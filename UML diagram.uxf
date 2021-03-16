@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="14.3.0">
+  <zoom_level>12</zoom_level>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>372</x>
+      <y>108</y>
+      <w>312</w>
+      <h>312</h>
+    </coordinates>
+    <panel_attributes>User / Player
+--
+//
+- _id: ObjectID
+//
+- statistics: ObjectID
+//
+- email: String
+//
+- name: String
+//
+- password: String
+//
+- active: Boolean</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>864</x>
+      <y>108</y>
+      <w>312</w>
+      <h>312</h>
+    </coordinates>
+    <panel_attributes>Statistics
+--
+//
+- _id: ObjectID
+//
+- easyWin: Int
+//
+- easyLose: Int
+//
+- middleWin: Int
+//
+- middleLose: Int
+//
+- hardWin: Int
+//
+- hardLose: Int
+//
+- expertWin: Int
+//
+- expertLose: Int
+//
+- multiplayerWin: Int
+//
+- multiplayerLose: Int</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>672</x>
+      <y>240</y>
+      <w>216</w>
+      <h>48</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>10.0;10.0;160.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>612</x>
+      <y>480</y>
+      <w>312</w>
+      <h>312</h>
+    </coordinates>
+    <panel_attributes>Memes
+--
+//
+- _id: ObjectID
+//
+- link: String</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>

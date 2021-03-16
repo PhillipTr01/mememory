@@ -1,6 +1,6 @@
 var request = require('request');
 
-request('https://www.reddit.com/r/dankmemes/.json?limit=100', function(err, res, body) {
+request('https://www.reddit.com/r/memes/.json?limit=100', function(err, res, body) {
 
 
     if(!err && res.statusCode === 200) {
@@ -14,6 +14,7 @@ request('https://www.reddit.com/r/dankmemes/.json?limit=100', function(err, res,
             }
             count++;
         }
+        console.log(count);
     } else {
         console.log(err + " " + res.statusMessage + " " + res.statusCode);
     }
