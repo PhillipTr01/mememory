@@ -1,20 +1,17 @@
 var express = require('express');
 var cron = require("node-cron");
 var path = require('path');
-let shell = require('shelljs');
 const app = express();
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
-const Meme = require('./models/Meme');
+const scraper = require("./meme_scrape");
 
 app.use(bodyParser.json());
 app.use(morgan('dev'));
 
 cron.schedule("0 1 * * *", function() {
-    if(shell.exec("node meme_scrape.js").code !== 0) {
-        console.log("Something went wrong!")
-    }
+    scraper.scrape();
 });
 
 app.get('/', async (req, res, next) => {
