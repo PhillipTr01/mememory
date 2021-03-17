@@ -6,18 +6,24 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const scraper = require("./meme_scrape");
+const Meme = require('./models/Meme');
 
 app.use(bodyParser.json());
 app.use(morgan('dev'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-cron.schedule("0 1 * * *", function() {
+cron.schedule('0 1 * * *', () => {
     scraper.scrape();
 });
 
 app.get('/', async (req, res, next) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile('/index.html');
 });
 
+app.get('/links', async (req, res, next) => {
+    const memes = await Meme.find().select('link');
+    res.json(memes);
+});
 
 app.use((req, res, next) => {
     const err = new Error("I'm a teapot! I don't want to handle this request!");
@@ -42,4 +48,4 @@ mongoose.connect("mongodb://localhost:27017/MemeMory?readPreference=primary&appn
     () => console.log('Connected to Database!')
  );
 
-app.listen(3000);
+app.listen(5000);
