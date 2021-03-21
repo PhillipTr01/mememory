@@ -1,0 +1,29 @@
+html, body{
+    height: 100%;
+}
+
+body{
+    background-color:#141414;
+    font-family: 'Poppins', sans-serif;
+}
+
+a{
+    text-decoration: none;
+}
+
+video {
+    width: 100%;
+    height: auto;
+}
+
+main {
+    display: block;
+}
+
+.max-height-set-500{
+    max-height: 500px;
+}
+
+.displ-content{
+    display: contents;
+}
