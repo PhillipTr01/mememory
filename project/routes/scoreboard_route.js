@@ -5,11 +5,11 @@ const router = express.Router();
 
 router.get('/', async (req, res, next) => {
 
-    var easy = await Statistic.find().sort({easyWin: -1}).limit(5).select("easyWin easyLose");
-    var middle = await Statistic.find().sort({middleWin: -1}).limit(5).select("middleWin middleLose");
-    var hard = await Statistic.find().sort({hardWin: -1}).limit(5).select("hardWin hardLose");
-    var expert = await Statistic.find().sort({expertWin: -1}).limit(5).select("expertWin expertLose");
-    var multiplayer = await Statistic.find().sort({multiplayerWin: -1}).limit(5).select("multiplayerWin multiplayerLose");
+    var easy = await Statistic.find().sort({easyWin: -1}).limit(10).select("easyWin easyLose");
+    var middle = await Statistic.find().sort({middleWin: -1}).limit(10).select("middleWin middleLose");
+    var hard = await Statistic.find().sort({hardWin: -1}).limit(10).select("hardWin hardLose");
+    var expert = await Statistic.find().sort({expertWin: -1}).limit(10).select("expertWin expertLose");
+    var multiplayer = await Statistic.find().sort({multiplayerWin: -1}).limit(10).select("multiplayerWin multiplayerLose");
 
     easy = await addUserToStatistic(easy);
     middle = await addUserToStatistic(middle);

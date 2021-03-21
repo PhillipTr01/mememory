@@ -20,7 +20,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
 </head>
 
-<body>
+<body class="d-flex flex-column">
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid px-3">
@@ -85,6 +85,10 @@
         </div>
     </nav>
 
+    <main class="my-auto">
+        <div id="x" class="p-3 m-3"></div>
+    </main>
+
     <footer>
         <div class="container-fluid pt-5">
             <nav class="d-flex justify-content-center text-center">
@@ -96,11 +100,9 @@
                         click</a>
                 </div>
             </nav>
-    
+
         </div>
     </footer>
-
-    <div id="x" class="p-3 m-3"></div>
 
     <!--- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js"
@@ -108,6 +110,8 @@
     </script>
     <!--- Custom JS -->
     <script src="/scripts/cookies.js"></script>
+
+
 
 </body>
 
@@ -169,6 +173,7 @@
         }
     }
 
-    
-    document.getElementById("showUsername").innerHTML = JSON.stringify(parseJWT(getToken()).username).replaceAll('"', '');
+
+    document.getElementById("showUsername").innerHTML = JSON.stringify(parseJWT(getToken()).username).replaceAll('"',
+        '');
 </script>
