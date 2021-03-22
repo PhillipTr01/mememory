@@ -41,58 +41,19 @@ function registerUser() {
   var password = document.getElementById('registerPassword1').value;
   var repeatPassword = document.getElementById('registerPassword2').value;
   var emailLabel = document.getElementById('registerEmailLabel');
+  var emailTakenLabel = document.getElementById('registerEmailTakenLabel');
   var usernameLabel = document.getElementById('registerUsernameLabel');
+  var usernameTakenLabel = document.getElementById('registerUsernameTakenLabel');
   var passwordLabel = document.getElementById('registerPassword1Label');
   var repeatPasswordLabel = document.getElementById('registerPassword2Label');
 
   //resetRegisterLabels
-  emailLabel.innerText = "Email";
-  emailLabel.classList.remove("text-danger");
-  usernameLabel.innerText = "Username";
-  usernameLabel.classList.remove("text-danger");
-  passwordLabel.innerText = "Password";
-  passwordLabel.classList.remove("text-danger");
-  repeatPasswordLabel.innerText = "Repeat Password";
-  repeatPasswordLabel.classList.remove("text-danger");
-
-/*  //checkEmail
-  //RFC 5322 Official Standard
-  var emailRegex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-  if (!emailRegex.test(email)) {
-    emailLabel.innerText = "This is not an email";
-    emailLabel.classList.add("text-danger");
-    return;
-  }
-
-  //checkUsername
-  if (username.length > 16 || username.length < 3) {
-    usernameLabel.innerText = "Username must be between 3 and 16 characters";
-    usernameLabel.classList.add("text-danger");
-    return;
-  }
-
-  //checkPasswordLength
-  if (password.length < 8) {
-    passwordLabel.innerText = "Password must be at least 8 characters long";
-    passwordLabel.classList.add("text-danger");
-    return;
-  }
-
-  //checkPasswordStrength
-  var passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
-  if (!passwordRegex.test(password)) {
-    passwordLabel.innerText = "Password is to weak (must contain at least one letter, one number and one special character)";
-    passwordLabel.classList.add("text-danger");
-    return;
-  }
-
-  //comparePasswords
-  if (password != repeatPassword) {
-    repeatPasswordLabel.innerText = "Password is not identical";
-    repeatPasswordLabel.classList.add("text-danger");
-    return;
-  }
-  */
+  emailLabel.classList.add("visually-hidden");
+  emailTakenLabel.classList.add("visually-hidden");
+  usernameLabel.classList.add("visually-hidden");
+  usernameTakenLabel.classList.add("visually-hidden");
+  passwordLabel.classList.add("visually-hidden");
+  repeatPasswordLabel.classList.add("visually-hidden");
 
   var registerRequest = new XMLHttpRequest();
 
@@ -105,45 +66,36 @@ function registerUser() {
 
       } else if (this.status == 400) {
         var response = JSON.parse(this.responseText).error.message;
-        
+
         if (response.includes("email: Path `email` is invalid")) {
-          emailLabel.innerText = "This is not an email";
-          emailLabel.classList.add("text-danger");
+          emailLabel.classList.remove("visually-hidden");
           return;
         }
 
         if (response.includes("username: Path `username`")) {
-          usernameLabel.innerText = "Username must be between 3 and 16 characters";
-          usernameLabel.classList.add("text-danger");
+          usernameLabel.classList.remove("visually-hidden");
           return;
         }
 
-        switch (response) {
-          case "password: Path `password` is shorter than the minimum allowed length (8).":
-            passwordLabel.innerText = "Password must be at least 8 characters long";
-            passwordLabel.classList.add("text-danger");
-            return;
-          case "password: Path `password` is too weak.":
-            passwordLabel.innerText = "Password is to weak (must contain at least one letter, one number and one special character)";
-            passwordLabel.classList.add("text-danger");
-            return;
-          case "password: Path `password` is not matching with `repeatPassword`.":
-            repeatPasswordLabel.innerText = "Password is not identical";
-            repeatPasswordLabel.classList.add("text-danger");
-            return;
+        if (response.includes("password: Path `password` is too weak.")) {
+          passwordLabel.classList.remove("visually-hidden");
+          return;
+        }
+
+        if (response.includes("password: Path `password` is not matching with `repeatPassword`.")) {
+          repeatPasswordLabel.classList.remove("visually-hidden");
+          return;
         }
 
       } else if (this.status == 409) {
         var response = JSON.parse(this.responseText).error.message;
 
         if (response == "email: Path `email` is already in use.") {
-          emailLabel.innerText = "Email is already taken";
-          emailLabel.classList.add("text-danger");
+          emailTakenLabel.classList.remove("visually-hidden");
         }
 
         if (response == "username: Path `username` is already taken.") {
-          usernameLabel.innerText = "Username is already taken";
-          usernameLabel.classList.add("text-danger");
+          usernameTakenLabel.classList.remove("visually-hidden");
         }
 
       }
@@ -163,16 +115,10 @@ function registerUser() {
 function loginUser(username, password) {
   var identifier = username || document.getElementById("loginUsername").value; // Identifier is either the e-mail or the username;
   var inputPassword = password || document.getElementById("loginPassword").value;
-  var signinHeader = document.getElementById('signinHeader');
-  var usernameLabel = document.getElementById('loginUsernameLabel');
-  var passwordLabel = document.getElementById('loginPasswordLabel');
+  var wrongDataLabel = document.getElementById('loginWrongDataLabel');
 
   //resetRegisterLabels
-  signinHeader.innerText = "Sign In";
-  usernameLabel.innerText = "Username";
-  usernameLabel.classList.remove("text-danger");
-  passwordLabel.innerText = "Password";
-  passwordLabel.classList.remove("text-danger");
+  wrongDataLabel.classList.add("visually-hidden");
 
   var loginRequest = new XMLHttpRequest();
 
@@ -187,11 +133,7 @@ function loginUser(username, password) {
         var response = JSON.parse(this.responseText).error.message;
 
         if (response.includes("Authentication: Path `authentication` failed.")) {
-          signinHeader.innerText = "Sign In failed. Try again";
-          usernameLabel.innerText = "Username may be invalid";
-          usernameLabel.classList.add("text-danger");
-          passwordLabel.innerText = "Password may be invalid";
-          passwordLabel.classList.add("text-danger");
+          wrongDataLabel.classList.remove("visually-hidden");
           return;
         }
 

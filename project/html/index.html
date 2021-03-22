@@ -26,11 +26,13 @@
             <div class="container-fluid px-3">
                 <div class="row displ-content">
                     <div class="col-4 d-none d-sm-block align-self-start align-self-lg-center">
-                        <a class="navbar-brand active d-block d-lg-none" href="index.html">
-                            <img src="https://i.picsum.photos/id/338/70/50.jpg?hmac=vekFJNJE9Q7zEpaT2s9UpSxBz8NNC4m9tIAe9wgo6dA" alt="logo" class="img-fluid">
+                        <a class="navbar-brand active d-block d-lg-none" href="/">
+                            <img src="https://i.picsum.photos/id/338/70/50.jpg?hmac=vekFJNJE9Q7zEpaT2s9UpSxBz8NNC4m9tIAe9wgo6dA"
+                                alt="logo" class="img-fluid">
                         </a>
-                        <a class="navbar-brand active d-none d-lg-block" href="index.html">
-                            <img src="https://i.picsum.photos/id/42/400/70.jpg?hmac=MCA_hv-pOtJlwxxpHkvN8gA1Rbu29xEl55n8jPJW0As" alt="logo" class="img-fluid">
+                        <a class="navbar-brand active d-none d-lg-block" href="/">
+                            <img src="https://i.picsum.photos/id/42/400/70.jpg?hmac=MCA_hv-pOtJlwxxpHkvN8gA1Rbu29xEl55n8jPJW0As"
+                                alt="logo" class="img-fluid">
                         </a>
                     </div>
                     <div class="col-4 text-center d-none d-sm-block align-self-start align-self-lg-center">
@@ -77,8 +79,9 @@
                         </div>
                     </div>
                     <div class="col d-sm-none align-self-start">
-                        <a class="navbar-brand active text-end" href="/index.html">
-                            <img src="https://i.picsum.photos/id/338/70/50.jpg?hmac=vekFJNJE9Q7zEpaT2s9UpSxBz8NNC4m9tIAe9wgo6dA" alt="logo" class="img-fluid">
+                        <a class="navbar-brand active text-end" href="/">
+                            <img src="https://i.picsum.photos/id/338/70/50.jpg?hmac=vekFJNJE9Q7zEpaT2s9UpSxBz8NNC4m9tIAe9wgo6dA"
+                                alt="logo" class="img-fluid">
                         </a>
                     </div>
                 </div>
@@ -120,27 +123,32 @@
                 <div class="col-12 col-sm-8 col-md-7 col-lg-4 offset-lg-1 py-3 px-3 p-sm-5 p-lg-4 p-xl-5 my-2 my-lg-auto rounded-3 text-light visually-hidden"
                     id="loginForm">
                     <div>
-                        <h3 class="mb-0 mb-lg-4" id="signinHeader">Sign In</h3>
+                        <h3 class="mb-0 mb-lg-4">Login</h3>
                     </div>
-                    <form action="#" class="signin-form mt-2" onsubmit="loginUser(); return false;">
+                    <form action="#" class="mt-2" onsubmit="loginUser(); return false;">
                         <div class="form-group mt-1 mt-lg-3">
-                            <label for="username" id="loginUsernameLabel">Username</label>
+                            <label for="username">Username</label>
                             <input type="text" id="loginUsername" class="form-control"
                                 placeholder="Username / Email address" required>
                         </div>
                         <div class="form-group mt-1 mt-lg-3">
-                            <label for="loginPassword" id="loginPasswordLabel">Password</label>
-                            <input id="loginPassword" type="password" class="form-control" placeholder="Password" required>
+                            <label for="loginPassword">Password</label>
+                            <input id="loginPassword" type="password" class="form-control" placeholder="Password"
+                                required>
+                            <label class="visually-hidden text-danger" id="loginWrongDataLabel">
+                                Invalid username or password.
+                            </label>
                         </div>
                         <div class="form-group mt-3 mt-lg-4">
-                            <button type="submit" class="form-control btn btn-outline-light rounded">Sign In</button>
+                            <button type="submit" class="form-control btn btn-outline-light rounded">Login</button>
                         </div>
                         <div class="form-group mt-1 mt-lg-3">
                             <div class="form-group mt-1 mt-lg-3">
                                 <div class="container-fluid p-0">
                                     <div class="row row-cols-1 row-cols-sm-2 m-0 ">
                                         <div class="col col-lg-6 mt-1 mt-lg-3 px-5 px-sm-1">
-                                            <button type="button" class="form-control btn btn-outline-info btn-sm rounded"
+                                            <button type="button"
+                                                class="form-control btn btn-outline-info btn-sm rounded"
                                                 onclick="showRegisterForm()">New? Register</button>
                                         </div>
                                         <div class="col col-lg-6 mt-1 mt-lg-3 px-5 px-sm-1">
@@ -161,32 +169,54 @@
                     <div>
                         <h3 class="mb-0 mb-lg-4">Register</h3>
                     </div>
-                    <form action="#" class="signin-form mt-2" onsubmit="registerUser(); return false;">
+                    <form action="#" class="mt-2" onsubmit="registerUser(); return false;">
                         <div class="form-group mt-1 mt-lg-3">
-                            <label for="registerEmail" id="registerEmailLabel">Email</label>
-                            <input type="text" id="registerEmail" class="form-control" placeholder="Email address" required>
+                            <label for="registerEmail">Email</label>
+                            <input type="text" id="registerEmail" class="form-control" placeholder="Email address"
+                                required>
+                            <label class="visually-hidden text-danger" id="registerEmailLabel">
+                                Please choose a valid email.
+                            </label>
+                            <label class="visually-hidden text-danger" id="registerEmailTakenLabel">
+                                Email is already taken.
+                            </label>
                         </div>
                         <div class="form-group mt-1 mt-lg-3">
-                            <label for="registerUsername" id="registerUsernameLabel" >Username</label>
-                            <input type="text" id="registerUsername" class="form-control" placeholder="Username" required>
+                            <label for="registerUsername">Username</label>
+                            <input type="text" id="registerUsername" class="form-control" placeholder="Username"
+                                required>
+                            <label class="visually-hidden text-danger" id="registerUsernameLabel">
+                                Please choose a username. (Between 3 and 16 characters)
+                            </label>
+                            <label class="visually-hidden text-danger" id="registerUsernameTakenLabel">
+                                Username is already taken.
+                            </label>
                         </div>
                         <div class="form-group mt-1 mt-lg-3">
-                            <label for="registerPassword1" id="registerPassword1Label">Password</label>
+                            <label for="registerPassword1">Password</label>
                             <input id="registerPassword1" type="password" class="form-control" placeholder="Password"
                                 required>
+                            <label class="visually-hidden text-danger" id="registerPassword1Label">
+                                Password is too weak. (Minimum of 8 characters with one letter, one number and one
+                                special character)
+                            </label>
                         </div>
                         <div class="form-group mt-1 mt-lg-3">
-                            <label for="registerPassword2" id="registerPassword2Label">Repeat Password</label>
+                            <label for="registerPassword2">Repeat Password</label>
                             <input id="registerPassword2" type="password" class="form-control" placeholder="Password"
                                 required>
+                            <label class="visually-hidden text-danger" id="registerPassword2Label">
+                                Password is not identical.
+                            </label>
                         </div>
                         <div class="form-group mt-3 mt-lg-4">
-                            <button type="submit" class="form-control btn btn-outline-light rounded">Register</button>
+                            <button type="submit"
+                                class="btn btn-outline-light w-100 rounded">Register</button>
                         </div>
                         <div class="form-group mt-3">
                             <div class="container-fluid p-0">
                                 <div>
-                                    <button type="button" class="form-control btn btn-outline-info btn-sm rounded"
+                                    <button type="button" class="btn btn-outline-info btn-sm w-100 rounded"
                                         onclick="showLoginForm()">Or Sign In</button>
                                 </div>
                             </div>
@@ -208,7 +238,7 @@
                         click</a>
                 </div>
             </nav>
-    
+
         </div>
     </footer>
 

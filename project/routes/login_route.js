@@ -31,13 +31,6 @@ router.post('/register', async (req, res, next) => {
             return next(err);
         }
 
-        /* Check if password is long enough */
-        if (JSON.stringify(req.body.password).length < 8) {
-            err = new Error("password: Path `password` is shorter than the minimum allowed length (8).");
-            err.status = 400;
-            return next(err);
-        }
-
         /* Check if password is strong enough */
         var passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&-])[A-Za-z\d@$!%*#?&-]{8,}$/
         if (!passwordRegex.test(req.body.password)) {
