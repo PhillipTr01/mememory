@@ -21,7 +21,7 @@ app.use(express.urlencoded({
    .use(express.json())
    .use(morgan('dev'))
    .use(cookieParser())
-   .use(express.static(path.join(__dirname, 'public')));
+   .use('/static', express.static(path.join(__dirname, 'public')));
 
 /* Routes */
 const loginRoute = require('./routes/login_route');
@@ -34,10 +34,13 @@ app.use('/requests/authentication', loginRoute)
    .use('/requests/statistic', statisticRoute)
    .use('/requests/scoreboard', scoreboardRoute);
 
+/* Base Routes */
+app.get('/', (req, res, next) => {
+   res.sendFile(__dirname + '/html/index.html');
+});
 
-/* Get new Memes every hour */
-cron.schedule('0 1 * * *', () => {
-   memeScraper.scrape();
+app.get('/beta', (req, res, next) => {
+   res.sendFile(__dirname + '/html/beta_test.html');
 });
 
 /* Error handling */
@@ -72,6 +75,10 @@ mongoose.connect(database, {
    () => console.log('Connected to Database!')
 );
 
+/* Get new Memes every hour */
+cron.schedule('0 1 * * *', () => {
+   memeScraper.scrape();
+});
 
 /* Start Backend */
 app.listen(port);
