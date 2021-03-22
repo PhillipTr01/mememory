@@ -98,13 +98,13 @@ function registerUser() {
 
   registerRequest.onreadystatechange = function (e) {
     if (this.readyState == 4) {
-      var response = JSON.parse(this.responseText).error.message;
 
       if (this.status == 201) {
 
         loginUser(username, password);
 
       } else if (this.status == 400) {
+        var response = JSON.parse(this.responseText).error.message;
         
         if (response.includes("email: Path `email` is invalid")) {
           emailLabel.innerText = "This is not an email";
@@ -134,13 +134,14 @@ function registerUser() {
         }
 
       } else if (this.status == 409) {
+        var response = JSON.parse(this.responseText).error.message;
 
-        if (response.includes("E-Mail")) {
+        if (response == "email: Path `email` is already in use.") {
           emailLabel.innerText = "Email is already taken";
           emailLabel.classList.add("text-danger");
         }
 
-        if (response.includes("Username")) {
+        if (response == "username: Path `username` is already taken.") {
           usernameLabel.innerText = "Username is already taken";
           usernameLabel.classList.add("text-danger");
         }
@@ -177,13 +178,13 @@ function loginUser(username, password) {
 
   loginRequest.onreadystatechange = function () {
     if (this.readyState == 4) {
-      var response = JSON.parse(this.responseText).error.message;
 
       if (this.status == 200) {
 
         window.location.href = "/home";
 
       } else if (this.status == 401) {
+        var response = JSON.parse(this.responseText).error.message;
 
         if (response.includes("Authentication: Path `authentication` failed.")) {
           signinHeader.innerText = "Sign In failed. Try again";

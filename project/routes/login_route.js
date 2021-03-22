@@ -39,7 +39,7 @@ router.post('/register', async (req, res, next) => {
         }
 
         /* Check if password is strong enough */
-        var passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/
+        var passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&-])[A-Za-z\d@$!%*#?&-]{8,}$/
         if (!passwordRegex.test(req.body.password)) {
             err = new Error("password: Path `password` is too weak.");
             err.status = 400;
