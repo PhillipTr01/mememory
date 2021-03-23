@@ -8,7 +8,7 @@ const cookieParser = require('cookie-parser');
 
 /* File-Imports */
 const memeScraper = require("./meme_scraper");
-const Meme = require('./models/Meme');
+const Auth = require("./middleware/auth");
 
 /* Importatn Variables */
 const port = 5000;
@@ -35,12 +35,16 @@ app.use('/requests/authentication', loginRoute)
    .use('/requests/scoreboard', scoreboardRoute);
 
 /* Base Routes */
-app.get('/', (req, res, next) => {
+app.get('/', Auth, (req, res, next) => {
    res.sendFile(__dirname + '/html/index.html');
 });
 
-app.get('/beta', (req, res, next) => {
+app.get('/beta', Auth, (req, res, next) => {
    res.sendFile(__dirname + '/html/beta_test.html');
+});
+
+app.get('/home', Auth, (req, res, next) => {
+   res.sendFile(__dirname + '/html/home.html');
 });
 
 /* Error handling */

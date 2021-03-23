@@ -69,9 +69,10 @@ router.post('/login', async (req, res, next) => {
         if (user != null && await bcrypt.compare(req.body.password, user.password)) {
             token = jwt.sign({
                 _id: user._id,
-                username: user.username,
+                statistics: user.statistics,
+                username: user.username
             }, "FMdYFjdjNCDCDDFXAtgP", {
-                expiresIn: "30d"
+                expiresIn: "7d"
             });
         } else {
             err = new Error("Authentication: Path `authentication` failed.");
@@ -79,7 +80,7 @@ router.post('/login', async (req, res, next) => {
             return next(err);
         }
 
-        res.cookie('token', token, {maxAge: 30 * 24 * 60 * 60 * 1000}).status(200).json({success: {status: 200, message: "Successfully logged in."}});
+        res.cookie('token', token, {maxAge: 7 * 24 * 60 * 60 * 1000, httpOnly: true}).status(200).json({success: {status: 200, message: "Successfully logged in."}});
     } catch (error) {
         err = new Error(error.message);
         err.status = 400;
