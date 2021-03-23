@@ -24,6 +24,30 @@ main {
     max-height: 500px;
 }
 
+.max-width-500{
+    max-width: 500px;
+}
+
 .displ-content{
     display: contents;
+}
+
+.dropdown-menu > li > a:hover,
+.dropdown-menu > li > div:hover {
+    background-image: none !important;
+    background-color: black;
+}
+
+.nav-tabs > .nav-link.active {
+    background-color: #141414;
+    border-bottom: none;
+    border-top: none;
+}
+
+.nav-tabs > button {
+    border-radius: 0 !important;
+}
+
+.dropdown-item:hover>.dropdown-menu {
+    display: block;
 }

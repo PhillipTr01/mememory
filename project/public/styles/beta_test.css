@@ -55,3 +55,8 @@ a {
 html, body{
   height: 100%;
 }
+
+.dropdown-menu > li > a:hover {
+  background-image: none !important;
+  background-color: black !important;
+}

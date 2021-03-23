@@ -47,6 +47,10 @@ app.get('/home', Auth, (req, res, next) => {
    res.sendFile(__dirname + '/html/home.html');
 });
 
+app.get('/user', Auth, (req, res, next) => {
+   res.sendFile(__dirname + '/html/user_profile.html');
+});
+
 /* Error handling */
 app.use((req, res, next) => {
    const err = new Error("Error! Ressource not found!");

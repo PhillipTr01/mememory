@@ -25,10 +25,10 @@ router.get('/', async (req, res, next) => {
 
 async function addUserToStatistic(obj) {
     var k = 0;
-
+    console.log(obj);
     for (statistic of obj) {
         user = await User.findOne({statistics: statistic._id});
-        newStatistic = {statistic, username: user.username}
+        newStatistic = {win: (statistic.easyWin | statistic.middleWin | statistic.hardWin | statistic.expertWin | statistic.multiplayerWin), lose: (statistic.easyLose | statistic.middleLose | statistic.hardLose | statistic.expertLose | statistic.multiplayerLose), username: user.username}
         obj[k] = newStatistic;
         k++;
     }

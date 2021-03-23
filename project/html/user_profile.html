@@ -55,9 +55,9 @@
                                 </p>
                                 <ul class="dropdown-menu dropdown-menu-end bg-dark">
                                     <li>
-                                        <div class="dropdown-item d-flex text-light" onclick="startProfilePage()">
-                                            <i class="bi bi-bar-chart-line pe-3"></i>
-                                            <p class="m-0">Profile</p>
+                                        <div class="dropdown-item d-flex text-light" onclick="startScoreboardPage()">
+                                            <i class="bi bi-trophy pe-3"></i>
+                                            <p class="m-0">Scoreboard</p>
                                         </div>
                                     </li>
                                     <li class="mt-2">
@@ -111,115 +111,57 @@
 
     <main class="my-auto p-3">
         <div>
-            <div class="container-sm my-auto rounded-3 p-0 max-width-500">
+            <div class="container-sm my-auto border border-light rounded-3 p-0 max-width-500">
                 <div class="text-center text-light fs-3 border-bottom border-light">
-                    <p class="py-3 m-0">
-                        Scoreboard
+                    <p id="usernameHomePage" class="py-3 m-0">
+                        Username
                     </p>
                 </div>
-                <div class="border border-light">
-                    <nav>
-                        <div class="nav nav-tabs d-flex flex-nowrap" id="nav-tab" role="tablist">
-                            <button class="nav-link text-light px-0 flex-fill  active" id="nav-easy-tab" data-bs-toggle="tab"
-                                data-bs-target="#nav-easy" type="button" role="tab" aria-controls="nav-easy"
-                                aria-selected="true">Easy</button>
-                            <button class="nav-link text-light px-0 flex-fill" id="nav-middle-tab" data-bs-toggle="tab"
-                                data-bs-target="#nav-middle" type="button" role="tab" aria-controls="nav-middle"
-                                aria-selected="false">Medium</button>
-                            <button class="nav-link text-light px-0 flex-fill" id="nav-hard-tab" data-bs-toggle="tab"
-                                data-bs-target="#nav-hard" type="button" role="tab" aria-controls="nav-hard"
-                                aria-selected="false">Hard</button>
-                            <button class="nav-link text-light px-0 flex-fill" id="nav-expert-tab" data-bs-toggle="tab"
-                                data-bs-target="#nav-expert" type="button" role="tab" aria-controls="nav-expert"
-                                aria-selected="false">Expert</button>
-                            <button class="nav-link text-light px-0 flex-fill" id="nav-multiplayer-tab" data-bs-toggle="tab"
-                                data-bs-target="#nav-multiplayer" type="button" role="tab" aria-controls="nav-multiplayer"
-                                aria-selected="false">Online</button>
-                        </div>
-                    </nav>
-                    <div class="tab-content" id="nav-tabContent">
-                        <div class="tab-pane fade show active" id="nav-easy" role="tabpanel"
-                            aria-labelledby="nav-easy-tab">
-                            <table class="table text-light table-borderless">
-                                <thead>
-                                    <tr>
-                                        <td>#</th>
-                                        <th scope="col">Name</th>
-                                        <th scope="col">Win</th>
-                                        <th scope="col">Lose</th>
-                                        <th scope="col" class="d-none d-md-block">W/L</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="easyTable">
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="tab-pane fade show" id="nav-middle" role="tabpanel"
-                            aria-labelledby="nav-middle-tab">
-                            <table class="table text-light table-borderless">
-                                <thead>
-                                    <tr>
-                                        <td>#</th>
-                                        <th scope="col">Name</th>
-                                        <th scope="col">Win</th>
-                                        <th scope="col">Lose</th>
-                                        <th scope="col" class="d-none d-md-block">W/L</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="middleTable">
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="tab-pane fade show" id="nav-hard" role="tabpanel"
-                            aria-labelledby="nav-hard-tab">
-                            <table class="table text-light table-borderless">
-                                <thead>
-                                    <tr>
-                                        <td>#</th>
-                                        <th scope="col">Name</th>
-                                        <th scope="col">Win</th>
-                                        <th scope="col">Lose</th>
-                                        <th scope="col" class="d-none d-md-block">W/L</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="hardTable">
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="tab-pane fade show" id="nav-expert" role="tabpanel"
-                            aria-labelledby="nav-expert-tab">
-                            <table class="table text-light table-borderless">
-                                <thead>
-                                    <tr>
-                                        <td>#</th>
-                                        <th scope="col">Name</th>
-                                        <th scope="col">Win</th>
-                                        <th scope="col">Lose</th>
-                                        <th scope="col" class="d-none d-md-block">W/L</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="expertTable">
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="tab-pane fade show" id="nav-multiplayer" role="tabpanel"
-                            aria-labelledby="nav-multiplayer-tab">
-                            <table class="table text-light table-borderless">
-                                <thead>
-                                    <tr>
-                                        <td>#</th>
-                                        <th scope="col">Name</th>
-                                        <th scope="col">Win</th>
-                                        <th scope="col">Lose</th>
-                                        <th scope="col" class="d-none d-md-block">W/L</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="multiplayerTable">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                <div>
+                    <table class="table text-light table-borderless">
+                        <thead>
+                            <tr>
+                                <td colspan="3" class="text-center fs-3 py-3">Singleplayer</td>
+                            </tr>
+                            <tr>
+                                <th scope="col"></th>
+                                <th scope="col">Win</th>
+                                <th scope="col">Lose</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th scope="row">Easy</th>
+                                <td id="easyWin"></td>
+                                <td id="easyLose"></td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Medium</th>
+                                <td id="middleWin"></td>
+                                <td id="middleLose"></td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Hard</th>
+                                <td id="hardWin"></td>
+                                <td id="hardLose"></td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Expert</th>
+                                <td id="expertWin"></td>
+                                <td id="expertLose"></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-center fs-3 pb-3 pt-5">Multiplayer</td>
+                            </tr>
+                            <tr>
+                                <th scope="col">Online</th>
+                                <td id="multiplayerWin"></td>
+                                <td id="multiplayerLose"></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
+            </div>
             <div class="d-block d-sm-none container max-width-500 px-0 py-5">
                 <button type="submit" class="form-control btn btn-outline-light btn-lg fw-bold rounded max-width-500"
                     onclick="startLobbyPage()">
@@ -249,7 +191,7 @@
         integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous">
     </script>
     <!--- Custom JS --->
-    <script src="/static/scripts/home.js"></script>
+    <script src="/static/scripts/user_profile.js"></script>
 </body>
 
 </html>
