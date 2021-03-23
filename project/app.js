@@ -26,12 +26,12 @@ app.use(express.urlencoded({
 /* Routes */
 const loginRoute = require('./routes/login_route');
 const memeRoute = require('./routes/meme_route');
-const statisticRoute = require('./routes/statistic_route');
+const userRoute = require('./routes/user_route');
 const scoreboardRoute = require('./routes/scoreboard_route');
 
 app.use('/requests/authentication', loginRoute)
    .use('/requests/memes', memeRoute)
-   .use('/requests/statistic', statisticRoute)
+   .use('/requests/user', userRoute)
    .use('/requests/scoreboard', scoreboardRoute);
 
 /* Base Routes */

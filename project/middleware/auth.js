@@ -4,8 +4,9 @@ module.exports = async (req, res, next) => {
 
     try {
         // Check if Token is valid.
-        await jwt.verify(req.cookies.token, "FMdYFjdjNCDCDDFXAtgP");
-
+        var decode = await jwt.verify(req.cookies.token, "FMdYFjdjNCDCDDFXAtgP");
+        req._id = decode._id;
+        
         if (req.originalUrl == '/') {
             res.redirect('/home');
         } else {

@@ -12,9 +12,6 @@ router.post('/register', async (req, res, next) => {
 
     try {
 
-        var stat = await Statistic().save();
-        req.body.statistics = stat._id;
-
         await User.validate(req.body);
 
         /* Check if e-Mail ist already in use */
@@ -50,6 +47,9 @@ router.post('/register', async (req, res, next) => {
         req.body.usernameLowerCase = req.body.username.toLowerCase();
         req.body.emailLowerCase = req.body.email.toLowerCase();
 
+        var stat = await Statistic().save();
+        req.body.statistics = stat._id;
+
         await User(req.body).save();
         res.status(201).json({success: {status: 201, message: "Successfully signed up."}});
     } catch (error) {
@@ -69,8 +69,6 @@ router.post('/login', async (req, res, next) => {
         if (user != null && await bcrypt.compare(req.body.password, user.password)) {
             token = jwt.sign({
                 _id: user._id,
-                statistics: user.statistics,
-                username: user.username
             }, "FMdYFjdjNCDCDDFXAtgP", {
                 expiresIn: "7d"
             });
@@ -80,7 +78,7 @@ router.post('/login', async (req, res, next) => {
             return next(err);
         }
 
-        res.cookie('token', token, {maxAge: 7 * 24 * 60 * 60 * 1000, httpOnly: true}).status(200).json({success: {status: 200, message: "Successfully logged in."}});
+        res.cookie('token', token, {maxAge: 7 * 24 * 60 * 60 * 1000, httpOnly: true}).status(200).redirect('/home');
     } catch (error) {
         err = new Error(error.message);
         err.status = 400;
