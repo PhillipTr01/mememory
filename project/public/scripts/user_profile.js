@@ -4,6 +4,11 @@ document.addEventListener('DOMContentLoaded', function () {
     setStatisticData();
 }, false);
 
+//Keep dropdown open if clicked on other groups
+document.getElementById("keep-open-dropdown").addEventListener("click", function (e) {
+    e.stopPropagation();
+}, false);
+
 function startLobbyPage() {
     window.location.href = "/beta";
     //window.location.href = "/lobby";
