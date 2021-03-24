@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="h-100">
 
 <head>
     <title>MemeMory</title>
@@ -14,16 +14,16 @@
 
     <!--- Custom CSS-->
     <link rel="stylesheet" href="/static/styles/index.css">
-    
+
     <!--- Favicon --->
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico">
-    
+
     <!--- Font --->
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
 </head>
 
-<body class="d-flex flex-column">
+<body class="d-flex flex-column h-100">
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark">
             <div class="container-fluid px-3">
@@ -105,16 +105,16 @@
                     </div>
                 </div>
 
-                <div class="col-12 col-sm-10 col-md-8 col-lg-6 py-3 px-3 p-lg-4 p-xl-5 my-2 my-lg-auto rounded-3 text-light"
+                <div class="col-12 col-sm-10 col-md-8 col-lg-6 py-3 px-0 p-lg-4 p-xl-5 my-2 my-lg-auto rounded-3 text-light"
                     id="loginButton">
-                    <div class="container-fluid p-0">
+                    <div class="container-fluid my-auto p-0 max-width-500">
                         <div class="d-flex justify-content-evenly p-3 p-lg-5 text-center fs-3 fw-light">
                             <p>Play Memory with the latest memes from Reddit</p>
                         </div>
                         <div class="d-flex justify-content-evenly align-items-stretch">
                             <div class="">
                                 <button type="submit" class="form-control btn btn-primary btn-lg rounded"
-                                    onclick="showLoginFormInitial()">Sign In</button>
+                                    onclick="showLoginFormInitial()">Login</button>
                             </div>
                             <div class="">
                                 <button type="submit" class="form-control btn btn-outline-primary btn-lg rounded"
@@ -125,108 +125,111 @@
                 </div>
 
                 <!--- Login Form -->
-                <div class="col-12 col-sm-8 col-md-7 col-lg-4 offset-lg-1 py-3 px-3 p-sm-5 p-lg-4 p-xl-5 my-2 my-lg-auto rounded-3 text-light visually-hidden"
+                <div class="col-12 col-sm-10 col-md-8 col-lg-6 py-3 px-0 p-lg-4 p-xl-5 my-2 my-lg-auto rounded-3 text-light visually-hidden"
                     id="loginForm">
-                    <div>
-                        <h3 class="mb-0 mb-lg-4">Login</h3>
-                    </div>
-                    <form action="#" class="mt-2" onsubmit="loginUser(); return false;">
-                        <div class="form-group mt-1 mt-lg-3">
-                            <label for="username">Username</label>
-                            <input type="text" id="loginUsername" class="form-control"
-                                placeholder="Username / Email address" required>
+                    <div class="container-fluid my-auto p-0 max-width-500">
+                        <div>
+                            <h3 class="mb-0 mb-lg-4">Login</h3>
                         </div>
-                        <div class="form-group mt-1 mt-lg-3">
-                            <label for="loginPassword">Password</label>
-                            <input id="loginPassword" type="password" class="form-control" placeholder="Password"
-                                required>
-                            <label class="visually-hidden text-danger" id="loginWrongDataLabel">
-                                Invalid username or password.
-                            </label>
-                        </div>
-                        <div class="form-group mt-3 mt-lg-4">
-                            <button type="submit" class="form-control btn btn-outline-light rounded">Login</button>
-                        </div>
-                        <div class="form-group mt-1 mt-lg-3">
+                        <form action="#" class="mt-2" onsubmit="loginUser(); return false;">
                             <div class="form-group mt-1 mt-lg-3">
-                                <div class="container-fluid p-0">
-                                    <div class="row row-cols-1 row-cols-sm-2 m-0 ">
-                                        <div class="col col-lg-6 mt-1 mt-lg-3 px-5 px-sm-1">
-                                            <button type="button"
-                                                class="form-control btn btn-outline-info btn-sm rounded"
-                                                onclick="showRegisterForm()">New? Register</button>
-                                        </div>
-                                        <div class="col col-lg-6 mt-1 mt-lg-3 px-5 px-sm-1">
-                                            <button type="button"
-                                                class="form-control btn btn-outline-info btn-sm rounded px-0"
-                                                onclick="forgotPassword()">Forgot Password</button>
+                                <label for="username">Username</label>
+                                <input type="text" id="loginUsername" class="form-control"
+                                    placeholder="Username / Email address" required>
+                            </div>
+                            <div class="form-group mt-1 mt-lg-3">
+                                <label for="loginPassword">Password</label>
+                                <input id="loginPassword" type="password" class="form-control" placeholder="Password"
+                                    required>
+                                <label class="visually-hidden text-danger" id="loginWrongDataLabel">
+                                    Invalid username or password.
+                                </label>
+                            </div>
+                            <div class="form-group mt-3 mt-lg-4">
+                                <button type="submit" class="form-control btn btn-outline-light rounded">Login</button>
+                            </div>
+                            <div class="form-group mt-1 mt-lg-3">
+                                <div class="form-group mt-1 mt-lg-3">
+                                    <div class="container-fluid p-0">
+                                        <div class="row row-cols-1 row-cols-sm-2 m-0 ">
+                                            <div class="col col-lg-6 mt-1 mt-lg-3 px-5 px-sm-1">
+                                                <button type="button"
+                                                    class="form-control btn btn-outline-info btn-sm rounded"
+                                                    onclick="showRegisterForm()">New? Register</button>
+                                            </div>
+                                            <div class="col col-lg-6 mt-1 mt-lg-3 px-5 px-sm-1">
+                                                <button type="button"
+                                                    class="form-control btn btn-outline-info btn-sm rounded px-0"
+                                                    onclick="forgotPassword()">Forgot Password</button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
 
                 <!--- Register Form -->
-                <div class="col-12 col-sm-8 col-md-6 col-lg-4 offset-lg-1 py-3 px-3 p-sm-5 p-lg-4 p-xl-5 my-2 my-lg-auto rounded-3 text-light visually-hidden"
+                <div class="col-12 col-sm-10 col-md-8 col-lg-6 py-3 px-0 p-lg-4 p-xl-5 my-2 my-lg-auto rounded-3 text-light visually-hidden"
                     id="registerForm">
-                    <div>
-                        <h3 class="mb-0 mb-lg-4">Register</h3>
-                    </div>
-                    <form action="#" class="mt-2" onsubmit="registerUser(); return false;">
-                        <div class="form-group mt-1 mt-lg-3">
-                            <label for="registerEmail">Email</label>
-                            <input type="text" id="registerEmail" class="form-control" placeholder="Email address"
-                                required>
-                            <label class="visually-hidden text-danger" id="registerEmailLabel">
-                                Please choose a valid email.
-                            </label>
-                            <label class="visually-hidden text-danger" id="registerEmailTakenLabel">
-                                Email is already taken.
-                            </label>
+                    <div class="container-fluid my-auto p-0 max-width-500">
+                        <div>
+                            <h3 class="mb-0 mb-lg-4">Register</h3>
                         </div>
-                        <div class="form-group mt-1 mt-lg-3">
-                            <label for="registerUsername">Username</label>
-                            <input type="text" id="registerUsername" class="form-control" placeholder="Username"
-                                required>
-                            <label class="visually-hidden text-danger" id="registerUsernameLabel">
-                                Please choose a username. (Between 3 and 16 characters)
-                            </label>
-                            <label class="visually-hidden text-danger" id="registerUsernameTakenLabel">
-                                Username is already taken.
-                            </label>
-                        </div>
-                        <div class="form-group mt-1 mt-lg-3">
-                            <label for="registerPassword1">Password</label>
-                            <input id="registerPassword1" type="password" class="form-control" placeholder="Password"
-                                required>
-                            <label class="visually-hidden text-danger" id="registerPassword1Label">
-                                Password is too weak. (Minimum of 8 characters with one letter, one number and one
-                                special character)
-                            </label>
-                        </div>
-                        <div class="form-group mt-1 mt-lg-3">
-                            <label for="registerPassword2">Repeat Password</label>
-                            <input id="registerPassword2" type="password" class="form-control" placeholder="Password"
-                                required>
-                            <label class="visually-hidden text-danger" id="registerPassword2Label">
-                                Password is not identical.
-                            </label>
-                        </div>
-                        <div class="form-group mt-3 mt-lg-4">
-                            <button type="submit"
-                                class="btn btn-outline-light w-100 rounded">Register</button>
-                        </div>
-                        <div class="form-group mt-3">
-                            <div class="container-fluid p-0">
-                                <div>
-                                    <button type="button" class="btn btn-outline-info btn-sm w-100 rounded"
-                                        onclick="showLoginForm()">Or Sign In</button>
+                        <form action="#" class="mt-2" onsubmit="registerUser(); return false;">
+                            <div class="form-group mt-1 mt-lg-3">
+                                <label for="registerEmail">Email</label>
+                                <input type="text" id="registerEmail" class="form-control" placeholder="Email address"
+                                    required>
+                                <label class="visually-hidden text-danger" id="registerEmailLabel">
+                                    Please choose a valid email.
+                                </label>
+                                <label class="visually-hidden text-danger" id="registerEmailTakenLabel">
+                                    Email is already taken.
+                                </label>
+                            </div>
+                            <div class="form-group mt-1 mt-lg-3">
+                                <label for="registerUsername">Username</label>
+                                <input type="text" id="registerUsername" class="form-control" placeholder="Username"
+                                    required>
+                                <label class="visually-hidden text-danger" id="registerUsernameLabel">
+                                    Please choose a username. (Between 3 and 16 characters)
+                                </label>
+                                <label class="visually-hidden text-danger" id="registerUsernameTakenLabel">
+                                    Username is already taken.
+                                </label>
+                            </div>
+                            <div class="form-group mt-1 mt-lg-3">
+                                <label for="registerPassword1">Password</label>
+                                <input id="registerPassword1" type="password" class="form-control"
+                                    placeholder="Password" required>
+                                <label class="visually-hidden text-danger" id="registerPassword1Label">
+                                    Password is too weak. (Minimum of 8 characters with one letter, one number and one
+                                    special character)
+                                </label>
+                            </div>
+                            <div class="form-group mt-1 mt-lg-3">
+                                <label for="registerPassword2">Repeat Password</label>
+                                <input id="registerPassword2" type="password" class="form-control"
+                                    placeholder="Password" required>
+                                <label class="visually-hidden text-danger" id="registerPassword2Label">
+                                    Password is not identical.
+                                </label>
+                            </div>
+                            <div class="form-group mt-3 mt-lg-4">
+                                <button type="submit" class="btn btn-outline-light w-100 rounded">Register</button>
+                            </div>
+                            <div class="form-group mt-3">
+                                <div class="container-fluid p-0">
+                                    <div>
+                                        <button type="button" class="btn btn-outline-info btn-sm w-100 rounded"
+                                            onclick="showLoginForm()">Or Sign In</button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

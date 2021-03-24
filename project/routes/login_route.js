@@ -29,7 +29,7 @@ router.post('/register', async (req, res, next) => {
         }
 
         /* Check if password is strong enough */
-        var passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&-])[A-Za-z\d@$!%*#?&-]{8,}$/
+        var passwordRegex = /^(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[*.!@$%^&#(){}[\]:;<>,.?\/~_+-=|])\S{8,}$/;
         if (!passwordRegex.test(req.body.password)) {
             err = new Error("password: Path `password` is too weak.");
             err.status = 400;
@@ -79,6 +79,18 @@ router.post('/login', async (req, res, next) => {
         }
 
         res.cookie('token', token, {maxAge: 7 * 24 * 60 * 60 * 1000, httpOnly: true}).status(200).redirect('/home');
+    } catch (error) {
+        err = new Error(error.message);
+        err.status = 400;
+        return next(err);
+    }
+})
+
+router.get('/logout', async (req, res, next) => {
+    var err = null;
+
+    try {
+        res.cookie('token', '', {maxAge: 0, httpOnly: true}).status(200).redirect('/');
     } catch (error) {
         err = new Error(error.message);
         err.status = 400;

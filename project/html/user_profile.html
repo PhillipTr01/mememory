@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="h-100">
 
 <head>
     <title>MemeMory</title>
@@ -25,7 +25,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
 </head>
 
-<body class="d-flex flex-column">
+<body class="d-flex flex-column h-100">
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark">
             <div class="container-fluid px-3">
@@ -44,15 +44,13 @@
                         <a class="text-light h1 text-decoration-none">
                             <button type="submit"
                                 class="form-control btn btn-outline-light btn-lg fw-bold rounded max-width-500"
-                                onclick="startLobbyPage()"> Play</button>
+                                onclick="startLobbyPage()">Play</button>
                         </a>
                     </div>
                     <div class="col-8 col-sm-4 fw-light text-center align-self-center ">
                         <div class="d-flex text-light pl-xl-5">
                             <div class="ms-auto dropdown">
-                                <p id="username" class="m-0 pb-1 dropdown-toggle fs-4" data-bs-toggle="dropdown">
-                                    Username
-                                </p>
+                                <p id="username" class="m-0 pb-1 dropdown-toggle fs-4" data-bs-toggle="dropdown"></p>
                                 <ul class="dropdown-menu dropdown-menu-end bg-dark">
                                     <li>
                                         <div class="dropdown-item d-flex text-light" onclick="startScoreboardPage()">
@@ -113,9 +111,7 @@
         <div>
             <div class="container-sm my-auto border border-light rounded-3 p-0 max-width-500">
                 <div class="text-center text-light fs-3 border-bottom border-light">
-                    <p id="usernameHomePage" class="py-3 m-0">
-                        Username
-                    </p>
+                    <p id="usernameHomePage" class="py-3 m-0"></p>
                 </div>
                 <div>
                     <table class="table text-light table-borderless">

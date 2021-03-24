@@ -1,7 +1,3 @@
-html, body{
-    height: 100%;
-}
-
 body{
     background-color:#141414;
     font-family: 'Poppins', sans-serif;
@@ -20,12 +16,20 @@ main {
     display: block;
 }
 
+.h-200{
+    height: 200%;
+}
+
 .max-height-set-500{
     max-height: 500px;
 }
 
 .max-width-500{
     max-width: 500px;
+}
+
+.max-width-600{
+    max-width: 600px;
 }
 
 .displ-content{
@@ -50,4 +54,8 @@ main {
 
 .dropdown-item:hover>.dropdown-menu {
     display: block;
+}
+
+#pageTwo{
+    background-color: darkslategray;
 }

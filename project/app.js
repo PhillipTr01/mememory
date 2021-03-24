@@ -39,7 +39,7 @@ app.get('/', Auth, (req, res, next) => {
    res.sendFile(__dirname + '/html/index.html');
 });
 
-app.get('/beta', Auth, (req, res, next) => {
+app.get('/beta', (req, res, next) => {
    res.sendFile(__dirname + '/html/beta_test.html');
 });
 

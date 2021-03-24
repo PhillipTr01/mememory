@@ -5,6 +5,11 @@ document.addEventListener('DOMContentLoaded', function () {
     setScoreboardData();
 }, false);
 
+//Keep dropdown open if clicked on other groups
+document.getElementById("keep-open-dropdown").addEventListener("click", function (e) {
+    e.stopPropagation();
+}, false);
+
 function startLobbyPage() {
     window.location.href = "/beta";
     return;
@@ -22,8 +27,19 @@ function startSettingsPage() {
 }
 
 function logoutUser() {
+    var request = new XMLHttpRequest();
+
+    request.onreadystatechange = function () {
+        if (this.readyState == 4) {
+            if (this.status == 200) {
+                window.location.href = "/";
+            }
+        }
+    }
+
+    request.open('GET', '/requests/authentication/logout');
+    request.send();
     return;
-    //TODO logout function
 }
 
 function setUsername() {
@@ -68,6 +84,7 @@ function setScoreboardData() {
 
 function createScoreboard(tableID, array) {
     var tableBody = document.getElementById(tableID);
+    tableBody.innerHTML = "";
     for (var i = 0; i < array.length; i++) {
         tableBody.innerHTML += `<tr>
                                     <td>` + (i + 1) + `.</td>
