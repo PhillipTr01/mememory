@@ -1,5 +1,6 @@
 //after creation 
 document.addEventListener('DOMContentLoaded', function () {
+
     //setting correct username
     setUsername();
 }, false);
@@ -28,14 +29,6 @@ function startProfilePage() {
 function startSettingsPage() {
     return;
     //TODO add Settings Page
-}
-
-function createLobby() {
-    document.getElementById('createLobbyButton').innerText = "Cancel Lobby";
-    displayNewLobby("Flaver", 3, 44, "beispiel Lobby Id String");
-
-    return;
-    //TODO add lobby creation
 }
 
 function startComputerMatch() {
@@ -80,10 +73,24 @@ function setUsername() {
     request.send();
 }
 
-function displayNewLobby(username, win, lose, id) {
+const lobbySocket = io('/lobby');
+var createLobbyButton = document.getElementById('createLobbyButton');
+var cancelLobbyButton = document.getElementById('cancelLobbyButton');
+
+lobbySocket.on('message', message => {
+    console.log(message);
+});
+
+lobbySocket.on('showLobby', lobbyData => {
     var tableBody = document.getElementById("lobbyTable");
+
+    var username = lobbyData.username;
+    var win = lobbyData.multiplayerWin;
+    var lose = lobbyData.multiplayerLose;
+    var id = lobbyData.id;
+
     tableBody.innerHTML +=
-        `<tr class="border-dark border-bottom">
+        `<tr class="border-dark border-bottom" id='lobby-${username}'>
         <td class="text-start">${username}</td>
         <td>${win}</td>
         <td>${lose}</td>
@@ -94,4 +101,50 @@ function displayNewLobby(username, win, lose, id) {
         </td>
     </tr>`;
 
+    document.getElementById('cancelLobbyButton').onclick = function() {cancelLobby(lobbyData.id)};
+});
+
+lobbySocket.on('removeLobby', username => {
+    var lobby = document.getElementById("lobby-" + username);
+    lobby.remove();
+});
+
+function cancelLobby(id) {
+    lobbySocket.emit('deleteLobby', id);
+
+    cancelLobbyButton.classList.add("d-none");
+    createLobbyButton.classList.remove("d-none");
 }
+
+function createLobby() {
+
+    var username = document.getElementById('username').innerText;
+    var multiplayerWin = -1;
+    var multiplayerLose = -1;
+
+    
+    var statisticRequest = new XMLHttpRequest();
+    statisticRequest.onreadystatechange = function () {
+        if (this.readyState == 4) {
+            if (this.status == 200) {
+                multiplayerWin = JSON.parse(this.responseText).multiplayerWin;
+                multiplayerLose = JSON.parse(this.responseText).multiplayerLose;
+
+                var lobbyData = {
+                    username: username,
+                    multiplayerWin: multiplayerWin,
+                    multiplayerLose: multiplayerLose,
+                    id: null
+                }
+
+                lobbySocket.emit('createLobby', lobbyData);
+            }
+        }
+    }
+    statisticRequest.open('GET', '/requests/user/statistic', true);
+    statisticRequest.send();
+
+    createLobbyButton.classList.add("d-none");
+    cancelLobbyButton.classList.remove("d-none");
+};
+

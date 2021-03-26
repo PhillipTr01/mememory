@@ -41,9 +41,14 @@
                         </a>
                     </div>
                     <div class="col-3 text-center d-none d-sm-block align-self-center">
-                        <button id="createLobbyButton" type="submit" class="form-control btn btn-outline-light btn-lg fw-bold max-width-300"
+                        <button id="createLobbyButton" type="submit"
+                            class="form-control btn btn-outline-light btn-lg fw-bold max-width-300"
                             onclick="createLobby()">
                             Create Lobby
+                        </button>
+                        <button id="cancelLobbyButton" type="submit"
+                            class="form-control btn btn-outline-light btn-lg fw-bold max-width-300 d-none">
+                            Cancel Lobby
                         </button>
                     </div>
                     <div class="col-3 text-center d-none d-sm-block align-self-center">
@@ -121,10 +126,14 @@
     <main class="pt-5">
         <div class="container text-center max-width-900">
             <div class="d-block d-sm-none container max-width-500 px-0 pt-5 pb-2">
-                <button type="submit" class="form-control btn btn-outline-light btn-lg fw-bold max-width-300"
-                    onclick="createLobby()">
-                    Create Lobby
-                </button>
+                <button id="createLobbyButton" type="submit"
+                class="form-control btn btn-outline-light btn-lg fw-bold max-width-300">
+                Create Lobby
+            </button>
+            <button id="cancelLobbyButton" type="submit"
+                class="form-control btn btn-outline-light btn-lg fw-bold max-width-300 d-none">
+                Cancel Lobby
+            </button>
             </div>
             <div class="d-block d-sm-none container max-width-500 px-0 pb-5">
                 <button type="submit" class="form-control btn btn-outline-light btn-lg fw-bold max-width-300"
@@ -172,6 +181,7 @@
         integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous">
     </script>
     <!--- Custom JS --->
+    <script src="/socket.io/socket.io.js"></script>
     <script src="/static/scripts/lobby.js"></script>
 </body>
 

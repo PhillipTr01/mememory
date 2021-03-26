@@ -9,10 +9,6 @@ const cookieParser = require('cookie-parser');
 const http = require('http');
 const socketio = require('socket.io');
 
-/* File-Imports */
-const memeScraper = require("./meme_scraper");
-const Auth = require("./middleware/auth");
-
 const app = express();
 const server = http.createServer(app);
 const io = socketio(server);
@@ -23,6 +19,11 @@ app.use(express.urlencoded({
    //.use(morgan('dev'))
    .use(cookieParser())
    .use('/static', express.static(path.join(__dirname, 'public')));
+
+/* File-Imports */
+const memeScraper = require("./meme_scraper");
+const Auth = require("./middleware/auth");
+require('./sockets/lobby_socket')(io);
 
 /* Routes */
 const loginRoute = require('./routes/login_route');
@@ -85,9 +86,7 @@ app.use((err, req, res, next) => {
 mongoose.connect(process.env.DB_URL, {
       useNewUrlParser: true,
       useUnifiedTopology: true
-   },
-   () => console.log('Connected to Database!')
-);
+});
 
 /* Get new Memes every hour */
 cron.schedule('0 1 * * *', () => {
