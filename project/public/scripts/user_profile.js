@@ -10,10 +10,8 @@ document.getElementById("keep-open-dropdown").addEventListener("click", function
 }, false);
 
 function startLobbyPage() {
-    window.location.href = "/beta";
-    //window.location.href = "/lobby";
+    window.location.href = "/lobby";
     return;
-    //TODO add Lobby Page
 }
 
 function startScoreboardPage() {
@@ -50,7 +48,6 @@ function setUsername() {
             if (this.status == 200) {
                 var username = JSON.parse(this.responseText).username;
                 document.getElementById('username').innerText = username;
-                document.getElementById('usernameHomePage').innerText = username;
             }
         }
     }

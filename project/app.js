@@ -1,25 +1,26 @@
 /* Module-Imports */
+require('dotenv').config()
 const express = require('express');
 const cron = require("node-cron");
 const path = require('path');
 const mongoose = require('mongoose');
-const morgan = require('morgan');
+//const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
+const http = require('http');
+const socketio = require('socket.io');
 
 /* File-Imports */
 const memeScraper = require("./meme_scraper");
 const Auth = require("./middleware/auth");
 
-/* Importatn Variables */
-const port = 5000;
-const database = "mongodb://localhost:27017/MemeMory?readPreference=primary&ssl=false";
-
 const app = express();
+const server = http.createServer(app);
+const io = socketio(server);
 app.use(express.urlencoded({
       extended: true
    }))
    .use(express.json())
-   .use(morgan('dev'))
+   //.use(morgan('dev'))
    .use(cookieParser())
    .use('/static', express.static(path.join(__dirname, 'public')));
 
@@ -51,6 +52,12 @@ app.get('/user', Auth, (req, res, next) => {
    res.sendFile(__dirname + '/html/user_profile.html');
 });
 
+app.get('/lobby', (req, res, next) => {
+   res.sendFile(__dirname + '/html/lobby.html');
+});
+
+
+
 /* Error handling */
 app.use((req, res, next) => {
    const err = new Error("Error! Ressource not found!");
@@ -74,9 +81,8 @@ app.use((err, req, res, next) => {
    })
 })
 
-
 /* Connect to Database */
-mongoose.connect(database, {
+mongoose.connect(process.env.DB_URL, {
       useNewUrlParser: true,
       useUnifiedTopology: true
    },
@@ -89,4 +95,4 @@ cron.schedule('0 1 * * *', () => {
 });
 
 /* Start Backend */
-app.listen(port);
+server.listen(process.env.PORT);

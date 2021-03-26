@@ -29,7 +29,7 @@ router.post('/register', async (req, res, next) => {
         }
 
         /* Check if password is strong enough */
-        var passwordRegex = /^(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[*.!@$%^&#(){}[\]:;<>,.?\/~_+-=|])\S{8,}$/;
+        var passwordRegex = /^(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[\*\.\!\@\$\%\^\&\#\(\)\{\}\[\]\:\;\<\>\,\.\?\/\~\_\+\-\=\|\\])\S{8,}$/;
         if (!passwordRegex.test(req.body.password)) {
             err = new Error("password: Path `password` is too weak.");
             err.status = 400;
@@ -69,8 +69,8 @@ router.post('/login', async (req, res, next) => {
         if (user != null && await bcrypt.compare(req.body.password, user.password)) {
             token = jwt.sign({
                 _id: user._id,
-            }, "FMdYFjdjNCDCDDFXAtgP", {
-                expiresIn: "7d"
+            }, process.env.SECRET_KEY, {
+                expiresIn: process.env.EXPIRY_DATE
             });
         } else {
             err = new Error("Authentication: Path `authentication` failed.");

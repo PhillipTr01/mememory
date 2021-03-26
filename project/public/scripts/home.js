@@ -11,9 +11,8 @@ document.getElementById("keep-open-dropdown").addEventListener("click", function
 }, false);
 
 function startLobbyPage() {
-    window.location.href = "/beta";
+    window.location.href = "/lobby";
     return;
-    //TODO add Lobby Page
 }
 
 function startProfilePage() {
@@ -87,12 +86,12 @@ function createScoreboard(tableID, array) {
     tableBody.innerHTML = "";
     for (var i = 0; i < array.length; i++) {
         tableBody.innerHTML += `<tr>
-                                    <td>` + (i + 1) + `.</td>
-                                    <td>` + array[i].username + `</td>
-                                    <td>` + array[i].win + `</td>
-                                    <td>` + array[i].lose + `</td>
-                                    <td class="d-none d-md-block">` + divide(array[i].win, array[i].lose) + `</td>
-                                </tr>`
+                                    <td>${(i + 1)}.</td>
+                                    <td>${array[i].username}</td>
+                                    <td>${array[i].win}</td>
+                                    <td>${array[i].lose}</td>
+                                    <td class="d-none d-md-block">${divide(array[i].win, array[i].lose)}</td>
+                                </tr>`;
     }
 }
 
