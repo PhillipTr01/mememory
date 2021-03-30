@@ -72,6 +72,11 @@ main {
     cursor: pointer;
 }
 
+.avatar-size-lobby{
+    max-width: 200px;
+    max-height: 200px;
+}
+
 #pageTwo {
     background-color: darkslategray;
 }

@@ -23,7 +23,9 @@ app.use(express.urlencoded({
 /* File-Imports */
 const memeScraper = require("./meme_scraper");
 const Auth = require("./middleware/auth");
-require('./sockets/lobby_socket')(io);
+require('./sockets/lobby_server')(io);
+require('./sockets/singleplayer_server')(io);
+require('./sockets/multiplayer_server')(io);
 
 /* Routes */
 const loginRoute = require('./routes/login_route');
@@ -53,11 +55,13 @@ app.get('/user', Auth, (req, res, next) => {
    res.sendFile(__dirname + '/html/user_profile.html');
 });
 
-app.get('/lobby', (req, res, next) => {
+app.get('/lobby', Auth, (req, res, next) => {
    res.sendFile(__dirname + '/html/lobby.html');
 });
 
-
+app.get('/play', Auth, (req, res, next) => {
+   res.sendFile(__dirname + '/html/play.html');
+})
 
 /* Error handling */
 app.use((req, res, next) => {
