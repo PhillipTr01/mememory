@@ -34,6 +34,11 @@ function joinLobby() {
     //TODO add join lobby
 }
 
+function play(level) {
+    window.location.href = "/play#" + level;
+    return;
+}
+
 function logoutUser() {
     var request = new XMLHttpRequest();
 

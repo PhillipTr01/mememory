@@ -16,6 +16,10 @@ main {
     display: block;
 }
 
+p{
+    margin-bottom: 0;
+}
+
 .h-200 {
     height: 200%;
 }
