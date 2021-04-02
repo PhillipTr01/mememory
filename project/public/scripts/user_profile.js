@@ -65,8 +65,8 @@ function setStatisticData() {
                 var response = JSON.parse(this.responseText);
                 document.getElementById('easyWin').innerText = response.easyWin;
                 document.getElementById('easyLose').innerText = response.easyLose;
-                document.getElementById('middleWin').innerText = response.middleWin;
-                document.getElementById('middleLose').innerText = response.middleLose;
+                document.getElementById('mediumWin').innerText = response.mediumWin;
+                document.getElementById('mediumLose').innerText = response.mediumLose;
                 document.getElementById('hardWin').innerText = response.hardWin;
                 document.getElementById('hardLose').innerText = response.hardLose;
                 document.getElementById('expertWin').innerText = response.expertWin;

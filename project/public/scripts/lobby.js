@@ -41,7 +41,6 @@ function play(level) {
 
 function logoutUser() {
     var request = new XMLHttpRequest();
-
     request.onreadystatechange = function () {
         if (this.readyState == 4) {
             if (this.status == 200) {
@@ -49,7 +48,6 @@ function logoutUser() {
             }
         }
     }
-
     request.open('GET', '/requests/authentication/logout');
     request.send();
     return;
@@ -57,16 +55,13 @@ function logoutUser() {
 
 function setUsername() {
     var request = new XMLHttpRequest();
-
     request.onreadystatechange = function () {
         if (this.readyState == 4) {
             if (this.status == 200) {
                 document.getElementById('username').innerText = JSON.parse(this.responseText).username;
-                window.username = JSON.parse(this.responseText).username;
             }
         }
     }
-
     request.open('GET', '/requests/user/username');
     request.send();
 }

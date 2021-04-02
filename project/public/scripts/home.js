@@ -64,12 +64,12 @@ function setScoreboardData() {
             if (this.status == 200) {
                 var response = JSON.parse(this.responseText);
                 var easyArr = response.easy;
-                var middleArr = response.middle;
+                var mediumArr = response.medium;
                 var hardArr = response.hard;
                 var expertArr = response.expert;
                 var multiplayerArr = response.multiplayer;
                 createScoreboard("easyTable", easyArr);
-                createScoreboard("middleTable", middleArr);
+                createScoreboard("mediumTable", mediumArr);
                 createScoreboard("hardTable", hardArr);
                 createScoreboard("expertTable", expertArr);
                 createScoreboard("multiplayerTable", multiplayerArr);

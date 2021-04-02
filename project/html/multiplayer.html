@@ -29,8 +29,8 @@
 <body class="d-flex flex-column h-100">
 
     <div id="cardModal" class="modal" onclick="closeCardModal()">
-        <span class="close mx-auto">&times;</span>
-        <img class="modal-content" id="imgModal">
+        <span class="close">&times;</span>
+        <img class="modal-content mx-auto" id="imgModal">
     </div>
 
     <header>
@@ -456,8 +456,10 @@
         integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous">
     </script>
     <!--- Custom JS --->
+    <script src="/socket.io/socket.io.js"></script>
     <script src="/static/scripts/play.js"></script>
     <script src="/static/scripts/play_server.js"></script>
+    <script src="/static/scripts/multiplayer_socket.js"></script>
 </body>
 
 </html>

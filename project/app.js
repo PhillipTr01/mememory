@@ -1,4 +1,4 @@
-/* Module-Imports */
+/* Libraries */
 require('dotenv').config()
 const express = require('express');
 const cron = require("node-cron");
@@ -12,22 +12,21 @@ const socketio = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 const io = socketio(server);
-app.use(express.urlencoded({
-      extended: true
-   }))
+
+app.use(express.urlencoded({extended: true}))
    .use(express.json())
    //.use(morgan('dev'))
    .use(cookieParser())
    .use('/static', express.static(path.join(__dirname, 'public')));
 
-/* File-Imports */
+/* Modules */
 const memeScraper = require("./meme_scraper");
 const Auth = require("./middleware/auth");
 require('./sockets/lobby_server')(io);
 require('./sockets/singleplayer_server')(io);
 require('./sockets/multiplayer_server')(io);
 
-/* Routes */
+/* Page routes */
 const loginRoute = require('./routes/login_route');
 const memeRoute = require('./routes/meme_route');
 const userRoute = require('./routes/user_route');
@@ -38,7 +37,7 @@ app.use('/requests/authentication', loginRoute)
    .use('/requests/user', userRoute)
    .use('/requests/scoreboard', scoreboardRoute);
 
-/* Base Routes */
+/* Base routes */
 app.get('/', Auth, (req, res, next) => {
    res.sendFile(__dirname + '/html/index.html');
 });
@@ -60,7 +59,11 @@ app.get('/lobby', Auth, (req, res, next) => {
 });
 
 app.get('/play', Auth, (req, res, next) => {
-   res.sendFile(__dirname + '/html/play.html');
+   res.sendFile(__dirname + '/html/multiplayer.html');
+})
+
+app.get('/singleplayer', Auth, (req, res, next) => {
+   res.sendFile(__dirname + '/html/singleplayer.html');
 })
 
 /* Error handling */
@@ -72,19 +75,12 @@ app.use((req, res, next) => {
 
 app.use((err, req, res, next) => {
    res.status(err.status || 500);
-
    if (err.status == 404) {
       res.send();
       return;
    }
-
-   res.send({
-      error: {
-         status: err.status || 500,
-         message: err.message
-      }
-   })
-})
+   res.send({error: {status: err.status || 500, message: err.message}})
+});
 
 /* Connect to Database */
 mongoose.connect(process.env.DB_URL, {
@@ -92,8 +88,8 @@ mongoose.connect(process.env.DB_URL, {
       useUnifiedTopology: true
 });
 
-/* Get new Memes every hour */
-cron.schedule('0 1 * * *', () => {
+/* Get new Memes every 10 minutes */
+cron.schedule('10 * * * *', () => {
    memeScraper.scrape();
 });
 

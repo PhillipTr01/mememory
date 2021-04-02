@@ -1,10 +1,21 @@
-const lobbySocket = io('/lobby');
+const socket = io('/lobby');
 
-function createLobby() {
-    lobbySocket.emit('createGame', window.username);
+function playSingleplayer(difficulty) {
+    var request = new XMLHttpRequest();
+    request.onreadystatechange = function () {
+        if (this.readyState == 4) {
+            if (this.status == 200) {
+                var username = JSON.parse(this.responseText).username;
+                socket.emit('playSingleplayer', {username: username, difficulty: difficulty});
+            }
+        }
+    }
+    request.open('GET', '/requests/user/username');
+    request.send();
 }
 
-lobbySocket.on('saveGameID', data => {
+socket.on('saveGameID', data => {
     sessionStorage.setItem('gameID', data.gameID);
-    window.location.href = '/play';
+    sessionStorage.setItem('type', data.type);
+    window.location.href = data.url;
 });

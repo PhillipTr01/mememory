@@ -2,9 +2,7 @@ var request = require('request');
 const Meme = require('./models/Meme');
 
 module.exports.scrape = function () {
-
     Meme.collection.drop();
-
     scrapeImages("https://www.reddit.com/r/dankmemes/.json?limit=100");
     scrapeImages("https://www.reddit.com/r/memes/.json?limit=100");
 };
