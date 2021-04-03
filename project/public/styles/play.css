@@ -68,6 +68,15 @@
     margin-right: 2rem;
 }
 
+.zoom-card-on-turn{
+    -webkit-transform: scale(1.2);
+    -moz-transform: scale(1.2);
+    -o-transform: scale(1.2);
+    transform: scale(1.2);
+
+    z-index: 500;
+}
+
 .right-message {
     margin-left: 2rem;
 }

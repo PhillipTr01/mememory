@@ -1,27 +1,29 @@
 var randomstring = require('randomstring');
-const memeScraper = require("../meme_scraper");
 
 global.rooms = {};
 
-module.exports = function(io) {
+module.exports = function (io) {
     const lobby = io.of('/lobby');
 
     lobby.on('connection', socket => {
-        
-        socket.on('playSingleplayer', async data => {
-            if(data.difficulty >= 0 && data.difficulty <= 3) {
-                switch(data.difficulty) {
+        socket.on('playSingleplayer', data => {
+
+            // Check if difficulty is in range
+            if (data.difficulty >= 0 && data.difficulty <= 3) {
+
+                // Assign Name & how much the computer can remember
+                switch (data.difficulty) {
                     case 0:
                         var computername = "Easy Bot";
-                        var moveMemory = 2;
+                        var moveMemory = 3;
                         break;
                     case 1:
                         var computername = "Medium Bot";
-                        var moveMemory = 4;
+                        var moveMemory = 7;
                         break;
                     case 2:
                         var computername = "Hard Bot";
-                        var moveMemory = 8;
+                        var moveMemory = 12;
                         break;
                     case 3:
                         var computername = "Expert Bot";
@@ -29,24 +31,45 @@ module.exports = function(io) {
                         break;
                 }
 
+                // Randomstring of 10 Chars
                 var gameID = randomstring.generate(10);
+
+                // Save Game to rooms
                 global.rooms[gameID] = {
-                    type: "singlePlayer",
                     difficulty: data.difficulty,
-                    user: {name: data.username, points: 0, opened: 0},
-                    computer: {name: computername, moveMemory: moveMemory, points: 0},
-                    status: 0,
-                    turn: 0, // TODO: Multiplayer -> Entweder Turn 0 oder 1
-                    openedCards: [],
-                    cardPairs: [],
-                    cardImages: [],
-                    foundMatches: [],
-                    previousMoves: [],
-                    moveQueue: []
+                    username: data.username,
+                    computername: computername,
+                    moveMemory: moveMemory
                 }
 
-                socket.emit('saveGameID', {gameID: gameID, type: "singlePlayer", url: '/singleplayer'});
+                socket.emit('saveGameID', {gameID: gameID, url: '/singleplayer'});
             }
-        })
+        });
+
+        socket.on('playMultiplayer', username => {
+
+            // Randomstring of 10 Chars
+            var gameID = randomstring.generate(10);
+
+            // Save Game to rooms
+            global.rooms[gameID] = {
+                player1: {name: username, points: 0},
+                player2: {name: '', points: 0},
+                status: 0,
+                finished: 0,
+                turn: Math.floor(Math.random() * 2),
+                openedCards: [],
+                cardPairs: [],
+                cardImages: [],
+                foundMatches: [],
+                interval: null
+            }
+
+            socket.emit('saveGameID', {gameID: gameID, url: '/play'});
+        });
+        
+        socket.on('joinMultiplayer', gameID => {
+            socket.emit('saveGameID', {gameID: gameID, url: '/play'});
+        });
     });
 }

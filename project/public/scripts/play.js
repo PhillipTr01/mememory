@@ -1,5 +1,3 @@
-var username1;
-
 // after creation 
 document.addEventListener('DOMContentLoaded', function () {
     // setting correct username
@@ -25,9 +23,9 @@ function setUsername() {
     request.onreadystatechange = function () {
         if (this.readyState == 4) {
             if (this.status == 200) {
-                username1 = JSON.parse(this.responseText).username;
-                document.getElementById('username').innerText = username1;
-                document.getElementById('user1Username').innerText = username1;
+                var username = JSON.parse(this.responseText).username;
+                document.getElementById('gameID').innerText = 'GameID: ' + sessionStorage.getItem('gameID');
+                document.getElementById('user1Username').innerText = username;
             }
         }
     }
@@ -37,8 +35,4 @@ function setUsername() {
 
 function closeCardModal() {
     modal.style.display = "none";
-}
-
-if (sessionStorage.getItem('gameID') == null) {
-    window.location.href = "/lobby";
 }

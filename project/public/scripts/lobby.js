@@ -24,21 +24,6 @@ function startSettingsPage() {
     //TODO add Settings Page
 }
 
-function startComputerMatch() {
-    return;
-    //TODO add computer match
-}
-
-function joinLobby() {
-    return;
-    //TODO add join lobby
-}
-
-function play(level) {
-    window.location.href = "/play#" + level;
-    return;
-}
-
 function logoutUser() {
     var request = new XMLHttpRequest();
     request.onreadystatechange = function () {
