@@ -2,7 +2,7 @@ const socket = io('/singleplayer');
 
 var modal;
 var game;
-var backImage = "/static/images/avatar_expert_200.png";
+var backImage = "/static/images/logo_small.png";
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -76,6 +76,7 @@ socket.on('turnCard', data => {
 
     // Highlighting a card - It gets bigger and gets a border
     document.getElementById("card-" + data.id).classList.add("border");
+    document.getElementById("card-" + data.id).classList.add("border-info");
     document.getElementById("card-" + data.id).classList.add("border-3");
     document.getElementById("card-" + data.id).classList.add("zoom-card-on-turn");
 });
@@ -104,6 +105,7 @@ socket.on('understateCard', id => {
 function understateCard(id) {
     document.getElementById("card-" + id).classList.remove("zoom-card-on-turn");
     document.getElementById("card-" + id).classList.remove("border");
+    document.getElementById("card-" + id).classList.remove("border-info");
     document.getElementById("card-" + id).classList.remove("border-3");
 }
 
@@ -143,24 +145,27 @@ socket.on('getWinner', data => {
     var playButton = document.getElementById('playButton');
     var user1 = document.getElementById("user1Username");
     var user2 = document.getElementById("user2Username");
+    var score1 = document.getElementById("user1Score");
+    var score2 = document.getElementById("user2Score");
 
     // Visual change for winner
     if (data.winner == 0) {
         user1.innerHTML = data.user + " ";
         user2.innerHTML = data.computer;
-        user1.classList.add("text-success");
         user1.innerHTML += `<i class="bi bi-trophy text-warning"></i>`;
-        user2.classList.add("text-danger");
+        user2.classList.add("text-secondary");
+        user2.classList.remove("fw-bold");
+        user1.classList.add("fw-bold");
+        score2.classList.add("text-secondary");
     } else {
         user1.innerHTML = data.user;
         user2.innerHTML = data.computer + " ";
-        user2.classList.add("text-success");
         user2.innerHTML += `<i class="bi bi-trophy text-warning"></i>`;
-        user1.classList.add("text-danger");
+        user1.classList.add("text-secondary");
+        user1.classList.remove("fw-bold");
+        user2.classList.add("fw-bold");
+        score1.classList.add("text-secondary");
     }
-
-    user1.classList.remove("fw-bold");
-    user2.classList.remove("fw-bold");
 
     // Remove all highlights
     for(var i = 0; i < 66; i++) {
@@ -173,6 +178,7 @@ socket.on('getWinner', data => {
     };
     playButton.disabled = false;
     playButton.innerHTML = 'Back to Lobby';
+    document.getElementById('surrenderButton').disabled = true;
 
     // Reset storage
     sessionStorage.clear();

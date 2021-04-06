@@ -85,12 +85,12 @@ function createScoreboard(tableID, array) {
     var tableBody = document.getElementById(tableID);
     tableBody.innerHTML = "";
     for (var i = 0; i < array.length; i++) {
-        tableBody.innerHTML += `<tr>
-                                    <td>${(i + 1)}.</td>
-                                    <td>${array[i].username}</td>
-                                    <td>${array[i].win}</td>
-                                    <td>${array[i].lose}</td>
-                                    <td class="d-none d-md-block">${divide(array[i].win, array[i].lose)}</td>
+        tableBody.innerHTML += `<tr class="tr-bottom-border">
+                                    <td class="ps-5">${(i + 1)}.</td>
+                                    <td class="text-start">${array[i].username}</td>
+                                    <td class="text-end">${array[i].win}</td>
+                                    <td class="text-end">${array[i].lose}</td>
+                                    <td class="text-end pe-5 d-none d-md-block">${divide(array[i].win, array[i].lose)}</td>
                                 </tr>`;
     }
 }

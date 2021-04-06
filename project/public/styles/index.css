@@ -16,7 +16,7 @@ main {
     display: block;
 }
 
-p{
+p {
     margin-bottom: 0;
 }
 
@@ -48,24 +48,23 @@ p{
     max-width: 900px;
 }
 
+.th-width {
+    width: 20%;
+}
+
 .displ-content {
     display: contents;
+}
+
+.logo {
+    max-height: 80px;
+    opacity: 0.9;
 }
 
 .dropdown-menu>li>a:hover,
 .dropdown-menu>li>div:hover {
     background-image: none !important;
     background-color: black;
-}
-
-.nav-tabs>.nav-link.active {
-    background-color: #141414;
-    border-bottom: none;
-    border-top: none;
-}
-
-.nav-tabs>button {
-    border-radius: 0 !important;
 }
 
 .dropdown-item:hover>.dropdown-menu {
@@ -76,7 +75,27 @@ p{
     cursor: pointer;
 }
 
-.avatar-size-lobby{
+.footer-flex{
+    flex: 1 1 0px
+}
+
+.zoom-on-hover img {
+    -webkit-transition: all 0.3s linear;
+    -moz-transition: all 0.3s linear;
+    -ms-transition: all 0.3s linear;
+    -o-transition: all 0.3s linear;
+    transition: all 0.3s linear;
+}
+
+.zoom-on-hover:hover img {
+    -webkit-transform: scale(1.2);
+    -moz-transform: scale(1.2);
+    -ms-transform: scale(1.2);
+    -o-transform: scale(1.2);
+    transform: scale(1.2);
+}
+
+.avatar-size-lobby {
     max-width: 200px;
     max-height: 200px;
 }
@@ -85,6 +104,41 @@ p{
     background-color: darkslategray;
 }
 
+.lobby-button {
+    border-color: #3E9689;
+    color: #3E9689;
+}
+
+.lobby-button:hover {
+    background-color: #3E9689;
+    color: black;
+}
+
+.tr-user-profile {
+    border-bottom-color: #141414;
+    border-bottom-width: 3px;
+}
+
+
+.tr-user-profile-1 {
+    background-color: #4A2626;
+}
+
+.tr-user-profile-2 {
+    background-color: #502826;
+}
+
+.tr-user-profile-3 {
+    background-color: #552a26;
+}
+
+.tr-user-profile-4 {
+    background-color: #5b2c26;
+}
+
+.tr-user-profile-5 {
+    background-color: #612e26;
+}
 
 ::-webkit-scrollbar {
     width: 8px;

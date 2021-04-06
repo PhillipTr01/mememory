@@ -24,7 +24,11 @@ function setUsername() {
         if (this.readyState == 4) {
             if (this.status == 200) {
                 var username = JSON.parse(this.responseText).username;
-                document.getElementById('gameID').innerText = 'GameID: ' + sessionStorage.getItem('gameID');
+                var gameDiv = document.getElementById('gameID'); 
+                gameDiv.innerText = 'GameID: ' + sessionStorage.getItem('gameID');
+                gameDiv.addEventListener('click', () => {
+                    copyStringToClipboard(sessionStorage.getItem('gameID'));
+                });
                 document.getElementById('user1Username').innerText = username;
             }
         }
@@ -32,6 +36,17 @@ function setUsername() {
     request.open('GET', '/requests/user/username');
     request.send();
 }
+
+function copyStringToClipboard (str) {
+    var el = document.createElement('textarea');
+    el.value = str;
+    el.setAttribute('readonly', '');
+    el.style = {position: 'absolute', left: '-9999px'};
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+ }
 
 function closeCardModal() {
     modal.style.display = "none";

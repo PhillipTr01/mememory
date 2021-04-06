@@ -2,7 +2,7 @@ const socket = io('/multiplayer');
 
 var modal;
 var game;
-var backImage = "/static/images/avatar_expert_200.png";
+var backImage = "/static/images/logo_small.png";
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var board = document.getElementById("memoryTable");
     board.innerHTML = "";
     for (var index = 0; index < 66; index++) {
-        var div = ` <div id="card-${index}" class="col-1 card card-size" onclick="openCard(${index}); false;"> 
+        var div = `<div id="card-${index}" class="col-1 card card-size" onclick="openCard(${index}); false;"> 
                         <div class="card-back card-image"> 
                             <img src="" class="card-image">
                         </div>
@@ -43,10 +43,11 @@ if (sessionStorage.getItem('player') == 'player1') {
 }
 
 // Set usernames on the scoreboard
-socket.on('setUsernames', data => {
+socket.on('visualInitializing', data => {
     document.getElementById('user1Username').innerText = data.player1;
     document.getElementById('user2Username').innerText = data.player2;
     document.getElementById('user2Score').innerText = '0';
+    document.getElementById('surrenderButton').disabled = false;
 });
 
 // Show which player's turn it is
@@ -87,9 +88,11 @@ socket.on('turnCard', data => {
 
 // If the card is already open, you can zoom in to read the meme
 socket.on('zoomImage', id => {
-    var src = document.getElementById("card-" + id).childNodes[1].childNodes[1].src;
-    document.getElementById("imgModal").src = src;
-    modal.style.display = "block";
+    if(document.getElementById("card-" + id).classList.contains('flip')) {
+        var src = document.getElementById("card-" + id).childNodes[1].childNodes[1].src;
+        document.getElementById("imgModal").src = src;
+        modal.style.display = "block";
+    }
 });
 
 // Increase Points if a match was found
@@ -148,24 +151,27 @@ socket.on('getWinner', data => {
     var playButton = document.getElementById('playButton');
     var user1 = document.getElementById("user1Username");
     var user2 = document.getElementById("user2Username");
+    var score1 = document.getElementById("user1Score");
+    var score2 = document.getElementById("user2Score");
 
     // Visual change for winner
     if (data.winner == 0) {
         user1.innerHTML = data.player1 + " ";
         user2.innerHTML = data.player2;
-        user1.classList.add("text-success");
         user1.innerHTML += `<i class="bi bi-trophy text-warning"></i>`;
-        user2.classList.add("text-danger");
+        user2.classList.add("text-secondary");
+        user2.classList.remove("fw-bold");
+        user1.classList.add("fw-bold");
+        score2.classList.add("text-secondary");
     } else {
         user1.innerHTML = data.player1;
         user2.innerHTML = data.player2 + " ";
-        user2.classList.add("text-success");
         user2.innerHTML += `<i class="bi bi-trophy text-warning"></i>`;
-        user1.classList.add("text-danger");
+        user1.classList.add("text-secondary");
+        user1.classList.remove("fw-bold");
+        user2.classList.add("fw-bold");
+        score1.classList.add("text-secondary");
     }
-
-    user1.classList.remove("fw-bold");
-    user2.classList.remove("fw-bold");
 
     // Remove all highlights
     for(var i = 0; i < 66; i++) {
@@ -178,6 +184,7 @@ socket.on('getWinner', data => {
     };
     playButton.disabled = false;
     playButton.innerHTML = 'Back to Lobby';
+    document.getElementById('surrenderButton').disabled = true;
 
     // Reset storage
     sessionStorage.clear();

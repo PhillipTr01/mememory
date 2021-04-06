@@ -227,8 +227,10 @@ function endTurn(socket) {
     var id2 = socket.openedCards[1];
 
     // Close both cards
-    socket.emit('closeCards', {1: id, 2: id2});
-
+    if (!socket.finished) {
+        socket.emit('closeCards', {1: id, 2: id2});
+    }
+    
     // If it's the player's turn disable the endTurn-Button so that the user can't end his turn twice
     if (socket.turn == 0) {
         socket.emit('disableEndTurn');

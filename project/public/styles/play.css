@@ -8,14 +8,16 @@
     transform: rotateY(-180deg);
 
     border: 0;
+    cursor: pointer;
 }
 
 .card-front {
     backface-visibility: hidden;
     transform: rotateY(180deg);
     position: absolute;
-    background-color: #363636;
-
+    background-color: #141414;
+    border: solid #616161 2px;
+    border-radius: 3px;
 }
 
 .card-back {
@@ -68,11 +70,11 @@
     margin-right: 2rem;
 }
 
-.zoom-card-on-turn{
-    -webkit-transform: scale(1.2);
-    -moz-transform: scale(1.2);
-    -o-transform: scale(1.2);
-    transform: scale(1.2);
+.zoom-card-on-turn {
+    -webkit-transform: scale(1.1);
+    -moz-transform: scale(1.1);
+    -o-transform: scale(1.1);
+    transform: scale(1.1);
 
     z-index: 500;
 }
@@ -107,12 +109,16 @@
     min-width: none;
 }
 
+#gameID {
+    cursor: copy;
+}
+
 #chat-content {
     overflow-y: scroll;
     height: 60vh;
 }
 
-#cardModal{
+#cardModal {
     padding: 10vw;
     text-align: center;
 }

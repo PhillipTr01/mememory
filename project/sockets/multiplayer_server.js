@@ -60,7 +60,7 @@ module.exports = function (io) {
                 socket.join(socket.gameID);
                 global.rooms[socket.gameID].player2.name = data.username;
     
-                multiPlayer.to(socket.gameID).emit('setUsernames', {player1: global.rooms[socket.gameID].player1.name, player2: global.rooms[socket.gameID].player2.name});
+                multiPlayer.to(socket.gameID).emit('visualInitializing', {player1: global.rooms[socket.gameID].player1.name, player2: global.rooms[socket.gameID].player2.name});
                 multiPlayer.to(socket.gameID).emit('highlightPlayer', {turn: global.rooms[socket.gameID].turn, player1: global.rooms[socket.gameID].player1.name, player2: global.rooms[socket.gameID].player2.name});
                 checkGame(multiPlayer, socket);
             } else {
@@ -69,7 +69,7 @@ module.exports = function (io) {
         });
 
         socket.on('openCard', id => {
-            if (global.rooms[socket.gameID] != null && !global.rooms[socket.gameID].openedCards.includes(id) && !global.rooms[socket.gameID].foundMatches.includes(id)) {
+            if (global.rooms[socket.gameID] != null && global.rooms[socket.gameID].player2.name != '' && !global.rooms[socket.gameID].openedCards.includes(id) && !global.rooms[socket.gameID].foundMatches.includes(id)) {
                 if (global.rooms[socket.gameID].openedCards.length < 2) {
                     if ((global.rooms[socket.gameID].player1.name == socket.username && global.rooms[socket.gameID].turn == 0) || 
                         (global.rooms[socket.gameID].player2.name == socket.username && global.rooms[socket.gameID].turn == 1)) {
@@ -97,7 +97,7 @@ module.exports = function (io) {
         });
 
         // disconnect
-        socket.on('disconnect', () => { 
+        socket.on('disconnect', () => {      
             surrendGame(multiPlayer, socket);
         });
     });
@@ -191,35 +191,37 @@ function surrendGame(io, socket) {
 }
 
 async function getWinner(io, socket) {
-    var player1 = await User.findOne({username: global.rooms[socket.gameID].player1.name});
-    var statistic1 = await Statistic.findOne({_id: player1.statistics});
-    var player2 = await User.findOne({username: global.rooms[socket.gameID].player2.name});
-    var statistic2 = await Statistic.findOne({_id: player2.statistics});
-    var winner;
-
-    for(var i = 0; i < 66; i++) {
-        io.to(socket.gameID).emit('turnCard', {id: i, src: global.rooms[socket.gameID].cardImages[i]});
-    }
-
-    // Change gameState to finish
-    socket.finished = 1;
-
-    // Change Statistic in Database
-    if (global.rooms[socket.gameID].player1.points > global.rooms[socket.gameID].player2.points) {
-        winner = 0;
-
-        await Statistic.updateOne({_id: player1.statistics}, {multiplayerWin: (statistic1.multiplayerWin + 1)}, {runValidators: true});
-        await Statistic.updateOne({_id: player2.statistics}, {multiplayerLose: (statistic2.multiplayerLose + 1)}, {runValidators: true});
-
-    } else {
-        winner = 1;
-
-        await Statistic.updateOne({_id: player1.statistics}, {multiplayerLose: (statistic1.multiplayerLose + 1)}, {runValidators: true});
-        await Statistic.updateOne({_id: player2.statistics}, {multiplayerWin: (statistic2.multiplayerWin + 1)}, {runValidators: true});
-    }
+    if (global.rooms[socket.gameID].player2.name != '') {
+        var player1 = await User.findOne({username: global.rooms[socket.gameID].player1.name});
+        var statistic1 = await Statistic.findOne({_id: player1.statistics});
+        var player2 = await User.findOne({username: global.rooms[socket.gameID].player2.name});
+        var statistic2 = await Statistic.findOne({_id: player2.statistics});
+        var winner;
     
-    io.to(socket.gameID).emit('getWinner', {winner: winner, player1: global.rooms[socket.gameID].player1.name, player2: global.rooms[socket.gameID].player2.name});
-
-    // Delete game
-    setTimeout(() => delete global.rooms[socket.gameID], 5000);
+        for(var i = 0; i < 66; i++) {
+            io.to(socket.gameID).emit('turnCard', {id: i, src: global.rooms[socket.gameID].cardImages[i]});
+        }
+    
+        // Change gameState to finish
+        socket.finished = 1;
+    
+        // Change Statistic in Database
+        if (global.rooms[socket.gameID].player1.points > global.rooms[socket.gameID].player2.points) {
+            winner = 0;
+    
+            await Statistic.updateOne({_id: player1.statistics}, {multiplayerWin: (statistic1.multiplayerWin + 1)}, {runValidators: true});
+            await Statistic.updateOne({_id: player2.statistics}, {multiplayerLose: (statistic2.multiplayerLose + 1)}, {runValidators: true});
+    
+        } else {
+            winner = 1;
+    
+            await Statistic.updateOne({_id: player1.statistics}, {multiplayerLose: (statistic1.multiplayerLose + 1)}, {runValidators: true});
+            await Statistic.updateOne({_id: player2.statistics}, {multiplayerWin: (statistic2.multiplayerWin + 1)}, {runValidators: true});
+        }
+        
+        io.to(socket.gameID).emit('getWinner', {winner: winner, player1: global.rooms[socket.gameID].player1.name, player2: global.rooms[socket.gameID].player2.name});
+    
+        // Delete game
+        delete global.rooms[socket.gameID];
+    }
 }

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="h-100">
+<html lang="en" class="h-100" data-lt-installed="true">
 
 <head>
     <title>MemeMory</title>
@@ -22,36 +22,35 @@
 
     <!--- Font --->
     <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&amp;display=swap"
+        rel="stylesheet">
 </head>
 
 <body class="d-flex flex-column h-100">
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark">
-            <div class="container-fluid px-3">
+            <div class="container-fluid px-0 px-sm-3">
                 <div class="row displ-content">
-                    <div class="col-4 align-self-start align-self-lg-center">
-                        <a class="navbar-brand active d-block d-xxl-none" href="/">
-                            <img src="https://i.picsum.photos/id/338/70/50.jpg?hmac=vekFJNJE9Q7zEpaT2s9UpSxBz8NNC4m9tIAe9wgo6dA"
-                                alt="logo" class="img-fluid">
-                        </a>
-                        <a class="navbar-brand active d-none d-xxl-block" href="/">
-                            <img src="https://i.picsum.photos/id/42/400/70.jpg?hmac=MCA_hv-pOtJlwxxpHkvN8gA1Rbu29xEl55n8jPJW0As"
-                                alt="logo" class="img-fluid">
-                        </a>
+                    <div class="col-6 col-lg-4">
+                        <div class="navbar-brand active">
+                            <a href="/">
+                                <img src="/static/images/logo.png" alt="logo" class="img-fluid logo">
+                            </a>
+                        </div>
                     </div>
-                    <div class="col-4 text-center d-none d-sm-block align-self-center">
+                    <div class="col-4 text-center d-none d-lg-block">
                         <a class="text-light h1 text-decoration-none">
                             <button type="submit"
-                                class="form-control btn btn-outline-light btn-lg fw-bold rounded max-width-300"
+                                class="form-control btn btn-lg fw-bold rounded max-width-300 lobby-button"
                                 onclick="startLobbyPage()">Play</button>
                         </a>
                     </div>
-                    <div class="col-8 col-sm-4 fw-light text-center align-self-center ">
+                    <div class="col-6 col-lg-4 fw-light">
                         <div class="d-flex text-light pl-xl-5">
                             <div class="ms-auto dropdown">
-                                <p id="username" class="m-0 pb-1 dropdown-toggle fs-4" data-bs-toggle="dropdown"></p>
-                                <ul class="dropdown-menu dropdown-menu-end bg-dark">
+                                <p id="username" class="m-0 pb-1 dropdown-toggle fs-4" data-bs-toggle="dropdown">
+                                </p>
+                                <ul class="dropdown-menu dropdown-menu-start dropdown-menu-md-end bg-dark">
                                     <li>
                                         <div class="dropdown-item d-flex text-light" onclick="startScoreboardPage()">
                                             <i class="bi bi-trophy pe-3"></i>
@@ -109,57 +108,54 @@
 
     <main class="my-auto p-3">
         <div>
-            <div class="container-sm my-auto border border-light rounded-3 p-0 max-width-600">
-                <div class="text-center text-light fs-3 border-bottom border-light">
-                    <p class="py-3 m-0 ">Your Stats</p>
-                </div>
+            <div class="container-sm my-auto max-width-500">
                 <div>
-                    <table class="table text-light table-borderless">
+                    <table class="table text-light table-borderless text-end">
                         <thead>
                             <tr>
                                 <td colspan="3" class="text-center fs-3 py-3">Singleplayer</td>
                             </tr>
                             <tr>
-                                <th scope="col"></th>
+                                <th scope="col" class="th-width"></th>
                                 <th scope="col">Win</th>
-                                <th scope="col">Lose</th>
+                                <th scope="col" class="pe-5">Lose</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <th scope="row">Easy</th>
+                            <tr class="tr-user-profile tr-user-profile-1">
+                                <th scope="row" class="text-start ps-5">Easy</th>
                                 <td id="easyWin"></td>
-                                <td id="easyLose"></td>
+                                <td id="easyLose" class="pe-5"></td>
                             </tr>
-                            <tr>
-                                <th scope="row">Medium</th>
+                            <tr class="tr-user-profile tr-user-profile-2">
+                                <th scope="row" class="text-start ps-5">Medium</th>
                                 <td id="mediumWin"></td>
-                                <td id="mediumLose"></td>
+                                <td id="mediumLose" class="pe-5"></td>
                             </tr>
-                            <tr>
-                                <th scope="row">Hard</th>
+                            <tr class="tr-user-profile tr-user-profile-3">
+                                <th scope="row" class="text-start ps-5">Hard</th>
                                 <td id="hardWin"></td>
-                                <td id="hardLose"></td>
+                                <td id="hardLose" class="pe-5"></td>
                             </tr>
-                            <tr>
-                                <th scope="row">Expert</th>
+                            <tr class="tr-user-profile tr-user-profile-4">
+                                <th scope="row" class="text-start ps-5">Expert</th>
                                 <td id="expertWin"></td>
-                                <td id="expertLose"></td>
+                                <td id="expertLose" class="pe-5"></td>
                             </tr>
                             <tr>
                                 <td colspan="3" class="text-center fs-3 pb-3 pt-5">Multiplayer</td>
                             </tr>
-                            <tr>
-                                <th scope="col">Online</th>
+                            <tr class="tr-user-profile tr-user-profile-5">
+                                <th scope="col" class="text-start ps-5">Online</th>
                                 <td id="multiplayerWin"></td>
-                                <td id="multiplayerLose"></td>
+                                <td id="multiplayerLose" class="pe-5"></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-            <div class="d-block d-sm-none container max-width-500 px-0 py-5">
-                <button type="submit" class="form-control btn btn-outline-light btn-lg fw-bold rounded max-width-500"
+            <div class="d-block d-lg-none container max-width-500 px-0 py-5">
+                <button type="submit" class="form-control btn btn-lg fw-bold rounded max-width-500 lobby-button"
                     onclick="startLobbyPage()">
                     Play
                 </button>
@@ -171,14 +167,14 @@
         <div class="container-fluid pt-5">
             <nav class="d-flex justify-content-center text-center">
                 <div>
-                    <a class="nav-link text-light px-4 py-2 " href="#">Impressum</a>
+                    <a class="nav-link text-light px-4 py-2 "
+                        href="https://de.wikipedia.org/wiki/Impressum">Impressum</a>
                 </div>
                 <div>
                     <a class="nav-link text-light px-4 py-2" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">don't
                         click</a>
                 </div>
             </nav>
-
         </div>
     </footer>
 
@@ -188,6 +184,8 @@
     </script>
     <!--- Custom JS --->
     <script src="/static/scripts/user_profile.js"></script>
+
+
 </body>
 
 </html>
