@@ -86,7 +86,7 @@ function createScoreboard(tableID, array) {
     tableBody.innerHTML = "";
     for (var i = 0; i < array.length; i++) {
         tableBody.innerHTML += `<tr class="tr-bottom-border">
-                                    <td class="ps-5">${(i + 1)}.</td>
+                                    <td class="ps-3 ps-sm-5">${(i + 1)}.</td>
                                     <td class="text-start">${array[i].username}</td>
                                     <td class="text-end">${array[i].win}</td>
                                     <td class="text-end">${array[i].lose}</td>

@@ -24,8 +24,8 @@ function setUsername() {
         if (this.readyState == 4) {
             if (this.status == 200) {
                 var username = JSON.parse(this.responseText).username;
-                var gameDiv = document.getElementById('gameID'); 
-                gameDiv.innerText = 'GameID: ' + sessionStorage.getItem('gameID');
+                var gameDiv = document.getElementById('gameIDdiv'); 
+                document.getElementById('gameID').innerText = 'GameID: ' + sessionStorage.getItem('gameID');
                 gameDiv.addEventListener('click', () => {
                     copyStringToClipboard(sessionStorage.getItem('gameID'));
                 });
@@ -46,6 +46,7 @@ function copyStringToClipboard (str) {
     el.select();
     document.execCommand('copy');
     document.body.removeChild(el);
+    document.getElementById("gameIDdescr").style.display="none";
  }
 
 function closeCardModal() {

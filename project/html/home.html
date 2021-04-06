@@ -11,7 +11,6 @@
     <!-- CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
-    <link rel="stylesheet" href="/static/styles/full-page-scroll.css">
 
     <!--- Custom CSS-->
     <!--- identical to index.html --->
@@ -28,31 +27,32 @@
 </head>
 
 <body class="d-flex flex-column">
-    <div id="main" class="scroll-container">
-        <section id="pageOne" class="section1 d-flex flex-column">
+    <div id="main">
+        <section class="d-flex flex-column min-h-100">
             <header>
                 <nav class="navbar navbar-expand-lg navbar-dark">
                     <div class="container-fluid px-0 px-sm-3">
                         <div class="row displ-content">
-                            <div class="col-6 col-lg-4">
+                            <div class="col-6 col-md-4 order-1 order-md-1">
                                 <div class="navbar-brand active">
                                     <a href="/">
                                         <img src="/static/images/logo.png" alt="logo" class="img-fluid logo">
                                     </a>
                                 </div>
                             </div>
-                            <div class="col-4 text-center d-none d-lg-block">
-                                    <button type="submit"
-                                        class="form-control btn btn-lg fw-bold rounded max-width-300 lobby-button"
-                                        onclick="startLobbyPage()">Play</button>
+                            <div class="col-12 col-md-4 text-center order-3 order-md-2 pt-5 pb-3 pt-md-0 pb-md-0">
+                                <button type="submit"
+                                    class="form-control btn btn-lg fw-bold rounded max-width-300 lobby-button"
+                                    onclick="startLobbyPage()">Play
+                                </button>
                             </div>
-                            <div class="col-6 col-lg-4 fw-light">
+                            <div class="col-6 col-md-4 fw-light order-2 order-md-3">
                                 <div class="d-flex text-light pl-xl-5">
                                     <div class="ms-auto dropdown">
-                                        <p id="username" class="m-0 pb-1 dropdown-toggle fs-4"
+                                        <p id="username" class="m-0 pb-1 dropdown-toggle fs-4 text-break"
                                             data-bs-toggle="dropdown">
                                         </p>
-                                        <ul class="dropdown-menu dropdown-menu-start dropdown-menu-md-end bg-dark">
+                                        <ul class="dropdown-menu dropdown-menu-end bg-dark">
                                             <li>
                                                 <div class="dropdown-item d-flex text-light"
                                                     onclick="startProfilePage()">
@@ -266,13 +266,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="d-block d-sm-none container max-width-500 px-0 py-5">
-                                    <button type="submit"
-                                        class="form-control btn btn-outline-light btn-lg fw-bold rounded max-width-500"
-                                        onclick="startLobbyPage()">
-                                        Play
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -280,7 +273,7 @@
             </main>
         </section>
 
-        <section id="pageTwo" class="section2 d-flex flex-column">
+        <section id="pageTwo" class="d-flex flex-column min-h-100">
             <main class="my-auto">
                 <div class="container-fluid">
                     <div class="container-xxl px-0 py-5 text-light">
@@ -301,8 +294,8 @@
                             </div>
                         </div>
                         <div>
-                            <div>
-                                <p class="fs-3 pt-0 pt-lg-5">Instructions</p>
+                            <div class="pt-5">
+                                <p class="fs-3">Instructions</p>
                             </div>
                             <div>
                                 <p class="fs-5 ps-3">The game decides "randomly" who may start.
@@ -319,8 +312,8 @@
                             </div>
                         </div>
                         <div>
-                            <div>
-                                <p class="fs-3 pt-0 pt-lg-5">Chat Guidelines</p>
+                            <div class="pt-5">
+                                <p class="fs-3">Chat Guidelines</p>
                             </div>
                             <div>
                                 <li class="fs-5 ps-3">
@@ -342,7 +335,8 @@
                 <div class="container-fluid pt-2">
                     <nav class="d-flex justify-content-center text-center">
                         <div>
-                            <a class="nav-link text-light px-4 py-2 " href="https://de.wikipedia.org/wiki/Impressum">Impressum</a>
+                            <a class="nav-link text-light px-4 py-2 "
+                                href="https://de.wikipedia.org/wiki/Impressum">Impressum</a>
                         </div>
                         <div>
                             <a class="nav-link text-light px-4 py-2"
@@ -362,17 +356,6 @@
     </script>
     <!--- Custom JS --->
     <script src="/static/scripts/home.js"></script>
-    <!--- Full Page Scroll --->
-    <script src="/static/scripts/full-page-scroll.js"></script>
-    <script type="text/javascript">
-        new fullScroll({
-            mainElement: "main",
-            displayDots: true,
-            dotsPosition: "right",
-            animateTime: 0.7,
-            animateFunction: "ease",
-        });
-    </script>
 
 </body>
 

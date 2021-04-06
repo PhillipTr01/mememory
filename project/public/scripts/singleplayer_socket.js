@@ -76,7 +76,6 @@ socket.on('turnCard', data => {
 
     // Highlighting a card - It gets bigger and gets a border
     document.getElementById("card-" + data.id).classList.add("border");
-    document.getElementById("card-" + data.id).classList.add("border-info");
     document.getElementById("card-" + data.id).classList.add("border-3");
     document.getElementById("card-" + data.id).classList.add("zoom-card-on-turn");
 });
@@ -105,7 +104,6 @@ socket.on('understateCard', id => {
 function understateCard(id) {
     document.getElementById("card-" + id).classList.remove("zoom-card-on-turn");
     document.getElementById("card-" + id).classList.remove("border");
-    document.getElementById("card-" + id).classList.remove("border-info");
     document.getElementById("card-" + id).classList.remove("border-3");
 }
 

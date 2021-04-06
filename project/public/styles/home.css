@@ -31,29 +31,29 @@ td {
 #nav-easy-tab.active,
 #nav-easy-tab:hover,
 #easyTable {
-    background-color: #4A2626;
+    background-color: #709ba9;
 }
 
 #nav-medium-tab.active,
 #nav-medium-tab:hover,
 #mediumTable {
-    background-color: #502826;
+    background-color: #608f9f;
 }
 
 #nav-hard-tab.active,
 #nav-hard-tab:hover,
 #hardTable {
-    background-color: #552a26;
+    background-color: #56818f;
 }
 
 #nav-expert-tab.active,
 #nav-expert-tab:hover,
 #expertTable {
-    background-color: #5b2c26;
+    background-color: #436470;
 }
 
 #nav-multiplayer-tab.active,
 #nav-multiplayer-tab:hover,
 #multiplayerTable {
-    background-color: #612e26;
+    background-color: #603939;
 }

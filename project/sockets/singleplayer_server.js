@@ -229,21 +229,21 @@ function endTurn(socket) {
     // Close both cards
     if (!socket.finished) {
         socket.emit('closeCards', {1: id, 2: id2});
-    }
-    
-    // If it's the player's turn disable the endTurn-Button so that the user can't end his turn twice
-    if (socket.turn == 0) {
-        socket.emit('disableEndTurn');
-    }
+        
+        // If it's the player's turn disable the endTurn-Button so that the user can't end his turn twice
+        if (socket.turn == 0) {
+            socket.emit('disableEndTurn');
+        }
 
-    // Switch turns
-    socket.turn = (socket.turn == 1 ? 0 : 1);
-    // Reset turn
-    socket.openedCards = [];
-    socket.status = 0;
+        // Switch turns
+        socket.turn = (socket.turn == 1 ? 0 : 1);
+        // Reset turn
+        socket.openedCards = [];
+        socket.status = 0;
 
-    // Change highlight of player
-    socket.emit('highlightPlayer', {turn: socket.turn, computer: socket.computer.name, user: socket.user.name});
+        // Change highlight of player
+        socket.emit('highlightPlayer', {turn: socket.turn, computer: socket.computer.name, user: socket.user.name});
+    }
 }
 
 function surrendGame(socket) {

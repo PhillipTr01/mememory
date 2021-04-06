@@ -89,9 +89,7 @@ mongoose.connect(process.env.DB_URL, {
 });
 
 /* Get new Memes every 10 minutes */
-cron.schedule('10 * * * *', () => {
-   memeScraper.scrape();
-});
+setInterval(() => memeScraper.scrape(), 600000);
 
 /* Start Backend */
 server.listen(process.env.PORT);

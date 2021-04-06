@@ -1,0 +1,52 @@
+.zoom-on-hover img {
+    -webkit-transition: all 0.3s linear;
+    -moz-transition: all 0.3s linear;
+    -ms-transition: all 0.3s linear;
+    -o-transition: all 0.3s linear;
+    transition: all 0.3s linear;
+}
+
+.zoom-on-hover:hover img {
+    -webkit-transform: scale(1.2);
+    -moz-transform: scale(1.2);
+    -ms-transform: scale(1.2);
+    -o-transform: scale(1.2);
+    transform: scale(1.2);
+}
+
+.avatar-size-lobby {
+    max-width: 200px;
+    max-height: 200px;
+    width: 100%;
+}
+
+.text-or {
+    color: #d2d9df;
+}
+
+.multiplayer-button {
+    border-color: #603939;
+    color: #603939;
+}
+
+.multiplayer-button:hover {
+    border-color: #603939;
+    background-color: #603939;
+    color: #f8f9fa;
+}
+
+.text-easy {
+    color: #709ba9;
+}
+
+.text-medium {
+    color: #608f9f;
+}
+
+.text-hard {
+    color: #56818f;
+}
+
+.text-expert {
+    color: #436470;
+}
