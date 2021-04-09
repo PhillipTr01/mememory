@@ -10,13 +10,15 @@ document.addEventListener('DOMContentLoaded', function () {
     var board = document.getElementById("memoryTable");
     board.innerHTML = "";
     for (var index = 0; index < 66; index++) {
-        var div = ` <div id="card-${index}" class="col-1 card card-size" onclick="openCard(${index}); false;"> 
-                        <div class="card-back card-image"> 
-                            <img src="" class="card-image">
+        var div = ` <div class="card-size">
+                        <div id="card-${index}" class="col-1 card pos-abs w-100 h-100" onclick="openCard(${index}); false;"> 
+                            <div class="card-back card-image"> 
+                                <img src="" class="card-image">
+                            </div>
+                            <div class="card-front card-image"> 
+                                <img src="${backImage}" class="card-image">
+                            </div>    
                         </div>
-                        <div class="card-front card-image"> 
-                            <img src="${backImage}" class="card-image">
-                        </div>    
                     </div>`;
         board.innerHTML += div;
     }

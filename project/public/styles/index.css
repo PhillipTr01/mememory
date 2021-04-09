@@ -28,6 +28,10 @@ p {
     min-height: 100vh;
 }
 
+.min-h-50{
+    min-height: 50vh;
+}
+
 .max-height-set-500 {
     max-height: 500px;
 }
@@ -62,6 +66,10 @@ p {
 
 .th-width {
     width: 20%;
+}
+
+.pos-abs{
+    position: absolute;
 }
 
 .displ-content {

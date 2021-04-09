@@ -20,8 +20,8 @@ function startScoreboardPage() {
 }
 
 function startSettingsPage() {
+    window.location.href = "/settings";
     return;
-    //TODO add Settings Page
 }
 
 function logoutUser() {

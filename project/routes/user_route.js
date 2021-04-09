@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcrypt');
 
 const Auth = require('../middleware/auth');
 const Statistic = require('../models/Statistic');
@@ -80,9 +81,6 @@ router.put('/changePassword', Auth, async (req, res, next) => {
     var err = null;
     try {
         var user = await User.findOne({_id: req._id});
-
-        console.log(user.username);
-        console.log(user.password + " " + req.body.oldPassword);
 
         if (user != null && await bcrypt.compare(req.body.oldPassword, user.password)) {
 

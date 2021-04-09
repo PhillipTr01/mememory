@@ -58,6 +58,10 @@ app.get('/lobby', Auth, (req, res, next) => {
    res.sendFile(__dirname + '/html/lobby.html');
 });
 
+app.get('/settings', Auth, (req, res, next) => {
+   res.sendFile(__dirname + '/html/settings.html');
+});
+
 app.get('/play', Auth, (req, res, next) => {
    res.sendFile(__dirname + '/html/multiplayer.html');
 })

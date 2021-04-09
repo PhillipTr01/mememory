@@ -33,9 +33,6 @@ function showLoginForm() {
 function hideInitialButton() {
   var loginBtn = document.getElementById("loginButton");
   loginBtn.classList.add("visually-hidden");
-
-  var turningVideo = document.getElementById("videoContainer");
-  turningVideo.classList.add("visually-hidden");
 }
 
 function registerUser() {

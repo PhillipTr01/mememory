@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en" class="h-100">
+
+<head>
+    <title>MemeMory</title>
+
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+
+    <!--- Custom CSS-->
+    <!--- identical to index.html --->
+    <link rel="stylesheet" href="/static/styles/index.css">
+
+    <!--- Icons --->
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.0/font/bootstrap-icons.css">
+
+    <!--- Font --->
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body class="d-flex flex-column h-100">
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container-fluid px-3">
+                <div class="row displ-content">
+                    <div class="col-6 col-md-4 order-1 order-md-1">
+                        <div class="navbar-brand active">
+                            <a href="/">
+                                <img src="/static/images/logo.png" alt="logo" class="img-fluid logo">
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4 text-center order-3 order-md-2 pt-5 pb-3 pt-md-0 pb-md-0">
+                        <button type="submit" class="form-control btn btn-lg fw-bold rounded max-width-300 lobby-button"
+                            onclick="startLobbyPage()">Play
+                        </button>
+                    </div>
+                    <div class="col-6 col-md-4 fw-light order-2 order-md-3">
+                        <div class="d-flex text-light pl-xl-5">
+                            <div class="ms-auto dropdown">
+                                <p id="username" class="m-0 pb-1 dropdown-toggle fs-4 text-break overflow-hidden"
+                                    data-bs-toggle="dropdown">
+                                </p>
+                                <ul class="dropdown-menu dropdown-menu-end bg-dark">
+                                    <li>
+                                        <div class="dropdown-item d-flex text-light" onclick="startScoreboardPage()">
+                                            <i class="bi bi-trophy pe-3"></i>
+                                            <p class="m-0">Scoreboard</p>
+                                        </div>
+                                    </li>
+                                    <li class="mt-2">
+                                        <div class="dropdown-item d-flex text-light" onclick="startProfilePage()">
+                                            <i class="bi bi-bar-chart-line pe-3"></i>
+                                            <p class="m-0">Profile</p>
+                                        </div>
+                                    </li>
+                                    <li class="mt-2" id="keep-open-dropdown">
+                                        <div class="dropdown-item d-flex text-light dropstart">
+                                            <i class="bi bi-people pe-3"></i>
+                                            <a class="nav-link text-light p-0 m-0">Other Groups</a>
+                                            <ul class="dropdown-menu dropdown-menu-end bg-dark">
+                                                <li><a class="dropdown-item text-light"
+                                                        href="https://gruppe2.testsites.info/">Group 2</a></li>
+                                                <li><a class="dropdown-item text-light"
+                                                        href="https://gruppe3.testsites.info/">Group 3</a></li>
+                                                <li><a class="dropdown-item text-light"
+                                                        href="https://gruppe4.testsites.info/">Group 4</a></li>
+                                                <li><a class="dropdown-item text-light"
+                                                        href="https://gruppe5.testsites.info/">Group 5</a></li>
+                                                <li><a class="dropdown-item text-light"
+                                                        href="https://gruppe6.testsites.info/">Group 6</a></li>
+                                                <li><a class="dropdown-item text-light"
+                                                        href="https://gruppe7.testsites.info/">Group 7</a></li>
+                                                <li><a class="dropdown-item text-light"
+                                                        href="https://gruppe8.testsites.info/">Group 8</a></li>
+                                                <li><a class="dropdown-item text-light"
+                                                        href="https://gruppe9.testsites.info/">Group 9</a></li>
+                                                <li><a class="dropdown-item text-light"
+                                                        href="https://gruppe10.testsites.info/">Group 10</a>
+                                                </li>
+                                                <li><a class="dropdown-item text-light"
+                                                        href="https://gruppe11.testsites.info/">Group 11</a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </li>
+                                    <li class="mt-2">
+                                        <div class="dropdown-item d-flex text-danger" onclick="logoutUser()">
+                                            <i class="bi bi-box-arrow-right pe-3"></i>
+                                            <p class="m-0 fw-bold">Logout</p>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="pt-3 pt-lg-0 my-auto px-3">
+        <div class="max-width-500 mx-auto">
+
+            <form action="#" class="mt-2 text-light mb-3 mb-sm-5" onsubmit="changePassword(); return false;">
+                <div class="form-group mt-1 mt-lg-3">
+                    <label for="oldPassword">Old Password</label>
+                    <input id="oldPassword" type="password" class="form-control" placeholder="Password" required>
+                    <label class="visually-hidden text-danger" id="oldPasswordLabel">
+                        Wrong Password
+                    </label>
+                </div>
+                <div class="form-group mt-1 mt-lg-3">
+                    <label for="newPassword">New Password</label>
+                    <input id="newPassword" type="password" class="form-control" placeholder="Password" required>
+                    <label class="visually-hidden text-danger" id="newPasswordLabel">
+                        Password is too weak. (Minimum of 8 characters with one letter, one number
+                        and one special character)
+                    </label>
+                </div>
+                <div class="form-group mt-1 mt-lg-3">
+                    <label for="repeatNewPassword">Repeat New Password</label>
+                    <input id="repeatNewPassword" type="password" class="form-control" placeholder="Password" required>
+                    <label class="visually-hidden text-danger" id="repeatNewPasswordLabel">
+                        Password is not identical.
+                    </label>
+                </div>
+                <div class="form-group mt-3 mt-lg-4">
+                    <button type="submit" class="btn btn-outline-light w-100 rounded" id="buttonNewPassword">Set New
+                        Password</button>
+                </div>
+            </form>
+
+            <button type="button" class="btn btn-outline-danger text-danger w-100 rounded mt-5" data-bs-toggle="modal"
+                data-bs-target="#exampleModal">Delete Account</button>
+
+            <!-- Modal -->
+            <div class="modal fade " id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-body">
+                            <p class="fs-5 text-center">Your account will be deleted permanently and all data will be
+                                lost</p>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-danger"
+                                onclick="deleteUser(); return false;">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer>
+        <div class="container-fluid pt-5">
+            <nav class="d-flex justify-content-center text-center">
+                <div>
+                    <a class="nav-link text-light px-4 py-2 "
+                        href="https://de.wikipedia.org/wiki/Impressum">Impressum</a>
+                </div>
+                <div>
+                    <a class="nav-link text-light px-4 py-2" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">don't
+                        click</a>
+                </div>
+            </nav>
+        </div>
+    </footer>
+
+    <!--- JavaScript --->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous">
+    </script>
+    <!--- Custom JS --->
+    <script src="/static/scripts/settings.js"></script>
+</body>
+
+</html>
