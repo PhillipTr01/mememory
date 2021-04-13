@@ -3,9 +3,8 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-// const Auth = require('../middleware/auth');
-const User = require('../models/User');
-const Statistic = require('../models/Statistic');
+const User = require('../../models/User');
+const Statistic = require('../../models/Statistic');
 
 router.post('/register', async (req, res, next) => {
     var err = null;
@@ -78,19 +77,7 @@ router.post('/login', async (req, res, next) => {
             return next(err);
         }
 
-        res.cookie('token', token, {maxAge: 7 * 24 * 60 * 60 * 1000, httpOnly: true}).status(200).redirect('/home');
-    } catch (error) {
-        err = new Error(error.message);
-        err.status = 400;
-        return next(err);
-    }
-})
-
-router.get('/logout', async (req, res, next) => {
-    var err = null;
-
-    try {
-        res.cookie('token', '', {maxAge: 0, httpOnly: true}).status(200).redirect('/');
+        res.status(200).json({success: {status: 200, message: "Successfully logged in.", token: token}});
     } catch (error) {
         err = new Error(error.message);
         err.status = 400;

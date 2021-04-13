@@ -1,6 +1,6 @@
 const express = require('express');
-const Statistic = require('../models/Statistic');
-const User = require('../models/User');
+const Statistic = require('../../models/Statistic');
+const User = require('../../models/User');
 const router = express.Router();
 const Auth = require('../middleware/auth');
 

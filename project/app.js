@@ -27,15 +27,25 @@ require('./sockets/singleplayer_server')(io);
 require('./sockets/multiplayer_server')(io);
 
 /* Page routes */
-const loginRoute = require('./routes/login_route');
+const authenticationRoute = require('./routes/authentication_route');
 const memeRoute = require('./routes/meme_route');
 const userRoute = require('./routes/user_route');
 const scoreboardRoute = require('./routes/scoreboard_route');
 
-app.use('/requests/authentication', loginRoute)
+/* API routes */
+const authenticationAPIRoute = require('./API/routes/authentication_route');
+const memeAPIRoute = require('./API/routes/meme_route');
+const userAPIRoute = require('./API/routes/user_route');
+const scoreboardAPIRoute = require('./API/routes/scoreboard_route');
+
+app.use('/requests/authentication', authenticationRoute)
    .use('/requests/memes', memeRoute)
    .use('/requests/user', userRoute)
-   .use('/requests/scoreboard', scoreboardRoute);
+   .use('/requests/scoreboard', scoreboardRoute)
+   .use('/v1/API/authentication', authenticationAPIRoute)
+   .use('/v1/API/memes', memeAPIRoute)
+   .use('/v1/API/user', userAPIRoute)
+   .use('/v1/API/scoreboard', scoreboardAPIRoute);
 
 /* Base routes */
 app.get('/', Auth, (req, res, next) => {

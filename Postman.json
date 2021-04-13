@@ -1,0 +1,297 @@
+{
+	"info": {
+		"_postman_id": "7fa41919-af58-47f1-8dde-01314f6a0489",
+		"name": "MemeMory",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"Hier ihre E-Mail Adresse eintragen\",\r\n    \"username\": \"Hier ihren Usernamen eintragen\",\r\n    \"password\": \"Hier Passwort eintragen\",\r\n    \"repeatPassword\": \"Tragen Sie hier erneut ihr Passwort ein\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://gruppe1.testsites.info/v1/API/authentication/register",
+							"protocol": "https",
+							"host": [
+								"gruppe1",
+								"testsites",
+								"info"
+							],
+							"path": [
+								"v1",
+								"API",
+								"authentication",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"username\": \"Benutzen Sie entweder den Usernamen\",\r\n    \"email\": \"oder die E-Mail Adresse\",\r\n    \"password\": \"Bitte tragen Sie hier ein Passwort ein\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://gruppe1.testsites.info/v1/API/authentication/login",
+							"protocol": "https",
+							"host": [
+								"gruppe1",
+								"testsites",
+								"info"
+							],
+							"path": [
+								"v1",
+								"API",
+								"authentication",
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Memes",
+			"item": [
+				{
+					"name": "GET all memes",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://gruppe1.testsites.info/v1/API/memes",
+							"protocol": "https",
+							"host": [
+								"gruppe1",
+								"testsites",
+								"info"
+							],
+							"path": [
+								"v1",
+								"API",
+								"memes"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Scoreboard",
+			"item": [
+				{
+					"name": "GET current scoreboard",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://gruppe1.testsites.info/v1/API/scoreboard",
+							"protocol": "https",
+							"host": [
+								"gruppe1",
+								"testsites",
+								"info"
+							],
+							"path": [
+								"v1",
+								"API",
+								"scoreboard"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "GET username",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://gruppe1.testsites.info/v1/API/user/username",
+							"protocol": "https",
+							"host": [
+								"gruppe1",
+								"testsites",
+								"info"
+							],
+							"path": [
+								"v1",
+								"API",
+								"user",
+								"username"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET statistic",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://gruppe1.testsites.info/v1/API/user/statistic",
+							"protocol": "https",
+							"host": [
+								"gruppe1",
+								"testsites",
+								"info"
+							],
+							"path": [
+								"v1",
+								"API",
+								"user",
+								"statistic"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE user",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "https://gruppe1.testsites.info/v1/API/user",
+							"protocol": "https",
+							"host": [
+								"gruppe1",
+								"testsites",
+								"info"
+							],
+							"path": [
+								"v1",
+								"API",
+								"user"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE user Copy",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"oldPassword\": \"Hier altes Passwort reinschreiben\",\r\n    \"newPassword\": \"Hier neues Passwort einfuegen\",\r\n    \"repeatNewPassword\": \"Neues Passwort hier bestaetigen\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://gruppe1.testsites.info/v1/API/user/changePassword",
+							"protocol": "https",
+							"host": [
+								"gruppe1",
+								"testsites",
+								"info"
+							],
+							"path": [
+								"v1",
+								"API",
+								"user",
+								"changePassword"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
