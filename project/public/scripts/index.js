@@ -149,3 +149,5 @@ function loginUser(username, password) {
     "password": inputPassword
   }));
 }
+
+var bcrypt = dcodeIO.bcrypt;

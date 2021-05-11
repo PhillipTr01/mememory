@@ -6,6 +6,7 @@ const Auth = require('../middleware/auth');
 
 router.get('/', Auth, async (req, res, next) => {
 
+    // Get the best Users from all difficulty levels
     var easy = await Statistic.find().sort({easyWin: -1}).limit(10).select("easyWin easyLose");
     var medium = await Statistic.find().sort({mediumWin: -1}).limit(10).select("mediumWin mediumLose");
     var hard = await Statistic.find().sort({hardWin: -1}).limit(10).select("hardWin hardLose");

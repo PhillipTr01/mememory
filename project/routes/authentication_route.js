@@ -65,6 +65,7 @@ router.post('/login', async (req, res, next) => {
     try {
         const user = await User.findOne({$or: [{emailLowerCase: req.body.email.toLowerCase()}, {usernameLowerCase: req.body.username.toLowerCase()}]});
 
+        // Check if user exists and if the password given is correct
         if (user != null && await bcrypt.compare(req.body.password, user.password)) {
             token = jwt.sign({
                 _id: user._id,
@@ -77,6 +78,7 @@ router.post('/login', async (req, res, next) => {
             return next(err);
         }
 
+        // Save token in cookies to authenticate the user session
         res.cookie('token', token, {maxAge: 7 * 24 * 60 * 60 * 1000, httpOnly: true}).status(200).redirect('/home');
     } catch (error) {
         err = new Error(error.message);
@@ -89,6 +91,7 @@ router.get('/logout', async (req, res, next) => {
     var err = null;
 
     try {
+        // Delete cookie so the session is not valid anymore
         res.cookie('token', '', {maxAge: 0, httpOnly: true}).status(200).redirect('/');
     } catch (error) {
         err = new Error(error.message);
