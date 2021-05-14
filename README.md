@@ -3,7 +3,7 @@
 
 ## Bearbeitungszeit & Rahmenbedingung
 
-- Bearbeitungszeitraum: 03. 03 .20 21 – 18. 05 .20 21
+- Bearbeitungszeitraum: 03.03.2021 – 18.05.2021
 - Abgabe: 17. Mai 2021, bis 18 Uhr
 - Optional: Vorinstallierte Ubuntu-VM sowie Domäne werden bereitgestellt oder
     andere Hosting-Option
