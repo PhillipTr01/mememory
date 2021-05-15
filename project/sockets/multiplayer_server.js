@@ -54,7 +54,8 @@ module.exports = function (io) {
         });
 
         socket.on('joinGame', data => {
-            if (global.rooms[data.gameID] != null) {
+            if (global.rooms[data.gameID] != null && !global.rooms[data.gameID].joined) {
+                global.rooms[data.gameID].joined = 1;
                 socket.gameID = data.gameID;
                 socket.username = data.username;
                 socket.join(socket.gameID);
