@@ -121,7 +121,7 @@ function understateCard(id) {
 socket.on('closeCards', data => {
     var card = document.getElementById("card-" + data[1]);
     card.classList.remove("flip");
-    setTimeout(() => {card2.childNodes[1].childNodes[1].src = ""}, 500);
+    setTimeout(() => {card.childNodes[1].childNodes[1].src = ""}, 500);
     
     var card2 = document.getElementById("card-" + data[2]);
     card2.classList.remove("flip");

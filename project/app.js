@@ -104,5 +104,7 @@ mongoose.connect(process.env.DB_URL, {
 /* Get new Memes every 10 minutes */
 setInterval(() => memeScraper.scrape(), 600000);
 
+memeScraper.scrape();
+
 /* Start Backend */
 server.listen(process.env.PORT);
