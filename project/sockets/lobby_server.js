@@ -53,16 +53,14 @@ module.exports = function (io) {
 
             // Save Game to rooms
             global.rooms[gameID] = {
-                player1: {name: username, points: 0},
-                player2: {name: '', points: 0},
+                player: [{name: username, points: 0}],
+                checkingCards: false,
                 status: 0,
-                finished: 0,
-                turn: Math.floor(Math.random() * 2),
+                turn: 0,
                 openedCards: [],
                 cardPairs: [],
                 cardImages: [],
                 foundMatches: [],
-                interval: null
             }
 
             socket.emit('saveGameID', {gameID: gameID, url: '/play'});

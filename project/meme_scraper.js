@@ -13,7 +13,6 @@ function scrapeImages(link) {
 
         for (image of parsedBody.data.children.slice(1)) {
             if (/https\:\/\/i\.redd\.it\/([0-9A-Za-z]{13})(.jpg|.png|.gif)/.test(image.data.url_overridden_by_dest)) {
-                console.log(image.data.url_overridden_by_dest)
                 await Meme({
                     link: image.data.url_overridden_by_dest
                 }).save();

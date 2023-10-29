@@ -115,7 +115,6 @@ function deleteUser() {
 
     request.onreadystatechange = function () {
         if (this.readyState == 4) {
-            console.log(JSON.parse(this.responseText));
             if (this.status == 200) {
                 window.location.href = '/';
                 return;

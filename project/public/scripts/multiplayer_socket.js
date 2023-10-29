@@ -26,46 +26,55 @@ document.addEventListener('DOMContentLoaded', function () {
     modal = document.getElementById("cardModal");
 }, false);
 
-if (sessionStorage.getItem('player') == 'player1') {
+if (sessionStorage.getItem("role") == "creator") {
     // Get all Memes from database
+    document.getElementById('playButton').hidden = true;
+    document.getElementById('startButton').hidden = false;
+
     var request = new XMLHttpRequest();
     request.onreadystatechange = function () {
         if (this.readyState == 4) {
             if (this.status == 200) {
+
                 var links = JSON.parse(request.responseText);
                 // Initialize Game
-                socket.emit('initializingGame', {gameID: sessionStorage.getItem('gameID'), links: links});
+                socket.emit('initializingGame', {
+                    gameID: sessionStorage.getItem('gameID'),
+                    links: links
+                });
             }
         }
     }
     request.open("GET", '/requests/memes');
     request.send();
 } else {
-    socket.emit('joinGame', {gameID: sessionStorage.getItem('gameID'), username: sessionStorage.getItem('username')});
+    socket.emit('joinGame', {
+        gameID: sessionStorage.getItem('gameID'),
+        username: sessionStorage.getItem('username')
+    });
 }
+
+
 
 // Set usernames on the scoreboard
 socket.on('visualInitializing', data => {
-    document.getElementById('user1Username').innerText = data.player1;
-    document.getElementById('user2Username').innerText = data.player2;
-    document.getElementById('user2Score').innerText = '0';
-    document.getElementById('surrenderButton').disabled = false;
+    for (var i = 1; i < data.player.length + 1; i++) {
+        document.getElementById(`user${i}Username`).innerText = data.player[i - 1].name;
+        document.getElementById(`user${i}Score`).innerText = '0';
+    }
+    // document.getElementById('surrenderButton').disabled = false;
 });
 
 // Show which player's turn it is
 socket.on('highlightPlayer', data => {
-    if (data.turn == 0) {
-        // Highlight player1
-        document.getElementById("user1Username").classList.add("fw-bold");
-        document.getElementById("user2Username").classList.remove("fw-bold");
-        document.getElementById("user1Username").innerHTML += `<i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
-        document.getElementById("user2Username").innerHTML = data.player2;
-    } else {
-        // Highlight player2
-        document.getElementById("user1Username").classList.remove("fw-bold");
-        document.getElementById("user2Username").classList.add("fw-bold");
-        document.getElementById("user1Username").innerHTML = data.player1;
-        document.getElementById("user2Username").innerHTML += `<i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
+    for (var i = 1; i <= data.player.length; i++) {
+        if (data.turn == i) {
+            document.getElementById(`user${i}Username`).classList.add("fw-bold");
+            document.getElementById(`user${i}Username`).innerHTML += ` <i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
+        } else {
+            document.getElementById(`user${i}Username`).classList.remove("fw-bold");
+            document.getElementById(`user${i}Username`).innerHTML = data.player[i - 1].name;
+        }
     }
 });
 
@@ -90,7 +99,7 @@ socket.on('turnCard', data => {
 
 // If the card is already open, you can zoom in to read the meme
 socket.on('zoomImage', id => {
-    if(document.getElementById("card-" + id).classList.contains('flip')) {
+    if (document.getElementById("card-" + id).classList.contains('flip')) {
         var src = document.getElementById("card-" + id).childNodes[1].childNodes[1].src;
         document.getElementById("imgModal").src = src;
         modal.style.display = "block";
@@ -99,11 +108,7 @@ socket.on('zoomImage', id => {
 
 // Increase Points if a match was found
 socket.on('increasePoints', data => {
-    if (data.turn == 0) {
-        document.getElementById("user1Score").innerHTML = data.points;
-    } else {
-        document.getElementById("user2Score").innerHTML = data.points;
-    }
+    document.getElementById(`user${data.turn}Score`).innerHTML = data.points;
 });
 
 // Remove the zoom and the border of a card (if highlighted) 
@@ -121,11 +126,15 @@ function understateCard(id) {
 socket.on('closeCards', data => {
     var card = document.getElementById("card-" + data[1]);
     card.classList.remove("flip");
-    setTimeout(() => {card.childNodes[1].childNodes[1].src = ""}, 500);
-    
+    setTimeout(() => {
+        card.childNodes[1].childNodes[1].src = ""
+    }, 500);
+
     var card2 = document.getElementById("card-" + data[2]);
     card2.classList.remove("flip");
-    setTimeout(() => {card2.childNodes[1].childNodes[1].src = ""}, 500);
+    setTimeout(() => {
+        card2.childNodes[1].childNodes[1].src = ""
+    }, 500);
 
     understateCard(data[1]);
     understateCard(data[2]);
@@ -141,6 +150,15 @@ socket.on('disableEndTurn', () => {
     document.getElementById("playButton").disabled = true;
 });
 
+function startGame() {
+    document.getElementById('startButton').hidden = true;
+    document.getElementById('playButton').hidden = false;
+
+    socket.emit('startGame', {
+        username: sessionStorage.getItem('username')
+    });
+}
+
 function emitEndTurn() {
     socket.emit('endTurn');
 };
@@ -151,32 +169,24 @@ function surrender() {
 
 socket.on('getWinner', data => {
     var playButton = document.getElementById('playButton');
-    var user1 = document.getElementById("user1Username");
-    var user2 = document.getElementById("user2Username");
-    var score1 = document.getElementById("user1Score");
-    var score2 = document.getElementById("user2Score");
 
-    // Visual change for winner
-    if (data.winner == 0) {
-        user1.innerHTML = data.player1 + " ";
-        user2.innerHTML = data.player2;
-        user1.innerHTML += `<i class="bi bi-trophy text-warning"></i>`;
-        user2.classList.add("text-secondary");
-        user2.classList.remove("fw-bold");
-        user1.classList.add("fw-bold");
-        score2.classList.add("text-secondary");
-    } else {
-        user1.innerHTML = data.player1;
-        user2.innerHTML = data.player2 + " ";
-        user2.innerHTML += `<i class="bi bi-trophy text-warning"></i>`;
-        user1.classList.add("text-secondary");
-        user1.classList.remove("fw-bold");
-        user2.classList.add("fw-bold");
-        score1.classList.add("text-secondary");
+    for (var i = 1; i < data.player.length + 1; i++) {
+        var userElement = document.getElementById(`user${i}Username`);
+        var scoreElement = document.getElementById(`user${i}Score`);
+
+        if (data.winners.contains(data.player[i - 1].name)) {
+            userElement.innerHTML = `${data.player[i - 1].name} <i class="bi bi-trophy text-warning"></i>`;
+            userElement.classList.add("fw-bold");
+        } else {
+            userElement.innerHTML = data.player[i - 1].name;
+            userElement.classList.add("text-secondary");
+            scoreElement.classList.add("text-secondary");
+            userElement.classList.remove("fw-bold");
+        }
     }
 
     // Remove all highlights
-    for(var i = 0; i < 66; i++) {
+    for (var i = 0; i < 66; i++) {
         understateCard(i);
     }
 

@@ -20,7 +20,7 @@ function playMultiplayer() {
         if (this.readyState == 4) {
             if (this.status == 200) {
                 var username = JSON.parse(this.responseText).username;
-                sessionStorage.setItem('player', 'player1');
+                sessionStorage.setItem("role", "creator");
                 socket.emit('playMultiplayer', username);
             }
         }
@@ -37,8 +37,8 @@ function joinMultiplayer() {
         if (this.readyState == 4) {
             if (this.status == 200) {
                 var username = JSON.parse(this.responseText).username;
+                sessionStorage.setItem("role", "player");
                 sessionStorage.setItem('username', username);
-                sessionStorage.setItem('player', 'player2');
                 socket.emit('joinMultiplayer', gameID);
             }
         }
