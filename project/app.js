@@ -102,7 +102,7 @@ mongoose.connect(process.env.DB_URL, {
 });
 
 /* Get new Memes every 10 minutes */
-setInterval(() => memeScraper.scrape(), 600000);
+setInterval(() => memeScraper.scrape(), 10 * 60 * 1000);
 
 memeScraper.scrape();
 
