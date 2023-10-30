@@ -241,6 +241,10 @@ async function leaveGame(io, socket) {
 
         if (activePlayers.length == 1) {
             io.to(socket.gameID).emit('disableStartGame');
+        } else if (activePlayers.length == 0) {
+            // Delete game
+            delete global.rooms[socket.gameID];
+            return;
         }
 
         for (let i = playerIndex; i < activePlayers.length; i++) {
