@@ -30,6 +30,7 @@ if (sessionStorage.getItem("role") == "creator") {
     // Get all Memes from database
     document.getElementById('playButton').hidden = true;
     document.getElementById('startButton').hidden = false;
+    document.getElementById('startButton').disabled = true;
 
     var request = new XMLHttpRequest();
     request.onreadystatechange = function () {
@@ -54,15 +55,45 @@ if (sessionStorage.getItem("role") == "creator") {
     });
 }
 
+socket.on('enableStartGame', () => {
+    if (document.getElementById('startButton').disabled) {
+        document.getElementById('startButton').disabled = false;
+    }
+});
 
+socket.on('disableStartGame', () => {
+    document.getElementById('startButton').disabled = true;
+});
 
 // Set usernames on the scoreboard
 socket.on('visualInitializing', data => {
-    for (var i = 1; i < data.player.length + 1; i++) {
+    for (var i = 1; i <= 4; i++) {
+        document.getElementById(`user${i}Username`).innerText = "";
+        document.getElementById(`user${i}Score`).innerText = "";
+    }
+
+    for (var i = 1; i <= data.player.length; i++) {
         document.getElementById(`user${i}Username`).innerText = data.player[i - 1].name;
-        document.getElementById(`user${i}Score`).innerText = '0';
+        document.getElementById(`user${i}Score`).innerText = "0";
     }
     // document.getElementById('surrenderButton').disabled = false;
+});
+
+// Set usernames on the scoreboard
+socket.on('watchGame', () => {
+    var playButton = document.getElementById('playButton');
+    var surrenderButton = document.getElementById('surrenderButton');
+
+    surrenderButton.disabled = true;
+    surrenderButton.innerHTML = 'SPECTATING GAME';
+    surrenderButton.classList.remove('btn-outline-danger');
+    surrenderButton.classList.add('btn-outline-secondary');
+
+    playButton.onclick = () => {
+        window.location.href = '/lobby';
+    };
+    playButton.disabled = false;
+    playButton.innerHTML = 'Back to Lobby';
 });
 
 // Show which player's turn it is
@@ -70,7 +101,7 @@ socket.on('highlightPlayer', data => {
     for (var i = 1; i <= data.player.length; i++) {
         if (data.turn == i) {
             document.getElementById(`user${i}Username`).classList.add("fw-bold");
-            document.getElementById(`user${i}Username`).innerHTML += ` <i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
+            document.getElementById(`user${i}Username`).innerHTML = `${data.player[i - 1].name} <i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
         } else {
             document.getElementById(`user${i}Username`).classList.remove("fw-bold");
             document.getElementById(`user${i}Username`).innerHTML = data.player[i - 1].name;
@@ -167,6 +198,16 @@ function surrender() {
     socket.emit('surrender');
 }
 
+socket.on('playerSurrendered', data => {
+    var userElement = document.getElementById(`user${data.playerIndex}Username`);
+    var scoreElement = document.getElementById(`user${data.playerIndex}Score`);
+    
+    userElement.innerHTML = data.playerName;
+    userElement.classList.add("text-secondary");
+    scoreElement.classList.add("text-secondary");
+    userElement.classList.remove("fw-bold");
+});
+
 socket.on('getWinner', data => {
     var playButton = document.getElementById('playButton');
 
@@ -174,8 +215,8 @@ socket.on('getWinner', data => {
         var userElement = document.getElementById(`user${i}Username`);
         var scoreElement = document.getElementById(`user${i}Score`);
 
-        if (data.winners.contains(data.player[i - 1].name)) {
-            userElement.innerHTML = `${data.player[i - 1].name} <i class="bi bi-trophy text-warning"></i>`;
+        if (data.winners.includes(data.player[i - 1].name)) {
+            userElement.innerHTML = `${data.player[i - 1].name}  <i class="bi bi-trophy text-warning"></i>`;
             userElement.classList.add("fw-bold");
         } else {
             userElement.innerHTML = data.player[i - 1].name;

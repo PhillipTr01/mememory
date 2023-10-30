@@ -54,28 +54,41 @@ module.exports = function (io) {
         });
 
         socket.on('joinGame', data => {
-            if (global.rooms[data.gameID] != null && global.rooms[data.gameID].player.length < 4) {
+            if (global.rooms[data.gameID] == null || global.rooms[data.gameID].player.some(obj => obj.name === data.username)) {
+                socket.emit('noGameFound');
+                return;
+            }
+
+            if (global.rooms[data.gameID].player.length < 4 && global.rooms[data.gameID].status == 0) {
+                multiPlayer.to(data.gameID).emit('enableStartGame');
                 socket.gameID = data.gameID;
                 socket.username = data.username;
-                socket.join(socket.gameID);
+                socket.join(data.gameID);
                 global.rooms[data.gameID].player.push({
                     name: data.username,
                     points: 0
                 });
-
-                multiPlayer.to(socket.gameID).emit('visualInitializing', {
-                    player: global.rooms[data.gameID].player
-                });
+                global.rooms[data.gameID].activePlayers.push(global.rooms[data.gameID].player.length)
             } else {
-                // Spectate?
-                socket.emit('noGameFound');
+                socket.join(data.gameID);
+                socket.emit('watchGame');
             }
+
+            multiPlayer.to(data.gameID).emit('visualInitializing', {
+                player: global.rooms[data.gameID].player
+            });
+
+            multiPlayer.to(data.gameID).emit('highlightPlayer', {
+                turn: global.rooms[data.gameID].turn,
+                player: global.rooms[data.gameID].player
+            })
         });
 
 
         socket.on('startGame', data => {
             if (global.rooms[socket.gameID] != null && global.rooms[socket.gameID].player[0].name == data.username && global.rooms[socket.gameID].status == 0) {
                 global.rooms[socket.gameID].turn = Math.floor(Math.random() * global.rooms[socket.gameID].player.length) + 1;
+
                 global.rooms[socket.gameID].status = 1;
                 multiPlayer.to(socket.gameID).emit('highlightPlayer', {
                     turn: global.rooms[socket.gameID].turn,
@@ -115,7 +128,7 @@ module.exports = function (io) {
 
         // disconnect
         socket.on('disconnect', () => {
-            leaveGame(socket);
+            leaveGame(multiPlayer, socket);
         });
     });
 }
@@ -177,6 +190,7 @@ function endTurn(io, socket) {
     var id = global.rooms[socket.gameID].openedCards[0];
     var id2 = global.rooms[socket.gameID].openedCards[1];
     var turn = global.rooms[socket.gameID].turn;
+    var activePlayers = global.rooms[socket.gameID].activePlayers;
 
     // Close both cards
     io.to(socket.gameID).emit('closeCards', {
@@ -185,10 +199,10 @@ function endTurn(io, socket) {
     });
 
     // If it's the player's turn disable the endTurn-Button so that the user can't end his turn twice
-    socket.emit('disableEndTurn');
+    socket.emit('disableEndTurn'); 
 
     // Switch turns
-    global.rooms[socket.gameID].turn = turn < global.rooms[socket.gameID].player.length ? turn + 1 : 1;
+    global.rooms[socket.gameID].turn = activePlayers[(activePlayers.indexOf(turn) + 1) % activePlayers.length];
 
     // Reset turn
     global.rooms[socket.gameID].openedCards = [];
@@ -213,33 +227,58 @@ function surrendGame(io, socket) {
     // }
 }
 
-async function leaveGame(socket) {
-    if (global.rooms[socket.gameID] != null && global.rooms[socket.gameID].status == 1) {
-        var playerName = socket.username;
-        var playerObject = await User.findOne({
-            username: playerName
+async function leaveGame(io, socket) {
+    if (global.rooms[socket.gameID] == null || !global.rooms[socket.gameID].player.some(obj => obj.name === socket.username)) {
+        return
+    }
+
+    var playerIndex = global.rooms[socket.gameID].player.findIndex(obj => obj.name === socket.username)
+    var activePlayers = global.rooms[socket.gameID].activePlayers;
+    
+    if (global.rooms[socket.gameID].status == 0) { 
+        global.rooms[socket.gameID].player.splice(playerIndex, 1);
+        activePlayers.splice(playerIndex, 1);
+
+        if (activePlayers.length == 1) {
+            io.to(socket.gameID).emit('disableStartGame');
+        }
+
+        for (let i = playerIndex; i < activePlayers.length; i++) {
+            activePlayers[i] = activePlayers[i] - 1;
+        }
+
+        io.to(socket.gameID).emit('visualInitializing', {
+            player: global.rooms[socket.gameID].player
         });
-        var playerStatistic = await Statistic.findOne({
-            _id: playerObject.statistics
+    } else if (global.rooms[socket.gameID].status == 1) {
+        activePlayers.splice(playerIndex, 1);
+
+        if (global.rooms[socket.gameID].turn == (playerIndex + 1)) {  
+            endTurn(io, socket);
+        }
+
+        if (global.rooms[socket.gameID].activePlayers.length == 1) {
+            getWinner(io, socket);
+        }
+
+        io.to(socket.gameID).emit("playerSurrendered", {
+            playerName: socket.username,
+            playerIndex: playerIndex + 1
         })
-        await Statistic.updateOne({
-            _id: playerObject.statistics
-        }, {
-            multiplayerLose: (playerStatistic.multiplayerLose + 1)
-        }, {
-            runValidators: true
-        });
     }
 }
 
 async function getWinner(io, socket) {
     if (global.rooms[socket.gameID].status == 1) {
         global.rooms[socket.gameID].status = 2;
+        // check if not one of the leavers get the win
         var highestScore = global.rooms[socket.gameID].player.reduce((max, current) => (current.score > max.score) ? current.score : max.score);
         var winners = [];
 
-        for (player in global.rooms[socket.gameID].player) {
-            if (player.score == highestScore) {
+        for (var i = 1; i <= global.rooms[socket.gameID].player.length; i++) { 
+            player = global.rooms[socket.gameID].player[i - 1];
+            
+            if (player.score == highestScore && global.rooms[socket.gameID].activePlayers.includes(i)) {
                 winners.push(player.name);
             }
         }
@@ -251,7 +290,7 @@ async function getWinner(io, socket) {
             });
         }
 
-        for (var i = 1; i < data.player + 1; i++) {
+        for (var i = 1; i <= global.rooms[socket.gameID].player.length; i++) {
             var playerName = global.rooms[socket.gameID].player[i - 1].name;
             var playerObject = await User.findOne({
                 username: playerName
@@ -260,7 +299,7 @@ async function getWinner(io, socket) {
                 _id: playerObject.statistics
             })
 
-            if (winners.contains(playerName)) {
+            if (winners.includes(playerName)) {
                 await Statistic.updateOne({
                     _id: playerObject.statistics
                 }, {
@@ -281,8 +320,7 @@ async function getWinner(io, socket) {
 
         io.to(socket.gameID).emit('getWinner', {
             winners: winners,
-            player1: global.rooms[socket.gameID].player1.name,
-            player2: global.rooms[socket.gameID].player2.name
+            player: global.rooms[socket.gameID].player
         });
 
         // Delete game

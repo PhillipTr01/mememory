@@ -54,6 +54,7 @@ module.exports = function (io) {
             // Save Game to rooms
             global.rooms[gameID] = {
                 player: [{name: username, points: 0}],
+                activePlayers: [1],
                 checkingCards: false,
                 status: 0,
                 turn: 0,

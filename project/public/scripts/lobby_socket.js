@@ -21,6 +21,7 @@ function playMultiplayer() {
             if (this.status == 200) {
                 var username = JSON.parse(this.responseText).username;
                 sessionStorage.setItem("role", "creator");
+                sessionStorage.setItem('username', username);
                 socket.emit('playMultiplayer', username);
             }
         }
