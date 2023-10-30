@@ -59,7 +59,7 @@ module.exports = function (io) {
                 return;
             }
 
-            if (global.rooms[data.gameID].player.length < 4 && global.rooms[data.gameID].status == 0) {
+            if (global.rooms[data.gameID].player.length < 5 && global.rooms[data.gameID].status == 0) {
                 multiPlayer.to(data.gameID).emit('enableStartGame');
                 socket.gameID = data.gameID;
                 socket.username = data.username;
