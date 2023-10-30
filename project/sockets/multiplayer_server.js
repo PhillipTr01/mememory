@@ -247,7 +247,7 @@ async function leaveGame(io, socket) {
             return;
         }
 
-        for (let i = playerIndex; i < activePlayers.length; i++) {
+        for (var i = playerIndex; i < activePlayers.length; i++) {
             activePlayers[i] = activePlayers[i] - 1;
         }
 
@@ -276,15 +276,19 @@ async function getWinner(io, socket) {
     if (global.rooms[socket.gameID].status == 1) {
         global.rooms[socket.gameID].status = 2;
         // check if not one of the leavers get the win
-        var highestScore = global.rooms[socket.gameID].player.reduce((max, current) => (current.score > max.score) ? current.score : max.score);
+        var highestPoints = -1;
         var winners = [];
 
-        for (var i = 1; i <= global.rooms[socket.gameID].player.length; i++) { 
+        for (var i = 1; i <= global.rooms[socket.gameID].player.length; i++) {
             player = global.rooms[socket.gameID].player[i - 1];
-            
-            if (player.score == highestScore && global.rooms[socket.gameID].activePlayers.includes(i)) {
-                winners.push(player.name);
-            }
+
+            if (global.rooms[socket.gameID].activePlayers.includes(i))
+                if (player.points > highestPoints) {
+                    highestPoints = player.points;
+                    winners = [player.name];
+                } else if (player.points === highestPoints) {
+                    winners.push(player.name);
+                }
         }
 
         for (var i = 0; i < 66; i++) {
