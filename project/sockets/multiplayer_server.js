@@ -116,6 +116,13 @@ module.exports = function (io) {
             }
         });
 
+        socket.on('sendChatMessage', data => {
+            socket.broadcast.emit('receiveChatMessage', {
+                name: socket.username,
+                message: data.message
+            })
+        });
+
         // endTurn
         socket.on('endTurn', () => {
             endTurn(multiPlayer, socket);
@@ -131,6 +138,10 @@ module.exports = function (io) {
             leaveGame(multiPlayer, socket);
         });
     });
+}
+
+function sendChatMessage(io, socket, message) {
+
 }
 
 function checkGame(io, socket) {
@@ -252,7 +263,8 @@ async function leaveGame(io, socket) {
         }
 
         io.to(socket.gameID).emit('visualInitializing', {
-            player: global.rooms[socket.gameID].player
+            player: global.rooms[socket.gameID].player,
+            activePlayers: activePlayers
         });
     } else if (global.rooms[socket.gameID].status == 1) {
         activePlayers.splice(playerIndex, 1);

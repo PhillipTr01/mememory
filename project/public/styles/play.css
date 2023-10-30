@@ -67,20 +67,17 @@
 
 .chat {
     background-color: #262626;
+    font-size: medium!important;
 }
 
 .message {
     word-break: break-word;
-    margin-top: 1rem;
-    margin-bottom: 1rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0rem;
     padding-left: 0.5rem;
     padding-right: 0.5rem;
     display: flex;
     flex-direction: column;
-}
-
-.left-message {
-    margin-right: 2rem;
 }
 
 .zoom-card-on-turn {
@@ -92,22 +89,22 @@
     z-index: 500;
 }
 
-.right-message {
-    margin-left: 2rem;
-}
-
 .message p {
     border-radius: 0.25rem;
     padding: 0.5rem;
     padding-right: 1rem;
     margin-bottom: 0.25rem;
-    font-weight: 100;
+    font-weight: 25;
+	hyphens: auto; 
+	text-align: justify;
+    max-width: 80%;
 }
 
 .left-message p {
     background-color: #f5f6f7;
-    color: #9b9b9b;
+    color: #858383;
     margin-right: auto;
+
 }
 
 .right-message p {
@@ -120,6 +117,7 @@
     border: none;
     outline: none !important;
     min-width: none;
+    font-size: medium!important;
 }
 
 #gameID {
@@ -129,7 +127,7 @@
 
 #chat-content {
     overflow-y: scroll;
-    height: 60vh;
+    height: 32vh;
 }
 
 #cardModal {

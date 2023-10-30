@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     modal = document.getElementById("cardModal");
+    addChatInputEvent();
 }, false);
 
 if (sessionStorage.getItem("role") == "creator") {
@@ -113,6 +114,17 @@ socket.on('noGameFound', () => {
     window.location.href = '/lobby';
 });
 
+function addChatInputEvent() {
+    let input = document.getElementById("chat-input");
+
+    input.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            document.getElementById("send-message-btn").click();
+        }
+    });
+}
+
 function openCard(id) {
     socket.emit('openCard', id);
 }
@@ -197,6 +209,33 @@ function emitEndTurn() {
 function surrender() {
     socket.emit('surrender');
 }
+
+function sendChatMessage() {
+    let inputElement = document.getElementById('chat-input');
+    let chatContentElement = document.getElementById('chat-content');
+    
+    socket.emit('sendChatMessage', {
+        message: inputElement.value
+    });
+
+    let newChatMessage = `<div class="message right-message">
+                            <p>${inputElement.value}</p>
+                          </div>`;
+
+    chatContentElement.innerHTML += newChatMessage;
+    chatContentElement.scrollTop = chatContentElement.scrollHeight;
+
+    inputElement.value = "";
+}
+
+socket.on('receiveChatMessage', data => {
+    let chatContentElement = document.getElementById('chat-content');
+    let newChatMessage = `<div class="message left-message">
+                            <p><span style="font-size: large; font-weight: bold;">${data.name}</span><br>${data.message}</p>
+                          </div>`;
+    chatContentElement.innerHTML += newChatMessage;
+    chatContentElement.scrollTop = chatContentElement.scrollHeight;
+});
 
 socket.on('playerSurrendered', data => {
     var userElement = document.getElementById(`user${data.playerIndex}Username`);

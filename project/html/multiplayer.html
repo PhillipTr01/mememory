@@ -117,7 +117,7 @@
                                 <p id="user5Score"></p>
                             </div>
                         </div>
-                        <div class="mt-3 mt-md-5">
+                        <div class="mt-md-2">
                             <button type="submit" id="playButton"
                                 class="form-control btn btn-outline-info btn-lg rounded " onclick="emitEndTurn();"
                                 disabled> End Turn
@@ -126,6 +126,19 @@
                                 class="form-control btn btn-outline-success btn-lg rounded " onclick="startGame();"
                                 hidden> Start Game
                             </button>
+                        </div>
+                         <div class="border border-light mt-md-4">
+                            <div class="chat">
+                                <div class="d-flex flex-column" id="chat-content">
+                                </div>
+                                <div class="d-flex bg-transparent p-2 border-top">
+                                    <input id="chat-input" class="chat-input bg-transparent text-light flex-grow-1" type="text"
+                                        placeholder="type...">
+                                    <a id="send-message-btn" class="text-info ms-2 my-auto" onclick="sendChatMessage()">
+                                        <i class="bi bi-arrow-right-square"></i>
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
