@@ -221,9 +221,9 @@ function sendChatMessage() {
             message: inputValue
         });
 
-        if (/^(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png)$/.test(inputValue)) {
+        if (/^(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png)(.)*$/.test(inputValue)) {
             newChatMessage = `<div class="message right-message">
-                                <p><img style="border: 3px solid #fff; border-radius: 3px; text-align: center, width: 100%" src="${inputValue}"></p>
+                                <p><img style="border: 3px solid #fff; border-radius: 3px; text-align: center; height: 100%; width: 100%" src="${inputValue}"></p>
                               </div>`
         } else {
             newChatMessage = `<div class="message right-message">
@@ -242,9 +242,9 @@ socket.on('receiveChatMessage', data => {
     let chatContentElement = document.getElementById('chat-content');
     let newChatMessage = "";
     
-    if (/^(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png)$/.test(data.message)) {
+    if (/^(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png)(.)*$/.test(data.message)) {
         newChatMessage = `<div class="message left-message">
-                            <p><span style="font-size: large; font-weight: bold;">${data.name}</span><br><img style="border: 3px solid #858383; border-radius: 3px; text-align: center, width: 100%" src="${data.message}"></p>
+                            <p><span style="font-size: large; font-weight: bold;">${data.name}</span><br><img style="border: 3px solid #858383; border-radius: 3px; text-align: center; height: 100%; width: 100%" src="${data.message}"></p>
                           </div>`
     } else {
         newChatMessage = `<div class="message left-message">
