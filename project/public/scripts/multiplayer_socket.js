@@ -244,7 +244,7 @@ socket.on('receiveChatMessage', data => {
     
     if (/^(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png)(.)*$/.test(data.message)) {
         newChatMessage = `<div class="message left-message">
-                            <p><span style="font-size: large; font-weight: bold;">${data.name}</span><br><img style="border: 3px solid #858383; border-radius: 3px; text-align: center; height: 100%; width: 100%" src="${data.message}"></p>
+                            <p><span style="font-size: large; font-weight: bold;">${data.name}</span><br><img style="border: 3px solid #858383; border-radius: 3px; text-align: center; height: 80%; width: 100%" src="${data.message}"></p>
                           </div>`
     } else {
         newChatMessage = `<div class="message left-message">
