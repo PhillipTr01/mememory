@@ -213,26 +213,44 @@ function surrender() {
 function sendChatMessage() {
     let inputElement = document.getElementById('chat-input');
     let chatContentElement = document.getElementById('chat-content');
+    let inputValue = inputElement.value;
+    let newChatMessage = "";
     
-    socket.emit('sendChatMessage', {
-        message: inputElement.value
-    });
+    if (inputValue != "") {
+        socket.emit('sendChatMessage', {
+            message: inputValue
+        });
 
-    let newChatMessage = `<div class="message right-message">
-                            <p>${inputElement.value}</p>
-                          </div>`;
+        if (/^(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png)$/.test(inputValue)) {
+            newChatMessage = `<div class="message right-message">
+                                <p><img style="border: 3px solid #fff; border-radius: 3px; text-align: center, width: 100%" src="${inputValue}"></p>
+                              </div>`
+        } else {
+            newChatMessage = `<div class="message right-message">
+                                <p>${inputValue}</p>
+                              </div>`;
+        }
 
-    chatContentElement.innerHTML += newChatMessage;
-    chatContentElement.scrollTop = chatContentElement.scrollHeight;
+        chatContentElement.innerHTML += newChatMessage;
+        chatContentElement.scrollTop = chatContentElement.scrollHeight;
 
-    inputElement.value = "";
+        inputElement.value = "";
+    }
 }
 
 socket.on('receiveChatMessage', data => {
     let chatContentElement = document.getElementById('chat-content');
-    let newChatMessage = `<div class="message left-message">
+    let newChatMessage = "";
+    
+    if (/^(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png)$/.test(data.message)) {
+        newChatMessage = `<div class="message left-message">
+                            <p><span style="font-size: large; font-weight: bold;">${data.name}</span><br><img style="border: 3px solid #858383; border-radius: 3px; text-align: center, width: 100%" src="${data.message}"></p>
+                          </div>`
+    } else {
+        newChatMessage = `<div class="message left-message">
                             <p><span style="font-size: large; font-weight: bold;">${data.name}</span><br>${data.message}</p>
                           </div>`;
+    }
     chatContentElement.innerHTML += newChatMessage;
     chatContentElement.scrollTop = chatContentElement.scrollHeight;
 });

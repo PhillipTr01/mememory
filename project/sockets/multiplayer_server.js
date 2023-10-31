@@ -117,7 +117,7 @@ module.exports = function (io) {
         });
 
         socket.on('sendChatMessage', data => {
-            socket.broadcast.emit('receiveChatMessage', {
+            socket.broadcast.to(socket.gameID).emit('receiveChatMessage', {
                 name: socket.username,
                 message: data.message
             })
@@ -138,10 +138,6 @@ module.exports = function (io) {
             leaveGame(multiPlayer, socket);
         });
     });
-}
-
-function sendChatMessage(io, socket, message) {
-
 }
 
 function checkGame(io, socket) {
