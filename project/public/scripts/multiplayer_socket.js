@@ -242,14 +242,15 @@ function sendChatMessage() {
 socket.on('receiveChatMessage', data => {
     let chatContentElement = document.getElementById('chat-content');
     let newChatMessage = "";
+    let username = (data.spectator) ? `${data.name} 👁` : data.name;
     
     if (/^(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png)(.)*$/.test(data.message)) {
         newChatMessage = `<div class="message left-message">
-                            <p><span style="font-size: large; font-weight: bold;">${data.name}</span><br><img style="border: 3px solid #858383; border-radius: 3px; text-align: center; height: 80%; width: 100%" src="${data.message}"></p>
+                            <p><span style="font-size: large; font-weight: bold;">${username}</span><br><img style="border: 3px solid #858383; border-radius: 3px; text-align: center; height: 80%; width: 100%" src="${data.message}"></p>
                           </div>`
     } else {
         newChatMessage = `<div class="message left-message">
-                            <p><span style="font-size: large; font-weight: bold;">${data.name}</span><br>${data.message}</p>
+                            <p><span style="font-size: large; font-weight: bold;">${username}</span><br>${data.message}</p>
                           </div>`;
     }
     chatContentElement.innerHTML += newChatMessage;

@@ -11,8 +11,15 @@ module.exports = function (io) {
             if (global.rooms[data.gameID] != null) {
                 socket.gameID = data.gameID;
                 socket.difficulty = global.rooms[data.gameID].difficulty;
-                socket.user = {name: global.rooms[data.gameID].username, points: 0};
-                socket.computer = {name: global.rooms[data.gameID].computername, moveMemory: global.rooms[data.gameID].moveMemory, points: 0};
+                socket.user = {
+                    name: global.rooms[data.gameID].username,
+                    points: 0
+                };
+                socket.computer = {
+                    name: global.rooms[data.gameID].computername,
+                    moveMemory: global.rooms[data.gameID].moveMemory,
+                    points: 0
+                };
                 socket.status = 0;
                 socket.turn = 0;
                 socket.finished = 0;
@@ -27,7 +34,7 @@ module.exports = function (io) {
                     linkArray = [];
 
                 // Fetch Memes and initialize idArray
-                for(link of data.links) {
+                for (link of data.links) {
                     linkArray.push(link.link);
                 }
 
@@ -65,7 +72,11 @@ module.exports = function (io) {
                 }
 
                 socket.emit('setComputername', socket.computer.name);
-                socket.emit('highlightPlayer', {turn: socket.turn, computer: socket.computer.name, user: socket.user.name});
+                socket.emit('highlightPlayer', {
+                    turn: socket.turn,
+                    computer: socket.computer.name,
+                    user: socket.user.name
+                });
                 checkGame(socket);
             } else {
                 socket.emit('noGameFound');
@@ -77,7 +88,10 @@ module.exports = function (io) {
                 if (socket.turn == 0 && socket.openedCards.length < 2) {
                     socket.openedCards.push(id);
                     socket.cardCounter[id] = socket.cardCounter[id] + 1;
-                    socket.emit('turnCard', {id: id, src: socket.cardImages[id]});
+                    socket.emit('turnCard', {
+                        id: id,
+                        src: socket.cardImages[id]
+                    });
                 }
             } else {
                 socket.emit('zoomImage', id);
@@ -91,15 +105,18 @@ module.exports = function (io) {
 
         // surrender
         socket.on('surrender', () => {
-            for(var i = 0; i < 66; i++) {
-                socket.emit('turnCard', {id: i, src: socket.cardImages[i]});
+            for (var i = 0; i < 66; i++) {
+                socket.emit('turnCard', {
+                    id: i,
+                    src: socket.cardImages[i]
+                });
             }
-            
+
             surrendGame(socket);
         });
 
         // disconnect
-        socket.on('disconnect', () => { 
+        socket.on('disconnect', () => {
             surrendGame(socket);
         });
     });
@@ -110,17 +127,17 @@ function checkGame(socket) {
         if (socket.gameID != null) {
             // Status: 0 - Doing nothing; 1 - Computer running; 2 - Checking Cards;
             // Turn: 0 - Turn of player; 1 - Turn of computer;
-    
+
             if (socket.turn == 1 && socket.status == 0) {
                 // Change status so that socket doesn't call the computerLogic twice (or more).
                 socket.status = 1;
                 computerLogic(socket);
             }
-    
+
             // If both cards are open check if those are a match.
             if (socket.openedCards.length == 2 && socket.status < 2) {
                 socket.status = 2;
-    
+
                 if (!checkCards(socket)) {
                     // If it's the player's turn activate endTurn-Button, so that he can manually end his turn. 
                     if (socket.turn == 0) {
@@ -131,7 +148,7 @@ function checkGame(socket) {
                     }
                 }
             }
-    
+
             // Check for winner
             if (socket.foundMatches.length == 66) {
                 getWinner(socket);
@@ -156,7 +173,7 @@ function computerLogic(socket) {
         }
     }
 
-    if(id == -1 && id2 == -1) {
+    if (id == -1 && id2 == -1) {
         // Get random card -> if pair is in previousMoves open it -> if not get another random card.
         id = getRandomCard(socket);
         id2 = socket.cardPairs[id];
@@ -170,8 +187,14 @@ function computerLogic(socket) {
 
     // Push cards to openedCards, so that they get checked in checkGame-method
     socket.openedCards.push(id);
-    setTimeout(() => socket.emit('turnCard', {id: id, src: socket.cardImages[id]}), 1250);
-    setTimeout(() => socket.emit('turnCard', {id: id2, src: socket.cardImages[id2]}), 1750);
+    setTimeout(() => socket.emit('turnCard', {
+        id: id,
+        src: socket.cardImages[id]
+    }), 1250);
+    setTimeout(() => socket.emit('turnCard', {
+        id: id2,
+        src: socket.cardImages[id2]
+    }), 1750);
     setTimeout(() => socket.openedCards.push(id2), 2250);
 }
 
@@ -204,10 +227,16 @@ function checkCards(socket) {
         // Increase Points
         if (socket.turn == 0) {
             socket.user.points++;
-            socket.emit('increasePoints', {turn: socket.turn, points: socket.user.points});
+            socket.emit('increasePoints', {
+                turn: socket.turn,
+                points: socket.user.points
+            });
         } else {
             socket.computer.points++;
-            socket.emit('increasePoints', {turn: socket.turn, points: socket.computer.points});
+            socket.emit('increasePoints', {
+                turn: socket.turn,
+                points: socket.computer.points
+            });
         }
 
         // Reset turn
@@ -230,8 +259,11 @@ function endTurn(socket) {
 
     // Close both cards
     if (!socket.finished) {
-        socket.emit('closeCards', {1: id, 2: id2});
-        
+        socket.emit('closeCards', {
+            1: id,
+            2: id2
+        });
+
         // If it's the player's turn disable the endTurn-Button so that the user can't end his turn twice
         if (socket.turn == 0) {
             socket.emit('disableEndTurn');
@@ -244,13 +276,17 @@ function endTurn(socket) {
         socket.status = 0;
 
         // Change highlight of player
-        socket.emit('highlightPlayer', {turn: socket.turn, computer: socket.computer.name, user: socket.user.name});
+        socket.emit('highlightPlayer', {
+            turn: socket.turn,
+            computer: socket.computer.name,
+            user: socket.user.name
+        });
     }
 }
 
 function surrendGame(socket) {
     // Does this game exist? Is it finished?
-    if(socket.gameID != null && !socket.finished) {
+    if (socket.gameID != null && !socket.finished) {
         // Set points above possible range. => No need to implement surrend function, if you declare computer as winner.
         socket.computer.points = 50;
         getWinner(socket);
@@ -258,8 +294,12 @@ function surrendGame(socket) {
 }
 
 async function getWinner(socket) {
-    var user = await User.findOne({username: socket.user.name});
-    var statistic = await Statistic.findOne({_id: user.statistics});
+    var user = await User.findOne({
+        username: socket.user.name
+    });
+    var statistic = await Statistic.findOne({
+        _id: user.statistics
+    });
     var winner;
     var body;
 
@@ -272,16 +312,24 @@ async function getWinner(socket) {
 
         switch (socket.difficulty) {
             case 0:
-                body = {easyWin: (statistic.easyWin + 1)};
+                body = {
+                    easyWin: (statistic.easyWin + 1)
+                };
                 break;
             case 1:
-                body = {mediumWin: (statistic.mediumWin + 1)};
+                body = {
+                    mediumWin: (statistic.mediumWin + 1)
+                };
                 break;
             case 2:
-                body = {hardWin: (statistic.hardWin + 1)};
+                body = {
+                    hardWin: (statistic.hardWin + 1)
+                };
                 break;
             case 3:
-                body = {expertWin: (statistic.expertWin + 1)};
+                body = {
+                    expertWin: (statistic.expertWin + 1)
+                };
                 break;
         }
     } else {
@@ -289,22 +337,39 @@ async function getWinner(socket) {
 
         switch (socket.difficulty) {
             case 0:
-                body = {easyLose: (statistic.easyLose + 1)};
+                body = {
+                    easyLose: (statistic.easyLose + 1)
+                };
                 break;
             case 1:
-                body = {mediumLose: (statistic.mediumLose + 1)};
+                body = {
+                    mediumLose: (statistic.mediumLose + 1)
+                };
                 break;
             case 2:
-                body = {hardLose: (statistic.hardLose + 1)};
+                body = {
+                    hardLose: (statistic.hardLose + 1)
+                };
                 break;
             case 3:
-                body = {expertLose: (statistic.expertLose + 1)};
+                body = {
+                    expertLose: (statistic.expertLose + 1)
+                };
                 break;
         }
     }
 
-    await Statistic.updateOne({_id: user.statistics}, body, {runValidators: true});
-    socket.emit('getWinner', {winner: winner, cardCounter: socket.cardCounter, computer: socket.computer.name, user: socket.user.name});
+    await Statistic.updateOne({
+        _id: user.statistics
+    }, body, {
+        runValidators: true
+    });
+    socket.emit('getWinner', {
+        winner: winner,
+        cardCounter: socket.cardCounter,
+        computer: socket.computer.name,
+        user: socket.user.name
+    });
 
     // Delete game
     delete global.rooms[socket.gameID];

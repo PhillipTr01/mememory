@@ -59,18 +59,20 @@ module.exports = function (io) {
                 return;
             }
 
+            socket.username = data.username;
+            socket.gameID = data.gameID;
+            socket.join(data.gameID);
+
             if (global.rooms[data.gameID].player.length < 5 && global.rooms[data.gameID].status == 0) {
                 multiPlayer.to(data.gameID).emit('enableStartGame');
-                socket.gameID = data.gameID;
-                socket.username = data.username;
-                socket.join(data.gameID);
+                socket.spectator = false;
                 global.rooms[data.gameID].player.push({
                     name: data.username,
                     points: 0
                 });
                 global.rooms[data.gameID].activePlayers.push(global.rooms[data.gameID].player.length)
             } else {
-                socket.join(data.gameID);
+                socket.spectator = true;
                 socket.emit('watchGame');
             }
 
@@ -120,7 +122,8 @@ module.exports = function (io) {
         socket.on('sendChatMessage', data => {
             socket.broadcast.to(socket.gameID).emit('receiveChatMessage', {
                 name: socket.username,
-                message: data.message
+                message: data.message,
+                spectator: socket.spectator
             })
         });
 
