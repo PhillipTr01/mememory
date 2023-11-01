@@ -39,7 +39,7 @@ module.exports = function (io) {
                     difficulty: data.difficulty,
                     username: data.username,
                     computername: computername,
-                    moveMemory: moveMemory
+                    moveMemory: moveMemory,
                 }
 
                 socket.emit('saveGameID', {gameID: gameID, url: '/singleplayer'});
@@ -62,6 +62,7 @@ module.exports = function (io) {
                 cardPairs: [],
                 cardImages: [],
                 foundMatches: [],
+                cardCounter: Array(66).fill(0)
             }
 
             socket.emit('saveGameID', {gameID: gameID, url: '/play'});

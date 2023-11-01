@@ -103,6 +103,7 @@ module.exports = function (io) {
                     var turn = global.rooms[socket.gameID].turn;
                     if ((global.rooms[socket.gameID].player[turn - 1].name == socket.username)) {
                         global.rooms[socket.gameID].openedCards.push(id);
+                        global.rooms[socket.gameID].cardCounter[id] = global.rooms[socket.gameID].cardCounter[id] + 1;
                         multiPlayer.to(socket.gameID).emit('turnCard', {
                             id: id,
                             src: global.rooms[socket.gameID].cardImages[id]
@@ -336,7 +337,8 @@ async function getWinner(io, socket) {
 
         io.to(socket.gameID).emit('getWinner', {
             winners: winners,
-            player: global.rooms[socket.gameID].player
+            player: global.rooms[socket.gameID].player,
+            cardCounter: global.rooms[socket.gameID].cardCounter
         });
 
         // Delete game

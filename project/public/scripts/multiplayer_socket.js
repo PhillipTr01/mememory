@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div id="card-${index}" class="col-1 card pos-abs w-100 h-100" onclick="openCard(${index}); false;"> 
                             <div class="card-back card-image"> 
                                 <img src="" class="card-image">
+                                <div id="cardcount-${index}" class="overlay"></div>
                             </div>
                             <div class="card-front card-image"> 
                                 <img src="${backImage}" class="card-image">
@@ -285,6 +286,7 @@ socket.on('getWinner', data => {
 
     // Remove all highlights
     for (var i = 0; i < 66; i++) {
+        document.getElementById(`cardcount-${i}`).innerText = data.cardCounter[i]; 
         understateCard(i);
     }
 

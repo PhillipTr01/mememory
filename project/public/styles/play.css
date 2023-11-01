@@ -26,6 +26,17 @@
     position: absolute;
 }
 
+.overlay {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
+    color: white; /* Text color for the overlay */
+    padding: 8%;
+    padding-top: 1%;
+    padding-bottom: 0;
+}
+
 .card-size {
     position: relative;
     width: 13.9%;

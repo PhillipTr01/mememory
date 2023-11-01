@@ -21,7 +21,8 @@ module.exports = function (io) {
                 socket.cardImages = [];
                 socket.foundMatches = [];
                 socket.previousMoves = [];
-                
+                socket.cardCounter = Array(66).fill(0);
+
                 var idArray = [],
                     linkArray = [];
 
@@ -75,6 +76,7 @@ module.exports = function (io) {
             if (socket.gameID != null && !socket.openedCards.includes(id) && !socket.foundMatches.includes(id)) {
                 if (socket.turn == 0 && socket.openedCards.length < 2) {
                     socket.openedCards.push(id);
+                    socket.cardCounter[id] = socket.cardCounter[id] + 1;
                     socket.emit('turnCard', {id: id, src: socket.cardImages[id]});
                 }
             } else {
@@ -302,7 +304,7 @@ async function getWinner(socket) {
     }
 
     await Statistic.updateOne({_id: user.statistics}, body, {runValidators: true});
-    socket.emit('getWinner', {winner: winner, computer: socket.computer.name, user: socket.user.name});
+    socket.emit('getWinner', {winner: winner, cardCounter: socket.cardCounter, computer: socket.computer.name, user: socket.user.name});
 
     // Delete game
     delete global.rooms[socket.gameID];
