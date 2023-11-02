@@ -76,7 +76,7 @@ socket.on('visualInitializing', data => {
 
     for (var i = 1; i <= data.player.length; i++) {
         document.getElementById(`user${i}Username`).innerText = data.player[i - 1].name;
-        document.getElementById(`user${i}Score`).innerText = "0";
+        document.getElementById(`user${i}Score`).innerText = data.player[i - 1].points;
     }
     // document.getElementById('surrenderButton').disabled = false;
 });
