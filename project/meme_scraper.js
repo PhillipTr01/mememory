@@ -5,6 +5,11 @@ module.exports.scrape = function () {
     Meme.collection.drop();
     scrapeImages("https://www.reddit.com/r/dankmemes/.json?limit=100");
     scrapeImages("https://www.reddit.com/r/memes/.json?limit=100");
+    scrapeImages("https://www.reddit.com/r/me_irl/.json?limit=100");
+    scrapeImages("https://www.reddit.com/r/AnimalsBeingDerps/.json?limit=100");
+    scrapeImages("https://www.reddit.com/r/wholesomememes/.json?limit=100");
+    scrapeImages("https://www.reddit.com/r/antimeme/.json?limit=100");
+    scrapeImages("https://www.reddit.com/r/ProgrammerHumor/.json?limit=100");
 };
 
 function scrapeImages(link) {
