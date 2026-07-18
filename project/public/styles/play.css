@@ -1,192 +1,198 @@
 .card {
-    -webkit-transition: 1s ease-in-out;
-    -moz-transition: 1s ease-in-out;
-    -o-transition: 1s ease-in-out;
-    transition: 1s ease-in-out;
+  -webkit-transition: 1s ease-in-out;
+  -moz-transition: 1s ease-in-out;
+  -o-transition: 1s ease-in-out;
+  transition: 1s ease-in-out;
 
-    transform-style: preserve-3d;
-    transform: rotateY(-180deg);
+  transform-style: preserve-3d;
+  transform: rotateY(-180deg);
 
-    border: 0;
-    cursor: pointer;
+  border: 0;
+  cursor: pointer;
 }
 
 .card-front {
-    backface-visibility: hidden;
-    transform: rotateY(180deg);
-    position: absolute;
-    background-color: #141414;
-    border: solid #616161 2px;
-    border-radius: 3px;
+  backface-visibility: hidden;
+  transform: rotateY(180deg);
+  position: absolute;
+  background-color: #141414;
+  border: solid #616161 2px;
+  border-radius: 3px;
 }
 
 .card-back {
-    backface-visibility: hidden;
-    transform: rotateY(0deg);
-    position: absolute;
+  backface-visibility: hidden;
+  transform: rotateY(0deg);
+  position: absolute;
+}
+
+.overlay {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
+  color: white; /* Text color for the overlay */
+  padding: 8%;
+  padding-top: 1%;
+  padding-bottom: 0;
 }
 
 .card-size {
-    position: relative;
-    width: 13.9%;
-    padding: 0px;
-    padding-bottom: 13.9%;
-    max-height: 13.9%;
-    margin: 0.2rem;
+  position: relative;
+  width: 13.9%;
+  padding: 0px;
+  padding-bottom: 13.9%;
+  max-height: 13.9%;
+  margin: 0.2rem;
 }
 
 @media (min-width: 576px) {
-    .card-size {
-        position: relative;
-        width: 8%;
-        padding: 0px;
-        padding-bottom: 8%;
-        max-height: 8%;
-        margin: 0.2rem;
-    }
+  .card-size {
+    position: relative;
+    width: 8%;
+    padding: 0px;
+    padding-bottom: 8%;
+    max-height: 8%;
+    margin: 0.2rem;
+  }
 }
 
-
 .card-image {
-    width: 100%;
-    height: 100%;
+  width: 100%;
+  height: 100%;
 }
 
 .flip {
-    -webkit-transform: rotateY(0deg);
-    -moz-transform: rotateY(0deg);
-    -o-transform: rotateY(0deg);
-    transform: rotateY(0deg);
+  -webkit-transform: rotateY(0deg);
+  -moz-transform: rotateY(0deg);
+  -o-transform: rotateY(0deg);
+  transform: rotateY(0deg);
 }
 
 .inner-card {
-    width: 100%;
-    height: 100%;
-
+  width: 100%;
+  height: 100%;
 }
 
 .chat {
-    background-color: #262626;
+  background-color: #262626;
+  font-size: medium !important;
 }
 
 .message {
-    word-break: break-word;
-    margin-top: 1rem;
-    margin-bottom: 1rem;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-    display: flex;
-    flex-direction: column;
-}
-
-.left-message {
-    margin-right: 2rem;
+  word-break: break-word;
+  margin-top: 0.5rem;
+  margin-bottom: 0rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .zoom-card-on-turn {
-    -webkit-transform: scale(1.2);
-    -moz-transform: scale(1.2);
-    -o-transform: scale(1.2);
-    transform: scale(1.2);
+  -webkit-transform: scale(1.2);
+  -moz-transform: scale(1.2);
+  -o-transform: scale(1.2);
+  transform: scale(1.2);
 
-    z-index: 500;
-}
-
-.right-message {
-    margin-left: 2rem;
+  z-index: 500;
 }
 
 .message p {
-    border-radius: 0.25rem;
-    padding: 0.5rem;
-    padding-right: 1rem;
-    margin-bottom: 0.25rem;
-    font-weight: 100;
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  padding-right: 1rem;
+  margin-bottom: 0.25rem;
+  font-weight: 25;
+  hyphens: auto;
+  text-align: justify;
+  max-width: 80%;
 }
 
 .left-message p {
-    background-color: #f5f6f7;
-    color: #9b9b9b;
-    margin-right: auto;
+  background-color: #f5f6f7;
+  color: #858383;
+  margin-right: auto;
 }
 
 .right-message p {
-    background-color: #48b0f7;
-    color: #fff;
-    margin-left: auto;
+  background-color: #48b0f7;
+  color: #fff;
+  margin-left: auto;
 }
 
 .chat-input {
-    border: none;
-    outline: none !important;
-    min-width: none;
+  border: none;
+  outline: none !important;
+  min-width: none;
+  font-size: medium !important;
 }
 
 #gameID {
-    cursor: copy;
-    font-weight: 500;
+  cursor: copy;
+  font-weight: 500;
 }
 
 #chat-content {
-    overflow-y: scroll;
-    height: 60vh;
+  overflow-y: scroll;
+  height: 32vh;
 }
 
 #cardModal {
-    padding: 10vw;
-    text-align: center;
+  padding: 10vw;
+  text-align: center;
 }
 
 #imgModal {
-    max-height: 100%;
-    max-width: 100%;
-    width: auto;
-    height: auto;
-    display: block;
+  max-height: 100%;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  display: block;
 }
 
 .modal-content {
-    animation-name: zoom;
-    animation-duration: 0.6s;
+  animation-name: zoom;
+  animation-duration: 0.6s;
 }
 
 @keyframes zoom {
-    from {
-        -webkit-transform: scale(0);
-        -moz-transform: scale(0);
-        -o-transform: scale(0);
-        transform: scale(0);
-    }
+  from {
+    -webkit-transform: scale(0);
+    -moz-transform: scale(0);
+    -o-transform: scale(0);
+    transform: scale(0);
+  }
 
-    to {
-        -webkit-transform: scale(1);
-        -moz-transform: scale(1);
-        -o-transform: scale(1);
-        transform: scale(1);
-    }
+  to {
+    -webkit-transform: scale(1);
+    -moz-transform: scale(1);
+    -o-transform: scale(1);
+    transform: scale(1);
+  }
 }
 
 /* The Close Button */
 .close {
-    position: absolute;
-    top: 15px;
-    right: 35px;
-    color: #f1f1f1;
-    font-size: 40px;
-    font-weight: bold;
-    transition: 0.3s;
+  position: absolute;
+  top: 15px;
+  right: 35px;
+  color: #f1f1f1;
+  font-size: 40px;
+  font-weight: bold;
+  transition: 0.3s;
 }
 
 .close:hover,
 .close:focus {
-    color: #bbb;
-    text-decoration: none;
-    cursor: pointer;
+  color: #bbb;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 /* 100% Image Width on Smaller Screens */
 @media only screen and (max-width: 700px) {
-    .modal-content {
-        width: 100%;
-    }
+  .modal-content {
+    width: 100%;
+  }
 }
