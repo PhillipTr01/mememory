@@ -1,42 +1,59 @@
-var request = require("request");
+const Parser = require("rss-parser");
+const parser = new Parser();
 const Meme = require("./models/Meme");
 
-module.exports.scrape = function () {
-  Meme.collection.drop();
-  scrapeImages("https://www.reddit.com/r/dankmemes/.json?limit=100");
-  scrapeImages("https://www.reddit.com/r/memes/.json?limit=100");
-  scrapeImages("https://www.reddit.com/r/me_irl/.json?limit=100");
-  scrapeImages("https://www.reddit.com/r/AnimalsBeingDerps/.json?limit=100");
-  scrapeImages("https://www.reddit.com/r/wholesomememes/.json?limit=100");
-  scrapeImages("https://www.reddit.com/r/antimeme/.json?limit=100");
-  scrapeImages("https://www.reddit.com/r/ProgrammerHumor/.json?limit=100");
+module.exports.scrape = async function () {
+  try {
+    await Meme.collection.drop();
+  } catch (err) {}
+
+  const subreddits = [
+    "dankmemes",
+    "memes",
+    "me_irl",
+    "AnimalsBeingDerps",
+    "wholesomememes",
+    "antimeme",
+    "ProgrammerHumor",
+  ];
+
+  for (const subreddit of subreddits) {
+    await scrapeImages(`https://www.reddit.com/r/${subreddit}/.rss?limit=100`);
+
+    console.log(`Finished ${subreddit}, waiting 30 seconds...`);
+
+    await new Promise((resolve) => setTimeout(resolve, 30000));
+  }
 };
 
-function scrapeImages(link) {
-  request(link, async function (err, res, body) {
-    if (!err && res.statusCode === 200) {
-      try {
-        var parsedBody = JSON.parse(body);
-        var skipFirst = false;
+async function scrapeImages(link) {
+  try {
+    const feed = await parser.parseURL(link);
 
-        for (image of parsedBody.data.children) {
-          if (
-            skipFirst &&
-            /https\:\/\/i\.redd\.it\/([0-9A-Za-z]{13})(.jpg|.png|.gif)/.test(
-              image.data.url_overridden_by_dest,
-            )
-          ) {
-            await Meme({
-              link: image.data.url_overridden_by_dest,
-            }).save();
-          }
-          skipFirst = true;
-        }
-      } catch (error) {
-        console.log(error);
+    let skipFirst = false;
+
+    for (const item of feed.items) {
+      if (!skipFirst) {
+        skipFirst = true;
+        continue;
       }
-    } else {
-      console.log(err + " " + res.statusMessage + " " + res.statusCode);
+
+      // Find i.redd.it image inside the RSS HTML
+      const match =
+        item.content?.match(
+          /https:\/\/i\.redd\.it\/[^\s"'<>]+\.(jpg|jpeg|png|gif|webp)/i,
+        ) ||
+        item.contentSnippet?.match(
+          /https:\/\/i\.redd\.it\/[^\s"'<>]+\.(jpg|jpeg|png|gif|webp)/i,
+        );
+
+      if (match) {
+        await Meme({
+          link: match[0],
+        }).save();
+      }
     }
-  });
+  } catch (err) {
+    console.error(`Failed to scrape ${link}:`, err.message);
+  }
 }

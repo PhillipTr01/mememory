@@ -103,8 +103,8 @@ mongoose.connect(process.env.DB_URL, {
   useUnifiedTopology: true,
 });
 
-/* Get new Memes every 10 minutes */
-setInterval(() => memeScraper.scrape(), 600000);
+/* Get new Memes every 60 minutes */
+setInterval(() => memeScraper.scrape(), 60 * 60 * 1000);
 
 memeScraper.scrape();
 

@@ -4,7 +4,7 @@ const schema = mongoose.Schema({
   link: {
     type: String,
     required: true,
-    match: /https\:\/\/i\.redd\.it\/([0-9A-Za-z]{13})(.jpg|.png|.gif)/,
+    match: /https:\/\/i\.redd\.it\/[^\s"'<>]+\.(jpg|jpeg|png|gif|webp)/i,
     minLength: 15,
   },
 });
