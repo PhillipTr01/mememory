@@ -7,7 +7,6 @@ function playSingleplayer(difficulty) {
       if (this.status == 200) {
         var username = JSON.parse(this.responseText).username;
         socket.emit("playSingleplayer", {
-          username: username,
           difficulty: difficulty,
         });
       }
@@ -25,7 +24,7 @@ function playMultiplayer() {
         var username = JSON.parse(this.responseText).username;
         sessionStorage.setItem("role", "creator");
         sessionStorage.setItem("username", username);
-        socket.emit("playMultiplayer", username);
+        socket.emit("playMultiplayer");
       }
     }
   };
@@ -54,4 +53,15 @@ function joinMultiplayer() {
 socket.on("saveGameID", (data) => {
   sessionStorage.setItem("gameID", data.gameID);
   window.location.href = data.url;
+});
+
+socket.on("gameError", (message) => {
+  alert(message);
+});
+
+socket.on("connect_error", (error) => {
+  // Not logged in (anymore)
+  if (error && error.message == "unauthorized") {
+    window.location.href = "/";
+  }
 });

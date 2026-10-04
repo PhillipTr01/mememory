@@ -13,4 +13,20 @@ const schema = mongoose.Schema({
     multiplayerLose: {type: Number, required: true, default: 0}
 });
 
+/*
+ * Atomically increments one counter of a user's statistic.
+ * $inc avoids lost updates when two games finish at the same time.
+ */
+schema.statics.increment = async function (username, field) {
+    const User = require('./User');
+    const user = await User.findOne({username: username}).select('statistics');
+
+    if (user == null || user.statistics == null) {
+        return false;
+    }
+
+    const result = await this.updateOne({_id: user.statistics}, {$inc: {[field]: 1}});
+    return result.n > 0 || result.matchedCount > 0;
+};
+
 module.exports = mongoose.model('statistic', schema);

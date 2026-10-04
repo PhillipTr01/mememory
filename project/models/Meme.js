@@ -6,6 +6,7 @@ const schema = mongoose.Schema({
     required: true,
     match: /https:\/\/i\.redd\.it\/[^\s"'<>]+\.(jpg|jpeg|png|gif|webp)/i,
     minLength: 15,
+    index: true,
   },
 });
 

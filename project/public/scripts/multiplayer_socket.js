@@ -4,6 +4,29 @@ var modal;
 var game;
 var backImage = "/static/images/logo_small.png";
 
+// Escape text before putting it into innerHTML (usernames, chat messages, ...)
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Something went wrong on the server (e.g. not enough memes) -> back to the lobby
+socket.on("gameError", (message) => {
+  alert(message || "Something went wrong. Please try again.");
+  window.location.href = "/lobby";
+});
+
+socket.on("connect_error", (error) => {
+  // Not logged in (anymore)
+  if (error && error.message == "unauthorized") {
+    window.location.href = "/";
+  }
+});
+
 document.addEventListener(
   "DOMContentLoaded",
   function () {
@@ -32,36 +55,33 @@ document.addEventListener(
 );
 
 if (sessionStorage.getItem("role") == "creator") {
-  // Get all Memes from database
   document.getElementById("playButton").hidden = true;
   document.getElementById("startButton").hidden = false;
   document.getElementById("startButton").disabled = true;
 
-  var request = new XMLHttpRequest();
-  request.onreadystatechange = function () {
-    if (this.readyState == 4) {
-      if (this.status == 200) {
-        var links = JSON.parse(request.responseText);
-        // Initialize Game
-        socket.emit("initializingGame", {
-          gameID: sessionStorage.getItem("gameID"),
-          links: links,
-        });
-      }
-    }
-  };
-  request.open("GET", "/requests/memes");
-  request.send();
+  // Initialize Game - the server picks the memes
+  socket.emit("initializingGame", {
+    gameID: sessionStorage.getItem("gameID"),
+  });
 } else {
   socket.emit("joinGame", {
     gameID: sessionStorage.getItem("gameID"),
-    username: sessionStorage.getItem("username"),
   });
 }
 
 socket.on("enableStartGame", () => {
   if (document.getElementById("startButton").disabled) {
     document.getElementById("startButton").disabled = false;
+  }
+});
+
+// The creator left the lobby -> the next player becomes the creator
+socket.on("newCreator", (data) => {
+  if (data.name == sessionStorage.getItem("username")) {
+    sessionStorage.setItem("role", "creator");
+    document.getElementById("playButton").hidden = true;
+    document.getElementById("startButton").hidden = false;
+    document.getElementById("startButton").disabled = true;
   }
 });
 
@@ -108,11 +128,12 @@ socket.on("highlightPlayer", (data) => {
     if (data.turn == i) {
       document.getElementById(`user${i}Username`).classList.add("fw-bold");
       document.getElementById(`user${i}Username`).innerHTML =
-        `${data.player[i - 1].name} <i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
+        `${escapeHtml(data.player[i - 1].name)} <i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
     } else {
       document.getElementById(`user${i}Username`).classList.remove("fw-bold");
-      document.getElementById(`user${i}Username`).innerHTML =
-        data.player[i - 1].name;
+      document.getElementById(`user${i}Username`).innerHTML = escapeHtml(
+        data.player[i - 1].name,
+      );
     }
   }
 });
@@ -168,27 +189,25 @@ socket.on("understateCard", (id) => {
 });
 
 function understateCard(id) {
-  document.getElementById("card-" + id).classList.remove("zoom-card-on-turn");
-  document.getElementById("card-" + id).classList.remove("border");
-  document.getElementById("card-" + id).classList.remove("border-3");
+  var card = document.getElementById("card-" + id);
+  if (card == null) return;
+  card.classList.remove("zoom-card-on-turn");
+  card.classList.remove("border");
+  card.classList.remove("border-3");
 }
 
 // Close opened cards
 socket.on("closeCards", (data) => {
-  var card = document.getElementById("card-" + data[1]);
-  card.classList.remove("flip");
-  setTimeout(() => {
-    card.childNodes[1].childNodes[1].src = "";
-  }, 500);
+  [data[1], data[2]].forEach((id) => {
+    var card = document.getElementById("card-" + id);
+    if (card == null) return;
 
-  var card2 = document.getElementById("card-" + data[2]);
-  card2.classList.remove("flip");
-  setTimeout(() => {
-    card2.childNodes[1].childNodes[1].src = "";
-  }, 500);
-
-  understateCard(data[1]);
-  understateCard(data[2]);
+    card.classList.remove("flip");
+    setTimeout(() => {
+      card.childNodes[1].childNodes[1].src = "";
+    }, 500);
+    understateCard(id);
+  });
 });
 
 // Activate endTurn-Button
@@ -205,9 +224,7 @@ function startGame() {
   document.getElementById("startButton").hidden = true;
   document.getElementById("playButton").hidden = false;
 
-  socket.emit("startGame", {
-    username: sessionStorage.getItem("username"),
-  });
+  socket.emit("startGame");
 }
 
 function emitEndTurn() {
@@ -231,11 +248,11 @@ function sendChatMessage() {
 
     if (/^(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png)(.)*$/.test(inputValue)) {
       newChatMessage = `<div class="message right-message">
-                                <p><img style="border: 3px solid #fff; border-radius: 3px; text-align: center; height: 100%; width: 100%" src="${inputValue}"></p>
+                                <p><img style="border: 3px solid #fff; border-radius: 3px; text-align: center; height: 100%; width: 100%" src="${escapeHtml(inputValue)}"></p>
                               </div>`;
     } else {
       newChatMessage = `<div class="message right-message">
-                                <p>${inputValue}</p>
+                                <p>${escapeHtml(inputValue)}</p>
                               </div>`;
     }
 
@@ -249,15 +266,15 @@ function sendChatMessage() {
 socket.on("receiveChatMessage", (data) => {
   let chatContentElement = document.getElementById("chat-content");
   let newChatMessage = "";
-  let username = data.spectator ? `${data.name} 👁` : data.name;
+  let username = escapeHtml(data.spectator ? `${data.name} 👁` : data.name);
 
   if (/^(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png)(.)*$/.test(data.message)) {
     newChatMessage = `<div class="message left-message">
-                            <p><span style="font-size: large; font-weight: bold;">${username}</span><br><img style="border: 3px solid #858383; border-radius: 3px; text-align: center; height: 80%; width: 100%" src="${data.message}"></p>
+                            <p><span style="font-size: large; font-weight: bold;">${username}</span><br><img style="border: 3px solid #858383; border-radius: 3px; text-align: center; height: 80%; width: 100%" src="${escapeHtml(data.message)}"></p>
                           </div>`;
   } else {
     newChatMessage = `<div class="message left-message">
-                            <p><span style="font-size: large; font-weight: bold;">${username}</span><br>${data.message}</p>
+                            <p><span style="font-size: large; font-weight: bold;">${username}</span><br>${escapeHtml(data.message)}</p>
                           </div>`;
   }
   chatContentElement.innerHTML += newChatMessage;
@@ -268,7 +285,7 @@ socket.on("playerSurrendered", (data) => {
   var userElement = document.getElementById(`user${data.playerIndex}Username`);
   var scoreElement = document.getElementById(`user${data.playerIndex}Score`);
 
-  userElement.innerHTML = data.playerName;
+  userElement.innerText = data.playerName;
   userElement.classList.add("text-secondary");
   scoreElement.classList.add("text-secondary");
   userElement.classList.remove("fw-bold");
@@ -282,10 +299,10 @@ socket.on("getWinner", (data) => {
     var scoreElement = document.getElementById(`user${i}Score`);
 
     if (data.winners.includes(data.player[i - 1].name)) {
-      userElement.innerHTML = `${data.player[i - 1].name}  <i class="bi bi-trophy text-warning"></i>`;
+      userElement.innerHTML = `${escapeHtml(data.player[i - 1].name)}  <i class="bi bi-trophy text-warning"></i>`;
       userElement.classList.add("fw-bold");
     } else {
-      userElement.innerHTML = data.player[i - 1].name;
+      userElement.innerText = data.player[i - 1].name;
       userElement.classList.add("text-secondary");
       scoreElement.classList.add("text-secondary");
       userElement.classList.remove("fw-bold");
