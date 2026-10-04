@@ -169,9 +169,17 @@ function emitEndTurn() {
 }
 
 function surrender() {
-  if (confirm("Do you really want to surrender? This counts as a loss.")) {
-    socket.emit("surrender");
-  }
+  confirmDialog({
+    icon: "🏳️",
+    title: "Surrender?",
+    text: "The bot wins this game and it counts as a loss in your statistics.",
+    cancelLabel: "Keep playing",
+    confirmLabel: "Surrender",
+    confirmIcon: "bi-flag-fill me-1",
+    danger: true,
+  }).then((ok) => {
+    if (ok) socket.emit("surrender");
+  });
 }
 
 socket.on("getWinner", (data) => {

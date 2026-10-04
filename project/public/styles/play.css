@@ -2,15 +2,16 @@
 .memory-grid {
   display: grid;
   grid-template-columns: repeat(11, minmax(0, 1fr));
-  gap: clamp(4px, 0.6vw, 10px);
-  max-width: 1150px;
+  gap: clamp(4px, 0.5vw, 8px);
+  /* As big as possible, but all 6 rows have to fit on the screen */
+  width: min(100%, calc((100vh - 130px) * 11 / 6));
   margin: 0 auto;
-  padding: 0.5rem;
 }
 
 @media (max-width: 767px) {
   .memory-grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
+    width: 100%;
   }
 }
 

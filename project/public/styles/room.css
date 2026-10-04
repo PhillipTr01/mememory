@@ -1,15 +1,15 @@
 /* ---------- Layout ---------- */
 .room-page {
   flex: 1 0 auto;
-  padding: 1rem;
+  padding: 0.25rem 1rem 1rem;
   color: var(--mm-text);
 }
 
 .room-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 340px;
   gap: 1.25rem;
-  max-width: 1700px;
+  max-width: 2000px;
   margin: 0 auto;
   align-items: start;
 }
@@ -346,17 +346,6 @@
 /* ---------- Board ---------- */
 .board {
   animation: mm-fade-up 0.35s ease;
-}
-
-/* Glow around the board when it's your turn */
-.board {
-  border-radius: 16px;
-  transition: box-shadow 0.3s ease, background 0.3s ease;
-}
-
-.board.my-turn {
-  background: rgba(72, 176, 247, 0.05);
-  box-shadow: 0 0 0 2px rgba(72, 176, 247, 0.55), 0 0 40px rgba(72, 176, 247, 0.15);
 }
 
 .board.locked .card {
