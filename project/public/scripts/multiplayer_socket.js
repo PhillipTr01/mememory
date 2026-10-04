@@ -179,7 +179,9 @@ socket.on("roomState", (state) => {
 
   var player = getMyPlayer(state);
   var inGame = (state.status == "playing" || state.status == "starting") && player != null && player.active;
-  document.getElementById("playButton").hidden = !inGame;
+  // Speed round: the turn passes on its own after two wrong cards
+  document.getElementById("playButton").hidden = !inGame || state.mode == "speed";
+  updateTurnTimer(state);
 
   // My turn is over -> the End Turn button can't be used anymore
   if (!isMyTurn(state)) {
@@ -238,6 +240,11 @@ function renderPlayerList(state, previous) {
       }
     }
 
+    // Host can kick players while waiting
+    if (state.status == "waiting" && state.host == me.username && player.name != me.username) {
+      name.appendChild(createKickButton(player.name, "player-kick"));
+    }
+
     // Out of the game: tag with a flag instead of a text
     if (!player.active) {
       name.appendChild(createSurrenderedTag());
@@ -253,6 +260,16 @@ function renderPlayerList(state, previous) {
           ? "is playing"
           : "";
     info.append(name, sub);
+
+    // Speed round: time left for the player whose turn it is
+    if (state.mode == "speed" && state.status == "playing" && state.turn == index) {
+      item.classList.add("timed");
+      var bar = document.createElement("div");
+      bar.className = "turn-timer";
+      bar.appendChild(document.createElement("span"));
+      item.appendChild(bar);
+      sub.classList.add("turn-seconds");
+    }
 
     var points = document.createElement("div");
     points.className = "player-points";
@@ -297,6 +314,13 @@ function renderWaitingRoom(state) {
       ? "The room is full - you are watching this game."
       : `Waiting for ${state.host} to start the game`;
 
+  // Mode: badge for everybody, hint for the host
+  var badge = document.getElementById("modeBadge");
+  badge.hidden = state.mode != "speed";
+  badge.replaceChildren(createIcon("bi-lightning-charge-fill"), document.createTextNode(" Speed round"));
+  document.getElementById("modeHint").innerText =
+    state.mode == "speed" ? `${state.turnTime / 1000} seconds per turn` : "No time limit";
+
   // Seats: players + free seats
   var seats = document.getElementById("waitingPlayers");
   seats.replaceChildren();
@@ -334,6 +358,10 @@ function renderWaitingRoom(state) {
   }
 
   document.getElementById("publicSwitch").checked = state.isPublic;
+
+  document.querySelectorAll("#modePicker button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.mode == state.mode);
+  });
 }
 
 function createSeat(state, player, isHost) {
@@ -378,25 +406,31 @@ function createSeat(state, player, isHost) {
 
   // The host can remove other players
   if (isHost && player.name != me.username) {
-    var kick = document.createElement("button");
-    kick.type = "button";
-    kick.className = "seat-kick";
-    kick.title = "Remove " + player.name;
-    kick.appendChild(createIcon("bi-x-lg"));
-    kick.addEventListener("click", () => {
-      confirmDialog({
-        title: `Remove ${player.name}?`,
-        text: "The player can still watch, but can't take a seat in this room again.",
-        confirmLabel: "Remove",
-        danger: true,
-      }).then((ok) => {
-        if (ok) socket.emit("kickPlayer", { name: player.name });
-      });
-    });
-    seat.appendChild(kick);
+    seat.appendChild(createKickButton(player.name, "seat-kick"));
   }
 
   return seat;
+}
+
+// Button for the host to remove a player from the waiting room
+function createKickButton(name, className) {
+  var kick = document.createElement("button");
+  kick.type = "button";
+  kick.className = className;
+  kick.title = "Remove " + name + " from the room";
+  kick.append(createIcon("bi-x-lg"), document.createTextNode("Kick"));
+  kick.addEventListener("click", (event) => {
+    event.stopPropagation();
+    confirmDialog({
+      title: `Remove ${name}?`,
+      text: "The player can still watch, but can't take a seat in this room again.",
+      confirmLabel: "Remove",
+      danger: true,
+    }).then((ok) => {
+      if (ok) socket.emit("kickPlayer", { name: name });
+    });
+  });
+  return kick;
 }
 
 /* ---------- "Who starts?" animation ---------- */
@@ -787,6 +821,7 @@ function isJumboEmoji(text) {
 
 var SYSTEM_ICONS = {
   join: "bi-person-plus",
+  timer: "bi-stopwatch",
   leave: "bi-box-arrow-left",
   watch: "bi-eye",
   host: "bi-star-fill",
@@ -879,3 +914,39 @@ function addChatMessage(message, live) {
     document.getElementById("newMessages").hidden = false;
   }
 }
+
+/* ---------- Speed round: turn timer ---------- */
+
+var turnDeadline = null;
+var turnTimerInterval = null;
+
+function updateTurnTimer(state) {
+  clearInterval(turnTimerInterval);
+  turnDeadline = state.turnRemaining != null ? Date.now() + state.turnRemaining : null;
+  if (turnDeadline == null) return;
+
+  var total = state.turnTime;
+  var tick = () => {
+    var left = Math.max(0, turnDeadline - Date.now());
+    var fill = document.querySelector(".turn-timer span");
+    var seconds = document.querySelector(".turn-seconds");
+    if (fill) {
+      fill.style.width = (left / total) * 100 + "%";
+      fill.parentElement.classList.toggle("urgent", left <= 3000);
+    }
+    if (seconds) seconds.innerText = Math.ceil(left / 1000) + "s left";
+    if (left <= 0) clearInterval(turnTimerInterval);
+  };
+  tick();
+  turnTimerInterval = setInterval(tick, 100);
+}
+
+socket.on("turnTimeout", (data) => {
+  if (data.name == me.username) showToast("Time's up!");
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("#modePicker button").forEach((button) => {
+    button.addEventListener("click", () => socket.emit("updateSettings", { mode: button.dataset.mode }));
+  });
+});

@@ -1144,3 +1144,78 @@
 .player-tag.surrendered .bi::before {
   vertical-align: 0;
 }
+
+/* Kick buttons are always visible for the host */
+.seat-kick,
+.player-kick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid rgba(224, 103, 90, 0.4);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--mm-danger);
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.4;
+  opacity: 1;
+  transition: background 0.15s ease;
+}
+
+.seat-kick {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.player-kick {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.seat-kick:hover,
+.player-kick:hover {
+  background: rgba(224, 103, 90, 0.12);
+  color: var(--mm-danger);
+}
+
+/* Mode setting spans the whole width */
+.setting-wide {
+  grid-column: 1 / -1;
+}
+
+.waiting-title .mode-badge {
+  font-size: 0.75rem;
+  margin-left: 0.4rem;
+}
+
+/* Speed round: time bar under the player whose turn it is */
+.player-item.timed {
+  position: relative;
+  overflow: hidden;
+}
+
+.turn-timer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--mm-surface-3);
+}
+
+.turn-timer span {
+  display: block;
+  height: 100%;
+  background: var(--mm-accent);
+  transition: width 0.1s linear;
+}
+
+.turn-timer.urgent span {
+  background: var(--mm-danger);
+}
+
+.turn-seconds {
+  font-variant-numeric: tabular-nums;
+}

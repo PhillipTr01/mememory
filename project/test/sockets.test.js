@@ -11,6 +11,8 @@ Object.assign(config, {
   EMPTY_ROOM_GRACE: 300,
   START_ANIMATION: 100,
   TICK: 50,
+  SPEED_TURN_TIME: 400,
+  SPEED_MISS_DELAY: 100,
 });
 
 let server;
@@ -444,4 +446,52 @@ test("multiplayer: watch joins as spectator even with free seats", async () => {
   const lobby = client("/lobby", "carol");
   const list = await waitFor(lobby, "roomList", (rooms) => rooms.some((room) => room.gameID === gameID));
   assert.deepStrictEqual(list.find((room) => room.gameID === gameID).playerNames, ["alice"]);
+});
+
+async function startSpeedGame() {
+  const { gameID, alice, others: [bob] } = await openRoom("bob");
+  const updated = waitFor(alice, "roomState", (s) => s.mode === "speed");
+  bob.emit("updateSettings", { mode: "speed" }); // not the host -> ignored
+  alice.emit("updateSettings", { mode: "nonsense" }); // invalid -> ignored
+  alice.emit("updateSettings", { mode: "speed" });
+  await updated;
+  const started = waitFor(alice, "roomState", (s) => s.status === "playing");
+  alice.emit("startGame");
+  const state = await started;
+  return { gameID, alice, bob, state };
+}
+
+test("speed round: the turn passes when the time runs out", async () => {
+  const { alice, state } = await startSpeedGame();
+  assert.ok(state.turnRemaining > 0 && state.turnRemaining <= 400);
+
+  const first = state.players[state.turn].name;
+  const timeout = h.once(alice, "turnTimeout", 2000);
+  const next = await waitFor(alice, "roomState", (s) => s.players[s.turn].name !== first, 2000);
+  assert.strictEqual((await timeout).name, first);
+  assert.ok(next.turnRemaining > 0);
+});
+
+test("speed round: two wrong cards end the turn without End turn", async () => {
+  const { gameID, alice, bob, state } = await startSpeedGame();
+  const room = rooms.get(gameID, "multiplayer");
+  const current = state.players[state.turn].name === "alice" ? alice : bob;
+  const first = state.players[state.turn].name;
+
+  // two cards that are no pair
+  const a = 0;
+  const b = room.cardPairs[0] === 1 ? 2 : 1;
+  const passed = waitFor(alice, "roomState", (s) => s.players[s.turn].name !== first, 2000);
+  current.emit("openCard", a);
+  current.emit("openCard", b);
+  await passed;
+});
+
+test("classic rooms have no turn timer", async () => {
+  const { alice } = await openRoom("bob");
+  const started = waitFor(alice, "roomState", (s) => s.status === "playing");
+  alice.emit("startGame");
+  const state = await started;
+  assert.strictEqual(state.mode, "classic");
+  assert.strictEqual(state.turnRemaining, null);
 });

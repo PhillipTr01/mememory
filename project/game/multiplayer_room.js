@@ -15,6 +15,9 @@ function createRoom(host, board) {
     host: host,
     maxPlayers: config.DEFAULT_MAX_PLAYERS,
     isPublic: true,
+    mode: "classic",
+    turnEndsAt: null, // speed round: when the current turn runs out
+    turnToken: 0, // changes with every new turn, so old timers do nothing
     status: STATUS.WAITING,
     // [{name, points, active, connected, socketId, disconnectedAt}]
     // inactive = left or surrendered, not connected = may still come back
@@ -53,6 +56,10 @@ function serialize(gameID, room) {
     minPlayers: config.MIN_PLAYERS,
     maxPlayersLimit: config.MAX_PLAYERS,
     turn: room.turn,
+    mode: room.mode,
+    turnTime: config.SPEED_TURN_TIME,
+    // Remaining time instead of a timestamp, so different clocks don't matter
+    turnRemaining: room.turnEndsAt != null ? Math.max(0, room.turnEndsAt - Date.now()) : null,
     pairsLeft: (CARD_COUNT - room.foundMatches.length) / 2,
     spectators: [...new Set(room.spectators.values())],
     players: room.players.map((player) => ({
@@ -78,6 +85,7 @@ function publicRooms() {
       gameID: gameID,
       host: room.host,
       status: room.status,
+      mode: room.mode,
       players: room.players.filter((player) => player.active).length,
       // Lets the lobby show "Rejoin" for players who are already in the room
       playerNames: room.players.filter((player) => player.active).map((player) => player.name),

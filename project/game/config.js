@@ -26,4 +26,10 @@ module.exports = {
   START_ANIMATION: 4000,
   // How often disconnected players and empty rooms are checked
   TICK: 1000,
+
+  // Game modes the host can choose in the waiting room
+  MODES: ["classic", "speed"],
+  // Speed round: time per turn, and pause after two wrong cards before the turn passes
+  SPEED_TURN_TIME: 10 * 1000,
+  SPEED_MISS_DELAY: 1500,
 };
