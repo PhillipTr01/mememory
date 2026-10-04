@@ -196,3 +196,80 @@
     width: 100%;
   }
 }
+
+/* Waiting room */
+.waiting-room {
+  background-color: #1d1d1d;
+  border: 1px solid #3a3a3a;
+  max-width: 560px;
+}
+
+.room-code-box {
+  background-color: #262626;
+}
+
+.room-code {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: 0.2rem;
+  word-break: break-all;
+}
+
+.waiting-player {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
+  margin-bottom: 0.35rem;
+  border-radius: 0.25rem;
+  background-color: #262626;
+}
+
+.waiting-player.empty {
+  color: #6c6c6c;
+  border: 1px dashed #3a3a3a;
+  background-color: transparent;
+}
+
+/* Scoreboard */
+.player-row.inactive {
+  color: #6c757d;
+  text-decoration: line-through;
+}
+
+.player-row .you {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+/* Chat */
+.chat-name {
+  display: block;
+  font-weight: bold;
+}
+
+.chat-time {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  margin-left: 0.5rem;
+}
+
+.chat-image {
+  display: block;
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 3px;
+  margin-top: 0.25rem;
+  cursor: zoom-in;
+}
+
+.system-message {
+  text-align: center;
+  color: #8f8f8f;
+  font-size: 0.85rem;
+  font-style: italic;
+  margin: 0.4rem 0.5rem 0;
+}
+
+.chat-error {
+  font-size: 0.8rem;
+}

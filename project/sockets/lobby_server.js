@@ -1,4 +1,6 @@
 const rooms = require("../game/rooms");
+const { createBoard } = require("../game/board");
+const multiplayerRoom = require("../game/multiplayer_room");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 
@@ -13,8 +15,12 @@ const BOTS = [
 module.exports = function (io) {
   const lobby = io.of("/lobby");
   lobby.use(socketAuth);
+  multiplayerRoom.attachLobby(lobby);
 
   lobby.on("connection", (socket) => {
+    // Open multiplayer rooms
+    socket.emit("roomList", multiplayerRoom.publicRooms());
+
     socket.on(
       "playSingleplayer",
       safe("playSingleplayer", (data) => {
@@ -38,22 +44,21 @@ module.exports = function (io) {
 
     socket.on(
       "playMultiplayer",
-      safe("playMultiplayer", () => {
-        const gameID = rooms.create("multiplayer", {
-          player: [{ name: socket.data.username, points: 0 }],
-          activePlayers: [1],
-          checkingCards: false,
-          initialized: false,
-          status: 0,
-          turn: 0,
-          openedCards: [],
-          cardPairs: [],
-          cardImages: [],
-          foundMatches: [],
-          cardCounter: Array(66).fill(0),
-        });
+      safe("playMultiplayer", async () => {
+        // One room per click
+        if (socket.creatingRoom) return;
+        socket.creatingRoom = true;
 
-        socket.emit("saveGameID", { gameID: gameID, url: "/play" });
+        try {
+          // The board is created right away, so the room is ready to start.
+          const board = await createBoard();
+          const gameID = multiplayerRoom.createRoom(socket.data.username, board);
+          socket.emit("saveGameID", { gameID: gameID, url: "/play" });
+        } catch (error) {
+          socket.emit("gameError", error.message);
+        } finally {
+          socket.creatingRoom = false;
+        }
       }),
     );
 
