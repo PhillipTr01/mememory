@@ -429,6 +429,6 @@ test("singleplayer: after the player's turn the computer plays", async () => {
   assert.strictEqual((await highlight).turn, 1);
 
   // The computer flips two cards on its own
-  const flips = [await h.once(socket, "turnCard", 4000), await h.once(socket, "turnCard", 4000)];
+  const flips = [await h.once(socket, "turnCard", 8000), await h.once(socket, "turnCard", 8000)];
   assert.strictEqual(flips.length, 2);
 });

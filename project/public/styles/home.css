@@ -5,9 +5,7 @@
 .mode-expert { --mode: #ef4444; }
 .mode-multiplayer { --mode: #a78bfa; }
 
-.scoreboard {
-  --mode: #34d399;
-}
+
 
 .mode-tabs {
   display: flex;
