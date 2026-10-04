@@ -129,6 +129,7 @@ module.exports = function (io) {
             points: 0,
             active: true,
             connected: true,
+            ready: false, // set in the waiting room with the "Ready" button
             socketId: socket.id,
             disconnectedAt: null,
           });
@@ -235,6 +236,22 @@ module.exports = function (io) {
       }),
     );
 
+    /* Players tell the host that they are ready to play */
+    socket.on(
+      "setReady",
+      safe("setReady", (data) => {
+        const room = rooms.get(socket.gameID, "multiplayer");
+        const player = room != null ? findPlayer(room, username) : null;
+        if (player == null || room.status !== STATUS.WAITING || data == null || typeof data.ready !== "boolean") {
+          return;
+        }
+
+        player.ready = data.ready;
+        rooms.touch(room);
+        emitRoomState(socket.gameID, room);
+      }),
+    );
+
     socket.on(
       "startGame",
       safe("startGame", () => {
@@ -246,7 +263,9 @@ module.exports = function (io) {
           room == null ||
           room.status !== STATUS.WAITING ||
           room.host !== username ||
-          ready.length < config.MIN_PLAYERS
+          ready.length < config.MIN_PLAYERS ||
+          // Everybody except the host has to press "Ready"
+          ready.some((player) => player.name !== room.host && !player.ready)
         ) {
           return;
         }

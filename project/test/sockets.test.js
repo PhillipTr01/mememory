@@ -161,14 +161,25 @@ async function joinRoom(user, gameID) {
   return { socket, joined: await joined };
 }
 
+// Room with alice as host; the guests join and press "Ready" (unless ready = false)
 async function openRoom(...guests) {
+  return openRoomWith({ ready: true }, ...guests);
+}
+
+async function openRoomWith(options, ...guests) {
   const gameID = await createGame("alice", "playMultiplayer");
   const alice = (await joinRoom("alice", gameID)).socket;
   const others = [];
   for (const guest of guests) {
     const state = waitFor(alice, "roomState", (s) => s.players.some((p) => p.name === guest));
-    others.push((await joinRoom(guest, gameID)).socket);
+    const socket = (await joinRoom(guest, gameID)).socket;
+    others.push(socket);
     await state;
+    if (options.ready) {
+      const ready = waitFor(alice, "roomState", (s) => s.players.some((p) => p.name === guest && p.ready));
+      socket.emit("setReady", { ready: true });
+      await ready;
+    }
   }
   return { gameID, alice, others };
 }
@@ -504,4 +515,27 @@ test("speed round: the host chooses the seconds per turn", async () => {
   alice.emit("updateSettings", { turnTime: 15 });
   const state = await waitFor(bob, "roomState", (s) => s.mode === "speed" && s.turnTime === 15000);
   assert.deepStrictEqual(state.turnTimeOptions, [5, 10, 15, 20]);
+});
+
+test("multiplayer: the host can only start when everybody is ready", async () => {
+  const { gameID, alice, others: [bob] } = await openRoomWith({ ready: false }, "bob");
+  const room = rooms.get(gameID, "multiplayer");
+
+  alice.emit("startGame"); // bob isn't ready -> ignored
+  bob.emit("setReady", { ready: "yes" }); // invalid -> ignored
+  await h.wait(200);
+  assert.strictEqual(room.status, "waiting");
+
+  const ready = waitFor(alice, "roomState", (s) => s.players.find((p) => p.name === "bob").ready);
+  bob.emit("setReady", { ready: true });
+  await ready;
+
+  const started = waitFor(alice, "roomState", (s) => s.status === "playing");
+  alice.emit("startGame");
+  await started;
+
+  // Not possible anymore once the game runs
+  bob.emit("setReady", { ready: false });
+  await h.wait(100);
+  assert.strictEqual(room.players.find((p) => p.name === "bob").ready, true);
 });
