@@ -2,6 +2,16 @@ const { test, before, after, beforeEach } = require("node:test");
 const assert = require("node:assert");
 const h = require("./helpers");
 const rooms = require("../game/rooms");
+const config = require("../game/config");
+
+// Short timings, so rejoin and cleanup can be tested quickly
+Object.assign(config, {
+  REJOIN_GRACE_WAITING: 300,
+  REJOIN_GRACE_PLAYING: 300,
+  EMPTY_ROOM_GRACE: 300,
+  START_ANIMATION: 100,
+  TICK: 50,
+});
 
 let server;
 const sockets = [];
@@ -204,20 +214,30 @@ test("multiplayer: the room list in the lobby shows public rooms only", async ()
   await waitFor(lobby, "roomList", (rooms) => !rooms.some((room) => room.gameID === gameID));
 });
 
-test("multiplayer: the same user can't join a room twice", async () => {
-  const { gameID } = await openRoom();
+test("multiplayer: opening the room in a second tab replaces the first one", async () => {
+  const { gameID, alice } = await openRoom();
+  const replaced = h.once(alice, "sessionReplaced");
   const second = client("/multiplayer", "alice");
+  const joined = h.once(second, "joinedRoom");
+  const stateEvent = h.once(second, "roomState");
   second.emit("joinRoom", { gameID });
-  assert.match(await h.once(second, "gameError"), /already in this room/);
+  assert.strictEqual((await joined).spectator, false);
+  await replaced;
+  const state = await stateEvent;
+  assert.deepStrictEqual(state.players.map((p) => [p.name, p.connected]), [["alice", true]]);
 });
 
 test("multiplayer: only the host can start, a leaver loses and the other wins", async () => {
   const { alice, others: [bob] } = await openRoom("bob");
 
   bob.emit("startGame"); // not the host -> ignored
+  const starting = h.once(bob, "gameStarting");
   const started = waitFor(alice, "roomState", (s) => s.status === "playing");
   alice.emit("startGame");
+  const animation = await starting;
+  assert.deepStrictEqual(animation.players, ["alice", "bob"]);
   const { turn, players } = await started;
+  assert.strictEqual(turn, animation.starter);
   assert.ok(turn === 0 || turn === 1);
 
   // The player whose turn it isn't can't open cards
@@ -247,6 +267,8 @@ test("multiplayer: games with more than two players keep the turn order", async 
   const started = waitFor(alice, "roomState", (s) => s.status === "playing");
   alice.emit("startGame");
   let state = await started;
+  // Cards can't be opened during the start animation
+  assert.strictEqual(state.status, "playing");
   assert.strictEqual(state.players.length, 3);
 
   // The player whose turn it is leaves -> the next active player continues
@@ -289,8 +311,85 @@ test("multiplayer: when the host leaves before the start, the next player takes 
   const { alice, others: [bob] } = await openRoom("bob");
 
   const state = waitFor(bob, "roomState", (s) => s.host === "bob");
-  alice.close();
+  alice.emit("leaveRoom");
   assert.deepStrictEqual((await state).players.map((p) => p.name), ["bob"]);
+});
+
+test("multiplayer: a disconnected host keeps the seat for a while, then hands over", async () => {
+  const { alice, others: [bob] } = await openRoom("bob");
+
+  const offline = waitFor(bob, "roomState", (s) => s.players.some((p) => p.name === "alice" && !p.connected));
+  alice.close();
+  const state = await offline;
+  assert.strictEqual(state.host, "alice");
+
+  const handover = await waitFor(bob, "roomState", (s) => s.host === "bob", 2000);
+  assert.deepStrictEqual(handover.players.map((p) => p.name), ["bob"]);
+});
+
+test("multiplayer: players can rejoin a running game and keep their points", async () => {
+  const { gameID, alice, others: [bob] } = await openRoom("bob");
+  const started = waitFor(alice, "roomState", (s) => s.status === "playing");
+  alice.emit("startGame");
+  await started;
+
+  const offline = waitFor(alice, "roomState", (s) => s.players.some((p) => p.name === "bob" && !p.connected));
+  bob.close();
+  const state = await offline;
+  // The turn never stays with a disconnected player
+  assert.strictEqual(state.players[state.turn].name, "alice");
+
+  const bob2 = client("/multiplayer", "bob");
+  const board = h.once(bob2, "boardState");
+  const joined = h.once(bob2, "joinedRoom");
+  bob2.emit("joinRoom", { gameID });
+  assert.strictEqual((await joined).spectator, false);
+  assert.ok(Array.isArray((await board).found));
+  const back = await waitFor(alice, "roomState", (s) => s.players.every((p) => p.connected));
+  assert.strictEqual(back.status, "playing");
+  assert.strictEqual(h.increments.length, 0);
+});
+
+test("multiplayer: a player who doesn't come back loses the game", async () => {
+  const { alice, others: [bob] } = await openRoom("bob");
+  const started = waitFor(alice, "roomState", (s) => s.status === "playing");
+  alice.emit("startGame");
+  await started;
+
+  const winner = h.once(alice, "getWinner", 2000);
+  bob.close();
+  assert.deepStrictEqual((await winner).winners, ["alice"]);
+});
+
+test("multiplayer: the host can kick players, they can only watch afterwards", async () => {
+  const { gameID, alice, others: [bob] } = await openRoom("bob");
+  const kicked = h.once(bob, "kicked");
+  alice.emit("kickPlayer", { name: "bob" });
+  await kicked;
+
+  const bob2 = client("/multiplayer", "bob");
+  bob2.emit("joinRoom", { gameID });
+  assert.strictEqual((await h.once(bob2, "joinedRoom")).spectator, true);
+});
+
+test("multiplayer: empty rooms are deleted", async () => {
+  const { gameID, alice } = await openRoom();
+  alice.close();
+  await h.wait(900);
+  assert.strictEqual(rooms.get(gameID), null);
+
+  // A room nobody ever entered is removed as well
+  const unused = await createGame("bob", "playMultiplayer");
+  await h.wait(900);
+  assert.strictEqual(rooms.get(unused), null);
+});
+
+test("multiplayer: the lobby lists running games too", async () => {
+  const { gameID, alice } = await openRoom("bob");
+  alice.emit("startGame");
+  const lobby = client("/lobby", "carol");
+  const list = await waitFor(lobby, "roomList", (r) => r.some((room) => room.gameID === gameID && room.status !== "waiting"));
+  assert.strictEqual(list.find((room) => room.gameID === gameID).players, 2);
 });
 
 test("rooms: abandoned rooms are removed", () => {

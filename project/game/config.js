@@ -7,6 +7,7 @@ function clamp(value, min, max) {
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = clamp(parseInt(process.env.MULTIPLAYER_MAX_PLAYERS, 10) || 8, MIN_PLAYERS, 16);
 
+// Plain object on purpose: the tests shorten the timings.
 module.exports = {
   MIN_PLAYERS,
   MAX_PLAYERS,
@@ -15,4 +16,14 @@ module.exports = {
   MAX_CHAT_LENGTH: 300,
   CHAT_HISTORY: 50,
   CHAT_COOLDOWN: 500, // ms between two chat messages of one player
+
+  // A disconnected player keeps the seat this long (reload, bad connection, ...)
+  REJOIN_GRACE_WAITING: 20 * 1000,
+  REJOIN_GRACE_PLAYING: 60 * 1000,
+  // Rooms without anybody in them are deleted after this time
+  EMPTY_ROOM_GRACE: 15 * 1000,
+  // Length of the "who starts" animation, the game begins afterwards
+  START_ANIMATION: 4000,
+  // How often disconnected players and empty rooms are checked
+  TICK: 1000,
 };
