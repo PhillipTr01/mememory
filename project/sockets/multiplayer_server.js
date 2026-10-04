@@ -194,6 +194,11 @@ module.exports = function (io) {
           room.mode = data.mode;
         }
 
+        // Seconds per turn in the speed round (only the offered options)
+        if (data.turnTime !== undefined && config.SPEED_TURN_OPTIONS.includes(Number(data.turnTime))) {
+          room.turnTime = Number(data.turnTime) * 1000;
+        }
+
         if (typeof data.isPublic === "boolean") {
           room.isPublic = data.isPublic;
         }
@@ -600,7 +605,7 @@ module.exports = function (io) {
     }
 
     const token = room.turnToken;
-    room.turnEndsAt = Date.now() + config.SPEED_TURN_TIME;
+    room.turnEndsAt = Date.now() + room.turnTime;
 
     roomTimeout(
       room,
@@ -612,7 +617,7 @@ module.exports = function (io) {
         nextTurn(gameID, room);
         emitRoomState(gameID, room);
       },
-      config.SPEED_TURN_TIME,
+      room.turnTime,
     );
   }
 

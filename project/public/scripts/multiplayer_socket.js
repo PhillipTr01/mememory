@@ -314,12 +314,13 @@ function renderWaitingRoom(state) {
       ? "The room is full - you are watching this game."
       : `Waiting for ${state.host} to start the game`;
 
-  // Mode: badge for everybody, hint for the host
+  // Mode badge for everybody
   var badge = document.getElementById("modeBadge");
   badge.hidden = state.mode != "speed";
-  badge.replaceChildren(createIcon("bi-lightning-charge-fill"), document.createTextNode(" Speed round"));
-  document.getElementById("modeHint").innerText =
-    state.mode == "speed" ? `${state.turnTime / 1000} seconds per turn` : "No time limit";
+  badge.replaceChildren(
+    createIcon("bi-lightning-charge-fill"),
+    document.createTextNode(` Speed round · ${state.turnTime / 1000}s`),
+  );
 
   // Seats: players + free seats
   var seats = document.getElementById("waitingPlayers");
@@ -361,6 +362,19 @@ function renderWaitingRoom(state) {
 
   document.querySelectorAll("#modePicker button").forEach((button) => {
     button.classList.toggle("active", button.dataset.mode == state.mode);
+  });
+
+  // Seconds per turn (only in the speed round)
+  var timePicker = document.getElementById("turnTimePicker");
+  timePicker.hidden = state.mode != "speed";
+  timePicker.replaceChildren();
+  (state.turnTimeOptions || []).forEach((seconds) => {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.innerText = seconds + "s";
+    button.classList.toggle("active", seconds * 1000 == state.turnTime);
+    button.addEventListener("click", () => socket.emit("updateSettings", { turnTime: seconds }));
+    timePicker.appendChild(button);
   });
 }
 

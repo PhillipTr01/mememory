@@ -16,6 +16,7 @@ function createRoom(host, board) {
     maxPlayers: config.DEFAULT_MAX_PLAYERS,
     isPublic: true,
     mode: "classic",
+    turnTime: config.SPEED_TURN_TIME, // speed round: ms per turn, chosen by the host
     turnEndsAt: null, // speed round: when the current turn runs out
     turnToken: 0, // changes with every new turn, so old timers do nothing
     status: STATUS.WAITING,
@@ -57,7 +58,8 @@ function serialize(gameID, room) {
     maxPlayersLimit: config.MAX_PLAYERS,
     turn: room.turn,
     mode: room.mode,
-    turnTime: config.SPEED_TURN_TIME,
+    turnTime: room.turnTime,
+    turnTimeOptions: config.SPEED_TURN_OPTIONS,
     // Remaining time instead of a timestamp, so different clocks don't matter
     turnRemaining: room.turnEndsAt != null ? Math.max(0, room.turnEndsAt - Date.now()) : null,
     pairsLeft: (CARD_COUNT - room.foundMatches.length) / 2,
@@ -86,6 +88,7 @@ function publicRooms() {
       host: room.host,
       status: room.status,
       mode: room.mode,
+      turnTime: room.turnTime,
       players: room.players.filter((player) => player.active).length,
       // Lets the lobby show "Rejoin" for players who are already in the room
       playerNames: room.players.filter((player) => player.active).map((player) => player.name),
