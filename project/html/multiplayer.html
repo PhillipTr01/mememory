@@ -133,7 +133,11 @@
                         </div>
                         <div class="setting">
                             <span class="setting-label">Max. players</span>
-                            <div id="maxPlayersPicker" class="segmented" role="group" aria-label="Max. players"></div>
+                            <div class="stepper" role="group" aria-label="Max. players">
+                                <button type="button" id="maxPlayersMinus" aria-label="Fewer players"><i class="bi bi-dash"></i></button>
+                                <span id="maxPlayersValue" aria-live="polite"></span>
+                                <button type="button" id="maxPlayersPlus" aria-label="More players"><i class="bi bi-plus"></i></button>
+                            </div>
                         </div>
                         <label class="setting toggle">
                             <span class="setting-label">Public room <small class="mm-muted d-block">Show it in the lobby</small></span>

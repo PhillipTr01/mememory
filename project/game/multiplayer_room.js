@@ -61,7 +61,10 @@ function serialize(gameID, room) {
     turnTime: room.turnTime,
     turnTimeOptions: config.SPEED_TURN_OPTIONS,
     // Remaining time instead of a timestamp, so different clocks don't matter
-    turnRemaining: room.turnEndsAt != null ? Math.max(0, room.turnEndsAt - Date.now()) : null,
+    // Time left once the clock runs, and how long until it starts (animations)
+    turnRemaining:
+      room.turnEndsAt != null ? Math.min(room.turnTime, Math.max(0, room.turnEndsAt - Date.now())) : null,
+    turnStartsIn: room.turnEndsAt != null ? Math.max(0, (room.turnStartsAt || 0) - Date.now()) : 0,
     pairsLeft: (CARD_COUNT - room.foundMatches.length) / 2,
     spectators: [...new Set(room.spectators.values())],
     players: room.players.map((player) => ({

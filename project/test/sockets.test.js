@@ -13,6 +13,7 @@ Object.assign(config, {
   TICK: 50,
   SPEED_TURN_TIME: 400,
   SPEED_MISS_DELAY: 100,
+  SPEED_ANIMATION_GRACE: 50,
 });
 
 let server;
@@ -552,4 +553,19 @@ test("lobby: a kicked player only gets the option to watch", async () => {
   const forCarol = await waitFor(carolLobby, "roomList", (rooms) => rooms.some((room) => room.gameID === gameID));
   assert.strictEqual(forBob.find((room) => room.gameID === gameID).kicked, true);
   assert.strictEqual(forCarol.find((room) => room.gameID === gameID).kicked, false);
+});
+
+test("speed round: animations don't count, the clock stops after two wrong cards", async () => {
+  const { gameID, alice, bob, state } = await startSpeedGame();
+  // The clock starts after the card animation; until then the full time is left
+  assert.ok(state.turnStartsIn > 0);
+  assert.strictEqual(state.turnRemaining, state.turnTime);
+
+  const room = rooms.get(gameID, "multiplayer");
+  const current = state.players[state.turn].name === "alice" ? alice : bob;
+  const b = room.cardPairs[0] === 1 ? 2 : 1;
+  const stopped = waitFor(alice, "roomState", (s) => s.status === "playing" && s.turnRemaining === null, 2000);
+  current.emit("openCard", 0);
+  current.emit("openCard", b);
+  await stopped;
 });
