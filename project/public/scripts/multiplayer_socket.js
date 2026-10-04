@@ -11,7 +11,10 @@ var room = null;
 var sessionOver = false;
 
 // The room can come from an invite link (/play?game=ID) or from the lobby
-var urlGameID = new URLSearchParams(window.location.search).get("game");
+var urlParams = new URLSearchParams(window.location.search);
+var urlGameID = urlParams.get("game");
+// "Watch" in the lobby: join as spectator even if there is a free seat
+var watchOnly = urlParams.get("watch") == "1";
 if (urlGameID) {
   sessionStorage.setItem("gameID", urlGameID);
 }
@@ -21,7 +24,7 @@ if (!gameID) {
   window.location.href = "/lobby";
 } else if (urlGameID !== gameID) {
   // Keep the room in the URL, so reloading or sharing the page works
-  history.replaceState(null, "", "/play?game=" + encodeURIComponent(gameID));
+  history.replaceState(null, "", "/play?game=" + encodeURIComponent(gameID) + (watchOnly ? "&watch=1" : ""));
 }
 
 /* ---------- Connection & rejoin ---------- */
@@ -30,7 +33,7 @@ if (!gameID) {
 socket.on("connect", () => {
   document.getElementById("connectionBanner").hidden = true;
   if (!sessionOver) {
-    socket.emit("joinRoom", { gameID: gameID });
+    socket.emit("joinRoom", { gameID: gameID, watch: watchOnly });
   }
 });
 
@@ -100,7 +103,7 @@ document.addEventListener(
       var div = `<div class="card-size">
                         <div id="card-${index}" class="col-1 card pos-abs w-100 h-100" onclick="openCard(${index}); false;">
                             <div class="card-back card-image">
-                                <img src="" class="card-image">
+                                <img class="card-image" alt="">
                                 <div id="cardcount-${index}" class="overlay"></div>
                             </div>
                             <div class="card-front card-image">
@@ -155,9 +158,7 @@ socket.on("joinedRoom", (data) => {
   me = data;
 
   // Spectators (and players who surrendered) can't surrender
-  if (me.spectator) {
-    document.getElementById("surrenderButton").hidden = true;
-  }
+  if (room) renderPlayerList(room, room);
 });
 
 socket.on("roomState", (state) => {
@@ -179,9 +180,6 @@ socket.on("roomState", (state) => {
   var player = getMyPlayer(state);
   var inGame = (state.status == "playing" || state.status == "starting") && player != null && player.active;
   document.getElementById("playButton").hidden = !inGame;
-  var surrenderButton = document.getElementById("surrenderButton");
-  surrenderButton.hidden = !inGame || me.spectator;
-  surrenderButton.disabled = !inGame;
 
   // My turn is over -> the End Turn button can't be used anymore
   if (!isMyTurn(state)) {
@@ -232,6 +230,12 @@ function renderPlayerList(state, previous) {
       you.className = "player-tag";
       you.innerText = "You";
       name.appendChild(you);
+
+      // Surrender right next to the own name while playing
+      var playing = state.status == "playing" || state.status == "starting";
+      if (playing && player.active && !me.spectator) {
+        name.appendChild(createSurrenderButton());
+      }
     }
 
     var sub = document.createElement("div");
@@ -512,7 +516,7 @@ socket.on("turnCard", showCard);
 function showCard(data) {
   var card = document.getElementById("card-" + data.id);
   if (card == null) return;
-  card.childNodes[1].childNodes[1].src = data.src;
+  setCardImage(card, data.src);
 
   // Highlighting a card - It gets bigger and gets a border
   card.classList.add("flip", "border", "border-3", "zoom-card-on-turn");
@@ -524,13 +528,7 @@ function closeCard(id, instant) {
 
   card.classList.remove("flip");
   understateCard(id);
-  if (instant) {
-    card.childNodes[1].childNodes[1].src = "";
-  } else {
-    setTimeout(() => {
-      card.childNodes[1].childNodes[1].src = "";
-    }, 900);
-  }
+  clearCardImage(card, instant ? 0 : 900);
 }
 
 // If the card is already open, you can zoom in to read the meme
@@ -604,7 +602,6 @@ socket.on("getWinner", (data) => {
   playButton.hidden = false;
   playButton.disabled = false;
   playButton.innerText = "Back to Lobby";
-  document.getElementById("surrenderButton").hidden = true;
 
   showResult(data.winners);
 
@@ -618,6 +615,7 @@ function closeResult() {
 
 function showResult(winners) {
   var won = winners.includes(me.username);
+  document.getElementById("resultOverlay").classList.toggle("lost", !won);
   document.getElementById("resultTitle").innerText =
     winners.length > 1 ? "It's a draw!" : won ? "You win!" : `${winners[0]} wins!`;
 

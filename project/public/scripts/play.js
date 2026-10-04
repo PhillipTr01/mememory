@@ -15,6 +15,8 @@ function zoomCard(id) {
 
     var image = card.querySelector(".card-back img");
     if (image == null || !image.getAttribute("src")) return false;
+    // Nothing to show for an image that couldn't be loaded
+    if (card.querySelector(".card-back.broken")) return true;
 
     document.getElementById("imgModal").src = image.src;
     document.getElementById("cardModal").style.display = "block";
@@ -24,3 +26,42 @@ function zoomCard(id) {
 document.addEventListener("keydown", (event) => {
     if (event.key == "Escape") closeCardModal();
 });
+
+// Shows the meme on a card. If the image can't be loaded (e.g. deleted on
+// Reddit) a placeholder is shown instead of the browser's broken image icon.
+function setCardImage(card, src) {
+    var back = card.querySelector(".card-back");
+    var image = back.querySelector("img");
+    back.classList.remove("broken");
+    image.onerror = () => back.classList.add("broken");
+    image.src = src;
+}
+
+// Removes the image after the card is turned around - but only if the card is
+// still face down then (it may have been opened again in the meantime).
+function clearCardImage(card, delay) {
+    var clear = () => {
+        if (card.classList.contains("flip")) return;
+        var back = card.querySelector(".card-back");
+        back.classList.remove("broken");
+        back.querySelector("img").removeAttribute("src");
+    };
+    if (delay) setTimeout(clear, delay);
+    else clear();
+}
+
+// Small "Surrender" button shown next to the own name in the player list
+function createSurrenderButton() {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "player-surrender";
+    button.title = "Surrender";
+    var icon = document.createElement("i");
+    icon.className = "bi bi-flag-fill";
+    button.append(icon, document.createTextNode("Surrender"));
+    button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        surrender();
+    });
+    return button;
+}

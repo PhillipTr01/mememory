@@ -85,6 +85,8 @@ module.exports = function (io) {
       "joinRoom",
       safe("joinRoom", (data) => {
         const gameID = data != null ? data.gameID : null;
+        // Only watch, even if there is a free seat
+        const watch = data != null && data.watch === true;
         const room = rooms.get(gameID, "multiplayer");
 
         if (room == null || room.status === STATUS.FINISHED) {
@@ -117,6 +119,7 @@ module.exports = function (io) {
           player.disconnectedAt = null;
           socket.spectator = !player.active;
         } else if (
+          !watch &&
           room.status === STATUS.WAITING &&
           room.players.length < room.maxPlayers &&
           !room.banned.has(username)

@@ -2,6 +2,14 @@
 var scoreboard = null;
 var currentMode = "easy";
 
+var MODE_COLORS = {
+    easy: "#34d399",
+    medium: "#48b0f7",
+    hard: "#f59e0b",
+    expert: "#ef4444",
+    multiplayer: "#a78bfa",
+};
+
 document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll(".mode-tab").forEach((tab) => {
         tab.addEventListener("click", () => showMode(tab.dataset.mode));
@@ -28,9 +36,11 @@ function showMode(mode) {
         tab.setAttribute("aria-selected", active);
     });
 
-    // The color of the list follows the selected mode
+    // The color of the list follows the selected mode (same colors as the lobby).
+    // Set directly on the element, so no other style rule can override it.
     var board = document.querySelector(".scoreboard");
     board.className = board.className.replace(/\bmode-\w+/g, "").trim() + " mode-" + mode;
+    board.style.setProperty("--mode", MODE_COLORS[mode]);
 
     if (scoreboard == null) return;
     userPromise.then((username) => renderList(scoreboard[mode] || [], username));

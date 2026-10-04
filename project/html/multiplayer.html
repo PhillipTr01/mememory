@@ -158,9 +158,6 @@
                         <button type="button" id="playButton" class="mm-btn mm-btn-primary w-100" onclick="emitEndTurn();" disabled hidden>
                             <i class="bi bi-arrow-repeat"></i> End turn
                         </button>
-                        <button type="button" id="surrenderButton" class="mm-btn mm-btn-danger w-100" onclick="surrender()" disabled hidden>
-                            <i class="bi bi-flag"></i> Surrender
-                        </button>
                     </div>
                 </div>
 
@@ -218,6 +215,7 @@
     <!--- Game over --->
     <div id="resultOverlay" class="overlay-screen" hidden>
         <div class="result-box mm-card">
+            <div class="result-trophy-icon"><i class="bi bi-trophy-fill"></i></div>
             <h2 id="resultTitle" class="result-title"></h2>
             <ol id="resultList" class="result-list"></ol>
             <div class="d-flex gap-2 justify-content-center flex-wrap">

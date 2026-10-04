@@ -79,6 +79,8 @@ function publicRooms() {
       host: room.host,
       status: room.status,
       players: room.players.filter((player) => player.active).length,
+      // Lets the lobby show "Rejoin" for players who are already in the room
+      playerNames: room.players.filter((player) => player.active).map((player) => player.name),
       maxPlayers: room.maxPlayers,
       spectators: room.spectators.size,
       createdAt: room.createdAt,

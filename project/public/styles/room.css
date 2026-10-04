@@ -1006,3 +1006,97 @@
   letter-spacing: 0.04em;
   line-height: 1.4;
 }
+
+/* ---------- Compact player list (more space for the chat) ---------- */
+.side-card {
+  padding: 0.75rem;
+}
+
+.side-head {
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.player-list {
+  gap: 0.3rem;
+}
+
+.player-item {
+  padding: 0.35rem 0.55rem;
+  gap: 0.55rem;
+}
+
+.player-item .mm-avatar,
+.player-item .bot-avatar-small {
+  --size: 28px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+}
+
+.player-name {
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+.player-sub {
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.player-sub:empty {
+  display: none;
+}
+
+.player-points {
+  font-size: 1.1rem;
+}
+
+.side-actions {
+  margin-top: 0.5rem;
+}
+
+.side-actions .mm-btn {
+  padding: 0.45rem 0.9rem;
+}
+
+/* Surrender next to the own name */
+.player-surrender {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid rgba(224, 103, 90, 0.4);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--mm-danger);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.4;
+  transition: background 0.15s ease;
+}
+
+.player-surrender:hover {
+  background: rgba(224, 103, 90, 0.12);
+}
+
+/* ---------- Result screen with trophy ---------- */
+.result-trophy-icon {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 0.9rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+  color: #f5c542;
+  background: rgba(245, 197, 66, 0.12);
+}
+
+#resultOverlay.lost .result-trophy-icon {
+  color: var(--mm-muted);
+  background: var(--mm-surface-2);
+}

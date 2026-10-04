@@ -37,7 +37,7 @@ document.addEventListener(
       var div = ` <div class="card-size">
                         <div id="card-${index}" class="col-1 card pos-abs w-100 h-100" onclick="openCard(${index}); false;">
                             <div class="card-back card-image">
-                                <img src="" class="card-image">
+                                <img class="card-image" alt="">
                                 <div id="cardcount-${index}" class="overlay"></div>
                             </div>
                             <div class="card-front card-image">
@@ -100,7 +100,8 @@ function openCard(id) {
 
 socket.on("turnCard", (data) => {
   var card = document.getElementById("card-" + data.id);
-  card.childNodes[1].childNodes[1].src = data.src;
+  if (card == null) return;
+  setCardImage(card, data.src);
   card.classList.add("flip");
 
   // Highlighting a card - It gets bigger and gets a border
@@ -149,9 +150,7 @@ socket.on("closeCards", (data) => {
     if (card == null) return;
 
     card.classList.remove("flip");
-    setTimeout(() => {
-      card.childNodes[1].childNodes[1].src = "";
-    }, 900);
+    clearCardImage(card, 900);
     understateCard(id);
   });
 });
@@ -208,8 +207,37 @@ socket.on("getWinner", (data) => {
   };
   playButton.disabled = false;
   playButton.innerText = "Back to Lobby";
-  document.getElementById("surrenderButton").hidden = true;
+  document.getElementById("surrenderSlot").replaceChildren();
+  showResult(data);
 
   // Reset storage
   sessionStorage.clear();
 });
+
+// Surrender button next to the own name
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("surrenderSlot").appendChild(createSurrenderButton());
+
+  var overlay = document.getElementById("resultOverlay");
+  document.getElementById("resultBoardButton").addEventListener("click", () => (overlay.hidden = true));
+  // A click next to the result closes it and opens the card below
+  overlay.addEventListener("click", (event) => {
+    if (event.target != overlay) return;
+    overlay.hidden = true;
+    var below = document.elementFromPoint(event.clientX, event.clientY);
+    var card = below && below.closest(".card");
+    if (card) zoomCard(Number(card.id.replace("card-", "")));
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key == "Escape") overlay.hidden = true;
+  });
+});
+
+function showResult(data) {
+  var won = data.winner == 0;
+  document.getElementById("resultOverlay").classList.toggle("lost", !won);
+  document.getElementById("resultTitle").innerText = won ? "You win!" : `${data.computer} wins`;
+  document.getElementById("resultText").innerText =
+    document.getElementById("user1Score").innerText + " : " + document.getElementById("user2Score").innerText;
+  document.getElementById("resultOverlay").hidden = false;
+}

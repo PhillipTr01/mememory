@@ -327,3 +327,27 @@
 .chat-error {
   font-size: 0.8rem;
 }
+
+/* Card without image (face down) and image that couldn't be loaded */
+.card-back > img:not([src]) {
+  visibility: hidden;
+}
+
+.card-back.broken > img {
+  visibility: hidden;
+}
+
+.card-back.broken::after {
+  content: "Meme not available";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem;
+  text-align: center;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  color: #8f8f8f;
+  background: #1f1f1f;
+}
