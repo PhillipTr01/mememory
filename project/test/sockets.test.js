@@ -432,3 +432,16 @@ test("singleplayer: after the player's turn the computer plays", async () => {
   const flips = [await h.once(socket, "turnCard", 8000), await h.once(socket, "turnCard", 8000)];
   assert.strictEqual(flips.length, 2);
 });
+
+test("multiplayer: watch joins as spectator even with free seats", async () => {
+  const { gameID } = await openRoom();
+  const bob = client("/multiplayer", "bob");
+  const joined = h.once(bob, "joinedRoom");
+  bob.emit("joinRoom", { gameID, watch: true });
+  assert.strictEqual((await joined).spectator, true);
+
+  // The lobby knows who plays in a room (for the "Rejoin" button)
+  const lobby = client("/lobby", "carol");
+  const list = await waitFor(lobby, "roomList", (rooms) => rooms.some((room) => room.gameID === gameID));
+  assert.deepStrictEqual(list.find((room) => room.gameID === gameID).playerNames, ["alice"]);
+});

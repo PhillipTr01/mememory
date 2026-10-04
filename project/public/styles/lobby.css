@@ -321,3 +321,11 @@
     justify-content: center;
   }
 }
+
+.room-actions {
+  white-space: nowrap;
+}
+
+.room-actions .mm-btn + .mm-btn {
+  margin-left: 0.4rem;
+}

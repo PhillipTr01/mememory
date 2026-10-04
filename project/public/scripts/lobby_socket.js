@@ -36,7 +36,20 @@ socket.on("saveGameID", (data) => {
 
 /* ---------- List of multiplayer games (updated live) ---------- */
 
+// Own name, to show "Rejoin" for rooms I'm already playing in
+var myUsername = null;
+var lastRooms = [];
+userPromise.then((username) => {
+  myUsername = username;
+  renderRooms(lastRooms);
+});
+
 socket.on("roomList", (rooms) => {
+  lastRooms = rooms;
+  renderRooms(rooms);
+});
+
+function renderRooms(rooms) {
   var list = document.getElementById("roomList");
   list.replaceChildren();
   document.getElementById("noRooms").hidden = rooms.length > 0;
@@ -45,7 +58,22 @@ socket.on("roomList", (rooms) => {
     rooms.length == 1 ? "1 game" : rooms.length + " games";
 
   rooms.forEach((room) => list.appendChild(createRoomRow(room)));
-});
+}
+
+function actionButton(label, icon, primary, onClick) {
+  var button = document.createElement("button");
+  button.type = "button";
+  button.className = "mm-btn mm-btn-sm" + (primary ? " mm-btn-primary" : "");
+  button.append(createIcon(icon), document.createTextNode(label));
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+// Opens a room from the list, optionally only as spectator
+function openRoom(gameID, watch) {
+  sessionStorage.setItem("gameID", gameID);
+  window.location.href = "/play?game=" + encodeURIComponent(gameID) + (watch ? "&watch=1" : "");
+}
 
 function createRoomRow(room) {
   var row = document.createElement("tr");
@@ -93,16 +121,19 @@ function createRoomRow(room) {
   badge.innerText = waiting ? (full ? "Full" : "Waiting") : room.status == "starting" ? "Starting" : "In game";
   statusCell.appendChild(badge);
 
-  // Join or watch
+  // Rejoin (already a player), join (free seat) and watch
   var actionCell = document.createElement("td");
-  actionCell.className = "text-end";
-  var button = document.createElement("button");
-  button.type = "button";
-  var canJoin = waiting && !full;
-  button.className = "mm-btn mm-btn-sm " + (canJoin ? "mm-btn-primary" : "");
-  button.append(createIcon(canJoin ? "bi-box-arrow-in-right" : "bi-eye"), document.createTextNode(canJoin ? "Join" : "Watch"));
-  button.addEventListener("click", () => joinMultiplayer(room.gameID));
-  actionCell.appendChild(button);
+  actionCell.className = "text-end room-actions";
+  var isMine = myUsername != null && (room.playerNames || []).includes(myUsername);
+
+  if (isMine) {
+    actionCell.appendChild(actionButton("Rejoin", "bi-arrow-repeat", true, () => openRoom(room.gameID, false)));
+  } else {
+    if (waiting && !full) {
+      actionCell.appendChild(actionButton("Join", "bi-box-arrow-in-right", true, () => openRoom(room.gameID, false)));
+    }
+    actionCell.appendChild(actionButton("Watch", "bi-eye", false, () => openRoom(room.gameID, true)));
+  }
 
   row.append(hostCell, playersCell, spectatorsCell, statusCell, actionCell);
   return row;
