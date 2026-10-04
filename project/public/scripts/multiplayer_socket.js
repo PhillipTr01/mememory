@@ -975,21 +975,22 @@ function updateTurnTimer(state) {
   clearInterval(turnTimerInterval);
   var total = state.turnTime;
 
-  var draw = (left, stopped) => {
+  var draw = (left) => {
     var fill = document.querySelector(".turn-timer span");
     var seconds = document.querySelector(".turn-seconds");
     if (fill) {
       fill.style.width = (left / total) * 100 + "%";
       fill.parentElement.classList.toggle("urgent", left <= 3000);
     }
-    if (seconds) seconds.innerText = stopped ? "time stopped" : Math.ceil(left / 1000) + "s left";
+    if (seconds) seconds.innerText = Math.ceil(left / 1000) + "s left";
   };
 
   // Clock stopped (two wrong cards): keep the bar where it was
   if (state.turnRemaining == null) {
     turnDeadline = null;
     if (state.mode == "speed" && state.status == "playing" && lastTimerLeft != null) {
-      draw(lastTimerLeft, true);
+      // Just stop: bar and seconds stay where they were
+      draw(lastTimerLeft);
     }
     return;
   }
@@ -1001,7 +1002,7 @@ function updateTurnTimer(state) {
   var tick = () => {
     var left = Math.min(total, Math.max(0, turnDeadline - Math.max(Date.now(), start)));
     lastTimerLeft = left;
-    draw(left, false);
+    draw(left);
     if (left <= 0) clearInterval(turnTimerInterval);
   };
   tick();
