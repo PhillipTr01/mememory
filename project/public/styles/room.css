@@ -151,8 +151,8 @@
 }
 
 .seat.me {
-  border-color: rgba(217, 119, 87, 0.6);
-  box-shadow: 0 0 0 1px rgba(217, 119, 87, 0.25) inset;
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25) inset;
 }
 
 .seat.offline {
@@ -323,7 +323,7 @@
 }
 
 .toggle input:focus-visible + .toggle-track {
-  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.35);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
 }
 
 .waiting-dots::after {
@@ -670,7 +670,7 @@
 
 .chat-form:focus-within {
   border-color: var(--mm-accent);
-  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.2);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
 .chat-input {

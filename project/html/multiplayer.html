@@ -172,13 +172,23 @@
                     <div class="chat-body-wrap">
                         <div id="chat-content" class="chat-body" aria-live="polite"></div>
                         <div id="chat-empty" class="chat-empty">
-                            <p class="mb-0">No messages yet</p>
+                            <span>👋</span>
+                            <p class="mb-0">No messages yet - say hi!</p>
                         </div>
                         <button type="button" id="newMessages" class="new-messages" hidden>
                             New messages <i class="bi bi-arrow-down"></i>
                         </button>
                     </div>
                     <p id="chat-error" class="chat-error" hidden></p>
+                    <div class="chat-quick" aria-label="Quick emojis">
+                        <button type="button" data-emoji="😂">😂</button>
+                        <button type="button" data-emoji="🔥">🔥</button>
+                        <button type="button" data-emoji="👏">👏</button>
+                        <button type="button" data-emoji="😭">😭</button>
+                        <button type="button" data-emoji="🤯">🤯</button>
+                        <button type="button" data-emoji="💀">💀</button>
+                        <button type="button" data-emoji="GG">GG</button>
+                    </div>
                     <form id="chat-form" class="chat-form" autocomplete="off">
                         <input id="chat-input" class="chat-input" type="text" maxlength="300"
                             placeholder="Write a message..." aria-label="Chat message">
