@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
 }, false);
 
 //Keep dropdown open if clicked on other groups
-document.getElementById("keep-open-dropdown").addEventListener("click", function (e) {
+document.getElementById("keep-open-dropdown")?.addEventListener("click", function (e) {
     e.stopPropagation();
 }, false);
 

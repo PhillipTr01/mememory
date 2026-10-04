@@ -29,7 +29,11 @@ function setUsername() {
                 gameDiv.addEventListener('click', () => {
                     copyStringToClipboard(sessionStorage.getItem('gameID'));
                 });
-                document.getElementById('user1Username').innerText = username;
+                // Singleplayer shows the own name in the first row (multiplayer draws its own list)
+                var user1 = document.getElementById('user1Username');
+                if (user1 != null) {
+                    user1.innerText = username;
+                }
             }
         }
     }

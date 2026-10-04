@@ -7,6 +7,22 @@ const randomstring = require("randomstring");
  * rooms are removed instead of filling up the memory forever.
  */
 const rooms = new Map();
+const listeners = [];
+
+// Lets other modules react when rooms disappear (e.g. update the lobby's room list).
+function onRemove(listener) {
+  listeners.push(listener);
+}
+
+function notifyRemoved(gameID, room) {
+  for (const listener of listeners) {
+    try {
+      listener(gameID, room);
+    } catch (error) {
+      console.error("[rooms] Listener failed:", error);
+    }
+  }
+}
 
 const UNUSED_ROOM_TTL = 15 * 60 * 1000; // created, but nobody ever played
 const IDLE_ROOM_TTL = 2 * 60 * 60 * 1000; // no activity at all
@@ -41,14 +57,23 @@ function touch(room) {
 }
 
 function remove(gameID) {
-  rooms.delete(gameID);
+  const room = rooms.get(gameID);
+  if (room != null) {
+    rooms.delete(gameID);
+    notifyRemoved(gameID, room);
+  }
+}
+
+// All rooms of one type as [gameID, room] pairs.
+function list(type) {
+  return [...rooms].filter(([, room]) => room.type === type);
 }
 
 function sweep(now = Date.now()) {
   for (const [gameID, room] of rooms) {
     const ttl = room.used ? IDLE_ROOM_TTL : UNUSED_ROOM_TTL;
     if (now - room.lastActivity > ttl) {
-      rooms.delete(gameID);
+      remove(gameID);
     }
   }
 }
@@ -57,4 +82,4 @@ const sweeper = setInterval(sweep, SWEEP_INTERVAL);
 // Don't keep the process alive just for the sweeper.
 sweeper.unref();
 
-module.exports = { create, get, touch, remove, sweep, size: () => rooms.size };
+module.exports = { create, get, touch, remove, list, onRemove, sweep, size: () => rooms.size };

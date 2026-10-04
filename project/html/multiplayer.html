@@ -70,87 +70,76 @@
         <div class="container-fluid px-3 h-100">
             <div class="row h-100">
                 <div class="col-12 col-lg-9 h-lg-100 p-1 m-0 order-2 order-lg-1">
-                    <div class="container-xxl p-0 m-0 h-100 mx-auto">
+                    <!--- Waiting room: shown until the host starts the game --->
+                    <section id="waitingRoom" class="waiting-room text-light mx-auto my-3 p-4 rounded-3" hidden>
+                        <p class="fs-2 text-center mb-1">Waiting room</p>
+                        <p id="waitingText" class="text-center text-secondary mb-4"></p>
+
+                        <div class="room-code-box rounded-3 p-3 mb-4 text-center">
+                            <p class="text-secondary mb-1">Room code</p>
+                            <p id="roomCode" class="room-code mb-3"></p>
+                            <button type="button" id="copyCodeButton" class="btn btn-outline-info btn-sm m-1">
+                                <i class="bi bi-clipboard pe-1"></i> Copy code
+                            </button>
+                            <button type="button" id="copyLinkButton" class="btn btn-outline-info btn-sm m-1">
+                                <i class="bi bi-link-45deg pe-1"></i> Copy invite link
+                            </button>
+                        </div>
+
+                        <p class="fs-5 mb-2">Players <span id="playerCount" class="text-secondary"></span></p>
+                        <ul id="waitingPlayers" class="list-unstyled mb-4"></ul>
+
+                        <!--- Only visible for the host --->
+                        <div id="hostSettings" hidden>
+                            <div class="d-flex flex-wrap align-items-center mb-3">
+                                <label for="maxPlayersSelect" class="me-3">Max. players</label>
+                                <select id="maxPlayersSelect" class="form-select form-select-sm bg-dark text-light w-auto"></select>
+                            </div>
+                            <div class="form-check form-switch mb-4">
+                                <input class="form-check-input" type="checkbox" id="publicSwitch">
+                                <label class="form-check-label" for="publicSwitch">Show room in the public room list</label>
+                            </div>
+                            <button type="button" id="startButton" class="form-control btn btn-outline-success btn-lg rounded" disabled>
+                                Start Game
+                            </button>
+                            <p id="startHint" class="text-secondary text-center small mt-2 mb-0"></p>
+                        </div>
+                    </section>
+
+                    <div id="board" class="container-xxl p-0 m-0 h-100 mx-auto" hidden>
                         <div class="row row-cols-11 h-100 justify-content-center" id="memoryTable">
                         </div>
                     </div>
                 </div>
                 <div class="col-12 col-lg-3 h-lg-100 order-1 order-lg-2 d-flex flex-column p-0">
                     <div class="text-light fs-4 p-3 text-break w-100 max-width-500 mx-auto me-lg-0">
-                        <div class="d-flex pb-2">
-                            <div class="flex-grow-1">
-                                <p id="user1Username"></p>
-                            </div>
-                            <div>
-                                <p id="user1Score"></p>
-                            </div>
-                        </div>
-                        <div class="d-flex pb-2">
-                            <div class="flex-grow-1">
-                                <p id="user2Username"></p>
-                            </div>
-                            <div>
-                                <p id="user2Score"></p>
-                            </div>
-                        </div>
-                        <div class="d-flex pb-2">
-                            <div class="flex-grow-1">
-                                <p id="user3Username"></p>
-                            </div>
-                            <div>
-                                <p id="user3Score"></p>
-                            </div>
-                        </div>
-                        <div class="d-flex pb-2">
-                            <div class="flex-grow-1">
-                                <p id="user4Username"></p>
-                            </div>
-                            <div>
-                                <p id="user4Score"></p>
-                            </div>
-                        </div>
-                        <div class="d-flex pb-2">
-                            <div class="flex-grow-1">
-                                <p id="user5Username"></p>
-                            </div>
-                            <div>
-                                <p id="user5Score"></p>
-                            </div>
-                        </div>
-                        <div class="d-flex pb-2">
-                            <div class="flex-grow-1">
-                                <p id="user6Username"></p>
-                            </div>
-                            <div>
-                                <p id="user6Score"></p>
-                            </div>
-                        </div>
+                        <!--- Scoreboard, filled by multiplayer_socket.js --->
+                        <div id="playerList"></div>
+
                         <div class="mt-md-2">
                             <button type="submit" id="playButton"
                                 class="form-control btn btn-outline-info btn-lg rounded " onclick="emitEndTurn();"
-                                disabled> End Turn
-                            </button>
-                            <button type="submit" id="startButton"
-                                class="form-control btn btn-outline-success btn-lg rounded " onclick="startGame();"
-                                hidden> Start Game
+                                disabled hidden> End Turn
                             </button>
                         </div>
-                         <div class="border border-light mt-md-4">
+                        <div class="border border-light mt-3 mt-md-4">
                             <div class="chat">
-                                <div class="d-flex flex-column" id="chat-content">
+                                <div class="d-flex flex-column" id="chat-content" aria-live="polite">
                                 </div>
-                                <div class="d-flex bg-transparent p-2 border-top">
+                                <p id="chat-error" class="chat-error text-warning px-2 m-0" hidden></p>
+                                <form id="chat-form" class="d-flex bg-transparent p-2 border-top" autocomplete="off">
                                     <input id="chat-input" class="chat-input bg-transparent text-light flex-grow-1" type="text"
-                                        placeholder="type...">
-                                    <a id="send-message-btn" class="text-info ms-2 my-auto" onclick="sendChatMessage()">
+                                        maxlength="300" placeholder="type..." aria-label="Chat message">
+                                    <button id="send-message-btn" type="submit" class="btn btn-link text-info p-0 ms-2 my-auto" aria-label="Send">
                                         <i class="bi bi-arrow-right-square"></i>
-                                    </a>
-                                </div>
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
     </main>
 
     <!--- JavaScript --->

@@ -125,44 +125,103 @@ test("lobby: invalid difficulty and unknown game ids are handled", async () => {
   assert.match(await h.once(lobby, "gameError"), /No game found/);
 });
 
+// Waits for the first event that matches the predicate
+function waitFor(socket, event, predicate, timeout = 3000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      socket.off(event, handler);
+      reject(new Error(`Timeout waiting for "${event}"`));
+    }, timeout);
+    function handler(data) {
+      if (!predicate(data)) return;
+      clearTimeout(timer);
+      socket.off(event, handler);
+      resolve(data);
+    }
+    socket.on(event, handler);
+  });
+}
+
+async function joinRoom(user, gameID) {
+  const socket = client("/multiplayer", user);
+  const joined = h.once(socket, "joinedRoom");
+  socket.emit("joinRoom", { gameID });
+  return { socket, joined: await joined };
+}
+
+async function openRoom(...guests) {
+  const gameID = await createGame("alice", "playMultiplayer");
+  const alice = (await joinRoom("alice", gameID)).socket;
+  const others = [];
+  for (const guest of guests) {
+    const state = waitFor(alice, "roomState", (s) => s.players.some((p) => p.name === guest));
+    others.push((await joinRoom(guest, gameID)).socket);
+    await state;
+  }
+  return { gameID, alice, others };
+}
+
 test("multiplayer: a singleplayer id can't be used to join (used to crash)", async () => {
   const gameID = await createGame("alice", "playSingleplayer", { difficulty: 0 });
   const bob = client("/multiplayer", "bob");
-  await h.once(bob, "connect");
-  bob.emit("joinGame", { gameID });
+  bob.emit("joinRoom", { gameID });
   await h.once(bob, "noGameFound");
 });
 
-async function startMultiplayer() {
+test("multiplayer: waiting room shows players, host and settings", async () => {
   const gameID = await createGame("alice", "playMultiplayer");
-
   const alice = client("/multiplayer", "alice");
-  await h.once(alice, "connect");
-  alice.emit("initializingGame", { gameID });
-  await h.once(alice, "visualInitializing");
+  const first = h.once(alice, "roomState");
+  alice.emit("joinRoom", { gameID });
+  const state = await first;
 
-  const bob = client("/multiplayer", "bob");
-  await h.once(bob, "connect");
-  const enabled = h.once(alice, "enableStartGame");
-  bob.emit("joinGame", { gameID, username: "alice" }); // username from the client is ignored
-  const players = await h.once(bob, "visualInitializing");
-  assert.deepStrictEqual(players.player.map((p) => p.name), ["alice", "bob"]);
-  await enabled;
+  assert.strictEqual(state.status, "waiting");
+  assert.strictEqual(state.host, "alice");
+  assert.deepStrictEqual(state.players.map((p) => p.name), ["alice"]);
+  assert.ok(state.maxPlayersLimit >= state.maxPlayers);
 
-  return { gameID, alice, bob };
-}
+  // Only the host can change the settings, the value has to be in range
+  const bob = (await joinRoom("bob", gameID)).socket;
+  bob.emit("updateSettings", { maxPlayers: 2 });
+  alice.emit("updateSettings", { maxPlayers: 1 }); // too small -> ignored
+  alice.emit("updateSettings", { maxPlayers: 99 }); // too big -> ignored
+  alice.emit("updateSettings", { maxPlayers: 2, isPublic: false });
+  const updated = await waitFor(bob, "roomState", (s) => s.maxPlayers === 2);
+  assert.strictEqual(updated.isPublic, false);
 
-test("multiplayer: only the creator can start, a leaver loses and the other wins", async () => {
-  const { alice, bob } = await startMultiplayer();
+  // Room is full now -> carol watches
+  const carol = await joinRoom("carol", gameID);
+  assert.strictEqual(carol.joined.spectator, true);
+});
 
-  bob.emit("startGame"); // not the creator -> ignored
-  const highlight = h.once(alice, "highlightPlayer");
+test("multiplayer: the room list in the lobby shows public rooms only", async () => {
+  const { gameID, alice } = await openRoom();
+  const lobby = client("/lobby", "bob");
+  const list = await h.once(lobby, "roomList");
+  assert.ok(list.some((room) => room.gameID === gameID && room.host === "alice"));
+
+  alice.emit("updateSettings", { isPublic: false });
+  await waitFor(lobby, "roomList", (rooms) => !rooms.some((room) => room.gameID === gameID));
+});
+
+test("multiplayer: the same user can't join a room twice", async () => {
+  const { gameID } = await openRoom();
+  const second = client("/multiplayer", "alice");
+  second.emit("joinRoom", { gameID });
+  assert.match(await h.once(second, "gameError"), /already in this room/);
+});
+
+test("multiplayer: only the host can start, a leaver loses and the other wins", async () => {
+  const { alice, others: [bob] } = await openRoom("bob");
+
+  bob.emit("startGame"); // not the host -> ignored
+  const started = waitFor(alice, "roomState", (s) => s.status === "playing");
   alice.emit("startGame");
-  const { turn } = await highlight;
-  assert.ok(turn === 1 || turn === 2);
+  const { turn, players } = await started;
+  assert.ok(turn === 0 || turn === 1);
 
   // The player whose turn it isn't can't open cards
-  const other = turn === 1 ? bob : alice;
+  const other = players[turn].name === "alice" ? bob : alice;
   other.emit("openCard", 3);
   other.emit("endTurn");
 
@@ -181,23 +240,57 @@ test("multiplayer: only the creator can start, a leaver loses and the other wins
   );
 });
 
-test("multiplayer: chat messages are validated and trimmed", async () => {
-  const { alice, bob } = await startMultiplayer();
+test("multiplayer: games with more than two players keep the turn order", async () => {
+  const { alice, others } = await openRoom("bob", "carol");
+  const sockets = { alice, bob: others[0], carol: others[1] };
+
+  const started = waitFor(alice, "roomState", (s) => s.status === "playing");
+  alice.emit("startGame");
+  let state = await started;
+  assert.strictEqual(state.players.length, 3);
+
+  // The player whose turn it is leaves -> the next active player continues
+  const leaving = state.players[state.turn].name;
+  const expected = state.players[(state.turn + 1) % 3].name;
+  const watcher = leaving === "alice" ? sockets.bob : alice;
+  const next = waitFor(watcher, "roomState", (s) => !s.players.find((p) => p.name === leaving).active);
+  sockets[leaving].emit("surrender");
+  state = await next;
+  assert.strictEqual(state.players[state.turn].name, expected);
+  assert.strictEqual(state.status, "playing");
+});
+
+test("multiplayer: chat is validated, rate limited and kept as history", async () => {
+  const { gameID, alice, others: [bob] } = await openRoom("bob");
 
   alice.emit("sendChatMessage", null);
   alice.emit("sendChatMessage", { message: 42 });
-  alice.emit("sendChatMessage", { message: "x".repeat(2000) });
-  const message = await h.once(bob, "receiveChatMessage");
+  alice.emit("sendChatMessage", { message: "   " });
+  alice.emit("sendChatMessage", { message: "  hello   <b>world</b>  " + "x".repeat(2000) });
+  const message = await waitFor(bob, "chatMessage", (m) => m.type === "user");
   assert.strictEqual(message.name, "alice");
-  assert.strictEqual(message.message.length, 500);
+  assert.ok(message.text.startsWith("hello <b>world</b> "));
+  assert.strictEqual(message.text.length, 300);
+
+  // Too fast
+  alice.emit("sendChatMessage", { message: "spam" });
+  assert.match(await h.once(alice, "chatError"), /too fast/);
+
+  // Late joiners get the history including system messages
+  const carol = client("/multiplayer", "carol");
+  const history = h.once(carol, "chatHistory");
+  carol.emit("joinRoom", { gameID });
+  const messages = await history;
+  assert.ok(messages.some((m) => m.type === "system" && /bob joined/.test(m.text)));
+  assert.ok(messages.some((m) => m.type === "user" && m.name === "alice"));
 });
 
-test("multiplayer: when the creator leaves before the start, the next player takes over", async () => {
-  const { alice, bob } = await startMultiplayer();
+test("multiplayer: when the host leaves before the start, the next player takes over", async () => {
+  const { alice, others: [bob] } = await openRoom("bob");
 
-  const creator = h.once(bob, "newCreator");
+  const state = waitFor(bob, "roomState", (s) => s.host === "bob");
   alice.close();
-  assert.deepStrictEqual(await creator, { name: "bob" });
+  assert.deepStrictEqual((await state).players.map((p) => p.name), ["bob"]);
 });
 
 test("rooms: abandoned rooms are removed", () => {
