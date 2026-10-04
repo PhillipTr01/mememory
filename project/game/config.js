@@ -29,7 +29,9 @@ module.exports = {
 
   // Game modes the host can choose in the waiting room
   MODES: ["classic", "speed"],
-  // Speed round: time per turn, and pause after two wrong cards before the turn passes
+  // Speed round: default time per turn (ms), the choices for the host (seconds)
+  // and the pause after two wrong cards before the turn passes
   SPEED_TURN_TIME: 10 * 1000,
+  SPEED_TURN_OPTIONS: [5, 10, 15, 20],
   SPEED_MISS_DELAY: 1500,
 };

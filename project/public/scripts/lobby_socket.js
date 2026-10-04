@@ -91,7 +91,10 @@ function createRoomRow(room) {
   if (room.mode == "speed") {
     var speed = document.createElement("span");
     speed.className = "mode-badge ms-2";
-    speed.append(createIcon("bi-lightning-charge-fill"), document.createTextNode(" Speed"));
+    speed.append(
+      createIcon("bi-lightning-charge-fill"),
+      document.createTextNode(" Speed" + (room.turnTime ? " " + room.turnTime / 1000 + "s" : "")),
+    );
     name.appendChild(speed);
   }
   var code = document.createElement("div");
