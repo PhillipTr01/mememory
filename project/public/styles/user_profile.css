@@ -67,7 +67,6 @@
   font-weight: 700;
   font-size: 1.1rem;
   color: var(--mode);
-  filter: brightness(1.35);
 }
 
 .stat-numbers {
@@ -115,6 +114,5 @@
   height: 100%;
   width: 0;
   background: var(--mode);
-  filter: brightness(1.35);
   transition: width 0.6s ease;
 }
