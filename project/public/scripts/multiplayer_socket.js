@@ -470,7 +470,8 @@ function createKickButton(name, className) {
   kick.type = "button";
   kick.className = className;
   kick.title = "Remove " + name + " from the room";
-  kick.append(createIcon("bi-x-lg"), document.createTextNode("Kick"));
+  kick.setAttribute("aria-label", "Kick " + name);
+  kick.appendChild(createIcon("bi-x"));
   kick.addEventListener("click", (event) => {
     event.stopPropagation();
     confirmDialog({

@@ -1268,3 +1268,40 @@
   font-size: 0.8rem;
   flex-shrink: 0;
 }
+
+/* Kick: small round x in the top right corner */
+.seat-kick,
+.player-kick {
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--mm-surface-3);
+  color: var(--mm-muted);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.seat-kick {
+  top: 8px;
+  right: 8px;
+}
+
+.player-kick {
+  width: 20px;
+  height: 20px;
+}
+
+.seat-kick .bi,
+.player-kick .bi {
+  display: block;
+  line-height: 1;
+}
+
+.seat-kick:hover,
+.player-kick:hover {
+  background: rgba(224, 103, 90, 0.18);
+  color: var(--mm-danger);
+}
