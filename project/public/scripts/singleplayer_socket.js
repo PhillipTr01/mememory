@@ -93,6 +93,8 @@ socket.on("noGameFound", () => {
 });
 
 function openCard(id) {
+  // Open cards are zoomed in right away, closed ones are turned by the server
+  if (zoomCard(id)) return;
   socket.emit("openCard", id);
 }
 
