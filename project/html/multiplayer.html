@@ -121,14 +121,15 @@
                     <div id="hostSettings" class="host-settings" hidden>
                         <div class="setting setting-wide">
                             <span class="setting-label">Mode</span>
-                            <div class="mode-controls">
-                                <div id="modePicker" class="segmented" role="group" aria-label="Game mode">
-                                    <button type="button" data-mode="classic">Classic</button>
-                                    <button type="button" data-mode="speed"><i class="bi bi-lightning-charge-fill"></i> Speed</button>
-                                </div>
-                                <!--- Time per turn, only for the speed round --->
-                                <div id="turnTimePicker" class="segmented" role="group" aria-label="Seconds per turn" hidden></div>
+                            <div id="modePicker" class="segmented" role="group" aria-label="Game mode">
+                                <button type="button" data-mode="classic">Classic</button>
+                                <button type="button" data-mode="speed"><i class="bi bi-lightning-charge-fill"></i> Speed</button>
                             </div>
+                        </div>
+                        <!--- Time per turn, only for the speed round --->
+                        <div id="turnTimeSetting" class="setting setting-wide" hidden>
+                            <span class="setting-label">Turn timer</span>
+                            <div id="turnTimePicker" class="segmented" role="group" aria-label="Seconds per turn"></div>
                         </div>
                         <div class="setting">
                             <span class="setting-label">Max. players</span>
