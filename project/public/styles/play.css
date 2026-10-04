@@ -193,16 +193,23 @@
 }
 
 #cardModal {
-  padding: 10vw;
+  padding: 6vh 4vw;
   text-align: center;
+  background: rgba(0, 0, 0, 0.85);
+  cursor: zoom-out;
+  z-index: 3500;
 }
 
 #imgModal {
-  max-height: 100%;
-  max-width: 100%;
+  max-height: 86vh;
+  max-width: 92vw;
   width: auto;
   height: auto;
   display: block;
+  margin: 0 auto;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
 }
 
 .modal-content {
