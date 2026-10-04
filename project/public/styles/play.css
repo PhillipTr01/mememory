@@ -1,60 +1,75 @@
-.card {
-  -webkit-transition: 1s ease-in-out;
-  -moz-transition: 1s ease-in-out;
-  -o-transition: 1s ease-in-out;
-  transition: 1s ease-in-out;
-
-  transform-style: preserve-3d;
-  transform: rotateY(-180deg);
-
-  border: 0;
-  cursor: pointer;
+/* ---------- Memory board ---------- */
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(11, minmax(0, 1fr));
+  gap: clamp(4px, 0.6vw, 10px);
+  max-width: 1150px;
+  margin: 0 auto;
+  padding: 0.5rem;
 }
 
-.card-front {
-  backface-visibility: hidden;
-  transform: rotateY(180deg);
-  position: absolute;
-  background-color: #141414;
-  border: solid #616161 2px;
-  border-radius: 3px;
-}
-
-.card-back {
-  backface-visibility: hidden;
-  transform: rotateY(0deg);
-  position: absolute;
-}
-
-.overlay {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
-  color: white; /* Text color for the overlay */
-  padding: 8%;
-  padding-top: 1%;
-  padding-bottom: 0;
+@media (max-width: 767px) {
+  .memory-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
 }
 
 .card-size {
   position: relative;
-  width: 13.9%;
-  padding: 0px;
-  padding-bottom: 13.9%;
-  max-height: 13.9%;
-  margin: 0.2rem;
+  aspect-ratio: 1 / 1;
+  perspective: 900px;
 }
 
-@media (min-width: 576px) {
-  .card-size {
-    position: relative;
-    width: 8%;
-    padding: 0px;
-    padding-bottom: 8%;
-    max-height: 8%;
-    margin: 0.2rem;
-  }
+/* .card-front = face down (logo), .card-back = face up (meme) */
+.card {
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transform: rotateY(-180deg);
+  transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+.card-front,
+.card-back {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+}
+
+.card-front {
+  transform: rotateY(180deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 30% 20%, #2c3440, #19191f 75%);
+  border: 1px solid #34343d;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 10px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card-front img {
+  width: 64%;
+  height: 64%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  opacity: 0.9;
+}
+
+.card-back {
+  transform: rotateY(0deg);
+  background: #0d0d10;
+  border: 1px solid #3a3a45;
+}
+
+.card-back > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .card-image {
@@ -62,16 +77,54 @@
   height: 100%;
 }
 
+/* Face down card under the mouse */
+.card:not(.flip):hover .card-front {
+  border-color: #48b0f7;
+  box-shadow: 0 0 0 1px #48b0f7, 0 6px 18px rgba(72, 176, 247, 0.35);
+}
+
 .flip {
-  -webkit-transform: rotateY(0deg);
-  -moz-transform: rotateY(0deg);
-  -o-transform: rotateY(0deg);
   transform: rotateY(0deg);
 }
 
-.inner-card {
-  width: 100%;
-  height: 100%;
+/* Card that was just opened */
+.card.border {
+  border: 0 !important;
+}
+
+.card.zoom-card-on-turn {
+  transform: rotateY(0deg) scale(1.12);
+  z-index: 5;
+}
+
+.card.zoom-card-on-turn .card-back {
+  border-color: transparent;
+  box-shadow: 0 0 0 3px #48b0f7, 0 12px 26px rgba(0, 0, 0, 0.55);
+}
+
+/* Found pairs */
+.card.flip:not(.zoom-card-on-turn) .card-back {
+  border-color: rgba(52, 211, 153, 0.7);
+  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.45);
+}
+
+/* How often a card was opened (shown after the game) */
+.overlay {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  min-width: 1.4em;
+  padding: 0 0.35em;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.overlay:empty {
+  display: none;
 }
 
 .chat {

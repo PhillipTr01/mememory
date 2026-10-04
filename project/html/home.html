@@ -18,6 +18,7 @@
     <!--- Custom CSS-->
     <!--- identical to index.html --->
     <link rel="stylesheet" href="/static/styles/index.css" />
+    <link rel="stylesheet" href="/static/styles/theme.css" />
     <link rel="stylesheet" href="/static/styles/home.css" />
 
     <!--- Icons --->
@@ -70,42 +71,30 @@
                 </div>
                 <div class="col-6 col-md-4 fw-light order-2 order-md-3">
                   <div class="d-flex text-light pl-xl-5">
-                    <div class="ms-auto dropdown">
-                      <p
-                        id="username"
-                        class="m-0 pb-1 dropdown-toggle fs-4 text-break overflow-hidden"
-                        data-bs-toggle="dropdown"
-                      ></p>
-                      <ul class="dropdown-menu dropdown-menu-end bg-dark">
-                        <li>
-                          <div
-                            class="dropdown-item d-flex text-light"
-                            onclick="startProfilePage()"
-                          >
-                            <i class="bi bi-bar-chart-line pe-3"></i>
-                            <p class="m-0">Profile</p>
-                          </div>
-                        </li>
-                        <li class="mt-2">
-                          <div
-                            class="dropdown-item d-flex text-light"
-                            onclick="startSettingsPage()"
-                          >
-                            <i class="bi bi-gear pe-3"></i>
-                            <p class="m-0">Settings</p>
-                          </div>
-                        </li>
-                        <li class="mt-2">
-                          <div
-                            class="dropdown-item d-flex text-danger"
-                            onclick="logoutUser()"
-                          >
-                            <i class="bi bi-box-arrow-right pe-3"></i>
-                            <p class="m-0 fw-bold">Logout</p>
-                          </div>
-                        </li>
-                      </ul>
+                    <div class="ms-auto profile-menu" id="profileMenu">
+                  <button type="button" class="profile-trigger" id="profileTrigger" aria-haspopup="true" aria-expanded="false">
+                    <span id="profileAvatar" class="mm-avatar sm"></span>
+                    <span class="profile-name" id="username"></span>
+                    <i class="bi bi-chevron-down profile-caret"></i>
+                  </button>
+                  <div class="profile-dropdown" id="profileDropdown" hidden>
+                    <div class="profile-head">
+                      <span id="profileAvatarLarge" class="mm-avatar"></span>
+                      <div class="overflow-hidden">
+                        <div class="profile-head-name" id="profileName"></div>
+                        <div class="mm-muted small">Signed in</div>
+                      </div>
                     </div>
+                    <a href="/lobby" class="profile-item"><i class="bi bi-controller"></i> Play</a>
+                    <a href="/home" class="profile-item"><i class="bi bi-trophy"></i> Scoreboard</a>
+                    <a href="/user" class="profile-item"><i class="bi bi-bar-chart-line"></i> Profile</a>
+                    <a href="/settings" class="profile-item"><i class="bi bi-gear"></i> Settings</a>
+                    <div class="profile-divider"></div>
+                    <button type="button" class="profile-item danger" id="logoutButton">
+                      <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                  </div>
+                </div>
                   </div>
                 </div>
               </div>
@@ -137,232 +126,22 @@
               <div
                 class="col-12 col-sm-10 col-md-8 col-lg-6 py-3 px-0 p-lg-4 my-2 my-lg-auto text-light"
               >
-                <div class="container-sm my-auto rounded-3 p-0 max-width-600">
-                  <div class="text-center text-light fs-3">
-                    <p class="pb-5 m-0">Scoreboard</p>
+                <div class="panel scoreboard mx-auto max-width-600">
+                  <div class="d-flex justify-content-between align-items-baseline mb-3">
+                    <h1 class="page-title">Scoreboard</h1>
+                    <span class="mm-muted small">Top 10</span>
                   </div>
-                  <div class="">
-                    <nav class="pb-4">
-                      <div
-                        class="nav nav-tabs d-flex flex-nowrap"
-                        id="nav-tab"
-                        role="tablist"
-                      >
-                        <button
-                          class="nav-link text-light px-0 flex-fill active"
-                          id="nav-easy-tab"
-                          data-bs-toggle="tab"
-                          data-bs-target="#nav-easy"
-                          type="button"
-                          role="tab"
-                          aria-controls="nav-easy"
-                          aria-selected="true"
-                        >
-                          Easy
-                        </button>
-                        <button
-                          class="nav-link text-light px-0 flex-fill"
-                          id="nav-medium-tab"
-                          data-bs-toggle="tab"
-                          data-bs-target="#nav-medium"
-                          type="button"
-                          role="tab"
-                          aria-controls="nav-medium"
-                          aria-selected="false"
-                        >
-                          Medium
-                        </button>
-                        <button
-                          class="nav-link text-light px-0 flex-fill"
-                          id="nav-hard-tab"
-                          data-bs-toggle="tab"
-                          data-bs-target="#nav-hard"
-                          type="button"
-                          role="tab"
-                          aria-controls="nav-hard"
-                          aria-selected="false"
-                        >
-                          Hard
-                        </button>
-                        <button
-                          class="nav-link text-light px-0 flex-fill"
-                          id="nav-expert-tab"
-                          data-bs-toggle="tab"
-                          data-bs-target="#nav-expert"
-                          type="button"
-                          role="tab"
-                          aria-controls="nav-expert"
-                          aria-selected="false"
-                        >
-                          Expert
-                        </button>
-                        <button
-                          class="nav-link text-light px-0 flex-fill"
-                          id="nav-multiplayer-tab"
-                          data-bs-toggle="tab"
-                          data-bs-target="#nav-multiplayer"
-                          type="button"
-                          role="tab"
-                          aria-controls="nav-multiplayer"
-                          aria-selected="false"
-                        >
-                          Online
-                        </button>
-                      </div>
-                    </nav>
-                    <div class="tab-content" id="nav-tabContent">
-                      <div
-                        class="tab-pane fade show active"
-                        id="nav-easy"
-                        role="tabpanel"
-                        aria-labelledby="nav-easy-tab"
-                      >
-                        <table class="table text-light my-2 table-borderless">
-                          <thead>
-                            <tr>
-                              <td></td>
-                              <th scope="col" class="text-start">Name</th>
-                              <th scope="col" class="text-end">Win</th>
-                              <th scope="col" class="text-end">Lose</th>
-                              <th
-                                scope="col"
-                                class="text-end pe-5 d-none d-md-block"
-                              >
-                                W/L
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody id="easyTable">
-                            <tr>
-                              <td>1.</td>
-                            </tr>
-                            <tr>
-                              <td>2.</td>
-                            </tr>
-                            <tr>
-                              <td>3.</td>
-                            </tr>
-                            <tr>
-                              <td>4.</td>
-                            </tr>
-                            <tr>
-                              <td>5.</td>
-                            </tr>
-                            <tr>
-                              <td>6.</td>
-                            </tr>
-                            <tr>
-                              <td>7.</td>
-                            </tr>
-                            <tr>
-                              <td>8.</td>
-                            </tr>
-                            <tr>
-                              <td>9.</td>
-                            </tr>
-                            <tr>
-                              <td>10.</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                      <div
-                        class="tab-pane fade show"
-                        id="nav-medium"
-                        role="tabpanel"
-                        aria-labelledby="nav-medium-tab"
-                      >
-                        <table class="table text-light my-2 table-borderless">
-                          <thead>
-                            <tr>
-                              <td></td>
-                              <th scope="col" class="text-start">Name</th>
-                              <th scope="col" class="text-end">Win</th>
-                              <th scope="col" class="text-end">Lose</th>
-                              <th
-                                scope="col"
-                                class="text-end pe-5 d-none d-md-block"
-                              >
-                                W/L
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody id="mediumTable"></tbody>
-                        </table>
-                      </div>
-                      <div
-                        class="tab-pane fade show"
-                        id="nav-hard"
-                        role="tabpanel"
-                        aria-labelledby="nav-hard-tab"
-                      >
-                        <table class="table text-light my-2 table-borderless">
-                          <thead>
-                            <tr>
-                              <td></td>
-                              <th scope="col" class="text-start">Name</th>
-                              <th scope="col" class="text-end">Win</th>
-                              <th scope="col" class="text-end">Lose</th>
-                              <th
-                                scope="col"
-                                class="text-end pe-5 d-none d-md-block"
-                              >
-                                W/L
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody id="hardTable"></tbody>
-                        </table>
-                      </div>
-                      <div
-                        class="tab-pane fade show"
-                        id="nav-expert"
-                        role="tabpanel"
-                        aria-labelledby="nav-expert-tab"
-                      >
-                        <table class="table text-light my-2 table-borderless">
-                          <thead>
-                            <tr>
-                              <td></td>
-                              <th scope="col" class="text-start">Name</th>
-                              <th scope="col" class="text-end">Win</th>
-                              <th scope="col" class="text-end">Lose</th>
-                              <th
-                                scope="col"
-                                class="text-end pe-5 d-none d-md-block"
-                              >
-                                W/L
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody id="expertTable"></tbody>
-                        </table>
-                      </div>
-                      <div
-                        class="tab-pane fade show"
-                        id="nav-multiplayer"
-                        role="tabpanel"
-                        aria-labelledby="nav-multiplayer-tab"
-                      >
-                        <table class="table text-light my-2 table-borderless">
-                          <thead>
-                            <tr>
-                              <td></td>
-                              <th scope="col" class="text-start">Name</th>
-                              <th scope="col" class="text-end">Win</th>
-                              <th scope="col" class="text-end">Lose</th>
-                              <th
-                                scope="col"
-                                class="text-end pe-5 d-none d-md-block"
-                              >
-                                W/L
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody id="multiplayerTable"></tbody>
-                        </table>
-                      </div>
-                    </div>
+                  <div class="mode-tabs" role="tablist">
+                    <button type="button" class="mode-tab mode-easy active" data-mode="easy" role="tab" aria-selected="true">Easy</button>
+                    <button type="button" class="mode-tab mode-medium" data-mode="medium" role="tab" aria-selected="false">Medium</button>
+                    <button type="button" class="mode-tab mode-hard" data-mode="hard" role="tab" aria-selected="false">Hard</button>
+                    <button type="button" class="mode-tab mode-expert" data-mode="expert" role="tab" aria-selected="false">Expert</button>
+                    <button type="button" class="mode-tab mode-multiplayer" data-mode="multiplayer" role="tab" aria-selected="false">Online</button>
+                  </div>
+                  <ol id="scoreList" class="score-list" aria-live="polite"></ol>
+                  <div id="scoreEmpty" class="score-empty" hidden>
+                    <i class="bi bi-hourglass-split"></i>
+                    <p class="mb-0">Nobody has won in this mode yet.</p>
                   </div>
                 </div>
               </div>
@@ -375,58 +154,46 @@
         <main class="my-auto">
           <div class="container-fluid">
             <div class="container-xxl px-0 py-5 text-light">
-              <div>
-                <div>
-                  <p class="fs-3">Description</p>
-                </div>
-                <div class="pl-3">
-                  <p class="fs-5 ps-3">
+              <div class="info-grid">
+                <div class="info-card">
+                  <i class="bi bi-emoji-laughing"></i>
+                  <p class="fs-4 mb-2">Description</p>
+                  <p>
                     MemeMory is a special online version of the popular game
                     Memory®. The peculiarity of MemeMory is that all the images
                     depict very recent memes from reddit. You can either play
                     against a computer, which comes in four different difficulty
-                    levels, or you can compete online against other player.
+                    levels, or you can compete online against other players.
                   </p>
-                  <br />
-                  <p class="fs-6 ps-3">
-                    INFO: You can now play MemeMory with up to 5 players.
-                  </p>
+                  <p class="small mm-muted mb-0">INFO: You can now play MemeMory with up to 8 players.</p>
                 </div>
-              </div>
-              <div>
-                <div class="pt-5">
-                  <p class="fs-3">Instructions</p>
-                </div>
-                <div>
-                  <p class="fs-5 ps-3">
-                    The game decides "randomly" who may start. When it's your
+                <div class="info-card">
+                  <i class="bi bi-joystick"></i>
+                  <p class="fs-4 mb-2">Instructions</p>
+                  <p>
+                    The game decides randomly who may start. When it's your
                     turn, you get to open two cards in a row. If those two cards
                     are the same, they remain face up, you get one point and
                     it's your turn again. If the cards are different, they are
                     turned over again and it is the next player's turn.
                   </p>
-                  <br />
-                  <p class="fs-6 ps-3">
-                    IMPORTANT: If you leave during the match (singleplayer and
-                    multiplayer), you will get a Lose!
-                  </p>
+                  <p class="small mm-muted mb-0">IMPORTANT: If you leave during the match, you will get a Lose!</p>
                 </div>
-              </div>
-              <div>
-                <div class="pt-5">
-                  <p class="fs-3">Chat Guidelines</p>
-                </div>
-                <div>
-                  <li class="fs-5 ps-3">Do not insult!</li>
-                  <li class="fs-5 ps-3">Do not offend!</li>
-                  <li class="fs-5 ps-3">Be kind & have fun!</li>
+                <div class="info-card">
+                  <i class="bi bi-chat-dots"></i>
+                  <p class="fs-4 mb-2">Chat Guidelines</p>
+                  <ul class="mb-0">
+                    <li>Do not insult!</li>
+                    <li>Do not offend!</li>
+                    <li>Be kind &amp; have fun!</li>
+                  </ul>
                 </div>
               </div>
             </div>
           </div>
         </main>
 
-        <footer class="mt-auto mb-0">
+        <footer class="app-footer mt-auto mb-0">
           <div class="container-fluid pt-2">
             <nav class="d-flex justify-content-center text-center">
               <div>
@@ -456,6 +223,8 @@
       crossorigin="anonymous"
     ></script>
     <!--- Custom JS --->
+    <script src="/static/scripts/ui.js"></script>
+    <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/home.js"></script>
   </body>
 </html>

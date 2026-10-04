@@ -17,6 +17,7 @@
 
     <!--- Custom CSS-->
     <link rel="stylesheet" href="/static/styles/index.css" />
+    <link rel="stylesheet" href="/static/styles/theme.css" />
 
     <!--- Favicon --->
     <link
@@ -180,7 +181,7 @@
                     <div class="">
                       <button
                         type="submit"
-                        class="form-control btn btn-primary btn-lg rounded"
+                        class="mm-btn mm-btn-primary mm-btn-lg px-5"
                         onclick="showLoginFormInitial()"
                       >
                         Login
@@ -189,7 +190,7 @@
                     <div class="">
                       <button
                         type="submit"
-                        class="form-control btn btn-outline-primary btn-lg rounded"
+                        class="mm-btn mm-btn-lg px-5"
                         onclick="showRegisterFormInitial()"
                       >
                         Register
@@ -204,9 +205,9 @@
                 class="col-12 col-sm-10 col-md-8 col-lg-6 py-3 px-0 p-lg-4 p-xl-5 my-2 my-lg-auto rounded-3 text-light visually-hidden"
                 id="loginForm"
               >
-                <div class="container-fluid my-auto p-0 max-width-500">
+                <div class="container-fluid my-auto max-width-500 panel auth-panel">
                   <div>
-                    <h3 class="mb-0 mb-lg-4">Login</h3>
+                    <h3 class="page-title mb-3">Welcome back 👋</h3>
                   </div>
                   <form
                     action="#"
@@ -216,22 +217,22 @@
                       return false;
                     "
                   >
-                    <div class="form-group mt-1 mt-lg-3">
+                    <div class="mm-field">
                       <label for="username">Username</label>
                       <input
                         type="text"
                         id="loginUsername"
-                        class="form-control"
+                        class="mm-input"
                         placeholder="Username / Email address"
                         required
                       />
                     </div>
-                    <div class="form-group mt-1 mt-lg-3">
+                    <div class="mm-field">
                       <label for="loginPassword">Password</label>
                       <input
                         id="loginPassword"
                         type="password"
-                        class="form-control"
+                        class="mm-input"
                         placeholder="Password"
                         required
                       />
@@ -242,22 +243,22 @@
                         Invalid username or password.
                       </label>
                     </div>
-                    <div class="form-group mt-3 mt-lg-4">
+                    <div class="mt-3">
                       <button
                         type="submit"
-                        class="form-control btn btn-outline-light rounded"
+                        class="mm-btn mm-btn-primary w-100"
                       >
                         Login
                       </button>
                     </div>
-                    <div class="form-group mt-1 mt-lg-3">
-                      <div class="form-group mt-1 mt-lg-3">
+                    <div class="mm-field">
+                      <div class="mm-field">
                         <div class="container-fluid p-0">
                           <div class="row row-cols-1 row-cols-sm-2 m-0">
                             <div class="col col-lg-6 mt-1 mt-lg-3 px-5 px-sm-1">
                               <button
                                 type="button"
-                                class="form-control btn btn-outline-info btn-sm rounded"
+                                class="mm-btn mm-btn-sm w-100"
                                 onclick="showRegisterForm()"
                               >
                                 New? Register
@@ -266,7 +267,7 @@
                             <div class="col col-lg-6 mt-1 mt-lg-3 px-5 px-sm-1">
                               <button
                                 type="button"
-                                class="form-control btn btn-outline-info btn-sm rounded px-0"
+                                class="mm-btn mm-btn-sm w-100"
                                 onclick="forgotPassword()"
                                 disabled
                               >
@@ -286,9 +287,9 @@
                 class="col-12 col-sm-10 col-md-8 col-lg-6 py-3 px-0 p-lg-4 p-xl-5 my-2 my-lg-auto rounded-3 text-light visually-hidden"
                 id="registerForm"
               >
-                <div class="container-fluid my-auto p-0 max-width-500">
+                <div class="container-fluid my-auto max-width-500 panel auth-panel">
                   <div>
-                    <h3 class="mb-0 mb-lg-4">Register</h3>
+                    <h3 class="page-title mb-3">Create your account</h3>
                   </div>
                   <form
                     action="#"
@@ -298,12 +299,12 @@
                       return false;
                     "
                   >
-                    <div class="form-group mt-1 mt-lg-3">
+                    <div class="mm-field">
                       <label for="registerEmail">Email</label>
                       <input
                         type="text"
                         id="registerEmail"
-                        class="form-control"
+                        class="mm-input"
                         placeholder="Email address"
                         required
                       />
@@ -320,12 +321,12 @@
                         Email is already taken.
                       </label>
                     </div>
-                    <div class="form-group mt-1 mt-lg-3">
+                    <div class="mm-field">
                       <label for="registerUsername">Username</label>
                       <input
                         type="text"
                         id="registerUsername"
-                        class="form-control"
+                        class="mm-input"
                         placeholder="Username"
                         required
                       />
@@ -342,12 +343,12 @@
                         Username is already taken.
                       </label>
                     </div>
-                    <div class="form-group mt-1 mt-lg-3">
+                    <div class="mm-field">
                       <label for="registerPassword1">Password</label>
                       <input
                         id="registerPassword1"
                         type="password"
-                        class="form-control"
+                        class="mm-input"
                         placeholder="Password"
                         required
                       />
@@ -359,12 +360,12 @@
                         letter, one number and one special character)
                       </label>
                     </div>
-                    <div class="form-group mt-1 mt-lg-3">
+                    <div class="mm-field">
                       <label for="registerPassword2">Repeat Password</label>
                       <input
                         id="registerPassword2"
                         type="password"
-                        class="form-control"
+                        class="mm-input"
                         placeholder="Password"
                         required
                       />
@@ -375,20 +376,20 @@
                         Password is not identical.
                       </label>
                     </div>
-                    <div class="form-group mt-3 mt-lg-4">
+                    <div class="mt-3">
                       <button
                         type="submit"
-                        class="btn btn-outline-light w-100 rounded"
+                        class="mm-btn mm-btn-primary w-100"
                       >
                         Register
                       </button>
                     </div>
-                    <div class="form-group mt-3">
+                    <div class="mt-3">
                       <div class="container-fluid p-0">
                         <div>
                           <button
                             type="button"
-                            class="btn btn-outline-info btn-sm w-100 rounded"
+                            class="mm-btn mm-btn-sm w-100"
                             onclick="showLoginForm()"
                           >
                             Or Sign In
@@ -408,58 +409,46 @@
         <main class="my-auto">
           <div class="container-fluid">
             <div class="container-xxl px-0 py-5 text-light">
-              <div>
-                <div>
-                  <p class="fs-3">Description</p>
-                </div>
-                <div class="pl-3">
-                  <p class="fs-5 ps-3">
+              <div class="info-grid">
+                <div class="info-card">
+                  <i class="bi bi-emoji-laughing"></i>
+                  <p class="fs-4 mb-2">Description</p>
+                  <p>
                     MemeMory is a special online version of the popular game
                     Memory®. The peculiarity of MemeMory is that all the images
                     depict very recent memes from reddit. You can either play
                     against a computer, which comes in four different difficulty
-                    levels, or you can compete online against other player.
+                    levels, or you can compete online against other players.
                   </p>
-                  <br />
-                  <p class="fs-6 ps-3">
-                    INFO: You can now play MemeMory with up to 5 players.
-                  </p>
+                  <p class="small mm-muted mb-0">INFO: You can now play MemeMory with up to 8 players.</p>
                 </div>
-              </div>
-              <div>
-                <div class="pt-5">
-                  <p class="fs-3">Instructions</p>
-                </div>
-                <div>
-                  <p class="fs-5 ps-3">
-                    The game decides "randomly" who may start. When it's your
+                <div class="info-card">
+                  <i class="bi bi-joystick"></i>
+                  <p class="fs-4 mb-2">Instructions</p>
+                  <p>
+                    The game decides randomly who may start. When it's your
                     turn, you get to open two cards in a row. If those two cards
                     are the same, they remain face up, you get one point and
                     it's your turn again. If the cards are different, they are
                     turned over again and it is the next player's turn.
                   </p>
-                  <br />
-                  <p class="fs-6 ps-3">
-                    IMPORTANT: If you leave during the match (singleplayer and
-                    multiplayer), you will get a Lose!
-                  </p>
+                  <p class="small mm-muted mb-0">IMPORTANT: If you leave during the match, you will get a Lose!</p>
                 </div>
-              </div>
-              <div>
-                <div class="pt-5">
-                  <p class="fs-3">Chat Guidelines</p>
-                </div>
-                <div>
-                  <li class="fs-5 ps-3">Do not insult!</li>
-                  <li class="fs-5 ps-3">Do not offend!</li>
-                  <li class="fs-5 ps-3">Be kind & have fun!</li>
+                <div class="info-card">
+                  <i class="bi bi-chat-dots"></i>
+                  <p class="fs-4 mb-2">Chat Guidelines</p>
+                  <ul class="mb-0">
+                    <li>Do not insult!</li>
+                    <li>Do not offend!</li>
+                    <li>Be kind &amp; have fun!</li>
+                  </ul>
                 </div>
               </div>
             </div>
           </div>
         </main>
 
-        <footer class="mt-auto mb-0">
+        <footer class="app-footer mt-auto mb-0">
           <div class="container-fluid pt-2">
             <nav class="d-flex justify-content-center text-center">
               <div>

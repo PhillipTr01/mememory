@@ -1,59 +1,188 @@
-tbody {
-    background-color: #2b3035;
+/* Scoreboard - the difficulty colors are the original MemeMory colors */
+.mode-easy { --mode: #709ba9; }
+.mode-medium { --mode: #608f9f; }
+.mode-hard { --mode: #56818f; }
+.mode-expert { --mode: #436470; }
+.mode-multiplayer { --mode: #603939; }
+
+.scoreboard {
+  --mode: #709ba9;
 }
 
-td {
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
+.mode-tabs {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+  overflow-x: auto;
 }
 
-.nav-tabs {
-    border: none;
+.mode-tab {
+  flex: 1;
+  border: none;
+  border-radius: 9px;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  color: var(--mm-muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.nav-tabs>.nav-link.active {
-    background-color: #141414;
+.mode-tab:hover {
+  color: var(--mm-text);
 }
 
-.nav-tabs>.nav-link {
-    border: none;
+.mode-tab.active {
+  background: var(--mode);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
 }
 
-.nav-tabs>button {
-    border-radius: 0 !important;
+.score-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  min-height: 200px;
 }
 
-.tr-bottom-border {
-    border-bottom-color: #141414;
-    border-bottom-width: 3px;
+.score-row {
+  display: grid;
+  grid-template-columns: 2.2rem auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.4rem;
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+  border-left: 4px solid var(--mode);
+  animation: mm-fade-up 0.25s ease both;
 }
 
-#nav-easy-tab.active,
-#nav-easy-tab:hover,
-#easyTable {
-    background-color: #709ba9;
+.score-row.me {
+  background: linear-gradient(90deg, rgba(72, 176, 247, 0.14), var(--mm-surface-2));
+  box-shadow: 0 0 0 1px rgba(72, 176, 247, 0.35) inset;
 }
 
-#nav-medium-tab.active,
-#nav-medium-tab:hover,
-#mediumTable {
-    background-color: #608f9f;
+.score-rank {
+  font-weight: 700;
+  font-size: 1.05rem;
+  text-align: center;
+  color: var(--mm-muted);
 }
 
-#nav-hard-tab.active,
-#nav-hard-tab:hover,
-#hardTable {
-    background-color: #56818f;
+.score-rank.medal {
+  font-size: 1.4rem;
 }
 
-#nav-expert-tab.active,
-#nav-expert-tab:hover,
-#expertTable {
-    background-color: #436470;
+.score-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-#nav-multiplayer-tab.active,
-#nav-multiplayer-tab:hover,
-#multiplayerTable {
-    background-color: #603939;
+.score-rate {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--mm-muted);
+  margin-top: 0.2rem;
+}
+
+.score-rate .bar {
+  width: 90px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--mm-surface-3);
+  overflow: hidden;
+}
+
+.score-rate .fill {
+  height: 100%;
+  background: var(--mode);
+  filter: brightness(1.3);
+}
+
+.score-stats {
+  display: flex;
+  gap: 0.9rem;
+  text-align: center;
+}
+
+.score-stats div {
+  min-width: 2.4rem;
+}
+
+.score-stats .value {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.score-stats .label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mm-muted);
+}
+
+.score-stats .win .value {
+  color: var(--mm-success);
+}
+
+.score-stats .lose .value {
+  color: var(--mm-danger);
+}
+
+.score-empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--mm-muted);
+}
+
+.score-empty .bi {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+
+.score-rate {
+  white-space: nowrap;
+}
+
+@media (max-width: 575px) {
+  .scoreboard {
+    padding: 1rem;
+  }
+
+  .score-row {
+    grid-template-columns: 1.6rem auto minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    padding: 0.55rem 0.6rem;
+  }
+
+  .score-row .mm-avatar {
+    --size: 30px;
+  }
+
+  .score-rate .bar {
+    width: 40px;
+  }
+
+  .score-stats {
+    gap: 0.5rem;
+  }
+
+  .score-stats div {
+    min-width: 2rem;
+  }
+
+  .mode-tab {
+    padding: 0.45rem 0.6rem;
+  }
 }

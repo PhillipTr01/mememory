@@ -1,82 +1,45 @@
-//after creation 
+// Profile: statistics of the logged in user
+var MODES = ["easy", "medium", "hard", "expert", "multiplayer"];
+
 document.addEventListener('DOMContentLoaded', function () {
-    setUsername();
-    setStatisticData();
+    userPromise.then((username) => {
+        if (!username) return;
+        document.getElementById('heroName').innerText = username;
+        document.getElementById('heroAvatar').replaceWith(createAvatar(username, 'lg'));
+    });
+    loadStatistic();
 }, false);
 
-//Keep dropdown open if clicked on other groups
-document.getElementById("keep-open-dropdown")?.addEventListener("click", function (e) {
-    e.stopPropagation();
-}, false);
-
-function startLobbyPage() {
-    window.location.href = "/lobby";
-    return;
+function loadStatistic() {
+    fetch('/requests/user/statistic', { credentials: 'same-origin' })
+        .then((response) => (response.ok ? response.json() : Promise.reject(response.status)))
+        .then(showStatistic)
+        .catch(() => showToast('Could not load your statistics.', 'error'));
 }
 
-function startScoreboardPage() {
-    window.location.href = "/home";
-    return;
+function percent(win, lose) {
+    var games = win + lose;
+    return games == 0 ? 0 : Math.round((win / games) * 100);
 }
 
-function startSettingsPage() {
-    window.location.href = "/settings";
-    return;
-}
+function showStatistic(statistic) {
+    var totalWins = 0;
+    var totalGames = 0;
 
-function logoutUser() {
-    var request = new XMLHttpRequest();
+    MODES.forEach((mode) => {
+        var win = statistic[mode + 'Win'] || 0;
+        var lose = statistic[mode + 'Lose'] || 0;
+        totalWins += win;
+        totalGames += win + lose;
 
-    request.onreadystatechange = function () {
-        if (this.readyState == 4) {
-            if (this.status == 200) {
-                window.location.href = "/";
-            }
-        }
-    }
+        document.getElementById(mode + 'Win').innerText = win;
+        document.getElementById(mode + 'Lose').innerText = lose;
+        document.getElementById(mode + 'Bar').style.width = percent(win, lose) + '%';
+        document.getElementById(mode + 'Rate').innerText =
+            win + lose == 0 ? 'No games yet' : percent(win, lose) + '% win rate · ' + (win + lose) + ' games';
+    });
 
-    request.open('GET', '/requests/authentication/logout');
-    request.send();
-    return;
-}
-
-function setUsername() {
-    var request = new XMLHttpRequest();
-
-    request.onreadystatechange = function () {
-        if (this.readyState == 4) {
-            if (this.status == 200) {
-                var username = JSON.parse(this.responseText).username;
-                document.getElementById('username').innerText = username;
-            }
-        }
-    }
-
-    request.open('GET', '/requests/user/username');
-    request.send();
-}
-
-function setStatisticData() {
-    var request = new XMLHttpRequest();
-
-    request.onreadystatechange = function () {
-        if (this.readyState == 4) {
-            if (this.status == 200) {
-                var response = JSON.parse(this.responseText);
-                document.getElementById('easyWin').innerText = response.easyWin;
-                document.getElementById('easyLose').innerText = response.easyLose;
-                document.getElementById('mediumWin').innerText = response.mediumWin;
-                document.getElementById('mediumLose').innerText = response.mediumLose;
-                document.getElementById('hardWin').innerText = response.hardWin;
-                document.getElementById('hardLose').innerText = response.hardLose;
-                document.getElementById('expertWin').innerText = response.expertWin;
-                document.getElementById('expertLose').innerText = response.expertLose;
-                document.getElementById('multiplayerWin').innerText = response.multiplayerWin;
-                document.getElementById('multiplayerLose').innerText = response.multiplayerLose;
-            }
-        }
-    }
-
-    request.open('GET', '/requests/user/statistic');
-    request.send();
+    document.getElementById('totalGames').innerText = totalGames;
+    document.getElementById('totalWins').innerText = totalWins;
+    document.getElementById('totalRate').innerText = percent(totalWins, totalGames - totalWins) + '%';
 }

@@ -18,6 +18,8 @@
     <!--- Custom CSS-->
     <!--- identical to index.html --->
     <link rel="stylesheet" href="/static/styles/index.css" />
+    <link rel="stylesheet" href="/static/styles/theme.css" />
+    <link rel="stylesheet" href="/static/styles/home.css" />
     <link rel="stylesheet" href="/static/styles/user_profile.css" />
 
     <!--- Icons --->
@@ -70,41 +72,29 @@
             </div>
             <div class="col-6 col-md-4 fw-light order-2 order-md-3">
               <div class="d-flex text-light pl-xl-5">
-                <div class="ms-auto dropdown">
-                  <p
-                    id="username"
-                    class="m-0 pb-1 dropdown-toggle fs-4"
-                    data-bs-toggle="dropdown"
-                  ></p>
-                  <ul class="dropdown-menu dropdown-menu-end bg-dark">
-                    <li>
-                      <div
-                        class="dropdown-item d-flex text-light"
-                        onclick="startScoreboardPage()"
-                      >
-                        <i class="bi bi-trophy pe-3"></i>
-                        <p class="m-0">Scoreboard</p>
+                <div class="ms-auto profile-menu" id="profileMenu">
+                  <button type="button" class="profile-trigger" id="profileTrigger" aria-haspopup="true" aria-expanded="false">
+                    <span id="profileAvatar" class="mm-avatar sm"></span>
+                    <span class="profile-name" id="username"></span>
+                    <i class="bi bi-chevron-down profile-caret"></i>
+                  </button>
+                  <div class="profile-dropdown" id="profileDropdown" hidden>
+                    <div class="profile-head">
+                      <span id="profileAvatarLarge" class="mm-avatar"></span>
+                      <div class="overflow-hidden">
+                        <div class="profile-head-name" id="profileName"></div>
+                        <div class="mm-muted small">Signed in</div>
                       </div>
-                    </li>
-                    <li class="mt-2">
-                      <div
-                        class="dropdown-item d-flex text-light"
-                        onclick="startSettingsPage()"
-                      >
-                        <i class="bi bi-gear pe-3"></i>
-                        <p class="m-0">Settings</p>
-                      </div>
-                    </li>
-                    <li class="mt-2">
-                      <div
-                        class="dropdown-item d-flex text-danger"
-                        onclick="logoutUser()"
-                      >
-                        <i class="bi bi-box-arrow-right pe-3"></i>
-                        <p class="m-0 fw-bold">Logout</p>
-                      </div>
-                    </li>
-                  </ul>
+                    </div>
+                    <a href="/lobby" class="profile-item"><i class="bi bi-controller"></i> Play</a>
+                    <a href="/home" class="profile-item"><i class="bi bi-trophy"></i> Scoreboard</a>
+                    <a href="/user" class="profile-item"><i class="bi bi-bar-chart-line"></i> Profile</a>
+                    <a href="/settings" class="profile-item"><i class="bi bi-gear"></i> Settings</a>
+                    <div class="profile-divider"></div>
+                    <button type="button" class="profile-item danger" id="logoutButton">
+                      <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -113,62 +103,85 @@
       </nav>
     </header>
 
-    <main class="my-auto p-3">
-      <div>
-        <div class="container-sm my-auto max-width-500">
-          <div>
-            <table class="table text-light table-borderless text-end">
-              <thead>
-                <tr>
-                  <td colspan="3" class="text-center fs-3 py-3">
-                    Singleplayer
-                  </td>
-                </tr>
-                <tr>
-                  <th scope="col" class="th-width"></th>
-                  <th scope="col">Win</th>
-                  <th scope="col" class="pe-5">Lose</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr class="tr-user-profile tr-user-profile-1">
-                  <th scope="row" class="text-start ps-3 ps-sm-5">Easy</th>
-                  <td id="easyWin"></td>
-                  <td id="easyLose" class="pe-5"></td>
-                </tr>
-                <tr class="tr-user-profile tr-user-profile-2">
-                  <th scope="row" class="text-start ps-3 ps-sm-5">Medium</th>
-                  <td id="mediumWin"></td>
-                  <td id="mediumLose" class="pe-5"></td>
-                </tr>
-                <tr class="tr-user-profile tr-user-profile-3">
-                  <th scope="row" class="text-start ps-3 ps-sm-5">Hard</th>
-                  <td id="hardWin"></td>
-                  <td id="hardLose" class="pe-5"></td>
-                </tr>
-                <tr class="tr-user-profile tr-user-profile-4">
-                  <th scope="row" class="text-start ps-3 ps-sm-5">Expert</th>
-                  <td id="expertWin"></td>
-                  <td id="expertLose" class="pe-5"></td>
-                </tr>
-                <tr>
-                  <td colspan="3" class="text-center fs-3 pb-3 pt-5">
-                    Multiplayer
-                  </td>
-                </tr>
-                <tr class="tr-user-profile tr-user-profile-5">
-                  <th scope="col" class="text-start ps-3 ps-sm-5">Online</th>
-                  <td id="multiplayerWin"></td>
-                  <td id="multiplayerLose" class="pe-5"></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+    <main class="page">
+      <section class="panel profile-hero mb-4">
+        <span id="heroAvatar" class="mm-avatar lg"></span>
+        <div class="flex-grow-1 overflow-hidden">
+          <h1 class="page-title text-truncate" id="heroName">Profile</h1>
+          <p class="mm-muted mb-0">Your MemeMory statistics</p>
         </div>
+        <div class="hero-stats">
+          <div><span id="totalGames">0</span><small>Games</small></div>
+          <div><span id="totalWins">0</span><small>Wins</small></div>
+          <div><span id="totalRate">0%</span><small>Win rate</small></div>
+        </div>
+      </section>
+
+      <div class="stat-grid">
+          <div class="stat-card mode-easy">
+            <div class="d-flex justify-content-between align-items-baseline">
+              <span class="stat-mode">Easy</span>
+              <span class="mm-muted small">Singleplayer</span>
+            </div>
+            <div class="stat-numbers">
+              <div><span id="easyWin" class="stat-win">0</span><span class="stat-label">Wins</span></div>
+              <div><span id="easyLose" class="stat-lose">0</span><span class="stat-label">Losses</span></div>
+            </div>
+            <div class="stat-bar"><span id="easyBar"></span></div>
+            <div class="mm-muted small mt-1" id="easyRate">No games yet</div>
+          </div>
+          <div class="stat-card mode-medium">
+            <div class="d-flex justify-content-between align-items-baseline">
+              <span class="stat-mode">Medium</span>
+              <span class="mm-muted small">Singleplayer</span>
+            </div>
+            <div class="stat-numbers">
+              <div><span id="mediumWin" class="stat-win">0</span><span class="stat-label">Wins</span></div>
+              <div><span id="mediumLose" class="stat-lose">0</span><span class="stat-label">Losses</span></div>
+            </div>
+            <div class="stat-bar"><span id="mediumBar"></span></div>
+            <div class="mm-muted small mt-1" id="mediumRate">No games yet</div>
+          </div>
+          <div class="stat-card mode-hard">
+            <div class="d-flex justify-content-between align-items-baseline">
+              <span class="stat-mode">Hard</span>
+              <span class="mm-muted small">Singleplayer</span>
+            </div>
+            <div class="stat-numbers">
+              <div><span id="hardWin" class="stat-win">0</span><span class="stat-label">Wins</span></div>
+              <div><span id="hardLose" class="stat-lose">0</span><span class="stat-label">Losses</span></div>
+            </div>
+            <div class="stat-bar"><span id="hardBar"></span></div>
+            <div class="mm-muted small mt-1" id="hardRate">No games yet</div>
+          </div>
+          <div class="stat-card mode-expert">
+            <div class="d-flex justify-content-between align-items-baseline">
+              <span class="stat-mode">Expert</span>
+              <span class="mm-muted small">Singleplayer</span>
+            </div>
+            <div class="stat-numbers">
+              <div><span id="expertWin" class="stat-win">0</span><span class="stat-label">Wins</span></div>
+              <div><span id="expertLose" class="stat-lose">0</span><span class="stat-label">Losses</span></div>
+            </div>
+            <div class="stat-bar"><span id="expertBar"></span></div>
+            <div class="mm-muted small mt-1" id="expertRate">No games yet</div>
+          </div>
+          <div class="stat-card mode-multiplayer">
+            <div class="d-flex justify-content-between align-items-baseline">
+              <span class="stat-mode">Online</span>
+              <span class="mm-muted small">Multiplayer</span>
+            </div>
+            <div class="stat-numbers">
+              <div><span id="multiplayerWin" class="stat-win">0</span><span class="stat-label">Wins</span></div>
+              <div><span id="multiplayerLose" class="stat-lose">0</span><span class="stat-label">Losses</span></div>
+            </div>
+            <div class="stat-bar"><span id="multiplayerBar"></span></div>
+            <div class="mm-muted small mt-1" id="multiplayerRate">No games yet</div>
+          </div>
       </div>
     </main>
 
-    <footer>
+    <footer class="app-footer">
       <div class="container-fluid pt-5">
         <nav class="d-flex justify-content-center text-center">
           <div>
@@ -196,6 +209,8 @@
       crossorigin="anonymous"
     ></script>
     <!--- Custom JS --->
+    <script src="/static/scripts/ui.js"></script>
+    <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/user_profile.js"></script>
   </body>
 </html>

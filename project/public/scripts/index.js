@@ -150,4 +150,3 @@ function loginUser(username, password) {
   }));
 }
 
-var bcrypt = dcodeIO.bcrypt;
