@@ -79,10 +79,6 @@
   font-size: 1.8rem;
   font-weight: 700;
   margin: 0 0 0.25rem;
-  background: var(--mm-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 
 .waiting-subtitle {
@@ -100,8 +96,8 @@
   padding: 1.1rem 1.25rem;
   margin-bottom: 1.5rem;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(72, 176, 247, 0.12), rgba(139, 92, 246, 0.12));
-  border: 1px solid rgba(72, 176, 247, 0.25);
+  background: var(--mm-surface-2);
+  border: 1px solid var(--mm-border);
 }
 
 .invite-label {
@@ -155,8 +151,8 @@
 }
 
 .seat.me {
-  border-color: rgba(72, 176, 247, 0.6);
-  box-shadow: 0 0 0 1px rgba(72, 176, 247, 0.25) inset;
+  border-color: rgba(217, 119, 87, 0.6);
+  box-shadow: 0 0 0 1px rgba(217, 119, 87, 0.25) inset;
 }
 
 .seat.offline {
@@ -189,7 +185,6 @@
 
 .seat.empty .bi {
   font-size: 1.6rem;
-  animation: mm-blink 2.4s infinite;
 }
 
 .seat-kick {
@@ -328,7 +323,7 @@
 }
 
 .toggle input:focus-visible + .toggle-track {
-  box-shadow: 0 0 0 3px rgba(72, 176, 247, 0.35);
+  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.35);
 }
 
 .waiting-dots::after {
@@ -384,8 +379,8 @@
 
 .player-item.turn {
   border-color: var(--mm-accent);
-  background: linear-gradient(135deg, rgba(72, 176, 247, 0.16), rgba(139, 92, 246, 0.16));
-  box-shadow: 0 0 18px rgba(72, 176, 247, 0.25);
+  background: var(--mm-surface-3);
+  box-shadow: none;
 }
 
 .player-item.inactive {
@@ -426,7 +421,7 @@
 }
 
 .player-points.bump {
-  animation: room-bump 0.6s ease;
+  color: var(--mm-accent);
 }
 
 @keyframes room-bump {
@@ -631,7 +626,7 @@
   font-weight: 600;
   background: var(--mm-gradient);
   color: #fff;
-  box-shadow: var(--mm-shadow);
+  box-shadow: none;
 }
 
 .chat-error {
@@ -658,7 +653,7 @@
 }
 
 .chat-quick button:hover {
-  transform: translateY(-2px);
+  
   background: var(--mm-surface-3);
 }
 
@@ -675,7 +670,7 @@
 
 .chat-form:focus-within {
   border-color: var(--mm-accent);
-  box-shadow: 0 0 0 3px rgba(72, 176, 247, 0.2);
+  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.2);
 }
 
 .chat-input {
@@ -733,7 +728,7 @@
   justify-content: center;
   padding: 1rem;
   background: rgba(8, 8, 12, 0.78);
-  backdrop-filter: blur(6px);
+  
   color: var(--mm-text);
   animation: room-fade 0.25s ease;
   overflow: hidden;
@@ -778,7 +773,7 @@
   border-radius: 18px;
   background: var(--mm-surface);
   border: 1px solid var(--mm-border);
-  box-shadow: var(--mm-shadow);
+  box-shadow: none;
   -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
   mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
 }
@@ -791,7 +786,7 @@
   height: var(--item);
   border-radius: 12px;
   border: 2px solid var(--mm-accent);
-  box-shadow: 0 0 24px rgba(72, 176, 247, 0.45);
+  box-shadow: none;
   z-index: 1;
   pointer-events: none;
 }
@@ -811,7 +806,7 @@
 }
 
 .reel-item.chosen {
-  animation: room-chosen 0.8s ease infinite alternate;
+  color: var(--mm-accent);
 }
 
 @keyframes room-chosen {
@@ -824,10 +819,7 @@
   margin-top: 1.4rem;
   font-size: 1.6rem;
   font-weight: 800;
-  background: var(--mm-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--mm-accent);
   opacity: 0;
   transform: scale(0.6);
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -839,6 +831,7 @@
 }
 
 .confetti {
+  display: none;
   position: absolute;
   inset: 0;
   pointer-events: none;

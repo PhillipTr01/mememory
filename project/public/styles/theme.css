@@ -1,20 +1,21 @@
 /* Shared look for lobby and multiplayer room */
 :root {
+  /* Calm, flat palette: neutral surfaces, thin borders, one accent */
   --mm-bg: #141414;
-  --mm-surface: #1c1c20;
-  --mm-surface-2: #24242a;
-  --mm-surface-3: #2d2d35;
-  --mm-border: #34343d;
-  --mm-text: #f1f1f4;
-  --mm-muted: #9a9aa6;
-  --mm-accent: #48b0f7;
-  --mm-accent-2: #8b5cf6;
-  --mm-success: #34d399;
-  --mm-warning: #fbbf24;
-  --mm-danger: #f87171;
-  --mm-gradient: linear-gradient(135deg, var(--mm-accent), var(--mm-accent-2));
-  --mm-radius: 14px;
-  --mm-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --mm-surface: #1b1b1b;
+  --mm-surface-2: #222222;
+  --mm-surface-3: #2c2c2c;
+  --mm-border: #2f2f2f;
+  --mm-text: #ececec;
+  --mm-muted: #8f8f8f;
+  --mm-accent: #d97757;
+  --mm-accent-2: #d97757;
+  --mm-success: #7fae6e;
+  --mm-warning: #d4a64a;
+  --mm-danger: #e0675a;
+  --mm-gradient: var(--mm-accent);
+  --mm-radius: 8px;
+  --mm-shadow: none;
 }
 
 /* ---------- Buttons ---------- */
@@ -37,7 +38,7 @@
 .mm-btn:hover:not(:disabled) {
   background: var(--mm-surface-3);
   border-color: #4a4a55;
-  transform: translateY(-1px);
+  
 }
 
 .mm-btn:disabled {
@@ -49,23 +50,23 @@
   background: var(--mm-gradient);
   border: none;
   color: #fff;
-  box-shadow: 0 6px 20px rgba(72, 176, 247, 0.25);
+  box-shadow: none;
 }
 
 .mm-btn-primary:hover:not(:disabled) {
-  background: var(--mm-gradient);
-  box-shadow: 0 8px 26px rgba(139, 92, 246, 0.4);
+  background: #c86a4c;
+  box-shadow: none;
 }
 
 .mm-btn-success {
-  background: linear-gradient(135deg, #10b981, #34d399);
+  background: var(--mm-accent);
   border: none;
-  color: #06281d;
+  color: #fff;
 }
 
 .mm-btn-success:hover:not(:disabled) {
-  background: linear-gradient(135deg, #10b981, #34d399);
-  box-shadow: 0 8px 26px rgba(52, 211, 153, 0.35);
+  background: #c86a4c;
+  box-shadow: none;
 }
 
 .mm-btn-danger {
@@ -99,7 +100,7 @@
   background: var(--mm-surface);
   border: 1px solid var(--mm-border);
   border-radius: var(--mm-radius);
-  box-shadow: var(--mm-shadow);
+  box-shadow: none;
 }
 
 /* ---------- Avatars (initial + color from the name) ---------- */
@@ -141,7 +142,6 @@
 
 .mm-status-dot.offline {
   background: var(--mm-warning);
-  animation: mm-blink 1.2s infinite;
 }
 
 /* ---------- Badges ---------- */
@@ -190,8 +190,7 @@
   height: 8px;
   border-radius: 50%;
   background: var(--mm-success);
-  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6);
-  animation: mm-pulse 1.8s infinite;
+  box-shadow: none;
 }
 
 .mm-live.offline {
@@ -220,7 +219,7 @@
 
 .mm-input:focus {
   border-color: var(--mm-accent);
-  box-shadow: 0 0 0 3px rgba(72, 176, 247, 0.2);
+  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.2);
 }
 
 .mm-muted {
@@ -247,7 +246,7 @@
   border: 1px solid var(--mm-border);
   border-radius: 10px;
   padding: 0.6rem 1rem;
-  box-shadow: var(--mm-shadow);
+  box-shadow: none;
   font-size: 0.9rem;
   animation: mm-toast-in 0.25s ease;
 }
@@ -258,9 +257,9 @@
 
 /* ---------- Animations ---------- */
 @keyframes mm-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6); }
+  0% { box-shadow: none; }
   70% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+  100% { box-shadow: none; }
 }
 
 @keyframes mm-blink {
@@ -273,7 +272,7 @@
 }
 
 @keyframes mm-fade-up {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(3px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -345,7 +344,7 @@
   background: var(--mm-surface);
   border: 1px solid var(--mm-border);
   border-radius: var(--mm-radius);
-  box-shadow: var(--mm-shadow);
+  box-shadow: none;
   animation: mm-fade-up 0.15s ease;
   text-align: left;
 }
@@ -448,7 +447,7 @@
   border: 1px solid var(--mm-border);
   border-radius: var(--mm-radius);
   padding: 1.5rem;
-  box-shadow: var(--mm-shadow);
+  box-shadow: none;
 }
 
 .panel-title {
@@ -557,7 +556,7 @@
   background: var(--mm-surface) !important;
   border: 1px solid var(--mm-border);
   border-radius: var(--mm-radius);
-  box-shadow: var(--mm-shadow);
+  box-shadow: none;
   padding: 0.4rem;
 }
 
@@ -579,7 +578,7 @@
   justify-content: center;
   padding: 1rem;
   background: rgba(8, 8, 12, 0.72);
-  backdrop-filter: blur(5px);
+  
   animation: mm-dialog-fade 0.15s ease;
 }
 
@@ -591,18 +590,14 @@
 .mm-dialog {
   width: 100%;
   max-width: 380px;
-  padding: 1.75rem 1.5rem 1.4rem;
-  text-align: center;
+  padding: 1.4rem 1.4rem 1.2rem;
+  text-align: left;
   color: var(--mm-text);
   background: var(--mm-surface);
   border: 1px solid var(--mm-border);
-  border-radius: 18px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
-  animation: mm-dialog-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.mm-dialog.danger {
-  border-color: rgba(248, 113, 113, 0.35);
+  border-radius: var(--mm-radius);
+  box-shadow: none;
+  animation: mm-dialog-fade 0.12s ease;
 }
 
 .mm-dialog-icon {
@@ -617,14 +612,9 @@
   background: var(--mm-surface-2);
 }
 
-.mm-dialog.danger .mm-dialog-icon {
-  background: rgba(248, 113, 113, 0.14);
-  box-shadow: 0 0 0 6px rgba(248, 113, 113, 0.06);
-}
-
 .mm-dialog-title {
-  font-size: 1.35rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 600;
   margin-bottom: 0.4rem;
 }
 
@@ -641,14 +631,14 @@
 }
 
 .mm-btn-danger-solid {
-  background: linear-gradient(135deg, #ef4444, #f87171);
+  background: var(--mm-danger);
   border: none;
   color: #fff;
 }
 
 .mm-btn-danger-solid:hover:not(:disabled) {
-  background: linear-gradient(135deg, #ef4444, #f87171);
-  box-shadow: 0 8px 22px rgba(239, 68, 68, 0.35);
+  background: #c85a4e;
+  box-shadow: none;
 }
 
 @keyframes mm-dialog-fade {
@@ -680,7 +670,7 @@ html.flip-scroll {
 
 .flip-section:not(.in-view) .flip-content {
   opacity: 0;
-  transform: perspective(1400px) rotateX(-16deg) translateY(50px) scale(0.96);
+  transform: translateY(16px);
 }
 
 .flip-dots {
@@ -733,7 +723,6 @@ html.flip-scroll {
 
 .flip-next .bi {
   font-size: 1.4rem;
-  animation: flip-bounce 1.8s ease-in-out infinite;
 }
 
 .flip-next:hover {
@@ -761,10 +750,7 @@ html.flip-scroll {
   overflow: hidden;
   width: 100%;
   max-width: 260px;
-  border-radius: 999px;
-  font-size: 1.15rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 1.05rem;
   color: #fff !important;
   text-decoration: none;
 }
@@ -774,24 +760,3 @@ html.flip-scroll {
   transition: transform 0.25s ease;
 }
 
-.play-button:hover .bi {
-  transform: scale(1.2);
-}
-
-/* Light reflex that runs over the button */
-.play-button::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -60%;
-  width: 40%;
-  height: 100%;
-  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.35), transparent);
-  transform: skewX(-20deg);
-  animation: play-shine 3.5s ease-in-out infinite;
-}
-
-@keyframes play-shine {
-  0%, 60% { left: -60%; }
-  100% { left: 130%; }
-}
