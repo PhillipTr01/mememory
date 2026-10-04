@@ -322,11 +322,21 @@ function renderWaitingRoom(state) {
     document.createTextNode(` Speed round · ${state.turnTime / 1000}s`),
   );
 
-  // Seats: players + free seats
+  // Seats: players + free seats. Only redrawn when something about the seats
+  // changed - otherwise e.g. switching the mode would make them flicker.
+  var seatsKey = JSON.stringify([
+    state.maxPlayers,
+    state.host,
+    me.username,
+    state.players.map((p) => [p.name, p.connected]),
+  ]);
   var seats = document.getElementById("waitingPlayers");
-  seats.replaceChildren();
-  for (var i = 0; i < state.maxPlayers; i++) {
-    seats.appendChild(createSeat(state, state.players[i], isHost));
+  if (seats.dataset.key != seatsKey) {
+    seats.dataset.key = seatsKey;
+    seats.replaceChildren();
+    for (var i = 0; i < state.maxPlayers; i++) {
+      seats.appendChild(createSeat(state, state.players[i], isHost));
+    }
   }
 
   // Host settings
