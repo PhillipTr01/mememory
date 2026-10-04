@@ -267,3 +267,57 @@
     font-size: 0.72rem;
   }
 }
+
+/* ---------- The lobby fits on one screen, only the game list scrolls ---------- */
+.rooms-empty {
+  padding: 1.5rem 1rem;
+}
+
+@media (min-width: 768px) and (min-height: 600px) {
+  body {
+    height: 100vh;
+  }
+
+  .lobby {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mp-section {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .rooms {
+    flex: 1 1 auto;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .rooms .table-responsive {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .rooms-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--mm-surface);
+    z-index: 1;
+  }
+}
+
+@media (min-width: 768px) and (min-height: 600px) {
+  .rooms-empty:not([hidden]) {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
