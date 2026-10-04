@@ -6,7 +6,7 @@ function avatarColor(name) {
   for (var i = 0; i < name.length; i++) {
     hash = (hash * 31 + name.charCodeAt(i)) | 0;
   }
-  return `hsl(${Math.abs(hash) % 360}, 55%, 45%)`;
+  return `hsl(${Math.abs(hash) % 360}, 22%, 38%)`;
 }
 
 // Avatar with the first letter of the name (built with DOM nodes, no innerHTML)
@@ -81,9 +81,6 @@ function confirmDialog(options) {
     dialog.setAttribute("role", "alertdialog");
     dialog.setAttribute("aria-modal", "true");
 
-    var icon = document.createElement("div");
-    icon.className = "mm-dialog-icon";
-    icon.innerText = options.icon || "❓";
 
     var title = document.createElement("h2");
     title.className = "mm-dialog-title";
@@ -110,7 +107,7 @@ function confirmDialog(options) {
     confirm.appendChild(document.createTextNode(options.confirmLabel || "OK"));
 
     actions.append(cancel, confirm);
-    dialog.append(icon, title, text, actions);
+    dialog.append(title, text, actions);
     backdrop.appendChild(dialog);
     document.body.appendChild(backdrop);
 

@@ -170,12 +170,10 @@ function emitEndTurn() {
 
 function surrender() {
   confirmDialog({
-    icon: "🏳️",
     title: "Surrender?",
     text: "The bot wins this game and it counts as a loss in your statistics.",
     cancelLabel: "Keep playing",
     confirmLabel: "Surrender",
-    confirmIcon: "bi-flag-fill me-1",
     danger: true,
   }).then((ok) => {
     if (ok) socket.emit("surrender");
@@ -191,7 +189,7 @@ socket.on("getWinner", (data) => {
   document.getElementById("user1Item").classList.remove("turn");
   document.getElementById("user2Item").classList.remove("turn");
   document.getElementById("board").classList.remove("my-turn");
-  showToast(data.winner == 0 ? "You win! 🎉" : `${data.computer} wins!`);
+  showToast(data.winner == 0 ? "You win" : `${data.computer} wins`);
 
   // Remove all highlights
   for (var i = 0; i < 66; i++) {

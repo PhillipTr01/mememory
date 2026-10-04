@@ -246,7 +246,7 @@ function renderTurn(state, previous) {
   document.getElementById("board").classList.toggle("my-turn", mine);
 
   if (mine && (previous == null || !isMyTurn(previous))) {
-    showToast("Your turn! Find a pair 🎯");
+    showToast("Your turn");
   }
 }
 
@@ -352,7 +352,6 @@ function createSeat(state, player, isHost) {
     kick.appendChild(createIcon("bi-x-lg"));
     kick.addEventListener("click", () => {
       confirmDialog({
-        icon: "👢",
         title: `Remove ${player.name}?`,
         text: "The player can still watch, but can't take a seat in this room again.",
         confirmLabel: "Remove",
@@ -416,9 +415,8 @@ function playStartAnimation(players, starter, duration) {
   setTimeout(() => {
     track.children[target].classList.add("chosen");
     var name = players[starter];
-    result.innerText = name == me.username ? "You start! 🎉" : `${name} starts!`;
+    result.innerText = name == me.username ? "You start" : `${name} starts`;
     result.classList.add("show");
-    launchConfetti();
   }, spin);
 
   setTimeout(() => {
@@ -461,12 +459,10 @@ function emitEndTurn() {
 
 function surrender() {
   confirmDialog({
-    icon: "🏳️",
     title: "Surrender?",
     text: "You leave the game and it counts as a loss. You can keep watching the others.",
     cancelLabel: "Keep playing",
     confirmLabel: "Surrender",
-    confirmIcon: "bi-flag-fill me-1",
     danger: true,
   }).then((ok) => {
     if (ok) socket.emit("surrender");
@@ -542,7 +538,7 @@ socket.on("closeCards", (data) => {
 
 socket.on("matchFound", (data) => {
   if (data.name == me.username) {
-    showToast("Pair found! +1 🎉");
+    showToast("Pair found");
   }
 });
 
@@ -616,7 +612,6 @@ function showResult(winners) {
   });
 
   document.getElementById("resultOverlay").hidden = false;
-  if (won) launchConfetti();
 }
 
 /* ---------- Chat ---------- */

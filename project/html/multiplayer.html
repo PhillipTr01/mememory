@@ -172,23 +172,13 @@
                     <div class="chat-body-wrap">
                         <div id="chat-content" class="chat-body" aria-live="polite"></div>
                         <div id="chat-empty" class="chat-empty">
-                            <span>👋</span>
-                            <p class="mb-0">No messages yet - say hi!</p>
+                            <p class="mb-0">No messages yet</p>
                         </div>
                         <button type="button" id="newMessages" class="new-messages" hidden>
                             New messages <i class="bi bi-arrow-down"></i>
                         </button>
                     </div>
                     <p id="chat-error" class="chat-error" hidden></p>
-                    <div class="chat-quick" aria-label="Quick emojis">
-                        <button type="button" data-emoji="😂">😂</button>
-                        <button type="button" data-emoji="🔥">🔥</button>
-                        <button type="button" data-emoji="👏">👏</button>
-                        <button type="button" data-emoji="😭">😭</button>
-                        <button type="button" data-emoji="🤯">🤯</button>
-                        <button type="button" data-emoji="💀">💀</button>
-                        <button type="button" data-emoji="GG">GG</button>
-                    </div>
                     <form id="chat-form" class="chat-form" autocomplete="off">
                         <input id="chat-input" class="chat-input" type="text" maxlength="300"
                             placeholder="Write a message..." aria-label="Chat message">
@@ -205,7 +195,6 @@
     <!--- "Who starts?" animation --->
     <div id="startOverlay" class="overlay-screen" hidden>
         <div class="start-box">
-            <p class="start-kicker">Get ready</p>
             <h2 class="start-title">Who starts?</h2>
             <div class="reel">
                 <div class="reel-marker"></div>
@@ -213,13 +202,12 @@
             </div>
             <p id="startResult" class="start-result"></p>
         </div>
-        <div id="confetti" class="confetti"></div>
+        <div id="confetti" class="confetti" hidden></div>
     </div>
 
     <!--- Game over --->
     <div id="resultOverlay" class="overlay-screen" hidden>
         <div class="result-box mm-card">
-            <div class="result-trophy">🏆</div>
             <h2 id="resultTitle" class="result-title"></h2>
             <ol id="resultList" class="result-list"></ol>
             <div class="d-flex gap-2 justify-content-center flex-wrap">
@@ -236,7 +224,7 @@
     <!--- Opened in another tab / removed by the host --->
     <div id="noticeOverlay" class="overlay-screen" hidden>
         <div class="result-box mm-card">
-            <div class="result-trophy" id="noticeIcon">📑</div>
+            <div id="noticeIcon" hidden></div>
             <h2 id="noticeTitle" class="result-title"></h2>
             <p id="noticeText" class="mm-muted"></p>
             <div class="d-flex gap-2 justify-content-center flex-wrap">

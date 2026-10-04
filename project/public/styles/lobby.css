@@ -47,29 +47,17 @@
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.bot-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 0% 50%, var(--bot-color), transparent 60%);
-  opacity: 0.12;
-  transition: opacity 0.2s ease;
-}
-
 .bot-card:hover {
-  transform: translateY(-3px);
+  
   border-color: var(--bot-color);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: none;
 }
 
-.bot-card:hover::before {
-  opacity: 0.25;
-}
-
-.bot-easy { --bot-color: #34d399; }
-.bot-medium { --bot-color: #48b0f7; }
-.bot-hard { --bot-color: #f59e0b; }
-.bot-expert { --bot-color: #ef4444; }
+/* Original MemeMory difficulty colors */
+.bot-easy { --bot-color: #8fb5c2; }
+.bot-medium { --bot-color: #7aa6b5; }
+.bot-hard { --bot-color: #6c97a6; }
+.bot-expert { --bot-color: #5a8291; }
 
 .bot-avatar {
   width: 64px;
@@ -77,10 +65,6 @@
   object-fit: contain;
   position: relative;
   transition: transform 0.25s ease;
-}
-
-.bot-card:hover .bot-avatar {
-  transform: scale(1.1) rotate(-4deg);
 }
 
 .bot-text {
@@ -122,7 +106,7 @@
   align-items: stretch;
   gap: 1.5rem;
   padding: 1.25rem 1.5rem;
-  background: linear-gradient(135deg, rgba(72, 176, 247, 0.08), rgba(139, 92, 246, 0.08)), var(--mm-surface);
+  background: var(--mm-surface);
 }
 
 .mp-label {
