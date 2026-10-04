@@ -1228,6 +1228,6 @@
   gap: 0.5rem;
 }
 
-#turnTimePicker[hidden] {
+#turnTimeSetting[hidden] {
   display: none;
 }
