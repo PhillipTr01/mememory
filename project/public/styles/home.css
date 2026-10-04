@@ -1,12 +1,12 @@
-/* Scoreboard - the difficulty colors are the original MemeMory colors */
-.mode-easy { --mode: #709ba9; }
-.mode-medium { --mode: #608f9f; }
-.mode-hard { --mode: #56818f; }
-.mode-expert { --mode: #436470; }
-.mode-multiplayer { --mode: #603939; }
+/* Same difficulty colors as in the lobby */
+.mode-easy { --mode: #34d399; }
+.mode-medium { --mode: #48b0f7; }
+.mode-hard { --mode: #f59e0b; }
+.mode-expert { --mode: #ef4444; }
+.mode-multiplayer { --mode: #a78bfa; }
 
 .scoreboard {
-  --mode: #709ba9;
+  --mode: #34d399;
 }
 
 .mode-tabs {
@@ -38,7 +38,7 @@
 
 .mode-tab.active {
   background: var(--mode);
-  color: #fff;
+  color: #111;
   box-shadow: none;
 }
 

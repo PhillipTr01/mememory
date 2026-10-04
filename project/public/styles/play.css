@@ -4,7 +4,7 @@
   grid-template-columns: repeat(11, minmax(0, 1fr));
   gap: clamp(4px, 0.5vw, 8px);
   /* As big as possible, but all 6 rows have to fit on the screen */
-  width: min(100%, calc((100vh - 130px) * 11 / 6));
+  width: min(100%, calc((100vh - 140px) * 11 / 6));
   margin: 0 auto;
 }
 
@@ -29,7 +29,7 @@
   cursor: pointer;
   transform-style: preserve-3d;
   transform: rotateY(-180deg);
-  transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transition: transform 0.9s cubic-bezier(0.4, 0.2, 0.2, 1);
 }
 
 .card-front,

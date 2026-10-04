@@ -932,3 +932,44 @@
 .player-item.winner.inactive {
   opacity: 1;
 }
+
+/* ---------- Everything fits on one screen (no page scrolling) ---------- */
+@media (min-width: 992px) {
+  .room-side {
+    /* screen height minus header */
+    height: calc(100vh - 135px);
+    min-height: 420px;
+    top: 0.25rem;
+  }
+
+  .side-card {
+    flex: 0 0 auto;
+  }
+
+  .chat-card {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .chat-body-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  #chat-content.chat-body {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+/* Quick emojis share the width, no horizontal scrollbar */
+.chat-quick {
+  overflow: visible;
+  flex-wrap: nowrap;
+}
+
+.chat-quick button {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.15rem 0;
+}

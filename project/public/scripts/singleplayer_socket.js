@@ -149,7 +149,7 @@ socket.on("closeCards", (data) => {
     card.classList.remove("flip");
     setTimeout(() => {
       card.childNodes[1].childNodes[1].src = "";
-    }, 500);
+    }, 900);
     understateCard(id);
   });
 });

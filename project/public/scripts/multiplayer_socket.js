@@ -503,7 +503,7 @@ function closeCard(id, instant) {
   } else {
     setTimeout(() => {
       card.childNodes[1].childNodes[1].src = "";
-    }, 500);
+    }, 900);
   }
 }
 
