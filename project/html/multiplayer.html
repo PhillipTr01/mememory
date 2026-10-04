@@ -15,7 +15,9 @@
     <!--- Custom CSS-->
     <!--- identical to index.html --->
     <link rel="stylesheet" href="/static/styles/index.css">
+    <link rel="stylesheet" href="/static/styles/theme.css">
     <link rel="stylesheet" href="/static/styles/play.css">
+    <link rel="stylesheet" href="/static/styles/room.css">
 
     <!--- Icons --->
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico">
@@ -26,7 +28,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
 </head>
 
-<body class="d-flex flex-column h-100">
+<body class="d-flex flex-column min-h-100">
 
     <div id="cardModal" class="modal" onclick="closeCardModal()">
         <span class="close">&times;</span>
@@ -46,7 +48,7 @@
                     </div>
                     <div class="col-12 col-lg-4 order-sm-3 order-2 order-lg-2 text-center pt-2 pb-3 pt-md-0 pb-md-0">
                         <button type="submit" id="surrenderButton"
-                            class="form-control btn btn-outline-danger btn-lg fw-bold rounded max-width-300"
+                            class="mm-btn mm-btn-danger w-100 max-width-300"
                             onclick="surrender()" disabled>Surrender</button>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-4 order-3 order-sm-2 order-lg-3 fw-light">
@@ -66,81 +68,172 @@
         </nav>
     </header>
 
-    <main class="pt-0 pt-md-3 pt-lg-5 h-100">
-        <div class="container-fluid px-3 h-100">
-            <div class="row h-100">
-                <div class="col-12 col-lg-9 h-lg-100 p-1 m-0 order-2 order-lg-1">
-                    <!--- Waiting room: shown until the host starts the game --->
-                    <section id="waitingRoom" class="waiting-room text-light mx-auto my-3 p-4 rounded-3" hidden>
-                        <p class="fs-2 text-center mb-1">Waiting room</p>
-                        <p id="waitingText" class="text-center text-secondary mb-4"></p>
+    <!--- Shown while the connection is lost --->
+    <div id="connectionBanner" class="connection-banner" hidden>
+        <span class="spinner"></span> Connection lost - reconnecting...
+    </div>
 
-                        <div class="room-code-box rounded-3 p-3 mb-4 text-center">
-                            <p class="text-secondary mb-1">Room code</p>
-                            <p id="roomCode" class="room-code mb-3"></p>
-                            <button type="button" id="copyCodeButton" class="btn btn-outline-info btn-sm m-1">
-                                <i class="bi bi-clipboard pe-1"></i> Copy code
-                            </button>
-                            <button type="button" id="copyLinkButton" class="btn btn-outline-info btn-sm m-1">
-                                <i class="bi bi-link-45deg pe-1"></i> Copy invite link
-                            </button>
+    <main class="room-page">
+        <div class="room-layout">
+            <div class="room-main">
+                <!--- Waiting room: shown until the host starts the game --->
+                <section id="waitingRoom" class="waiting mm-card" hidden>
+                    <div class="waiting-head">
+                        <div>
+                            <h1 class="waiting-title">Waiting room</h1>
+                            <p id="waitingText" class="mm-muted mb-0"></p>
                         </div>
+                        <button type="button" id="leaveButton" class="mm-btn mm-btn-ghost mm-btn-sm">
+                            <i class="bi bi-box-arrow-left"></i> Leave
+                        </button>
+                    </div>
 
-                        <p class="fs-5 mb-2">Players <span id="playerCount" class="text-secondary"></span></p>
-                        <ul id="waitingPlayers" class="list-unstyled mb-4"></ul>
-
-                        <!--- Only visible for the host --->
-                        <div id="hostSettings" hidden>
-                            <div class="d-flex flex-wrap align-items-center mb-3">
-                                <label for="maxPlayersSelect" class="me-3">Max. players</label>
-                                <select id="maxPlayersSelect" class="form-select form-select-sm bg-dark text-light w-auto"></select>
-                            </div>
-                            <div class="form-check form-switch mb-4">
-                                <input class="form-check-input" type="checkbox" id="publicSwitch">
-                                <label class="form-check-label" for="publicSwitch">Show room in the public room list</label>
-                            </div>
-                            <button type="button" id="startButton" class="form-control btn btn-outline-success btn-lg rounded" disabled>
-                                Start Game
-                            </button>
-                            <p id="startHint" class="text-secondary text-center small mt-2 mb-0"></p>
+                    <div class="invite">
+                        <div>
+                            <p class="invite-label">Room code</p>
+                            <p id="roomCode" class="invite-code"></p>
                         </div>
-                    </section>
-
-                    <div id="board" class="container-xxl p-0 m-0 h-100 mx-auto" hidden>
-                        <div class="row row-cols-11 h-100 justify-content-center" id="memoryTable">
+                        <div class="invite-actions">
+                            <button type="button" id="copyCodeButton" class="mm-btn mm-btn-sm">
+                                <i class="bi bi-clipboard"></i> Copy code
+                            </button>
+                            <button type="button" id="copyLinkButton" class="mm-btn mm-btn-sm mm-btn-primary">
+                                <i class="bi bi-link-45deg"></i> Copy invite link
+                            </button>
                         </div>
                     </div>
-                </div>
-                <div class="col-12 col-lg-3 h-lg-100 order-1 order-lg-2 d-flex flex-column p-0">
-                    <div class="text-light fs-4 p-3 text-break w-100 max-width-500 mx-auto me-lg-0">
-                        <!--- Scoreboard, filled by multiplayer_socket.js --->
-                        <div id="playerList"></div>
 
-                        <div class="mt-md-2">
-                            <button type="submit" id="playButton"
-                                class="form-control btn btn-outline-info btn-lg rounded " onclick="emitEndTurn();"
-                                disabled hidden> End Turn
-                            </button>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h2 class="waiting-subtitle">Players <span id="playerCount" class="mm-muted"></span></h2>
+                    </div>
+                    <div id="waitingPlayers" class="seat-grid"></div>
+
+                    <!--- Only visible for the host --->
+                    <div id="hostSettings" class="host-settings" hidden>
+                        <div class="setting">
+                            <span class="setting-label">Max. players</span>
+                            <div id="maxPlayersPicker" class="segmented" role="group" aria-label="Max. players"></div>
                         </div>
-                        <div class="border border-light mt-3 mt-md-4">
-                            <div class="chat">
-                                <div class="d-flex flex-column" id="chat-content" aria-live="polite">
-                                </div>
-                                <p id="chat-error" class="chat-error text-warning px-2 m-0" hidden></p>
-                                <form id="chat-form" class="d-flex bg-transparent p-2 border-top" autocomplete="off">
-                                    <input id="chat-input" class="chat-input bg-transparent text-light flex-grow-1" type="text"
-                                        maxlength="300" placeholder="type..." aria-label="Chat message">
-                                    <button id="send-message-btn" type="submit" class="btn btn-link text-info p-0 ms-2 my-auto" aria-label="Send">
-                                        <i class="bi bi-arrow-right-square"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+                        <label class="setting toggle">
+                            <span class="setting-label">Public room <small class="mm-muted d-block">Show it in the lobby</small></span>
+                            <input type="checkbox" id="publicSwitch">
+                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        </label>
+                    </div>
+
+                    <div class="waiting-footer">
+                        <button type="button" id="startButton" class="mm-btn mm-btn-success mm-btn-lg w-100" disabled hidden>
+                            <i class="bi bi-play-fill"></i> Start game
+                        </button>
+                        <p id="startHint" class="mm-muted text-center small mt-2 mb-0"></p>
+                    </div>
+                </section>
+
+                <div id="board" class="board" hidden>
+                    <div id="turnBanner" class="turn-banner"></div>
+                    <div class="container-xxl p-0 m-0 mx-auto">
+                        <div class="row row-cols-11 justify-content-center" id="memoryTable"></div>
                     </div>
                 </div>
             </div>
+
+            <aside class="room-side">
+                <div class="mm-card side-card">
+                    <div class="side-head">
+                        <span class="fw-semibold"><i class="bi bi-people me-2"></i>Players</span>
+                        <span id="pairsLeft" class="mm-badge" hidden></span>
+                    </div>
+                    <!--- Scoreboard, filled by multiplayer_socket.js --->
+                    <div id="playerList" class="player-list"></div>
+                    <div id="spectatorInfo" class="spectator-info mm-muted" hidden></div>
+                    <div class="side-actions">
+                        <button type="button" id="playButton" class="mm-btn mm-btn-primary w-100" onclick="emitEndTurn();" disabled hidden>
+                            End turn
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mm-card chat-card">
+                    <div class="chat-head">
+                        <span class="fw-semibold"><i class="bi bi-chat-dots me-2"></i>Chat</span>
+                        <span id="onlineCount" class="mm-muted small"></span>
+                    </div>
+                    <div class="chat-body-wrap">
+                        <div id="chat-content" class="chat-body" aria-live="polite"></div>
+                        <div id="chat-empty" class="chat-empty">
+                            <span>👋</span>
+                            <p class="mb-0">No messages yet - say hi!</p>
+                        </div>
+                        <button type="button" id="newMessages" class="new-messages" hidden>
+                            New messages <i class="bi bi-arrow-down"></i>
+                        </button>
+                    </div>
+                    <p id="chat-error" class="chat-error" hidden></p>
+                    <div class="chat-quick" aria-label="Quick emojis">
+                        <button type="button" data-emoji="😂">😂</button>
+                        <button type="button" data-emoji="🔥">🔥</button>
+                        <button type="button" data-emoji="👏">👏</button>
+                        <button type="button" data-emoji="😭">😭</button>
+                        <button type="button" data-emoji="🤯">🤯</button>
+                        <button type="button" data-emoji="💀">💀</button>
+                        <button type="button" data-emoji="GG">GG</button>
+                    </div>
+                    <form id="chat-form" class="chat-form" autocomplete="off">
+                        <input id="chat-input" class="chat-input" type="text" maxlength="300"
+                            placeholder="Write a message..." aria-label="Chat message">
+                        <span id="chat-counter" class="chat-counter" hidden></span>
+                        <button id="send-message-btn" type="submit" class="chat-send" aria-label="Send" disabled>
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </form>
+                </div>
+            </aside>
         </div>
     </main>
+
+    <!--- "Who starts?" animation --->
+    <div id="startOverlay" class="overlay-screen" hidden>
+        <div class="start-box">
+            <p class="start-kicker">Get ready</p>
+            <h2 class="start-title">Who starts?</h2>
+            <div class="reel">
+                <div class="reel-marker"></div>
+                <div id="reelTrack" class="reel-track"></div>
+            </div>
+            <p id="startResult" class="start-result"></p>
+        </div>
+        <div id="confetti" class="confetti"></div>
+    </div>
+
+    <!--- Game over --->
+    <div id="resultOverlay" class="overlay-screen" hidden>
+        <div class="result-box mm-card">
+            <div class="result-trophy">🏆</div>
+            <h2 id="resultTitle" class="result-title"></h2>
+            <ol id="resultList" class="result-list"></ol>
+            <div class="d-flex gap-2 justify-content-center flex-wrap">
+                <button type="button" id="resultBoardButton" class="mm-btn">
+                    <i class="bi bi-grid-3x3-gap"></i> Show board
+                </button>
+                <a href="/lobby" class="mm-btn mm-btn-primary">
+                    <i class="bi bi-house"></i> Back to lobby
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!--- Opened in another tab / removed by the host --->
+    <div id="noticeOverlay" class="overlay-screen" hidden>
+        <div class="result-box mm-card">
+            <div class="result-trophy" id="noticeIcon">📑</div>
+            <h2 id="noticeTitle" class="result-title"></h2>
+            <p id="noticeText" class="mm-muted"></p>
+            <div class="d-flex gap-2 justify-content-center flex-wrap">
+                <button type="button" id="noticeAction" class="mm-btn mm-btn-primary"></button>
+                <a href="/lobby" class="mm-btn"><i class="bi bi-house"></i> Lobby</a>
+            </div>
+        </div>
+    </div>
 
     <!--- JavaScript --->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js"
@@ -148,6 +241,7 @@
     </script>
     <!--- Custom JS --->
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/static/scripts/ui.js"></script>
     <script src="/static/scripts/play.js"></script>
     <script src="/static/scripts/multiplayer_socket.js"></script>
 </body>

@@ -18,6 +18,7 @@
     <!--- Custom CSS-->
     <!--- identical to index.html --->
     <link rel="stylesheet" href="/static/styles/index.css" />
+    <link rel="stylesheet" href="/static/styles/theme.css" />
     <link rel="stylesheet" href="/static/styles/lobby.css" />
 
     <!--- Icons --->
@@ -109,133 +110,101 @@
       </nav>
     </header>
 
-    <main class="pt-5 pt-lg-0 my-auto">
-      <div class="container-fluid">
-        <div class="pb-5">
-          <div>
-            <p class="fs-3 text-light text-center mb-3">Multiplayer</p>
-          </div>
-          <div
-            class="d-flex flex-column flex-md-row p-2 justify-content-evenly text-light align-middle max-width-900 mx-auto"
-          >
-            <div class="m-auto text-center align-middle max-width-200">
-              <button
-                id="createGameButton"
-                type="submit"
-                onclick="playMultiplayer()"
-                class="btn btn-lg fw-bold text-center px-4 mx-1 multiplayer-button"
-              >
-                Create Game
-              </button>
-            </div>
-            <div>
-              <p class="py-2 py-md-5 m-0 text-or text-center fs-5">or</p>
-            </div>
-            <div class="d-flex mx-auto flex-column p-0 max-width-200">
-              <input
-                type="text"
-                id="joinLobbyTag"
-                class="border-0 bg-dark text-light rounded text-center py-2 mt-3"
-                placeholder="Insert Game ID"
-              />
-              <button
-                id="joinGameButton"
-                type="submit"
-                class="btn btn-lg fw-bold mt-2 multiplayer-button"
-                onclick="joinMultiplayer()"
-              >
-                Join Game
-              </button>
-            </div>
-          </div>
+    <main class="lobby container py-4 py-lg-5">
+      <!--- Singleplayer: small cards on top --->
+      <section class="mb-5">
+        <div class="section-head">
+          <h2 class="section-title">Singleplayer</h2>
+          <span class="mm-muted">Train your memory against a bot</span>
         </div>
-        <!--- Open multiplayer rooms, filled by lobby_socket.js --->
-        <div class="pb-5 text-light max-width-600 mx-auto">
-          <p class="fs-5 text-center mb-2">Open rooms</p>
-          <ul id="roomList" class="list-unstyled m-0"></ul>
-          <p id="noRooms" class="text-secondary text-center">
-            No open rooms right now - create one!
-          </p>
+        <div class="bot-grid">
+          <button type="button" class="bot-card bot-easy" onclick="playSingleplayer(0)">
+            <img src="/static/images/avatar_easy_200.png" alt="" class="bot-avatar" />
+            <span class="bot-text">
+              <span class="bot-name">Easy</span>
+              <span class="bot-desc">Remembers 3 moves</span>
+            </span>
+            <i class="bi bi-play-fill bot-play"></i>
+          </button>
+          <button type="button" class="bot-card bot-medium" onclick="playSingleplayer(1)">
+            <img src="/static/images/avatar_medium_200.png" alt="" class="bot-avatar" />
+            <span class="bot-text">
+              <span class="bot-name">Medium</span>
+              <span class="bot-desc">Remembers 7 moves</span>
+            </span>
+            <i class="bi bi-play-fill bot-play"></i>
+          </button>
+          <button type="button" class="bot-card bot-hard" onclick="playSingleplayer(2)">
+            <img src="/static/images/avatar_hard_200.png" alt="" class="bot-avatar" />
+            <span class="bot-text">
+              <span class="bot-name">Hard</span>
+              <span class="bot-desc">Remembers 12 moves</span>
+            </span>
+            <i class="bi bi-play-fill bot-play"></i>
+          </button>
+          <button type="button" class="bot-card bot-expert" onclick="playSingleplayer(3)">
+            <img src="/static/images/avatar_expert_200.png" alt="" class="bot-avatar" />
+            <span class="bot-text">
+              <span class="bot-name">Expert</span>
+              <span class="bot-desc">Remembers almost everything</span>
+            </span>
+            <i class="bi bi-play-fill bot-play"></i>
+          </button>
         </div>
-        <div class="pt-0 pt-lg-5">
-          <div>
-            <p class="fs-3 text-light text-center mb-3 mb-sm-5">Singleplayer</p>
-          </div>
-          <div
-            class="d-flex flex-wrap flex-sm-nowrap p-2 justify-content-evenly"
-          >
-            <div
-              class="d-flex flex-column p-0 rounded-3 btn btn-lg zoom-on-hover max-width-40-percent"
-              onclick="playSingleplayer(0)"
-            >
-              <img
-                src="/static/images/avatar_easy_200.png"
-                alt="logo"
-                class="img-fluid mx-auto rounded-top avatar-size-lobby"
-              />
-              <div
-                id="startEasyGameButton"
-                type="submit"
-                class="text-easy fw-bold mt-3"
-              >
-                Easy
-              </div>
-            </div>
+      </section>
 
-            <div
-              class="d-flex flex-column p-0 rounded-3 btn btn-lg zoom-on-hover max-width-40-percent"
-              onclick="playSingleplayer(1)"
-            >
-              <img
-                src="/static/images/avatar_medium_200.png"
-                alt="logo"
-                class="img-fluid mx-auto rounded-top avatar-size-lobby"
-              />
-              <div
-                id="startMediumGameButton"
-                type="submit"
-                class="text-medium fw-bold mt-3"
-              >
-                Medium
-              </div>
+      <!--- Multiplayer: create / join and the list of games --->
+      <section>
+        <div class="section-head">
+          <h2 class="section-title">Multiplayer</h2>
+          <span id="lobbyStatus" class="mm-live">Live</span>
+        </div>
+
+        <div class="mp-toolbar mm-card">
+          <div class="mp-create">
+            <p class="mp-label">Start your own room</p>
+            <button id="createGameButton" type="button" class="mm-btn mm-btn-primary mm-btn-lg" onclick="playMultiplayer()">
+              <i class="bi bi-plus-lg"></i> Create room
+            </button>
+          </div>
+          <div class="mp-divider"><span>or</span></div>
+          <form id="joinForm" class="mp-join">
+            <label class="mp-label" for="joinLobbyTag">Join with a room code</label>
+            <div class="d-flex gap-2">
+              <input type="text" id="joinLobbyTag" class="mm-input flex-grow-1" placeholder="e.g. aB3dE9fGh1" maxlength="20" autocomplete="off" spellcheck="false" />
+              <button id="joinGameButton" type="submit" class="mm-btn">
+                Join <i class="bi bi-arrow-right"></i>
+              </button>
             </div>
-            <div
-              class="d-flex flex-column p-0 mt-3 mt-sm-0 rounded-3 btn btn-lg zoom-on-hover max-width-40-percent"
-              onclick="playSingleplayer(2)"
-            >
-              <img
-                src="/static/images/avatar_hard_200.png"
-                alt="logo"
-                class="img-fluid mx-auto rounded-top avatar-size-lobby"
-              />
-              <div
-                id="startHardGameButton"
-                type="submit"
-                class="text-hard fw-bold mt-3"
-              >
-                Hard
-              </div>
-            </div>
-            <div
-              class="d-flex flex-column p-0 mt-3 mt-sm-0 rounded-3 btn btn-lg zoom-on-hover max-width-40-percent"
-              onclick="playSingleplayer(3)"
-            >
-              <img
-                src="/static/images/avatar_expert_200.png"
-                alt="logo"
-                class="img-fluid mx-auto rounded-top avatar-size-lobby"
-              />
-              <div
-                id="startExpertGameButton"
-                type="submit"
-                class="text-expert fw-bold mt-3"
-              >
-                Expert
-              </div>
-            </div>
+          </form>
+        </div>
+
+        <div class="rooms mm-card mt-4">
+          <div class="rooms-head">
+            <span class="fw-semibold">Open games</span>
+            <span id="roomCount" class="mm-muted small"></span>
+          </div>
+          <div class="table-responsive">
+            <table class="rooms-table">
+              <thead>
+                <tr>
+                  <th>Room</th>
+                  <th>Players</th>
+                  <th class="d-none d-md-table-cell">Spectators</th>
+                  <th>Status</th>
+                  <th class="text-end"></th>
+                </tr>
+              </thead>
+              <tbody id="roomList"></tbody>
+            </table>
+          </div>
+          <div id="noRooms" class="rooms-empty">
+            <i class="bi bi-door-open"></i>
+            <p class="mb-1 fw-semibold">No open games right now</p>
+            <p class="mm-muted small mb-3">Create a room and invite your friends with the code.</p>
           </div>
         </div>
-      </div>
+      </section>
     </main>
 
     <footer>
@@ -267,6 +236,7 @@
     ></script>
     <!--- Custom JS --->
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/static/scripts/ui.js"></script>
     <script src="/static/scripts/lobby.js"></script>
     <script src="/static/scripts/lobby_socket.js"></script>
   </body>

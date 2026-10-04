@@ -7,6 +7,8 @@ var backImage = "/static/images/logo_small.png";
 var me = { username: null, spectator: false };
 // Last state of the room (players, host, turn, settings)
 var room = null;
+// Set when the session ended on purpose (game over, kicked, other tab) -> don't rejoin
+var sessionOver = false;
 
 // The room can come from an invite link (/play?game=ID) or from the lobby
 var urlGameID = new URLSearchParams(window.location.search).get("game");
@@ -22,22 +24,21 @@ if (!gameID) {
   history.replaceState(null, "", "/play?game=" + encodeURIComponent(gameID));
 }
 
-/* ---------- Connection ---------- */
+/* ---------- Connection & rejoin ---------- */
 
-// (Re)join the room on every (re)connect
+// (Re)join the room on every (re)connect - the server keeps the seat for a while
 socket.on("connect", () => {
-  socket.emit("joinRoom", { gameID: gameID });
+  document.getElementById("connectionBanner").hidden = true;
+  if (!sessionOver) {
+    socket.emit("joinRoom", { gameID: gameID });
+  }
 });
 
-// Something went wrong on the server (e.g. not enough memes) -> back to the lobby
-socket.on("gameError", (message) => {
-  alert(message || "Something went wrong. Please try again.");
-  window.location.href = "/lobby";
-});
-
-socket.on("noGameFound", () => {
-  alert("This room doesn't exist anymore.");
-  window.location.href = "/lobby";
+socket.on("disconnect", (reason) => {
+  // "io server disconnect" = we were removed on purpose, socket.io doesn't reconnect then
+  if (!sessionOver && reason != "io server disconnect") {
+    document.getElementById("connectionBanner").hidden = false;
+  }
 });
 
 socket.on("connect_error", (error) => {
@@ -47,9 +48,45 @@ socket.on("connect_error", (error) => {
   }
 });
 
-socket.on("disconnect", () => {
-  showChatError("Connection lost - reconnecting...");
+// Something went wrong on the server (e.g. not enough memes) -> back to the lobby
+socket.on("gameError", (message) => {
+  showNotice("⚠️", "Something went wrong", message || "Please try again.", "Back to lobby", () => {
+    window.location.href = "/lobby";
+  });
 });
+
+socket.on("noGameFound", () => {
+  sessionOver = true;
+  showNotice("🚪", "Room not found", "This room doesn't exist anymore.", "Back to lobby", () => {
+    window.location.href = "/lobby";
+  });
+});
+
+// The room was opened in another tab
+socket.on("sessionReplaced", () => {
+  sessionOver = true;
+  showNotice("📑", "Opened in another tab", "You are playing in another tab or window now.", "Play here", () => {
+    window.location.reload();
+  });
+});
+
+socket.on("kicked", () => {
+  sessionOver = true;
+  showNotice("👢", "Removed from the room", "The host removed you from this room.", "Back to lobby", () => {
+    window.location.href = "/lobby";
+  });
+});
+
+function showNotice(icon, title, text, actionLabel, action) {
+  document.getElementById("noticeIcon").innerText = icon;
+  document.getElementById("noticeTitle").innerText = title;
+  document.getElementById("noticeText").innerText = text;
+  var button = document.getElementById("noticeAction");
+  button.innerText = actionLabel;
+  button.onclick = action;
+  document.getElementById("connectionBanner").hidden = true;
+  document.getElementById("noticeOverlay").hidden = false;
+}
 
 /* ---------- Page setup ---------- */
 
@@ -82,32 +119,23 @@ document.addEventListener(
       copyText(window.location.origin + "/play?game=" + encodeURIComponent(gameID), e.currentTarget),
     );
     document.getElementById("startButton").addEventListener("click", startGame);
-    document.getElementById("maxPlayersSelect").addEventListener("change", (e) => {
-      socket.emit("updateSettings", { maxPlayers: Number(e.target.value) });
-    });
+    document.getElementById("leaveButton").addEventListener("click", leaveRoom);
     document.getElementById("publicSwitch").addEventListener("change", (e) => {
       socket.emit("updateSettings", { isPublic: e.target.checked });
     });
-    document.getElementById("chat-form").addEventListener("submit", (e) => {
-      e.preventDefault();
-      sendChatMessage();
+    document.getElementById("resultBoardButton").addEventListener("click", () => {
+      document.getElementById("resultOverlay").hidden = true;
     });
+
+    setupChat();
   },
   false,
 );
 
-function copyText(text, button) {
-  var done = () => {
-    var label = button.innerHTML;
-    button.innerText = "Copied!";
-    setTimeout(() => (button.innerHTML = label), 1500);
-  };
-
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(text).then(done, () => prompt("Copy this:", text));
-  } else {
-    prompt("Copy this:", text);
-  }
+function leaveRoom() {
+  sessionOver = true;
+  socket.emit("leaveRoom");
+  window.location.href = "/lobby";
 }
 
 /* ---------- Room state ---------- */
@@ -115,12 +143,11 @@ function copyText(text, button) {
 socket.on("joinedRoom", (data) => {
   me = data;
 
+  var surrenderButton = document.getElementById("surrenderButton");
   if (me.spectator) {
-    var surrenderButton = document.getElementById("surrenderButton");
     surrenderButton.disabled = true;
-    surrenderButton.innerText = "SPECTATING GAME";
-    surrenderButton.classList.remove("btn-outline-danger");
-    surrenderButton.classList.add("btn-outline-secondary");
+    surrenderButton.innerText = "Spectating";
+    surrenderButton.classList.remove("mm-btn-danger");
   }
 });
 
@@ -128,24 +155,34 @@ socket.on("roomState", (state) => {
   var previous = room;
   room = state;
 
-  renderPlayerList(state);
+  renderPlayerList(state, previous);
   renderWaitingRoom(state);
+  renderTurnBanner(state);
 
   var waiting = state.status == "waiting";
   document.getElementById("waitingRoom").hidden = !waiting;
   document.getElementById("board").hidden = waiting;
 
+  var pairs = document.getElementById("pairsLeft");
+  pairs.hidden = waiting;
+  pairs.innerText = state.pairsLeft + " pairs left";
+
   var player = getMyPlayer(state);
-  var isPlaying = state.status == "playing" && player != null && player.active;
-  document.getElementById("playButton").hidden = !isPlaying;
+  var inGame = (state.status == "playing" || state.status == "starting") && player != null && player.active;
+  document.getElementById("playButton").hidden = !inGame;
   if (!me.spectator && state.status != "finished") {
-    document.getElementById("surrenderButton").disabled = !isPlaying;
+    document.getElementById("surrenderButton").disabled = !inGame;
   }
 
   // My turn is over -> the End Turn button can't be used anymore
-  if (previous != null && !isMyTurn(state)) {
+  if (!isMyTurn(state)) {
     document.getElementById("playButton").disabled = true;
   }
+
+  document.getElementById("board").classList.toggle("locked", !isMyTurn(state));
+
+  var online = state.players.filter((p) => p.connected).length + state.spectators.length;
+  document.getElementById("onlineCount").innerText = online + " online";
 });
 
 function getMyPlayer(state) {
@@ -157,105 +194,256 @@ function isMyTurn(state) {
   return state.status == "playing" && player != null && player.name == me.username;
 }
 
-// Scoreboard on the right: one row per player, no fixed number of rows
-function renderPlayerList(state) {
+// Scoreboard on the right: one entry per player, no fixed number of rows
+function renderPlayerList(state, previous) {
   var list = document.getElementById("playerList");
   list.replaceChildren();
 
   state.players.forEach((player, index) => {
-    var row = document.createElement("div");
-    row.className = "d-flex pb-2 player-row";
-    if (!player.active) row.classList.add("inactive");
+    var item = document.createElement("div");
+    item.className = "player-item";
+    if (!player.active) item.classList.add("inactive");
+    if (state.status == "playing" && state.turn == index && player.active) item.classList.add("turn");
 
-    var name = document.createElement("p");
-    name.className = "flex-grow-1 m-0";
-    name.innerText = player.name;
+    var info = document.createElement("div");
+    info.className = "player-info";
+    var name = document.createElement("div");
+    name.className = "player-name";
+    name.innerText = player.name + (player.name == me.username ? " (you)" : "");
+    var sub = document.createElement("div");
+    sub.className = "player-sub";
+    sub.innerText = !player.active
+      ? "left the game"
+      : !player.connected
+        ? "reconnecting..."
+        : state.status == "playing" && state.turn == index
+          ? "is playing"
+          : player.name == state.host && state.status == "waiting"
+            ? "host"
+            : "";
+    info.append(name, sub);
 
-    if (player.name == state.host && state.status == "waiting") {
-      name.appendChild(icon("bi-star-fill ps-2 text-warning", "Host"));
+    var points = document.createElement("div");
+    points.className = "player-points";
+    points.innerText = player.points;
+
+    // Small animation when a player scored
+    var before = previous && previous.players.find((p) => p.name == player.name);
+    if (before && before.points < player.points) {
+      points.classList.add("bump");
     }
-    if (player.name == me.username) {
-      var you = document.createElement("span");
-      you.className = "you ps-2";
-      you.innerText = "(you)";
-      name.appendChild(you);
-    }
-    if (state.status == "playing" && state.turn == index) {
-      row.classList.add("fw-bold");
-      name.appendChild(icon("bi-hand-index-thumb ps-2 text-info", "Turn"));
-    }
 
-    var score = document.createElement("p");
-    score.className = "m-0";
-    score.innerText = player.points;
-
-    row.append(name, score);
-    list.appendChild(row);
+    item.append(createAvatar(player.name, "", player.connected), info, points);
+    list.appendChild(item);
   });
+
+  var spectators = document.getElementById("spectatorInfo");
+  spectators.hidden = state.spectators.length == 0;
+  spectators.replaceChildren(createIcon("bi-eye me-1"), document.createTextNode(state.spectators.join(", ")));
 }
 
-function icon(classes, title) {
-  var i = document.createElement("i");
-  i.className = "bi " + classes;
-  i.title = title;
-  return i;
+function renderTurnBanner(state) {
+  var banner = document.getElementById("turnBanner");
+  var player = state.players[state.turn];
+  banner.classList.toggle("mine", isMyTurn(state));
+
+  if (state.status == "starting") {
+    banner.innerText = "The game is about to start...";
+  } else if (state.status == "finished") {
+    banner.innerText = "Game over";
+  } else if (isMyTurn(state)) {
+    banner.innerText = "Your turn! Find a pair 🎯";
+  } else if (player) {
+    banner.innerText = `${player.name}'s turn`;
+  }
 }
 
 function renderWaitingRoom(state) {
   var isHost = state.host == me.username;
   var count = state.players.length;
 
-  document.getElementById("playerCount").innerText = `(${count} / ${state.maxPlayers})`;
-  document.getElementById("waitingText").innerText = isHost
-    ? "Invite your friends with the room code or link and start when everybody is here."
+  document.getElementById("playerCount").innerText = `${count} / ${state.maxPlayers}`;
+
+  var waitingText = document.getElementById("waitingText");
+  waitingText.classList.toggle("waiting-dots", !isHost && !me.spectator);
+  waitingText.innerText = isHost
+    ? "Invite your friends and start when everybody is here."
     : me.spectator
       ? "The room is full - you are watching this game."
-      : `Waiting for ${state.host} to start the game...`;
+      : `Waiting for ${state.host} to start the game`;
 
-  // Player slots
-  var list = document.getElementById("waitingPlayers");
-  list.replaceChildren();
+  // Seats: players + free seats
+  var seats = document.getElementById("waitingPlayers");
+  seats.replaceChildren();
   for (var i = 0; i < state.maxPlayers; i++) {
-    var item = document.createElement("li");
-    item.className = "waiting-player";
-    var player = state.players[i];
-
-    if (player) {
-      var name = document.createElement("span");
-      name.className = "flex-grow-1";
-      name.innerText = player.name + (player.name == me.username ? " (you)" : "");
-      item.appendChild(name);
-      if (player.name == state.host) {
-        item.appendChild(icon("bi-star-fill text-warning", "Host"));
-      }
-    } else {
-      item.classList.add("empty");
-      item.innerText = "Free slot";
-    }
-    list.appendChild(item);
+    seats.appendChild(createSeat(state, state.players[i], isHost));
   }
 
   // Host settings
   document.getElementById("hostSettings").hidden = !isHost;
+  var startButton = document.getElementById("startButton");
+  startButton.hidden = !isHost;
+
+  var ready = state.players.filter((p) => p.connected).length;
+  var canStart = ready >= state.minPlayers;
+  startButton.disabled = !canStart;
+  document.getElementById("startHint").innerText = !isHost
+    ? ""
+    : canStart
+      ? `${ready} players ready`
+      : `At least ${state.minPlayers} players are needed to start.`;
+
   if (!isHost) return;
 
-  var select = document.getElementById("maxPlayersSelect");
-  select.replaceChildren();
-  for (var n = Math.max(state.minPlayers, count); n <= state.maxPlayersLimit; n++) {
-    var option = document.createElement("option");
-    option.value = n;
-    option.innerText = n;
-    option.selected = n == state.maxPlayers;
-    select.appendChild(option);
+  // Max. players as buttons
+  var picker = document.getElementById("maxPlayersPicker");
+  picker.replaceChildren();
+  for (var n = state.minPlayers; n <= state.maxPlayersLimit; n++) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.innerText = n;
+    button.disabled = n < count;
+    button.classList.toggle("active", n == state.maxPlayers);
+    button.addEventListener("click", ((value) => () => socket.emit("updateSettings", { maxPlayers: value }))(n));
+    picker.appendChild(button);
   }
 
   document.getElementById("publicSwitch").checked = state.isPublic;
+}
 
-  var canStart = count >= state.minPlayers;
-  document.getElementById("startButton").disabled = !canStart;
-  document.getElementById("startHint").innerText = canStart
-    ? ""
-    : `At least ${state.minPlayers} players are needed to start.`;
+function createSeat(state, player, isHost) {
+  var seat = document.createElement("div");
+  seat.className = "seat";
+
+  if (!player) {
+    seat.classList.add("empty");
+    seat.append(createIcon("bi-person-plus"), document.createTextNode("Free seat"));
+    return seat;
+  }
+
+  if (player.name == me.username) seat.classList.add("me");
+  if (!player.connected) seat.classList.add("offline");
+
+  var name = document.createElement("div");
+  name.className = "seat-name";
+  name.innerText = player.name;
+
+  var tags = document.createElement("div");
+  tags.className = "seat-tags";
+  if (player.name == state.host) {
+    var host = document.createElement("span");
+    host.className = "mm-badge host";
+    host.append(createIcon("bi-star-fill"), document.createTextNode("Host"));
+    tags.appendChild(host);
+  }
+  if (player.name == me.username) {
+    var you = document.createElement("span");
+    you.className = "mm-badge";
+    you.innerText = "You";
+    tags.appendChild(you);
+  }
+  if (!player.connected) {
+    var offline = document.createElement("span");
+    offline.className = "mm-badge playing";
+    offline.innerText = "Reconnecting";
+    tags.appendChild(offline);
+  }
+
+  seat.append(createAvatar(player.name, "lg", player.connected), name, tags);
+
+  // The host can remove other players
+  if (isHost && player.name != me.username) {
+    var kick = document.createElement("button");
+    kick.type = "button";
+    kick.className = "seat-kick";
+    kick.title = "Remove " + player.name;
+    kick.appendChild(createIcon("bi-x-lg"));
+    kick.addEventListener("click", () => {
+      if (confirm(`Remove ${player.name} from the room?`)) {
+        socket.emit("kickPlayer", { name: player.name });
+      }
+    });
+    seat.appendChild(kick);
+  }
+
+  return seat;
+}
+
+/* ---------- "Who starts?" animation ---------- */
+
+socket.on("gameStarting", (data) => {
+  playStartAnimation(data.players, data.starter, data.duration);
+});
+
+function playStartAnimation(players, starter, duration) {
+  var overlay = document.getElementById("startOverlay");
+  var track = document.getElementById("reelTrack");
+  var result = document.getElementById("startResult");
+  var reel = track.parentElement;
+  var itemHeight = parseFloat(getComputedStyle(reel).getPropertyValue("--item")) || 72;
+
+  // Long list of names, the winner is the last one -> spinning slot machine
+  var rounds = Math.max(4, Math.ceil(24 / players.length));
+  var names = [];
+  for (var r = 0; r < rounds; r++) names.push(...players);
+  names.push(...players.slice(0, starter + 1));
+  names.push(players[(starter + 1) % players.length]); // one more below the marker
+
+  track.replaceChildren();
+  names.forEach((name) => {
+    var item = document.createElement("div");
+    item.className = "reel-item";
+    item.append(createAvatar(name), document.createTextNode(name));
+    track.appendChild(item);
+  });
+
+  var target = names.length - 2; // the starter
+  var spin = Math.max(1200, duration - 1300);
+
+  result.classList.remove("show");
+  result.innerText = "";
+  track.style.transition = "none";
+  track.style.transform = "translateY(0)";
+  overlay.hidden = false;
+
+  // Start the spin in the next frame so the transition is applied
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      track.style.transition = `transform ${spin}ms cubic-bezier(0.12, 0.75, 0.18, 1)`;
+      // The marker is the second row of the reel
+      track.style.transform = `translateY(${-(target - 1) * itemHeight}px)`;
+    }),
+  );
+
+  setTimeout(() => {
+    track.children[target].classList.add("chosen");
+    var name = players[starter];
+    result.innerText = name == me.username ? "You start! 🎉" : `${name} starts!`;
+    result.classList.add("show");
+    launchConfetti();
+  }, spin);
+
+  setTimeout(() => {
+    overlay.hidden = true;
+    document.getElementById("confetti").replaceChildren();
+  }, duration + 200);
+}
+
+function launchConfetti() {
+  var container = document.getElementById("confetti");
+  var colors = ["#48b0f7", "#8b5cf6", "#34d399", "#fbbf24", "#f87171", "#f472b6"];
+  container.replaceChildren();
+
+  for (var i = 0; i < 90; i++) {
+    var piece = document.createElement("i");
+    piece.style.left = Math.random() * 100 + "%";
+    piece.style.background = colors[i % colors.length];
+    piece.style.animationDuration = 1.4 + Math.random() * 1.4 + "s";
+    piece.style.animationDelay = Math.random() * 0.3 + "s";
+    piece.style.setProperty("--dx", (Math.random() - 0.5) * 300 + "px");
+    piece.style.setProperty("--rot", Math.random() * 720 + "deg");
+    container.appendChild(piece);
+  }
 }
 
 /* ---------- Game ---------- */
@@ -279,14 +467,43 @@ function surrender() {
   }
 }
 
-socket.on("turnCard", (data) => {
+// Cards that are already open when (re)joining
+socket.on("boardState", (data) => {
+  for (var i = 0; i < 66; i++) {
+    closeCard(i, true);
+  }
+  data.found.forEach((card) => {
+    showCard(card);
+    understateCard(card.id);
+  });
+  data.opened.forEach(showCard);
+});
+
+socket.on("turnCard", showCard);
+
+function showCard(data) {
   var card = document.getElementById("card-" + data.id);
   if (card == null) return;
   card.childNodes[1].childNodes[1].src = data.src;
 
   // Highlighting a card - It gets bigger and gets a border
   card.classList.add("flip", "border", "border-3", "zoom-card-on-turn");
-});
+}
+
+function closeCard(id, instant) {
+  var card = document.getElementById("card-" + id);
+  if (card == null) return;
+
+  card.classList.remove("flip");
+  understateCard(id);
+  if (instant) {
+    card.childNodes[1].childNodes[1].src = "";
+  } else {
+    setTimeout(() => {
+      card.childNodes[1].childNodes[1].src = "";
+    }, 500);
+  }
+}
 
 // If the card is already open, you can zoom in to read the meme
 socket.on("zoomImage", (id) => {
@@ -314,16 +531,13 @@ function understateCard(id) {
 
 // Close opened cards
 socket.on("closeCards", (data) => {
-  [data[1], data[2]].forEach((id) => {
-    var card = document.getElementById("card-" + id);
-    if (card == null) return;
+  [data[1], data[2]].forEach((id) => closeCard(id, false));
+});
 
-    card.classList.remove("flip");
-    setTimeout(() => {
-      card.childNodes[1].childNodes[1].src = "";
-    }, 500);
-    understateCard(id);
-  });
+socket.on("matchFound", (data) => {
+  if (data.name == me.username) {
+    showToast("Pair found! +1 🎉");
+  }
 });
 
 // Activate endTurn-Button
@@ -337,26 +551,22 @@ socket.on("disableEndTurn", () => {
 });
 
 socket.on("getWinner", (data) => {
-  var playButton = document.getElementById("playButton");
+  sessionOver = true;
 
-  // Mark the winners in the scoreboard
-  document.querySelectorAll("#playerList .player-row").forEach((row, index) => {
-    var player = room && room.players[index];
-    if (player && data.winners.includes(player.name)) {
-      row.classList.add("fw-bold");
-      row.firstChild.appendChild(icon("bi-trophy ps-2 text-warning", "Winner"));
-    } else {
-      row.classList.add("text-secondary");
-    }
-  });
-
-  // Remove all highlights
+  // Remove all highlights, show how often each card was opened
   for (var i = 0; i < 66; i++) {
     document.getElementById(`cardcount-${i}`).innerText = data.cardCounter[i];
     understateCard(i);
   }
 
-  // Change EndTurn-Button to Back to Lobby
+  document.querySelectorAll("#playerList .player-item").forEach((item, index) => {
+    var player = room && room.players[index];
+    if (player && data.winners.includes(player.name)) {
+      item.classList.add("winner");
+    }
+  });
+
+  var playButton = document.getElementById("playButton");
   playButton.onclick = () => {
     window.location.href = "/lobby";
   };
@@ -365,11 +575,87 @@ socket.on("getWinner", (data) => {
   playButton.innerText = "Back to Lobby";
   document.getElementById("surrenderButton").disabled = true;
 
+  showResult(data.winners);
+
   // Reset storage
   sessionStorage.clear();
 });
 
+function showResult(winners) {
+  var won = winners.includes(me.username);
+  document.getElementById("resultTitle").innerText =
+    winners.length > 1 ? "It's a draw!" : won ? "You win!" : `${winners[0]} wins!`;
+
+  var list = document.getElementById("resultList");
+  list.replaceChildren();
+  // Winners first, then by points, players who left at the end
+  var score = (p) => (winners.includes(p.name) ? 1e6 : 0) + (p.active ? 1e3 : 0) + p.points;
+  var ranking = (room ? room.players : []).slice().sort((a, b) => score(b) - score(a));
+  ranking.forEach((player, index) => {
+    var item = document.createElement("li");
+    if (winners.includes(player.name)) item.classList.add("winner");
+
+    var rank = document.createElement("span");
+    rank.className = "rank";
+    rank.innerText = index + 1 + ".";
+    var name = document.createElement("span");
+    name.className = "name";
+    name.innerText = player.name + (player.active ? "" : " (left)");
+    var points = document.createElement("span");
+    points.className = "points";
+    points.innerText = player.points;
+
+    item.append(rank, createAvatar(player.name, "sm"), name, points);
+    list.appendChild(item);
+  });
+
+  document.getElementById("resultOverlay").hidden = false;
+  if (won) launchConfetti();
+}
+
 /* ---------- Chat ---------- */
+
+var lastMessage = null; // for grouping messages of the same person
+
+function setupChat() {
+  var form = document.getElementById("chat-form");
+  var input = document.getElementById("chat-input");
+  var send = document.getElementById("send-message-btn");
+  var counter = document.getElementById("chat-counter");
+  var chat = document.getElementById("chat-content");
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    sendChatMessage();
+  });
+
+  input.addEventListener("input", () => {
+    var length = input.value.length;
+    send.disabled = input.value.trim() == "";
+    counter.hidden = length < 250;
+    counter.innerText = 300 - length;
+    counter.classList.toggle("limit", length >= 290);
+  });
+
+  // Quick emojis are added to the message
+  document.querySelectorAll(".chat-quick button").forEach((button) => {
+    button.addEventListener("click", () => {
+      var emoji = button.dataset.emoji;
+      var start = input.selectionStart != null ? input.selectionStart : input.value.length;
+      input.value = (input.value.slice(0, start) + emoji + input.value.slice(input.selectionEnd || start)).slice(0, 300);
+      input.dispatchEvent(new Event("input"));
+      input.focus();
+    });
+  });
+
+  chat.addEventListener("scroll", () => {
+    if (isChatAtBottom()) document.getElementById("newMessages").hidden = true;
+  });
+
+  document.getElementById("newMessages").addEventListener("click", () => {
+    chat.scrollTop = chat.scrollHeight;
+  });
+}
 
 function sendChatMessage() {
   var input = document.getElementById("chat-input");
@@ -384,17 +670,20 @@ function sendChatMessage() {
   // The message is shown when the server sends it back to everybody
   socket.emit("sendChatMessage", { message: message });
   input.value = "";
+  input.dispatchEvent(new Event("input"));
   input.focus();
 }
 
 socket.on("chatHistory", (messages) => {
   document.getElementById("chat-content").replaceChildren();
-  messages.forEach(addChatMessage);
+  lastMessage = null;
+  messages.forEach((message) => addChatMessage(message, false));
+  scrollChatDown();
 });
 
 socket.on("chatMessage", (message) => {
   hideChatError();
-  addChatMessage(message);
+  addChatMessage(message, true);
 });
 
 socket.on("chatError", (message) => {
@@ -417,6 +706,17 @@ function hideChatError() {
   if (element != null) element.hidden = true;
 }
 
+function isChatAtBottom() {
+  var chat = document.getElementById("chat-content");
+  return chat.scrollHeight - chat.scrollTop - chat.clientHeight < 40;
+}
+
+function scrollChatDown() {
+  var chat = document.getElementById("chat-content");
+  chat.scrollTop = chat.scrollHeight;
+  document.getElementById("newMessages").hidden = true;
+}
+
 // Returns the link if the whole message is a link to an image (https only)
 function getImageUrl(text) {
   if (!/^https:\/\/\S+\.(jpe?g|png|gif|webp)(\?\S*)?$/i.test(text)) return null;
@@ -428,36 +728,74 @@ function getImageUrl(text) {
   }
 }
 
+function isEmojiOnly(text) {
+  try {
+    return /^(\p{Extended_Pictographic}|\p{Emoji_Component}|\s){1,12}$/u.test(text) && /\p{Extended_Pictographic}/u.test(text);
+  } catch (error) {
+    return false;
+  }
+}
+
+var SYSTEM_ICONS = {
+  join: "bi-person-plus",
+  leave: "bi-box-arrow-left",
+  watch: "bi-eye",
+  host: "bi-star-fill",
+  start: "bi-flag-fill",
+  trophy: "bi-trophy-fill",
+  disconnect: "bi-wifi-off",
+  reconnect: "bi-wifi",
+  info: "bi-info-circle",
+};
+
 // Builds the message with DOM elements - no innerHTML, so nothing in a message can run as code
-function addChatMessage(message) {
+function addChatMessage(message, live) {
   var chat = document.getElementById("chat-content");
   if (chat == null) return;
+  document.getElementById("chat-empty").hidden = true;
 
-  // Only scroll down if the user didn't scroll up to read older messages
-  var atBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 40;
-
-  var wrapper = document.createElement("div");
+  var atBottom = isChatAtBottom();
+  var element;
 
   if (message.type == "system") {
-    wrapper.className = "system-message";
-    wrapper.innerText = message.text;
+    element = document.createElement("div");
+    element.className = "sys-msg " + (message.icon || "info");
+    element.append(createIcon(SYSTEM_ICONS[message.icon] || SYSTEM_ICONS.info), document.createTextNode(message.text));
+    lastMessage = null;
   } else {
     var own = message.name == me.username;
-    wrapper.className = "message " + (own ? "right-message" : "left-message");
+    // Messages of the same person within 2 minutes are grouped
+    var grouped = lastMessage != null && lastMessage.name == message.name && message.time - lastMessage.time < 120000;
 
-    var bubble = document.createElement("p");
+    element = document.createElement("div");
+    element.className = "msg" + (own ? " own" : "") + (grouped ? " grouped" : "");
 
-    var header = document.createElement("span");
-    header.className = "chat-name";
-    header.innerText = own ? "You" : message.name + (message.spectator ? " 👁" : "");
+    var avatarSlot = document.createElement("div");
+    avatarSlot.className = "avatar-slot";
+    avatarSlot.appendChild(createAvatar(message.name, "sm"));
+
+    var body = document.createElement("div");
+    body.className = "msg-body";
+
+    var meta = document.createElement("div");
+    meta.className = "msg-meta";
+    var name = document.createElement("span");
+    name.className = "msg-name";
+    name.style.color = own ? "var(--mm-accent)" : avatarColor(message.name);
+    name.innerText = own ? "You" : message.name;
+    if (message.spectator) name.appendChild(createIcon("bi-eye ms-1", "Spectator"));
     var time = document.createElement("span");
-    time.className = "chat-time fw-normal";
+    time.className = "msg-time";
     time.innerText = new Date(message.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    header.appendChild(time);
-    bubble.appendChild(header);
+    meta.append(name, time);
+
+    var bubble = document.createElement("div");
+    bubble.className = "msg-bubble";
+    bubble.title = time.innerText;
 
     var imageUrl = getImageUrl(message.text);
     if (imageUrl) {
+      bubble.classList.add("has-image");
       var image = document.createElement("img");
       image.className = "chat-image";
       image.src = imageUrl;
@@ -465,17 +803,30 @@ function addChatMessage(message) {
       image.referrerPolicy = "no-referrer";
       image.addEventListener("click", () => openImageModal(imageUrl));
       // Show the link as text if the image can't be loaded
-      image.addEventListener("error", () => image.replaceWith(document.createTextNode(message.text)));
+      image.addEventListener("error", () => {
+        bubble.classList.remove("has-image");
+        image.replaceWith(document.createTextNode(message.text));
+      });
+      image.addEventListener("load", () => {
+        if (atBottom) scrollChatDown();
+      });
       bubble.appendChild(image);
     } else {
+      if (isEmojiOnly(message.text)) bubble.classList.add("emoji-only");
       bubble.appendChild(document.createTextNode(message.text));
     }
 
-    wrapper.appendChild(bubble);
+    body.append(meta, bubble);
+    element.append(avatarSlot, body);
+    lastMessage = message;
   }
 
-  chat.appendChild(wrapper);
-  if (atBottom) {
-    chat.scrollTop = chat.scrollHeight;
+  chat.appendChild(element);
+
+  // Only scroll down if the user didn't scroll up to read older messages
+  if (!live || atBottom || message.name == me.username) {
+    scrollChatDown();
+  } else {
+    document.getElementById("newMessages").hidden = false;
   }
 }

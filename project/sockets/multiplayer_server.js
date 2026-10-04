@@ -5,15 +5,20 @@ const { CARD_COUNT, isValidCardId } = require("../game/board");
 const {
   STATUS,
   activePlayers,
+  connectedCount,
   serialize,
   notifyLobby,
 } = require("../game/multiplayer_room");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 
+let messageId = 0;
+
 module.exports = function (io) {
   const multiPlayer = io.of("/multiplayer");
   multiPlayer.use(socketAuth);
+
+  /* ---------- Helpers ---------- */
 
   // Sends the current room state (players, host, turn, settings) to everyone in the room.
   function emitRoomState(gameID, room) {
@@ -21,60 +26,143 @@ module.exports = function (io) {
     notifyLobby();
   }
 
-  // Chat message from the server itself (joins, leaves, game start, ...)
-  function systemMessage(gameID, room, text) {
-    addChatMessage(multiPlayer, gameID, room, { type: "system", text: text });
+  // Adds a message to the chat history and sends it to everyone (sender included).
+  function addChatMessage(gameID, room, message) {
+    const entry = { id: ++messageId, time: Date.now(), ...message };
+    room.chat.push(entry);
+    if (room.chat.length > config.CHAT_HISTORY) {
+      room.chat.splice(0, room.chat.length - config.CHAT_HISTORY);
+    }
+    multiPlayer.to(gameID).emit("chatMessage", entry);
   }
+
+  // Chat message from the server itself (joins, leaves, game start, ...)
+  function systemMessage(gameID, room, text, icon) {
+    addChatMessage(gameID, room, { type: "system", text: text, icon: icon || "info" });
+  }
+
+  // setTimeout that is cancelled when the room is removed
+  function roomTimeout(room, fn, ms) {
+    const timer = setTimeout(() => {
+      room.timers = room.timers.filter((t) => t !== timer);
+      try {
+        fn();
+      } catch (error) {
+        console.error("[multiplayer] Timer failed:", error);
+      }
+    }, ms);
+    room.timers.push(timer);
+  }
+
+  function findPlayer(room, name) {
+    return room.players.find((player) => player.name === name) || null;
+  }
+
+  function isPlayersTurn(room, name) {
+    const player = room.players[room.turn];
+    return room.status === STATUS.PLAYING && player != null && player.active && player.name === name;
+  }
+
+  // Detaches a socket from its room without touching the game (e.g. replaced by a new tab)
+  function detachSocket(socket) {
+    if (socket.gameID != null) {
+      socket.leave(socket.gameID);
+    }
+    socket.gameID = null;
+    socket.spectator = false;
+  }
+
+  /* ---------- Connection ---------- */
 
   multiPlayer.on("connection", (socket) => {
     const username = socket.data.username;
 
-    /* Enter a room - as player while it's waiting and not full, otherwise as spectator */
+    /*
+     * Enter a room. Works for new players, spectators and for players
+     * coming back after a reload or a lost connection (rejoin).
+     */
     socket.on(
       "joinRoom",
       safe("joinRoom", (data) => {
         const gameID = data != null ? data.gameID : null;
         const room = rooms.get(gameID, "multiplayer");
 
-        if (socket.gameID != null) return;
         if (room == null || room.status === STATUS.FINISHED) {
           socket.emit("noGameFound");
           return;
         }
-
-        const existing = room.players.find((player) => player.name === username);
-        if (existing != null && existing.active) {
-          socket.emit("gameError", "You are already in this room (maybe in another tab).");
-          return;
+        if (socket.gameID === gameID) return;
+        if (socket.gameID != null) {
+          leaveRoom(socket, false);
         }
 
         rooms.touch(room);
-        socket.gameID = gameID;
-        socket.join(gameID);
+        const player = findPlayer(room, username);
+        let rejoined = false;
 
-        if (
-          existing == null &&
+        if (player != null) {
+          // The same user is still connected in another tab -> that tab is replaced
+          if (player.connected && player.socketId !== socket.id) {
+            const old = multiPlayer.sockets.get(player.socketId);
+            if (old != null) {
+              detachSocket(old);
+              old.emit("sessionReplaced");
+              old.disconnect(true);
+            }
+          }
+
+          rejoined = !player.connected;
+          player.connected = true;
+          player.socketId = socket.id;
+          player.disconnectedAt = null;
+          socket.spectator = !player.active;
+        } else if (
           room.status === STATUS.WAITING &&
-          room.players.length < room.maxPlayers
+          room.players.length < room.maxPlayers &&
+          !room.banned.has(username)
         ) {
+          room.players.push({
+            name: username,
+            points: 0,
+            active: true,
+            connected: true,
+            socketId: socket.id,
+            disconnectedAt: null,
+          });
           socket.spectator = false;
-          room.players.push({ name: username, points: 0, active: true });
-          systemMessage(gameID, room, `${username} joined the room.`);
         } else {
           socket.spectator = true;
-          systemMessage(gameID, room, `${username} is watching.`);
+          room.spectators.set(socket.id, username);
         }
+
+        socket.gameID = gameID;
+        socket.join(gameID);
+        room.emptySince = null;
 
         socket.emit("joinedRoom", { username: username, spectator: socket.spectator });
         socket.emit("chatHistory", room.chat);
+        socket.emit("boardState", {
+          found: room.foundMatches.map((id) => ({ id: id, src: room.cardImages[id] })),
+          opened: room.openedCards.map((id) => ({ id: id, src: room.cardImages[id] })),
+        });
 
-        // Show cards that have already been found
-        for (const id of room.foundMatches) {
-          socket.emit("turnCard", { id: id, src: room.cardImages[id] });
-          socket.emit("understateCard", id);
+        if (player != null && rejoined) {
+          systemMessage(gameID, room, `${username} is back.`, "reconnect");
+        } else if (player == null) {
+          systemMessage(
+            gameID,
+            room,
+            socket.spectator ? `${username} is watching.` : `${username} joined the room.`,
+            socket.spectator ? "watch" : "join",
+          );
         }
 
         emitRoomState(gameID, room);
+
+        // Back in the middle of the own turn with two wrong cards open
+        if (isPlayersTurn(room, username) && room.checkingCards) {
+          socket.emit("activateEndTurn");
+        }
       }),
     );
 
@@ -108,26 +196,80 @@ module.exports = function (io) {
       }),
     );
 
+    /* The host removes a player from the waiting room */
+    socket.on(
+      "kickPlayer",
+      safe("kickPlayer", (data) => {
+        const room = rooms.get(socket.gameID, "multiplayer");
+        const name = data != null ? data.name : null;
+        if (room == null || room.status !== STATUS.WAITING || room.host !== username || name === username) {
+          return;
+        }
+
+        const index = room.players.findIndex((player) => player.name === name);
+        if (index < 0) return;
+
+        const [player] = room.players.splice(index, 1);
+        // Can still watch, but not take a seat again
+        room.banned.add(player.name);
+        const target = multiPlayer.sockets.get(player.socketId);
+        if (target != null) {
+          detachSocket(target);
+          target.emit("kicked");
+        }
+
+        systemMessage(socket.gameID, room, `${player.name} was removed by the host.`, "leave");
+        emitRoomState(socket.gameID, room);
+      }),
+    );
+
     socket.on(
       "startGame",
       safe("startGame", () => {
-        const room = rooms.get(socket.gameID, "multiplayer");
+        const gameID = socket.gameID;
+        const room = rooms.get(gameID, "multiplayer");
+        const ready = room != null ? room.players.filter((player) => player.connected) : [];
 
         if (
           room == null ||
           room.status !== STATUS.WAITING ||
           room.host !== username ||
-          room.players.length < config.MIN_PLAYERS
+          ready.length < config.MIN_PLAYERS
         ) {
           return;
         }
 
-        rooms.touch(room);
-        room.status = STATUS.PLAYING;
+        // Players that are still reconnecting can't take part
+        room.players = ready;
+        room.status = STATUS.STARTING;
         room.turn = Math.floor(Math.random() * room.players.length);
+        rooms.touch(room);
 
-        systemMessage(socket.gameID, room, `The game has started. ${room.players[room.turn].name} begins!`);
-        emitRoomState(socket.gameID, room);
+        multiPlayer.to(gameID).emit("gameStarting", {
+          players: room.players.map((player) => player.name),
+          starter: room.turn,
+          duration: config.START_ANIMATION,
+        });
+        emitRoomState(gameID, room);
+
+        // The game begins when the "who starts" animation is over
+        roomTimeout(
+          room,
+          () => {
+            if (room.status !== STATUS.STARTING) return;
+            room.status = STATUS.PLAYING;
+
+            // The starter left during the animation
+            const starter = room.players[room.turn];
+            if (!starter.active || !starter.connected) {
+              nextTurn(gameID, room);
+            }
+
+            systemMessage(gameID, room, `The game has started. ${room.players[room.turn].name} begins!`, "start");
+            emitRoomState(gameID, room);
+          },
+          config.START_ANIMATION,
+        );
       }),
     );
 
@@ -175,7 +317,7 @@ module.exports = function (io) {
         }
         socket.lastChatMessage = now;
 
-        addChatMessage(multiPlayer, socket.gameID, room, {
+        addChatMessage(socket.gameID, room, {
           type: "user",
           name: username,
           spectator: socket.spectator,
@@ -190,13 +332,7 @@ module.exports = function (io) {
       safe("endTurn", () => {
         const room = rooms.get(socket.gameID, "multiplayer");
 
-        if (
-          room != null &&
-          room.status === STATUS.PLAYING &&
-          room.checkingCards &&
-          room.openedCards.length == 2 &&
-          isPlayersTurn(room, username)
-        ) {
+        if (room != null && room.checkingCards && room.openedCards.length == 2 && isPlayersTurn(room, username)) {
           rooms.touch(room);
           socket.emit("disableEndTurn");
           nextTurn(socket.gameID, room);
@@ -210,20 +346,145 @@ module.exports = function (io) {
       "surrender",
       safe("surrender", async () => {
         const room = rooms.get(socket.gameID, "multiplayer");
-        if (room != null && room.status === STATUS.PLAYING) {
-          await leaveGame(socket, "surrendered");
+        const player = room != null ? findPlayer(room, username) : null;
+
+        if (player != null && player.active && room.status !== STATUS.WAITING && room.status !== STATUS.FINISHED) {
+          await removePlayer(socket.gameID, room, player, "surrendered");
+          socket.spectator = true;
+          socket.emit("joinedRoom", { username: username, spectator: true });
         }
       }),
     );
 
-    // disconnect
+    // Leave button: leave right away, no rejoin grace
+    socket.on(
+      "leaveRoom",
+      safe("leaveRoom", async () => {
+        await leaveRoom(socket, true);
+      }),
+    );
+
+    // Lost connection or closed tab: the seat is kept for a while
     socket.on(
       "disconnect",
       safe("disconnect", async () => {
-        await leaveGame(socket, "left the room");
+        await leaveRoom(socket, false);
       }),
     );
   });
+
+  /* ---------- Leaving & rejoining ---------- */
+
+  async function leaveRoom(socket, intentional) {
+    const gameID = socket.gameID;
+    const room = rooms.get(gameID, "multiplayer");
+    detachSocket(socket);
+    if (room == null) return;
+
+    // Spectator
+    if (room.spectators.delete(socket.id)) {
+      emitRoomState(gameID, room);
+      return;
+    }
+
+    const player = findPlayer(room, socket.data.username);
+    // Not this socket's seat (e.g. replaced by another tab)
+    if (player == null || player.socketId !== socket.id || !player.connected) return;
+
+    // Surrendered players only watch, nothing to do for the game
+    if (!player.active) {
+      player.connected = false;
+      emitRoomState(gameID, room);
+      return;
+    }
+
+    if (intentional) {
+      await removePlayer(gameID, room, player, "left the room");
+      return;
+    }
+
+    player.connected = false;
+    player.disconnectedAt = Date.now();
+
+    if (room.status === STATUS.PLAYING && isPlayersTurn(room, player.name)) {
+      // Don't let the others wait for somebody who is gone
+      nextTurn(gameID, room);
+    }
+
+    systemMessage(gameID, room, `${player.name} lost the connection...`, "disconnect");
+    emitRoomState(gameID, room);
+  }
+
+  // Removes a player for good (left, kicked out by the timeout, surrendered).
+  async function removePlayer(gameID, room, player, reason) {
+    const index = room.players.indexOf(player);
+    if (index < 0) return;
+
+    if (room.status === STATUS.WAITING) {
+      room.players.splice(index, 1);
+      systemMessage(gameID, room, `${player.name} ${reason}.`, "leave");
+
+      // The host left, the next player takes over
+      if (room.host === player.name && room.players.length > 0) {
+        const next = room.players.find((p) => p.connected) || room.players[0];
+        room.host = next.name;
+        systemMessage(gameID, room, `${room.host} is the new host.`, "host");
+      }
+
+      emitRoomState(gameID, room);
+      return;
+    }
+
+    if (!player.active || room.status === STATUS.FINISHED) return;
+
+    rooms.touch(room);
+    const wasTurn = room.turn === index;
+    player.active = false;
+    if (wasTurn && room.status === STATUS.PLAYING) {
+      nextTurn(gameID, room);
+    }
+
+    systemMessage(gameID, room, `${player.name} ${reason}.`, "leave");
+
+    if (activePlayers(room).length <= 1) {
+      await getWinner(gameID, room);
+    } else {
+      emitRoomState(gameID, room);
+    }
+  }
+
+  /*
+   * Runs regularly: players who didn't come back in time lose their seat,
+   * rooms without anybody in them are deleted.
+   */
+  async function tick(now = Date.now()) {
+    for (const [gameID, room] of rooms.list("multiplayer")) {
+      try {
+        const grace = room.status === STATUS.WAITING ? config.REJOIN_GRACE_WAITING : config.REJOIN_GRACE_PLAYING;
+
+        for (const player of [...room.players]) {
+          if (!player.connected && player.active && now - player.disconnectedAt >= grace) {
+            await removePlayer(gameID, room, player, "didn't come back");
+          }
+        }
+
+        if (connectedCount(room) > 0) {
+          room.emptySince = null;
+        } else if (room.emptySince == null) {
+          room.emptySince = now;
+        } else if (now - room.emptySince >= config.EMPTY_ROOM_GRACE) {
+          rooms.remove(gameID);
+        }
+      } catch (error) {
+        console.error("[multiplayer] Room check failed:", error);
+      }
+    }
+  }
+
+  const ticker = setInterval(() => tick().catch(() => {}), config.TICK);
+  ticker.unref();
+
+  /* ---------- Game ---------- */
 
   function checkGame(socket, room) {
     // If both cards are open check if those are a match.
@@ -255,11 +516,13 @@ module.exports = function (io) {
       room.foundMatches.push(id, id2);
 
       // understateCard - remove Zoom and Border on cards
-      setTimeout(() => multiPlayer.to(gameID).emit("understateCard", id), 500);
-      setTimeout(() => multiPlayer.to(gameID).emit("understateCard", id2), 500);
+      roomTimeout(room, () => multiPlayer.to(gameID).emit("understateCard", id), 500);
+      roomTimeout(room, () => multiPlayer.to(gameID).emit("understateCard", id2), 500);
 
       // Increase Points
-      room.players[room.turn].points++;
+      const player = room.players[room.turn];
+      player.points++;
+      multiPlayer.to(gameID).emit("matchFound", { name: player.name, ids: [id, id2] });
 
       // Reset turn
       room.openedCards = [];
@@ -270,7 +533,7 @@ module.exports = function (io) {
     return cardsMatch;
   }
 
-  // Closes the open cards and gives the turn to the next active player.
+  // Closes the open cards and gives the turn to the next active and connected player.
   function nextTurn(gameID, room) {
     if (room.openedCards.length > 0) {
       multiPlayer.to(gameID).emit("closeCards", {
@@ -280,69 +543,29 @@ module.exports = function (io) {
     }
 
     const count = room.players.length;
+    let fallback = null;
     for (let step = 1; step <= count; step++) {
       const index = (room.turn + step) % count;
-      if (room.players[index].active) {
+      const player = room.players[index];
+      if (!player.active) continue;
+      if (player.connected) {
         room.turn = index;
+        fallback = null;
         break;
       }
+      // Only disconnected players left: give it to one of them, they may come back
+      if (fallback == null) fallback = index;
     }
+    if (fallback != null) room.turn = fallback;
 
     // Reset turn
     room.openedCards = [];
     room.checkingCards = false;
   }
 
-  async function leaveGame(socket, reason) {
-    const gameID = socket.gameID;
-    const room = rooms.get(gameID, "multiplayer");
-    if (room == null || socket.spectator) return;
-
-    const index = room.players.findIndex((player) => player.name === socket.data.username);
-    if (index < 0) return;
-    const player = room.players[index];
-
-    if (room.status === STATUS.WAITING) {
-      room.players.splice(index, 1);
-
-      if (room.players.length == 0) {
-        // Delete game
-        rooms.remove(gameID);
-        return;
-      }
-
-      systemMessage(gameID, room, `${player.name} ${reason}.`);
-
-      // The host left, the next player takes over
-      if (room.host === player.name) {
-        room.host = room.players[0].name;
-        systemMessage(gameID, room, `${room.host} is the new host.`);
-      }
-
-      emitRoomState(gameID, room);
-    } else if (room.status === STATUS.PLAYING) {
-      // Already surrendered?
-      if (!player.active) return;
-
-      rooms.touch(room);
-      if (room.turn === index) {
-        nextTurn(gameID, room);
-      }
-      player.active = false;
-
-      systemMessage(gameID, room, `${player.name} ${reason}.`);
-
-      if (activePlayers(room).length <= 1) {
-        await getWinner(gameID, room);
-      } else {
-        emitRoomState(gameID, room);
-      }
-    }
-  }
-
   async function getWinner(gameID, room) {
     // Only finish a game once
-    if (room.status !== STATUS.PLAYING) return;
+    if (room.status !== STATUS.PLAYING && room.status !== STATUS.STARTING) return;
     room.status = STATUS.FINISHED;
 
     // Players who left can't win
@@ -378,6 +601,7 @@ module.exports = function (io) {
       gameID,
       room,
       winners.length > 1 ? `Draw between ${winners.join(", ")}!` : `${winners[0]} wins!`,
+      "trophy",
     );
     emitRoomState(gameID, room);
     multiPlayer.to(gameID).emit("getWinner", {
@@ -388,21 +612,6 @@ module.exports = function (io) {
     // Delete game
     rooms.remove(gameID);
   }
+
+  return { tick };
 };
-
-function isPlayersTurn(room, username) {
-  const player = room.players[room.turn];
-  return player != null && player.active && player.name === username;
-}
-
-let messageId = 0;
-
-/* Adds a message to the room's chat history and sends it to everyone (sender included). */
-function addChatMessage(io, gameID, room, message) {
-  const entry = { id: ++messageId, time: Date.now(), ...message };
-  room.chat.push(entry);
-  if (room.chat.length > config.CHAT_HISTORY) {
-    room.chat.splice(0, room.chat.length - config.CHAT_HISTORY);
-  }
-  io.to(gameID).emit("chatMessage", entry);
-}

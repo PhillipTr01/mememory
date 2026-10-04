@@ -2,7 +2,12 @@ const rooms = require("./rooms");
 const config = require("./config");
 const { CARD_COUNT } = require("./board");
 
-const STATUS = { WAITING: "waiting", PLAYING: "playing", FINISHED: "finished" };
+const STATUS = {
+  WAITING: "waiting",
+  STARTING: "starting", // "who starts" animation is running
+  PLAYING: "playing",
+  FINISHED: "finished",
+};
 
 /* Creates a new multiplayer room. The host joins it from the game page. */
 function createRoom(host, board) {
@@ -11,7 +16,11 @@ function createRoom(host, board) {
     maxPlayers: config.DEFAULT_MAX_PLAYERS,
     isPublic: true,
     status: STATUS.WAITING,
-    players: [], // [{name, points, active}] - inactive players left or surrendered
+    // [{name, points, active, connected, socketId, disconnectedAt}]
+    // inactive = left or surrendered, not connected = may still come back
+    players: [],
+    spectators: new Map(), // socketId -> name
+    banned: new Set(), // kicked by the host
     turn: -1, // index into players
     openedCards: [],
     checkingCards: false,
@@ -20,11 +29,17 @@ function createRoom(host, board) {
     cardPairs: board.cardPairs,
     cardImages: board.cardImages,
     chat: [],
+    emptySince: Date.now(),
+    timers: [],
   });
 }
 
 function activePlayers(room) {
   return room.players.filter((player) => player.active);
+}
+
+function connectedCount(room) {
+  return room.players.filter((player) => player.connected).length + room.spectators.size;
 }
 
 /* Everything the clients need to draw the waiting room and the scoreboard. */
@@ -38,31 +53,37 @@ function serialize(gameID, room) {
     minPlayers: config.MIN_PLAYERS,
     maxPlayersLimit: config.MAX_PLAYERS,
     turn: room.turn,
+    pairsLeft: (CARD_COUNT - room.foundMatches.length) / 2,
+    spectators: [...new Set(room.spectators.values())],
     players: room.players.map((player) => ({
       name: player.name,
       points: player.points,
       active: player.active,
+      connected: player.connected,
     })),
   };
 }
 
-/* Open rooms shown in the lobby. */
+/* Rooms shown in the lobby: public, not finished and somebody is in it. */
 function publicRooms() {
   return rooms
     .list("multiplayer")
     .filter(
       ([, room]) =>
         room.isPublic &&
-        room.status === STATUS.WAITING &&
-        room.players.length > 0 &&
-        room.players.length < room.maxPlayers,
+        room.status !== STATUS.FINISHED &&
+        room.players.some((player) => player.connected),
     )
     .map(([gameID, room]) => ({
       gameID: gameID,
       host: room.host,
-      players: room.players.length,
+      status: room.status,
+      players: room.players.filter((player) => player.active).length,
       maxPlayers: room.maxPlayers,
+      spectators: room.spectators.size,
+      createdAt: room.createdAt,
     }))
+    .sort((a, b) => (a.status === b.status ? b.createdAt - a.createdAt : a.status === STATUS.WAITING ? -1 : 1))
     .slice(0, 50);
 }
 
@@ -83,13 +104,17 @@ function notifyLobby() {
 }
 
 rooms.onRemove((gameID, room) => {
-  if (room.type === "multiplayer") notifyLobby();
+  if (room.type !== "multiplayer") return;
+  // Stop pending timers (start animation, card animations)
+  (room.timers || []).forEach(clearTimeout);
+  notifyLobby();
 });
 
 module.exports = {
   STATUS,
   createRoom,
   activePlayers,
+  connectedCount,
   serialize,
   publicRooms,
   attachLobby,

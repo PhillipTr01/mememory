@@ -1,0 +1,295 @@
+/* Shared look for lobby and multiplayer room */
+:root {
+  --mm-bg: #141414;
+  --mm-surface: #1c1c20;
+  --mm-surface-2: #24242a;
+  --mm-surface-3: #2d2d35;
+  --mm-border: #34343d;
+  --mm-text: #f1f1f4;
+  --mm-muted: #9a9aa6;
+  --mm-accent: #48b0f7;
+  --mm-accent-2: #8b5cf6;
+  --mm-success: #34d399;
+  --mm-warning: #fbbf24;
+  --mm-danger: #f87171;
+  --mm-gradient: linear-gradient(135deg, var(--mm-accent), var(--mm-accent-2));
+  --mm-radius: 14px;
+  --mm-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- Buttons ---------- */
+.mm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  padding: 0.6rem 1.1rem;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-weight: 600;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mm-btn:hover:not(:disabled) {
+  background: var(--mm-surface-3);
+  border-color: #4a4a55;
+  transform: translateY(-1px);
+}
+
+.mm-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mm-btn-primary {
+  background: var(--mm-gradient);
+  border: none;
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(72, 176, 247, 0.25);
+}
+
+.mm-btn-primary:hover:not(:disabled) {
+  background: var(--mm-gradient);
+  box-shadow: 0 8px 26px rgba(139, 92, 246, 0.4);
+}
+
+.mm-btn-success {
+  background: linear-gradient(135deg, #10b981, #34d399);
+  border: none;
+  color: #06281d;
+}
+
+.mm-btn-success:hover:not(:disabled) {
+  background: linear-gradient(135deg, #10b981, #34d399);
+  box-shadow: 0 8px 26px rgba(52, 211, 153, 0.35);
+}
+
+.mm-btn-danger {
+  color: var(--mm-danger);
+  border-color: rgba(248, 113, 113, 0.4);
+  background: transparent;
+}
+
+.mm-btn-danger:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: var(--mm-danger);
+}
+
+.mm-btn-ghost {
+  background: transparent;
+}
+
+.mm-btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  border-radius: 8px;
+}
+
+.mm-btn-lg {
+  padding: 0.85rem 1.5rem;
+  font-size: 1.1rem;
+}
+
+/* ---------- Cards ---------- */
+.mm-card {
+  background: var(--mm-surface);
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  box-shadow: var(--mm-shadow);
+}
+
+/* ---------- Avatars (initial + color from the name) ---------- */
+.mm-avatar {
+  --size: 36px;
+  width: var(--size);
+  height: var(--size);
+  min-width: var(--size);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: calc(var(--size) * 0.42);
+  color: #fff;
+  text-transform: uppercase;
+  position: relative;
+  user-select: none;
+}
+
+.mm-avatar.lg {
+  --size: 56px;
+}
+
+.mm-avatar.sm {
+  --size: 28px;
+}
+
+.mm-status-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  border: 2px solid var(--mm-surface);
+  background: var(--mm-success);
+}
+
+.mm-status-dot.offline {
+  background: var(--mm-warning);
+  animation: mm-blink 1.2s infinite;
+}
+
+/* ---------- Badges ---------- */
+.mm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--mm-surface-3);
+  color: var(--mm-muted);
+  white-space: nowrap;
+}
+
+.mm-badge.waiting {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--mm-success);
+}
+
+.mm-badge.playing {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--mm-warning);
+}
+
+.mm-badge.host {
+  background: rgba(251, 191, 36, 0.15);
+  color: var(--mm-warning);
+}
+
+.mm-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--mm-success);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.mm-live::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mm-success);
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6);
+  animation: mm-pulse 1.8s infinite;
+}
+
+.mm-live.offline {
+  color: var(--mm-warning);
+}
+
+.mm-live.offline::before {
+  background: var(--mm-warning);
+}
+
+/* ---------- Inputs ---------- */
+.mm-input {
+  background: var(--mm-surface-2);
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  color: var(--mm-text);
+  padding: 0.6rem 0.9rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  min-width: 0;
+}
+
+.mm-input::placeholder {
+  color: #6f6f7a;
+}
+
+.mm-input:focus {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 0 3px rgba(72, 176, 247, 0.2);
+}
+
+.mm-muted {
+  color: var(--mm-muted);
+}
+
+/* ---------- Toasts ---------- */
+#mm-toasts {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  pointer-events: none;
+}
+
+.mm-toast {
+  background: var(--mm-surface-3);
+  color: var(--mm-text);
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  box-shadow: var(--mm-shadow);
+  font-size: 0.9rem;
+  animation: mm-toast-in 0.25s ease;
+}
+
+.mm-toast.error {
+  border-color: rgba(248, 113, 113, 0.5);
+}
+
+/* ---------- Animations ---------- */
+@keyframes mm-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+@keyframes mm-blink {
+  50% { opacity: 0.35; }
+}
+
+@keyframes mm-toast-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mm-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Bootstrap 5.0 beta has no fw-semibold / gap utilities */
+.fw-semibold {
+  font-weight: 600 !important;
+}
+
+.gap-2 {
+  gap: 0.5rem !important;
+}
