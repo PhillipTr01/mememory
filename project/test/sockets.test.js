@@ -511,11 +511,11 @@ test("classic rooms have no turn timer", async () => {
 test("speed round: the host chooses the seconds per turn", async () => {
   const { alice, others: [bob] } = await openRoom("bob");
   alice.emit("updateSettings", { mode: "speed" });
-  alice.emit("updateSettings", { turnTime: 7 }); // not offered -> ignored
+  alice.emit("updateSettings", { turnTime: 20 }); // not offered anymore -> ignored
   bob.emit("updateSettings", { turnTime: 5 }); // not the host -> ignored
   alice.emit("updateSettings", { turnTime: 15 });
   const state = await waitFor(bob, "roomState", (s) => s.mode === "speed" && s.turnTime === 15000);
-  assert.deepStrictEqual(state.turnTimeOptions, [5, 10, 15, 20]);
+  assert.deepStrictEqual(state.turnTimeOptions, [3, 5, 10, 15]);
 });
 
 test("multiplayer: the host can only start when everybody is ready", async () => {
