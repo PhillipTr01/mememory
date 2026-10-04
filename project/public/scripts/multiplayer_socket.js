@@ -218,7 +218,22 @@ function renderPlayerList(state, previous) {
     info.className = "player-info";
     var name = document.createElement("div");
     name.className = "player-name";
-    name.innerText = player.name + (player.name == me.username ? " (you)" : "");
+    var nameText = document.createElement("span");
+    nameText.className = "player-name-text";
+    nameText.innerText = player.name;
+    name.appendChild(nameText);
+
+    // Host: star, own entry: small "You" tag
+    if (player.name == state.host) {
+      name.appendChild(createIcon("bi-star-fill player-host", "Host"));
+    }
+    if (player.name == me.username) {
+      var you = document.createElement("span");
+      you.className = "player-tag";
+      you.innerText = "You";
+      name.appendChild(you);
+    }
+
     var sub = document.createElement("div");
     sub.className = "player-sub";
     sub.innerText = !player.active
@@ -227,9 +242,7 @@ function renderPlayerList(state, previous) {
         ? "reconnecting..."
         : state.status == "playing" && state.turn == index
           ? "is playing"
-          : player.name == state.host && state.status == "waiting"
-            ? "host"
-            : "";
+          : "";
     info.append(name, sub);
 
     var points = document.createElement("div");
