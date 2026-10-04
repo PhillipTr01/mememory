@@ -50,8 +50,20 @@
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1rem;
+}
+
+@media (max-width: 991px) {
+  .stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .stat-card {
@@ -115,4 +127,18 @@
   width: 0;
   background: var(--mode);
   transition: width 0.6s ease;
+}
+
+.stat-mode {
+  display: block;
+}
+
+.stat-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--mm-muted);
+  white-space: nowrap;
 }

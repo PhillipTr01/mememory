@@ -123,8 +123,19 @@ document.addEventListener(
     document.getElementById("publicSwitch").addEventListener("change", (e) => {
       socket.emit("updateSettings", { isPublic: e.target.checked });
     });
-    document.getElementById("resultBoardButton").addEventListener("click", () => {
-      document.getElementById("resultOverlay").hidden = true;
+    document.getElementById("resultBoardButton").addEventListener("click", closeResult);
+
+    // The result must not block the board: a click next to it closes it,
+    // and if there is a card under the click, its meme is opened right away
+    document.getElementById("resultOverlay").addEventListener("click", (event) => {
+      if (event.target.id != "resultOverlay") return;
+      closeResult();
+      var below = document.elementFromPoint(event.clientX, event.clientY);
+      var card = below && below.closest(".card");
+      if (card) zoomCard(Number(card.id.replace("card-", "")));
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key == "Escape") closeResult();
     });
 
     setupChat();
@@ -557,6 +568,9 @@ socket.on("disableEndTurn", () => {
 socket.on("getWinner", (data) => {
   sessionOver = true;
 
+  // All cards are shown normally now (found pairs are not dimmed anymore)
+  document.getElementById("board").classList.add("revealed");
+
   // Remove all highlights, show how often each card was opened
   for (var i = 0; i < 66; i++) {
     document.getElementById(`cardcount-${i}`).innerText = data.cardCounter[i];
@@ -584,6 +598,10 @@ socket.on("getWinner", (data) => {
   // Reset storage
   sessionStorage.clear();
 });
+
+function closeResult() {
+  document.getElementById("resultOverlay").hidden = true;
+}
 
 function showResult(winners) {
   var won = winners.includes(me.username);

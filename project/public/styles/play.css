@@ -48,7 +48,7 @@
   align-items: center;
   justify-content: center;
   background: #1f1f1f;
-  border: 1px solid #34343d;
+  border: 0;
   box-shadow: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
@@ -64,7 +64,7 @@
 .card-back {
   transform: rotateY(0deg);
   background: #0d0d10;
-  border: 1px solid #3a3a45;
+  border: 0;
 }
 
 .card-back > img {
@@ -80,33 +80,34 @@
 
 /* Face down card under the mouse */
 .card:not(.flip):hover .card-front {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 1px #3b82f6;
+  background: #2a2a2a;
 }
 
 .flip {
   transform: rotateY(0deg);
 }
 
-/* Card that was just opened */
+/* Bootstrap border classes from the old highlight are not used anymore */
 .card.border {
   border: 0 !important;
 }
 
+/* Card that was just opened: lifted a little */
 .card.zoom-card-on-turn {
-  transform: rotateY(0deg) scale(1.04);
+  transform: rotateY(0deg) scale(1.05);
   z-index: 5;
 }
 
-.card.zoom-card-on-turn .card-back {
-  border-color: transparent;
-  box-shadow: 0 0 0 3px #3b82f6;
+/* Found pairs stay open, but step back */
+.card.flip:not(.zoom-card-on-turn) .card-back > img {
+  opacity: 0.45;
+  transition: opacity 0.4s ease;
 }
 
-/* Found pairs */
-.card.flip:not(.zoom-card-on-turn) .card-back {
-  border-color: rgba(52, 211, 153, 0.7);
-  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.45);
+/* After the game every card is shown normally */
+.board.revealed .card.flip .card-back > img,
+.card.flip:not(.zoom-card-on-turn):hover .card-back > img {
+  opacity: 1;
 }
 
 /* How often a card was opened (shown after the game) */
@@ -143,14 +144,6 @@
   flex-direction: column;
 }
 
-.zoom-card-on-turn {
-  -webkit-transform: scale(1.2);
-  -moz-transform: scale(1.2);
-  -o-transform: scale(1.2);
-  transform: scale(1.2);
-
-  z-index: 500;
-}
 
 .message p {
   border-radius: 0.25rem;
