@@ -73,6 +73,7 @@ function createSurrenderedTag() {
     tag.title = "Surrendered";
     var icon = document.createElement("i");
     icon.className = "bi bi-flag-fill";
-    tag.append(icon, document.createTextNode("Surrendered"));
+    tag.setAttribute("aria-label", "Surrendered");
+    tag.appendChild(icon);
     return tag;
 }
