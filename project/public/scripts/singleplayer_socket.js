@@ -4,6 +4,29 @@ var modal;
 var game;
 var backImage = "/static/images/logo_small.png";
 
+// Escape text before putting it into innerHTML (usernames, chat messages, ...)
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Something went wrong on the server (e.g. not enough memes) -> back to the lobby
+socket.on("gameError", (message) => {
+  alert(message || "Something went wrong. Please try again.");
+  window.location.href = "/lobby";
+});
+
+socket.on("connect_error", (error) => {
+  // Not logged in (anymore)
+  if (error && error.message == "unauthorized") {
+    window.location.href = "/";
+  }
+});
+
 document.addEventListener(
   "DOMContentLoaded",
   function () {
@@ -30,22 +53,10 @@ document.addEventListener(
   false,
 );
 
-// Get all Memes from database
-var request = new XMLHttpRequest();
-request.onreadystatechange = function () {
-  if (this.readyState == 4) {
-    if (this.status == 200) {
-      var links = JSON.parse(request.responseText);
-      // Initialize Game
-      socket.emit("initializingGame", {
-        gameID: sessionStorage.getItem("gameID"),
-        links: links,
-      });
-    }
-  }
-};
-request.open("GET", "/requests/memes");
-request.send();
+// Initialize Game - the server picks the memes
+socket.emit("initializingGame", {
+  gameID: sessionStorage.getItem("gameID"),
+});
 
 // Set computername on the scoreboard
 socket.on("setComputername", (name) => {
@@ -58,16 +69,16 @@ socket.on("highlightPlayer", (data) => {
     // Highlight player1
     document.getElementById("user1Username").classList.add("fw-bold");
     document.getElementById("user2Username").classList.remove("fw-bold");
-    document.getElementById("user1Username").innerHTML +=
-      `<i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
-    document.getElementById("user2Username").innerHTML = data.computer;
+    document.getElementById("user1Username").innerHTML =
+      escapeHtml(data.user) + `<i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
+    document.getElementById("user2Username").innerHTML = escapeHtml(data.computer);
   } else {
     // Highlight computer
     document.getElementById("user1Username").classList.remove("fw-bold");
     document.getElementById("user2Username").classList.add("fw-bold");
-    document.getElementById("user1Username").innerHTML = data.user;
-    document.getElementById("user2Username").innerHTML +=
-      `<i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
+    document.getElementById("user1Username").innerHTML = escapeHtml(data.user);
+    document.getElementById("user2Username").innerHTML =
+      escapeHtml(data.computer) + `<i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
   }
 });
 
@@ -113,27 +124,25 @@ socket.on("understateCard", (id) => {
 });
 
 function understateCard(id) {
-  document.getElementById("card-" + id).classList.remove("zoom-card-on-turn");
-  document.getElementById("card-" + id).classList.remove("border");
-  document.getElementById("card-" + id).classList.remove("border-3");
+  var card = document.getElementById("card-" + id);
+  if (card == null) return;
+  card.classList.remove("zoom-card-on-turn");
+  card.classList.remove("border");
+  card.classList.remove("border-3");
 }
 
 // Close opened cards
 socket.on("closeCards", (data) => {
-  var card = document.getElementById("card-" + data[1]);
-  card.classList.remove("flip");
-  setTimeout(() => {
-    card.childNodes[1].childNodes[1].src = "";
-  }, 500);
+  [data[1], data[2]].forEach((id) => {
+    var card = document.getElementById("card-" + id);
+    if (card == null) return;
 
-  var card2 = document.getElementById("card-" + data[2]);
-  card2.classList.remove("flip");
-  setTimeout(() => {
-    card2.childNodes[1].childNodes[1].src = "";
-  }, 500);
-
-  understateCard(data[1]);
-  understateCard(data[2]);
+    card.classList.remove("flip");
+    setTimeout(() => {
+      card.childNodes[1].childNodes[1].src = "";
+    }, 500);
+    understateCard(id);
+  });
 });
 
 // Activate endTurn-Button
@@ -163,16 +172,16 @@ socket.on("getWinner", (data) => {
 
   // Visual change for winner
   if (data.winner == 0) {
-    user1.innerHTML = data.user + " ";
-    user2.innerHTML = data.computer;
+    user1.innerHTML = escapeHtml(data.user) + " ";
+    user2.innerHTML = escapeHtml(data.computer);
     user1.innerHTML += `<i class="bi bi-trophy text-warning"></i>`;
     user2.classList.add("text-secondary");
     user2.classList.remove("fw-bold");
     user1.classList.add("fw-bold");
     score2.classList.add("text-secondary");
   } else {
-    user1.innerHTML = data.user;
-    user2.innerHTML = data.computer + " ";
+    user1.innerHTML = escapeHtml(data.user);
+    user2.innerHTML = escapeHtml(data.computer) + " ";
     user2.innerHTML += `<i class="bi bi-trophy text-warning"></i>`;
     user1.classList.add("text-secondary");
     user1.classList.remove("fw-bold");

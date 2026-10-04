@@ -87,7 +87,7 @@ function createScoreboard(tableID, array) {
     for (var i = 0; i < array.length; i++) {
         tableBody.innerHTML += `<tr class="tr-bottom-border">
                                     <td class="ps-3 ps-sm-5">${(i + 1)}.</td>
-                                    <td class="text-start">${array[i].username}</td>
+                                    <td class="text-start">${escapeHtml(array[i].username)}</td>
                                     <td class="text-end">${array[i].win}</td>
                                     <td class="text-end">${array[i].lose}</td>
                                     <td class="text-end pe-5 d-none d-md-block">${divide(array[i].win, array[i].lose)}</td>
@@ -100,4 +100,13 @@ function divide(x, y) {
     var z = x / y;
     n = Math.pow(10, 2);
     return (Math.round(z * n) / n);
+}
+// Escape text before putting it into innerHTML
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
