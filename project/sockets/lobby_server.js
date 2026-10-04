@@ -19,7 +19,7 @@ module.exports = function (io) {
 
   lobby.on("connection", (socket) => {
     // Open multiplayer rooms
-    socket.emit("roomList", multiplayerRoom.publicRooms());
+    socket.emit("roomList", multiplayerRoom.publicRooms(socket.data.username));
 
     socket.on(
       "playSingleplayer",
