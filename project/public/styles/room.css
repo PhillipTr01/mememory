@@ -1231,3 +1231,40 @@
 #turnTimeSetting[hidden] {
   display: none;
 }
+
+/* ---------- Ready ---------- */
+.ready-button {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+  background: transparent;
+}
+
+.ready-button:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.ready-button.is-ready {
+  background: var(--mm-success);
+  border-color: transparent;
+  color: #0f1a0c;
+}
+
+.ready-button.is-ready:hover:not(:disabled) {
+  background: #8fbd7e;
+}
+
+.mm-badge.ready {
+  background: rgba(127, 174, 110, 0.15);
+  color: var(--mm-success);
+}
+
+.mm-badge.not-ready {
+  background: var(--mm-surface-3);
+  color: var(--mm-muted);
+}
+
+.player-ready {
+  color: var(--mm-success);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}

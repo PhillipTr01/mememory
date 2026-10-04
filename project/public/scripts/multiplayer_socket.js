@@ -240,6 +240,11 @@ function renderPlayerList(state, previous) {
       }
     }
 
+    // Ready mark in the waiting room
+    if (state.status == "waiting" && player.name != state.host && player.ready) {
+      name.appendChild(createIcon("bi-check-circle-fill player-ready", "Ready"));
+    }
+
     // Host can kick players while waiting
     if (state.status == "waiting" && state.host == me.username && player.name != me.username) {
       name.appendChild(createKickButton(player.name, "player-kick"));
@@ -307,12 +312,12 @@ function renderWaitingRoom(state) {
   document.getElementById("playerCount").innerText = `${count} / ${state.maxPlayers}`;
 
   var waitingText = document.getElementById("waitingText");
-  waitingText.classList.toggle("waiting-dots", !isHost && !me.spectator);
+  waitingText.classList.remove("waiting-dots");
   waitingText.innerText = isHost
-    ? "Invite your friends and start when everybody is here."
+    ? "Invite your friends and start when everybody is ready."
     : me.spectator
-      ? "The room is full - you are watching this game."
-      : `Waiting for ${state.host} to start the game`;
+      ? "You are watching this game."
+      : "Press \"I'm ready\" when you want to play.";
 
   // Mode badge for everybody
   var badge = document.getElementById("modeBadge");
@@ -328,7 +333,7 @@ function renderWaitingRoom(state) {
     state.maxPlayers,
     state.host,
     me.username,
-    state.players.map((p) => [p.name, p.connected]),
+    state.players.map((p) => [p.name, p.connected, p.ready]),
   ]);
   var seats = document.getElementById("waitingPlayers");
   if (seats.dataset.key != seatsKey) {
@@ -344,14 +349,31 @@ function renderWaitingRoom(state) {
   var startButton = document.getElementById("startButton");
   startButton.hidden = !isHost;
 
-  var ready = state.players.filter((p) => p.connected).length;
-  var canStart = ready >= state.minPlayers;
+  // Ready button for everybody except the host
+  var mine = getMyPlayer(state);
+  var readyButton = document.getElementById("readyButton");
+  readyButton.hidden = isHost || mine == null || me.spectator;
+  if (mine != null) {
+    readyButton.classList.toggle("is-ready", mine.ready);
+    readyButton.replaceChildren(
+      createIcon(mine.ready ? "bi-check-circle-fill" : "bi-circle"),
+      document.createTextNode(mine.ready ? " Ready" : " I'm ready"),
+    );
+  }
+
+  // The host can start when enough players are there and all of them are ready
+  var connected = state.players.filter((p) => p.connected);
+  var notReady = connected.filter((p) => p.name != state.host && !p.ready);
+  var canStart = connected.length >= state.minPlayers && notReady.length == 0;
   startButton.disabled = !canStart;
-  document.getElementById("startHint").innerText = !isHost
-    ? ""
-    : canStart
-      ? `${ready} players ready`
-      : `At least ${state.minPlayers} players are needed to start.`;
+  document.getElementById("startHint").innerText =
+    connected.length < state.minPlayers
+      ? `At least ${state.minPlayers} players are needed to start.`
+      : notReady.length > 0
+        ? `Waiting for ${notReady.map((p) => p.name).join(", ")} to be ready`
+        : isHost
+          ? "Everybody is ready!"
+          : `Waiting for ${state.host} to start the game`;
 
   if (!isHost) return;
 
@@ -418,6 +440,12 @@ function createSeat(state, player, isHost) {
     you.className = "mm-badge";
     you.innerText = "You";
     tags.appendChild(you);
+  }
+  if (player.name != state.host && player.connected) {
+    var ready = document.createElement("span");
+    ready.className = "mm-badge " + (player.ready ? "ready" : "not-ready");
+    ready.append(createIcon(player.ready ? "bi-check2" : "bi-hourglass-split"), document.createTextNode(player.ready ? "Ready" : "Not ready"));
+    tags.appendChild(ready);
   }
   if (!player.connected) {
     var offline = document.createElement("span");
@@ -972,5 +1000,12 @@ socket.on("turnTimeout", (data) => {
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("#modePicker button").forEach((button) => {
     button.addEventListener("click", () => socket.emit("updateSettings", { mode: button.dataset.mode }));
+  });
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("readyButton").addEventListener("click", () => {
+    var mine = room && getMyPlayer(room);
+    if (mine) socket.emit("setReady", { ready: !mine.ready });
   });
 });

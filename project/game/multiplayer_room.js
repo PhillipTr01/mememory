@@ -20,7 +20,7 @@ function createRoom(host, board) {
     turnEndsAt: null, // speed round: when the current turn runs out
     turnToken: 0, // changes with every new turn, so old timers do nothing
     status: STATUS.WAITING,
-    // [{name, points, active, connected, socketId, disconnectedAt}]
+    // [{name, points, active, connected, ready, socketId, disconnectedAt}]
     // inactive = left or surrendered, not connected = may still come back
     players: [],
     spectators: new Map(), // socketId -> name
@@ -69,6 +69,7 @@ function serialize(gameID, room) {
       points: player.points,
       active: player.active,
       connected: player.connected,
+      ready: player.ready === true,
     })),
   };
 }
