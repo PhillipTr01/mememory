@@ -9,7 +9,10 @@
   --mm-text: #ececec;
   --mm-muted: #8f8f8f;
   --mm-accent: #3b82f6;
-  --mm-accent-2: #3b82f6;
+  --mm-accent-rgb: 59, 130, 246;
+  --mm-accent-hover: #2f6fd6;
+  --mm-on-accent: #fff; /* text on accent colored buttons */
+  --mm-accent-2: var(--mm-accent);
   --mm-success: #7fae6e;
   --mm-warning: #d4a64a;
   --mm-danger: #e0675a;
@@ -49,12 +52,12 @@
 .mm-btn-primary {
   background: var(--mm-gradient);
   border: none;
-  color: #fff;
+  color: var(--mm-on-accent);
   box-shadow: none;
 }
 
 .mm-btn-primary:hover:not(:disabled) {
-  background: #2f6fd6;
+  background: var(--mm-accent-hover);
   box-shadow: none;
 }
 
@@ -65,7 +68,7 @@
 }
 
 .mm-btn-success:hover:not(:disabled) {
-  background: #2f6fd6;
+  background: var(--mm-accent-hover);
   box-shadow: none;
 }
 
@@ -219,7 +222,7 @@
 
 .mm-input:focus {
   border-color: var(--mm-accent);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 3px rgba(var(--mm-accent-rgb), 0.2);
 }
 
 .mm-muted {
@@ -779,4 +782,13 @@ html.flip-scroll {
   font-weight: 600;
   vertical-align: middle;
   white-space: nowrap;
+}
+
+/* Speed round: the whole room uses a yellow / orange accent */
+body.mode-speed {
+  --mm-accent: #f5a524;
+  --mm-accent-rgb: 245, 165, 36;
+  --mm-accent-hover: #e0921a;
+  --mm-gradient: var(--mm-accent);
+  --mm-on-accent: #1b1406;
 }
