@@ -947,6 +947,16 @@ socket.on("turnTimeout", (data) => {
 
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("#modePicker button").forEach((button) => {
-    button.addEventListener("click", () => socket.emit("updateSettings", { mode: button.dataset.mode }));
+    button.addEventListener("click", () => {
+      var mode = button.dataset.mode;
+      socket.emit("updateSettings", { mode: mode });
+
+      // The server answers with a new room state - tell the user if it doesn't
+      setTimeout(() => {
+        if (room && room.status == "waiting" && room.mode != mode) {
+          showToast("The server didn't accept the mode. Please restart the server (it may run old code).", "error");
+        }
+      }, 2500);
+    });
   });
 });
