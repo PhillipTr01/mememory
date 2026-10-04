@@ -351,9 +351,15 @@ function createSeat(state, player, isHost) {
     kick.title = "Remove " + player.name;
     kick.appendChild(createIcon("bi-x-lg"));
     kick.addEventListener("click", () => {
-      if (confirm(`Remove ${player.name} from the room?`)) {
-        socket.emit("kickPlayer", { name: player.name });
-      }
+      confirmDialog({
+        icon: "👢",
+        title: `Remove ${player.name}?`,
+        text: "The player can still watch, but can't take a seat in this room again.",
+        confirmLabel: "Remove",
+        danger: true,
+      }).then((ok) => {
+        if (ok) socket.emit("kickPlayer", { name: player.name });
+      });
     });
     seat.appendChild(kick);
   }
@@ -454,9 +460,17 @@ function emitEndTurn() {
 }
 
 function surrender() {
-  if (confirm("Do you really want to surrender?")) {
-    socket.emit("surrender");
-  }
+  confirmDialog({
+    icon: "🏳️",
+    title: "Surrender?",
+    text: "You leave the game and it counts as a loss. You can keep watching the others.",
+    cancelLabel: "Keep playing",
+    confirmLabel: "Surrender",
+    confirmIcon: "bi-flag-fill me-1",
+    danger: true,
+  }).then((ok) => {
+    if (ok) socket.emit("surrender");
+  });
 }
 
 // Cards that are already open when (re)joining

@@ -64,3 +64,81 @@ function copyText(text, button) {
     prompt("Copy this:", text);
   }
 }
+
+/*
+ * Styled confirm dialog instead of the browser's confirm().
+ * Returns a Promise<boolean>. Escape / click outside = cancel.
+ */
+function confirmDialog(options) {
+  return new Promise((resolve) => {
+    var previousFocus = document.activeElement;
+
+    var backdrop = document.createElement("div");
+    backdrop.className = "mm-dialog-backdrop";
+
+    var dialog = document.createElement("div");
+    dialog.className = "mm-dialog" + (options.danger ? " danger" : "");
+    dialog.setAttribute("role", "alertdialog");
+    dialog.setAttribute("aria-modal", "true");
+
+    var icon = document.createElement("div");
+    icon.className = "mm-dialog-icon";
+    icon.innerText = options.icon || "❓";
+
+    var title = document.createElement("h2");
+    title.className = "mm-dialog-title";
+    title.id = "mm-dialog-title";
+    title.innerText = options.title;
+    dialog.setAttribute("aria-labelledby", title.id);
+
+    var text = document.createElement("p");
+    text.className = "mm-dialog-text";
+    text.innerText = options.text || "";
+
+    var actions = document.createElement("div");
+    actions.className = "mm-dialog-actions";
+
+    var cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "mm-btn";
+    cancel.innerText = options.cancelLabel || "Cancel";
+
+    var confirm = document.createElement("button");
+    confirm.type = "button";
+    confirm.className = "mm-btn " + (options.danger ? "mm-btn-danger-solid" : "mm-btn-primary");
+    if (options.confirmIcon) confirm.appendChild(createIcon(options.confirmIcon));
+    confirm.appendChild(document.createTextNode(options.confirmLabel || "OK"));
+
+    actions.append(cancel, confirm);
+    dialog.append(icon, title, text, actions);
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+
+    function close(result) {
+      document.removeEventListener("keydown", onKey);
+      backdrop.classList.add("closing");
+      setTimeout(() => backdrop.remove(), 150);
+      if (previousFocus && previousFocus.focus) previousFocus.focus();
+      resolve(result);
+    }
+
+    function onKey(event) {
+      if (event.key == "Escape") close(false);
+      // Keep the focus inside the dialog
+      if (event.key == "Tab") {
+        event.preventDefault();
+        (document.activeElement == cancel ? confirm : cancel).focus();
+      }
+    }
+
+    cancel.addEventListener("click", () => close(false));
+    confirm.addEventListener("click", () => close(true));
+    backdrop.addEventListener("click", (event) => {
+      if (event.target == backdrop) close(false);
+    });
+    document.addEventListener("keydown", onKey);
+
+    // The safe choice has the focus
+    cancel.focus();
+  });
+}

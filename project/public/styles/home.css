@@ -186,3 +186,73 @@
     padding: 0.45rem 0.6rem;
   }
 }
+
+/* ---------- Compact scoreboard: all 10 places fit on one screen ---------- */
+.scoreboard {
+  padding: 1.1rem 1.25rem;
+}
+
+.scoreboard .page-title {
+  font-size: 1.35rem;
+}
+
+.scoreboard .mode-tabs {
+  margin-bottom: 0.75rem;
+}
+
+.scoreboard .mode-tab {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.score-list {
+  min-height: 0;
+}
+
+.score-row {
+  grid-template-columns: 1.8rem auto minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  padding: 0.3rem 0.65rem;
+  margin-bottom: 0.3rem;
+  border-left-width: 3px;
+}
+
+.score-row .mm-avatar {
+  --size: 26px;
+}
+
+.score-rank {
+  font-size: 0.9rem;
+}
+
+.score-rank.medal {
+  font-size: 1.1rem;
+}
+
+.score-name {
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+.score-rate {
+  margin-top: 0.1rem;
+  font-size: 0.68rem;
+}
+
+.score-rate .bar {
+  width: 60px;
+  height: 3px;
+}
+
+.score-stats {
+  gap: 0.6rem;
+}
+
+.score-stats .value {
+  font-size: 0.95rem;
+  line-height: 1.1;
+}
+
+.score-stats .label {
+  font-size: 0.58rem;
+}

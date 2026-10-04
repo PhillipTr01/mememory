@@ -568,3 +568,230 @@
 .dropdown-menu.bg-dark .dropdown-item:hover {
   background: var(--mm-surface-2) !important;
 }
+
+/* ---------- Confirm dialog ---------- */
+.mm-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(8, 8, 12, 0.72);
+  backdrop-filter: blur(5px);
+  animation: mm-dialog-fade 0.15s ease;
+}
+
+.mm-dialog-backdrop.closing {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.mm-dialog {
+  width: 100%;
+  max-width: 380px;
+  padding: 1.75rem 1.5rem 1.4rem;
+  text-align: center;
+  color: var(--mm-text);
+  background: var(--mm-surface);
+  border: 1px solid var(--mm-border);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  animation: mm-dialog-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mm-dialog.danger {
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.mm-dialog-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 0.9rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  background: var(--mm-surface-2);
+}
+
+.mm-dialog.danger .mm-dialog-icon {
+  background: rgba(248, 113, 113, 0.14);
+  box-shadow: 0 0 0 6px rgba(248, 113, 113, 0.06);
+}
+
+.mm-dialog-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.mm-dialog-text {
+  color: var(--mm-muted);
+  font-size: 0.95rem;
+  margin-bottom: 1.4rem;
+}
+
+.mm-dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.mm-btn-danger-solid {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+  border: none;
+  color: #fff;
+}
+
+.mm-btn-danger-solid:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+  box-shadow: 0 8px 22px rgba(239, 68, 68, 0.35);
+}
+
+@keyframes mm-dialog-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mm-dialog-pop {
+  from { opacity: 0; transform: scale(0.85) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ---------- Flip scroll (homepage) ---------- */
+html.flip-scroll {
+  scroll-snap-type: y proximity;
+}
+
+.flip-section {
+  position: relative;
+  min-height: 100vh;
+  scroll-snap-align: start;
+  overflow-x: hidden;
+}
+
+.flip-content {
+  transform-origin: 50% 0;
+  transition: transform 0.85s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.85s ease;
+}
+
+.flip-section:not(.in-view) .flip-content {
+  opacity: 0;
+  transform: perspective(1400px) rotateX(-16deg) translateY(50px) scale(0.96);
+}
+
+.flip-dots {
+  position: fixed;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.flip-dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  transition: transform 0.25s ease, background 0.25s ease, height 0.25s ease;
+}
+
+.flip-dot:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.flip-dot.active {
+  height: 22px;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.flip-next {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  border: none;
+  background: transparent;
+  color: var(--mm-muted);
+  font-size: 0.8rem;
+  transition: color 0.2s ease;
+}
+
+.flip-next .bi {
+  font-size: 1.4rem;
+  animation: flip-bounce 1.8s ease-in-out infinite;
+}
+
+.flip-next:hover {
+  color: var(--mm-text);
+}
+
+@keyframes flip-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+@media (max-width: 767px) {
+  .flip-dots {
+    right: 8px;
+  }
+
+  .flip-next {
+    display: none;
+  }
+}
+
+/* ---------- Play button in the header ---------- */
+.play-button {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 260px;
+  border-radius: 999px;
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff !important;
+  text-decoration: none;
+}
+
+.play-button .bi {
+  font-size: 1.4rem;
+  transition: transform 0.25s ease;
+}
+
+.play-button:hover .bi {
+  transform: scale(1.2);
+}
+
+/* Light reflex that runs over the button */
+.play-button::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+  animation: play-shine 3.5s ease-in-out infinite;
+}
+
+@keyframes play-shine {
+  0%, 60% { left: -60%; }
+  100% { left: 130%; }
+}
