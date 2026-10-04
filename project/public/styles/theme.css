@@ -760,3 +760,8 @@ html.flip-scroll {
   transition: transform 0.25s ease;
 }
 
+
+.info-card p:last-child,
+.info-card ul:last-child {
+  margin-bottom: 0;
+}

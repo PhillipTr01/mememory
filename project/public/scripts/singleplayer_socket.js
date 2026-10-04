@@ -193,6 +193,9 @@ socket.on("getWinner", (data) => {
   document.getElementById("board").classList.remove("my-turn");
   showToast(data.winner == 0 ? "You win" : `${data.computer} wins`);
 
+  // All cards are shown normally now (found pairs are not dimmed anymore)
+  document.getElementById("board").classList.add("revealed");
+
   // Remove all highlights
   for (var i = 0; i < 66; i++) {
     document.getElementById(`cardcount-${i}`).innerText = data.cardCounter[i];

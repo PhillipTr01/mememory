@@ -35,8 +35,16 @@ function showStatistic(statistic) {
         document.getElementById(mode + 'Win').innerText = win;
         document.getElementById(mode + 'Lose').innerText = lose;
         document.getElementById(mode + 'Bar').style.width = percent(win, lose) + '%';
-        document.getElementById(mode + 'Rate').innerText =
-            win + lose == 0 ? 'No games yet' : percent(win, lose) + '% win rate · ' + (win + lose) + ' games';
+        var footer = document.getElementById(mode + 'Rate');
+        if (win + lose == 0) {
+            footer.innerText = 'No games yet';
+        } else {
+            var rate = document.createElement('span');
+            rate.innerText = percent(win, lose) + '% win rate';
+            var games = document.createElement('span');
+            games.innerText = (win + lose) + (win + lose == 1 ? ' game' : ' games');
+            footer.replaceChildren(rate, games);
+        }
     });
 
     document.getElementById('totalGames').innerText = totalGames;
