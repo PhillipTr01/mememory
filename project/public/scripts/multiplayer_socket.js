@@ -238,10 +238,15 @@ function renderPlayerList(state, previous) {
       }
     }
 
+    // Out of the game: tag with a flag instead of a text
+    if (!player.active) {
+      name.appendChild(createSurrenderedTag());
+    }
+
     var sub = document.createElement("div");
     sub.className = "player-sub";
     sub.innerText = !player.active
-      ? "left the game"
+      ? ""
       : !player.connected
         ? "reconnecting..."
         : state.status == "playing" && state.turn == index
@@ -633,7 +638,11 @@ function showResult(winners) {
     rank.innerText = index + 1 + ".";
     var name = document.createElement("span");
     name.className = "name";
-    name.innerText = player.name + (player.active ? "" : " (left)");
+    var nameText = document.createElement("span");
+    nameText.className = "player-name-text";
+    nameText.innerText = player.name;
+    name.appendChild(nameText);
+    if (!player.active) name.appendChild(createSurrenderedTag());
     var points = document.createElement("span");
     points.className = "points";
     points.innerText = player.points;
