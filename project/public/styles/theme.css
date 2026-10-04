@@ -765,3 +765,18 @@ html.flip-scroll {
 .info-card ul:last-child {
   margin-bottom: 0;
 }
+
+/* Game mode badge (waiting room, lobby) */
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(212, 166, 74, 0.15);
+  color: var(--mm-warning);
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
+  white-space: nowrap;
+}

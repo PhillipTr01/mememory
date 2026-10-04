@@ -190,6 +190,10 @@ module.exports = function (io) {
           }
         }
 
+        if (config.MODES.includes(data.mode)) {
+          room.mode = data.mode;
+        }
+
         if (typeof data.isPublic === "boolean") {
           room.isPublic = data.isPublic;
         }
@@ -269,6 +273,7 @@ module.exports = function (io) {
             }
 
             systemMessage(gameID, room, `The game has started. ${room.players[room.turn].name} begins!`, "start");
+            startTurnTimer(gameID, room);
             emitRoomState(gameID, room);
           },
           config.START_ANIMATION,
@@ -495,7 +500,22 @@ module.exports = function (io) {
       room.checkingCards = true;
 
       if (!checkCards(socket.gameID, room)) {
-        socket.emit("activateEndTurn");
+        if (room.mode === "speed") {
+          // Speed round: the turn passes on its own after a short look at the cards
+          const token = room.turnToken;
+          const gameID = socket.gameID;
+          roomTimeout(
+            room,
+            () => {
+              if (room.status !== STATUS.PLAYING || room.turnToken !== token) return;
+              nextTurn(gameID, room);
+              emitRoomState(gameID, room);
+            },
+            config.SPEED_MISS_DELAY,
+          );
+        } else {
+          socket.emit("activateEndTurn");
+        }
       }
     }
 
@@ -527,9 +547,10 @@ module.exports = function (io) {
       player.points++;
       multiPlayer.to(gameID).emit("matchFound", { name: player.name, ids: [id, id2] });
 
-      // Reset turn
+      // Reset turn - a found pair gives another try with fresh time
       room.openedCards = [];
       room.checkingCards = false;
+      startTurnTimer(gameID, room);
       emitRoomState(gameID, room);
     }
 
@@ -564,12 +585,43 @@ module.exports = function (io) {
     // Reset turn
     room.openedCards = [];
     room.checkingCards = false;
+    startTurnTimer(gameID, room);
+  }
+
+  /*
+   * Speed round: every turn has a time limit. When it runs out, the open
+   * cards are closed and the next player continues.
+   */
+  function startTurnTimer(gameID, room) {
+    room.turnToken++;
+    if (room.mode !== "speed" || room.status !== STATUS.PLAYING) {
+      room.turnEndsAt = null;
+      return;
+    }
+
+    const token = room.turnToken;
+    room.turnEndsAt = Date.now() + config.SPEED_TURN_TIME;
+
+    roomTimeout(
+      room,
+      () => {
+        if (room.status !== STATUS.PLAYING || room.turnToken !== token) return;
+        const player = room.players[room.turn];
+        multiPlayer.to(gameID).emit("turnTimeout", { name: player.name });
+        systemMessage(gameID, room, `${player.name} ran out of time.`, "timer");
+        nextTurn(gameID, room);
+        emitRoomState(gameID, room);
+      },
+      config.SPEED_TURN_TIME,
+    );
   }
 
   async function getWinner(gameID, room) {
     // Only finish a game once
     if (room.status !== STATUS.PLAYING && room.status !== STATUS.STARTING) return;
     room.status = STATUS.FINISHED;
+    room.turnEndsAt = null;
+    room.turnToken++;
 
     // Players who left can't win
     const active = activePlayers(room);

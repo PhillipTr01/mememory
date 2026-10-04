@@ -89,7 +89,7 @@
                 <section id="waitingRoom" class="waiting mm-card" hidden>
                     <div class="waiting-head">
                         <div>
-                            <h1 class="waiting-title">Waiting room</h1>
+                            <h1 class="waiting-title">Waiting room <span id="modeBadge" class="mode-badge" hidden></span></h1>
                             <p id="waitingText" class="mm-muted mb-0"></p>
                         </div>
                         <button type="button" id="leaveButton" class="mm-btn mm-btn-ghost mm-btn-sm">
@@ -119,6 +119,15 @@
 
                     <!--- Only visible for the host --->
                     <div id="hostSettings" class="host-settings" hidden>
+                        <div class="setting setting-wide">
+                            <span class="setting-label">Mode
+                                <small id="modeHint" class="mm-muted d-block"></small>
+                            </span>
+                            <div id="modePicker" class="segmented" role="group" aria-label="Game mode">
+                                <button type="button" data-mode="classic">Classic</button>
+                                <button type="button" data-mode="speed"><i class="bi bi-lightning-charge-fill"></i> Speed</button>
+                            </div>
+                        </div>
                         <div class="setting">
                             <span class="setting-label">Max. players</span>
                             <div id="maxPlayersPicker" class="segmented" role="group" aria-label="Max. players"></div>
