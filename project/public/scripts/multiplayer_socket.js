@@ -165,6 +165,9 @@ socket.on("roomState", (state) => {
   var previous = room;
   room = state;
 
+  // Speed round: yellow / orange accent color for the whole room
+  document.body.classList.toggle("mode-speed", state.mode == "speed");
+
   renderPlayerList(state, previous);
   renderWaitingRoom(state);
   renderTurn(state, previous);

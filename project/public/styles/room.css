@@ -151,8 +151,8 @@
 }
 
 .seat.me {
-  border-color: rgba(59, 130, 246, 0.6);
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25) inset;
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  box-shadow: 0 0 0 1px rgba(var(--mm-accent-rgb), 0.25) inset;
 }
 
 .seat.offline {
@@ -274,7 +274,7 @@
 .segmented button.active {
   background: var(--mm-gradient);
   border-color: transparent;
-  color: #fff;
+  color: var(--mm-on-accent);
 }
 
 .segmented button:disabled {
@@ -323,7 +323,7 @@
 }
 
 .toggle input:focus-visible + .toggle-track {
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+  box-shadow: 0 0 0 3px rgba(var(--mm-accent-rgb), 0.35);
 }
 
 .waiting-dots::after {
@@ -566,7 +566,7 @@
 
 .msg.own .msg-bubble {
   background: var(--mm-gradient);
-  color: #fff;
+  color: var(--mm-on-accent);
   border-top-left-radius: 16px;
   border-top-right-radius: 6px;
 }
@@ -625,7 +625,7 @@
   font-size: 0.8rem;
   font-weight: 600;
   background: var(--mm-gradient);
-  color: #fff;
+  color: var(--mm-on-accent);
   box-shadow: none;
 }
 
@@ -670,7 +670,7 @@
 
 .chat-form:focus-within {
   border-color: var(--mm-accent);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 3px rgba(var(--mm-accent-rgb), 0.2);
 }
 
 .chat-input {
@@ -703,7 +703,7 @@
   border-radius: 50%;
   border: none;
   background: var(--mm-gradient);
-  color: #fff;
+  color: var(--mm-on-accent);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1240,7 +1240,7 @@
 }
 
 .ready-button:hover:not(:disabled) {
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(var(--mm-accent-rgb), 0.1);
 }
 
 .ready-button.is-ready {
