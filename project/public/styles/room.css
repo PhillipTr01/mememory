@@ -1369,3 +1369,87 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- Compact waiting room: fits on one screen ---------- */
+.waiting {
+  padding: 1.25rem 1.5rem;
+}
+
+.waiting-head {
+  margin-bottom: 1rem;
+}
+
+.waiting-title {
+  font-size: 1.5rem;
+}
+
+.invite {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.invite-code {
+  font-size: 1.4rem;
+}
+
+.seat-grid {
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.seat {
+  height: 118px;
+  gap: 0.3rem;
+  padding: 0.6rem 0.5rem;
+}
+
+.seat .mm-avatar.lg {
+  --size: 44px;
+}
+
+.seat.empty .bi {
+  font-size: 1.3rem;
+}
+
+.host-settings {
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.setting {
+  padding: 0.6rem 0.9rem;
+}
+
+.waiting-footer .mm-btn-lg {
+  padding: 0.65rem 1.25rem;
+  font-size: 1rem;
+}
+
+@media (max-height: 820px) {
+  .waiting {
+    padding: 1rem 1.25rem;
+  }
+
+  .waiting-head,
+  .invite,
+  .seat-grid,
+  .host-settings {
+    margin-bottom: 0.75rem;
+  }
+
+  .waiting-title {
+    font-size: 1.35rem;
+  }
+
+  .seat {
+    height: 106px;
+  }
+
+  .seat .mm-avatar.lg {
+    --size: 38px;
+  }
+
+  .setting {
+    padding: 0.5rem 0.85rem;
+  }
+}
