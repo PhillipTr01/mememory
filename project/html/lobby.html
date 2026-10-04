@@ -58,50 +58,29 @@
             </div>
             <div class="col-6 text-end fw-light">
               <div class="d-flex text-light pl-xl-5">
-                <div class="ms-auto dropdown">
-                  <p
-                    id="username"
-                    class="m-0 pb-1 dropdown-toggle fs-4 overflow-hidden"
-                    data-bs-toggle="dropdown"
-                  ></p>
-                  <ul class="dropdown-menu dropdown-menu-end bg-dark">
-                    <li>
-                      <div
-                        class="dropdown-item d-flex text-light"
-                        onclick="startScoreboardPage()"
-                      >
-                        <i class="bi bi-trophy pe-3"></i>
-                        <p class="m-0">Scoreboard</p>
+                <div class="ms-auto profile-menu" id="profileMenu">
+                  <button type="button" class="profile-trigger" id="profileTrigger" aria-haspopup="true" aria-expanded="false">
+                    <span id="profileAvatar" class="mm-avatar sm"></span>
+                    <span class="profile-name" id="username"></span>
+                    <i class="bi bi-chevron-down profile-caret"></i>
+                  </button>
+                  <div class="profile-dropdown" id="profileDropdown" hidden>
+                    <div class="profile-head">
+                      <span id="profileAvatarLarge" class="mm-avatar"></span>
+                      <div class="overflow-hidden">
+                        <div class="profile-head-name" id="profileName"></div>
+                        <div class="mm-muted small">Signed in</div>
                       </div>
-                    </li>
-                    <li class="mt-2">
-                      <div
-                        class="dropdown-item d-flex text-light"
-                        onclick="startProfilePage()"
-                      >
-                        <i class="bi bi-bar-chart-line pe-3"></i>
-                        <p class="m-0">Profile</p>
-                      </div>
-                    </li>
-                    <li class="mt-2">
-                      <div
-                        class="dropdown-item d-flex text-light"
-                        onclick="startSettingsPage()"
-                      >
-                        <i class="bi bi-gear pe-3"></i>
-                        <p class="m-0">Settings</p>
-                      </div>
-                    </li>
-                    <li class="mt-2">
-                      <div
-                        class="dropdown-item d-flex text-danger"
-                        onclick="logoutUser()"
-                      >
-                        <i class="bi bi-box-arrow-right pe-3"></i>
-                        <p class="m-0 fw-bold">Logout</p>
-                      </div>
-                    </li>
-                  </ul>
+                    </div>
+                    <a href="/lobby" class="profile-item"><i class="bi bi-controller"></i> Play</a>
+                    <a href="/home" class="profile-item"><i class="bi bi-trophy"></i> Scoreboard</a>
+                    <a href="/user" class="profile-item"><i class="bi bi-bar-chart-line"></i> Profile</a>
+                    <a href="/settings" class="profile-item"><i class="bi bi-gear"></i> Settings</a>
+                    <div class="profile-divider"></div>
+                    <button type="button" class="profile-item danger" id="logoutButton">
+                      <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -115,14 +94,12 @@
       <section class="mb-5">
         <div class="section-head">
           <h2 class="section-title">Singleplayer</h2>
-          <span class="mm-muted">Train your memory against a bot</span>
         </div>
         <div class="bot-grid">
           <button type="button" class="bot-card bot-easy" onclick="playSingleplayer(0)">
             <img src="/static/images/avatar_easy_200.png" alt="" class="bot-avatar" />
             <span class="bot-text">
               <span class="bot-name">Easy</span>
-              <span class="bot-desc">Remembers 3 moves</span>
             </span>
             <i class="bi bi-play-fill bot-play"></i>
           </button>
@@ -130,7 +107,6 @@
             <img src="/static/images/avatar_medium_200.png" alt="" class="bot-avatar" />
             <span class="bot-text">
               <span class="bot-name">Medium</span>
-              <span class="bot-desc">Remembers 7 moves</span>
             </span>
             <i class="bi bi-play-fill bot-play"></i>
           </button>
@@ -138,7 +114,6 @@
             <img src="/static/images/avatar_hard_200.png" alt="" class="bot-avatar" />
             <span class="bot-text">
               <span class="bot-name">Hard</span>
-              <span class="bot-desc">Remembers 12 moves</span>
             </span>
             <i class="bi bi-play-fill bot-play"></i>
           </button>
@@ -146,7 +121,6 @@
             <img src="/static/images/avatar_expert_200.png" alt="" class="bot-avatar" />
             <span class="bot-text">
               <span class="bot-name">Expert</span>
-              <span class="bot-desc">Remembers almost everything</span>
             </span>
             <i class="bi bi-play-fill bot-play"></i>
           </button>
@@ -207,7 +181,7 @@
       </section>
     </main>
 
-    <footer>
+    <footer class="app-footer">
       <div class="container-fluid pt-5">
         <nav class="d-flex justify-content-center text-center">
           <div>
@@ -235,9 +209,9 @@
       crossorigin="anonymous"
     ></script>
     <!--- Custom JS --->
-    <script src="/socket.io/socket.io.js"></script>
     <script src="/static/scripts/ui.js"></script>
-    <script src="/static/scripts/lobby.js"></script>
+    <script src="/static/scripts/nav.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <script src="/static/scripts/lobby_socket.js"></script>
   </body>
 </html>

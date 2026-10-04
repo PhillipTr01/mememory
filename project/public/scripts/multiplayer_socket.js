@@ -143,11 +143,9 @@ function leaveRoom() {
 socket.on("joinedRoom", (data) => {
   me = data;
 
-  var surrenderButton = document.getElementById("surrenderButton");
+  // Spectators (and players who surrendered) can't surrender
   if (me.spectator) {
-    surrenderButton.disabled = true;
-    surrenderButton.innerText = "Spectating";
-    surrenderButton.classList.remove("mm-btn-danger");
+    document.getElementById("surrenderButton").hidden = true;
   }
 });
 
@@ -157,7 +155,7 @@ socket.on("roomState", (state) => {
 
   renderPlayerList(state, previous);
   renderWaitingRoom(state);
-  renderTurnBanner(state);
+  renderTurn(state, previous);
 
   var waiting = state.status == "waiting";
   document.getElementById("waitingRoom").hidden = !waiting;
@@ -170,9 +168,9 @@ socket.on("roomState", (state) => {
   var player = getMyPlayer(state);
   var inGame = (state.status == "playing" || state.status == "starting") && player != null && player.active;
   document.getElementById("playButton").hidden = !inGame;
-  if (!me.spectator && state.status != "finished") {
-    document.getElementById("surrenderButton").disabled = !inGame;
-  }
+  var surrenderButton = document.getElementById("surrenderButton");
+  surrenderButton.hidden = !inGame || me.spectator;
+  surrenderButton.disabled = !inGame;
 
   // My turn is over -> the End Turn button can't be used anymore
   if (!isMyTurn(state)) {
@@ -242,19 +240,13 @@ function renderPlayerList(state, previous) {
   spectators.replaceChildren(createIcon("bi-eye me-1"), document.createTextNode(state.spectators.join(", ")));
 }
 
-function renderTurnBanner(state) {
-  var banner = document.getElementById("turnBanner");
-  var player = state.players[state.turn];
-  banner.classList.toggle("mine", isMyTurn(state));
+// The board glows when it's my turn, plus a short hint when the turn changes to me
+function renderTurn(state, previous) {
+  var mine = isMyTurn(state);
+  document.getElementById("board").classList.toggle("my-turn", mine);
 
-  if (state.status == "starting") {
-    banner.innerText = "The game is about to start...";
-  } else if (state.status == "finished") {
-    banner.innerText = "Game over";
-  } else if (isMyTurn(state)) {
-    banner.innerText = "Your turn! Find a pair 🎯";
-  } else if (player) {
-    banner.innerText = `${player.name}'s turn`;
+  if (mine && (previous == null || !isMyTurn(previous))) {
+    showToast("Your turn! Find a pair 🎯");
   }
 }
 
@@ -573,7 +565,7 @@ socket.on("getWinner", (data) => {
   playButton.hidden = false;
   playButton.disabled = false;
   playButton.innerText = "Back to Lobby";
-  document.getElementById("surrenderButton").disabled = true;
+  document.getElementById("surrenderButton").hidden = true;
 
   showResult(data.winners);
 
@@ -728,9 +720,17 @@ function getImageUrl(text) {
   }
 }
 
-function isEmojiOnly(text) {
+// Only 1-3 emojis (no text) -> shown big. Longer emoji rows stay in a normal bubble.
+function isJumboEmoji(text) {
   try {
-    return /^(\p{Extended_Pictographic}|\p{Emoji_Component}|\s){1,12}$/u.test(text) && /\p{Extended_Pictographic}/u.test(text);
+    var compact = text.replace(/\s+/g, "");
+    if (!/^(\p{Extended_Pictographic}|\p{Emoji_Component}|\u200d|\ufe0f)+$/u.test(compact)) return false;
+    if (!/\p{Extended_Pictographic}/u.test(compact)) return false;
+
+    var count = window.Intl && Intl.Segmenter
+      ? [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(compact)].length
+      : (compact.match(/\p{Extended_Pictographic}/gu) || []).length;
+    return count <= 3;
   } catch (error) {
     return false;
   }
@@ -812,7 +812,7 @@ function addChatMessage(message, live) {
       });
       bubble.appendChild(image);
     } else {
-      if (isEmojiOnly(message.text)) bubble.classList.add("emoji-only");
+      if (isJumboEmoji(message.text)) bubble.classList.add("jumbo");
       bubble.appendChild(document.createTextNode(message.text));
     }
 

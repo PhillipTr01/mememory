@@ -39,29 +39,38 @@
         <nav class="navbar navbar-expand-lg navbar-dark">
             <div class="container-fluid px-3">
                 <div class="row displ-content">
-                    <div class="col-12 col-sm-6 col-lg-4 order-1 order-sm-1 order-lg-1">
+                    <div class="col-6">
                         <div class="navbar-brand active">
                             <a href="/">
                                 <img src="/static/images/logo.png" alt="logo" class="img-fluid logo">
                             </a>
                         </div>
                     </div>
-                    <div class="col-12 col-lg-4 order-sm-3 order-2 order-lg-2 text-center pt-2 pb-3 pt-md-0 pb-md-0">
-                        <button type="submit" id="surrenderButton"
-                            class="mm-btn mm-btn-danger w-100 max-width-300"
-                            onclick="surrender()" disabled>Surrender</button>
+                    <div class="col-6 d-flex justify-content-end align-items-center">
+                        <div class="ms-auto profile-menu" id="profileMenu">
+                  <button type="button" class="profile-trigger" id="profileTrigger" aria-haspopup="true" aria-expanded="false">
+                    <span id="profileAvatar" class="mm-avatar sm"></span>
+                    <span class="profile-name" id="username"></span>
+                    <i class="bi bi-chevron-down profile-caret"></i>
+                  </button>
+                  <div class="profile-dropdown" id="profileDropdown" hidden>
+                    <div class="profile-head">
+                      <span id="profileAvatarLarge" class="mm-avatar"></span>
+                      <div class="overflow-hidden">
+                        <div class="profile-head-name" id="profileName"></div>
+                        <div class="mm-muted small">Signed in</div>
+                      </div>
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-4 order-3 order-sm-2 order-lg-3 fw-light">
-                        <div class="d-flex text-secondary pl-xl-5">
-                            <div class="mx-auto ms-sm-auto me-sm-0">
-                                <div id="gameIDdiv">
-                                    <p id="gameID" class="m-0 pb-0 fs-4 pt-4 pt-sm-0" data-bs-toggle="popover"
-                                        data-bs-placement="bottom" data-bs-content="copied" data-bs-container="body">
-                                    </p>
-                                    <p id="gameIDdescr" class="fs-7 p-0 m-0 text-center text-secondary">^ (click to copy) ^</p>
-                                </div>
-                            </div>
-                        </div>
+                    <a href="/lobby" class="profile-item"><i class="bi bi-controller"></i> Play</a>
+                    <a href="/home" class="profile-item"><i class="bi bi-trophy"></i> Scoreboard</a>
+                    <a href="/user" class="profile-item"><i class="bi bi-bar-chart-line"></i> Profile</a>
+                    <a href="/settings" class="profile-item"><i class="bi bi-gear"></i> Settings</a>
+                    <div class="profile-divider"></div>
+                    <button type="button" class="profile-item danger" id="logoutButton">
+                      <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                  </div>
+                </div>
                     </div>
                 </div>
             </div>
@@ -130,9 +139,8 @@
                 </section>
 
                 <div id="board" class="board" hidden>
-                    <div id="turnBanner" class="turn-banner"></div>
                     <div class="container-xxl p-0 m-0 mx-auto">
-                        <div class="row row-cols-11 justify-content-center" id="memoryTable"></div>
+                        <div class="memory-grid" id="memoryTable"></div>
                     </div>
                 </div>
             </div>
@@ -148,7 +156,10 @@
                     <div id="spectatorInfo" class="spectator-info mm-muted" hidden></div>
                     <div class="side-actions">
                         <button type="button" id="playButton" class="mm-btn mm-btn-primary w-100" onclick="emitEndTurn();" disabled hidden>
-                            End turn
+                            <i class="bi bi-arrow-repeat"></i> End turn
+                        </button>
+                        <button type="button" id="surrenderButton" class="mm-btn mm-btn-danger w-100" onclick="surrender()" disabled hidden>
+                            <i class="bi bi-flag"></i> Surrender
                         </button>
                     </div>
                 </div>
@@ -242,6 +253,7 @@
     <!--- Custom JS --->
     <script src="/socket.io/socket.io.js"></script>
     <script src="/static/scripts/ui.js"></script>
+    <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/play.js"></script>
     <script src="/static/scripts/multiplayer_socket.js"></script>
 </body>

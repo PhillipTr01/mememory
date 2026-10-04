@@ -58,28 +58,34 @@ socket.emit("initializingGame", {
   gameID: sessionStorage.getItem("gameID"),
 });
 
+var BOT_AVATARS = {
+  "Easy Bot": "easy",
+  "Medium Bot": "medium",
+  "Hard Bot": "hard",
+  "Expert Bot": "expert",
+};
+
+// Own name + avatar in the player panel
+userPromise.then((username) => {
+  if (!username) return;
+  document.getElementById("user1Username").innerText = username;
+  document.getElementById("user1Avatar").replaceWith(createAvatar(username));
+});
+
 // Set computername on the scoreboard
 socket.on("setComputername", (name) => {
   document.getElementById("user2Username").innerText = name;
+  document.getElementById("botAvatar").src =
+    "/static/images/avatar_" + (BOT_AVATARS[name] || "easy") + "_200.png";
 });
 
 // Show which player's turn it is
 socket.on("highlightPlayer", (data) => {
-  if (data.turn == 0) {
-    // Highlight player1
-    document.getElementById("user1Username").classList.add("fw-bold");
-    document.getElementById("user2Username").classList.remove("fw-bold");
-    document.getElementById("user1Username").innerHTML =
-      escapeHtml(data.user) + `<i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
-    document.getElementById("user2Username").innerHTML = escapeHtml(data.computer);
-  } else {
-    // Highlight computer
-    document.getElementById("user1Username").classList.remove("fw-bold");
-    document.getElementById("user2Username").classList.add("fw-bold");
-    document.getElementById("user1Username").innerHTML = escapeHtml(data.user);
-    document.getElementById("user2Username").innerHTML =
-      escapeHtml(data.computer) + `<i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
-  }
+  document.getElementById("user1Username").innerText = data.user;
+  document.getElementById("user2Username").innerText = data.computer;
+  document.getElementById("user1Item").classList.toggle("turn", data.turn == 0);
+  document.getElementById("user2Item").classList.toggle("turn", data.turn == 1);
+  document.getElementById("board").classList.toggle("my-turn", data.turn == 0);
 });
 
 socket.on("noGameFound", () => {
@@ -111,11 +117,14 @@ socket.on("zoomImage", (id) => {
 
 // Increase Points if a match was found
 socket.on("increasePoints", (data) => {
-  if (data.turn == 0) {
-    document.getElementById("user1Score").innerHTML = data.points;
-  } else {
-    document.getElementById("user2Score").innerHTML = data.points;
-  }
+  var score = document.getElementById(data.turn == 0 ? "user1Score" : "user2Score");
+  score.innerText = data.points;
+  score.classList.remove("bump");
+  void score.offsetWidth; // restart the animation
+  score.classList.add("bump");
+
+  var found = Number(document.getElementById("user1Score").innerText) + Number(document.getElementById("user2Score").innerText);
+  document.getElementById("pairsLeft").innerText = 33 - found + " pairs left";
 });
 
 // Remove the zoom and the border of a card (if highlighted)
@@ -160,34 +169,21 @@ function emitEndTurn() {
 }
 
 function surrender() {
-  socket.emit("surrender");
+  if (confirm("Do you really want to surrender? This counts as a loss.")) {
+    socket.emit("surrender");
+  }
 }
 
 socket.on("getWinner", (data) => {
   var playButton = document.getElementById("playButton");
-  var user1 = document.getElementById("user1Username");
-  var user2 = document.getElementById("user2Username");
-  var score1 = document.getElementById("user1Score");
-  var score2 = document.getElementById("user2Score");
 
   // Visual change for winner
-  if (data.winner == 0) {
-    user1.innerHTML = escapeHtml(data.user) + " ";
-    user2.innerHTML = escapeHtml(data.computer);
-    user1.innerHTML += `<i class="bi bi-trophy text-warning"></i>`;
-    user2.classList.add("text-secondary");
-    user2.classList.remove("fw-bold");
-    user1.classList.add("fw-bold");
-    score2.classList.add("text-secondary");
-  } else {
-    user1.innerHTML = escapeHtml(data.user);
-    user2.innerHTML = escapeHtml(data.computer) + " ";
-    user2.innerHTML += `<i class="bi bi-trophy text-warning"></i>`;
-    user1.classList.add("text-secondary");
-    user1.classList.remove("fw-bold");
-    user2.classList.add("fw-bold");
-    score1.classList.add("text-secondary");
-  }
+  document.getElementById(data.winner == 0 ? "user1Item" : "user2Item").classList.add("winner");
+  document.getElementById(data.winner == 0 ? "user2Item" : "user1Item").classList.add("inactive");
+  document.getElementById("user1Item").classList.remove("turn");
+  document.getElementById("user2Item").classList.remove("turn");
+  document.getElementById("board").classList.remove("my-turn");
+  showToast(data.winner == 0 ? "You win! 🎉" : `${data.computer} wins!`);
 
   // Remove all highlights
   for (var i = 0; i < 66; i++) {
@@ -200,8 +196,8 @@ socket.on("getWinner", (data) => {
     window.location.href = "/lobby";
   };
   playButton.disabled = false;
-  playButton.innerHTML = "Back to Lobby";
-  document.getElementById("surrenderButton").disabled = true;
+  playButton.innerText = "Back to Lobby";
+  document.getElementById("surrenderButton").hidden = true;
 
   // Reset storage
   sessionStorage.clear();
