@@ -138,7 +138,8 @@ function createRoomRow(room) {
   if (isMine) {
     actionCell.appendChild(actionButton("Rejoin", "bi-arrow-repeat", true, () => openRoom(room.gameID, false)));
   } else {
-    if (waiting && !full) {
+    // Kicked by the host: only watching is possible
+    if (waiting && !full && !room.kicked) {
       actionCell.appendChild(actionButton("Join", "bi-box-arrow-in-right", true, () => openRoom(room.gameID, false)));
     }
     actionCell.appendChild(actionButton("Watch", "bi-eye", false, () => openRoom(room.gameID, true)));

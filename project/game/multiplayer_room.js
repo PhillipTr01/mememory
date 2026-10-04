@@ -74,8 +74,11 @@ function serialize(gameID, room) {
   };
 }
 
-/* Rooms shown in the lobby: public, not finished and somebody is in it. */
-function publicRooms() {
+/*
+ * Rooms shown in the lobby: public, not finished and somebody is in it.
+ * "kicked" tells the given user that the host removed them from the room.
+ */
+function publicRooms(username) {
   return rooms
     .list("multiplayer")
     .filter(
@@ -95,6 +98,7 @@ function publicRooms() {
       playerNames: room.players.filter((player) => player.active).map((player) => player.name),
       maxPlayers: room.maxPlayers,
       spectators: room.spectators.size,
+      kicked: username != null && room.banned.has(username),
       createdAt: room.createdAt,
     }))
     .sort((a, b) => (a.status === b.status ? b.createdAt - a.createdAt : a.status === STATUS.WAITING ? -1 : 1))
@@ -113,7 +117,10 @@ function notifyLobby() {
   if (lobby == null || pending != null) return;
   pending = setTimeout(() => {
     pending = null;
-    lobby.emit("roomList", publicRooms());
+    // Every user gets their own list (e.g. "kicked" is personal)
+    for (const [, socket] of lobby.sockets) {
+      socket.emit("roomList", publicRooms(socket.data.username));
+    }
   }, 200);
 }
 

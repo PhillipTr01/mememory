@@ -539,3 +539,17 @@ test("multiplayer: the host can only start when everybody is ready", async () =>
   await h.wait(100);
   assert.strictEqual(room.players.find((p) => p.name === "bob").ready, true);
 });
+
+test("lobby: a kicked player only gets the option to watch", async () => {
+  const { gameID, alice, others: [bob] } = await openRoom("bob");
+  const kicked = h.once(bob, "kicked");
+  alice.emit("kickPlayer", { name: "bob" });
+  await kicked;
+
+  const bobLobby = client("/lobby", "bob");
+  const carolLobby = client("/lobby", "carol");
+  const forBob = await waitFor(bobLobby, "roomList", (rooms) => rooms.some((room) => room.gameID === gameID));
+  const forCarol = await waitFor(carolLobby, "roomList", (rooms) => rooms.some((room) => room.gameID === gameID));
+  assert.strictEqual(forBob.find((room) => room.gameID === gameID).kicked, true);
+  assert.strictEqual(forCarol.find((room) => room.gameID === gameID).kicked, false);
+});
