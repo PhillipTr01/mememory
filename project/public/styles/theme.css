@@ -8,8 +8,8 @@
   --mm-border: #2f2f2f;
   --mm-text: #ececec;
   --mm-muted: #8f8f8f;
-  --mm-accent: #d97757;
-  --mm-accent-2: #d97757;
+  --mm-accent: #3b82f6;
+  --mm-accent-2: #3b82f6;
   --mm-success: #7fae6e;
   --mm-warning: #d4a64a;
   --mm-danger: #e0675a;
@@ -54,7 +54,7 @@
 }
 
 .mm-btn-primary:hover:not(:disabled) {
-  background: #c86a4c;
+  background: #2f6fd6;
   box-shadow: none;
 }
 
@@ -65,7 +65,7 @@
 }
 
 .mm-btn-success:hover:not(:disabled) {
-  background: #c86a4c;
+  background: #2f6fd6;
   box-shadow: none;
 }
 
@@ -219,7 +219,7 @@
 
 .mm-input:focus {
   border-color: var(--mm-accent);
-  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.2);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
 .mm-muted {

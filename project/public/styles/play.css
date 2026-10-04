@@ -80,8 +80,8 @@
 
 /* Face down card under the mouse */
 .card:not(.flip):hover .card-front {
-  border-color: #d97757;
-  box-shadow: 0 0 0 1px #d97757;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
 }
 
 .flip {
@@ -100,7 +100,7 @@
 
 .card.zoom-card-on-turn .card-back {
   border-color: transparent;
-  box-shadow: 0 0 0 3px #d97757;
+  box-shadow: 0 0 0 3px #3b82f6;
 }
 
 /* Found pairs */
@@ -170,7 +170,7 @@
 }
 
 .right-message p {
-  background-color: #d97757;
+  background-color: #3b82f6;
   color: #fff;
   margin-left: auto;
 }

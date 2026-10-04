@@ -53,11 +53,10 @@
   box-shadow: none;
 }
 
-/* Original MemeMory difficulty colors */
-.bot-easy { --bot-color: #8fb5c2; }
-.bot-medium { --bot-color: #7aa6b5; }
-.bot-hard { --bot-color: #6c97a6; }
-.bot-expert { --bot-color: #5a8291; }
+.bot-easy { --bot-color: #34d399; }
+.bot-medium { --bot-color: #48b0f7; }
+.bot-hard { --bot-color: #f59e0b; }
+.bot-expert { --bot-color: #ef4444; }
 
 .bot-avatar {
   width: 64px;

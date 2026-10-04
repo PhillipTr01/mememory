@@ -64,7 +64,7 @@
 
 .score-row.me {
   background: var(--mm-surface-3);
-  box-shadow: 0 0 0 1px rgba(217, 119, 87, 0.35) inset;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35) inset;
 }
 
 .score-rank {
