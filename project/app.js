@@ -17,6 +17,8 @@ if (missing.length > 0) {
 
 const PORT = process.env.PORT || 5000;
 
+const { page, staticHeaders } = require("./utils/pages");
+
 const app = express();
 const server = http.createServer(app);
 // Small buffer: no socket message of this game needs more than a few KB.
@@ -27,9 +29,10 @@ app
   .use(express.json({ limit: "10kb" }))
   //.use(morgan('dev'))
   .use(cookieParser())
-  .use("/static", express.static(path.join(__dirname, "public")));
+  .use("/static", express.static(path.join(__dirname, "public"), { setHeaders: staticHeaders }));
 
 /* Modules */
+
 const memeScraper = require("./meme_scraper");
 const Auth = require("./middleware/auth");
 require("./sockets/lobby_server")(io);
@@ -65,7 +68,6 @@ app.get("/health", (req, res) => {
 });
 
 /* Base routes */
-const page = (file) => (req, res) => res.sendFile(path.join(__dirname, "html", file));
 
 app.get("/", Auth, page("index.html"));
 app.get("/home", Auth, page("home.html"));
