@@ -1100,3 +1100,28 @@
   color: var(--mm-muted);
   background: var(--mm-surface-2);
 }
+
+/* "Surrendered" tag, same shape as the "You" tag */
+.player-tag.surrendered {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(224, 103, 90, 0.14);
+  color: var(--mm-danger);
+}
+
+/* No strike-through anymore, the tag says it */
+.player-item.inactive .player-name {
+  text-decoration: none;
+}
+
+.result-list .name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.player-item.inactive {
+  opacity: 0.65;
+}

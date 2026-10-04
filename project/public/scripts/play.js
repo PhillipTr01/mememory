@@ -65,3 +65,14 @@ function createSurrenderButton() {
     });
     return button;
 }
+
+// Small tag for players who surrendered / left the game (like the "You" tag)
+function createSurrenderedTag() {
+    var tag = document.createElement("span");
+    tag.className = "player-tag surrendered";
+    tag.title = "Surrendered";
+    var icon = document.createElement("i");
+    icon.className = "bi bi-flag-fill";
+    tag.append(icon, document.createTextNode("Surrendered"));
+    return tag;
+}
