@@ -525,9 +525,13 @@ module.exports = function (io) {
 
       if (!checkCards(socket.gameID, room)) {
         if (room.mode === "speed") {
-          // Speed round: the turn passes on its own after a short look at the cards
+          // Speed round: the clock stops, and the turn passes on its own
+          // after a short look at the cards
+          room.turnToken++;
+          room.turnEndsAt = null;
           const token = room.turnToken;
           const gameID = socket.gameID;
+          emitRoomState(gameID, room);
           roomTimeout(
             room,
             () => {
@@ -624,7 +628,9 @@ module.exports = function (io) {
     }
 
     const token = room.turnToken;
-    room.turnEndsAt = Date.now() + room.turnTime;
+    // Animations (cards turning) don't count: the clock starts a bit later
+    room.turnStartsAt = Date.now() + config.SPEED_ANIMATION_GRACE;
+    room.turnEndsAt = room.turnStartsAt + room.turnTime;
 
     roomTimeout(
       room,
@@ -636,7 +642,7 @@ module.exports = function (io) {
         nextTurn(gameID, room);
         emitRoomState(gameID, room);
       },
-      room.turnTime,
+      config.SPEED_ANIMATION_GRACE + room.turnTime,
     );
   }
 

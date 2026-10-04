@@ -34,4 +34,6 @@ module.exports = {
   SPEED_TURN_TIME: 10 * 1000,
   SPEED_TURN_OPTIONS: [5, 10, 15, 20],
   SPEED_MISS_DELAY: 1500,
+  // The clock starts after the card animations (flip takes 0.9s on the client)
+  SPEED_ANIMATION_GRACE: 1000,
 };

@@ -380,18 +380,11 @@ function renderWaitingRoom(state) {
 
   if (!isHost) return;
 
-  // Max. players as buttons
-  var picker = document.getElementById("maxPlayersPicker");
-  picker.replaceChildren();
-  for (var n = state.minPlayers; n <= state.maxPlayersLimit; n++) {
-    var button = document.createElement("button");
-    button.type = "button";
-    button.innerText = n;
-    button.disabled = n < count;
-    button.classList.toggle("active", n == state.maxPlayers);
-    button.addEventListener("click", ((value) => () => socket.emit("updateSettings", { maxPlayers: value }))(n));
-    picker.appendChild(button);
-  }
+  // Max. players as a small stepper: [-] 4 [+]
+  var lowest = Math.max(state.minPlayers, count);
+  document.getElementById("maxPlayersValue").innerText = state.maxPlayers;
+  document.getElementById("maxPlayersMinus").disabled = state.maxPlayers <= lowest;
+  document.getElementById("maxPlayersPlus").disabled = state.maxPlayers >= state.maxPlayersLimit;
 
   document.getElementById("publicSwitch").checked = state.isPublic;
 
@@ -976,21 +969,39 @@ function addChatMessage(message, live) {
 var turnDeadline = null;
 var turnTimerInterval = null;
 
+var lastTimerLeft = null; // shown while the clock is stopped
+
 function updateTurnTimer(state) {
   clearInterval(turnTimerInterval);
-  turnDeadline = state.turnRemaining != null ? Date.now() + state.turnRemaining : null;
-  if (turnDeadline == null) return;
-
   var total = state.turnTime;
-  var tick = () => {
-    var left = Math.max(0, turnDeadline - Date.now());
+
+  var draw = (left, stopped) => {
     var fill = document.querySelector(".turn-timer span");
     var seconds = document.querySelector(".turn-seconds");
     if (fill) {
       fill.style.width = (left / total) * 100 + "%";
       fill.parentElement.classList.toggle("urgent", left <= 3000);
     }
-    if (seconds) seconds.innerText = Math.ceil(left / 1000) + "s left";
+    if (seconds) seconds.innerText = stopped ? "time stopped" : Math.ceil(left / 1000) + "s left";
+  };
+
+  // Clock stopped (two wrong cards): keep the bar where it was
+  if (state.turnRemaining == null) {
+    turnDeadline = null;
+    if (state.mode == "speed" && state.status == "playing" && lastTimerLeft != null) {
+      draw(lastTimerLeft, true);
+    }
+    return;
+  }
+
+  // The clock starts after the card animations - until then the bar stays full
+  var start = Date.now() + (state.turnStartsIn || 0);
+  turnDeadline = start + state.turnRemaining;
+
+  var tick = () => {
+    var left = Math.min(total, Math.max(0, turnDeadline - Math.max(Date.now(), start)));
+    lastTimerLeft = left;
+    draw(left, false);
     if (left <= 0) clearInterval(turnTimerInterval);
   };
   tick();
@@ -1012,4 +1023,12 @@ document.addEventListener("DOMContentLoaded", () => {
     var mine = room && getMyPlayer(room);
     if (mine) socket.emit("setReady", { ready: !mine.ready });
   });
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  var change = (delta) => {
+    if (room) socket.emit("updateSettings", { maxPlayers: room.maxPlayers + delta });
+  };
+  document.getElementById("maxPlayersMinus").addEventListener("click", () => change(-1));
+  document.getElementById("maxPlayersPlus").addEventListener("click", () => change(1));
 });
