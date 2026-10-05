@@ -13,6 +13,8 @@ var DRAW_MODES = [
   { id: "bowling", icon: "🎳", label: "Bowling", description: "Every player is a pin - only the winner stays standing" },
   { id: "plinko", icon: "🔻", label: "Plinko", description: "A ball falls through the pegs into the winning slot" },
   { id: "race", icon: "🏇", label: "Race", description: "Every player runs - the winner crosses the line first" },
+  { id: "claw", icon: "🕹️", label: "Claw", description: "The claw machine grabs the winner out of the pile" },
+  { id: "royale", icon: "🪂", label: "Royale", description: "Battle royale - the zone shrinks, the last one standing wins" },
 ];
 
 /* ---------- Helpers ---------- */
@@ -562,7 +564,220 @@ var raceDraw = {
   },
 };
 
+/* ---------- 6. Claw machine: the claw grabs the winner ---------- */
+
+var clawDraw = {
+  build(stage, winner) {
+    var root = scene(stage, "claw");
+    root.replaceChildren();
+    var machine = el("div", "jp-claw-machine");
+    var chute = el("div", "jp-claw-chute");
+    chute.appendChild(el("span", "", "WIN"));
+    var rail = el("div", "jp-claw-rail");
+    var claw = el("div", "jp-claw");
+    claw.append(el("div", "jp-claw-rope"), el("div", "jp-claw-head"), el("div", "jp-claw-arm left"), el("div", "jp-claw-arm right"));
+    var pile = el("div", "jp-claw-pile");
+    // One plush per player, at a random place in the pile (the same place for
+    // everybody while the pot doesn't change)
+    var players = playersFor(12, winner);
+    var plushes = players.map((player, index) => {
+      var plush = el("div", "jp-plush");
+      plush.dataset.name = player.name;
+      plush.style.setProperty("--share", shareColor(player.name));
+      var column = index % 6;
+      var row = Math.floor(index / 6);
+      plush.style.left = 30 + column * 11 + (row % 2) * 5 + "%";
+      plush.style.bottom = 6 + row * 22 + "%";
+      plush.appendChild(createAvatar(player.name));
+      pile.appendChild(plush);
+      return plush;
+    });
+    machine.append(chute, rail, pile, claw);
+    root.appendChild(machine);
+    // The claw waits above the chute
+    claw.style.transform = `translate(${machine.clientWidth * 0.11}px, 0px)`;
+    if (players.length == 0) emptyNote(machine, "The plushies drop in with the first coins.");
+    return { root: root, machine: machine, claw: claw, plushes: plushes };
+  },
+
+  idle(stage) {
+    this.build(stage);
+  },
+
+  async play(stage, draw, duration, short) {
+    var parts = this.build(stage, draw.winner);
+    var machine = parts.machine;
+    var claw = parts.claw;
+    var prize = parts.plushes.find((plush) => plush.dataset.name == draw.winner);
+    var width = machine.clientWidth;
+    var height = machine.clientHeight;
+    var target = prize.offsetLeft + prize.offsetWidth / 2;
+    var prizeTop = prize.offsetTop;
+    var chuteX = width * 0.11;
+    var start = width * 0.11;
+    var t = duration / 7100;
+    var setClaw = (x, drop) => ({ transform: `translate(${x}px, ${drop}px)` });
+
+    // 1. Searching: left and right over the pile, slower and slower, then above the winner
+    var search = [setClaw(start, 0)];
+    var spots = short ? [] : [width * 0.8, width * 0.35, width * 0.68, target + 30];
+    spots.forEach((x) => search.push(setClaw(x, 0)));
+    search.push(setClaw(target, 0));
+    await animate(claw, search, { duration: 2600 * t, easing: SLOW_END });
+
+    // 2. Down to the prize, the claw closes
+    var drop = prizeTop - 40;
+    await animate(claw, [setClaw(target, 0), setClaw(target, drop)], { duration: 1100 * t, easing: SLOW_END });
+    claw.classList.add("closed");
+    await wait(350 * t);
+
+    // 3. Up with the prize ... it wobbles dangerously
+    var hold = el("div", "jp-plush held");
+    hold.style.setProperty("--share", shareColor(draw.winner));
+    hold.appendChild(createAvatar(draw.winner));
+    prize.style.visibility = "hidden";
+    claw.appendChild(hold);
+    await animate(claw, [setClaw(target, drop), setClaw(target, 0)], { duration: 1000 * t, easing: SLOW_END });
+    if (!short) {
+      await animate(
+        hold,
+        [0, 1, 2, 3, 4, 5].map((i) => ({ transform: `translateX(-50%) rotate(${(i % 2 ? -1 : 1) * (14 - i * 2)}deg)` })),
+        { duration: 700, easing: SLOW_END },
+      );
+    }
+
+    // 4. Over to the chute, open, it falls in
+    await animate(claw, [setClaw(target, 0), setClaw(chuteX, 0)], { duration: 1100 * t, easing: SLOW_END });
+    claw.classList.remove("closed");
+    var fall = animate(
+      hold,
+      [{ transform: "translateX(-50%) translateY(0)" }, { transform: `translateX(-50%) translateY(${height * 0.62}px)`, opacity: 0.2 }],
+      { duration: 600, easing: "ease-in" },
+    );
+    await fall;
+    parts.machine.querySelector(".jp-claw-chute").classList.add("won");
+    if (!short) {
+      shout(parts.root, "GOT IT!", "strike");
+      confetti(parts.root);
+    }
+    winnerLabel(parts.root, draw);
+  },
+};
+
+/* ---------- 7. Battle royale: the last one standing wins ---------- */
+
+var royaleDraw = {
+  // Random places in the arena (the same while the pot doesn't change)
+  place(index, count) {
+    var angle = (index / Math.max(1, count)) * Math.PI * 2 + 0.6;
+    var radius = 0.32 + ((index * 37) % 10) / 100;
+    // Not too close to the edges, so the zone around everybody stays visible
+    return { x: 50 + Math.cos(angle) * radius * 100 * 0.62, y: 54 + Math.sin(angle) * radius * 70 };
+  },
+
+  build(stage, winner) {
+    var root = scene(stage, "royale");
+    root.replaceChildren();
+    var arena = el("div", "jp-arena-map");
+    var zone = el("div", "jp-zone");
+    arena.appendChild(zone);
+    var feed = el("div", "jp-killfeed");
+    var players = playersFor(12, winner);
+    var fighters = players.map((player, index) => {
+      var spot = this.place(index, players.length);
+      var fighter = el("div", "jp-fighter");
+      fighter.dataset.name = player.name;
+      fighter.style.left = spot.x + "%";
+      fighter.style.top = spot.y + "%";
+      fighter.style.setProperty("--share", shareColor(player.name));
+      fighter.appendChild(createAvatar(player.name));
+      arena.appendChild(fighter);
+      return fighter;
+    });
+    root.append(arena, feed);
+    if (players.length == 0) emptyNote(arena, "The arena fills with the first coins.");
+    return { root: root, arena: arena, zone: zone, feed: feed, fighters: fighters };
+  },
+
+  idle(stage) {
+    this.build(stage);
+  },
+
+  async play(stage, draw, duration, short) {
+    var parts = this.build(stage, draw.winner);
+    var winner = parts.fighters.find((fighter) => fighter.dataset.name == draw.winner);
+    // Who is out when: the smaller the share, the earlier (with luck), the winner last
+    var losers = parts.fighters
+      .filter((fighter) => fighter != winner)
+      .map((fighter) => {
+        var entry = state.entries.find((e) => e.name == fighter.dataset.name);
+        return { fighter: fighter, order: (entry ? entry.coins / state.total : 0) + Math.random() * 0.5 };
+      })
+      .sort((a, b) => a.order - b.order)
+      .map((item) => item.fighter);
+
+    // The zone closes in on the winner (slower at the end)
+    var zone = parts.zone;
+    var winnerX = parseFloat(winner.style.left);
+    var winnerY = parseFloat(winner.style.top);
+    animate(
+      zone,
+      [
+        { left: "50%", top: "50%", width: "120%", height: "190%" },
+        { left: winnerX + "%", top: winnerY + "%", width: "16%", height: "30%" },
+      ],
+      { duration: duration, easing: SLOW_END },
+    );
+
+    // Everybody moves a little (they fight)
+    parts.fighters.forEach((fighter) => {
+      animate(
+        fighter,
+        [0, 1, 2, 3].map((i) => ({ transform: `translate(calc(-50% + ${randomBetween(-14, 14)}px), calc(-50% + ${randomBetween(-10, 10)}px))` })),
+        { duration: duration, easing: "ease-in-out", fill: "none" },
+      );
+    });
+
+    // Eliminations: quick at first, longer and longer pauses (the final duel is the longest)
+    var count = losers.length;
+    var weights = losers.map((_, i) => 1 + i * 0.7);
+    var sum = weights.reduce((a, b) => a + b, 0);
+    var playTime = duration * (short ? 1 : 0.88);
+    for (var i = 0; i < count; i++) {
+      await wait((weights[i] / sum) * playTime);
+      this.eliminate(parts, losers[i], short);
+      if (count - i - 1 == 1 && !short) shout(parts.root, "FINAL DUEL", "small");
+    }
+    await wait(short ? 0 : 300);
+    winner.classList.add("champion");
+    if (!short) {
+      shout(parts.root, "WINNER WINNER", "strike");
+      confetti(parts.root);
+    }
+    winnerLabel(parts.root, draw);
+  },
+
+  eliminate(parts, fighter, short) {
+    var boom = el("span", "jp-boom", "💥");
+    boom.style.left = fighter.style.left;
+    boom.style.top = fighter.style.top;
+    parts.arena.appendChild(boom);
+    animate(boom, [{ transform: "translate(-50%, -50%) scale(0.3)", opacity: 1 }, { transform: "translate(-50%, -50%) scale(1.6)", opacity: 0 }], {
+      duration: 600,
+    }).then(() => boom.remove());
+    fighter.classList.add("out");
+    // Kill feed (the newest on top, at most 4)
+    var line = el("div", "jp-kill");
+    line.append(el("b", "", fighter.dataset.name), document.createTextNode(" was eliminated"));
+    parts.feed.prepend(line);
+    while (parts.feed.childElementCount > 4) parts.feed.lastElementChild.remove();
+    if (!short) animate(parts.root, [{ transform: "translateX(-4px)" }, { transform: "translateX(4px)" }, { transform: "translateX(0)" }], { duration: 180, fill: "none" });
+  },
+};
+
 var DRAWS = {
+  claw: clawDraw,
+  royale: royaleDraw,
   wheel: wheelDraw,
   roulette: rouletteDraw,
   bowling: bowlingDraw,
