@@ -746,6 +746,15 @@ module.exports = function (io) {
     room.cardImages = board.cardImages;
     rooms.touch(room);
 
+    // Players who surrendered watched until now - they play again
+    for (const player of room.players) {
+      const playerSocket = multiPlayer.sockets.get(player.socketId);
+      if (playerSocket != null && playerSocket.spectator) {
+        playerSocket.spectator = false;
+        playerSocket.emit("joinedRoom", { username: player.name, spectator: false });
+      }
+    }
+
     multiPlayer.to(gameID).emit("rematch");
     systemMessage(gameID, room, `${by} started a rematch.`, "start");
     emitRoomState(gameID, room);

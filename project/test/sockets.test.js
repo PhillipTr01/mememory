@@ -337,7 +337,10 @@ test("multiplayer: rematch after the game goes back to the waiting room", async 
 
   const back = waitFor(alice, "roomState", (s) => s.status === "waiting");
   const reset = h.once(bob, "rematch");
+  // bob surrendered and watched - for the rematch he is a player again
+  const player = waitFor(bob, "joinedRoom", (data) => data.spectator === false);
   alice.emit("rematch");
+  await player;
   const state = await back;
   await reset;
   assert.deepStrictEqual(state.players.map((p) => [p.name, p.points, p.active, p.ready]).sort(), [
