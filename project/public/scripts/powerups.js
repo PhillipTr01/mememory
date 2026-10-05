@@ -11,7 +11,7 @@ socket.on("powerupDefs", (defs) => {
 });
 
 function powerupInfo(id) {
-  return powerupDefs[id] || { emoji: "✨", name: id, description: "" };
+  return powerupDefs[id] || { icon: "bi-stars", name: id, description: "" };
 }
 
 function canUsePowerup(state, id) {
@@ -55,29 +55,15 @@ function renderPowerups(state) {
     button.className = "powerup-slot" + (targeting && targeting.id == id ? " active" : "");
     button.disabled = !canUsePowerup(state, id);
     button.title = info.name + " - " + info.description;
-    var emoji = document.createElement("span");
-    emoji.className = "powerup-emoji";
-    emoji.innerText = info.emoji;
+    var icon = createIcon(info.icon + " powerup-icon");
     var name = document.createElement("span");
     name.className = "powerup-name";
     name.innerText = info.name;
-    button.append(emoji, name);
+    button.append(icon, name);
     button.addEventListener("click", startPowerup.bind(null, id));
     slots.appendChild(button);
   }
 
-  var hint = document.getElementById("powerupHint");
-  hint.replaceChildren();
-  if (targeting) {
-    var text = document.createElement("span");
-    text.innerText = targeting.needed == 2 ? "Choose two closed cards" : "Choose a closed card";
-    var cancel = document.createElement("button");
-    cancel.type = "button";
-    cancel.className = "powerup-cancel";
-    cancel.innerText = "Cancel";
-    cancel.addEventListener("click", cancelTargeting);
-    hint.append(text, cancel);
-  }
 }
 
 // Small icons in the player list: power-ups in the hand and running effects
@@ -87,7 +73,7 @@ function createPowerupIcons(player) {
   player.powerups.forEach((id) => {
     var icon = document.createElement("span");
     icon.className = "power-icon";
-    icon.innerText = powerupInfo(id).emoji;
+    icon.appendChild(createIcon(powerupInfo(id).icon));
     icon.title = powerupInfo(id).name;
     icons.appendChild(icon);
   });
@@ -99,7 +85,7 @@ function createPowerupIcons(player) {
   effects.forEach(([id, label]) => {
     var effect = document.createElement("span");
     effect.className = "power-effect";
-    effect.innerText = powerupInfo(id).emoji;
+    effect.appendChild(createIcon(powerupInfo(id).icon));
     effect.title = powerupInfo(id).name + ": " + label;
     icons.appendChild(effect);
   });
@@ -119,6 +105,8 @@ function startPowerup(id) {
   if (info.target == "card" || info.target == "cards") {
     targeting = { id: id, needed: info.target == "cards" ? 2 : 1, picked: [] };
     document.getElementById("board").classList.add("targeting");
+    // Click the power-up again or press Escape to cancel
+    showToast(targeting.needed == 2 ? "Choose two closed cards" : "Choose a closed card");
     renderPowerups(room);
     return;
   }
@@ -150,8 +138,6 @@ function cancelTargeting() {
   targeting = null;
   document.getElementById("board").classList.remove("targeting");
   document.querySelectorAll(".card.target-picked").forEach((card) => card.classList.remove("target-picked"));
-  var hint = document.getElementById("powerupHint");
-  if (hint) hint.replaceChildren();
   if (room && !document.getElementById("powerupBar").hidden) renderPowerups(room);
 }
 

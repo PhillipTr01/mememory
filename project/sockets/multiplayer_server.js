@@ -301,6 +301,11 @@ module.exports = function (io) {
             }
 
             systemMessage(gameID, room, `The game has started. ${room.players[room.turn].name} begins!`, "start");
+            // Power-up mode: which power-ups everybody starts with
+            if (room.mode === "powerups") {
+              const start = room.players[0].powerups.map(powerupLabel).join(" and ");
+              systemMessage(gameID, room, `Everybody starts with ${start}. ${powerups.POWER_PAIRS} pairs hold a power-up (⚡).`, "info");
+            }
             startTurnTimer(gameID, room);
             emitRoomState(gameID, room);
           },
@@ -714,7 +719,8 @@ module.exports = function (io) {
         break;
       case "gamble": {
         const win = Math.random() < 0.5;
-        player.points = Math.max(0, player.points + (win ? 2 : -1));
+        // Can also go below 0
+        player.points += win ? 2 : -1;
         systemMessage(gameID, room, win ? `${username} wins the gamble: +2!` : `${username} loses the gamble: -1.`, win ? "trophy" : "info");
         break;
       }

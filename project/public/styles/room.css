@@ -1508,31 +1508,10 @@
 }
 
 .powerup-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
   margin-bottom: 0.5rem;
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--mm-muted);
-}
-
-.powerup-hint {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--mm-text);
-  font-weight: 500;
-}
-
-.powerup-cancel {
-  border: 0;
-  background: none;
-  padding: 0;
-  color: var(--mm-muted);
-  font-size: 0.75rem;
-  text-decoration: underline;
 }
 
 .powerup-slots {
@@ -1541,12 +1520,14 @@
   gap: 0.4rem;
 }
 
+/* Square slots: icon on top, name below */
 .powerup-slot {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
-  min-height: 3.6rem;
+  justify-content: center;
+  gap: 0.35rem;
+  aspect-ratio: 1 / 1;
   padding: 0.4rem 0.25rem;
   border: 1px solid var(--mm-border);
   border-radius: var(--mm-radius);
@@ -1574,9 +1555,14 @@
   background: none;
 }
 
-.powerup-emoji {
-  font-size: 1.25rem;
-  line-height: 1.2;
+.powerup-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--mm-accent);
+}
+
+.powerup-slot:disabled .powerup-icon {
+  color: var(--mm-muted);
 }
 
 .powerup-name {
@@ -1584,7 +1570,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
@@ -1605,6 +1591,7 @@
   height: 1.35rem;
   border-radius: 4px;
   background: var(--mm-surface-3);
+  color: var(--mm-text);
   font-size: 0.75rem;
   line-height: 1;
 }

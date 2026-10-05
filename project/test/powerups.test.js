@@ -148,6 +148,14 @@ test("powerups game: same two start power-ups for everybody, four power pairs", 
   assert.strictEqual(room.powerCards.length, 8);
 });
 
+test("powerups game: the chat says which power-ups everybody starts with", async () => {
+  const { room, state } = await powerupGame();
+  const names = state.players[0].powerups.map((id) => powerups.POWERUPS[id].name);
+  const message = room.chat.find((m) => /Everybody starts with/.test(m.text));
+  assert.ok(message, "start message in the chat");
+  assert.ok(names.every((name) => message.text.includes(name)));
+});
+
 test("powerups game: only on the own turn, once per turn, and it leaves the hand", async () => {
   const { room, current, other, currentName, otherName, gameID } = await powerupGame();
   const me = room.players.find((p) => p.name === currentName);
