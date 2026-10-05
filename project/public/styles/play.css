@@ -29,7 +29,7 @@
   cursor: pointer;
   transform-style: preserve-3d;
   transform: rotateY(-180deg);
-  transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transition: transform 0.4s cubic-bezier(0.4, 0.2, 0.2, 1);
 }
 
 .card-front,
@@ -100,7 +100,7 @@
 
 .card.zoom-card-on-turn .card-back {
   box-shadow: 0 0 0 2px rgba(var(--mm-accent-rgb), 0.45), 0 10px 24px rgba(0, 0, 0, 0.45);
-  transition: box-shadow 0.3s ease;
+  transition: box-shadow 0.25s ease;
 }
 
 

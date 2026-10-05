@@ -617,8 +617,8 @@ function closeCard(id, instant) {
 
   card.classList.remove("flip");
   understateCard(id);
-  // After the flip (0.5s, see play.css)
-  clearCardImage(card, instant ? 0 : 500);
+  // After the flip (0.4s, see play.css)
+  clearCardImage(card, instant ? 0 : 400);
 }
 
 // If the card is already open, you can zoom in to read the meme

@@ -23,7 +23,7 @@ module.exports = {
   // Rooms without anybody in them are deleted after this time
   EMPTY_ROOM_GRACE: 15 * 1000,
   // Length of the "who starts" animation, the game begins afterwards
-  START_ANIMATION: 4000,
+  START_ANIMATION: 3500,
   // How often disconnected players and empty rooms are checked
   TICK: 1000,
 
@@ -33,12 +33,12 @@ module.exports = {
   // and the pause after two wrong cards before the turn passes
   SPEED_TURN_TIME: 10 * 1000,
   SPEED_TURN_OPTIONS: [3, 5, 10, 15],
-  SPEED_MISS_DELAY: 1100,
-  // The clock starts after the card animations (the flip takes 0.5s on the client)
-  SPEED_ANIMATION_GRACE: 600,
+  SPEED_MISS_DELAY: 950,
+  // The clock starts after the card animations (the flip takes 0.4s on the client)
+  SPEED_ANIMATION_GRACE: 500,
   // Singleplayer: who starts (0 = player, 1 = bot, null = random)
   SINGLEPLAYER_STARTER: null,
 
   // Speed round: shorter "who starts" animation
-  SPEED_START_ANIMATION: 2600,
+  SPEED_START_ANIMATION: 2300,
 };

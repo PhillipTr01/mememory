@@ -226,8 +226,8 @@ function checkGame(socket) {
           if (game.turn == 0) {
             socket.emit("activateEndTurn");
           } else {
-            // Computer automatically ends his turn after 2 seconds.
-            later(game, () => endTurn(socket), 2000);
+            // Computer automatically ends his turn after a short look at the cards.
+            later(game, () => endTurn(socket), 1850);
           }
         }
       }
@@ -283,9 +283,9 @@ function computerLogic(socket) {
 
   // Push cards to openedCards, so that they get checked in checkGame-method
   game.openedCards.push(id);
-  later(game, () => socket.emit("turnCard", { id: id, src: game.cardImages[id] }), 1250);
-  later(game, () => socket.emit("turnCard", { id: id2, src: game.cardImages[id2] }), 1750);
-  later(game, () => game.openedCards.push(id2), 2250);
+  later(game, () => socket.emit("turnCard", { id: id, src: game.cardImages[id] }), 1100);
+  later(game, () => socket.emit("turnCard", { id: id2, src: game.cardImages[id2] }), 1550);
+  later(game, () => game.openedCards.push(id2), 1950);
 }
 
 // Random card which isn't in the computer's memory and hasn't been found yet.
