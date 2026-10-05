@@ -139,26 +139,41 @@
           <div id="gamePicker" class="game-picker">
             <button type="button" class="game-tile" data-game="memory">
               <svg class="game-icon" viewBox="0 0 48 48" aria-hidden="true">
-                <!--- Face down card --->
-                <rect x="5" y="10" width="21" height="29" rx="4" transform="rotate(-12 15.5 24.5)" fill="#222" stroke="#3b82f6" stroke-width="1.5" />
-                <text x="15.5" y="29" transform="rotate(-12 15.5 24.5)" text-anchor="middle" font-family="Poppins, sans-serif" font-size="13" font-weight="700" fill="#3b82f6">?</text>
-                <!--- Face up card with a picture --->
-                <g transform="rotate(9 31 23)">
-                  <rect x="20" y="8" width="22" height="30" rx="4" fill="#3b82f6" />
-                  <circle cx="35" cy="15.5" r="2.4" fill="#fff" />
-                  <path d="M23.5 31 L29.5 22 L33.5 27 L36 24.5 L39.5 31 Z" fill="#fff" />
+                <!--- Face down card: blue with a "?" --->
+                <g transform="rotate(-14 16 26)">
+                  <rect x="5" y="11" width="22" height="30" rx="4" fill="#3b82f6" />
+                  <text x="16" y="32" text-anchor="middle" font-family="Poppins, sans-serif" font-size="15" font-weight="800" fill="#fff">?</text>
+                </g>
+                <!--- Face up card: a laughing meme face --->
+                <g transform="rotate(10 32 24)">
+                  <rect x="20" y="8" width="23" height="31" rx="4" fill="#ececec" />
+                  <circle cx="31.5" cy="23.5" r="8" fill="#f5c542" />
+                  <path d="M26.8 21.4 Q28.4 19.6 30 21.4 M33 21.4 Q34.6 19.6 36.2 21.4" fill="none" stroke="#5a3a12" stroke-width="1.4" stroke-linecap="round" />
+                  <path d="M27.2 24.6 H35.8 Q35.4 29.6 31.5 29.6 Q27.6 29.6 27.2 24.6 Z" fill="#5a3a12" />
+                  <path d="M25.6 22.6 Q24.4 25 25.4 26.2 Q26.6 25 25.6 22.6 Z M37.4 22.6 Q38.6 25 37.6 26.2 Q36.4 25 37.4 22.6 Z" fill="#6ab7f0" />
                 </g>
               </svg>
               <span class="game-name">MemeMory</span>
             </button>
             <button type="button" class="game-tile" data-game="tictactoe">
               <svg class="game-icon" viewBox="0 0 48 48" aria-hidden="true">
-                <path d="M18 6v36M30 6v36M6 18h36M6 30h36" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" />
-                <circle cx="12" cy="12" r="5" fill="#3a131b" stroke="#e81932" stroke-width="1.5" />
-                <circle cx="24" cy="24" r="4.2" fill="#21212f" stroke="#a9c1e9" stroke-width="1.5" />
-                <circle cx="36" cy="36" r="3.2" fill="#3a131b" stroke="#e81932" stroke-width="1.5" />
-                <circle cx="36" cy="12" r="3" fill="#21212f" stroke="#a9c1e9" stroke-width="1.5" />
-                <circle cx="12" cy="36" r="2.4" fill="#21212f" stroke="#a9c1e9" stroke-width="1.5" />
+                <!--- Flat board, the grid lines are gaps --->
+                <rect x="4" y="4" width="12.6" height="12.6" rx="3" fill="#333" />
+                <rect x="17.7" y="4" width="12.6" height="12.6" rx="3" fill="#333" />
+                <rect x="31.4" y="4" width="12.6" height="12.6" rx="3" fill="#333" />
+                <rect x="4" y="17.7" width="12.6" height="12.6" rx="3" fill="#333" />
+                <rect x="17.7" y="17.7" width="12.6" height="12.6" rx="3" fill="#333" />
+                <rect x="31.4" y="17.7" width="12.6" height="12.6" rx="3" fill="#333" />
+                <rect x="4" y="31.4" width="12.6" height="12.6" rx="3" fill="#333" />
+                <rect x="17.7" y="31.4" width="12.6" height="12.6" rx="3" fill="#333" />
+                <rect x="31.4" y="31.4" width="12.6" height="12.6" rx="3" fill="#333" />
+                <!--- Pieces of different sizes --->
+                <circle cx="10.3" cy="10.3" r="5" fill="#e81932" />
+                <circle cx="24" cy="24" r="5" fill="#a9c1e9" />
+                <circle cx="37.7" cy="37.7" r="5" fill="#e81932" />
+                <circle cx="37.7" cy="10.3" r="3" fill="#a9c1e9" />
+                <circle cx="10.3" cy="37.7" r="3.6" fill="#a9c1e9" />
+                <circle cx="24" cy="37.7" r="2.4" fill="#e81932" />
               </svg>
               <span class="game-name">Tic Tac Toe XL</span>
             </button>
