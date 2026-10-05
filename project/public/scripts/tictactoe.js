@@ -11,6 +11,8 @@ var myName = null;
 var selected = null; // selected piece size
 var lastMoveShown = null; // to animate only new pieces
 var sessionOver = false;
+var shownRound = null; // round of the last "who starts" animation
+var startBlockedUntil = 0; // no moves while the animation runs
 
 /* ---------- Helpers ---------- */
 
@@ -30,7 +32,7 @@ function isMyTurn() {
 
 function canPlace(size, cell) {
   var seat = mySeat();
-  if (!isMyTurn() || size == null) return false;
+  if (!isMyTurn() || size == null || Date.now() < startBlockedUntil) return false;
   if (!(state.seats[seat].reserve[size] > 0)) return false;
   var piece = state.board[cell];
   return piece == null || piece.size < size;
@@ -82,6 +84,8 @@ function renderStatus() {
 
   if (state.board == null) {
     parts.push("Waiting for an opponent...");
+  } else if (Date.now() < startBlockedUntil) {
+    parts.push("New round...");
   } else if (state.winner != null) {
     if (state.forfeit && state.winner == seat) {
       parts.push("Your opponent left - ", strong("you win!"));
@@ -159,7 +163,10 @@ function renderSeat(index) {
   var mine = index == mySeat();
 
   panel.classList.toggle("mine", mine || (mySeat() < 0 && index == 1));
-  panel.classList.toggle("turn", state.status == "playing" && state.turn == index);
+  panel.classList.toggle(
+    "turn",
+    state.status == "playing" && state.turn == index && Date.now() >= startBlockedUntil,
+  );
   panel.classList.toggle("offline", seat != null && !seat.connected);
   panel.classList.toggle("waiting", seat == null);
 
@@ -264,10 +271,6 @@ function renderFooter() {
     );
   }
 
-  var online =
-    state.seats.filter((seat) => seat != null && seat.connected).length + state.spectators.length;
-  document.getElementById("onlineCount").innerText = online + " online";
-
   var spectators = document.getElementById("spectatorInfo");
   spectators.hidden = state.spectators.length == 0;
   spectators.replaceChildren(
@@ -322,8 +325,68 @@ socket.on("joined", (data) => {
 
 socket.on("state", (data) => {
   state = data;
+  // New game: show who starts (once, also after a reload during the animation)
+  if (state.status == "playing" && state.startIn > 0 && state.round !== shownRound) {
+    shownRound = state.round;
+    playStartAnimation(state.startIn);
+  }
   render();
 });
+
+/* ---------- "Who starts?" animation (same reel as in MemeMory) ---------- */
+
+function playStartAnimation(duration) {
+  var overlay = document.getElementById("startOverlay");
+  var track = document.getElementById("reelTrack");
+  var result = document.getElementById("startResult");
+  var reel = track.parentElement;
+  var itemHeight = parseFloat(getComputedStyle(reel).getPropertyValue("--item")) || 72;
+  var players = state.seats.map((seat) => seat.name);
+  var starter = state.turn;
+
+  startBlockedUntil = Date.now() + duration;
+  setTimeout(render, duration + 50);
+
+  // Long list of names, the starter is the second to last one -> slot machine
+  var names = [];
+  for (var r = 0; r < 12; r++) names.push(...players);
+  names.push(...players.slice(0, starter + 1));
+  names.push(players[(starter + 1) % 2]);
+
+  track.replaceChildren();
+  names.forEach((name) => {
+    var item = document.createElement("div");
+    item.className = "reel-item";
+    item.append(createAvatar(name), document.createTextNode(name));
+    track.appendChild(item);
+  });
+
+  var target = names.length - 2;
+  var spin = Math.max(800, duration - 1300);
+
+  result.classList.remove("show");
+  result.innerText = "";
+  track.style.transition = "none";
+  track.style.transform = "translateY(0)";
+  overlay.hidden = false;
+
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      track.style.transition = `transform ${spin}ms cubic-bezier(0.12, 0.75, 0.18, 1)`;
+      // The marker is the second row of the reel
+      track.style.transform = `translateY(${-(target - 1) * itemHeight}px)`;
+    }),
+  );
+
+  setTimeout(() => {
+    track.children[target].classList.add("chosen");
+    var name = players[starter];
+    result.innerText = name == myName ? "You start" : `${name} starts`;
+    result.classList.add("show");
+  }, spin);
+
+  setTimeout(() => (overlay.hidden = true), duration + 200);
+}
 
 socket.on("moveError", (message) => showToast(message, "error"));
 

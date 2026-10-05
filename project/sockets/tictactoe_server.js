@@ -27,8 +27,18 @@ module.exports = function (io) {
     room.game = ttt.newGame(starter);
     room.forfeit = false;
     room.status = STATUS.PLAYING;
+    room.round++;
+    // Clients show who starts first, moves are possible afterwards
+    room.startsAt = Date.now() + config.START_ANIMATION;
     room.seats.forEach((seat) => (seat.rematch = false));
-    systemMessage(gameID, room, `New round - ${room.seats[starter].name} starts.`, "start");
+    // Announced after the animation, so the chat doesn't spoil it
+    const round = room.round;
+    const name = room.seats[starter].name;
+    setTimeout(() => {
+      if (rooms.get(gameID, "tictactoe") === room && room.round === round) {
+        systemMessage(gameID, room, `New round - ${name} starts.`, "start");
+      }
+    }, config.START_ANIMATION);
   }
 
   function isEmpty(room) {
@@ -171,6 +181,8 @@ module.exports = function (io) {
 
         const index = seatOf(room, username);
         if (index < 0 || room.seats[index].socketId !== socket.id) return;
+        // The "who starts" animation is still running
+        if (Date.now() < room.startsAt) return;
 
         const result = ttt.place(room.game, index, data.size, data.cell);
         if (result.error) {
