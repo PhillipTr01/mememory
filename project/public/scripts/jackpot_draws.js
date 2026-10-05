@@ -36,6 +36,9 @@ function randomBetween(a, b) {
   return a + Math.random() * (b - a);
 }
 
+// Every draw slows down at the end: fast start, long, soft stop
+var SLOW_END = "cubic-bezier(0.22, 0.61, 0.36, 1)";
+
 // Scene container of a draw (built again when another draw was shown before)
 function scene(stage, name) {
   var current = stage.firstElementChild;
@@ -199,7 +202,7 @@ var wheelDraw = {
     var turns = short ? 1 : 3;
     await animate(wheel, [{ transform: "rotate(0deg)" }, { transform: `rotate(${turns * 360 - target}deg)` }], {
       duration: duration,
-      easing: "cubic-bezier(0.3, 0.35, 0.2, 1)",
+      easing: SLOW_END,
     });
     wheel.style.transform = `rotate(${turns * 360 - target}deg)`;
     if (!short) confetti(stage.firstElementChild);
@@ -265,7 +268,7 @@ var rouletteDraw = {
     var end = strip.clientWidth / 2 - offset;
     await animate(track, [{ transform: "translateX(0)" }, { transform: `translateX(${end}px)` }], {
       duration: duration,
-      easing: "cubic-bezier(0.1, 0.7, 0.15, 1)",
+      easing: SLOW_END,
     });
     tile.classList.add("chosen");
   },
@@ -337,15 +340,11 @@ var bowlingDraw = {
 
     // 2. The roll: fast, then slow motion right before the pins (and zoom)
     var laneWidth = lane.clientWidth;
+    // The roll slows down right before the pins (slow motion)
     var roll = animate(
       ball,
-      [
-        { transform: "translateX(0) rotate(0deg)" },
-        { transform: `translateX(${laneWidth * 0.48}px) rotate(900deg)`, offset: 0.45 },
-        { transform: `translateX(${laneWidth * 0.6}px) rotate(1100deg)`, offset: 0.85 },
-        { transform: `translateX(${laneWidth * 0.66}px) rotate(1180deg)` },
-      ],
-      { duration: 2600 * t, easing: "ease-in" },
+      [{ transform: "translateX(0) rotate(0deg)" }, { transform: `translateX(${laneWidth * 0.66}px) rotate(1180deg)` }],
+      { duration: 2600 * t, easing: SLOW_END },
     );
     lane.classList.add("rolling");
     setTimeout(() => lane.classList.add("zoom"), 1300 * t);
@@ -391,7 +390,7 @@ var bowlingDraw = {
           { transform: "translate(-50%, -50%) rotate(-5deg)" },
           { transform: "translate(-50%, -50%) rotate(0deg)" },
         ],
-        { duration: 1500 * t + 300, easing: "ease-in-out" },
+        { duration: 1500 * t + 300, easing: SLOW_END },
       );
       winnerPin.classList.add("standing");
     }
@@ -474,7 +473,7 @@ var plinkoDraw = {
       x = next;
     }
     frames.push({ transform: `translate(${targetX}px, ${height * 0.9}px)`, offset: 1 });
-    await animate(parts.ball, frames, { duration: duration, easing: "ease-in" });
+    await animate(parts.ball, frames, { duration: duration, easing: SLOW_END });
 
     // The slot of the winning ticket lights up
     var winner = [...parts.slots.children].find(
@@ -544,7 +543,8 @@ var raceDraw = {
         frames.push({ transform: `translateX(${position * laneWidth}px)`, offset: (index + 1) / speeds.length });
       });
       if (isWinner) finishers.push(runner);
-      return animate(runner, frames, { duration: raceTime, easing: "linear" });
+      // Everybody slows down towards the line (the winner still arrives first)
+      return animate(runner, frames, { duration: raceTime, easing: SLOW_END });
     });
     // The last moment: the photo finish (the track gets darker at the edges)
     setTimeout(() => parts.track.classList.add("photo"), raceTime * 0.82);
