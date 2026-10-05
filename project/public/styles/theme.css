@@ -861,3 +861,40 @@ body.mode-speed {
     display: none;
   }
 }
+
+/* ---------- Hover labels (see ui.js) ---------- */
+.mm-tooltip {
+  position: fixed;
+  z-index: 4000;
+  max-width: 260px;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 6px;
+  background: #0f0f0f;
+  color: var(--mm-text);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  animation: mm-tooltip-in 0.12s ease;
+}
+
+.mm-tooltip[hidden] {
+  display: none;
+}
+
+@keyframes mm-tooltip-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mm-tooltip.below {
+  animation-name: mm-tooltip-in-below;
+}
+
+@keyframes mm-tooltip-in-below {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}

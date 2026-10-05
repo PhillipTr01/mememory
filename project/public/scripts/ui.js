@@ -141,3 +141,67 @@ function confirmDialog(options) {
     cancel.focus();
   });
 }
+
+/*
+ * Styled hover labels instead of the browser's default ones: every element
+ * with a title gets this tooltip (also elements that are added later).
+ */
+(function () {
+  var tip = null;
+  var current = null;
+
+  function hide() {
+    if (tip) tip.hidden = true;
+    current = null;
+  }
+
+  function show(element) {
+    if (tip == null) {
+      tip = document.createElement("div");
+      tip.className = "mm-tooltip";
+      tip.setAttribute("role", "tooltip");
+      document.body.appendChild(tip);
+    }
+    tip.innerText = element.dataset.tip;
+    tip.hidden = false;
+    tip.classList.remove("below");
+
+    // Above the element, centered; below if there is no room above
+    var rect = element.getBoundingClientRect();
+    var box = tip.getBoundingClientRect();
+    var top = rect.top - box.height - 8;
+    if (top < 4) {
+      top = rect.bottom + 8;
+      tip.classList.add("below");
+    }
+    var left = rect.left + rect.width / 2 - box.width / 2;
+    left = Math.max(6, Math.min(left, window.innerWidth - box.width - 6));
+    tip.style.top = top + "px";
+    tip.style.left = left + "px";
+  }
+
+  document.addEventListener("mouseover", (event) => {
+    var element = event.target.closest && event.target.closest("[title], [data-tip]");
+    if (element == null || element == current) return;
+    // Move the title to data-tip, so the browser doesn't show its own label
+    if (element.hasAttribute("title")) {
+      var title = element.getAttribute("title");
+      element.removeAttribute("title");
+      if (title) element.dataset.tip = title;
+      if (!element.hasAttribute("aria-label") && title) element.setAttribute("aria-label", title);
+    }
+    if (!element.dataset.tip) return;
+    current = element;
+    show(element);
+  });
+
+  document.addEventListener("mouseout", (event) => {
+    if (current && !current.contains(event.relatedTarget)) hide();
+  });
+  // The element was redrawn (e.g. the player list) -> don't leave the label behind
+  document.addEventListener("mousemove", () => {
+    if (current && !current.isConnected) hide();
+  });
+  document.addEventListener("mousedown", hide);
+  window.addEventListener("scroll", hide, true);
+})();
