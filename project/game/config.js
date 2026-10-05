@@ -33,10 +33,14 @@ module.exports = {
   // and the pause after two wrong cards before the turn passes
   SPEED_TURN_TIME: 10 * 1000,
   SPEED_TURN_OPTIONS: [3, 5, 10, 15],
-  SPEED_MISS_DELAY: 1500,
-  // The clock starts after the card animations (flip takes 0.9s on the client)
-  SPEED_ANIMATION_GRACE: 1000,
+  SPEED_MISS_DELAY: 950,
+  // The clock starts after the card animations (the flip takes 0.6s on the client)
+  SPEED_ANIMATION_GRACE: 700,
+  // Singleplayer: who starts (0 = player, 1 = bot, null = random)
+  SINGLEPLAYER_STARTER: null,
+  // Singleplayer: two wrong cards stay open this long, then the turn passes
+  SINGLEPLAYER_MISS_DELAY: 1850,
 
-  // Tic Tac Toe XL: a player who doesn't come back in time loses the game
-  TTT_REJOIN_GRACE: 30 * 1000,
+  // Speed round: shorter "who starts" animation
+  SPEED_START_ANIMATION: 2600,
 };

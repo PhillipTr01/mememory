@@ -14,6 +14,10 @@ Object.assign(config, {
   SPEED_TURN_TIME: 400,
   SPEED_MISS_DELAY: 100,
   SPEED_ANIMATION_GRACE: 50,
+  SPEED_START_ANIMATION: 100,
+  // The player starts, so the tests can open cards right away
+  SINGLEPLAYER_STARTER: 0,
+  SINGLEPLAYER_MISS_DELAY: 100,
 });
 
 let server;
@@ -249,7 +253,8 @@ test("multiplayer: only the host can start, a leaver loses and the other wins", 
   const started = waitFor(alice, "roomState", (s) => s.status === "playing");
   alice.emit("startGame");
   const animation = await starting;
-  assert.deepStrictEqual(animation.players, ["alice", "bob"]);
+  // The order is shuffled for every game
+  assert.deepStrictEqual(animation.players.slice().sort(), ["alice", "bob"]);
   const { turn, players } = await started;
   assert.strictEqual(turn, animation.starter);
   assert.ok(turn === 0 || turn === 1);
@@ -294,6 +299,95 @@ test("multiplayer: games with more than two players keep the turn order", async 
   state = await next;
   assert.strictEqual(state.players[state.turn].name, expected);
   assert.strictEqual(state.status, "playing");
+});
+
+test("multiplayer: the player order is shuffled", async () => {
+  const orders = new Set();
+  for (let i = 0; i < 12 && orders.size < 2; i++) {
+    const { alice } = await openRoom("bob", "carol");
+    const starting = h.once(alice, "gameStarting");
+    alice.emit("startGame");
+    orders.add((await starting).players.join(","));
+    alice.emit("leaveRoom");
+  }
+  assert.ok(orders.size > 1, "different orders");
+});
+
+test("multiplayer: rematch after the game goes back to the waiting room", async () => {
+  const { gameID, alice, others } = await openRoom("bob");
+  const bob = others[0];
+  const started = waitFor(alice, "roomState", (s) => s.status === "playing");
+  alice.emit("startGame");
+  await started;
+  const oldImages = rooms.get(gameID, "multiplayer").cardImages;
+
+  const finished = h.once(alice, "getWinner");
+  bob.emit("surrender");
+  await finished;
+  assert.ok(rooms.get(gameID, "multiplayer"), "the room stays for a rematch");
+
+  // Strangers can't enter a finished room
+  const carol = client("/multiplayer", "carol");
+  carol.emit("joinRoom", { gameID });
+  await h.once(carol, "noGameFound");
+
+  // Only the host can start a rematch
+  bob.emit("rematch");
+  await h.wait(150);
+  assert.strictEqual(rooms.get(gameID, "multiplayer").status, "finished");
+
+  const back = waitFor(alice, "roomState", (s) => s.status === "waiting");
+  const reset = h.once(bob, "rematch");
+  // bob surrendered and watched - for the rematch he is a player again
+  const player = waitFor(bob, "joinedRoom", (data) => data.spectator === false);
+  alice.emit("rematch");
+  await player;
+  const state = await back;
+  await reset;
+  assert.deepStrictEqual(state.players.map((p) => [p.name, p.points, p.active, p.ready]).sort(), [
+    ["alice", 0, true, false],
+    ["bob", 0, true, false],
+  ]);
+  assert.strictEqual(state.host, "alice");
+  assert.notStrictEqual(rooms.get(gameID, "multiplayer").cardImages, oldImages, "new board");
+});
+
+test("multiplayer: the host leaves after the game, the next player can start the rematch", async () => {
+  const { gameID, alice, others } = await openRoom("bob");
+  const bob = others[0];
+  const started = waitFor(alice, "roomState", (s) => s.status === "playing");
+  alice.emit("startGame");
+  await started;
+  const finished = h.once(bob, "getWinner");
+  alice.emit("surrender");
+  await finished;
+
+  const newHost = waitFor(bob, "roomState", (s) => s.host === "bob");
+  alice.emit("leaveRoom");
+  await newHost;
+
+  const back = waitFor(bob, "roomState", (s) => s.status === "waiting");
+  bob.emit("rematch");
+  const state = await back;
+  assert.deepStrictEqual(state.players.map((p) => p.name), ["bob"], "only players who are still here");
+});
+
+test("multiplayer: players who left are marked, players who surrendered are not", async () => {
+  const { alice, others } = await openRoom("bob", "carol");
+  const [bob, carol] = others;
+  const started = waitFor(alice, "roomState", (s) => s.status === "playing");
+  alice.emit("startGame");
+  await started;
+
+  const marked = waitFor(alice, "roomState", (s) => s.players.find((p) => p.name === "bob").left);
+  bob.emit("leaveRoom");
+  const state = await marked;
+  assert.strictEqual(state.players.find((p) => p.name === "bob").active, false);
+
+  const surrendered = waitFor(alice, "roomState", (s) => !s.players.find((p) => p.name === "carol").active);
+  carol.emit("surrender");
+  const after = await surrendered;
+  assert.strictEqual(after.players.find((p) => p.name === "carol").left, false);
 });
 
 test("multiplayer: chat is validated, rate limited and kept as history", async () => {
@@ -423,6 +517,10 @@ test("singleplayer: after the player's turn the computer plays", async () => {
   socket.emit("initializingGame", { gameID });
   await h.once(socket, "setComputername");
 
+  // No "End turn": after two wrong cards the turn passes on its own
+  const closed = h.once(socket, "closeCards", 8000);
+  const highlight = waitFor(socket, "highlightPlayer", (data) => data.turn === 1, 8000);
+
   // Open cards until two of them don't match
   let first = null;
   for (let id = 0; id < 66; id++) {
@@ -437,14 +535,55 @@ test("singleplayer: after the player's turn the computer plays", async () => {
     }
   }
 
-  await h.once(socket, "activateEndTurn");
-  const highlight = h.once(socket, "highlightPlayer");
-  socket.emit("endTurn");
+  const cards = await closed;
+  assert.ok(cards[1] != null && cards[2] != null);
   assert.strictEqual((await highlight).turn, 1);
 
   // The computer flips two cards on its own
   const flips = [await h.once(socket, "turnCard", 8000), await h.once(socket, "turnCard", 8000)];
   assert.strictEqual(flips.length, 2);
+});
+
+test("singleplayer: who starts is random", async () => {
+  config.SINGLEPLAYER_STARTER = null;
+  try {
+    const starters = new Set();
+    for (let i = 0; i < 12 && starters.size < 2; i++) {
+      const gameID = await createGame("alice", "playSingleplayer", { difficulty: 0 });
+      const socket = client("/singleplayer", "alice");
+      await h.once(socket, "connect");
+      const highlight = h.once(socket, "highlightPlayer");
+      socket.emit("initializingGame", { gameID });
+      starters.add((await highlight).turn);
+      socket.close();
+    }
+    assert.deepStrictEqual([...starters].sort(), [0, 1]);
+  } finally {
+    config.SINGLEPLAYER_STARTER = 0;
+  }
+});
+
+test("singleplayer: rematch starts a new game against the same bot", async () => {
+  const gameID = await createGame("alice", "playSingleplayer", { difficulty: 1 });
+  const socket = client("/singleplayer", "alice");
+  await h.once(socket, "connect");
+  socket.emit("initializingGame", { gameID });
+  await h.once(socket, "setComputername");
+
+  // No rematch while the game is running
+  socket.emit("rematch");
+  socket.emit("surrender");
+  await h.once(socket, "getWinner");
+
+  const rematch = h.once(socket, "rematch");
+  const highlight = h.once(socket, "highlightPlayer");
+  socket.emit("rematch");
+  await rematch;
+  assert.strictEqual((await highlight).computer, "Medium Bot");
+
+  // The new game can be played
+  socket.emit("openCard", 0);
+  assert.strictEqual((await h.once(socket, "turnCard")).id, 0);
 });
 
 test("multiplayer: watch joins as spectator even with free seats", async () => {

@@ -13,11 +13,11 @@
   --ttt-board: min(calc(100vh - 245px), 520px, calc(100vw - 690px));
 }
 
-/* Red accent on this page */
+/* Green accent on this page (classic MemeMory blue, speed round orange) */
 body.ttt-theme {
-  --mm-accent: #e81932;
-  --mm-accent-rgb: 232, 25, 50;
-  --mm-accent-hover: #c8142a;
+  --mm-accent: #3f9d6b;
+  --mm-accent-rgb: 63, 157, 107;
+  --mm-accent-hover: #35895c;
   --mm-gradient: var(--mm-accent);
   --mm-on-accent: #fff;
 }
@@ -133,7 +133,7 @@ body.ttt-theme {
 }
 
 .ttt-cell.legal:hover {
-  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  border-color: var(--ttt-own, rgba(var(--mm-accent-rgb), 0.6));
 }
 
 .ttt-cell.last {
@@ -243,6 +243,11 @@ body.ttt-theme {
   min-width: 0;
 }
 
+.ttt-who-text {
+  flex: 1;
+  min-width: 0;
+}
+
 .ttt-name {
   display: flex;
   align-items: center;
@@ -318,9 +323,20 @@ body.ttt-theme {
 }
 
 .ttt-stock.selected {
-  border-color: rgba(var(--mm-accent-rgb), 0.7);
+  border-color: var(--ttt-own);
   background: var(--mm-surface-2);
   color: var(--mm-text);
+}
+
+/* The own color (red / blue) for the selection and the board hover */
+.ttt-player.p0,
+.ttt-board.own-p0 {
+  --ttt-own: var(--ttt-p0);
+}
+
+.ttt-player.p1,
+.ttt-board.own-p1 {
+  --ttt-own: var(--ttt-p1-mark);
 }
 
 /* Free seat: invite */

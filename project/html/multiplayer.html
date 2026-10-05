@@ -176,6 +176,13 @@
                         <button type="button" id="playButton" class="mm-btn mm-btn-primary w-100" onclick="emitEndTurn();" disabled hidden>
                             <i class="bi bi-arrow-repeat"></i> End turn
                         </button>
+                        <!--- After the game --->
+                        <button type="button" id="rematchButton" class="mm-btn mm-btn-primary w-100" hidden>
+                            <i class="bi bi-arrow-repeat"></i> Rematch
+                        </button>
+                        <a href="/lobby" id="lobbyButton" class="mm-btn w-100" hidden>
+                            <i class="bi bi-house"></i> Back to lobby
+                        </a>
                     </div>
                 </div>
 
@@ -201,6 +208,7 @@
                         <button type="button" data-emoji="😭">😭</button>
                         <button type="button" data-emoji="🤯">🤯</button>
                         <button type="button" data-emoji="💀">💀</button>
+                        <button type="button" data-emoji="🤡">🤡</button>
                         <button type="button" data-emoji="GG">GG</button>
                     </div>
                     <form id="chat-form" class="chat-form" autocomplete="off">
@@ -239,9 +247,13 @@
                 <button type="button" id="resultBoardButton" class="mm-btn">
                     <i class="bi bi-grid-3x3-gap"></i> Show board
                 </button>
-                <a href="/lobby" class="mm-btn mm-btn-primary">
+                <a href="/lobby" class="mm-btn">
                     <i class="bi bi-house"></i> Back to lobby
                 </a>
+                <button type="button" id="resultRematchButton" class="mm-btn mm-btn-primary result-rematch" hidden>
+                    <i class="bi bi-arrow-repeat"></i> Rematch
+                </button>
+                <p id="rematchHint" class="mm-muted small result-rematch mb-1" hidden>The host can start a rematch.</p>
             </div>
         </div>
     </div>
@@ -251,9 +263,9 @@
         <div class="result-box mm-card">
             <div id="noticeIcon" hidden></div>
             <h2 id="noticeTitle" class="result-title"></h2>
-            <p id="noticeText" class="mm-muted"></p>
-            <div class="d-flex gap-2 justify-content-center flex-wrap">
-                <button type="button" id="noticeAction" class="mm-btn mm-btn-primary"></button>
+            <p id="noticeText" class="mm-muted notice-text"></p>
+            <div class="notice-actions">
+                <button type="button" id="noticeAction" class="mm-btn mm-btn-primary" hidden></button>
                 <a href="/lobby" class="mm-btn"><i class="bi bi-house"></i> Lobby</a>
             </div>
         </div>

@@ -16,6 +16,8 @@
   --mm-success: #7fae6e;
   --mm-warning: #d4a64a;
   --mm-danger: #e0675a;
+  --mm-info: #7fa9b3; /* chat info messages: muted teal */
+  --mm-info-rgb: 127, 169, 179;
   --mm-gradient: var(--mm-accent);
   --mm-radius: 8px;
   --mm-shadow: none;
@@ -54,6 +56,18 @@
   border: none;
   color: var(--mm-on-accent);
   box-shadow: none;
+}
+
+/* Links styled as buttons keep their text color (Bootstrap's a:hover is blue) */
+a.mm-btn:hover,
+a.mm-btn:focus {
+  color: var(--mm-text);
+}
+
+a.mm-btn.mm-btn-primary:hover,
+a.mm-btn.mm-btn-primary:focus,
+.mm-btn.mm-btn-primary:hover {
+  color: var(--mm-on-accent);
 }
 
 .mm-btn-primary:hover:not(:disabled) {
@@ -788,9 +802,10 @@ html.flip-scroll {
 body.mode-speed {
   --mm-accent: #f5a524;
   --mm-accent-rgb: 245, 165, 36;
-  --mm-accent-hover: #e0921a;
+  --mm-accent-hover: #d98a10;
   --mm-gradient: var(--mm-accent);
-  --mm-on-accent: #1b1406;
+  /* White text on orange buttons, like on the blue ones */
+  --mm-on-accent: #fff;
 }
 
 /* ---------- Smaller logo and Play button ---------- */

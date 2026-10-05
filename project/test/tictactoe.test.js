@@ -5,7 +5,7 @@ const rooms = require("../game/rooms");
 const config = require("../game/config");
 const ttt = require("../game/tictactoe");
 
-Object.assign(config, { START_ANIMATION: 100, TICK: 50, TTT_REJOIN_GRACE: 300, REJOIN_GRACE_WAITING: 300, EMPTY_ROOM_GRACE: 300 });
+Object.assign(config, { START_ANIMATION: 100, TICK: 50, REJOIN_GRACE_PLAYING: 300, REJOIN_GRACE_WAITING: 300, EMPTY_ROOM_GRACE: 300 });
 
 /* ---------- Game logic ---------- */
 
@@ -195,20 +195,52 @@ test("tictactoe: moves are checked by the server and a line wins", async () => {
   assert.strictEqual(rooms.get(gameID, "tictactoe").game.reserves[0][1], ttt.PIECES[1]);
 });
 
-test("tictactoe: leaving during a game lets the opponent win, a new player can join", async () => {
+test("tictactoe: leaving keeps the seat for a while, then the opponent wins", async () => {
   const { gameID, alice, bob, A, B } = await startedGame();
-  const left = stateWhere(alice, (s) => s.seats[B] == null);
+  const away = stateWhere(alice, (s) => s.seats[B] != null && s.seats[B].connected === false);
   bob.emit("leave");
-  const state = await left;
-  assert.strictEqual(state.winner, A);
-  assert.strictEqual(state.forfeit, true);
-  assert.strictEqual(state.status, "waiting");
+  const state = await away;
+  assert.strictEqual(state.winner, null, "no win right away");
+  assert.strictEqual(state.status, "playing");
+  assert.ok(state.seats[B].awayLeft > 0);
+
+  // Not back in time -> forfeit, the seat is free again
+  const left = await stateWhere(alice, (s) => s.seats[B] == null, 2000);
+  assert.strictEqual(left.winner, A);
+  assert.strictEqual(left.forfeit, "left");
+  assert.strictEqual(left.status, "waiting");
 
   const playing = stateWhere(alice, (s) => s.status === "playing");
   await join("carol", gameID);
   const next = await playing;
   assert.strictEqual(next.seats[B].name, "carol");
   assert.strictEqual(next.seats[A].wins, 0, "new opponent, new score");
+});
+
+test("tictactoe: a player who left can rejoin the running game", async () => {
+  const { gameID, alice, bob, B } = await startedGame();
+  bob.emit("leave");
+  await stateWhere(alice, (s) => s.seats[B].connected === false);
+  const bob2 = await join("bob", gameID);
+  assert.strictEqual(bob2.firstState.seats[B].connected, true);
+  assert.strictEqual(bob2.firstState.status, "playing");
+  assert.strictEqual(bob2.firstState.winner, null);
+});
+
+test("tictactoe: surrender ends the round, both can play a rematch", async () => {
+  const { alice, bob, A, B } = await startedGame();
+  const finished = stateWhere(alice, (s) => s.status === "finished");
+  bob.emit("surrender");
+  const state = await finished;
+  assert.strictEqual(state.winner, A);
+  assert.strictEqual(state.forfeit, "surrender");
+  assert.strictEqual(state.seats[A].wins, 1);
+  assert.strictEqual(state.seats[B].name, "bob");
+
+  const rematch = stateWhere(alice, (s) => s.status === "playing");
+  alice.emit("rematch");
+  bob.emit("rematch");
+  assert.strictEqual((await rematch).forfeit, false);
 });
 
 test("tictactoe: rejoin after a reload, forfeit when not coming back", async () => {

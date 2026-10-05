@@ -150,24 +150,11 @@ socket.on("closeCards", (data) => {
     if (card == null) return;
 
     card.classList.remove("flip");
-    clearCardImage(card, 900);
+    clearCardImage(card, 600);
     understateCard(id);
   });
 });
 
-// Activate endTurn-Button
-socket.on("activateEndTurn", () => {
-  document.getElementById("playButton").disabled = false;
-});
-
-// Disable endTurn-Button
-socket.on("disableEndTurn", () => {
-  document.getElementById("playButton").disabled = true;
-});
-
-function emitEndTurn() {
-  socket.emit("endTurn");
-}
 
 function surrender() {
   confirmDialog({
@@ -182,8 +169,6 @@ function surrender() {
 }
 
 socket.on("getWinner", (data) => {
-  var playButton = document.getElementById("playButton");
-
   // Visual change for winner
   document.getElementById(data.winner == 0 ? "user1Item" : "user2Item").classList.add("winner");
   document.getElementById(data.winner == 0 ? "user2Item" : "user1Item").classList.add("inactive");
@@ -201,17 +186,41 @@ socket.on("getWinner", (data) => {
     understateCard(i);
   }
 
-  // Change EndTurn-Button to Back to Lobby
-  playButton.onclick = () => {
-    window.location.href = "/lobby";
-  };
-  playButton.disabled = false;
-  playButton.innerText = "Back to Lobby";
+  // Rematch / Back to lobby
+  document.getElementById("rematchButton").hidden = false;
+  document.getElementById("lobbyButton").hidden = false;
   document.getElementById("surrenderSlot").replaceChildren();
   showResult(data);
 
   // Reset storage
   sessionStorage.clear();
+});
+
+function requestRematch() {
+  document.getElementById("rematchButton").disabled = true;
+  document.getElementById("resultRematchButton").disabled = true;
+  socket.emit("rematch");
+}
+
+// Rematch: new board against the same bot
+socket.on("rematch", () => {
+  document.getElementById("resultOverlay").hidden = true;
+  document.getElementById("board").classList.remove("revealed");
+  for (var i = 0; i < 66; i++) {
+    var card = document.getElementById("card-" + i);
+    card.classList.remove("flip");
+    understateCard(i);
+    clearCardImage(card, 0);
+    document.getElementById(`cardcount-${i}`).innerText = "";
+  }
+  ["user1Score", "user2Score"].forEach((id) => (document.getElementById(id).innerText = "0"));
+  document.getElementById("pairsLeft").innerText = "33 pairs left";
+  ["user1Item", "user2Item"].forEach((id) => document.getElementById(id).classList.remove("winner", "inactive"));
+  document.getElementById("surrenderSlot").replaceChildren(createSurrenderButton());
+
+  ["rematchButton", "resultRematchButton"].forEach((id) => (document.getElementById(id).disabled = false));
+  document.getElementById("rematchButton").hidden = true;
+  document.getElementById("lobbyButton").hidden = true;
 });
 
 // Surrender button next to the own name
@@ -220,6 +229,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   var overlay = document.getElementById("resultOverlay");
   document.getElementById("resultBoardButton").addEventListener("click", () => (overlay.hidden = true));
+  document.getElementById("rematchButton").addEventListener("click", requestRematch);
+  document.getElementById("resultRematchButton").addEventListener("click", requestRematch);
   // A click next to the result closes it and opens the card below
   overlay.addEventListener("click", (event) => {
     if (event.target != overlay) return;

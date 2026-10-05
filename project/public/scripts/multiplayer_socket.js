@@ -37,6 +37,14 @@ socket.on("connect", () => {
   }
 });
 
+// Leaving the page (logo, menu, back button): disconnect right away, so the
+// others see "Away" at once. Browsers can keep a page with an open connection
+// in the back/forward cache; coming back reconnects (and rejoins).
+window.addEventListener("pagehide", () => socket.disconnect());
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) socket.connect();
+});
+
 socket.on("disconnect", (reason) => {
   // "io server disconnect" = we were removed on purpose, socket.io doesn't reconnect then
   if (!sessionOver && reason != "io server disconnect") {
@@ -53,16 +61,12 @@ socket.on("connect_error", (error) => {
 
 // Something went wrong on the server (e.g. not enough memes) -> back to the lobby
 socket.on("gameError", (message) => {
-  showNotice("⚠️", "Something went wrong", message || "Please try again.", "Back to lobby", () => {
-    window.location.href = "/lobby";
-  });
+  showNotice("⚠️", "Something went wrong", message || "Please try again.");
 });
 
 socket.on("noGameFound", () => {
   sessionOver = true;
-  showNotice("🚪", "Room not found", "This room doesn't exist anymore.", "Back to lobby", () => {
-    window.location.href = "/lobby";
-  });
+  showNotice("🚪", "Room not found", "This room doesn't exist anymore.");
 });
 
 // The room was opened in another tab
@@ -75,18 +79,18 @@ socket.on("sessionReplaced", () => {
 
 socket.on("kicked", () => {
   sessionOver = true;
-  showNotice("👢", "Removed from the room", "The host removed you from this room.", "Back to lobby", () => {
-    window.location.href = "/lobby";
-  });
+  showNotice("👢", "Removed from the room", "The host removed you from this room.");
 });
 
 function showNotice(icon, title, text, actionLabel, action) {
   document.getElementById("noticeIcon").innerText = icon;
   document.getElementById("noticeTitle").innerText = title;
   document.getElementById("noticeText").innerText = text;
+  // Extra action (e.g. "Play here"), the lobby button is always there
   var button = document.getElementById("noticeAction");
-  button.innerText = actionLabel;
-  button.onclick = action;
+  button.hidden = actionLabel == null;
+  button.innerText = actionLabel || "";
+  button.onclick = action || null;
   document.getElementById("connectionBanner").hidden = true;
   document.getElementById("noticeOverlay").hidden = false;
 }
@@ -127,6 +131,8 @@ document.addEventListener(
       socket.emit("updateSettings", { isPublic: e.target.checked });
     });
     document.getElementById("resultBoardButton").addEventListener("click", closeResult);
+    document.getElementById("rematchButton").addEventListener("click", requestRematch);
+    document.getElementById("resultRematchButton").addEventListener("click", requestRematch);
 
     // The result must not block the board: a click next to it closes it,
     // and if there is a card under the click, its meme is opened right away
@@ -161,9 +167,36 @@ socket.on("joinedRoom", (data) => {
   if (room) renderPlayerList(room, room);
 });
 
+// Players who are away: when their time to come back runs out (local clock)
+var awayUntil = {};
+var awayTimer = null;
+
+function awaySeconds(player) {
+  var until = awayUntil[player.name];
+  return until == null ? null : Math.max(0, Math.ceil((until - Date.now()) / 1000));
+}
+
+function createAwayTag() {
+  var tag = document.createElement("span");
+  tag.className = "player-tag away";
+  tag.title = "Left - can still come back";
+  tag.innerText = "Away";
+  return tag;
+}
+
 socket.on("roomState", (state) => {
   var previous = room;
   room = state;
+
+  awayUntil = {};
+  state.players.forEach((player) => {
+    if (player.awayLeft != null) awayUntil[player.name] = Date.now() + player.awayLeft;
+  });
+  clearInterval(awayTimer);
+  if (Object.keys(awayUntil).length > 0 && state.status != "waiting") {
+    // Count down once a second
+    awayTimer = setInterval(() => room && renderPlayerList(room, room), 1000);
+  }
 
   // Speed round: yellow / orange accent color for the whole room
   document.body.classList.toggle("mode-speed", state.mode == "speed");
@@ -192,6 +225,8 @@ socket.on("roomState", (state) => {
   }
 
   document.getElementById("board").classList.toggle("locked", !isMyTurn(state));
+  // The host can change after the game (the old host left)
+  if (state.status == "finished") updateRematchButtons(state);
 });
 
 function getMyPlayer(state) {
@@ -211,7 +246,7 @@ function renderPlayerList(state, previous) {
   state.players.forEach((player, index) => {
     var item = document.createElement("div");
     item.className = "player-item";
-    if (!player.active) item.classList.add("inactive");
+    if (!player.active || player.left) item.classList.add("inactive");
     if (state.status == "playing" && state.turn == index && player.active) item.classList.add("turn");
 
     var info = document.createElement("div");
@@ -250,17 +285,23 @@ function renderPlayerList(state, previous) {
       name.appendChild(createKickButton(player.name, "player-kick"));
     }
 
-    // Out of the game: tag with a flag instead of a text
-    if (!player.active) {
+    // Out of the game: "Left" or the surrender flag, "Away" while they can come back
+    if (player.left) {
+      name.appendChild(createLeftTag());
+    } else if (!player.active) {
       name.appendChild(createSurrenderedTag());
+    } else if (awaySeconds(player) != null) {
+      name.appendChild(createAwayTag());
     }
 
     var sub = document.createElement("div");
     sub.className = "player-sub";
-    sub.innerText = !player.active
+    sub.innerText = !player.active || player.left
       ? ""
-      : !player.connected
-        ? "reconnecting..."
+      : awaySeconds(player) != null
+        ? awaySeconds(player) + "s to come back"
+        : !player.connected
+          ? "reconnecting..."
         : state.status == "playing" && state.turn == index
           ? "is playing"
           : "";
@@ -443,7 +484,7 @@ function createSeat(state, player, isHost) {
   if (!player.connected) {
     var offline = document.createElement("span");
     offline.className = "mm-badge playing";
-    offline.innerText = "Reconnecting";
+    offline.innerText = "Away";
     tags.appendChild(offline);
   }
 
@@ -613,7 +654,8 @@ function closeCard(id, instant) {
 
   card.classList.remove("flip");
   understateCard(id);
-  clearCardImage(card, instant ? 0 : 900);
+  // After the flip (0.6s, see play.css)
+  clearCardImage(card, instant ? 0 : 600);
 }
 
 // If the card is already open, you can zoom in to read the meme
@@ -680,18 +722,47 @@ socket.on("getWinner", (data) => {
     }
   });
 
-  var playButton = document.getElementById("playButton");
-  playButton.onclick = () => {
-    window.location.href = "/lobby";
-  };
-  playButton.hidden = false;
-  playButton.disabled = false;
-  playButton.innerText = "Back to Lobby";
+  // Rematch (only the host) or back to the lobby
+  document.getElementById("playButton").hidden = true;
+  document.getElementById("lobbyButton").hidden = false;
+  updateRematchButtons(room);
 
   showResult(data.winners);
+});
 
-  // Reset storage
-  sessionStorage.clear();
+// Only the host can start a rematch, the other players see a note
+function updateRematchButtons(state) {
+  var finished = state != null && state.status == "finished";
+  var isHost = finished && state.host == me.username;
+  var isPlayer = finished && getMyPlayer(state) != null;
+  document.getElementById("rematchButton").hidden = !isHost;
+  document.getElementById("resultRematchButton").hidden = !isHost;
+  document.getElementById("rematchHint").hidden = !isPlayer || isHost;
+}
+
+function requestRematch() {
+  document.getElementById("rematchButton").disabled = true;
+  document.getElementById("resultRematchButton").disabled = true;
+  socket.emit("rematch");
+}
+
+// Rematch: back to the waiting room with a new board
+socket.on("rematch", () => {
+  sessionOver = false;
+  sessionStorage.setItem("gameID", gameID);
+  closeResult();
+  document.getElementById("board").classList.remove("revealed");
+  for (var i = 0; i < 66; i++) {
+    closeCard(i, true);
+    document.getElementById(`cardcount-${i}`).innerText = "";
+  }
+  document.getElementById("rematchHint").hidden = true;
+  ["rematchButton", "resultRematchButton", "lobbyButton"].forEach((id) => {
+    var element = document.getElementById(id);
+    element.hidden = true;
+    element.disabled = false;
+  });
+  document.querySelectorAll("#playerList .player-item.winner").forEach((item) => item.classList.remove("winner"));
 });
 
 function closeResult() {
@@ -722,7 +793,8 @@ function showResult(winners) {
     nameText.className = "player-name-text";
     nameText.innerText = player.name;
     name.appendChild(nameText);
-    if (!player.active) name.appendChild(createSurrenderedTag());
+    if (player.left) name.appendChild(createLeftTag());
+    else if (!player.active) name.appendChild(createSurrenderedTag());
     var points = document.createElement("span");
     points.className = "points";
     points.innerText = player.points;

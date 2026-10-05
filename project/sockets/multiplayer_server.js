@@ -1,7 +1,7 @@
 const Statistic = require("../models/Statistic");
 const rooms = require("../game/rooms");
 const config = require("../game/config");
-const { CARD_COUNT, isValidCardId } = require("../game/board");
+const { CARD_COUNT, isValidCardId, createBoard } = require("../game/board");
 const {
   STATUS,
   activePlayers,
@@ -43,6 +43,16 @@ module.exports = function (io) {
     room.timers.push(timer);
   }
 
+  // Fisher-Yates shuffle (returns a new array)
+  function shuffle(list) {
+    const copy = list.slice();
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
   function findPlayer(room, name) {
     return room.players.find((player) => player.name === name) || null;
   }
@@ -78,7 +88,8 @@ module.exports = function (io) {
         const watch = data != null && data.watch === true;
         const room = rooms.get(gameID, "multiplayer");
 
-        if (room == null || room.status === STATUS.FINISHED) {
+        // A finished room stays open for a rematch, but only for its players
+        if (room == null || (room.status === STATUS.FINISHED && findPlayer(room, username) == null)) {
           socket.emit("noGameFound");
           return;
         }
@@ -106,6 +117,8 @@ module.exports = function (io) {
           player.connected = true;
           player.socketId = socket.id;
           player.disconnectedAt = null;
+          // Back in a finished room (e.g. reload after the game)
+          if (room.status === STATUS.FINISHED) player.left = false;
           socket.spectator = !player.active;
         } else if (
           !watch &&
@@ -259,16 +272,18 @@ module.exports = function (io) {
           return;
         }
 
-        // Players that are still reconnecting can't take part
-        room.players = ready;
+        // Players that are still reconnecting can't take part.
+        // The order of the players is shuffled for every game.
+        room.players = shuffle(ready);
         room.status = STATUS.STARTING;
         room.turn = Math.floor(Math.random() * room.players.length);
         rooms.touch(room);
+        const animation = room.mode === "speed" ? config.SPEED_START_ANIMATION : config.START_ANIMATION;
 
         multiPlayer.to(gameID).emit("gameStarting", {
           players: room.players.map((player) => player.name),
           starter: room.turn,
-          duration: config.START_ANIMATION,
+          duration: animation,
         });
         emitRoomState(gameID, room);
 
@@ -289,7 +304,7 @@ module.exports = function (io) {
             startTurnTimer(gameID, room);
             emitRoomState(gameID, room);
           },
-          config.START_ANIMATION,
+          animation,
         );
       }),
     );
@@ -360,6 +375,22 @@ module.exports = function (io) {
       }),
     );
 
+    // After the game: everybody back to the waiting room with a new board
+    socket.on(
+      "rematch",
+      safe("rematch", async () => {
+        const room = rooms.get(socket.gameID, "multiplayer");
+        const player = room != null ? findPlayer(room, username) : null;
+        // Only the host decides about a rematch
+        if (player == null || player.socketId !== socket.id || room.host !== username) return;
+        try {
+          await rematch(socket.gameID, room, username);
+        } catch (error) {
+          socket.emit("gameError", "Could not create a new board. Please try again.");
+        }
+      }),
+    );
+
     // Leave button: leave right away, no rejoin grace
     socket.on(
       "leaveRoom",
@@ -394,6 +425,22 @@ module.exports = function (io) {
     const player = findPlayer(room, socket.data.username);
     // Not this socket's seat (e.g. replaced by another tab)
     if (player == null || player.socketId !== socket.id || !player.connected) return;
+
+    // After the game: gone, so not part of a rematch
+    if (room.status === STATUS.FINISHED) {
+      player.connected = false;
+      player.left = true;
+      player.disconnectedAt = Date.now();
+      systemMessage(gameID, room, `${player.name} left the room.`, "leave");
+      // The host left: somebody who is still here can start the rematch
+      const next = room.players.find((p) => p.connected);
+      if (room.host === player.name && next != null) {
+        room.host = next.name;
+        systemMessage(gameID, room, `${room.host} is the new host.`, "host");
+      }
+      emitRoomState(gameID, room);
+      return;
+    }
 
     // Surrendered players only watch, nothing to do for the game
     if (!player.active) {
@@ -444,6 +491,8 @@ module.exports = function (io) {
     rooms.touch(room);
     const wasTurn = room.turn === index;
     player.active = false;
+    // Shown as "Left" instead of the surrender flag
+    player.left = reason !== "surrendered";
     if (wasTurn && room.status === STATUS.PLAYING) {
       nextTurn(gameID, room);
     }
@@ -665,9 +714,55 @@ module.exports = function (io) {
       winners: winners,
       cardCounter: room.cardCounter,
     });
+    // The room stays for a rematch, it is removed once everybody is gone
+  }
 
-    // Delete game
-    rooms.remove(gameID);
+  /*
+   * Rematch: everybody who is still in the room goes back to the waiting
+   * room with a new board. The host starts the next game as usual.
+   */
+  async function rematch(gameID, room, by) {
+    if (room.status !== STATUS.FINISHED || room.creatingRematch) return;
+    room.creatingRematch = true;
+    let board;
+    try {
+      board = await createBoard();
+    } finally {
+      room.creatingRematch = false;
+    }
+    // Somebody else was faster, or the room is gone
+    if (room.status !== STATUS.FINISHED || rooms.get(gameID, "multiplayer") !== room) return;
+
+    room.players = room.players
+      .filter((player) => player.connected)
+      .map((player) => ({ ...player, points: 0, active: true, ready: false, left: false, disconnectedAt: null }));
+    if (findPlayer(room, room.host) == null && room.players.length > 0) {
+      room.host = room.players[0].name;
+    }
+    room.status = STATUS.WAITING;
+    room.turn = -1;
+    room.turnEndsAt = null;
+    room.turnToken++;
+    room.openedCards = [];
+    room.checkingCards = false;
+    room.foundMatches = [];
+    room.cardCounter = Array(CARD_COUNT).fill(0);
+    room.cardPairs = board.cardPairs;
+    room.cardImages = board.cardImages;
+    rooms.touch(room);
+
+    // Players who surrendered watched until now - they play again
+    for (const player of room.players) {
+      const playerSocket = multiPlayer.sockets.get(player.socketId);
+      if (playerSocket != null && playerSocket.spectator) {
+        playerSocket.spectator = false;
+        playerSocket.emit("joinedRoom", { username: player.name, spectator: false });
+      }
+    }
+
+    multiPlayer.to(gameID).emit("rematch");
+    systemMessage(gameID, room, `${by} started a rematch.`, "start");
+    emitRoomState(gameID, room);
   }
 
   return { tick };

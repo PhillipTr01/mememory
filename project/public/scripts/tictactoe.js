@@ -60,6 +60,35 @@ function strong(text) {
   return element;
 }
 
+// Seconds a player who left still has to come back
+var awayUntil = [null, null];
+
+function awaySeconds(index) {
+  return awayUntil[index] == null ? 0 : Math.max(0, Math.ceil((awayUntil[index] - Date.now()) / 1000));
+}
+
+function createSurrenderButton() {
+  var button = document.createElement("button");
+  button.type = "button";
+  button.className = "player-surrender";
+  button.title = "Surrender";
+  button.append(createIcon("bi-flag-fill"), document.createTextNode("Surrender"));
+  button.addEventListener("click", surrender);
+  return button;
+}
+
+function surrender() {
+  confirmDialog({
+    title: "Surrender?",
+    text: "Your opponent wins this round. You can still play a rematch.",
+    confirmLabel: "Surrender",
+    confirmIcon: "bi-flag-fill",
+    danger: true,
+  }).then((ok) => {
+    if (ok) socket.emit("surrender");
+  });
+}
+
 /* ---------- Rendering ---------- */
 
 function render() {
@@ -92,14 +121,17 @@ function renderStatus() {
   } else if (Date.now() < startBlockedUntil) {
     parts.push("New round...");
   } else if (state.winner != null) {
-    if (state.forfeit && state.winner == seat) {
-      parts.push("Your opponent left - ", strong("you win!"));
-    } else if (state.winner == seat) {
-      parts.push(strong("You win!"));
-    } else if (seat >= 0) {
-      parts.push(strong(nameOf(state.winner)), " wins this round.");
+    var loser = 1 - state.winner;
+    // Why the round ended early
+    if (state.forfeit == "surrender") {
+      parts.push((loser == seat ? "You" : nameOf(loser)) + " surrendered - ");
+    } else if (state.forfeit == "left") {
+      parts.push((state.seats[loser] ? nameOf(loser) : "Your opponent") + " didn't come back - ");
+    }
+    if (state.winner == seat) {
+      parts.push(strong(state.forfeit ? "you win!" : "You win!"));
     } else {
-      parts.push(strong(nameOf(state.winner)), " wins" + (state.forfeit ? " (opponent left)." : "."));
+      parts.push(strong(nameOf(state.winner)), " wins this round.");
     }
     if (state.status == "waiting") parts.push(" Waiting for a new opponent...");
   } else if (state.draw) {
@@ -111,7 +143,11 @@ function renderStatus() {
     if (state.passed != null) {
       parts.push((state.passed == seat ? "You can't move" : nameOf(state.passed) + " can't move") + " - ");
     }
-    if (state.turn == seat) {
+    var turnSeat = state.seats[state.turn];
+    if (turnSeat != null && !turnSeat.connected && state.turn != seat) {
+      // The player on turn left / lost the connection, they still have some time
+      parts.push(strong(turnSeat.name), " left - " + awaySeconds(state.turn) + "s to come back");
+    } else if (state.turn == seat) {
       parts.push(strong("Your turn"));
     } else {
       parts.push(strong(nameOf(state.turn)), "'s turn");
@@ -124,6 +160,9 @@ function renderBoard() {
   var board = document.getElementById("board");
   var over = state.winner != null || state.draw;
   board.classList.toggle("over", over);
+  // Hover on free cells in the own color
+  board.classList.toggle("own-p0", mySeat() >= 0 && colorClass(mySeat()) == "p0");
+  board.classList.toggle("own-p1", mySeat() >= 0 && colorClass(mySeat()) == "p1");
   board.classList.toggle("p0-won", state.winner != null && colorClass(state.winner) == "p0");
   board.classList.toggle("p1-won", state.winner != null && colorClass(state.winner) == "p1");
 
@@ -186,7 +225,7 @@ function renderSeat(index) {
   var who = document.createElement("div");
   who.className = "ttt-who";
   var text = document.createElement("div");
-  text.className = "overflow-hidden";
+  text.className = "ttt-who-text";
   var name = document.createElement("div");
   name.className = "ttt-name";
   var label = document.createElement("span");
@@ -199,11 +238,15 @@ function renderSeat(index) {
     you.className = "you-tag";
     you.innerText = "You";
     name.appendChild(you);
+    // Surrender right next to the own name, like in MemeMory
+    if (state.status == "playing" && Date.now() >= startBlockedUntil) {
+      name.appendChild(createSurrenderButton());
+    }
   }
   var sub = document.createElement("div");
   sub.className = "ttt-sub";
   sub.innerText = !seat.connected
-    ? "Reconnecting..."
+    ? "Away - " + awaySeconds(index) + "s to come back"
     : state.status == "finished" && seat.rematch
       ? "Wants a rematch"
       : seat.wins == 1
@@ -269,7 +312,7 @@ function renderFooter() {
   if (show) {
     var me = state.seats[seat];
     var other = state.seats[1 - seat];
-    button.className = "mm-btn" + (me.rematch ? "" : " mm-btn-primary");
+    button.className = "mm-btn";
     button.replaceChildren(
       createIcon(me.rematch ? "bi-x" : "bi-arrow-repeat"),
       document.createTextNode(
@@ -316,6 +359,14 @@ socket.on("connect", () => {
   join();
 });
 
+// Leaving the page (logo, menu, back button): disconnect right away, so the
+// others see "Away" at once. Browsers can keep a page with an open connection
+// in the back/forward cache; coming back reconnects (and rejoins).
+window.addEventListener("pagehide", () => socket.disconnect());
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) socket.connect();
+});
+
 socket.on("disconnect", () => {
   if (!sessionOver) document.getElementById("connectionBanner").hidden = false;
 });
@@ -330,8 +381,22 @@ socket.on("joined", (data) => {
   sessionStorage.setItem("gameID", gameID);
 });
 
+var awayTimer = null;
+
 socket.on("state", (data) => {
   state = data;
+  // Countdown for players who left (the server only sends the remaining time)
+  awayUntil = state.seats.map((seat) =>
+    seat != null && seat.awayLeft != null ? Date.now() + seat.awayLeft : null,
+  );
+  clearInterval(awayTimer);
+  if (awayUntil.some((until) => until != null)) {
+    awayTimer = setInterval(() => {
+      renderStatus();
+      renderSeat(0);
+      renderSeat(1);
+    }, 1000);
+  }
   // New game: show who starts (once, also after a reload during the animation)
   if (state.status == "playing" && state.startIn > 0 && state.round !== shownRound) {
     shownRound = state.round;
@@ -442,7 +507,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (playing) {
       var ok = await confirmDialog({
         title: "Leave the game?",
-        text: "Your opponent wins this round.",
+        text:
+          "You can rejoin from the lobby within " +
+          state.rejoinSeconds +
+          " seconds. After that, your opponent wins this round.",
         confirmLabel: "Leave",
         confirmIcon: "bi-box-arrow-left",
         danger: true,
