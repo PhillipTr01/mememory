@@ -283,9 +283,9 @@ function computerLogic(socket) {
 
   // Push cards to openedCards, so that they get checked in checkGame-method
   game.openedCards.push(id);
-  later(game, () => socket.emit("turnCard", { id: id, src: game.cardImages[id] }), 1100);
-  later(game, () => socket.emit("turnCard", { id: id2, src: game.cardImages[id2] }), 1550);
-  later(game, () => game.openedCards.push(id2), 1950);
+  later(game, () => socket.emit("turnCard", { id: id, src: game.cardImages[id] }), 1250);
+  later(game, () => socket.emit("turnCard", { id: id2, src: game.cardImages[id2] }), 1750);
+  later(game, () => game.openedCards.push(id2), 2250);
 }
 
 // Random card which isn't in the computer's memory and hasn't been found yet.

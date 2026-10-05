@@ -150,7 +150,7 @@ socket.on("closeCards", (data) => {
     if (card == null) return;
 
     card.classList.remove("flip");
-    clearCardImage(card, 400);
+    clearCardImage(card, 600);
     understateCard(id);
   });
 });
