@@ -531,28 +531,6 @@ socket.on("gameStarting", (data) => {
 });
 
 function playStartAnimation(players, starter, duration, startPowerups) {
-  var overlay = document.getElementById("startOverlay");
-  var track = document.getElementById("reelTrack");
-  var result = document.getElementById("startResult");
-  var reel = track.parentElement;
-  var itemHeight = parseFloat(getComputedStyle(reel).getPropertyValue("--item")) || 72;
-
-  // Long list of names, the winner is the last one -> spinning slot machine
-  var rounds = Math.max(4, Math.ceil(24 / players.length));
-  var names = [];
-  for (var r = 0; r < rounds; r++) names.push(...players);
-  names.push(...players.slice(0, starter + 1));
-  names.push(players[(starter + 1) % players.length]); // one more below the marker
-
-  track.replaceChildren();
-  names.forEach((name) => {
-    var item = document.createElement("div");
-    item.className = "reel-item";
-    item.append(createAvatar(name), document.createTextNode(name));
-    track.appendChild(item);
-  });
-
-  var target = names.length - 2; // the starter
   // Power-up mode: the player reel is faster, the power-up reels follow
   var spin = startPowerups ? 2200 : Math.max(1200, duration - 1300);
   document.getElementById("startPowerups").hidden = true;
@@ -560,32 +538,8 @@ function playStartAnimation(players, starter, duration, startPowerups) {
   // Power-up mode: after the result, the power-up reels replace "Who starts?"
   if (startPowerups) setTimeout(() => playPowerupReels(startPowerups), spin + 1300);
 
-  result.classList.remove("show");
-  result.innerText = "";
-  track.style.transition = "none";
-  track.style.transform = "translateY(0)";
-  overlay.hidden = false;
-
-  // Start the spin in the next frame so the transition is applied
-  requestAnimationFrame(() =>
-    requestAnimationFrame(() => {
-      track.style.transition = `transform ${spin}ms cubic-bezier(0.12, 0.75, 0.18, 1)`;
-      // The marker is the second row of the reel
-      track.style.transform = `translateY(${-(target - 1) * itemHeight}px)`;
-    }),
-  );
-
-  setTimeout(() => {
-    track.children[target].classList.add("chosen");
-    var name = players[starter];
-    result.innerText = name == me.username ? "You start" : `${name} starts`;
-    result.classList.add("show");
-  }, spin);
-
-  setTimeout(() => {
-    overlay.hidden = true;
-    document.getElementById("confetti").replaceChildren();
-  }, duration + 200);
+  playStartReel({ players: players, starter: starter, duration: duration, spin: spin, myName: me.username });
+  setTimeout(() => document.getElementById("confetti").replaceChildren(), duration + 200);
 }
 
 function launchConfetti() {
@@ -667,6 +621,7 @@ function surrender() {
     text: "You leave the game and it counts as a loss. You can keep watching the others.",
     cancelLabel: "Keep playing",
     confirmLabel: "Surrender",
+    confirmIcon: "bi-flag-fill",
     danger: true,
   }).then((ok) => {
     if (ok) socket.emit("surrender");

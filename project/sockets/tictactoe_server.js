@@ -36,7 +36,9 @@ module.exports = function (io) {
     const name = room.seats[starter].name;
     setTimeout(() => {
       if (rooms.get(gameID, "tictactoe") === room && room.round === round) {
-        systemMessage(gameID, room, `New round - ${name} starts.`, "start");
+        // Same wording as in MemeMory
+        const text = round === 1 ? `The game has started. ${name} begins!` : `New round - ${name} begins!`;
+        systemMessage(gameID, room, text, "start");
       }
     }, config.START_ANIMATION);
   }
@@ -54,7 +56,7 @@ module.exports = function (io) {
     room.status = STATUS.FINISHED;
     if (room.seats[winner] != null) {
       room.seats[winner].wins++;
-      systemMessage(gameID, room, `${room.seats[winner].name} wins the round.`, "trophy");
+      systemMessage(gameID, room, `${room.seats[winner].name} wins the round!`, "trophy");
     }
   }
 
@@ -184,7 +186,7 @@ module.exports = function (io) {
           systemMessage(
             gameID,
             room,
-            index >= 0 ? `${username} joined the game.` : `${username} is watching.`,
+            index >= 0 ? `${username} joined the room.` : `${username} is watching.`,
             index >= 0 ? "join" : "watch",
           );
         }

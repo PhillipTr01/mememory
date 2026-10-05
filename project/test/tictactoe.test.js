@@ -324,7 +324,7 @@ test("tictactoe: chat with history, system messages and spectators", async () =>
   carol.emit("joinGame", { gameID });
   const messages = await history;
   assert.ok(messages.some((m) => m.text === "gg wp"));
-  assert.ok(messages.some((m) => m.type === "system" && /starts/.test(m.text)));
+  assert.ok(messages.some((m) => m.type === "system" && /has started.*begins/.test(m.text)));
 
   const fromCarol = new Promise((resolve) =>
     alice.on("chatMessage", (m) => m.name === "carol" && resolve(m)),

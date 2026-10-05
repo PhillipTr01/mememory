@@ -87,7 +87,8 @@ module.exports = function (io) {
         if (game == null || game.finished || !isValidCardId(id)) return;
 
         if (!game.openedCards.includes(id) && !game.foundMatches.includes(id)) {
-          if (game.turn == 0 && game.openedCards.length < 2) {
+          // Not during the "who starts" animation
+          if (game.turn == 0 && game.openedCards.length < 2 && Date.now() >= game.startsAt) {
             game.openedCards.push(id);
             game.cardCounter[id]++;
             socket.emit("turnCard", {
@@ -153,15 +154,28 @@ function startGame(socket, board) {
     cardCounter: Array(CARD_COUNT).fill(0),
     timeouts: [],
     interval: null,
+    // The game begins after the "who starts" animation (like in the multiplayer)
+    startsAt: Date.now() + config.START_ANIMATION,
   };
   socket.game = game;
 
-  socket.emit("highlightPlayer", {
-    turn: game.turn,
-    computer: game.computer.name,
-    user: game.user.name,
+  socket.emit("gameStarting", {
+    players: [game.user.name, game.computer.name],
+    starter: game.turn,
+    duration: config.START_ANIMATION,
   });
-  checkGame(socket);
+  later(
+    game,
+    () => {
+      socket.emit("highlightPlayer", {
+        turn: game.turn,
+        computer: game.computer.name,
+        user: game.user.name,
+      });
+      checkGame(socket);
+    },
+    config.START_ANIMATION,
+  );
 }
 
 // Like setTimeout, but the timer is cancelled when the game ends.
@@ -366,6 +380,7 @@ async function surrendGame(socket) {
   if (game != null && !game.finished) {
     // Set points above possible range. => No need to implement surrend function, if you declare computer as winner.
     game.computer.points = 50;
+    game.surrendered = true;
     await getWinner(socket);
   }
 }
@@ -395,5 +410,6 @@ async function getWinner(socket) {
     cardCounter: game.cardCounter,
     computer: game.computer.name,
     user: game.user.name,
+    surrendered: game.surrendered === true,
   });
 }

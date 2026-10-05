@@ -14,10 +14,24 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
-// Something went wrong on the server (e.g. not enough memes) -> back to the lobby
+var gameOver = false;
+
+// Same notice as in the multiplayer (instead of the browser's alert)
+function showNotice(title, text) {
+  document.getElementById("noticeTitle").innerText = title;
+  document.getElementById("noticeText").innerText = text;
+  document.getElementById("startOverlay").hidden = true;
+  document.getElementById("noticeOverlay").hidden = false;
+}
+
+// Something went wrong on the server (e.g. not enough memes)
 socket.on("gameError", (message) => {
-  alert(message || "Something went wrong. Please try again.");
-  window.location.href = "/lobby";
+  showNotice("Something went wrong", message || "Please try again.");
+});
+
+// The game lives on the connection: without it, it is over
+socket.on("disconnect", () => {
+  if (!gameOver) showNotice("Connection lost", "The game was ended. You can start a new one in the lobby.");
 });
 
 socket.on("connect_error", (error) => {
@@ -77,6 +91,25 @@ socket.on("setComputername", (name) => {
   document.getElementById("user2Username").innerText = name;
   document.getElementById("botAvatar").src =
     "/static/images/avatar_" + (BOT_AVATARS[name] || "easy") + "_200.png";
+});
+
+// "Who starts?" - the same reel as in the multiplayer and Tic Tac Toe
+socket.on("gameStarting", (data) => {
+  var bot = data.players[1];
+  playStartReel({
+    players: data.players,
+    starter: data.starter,
+    duration: data.duration,
+    myName: data.players[0],
+    avatar: (name) => {
+      if (name != bot) return createAvatar(name);
+      var image = document.createElement("img");
+      image.className = "bot-avatar-small";
+      image.src = "/static/images/avatar_" + (BOT_AVATARS[name] || "easy") + "_200.png";
+      image.alt = "";
+      return image;
+    },
+  });
 });
 
 // Show which player's turn it is
@@ -192,6 +225,7 @@ function surrender() {
     text: "The bot wins this game and it counts as a loss in your statistics.",
     cancelLabel: "Keep playing",
     confirmLabel: "Surrender",
+    confirmIcon: "bi-flag-fill",
     danger: true,
   }).then((ok) => {
     if (ok) socket.emit("surrender");
@@ -199,6 +233,7 @@ function surrender() {
 }
 
 socket.on("getWinner", (data) => {
+  gameOver = true;
   // Visual change for winner
   document.getElementById(data.winner == 0 ? "user1Item" : "user2Item").classList.add("winner");
   document.getElementById(data.winner == 0 ? "user2Item" : "user1Item").classList.add("inactive");
@@ -233,6 +268,7 @@ function requestRematch() {
 
 // Rematch: new board against the same bot
 socket.on("rematch", () => {
+  gameOver = false;
   document.getElementById("resultOverlay").hidden = true;
   document.getElementById("board").classList.remove("revealed");
   for (var i = 0; i < 66; i++) {
@@ -273,11 +309,43 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// Same result as in the multiplayer: title + ranking with the points
 function showResult(data) {
   var won = data.winner == 0;
   document.getElementById("resultOverlay").classList.toggle("lost", !won);
-  document.getElementById("resultTitle").innerText = won ? "You win!" : `${data.computer} wins`;
-  document.getElementById("resultText").innerText =
-    document.getElementById("user1Score").innerText + " : " + document.getElementById("user2Score").innerText;
+  document.getElementById("resultTitle").innerText = won ? "You win!" : `${data.computer} wins!`;
+
+  var players = [
+    { name: data.user, points: document.getElementById("user1Score").innerText, avatar: createAvatar(data.user, "sm") },
+    {
+      name: data.computer,
+      points: document.getElementById("user2Score").innerText,
+      avatar: document.getElementById("botAvatar").cloneNode(),
+    },
+  ];
+  if (!won) players.reverse();
+  var list = document.getElementById("resultList");
+  list.replaceChildren();
+  players.forEach((player, index) => {
+    var item = document.createElement("li");
+    if (index == 0) item.classList.add("winner");
+    var rank = document.createElement("span");
+    rank.className = "rank";
+    rank.innerText = index + 1 + ".";
+    var name = document.createElement("span");
+    name.className = "name";
+    var nameText = document.createElement("span");
+    nameText.className = "player-name-text";
+    nameText.innerText = player.name;
+    name.appendChild(nameText);
+    // Surrendered / left: the flag, like in the multiplayer
+    if (data.surrendered && player.name == data.user) name.appendChild(createSurrenderedTag());
+    var points = document.createElement("span");
+    points.className = "points";
+    points.innerText = player.points;
+    player.avatar.removeAttribute("id");
+    item.append(rank, player.avatar, name, points);
+    list.appendChild(item);
+  });
   document.getElementById("resultOverlay").hidden = false;
 }

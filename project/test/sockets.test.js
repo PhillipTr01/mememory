@@ -72,8 +72,10 @@ test("singleplayer: invalid input does not crash the server", async () => {
   socket.emit("initializingGame", null);
   await h.once(socket, "noGameFound");
 
+  const started = h.once(socket, "highlightPlayer");
   socket.emit("initializingGame", { gameID });
   assert.strictEqual(await h.once(socket, "setComputername"), "Easy Bot");
+  await started; // after the "who starts" animation
 
   // Invalid card ids are ignored
   for (const id of ["1", -1, 66, 1.5, null, { id: 1 }]) socket.emit("openCard", id);
@@ -514,8 +516,12 @@ test("singleplayer: after the player's turn the computer plays", async () => {
   const gameID = await createGame("alice", "playSingleplayer", { difficulty: 3 });
   const socket = client("/singleplayer", "alice");
   await h.once(socket, "connect");
+  // The game begins after the "who starts" animation
+  const started = h.once(socket, "highlightPlayer");
   socket.emit("initializingGame", { gameID });
-  await h.once(socket, "setComputername");
+  await h.once(socket, "gameStarting");
+  socket.emit("openCard", 0); // too early: ignored
+  await started;
 
   // No "End turn": after two wrong cards the turn passes on its own
   const closed = h.once(socket, "closeCards", 8000);
