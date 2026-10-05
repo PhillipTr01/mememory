@@ -1,4 +1,5 @@
 const Statistic = require("../models/Statistic");
+const coins = require("../game/coins");
 const rooms = require("../game/rooms");
 const config = require("../game/config");
 const { CARD_COUNT, isValidCardId, createBoard } = require("../game/board");
@@ -1034,6 +1035,12 @@ module.exports = function (io) {
     const winners = active
       .filter((player) => player.points === highestPoints)
       .map((player) => player.name);
+
+    // Coins for the hidden jackpot: only for a game that was played to the end
+    // (not when the others surrendered or left)
+    if (room.foundMatches.length === CARD_COUNT) {
+      winners.forEach((name) => coins.reward(name, "multiplayer"));
+    }
 
     for (let i = 0; i < CARD_COUNT; i++) {
       multiPlayer.to(gameID).emit("turnCard", cardData(room, i));

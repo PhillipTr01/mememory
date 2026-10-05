@@ -1,0 +1,354 @@
+/* ---------- Hidden jackpot: gold accent ---------- */
+body.jackpot-theme {
+  --mm-accent: #d4a64a;
+  --mm-accent-rgb: 212, 166, 74;
+  --mm-accent-hover: #bf9238;
+  --mm-gradient: var(--mm-accent);
+  --mm-on-accent: #1b1b1b; /* dark text on gold */
+}
+
+.jp-main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.jp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.jp-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.jp-title .mm-badge {
+  font-size: 0.75rem;
+}
+
+.jp-status {
+  margin: 0.2rem 0 0;
+  min-height: 1.5em;
+  color: var(--mm-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Pot ---------- */
+.jp-pot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.5rem 0 0;
+}
+
+.jp-total {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.jp-pot-label {
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+}
+
+/* Countdown: a thin bar that runs out */
+.jp-timer {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--mm-surface-3);
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.jp-timer.running {
+  opacity: 1;
+}
+
+.jp-timer span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--mm-accent);
+  transition: width 0.1s linear;
+}
+
+.jp-timer.urgent span {
+  background: var(--mm-danger);
+}
+
+/* ---------- Shares of the pot ---------- */
+.jp-shares {
+  display: flex;
+  gap: 2px;
+  height: 18px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--mm-surface-3);
+}
+
+.jp-share {
+  flex: 1 1 0;
+  min-width: 4px;
+  transition: flex-grow 0.4s ease;
+}
+
+.jp-share.empty {
+  background: transparent;
+}
+
+/* ---------- Roulette ---------- */
+.jp-roulette {
+  position: relative;
+  overflow: hidden;
+  padding: 0.6rem 0;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface-2);
+  /* Tiles fade out at both ends */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+.jp-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--mm-accent);
+  box-shadow: 0 0 8px rgba(var(--mm-accent-rgb), 0.8);
+  z-index: 2;
+}
+
+.jp-track {
+  display: flex;
+  gap: 8px;
+  width: max-content;
+  will-change: transform;
+}
+
+.jp-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 96px;
+  height: 96px;
+  flex: 0 0 auto;
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface);
+  border-bottom: 3px solid var(--share);
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.jp-tile span:last-child {
+  max-width: 88px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jp-tile.chosen {
+  transform: scale(1.08);
+  box-shadow: 0 0 0 2px var(--mm-accent);
+}
+
+.jp-result {
+  margin: 0;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  animation: mm-fade-up 0.35s ease;
+}
+
+.jp-result.won {
+  color: var(--mm-accent);
+}
+
+/* ---------- Own coins and bet ---------- */
+.jp-bet {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.jp-wallet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.jp-wallet-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mm-muted);
+}
+
+.jp-coins {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.jp-chance {
+  font-size: 0.85rem;
+  color: var(--mm-muted);
+}
+
+.jp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.jp-quick {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.jp-quick button {
+  flex: 1 1 0;
+}
+
+.jp-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.jp-input-row .mm-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* No arrows in the number field */
+.jp-input-row .mm-input::-webkit-outer-spin-button,
+.jp-input-row .mm-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.jp-input-row .mm-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+#jpBonus,
+.jp-error {
+  grid-column: 1 / -1;
+}
+
+.jp-error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--mm-danger);
+}
+
+.jp-error.good {
+  color: var(--mm-success);
+}
+
+/* ---------- Side: players in the pot, last winners ---------- */
+.jp-player {
+  border-left: 3px solid var(--share);
+}
+
+.jp-player-coins {
+  color: var(--mm-accent);
+}
+
+.jp-empty {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+}
+
+.jp-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.jp-history li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.jp-history-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.jp-history-odds {
+  color: var(--mm-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.jp-history-won {
+  color: var(--mm-accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* On big screens the side fits the screen: the lists scroll, the chat keeps its room */
+@media (min-width: 992px) {
+  #jpPlayers {
+    max-height: 26vh;
+    overflow-y: auto;
+  }
+
+  .jp-history {
+    max-height: 16vh;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 575px) {
+  .jp-main {
+    padding: 1rem;
+  }
+
+  .jp-total {
+    font-size: 2.3rem;
+  }
+
+  .jp-bet {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .jp-tile {
+    width: 80px;
+    height: 80px;
+  }
+}

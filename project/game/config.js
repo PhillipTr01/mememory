@@ -46,4 +46,19 @@ module.exports = {
 
   // Speed round: shorter "who starts" animation
   SPEED_START_ANIMATION: 2600,
+
+  // Coins (hidden jackpot): start amount, free coins once a day when (almost) broke
+  START_COINS: 100,
+  DAILY_BONUS: 50,
+  BONUS_BELOW: 10,
+  BONUS_EVERY: 24 * 60 * 60 * 1000,
+  // Coins for a win (only real wins: no surrender / left opponent)
+  COIN_REWARDS: { easy: 5, medium: 10, hard: 20, expert: 40, multiplayer: 15, tictactoe: 5 },
+
+  // Jackpot: the draw starts this long after the second player joined the pot
+  JACKPOT_COUNTDOWN: 30 * 1000,
+  JACKPOT_SPIN: 6500, // the roulette animation
+  JACKPOT_PAUSE: 5000, // result is shown, then a new round starts
+  JACKPOT_MAX_BET: 1000, // per player and round
+  JACKPOT_HISTORY: 10,
 };

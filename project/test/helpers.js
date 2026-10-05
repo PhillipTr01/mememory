@@ -28,6 +28,34 @@ User.findOne = (filter) => {
   return query(user);
 };
 
+// Tiny version of MongoDB's filters / updates, enough for game/coins.js
+function matches(doc, filter) {
+  return Object.entries(filter).every(([key, condition]) => {
+    if (key === "$or") return condition.some((part) => matches(doc, part));
+    const value = doc[key];
+    if (condition !== null && typeof condition === "object" && !(condition instanceof Date)) {
+      if ("$exists" in condition && (value !== undefined) !== condition.$exists) return false;
+      if ("$gte" in condition && !(value >= condition.$gte)) return false;
+      if ("$lt" in condition && !(value < condition.$lt)) return false;
+      if ("$lte" in condition && !(value <= condition.$lte)) return false;
+      return true;
+    }
+    return value === condition;
+  });
+}
+
+User.updateOne = async (filter, update) => {
+  const user = [...users.values()].find((u) => matches(u, filter));
+  if (user == null) return { n: 0, nModified: 0 };
+  Object.assign(user, update.$set || {});
+  for (const [key, amount] of Object.entries(update.$inc || {})) user[key] = (user[key] || 0) + amount;
+  return { n: 1, nModified: 1 };
+};
+
+function userByName(username) {
+  return [...users.values()].find((u) => u.username === username);
+}
+
 Statistic.increment = async (username, field) => {
   increments.push({ username, field });
   return true;
@@ -49,6 +77,7 @@ async function startServer() {
   require("../sockets/singleplayer_server")(io);
   require("../sockets/multiplayer_server")(io);
   require("../sockets/tictactoe_server")(io);
+  require("../sockets/jackpot_server")(io);
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
 
@@ -85,5 +114,7 @@ module.exports = {
   once,
   wait,
   increments,
+  coinsOf: (username) => userByName(username).coins,
+  setCoins: (username, amount) => { userByName(username).coins = amount; },
   setMemeCount: (count) => { memeCount = count; },
 };

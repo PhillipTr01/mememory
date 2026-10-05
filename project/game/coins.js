@@ -1,0 +1,68 @@
+const User = require("../models/User");
+const config = require("./config");
+
+/*
+ * Coins for the hidden jackpot. Stored on the user, every change is a single
+ * atomic update, so two games (or tabs) can't spend the same coins twice.
+ * Users from before the coins existed get the start coins on first use.
+ */
+
+function changed(result) {
+  return result != null && (result.nModified > 0 || result.modifiedCount > 0);
+}
+
+// Old accounts don't have the field yet: they start with START_COINS
+async function ensure(username) {
+  await User.updateOne({ username: username, coins: { $exists: false } }, { $set: { coins: config.START_COINS } });
+}
+
+function bonusAvailable(user, now = Date.now()) {
+  if (user == null || user.coins >= config.BONUS_BELOW) return false;
+  return user.coinBonusAt == null || now - new Date(user.coinBonusAt).getTime() >= config.BONUS_EVERY;
+}
+
+// { coins, bonus } - bonus: the daily free coins can be claimed now
+async function get(username) {
+  await ensure(username);
+  const user = await User.findOne({ username: username }).select("coins coinBonusAt");
+  if (user == null) return { coins: 0, bonus: false };
+  return { coins: user.coins || 0, bonus: bonusAvailable(user) };
+}
+
+async function add(username, amount) {
+  if (!Number.isInteger(amount) || amount <= 0) return false;
+  await ensure(username);
+  return changed(await User.updateOne({ username: username }, { $inc: { coins: amount } }));
+}
+
+// Takes the coins only if the user has enough (false otherwise)
+async function spend(username, amount) {
+  if (!Number.isInteger(amount) || amount <= 0) return false;
+  await ensure(username);
+  return changed(
+    await User.updateOne({ username: username, coins: { $gte: amount } }, { $inc: { coins: -amount } }),
+  );
+}
+
+// Free coins once a day for players who are (almost) broke
+async function claimBonus(username, now = Date.now()) {
+  await ensure(username);
+  const result = await User.updateOne(
+    {
+      username: username,
+      coins: { $lt: config.BONUS_BELOW },
+      $or: [{ coinBonusAt: { $exists: false } }, { coinBonusAt: null }, { coinBonusAt: { $lte: new Date(now - config.BONUS_EVERY) } }],
+    },
+    { $inc: { coins: config.DAILY_BONUS }, $set: { coinBonusAt: new Date(now) } },
+  );
+  return changed(result);
+}
+
+// Coins for a win in a game (never blocks or breaks the game)
+function reward(username, mode) {
+  const amount = config.COIN_REWARDS[mode];
+  if (!amount) return;
+  add(username, amount).catch((error) => console.error("[coins] Could not add coins:", error));
+}
+
+module.exports = { get, add, spend, claimBonus, reward, bonusAvailable };

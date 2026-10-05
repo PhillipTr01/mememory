@@ -11,6 +11,9 @@ const schema = mongoose.Schema({
     usernameLowerCase: {type: String, unique: true, sparse: true},
     // Own avatar from the avatar maker (see public/scripts/avatar.js), null = letter
     avatar: {type: mongoose.Schema.Types.Mixed, default: null},
+    // Coins for the hidden jackpot (earned by winning games, see game/coins.js)
+    coins: {type: Number, min: 0},
+    coinBonusAt: {type: Date},
 	// active: {type: String, required: true, default: false}
 });
 

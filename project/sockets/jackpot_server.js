@@ -1,0 +1,203 @@
+const config = require("../game/config");
+const coins = require("../game/coins");
+const { pickWinner } = require("../game/jackpot");
+const chat = require("../game/chat");
+const socketAuth = require("./socket_auth");
+const safe = require("./safe_handler");
+
+const ROOM = "jackpot"; // everybody is in the same (socket.io) room
+const PHASE = {
+  OPEN: "open", // waiting for a second player
+  COUNTDOWN: "countdown", // the draw starts at endsAt
+  DRAWING: "drawing", // the roulette spins, the winner is known on the server
+};
+
+/*
+ * Hidden jackpot: one pot for everybody. Players put in coins, as soon as two
+ * players are in, a countdown starts. Then a random ticket decides who wins
+ * the whole pot - the more coins somebody put in, the higher the chance.
+ */
+module.exports = function (io) {
+  const jackpot = io.of("/jackpot");
+  jackpot.use(socketAuth);
+
+  const pot = {
+    round: 1,
+    phase: PHASE.OPEN,
+    entries: [], // [{name, coins}] in the order of the first bet
+    endsAt: null,
+    draw: null, // {winner, ticket, total} while drawing
+    timer: null,
+    history: [], // [{round, winner, total, coins}] newest first
+    chat: [],
+  };
+  const betting = new Set(); // users with a bet in progress (two tabs, fast clicks)
+
+  function total() {
+    return pot.entries.reduce((sum, entry) => sum + entry.coins, 0);
+  }
+
+  function serialize() {
+    return {
+      round: pot.round,
+      phase: pot.phase,
+      entries: pot.entries.map((entry) => ({ name: entry.name, coins: entry.coins })),
+      total: total(),
+      // Time left (ms) instead of a timestamp: the clocks of the clients may differ
+      endsIn: pot.endsAt != null ? Math.max(0, pot.endsAt - Date.now()) : null,
+      draw: pot.draw,
+      spin: config.JACKPOT_SPIN,
+      maxBet: config.JACKPOT_MAX_BET,
+      history: pot.history,
+      viewers: jackpot.sockets.size,
+    };
+  }
+
+  function emitState() {
+    jackpot.to(ROOM).emit("jackpotState", serialize());
+  }
+
+  function systemMessage(text, icon) {
+    chat.system(jackpot, ROOM, pot, text, icon);
+  }
+
+  // Sends the balance to every open tab of the user
+  async function sendCoins(username) {
+    const data = await coins.get(username);
+    for (const socket of jackpot.sockets.values()) {
+      if (socket.data.username === username) socket.emit("coins", data);
+    }
+  }
+
+  /* ---------- Round ---------- */
+
+  function startCountdown() {
+    pot.phase = PHASE.COUNTDOWN;
+    pot.endsAt = Date.now() + config.JACKPOT_COUNTDOWN;
+    clearTimeout(pot.timer);
+    pot.timer = setTimeout(() => runDraw().catch((error) => console.error("[jackpot] Draw failed:", error)), config.JACKPOT_COUNTDOWN);
+    systemMessage(`The draw starts in ${Math.round(config.JACKPOT_COUNTDOWN / 1000)}s - last chance to put in coins!`, "timer");
+  }
+
+  async function runDraw() {
+    if (pot.phase !== PHASE.COUNTDOWN) return;
+    pot.phase = PHASE.DRAWING;
+    pot.endsAt = null;
+
+    // The ticket decides: every coin is one ticket, so the chance is the share of the pot
+    pot.draw = pickWinner(pot.entries);
+    const sum = pot.draw.total;
+    const winner = pot.entries.find((entry) => entry.name === pot.draw.winner);
+
+    // Paid right away, so nothing is lost if the page (or the server) goes away
+    // during the animation
+    try {
+      await coins.add(winner.name, sum);
+    } catch (error) {
+      console.error("[jackpot] Could not pay the winner:", error);
+    }
+    emitState();
+
+    // Announced after the roulette, so the chat doesn't spoil it
+    pot.timer = setTimeout(() => {
+      const chance = Math.round((winner.coins / sum) * 100);
+      systemMessage(`${winner.name} wins the jackpot: ${sum} coins (${chance}% chance)!`, "trophy");
+      pot.history.unshift({ round: pot.round, winner: winner.name, total: sum, coins: winner.coins });
+      pot.history.length = Math.min(pot.history.length, config.JACKPOT_HISTORY);
+      sendCoins(winner.name).catch(() => {});
+      emitState();
+      pot.timer = setTimeout(newRound, config.JACKPOT_PAUSE);
+    }, config.JACKPOT_SPIN);
+  }
+
+  function newRound() {
+    pot.round++;
+    pot.phase = PHASE.OPEN;
+    pot.entries = [];
+    pot.endsAt = null;
+    pot.draw = null;
+    emitState();
+  }
+
+  /* ---------- Connection ---------- */
+
+  jackpot.on("connection", (socket) => {
+    const username = socket.data.username;
+    socket.gameID = ROOM; // for the chat
+    socket.join(ROOM);
+    socket.emit("joined", { username: username });
+    socket.emit("chatHistory", pot.chat);
+    emitState();
+    sendCoins(username).catch((error) => console.error("[jackpot] Could not load coins:", error));
+
+    // Put coins into the pot (more than once per round is fine, up to the limit)
+    socket.on(
+      "bet",
+      safe("bet", async (data) => {
+        const amount = data != null ? data.amount : null;
+        if (!Number.isInteger(amount) || amount <= 0) return;
+        if (pot.phase === PHASE.DRAWING) {
+          socket.emit("betError", "The draw is running - wait for the next round.");
+          return;
+        }
+        const entry = pot.entries.find((e) => e.name === username);
+        const already = entry != null ? entry.coins : 0;
+        if (already + amount > config.JACKPOT_MAX_BET) {
+          socket.emit("betError", `At most ${config.JACKPOT_MAX_BET} coins per round.`);
+          return;
+        }
+        // One bet at a time per user (two tabs, fast clicks)
+        if (betting.has(username)) return;
+        betting.add(username);
+        const round = pot.round;
+        try {
+          if (!(await coins.spend(username, amount))) {
+            socket.emit("betError", "You don't have enough coins.");
+            return;
+          }
+          // The round changed (draw started) while the coins were taken: give them back
+          if (pot.round !== round || pot.phase === PHASE.DRAWING) {
+            await coins.add(username, amount);
+            socket.emit("betError", "Too late - the draw already started.");
+            return;
+          }
+          const current = pot.entries.find((e) => e.name === username);
+          if (current != null) {
+            current.coins += amount;
+          } else {
+            pot.entries.push({ name: username, coins: amount });
+          }
+          systemMessage(`${username} put ${amount} coins into the pot.`, "info");
+          if (pot.phase === PHASE.OPEN && pot.entries.length >= 2) startCountdown();
+          emitState();
+        } finally {
+          betting.delete(username);
+          sendCoins(username).catch(() => {});
+        }
+      }),
+    );
+
+    // Free coins once a day when (almost) broke
+    socket.on(
+      "claimBonus",
+      safe("claimBonus", async () => {
+        if (await coins.claimBonus(username)) {
+          socket.emit("bonusClaimed", config.DAILY_BONUS);
+        }
+        await sendCoins(username);
+      }),
+    );
+
+    socket.on(
+      "sendChatMessage",
+      safe("sendChatMessage", (data) => chat.fromUser(jackpot, socket, pot, data, false)),
+    );
+
+    socket.on(
+      "disconnect",
+      safe("disconnect", () => emitState()),
+    );
+  });
+
+  return { pot };
+};

@@ -1,4 +1,5 @@
 const Statistic = require("../models/Statistic");
+const coins = require("../game/coins");
 const rooms = require("../game/rooms");
 const config = require("../game/config");
 const { CARD_COUNT, createBoard, isValidCardId } = require("../game/board");
@@ -450,6 +451,8 @@ module.exports = function (io) {
     // A surrender always loses (there are 33 pairs, so no draw otherwise)
     game.winner = !game.surrendered && game.user.points > game.computer.points ? 0 : 1;
     const field = DIFFICULTIES[game.difficulty] + (game.winner == 0 ? "Win" : "Lose");
+    // Coins for the hidden jackpot
+    if (game.winner == 0) coins.reward(game.user.name, DIFFICULTIES[game.difficulty]);
 
     // Change Statistic in Database - a database problem must not stop the game from ending.
     try {

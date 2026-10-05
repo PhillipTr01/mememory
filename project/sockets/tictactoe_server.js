@@ -1,4 +1,5 @@
 const Statistic = require("../models/Statistic");
+const coins = require("../game/coins");
 const rooms = require("../game/rooms");
 const config = require("../game/config");
 const ttt = require("../game/tictactoe");
@@ -241,6 +242,8 @@ module.exports = function (io) {
           recordRound(room);
           if (room.game.winner != null) {
             room.seats[room.game.winner].wins++;
+            // Coins for the hidden jackpot (only for a real win, not a forfeit)
+            coins.reward(username, "tictactoe");
             systemMessage(socket.gameID, room, `${username} wins the round!`, "trophy");
           } else {
             systemMessage(socket.gameID, room, "Draw - nobody can move anymore.", "info");
