@@ -519,6 +519,8 @@
 .msg-body {
   display: flex;
   flex-direction: column;
+  /* The bubble is as wide as its text, not as the name + time above it */
+  align-items: flex-start;
   max-width: 80%;
   min-width: 0;
 }
