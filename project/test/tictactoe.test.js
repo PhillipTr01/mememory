@@ -5,7 +5,7 @@ const rooms = require("../game/rooms");
 const config = require("../game/config");
 const ttt = require("../game/tictactoe");
 
-Object.assign(config, { TICK: 50, TTT_REJOIN_GRACE: 300, REJOIN_GRACE_WAITING: 300, EMPTY_ROOM_GRACE: 300 });
+Object.assign(config, { START_ANIMATION: 100, TICK: 50, TTT_REJOIN_GRACE: 300, REJOIN_GRACE_WAITING: 300, EMPTY_ROOM_GRACE: 300 });
 
 /* ---------- Game logic ---------- */
 
@@ -119,6 +119,8 @@ async function startedGame() {
   const playing = stateWhere(alice, (s) => s.status === "playing");
   const bob = await join("bob", gameID);
   const state = await playing;
+  assert.ok(state.startIn > 0, "clients show who starts");
+  await h.wait(config.START_ANIMATION + 20);
   // [player whose turn it is, the other one]
   const players = state.turn === 0 ? [alice, bob] : [bob, alice];
   return { gameID, alice, bob, state, players };

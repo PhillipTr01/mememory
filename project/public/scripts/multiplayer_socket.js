@@ -192,9 +192,6 @@ socket.on("roomState", (state) => {
   }
 
   document.getElementById("board").classList.toggle("locked", !isMyTurn(state));
-
-  var online = state.players.filter((p) => p.connected).length + state.spectators.length;
-  document.getElementById("onlineCount").innerText = online + " online";
 });
 
 function getMyPlayer(state) {

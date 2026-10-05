@@ -101,7 +101,6 @@
             <div class="mm-card chat-card ttt-chat">
                 <div class="chat-head">
                     <span class="fw-semibold"><i class="bi bi-chat-dots me-2"></i>Chat</span>
-                    <span id="onlineCount" class="mm-muted small"></span>
                 </div>
                 <div class="chat-body-wrap">
                     <div id="chat-content" class="chat-body" aria-live="polite"></div>
@@ -134,6 +133,18 @@
             </div>
         </div>
     </main>
+
+    <!--- "Who starts?" animation --->
+    <div id="startOverlay" class="overlay-screen" hidden>
+        <div class="start-box">
+            <h2 class="start-title">Who starts?</h2>
+            <div class="reel">
+                <div class="reel-marker"></div>
+                <div id="reelTrack" class="reel-track"></div>
+            </div>
+            <p id="startResult" class="start-result"></p>
+        </div>
+    </div>
 
     <!--- Opened in another tab / game not found --->
     <div id="noticeOverlay" class="overlay-screen" hidden>

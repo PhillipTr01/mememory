@@ -264,14 +264,8 @@ body.ttt-theme {
   flex-shrink: 0;
 }
 
-.p0 .ttt-dot {
-  background: #3a131b;
-  box-shadow: 0 0 0 1px var(--ttt-p0);
-}
-.p1 .ttt-dot {
-  background: var(--ttt-p1);
-  box-shadow: 0 0 0 1px var(--ttt-p1-mark);
-}
+.p0 .ttt-dot { background: var(--ttt-p0); }
+.p1 .ttt-dot { background: var(--ttt-p1-mark); }
 
 .ttt-sub {
   font-size: 0.8rem;
