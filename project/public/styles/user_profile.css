@@ -50,7 +50,7 @@
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -93,7 +93,8 @@
 }
 
 .stat-win,
-.stat-lose {
+.stat-lose,
+.stat-draw {
   font-size: 1.6rem;
   font-weight: 700;
   line-height: 1.1;
@@ -105,6 +106,10 @@
 
 .stat-lose {
   color: var(--mm-danger);
+}
+
+.stat-draw {
+  color: var(--mm-muted);
 }
 
 .stat-label {

@@ -243,6 +243,23 @@ test("tictactoe: surrender ends the round, both can play a rematch", async () =>
   assert.strictEqual((await rematch).forfeit, false);
 });
 
+test("tictactoe: every finished round counts once in the statistics", async () => {
+  const { alice, bob } = await startedGame();
+  h.increments.length = 0;
+  const finished = stateWhere(alice, (s) => s.status === "finished");
+  bob.emit("surrender");
+  await finished;
+  bob.emit("surrender"); // already over: nothing more
+  await h.wait(100);
+  assert.deepStrictEqual(
+    h.increments.slice().sort((x, y) => x.username.localeCompare(y.username)),
+    [
+      { username: "alice", field: "tictactoeWin" },
+      { username: "bob", field: "tictactoeLose" },
+    ],
+  );
+});
+
 test("tictactoe: rejoin after a reload, forfeit when not coming back", async () => {
   const { gameID, alice, bob, A, B } = await startedGame();
   bob.close();

@@ -8,6 +8,7 @@ var MODE_COLORS = {
     hard: "#f59e0b",
     expert: "#ef4444",
     multiplayer: "#a78bfa",
+    tictactoe: "#3f9d6b",
 };
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -78,7 +79,8 @@ function renderList(players, username) {
             name.appendChild(you);
         }
 
-        var games = player.win + player.lose;
+        var draw = player.draw || 0;
+        var games = player.win + player.lose + draw;
         var percent = games == 0 ? 0 : Math.round((player.win / games) * 100);
         var rate = document.createElement("div");
         rate.className = "score-rate";
@@ -94,6 +96,8 @@ function renderList(players, username) {
         var stats = document.createElement("div");
         stats.className = "score-stats";
         stats.append(stat("win", player.win, "Wins"), stat("lose", player.lose, "Losses"));
+        // Tic Tac Toe: draws count as games, too
+        if (currentMode == "tictactoe") stats.append(stat("draw", draw, "Draws"));
 
         row.append(rank, createAvatar(player.username), info, stats);
         list.appendChild(row);

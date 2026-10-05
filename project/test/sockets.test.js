@@ -101,10 +101,44 @@ test("singleplayer: a game can only be initialized once and only by its owner", 
   alice.emit("initializingGame", { gameID });
   await h.once(alice, "setComputername");
 
+  // A second tab takes over (like in the multiplayer), the first one stops
+  const replaced = h.once(alice, "sessionReplaced");
   const alice2 = client("/singleplayer", "alice");
   await h.once(alice2, "connect");
   alice2.emit("initializingGame", { gameID });
-  await h.once(alice2, "noGameFound");
+  await h.once(alice2, "resumeGame");
+  await replaced;
+});
+
+test("singleplayer: a reload continues the game, not coming back is a loss", async () => {
+  const gameID = await createGame("alice", "playSingleplayer", { difficulty: 0 });
+  const first = client("/singleplayer", "alice");
+  await h.once(first, "connect");
+  const started = h.once(first, "highlightPlayer");
+  first.emit("initializingGame", { gameID });
+  await started;
+  const card = h.once(first, "turnCard");
+  first.emit("openCard", 0);
+  await card;
+
+  // Reload: the game is still there, without a loss
+  first.close();
+  await h.wait(100);
+  const second = client("/singleplayer", "alice");
+  await h.once(second, "connect");
+  const resumed = h.once(second, "resumeGame");
+  second.emit("initializingGame", { gameID });
+  const state = await resumed;
+  assert.strictEqual(state.finished, false);
+  assert.deepStrictEqual(state.points, [0, 0]);
+  await h.wait(400); // longer than the rejoin time in the tests
+  assert.deepStrictEqual(h.increments, []);
+
+  // Gone for good: counts as a loss once
+  second.close();
+  await h.wait(600);
+  assert.deepStrictEqual(h.increments, [{ username: "alice", field: "easyLose" }]);
+  assert.strictEqual(rooms.get(gameID, "singleplayer"), null);
 });
 
 test("singleplayer: surrender + disconnect counts exactly one loss", async () => {

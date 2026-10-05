@@ -10,7 +10,11 @@ const schema = mongoose.Schema({
     expertWin: {type: Number, required: true, default: 0},
     expertLose: {type: Number, required: true, default: 0},
     multiplayerWin: {type: Number, required: true, default: 0},
-    multiplayerLose: {type: Number, required: true, default: 0}
+    multiplayerLose: {type: Number, required: true, default: 0},
+    // Tic Tac Toe XL: every round counts
+    tictactoeWin: {type: Number, required: true, default: 0},
+    tictactoeLose: {type: Number, required: true, default: 0},
+    tictactoeDraw: {type: Number, required: true, default: 0}
 });
 
 /*

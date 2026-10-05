@@ -26,12 +26,58 @@ function showNotice(title, text) {
 
 // Something went wrong on the server (e.g. not enough memes)
 socket.on("gameError", (message) => {
+  sessionOver = true;
   showNotice("Something went wrong", message || "Please try again.");
 });
 
-// The game lives on the connection: without it, it is over
+var sessionOver = false; // other tab, error: don't come back
+
+// Reload or lost connection: the game pauses on the server and goes on
+// when the page is back (within the rejoin time, like in the multiplayer)
 socket.on("disconnect", () => {
-  if (!gameOver) showNotice("Connection lost", "The game was ended. You can start a new one in the lobby.");
+  if (!sessionOver) document.getElementById("connectionBanner").hidden = false;
+});
+
+socket.on("connect", () => {
+  document.getElementById("connectionBanner").hidden = true;
+  if (!sessionOver) socket.emit("initializingGame", { gameID: sessionStorage.getItem("gameID") });
+});
+
+// Leaving the page (logo, menu, back button): disconnect right away.
+// Coming back with the back button reconnects.
+window.addEventListener("pagehide", () => socket.disconnect());
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) socket.connect();
+});
+
+socket.on("sessionReplaced", () => {
+  sessionOver = true;
+  showNotice("Opened in another tab", "You are playing in another tab or window now.");
+});
+
+// Back in the game after a reload / lost connection: the whole board again
+socket.on("resumeGame", (data) => {
+  document.getElementById("startOverlay").hidden = true;
+  document.getElementById("resultOverlay").hidden = true;
+  document.getElementById("board").classList.remove("revealed");
+  for (var i = 0; i < 66; i++) {
+    var card = document.getElementById("card-" + i);
+    card.classList.remove("flip");
+    understateCard(i);
+    clearCardImage(card, 0);
+    document.getElementById(`cardcount-${i}`).innerText = "";
+  }
+  data.found.forEach((item) => {
+    var card = document.getElementById("card-" + item.id);
+    setCardImage(card, item.src);
+    card.classList.add("flip");
+  });
+  document.getElementById("user1Score").innerText = data.points[0];
+  document.getElementById("user2Score").innerText = data.points[1];
+  document.getElementById("pairsLeft").innerText = 33 - data.points[0] - data.points[1] + " pairs left";
+  ["user1Item", "user2Item"].forEach((id) => document.getElementById(id).classList.remove("winner", "inactive"));
+  gameOver = data.finished;
+  renderGameActions(!data.finished);
 });
 
 socket.on("connect_error", (error) => {
@@ -68,9 +114,7 @@ document.addEventListener(
 );
 
 // Initialize Game - the server picks the memes
-socket.emit("initializingGame", {
-  gameID: sessionStorage.getItem("gameID"),
-});
+// (the game is joined in "connect", also after a reload)
 
 var BOT_AVATARS = {
   "Easy Bot": "easy",
@@ -122,6 +166,7 @@ socket.on("highlightPlayer", (data) => {
 });
 
 socket.on("noGameFound", () => {
+  sessionOver = true;
   window.location.href = "/lobby";
 });
 
@@ -256,8 +301,13 @@ socket.on("getWinner", (data) => {
   renderGameActions(false);
   showResult(data);
 
-  // Reset storage
-  sessionStorage.clear();
+  // All cards are shown after the game
+  (data.cards || []).forEach((src, id) => {
+    var card = document.getElementById("card-" + id);
+    if (card == null || card.classList.contains("flip")) return;
+    setCardImage(card, src);
+    card.classList.add("flip");
+  });
 });
 
 function requestRematch() {

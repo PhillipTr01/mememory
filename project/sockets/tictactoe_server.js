@@ -1,3 +1,4 @@
+const Statistic = require("../models/Statistic");
 const rooms = require("../game/rooms");
 const config = require("../game/config");
 const ttt = require("../game/tictactoe");
@@ -16,6 +17,24 @@ module.exports = function (io) {
   function emitState(gameID, room) {
     tictactoe.to(gameID).emit("state", serialize(gameID, room));
     notifyLobby();
+  }
+
+  /*
+   * Statistics: every finished round counts once (win / loss / draw), also
+   * when it ended early (surrender, didn't come back).
+   */
+  function recordRound(room) {
+    if (room.game == null || room.recordedRound === room.round) return;
+    room.recordedRound = room.round;
+    const winner = room.game.winner;
+    room.seats.forEach((seat, index) => {
+      if (seat == null) return;
+      const field = winner == null ? "tictactoeDraw" : winner === index ? "tictactoeWin" : "tictactoeLose";
+      // A database problem must not stop the game
+      Statistic.increment(seat.name, field).catch((error) =>
+        console.error("[tictactoe] Could not update statistic:", error),
+      );
+    });
   }
 
   function systemMessage(gameID, room, text, icon) {
@@ -54,6 +73,7 @@ module.exports = function (io) {
     room.game.winner = winner;
     room.forfeit = reason;
     room.status = STATUS.FINISHED;
+    recordRound(room);
     if (room.seats[winner] != null) {
       room.seats[winner].wins++;
       systemMessage(gameID, room, `${room.seats[winner].name} wins the round!`, "trophy");
@@ -218,6 +238,7 @@ module.exports = function (io) {
         rooms.touch(room);
         if (ttt.isOver(room.game)) {
           room.status = STATUS.FINISHED;
+          recordRound(room);
           if (room.game.winner != null) {
             room.seats[room.game.winner].wins++;
             systemMessage(socket.gameID, room, `${username} wins the round!`, "trophy");
