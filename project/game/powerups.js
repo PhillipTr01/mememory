@@ -19,6 +19,7 @@ const START_POWERUPS = 2;
  *   null    - nothing, used right away
  *   "card"  - one closed card
  *   "cards" - two closed cards
+ *   "player" - an opponent (chosen automatically if there is only one)
  */
 const POWERUPS = {
   // Information
@@ -30,8 +31,8 @@ const POWERUPS = {
   secondChance: { category: "tempo", rarity: "uncommon", target: null, emoji: "🔁", name: "Second chance", description: "If your second card is wrong, it closes and you pick another one." },
   // Attack
   shuffle: { category: "attack", rarity: "rare", target: null, emoji: "🔀", name: "Shuffle", description: "Shuffles all closed cards." },
-  fog: { category: "attack", rarity: "uncommon", target: null, emoji: "🌫️", name: "Fog", description: "The next player only sees blurred cards in their turn." },
-  skip: { category: "attack", rarity: "rare", target: null, emoji: "⏭️", name: "Skip", description: "The next player's turn is skipped." },
+  fog: { category: "attack", rarity: "uncommon", target: "player", emoji: "🌫️", name: "Fog", description: "A player of your choice only sees blurred cards in their next turn." },
+  skip: { category: "attack", rarity: "rare", target: "player", emoji: "⏭️", name: "Skip", description: "A player of your choice misses their next turn." },
   // Points
   shield: { category: "points", rarity: "common", target: null, emoji: "🛡️", name: "Shield", description: "Blocks the next Fog or Skip against you." },
   combo: { category: "points", rarity: "uncommon", target: null, emoji: "🎯", name: "Combo", description: "This turn every further pair gives bonus points (+1, +2, ...)." },

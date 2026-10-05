@@ -73,11 +73,13 @@ function renderPowerups(state) {
   }
 
   // While choosing cards, the bar says what to do
-  document.querySelector("#actionToggle .action-toggle-label").innerText = targeting
-    ? targeting.needed == 2
-      ? "Choose two closed cards"
-      : "Choose a closed card"
-    : "⚡ Power-ups";
+  document.querySelector("#actionToggle .action-toggle-label").innerText = !targeting
+    ? "⚡ Power-ups"
+    : targeting.player
+      ? "Choose a player in the list"
+      : targeting.needed == 2
+        ? "Choose two closed cards"
+        : "Choose a closed card";
 
   // Two wrong cards: End turn right away (the bar opens if it was closed)
   endButton.disabled = !ready;
@@ -178,6 +180,19 @@ function startPowerup(id) {
     return;
   }
   cancelTargeting();
+  if (info.target == "player") {
+    // Only one opponent: no need to choose
+    var opponents = room.players.filter((p) => p.active && p.name != me.username);
+    if (opponents.length == 1) {
+      socket.emit("usePowerup", { id: id, player: opponents[0].name });
+      return;
+    }
+    targeting = { id: id, player: true };
+    document.body.classList.add("targeting-player");
+    renderPlayerList(room, room);
+    renderPowerups(room);
+    return;
+  }
   if (info.target == "card" || info.target == "cards") {
     targeting = { id: id, needed: info.target == "cards" ? 2 : 1, picked: [] };
     document.getElementById("board").classList.add("targeting");
@@ -188,9 +203,18 @@ function startPowerup(id) {
   socket.emit("usePowerup", { id: id });
 }
 
+// Attacks: a click on an opponent in the player list picks the target
+document.addEventListener("click", (event) => {
+  if (!targeting || !targeting.player) return;
+  var item = event.target.closest("#playerList .player-item.targetable");
+  if (item == null) return;
+  socket.emit("usePowerup", { id: targeting.id, player: item.dataset.name });
+  cancelTargeting();
+});
+
 // Called by openCard(): while choosing, a click picks the card instead
 function handlePowerupTarget(id) {
-  if (!targeting) return false;
+  if (!targeting || targeting.player) return false;
   var card = document.getElementById("card-" + id);
   if (card == null || card.classList.contains("flip")) return true; // only closed cards
 
@@ -210,7 +234,10 @@ function handlePowerupTarget(id) {
 }
 
 function cancelTargeting() {
+  var wasPlayer = targeting && targeting.player;
   targeting = null;
+  document.body.classList.remove("targeting-player");
+  if (wasPlayer && room) renderPlayerList(room, room);
   document.getElementById("board").classList.remove("targeting");
   document.querySelectorAll(".card.target-picked").forEach((card) => card.classList.remove("target-picked"));
   if (room && !document.getElementById("actionBar").hidden) renderPowerups(room);

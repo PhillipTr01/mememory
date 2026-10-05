@@ -110,8 +110,8 @@ function waitFor(socket, event, predicate, timeout = 3000) {
   });
 }
 
-// alice (host) and bob in a running power-up game
-async function powerupGame() {
+// alice (host) and bob (and more guests) in a running power-up game
+async function powerupGame(...extra) {
   const lobby = server.client("/lobby", tokens.alice);
   sockets.push(lobby);
   lobby.emit("playMultiplayer");
@@ -124,14 +124,22 @@ async function powerupGame() {
   bob.emit("joinRoom", { gameID });
   await h.once(bob, "joinedRoom");
   bob.emit("setReady", { ready: true });
+  const guests = {};
+  for (const name of extra) {
+    const guest = client(name);
+    guests[name] = guest;
+    guest.emit("joinRoom", { gameID });
+    await h.once(guest, "joinedRoom");
+    guest.emit("setReady", { ready: true });
+  }
   alice.emit("updateSettings", { mode: "powerups" });
-  await waitFor(alice, "roomState", (s) => s.mode === "powerups" && s.players.every((p) => p.name === "alice" || p.ready));
+  await waitFor(alice, "roomState", (s) => s.mode === "powerups" && s.players.length === 2 + extra.length && s.players.every((p) => p.name === "alice" || p.ready));
 
   const playing = waitFor(alice, "roomState", (s) => s.status === "playing");
   alice.emit("startGame");
   const state = await playing;
   const room = rooms.get(gameID, "multiplayer");
-  const byName = { alice, bob };
+  const byName = { alice, bob, ...guests };
   const current = state.players[state.turn].name;
   const other = current === "alice" ? "bob" : "alice";
   return { gameID, room, state, alice, bob, current: byName[current], other: byName[other], currentName: current, otherName: other };
@@ -148,7 +156,7 @@ function wrongPair(room) {
 
 before(async () => {
   server = await h.startServer();
-  for (const name of ["alice", "bob"]) tokens[name] = h.addUser(name);
+  for (const name of ["alice", "bob", "carol"]) tokens[name] = h.addUser(name);
 });
 
 after(async () => {
@@ -322,4 +330,23 @@ test("powerups game: rotate and shuffle send the new board, peek only to the pla
   assert.strictEqual(data.cards[0].src, room.cardImages[7]);
   await h.wait(100);
   assert.strictEqual(otherSaw, false);
+});
+
+test("powerups game: attacks hit the chosen player (with more than one opponent)", async () => {
+  const { room, current, currentName } = await powerupGame("carol");
+  const me = room.players.find((p) => p.name === currentName);
+  const targets = room.players.filter((p) => p.name !== currentName);
+  const victim = targets[targets.length - 1]; // not necessarily the next player
+  me.powerups = ["skip", "fog"];
+
+  // Without a choice nothing happens (two opponents)
+  current.emit("usePowerup", { id: "skip" });
+  current.emit("usePowerup", { id: "skip", player: currentName }); // not myself
+  await h.wait(100);
+  assert.strictEqual(room.turnPowerUsed, false);
+
+  const hit = waitFor(current, "roomState", (s) => s.players.find((p) => p.name === victim.name).skipNext);
+  current.emit("usePowerup", { id: "skip", player: victim.name });
+  await hit;
+  assert.ok(targets.every((p) => p.skipNext === (p === victim)));
 });

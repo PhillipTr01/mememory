@@ -248,6 +248,11 @@ function renderPlayerList(state, previous) {
   state.players.forEach((player, index) => {
     var item = document.createElement("div");
     item.className = "player-item";
+    item.dataset.name = player.name;
+    // Power-up attacks: opponents can be picked as the target
+    if (typeof targeting != "undefined" && targeting && targeting.player && player.active && player.name != me.username) {
+      item.classList.add("targetable");
+    }
     if (!player.active || player.left) item.classList.add("inactive");
     if (state.status == "playing" && state.turn == index && player.active) item.classList.add("turn");
 

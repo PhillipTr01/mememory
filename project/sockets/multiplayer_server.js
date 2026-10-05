@@ -637,16 +637,6 @@ module.exports = function (io) {
     room.turnPairs = 0;
   }
 
-  // The next player who will play (for Fog and Skip)
-  function nextOpponent(room) {
-    const count = room.players.length;
-    for (let step = 1; step < count; step++) {
-      const player = room.players[(room.turn + step) % count];
-      if (player.active) return player;
-    }
-    return null;
-  }
-
   function isClosed(room, id) {
     return isValidCardId(id) && !room.foundMatches.includes(id) && !room.openedCards.includes(id) && room.closingCard !== id;
   }
@@ -680,6 +670,14 @@ module.exports = function (io) {
       !player.powerups.includes(id)
     ) {
       return;
+    }
+
+    // Attacks: the chosen opponent (or the only one there is)
+    let victim = null;
+    if (info.target === "player") {
+      const opponents = room.players.filter((p) => p.active && p.name !== username);
+      victim = opponents.length === 1 ? opponents[0] : opponents.find((p) => p.name === data.player) || null;
+      if (victim == null) return;
     }
 
     // Cards to choose (validated here)
@@ -733,15 +731,15 @@ module.exports = function (io) {
       }
       case "fog":
       case "skip": {
-        const target = nextOpponent(room);
-        if (target == null) break;
-        if (target.shield) {
-          target.shield = false;
-          systemMessage(gameID, room, `${target.name}'s shield blocked it.`, "info");
+        if (victim.shield) {
+          victim.shield = false;
+          systemMessage(gameID, room, `${victim.name}'s shield blocked it.`, "info");
         } else if (id === "fog") {
-          target.fog = true;
+          victim.fog = true;
+          systemMessage(gameID, room, `${victim.name} is in the fog for their next turn.`, "info");
         } else {
-          target.skipNext = true;
+          victim.skipNext = true;
+          systemMessage(gameID, room, `${victim.name} misses their next turn.`, "info");
         }
         break;
       }

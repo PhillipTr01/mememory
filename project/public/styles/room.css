@@ -1887,3 +1887,14 @@
   20% { opacity: 1; transform: translate(-50%, -6px) scale(1.15); }
   100% { opacity: 0; transform: translate(-50%, -34px) scale(1); }
 }
+
+/* Attacks: choosing a player in the list */
+.player-item.targetable {
+  cursor: crosshair;
+  box-shadow: inset 0 0 0 1px rgba(var(--mm-accent-rgb), 0.5);
+}
+
+.player-item.targetable:hover {
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  box-shadow: inset 0 0 0 2px var(--mm-accent);
+}
