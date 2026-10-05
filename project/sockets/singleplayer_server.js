@@ -101,22 +101,6 @@ module.exports = function (io) {
       }),
     );
 
-    // endTurn - only allowed for the player after two cards that don't match
-    socket.on(
-      "endTurn",
-      safe("endTurn", () => {
-        const game = socket.game;
-        if (
-          game != null &&
-          game.turn == 0 &&
-          game.status == 2 &&
-          game.openedCards.length == 2
-        ) {
-          endTurn(socket);
-        }
-      }),
-    );
-
     // surrender
     socket.on(
       "surrender",
@@ -222,13 +206,9 @@ function checkGame(socket) {
         game.status = 2;
 
         if (!checkCards(socket)) {
-          // If it's the player's turn activate endTurn-Button, so that he can manually end his turn.
-          if (game.turn == 0) {
-            socket.emit("activateEndTurn");
-          } else {
-            // Computer automatically ends his turn after a short look at the cards.
-            later(game, () => endTurn(socket), 1850);
-          }
+          // No match: the turn passes on its own after a short look at the cards
+          // (for the player and the computer)
+          later(game, () => endTurn(socket), config.SINGLEPLAYER_MISS_DELAY);
         }
       }
 
@@ -364,11 +344,6 @@ function endTurn(socket) {
     1: id,
     2: id2,
   });
-
-  // If it's the player's turn disable the endTurn-Button so that the user can't end his turn twice
-  if (game.turn == 0) {
-    socket.emit("disableEndTurn");
-  }
 
   // Switch turns
   game.turn = game.turn == 1 ? 0 : 1;

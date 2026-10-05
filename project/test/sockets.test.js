@@ -17,6 +17,7 @@ Object.assign(config, {
   SPEED_START_ANIMATION: 100,
   // The player starts, so the tests can open cards right away
   SINGLEPLAYER_STARTER: 0,
+  SINGLEPLAYER_MISS_DELAY: 100,
 });
 
 let server;
@@ -498,6 +499,10 @@ test("singleplayer: after the player's turn the computer plays", async () => {
   socket.emit("initializingGame", { gameID });
   await h.once(socket, "setComputername");
 
+  // No "End turn": after two wrong cards the turn passes on its own
+  const closed = h.once(socket, "closeCards", 8000);
+  const highlight = waitFor(socket, "highlightPlayer", (data) => data.turn === 1, 8000);
+
   // Open cards until two of them don't match
   let first = null;
   for (let id = 0; id < 66; id++) {
@@ -512,9 +517,8 @@ test("singleplayer: after the player's turn the computer plays", async () => {
     }
   }
 
-  await h.once(socket, "activateEndTurn");
-  const highlight = h.once(socket, "highlightPlayer");
-  socket.emit("endTurn");
+  const cards = await closed;
+  assert.ok(cards[1] != null && cards[2] != null);
   assert.strictEqual((await highlight).turn, 1);
 
   // The computer flips two cards on its own

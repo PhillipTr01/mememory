@@ -38,6 +38,8 @@ module.exports = {
   SPEED_ANIMATION_GRACE: 700,
   // Singleplayer: who starts (0 = player, 1 = bot, null = random)
   SINGLEPLAYER_STARTER: null,
+  // Singleplayer: two wrong cards stay open this long, then the turn passes
+  SINGLEPLAYER_MISS_DELAY: 1850,
 
   // Speed round: shorter "who starts" animation
   SPEED_START_ANIMATION: 2600,

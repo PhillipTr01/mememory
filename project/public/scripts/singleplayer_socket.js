@@ -155,19 +155,6 @@ socket.on("closeCards", (data) => {
   });
 });
 
-// Activate endTurn-Button
-socket.on("activateEndTurn", () => {
-  document.getElementById("playButton").disabled = false;
-});
-
-// Disable endTurn-Button
-socket.on("disableEndTurn", () => {
-  document.getElementById("playButton").disabled = true;
-});
-
-function emitEndTurn() {
-  socket.emit("endTurn");
-}
 
 function surrender() {
   confirmDialog({
@@ -182,8 +169,6 @@ function surrender() {
 }
 
 socket.on("getWinner", (data) => {
-  var playButton = document.getElementById("playButton");
-
   // Visual change for winner
   document.getElementById(data.winner == 0 ? "user1Item" : "user2Item").classList.add("winner");
   document.getElementById(data.winner == 0 ? "user2Item" : "user1Item").classList.add("inactive");
@@ -201,8 +186,7 @@ socket.on("getWinner", (data) => {
     understateCard(i);
   }
 
-  // End turn -> Rematch / Back to lobby
-  playButton.hidden = true;
+  // Rematch / Back to lobby
   document.getElementById("rematchButton").hidden = false;
   document.getElementById("lobbyButton").hidden = false;
   document.getElementById("surrenderSlot").replaceChildren();
@@ -234,9 +218,6 @@ socket.on("rematch", () => {
   ["user1Item", "user2Item"].forEach((id) => document.getElementById(id).classList.remove("winner", "inactive"));
   document.getElementById("surrenderSlot").replaceChildren(createSurrenderButton());
 
-  var playButton = document.getElementById("playButton");
-  playButton.hidden = false;
-  playButton.disabled = true;
   ["rematchButton", "resultRematchButton"].forEach((id) => (document.getElementById(id).disabled = false));
   document.getElementById("rematchButton").hidden = true;
   document.getElementById("lobbyButton").hidden = true;
