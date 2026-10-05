@@ -160,6 +160,9 @@ function renderBoard() {
   var board = document.getElementById("board");
   var over = state.winner != null || state.draw;
   board.classList.toggle("over", over);
+  // Hover on free cells in the own color
+  board.classList.toggle("own-p0", mySeat() >= 0 && colorClass(mySeat()) == "p0");
+  board.classList.toggle("own-p1", mySeat() >= 0 && colorClass(mySeat()) == "p1");
   board.classList.toggle("p0-won", state.winner != null && colorClass(state.winner) == "p0");
   board.classList.toggle("p1-won", state.winner != null && colorClass(state.winner) == "p1");
 
