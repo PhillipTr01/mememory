@@ -18,7 +18,7 @@ function canUsePowerup(state, id) {
   if (state.mode != "powerups" || state.status != "playing" || !isMyTurn(state)) return false;
   if (state.turnPowerUsed || state.checkingCards) return false;
   // Moving cards only works when no card is open, second chance before the second card
-  if (["shuffle", "swap", "rotate"].includes(id) && state.openedCount > 0) return false;
+  if (["shuffle", "swap", "rotate", "rowShift"].includes(id) && state.openedCount > 0) return false;
   if (id == "secondChance" && state.openedCount > 1) return false;
   return true;
 }
@@ -37,7 +37,7 @@ function renderPowerups(state) {
   var bar = document.getElementById("actionBar");
   var mine = getMyPlayer(state);
   var player = state.status == "playing" && mine != null && mine.active && !me.spectator;
-  var ready = player && isMyTurn(state) && state.checkingCards && state.openedCount == 2;
+  var ready = player && isMyTurn(state) && state.checkingCards && state.openedCount >= 2;
   var powerMode = state.mode == "powerups";
   var show = player && (powerMode || (state.mode == "classic" && ready));
   bar.hidden = !show;
@@ -347,12 +347,63 @@ socket.on("powerupReveal", (data) => {
   });
 });
 
-// Shuffle / Rotate: a short animation, the new board follows as boardState
+/*
+ * Shuffle, Swap, Row shift, Rotate: the cards fly from their old place to the
+ * new one. perm[newPosition] = oldPosition; the new board follows as boardState,
+ * then the cards start at their old places and move to the new ones.
+ */
+var pendingMove = null;
+
 socket.on("boardChanged", (data) => {
-  var board = document.getElementById("memoryTable");
-  var name = data.type == "rotate" ? "rotating" : "shuffling";
-  board.classList.remove(name);
-  void board.offsetWidth; // restart the animation
-  board.classList.add(name);
-  setTimeout(() => board.classList.remove(name), 700);
+  pendingMove = data;
 });
+
+function animateBoardMove() {
+  var move = pendingMove;
+  pendingMove = null;
+  if (move == null || !Array.isArray(move.perm)) return;
+  var table = document.getElementById("memoryTable");
+  var cells = table.children;
+  var rects = Array.from(cells, (cell) => cell.getBoundingClientRect());
+  var box = table.getBoundingClientRect();
+  var ratio = box.width / Math.max(box.height, 1);
+  // Nothing flies over the page (and no scrollbars) while the cards move
+  table.classList.add("moving");
+  clearTimeout(animateBoardMove.timer);
+  animateBoardMove.timer = setTimeout(() => table.classList.remove("moving"), 1200);
+  var duration = move.type == "rotate" ? 900 : move.type == "shuffle" ? 750 : 650;
+
+  move.perm.forEach((old, position) => {
+    if (old == position || cells[position] == null) return;
+    var dx = rects[old].left - rects[position].left;
+    var dy = rects[old].top - rects[position].top;
+    // Swap and row shift: the cards lift a bit on the way
+    var lift = move.type == "swap" || move.type == "rowShift" ? 1.18 : 1.06;
+    var delay = move.type == "shuffle" ? Math.random() * 160 : 0;
+    var cell = cells[position];
+    cell.style.zIndex = 5;
+    var frames = [
+      { transform: `translate(${dx}px, ${dy}px)` },
+      { transform: `translate(${dx / 2}px, ${dy / 2}px) scale(${lift})`, offset: 0.5 },
+      { transform: "translate(0, 0)" },
+    ];
+    if (move.type == "rotate") {
+      // Around the middle of the board (upright), not all through the center
+      // (an ellipse like the board, so the cards stay on it)
+      var vx = dx / 2;
+      var vy = dy / 2;
+      frames = [];
+      for (var step = 0; step <= 12; step++) {
+        var angle = (Math.PI * step) / 12;
+        var x = vx * Math.cos(angle) - vy * ratio * Math.sin(angle) + vx;
+        var y = (vx / ratio) * Math.sin(angle) + vy * Math.cos(angle) + vy;
+        frames.push({ transform: `translate(${x}px, ${y}px)` });
+      }
+    }
+    var animation = cell.animate(
+      frames,
+      { duration: duration, delay: delay, easing: "cubic-bezier(0.45, 0, 0.25, 1)", fill: "backwards" },
+    );
+    animation.onfinish = animation.oncancel = () => (cell.style.zIndex = "");
+  });
+}

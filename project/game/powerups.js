@@ -29,25 +29,31 @@ const POWERUPS = {
   // Tempo
   extraTurn: { category: "tempo", rarity: "rare", target: null, emoji: "➕", name: "Extra turn", description: "After your next wrong pair you keep playing." },
   secondChance: { category: "tempo", rarity: "uncommon", target: null, emoji: "🔁", name: "Second chance", description: "If your second card is wrong, it closes and you pick another one." },
+  tripleFlip: { category: "tempo", rarity: "rare", target: null, emoji: "🔱", name: "Triple flip", description: "Open 3 cards instead of 2 - any pair among them counts." },
   // Attack
   shuffle: { category: "attack", rarity: "rare", target: null, emoji: "🔀", name: "Shuffle", description: "Shuffles all closed cards." },
   fog: { category: "attack", rarity: "uncommon", target: "player", emoji: "🌫️", name: "Fog", description: "A player of your choice only sees blurred cards in their next turn." },
   skip: { category: "attack", rarity: "rare", target: "player", emoji: "⏭️", name: "Skip", description: "A player of your choice misses their next turn." },
+  steal: { category: "attack", rarity: "uncommon", target: "player", emoji: "🥷", name: "Steal", description: "Take a random power-up from a player of your choice." },
   // Points
-  shield: { category: "points", rarity: "common", target: null, emoji: "🛡️", name: "Shield", description: "Blocks the next Fog or Skip against you." },
+  shield: { category: "points", rarity: "common", target: null, emoji: "🛡️", name: "Shield", description: "Blocks the next attack against you (Fog, Skip, Steal)." },
   combo: { category: "points", rarity: "uncommon", target: null, emoji: "🎯", name: "Combo", description: "This turn every further pair gives bonus points (+1, +2, ...)." },
-  gamble: { category: "points", rarity: "common", target: null, emoji: "🎲", name: "Gamble", description: "50 / 50: +2 points or -1 point." },
+  doubleOrNothing: { category: "points", rarity: "common", target: null, emoji: "🎰", name: "Double or nothing", description: "Your next pair this turn counts double - a wrong pair costs 1 point." },
   // Board
-  swap: { category: "board", rarity: "uncommon", target: "cards", emoji: "🔄", name: "Swap", description: "Secretly swap two closed cards." },
+  swap: { category: "board", rarity: "uncommon", target: "cards", emoji: "🔄", name: "Swap", description: "Swap two closed cards." },
+  rowShift: { category: "board", rarity: "uncommon", target: "card", emoji: "↔️", name: "Row shift", description: "The closed cards in the row of a card move one place to the right." },
   rotate: { category: "board", rarity: "uncommon", target: null, emoji: "🌀", name: "Rotate", description: "Turns the whole board by 180 degrees." },
   bomb: { category: "board", rarity: "common", target: "card", emoji: "💣", name: "Bomb", description: "Shows a card and its neighbours to everybody for 2 seconds." },
+  // Chaos
+  party: { category: "chaos", rarity: "uncommon", target: null, emoji: "🎉", name: "Party", description: "Every player gets a random power-up." },
+  mysteryBox: { category: "chaos", rarity: "common", target: null, emoji: "🎁", name: "Mystery box", description: "Usually a random power-up - but it can also hurt you." },
 };
 
 const IDS = Object.keys(POWERUPS);
 
 /*
  * Weights by impact: strong power-ups come less often, but still regularly
- * (common ~11%, uncommon ~6%, rare ~3.6% per draw each).
+ * (common ~8%, uncommon ~4.7%, rare ~2.7% per draw each).
  */
 const RARITY = { common: 12, uncommon: 7, rare: 4 };
 
@@ -141,6 +147,19 @@ function swapPermutation(a, b) {
   return perm;
 }
 
+// The closed cards of a row move one place to the right (the last one to the front)
+function rowShiftPermutation(room, id) {
+  const perm = identity();
+  const row = Math.floor(id / COLUMNS);
+  const closed = [];
+  for (let column = 0; column < COLUMNS; column++) {
+    const card = row * COLUMNS + column;
+    if (!room.foundMatches.includes(card) && !room.openedCards.includes(card)) closed.push(card);
+  }
+  closed.forEach((position, index) => (perm[position] = closed[(index - 1 + closed.length) % closed.length]));
+  return closed.length > 1 ? perm : null;
+}
+
 // The whole board turns by 180 degrees
 function rotatePermutation() {
   return identity().map((id) => CARD_COUNT - 1 - id);
@@ -161,5 +180,6 @@ module.exports = {
   applyPermutation,
   shufflePermutation,
   swapPermutation,
+  rowShiftPermutation,
   rotatePermutation,
 };

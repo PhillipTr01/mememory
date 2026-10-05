@@ -800,8 +800,17 @@ html.flip-scroll {
 
 /* Power-up mode badge (waiting room and lobby): dark blue */
 .mode-badge.powerups-badge {
-  background: rgba(59, 130, 246, 0.14);
-  color: #3b82f6;
+  background: rgba(35, 80, 200, 0.22);
+  color: #6487e6;
+}
+
+/* Power-up mode: the whole room uses a darker blue than classic */
+body.mode-powerups {
+  --mm-accent: #2350c8;
+  --mm-accent-rgb: 35, 80, 200;
+  --mm-accent-hover: #1c42a8;
+  --mm-gradient: var(--mm-accent);
+  --mm-on-accent: #fff;
 }
 
 /* Speed round: the whole room uses a yellow / orange accent */

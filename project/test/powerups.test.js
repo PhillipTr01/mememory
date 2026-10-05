@@ -75,6 +75,16 @@ test("powerups: shuffle, swap and rotate keep the board consistent", async () =>
   assert.strictEqual(room.cardImages[b], imageA);
   assert.deepStrictEqual(room.foundMatches, found);
 
+  // Row shift: only the closed cards of the row move, one place to the right
+  const rowPerm = powerups.rowShiftPermutation(room, 0);
+  const closedRow = [...Array(11).keys()].filter((id) => !room.foundMatches.includes(id));
+  closedRow.forEach((position, index) =>
+    assert.strictEqual(rowPerm[position], closedRow[(index - 1 + closedRow.length) % closedRow.length]),
+  );
+  powerups.applyPermutation(room, rowPerm);
+  assertConsistent(room);
+  assert.deepStrictEqual(room.foundMatches, found);
+
   powerups.applyPermutation(room, powerups.rotatePermutation());
   assertConsistent(room);
   assert.deepStrictEqual(room.foundMatches.sort(), found.map((id) => CARD_COUNT - 1 - id).sort());
@@ -184,21 +194,21 @@ test("powerups game: the chat says which power-ups everybody starts with", async
 test("powerups game: only on the own turn, once per turn, and it leaves the hand", async () => {
   const { room, current, other, currentName, otherName, gameID } = await powerupGame();
   const me = room.players.find((p) => p.name === currentName);
-  me.powerups = ["gamble", "shield"];
-  room.players.find((p) => p.name === otherName).powerups = ["gamble"];
+  me.powerups = ["doubleOrNothing", "shield"];
+  room.players.find((p) => p.name === otherName).powerups = ["doubleOrNothing"];
 
   // Not the other player's turn
-  other.emit("usePowerup", { id: "gamble" });
+  other.emit("usePowerup", { id: "doubleOrNothing" });
   // Not in the hand
   current.emit("usePowerup", { id: "rotate" });
   await h.wait(100);
   assert.strictEqual(room.turnPowerUsed, false);
 
   const used = waitFor(current, "roomState", (s) => s.turnPowerUsed);
-  current.emit("usePowerup", { id: "gamble" });
+  current.emit("usePowerup", { id: "doubleOrNothing" });
   const state = await used;
   assert.deepStrictEqual(state.players.find((p) => p.name === currentName).powerups, ["shield"]);
-  assert.ok([-1, 2].includes(state.players.find((p) => p.name === currentName).points));
+  assert.ok(state.players.find((p) => p.name === currentName).armed.includes("doubleOrNothing"));
 
   // Only one per turn
   current.emit("usePowerup", { id: "shield" });
@@ -316,7 +326,9 @@ test("powerups game: rotate and shuffle send the new board, peek only to the pla
   const changed = h.once(other, "boardChanged");
   const board = h.once(other, "boardState");
   current.emit("usePowerup", { id: "rotate" });
-  assert.strictEqual((await changed).type, "rotate");
+  const move = await changed;
+  assert.strictEqual(move.type, "rotate");
+  assert.strictEqual(move.perm[0], CARD_COUNT - 1, "the clients get the moves for the animation");
   assert.ok(Array.isArray((await board).found));
   assertConsistent(room);
 
@@ -349,4 +361,102 @@ test("powerups game: attacks hit the chosen player (with more than one opponent)
   current.emit("usePowerup", { id: "skip", player: victim.name });
   await hit;
   assert.ok(targets.every((p) => p.skipNext === (p === victim)));
+});
+
+// A card that is not part of a power-up pair, and closed
+function plainCard(room, not = []) {
+  for (let id = 0; id < CARD_COUNT; id++) {
+    if (room.powerCards.includes(id) || room.foundMatches.includes(id) || not.includes(id)) continue;
+    if (not.some((other) => room.cardPairs[other] === id)) continue;
+    return id;
+  }
+}
+
+test("powerups game: triple flip - a pair among three cards counts, the third closes", async () => {
+  const { room, current, currentName } = await powerupGame();
+  const me = room.players.find((p) => p.name === currentName);
+  me.powerups = ["tripleFlip"];
+  current.emit("usePowerup", { id: "tripleFlip" });
+  await waitFor(current, "roomState", (s) => s.players.find((p) => p.name === currentName).armed.includes("tripleFlip"));
+
+  const a = plainCard(room);
+  const c = plainCard(room, [a]);
+  const b = room.cardPairs[a];
+  const waiting = waitFor(current, "roomState", (s) => s.openedCount === 2 && !s.checkingCards);
+  current.emit("openCard", a);
+  current.emit("openCard", c);
+  await waiting; // no End turn after two wrong cards
+  const closed = waitFor(current, "closeCards", (data) => data[1] === c);
+  current.emit("openCard", b);
+  await closed;
+  assert.ok(room.foundMatches.includes(a) && room.foundMatches.includes(b));
+  assert.strictEqual(me.points, 1);
+  assert.strictEqual(me.armed.tripleFlip, false, "used up");
+  assert.strictEqual(room.players[room.turn].name, currentName, "a pair: keep playing");
+
+  // Normal again: two wrong cards end the turn
+  await h.wait(100);
+  const [d, e] = wrongPair(room);
+  current.emit("openCard", d);
+  current.emit("openCard", e);
+  await h.once(current, "activateEndTurn");
+});
+
+test("powerups game: double or nothing", async () => {
+  const { room, current, currentName } = await powerupGame();
+  const me = room.players.find((p) => p.name === currentName);
+  me.powerups = ["doubleOrNothing"];
+  current.emit("usePowerup", { id: "doubleOrNothing" });
+  await waitFor(current, "roomState", (s) => s.players.find((p) => p.name === currentName).armed.includes("doubleOrNothing"));
+  const a = plainCard(room);
+  const pair = waitFor(current, "roomState", (s) => s.players.find((p) => p.name === currentName).points === 2);
+  current.emit("openCard", a);
+  current.emit("openCard", room.cardPairs[a]);
+  await pair;
+
+  // Next turn's gamble goes wrong: -1 (also below 0)
+  me.points = 0;
+  me.armed.doubleOrNothing = true;
+  const [b, c] = wrongPair(room);
+  current.emit("openCard", b);
+  current.emit("openCard", c);
+  await h.once(current, "activateEndTurn");
+  assert.strictEqual(me.points, -1);
+});
+
+test("powerups game: steal, party and mystery box", async () => {
+  const { room, current, currentName, otherName } = await powerupGame();
+  const me = room.players.find((p) => p.name === currentName);
+  const opponent = room.players.find((p) => p.name === otherName);
+  me.powerups = ["steal"];
+  opponent.powerups = ["map"];
+  current.emit("usePowerup", { id: "steal" });
+  await waitFor(current, "roomState", (s) => s.players.find((p) => p.name === otherName).powerups.length === 0);
+  assert.deepStrictEqual(me.powerups, ["map"]);
+
+  room.turnPowerUsed = false;
+  me.powerups = ["party"];
+  opponent.powerups = [];
+  current.emit("usePowerup", { id: "party" });
+  await waitFor(current, "roomState", (s) => s.players.every((p) => p.powerups.length === 1));
+
+  room.turnPowerUsed = false;
+  me.powerups = ["mysteryBox"];
+  me.points = 0;
+  current.emit("usePowerup", { id: "mysteryBox" });
+  await waitFor(current, "roomState", (s) => !s.players.find((p) => p.name === currentName).powerups.includes("mysteryBox"));
+  // Something happened: a new power-up, -1 point or a skipped turn
+  assert.ok(me.powerups.length === 1 || me.points === -1 || me.skipNext);
+});
+
+test("powerups game: row shift moves the closed cards of the row", async () => {
+  const { room, current, other, currentName } = await powerupGame();
+  const me = room.players.find((p) => p.name === currentName);
+  me.powerups = ["rowShift"];
+  const images = room.cardImages.slice(0, 11);
+  const changed = h.once(other, "boardChanged");
+  current.emit("usePowerup", { id: "rowShift", targets: [3] });
+  assert.strictEqual((await changed).type, "rowShift");
+  assert.deepStrictEqual(room.cardImages.slice(0, 11), [images[10], ...images.slice(0, 10)]);
+  assertConsistent(room);
 });

@@ -333,7 +333,7 @@ module.exports = function (io) {
           !room.foundMatches.includes(id)
         ) {
           if (room.closingCard === id) return;
-          if (room.openedCards.length < 2 && isPlayersTurn(room, username)) {
+          if (room.openedCards.length < openLimit(room) && !room.checkingCards && isPlayersTurn(room, username)) {
             rooms.touch(room);
             room.openedCards.push(id);
             room.cardCounter[id]++;
@@ -361,7 +361,7 @@ module.exports = function (io) {
       safe("endTurn", () => {
         const room = rooms.get(socket.gameID, "multiplayer");
 
-        if (room != null && room.checkingCards && room.openedCards.length == 2 && isPlayersTurn(room, username)) {
+        if (room != null && room.checkingCards && room.openedCards.length >= 2 && isPlayersTurn(room, username)) {
           rooms.touch(room);
           socket.emit("disableEndTurn");
           const player = room.players[room.turn];
@@ -594,11 +594,32 @@ module.exports = function (io) {
       player.shield = false;
       player.fog = false;
       player.skipNext = false;
-      player.armed = { extraTurn: false, secondChance: false, combo: false };
+      player.armed = noneArmed();
     }
     if (room.mode === "powerups") {
       room.powerCards = powerups.choosePowerCards(room.cardPairs);
     }
+  }
+
+  function noneArmed() {
+    return { extraTurn: false, secondChance: false, combo: false, tripleFlip: false, doubleOrNothing: false };
+  }
+
+  // Triple flip: 3 cards can be open at once
+  function openLimit(room) {
+    const player = room.players[room.turn];
+    return room.mode === "powerups" && player != null && player.armed.tripleFlip ? 3 : 2;
+  }
+
+  // Two of the open cards that belong together (or null)
+  function findOpenPair(room) {
+    const open = room.openedCards;
+    for (let i = 0; i < open.length; i++) {
+      for (let j = i + 1; j < open.length; j++) {
+        if (room.cardPairs[open[i]] === open[j]) return [open[i], open[j]];
+      }
+    }
+    return null;
   }
 
   function powerupLabel(id) {
@@ -631,7 +652,7 @@ module.exports = function (io) {
         player.unlucky = 0;
       }
       player.fog = false;
-      player.armed = { extraTurn: false, secondChance: false, combo: false };
+      player.armed = noneArmed();
     }
     room.turnPowerUsed = false;
     room.turnPairs = 0;
@@ -646,9 +667,10 @@ module.exports = function (io) {
     target.emit("powerupReveal", { type: type, duration: duration, cards: ids.map((id) => cardData(room, id)) });
   }
 
-  // The board changed (shuffle, rotate): everybody gets the new state
-  function boardChanged(gameID, room, type) {
-    multiPlayer.to(gameID).emit("boardChanged", { type: type });
+  // The board changed (shuffle, rotate, ...): the cards move, everybody gets the new state
+  function moveCards(gameID, room, type, perm) {
+    powerups.applyPermutation(room, perm);
+    multiPlayer.to(gameID).emit("boardChanged", { type: type, perm: perm });
     multiPlayer.to(gameID).emit("boardState", boardState(room));
   }
 
@@ -687,7 +709,9 @@ module.exports = function (io) {
     if (needed === 2 && targets[0] === targets[1]) return;
 
     // Moving cards only works when no card is open, second chance before the second card
-    if (["shuffle", "swap", "rotate"].includes(id) && room.openedCards.length > 0) return;
+    if (["shuffle", "swap", "rotate", "rowShift"].includes(id) && room.openedCards.length > 0) return;
+    const rowPerm = id === "rowShift" ? powerups.rowShiftPermutation(room, targets[0]) : null;
+    if (id === "rowShift" && rowPerm == null) return; // nothing would move
     if (id === "secondChance" && (room.openedCards.length > 1 || player.armed.secondChance)) return;
 
     player.powerups.splice(player.powerups.indexOf(id), 1);
@@ -717,43 +741,67 @@ module.exports = function (io) {
       case "extraTurn":
       case "secondChance":
       case "combo":
+      case "tripleFlip":
+      case "doubleOrNothing":
         player.armed[id] = true;
         break;
       case "shield":
         player.shield = true;
         break;
-      case "gamble": {
-        const win = Math.random() < 0.5;
-        // Can also go below 0
-        player.points += win ? 2 : -1;
-        systemMessage(gameID, room, win ? `${username} wins the gamble: +2!` : `${username} loses the gamble: -1.`, win ? "trophy" : "info");
+      case "party":
+        for (const p of room.players) {
+          if (p.active) grantPowerup(gameID, room, p, "gets from the party");
+        }
+        break;
+      case "mysteryBox": {
+        // Mostly good, sometimes not
+        const roll = Math.random();
+        if (roll < 0.75) {
+          const others = powerups.IDS.filter((other) => other !== "mysteryBox");
+          const prize = others[Math.floor(Math.random() * others.length)];
+          player.powerups.push(prize);
+          systemMessage(gameID, room, `${username} finds ${powerupLabel(prize)} in the box.`, "start");
+        } else if (roll < 0.875) {
+          player.points -= 1;
+          systemMessage(gameID, room, `The box bites! ${username} loses 1 point.`, "info");
+        } else {
+          player.skipNext = true;
+          systemMessage(gameID, room, `The box is empty and ${username} misses their next turn.`, "info");
+        }
         break;
       }
       case "fog":
-      case "skip": {
+      case "skip":
+      case "steal": {
         if (victim.shield) {
           victim.shield = false;
           systemMessage(gameID, room, `${victim.name}'s shield blocked it.`, "info");
         } else if (id === "fog") {
           victim.fog = true;
           systemMessage(gameID, room, `${victim.name} is in the fog for their next turn.`, "info");
-        } else {
+        } else if (id === "skip") {
           victim.skipNext = true;
           systemMessage(gameID, room, `${victim.name} misses their next turn.`, "info");
+        } else if (victim.powerups.length === 0) {
+          systemMessage(gameID, room, `${victim.name} has nothing to steal.`, "info");
+        } else {
+          const loot = victim.powerups.splice(Math.floor(Math.random() * victim.powerups.length), 1)[0];
+          player.powerups.push(loot);
+          systemMessage(gameID, room, `${username} steals ${powerupLabel(loot)} from ${victim.name}.`, "info");
         }
         break;
       }
       case "shuffle":
-        powerups.applyPermutation(room, powerups.shufflePermutation(room));
-        boardChanged(gameID, room, "shuffle");
+        moveCards(gameID, room, "shuffle", powerups.shufflePermutation(room));
         break;
       case "swap":
-        // Secret: nobody sees which cards changed places
-        powerups.applyPermutation(room, powerups.swapPermutation(targets[0], targets[1]));
+        moveCards(gameID, room, "swap", powerups.swapPermutation(targets[0], targets[1]));
+        break;
+      case "rowShift":
+        moveCards(gameID, room, "rowShift", rowPerm);
         break;
       case "rotate":
-        powerups.applyPermutation(room, powerups.rotatePermutation());
-        boardChanged(gameID, room, "rotate");
+        moveCards(gameID, room, "rotate", powerups.rotatePermutation());
         break;
     }
 
@@ -763,104 +811,124 @@ module.exports = function (io) {
   /* ---------- Game ---------- */
 
   function checkGame(socket, room) {
-    // If both cards are open check if those are a match.
-    if (room.openedCards.length == 2 && !room.checkingCards) {
-      room.checkingCards = true;
-
-      if (!checkCards(socket.gameID, room)) {
-        const player = room.players[room.turn];
-        if (room.mode === "powerups" && player.armed.secondChance) {
-          // Second chance: only the second card closes, pick another one
-          player.armed.secondChance = false;
-          const second = room.openedCards.pop();
-          room.checkingCards = false;
-          // Can't be opened again until it is closed on the screens
-          room.closingCard = second;
-          roomTimeout(
-            room,
-            () => {
-              room.closingCard = null;
-              multiPlayer.to(socket.gameID).emit("closeCards", { 1: second });
-            },
-            900,
-          );
-          systemMessage(socket.gameID, room, `${player.name} uses the second chance.`, "info");
-          emitRoomState(socket.gameID, room);
-          return;
-        }
-        if (room.mode === "speed") {
-          // Speed round: the clock stops, and the turn passes on its own
-          // after a short look at the cards
-          room.turnToken++;
-          room.turnEndsAt = null;
-          const token = room.turnToken;
-          const gameID = socket.gameID;
-          emitRoomState(gameID, room);
-          roomTimeout(
-            room,
-            () => {
-              if (room.status !== STATUS.PLAYING || room.turnToken !== token) return;
-              nextTurn(gameID, room);
-              emitRoomState(gameID, room);
-            },
-            config.SPEED_MISS_DELAY,
-          );
-        } else {
-          socket.emit("activateEndTurn");
-          // Everybody sees that two wrong cards are open (power-up mode: End turn in the bar)
-          emitRoomState(socket.gameID, room);
-        }
+    const gameID = socket.gameID;
+    if (room.openedCards.length >= 2 && !room.checkingCards) {
+      const pair = findOpenPair(room);
+      if (pair != null) {
+        foundPair(gameID, room, pair);
+      } else if (room.openedCards.length < openLimit(room)) {
+        // Triple flip: one more card to go
+        emitRoomState(gameID, room);
+      } else {
+        room.checkingCards = true;
+        missedPair(socket, room);
       }
     }
 
     // Check for winner
     if (room.foundMatches.length == CARD_COUNT) {
-      getWinner(socket.gameID, room).catch((error) =>
+      getWinner(gameID, room).catch((error) =>
         console.error("[multiplayer] Could not finish game:", error),
       );
     }
   }
 
-  function checkCards(gameID, room) {
-    const id = room.openedCards[0];
-    const id2 = room.openedCards[1];
+  // Lets a single open card close a moment later (it can't be opened until then)
+  function closeLater(gameID, room, id) {
+    room.closingCard = id;
+    roomTimeout(
+      room,
+      () => {
+        if (room.closingCard === id) room.closingCard = null;
+        multiPlayer.to(gameID).emit("closeCards", { 1: id });
+      },
+      900,
+    );
+  }
 
-    // Check if cards match
-    const cardsMatch = room.cardPairs[id] == id2;
-
-    if (cardsMatch) {
-      // Push to foundMatches -> So it can't be opened again
-      room.foundMatches.push(id, id2);
-
-      // understateCard - remove Zoom and Border on cards
-      roomTimeout(room, () => multiPlayer.to(gameID).emit("understateCard", id), 500);
-      roomTimeout(room, () => multiPlayer.to(gameID).emit("understateCard", id2), 500);
-
-      // Increase Points
-      const player = room.players[room.turn];
-      player.points++;
-      multiPlayer.to(gameID).emit("matchFound", { name: player.name, ids: [id, id2] });
-
-      if (room.mode === "powerups") {
-        room.turnPairs++;
-        // Combo: every further pair in this turn gives bonus points (+1, +2, ...)
-        if (player.armed.combo && room.turnPairs > 1) {
-          player.points += room.turnPairs - 1;
-          systemMessage(gameID, room, `Combo! ${player.name} gets +${room.turnPairs - 1} bonus.`, "trophy");
-        }
-        if (room.powerCards.includes(id)) {
-          grantPowerup(gameID, room, player, "found a power-up pair");
-        }
-      }
-
-      // Reset turn - a found pair gives another try with fresh time
-      room.openedCards = [];
+  // The open cards don't contain a pair
+  function missedPair(socket, room) {
+    const gameID = socket.gameID;
+    const player = room.players[room.turn];
+    if (room.mode === "powerups" && player.armed.tripleFlip) player.armed.tripleFlip = false;
+    if (room.mode === "powerups" && player.armed.doubleOrNothing) {
+      // Double or nothing: nothing it is (points can go below 0)
+      player.armed.doubleOrNothing = false;
+      player.points -= 1;
+      systemMessage(gameID, room, `Double or nothing: ${player.name} loses 1 point.`, "info");
+    }
+    if (room.mode === "powerups" && player.armed.secondChance) {
+      // Second chance: only the second card closes, pick another one
+      player.armed.secondChance = false;
+      const second = room.openedCards.pop();
       room.checkingCards = false;
-      startTurnTimer(gameID, room);
+      closeLater(gameID, room, second);
+      systemMessage(gameID, room, `${player.name} uses the second chance.`, "info");
+      emitRoomState(gameID, room);
+      return;
+    }
+    if (room.mode === "speed") {
+      // Speed round: the clock stops, and the turn passes on its own
+      // after a short look at the cards
+      room.turnToken++;
+      room.turnEndsAt = null;
+      const token = room.turnToken;
+      emitRoomState(gameID, room);
+      roomTimeout(
+        room,
+        () => {
+          if (room.status !== STATUS.PLAYING || room.turnToken !== token) return;
+          nextTurn(gameID, room);
+          emitRoomState(gameID, room);
+        },
+        config.SPEED_MISS_DELAY,
+      );
+    } else {
+      socket.emit("activateEndTurn");
+      // Everybody sees that two wrong cards are open (power-up mode: End turn in the bar)
       emitRoomState(gameID, room);
     }
+  }
 
-    return cardsMatch;
+  function foundPair(gameID, room, [id, id2]) {
+    // Push to foundMatches -> So it can't be opened again
+    room.foundMatches.push(id, id2);
+
+    // understateCard - remove Zoom and Border on cards
+    roomTimeout(room, () => multiPlayer.to(gameID).emit("understateCard", id), 500);
+    roomTimeout(room, () => multiPlayer.to(gameID).emit("understateCard", id2), 500);
+
+    // Increase Points
+    const player = room.players[room.turn];
+    player.points++;
+    multiPlayer.to(gameID).emit("matchFound", { name: player.name, ids: [id, id2] });
+
+    if (room.mode === "powerups") {
+      room.turnPairs++;
+      // Combo: every further pair in this turn gives bonus points (+1, +2, ...)
+      if (player.armed.combo && room.turnPairs > 1) {
+        player.points += room.turnPairs - 1;
+        systemMessage(gameID, room, `Combo! ${player.name} gets +${room.turnPairs - 1} bonus.`, "trophy");
+      }
+      if (player.armed.doubleOrNothing) {
+        player.armed.doubleOrNothing = false;
+        player.points++;
+        systemMessage(gameID, room, `Double or nothing: ${player.name} gets double!`, "trophy");
+      }
+      if (room.powerCards.includes(id)) {
+        grantPowerup(gameID, room, player, "found a power-up pair");
+      }
+      // Triple flip: the third card closes again, the triple flip is used up
+      const rest = room.openedCards.filter((card) => card !== id && card !== id2);
+      if (room.openedCards.length > 2) player.armed.tripleFlip = false;
+      rest.forEach((card) => closeLater(gameID, room, card));
+    }
+
+    // Reset turn - a found pair gives another try with fresh time
+    room.openedCards = [];
+    room.checkingCards = false;
+    startTurnTimer(gameID, room);
+    emitRoomState(gameID, room);
   }
 
   // Closes the open cards (the turn stays)
@@ -869,6 +937,7 @@ module.exports = function (io) {
       multiPlayer.to(gameID).emit("closeCards", {
         1: room.openedCards[0],
         2: room.openedCards[1],
+        3: room.openedCards[2],
       });
     }
     room.openedCards = [];

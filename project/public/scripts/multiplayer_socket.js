@@ -683,6 +683,8 @@ socket.on("boardState", (data) => {
     understateCard(card.id);
   });
   data.opened.forEach(showCard);
+  // Power-ups: cards that moved fly to their new place
+  if (typeof animateBoardMove == "function") animateBoardMove();
 });
 
 socket.on("turnCard", showCard);
@@ -737,7 +739,7 @@ function understateCard(id) {
 
 // Close opened cards
 socket.on("closeCards", (data) => {
-  [data[1], data[2]].forEach((id) => closeCard(id, false));
+  [data[1], data[2], data[3]].forEach((id) => id != null && closeCard(id, false));
 });
 
 // Activate endTurn-Button

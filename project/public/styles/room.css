@@ -1626,25 +1626,10 @@
   filter: blur(9px);
 }
 
-/* Board changes */
-.memory-grid.rotating {
-  animation: board-rotate 0.6s ease;
-}
-
-.memory-grid.shuffling .card-size {
-  animation: board-shuffle 0.6s ease;
-}
-
-@keyframes board-rotate {
-  from { transform: rotate(-180deg) scale(0.9); }
-  to { transform: rotate(0deg) scale(1); }
-}
-
-@keyframes board-shuffle {
-  0%, 100% { transform: translate(0, 0); }
-  25% { transform: translate(-3px, 2px) rotate(-2deg); }
-  50% { transform: translate(3px, -2px) rotate(2deg); }
-  75% { transform: translate(-2px, -1px) rotate(-1deg); }
+/* Board changes: the cards fly to their new places (see animateBoardMove) */
+.memory-grid.moving {
+  overflow: clip;
+  overflow-clip-margin: 12px;
 }
 
 /* Rarity: uncommon blue, rare gold */
