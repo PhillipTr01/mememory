@@ -121,9 +121,12 @@ async function startedGame() {
   const state = await playing;
   assert.ok(state.startIn > 0, "clients show who starts");
   await h.wait(config.START_ANIMATION + 20);
+  // Seats (colors) are random
+  const A = state.seats.findIndex((seat) => seat.name === "alice");
+  const B = 1 - A;
   // [player whose turn it is, the other one]
-  const players = state.turn === 0 ? [alice, bob] : [bob, alice];
-  return { gameID, alice, bob, state, players };
+  const players = state.turn === A ? [alice, bob] : [bob, alice];
+  return { gameID, alice, bob, state, players, A, B };
 }
 
 before(async () => {
@@ -138,8 +141,9 @@ after(async () => {
 
 test("tictactoe: two players start a game, others watch", async () => {
   const { gameID, alice, state } = await startedGame();
-  assert.deepStrictEqual(state.seats.map((s) => s.name), ["alice", "bob"]);
+  assert.deepStrictEqual(state.seats.map((s) => s.name).sort(), ["alice", "bob"]);
   assert.deepStrictEqual(state.seats[0].reserve, ttt.PIECES);
+  assert.deepStrictEqual(state.seats[1].reserve, ttt.PIECES);
   assert.ok([0, 1].includes(state.turn));
 
   const watching = stateWhere(alice, (s) => s.spectators.includes("carol"));
@@ -192,36 +196,36 @@ test("tictactoe: moves are checked by the server and a line wins", async () => {
 });
 
 test("tictactoe: leaving during a game lets the opponent win, a new player can join", async () => {
-  const { gameID, alice, bob } = await startedGame();
-  const left = stateWhere(alice, (s) => s.seats[1] == null);
+  const { gameID, alice, bob, A, B } = await startedGame();
+  const left = stateWhere(alice, (s) => s.seats[B] == null);
   bob.emit("leave");
   const state = await left;
-  assert.strictEqual(state.winner, 0);
+  assert.strictEqual(state.winner, A);
   assert.strictEqual(state.forfeit, true);
   assert.strictEqual(state.status, "waiting");
 
   const playing = stateWhere(alice, (s) => s.status === "playing");
   await join("carol", gameID);
   const next = await playing;
-  assert.strictEqual(next.seats[1].name, "carol");
-  assert.strictEqual(next.seats[0].wins, 0, "new opponent, new score");
+  assert.strictEqual(next.seats[B].name, "carol");
+  assert.strictEqual(next.seats[A].wins, 0, "new opponent, new score");
 });
 
 test("tictactoe: rejoin after a reload, forfeit when not coming back", async () => {
-  const { gameID, alice, bob } = await startedGame();
+  const { gameID, alice, bob, A, B } = await startedGame();
   bob.close();
-  await stateWhere(alice, (s) => s.seats[1].connected === false);
+  await stateWhere(alice, (s) => s.seats[B].connected === false);
 
   // Bob comes back in time
   const bob2 = await join("bob", gameID);
   const back = bob2.firstState;
-  assert.strictEqual(back.seats[1].connected, true);
+  assert.strictEqual(back.seats[B].connected, true);
   assert.strictEqual(back.status, "playing");
 
   // ... and then leaves for good
   bob2.close();
-  const state = await stateWhere(alice, (s) => s.seats[1] == null, 2000);
-  assert.strictEqual(state.winner, 0);
+  const state = await stateWhere(alice, (s) => s.seats[B] == null, 2000);
+  assert.strictEqual(state.winner, A);
 });
 
 test("tictactoe: the lobby lists open games and the room code works", async () => {
@@ -242,6 +246,17 @@ test("tictactoe: the lobby lists open games and the room code works", async () =
   alice.close();
   await h.wait(1000);
   assert.strictEqual(rooms.get(gameID, "tictactoe"), null);
+});
+
+test("tictactoe: the first player gets a random color", async () => {
+  const seats = new Set();
+  for (let i = 0; i < 12 && seats.size < 2; i++) {
+    const gameID = await createGame("alice");
+    const alice = await join("alice", gameID);
+    seats.add(alice.firstState.seats.findIndex((seat) => seat != null));
+    alice.emit("leave");
+  }
+  assert.deepStrictEqual([...seats].sort(), [0, 1]);
 });
 
 test("tictactoe: unknown games", async () => {
