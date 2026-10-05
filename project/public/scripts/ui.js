@@ -106,6 +106,18 @@ function setAvatarConfig(name, config) {
   });
 }
 
+/*
+ * The server was restarted / updated while the page was open (the socket
+ * reconnected by itself): reload, so the page code fits the server again.
+ */
+document.addEventListener("DOMContentLoaded", () => {
+  var meta = document.querySelector('meta[name="app-version"]');
+  if (meta == null || typeof socket == "undefined") return;
+  socket.on("appVersion", (current) => {
+    if (current && current != meta.content) window.location.reload();
+  });
+});
+
 // Small square button with only an icon; the label is the hover tooltip
 function createIconButton(icon, label, extraClass, onClick) {
   var button = document.createElement("button");

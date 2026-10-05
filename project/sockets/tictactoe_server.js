@@ -7,6 +7,7 @@ const { STATUS, seatOf, serialize, graceFor } = require("../game/tictactoe_room"
 const { notifyLobby } = require("../game/multiplayer_room");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
+const version = require("../game/version");
 const chat = require("../game/chat");
 
 module.exports = function (io) {
@@ -144,6 +145,7 @@ module.exports = function (io) {
   /* ---------- Connection ---------- */
 
   tictactoe.on("connection", (socket) => {
+    version.announce(socket);
     const username = socket.data.username;
 
     socket.on(

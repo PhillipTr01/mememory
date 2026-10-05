@@ -5,6 +5,7 @@ const config = require("../game/config");
 const { CARD_COUNT, createBoard, isValidCardId } = require("../game/board");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
+const version = require("../game/version");
 
 const DIFFICULTIES = ["easy", "medium", "hard", "expert"];
 
@@ -28,6 +29,7 @@ module.exports = function (io) {
   });
 
   singlePlayer.on("connection", (socket) => {
+    version.announce(socket);
     const username = socket.data.username;
 
     socket.on(

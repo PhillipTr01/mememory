@@ -12,6 +12,7 @@ const {
 } = require("../game/multiplayer_room");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
+const version = require("../game/version");
 const chat = require("../game/chat");
 const powerups = require("../game/powerups");
 
@@ -76,6 +77,7 @@ module.exports = function (io) {
   /* ---------- Connection ---------- */
 
   multiPlayer.on("connection", (socket) => {
+    version.announce(socket);
     const username = socket.data.username;
 
     /*

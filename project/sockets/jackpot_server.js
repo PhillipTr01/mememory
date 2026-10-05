@@ -4,6 +4,7 @@ const { newFairRound, fairWinner } = require("../game/jackpot");
 const chat = require("../game/chat");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
+const version = require("../game/version");
 
 const ROOM = "jackpot"; // everybody is in the same (socket.io) room
 const PHASE = {
@@ -91,7 +92,6 @@ module.exports = function (io) {
     pot.endsAt = Date.now() + config.JACKPOT_COUNTDOWN;
     clearTimeout(pot.timer);
     pot.timer = setTimeout(() => runDraw().catch((error) => console.error("[jackpot] Draw failed:", error)), config.JACKPOT_COUNTDOWN);
-    systemMessage(`The draw starts in ${Math.round(config.JACKPOT_COUNTDOWN / 1000)}s - last chance to put in coins!`, "timer");
   }
 
   async function runDraw() {
@@ -147,6 +147,7 @@ module.exports = function (io) {
   /* ---------- Connection ---------- */
 
   jackpot.on("connection", (socket) => {
+    version.announce(socket);
     const username = socket.data.username;
     socket.gameID = ROOM; // for the chat
     socket.join(ROOM);
@@ -193,7 +194,6 @@ module.exports = function (io) {
           }
           const before = pot.bets.length > 0 ? pot.bets[pot.bets.length - 1].to : 0;
           pot.bets.push({ name: username, amount: amount, from: before + 1, to: before + amount });
-          systemMessage(`${username} put ${amount} coins into the pot (tickets #${before + 1} - #${before + amount}).`, "info");
           if (pot.phase === PHASE.OPEN && pot.entries.length >= 2) startCountdown();
           emitState();
         } finally {

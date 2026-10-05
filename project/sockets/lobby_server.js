@@ -4,6 +4,7 @@ const multiplayerRoom = require("../game/multiplayer_room");
 const tictactoeRoom = require("../game/tictactoe_room");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
+const version = require("../game/version");
 
 // Name & how much the computer can remember for every difficulty
 const BOTS = [
@@ -19,6 +20,7 @@ module.exports = function (io) {
   multiplayerRoom.attachLobby(lobby);
 
   lobby.on("connection", (socket) => {
+    version.announce(socket);
     // Open multiplayer rooms
     socket.emit("roomList", multiplayerRoom.publicRooms(socket.data.username));
 

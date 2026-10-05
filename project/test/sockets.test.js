@@ -762,3 +762,14 @@ test("lobby: clicking again doesn't pile up rooms nobody entered", async () => {
   // Other users' rooms stay
   assert.ok(rooms.get(second, "singleplayer"));
 });
+
+test("pages and sockets know the server version (old pages reload after a restart)", async () => {
+  const { BOOT_ID } = require("../game/version");
+  const lobby = client("/lobby", "alice");
+  assert.strictEqual(await h.once(lobby, "appVersion"), BOOT_ID);
+
+  const { page } = require("../utils/pages");
+  let html = null;
+  page("lobby.html")(null, { set() {}, type() { return { send: (body) => (html = body) }; } }, (error) => { throw error; });
+  assert.match(html, new RegExp(`<meta name="app-version" content="${BOOT_ID}">`));
+});
