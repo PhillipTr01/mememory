@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en" class="min-h-100">
+
+<head>
+    <title>Tic Tac Toe XL - MemeMory</title>
+
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+
+    <!--- Custom CSS-->
+    <!--- identical to index.html --->
+    <link rel="stylesheet" href="/static/styles/index.css">
+    <link rel="stylesheet" href="/static/styles/theme.css">
+    <link rel="stylesheet" href="/static/styles/room.css">
+    <link rel="stylesheet" href="/static/styles/tictactoe.css">
+
+    <!--- Icons --->
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.0/font/bootstrap-icons.css">
+
+    <!--- Font --->
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body class="d-flex flex-column min-h-100">
+
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container-fluid px-3">
+                <div class="row displ-content">
+                    <div class="col-6">
+                        <div class="navbar-brand active">
+                            <a href="/">
+                                <img src="/static/images/logo.png" alt="logo" class="img-fluid logo">
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-6 d-flex justify-content-end align-items-center">
+                        <div class="ms-auto profile-menu" id="profileMenu">
+                  <button type="button" class="profile-trigger" id="profileTrigger" aria-haspopup="true" aria-expanded="false">
+                    <span id="profileAvatar" class="mm-avatar sm"></span>
+                    <span class="profile-name" id="username"></span>
+                    <i class="bi bi-chevron-down profile-caret"></i>
+                  </button>
+                  <div class="profile-dropdown" id="profileDropdown" hidden>
+                    <div class="profile-head">
+                      <span id="profileAvatarLarge" class="mm-avatar"></span>
+                      <div class="overflow-hidden">
+                        <div class="profile-head-name" id="profileName"></div>
+                        <div class="mm-muted small">Signed in</div>
+                      </div>
+                    </div>
+                    <a href="/lobby" class="profile-item"><i class="bi bi-controller"></i> Play</a>
+                    <a href="/home" class="profile-item"><i class="bi bi-trophy"></i> Scoreboard</a>
+                    <a href="/user" class="profile-item"><i class="bi bi-bar-chart-line"></i> Profile</a>
+                    <a href="/settings" class="profile-item"><i class="bi bi-gear"></i> Settings</a>
+                    <div class="profile-divider"></div>
+                    <button type="button" class="profile-item danger" id="logoutButton">
+                      <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                  </div>
+                </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!--- Shown while the connection is lost --->
+    <div id="connectionBanner" class="connection-banner" hidden>
+        <span class="spinner"></span> Connection lost - reconnecting...
+    </div>
+
+    <main class="ttt-page">
+        <div class="ttt-head">
+            <div class="ttt-heading">
+                <h1 class="ttt-title">Tic Tac Toe <span class="ttt-xl">XL</span></h1>
+                <p id="status" class="ttt-status" aria-live="polite"></p>
+            </div>
+            <button type="button" id="leaveButton" class="mm-btn mm-btn-ghost mm-btn-sm">
+                <i class="bi bi-box-arrow-left"></i> Leave
+            </button>
+        </div>
+
+        <div class="ttt-layout">
+            <section id="seat0" class="ttt-player p0"></section>
+            <div class="ttt-board-wrap">
+                <div id="board" class="ttt-board" role="grid" aria-label="Board"></div>
+            </div>
+            <section id="seat1" class="ttt-player p1"></section>
+        </div>
+
+        <div class="ttt-footer">
+            <button type="button" id="rematchButton" class="mm-btn mm-btn-primary" hidden></button>
+            <span id="spectatorInfo" class="mm-muted small" hidden></span>
+        </div>
+    </main>
+
+    <!--- Opened in another tab / game not found --->
+    <div id="noticeOverlay" class="overlay-screen" hidden>
+        <div class="result-box mm-card">
+            <h2 id="noticeTitle" class="result-title"></h2>
+            <p id="noticeText" class="mm-muted"></p>
+            <div class="d-flex gap-2 justify-content-center flex-wrap">
+                <button type="button" id="noticeAction" class="mm-btn mm-btn-primary" hidden></button>
+                <a href="/lobby" class="mm-btn"><i class="bi bi-house"></i> Lobby</a>
+            </div>
+        </div>
+    </div>
+
+    <!--- JavaScript --->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous">
+    </script>
+    <!--- Custom JS --->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/static/scripts/ui.js"></script>
+    <script src="/static/scripts/nav.js"></script>
+    <script src="/static/scripts/tictactoe.js"></script>
+</body>
+
+</html>

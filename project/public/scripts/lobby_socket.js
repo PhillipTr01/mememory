@@ -14,6 +14,13 @@ function playMultiplayer() {
   socket.emit("playMultiplayer");
 }
 
+function playTicTacToe() {
+  var button = document.getElementById("createTicTacToeButton");
+  button.disabled = true;
+  setTimeout(() => (button.disabled = false), 5000);
+  socket.emit("playTicTacToe");
+}
+
 function joinMultiplayer(gameID) {
   gameID = (gameID || document.getElementById("joinLobbyTag").value).trim();
   if (gameID == "") {
@@ -31,7 +38,7 @@ document.getElementById("joinForm").addEventListener("submit", (event) => {
 socket.on("saveGameID", (data) => {
   sessionStorage.setItem("gameID", data.gameID);
   window.location.href =
-    data.url == "/play" ? "/play?game=" + encodeURIComponent(data.gameID) : data.url;
+    data.url == "/play" || data.url == "/tictactoe" ? data.url + "?game=" + encodeURIComponent(data.gameID) : data.url;
 });
 
 /* ---------- List of multiplayer games (updated live) ---------- */
@@ -70,9 +77,11 @@ function actionButton(label, icon, primary, onClick) {
 }
 
 // Opens a room from the list, optionally only as spectator
-function openRoom(gameID, watch) {
-  sessionStorage.setItem("gameID", gameID);
-  window.location.href = "/play?game=" + encodeURIComponent(gameID) + (watch ? "&watch=1" : "");
+function openRoom(room, watch) {
+  sessionStorage.setItem("gameID", room.gameID);
+  window.location.href =
+    (room.game == "tictactoe" ? "/tictactoe" : "/play") +
+    "?game=" + encodeURIComponent(room.gameID) + (watch ? "&watch=1" : "");
 }
 
 function createRoomRow(room) {
@@ -88,7 +97,12 @@ function createRoomRow(room) {
   var name = document.createElement("div");
   name.className = "fw-semibold";
   name.innerText = room.host + "'s room";
-  if (room.mode == "speed") {
+  if (room.game == "tictactoe") {
+    var ttt = document.createElement("span");
+    ttt.className = "mode-badge game-badge ms-2";
+    ttt.append(createIcon("bi-grid-3x3"), document.createTextNode(" Tic Tac Toe XL"));
+    name.appendChild(ttt);
+  } else if (room.mode == "speed") {
     var speed = document.createElement("span");
     speed.className = "mode-badge ms-2";
     speed.append(
@@ -136,13 +150,13 @@ function createRoomRow(room) {
   var isMine = myUsername != null && (room.playerNames || []).includes(myUsername);
 
   if (isMine) {
-    actionCell.appendChild(actionButton("Rejoin", "bi-arrow-repeat", true, () => openRoom(room.gameID, false)));
+    actionCell.appendChild(actionButton("Rejoin", "bi-arrow-repeat", true, () => openRoom(room, false)));
   } else {
     // Kicked by the host: only watching is possible
     if (waiting && !full && !room.kicked) {
-      actionCell.appendChild(actionButton("Join", "bi-box-arrow-in-right", true, () => openRoom(room.gameID, false)));
+      actionCell.appendChild(actionButton("Join", "bi-box-arrow-in-right", true, () => openRoom(room, false)));
     }
-    actionCell.appendChild(actionButton("Watch", "bi-eye", false, () => openRoom(room.gameID, true)));
+    actionCell.appendChild(actionButton("Watch", "bi-eye", false, () => openRoom(room, true)));
   }
 
   row.append(hostCell, playersCell, spectatorsCell, statusCell, actionCell);
@@ -153,6 +167,7 @@ function createRoomRow(room) {
 
 socket.on("gameError", (message) => {
   document.getElementById("createGameButton").disabled = false;
+  document.getElementById("createTicTacToeButton").disabled = false;
   showToast(message, "error");
 });
 

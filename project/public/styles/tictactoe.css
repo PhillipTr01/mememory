@@ -1,0 +1,356 @@
+/* ---------- Tic Tac Toe XL ---------- */
+:root {
+  --ttt-p0: #3b82f6;
+  --ttt-p0-rgb: 59, 130, 246;
+  --ttt-p1: #f5a524;
+  --ttt-p1-rgb: 245, 165, 36;
+  /* Board as big as possible without scrolling */
+  --ttt-board: min(calc(100vh - 245px), 520px, calc(100vw - 2rem));
+}
+
+.ttt-page {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.25rem 1rem 1rem;
+  color: var(--mm-text);
+}
+
+.ttt-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.ttt-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.ttt-xl {
+  color: var(--mm-accent);
+}
+
+.ttt-status {
+  margin: 0.15rem 0 0;
+  min-height: 1.5em;
+  color: var(--mm-muted);
+}
+
+.ttt-status strong {
+  color: var(--mm-text);
+}
+
+/* ---------- Layout: player | board | player ---------- */
+.ttt-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* ---------- Board ---------- */
+.ttt-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 6px;
+  width: var(--ttt-board);
+  height: var(--ttt-board);
+}
+
+.ttt-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface);
+  cursor: default;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.2s ease;
+}
+
+.ttt-cell:focus-visible {
+  outline: 2px solid var(--mm-accent);
+  outline-offset: 2px;
+}
+
+/* A selected piece fits here */
+.ttt-cell.legal {
+  cursor: pointer;
+  background: var(--mm-surface-2);
+}
+
+.ttt-cell.legal:hover {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+}
+
+.ttt-cell.last {
+  border-color: #4a4a4a;
+}
+
+.ttt-cell.win {
+  border-color: var(--ttt-win);
+  background: rgba(var(--ttt-win-rgb), 0.12);
+}
+
+.ttt-board.over .ttt-cell:not(.win) {
+  opacity: 0.55;
+}
+
+.ttt-board.p0-won {
+  --ttt-win: var(--ttt-p0);
+  --ttt-win-rgb: var(--ttt-p0-rgb);
+}
+
+.ttt-board.p1-won {
+  --ttt-win: var(--ttt-p1);
+  --ttt-win-rgb: var(--ttt-p1-rgb);
+}
+
+/* ---------- Pieces ---------- */
+.ttt-piece {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: inset 0 0 0 0.18em rgba(0, 0, 0, 0.16);
+  pointer-events: none;
+}
+
+.ttt-piece.p0 {
+  background: var(--ttt-p0);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.ttt-piece.p1 {
+  background: var(--ttt-p1);
+}
+
+/* Size on the board: share of the cell */
+.ttt-cell .ttt-piece {
+  font-size: calc(var(--ttt-board) / 22);
+}
+
+.ttt-cell .ttt-piece.s1 { width: 36%; height: 36%; }
+.ttt-cell .ttt-piece.s2 { width: 53%; height: 53%; }
+.ttt-cell .ttt-piece.s3 { width: 70%; height: 70%; }
+.ttt-cell .ttt-piece.s4 { width: 87%; height: 87%; }
+
+.ttt-cell .ttt-piece.placed {
+  animation: ttt-drop 0.25s ease-out;
+}
+
+@keyframes ttt-drop {
+  from { transform: scale(1.25); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Preview of the selected piece */
+.ttt-cell .ttt-piece.ghost {
+  position: absolute;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.ttt-cell.legal:hover .ttt-piece.ghost {
+  opacity: 0.45;
+}
+
+/* ---------- Players ---------- */
+.ttt-player {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.1rem;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface);
+  transition: border-color 0.2s ease;
+}
+
+.ttt-player.turn.p0 { border-color: var(--ttt-p0); }
+.ttt-player.turn.p1 { border-color: var(--ttt-p1); }
+
+.ttt-player.offline .ttt-who {
+  opacity: 0.5;
+}
+
+.ttt-who {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.ttt-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.ttt-name span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ttt-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.p0 .ttt-dot { background: var(--ttt-p0); }
+.p1 .ttt-dot { background: var(--ttt-p1); }
+
+.ttt-sub {
+  font-size: 0.8rem;
+  color: var(--mm-muted);
+}
+
+/* Pieces that are left */
+.ttt-reserve {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.ttt-stock {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.25rem 0.35rem;
+  border: 1px solid transparent;
+  border-radius: var(--mm-radius);
+  background: none;
+  color: var(--mm-muted);
+  font-size: 0.75rem;
+  cursor: default;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ttt-stock .ttt-piece {
+  font-size: 0.7rem;
+}
+
+.ttt-stock .ttt-piece.s1 { width: 20px; height: 20px; }
+.ttt-stock .ttt-piece.s2 { width: 28px; height: 28px; }
+.ttt-stock .ttt-piece.s3 { width: 36px; height: 36px; }
+.ttt-stock .ttt-piece.s4 { width: 44px; height: 44px; }
+
+.ttt-stock.empty .ttt-piece {
+  opacity: 0.18;
+}
+
+.ttt-stock.selectable {
+  cursor: pointer;
+}
+
+.ttt-stock.selectable:hover {
+  background: var(--mm-surface-2);
+}
+
+.ttt-stock.selected {
+  border-color: rgba(var(--mm-accent-rgb), 0.7);
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+}
+
+/* Free seat: invite */
+.ttt-player.waiting {
+  align-items: center;
+  text-align: center;
+  border-style: dashed;
+}
+
+.ttt-player.waiting .invite-code {
+  font-size: 1.15rem;
+}
+
+.ttt-invite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* ---------- Footer ---------- */
+.ttt-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  min-height: 2.75rem;
+}
+
+/* ---------- Small screens: players above and below the board ---------- */
+@media (max-width: 860px) {
+  :root {
+    --ttt-board: min(calc(100vh - 380px), 420px, calc(100vw - 2rem));
+  }
+
+  .ttt-layout {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 0.75rem;
+  }
+
+  .ttt-player {
+    width: 100%;
+    max-width: 480px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0.6rem 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .ttt-who {
+    flex: 0 0 38%;
+  }
+
+  .ttt-reserve {
+    flex: 1;
+  }
+
+  .ttt-stock {
+    padding: 0.3rem 0.1rem 0.2rem;
+  }
+
+  .ttt-stock .ttt-piece.s1 { width: 14px; height: 14px; }
+  .ttt-stock .ttt-piece.s2 { width: 19px; height: 19px; }
+  .ttt-stock .ttt-piece.s3 { width: 24px; height: 24px; }
+  .ttt-stock .ttt-piece.s4 { width: 29px; height: 29px; }
+
+  .ttt-stock .ttt-piece {
+    font-size: 0.6rem;
+  }
+
+  .ttt-player.waiting {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* Opponent on top, own pieces below the board */
+  .ttt-player { order: 0; }
+  .ttt-board-wrap { order: 1; }
+  .ttt-player.mine { order: 2; }
+}

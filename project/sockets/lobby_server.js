@@ -1,6 +1,7 @@
 const rooms = require("../game/rooms");
 const { createBoard } = require("../game/board");
 const multiplayerRoom = require("../game/multiplayer_room");
+const tictactoeRoom = require("../game/tictactoe_room");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 
@@ -63,17 +64,27 @@ module.exports = function (io) {
     );
 
     socket.on(
+      "playTicTacToe",
+      safe("playTicTacToe", () => {
+        const gameID = tictactoeRoom.createRoom(socket.data.username);
+        socket.emit("saveGameID", { gameID: gameID, url: "/tictactoe" });
+      }),
+    );
+
+    socket.on(
       "joinMultiplayer",
       safe("joinMultiplayer", (gameID) => {
         if (typeof gameID !== "string") return;
         gameID = gameID.trim();
 
-        if (rooms.get(gameID, "multiplayer") == null) {
+        // The same code field works for every game
+        const room = rooms.get(gameID);
+        if (room == null || (room.type !== "multiplayer" && room.type !== "tictactoe")) {
           socket.emit("gameError", "No game found with this ID.");
           return;
         }
 
-        socket.emit("saveGameID", { gameID: gameID, url: "/play" });
+        socket.emit("saveGameID", { gameID: gameID, url: room.type === "tictactoe" ? "/tictactoe" : "/play" });
       }),
     );
   });

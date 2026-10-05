@@ -137,9 +137,14 @@
         <div class="mp-toolbar mm-card">
           <div class="mp-create">
             <p class="mp-label">Start your own room</p>
-            <button id="createGameButton" type="button" class="mm-btn mm-btn-primary mm-btn-lg" onclick="playMultiplayer()">
-              <i class="bi bi-plus-lg"></i> Create room
-            </button>
+            <div class="mp-create-buttons">
+              <button id="createGameButton" type="button" class="mm-btn mm-btn-primary mm-btn-lg" onclick="playMultiplayer()">
+                <i class="bi bi-plus-lg"></i> Create room
+              </button>
+              <button id="createTicTacToeButton" type="button" class="mm-btn mm-btn-lg" onclick="playTicTacToe()">
+                <i class="bi bi-grid-3x3"></i> Tic Tac Toe XL
+              </button>
+            </div>
           </div>
           <div class="mp-divider"><span>or</span></div>
           <form id="joinForm" class="mp-join">
