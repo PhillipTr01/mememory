@@ -138,6 +138,18 @@ a.mm-btn.mm-btn-primary:focus,
   user-select: none;
 }
 
+/* Own avatar (avatar maker): the drawing fills the circle */
+.mm-avatar.has-avatar {
+  background: transparent !important;
+}
+
+.mm-avatar .mm-avatar-svg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: block;
+}
+
 .mm-avatar.lg {
   --size: 56px;
 }

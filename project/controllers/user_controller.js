@@ -4,6 +4,9 @@ const Statistic = require('../models/Statistic');
 const User = require('../models/User');
 const { httpError } = require('../utils/errors');
 const { isNonEmptyString, isStrongPassword } = require('../utils/validation');
+const { cleanAvatar } = require('../public/scripts/avatar');
+
+const MAX_AVATAR_NAMES = 50;
 
 async function findUser(id) {
     const user = await User.findOne({_id: id});
@@ -62,4 +65,29 @@ async function changePassword(id, body) {
     await User.updateOne({_id: user._id}, {password: hash}, {runValidators: true});
 }
 
-module.exports = { getUsername, getStatistic, deleteUser, changePassword };
+/* Avatars of some users as {username: config or null} (for the player lists). */
+async function getAvatars(names) {
+    if (typeof names !== 'string' || names.length === 0) return {};
+    const list = [...new Set(names.split(',').map((name) => name.trim()).filter(Boolean))].slice(0, MAX_AVATAR_NAMES);
+    const users = await User.find({username: {$in: list}}).select('username avatar').lean();
+    const result = {};
+    list.forEach((name) => { result[name] = null; });
+    users.forEach((user) => { result[user.username] = cleanAvatar(user.avatar); });
+    return result;
+}
+
+/* Saves the own avatar. Only known parts are stored; null = back to the letter. */
+async function setAvatar(id, body) {
+    const config = body != null ? body.avatar : undefined;
+    if (config !== null && (config == null || typeof config !== 'object' || Array.isArray(config))) {
+        throw httpError(400, "avatar: Path `avatar` is invalid.");
+    }
+    const avatar = cleanAvatar(config);
+    const result = await User.updateOne({_id: id}, {$set: {avatar: avatar}});
+    if (!(result.n > 0 || result.matchedCount > 0)) {
+        throw httpError(404, "Ressource not found!");
+    }
+    return avatar;
+}
+
+module.exports = { getUsername, getStatistic, deleteUser, changePassword, getAvatars, setAvatar };

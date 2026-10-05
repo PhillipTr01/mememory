@@ -9,13 +9,19 @@ function avatarColor(name) {
   return `hsl(${Math.abs(hash) % 360}, 22%, 38%)`;
 }
 
-// Avatar with the first letter of the name (built with DOM nodes, no innerHTML)
+// Avatar with the first letter of the name (built with DOM nodes, no innerHTML).
+// Users with an own avatar (avatar maker) get it as soon as it is loaded.
 function createAvatar(name, size, online) {
   var avatar = document.createElement("span");
   avatar.className = "mm-avatar" + (size ? " " + size : "");
   avatar.style.background = avatarColor(name);
   avatar.innerText = name.charAt(0);
   avatar.title = name;
+  avatar.dataset.name = name;
+  if (typeof drawAvatar == "function") {
+    if (name in avatarCache) applyAvatar(avatar, avatarCache[name]);
+    else requestAvatar(name);
+  }
 
   if (online !== undefined) {
     var dot = document.createElement("span");
@@ -23,6 +29,70 @@ function createAvatar(name, size, online) {
     avatar.appendChild(dot);
   }
   return avatar;
+}
+
+/* ---------- Own avatars (avatar maker, see avatar.js) ---------- */
+
+// name -> config or null (letter); kept for the browser tab, so pages don't flicker
+var avatarCache = {};
+try {
+  avatarCache = JSON.parse(sessionStorage.getItem("avatars")) || {};
+} catch (error) {
+  avatarCache = {};
+}
+var avatarQueue = new Set();
+var avatarTimer = null;
+
+function saveAvatarCache() {
+  try {
+    sessionStorage.setItem("avatars", JSON.stringify(avatarCache));
+  } catch (error) {
+    // storage full or blocked: only this page knows the avatars
+  }
+}
+
+// The letter avatar becomes the drawn one (the online dot stays)
+function applyAvatar(element, config) {
+  var old = element.querySelector(".mm-avatar-svg");
+  if (old) old.remove();
+  element.classList.toggle("has-avatar", config != null);
+  if (config == null) {
+    if (element.firstChild == null || element.firstChild.nodeType != Node.TEXT_NODE) {
+      element.insertBefore(document.createTextNode(element.dataset.name.charAt(0)), element.firstChild);
+    }
+    return;
+  }
+  if (element.firstChild && element.firstChild.nodeType == Node.TEXT_NODE) element.firstChild.remove();
+  element.insertBefore(drawAvatar(config), element.firstChild);
+}
+
+// Avatars are loaded together (one request for a whole player list)
+function requestAvatar(name) {
+  avatarQueue.add(name);
+  clearTimeout(avatarTimer);
+  avatarTimer = setTimeout(loadAvatars, 30);
+}
+
+function loadAvatars() {
+  var names = [...avatarQueue].filter((name) => !(name in avatarCache));
+  avatarQueue.clear();
+  if (names.length == 0) return;
+  fetch("/requests/user/avatars?names=" + encodeURIComponent(names.join(",")), { credentials: "same-origin" })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((avatars) => {
+      if (avatars == null) return;
+      names.forEach((name) => setAvatarConfig(name, avatars[name] || null));
+    })
+    .catch(() => {});
+}
+
+// Updates the cache and every avatar of this user on the page
+function setAvatarConfig(name, config) {
+  avatarCache[name] = config;
+  saveAvatarCache();
+  document.querySelectorAll(".mm-avatar").forEach((element) => {
+    if (element.dataset.name == name) applyAvatar(element, config);
+  });
 }
 
 // Small square button with only an icon; the label is the hover tooltip

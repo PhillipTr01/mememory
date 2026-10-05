@@ -9,6 +9,8 @@ const schema = mongoose.Schema({
     // Unique indexes prevent duplicate accounts even if two sign-ups race each other.
     emailLowerCase: {type: String, unique: true, sparse: true},
     usernameLowerCase: {type: String, unique: true, sparse: true},
+    // Own avatar from the avatar maker (see public/scripts/avatar.js), null = letter
+    avatar: {type: mongoose.Schema.Types.Mixed, default: null},
 	// active: {type: String, required: true, default: false}
 });
 
