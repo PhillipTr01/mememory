@@ -102,8 +102,9 @@
 /* ---------- Create a new room ---------- */
 .mp-create {
   display: flex;
-  align-items: center;
-  gap: 1.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
   padding: 1rem 1.5rem;
   background: var(--mm-surface);
 }
@@ -117,6 +118,8 @@
 .game-picker {
   display: flex;
   gap: 0.5rem;
+  /* Line the icons up with the heading */
+  margin-left: -0.9rem;
 }
 
 /* Icon on top, name below - a click creates the room */
@@ -158,10 +161,12 @@
 
 @media (max-width: 767px) {
   .mp-create {
-    flex-direction: column;
     align-items: stretch;
-    gap: 0.5rem;
     padding: 1rem;
+  }
+
+  .game-picker {
+    margin-left: 0;
   }
 
   .game-tile {
