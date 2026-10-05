@@ -1028,6 +1028,7 @@
 }
 
 .player-item .mm-avatar,
+.result-list .bot-avatar-small,
 .player-item .bot-avatar-small {
   --size: 28px;
   width: 28px;

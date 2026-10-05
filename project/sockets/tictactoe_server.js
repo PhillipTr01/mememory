@@ -1,3 +1,4 @@
+const Statistic = require("../models/Statistic");
 const rooms = require("../game/rooms");
 const config = require("../game/config");
 const ttt = require("../game/tictactoe");
@@ -18,6 +19,24 @@ module.exports = function (io) {
     notifyLobby();
   }
 
+  /*
+   * Statistics: every finished round counts once (win / loss / draw), also
+   * when it ended early (surrender, didn't come back).
+   */
+  function recordRound(room) {
+    if (room.game == null || room.recordedRound === room.round) return;
+    room.recordedRound = room.round;
+    const winner = room.game.winner;
+    room.seats.forEach((seat, index) => {
+      if (seat == null) return;
+      const field = winner == null ? "tictactoeDraw" : winner === index ? "tictactoeWin" : "tictactoeLose";
+      // A database problem must not stop the game
+      Statistic.increment(seat.name, field).catch((error) =>
+        console.error("[tictactoe] Could not update statistic:", error),
+      );
+    });
+  }
+
   function systemMessage(gameID, room, text, icon) {
     chat.system(tictactoe, gameID, room, text, icon);
   }
@@ -36,7 +55,9 @@ module.exports = function (io) {
     const name = room.seats[starter].name;
     setTimeout(() => {
       if (rooms.get(gameID, "tictactoe") === room && room.round === round) {
-        systemMessage(gameID, room, `New round - ${name} starts.`, "start");
+        // Same wording as in MemeMory
+        const text = round === 1 ? `The game has started. ${name} begins!` : `New round - ${name} begins!`;
+        systemMessage(gameID, room, text, "start");
       }
     }, config.START_ANIMATION);
   }
@@ -52,9 +73,10 @@ module.exports = function (io) {
     room.game.winner = winner;
     room.forfeit = reason;
     room.status = STATUS.FINISHED;
+    recordRound(room);
     if (room.seats[winner] != null) {
       room.seats[winner].wins++;
-      systemMessage(gameID, room, `${room.seats[winner].name} wins the round.`, "trophy");
+      systemMessage(gameID, room, `${room.seats[winner].name} wins the round!`, "trophy");
     }
   }
 
@@ -184,7 +206,7 @@ module.exports = function (io) {
           systemMessage(
             gameID,
             room,
-            index >= 0 ? `${username} joined the game.` : `${username} is watching.`,
+            index >= 0 ? `${username} joined the room.` : `${username} is watching.`,
             index >= 0 ? "join" : "watch",
           );
         }
@@ -216,6 +238,7 @@ module.exports = function (io) {
         rooms.touch(room);
         if (ttt.isOver(room.game)) {
           room.status = STATUS.FINISHED;
+          recordRound(room);
           if (room.game.winner != null) {
             room.seats[room.game.winner].wins++;
             systemMessage(socket.gameID, room, `${username} wins the round!`, "trophy");
@@ -297,16 +320,20 @@ module.exports = function (io) {
   /* Players that didn't come back lose their seat, empty rooms are removed */
   function tick(now = Date.now()) {
     for (const [gameID, room] of rooms.list("tictactoe")) {
-      room.seats.forEach((seat, index) => {
-        if (seat == null || seat.connected) return;
-        if (now - seat.disconnectedAt >= graceFor(room)) vacateSeat(gameID, room, index, "didn't come back");
-      });
+      try {
+        room.seats.forEach((seat, index) => {
+          if (seat == null || seat.connected) return;
+          if (now - seat.disconnectedAt >= graceFor(room)) vacateSeat(gameID, room, index, "didn't come back");
+        });
 
-      if (room.emptySince != null && room.seats.every((seat) => seat == null || !seat.connected)) {
-        const nobodyLeft = room.seats.every((seat) => seat == null);
-        if (nobodyLeft && room.spectators.size === 0 && now - room.emptySince >= config.EMPTY_ROOM_GRACE) {
-          rooms.remove(gameID);
+        if (room.emptySince != null && room.seats.every((seat) => seat == null || !seat.connected)) {
+          const nobodyLeft = room.seats.every((seat) => seat == null);
+          if (nobodyLeft && room.spectators.size === 0 && now - room.emptySince >= config.EMPTY_ROOM_GRACE) {
+            rooms.remove(gameID);
+          }
         }
+      } catch (error) {
+        console.error("[tictactoe] Room check failed:", error);
       }
     }
   }

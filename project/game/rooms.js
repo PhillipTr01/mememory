@@ -36,7 +36,9 @@ function create(type, data) {
   } while (rooms.has(gameID));
 
   const now = Date.now();
-  rooms.set(gameID, { ...data, type, used: false, createdAt: now, lastActivity: now });
+  // owner: who created the room (see removeUnused)
+  const owner = data.username || data.host || null;
+  rooms.set(gameID, { ...data, type, owner, used: false, createdAt: now, lastActivity: now });
   return gameID;
 }
 
@@ -64,6 +66,13 @@ function remove(gameID) {
   }
 }
 
+// Removes the rooms of one type that a user created, but nobody ever entered
+function removeUnused(type, owner) {
+  for (const [gameID, room] of rooms) {
+    if (room.type === type && !room.used && room.owner === owner) remove(gameID);
+  }
+}
+
 // All rooms of one type as [gameID, room] pairs.
 function list(type) {
   return [...rooms].filter(([, room]) => room.type === type);
@@ -82,4 +91,4 @@ const sweeper = setInterval(sweep, SWEEP_INTERVAL);
 // Don't keep the process alive just for the sweeper.
 sweeper.unref();
 
-module.exports = { create, get, touch, remove, list, onRemove, sweep, size: () => rooms.size };
+module.exports = { create, get, touch, remove, removeUnused, list, onRemove, sweep, size: () => rooms.size };

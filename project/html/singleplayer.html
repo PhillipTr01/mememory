@@ -77,6 +77,11 @@
         </nav>
     </header>
 
+    <!--- Shown while the connection is lost --->
+    <div id="connectionBanner" class="connection-banner" hidden>
+        <span class="spinner"></span> Connection lost - reconnecting...
+    </div>
+
     <main class="room-page">
         <div class="room-layout">
             <div class="room-main">
@@ -133,7 +138,7 @@
         <div class="result-box mm-card">
             <div class="result-trophy-icon"><i class="bi bi-trophy-fill"></i></div>
             <h2 id="resultTitle" class="result-title"></h2>
-            <p id="resultText" class="mm-muted mb-4"></p>
+            <ol id="resultList" class="result-list"></ol>
             <div class="d-flex gap-2 justify-content-center flex-wrap">
                 <button type="button" id="resultBoardButton" class="mm-btn">
                     <i class="bi bi-grid-3x3-gap"></i> Show board
@@ -144,6 +149,29 @@
                 <button type="button" id="resultRematchButton" class="mm-btn mm-btn-primary result-rematch">
                     <i class="bi bi-arrow-repeat"></i> Rematch
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!--- "Who starts?" animation (same as in the multiplayer) --->
+    <div id="startOverlay" class="overlay-screen" hidden>
+        <div class="start-box">
+            <h2 class="start-title">Who starts?</h2>
+            <div class="reel">
+                <div class="reel-marker"></div>
+                <div id="reelTrack" class="reel-track"></div>
+            </div>
+            <p id="startResult" class="start-result"></p>
+        </div>
+    </div>
+
+    <!--- Errors / lost connection --->
+    <div id="noticeOverlay" class="overlay-screen" hidden>
+        <div class="result-box mm-card">
+            <h2 id="noticeTitle" class="result-title"></h2>
+            <p id="noticeText" class="mm-muted notice-text"></p>
+            <div class="notice-actions">
+                <a href="/lobby" class="mm-btn mm-btn-primary"><i class="bi bi-house"></i> Lobby</a>
             </div>
         </div>
     </div>

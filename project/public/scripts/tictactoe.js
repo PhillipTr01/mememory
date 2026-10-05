@@ -105,6 +105,7 @@ function surrender() {
   confirmDialog({
     title: "Surrender?",
     text: "Your opponent wins this round. You can still play a rematch.",
+    cancelLabel: "Keep playing",
     confirmLabel: "Surrender",
     confirmIcon: "bi-flag-fill",
     danger: true,
@@ -429,56 +430,14 @@ socket.on("state", (data) => {
 /* ---------- "Who starts?" animation (same reel as in MemeMory) ---------- */
 
 function playStartAnimation(duration) {
-  var overlay = document.getElementById("startOverlay");
-  var track = document.getElementById("reelTrack");
-  var result = document.getElementById("startResult");
-  var reel = track.parentElement;
-  var itemHeight = parseFloat(getComputedStyle(reel).getPropertyValue("--item")) || 72;
-  var players = state.seats.map((seat) => seat.name);
-  var starter = state.turn;
-
   startBlockedUntil = Date.now() + duration;
   setTimeout(render, duration + 50);
-
-  // Long list of names, the starter is the second to last one -> slot machine
-  var names = [];
-  for (var r = 0; r < 12; r++) names.push(...players);
-  names.push(...players.slice(0, starter + 1));
-  names.push(players[(starter + 1) % 2]);
-
-  track.replaceChildren();
-  names.forEach((name) => {
-    var item = document.createElement("div");
-    item.className = "reel-item";
-    item.append(createAvatar(name), document.createTextNode(name));
-    track.appendChild(item);
+  playStartReel({
+    players: state.seats.map((seat) => seat.name),
+    starter: state.turn,
+    duration: duration,
+    myName: myName,
   });
-
-  var target = names.length - 2;
-  var spin = Math.max(800, duration - 1300);
-
-  result.classList.remove("show");
-  result.innerText = "";
-  track.style.transition = "none";
-  track.style.transform = "translateY(0)";
-  overlay.hidden = false;
-
-  requestAnimationFrame(() =>
-    requestAnimationFrame(() => {
-      track.style.transition = `transform ${spin}ms cubic-bezier(0.12, 0.75, 0.18, 1)`;
-      // The marker is the second row of the reel
-      track.style.transform = `translateY(${-(target - 1) * itemHeight}px)`;
-    }),
-  );
-
-  setTimeout(() => {
-    track.children[target].classList.add("chosen");
-    var name = players[starter];
-    result.innerText = name == myName ? "You start" : `${name} starts`;
-    result.classList.add("show");
-  }, spin);
-
-  setTimeout(() => (overlay.hidden = true), duration + 200);
 }
 
 socket.on("moveError", (message) => showToast(message, "error"));

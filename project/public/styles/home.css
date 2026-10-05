@@ -4,6 +4,7 @@
 .mode-hard { --mode: #f59e0b; }
 .mode-expert { --mode: #ef4444; }
 .mode-multiplayer { --mode: #a78bfa; }
+.mode-tictactoe { --mode: #3f9d6b; }
 
 
 
@@ -133,6 +134,10 @@
 
 .score-stats .lose .value {
   color: var(--mm-danger);
+}
+
+.score-stats .draw .value {
+  color: var(--mm-muted);
 }
 
 .score-empty {

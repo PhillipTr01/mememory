@@ -72,8 +72,10 @@ test("singleplayer: invalid input does not crash the server", async () => {
   socket.emit("initializingGame", null);
   await h.once(socket, "noGameFound");
 
+  const started = h.once(socket, "highlightPlayer");
   socket.emit("initializingGame", { gameID });
   assert.strictEqual(await h.once(socket, "setComputername"), "Easy Bot");
+  await started; // after the "who starts" animation
 
   // Invalid card ids are ignored
   for (const id of ["1", -1, 66, 1.5, null, { id: 1 }]) socket.emit("openCard", id);
@@ -99,10 +101,44 @@ test("singleplayer: a game can only be initialized once and only by its owner", 
   alice.emit("initializingGame", { gameID });
   await h.once(alice, "setComputername");
 
+  // A second tab takes over (like in the multiplayer), the first one stops
+  const replaced = h.once(alice, "sessionReplaced");
   const alice2 = client("/singleplayer", "alice");
   await h.once(alice2, "connect");
   alice2.emit("initializingGame", { gameID });
-  await h.once(alice2, "noGameFound");
+  await h.once(alice2, "resumeGame");
+  await replaced;
+});
+
+test("singleplayer: a reload continues the game, not coming back is a loss", async () => {
+  const gameID = await createGame("alice", "playSingleplayer", { difficulty: 0 });
+  const first = client("/singleplayer", "alice");
+  await h.once(first, "connect");
+  const started = h.once(first, "highlightPlayer");
+  first.emit("initializingGame", { gameID });
+  await started;
+  const card = h.once(first, "turnCard");
+  first.emit("openCard", 0);
+  await card;
+
+  // Reload: the game is still there, without a loss
+  first.close();
+  await h.wait(100);
+  const second = client("/singleplayer", "alice");
+  await h.once(second, "connect");
+  const resumed = h.once(second, "resumeGame");
+  second.emit("initializingGame", { gameID });
+  const state = await resumed;
+  assert.strictEqual(state.finished, false);
+  assert.deepStrictEqual(state.points, [0, 0]);
+  await h.wait(400); // longer than the rejoin time in the tests
+  assert.deepStrictEqual(h.increments, []);
+
+  // Gone for good: counts as a loss once
+  second.close();
+  await h.wait(600);
+  assert.deepStrictEqual(h.increments, [{ username: "alice", field: "easyLose" }]);
+  assert.strictEqual(rooms.get(gameID, "singleplayer"), null);
 });
 
 test("singleplayer: surrender + disconnect counts exactly one loss", async () => {
@@ -514,8 +550,12 @@ test("singleplayer: after the player's turn the computer plays", async () => {
   const gameID = await createGame("alice", "playSingleplayer", { difficulty: 3 });
   const socket = client("/singleplayer", "alice");
   await h.once(socket, "connect");
+  // The game begins after the "who starts" animation
+  const started = h.once(socket, "highlightPlayer");
   socket.emit("initializingGame", { gameID });
-  await h.once(socket, "setComputername");
+  await h.once(socket, "gameStarting");
+  socket.emit("openCard", 0); // too early: ignored
+  await started;
 
   // No "End turn": after two wrong cards the turn passes on its own
   const closed = h.once(socket, "closeCards", 8000);
@@ -707,4 +747,18 @@ test("speed round: animations don't count, the clock stops after two wrong cards
   current.emit("openCard", 0);
   current.emit("openCard", b);
   await stopped;
+});
+
+test("lobby: clicking again doesn't pile up rooms nobody entered", async () => {
+  const first = await createGame("carol", "playSingleplayer", { difficulty: 0 });
+  const second = await createGame("carol", "playSingleplayer", { difficulty: 1 });
+  assert.strictEqual(rooms.get(first, "singleplayer"), null);
+  assert.ok(rooms.get(second, "singleplayer"));
+
+  const ttt1 = await createGame("carol", "playTicTacToe");
+  const ttt2 = await createGame("carol", "playTicTacToe");
+  assert.strictEqual(rooms.get(ttt1, "tictactoe"), null);
+  assert.ok(rooms.get(ttt2, "tictactoe"));
+  // Other users' rooms stay
+  assert.ok(rooms.get(second, "singleplayer"));
 });

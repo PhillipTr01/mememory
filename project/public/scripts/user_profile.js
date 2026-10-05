@@ -1,5 +1,5 @@
 // Profile: statistics of the logged in user
-var MODES = ["easy", "medium", "hard", "expert", "multiplayer"];
+var MODES = ["easy", "medium", "hard", "expert", "multiplayer", "tictactoe"];
 
 document.addEventListener('DOMContentLoaded', function () {
     userPromise.then((username) => {
@@ -17,8 +17,8 @@ function loadStatistic() {
         .catch(() => showToast('Could not load your statistics.', 'error'));
 }
 
-function percent(win, lose) {
-    var games = win + lose;
+function percent(win, lose, draw) {
+    var games = win + lose + (draw || 0);
     return games == 0 ? 0 : Math.round((win / games) * 100);
 }
 
@@ -29,25 +29,30 @@ function showStatistic(statistic) {
     MODES.forEach((mode) => {
         var win = statistic[mode + 'Win'] || 0;
         var lose = statistic[mode + 'Lose'] || 0;
+        // Only Tic Tac Toe has draws
+        var draw = statistic[mode + 'Draw'] || 0;
+        var played = win + lose + draw;
         totalWins += win;
-        totalGames += win + lose;
+        totalGames += played;
 
         document.getElementById(mode + 'Win').innerText = win;
         document.getElementById(mode + 'Lose').innerText = lose;
-        document.getElementById(mode + 'Bar').style.width = percent(win, lose) + '%';
+        var drawElement = document.getElementById(mode + 'Draw');
+        if (drawElement) drawElement.innerText = draw;
+        document.getElementById(mode + 'Bar').style.width = percent(win, lose, draw) + '%';
         var footer = document.getElementById(mode + 'Rate');
-        if (win + lose == 0) {
+        if (played == 0) {
             footer.innerText = 'No games yet';
         } else {
             var rate = document.createElement('span');
-            rate.innerText = percent(win, lose) + '% win rate';
+            rate.innerText = percent(win, lose, draw) + '% win rate';
             var games = document.createElement('span');
-            games.innerText = (win + lose) + (win + lose == 1 ? ' game' : ' games');
+            games.innerText = played + (played == 1 ? ' game' : ' games');
             footer.replaceChildren(rate, games);
         }
     });
 
     document.getElementById('totalGames').innerText = totalGames;
     document.getElementById('totalWins').innerText = totalWins;
-    document.getElementById('totalRate').innerText = percent(totalWins, totalGames - totalWins) + '%';
+    document.getElementById('totalRate').innerText = percent(totalWins, totalGames - totalWins, 0) + '%';
 }

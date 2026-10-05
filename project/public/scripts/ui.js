@@ -161,10 +161,21 @@ function confirmDialog(options) {
 (function () {
   var tip = null;
   var current = null;
+  var watch = null;
 
   function hide() {
     if (tip) tip.hidden = true;
     current = null;
+    clearInterval(watch);
+  }
+
+  // The element was redrawn or something covers it now (e.g. an overlay),
+  // without the mouse moving -> don't leave the label behind
+  function watchCurrent() {
+    clearInterval(watch);
+    watch = setInterval(() => {
+      if (current && (!current.isConnected || !current.matches(":hover"))) hide();
+    }, 200);
   }
 
   function show(element) {
@@ -205,6 +216,7 @@ function confirmDialog(options) {
     if (!element.dataset.tip) return;
     current = element;
     show(element);
+    watchCurrent();
   });
 
   document.addEventListener("mouseout", (event) => {
@@ -217,3 +229,63 @@ function confirmDialog(options) {
   document.addEventListener("mousedown", hide);
   window.addEventListener("scroll", hide, true);
 })();
+
+/*
+ * "Who starts?" - the same slot machine in every game (MemeMory, Singleplayer,
+ * Tic Tac Toe). Needs #startOverlay, #reelTrack and #startResult on the page.
+ * options: players (names), starter (index), duration (ms), myName,
+ *          spin (ms, optional), avatar (name -> element, optional)
+ */
+function playStartReel(options) {
+  var overlay = document.getElementById("startOverlay");
+  var track = document.getElementById("reelTrack");
+  var result = document.getElementById("startResult");
+  var reel = track.parentElement;
+  var itemHeight = parseFloat(getComputedStyle(reel).getPropertyValue("--item")) || 72;
+  var players = options.players;
+  var starter = options.starter;
+  var avatar = options.avatar || ((name) => createAvatar(name));
+
+  // Long list of names, the starter is the second to last one (under the marker)
+  var rounds = Math.max(4, Math.ceil(24 / players.length));
+  var names = [];
+  for (var r = 0; r < rounds; r++) names.push(...players);
+  names.push(...players.slice(0, starter + 1));
+  names.push(players[(starter + 1) % players.length]); // one more below the marker
+
+  track.replaceChildren();
+  names.forEach((name) => {
+    var item = document.createElement("div");
+    item.className = "reel-item";
+    item.append(avatar(name), document.createTextNode(name));
+    track.appendChild(item);
+  });
+
+  var target = names.length - 2;
+  var spin = options.spin || Math.max(1200, options.duration - 1300);
+
+  result.classList.remove("show");
+  result.innerText = "";
+  track.style.transition = "none";
+  track.style.transform = "translateY(0)";
+  overlay.hidden = false;
+
+  // Start the spin in the next frame so the transition is applied
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      track.style.transition = `transform ${spin}ms cubic-bezier(0.12, 0.75, 0.18, 1)`;
+      // The marker is the second row of the reel
+      track.style.transform = `translateY(${-(target - 1) * itemHeight}px)`;
+    }),
+  );
+
+  setTimeout(() => {
+    track.children[target].classList.add("chosen");
+    var name = players[starter];
+    result.innerText = name == options.myName ? "You start" : `${name} starts`;
+    result.classList.add("show");
+  }, spin);
+
+  setTimeout(() => (overlay.hidden = true), options.duration + 200);
+  return spin;
+}
