@@ -105,12 +105,7 @@ function createRoomRow(room) {
   var name = document.createElement("div");
   name.className = "fw-semibold";
   name.innerText = room.host + "'s room";
-  if (room.game == "tictactoe") {
-    var ttt = document.createElement("span");
-    ttt.className = "mode-badge game-badge ms-2";
-    ttt.append(createIcon("bi-grid-3x3"), document.createTextNode(" Tic Tac Toe XL"));
-    name.appendChild(ttt);
-  } else if (room.mode == "speed") {
+  if (room.mode == "speed") {
     var speed = document.createElement("span");
     speed.className = "mode-badge ms-2";
     speed.append(
@@ -172,7 +167,18 @@ function createRoomRow(room) {
     actionCell.appendChild(watch);
   }
 
-  row.append(hostCell, playersCell, spectatorsCell, statusCell, actionCell);
+  // Game icon (same icons as "Create a new room")
+  var game = room.game == "tictactoe" ? "tictactoe" : "memory";
+  var gameCell = document.createElement("td");
+  gameCell.className = "game-col";
+  var icon = document.querySelector(`#gamePicker [data-game=${game}] .game-icon`).cloneNode(true);
+  icon.classList.add("game-icon-small");
+  var label = game == "tictactoe" ? "Tic Tac Toe XL" : "MemeMory";
+  gameCell.title = label;
+  gameCell.setAttribute("aria-label", label);
+  gameCell.appendChild(icon);
+
+  row.append(gameCell, hostCell, playersCell, spectatorsCell, statusCell, actionCell);
   return row;
 }
 
