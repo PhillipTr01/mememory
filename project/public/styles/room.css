@@ -550,7 +550,7 @@
   border-top-left-radius: 6px;
   background: var(--mm-surface-3);
   color: var(--mm-text);
-  font-family: "Poppins", "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+  font-family: "Poppins", sans-serif; /* emojis come from the system emoji font automatically */
   font-size: 0.92rem;
   line-height: 1.4;
   letter-spacing: normal;
