@@ -868,9 +868,9 @@ body.mode-speed {
   z-index: 4000;
   max-width: 260px;
   padding: 0.35rem 0.6rem;
-  border: 1px solid var(--mm-border);
+  border: 1px solid #3c3c3c;
   border-radius: 6px;
-  background: #0f0f0f;
+  background: #2b2b2b;
   color: var(--mm-text);
   font-size: 0.75rem;
   font-weight: 500;

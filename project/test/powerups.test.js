@@ -67,10 +67,13 @@ test("powerups: shuffle, swap and rotate keep the board consistent", async () =>
   assertConsistent(room);
   assert.deepStrictEqual(room.foundMatches, found, "found cards don't move");
 
-  const imageA = room.cardImages[10];
-  powerups.applyPermutation(room, powerups.swapPermutation(10, 20));
+  // Swap two closed cards (the found pair stays where it is)
+  const [a, b] = [...Array(CARD_COUNT).keys()].filter((id) => !room.foundMatches.includes(id));
+  const imageA = room.cardImages[a];
+  powerups.applyPermutation(room, powerups.swapPermutation(a, b));
   assertConsistent(room);
-  assert.strictEqual(room.cardImages[20], imageA);
+  assert.strictEqual(room.cardImages[b], imageA);
+  assert.deepStrictEqual(room.foundMatches, found);
 
   powerups.applyPermutation(room, powerups.rotatePermutation());
   assertConsistent(room);
