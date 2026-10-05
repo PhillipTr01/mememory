@@ -205,7 +205,7 @@ socket.on("roomState", (state) => {
 
   renderPlayerList(state, previous);
   renderWaitingRoom(state);
-  renderTurn(state, previous);
+  renderTurn(state);
   renderPowerups(state);
 
   var waiting = state.status == "waiting";
@@ -328,10 +328,12 @@ function renderPlayerList(state, previous) {
     points.className = "player-points";
     points.innerText = player.points;
 
-    // Small animation when a player scored
+    // Small animation when the points changed: "+1" floats up
     var before = previous && previous.players.find((p) => p.name == player.name);
-    if (before && before.points < player.points) {
+    if (before && before.points != player.points) {
       points.classList.add("bump");
+      var delta = player.points - before.points;
+      requestAnimationFrame(() => showPointsDelta(points, delta));
     }
 
     item.append(createAvatar(player.name, "", player.connected), info, points);
@@ -343,14 +345,9 @@ function renderPlayerList(state, previous) {
   spectators.replaceChildren(createIcon("bi-eye me-1"), document.createTextNode(state.spectators.join(", ")));
 }
 
-// The board glows when it's my turn, plus a short hint when the turn changes to me
-function renderTurn(state, previous) {
-  var mine = isMyTurn(state);
-  document.getElementById("board").classList.toggle("my-turn", mine);
-
-  if (mine && (previous == null || !isMyTurn(previous))) {
-    showToast("Your turn");
-  }
+// The board glows when it's my turn
+function renderTurn(state) {
+  document.getElementById("board").classList.toggle("my-turn", isMyTurn(state));
 }
 
 function renderWaitingRoom(state) {
@@ -710,12 +707,6 @@ socket.on("closeCards", (data) => {
   [data[1], data[2]].forEach((id) => closeCard(id, false));
 });
 
-socket.on("matchFound", (data) => {
-  if (data.name == me.username) {
-    showToast("Pair found");
-  }
-});
-
 // Activate endTurn-Button
 socket.on("activateEndTurn", () => {
   document.getElementById("playButton").disabled = false;
@@ -880,9 +871,6 @@ function updateTurnTimer(state) {
   turnTimerInterval = setInterval(tick, 100);
 }
 
-socket.on("turnTimeout", (data) => {
-  if (data.name == me.username) showToast("Time's up!");
-});
 
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("#modePicker button").forEach((button) => {

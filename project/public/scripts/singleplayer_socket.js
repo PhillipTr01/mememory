@@ -121,7 +121,9 @@ socket.on("zoomImage", (id) => {
 // Increase Points if a match was found
 socket.on("increasePoints", (data) => {
   var score = document.getElementById(data.turn == 0 ? "user1Score" : "user2Score");
+  var delta = data.points - Number(score.innerText);
   score.innerText = data.points;
+  if (delta != 0) showPointsDelta(score, delta);
   score.classList.remove("bump");
   void score.offsetWidth; // restart the animation
   score.classList.add("bump");
@@ -175,7 +177,6 @@ socket.on("getWinner", (data) => {
   document.getElementById("user1Item").classList.remove("turn");
   document.getElementById("user2Item").classList.remove("turn");
   document.getElementById("board").classList.remove("my-turn");
-  showToast(data.winner == 0 ? "You win" : `${data.computer} wins`);
 
   // All cards are shown normally now (found pairs are not dimmed anymore)
   document.getElementById("board").classList.add("revealed");

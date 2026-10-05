@@ -72,6 +72,13 @@ function renderPowerups(state) {
     setActionBarOpen(false);
   }
 
+  // While choosing cards, the bar says what to do
+  document.querySelector("#actionToggle .action-toggle-label").innerText = targeting
+    ? targeting.needed == 2
+      ? "Choose two closed cards"
+      : "Choose a closed card"
+    : "⚡ Power-ups";
+
   // Two wrong cards: End turn right away (the bar opens if it was closed)
   endButton.disabled = !ready;
   endButton.classList.toggle("mm-btn-primary", ready);
@@ -175,7 +182,6 @@ function startPowerup(id) {
     targeting = { id: id, needed: info.target == "cards" ? 2 : 1, picked: [] };
     document.getElementById("board").classList.add("targeting");
     // Click the power-up again or press Escape to cancel
-    showToast(targeting.needed == 2 ? "Choose two closed cards" : "Choose a closed card");
     renderPowerups(room);
     return;
   }

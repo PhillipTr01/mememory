@@ -66,6 +66,21 @@ function createSurrenderButton() {
     return button;
 }
 
+// "+1" that floats up from a score when the points changed. It lives on the
+// page (not in the player list), so redrawing the list doesn't cut it off.
+function showPointsDelta(element, delta) {
+    if (!element.isConnected) return;
+    var rect = element.getBoundingClientRect();
+    var label = document.createElement("span");
+    label.className = "points-delta" + (delta < 0 ? " minus" : "");
+    label.innerText = (delta > 0 ? "+" : "") + delta;
+    // Starts just left of the score, so both stay readable
+    label.style.left = rect.left - 16 + "px";
+    label.style.top = rect.top + "px";
+    document.body.appendChild(label);
+    setTimeout(() => label.remove(), 1200);
+}
+
 // Small "Left" tag for players who left the room / didn't come back
 function createLeftTag() {
     var tag = document.createElement("span");

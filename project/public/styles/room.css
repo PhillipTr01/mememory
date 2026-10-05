@@ -1495,11 +1495,6 @@
 }
 
 /* ---------- Power-up mode ---------- */
-.mode-badge.powerups-badge {
-  background: rgba(var(--mm-accent-rgb), 0.14);
-  color: var(--mm-accent);
-}
-
 .powerup-slots {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1773,7 +1768,13 @@
   background: rgba(27, 27, 27, 0.94);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(6px);
-  animation: mm-fade-up 0.25s ease;
+  /* Own animation: mm-fade-up would overwrite the centering transform */
+  animation: action-in 0.25s ease;
+}
+
+@keyframes action-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 @media (max-width: 991px) {
@@ -1841,21 +1842,17 @@
   transform: rotate(180deg);
 }
 
-/* Toasts above the floating action bar, not on top of it */
-body.has-action-bar #mm-toasts {
-  bottom: 9rem;
-}
-
-/* In the room, toasts are centered over the board like the action bar */
-@media (min-width: 992px) {
-  body.in-room #mm-toasts {
-    left: calc((100vw - 340px - 1.25rem) / 2);
-  }
-}
-
-/* Classic: only the End turn button, no open / close */
+/* Classic: only the End turn button, no box around it */
 .action-bar.end-only {
-  padding: 0.6rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.action-bar.end-only .action-end {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
 }
 
 .action-bar.end-only .action-toggle,
@@ -1867,4 +1864,26 @@ body.has-action-bar #mm-toasts {
   height: auto;
   padding: 0.75rem 1.6rem;
   font-size: 1.05rem;
+}
+
+/* "+1" floating up from a score */
+.points-delta {
+  position: fixed;
+  z-index: 2500;
+  transform: translate(-50%, 0);
+  color: var(--mm-success);
+  font-size: 1.1rem;
+  font-weight: 800;
+  pointer-events: none;
+  animation: points-float 1.2s ease-out forwards;
+}
+
+.points-delta.minus {
+  color: var(--mm-danger);
+}
+
+@keyframes points-float {
+  0% { opacity: 0; transform: translate(-50%, 4px) scale(0.8); }
+  20% { opacity: 1; transform: translate(-50%, -6px) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -34px) scale(1); }
 }

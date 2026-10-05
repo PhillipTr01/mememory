@@ -34,6 +34,8 @@ function createIcon(classes, title) {
 
 // Small message at the bottom of the screen instead of alert()
 function showToast(message, type) {
+  // The game pages show everything on the board / in the chat instead
+  if (document.body.classList.contains("no-toasts")) return;
   var container = document.getElementById("mm-toasts");
   if (container == null) {
     container = document.createElement("div");
