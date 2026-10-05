@@ -48,6 +48,7 @@ async function startServer() {
   require("../sockets/lobby_server")(io);
   require("../sockets/singleplayer_server")(io);
   require("../sockets/multiplayer_server")(io);
+  require("../sockets/tictactoe_server")(io);
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
 

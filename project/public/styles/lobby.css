@@ -114,6 +114,12 @@
   margin-bottom: 0.5rem;
 }
 
+.mp-create-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .mp-create,
 .mp-join {
   display: flex;
@@ -143,8 +149,16 @@
     max-width: none;
   }
 
+  .mp-create-buttons {
+    flex-wrap: nowrap;
+  }
+
   .mp-create .mm-btn {
-    width: 100%;
+    flex: 1 1 0;
+    min-width: 0;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    font-size: 1rem;
   }
 }
 
@@ -328,4 +342,10 @@
 
 .room-actions .mm-btn + .mm-btn {
   margin-left: 0.4rem;
+}
+
+/* Other games in the list */
+.mode-badge.game-badge {
+  background: var(--mm-surface-3);
+  color: var(--mm-text);
 }

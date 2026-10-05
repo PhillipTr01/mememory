@@ -38,6 +38,7 @@ const Auth = require("./middleware/auth");
 require("./sockets/lobby_server")(io);
 require("./sockets/singleplayer_server")(io);
 require("./sockets/multiplayer_server")(io);
+require("./sockets/tictactoe_server")(io);
 
 /* Page routes */
 const authenticationRoute = require("./routes/authentication_route");
@@ -76,6 +77,7 @@ app.get("/lobby", Auth, page("lobby.html"));
 app.get("/settings", Auth, page("settings.html"));
 app.get("/play", Auth, page("multiplayer.html"));
 app.get("/singleplayer", Auth, page("singleplayer.html"));
+app.get("/tictactoe", Auth, page("tictactoe.html"));
 
 /* Error handling */
 app.use((req, res, next) => {

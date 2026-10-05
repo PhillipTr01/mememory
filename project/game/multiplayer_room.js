@@ -77,12 +77,19 @@ function serialize(gameID, room) {
   };
 }
 
+/* Other games (e.g. Tic Tac Toe XL) add their open rooms to the lobby list */
+const lobbySources = [];
+
+function addLobbySource(source) {
+  lobbySources.push(source);
+}
+
 /*
  * Rooms shown in the lobby: public, not finished and somebody is in it.
  * "kicked" tells the given user that the host removed them from the room.
  */
 function publicRooms(username) {
-  return rooms
+  const memory = rooms
     .list("multiplayer")
     .filter(
       ([, room]) =>
@@ -103,7 +110,10 @@ function publicRooms(username) {
       spectators: room.spectators.size,
       kicked: username != null && room.banned.has(username),
       createdAt: room.createdAt,
-    }))
+    }));
+
+  return memory
+    .concat(...lobbySources.map((source) => source(username)))
     .sort((a, b) => (a.status === b.status ? b.createdAt - a.createdAt : a.status === STATUS.WAITING ? -1 : 1))
     .slice(0, 50);
 }
@@ -141,6 +151,7 @@ module.exports = {
   connectedCount,
   serialize,
   publicRooms,
+  addLobbySource,
   attachLobby,
   notifyLobby,
 };
