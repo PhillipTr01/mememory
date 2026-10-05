@@ -92,10 +92,20 @@
   border: 0 !important;
 }
 
-/* Card that was just opened: lifted a little */
+/* Card that was just opened: a bit bigger with a subtle accent ring */
 .card.zoom-card-on-turn {
-  transform: rotateY(0deg) scale(1.05);
+  transform: rotateY(0deg) scale(1.08);
   z-index: 5;
+}
+
+.card.zoom-card-on-turn .card-back {
+  box-shadow: 0 0 0 2px rgba(var(--mm-accent-rgb), 0.45), 0 10px 24px rgba(0, 0, 0, 0.45);
+  transition: box-shadow 0.3s ease;
+}
+
+/* Speed round: faster flips */
+body.mode-speed .card {
+  transition-duration: 0.5s;
 }
 
 /* Found pairs stay open, but step back */

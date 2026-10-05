@@ -14,6 +14,7 @@ Object.assign(config, {
   SPEED_TURN_TIME: 400,
   SPEED_MISS_DELAY: 100,
   SPEED_ANIMATION_GRACE: 50,
+  SPEED_START_ANIMATION: 100,
 });
 
 let server;
@@ -249,7 +250,8 @@ test("multiplayer: only the host can start, a leaver loses and the other wins", 
   const started = waitFor(alice, "roomState", (s) => s.status === "playing");
   alice.emit("startGame");
   const animation = await starting;
-  assert.deepStrictEqual(animation.players, ["alice", "bob"]);
+  // The order is shuffled for every game
+  assert.deepStrictEqual(animation.players.slice().sort(), ["alice", "bob"]);
   const { turn, players } = await started;
   assert.strictEqual(turn, animation.starter);
   assert.ok(turn === 0 || turn === 1);
@@ -294,6 +296,49 @@ test("multiplayer: games with more than two players keep the turn order", async 
   state = await next;
   assert.strictEqual(state.players[state.turn].name, expected);
   assert.strictEqual(state.status, "playing");
+});
+
+test("multiplayer: the player order is shuffled", async () => {
+  const orders = new Set();
+  for (let i = 0; i < 12 && orders.size < 2; i++) {
+    const { alice } = await openRoom("bob", "carol");
+    const starting = h.once(alice, "gameStarting");
+    alice.emit("startGame");
+    orders.add((await starting).players.join(","));
+    alice.emit("leaveRoom");
+  }
+  assert.ok(orders.size > 1, "different orders");
+});
+
+test("multiplayer: rematch after the game goes back to the waiting room", async () => {
+  const { gameID, alice, others } = await openRoom("bob");
+  const bob = others[0];
+  const started = waitFor(alice, "roomState", (s) => s.status === "playing");
+  alice.emit("startGame");
+  await started;
+  const oldImages = rooms.get(gameID, "multiplayer").cardImages;
+
+  const finished = h.once(alice, "getWinner");
+  bob.emit("surrender");
+  await finished;
+  assert.ok(rooms.get(gameID, "multiplayer"), "the room stays for a rematch");
+
+  // Strangers can't enter a finished room
+  const carol = client("/multiplayer", "carol");
+  carol.emit("joinRoom", { gameID });
+  await h.once(carol, "noGameFound");
+
+  const back = waitFor(alice, "roomState", (s) => s.status === "waiting");
+  const reset = h.once(bob, "rematch");
+  bob.emit("rematch");
+  const state = await back;
+  await reset;
+  assert.deepStrictEqual(state.players.map((p) => [p.name, p.points, p.active, p.ready]).sort(), [
+    ["alice", 0, true, false],
+    ["bob", 0, true, false],
+  ]);
+  assert.strictEqual(state.host, "alice");
+  assert.notStrictEqual(rooms.get(gameID, "multiplayer").cardImages, oldImages, "new board");
 });
 
 test("multiplayer: chat is validated, rate limited and kept as history", async () => {

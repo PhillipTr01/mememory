@@ -127,6 +127,8 @@ document.addEventListener(
       socket.emit("updateSettings", { isPublic: e.target.checked });
     });
     document.getElementById("resultBoardButton").addEventListener("click", closeResult);
+    document.getElementById("rematchButton").addEventListener("click", requestRematch);
+    document.getElementById("resultRematchButton").addEventListener("click", requestRematch);
 
     // The result must not block the board: a click next to it closes it,
     // and if there is a card under the click, its meme is opened right away
@@ -613,7 +615,8 @@ function closeCard(id, instant) {
 
   card.classList.remove("flip");
   understateCard(id);
-  clearCardImage(card, instant ? 0 : 900);
+  // The flip is faster in speed rounds (see play.css)
+  clearCardImage(card, instant ? 0 : room && room.mode == "speed" ? 500 : 900);
 }
 
 // If the card is already open, you can zoom in to read the meme
@@ -680,18 +683,38 @@ socket.on("getWinner", (data) => {
     }
   });
 
-  var playButton = document.getElementById("playButton");
-  playButton.onclick = () => {
-    window.location.href = "/lobby";
-  };
-  playButton.hidden = false;
-  playButton.disabled = false;
-  playButton.innerText = "Back to Lobby";
+  // Rematch (only for players) or back to the lobby
+  var isPlayer = getMyPlayer(room) != null;
+  document.getElementById("playButton").hidden = true;
+  document.getElementById("rematchButton").hidden = !isPlayer;
+  document.getElementById("resultRematchButton").hidden = !isPlayer;
+  document.getElementById("lobbyButton").hidden = false;
 
   showResult(data.winners);
+});
 
-  // Reset storage
-  sessionStorage.clear();
+function requestRematch() {
+  document.getElementById("rematchButton").disabled = true;
+  document.getElementById("resultRematchButton").disabled = true;
+  socket.emit("rematch");
+}
+
+// Rematch: back to the waiting room with a new board
+socket.on("rematch", () => {
+  sessionOver = false;
+  sessionStorage.setItem("gameID", gameID);
+  closeResult();
+  document.getElementById("board").classList.remove("revealed");
+  for (var i = 0; i < 66; i++) {
+    closeCard(i, true);
+    document.getElementById(`cardcount-${i}`).innerText = "";
+  }
+  ["rematchButton", "resultRematchButton", "lobbyButton"].forEach((id) => {
+    var element = document.getElementById(id);
+    element.hidden = true;
+    element.disabled = false;
+  });
+  document.querySelectorAll("#playerList .player-item.winner").forEach((item) => item.classList.remove("winner"));
 });
 
 function closeResult() {

@@ -56,6 +56,15 @@
   box-shadow: none;
 }
 
+/* Links styled as buttons keep their text color (Bootstrap's a:hover is blue) */
+a.mm-btn:hover {
+  color: var(--mm-text);
+}
+
+a.mm-btn-primary:hover {
+  color: var(--mm-on-accent);
+}
+
 .mm-btn-primary:hover:not(:disabled) {
   background: var(--mm-accent-hover);
   box-shadow: none;
