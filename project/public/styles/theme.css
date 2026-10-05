@@ -792,3 +792,51 @@ body.mode-speed {
   --mm-gradient: var(--mm-accent);
   --mm-on-accent: #1b1406;
 }
+
+/* ---------- Smaller logo and Play button ---------- */
+.logo {
+  max-height: 56px;
+}
+
+@media (max-width: 575px) {
+  .logo {
+    max-height: 38px;
+  }
+}
+
+.play-button {
+  width: auto;
+  max-width: none;
+  padding: 0.45rem 1.4rem;
+  font-size: 0.95rem;
+}
+
+.play-button .bi {
+  font-size: 1.1rem;
+}
+
+/* "You" tag (same look as in the game) */
+.you-tag {
+  flex-shrink: 0;
+  padding: 0.05rem 0.4rem;
+  border-radius: 4px;
+  background: var(--mm-surface-3);
+  color: var(--mm-muted);
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+}
+
+/* Flip scroll: the "scroll down" arrow sits at the very bottom edge */
+.flip-next {
+  bottom: 4px;
+  padding: 0.25rem 0.75rem;
+}
+
+@media (max-height: 600px) {
+  .flip-next {
+    display: none;
+  }
+}

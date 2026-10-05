@@ -75,14 +75,25 @@
     setTimeout(() => (locked = false), 900);
   }
 
+  // Is there an element under the mouse that can still scroll in this direction?
+  function canScrollInside(element, down) {
+    for (var node = element; node && node != document.body; node = node.parentElement) {
+      var style = getComputedStyle(node);
+      if (!/(auto|scroll)/.test(style.overflowY) || node.scrollHeight <= node.clientHeight + 1) continue;
+      if (down && node.scrollTop + node.clientHeight < node.scrollHeight - 1) return true;
+      if (!down && node.scrollTop > 0) return true;
+    }
+    return false;
+  }
+
   /* ---------- Mouse wheel (desktop) ---------- */
   if (finePointer) {
     window.addEventListener(
       "wheel",
       (event) => {
         if (event.ctrlKey || Math.abs(event.deltaY) < 4) return;
-        // Scrollable areas inside the page (e.g. dropdowns) scroll normally
-        if (event.target.closest && event.target.closest(".profile-dropdown, .dropdown-menu, textarea")) return;
+        // Scrollable areas inside the page (e.g. the scoreboard list) scroll first
+        if (canScrollInside(event.target, event.deltaY > 0)) return;
 
         var index = currentIndex();
         var rect = sections[index].getBoundingClientRect();

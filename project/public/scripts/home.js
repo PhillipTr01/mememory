@@ -66,7 +66,17 @@ function renderList(players, username) {
         info.className = "overflow-hidden";
         var name = document.createElement("div");
         name.className = "score-name";
-        name.innerText = player.username + (player.username == username ? " (you)" : "");
+        var nameText = document.createElement("span");
+        nameText.className = "score-name-text";
+        nameText.innerText = player.username;
+        name.appendChild(nameText);
+        // Same "You" tag as in the game
+        if (player.username == username) {
+            var you = document.createElement("span");
+            you.className = "you-tag";
+            you.innerText = "You";
+            name.appendChild(you);
+        }
 
         var games = player.win + player.lose;
         var percent = games == 0 ? 0 : Math.round((player.win / games) * 100);
