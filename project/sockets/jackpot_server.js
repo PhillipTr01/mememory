@@ -62,7 +62,7 @@ module.exports = function (io) {
       fair: pot.phase === PHASE.DRAWING ? pot.fair : { hash: pot.fair.hash },
       records: pot.records,
       spin: config.JACKPOT_SPIN,
-      maxBet: config.JACKPOT_MAX_BET,
+      maxBets: config.JACKPOT_MAX_BETS,
       history: pot.history,
       viewers: jackpot.sockets.size,
     };
@@ -165,14 +165,13 @@ module.exports = function (io) {
           socket.emit("betError", "The draw is running - wait for the next round.");
           return;
         }
-        const entry = pot.entries.find((e) => e.name === username);
-        const already = entry != null ? entry.coins : 0;
-        if (already + amount > config.JACKPOT_MAX_BET) {
-          socket.emit("betError", `At most ${config.JACKPOT_MAX_BET} coins per round.`);
-          return;
-        }
         // One bet at a time per user (two tabs, fast clicks)
         if (betting.has(username)) return;
+        // Any amount, but at most a few separate bets per round
+        if (pot.bets.filter((bet) => bet.name === username).length >= config.JACKPOT_MAX_BETS) {
+          socket.emit("betError", `At most ${config.JACKPOT_MAX_BETS} bets per round.`);
+          return;
+        }
         betting.add(username);
         const round = pot.round;
         try {

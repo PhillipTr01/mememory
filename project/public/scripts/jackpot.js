@@ -235,7 +235,8 @@ function spinWheel(short) {
   var wheel = document.getElementById("jpWheel");
   var draw = state.draw;
   var target = ((draw.ticket + 0.5) / draw.total) * 360;
-  var turns = short ? 1 : 6;
+  // Not too fast: a very fast wheel looks like it turns backwards (wagon-wheel effect)
+  var turns = short ? 1 : 3;
   var duration = short ? 900 : state.spin - 900;
 
   renderWheel();
@@ -246,7 +247,8 @@ function spinWheel(short) {
   document.getElementById("jpResult").hidden = true;
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
-      wheel.style.transition = `transform ${duration}ms cubic-bezier(0.12, 0.6, 0.12, 1)`;
+      wheel.style.transition = `transform ${duration}ms cubic-bezier(0.3, 0.35, 0.2, 1)`;
+      // Clockwise, until the winning ticket is under the pointer
       wheel.style.transform = `rotate(${turns * 360 - target}deg)`;
     }),
   );
@@ -335,9 +337,7 @@ function renderBets() {
         // The winning bet is the one with the drawn ticket
         var won = state.draw && !spinning && state.draw.ticket + 1 >= bet.from && state.draw.ticket + 1 <= bet.to;
         var row = personRow(bet.name, won ? "winner" : "");
-        row.sub.innerText =
-          "Tickets #" + formatCoins(bet.from) + " - #" + formatCoins(bet.to) +
-          " · " + percent(bet.from - 1) + " - " + percent(bet.to);
+        row.sub.innerText = "Tickets #" + formatCoins(bet.from) + " - #" + formatCoins(bet.to);
         row.sub.title = "If the drawn ticket is in this range, this bet wins the pot";
         row.points.innerText = "+" + formatCoins(bet.amount);
         var li = document.createElement("li");
@@ -431,10 +431,13 @@ function renderBet() {
   if (state == null) return;
   var mine = myEntry();
   var inPot = mine ? mine.coins : 0;
-  var room = Math.max(0, Math.min(myCoins, state.maxBet - inPot));
+  var myBets = (state.bets || []).filter((bet) => bet.name == myName).length;
+  var betsLeft = Math.max(0, state.maxBets - myBets);
+  var room = betsLeft > 0 ? myCoins : 0;
   var open = state.phase != "drawing";
   document.getElementById("jpChance").innerText = mine
-    ? "In the pot: " + formatCoins(inPot) + " · " + chance(mine) + "% chance"
+    ? "In the pot: " + formatCoins(inPot) + " · " + chance(mine) + "% chance · " +
+      (betsLeft == 0 ? "no bets left" : betsLeft == 1 ? "1 bet left" : betsLeft + " bets left")
     : "";
   document.getElementById("jpAmount").max = room;
   document.getElementById("jpAmount").disabled = !open || room == 0;

@@ -179,10 +179,19 @@ test("jackpot: invalid bets are rejected", async () => {
   carol.emit("bet", { amount: 21 });
   assert.match(await tooMuch, /enough coins/);
 
-  const overLimit = h.once(carol, "betError");
-  carol.emit("bet", { amount: config.JACKPOT_MAX_BET + 1 });
-  assert.match(await overLimit, /At most/);
   assert.strictEqual(h.coinsOf("carol"), 20);
+
+  // Any amount, but only a few separate bets per round
+  h.setCoins("carol", 5000);
+  for (let i = 0; i < config.JACKPOT_MAX_BETS; i++) {
+    const placed = waitFor(carol, "jackpotState", (s) => s.bets.filter((b) => b.name === "carol").length === i + 1);
+    carol.emit("bet", { amount: i === 0 ? 2000 : 1 });
+    await placed;
+  }
+  const overLimit = h.once(carol, "betError");
+  carol.emit("bet", { amount: 1 });
+  assert.match(await overLimit, /At most 5 bets/);
+  assert.strictEqual(h.coinsOf("carol"), 5000 - 2000 - (config.JACKPOT_MAX_BETS - 1));
 });
 
 test("jackpot: chat works like in the other games", async () => {
@@ -207,15 +216,15 @@ test("jackpot: the secret word gives coins every time (not too fast)", async () 
   const got = h.once(carol, "secretCoins");
   carol.emit("typed", "abc" + config.JACKPOT_SECRET);
   assert.strictEqual(await got, config.JACKPOT_SECRET_COINS);
-  assert.strictEqual(h.coinsOf("carol"), 100);
+  assert.strictEqual(h.coinsOf("carol"), config.JACKPOT_SECRET_COINS);
 
-  // Right away again: too fast, after the cooldown: again +100
+  // Right away again: too fast, after the cooldown: again
   carol.emit("typed", config.JACKPOT_SECRET);
   await h.wait(100);
-  assert.strictEqual(h.coinsOf("carol"), 100);
+  assert.strictEqual(h.coinsOf("carol"), config.JACKPOT_SECRET_COINS);
   await h.wait(config.JACKPOT_SECRET_COOLDOWN);
   const again = h.once(carol, "secretCoins");
   carol.emit("typed", config.JACKPOT_SECRET);
   await again;
-  assert.strictEqual(h.coinsOf("carol"), 200);
+  assert.strictEqual(h.coinsOf("carol"), 2 * config.JACKPOT_SECRET_COINS);
 });
