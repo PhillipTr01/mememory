@@ -36,6 +36,9 @@ module.exports = {
   SPEED_MISS_DELAY: 1100,
   // The clock starts after the card animations (the flip takes 0.5s on the client)
   SPEED_ANIMATION_GRACE: 600,
+  // Singleplayer: who starts (0 = player, 1 = bot, null = random)
+  SINGLEPLAYER_STARTER: null,
+
   // Speed round: shorter "who starts" animation
   SPEED_START_ANIMATION: 2600,
 };

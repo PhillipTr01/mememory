@@ -15,6 +15,8 @@ Object.assign(config, {
   SPEED_MISS_DELAY: 100,
   SPEED_ANIMATION_GRACE: 50,
   SPEED_START_ANIMATION: 100,
+  // The player starts, so the tests can open cards right away
+  SINGLEPLAYER_STARTER: 0,
 });
 
 let server;
@@ -490,6 +492,48 @@ test("singleplayer: after the player's turn the computer plays", async () => {
   // The computer flips two cards on its own
   const flips = [await h.once(socket, "turnCard", 8000), await h.once(socket, "turnCard", 8000)];
   assert.strictEqual(flips.length, 2);
+});
+
+test("singleplayer: who starts is random", async () => {
+  config.SINGLEPLAYER_STARTER = null;
+  try {
+    const starters = new Set();
+    for (let i = 0; i < 12 && starters.size < 2; i++) {
+      const gameID = await createGame("alice", "playSingleplayer", { difficulty: 0 });
+      const socket = client("/singleplayer", "alice");
+      await h.once(socket, "connect");
+      const highlight = h.once(socket, "highlightPlayer");
+      socket.emit("initializingGame", { gameID });
+      starters.add((await highlight).turn);
+      socket.close();
+    }
+    assert.deepStrictEqual([...starters].sort(), [0, 1]);
+  } finally {
+    config.SINGLEPLAYER_STARTER = 0;
+  }
+});
+
+test("singleplayer: rematch starts a new game against the same bot", async () => {
+  const gameID = await createGame("alice", "playSingleplayer", { difficulty: 1 });
+  const socket = client("/singleplayer", "alice");
+  await h.once(socket, "connect");
+  socket.emit("initializingGame", { gameID });
+  await h.once(socket, "setComputername");
+
+  // No rematch while the game is running
+  socket.emit("rematch");
+  socket.emit("surrender");
+  await h.once(socket, "getWinner");
+
+  const rematch = h.once(socket, "rematch");
+  const highlight = h.once(socket, "highlightPlayer");
+  socket.emit("rematch");
+  await rematch;
+  assert.strictEqual((await highlight).computer, "Medium Bot");
+
+  // The new game can be played
+  socket.emit("openCard", 0);
+  assert.strictEqual((await h.once(socket, "turnCard")).id, 0);
 });
 
 test("multiplayer: watch joins as spectator even with free seats", async () => {

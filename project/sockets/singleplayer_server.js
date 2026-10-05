@@ -1,5 +1,6 @@
 const Statistic = require("../models/Statistic");
 const rooms = require("../game/rooms");
+const config = require("../game/config");
 const { CARD_COUNT, createBoard, isValidCardId } = require("../game/board");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
@@ -46,36 +47,36 @@ module.exports = function (io) {
 
         if (socket.disconnected) return;
 
-        const game = {
+        // Kept for rematches against the same bot
+        socket.settings = {
           difficulty: room.difficulty,
-          user: { name: room.username, points: 0 },
-          computer: {
-            name: room.computername,
-            moveMemory: room.moveMemory,
-            points: 0,
-          },
-          status: 0,
-          turn: 0,
-          finished: false,
-          openedCards: [],
-          cardPairs: board.cardPairs,
-          cardImages: board.cardImages,
-          foundMatches: [],
-          // Defines how many cards the computer can remember.
-          previousMoves: Array(room.moveMemory * 2).fill(-1),
-          cardCounter: Array(CARD_COUNT).fill(0),
-          timeouts: [],
-          interval: null,
+          username: room.username,
+          computername: room.computername,
+          moveMemory: room.moveMemory,
         };
-        socket.game = game;
+        socket.emit("setComputername", room.computername);
+        startGame(socket, board);
+      }),
+    );
 
-        socket.emit("setComputername", game.computer.name);
-        socket.emit("highlightPlayer", {
-          turn: game.turn,
-          computer: game.computer.name,
-          user: game.user.name,
-        });
-        checkGame(socket);
+    // Rematch: a new board against the same bot
+    socket.on(
+      "rematch",
+      safe("rematch", async () => {
+        if (socket.game == null || !socket.game.finished || socket.settings == null || socket.initializing) return;
+        socket.initializing = true;
+        let board;
+        try {
+          board = await createBoard();
+        } catch (error) {
+          socket.emit("gameError", error.message);
+          return;
+        } finally {
+          socket.initializing = false;
+        }
+        if (socket.disconnected) return;
+        socket.emit("rematch");
+        startGame(socket, board);
       }),
     );
 
@@ -144,6 +145,40 @@ module.exports = function (io) {
     );
   });
 };
+
+// Starts a game on the socket. Who begins is random (player or bot).
+function startGame(socket, board) {
+  const settings = socket.settings;
+  const game = {
+    difficulty: settings.difficulty,
+    user: { name: settings.username, points: 0 },
+    computer: {
+      name: settings.computername,
+      moveMemory: settings.moveMemory,
+      points: 0,
+    },
+    status: 0,
+    turn: config.SINGLEPLAYER_STARTER != null ? config.SINGLEPLAYER_STARTER : Math.random() < 0.5 ? 0 : 1,
+    finished: false,
+    openedCards: [],
+    cardPairs: board.cardPairs,
+    cardImages: board.cardImages,
+    foundMatches: [],
+    // Defines how many cards the computer can remember.
+    previousMoves: Array(settings.moveMemory * 2).fill(-1),
+    cardCounter: Array(CARD_COUNT).fill(0),
+    timeouts: [],
+    interval: null,
+  };
+  socket.game = game;
+
+  socket.emit("highlightPlayer", {
+    turn: game.turn,
+    computer: game.computer.name,
+    user: game.user.name,
+  });
+  checkGame(socket);
+}
 
 // Like setTimeout, but the timer is cancelled when the game ends.
 function later(game, fn, ms) {

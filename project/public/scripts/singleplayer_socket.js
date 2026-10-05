@@ -201,17 +201,45 @@ socket.on("getWinner", (data) => {
     understateCard(i);
   }
 
-  // Change EndTurn-Button to Back to Lobby
-  playButton.onclick = () => {
-    window.location.href = "/lobby";
-  };
-  playButton.disabled = false;
-  playButton.innerText = "Back to Lobby";
+  // End turn -> Rematch / Back to lobby
+  playButton.hidden = true;
+  document.getElementById("rematchButton").hidden = false;
+  document.getElementById("lobbyButton").hidden = false;
   document.getElementById("surrenderSlot").replaceChildren();
   showResult(data);
 
   // Reset storage
   sessionStorage.clear();
+});
+
+function requestRematch() {
+  document.getElementById("rematchButton").disabled = true;
+  document.getElementById("resultRematchButton").disabled = true;
+  socket.emit("rematch");
+}
+
+// Rematch: new board against the same bot
+socket.on("rematch", () => {
+  document.getElementById("resultOverlay").hidden = true;
+  document.getElementById("board").classList.remove("revealed");
+  for (var i = 0; i < 66; i++) {
+    var card = document.getElementById("card-" + i);
+    card.classList.remove("flip");
+    understateCard(i);
+    clearCardImage(card, 0);
+    document.getElementById(`cardcount-${i}`).innerText = "";
+  }
+  ["user1Score", "user2Score"].forEach((id) => (document.getElementById(id).innerText = "0"));
+  document.getElementById("pairsLeft").innerText = "33 pairs left";
+  ["user1Item", "user2Item"].forEach((id) => document.getElementById(id).classList.remove("winner", "inactive"));
+  document.getElementById("surrenderSlot").replaceChildren(createSurrenderButton());
+
+  var playButton = document.getElementById("playButton");
+  playButton.hidden = false;
+  playButton.disabled = true;
+  ["rematchButton", "resultRematchButton"].forEach((id) => (document.getElementById(id).disabled = false));
+  document.getElementById("rematchButton").hidden = true;
+  document.getElementById("lobbyButton").hidden = true;
 });
 
 // Surrender button next to the own name
@@ -220,6 +248,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   var overlay = document.getElementById("resultOverlay");
   document.getElementById("resultBoardButton").addEventListener("click", () => (overlay.hidden = true));
+  document.getElementById("rematchButton").addEventListener("click", requestRematch);
+  document.getElementById("resultRematchButton").addEventListener("click", requestRematch);
   // A click next to the result closes it and opens the card below
   overlay.addEventListener("click", (event) => {
     if (event.target != overlay) return;
