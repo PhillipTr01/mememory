@@ -164,7 +164,12 @@ function createRoomRow(room) {
     if (waiting && !full && !room.kicked) {
       actionCell.appendChild(actionButton("Join", "bi-box-arrow-in-right", true, () => openRoom(room, false)));
     }
-    actionCell.appendChild(actionButton("Watch", "bi-eye", false, () => openRoom(room, true)));
+    // Only the eye icon, the label is the tooltip
+    var watch = actionButton("", "bi-eye", false, () => openRoom(room, true));
+    watch.classList.add("mm-btn-icon");
+    watch.title = "Watch";
+    watch.setAttribute("aria-label", "Watch");
+    actionCell.appendChild(watch);
   }
 
   row.append(hostCell, playersCell, spectatorsCell, statusCell, actionCell);
