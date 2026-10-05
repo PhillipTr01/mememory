@@ -63,7 +63,7 @@ function showStatistic(statistic) {
 
 /* ---------- Avatar maker ---------- */
 
-var COLOR_PARTS = ['bg', 'skin', 'hairColor', 'shirt'];
+var COLOR_PARTS = AVATAR_COLORS;
 var editing = null; // config while the editor is open (null = letter avatar)
 var editTab = 'hair';
 
@@ -131,6 +131,31 @@ function renderAvatarEditor() {
         });
         return option;
     }));
+
+    // Colors: any other color with the color picker
+    if (COLOR_PARTS.includes(editTab)) {
+        var custom = document.createElement('label');
+        var own = !AVATAR_PARTS[editTab].includes(base[editTab]);
+        custom.className = 'avatar-option swatch custom' + (editing != null && own ? ' selected' : '');
+        custom.title = 'Pick any color';
+        if (own) custom.style.background = base[editTab];
+        var picker = document.createElement('input');
+        picker.type = 'color';
+        picker.value = base[editTab];
+        picker.setAttribute('aria-label', 'Pick any color');
+        picker.addEventListener('input', () => {
+            editing = Object.assign({}, editing || AVATAR_DEFAULT);
+            editing[editTab] = picker.value;
+            // Only the preview: the picker stays open while dragging
+            var fresh = createAvatarPreview(editing, 'avatar-xl');
+            fresh.id = 'avatarPreview';
+            document.getElementById('avatarPreview').replaceWith(fresh);
+            custom.style.background = picker.value;
+        });
+        picker.addEventListener('change', renderAvatarEditor);
+        custom.append(createIcon('bi-eyedropper'), picker);
+        options.appendChild(custom);
+    }
 }
 
 // Avatar from a config (not from the cache), for the preview and the options

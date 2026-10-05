@@ -5,25 +5,33 @@
  */
 var AVATAR_PARTS = {
   bg: [
-    "#3b4a6b", "#5b3b6b", "#6b3b45", "#3b6b5a", "#6b5a3b", "#2f3e46",
-    "#4a4a4a", "#1f5f8b", "#8b3a62", "#2e6b3a", "#7a5230", "#1f2a44",
+    "#3b4a6b", "#1f2a44", "#1f5f8b", "#0c4a6e", "#0f766e", "#3b6b5a", "#2e6b3a", "#365314",
+    "#6b5a3b", "#7a5230", "#7c2d12", "#6b3b45", "#8b3a62", "#831843", "#5b3b6b", "#4c1d95",
+    "#2f3e46", "#4a4a4a",
   ],
-  skin: ["#fbe3cc", "#f3d2b3", "#e8b98f", "#d9a577", "#c48a5a", "#a86f43", "#8a5a36", "#5e3b22"],
+  skin: ["#ffe8d6", "#fbe3cc", "#f3d2b3", "#e8b98f", "#d9a577", "#c48a5a", "#a86f43", "#8a5a36", "#5e3b22", "#3d2414"],
   hair: [
     "none", "buzz", "short", "crew", "quiff", "side", "undercut", "messy", "wavy",
     "long", "bob", "curly", "afro", "bun", "ponytail", "pigtails", "mohawk",
   ],
   hairColor: [
-    "#1f1b18", "#4a2f1d", "#8b5a2b", "#b07b3c", "#d9b36c", "#f0dca0",
-    "#b8452f", "#e07a3a", "#c9c9c9", "#5b7bd6", "#d65bb4", "#3fae8a",
+    "#0d0b0a", "#1f1b18", "#3b2a20", "#4a2f1d", "#6b3e26", "#8b5a2b", "#b07b3c", "#d9b36c",
+    "#f0dca0", "#b8452f", "#e07a3a", "#9a9a9a", "#e6e6e6", "#5b7bd6", "#7a3b8f", "#d65bb4",
+    "#3fae8a", "#e05050",
   ],
   beard: ["none", "stubble", "mustache", "goatee", "beard", "chinstrap"],
-  eyes: ["normal", "happy", "wink", "sleepy", "surprised", "angry", "lashes", "hearts", "dizzy"],
-  mouth: ["smile", "grin", "laugh", "neutral", "open", "tongue", "smirk", "sad", "kiss"],
+  eyes: [
+    "normal", "big", "happy", "laughing", "wink", "sleepy", "tired", "side", "suspicious",
+    "surprised", "angry", "lashes", "crying", "hearts", "stars", "money", "dizzy",
+  ],
+  mouth: [
+    "smile", "wide", "grin", "laugh", "neutral", "open", "wow", "tongue", "smirk",
+    "cat", "sad", "nervous", "kiss", "whistle", "fangs", "bucktooth", "drool",
+  ],
   top: ["tshirt", "hoodie", "collar", "vneck", "stripes", "suit"],
   shirt: [
-    "#3b82f6", "#1e40af", "#06b6d4", "#3f9d6b", "#84cc16", "#d4a64a",
-    "#f97316", "#e0675a", "#be123c", "#ec4899", "#8b5cf6", "#6b4f3a",
+    "#3b82f6", "#1e40af", "#06b6d4", "#14b8a6", "#3f9d6b", "#84cc16", "#facc15", "#d4a64a",
+    "#f97316", "#e0675a", "#f43f5e", "#be123c", "#ec4899", "#a855f7", "#8b5cf6", "#6b4f3a",
     "#2b2b2b", "#6b7280", "#e8e8e8", "#f5e6c8",
   ],
   accessory: [
@@ -59,12 +67,19 @@ var AVATAR_DEFAULT = {
   accessory: "none",
 };
 
+// Colors can also be picked freely (any #rrggbb)
+var AVATAR_COLORS = ["bg", "skin", "hairColor", "shirt"];
+var COLOR_REGEX = /^#[0-9a-f]{6}$/;
+
 // Only known parts (anything else is replaced by the default); null = no avatar
 function cleanAvatar(config) {
   if (config == null || typeof config !== "object") return null;
   var clean = {};
   Object.keys(AVATAR_PARTS).forEach(function (key) {
-    clean[key] = AVATAR_PARTS[key].indexOf(config[key]) >= 0 ? config[key] : AVATAR_DEFAULT[key];
+    var value = config[key];
+    var color = AVATAR_COLORS.indexOf(key) >= 0 && typeof value == "string" && COLOR_REGEX.test(value.toLowerCase());
+    if (color) clean[key] = value.toLowerCase();
+    else clean[key] = AVATAR_PARTS[key].indexOf(value) >= 0 ? value : AVATAR_DEFAULT[key];
   });
   return clean;
 }
@@ -216,20 +231,35 @@ var HAIR = {
 var avatarClipId = 0;
 
 // Behind the head (long hair, buns, tails)
-function drawHairBack(svg, c) {
+function drawHairBack(svg, c, headwear) {
   var hair = HAIR[c.hair];
   if (hair == null || hair.back == null) return;
+  // A bun doesn't fit under a hat or a crown
+  if (c.hair == "bun" && headwear) return;
   if (typeof hair.back == "string") {
     svgAdd(svg, "path", { d: hair.back, fill: c.hairColor });
-  } else {
-    hair.back.forEach(function (circle) {
-      svgAdd(svg, "circle", { cx: circle[0], cy: circle[1], r: circle[2], fill: c.hairColor });
-    });
+    return;
   }
+  var circles = hair.back;
+  if (headwear == "hat") {
+    // Under a hat only the hair at the sides puffs out
+    if (c.hair == "afro") circles = [[50, 46, 28]];
+    if (c.hair == "curly") circles = circles.filter(function (circle) { return circle[1] >= 30; });
+  }
+  circles.forEach(function (circle) {
+    svgAdd(svg, "circle", { cx: circle[0], cy: circle[1], r: circle[2], fill: c.hairColor });
+  });
 }
 
-// On the head; with a hat only the hair below the hat shows
-function drawHairFront(svg, c, hat) {
+// How high the hair goes (y of the top), so crowns sit on the hair
+var HAIR_TOP = {
+  none: 21, buzz: 20, short: 13, crew: 16, quiff: 9, side: 15, undercut: 12, messy: 8, wavy: 18,
+  long: 18, bob: 18, curly: 10, afro: 6, bun: 20, ponytail: 21, pigtails: 21, mohawk: 20,
+};
+
+// On the head; with a hat only the hair below the hat shows,
+// with a crown / party hat no mohawk
+function drawHairFront(svg, c, hat, crown) {
   var hair = HAIR[c.hair];
   if (hair == null) return;
   var dark = shade(c.hairColor, 28);
@@ -249,7 +279,7 @@ function drawHairFront(svg, c, hat) {
   }
   svg.appendChild(group);
 
-  if (hair.top && !hat) {
+  if (hair.top && !hat && !(crown && c.hair == "mohawk")) {
     svgAdd(svg, "path", { d: hair.top, fill: c.hairColor });
     if (hair.strands) svgAdd(svg, "path", withLine({ d: hair.strands }, dark, 1.2));
   }
@@ -379,6 +409,64 @@ function drawEyes(svg, c) {
       heart(svg, left, y - 1, 4, "#e0475a");
       heart(svg, right, y - 1, 4, "#e0475a");
       break;
+    case "big":
+      [left, right].forEach(function (x) {
+        svgAdd(svg, "circle", { cx: x, cy: y, r: 4.6, fill: INK });
+        svgAdd(svg, "circle", { cx: x + 1.5, cy: y - 1.6, r: 1.6, fill: "#fff" });
+      });
+      break;
+    case "laughing":
+      // > <
+      svgAdd(svg, "path", withLine({ d: "M" + (left - 3) + " " + (y - 3) + " L" + (left + 3) + " " + y + " L" + (left - 3) + " " + (y + 3) }, INK, 2.2));
+      svgAdd(svg, "path", withLine({ d: "M" + (right + 3) + " " + (y - 3) + " L" + (right - 3) + " " + y + " L" + (right + 3) + " " + (y + 3) }, INK, 2.2));
+      break;
+    case "tired":
+      dot(left);
+      dot(right);
+      [left, right].forEach(function (x) {
+        svgAdd(svg, "path", withLine({ d: "M" + (x - 4) + " " + (y - 2.5) + " L" + (x + 4) + " " + (y - 2.5) }, INK, 1.8));
+        svgAdd(svg, "path", withLine({ d: "M" + (x - 3) + " " + (y + 4) + " Q" + x + " " + (y + 6) + " " + (x + 3) + " " + (y + 4) }, "rgba(80,40,60,0.45)", 1.4));
+      });
+      break;
+    case "side":
+      [left, right].forEach(function (x) {
+        svgAdd(svg, "ellipse", { cx: x, cy: y, rx: 4.4, ry: 3.6, fill: "#fff" });
+        svgAdd(svg, "circle", { cx: x + 2, cy: y, r: 2.2, fill: INK });
+      });
+      break;
+    case "suspicious":
+      [left, right].forEach(function (x) {
+        svgAdd(svg, "path", { d: "M" + (x - 4.5) + " " + (y - 0.5) + " L" + (x + 4.5) + " " + (y - 0.5) + " Q" + (x + 4) + " " + (y + 3.5) + " " + x + " " + (y + 3.5) + " Q" + (x - 4) + " " + (y + 3.5) + " " + (x - 4.5) + " " + (y - 0.5) + " Z", fill: "#fff" });
+        svgAdd(svg, "circle", { cx: x - 1.5, cy: y + 1.3, r: 1.8, fill: INK });
+        svgAdd(svg, "path", withLine({ d: "M" + (x - 5) + " " + (y - 0.5) + " L" + (x + 5) + " " + (y - 0.5) }, INK, 1.8));
+      });
+      break;
+    case "crying":
+      [left, right].forEach(function (x) {
+        svgAdd(svg, "path", withLine({ d: "M" + (x - 4) + " " + (y + 1) + " Q" + x + " " + (y - 3) + " " + (x + 4) + " " + (y + 1) }));
+      });
+      svgAdd(svg, "path", { d: "M" + (left - 1) + " " + (y + 3) + " Q" + (left - 3.5) + " " + (y + 8) + " " + (left - 1) + " " + (y + 9) + " Q" + (left + 1.5) + " " + (y + 8) + " " + (left - 1) + " " + (y + 3) + " Z", fill: "#7cc4f0" });
+      svgAdd(svg, "path", { d: "M" + (right + 1) + " " + (y + 3) + " Q" + (right - 1.5) + " " + (y + 8) + " " + (right + 1) + " " + (y + 9) + " Q" + (right + 3.5) + " " + (y + 8) + " " + (right + 1) + " " + (y + 3) + " Z", fill: "#7cc4f0" });
+      break;
+    case "stars":
+      [left, right].forEach(function (x) {
+        var points = [];
+        for (var i = 0; i < 10; i++) {
+          var radius = i % 2 == 0 ? 5 : 2.2;
+          var angle = (Math.PI / 5) * i - Math.PI / 2;
+          points.push((x + radius * Math.cos(angle)).toFixed(2) + "," + (y + radius * Math.sin(angle)).toFixed(2));
+        }
+        svgAdd(svg, "polygon", { points: points.join(" "), fill: "#f5c542" });
+      });
+      break;
+    case "money":
+      // $ $ - for the jackpot fans
+      [left, right].forEach(function (x) {
+        var text = svgElement("text", { x: x, y: y + 3.5, "text-anchor": "middle", "font-size": 10, "font-weight": 700, "font-family": "Arial, sans-serif", fill: "#3f9d6b" });
+        text.textContent = "$";
+        svg.appendChild(text);
+      });
+      break;
     case "dizzy":
       [left, right].forEach(function (x) {
         svgAdd(svg, "path", withLine({
@@ -420,6 +508,38 @@ function drawMouth(svg, c) {
       break;
     case "sad":
       svgAdd(svg, "path", withLine({ d: "M43 61 Q50 54 57 61" }, dark));
+      break;
+    case "wide":
+      svgAdd(svg, "path", withLine({ d: "M39 54 Q50 64 61 54" }, dark));
+      break;
+    case "wow":
+      svgAdd(svg, "ellipse", { cx: 50, cy: 59, rx: 5.5, ry: 6.5, fill: dark });
+      svgAdd(svg, "ellipse", { cx: 50, cy: 62.5, rx: 3.2, ry: 2.2, fill: "#e0675a" });
+      break;
+    case "cat":
+      // :3
+      svgAdd(svg, "path", withLine({ d: "M43 56 Q46.5 60 50 56 Q53.5 60 57 56" }, dark, 2.2));
+      break;
+    case "nervous":
+      svgAdd(svg, "path", withLine({ d: "M42 58 L45 56 L48 58 L51 56 L54 58 L57 56" }, dark, 2));
+      break;
+    case "whistle":
+      svgAdd(svg, "circle", { cx: 53, cy: 58, r: 2.6, fill: "none", stroke: dark, "stroke-width": 2 });
+      svgAdd(svg, "path", withLine({ d: "M62 52 L62 46 L65 45" }, "#6b7280", 1.4));
+      svgAdd(svg, "circle", { cx: 61, cy: 52.5, r: 1.4, fill: "#6b7280" });
+      break;
+    case "fangs":
+      svgAdd(svg, "path", withLine({ d: "M42 55 Q50 61 58 55" }, dark));
+      svgAdd(svg, "path", { d: "M44.5 56.4 L46 60.5 L47.5 57.5 Z M55.5 56.4 L54 60.5 L52.5 57.5 Z", fill: "#fff" });
+      break;
+    case "bucktooth":
+      svgAdd(svg, "path", withLine({ d: "M43 55 Q50 60 57 55" }, dark));
+      svgAdd(svg, "rect", { x: 47.4, y: 57.2, width: 5.2, height: 4.2, rx: 0.8, fill: "#fff", stroke: "#cfcfcf", "stroke-width": 0.5 });
+      svgAdd(svg, "path", { d: "M50 57.2 L50 61.4", stroke: "#cfcfcf", "stroke-width": 0.6 });
+      break;
+    case "drool":
+      svgAdd(svg, "path", withLine({ d: "M43 56 Q50 61 57 56" }, dark));
+      svgAdd(svg, "path", { d: "M54 58.5 Q53 64 55 65 Q57 64 56 58.2 Z", fill: "#9fd6f5" });
       break;
     case "kiss":
       svgAdd(svg, "path", withLine({ d: "M48 54 Q53 55.5 50 57.5 Q53 59.5 48 61" }, dark, 2.4));
@@ -483,16 +603,20 @@ function drawAccessory(svg, c) {
       svgAdd(svg, "rect", { x: 25, y: 33, width: 50, height: 7, rx: 3, fill: shade(c.shirt, 35) });
       svgAdd(svg, "circle", { cx: 50, cy: 12, r: 4, fill: shade(c.shirt, -40) });
       break;
-    case "partyhat":
-      svgAdd(svg, "path", { d: "M38 24 L50 2 L62 24 Z", fill: "#8b5cf6" });
-      svgAdd(svg, "path", { d: "M42 17 L58 17 M45 11 L55 11", stroke: "#f5d76e", "stroke-width": 2 });
-      svgAdd(svg, "circle", { cx: 50, cy: 3, r: 3, fill: "#f5d76e" });
+    case "partyhat": {
+      var party = onTop(svg, c, 22, 0.8);
+      svgAdd(party, "path", { d: "M38 24 L50 2 L62 24 Z", fill: "#8b5cf6" });
+      svgAdd(party, "path", { d: "M42 17 L58 17 M45 11 L55 11", stroke: "#f5d76e", "stroke-width": 2 });
+      svgAdd(party, "circle", { cx: 50, cy: 3, r: 3, fill: "#f5d76e" });
       break;
-    case "crown":
-      svgAdd(svg, "path", { d: "M34 24 L36 10 L43 18 L50 6 L57 18 L64 10 L66 24 Z", fill: "#e8c050", stroke: "#b8902a", "stroke-width": 1.2 });
+    }
+    case "crown": {
+      var crown = onTop(svg, c, 20, 0.85);
+      svgAdd(crown, "path", { d: "M34 24 L36 10 L43 18 L50 6 L57 18 L64 10 L66 24 Z", fill: "#e8c050", stroke: "#b8902a", "stroke-width": 1.2 });
       break;
+    }
     case "halo":
-      svgAdd(svg, "ellipse", { cx: 50, cy: 11, rx: 15, ry: 4, fill: "none", stroke: "#f5d76e", "stroke-width": 2.5 });
+      svgAdd(svg, "ellipse", { cx: 50, cy: Math.max(9, HAIR_TOP[c.hair] - 9), rx: 15, ry: 4, fill: "none", stroke: "#f5d76e", "stroke-width": 2.5 });
       break;
     case "headphones":
       svgAdd(svg, "path", { d: "M25 46 Q25 16 50 16 Q75 16 75 46", fill: "none", stroke: INK, "stroke-width": 4 });
@@ -508,13 +632,32 @@ function drawAccessory(svg, c) {
   }
 }
 
+/*
+ * A group for things that sit on the head (drawn for a bald head, base y 24):
+ * moved up onto high hair. Very high hair: it sinks in a bit and gets smaller,
+ * so it still fits into the picture.
+ */
+function onTop(svg, c, lowest, smaller) {
+  var base = 24 + (HAIR_TOP[c.hair] - 21);
+  var scale = 1;
+  if (base < lowest) {
+    base = lowest;
+    scale = smaller;
+  }
+  var group = svgElement("g", { transform: "translate(50 " + base + ") scale(" + scale + ") translate(-50 -24)" });
+  svg.appendChild(group);
+  return group;
+}
+
 // The whole avatar as an <svg> (square, the round shape comes from the CSS)
 function drawAvatar(config) {
   var c = cleanAvatar(config) || AVATAR_DEFAULT;
   // Zoomed in a bit, so the face is easy to see in small avatars
   var svg = svgElement("svg", { viewBox: "8 4 84 84", "aria-hidden": "true", class: "mm-avatar-svg" });
   svgAdd(svg, "rect", { x: 0, y: 0, width: 100, height: 100, fill: c.bg });
-  drawHairBack(svg, c);
+  var hat = HATS.indexOf(c.accessory) >= 0;
+  var crown = c.accessory == "crown" || c.accessory == "partyhat";
+  drawHairBack(svg, c, hat ? "hat" : crown ? "crown" : null);
   drawTop(svg, c);
   svgAdd(svg, "rect", { x: 44, y: 62, width: 12, height: 14, fill: shade(c.skin, 25) }); // neck
   // Hoodie: the hood lies around the neck
@@ -527,7 +670,7 @@ function drawAvatar(config) {
   svgAdd(svg, "circle", { cx: 36, cy: 54, r: 3.5, fill: "rgba(224,103,90,0.22)" });
   svgAdd(svg, "circle", { cx: 64, cy: 54, r: 3.5, fill: "rgba(224,103,90,0.22)" });
   drawBeard(svg, c);
-  drawHairFront(svg, c, HATS.indexOf(c.accessory) >= 0);
+  drawHairFront(svg, c, hat, crown);
   drawEyes(svg, c);
   drawMouth(svg, c);
   drawMustache(svg, c);
@@ -536,5 +679,5 @@ function drawAvatar(config) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { AVATAR_PARTS: AVATAR_PARTS, AVATAR_DEFAULT: AVATAR_DEFAULT, cleanAvatar: cleanAvatar };
+  module.exports = { AVATAR_PARTS: AVATAR_PARTS, AVATAR_DEFAULT: AVATAR_DEFAULT, AVATAR_COLORS: AVATAR_COLORS, cleanAvatar: cleanAvatar };
 }
