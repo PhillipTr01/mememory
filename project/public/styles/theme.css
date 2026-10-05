@@ -768,20 +768,8 @@ html.flip-scroll {
   width: 100%;
   max-width: 260px;
   font-size: 1.05rem;
-  color: var(--mm-text) !important;
+  color: #fff !important;
   text-decoration: none;
-}
-
-/* Neutral mid gray: stands out in the dark header without being bright */
-.mm-btn.play-button {
-  background: #454545;
-  border-color: #545454;
-  color: #f2f2f2 !important;
-}
-
-.mm-btn.play-button:hover:not(:disabled) {
-  background: #525252;
-  border-color: #616161;
 }
 
 .play-button .bi {
