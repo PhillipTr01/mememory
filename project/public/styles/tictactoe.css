@@ -1,21 +1,23 @@
-/* ---------- Tic Tac Toe XL: red and black ---------- */
+/* ---------- Tic Tac Toe XL: red and navy ---------- */
 :root {
-  --ttt-p0: #e5484d; /* red */
-  --ttt-p0-rgb: 229, 72, 77;
-  --ttt-p1: #0c0c0c; /* black */
-  --ttt-p1-rgb: 12, 12, 12;
-  /* Black pieces need a light color for borders and highlights */
-  --ttt-p1-mark: #d4d4d4;
-  --ttt-p1-mark-rgb: 212, 212, 212;
+  --ttt-p0: #e81932; /* red with pink number */
+  --ttt-p0-rgb: 232, 25, 50;
+  --ttt-p0-text: #f9a0b2;
+  --ttt-p1: #21212f; /* navy with light blue number */
+  --ttt-p1-rgb: 33, 33, 47;
+  --ttt-p1-text: #a9c1e9;
+  /* Navy pieces use the light blue for borders and highlights */
+  --ttt-p1-mark: #a9c1e9;
+  --ttt-p1-mark-rgb: 169, 193, 233;
   /* Board as big as possible without scrolling (players left, chat right) */
   --ttt-board: min(calc(100vh - 245px), 520px, calc(100vw - 690px));
 }
 
 /* Red accent on this page */
 body.ttt-theme {
-  --mm-accent: #e5484d;
-  --mm-accent-rgb: 229, 72, 77;
-  --mm-accent-hover: #c93b40;
+  --mm-accent: #e81932;
+  --mm-accent-rgb: 232, 25, 50;
+  --mm-accent-hover: #c8142a;
   --mm-gradient: var(--mm-accent);
   --mm-on-accent: #fff;
 }
@@ -173,14 +175,14 @@ body.ttt-theme {
 
 .ttt-piece.p0 {
   background: var(--ttt-p0);
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--ttt-p0-text);
 }
 
 .ttt-piece.p1 {
   background: var(--ttt-p1);
-  color: rgba(255, 255, 255, 0.7);
-  /* Light ring, so black pieces are visible on the dark board */
-  box-shadow: 0 0 0 1px #5a5a5a, inset 0 0 0 0.18em rgba(255, 255, 255, 0.1);
+  color: var(--ttt-p1-text);
+  /* Light blue ring, so navy pieces are visible on the dark board */
+  box-shadow: 0 0 0 1px rgba(var(--ttt-p1-mark-rgb), 0.45), inset 0 0 0 0.18em rgba(var(--ttt-p1-mark-rgb), 0.12);
 }
 
 /* Size on the board: share of the cell */
@@ -263,7 +265,7 @@ body.ttt-theme {
 .p0 .ttt-dot { background: var(--ttt-p0); }
 .p1 .ttt-dot {
   background: var(--ttt-p1);
-  box-shadow: 0 0 0 1px #6a6a6a;
+  box-shadow: 0 0 0 1px var(--ttt-p1-mark);
 }
 
 .ttt-sub {
