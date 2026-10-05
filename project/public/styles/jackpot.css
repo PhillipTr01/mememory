@@ -43,14 +43,147 @@ body.jackpot-theme {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Arena: the wheel and the panel next to it ---------- */
-.jp-arena {
+/* ---------- Draw menu ---------- */
+.jp-modes {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 1.5rem;
-  align-items: center;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
 }
 
+.jp-mode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface-2);
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: all 0.15s ease;
+}
+
+.jp-mode:hover:not(:disabled) {
+  color: var(--mm-text);
+}
+
+.jp-mode.active {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  color: var(--mm-text);
+}
+
+.jp-mode:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.jp-mode-icon {
+  font-size: 1.05rem;
+}
+
+/* Pot above the stage (not for the wheel, it has the pot in its middle) */
+.jp-potbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.jp-potbar .jp-center-status {
+  margin: 0;
+  max-width: none;
+}
+
+/* ---------- Stage: where the draw happens ---------- */
+.jp-stage {
+  position: relative;
+  min-height: 320px;
+}
+
+.jp-scene {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--mm-radius);
+}
+
+.jp-scene-empty {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  color: var(--mm-muted);
+  font-size: 0.9rem;
+  text-align: center;
+  z-index: 3;
+}
+
+.jp-shout {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  z-index: 6;
+  font-size: 3.2rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.jp-shout.small {
+  font-size: 2rem;
+}
+
+.jp-shout.strike {
+  color: var(--mm-accent);
+  font-size: 3.6rem;
+}
+
+.jp-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: #fff;
+  pointer-events: none;
+}
+
+.jp-confetti {
+  position: absolute;
+  top: -10px;
+  width: 8px;
+  height: 12px;
+  z-index: 6;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.jp-scene-winner {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.9rem 0.35rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.85);
+  border: 1px solid var(--mm-accent);
+  font-weight: 700;
+  transform: translateX(-50%);
+}
+
+/* ---------- 1. Wheel ---------- */
 .jp-wheel-wrap {
   position: relative;
   width: 300px;
@@ -152,6 +285,320 @@ body.jackpot-theme {
   font-size: 0.95rem;
 }
 
+/* ---------- 2. Roulette ---------- */
+.jp-roulette {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  padding: 0.7rem 0;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface-2);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+.jp-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 3px;
+  margin-left: -1.5px;
+  background: var(--mm-accent);
+  z-index: 2;
+}
+
+.jp-track {
+  display: flex;
+  gap: 8px;
+  width: max-content;
+  will-change: transform;
+}
+
+.jp-scene-roulette .jp-roulette:not(:has(.jp-track > :nth-child(6))) .jp-track {
+  margin: 0 auto;
+}
+
+.jp-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 110px;
+  height: 120px;
+  flex: 0 0 auto;
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface);
+  border-bottom: 4px solid var(--share);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.jp-tile .mm-avatar {
+  --size: 52px;
+}
+
+.jp-tile span:last-child {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jp-tile.chosen {
+  box-shadow: 0 0 0 3px var(--mm-accent);
+  transform: scale(1.06);
+  transition: transform 0.3s ease;
+}
+
+/* ---------- 3. Bowling ---------- */
+.jp-lane {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #6b4a2b;
+  background-image: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.08) 0 2px, transparent 2px 46px);
+  transition: transform 1.2s ease, filter 0.3s ease;
+  transform-origin: 80% 50%;
+}
+
+.jp-lane-gutter {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 14%;
+  background: #2b2b2b;
+}
+
+.jp-lane-gutter.top {
+  top: 0;
+}
+
+.jp-lane-gutter.bottom {
+  bottom: 0;
+}
+
+.jp-lane-arrows {
+  position: absolute;
+  left: 38%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform: translateY(-50%);
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  border-left: 14px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 -40px 0 0 transparent;
+}
+
+.jp-lane.charging {
+  animation: jp-lane-flash 0.3s steps(2) infinite;
+}
+
+@keyframes jp-lane-flash {
+  50% { filter: brightness(1.35); }
+}
+
+.jp-lane.rolling {
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.07) 0 30px, transparent 30px 60px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.08) 0 2px, transparent 2px 46px);
+}
+
+.jp-lane.zoom {
+  transform: scale(1.18);
+}
+
+.jp-ball {
+  position: absolute;
+  left: 6%;
+  top: 50%;
+  width: 46px;
+  height: 46px;
+  margin-top: -23px;
+  border-radius: 50%;
+  background: #1f2a44;
+  box-shadow: inset -6px -6px 0 rgba(0, 0, 0, 0.35);
+  z-index: 2;
+}
+
+.jp-ball::before,
+.jp-ball::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #0d0d0d;
+  top: 12px;
+  left: 14px;
+}
+
+.jp-ball::after {
+  top: 20px;
+  left: 22px;
+}
+
+.jp-pin {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+.jp-pin .mm-avatar {
+  box-shadow: 0 0 0 2px #fff;
+  z-index: 1;
+}
+
+.jp-pin-body {
+  width: 22px;
+  height: 30px;
+  margin-top: -6px;
+  border-radius: 45% 45% 30% 30%;
+  background: #f2f2f2;
+  border-top: 5px solid var(--share);
+}
+
+.jp-pin.standing .mm-avatar {
+  box-shadow: 0 0 0 3px var(--mm-accent), 0 0 18px var(--mm-accent);
+}
+
+/* ---------- 4. Plinko ---------- */
+.jp-plinko {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface-2);
+}
+
+.jp-peg {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: #4a4a4a;
+}
+
+.jp-slots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 16%;
+  display: flex;
+  gap: 2px;
+}
+
+.jp-slot {
+  flex: 1 1 0;
+  min-width: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--share);
+  opacity: 0.75;
+  border-radius: 4px 4px 0 0;
+  transition: opacity 0.2s ease, transform 0.3s ease;
+}
+
+.jp-slot.won {
+  opacity: 1;
+  transform: translateY(-4px);
+  box-shadow: 0 0 0 2px #fff, 0 0 16px var(--share);
+}
+
+.jp-plinko-ball {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: var(--mm-accent);
+  box-shadow: 0 0 10px rgba(var(--mm-accent-rgb), 0.8);
+  transform: translate(-100px, 0);
+  z-index: 2;
+}
+
+/* ---------- 5. Race ---------- */
+.jp-race {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 0;
+  border-radius: var(--mm-radius);
+  background: #2e4a2e;
+  transition: box-shadow 0.4s ease;
+}
+
+.jp-race.photo {
+  box-shadow: inset 0 0 80px 30px rgba(0, 0, 0, 0.6);
+}
+
+.jp-race-lane {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding-left: 40px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.jp-race-lane:first-child {
+  border-top: 0;
+}
+
+.jp-race-lane.won {
+  background: rgba(var(--mm-accent-rgb), 0.18);
+}
+
+.jp-race-chance {
+  position: absolute;
+  left: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.jp-runner {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  will-change: transform;
+}
+
+.jp-runner .mm-avatar {
+  box-shadow: 0 0 0 2px var(--share);
+}
+
+.jp-runner-horse {
+  font-size: 1.4rem;
+  transform: scaleX(-1);
+}
+
+.jp-finish {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 24px;
+  width: 10px;
+  background: repeating-linear-gradient(0deg, #fff 0 8px, #1b1b1b 8px 16px);
+  opacity: 0.85;
+}
+
+/* ---------- Bet panel and records under the stage ---------- */
 .jp-panel {
   display: flex;
   flex-direction: column;
@@ -431,14 +878,21 @@ body.jackpot-theme {
   }
 }
 
-@media (max-width: 991px) {
-  .jp-arena {
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: center;
+@media (max-width: 575px) {
+  .jp-modes {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
-  .jp-panel {
-    width: 100%;
+  .jp-mode span:last-child {
+    display: none;
+  }
+
+  .jp-shout {
+    font-size: 2.2rem;
+  }
+
+  .jp-shout.strike {
+    font-size: 2.6rem;
   }
 }
 
@@ -450,5 +904,14 @@ body.jackpot-theme {
   .jp-bet,
   .jp-records {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 575px) {
+
+  .jp-scene,
+  .jp-stage {
+    height: 280px;
+    min-height: 280px;
   }
 }

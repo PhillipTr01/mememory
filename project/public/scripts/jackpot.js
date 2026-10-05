@@ -4,7 +4,7 @@ const socket = io("/jackpot");
 var state = null;
 var myName = null;
 var myCoins = 0;
-var spunRound = null; // the wheel spins once per round
+var spunRound = null; // the draw animation runs once per round
 var spinning = false;
 var countdownTimer = null;
 var countdownEnd = null;
@@ -70,11 +70,13 @@ socket.on("jackpotState", (data) => {
     spunRound = state.round;
     // Opened in the middle of the draw: no long spin
     var short = previous == null || previous.round !== state.round || previous.phase != "countdown";
-    render();
-    spinWheel(short);
+    playDraw(short);
     return;
   }
-  if (state.phase == "open" && previous && previous.round !== state.round) resetWheel();
+  if (state.phase == "open" && previous && previous.round !== state.round) {
+    document.getElementById("jpResult").hidden = true;
+    document.getElementById("jpStage").replaceChildren();
+  }
   render();
 });
 
@@ -107,9 +109,12 @@ function render() {
   document.getElementById("jpRound").innerText = "Round " + state.round;
   document.getElementById("jpTotal").innerText = "🪙 " + formatCoins(state.total);
   document.getElementById("jpViewers").innerText = state.viewers + " here";
+  renderModes();
+  // The pot is in the middle of the wheel, the other draws show it above
+  document.getElementById("jpPotbar").hidden = drawMode == "wheel";
+  // A running animation keeps its scene, a finished one stays until the next round
+  if (!spinning && !(state.phase == "drawing" && spunRound == state.round)) currentDraw().idle(document.getElementById("jpStage"));
   renderStatus();
-  // The wheel keeps its segments while it spins
-  if (!spinning) renderWheel();
   renderPlayers();
   renderBets();
   renderRecords();
@@ -143,135 +148,87 @@ function renderStatus() {
     center.innerText = state.draw.winner;
     center.className = "jp-center-status winner";
   }
-}
-
-/* ---------- The wheel ---------- */
-
-var SVG_NS_JP = "http://www.w3.org/2000/svg";
-
-// Point on the circle: angle 0 = top, clockwise
-function point(radius, angle) {
-  var rad = ((angle - 90) * Math.PI) / 180;
-  return [100 + radius * Math.cos(rad), 100 + radius * Math.sin(rad)];
-}
-
-// A piece of the ring from angle a to angle b
-function ringPath(a, b, outer, inner) {
-  var large = b - a > 180 ? 1 : 0;
-  var p1 = point(outer, a);
-  var p2 = point(outer, b);
-  var p3 = point(inner, b);
-  var p4 = point(inner, a);
-  return (
-    "M" + p1.join(" ") + " A" + outer + " " + outer + " 0 " + large + " 1 " + p2.join(" ") +
-    " L" + p3.join(" ") + " A" + inner + " " + inner + " 0 " + large + " 0 " + p4.join(" ") + " Z"
-  );
-}
-
-function renderWheel() {
-  var svg = document.getElementById("jpWheelSvg");
-  var avatars = document.getElementById("jpWheelAvatars");
-  var children = [];
-  var avatarItems = [];
-  var outer = 96;
-  var inner = 70;
-
-  // Empty ring
-  var track = document.createElementNS(SVG_NS_JP, "circle");
-  track.setAttribute("cx", 100);
-  track.setAttribute("cy", 100);
-  track.setAttribute("r", (outer + inner) / 2);
-  track.setAttribute("fill", "none");
-  track.setAttribute("stroke", "#2a2a2a");
-  track.setAttribute("stroke-width", outer - inner);
-  children.push(track);
-
-  // One piece per bet, in the order of the bets (a later bet gets the end of the wheel)
-  var angle = 0;
-  var bets = (state.bets || []).map((bet) => ({ name: bet.name, coins: bet.amount, from: bet.from, to: bet.to }));
-  bets.forEach((entry) => {
-    var size = (entry.coins / state.total) * 360;
-    var piece;
-    if (size >= 359.99) {
-      // One player: the whole ring
-      piece = document.createElementNS(SVG_NS_JP, "circle");
-      piece.setAttribute("cx", 100);
-      piece.setAttribute("cy", 100);
-      piece.setAttribute("r", (outer + inner) / 2);
-      piece.setAttribute("fill", "none");
-      piece.setAttribute("stroke", shareColor(entry.name));
-      piece.setAttribute("stroke-width", outer - inner);
-    } else {
-      piece = document.createElementNS(SVG_NS_JP, "path");
-      piece.setAttribute("d", ringPath(angle, angle + size, outer, inner));
-      piece.setAttribute("fill", shareColor(entry.name));
-      piece.setAttribute("stroke", "#1b1b1b");
-      piece.setAttribute("stroke-width", 1.2);
-    }
-    // Hover: whose bet and which tickets
-    var tip = document.createElementNS(SVG_NS_JP, "title");
-    tip.textContent = entry.name + ": tickets #" + entry.from + " - #" + entry.to + " (" + percent(entry.from - 1) + " - " + percent(entry.to) + ")";
-    piece.appendChild(tip);
-    children.push(piece);
-
-    // The avatar in the middle of the piece (only if there is room)
-    if (size >= 14) {
-      var middle = point((outer + inner) / 2, angle + size / 2);
-      var avatar = createAvatar(entry.name, "sm");
-      avatar.classList.add("jp-wheel-avatar");
-      avatar.style.left = middle[0] / 2 + "%";
-      avatar.style.top = middle[1] / 2 + "%";
-      avatarItems.push(avatar);
-    }
-    angle += size;
+  // The wheel shows the pot and the status in its middle
+  document.querySelectorAll(".jp-mirror-total").forEach((total) => (total.innerText = document.getElementById("jpTotal").innerText));
+  document.querySelectorAll(".jp-mirror-status").forEach((mirror) => {
+    mirror.innerText = center.innerText;
+    mirror.className = center.className + " jp-mirror-status";
   });
-
-  svg.replaceChildren(...children);
-  avatars.replaceChildren(...avatarItems);
 }
 
-// Spin until the winning ticket is under the pointer (top)
-function spinWheel(short) {
-  var wheel = document.getElementById("jpWheel");
-  var draw = state.draw;
-  var target = ((draw.ticket + 0.5) / draw.total) * 360;
-  // Not too fast: a very fast wheel looks like it turns backwards (wagon-wheel effect)
-  var turns = short ? 1 : 3;
-  var duration = short ? 900 : state.spin - 900;
+/* ---------- The draw (see jackpot_draws.js) ---------- */
 
-  renderWheel();
-  spinning = true;
-  wheel.classList.add("spinning");
-  wheel.style.transition = "none";
-  wheel.style.transform = "rotate(0deg)";
-  document.getElementById("jpResult").hidden = true;
-  requestAnimationFrame(() =>
-    requestAnimationFrame(() => {
-      wheel.style.transition = `transform ${duration}ms cubic-bezier(0.3, 0.35, 0.2, 1)`;
-      // Clockwise, until the winning ticket is under the pointer
-      wheel.style.transform = `rotate(${turns * 360 - target}deg)`;
+// Which animation this viewer wants to see (only on this device)
+var drawMode = "wheel";
+try {
+  drawMode = localStorage.getItem("jackpotDrawMode") || "wheel";
+} catch (error) {
+  // storage blocked: the wheel
+}
+
+function currentDraw() {
+  return DRAWS[drawMode] || DRAWS.wheel;
+}
+
+function renderModes() {
+  var modes = document.getElementById("jpModes");
+  modes.replaceChildren(
+    ...DRAW_MODES.map((mode) => {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "jp-mode" + (mode.id == drawMode ? " active" : "");
+      button.setAttribute("role", "radio");
+      button.setAttribute("aria-checked", mode.id == drawMode);
+      button.disabled = spinning;
+      button.title = mode.description;
+      var icon = document.createElement("span");
+      icon.className = "jp-mode-icon";
+      icon.innerText = mode.icon;
+      var label = document.createElement("span");
+      label.innerText = mode.label;
+      button.append(icon, label);
+      button.addEventListener("click", () => {
+        if (spinning || mode.id == drawMode) return;
+        drawMode = mode.id;
+        try {
+          localStorage.setItem("jackpotDrawMode", drawMode);
+        } catch (error) {
+          // only for this page then
+        }
+        document.getElementById("jpStage").replaceChildren();
+        render();
+      });
+      return button;
     }),
   );
-
-  setTimeout(() => {
-    spinning = false;
-    wheel.classList.remove("spinning");
-    var result = document.getElementById("jpResult");
-    var won = draw.winner == myName;
-    result.innerText = won
-      ? "You win " + formatCoins(draw.total) + " coins!"
-      : draw.winner + " wins " + formatCoins(draw.total) + " coins";
-    result.classList.toggle("won", won);
-    result.hidden = false;
-    render();
-  }, duration);
 }
 
-function resetWheel() {
-  var wheel = document.getElementById("jpWheel");
-  wheel.style.transition = "none";
-  wheel.style.transform = "rotate(0deg)";
+// The pot as the draws need it: one piece per bet, in the order of the bets
+function drawBets() {
+  return (state.bets || []).map((bet) => ({ name: bet.name, coins: bet.amount, from: bet.from, to: bet.to }));
+}
+
+function playDraw(short) {
+  var draw = state.draw;
+  var duration = short ? 900 : state.spin - 900;
+  var stage = document.getElementById("jpStage");
+  spinning = true;
   document.getElementById("jpResult").hidden = true;
+  render();
+  currentDraw()
+    .play(stage, draw, duration, short)
+    .catch((error) => console.error("Draw animation failed:", error))
+    .finally(() => {
+      spinning = false;
+      var result = document.getElementById("jpResult");
+      var won = draw.winner == myName;
+      result.innerText = won
+        ? "You win " + formatCoins(draw.total) + " coins!"
+        : draw.winner + " wins " + formatCoins(draw.total) + " coins";
+      result.classList.toggle("won", won);
+      result.hidden = false;
+      render();
+    });
 }
 
 /* ---------- Players, deposits, records ---------- */

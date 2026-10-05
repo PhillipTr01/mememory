@@ -57,7 +57,7 @@ module.exports = {
 
   // Jackpot: the draw starts this long after the second player joined the pot
   JACKPOT_COUNTDOWN: 30 * 1000,
-  JACKPOT_SPIN: 6500, // the roulette animation
+  JACKPOT_SPIN: 8000, // the draw animation (wheel, roulette, bowling, ...)
   JACKPOT_PAUSE: 5000, // result is shown, then a new round starts
   JACKPOT_MAX_BETS: 5, // separate bets per player and round (any amount)
   JACKPOT_HISTORY: 10,
