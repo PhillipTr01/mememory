@@ -6,36 +6,28 @@ function playSingleplayer(difficulty) {
   });
 }
 
-/* Game for "Create room" (remembered for the next visit) */
-var selectedGame = "memory";
-try {
-  if (localStorage.getItem("mm-game") == "tictactoe") selectedGame = "tictactoe";
-} catch (error) {}
+/* Clicking a game creates a room for it */
+var creating = false;
 
-function selectGame(game) {
-  selectedGame = game;
-  try {
-    localStorage.setItem("mm-game", game);
-  } catch (error) {}
-  document.querySelectorAll("#gamePicker button").forEach((button) => {
-    var active = button.dataset.game == game;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-checked", active);
-  });
-}
-
-document.querySelectorAll("#gamePicker button").forEach((button) =>
-  button.addEventListener("click", () => selectGame(button.dataset.game)),
-);
-selectGame(selectedGame);
-
-function createRoom() {
-  var button = document.getElementById("createGameButton");
-  button.disabled = true;
+function createRoom(game) {
+  if (creating) return;
+  creating = true;
+  setGameTilesDisabled(true);
   // Enable again if the server doesn't answer
-  setTimeout(() => (button.disabled = false), 5000);
-  socket.emit(selectedGame == "tictactoe" ? "playTicTacToe" : "playMultiplayer");
+  setTimeout(() => {
+    creating = false;
+    setGameTilesDisabled(false);
+  }, 5000);
+  socket.emit(game == "tictactoe" ? "playTicTacToe" : "playMultiplayer");
 }
+
+function setGameTilesDisabled(disabled) {
+  document.querySelectorAll("#gamePicker .game-tile").forEach((tile) => (tile.disabled = disabled));
+}
+
+document.querySelectorAll("#gamePicker .game-tile").forEach((tile) =>
+  tile.addEventListener("click", () => createRoom(tile.dataset.game)),
+);
 
 function joinMultiplayer(gameID) {
   gameID = (gameID || document.getElementById("joinLobbyTag").value).trim();
@@ -182,7 +174,8 @@ function createRoomRow(room) {
 /* ---------- Connection ---------- */
 
 socket.on("gameError", (message) => {
-  document.getElementById("createGameButton").disabled = false;
+  creating = false;
+  setGameTilesDisabled(false);
   showToast(message, "error");
 });
 
