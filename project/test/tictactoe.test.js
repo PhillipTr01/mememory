@@ -250,3 +250,35 @@ test("tictactoe: unknown games", async () => {
   socket.emit("joinGame", null);
   await h.once(socket, "noGameFound");
 });
+
+test("tictactoe: chat with history, system messages and spectators", async () => {
+  const { gameID, alice, bob } = await startedGame();
+  const message = new Promise((resolve) =>
+    bob.on("chatMessage", (m) => m.type === "user" && resolve(m)),
+  );
+  alice.emit("sendChatMessage", { message: "  gg   wp  " });
+  const received = await message;
+  assert.strictEqual(received.text, "gg wp");
+  assert.strictEqual(received.name, "alice");
+  assert.strictEqual(received.spectator, false);
+
+  // Too fast / invalid
+  alice.emit("sendChatMessage", { message: "again" });
+  assert.strictEqual(await h.once(alice, "chatError"), "You are sending messages too fast.");
+  alice.emit("sendChatMessage", null);
+
+  // Late joiners get the history
+  const carol = client("/tictactoe", "carol");
+  await h.once(carol, "connect");
+  const history = h.once(carol, "chatHistory");
+  carol.emit("joinGame", { gameID });
+  const messages = await history;
+  assert.ok(messages.some((m) => m.text === "gg wp"));
+  assert.ok(messages.some((m) => m.type === "system" && /starts/.test(m.text)));
+
+  const fromCarol = new Promise((resolve) =>
+    alice.on("chatMessage", (m) => m.name === "carol" && resolve(m)),
+  );
+  carol.emit("sendChatMessage", { message: "hi" });
+  assert.strictEqual((await fromCarol).spectator, true);
+});

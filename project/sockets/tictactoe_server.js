@@ -5,6 +5,7 @@ const { STATUS, seatOf, serialize } = require("../game/tictactoe_room");
 const { notifyLobby } = require("../game/multiplayer_room");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
+const chat = require("../game/chat");
 
 module.exports = function (io) {
   const tictactoe = io.of("/tictactoe");
@@ -17,12 +18,17 @@ module.exports = function (io) {
     notifyLobby();
   }
 
-  function startGame(room, starter) {
+  function systemMessage(gameID, room, text, icon) {
+    chat.system(tictactoe, gameID, room, text, icon);
+  }
+
+  function startGame(gameID, room, starter) {
     room.starter = starter;
     room.game = ttt.newGame(starter);
     room.forfeit = false;
     room.status = STATUS.PLAYING;
     room.seats.forEach((seat) => (seat.rematch = false));
+    systemMessage(gameID, room, `New round - ${room.seats[starter].name} starts.`, "start");
   }
 
   function isEmpty(room) {
@@ -37,10 +43,14 @@ module.exports = function (io) {
     const seat = room.seats[index];
     if (seat == null) return;
 
+    systemMessage(gameID, room, `${seat.name} left the game.`, "leave");
     if (room.status === STATUS.PLAYING && room.game != null && !ttt.isOver(room.game)) {
       room.game.winner = 1 - index;
       room.forfeit = true;
-      if (room.seats[1 - index] != null) room.seats[1 - index].wins++;
+      if (room.seats[1 - index] != null) {
+        room.seats[1 - index].wins++;
+        systemMessage(gameID, room, `${room.seats[1 - index].name} wins the round.`, "trophy");
+      }
     }
 
     room.seats[index] = null;
@@ -96,6 +106,8 @@ module.exports = function (io) {
 
         rooms.touch(room);
         let index = seatOf(room, username);
+        const wasSeated = index >= 0;
+        const rejoined = wasSeated && !room.seats[index].connected;
 
         if (index >= 0) {
           // Back after a reload / lost connection. Another open tab is replaced.
@@ -123,10 +135,6 @@ module.exports = function (io) {
             rematch: false,
           };
           if (room.host == null || seatOf(room, room.host) < 0) room.host = username;
-          // Both seats taken -> play, random player starts
-          if (!room.seats.includes(null)) {
-            startGame(room, Math.random() < 0.5 ? 0 : 1);
-          }
         } else {
           room.spectators.set(socket.id, username);
         }
@@ -136,6 +144,21 @@ module.exports = function (io) {
         room.emptySince = null;
 
         socket.emit("joined", { username: username, seat: index });
+        socket.emit("chatHistory", room.chat);
+        if (rejoined) {
+          systemMessage(gameID, room, `${username} is back.`, "reconnect");
+        } else if (!wasSeated) {
+          systemMessage(
+            gameID,
+            room,
+            index >= 0 ? `${username} joined the game.` : `${username} is watching.`,
+            index >= 0 ? "join" : "watch",
+          );
+        }
+        // Both seats taken -> play, random player starts
+        if (room.status === STATUS.WAITING && !room.seats.includes(null)) {
+          startGame(gameID, room, Math.random() < 0.5 ? 0 : 1);
+        }
         emitState(gameID, room);
       }),
     );
@@ -158,7 +181,12 @@ module.exports = function (io) {
         rooms.touch(room);
         if (ttt.isOver(room.game)) {
           room.status = STATUS.FINISHED;
-          if (room.game.winner != null) room.seats[room.game.winner].wins++;
+          if (room.game.winner != null) {
+            room.seats[room.game.winner].wins++;
+            systemMessage(socket.gameID, room, `${username} wins the round!`, "trophy");
+          } else {
+            systemMessage(socket.gameID, room, "Draw - nobody can move anymore.", "info");
+          }
         }
         emitState(socket.gameID, room);
       }),
@@ -176,10 +204,18 @@ module.exports = function (io) {
 
         room.seats[index].rematch = !room.seats[index].rematch;
         if (room.seats.every((seat) => seat != null && seat.rematch)) {
-          startGame(room, 1 - room.starter);
+          startGame(socket.gameID, room, 1 - room.starter);
         }
         rooms.touch(room);
         emitState(socket.gameID, room);
+      }),
+    );
+
+    socket.on(
+      "sendChatMessage",
+      safe("sendChatMessage", (data) => {
+        const room = rooms.get(socket.gameID, "tictactoe");
+        chat.fromUser(tictactoe, socket, room, data, room != null && seatOf(room, username) < 0);
       }),
     );
 
@@ -201,6 +237,7 @@ module.exports = function (io) {
         if (index >= 0 && room.seats[index].socketId === socket.id) {
           room.seats[index].connected = false;
           room.seats[index].disconnectedAt = Date.now();
+          systemMessage(gameID, room, `${username} lost the connection...`, "disconnect");
         }
         if (isEmpty(room) && room.emptySince == null) room.emptySince = Date.now();
         emitState(gameID, room);

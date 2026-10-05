@@ -11,8 +11,7 @@ const {
 } = require("../game/multiplayer_room");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
-
-let messageId = 0;
+const chat = require("../game/chat");
 
 module.exports = function (io) {
   const multiPlayer = io.of("/multiplayer");
@@ -26,19 +25,9 @@ module.exports = function (io) {
     notifyLobby();
   }
 
-  // Adds a message to the chat history and sends it to everyone (sender included).
-  function addChatMessage(gameID, room, message) {
-    const entry = { id: ++messageId, time: Date.now(), ...message };
-    room.chat.push(entry);
-    if (room.chat.length > config.CHAT_HISTORY) {
-      room.chat.splice(0, room.chat.length - config.CHAT_HISTORY);
-    }
-    multiPlayer.to(gameID).emit("chatMessage", entry);
-  }
-
   // Chat message from the server itself (joins, leaves, game start, ...)
   function systemMessage(gameID, room, text, icon) {
-    addChatMessage(gameID, room, { type: "system", text: text, icon: icon || "info" });
+    chat.system(multiPlayer, gameID, room, text, icon);
   }
 
   // setTimeout that is cancelled when the room is removed
@@ -337,24 +326,7 @@ module.exports = function (io) {
       "sendChatMessage",
       safe("sendChatMessage", (data) => {
         const room = rooms.get(socket.gameID, "multiplayer");
-        if (room == null || data == null || typeof data.message !== "string") return;
-
-        const text = data.message.replace(/\s+/g, " ").trim().slice(0, config.MAX_CHAT_LENGTH);
-        if (text.length == 0) return;
-
-        const now = Date.now();
-        if (now - (socket.lastChatMessage || 0) < config.CHAT_COOLDOWN) {
-          socket.emit("chatError", "You are sending messages too fast.");
-          return;
-        }
-        socket.lastChatMessage = now;
-
-        addChatMessage(socket.gameID, room, {
-          type: "user",
-          name: username,
-          spectator: socket.spectator,
-          text: text,
-        });
+        chat.fromUser(multiPlayer, socket, room, data, socket.spectator);
       }),
     );
 

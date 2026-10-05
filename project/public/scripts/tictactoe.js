@@ -14,6 +14,11 @@ var sessionOver = false;
 
 /* ---------- Helpers ---------- */
 
+// Used by chat.js
+function chatUsername() {
+  return myName;
+}
+
 function mySeat() {
   if (state == null || myName == null) return -1;
   return state.seats.findIndex((seat) => seat != null && seat.name == myName);
@@ -259,6 +264,10 @@ function renderFooter() {
     );
   }
 
+  var online =
+    state.seats.filter((seat) => seat != null && seat.connected).length + state.spectators.length;
+  document.getElementById("onlineCount").innerText = online + " online";
+
   var spectators = document.getElementById("spectatorInfo");
   spectators.hidden = state.spectators.length == 0;
   spectators.replaceChildren(
@@ -344,6 +353,8 @@ function showNotice(title, text, actionLabel, action) {
 /* ---------- Page setup ---------- */
 
 document.addEventListener("DOMContentLoaded", () => {
+  setupChat();
+
   var board = document.getElementById("board");
   for (var index = 0; index < 9; index++) {
     var cell = document.createElement("button");
