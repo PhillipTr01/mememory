@@ -19,8 +19,10 @@ function createAvatar(name, size, online) {
   avatar.title = name;
   avatar.dataset.name = name;
   if (typeof drawAvatar == "function") {
-    if (name in avatarCache) applyAvatar(avatar, avatarCache[name]);
-    else requestAvatar(name);
+    // Right away: the saved one, or the default avatar of the name (no flicker
+    // for most users); an own avatar replaces it once it is loaded
+    applyAvatar(avatar, name in avatarCache ? avatarCache[name] : null);
+    if (!(name in avatarCache)) requestAvatar(name);
   }
 
   if (online !== undefined) {
@@ -51,12 +53,15 @@ function saveAvatarCache() {
   }
 }
 
-// The letter avatar becomes the drawn one (the online dot stays)
+// config: own avatar, null = the default avatar of the name, "letter" = letter
+// (the online dot stays)
 function applyAvatar(element, config) {
   var old = element.querySelector(".mm-avatar-svg");
   if (old) old.remove();
-  element.classList.toggle("has-avatar", config != null);
-  if (config == null) {
+  if (config == null) config = nameAvatar(element.dataset.name);
+  var letter = config == AVATAR_LETTER;
+  element.classList.toggle("has-avatar", !letter);
+  if (letter) {
     if (element.firstChild == null || element.firstChild.nodeType != Node.TEXT_NODE) {
       element.insertBefore(document.createTextNode(element.dataset.name.charAt(0)), element.firstChild);
     }

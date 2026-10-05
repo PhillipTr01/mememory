@@ -70,7 +70,8 @@ var editTab = 'hair';
 function openAvatarEditor() {
     if (!myName) return;
     var current = avatarCache[myName];
-    editing = current ? Object.assign({}, current) : randomAvatar();
+    // Own avatar, the letter, or (nothing saved yet) the default avatar of the name
+    editing = current == AVATAR_LETTER ? null : Object.assign({}, current || nameAvatar(myName));
     document.getElementById('avatarEditor').hidden = false;
     renderAvatarEditor();
     document.getElementById('avatarEditor').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -180,7 +181,7 @@ function saveAvatar() {
         method: 'PUT',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatar: editing }),
+        body: JSON.stringify({ avatar: editing == null ? AVATAR_LETTER : editing }),
     })
         .then((response) => (response.ok ? response.json() : Promise.reject(response.status)))
         .then((data) => {
