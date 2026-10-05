@@ -390,10 +390,18 @@
   margin-left: 0.4rem;
 }
 
-/* Other games in the list */
-.mode-badge.game-badge {
-  background: var(--mm-surface-3);
-  color: var(--mm-text);
+/* Game icon column */
+.rooms-table .game-col {
+  width: 1%;
+  padding-right: 0;
+  text-align: center;
+}
+
+.game-icon-small {
+  width: 32px;
+  height: 32px;
+  display: block;
+  margin: 0 auto;
 }
 
 /* Square button with only an icon (Watch) */
