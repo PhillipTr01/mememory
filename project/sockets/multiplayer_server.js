@@ -809,6 +809,8 @@ module.exports = function (io) {
           );
         } else {
           socket.emit("activateEndTurn");
+          // Everybody sees that two wrong cards are open (power-up mode: End turn in the bar)
+          emitRoomState(socket.gameID, room);
         }
       }
     }

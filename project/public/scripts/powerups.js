@@ -25,19 +25,41 @@ function canUsePowerup(state, id) {
 
 /* ---------- Own hand ---------- */
 
+var endTurnReady = false; // for opening the bar when the turn can be ended
+var barTurnKey = null; // a new turn closes the bar
+
 function renderPowerups(state) {
-  var bar = document.getElementById("powerupBar");
+  var bar = document.getElementById("actionBar");
   var mine = getMyPlayer(state);
   var show = state.mode == "powerups" && state.status == "playing" && mine != null && mine.active && !me.spectator;
   bar.hidden = !show;
+  // The bar has its own End turn button in this mode
+  document.body.classList.toggle("has-action-bar", show);
 
   // Fog: my cards are blurred during my turn
   document.getElementById("board").classList.toggle("fogged", !!(mine && mine.fog && isMyTurn(state)));
   if (!show) {
     cancelTargeting();
+    endTurnReady = false;
     return;
   }
   if (targeting && !canUsePowerup(state, targeting.id)) cancelTargeting();
+
+  // Every new turn starts with the bar closed, so it doesn't cover the board
+  var turnKey = state.turn + ":" + state.players.map((p) => p.name).join(",");
+  if (turnKey != barTurnKey) {
+    barTurnKey = turnKey;
+    setActionBarOpen(false);
+  }
+
+  // Two wrong cards: End turn right away (the bar opens if it was closed)
+  var ready = isMyTurn(state) && state.checkingCards && state.openedCount == 2;
+  var endButton = document.getElementById("actionEndTurn");
+  endButton.disabled = !ready;
+  endButton.classList.toggle("mm-btn-primary", ready);
+  endButton.classList.toggle("ready", ready);
+  if (ready && !endTurnReady) setActionBarOpen(true);
+  endTurnReady = ready;
 
   var slots = document.getElementById("powerupSlots");
   slots.replaceChildren();
@@ -96,6 +118,31 @@ function createPowerupIcons(player) {
   return icons;
 }
 
+/* ---------- Action bar: open / close ---------- */
+
+function setActionBarOpen(open) {
+  var bar = document.getElementById("actionBar");
+  bar.classList.toggle("collapsed", !open);
+  document.getElementById("actionToggle").setAttribute("aria-expanded", open);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  setActionBarOpen(false);
+
+  document.getElementById("actionToggle").addEventListener("click", () => {
+    setActionBarOpen(document.getElementById("actionBar").classList.contains("collapsed"));
+  });
+  document.getElementById("actionEndTurn").addEventListener("click", () => {
+    if (endTurnReady) emitEndTurn();
+  });
+});
+
+// Enter ends the turn when it can be ended (not while typing in the chat)
+document.addEventListener("keydown", (event) => {
+  if (event.key != "Enter" || !endTurnReady || event.target.closest("input, textarea, button")) return;
+  emitEndTurn();
+});
+
 /* ---------- Using power-ups ---------- */
 
 function startPowerup(id) {
@@ -142,7 +189,7 @@ function cancelTargeting() {
   targeting = null;
   document.getElementById("board").classList.remove("targeting");
   document.querySelectorAll(".card.target-picked").forEach((card) => card.classList.remove("target-picked"));
-  if (room && !document.getElementById("powerupBar").hidden) renderPowerups(room);
+  if (room && !document.getElementById("actionBar").hidden) renderPowerups(room);
 }
 
 document.addEventListener("keydown", (event) => {

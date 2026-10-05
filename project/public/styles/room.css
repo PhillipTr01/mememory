@@ -1500,20 +1500,6 @@
   color: var(--mm-accent);
 }
 
-/* Own hand under the player list */
-.powerup-bar {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--mm-border);
-}
-
-.powerup-head {
-  margin-bottom: 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--mm-muted);
-}
-
 .powerup-slots {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1751,31 +1737,6 @@
   font-size: 0.6rem;
 }
 
-.powerup-bar {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-}
-
-/* ---------- Power-up bar under the board ---------- */
-.powerup-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.9rem;
-  margin-top: 0.75rem;
-  padding-top: 0;
-  border-top: 0;
-}
-
-.powerup-head {
-  margin: 0;
-}
-
-/* The board leaves room for the bar */
-body.mode-powerups .memory-grid {
-  width: min(100%, calc((100vh - 140px - 80px) * 11 / 6));
-}
-
 /* Power-up icons in the line under the player's name */
 .player-sub.with-powers {
   display: flex;
@@ -1793,4 +1754,94 @@ body.mode-powerups .memory-grid {
   width: 1.2rem;
   height: 1.2rem;
   font-size: 0.7rem;
+}
+
+/* ---------- Power-up mode: floating action bar ---------- */
+.action-bar {
+  position: fixed;
+  z-index: 1500;
+  bottom: 1rem;
+  /* Centered over the board (the side column is 340px + gap) */
+  left: calc((100vw - 340px - 1.25rem) / 2);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.35rem 0.75rem 0.75rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: rgba(27, 27, 27, 0.94);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  animation: mm-fade-up 0.25s ease;
+}
+
+@media (max-width: 991px) {
+  .action-bar {
+    left: 50%;
+  }
+}
+
+.action-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.5rem 0.3rem;
+  border: 0;
+  background: none;
+  color: var(--mm-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.action-toggle:hover {
+  color: var(--mm-text);
+}
+
+.action-toggle .bi {
+  transition: transform 0.2s ease;
+}
+
+.action-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.action-end {
+  height: 60px;
+  white-space: nowrap;
+}
+
+/* Two wrong cards: End turn is the next step */
+.action-end.ready {
+  animation: action-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes action-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--mm-accent-rgb), 0.55); }
+  50% { box-shadow: 0 0 0 6px rgba(var(--mm-accent-rgb), 0); }
+}
+
+/* Collapsed: only the small pill */
+.action-bar.collapsed {
+  padding: 0.35rem 0.75rem;
+}
+
+.action-bar.collapsed .action-content {
+  display: none;
+}
+
+.action-bar.collapsed .action-toggle {
+  padding: 0;
+  color: var(--mm-text);
+}
+
+.action-bar.collapsed .action-toggle .bi {
+  transform: rotate(180deg);
+}
+
+/* Toasts above the floating action bar, not on top of it */
+body.has-action-bar #mm-toasts {
+  bottom: 9rem;
 }

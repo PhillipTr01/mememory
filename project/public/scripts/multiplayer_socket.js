@@ -218,8 +218,8 @@ socket.on("roomState", (state) => {
 
   var player = getMyPlayer(state);
   var inGame = (state.status == "playing" || state.status == "starting") && player != null && player.active;
-  // Speed round: the turn passes on its own after two wrong cards
-  document.getElementById("playButton").hidden = !inGame || state.mode == "speed";
+  // Speed round: the turn passes on its own; power-ups: End turn is in the action bar
+  document.getElementById("playButton").hidden = !inGame || state.mode == "speed" || state.mode == "powerups";
   updateTurnTimer(state);
 
   // My turn is over -> the End Turn button can't be used anymore

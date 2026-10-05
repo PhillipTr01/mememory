@@ -161,11 +161,6 @@
                     <div class="container-xxl p-0 m-0 mx-auto">
                         <div class="memory-grid" id="memoryTable"></div>
                     </div>
-                    <!--- Power-up mode: the own hand, under the board --->
-                    <div id="powerupBar" class="powerup-bar" hidden>
-                        <div class="powerup-head">Your power-ups</div>
-                        <div id="powerupSlots" class="powerup-slots"></div>
-                    </div>
                 </div>
             </div>
 
@@ -229,6 +224,20 @@
             </aside>
         </div>
     </main>
+
+    <!--- Power-up mode: floating action bar (power-ups + End turn), can be collapsed --->
+    <div id="actionBar" class="action-bar" hidden>
+        <button type="button" id="actionToggle" class="action-toggle" aria-expanded="true" title="Hide / show">
+            <i class="bi bi-chevron-down"></i>
+            <span class="action-toggle-label">⚡ Power-ups</span>
+        </button>
+        <div class="action-content">
+            <div id="powerupSlots" class="powerup-slots"></div>
+            <button type="button" id="actionEndTurn" class="mm-btn action-end" disabled>
+                <i class="bi bi-arrow-repeat"></i> End turn
+            </button>
+        </div>
+    </div>
 
     <!--- "Who starts?" animation --->
     <div id="startOverlay" class="overlay-screen" hidden>
