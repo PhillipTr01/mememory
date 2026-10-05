@@ -13,7 +13,7 @@ const UNLUCKY_TURNS = 5; // turns in a row without a pair -> bonus power-up
 const START_POWERUPS = 2;
 
 /*
- * icon: Bootstrap icon in the game, emoji: for chat messages
+ * emoji: shown in the game and in chat messages
  * target: what the player has to choose before it is used
  *   null    - nothing, used right away
  *   "card"  - one closed card
@@ -21,24 +21,24 @@ const START_POWERUPS = 2;
  */
 const POWERUPS = {
   // Information
-  map: { category: "info", target: null, emoji: "🗺️", icon: "bi-map", name: "Map", description: "Shows you which cards were never opened." },
-  peek: { category: "info", target: "card", emoji: "🔍", icon: "bi-eye", name: "Peek", description: "Look at one closed card - only you see it." },
-  spotlight: { category: "info", target: "card", emoji: "🔦", icon: "bi-brightness-high", name: "Spotlight", description: "Look at a card and its neighbours - only you see them." },
+  map: { category: "info", target: null, emoji: "🗺️", name: "Map", description: "Shows you which cards were never opened." },
+  peek: { category: "info", target: "card", emoji: "🔍", name: "Peek", description: "Look at one closed card - only you see it." },
+  spotlight: { category: "info", target: "card", emoji: "🔦", name: "Spotlight", description: "Look at a card and its neighbours - only you see them." },
   // Tempo
-  extraTurn: { category: "tempo", target: null, emoji: "➕", icon: "bi-plus-circle", name: "Extra turn", description: "After your next wrong pair you keep playing." },
-  secondChance: { category: "tempo", target: null, emoji: "🔁", icon: "bi-arrow-counterclockwise", name: "Second chance", description: "If your second card is wrong, it closes and you pick another one." },
+  extraTurn: { category: "tempo", target: null, emoji: "➕", name: "Extra turn", description: "After your next wrong pair you keep playing." },
+  secondChance: { category: "tempo", target: null, emoji: "🔁", name: "Second chance", description: "If your second card is wrong, it closes and you pick another one." },
   // Attack
-  shuffle: { category: "attack", target: null, emoji: "🔀", icon: "bi-shuffle", name: "Shuffle", description: "Shuffles all closed cards." },
-  fog: { category: "attack", target: null, emoji: "🌫️", icon: "bi-cloud-fog2", name: "Fog", description: "The next player only sees blurred cards in their turn." },
-  skip: { category: "attack", target: null, emoji: "⏭️", icon: "bi-skip-forward", name: "Skip", description: "The next player's turn is skipped." },
+  shuffle: { category: "attack", target: null, emoji: "🔀", name: "Shuffle", description: "Shuffles all closed cards." },
+  fog: { category: "attack", target: null, emoji: "🌫️", name: "Fog", description: "The next player only sees blurred cards in their turn." },
+  skip: { category: "attack", target: null, emoji: "⏭️", name: "Skip", description: "The next player's turn is skipped." },
   // Points
-  shield: { category: "points", target: null, emoji: "🛡️", icon: "bi-shield-check", name: "Shield", description: "Blocks the next Fog or Skip against you." },
-  combo: { category: "points", target: null, emoji: "🎯", icon: "bi-bullseye", name: "Combo", description: "This turn every further pair gives bonus points (+1, +2, ...)." },
-  gamble: { category: "points", target: null, emoji: "🎲", icon: "bi-dice-5", name: "Gamble", description: "50 / 50: +2 points or -1 point." },
+  shield: { category: "points", target: null, emoji: "🛡️", name: "Shield", description: "Blocks the next Fog or Skip against you." },
+  combo: { category: "points", target: null, emoji: "🎯", name: "Combo", description: "This turn every further pair gives bonus points (+1, +2, ...)." },
+  gamble: { category: "points", target: null, emoji: "🎲", name: "Gamble", description: "50 / 50: +2 points or -1 point." },
   // Board
-  swap: { category: "board", target: "cards", emoji: "🔄", icon: "bi-arrow-left-right", name: "Swap", description: "Secretly swap two closed cards." },
-  rotate: { category: "board", target: null, emoji: "🌀", icon: "bi-arrow-clockwise", name: "Rotate", description: "Turns the whole board by 180 degrees." },
-  bomb: { category: "board", target: "card", emoji: "💣", icon: "bi-asterisk", name: "Bomb", description: "Shows a card and its neighbours to everybody for 2 seconds." },
+  swap: { category: "board", target: "cards", emoji: "🔄", name: "Swap", description: "Secretly swap two closed cards." },
+  rotate: { category: "board", target: null, emoji: "🌀", name: "Rotate", description: "Turns the whole board by 180 degrees." },
+  bomb: { category: "board", target: "card", emoji: "💣", name: "Bomb", description: "Shows a card and its neighbours to everybody for 2 seconds." },
 };
 
 const IDS = Object.keys(POWERUPS);

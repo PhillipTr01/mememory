@@ -11,7 +11,7 @@ socket.on("powerupDefs", (defs) => {
 });
 
 function powerupInfo(id) {
-  return powerupDefs[id] || { icon: "bi-stars", name: id, description: "" };
+  return powerupDefs[id] || { emoji: "✨", name: id, description: "" };
 }
 
 function canUsePowerup(state, id) {
@@ -55,7 +55,10 @@ function renderPowerups(state) {
     button.className = "powerup-slot" + (targeting && targeting.id == id ? " active" : "");
     button.disabled = !canUsePowerup(state, id);
     button.title = info.name + " - " + info.description;
-    var icon = createIcon(info.icon + " powerup-icon");
+    // Same emoji as in the chat
+    var icon = document.createElement("span");
+    icon.className = "powerup-icon";
+    icon.innerText = info.emoji;
     var name = document.createElement("span");
     name.className = "powerup-name";
     name.innerText = info.name;
@@ -73,7 +76,7 @@ function createPowerupIcons(player) {
   player.powerups.forEach((id) => {
     var icon = document.createElement("span");
     icon.className = "power-icon";
-    icon.appendChild(createIcon(powerupInfo(id).icon));
+    icon.innerText = powerupInfo(id).emoji;
     icon.title = powerupInfo(id).name;
     icons.appendChild(icon);
   });
@@ -85,7 +88,7 @@ function createPowerupIcons(player) {
   effects.forEach(([id, label]) => {
     var effect = document.createElement("span");
     effect.className = "power-effect";
-    effect.appendChild(createIcon(powerupInfo(id).icon));
+    effect.innerText = powerupInfo(id).emoji;
     effect.title = powerupInfo(id).name + ": " + label;
     icons.appendChild(effect);
   });

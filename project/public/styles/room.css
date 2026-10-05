@@ -1558,11 +1558,10 @@
 .powerup-icon {
   font-size: 1.6rem;
   line-height: 1;
-  color: var(--mm-accent);
 }
 
 .powerup-slot:disabled .powerup-icon {
-  color: var(--mm-muted);
+  filter: grayscale(0.6);
 }
 
 .powerup-name {
