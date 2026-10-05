@@ -36,8 +36,10 @@ function renderPowerups(state) {
   // The bar has its own End turn button in this mode
   document.body.classList.toggle("has-action-bar", show);
 
-  // Fog: my cards are blurred during my turn
-  document.getElementById("board").classList.toggle("fogged", !!(mine && mine.fog && isMyTurn(state)));
+  // Fog: the cards I open in my turn are blurred (see isFogged / turnCard)
+  var fogged = !!(mine && mine.fog && isMyTurn(state));
+  document.getElementById("board").classList.toggle("fogged", fogged);
+  if (!fogged) clearFog();
   if (!show) {
     cancelTargeting();
     endTurnReady = false;
@@ -238,6 +240,35 @@ function playPowerupReels(startPowerups) {
       }),
     );
     setTimeout(() => track.children[target].classList.add("chosen"), spin);
+  });
+}
+
+/* ---------- Fog ---------- */
+
+// The fog is on for me right now
+function isFogged() {
+  return document.getElementById("board").classList.contains("fogged");
+}
+
+// Cards opened during the fogged turn are blurred (only those)
+function fogCard(id) {
+  if (!isFogged()) return;
+  var card = document.getElementById("card-" + id);
+  if (card != null) card.classList.add("fog-card");
+}
+
+// Blurred cards can't be zoomed into
+function isFogCard(id) {
+  var card = document.getElementById("card-" + id);
+  return isFogged() && card != null && card.classList.contains("fog-card");
+}
+
+// The fog is over: open cards are clear again, closing cards stay blurred
+// until they are turned over (the flip takes 0.6s)
+function clearFog() {
+  document.querySelectorAll(".card.fog-card").forEach((card) => {
+    if (card.classList.contains("flip")) card.classList.remove("fog-card");
+    else setTimeout(() => card.classList.remove("fog-card"), 700);
   });
 }
 

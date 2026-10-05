@@ -622,6 +622,8 @@ function startGame() {
 function openCard(id) {
   // Power-up mode: choosing a card for Peek, Swap, ...
   if (handlePowerupTarget(id)) return;
+  // Fog: my blurred cards can't be zoomed into
+  if (isFogCard(id)) return;
   // Open cards are zoomed in right away, closed ones are turned by the server
   if (zoomCard(id)) return;
   socket.emit("openCard", id);
@@ -664,6 +666,7 @@ function showCard(data) {
   // Opened for real (not only peeked); power-up pairs get a small badge
   card.classList.remove("peek");
   card.classList.toggle("power-card", data.power === true);
+  fogCard(data.id);
 
   // Highlighting a card - It gets bigger and gets a border
   card.classList.add("flip", "border", "border-3", "zoom-card-on-turn");
@@ -681,6 +684,7 @@ function closeCard(id, instant) {
 
 // If the card is already open, you can zoom in to read the meme
 socket.on("zoomImage", (id) => {
+  if (isFogCard(id)) return;
   var card = document.getElementById("card-" + id);
   if (card != null && card.classList.contains("flip")) {
     openImageModal(card.childNodes[1].childNodes[1].src);

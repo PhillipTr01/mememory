@@ -1626,8 +1626,8 @@
   box-shadow: inset 0 0 0 3px var(--mm-accent);
 }
 
-/* Fog: blurred cards during the own turn */
-.board.fogged .card.flip .card-back > img {
+/* Fog: the cards opened during the fogged turn are blurred */
+.card.fog-card .card-back > img {
   filter: blur(9px);
 }
 
