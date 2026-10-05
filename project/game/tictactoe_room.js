@@ -21,6 +21,8 @@ function createRoom(host) {
     forfeit: false, // the last game was won because the opponent left
     starter: null, // seat that started the last game
     chat: [],
+    // Seats stay where they are, only the colors are random (false: seat 0 red, seat 1 blue)
+    swapColors: Math.random() < 0.5,
     round: 0, // counts the games, so clients play the start animation once per game
     startsAt: 0, // moves are possible after the "who starts" animation
     emptySince: Date.now(),
@@ -59,6 +61,7 @@ function serialize(gameID, room) {
     passed: game != null ? game.passed : null,
     forfeit: room.forfeit,
     round: room.round,
+    swapColors: room.swapColors,
     startIn: Math.max(0, room.startsAt - Date.now()),
     spectators: [...new Set(room.spectators.values())],
   };
