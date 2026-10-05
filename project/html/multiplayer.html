@@ -28,7 +28,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
 </head>
 
-<body class="d-flex flex-column min-h-100">
+<body class="d-flex flex-column min-h-100 in-room no-toasts">
 
     <div id="cardModal" class="modal" onclick="closeCardModal()">
         <span class="close">&times;</span>
@@ -124,6 +124,7 @@
                             <div id="modePicker" class="segmented" role="group" aria-label="Game mode">
                                 <button type="button" data-mode="classic">Classic</button>
                                 <button type="button" data-mode="speed"><i class="bi bi-lightning-charge-fill"></i> Speed</button>
+                                <button type="button" data-mode="powerups"><i class="bi bi-stars"></i> Power-ups</button>
                             </div>
                         </div>
                         <!--- Time per turn, only for the speed round --->
@@ -167,7 +168,11 @@
                 <div class="mm-card side-card">
                     <div class="side-head">
                         <span class="fw-semibold"><i class="bi bi-people me-2"></i>Players</span>
-                        <span id="pairsLeft" class="mm-badge" hidden></span>
+                        <div class="side-head-actions">
+                            <span id="pairsLeft" class="mm-badge" hidden></span>
+                            <!--- Surrender + leave (icons), filled by multiplayer_socket.js --->
+                            <span id="gameActions" class="game-actions"></span>
+                        </div>
                     </div>
                     <!--- Scoreboard, filled by multiplayer_socket.js --->
                     <div id="playerList" class="player-list"></div>
@@ -224,15 +229,45 @@
         </div>
     </main>
 
+    <!--- Power-up mode: floating action bar (power-ups + End turn), can be collapsed --->
+    <div id="actionBar" class="action-bar" hidden>
+        <button type="button" id="actionToggle" class="action-toggle" aria-expanded="true" title="Hide / show">
+            <i class="bi bi-chevron-down"></i>
+            <span class="action-toggle-label">⚡ Power-ups</span>
+        </button>
+        <div class="action-content">
+            <div id="powerupSlots" class="powerup-slots"></div>
+            <button type="button" id="actionEndTurn" class="mm-btn action-end" disabled>
+                <i class="bi bi-arrow-repeat"></i> End turn
+            </button>
+        </div>
+    </div>
+
     <!--- "Who starts?" animation --->
     <div id="startOverlay" class="overlay-screen" hidden>
         <div class="start-box">
-            <h2 class="start-title">Who starts?</h2>
-            <div class="reel">
-                <div class="reel-marker"></div>
-                <div id="reelTrack" class="reel-track"></div>
+            <div id="startWho">
+                <h2 class="start-title">Who starts?</h2>
+                <div class="reel">
+                    <div class="reel-marker"></div>
+                    <div id="reelTrack" class="reel-track"></div>
+                </div>
+                <p id="startResult" class="start-result"></p>
             </div>
-            <p id="startResult" class="start-result"></p>
+            <!--- Power-up mode: after "Who starts?", two reels for the start power-ups --->
+            <div id="startPowerups" class="start-powerups" hidden>
+                <h2 class="start-title">Start power-ups</h2>
+                <div class="powerup-reels">
+                    <div class="reel reel-small">
+                        <div class="reel-marker"></div>
+                        <div id="powerReel0" class="reel-track"></div>
+                    </div>
+                    <div class="reel reel-small">
+                        <div class="reel-marker"></div>
+                        <div id="powerReel1" class="reel-track"></div>
+                    </div>
+                </div>
+            </div>
         </div>
         <div id="confetti" class="confetti" hidden></div>
     </div>
@@ -281,6 +316,7 @@
     <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/play.js"></script>
     <script src="/static/scripts/multiplayer_socket.js"></script>
+    <script src="/static/scripts/powerups.js"></script>
     <script src="/static/scripts/chat.js"></script>
 </body>
 

@@ -50,20 +50,20 @@ function clearCardImage(card, delay) {
     else clear();
 }
 
-// Small "Surrender" button shown next to the own name in the player list
-function createSurrenderButton() {
-    var button = document.createElement("button");
-    button.type = "button";
-    button.className = "player-surrender";
-    button.title = "Surrender";
-    var icon = document.createElement("i");
-    icon.className = "bi bi-flag-fill";
-    button.append(icon, document.createTextNode("Surrender"));
-    button.addEventListener("click", (event) => {
-        event.stopPropagation();
-        surrender();
-    });
-    return button;
+
+// "+1" that floats up from a score when the points changed. It lives on the
+// page (not in the player list), so redrawing the list doesn't cut it off.
+function showPointsDelta(element, delta) {
+    if (!element.isConnected) return;
+    var rect = element.getBoundingClientRect();
+    var label = document.createElement("span");
+    label.className = "points-delta" + (delta < 0 ? " minus" : "");
+    label.innerText = (delta > 0 ? "+" : "") + delta;
+    // Starts just left of the score, so both stay readable
+    label.style.left = rect.left - 16 + "px";
+    label.style.top = rect.top + "px";
+    document.body.appendChild(label);
+    setTimeout(() => label.remove(), 1200);
 }
 
 // Small "Left" tag for players who left the room / didn't come back

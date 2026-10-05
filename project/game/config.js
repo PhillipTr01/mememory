@@ -28,7 +28,7 @@ module.exports = {
   TICK: 1000,
 
   // Game modes the host can choose in the waiting room
-  MODES: ["classic", "speed"],
+  MODES: ["classic", "speed", "powerups"],
   // Speed round: default time per turn (ms), the choices for the host (seconds)
   // and the pause after two wrong cards before the turn passes
   SPEED_TURN_TIME: 10 * 1000,
@@ -40,6 +40,9 @@ module.exports = {
   SINGLEPLAYER_STARTER: null,
   // Singleplayer: two wrong cards stay open this long, then the turn passes
   SINGLEPLAYER_MISS_DELAY: 1850,
+
+  // Power-up mode: "who starts" plus the start power-ups
+  POWERUPS_START_ANIMATION: 7000,
 
   // Speed round: shorter "who starts" animation
   SPEED_START_ANIMATION: 2600,

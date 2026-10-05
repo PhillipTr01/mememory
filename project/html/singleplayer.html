@@ -28,7 +28,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
 </head>
 
-<body class="d-flex flex-column min-h-100">
+<body class="d-flex flex-column min-h-100 no-toasts">
 
     <div id="cardModal" class="modal" onclick="closeCardModal()">
         <span class="close">&times;</span>
@@ -89,7 +89,10 @@
                 <div class="mm-card side-card">
                     <div class="side-head">
                         <span class="fw-semibold"><i class="bi bi-person me-2"></i>Singleplayer</span>
-                        <span id="pairsLeft" class="mm-badge">33 pairs left</span>
+                        <div class="side-head-actions">
+                            <span id="pairsLeft" class="mm-badge">33 pairs left</span>
+                            <span id="gameActions" class="game-actions"></span>
+                        </div>
                     </div>
                     <div class="player-list">
                         <div class="player-item" id="user1Item">
@@ -98,7 +101,6 @@
                                 <div class="player-name">
                                     <span class="player-name-text" id="user1Username"></span>
                                     <span class="player-tag">You</span>
-                                    <span id="surrenderSlot"></span>
                                 </div>
                             </div>
                             <div class="player-points" id="user1Score">0</div>

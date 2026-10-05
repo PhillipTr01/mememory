@@ -1493,3 +1493,393 @@
 .notice-actions .mm-btn {
   flex: 1 1 0;
 }
+
+/* ---------- Power-up mode ---------- */
+.powerup-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+/* Square slots: icon on top, name below */
+.powerup-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  aspect-ratio: 1 / 1;
+  padding: 0.4rem 0.25rem;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.powerup-slot:hover:not(:disabled) {
+  background: var(--mm-surface-3);
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+}
+
+.powerup-slot:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.powerup-slot.active {
+  border-color: var(--mm-accent);
+}
+
+.powerup-slot.empty {
+  border-style: dashed;
+  background: none;
+}
+
+.powerup-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.powerup-slot:disabled .powerup-icon {
+  filter: grayscale(0.6);
+}
+
+.powerup-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Icons in the player list */
+.player-powers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin-top: 0.2rem;
+}
+
+.power-icon,
+.power-effect {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 4px;
+  background: var(--mm-surface-3);
+  color: var(--mm-text);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.power-effect {
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  box-shadow: inset 0 0 0 1px rgba(var(--mm-accent-rgb), 0.45);
+}
+
+/* Cards of a power-up pair: small badge once they are open */
+.card.flip.power-card .card-back::after {
+  content: "⚡";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  background: rgba(20, 20, 20, 0.8);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+/* Peek / Spotlight / Bomb: shown for a moment, with a ring */
+.card.peek .card-back {
+  box-shadow: 0 0 0 2px rgba(var(--mm-info-rgb), 0.8);
+}
+
+/* Map: cards nobody has opened yet */
+.card.fresh .card-front {
+  box-shadow: inset 0 0 0 2px rgba(var(--mm-info-rgb), 0.9);
+}
+
+/* Choosing cards for a power-up */
+.board.targeting .card:not(.flip) {
+  cursor: crosshair;
+}
+
+.board.targeting .card:not(.flip):hover .card-front {
+  box-shadow: inset 0 0 0 2px rgba(var(--mm-accent-rgb), 0.7);
+}
+
+.card.target-picked .card-front {
+  box-shadow: inset 0 0 0 3px var(--mm-accent);
+}
+
+/* Fog: the cards opened during the fogged turn are blurred */
+.card.fog-card .card-back > img {
+  filter: blur(9px);
+}
+
+/* Board changes: the cards fly to their new places (see animateBoardMove) */
+.memory-grid.moving {
+  overflow: clip;
+  overflow-clip-margin: 12px;
+}
+
+/* Rarity: uncommon blue, rare gold */
+.powerup-slot.rarity-uncommon:not(:disabled) {
+  border-color: rgba(96, 165, 250, 0.45);
+}
+
+.powerup-slot.rarity-rare:not(:disabled) {
+  border-color: rgba(212, 166, 74, 0.6);
+}
+
+/* Start animation: two small reels for the start power-ups */
+.start-subtitle {
+  margin: 0.5rem 0 0.6rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--mm-muted);
+}
+
+.powerup-reels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.reel.reel-small {
+  --item: 52px;
+}
+
+.reel-item.reel-power {
+  gap: 0.45rem;
+  font-size: 0.95rem;
+}
+
+.reel-item.reel-power span:first-child {
+  font-size: 1.3rem;
+}
+
+.reel-item.reel-power.rarity-rare.chosen {
+  color: var(--mm-warning);
+}
+
+/* ---------- The chat stays usable with many players and power-ups ---------- */
+@media (min-width: 992px) {
+  /* The player card may shrink, its list scrolls instead of pushing the chat away */
+  .side-card {
+    flex: 0 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Only the list shrinks (and scrolls), the rest of the card keeps its size */
+  .side-card > * {
+    flex-shrink: 0;
+  }
+
+  .side-card .player-list {
+    flex: 0 1 auto;
+    min-height: 6.5rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--mm-surface-3) transparent;
+  }
+
+  /* The chat takes the rest of the column, but never less than 220px */
+  .chat-card {
+    flex: 1 1 0;
+    min-height: 220px;
+  }
+}
+
+/* Compact square power-up slots */
+.powerup-slots {
+  grid-template-columns: repeat(3, 60px);
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.powerup-icon {
+  font-size: 1.2rem;
+}
+
+.powerup-name {
+  font-size: 0.6rem;
+}
+
+/* Power-up icons in the line under the player's name */
+.player-sub.with-powers {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.player-sub.with-powers .player-powers {
+  margin-top: 0;
+}
+
+.player-sub.with-powers .power-icon,
+.player-sub.with-powers .power-effect {
+  width: 1.2rem;
+  height: 1.2rem;
+  font-size: 0.7rem;
+}
+
+/* ---------- Power-up mode: floating action bar ---------- */
+.action-bar {
+  position: fixed;
+  z-index: 1500;
+  bottom: 1rem;
+  /* Centered over the board (the side column is 340px + gap) */
+  left: calc((100vw - 340px - 1.25rem) / 2);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.35rem 0.75rem 0.75rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: rgba(27, 27, 27, 0.94);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  /* Own animation: mm-fade-up would overwrite the centering transform */
+  animation: action-in 0.25s ease;
+}
+
+@keyframes action-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (max-width: 991px) {
+  .action-bar {
+    left: 50%;
+  }
+}
+
+.action-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.5rem 0.3rem;
+  border: 0;
+  background: none;
+  color: var(--mm-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.action-toggle:hover {
+  color: var(--mm-text);
+}
+
+.action-toggle .bi {
+  transition: transform 0.2s ease;
+}
+
+.action-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.action-end {
+  height: 60px;
+  white-space: nowrap;
+}
+
+/* Two wrong cards: End turn is the next step */
+.action-end.ready {
+  animation: action-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes action-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--mm-accent-rgb), 0.55); }
+  50% { box-shadow: 0 0 0 6px rgba(var(--mm-accent-rgb), 0); }
+}
+
+/* Collapsed: only the small pill */
+.action-bar.collapsed {
+  padding: 0.35rem 0.75rem;
+}
+
+.action-bar.collapsed .action-content {
+  display: none;
+}
+
+.action-bar.collapsed .action-toggle {
+  padding: 0;
+  color: var(--mm-text);
+}
+
+.action-bar.collapsed .action-toggle .bi {
+  transform: rotate(180deg);
+}
+
+/* Classic: only the End turn button, no box around it */
+.action-bar.end-only {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.action-bar.end-only .action-end {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+}
+
+.action-bar.end-only .action-toggle,
+.action-bar.end-only .powerup-slots {
+  display: none;
+}
+
+.action-bar.end-only .action-end {
+  height: auto;
+  padding: 0.75rem 1.6rem;
+  font-size: 1.05rem;
+}
+
+/* "+1" floating up from a score */
+.points-delta {
+  position: fixed;
+  z-index: 2500;
+  transform: translate(-50%, 0);
+  color: var(--mm-success);
+  font-size: 1.1rem;
+  font-weight: 800;
+  pointer-events: none;
+  animation: points-float 1.2s ease-out forwards;
+}
+
+.points-delta.minus {
+  color: var(--mm-danger);
+}
+
+@keyframes points-float {
+  0% { opacity: 0; transform: translate(-50%, 4px) scale(0.8); }
+  20% { opacity: 1; transform: translate(-50%, -6px) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -34px) scale(1); }
+}
+
+/* Attacks: choosing a player in the list */
+.player-item.targetable {
+  cursor: crosshair;
+  box-shadow: inset 0 0 0 1px rgba(var(--mm-accent-rgb), 0.5);
+}
+
+.player-item.targetable:hover {
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  box-shadow: inset 0 0 0 2px var(--mm-accent);
+}

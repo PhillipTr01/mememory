@@ -200,10 +200,14 @@ socket.on("roomState", (state) => {
 
   // Speed round: yellow / orange accent color for the whole room
   document.body.classList.toggle("mode-speed", state.mode == "speed");
+  // Power-up mode: room for the power-up bar under the board
+  document.body.classList.toggle("mode-powerups", state.mode == "powerups");
 
   renderPlayerList(state, previous);
   renderWaitingRoom(state);
-  renderTurn(state, previous);
+  renderTurn(state);
+  renderGameActions(state);
+  renderPowerups(state);
 
   var waiting = state.status == "waiting";
   document.getElementById("waitingRoom").hidden = !waiting;
@@ -213,10 +217,8 @@ socket.on("roomState", (state) => {
   pairs.hidden = waiting;
   pairs.innerText = state.pairsLeft + " pairs left";
 
-  var player = getMyPlayer(state);
-  var inGame = (state.status == "playing" || state.status == "starting") && player != null && player.active;
-  // Speed round: the turn passes on its own after two wrong cards
-  document.getElementById("playButton").hidden = !inGame || state.mode == "speed";
+  // End turn is in the floating action bar (classic, power-ups); the speed round has none
+  document.getElementById("playButton").hidden = true;
   updateTurnTimer(state);
 
   // My turn is over -> the End Turn button can't be used anymore
@@ -246,6 +248,11 @@ function renderPlayerList(state, previous) {
   state.players.forEach((player, index) => {
     var item = document.createElement("div");
     item.className = "player-item";
+    item.dataset.name = player.name;
+    // Power-up attacks: opponents can be picked as the target
+    if (typeof targeting != "undefined" && targeting && targeting.player && player.active && player.name != me.username) {
+      item.classList.add("targetable");
+    }
     if (!player.active || player.left) item.classList.add("inactive");
     if (state.status == "playing" && state.turn == index && player.active) item.classList.add("turn");
 
@@ -267,12 +274,6 @@ function renderPlayerList(state, previous) {
       you.className = "player-tag";
       you.innerText = "You";
       name.appendChild(you);
-
-      // Surrender right next to the own name while playing
-      var playing = state.status == "playing" || state.status == "starting";
-      if (playing && player.active && !me.spectator) {
-        name.appendChild(createSurrenderButton());
-      }
     }
 
     // Ready mark in the waiting room
@@ -302,10 +303,14 @@ function renderPlayerList(state, previous) {
         ? awaySeconds(player) + "s to come back"
         : !player.connected
           ? "reconnecting..."
-        : state.status == "playing" && state.turn == index
-          ? "is playing"
           : "";
     info.append(name, sub);
+    // Power-up mode: power-ups in the hand and running effects, in the line
+    // under the name (hidden during the start animation, the reels show them)
+    if (state.mode == "powerups" && state.status != "waiting" && state.status != "starting") {
+      sub.classList.add("with-powers");
+      sub.appendChild(createPowerupIcons(player));
+    }
 
     // Speed round: time left for the player whose turn it is
     if (state.mode == "speed" && state.status == "playing" && state.turn == index) {
@@ -321,10 +326,12 @@ function renderPlayerList(state, previous) {
     points.className = "player-points";
     points.innerText = player.points;
 
-    // Small animation when a player scored
+    // Small animation when the points changed: "+1" floats up
     var before = previous && previous.players.find((p) => p.name == player.name);
-    if (before && before.points < player.points) {
+    if (before && before.points != player.points) {
       points.classList.add("bump");
+      var delta = player.points - before.points;
+      requestAnimationFrame(() => showPointsDelta(points, delta));
     }
 
     item.append(createAvatar(player.name, "", player.connected), info, points);
@@ -336,14 +343,9 @@ function renderPlayerList(state, previous) {
   spectators.replaceChildren(createIcon("bi-eye me-1"), document.createTextNode(state.spectators.join(", ")));
 }
 
-// The board glows when it's my turn, plus a short hint when the turn changes to me
-function renderTurn(state, previous) {
-  var mine = isMyTurn(state);
-  document.getElementById("board").classList.toggle("my-turn", mine);
-
-  if (mine && (previous == null || !isMyTurn(previous))) {
-    showToast("Your turn");
-  }
+// The board glows when it's my turn
+function renderTurn(state) {
+  document.getElementById("board").classList.toggle("my-turn", isMyTurn(state));
 }
 
 function renderWaitingRoom(state) {
@@ -362,10 +364,12 @@ function renderWaitingRoom(state) {
 
   // Mode badge for everybody
   var badge = document.getElementById("modeBadge");
-  badge.hidden = state.mode != "speed";
+  badge.hidden = state.mode == "classic";
+  badge.classList.toggle("powerups-badge", state.mode == "powerups");
   badge.replaceChildren(
-    createIcon("bi-lightning-charge-fill"),
-    document.createTextNode(` Speed round · ${state.turnTime / 1000}s`),
+    ...(state.mode == "powerups"
+      ? [createIcon("bi-stars"), document.createTextNode(" Power-ups")]
+      : [createIcon("bi-lightning-charge-fill"), document.createTextNode(` Speed round · ${state.turnTime / 1000}s`)]),
   );
 
   // Seats: players + free seats. Only redrawn when something about the seats
@@ -523,10 +527,10 @@ function createKickButton(name, className) {
 /* ---------- "Who starts?" animation ---------- */
 
 socket.on("gameStarting", (data) => {
-  playStartAnimation(data.players, data.starter, data.duration);
+  playStartAnimation(data.players, data.starter, data.duration, data.powerups);
 });
 
-function playStartAnimation(players, starter, duration) {
+function playStartAnimation(players, starter, duration, startPowerups) {
   var overlay = document.getElementById("startOverlay");
   var track = document.getElementById("reelTrack");
   var result = document.getElementById("startResult");
@@ -549,7 +553,12 @@ function playStartAnimation(players, starter, duration) {
   });
 
   var target = names.length - 2; // the starter
-  var spin = Math.max(1200, duration - 1300);
+  // Power-up mode: the player reel is faster, the power-up reels follow
+  var spin = startPowerups ? 2200 : Math.max(1200, duration - 1300);
+  document.getElementById("startPowerups").hidden = true;
+  document.getElementById("startWho").hidden = false;
+  // Power-up mode: after the result, the power-up reels replace "Who starts?"
+  if (startPowerups) setTimeout(() => playPowerupReels(startPowerups), spin + 1300);
 
   result.classList.remove("show");
   result.innerText = "";
@@ -604,6 +613,10 @@ function startGame() {
 }
 
 function openCard(id) {
+  // Power-up mode: choosing a card for Peek, Swap, ...
+  if (handlePowerupTarget(id)) return;
+  // Fog: my blurred cards can't be zoomed into
+  if (isFogCard(id)) return;
   // Open cards are zoomed in right away, closed ones are turned by the server
   if (zoomCard(id)) return;
   socket.emit("openCard", id);
@@ -611,6 +624,41 @@ function openCard(id) {
 
 function emitEndTurn() {
   socket.emit("endTurn");
+}
+
+// Surrender (flag) and leave (door) next to "pairs left"
+function renderGameActions(state) {
+  var actions = document.getElementById("gameActions");
+  var running = state.status == "playing" || state.status == "starting";
+  var mine = getMyPlayer(state);
+  var playing = running && mine != null && mine.active && !me.spectator;
+  var key = [state.status, playing].join(":");
+  if (actions.dataset.key == key) return; // nothing changed, no flicker
+  actions.dataset.key = key;
+
+  var buttons = [];
+  if (playing) buttons.push(createIconButton("bi-flag-fill", "Surrender", "danger", surrender));
+  if (state.status != "waiting") buttons.push(createIconButton("bi-box-arrow-left", "Leave", "", leaveGame));
+  actions.replaceChildren(...buttons);
+}
+
+// Leaving a running game: the seat is kept for a while, like after a lost connection
+function leaveGame() {
+  var mine = room && getMyPlayer(room);
+  var playing = room && (room.status == "playing" || room.status == "starting") && mine && mine.active && !me.spectator;
+  if (!playing) {
+    window.location.href = "/lobby";
+    return;
+  }
+  confirmDialog({
+    title: "Leave the game?",
+    text: "You can rejoin from the lobby within " + room.rejoinSeconds + " seconds. After that, you are out of the game.",
+    confirmLabel: "Leave",
+    confirmIcon: "bi-box-arrow-left",
+    danger: true,
+  }).then((ok) => {
+    if (ok) window.location.href = "/lobby";
+  });
 }
 
 function surrender() {
@@ -635,6 +683,8 @@ socket.on("boardState", (data) => {
     understateCard(card.id);
   });
   data.opened.forEach(showCard);
+  // Power-ups: cards that moved fly to their new place
+  if (typeof animateBoardMove == "function") animateBoardMove();
 });
 
 socket.on("turnCard", showCard);
@@ -643,6 +693,10 @@ function showCard(data) {
   var card = document.getElementById("card-" + data.id);
   if (card == null) return;
   setCardImage(card, data.src);
+  // Opened for real (not only peeked); power-up pairs get a small badge
+  card.classList.remove("peek");
+  card.classList.toggle("power-card", data.power === true);
+  fogCard(data.id);
 
   // Highlighting a card - It gets bigger and gets a border
   card.classList.add("flip", "border", "border-3", "zoom-card-on-turn");
@@ -660,6 +714,7 @@ function closeCard(id, instant) {
 
 // If the card is already open, you can zoom in to read the meme
 socket.on("zoomImage", (id) => {
+  if (isFogCard(id)) return;
   var card = document.getElementById("card-" + id);
   if (card != null && card.classList.contains("flip")) {
     openImageModal(card.childNodes[1].childNodes[1].src);
@@ -684,13 +739,7 @@ function understateCard(id) {
 
 // Close opened cards
 socket.on("closeCards", (data) => {
-  [data[1], data[2]].forEach((id) => closeCard(id, false));
-});
-
-socket.on("matchFound", (data) => {
-  if (data.name == me.username) {
-    showToast("Pair found");
-  }
+  [data[1], data[2], data[3]].forEach((id) => id != null && closeCard(id, false));
 });
 
 // Activate endTurn-Button
@@ -857,9 +906,6 @@ function updateTurnTimer(state) {
   turnTimerInterval = setInterval(tick, 100);
 }
 
-socket.on("turnTimeout", (data) => {
-  if (data.name == me.username) showToast("Time's up!");
-});
 
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("#modePicker button").forEach((button) => {

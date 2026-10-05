@@ -12,6 +12,7 @@ const {
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 const chat = require("../game/chat");
+const powerups = require("../game/powerups");
 
 module.exports = function (io) {
   const multiPlayer = io.of("/multiplayer");
@@ -147,10 +148,8 @@ module.exports = function (io) {
 
         socket.emit("joinedRoom", { username: username, spectator: socket.spectator });
         socket.emit("chatHistory", room.chat);
-        socket.emit("boardState", {
-          found: room.foundMatches.map((id) => ({ id: id, src: room.cardImages[id] })),
-          opened: room.openedCards.map((id) => ({ id: id, src: room.cardImages[id] })),
-        });
+        socket.emit("boardState", boardState(room));
+        socket.emit("powerupDefs", powerups.POWERUPS);
 
         if (player != null && rejoined) {
           systemMessage(gameID, room, `${username} is back.`, "reconnect");
@@ -275,15 +274,23 @@ module.exports = function (io) {
         // Players that are still reconnecting can't take part.
         // The order of the players is shuffled for every game.
         room.players = shuffle(ready);
+        setupPowerups(room);
         room.status = STATUS.STARTING;
         room.turn = Math.floor(Math.random() * room.players.length);
         rooms.touch(room);
-        const animation = room.mode === "speed" ? config.SPEED_START_ANIMATION : config.START_ANIMATION;
+        const animation =
+          room.mode === "speed"
+            ? config.SPEED_START_ANIMATION
+            : room.mode === "powerups"
+              ? config.POWERUPS_START_ANIMATION
+              : config.START_ANIMATION;
 
         multiPlayer.to(gameID).emit("gameStarting", {
           players: room.players.map((player) => player.name),
           starter: room.turn,
           duration: animation,
+          // Power-up mode: the reels show which power-ups everybody gets
+          powerups: room.mode === "powerups" ? room.players[0].powerups : null,
         });
         emitRoomState(gameID, room);
 
@@ -301,6 +308,11 @@ module.exports = function (io) {
             }
 
             systemMessage(gameID, room, `The game has started. ${room.players[room.turn].name} begins!`, "start");
+            // Power-up mode: which power-ups everybody starts with
+            if (room.mode === "powerups") {
+              const start = room.players[0].powerups.map(powerupLabel).join(" and ");
+              systemMessage(gameID, room, `Everybody starts with ${start}. ${powerups.POWER_PAIRS} pairs hold a power-up (⚡).`, "info");
+            }
             startTurnTimer(gameID, room);
             emitRoomState(gameID, room);
           },
@@ -320,14 +332,12 @@ module.exports = function (io) {
           !room.openedCards.includes(id) &&
           !room.foundMatches.includes(id)
         ) {
-          if (room.openedCards.length < 2 && isPlayersTurn(room, username)) {
+          if (room.closingCard === id) return;
+          if (room.openedCards.length < openLimit(room) && !room.checkingCards && isPlayersTurn(room, username)) {
             rooms.touch(room);
             room.openedCards.push(id);
             room.cardCounter[id]++;
-            multiPlayer.to(socket.gameID).emit("turnCard", {
-              id: id,
-              src: room.cardImages[id],
-            });
+            multiPlayer.to(socket.gameID).emit("turnCard", cardData(room, id));
 
             checkGame(socket, room);
           }
@@ -351,12 +361,30 @@ module.exports = function (io) {
       safe("endTurn", () => {
         const room = rooms.get(socket.gameID, "multiplayer");
 
-        if (room != null && room.checkingCards && room.openedCards.length == 2 && isPlayersTurn(room, username)) {
+        if (room != null && room.checkingCards && room.openedCards.length >= 2 && isPlayersTurn(room, username)) {
           rooms.touch(room);
           socket.emit("disableEndTurn");
-          nextTurn(socket.gameID, room);
+          const player = room.players[room.turn];
+          if (room.mode === "powerups" && player.armed.extraTurn) {
+            // Extra turn: the cards close, but the player continues
+            player.armed.extraTurn = false;
+            closeOpenCards(socket.gameID, room);
+            systemMessage(socket.gameID, room, `${player.name} uses the extra turn.`, "info");
+          } else {
+            nextTurn(socket.gameID, room);
+          }
           emitRoomState(socket.gameID, room);
         }
+      }),
+    );
+
+    // Power-up mode: use a power-up from the own hand
+    socket.on(
+      "usePowerup",
+      safe("usePowerup", (data) => {
+        const room = rooms.get(socket.gameID, "multiplayer");
+        if (room == null || data == null) return;
+        usePowerup(socket, room, data);
       }),
     );
 
@@ -537,83 +565,397 @@ module.exports = function (io) {
   const ticker = setInterval(() => tick().catch(() => {}), config.TICK);
   ticker.unref();
 
+  /* ---------- Power-ups (mode "powerups") ---------- */
+
+  // A card as the clients get it (power: part of a power-up pair)
+  function cardData(room, id) {
+    const data = { id: id, src: room.cardImages[id] };
+    if (room.mode === "powerups" && room.powerCards.includes(id)) data.power = true;
+    return data;
+  }
+
+  // Found and open cards, e.g. for (re)joining players or after the board changed
+  function boardState(room) {
+    return {
+      found: room.foundMatches.map((id) => cardData(room, id)),
+      opened: room.openedCards.map((id) => cardData(room, id)),
+    };
+  }
+
+  function setupPowerups(room) {
+    room.powerCards = [];
+    room.turnPowerUsed = false;
+    room.turnPairs = 0;
+    room.closingCard = null;
+    const start = room.mode === "powerups" ? powerups.startPowerups() : [];
+    for (const player of room.players) {
+      player.powerups = start.slice();
+      player.unlucky = 0;
+      // How often the player got each power-up (it gets rarer every time)
+      player.received = {};
+      for (const id of start) player.received[id] = 1;
+      player.shield = false;
+      player.fog = false;
+      player.skipNext = false;
+      player.armed = noneArmed();
+    }
+    if (room.mode === "powerups") {
+      room.powerCards = powerups.choosePowerCards(room.cardPairs);
+    }
+  }
+
+  function noneArmed() {
+    return { extraTurn: false, secondChance: false, combo: false, tripleFlip: false, doubleOrNothing: false };
+  }
+
+  // Triple flip: 3 cards can be open at once
+  function openLimit(room) {
+    const player = room.players[room.turn];
+    return room.mode === "powerups" && player != null && player.armed.tripleFlip ? 3 : 2;
+  }
+
+  // Two of the open cards that belong together (or null)
+  function findOpenPair(room) {
+    const open = room.openedCards;
+    for (let i = 0; i < open.length; i++) {
+      for (let j = i + 1; j < open.length; j++) {
+        if (room.cardPairs[open[i]] === open[j]) return [open[i], open[j]];
+      }
+    }
+    return null;
+  }
+
+  function powerupLabel(id) {
+    const info = powerups.POWERUPS[id];
+    return info ? `${info.emoji} ${info.name}` : id;
+  }
+
+  function receive(player, id) {
+    player.powerups.push(id);
+    player.received = player.received || {};
+    player.received[id] = (player.received[id] || 0) + 1;
+  }
+
+  // A random power-up for the player, if there is a free slot
+  function grantPowerup(gameID, room, player, reason) {
+    if (player.powerups.length >= powerups.HAND_LIMIT) {
+      systemMessage(gameID, room, `${player.name} ${reason}, but has no free slot.`, "info");
+      return;
+    }
+    const id = powerups.randomPowerup(player.received);
+    receive(player, id);
+    systemMessage(gameID, room, `${player.name} ${reason}: ${powerupLabel(id)}`, "start");
+  }
+
+  // The turn of the current player ends: unlucky bonus, effects run out
+  function endPowerupTurn(gameID, room) {
+    const player = room.players[room.turn];
+    if (player != null && room.status === STATUS.PLAYING) {
+      if (room.turnPairs === 0) {
+        player.unlucky++;
+        if (player.unlucky >= powerups.UNLUCKY_TURNS) {
+          player.unlucky = 0;
+          grantPowerup(gameID, room, player, "had bad luck and gets");
+        }
+      } else {
+        player.unlucky = 0;
+      }
+      player.fog = false;
+      player.armed = noneArmed();
+    }
+    room.turnPowerUsed = false;
+    room.turnPairs = 0;
+  }
+
+  function isClosed(room, id) {
+    return isValidCardId(id) && !room.foundMatches.includes(id) && !room.openedCards.includes(id) && room.closingCard !== id;
+  }
+
+  // Shows cards for a moment: only to one socket, or to everybody in the room
+  function reveal(target, ids, room, duration, type) {
+    target.emit("powerupReveal", { type: type, duration: duration, cards: ids.map((id) => cardData(room, id)) });
+  }
+
+  // The board changed (shuffle, rotate, ...): the cards move, everybody gets the new state
+  function moveCards(gameID, room, type, perm) {
+    powerups.applyPermutation(room, perm);
+    multiPlayer.to(gameID).emit("boardChanged", { type: type, perm: perm });
+    multiPlayer.to(gameID).emit("boardState", boardState(room));
+  }
+
+  function usePowerup(socket, room, data) {
+    const username = socket.data.username;
+    const gameID = socket.gameID;
+    const id = data.id;
+    const info = powerups.POWERUPS[id];
+    const player = findPlayer(room, username);
+
+    if (
+      room.mode !== "powerups" ||
+      info == null ||
+      player == null ||
+      player.socketId !== socket.id ||
+      !isPlayersTurn(room, username) ||
+      room.turnPowerUsed ||
+      room.checkingCards ||
+      !player.powerups.includes(id)
+    ) {
+      return;
+    }
+
+    // Attacks: the chosen opponent (or the only one there is)
+    let victim = null;
+    if (info.target === "player") {
+      const opponents = room.players.filter((p) => p.active && p.name !== username);
+      victim = opponents.length === 1 ? opponents[0] : opponents.find((p) => p.name === data.player) || null;
+      if (victim == null) return;
+    }
+
+    // Cards to choose (validated here)
+    const targets = Array.isArray(data.targets) ? data.targets : [];
+    const needed = info.target === "card" ? 1 : info.target === "cards" ? 2 : 0;
+    if (targets.length !== needed || !targets.every((card) => isClosed(room, card))) return;
+    if (needed === 2 && targets[0] === targets[1]) return;
+
+    // Moving cards only works when no card is open, second chance before the second card
+    if (["shuffle", "swap", "rotate", "rowShift"].includes(id) && room.openedCards.length > 0) return;
+    const rowPerm = id === "rowShift" ? powerups.rowShiftPermutation(room, targets[0]) : null;
+    if (id === "rowShift" && rowPerm == null) return; // nothing would move
+    if (id === "secondChance" && (room.openedCards.length > 1 || player.armed.secondChance)) return;
+
+    player.powerups.splice(player.powerups.indexOf(id), 1);
+    room.turnPowerUsed = true;
+    rooms.touch(room);
+    systemMessage(gameID, room, `${username} used ${powerupLabel(id)}.`, "info");
+
+    switch (id) {
+      case "map": {
+        // Cards nobody has opened yet
+        const fresh = [];
+        for (let card = 0; card < CARD_COUNT; card++) {
+          if (room.cardCounter[card] === 0 && !room.foundMatches.includes(card)) fresh.push(card);
+        }
+        socket.emit("powerupReveal", { type: "map", duration: 3000, cards: fresh.map((card) => ({ id: card })) });
+        break;
+      }
+      case "peek":
+        reveal(socket, targets, room, 1500, "peek");
+        break;
+      case "spotlight":
+        reveal(socket, powerups.area(targets[0]).filter((card) => isClosed(room, card)), room, 1500, "peek");
+        break;
+      case "bomb":
+        reveal(multiPlayer.to(gameID), powerups.area(targets[0]).filter((card) => isClosed(room, card)), room, 2000, "bomb");
+        break;
+      case "extraTurn":
+      case "secondChance":
+      case "combo":
+      case "tripleFlip":
+      case "doubleOrNothing":
+        player.armed[id] = true;
+        break;
+      case "shield":
+        player.shield = true;
+        break;
+      case "party":
+        for (const p of room.players) {
+          if (p.active) grantPowerup(gameID, room, p, "gets from the party");
+        }
+        break;
+      case "mysteryBox": {
+        // Mostly good, sometimes not
+        const roll = Math.random();
+        if (roll < 0.75) {
+          const prize = powerups.randomPowerup(player.received, ["mysteryBox"]);
+          receive(player, prize);
+          systemMessage(gameID, room, `${username} finds ${powerupLabel(prize)} in the box.`, "start");
+        } else if (roll < 0.875) {
+          player.points -= 1;
+          systemMessage(gameID, room, `The box bites! ${username} loses 1 point.`, "info");
+        } else {
+          player.skipNext = true;
+          systemMessage(gameID, room, `The box is empty and ${username} misses their next turn.`, "info");
+        }
+        break;
+      }
+      case "fog":
+      case "skip":
+      case "steal": {
+        if (victim.shield) {
+          victim.shield = false;
+          systemMessage(gameID, room, `${victim.name}'s shield blocked it.`, "info");
+        } else if (id === "fog") {
+          victim.fog = true;
+          systemMessage(gameID, room, `${victim.name} is in the fog for their next turn.`, "info");
+        } else if (id === "skip") {
+          victim.skipNext = true;
+          systemMessage(gameID, room, `${victim.name} misses their next turn.`, "info");
+        } else if (victim.powerups.length === 0) {
+          systemMessage(gameID, room, `${victim.name} has nothing to steal.`, "info");
+        } else {
+          const loot = victim.powerups.splice(Math.floor(Math.random() * victim.powerups.length), 1)[0];
+          player.powerups.push(loot);
+          systemMessage(gameID, room, `${username} steals ${powerupLabel(loot)} from ${victim.name}.`, "info");
+        }
+        break;
+      }
+      case "shuffle":
+        moveCards(gameID, room, "shuffle", powerups.shufflePermutation(room));
+        break;
+      case "swap":
+        moveCards(gameID, room, "swap", powerups.swapPermutation(targets[0], targets[1]));
+        break;
+      case "rowShift":
+        moveCards(gameID, room, "rowShift", rowPerm);
+        break;
+      case "rotate":
+        moveCards(gameID, room, "rotate", powerups.rotatePermutation());
+        break;
+    }
+
+    emitRoomState(gameID, room);
+  }
+
   /* ---------- Game ---------- */
 
   function checkGame(socket, room) {
-    // If both cards are open check if those are a match.
-    if (room.openedCards.length == 2 && !room.checkingCards) {
-      room.checkingCards = true;
-
-      if (!checkCards(socket.gameID, room)) {
-        if (room.mode === "speed") {
-          // Speed round: the clock stops, and the turn passes on its own
-          // after a short look at the cards
-          room.turnToken++;
-          room.turnEndsAt = null;
-          const token = room.turnToken;
-          const gameID = socket.gameID;
-          emitRoomState(gameID, room);
-          roomTimeout(
-            room,
-            () => {
-              if (room.status !== STATUS.PLAYING || room.turnToken !== token) return;
-              nextTurn(gameID, room);
-              emitRoomState(gameID, room);
-            },
-            config.SPEED_MISS_DELAY,
-          );
-        } else {
-          socket.emit("activateEndTurn");
-        }
+    const gameID = socket.gameID;
+    if (room.openedCards.length >= 2 && !room.checkingCards) {
+      const pair = findOpenPair(room);
+      if (pair != null) {
+        foundPair(gameID, room, pair);
+      } else if (room.openedCards.length < openLimit(room)) {
+        // Triple flip: one more card to go
+        emitRoomState(gameID, room);
+      } else {
+        room.checkingCards = true;
+        missedPair(socket, room);
       }
     }
 
     // Check for winner
     if (room.foundMatches.length == CARD_COUNT) {
-      getWinner(socket.gameID, room).catch((error) =>
+      getWinner(gameID, room).catch((error) =>
         console.error("[multiplayer] Could not finish game:", error),
       );
     }
   }
 
-  function checkCards(gameID, room) {
-    const id = room.openedCards[0];
-    const id2 = room.openedCards[1];
-
-    // Check if cards match
-    const cardsMatch = room.cardPairs[id] == id2;
-
-    if (cardsMatch) {
-      // Push to foundMatches -> So it can't be opened again
-      room.foundMatches.push(id, id2);
-
-      // understateCard - remove Zoom and Border on cards
-      roomTimeout(room, () => multiPlayer.to(gameID).emit("understateCard", id), 500);
-      roomTimeout(room, () => multiPlayer.to(gameID).emit("understateCard", id2), 500);
-
-      // Increase Points
-      const player = room.players[room.turn];
-      player.points++;
-      multiPlayer.to(gameID).emit("matchFound", { name: player.name, ids: [id, id2] });
-
-      // Reset turn - a found pair gives another try with fresh time
-      room.openedCards = [];
-      room.checkingCards = false;
-      startTurnTimer(gameID, room);
-      emitRoomState(gameID, room);
-    }
-
-    return cardsMatch;
+  // Lets a single open card close a moment later (it can't be opened until then)
+  function closeLater(gameID, room, id) {
+    room.closingCard = id;
+    roomTimeout(
+      room,
+      () => {
+        if (room.closingCard === id) room.closingCard = null;
+        multiPlayer.to(gameID).emit("closeCards", { 1: id });
+      },
+      900,
+    );
   }
 
-  // Closes the open cards and gives the turn to the next active and connected player.
-  function nextTurn(gameID, room) {
+  // The open cards don't contain a pair
+  function missedPair(socket, room) {
+    const gameID = socket.gameID;
+    const player = room.players[room.turn];
+    if (room.mode === "powerups" && player.armed.tripleFlip) player.armed.tripleFlip = false;
+    if (room.mode === "powerups" && player.armed.doubleOrNothing) {
+      // Double or nothing: nothing it is (points can go below 0)
+      player.armed.doubleOrNothing = false;
+      player.points -= 1;
+      systemMessage(gameID, room, `Double or nothing: ${player.name} loses 1 point.`, "info");
+    }
+    if (room.mode === "powerups" && player.armed.secondChance) {
+      // Second chance: only the second card closes, pick another one
+      player.armed.secondChance = false;
+      const second = room.openedCards.pop();
+      room.checkingCards = false;
+      closeLater(gameID, room, second);
+      systemMessage(gameID, room, `${player.name} uses the second chance.`, "info");
+      emitRoomState(gameID, room);
+      return;
+    }
+    if (room.mode === "speed") {
+      // Speed round: the clock stops, and the turn passes on its own
+      // after a short look at the cards
+      room.turnToken++;
+      room.turnEndsAt = null;
+      const token = room.turnToken;
+      emitRoomState(gameID, room);
+      roomTimeout(
+        room,
+        () => {
+          if (room.status !== STATUS.PLAYING || room.turnToken !== token) return;
+          nextTurn(gameID, room);
+          emitRoomState(gameID, room);
+        },
+        config.SPEED_MISS_DELAY,
+      );
+    } else {
+      socket.emit("activateEndTurn");
+      // Everybody sees that two wrong cards are open (power-up mode: End turn in the bar)
+      emitRoomState(gameID, room);
+    }
+  }
+
+  function foundPair(gameID, room, [id, id2]) {
+    // Push to foundMatches -> So it can't be opened again
+    room.foundMatches.push(id, id2);
+
+    // understateCard - remove Zoom and Border on cards
+    roomTimeout(room, () => multiPlayer.to(gameID).emit("understateCard", id), 500);
+    roomTimeout(room, () => multiPlayer.to(gameID).emit("understateCard", id2), 500);
+
+    // Increase Points
+    const player = room.players[room.turn];
+    player.points++;
+    multiPlayer.to(gameID).emit("matchFound", { name: player.name, ids: [id, id2] });
+
+    if (room.mode === "powerups") {
+      room.turnPairs++;
+      // Combo: every further pair in this turn gives bonus points (+1, +2, ...)
+      if (player.armed.combo && room.turnPairs > 1) {
+        player.points += room.turnPairs - 1;
+        systemMessage(gameID, room, `Combo! ${player.name} gets +${room.turnPairs - 1} bonus.`, "trophy");
+      }
+      if (player.armed.doubleOrNothing) {
+        player.armed.doubleOrNothing = false;
+        player.points++;
+        systemMessage(gameID, room, `Double or nothing: ${player.name} gets double!`, "trophy");
+      }
+      if (room.powerCards.includes(id)) {
+        grantPowerup(gameID, room, player, "found a power-up pair");
+      }
+      // Triple flip: the third card closes again, the triple flip is used up
+      const rest = room.openedCards.filter((card) => card !== id && card !== id2);
+      if (room.openedCards.length > 2) player.armed.tripleFlip = false;
+      rest.forEach((card) => closeLater(gameID, room, card));
+    }
+
+    // Reset turn - a found pair gives another try with fresh time
+    room.openedCards = [];
+    room.checkingCards = false;
+    startTurnTimer(gameID, room);
+    emitRoomState(gameID, room);
+  }
+
+  // Closes the open cards (the turn stays)
+  function closeOpenCards(gameID, room) {
     if (room.openedCards.length > 0) {
       multiPlayer.to(gameID).emit("closeCards", {
         1: room.openedCards[0],
         2: room.openedCards[1],
+        3: room.openedCards[2],
       });
     }
+    room.openedCards = [];
+    room.checkingCards = false;
+  }
+
+  // Closes the open cards and gives the turn to the next active and connected player.
+  function nextTurn(gameID, room) {
+    closeOpenCards(gameID, room);
+    if (room.mode === "powerups") endPowerupTurn(gameID, room);
 
     const count = room.players.length;
     let fallback = null;
@@ -621,6 +963,12 @@ module.exports = function (io) {
       const index = (room.turn + step) % count;
       const player = room.players[index];
       if (!player.active) continue;
+      // Skip power-up: this player sits out once
+      if (room.mode === "powerups" && player.skipNext && index !== room.turn) {
+        player.skipNext = false;
+        systemMessage(gameID, room, `${player.name} is skipped.`, "info");
+        continue;
+      }
       if (player.connected) {
         room.turn = index;
         fallback = null;
@@ -682,10 +1030,7 @@ module.exports = function (io) {
       .map((player) => player.name);
 
     for (let i = 0; i < CARD_COUNT; i++) {
-      multiPlayer.to(gameID).emit("turnCard", {
-        id: i,
-        src: room.cardImages[i],
-      });
+      multiPlayer.to(gameID).emit("turnCard", cardData(room, i));
     }
 
     // Update all statistics. One failing update must not affect the others.
