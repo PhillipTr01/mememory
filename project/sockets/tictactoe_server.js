@@ -135,8 +135,7 @@ module.exports = function (io) {
           seat.socketId = socket.id;
           seat.disconnectedAt = null;
         } else if (!watch && room.status === STATUS.WAITING && room.seats.includes(null)) {
-          // The first player gets a random color (seat 0 = red, seat 1 = blue)
-          index = room.seats.every((seat) => seat == null) ? (Math.random() < 0.5 ? 0 : 1) : room.seats.indexOf(null);
+          index = room.seats.indexOf(null);
           room.seats[index] = {
             name: username,
             connected: true,

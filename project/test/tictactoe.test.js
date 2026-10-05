@@ -248,15 +248,16 @@ test("tictactoe: the lobby lists open games and the room code works", async () =
   assert.strictEqual(rooms.get(gameID, "tictactoe"), null);
 });
 
-test("tictactoe: the first player gets a random color", async () => {
-  const seats = new Set();
-  for (let i = 0; i < 12 && seats.size < 2; i++) {
+test("tictactoe: the creator keeps the first seat, the colors are random", async () => {
+  const colors = new Set();
+  for (let i = 0; i < 12 && colors.size < 2; i++) {
     const gameID = await createGame("alice");
     const alice = await join("alice", gameID);
-    seats.add(alice.firstState.seats.findIndex((seat) => seat != null));
+    assert.strictEqual(alice.firstState.seats[0].name, "alice");
+    colors.add(alice.firstState.swapColors);
     alice.emit("leave");
   }
-  assert.deepStrictEqual([...seats].sort(), [0, 1]);
+  assert.deepStrictEqual([...colors].sort(), [false, true]);
 });
 
 test("tictactoe: unknown games", async () => {

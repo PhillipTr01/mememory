@@ -38,9 +38,14 @@ function canPlace(size, cell) {
   return piece == null || piece.size < size;
 }
 
+// CSS class of a seat's color: p0 = red, p1 = blue (random per room)
+function colorClass(seat) {
+  return "p" + (state != null && state.swapColors ? 1 - seat : seat);
+}
+
 function createPiece(owner, size) {
   var piece = document.createElement("span");
-  piece.className = "ttt-piece p" + owner + " s" + size;
+  piece.className = "ttt-piece " + colorClass(owner) + " s" + size;
   piece.innerText = size;
   return piece;
 }
@@ -119,8 +124,8 @@ function renderBoard() {
   var board = document.getElementById("board");
   var over = state.winner != null || state.draw;
   board.classList.toggle("over", over);
-  board.classList.toggle("p0-won", state.winner == 0);
-  board.classList.toggle("p1-won", state.winner == 1);
+  board.classList.toggle("p0-won", state.winner != null && colorClass(state.winner) == "p0");
+  board.classList.toggle("p1-won", state.winner != null && colorClass(state.winner) == "p1");
 
   board.querySelectorAll(".ttt-cell").forEach((cell, index) => {
     var piece = state.board != null ? state.board[index] : null;
@@ -161,6 +166,8 @@ function renderSeat(index) {
   var panel = document.getElementById("seat" + index);
   var seat = state.seats[index];
   var mine = index == mySeat();
+  panel.classList.toggle("p0", colorClass(index) == "p0");
+  panel.classList.toggle("p1", colorClass(index) == "p1");
 
   panel.classList.toggle("mine", mine || (mySeat() < 0 && index == 1));
   panel.classList.toggle(
