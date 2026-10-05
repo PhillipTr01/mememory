@@ -372,6 +372,24 @@ test("multiplayer: the host leaves after the game, the next player can start the
   assert.deepStrictEqual(state.players.map((p) => p.name), ["bob"], "only players who are still here");
 });
 
+test("multiplayer: players who left are marked, players who surrendered are not", async () => {
+  const { alice, others } = await openRoom("bob", "carol");
+  const [bob, carol] = others;
+  const started = waitFor(alice, "roomState", (s) => s.status === "playing");
+  alice.emit("startGame");
+  await started;
+
+  const marked = waitFor(alice, "roomState", (s) => s.players.find((p) => p.name === "bob").left);
+  bob.emit("leaveRoom");
+  const state = await marked;
+  assert.strictEqual(state.players.find((p) => p.name === "bob").active, false);
+
+  const surrendered = waitFor(alice, "roomState", (s) => !s.players.find((p) => p.name === "carol").active);
+  carol.emit("surrender");
+  const after = await surrendered;
+  assert.strictEqual(after.players.find((p) => p.name === "carol").left, false);
+});
+
 test("multiplayer: chat is validated, rate limited and kept as history", async () => {
   const { gameID, alice, others: [bob] } = await openRoom("bob");
 

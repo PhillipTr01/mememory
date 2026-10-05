@@ -117,6 +117,8 @@ module.exports = function (io) {
           player.connected = true;
           player.socketId = socket.id;
           player.disconnectedAt = null;
+          // Back in a finished room (e.g. reload after the game)
+          if (room.status === STATUS.FINISHED) player.left = false;
           socket.spectator = !player.active;
         } else if (
           !watch &&
@@ -427,6 +429,7 @@ module.exports = function (io) {
     // After the game: gone, so not part of a rematch
     if (room.status === STATUS.FINISHED) {
       player.connected = false;
+      player.left = true;
       player.disconnectedAt = Date.now();
       systemMessage(gameID, room, `${player.name} left the room.`, "leave");
       // The host left: somebody who is still here can start the rematch
@@ -488,6 +491,8 @@ module.exports = function (io) {
     rooms.touch(room);
     const wasTurn = room.turn === index;
     player.active = false;
+    // Shown as "Left" instead of the surrender flag
+    player.left = reason !== "surrendered";
     if (wasTurn && room.status === STATUS.PLAYING) {
       nextTurn(gameID, room);
     }
@@ -730,7 +735,7 @@ module.exports = function (io) {
 
     room.players = room.players
       .filter((player) => player.connected)
-      .map((player) => ({ ...player, points: 0, active: true, ready: false, disconnectedAt: null }));
+      .map((player) => ({ ...player, points: 0, active: true, ready: false, left: false, disconnectedAt: null }));
     if (findPlayer(room, room.host) == null && room.players.length > 0) {
       room.host = room.players[0].name;
     }

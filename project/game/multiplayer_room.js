@@ -73,6 +73,18 @@ function serialize(gameID, room) {
       active: player.active,
       connected: player.connected,
       ready: player.ready === true,
+      // Left the room / didn't come back (not surrendered)
+      left: player.left === true,
+      // Lost the connection / closed the page: time left to come back (ms)
+      awayLeft:
+        player.connected || !player.active || player.disconnectedAt == null
+          ? null
+          : Math.max(
+              0,
+              player.disconnectedAt +
+                (room.status === STATUS.WAITING ? config.REJOIN_GRACE_WAITING : config.REJOIN_GRACE_PLAYING) -
+                Date.now(),
+            ),
     })),
   };
 }

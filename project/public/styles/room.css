@@ -1467,3 +1467,14 @@
 #resultOverlay .result-box .mm-btn.result-rematch {
   flex-basis: 100%;
 }
+
+/* Left the room / away (can still come back) */
+.player-tag.left {
+  background: rgba(224, 103, 90, 0.14);
+  color: var(--mm-danger);
+}
+
+.player-tag.away {
+  background: rgba(212, 166, 74, 0.15);
+  color: var(--mm-warning);
+}

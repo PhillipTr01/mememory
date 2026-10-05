@@ -66,6 +66,15 @@ function createSurrenderButton() {
     return button;
 }
 
+// Small "Left" tag for players who left the room / didn't come back
+function createLeftTag() {
+    var tag = document.createElement("span");
+    tag.className = "player-tag left";
+    tag.title = "Left the room";
+    tag.innerText = "Left";
+    return tag;
+}
+
 // Small tag for players who surrendered / left the game (like the "You" tag)
 function createSurrenderedTag() {
     var tag = document.createElement("span");

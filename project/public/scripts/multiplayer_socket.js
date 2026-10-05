@@ -163,9 +163,36 @@ socket.on("joinedRoom", (data) => {
   if (room) renderPlayerList(room, room);
 });
 
+// Players who are away: when their time to come back runs out (local clock)
+var awayUntil = {};
+var awayTimer = null;
+
+function awaySeconds(player) {
+  var until = awayUntil[player.name];
+  return until == null ? null : Math.max(0, Math.ceil((until - Date.now()) / 1000));
+}
+
+function createAwayTag() {
+  var tag = document.createElement("span");
+  tag.className = "player-tag away";
+  tag.title = "Left - can still come back";
+  tag.innerText = "Away";
+  return tag;
+}
+
 socket.on("roomState", (state) => {
   var previous = room;
   room = state;
+
+  awayUntil = {};
+  state.players.forEach((player) => {
+    if (player.awayLeft != null) awayUntil[player.name] = Date.now() + player.awayLeft;
+  });
+  clearInterval(awayTimer);
+  if (Object.keys(awayUntil).length > 0 && state.status != "waiting") {
+    // Count down once a second
+    awayTimer = setInterval(() => room && renderPlayerList(room, room), 1000);
+  }
 
   // Speed round: yellow / orange accent color for the whole room
   document.body.classList.toggle("mode-speed", state.mode == "speed");
@@ -215,7 +242,7 @@ function renderPlayerList(state, previous) {
   state.players.forEach((player, index) => {
     var item = document.createElement("div");
     item.className = "player-item";
-    if (!player.active) item.classList.add("inactive");
+    if (!player.active || player.left) item.classList.add("inactive");
     if (state.status == "playing" && state.turn == index && player.active) item.classList.add("turn");
 
     var info = document.createElement("div");
@@ -254,17 +281,23 @@ function renderPlayerList(state, previous) {
       name.appendChild(createKickButton(player.name, "player-kick"));
     }
 
-    // Out of the game: tag with a flag instead of a text
-    if (!player.active) {
+    // Out of the game: "Left" or the surrender flag, "Away" while they can come back
+    if (player.left) {
+      name.appendChild(createLeftTag());
+    } else if (!player.active) {
       name.appendChild(createSurrenderedTag());
+    } else if (awaySeconds(player) != null) {
+      name.appendChild(createAwayTag());
     }
 
     var sub = document.createElement("div");
     sub.className = "player-sub";
-    sub.innerText = !player.active
+    sub.innerText = !player.active || player.left
       ? ""
-      : !player.connected
-        ? "reconnecting..."
+      : awaySeconds(player) != null
+        ? awaySeconds(player) + "s to come back"
+        : !player.connected
+          ? "reconnecting..."
         : state.status == "playing" && state.turn == index
           ? "is playing"
           : "";
@@ -756,7 +789,8 @@ function showResult(winners) {
     nameText.className = "player-name-text";
     nameText.innerText = player.name;
     name.appendChild(nameText);
-    if (!player.active) name.appendChild(createSurrenderedTag());
+    if (player.left) name.appendChild(createLeftTag());
+    else if (!player.active) name.appendChild(createSurrenderedTag());
     var points = document.createElement("span");
     points.className = "points";
     points.innerText = player.points;
