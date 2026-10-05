@@ -1845,3 +1845,26 @@
 body.has-action-bar #mm-toasts {
   bottom: 9rem;
 }
+
+/* In the room, toasts are centered over the board like the action bar */
+@media (min-width: 992px) {
+  body.in-room #mm-toasts {
+    left: calc((100vw - 340px - 1.25rem) / 2);
+  }
+}
+
+/* Classic: only the End turn button, no open / close */
+.action-bar.end-only {
+  padding: 0.6rem;
+}
+
+.action-bar.end-only .action-toggle,
+.action-bar.end-only .powerup-slots {
+  display: none;
+}
+
+.action-bar.end-only .action-end {
+  height: auto;
+  padding: 0.75rem 1.6rem;
+  font-size: 1.05rem;
+}

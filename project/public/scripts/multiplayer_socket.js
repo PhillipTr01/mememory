@@ -216,10 +216,8 @@ socket.on("roomState", (state) => {
   pairs.hidden = waiting;
   pairs.innerText = state.pairsLeft + " pairs left";
 
-  var player = getMyPlayer(state);
-  var inGame = (state.status == "playing" || state.status == "starting") && player != null && player.active;
-  // Speed round: the turn passes on its own; power-ups: End turn is in the action bar
-  document.getElementById("playButton").hidden = !inGame || state.mode == "speed" || state.mode == "powerups";
+  // End turn is in the floating action bar (classic, power-ups); the speed round has none
+  document.getElementById("playButton").hidden = true;
   updateTurnTimer(state);
 
   // My turn is over -> the End Turn button can't be used anymore

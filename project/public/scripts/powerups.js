@@ -28,12 +28,20 @@ function canUsePowerup(state, id) {
 var endTurnReady = false; // for opening the bar when the turn can be ended
 var barTurnKey = null; // a new turn closes the bar
 
+/*
+ * Floating action bar:
+ * - power-up mode: power-ups + End turn, can be opened and closed
+ * - classic: only End turn, it pops up when the turn can be ended
+ */
 function renderPowerups(state) {
   var bar = document.getElementById("actionBar");
   var mine = getMyPlayer(state);
-  var show = state.mode == "powerups" && state.status == "playing" && mine != null && mine.active && !me.spectator;
+  var player = state.status == "playing" && mine != null && mine.active && !me.spectator;
+  var ready = player && isMyTurn(state) && state.checkingCards && state.openedCount == 2;
+  var powerMode = state.mode == "powerups";
+  var show = player && (powerMode || (state.mode == "classic" && ready));
   bar.hidden = !show;
-  // The bar has its own End turn button in this mode
+  bar.classList.toggle("end-only", !powerMode);
   document.body.classList.toggle("has-action-bar", show);
 
   // Fog: the cards I open in my turn are blurred (see isFogged / turnCard)
@@ -43,6 +51,16 @@ function renderPowerups(state) {
   if (!show) {
     cancelTargeting();
     endTurnReady = false;
+    return;
+  }
+
+  var endButton = document.getElementById("actionEndTurn");
+  if (!powerMode) {
+    // Classic: the bar only exists while the turn can be ended
+    setActionBarOpen(true);
+    endButton.disabled = false;
+    endButton.classList.add("mm-btn-primary", "ready");
+    endTurnReady = true;
     return;
   }
   if (targeting && !canUsePowerup(state, targeting.id)) cancelTargeting();
@@ -55,8 +73,6 @@ function renderPowerups(state) {
   }
 
   // Two wrong cards: End turn right away (the bar opens if it was closed)
-  var ready = isMyTurn(state) && state.checkingCards && state.openedCount == 2;
-  var endButton = document.getElementById("actionEndTurn");
   endButton.disabled = !ready;
   endButton.classList.toggle("mm-btn-primary", ready);
   endButton.classList.toggle("ready", ready);
