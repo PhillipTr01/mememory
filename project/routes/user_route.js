@@ -10,6 +10,15 @@ router.get('/username', Auth, asyncHandler(async (req, res) => {
     res.status(200).json(await users.getUsername(req._id));
 }));
 
+// Avatars for the player lists: /avatars?names=alice,bob
+router.get('/avatars', Auth, asyncHandler(async (req, res) => {
+    res.status(200).json(await users.getAvatars(req.query.names));
+}));
+
+router.put('/avatar', Auth, asyncHandler(async (req, res) => {
+    res.status(200).json({avatar: await users.setAvatar(req._id, req.body)});
+}));
+
 router.get('/statistic', Auth, asyncHandler(async (req, res) => {
     res.status(200).json(await users.getStatistic(req._id));
 }));

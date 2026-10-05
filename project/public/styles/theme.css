@@ -138,6 +138,18 @@ a.mm-btn.mm-btn-primary:focus,
   user-select: none;
 }
 
+/* Own avatar (avatar maker): the drawing fills the circle */
+.mm-avatar.has-avatar {
+  background: transparent !important;
+}
+
+.mm-avatar .mm-avatar-svg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: block;
+}
+
 .mm-avatar.lg {
   --size: 56px;
 }
@@ -397,6 +409,7 @@ a.mm-btn.mm-btn-primary:focus,
   background: transparent;
   color: var(--mm-text);
   font-size: 0.95rem;
+  font-weight: 600;
   text-align: left;
   transition: background 0.12s ease;
 }
@@ -408,17 +421,22 @@ a.mm-btn.mm-btn-primary:focus,
   outline: none;
 }
 
+/* Current page: neutral highlight like the rest of the site (no blue) */
 .profile-item.active {
-  color: var(--mm-accent);
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
 }
 
+/* Bold icons (the icon font has only one weight, a thin outline makes it bolder) */
 .profile-item .bi {
   width: 1.1rem;
-  color: var(--mm-muted);
+  color: #b5b5b5;
+  -webkit-text-stroke: 0.35px currentColor;
 }
 
+.profile-item:hover .bi,
 .profile-item.active .bi {
-  color: var(--mm-accent);
+  color: var(--mm-text);
 }
 
 .profile-item.danger,

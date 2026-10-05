@@ -97,7 +97,11 @@
 
     <main class="page">
       <section class="panel profile-hero mb-4">
-        <span id="heroAvatar" class="mm-avatar lg"></span>
+        <!--- Click the avatar to open the avatar maker --->
+        <button type="button" id="editAvatarButton" class="hero-avatar" title="Edit avatar" aria-label="Edit avatar">
+          <span id="heroAvatar" class="mm-avatar lg"></span>
+          <span class="hero-avatar-edit"><i class="bi bi-pencil-fill"></i></span>
+        </button>
         <div class="flex-grow-1 overflow-hidden">
           <h1 class="page-title text-truncate" id="heroName">Profile</h1>
           <p class="mm-muted mb-0">Your statistics in all games</p>
@@ -106,6 +110,25 @@
           <div><span id="totalGames">0</span><small>Games</small></div>
           <div><span id="totalWins">0</span><small>Wins</small></div>
           <div><span id="totalRate">0%</span><small>Win rate</small></div>
+        </div>
+      </section>
+
+      <!--- Avatar maker --->
+      <section id="avatarEditor" class="panel avatar-editor mb-4" hidden>
+        <div class="avatar-editor-preview">
+          <span id="avatarPreview" class="mm-avatar avatar-xl"></span>
+          <div class="avatar-editor-actions">
+            <button type="button" id="avatarRandom" class="mm-btn mm-btn-sm"><i class="bi bi-shuffle"></i> Random</button>
+            <button type="button" id="avatarLetter" class="mm-btn mm-btn-sm"><i class="bi bi-fonts"></i> Use letter</button>
+          </div>
+        </div>
+        <div class="avatar-editor-main">
+          <div id="avatarTabs" class="avatar-tabs" role="tablist" aria-label="Avatar parts"></div>
+          <div id="avatarOptions" class="avatar-options"></div>
+          <div class="avatar-editor-footer">
+            <button type="button" id="avatarCancel" class="mm-btn">Cancel</button>
+            <button type="button" id="avatarSave" class="mm-btn mm-btn-primary"><i class="bi bi-check-lg"></i> Save avatar</button>
+          </div>
         </div>
       </section>
 
@@ -196,6 +219,7 @@
       crossorigin="anonymous"
     ></script>
     <!--- Custom JS --->
+    <script src="/static/scripts/avatar.js"></script>
     <script src="/static/scripts/ui.js"></script>
     <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/user_profile.js"></script>
