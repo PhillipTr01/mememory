@@ -553,13 +553,19 @@ module.exports = function (io) {
           room.emptySince = null;
         } else if (room.emptySince == null) {
           room.emptySince = now;
-        } else if (now - room.emptySince >= config.EMPTY_ROOM_GRACE) {
+        } else if (now - room.emptySince >= Math.max(config.EMPTY_ROOM_GRACE, emptyGrace(room))) {
           rooms.remove(gameID);
         }
       } catch (error) {
         console.error("[multiplayer] Room check failed:", error);
       }
     }
+  }
+
+  // A running game isn't deleted while its players may still come back (reload)
+  function emptyGrace(room) {
+    const running = room.status === STATUS.PLAYING || room.status === STATUS.STARTING;
+    return running && room.players.some((player) => player.active) ? config.REJOIN_GRACE_PLAYING : 0;
   }
 
   const ticker = setInterval(() => tick().catch(() => {}), config.TICK);
@@ -1051,7 +1057,11 @@ module.exports = function (io) {
     systemMessage(
       gameID,
       room,
-      winners.length > 1 ? `Draw between ${winners.join(", ")}!` : `${winners[0]} wins!`,
+      winners.length > 1
+        ? `Draw between ${winners.join(", ")}!`
+        : winners.length == 1
+          ? `${winners[0]} wins!`
+          : "The game is over.", // nobody left in the game
       "trophy",
     );
     emitRoomState(gameID, room);

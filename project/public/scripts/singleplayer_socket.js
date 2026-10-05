@@ -4,16 +4,6 @@ var modal;
 var game;
 var backImage = "/static/images/logo_small.png";
 
-// Escape text before putting it into innerHTML (usernames, chat messages, ...)
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 var gameOver = false;
 
 // Same notice as in the multiplayer (instead of the browser's alert)
@@ -260,7 +250,11 @@ function leaveGame() {
     confirmIcon: "bi-box-arrow-left",
     danger: true,
   }).then((ok) => {
-    if (ok) window.location.href = "/lobby";
+    if (!ok) return;
+    // Counts right away (a reload would only pause the game)
+    socket.once("getWinner", () => (window.location.href = "/lobby"));
+    socket.emit("surrender");
+    setTimeout(() => (window.location.href = "/lobby"), 1500);
   });
 }
 

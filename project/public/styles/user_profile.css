@@ -87,6 +87,15 @@
   margin: 0.75rem 0;
 }
 
+/* Tic Tac Toe also has draws: three numbers in the same width */
+.stat-numbers:has(> :nth-child(3)) {
+  gap: 0.6rem;
+}
+
+.stat-numbers:has(> :nth-child(3)) .stat-label {
+  letter-spacing: 0;
+}
+
 .stat-numbers div {
   display: flex;
   flex-direction: column;

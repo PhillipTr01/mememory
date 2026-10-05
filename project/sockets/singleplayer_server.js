@@ -64,7 +64,10 @@ module.exports = function (io) {
           room.initializing = false;
         }
         // Left (or another tab took over) while the board was created
-        if (room.socketId !== socket.id || rooms.get(gameID, "singleplayer") !== room) return;
+        if (room.socketId !== socket.id || rooms.get(gameID, "singleplayer") !== room) {
+          if (room.socketId == null) rooms.remove(gameID);
+          return;
+        }
 
         send(room, "setComputername", room.computername);
         startGame(room, board);

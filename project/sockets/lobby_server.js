@@ -32,6 +32,8 @@ module.exports = function (io) {
           return;
         }
 
+        // Clicked again before the game page opened: only the newest room stays
+        rooms.removeUnused("singleplayer", socket.data.username);
         const gameID = rooms.create("singleplayer", {
           difficulty: difficulty,
           username: socket.data.username,
@@ -53,6 +55,7 @@ module.exports = function (io) {
         try {
           // The board is created right away, so the room is ready to start.
           const board = await createBoard();
+          rooms.removeUnused("multiplayer", socket.data.username);
           const gameID = multiplayerRoom.createRoom(socket.data.username, board);
           socket.emit("saveGameID", { gameID: gameID, url: "/play" });
         } catch (error) {
@@ -66,6 +69,7 @@ module.exports = function (io) {
     socket.on(
       "playTicTacToe",
       safe("playTicTacToe", () => {
+        rooms.removeUnused("tictactoe", socket.data.username);
         const gameID = tictactoeRoom.createRoom(socket.data.username);
         socket.emit("saveGameID", { gameID: gameID, url: "/tictactoe" });
       }),

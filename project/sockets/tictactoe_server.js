@@ -320,16 +320,20 @@ module.exports = function (io) {
   /* Players that didn't come back lose their seat, empty rooms are removed */
   function tick(now = Date.now()) {
     for (const [gameID, room] of rooms.list("tictactoe")) {
-      room.seats.forEach((seat, index) => {
-        if (seat == null || seat.connected) return;
-        if (now - seat.disconnectedAt >= graceFor(room)) vacateSeat(gameID, room, index, "didn't come back");
-      });
+      try {
+        room.seats.forEach((seat, index) => {
+          if (seat == null || seat.connected) return;
+          if (now - seat.disconnectedAt >= graceFor(room)) vacateSeat(gameID, room, index, "didn't come back");
+        });
 
-      if (room.emptySince != null && room.seats.every((seat) => seat == null || !seat.connected)) {
-        const nobodyLeft = room.seats.every((seat) => seat == null);
-        if (nobodyLeft && room.spectators.size === 0 && now - room.emptySince >= config.EMPTY_ROOM_GRACE) {
-          rooms.remove(gameID);
+        if (room.emptySince != null && room.seats.every((seat) => seat == null || !seat.connected)) {
+          const nobodyLeft = room.seats.every((seat) => seat == null);
+          if (nobodyLeft && room.spectators.size === 0 && now - room.emptySince >= config.EMPTY_ROOM_GRACE) {
+            rooms.remove(gameID);
+          }
         }
+      } catch (error) {
+        console.error("[tictactoe] Room check failed:", error);
       }
     }
   }

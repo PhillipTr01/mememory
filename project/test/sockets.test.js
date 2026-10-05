@@ -748,3 +748,17 @@ test("speed round: animations don't count, the clock stops after two wrong cards
   current.emit("openCard", b);
   await stopped;
 });
+
+test("lobby: clicking again doesn't pile up rooms nobody entered", async () => {
+  const first = await createGame("carol", "playSingleplayer", { difficulty: 0 });
+  const second = await createGame("carol", "playSingleplayer", { difficulty: 1 });
+  assert.strictEqual(rooms.get(first, "singleplayer"), null);
+  assert.ok(rooms.get(second, "singleplayer"));
+
+  const ttt1 = await createGame("carol", "playTicTacToe");
+  const ttt2 = await createGame("carol", "playTicTacToe");
+  assert.strictEqual(rooms.get(ttt1, "tictactoe"), null);
+  assert.ok(rooms.get(ttt2, "tictactoe"));
+  // Other users' rooms stay
+  assert.ok(rooms.get(second, "singleplayer"));
+});
