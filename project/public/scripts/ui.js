@@ -25,6 +25,18 @@ function createAvatar(name, size, online) {
   return avatar;
 }
 
+// Small square button with only an icon; the label is the hover tooltip
+function createIconButton(icon, label, extraClass, onClick) {
+  var button = document.createElement("button");
+  button.type = "button";
+  button.className = "icon-btn" + (extraClass ? " " + extraClass : "");
+  button.title = label;
+  button.setAttribute("aria-label", label);
+  button.appendChild(createIcon(icon));
+  button.addEventListener("click", onClick);
+  return button;
+}
+
 function createIcon(classes, title) {
   var icon = document.createElement("i");
   icon.className = "bi " + classes;

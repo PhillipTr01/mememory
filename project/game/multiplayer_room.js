@@ -67,6 +67,7 @@ function serialize(gameID, room) {
     turnStartsIn: room.turnEndsAt != null ? Math.max(0, (room.turnStartsAt || 0) - Date.now()) : 0,
     pairsLeft: (CARD_COUNT - room.foundMatches.length) / 2,
     turnPowerUsed: room.turnPowerUsed === true,
+    rejoinSeconds: Math.round(config.REJOIN_GRACE_PLAYING / 1000),
     openedCount: room.openedCards.length,
     checkingCards: room.checkingCards === true,
     spectators: [...new Set(room.spectators.values())],

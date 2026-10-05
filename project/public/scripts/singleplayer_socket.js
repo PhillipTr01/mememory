@@ -158,6 +158,34 @@ socket.on("closeCards", (data) => {
 });
 
 
+// Surrender (flag, only while playing) and leave (door) next to "pairs left"
+var gameRunning = true;
+
+function renderGameActions(running) {
+  gameRunning = running;
+  var buttons = [];
+  if (running) buttons.push(createIconButton("bi-flag-fill", "Surrender", "danger", surrender));
+  buttons.push(createIconButton("bi-box-arrow-left", "Leave", "", leaveGame));
+  document.getElementById("gameActions").replaceChildren(...buttons);
+}
+
+// Leaving a running game ends it - the bot wins
+function leaveGame() {
+  if (!gameRunning) {
+    window.location.href = "/lobby";
+    return;
+  }
+  confirmDialog({
+    title: "Leave the game?",
+    text: "The bot wins this game and it counts as a loss in your statistics.",
+    confirmLabel: "Leave",
+    confirmIcon: "bi-box-arrow-left",
+    danger: true,
+  }).then((ok) => {
+    if (ok) window.location.href = "/lobby";
+  });
+}
+
 function surrender() {
   confirmDialog({
     title: "Surrender?",
@@ -190,7 +218,7 @@ socket.on("getWinner", (data) => {
   // Rematch / Back to lobby
   document.getElementById("rematchButton").hidden = false;
   document.getElementById("lobbyButton").hidden = false;
-  document.getElementById("surrenderSlot").replaceChildren();
+  renderGameActions(false);
   showResult(data);
 
   // Reset storage
@@ -217,7 +245,7 @@ socket.on("rematch", () => {
   ["user1Score", "user2Score"].forEach((id) => (document.getElementById(id).innerText = "0"));
   document.getElementById("pairsLeft").innerText = "33 pairs left";
   ["user1Item", "user2Item"].forEach((id) => document.getElementById(id).classList.remove("winner", "inactive"));
-  document.getElementById("surrenderSlot").replaceChildren(createSurrenderButton());
+  renderGameActions(true);
 
   ["rematchButton", "resultRematchButton"].forEach((id) => (document.getElementById(id).disabled = false));
   document.getElementById("rematchButton").hidden = true;
@@ -226,7 +254,7 @@ socket.on("rematch", () => {
 
 // Surrender button next to the own name
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("surrenderSlot").appendChild(createSurrenderButton());
+  renderGameActions(true);
 
   var overlay = document.getElementById("resultOverlay");
   document.getElementById("resultBoardButton").addEventListener("click", () => (overlay.hidden = true));

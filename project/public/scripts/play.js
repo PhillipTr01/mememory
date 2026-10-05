@@ -50,21 +50,6 @@ function clearCardImage(card, delay) {
     else clear();
 }
 
-// Small "Surrender" button shown next to the own name in the player list
-function createSurrenderButton() {
-    var button = document.createElement("button");
-    button.type = "button";
-    button.className = "player-surrender";
-    button.title = "Surrender";
-    var icon = document.createElement("i");
-    icon.className = "bi bi-flag-fill";
-    button.append(icon, document.createTextNode("Surrender"));
-    button.addEventListener("click", (event) => {
-        event.stopPropagation();
-        surrender();
-    });
-    return button;
-}
 
 // "+1" that floats up from a score when the points changed. It lives on the
 // page (not in the player list), so redrawing the list doesn't cut it off.

@@ -67,14 +67,38 @@ function awaySeconds(index) {
   return awayUntil[index] == null ? 0 : Math.max(0, Math.ceil((awayUntil[index] - Date.now()) / 1000));
 }
 
-function createSurrenderButton() {
-  var button = document.createElement("button");
-  button.type = "button";
-  button.className = "player-surrender";
-  button.title = "Surrender";
-  button.append(createIcon("bi-flag-fill"), document.createTextNode("Surrender"));
-  button.addEventListener("click", surrender);
-  return button;
+// Surrender (flag, while playing) and leave (door) top right
+function renderGameActions() {
+  var actions = document.getElementById("gameActions");
+  var playing = state.status == "playing" && mySeat() >= 0 && Date.now() >= startBlockedUntil;
+  var key = String(playing);
+  if (actions.dataset.key == key) return; // nothing changed, no flicker
+  actions.dataset.key = key;
+  var buttons = [];
+  if (playing) buttons.push(createIconButton("bi-flag-fill", "Surrender", "danger", surrender));
+  buttons.push(createIconButton("bi-box-arrow-left", "Leave", "", leaveGame));
+  actions.replaceChildren(...buttons);
+}
+
+async function leaveGame() {
+  var playing = state != null && state.status == "playing" && mySeat() >= 0;
+  if (playing) {
+    var ok = await confirmDialog({
+      title: "Leave the game?",
+      text:
+        "You can rejoin from the lobby within " +
+        state.rejoinSeconds +
+        " seconds. After that, your opponent wins this round.",
+      confirmLabel: "Leave",
+      confirmIcon: "bi-box-arrow-left",
+      danger: true,
+    });
+    if (!ok) return;
+  }
+  sessionOver = true;
+  socket.emit("leave");
+  sessionStorage.removeItem("gameID");
+  window.location.href = "/lobby";
 }
 
 function surrender() {
@@ -105,6 +129,7 @@ function render() {
   }
 
   renderStatus();
+  renderGameActions();
   renderBoard();
   renderSeat(0);
   renderSeat(1);
@@ -238,10 +263,6 @@ function renderSeat(index) {
     you.className = "you-tag";
     you.innerText = "You";
     name.appendChild(you);
-    // Surrender right next to the own name, like in MemeMory
-    if (state.status == "playing" && Date.now() >= startBlockedUntil) {
-      name.appendChild(createSurrenderButton());
-    }
   }
   var sub = document.createElement("div");
   sub.className = "ttt-sub";
@@ -502,26 +523,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("rematchButton").addEventListener("click", () => socket.emit("rematch"));
 
-  document.getElementById("leaveButton").addEventListener("click", async () => {
-    var playing = state != null && state.status == "playing" && mySeat() >= 0;
-    if (playing) {
-      var ok = await confirmDialog({
-        title: "Leave the game?",
-        text:
-          "You can rejoin from the lobby within " +
-          state.rejoinSeconds +
-          " seconds. After that, your opponent wins this round.",
-        confirmLabel: "Leave",
-        confirmIcon: "bi-box-arrow-left",
-        danger: true,
-      });
-      if (!ok) return;
-    }
-    sessionOver = true;
-    socket.emit("leave");
-    sessionStorage.removeItem("gameID");
-    window.location.href = "/lobby";
-  });
+  // (surrender + leave buttons: see renderGameActions)
 
   // Keys 1-4 pick a piece
   document.addEventListener("keydown", (event) => {

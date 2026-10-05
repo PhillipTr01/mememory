@@ -206,6 +206,7 @@ socket.on("roomState", (state) => {
   renderPlayerList(state, previous);
   renderWaitingRoom(state);
   renderTurn(state);
+  renderGameActions(state);
   renderPowerups(state);
 
   var waiting = state.status == "waiting";
@@ -268,12 +269,6 @@ function renderPlayerList(state, previous) {
       you.className = "player-tag";
       you.innerText = "You";
       name.appendChild(you);
-
-      // Surrender right next to the own name while playing
-      var playing = state.status == "playing" || state.status == "starting";
-      if (playing && player.active && !me.spectator) {
-        name.appendChild(createSurrenderButton());
-      }
     }
 
     // Ready mark in the waiting room
@@ -303,8 +298,6 @@ function renderPlayerList(state, previous) {
         ? awaySeconds(player) + "s to come back"
         : !player.connected
           ? "reconnecting..."
-        : state.status == "playing" && state.turn == index
-          ? "is playing"
           : "";
     info.append(name, sub);
     // Power-up mode: power-ups in the hand and running effects, in the line
@@ -626,6 +619,41 @@ function openCard(id) {
 
 function emitEndTurn() {
   socket.emit("endTurn");
+}
+
+// Surrender (flag) and leave (door) next to "pairs left"
+function renderGameActions(state) {
+  var actions = document.getElementById("gameActions");
+  var running = state.status == "playing" || state.status == "starting";
+  var mine = getMyPlayer(state);
+  var playing = running && mine != null && mine.active && !me.spectator;
+  var key = [state.status, playing].join(":");
+  if (actions.dataset.key == key) return; // nothing changed, no flicker
+  actions.dataset.key = key;
+
+  var buttons = [];
+  if (playing) buttons.push(createIconButton("bi-flag-fill", "Surrender", "danger", surrender));
+  if (state.status != "waiting") buttons.push(createIconButton("bi-box-arrow-left", "Leave", "", leaveGame));
+  actions.replaceChildren(...buttons);
+}
+
+// Leaving a running game: the seat is kept for a while, like after a lost connection
+function leaveGame() {
+  var mine = room && getMyPlayer(room);
+  var playing = room && (room.status == "playing" || room.status == "starting") && mine && mine.active && !me.spectator;
+  if (!playing) {
+    window.location.href = "/lobby";
+    return;
+  }
+  confirmDialog({
+    title: "Leave the game?",
+    text: "You can rejoin from the lobby within " + room.rejoinSeconds + " seconds. After that, you are out of the game.",
+    confirmLabel: "Leave",
+    confirmIcon: "bi-box-arrow-left",
+    danger: true,
+  }).then((ok) => {
+    if (ok) window.location.href = "/lobby";
+  });
 }
 
 function surrender() {

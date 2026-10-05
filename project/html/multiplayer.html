@@ -168,7 +168,11 @@
                 <div class="mm-card side-card">
                     <div class="side-head">
                         <span class="fw-semibold"><i class="bi bi-people me-2"></i>Players</span>
-                        <span id="pairsLeft" class="mm-badge" hidden></span>
+                        <div class="side-head-actions">
+                            <span id="pairsLeft" class="mm-badge" hidden></span>
+                            <!--- Surrender + leave (icons), filled by multiplayer_socket.js --->
+                            <span id="gameActions" class="game-actions"></span>
+                        </div>
                     </div>
                     <!--- Scoreboard, filled by multiplayer_socket.js --->
                     <div id="playerList" class="player-list"></div>

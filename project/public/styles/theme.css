@@ -898,3 +898,50 @@ body.mode-speed {
   from { opacity: 0; transform: translateY(-3px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ---------- Small square icon buttons (surrender, leave) ---------- */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border: 1px solid var(--mm-border);
+  border-radius: 7px;
+  background: var(--mm-surface-2);
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: var(--mm-surface-3);
+  color: var(--mm-text);
+}
+
+.icon-btn.danger {
+  color: var(--mm-danger);
+  border-color: rgba(224, 103, 90, 0.35);
+}
+
+.icon-btn.danger:hover {
+  background: rgba(224, 103, 90, 0.12);
+  color: var(--mm-danger);
+}
+
+.game-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.game-actions:empty {
+  display: none;
+}
+
+.side-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
