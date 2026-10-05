@@ -356,6 +356,14 @@ socket.on("connect", () => {
   join();
 });
 
+// Leaving the page (logo, menu, back button): disconnect right away, so the
+// others see "Away" at once. Browsers can keep a page with an open connection
+// in the back/forward cache; coming back reconnects (and rejoins).
+window.addEventListener("pagehide", () => socket.disconnect());
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) socket.connect();
+});
+
 socket.on("disconnect", () => {
   if (!sessionOver) document.getElementById("connectionBanner").hidden = false;
 });

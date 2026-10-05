@@ -37,6 +37,14 @@ socket.on("connect", () => {
   }
 });
 
+// Leaving the page (logo, menu, back button): disconnect right away, so the
+// others see "Away" at once. Browsers can keep a page with an open connection
+// in the back/forward cache; coming back reconnects (and rejoins).
+window.addEventListener("pagehide", () => socket.disconnect());
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) socket.connect();
+});
+
 socket.on("disconnect", (reason) => {
   // "io server disconnect" = we were removed on purpose, socket.io doesn't reconnect then
   if (!sessionOver && reason != "io server disconnect") {
@@ -480,7 +488,7 @@ function createSeat(state, player, isHost) {
   if (!player.connected) {
     var offline = document.createElement("span");
     offline.className = "mm-badge playing";
-    offline.innerText = "Reconnecting";
+    offline.innerText = "Away";
     tags.appendChild(offline);
   }
 
