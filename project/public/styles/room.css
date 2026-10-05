@@ -600,8 +600,9 @@
   margin: 0.6rem 0 0.1rem;
   padding: 0.2rem 0.7rem;
   border-radius: 999px;
-  background: var(--mm-surface-2);
-  color: var(--mm-muted);
+  /* Info messages: light turquoise */
+  background: rgba(var(--mm-info-rgb), 0.07);
+  color: rgba(var(--mm-info-rgb), 0.8);
   font-size: 0.75rem;
   text-align: center;
   animation: mm-fade-up 0.2s ease;
@@ -609,8 +610,8 @@
 
 .sys-msg.trophy,
 .sys-msg.start {
-  background: rgba(251, 191, 36, 0.12);
-  color: var(--mm-warning);
+  background: rgba(var(--mm-info-rgb), 0.13);
+  color: var(--mm-info);
   font-weight: 600;
 }
 

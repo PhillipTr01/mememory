@@ -309,7 +309,7 @@ function renderFooter() {
   if (show) {
     var me = state.seats[seat];
     var other = state.seats[1 - seat];
-    button.className = "mm-btn" + (me.rematch ? "" : " mm-btn-primary");
+    button.className = "mm-btn";
     button.replaceChildren(
       createIcon(me.rematch ? "bi-x" : "bi-arrow-repeat"),
       document.createTextNode(
