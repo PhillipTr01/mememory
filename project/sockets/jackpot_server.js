@@ -1,6 +1,6 @@
 const config = require("../game/config");
 const coins = require("../game/coins");
-const { pickWinner } = require("../game/jackpot");
+const { newFairRound, fairWinner } = require("../game/jackpot");
 const chat = require("../game/chat");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
@@ -29,8 +29,19 @@ module.exports = function (io) {
     draw: null, // {winner, ticket, total} while drawing
     timer: null,
     history: [], // [{round, winner, total, coins}] newest first
+    // Every bet of the round, oldest first. Each bet has its own tickets
+    // (from..to, counted from 1) in the order of the bets: a later bet gets
+    // the tickets at the end of the pot.
+    bets: [], // [{name, amount, from, to}]
+    fair: newFairRound(), // winning number of the round, only its hash is public
+    // Records of the day: biggest pot, luckiest win (smallest chance)
+    records: { day: today(), biggest: null, luckiest: null },
     chat: [],
   };
+
+  function today() {
+    return new Date().toISOString().slice(0, 10);
+  }
   const betting = new Set(); // users with a bet in progress (two tabs, fast clicks)
 
   function total() {
@@ -46,6 +57,10 @@ module.exports = function (io) {
       // Time left (ms) instead of a timestamp: the clocks of the clients may differ
       endsIn: pot.endsAt != null ? Math.max(0, pot.endsAt - Date.now()) : null,
       draw: pot.draw,
+      bets: pot.bets,
+      // The number and the secret are shown after the draw (provably fair)
+      fair: pot.phase === PHASE.DRAWING ? pot.fair : { hash: pot.fair.hash },
+      records: pot.records,
       spin: config.JACKPOT_SPIN,
       maxBet: config.JACKPOT_MAX_BET,
       history: pot.history,
@@ -84,8 +99,10 @@ module.exports = function (io) {
     pot.phase = PHASE.DRAWING;
     pot.endsAt = null;
 
-    // The ticket decides: every coin is one ticket, so the chance is the share of the pot
-    pot.draw = pickWinner(pot.entries);
+    // The ticket decides: every coin is one ticket, so the chance is the share of
+    // the pot. Which ticket was fixed at the start of the round (provably fair).
+    // The tickets go through the bets in their order (not per player).
+    pot.draw = fairWinner(pot.bets.map((bet) => ({ name: bet.name, coins: bet.amount })), pot.fair.number);
     const sum = pot.draw.total;
     const winner = pot.entries.find((entry) => entry.name === pot.draw.winner);
 
@@ -102,7 +119,13 @@ module.exports = function (io) {
     pot.timer = setTimeout(() => {
       const chance = Math.round((winner.coins / sum) * 100);
       systemMessage(`${winner.name} wins the jackpot: ${sum} coins (${chance}% chance)!`, "trophy");
-      pot.history.unshift({ round: pot.round, winner: winner.name, total: sum, coins: winner.coins });
+      const result = { round: pot.round, winner: winner.name, total: sum, coins: winner.coins };
+      pot.history.unshift(result);
+      if (pot.records.day !== today()) pot.records = { day: today(), biggest: null, luckiest: null };
+      if (pot.records.biggest == null || sum > pot.records.biggest.total) pot.records.biggest = result;
+      if (pot.records.luckiest == null || winner.coins / sum < pot.records.luckiest.coins / pot.records.luckiest.total) {
+        pot.records.luckiest = result;
+      }
       pot.history.length = Math.min(pot.history.length, config.JACKPOT_HISTORY);
       sendCoins(winner.name).catch(() => {});
       emitState();
@@ -114,6 +137,8 @@ module.exports = function (io) {
     pot.round++;
     pot.phase = PHASE.OPEN;
     pot.entries = [];
+    pot.bets = [];
+    pot.fair = newFairRound();
     pot.endsAt = null;
     pot.draw = null;
     emitState();
@@ -167,7 +192,9 @@ module.exports = function (io) {
           } else {
             pot.entries.push({ name: username, coins: amount });
           }
-          systemMessage(`${username} put ${amount} coins into the pot.`, "info");
+          const before = pot.bets.length > 0 ? pot.bets[pot.bets.length - 1].to : 0;
+          pot.bets.push({ name: username, amount: amount, from: before + 1, to: before + amount });
+          systemMessage(`${username} put ${amount} coins into the pot (tickets #${before + 1} - #${before + amount}).`, "info");
           if (pot.phase === PHASE.OPEN && pot.entries.length >= 2) startCountdown();
           emitState();
         } finally {

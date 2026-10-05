@@ -3,7 +3,8 @@ const assert = require("node:assert");
 const h = require("./helpers");
 const config = require("../game/config");
 const coins = require("../game/coins");
-const { pickWinner } = require("../game/jackpot");
+const crypto = require("crypto");
+const { pickWinner, newFairRound, fairHash, fairWinner } = require("../game/jackpot");
 
 // Short timings for the tests
 Object.assign(config, { JACKPOT_COUNTDOWN: 200, JACKPOT_SPIN: 100, JACKPOT_PAUSE: 100 });
@@ -27,6 +28,27 @@ test("jackpot: every coin is a ticket, the chance is the share of the pot", () =
   const share = wins.alice / 8000;
   assert.ok(share > 0.71 && share < 0.79, `alice wins about 75% (${share})`);
   assert.strictEqual(pickWinner([]), null);
+});
+
+test("jackpot: provably fair - the number is fixed before the round, its hash is public", () => {
+  const round = newFairRound();
+  assert.match(round.number, /^0\.\d{12}$/);
+  assert.strictEqual(round.hash, crypto.createHash("sha256").update(round.number + ":" + round.secret).digest("hex"));
+  assert.strictEqual(fairHash(round.number, round.secret), round.hash);
+
+  // The number picks the ticket: 0.5 of 40 tickets = ticket 20
+  const bets = [{ name: "alice", coins: 30 }, { name: "bob", coins: 10 }];
+  assert.deepStrictEqual(fairWinner(bets, "0.500000000000"), { winner: "alice", ticket: 20, total: 40 });
+  assert.strictEqual(fairWinner(bets, "0.999999999999").winner, "bob");
+  assert.strictEqual(fairWinner(bets, "0.000000000000").ticket, 0);
+});
+
+test("jackpot: later bets get the tickets at the end (own range per bet)", () => {
+  // alice 0-49, bob 50-79, alice again 80-99: the last 20% are alice's second bet
+  const bets = [{ name: "alice", coins: 50 }, { name: "bob", coins: 30 }, { name: "alice", coins: 20 }];
+  assert.strictEqual(fairWinner(bets, "0.79").winner, "bob");
+  assert.strictEqual(fairWinner(bets, "0.80").winner, "alice");
+  assert.strictEqual(fairWinner(bets, "0.99").ticket, 99);
 });
 
 /* ---------- Coins ---------- */
@@ -119,9 +141,17 @@ test("jackpot: two players start the countdown, the winner gets the whole pot", 
   // Bets during the countdown still count
   const more = waitFor(alice, "jackpotState", (s) => s.total === 45);
   bob.emit("bet", { amount: 5 });
-  await more;
+
+  // Every bet has its own tickets, in the order of the bets
+  const bets = (await more).bets;
+  assert.deepStrictEqual(bets.map((b) => [b.name, b.from, b.to]), [["alice", 1, 30], ["bob", 31, 40], ["bob", 41, 45]]);
+  assert.strictEqual((await more).fair.number, undefined, "the winning number is secret until the draw");
+  const hash = (await more).fair.hash;
 
   const drawing = await waitFor(alice, "jackpotState", (s) => s.phase === "drawing");
+  // Now everybody can check the draw
+  assert.strictEqual(fairHash(drawing.fair.number, drawing.fair.secret), hash);
+  assert.strictEqual(drawing.draw.ticket, Math.floor(Number(drawing.fair.number) * 45));
   assert.ok(["alice", "bob"].includes(drawing.draw.winner));
   assert.strictEqual(drawing.draw.total, 45);
   assert.ok(drawing.draw.ticket >= 0 && drawing.draw.ticket < 45);

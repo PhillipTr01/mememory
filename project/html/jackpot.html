@@ -91,47 +91,72 @@
                         </a>
                     </div>
 
-                    <!--- The pot --->
-                    <div class="jp-pot">
-                        <span id="jpTotal" class="jp-total">0</span>
-                        <span class="jp-pot-label">coins in the pot</span>
-                    </div>
-                    <div class="jp-timer" id="jpTimer"><span></span></div>
+                    <div class="jp-arena">
+                        <!--- The wheel: everybody's share of the pot, the pointer picks the winner --->
+                        <div class="jp-wheel-wrap">
+                            <div class="jp-pointer" aria-hidden="true"></div>
+                            <div id="jpWheel" class="jp-wheel">
+                                <svg id="jpWheelSvg" viewBox="0 0 200 200" aria-hidden="true"></svg>
+                                <div id="jpWheelAvatars" class="jp-wheel-avatars"></div>
+                            </div>
+                            <div class="jp-wheel-center">
+                                <span id="jpTotal" class="jp-total">0</span>
+                                <span class="jp-pot-label">coins in the pot</span>
+                                <span id="jpCenter" class="jp-center-status"></span>
+                            </div>
+                        </div>
 
-                    <!--- Shares of the pot, and the roulette while drawing --->
-                    <div id="jpShares" class="jp-shares"></div>
-                    <div id="jpRoulette" class="jp-roulette" hidden>
-                        <div class="jp-marker"></div>
-                        <div id="jpTrack" class="jp-track"></div>
+                        <div class="jp-panel">
+                            <!--- Own coins and bet --->
+                            <div class="jp-bet">
+                                <div class="jp-wallet">
+                                    <span class="jp-wallet-label">Your coins</span>
+                                    <span id="jpCoins" class="jp-coins">-</span>
+                                    <span id="jpChance" class="jp-chance"></span>
+                                </div>
+                                <form id="jpForm" class="jp-form" autocomplete="off">
+                                    <div class="jp-quick">
+                                        <button type="button" class="mm-btn mm-btn-sm" data-add="10">+10</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-add="50">+50</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-add="100">+100</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-add="max">Max</button>
+                                    </div>
+                                    <div class="jp-input-row">
+                                        <input id="jpAmount" class="mm-input" type="number" min="1" step="1" inputmode="numeric" placeholder="Coins" aria-label="Coins to put in">
+                                        <button id="jpBetButton" type="submit" class="mm-btn mm-btn-primary">
+                                            <i class="bi bi-plus-circle"></i> Put in
+                                        </button>
+                                    </div>
+                                </form>
+                                <button type="button" id="jpBonus" class="mm-btn w-100" hidden>
+                                    <i class="bi bi-gift"></i> Claim your free daily coins
+                                </button>
+                                <p id="jpError" class="jp-error" hidden></p>
+                            </div>
+
+                            <!--- Last winner and the records of the day --->
+                            <div class="jp-records">
+                                <div class="jp-record" id="jpLastWinner"></div>
+                                <div class="jp-record" id="jpBiggest"></div>
+                                <div class="jp-record" id="jpLuckiest"></div>
+                            </div>
+                        </div>
                     </div>
+
                     <p id="jpResult" class="jp-result" hidden></p>
 
-                    <!--- Own coins and bet --->
-                    <div class="jp-bet">
-                        <div class="jp-wallet">
-                            <span class="jp-wallet-label">Your coins</span>
-                            <span id="jpCoins" class="jp-coins">-</span>
-                            <span id="jpChance" class="jp-chance"></span>
-                        </div>
-                        <form id="jpForm" class="jp-form" autocomplete="off">
-                            <div class="jp-quick">
-                                <button type="button" class="mm-btn mm-btn-sm" data-add="10">+10</button>
-                                <button type="button" class="mm-btn mm-btn-sm" data-add="50">+50</button>
-                                <button type="button" class="mm-btn mm-btn-sm" data-add="100">+100</button>
-                                <button type="button" class="mm-btn mm-btn-sm" data-add="max">Max</button>
-                            </div>
-                            <div class="jp-input-row">
-                                <input id="jpAmount" class="mm-input" type="number" min="1" step="1" inputmode="numeric" placeholder="Coins" aria-label="Coins to put in">
-                                <button id="jpBetButton" type="submit" class="mm-btn mm-btn-primary">
-                                    <i class="bi bi-plus-circle"></i> Put in
-                                </button>
-                            </div>
-                        </form>
-                        <button type="button" id="jpBonus" class="mm-btn w-100" hidden>
-                            <i class="bi bi-gift"></i> Claim your free daily coins
-                        </button>
-                        <p id="jpError" class="jp-error" hidden></p>
+                    <!--- Provably fair --->
+                    <div id="jpFair" class="jp-fair"></div>
+                </section>
+
+                <!--- Every bet of the round, newest first --->
+                <section class="mm-card jp-deposits">
+                    <div class="side-head">
+                        <span class="fw-semibold"><i class="bi bi-list-ul me-2"></i>Deposits</span>
+                        <span id="jpBetCount" class="mm-badge"></span>
                     </div>
+                    <ol id="jpBets" class="jp-bets"></ol>
+                    <p id="jpBetsEmpty" class="jp-empty mm-muted">No coins in this round yet - be the first!</p>
                 </section>
             </div>
 
