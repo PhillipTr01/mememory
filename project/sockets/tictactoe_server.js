@@ -1,7 +1,7 @@
 const rooms = require("../game/rooms");
 const config = require("../game/config");
 const ttt = require("../game/tictactoe");
-const { STATUS, seatOf, serialize } = require("../game/tictactoe_room");
+const { STATUS, seatOf, serialize, graceFor } = require("../game/tictactoe_room");
 const { notifyLobby } = require("../game/multiplayer_room");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
@@ -45,23 +45,29 @@ module.exports = function (io) {
     return !room.seats.some((seat) => seat != null && seat.connected) && room.spectators.size === 0;
   }
 
+  // The round ends early: the other player wins (surrender, didn't come back)
+  function forfeitRound(gameID, room, loser, reason) {
+    if (room.status !== STATUS.PLAYING || room.game == null || ttt.isOver(room.game)) return;
+    const winner = 1 - loser;
+    room.game.winner = winner;
+    room.forfeit = reason;
+    room.status = STATUS.FINISHED;
+    if (room.seats[winner] != null) {
+      room.seats[winner].wins++;
+      systemMessage(gameID, room, `${room.seats[winner].name} wins the round.`, "trophy");
+    }
+  }
+
   /*
-   * A player leaves for good (left, or didn't come back in time). During a
-   * game the opponent wins. The seat becomes free for somebody new.
+   * A player leaves for good (left after the game, or didn't come back in
+   * time). During a game the opponent wins. The seat becomes free.
    */
-  function vacateSeat(gameID, room, index) {
+  function vacateSeat(gameID, room, index, reason) {
     const seat = room.seats[index];
     if (seat == null) return;
 
-    systemMessage(gameID, room, `${seat.name} left the game.`, "leave");
-    if (room.status === STATUS.PLAYING && room.game != null && !ttt.isOver(room.game)) {
-      room.game.winner = 1 - index;
-      room.forfeit = true;
-      if (room.seats[1 - index] != null) {
-        room.seats[1 - index].wins++;
-        systemMessage(gameID, room, `${room.seats[1 - index].name} wins the round.`, "trophy");
-      }
-    }
+    systemMessage(gameID, room, `${seat.name} ${reason}.`, "leave");
+    forfeitRound(gameID, room, index, "left");
 
     room.seats[index] = null;
     room.status = STATUS.WAITING;
@@ -78,6 +84,18 @@ module.exports = function (io) {
     emitState(gameID, room);
   }
 
+  /*
+   * Like in MemeMory: a player who leaves a running game (or loses the
+   * connection) keeps the seat for a while and can rejoin from the lobby.
+   * Only if they don't come back in time, the opponent wins.
+   */
+  function markAway(gameID, room, index, text, icon) {
+    const seat = room.seats[index];
+    seat.connected = false;
+    seat.disconnectedAt = Date.now();
+    systemMessage(gameID, room, text, icon);
+  }
+
   function leave(socket) {
     const gameID = socket.gameID;
     const room = rooms.get(gameID, "tictactoe");
@@ -87,12 +105,17 @@ module.exports = function (io) {
 
     room.spectators.delete(socket.id);
     const index = seatOf(room, socket.data.username);
-    if (index >= 0 && room.seats[index].socketId === socket.id) {
-      vacateSeat(gameID, room, index);
-    } else {
-      if (isEmpty(room) && room.emptySince == null) room.emptySince = Date.now();
-      emitState(gameID, room);
+    if (index >= 0 && room.seats[index].socketId === socket.id && room.seats[index].connected) {
+      if (room.status === STATUS.PLAYING) {
+        const seconds = Math.round(config.REJOIN_GRACE_PLAYING / 1000);
+        markAway(gameID, room, index, `${socket.data.username} left - ${seconds}s to come back.`, "disconnect");
+      } else {
+        vacateSeat(gameID, room, index, "left the game");
+        return;
+      }
     }
+    if (isEmpty(room) && room.emptySince == null) room.emptySince = Date.now();
+    emitState(gameID, room);
   }
 
   /* ---------- Connection ---------- */
@@ -231,6 +254,22 @@ module.exports = function (io) {
       }),
     );
 
+    // Give up the running round, the opponent wins. Both stay for a rematch.
+    socket.on(
+      "surrender",
+      safe("surrender", () => {
+        const room = rooms.get(socket.gameID, "tictactoe");
+        if (room == null || room.status !== STATUS.PLAYING) return;
+        const index = seatOf(room, username);
+        if (index < 0 || room.seats[index].socketId !== socket.id) return;
+
+        rooms.touch(room);
+        systemMessage(socket.gameID, room, `${username} surrendered.`, "leave");
+        forfeitRound(socket.gameID, room, index, "surrender");
+        emitState(socket.gameID, room);
+      }),
+    );
+
     socket.on(
       "leave",
       safe("leave", () => leave(socket)),
@@ -246,10 +285,8 @@ module.exports = function (io) {
         room.spectators.delete(socket.id);
         const index = seatOf(room, username);
         // Players get some time to come back (reload, lost connection)
-        if (index >= 0 && room.seats[index].socketId === socket.id) {
-          room.seats[index].connected = false;
-          room.seats[index].disconnectedAt = Date.now();
-          systemMessage(gameID, room, `${username} lost the connection...`, "disconnect");
+        if (index >= 0 && room.seats[index].socketId === socket.id && room.seats[index].connected) {
+          markAway(gameID, room, index, `${username} lost the connection...`, "disconnect");
         }
         if (isEmpty(room) && room.emptySince == null) room.emptySince = Date.now();
         emitState(gameID, room);
@@ -262,8 +299,7 @@ module.exports = function (io) {
     for (const [gameID, room] of rooms.list("tictactoe")) {
       room.seats.forEach((seat, index) => {
         if (seat == null || seat.connected) return;
-        const grace = room.status === STATUS.PLAYING ? config.TTT_REJOIN_GRACE : config.REJOIN_GRACE_WAITING;
-        if (now - seat.disconnectedAt >= grace) vacateSeat(gameID, room, index);
+        if (now - seat.disconnectedAt >= graceFor(room)) vacateSeat(gameID, room, index, "didn't come back");
       });
 
       if (room.emptySince != null && room.seats.every((seat) => seat == null || !seat.connected)) {

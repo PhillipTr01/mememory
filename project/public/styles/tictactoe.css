@@ -243,6 +243,11 @@ body.ttt-theme {
   min-width: 0;
 }
 
+.ttt-who-text {
+  flex: 1;
+  min-width: 0;
+}
+
 .ttt-name {
   display: flex;
   align-items: center;

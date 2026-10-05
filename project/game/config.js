@@ -36,7 +36,4 @@ module.exports = {
   SPEED_MISS_DELAY: 1500,
   // The clock starts after the card animations (flip takes 0.9s on the client)
   SPEED_ANIMATION_GRACE: 1000,
-
-  // Tic Tac Toe XL: a player who doesn't come back in time loses the game
-  TTT_REJOIN_GRACE: 30 * 1000,
 };

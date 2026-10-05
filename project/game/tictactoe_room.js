@@ -1,6 +1,7 @@
 const rooms = require("./rooms");
 const multiplayerRoom = require("./multiplayer_room");
 const { PIECES } = require("./tictactoe");
+const config = require("./config");
 
 const STATUS = {
   WAITING: "waiting", // a seat is free
@@ -18,7 +19,7 @@ function createRoom(host) {
     seats: [null, null],
     spectators: new Map(), // socketId -> name
     game: null, // last / current game, see game/tictactoe.js
-    forfeit: false, // the last game was won because the opponent left
+    forfeit: false, // why the last round ended early: "surrender", "left" or false
     starter: null, // seat that started the last game
     chat: [],
     // Seats stay where they are, only the colors are random (false: seat 0 red, seat 1 blue)
@@ -31,6 +32,11 @@ function createRoom(host) {
 
 function seatOf(room, name) {
   return room.seats.findIndex((seat) => seat != null && seat.name === name);
+}
+
+// How long a player who left / lost the connection keeps the seat
+function graceFor(room) {
+  return room.status === STATUS.PLAYING ? config.REJOIN_GRACE_PLAYING : config.REJOIN_GRACE_WAITING;
 }
 
 function serialize(gameID, room) {
@@ -47,6 +53,8 @@ function serialize(gameID, room) {
             connected: seat.connected,
             wins: seat.wins,
             rematch: seat.rematch,
+            // Time left to come back (ms), while the player is away
+            awayLeft: seat.connected ? null : Math.max(0, seat.disconnectedAt + graceFor(room) - Date.now()),
             // Before the first game everybody has all pieces
             reserve: game != null ? game.reserves[index] : { ...PIECES },
           },
@@ -61,6 +69,7 @@ function serialize(gameID, room) {
     passed: game != null ? game.passed : null,
     forfeit: room.forfeit,
     round: room.round,
+    rejoinSeconds: Math.round(config.REJOIN_GRACE_PLAYING / 1000),
     swapColors: room.swapColors,
     startIn: Math.max(0, room.startsAt - Date.now()),
     spectators: [...new Set(room.spectators.values())],
@@ -95,4 +104,4 @@ rooms.onRemove((gameID, room) => {
   if (room.type === "tictactoe") multiplayerRoom.notifyLobby();
 });
 
-module.exports = { STATUS, createRoom, seatOf, serialize, publicRooms };
+module.exports = { STATUS, createRoom, seatOf, serialize, publicRooms, graceFor };
