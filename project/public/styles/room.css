@@ -1479,3 +1479,17 @@
   background: rgba(212, 166, 74, 0.15);
   color: var(--mm-warning);
 }
+
+/* Notices (room not found, removed, other tab) */
+.notice-text {
+  margin-bottom: 1.5rem;
+}
+
+.notice-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.notice-actions .mm-btn {
+  flex: 1 1 0;
+}

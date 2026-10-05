@@ -61,16 +61,12 @@ socket.on("connect_error", (error) => {
 
 // Something went wrong on the server (e.g. not enough memes) -> back to the lobby
 socket.on("gameError", (message) => {
-  showNotice("⚠️", "Something went wrong", message || "Please try again.", "Back to lobby", () => {
-    window.location.href = "/lobby";
-  });
+  showNotice("⚠️", "Something went wrong", message || "Please try again.");
 });
 
 socket.on("noGameFound", () => {
   sessionOver = true;
-  showNotice("🚪", "Room not found", "This room doesn't exist anymore.", "Back to lobby", () => {
-    window.location.href = "/lobby";
-  });
+  showNotice("🚪", "Room not found", "This room doesn't exist anymore.");
 });
 
 // The room was opened in another tab
@@ -83,18 +79,18 @@ socket.on("sessionReplaced", () => {
 
 socket.on("kicked", () => {
   sessionOver = true;
-  showNotice("👢", "Removed from the room", "The host removed you from this room.", "Back to lobby", () => {
-    window.location.href = "/lobby";
-  });
+  showNotice("👢", "Removed from the room", "The host removed you from this room.");
 });
 
 function showNotice(icon, title, text, actionLabel, action) {
   document.getElementById("noticeIcon").innerText = icon;
   document.getElementById("noticeTitle").innerText = title;
   document.getElementById("noticeText").innerText = text;
+  // Extra action (e.g. "Play here"), the lobby button is always there
   var button = document.getElementById("noticeAction");
-  button.innerText = actionLabel;
-  button.onclick = action;
+  button.hidden = actionLabel == null;
+  button.innerText = actionLabel || "";
+  button.onclick = action || null;
   document.getElementById("connectionBanner").hidden = true;
   document.getElementById("noticeOverlay").hidden = false;
 }
