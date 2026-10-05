@@ -253,3 +253,40 @@
 .score-stats .label {
   font-size: 0.58rem;
 }
+
+/* Name + "You" tag in one line */
+.score-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.score-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The scoreboard always fits on the screen, the list scrolls inside if needed */
+@media (min-width: 992px) {
+  .score-list {
+    max-height: calc(100vh - 340px);
+    overflow-y: auto;
+    padding-right: 0.15rem;
+  }
+}
+
+/* Small phones: the five tabs share the width */
+@media (max-width: 575px) {
+  .mode-tabs {
+    gap: 0.15rem;
+    padding: 0.2rem;
+  }
+
+  .mode-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.4rem 0.2rem;
+    font-size: 0.75rem;
+  }
+}
