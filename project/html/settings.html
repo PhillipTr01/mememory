@@ -18,6 +18,7 @@
     <!--- Custom CSS-->
     <!--- identical to index.html --->
     <link rel="stylesheet" href="/static/styles/index.css" />
+    <link rel="stylesheet" href="/static/styles/theme.css" />
 
     <!--- Icons --->
     <link
@@ -57,51 +58,33 @@
             <div
               class="col-12 col-md-4 text-center order-3 order-md-2 pt-5 pb-3 pt-md-0 pb-md-0"
             >
-              <button
-                type="submit"
-                class="form-control btn btn-lg fw-bold rounded max-width-300 lobby-button"
-                onclick="startLobbyPage()"
-              >
-                Play
-              </button>
+              <a href="/lobby" class="mm-btn mm-btn-primary mm-btn-lg play-button"><i class="bi bi-play-fill"></i> Play</a>
             </div>
             <div class="col-6 col-md-4 fw-light order-2 order-md-3">
               <div class="d-flex text-light pl-xl-5">
-                <div class="ms-auto dropdown">
-                  <p
-                    id="username"
-                    class="m-0 pb-1 dropdown-toggle fs-4 text-break overflow-hidden"
-                    data-bs-toggle="dropdown"
-                  ></p>
-                  <ul class="dropdown-menu dropdown-menu-end bg-dark">
-                    <li>
-                      <div
-                        class="dropdown-item d-flex text-light"
-                        onclick="startScoreboardPage()"
-                      >
-                        <i class="bi bi-trophy pe-3"></i>
-                        <p class="m-0">Scoreboard</p>
+                <div class="ms-auto profile-menu" id="profileMenu">
+                  <button type="button" class="profile-trigger" id="profileTrigger" aria-haspopup="true" aria-expanded="false">
+                    <span id="profileAvatar" class="mm-avatar sm"></span>
+                    <span class="profile-name" id="username"></span>
+                    <i class="bi bi-chevron-down profile-caret"></i>
+                  </button>
+                  <div class="profile-dropdown" id="profileDropdown" hidden>
+                    <div class="profile-head">
+                      <span id="profileAvatarLarge" class="mm-avatar"></span>
+                      <div class="overflow-hidden">
+                        <div class="profile-head-name" id="profileName"></div>
+                        <div class="mm-muted small">Signed in</div>
                       </div>
-                    </li>
-                    <li class="mt-2">
-                      <div
-                        class="dropdown-item d-flex text-light"
-                        onclick="startProfilePage()"
-                      >
-                        <i class="bi bi-bar-chart-line pe-3"></i>
-                        <p class="m-0">Profile</p>
-                      </div>
-                    </li>
-                    <li class="mt-2">
-                      <div
-                        class="dropdown-item d-flex text-danger"
-                        onclick="logoutUser()"
-                      >
-                        <i class="bi bi-box-arrow-right pe-3"></i>
-                        <p class="m-0 fw-bold">Logout</p>
-                      </div>
-                    </li>
-                  </ul>
+                    </div>
+                    <a href="/lobby" class="profile-item"><i class="bi bi-controller"></i> Play</a>
+                    <a href="/home" class="profile-item"><i class="bi bi-trophy"></i> Scoreboard</a>
+                    <a href="/user" class="profile-item"><i class="bi bi-bar-chart-line"></i> Profile</a>
+                    <a href="/settings" class="profile-item"><i class="bi bi-gear"></i> Settings</a>
+                    <div class="profile-divider"></div>
+                    <button type="button" class="profile-item danger" id="logoutButton">
+                      <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -110,121 +93,64 @@
       </nav>
     </header>
 
-    <main class="pt-3 pt-lg-0 my-auto px-3">
-      <div class="max-width-500 mx-auto">
-        <form
-          action="#"
-          class="mt-2 text-light mb-3 mb-sm-5"
-          onsubmit="
-            changePassword();
-            return false;
-          "
-        >
-          <div class="form-group mt-1 mt-lg-3">
-            <label for="oldPassword">Old Password</label>
-            <input
-              id="oldPassword"
-              type="password"
-              class="form-control"
-              placeholder="Password"
-              required
-            />
-            <label class="visually-hidden text-danger" id="oldPasswordLabel">
-              Wrong Password
-            </label>
+    <main class="page settings">
+      <h1 class="page-title mb-4">Settings</h1>
+
+      <section class="panel mb-4">
+        <h2 class="panel-title"><i class="bi bi-shield-lock"></i> Change password</h2>
+        <form action="#" onsubmit="changePassword(); return false;">
+          <div class="mm-field">
+            <label for="oldPassword">Current password</label>
+            <input id="oldPassword" type="password" class="mm-input" placeholder="••••••••" autocomplete="current-password" required />
+            <label class="visually-hidden text-danger" id="oldPasswordLabel">Wrong Password</label>
           </div>
-          <div class="form-group mt-1 mt-lg-3">
-            <label for="newPassword">New Password</label>
-            <input
-              id="newPassword"
-              type="password"
-              class="form-control"
-              placeholder="Password"
-              required
-            />
-            <label class="visually-hidden text-danger" id="newPasswordLabel">
-              Password is too weak. (Minimum of 8 characters with one letter,
-              one number and one special character)
-            </label>
+          <div class="mm-field">
+            <label for="newPassword">New password</label>
+            <input id="newPassword" type="password" class="mm-input" placeholder="••••••••" autocomplete="new-password" required />
+            <label class="visually-hidden text-danger" id="newPasswordLabel">Password is too weak. (Minimum of 8 characters with one letter, one number and one special character)</label>
           </div>
-          <div class="form-group mt-1 mt-lg-3">
-            <label for="repeatNewPassword">Repeat New Password</label>
-            <input
-              id="repeatNewPassword"
-              type="password"
-              class="form-control"
-              placeholder="Password"
-              required
-            />
-            <label
-              class="visually-hidden text-danger"
-              id="repeatNewPasswordLabel"
-            >
-              Password is not identical.
-            </label>
+          <div class="mm-field">
+            <label for="repeatNewPassword">Repeat new password</label>
+            <input id="repeatNewPassword" type="password" class="mm-input" placeholder="••••••••" autocomplete="new-password" required />
+            <label class="visually-hidden text-danger" id="repeatNewPasswordLabel">Password is not identical.</label>
           </div>
-          <div class="form-group mt-3 mt-lg-4">
-            <button
-              type="submit"
-              class="btn btn-outline-light w-100 rounded"
-              id="buttonNewPassword"
-            >
-              Set New Password
-            </button>
-          </div>
+          <button type="submit" class="mm-btn mm-btn-primary w-100 mt-2" id="buttonNewPassword">
+            Set New Password
+          </button>
         </form>
+      </section>
 
-        <button
-          type="button"
-          class="btn btn-outline-danger text-danger w-100 rounded mt-5"
-          data-bs-toggle="modal"
-          data-bs-target="#exampleModal"
-        >
-          Delete Account
-        </button>
+      <section class="panel danger-zone">
+        <h2 class="panel-title"><i class="bi bi-exclamation-triangle"></i> Danger zone</h2>
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <p class="mm-muted mb-0 me-3">Your account and all statistics will be deleted permanently.</p>
+          <button type="button" class="mm-btn mm-btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+            <i class="bi bi-trash"></i> Delete Account
+          </button>
+        </div>
+      </section>
 
-        <!-- Modal -->
-        <div
-          class="modal fade"
-          id="exampleModal"
-          tabindex="-1"
-          aria-labelledby="exampleModalLabel"
-          aria-hidden="true"
-        >
-          <div class="modal-dialog">
-            <div class="modal-content">
-              <div class="modal-body">
-                <p class="fs-5 text-center">
-                  Your account will be deleted permanently and all data will be
-                  lost
-                </p>
-              </div>
-              <div class="modal-footer justify-content-between">
-                <button
-                  type="button"
-                  class="btn btn-secondary"
-                  data-bs-dismiss="modal"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-danger"
-                  onclick="
-                    deleteUser();
-                    return false;
-                  "
-                >
-                  Delete
-                </button>
-              </div>
+      <!-- Confirm dialog -->
+      <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content mm-modal">
+            <div class="modal-body text-center p-4">
+              <div class="fs-1 mb-2">⚠️</div>
+              <h3 class="fs-5 fw-semibold" id="deleteModalLabel">Delete your account?</h3>
+              <p class="mm-muted mb-0">Your account will be deleted permanently and all data will be lost.</p>
+            </div>
+            <div class="modal-footer justify-content-between">
+              <button type="button" class="mm-btn" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="mm-btn mm-btn-danger" onclick="deleteUser(); return false;">
+                <i class="bi bi-trash"></i> Delete
+              </button>
             </div>
           </div>
         </div>
       </div>
     </main>
 
-    <footer>
+    <footer class="app-footer">
       <div class="container-fluid pt-5">
         <nav class="d-flex justify-content-center text-center">
           <div>
@@ -252,6 +178,8 @@
       crossorigin="anonymous"
     ></script>
     <!--- Custom JS --->
+    <script src="/static/scripts/ui.js"></script>
+    <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/settings.js"></script>
   </body>
 </html>

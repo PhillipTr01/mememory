@@ -1,60 +1,76 @@
-.card {
-  -webkit-transition: 1s ease-in-out;
-  -moz-transition: 1s ease-in-out;
-  -o-transition: 1s ease-in-out;
-  transition: 1s ease-in-out;
-
-  transform-style: preserve-3d;
-  transform: rotateY(-180deg);
-
-  border: 0;
-  cursor: pointer;
+/* ---------- Memory board ---------- */
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(11, minmax(0, 1fr));
+  gap: clamp(4px, 0.5vw, 8px);
+  /* As big as possible, but all 6 rows have to fit on the screen */
+  width: min(100%, calc((100vh - 140px) * 11 / 6));
+  margin: 0 auto;
 }
 
-.card-front {
-  backface-visibility: hidden;
-  transform: rotateY(180deg);
-  position: absolute;
-  background-color: #141414;
-  border: solid #616161 2px;
-  border-radius: 3px;
-}
-
-.card-back {
-  backface-visibility: hidden;
-  transform: rotateY(0deg);
-  position: absolute;
-}
-
-.overlay {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
-  color: white; /* Text color for the overlay */
-  padding: 8%;
-  padding-top: 1%;
-  padding-bottom: 0;
+@media (max-width: 767px) {
+  .memory-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    width: 100%;
+  }
 }
 
 .card-size {
   position: relative;
-  width: 13.9%;
-  padding: 0px;
-  padding-bottom: 13.9%;
-  max-height: 13.9%;
-  margin: 0.2rem;
+  aspect-ratio: 1 / 1;
+  perspective: 900px;
 }
 
-@media (min-width: 576px) {
-  .card-size {
-    position: relative;
-    width: 8%;
-    padding: 0px;
-    padding-bottom: 8%;
-    max-height: 8%;
-    margin: 0.2rem;
-  }
+/* .card-front = face down (logo), .card-back = face up (meme) */
+.card {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transform: rotateY(-180deg);
+  transition: transform 0.9s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+.card-front,
+.card-back {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+}
+
+.card-front {
+  transform: rotateY(180deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1f1f1f;
+  border: 0;
+  box-shadow: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card-front img {
+  width: 64%;
+  height: 64%;
+  object-fit: contain;
+  
+  opacity: 0.9;
+}
+
+.card-back {
+  transform: rotateY(0deg);
+  background: #0d0d10;
+  border: 0;
+}
+
+.card-back > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .card-image {
@@ -62,16 +78,55 @@
   height: 100%;
 }
 
+/* Face down card under the mouse */
+.card:not(.flip):hover .card-front {
+  background: #2a2a2a;
+}
+
 .flip {
-  -webkit-transform: rotateY(0deg);
-  -moz-transform: rotateY(0deg);
-  -o-transform: rotateY(0deg);
   transform: rotateY(0deg);
 }
 
-.inner-card {
-  width: 100%;
-  height: 100%;
+/* Bootstrap border classes from the old highlight are not used anymore */
+.card.border {
+  border: 0 !important;
+}
+
+/* Card that was just opened: lifted a little */
+.card.zoom-card-on-turn {
+  transform: rotateY(0deg) scale(1.05);
+  z-index: 5;
+}
+
+/* Found pairs stay open, but step back */
+.card.flip:not(.zoom-card-on-turn) .card-back > img {
+  opacity: 0.45;
+  transition: opacity 0.4s ease;
+}
+
+/* After the game every card is shown normally */
+.board.revealed .card.flip .card-back > img,
+.card.flip:not(.zoom-card-on-turn):hover .card-back > img {
+  opacity: 1;
+}
+
+/* How often a card was opened (shown after the game) */
+.overlay {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  min-width: 1.4em;
+  padding: 0 0.35em;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.overlay:empty {
+  display: none;
 }
 
 .chat {
@@ -89,14 +144,6 @@
   flex-direction: column;
 }
 
-.zoom-card-on-turn {
-  -webkit-transform: scale(1.2);
-  -moz-transform: scale(1.2);
-  -o-transform: scale(1.2);
-  transform: scale(1.2);
-
-  z-index: 500;
-}
 
 .message p {
   border-radius: 0.25rem;
@@ -116,7 +163,7 @@
 }
 
 .right-message p {
-  background-color: #48b0f7;
+  background-color: var(--mm-accent);
   color: #fff;
   margin-left: auto;
 }
@@ -139,16 +186,23 @@
 }
 
 #cardModal {
-  padding: 10vw;
+  padding: 6vh 4vw;
   text-align: center;
+  background: rgba(0, 0, 0, 0.85);
+  cursor: zoom-out;
+  z-index: 3500;
 }
 
 #imgModal {
-  max-height: 100%;
-  max-width: 100%;
+  max-height: 86vh;
+  max-width: 92vw;
   width: auto;
   height: auto;
   display: block;
+  margin: 0 auto;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
 }
 
 .modal-content {
@@ -195,4 +249,105 @@
   .modal-content {
     width: 100%;
   }
+}
+
+/* Waiting room */
+.waiting-room {
+  background-color: #1d1d1d;
+  border: 1px solid #3a3a3a;
+  max-width: 560px;
+}
+
+.room-code-box {
+  background-color: #262626;
+}
+
+.room-code {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: 0.2rem;
+  word-break: break-all;
+}
+
+.waiting-player {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
+  margin-bottom: 0.35rem;
+  border-radius: 0.25rem;
+  background-color: #262626;
+}
+
+.waiting-player.empty {
+  color: #6c6c6c;
+  border: 1px dashed #3a3a3a;
+  background-color: transparent;
+}
+
+/* Scoreboard */
+.player-row.inactive {
+  color: #6c757d;
+  text-decoration: line-through;
+}
+
+.player-row .you {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+/* Chat */
+.chat-name {
+  display: block;
+  font-weight: bold;
+}
+
+.chat-time {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  margin-left: 0.5rem;
+}
+
+.chat-image {
+  display: block;
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 3px;
+  margin-top: 0.25rem;
+  cursor: zoom-in;
+}
+
+.system-message {
+  text-align: center;
+  color: #8f8f8f;
+  font-size: 0.85rem;
+  font-style: italic;
+  margin: 0.4rem 0.5rem 0;
+}
+
+.chat-error {
+  font-size: 0.8rem;
+}
+
+/* Card without image (face down) and image that couldn't be loaded */
+.card-back > img:not([src]) {
+  visibility: hidden;
+}
+
+.card-back.broken > img {
+  visibility: hidden;
+}
+
+.card-back.broken::after {
+  content: "Meme not available";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem;
+  text-align: center;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  color: #8f8f8f;
+  background: #1f1f1f;
 }

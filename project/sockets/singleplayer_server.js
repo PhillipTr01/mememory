@@ -1,175 +1,226 @@
-const User = require("../models/User");
 const Statistic = require("../models/Statistic");
+const rooms = require("../game/rooms");
+const { CARD_COUNT, createBoard, isValidCardId } = require("../game/board");
+const socketAuth = require("./socket_auth");
+const safe = require("./safe_handler");
+
+const DIFFICULTIES = ["easy", "medium", "hard", "expert"];
 
 module.exports = function (io) {
   const singlePlayer = io.of("/singleplayer");
+  singlePlayer.use(socketAuth);
 
   singlePlayer.on("connection", (socket) => {
-    socket.on("initializingGame", (data) => {
-      // Check if game exists
-      if (global.rooms[data.gameID] != null) {
-        socket.gameID = data.gameID;
-        socket.difficulty = global.rooms[data.gameID].difficulty;
-        socket.user = {
-          name: global.rooms[data.gameID].username,
-          points: 0,
+    socket.on(
+      "initializingGame",
+      safe("initializingGame", async (data) => {
+        // A socket can only play one game
+        if (socket.game != null || socket.initializing) return;
+
+        const gameID = data != null ? data.gameID : null;
+        const room = rooms.get(gameID, "singleplayer");
+
+        // Check if game exists and belongs to this user
+        if (room == null || room.used || room.username !== socket.data.username) {
+          socket.emit("noGameFound");
+          return;
+        }
+
+        // Mark the room as used right away, so it can't be started twice.
+        rooms.touch(room);
+        socket.initializing = true;
+
+        let board;
+        try {
+          board = await createBoard();
+        } catch (error) {
+          rooms.remove(gameID);
+          socket.emit("gameError", error.message);
+          return;
+        } finally {
+          socket.initializing = false;
+        }
+
+        // The game state lives on the socket, the room isn't needed anymore.
+        rooms.remove(gameID);
+
+        if (socket.disconnected) return;
+
+        const game = {
+          difficulty: room.difficulty,
+          user: { name: room.username, points: 0 },
+          computer: {
+            name: room.computername,
+            moveMemory: room.moveMemory,
+            points: 0,
+          },
+          status: 0,
+          turn: 0,
+          finished: false,
+          openedCards: [],
+          cardPairs: board.cardPairs,
+          cardImages: board.cardImages,
+          foundMatches: [],
+          // Defines how many cards the computer can remember.
+          previousMoves: Array(room.moveMemory * 2).fill(-1),
+          cardCounter: Array(CARD_COUNT).fill(0),
+          timeouts: [],
+          interval: null,
         };
-        socket.computer = {
-          name: global.rooms[data.gameID].computername,
-          moveMemory: global.rooms[data.gameID].moveMemory,
-          points: 0,
-        };
-        socket.status = 0;
-        socket.turn = 0;
-        socket.finished = 0;
-        socket.openedCards = [];
-        socket.cardPairs = [];
-        socket.cardImages = [];
-        socket.foundMatches = [];
-        socket.previousMoves = [];
-        socket.cardCounter = Array(66).fill(0);
+        socket.game = game;
 
-        var idArray = [],
-          linkArray = [];
-
-        // Fetch Memes and initialize idArray
-        for (link of data.links) {
-          linkArray.push(link.link);
-        }
-
-        for (var i = 0; i < 66; i++) {
-          idArray.push(i);
-        }
-
-        // Assign images and card pairs to cards
-        while (idArray.length >= 2) {
-          var randomIndex = Math.floor(Math.random() * idArray.length);
-          do {
-            var randomIndex2 = Math.floor(Math.random() * idArray.length);
-          } while (randomIndex == randomIndex2);
-          var randomSourceIndex = Math.floor(Math.random() * linkArray.length);
-
-          var x = idArray[randomIndex];
-          var y = idArray[randomIndex2];
-
-          idArray.splice(idArray.indexOf(x), 1);
-          idArray.splice(idArray.indexOf(y), 1);
-
-          socket.cardPairs[x] = y;
-          socket.cardPairs[y] = x;
-
-          var src = linkArray[randomSourceIndex];
-          linkArray.splice(linkArray.indexOf(src), 1);
-
-          socket.cardImages[x] = src;
-          socket.cardImages[y] = src;
-        }
-
-        // Define length of previous moves. It shows how many cards the computer can remember.
-        for (var i = 0; i < socket.computer.moveMemory * 2; i++) {
-          socket.previousMoves.push(-1);
-        }
-
-        socket.emit("setComputername", socket.computer.name);
+        socket.emit("setComputername", game.computer.name);
         socket.emit("highlightPlayer", {
-          turn: socket.turn,
-          computer: socket.computer.name,
-          user: socket.user.name,
+          turn: game.turn,
+          computer: game.computer.name,
+          user: game.user.name,
         });
         checkGame(socket);
-      } else {
-        socket.emit("noGameFound");
-      }
-    });
+      }),
+    );
 
-    socket.on("openCard", (id) => {
-      if (
-        socket.gameID != null &&
-        !socket.openedCards.includes(id) &&
-        !socket.foundMatches.includes(id)
-      ) {
-        if (socket.turn == 0 && socket.openedCards.length < 2) {
-          socket.openedCards.push(id);
-          socket.cardCounter[id] = socket.cardCounter[id] + 1;
-          socket.emit("turnCard", {
-            id: id,
-            src: socket.cardImages[id],
-          });
+    socket.on(
+      "openCard",
+      safe("openCard", (id) => {
+        const game = socket.game;
+        if (game == null || game.finished || !isValidCardId(id)) return;
+
+        if (!game.openedCards.includes(id) && !game.foundMatches.includes(id)) {
+          if (game.turn == 0 && game.openedCards.length < 2) {
+            game.openedCards.push(id);
+            game.cardCounter[id]++;
+            socket.emit("turnCard", {
+              id: id,
+              src: game.cardImages[id],
+            });
+          }
+        } else {
+          socket.emit("zoomImage", id);
         }
-      } else {
-        socket.emit("zoomImage", id);
-      }
-    });
+      }),
+    );
 
-    // endTurn
-    socket.on("endTurn", () => {
-      endTurn(socket);
-    });
+    // endTurn - only allowed for the player after two cards that don't match
+    socket.on(
+      "endTurn",
+      safe("endTurn", () => {
+        const game = socket.game;
+        if (
+          game != null &&
+          game.turn == 0 &&
+          game.status == 2 &&
+          game.openedCards.length == 2
+        ) {
+          endTurn(socket);
+        }
+      }),
+    );
 
     // surrender
-    socket.on("surrender", () => {
-      for (var i = 0; i < 66; i++) {
-        socket.emit("turnCard", {
-          id: i,
-          src: socket.cardImages[i],
-        });
-      }
+    socket.on(
+      "surrender",
+      safe("surrender", async () => {
+        const game = socket.game;
+        if (game == null || game.finished) return;
 
-      surrendGame(socket);
-    });
+        for (var i = 0; i < CARD_COUNT; i++) {
+          socket.emit("turnCard", {
+            id: i,
+            src: game.cardImages[i],
+          });
+        }
+
+        await surrendGame(socket);
+      }),
+    );
 
     // disconnect
-    socket.on("disconnect", () => {
-      surrendGame(socket);
-    });
+    socket.on(
+      "disconnect",
+      safe("disconnect", async () => {
+        await surrendGame(socket);
+        stopTimers(socket.game);
+      }),
+    );
   });
 };
 
+// Like setTimeout, but the timer is cancelled when the game ends.
+function later(game, fn, ms) {
+  const timeout = setTimeout(() => {
+    game.timeouts = game.timeouts.filter((t) => t !== timeout);
+    if (!game.finished) {
+      fn();
+    }
+  }, ms);
+  game.timeouts.push(timeout);
+}
+
+function stopTimers(game) {
+  if (game == null) return;
+  clearInterval(game.interval);
+  game.timeouts.forEach(clearTimeout);
+  game.timeouts = [];
+}
+
 function checkGame(socket) {
-  socket.interval = setInterval(() => {
-    if (socket.gameID != null) {
+  const game = socket.game;
+
+  game.interval = setInterval(() => {
+    try {
+      if (game.finished) {
+        stopTimers(game);
+        return;
+      }
+
       // Status: 0 - Doing nothing; 1 - Computer running; 2 - Checking Cards;
       // Turn: 0 - Turn of player; 1 - Turn of computer;
 
-      if (socket.turn == 1 && socket.status == 0) {
+      if (game.turn == 1 && game.status == 0) {
         // Change status so that socket doesn't call the computerLogic twice (or more).
-        socket.status = 1;
+        game.status = 1;
         computerLogic(socket);
       }
 
       // If both cards are open check if those are a match.
-      if (socket.openedCards.length == 2 && socket.status < 2) {
-        socket.status = 2;
+      if (game.openedCards.length == 2 && game.status < 2) {
+        game.status = 2;
 
         if (!checkCards(socket)) {
           // If it's the player's turn activate endTurn-Button, so that he can manually end his turn.
-          if (socket.turn == 0) {
+          if (game.turn == 0) {
             socket.emit("activateEndTurn");
           } else {
             // Computer automatically ends his turn after 2 seconds.
-            setTimeout(() => endTurn(socket), 2000);
+            later(game, () => endTurn(socket), 2000);
           }
         }
       }
 
       // Check for winner
-      if (socket.foundMatches.length == 66) {
-        getWinner(socket);
+      if (game.foundMatches.length == CARD_COUNT) {
+        getWinner(socket).catch((error) =>
+          console.error("[singleplayer] Could not finish game:", error),
+        );
       }
+    } catch (error) {
+      console.error("[singleplayer] Error in game loop:", error);
     }
   }, 100);
 }
 
 function computerLogic(socket) {
+  const game = socket.game;
+  const pre = game.previousMoves;
+  const pairs = game.cardPairs;
+  const foundMatches = game.foundMatches;
   var id = -1;
   var id2 = -1;
 
   // Check if there is a match in previousMoves
-  for (var i = 0; i < socket.previousMoves.length; i++) {
-    var pre = socket.previousMoves;
-    var pairs = socket.cardPairs;
-    var foundMatches = socket.foundMatches;
+  for (var i = 0; i < pre.length; i++) {
     if (
+      pre[i] >= 0 &&
       pre.includes(pairs[pre[i]]) &&
       !foundMatches.includes(pairs[pre[i]]) &&
       !foundMatches.includes(pre[i])
@@ -181,218 +232,158 @@ function computerLogic(socket) {
 
   if (id == -1 && id2 == -1) {
     // Get random card -> if pair is in previousMoves open it -> if not get another random card.
-    id = getRandomCard(socket);
-    id2 = socket.cardPairs[id];
+    id = getRandomCard(game);
+    id2 = pairs[id];
 
-    if (!socket.previousMoves.includes(id2)) {
-      do {
-        id2 = getRandomCard(socket);
-      } while (id == id2);
+    if (!pre.includes(id2)) {
+      id2 = getRandomCard(game, id);
     }
   }
 
+  // Should never happen, but never let the computer get stuck.
+  if (id == null || id2 == null) {
+    endTurn(socket);
+    return;
+  }
+
   // Push cards to openedCards, so that they get checked in checkGame-method
-  socket.openedCards.push(id);
-  setTimeout(
-    () =>
-      socket.emit("turnCard", {
-        id: id,
-        src: socket.cardImages[id],
-      }),
-    1250,
-  );
-  setTimeout(
-    () =>
-      socket.emit("turnCard", {
-        id: id2,
-        src: socket.cardImages[id2],
-      }),
-    1750,
-  );
-  setTimeout(() => socket.openedCards.push(id2), 2250);
+  game.openedCards.push(id);
+  later(game, () => socket.emit("turnCard", { id: id, src: game.cardImages[id] }), 1250);
+  later(game, () => socket.emit("turnCard", { id: id2, src: game.cardImages[id2] }), 1750);
+  later(game, () => game.openedCards.push(id2), 2250);
 }
 
-function getRandomCard(socket) {
-  do {
-    // Get random card which wasn't opened (in computer memory) yet and haven't been found already
-    var id = Math.floor(Math.random() * 66);
-  } while (
-    socket.foundMatches.includes(id) ||
-    socket.previousMoves.includes(id)
-  );
+// Random card which isn't in the computer's memory and hasn't been found yet.
+// Falls back to any card that is still in the game, so this can't loop forever.
+function getRandomCard(game, exclude) {
+  const open = [];
+  const unknown = [];
 
-  return id;
+  for (var i = 0; i < CARD_COUNT; i++) {
+    if (i === exclude || game.foundMatches.includes(i)) continue;
+    open.push(i);
+    if (!game.previousMoves.includes(i)) unknown.push(i);
+  }
+
+  const candidates = unknown.length > 0 ? unknown : open;
+  return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
 function checkCards(socket) {
-  var id = socket.openedCards[0];
-  var id2 = socket.openedCards[1];
+  const game = socket.game;
+  var id = game.openedCards[0];
+  var id2 = game.openedCards[1];
 
   // Check if cards match
-  var cardsMatch = socket.cardPairs[id] == id2;
+  var cardsMatch = game.cardPairs[id] == id2;
 
   if (cardsMatch) {
     // Push to foundMatches -> So it can't be opened again
-    socket.foundMatches.push(id);
-    socket.foundMatches.push(id2);
+    game.foundMatches.push(id);
+    game.foundMatches.push(id2);
 
     // understateCard - remove Zoom and Border on cards
-    setTimeout(() => socket.emit("understateCard", id), 500);
-    setTimeout(() => socket.emit("understateCard", id2), 500);
+    later(game, () => socket.emit("understateCard", id), 500);
+    later(game, () => socket.emit("understateCard", id2), 500);
 
     // Increase Points
-    if (socket.turn == 0) {
-      socket.user.points++;
+    if (game.turn == 0) {
+      game.user.points++;
       socket.emit("increasePoints", {
-        turn: socket.turn,
-        points: socket.user.points,
+        turn: game.turn,
+        points: game.user.points,
       });
     } else {
-      socket.computer.points++;
+      game.computer.points++;
       socket.emit("increasePoints", {
-        turn: socket.turn,
-        points: socket.computer.points,
+        turn: game.turn,
+        points: game.computer.points,
       });
     }
 
     // Reset turn
-    socket.openedCards = [];
-    socket.status = 0;
+    game.openedCards = [];
+    game.status = 0;
   }
 
   // Push last 2 cards to previousMoves
-  socket.previousMoves.pop();
-  socket.previousMoves.pop();
-  socket.previousMoves.unshift(id);
-  socket.previousMoves.unshift(id2);
+  if (game.previousMoves.length >= 2) {
+    game.previousMoves.pop();
+    game.previousMoves.pop();
+    game.previousMoves.unshift(id);
+    game.previousMoves.unshift(id2);
+  }
 
   return cardsMatch;
 }
 
 function endTurn(socket) {
-  var id = socket.openedCards[0];
-  var id2 = socket.openedCards[1];
+  const game = socket.game;
+  if (game == null || game.finished) return;
+
+  var id = game.openedCards[0];
+  var id2 = game.openedCards[1];
 
   // Close both cards
-  if (!socket.finished) {
-    socket.emit("closeCards", {
-      1: id,
-      2: id2,
-    });
+  socket.emit("closeCards", {
+    1: id,
+    2: id2,
+  });
 
-    // If it's the player's turn disable the endTurn-Button so that the user can't end his turn twice
-    if (socket.turn == 0) {
-      socket.emit("disableEndTurn");
-    }
-
-    // Switch turns
-    socket.turn = socket.turn == 1 ? 0 : 1;
-    // Reset turn
-    socket.openedCards = [];
-    socket.status = 0;
-
-    // Change highlight of player
-    socket.emit("highlightPlayer", {
-      turn: socket.turn,
-      computer: socket.computer.name,
-      user: socket.user.name,
-    });
+  // If it's the player's turn disable the endTurn-Button so that the user can't end his turn twice
+  if (game.turn == 0) {
+    socket.emit("disableEndTurn");
   }
+
+  // Switch turns
+  game.turn = game.turn == 1 ? 0 : 1;
+  // Reset turn
+  game.openedCards = [];
+  game.status = 0;
+
+  // Change highlight of player
+  socket.emit("highlightPlayer", {
+    turn: game.turn,
+    computer: game.computer.name,
+    user: game.user.name,
+  });
 }
 
-function surrendGame(socket) {
+async function surrendGame(socket) {
+  const game = socket.game;
+
   // Does this game exist? Is it finished?
-  if (socket.gameID != null && !socket.finished) {
+  if (game != null && !game.finished) {
     // Set points above possible range. => No need to implement surrend function, if you declare computer as winner.
-    socket.computer.points = 50;
-    getWinner(socket);
+    game.computer.points = 50;
+    await getWinner(socket);
   }
 }
 
 async function getWinner(socket) {
-  var user = await User.findOne({
-    username: socket.user.name,
-  });
-  var statistic = await Statistic.findOne({
-    _id: user.statistics,
-  });
-  var winner;
-  var body;
+  const game = socket.game;
+
+  // Only finish a game once (the game loop runs every 100ms).
+  if (game == null || game.finished) return;
 
   // Change gameState to finish
-  socket.finished = 1;
+  game.finished = true;
+  stopTimers(game);
 
-  // Change Statistic in Database
-  if (socket.user.points > socket.computer.points) {
-    winner = 0;
+  const winner = game.user.points > game.computer.points ? 0 : 1;
+  const field = DIFFICULTIES[game.difficulty] + (winner == 0 ? "Win" : "Lose");
 
-    switch (socket.difficulty) {
-      case 0:
-        body = {
-          easyWin: statistic.easyWin + 1,
-        };
-        break;
-      case 1:
-        body = {
-          mediumWin: statistic.mediumWin + 1,
-        };
-        break;
-      case 2:
-        body = {
-          hardWin: statistic.hardWin + 1,
-        };
-        break;
-      case 3:
-        body = {
-          expertWin: statistic.expertWin + 1,
-        };
-        break;
-    }
-  } else {
-    winner = 1;
-
-    switch (socket.difficulty) {
-      case 0:
-        body = {
-          easyLose: statistic.easyLose + 1,
-        };
-        break;
-      case 1:
-        body = {
-          mediumLose: statistic.mediumLose + 1,
-        };
-        break;
-      case 2:
-        body = {
-          hardLose: statistic.hardLose + 1,
-        };
-        break;
-      case 3:
-        body = {
-          expertLose: statistic.expertLose + 1,
-        };
-        break;
-    }
+  // Change Statistic in Database - a database problem must not stop the game from ending.
+  try {
+    await Statistic.increment(game.user.name, field);
+  } catch (error) {
+    console.error("[singleplayer] Could not update statistic:", error);
   }
 
-  await Statistic.updateOne(
-    {
-      _id: user.statistics,
-    },
-    body,
-    {
-      runValidators: true,
-    },
-  );
   socket.emit("getWinner", {
     winner: winner,
-    cardCounter: socket.cardCounter,
-    computer: socket.computer.name,
-    user: socket.user.name,
+    cardCounter: game.cardCounter,
+    computer: game.computer.name,
+    user: game.user.name,
   });
-
-  // Delete game
-  delete global.rooms[socket.gameID];
-  delete socket.gameID;
-  clearInterval(socket.interval);
 }

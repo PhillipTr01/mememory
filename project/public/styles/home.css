@@ -1,59 +1,292 @@
-tbody {
-    background-color: #2b3035;
+/* Same difficulty colors as in the lobby */
+.mode-easy { --mode: #34d399; }
+.mode-medium { --mode: #48b0f7; }
+.mode-hard { --mode: #f59e0b; }
+.mode-expert { --mode: #ef4444; }
+.mode-multiplayer { --mode: #a78bfa; }
+
+
+
+.mode-tabs {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+  overflow-x: auto;
 }
 
-td {
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
+.mode-tab {
+  flex: 1;
+  border: none;
+  border-radius: 9px;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  color: var(--mm-muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.nav-tabs {
-    border: none;
+.mode-tab:hover {
+  color: var(--mm-text);
 }
 
-.nav-tabs>.nav-link.active {
-    background-color: #141414;
+.mode-tab.active {
+  background: var(--mode);
+  color: #111;
+  box-shadow: none;
 }
 
-.nav-tabs>.nav-link {
-    border: none;
+.score-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  min-height: 200px;
 }
 
-.nav-tabs>button {
-    border-radius: 0 !important;
+.score-row {
+  display: grid;
+  grid-template-columns: 2.2rem auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.4rem;
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+  border-left: 4px solid var(--mode);
+  animation: mm-fade-up 0.25s ease both;
 }
 
-.tr-bottom-border {
-    border-bottom-color: #141414;
-    border-bottom-width: 3px;
+.score-row.me {
+  background: var(--mm-surface-3);
+  box-shadow: 0 0 0 1px rgba(var(--mm-accent-rgb), 0.35) inset;
 }
 
-#nav-easy-tab.active,
-#nav-easy-tab:hover,
-#easyTable {
-    background-color: #709ba9;
+.score-rank {
+  font-weight: 700;
+  font-size: 1.05rem;
+  text-align: center;
+  color: var(--mm-muted);
 }
 
-#nav-medium-tab.active,
-#nav-medium-tab:hover,
-#mediumTable {
-    background-color: #608f9f;
+.score-rank.medal {
+  font-size: 1.4rem;
 }
 
-#nav-hard-tab.active,
-#nav-hard-tab:hover,
-#hardTable {
-    background-color: #56818f;
+.score-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-#nav-expert-tab.active,
-#nav-expert-tab:hover,
-#expertTable {
-    background-color: #436470;
+.score-rate {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--mm-muted);
+  margin-top: 0.2rem;
 }
 
-#nav-multiplayer-tab.active,
-#nav-multiplayer-tab:hover,
-#multiplayerTable {
-    background-color: #603939;
+.score-rate .bar {
+  width: 90px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--mm-surface-3);
+  overflow: hidden;
+}
+
+.score-rate .fill {
+  height: 100%;
+  background: var(--mode);
+}
+
+.score-stats {
+  display: flex;
+  gap: 0.9rem;
+  text-align: center;
+}
+
+.score-stats div {
+  min-width: 2.4rem;
+}
+
+.score-stats .value {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.score-stats .label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mm-muted);
+}
+
+.score-stats .win .value {
+  color: var(--mm-success);
+}
+
+.score-stats .lose .value {
+  color: var(--mm-danger);
+}
+
+.score-empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--mm-muted);
+}
+
+.score-empty .bi {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+
+.score-rate {
+  white-space: nowrap;
+}
+
+@media (max-width: 575px) {
+  .scoreboard {
+    padding: 1rem;
+  }
+
+  .score-row {
+    grid-template-columns: 1.6rem auto minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    padding: 0.55rem 0.6rem;
+  }
+
+  .score-row .mm-avatar {
+    --size: 30px;
+  }
+
+  .score-rate .bar {
+    width: 40px;
+  }
+
+  .score-stats {
+    gap: 0.5rem;
+  }
+
+  .score-stats div {
+    min-width: 2rem;
+  }
+
+  .mode-tab {
+    padding: 0.45rem 0.6rem;
+  }
+}
+
+/* ---------- Compact scoreboard: all 10 places fit on one screen ---------- */
+.scoreboard {
+  padding: 1.1rem 1.25rem;
+}
+
+.scoreboard .page-title {
+  font-size: 1.35rem;
+}
+
+.scoreboard .mode-tabs {
+  margin-bottom: 0.75rem;
+}
+
+.scoreboard .mode-tab {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.score-list {
+  min-height: 0;
+}
+
+.score-row {
+  grid-template-columns: 1.8rem auto minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  padding: 0.3rem 0.65rem;
+  margin-bottom: 0.3rem;
+  border-left-width: 3px;
+}
+
+.score-row .mm-avatar {
+  --size: 26px;
+}
+
+.score-rank {
+  font-size: 0.9rem;
+}
+
+.score-rank.medal {
+  font-size: 1.1rem;
+}
+
+.score-name {
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+.score-rate {
+  margin-top: 0.1rem;
+  font-size: 0.68rem;
+}
+
+.score-rate .bar {
+  width: 60px;
+  height: 3px;
+}
+
+.score-stats {
+  gap: 0.6rem;
+}
+
+.score-stats .value {
+  font-size: 0.95rem;
+  line-height: 1.1;
+}
+
+.score-stats .label {
+  font-size: 0.58rem;
+}
+
+/* Name + "You" tag in one line */
+.score-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.score-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The scoreboard always fits on the screen, the list scrolls inside if needed */
+@media (min-width: 992px) {
+  .score-list {
+    max-height: calc(100vh - 340px);
+    overflow-y: auto;
+    padding-right: 0.15rem;
+  }
+}
+
+/* Small phones: the five tabs share the width */
+@media (max-width: 575px) {
+  .mode-tabs {
+    gap: 0.15rem;
+    padding: 0.2rem;
+  }
+
+  .mode-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.4rem 0.2rem;
+    font-size: 0.75rem;
+  }
 }

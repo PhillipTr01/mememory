@@ -1,8 +1,97 @@
 const socket = io("/multiplayer");
 
 var modal;
-var game;
 var backImage = "/static/images/logo_small.png";
+
+// Own name and role, sent by the server after joining
+var me = { username: null, spectator: false };
+// Last state of the room (players, host, turn, settings)
+var room = null;
+// Set when the session ended on purpose (game over, kicked, other tab) -> don't rejoin
+var sessionOver = false;
+
+// The room can come from an invite link (/play?game=ID) or from the lobby
+var urlParams = new URLSearchParams(window.location.search);
+var urlGameID = urlParams.get("game");
+// "Watch" in the lobby: join as spectator even if there is a free seat
+var watchOnly = urlParams.get("watch") == "1";
+if (urlGameID) {
+  sessionStorage.setItem("gameID", urlGameID);
+}
+var gameID = sessionStorage.getItem("gameID");
+
+if (!gameID) {
+  window.location.href = "/lobby";
+} else if (urlGameID !== gameID) {
+  // Keep the room in the URL, so reloading or sharing the page works
+  history.replaceState(null, "", "/play?game=" + encodeURIComponent(gameID) + (watchOnly ? "&watch=1" : ""));
+}
+
+/* ---------- Connection & rejoin ---------- */
+
+// (Re)join the room on every (re)connect - the server keeps the seat for a while
+socket.on("connect", () => {
+  document.getElementById("connectionBanner").hidden = true;
+  if (!sessionOver) {
+    socket.emit("joinRoom", { gameID: gameID, watch: watchOnly });
+  }
+});
+
+socket.on("disconnect", (reason) => {
+  // "io server disconnect" = we were removed on purpose, socket.io doesn't reconnect then
+  if (!sessionOver && reason != "io server disconnect") {
+    document.getElementById("connectionBanner").hidden = false;
+  }
+});
+
+socket.on("connect_error", (error) => {
+  // Not logged in (anymore)
+  if (error && error.message == "unauthorized") {
+    window.location.href = "/";
+  }
+});
+
+// Something went wrong on the server (e.g. not enough memes) -> back to the lobby
+socket.on("gameError", (message) => {
+  showNotice("⚠️", "Something went wrong", message || "Please try again.", "Back to lobby", () => {
+    window.location.href = "/lobby";
+  });
+});
+
+socket.on("noGameFound", () => {
+  sessionOver = true;
+  showNotice("🚪", "Room not found", "This room doesn't exist anymore.", "Back to lobby", () => {
+    window.location.href = "/lobby";
+  });
+});
+
+// The room was opened in another tab
+socket.on("sessionReplaced", () => {
+  sessionOver = true;
+  showNotice("📑", "Opened in another tab", "You are playing in another tab or window now.", "Play here", () => {
+    window.location.reload();
+  });
+});
+
+socket.on("kicked", () => {
+  sessionOver = true;
+  showNotice("👢", "Removed from the room", "The host removed you from this room.", "Back to lobby", () => {
+    window.location.href = "/lobby";
+  });
+});
+
+function showNotice(icon, title, text, actionLabel, action) {
+  document.getElementById("noticeIcon").innerText = icon;
+  document.getElementById("noticeTitle").innerText = title;
+  document.getElementById("noticeText").innerText = text;
+  var button = document.getElementById("noticeAction");
+  button.innerText = actionLabel;
+  button.onclick = action;
+  document.getElementById("connectionBanner").hidden = true;
+  document.getElementById("noticeOverlay").hidden = false;
+}
+
+/* ---------- Page setup ---------- */
 
 document.addEventListener(
   "DOMContentLoaded",
@@ -14,7 +103,7 @@ document.addEventListener(
       var div = `<div class="card-size">
                         <div id="card-${index}" class="col-1 card pos-abs w-100 h-100" onclick="openCard(${index}); false;">
                             <div class="card-back card-image">
-                                <img src="" class="card-image">
+                                <img class="card-image" alt="">
                                 <div id="cardcount-${index}" class="overlay"></div>
                             </div>
                             <div class="card-front card-image">
@@ -26,141 +115,519 @@ document.addEventListener(
     }
 
     modal = document.getElementById("cardModal");
-    addChatInputEvent();
+
+    document.getElementById("roomCode").innerText = gameID;
+    document.getElementById("copyCodeButton").addEventListener("click", (e) => copyText(gameID, e.currentTarget));
+    document.getElementById("copyLinkButton").addEventListener("click", (e) =>
+      copyText(window.location.origin + "/play?game=" + encodeURIComponent(gameID), e.currentTarget),
+    );
+    document.getElementById("startButton").addEventListener("click", startGame);
+    document.getElementById("leaveButton").addEventListener("click", leaveRoom);
+    document.getElementById("publicSwitch").addEventListener("change", (e) => {
+      socket.emit("updateSettings", { isPublic: e.target.checked });
+    });
+    document.getElementById("resultBoardButton").addEventListener("click", closeResult);
+
+    // The result must not block the board: a click next to it closes it,
+    // and if there is a card under the click, its meme is opened right away
+    document.getElementById("resultOverlay").addEventListener("click", (event) => {
+      if (event.target.id != "resultOverlay") return;
+      closeResult();
+      var below = document.elementFromPoint(event.clientX, event.clientY);
+      var card = below && below.closest(".card");
+      if (card) zoomCard(Number(card.id.replace("card-", "")));
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key == "Escape") closeResult();
+    });
+
+    setupChat();
   },
   false,
 );
 
-if (sessionStorage.getItem("role") == "creator") {
-  // Get all Memes from database
-  document.getElementById("playButton").hidden = true;
-  document.getElementById("startButton").hidden = false;
-  document.getElementById("startButton").disabled = true;
+function leaveRoom() {
+  sessionOver = true;
+  socket.emit("leaveRoom");
+  window.location.href = "/lobby";
+}
 
-  var request = new XMLHttpRequest();
-  request.onreadystatechange = function () {
-    if (this.readyState == 4) {
-      if (this.status == 200) {
-        var links = JSON.parse(request.responseText);
-        // Initialize Game
-        socket.emit("initializingGame", {
-          gameID: sessionStorage.getItem("gameID"),
-          links: links,
-        });
+/* ---------- Room state ---------- */
+
+socket.on("joinedRoom", (data) => {
+  me = data;
+
+  // Spectators (and players who surrendered) can't surrender
+  if (room) renderPlayerList(room, room);
+});
+
+socket.on("roomState", (state) => {
+  var previous = room;
+  room = state;
+
+  // Speed round: yellow / orange accent color for the whole room
+  document.body.classList.toggle("mode-speed", state.mode == "speed");
+
+  renderPlayerList(state, previous);
+  renderWaitingRoom(state);
+  renderTurn(state, previous);
+
+  var waiting = state.status == "waiting";
+  document.getElementById("waitingRoom").hidden = !waiting;
+  document.getElementById("board").hidden = waiting;
+
+  var pairs = document.getElementById("pairsLeft");
+  pairs.hidden = waiting;
+  pairs.innerText = state.pairsLeft + " pairs left";
+
+  var player = getMyPlayer(state);
+  var inGame = (state.status == "playing" || state.status == "starting") && player != null && player.active;
+  // Speed round: the turn passes on its own after two wrong cards
+  document.getElementById("playButton").hidden = !inGame || state.mode == "speed";
+  updateTurnTimer(state);
+
+  // My turn is over -> the End Turn button can't be used anymore
+  if (!isMyTurn(state)) {
+    document.getElementById("playButton").disabled = true;
+  }
+
+  document.getElementById("board").classList.toggle("locked", !isMyTurn(state));
+});
+
+function getMyPlayer(state) {
+  return state.players.find((player) => player.name == me.username) || null;
+}
+
+function isMyTurn(state) {
+  var player = state.players[state.turn];
+  return state.status == "playing" && player != null && player.name == me.username;
+}
+
+// Scoreboard on the right: one entry per player, no fixed number of rows
+function renderPlayerList(state, previous) {
+  var list = document.getElementById("playerList");
+  list.replaceChildren();
+
+  state.players.forEach((player, index) => {
+    var item = document.createElement("div");
+    item.className = "player-item";
+    if (!player.active) item.classList.add("inactive");
+    if (state.status == "playing" && state.turn == index && player.active) item.classList.add("turn");
+
+    var info = document.createElement("div");
+    info.className = "player-info";
+    var name = document.createElement("div");
+    name.className = "player-name";
+    var nameText = document.createElement("span");
+    nameText.className = "player-name-text";
+    nameText.innerText = player.name;
+    name.appendChild(nameText);
+
+    // Host: star, own entry: small "You" tag
+    if (player.name == state.host) {
+      name.appendChild(createIcon("bi-star-fill player-host", "Host"));
+    }
+    if (player.name == me.username) {
+      var you = document.createElement("span");
+      you.className = "player-tag";
+      you.innerText = "You";
+      name.appendChild(you);
+
+      // Surrender right next to the own name while playing
+      var playing = state.status == "playing" || state.status == "starting";
+      if (playing && player.active && !me.spectator) {
+        name.appendChild(createSurrenderButton());
       }
     }
-  };
-  request.open("GET", "/requests/memes");
-  request.send();
-} else {
-  socket.emit("joinGame", {
-    gameID: sessionStorage.getItem("gameID"),
-    username: sessionStorage.getItem("username"),
+
+    // Ready mark in the waiting room
+    if (state.status == "waiting" && player.name != state.host && player.ready) {
+      name.appendChild(createIcon("bi-check-circle-fill player-ready", "Ready"));
+    }
+
+    // Host can kick players while waiting
+    if (state.status == "waiting" && state.host == me.username && player.name != me.username) {
+      name.appendChild(createKickButton(player.name, "player-kick"));
+    }
+
+    // Out of the game: tag with a flag instead of a text
+    if (!player.active) {
+      name.appendChild(createSurrenderedTag());
+    }
+
+    var sub = document.createElement("div");
+    sub.className = "player-sub";
+    sub.innerText = !player.active
+      ? ""
+      : !player.connected
+        ? "reconnecting..."
+        : state.status == "playing" && state.turn == index
+          ? "is playing"
+          : "";
+    info.append(name, sub);
+
+    // Speed round: time left for the player whose turn it is
+    if (state.mode == "speed" && state.status == "playing" && state.turn == index) {
+      item.classList.add("timed");
+      var bar = document.createElement("div");
+      bar.className = "turn-timer";
+      bar.appendChild(document.createElement("span"));
+      item.appendChild(bar);
+      sub.classList.add("turn-seconds");
+    }
+
+    var points = document.createElement("div");
+    points.className = "player-points";
+    points.innerText = player.points;
+
+    // Small animation when a player scored
+    var before = previous && previous.players.find((p) => p.name == player.name);
+    if (before && before.points < player.points) {
+      points.classList.add("bump");
+    }
+
+    item.append(createAvatar(player.name, "", player.connected), info, points);
+    list.appendChild(item);
+  });
+
+  var spectators = document.getElementById("spectatorInfo");
+  spectators.hidden = state.spectators.length == 0;
+  spectators.replaceChildren(createIcon("bi-eye me-1"), document.createTextNode(state.spectators.join(", ")));
+}
+
+// The board glows when it's my turn, plus a short hint when the turn changes to me
+function renderTurn(state, previous) {
+  var mine = isMyTurn(state);
+  document.getElementById("board").classList.toggle("my-turn", mine);
+
+  if (mine && (previous == null || !isMyTurn(previous))) {
+    showToast("Your turn");
+  }
+}
+
+function renderWaitingRoom(state) {
+  var isHost = state.host == me.username;
+  var count = state.players.length;
+
+  document.getElementById("playerCount").innerText = `${count} / ${state.maxPlayers}`;
+
+  var waitingText = document.getElementById("waitingText");
+  waitingText.classList.remove("waiting-dots");
+  waitingText.innerText = isHost
+    ? "Invite your friends and start when everybody is ready."
+    : me.spectator
+      ? "You are watching this game."
+      : "Press \"I'm ready\" when you want to play.";
+
+  // Mode badge for everybody
+  var badge = document.getElementById("modeBadge");
+  badge.hidden = state.mode != "speed";
+  badge.replaceChildren(
+    createIcon("bi-lightning-charge-fill"),
+    document.createTextNode(` Speed round · ${state.turnTime / 1000}s`),
+  );
+
+  // Seats: players + free seats. Only redrawn when something about the seats
+  // changed - otherwise e.g. switching the mode would make them flicker.
+  var seatsKey = JSON.stringify([
+    state.maxPlayers,
+    state.host,
+    me.username,
+    state.players.map((p) => [p.name, p.connected, p.ready]),
+  ]);
+  var seats = document.getElementById("waitingPlayers");
+  if (seats.dataset.key != seatsKey) {
+    seats.dataset.key = seatsKey;
+    seats.replaceChildren();
+    for (var i = 0; i < state.maxPlayers; i++) {
+      seats.appendChild(createSeat(state, state.players[i], isHost));
+    }
+  }
+
+  // Host settings
+  document.getElementById("hostSettings").hidden = !isHost;
+  var startButton = document.getElementById("startButton");
+  startButton.hidden = !isHost;
+
+  // Ready button for everybody except the host
+  var mine = getMyPlayer(state);
+  var readyButton = document.getElementById("readyButton");
+  readyButton.hidden = isHost || mine == null || me.spectator;
+  if (mine != null) {
+    readyButton.classList.toggle("is-ready", mine.ready);
+    readyButton.replaceChildren(
+      createIcon(mine.ready ? "bi-check-circle-fill" : "bi-circle"),
+      document.createTextNode(mine.ready ? " Ready" : " I'm ready"),
+    );
+  }
+
+  // The host can start when enough players are there and all of them are ready
+  var connected = state.players.filter((p) => p.connected);
+  var notReady = connected.filter((p) => p.name != state.host && !p.ready);
+  var canStart = connected.length >= state.minPlayers && notReady.length == 0;
+  startButton.disabled = !canStart;
+  document.getElementById("startHint").innerText =
+    connected.length < state.minPlayers
+      ? `At least ${state.minPlayers} players are needed to start.`
+      : notReady.length > 0
+        ? `Waiting for ${notReady.map((p) => p.name).join(", ")} to be ready`
+        : isHost
+          ? "Everybody is ready!"
+          : `Waiting for ${state.host} to start the game`;
+
+  if (!isHost) return;
+
+  // Max. players as a small stepper: [-] 4 [+]
+  var lowest = Math.max(state.minPlayers, count);
+  document.getElementById("maxPlayersValue").innerText = state.maxPlayers;
+  document.getElementById("maxPlayersMinus").disabled = state.maxPlayers <= lowest;
+  document.getElementById("maxPlayersPlus").disabled = state.maxPlayers >= state.maxPlayersLimit;
+
+  document.getElementById("publicSwitch").checked = state.isPublic;
+
+  document.querySelectorAll("#modePicker button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.mode == state.mode);
+  });
+
+  // Seconds per turn (only in the speed round)
+  var timePicker = document.getElementById("turnTimePicker");
+  document.getElementById("turnTimeSetting").hidden = state.mode != "speed";
+  timePicker.replaceChildren();
+  (state.turnTimeOptions || []).forEach((seconds) => {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.innerText = seconds + "s";
+    button.classList.toggle("active", seconds * 1000 == state.turnTime);
+    button.addEventListener("click", () => socket.emit("updateSettings", { turnTime: seconds }));
+    timePicker.appendChild(button);
   });
 }
 
-socket.on("enableStartGame", () => {
-  if (document.getElementById("startButton").disabled) {
-    document.getElementById("startButton").disabled = false;
-  }
-});
+function createSeat(state, player, isHost) {
+  var seat = document.createElement("div");
+  seat.className = "seat";
 
-socket.on("disableStartGame", () => {
-  document.getElementById("startButton").disabled = true;
-});
-
-// Set usernames on the scoreboard
-socket.on("visualInitializing", (data) => {
-  for (var i = 1; i <= 4; i++) {
-    document.getElementById(`user${i}Username`).innerText = "";
-    document.getElementById(`user${i}Score`).innerText = "";
+  if (!player) {
+    seat.classList.add("empty");
+    seat.append(createIcon("bi-person-plus"), document.createTextNode("Free seat"));
+    return seat;
   }
 
-  for (var i = 1; i <= data.player.length; i++) {
-    document.getElementById(`user${i}Username`).innerText =
-      data.player[i - 1].name;
-    document.getElementById(`user${i}Score`).innerText =
-      data.player[i - 1].points;
+  if (player.name == me.username) seat.classList.add("me");
+  if (!player.connected) seat.classList.add("offline");
+
+  var name = document.createElement("div");
+  name.className = "seat-name";
+  name.innerText = player.name;
+
+  var tags = document.createElement("div");
+  tags.className = "seat-tags";
+  if (player.name == state.host) {
+    var host = document.createElement("span");
+    host.className = "mm-badge host";
+    host.append(createIcon("bi-star-fill"), document.createTextNode("Host"));
+    tags.appendChild(host);
   }
-  // document.getElementById('surrenderButton').disabled = false;
-});
-
-// Set usernames on the scoreboard
-socket.on("watchGame", () => {
-  var playButton = document.getElementById("playButton");
-  var surrenderButton = document.getElementById("surrenderButton");
-
-  surrenderButton.disabled = true;
-  surrenderButton.innerHTML = "SPECTATING GAME";
-  surrenderButton.classList.remove("btn-outline-danger");
-  surrenderButton.classList.add("btn-outline-secondary");
-
-  playButton.onclick = () => {
-    window.location.href = "/lobby";
-  };
-  playButton.disabled = false;
-  playButton.innerHTML = "Back to Lobby";
-});
-
-// Show which player's turn it is
-socket.on("highlightPlayer", (data) => {
-  for (var i = 1; i <= data.player.length; i++) {
-    if (data.turn == i) {
-      document.getElementById(`user${i}Username`).classList.add("fw-bold");
-      document.getElementById(`user${i}Username`).innerHTML =
-        `${data.player[i - 1].name} <i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
-    } else {
-      document.getElementById(`user${i}Username`).classList.remove("fw-bold");
-      document.getElementById(`user${i}Username`).innerHTML =
-        data.player[i - 1].name;
-    }
+  if (player.name == me.username) {
+    var you = document.createElement("span");
+    you.className = "mm-badge";
+    you.innerText = "You";
+    tags.appendChild(you);
   }
-});
+  if (player.name != state.host && player.connected) {
+    var ready = document.createElement("span");
+    ready.className = "mm-badge " + (player.ready ? "ready" : "not-ready");
+    ready.append(createIcon(player.ready ? "bi-check2" : "bi-hourglass-split"), document.createTextNode(player.ready ? "Ready" : "Not ready"));
+    tags.appendChild(ready);
+  }
+  if (!player.connected) {
+    var offline = document.createElement("span");
+    offline.className = "mm-badge playing";
+    offline.innerText = "Reconnecting";
+    tags.appendChild(offline);
+  }
 
-socket.on("noGameFound", () => {
-  window.location.href = "/lobby";
-});
+  seat.append(createAvatar(player.name, "lg", player.connected), name, tags);
 
-function addChatInputEvent() {
-  let input = document.getElementById("chat-input");
+  // The host can remove other players
+  if (isHost && player.name != me.username) {
+    seat.appendChild(createKickButton(player.name, "seat-kick"));
+  }
 
-  input.addEventListener("keypress", function (event) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      document.getElementById("send-message-btn").click();
-    }
+  return seat;
+}
+
+// Button for the host to remove a player from the waiting room
+function createKickButton(name, className) {
+  var kick = document.createElement("button");
+  kick.type = "button";
+  kick.className = className;
+  kick.title = "Remove " + name + " from the room";
+  kick.setAttribute("aria-label", "Kick " + name);
+  kick.appendChild(createIcon("bi-x"));
+  kick.addEventListener("click", (event) => {
+    event.stopPropagation();
+    confirmDialog({
+      title: `Remove ${name}?`,
+      text: "The player can still watch, but can't take a seat in this room again.",
+      confirmLabel: "Remove",
+      danger: true,
+    }).then((ok) => {
+      if (ok) socket.emit("kickPlayer", { name: name });
+    });
   });
+  return kick;
+}
+
+/* ---------- "Who starts?" animation ---------- */
+
+socket.on("gameStarting", (data) => {
+  playStartAnimation(data.players, data.starter, data.duration);
+});
+
+function playStartAnimation(players, starter, duration) {
+  var overlay = document.getElementById("startOverlay");
+  var track = document.getElementById("reelTrack");
+  var result = document.getElementById("startResult");
+  var reel = track.parentElement;
+  var itemHeight = parseFloat(getComputedStyle(reel).getPropertyValue("--item")) || 72;
+
+  // Long list of names, the winner is the last one -> spinning slot machine
+  var rounds = Math.max(4, Math.ceil(24 / players.length));
+  var names = [];
+  for (var r = 0; r < rounds; r++) names.push(...players);
+  names.push(...players.slice(0, starter + 1));
+  names.push(players[(starter + 1) % players.length]); // one more below the marker
+
+  track.replaceChildren();
+  names.forEach((name) => {
+    var item = document.createElement("div");
+    item.className = "reel-item";
+    item.append(createAvatar(name), document.createTextNode(name));
+    track.appendChild(item);
+  });
+
+  var target = names.length - 2; // the starter
+  var spin = Math.max(1200, duration - 1300);
+
+  result.classList.remove("show");
+  result.innerText = "";
+  track.style.transition = "none";
+  track.style.transform = "translateY(0)";
+  overlay.hidden = false;
+
+  // Start the spin in the next frame so the transition is applied
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      track.style.transition = `transform ${spin}ms cubic-bezier(0.12, 0.75, 0.18, 1)`;
+      // The marker is the second row of the reel
+      track.style.transform = `translateY(${-(target - 1) * itemHeight}px)`;
+    }),
+  );
+
+  setTimeout(() => {
+    track.children[target].classList.add("chosen");
+    var name = players[starter];
+    result.innerText = name == me.username ? "You start" : `${name} starts`;
+    result.classList.add("show");
+  }, spin);
+
+  setTimeout(() => {
+    overlay.hidden = true;
+    document.getElementById("confetti").replaceChildren();
+  }, duration + 200);
+}
+
+function launchConfetti() {
+  var container = document.getElementById("confetti");
+  var colors = ["#48b0f7", "#8b5cf6", "#34d399", "#fbbf24", "#f87171", "#f472b6"];
+  container.replaceChildren();
+
+  for (var i = 0; i < 90; i++) {
+    var piece = document.createElement("i");
+    piece.style.left = Math.random() * 100 + "%";
+    piece.style.background = colors[i % colors.length];
+    piece.style.animationDuration = 1.4 + Math.random() * 1.4 + "s";
+    piece.style.animationDelay = Math.random() * 0.3 + "s";
+    piece.style.setProperty("--dx", (Math.random() - 0.5) * 300 + "px");
+    piece.style.setProperty("--rot", Math.random() * 720 + "deg");
+    container.appendChild(piece);
+  }
+}
+
+/* ---------- Game ---------- */
+
+function startGame() {
+  document.getElementById("startButton").disabled = true;
+  socket.emit("startGame");
 }
 
 function openCard(id) {
+  // Open cards are zoomed in right away, closed ones are turned by the server
+  if (zoomCard(id)) return;
   socket.emit("openCard", id);
 }
 
-socket.on("turnCard", (data) => {
+function emitEndTurn() {
+  socket.emit("endTurn");
+}
+
+function surrender() {
+  confirmDialog({
+    title: "Surrender?",
+    text: "You leave the game and it counts as a loss. You can keep watching the others.",
+    cancelLabel: "Keep playing",
+    confirmLabel: "Surrender",
+    danger: true,
+  }).then((ok) => {
+    if (ok) socket.emit("surrender");
+  });
+}
+
+// Cards that are already open when (re)joining
+socket.on("boardState", (data) => {
+  for (var i = 0; i < 66; i++) {
+    closeCard(i, true);
+  }
+  data.found.forEach((card) => {
+    showCard(card);
+    understateCard(card.id);
+  });
+  data.opened.forEach(showCard);
+});
+
+socket.on("turnCard", showCard);
+
+function showCard(data) {
   var card = document.getElementById("card-" + data.id);
-  card.childNodes[1].childNodes[1].src = data.src;
-  card.classList.add("flip");
+  if (card == null) return;
+  setCardImage(card, data.src);
 
   // Highlighting a card - It gets bigger and gets a border
-  document.getElementById("card-" + data.id).classList.add("border");
-  document.getElementById("card-" + data.id).classList.add("border-3");
-  document.getElementById("card-" + data.id).classList.add("zoom-card-on-turn");
-});
+  card.classList.add("flip", "border", "border-3", "zoom-card-on-turn");
+}
+
+function closeCard(id, instant) {
+  var card = document.getElementById("card-" + id);
+  if (card == null) return;
+
+  card.classList.remove("flip");
+  understateCard(id);
+  clearCardImage(card, instant ? 0 : 900);
+}
 
 // If the card is already open, you can zoom in to read the meme
 socket.on("zoomImage", (id) => {
-  if (document.getElementById("card-" + id).classList.contains("flip")) {
-    var src = document.getElementById("card-" + id).childNodes[1].childNodes[1]
-      .src;
-    document.getElementById("imgModal").src = src;
-    modal.style.display = "block";
+  var card = document.getElementById("card-" + id);
+  if (card != null && card.classList.contains("flip")) {
+    openImageModal(card.childNodes[1].childNodes[1].src);
   }
 });
 
-// Increase Points if a match was found
-socket.on("increasePoints", (data) => {
-  document.getElementById(`user${data.turn}Score`).innerHTML = data.points;
-});
+function openImageModal(src) {
+  document.getElementById("imgModal").src = src;
+  modal.style.display = "block";
+}
 
 // Remove the zoom and the border of a card (if highlighted)
 socket.on("understateCard", (id) => {
@@ -168,27 +635,20 @@ socket.on("understateCard", (id) => {
 });
 
 function understateCard(id) {
-  document.getElementById("card-" + id).classList.remove("zoom-card-on-turn");
-  document.getElementById("card-" + id).classList.remove("border");
-  document.getElementById("card-" + id).classList.remove("border-3");
+  var card = document.getElementById("card-" + id);
+  if (card == null) return;
+  card.classList.remove("zoom-card-on-turn", "border", "border-3");
 }
 
 // Close opened cards
 socket.on("closeCards", (data) => {
-  var card = document.getElementById("card-" + data[1]);
-  card.classList.remove("flip");
-  setTimeout(() => {
-    card.childNodes[1].childNodes[1].src = "";
-  }, 500);
+  [data[1], data[2]].forEach((id) => closeCard(id, false));
+});
 
-  var card2 = document.getElementById("card-" + data[2]);
-  card2.classList.remove("flip");
-  setTimeout(() => {
-    card2.childNodes[1].childNodes[1].src = "";
-  }, 500);
-
-  understateCard(data[1]);
-  understateCard(data[2]);
+socket.on("matchFound", (data) => {
+  if (data.name == me.username) {
+    showToast("Pair found");
+  }
 });
 
 // Activate endTurn-Button
@@ -201,111 +661,151 @@ socket.on("disableEndTurn", () => {
   document.getElementById("playButton").disabled = true;
 });
 
-function startGame() {
-  document.getElementById("startButton").hidden = true;
-  document.getElementById("playButton").hidden = false;
-
-  socket.emit("startGame", {
-    username: sessionStorage.getItem("username"),
-  });
-}
-
-function emitEndTurn() {
-  socket.emit("endTurn");
-}
-
-function surrender() {
-  socket.emit("surrender");
-}
-
-function sendChatMessage() {
-  let inputElement = document.getElementById("chat-input");
-  let chatContentElement = document.getElementById("chat-content");
-  let inputValue = inputElement.value;
-  let newChatMessage = "";
-
-  if (inputValue != "") {
-    socket.emit("sendChatMessage", {
-      message: inputValue,
-    });
-
-    if (/^(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png)(.)*$/.test(inputValue)) {
-      newChatMessage = `<div class="message right-message">
-                                <p><img style="border: 3px solid #fff; border-radius: 3px; text-align: center; height: 100%; width: 100%" src="${inputValue}"></p>
-                              </div>`;
-    } else {
-      newChatMessage = `<div class="message right-message">
-                                <p>${inputValue}</p>
-                              </div>`;
-    }
-
-    chatContentElement.innerHTML += newChatMessage;
-    chatContentElement.scrollTop = chatContentElement.scrollHeight;
-
-    inputElement.value = "";
-  }
-}
-
-socket.on("receiveChatMessage", (data) => {
-  let chatContentElement = document.getElementById("chat-content");
-  let newChatMessage = "";
-  let username = data.spectator ? `${data.name} 👁` : data.name;
-
-  if (/^(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png)(.)*$/.test(data.message)) {
-    newChatMessage = `<div class="message left-message">
-                            <p><span style="font-size: large; font-weight: bold;">${username}</span><br><img style="border: 3px solid #858383; border-radius: 3px; text-align: center; height: 80%; width: 100%" src="${data.message}"></p>
-                          </div>`;
-  } else {
-    newChatMessage = `<div class="message left-message">
-                            <p><span style="font-size: large; font-weight: bold;">${username}</span><br>${data.message}</p>
-                          </div>`;
-  }
-  chatContentElement.innerHTML += newChatMessage;
-  chatContentElement.scrollTop = chatContentElement.scrollHeight;
-});
-
-socket.on("playerSurrendered", (data) => {
-  var userElement = document.getElementById(`user${data.playerIndex}Username`);
-  var scoreElement = document.getElementById(`user${data.playerIndex}Score`);
-
-  userElement.innerHTML = data.playerName;
-  userElement.classList.add("text-secondary");
-  scoreElement.classList.add("text-secondary");
-  userElement.classList.remove("fw-bold");
-});
-
 socket.on("getWinner", (data) => {
-  var playButton = document.getElementById("playButton");
+  sessionOver = true;
 
-  for (var i = 1; i < data.player.length + 1; i++) {
-    var userElement = document.getElementById(`user${i}Username`);
-    var scoreElement = document.getElementById(`user${i}Score`);
+  // All cards are shown normally now (found pairs are not dimmed anymore)
+  document.getElementById("board").classList.add("revealed");
 
-    if (data.winners.includes(data.player[i - 1].name)) {
-      userElement.innerHTML = `${data.player[i - 1].name}  <i class="bi bi-trophy text-warning"></i>`;
-      userElement.classList.add("fw-bold");
-    } else {
-      userElement.innerHTML = data.player[i - 1].name;
-      userElement.classList.add("text-secondary");
-      scoreElement.classList.add("text-secondary");
-      userElement.classList.remove("fw-bold");
-    }
-  }
-
-  // Remove all highlights
+  // Remove all highlights, show how often each card was opened
   for (var i = 0; i < 66; i++) {
     document.getElementById(`cardcount-${i}`).innerText = data.cardCounter[i];
     understateCard(i);
   }
 
-  // Change EndTurn-Button to Back to Lobby
+  document.querySelectorAll("#playerList .player-item").forEach((item, index) => {
+    var player = room && room.players[index];
+    if (player && data.winners.includes(player.name)) {
+      item.classList.add("winner");
+    }
+  });
+
+  var playButton = document.getElementById("playButton");
   playButton.onclick = () => {
     window.location.href = "/lobby";
   };
+  playButton.hidden = false;
   playButton.disabled = false;
-  playButton.innerHTML = "Back to Lobby";
-  document.getElementById("surrenderButton").disabled = true;
+  playButton.innerText = "Back to Lobby";
+
+  showResult(data.winners);
 
   // Reset storage
   sessionStorage.clear();
+});
+
+function closeResult() {
+  document.getElementById("resultOverlay").hidden = true;
+}
+
+function showResult(winners) {
+  var won = winners.includes(me.username);
+  document.getElementById("resultOverlay").classList.toggle("lost", !won);
+  document.getElementById("resultTitle").innerText =
+    winners.length > 1 ? "It's a draw!" : won ? "You win!" : `${winners[0]} wins!`;
+
+  var list = document.getElementById("resultList");
+  list.replaceChildren();
+  // Winners first, then by points, players who left at the end
+  var score = (p) => (winners.includes(p.name) ? 1e6 : 0) + (p.active ? 1e3 : 0) + p.points;
+  var ranking = (room ? room.players : []).slice().sort((a, b) => score(b) - score(a));
+  ranking.forEach((player, index) => {
+    var item = document.createElement("li");
+    if (winners.includes(player.name)) item.classList.add("winner");
+
+    var rank = document.createElement("span");
+    rank.className = "rank";
+    rank.innerText = index + 1 + ".";
+    var name = document.createElement("span");
+    name.className = "name";
+    var nameText = document.createElement("span");
+    nameText.className = "player-name-text";
+    nameText.innerText = player.name;
+    name.appendChild(nameText);
+    if (!player.active) name.appendChild(createSurrenderedTag());
+    var points = document.createElement("span");
+    points.className = "points";
+    points.innerText = player.points;
+
+    item.append(rank, createAvatar(player.name, "sm"), name, points);
+    list.appendChild(item);
+  });
+
+  document.getElementById("resultOverlay").hidden = false;
+}
+
+/* ---------- Chat (see chat.js) ---------- */
+
+function chatUsername() {
+  return me.username;
+}
+
+/* ---------- Speed round: turn timer ---------- */
+
+var turnDeadline = null;
+var turnTimerInterval = null;
+
+var lastTimerLeft = null; // shown while the clock is stopped
+
+function updateTurnTimer(state) {
+  clearInterval(turnTimerInterval);
+  var total = state.turnTime;
+
+  var draw = (left) => {
+    var fill = document.querySelector(".turn-timer span");
+    var seconds = document.querySelector(".turn-seconds");
+    if (fill) {
+      fill.style.width = (left / total) * 100 + "%";
+      fill.parentElement.classList.toggle("urgent", left <= 3000);
+    }
+    if (seconds) seconds.innerText = Math.ceil(left / 1000) + "s left";
+  };
+
+  // Clock stopped (two wrong cards): keep the bar where it was
+  if (state.turnRemaining == null) {
+    turnDeadline = null;
+    if (state.mode == "speed" && state.status == "playing" && lastTimerLeft != null) {
+      // Just stop: bar and seconds stay where they were
+      draw(lastTimerLeft);
+    }
+    return;
+  }
+
+  // The clock starts after the card animations - until then the bar stays full
+  var start = Date.now() + (state.turnStartsIn || 0);
+  turnDeadline = start + state.turnRemaining;
+
+  var tick = () => {
+    var left = Math.min(total, Math.max(0, turnDeadline - Math.max(Date.now(), start)));
+    lastTimerLeft = left;
+    draw(left);
+    if (left <= 0) clearInterval(turnTimerInterval);
+  };
+  tick();
+  turnTimerInterval = setInterval(tick, 100);
+}
+
+socket.on("turnTimeout", (data) => {
+  if (data.name == me.username) showToast("Time's up!");
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("#modePicker button").forEach((button) => {
+    button.addEventListener("click", () => socket.emit("updateSettings", { mode: button.dataset.mode }));
+  });
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("readyButton").addEventListener("click", () => {
+    var mine = room && getMyPlayer(room);
+    if (mine) socket.emit("setReady", { ready: !mine.ready });
+  });
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  var change = (delta) => {
+    if (room) socket.emit("updateSettings", { maxPlayers: room.maxPlayers + delta });
+  };
+  document.getElementById("maxPlayersMinus").addEventListener("click", () => change(-1));
+  document.getElementById("maxPlayersPlus").addEventListener("click", () => change(1));
 });

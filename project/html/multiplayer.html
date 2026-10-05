@@ -15,7 +15,9 @@
     <!--- Custom CSS-->
     <!--- identical to index.html --->
     <link rel="stylesheet" href="/static/styles/index.css">
+    <link rel="stylesheet" href="/static/styles/theme.css">
     <link rel="stylesheet" href="/static/styles/play.css">
+    <link rel="stylesheet" href="/static/styles/room.css">
 
     <!--- Icons --->
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico">
@@ -26,7 +28,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
 </head>
 
-<body class="d-flex flex-column h-100">
+<body class="d-flex flex-column min-h-100">
 
     <div id="cardModal" class="modal" onclick="closeCardModal()">
         <span class="close">&times;</span>
@@ -37,121 +39,225 @@
         <nav class="navbar navbar-expand-lg navbar-dark">
             <div class="container-fluid px-3">
                 <div class="row displ-content">
-                    <div class="col-12 col-sm-6 col-lg-4 order-1 order-sm-1 order-lg-1">
+                    <div class="col-6">
                         <div class="navbar-brand active">
                             <a href="/">
                                 <img src="/static/images/logo.png" alt="logo" class="img-fluid logo">
                             </a>
                         </div>
                     </div>
-                    <div class="col-12 col-lg-4 order-sm-3 order-2 order-lg-2 text-center pt-2 pb-3 pt-md-0 pb-md-0">
-                        <button type="submit" id="surrenderButton"
-                            class="form-control btn btn-outline-danger btn-lg fw-bold rounded max-width-300"
-                            onclick="surrender()" disabled>Surrender</button>
+                    <div class="col-6 d-flex justify-content-end align-items-center">
+                        <div class="ms-auto profile-menu" id="profileMenu">
+                  <button type="button" class="profile-trigger" id="profileTrigger" aria-haspopup="true" aria-expanded="false">
+                    <span id="profileAvatar" class="mm-avatar sm"></span>
+                    <span class="profile-name" id="username"></span>
+                    <i class="bi bi-chevron-down profile-caret"></i>
+                  </button>
+                  <div class="profile-dropdown" id="profileDropdown" hidden>
+                    <div class="profile-head">
+                      <span id="profileAvatarLarge" class="mm-avatar"></span>
+                      <div class="overflow-hidden">
+                        <div class="profile-head-name" id="profileName"></div>
+                        <div class="mm-muted small">Signed in</div>
+                      </div>
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-4 order-3 order-sm-2 order-lg-3 fw-light">
-                        <div class="d-flex text-secondary pl-xl-5">
-                            <div class="mx-auto ms-sm-auto me-sm-0">
-                                <div id="gameIDdiv">
-                                    <p id="gameID" class="m-0 pb-0 fs-4 pt-4 pt-sm-0" data-bs-toggle="popover"
-                                        data-bs-placement="bottom" data-bs-content="copied" data-bs-container="body">
-                                    </p>
-                                    <p id="gameIDdescr" class="fs-7 p-0 m-0 text-center text-secondary">^ (click to copy) ^</p>
-                                </div>
-                            </div>
-                        </div>
+                    <a href="/lobby" class="profile-item"><i class="bi bi-controller"></i> Play</a>
+                    <a href="/home" class="profile-item"><i class="bi bi-trophy"></i> Scoreboard</a>
+                    <a href="/user" class="profile-item"><i class="bi bi-bar-chart-line"></i> Profile</a>
+                    <a href="/settings" class="profile-item"><i class="bi bi-gear"></i> Settings</a>
+                    <div class="profile-divider"></div>
+                    <button type="button" class="profile-item danger" id="logoutButton">
+                      <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                  </div>
+                </div>
                     </div>
                 </div>
             </div>
         </nav>
     </header>
 
-    <main class="pt-0 pt-md-3 pt-lg-5 h-100">
-        <div class="container-fluid px-3 h-100">
-            <div class="row h-100">
-                <div class="col-12 col-lg-9 h-lg-100 p-1 m-0 order-2 order-lg-1">
-                    <div class="container-xxl p-0 m-0 h-100 mx-auto">
-                        <div class="row row-cols-11 h-100 justify-content-center" id="memoryTable">
+    <!--- Shown while the connection is lost --->
+    <div id="connectionBanner" class="connection-banner" hidden>
+        <span class="spinner"></span> Connection lost - reconnecting...
+    </div>
+
+    <main class="room-page">
+        <div class="room-layout">
+            <div class="room-main">
+                <!--- Waiting room: shown until the host starts the game --->
+                <section id="waitingRoom" class="waiting mm-card" hidden>
+                    <div class="waiting-head">
+                        <div>
+                            <h1 class="waiting-title">Waiting room <span id="modeBadge" class="mode-badge" hidden></span></h1>
+                            <p id="waitingText" class="mm-muted mb-0"></p>
+                        </div>
+                        <button type="button" id="leaveButton" class="mm-btn mm-btn-ghost mm-btn-sm">
+                            <i class="bi bi-box-arrow-left"></i> Leave
+                        </button>
+                    </div>
+
+                    <div class="invite">
+                        <div>
+                            <p class="invite-label">Room code</p>
+                            <p id="roomCode" class="invite-code"></p>
+                        </div>
+                        <div class="invite-actions">
+                            <button type="button" id="copyCodeButton" class="mm-btn mm-btn-sm">
+                                <i class="bi bi-clipboard"></i> Copy code
+                            </button>
+                            <button type="button" id="copyLinkButton" class="mm-btn mm-btn-sm mm-btn-primary">
+                                <i class="bi bi-link-45deg"></i> Copy invite link
+                            </button>
                         </div>
                     </div>
-                </div>
-                <div class="col-12 col-lg-3 h-lg-100 order-1 order-lg-2 d-flex flex-column p-0">
-                    <div class="text-light fs-4 p-3 text-break w-100 max-width-500 mx-auto me-lg-0">
-                        <div class="d-flex pb-2">
-                            <div class="flex-grow-1">
-                                <p id="user1Username"></p>
-                            </div>
-                            <div>
-                                <p id="user1Score"></p>
-                            </div>
-                        </div>
-                        <div class="d-flex pb-2">
-                            <div class="flex-grow-1">
-                                <p id="user2Username"></p>
-                            </div>
-                            <div>
-                                <p id="user2Score"></p>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h2 class="waiting-subtitle">Players <span id="playerCount" class="mm-muted"></span></h2>
+                    </div>
+                    <div id="waitingPlayers" class="seat-grid"></div>
+
+                    <!--- Only visible for the host --->
+                    <div id="hostSettings" class="host-settings" hidden>
+                        <div class="setting setting-wide">
+                            <span class="setting-label">Mode</span>
+                            <div id="modePicker" class="segmented" role="group" aria-label="Game mode">
+                                <button type="button" data-mode="classic">Classic</button>
+                                <button type="button" data-mode="speed"><i class="bi bi-lightning-charge-fill"></i> Speed</button>
                             </div>
                         </div>
-                        <div class="d-flex pb-2">
-                            <div class="flex-grow-1">
-                                <p id="user3Username"></p>
-                            </div>
-                            <div>
-                                <p id="user3Score"></p>
+                        <!--- Time per turn, only for the speed round --->
+                        <div id="turnTimeSetting" class="setting setting-wide" hidden>
+                            <span class="setting-label">Turn timer</span>
+                            <div id="turnTimePicker" class="segmented" role="group" aria-label="Seconds per turn"></div>
+                        </div>
+                        <div class="setting">
+                            <span class="setting-label">Max. players</span>
+                            <div class="stepper" role="group" aria-label="Max. players">
+                                <button type="button" id="maxPlayersMinus" aria-label="Fewer players"><i class="bi bi-dash"></i></button>
+                                <span id="maxPlayersValue" aria-live="polite"></span>
+                                <button type="button" id="maxPlayersPlus" aria-label="More players"><i class="bi bi-plus"></i></button>
                             </div>
                         </div>
-                        <div class="d-flex pb-2">
-                            <div class="flex-grow-1">
-                                <p id="user4Username"></p>
-                            </div>
-                            <div>
-                                <p id="user4Score"></p>
-                            </div>
-                        </div>
-                        <div class="d-flex pb-2">
-                            <div class="flex-grow-1">
-                                <p id="user5Username"></p>
-                            </div>
-                            <div>
-                                <p id="user5Score"></p>
-                            </div>
-                        </div>
-                        <div class="d-flex pb-2">
-                            <div class="flex-grow-1">
-                                <p id="user6Username"></p>
-                            </div>
-                            <div>
-                                <p id="user6Score"></p>
-                            </div>
-                        </div>
-                        <div class="mt-md-2">
-                            <button type="submit" id="playButton"
-                                class="form-control btn btn-outline-info btn-lg rounded " onclick="emitEndTurn();"
-                                disabled> End Turn
-                            </button>
-                            <button type="submit" id="startButton"
-                                class="form-control btn btn-outline-success btn-lg rounded " onclick="startGame();"
-                                hidden> Start Game
-                            </button>
-                        </div>
-                         <div class="border border-light mt-md-4">
-                            <div class="chat">
-                                <div class="d-flex flex-column" id="chat-content">
-                                </div>
-                                <div class="d-flex bg-transparent p-2 border-top">
-                                    <input id="chat-input" class="chat-input bg-transparent text-light flex-grow-1" type="text"
-                                        placeholder="type...">
-                                    <a id="send-message-btn" class="text-info ms-2 my-auto" onclick="sendChatMessage()">
-                                        <i class="bi bi-arrow-right-square"></i>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
+                        <label class="setting toggle">
+                            <span class="setting-label">Public room <small class="mm-muted d-block">Show it in the lobby</small></span>
+                            <input type="checkbox" id="publicSwitch">
+                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        </label>
+                    </div>
+
+                    <div class="waiting-footer">
+                        <!--- Players (not the host) tell that they are ready --->
+                        <button type="button" id="readyButton" class="mm-btn mm-btn-lg w-100 ready-button" hidden></button>
+                        <button type="button" id="startButton" class="mm-btn mm-btn-success mm-btn-lg w-100" disabled hidden>
+                            <i class="bi bi-play-fill"></i> Start game
+                        </button>
+                        <p id="startHint" class="mm-muted text-center small mt-2 mb-0"></p>
+                    </div>
+                </section>
+
+                <div id="board" class="board" hidden>
+                    <div class="container-xxl p-0 m-0 mx-auto">
+                        <div class="memory-grid" id="memoryTable"></div>
                     </div>
                 </div>
             </div>
+
+            <aside class="room-side">
+                <div class="mm-card side-card">
+                    <div class="side-head">
+                        <span class="fw-semibold"><i class="bi bi-people me-2"></i>Players</span>
+                        <span id="pairsLeft" class="mm-badge" hidden></span>
+                    </div>
+                    <!--- Scoreboard, filled by multiplayer_socket.js --->
+                    <div id="playerList" class="player-list"></div>
+                    <div id="spectatorInfo" class="spectator-info mm-muted" hidden></div>
+                    <div class="side-actions">
+                        <button type="button" id="playButton" class="mm-btn mm-btn-primary w-100" onclick="emitEndTurn();" disabled hidden>
+                            <i class="bi bi-arrow-repeat"></i> End turn
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mm-card chat-card">
+                    <div class="chat-head">
+                        <span class="fw-semibold"><i class="bi bi-chat-dots me-2"></i>Chat</span>
+                    </div>
+                    <div class="chat-body-wrap">
+                        <div id="chat-content" class="chat-body" aria-live="polite"></div>
+                        <div id="chat-empty" class="chat-empty">
+                            <span>👋</span>
+                            <p class="mb-0">No messages yet - say hi!</p>
+                        </div>
+                        <button type="button" id="newMessages" class="new-messages" hidden>
+                            New messages <i class="bi bi-arrow-down"></i>
+                        </button>
+                    </div>
+                    <p id="chat-error" class="chat-error" hidden></p>
+                    <div class="chat-quick" aria-label="Quick emojis">
+                        <button type="button" data-emoji="😂">😂</button>
+                        <button type="button" data-emoji="🔥">🔥</button>
+                        <button type="button" data-emoji="👏">👏</button>
+                        <button type="button" data-emoji="😭">😭</button>
+                        <button type="button" data-emoji="🤯">🤯</button>
+                        <button type="button" data-emoji="💀">💀</button>
+                        <button type="button" data-emoji="GG">GG</button>
+                    </div>
+                    <form id="chat-form" class="chat-form" autocomplete="off">
+                        <input id="chat-input" class="chat-input" type="text" maxlength="300"
+                            placeholder="Write a message..." aria-label="Chat message">
+                        <span id="chat-counter" class="chat-counter" hidden></span>
+                        <button id="send-message-btn" type="submit" class="chat-send" aria-label="Send" disabled>
+                            <i class="bi bi-arrow-up"></i>
+                        </button>
+                    </form>
+                </div>
+            </aside>
+        </div>
     </main>
+
+    <!--- "Who starts?" animation --->
+    <div id="startOverlay" class="overlay-screen" hidden>
+        <div class="start-box">
+            <h2 class="start-title">Who starts?</h2>
+            <div class="reel">
+                <div class="reel-marker"></div>
+                <div id="reelTrack" class="reel-track"></div>
+            </div>
+            <p id="startResult" class="start-result"></p>
+        </div>
+        <div id="confetti" class="confetti" hidden></div>
+    </div>
+
+    <!--- Game over --->
+    <div id="resultOverlay" class="overlay-screen" hidden>
+        <div class="result-box mm-card">
+            <div class="result-trophy-icon"><i class="bi bi-trophy-fill"></i></div>
+            <h2 id="resultTitle" class="result-title"></h2>
+            <ol id="resultList" class="result-list"></ol>
+            <div class="d-flex gap-2 justify-content-center flex-wrap">
+                <button type="button" id="resultBoardButton" class="mm-btn">
+                    <i class="bi bi-grid-3x3-gap"></i> Show board
+                </button>
+                <a href="/lobby" class="mm-btn mm-btn-primary">
+                    <i class="bi bi-house"></i> Back to lobby
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!--- Opened in another tab / removed by the host --->
+    <div id="noticeOverlay" class="overlay-screen" hidden>
+        <div class="result-box mm-card">
+            <div id="noticeIcon" hidden></div>
+            <h2 id="noticeTitle" class="result-title"></h2>
+            <p id="noticeText" class="mm-muted"></p>
+            <div class="d-flex gap-2 justify-content-center flex-wrap">
+                <button type="button" id="noticeAction" class="mm-btn mm-btn-primary"></button>
+                <a href="/lobby" class="mm-btn"><i class="bi bi-house"></i> Lobby</a>
+            </div>
+        </div>
+    </div>
 
     <!--- JavaScript --->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js"
@@ -159,8 +265,11 @@
     </script>
     <!--- Custom JS --->
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/static/scripts/ui.js"></script>
+    <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/play.js"></script>
     <script src="/static/scripts/multiplayer_socket.js"></script>
+    <script src="/static/scripts/chat.js"></script>
 </body>
 
 </html>

@@ -1,72 +1,91 @@
-var randomstring = require("randomstring");
+const rooms = require("../game/rooms");
+const { createBoard } = require("../game/board");
+const multiplayerRoom = require("../game/multiplayer_room");
+const tictactoeRoom = require("../game/tictactoe_room");
+const socketAuth = require("./socket_auth");
+const safe = require("./safe_handler");
 
-global.rooms = {};
+// Name & how much the computer can remember for every difficulty
+const BOTS = [
+  { computername: "Easy Bot", moveMemory: 3 },
+  { computername: "Medium Bot", moveMemory: 7 },
+  { computername: "Hard Bot", moveMemory: 12 },
+  { computername: "Expert Bot", moveMemory: 50 },
+];
 
 module.exports = function (io) {
   const lobby = io.of("/lobby");
+  lobby.use(socketAuth);
+  multiplayerRoom.attachLobby(lobby);
 
   lobby.on("connection", (socket) => {
-    socket.on("playSingleplayer", (data) => {
-      // Check if difficulty is in range
-      if (data.difficulty >= 0 && data.difficulty <= 3) {
-        // Assign Name & how much the computer can remember
-        switch (data.difficulty) {
-          case 0:
-            var computername = "Easy Bot";
-            var moveMemory = 3;
-            break;
-          case 1:
-            var computername = "Medium Bot";
-            var moveMemory = 7;
-            break;
-          case 2:
-            var computername = "Hard Bot";
-            var moveMemory = 12;
-            break;
-          case 3:
-            var computername = "Expert Bot";
-            var moveMemory = 50;
-            break;
+    // Open multiplayer rooms
+    socket.emit("roomList", multiplayerRoom.publicRooms(socket.data.username));
+
+    socket.on(
+      "playSingleplayer",
+      safe("playSingleplayer", (data) => {
+        const difficulty = data != null ? data.difficulty : undefined;
+
+        // Check if difficulty is in range
+        if (!Number.isInteger(difficulty) || BOTS[difficulty] == null) {
+          return;
         }
 
-        // Randomstring of 10 Chars
-        var gameID = randomstring.generate(10);
-
-        // Save Game to rooms
-        global.rooms[gameID] = {
-          difficulty: data.difficulty,
-          username: data.username,
-          computername: computername,
-          moveMemory: moveMemory,
-        };
+        const gameID = rooms.create("singleplayer", {
+          difficulty: difficulty,
+          username: socket.data.username,
+          computername: BOTS[difficulty].computername,
+          moveMemory: BOTS[difficulty].moveMemory,
+        });
 
         socket.emit("saveGameID", { gameID: gameID, url: "/singleplayer" });
-      }
-    });
+      }),
+    );
 
-    socket.on("playMultiplayer", (username) => {
-      // Randomstring of 10 Chars
-      var gameID = randomstring.generate(10);
+    socket.on(
+      "playMultiplayer",
+      safe("playMultiplayer", async () => {
+        // One room per click
+        if (socket.creatingRoom) return;
+        socket.creatingRoom = true;
 
-      // Save Game to rooms
-      global.rooms[gameID] = {
-        player: [{ name: username, points: 0 }],
-        activePlayers: [1],
-        checkingCards: false,
-        status: 0,
-        turn: 0,
-        openedCards: [],
-        cardPairs: [],
-        cardImages: [],
-        foundMatches: [],
-        cardCounter: Array(66).fill(0),
-      };
+        try {
+          // The board is created right away, so the room is ready to start.
+          const board = await createBoard();
+          const gameID = multiplayerRoom.createRoom(socket.data.username, board);
+          socket.emit("saveGameID", { gameID: gameID, url: "/play" });
+        } catch (error) {
+          socket.emit("gameError", error.message);
+        } finally {
+          socket.creatingRoom = false;
+        }
+      }),
+    );
 
-      socket.emit("saveGameID", { gameID: gameID, url: "/play" });
-    });
+    socket.on(
+      "playTicTacToe",
+      safe("playTicTacToe", () => {
+        const gameID = tictactoeRoom.createRoom(socket.data.username);
+        socket.emit("saveGameID", { gameID: gameID, url: "/tictactoe" });
+      }),
+    );
 
-    socket.on("joinMultiplayer", (gameID) => {
-      socket.emit("saveGameID", { gameID: gameID, url: "/play" });
-    });
+    socket.on(
+      "joinMultiplayer",
+      safe("joinMultiplayer", (gameID) => {
+        if (typeof gameID !== "string") return;
+        gameID = gameID.trim();
+
+        // The same code field works for every game
+        const room = rooms.get(gameID);
+        if (room == null || (room.type !== "multiplayer" && room.type !== "tictactoe")) {
+          socket.emit("gameError", "No game found with this ID.");
+          return;
+        }
+
+        socket.emit("saveGameID", { gameID: gameID, url: room.type === "tictactoe" ? "/tictactoe" : "/play" });
+      }),
+    );
   });
 };

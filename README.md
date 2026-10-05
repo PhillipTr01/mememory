@@ -82,3 +82,16 @@ weitergeben?
     - Präsentation als PDF-Datei
     - Dokumentation als PDF-Datei
 - Benennung der zip-Datei: „Gruppe_XX.zip“ (XX mit Gruppennummer ersetzen)
+
+## Entwicklung
+
+```bash
+cd project
+cp .env.example .env   # Werte anpassen
+npm install
+npm run dev            # mit nodemon (Neustart bei Dateiänderungen)
+npm start              # Produktion (mit pm2/systemd betreiben, damit der Prozess nach einem Absturz neu startet)
+npm test               # Tests, benötigen keine MongoDB
+```
+
+`GET /health` liefert `200`, wenn Server und Datenbank erreichbar sind, sonst `503`.

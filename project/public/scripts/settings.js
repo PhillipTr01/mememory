@@ -1,67 +1,3 @@
-//after creation
-document.addEventListener(
-  "DOMContentLoaded",
-  function () {
-    //setting correct username
-    setUsername();
-  },
-  false,
-);
-
-//Keep dropdown open if clicked on other groups
-document.getElementById("keep-open-dropdown").addEventListener(
-  "click",
-  function (e) {
-    e.stopPropagation();
-  },
-  false,
-);
-
-function startLobbyPage() {
-  window.location.href = "/lobby";
-  return;
-}
-
-function startProfilePage() {
-  window.location.href = "/user";
-  return;
-}
-
-function startScoreboardPage() {
-  window.location.href = "/home";
-  return;
-}
-
-function logoutUser() {
-  var request = new XMLHttpRequest();
-  request.onreadystatechange = function () {
-    if (this.readyState == 4) {
-      if (this.status == 200) {
-        window.location.href = "/";
-      }
-    }
-  };
-  request.open("GET", "/requests/authentication/logout");
-  request.send();
-  return;
-}
-
-function setUsername() {
-  var request = new XMLHttpRequest();
-  request.onreadystatechange = function () {
-    if (this.readyState == 4) {
-      if (this.status == 200) {
-        document.getElementById("username").innerText = JSON.parse(
-          this.responseText,
-        ).username;
-      }
-    }
-  };
-
-  request.open("GET", "/requests/user/username");
-  request.send();
-}
-
 function changePassword() {
   var oldPassword = document.getElementById("oldPassword").value;
   var newPassword = document.getElementById("newPassword").value;
@@ -88,6 +24,7 @@ function changePassword() {
         document.getElementById("newPassword").value = "";
         document.getElementById("repeatNewPassword").value = "";
         buttonPW.innerText = "Password Updated Successfully";
+        showToast("Your password was changed.");
         return;
       } else if (this.status == 400 || this.status == 401) {
         var response = JSON.parse(this.responseText).error.message;

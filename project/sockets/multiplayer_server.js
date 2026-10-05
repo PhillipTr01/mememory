@@ -1,393 +1,674 @@
-const User = require("../models/User");
 const Statistic = require("../models/Statistic");
+const rooms = require("../game/rooms");
+const config = require("../game/config");
+const { CARD_COUNT, isValidCardId } = require("../game/board");
+const {
+  STATUS,
+  activePlayers,
+  connectedCount,
+  serialize,
+  notifyLobby,
+} = require("../game/multiplayer_room");
+const socketAuth = require("./socket_auth");
+const safe = require("./safe_handler");
+const chat = require("../game/chat");
 
 module.exports = function (io) {
   const multiPlayer = io.of("/multiplayer");
+  multiPlayer.use(socketAuth);
+
+  /* ---------- Helpers ---------- */
+
+  // Sends the current room state (players, host, turn, settings) to everyone in the room.
+  function emitRoomState(gameID, room) {
+    multiPlayer.to(gameID).emit("roomState", serialize(gameID, room));
+    notifyLobby();
+  }
+
+  // Chat message from the server itself (joins, leaves, game start, ...)
+  function systemMessage(gameID, room, text, icon) {
+    chat.system(multiPlayer, gameID, room, text, icon);
+  }
+
+  // setTimeout that is cancelled when the room is removed
+  function roomTimeout(room, fn, ms) {
+    const timer = setTimeout(() => {
+      room.timers = room.timers.filter((t) => t !== timer);
+      try {
+        fn();
+      } catch (error) {
+        console.error("[multiplayer] Timer failed:", error);
+      }
+    }, ms);
+    room.timers.push(timer);
+  }
+
+  function findPlayer(room, name) {
+    return room.players.find((player) => player.name === name) || null;
+  }
+
+  function isPlayersTurn(room, name) {
+    const player = room.players[room.turn];
+    return room.status === STATUS.PLAYING && player != null && player.active && player.name === name;
+  }
+
+  // Detaches a socket from its room without touching the game (e.g. replaced by a new tab)
+  function detachSocket(socket) {
+    if (socket.gameID != null) {
+      socket.leave(socket.gameID);
+    }
+    socket.gameID = null;
+    socket.spectator = false;
+  }
+
+  /* ---------- Connection ---------- */
 
   multiPlayer.on("connection", (socket) => {
-    socket.on("initializingGame", (data) => {
-      // Check if game exists
-      if (global.rooms[data.gameID] != null) {
-        socket.gameID = data.gameID;
-        socket.join(socket.gameID);
-        socket.username = global.rooms[data.gameID].player[0].name;
+    const username = socket.data.username;
 
-        var idArray = [],
-          linkArray = [];
+    /*
+     * Enter a room. Works for new players, spectators and for players
+     * coming back after a reload or a lost connection (rejoin).
+     */
+    socket.on(
+      "joinRoom",
+      safe("joinRoom", (data) => {
+        const gameID = data != null ? data.gameID : null;
+        // Only watch, even if there is a free seat
+        const watch = data != null && data.watch === true;
+        const room = rooms.get(gameID, "multiplayer");
 
-        // Fetch Memes and initialize idArray
-        for (link of data.links) {
-          linkArray.push(link.link);
+        if (room == null || room.status === STATUS.FINISHED) {
+          socket.emit("noGameFound");
+          return;
+        }
+        if (socket.gameID === gameID) return;
+        if (socket.gameID != null) {
+          leaveRoom(socket, false);
         }
 
-        for (var i = 0; i < 66; i++) {
-          idArray.push(i);
+        rooms.touch(room);
+        const player = findPlayer(room, username);
+        let rejoined = false;
+
+        if (player != null) {
+          // The same user is still connected in another tab -> that tab is replaced
+          if (player.connected && player.socketId !== socket.id) {
+            const old = multiPlayer.sockets.get(player.socketId);
+            if (old != null) {
+              detachSocket(old);
+              old.emit("sessionReplaced");
+              old.disconnect(true);
+            }
+          }
+
+          rejoined = !player.connected;
+          player.connected = true;
+          player.socketId = socket.id;
+          player.disconnectedAt = null;
+          socket.spectator = !player.active;
+        } else if (
+          !watch &&
+          room.status === STATUS.WAITING &&
+          room.players.length < room.maxPlayers &&
+          !room.banned.has(username)
+        ) {
+          room.players.push({
+            name: username,
+            points: 0,
+            active: true,
+            connected: true,
+            ready: false, // set in the waiting room with the "Ready" button
+            socketId: socket.id,
+            disconnectedAt: null,
+          });
+          socket.spectator = false;
+        } else {
+          socket.spectator = true;
+          room.spectators.set(socket.id, username);
         }
 
-        // Assign images and card pairs to cards
-        while (idArray.length >= 2) {
-          var randomIndex = Math.floor(Math.random() * idArray.length);
-          do {
-            var randomIndex2 = Math.floor(Math.random() * idArray.length);
-          } while (randomIndex == randomIndex2);
-          var randomSourceIndex = Math.floor(Math.random() * linkArray.length);
+        socket.gameID = gameID;
+        socket.join(gameID);
+        room.emptySince = null;
 
-          var x = idArray[randomIndex];
-          var y = idArray[randomIndex2];
-
-          idArray.splice(idArray.indexOf(x), 1);
-          idArray.splice(idArray.indexOf(y), 1);
-
-          global.rooms[socket.gameID].cardPairs[x] = y;
-          global.rooms[socket.gameID].cardPairs[y] = x;
-
-          var src = linkArray[randomSourceIndex];
-          linkArray.splice(linkArray.indexOf(src), 1);
-
-          global.rooms[socket.gameID].cardImages[x] = src;
-          global.rooms[socket.gameID].cardImages[y] = src;
-        }
-      } else {
-        socket.emit("noGameFound");
-      }
-    });
-
-    socket.on("joinGame", (data) => {
-      if (
-        global.rooms[data.gameID] == null ||
-        global.rooms[data.gameID].player.some(
-          (obj) => obj.name === data.username,
-        )
-      ) {
-        socket.emit("noGameFound");
-        return;
-      }
-
-      socket.username = data.username;
-      socket.gameID = data.gameID;
-      socket.join(data.gameID);
-
-      if (
-        global.rooms[data.gameID].player.length < 6 &&
-        global.rooms[data.gameID].status == 0
-      ) {
-        multiPlayer.to(data.gameID).emit("enableStartGame");
-        socket.spectator = false;
-        global.rooms[data.gameID].player.push({
-          name: data.username,
-          points: 0,
+        socket.emit("joinedRoom", { username: username, spectator: socket.spectator });
+        socket.emit("chatHistory", room.chat);
+        socket.emit("boardState", {
+          found: room.foundMatches.map((id) => ({ id: id, src: room.cardImages[id] })),
+          opened: room.openedCards.map((id) => ({ id: id, src: room.cardImages[id] })),
         });
-        global.rooms[data.gameID].activePlayers.push(
-          global.rooms[data.gameID].player.length,
-        );
-      } else {
-        socket.spectator = true;
-        socket.emit("watchGame");
-      }
 
-      multiPlayer.to(data.gameID).emit("visualInitializing", {
-        player: global.rooms[data.gameID].player,
-      });
+        if (player != null && rejoined) {
+          systemMessage(gameID, room, `${username} is back.`, "reconnect");
+        } else if (player == null) {
+          systemMessage(
+            gameID,
+            room,
+            socket.spectator ? `${username} is watching.` : `${username} joined the room.`,
+            socket.spectator ? "watch" : "join",
+          );
+        }
 
-      multiPlayer.to(data.gameID).emit("highlightPlayer", {
-        turn: global.rooms[data.gameID].turn,
-        player: global.rooms[data.gameID].player,
-      });
-    });
+        emitRoomState(gameID, room);
 
-    socket.on("startGame", (data) => {
-      if (
-        global.rooms[socket.gameID] != null &&
-        global.rooms[socket.gameID].player[0].name == data.username &&
-        global.rooms[socket.gameID].status == 0
-      ) {
-        global.rooms[socket.gameID].turn =
-          Math.floor(
-            Math.random() * global.rooms[socket.gameID].player.length,
-          ) + 1;
+        // Back in the middle of the own turn with two wrong cards open
+        if (isPlayersTurn(room, username) && room.checkingCards) {
+          socket.emit("activateEndTurn");
+        }
+      }),
+    );
 
-        global.rooms[socket.gameID].status = 1;
-        multiPlayer.to(socket.gameID).emit("highlightPlayer", {
-          turn: global.rooms[socket.gameID].turn,
-          player: global.rooms[socket.gameID].player,
-        });
-      }
-    });
+    /* Host settings in the waiting room */
+    socket.on(
+      "updateSettings",
+      safe("updateSettings", (data) => {
+        const room = rooms.get(socket.gameID, "multiplayer");
+        if (room == null || data == null || room.status !== STATUS.WAITING || room.host !== username) {
+          return;
+        }
 
-    socket.on("openCard", (id) => {
-      if (
-        global.rooms[socket.gameID] != null &&
-        global.rooms[socket.gameID].status == 1 &&
-        !global.rooms[socket.gameID].openedCards.includes(id) &&
-        !global.rooms[socket.gameID].foundMatches.includes(id)
-      ) {
-        if (global.rooms[socket.gameID].openedCards.length < 2) {
-          var turn = global.rooms[socket.gameID].turn;
+        if (data.maxPlayers !== undefined) {
+          const maxPlayers = Number(data.maxPlayers);
+          // Can't go below the players that are already in the room
           if (
-            global.rooms[socket.gameID].player[turn - 1].name == socket.username
+            Number.isInteger(maxPlayers) &&
+            maxPlayers >= Math.max(config.MIN_PLAYERS, room.players.length) &&
+            maxPlayers <= config.MAX_PLAYERS
           ) {
-            global.rooms[socket.gameID].openedCards.push(id);
-            global.rooms[socket.gameID].cardCounter[id] =
-              global.rooms[socket.gameID].cardCounter[id] + 1;
-            multiPlayer.to(socket.gameID).emit("turnCard", {
-              id: id,
-              src: global.rooms[socket.gameID].cardImages[id],
-            });
-
-            checkGame(multiPlayer, socket);
+            room.maxPlayers = maxPlayers;
           }
         }
-      } else {
-        socket.emit("zoomImage", id);
-      }
-    });
 
-    socket.on("sendChatMessage", (data) => {
-      socket.broadcast.to(socket.gameID).emit("receiveChatMessage", {
-        name: socket.username,
-        message: data.message,
-        spectator: socket.spectator,
-      });
-    });
+        if (config.MODES.includes(data.mode)) {
+          room.mode = data.mode;
+        }
 
-    // endTurn
-    socket.on("endTurn", () => {
-      endTurn(multiPlayer, socket);
-    });
+        // Seconds per turn in the speed round (only the offered options)
+        if (data.turnTime !== undefined && config.SPEED_TURN_OPTIONS.includes(Number(data.turnTime))) {
+          room.turnTime = Number(data.turnTime) * 1000;
+        }
 
-    // surrender
-    socket.on("surrender", () => {
-      surrendGame(multiPlayer, socket);
-    });
+        if (typeof data.isPublic === "boolean") {
+          room.isPublic = data.isPublic;
+        }
 
-    // disconnect
-    socket.on("disconnect", () => {
-      leaveGame(multiPlayer, socket);
-    });
+        rooms.touch(room);
+        emitRoomState(socket.gameID, room);
+      }),
+    );
+
+    /* The host removes a player from the waiting room */
+    socket.on(
+      "kickPlayer",
+      safe("kickPlayer", (data) => {
+        const room = rooms.get(socket.gameID, "multiplayer");
+        const name = data != null ? data.name : null;
+        if (room == null || room.status !== STATUS.WAITING || room.host !== username || name === username) {
+          return;
+        }
+
+        const index = room.players.findIndex((player) => player.name === name);
+        if (index < 0) return;
+
+        const [player] = room.players.splice(index, 1);
+        // Can still watch, but not take a seat again
+        room.banned.add(player.name);
+        const target = multiPlayer.sockets.get(player.socketId);
+        if (target != null) {
+          detachSocket(target);
+          target.emit("kicked");
+        }
+
+        systemMessage(socket.gameID, room, `${player.name} was removed by the host.`, "leave");
+        emitRoomState(socket.gameID, room);
+      }),
+    );
+
+    /* Players tell the host that they are ready to play */
+    socket.on(
+      "setReady",
+      safe("setReady", (data) => {
+        const room = rooms.get(socket.gameID, "multiplayer");
+        const player = room != null ? findPlayer(room, username) : null;
+        if (player == null || room.status !== STATUS.WAITING || data == null || typeof data.ready !== "boolean") {
+          return;
+        }
+
+        player.ready = data.ready;
+        rooms.touch(room);
+        emitRoomState(socket.gameID, room);
+      }),
+    );
+
+    socket.on(
+      "startGame",
+      safe("startGame", () => {
+        const gameID = socket.gameID;
+        const room = rooms.get(gameID, "multiplayer");
+        const ready = room != null ? room.players.filter((player) => player.connected) : [];
+
+        if (
+          room == null ||
+          room.status !== STATUS.WAITING ||
+          room.host !== username ||
+          ready.length < config.MIN_PLAYERS ||
+          // Everybody except the host has to press "Ready"
+          ready.some((player) => player.name !== room.host && !player.ready)
+        ) {
+          return;
+        }
+
+        // Players that are still reconnecting can't take part
+        room.players = ready;
+        room.status = STATUS.STARTING;
+        room.turn = Math.floor(Math.random() * room.players.length);
+        rooms.touch(room);
+
+        multiPlayer.to(gameID).emit("gameStarting", {
+          players: room.players.map((player) => player.name),
+          starter: room.turn,
+          duration: config.START_ANIMATION,
+        });
+        emitRoomState(gameID, room);
+
+        // The game begins when the "who starts" animation is over
+        roomTimeout(
+          room,
+          () => {
+            if (room.status !== STATUS.STARTING) return;
+            room.status = STATUS.PLAYING;
+
+            // The starter left during the animation
+            const starter = room.players[room.turn];
+            if (!starter.active || !starter.connected) {
+              nextTurn(gameID, room);
+            }
+
+            systemMessage(gameID, room, `The game has started. ${room.players[room.turn].name} begins!`, "start");
+            startTurnTimer(gameID, room);
+            emitRoomState(gameID, room);
+          },
+          config.START_ANIMATION,
+        );
+      }),
+    );
+
+    socket.on(
+      "openCard",
+      safe("openCard", (id) => {
+        const room = rooms.get(socket.gameID, "multiplayer");
+        if (room == null || !isValidCardId(id)) return;
+
+        if (
+          room.status === STATUS.PLAYING &&
+          !room.openedCards.includes(id) &&
+          !room.foundMatches.includes(id)
+        ) {
+          if (room.openedCards.length < 2 && isPlayersTurn(room, username)) {
+            rooms.touch(room);
+            room.openedCards.push(id);
+            room.cardCounter[id]++;
+            multiPlayer.to(socket.gameID).emit("turnCard", {
+              id: id,
+              src: room.cardImages[id],
+            });
+
+            checkGame(socket, room);
+          }
+        } else {
+          socket.emit("zoomImage", id);
+        }
+      }),
+    );
+
+    socket.on(
+      "sendChatMessage",
+      safe("sendChatMessage", (data) => {
+        const room = rooms.get(socket.gameID, "multiplayer");
+        chat.fromUser(multiPlayer, socket, room, data, socket.spectator);
+      }),
+    );
+
+    // endTurn - only after two cards that don't match
+    socket.on(
+      "endTurn",
+      safe("endTurn", () => {
+        const room = rooms.get(socket.gameID, "multiplayer");
+
+        if (room != null && room.checkingCards && room.openedCards.length == 2 && isPlayersTurn(room, username)) {
+          rooms.touch(room);
+          socket.emit("disableEndTurn");
+          nextTurn(socket.gameID, room);
+          emitRoomState(socket.gameID, room);
+        }
+      }),
+    );
+
+    // surrender - the player leaves the running game, but can keep watching
+    socket.on(
+      "surrender",
+      safe("surrender", async () => {
+        const room = rooms.get(socket.gameID, "multiplayer");
+        const player = room != null ? findPlayer(room, username) : null;
+
+        if (player != null && player.active && room.status !== STATUS.WAITING && room.status !== STATUS.FINISHED) {
+          await removePlayer(socket.gameID, room, player, "surrendered");
+          socket.spectator = true;
+          socket.emit("joinedRoom", { username: username, spectator: true });
+        }
+      }),
+    );
+
+    // Leave button: leave right away, no rejoin grace
+    socket.on(
+      "leaveRoom",
+      safe("leaveRoom", async () => {
+        await leaveRoom(socket, true);
+      }),
+    );
+
+    // Lost connection or closed tab: the seat is kept for a while
+    socket.on(
+      "disconnect",
+      safe("disconnect", async () => {
+        await leaveRoom(socket, false);
+      }),
+    );
   });
-};
 
-function checkGame(io, socket) {
-  if (socket.gameID != null) {
-    // checkingCards: 0 - Doing nothing; 1 - Checking Cards;
+  /* ---------- Leaving & rejoining ---------- */
 
+  async function leaveRoom(socket, intentional) {
+    const gameID = socket.gameID;
+    const room = rooms.get(gameID, "multiplayer");
+    detachSocket(socket);
+    if (room == null) return;
+
+    // Spectator
+    if (room.spectators.delete(socket.id)) {
+      emitRoomState(gameID, room);
+      return;
+    }
+
+    const player = findPlayer(room, socket.data.username);
+    // Not this socket's seat (e.g. replaced by another tab)
+    if (player == null || player.socketId !== socket.id || !player.connected) return;
+
+    // Surrendered players only watch, nothing to do for the game
+    if (!player.active) {
+      player.connected = false;
+      emitRoomState(gameID, room);
+      return;
+    }
+
+    if (intentional) {
+      await removePlayer(gameID, room, player, "left the room");
+      return;
+    }
+
+    player.connected = false;
+    player.disconnectedAt = Date.now();
+
+    if (room.status === STATUS.PLAYING && isPlayersTurn(room, player.name)) {
+      // Don't let the others wait for somebody who is gone
+      nextTurn(gameID, room);
+    }
+
+    systemMessage(gameID, room, `${player.name} lost the connection...`, "disconnect");
+    emitRoomState(gameID, room);
+  }
+
+  // Removes a player for good (left, kicked out by the timeout, surrendered).
+  async function removePlayer(gameID, room, player, reason) {
+    const index = room.players.indexOf(player);
+    if (index < 0) return;
+
+    if (room.status === STATUS.WAITING) {
+      room.players.splice(index, 1);
+      systemMessage(gameID, room, `${player.name} ${reason}.`, "leave");
+
+      // The host left, the next player takes over
+      if (room.host === player.name && room.players.length > 0) {
+        const next = room.players.find((p) => p.connected) || room.players[0];
+        room.host = next.name;
+        systemMessage(gameID, room, `${room.host} is the new host.`, "host");
+      }
+
+      emitRoomState(gameID, room);
+      return;
+    }
+
+    if (!player.active || room.status === STATUS.FINISHED) return;
+
+    rooms.touch(room);
+    const wasTurn = room.turn === index;
+    player.active = false;
+    if (wasTurn && room.status === STATUS.PLAYING) {
+      nextTurn(gameID, room);
+    }
+
+    systemMessage(gameID, room, `${player.name} ${reason}.`, "leave");
+
+    if (activePlayers(room).length <= 1) {
+      await getWinner(gameID, room);
+    } else {
+      emitRoomState(gameID, room);
+    }
+  }
+
+  /*
+   * Runs regularly: players who didn't come back in time lose their seat,
+   * rooms without anybody in them are deleted.
+   */
+  async function tick(now = Date.now()) {
+    for (const [gameID, room] of rooms.list("multiplayer")) {
+      try {
+        const grace = room.status === STATUS.WAITING ? config.REJOIN_GRACE_WAITING : config.REJOIN_GRACE_PLAYING;
+
+        for (const player of [...room.players]) {
+          if (!player.connected && player.active && now - player.disconnectedAt >= grace) {
+            await removePlayer(gameID, room, player, "didn't come back");
+          }
+        }
+
+        if (connectedCount(room) > 0) {
+          room.emptySince = null;
+        } else if (room.emptySince == null) {
+          room.emptySince = now;
+        } else if (now - room.emptySince >= config.EMPTY_ROOM_GRACE) {
+          rooms.remove(gameID);
+        }
+      } catch (error) {
+        console.error("[multiplayer] Room check failed:", error);
+      }
+    }
+  }
+
+  const ticker = setInterval(() => tick().catch(() => {}), config.TICK);
+  ticker.unref();
+
+  /* ---------- Game ---------- */
+
+  function checkGame(socket, room) {
     // If both cards are open check if those are a match.
-    if (
-      global.rooms[socket.gameID].openedCards.length == 2 &&
-      !global.rooms[socket.gameID].checkingCards
-    ) {
-      global.rooms[socket.gameID].checkingCards = true;
+    if (room.openedCards.length == 2 && !room.checkingCards) {
+      room.checkingCards = true;
 
-      if (!checkCards(io, socket)) {
-        socket.emit("activateEndTurn");
+      if (!checkCards(socket.gameID, room)) {
+        if (room.mode === "speed") {
+          // Speed round: the clock stops, and the turn passes on its own
+          // after a short look at the cards
+          room.turnToken++;
+          room.turnEndsAt = null;
+          const token = room.turnToken;
+          const gameID = socket.gameID;
+          emitRoomState(gameID, room);
+          roomTimeout(
+            room,
+            () => {
+              if (room.status !== STATUS.PLAYING || room.turnToken !== token) return;
+              nextTurn(gameID, room);
+              emitRoomState(gameID, room);
+            },
+            config.SPEED_MISS_DELAY,
+          );
+        } else {
+          socket.emit("activateEndTurn");
+        }
       }
     }
 
     // Check for winner
-    if (global.rooms[socket.gameID].foundMatches.length == 66) {
-      getWinner(io, socket);
+    if (room.foundMatches.length == CARD_COUNT) {
+      getWinner(socket.gameID, room).catch((error) =>
+        console.error("[multiplayer] Could not finish game:", error),
+      );
     }
   }
-}
 
-function checkCards(io, socket) {
-  var id = global.rooms[socket.gameID].openedCards[0];
-  var id2 = global.rooms[socket.gameID].openedCards[1];
-  var turn = global.rooms[socket.gameID].turn;
+  function checkCards(gameID, room) {
+    const id = room.openedCards[0];
+    const id2 = room.openedCards[1];
 
-  // Check if cards match
-  var cardsMatch = global.rooms[socket.gameID].cardPairs[id] == id2;
+    // Check if cards match
+    const cardsMatch = room.cardPairs[id] == id2;
 
-  if (cardsMatch) {
-    // Push to foundMatches -> So it can't be opened again
-    global.rooms[socket.gameID].foundMatches.push(id);
-    global.rooms[socket.gameID].foundMatches.push(id2);
+    if (cardsMatch) {
+      // Push to foundMatches -> So it can't be opened again
+      room.foundMatches.push(id, id2);
 
-    // understateCard - remove Zoom and Border on cards
-    setTimeout(() => io.to(socket.gameID).emit("understateCard", id), 500);
-    setTimeout(() => io.to(socket.gameID).emit("understateCard", id2), 500);
+      // understateCard - remove Zoom and Border on cards
+      roomTimeout(room, () => multiPlayer.to(gameID).emit("understateCard", id), 500);
+      roomTimeout(room, () => multiPlayer.to(gameID).emit("understateCard", id2), 500);
 
-    // Increase Points
-    global.rooms[socket.gameID].player[turn - 1].points++;
-    io.to(socket.gameID).emit("increasePoints", {
-      turn: turn,
-      points: global.rooms[socket.gameID].player[turn - 1].points,
-    });
+      // Increase Points
+      const player = room.players[room.turn];
+      player.points++;
+      multiPlayer.to(gameID).emit("matchFound", { name: player.name, ids: [id, id2] });
+
+      // Reset turn - a found pair gives another try with fresh time
+      room.openedCards = [];
+      room.checkingCards = false;
+      startTurnTimer(gameID, room);
+      emitRoomState(gameID, room);
+    }
+
+    return cardsMatch;
+  }
+
+  // Closes the open cards and gives the turn to the next active and connected player.
+  function nextTurn(gameID, room) {
+    if (room.openedCards.length > 0) {
+      multiPlayer.to(gameID).emit("closeCards", {
+        1: room.openedCards[0],
+        2: room.openedCards[1],
+      });
+    }
+
+    const count = room.players.length;
+    let fallback = null;
+    for (let step = 1; step <= count; step++) {
+      const index = (room.turn + step) % count;
+      const player = room.players[index];
+      if (!player.active) continue;
+      if (player.connected) {
+        room.turn = index;
+        fallback = null;
+        break;
+      }
+      // Only disconnected players left: give it to one of them, they may come back
+      if (fallback == null) fallback = index;
+    }
+    if (fallback != null) room.turn = fallback;
 
     // Reset turn
-    global.rooms[socket.gameID].openedCards = [];
-    global.rooms[socket.gameID].checkingCards = false;
+    room.openedCards = [];
+    room.checkingCards = false;
+    startTurnTimer(gameID, room);
   }
 
-  return cardsMatch;
-}
-
-function endTurn(io, socket) {
-  var id = global.rooms[socket.gameID].openedCards[0];
-  var id2 = global.rooms[socket.gameID].openedCards[1];
-  var turn = global.rooms[socket.gameID].turn;
-  var activePlayers = global.rooms[socket.gameID].activePlayers;
-
-  if (socket.username == global.rooms[socket.gameID].player[turn - 1].name) {
-    // Close both cards
-    io.to(socket.gameID).emit("closeCards", {
-      1: id,
-      2: id2,
-    });
-
-    // If it's the player's turn disable the endTurn-Button so that the user can't end his turn twice
-    socket.emit("disableEndTurn");
-
-    // Switch turns
-    global.rooms[socket.gameID].turn =
-      activePlayers[(activePlayers.indexOf(turn) + 1) % activePlayers.length];
-
-    // Reset turn
-    global.rooms[socket.gameID].openedCards = [];
-    global.rooms[socket.gameID].checkingCards = false;
-
-    // Change highlight of player
-    io.to(socket.gameID).emit("highlightPlayer", {
-      turn: global.rooms[socket.gameID].turn,
-      player: global.rooms[socket.gameID].player,
-    });
-  }
-}
-
-function surrendGame(io, socket) {
-  // Does this game exist? Is it finished?
-  // if (global.rooms[socket.gameID] != null && global.rooms[socket.gameID].status < 2) {
-  //     if (global.rooms[socket.gameID].player1.name == socket.username) {
-  //         global.rooms[socket.gameID].player2.points = 50;
-  //     } else {
-  //         global.rooms[socket.gameID].player1.points = 50;
-  //     }
-  //     getWinner(io, socket);
-  // }
-}
-
-async function leaveGame(io, socket) {
-  if (
-    global.rooms[socket.gameID] == null ||
-    !global.rooms[socket.gameID].player.some(
-      (obj) => obj.name === socket.username,
-    )
-  ) {
-    return;
-  }
-
-  var playerIndex = global.rooms[socket.gameID].player.findIndex(
-    (obj) => obj.name === socket.username,
-  );
-  var activePlayers = global.rooms[socket.gameID].activePlayers;
-
-  if (global.rooms[socket.gameID].status == 0) {
-    global.rooms[socket.gameID].player.splice(playerIndex, 1);
-    activePlayers.splice(playerIndex, 1);
-
-    if (activePlayers.length == 1) {
-      io.to(socket.gameID).emit("disableStartGame");
-    } else if (activePlayers.length == 0) {
-      // Delete game
-      delete global.rooms[socket.gameID];
+  /*
+   * Speed round: every turn has a time limit. When it runs out, the open
+   * cards are closed and the next player continues.
+   */
+  function startTurnTimer(gameID, room) {
+    room.turnToken++;
+    if (room.mode !== "speed" || room.status !== STATUS.PLAYING) {
+      room.turnEndsAt = null;
       return;
     }
 
-    for (var i = playerIndex; i < activePlayers.length; i++) {
-      activePlayers[i] = activePlayers[i] - 1;
-    }
+    const token = room.turnToken;
+    // Animations (cards turning) don't count: the clock starts a bit later
+    room.turnStartsAt = Date.now() + config.SPEED_ANIMATION_GRACE;
+    room.turnEndsAt = room.turnStartsAt + room.turnTime;
 
-    io.to(socket.gameID).emit("visualInitializing", {
-      player: global.rooms[socket.gameID].player,
-      activePlayers: activePlayers,
-    });
-  } else if (global.rooms[socket.gameID].status == 1) {
-    activePlayers.splice(playerIndex, 1);
-
-    if (global.rooms[socket.gameID].turn == playerIndex + 1) {
-      endTurn(io, socket);
-    }
-
-    if (global.rooms[socket.gameID].activePlayers.length == 1) {
-      getWinner(io, socket);
-    }
-
-    io.to(socket.gameID).emit("playerSurrendered", {
-      playerName: socket.username,
-      playerIndex: playerIndex + 1,
-    });
+    roomTimeout(
+      room,
+      () => {
+        if (room.status !== STATUS.PLAYING || room.turnToken !== token) return;
+        const player = room.players[room.turn];
+        multiPlayer.to(gameID).emit("turnTimeout", { name: player.name });
+        systemMessage(gameID, room, `${player.name} ran out of time.`, "timer");
+        nextTurn(gameID, room);
+        emitRoomState(gameID, room);
+      },
+      config.SPEED_ANIMATION_GRACE + room.turnTime,
+    );
   }
-}
 
-async function getWinner(io, socket) {
-  if (global.rooms[socket.gameID].status == 1) {
-    global.rooms[socket.gameID].status = 2;
-    // check if not one of the leavers get the win
-    var highestPoints = -1;
-    var winners = [];
+  async function getWinner(gameID, room) {
+    // Only finish a game once
+    if (room.status !== STATUS.PLAYING && room.status !== STATUS.STARTING) return;
+    room.status = STATUS.FINISHED;
+    room.turnEndsAt = null;
+    room.turnToken++;
 
-    for (var i = 1; i <= global.rooms[socket.gameID].player.length; i++) {
-      player = global.rooms[socket.gameID].player[i - 1];
+    // Players who left can't win
+    const active = activePlayers(room);
+    const highestPoints = Math.max(...active.map((player) => player.points));
+    const winners = active
+      .filter((player) => player.points === highestPoints)
+      .map((player) => player.name);
 
-      if (global.rooms[socket.gameID].activePlayers.includes(i))
-        if (player.points > highestPoints) {
-          highestPoints = player.points;
-          winners = [player.name];
-        } else if (player.points === highestPoints) {
-          winners.push(player.name);
-        }
-    }
-
-    for (var i = 0; i < 66; i++) {
-      io.to(socket.gameID).emit("turnCard", {
+    for (let i = 0; i < CARD_COUNT; i++) {
+      multiPlayer.to(gameID).emit("turnCard", {
         id: i,
-        src: global.rooms[socket.gameID].cardImages[i],
+        src: room.cardImages[i],
       });
     }
 
-    for (var i = 1; i <= global.rooms[socket.gameID].player.length; i++) {
-      var playerName = global.rooms[socket.gameID].player[i - 1].name;
-      var playerObject = await User.findOne({
-        username: playerName,
-      });
-      var playerStatistic = await Statistic.findOne({
-        _id: playerObject.statistics,
-      });
+    // Update all statistics. One failing update must not affect the others.
+    const results = await Promise.allSettled(
+      room.players.map((player) =>
+        Statistic.increment(
+          player.name,
+          winners.includes(player.name) ? "multiplayerWin" : "multiplayerLose",
+        ),
+      ),
+    );
+    results
+      .filter((result) => result.status === "rejected")
+      .forEach((result) =>
+        console.error("[multiplayer] Could not update statistic:", result.reason),
+      );
 
-      if (winners.includes(playerName)) {
-        await Statistic.updateOne(
-          {
-            _id: playerObject.statistics,
-          },
-          {
-            multiplayerWin: playerStatistic.multiplayerWin + 1,
-          },
-          {
-            runValidators: true,
-          },
-        );
-      } else {
-        await Statistic.updateOne(
-          {
-            _id: playerObject.statistics,
-          },
-          {
-            multiplayerLose: playerStatistic.multiplayerLose + 1,
-          },
-          {
-            runValidators: true,
-          },
-        );
-      }
-    }
-
-    io.to(socket.gameID).emit("getWinner", {
+    systemMessage(
+      gameID,
+      room,
+      winners.length > 1 ? `Draw between ${winners.join(", ")}!` : `${winners[0]} wins!`,
+      "trophy",
+    );
+    emitRoomState(gameID, room);
+    multiPlayer.to(gameID).emit("getWinner", {
       winners: winners,
-      player: global.rooms[socket.gameID].player,
-      cardCounter: global.rooms[socket.gameID].cardCounter,
+      cardCounter: room.cardCounter,
     });
 
     // Delete game
-    delete global.rooms[socket.gameID];
+    rooms.remove(gameID);
   }
-}
+
+  return { tick };
+};

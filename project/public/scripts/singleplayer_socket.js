@@ -4,6 +4,29 @@ var modal;
 var game;
 var backImage = "/static/images/logo_small.png";
 
+// Escape text before putting it into innerHTML (usernames, chat messages, ...)
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Something went wrong on the server (e.g. not enough memes) -> back to the lobby
+socket.on("gameError", (message) => {
+  alert(message || "Something went wrong. Please try again.");
+  window.location.href = "/lobby";
+});
+
+socket.on("connect_error", (error) => {
+  // Not logged in (anymore)
+  if (error && error.message == "unauthorized") {
+    window.location.href = "/";
+  }
+});
+
 document.addEventListener(
   "DOMContentLoaded",
   function () {
@@ -14,7 +37,7 @@ document.addEventListener(
       var div = ` <div class="card-size">
                         <div id="card-${index}" class="col-1 card pos-abs w-100 h-100" onclick="openCard(${index}); false;">
                             <div class="card-back card-image">
-                                <img src="" class="card-image">
+                                <img class="card-image" alt="">
                                 <div id="cardcount-${index}" class="overlay"></div>
                             </div>
                             <div class="card-front card-image">
@@ -30,45 +53,39 @@ document.addEventListener(
   false,
 );
 
-// Get all Memes from database
-var request = new XMLHttpRequest();
-request.onreadystatechange = function () {
-  if (this.readyState == 4) {
-    if (this.status == 200) {
-      var links = JSON.parse(request.responseText);
-      // Initialize Game
-      socket.emit("initializingGame", {
-        gameID: sessionStorage.getItem("gameID"),
-        links: links,
-      });
-    }
-  }
+// Initialize Game - the server picks the memes
+socket.emit("initializingGame", {
+  gameID: sessionStorage.getItem("gameID"),
+});
+
+var BOT_AVATARS = {
+  "Easy Bot": "easy",
+  "Medium Bot": "medium",
+  "Hard Bot": "hard",
+  "Expert Bot": "expert",
 };
-request.open("GET", "/requests/memes");
-request.send();
+
+// Own name + avatar in the player panel
+userPromise.then((username) => {
+  if (!username) return;
+  document.getElementById("user1Username").innerText = username;
+  document.getElementById("user1Avatar").replaceWith(createAvatar(username));
+});
 
 // Set computername on the scoreboard
 socket.on("setComputername", (name) => {
   document.getElementById("user2Username").innerText = name;
+  document.getElementById("botAvatar").src =
+    "/static/images/avatar_" + (BOT_AVATARS[name] || "easy") + "_200.png";
 });
 
 // Show which player's turn it is
 socket.on("highlightPlayer", (data) => {
-  if (data.turn == 0) {
-    // Highlight player1
-    document.getElementById("user1Username").classList.add("fw-bold");
-    document.getElementById("user2Username").classList.remove("fw-bold");
-    document.getElementById("user1Username").innerHTML +=
-      `<i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
-    document.getElementById("user2Username").innerHTML = data.computer;
-  } else {
-    // Highlight computer
-    document.getElementById("user1Username").classList.remove("fw-bold");
-    document.getElementById("user2Username").classList.add("fw-bold");
-    document.getElementById("user1Username").innerHTML = data.user;
-    document.getElementById("user2Username").innerHTML +=
-      `<i class="bi bi-hand-index-thumb ps-2 text-info"></i>`;
-  }
+  document.getElementById("user1Username").innerText = data.user;
+  document.getElementById("user2Username").innerText = data.computer;
+  document.getElementById("user1Item").classList.toggle("turn", data.turn == 0);
+  document.getElementById("user2Item").classList.toggle("turn", data.turn == 1);
+  document.getElementById("board").classList.toggle("my-turn", data.turn == 0);
 });
 
 socket.on("noGameFound", () => {
@@ -76,12 +93,15 @@ socket.on("noGameFound", () => {
 });
 
 function openCard(id) {
+  // Open cards are zoomed in right away, closed ones are turned by the server
+  if (zoomCard(id)) return;
   socket.emit("openCard", id);
 }
 
 socket.on("turnCard", (data) => {
   var card = document.getElementById("card-" + data.id);
-  card.childNodes[1].childNodes[1].src = data.src;
+  if (card == null) return;
+  setCardImage(card, data.src);
   card.classList.add("flip");
 
   // Highlighting a card - It gets bigger and gets a border
@@ -100,11 +120,14 @@ socket.on("zoomImage", (id) => {
 
 // Increase Points if a match was found
 socket.on("increasePoints", (data) => {
-  if (data.turn == 0) {
-    document.getElementById("user1Score").innerHTML = data.points;
-  } else {
-    document.getElementById("user2Score").innerHTML = data.points;
-  }
+  var score = document.getElementById(data.turn == 0 ? "user1Score" : "user2Score");
+  score.innerText = data.points;
+  score.classList.remove("bump");
+  void score.offsetWidth; // restart the animation
+  score.classList.add("bump");
+
+  var found = Number(document.getElementById("user1Score").innerText) + Number(document.getElementById("user2Score").innerText);
+  document.getElementById("pairsLeft").innerText = 33 - found + " pairs left";
 });
 
 // Remove the zoom and the border of a card (if highlighted)
@@ -113,27 +136,23 @@ socket.on("understateCard", (id) => {
 });
 
 function understateCard(id) {
-  document.getElementById("card-" + id).classList.remove("zoom-card-on-turn");
-  document.getElementById("card-" + id).classList.remove("border");
-  document.getElementById("card-" + id).classList.remove("border-3");
+  var card = document.getElementById("card-" + id);
+  if (card == null) return;
+  card.classList.remove("zoom-card-on-turn");
+  card.classList.remove("border");
+  card.classList.remove("border-3");
 }
 
 // Close opened cards
 socket.on("closeCards", (data) => {
-  var card = document.getElementById("card-" + data[1]);
-  card.classList.remove("flip");
-  setTimeout(() => {
-    card.childNodes[1].childNodes[1].src = "";
-  }, 500);
+  [data[1], data[2]].forEach((id) => {
+    var card = document.getElementById("card-" + id);
+    if (card == null) return;
 
-  var card2 = document.getElementById("card-" + data[2]);
-  card2.classList.remove("flip");
-  setTimeout(() => {
-    card2.childNodes[1].childNodes[1].src = "";
-  }, 500);
-
-  understateCard(data[1]);
-  understateCard(data[2]);
+    card.classList.remove("flip");
+    clearCardImage(card, 900);
+    understateCard(id);
+  });
 });
 
 // Activate endTurn-Button
@@ -151,34 +170,30 @@ function emitEndTurn() {
 }
 
 function surrender() {
-  socket.emit("surrender");
+  confirmDialog({
+    title: "Surrender?",
+    text: "The bot wins this game and it counts as a loss in your statistics.",
+    cancelLabel: "Keep playing",
+    confirmLabel: "Surrender",
+    danger: true,
+  }).then((ok) => {
+    if (ok) socket.emit("surrender");
+  });
 }
 
 socket.on("getWinner", (data) => {
   var playButton = document.getElementById("playButton");
-  var user1 = document.getElementById("user1Username");
-  var user2 = document.getElementById("user2Username");
-  var score1 = document.getElementById("user1Score");
-  var score2 = document.getElementById("user2Score");
 
   // Visual change for winner
-  if (data.winner == 0) {
-    user1.innerHTML = data.user + " ";
-    user2.innerHTML = data.computer;
-    user1.innerHTML += `<i class="bi bi-trophy text-warning"></i>`;
-    user2.classList.add("text-secondary");
-    user2.classList.remove("fw-bold");
-    user1.classList.add("fw-bold");
-    score2.classList.add("text-secondary");
-  } else {
-    user1.innerHTML = data.user;
-    user2.innerHTML = data.computer + " ";
-    user2.innerHTML += `<i class="bi bi-trophy text-warning"></i>`;
-    user1.classList.add("text-secondary");
-    user1.classList.remove("fw-bold");
-    user2.classList.add("fw-bold");
-    score1.classList.add("text-secondary");
-  }
+  document.getElementById(data.winner == 0 ? "user1Item" : "user2Item").classList.add("winner");
+  document.getElementById(data.winner == 0 ? "user2Item" : "user1Item").classList.add("inactive");
+  document.getElementById("user1Item").classList.remove("turn");
+  document.getElementById("user2Item").classList.remove("turn");
+  document.getElementById("board").classList.remove("my-turn");
+  showToast(data.winner == 0 ? "You win" : `${data.computer} wins`);
+
+  // All cards are shown normally now (found pairs are not dimmed anymore)
+  document.getElementById("board").classList.add("revealed");
 
   // Remove all highlights
   for (var i = 0; i < 66; i++) {
@@ -191,9 +206,38 @@ socket.on("getWinner", (data) => {
     window.location.href = "/lobby";
   };
   playButton.disabled = false;
-  playButton.innerHTML = "Back to Lobby";
-  document.getElementById("surrenderButton").disabled = true;
+  playButton.innerText = "Back to Lobby";
+  document.getElementById("surrenderSlot").replaceChildren();
+  showResult(data);
 
   // Reset storage
   sessionStorage.clear();
 });
+
+// Surrender button next to the own name
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("surrenderSlot").appendChild(createSurrenderButton());
+
+  var overlay = document.getElementById("resultOverlay");
+  document.getElementById("resultBoardButton").addEventListener("click", () => (overlay.hidden = true));
+  // A click next to the result closes it and opens the card below
+  overlay.addEventListener("click", (event) => {
+    if (event.target != overlay) return;
+    overlay.hidden = true;
+    var below = document.elementFromPoint(event.clientX, event.clientY);
+    var card = below && below.closest(".card");
+    if (card) zoomCard(Number(card.id.replace("card-", "")));
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key == "Escape") overlay.hidden = true;
+  });
+});
+
+function showResult(data) {
+  var won = data.winner == 0;
+  document.getElementById("resultOverlay").classList.toggle("lost", !won);
+  document.getElementById("resultTitle").innerText = won ? "You win!" : `${data.computer} wins`;
+  document.getElementById("resultText").innerText =
+    document.getElementById("user1Score").innerText + " : " + document.getElementById("user2Score").innerText;
+  document.getElementById("resultOverlay").hidden = false;
+}

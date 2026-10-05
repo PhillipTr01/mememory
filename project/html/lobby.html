@@ -18,6 +18,7 @@
     <!--- Custom CSS-->
     <!--- identical to index.html --->
     <link rel="stylesheet" href="/static/styles/index.css" />
+    <link rel="stylesheet" href="/static/styles/theme.css" />
     <link rel="stylesheet" href="/static/styles/lobby.css" />
 
     <!--- Icons --->
@@ -57,50 +58,29 @@
             </div>
             <div class="col-6 text-end fw-light">
               <div class="d-flex text-light pl-xl-5">
-                <div class="ms-auto dropdown">
-                  <p
-                    id="username"
-                    class="m-0 pb-1 dropdown-toggle fs-4 overflow-hidden"
-                    data-bs-toggle="dropdown"
-                  ></p>
-                  <ul class="dropdown-menu dropdown-menu-end bg-dark">
-                    <li>
-                      <div
-                        class="dropdown-item d-flex text-light"
-                        onclick="startScoreboardPage()"
-                      >
-                        <i class="bi bi-trophy pe-3"></i>
-                        <p class="m-0">Scoreboard</p>
+                <div class="ms-auto profile-menu" id="profileMenu">
+                  <button type="button" class="profile-trigger" id="profileTrigger" aria-haspopup="true" aria-expanded="false">
+                    <span id="profileAvatar" class="mm-avatar sm"></span>
+                    <span class="profile-name" id="username"></span>
+                    <i class="bi bi-chevron-down profile-caret"></i>
+                  </button>
+                  <div class="profile-dropdown" id="profileDropdown" hidden>
+                    <div class="profile-head">
+                      <span id="profileAvatarLarge" class="mm-avatar"></span>
+                      <div class="overflow-hidden">
+                        <div class="profile-head-name" id="profileName"></div>
+                        <div class="mm-muted small">Signed in</div>
                       </div>
-                    </li>
-                    <li class="mt-2">
-                      <div
-                        class="dropdown-item d-flex text-light"
-                        onclick="startProfilePage()"
-                      >
-                        <i class="bi bi-bar-chart-line pe-3"></i>
-                        <p class="m-0">Profile</p>
-                      </div>
-                    </li>
-                    <li class="mt-2">
-                      <div
-                        class="dropdown-item d-flex text-light"
-                        onclick="startSettingsPage()"
-                      >
-                        <i class="bi bi-gear pe-3"></i>
-                        <p class="m-0">Settings</p>
-                      </div>
-                    </li>
-                    <li class="mt-2">
-                      <div
-                        class="dropdown-item d-flex text-danger"
-                        onclick="logoutUser()"
-                      >
-                        <i class="bi bi-box-arrow-right pe-3"></i>
-                        <p class="m-0 fw-bold">Logout</p>
-                      </div>
-                    </li>
-                  </ul>
+                    </div>
+                    <a href="/lobby" class="profile-item"><i class="bi bi-controller"></i> Play</a>
+                    <a href="/home" class="profile-item"><i class="bi bi-trophy"></i> Scoreboard</a>
+                    <a href="/user" class="profile-item"><i class="bi bi-bar-chart-line"></i> Profile</a>
+                    <a href="/settings" class="profile-item"><i class="bi bi-gear"></i> Settings</a>
+                    <div class="profile-divider"></div>
+                    <button type="button" class="profile-item danger" id="logoutButton">
+                      <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -109,129 +89,118 @@
       </nav>
     </header>
 
-    <main class="pt-5 pt-lg-0 my-auto">
-      <div class="container-fluid">
-        <div class="pb-5">
-          <div>
-            <p class="fs-3 text-light text-center mb-3">Multiplayer</p>
-          </div>
-          <div
-            class="d-flex flex-column flex-md-row p-2 justify-content-evenly text-light align-middle max-width-900 mx-auto"
-          >
-            <div class="m-auto text-center align-middle max-width-200">
-              <button
-                id="createGameButton"
-                type="submit"
-                onclick="playMultiplayer()"
-                class="btn btn-lg fw-bold text-center px-4 mx-1 multiplayer-button"
-              >
-                Create Game
-              </button>
-            </div>
-            <div>
-              <p class="py-2 py-md-5 m-0 text-or text-center fs-5">or</p>
-            </div>
-            <div class="d-flex mx-auto flex-column p-0 max-width-200">
-              <input
-                type="text"
-                id="joinLobbyTag"
-                class="border-0 bg-dark text-light rounded text-center py-2 mt-3"
-                placeholder="Insert Game ID"
-              />
-              <button
-                id="joinGameButton"
-                type="submit"
-                class="btn btn-lg fw-bold mt-2 multiplayer-button"
-                onclick="joinMultiplayer()"
-              >
-                Join Game
-              </button>
-            </div>
-          </div>
+    <main class="lobby container py-3">
+      <!--- Singleplayer: small cards on top --->
+      <section class="mb-4">
+        <div class="section-head">
+          <h2 class="section-title">Singleplayer</h2>
         </div>
-        <div class="pt-0 pt-lg-5">
-          <div>
-            <p class="fs-3 text-light text-center mb-3 mb-sm-5">Singleplayer</p>
-          </div>
-          <div
-            class="d-flex flex-wrap flex-sm-nowrap p-2 justify-content-evenly"
-          >
-            <div
-              class="d-flex flex-column p-0 rounded-3 btn btn-lg zoom-on-hover max-width-40-percent"
-              onclick="playSingleplayer(0)"
-            >
-              <img
-                src="/static/images/avatar_easy_200.png"
-                alt="logo"
-                class="img-fluid mx-auto rounded-top avatar-size-lobby"
-              />
-              <div
-                id="startEasyGameButton"
-                type="submit"
-                class="text-easy fw-bold mt-3"
-              >
-                Easy
-              </div>
-            </div>
+        <div class="bot-grid">
+          <button type="button" class="bot-card bot-easy" onclick="playSingleplayer(0)">
+            <img src="/static/images/avatar_easy_200.png" alt="" class="bot-avatar" />
+            <span class="bot-text">
+              <span class="bot-name">Easy</span>
+            </span>
+            <i class="bi bi-play-fill bot-play"></i>
+          </button>
+          <button type="button" class="bot-card bot-medium" onclick="playSingleplayer(1)">
+            <img src="/static/images/avatar_medium_200.png" alt="" class="bot-avatar" />
+            <span class="bot-text">
+              <span class="bot-name">Medium</span>
+            </span>
+            <i class="bi bi-play-fill bot-play"></i>
+          </button>
+          <button type="button" class="bot-card bot-hard" onclick="playSingleplayer(2)">
+            <img src="/static/images/avatar_hard_200.png" alt="" class="bot-avatar" />
+            <span class="bot-text">
+              <span class="bot-name">Hard</span>
+            </span>
+            <i class="bi bi-play-fill bot-play"></i>
+          </button>
+          <button type="button" class="bot-card bot-expert" onclick="playSingleplayer(3)">
+            <img src="/static/images/avatar_expert_200.png" alt="" class="bot-avatar" />
+            <span class="bot-text">
+              <span class="bot-name">Expert</span>
+            </span>
+            <i class="bi bi-play-fill bot-play"></i>
+          </button>
+        </div>
+      </section>
 
-            <div
-              class="d-flex flex-column p-0 rounded-3 btn btn-lg zoom-on-hover max-width-40-percent"
-              onclick="playSingleplayer(1)"
-            >
-              <img
-                src="/static/images/avatar_medium_200.png"
-                alt="logo"
-                class="img-fluid mx-auto rounded-top avatar-size-lobby"
-              />
-              <div
-                id="startMediumGameButton"
-                type="submit"
-                class="text-medium fw-bold mt-3"
-              >
-                Medium
-              </div>
-            </div>
-            <div
-              class="d-flex flex-column p-0 mt-3 mt-sm-0 rounded-3 btn btn-lg zoom-on-hover max-width-40-percent"
-              onclick="playSingleplayer(2)"
-            >
-              <img
-                src="/static/images/avatar_hard_200.png"
-                alt="logo"
-                class="img-fluid mx-auto rounded-top avatar-size-lobby"
-              />
-              <div
-                id="startHardGameButton"
-                type="submit"
-                class="text-hard fw-bold mt-3"
-              >
-                Hard
-              </div>
-            </div>
-            <div
-              class="d-flex flex-column p-0 mt-3 mt-sm-0 rounded-3 btn btn-lg zoom-on-hover max-width-40-percent"
-              onclick="playSingleplayer(3)"
-            >
-              <img
-                src="/static/images/avatar_expert_200.png"
-                alt="logo"
-                class="img-fluid mx-auto rounded-top avatar-size-lobby"
-              />
-              <div
-                id="startExpertGameButton"
-                type="submit"
-                class="text-expert fw-bold mt-3"
-              >
-                Expert
-              </div>
-            </div>
+      <!--- Multiplayer: create / join and the list of games --->
+      <section class="mp-section">
+        <div class="section-head">
+          <h2 class="section-title">Multiplayer</h2>
+          <span id="lobbyStatus" class="mm-live">Live</span>
+        </div>
+
+        <div class="mp-create mm-card">
+          <h3 class="mp-create-title">Create a new room</h3>
+          <div id="gamePicker" class="game-picker">
+            <button type="button" class="game-tile" data-game="memory">
+              <svg class="game-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <rect x="5" y="10" width="21" height="29" rx="4" transform="rotate(-12 15.5 24.5)" fill="#222" stroke="#3b82f6" stroke-width="1.5" />
+                <text x="15.5" y="29" transform="rotate(-12 15.5 24.5)" text-anchor="middle" font-family="Poppins, sans-serif" font-size="13" font-weight="700" fill="#3b82f6">?</text>
+                <rect x="20" y="8" width="22" height="30" rx="4" transform="rotate(9 31 23)" fill="#3b82f6" />
+                <g transform="rotate(9 31 23)">
+                  <circle cx="35" cy="16.5" r="2.3" fill="#fff" />
+                  <path d="M24 32l6-8 4 5 3-3 3 6z" fill="#fff" opacity="0.92" />
+                </g>
+              </svg>
+              <span class="game-name">MemeMory</span>
+            </button>
+            <button type="button" class="game-tile" data-game="tictactoe">
+              <svg class="game-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M18 6v36M30 6v36M6 18h36M6 30h36" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" />
+                <circle cx="12" cy="12" r="5" fill="#3a131b" stroke="#e81932" stroke-width="1.5" />
+                <circle cx="24" cy="24" r="4.2" fill="#21212f" stroke="#a9c1e9" stroke-width="1.5" />
+                <circle cx="36" cy="36" r="3.2" fill="#3a131b" stroke="#e81932" stroke-width="1.5" />
+                <circle cx="36" cy="12" r="3" fill="#21212f" stroke="#a9c1e9" stroke-width="1.5" />
+              </svg>
+              <span class="game-name">Tic Tac Toe XL</span>
+            </button>
           </div>
         </div>
-      </div>
+
+        <div class="rooms mm-card mt-3">
+          <div class="rooms-head">
+            <div class="rooms-title">
+              <span class="fw-semibold">Open games</span>
+              <span id="roomCount" class="mm-muted small"></span>
+            </div>
+            <form id="joinForm" class="rooms-join">
+              <input type="text" id="joinLobbyTag" class="mm-input" placeholder="Room code" aria-label="Join with a room code" maxlength="20" autocomplete="off" spellcheck="false" />
+              <button id="joinGameButton" type="submit" class="mm-btn mm-btn-sm">
+                Join <i class="bi bi-arrow-right"></i>
+              </button>
+            </form>
+          </div>
+          <div class="table-responsive">
+            <table class="rooms-table">
+              <thead>
+                <tr>
+                  <th class="game-col">Game</th>
+                  <th>Room</th>
+                  <th>Players</th>
+                  <th class="d-none d-md-table-cell">Spectators</th>
+                  <th>Status</th>
+                  <th class="text-end"></th>
+                </tr>
+              </thead>
+              <tbody id="roomList"></tbody>
+            </table>
+          </div>
+          <div id="noRooms" class="rooms-empty">
+            <i class="bi bi-door-open"></i>
+            <p class="mb-1 fw-semibold">No open games right now</p>
+            <p class="mm-muted small mb-3">Create a room and invite your friends with the code.</p>
+          </div>
+        </div>
+      </section>
     </main>
 
-    <footer>
-      <div class="container-fluid pt-5">
+    <footer class="app-footer">
+      <div class="container-fluid py-1">
         <nav class="d-flex justify-content-center text-center">
           <div>
             <a
@@ -258,8 +227,9 @@
       crossorigin="anonymous"
     ></script>
     <!--- Custom JS --->
+    <script src="/static/scripts/ui.js"></script>
+    <script src="/static/scripts/nav.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/static/scripts/lobby.js"></script>
     <script src="/static/scripts/lobby_socket.js"></script>
   </body>
 </html>
