@@ -34,7 +34,7 @@ module.exports = {
   SPEED_TURN_TIME: 10 * 1000,
   SPEED_TURN_OPTIONS: [3, 5, 10, 15],
   SPEED_MISS_DELAY: 1100,
-  // The clock starts after the card animations (flip takes 0.5s on the client in speed rounds)
+  // The clock starts after the card animations (the flip takes 0.5s on the client)
   SPEED_ANIMATION_GRACE: 600,
   // Speed round: shorter "who starts" animation
   SPEED_START_ANIMATION: 2600,

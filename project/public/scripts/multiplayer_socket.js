@@ -615,8 +615,8 @@ function closeCard(id, instant) {
 
   card.classList.remove("flip");
   understateCard(id);
-  // The flip is faster in speed rounds (see play.css)
-  clearCardImage(card, instant ? 0 : room && room.mode == "speed" ? 500 : 900);
+  // After the flip (0.5s, see play.css)
+  clearCardImage(card, instant ? 0 : 500);
 }
 
 // If the card is already open, you can zoom in to read the meme

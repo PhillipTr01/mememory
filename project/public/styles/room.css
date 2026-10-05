@@ -1454,8 +1454,16 @@
   }
 }
 
-/* Rematch as the main action on top of the other result buttons */
+/* Rematch as the main action on top, the other buttons share the full width */
 .result-rematch {
   order: -1;
+  flex-basis: 100%;
+}
+
+#resultOverlay .result-box .mm-btn {
+  flex: 1 1 0;
+}
+
+#resultOverlay .result-box .mm-btn.result-rematch {
   flex-basis: 100%;
 }
