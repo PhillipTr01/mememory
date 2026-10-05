@@ -141,12 +141,12 @@ body.ttt-theme {
 }
 
 .ttt-cell.win {
-  border-color: var(--ttt-win);
-  background: rgba(var(--ttt-win-rgb), 0.12);
+  border-color: rgba(var(--ttt-win-rgb), 0.35);
+  background: rgba(var(--ttt-win-rgb), 0.05);
 }
 
 .ttt-board.over .ttt-cell:not(.win) {
-  opacity: 0.55;
+  opacity: 0.6;
 }
 
 .ttt-board.p0-won {
