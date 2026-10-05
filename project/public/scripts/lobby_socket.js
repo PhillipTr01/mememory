@@ -6,19 +6,35 @@ function playSingleplayer(difficulty) {
   });
 }
 
-function playMultiplayer() {
+/* Game for "Create room" (remembered for the next visit) */
+var selectedGame = "memory";
+try {
+  if (localStorage.getItem("mm-game") == "tictactoe") selectedGame = "tictactoe";
+} catch (error) {}
+
+function selectGame(game) {
+  selectedGame = game;
+  try {
+    localStorage.setItem("mm-game", game);
+  } catch (error) {}
+  document.querySelectorAll("#gamePicker button").forEach((button) => {
+    var active = button.dataset.game == game;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-checked", active);
+  });
+}
+
+document.querySelectorAll("#gamePicker button").forEach((button) =>
+  button.addEventListener("click", () => selectGame(button.dataset.game)),
+);
+selectGame(selectedGame);
+
+function createRoom() {
   var button = document.getElementById("createGameButton");
   button.disabled = true;
   // Enable again if the server doesn't answer
   setTimeout(() => (button.disabled = false), 5000);
-  socket.emit("playMultiplayer");
-}
-
-function playTicTacToe() {
-  var button = document.getElementById("createTicTacToeButton");
-  button.disabled = true;
-  setTimeout(() => (button.disabled = false), 5000);
-  socket.emit("playTicTacToe");
+  socket.emit(selectedGame == "tictactoe" ? "playTicTacToe" : "playMultiplayer");
 }
 
 function joinMultiplayer(gameID) {
@@ -167,7 +183,6 @@ function createRoomRow(room) {
 
 socket.on("gameError", (message) => {
   document.getElementById("createGameButton").disabled = false;
-  document.getElementById("createTicTacToeButton").disabled = false;
   showToast(message, "error");
 });
 

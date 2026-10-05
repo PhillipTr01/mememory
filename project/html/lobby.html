@@ -137,12 +137,17 @@
         <div class="mp-toolbar mm-card">
           <div class="mp-create">
             <p class="mp-label">Start your own room</p>
-            <div class="mp-create-buttons">
-              <button id="createGameButton" type="button" class="mm-btn mm-btn-primary mm-btn-lg" onclick="playMultiplayer()">
+            <div class="mp-create-row">
+              <div id="gamePicker" class="game-picker" role="radiogroup" aria-label="Game">
+                <button type="button" role="radio" data-game="memory" aria-checked="true" class="active">
+                  <i class="bi bi-images"></i> MemeMory
+                </button>
+                <button type="button" role="radio" data-game="tictactoe" aria-checked="false">
+                  <i class="bi bi-grid-3x3"></i> Tic Tac Toe XL
+                </button>
+              </div>
+              <button id="createGameButton" type="button" class="mm-btn mm-btn-primary" onclick="createRoom()">
                 <i class="bi bi-plus-lg"></i> Create room
-              </button>
-              <button id="createTicTacToeButton" type="button" class="mm-btn mm-btn-lg" onclick="playTicTacToe()">
-                <i class="bi bi-grid-3x3"></i> Tic Tac Toe XL
               </button>
             </div>
           </div>

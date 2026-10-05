@@ -28,7 +28,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
 </head>
 
-<body class="d-flex flex-column min-h-100">
+<body class="d-flex flex-column min-h-100 ttt-theme">
 
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark">
@@ -90,15 +90,48 @@
 
         <div class="ttt-layout">
             <section id="seat0" class="ttt-player p0"></section>
-            <div class="ttt-board-wrap">
+            <div class="ttt-center">
                 <div id="board" class="ttt-board" role="grid" aria-label="Board"></div>
+                <div class="ttt-footer">
+                    <button type="button" id="rematchButton" class="mm-btn mm-btn-primary" hidden></button>
+                    <span id="spectatorInfo" class="mm-muted small" hidden></span>
+                </div>
             </div>
             <section id="seat1" class="ttt-player p1"></section>
-        </div>
-
-        <div class="ttt-footer">
-            <button type="button" id="rematchButton" class="mm-btn mm-btn-primary" hidden></button>
-            <span id="spectatorInfo" class="mm-muted small" hidden></span>
+            <div class="mm-card chat-card ttt-chat">
+                <div class="chat-head">
+                    <span class="fw-semibold"><i class="bi bi-chat-dots me-2"></i>Chat</span>
+                    <span id="onlineCount" class="mm-muted small"></span>
+                </div>
+                <div class="chat-body-wrap">
+                    <div id="chat-content" class="chat-body" aria-live="polite"></div>
+                    <div id="chat-empty" class="chat-empty">
+                        <span>👋</span>
+                        <p class="mb-0">No messages yet - say hi!</p>
+                    </div>
+                    <button type="button" id="newMessages" class="new-messages" hidden>
+                        New messages <i class="bi bi-arrow-down"></i>
+                    </button>
+                </div>
+                <p id="chat-error" class="chat-error" hidden></p>
+                <div class="chat-quick" aria-label="Quick emojis">
+                    <button type="button" data-emoji="😂">😂</button>
+                    <button type="button" data-emoji="🔥">🔥</button>
+                    <button type="button" data-emoji="👏">👏</button>
+                    <button type="button" data-emoji="😭">😭</button>
+                    <button type="button" data-emoji="🤯">🤯</button>
+                    <button type="button" data-emoji="💀">💀</button>
+                    <button type="button" data-emoji="GG">GG</button>
+                </div>
+                <form id="chat-form" class="chat-form" autocomplete="off">
+                    <input id="chat-input" class="chat-input" type="text" maxlength="300"
+                        placeholder="Write a message..." aria-label="Chat message">
+                    <span id="chat-counter" class="chat-counter" hidden></span>
+                    <button id="send-message-btn" type="submit" class="chat-send" aria-label="Send" disabled>
+                        <i class="bi bi-arrow-up"></i>
+                    </button>
+                </form>
+            </div>
         </div>
     </main>
 
@@ -123,6 +156,7 @@
     <script src="/static/scripts/ui.js"></script>
     <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/tictactoe.js"></script>
+    <script src="/static/scripts/chat.js"></script>
 </body>
 
 </html>

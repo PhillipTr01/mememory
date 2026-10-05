@@ -1,11 +1,23 @@
-/* ---------- Tic Tac Toe XL ---------- */
+/* ---------- Tic Tac Toe XL: red and black ---------- */
 :root {
-  --ttt-p0: #3b82f6;
-  --ttt-p0-rgb: 59, 130, 246;
-  --ttt-p1: #f5a524;
-  --ttt-p1-rgb: 245, 165, 36;
-  /* Board as big as possible without scrolling */
-  --ttt-board: min(calc(100vh - 245px), 520px, calc(100vw - 2rem));
+  --ttt-p0: #e5484d; /* red */
+  --ttt-p0-rgb: 229, 72, 77;
+  --ttt-p1: #0c0c0c; /* black */
+  --ttt-p1-rgb: 12, 12, 12;
+  /* Black pieces need a light color for borders and highlights */
+  --ttt-p1-mark: #d4d4d4;
+  --ttt-p1-mark-rgb: 212, 212, 212;
+  /* Board as big as possible without scrolling (players left, chat right) */
+  --ttt-board: min(calc(100vh - 245px), 520px, calc(100vw - 690px));
+}
+
+/* Red accent on this page */
+body.ttt-theme {
+  --mm-accent: #e5484d;
+  --mm-accent-rgb: 229, 72, 77;
+  --mm-accent-hover: #c93b40;
+  --mm-gradient: var(--mm-accent);
+  --mm-on-accent: #fff;
 }
 
 .ttt-page {
@@ -13,8 +25,9 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  width: 100%;
-  max-width: 1100px;
+  /* As wide as the game, so the title lines up with the players */
+  width: fit-content;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0.25rem 1rem 1rem;
   color: var(--mm-text);
@@ -47,12 +60,40 @@
   color: var(--mm-text);
 }
 
-/* ---------- Layout: player | board | player ---------- */
+/* ---------- Layout: players | board | chat ---------- */
 .ttt-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  gap: 1.5rem;
+  grid-template-columns: 260px auto minmax(280px, 340px);
+  grid-template-rows: 1fr 1fr;
+  grid-template-areas:
+    "p0 center chat"
+    "p1 center chat";
+  justify-content: center;
+  column-gap: 1.5rem;
+  row-gap: 1rem;
+}
+
+#seat0 {
+  grid-area: p0;
+  align-self: end;
+}
+
+#seat1 {
+  grid-area: p1;
+  align-self: start;
+}
+
+.ttt-center {
+  grid-area: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ttt-chat {
+  grid-area: chat;
+  height: calc(var(--ttt-board) + 3.75rem);
+  min-height: 0;
 }
 
 /* ---------- Board ---------- */
@@ -112,8 +153,8 @@
 }
 
 .ttt-board.p1-won {
-  --ttt-win: var(--ttt-p1);
-  --ttt-win-rgb: var(--ttt-p1-rgb);
+  --ttt-win: var(--ttt-p1-mark);
+  --ttt-win-rgb: var(--ttt-p1-mark-rgb);
 }
 
 /* ---------- Pieces ---------- */
@@ -132,11 +173,14 @@
 
 .ttt-piece.p0 {
   background: var(--ttt-p0);
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .ttt-piece.p1 {
   background: var(--ttt-p1);
+  color: rgba(255, 255, 255, 0.7);
+  /* Light ring, so black pieces are visible on the dark board */
+  box-shadow: 0 0 0 1px #5a5a5a, inset 0 0 0 0.18em rgba(255, 255, 255, 0.1);
 }
 
 /* Size on the board: share of the cell */
@@ -182,7 +226,7 @@
 }
 
 .ttt-player.turn.p0 { border-color: var(--ttt-p0); }
-.ttt-player.turn.p1 { border-color: var(--ttt-p1); }
+.ttt-player.turn.p1 { border-color: var(--ttt-p1-mark); }
 
 .ttt-player.offline .ttt-who {
   opacity: 0.5;
@@ -217,7 +261,10 @@
 }
 
 .p0 .ttt-dot { background: var(--ttt-p0); }
-.p1 .ttt-dot { background: var(--ttt-p1); }
+.p1 .ttt-dot {
+  background: var(--ttt-p1);
+  box-shadow: 0 0 0 1px #6a6a6a;
+}
 
 .ttt-sub {
   font-size: 0.8rem;
@@ -302,16 +349,53 @@
   min-height: 2.75rem;
 }
 
-/* ---------- Small screens: players above and below the board ---------- */
-@media (max-width: 860px) {
+/* Medium screens: narrower side columns, bigger board */
+@media (min-width: 992px) and (max-width: 1279px) {
+  :root {
+    --ttt-board: min(calc(100vh - 245px), 520px, calc(100vw - 590px));
+  }
+
+  .ttt-layout {
+    grid-template-columns: 220px auto 280px;
+    column-gap: 1rem;
+  }
+
+  .ttt-player {
+    padding: 0.85rem;
+  }
+}
+
+/* ---------- Small screens: opponent, board, own pieces, chat ---------- */
+@media (max-width: 991px) {
   :root {
     --ttt-board: min(calc(100vh - 380px), 420px, calc(100vw - 2rem));
   }
 
+  .ttt-page {
+    width: 100%;
+  }
+
   .ttt-layout {
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: 0.75rem;
+  }
+
+  .ttt-center {
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* No empty gap under the board when there is no rematch button */
+  .ttt-footer:not(:has(> :not([hidden]))) {
+    display: none;
+  }
+
+  .ttt-chat {
+    width: 100%;
+    max-width: 480px;
+    height: 420px;
   }
 
   .ttt-player {
@@ -351,6 +435,7 @@
 
   /* Opponent on top, own pieces below the board */
   .ttt-player { order: 0; }
-  .ttt-board-wrap { order: 1; }
+  .ttt-center { order: 1; }
   .ttt-player.mine { order: 2; }
+  .ttt-chat { order: 3; }
 }

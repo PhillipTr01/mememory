@@ -20,6 +20,7 @@ function createRoom(host) {
     game: null, // last / current game, see game/tictactoe.js
     forfeit: false, // the last game was won because the opponent left
     starter: null, // seat that started the last game
+    chat: [],
     emptySince: Date.now(),
   });
 }

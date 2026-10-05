@@ -114,10 +114,47 @@
   margin-bottom: 0.5rem;
 }
 
-.mp-create-buttons {
+.mp-create-row {
   display: flex;
-  flex-wrap: wrap;
+  align-items: stretch;
   gap: 0.5rem;
+}
+
+/* Game selection: MemeMory / Tic Tac Toe XL */
+.game-picker {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+}
+
+.game-picker button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--mm-muted);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.game-picker button:hover {
+  color: var(--mm-text);
+}
+
+.game-picker button.active {
+  background: var(--mm-surface-3);
+  color: var(--mm-text);
+}
+
+.game-picker button.active .bi {
+  color: var(--mm-accent);
 }
 
 .mp-create,
@@ -149,16 +186,14 @@
     max-width: none;
   }
 
-  .mp-create-buttons {
-    flex-wrap: nowrap;
+  .mp-create-row {
+    flex-direction: column;
   }
 
-  .mp-create .mm-btn {
+  .game-picker button {
     flex: 1 1 0;
+    justify-content: center;
     min-width: 0;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-    font-size: 1rem;
   }
 }
 
