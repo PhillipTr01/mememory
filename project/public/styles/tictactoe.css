@@ -13,11 +13,11 @@
   --ttt-board: min(calc(100vh - 245px), 520px, calc(100vw - 690px));
 }
 
-/* Violet accent on this page (classic MemeMory blue, speed round orange) */
+/* Green accent on this page (classic MemeMory blue, speed round orange) */
 body.ttt-theme {
-  --mm-accent: #8b5cf6;
-  --mm-accent-rgb: 139, 92, 246;
-  --mm-accent-hover: #7a4ae6;
+  --mm-accent: #3f9d6b;
+  --mm-accent-rgb: 63, 157, 107;
+  --mm-accent-hover: #35895c;
   --mm-gradient: var(--mm-accent);
   --mm-on-accent: #fff;
 }

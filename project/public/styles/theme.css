@@ -16,8 +16,8 @@
   --mm-success: #7fae6e;
   --mm-warning: #d4a64a;
   --mm-danger: #e0675a;
-  --mm-info: #67d4e8; /* chat info messages */
-  --mm-info-rgb: 103, 212, 232;
+  --mm-info: #7fa9b3; /* chat info messages: muted teal */
+  --mm-info-rgb: 127, 169, 179;
   --mm-gradient: var(--mm-accent);
   --mm-radius: 8px;
   --mm-shadow: none;
@@ -770,6 +770,18 @@ html.flip-scroll {
   font-size: 1.05rem;
   color: var(--mm-text) !important;
   text-decoration: none;
+}
+
+/* Neutral, but light so it stands out in the dark header */
+.mm-btn.play-button {
+  background: #e6e6e6;
+  border-color: #e6e6e6;
+  color: #161616 !important;
+}
+
+.mm-btn.play-button:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: #ffffff;
 }
 
 .play-button .bi {
