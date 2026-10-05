@@ -379,7 +379,8 @@ module.exports = function (io) {
       safe("rematch", async () => {
         const room = rooms.get(socket.gameID, "multiplayer");
         const player = room != null ? findPlayer(room, username) : null;
-        if (player == null || player.socketId !== socket.id) return;
+        // Only the host decides about a rematch
+        if (player == null || player.socketId !== socket.id || room.host !== username) return;
         try {
           await rematch(socket.gameID, room, username);
         } catch (error) {
@@ -423,18 +424,24 @@ module.exports = function (io) {
     // Not this socket's seat (e.g. replaced by another tab)
     if (player == null || player.socketId !== socket.id || !player.connected) return;
 
-    // Surrendered players only watch, nothing to do for the game
-    if (!player.active) {
-      player.connected = false;
-      emitRoomState(gameID, room);
-      return;
-    }
-
     // After the game: gone, so not part of a rematch
     if (room.status === STATUS.FINISHED) {
       player.connected = false;
       player.disconnectedAt = Date.now();
       systemMessage(gameID, room, `${player.name} left the room.`, "leave");
+      // The host left: somebody who is still here can start the rematch
+      const next = room.players.find((p) => p.connected);
+      if (room.host === player.name && next != null) {
+        room.host = next.name;
+        systemMessage(gameID, room, `${room.host} is the new host.`, "host");
+      }
+      emitRoomState(gameID, room);
+      return;
+    }
+
+    // Surrendered players only watch, nothing to do for the game
+    if (!player.active) {
+      player.connected = false;
       emitRoomState(gameID, room);
       return;
     }

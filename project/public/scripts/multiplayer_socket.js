@@ -194,6 +194,8 @@ socket.on("roomState", (state) => {
   }
 
   document.getElementById("board").classList.toggle("locked", !isMyTurn(state));
+  // The host can change after the game (the old host left)
+  if (state.status == "finished") updateRematchButtons(state);
 });
 
 function getMyPlayer(state) {
@@ -683,15 +685,23 @@ socket.on("getWinner", (data) => {
     }
   });
 
-  // Rematch (only for players) or back to the lobby
-  var isPlayer = getMyPlayer(room) != null;
+  // Rematch (only the host) or back to the lobby
   document.getElementById("playButton").hidden = true;
-  document.getElementById("rematchButton").hidden = !isPlayer;
-  document.getElementById("resultRematchButton").hidden = !isPlayer;
   document.getElementById("lobbyButton").hidden = false;
+  updateRematchButtons(room);
 
   showResult(data.winners);
 });
+
+// Only the host can start a rematch, the other players see a note
+function updateRematchButtons(state) {
+  var finished = state != null && state.status == "finished";
+  var isHost = finished && state.host == me.username;
+  var isPlayer = finished && getMyPlayer(state) != null;
+  document.getElementById("rematchButton").hidden = !isHost;
+  document.getElementById("resultRematchButton").hidden = !isHost;
+  document.getElementById("rematchHint").hidden = !isPlayer || isHost;
+}
 
 function requestRematch() {
   document.getElementById("rematchButton").disabled = true;
@@ -709,6 +719,7 @@ socket.on("rematch", () => {
     closeCard(i, true);
     document.getElementById(`cardcount-${i}`).innerText = "";
   }
+  document.getElementById("rematchHint").hidden = true;
   ["rematchButton", "resultRematchButton", "lobbyButton"].forEach((id) => {
     var element = document.getElementById(id);
     element.hidden = true;

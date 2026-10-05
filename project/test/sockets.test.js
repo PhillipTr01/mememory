@@ -330,9 +330,14 @@ test("multiplayer: rematch after the game goes back to the waiting room", async 
   carol.emit("joinRoom", { gameID });
   await h.once(carol, "noGameFound");
 
+  // Only the host can start a rematch
+  bob.emit("rematch");
+  await h.wait(150);
+  assert.strictEqual(rooms.get(gameID, "multiplayer").status, "finished");
+
   const back = waitFor(alice, "roomState", (s) => s.status === "waiting");
   const reset = h.once(bob, "rematch");
-  bob.emit("rematch");
+  alice.emit("rematch");
   const state = await back;
   await reset;
   assert.deepStrictEqual(state.players.map((p) => [p.name, p.points, p.active, p.ready]).sort(), [
@@ -341,6 +346,26 @@ test("multiplayer: rematch after the game goes back to the waiting room", async 
   ]);
   assert.strictEqual(state.host, "alice");
   assert.notStrictEqual(rooms.get(gameID, "multiplayer").cardImages, oldImages, "new board");
+});
+
+test("multiplayer: the host leaves after the game, the next player can start the rematch", async () => {
+  const { gameID, alice, others } = await openRoom("bob");
+  const bob = others[0];
+  const started = waitFor(alice, "roomState", (s) => s.status === "playing");
+  alice.emit("startGame");
+  await started;
+  const finished = h.once(bob, "getWinner");
+  alice.emit("surrender");
+  await finished;
+
+  const newHost = waitFor(bob, "roomState", (s) => s.host === "bob");
+  alice.emit("leaveRoom");
+  await newHost;
+
+  const back = waitFor(bob, "roomState", (s) => s.status === "waiting");
+  bob.emit("rematch");
+  const state = await back;
+  assert.deepStrictEqual(state.players.map((p) => p.name), ["bob"], "only players who are still here");
 });
 
 test("multiplayer: chat is validated, rate limited and kept as history", async () => {
