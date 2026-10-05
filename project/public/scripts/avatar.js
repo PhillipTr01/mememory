@@ -10,8 +10,8 @@ var AVATAR_PARTS = {
   ],
   skin: ["#fbe3cc", "#f3d2b3", "#e8b98f", "#d9a577", "#c48a5a", "#a86f43", "#8a5a36", "#5e3b22"],
   hair: [
-    "none", "short", "buzz", "side", "undercut", "wavy", "long", "bob",
-    "curly", "afro", "bun", "ponytail", "pigtails", "mohawk",
+    "none", "buzz", "short", "crew", "quiff", "side", "undercut", "messy", "wavy",
+    "long", "bob", "curly", "afro", "bun", "ponytail", "pigtails", "mohawk",
   ],
   hairColor: [
     "#1f1b18", "#4a2f1d", "#8b5a2b", "#b07b3c", "#d9b36c", "#f0dca0",
@@ -120,59 +120,142 @@ function withLine(attributes, color, width) {
 
 /* ----- Hair ----- */
 
-// Behind the head (long hair, buns, ...)
+/*
+ * Hair has up to three parts, so it always sits right on the head:
+ * - back:  behind the head (long hair, buns, tails)
+ * - cap:   the hair on the skull - cut to the shape of the head (clip path),
+ *          only the hairline has to be drawn
+ * - top:   volume above the skull (covered by hats)
+ * plus a few darker strands for some texture.
+ */
+var HAIR = {
+  buzz: {
+    cap: "M10 0 H90 V42 L74 42 Q72 31 50 29 Q28 31 26 42 L10 42 Z",
+    capOpacity: 0.85,
+    strands: "M36 25 L37 28 M43 23 L44 26 M50 22 L50 25 M57 23 L56 26 M64 25 L63 28",
+  },
+  short: {
+    cap: "M10 0 H90 V47 L74 47 Q73 34 63 31 Q50 35 37 31 Q27 34 26 47 L10 47 Z",
+    top: "M27 36 Q26 19 36 16 Q41 12 48 14 Q54 11 60 14 Q68 14 71 21 Q75 27 73 36 Q66 24 50 24 Q34 24 27 36 Z",
+    strands: "M37 20 Q41 25 39 31 M47 17 Q51 24 48 31 M57 18 Q60 25 58 31 M66 23 Q67 27 66 32",
+  },
+  crew: {
+    cap: "M10 0 H90 V45 L74 45 Q72 32 50 30 Q28 32 26 45 L10 45 Z",
+    top: "M28 32 Q28 18 50 17 Q72 18 72 32 Q62 26 50 26 Q38 26 28 32 Z",
+    strands: "M40 21 L41 26 M50 19 L50 25 M60 21 L59 26",
+  },
+  quiff: {
+    cap: "M10 0 H90 V46 L74 46 Q72 33 60 31 Q48 33 40 31 Q28 33 26 46 L10 46 Z",
+    top: "M30 32 Q28 13 46 10 Q60 7 69 16 Q75 22 72 32 Q66 22 54 25 Q44 27 38 29 Q33 30 30 32 Z",
+    strands: "M40 14 Q48 18 52 27 M50 11 Q58 15 62 25 M60 12 Q66 17 68 25",
+  },
+  side: {
+    cap: "M10 0 H90 V46 L74 46 Q73 30 62 27 Q48 30 38 37 Q30 41 26 46 L10 46 Z",
+    top: "M26 41 Q23 18 48 16 Q72 15 74 34 Q66 23 56 25 Q42 29 26 41 Z",
+    strands: "M60 17 Q58 22 60 27 M46 19 Q40 26 34 34 M52 19 Q46 27 40 33",
+  },
+  undercut: {
+    cap: "M10 0 H90 V42 L74 42 Q72 32 50 30 Q28 32 26 42 L10 42 Z",
+    capOpacity: 0.4,
+    top: "M30 34 Q28 14 50 12 Q72 12 73 28 Q73 32 72 34 Q64 26 50 27 Q38 28 30 34 Z",
+    strands: "M40 16 Q48 19 52 25 M52 13 Q60 17 63 24",
+  },
+  messy: {
+    cap: "M10 0 H90 V47 L74 47 Q74 34 64 32 Q58 36 52 32 Q46 36 40 32 Q30 34 26 47 L10 47 Z",
+    top: "M26 36 Q22 26 28 22 Q26 14 36 15 Q40 8 48 12 Q54 6 60 12 Q68 9 70 17 Q78 19 74 28 Q76 32 73 36 Q66 26 50 26 Q34 26 26 36 Z",
+    strands: "M34 18 L38 26 M44 13 L46 24 M54 11 L52 23 M64 15 L60 25",
+  },
+  wavy: {
+    back: "M24 44 Q22 20 50 18 Q78 20 76 44 Q80 56 74 64 Q76 54 70 48 L30 48 Q24 54 26 64 Q20 56 24 44 Z",
+    cap: "M10 0 H90 V56 L73 56 Q73 34 64 32 Q58 28 52 33 Q46 28 40 33 Q30 32 27 56 L10 56 Z",
+    top: "M27 34 Q26 19 50 18 Q74 19 73 34 Q64 25 50 25 Q36 25 27 34 Z",
+    strands: "M40 22 Q44 27 41 33 M52 20 Q55 26 52 32 M63 23 Q65 28 63 33",
+  },
+  long: {
+    back: "M23 44 Q23 18 50 18 Q77 18 77 44 L79 86 L21 86 Z",
+    cap: "M10 0 H90 V66 L74 66 Q73 36 57 28 L50 26 L43 28 Q27 36 26 66 L10 66 Z",
+    strands: "M50 21 L50 27 M30 50 Q28 66 30 80 M70 50 Q72 66 70 80",
+  },
+  bob: {
+    back: "M23 46 Q23 18 50 18 Q77 18 77 46 L77 66 Q71 70 65 66 L35 66 Q29 70 23 66 Z",
+    cap: "M10 0 H90 V64 L73 64 L73 37 Q62 34 50 35 Q38 34 27 37 L27 64 L10 64 Z",
+    strands: "M36 22 L35 35 M44 21 L43 35 M52 21 L52 35 M60 22 L61 35",
+  },
+  curly: {
+    back: [[29, 30, 9], [39, 21, 9], [51, 18, 9], [62, 21, 9], [71, 30, 9], [25, 42, 8], [75, 42, 8]],
+    cap: "M10 0 H90 V44 L74 44 Q74 32 66 31 Q62 36 56 31 Q50 36 44 31 Q38 36 34 31 Q26 32 26 44 L10 44 Z",
+  },
+  afro: {
+    back: [[50, 36, 31]],
+    cap: "M10 0 H90 V46 L74 46 Q72 31 50 30 Q28 31 26 46 L10 46 Z",
+  },
+  bun: {
+    back: [[50, 14, 10]],
+    cap: "M10 0 H90 V42 L74 42 Q71 28 50 27 Q29 28 26 42 L10 42 Z",
+    strands: "M40 23 Q45 26 48 29 M60 23 Q55 26 52 29",
+  },
+  ponytail: {
+    back: "M68 30 Q87 34 83 57 Q81 67 74 71 Q78 55 70 43 Z",
+    cap: "M10 0 H90 V42 L74 42 Q71 28 50 27 Q29 28 26 42 L10 42 Z",
+    strands: "M38 24 Q50 21 66 25",
+  },
+  pigtails: {
+    back: [[21, 42, 9], [79, 42, 9]],
+    cap: "M10 0 H90 V44 L74 44 Q72 30 52 28 L50 27 L48 28 Q28 30 26 44 L10 44 Z",
+    strands: "M50 20 L50 27",
+    bands: true,
+  },
+  mohawk: {
+    cap: "M10 0 H90 V42 L74 42 Q72 32 50 30 Q28 32 26 42 L10 42 Z",
+    capOpacity: 0.3,
+    top: "M44 31 Q43 10 50 5 Q57 10 56 31 Z",
+    strands: "M48 10 L48 28 M52 10 L52 28",
+  },
+};
+
+var avatarClipId = 0;
+
+// Behind the head (long hair, buns, tails)
 function drawHairBack(svg, c) {
-  var color = c.hairColor;
-  switch (c.hair) {
-    case "long":
-      svgAdd(svg, "path", { d: "M24 44 Q24 18 50 18 Q76 18 76 44 L78 84 L22 84 Z", fill: color });
-      break;
-    case "bob":
-      svgAdd(svg, "path", { d: "M24 46 Q24 18 50 18 Q76 18 76 46 L76 66 Q70 70 64 66 L36 66 Q30 70 24 66 Z", fill: color });
-      break;
-    case "afro":
-      svgAdd(svg, "circle", { cx: 50, cy: 36, r: 31, fill: color });
-      break;
-    case "curly":
-      [[30, 30], [40, 22], [52, 19], [63, 23], [71, 32], [26, 42], [74, 43]].forEach(function (p) {
-        svgAdd(svg, "circle", { cx: p[0], cy: p[1], r: 9, fill: color });
-      });
-      break;
-    case "bun":
-      svgAdd(svg, "circle", { cx: 50, cy: 15, r: 10, fill: color });
-      break;
-    case "ponytail":
-      svgAdd(svg, "path", { d: "M68 30 Q86 34 82 56 Q80 66 74 70 Q78 54 70 42 Z", fill: color });
-      break;
-    case "pigtails":
-      svgAdd(svg, "circle", { cx: 22, cy: 42, r: 9, fill: color });
-      svgAdd(svg, "circle", { cx: 78, cy: 42, r: 9, fill: color });
-      break;
+  var hair = HAIR[c.hair];
+  if (hair == null || hair.back == null) return;
+  if (typeof hair.back == "string") {
+    svgAdd(svg, "path", { d: hair.back, fill: c.hairColor });
+  } else {
+    hair.back.forEach(function (circle) {
+      svgAdd(svg, "circle", { cx: circle[0], cy: circle[1], r: circle[2], fill: c.hairColor });
+    });
   }
 }
 
-// On top of the head
-function drawHairFront(svg, c) {
-  var color = c.hairColor;
-  var paths = {
-    short: "M27 42 Q26 20 50 20 Q74 20 73 42 Q66 30 50 30 Q34 30 27 42 Z",
-    buzz: "M28 38 Q29 21 50 21 Q71 21 72 38 Q62 27 50 27 Q38 27 28 38 Z",
-    side: "M26 44 Q24 20 50 19 Q76 19 74 38 Q60 26 30 44 Z",
-    undercut: "M30 32 Q34 16 54 17 Q74 18 74 34 Q64 24 46 30 Q36 33 30 32 Z",
-    wavy: "M27 42 Q25 20 50 19 Q75 20 73 42 Q70 34 64 34 Q60 28 54 33 Q48 27 42 33 Q37 29 32 35 Q29 36 27 42 Z",
-    long: "M27 44 Q26 20 50 20 Q74 20 73 44 Q70 30 58 28 Q50 34 40 29 Q30 32 27 44 Z",
-    bob: "M27 44 Q26 20 50 20 Q74 20 73 44 L73 36 L27 36 Z",
-    curly: "M28 36 Q32 24 42 26 Q46 20 54 24 Q62 21 66 28 Q73 30 72 38 Q62 31 50 31 Q38 31 28 36 Z",
-    afro: "M27 40 Q30 26 50 26 Q70 26 73 40 Q62 32 50 32 Q38 32 27 40 Z",
-    bun: "M27 40 Q27 22 50 22 Q73 22 73 40 Q64 30 50 30 Q36 30 27 40 Z",
-    ponytail: "M27 40 Q27 21 50 21 Q73 21 73 40 Q64 30 50 30 Q36 30 27 40 Z",
-    pigtails: "M27 40 Q27 21 50 21 Q73 21 73 40 Q60 26 50 33 Q40 26 27 40 Z",
-  };
-  if (paths[c.hair]) svgAdd(svg, "path", { d: paths[c.hair], fill: color });
-  if (c.hair == "mohawk") svgAdd(svg, "path", { d: "M44 30 Q44 8 50 6 Q56 8 56 30 Z", fill: color });
-  if (c.hair == "pigtails") {
-    svgAdd(svg, "circle", { cx: 27, cy: 38, r: 2.5, fill: "#e0675a" });
-    svgAdd(svg, "circle", { cx: 73, cy: 38, r: 2.5, fill: "#e0675a" });
+// On the head; with a hat only the hair below the hat shows
+function drawHairFront(svg, c, hat) {
+  var hair = HAIR[c.hair];
+  if (hair == null) return;
+  var dark = shade(c.hairColor, 28);
+
+  // Cut to the head (a bit bigger than the face, so it covers the edge)
+  var id = "mm-hair-" + ++avatarClipId;
+  var defs = svgElement("defs");
+  var clip = svgElement("clipPath", { id: id });
+  clip.appendChild(svgElement("ellipse", { cx: 50, cy: 46, rx: 24.5, ry: 26.5 }));
+  defs.appendChild(clip);
+  svg.appendChild(defs);
+
+  var group = svgElement("g", { "clip-path": "url(#" + id + ")" });
+  group.appendChild(svgElement("path", { d: hair.cap, fill: c.hairColor, opacity: hair.capOpacity || 1 }));
+  if (hair.strands && !hat) {
+    group.appendChild(svgElement("path", withLine({ d: hair.strands }, dark, 1.2)));
+  }
+  svg.appendChild(group);
+
+  if (hair.top && !hat) {
+    svgAdd(svg, "path", { d: hair.top, fill: c.hairColor });
+    if (hair.strands) svgAdd(svg, "path", withLine({ d: hair.strands }, dark, 1.2));
+  }
+  if (hair.bands) {
+    svgAdd(svg, "circle", { cx: 26, cy: 39, r: 2.5, fill: "#e0675a" });
+    svgAdd(svg, "circle", { cx: 74, cy: 39, r: 2.5, fill: "#e0675a" });
   }
 }
 
@@ -444,7 +527,7 @@ function drawAvatar(config) {
   svgAdd(svg, "circle", { cx: 36, cy: 54, r: 3.5, fill: "rgba(224,103,90,0.22)" });
   svgAdd(svg, "circle", { cx: 64, cy: 54, r: 3.5, fill: "rgba(224,103,90,0.22)" });
   drawBeard(svg, c);
-  if (HATS.indexOf(c.accessory) < 0 || c.hair == "long" || c.hair == "bob") drawHairFront(svg, c);
+  drawHairFront(svg, c, HATS.indexOf(c.accessory) >= 0);
   drawEyes(svg, c);
   drawMouth(svg, c);
   drawMustache(svg, c);
