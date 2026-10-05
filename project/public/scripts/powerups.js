@@ -52,9 +52,10 @@ function renderPowerups(state) {
     var info = powerupInfo(id);
     var button = document.createElement("button");
     button.type = "button";
-    button.className = "powerup-slot" + (targeting && targeting.id == id ? " active" : "");
+    button.className =
+      "powerup-slot rarity-" + info.rarity + (targeting && targeting.id == id ? " active" : "");
     button.disabled = !canUsePowerup(state, id);
-    button.title = info.name + " - " + info.description;
+    button.title = info.name + " (" + info.rarity + ") - " + info.description;
     // Same emoji as in the chat
     var icon = document.createElement("span");
     icon.className = "powerup-icon";
@@ -147,6 +148,51 @@ function cancelTargeting() {
 document.addEventListener("keydown", (event) => {
   if (event.key == "Escape" && targeting) cancelTargeting();
 });
+
+/* ---------- Start animation: two reels with the start power-ups ---------- */
+
+function playPowerupReels(startPowerups) {
+  // "Who starts?" is done, the power-up reels take its place
+  document.getElementById("startWho").hidden = true;
+  document.getElementById("startPowerups").hidden = false;
+  startPowerups.forEach((id, index) => {
+    var track = document.getElementById("powerReel" + index);
+    var reel = track.parentElement;
+    var itemHeight = parseFloat(getComputedStyle(reel).getPropertyValue("--item")) || 56;
+
+    // Random power-ups, the chosen one second to last (under the marker)
+    var ids = Object.keys(powerupDefs);
+    var items = [];
+    for (var i = 0; i < 16; i++) items.push(ids[Math.floor(Math.random() * ids.length)]);
+    items.push(id, ids[Math.floor(Math.random() * ids.length)]);
+
+    track.replaceChildren();
+    items.forEach((item) => {
+      var info = powerupInfo(item);
+      var row = document.createElement("div");
+      row.className = "reel-item reel-power rarity-" + info.rarity;
+      var emoji = document.createElement("span");
+      emoji.innerText = info.emoji;
+      var name = document.createElement("span");
+      name.innerText = info.name;
+      row.append(emoji, name);
+      track.appendChild(row);
+    });
+
+    var target = items.length - 2;
+    // The second reel stops a bit later
+    var spin = 1500 + index * 700;
+    track.style.transition = "none";
+    track.style.transform = "translateY(0)";
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        track.style.transition = `transform ${spin}ms cubic-bezier(0.12, 0.75, 0.18, 1)`;
+        track.style.transform = `translateY(${-(target - 1) * itemHeight}px)`;
+      }),
+    );
+    setTimeout(() => track.children[target].classList.add("chosen"), spin);
+  });
+}
 
 /* ---------- Effects ---------- */
 

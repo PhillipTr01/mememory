@@ -6,7 +6,7 @@ const config = require("../game/config");
 const powerups = require("../game/powerups");
 const { CARD_COUNT, createBoard } = require("../game/board");
 
-Object.assign(config, { START_ANIMATION: 100, TICK: 50 });
+Object.assign(config, { START_ANIMATION: 100, POWERUPS_START_ANIMATION: 100, TICK: 50 });
 
 /* ---------- Pure logic ---------- */
 
@@ -15,6 +15,20 @@ test("powerups: everybody starts with two power-ups from different categories", 
     const [a, b] = powerups.startPowerups();
     assert.notStrictEqual(powerups.POWERUPS[a].category, powerups.POWERUPS[b].category);
   }
+});
+
+test("powerups: strong power-ups are rarer, but every power-up comes", () => {
+  const counts = {};
+  for (let i = 0; i < 30000; i++) {
+    const id = powerups.randomPowerup();
+    counts[id] = (counts[id] || 0) + 1;
+  }
+  for (const id of powerups.IDS) assert.ok(counts[id] > 500, `${id} comes regularly`);
+  const share = (rarity) =>
+    powerups.IDS.filter((id) => powerups.POWERUPS[id].rarity === rarity).reduce((sum, id) => sum + counts[id], 0) /
+    powerups.IDS.filter((id) => powerups.POWERUPS[id].rarity === rarity).length;
+  assert.ok(share("common") > share("uncommon"));
+  assert.ok(share("uncommon") > share("rare"));
 });
 
 test("powerups: the area is the card and its neighbours on the 11 x 6 board", () => {
@@ -173,7 +187,7 @@ test("powerups game: only on the own turn, once per turn, and it leaves the hand
   current.emit("usePowerup", { id: "gamble" });
   const state = await used;
   assert.deepStrictEqual(state.players.find((p) => p.name === currentName).powerups, ["shield"]);
-  assert.ok([0, 2].includes(state.players.find((p) => p.name === currentName).points));
+  assert.ok([-1, 2].includes(state.players.find((p) => p.name === currentName).points));
 
   // Only one per turn
   current.emit("usePowerup", { id: "shield" });

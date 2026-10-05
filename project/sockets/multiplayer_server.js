@@ -278,12 +278,19 @@ module.exports = function (io) {
         room.status = STATUS.STARTING;
         room.turn = Math.floor(Math.random() * room.players.length);
         rooms.touch(room);
-        const animation = room.mode === "speed" ? config.SPEED_START_ANIMATION : config.START_ANIMATION;
+        const animation =
+          room.mode === "speed"
+            ? config.SPEED_START_ANIMATION
+            : room.mode === "powerups"
+              ? config.POWERUPS_START_ANIMATION
+              : config.START_ANIMATION;
 
         multiPlayer.to(gameID).emit("gameStarting", {
           players: room.players.map((player) => player.name),
           starter: room.turn,
           duration: animation,
+          // Power-up mode: the reels show which power-ups everybody gets
+          powerups: room.mode === "powerups" ? room.players[0].powerups : null,
         });
         emitRoomState(gameID, room);
 

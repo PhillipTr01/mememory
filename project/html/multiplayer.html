@@ -161,6 +161,11 @@
                     <div class="container-xxl p-0 m-0 mx-auto">
                         <div class="memory-grid" id="memoryTable"></div>
                     </div>
+                    <!--- Power-up mode: the own hand, under the board --->
+                    <div id="powerupBar" class="powerup-bar" hidden>
+                        <div class="powerup-head">Your power-ups</div>
+                        <div id="powerupSlots" class="powerup-slots"></div>
+                    </div>
                 </div>
             </div>
 
@@ -172,11 +177,6 @@
                     </div>
                     <!--- Scoreboard, filled by multiplayer_socket.js --->
                     <div id="playerList" class="player-list"></div>
-                    <!--- Power-up mode: the own hand --->
-                    <div id="powerupBar" class="powerup-bar" hidden>
-                        <div class="powerup-head">Your power-ups</div>
-                        <div id="powerupSlots" class="powerup-slots"></div>
-                    </div>
                     <div id="spectatorInfo" class="spectator-info mm-muted" hidden></div>
                     <div class="side-actions">
                         <button type="button" id="playButton" class="mm-btn mm-btn-primary w-100" onclick="emitEndTurn();" disabled hidden>
@@ -233,12 +233,28 @@
     <!--- "Who starts?" animation --->
     <div id="startOverlay" class="overlay-screen" hidden>
         <div class="start-box">
-            <h2 class="start-title">Who starts?</h2>
-            <div class="reel">
-                <div class="reel-marker"></div>
-                <div id="reelTrack" class="reel-track"></div>
+            <div id="startWho">
+                <h2 class="start-title">Who starts?</h2>
+                <div class="reel">
+                    <div class="reel-marker"></div>
+                    <div id="reelTrack" class="reel-track"></div>
+                </div>
+                <p id="startResult" class="start-result"></p>
             </div>
-            <p id="startResult" class="start-result"></p>
+            <!--- Power-up mode: after "Who starts?", two reels for the start power-ups --->
+            <div id="startPowerups" class="start-powerups" hidden>
+                <h2 class="start-title">Start power-ups</h2>
+                <div class="powerup-reels">
+                    <div class="reel reel-small">
+                        <div class="reel-marker"></div>
+                        <div id="powerReel0" class="reel-track"></div>
+                    </div>
+                    <div class="reel reel-small">
+                        <div class="reel-marker"></div>
+                        <div id="powerReel1" class="reel-track"></div>
+                    </div>
+                </div>
+            </div>
         </div>
         <div id="confetti" class="confetti" hidden></div>
     </div>

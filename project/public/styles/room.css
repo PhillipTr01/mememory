@@ -1665,3 +1665,132 @@
   50% { transform: translate(3px, -2px) rotate(2deg); }
   75% { transform: translate(-2px, -1px) rotate(-1deg); }
 }
+
+/* Rarity: uncommon blue, rare gold */
+.powerup-slot.rarity-uncommon:not(:disabled) {
+  border-color: rgba(96, 165, 250, 0.45);
+}
+
+.powerup-slot.rarity-rare:not(:disabled) {
+  border-color: rgba(212, 166, 74, 0.6);
+}
+
+/* Start animation: two small reels for the start power-ups */
+.start-subtitle {
+  margin: 0.5rem 0 0.6rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--mm-muted);
+}
+
+.powerup-reels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.reel.reel-small {
+  --item: 52px;
+}
+
+.reel-item.reel-power {
+  gap: 0.45rem;
+  font-size: 0.95rem;
+}
+
+.reel-item.reel-power span:first-child {
+  font-size: 1.3rem;
+}
+
+.reel-item.reel-power.rarity-rare.chosen {
+  color: var(--mm-warning);
+}
+
+/* ---------- The chat stays usable with many players and power-ups ---------- */
+@media (min-width: 992px) {
+  /* The player card may shrink, its list scrolls instead of pushing the chat away */
+  .side-card {
+    flex: 0 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Only the list shrinks (and scrolls), the rest of the card keeps its size */
+  .side-card > * {
+    flex-shrink: 0;
+  }
+
+  .side-card .player-list {
+    flex: 0 1 auto;
+    min-height: 6.5rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--mm-surface-3) transparent;
+  }
+
+  /* The chat takes the rest of the column, but never less than 220px */
+  .chat-card {
+    flex: 1 1 0;
+    min-height: 220px;
+  }
+}
+
+/* Compact square power-up slots */
+.powerup-slots {
+  grid-template-columns: repeat(3, 60px);
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.powerup-icon {
+  font-size: 1.2rem;
+}
+
+.powerup-name {
+  font-size: 0.6rem;
+}
+
+.powerup-bar {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+/* ---------- Power-up bar under the board ---------- */
+.powerup-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  margin-top: 0.75rem;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.powerup-head {
+  margin: 0;
+}
+
+/* The board leaves room for the bar */
+body.mode-powerups .memory-grid {
+  width: min(100%, calc((100vh - 140px - 80px) * 11 / 6));
+}
+
+/* Power-up icons in the line under the player's name */
+.player-sub.with-powers {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.player-sub.with-powers .player-powers {
+  margin-top: 0;
+}
+
+.player-sub.with-powers .power-icon,
+.player-sub.with-powers .power-effect {
+  width: 1.2rem;
+  height: 1.2rem;
+  font-size: 0.7rem;
+}

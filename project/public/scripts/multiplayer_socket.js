@@ -200,6 +200,8 @@ socket.on("roomState", (state) => {
 
   // Speed round: yellow / orange accent color for the whole room
   document.body.classList.toggle("mode-speed", state.mode == "speed");
+  // Power-up mode: room for the power-up bar under the board
+  document.body.classList.toggle("mode-powerups", state.mode == "powerups");
 
   renderPlayerList(state, previous);
   renderWaitingRoom(state);
@@ -307,8 +309,12 @@ function renderPlayerList(state, previous) {
           ? "is playing"
           : "";
     info.append(name, sub);
-    // Power-up mode: power-ups in the hand and running effects
-    if (state.mode == "powerups" && state.status != "waiting") info.appendChild(createPowerupIcons(player));
+    // Power-up mode: power-ups in the hand and running effects, in the line
+    // under the name (hidden during the start animation, the reels show them)
+    if (state.mode == "powerups" && state.status != "waiting" && state.status != "starting") {
+      sub.classList.add("with-powers");
+      sub.appendChild(createPowerupIcons(player));
+    }
 
     // Speed round: time left for the player whose turn it is
     if (state.mode == "speed" && state.status == "playing" && state.turn == index) {
@@ -528,10 +534,10 @@ function createKickButton(name, className) {
 /* ---------- "Who starts?" animation ---------- */
 
 socket.on("gameStarting", (data) => {
-  playStartAnimation(data.players, data.starter, data.duration);
+  playStartAnimation(data.players, data.starter, data.duration, data.powerups);
 });
 
-function playStartAnimation(players, starter, duration) {
+function playStartAnimation(players, starter, duration, startPowerups) {
   var overlay = document.getElementById("startOverlay");
   var track = document.getElementById("reelTrack");
   var result = document.getElementById("startResult");
@@ -554,7 +560,12 @@ function playStartAnimation(players, starter, duration) {
   });
 
   var target = names.length - 2; // the starter
-  var spin = Math.max(1200, duration - 1300);
+  // Power-up mode: the player reel is faster, the power-up reels follow
+  var spin = startPowerups ? 2200 : Math.max(1200, duration - 1300);
+  document.getElementById("startPowerups").hidden = true;
+  document.getElementById("startWho").hidden = false;
+  // Power-up mode: after the result, the power-up reels replace "Who starts?"
+  if (startPowerups) setTimeout(() => playPowerupReels(startPowerups), spin + 1300);
 
   result.classList.remove("show");
   result.innerText = "";

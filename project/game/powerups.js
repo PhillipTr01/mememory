@@ -13,6 +13,7 @@ const UNLUCKY_TURNS = 5; // turns in a row without a pair -> bonus power-up
 const START_POWERUPS = 2;
 
 /*
+ * rarity: how often it comes (by impact), see RARITY
  * emoji: shown in the game and in chat messages
  * target: what the player has to choose before it is used
  *   null    - nothing, used right away
@@ -21,40 +22,52 @@ const START_POWERUPS = 2;
  */
 const POWERUPS = {
   // Information
-  map: { category: "info", target: null, emoji: "🗺️", name: "Map", description: "Shows you which cards were never opened." },
-  peek: { category: "info", target: "card", emoji: "🔍", name: "Peek", description: "Look at one closed card - only you see it." },
-  spotlight: { category: "info", target: "card", emoji: "🔦", name: "Spotlight", description: "Look at a card and its neighbours - only you see them." },
+  map: { category: "info", rarity: "common", target: null, emoji: "🗺️", name: "Map", description: "Shows you which cards were never opened." },
+  peek: { category: "info", rarity: "common", target: "card", emoji: "🔍", name: "Peek", description: "Look at one closed card - only you see it." },
+  spotlight: { category: "info", rarity: "rare", target: "card", emoji: "🔦", name: "Spotlight", description: "Look at a card and its neighbours - only you see them." },
   // Tempo
-  extraTurn: { category: "tempo", target: null, emoji: "➕", name: "Extra turn", description: "After your next wrong pair you keep playing." },
-  secondChance: { category: "tempo", target: null, emoji: "🔁", name: "Second chance", description: "If your second card is wrong, it closes and you pick another one." },
+  extraTurn: { category: "tempo", rarity: "rare", target: null, emoji: "➕", name: "Extra turn", description: "After your next wrong pair you keep playing." },
+  secondChance: { category: "tempo", rarity: "uncommon", target: null, emoji: "🔁", name: "Second chance", description: "If your second card is wrong, it closes and you pick another one." },
   // Attack
-  shuffle: { category: "attack", target: null, emoji: "🔀", name: "Shuffle", description: "Shuffles all closed cards." },
-  fog: { category: "attack", target: null, emoji: "🌫️", name: "Fog", description: "The next player only sees blurred cards in their turn." },
-  skip: { category: "attack", target: null, emoji: "⏭️", name: "Skip", description: "The next player's turn is skipped." },
+  shuffle: { category: "attack", rarity: "rare", target: null, emoji: "🔀", name: "Shuffle", description: "Shuffles all closed cards." },
+  fog: { category: "attack", rarity: "uncommon", target: null, emoji: "🌫️", name: "Fog", description: "The next player only sees blurred cards in their turn." },
+  skip: { category: "attack", rarity: "rare", target: null, emoji: "⏭️", name: "Skip", description: "The next player's turn is skipped." },
   // Points
-  shield: { category: "points", target: null, emoji: "🛡️", name: "Shield", description: "Blocks the next Fog or Skip against you." },
-  combo: { category: "points", target: null, emoji: "🎯", name: "Combo", description: "This turn every further pair gives bonus points (+1, +2, ...)." },
-  gamble: { category: "points", target: null, emoji: "🎲", name: "Gamble", description: "50 / 50: +2 points or -1 point." },
+  shield: { category: "points", rarity: "common", target: null, emoji: "🛡️", name: "Shield", description: "Blocks the next Fog or Skip against you." },
+  combo: { category: "points", rarity: "uncommon", target: null, emoji: "🎯", name: "Combo", description: "This turn every further pair gives bonus points (+1, +2, ...)." },
+  gamble: { category: "points", rarity: "common", target: null, emoji: "🎲", name: "Gamble", description: "50 / 50: +2 points or -1 point." },
   // Board
-  swap: { category: "board", target: "cards", emoji: "🔄", name: "Swap", description: "Secretly swap two closed cards." },
-  rotate: { category: "board", target: null, emoji: "🌀", name: "Rotate", description: "Turns the whole board by 180 degrees." },
-  bomb: { category: "board", target: "card", emoji: "💣", name: "Bomb", description: "Shows a card and its neighbours to everybody for 2 seconds." },
+  swap: { category: "board", rarity: "uncommon", target: "cards", emoji: "🔄", name: "Swap", description: "Secretly swap two closed cards." },
+  rotate: { category: "board", rarity: "uncommon", target: null, emoji: "🌀", name: "Rotate", description: "Turns the whole board by 180 degrees." },
+  bomb: { category: "board", rarity: "common", target: "card", emoji: "💣", name: "Bomb", description: "Shows a card and its neighbours to everybody for 2 seconds." },
 };
 
 const IDS = Object.keys(POWERUPS);
 
-function pick(list) {
-  return list[Math.floor(Math.random() * list.length)];
+/*
+ * Weights by impact: strong power-ups come less often, but still regularly
+ * (common ~11%, uncommon ~6%, rare ~3.6% per draw each).
+ */
+const RARITY = { common: 12, uncommon: 7, rare: 4 };
+
+function weightedPick(list) {
+  const total = list.reduce((sum, id) => sum + RARITY[POWERUPS[id].rarity], 0);
+  let roll = Math.random() * total;
+  for (const id of list) {
+    roll -= RARITY[POWERUPS[id].rarity];
+    if (roll < 0) return id;
+  }
+  return list[list.length - 1];
 }
 
 function randomPowerup() {
-  return pick(IDS);
+  return weightedPick(IDS);
 }
 
 // Two power-ups from different categories (everybody starts with the same two)
 function startPowerups() {
   const first = randomPowerup();
-  const second = pick(IDS.filter((id) => POWERUPS[id].category !== POWERUPS[first].category));
+  const second = weightedPick(IDS.filter((id) => POWERUPS[id].category !== POWERUPS[first].category));
   return [first, second];
 }
 
@@ -135,6 +148,7 @@ function rotatePermutation() {
 module.exports = {
   POWERUPS,
   IDS,
+  RARITY,
   HAND_LIMIT,
   POWER_PAIRS,
   UNLUCKY_TURNS,

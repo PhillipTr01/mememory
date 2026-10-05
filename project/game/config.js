@@ -41,6 +41,9 @@ module.exports = {
   // Singleplayer: two wrong cards stay open this long, then the turn passes
   SINGLEPLAYER_MISS_DELAY: 1850,
 
+  // Power-up mode: "who starts" plus the start power-ups
+  POWERUPS_START_ANIMATION: 7000,
+
   // Speed round: shorter "who starts" animation
   SPEED_START_ANIMATION: 2600,
 };
