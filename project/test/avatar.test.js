@@ -3,7 +3,7 @@ const assert = require("node:assert");
 
 require("./helpers");
 const User = require("../models/User");
-const { AVATAR_PARTS, AVATAR_DEFAULT, cleanAvatar } = require("../public/scripts/avatar");
+const { AVATAR_PARTS, AVATAR_DEFAULT, AVATAR_LETTER, cleanAvatar, nameAvatar } = require("../public/scripts/avatar");
 const users = require("../controllers/user_controller");
 
 // Small in-memory users for this file
@@ -35,7 +35,17 @@ test("avatar: only known parts are kept, the rest becomes the default", () => {
   for (const key of Object.keys(AVATAR_PARTS)) assert.ok(AVATAR_PARTS[key].includes(AVATAR_DEFAULT[key]), key);
 });
 
-test("avatar: saving checks the input, null goes back to the letter", async () => {
+test("avatar: everybody has a random default avatar, always the same for a name", () => {
+  const alice = nameAvatar("alice");
+  assert.deepStrictEqual(nameAvatar("alice"), alice, "same name, same avatar");
+  assert.deepStrictEqual(cleanAvatar(alice), alice, "only valid parts");
+  // Different names look different (at least most of them)
+  const names = ["alice", "bob", "carol", "dave", "erin", "frank", "grace", "heidi"];
+  const looks = new Set(names.map((name) => JSON.stringify(nameAvatar(name))));
+  assert.strictEqual(looks.size, names.length);
+});
+
+test("avatar: saving checks the input, null goes back to the default, the letter can be chosen", async () => {
   const saved = await users.setAvatar("id_alice", { avatar: { hair: "bun", accessory: "scumbag", bg: "#000" } });
   assert.strictEqual(saved.hair, "bun");
   assert.strictEqual(saved.accessory, "scumbag");
@@ -48,14 +58,19 @@ test("avatar: saving checks the input, null goes back to the letter", async () =
 
   assert.strictEqual(await users.setAvatar("id_alice", { avatar: null }), null);
   assert.strictEqual(stored.get("id_alice").avatar, null);
+
+  // Only the letter, no drawing
+  assert.strictEqual(await users.setAvatar("id_alice", { avatar: AVATAR_LETTER }), AVATAR_LETTER);
+  assert.strictEqual((await users.getAvatars("alice")).alice, AVATAR_LETTER);
+  await users.setAvatar("id_alice", { avatar: null });
 });
 
 test("avatar: the player lists get the avatars of many users at once", async () => {
   const avatars = await users.getAvatars("bob,alice,carol,bob");
   assert.deepStrictEqual(Object.keys(avatars).sort(), ["alice", "bob", "carol"]);
   assert.strictEqual(avatars.bob.hair, "mohawk");
-  assert.strictEqual(avatars.alice, null);
-  assert.strictEqual(avatars.carol, null, "unknown users get the letter");
+  assert.strictEqual(avatars.alice, null, "no own avatar: the page draws the default one");
+  assert.strictEqual(avatars.carol, null);
   assert.deepStrictEqual(await users.getAvatars(undefined), {});
   assert.deepStrictEqual(await users.getAvatars(["a", "b"]), {});
 });

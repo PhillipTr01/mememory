@@ -84,17 +84,41 @@ function cleanAvatar(config) {
   return clean;
 }
 
-function randomAvatar() {
+// random: a function like Math.random (default)
+function randomAvatar(random) {
+  random = random || Math.random;
   var config = {};
   Object.keys(AVATAR_PARTS).forEach(function (key) {
     var options = AVATAR_PARTS[key];
-    config[key] = options[Math.floor(Math.random() * options.length)];
+    config[key] = options[Math.floor(random() * options.length)];
   });
   // Not everybody has a beard or extras
-  if (Math.random() < 0.6) config.beard = "none";
-  if (Math.random() < 0.4) config.accessory = "none";
+  if (random() < 0.6) config.beard = "none";
+  if (random() < 0.4) config.accessory = "none";
   return config;
 }
+
+/*
+ * The avatar of users who didn't make their own: random, but always the
+ * same for the same name (the name is the seed), so nothing has to be stored.
+ */
+function nameAvatar(name) {
+  var seed = 2166136261;
+  for (var i = 0; i < name.length; i++) {
+    seed = Math.imul(seed ^ name.charCodeAt(i), 16777619);
+  }
+  // mulberry32: small random number generator with a seed
+  var random = function () {
+    seed = (seed + 0x6d2b79f5) | 0;
+    var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  return randomAvatar(random);
+}
+
+// Stored value for "I want the letter, not a drawing"
+var AVATAR_LETTER = "letter";
 
 /* ---------- Drawing (only in the browser) ---------- */
 
@@ -679,5 +703,12 @@ function drawAvatar(config) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { AVATAR_PARTS: AVATAR_PARTS, AVATAR_DEFAULT: AVATAR_DEFAULT, AVATAR_COLORS: AVATAR_COLORS, cleanAvatar: cleanAvatar };
+  module.exports = {
+    AVATAR_PARTS: AVATAR_PARTS,
+    AVATAR_DEFAULT: AVATAR_DEFAULT,
+    AVATAR_COLORS: AVATAR_COLORS,
+    AVATAR_LETTER: AVATAR_LETTER,
+    cleanAvatar: cleanAvatar,
+    nameAvatar: nameAvatar,
+  };
 }
