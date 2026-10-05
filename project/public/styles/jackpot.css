@@ -213,6 +213,21 @@ body.jackpot-theme {
   font-variant-numeric: tabular-nums;
 }
 
+/* Secret coins: the balance pops */
+.jp-coins.jp-coins-pop {
+  animation: jp-pop 0.6s ease;
+}
+
+@keyframes jp-pop {
+  30% { transform: scale(1.25); color: var(--mm-accent); }
+  100% { transform: scale(1); }
+}
+
+.jp-coins {
+  display: inline-block;
+  transform-origin: left center;
+}
+
 .jp-chance {
   font-size: 0.85rem;
   color: var(--mm-muted);

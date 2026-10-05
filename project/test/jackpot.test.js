@@ -161,3 +161,31 @@ test("jackpot: chat works like in the other games", async () => {
   alice.emit("sendChatMessage", { message: "good luck" });
   assert.strictEqual((await message).name, "alice");
 });
+
+test("jackpot: the secret word gives coins every time (not too fast)", async () => {
+  h.setCoins("carol", 0);
+  const carol = client("carol");
+  await waitFor(carol, "coins", (data) => data.coins === 0);
+
+  // Wrong letters: nothing
+  carol.emit("typed", "money");
+  carol.emit("typed", 12345);
+  carol.emit("typed", "x".repeat(40) + config.JACKPOT_SECRET);
+  await h.wait(100);
+  assert.strictEqual(h.coinsOf("carol"), 0);
+
+  const got = h.once(carol, "secretCoins");
+  carol.emit("typed", "abc" + config.JACKPOT_SECRET);
+  assert.strictEqual(await got, config.JACKPOT_SECRET_COINS);
+  assert.strictEqual(h.coinsOf("carol"), 100);
+
+  // Right away again: too fast, after the cooldown: again +100
+  carol.emit("typed", config.JACKPOT_SECRET);
+  await h.wait(100);
+  assert.strictEqual(h.coinsOf("carol"), 100);
+  await h.wait(config.JACKPOT_SECRET_COOLDOWN);
+  const again = h.once(carol, "secretCoins");
+  carol.emit("typed", config.JACKPOT_SECRET);
+  await again;
+  assert.strictEqual(h.coinsOf("carol"), 200);
+});

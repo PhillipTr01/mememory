@@ -51,6 +51,28 @@ socket.on("coins", (data) => {
 });
 
 socket.on("bonusClaimed", (amount) => showError("+" + amount + " free coins - good luck!", true));
+
+/*
+ * Psst: the last letters typed on the page (not in a field) go to the server,
+ * the right word gives coins. Which word? Only the server knows.
+ */
+var typed = "";
+
+document.addEventListener("keydown", (event) => {
+  if (event.target.closest && event.target.closest("input, textarea")) return;
+  if (event.ctrlKey || event.metaKey || event.altKey || !/^[a-z]$/i.test(event.key)) return;
+  typed = (typed + event.key.toLowerCase()).slice(-32);
+  if (typed.length >= 4) socket.emit("typed", typed);
+});
+
+socket.on("secretCoins", (amount) => {
+  typed = "";
+  showError("🤫 +" + amount + " coins", true);
+  var coins = document.getElementById("jpCoins");
+  coins.classList.remove("jp-coins-pop");
+  void coins.offsetWidth; // restart the animation
+  coins.classList.add("jp-coins-pop");
+});
 socket.on("betError", (message) => showError(message));
 
 socket.on("jackpotState", (data) => {

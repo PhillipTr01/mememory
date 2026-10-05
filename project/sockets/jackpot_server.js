@@ -177,6 +177,25 @@ module.exports = function (io) {
       }),
     );
 
+    /*
+     * Secret code: the page sends the last letters typed on it, the server
+     * checks them (the word itself is not in the page's code).
+     */
+    socket.on(
+      "typed",
+      safe("typed", async (letters) => {
+        if (typeof letters !== "string" || letters.length > 32) return;
+        if (!letters.toLowerCase().endsWith(config.JACKPOT_SECRET)) return;
+        const now = Date.now();
+        if (now - (socket.data.secretAt || 0) < config.JACKPOT_SECRET_COOLDOWN) return;
+        socket.data.secretAt = now;
+        if (await coins.add(username, config.JACKPOT_SECRET_COINS)) {
+          socket.emit("secretCoins", config.JACKPOT_SECRET_COINS);
+          await sendCoins(username);
+        }
+      }),
+    );
+
     // Free coins once a day when (almost) broke
     socket.on(
       "claimBonus",

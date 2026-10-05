@@ -61,4 +61,9 @@ module.exports = {
   JACKPOT_PAUSE: 5000, // result is shown, then a new round starts
   JACKPOT_MAX_BET: 1000, // per player and round
   JACKPOT_HISTORY: 10,
+  // Secret word on the jackpot page (typed anywhere, not in a field): +100 coins
+  // every time. Only the server knows it, it can be changed with JACKPOT_SECRET.
+  JACKPOT_SECRET: (process.env.JACKPOT_SECRET || "moneyrain").toLowerCase(),
+  JACKPOT_SECRET_COINS: 100,
+  JACKPOT_SECRET_COOLDOWN: 1000, // ms between two uses (no flooding)
 };
