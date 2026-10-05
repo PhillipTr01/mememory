@@ -1493,3 +1493,189 @@
 .notice-actions .mm-btn {
   flex: 1 1 0;
 }
+
+/* ---------- Power-up mode ---------- */
+.mode-badge.powerups-badge {
+  background: rgba(var(--mm-accent-rgb), 0.14);
+  color: var(--mm-accent);
+}
+
+/* Own hand under the player list */
+.powerup-bar {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.powerup-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mm-muted);
+}
+
+.powerup-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--mm-text);
+  font-weight: 500;
+}
+
+.powerup-cancel {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--mm-muted);
+  font-size: 0.75rem;
+  text-decoration: underline;
+}
+
+.powerup-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.powerup-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-height: 3.6rem;
+  padding: 0.4rem 0.25rem;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.powerup-slot:hover:not(:disabled) {
+  background: var(--mm-surface-3);
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+}
+
+.powerup-slot:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.powerup-slot.active {
+  border-color: var(--mm-accent);
+}
+
+.powerup-slot.empty {
+  border-style: dashed;
+  background: none;
+}
+
+.powerup-emoji {
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.powerup-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* Icons in the player list */
+.player-powers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin-top: 0.2rem;
+}
+
+.power-icon,
+.power-effect {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 4px;
+  background: var(--mm-surface-3);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.power-effect {
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  box-shadow: inset 0 0 0 1px rgba(var(--mm-accent-rgb), 0.45);
+}
+
+/* Cards of a power-up pair: small badge once they are open */
+.card.flip.power-card .card-back::after {
+  content: "⚡";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  background: rgba(20, 20, 20, 0.8);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+/* Peek / Spotlight / Bomb: shown for a moment, with a ring */
+.card.peek .card-back {
+  box-shadow: 0 0 0 2px rgba(var(--mm-info-rgb), 0.8);
+}
+
+/* Map: cards nobody has opened yet */
+.card.fresh .card-front {
+  box-shadow: inset 0 0 0 2px rgba(var(--mm-info-rgb), 0.9);
+}
+
+/* Choosing cards for a power-up */
+.board.targeting .card:not(.flip) {
+  cursor: crosshair;
+}
+
+.board.targeting .card:not(.flip):hover .card-front {
+  box-shadow: inset 0 0 0 2px rgba(var(--mm-accent-rgb), 0.7);
+}
+
+.card.target-picked .card-front {
+  box-shadow: inset 0 0 0 3px var(--mm-accent);
+}
+
+/* Fog: blurred cards during the own turn */
+.board.fogged .card.flip .card-back > img {
+  filter: blur(9px);
+}
+
+/* Board changes */
+.memory-grid.rotating {
+  animation: board-rotate 0.6s ease;
+}
+
+.memory-grid.shuffling .card-size {
+  animation: board-shuffle 0.6s ease;
+}
+
+@keyframes board-rotate {
+  from { transform: rotate(-180deg) scale(0.9); }
+  to { transform: rotate(0deg) scale(1); }
+}
+
+@keyframes board-shuffle {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-3px, 2px) rotate(-2deg); }
+  50% { transform: translate(3px, -2px) rotate(2deg); }
+  75% { transform: translate(-2px, -1px) rotate(-1deg); }
+}

@@ -105,7 +105,12 @@ function createRoomRow(room) {
   var name = document.createElement("div");
   name.className = "fw-semibold";
   name.innerText = room.host + "'s room";
-  if (room.mode == "speed") {
+  if (room.mode == "powerups") {
+    var powers = document.createElement("span");
+    powers.className = "mode-badge powerups-badge ms-2";
+    powers.append(createIcon("bi-stars"), document.createTextNode(" Power-ups"));
+    name.appendChild(powers);
+  } else if (room.mode == "speed") {
     var speed = document.createElement("span");
     speed.className = "mode-badge ms-2";
     speed.append(

@@ -204,6 +204,7 @@ socket.on("roomState", (state) => {
   renderPlayerList(state, previous);
   renderWaitingRoom(state);
   renderTurn(state, previous);
+  renderPowerups(state);
 
   var waiting = state.status == "waiting";
   document.getElementById("waitingRoom").hidden = !waiting;
@@ -306,6 +307,8 @@ function renderPlayerList(state, previous) {
           ? "is playing"
           : "";
     info.append(name, sub);
+    // Power-up mode: power-ups in the hand and running effects
+    if (state.mode == "powerups" && state.status != "waiting") info.appendChild(createPowerupIcons(player));
 
     // Speed round: time left for the player whose turn it is
     if (state.mode == "speed" && state.status == "playing" && state.turn == index) {
@@ -362,10 +365,12 @@ function renderWaitingRoom(state) {
 
   // Mode badge for everybody
   var badge = document.getElementById("modeBadge");
-  badge.hidden = state.mode != "speed";
+  badge.hidden = state.mode == "classic";
+  badge.classList.toggle("powerups-badge", state.mode == "powerups");
   badge.replaceChildren(
-    createIcon("bi-lightning-charge-fill"),
-    document.createTextNode(` Speed round · ${state.turnTime / 1000}s`),
+    ...(state.mode == "powerups"
+      ? [createIcon("bi-stars"), document.createTextNode(" Power-ups")]
+      : [createIcon("bi-lightning-charge-fill"), document.createTextNode(` Speed round · ${state.turnTime / 1000}s`)]),
   );
 
   // Seats: players + free seats. Only redrawn when something about the seats
@@ -604,6 +609,8 @@ function startGame() {
 }
 
 function openCard(id) {
+  // Power-up mode: choosing a card for Peek, Swap, ...
+  if (handlePowerupTarget(id)) return;
   // Open cards are zoomed in right away, closed ones are turned by the server
   if (zoomCard(id)) return;
   socket.emit("openCard", id);
@@ -643,6 +650,9 @@ function showCard(data) {
   var card = document.getElementById("card-" + data.id);
   if (card == null) return;
   setCardImage(card, data.src);
+  // Opened for real (not only peeked); power-up pairs get a small badge
+  card.classList.remove("peek");
+  card.classList.toggle("power-card", data.power === true);
 
   // Highlighting a card - It gets bigger and gets a border
   card.classList.add("flip", "border", "border-3", "zoom-card-on-turn");

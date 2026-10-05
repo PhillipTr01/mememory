@@ -124,6 +124,7 @@
                             <div id="modePicker" class="segmented" role="group" aria-label="Game mode">
                                 <button type="button" data-mode="classic">Classic</button>
                                 <button type="button" data-mode="speed"><i class="bi bi-lightning-charge-fill"></i> Speed</button>
+                                <button type="button" data-mode="powerups"><i class="bi bi-stars"></i> Power-ups</button>
                             </div>
                         </div>
                         <!--- Time per turn, only for the speed round --->
@@ -171,6 +172,14 @@
                     </div>
                     <!--- Scoreboard, filled by multiplayer_socket.js --->
                     <div id="playerList" class="player-list"></div>
+                    <!--- Power-up mode: the own hand --->
+                    <div id="powerupBar" class="powerup-bar" hidden>
+                        <div class="powerup-head">
+                            <span>Your power-ups</span>
+                            <span id="powerupHint" class="powerup-hint"></span>
+                        </div>
+                        <div id="powerupSlots" class="powerup-slots"></div>
+                    </div>
                     <div id="spectatorInfo" class="spectator-info mm-muted" hidden></div>
                     <div class="side-actions">
                         <button type="button" id="playButton" class="mm-btn mm-btn-primary w-100" onclick="emitEndTurn();" disabled hidden>
@@ -281,6 +290,7 @@
     <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/play.js"></script>
     <script src="/static/scripts/multiplayer_socket.js"></script>
+    <script src="/static/scripts/powerups.js"></script>
     <script src="/static/scripts/chat.js"></script>
 </body>
 

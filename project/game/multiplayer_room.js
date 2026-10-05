@@ -66,6 +66,9 @@ function serialize(gameID, room) {
       room.turnEndsAt != null ? Math.min(room.turnTime, Math.max(0, room.turnEndsAt - Date.now())) : null,
     turnStartsIn: room.turnEndsAt != null ? Math.max(0, (room.turnStartsAt || 0) - Date.now()) : 0,
     pairsLeft: (CARD_COUNT - room.foundMatches.length) / 2,
+    turnPowerUsed: room.turnPowerUsed === true,
+    openedCount: room.openedCards.length,
+    checkingCards: room.checkingCards === true,
     spectators: [...new Set(room.spectators.values())],
     players: room.players.map((player) => ({
       name: player.name,
@@ -75,6 +78,12 @@ function serialize(gameID, room) {
       ready: player.ready === true,
       // Left the room / didn't come back (not surrendered)
       left: player.left === true,
+      // Power-up mode: hand and running effects
+      powerups: player.powerups || [],
+      shield: player.shield === true,
+      fog: player.fog === true,
+      skipNext: player.skipNext === true,
+      armed: player.armed ? Object.keys(player.armed).filter((key) => player.armed[key]) : [],
       // Lost the connection / closed the page: time left to come back (ms)
       awayLeft:
         player.connected || !player.active || player.disconnectedAt == null

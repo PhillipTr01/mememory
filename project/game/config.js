@@ -28,7 +28,7 @@ module.exports = {
   TICK: 1000,
 
   // Game modes the host can choose in the waiting room
-  MODES: ["classic", "speed"],
+  MODES: ["classic", "speed", "powerups"],
   // Speed round: default time per turn (ms), the choices for the host (seconds)
   // and the pause after two wrong cards before the turn passes
   SPEED_TURN_TIME: 10 * 1000,

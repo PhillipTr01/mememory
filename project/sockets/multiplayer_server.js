@@ -12,6 +12,7 @@ const {
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 const chat = require("../game/chat");
+const powerups = require("../game/powerups");
 
 module.exports = function (io) {
   const multiPlayer = io.of("/multiplayer");
@@ -147,10 +148,8 @@ module.exports = function (io) {
 
         socket.emit("joinedRoom", { username: username, spectator: socket.spectator });
         socket.emit("chatHistory", room.chat);
-        socket.emit("boardState", {
-          found: room.foundMatches.map((id) => ({ id: id, src: room.cardImages[id] })),
-          opened: room.openedCards.map((id) => ({ id: id, src: room.cardImages[id] })),
-        });
+        socket.emit("boardState", boardState(room));
+        socket.emit("powerupDefs", powerups.POWERUPS);
 
         if (player != null && rejoined) {
           systemMessage(gameID, room, `${username} is back.`, "reconnect");
@@ -275,6 +274,7 @@ module.exports = function (io) {
         // Players that are still reconnecting can't take part.
         // The order of the players is shuffled for every game.
         room.players = shuffle(ready);
+        setupPowerups(room);
         room.status = STATUS.STARTING;
         room.turn = Math.floor(Math.random() * room.players.length);
         rooms.touch(room);
@@ -320,14 +320,12 @@ module.exports = function (io) {
           !room.openedCards.includes(id) &&
           !room.foundMatches.includes(id)
         ) {
+          if (room.closingCard === id) return;
           if (room.openedCards.length < 2 && isPlayersTurn(room, username)) {
             rooms.touch(room);
             room.openedCards.push(id);
             room.cardCounter[id]++;
-            multiPlayer.to(socket.gameID).emit("turnCard", {
-              id: id,
-              src: room.cardImages[id],
-            });
+            multiPlayer.to(socket.gameID).emit("turnCard", cardData(room, id));
 
             checkGame(socket, room);
           }
@@ -354,9 +352,27 @@ module.exports = function (io) {
         if (room != null && room.checkingCards && room.openedCards.length == 2 && isPlayersTurn(room, username)) {
           rooms.touch(room);
           socket.emit("disableEndTurn");
-          nextTurn(socket.gameID, room);
+          const player = room.players[room.turn];
+          if (room.mode === "powerups" && player.armed.extraTurn) {
+            // Extra turn: the cards close, but the player continues
+            player.armed.extraTurn = false;
+            closeOpenCards(socket.gameID, room);
+            systemMessage(socket.gameID, room, `${player.name} uses the extra turn.`, "info");
+          } else {
+            nextTurn(socket.gameID, room);
+          }
           emitRoomState(socket.gameID, room);
         }
+      }),
+    );
+
+    // Power-up mode: use a power-up from the own hand
+    socket.on(
+      "usePowerup",
+      safe("usePowerup", (data) => {
+        const room = rooms.get(socket.gameID, "multiplayer");
+        if (room == null || data == null) return;
+        usePowerup(socket, room, data);
       }),
     );
 
@@ -537,6 +553,202 @@ module.exports = function (io) {
   const ticker = setInterval(() => tick().catch(() => {}), config.TICK);
   ticker.unref();
 
+  /* ---------- Power-ups (mode "powerups") ---------- */
+
+  // A card as the clients get it (power: part of a power-up pair)
+  function cardData(room, id) {
+    const data = { id: id, src: room.cardImages[id] };
+    if (room.mode === "powerups" && room.powerCards.includes(id)) data.power = true;
+    return data;
+  }
+
+  // Found and open cards, e.g. for (re)joining players or after the board changed
+  function boardState(room) {
+    return {
+      found: room.foundMatches.map((id) => cardData(room, id)),
+      opened: room.openedCards.map((id) => cardData(room, id)),
+    };
+  }
+
+  function setupPowerups(room) {
+    room.powerCards = [];
+    room.turnPowerUsed = false;
+    room.turnPairs = 0;
+    room.closingCard = null;
+    const start = room.mode === "powerups" ? powerups.startPowerups() : [];
+    for (const player of room.players) {
+      player.powerups = start.slice();
+      player.unlucky = 0;
+      player.shield = false;
+      player.fog = false;
+      player.skipNext = false;
+      player.armed = { extraTurn: false, secondChance: false, combo: false };
+    }
+    if (room.mode === "powerups") {
+      room.powerCards = powerups.choosePowerCards(room.cardPairs);
+    }
+  }
+
+  function powerupLabel(id) {
+    const info = powerups.POWERUPS[id];
+    return info ? `${info.emoji} ${info.name}` : id;
+  }
+
+  // A random power-up for the player, if there is a free slot
+  function grantPowerup(gameID, room, player, reason) {
+    if (player.powerups.length >= powerups.HAND_LIMIT) {
+      systemMessage(gameID, room, `${player.name} ${reason}, but has no free slot.`, "info");
+      return;
+    }
+    const id = powerups.randomPowerup();
+    player.powerups.push(id);
+    systemMessage(gameID, room, `${player.name} ${reason}: ${powerupLabel(id)}`, "start");
+  }
+
+  // The turn of the current player ends: unlucky bonus, effects run out
+  function endPowerupTurn(gameID, room) {
+    const player = room.players[room.turn];
+    if (player != null && room.status === STATUS.PLAYING) {
+      if (room.turnPairs === 0) {
+        player.unlucky++;
+        if (player.unlucky >= powerups.UNLUCKY_TURNS) {
+          player.unlucky = 0;
+          grantPowerup(gameID, room, player, "had bad luck and gets");
+        }
+      } else {
+        player.unlucky = 0;
+      }
+      player.fog = false;
+      player.armed = { extraTurn: false, secondChance: false, combo: false };
+    }
+    room.turnPowerUsed = false;
+    room.turnPairs = 0;
+  }
+
+  // The next player who will play (for Fog and Skip)
+  function nextOpponent(room) {
+    const count = room.players.length;
+    for (let step = 1; step < count; step++) {
+      const player = room.players[(room.turn + step) % count];
+      if (player.active) return player;
+    }
+    return null;
+  }
+
+  function isClosed(room, id) {
+    return isValidCardId(id) && !room.foundMatches.includes(id) && !room.openedCards.includes(id) && room.closingCard !== id;
+  }
+
+  // Shows cards for a moment: only to one socket, or to everybody in the room
+  function reveal(target, ids, room, duration, type) {
+    target.emit("powerupReveal", { type: type, duration: duration, cards: ids.map((id) => cardData(room, id)) });
+  }
+
+  // The board changed (shuffle, rotate): everybody gets the new state
+  function boardChanged(gameID, room, type) {
+    multiPlayer.to(gameID).emit("boardChanged", { type: type });
+    multiPlayer.to(gameID).emit("boardState", boardState(room));
+  }
+
+  function usePowerup(socket, room, data) {
+    const username = socket.data.username;
+    const gameID = socket.gameID;
+    const id = data.id;
+    const info = powerups.POWERUPS[id];
+    const player = findPlayer(room, username);
+
+    if (
+      room.mode !== "powerups" ||
+      info == null ||
+      player == null ||
+      player.socketId !== socket.id ||
+      !isPlayersTurn(room, username) ||
+      room.turnPowerUsed ||
+      room.checkingCards ||
+      !player.powerups.includes(id)
+    ) {
+      return;
+    }
+
+    // Cards to choose (validated here)
+    const targets = Array.isArray(data.targets) ? data.targets : [];
+    const needed = info.target === "card" ? 1 : info.target === "cards" ? 2 : 0;
+    if (targets.length !== needed || !targets.every((card) => isClosed(room, card))) return;
+    if (needed === 2 && targets[0] === targets[1]) return;
+
+    // Moving cards only works when no card is open, second chance before the second card
+    if (["shuffle", "swap", "rotate"].includes(id) && room.openedCards.length > 0) return;
+    if (id === "secondChance" && (room.openedCards.length > 1 || player.armed.secondChance)) return;
+
+    player.powerups.splice(player.powerups.indexOf(id), 1);
+    room.turnPowerUsed = true;
+    rooms.touch(room);
+    systemMessage(gameID, room, `${username} used ${powerupLabel(id)}.`, "info");
+
+    switch (id) {
+      case "map": {
+        // Cards nobody has opened yet
+        const fresh = [];
+        for (let card = 0; card < CARD_COUNT; card++) {
+          if (room.cardCounter[card] === 0 && !room.foundMatches.includes(card)) fresh.push(card);
+        }
+        socket.emit("powerupReveal", { type: "map", duration: 3000, cards: fresh.map((card) => ({ id: card })) });
+        break;
+      }
+      case "peek":
+        reveal(socket, targets, room, 1500, "peek");
+        break;
+      case "spotlight":
+        reveal(socket, powerups.area(targets[0]).filter((card) => isClosed(room, card)), room, 1500, "peek");
+        break;
+      case "bomb":
+        reveal(multiPlayer.to(gameID), powerups.area(targets[0]).filter((card) => isClosed(room, card)), room, 2000, "bomb");
+        break;
+      case "extraTurn":
+      case "secondChance":
+      case "combo":
+        player.armed[id] = true;
+        break;
+      case "shield":
+        player.shield = true;
+        break;
+      case "gamble": {
+        const win = Math.random() < 0.5;
+        player.points = Math.max(0, player.points + (win ? 2 : -1));
+        systemMessage(gameID, room, win ? `${username} wins the gamble: +2!` : `${username} loses the gamble: -1.`, win ? "trophy" : "info");
+        break;
+      }
+      case "fog":
+      case "skip": {
+        const target = nextOpponent(room);
+        if (target == null) break;
+        if (target.shield) {
+          target.shield = false;
+          systemMessage(gameID, room, `${target.name}'s shield blocked it.`, "info");
+        } else if (id === "fog") {
+          target.fog = true;
+        } else {
+          target.skipNext = true;
+        }
+        break;
+      }
+      case "shuffle":
+        powerups.applyPermutation(room, powerups.shufflePermutation(room));
+        boardChanged(gameID, room, "shuffle");
+        break;
+      case "swap":
+        // Secret: nobody sees which cards changed places
+        powerups.applyPermutation(room, powerups.swapPermutation(targets[0], targets[1]));
+        break;
+      case "rotate":
+        powerups.applyPermutation(room, powerups.rotatePermutation());
+        boardChanged(gameID, room, "rotate");
+        break;
+    }
+
+    emitRoomState(gameID, room);
+  }
+
   /* ---------- Game ---------- */
 
   function checkGame(socket, room) {
@@ -545,6 +757,26 @@ module.exports = function (io) {
       room.checkingCards = true;
 
       if (!checkCards(socket.gameID, room)) {
+        const player = room.players[room.turn];
+        if (room.mode === "powerups" && player.armed.secondChance) {
+          // Second chance: only the second card closes, pick another one
+          player.armed.secondChance = false;
+          const second = room.openedCards.pop();
+          room.checkingCards = false;
+          // Can't be opened again until it is closed on the screens
+          room.closingCard = second;
+          roomTimeout(
+            room,
+            () => {
+              room.closingCard = null;
+              multiPlayer.to(socket.gameID).emit("closeCards", { 1: second });
+            },
+            900,
+          );
+          systemMessage(socket.gameID, room, `${player.name} uses the second chance.`, "info");
+          emitRoomState(socket.gameID, room);
+          return;
+        }
         if (room.mode === "speed") {
           // Speed round: the clock stops, and the turn passes on its own
           // after a short look at the cards
@@ -596,6 +828,18 @@ module.exports = function (io) {
       player.points++;
       multiPlayer.to(gameID).emit("matchFound", { name: player.name, ids: [id, id2] });
 
+      if (room.mode === "powerups") {
+        room.turnPairs++;
+        // Combo: every further pair in this turn gives bonus points (+1, +2, ...)
+        if (player.armed.combo && room.turnPairs > 1) {
+          player.points += room.turnPairs - 1;
+          systemMessage(gameID, room, `Combo! ${player.name} gets +${room.turnPairs - 1} bonus.`, "trophy");
+        }
+        if (room.powerCards.includes(id)) {
+          grantPowerup(gameID, room, player, "found a power-up pair");
+        }
+      }
+
       // Reset turn - a found pair gives another try with fresh time
       room.openedCards = [];
       room.checkingCards = false;
@@ -606,14 +850,22 @@ module.exports = function (io) {
     return cardsMatch;
   }
 
-  // Closes the open cards and gives the turn to the next active and connected player.
-  function nextTurn(gameID, room) {
+  // Closes the open cards (the turn stays)
+  function closeOpenCards(gameID, room) {
     if (room.openedCards.length > 0) {
       multiPlayer.to(gameID).emit("closeCards", {
         1: room.openedCards[0],
         2: room.openedCards[1],
       });
     }
+    room.openedCards = [];
+    room.checkingCards = false;
+  }
+
+  // Closes the open cards and gives the turn to the next active and connected player.
+  function nextTurn(gameID, room) {
+    closeOpenCards(gameID, room);
+    if (room.mode === "powerups") endPowerupTurn(gameID, room);
 
     const count = room.players.length;
     let fallback = null;
@@ -621,6 +873,12 @@ module.exports = function (io) {
       const index = (room.turn + step) % count;
       const player = room.players[index];
       if (!player.active) continue;
+      // Skip power-up: this player sits out once
+      if (room.mode === "powerups" && player.skipNext && index !== room.turn) {
+        player.skipNext = false;
+        systemMessage(gameID, room, `${player.name} is skipped.`, "info");
+        continue;
+      }
       if (player.connected) {
         room.turn = index;
         fallback = null;
@@ -682,10 +940,7 @@ module.exports = function (io) {
       .map((player) => player.name);
 
     for (let i = 0; i < CARD_COUNT; i++) {
-      multiPlayer.to(gameID).emit("turnCard", {
-        id: i,
-        src: room.cardImages[i],
-      });
+      multiPlayer.to(gameID).emit("turnCard", cardData(room, i));
     }
 
     // Update all statistics. One failing update must not affect the others.
