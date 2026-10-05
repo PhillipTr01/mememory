@@ -65,7 +65,8 @@ body.ttt-theme {
 /* ---------- Layout: players | board | chat ---------- */
 .ttt-layout {
   display: grid;
-  grid-template-columns: 260px auto minmax(280px, 340px);
+  /* Player boxes grow up to 300px when there is space; board and chat keep their size */
+  grid-template-columns: minmax(260px, 300px) auto minmax(280px, 340px);
   grid-template-rows: 1fr 1fr;
   grid-template-areas:
     "p0 center chat"
