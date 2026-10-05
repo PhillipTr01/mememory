@@ -22,7 +22,9 @@ function createAvatar(name, size, online) {
     // Right away: the saved one, or the default avatar of the name (no flicker
     // for most users); an own avatar replaces it once it is loaded
     applyAvatar(avatar, name in avatarCache ? avatarCache[name] : null);
-    if (!(name in avatarCache)) requestAvatar(name);
+    // The cache is only for the first moment: every page asks once for the
+    // current avatar, so changes by others show up
+    if (!avatarChecked.has(name)) requestAvatar(name);
   }
 
   if (online !== undefined) {
@@ -43,6 +45,7 @@ try {
   avatarCache = {};
 }
 var avatarQueue = new Set();
+var avatarChecked = new Set(); // names this page already asked the server for
 var avatarTimer = null;
 
 function saveAvatarCache() {
@@ -79,8 +82,9 @@ function requestAvatar(name) {
 }
 
 function loadAvatars() {
-  var names = [...avatarQueue].filter((name) => !(name in avatarCache));
+  var names = [...avatarQueue].filter((name) => !avatarChecked.has(name));
   avatarQueue.clear();
+  names.forEach((name) => avatarChecked.add(name));
   if (names.length == 0) return;
   fetch("/requests/user/avatars?names=" + encodeURIComponent(names.join(",")), { credentials: "same-origin" })
     .then((response) => (response.ok ? response.json() : null))
@@ -93,6 +97,8 @@ function loadAvatars() {
 
 // Updates the cache and every avatar of this user on the page
 function setAvatarConfig(name, config) {
+  // Unchanged (the usual case): nothing to redraw
+  if (name in avatarCache && JSON.stringify(avatarCache[name]) == JSON.stringify(config)) return;
   avatarCache[name] = config;
   saveAvatarCache();
   document.querySelectorAll(".mm-avatar").forEach((element) => {
