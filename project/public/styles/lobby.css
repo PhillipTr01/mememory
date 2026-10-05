@@ -394,3 +394,10 @@
   background: var(--mm-surface-3);
   color: var(--mm-text);
 }
+
+/* Square button with only an icon (Watch) */
+.mm-btn.mm-btn-icon {
+  gap: 0;
+  padding-left: 0.6rem;
+  padding-right: 0.6rem;
+}
