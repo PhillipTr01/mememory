@@ -57,18 +57,29 @@ const IDS = Object.keys(POWERUPS);
  */
 const RARITY = { common: 12, uncommon: 7, rare: 4 };
 
-function weightedPick(list) {
-  const total = list.reduce((sum, id) => sum + RARITY[POWERUPS[id].rarity], 0);
+// Every time a player got a power-up, it comes half as often for them
+const REPEAT_FACTOR = 0.5;
+
+/*
+ * received: how often the player already got each power-up ({ map: 2, ... }),
+ * so the same power-up gets rarer for them every time
+ */
+function weight(id, received = {}) {
+  return RARITY[POWERUPS[id].rarity] * Math.pow(REPEAT_FACTOR, received[id] || 0);
+}
+
+function weightedPick(list, received) {
+  const total = list.reduce((sum, id) => sum + weight(id, received), 0);
   let roll = Math.random() * total;
   for (const id of list) {
-    roll -= RARITY[POWERUPS[id].rarity];
+    roll -= weight(id, received);
     if (roll < 0) return id;
   }
   return list[list.length - 1];
 }
 
-function randomPowerup() {
-  return weightedPick(IDS);
+function randomPowerup(received, exclude = []) {
+  return weightedPick(IDS.filter((id) => !exclude.includes(id)), received);
 }
 
 // Two power-ups from different categories (everybody starts with the same two)
@@ -169,6 +180,8 @@ module.exports = {
   POWERUPS,
   IDS,
   RARITY,
+  REPEAT_FACTOR,
+  weight,
   HAND_LIMIT,
   POWER_PAIRS,
   UNLUCKY_TURNS,

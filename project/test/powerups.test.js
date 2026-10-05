@@ -31,6 +31,19 @@ test("powerups: strong power-ups are rarer, but every power-up comes", () => {
   assert.ok(share("uncommon") > share("rare"));
 });
 
+test("powerups: a power-up gets rarer for a player every time they got it", () => {
+  const counts = { map: 0, peek: 0 };
+  for (let i = 0; i < 20000; i++) {
+    const id = powerups.randomPowerup({ map: 2 });
+    if (id in counts) counts[id]++;
+  }
+  // Both common: map (got twice) comes about a quarter as often as peek
+  assert.ok(counts.map > 0, "still possible");
+  assert.ok(counts.map < counts.peek * 0.4, `map ${counts.map}, peek ${counts.peek}`);
+  assert.strictEqual(powerups.weight("map", { map: 1 }), powerups.weight("map") / 2);
+  assert.notStrictEqual(powerups.randomPowerup({}, ["mysteryBox"]), "mysteryBox");
+});
+
 test("powerups: the area is the card and its neighbours on the 11 x 6 board", () => {
   assert.deepStrictEqual(powerups.area(0).sort((a, b) => a - b), [0, 1, 11, 12]);
   assert.strictEqual(powerups.area(12).length, 9);
@@ -259,6 +272,7 @@ test("powerups game: a power-up pair gives a power-up, the hand holds three", as
   const got = waitFor(current, "roomState", (s) => s.players.find((p) => p.name === currentName).powerups.length === 1);
   current.emit("openCard", b);
   await got;
+  assert.ok(me.received[me.powerups[0]] >= 1, "counted, so it gets rarer for this player");
 
   // Full hand: nothing more
   me.powerups = ["map", "peek", "fog"];

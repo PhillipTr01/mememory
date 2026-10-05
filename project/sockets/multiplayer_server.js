@@ -591,6 +591,9 @@ module.exports = function (io) {
     for (const player of room.players) {
       player.powerups = start.slice();
       player.unlucky = 0;
+      // How often the player got each power-up (it gets rarer every time)
+      player.received = {};
+      for (const id of start) player.received[id] = 1;
       player.shield = false;
       player.fog = false;
       player.skipNext = false;
@@ -627,14 +630,20 @@ module.exports = function (io) {
     return info ? `${info.emoji} ${info.name}` : id;
   }
 
+  function receive(player, id) {
+    player.powerups.push(id);
+    player.received = player.received || {};
+    player.received[id] = (player.received[id] || 0) + 1;
+  }
+
   // A random power-up for the player, if there is a free slot
   function grantPowerup(gameID, room, player, reason) {
     if (player.powerups.length >= powerups.HAND_LIMIT) {
       systemMessage(gameID, room, `${player.name} ${reason}, but has no free slot.`, "info");
       return;
     }
-    const id = powerups.randomPowerup();
-    player.powerups.push(id);
+    const id = powerups.randomPowerup(player.received);
+    receive(player, id);
     systemMessage(gameID, room, `${player.name} ${reason}: ${powerupLabel(id)}`, "start");
   }
 
@@ -757,9 +766,8 @@ module.exports = function (io) {
         // Mostly good, sometimes not
         const roll = Math.random();
         if (roll < 0.75) {
-          const others = powerups.IDS.filter((other) => other !== "mysteryBox");
-          const prize = others[Math.floor(Math.random() * others.length)];
-          player.powerups.push(prize);
+          const prize = powerups.randomPowerup(player.received, ["mysteryBox"]);
+          receive(player, prize);
           systemMessage(gameID, room, `${username} finds ${powerupLabel(prize)} in the box.`, "start");
         } else if (roll < 0.875) {
           player.points -= 1;
