@@ -120,28 +120,34 @@
   gap: 0.5rem;
 }
 
-/* Game selection: MemeMory / Tic Tac Toe XL */
+/* Game selection: MemeMory / Tic Tac Toe XL (icon on top, name below) */
 .game-picker {
   display: flex;
   gap: 0.25rem;
-  padding: 0.25rem;
-  border: 1px solid var(--mm-border);
-  border-radius: 10px;
-  background: var(--mm-surface-2);
 }
 
 .game-picker button {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.45rem 0.85rem;
-  border: 0;
-  border-radius: 7px;
+  justify-content: center;
+  gap: 0.15rem;
+  min-width: 5.5rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 8px;
   background: none;
   color: var(--mm-muted);
+  font-size: 0.72rem;
   font-weight: 600;
+  line-height: 1.2;
   white-space: nowrap;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.game-picker button .bi {
+  font-size: 1.05rem;
+  line-height: 1;
 }
 
 .game-picker button:hover {
@@ -149,7 +155,8 @@
 }
 
 .game-picker button.active {
-  background: var(--mm-surface-3);
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  background: var(--mm-surface-2);
   color: var(--mm-text);
 }
 
@@ -186,14 +193,16 @@
     max-width: none;
   }
 
-  .mp-create-row {
-    flex-direction: column;
+  .game-picker button {
+    min-width: 0;
+    flex: 1 1 0;
   }
 
-  .game-picker button {
-    flex: 1 1 0;
-    justify-content: center;
+  .mp-create .mm-btn {
+    flex: 1 1 auto;
     min-width: 0;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 }
 
