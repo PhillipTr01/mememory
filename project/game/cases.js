@@ -319,13 +319,13 @@ const CASES = [
     price: 2500,
     risk: "high",
     items: [
-      { name: "Charred Bone", icon: "🦴", value: 100, weight: 32000 },
+      { name: "Charred Bone", icon: "🦴", value: 100, weight: 32100 },
       { name: "Fire Lizard", icon: "🦎", value: 400, weight: 24000 },
       { name: "Dragon Egg", icon: "🥚", value: 1500, weight: 20000 },
       { name: "Fire Breath", icon: "🔥", value: 3200, weight: 15000 },
-      { name: "Hoard of Gold", icon: "💰", value: 9000, weight: 7600 },
+      { name: "Hoard of Gold", icon: "💰", value: 10500, weight: 7600 },
       { name: "Wyvern", icon: "🐲", value: 25000, weight: 1250 },
-      { name: "Elder Dragon", icon: "🐉", value: 125000, weight: 150 },
+      { name: "Elder Dragon", icon: "🐉", value: 125000, weight: 50 },
     ],
   },
 ];
