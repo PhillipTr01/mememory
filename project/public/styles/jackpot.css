@@ -2148,74 +2148,93 @@ body.jackpot-theme {
 
 /* ---------- 10. Slots ---------- */
 .jp-scene-slots {
-  background: radial-gradient(circle at 50% 30%, #3b1f4a, #1a1020 75%);
+  background: radial-gradient(ellipse at 50% 0%, rgba(245, 197, 66, 0.18), transparent 55%), radial-gradient(circle at 50% 40%, #3b1f4a, #160d1b 75%);
 }
 
 .jp-slotm {
-  --tile: 72px;
+  --tile: 64px;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px 16px;
-  border-radius: 22px;
-  background: linear-gradient(180deg, #b8860b, #7a5a0b);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 12px 30px rgba(0, 0, 0, 0.5);
+  padding: 8px 16px 10px;
+  border-radius: 24px 24px 18px 18px;
+  background: linear-gradient(180deg, #f2c24b 0%, #c8901a 45%, #8a5a0b 100%);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), inset 0 -3px 0 rgba(0, 0, 0, 0.25), inset 3px 0 0 rgba(255, 255, 255, 0.15), 0 16px 40px rgba(0, 0, 0, 0.6);
 }
 
+/* The sign: red with a golden frame, lights above and below the word */
 .jp-slots-top {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 3px;
+  min-width: 82%;
+  padding: 4px 14px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #c81e1e, #7f1010);
+  box-shadow: inset 0 0 0 2px #f5d76e, 0 2px 0 rgba(0, 0, 0, 0.3);
 }
 
 .jp-slots-title {
   font-weight: 900;
-  font-size: 1.2rem;
-  letter-spacing: 0.25em;
+  font-size: 1rem;
+  letter-spacing: 0.22em;
   color: #fff7d6;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+  text-shadow: 0 0 6px rgba(255, 215, 110, 0.9), 0 2px 0 rgba(0, 0, 0, 0.45);
 }
 
-.jp-slots-bulbs {
-  width: 46px;
-  height: 8px;
-  border-radius: 4px;
-  background: repeating-linear-gradient(90deg, #fff3b0 0 8px, transparent 8px 14px);
-  animation: jp-bulbs 0.6s steps(2) infinite;
+/* A row of little bulbs that run along */
+.jp-slots-lights {
+  width: 100%;
+  height: 5px;
+  background: radial-gradient(circle, #fff3b0 0 1.8px, transparent 2.4px) 0 50% / 10px 5px repeat-x;
+  filter: drop-shadow(0 0 2px #ffd76e);
+  animation: jp-lights 0.9s linear infinite;
 }
 
-@keyframes jp-bulbs {
-  50% {
-    opacity: 0.35;
+.jp-slots-lights:last-child {
+  animation-direction: reverse;
+}
+
+@keyframes jp-lights {
+  to {
+    background-position: 20px 50%;
   }
 }
 
+.jp-slotm.jackpot .jp-slots-lights {
+  animation-duration: 0.25s;
+}
+
+/* The window: dark, with a golden frame */
 .jp-slots-window {
   position: relative;
   display: flex;
-  gap: 8px;
-  padding: 8px;
+  gap: 6px;
+  padding: 7px;
   border-radius: 14px;
-  background: #1a1a1a;
+  background: #141016;
+  box-shadow: inset 0 0 0 2px #7a520a, inset 0 6px 14px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .jp-reel {
   position: relative;
-  width: calc(var(--tile) + 10px);
+  width: calc(var(--tile) + 12px);
   height: calc(var(--tile) * 3);
   overflow: hidden;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #d9d9d9, #fff 30%, #fff 70%, #d9d9d9);
+  border-radius: 9px;
+  background: linear-gradient(180deg, #e9e2d0, #fffaf0 28%, #fffaf0 72%, #e9e2d0);
 }
 
-/* Dark at the top and bottom: the reel is round */
+/* Round reels: dark at the top and the bottom */
 .jp-reel::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), transparent 30%, transparent 70%, rgba(0, 0, 0, 0.45));
+  background: linear-gradient(180deg, rgba(20, 10, 25, 0.65), transparent 32%, transparent 68%, rgba(20, 10, 25, 0.65));
   pointer-events: none;
 }
 
@@ -2235,11 +2254,12 @@ body.jackpot-theme {
   height: var(--tile);
   display: grid;
   place-items: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .jp-reel-tile .mm-avatar {
-  --size: calc(var(--tile) - 22px);
-  box-shadow: 0 0 0 3px var(--share);
+  --size: calc(var(--tile) - 18px);
+  box-shadow: 0 0 0 3px var(--share), 0 3px 6px rgba(0, 0, 0, 0.25);
 }
 
 .jp-reel-tile.win .mm-avatar {
@@ -2253,14 +2273,45 @@ body.jackpot-theme {
   }
 }
 
+/* The win line through the middle, with an arrow on both sides */
 .jp-slots-line {
   position: absolute;
-  left: 2px;
-  right: 2px;
+  left: 7px;
+  right: 7px;
   top: 50%;
   height: 2px;
-  background: rgba(224, 103, 90, 0.85);
-  box-shadow: 0 0 8px rgba(224, 103, 90, 0.8);
+  margin-top: -1px;
+  background: rgba(245, 197, 66, 0.55);
+  pointer-events: none;
+}
+
+.jp-slots-arrow {
+  position: absolute;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  transform: translateY(-50%);
+  filter: drop-shadow(0 0 3px rgba(245, 197, 66, 0.8));
+}
+
+.jp-slots-arrow.left {
+  left: -4px;
+  border-left: 10px solid #f5d76e;
+}
+
+.jp-slots-arrow.right {
+  right: -4px;
+  border-right: 10px solid #f5d76e;
+}
+
+/* Glass over the reels: a soft light from the top left */
+.jp-slots-glass {
+  position: absolute;
+  inset: 7px;
+  border-radius: 9px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.22), transparent 38%);
   pointer-events: none;
 }
 
@@ -2270,29 +2321,50 @@ body.jackpot-theme {
 
 @keyframes jp-slots-glow {
   to {
-    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 0 40px #f5d76e;
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), inset 0 -3px 0 rgba(0, 0, 0, 0.25), 0 0 46px #f5d76e;
   }
+}
+
+/* The coin tray at the bottom */
+.jp-slots-tray {
+  width: 70%;
+  height: 12px;
+  border-radius: 0 0 10px 10px;
+  background: linear-gradient(180deg, #2a1f0a, #4a3510);
+  box-shadow: inset 0 3px 4px rgba(0, 0, 0, 0.7);
+}
+
+/* The lever: a chrome rod with a red ball, on a mount at the side */
+.jp-slots-mount {
+  position: absolute;
+  right: -12px;
+  top: 52%;
+  width: 14px;
+  height: 34px;
+  border-radius: 0 8px 8px 0;
+  background: linear-gradient(90deg, #8a5a0b, #c8901a);
 }
 
 .jp-slots-lever {
   position: absolute;
-  right: -26px;
-  top: 40%;
-  width: 8px;
+  right: -22px;
+  top: calc(52% - 52px);
+  width: 7px;
   height: 70px;
   border-radius: 4px;
-  background: #9ca3af;
+  background: linear-gradient(90deg, #9ca3af, #f3f4f6 45%, #9ca3af);
   transform-origin: 50% 100%;
 }
 
 .jp-slots-knob {
   position: absolute;
-  top: -12px;
-  left: -6px;
-  width: 20px;
-  height: 20px;
+  top: -14px;
+  left: -7px;
+  width: 21px;
+  height: 21px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #ff8a80, #c62828);
+  background: radial-gradient(circle at 35% 30%, #ffb4a8, #e11d1d 45%, #8a0f0f);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* ---------- 11. Space launch ---------- */
@@ -2604,8 +2676,8 @@ body.jackpot-theme {
 
 @media (max-width: 575px) {
   .jp-slotm {
-    --tile: 64px;
-    padding: 8px 12px 12px;
+    --tile: 54px;
+    padding: 6px 12px 8px;
   }
 
   .jp-scratch-grid {
