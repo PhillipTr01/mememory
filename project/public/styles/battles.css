@@ -176,11 +176,132 @@
 }
 
 .bt-picked {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 0.5rem;
+  min-height: 2rem;
+}
+
+.bt-picked-empty {
+  grid-column: 1 / -1;
+  align-self: center;
+}
+
+/* One round of the new battle: a small case card */
+.bt-round {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  min-height: 1.9rem;
+  flex-direction: column;
   align-items: center;
+  gap: 0.15rem;
+  padding: 0.55rem 0.4rem 0.35rem;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface-2);
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.bt-round.low {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.1), transparent 60%), var(--mm-surface-2);
+}
+
+.bt-round.high {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.1), transparent 60%), var(--mm-surface-2);
+}
+
+.bt-round:hover {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+}
+
+.bt-round.dragging {
+  opacity: 0.35;
+}
+
+.bt-round.drop {
+  border-color: var(--mm-accent);
+  transform: scale(1.04);
+}
+
+.bt-round-number {
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  min-width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.2);
+  color: var(--mm-accent);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.bt-round-remove {
+  position: absolute;
+  right: 4px;
+  top: 3px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--mm-muted);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.bt-round-remove:hover {
+  background: rgba(224, 103, 90, 0.2);
+  color: var(--mm-danger);
+}
+
+.bt-round-icon {
+  font-size: 1.7rem;
+  line-height: 1.2;
+}
+
+.bt-round-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.bt-round-price {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--mm-accent);
+}
+
+.bt-round-moves {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.bt-round-moves button {
+  width: 24px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--mm-border);
+  border-radius: 6px;
+  background: var(--mm-surface);
+  color: var(--mm-muted);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.bt-round-moves button:hover:not(:disabled) {
+  color: var(--mm-text);
+}
+
+.bt-round-moves button:disabled {
+  opacity: 0.3;
 }
 
 
@@ -293,74 +414,6 @@
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--mm-accent);
-}
-
-.bt-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.2rem 0.25rem 0.2rem 0.6rem;
-  border: 1px solid var(--mm-border);
-  border-radius: 999px;
-  background: var(--mm-surface-3);
-  font-size: 0.8rem;
-}
-
-.bt-chip {
-  cursor: grab;
-}
-
-.bt-chip.dragging {
-  opacity: 0.4;
-}
-
-.bt-chip.drop {
-  border-color: var(--mm-accent);
-}
-
-.bt-chip-order {
-  min-width: 20px;
-  height: 20px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: rgba(var(--mm-accent-rgb), 0.2);
-  color: var(--mm-accent);
-  font-size: 0.7rem;
-  font-weight: 800;
-}
-
-.bt-chip-move {
-  width: 20px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--mm-muted);
-  font-size: 1.1rem;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.bt-chip-move:hover:not(:disabled) {
-  color: var(--mm-text);
-}
-
-.bt-chip-move:disabled {
-  opacity: 0.25;
-}
-
-.bt-chip-icon {
-  font-size: 1rem;
-}
-
-.bt-chip-name {
-  font-weight: 700;
-}
-
-.bt-chip-price {
-  color: var(--mm-muted);
-  font-variant-numeric: tabular-nums;
 }
 
 /* Crazy mode: a switch with a clown */

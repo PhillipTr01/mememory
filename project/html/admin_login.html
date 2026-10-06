@@ -32,9 +32,16 @@
         document.getElementById("adLogin").addEventListener("submit", async (event) => {
             event.preventDefault();
             var error = document.getElementById("adLoginError");
-            var res = await fetch("login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: document.getElementById("adPassword").value }) });
-            if (res.ok) return window.location.reload();
-            error.innerText = ((await res.json().catch(() => ({}))).error) || "Wrong password.";
+            error.hidden = true;
+            var res = await fetch("login", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: document.getElementById("adPassword").value }) });
+            if (res.ok) {
+                // The password was right - did the browser keep the login?
+                var check = await fetch("api/overview", { credentials: "same-origin" });
+                if (check.ok) return window.location.reload();
+                error.innerText = "The password is right, but your browser didn't keep the login cookie (is the site on https and the server told it isn't, or are cookies blocked?).";
+            } else {
+                error.innerText = ((await res.json().catch(() => ({}))).error) || "Wrong password.";
+            }
             error.hidden = false;
         });
     </script>

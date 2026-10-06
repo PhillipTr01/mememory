@@ -50,8 +50,11 @@ module.exports = function () {
     }
   }
 
+  // Secure only on a real https connection (behind a proxy: X-Forwarded-Proto),
+  // a secure cookie on plain http is thrown away by the browser
   function cookieOptions(req) {
-    return { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production", path: req.baseUrl || "/" };
+    const https = req.secure || String(req.get("x-forwarded-proto") || "").split(",")[0].trim() === "https";
+    return { httpOnly: true, sameSite: "lax", secure: https, path: "/" };
   }
 
   // Only for a logged in admin; the API answers 401, pages show the login

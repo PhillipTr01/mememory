@@ -8,7 +8,7 @@ var battles = []; // every battle the server knows
 var lastBattles = []; // finished battles, newest first
 var roundTime = 4500;
 
-var picked = []; // the new battle: [{id, count}] in the order they were chosen (every case is one round)
+var picked = []; // the new battle: case ids, one per round, in their order
 var size = 2;
 var filter = "all";
 var sort = "price-asc";
@@ -158,43 +158,27 @@ function bestItem(box) {
 
 // Every round of the new battle, in order
 function pickedIds() {
-  return picked.flatMap((group) => new Array(group.count).fill(group.id));
+  return picked.slice();
 }
 
-// All rounds of a case (it can be at several places in the order)
 function countOf(id) {
-  return picked.filter((g) => g.id == id).reduce((sum, g) => sum + g.count, 0);
+  return picked.filter((p) => p == id).length;
 }
 
-// Next to each other, the same case is one block
-function tidyPicked() {
-  picked = picked.filter((g) => g.count > 0);
-  for (var i = picked.length - 1; i > 0; i--) {
-    if (picked[i].id == picked[i - 1].id) {
-      picked[i - 1].count += picked[i].count;
-      picked.splice(i, 1);
-    }
-  }
-}
-
-// A block of rounds to another place in the order
+// A round to another place in the order
 function movePicked(from, to) {
-  if (!Number.isInteger(from) || to < 0 || to >= picked.length || from == to) return;
-  var [group] = picked.splice(from, 1);
-  picked.splice(to, 0, group);
-  tidyPicked();
+  if (!Number.isInteger(from) || !Number.isInteger(to) || from == to || from < 0 || from >= picked.length) return;
+  to = Math.max(0, Math.min(picked.length - 1, to));
+  var [id] = picked.splice(from, 1);
+  picked.splice(to, 0, id);
   renderCreate();
 }
 
 function shufflePicked() {
-  // Every single round gets a new place (then the same cases next to each other are one block again)
-  var rounds = pickedIds();
-  for (var i = rounds.length - 1; i > 0; i--) {
+  for (var i = picked.length - 1; i > 0; i--) {
     var j = Math.floor(Math.random() * (i + 1));
-    [rounds[i], rounds[j]] = [rounds[j], rounds[i]];
+    [picked[i], picked[j]] = [picked[j], picked[i]];
   }
-  picked = rounds.map((id) => ({ id: id, count: 1 }));
-  tidyPicked();
   renderCreate();
 }
 
@@ -205,53 +189,36 @@ function shufflePicked() {
 function setCount(id, count) {
   count = Math.max(0, Math.floor(Number(count)) || 0);
   var diff = count - countOf(id);
-  if (diff > 0) {
-    var last = picked[picked.length - 1];
-    if (last && last.id == id) last.count += diff;
-    else picked.push({ id: id, count: diff });
-  }
+  for (; diff > 0; diff--) picked.push(id);
   for (var i = picked.length - 1; i >= 0 && diff < 0; i--) {
-    if (picked[i].id != id) continue;
-    var take = Math.min(picked[i].count, -diff);
-    picked[i].count -= take;
-    diff += take;
+    if (picked[i] != id) continue;
+    picked.splice(i, 1);
+    diff++;
   }
-  tidyPicked();
   renderCreate();
 }
 
-// One block of the order: its own number of rounds
-function setGroupCount(index, count) {
-  if (picked[index] == null) return;
-  picked[index].count = Math.max(0, Math.floor(Number(count)) || 0);
-  tidyPicked();
-  renderCreate();
-}
-
-// - count +: for a case on its card, or for one block in the order
-function stepper(id, extraClass, index) {
+// - count + on the card of a case
+function stepper(id, extraClass) {
   var box = el("div", "bt-stepper" + (extraClass ? " " + extraClass : ""));
   box.addEventListener("click", (event) => event.stopPropagation());
-  var block = index != null;
-  var get = () => (block ? picked[index].count : countOf(id));
-  var put = (value) => (block ? setGroupCount(index, value) : setCount(id, value));
   var minus = el("button", "", "−");
   minus.type = "button";
   minus.setAttribute("aria-label", "One less");
-  minus.addEventListener("click", () => put(get() - 1));
+  minus.addEventListener("click", () => setCount(id, countOf(id) - 1));
   var input = el("input", "bt-stepper-count");
   input.type = "number";
   input.min = 0;
   input.inputMode = "numeric";
-  if (!block) input.dataset.id = id;
+  input.dataset.id = id;
   input.setAttribute("aria-label", "How many");
-  input.value = get();
-  input.addEventListener("change", () => put(input.value));
+  input.value = countOf(id);
+  input.addEventListener("change", () => setCount(id, input.value));
   input.addEventListener("keydown", (event) => event.stopPropagation());
   var plus = el("button", "", "+");
   plus.type = "button";
   plus.setAttribute("aria-label", "One more");
-  plus.addEventListener("click", () => put(get() + 1));
+  plus.addEventListener("click", () => setCount(id, countOf(id) + 1));
   box.append(minus, input, plus);
   return box;
 }
@@ -318,47 +285,59 @@ function renderCreate() {
   var ids = pickedIds();
   var list = document.getElementById("btPicked");
   if (picked.length == 0) {
-    list.replaceChildren(el("span", "mm-muted small", "Click a case to add it - every case is one round, as many as you like."));
+    list.replaceChildren(el("span", "mm-muted small bt-picked-empty", "Click a case to add it - every case is one round, as many as you like."));
   } else {
-    // The order of the cases is the order of the rounds: drag a case or use the arrows
-    var round = 1;
+    // One card per round, side by side: drag a card to another place, × takes it out
     list.replaceChildren(
-      ...picked.map((group, index) => {
-        var box = caseById(group.id);
-        var chip = el("div", "bt-chip");
-        chip.draggable = true;
-        chip.dataset.index = index;
-        var rounds = group.count == 1 ? "Round " + round : "Rounds " + round + "-" + (round + group.count - 1);
-        round += group.count;
-        var order = el("span", "bt-chip-order", index + 1);
-        order.title = rounds + " - drag to change the order";
-        var left = el("button", "bt-chip-move", "‹");
+      ...picked.map((id, index) => {
+        var box = caseById(id);
+        var card = el("div", "bt-round " + box.risk);
+        card.draggable = true;
+        card.title = "Round " + (index + 1) + " - drag to another place";
+        var remove = el("button", "bt-round-remove", "×");
+        remove.type = "button";
+        remove.title = "Take this round out";
+        remove.setAttribute("aria-label", "Take round " + (index + 1) + " out");
+        remove.addEventListener("click", () => {
+          picked.splice(index, 1);
+          renderCreate();
+        });
+        var moves = el("div", "bt-round-moves");
+        var left = el("button", "", "‹");
         left.type = "button";
         left.title = "Earlier";
         left.disabled = index == 0;
         left.addEventListener("click", () => movePicked(index, index - 1));
-        var right = el("button", "bt-chip-move", "›");
+        var right = el("button", "", "›");
         right.type = "button";
         right.title = "Later";
         right.disabled = index == picked.length - 1;
         right.addEventListener("click", () => movePicked(index, index + 1));
-        chip.append(left, order, el("span", "bt-chip-icon", box.icon), el("span", "bt-chip-name", box.name), el("span", "bt-chip-price", "🪙 " + formatCoins(box.price * group.count)), stepper(group.id, "", index), right);
-        chip.addEventListener("dragstart", (event) => {
+        moves.append(left, right);
+        card.append(
+          el("span", "bt-round-number", index + 1),
+          remove,
+          el("span", "bt-round-icon", box.icon),
+          el("span", "bt-round-name", box.name),
+          el("span", "bt-round-price", "🪙 " + formatCoins(box.price)),
+          moves,
+        );
+        card.addEventListener("dragstart", (event) => {
           event.dataTransfer.effectAllowed = "move";
           event.dataTransfer.setData("text/plain", String(index));
-          chip.classList.add("dragging");
+          card.classList.add("dragging");
         });
-        chip.addEventListener("dragend", () => chip.classList.remove("dragging"));
-        chip.addEventListener("dragover", (event) => {
+        card.addEventListener("dragend", () => card.classList.remove("dragging"));
+        card.addEventListener("dragover", (event) => {
           event.preventDefault();
-          chip.classList.add("drop");
+          card.classList.add("drop");
         });
-        chip.addEventListener("dragleave", () => chip.classList.remove("drop"));
-        chip.addEventListener("drop", (event) => {
+        card.addEventListener("dragleave", () => card.classList.remove("drop"));
+        card.addEventListener("drop", (event) => {
           event.preventDefault();
           movePicked(Number(event.dataTransfer.getData("text/plain")), index);
         });
-        return chip;
+        return card;
       }),
     );
   }

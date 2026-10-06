@@ -61,7 +61,8 @@ test("admin: a secret address and a password - nothing works without the login",
   assert.strictEqual(right.status, 200);
   const cookie = right.headers.get("set-cookie");
   assert.match(cookie, /HttpOnly/i);
-  assert.match(cookie, /SameSite=Strict/i);
+  assert.match(cookie, /SameSite=Lax/i);
+  assert.doesNotMatch(cookie, /Secure/i, "plain http: no secure cookie (the browser would throw it away)");
   adminCookie = cookie.split(";")[0];
 
   assert.match(await (await call(ADMIN + "/", { cookie: adminCookie })).text(), /adBalance/, "the panel");
