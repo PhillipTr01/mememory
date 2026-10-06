@@ -62,9 +62,9 @@ module.exports = {
   JACKPOT_SPIN: 8000, // the draw animation (wheel, roulette, bowling, ...)
   JACKPOT_PAUSE: 5000, // result is shown, then a new round starts
   JACKPOT_MAX_BETS: 5, // separate bets per player and round (any amount)
-  // A new bet is shown to the others only after a random 5-7 s (no sniping:
-  // nobody can see a bet and answer it in the last second). It counts right away.
-  JACKPOT_BET_DELAY: [5000, 7000],
+  // A new bet gets into the pot only after a random 3-5 s (no sniping:
+  // nobody can answer a bet in the last second). Too late for the draw: coins back.
+  JACKPOT_BET_DELAY: [3000, 5000],
   // The animation of a round, one for everybody, chosen at random per round
   JACKPOT_DRAWS: ["wheel", "roulette", "bowling", "plinko", "race", "claw", "royale", "coinrain", "revolver"],
   JACKPOT_HISTORY: 10,
