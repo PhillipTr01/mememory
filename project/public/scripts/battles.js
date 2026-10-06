@@ -633,7 +633,7 @@ function renderBattle() {
   var top = el("div", "bt-battle-top");
   var badges = el("div", "bt-row-tags");
   badges.append(el("span", "bt-row-price", "🪙 " + formatCoins(battle.price) + " to join"));
-  if (battle.crazy) badges.appendChild(el("span", "bt-crazy-tag", "🤡 Crazy - lowest wins"));
+  if (battle.crazy) badges.appendChild(el("span", "bt-crazy-tag", "🤡 Crazy"));
   var pot = 0;
   battle.seats.forEach((_, seat) => (pot += totalOf(battle, seat, rounds)));
   badges.appendChild(el("span", "bt-pot", "Pot 🪙 " + formatCoins(pot)));
