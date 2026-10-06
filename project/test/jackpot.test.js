@@ -117,8 +117,26 @@ test("coins: free coins for everybody once a day, whatever the balance", async (
   assert.strictEqual(await coins.claimBonus("dave"), false, "once a day");
   const after = await coins.get("dave");
   assert.strictEqual(after.bonus, false);
-  assert.ok(after.bonusIn > config.BONUS_EVERY - 5000 && after.bonusIn <= config.BONUS_EVERY);
-  assert.strictEqual(await coins.claimBonus("dave", Date.now() + config.BONUS_EVERY + 1000), true);
+  assert.ok(after.bonusIn > 0 && after.bonusIn <= 25 * 60 * 60 * 1000);
+});
+
+test("coins: the free coins come back at midnight (German time), not after 24 hours", async () => {
+  const days = require("../game/days");
+  // Midnight in Berlin: summer time (UTC+2) and winter time (UTC+1), also on the days the clocks change
+  assert.strictEqual(new Date(days.dayStart(Date.parse("2026-10-06T21:50:00Z"))).toISOString(), "2026-10-05T22:00:00.000Z");
+  assert.strictEqual(new Date(days.dayStart(Date.parse("2026-10-06T22:10:00Z"))).toISOString(), "2026-10-06T22:00:00.000Z");
+  assert.strictEqual(new Date(days.dayStart(Date.parse("2026-12-24T12:00:00Z"))).toISOString(), "2026-12-23T23:00:00.000Z");
+  assert.strictEqual(new Date(days.nextDay(Date.parse("2026-03-29T12:00:00Z"))).toISOString(), "2026-03-29T22:00:00.000Z");
+  assert.strictEqual(new Date(days.nextDay(Date.parse("2026-10-25T12:00:00Z"))).toISOString(), "2026-10-25T23:00:00.000Z");
+
+  // Claimed at 23:50 - the next ones 10 minutes later, at 00:00
+  const lateEvening = Date.parse("2026-10-06T21:50:00Z");
+  h.setCoins("dave", 1000);
+  h.userOf("dave").coinBonusAt = null;
+  assert.strictEqual(await coins.claimBonus("dave", lateEvening), true);
+  assert.strictEqual(await coins.claimBonus("dave", lateEvening + 9 * 60 * 1000), false, "still the same day");
+  assert.strictEqual(await coins.claimBonus("dave", lateEvening + 11 * 60 * 1000), true, "a new day");
+  assert.strictEqual(h.coinsOf("dave"), 1000 + 2 * config.DAILY_BONUS);
 });
 
 /* ---------- The pot ---------- */

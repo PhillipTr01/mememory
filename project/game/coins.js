@@ -2,6 +2,7 @@ const EventEmitter = require("events");
 const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
 const config = require("./config");
+const days = require("./days");
 
 /*
  * "change" (username) after every change of a balance: every page that shows
@@ -45,11 +46,12 @@ async function ensure(username) {
   if (changed(reset)) log(username, config.START_COINS, "start coins");
 }
 
-// Time (ms) until the next free coins can be claimed (0: now)
+// Time (ms) until the next free coins can be claimed (0: now) - once per calendar day, new ones at midnight
 function bonusIn(user, now = Date.now()) {
-  if (user == null) return config.BONUS_EVERY;
-  if (user.coinBonusAt == null) return 0;
-  return Math.max(0, new Date(user.coinBonusAt).getTime() + config.BONUS_EVERY - now);
+  if (user == null || user.coinBonusAt == null) return 0;
+  const claimed = new Date(user.coinBonusAt).getTime();
+  if (claimed < days.dayStart(now)) return 0;
+  return Math.max(0, days.nextDay(now) - now);
 }
 
 function bonusAvailable(user, now = Date.now()) {
@@ -60,7 +62,7 @@ function bonusAvailable(user, now = Date.now()) {
 async function get(username) {
   await ensure(username);
   const user = await User.findOne({ username: username }).select("coins coinBonusAt payoutAllowed");
-  if (user == null) return { coins: 0, bonus: false, bonusIn: config.BONUS_EVERY, payout: false };
+  if (user == null) return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), payout: false };
   return { coins: user.coins || 0, bonus: bonusAvailable(user), bonusIn: bonusIn(user), bonusAmount: config.DAILY_BONUS, payout: user.payoutAllowed === true };
 }
 
@@ -105,13 +107,13 @@ async function set(username, amount, note) {
   return amount;
 }
 
-// Free coins once a day, for everybody
+// Free coins once a day (calendar day), for everybody
 async function claimBonus(username, now = Date.now()) {
   await ensure(username);
   const result = await User.updateOne(
     {
       username: username,
-      $or: [{ coinBonusAt: { $exists: false } }, { coinBonusAt: null }, { coinBonusAt: { $lte: new Date(now - config.BONUS_EVERY) } }],
+      $or: [{ coinBonusAt: { $exists: false } }, { coinBonusAt: null }, { coinBonusAt: { $lt: new Date(days.dayStart(now)) } }],
     },
     { $inc: { coins: config.DAILY_BONUS }, $set: { coinBonusAt: new Date(now) } },
   );

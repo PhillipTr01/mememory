@@ -3,6 +3,7 @@ const User = require("../models/User");
 const Setting = require("../models/Setting");
 const coins = require("./coins");
 const config = require("./config");
+const days = require("./days");
 
 /*
  * The secret casino is only for players the admin let in (in the admin panel).
@@ -35,9 +36,9 @@ async function setFirstApproval(now) {
   return firstApproval();
 }
 
-// What a player gets who is let in now: {coins, missed}
+// What a player gets who is let in now: {coins, missed} - a bonus for every day since the day of the first approval (today's one they claim themselves)
 function startCoins(first, now = Date.now()) {
-  const missed = first == null ? 0 : Math.max(0, Math.floor((now - new Date(first).getTime()) / config.BONUS_EVERY));
+  const missed = first == null ? 0 : Math.max(0, days.dayNumber(now) - days.dayNumber(new Date(first).getTime()));
   return { coins: config.START_COINS + missed * config.DAILY_BONUS, missed: missed };
 }
 

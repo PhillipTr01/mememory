@@ -104,15 +104,16 @@ test("access: the admin sees who wants in, first", async () => {
   assert.strictEqual((await call(ADMIN + "/api/access", { json: { username: "tom", approve: true } })).status, 401);
 });
 
-test("access: the start money - 50,000 plus every daily bonus missed since the first approval", async () => {
-  const first = Date.now() - 3.5 * DAY;
-  // The very first approval (3.5 days ago): just the start money
+test("access: the start money - 50,000 plus the daily bonus of every day since the first approval", async () => {
+  const days = require("../game/days");
+  // The very first approval (3 calendar days ago): just the start money
+  const first = days.dayStart(days.dayStart() - 2.5 * DAY) + 2 * 60 * 60 * 1000;
   const tom = await access.approve("tom", first);
   assert.deepStrictEqual(tom, { username: "tom", coins: config.START_COINS, missed: 0, again: false });
   assert.strictEqual(h.coinsOf("tom"), config.START_COINS);
   assert.strictEqual((await access.approve("tom")).error, "Already approved.");
 
-  // Today: three full days later - three bonuses missed
+  // Today: three days later - three bonuses missed
   const res = await adminApi("access", { username: "uma", approve: true });
   assert.strictEqual(res.status, 200);
   assert.deepStrictEqual(res.body, { username: "uma", coins: config.START_COINS + 3 * config.DAILY_BONUS, missed: 3, again: false });
