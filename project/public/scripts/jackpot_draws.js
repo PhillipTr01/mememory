@@ -866,18 +866,9 @@ var coinRainDraw = {
     var winner = jars.find((jar) => jar.name == draw.winner);
     if (winner == null) return winnerLabel(parts.root, draw);
 
-    // How full each jar ends and how it gets there (bend > 1: late, < 1: early).
-    // The biggest rival leads for a long time and ends just below the rim.
-    var share = (jar) => (state.entries.find((e) => e.name == jar.name) || { coins: 0 }).coins;
-    var rivals = jars.filter((jar) => jar != winner).sort((a, b) => share(b) - share(a));
-    rivals.forEach((jar) => {
-      jar.final = randomBetween(0.55, 0.86);
-      jar.bend = randomBetween(0.7, 1.4);
-    });
-    if (rivals[0]) Object.assign(rivals[0], { final: randomBetween(0.94, 0.97), bend: randomBetween(0.55, 0.75) });
-    if (rivals[1]) Object.assign(rivals[1], { final: randomBetween(0.86, 0.93), bend: randomBetween(0.8, 1.1) });
-    winner.final = 1;
-    winner.bend = Math.random() < 0.65 ? randomBetween(1.4, 1.8) : randomBetween(0.9, 1.2);
+    // A different story every time: how full each jar ends and how fast it gets there
+    var rivals = jars.filter((jar) => jar != winner);
+    var plan = this.plan(winner, rivals);
 
     if (short) {
       jars.forEach((jar) => this.setLevel(jar, jar.final));
@@ -885,18 +876,18 @@ var coinRainDraw = {
     }
 
     // The rain: fast at first, slower and slower at the end
-    var rainTime = duration - 900;
+    var rainTime = duration - 1000;
     var start = performance.now();
     var leader = null;
-    var almost = false;
+    var shouted = 0;
     await new Promise((resolve) => {
       var frame = (now) => {
         // The first frame can be a little older than start
         var t = Math.min(1, Math.max(0, (now - start) / rainTime));
-        var p = 1 - Math.pow(1 - t, 1.7);
+        var p = 1 - Math.pow(1 - t, 1.5);
         jars.forEach((jar) => {
           // The winner stays just below the rim until the last coin
-          var target = jar.final * Math.pow(p, jar.bend) * (jar == winner ? 0.985 : 1);
+          var target = jar.final * jar.pace(p) * (jar == winner ? 0.985 : 1);
           var level = Math.max(jar.level, target);
           jar.debt = Math.min(jar.debt + (level - jar.level) * 36, 3);
           for (; jar.debt >= 1; jar.debt--) this.drop(parts, jar);
@@ -908,9 +899,9 @@ var coinRainDraw = {
           leader = top;
           this.crownOn(parts, top);
         }
-        if (!almost && t > 0.7) {
-          almost = true;
-          shout(parts.root, "ALMOST…", "small");
+        if (shouted < plan.shouts.length && t > plan.shouts[shouted].at) {
+          shout(parts.root, plan.shouts[shouted].text, "small");
+          shouted++;
         }
         if (t < 1) requestAnimationFrame(frame);
         else resolve();
@@ -918,23 +909,124 @@ var coinRainDraw = {
       requestAnimationFrame(frame);
     });
 
-    // The last coin, big and slow
+    // The last coin, big and slow - and not always straight in
     jars.forEach((jar) => jar.column.classList.remove("brim"));
     winner.column.classList.add("brim");
-    var spot = this.spot(parts, winner);
-    var last = this.coin(parts, spot.x, 26);
-    await animate(
-      last,
-      [
-        { transform: "translate(-50%, -40px) rotate(0deg)" },
-        { transform: `translate(-50%, ${spot.top - 20}px) rotate(540deg)`, offset: 0.85 },
-        { transform: `translate(-50%, ${spot.surface - 18}px) rotate(720deg)` },
-      ],
-      { duration: 850, easing: "cubic-bezier(.4,0,.9,.6)" },
-    );
+    var last = await this.lastCoin(parts, winner, plan.decoy);
     last.remove();
     this.setLevel(winner, 1);
     this.overflow(parts, winner, draw, false);
+  },
+
+  // How fast a jar fills over the time: random speeds for a few parts of the rain
+  pace(speeds) {
+    var total = speeds.reduce((a, b) => a + b, 0);
+    var sums = [0];
+    speeds.forEach((speed) => sums.push(sums[sums.length - 1] + speed / total));
+    var n = speeds.length;
+    return (p) => {
+      var i = Math.min(n - 1, Math.floor(p * n));
+      return sums[i] + (sums[i + 1] - sums[i]) * (p * n - i);
+    };
+  },
+
+  randomSpeeds(low, high) {
+    return [0, 1, 2, 3, 4].map(() => randomBetween(low, high));
+  },
+
+  /*
+   * The story of this draw (random): a comeback, a runaway leader, a photo
+   * finish, a back and forth or an underdog. The winner is fixed (server),
+   * only the way there changes.
+   */
+  plan(winner, rivals) {
+    var pick = (list) => list[Math.floor(Math.random() * list.length)];
+    var stories = ["comeback", "runaway", "photo", "seesaw", "underdog"];
+    var story = rivals.length ? pick(stories) : "runaway";
+    var threat = rivals.length ? pick(rivals) : null; // not always the biggest one
+    var jitter = (speeds) => speeds.map((speed) => speed * randomBetween(0.85, 1.15));
+
+    rivals.forEach((jar) => {
+      jar.final = randomBetween(0.5, 0.88);
+      jar.pace = this.pace(this.randomSpeeds(0.4, 1.6));
+    });
+    winner.final = 1;
+    winner.pace = this.pace(this.randomSpeeds(0.6, 1.4));
+    var shouts = [];
+
+    if (story == "comeback") {
+      winner.pace = this.pace(jitter([0.4, 0.6, 0.9, 1.4, 1.9]));
+      Object.assign(threat, { final: randomBetween(0.95, 0.975), pace: this.pace(jitter([1.8, 1.4, 1, 0.7, 0.4])) });
+      shouts.push({ at: randomBetween(0.55, 0.7), text: pick(["COMEBACK?", "HERE IT COMES…", "NOT OVER YET!"]) });
+    } else if (story == "runaway") {
+      winner.pace = this.pace(jitter([1.9, 1.3, 0.9, 0.7, 0.6]));
+      rivals.forEach((jar) => (jar.final = randomBetween(0.55, 0.85)));
+      if (threat) Object.assign(threat, { final: randomBetween(0.88, 0.94), pace: this.pace(jitter([0.5, 0.8, 1.1, 1.4, 1.5])) });
+      shouts.push({ at: randomBetween(0.5, 0.65), text: pick(["CAN ANYONE CATCH UP?", "WAY AHEAD!", "RUNAWAY!"]) });
+    } else if (story == "photo") {
+      rivals.slice(0, 3).forEach((jar) => {
+        jar.final = randomBetween(0.955, 0.98);
+        jar.pace = this.pace(this.randomSpeeds(0.8, 1.2));
+      });
+      winner.pace = this.pace(this.randomSpeeds(0.8, 1.2));
+      shouts.push({ at: randomBetween(0.6, 0.72), text: pick(["NECK AND NECK!", "PHOTO FINISH!", "SO CLOSE…"]) });
+    } else if (story == "seesaw") {
+      winner.pace = this.pace(jitter([1.6, 0.5, 1.6, 0.5, 1.4]));
+      Object.assign(threat, { final: randomBetween(0.96, 0.978), pace: this.pace(jitter([0.6, 1.6, 0.6, 1.6, 0.6])) });
+      shouts.push({ at: randomBetween(0.45, 0.6), text: pick(["BACK AND FORTH!", "WHO WILL IT BE?"]) });
+    } else {
+      winner.pace = this.pace(jitter([0.2, 0.3, 0.6, 1.6, 2.8]));
+      rivals.forEach((jar) => {
+        jar.final = randomBetween(0.72, 0.95);
+        jar.pace = this.pace(jitter([1.6, 1.4, 1.1, 0.8, 0.5]));
+      });
+      shouts.push({ at: randomBetween(0.6, 0.75), text: pick(["WHAT IS HAPPENING?!", "THE UNDERDOG!", "OUT OF NOWHERE!"]) });
+    }
+    if (Math.random() < 0.5) shouts.push({ at: randomBetween(0.86, 0.93), text: pick(["ALMOST…", "ONE MORE COIN…", "WAIT FOR IT…"]) });
+
+    // The last coin teases another jar first (if there is one that is almost full)
+    var close = rivals.filter((jar) => jar.final > 0.85);
+    var decoy = close.length && Math.random() < 0.6 ? pick(close) : null;
+    return { story: story, shouts: shouts, decoy: decoy };
+  },
+
+  // Straight in, off the rim of another jar, or hovering over another jar first
+  async lastCoin(parts, winner, decoy) {
+    var spot = this.spot(parts, winner);
+    var last = this.coin(parts, spot.x, 26);
+    var end = { transform: `translate(-50%, ${spot.surface - 18}px) rotate(720deg)` };
+    var way;
+    if (decoy == null) {
+      way = [
+        { transform: "translate(-50%, -40px) rotate(0deg)" },
+        { transform: `translate(-50%, ${spot.top - 20}px) rotate(540deg)`, offset: 0.85 },
+        end,
+      ];
+    } else {
+      var other = this.spot(parts, decoy);
+      var dx = other.x - spot.x;
+      if (Math.random() < 0.5) {
+        // Hits the rim of the other jar and jumps over
+        way = [
+          { transform: `translate(calc(-50% + ${dx}px), -40px) rotate(0deg)` },
+          { transform: `translate(calc(-50% + ${dx}px), ${other.top - 14}px) rotate(300deg)`, offset: 0.45 },
+          { transform: `translate(calc(-50% + ${dx / 2}px), ${Math.min(other.top, spot.top) - 90}px) rotate(500deg)`, offset: 0.7 },
+          { transform: `translate(-50%, ${spot.top - 20}px) rotate(640deg)`, offset: 0.9 },
+          end,
+        ];
+      } else {
+        // Hangs over the other jar ... and drifts away
+        way = [
+          { transform: `translate(calc(-50% + ${dx}px), -40px) rotate(0deg)` },
+          { transform: `translate(calc(-50% + ${dx}px), ${other.top - 60}px) rotate(200deg)`, offset: 0.4 },
+          { transform: `translate(calc(-50% + ${dx}px), ${other.top - 50}px) rotate(260deg)`, offset: 0.6 },
+          { transform: `translate(-50%, ${spot.top - 30}px) rotate(560deg)`, offset: 0.88 },
+          end,
+        ];
+      }
+    }
+    await animate(last, way, { duration: decoy ? 1150 : 850, easing: "cubic-bezier(.4,0,.9,.6)" });
+    return last;
   },
 
   overflow(parts, winner, draw, short) {
