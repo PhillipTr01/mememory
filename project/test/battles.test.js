@@ -155,6 +155,8 @@ test("battles: two players pay the cases, the best total wins every item", async
   // One round after the other
   const round1 = battleIn(await waitFor(bob, "battles", (data) => battleIn(data, id) && battleIn(data, id).revealed === 1), id);
   assert.strictEqual(round1.rounds.length, 1);
+  // While the cases are opened nobody has the pot yet (it can't be played elsewhere)
+  assert.deepStrictEqual([h.coinsOf("alice"), h.coinsOf("bob")], [455, 455]);
 
   const done = battleIn(await waitFor(bob, "battles", (data) => battleIn(data, id) && battleIn(data, id).phase === "done"), id);
   assert.strictEqual(done.rounds.length, 3);
@@ -174,7 +176,8 @@ test("battles: two players pay the cases, the best total wins every item", async
   // The winner gets every item's worth, the other one nothing
   const winner = done.seats[done.winner].name;
   const loser = winner === "alice" ? "bob" : "alice";
-  assert.strictEqual(h.coinsOf(winner), 455 + done.payout);
+  await h.wait(30);
+  assert.strictEqual(h.coinsOf(winner), 455 + done.payout, "paid when the battle is over");
   assert.strictEqual(h.coinsOf(loser), 455);
 });
 

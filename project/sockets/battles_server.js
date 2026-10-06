@@ -134,16 +134,10 @@ module.exports = function (io) {
     battle.winner = tied[Math.floor(cases.roll(battle.fair.seed, `${battle.id}:tie`) * tied.length)];
     battle.payout = all.reduce((sum, total) => sum + total, 0);
 
-    // Paid right away (nothing is lost if the page goes away during the show),
-    // the new balance is sent at the end so it doesn't spoil anything
-    const winner = battle.seats[battle.winner];
-    if (!winner.bot && battle.payout > 0) {
-      try {
-        await coins.add(winner.name, battle.payout, { quiet: true, reason: "battle win" });
-      } catch (error) {
-        console.error("[battles] Could not pay the winner:", error);
-      }
-    }
+    // The winner is paid when the battle is over (see finish) - not before:
+    // the coins can't be played elsewhere while the cases are still opened
+    battle.payAtEnd = true;
+    battle.paid = false;
 
     // A short countdown, then one round after the other
     battle.begin = Date.now() + config.BATTLE_START;
@@ -170,14 +164,29 @@ module.exports = function (io) {
     else battle.timer = setTimeout(() => finish(battle), battle.nextAt - Date.now());
   }
 
+  // The pot goes to the winner - once (battles from before payAtEnd were paid at the start)
+  async function payWinner(battle) {
+    const winner = battle.seats[battle.winner];
+    if (!battle.payAtEnd || battle.paid || winner.bot || battle.payout <= 0) return;
+    battle.paid = true;
+    persist.changed("battles");
+    try {
+      await coins.add(winner.name, battle.payout, { reason: "battle win" });
+    } catch (error) {
+      battle.paid = false;
+      console.error("[battles] Could not pay the winner:", error);
+    }
+  }
+
   function finish(battle) {
     battle.phase = PHASE.DONE;
     battle.nextAt = null;
     battle.doneAt = Date.now();
+    payWinner(battle);
     const winner = battle.seats[battle.winner];
     lobby.history.unshift({ id: battle.id, winner: winner.name, bot: winner.bot, total: battle.payout, price: battle.price });
     lobby.history.length = Math.min(lobby.history.length, config.BATTLE_HISTORY);
-    if (!winner.bot) coins.notify(winner.name);
+
     emitList();
     remove(battle, config.BATTLE_KEEP);
   }
@@ -351,6 +360,7 @@ module.exports = function (io) {
         battle.nextAt += shift;
         scheduleReveal(battle);
       } else if (battle.phase === PHASE.DONE) {
+        payWinner(battle);
         remove(battle, Math.max(config.RESTORE_GRACE, (battle.doneAt || now) + config.BATTLE_KEEP - now));
       }
     }
