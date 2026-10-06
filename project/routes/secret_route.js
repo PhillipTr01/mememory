@@ -13,8 +13,7 @@ const access = require("../game/access");
 module.exports = function (auth) {
   const router = express.Router({ caseSensitive: false, strict: true });
 
-  // Only for players the admin let in - everybody else back to the start page
-  // (and the admin sees that they want in)
+  // Only for players the admin let in - everybody else gets the page to ask for access
   const approved = asyncHandler(async (req, res, next) => {
     const user = await User.findOne({ _id: req._id }).select("username casinoApproved payoutAllowed").lean();
     if (access.approved(user)) {
@@ -22,25 +21,45 @@ module.exports = function (auth) {
       req.payoutAllowed = user.payoutAllowed === true;
       return next();
     }
-    if (user != null) await access.request(req._id).catch(() => {});
     if (req.path.startsWith("/withdraw")) return res.status(403).json({ error: "No access." });
-    res.redirect("/");
+    if (req.path === "/") return page("casino_request.html")(req, res, next);
+    res.redirect(req.baseUrl + "/");
   });
 
-  router.get("/", auth, approved, (req, res, next) => {
-    // Always with a slash at the end, so the relative links work
-    if (!req.originalUrl.split("?")[0].endsWith("/")) return res.redirect(req.baseUrl + "/");
-    page("jackpot.html")(req, res, next);
-  });
+  // Always with a slash at the end, so the relative links work
+  router.get("/", auth, (req, res, next) => (req.originalUrl.split("?")[0].endsWith("/") ? next() : res.redirect(req.baseUrl + "/")));
+  router.get("/", auth, approved, page("jackpot.html"));
   // The jackpot also under its own name
   router.get("/jackpot", auth, approved, page("jackpot.html"));
   router.get("/battles", auth, approved, page("battles.html"));
   router.get("/poker", auth, approved, page("poker.html"));
   router.get("/blackjack", auth, approved, page("blackjack.html"));
 
-  /* ---------- Payouts of the logged in player ---------- */
-
   router.use(express.json({ limit: "2kb" }));
+
+  /* ---------- Asking for access ---------- */
+
+  // {approved, requested, startCoins}: what the page to ask for access shows
+  router.get(
+    "/request",
+    auth,
+    asyncHandler(async (req, res) => {
+      const user = await User.findOne({ _id: req._id }).select("casinoApproved casinoRequestedAt").lean();
+      if (user == null) return res.status(401).json({ error: "Not logged in." });
+      res.json({ approved: access.approved(user), requested: user.casinoRequestedAt != null, startCoins: access.startCoins(await access.firstApproval()).coins });
+    }),
+  );
+
+  router.post(
+    "/request",
+    auth,
+    asyncHandler(async (req, res) => {
+      await access.request(req._id);
+      res.json({ requested: true });
+    }),
+  );
+
+  /* ---------- Payouts of the logged in player ---------- */
 
   // Takes the coins off the balance, the admin sees it in the admin panel
   router.post(

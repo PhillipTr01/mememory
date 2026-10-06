@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Psst... - MemeMory</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <link rel="stylesheet" href="/static/styles/theme.css" />
+    <link rel="stylesheet" href="/static/styles/not_found.css" />
+    <link rel="stylesheet" href="/static/styles/casino_request.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet" />
+  </head>
+
+  <body class="nf-page cr-page">
+    <main class="nf-main">
+      <div class="cr-card">
+        <span class="cr-icon" aria-hidden="true">🤫</span>
+        <h1 class="nf-title">Psst... you found it.</h1>
+        <p class="nf-text">This place is invite only. Ask for access - as soon as you're let in, you start with <b id="crCoins" class="cr-coins">🪙 50,000</b>.</p>
+
+        <!--- Not asked yet --->
+        <div id="crAsk" class="cr-state" hidden>
+          <button type="button" id="crButton" class="mm-btn mm-btn-primary cr-button">🔑 Ask for access</button>
+        </div>
+
+        <!--- Asked: waiting for the admin --->
+        <div id="crWaiting" class="cr-state" hidden>
+          <div class="cr-waiting"><span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"></span></div>
+          <p class="cr-waiting-text">Request sent - waiting for the admin.</p>
+          <p class="cr-hint">Keep this page open, you're let in by yourself.</p>
+        </div>
+
+        <p id="crError" class="cr-error" hidden></p>
+      </div>
+      <a href="/" class="cr-back">← Back to MemeMory</a>
+    </main>
+
+    <script>
+      (function () {
+        var ask = document.getElementById("crAsk");
+        var waiting = document.getElementById("crWaiting");
+        var error = document.getElementById("crError");
+        var button = document.getElementById("crButton");
+
+        function show(state) {
+          // Let in: off to the casino
+          if (state.approved) return window.location.reload();
+          if (state.startCoins) document.getElementById("crCoins").innerText = "🪙 " + Number(state.startCoins).toLocaleString("en-US");
+          ask.hidden = state.requested;
+          waiting.hidden = !state.requested;
+        }
+
+        // The address next to this page (the secret one is in no file)
+        async function load() {
+          try {
+            var res = await fetch("request", { cache: "no-store" });
+            if (res.ok) show(await res.json());
+          } catch (e) {
+            // offline for a moment: the next try
+          }
+        }
+
+        button.addEventListener("click", async () => {
+          button.disabled = true;
+          error.hidden = true;
+          try {
+            var res = await fetch("request", { method: "POST" });
+            if (!res.ok) throw new Error();
+            await load();
+          } catch (e) {
+            error.innerText = "That didn't work - try again.";
+            error.hidden = false;
+          } finally {
+            button.disabled = false;
+          }
+        });
+
+        load();
+        setInterval(load, 10000);
+      })();
+    </script>
+  </body>
+</html>

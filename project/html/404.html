@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Not found - MemeMory</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <link rel="stylesheet" href="/static/styles/theme.css" />
+    <link rel="stylesheet" href="/static/styles/not_found.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet" />
+  </head>
+
+  <body class="nf-page">
+    <main class="nf-main">
+      <a href="/" class="nf-logo" aria-label="MemeMory"><img src="/static/images/logo.png" alt="MemeMory" /></a>
+
+      <!--- Three memory cards: they flip and show 4 0 4 --->
+      <div class="nf-cards" aria-hidden="true">
+        <div class="nf-card" style="--i: 0"><div class="nf-card-inner"><div class="nf-back"></div><div class="nf-front">4</div></div></div>
+        <div class="nf-card" style="--i: 1"><div class="nf-card-inner"><div class="nf-back"></div><div class="nf-front nf-zero">0</div></div></div>
+        <div class="nf-card" style="--i: 2"><div class="nf-card-inner"><div class="nf-back"></div><div class="nf-front">4</div></div></div>
+      </div>
+
+      <h1 class="nf-title">No match for this one</h1>
+      <p class="nf-text">You flipped a card that doesn't exist. The page may have moved, or the link is wrong.</p>
+
+      <div class="nf-actions">
+        <a href="/" class="mm-btn mm-btn-primary">Back to MemeMory</a>
+        <button type="button" class="mm-btn" onclick="history.length > 1 ? history.back() : (location.href = '/')">Go back</button>
+      </div>
+    </main>
+  </body>
+</html>

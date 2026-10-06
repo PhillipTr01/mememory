@@ -80,7 +80,8 @@ module.exports = {
 
   // Admin panel: a secret address and a password (ADMIN_PASSWORD or the
   // hash below; without both there is no admin panel)
-  ADMIN_PATH: "/" + (process.env.ADMIN_PATH || "🛠️🦆"),
+  // Only emojis without an invisible variation selector: the address bar shows them as they are
+  ADMIN_PATH: "/" + (process.env.ADMIN_PATH || "🦆🔧"),
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || "",
   // Or only a salted scrypt hash of the password (make one with
   // `npm run admin-password`). ADMIN_PASSWORD wins if both are set.

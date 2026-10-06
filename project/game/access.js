@@ -84,9 +84,19 @@ async function setPayout(username, allowed) {
   return { username: username, payout: allowed === true };
 }
 
-// Somebody without access tried to get in: shown to the admin as a request
+// A player without access asks for it (on the secret page): shown to the admin as a request
 async function request(userId) {
-  await User.updateOne({ _id: userId, casinoApproved: { $ne: true }, casinoRequestedAt: { $exists: false } }, { $set: { casinoRequestedAt: new Date() } });
+  await User.updateOne(
+    { _id: userId, casinoApproved: { $ne: true }, $or: [{ casinoRequestedAt: { $exists: false } }, { casinoRequestedAt: null }] },
+    { $set: { casinoRequestedAt: new Date() } },
+  );
 }
 
-module.exports = { approved, approve, revoke, setPayout, request, firstApproval, startCoins, changes };
+// The admin says no: the request is gone (the player can ask again)
+async function decline(username) {
+  const result = await User.updateOne({ username: username, casinoApproved: { $ne: true } }, { $set: { casinoRequestedAt: null } });
+  if (!(result.nModified > 0 || result.modifiedCount > 0)) return { error: "No such request." };
+  return { username: username };
+}
+
+module.exports = { approved, approve, revoke, setPayout, request, decline, firstApproval, startCoins, changes };

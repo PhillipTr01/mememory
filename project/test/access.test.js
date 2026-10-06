@@ -67,12 +67,19 @@ function connect(namespace, name) {
   });
 }
 
-test("access: without the approval every casino page leads back to the start page", async () => {
-  for (const path of ["/", "/jackpot", "/battles", "/poker", "/blackjack"]) {
+test("access: without the approval the secret address only shows the page to ask for access", async () => {
+  const start = await call(CASINO + "/", as("tom"));
+  assert.strictEqual(start.status, 200);
+  const html = await start.text();
+  assert.match(html, /Ask for access/);
+  assert.doesNotMatch(html, /<title>Jackpot/);
+  for (const path of ["/jackpot", "/battles", "/poker", "/blackjack"]) {
     const res = await call(CASINO + path, as("tom"));
     assert.strictEqual(res.status, 302, path);
-    assert.strictEqual(res.headers.get("location"), "/", path);
+    assert.strictEqual(res.headers.get("location"), CASINO + "/", path);
   }
+  // Not logged in: the landing page
+  assert.strictEqual((await call(CASINO + "/")).headers.get("location"), "/");
   assert.strictEqual((await call(CASINO + "/withdraw", { ...as("tom"), json: { amount: 5000 } })).status, 403);
   assert.strictEqual((await call(CASINO + "/withdrawals", as("tom"))).status, 403);
 
@@ -87,16 +94,34 @@ test("access: without the approval every casino page leads back to the start pag
   assert.strictEqual((await connect("/blackjack", "old")).ok, true);
 });
 
-test("access: the admin sees who wants in, first", async () => {
+test("access: asking for access - the admin sees the request, can approve or decline it", async () => {
+  // Looking is no request
+  assert.deepStrictEqual(await (await call(CASINO + "/request", as("tom"))).json(), { approved: false, requested: false, startCoins: config.START_COINS });
+  assert.deepStrictEqual((await adminApi("overview")).body.requests, []);
+  // Vic asks and is declined: he can ask again
+  assert.strictEqual((await call(CASINO + "/request", { ...as("vic"), json: {} })).status, 200);
+  assert.strictEqual((await adminApi("overview")).body.requests[0].username, "vic");
+  assert.deepStrictEqual((await adminApi("access/decline", { username: "vic" })).body, { username: "vic" });
+  assert.strictEqual((await (await call(CASINO + "/request", as("vic"))).json()).requested, false);
+  assert.strictEqual((await adminApi("access/decline", { username: "old" })).status, 400, "approved: nothing to decline");
+
+  // Tom asks
+  assert.deepStrictEqual(await (await call(CASINO + "/request", { ...as("tom"), json: {} })).json(), { requested: true });
+  assert.strictEqual((await (await call(CASINO + "/request", as("tom"))).json()).requested, true);
+  const overview = (await adminApi("overview")).body;
+  assert.deepStrictEqual(overview.requests.map((r) => r.username), ["tom"]);
+  assert.strictEqual(overview.waiting, 1);
+  assert.ok(Array.isArray(overview.open), "the open payouts are there too");
+
   const res = await adminApi("access");
   assert.strictEqual(res.status, 200);
   assert.strictEqual(res.body.firstApproval, null);
   assert.strictEqual(res.body.startCoins, config.START_COINS);
-  assert.deepStrictEqual(res.body.players[0], { username: "tom", approved: false, approvedAt: null, requestedAt: res.body.players[0].requestedAt, payout: false });
-  assert.ok(res.body.players[0].requestedAt, "tom tried to get in");
-  const old = res.body.players.find((p) => p.username === "old");
-  assert.strictEqual(old.approved, true);
-  assert.strictEqual((await adminApi("overview")).body.waiting, 1);
+  // The approved players first, then who asked, then the rest
+  assert.deepStrictEqual(res.body.players.map((p) => p.username), ["old", "tom", "uma", "vic"]);
+  const tom = res.body.players[1];
+  assert.deepStrictEqual(tom, { username: "tom", approved: false, approvedAt: null, requestedAt: tom.requestedAt, payout: false });
+  assert.ok(tom.requestedAt);
   // Not in the casino: not on the leaderboard, no balance to change
   assert.ok(!(await adminApi("users")).body.some((p) => p.username === "tom"));
   assert.strictEqual((await adminApi("balance", { username: "tom", mode: "set", amount: 5 })).status, 400);
@@ -144,7 +169,7 @@ test("access: taken away - the open pages close, a new approval gives no second 
   assert.strictEqual(res.status, 200);
   await closed;
   await gone;
-  assert.strictEqual((await call(CASINO + "/", as("uma"))).headers.get("location"), "/");
+  assert.match(await (await call(CASINO + "/", as("uma"))).text(), /Ask for access/);
   assert.strictEqual((await connect("/jackpot", "uma")).ok, false);
 
   h.setCoins("uma", 1234);

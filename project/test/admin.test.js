@@ -135,16 +135,16 @@ test("admin: leaderboard, the richest first", async () => {
   assert.deepStrictEqual((await adminApi("users?q=ros")).body.map((p) => p.username), ["rosa"]);
 });
 
-test("admin: the address works with and without the invisible emoji character", async () => {
-  const plain = encodeURI(config.ADMIN_PATH.replace(/\uFE0F/g, ""));
-  assert.notStrictEqual(plain, ADMIN, "the default address has such a character");
-  const res = await call(plain + "/", { cookie: adminCookie });
-  assert.strictEqual(res.status, 200);
+test("admin: an address the address bar shows as it is - with or without invisible emoji characters", async () => {
+  assert.ok(!/\uFE0F/.test(config.ADMIN_PATH), "no invisible character in the default address (no %EF%B8%8F in the bar)");
+  // A self chosen address with such a character works both ways
+  assert.deepStrictEqual(config.addresses("/🛠️🦆"), [encodeURI("/🛠️🦆"), encodeURI("/🛠🦆")]);
+  const res = await call(ADMIN + "/", { cookie: adminCookie });
   assert.match(await res.text(), /adBalance/);
   // Without the slash: to the address with the slash
-  const redirect = await call(plain);
+  const redirect = await call(ADMIN);
   assert.strictEqual(redirect.status, 302);
-  assert.strictEqual(redirect.headers.get("location"), plain + "/");
+  assert.strictEqual(redirect.headers.get("location"), ADMIN + "/");
 });
 
 test("admin: the stored hash - only the right password fits", async () => {

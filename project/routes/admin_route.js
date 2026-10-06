@@ -23,7 +23,8 @@ module.exports = function () {
   const tries = new Map(); // ip -> [times of wrong passwords]
 
   const enabled = () => Boolean(config.ADMIN_PASSWORD || config.ADMIN_PASSWORD_HASH);
-  router.use((req, res, next) => (enabled() ? next() : res.status(404).send("Not found")));
+  // Off: like any address that doesn't exist (the 404 page)
+  router.use((req, res, next) => (enabled() ? next() : next(Object.assign(new Error("Not found"), { status: 404 }))));
   router.use(express.json({ limit: "4kb" }));
   router.use(express.urlencoded({ extended: false, limit: "2kb" }));
 
@@ -105,10 +106,10 @@ module.exports = function () {
     return users.map((user) => ({ username: user.username, coins: balance(user) })).sort((a, b) => b.coins - a.coins || a.username.localeCompare(b.username));
   }
 
-  // Everybody with the access state: who wants in first, then the rest, then the approved players
+  // Everybody with the access state: the approved players first, then who wants in, then the rest
   async function accessList(q) {
     const users = await User.find({}).select("username casinoApproved casinoApprovedAt casinoRequestedAt payoutAllowed").lean();
-    const rank = (u) => (u.approved ? 2 : u.requestedAt ? 0 : 1);
+    const rank = (u) => (u.approved ? 0 : u.requestedAt ? 1 : 2);
     return users
       .map((user) => ({
         username: user.username,
@@ -121,8 +122,9 @@ module.exports = function () {
       .sort((a, b) => rank(a) - rank(b) || new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0) || a.username.localeCompare(b.username));
   }
 
-  async function waiting() {
-    return (await accessList("")).filter((user) => !user.approved && user.requestedAt).length;
+  // Who asked for access, the newest first
+  async function requests() {
+    return (await accessList("")).filter((user) => !user.approved && user.requestedAt);
   }
 
   // Everything at a glance: leaderboard, open payouts, totals
@@ -138,7 +140,8 @@ module.exports = function () {
         coins: all.reduce((sum, p) => sum + p.coins, 0),
         open: open,
         openCoins: open.reduce((sum, w) => sum + w.amount, 0),
-        waiting: await waiting(),
+        requests: (await requests()).map((user) => ({ username: user.username, requestedAt: user.requestedAt })),
+        waiting: (await requests()).length,
       });
     }),
   );
@@ -198,6 +201,19 @@ module.exports = function () {
       const { username, approve } = req.body || {};
       if (typeof username !== "string" || typeof approve !== "boolean") return res.status(400).json({ error: "Username and approve." });
       const result = approve ? await access.approve(username) : await access.revoke(username);
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
+  // Say no to a request (the player can ask again)
+  router.post(
+    "/api/access/decline",
+    admin,
+    asyncHandler(async (req, res) => {
+      const { username } = req.body || {};
+      if (typeof username !== "string") return res.status(400).json({ error: "Username." });
+      const result = await access.decline(username);
       if (result.error) return res.status(400).json(result);
       res.json(result);
     }),

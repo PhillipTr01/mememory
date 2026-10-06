@@ -83,3 +83,19 @@ test("page auth middleware redirects invalid sessions", async () => {
   assert.strictEqual(res.status, 302);
   assert.strictEqual(res.headers.get("location"), "/");
 });
+
+test("404: pages get the 404 page, the API a short JSON answer", async () => {
+  const { notFound, errorHandler } = require("../utils/errors");
+  const app = express();
+  app.use(notFound);
+  app.use(errorHandler);
+
+  const page = await request(app, "/jackpot", { headers: { accept: "text/html,application/xhtml+xml,*/*;q=0.8" } });
+  assert.strictEqual(page.status, 404);
+  assert.match(page.headers.get("content-type"), /html/);
+  assert.match(await page.text(), /No match for this one/);
+
+  const api = await request(app, "/api/nothing", { headers: { accept: "application/json" } });
+  assert.strictEqual(api.status, 404);
+  assert.deepStrictEqual(await api.json(), { error: { status: 404, message: "Not found." } });
+});

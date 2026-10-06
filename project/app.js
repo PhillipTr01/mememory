@@ -18,6 +18,7 @@ if (missing.length > 0) {
 const PORT = process.env.PORT || 5000;
 
 const { page, staticHeaders } = require("./utils/pages");
+const { notFound, errorHandler } = require("./utils/errors");
 const config = require("./game/config");
 
 const app = express();
@@ -98,34 +99,8 @@ console.log(
 );
 
 /* Error handling */
-app.use((req, res, next) => {
-  const err = new Error("Error! Ressource not found!");
-  err.status = 404;
-  next(err);
-});
-
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-  const status = err.status || err.statusCode || 500;
-
-  if (status >= 500) {
-    // Log the real problem, but don't show internals to the client.
-    console.error(`[${req.method} ${req.originalUrl}]`, err);
-  }
-
-  if (res.headersSent) {
-    return;
-  }
-
-  res.status(status);
-  if (status == 404) {
-    res.send();
-    return;
-  }
-
-  const message = status >= 500 ? "Internal server error." : err.message;
-  res.send({ error: { status: status, message: message } });
-});
+app.use(notFound);
+app.use(errorHandler);
 
 /* Connect to Database - retry instead of giving up when MongoDB isn't up yet */
 let scraperInterval = null;

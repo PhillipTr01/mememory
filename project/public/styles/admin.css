@@ -214,6 +214,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+.ad-stat-sub {
+  font-size: 0.8rem;
+  color: var(--mm-muted);
+}
+
+.ad-request-icon {
+  font-size: 1.2rem;
+}
+
 .ad-status {
   min-width: 70px;
   text-align: center;

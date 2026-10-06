@@ -113,6 +113,9 @@ async function loadOverview() {
     document.getElementById("adCoins").innerText = "🪙 " + formatCoins(data.coins);
     document.getElementById("adOpen").innerText = data.open.length;
     document.getElementById("adOpenCoins").innerText = "🪙 " + formatCoins(data.openCoins);
+    document.getElementById("adWaiting").innerText = data.requests.length;
+    var requests = document.getElementById("adRequestList");
+    requests.replaceChildren(...(data.requests.length ? data.requests.map(requestRow) : [el("p", "mm-muted mb-0", "Nobody is waiting.")]));
     var list = document.getElementById("adOpenList");
     list.replaceChildren(...(data.open.length ? data.open.map(payoutRow) : [el("p", "mm-muted mb-0", "Nothing to pay out.")]));
 
@@ -147,6 +150,33 @@ async function loadOverview() {
 }
 
 /* ---------- Access ---------- */
+
+// A player who asked for access (overview): let in or say no
+function requestRow(request) {
+  var row = el("div", "ad-payout open");
+  var info = el("div", "ad-payout-info");
+  info.append(el("b", "", request.username), el("span", "mm-muted small", "asked " + time(request.requestedAt)));
+  var approve = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Approve");
+  approve.type = "button";
+  approve.addEventListener("click", () => setAccess({ username: request.username, approved: false }, true, approve));
+  var decline = el("button", "mm-btn mm-btn-sm", "Decline");
+  decline.type = "button";
+  decline.title = "Say no - the player can ask again";
+  decline.addEventListener("click", async () => {
+    decline.disabled = true;
+    try {
+      await api("access/decline", { username: request.username });
+      showToast(request.username + "'s request is declined");
+      loadOverview();
+      if (!document.getElementById("tab-access").hidden) loadAccess();
+    } catch (error) {
+      decline.disabled = false;
+      fail(error);
+    }
+  });
+  row.append(el("span", "ad-request-icon", "🔑"), info, approve, decline);
+  return row;
+}
 
 function day(value) {
   return new Date(value).toLocaleDateString(undefined, { dateStyle: "medium" });
