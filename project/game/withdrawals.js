@@ -10,7 +10,8 @@ const config = require("./config");
 
 // {ok, withdrawal} or {error}
 async function request(username, amount) {
-  if (!Number.isInteger(amount) || amount < config.WITHDRAW_MIN) return { error: `At least ${config.WITHDRAW_MIN} coins.` };
+  if (!Number.isInteger(amount) || amount < config.WITHDRAW_MIN) return { error: `At least ${config.WITHDRAW_MIN.toLocaleString("en-US")} coins.` };
+  if (amount % config.WITHDRAW_STEP !== 0) return { error: `Only in steps of ${config.WITHDRAW_STEP.toLocaleString("en-US")} coins.` };
   const open = await Withdrawal.countDocuments({ username: username, status: "open" });
   if (open >= config.WITHDRAW_MAX_OPEN) return { error: `At most ${config.WITHDRAW_MAX_OPEN} open payouts at a time.` };
   if (!(await coins.spend(username, amount, { reason: "withdrawal" }))) return { error: "You don't have enough coins." };

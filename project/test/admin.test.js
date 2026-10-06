@@ -89,38 +89,38 @@ test("admin: change balances, the history knows every change", async () => {
 });
 
 test("admin: payouts - a player takes coins off, the admin pays or rejects (coins back)", async () => {
-  h.setCoins("quinn", 1000);
+  h.setCoins("quinn", 20000);
   const player = { cookie: `token=${tokens.quinn}` };
-  let res = await call(CASINO + "/withdraw", { ...player, json: { amount: 400 } });
+  let res = await call(CASINO + "/withdraw", { ...player, json: { amount: 6000 } });
   assert.strictEqual(res.status, 200);
   const first = await res.json();
   assert.strictEqual(first.status, "open");
-  assert.strictEqual(h.coinsOf("quinn"), 600);
+  assert.strictEqual(h.coinsOf("quinn"), 14000);
 
-  // Not more than the balance, not too little
-  for (const amount of [5000, 5, "x"]) {
+  // Not more than the balance, at least 5k, only whole thousands
+  for (const amount of [30000, 4000, 5500, "x"]) {
     res = await call(CASINO + "/withdraw", { ...player, json: { amount } });
     assert.strictEqual(res.status, 400);
   }
-  assert.strictEqual(h.coinsOf("quinn"), 600);
-  res = await call(CASINO + "/withdraw", { ...player, json: { amount: 200 } });
+  assert.strictEqual(h.coinsOf("quinn"), 14000);
+  res = await call(CASINO + "/withdraw", { ...player, json: { amount: 5000 } });
   const second = await res.json();
 
   // The admin sees both
   const overview = (await adminApi("overview")).body;
-  assert.deepStrictEqual(overview.open.map((w) => [w.username, w.amount]).sort(), [["quinn", 200], ["quinn", 400]]);
-  assert.strictEqual(overview.openCoins, 600);
+  assert.deepStrictEqual(overview.open.map((w) => [w.username, w.amount]).sort(), [["quinn", 5000], ["quinn", 6000]]);
+  assert.strictEqual(overview.openCoins, 11000);
 
   // Paid: done; rejected: the coins go back
   assert.strictEqual((await adminApi("withdrawals/" + first.id, { action: "paid" })).status, 200);
   assert.strictEqual((await adminApi("withdrawals/" + first.id, { action: "reject" })).status, 400, "only once");
-  assert.strictEqual(h.coinsOf("quinn"), 400, "both payouts are off the balance");
+  assert.strictEqual(h.coinsOf("quinn"), 9000, "both payouts are off the balance");
   assert.strictEqual((await adminApi("withdrawals/" + second.id, { action: "reject", note: "nope" })).status, 200);
-  assert.strictEqual(h.coinsOf("quinn"), 600, "the rejected 200 are back");
+  assert.strictEqual(h.coinsOf("quinn"), 14000, "the rejected 5000 are back");
 
   // The player sees what happened
   const own = await (await call(CASINO + "/withdrawals", player)).json();
-  assert.deepStrictEqual(own.map((w) => [w.amount, w.status, w.note]).sort(), [[200, "rejected", "nope"], [400, "paid", null]]);
+  assert.deepStrictEqual(own.map((w) => [w.amount, w.status, w.note]).sort(), [[5000, "rejected", "nope"], [6000, "paid", null]]);
   assert.deepStrictEqual((await adminApi("withdrawals?status=open")).body, []);
   const history = (await adminApi("history?username=quinn")).body.map((row) => row.reason);
   assert.ok(history.includes("withdrawal") && history.includes("withdrawal refund"));

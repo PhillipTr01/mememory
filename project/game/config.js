@@ -79,7 +79,8 @@ module.exports = {
   JACKPOT_PATH: "/" + (process.env.JACKPOT_PATH || "🤫🎰💸"),
 
   // Payouts: a player takes coins off the balance, the admin pays them out
-  WITHDRAW_MIN: 100,
+  WITHDRAW_MIN: 5000,
+  WITHDRAW_STEP: 1000, // only whole thousands
   WITHDRAW_MAX_OPEN: 5, // open payouts per player
 
   // Admin panel: a secret address and a password (only from the environment,
