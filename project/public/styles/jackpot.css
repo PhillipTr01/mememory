@@ -300,15 +300,12 @@ body.jackpot-theme {
   font-variant-numeric: tabular-nums;
 }
 
-/* A drawn coin in front of the pot (in line with the digits, unlike the emoji) */
+/* The coin in front of the pot: centered on the digits (not on the text line) */
 .jp-total::before {
-  content: "";
+  content: "🪙";
   flex-shrink: 0;
-  width: 0.82em;
-  height: 0.82em;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff3b0 0 18%, #f5c542 42%, #c9930f 100%);
-  box-shadow: inset 0 0 0 0.09em #b8860b, inset 0 0 0 0.16em #f5d76e, 0 0.05em 0.12em rgba(0, 0, 0, 0.4);
+  font-size: 0.9em;
+  line-height: 1;
 }
 
 .jp-pot-label {
@@ -1124,40 +1121,134 @@ body.jackpot-theme {
   min-width: 0;
 }
 
+/* A record: picture left, label and name in the middle, pot and chance right */
+/* The label over the whole card, the name and the pot below it */
 .jp-record {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "picture label label"
+    "picture name amount"
+    "picture name chance";
+  align-items: center;
+  gap: 0.15rem 0.9rem;
+  min-width: 0;
+  padding: 0.9rem 1.1rem;
+}
+
+.jp-record-picture {
+  grid-area: picture;
+}
+
+.jp-record .jp-record-label {
+  grid-area: label;
+}
+
+.jp-record .jp-record-name {
+  grid-area: name;
+}
+
+.jp-record .jp-record-amount {
+  grid-area: amount;
+  justify-self: end;
+}
+
+.jp-record .jp-record-chance {
+  grid-area: chance;
+  justify-self: end;
+}
+
+.jp-record .mm-avatar {
+  --size: 48px;
+}
+
+.jp-record-placeholder {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 2px dashed var(--mm-border);
+  border-radius: 50%;
+  font-size: 1.3rem;
+  opacity: 0.6;
+}
+
+.jp-record-text {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.15rem;
   min-width: 0;
-  padding: 0.75rem 0.85rem;
 }
 
 .jp-record-label {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: var(--mm-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jp-record-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.jp-record-who {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-width: 0;
+.jp-record.empty .jp-record-name {
+  font-size: 0.95rem;
   font-weight: 600;
-  font-size: 0.85rem;
+  color: var(--mm-muted);
 }
 
 .jp-record-amount {
-  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 1.15rem;
+  font-weight: 800;
   color: var(--mm-accent);
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.jp-record-none {
+/* The same coin as at the pot */
+.jp-record-amount::before {
+  content: "🪙";
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+.jp-record-chance {
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  font-size: 0.72rem;
+  font-weight: 700;
   color: var(--mm-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 1199px) {
+  .jp-record .mm-avatar,
+  .jp-record-placeholder {
+    --size: 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .jp-record-name {
+    font-size: 1rem;
+  }
+
+  .jp-record-amount {
+    font-size: 1rem;
+  }
 }
 
 /* ---------- Provably fair ---------- */

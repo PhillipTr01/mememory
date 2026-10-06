@@ -261,36 +261,25 @@ function renderBets() {
   );
 }
 
-function recordCard(id, label, round) {
+// One record: the picture left, what and who in the middle, the pot and the chance right
+function recordCard(id, label, round, icon) {
   var card = document.getElementById(id);
-  var title = document.createElement("span");
-  title.className = "jp-record-label";
-  title.innerText = label;
-  if (round == null) {
-    var none = document.createElement("span");
-    none.className = "jp-record-none";
-    none.innerText = "-";
-    card.replaceChildren(title, none);
-    return;
-  }
-  var who = document.createElement("div");
-  who.className = "jp-record-who";
-  var name = document.createElement("span");
-  name.className = "player-name-text";
-  name.innerText = round.winner;
-  who.append(createAvatar(round.winner, "sm"), name);
-  var amount = document.createElement("span");
-  amount.className = "jp-record-amount";
-  amount.innerText = "🪙 " + formatCoins(round.total) + " · " + chanceOf(round.coins, round.total) + "%";
-  card.replaceChildren(title, who, amount);
+  card.classList.toggle("empty", round == null);
+  var picture = round ? createAvatar(round.winner, "lg") : el("span", "jp-record-placeholder", icon);
+  picture.classList.add("jp-record-picture");
+  var title = el("span", "jp-record-label", icon + " " + label);
+  var name = el("span", "jp-record-name", round ? round.winner : "Nobody yet");
+  var parts = [picture, title, name];
+  if (round) parts.push(el("span", "jp-record-amount", formatCoins(round.total)), el("span", "jp-record-chance", chanceOf(round.coins, round.total) + "% chance"));
+  card.replaceChildren(...parts);
 }
 
 function renderRecords() {
   // While the wheel spins, the last winner is still the one before
-  recordCard("jpLastWinner", "Last winner", state.history[0] || null);
+  recordCard("jpLastWinner", "Last winner", state.history[0] || null, "👑");
   var records = state.records || {};
-  recordCard("jpBiggest", "Biggest pot today", records.biggest || null);
-  recordCard("jpLuckiest", "Luckiest win today", records.luckiest || null);
+  recordCard("jpBiggest", "Biggest pot today", records.biggest || null, "💰");
+  recordCard("jpLuckiest", "Luckiest win today", records.luckiest || null, "🍀");
 }
 
 function renderHistory() {
