@@ -88,12 +88,12 @@ module.exports = function (io) {
     }
   }
 
+  // Any change of a balance (here, in a game, on another page): the open tabs get it
+  coins.changes.on("change", (username) => sendCoins(username).catch(() => {}));
+
   function refund(battle) {
     for (const seat of humans(battle)) {
-      coins
-        .add(seat.name, battle.price)
-        .then(() => sendCoins(seat.name))
-        .catch((error) => console.error("[battles] Could not refund:", error));
+      coins.add(seat.name, battle.price).catch((error) => console.error("[battles] Could not refund:", error));
     }
   }
 
@@ -135,7 +135,7 @@ module.exports = function (io) {
     const winner = battle.seats[battle.winner];
     if (!winner.bot && battle.payout > 0) {
       try {
-        await coins.add(winner.name, battle.payout);
+        await coins.add(winner.name, battle.payout, { quiet: true });
       } catch (error) {
         console.error("[battles] Could not pay the winner:", error);
       }
@@ -166,7 +166,7 @@ module.exports = function (io) {
     lobby.history.unshift({ id: battle.id, winner: winner.name, bot: winner.bot, total: battle.payout, price: battle.price });
     lobby.history.length = Math.min(lobby.history.length, config.BATTLE_HISTORY);
     chat.system(battles, ROOM, lobby, `${winner.name} wins a case battle: ${battle.payout} coins!`, "trophy");
-    if (!winner.bot) sendCoins(winner.name).catch(() => {});
+    if (!winner.bot) coins.notify(winner.name);
     emitList();
     remove(battle, config.BATTLE_KEEP);
   }
@@ -283,6 +283,15 @@ module.exports = function (io) {
         const battle = lobby.list.get(id);
         if (battle == null || battle.creator !== username) return;
         cancel(battle);
+      }),
+    );
+
+    // Free coins once a day when (almost) broke - the same as on the jackpot page
+    socket.on(
+      "claimBonus",
+      safe("claimBonus", async () => {
+        if (await coins.claimBonus(username)) socket.emit("bonusClaimed", config.DAILY_BONUS);
+        await sendCoins(username);
       }),
     );
 

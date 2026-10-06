@@ -1,5 +1,18 @@
+const EventEmitter = require("events");
 const User = require("../models/User");
 const config = require("./config");
+
+/*
+ * "change" (username) after every change of a balance: every page that shows
+ * coins (jackpot, case battles) gets the new balance, whichever page (or game)
+ * changed it.
+ */
+const changes = new EventEmitter();
+changes.setMaxListeners(0);
+
+function notify(username) {
+  changes.emit("change", username);
+}
 
 /*
  * Coins for the hidden jackpot. Stored on the user, every change is a single
@@ -29,19 +42,24 @@ async function get(username) {
   return { coins: user.coins || 0, bonus: bonusAvailable(user) };
 }
 
-async function add(username, amount) {
+// quiet: the pages are told later with notify() (a win that is shown after an animation)
+async function add(username, amount, options) {
   if (!Number.isInteger(amount) || amount <= 0) return false;
   await ensure(username);
-  return changed(await User.updateOne({ username: username }, { $inc: { coins: amount } }));
+  const done = changed(await User.updateOne({ username: username }, { $inc: { coins: amount } }));
+  if (done && !(options && options.quiet)) notify(username);
+  return done;
 }
 
 // Takes the coins only if the user has enough (false otherwise)
 async function spend(username, amount) {
   if (!Number.isInteger(amount) || amount <= 0) return false;
   await ensure(username);
-  return changed(
+  const done = changed(
     await User.updateOne({ username: username, coins: { $gte: amount } }, { $inc: { coins: -amount } }),
   );
+  if (done) notify(username);
+  return done;
 }
 
 // Free coins once a day for players who are (almost) broke
@@ -55,6 +73,7 @@ async function claimBonus(username, now = Date.now()) {
     },
     { $inc: { coins: config.DAILY_BONUS }, $set: { coinBonusAt: new Date(now) } },
   );
+  if (changed(result)) notify(username);
   return changed(result);
 }
 
@@ -65,4 +84,4 @@ function reward(username, mode) {
   add(username, amount).catch((error) => console.error("[coins] Could not add coins:", error));
 }
 
-module.exports = { get, add, spend, claimBonus, reward, bonusAvailable };
+module.exports = { get, add, spend, claimBonus, reward, bonusAvailable, changes, notify };

@@ -69,6 +69,9 @@ module.exports = function (io) {
     };
   }
 
+  // Any change of a balance (here, in a game, on another page): the open tabs get it
+  coins.changes.on("change", (username) => sendCoins(username).catch(() => {}));
+
   function emitState() {
     jackpot.to(ROOM).emit("jackpotState", serialize());
   }
@@ -109,7 +112,7 @@ module.exports = function (io) {
     // Paid right away, so nothing is lost if the page (or the server) goes away
     // during the animation
     try {
-      await coins.add(winner.name, sum);
+      await coins.add(winner.name, sum, { quiet: true });
     } catch (error) {
       console.error("[jackpot] Could not pay the winner:", error);
     }
@@ -127,7 +130,7 @@ module.exports = function (io) {
         pot.records.luckiest = result;
       }
       pot.history.length = Math.min(pot.history.length, config.JACKPOT_HISTORY);
-      sendCoins(winner.name).catch(() => {});
+      coins.notify(winner.name);
       emitState();
       pot.timer = setTimeout(newRound, config.JACKPOT_PAUSE);
     }, config.JACKPOT_SPIN);
@@ -217,7 +220,6 @@ module.exports = function (io) {
         socket.data.secretAt = now;
         if (await coins.add(username, config.JACKPOT_SECRET_COINS)) {
           socket.emit("secretCoins", config.JACKPOT_SECRET_COINS);
-          await sendCoins(username);
         }
       }),
     );

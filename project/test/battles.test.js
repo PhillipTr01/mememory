@@ -3,6 +3,7 @@ const assert = require("node:assert");
 const h = require("./helpers");
 const config = require("../game/config");
 const cases = require("../game/cases");
+const coins = require("../game/coins");
 
 // Short timings for the tests
 Object.assign(config, { BATTLE_START: 50, BATTLE_ROUND: 50, BATTLE_KEEP: 5000 });
@@ -174,6 +175,36 @@ test("battles: crazy mode - the lowest total wins; bots fill the seats", async (
   // A bot's win stays with the house
   const expected = done.winner === 0 ? 1000 - 70 + done.payout : 1000 - 70;
   assert.strictEqual(h.coinsOf("carol"), expected);
+});
+
+test("battles: the same coins as the jackpot - every change reaches the page right away", async () => {
+  h.setCoins("carol", 100);
+  const carol = client("carol");
+  const jackpot = server.client("/jackpot", tokens.carol);
+  sockets.push(jackpot);
+  await Promise.all([waitFor(carol, "coins", (d) => d.coins === 100), waitFor(jackpot, "coins", (d) => d.coins === 100)]);
+
+  // A bet in the jackpot (another page): the battles page has the new balance
+  const onBattles = waitFor(carol, "coins", (d) => d.coins === 60);
+  jackpot.emit("bet", { amount: 40 });
+  await onBattles;
+
+  // A win in a game, too
+  const won = waitFor(carol, "coins", (d) => d.coins === 60 + config.COIN_REWARDS.tictactoe);
+  coins.reward("carol", "tictactoe");
+  await won;
+
+  // A quiet payout (shown after an animation) only when it is announced
+  let early = false;
+  const listener = (d) => d.coins === 65 + 500 && (early = true);
+  carol.on("coins", listener);
+  await coins.add("carol", 500, { quiet: true });
+  await h.wait(50);
+  assert.strictEqual(early, false);
+  const announced = waitFor(carol, "coins", (d) => d.coins === 565);
+  coins.notify("carol");
+  await announced;
+  carol.off("coins", listener);
 });
 
 test("battles: invalid battles, not enough coins, cancel gives the coins back", async () => {
