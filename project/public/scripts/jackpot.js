@@ -88,7 +88,8 @@ socket.on("jackpotState", (data) => {
 function render() {
   if (state == null) return;
   document.getElementById("jpRound").innerText = "Round " + state.round;
-  document.getElementById("jpTotal").innerText = "🪙 " + formatCoins(state.total);
+  // The coin in front of the number is drawn by the style (.jp-total::before)
+  document.getElementById("jpTotal").innerText = formatCoins(state.total);
   // The pot is in the middle of the wheel, the other draws show it above
   document.getElementById("jpPotbar").hidden = state.mode == "wheel";
   // A running animation keeps its scene, a finished one stays until the next round
