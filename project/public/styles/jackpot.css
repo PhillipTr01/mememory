@@ -43,21 +43,6 @@ body.jackpot-theme {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- The animation of this round ---------- */
-.jp-mode-now {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  color: var(--mm-muted);
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-.jp-mode-icon {
-  font-size: 1.05rem;
-}
-
 /* An own bet the others don't see yet */
 .jp-player.pending {
   opacity: 0.65;

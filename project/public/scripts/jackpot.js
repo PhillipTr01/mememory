@@ -109,7 +109,6 @@ function render() {
   document.getElementById("jpRound").innerText = "Round " + state.round;
   document.getElementById("jpTotal").innerText = "🪙 " + formatCoins(state.total);
   document.getElementById("jpViewers").innerText = state.viewers + " here";
-  renderModes();
   // The pot is in the middle of the wheel, the other draws show it above
   document.getElementById("jpPotbar").hidden = state.mode == "wheel";
   // A running animation keeps its scene, a finished one stays until the next round
@@ -161,16 +160,6 @@ function renderStatus() {
 // The animation of the round: chosen by the server, the same for everybody
 function currentDraw() {
   return DRAWS[state.mode] || DRAWS.wheel;
-}
-
-function renderModes() {
-  var mode = DRAW_MODES.find((m) => m.id == state.mode) || DRAW_MODES[0];
-  var label = document.getElementById("jpModes");
-  label.title = mode.description;
-  label.replaceChildren(
-    Object.assign(document.createElement("span"), { className: "jp-mode-icon", innerText: mode.icon }),
-    Object.assign(document.createElement("span"), { innerText: "This round: " + mode.label }),
-  );
 }
 
 // The pot as the draws need it: one piece per bet, in the order of the bets
