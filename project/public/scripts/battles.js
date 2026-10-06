@@ -613,8 +613,8 @@ async function playRound(battle, round) {
     var stop = count - 4;
     for (var i = 0; i < count; i++) {
       var item = i == stop ? win : randomItem(box);
-      // Near miss: the best item right after the stop
-      if (i == stop + 1 && Math.random() < 0.5) item = box.items[box.items.length - 1];
+      // Near miss now and then: the best item right after the stop
+      if (i == stop + 1 && Math.random() < 0.15) item = box.items[box.items.length - 1];
       reel.appendChild(itemTile(item, i == stop ? "big winner-tile" : "big"));
     }
     window_.replaceChildren(reel);
