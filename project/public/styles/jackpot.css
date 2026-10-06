@@ -2694,3 +2694,43 @@ body.jackpot-theme {
 .jp-status:empty {
   display: none;
 }
+
+/* Roulette with nobody in it yet: blank pictures under the marker */
+.jp-roulette.empty .jp-track {
+  justify-content: center;
+}
+
+.jp-tile.blank {
+  border-bottom-color: var(--mm-border);
+  opacity: 0.55;
+  animation: jp-blank 2.4s ease-in-out infinite;
+}
+
+.jp-tile.blank:nth-child(even) {
+  animation-delay: 1.2s;
+}
+
+@keyframes jp-blank {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.jp-tile-blank-face {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 2px dashed var(--mm-border);
+  border-radius: 50%;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--mm-muted);
+}
+
+.jp-tile .jp-tile-blank-name {
+  width: 56px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--mm-surface-3);
+}

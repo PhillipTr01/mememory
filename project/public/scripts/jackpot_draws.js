@@ -89,10 +89,6 @@ function scene(stage, name) {
   return root;
 }
 
-function emptyNote(root, text) {
-  root.appendChild(el("p", "jp-scene-empty", text));
-}
-
 // The players of the round, at most `limit`, the winner always among them
 function playersFor(limit, winner) {
   var players = state.entries.slice();
@@ -270,7 +266,16 @@ var rouletteDraw = {
     var root = scene(stage, "roulette");
     root.replaceChildren();
     if (state.entries.length == 0) {
-      emptyNote(root, "Nobody is in yet - the pictures appear here.");
+      // Empty: the strip with blank pictures, waiting for the first coins
+      var empty = el("div", "jp-roulette empty");
+      var blanks = el("div", "jp-track");
+      for (var i = 0; i < 14; i++) {
+        var blank = el("div", "jp-tile blank");
+        blank.append(el("span", "jp-tile-blank-face", "?"), el("span", "jp-tile-blank-name"));
+        blanks.appendChild(blank);
+      }
+      empty.append(el("div", "jp-marker"), blanks);
+      root.appendChild(empty);
       return;
     }
     var strip = el("div", "jp-roulette");
@@ -357,7 +362,6 @@ var bowlingDraw = {
 
   idle(stage) {
     var parts = this.build(stage);
-    if (parts.pins.length == 0) emptyNote(parts.lane, "No pins yet - every player is a pin.");
   },
 
   async play(stage, draw, duration, short) {
@@ -491,7 +495,6 @@ var raceDraw = {
     });
     track.appendChild(el("div", "jp-finish"));
     root.appendChild(track);
-    if (players.length == 0) emptyNote(track, "No runners yet - every player gets a lane.");
     return { root: root, track: track, runners: runners };
   },
 
@@ -593,7 +596,6 @@ var clawDraw = {
     root.appendChild(machine);
     // The claw waits above the chute
     claw.style.transform = `translate(${machine.clientWidth * 0.11}px, 0px)`;
-    if (players.length == 0) emptyNote(machine, "The plushies drop in with the first coins.");
     return { root: root, machine: machine, claw: claw, plushes: plushes };
   },
 
@@ -719,7 +721,6 @@ var royaleDraw = {
       return fighter;
     });
     root.append(arena, feed);
-    if (players.length == 0) emptyNote(arena, "The arena fills with the first coins.");
     return { root: root, arena: arena, zone: zone, feed: feed, fighters: fighters };
   },
 
@@ -833,7 +834,6 @@ var coinRainDraw = {
     });
     var crown = el("div", "jp-jar-crown", "👑");
     root.append(shelf, crown);
-    if (jars.length == 0) emptyNote(root, "The jars fill with the first coins.");
     return { root: root, jars: jars, crown: crown };
   },
 
@@ -1141,7 +1141,6 @@ var revolverDraw = {
     gun.append(barrel, cylinder);
     table.appendChild(gun);
     root.appendChild(table);
-    if (players.length == 0) emptyNote(table, "The players take their seats with the first coins.");
     return { root: root, table: table, seats: seats, gun: gun, cylinder: cylinder, aim: 0, spin: 0 };
   },
 
@@ -1351,7 +1350,6 @@ var slotsDraw = {
     parts.root.dataset.key = key;
     if (state.entries.length == 0) {
       parts.reels.forEach((reel) => reel.track.replaceChildren());
-      emptyNote(parts.root, "The faces appear on the reels with the first coins.");
       return;
     }
     var names = state.entries.map((entry) => entry.name);
@@ -1484,7 +1482,6 @@ var launchDraw = {
       return rocket;
     });
     root.appendChild(sky);
-    if (players.length == 0) emptyNote(sky, "Every player gets a rocket on the launch pad.");
     return { root: root, sky: sky, rockets: rockets };
   },
 
@@ -1619,7 +1616,6 @@ var scratchDraw = {
 
   idle(stage) {
     var parts = this.build(stage);
-    if (state.entries.length == 0) emptyNote(parts.root, "The faces hide under the foil.");
   },
 
   // What is under the fields, in the order they are scratched: the winner's
@@ -1739,7 +1735,6 @@ var ghostHuntDraw = {
     var light = el("div", "jp-flashlight");
     room.appendChild(light);
     root.appendChild(room);
-    if (players.length == 0) emptyNote(room, "Somebody has to be in the dark house first...");
     return { root: root, room: room, hiders: hiders, light: light, x: room.clientWidth / 2, y: room.clientHeight / 2 };
   },
 
