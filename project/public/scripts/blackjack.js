@@ -154,14 +154,17 @@ function renderSeats() {
   var betting = state.phase == "betting";
   var dealing = firstDeal();
   var order = dealOrder();
-  var blocked = myEmptySeat() != null;
+  var full = mySeats().length >= state.rules.mySeats;
+  var blocked = myEmptySeat() != null || full;
+  container.style.setProperty("--seats", state.seats.length);
   container.replaceChildren(
     ...state.seats.map((seat, i) => {
       var spot = el("div", "bj-seat");
       // Seat 1 on the right: the cards go round clockwise from there
       spot.style.gridColumn = String(state.seats.length - i);
       spot.style.gridRow = "1";
-      spot.style.setProperty("--lift", [0, 26, 36, 26, 0][i % 5] + "px");
+      // In an arc: the middle seats lower
+      spot.style.setProperty("--lift", Math.round(Math.sin((Math.PI * i) / (state.seats.length - 1)) * 36) + "px");
       if (selected == i && betting) spot.classList.add("selected");
 
       if (seat == null) {
@@ -170,7 +173,7 @@ function renderSeats() {
         take.type = "button";
         take.append(el("span", "bj-seat-chair", "🪑"), el("span", "", "Sit down"));
         take.disabled = blocked;
-        take.title = blocked ? "Bet on your seat first" : "Seat " + (i + 1);
+        take.title = full ? "At most " + state.rules.mySeats + " seats" : blocked ? "Bet on your seat first" : "Seat " + (i + 1);
         take.addEventListener("click", () => {
           selected = i;
           socket.emit("sit", i);
@@ -294,7 +297,21 @@ function renderStatus() {
   }
 }
 
+// One click: the same bets as last round
+function renderRebet() {
+  var bar = document.getElementById("bjRebet");
+  var last = state.lastBets;
+  var betNow = mySeats().some((i) => state.seats[i].bet > 0);
+  var total = last ? last.reduce((sum, bet) => sum + bet.amount, 0) : 0;
+  bar.hidden = !(state.phase == "betting" && last && last.length && !betNow);
+  if (bar.hidden) return;
+  var button = document.getElementById("bjRebetButton");
+  button.disabled = total > myCoins;
+  document.getElementById("bjRebetText").innerText = "Same bet · 🪙 " + formatCoins(total) + (last.length > 1 ? " on " + last.length + " seats" : "");
+}
+
 function renderBars() {
+  renderRebet();
   var betBar = document.getElementById("bjBetBar");
   var canBet = state.phase == "betting" && selected != null;
   betBar.hidden = !canBet;
@@ -367,4 +384,8 @@ document.addEventListener("DOMContentLoaded", () => {
     selected = null;
   });
   document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", () => socket.emit("action", button.dataset.action)));
+  document.getElementById("bjRebetButton").addEventListener("click", () => {
+    selected = null;
+    socket.emit("rebet");
+  });
 });

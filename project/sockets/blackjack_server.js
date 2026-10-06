@@ -34,6 +34,7 @@ module.exports = function (io) {
     timer: null,
     turnTimer: null,
     history: [], // [{round, dealer, results: [{name, result, payout, bet}]}] newest first
+    lastBets: new Map(), // username -> [{seat, amount}] of the last round played (for "same bet")
   };
   const busy = new Set();
 
@@ -75,7 +76,8 @@ module.exports = function (io) {
       startIn: table.startAt != null ? Math.max(0, table.startAt - Date.now()) : null,
       history: table.history,
       viewers: room.sockets.size,
-      rules: { minBet: config.BJ_MIN_BET, maxBet: config.BJ_MAX_BET, turn: config.BJ_TURN, betting: config.BJ_BETTING, sit: config.BJ_SIT, decks: bj.DECKS },
+      rules: { minBet: config.BJ_MIN_BET, maxBet: config.BJ_MAX_BET, mySeats: config.BJ_MY_SEATS, turn: config.BJ_TURN, betting: config.BJ_BETTING, sit: config.BJ_SIT, decks: bj.DECKS },
+      lastBets: table.lastBets.get(viewer) || null,
     };
   }
 
@@ -143,6 +145,14 @@ module.exports = function (io) {
       else standUp(i);
     });
     const seats = playing();
+    // What everybody bet this round: one click to bet it again next round
+    const bets = new Map();
+    seats.forEach((i) => {
+      const seat = table.seats[i];
+      if (!bets.has(seat.name)) bets.set(seat.name, []);
+      bets.get(seat.name).push({ seat: i, amount: seat.bet });
+    });
+    bets.forEach((list, name) => table.lastBets.set(name, list));
     if (seats.length === 0) {
       table.phase = "betting";
       emitState();
@@ -338,8 +348,9 @@ module.exports = function (io) {
       safe("sit", (s) => {
         if (!Number.isInteger(s) || s < 0 || s >= table.seats.length) return;
         if (table.seats[s]) return table.seats[s].name === username ? undefined : error("This seat is taken.");
-        const unbet = table.seats.some((seat) => seat && seat.name === username && seat.bet === 0);
-        if (unbet) return error("Bet on your seat first, then take another one.");
+        const mine = table.seats.filter((seat) => seat && seat.name === username);
+        if (mine.some((seat) => seat.bet === 0)) return error("Bet on your seat first, then take another one.");
+        if (mine.length >= config.BJ_MY_SEATS) return error(`At most ${config.BJ_MY_SEATS} seats at a time.`);
         table.seats[s] = { name: username, bet: 0, hands: [], standAt: null, standTimer: null };
         // During a round: the stand-up time starts with the next betting time
         if (table.phase === "betting") startStandTimer(s);
@@ -373,6 +384,49 @@ module.exports = function (io) {
           seat.bet += amount;
           stopStandTimer(seat);
           startBetting();
+          emitState();
+        } finally {
+          busy.delete(username);
+        }
+      }),
+    );
+
+    // The same bets as last round, with one click: the same seats (or free ones) and amounts
+    socket.on(
+      "rebet",
+      safe("rebet", async () => {
+        const last = table.lastBets.get(username);
+        if (!last || last.length === 0) return error("No bet to repeat yet.");
+        if (table.phase !== "betting") return error("Wait for the next round.");
+        if (table.seats.some((seat) => seat && seat.name === username && seat.bet > 0)) return error("You already bet this round.");
+        if (busy.has(username)) return;
+        busy.add(username);
+        try {
+          const total = last.reduce((sum, bet) => sum + bet.amount, 0);
+          if (!(await coins.spend(username, total, { reason: "blackjack bet", note: "same bet" }))) return error("You don't have enough coins.");
+          // The seats now (the round may have started, others may have sat down meanwhile)
+          let refund = 0;
+          const free = (i) => table.phase === "betting" && (table.seats[i] == null || (table.seats[i].name === username && table.seats[i].bet === 0));
+          const used = new Set();
+          for (const bet of last) {
+            let s = free(bet.seat) && !used.has(bet.seat) ? bet.seat : -1;
+            // The old seat is taken: the nearest free one
+            if (s < 0) s = table.seats.findIndex((_, i) => free(i) && !used.has(i) && !last.some((b) => b.seat === i));
+            const mine = table.seats.filter((seat, i) => seat && seat.name === username && (seat.bet > 0 || used.has(i))).length;
+            if (s < 0 || mine >= config.BJ_MY_SEATS) {
+              refund += bet.amount;
+              continue;
+            }
+            used.add(s);
+            if (table.seats[s] == null) table.seats[s] = { name: username, bet: 0, hands: [], standAt: null, standTimer: null };
+            table.seats[s].bet = bet.amount;
+            stopStandTimer(table.seats[s]);
+          }
+          if (refund > 0) {
+            await coins.add(username, refund, { reason: "blackjack refund" });
+            error(used.size ? "Not every seat was free - the rest is back." : "No free seat - the coins are back.");
+          }
+          if (used.size) startBetting();
           emitState();
         } finally {
           busy.delete(username);

@@ -90,7 +90,7 @@
   width: 100%;
   margin-top: auto;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--seats, 7), minmax(0, 1fr));
   gap: 0.5rem;
   align-items: start;
 }
@@ -425,6 +425,22 @@
   background: var(--mm-accent);
 }
 
+/* The bets of the last round again */
+.bj-rebet {
+  display: flex;
+  justify-content: center;
+}
+
+.bj-rebet[hidden] {
+  display: none;
+}
+
+.bj-rebet .mm-btn {
+  padding: 0.65rem 1.4rem;
+  font-weight: 800;
+  box-shadow: 0 0 18px rgba(var(--mm-accent-rgb), 0.35);
+}
+
 @media (max-width: 767px) {
   .bj-table {
     min-height: 380px;
@@ -464,5 +480,35 @@
 @media (max-width: 575px) {
   .bj-main {
     padding: 1rem;
+  }
+}
+
+/* Seven seats on a phone: only the chair */
+@media (max-width: 575px) {
+  .bj-seats {
+    gap: 0.1rem;
+  }
+
+  .bj-seat {
+    padding: 0.3rem 0;
+  }
+
+  .bj-seat-empty {
+    width: 40px;
+    height: 40px;
+  }
+
+  .bj-seat-empty span:not(.bj-seat-chair) {
+    display: none;
+  }
+
+  .bj-stand {
+    font-size: 0.6rem;
+    padding: 0 0.3rem;
+  }
+
+  .bj-bet {
+    font-size: 0.66rem;
+    padding: 0 0.35rem;
   }
 }
