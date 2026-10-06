@@ -393,15 +393,14 @@ function renderHistory() {
   document.getElementById("bjHistoryEmpty").hidden = state.history.length > 0;
   list.replaceChildren(
     ...state.history.map((round) => {
-      var item = el("li");
       var mine = round.results.filter((r) => r.name == myName);
       var gain = mine.reduce((sum, r) => sum + r.payout - r.bet, 0);
-      item.append(
-        el("span", "jp-history-name", "Dealer " + (round.dealer > 21 ? "bust" : round.dealer)),
-        el("span", "jp-history-odds", round.results.length + (round.results.length == 1 ? " hand" : " hands")),
-        el("span", "jp-history-won" + (gain < 0 ? " minus" : ""), mine.length ? (gain >= 0 ? "+" : "") + formatCoins(gain) : "-"),
-      );
-      return item;
+      var won = round.results.filter((r) => r.payout > r.bet).length;
+      var title = round.dealer > 21 ? "Dealer bust" : "Dealer " + round.dealer;
+      var sub = "Round " + round.round + " · " + won + " of " + round.results.length + (round.results.length == 1 ? " hand" : " hands") + " won";
+      // Own result: plus or minus; not played: nothing
+      var value = mine.length ? (gain > 0 ? "+" : gain < 0 ? "−" : "±") + formatCoins(Math.abs(gain)) : "–";
+      return historyItem(round.dealer > 21 ? "💥" : "🃏", title, sub, value, mine.length ? (gain > 0 ? "plus" : gain < 0 ? "minus" : "") : "muted");
     }),
   );
 }

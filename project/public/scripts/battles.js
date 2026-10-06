@@ -557,13 +557,9 @@ function renderHistory() {
   document.getElementById("btHistoryEmpty").hidden = lastBattles.length > 0;
   list.replaceChildren(
     ...lastBattles.map((entry) => {
-      var item = el("li");
-      var name = el("span", "jp-history-name");
-      name.append(createAvatar(entry.winner, "sm"), document.createTextNode(entry.winner));
-      var odds = el("span", "jp-history-odds", "🪙 " + formatCoins(entry.price));
-      odds.title = "Price of the battle";
-      item.append(name, odds, el("span", "jp-history-won", "🪙 " + formatCoins(entry.total)));
-      return item;
+      var multiple = entry.price > 0 ? entry.total / entry.price : 0;
+      var sub = "Paid 🪙 " + formatCoins(entry.price) + (multiple >= 1 ? " · " + (multiple >= 10 ? Math.round(multiple) : multiple.toFixed(1)) + "x" : "");
+      return historyItem(createAvatar(entry.winner, "sm"), entry.winner, sub, "🪙 " + formatCoins(entry.total));
     }),
   );
 }

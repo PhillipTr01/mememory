@@ -293,20 +293,9 @@ function renderHistory() {
   document.getElementById("jpHistoryEmpty").hidden = state.history.length > 0;
   // Only the last three winners
   list.replaceChildren(
-    ...state.history.slice(0, 3).map((round) => {
-      var item = document.createElement("li");
-      var name = document.createElement("span");
-      name.className = "jp-history-name";
-      name.append(createAvatar(round.winner, "sm"), document.createTextNode(round.winner));
-      var won = document.createElement("span");
-      won.className = "jp-history-won";
-      won.innerText = "🪙 " + formatCoins(round.total);
-      var odds = document.createElement("span");
-      odds.className = "jp-history-odds";
-      odds.innerText = chanceOf(round.coins, round.total) + "%";
-      item.append(name, odds, won);
-      return item;
-    }),
+    ...state.history.slice(0, 3).map((round) =>
+      historyItem(createAvatar(round.winner, "sm"), round.winner, "Round " + round.round + " · " + chanceOf(round.coins, round.total) + "% chance", "🪙 " + formatCoins(round.total)),
+    ),
   );
 }
 

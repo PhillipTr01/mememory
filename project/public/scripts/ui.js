@@ -392,3 +392,26 @@ function playStartReel(options) {
   setTimeout(() => (overlay.hidden = true), options.duration + 200);
   return spin;
 }
+
+/*
+ * One row of a "last rounds" list (jackpot, battles, poker, blackjack): a
+ * picture, who and what happened, the coins on the right.
+ * `picture`: an element (avatar) or a text (emoji); `tone`: "", "plus" or "minus".
+ */
+function historyItem(picture, title, sub, value, tone) {
+  var item = document.createElement("li");
+  item.className = "jp-history-item";
+  var icon = typeof picture == "string" ? Object.assign(document.createElement("span"), { className: "jp-history-icon", innerText: picture }) : picture;
+  var text = document.createElement("span");
+  text.className = "jp-history-text";
+  var name = document.createElement("b");
+  name.innerText = title;
+  var detail = document.createElement("small");
+  detail.innerText = sub;
+  text.append(name, detail);
+  var coins = document.createElement("span");
+  coins.className = "jp-history-won" + (tone ? " " + tone : "");
+  coins.innerText = value;
+  item.append(icon, text, coins);
+  return item;
+}

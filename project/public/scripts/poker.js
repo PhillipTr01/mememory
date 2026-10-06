@@ -456,14 +456,9 @@ function renderHistory() {
   document.getElementById("pkHistoryEmpty").hidden = state.history.length > 0;
   list.replaceChildren(
     ...state.history.map((entry) => {
-      var item = el("li");
       var first = entry.winners[0];
-      var name = el("span", "jp-history-name");
-      name.append(createAvatar(first.name, "sm"), document.createTextNode(entry.winners.map((w) => w.name).join(", ")));
-      var hand = el("span", "jp-history-odds", first.hand || "no showdown");
-      var won = el("span", "jp-history-won", "🪙 " + formatCoins(entry.winners.reduce((sum, w) => sum + w.amount, 0)));
-      item.append(name, hand, won);
-      return item;
+      var sub = "Hand " + entry.hand + " · " + (first.hand || "everybody folded");
+      return historyItem(createAvatar(first.name, "sm"), entry.winners.map((w) => w.name).join(", "), sub, "🪙 " + formatCoins(entry.winners.reduce((sum, w) => sum + w.amount, 0)));
     }),
   );
 }

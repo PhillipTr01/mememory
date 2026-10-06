@@ -1303,42 +1303,118 @@ body.jackpot-theme {
   font-size: 0.85rem;
 }
 
+/* ---------- Side lists: the last rounds of every game ---------- */
 .jp-history {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--mm-surface-3) transparent;
 }
 
-.jp-history li {
-  display: flex;
+.jp-history-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.6rem;
-  font-size: 0.85rem;
+  gap: 0.65rem;
+  padding: 0.45rem 0.65rem 0.45rem 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--mm-surface-2);
 }
 
-.jp-history-name {
-  flex: 1 1 auto;
+/* The newest one a bit brighter */
+.jp-history-item:first-child {
+  border-color: rgba(var(--mm-accent-rgb), 0.3);
+  background: linear-gradient(90deg, rgba(var(--mm-accent-rgb), 0.12), var(--mm-surface-2) 70%);
+}
+
+.jp-history-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--mm-surface-3);
+  font-size: 0.95rem;
+}
+
+.jp-history-text {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  line-height: 1.25;
 }
 
-.jp-history-odds {
+.jp-history-text b,
+.jp-history-text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jp-history-text b {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.jp-history-text small {
+  font-size: 0.72rem;
   color: var(--mm-muted);
-  font-variant-numeric: tabular-nums;
 }
 
 .jp-history-won {
+  font-size: 0.86rem;
+  font-weight: 800;
   color: var(--mm-accent);
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.jp-history-won.plus {
+  color: var(--mm-success);
+}
+
+.jp-history-won.minus {
+  color: var(--mm-danger);
+}
+
+.jp-history-won.muted {
+  color: var(--mm-muted);
+  font-weight: 600;
+}
+
+/* Nothing there yet: a calm box with an icon instead of a lonely line */
+.jp-empty[data-icon] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 1rem 0.75rem;
+  border: 1px dashed var(--mm-border);
+  border-radius: 12px;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.jp-empty[data-icon]::before {
+  content: attr(data-icon);
+  font-size: 1.5rem;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.jp-empty[hidden] {
+  display: none;
+}
+
+/* An empty player list takes no room (no big gap above "nobody is in") */
+.side-card .player-list:empty {
+  display: none;
 }
 
 /* On big screens the side fits the screen: the lists scroll, the chat keeps its room */
@@ -1348,8 +1424,9 @@ body.jackpot-theme {
     overflow-y: auto;
   }
 
+  /* About four rows, then the list scrolls */
   .jp-history {
-    max-height: 16vh;
+    max-height: 228px;
     overflow-y: auto;
   }
 }
