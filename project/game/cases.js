@@ -7,7 +7,7 @@ const crypto = require("crypto");
  *
  *   low risk:  every item is worth something near the price (at most 2.5x)
  *   balanced:  most items are worth something near the price
- *   high risk: mostly cheap junk, but a small chance of a huge item (up to 50k)
+ *   high risk: mostly cheap junk, but a small chance of a huge item (up to 25k)
  */
 const WEIGHT_TOTAL = 100000;
 
@@ -94,12 +94,12 @@ const CASES = [
     price: 20,
     risk: "high",
     items: [
-      { name: "Losing Ticket", icon: "🗑️", value: 1, weight: 48466 },
+      { name: "Losing Ticket", icon: "🗑️", value: 1, weight: 48399 },
       { name: "Pocket Lint", icon: "🧦", value: 4, weight: 25000 },
       { name: "Scratch Card", icon: "🃏", value: 15, weight: 12000 },
       { name: "Four-Leaf Clover", icon: "🍀", value: 60, weight: 13267 },
       { name: "Golden Ticket", icon: "🎫", value: 340, weight: 1200 },
-      { name: "Jackpot", icon: "🎰", value: 2500, weight: 67 },
+      { name: "Jackpot", icon: "🎰", value: 1250, weight: 134 },
     ],
   },
   {
@@ -109,12 +109,12 @@ const CASES = [
     price: 50,
     risk: "high",
     items: [
-      { name: "Crashed Rocket", icon: "💥", value: 2, weight: 43942 },
+      { name: "Crashed Rocket", icon: "💥", value: 2, weight: 43842 },
       { name: "Launch Pad", icon: "🛰️", value: 10, weight: 28000 },
       { name: "Astronaut", icon: "👨‍🚀", value: 50, weight: 13000 },
       { name: "Moon Rock", icon: "🌑", value: 150, weight: 13638 },
       { name: "Mars Colony", icon: "🪐", value: 520, weight: 1320 },
-      { name: "To the Moon", icon: "🚀", value: 5000, weight: 100 },
+      { name: "To the Moon", icon: "🚀", value: 2500, weight: 200 },
     ],
   },
   {
@@ -124,12 +124,12 @@ const CASES = [
     price: 100,
     risk: "high",
     items: [
-      { name: "Nothing", icon: "💨", value: 1, weight: 54336 },
+      { name: "Nothing", icon: "💨", value: 1, weight: 54269 },
       { name: "Snake Eyes", icon: "🐍", value: 20, weight: 22000 },
       { name: "Lucky Dice", icon: "🎲", value: 100, weight: 10001 },
       { name: "Royal Flush", icon: "🂡", value: 350, weight: 12516 },
       { name: "High Roller", icon: "🎩", value: 1500, weight: 1080 },
-      { name: "All In", icon: "💰", value: 15000, weight: 67 },
+      { name: "All In", icon: "💰", value: 7500, weight: 134 },
     ],
   },
   {
@@ -139,12 +139,12 @@ const CASES = [
     price: 500,
     risk: "high",
     items: [
-      { name: "Sad Pepe", icon: "😢", value: 10, weight: 51079 },
+      { name: "Sad Pepe", icon: "😢", value: 10, weight: 50946 },
       { name: "Smug Pepe", icon: "😏", value: 100, weight: 22000 },
       { name: "Pepe Hands", icon: "🙌", value: 450, weight: 13000 },
       { name: "Rare Pepe", icon: "🖼️", value: 1800, weight: 12408 },
       { name: "Feels Good Man", icon: "😌", value: 6000, weight: 1380 },
-      { name: "Golden Pepe", icon: "🐸", value: 25000, weight: 133 },
+      { name: "Golden Pepe", icon: "🐸", value: 12500, weight: 266 },
     ],
   },
   {
@@ -274,12 +274,12 @@ const CASES = [
     price: 250,
     risk: "high",
     items: [
-      { name: "Rug Pull", icon: "🧹", value: 10, weight: 43942 },
+      { name: "Rug Pull", icon: "🧹", value: 10, weight: 43842 },
       { name: "Bag Holder", icon: "👜", value: 50, weight: 28000 },
       { name: "Hodl", icon: "💪", value: 250, weight: 13000 },
       { name: "Pump", icon: "⛽", value: 750, weight: 13638 },
       { name: "Moon Bag", icon: "🌙", value: 2600, weight: 1320 },
-      { name: "Satoshi Wallet", icon: "₿", value: 25000, weight: 100 },
+      { name: "Satoshi Wallet", icon: "₿", value: 12500, weight: 200 },
     ],
   },
   {
@@ -289,12 +289,12 @@ const CASES = [
     price: 750,
     risk: "high",
     items: [
-      { name: "Glass Shard", icon: "🪟", value: 30, weight: 43662 },
+      { name: "Glass Shard", icon: "🪟", value: 30, weight: 43462 },
       { name: "Cubic Zirconia", icon: "🔹", value: 150, weight: 28000 },
       { name: "Sapphire", icon: "🔷", value: 750, weight: 13001 },
       { name: "Emerald", icon: "💚", value: 2250, weight: 13817 },
       { name: "Ruby", icon: "❤️", value: 7500, weight: 1320 },
-      { name: "Diamond Storm", icon: "💠", value: 37500, weight: 200 },
+      { name: "Diamond Storm", icon: "💠", value: 18750, weight: 400 },
     ],
   },
   {
@@ -304,12 +304,12 @@ const CASES = [
     price: 1000,
     risk: "high",
     items: [
-      { name: "Plankton", icon: "🦐", value: 40, weight: 43662 },
+      { name: "Plankton", icon: "🦐", value: 40, weight: 43462 },
       { name: "Shrimp", icon: "🍤", value: 200, weight: 28000 },
       { name: "Dolphin", icon: "🐬", value: 1000, weight: 13001 },
       { name: "Shark", icon: "🦈", value: 3000, weight: 13817 },
       { name: "Orca", icon: "🐋", value: 10000, weight: 1320 },
-      { name: "The Whale", icon: "🐳", value: 50000, weight: 200 },
+      { name: "The Whale", icon: "🐳", value: 25000, weight: 400 },
     ],
   },
 ];
