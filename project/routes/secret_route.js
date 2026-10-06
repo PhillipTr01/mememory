@@ -7,7 +7,7 @@ const access = require("../game/access");
 
 /*
  * The hidden pages, mounted at the secret address (config.JACKPOT_PATH):
- * the choice of games, the jackpot, case battles, poker and blackjack.
+ * the jackpot is the start page, case battles, poker and blackjack next to it.
  * The pages link each other relatively, so the address is in no page.
  */
 module.exports = function (auth) {
@@ -30,9 +30,10 @@ module.exports = function (auth) {
   router.get("/", auth, approved, (req, res, next) => {
     // Always with a slash at the end, so the relative links work
     if (!req.originalUrl.split("?")[0].endsWith("/")) return res.redirect(req.baseUrl + "/");
-    page("casino.html")(req, res, next);
+    page("jackpot.html")(req, res, next);
   });
-  router.get("/jackpot", auth, approved, page("jackpot.html"));
+  // The old address of the jackpot
+  router.get("/jackpot", (req, res) => res.redirect("./"));
   router.get("/battles", auth, approved, page("battles.html"));
   router.get("/poker", auth, approved, page("poker.html"));
   router.get("/blackjack", auth, approved, page("blackjack.html"));

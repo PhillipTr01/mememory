@@ -222,7 +222,7 @@ test("jackpot: one chat for every hidden game, no info messages", async () => {
   const alice = client("alice");
   const onPoker = server.client("/poker", tokens.bob);
   const onBattles = server.client("/battles", tokens.carol);
-  const onCasino = server.client("/casino", tokens.dave);
+  const onCasino = server.client("/blackjack", tokens.dave);
   sockets.push(onPoker, onBattles, onCasino);
   await Promise.all([alice, onPoker, onBattles, onCasino].map((s) => h.once(s, "connect")));
   await h.wait(50);
@@ -302,7 +302,7 @@ test("jackpot: a bet gets into the pot only after a few seconds - too late for t
 
 /* ---------- Secret address, start coins ---------- */
 
-test("casino: a secret address with the choice of games, jackpot, battles and poker under it", async () => {
+test("casino: a secret address - the jackpot is the start page, the other games under it", async () => {
   const express = require("express");
   const http = require("http");
   const secretRoute = require("../routes/secret_route");
@@ -326,8 +326,9 @@ test("casino: a secret address with the choice of games, jackpot, battles and po
     const redirect = await get(base);
     assert.strictEqual(redirect.status, 302);
     assert.strictEqual(redirect.location, base + "/");
-    assert.match((await get(base + "/")).body, /<title>Secret Casino/);
-    assert.match((await get(base + "/jackpot")).body, /<title>Jackpot/);
+    assert.match((await get(base + "/")).body, /<title>Jackpot/);
+    const old = await get(base + "/jackpot");
+    assert.deepStrictEqual([old.status, old.location], [302, "./"], "the old address leads to the start page");
     assert.match((await get(base + "/battles")).body, /<title>Case Battles/);
     assert.match((await get(base + "/poker")).body, /<title>Poker/);
     assert.match((await get(base + "/blackjack")).body, /<title>Blackjack/);
@@ -360,11 +361,3 @@ test("coins: new accounts start with 50k - a reset gives every account the start
   assert.strictEqual((await coins.get("frank")).coins, 1000, "no second reset");
 });
 
-test("casino: the start page shows what is going on in every game", async () => {
-  const page = server.client("/casino", tokens.carol);
-  sockets.push(page);
-  const summary = await h.once(page, "summary");
-  assert.deepStrictEqual(Object.keys(summary).sort(), ["battles", "blackjack", "jackpot", "poker"]);
-  assert.strictEqual(summary.poker.seats, config.POKER_SEATS);
-  assert.ok(typeof summary.jackpot.total === "number");
-});

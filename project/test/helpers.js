@@ -134,7 +134,7 @@ async function startServer() {
   const battles = require("../sockets/battles_server")(io);
   const poker = require("../sockets/poker_server")(io);
   const blackjack = require("../sockets/blackjack_server")(io);
-  require("../sockets/casino_server")(io, { jackpot, battles, poker, blackjack });
+  require("../sockets/casino_server")(io);
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
 

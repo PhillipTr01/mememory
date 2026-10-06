@@ -44,7 +44,7 @@ const jackpotGame = require("./sockets/jackpot_server")(io);
 const battlesGame = require("./sockets/battles_server")(io);
 const pokerTable = require("./sockets/poker_server")(io);
 const blackjackTable = require("./sockets/blackjack_server")(io);
-require("./sockets/casino_server")(io, { jackpot: jackpotGame, battles: battlesGame, poker: pokerTable, blackjack: blackjackTable });
+require("./sockets/casino_server")(io);
 
 /* Page routes */
 const authenticationRoute = require("./routes/authentication_route");

@@ -68,7 +68,7 @@ function connect(namespace, name) {
 }
 
 test("access: without the approval every casino page leads back to the start page", async () => {
-  for (const path of ["/", "/jackpot", "/battles", "/poker", "/blackjack"]) {
+  for (const path of ["/", "/battles", "/poker", "/blackjack"]) {
     const res = await call(CASINO + path, as("tom"));
     assert.strictEqual(res.status, 302, path);
     assert.strictEqual(res.headers.get("location"), "/", path);
@@ -76,7 +76,7 @@ test("access: without the approval every casino page leads back to the start pag
   assert.strictEqual((await call(CASINO + "/withdraw", { ...as("tom"), json: { amount: 5000 } })).status, 403);
   assert.strictEqual((await call(CASINO + "/withdrawals", as("tom"))).status, 403);
 
-  for (const namespace of ["/casino", "/jackpot", "/battles", "/poker", "/blackjack"]) {
+  for (const namespace of ["/jackpot", "/battles", "/poker", "/blackjack"]) {
     const result = await connect(namespace, "tom");
     assert.deepStrictEqual([result.ok, result.error], [false, "unauthorized"], namespace);
   }
@@ -132,7 +132,7 @@ test("access: the start money - 50,000 plus the daily bonus of every day since t
 
   // Now uma gets in
   assert.strictEqual((await call(CASINO + "/", as("uma"))).status, 200);
-  const page = await connect("/casino", "uma");
+  const page = await connect("/jackpot", "uma");
   assert.strictEqual(page.ok, true);
 });
 
@@ -144,7 +144,7 @@ test("access: taken away - the open pages close, a new approval gives no second 
   assert.strictEqual(res.status, 200);
   await closed;
   await gone;
-  assert.strictEqual((await call(CASINO + "/jackpot", as("uma"))).headers.get("location"), "/");
+  assert.strictEqual((await call(CASINO + "/", as("uma"))).headers.get("location"), "/");
   assert.strictEqual((await connect("/jackpot", "uma")).ok, false);
 
   h.setCoins("uma", 1234);
@@ -165,7 +165,7 @@ test("access: payouts only for players the admin ticked", async () => {
   assert.strictEqual((await adminApi("access")).body.players.find((p) => p.username === "tom").payout, false);
 
   // Ticked: the open page hears it right away, the payout works
-  const { socket } = await connect("/casino", "tom");
+  const { socket } = await connect("/jackpot", "tom");
   const told = new Promise((resolve) => socket.on("coins", (data) => data.payout && resolve(data)));
   assert.deepStrictEqual((await adminApi("payout", { username: "tom", allowed: true })).body, { username: "tom", payout: true });
   assert.strictEqual((await told).payout, true);
