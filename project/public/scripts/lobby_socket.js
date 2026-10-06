@@ -215,7 +215,8 @@ socket.on("connect_error", (error) => {
 });
 
 /*
- * Secret: the Konami code (↑ ↑ ↓ ↓ ← → ← → B A) opens the hidden jackpot.
+ * Secret: the Konami code (↑ ↑ ↓ ↓ ← → ← → B A) opens the hidden jackpot
+ * (its address is secret too, the server sends it).
  * Not while typing (e.g. a room code).
  */
 (function () {
@@ -227,7 +228,8 @@ socket.on("connect_error", (error) => {
     position = key == code[position] ? position + 1 : key == code[0] ? 1 : 0;
     if (position == code.length) {
       position = 0;
-      window.location.href = "/jackpot";
+      // Only the server knows where the jackpot is
+      socket.emit("secretDoor", (url) => (window.location.href = url));
     }
   });
 })();

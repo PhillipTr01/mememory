@@ -18,6 +18,7 @@ if (missing.length > 0) {
 const PORT = process.env.PORT || 5000;
 
 const { page, staticHeaders } = require("./utils/pages");
+const config = require("./game/config");
 
 const app = express();
 const server = http.createServer(app);
@@ -48,6 +49,7 @@ const authenticationRoute = require("./routes/authentication_route");
 const memeRoute = require("./routes/meme_route");
 const userRoute = require("./routes/user_route");
 const scoreboardRoute = require("./routes/scoreboard_route");
+const secretRoute = require("./routes/secret_route");
 
 /* API routes */
 const authenticationAPIRoute = require("./API/routes/authentication_route");
@@ -81,11 +83,8 @@ app.get("/settings", Auth, page("settings.html"));
 app.get("/play", Auth, page("multiplayer.html"));
 app.get("/singleplayer", Auth, page("singleplayer.html"));
 app.get("/tictactoe", Auth, page("tictactoe.html"));
-// Hidden: not linked anywhere (Konami code in the lobby)
-app.get("/jackpot", Auth, page("jackpot.html"));
-// Hidden too: only reachable from the jackpot page
-app.get("/battles", Auth, page("battles.html"));
-app.get("/poker", Auth, page("poker.html"));
+// Hidden: the jackpot (and its case battles and poker) at a secret address
+app.use(encodeURI(config.JACKPOT_PATH), secretRoute(Auth));
 
 /* Error handling */
 app.use((req, res, next) => {

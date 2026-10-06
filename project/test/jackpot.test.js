@@ -228,3 +228,61 @@ test("jackpot: the secret word gives coins every time (not too fast)", async () 
   await again;
   assert.strictEqual(h.coinsOf("carol"), 2 * config.JACKPOT_SECRET_COINS);
 });
+
+/* ---------- Secret address, start coins ---------- */
+
+test("jackpot: lives at a secret address, battles and poker under it", async () => {
+  const express = require("express");
+  const http = require("http");
+  const secretRoute = require("../routes/secret_route");
+  const app = express();
+  const base = encodeURI(config.JACKPOT_PATH);
+  app.use(base, secretRoute((req, res, next) => next()));
+  const web = http.createServer(app);
+  await new Promise((resolve) => web.listen(0, resolve));
+  const get = (path) =>
+    new Promise((resolve, reject) =>
+      http.get({ port: web.address().port, path: path }, (res) => {
+        let body = "";
+        res.on("data", (chunk) => (body += chunk));
+        res.on("end", () => resolve({ status: res.statusCode, location: res.headers.location, body: body }));
+      }).on("error", reject),
+    );
+  try {
+    assert.strictEqual(config.JACKPOT_PATH, "/🤫🎰💸");
+    // Without the slash: redirected, so the relative links work
+    const redirect = await get(base);
+    assert.strictEqual(redirect.status, 302);
+    assert.strictEqual(redirect.location, base + "/");
+    assert.match((await get(base + "/")).body, /<title>Jackpot/);
+    assert.match((await get(base + "/battles")).body, /<title>Case Battles/);
+    assert.match((await get(base + "/poker")).body, /<title>Poker/);
+    // The old, easy addresses are gone
+    for (const path of ["/jackpot", "/battles", "/poker"]) assert.strictEqual((await get(path)).status, 404);
+  } finally {
+    await new Promise((resolve) => web.close(resolve));
+  }
+});
+
+test("jackpot: the Konami code gets the secret address from the server", async () => {
+  const lobby = server.client("/lobby", tokens.alice);
+  sockets.push(lobby);
+  await h.once(lobby, "connect");
+  const url = await new Promise((resolve) => lobby.emit("secretDoor", resolve));
+  assert.strictEqual(url, encodeURI("/🤫🎰💸") + "/");
+});
+
+test("coins: everybody gets 2500 start coins - old accounts get the difference once", async () => {
+  assert.strictEqual(config.START_COINS, 2500);
+  // A new account
+  h.addUser("erin");
+  assert.strictEqual((await coins.get("erin")).coins, 2500);
+  // An account from before (100 start coins, 30 left): +2400, only once
+  h.addUser("frank");
+  const User = require("../models/User");
+  await User.updateOne({ username: "frank" }, { $set: { coins: 30 } });
+  assert.strictEqual((await coins.get("frank")).coins, 2430);
+  assert.strictEqual((await coins.get("frank")).coins, 2430);
+  assert.strictEqual(await coins.spend("frank", 2430), true);
+  assert.strictEqual((await coins.get("frank")).coins, 0, "no new start coins when broke");
+});

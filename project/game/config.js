@@ -48,7 +48,7 @@ module.exports = {
   SPEED_START_ANIMATION: 2600,
 
   // Coins (hidden jackpot): start amount, free coins once a day when (almost) broke
-  START_COINS: 100,
+  START_COINS: 2500,
   DAILY_BONUS: 50,
   BONUS_BELOW: 10,
   BONUS_EVERY: 24 * 60 * 60 * 1000,
@@ -66,6 +66,10 @@ module.exports = {
   JACKPOT_SECRET: (process.env.JACKPOT_SECRET || "moneyrain").toLowerCase(),
   JACKPOT_SECRET_COINS: 1000,
   JACKPOT_SECRET_COOLDOWN: 1000, // ms between two uses (no flooding)
+
+  // The secret address of the jackpot (and its case battles and poker):
+  // not linked anywhere. Can be changed with JACKPOT_PATH.
+  JACKPOT_PATH: "/" + (process.env.JACKPOT_PATH || "🤫🎰💸"),
 
   // Case battles (hidden, opened from the jackpot page)
   BATTLE_START: 3000, // countdown when the battle is full

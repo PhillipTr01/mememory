@@ -24,9 +24,23 @@ function changed(result) {
   return result != null && (result.nModified > 0 || result.modifiedCount > 0);
 }
 
-// Old accounts don't have the field yet: they start with START_COINS
+// Accounts from before the start coins were raised got this much
+const OLD_START_COINS = 100;
+
+/*
+ * Everybody gets the start coins once: accounts without coins get them now,
+ * accounts that only got the old (smaller) start coins get the difference.
+ * coinStart remembers what an account got.
+ */
 async function ensure(username) {
-  await User.updateOne({ username: username, coins: { $exists: false } }, { $set: { coins: config.START_COINS } });
+  await User.updateOne(
+    { username: username, coins: { $exists: false } },
+    { $set: { coins: config.START_COINS, coinStart: config.START_COINS } },
+  );
+  await User.updateOne(
+    { username: username, coins: { $exists: true }, coinStart: { $exists: false } },
+    { $inc: { coins: Math.max(0, config.START_COINS - OLD_START_COINS) }, $set: { coinStart: config.START_COINS } },
+  );
 }
 
 function bonusAvailable(user, now = Date.now()) {
