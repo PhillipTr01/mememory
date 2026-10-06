@@ -343,6 +343,24 @@ module.exports = function (io) {
     }
   }
 
+  /*
+   * After a restart of the server: the game is there again, the players get
+   * the usual time to come back (their pages reload and join again)
+   */
+  rooms.onRestore("tictactoe", (gameID, room) => {
+    const now = Date.now();
+    room.spectators = new Map();
+    room.emptySince = now;
+    room.seats.forEach((seat) => {
+      if (seat == null) return;
+      if (seat.connected) {
+        seat.connected = false;
+        seat.disconnectedAt = now;
+      }
+      seat.socketId = null;
+    });
+  });
+
   const ticker = setInterval(() => {
     try {
       tick();

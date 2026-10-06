@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const persist = require("../game/persist");
 
 function readCookie(header, name) {
   if (typeof header !== "string") return null;
@@ -26,6 +27,8 @@ function readCookie(header, name) {
 function check(casino) {
   return async function socketAuth(socket, next) {
     try {
+      // After a restart: the games are back first
+      await persist.whenRestored();
       const token = readCookie(socket.handshake.headers.cookie, "token");
       const decode = jwt.verify(token, process.env.SECRET_KEY);
       const user = await User.findOne({ _id: decode._id }).select("username casinoApproved");

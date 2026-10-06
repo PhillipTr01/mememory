@@ -146,18 +146,35 @@ module.exports = function (io) {
           return;
         }
         stopTimers(game);
-        clearTimeout(room.awayTimer);
-        room.awayTimer = setTimeout(() => {
-          if (room.socketId != null || game.finished || room.game !== game) return;
-          // Didn't come back in time: counts as a loss, like surrendering
-          surrender(room)
-            .catch((error) => console.error("[singleplayer] Could not end game:", error))
-            .finally(() => {
-              if (room.socketId == null) rooms.remove(gameID);
-            });
-        }, config.REJOIN_GRACE_PLAYING);
+        waitForPlayer(gameID, room);
       }),
     );
+  });
+
+  // The player is gone (reload, lost connection, restart): some time to come back
+  function waitForPlayer(gameID, room) {
+    const game = room.game;
+    clearTimeout(room.awayTimer);
+    room.awayTimer = setTimeout(() => {
+      if (room.socketId != null || game.finished || room.game !== game) return;
+      // Didn't come back in time: counts as a loss, like surrendering
+      surrender(room)
+        .catch((error) => console.error("[singleplayer] Could not end game:", error))
+        .finally(() => {
+          if (room.socketId == null) rooms.remove(gameID);
+        });
+    }, config.REJOIN_GRACE_PLAYING);
+  }
+
+  // After a restart of the server: the game is there again, paused until the player is back
+  rooms.onRestore("singleplayer", (gameID, room) => {
+    room.socketId = null;
+    room.initializing = false;
+    const game = room.game;
+    if (game == null) return;
+    game.timeouts = [];
+    game.interval = null;
+    if (!game.finished) waitForPlayer(gameID, room);
   });
 
   /* ---------- Connection ---------- */

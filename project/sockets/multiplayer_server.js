@@ -571,6 +571,29 @@ module.exports = function (io) {
     return running && room.players.some((player) => player.active) ? config.REJOIN_GRACE_PLAYING : 0;
   }
 
+  /*
+   * After a restart of the server: the room is there again, the players get
+   * the usual time to come back (their pages reload and join again). A game
+   * that was just starting starts, the clock of a speed round starts again.
+   */
+  rooms.onRestore("multiplayer", (gameID, room) => {
+    const now = Date.now();
+    room.timers = [];
+    room.spectators = new Map();
+    room.emptySince = now;
+    room.closingCard = null;
+    if (!(room.banned instanceof Set)) room.banned = new Set(room.banned || []);
+    room.players.forEach((player) => {
+      if (player.connected) {
+        player.connected = false;
+        player.disconnectedAt = now;
+      }
+      player.socketId = null;
+    });
+    if (room.status === STATUS.STARTING) room.status = STATUS.PLAYING;
+    if (room.status === STATUS.PLAYING) startTurnTimer(gameID, room);
+  });
+
   const ticker = setInterval(() => tick().catch(() => {}), config.TICK);
   ticker.unref();
 

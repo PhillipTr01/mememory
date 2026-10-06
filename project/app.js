@@ -20,6 +20,8 @@ const PORT = process.env.PORT || 5000;
 const { page, staticHeaders } = require("./utils/pages");
 const { notFound, errorHandler } = require("./utils/errors");
 const persist = require("./game/persist");
+// The games of the last run come back before anybody can join one
+persist.expectRestore();
 const config = require("./game/config");
 
 const app = express();

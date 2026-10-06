@@ -11,13 +11,16 @@ const Setting = require("../models/Setting");
  */
 const games = new Map(); // key -> {snapshot, restore}
 const timers = new Map(); // key -> pending save
+const lastSaved = new Map(); // key -> the text saved last (unchanged: no write)
 let ready = false;
+let restored = null; // the server waits for the saved state (see expectRestore)
+let markRestored = () => {};
 const SAVE_AFTER = 100; // ms
 
 // Timers (and other things that can't be saved) are left out; Maps become lists
 function toJSON(value) {
   return JSON.stringify(value, (key, item) => {
-    if (/timer$/i.test(key)) return undefined;
+    if (/timers?$|timeouts$|^interval$/i.test(key)) return undefined;
     if (item instanceof Map) return { __map: [...item.entries()] };
     if (item instanceof Set) return { __set: [...item] };
     return item;
@@ -50,7 +53,10 @@ function changed(key) {
 async function save(key) {
   const game = games.get(key);
   if (game == null) return;
-  await Setting.updateOne({ key: "game:" + key }, { $set: { value: toJSON(game.snapshot()) } }, { upsert: true });
+  const text = toJSON(game.snapshot());
+  if (lastSaved.get(key) === text) return;
+  await Setting.updateOne({ key: "game:" + key }, { $set: { value: text } }, { upsert: true });
+  lastSaved.set(key, text);
 }
 
 // The server stops: everything right now
@@ -72,13 +78,28 @@ async function restoreAll() {
     }
   }
   ready = true;
+  markRestored();
+}
+
+/*
+ * The server will load the saved state: until then nobody gets into a game
+ * (a page that reconnects after a restart would not find its game yet)
+ */
+function expectRestore() {
+  restored = new Promise((resolve) => (markRestored = resolve));
+}
+
+function whenRestored() {
+  return restored || Promise.resolve();
 }
 
 // Tests: start again without anything saved or loaded
 function reset() {
   for (const timer of timers.values()) clearTimeout(timer);
   timers.clear();
+  lastSaved.clear();
   ready = false;
+  restored = null;
 }
 
-module.exports = { register, changed, saveAll, restoreAll, reset, toJSON, fromJSON };
+module.exports = { register, changed, saveAll, restoreAll, expectRestore, whenRestored, reset, toJSON, fromJSON };
