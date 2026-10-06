@@ -691,7 +691,178 @@
 }
 
 .bt-seat.lost {
-  opacity: 0.45;
+  opacity: 0.6;
+}
+
+.bt-arena.over .bt-seat.lost {
+  opacity: 0.75;
+  filter: saturate(0.6);
+}
+
+/* ---------- The end of a battle ---------- */
+.bt-hero {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem 1.4rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.55);
+  border-radius: var(--mm-radius);
+  background: radial-gradient(circle at 8% 50%, rgba(var(--mm-accent-rgb), 0.28), transparent 45%), linear-gradient(120deg, rgba(var(--mm-accent-rgb), 0.12), var(--mm-surface-2) 60%);
+  overflow: hidden;
+  animation: bt-hero-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.bt-hero.won {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 30px rgba(var(--mm-accent-rgb), 0.35);
+}
+
+.bt-hero.lost {
+  border-color: var(--mm-border);
+  background: linear-gradient(120deg, rgba(239, 68, 68, 0.1), var(--mm-surface-2) 60%);
+}
+
+@keyframes bt-hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+}
+
+.bt-hero-trophy {
+  font-size: 2.6rem;
+  line-height: 1;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
+  animation: bt-trophy 2.4s ease-in-out infinite;
+}
+
+@keyframes bt-trophy {
+  50% {
+    transform: translateY(-4px) rotate(-6deg);
+  }
+}
+
+.bt-hero-main {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.bt-hero-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
+
+.bt-hero-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--mm-text);
+}
+
+.bt-hero-pot,
+.bt-hero-me {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+}
+
+.bt-hero-pot b {
+  font-size: 1.5rem;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.bt-hero-me b {
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.bt-hero-me.plus b {
+  color: var(--mm-success);
+}
+
+.bt-hero-me.minus b {
+  color: var(--mm-danger);
+}
+
+.bt-again {
+  margin-left: auto;
+}
+
+.bt-final {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.8rem 0.4rem;
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface);
+}
+
+.bt-final-medal {
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 900;
+  color: var(--mm-muted);
+}
+
+.bt-final-place {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
+
+.bt-final-total {
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.bt-final.place-1 {
+  background: radial-gradient(circle at 50% 0%, rgba(var(--mm-accent-rgb), 0.3), transparent 70%), var(--mm-surface);
+}
+
+.bt-final.place-1 .bt-final-medal {
+  font-size: 2.6rem;
+  animation: bt-hit 0.6s ease-out;
+}
+
+.bt-final-gain {
+  margin-top: 0.2rem;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  background: var(--mm-accent);
+  color: var(--mm-on-accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+@media (max-width: 575px) {
+  .bt-hero {
+    padding: 0.8rem;
+    gap: 0.6rem 1rem;
+  }
+
+  .bt-hero-trophy {
+    font-size: 2rem;
+  }
+
+  .bt-again {
+    width: 100%;
+  }
 }
 
 .bt-seat-head {

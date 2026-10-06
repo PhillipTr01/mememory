@@ -122,6 +122,15 @@ function track(battle) {
   if (battle.phase == "done" && before && before.phase == "running") celebrate(battle);
 }
 
+// Once: may the browser tell when a battle starts while another tab is open?
+function askForNotifications() {
+  try {
+    if (window.Notification && Notification.permission == "default") Notification.requestPermission();
+  } catch (e) {
+    // not supported
+  }
+}
+
 /* ---------- Views ---------- */
 
 function openBattle(id) {
@@ -469,6 +478,7 @@ function renderList() {
         join.disabled = battle.price > myCoins;
         join.addEventListener("click", (event) => {
           event.stopPropagation();
+          askForNotifications();
           socket.emit("joinBattle", battle.id);
           openBattle(battle.id);
         });
@@ -560,10 +570,11 @@ function renderBattle() {
   var strip = caseStrip(battle, battle.phase == "running" ? rounds : null);
   strip.classList.add("big");
 
-  var grid = el("div", "bt-arena");
+  var grid = el("div", "bt-arena" + (over ? " over" : ""));
   grid.style.setProperty("--seats", battle.size);
   var totals = battle.seats.map((_, seat) => totalOf(battle, seat, rounds));
   var best = battle.crazy ? Math.min(...totals) : Math.max(...totals);
+  var places = over ? placesOf(battle, totals) : null;
   battle.seats.forEach((seat, index) => {
     var column = el("div", "bt-seat");
     column.dataset.seat = index;
@@ -577,7 +588,10 @@ function renderBattle() {
         var join = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Join 🪙 " + formatCoins(battle.price));
         join.type = "button";
         join.disabled = battle.price > myCoins;
-        join.addEventListener("click", () => socket.emit("joinBattle", battle.id));
+        join.addEventListener("click", () => {
+          askForNotifications();
+          socket.emit("joinBattle", battle.id);
+        });
         head.appendChild(join);
       } else if (battle.creator == myName) {
         var bot = el("button", "mm-btn mm-btn-sm");
@@ -595,31 +609,32 @@ function renderBattle() {
       else if (seat.name == myName) name.appendChild(el("span", "player-tag", "You"));
       head.append(name, el("span", "bt-seat-total", "🪙 " + formatCoins(totals[index])));
     }
-    var reel = el("div", "bt-reel");
-    var last = rounds > 0 ? itemOf(battle, rounds - 1, index) : null;
-    var window_ = el("div", "bt-reel-window");
-    if (last && !spinning) window_.appendChild(itemTile(last, "big"));
-    else window_.appendChild(el("span", "bt-reel-idle", battle.phase == "waiting" ? "?" : ""));
-    reel.appendChild(window_);
     var items = el("div", "bt-won");
-    for (var r = rounds - 1; r >= 0; r--) items.appendChild(itemTile(itemOf(battle, r, index)));
-    column.append(head, reel, items);
+    if (over) {
+      // The end: the place instead of the reel, the items in the order they came
+      column.append(head, finalTile(battle, index, places[index], totals[index]));
+      for (var n = 0; n < rounds; n++) items.appendChild(itemTile(itemOf(battle, n, index)));
+      column.appendChild(items);
+    } else {
+      var reel = el("div", "bt-reel");
+      var last = rounds > 0 ? itemOf(battle, rounds - 1, index) : null;
+      var window_ = el("div", "bt-reel-window");
+      if (last && !spinning) window_.appendChild(itemTile(last, "big"));
+      else window_.appendChild(el("span", "bt-reel-idle", battle.phase == "waiting" ? "?" : ""));
+      reel.appendChild(window_);
+      for (var r = rounds - 1; r >= 0; r--) items.appendChild(itemTile(itemOf(battle, r, index)));
+      column.append(head, reel, items);
+    }
     grid.appendChild(column);
   });
 
-  var parts = [top, strip, grid];
+  var parts = over ? [top, resultHero(battle), strip, grid] : [top, strip, grid];
   if (battle.phase == "waiting" && battle.creator == myName) {
     var cancel = el("button", "mm-btn mm-btn-sm bt-cancel");
     cancel.type = "button";
     cancel.append(createIcon("bi-x-circle"), document.createTextNode(" Cancel battle (coins back)"));
     cancel.addEventListener("click", () => socket.emit("cancelBattle", battle.id));
     parts.push(cancel);
-  }
-  if (over) {
-    var winner = battle.seats[battle.winner];
-    var result = el("p", "jp-result" + (winner.name == myName ? " won" : ""));
-    result.innerText = winner.name == myName ? "You win " + formatCoins(battle.payout) + " coins!" : winner.name + " wins " + formatCoins(battle.payout) + " coins";
-    parts.push(result);
   }
   parts.push(fairLine(battle));
   view.replaceChildren(...parts);
@@ -633,6 +648,61 @@ function renderBattle() {
       if (left <= 0) clearInterval(statusTimer);
     }, 200);
   }
+}
+
+/* ---------- The end of a battle ---------- */
+
+var MEDALS = ["🥇", "🥈", "🥉", "4"];
+var PLACE_NAMES = ["1st", "2nd", "3rd", "4th"];
+
+// Place of every seat: the winner first, then by the totals
+function placesOf(battle, totals) {
+  var order = battle.seats.map((_, seat) => seat);
+  order.sort((a, b) => (a == battle.winner ? -1 : b == battle.winner ? 1 : battle.crazy ? totals[a] - totals[b] : totals[b] - totals[a]));
+  var places = [];
+  order.forEach((seat, place) => (places[seat] = place));
+  return places;
+}
+
+function finalTile(battle, seat, place, total) {
+  var tile = el("div", "bt-final place-" + (place + 1));
+  tile.append(el("span", "bt-final-medal", MEDALS[place]), el("span", "bt-final-place", PLACE_NAMES[place]));
+  var value = el("span", "bt-final-total", "🪙 " + formatCoins(total));
+  tile.appendChild(value);
+  if (seat == battle.winner) tile.appendChild(el("span", "bt-final-gain", "Takes 🪙 " + formatCoins(battle.payout)));
+  return tile;
+}
+
+// The big result on top: who won, the pot, what it was for me - and the same battle again
+function resultHero(battle) {
+  var winner = battle.seats[battle.winner];
+  var mine = isIn(battle);
+  var won = winner.name == myName;
+  var hero = el("div", "bt-hero" + (won ? " won" : mine ? " lost" : ""));
+  hero.appendChild(el("span", "bt-hero-trophy", won ? "🏆" : mine ? "💀" : "🏆"));
+  var main = el("div", "bt-hero-main");
+  var label = el("span", "bt-hero-label", won ? "You won the battle!" : battle.crazy ? "Winner - lowest total" : "Winner");
+  var name = el("div", "bt-hero-name");
+  name.append(createAvatar(winner.name), el("span", "", winner.name));
+  if (winner.bot) name.appendChild(el("span", "player-tag", "Bot"));
+  main.append(label, name);
+  var pot = el("div", "bt-hero-pot");
+  pot.append(el("span", "bt-hero-label", "Pot"), el("b", "", "🪙 " + formatCoins(battle.payout)));
+  hero.append(main, pot);
+  if (mine) {
+    var profit = (won ? battle.payout : 0) - battle.price;
+    var me = el("div", "bt-hero-me " + (profit >= 0 ? "plus" : "minus"));
+    me.append(el("span", "bt-hero-label", "You"), el("b", "", (profit >= 0 ? "+" : "−") + formatCoins(Math.abs(profit))));
+    hero.appendChild(me);
+  }
+  var again = el("button", "mm-btn mm-btn-primary mm-btn-sm bt-again");
+  again.type = "button";
+  again.append(createIcon("bi-arrow-repeat"), document.createTextNode(" Battle again · 🪙 " + formatCoins(battle.price)));
+  again.disabled = battle.price > myCoins;
+  again.title = "The same cases again, a new battle";
+  again.addEventListener("click", () => socket.emit("createBattle", { cases: battle.cases.slice(), size: battle.size, crazy: battle.crazy }));
+  hero.appendChild(again);
+  return hero;
 }
 
 function renderBattleStatus(battle) {
@@ -785,6 +855,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("btCreate").addEventListener("click", () => {
     if (picked.length == 0) return;
+    askForNotifications();
     socket.emit("createBattle", { cases: pickedIds(), size: size, crazy: crazy });
   });
 

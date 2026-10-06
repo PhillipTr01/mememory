@@ -4,6 +4,7 @@ const coins = require("../game/coins");
 const cases = require("../game/cases");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
+const notices = require("../game/notices");
 const safe = require("./safe_handler");
 const version = require("../game/version");
 
@@ -145,6 +146,11 @@ module.exports = function (io) {
     const begin = Date.now() + config.BATTLE_START;
     battle.nextAt = begin;
     emitList();
+    // Everybody in it hears it, on whatever casino page they are
+    const players = battle.seats.map((seat) => seat.name);
+    for (const seat of humans(battle)) {
+      notices.send(seat.name, "battleStarted", { id: battle.id, price: battle.price, cases: battle.cases.length, players: players, crazy: battle.crazy });
+    }
     const reveal = () => {
       battle.revealed++;
       if (battle.revealed < battle.cases.length) {

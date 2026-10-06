@@ -68,7 +68,7 @@ function connect(namespace, name) {
 }
 
 test("access: without the approval every casino page leads back to the start page", async () => {
-  for (const path of ["/", "/battles", "/poker", "/blackjack"]) {
+  for (const path of ["/", "/jackpot", "/battles", "/poker", "/blackjack"]) {
     const res = await call(CASINO + path, as("tom"));
     assert.strictEqual(res.status, 302, path);
     assert.strictEqual(res.headers.get("location"), "/", path);

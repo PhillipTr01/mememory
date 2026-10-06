@@ -32,8 +32,8 @@ module.exports = function (auth) {
     if (!req.originalUrl.split("?")[0].endsWith("/")) return res.redirect(req.baseUrl + "/");
     page("jackpot.html")(req, res, next);
   });
-  // The old address of the jackpot
-  router.get("/jackpot", (req, res) => res.redirect("./"));
+  // The jackpot also under its own name
+  router.get("/jackpot", auth, approved, page("jackpot.html"));
   router.get("/battles", auth, approved, page("battles.html"));
   router.get("/poker", auth, approved, page("poker.html"));
   router.get("/blackjack", auth, approved, page("blackjack.html"));

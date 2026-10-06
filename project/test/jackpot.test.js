@@ -327,8 +327,7 @@ test("casino: a secret address - the jackpot is the start page, the other games 
     assert.strictEqual(redirect.status, 302);
     assert.strictEqual(redirect.location, base + "/");
     assert.match((await get(base + "/")).body, /<title>Jackpot/);
-    const old = await get(base + "/jackpot");
-    assert.deepStrictEqual([old.status, old.location], [302, "./"], "the old address leads to the start page");
+    assert.match((await get(base + "/jackpot")).body, /<title>Jackpot/);
     assert.match((await get(base + "/battles")).body, /<title>Case Battles/);
     assert.match((await get(base + "/poker")).body, /<title>Poker/);
     assert.match((await get(base + "/blackjack")).body, /<title>Blackjack/);

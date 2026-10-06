@@ -270,3 +270,29 @@ test("battles: invalid battles, not enough coins, cancel gives the coins back", 
   assert.strictEqual(h.coinsOf("alice"), 30);
   assert.strictEqual(h.coinsOf("bob"), 100);
 });
+
+test("battles: everybody in a battle hears that it starts - on every casino page", async () => {
+  h.setCoins("alice", 500);
+  h.setCoins("carol", 500);
+  const alice = client("alice");
+  const onPoker = server.client("/poker", tokens.alice);
+  const onBlackjack = server.client("/blackjack", tokens.carol);
+  const outsider = server.client("/jackpot", tokens.bob);
+  sockets.push(onPoker, onBlackjack, outsider);
+  await Promise.all([alice, onPoker, onBlackjack, outsider].map((s) => h.once(s, "connect")));
+  let bobHeard = false;
+  outsider.on("battleStarted", () => (bobHeard = true));
+
+  const created = h.once(alice, "battleCreated");
+  alice.emit("createBattle", { cases: ["starter"], size: 2, crazy: true });
+  const id = await created;
+  const heard = [h.once(onPoker, "battleStarted"), h.once(onBlackjack, "battleStarted"), h.once(alice, "battleStarted")];
+  const carol = client("carol");
+  await h.once(carol, "connect");
+  carol.emit("joinBattle", id);
+  for (const notice of await Promise.all(heard)) {
+    assert.deepStrictEqual(notice, { id: id, price: notice.price, cases: 1, players: ["alice", "carol"], crazy: true });
+  }
+  await h.wait(50);
+  assert.strictEqual(bobHeard, false, "only the players of the battle");
+});

@@ -1674,3 +1674,79 @@ body.jackpot-theme {
   font-size: 0.9em;
   margin-right: 0.2em;
 }
+
+/* ---------- A case battle of mine starts (every casino page) ---------- */
+.bt-notice {
+  position: fixed;
+  top: 84px;
+  right: 16px;
+  z-index: 1080;
+  width: min(380px, calc(100vw - 32px));
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.75rem 0.8rem;
+  border: 1px solid var(--mm-accent);
+  border-radius: var(--mm-radius);
+  background: linear-gradient(120deg, rgba(var(--mm-accent-rgb), 0.18), var(--mm-surface-2) 70%), var(--mm-surface-2);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), 0 0 22px rgba(var(--mm-accent-rgb), 0.3);
+  color: var(--mm-text);
+  animation: bt-notice-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+
+.bt-notice.out {
+  animation: bt-notice-out 0.25s ease-in both;
+}
+
+@keyframes bt-notice-in {
+  from {
+    opacity: 0;
+    transform: translateX(40px) scale(0.95);
+  }
+}
+
+@keyframes bt-notice-out {
+  to {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+}
+
+.bt-notice-icon {
+  font-size: 1.8rem;
+  animation: bt-notice-swing 0.6s ease-in-out 3;
+}
+
+@keyframes bt-notice-swing {
+  50% {
+    transform: rotate(-18deg) scale(1.15);
+  }
+}
+
+.bt-notice-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bt-notice-text span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--mm-muted);
+  font-size: 0.8rem;
+}
+
+.bt-notice-close {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  color: var(--mm-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.bt-notice-close:hover {
+  color: var(--mm-text);
+}

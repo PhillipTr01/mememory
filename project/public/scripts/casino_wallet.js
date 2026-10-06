@@ -164,4 +164,73 @@
 
   // Only for players with payouts: otherwise the coins are just shown
   button.addEventListener("click", () => payout && payoutDialog());
+
+  /* ---------- A case battle of mine starts (on every casino page) ---------- */
+
+  var notice = null;
+  var titleTimer = null;
+
+  function watchBattle(id) {
+    // On the battles page: open it right there
+    if (typeof openBattle == "function") openBattle(id);
+    else window.location.href = "battles#" + id;
+  }
+
+  socket.on("battleStarted", (data) => {
+    // Already watching it
+    if (typeof viewId != "undefined" && viewId == data.id && !document.hidden) return;
+    if (notice) notice.remove();
+    notice = el("div", "bt-notice");
+    notice.setAttribute("role", "status");
+    var text = el("div", "bt-notice-text");
+    text.append(
+      el("b", "", data.crazy ? "Your crazy battle starts!" : "Your case battle starts!"),
+      el("span", "", data.players.join(" vs ") + " · " + data.cases + (data.cases == 1 ? " case" : " cases") + " · 🪙 " + format(data.price)),
+    );
+    var watch = el("button", "mm-btn mm-btn-primary mm-btn-sm", "Watch");
+    watch.type = "button";
+    var close = el("button", "bt-notice-close", "×");
+    close.type = "button";
+    close.setAttribute("aria-label", "Close");
+    var shown = notice;
+    var hide = () => {
+      shown.classList.add("out");
+      setTimeout(() => shown.remove(), 250);
+      if (notice == shown) notice = null;
+    };
+    watch.addEventListener("click", () => {
+      hide();
+      watchBattle(data.id);
+    });
+    close.addEventListener("click", hide);
+    notice.append(el("span", "bt-notice-icon", data.crazy ? "🤡" : "⚔️"), text, watch, close);
+    document.body.appendChild(notice);
+    setTimeout(hide, 12000);
+
+    // Another tab in front: the browser shows it, the title blinks
+    if (document.hidden) {
+      if (window.Notification && Notification.permission == "granted") {
+        try {
+          var note = new Notification("Your case battle starts!", { body: data.players.join(" vs "), tag: "battle-" + data.id });
+          note.onclick = () => {
+            window.focus();
+            watchBattle(data.id);
+          };
+        } catch (e) {
+          // not everywhere (mobile)
+        }
+      }
+      var original = document.title;
+      var on = false;
+      clearInterval(titleTimer);
+      titleTimer = setInterval(() => {
+        on = !on;
+        document.title = on ? "⚔️ Battle starts!" : original;
+        if (!document.hidden) {
+          clearInterval(titleTimer);
+          document.title = original;
+        }
+      }, 900);
+    }
+  });
 })();
