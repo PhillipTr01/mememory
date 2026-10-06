@@ -2582,10 +2582,25 @@ body.jackpot-theme {
   color: #e5e7eb;
 }
 
+/* Taken by the ghost: a grey ghost of the player stays (over the dark), so it's clear who is out */
 .jp-hider.taken {
-  opacity: 0;
-  filter: blur(3px);
-  transform: translate(-50%, -90%) scale(0.6);
+  z-index: 5;
+  opacity: 0.5;
+  filter: grayscale(1);
+  transform: translate(-50%, -50%) scale(0.8);
+}
+
+.jp-hider.taken .jp-hider-name {
+  text-decoration: line-through;
+}
+
+.jp-hider.taken::after {
+  content: "👻";
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  font-size: 1.1rem;
+  filter: none;
 }
 
 .jp-hider.survivor .mm-avatar {
