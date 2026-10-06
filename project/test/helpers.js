@@ -119,7 +119,7 @@ Meme.aggregate = async () =>
 function addUser(username, options) {
   const _id = `id_${username}`;
   const approved = !(options && options.approved === false);
-  users.set(_id, { _id, username, statistics: `stat_${username}`, casinoApproved: approved, casinoApprovedAt: approved ? new Date(0) : undefined });
+  users.set(_id, { _id, username, statistics: `stat_${username}`, casinoApproved: approved, casinoApprovedAt: approved ? new Date(0) : undefined, payoutAllowed: approved });
   return jwt.sign({ _id }, process.env.SECRET_KEY);
 }
 

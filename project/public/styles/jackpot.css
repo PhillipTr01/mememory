@@ -1495,6 +1495,14 @@ body.jackpot-theme {
   transition: background 0.15s ease;
 }
 
+.nav-coins.no-payout {
+  cursor: default;
+}
+
+.nav-coins.no-payout:hover {
+  background: rgba(var(--mm-accent-rgb), 0.1);
+}
+
 .nav-coins:hover {
   background: rgba(var(--mm-accent-rgb), 0.2);
 }

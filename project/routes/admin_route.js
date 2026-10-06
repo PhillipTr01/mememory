@@ -107,7 +107,7 @@ module.exports = function () {
 
   // Everybody with the access state: who wants in first, then the rest, then the approved players
   async function accessList(q) {
-    const users = await User.find({}).select("username casinoApproved casinoApprovedAt casinoRequestedAt").lean();
+    const users = await User.find({}).select("username casinoApproved casinoApprovedAt casinoRequestedAt payoutAllowed").lean();
     const rank = (u) => (u.approved ? 2 : u.requestedAt ? 0 : 1);
     return users
       .map((user) => ({
@@ -115,6 +115,7 @@ module.exports = function () {
         approved: user.casinoApproved === true,
         approvedAt: user.casinoApprovedAt || null,
         requestedAt: user.casinoRequestedAt || null,
+        payout: user.payoutAllowed === true,
       }))
       .filter((user) => user.username.toLowerCase().includes(q))
       .sort((a, b) => rank(a) - rank(b) || new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0) || a.username.localeCompare(b.username));
@@ -197,6 +198,19 @@ module.exports = function () {
       const { username, approve } = req.body || {};
       if (typeof username !== "string" || typeof approve !== "boolean") return res.status(400).json({ error: "Username and approve." });
       const result = approve ? await access.approve(username) : await access.revoke(username);
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
+  // Payouts for a player on / off: {username, allowed: true | false}
+  router.post(
+    "/api/payout",
+    admin,
+    asyncHandler(async (req, res) => {
+      const { username, allowed } = req.body || {};
+      if (typeof username !== "string" || typeof allowed !== "boolean") return res.status(400).json({ error: "Username and allowed." });
+      const result = await access.setPayout(username, allowed);
       if (result.error) return res.status(400).json(result);
       res.json(result);
     }),

@@ -56,12 +56,12 @@ function bonusAvailable(user, now = Date.now()) {
   return user != null && bonusIn(user, now) === 0;
 }
 
-// { coins, bonus, bonusIn } - bonus: the daily free coins can be claimed now
+// { coins, bonus, bonusIn, payout } - bonus: the daily free coins can be claimed now, payout: may pay coins out
 async function get(username) {
   await ensure(username);
-  const user = await User.findOne({ username: username }).select("coins coinBonusAt");
-  if (user == null) return { coins: 0, bonus: false, bonusIn: config.BONUS_EVERY };
-  return { coins: user.coins || 0, bonus: bonusAvailable(user), bonusIn: bonusIn(user), bonusAmount: config.DAILY_BONUS };
+  const user = await User.findOne({ username: username }).select("coins coinBonusAt payoutAllowed");
+  if (user == null) return { coins: 0, bonus: false, bonusIn: config.BONUS_EVERY, payout: false };
+  return { coins: user.coins || 0, bonus: bonusAvailable(user), bonusIn: bonusIn(user), bonusAmount: config.DAILY_BONUS, payout: user.payoutAllowed === true };
 }
 
 /*

@@ -92,7 +92,7 @@ test("access: the admin sees who wants in, first", async () => {
   assert.strictEqual(res.status, 200);
   assert.strictEqual(res.body.firstApproval, null);
   assert.strictEqual(res.body.startCoins, config.START_COINS);
-  assert.deepStrictEqual(res.body.players[0], { username: "tom", approved: false, approvedAt: null, requestedAt: res.body.players[0].requestedAt });
+  assert.deepStrictEqual(res.body.players[0], { username: "tom", approved: false, approvedAt: null, requestedAt: res.body.players[0].requestedAt, payout: false });
   assert.ok(res.body.players[0].requestedAt, "tom tried to get in");
   const old = res.body.players.find((p) => p.username === "old");
   assert.strictEqual(old.approved, true);
@@ -151,4 +151,29 @@ test("access: taken away - the open pages close, a new approval gives no second 
   assert.deepStrictEqual(again.body, { username: "uma", again: true });
   assert.strictEqual(h.coinsOf("uma"), 1234, "the old coins, no new start money");
   assert.strictEqual((await adminApi("access", { username: "nobody", approve: true })).status, 400);
+});
+
+test("access: payouts only for players the admin ticked", async () => {
+  // tom: approved, payouts not allowed yet
+  const before = h.coinsOf("tom");
+  const refused = await call(CASINO + "/withdraw", { ...as("tom"), json: { amount: 5000 } });
+  assert.strictEqual(refused.status, 403);
+  assert.match((await refused.json()).error, /Payouts aren't enabled/);
+  assert.strictEqual(h.coinsOf("tom"), before);
+  assert.strictEqual((await coins.get("tom")).payout, false);
+  assert.strictEqual((await adminApi("access")).body.players.find((p) => p.username === "tom").payout, false);
+
+  // Ticked: the open page hears it right away, the payout works
+  const { socket } = await connect("/casino", "tom");
+  const told = new Promise((resolve) => socket.on("coins", (data) => data.payout && resolve(data)));
+  assert.deepStrictEqual((await adminApi("payout", { username: "tom", allowed: true })).body, { username: "tom", payout: true });
+  assert.strictEqual((await told).payout, true);
+  const ok = await call(CASINO + "/withdraw", { ...as("tom"), json: { amount: 5000 } });
+  assert.strictEqual(ok.status, 200);
+  assert.strictEqual(h.coinsOf("tom"), before - 5000);
+
+  // Unticked again
+  await adminApi("payout", { username: "tom", allowed: false });
+  assert.strictEqual((await call(CASINO + "/withdraw", { ...as("tom"), json: { amount: 5000 } })).status, 403);
+  assert.strictEqual((await adminApi("payout", { username: "nobody", allowed: true })).status, 400);
 });

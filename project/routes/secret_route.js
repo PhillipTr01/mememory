@@ -16,9 +16,10 @@ module.exports = function (auth) {
   // Only for players the admin let in - everybody else back to the start page
   // (and the admin sees that they want in)
   const approved = asyncHandler(async (req, res, next) => {
-    const user = await User.findOne({ _id: req._id }).select("username casinoApproved").lean();
+    const user = await User.findOne({ _id: req._id }).select("username casinoApproved payoutAllowed").lean();
     if (access.approved(user)) {
       req.username = user.username;
+      req.payoutAllowed = user.payoutAllowed === true;
       return next();
     }
     if (user != null) await access.request(req._id).catch(() => {});
@@ -47,6 +48,7 @@ module.exports = function (auth) {
     approved,
     asyncHandler(async (req, res) => {
       const name = req.username;
+      if (!req.payoutAllowed) return res.status(403).json({ error: "Payouts aren't enabled for you." });
       const result = await withdrawals.request(name, Number(req.body && req.body.amount));
       if (result.error) return res.status(400).json({ error: result.error });
       res.json(result.withdrawal);

@@ -74,9 +74,18 @@ async function revoke(username) {
   return { username: username };
 }
 
+// Payouts on / off for a player (the open pages update right away)
+async function setPayout(username, allowed) {
+  const user = await User.findOne({ username: username }).select("username").lean();
+  if (user == null) return { error: "No such player." };
+  await User.updateOne({ username: username }, { $set: { payoutAllowed: allowed === true } });
+  coins.notify(username);
+  return { username: username, payout: allowed === true };
+}
+
 // Somebody without access tried to get in: shown to the admin as a request
 async function request(userId) {
   await User.updateOne({ _id: userId, casinoApproved: { $ne: true }, casinoRequestedAt: { $exists: false } }, { $set: { casinoRequestedAt: new Date() } });
 }
 
-module.exports = { approved, approve, revoke, request, firstApproval, startCoins, changes };
+module.exports = { approved, approve, revoke, setPayout, request, firstApproval, startCoins, changes };

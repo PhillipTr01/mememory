@@ -248,6 +248,23 @@
   text-align: left;
 }
 
+.ad-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--mm-muted);
+  cursor: pointer;
+}
+
+.ad-check input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--mm-accent);
+  cursor: pointer;
+}
+
 .ad-table tr.ad-waiting td {
   background: rgba(var(--mm-accent-rgb), 0.07);
 }

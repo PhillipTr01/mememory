@@ -7,6 +7,7 @@
   var button = document.getElementById("navCoins");
   var bonusButton = document.getElementById("navBonus");
   var coins = 0;
+  var payout = false; // the admin allowed payouts for this player
   var bonusAt = null; // when the next free coins can be claimed (null: now)
   var bonusAmount = 0;
   var bonusTimer = null;
@@ -55,7 +56,10 @@
     }
     var before = coins;
     coins = data.coins;
+    payout = data.payout === true;
     button.hidden = false;
+    button.classList.toggle("no-payout", !payout);
+    button.title = payout ? "Your coins - click to pay out" : "Your coins";
     document.getElementById("navCoinsValue").innerText = format(coins);
     if (before && coins != before) {
       button.classList.remove("up", "down");
@@ -158,5 +162,6 @@
     loadList();
   }
 
-  button.addEventListener("click", payoutDialog);
+  // Only for players with payouts: otherwise the coins are just shown
+  button.addEventListener("click", () => payout && payoutDialog());
 })();

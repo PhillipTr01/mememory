@@ -171,7 +171,7 @@ async function loadAccess() {
     if (data.players.length == 0) {
       var empty = el("tr");
       var cell = el("td", "mm-muted", "No players.");
-      cell.colSpan = 3;
+      cell.colSpan = 4;
       empty.appendChild(cell);
       list.replaceChildren(empty);
       return;
@@ -189,8 +189,18 @@ async function loadAccess() {
         button.addEventListener("click", () => setAccess(p, !p.approved, button));
         var actions = el("td", "ad-actions");
         actions.appendChild(button);
-        row.append(el("td", "fw-semibold", p.username), el("td", "", ""), actions);
-        row.children[1].appendChild(status);
+        // May the player pay coins out? (otherwise there is no payout for them)
+        var payout = el("label", "ad-check");
+        var box = document.createElement("input");
+        box.type = "checkbox";
+        box.checked = p.payout;
+        box.addEventListener("change", () => setPayout(p, box));
+        payout.append(box, el("span", "", "allowed"));
+        var payoutCell = el("td");
+        payoutCell.appendChild(payout);
+        var statusCell = el("td");
+        statusCell.appendChild(status);
+        row.append(el("td", "fw-semibold", p.username), statusCell, payoutCell, actions);
         return row;
       }),
     );
@@ -213,6 +223,20 @@ async function setAccess(player, approve, button) {
   } catch (error) {
     button.disabled = false;
     fail(error);
+  }
+}
+
+async function setPayout(player, box) {
+  box.disabled = true;
+  try {
+    await api("payout", { username: player.username, allowed: box.checked });
+    player.payout = box.checked;
+    showToast(player.username + (box.checked ? " can pay out now" : " can't pay out any more"));
+  } catch (error) {
+    box.checked = !box.checked;
+    fail(error);
+  } finally {
+    box.disabled = false;
   }
 }
 
