@@ -1081,81 +1081,14 @@ body.jackpot-theme {
   min-width: 0;
 }
 
-/*
- * Page layout: the records of the day on the left of the game (wide screens),
- * on top of the side column (medium), under the game (phones) - so the
- * deposits are right under the bet
- */
-.jp-layout {
-  grid-template-columns: 230px minmax(0, 1fr) 340px;
-}
-
-.jp-left {
-  position: sticky;
-  top: 1rem;
-}
-
-@media (max-width: 1399px) {
-  .jp-layout {
-    grid-template-columns: minmax(0, 1fr) 340px;
-  }
-
-  .jp-layout > .room-main {
-    grid-column: 1;
-    grid-row: 1 / span 2;
-  }
-
-  .jp-layout > .jp-left {
-    position: static;
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .jp-layout > .room-side {
-    grid-column: 2;
-    grid-row: 2;
-  }
-}
-
-@media (max-width: 991px) {
-  .jp-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .jp-layout > .room-main,
-  .jp-layout > .jp-left,
-  .jp-layout > .room-side {
-    grid-column: 1;
-    grid-row: auto;
-  }
-}
-
-/* ---------- Records ---------- */
+/* ---------- Records of the day: a row of three cards on top of the game ---------- */
 .jp-records {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  max-width: 860px;
+  margin: 0 auto 1rem;
   min-width: 0;
-}
-
-/* Medium screens: three slim cards on top of the side column */
-@media (min-width: 992px) and (max-width: 1399px) {
-  .jp-records {
-    gap: 0.4rem;
-  }
-
-  .jp-records .jp-record {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.15rem 0.6rem;
-    padding: 0.5rem 0.8rem;
-  }
-
-  .jp-records .jp-record-label {
-    flex-basis: 100%;
-  }
 }
 
 .jp-record {
@@ -1438,15 +1371,6 @@ body.jackpot-theme {
 
   .jp-bet {
     grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* Phones: the records side by side in a row */
-@media (max-width: 991px) {
-  .jp-records {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.5rem;
   }
 }
 

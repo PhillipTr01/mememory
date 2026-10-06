@@ -89,6 +89,7 @@ module.exports = function (io) {
       records: pot.records,
       spin: config.JACKPOT_SPIN,
       maxBets: config.JACKPOT_MAX_BETS,
+      maxCoins: config.JACKPOT_MAX_COINS,
       history: pot.history,
       viewers: jackpot.sockets.size,
     };
@@ -298,8 +299,20 @@ module.exports = function (io) {
         if (betting.has(username)) return;
         // Any amount, but at most a few separate bets per round (during a draw: for the next one)
         const round = pot.phase === PHASE.DRAWING ? [] : pot.bets;
-        if (round.concat(pot.incoming, pot.waiting).filter((bet) => bet.name === username).length >= config.JACKPOT_MAX_BETS) {
+        const mine = round.concat(pot.incoming, pot.waiting).filter((bet) => bet.name === username);
+        if (mine.length >= config.JACKPOT_MAX_BETS) {
           socket.emit("betError", `At most ${config.JACKPOT_MAX_BETS} bets per round.`);
+          return;
+        }
+        // All bets of a round together: at most JACKPOT_MAX_COINS
+        const left = config.JACKPOT_MAX_COINS - mine.reduce((sum, bet) => sum + bet.amount, 0);
+        if (amount > left) {
+          socket.emit(
+            "betError",
+            left > 0
+              ? `At most 🪙 ${config.JACKPOT_MAX_COINS.toLocaleString("en-US")} per round - you can put in 🪙 ${left.toLocaleString("en-US")} more.`
+              : `At most 🪙 ${config.JACKPOT_MAX_COINS.toLocaleString("en-US")} per round.`,
+          );
           return;
         }
         betting.add(username);

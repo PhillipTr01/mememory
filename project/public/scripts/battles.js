@@ -91,6 +91,7 @@ socket.on("battleCreated", (id) => {
 
 socket.on("battles", (data) => {
   battles = data.list;
+  battlesLoaded = true;
   lastBattles = data.history;
   roundTime = data.round;
   battles.forEach(track);
@@ -202,9 +203,15 @@ function shufflePicked() {
  * The card of a case: more = new rounds at the end (Whale, Vault, Whale is
  * possible), fewer = the last rounds of this case go.
  */
+var MAX_CASES = 100; // cases per battle (the server checks it too)
+
 function setCount(id, count) {
   count = Math.max(0, Math.floor(Number(count)) || 0);
   var diff = count - countOf(id);
+  if (diff > 0 && picked.length + diff > MAX_CASES) {
+    diff = MAX_CASES - picked.length;
+    showToast("At most " + MAX_CASES + " cases per battle.", "error");
+  }
   for (; diff > 0; diff--) picked.push(id);
   for (var i = picked.length - 1; i >= 0 && diff < 0; i--) {
     if (picked[i] != id) continue;
@@ -430,8 +437,16 @@ function caseStrip(battle, current) {
   battle.cases.slice(from, to).forEach((id, n) => {
     var index = from + n;
     var box = caseById(id);
-    var item = el("span", "bt-strip-case", box ? box.icon : "?");
-    item.title = box ? box.name + " · 🪙 " + box.price : id;
+    var item = el(box ? "button" : "span", "bt-strip-case", box ? box.icon : "?");
+    item.title = box ? box.name + " · 🪙 " + formatCoins(box.price) + " - click for the odds" : id;
+    if (box) {
+      item.type = "button";
+      item.setAttribute("aria-label", "What's inside " + box.name);
+      item.addEventListener("click", (event) => {
+        event.stopPropagation();
+        showContents(box);
+      });
+    }
     if (current != null) {
       if (index < current) item.classList.add("done");
       if (index == current) item.classList.add("current");
@@ -550,8 +565,14 @@ function renderHistory() {
 
 /* ---------- One battle ---------- */
 
+var battlesLoaded = false; // the first list came: an unknown battle is gone, not loading
+var lastViewed = null; // the open battle: a finished one stays open after the server drops it
+
 function currentBattle() {
-  return battles.find((battle) => battle.id == viewId) || null;
+  var battle = battles.find((battle) => battle.id == viewId) || null;
+  if (battle) lastViewed = battle;
+  else if (lastViewed && lastViewed.id == viewId && lastViewed.phase == "done") battle = lastViewed;
+  return battle;
 }
 
 function itemOf(battle, round, seat) {
@@ -587,9 +608,14 @@ function renderBattle() {
     pushView(null);
     showView();
   });
+  if (battle == null && !battlesLoaded) {
+    view.replaceChildren(back);
+    return;
+  }
   if (battle == null) {
-    view.replaceChildren(back, el("p", "jp-empty mm-muted", "This battle is over or was cancelled."));
-    document.getElementById("btStatus").innerText = "";
+    // Cancelled (or unknown): back to all battles
+    history.replaceState(null, "", location.pathname);
+    showView();
     return;
   }
 
@@ -632,9 +658,9 @@ function renderBattle() {
         });
         head.appendChild(join);
       } else if (battle.creator == myName) {
-        var bot = el("button", "mm-btn mm-btn-sm");
+        var bot = el("button", "bt-add-bot");
         bot.type = "button";
-        bot.innerText = "🤖 Add bot";
+        bot.append(el("span", "bt-add-bot-icon", "🤖"), document.createTextNode("Add bot"));
         bot.addEventListener("click", () => socket.emit("addBot", battle.id));
         head.appendChild(bot);
       } else {
@@ -668,7 +694,7 @@ function renderBattle() {
 
   var parts = over ? [top, resultHero(battle), strip, grid] : [top, strip, grid];
   if (battle.phase == "waiting" && battle.creator == myName) {
-    var cancel = el("button", "mm-btn mm-btn-sm bt-cancel");
+    var cancel = el("button", "bt-cancel");
     cancel.type = "button";
     cancel.append(createIcon("bi-x-circle"), document.createTextNode(" Cancel battle"));
     cancel.addEventListener("click", () => {

@@ -231,8 +231,12 @@ module.exports = function (io) {
       safe("createBattle", async (data) => {
         if (data == null || !Array.isArray(data.cases)) return;
         const ids = data.cases;
-        // Any number of cases (one round each)
+        // Up to BATTLE_MAX_CASES cases (one round each)
         if (ids.length < 1 || !ids.every((id) => cases.caseById(id))) return;
+        if (ids.length > config.BATTLE_MAX_CASES) {
+          socket.emit("battleError", `At most ${config.BATTLE_MAX_CASES} cases per battle.`);
+          return;
+        }
         if (!SIZES.includes(data.size)) return;
         const open = [...lobby.list.values()].filter((b) => b.creator === username && b.phase === PHASE.WAITING);
         if (open.length >= config.BATTLE_MAX_OPEN) {

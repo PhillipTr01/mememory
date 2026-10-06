@@ -1023,10 +1023,6 @@
   font-size: 1.5rem;
 }
 
-.bt-cancel {
-  align-self: center;
-}
-
 /* ---------- What's inside a case ---------- */
 .bt-contents {
   max-width: 420px;
@@ -1194,4 +1190,86 @@
 .bt-empty-icon {
   font-size: 2.2rem;
   opacity: 0.7;
+}
+
+/* ---------- Add bot / cancel ---------- */
+.bt-add-bot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.95rem 0.4rem 0.45rem;
+  border: 1px dashed rgba(var(--mm-accent-rgb), 0.55);
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.08);
+  color: var(--mm-accent);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bt-add-bot-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  font-size: 0.95rem;
+}
+
+.bt-add-bot:hover,
+.bt-add-bot:focus-visible {
+  border-style: solid;
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  box-shadow: 0 0 14px rgba(var(--mm-accent-rgb), 0.3);
+  transform: translateY(-1px);
+}
+
+.bt-cancel {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1.1rem;
+  border: 1px solid rgba(224, 103, 90, 0.45);
+  border-radius: 999px;
+  background: rgba(224, 103, 90, 0.08);
+  color: var(--mm-danger);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.bt-cancel:hover,
+.bt-cancel:focus-visible {
+  background: var(--mm-danger);
+  border-color: var(--mm-danger);
+  color: #fff;
+}
+
+/* The cases of a battle open what's inside */
+button.bt-strip-case {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.bt-strip.big button.bt-strip-case {
+  border: 1px solid var(--mm-border);
+  background: var(--mm-surface-2);
+  font-size: 1.3rem;
+}
+
+button.bt-strip-case:hover {
+  transform: scale(1.12);
+}
+
+.bt-strip.big button.bt-strip-case:hover {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  opacity: 1;
 }

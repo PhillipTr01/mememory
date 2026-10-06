@@ -193,7 +193,7 @@ async function loadAccess() {
         "span",
         "mm-muted",
         data.firstApproval
-          ? " (50,000 + " + data.missed + " missed daily bonus" + (data.missed == 1 ? "" : "es") + " since " + day(data.firstApproval) + ")"
+          ? " (" + formatCoins(data.baseCoins) + " + " + data.missed + " missed daily bonus" + (data.missed == 1 ? "" : "es") + " since " + day(data.firstApproval) + ")"
           : " - nobody is approved yet, the daily bonuses count from the first approval",
       ),
     );

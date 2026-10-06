@@ -81,16 +81,14 @@
 
     <main class="room-page">
         <div class="room-layout jp-layout">
-            <!--- Last winner and the records of the day: left of the game (wide screens) --->
-            <aside class="jp-left">
+            <div class="room-main">
+                <!--- Last winner and the records of the day: a row on top of the game --->
                 <div class="jp-records">
                     <div class="mm-card jp-record" id="jpLastWinner"></div>
                     <div class="mm-card jp-record" id="jpBiggest"></div>
                     <div class="mm-card jp-record" id="jpLuckiest"></div>
                 </div>
-            </aside>
 
-            <div class="room-main">
                 <section class="mm-card jp-main">
                     <!--- Choice of the hidden games --->
                     <nav class="cs-nav" aria-label="Games">
@@ -129,9 +127,9 @@
                             </div>
                             <form id="jpForm" class="jp-form" autocomplete="off">
                                 <div class="jp-quick">
-                                    <button type="button" class="mm-btn mm-btn-sm" data-add="10">+10</button>
-                                    <button type="button" class="mm-btn mm-btn-sm" data-add="50">+50</button>
                                     <button type="button" class="mm-btn mm-btn-sm" data-add="100">+100</button>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-add="500">+500</button>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-add="1000">+1,000</button>
                                     <button type="button" class="mm-btn mm-btn-sm" data-add="max">Max</button>
                                 </div>
                                 <div class="jp-input-row">

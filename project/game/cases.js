@@ -7,7 +7,7 @@ const crypto = require("crypto");
  *
  *   low risk:  every item is worth something near the price (at most 2.5x)
  *   balanced:  most items are worth something near the price
- *   high risk: mostly cheap junk, but a small chance of a huge item (up to 50k)
+ *   high risk: mostly cheap junk, but a small chance of a huge item (up to 50x the price)
  */
 const WEIGHT_TOTAL = 100000;
 
@@ -310,6 +310,22 @@ const CASES = [
       { name: "Shark", icon: "🦈", value: 3000, weight: 13817 },
       { name: "Orca", icon: "🐋", value: 10000, weight: 1822 },
       { name: "The Whale", icon: "🐳", value: 50000, weight: 100 },
+    ],
+  },
+  {
+    id: "dragon",
+    name: "Dragon's Hoard",
+    icon: "🐉",
+    price: 2500,
+    risk: "high",
+    items: [
+      { name: "Charred Bone", icon: "🦴", value: 100, weight: 32000 },
+      { name: "Fire Lizard", icon: "🦎", value: 400, weight: 24000 },
+      { name: "Dragon Egg", icon: "🥚", value: 1500, weight: 20000 },
+      { name: "Fire Breath", icon: "🔥", value: 3200, weight: 15000 },
+      { name: "Hoard of Gold", icon: "💰", value: 9000, weight: 7600 },
+      { name: "Wyvern", icon: "🐲", value: 25000, weight: 1250 },
+      { name: "Elder Dragon", icon: "🐉", value: 125000, weight: 150 },
     ],
   },
 ];

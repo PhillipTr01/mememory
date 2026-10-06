@@ -27,8 +27,8 @@ test("cases: balanced cases are safe, high risk cases have a big jackpot", () =>
     box.items.filter((item) => item.value >= box.price).reduce((sum, item) => sum + item.weight, 0) / cases.WEIGHT_TOTAL;
   const best = (box) => Math.max(...box.items.map((item) => item.value)) / box.price;
   for (const box of cases.CASES) {
-    assert.ok(best(box) * box.price <= 50000, `${box.id}: at most 50k`);
-    assert.ok(box.price <= 1000, `${box.id}: at most 1k per case`);
+    assert.ok(best(box) * box.price <= Math.max(50000, box.price * 50), `${box.id}: at most 50k (or 50x a pricier case)`);
+    assert.ok(box.price <= 2500, `${box.id}: at most 2.5k per case`);
     if (box.risk === "low") {
       assert.ok(chanceAtLeastPrice(box) >= 0.5, `${box.id}: mostly the price back`);
       assert.ok(best(box) <= 3, `${box.id}: no big jackpot`);
@@ -42,9 +42,9 @@ test("cases: balanced cases are safe, high risk cases have a big jackpot", () =>
     }
   }
   for (const risk of ["low", "balanced", "high"]) assert.ok(cases.CASES.filter((box) => box.risk === risk).length >= 5, risk);
-  // Up to 1k per case, the biggest win is 50k
-  assert.strictEqual(Math.max(...cases.CASES.map((box) => box.price)), 1000);
-  assert.strictEqual(Math.max(...cases.CASES.flatMap((box) => box.items.map((item) => item.value))), 50000);
+  // Up to 2.5k per case (the dragon), the biggest win is 125k
+  assert.strictEqual(Math.max(...cases.CASES.map((box) => box.price)), 2500);
+  assert.strictEqual(Math.max(...cases.CASES.flatMap((box) => box.items.map((item) => item.value))), 125000);
 });
 
 test("cases: the roll picks the item by its chance, provably fair", () => {

@@ -31,7 +31,7 @@ function formatCoins(value) {
 }
 
 function chanceOf(coins, total) {
-  return total > 0 ? Math.round((coins / total) * 100) : 0;
+  return total > 0 ? ((coins / total) * 100).toFixed(2) : "0.00";
 }
 
 function chance(entry) {
@@ -110,7 +110,7 @@ function renderStatus() {
       state.entries.length == 0
         ? "Put in coins - the more you put in, the higher your chance."
         : ghostSeconds != null
-          ? "Waiting for a second player - a 👻 ghost joins in " + ghostSeconds + "s"
+          ? "👻 joins in " + ghostSeconds + "s"
           : "Waiting for a second player...";
     center.innerText = state.entries.length == 0 ? "Waiting for players" : "Waiting for a 2nd player";
     center.className = "jp-center-status";
@@ -217,7 +217,7 @@ function renderPlayers() {
 
 function percent(value) {
   var number = (value / state.total) * 100;
-  return (number >= 10 || number == 0 ? Math.round(number) : number.toFixed(1)) + "%";
+  return number.toFixed(2) + "%";
 }
 
 // Every bet of the round, newest first, with its tickets (from..to)
@@ -343,7 +343,10 @@ function renderBet() {
   var inPot = mine ? mine.coins : 0;
   var myBets = (state.bets || []).concat(state.pending || []).filter((bet) => bet.name == myName).length;
   var betsLeft = Math.max(0, state.maxBets - myBets);
-  var room = betsLeft > 0 ? myCoins : 0;
+  // All bets of a round together: at most maxCoins
+  var myAmount = (state.bets || []).concat(state.pending || []).filter((bet) => bet.name == myName).reduce((sum, bet) => sum + bet.amount, 0);
+  var coinsLeft = state.maxCoins != null ? Math.max(0, state.maxCoins - myAmount) : Infinity;
+  var room = betsLeft > 0 ? Math.min(myCoins, coinsLeft) : 0;
   var open = state.phase != "drawing";
   document.getElementById("jpChance").innerText = mine
     ? "In the pot: " + formatCoins(inPot) + " · " + chance(mine) + "% chance · " +
@@ -415,7 +418,7 @@ document.addEventListener("DOMContentLoaded", () => {
     bet();
   });
 
-  // +10 / +50 / +100 add up, Max = everything that is still allowed
+  // +100 / +500 / +1,000 add up, Max = everything that is still allowed
   document.querySelectorAll(".jp-quick button").forEach((button) => {
     button.addEventListener("click", () => {
       var input = document.getElementById("jpAmount");

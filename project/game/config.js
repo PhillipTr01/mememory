@@ -48,7 +48,7 @@ module.exports = {
   SPEED_START_ANIMATION: 2600,
 
   // Coins (hidden jackpot): start amount, free coins for everybody once a day
-  START_COINS: 50000,
+  START_COINS: 25000,
   // Every account gets START_COINS once for this id: a new id resets everybody's coins
   COIN_RESET: "reset-100k",
   DAILY_BONUS: 2500,
@@ -61,7 +61,8 @@ module.exports = {
   JACKPOT_COUNTDOWN: 30 * 1000,
   JACKPOT_SPIN: 12000, // the draw animation (wheel, roulette, bowling, ...): about 11 s
   JACKPOT_PAUSE: 5000, // result is shown, then a new round starts
-  JACKPOT_MAX_BETS: 5, // separate bets per player and round (any amount)
+  JACKPOT_MAX_BETS: 5, // separate bets per player and round
+  JACKPOT_MAX_COINS: 100000, // all bets of a player in one round together
   // A new bet gets into the pot only after a random 3-5 s (no sniping:
   // nobody can answer a bet in the last second). Too late for the draw: the next pot.
   JACKPOT_BET_DELAY: [3000, 5000],
@@ -70,8 +71,8 @@ module.exports = {
   JACKPOT_HISTORY: 10,
   // After a restart: at least this long until a countdown or a turn ends (time to come back)
   RESTORE_GRACE: 10 * 1000,
-  // Alone in the pot this long: a ghost (the house) of 85-115% of the first player's coins joins
-  JACKPOT_GHOST_AFTER: 15 * 1000,
+  // Alone in the pot this long after the first bet: a ghost (the house) of 85-115% of the first player's coins joins
+  JACKPOT_GHOST_AFTER: 10 * 1000,
   JACKPOT_GHOST_SHARE: [0.85, 1.15],
 
   // The secret address of the jackpot (and its case battles and poker):
@@ -103,6 +104,7 @@ module.exports = {
   BATTLE_START: 3000, // countdown when the battle is full
   BATTLE_ROUND: 4500, // one case for everybody: spin + a short look at the items
   BATTLE_MAX_OPEN: 3, // waiting battles per creator
+  BATTLE_MAX_CASES: 100, // cases (rounds) per battle
   BATTLE_KEEP: 60 * 1000, // a finished battle stays in the list this long
   BATTLE_EXPIRE: 15 * 60 * 1000, // nobody joined: cancelled, coins back
   BATTLE_HISTORY: 10,
