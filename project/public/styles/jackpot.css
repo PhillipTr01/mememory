@@ -2659,3 +2659,8 @@ body.jackpot-theme {
   font-size: 1.75rem;
   line-height: 1;
 }
+
+/* An empty status line takes no room */
+.jp-status:empty {
+  display: none;
+}

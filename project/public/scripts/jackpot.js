@@ -121,7 +121,8 @@ function renderStatus() {
     center.className = "jp-center-status";
   } else if (state.phase == "countdown") {
     var seconds = Math.ceil(timeLeft() / 1000);
-    status.innerText = "The draw starts in " + seconds + "s";
+    // The countdown is in the bar over the draw - no second one here
+    status.innerText = "";
     center.innerText = "0:" + String(seconds).padStart(2, "0");
     center.className = "jp-center-status timer" + (seconds <= 5 ? " urgent" : "");
   } else if (spinning) {
