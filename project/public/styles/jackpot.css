@@ -2449,3 +2449,18 @@ body.jackpot-theme {
   background: rgba(20, 20, 20, 0.88);
   color: var(--mm-text);
 }
+
+/* The icon of a game next to its name (the same as in the game bar) */
+.cs-title-icon {
+  flex-shrink: 0;
+  width: 1.4em;
+  height: 1.4em;
+}
+
+/* Blackjack in the game bar: the red "21" card of its page */
+.cs-dock-21 {
+  display: grid;
+  place-items: center;
+  font-size: 1.75rem;
+  line-height: 1;
+}
