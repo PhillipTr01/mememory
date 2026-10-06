@@ -34,17 +34,6 @@
   display: none;
 }
 
-.bt-wallet {
-  padding: 0.3rem 0.7rem;
-  border: 1px solid var(--mm-border);
-  border-radius: 999px;
-  background: var(--mm-surface-2);
-  font-weight: 700;
-  color: var(--mm-accent);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
 .bt-section-head {
   display: flex;
   align-items: center;

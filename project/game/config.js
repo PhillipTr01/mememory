@@ -75,4 +75,17 @@ module.exports = {
   BATTLE_KEEP: 60 * 1000, // a finished battle stays in the list this long
   BATTLE_EXPIRE: 15 * 60 * 1000, // nobody joined: cancelled, coins back
   BATTLE_HISTORY: 10,
+
+  // Poker (hidden, opened from the jackpot page): one table, texas hold'em
+  POKER_SEATS: 5,
+  POKER_SMALL_BLIND: 5,
+  POKER_BIG_BLIND: 10,
+  POKER_MIN_BUYIN: 100,
+  POKER_MAX_BUYIN: 2000,
+  POKER_TURN: 20 * 1000, // time to act, then check (or fold)
+  POKER_START: 3000, // pause before a hand starts
+  POKER_STREET: 1200, // all-in: pause between the cards of the board
+  POKER_SHOWDOWN: 6000, // the result is shown this long
+  POKER_AWAY: 30 * 1000, // a player without an open page leaves the table
+  POKER_HISTORY: 10,
 };

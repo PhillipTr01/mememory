@@ -1431,3 +1431,15 @@ body.jackpot-theme {
   align-items: center;
   gap: 0.5rem;
 }
+
+/* Own coins in the head (case battles, poker) */
+.bt-wallet {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  font-weight: 700;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

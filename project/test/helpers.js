@@ -79,12 +79,14 @@ async function startServer() {
   require("../sockets/tictactoe_server")(io);
   require("../sockets/jackpot_server")(io);
   require("../sockets/battles_server")(io);
+  const poker = require("../sockets/poker_server")(io);
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
 
   return {
     io,
     port,
+    poker,
     client(namespace, token) {
       return connect(`http://localhost:${port}${namespace}`, {
         transports: ["websocket"],

@@ -41,6 +41,7 @@ require("./sockets/multiplayer_server")(io);
 require("./sockets/tictactoe_server")(io);
 require("./sockets/jackpot_server")(io);
 require("./sockets/battles_server")(io);
+const pokerTable = require("./sockets/poker_server")(io);
 
 /* Page routes */
 const authenticationRoute = require("./routes/authentication_route");
@@ -84,6 +85,7 @@ app.get("/tictactoe", Auth, page("tictactoe.html"));
 app.get("/jackpot", Auth, page("jackpot.html"));
 // Hidden too: only reachable from the jackpot page
 app.get("/battles", Auth, page("battles.html"));
+app.get("/poker", Auth, page("poker.html"));
 
 /* Error handling */
 app.use((req, res, next) => {
@@ -169,10 +171,16 @@ function shutdown(code = 0) {
   // Force exit if closing takes too long
   setTimeout(() => process.exit(code), 5000).unref();
 
-  io.close();
-  server.close(() => {
-    mongoose.connection.close(false, () => process.exit(code));
-  });
+  // The chips at the poker table go back to the players first
+  pokerTable
+    .refundAll()
+    .catch((error) => console.error("Poker refund failed:", error))
+    .finally(() => {
+      io.close();
+      server.close(() => {
+        mongoose.connection.close(false, () => process.exit(code));
+      });
+    });
 }
 
 process.on("SIGINT", () => shutdown(0));

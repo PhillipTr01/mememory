@@ -1,0 +1,510 @@
+/* ---------- Hidden poker (uses the gold theme of jackpot.css) ---------- */
+.pk-main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ---------- Table ---------- */
+.pk-table-wrap {
+  padding: 46px 70px 70px;
+}
+
+.pk-table {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2.1 / 1;
+}
+
+.pk-felt {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border: 10px solid #3a2a1f;
+  border-radius: 999px;
+  background: radial-gradient(ellipse at 50% 40%, #2f7a4f, #1d5236 70%, #17432c);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.08), inset 0 0 40px rgba(0, 0, 0, 0.45), 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.pk-board {
+  display: flex;
+  gap: 6px;
+}
+
+.pk-pot {
+  min-height: 1.4em;
+  padding: 0.1rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  font-weight: 800;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.pk-pot:empty {
+  visibility: hidden;
+}
+
+.pk-result {
+  min-height: 1.3em;
+  max-width: 70%;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #f1f5f9;
+}
+
+.pk-result.won {
+  color: var(--mm-accent);
+}
+
+/* ---------- Cards ---------- */
+.pk-card {
+  position: relative;
+  width: 46px;
+  height: 64px;
+  border-radius: 6px;
+  background: #fafafa;
+  color: #1f2937;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  line-height: 1;
+  user-select: none;
+}
+
+.pk-card.red {
+  color: #dc2626;
+}
+
+.pk-rank {
+  position: absolute;
+  left: 5px;
+  top: 4px;
+  font-size: 0.95rem;
+}
+
+.pk-suit {
+  font-size: 1.7rem;
+  margin-top: 10px;
+}
+
+.pk-card.back {
+  background: repeating-linear-gradient(45deg, #b91c1c 0 5px, #991b1b 5px 10px);
+  border: 3px solid #fafafa;
+}
+
+.pk-card.slot {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  box-shadow: none;
+}
+
+.pk-card.flip {
+  animation: pk-flip 0.45s ease-out both;
+}
+
+@keyframes pk-flip {
+  from {
+    transform: rotateY(90deg) scale(0.9);
+    opacity: 0;
+  }
+}
+
+.pk-card.deal {
+  animation: pk-deal 0.35s ease-out both;
+}
+
+@keyframes pk-deal {
+  from {
+    transform: translateY(-30px) scale(0.6);
+    opacity: 0;
+  }
+}
+
+/* The cards of the winning hand */
+.pk-card.best {
+  box-shadow: 0 0 0 2px var(--mm-accent), 0 0 14px var(--mm-accent);
+  transform: translateY(-4px);
+}
+
+/* ---------- Seats ---------- */
+.pk-seat {
+  position: absolute;
+  z-index: 2;
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.3s ease;
+}
+
+.pk-seat.empty {
+  width: auto;
+}
+
+.pk-empty {
+  padding: 0.3rem 0.8rem;
+  border: 1px dashed var(--mm-border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--mm-muted);
+  background: var(--mm-surface);
+}
+
+.pk-sit {
+  border-style: dashed;
+}
+
+.pk-hole {
+  display: flex;
+  gap: 3px;
+  height: 46px;
+  margin-bottom: -14px;
+}
+
+.pk-hole .pk-card {
+  width: 34px;
+  height: 46px;
+}
+
+.pk-hole .pk-rank {
+  font-size: 0.8rem;
+  left: 3px;
+  top: 3px;
+}
+
+.pk-hole .pk-suit {
+  font-size: 1.15rem;
+  margin-top: 8px;
+}
+
+/* The own cards are bigger */
+.pk-seat.me .pk-hole {
+  height: 64px;
+  margin-bottom: -10px;
+}
+
+.pk-seat.me .pk-hole .pk-card {
+  width: 46px;
+  height: 64px;
+}
+
+.pk-seat.me .pk-hole .pk-rank {
+  font-size: 0.95rem;
+}
+
+.pk-seat.me .pk-hole .pk-suit {
+  font-size: 1.6rem;
+}
+
+.pk-avatar {
+  position: relative;
+  z-index: 1;
+}
+
+.pk-avatar .mm-avatar {
+  --size: 46px;
+  box-shadow: 0 0 0 3px var(--mm-surface-3);
+}
+
+.pk-seat.turn .pk-avatar .mm-avatar {
+  box-shadow: 0 0 0 3px var(--mm-accent);
+}
+
+.pk-seat.winner .pk-avatar .mm-avatar {
+  box-shadow: 0 0 0 3px var(--mm-accent), 0 0 22px var(--mm-accent);
+}
+
+/* Time left: a ring around the avatar */
+.pk-timer {
+  --left: 1;
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: conic-gradient(var(--mm-accent) calc(var(--left) * 360deg), transparent 0);
+  -webkit-mask: radial-gradient(circle, transparent 27px, #000 28px);
+  mask: radial-gradient(circle, transparent 27px, #000 28px);
+  pointer-events: none;
+}
+
+.pk-timer.hurry {
+  background: conic-gradient(var(--mm-danger) calc(var(--left) * 360deg), transparent 0);
+}
+
+.pk-dealer {
+  position: absolute;
+  right: -10px;
+  bottom: -4px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fafafa;
+  color: #111;
+  font-size: 0.7rem;
+  font-weight: 900;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.pk-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  margin-top: 4px;
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--mm-radius);
+  background: rgba(20, 20, 20, 0.85);
+  border: 1px solid var(--mm-border);
+  line-height: 1.25;
+}
+
+.pk-seat.turn .pk-info {
+  border-color: var(--mm-accent);
+}
+
+.pk-name {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.pk-stack {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.pk-tag {
+  margin-top: 3px;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--mm-text);
+  white-space: nowrap;
+}
+
+.pk-tag.allin {
+  background: var(--mm-danger);
+  color: #fff;
+}
+
+.pk-tag.win {
+  background: var(--mm-accent);
+  color: var(--mm-on-accent);
+}
+
+.pk-seat.folded .pk-hole,
+.pk-seat.folded .pk-avatar {
+  opacity: 0.35;
+}
+
+.pk-seat.out .pk-avatar {
+  opacity: 0.6;
+}
+
+.pk-bet {
+  position: absolute;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #fff;
+  white-space: nowrap;
+  animation: pk-bet 0.25s ease-out;
+}
+
+@keyframes pk-bet {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20%);
+  }
+}
+
+/* ---------- Actions ---------- */
+.pk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--mm-accent);
+  border-radius: var(--mm-radius);
+  background: rgba(var(--mm-accent-rgb), 0.06);
+}
+
+.pk-actions[hidden],
+.pk-seatbar[hidden],
+.pk-raise[hidden],
+.pk-actions .mm-btn[hidden] {
+  display: none;
+}
+
+.pk-action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pk-action-buttons .mm-btn {
+  min-width: 96px;
+}
+
+.pk-fold:hover {
+  border-color: var(--mm-danger);
+  color: var(--mm-danger);
+}
+
+.pk-raise {
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pk-presets {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.pk-slider {
+  flex: 1;
+  min-width: 80px;
+  accent-color: var(--mm-accent);
+}
+
+.pk-amount {
+  width: 90px;
+}
+
+.pk-seatbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.pk-seatbar-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ---------- Buy-in ---------- */
+.pk-dialog .pk-slider {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.pk-dialog-value {
+  margin-bottom: 0.4rem;
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.pk-dialog-warning {
+  color: var(--mm-danger);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 767px) {
+  .pk-table-wrap {
+    padding: 50px 30px 70px;
+  }
+
+  .pk-table {
+    aspect-ratio: 0.95 / 1;
+  }
+
+  .pk-felt {
+    border-radius: 120px;
+    padding-top: 56px;
+  }
+
+  .pk-result {
+    max-width: 90%;
+    font-size: 0.8rem;
+  }
+
+  .pk-seat {
+    width: 86px;
+  }
+
+  .pk-avatar .mm-avatar {
+    --size: 36px;
+  }
+
+  .pk-timer {
+    -webkit-mask: radial-gradient(circle, transparent 22px, #000 23px);
+    mask: radial-gradient(circle, transparent 22px, #000 23px);
+  }
+
+  .pk-name {
+    max-width: 76px;
+  }
+
+  .pk-card {
+    width: 32px;
+    height: 46px;
+  }
+
+  .pk-rank {
+    font-size: 0.75rem;
+    left: 3px;
+    top: 3px;
+  }
+
+  .pk-suit {
+    font-size: 1.1rem;
+  }
+
+  .pk-hole .pk-card,
+  .pk-seat.me .pk-hole .pk-card {
+    width: 28px;
+    height: 40px;
+  }
+
+  .pk-hole,
+  .pk-seat.me .pk-hole {
+    height: 40px;
+  }
+
+  .pk-felt {
+    border-width: 6px;
+  }
+
+  .pk-raise {
+    min-width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 575px) {
+  .pk-main {
+    padding: 1rem;
+  }
+}
