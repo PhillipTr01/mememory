@@ -40,6 +40,39 @@ function randomBetween(a, b) {
   return a + Math.random() * (b - a);
 }
 
+function pick(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+/*
+ * The end of a spin, different every time: straight to the stop, a bit too
+ * far and back, or nearly stopping before it and creeping on.
+ * Keyframes of a value (deg / px) from `from` to `to` (step: size of one
+ * field, so "nearly" means one field before).
+ */
+function spinEnding(from, to, step) {
+  var way = to - from;
+  var kind = pick(["straight", "overshoot", "creep", "creep"]);
+  if (kind == "overshoot") {
+    return [
+      { value: from, offset: 0, easing: SLOW_END },
+      { value: to + Math.sign(way) * step * randomBetween(0.25, 0.45), offset: 0.9, easing: "ease-in-out" },
+      { value: to, offset: 1 },
+    ];
+  }
+  if (kind == "creep") {
+    return [
+      { value: from, offset: 0, easing: SLOW_END },
+      { value: to - Math.sign(way) * step * randomBetween(0.55, 0.9), offset: randomBetween(0.78, 0.86), easing: "linear" },
+      { value: to, offset: 1 },
+    ];
+  }
+  return [
+    { value: from, offset: 0, easing: SLOW_END },
+    { value: to, offset: 1 },
+  ];
+}
+
 // Every draw slows down at the end: fast start, long, soft stop
 var SLOW_END = "cubic-bezier(0.22, 0.61, 0.36, 1)";
 
@@ -203,12 +236,18 @@ var wheelDraw = {
     var wheel = stage.querySelector(".jp-wheel");
     var target = ((draw.ticket + 0.5) / draw.total) * 360;
     // Not too fast: a very fast wheel looks like it turns backwards (wagon-wheel effect)
-    var turns = short ? 1 : 3;
-    await animate(wheel, [{ transform: "rotate(0deg)" }, { transform: `rotate(${turns * 360 - target}deg)` }], {
-      duration: duration,
-      easing: SLOW_END,
-    });
-    wheel.style.transform = `rotate(${turns * 360 - target}deg)`;
+    var turns = short ? 1 : randomBetween(2.5, 4);
+    var end = Math.round(turns) * 360 - target;
+    if (short) {
+      await animate(wheel, [{ transform: "rotate(0deg)" }, { transform: `rotate(${end}deg)` }], { duration: duration, easing: SLOW_END });
+    } else {
+      // A different ending every time (the size of the winner's field: how far "nearly" is)
+      var bet = drawBets().find((b) => b.from <= draw.ticket + 1 && b.to >= draw.ticket + 1);
+      var field = Math.min(40, bet ? (bet.coins / draw.total) * 360 : 20);
+      var frames = spinEnding(0, end, field).map((f) => ({ transform: `rotate(${f.value}deg)`, offset: f.offset, easing: f.easing }));
+      await animate(wheel, frames, { duration: duration });
+    }
+    wheel.style.transform = `rotate(${end}deg)`;
     if (!short) confetti(stage.firstElementChild);
   },
 };
@@ -256,8 +295,8 @@ var rouletteDraw = {
 
     // Many pictures, each player as often as their share; the winner stops under the marker
     var bets = drawBets();
-    var count = 64;
-    var target = 56;
+    var count = Math.round(randomBetween(48, 80));
+    var target = count - Math.round(randomBetween(5, 9));
     var names = [];
     for (var i = 0; i < count; i++) {
       var ticket = Math.random() * state.total;
@@ -270,10 +309,8 @@ var rouletteDraw = {
     var tileWidth = tile.offsetWidth + 8;
     var offset = target * tileWidth + tile.offsetWidth * randomBetween(0.2, 0.8);
     var end = strip.clientWidth / 2 - offset;
-    await animate(track, [{ transform: "translateX(0)" }, { transform: `translateX(${end}px)` }], {
-      duration: duration,
-      easing: SLOW_END,
-    });
+    var frames = spinEnding(0, end, tileWidth).map((f) => ({ transform: `translateX(${f.value}px)`, offset: f.offset, easing: f.easing }));
+    await animate(track, frames, { duration: duration });
     tile.classList.add("chosen");
   },
 };
@@ -332,26 +369,33 @@ var bowlingDraw = {
     // 1. Charging up: the ball shakes, the lane flashes
     if (!short) {
       lane.classList.add("charging");
-      shout(root, "READY?", "small");
+      shout(root, pick(["READY?", "AIM...", "HERE IT COMES"]), "small");
       await animate(
         ball,
         [0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => ({ transform: `translate(${i % 2 ? -3 : 3}px, ${i % 3 ? 2 : -2}px) scale(${1 + i * 0.02})` })),
         { duration: 1200 * t, easing: "linear" },
       );
       lane.classList.remove("charging");
-      shout(root, "GO!", "small");
+      shout(root, pick(["GO!", "ROLL!", "SEND IT!"]), "small");
     }
 
     // 2. The roll: fast, then slow motion right before the pins (and zoom)
     var laneWidth = lane.clientWidth;
     // The roll slows down right before the pins (slow motion)
+    // Straight or with a hook (a curve to the side and back)
+    var hook = Math.random() < 0.5 ? 0 : randomBetween(-34, 34);
+    var rollTime = randomBetween(2200, 3000) * t;
     var roll = animate(
       ball,
-      [{ transform: "translateX(0) rotate(0deg)" }, { transform: `translateX(${laneWidth * 0.66}px) rotate(1180deg)` }],
-      { duration: 2600 * t, easing: SLOW_END },
+      [
+        { transform: "translate(0, 0) rotate(0deg)" },
+        { transform: `translate(${laneWidth * 0.33}px, ${hook}px) rotate(600deg)`, offset: 0.55 },
+        { transform: `translate(${laneWidth * 0.66}px, 0) rotate(1180deg)` },
+      ],
+      { duration: rollTime, easing: SLOW_END },
     );
     lane.classList.add("rolling");
-    setTimeout(() => lane.classList.add("zoom"), 1300 * t);
+    setTimeout(() => lane.classList.add("zoom"), rollTime / 2);
     await roll;
     lane.classList.remove("rolling");
 
@@ -368,7 +412,22 @@ var bowlingDraw = {
       duration: 700 * t + 200,
       easing: "ease-out",
     });
+    // Sometimes one pin wobbles and only falls at the very end
+    var late = others.length && Math.random() < 0.5 ? pick(others) : null;
+    if (late && !short) {
+      animate(
+        late,
+        [0, 1, 2, 3, 4, 5, 6].map((i) => ({ transform: `translate(-50%, -50%) rotate(${(i % 2 ? -1 : 1) * (24 - i * 3)}deg)` })),
+        { duration: 1300 * t + 300, fill: "none" },
+      ).then(() =>
+        animate(late, [{ transform: "translate(-50%, -50%) rotate(0deg)", opacity: 1 }, { transform: `translate(calc(-50% + 40px), calc(-50% + 60px)) rotate(95deg)`, opacity: 0 }], {
+          duration: 500,
+          easing: "ease-in",
+        }),
+      );
+    }
     others.forEach((pin) => {
+      if (pin == late && !short) return;
       animate(
         pin,
         [
@@ -400,7 +459,7 @@ var bowlingDraw = {
     }
     lane.classList.remove("zoom");
     if (!short) {
-      shout(root, "STRIKE!", "strike");
+      shout(root, pick(["STRIKE!", "SPARE!", "BOOM!"]), "strike");
       confetti(root);
     }
     winnerLabel(root, draw);
@@ -459,7 +518,7 @@ var plinkoDraw = {
     var height = board.clientHeight;
     // Where the winning ticket is at the bottom
     var targetX = ((draw.ticket + 0.5) / draw.total) * width;
-    var startX = width / 2 + randomBetween(-20, 20);
+    var startX = randomBetween(width * 0.15, width * 0.85);
     var rowHeight = height * 0.09;
     var frames = [{ transform: `translate(${startX}px, 0px)`, offset: 0 }];
     var steps = this.ROWS + 1;
@@ -468,13 +527,21 @@ var plinkoDraw = {
       // Bounce from peg to peg, a bit random, but always closer to the target
       var progress = (row + 1) / steps;
       var wanted = startX + (targetX - startX) * progress;
-      var jitter = (1 - progress) * width * 0.09;
+      var jitter = (1 - progress) * width * randomBetween(0.05, 0.14);
       var next = row == this.ROWS ? targetX : wanted + randomBetween(-jitter, jitter);
       var y = height * 0.12 + row * rowHeight;
       // Small hop up after each peg
       frames.push({ transform: `translate(${(x + next) / 2}px, ${y - rowHeight * 0.35}px)`, offset: (row + 0.5) / (steps + 1) });
       frames.push({ transform: `translate(${next}px, ${y}px)`, offset: (row + 1) / (steps + 1) });
       x = next;
+    }
+    // Sometimes it jumps over into the slot next to it ... and back
+    if (!short && Math.random() < 0.45) {
+      var side = targetX + (Math.random() < 0.5 ? -1 : 1) * width * randomBetween(0.05, 0.09);
+      frames.forEach((f) => (f.offset *= 0.86));
+      frames.push({ transform: `translate(${(targetX + side) / 2}px, ${height * 0.78}px)`, offset: 0.9 });
+      frames.push({ transform: `translate(${side}px, ${height * 0.86}px)`, offset: 0.93 });
+      frames.push({ transform: `translate(${targetX}px, ${height * 0.8}px)`, offset: 0.97 });
     }
     frames.push({ transform: `translate(${targetX}px, ${height * 0.9}px)`, offset: 1 });
     await animate(parts.ball, frames, { duration: duration, easing: SLOW_END });
@@ -534,11 +601,18 @@ var raceDraw = {
     // Every runner: random speed in every part of the race (so they overtake).
     // The winner reaches the line at the end, the others just before (photo finish).
     var finishers = [];
+    // The story of the race: a late sprint, start to finish, or a stumble
+    var story = pick(["sprint", "leader", "stumble", "open"]);
+    var stumbler = pick(parts.runners);
     var animations = parts.runners.map((runner) => {
       var isWinner = runner.dataset.name == draw.winner;
-      var end = isWinner ? 1 : randomBetween(0.86, 0.985);
+      var end = isWinner ? 1 : randomBetween(story == "leader" ? 0.7 : 0.84, 0.985);
       var speeds = [];
       for (var i = 0; i < 8; i++) speeds.push(randomBetween(0.6, 1.4));
+      if (isWinner && story == "sprint") speeds = [0.4, 0.5, 0.6, 0.7, 0.9, 1.4, 1.9, 2.3].map((v) => v * randomBetween(0.85, 1.15));
+      if (isWinner && story == "leader") speeds = [2, 1.7, 1.4, 1.1, 0.9, 0.8, 0.7, 0.7].map((v) => v * randomBetween(0.85, 1.15));
+      // A stumble: almost standing still for a moment
+      if (story == "stumble" && runner == stumbler) speeds[Math.floor(randomBetween(2, 6))] = 0.05;
       var sum = speeds.reduce((a, b) => a + b, 0);
       var position = 0;
       var frames = [{ transform: "translateX(0px)", offset: 0 }];
@@ -551,7 +625,9 @@ var raceDraw = {
       return animate(runner, frames, { duration: raceTime, easing: SLOW_END });
     });
     // The last moment: the photo finish (the track gets darker at the edges)
-    setTimeout(() => parts.track.classList.add("photo"), raceTime * 0.82);
+    setTimeout(() => parts.track.classList.add("photo"), raceTime * randomBetween(0.76, 0.86));
+    if (!short && story == "stumble") setTimeout(() => shout(root, pick(["OOPS!", "STUMBLE!"]), "small"), raceTime * 0.4);
+    if (!short && story == "sprint") setTimeout(() => shout(root, pick(["FINAL SPRINT!", "HERE COMES..."]), "small"), raceTime * 0.62);
     await Promise.all(animations);
     parts.track.classList.remove("photo");
     finishers.forEach((runner) => runner.parentElement.classList.add("won"));
@@ -559,7 +635,7 @@ var raceDraw = {
       var flash = el("div", "jp-flash");
       root.appendChild(flash);
       animate(flash, [{ opacity: 0.8 }, { opacity: 0 }], { duration: 400 }).then(() => flash.remove());
-      shout(root, "PHOTO FINISH!", "strike");
+      shout(root, story == "leader" ? pick(["WIRE TO WIRE!", "UNTOUCHABLE!"]) : pick(["PHOTO FINISH!", "BY A NOSE!"]), "strike");
       confetti(root);
     }
     winnerLabel(root, draw);
@@ -622,10 +698,29 @@ var clawDraw = {
 
     // 1. Searching: left and right over the pile, slower and slower, then above the winner
     var search = [setClaw(start, 0)];
-    var spots = short ? [] : [width * 0.8, width * 0.35, width * 0.68, target + 30];
+    var spots = [];
+    if (!short) for (var n = Math.round(randomBetween(2, 5)); n > 0; n--) spots.push(randomBetween(width * 0.3, width * 0.85));
     spots.forEach((x) => search.push(setClaw(x, 0)));
     search.push(setClaw(target, 0));
-    await animate(claw, search, { duration: 2600 * t, easing: SLOW_END });
+
+    // Sometimes it goes for the wrong plush first ... and it slips out
+    var others = parts.plushes.filter((plush) => plush != prize);
+    var decoy = !short && others.length && Math.random() < 0.4 ? pick(others) : null;
+    if (decoy) {
+      var decoyX = decoy.offsetLeft + decoy.offsetWidth / 2;
+      search[search.length - 1] = setClaw(decoyX, 0);
+      await animate(claw, search, { duration: 1500 * t, easing: SLOW_END });
+      var decoyDrop = decoy.offsetTop - 40;
+      await animate(claw, [setClaw(decoyX, 0), setClaw(decoyX, decoyDrop)], { duration: 700 * t, easing: SLOW_END });
+      claw.classList.add("closed");
+      await animate(claw, [setClaw(decoyX, decoyDrop), setClaw(decoyX, decoyDrop * 0.4)], { duration: 500 * t, easing: "ease-out" });
+      claw.classList.remove("closed");
+      shout(parts.root, pick(["SLIPPED!", "NOPE!", "SO CLOSE!"]), "small");
+      animate(decoy, [{ transform: "rotate(0deg)" }, { transform: "rotate(20deg)" }, { transform: "rotate(-12deg)" }, { transform: "rotate(0deg)" }], { duration: 500, fill: "none" });
+      await animate(claw, [setClaw(decoyX, decoyDrop * 0.4), setClaw(target, 0)], { duration: 700 * t, easing: SLOW_END });
+    } else {
+      await animate(claw, search, { duration: 2600 * t, easing: SLOW_END });
+    }
 
     // 2. Down to the prize, the claw closes
     var drop = prizeTop - 40;
@@ -659,7 +754,7 @@ var clawDraw = {
     await fall;
     parts.machine.querySelector(".jp-claw-chute").classList.add("won");
     if (!short) {
-      shout(parts.root, "GOT IT!", "strike");
+      shout(parts.root, pick(["GOT IT!", "JACKPOT!", "PRIZE!"]), "strike");
       confetti(parts.root);
     }
     winnerLabel(parts.root, draw);
@@ -669,15 +764,15 @@ var clawDraw = {
 /* ---------- 7. Battle royale: the last one standing wins ---------- */
 
 var royaleDraw = {
-  // Random places in the arena (the same while the pot doesn't change)
-  place(index, count) {
-    var angle = (index / Math.max(1, count)) * Math.PI * 2 + 0.6;
-    var radius = 0.32 + ((index * 37) % 10) / 100;
+  // Places in the arena: the same while waiting (no jumping), new ones for every draw
+  place(index, count, spin) {
+    var angle = (index / Math.max(1, count)) * Math.PI * 2 + (spin == null ? 0.6 : spin);
+    var radius = spin == null ? 0.32 + ((index * 37) % 10) / 100 : randomBetween(0.3, 0.42);
     // Not too close to the edges, so the zone around everybody stays visible
     return { x: 50 + Math.cos(angle) * radius * 100 * 0.62, y: 54 + Math.sin(angle) * radius * 70 };
   },
 
-  build(stage, winner) {
+  build(stage, winner, shuffle) {
     var root = scene(stage, "royale");
     root.replaceChildren();
     var arena = el("div", "jp-arena-map");
@@ -685,8 +780,10 @@ var royaleDraw = {
     arena.appendChild(zone);
     var feed = el("div", "jp-killfeed");
     var players = playersFor(12, winner);
+    var spin = shuffle ? randomBetween(0, Math.PI * 2) : null;
+    if (shuffle) players = players.slice().sort(() => Math.random() - 0.5);
     var fighters = players.map((player, index) => {
-      var spot = this.place(index, players.length);
+      var spot = this.place(index, players.length, spin);
       var fighter = el("div", "jp-fighter");
       fighter.dataset.name = player.name;
       fighter.style.left = spot.x + "%";
@@ -706,14 +803,14 @@ var royaleDraw = {
   },
 
   async play(stage, draw, duration, short) {
-    var parts = this.build(stage, draw.winner);
+    var parts = this.build(stage, draw.winner, !short);
     var winner = parts.fighters.find((fighter) => fighter.dataset.name == draw.winner);
-    // Who is out when: the smaller the share, the earlier (with luck), the winner last
+    // Who is out when: the smaller the share, the earlier (with a lot of luck), the winner last
     var losers = parts.fighters
       .filter((fighter) => fighter != winner)
       .map((fighter) => {
         var entry = state.entries.find((e) => e.name == fighter.dataset.name);
-        return { fighter: fighter, order: (entry ? entry.coins / state.total : 0) + Math.random() * 0.5 };
+        return { fighter: fighter, order: (entry ? entry.coins / state.total : 0) + Math.random() * 1.2 };
       })
       .sort((a, b) => a.order - b.order)
       .map((item) => item.fighter);
@@ -722,10 +819,12 @@ var royaleDraw = {
     var zone = parts.zone;
     var winnerX = parseFloat(winner.style.left);
     var winnerY = parseFloat(winner.style.top);
+    // First it wanders somewhere else, then it closes in on the winner
     animate(
       zone,
       [
         { left: "50%", top: "50%", width: "120%", height: "190%" },
+        { left: randomBetween(30, 70) + "%", top: randomBetween(35, 70) + "%", width: randomBetween(55, 75) + "%", height: randomBetween(90, 120) + "%", offset: randomBetween(0.35, 0.55) },
         { left: winnerX + "%", top: winnerY + "%", width: "16%", height: "30%" },
       ],
       { duration: duration, easing: SLOW_END },
@@ -742,18 +841,18 @@ var royaleDraw = {
 
     // Eliminations: quick at first, longer and longer pauses (the final duel is the longest)
     var count = losers.length;
-    var weights = losers.map((_, i) => 1 + i * 0.7);
+    var weights = losers.map((_, i) => (1 + i * 0.7) * randomBetween(0.6, 1.4));
     var sum = weights.reduce((a, b) => a + b, 0);
     var playTime = duration * (short ? 1 : 0.88);
     for (var i = 0; i < count; i++) {
       await wait((weights[i] / sum) * playTime);
       this.eliminate(parts, losers[i], short);
-      if (count - i - 1 == 1 && !short) shout(parts.root, "FINAL DUEL", "small");
+      if (count - i - 1 == 1 && !short) shout(parts.root, pick(["FINAL DUEL", "LAST TWO!", "1 VS 1"]), "small");
     }
     await wait(short ? 0 : 300);
     winner.classList.add("champion");
     if (!short) {
-      shout(parts.root, "WINNER WINNER", "strike");
+      shout(parts.root, pick(["WINNER WINNER", "VICTORY ROYALE", "LAST ONE STANDING"]), "strike");
       confetti(parts.root);
     }
     winnerLabel(parts.root, draw);
@@ -770,7 +869,7 @@ var royaleDraw = {
     fighter.classList.add("out");
     // Kill feed (the newest on top, at most 4)
     var line = el("div", "jp-kill");
-    line.append(el("b", "", fighter.dataset.name), document.createTextNode(" was eliminated"));
+    line.append(el("b", "", fighter.dataset.name), document.createTextNode(pick([" was eliminated", " got knocked out", " was caught by the storm", " was sniped", " fell off the map"])));
     parts.feed.prepend(line);
     while (parts.feed.childElementCount > 4) parts.feed.lastElementChild.remove();
     if (!short) animate(parts.root, [{ transform: "translateX(-4px)" }, { transform: "translateX(4px)" }, { transform: "translateX(0)" }], { duration: 180, fill: "none" });
@@ -1139,21 +1238,22 @@ var revolverDraw = {
       .filter((seat) => seat != winner)
       .map((seat) => {
         var entry = state.entries.find((e) => e.name == seat.dataset.name);
-        return { seat: seat, order: (entry ? entry.coins / state.total : 0) + Math.random() * 0.5 };
+        return { seat: seat, order: (entry ? entry.coins / state.total : 0) + Math.random() * 1.2 };
       })
       .sort((a, b) => a.order - b.order)
       .map((item) => item.seat);
     var shots = [];
+    var nerves = randomBetween(0.3, 0.8); // how many empty clicks this time
     losers.forEach((loser, index) => {
       var alive = [winner].concat(losers.slice(index));
       if (index == losers.length - 1) {
         // Final duel: click, click, click ... bang
-        var clicks = 2 + Math.floor(Math.random() * 3);
+        var clicks = 1 + Math.floor(Math.random() * 5);
         var first = Math.random() < 0.5 ? 0 : 1;
         for (var i = 0; i < clicks; i++) shots.push({ seat: [winner, loser][(first + i) % 2], bang: false, duel: true });
         shots.push({ seat: loser, bang: true, duel: true });
       } else {
-        if (Math.random() < 0.55) shots.push({ seat: alive[Math.floor(Math.random() * alive.length)], bang: false });
+        while (Math.random() < nerves && shots.length < 14) shots.push({ seat: alive[Math.floor(Math.random() * alive.length)], bang: false });
         shots.push({ seat: loser, bang: true });
       }
     });
@@ -1172,7 +1272,7 @@ var revolverDraw = {
     }
 
     // The first spin is wild, every shot takes a little longer than the last
-    var weights = shots.map((shot, i) => (i == 0 ? 2.2 : 1 + i * 0.35) * (shot.duel ? 1.5 : 1));
+    var weights = shots.map((shot, i) => (i == 0 ? randomBetween(1.6, 2.8) : 1 + i * 0.35) * (shot.duel ? 1.5 : 1) * randomBetween(0.7, 1.3));
     var sum = weights.reduce((a, b) => a + b, 0);
     var playTime = duration - 600;
     var duelShouted = false;
@@ -1181,14 +1281,16 @@ var revolverDraw = {
       var time = (weights[i] / sum) * playTime;
       if (shot.duel && !duelShouted) {
         duelShouted = true;
-        shout(parts.root, "FINAL DUEL", "small");
+        shout(parts.root, pick(["FINAL DUEL", "ONE OF YOU...", "LAST TWO"]), "small");
       }
       // Spin the cylinder, aim, wait (the target trembles), pull
-      parts.spin += 60 * (i == 0 ? 7 : 1 + Math.floor(Math.random() * 3));
+      parts.spin += 60 * (i == 0 ? 5 + Math.floor(Math.random() * 6) : 1 + Math.floor(Math.random() * 3));
       animate(parts.cylinder, [{ transform: `translate(-50%, -50%) rotate(${parts.spin}deg)` }], { duration: time * 0.55, easing: SLOW_END });
-      await this.aimAt(parts, shot.seat, time * 0.55, i == 0 ? 2 : 0);
+      // Aim and hold: sometimes a long, nervous hold
+      var aim = randomBetween(0.4, 0.65);
+      await this.aimAt(parts, shot.seat, time * aim, i == 0 ? Math.round(randomBetween(1, 3)) : 0);
       shot.seat.classList.add("aimed");
-      await wait(time * 0.45);
+      await wait(time * (1 - aim));
       shot.seat.classList.remove("aimed");
       if (shot.bang) this.bang(parts, shot.seat);
       else this.click(parts, shot.seat);
@@ -1234,7 +1336,7 @@ var revolverDraw = {
     winner.classList.add("champion");
     if (!short) {
       this.aimAt(parts, winner, 900, 1);
-      shout(parts.root, "SURVIVED!", "strike");
+      shout(parts.root, pick(["SURVIVED!", "STILL STANDING!", "LUCKY ONE!"]), "strike");
       confetti(parts.root);
     }
     winnerLabel(parts.root, draw);
