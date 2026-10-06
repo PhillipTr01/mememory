@@ -11,9 +11,19 @@ function avatarColor(name) {
 
 // Avatar with the first letter of the name (built with DOM nodes, no innerHTML).
 // Users with an own avatar (avatar maker) get it as soon as it is loaded.
+// The house in the jackpot when a player is alone (see sockets/jackpot_server.js)
+var GHOST_BET = "Ghost bet";
+
 function createAvatar(name, size, online) {
   var avatar = document.createElement("span");
   avatar.className = "mm-avatar" + (size ? " " + size : "");
+  if (name == GHOST_BET) {
+    avatar.classList.add("ghost");
+    avatar.innerText = "👻";
+    avatar.title = name;
+    avatar.dataset.name = name;
+    return avatar;
+  }
   avatar.style.background = avatarColor(name);
   avatar.innerText = name.charAt(0);
   avatar.title = name;

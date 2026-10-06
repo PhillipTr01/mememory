@@ -141,6 +141,7 @@ async function startServer() {
   return {
     io,
     port,
+    jackpot,
     poker,
     blackjack,
     client(namespace, token) {

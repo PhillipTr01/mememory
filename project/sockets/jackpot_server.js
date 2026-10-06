@@ -7,6 +7,8 @@ const safe = require("./safe_handler");
 const version = require("../game/version");
 
 const ROOM = "jackpot"; // everybody is in the same (socket.io) room
+// The house when a player is alone too long: a space, so no username can be the same
+const GHOST = "Ghost bet";
 const PHASE = {
   OPEN: "open", // waiting for a second player
   COUNTDOWN: "countdown", // the draw starts at endsAt
@@ -31,6 +33,8 @@ module.exports = function (io) {
     draw: null, // {winner, ticket, total} while drawing
     mode: randomMode(), // the animation of this round (the same for everybody)
     timer: null,
+    ghostTimer: null, // a player alone in the pot: the ghost bet comes
+    ghostAt: null,
     history: [], // [{round, winner, total, coins}] newest first
     // Every bet in the pot, oldest first. Each bet has its own tickets
     // (from..to, counted from 1) in the order of the bets: a later bet gets
@@ -66,7 +70,8 @@ module.exports = function (io) {
       round: pot.round,
       phase: pot.phase,
       mode: pot.mode,
-      entries: pot.entries.map((entry) => ({ name: entry.name, coins: entry.coins })),
+      entries: pot.entries.map((entry) => ({ name: entry.name, coins: entry.coins, ghost: entry.name === GHOST })),
+      ghostIn: pot.ghostAt != null ? Math.max(0, pot.ghostAt - now) : null,
       total: total(),
       // Time left (ms) instead of a timestamp: the clocks of the clients may differ
       endsIn: pot.endsAt != null ? Math.max(0, pot.endsAt - now) : null,
@@ -110,12 +115,59 @@ module.exports = function (io) {
   }
 
   function addToPot(bet) {
+    // A real player joins: the ghost bet is gone, the countdown goes on
+    if (bet.name !== GHOST && hasGhost() && !pot.entries.some((e) => e.name === bet.name)) removeGhost();
     const current = pot.entries.find((e) => e.name === bet.name);
     if (current != null) current.coins += bet.amount;
     else pot.entries.push({ name: bet.name, coins: bet.amount });
     const before = pot.bets.length > 0 ? pot.bets[pot.bets.length - 1].to : 0;
     pot.bets.push({ name: bet.name, amount: bet.amount, from: before + 1, to: before + bet.amount });
     if (pot.phase === PHASE.OPEN && pot.entries.length >= 2) startCountdown();
+    // The first player: alone too long, the ghost bet comes
+    if (pot.phase === PHASE.OPEN && pot.entries.length === 1 && pot.ghostTimer == null) startGhostTimer();
+  }
+
+  /* ---------- The ghost bet ---------- */
+
+  function hasGhost() {
+    return pot.entries.some((entry) => entry.name === GHOST);
+  }
+
+  function startGhostTimer() {
+    pot.ghostAt = Date.now() + config.JACKPOT_GHOST_AFTER;
+    pot.ghostTimer = setTimeout(addGhost, config.JACKPOT_GHOST_AFTER);
+    pot.ghostTimer.unref();
+  }
+
+  function stopGhostTimer() {
+    clearTimeout(pot.ghostTimer);
+    pot.ghostTimer = null;
+    pot.ghostAt = null;
+  }
+
+  // 50-150% of the coins of the player who bet first (the house plays against them)
+  function addGhost() {
+    pot.ghostTimer = null;
+    pot.ghostAt = null;
+    if (pot.phase !== PHASE.OPEN || pot.entries.length !== 1) return;
+    const [low, high] = config.JACKPOT_GHOST_SHARE;
+    const share = low + Math.random() * (high - low);
+    const amount = Math.max(1, Math.round(pot.entries[0].coins * share));
+    addToPot({ name: GHOST, amount: amount });
+    emitState();
+  }
+
+  // The tickets are counted again without the ghost's
+  function removeGhost() {
+    pot.entries = pot.entries.filter((entry) => entry.name !== GHOST);
+    let counted = 0;
+    pot.bets = pot.bets
+      .filter((bet) => bet.name !== GHOST)
+      .map((bet) => {
+        const renumbered = { name: bet.name, amount: bet.amount, from: counted + 1, to: counted + bet.amount };
+        counted += bet.amount;
+        return renumbered;
+      });
   }
 
   // Any change of a balance (here, in a game, on another page): the open tabs get it
@@ -145,6 +197,7 @@ module.exports = function (io) {
 
   async function runDraw() {
     if (pot.phase !== PHASE.COUNTDOWN) return;
+    stopGhostTimer();
     pot.phase = PHASE.DRAWING;
     pot.endsAt = null;
 
@@ -154,13 +207,16 @@ module.exports = function (io) {
     pot.draw = fairWinner(pot.bets.map((bet) => ({ name: bet.name, coins: bet.amount })), pot.fair.number);
     const sum = pot.draw.total;
     const winner = pot.entries.find((entry) => entry.name === pot.draw.winner);
+    const ghostWon = winner.name === GHOST;
 
     // Paid right away, so nothing is lost if the page (or the server) goes away
-    // during the animation
-    try {
-      await coins.add(winner.name, sum, { quiet: true, reason: "jackpot win" });
-    } catch (error) {
-      console.error("[jackpot] Could not pay the winner:", error);
+    // during the animation (the ghost bet wins: the house keeps the pot)
+    if (!ghostWon) {
+      try {
+        await coins.add(winner.name, sum, { quiet: true, reason: "jackpot win", note: hasGhost() ? "against the ghost bet" : undefined });
+      } catch (error) {
+        console.error("[jackpot] Could not pay the winner:", error);
+      }
     }
     emitState();
 
@@ -169,18 +225,20 @@ module.exports = function (io) {
       const result = { round: pot.round, winner: winner.name, total: sum, coins: winner.coins };
       pot.history.unshift(result);
       if (pot.records.day !== today()) pot.records = { day: today(), biggest: null, luckiest: null };
-      if (pot.records.biggest == null || sum > pot.records.biggest.total) pot.records.biggest = result;
-      if (pot.records.luckiest == null || winner.coins / sum < pot.records.luckiest.coins / pot.records.luckiest.total) {
+      // Records only for players
+      if (!ghostWon && (pot.records.biggest == null || sum > pot.records.biggest.total)) pot.records.biggest = result;
+      if (!ghostWon && (pot.records.luckiest == null || winner.coins / sum < pot.records.luckiest.coins / pot.records.luckiest.total)) {
         pot.records.luckiest = result;
       }
       pot.history.length = Math.min(pot.history.length, config.JACKPOT_HISTORY);
-      coins.notify(winner.name);
+      if (!ghostWon) coins.notify(winner.name);
       emitState();
       pot.timer = setTimeout(newRound, config.JACKPOT_PAUSE);
     }, config.JACKPOT_SPIN);
   }
 
   function newRound() {
+    stopGhostTimer();
     pot.round++;
     pot.phase = PHASE.OPEN;
     pot.entries = [];

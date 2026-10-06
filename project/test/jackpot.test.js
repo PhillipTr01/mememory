@@ -7,7 +7,7 @@ const crypto = require("crypto");
 const { pickWinner, newFairRound, fairHash, fairWinner } = require("../game/jackpot");
 
 // Short timings for the tests
-Object.assign(config, { JACKPOT_COUNTDOWN: 200, JACKPOT_SPIN: 100, JACKPOT_PAUSE: 100, JACKPOT_BET_DELAY: [0, 0] });
+Object.assign(config, { JACKPOT_COUNTDOWN: 200, JACKPOT_SPIN: 100, JACKPOT_PAUSE: 100, JACKPOT_BET_DELAY: [0, 0], JACKPOT_GHOST_AFTER: 60000 });
 
 /* ---------- Pure logic ---------- */
 
@@ -190,6 +190,52 @@ test("jackpot: two players start the countdown, the winner gets the whole pot", 
   const next = await waitFor(alice, "jackpotState", (s) => s.phase === "open");
   assert.strictEqual(next.total, 0);
   assert.strictEqual(next.round, drawing.round + 1);
+});
+
+test("jackpot: alone in the pot - a ghost bet of 50-150% joins, a real player makes it disappear", async () => {
+  h.setCoins("alice", 5000);
+  h.setCoins("bob", 5000);
+  const alice = client("alice");
+  const bob = client("bob");
+  await waitFor(alice, "coins", (data) => data.coins === 5000);
+  await waitFor(bob, "coins", (data) => data.coins === 5000);
+  assert.strictEqual(server.jackpot.pot.phase, "open");
+  Object.assign(config, { JACKPOT_GHOST_AFTER: 150, JACKPOT_COUNTDOWN: 1500 });
+
+  // Alice alone: the page knows when the ghost comes, then it is in the pot
+  const alone = waitFor(alice, "jackpotState", (s) => s.total === 1000);
+  const ghosted = waitFor(alice, "jackpotState", (s) => s.entries.some((e) => e.ghost));
+  alice.emit("bet", { amount: 1000 });
+  assert.ok((await alone).ghostIn > 0);
+  const withGhost = await ghosted;
+  const ghost = withGhost.entries.find((e) => e.ghost);
+  assert.strictEqual(ghost.name, "Ghost bet");
+  assert.ok(ghost.coins >= 500 && ghost.coins <= 1500, `ghost: ${ghost.coins}`);
+  assert.strictEqual(withGhost.phase, "countdown", "the ghost starts the countdown");
+  assert.deepStrictEqual(withGhost.bets.map((b) => [b.name, b.from, b.to]), [["alice", 1, 1000], ["Ghost bet", 1001, 1000 + ghost.coins]]);
+
+  // Bob joins before the draw: the ghost is gone, the tickets are counted again
+  const gone = waitFor(alice, "jackpotState", (s) => s.entries.some((e) => e.name === "bob"));
+  bob.emit("bet", { amount: 200 });
+  const real = await gone;
+  assert.deepStrictEqual(real.entries.map((e) => e.name), ["alice", "bob"]);
+  assert.deepStrictEqual(real.bets.map((b) => [b.name, b.from, b.to]), [["alice", 1, 1000], ["bob", 1001, 1200]]);
+  assert.strictEqual(real.total, 1200);
+  assert.strictEqual(real.phase, "countdown", "the countdown goes on");
+  await waitFor(alice, "jackpotState", (s) => s.phase === "open" && s.total === 0, 5000);
+  assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 10000, "only real coins in the pot");
+
+  // No one joins: the ghost may win - then the house keeps the pot
+  const ghostAgain = waitFor(alice, "jackpotState", (s) => s.entries.some((e) => e.ghost));
+  alice.emit("bet", { amount: 1000 });
+  await ghostAgain;
+  server.jackpot.pot.fair.number = "0.999999999999"; // the last ticket: the ghost's
+  const before = h.coinsOf("alice");
+  const drawn = await waitFor(alice, "jackpotState", (s) => s.phase === "drawing", 5000);
+  assert.strictEqual(drawn.draw.winner, "Ghost bet");
+  await waitFor(alice, "jackpotState", (s) => s.phase === "open" && s.total === 0, 5000);
+  assert.strictEqual(h.coinsOf("alice"), before, "nothing back");
+  Object.assign(config, { JACKPOT_GHOST_AFTER: 60000, JACKPOT_COUNTDOWN: 200 });
 });
 
 test("jackpot: invalid bets are rejected", async () => {
