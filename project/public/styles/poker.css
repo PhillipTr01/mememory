@@ -509,16 +509,106 @@
   width: 90px;
 }
 
+/* My seat, in the head next to the title: chips, more chips, stand up */
 .pk-seatbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
 }
 
-.pk-seatbar-buttons {
+.pk-seatbar[hidden] {
+  display: none;
+}
+
+.pk-mychips {
   display: flex;
-  gap: 0.5rem;
+  flex-direction: column;
+  margin-right: 0.35rem;
+  line-height: 1.15;
+}
+
+.pk-mychips-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
+
+.pk-mychips-value {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 34px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface);
+  color: var(--mm-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.pk-pill.accent {
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+  background: rgba(var(--mm-accent-rgb), 0.14);
+  color: var(--mm-accent);
+}
+
+.pk-pill.accent:hover:not(:disabled) {
+  background: var(--mm-accent);
+  color: var(--mm-on-accent, #1a1305);
+}
+
+.pk-pill.leave:hover:not(:disabled) {
+  border-color: var(--mm-danger);
+  color: var(--mm-danger);
+}
+
+.pk-pill:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Small screens: the seat bar gets its own line under the title */
+@media (max-width: 767px) {
+  .pk-main .jp-head {
+    flex-wrap: wrap;
+  }
+
+  .pk-seatbar {
+    width: 100%;
+  }
+
+  .pk-mychips {
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 575px) {
+  .pk-seatbar {
+    padding-left: 0.6rem;
+  }
+
+  .pk-pill {
+    padding: 0 0.6rem;
+    font-size: 0.75rem;
+  }
 }
 
 /* ---------- Buy-in ---------- */

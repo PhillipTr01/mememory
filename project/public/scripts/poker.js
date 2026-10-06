@@ -378,7 +378,8 @@ function renderSeatBar() {
   bar.hidden = me < 0;
   if (me < 0) return;
   var seat = state.seats[me];
-  document.getElementById("pkMyInfo").innerText = "Your chips: 🪙 " + formatCoins(seat.stack) + (seat.leaving ? " · leaving after this hand" : "");
+  document.getElementById("pkMyInfo").innerText = "🪙 " + formatCoins(seat.stack);
+  document.getElementById("pkMyLabel").innerText = seat.leaving ? "Leaving after this hand" : "Your chips";
   document.getElementById("pkAddChips").disabled = (seat.inHand && state.phase != "showdown") || seat.stack >= state.rules.maxBuyIn;
   document.getElementById("pkStand").disabled = seat.leaving;
 }
