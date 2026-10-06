@@ -16,7 +16,7 @@ const BETTING = ["preflop", "flop", "turn", "river"];
  */
 module.exports = function (io) {
   const room = io.of("/poker");
-  room.use(socketAuth);
+  room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
 
   const table = {

@@ -14,6 +14,7 @@ const Statistic = require("../models/Statistic");
 const Meme = require("../models/Meme");
 const CoinLog = require("../models/CoinLog");
 const Withdrawal = require("../models/Withdrawal");
+const Setting = require("../models/Setting");
 
 const users = new Map(); // _id -> {_id, username, statistics}
 const increments = []; // [{username, field}]
@@ -100,6 +101,7 @@ function memoryModel(Model) {
 
 const coinLogs = memoryModel(CoinLog);
 const withdrawals = memoryModel(Withdrawal);
+const settings = memoryModel(Setting);
 
 function userByName(username) {
   return [...users.values()].find((u) => u.username === username);
@@ -113,9 +115,11 @@ Statistic.increment = async (username, field) => {
 Meme.aggregate = async () =>
   Array.from({ length: Math.min(memeCount, 33) }, (_, i) => ({ _id: `https://i.redd.it/meme${i}.png` }));
 
-function addUser(username) {
+// options.approved: false - not let into the casino (yet)
+function addUser(username, options) {
   const _id = `id_${username}`;
-  users.set(_id, { _id, username, statistics: `stat_${username}` });
+  const approved = !(options && options.approved === false);
+  users.set(_id, { _id, username, statistics: `stat_${username}`, casinoApproved: approved, casinoApprovedAt: approved ? new Date(0) : undefined });
   return jwt.sign({ _id }, process.env.SECRET_KEY);
 }
 
@@ -171,6 +175,7 @@ module.exports = {
   increments,
   coinLogs,
   withdrawals,
+  settings,
   coinsOf: (username) => userByName(username).coins,
   // An account that already got its start coins
   setCoins: (username, amount) => { Object.assign(userByName(username), { coins: amount, coinReset: require("../game/config").COIN_RESET }); },

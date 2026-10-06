@@ -16,7 +16,7 @@ const ROOM = "blackjack";
  */
 module.exports = function (io) {
   const room = io.of("/blackjack");
-  room.use(socketAuth);
+  room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
 
   const table = {

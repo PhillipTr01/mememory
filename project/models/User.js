@@ -16,6 +16,10 @@ const schema = mongoose.Schema({
     // The last reset of all coins this account got (see game/coins.js)
     coinReset: {type: String},
     coinBonusAt: {type: Date},
+    // The secret casino: only for players the admin let in (see game/access.js)
+    casinoApproved: {type: Boolean, default: false},
+    casinoApprovedAt: {type: Date}, // the first time - the start coins come only once
+    casinoRequestedAt: {type: Date}, // tried to open the casino without access
 	// active: {type: String, required: true, default: false}
 });
 

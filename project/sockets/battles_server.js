@@ -24,7 +24,7 @@ const BOT_NAMES = ["Bot Pepe", "Bot Doge", "Bot Wojak"];
  */
 module.exports = function (io) {
   const battles = io.of("/battles");
-  battles.use(socketAuth);
+  battles.use(socketAuth.casino);
   casinoChat.attach(battles, ROOM);
 
   const lobby = {

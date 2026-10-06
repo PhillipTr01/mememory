@@ -6,6 +6,7 @@ const { asyncHandler } = require("../utils/errors");
 const config = require("../game/config");
 const coins = require("../game/coins");
 const withdrawals = require("../game/withdrawals");
+const access = require("../game/access");
 const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
 
@@ -98,9 +99,29 @@ module.exports = function () {
     return user.coinReset === config.COIN_RESET ? user.coins || 0 : config.START_COINS;
   }
 
+  // The players in the casino (approved), richest first
   async function players() {
-    const users = await User.find({}).select("username coins coinReset").lean();
+    const users = await User.find({ casinoApproved: true }).select("username coins coinReset").lean();
     return users.map((user) => ({ username: user.username, coins: balance(user) })).sort((a, b) => b.coins - a.coins || a.username.localeCompare(b.username));
+  }
+
+  // Everybody with the access state: who wants in first, then the rest, then the approved players
+  async function accessList(q) {
+    const users = await User.find({}).select("username casinoApproved casinoApprovedAt casinoRequestedAt").lean();
+    const rank = (u) => (u.approved ? 2 : u.requestedAt ? 0 : 1);
+    return users
+      .map((user) => ({
+        username: user.username,
+        approved: user.casinoApproved === true,
+        approvedAt: user.casinoApprovedAt || null,
+        requestedAt: user.casinoRequestedAt || null,
+      }))
+      .filter((user) => user.username.toLowerCase().includes(q))
+      .sort((a, b) => rank(a) - rank(b) || new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0) || a.username.localeCompare(b.username));
+  }
+
+  async function waiting() {
+    return (await accessList("")).filter((user) => !user.approved && user.requestedAt).length;
   }
 
   // Everything at a glance: leaderboard, open payouts, totals
@@ -116,6 +137,7 @@ module.exports = function () {
         coins: all.reduce((sum, p) => sum + p.coins, 0),
         open: open,
         openCoins: open.reduce((sum, w) => sum + w.amount, 0),
+        waiting: await waiting(),
       });
     }),
   );
@@ -137,8 +159,9 @@ module.exports = function () {
       const { username, mode, amount, note } = req.body || {};
       const text = typeof note === "string" ? note.slice(0, 300) : undefined;
       if (typeof username !== "string" || !Number.isInteger(amount)) return res.status(400).json({ error: "Username and a whole number." });
-      const user = await User.findOne({ username: username }).select("username").lean();
+      const user = await User.findOne({ username: username }).select("username casinoApproved").lean();
       if (user == null) return res.status(404).json({ error: "No such player." });
+      if (!access.approved(user)) return res.status(400).json({ error: "The player isn't approved for the casino." });
       if (mode === "set") {
         if (amount < 0) return res.status(400).json({ error: "A balance can't be negative." });
         await coins.set(username, amount, text);
@@ -149,6 +172,33 @@ module.exports = function () {
         return res.status(400).json({ error: "Unknown mode." });
       }
       res.json({ username: username, coins: (await coins.get(username)).coins });
+    }),
+  );
+
+  /* ---------- Access to the casino ---------- */
+
+  // Who wants in, who is in - and what a player approved now gets
+  router.get(
+    "/api/access",
+    admin,
+    asyncHandler(async (req, res) => {
+      const first = await access.firstApproval();
+      const start = access.startCoins(first);
+      const all = await accessList(String(req.query.q || "").toLowerCase());
+      res.json({ firstApproval: first, startCoins: start.coins, missed: start.missed, players: all.slice(0, 200) });
+    }),
+  );
+
+  // {username, approve: true | false}
+  router.post(
+    "/api/access",
+    admin,
+    asyncHandler(async (req, res) => {
+      const { username, approve } = req.body || {};
+      if (typeof username !== "string" || typeof approve !== "boolean") return res.status(400).json({ error: "Username and approve." });
+      const result = approve ? await access.approve(username) : await access.revoke(username);
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
     }),
   );
 

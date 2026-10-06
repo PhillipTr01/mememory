@@ -290,7 +290,8 @@ test("casino: a secret address with the choice of games, jackpot, battles and po
   const secretRoute = require("../routes/secret_route");
   const app = express();
   const base = encodeURI(config.JACKPOT_PATH);
-  app.use(base, secretRoute((req, res, next) => next()));
+  // Logged in as alice (approved for the casino)
+  app.use(base, secretRoute((req, res, next) => ((req._id = "id_alice"), next())));
   const web = http.createServer(app);
   await new Promise((resolve) => web.listen(0, resolve));
   const get = (path) =>
@@ -311,6 +312,7 @@ test("casino: a secret address with the choice of games, jackpot, battles and po
     assert.match((await get(base + "/jackpot")).body, /<title>Jackpot/);
     assert.match((await get(base + "/battles")).body, /<title>Case Battles/);
     assert.match((await get(base + "/poker")).body, /<title>Poker/);
+    assert.match((await get(base + "/blackjack")).body, /<title>Blackjack/);
     // The old, easy addresses are gone
     for (const path of ["/jackpot", "/battles", "/poker"]) assert.strictEqual((await get(path)).status, 404);
   } finally {

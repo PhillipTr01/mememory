@@ -4,6 +4,7 @@ const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 const version = require("../game/version");
+const access = require("../game/access");
 
 const ROOM = "casino";
 
@@ -13,7 +14,7 @@ const ROOM = "casino";
  */
 module.exports = function (io, games) {
   const casino = io.of("/casino");
-  casino.use(socketAuth);
+  casino.use(socketAuth.casino);
   casinoChat.attach(casino, ROOM);
 
   function summary() {
@@ -38,6 +39,17 @@ module.exports = function (io, games) {
   }
 
   coins.changes.on("change", (username) => sendCoins(username).catch(() => {}));
+
+  // Access taken away: every open casino page of the player is closed
+  access.changes.on("revoked", (username) => {
+    for (const name of ["/casino", "/jackpot", "/battles", "/poker", "/blackjack"]) {
+      for (const socket of io.of(name).sockets.values()) {
+        if (socket.data.username !== username) continue;
+        socket.emit("casinoClosed");
+        socket.disconnect(true);
+      }
+    }
+  });
 
   // The numbers change all the time: every few seconds is enough
   const timer = setInterval(() => {

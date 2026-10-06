@@ -27,6 +27,7 @@
 
         <nav class="cs-nav" aria-label="Admin">
             <a href="#overview" class="cs-tab" data-tab="overview"><span class="cs-tab-icon">📊</span><span class="cs-tab-label">Overview</span></a>
+            <a href="#access" class="cs-tab" data-tab="access"><span class="cs-tab-icon">🔑</span><span class="cs-tab-label">Access <span id="adWaitingBadge" class="ad-count" hidden></span></span></a>
             <a href="#players" class="cs-tab" data-tab="players"><span class="cs-tab-icon">🏆</span><span class="cs-tab-label">Players</span></a>
             <a href="#payouts" class="cs-tab" data-tab="payouts"><span class="cs-tab-icon">💸</span><span class="cs-tab-label">Payouts</span></a>
             <a href="#history" class="cs-tab" data-tab="history"><span class="cs-tab-icon">📜</span><span class="cs-tab-label">History</span></a>
@@ -43,6 +44,21 @@
             <div class="mm-card ad-card">
                 <h2 class="ad-title">Open payouts</h2>
                 <div id="adOpenList"></div>
+            </div>
+        </section>
+
+        <!--- Access: who may play in the casino --->
+        <section id="tab-access" class="ad-tab" hidden>
+            <div class="mm-card ad-card">
+                <div class="ad-card-head">
+                    <h2 class="ad-title">Access to the casino</h2>
+                    <input id="adAccessSearch" class="mm-input ad-search" placeholder="Search a player">
+                </div>
+                <p id="adAccessInfo" class="ad-access-info"></p>
+                <table class="ad-table">
+                    <thead><tr><th>Player</th><th>Status</th><th></th></tr></thead>
+                    <tbody id="adAccessList"></tbody>
+                </table>
             </div>
         </section>
 

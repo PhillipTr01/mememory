@@ -33,6 +33,8 @@ socket.on("disconnect", () => (document.getElementById("connectionBanner").hidde
 socket.on("connect_error", (error) => {
   if (error && error.message == "unauthorized") window.location.href = "/";
 });
+// The admin took the access away
+socket.on("casinoClosed", () => (window.location.href = "/"));
 
 window.addEventListener("pagehide", () => socket.disconnect());
 window.addEventListener("pageshow", (event) => {

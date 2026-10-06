@@ -20,7 +20,7 @@ const PHASE = {
  */
 module.exports = function (io) {
   const jackpot = io.of("/jackpot");
-  jackpot.use(socketAuth);
+  jackpot.use(socketAuth.casino);
   casinoChat.attach(jackpot, ROOM);
 
   const pot = {

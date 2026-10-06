@@ -21,6 +21,7 @@ var REASONS = [
 ];
 
 var knownOpen = null; // ids of the open payouts already seen (new ones get a note)
+var knownWaiting = null; // players waiting for access at the last look
 var players = [];
 
 function formatCoins(value) {
@@ -60,6 +61,7 @@ function showTab() {
   var tab = (location.hash || "#overview").slice(1);
   document.querySelectorAll(".ad-tab").forEach((section) => (section.hidden = section.id != "tab-" + tab));
   document.querySelectorAll(".cs-tab").forEach((link) => link.classList.toggle("active", link.dataset.tab == tab));
+  if (tab == "access") loadAccess();
   if (tab == "players") loadPlayers();
   if (tab == "payouts") loadPayouts();
   if (tab == "history") loadHistory();
@@ -124,12 +126,92 @@ async function loadOverview() {
     var badge = document.getElementById("adOpenBadge");
     badge.hidden = ids.length == 0;
     badge.innerText = ids.length + " open";
-    document.title = (ids.length ? "(" + ids.length + ") " : "") + "Admin - MemeMory";
+    // Players who want into the casino
+    if (knownWaiting != null && data.waiting > knownWaiting) {
+      showToast("🔑 " + (data.waiting - knownWaiting == 1 ? "A player wants" : data.waiting - knownWaiting + " players want") + " into the casino");
+      if (!document.getElementById("tab-access").hidden) loadAccess();
+    }
+    knownWaiting = data.waiting;
+    var waitingBadge = document.getElementById("adWaitingBadge");
+    waitingBadge.hidden = data.waiting == 0;
+    waitingBadge.innerText = data.waiting;
+    var todo = ids.length + data.waiting;
+    document.title = (todo ? "(" + todo + ") " : "") + "Admin - MemeMory";
     if (!players.length) {
       players = data.leaderboard;
       fillUserList();
     }
   } catch (error) {
+    fail(error);
+  }
+}
+
+/* ---------- Access ---------- */
+
+function day(value) {
+  return new Date(value).toLocaleDateString(undefined, { dateStyle: "medium" });
+}
+
+async function loadAccess() {
+  try {
+    var data = await api("access?q=" + encodeURIComponent(document.getElementById("adAccessSearch").value.trim()));
+    var info = document.getElementById("adAccessInfo");
+    info.replaceChildren(
+      el("span", "", "Approving a player now gives "),
+      el("b", "", "🪙 " + formatCoins(data.startCoins)),
+      el(
+        "span",
+        "mm-muted",
+        data.firstApproval
+          ? " (50,000 + " + data.missed + " missed daily bonus" + (data.missed == 1 ? "" : "es") + " since " + day(data.firstApproval) + ")"
+          : " - nobody is approved yet, the daily bonuses count from the first approval",
+      ),
+    );
+    var list = document.getElementById("adAccessList");
+    if (data.players.length == 0) {
+      var empty = el("tr");
+      var cell = el("td", "mm-muted", "No players.");
+      cell.colSpan = 3;
+      empty.appendChild(cell);
+      list.replaceChildren(empty);
+      return;
+    }
+    list.replaceChildren(
+      ...data.players.map((p) => {
+        var row = el("tr", p.approved ? "" : p.requestedAt ? "ad-waiting" : "");
+        var status = p.approved
+          ? el("span", "ad-status paid", "approved" + (p.approvedAt ? " · " + day(p.approvedAt) : ""))
+          : p.requestedAt
+            ? el("span", "ad-status open", "wants in · " + time(p.requestedAt))
+            : el("span", "ad-status none", "no access");
+        var button = el("button", "mm-btn mm-btn-sm" + (p.approved ? "" : " mm-btn-primary"), p.approved ? "Revoke" : "Approve");
+        button.type = "button";
+        button.addEventListener("click", () => setAccess(p, !p.approved, button));
+        var actions = el("td", "ad-actions");
+        actions.appendChild(button);
+        row.append(el("td", "fw-semibold", p.username), el("td", "", ""), actions);
+        row.children[1].appendChild(status);
+        return row;
+      }),
+    );
+  } catch (error) {
+    fail(error);
+  }
+}
+
+async function setAccess(player, approve, button) {
+  if (!approve && !confirm("Take " + player.username + "'s access away? Their open casino pages close, the coins stay.")) return;
+  button.disabled = true;
+  try {
+    var result = await api("access", { username: player.username, approve: approve });
+    if (!approve) showToast(player.username + " has no access any more");
+    else if (result.again) showToast(player.username + " is back in (with the old coins)");
+    else showToast(player.username + " is in - 🪙 " + formatCoins(result.coins) + " start coins");
+    loadAccess();
+    loadOverview();
+    players = [];
+  } catch (error) {
+    button.disabled = false;
     fail(error);
   }
 }
@@ -249,6 +331,11 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("adSearch").addEventListener("input", () => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(loadPlayers, 250);
+  });
+  var accessTimer = null;
+  document.getElementById("adAccessSearch").addEventListener("input", () => {
+    clearTimeout(accessTimer);
+    accessTimer = setTimeout(loadAccess, 250);
   });
   document.getElementById("adPayoutStatus").addEventListener("change", loadPayouts);
   document.getElementById("adHistoryFilter").addEventListener("submit", loadHistory);

@@ -230,6 +230,45 @@
   color: var(--mm-danger);
 }
 
+/* ---------- Access to the casino ---------- */
+.ad-access-info {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}
+
+.ad-status.open {
+  color: var(--mm-accent);
+}
+
+.ad-status.none {
+  color: var(--mm-muted);
+}
+
+#tab-access .ad-status {
+  text-align: left;
+}
+
+.ad-table tr.ad-waiting td {
+  background: rgba(var(--mm-accent-rgb), 0.07);
+}
+
+.ad-count {
+  display: inline-block;
+  min-width: 1.2rem;
+  margin-left: 0.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--mm-danger);
+  color: #fff;
+  font-size: 0.7rem;
+  line-height: 1.2rem;
+  text-align: center;
+}
+
+.ad-count[hidden] {
+  display: none;
+}
+
 @media (max-width: 767px) {
   .ad-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -33,12 +33,13 @@ function changed(result) {
 }
 
 /*
- * New accounts get the start coins, and every account once after a reset of
- * all coins (config.COIN_RESET): coinReset remembers the last reset it got.
+ * Approved players (see game/access.js) get the start coins once more after a
+ * reset of all coins (config.COIN_RESET): coinReset remembers the last reset
+ * they got. The first start coins come with the approval.
  */
 async function ensure(username) {
   const reset = await User.updateOne(
-    { username: username, coinReset: { $ne: config.COIN_RESET } },
+    { username: username, casinoApproved: true, coinReset: { $ne: config.COIN_RESET } },
     { $set: { coins: config.START_COINS, coinReset: config.COIN_RESET } },
   );
   if (changed(reset)) log(username, config.START_COINS, "start coins");
@@ -128,4 +129,4 @@ function reward(username, mode) {
   add(username, amount, { reason: "game win", note: mode }).catch((error) => console.error("[coins] Could not add coins:", error));
 }
 
-module.exports = { get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };
+module.exports = { log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };

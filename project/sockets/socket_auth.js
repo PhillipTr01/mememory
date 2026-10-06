@@ -23,19 +23,26 @@ function readCookie(header, name) {
  * taken from the database instead of trusting what the client sends, so
  * nobody can play (and change statistics) in the name of somebody else.
  */
-module.exports = async function socketAuth(socket, next) {
-  try {
-    const token = readCookie(socket.handshake.headers.cookie, "token");
-    const decode = jwt.verify(token, process.env.SECRET_KEY);
-    const user = await User.findOne({ _id: decode._id }).select("username");
+function check(casino) {
+  return async function socketAuth(socket, next) {
+    try {
+      const token = readCookie(socket.handshake.headers.cookie, "token");
+      const decode = jwt.verify(token, process.env.SECRET_KEY);
+      const user = await User.findOne({ _id: decode._id }).select("username casinoApproved");
 
-    if (user == null) {
+      // The secret casino: only for players the admin let in
+      if (user == null || (casino && user.casinoApproved !== true)) {
+        return next(new Error("unauthorized"));
+      }
+
+      socket.data.username = user.username;
+      return next();
+    } catch (error) {
       return next(new Error("unauthorized"));
     }
+  };
+}
 
-    socket.data.username = user.username;
-    return next();
-  } catch (error) {
-    return next(new Error("unauthorized"));
-  }
-};
+module.exports = check(false);
+// For the namespaces of the secret casino
+module.exports.casino = check(true);
