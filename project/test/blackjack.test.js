@@ -143,7 +143,7 @@ test("blackjack: sit down first, bets 10 to 5,000 per seat, a second seat after 
   alice.emit("sit", 1);
   assert.match(await refused, /Bet on your seat first/);
 
-  for (const [amount, message] of [[5, /At least 10/], [5001, /At most 5,000/]]) {
+  for (const [amount, message] of [[5, /At least 10/], [10001, /At most 10,000/]]) {
     const refused = h.once(alice, "blackjackError");
     alice.emit("bet", { seat: 0, amount });
     assert.match(await refused, message);
@@ -158,10 +158,10 @@ test("blackjack: sit down first, bets 10 to 5,000 per seat, a second seat after 
   const both = await waitFor(alice, "blackjackState", (s) => s.seats[1] && s.seats[1].bet === 500);
   assert.strictEqual(both.seats[0].name, "alice");
   assert.ok(both.startIn > 0, "the betting time runs");
-  // More on the own seat, but not over 5,000
+  // More on the own seat, but not over 10,000
   const tooMuch = h.once(alice, "blackjackError");
-  alice.emit("bet", { seat: 0, amount: 2500 });
-  assert.match(await tooMuch, /At most 5,000/);
+  alice.emit("bet", { seat: 0, amount: 7500 });
+  assert.match(await tooMuch, /At most 10,000/);
   // At most 3 seats at a time
   alice.emit("sit", 2);
   await waitFor(alice, "blackjackState", (s) => s.seats[2] && s.seats[2].name === "alice");

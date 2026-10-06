@@ -170,6 +170,9 @@ test("access: taken away - the open pages close, a new approval gives no second 
   await closed;
   await gone;
   assert.match(await (await call(CASINO + "/", as("uma"))).text(), /Ask for access/);
+  // The old request is gone: to get back in, uma has to ask again
+  assert.strictEqual((await (await call(CASINO + "/request", as("uma"))).json()).requested, false);
+  assert.ok(!(await adminApi("overview")).body.requests.some((r) => r.username === "uma"));
   assert.strictEqual((await connect("/jackpot", "uma")).ok, false);
 
   h.setCoins("uma", 1234);

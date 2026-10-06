@@ -50,7 +50,7 @@ async function approve(username, now = Date.now()) {
 
   // Approved before (and taken out again): no second start money
   if (user.casinoApprovedAt != null) {
-    await User.updateOne({ username: username }, { $set: { casinoApproved: true } });
+    await User.updateOne({ username: username }, { $set: { casinoApproved: true, casinoRequestedAt: null } });
     return { username: username, again: true };
   }
 
@@ -58,7 +58,7 @@ async function approve(username, now = Date.now()) {
   const start = startCoins(first, now);
   const result = await User.updateOne(
     { username: username, casinoApproved: { $ne: true } },
-    { $set: { casinoApproved: true, casinoApprovedAt: new Date(now), coins: start.coins, coinReset: config.COIN_RESET, coinBonusAt: null } },
+    { $set: { casinoApproved: true, casinoApprovedAt: new Date(now), casinoRequestedAt: null, coins: start.coins, coinReset: config.COIN_RESET, coinBonusAt: null } },
   );
   if (!(result.nModified > 0 || result.modifiedCount > 0)) return { error: "Already approved." };
   const note = start.missed > 0 ? `approved: ${config.START_COINS.toLocaleString("en-US")} + ${start.missed} missed daily bonus${start.missed === 1 ? "" : "es"}` : "approved";
@@ -67,9 +67,10 @@ async function approve(username, now = Date.now()) {
   return { username: username, coins: start.coins, missed: start.missed, again: false };
 }
 
-// Take a player out again (the coins stay for a later approval)
+// Take a player out again (the coins stay for a later approval); the old
+// request is gone too - to get back in, the player has to ask again
 async function revoke(username) {
-  const result = await User.updateOne({ username: username, casinoApproved: true }, { $set: { casinoApproved: false } });
+  const result = await User.updateOne({ username: username, casinoApproved: true }, { $set: { casinoApproved: false, casinoRequestedAt: null } });
   if (!(result.nModified > 0 || result.modifiedCount > 0)) return { error: "Not approved." };
   changes.emit("revoked", username);
   return { username: username };
