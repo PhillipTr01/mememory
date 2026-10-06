@@ -102,6 +102,13 @@ body.jackpot-theme {
   color: var(--mm-danger);
 }
 
+/* The countdown itself: bigger than the rest of the bar */
+.jp-potbar .jp-center-status.timer {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .jp-potbar .jp-center-status.winner {
   color: var(--mm-accent);
 }
@@ -325,7 +332,7 @@ body.jackpot-theme {
 }
 
 .jp-center-status.timer {
-  font-size: 1.35rem;
+  font-size: 1.9rem;
   font-weight: 800;
   color: var(--mm-text);
   font-variant-numeric: tabular-nums;
