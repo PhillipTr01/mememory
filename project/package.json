@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "test": "node --test test/http.test.js test/sockets.test.js test/tictactoe.test.js test/powerups.test.js test/avatar.test.js test/jackpot.test.js"
+    "test": "node --test test/http.test.js test/sockets.test.js test/tictactoe.test.js test/powerups.test.js test/avatar.test.js test/jackpot.test.js test/battles.test.js"
   },
   "author": "",
   "license": "ISC",

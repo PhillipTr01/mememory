@@ -66,4 +66,13 @@ module.exports = {
   JACKPOT_SECRET: (process.env.JACKPOT_SECRET || "moneyrain").toLowerCase(),
   JACKPOT_SECRET_COINS: 1000,
   JACKPOT_SECRET_COOLDOWN: 1000, // ms between two uses (no flooding)
+
+  // Case battles (hidden, opened from the jackpot page)
+  BATTLE_START: 3000, // countdown when the battle is full
+  BATTLE_ROUND: 4500, // one case for everybody: spin + a short look at the items
+  BATTLE_MAX_ROUNDS: 10, // cases per battle
+  BATTLE_MAX_OPEN: 3, // waiting battles per creator
+  BATTLE_KEEP: 60 * 1000, // a finished battle stays in the list this long
+  BATTLE_EXPIRE: 15 * 60 * 1000, // nobody joined: cancelled, coins back
+  BATTLE_HISTORY: 10,
 };

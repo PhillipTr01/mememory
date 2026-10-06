@@ -1424,3 +1424,10 @@ body.jackpot-theme {
     min-height: 280px;
   }
 }
+
+/* Buttons on the right of the head (case battles, back) */
+.bt-head-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

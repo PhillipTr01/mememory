@@ -2,7 +2,7 @@
 <html lang="en" class="min-h-100">
 
 <head>
-    <title>Jackpot - MemeMory</title>
+    <title>Case Battles - MemeMory</title>
 
     <!-- Required meta tags -->
     <meta charset="utf-8">
@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="/static/styles/theme.css">
     <link rel="stylesheet" href="/static/styles/room.css">
     <link rel="stylesheet" href="/static/styles/jackpot.css">
+    <link rel="stylesheet" href="/static/styles/battles.css">
 
     <!--- Icons --->
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico">
@@ -80,102 +81,69 @@
     <main class="room-page">
         <div class="room-layout">
             <div class="room-main">
-                <section class="mm-card jp-main">
+                <section class="mm-card bt-main">
                     <div class="jp-head">
                         <div>
-                            <h1 class="jp-title">🪙 Jackpot <span id="jpRound" class="mm-badge"></span></h1>
-                            <p id="jpStatus" class="jp-status" aria-live="polite"></p>
+                            <h1 class="jp-title">⚔️ Case Battles <span class="mm-badge">Hidden</span></h1>
+                            <p id="btStatus" class="jp-status" aria-live="polite"></p>
                         </div>
                         <div class="bt-head-right">
-                            <a href="/battles" class="icon-btn" title="Case battles" aria-label="Case battles">⚔️</a>
-                            <a href="/lobby" class="icon-btn" title="Back to the lobby" aria-label="Back to the lobby">
+                            <span id="btCoins" class="bt-wallet">🪙 -</span>
+                            <a href="/jackpot" class="icon-btn" title="Back to the jackpot" aria-label="Back to the jackpot">
                                 <i class="bi bi-box-arrow-left"></i>
                             </a>
                         </div>
                     </div>
 
-                    <!--- How the winner is shown (only for this viewer, the server decides the winner) --->
-                    <div id="jpModes" class="jp-modes" role="radiogroup" aria-label="Draw animation"></div>
-
-                    <!--- Pot and countdown (in the wheel it is in the middle) --->
-                    <div id="jpPotbar" class="jp-potbar">
-                        <span id="jpTotal" class="jp-total">0</span>
-                        <span class="jp-pot-label">coins in the pot</span>
-                        <span id="jpCenter" class="jp-center-status"></span>
-                    </div>
-
-                    <!--- The draw: wheel, roulette, bowling, plinko or horse race --->
-                    <div id="jpStage" class="jp-stage"></div>
-
-                    <div class="jp-panel">
-                        <!--- Own coins and bet --->
-                        <div class="jp-bet">
-                            <div class="jp-wallet">
-                                <span class="jp-wallet-label">Your coins</span>
-                                <span id="jpCoins" class="jp-coins">-</span>
-                                <span id="jpChance" class="jp-chance"></span>
+                    <!--- All battles and a new one --->
+                    <div id="btListView" class="bt-view">
+                        <div class="bt-section-head">
+                            <span class="fw-semibold">Create a battle</span>
+                            <div id="btFilter" class="bt-tabs" role="tablist" aria-label="Cases">
+                                <button type="button" class="active" data-risk="all">All</button>
+                                <button type="button" data-risk="balanced">Balanced</button>
+                                <button type="button" data-risk="high">High risk</button>
                             </div>
-                            <form id="jpForm" class="jp-form" autocomplete="off">
-                                <div class="jp-quick">
-                                    <button type="button" class="mm-btn mm-btn-sm" data-add="10">+10</button>
-                                    <button type="button" class="mm-btn mm-btn-sm" data-add="50">+50</button>
-                                    <button type="button" class="mm-btn mm-btn-sm" data-add="100">+100</button>
-                                    <button type="button" class="mm-btn mm-btn-sm" data-add="max">Max</button>
+                        </div>
+                        <div id="btCases" class="bt-cases"></div>
+
+                        <div class="bt-create">
+                            <div id="btPicked" class="bt-picked"></div>
+                            <div class="bt-create-row">
+                                <div id="btSizes" class="bt-tabs" role="radiogroup" aria-label="Players">
+                                    <button type="button" class="active" data-size="2">1v1</button>
+                                    <button type="button" data-size="3">1v1v1</button>
+                                    <button type="button" data-size="4">1v1v1v1</button>
                                 </div>
-                                <div class="jp-input-row">
-                                    <input id="jpAmount" class="mm-input" type="number" min="1" step="1" inputmode="numeric" placeholder="Coins" aria-label="Coins to put in">
-                                    <button id="jpBetButton" type="submit" class="mm-btn mm-btn-primary">
-                                        <i class="bi bi-plus-circle"></i> Put in
-                                    </button>
-                                </div>
-                            </form>
-                            <button type="button" id="jpBonus" class="mm-btn w-100" hidden>
-                                <i class="bi bi-gift"></i> Claim your free daily coins
-                            </button>
-                            <p id="jpError" class="jp-error" hidden></p>
+                                <label class="bt-crazy" title="Crazy mode: the lowest total wins">
+                                    <input type="checkbox" id="btCrazy"> Crazy
+                                </label>
+                                <button type="button" id="btCreate" class="mm-btn mm-btn-primary" disabled>
+                                    <i class="bi bi-plus-circle"></i> <span id="btCreateLabel">Create</span>
+                                </button>
+                            </div>
                         </div>
 
-                        <!--- Last winner and the records of the day --->
-                        <div class="jp-records">
-                            <div class="jp-record" id="jpLastWinner"></div>
-                            <div class="jp-record" id="jpBiggest"></div>
-                            <div class="jp-record" id="jpLuckiest"></div>
+                        <div class="bt-section-head">
+                            <span class="fw-semibold">Battles</span>
+                            <span id="btCount" class="mm-badge"></span>
                         </div>
+                        <div id="btBattles" class="bt-battles"></div>
+                        <p id="btBattlesEmpty" class="jp-empty mm-muted">No battles yet - create the first one!</p>
                     </div>
 
-                    <p id="jpResult" class="jp-result" hidden></p>
-
-                    <!--- Provably fair --->
-                    <div id="jpFair" class="jp-fair"></div>
-                </section>
-
-                <!--- Every bet of the round, newest first --->
-                <section class="mm-card jp-deposits">
-                    <div class="side-head">
-                        <span class="fw-semibold"><i class="bi bi-list-ul me-2"></i>Deposits</span>
-                        <span id="jpBetCount" class="mm-badge"></span>
-                    </div>
-                    <ol id="jpBets" class="jp-bets"></ol>
-                    <p id="jpBetsEmpty" class="jp-empty mm-muted">No coins in this round yet - be the first!</p>
+                    <!--- One battle --->
+                    <div id="btBattleView" class="bt-view" hidden></div>
                 </section>
             </div>
 
             <aside class="room-side">
-                <div class="mm-card side-card">
-                    <div class="side-head">
-                        <span class="fw-semibold"><i class="bi bi-people me-2"></i>In the pot</span>
-                        <span id="jpViewers" class="mm-badge"></span>
-                    </div>
-                    <div id="jpPlayers" class="player-list"></div>
-                    <p id="jpEmpty" class="jp-empty mm-muted">Nobody is in yet - be the first!</p>
-                </div>
-
                 <div class="mm-card side-card jp-history-card">
                     <div class="side-head">
-                        <span class="fw-semibold"><i class="bi bi-clock-history me-2"></i>Last winners</span>
+                        <span class="fw-semibold"><i class="bi bi-clock-history me-2"></i>Last battles</span>
                     </div>
-                    <ol id="jpHistory" class="jp-history"></ol>
-                    <p id="jpHistoryEmpty" class="jp-empty mm-muted">No rounds yet.</p>
+                    <ol id="btHistory" class="jp-history"></ol>
+                    <p id="btHistoryEmpty" class="jp-empty mm-muted">No battles yet.</p>
                 </div>
 
                 <div class="mm-card chat-card">
@@ -225,8 +193,7 @@
     <script src="/static/scripts/avatar.js"></script>
     <script src="/static/scripts/ui.js"></script>
     <script src="/static/scripts/nav.js"></script>
-    <script src="/static/scripts/jackpot.js"></script>
-    <script src="/static/scripts/jackpot_draws.js"></script>
+    <script src="/static/scripts/battles.js"></script>
     <script src="/static/scripts/chat.js"></script>
 </body>
 

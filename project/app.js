@@ -40,6 +40,7 @@ require("./sockets/singleplayer_server")(io);
 require("./sockets/multiplayer_server")(io);
 require("./sockets/tictactoe_server")(io);
 require("./sockets/jackpot_server")(io);
+require("./sockets/battles_server")(io);
 
 /* Page routes */
 const authenticationRoute = require("./routes/authentication_route");
@@ -81,6 +82,8 @@ app.get("/singleplayer", Auth, page("singleplayer.html"));
 app.get("/tictactoe", Auth, page("tictactoe.html"));
 // Hidden: not linked anywhere (Konami code in the lobby)
 app.get("/jackpot", Auth, page("jackpot.html"));
+// Hidden too: only reachable from the jackpot page
+app.get("/battles", Auth, page("battles.html"));
 
 /* Error handling */
 app.use((req, res, next) => {
