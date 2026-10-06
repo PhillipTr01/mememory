@@ -326,17 +326,17 @@ test("jackpot: the Konami code gets the secret address from the server", async (
   assert.strictEqual(url, encodeURI("/🤫🎰💸") + "/");
 });
 
-test("coins: everybody starts with 100k - a reset gives every account 100k once", async () => {
-  assert.strictEqual(config.START_COINS, 100000);
+test("coins: new accounts start with 50k - a reset gives every account the start coins once", async () => {
+  assert.strictEqual(config.START_COINS, 50000);
   // A new account
   h.addUser("erin");
-  assert.strictEqual((await coins.get("erin")).coins, 100000);
-  // An account from before the reset (30 coins left): 100k, only once
+  assert.strictEqual((await coins.get("erin")).coins, 50000);
+  // An account from before a reset (30 coins left): the start coins, only once
   h.addUser("frank");
   const User = require("../models/User");
   await User.updateOne({ username: "frank" }, { $set: { coins: 30, coinReset: "an-old-reset" } });
-  assert.strictEqual((await coins.get("frank")).coins, 100000);
-  assert.strictEqual(await coins.spend("frank", 99000), true);
+  assert.strictEqual((await coins.get("frank")).coins, 50000);
+  assert.strictEqual(await coins.spend("frank", 49000), true);
   assert.strictEqual((await coins.get("frank")).coins, 1000, "no second reset");
 });
 

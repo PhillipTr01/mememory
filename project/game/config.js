@@ -48,10 +48,10 @@ module.exports = {
   SPEED_START_ANIMATION: 2600,
 
   // Coins (hidden jackpot): start amount, free coins for everybody once a day
-  START_COINS: 100000,
+  START_COINS: 50000,
   // Every account gets START_COINS once for this id: a new id resets everybody's coins
   COIN_RESET: "reset-100k",
-  DAILY_BONUS: 1000,
+  DAILY_BONUS: 2500,
   BONUS_EVERY: 24 * 60 * 60 * 1000,
   // Coins for a win (only real wins: no surrender / left opponent)
   COIN_REWARDS: { easy: 5, medium: 10, hard: 20, expert: 40, multiplayer: 15, tictactoe: 5 },

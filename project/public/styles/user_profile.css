@@ -263,6 +263,13 @@
 }
 
 .avatar-option {
+  /* Exactly round: a square box, the avatar in the middle (no text line around it) */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  line-height: 0;
+  flex-shrink: 0;
   padding: 4px;
   border: 2px solid transparent;
   border-radius: 50%;
