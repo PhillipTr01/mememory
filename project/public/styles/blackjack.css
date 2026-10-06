@@ -1,0 +1,328 @@
+/* ---------- Hidden blackjack (cards from poker.css, gold theme from jackpot.css) ---------- */
+.bj-main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* The table: round at the bottom like a real one */
+.bj-table {
+  position: relative;
+  min-height: 430px;
+  padding: 1.2rem 1rem 1.4rem;
+  border: 10px solid #3a2a1f;
+  border-radius: 24px 24px 50% 50% / 24px 24px 38% 38%;
+  background: radial-gradient(ellipse at 50% 20%, #2f7a4f, #1d5236 70%, #17432c);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.08), inset 0 0 40px rgba(0, 0, 0, 0.45), 0 10px 30px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.bj-dealer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 104px;
+}
+
+.bj-cards {
+  display: flex;
+  justify-content: center;
+}
+
+/* Cards a bit on top of each other, like dealt */
+.bj-cards .pk-card + .pk-card {
+  margin-left: -16px;
+}
+
+.bj-cards.small .pk-card {
+  width: 38px;
+  height: 54px;
+}
+
+.bj-cards.small .pk-card + .pk-card {
+  margin-left: -18px;
+}
+
+.bj-cards.small .pk-rank {
+  font-size: 0.8rem;
+  left: 4px;
+  top: 3px;
+}
+
+.bj-cards.small .pk-suit {
+  font-size: 1.3rem;
+  margin-top: 8px;
+}
+
+.bj-value {
+  padding: 0.05rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.bj-value.bust {
+  background: var(--mm-danger);
+}
+
+.bj-rules {
+  margin: 0.2rem 0 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* Five seats in an arc */
+.bj-seats {
+  width: 100%;
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  align-items: start;
+}
+
+.bj-seat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 150px;
+  padding: 0.4rem 0.2rem;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  transform: translateY(var(--lift, 0));
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.bj-seat.clickable {
+  cursor: pointer;
+}
+
+.bj-seat.mine {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.bj-seat.selected {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.12);
+}
+
+.bj-seat.turn {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.bj-seat-empty {
+  margin-top: auto;
+  width: 74px;
+  height: 74px;
+  border: 2px dashed rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.12);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.bj-seat-empty:hover:not(:disabled) {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+}
+
+.bj-seat-empty:disabled {
+  opacity: 0.4;
+}
+
+.bj-hands {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 80px;
+}
+
+.bj-hand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border-radius: 10px;
+}
+
+.bj-hand.active {
+  box-shadow: 0 0 0 2px var(--mm-accent), 0 0 14px rgba(var(--mm-accent-rgb), 0.6);
+}
+
+.bj-hand.lose .bj-cards,
+.bj-hand.bust .bj-cards {
+  opacity: 0.45;
+}
+
+.bj-result {
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+  animation: pk-bet 0.3s ease-out;
+}
+
+.bj-result.win,
+.bj-result.blackjack {
+  background: var(--mm-accent);
+  color: var(--mm-on-accent);
+}
+
+.bj-result.push {
+  background: rgba(255, 255, 255, 0.85);
+  color: #111;
+}
+
+.bj-result.lose,
+.bj-result.bust {
+  background: rgba(0, 0, 0, 0.6);
+  color: #fca5a5;
+}
+
+.bj-bet {
+  padding: 0.05rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.bj-who {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+}
+
+.bj-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+/* Bet and action bars under the table */
+.bj-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  border: 1px solid var(--mm-accent);
+  border-radius: var(--mm-radius);
+  background: rgba(var(--mm-accent-rgb), 0.06);
+}
+
+.bj-bar[hidden] {
+  display: none;
+}
+
+.bj-bar-label {
+  font-weight: 800;
+  color: var(--mm-accent);
+}
+
+.bj-chips {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.bj-chip {
+  width: 42px;
+  height: 42px;
+  border: 3px dashed rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+  background: #1f2937;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: transform 0.12s ease;
+}
+
+.bj-chip[data-chip="50"] { background: #b91c1c; }
+.bj-chip[data-chip="100"] { background: #1d4ed8; }
+.bj-chip[data-chip="500"] { background: #6d28d9; }
+.bj-chip[data-chip="1000"] { background: #b45309; }
+.bj-chip[data-chip="5000"] { background: #a16207; border-color: #fde68a; }
+
+.bj-chip:hover:not(:disabled) {
+  transform: translateY(-3px);
+}
+
+.bj-chip:disabled {
+  opacity: 0.35;
+}
+
+.bj-amount {
+  width: 110px;
+}
+
+.jp-history-won.minus {
+  color: var(--mm-danger);
+}
+
+@media (max-width: 767px) {
+  .bj-table {
+    min-height: 380px;
+    padding: 0.8rem 0.4rem 1rem;
+    border-width: 6px;
+  }
+
+  .bj-seats {
+    gap: 0.15rem;
+  }
+
+  .bj-seat {
+    min-height: 130px;
+    transform: translateY(calc(var(--lift, 0) * 0.5));
+  }
+
+  .bj-seat-empty {
+    width: 54px;
+    height: 54px;
+    font-size: 0.62rem;
+  }
+
+  .bj-cards.small .pk-card {
+    width: 28px;
+    height: 40px;
+  }
+
+  .bj-cards.small .pk-card + .pk-card {
+    margin-left: -14px;
+  }
+
+  .bj-name {
+    display: none;
+  }
+}
+
+@media (max-width: 575px) {
+  .bj-main {
+    padding: 1rem;
+  }
+}

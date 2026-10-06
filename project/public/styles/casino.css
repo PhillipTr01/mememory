@@ -10,7 +10,7 @@
 
 .cs-games {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
 }
 
@@ -39,6 +39,10 @@
 
 .cs-game.battles {
   background: linear-gradient(160deg, rgba(239, 68, 68, 0.12), transparent 55%), var(--mm-surface-2);
+}
+
+.cs-game.blackjack {
+  background: linear-gradient(160deg, rgba(59, 130, 246, 0.14), transparent 55%), var(--mm-surface-2);
 }
 
 .cs-game.poker {

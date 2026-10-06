@@ -344,7 +344,7 @@ test("casino: the start page shows what is going on in every game", async () => 
   const page = server.client("/casino", tokens.carol);
   sockets.push(page);
   const summary = await h.once(page, "summary");
-  assert.deepStrictEqual(Object.keys(summary).sort(), ["battles", "jackpot", "poker"]);
+  assert.deepStrictEqual(Object.keys(summary).sort(), ["battles", "blackjack", "jackpot", "poker"]);
   assert.strictEqual(summary.poker.seats, config.POKER_SEATS);
   assert.ok(typeof summary.jackpot.total === "number");
 });

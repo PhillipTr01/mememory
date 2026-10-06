@@ -1624,7 +1624,21 @@ body.jackpot-theme {
     font-size: 0.82rem;
   }
 
-  .nav-bonus:not(.ready) #navBonusText {
+  #navBonusText {
+    display: none;
+  }
+}
+
+/* Phones: the coins and the bonus next to the logo without overlapping it */
+@media (max-width: 575px) {
+  .nav-bonus,
+  .nav-coins {
+    margin-right: 0.3rem;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.82rem;
+  }
+
+  #navBonusText {
     display: none;
   }
 }

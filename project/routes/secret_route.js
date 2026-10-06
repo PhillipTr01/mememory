@@ -6,7 +6,7 @@ const withdrawals = require("../game/withdrawals");
 
 /*
  * The hidden pages, mounted at the secret address (config.JACKPOT_PATH):
- * the choice of games, the jackpot, case battles and poker.
+ * the choice of games, the jackpot, case battles, poker and blackjack.
  * The pages link each other relatively, so the address is in no page.
  */
 module.exports = function (auth) {
@@ -20,6 +20,7 @@ module.exports = function (auth) {
   router.get("/jackpot", auth, page("jackpot.html"));
   router.get("/battles", auth, page("battles.html"));
   router.get("/poker", auth, page("poker.html"));
+  router.get("/blackjack", auth, page("blackjack.html"));
 
   /* ---------- Payouts of the logged in player ---------- */
 

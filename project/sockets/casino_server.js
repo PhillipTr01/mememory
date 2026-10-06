@@ -21,10 +21,12 @@ module.exports = function (io, games) {
     const shown = pot.bets; // only bets that arrived
     const battles = [...games.battles.lobby.list.values()];
     const seats = games.poker.table.seats;
+    const bjSeats = games.blackjack.table.seats.filter((seat) => seat != null);
     return {
       jackpot: { phase: pot.phase, total: shown.reduce((sum, bet) => sum + bet.amount, 0), players: new Set(shown.map((bet) => bet.name)).size },
       battles: { open: battles.filter((b) => b.phase === "waiting").length, running: battles.filter((b) => b.phase === "running").length },
       poker: { seated: seats.filter((seat) => seat != null).length, seats: seats.length, playing: games.poker.table.phase !== "waiting" },
+      blackjack: { players: new Set(bjSeats.map((seat) => seat.name)).size, seats: bjSeats.length, phase: games.blackjack.table.phase },
     };
   }
 

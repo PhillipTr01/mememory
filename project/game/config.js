@@ -112,4 +112,14 @@ module.exports = {
   POKER_SHOWDOWN: 6000, // the result is shown this long
   POKER_AWAY: 30 * 1000, // a player without an open page leaves the table
   POKER_HISTORY: 10,
+
+  // Blackjack (hidden): one table against the dealer, a player can take several seats
+  BJ_SEATS: 5,
+  BJ_MIN_BET: 10,
+  BJ_MAX_BET: 5000, // per seat (a double or a split adds the same again)
+  BJ_BETTING: 10000, // after the first bet: time for the others to bet
+  BJ_TURN: 15000, // time for a decision, then the hand stands
+  BJ_STEP: 700, // dealer cards, one after the other
+  BJ_RESULT: 5000, // the result is shown this long
+  BJ_HISTORY: 10,
 };

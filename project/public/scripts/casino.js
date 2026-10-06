@@ -36,6 +36,8 @@ function live(id, text, hot) {
 }
 
 socket.on("summary", (data) => {
+  var blackjack = data.blackjack;
+  if (blackjack) live("csBlackjack", blackjack.players == 0 ? "The dealer is waiting - take a seat" : "🂡 " + blackjack.players + (blackjack.players == 1 ? " player" : " players") + " · " + blackjack.seats + " seats", blackjack.players > 0);
   var jackpot = data.jackpot;
   if (jackpot.phase == "drawing") live("csJackpot", "🎰 Drawing a winner right now", true);
   else if (jackpot.total > 0) live("csJackpot", "🪙 " + formatCoins(jackpot.total) + " in the pot · " + jackpot.players + (jackpot.players == 1 ? " player" : " players"), jackpot.phase == "countdown");

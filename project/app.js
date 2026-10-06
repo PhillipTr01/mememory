@@ -43,7 +43,8 @@ require("./sockets/tictactoe_server")(io);
 const jackpotGame = require("./sockets/jackpot_server")(io);
 const battlesGame = require("./sockets/battles_server")(io);
 const pokerTable = require("./sockets/poker_server")(io);
-require("./sockets/casino_server")(io, { jackpot: jackpotGame, battles: battlesGame, poker: pokerTable });
+const blackjackTable = require("./sockets/blackjack_server")(io);
+require("./sockets/casino_server")(io, { jackpot: jackpotGame, battles: battlesGame, poker: pokerTable, blackjack: blackjackTable });
 
 /* Page routes */
 const authenticationRoute = require("./routes/authentication_route");
@@ -180,10 +181,9 @@ function shutdown(code = 0) {
   // Force exit if closing takes too long
   setTimeout(() => process.exit(code), 5000).unref();
 
-  // The chips at the poker table go back to the players first
-  pokerTable
-    .refundAll()
-    .catch((error) => console.error("Poker refund failed:", error))
+  // The chips at the poker table and the open blackjack bets go back to the players first
+  Promise.all([pokerTable.refundAll(), blackjackTable.refundAll()])
+    .catch((error) => console.error("Refund failed:", error))
     .finally(() => {
       io.close();
       server.close(() => {

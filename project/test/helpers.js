@@ -129,7 +129,8 @@ async function startServer() {
   const jackpot = require("../sockets/jackpot_server")(io);
   const battles = require("../sockets/battles_server")(io);
   const poker = require("../sockets/poker_server")(io);
-  require("../sockets/casino_server")(io, { jackpot, battles, poker });
+  const blackjack = require("../sockets/blackjack_server")(io);
+  require("../sockets/casino_server")(io, { jackpot, battles, poker, blackjack });
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
 
@@ -137,6 +138,7 @@ async function startServer() {
     io,
     port,
     poker,
+    blackjack,
     client(namespace, token) {
       return connect(`http://localhost:${port}${namespace}`, {
         transports: ["websocket"],
