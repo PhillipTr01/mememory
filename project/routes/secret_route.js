@@ -4,6 +4,7 @@ const { asyncHandler } = require("../utils/errors");
 const User = require("../models/User");
 const withdrawals = require("../game/withdrawals");
 const access = require("../game/access");
+const leaderboard = require("../game/leaderboard");
 
 /*
  * The hidden pages, mounted at the secret address (config.JACKPOT_PATH):
@@ -21,7 +22,7 @@ module.exports = function (auth) {
       req.payoutAllowed = user.payoutAllowed === true;
       return next();
     }
-    if (req.path.startsWith("/withdraw")) return res.status(403).json({ error: "No access." });
+    if (req.path.startsWith("/withdraw") || req.path.startsWith("/leaderboard/")) return res.status(403).json({ error: "No access." });
     if (req.path === "/") return page("casino_request.html")(req, res, next);
     res.redirect(req.baseUrl + "/");
   });
@@ -34,6 +35,7 @@ module.exports = function (auth) {
   router.get("/battles", auth, approved, page("battles.html"));
   router.get("/poker", auth, approved, page("poker.html"));
   router.get("/blackjack", auth, approved, page("blackjack.html"));
+  router.get("/leaderboard", auth, approved, page("leaderboard.html"));
 
   router.use(express.json({ limit: "2kb" }));
 
@@ -57,6 +59,15 @@ module.exports = function (auth) {
       await access.request(req._id);
       res.json({ requested: true });
     }),
+  );
+
+  /* ---------- Leaderboard (made once a day) ---------- */
+
+  router.get(
+    "/leaderboard/data",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => res.json(await leaderboard.view(req.username))),
   );
 
   /* ---------- Payouts of the logged in player ---------- */

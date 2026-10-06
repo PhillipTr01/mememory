@@ -73,7 +73,7 @@ test("access: without the approval the secret address only shows the page to ask
   const html = await start.text();
   assert.match(html, /Ask for access/);
   assert.doesNotMatch(html, /<title>Jackpot/);
-  for (const path of ["/jackpot", "/battles", "/poker", "/blackjack"]) {
+  for (const path of ["/jackpot", "/battles", "/poker", "/blackjack", "/leaderboard"]) {
     const res = await call(CASINO + path, as("tom"));
     assert.strictEqual(res.status, 302, path);
     assert.strictEqual(res.headers.get("location"), CASINO + "/", path);
@@ -82,6 +82,11 @@ test("access: without the approval the secret address only shows the page to ask
   assert.strictEqual((await call(CASINO + "/")).headers.get("location"), "/");
   assert.strictEqual((await call(CASINO + "/withdraw", { ...as("tom"), json: { amount: 5000 } })).status, 403);
   assert.strictEqual((await call(CASINO + "/withdrawals", as("tom"))).status, 403);
+  assert.strictEqual((await call(CASINO + "/leaderboard/data", as("tom"))).status, 403);
+  // Approved: the leaderboard
+  assert.strictEqual((await call(CASINO + "/leaderboard", as("old"))).status, 200);
+  const board = await (await call(CASINO + "/leaderboard/data", as("old"))).json();
+  assert.strictEqual(board.me.username, "old");
 
   for (const namespace of ["/jackpot", "/battles", "/poker", "/blackjack"]) {
     const result = await connect(namespace, "tom");

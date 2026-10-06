@@ -1,0 +1,228 @@
+/* ---------- Leaderboard of the casino (gold theme from jackpot.css) ---------- */
+.lb-main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* The top three on steps: 2nd, 1st, 3rd */
+.lb-podium {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0.8rem;
+  padding-top: 0.5rem;
+}
+
+.lb-spot {
+  flex: 1;
+  max-width: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  animation: lb-rise 0.5s ease-out both;
+}
+
+.lb-spot.place-1 {
+  animation-delay: 0.15s;
+}
+
+.lb-spot.place-3 {
+  animation-delay: 0.3s;
+}
+
+@keyframes lb-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+.lb-medal {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.lb-spot.place-1 .lb-medal {
+  font-size: 2.4rem;
+}
+
+.lb-spot .mm-avatar.lg {
+  box-shadow: 0 0 0 3px var(--mm-surface-3);
+}
+
+.lb-spot.place-1 .mm-avatar.lg {
+  --size: 68px;
+  box-shadow: 0 0 0 3px var(--mm-accent), 0 0 22px rgba(var(--mm-accent-rgb), 0.45);
+}
+
+.lb-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+  color: var(--mm-text);
+}
+
+.lb-coins {
+  font-weight: 800;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lb-step {
+  width: 100%;
+  margin-top: 0.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--mm-radius) var(--mm-radius) 0 0;
+  background: linear-gradient(180deg, var(--mm-surface-3), var(--mm-surface-2));
+  color: var(--mm-muted);
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+
+.lb-spot.place-1 .lb-step {
+  height: 92px;
+  background: linear-gradient(180deg, rgba(var(--mm-accent-rgb), 0.45), rgba(var(--mm-accent-rgb), 0.12));
+  color: var(--mm-text);
+}
+
+.lb-spot.place-2 .lb-step {
+  height: 66px;
+}
+
+.lb-spot.place-3 .lb-step {
+  height: 46px;
+}
+
+.lb-spot.mine .lb-name::after {
+  content: " (you)";
+  color: var(--mm-muted);
+  font-weight: 600;
+}
+
+/* Up / down since the day before */
+.lb-change {
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-change.up {
+  color: var(--mm-success);
+}
+
+.lb-change.down {
+  color: var(--mm-danger);
+}
+
+.lb-change.same {
+  color: var(--mm-muted);
+}
+
+.lb-change.new {
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  color: var(--mm-accent);
+  text-transform: uppercase;
+}
+
+/* The own place */
+.lb-me {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.55);
+  border-radius: var(--mm-radius);
+  background: rgba(var(--mm-accent-rgb), 0.08);
+}
+
+.lb-me[hidden] {
+  display: none;
+}
+
+.lb-me-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
+
+.lb-me-rank {
+  flex: 1;
+  font-weight: 800;
+}
+
+/* Everybody else */
+.lb-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.lb-row {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 3.5rem auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface-2);
+}
+
+.lb-row.mine {
+  box-shadow: inset 0 0 0 1px var(--mm-accent);
+}
+
+.lb-rank {
+  color: var(--mm-muted);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-who {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.lb-next {
+  margin: 0 0 0.4rem;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 575px) {
+  .lb-main {
+    padding: 1rem;
+  }
+
+  .lb-podium {
+    gap: 0.4rem;
+  }
+
+  .lb-row {
+    grid-template-columns: 2.4rem minmax(0, 1fr) auto;
+  }
+
+  .lb-row .lb-change {
+    display: none;
+  }
+}
