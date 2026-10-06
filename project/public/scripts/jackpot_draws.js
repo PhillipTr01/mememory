@@ -1307,9 +1307,8 @@ var slotsDraw = {
     var root = scene(stage, "slots");
     root.replaceChildren();
     var machine = el("div", "jp-slotm");
-    // The sign on top: lights running round the word
     var top = el("div", "jp-slots-top");
-    top.append(el("span", "jp-slots-lights"), el("span", "jp-slots-title", "★ JACKPOT ★"), el("span", "jp-slots-lights"));
+    top.append(el("span", "jp-slots-title", "Jackpot"), el("span", "jp-slots-sub", "3 in a row wins"));
     var window_ = el("div", "jp-slots-window");
     var reels = [0, 1, 2].map(() => {
       var reel = el("div", "jp-reel");
@@ -1318,13 +1317,11 @@ var slotsDraw = {
       window_.appendChild(reel);
       return { reel: reel, track: track };
     });
-    // The win line: an arrow on both sides, glass over the reels
-    window_.append(el("div", "jp-slots-line"), el("span", "jp-slots-arrow left"), el("span", "jp-slots-arrow right"), el("div", "jp-slots-glass"));
+    // The win line through the middle, marked on both sides
+    window_.append(el("div", "jp-slots-line"), el("span", "jp-slots-arrow left"), el("span", "jp-slots-arrow right"));
     var lever = el("div", "jp-slots-lever");
     lever.appendChild(el("span", "jp-slots-knob"));
-    var mount = el("span", "jp-slots-mount");
-    var tray = el("div", "jp-slots-tray");
-    machine.append(top, window_, tray, mount, lever);
+    machine.append(top, window_, lever);
     root.appendChild(machine);
     return { root: root, machine: machine, reels: reels, lever: lever };
   },
