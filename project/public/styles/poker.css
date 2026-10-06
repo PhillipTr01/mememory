@@ -339,14 +339,15 @@
   position: absolute;
   inset: -6px;
   border-radius: 50%;
-  background: conic-gradient(var(--mm-accent) calc(var(--left) * 360deg), transparent 0);
+  /* The used part grows clockwise from the top: what is left goes round like a clock hand */
+  background: conic-gradient(transparent calc((1 - var(--left)) * 360deg), var(--mm-accent) 0);
   -webkit-mask: radial-gradient(circle, transparent 27px, #000 28px);
   mask: radial-gradient(circle, transparent 27px, #000 28px);
   pointer-events: none;
 }
 
 .pk-timer.hurry {
-  background: conic-gradient(var(--mm-danger) calc(var(--left) * 360deg), transparent 0);
+  background: conic-gradient(transparent calc((1 - var(--left)) * 360deg), var(--mm-danger) 0);
 }
 
 .pk-dealer {
