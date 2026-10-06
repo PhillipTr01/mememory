@@ -110,7 +110,7 @@ function renderStatus() {
       state.entries.length == 0
         ? "Put in coins - the more you put in, the higher your chance."
         : ghostSeconds != null
-          ? "Waiting for a second player - a 👻 ghost bet joins in " + ghostSeconds + "s"
+          ? "Waiting for a second player - a 👻 ghost joins in " + ghostSeconds + "s"
           : "Waiting for a second player...";
     center.innerText = state.entries.length == 0 ? "Waiting for players" : "Waiting for a 2nd player";
     center.className = "jp-center-status";
@@ -361,7 +361,7 @@ function timeLeft() {
   return countdownEnd == null ? 0 : Math.max(0, countdownEnd - Date.now());
 }
 
-var ghostEnd = null; // alone in the pot: when the ghost bet comes
+var ghostEnd = null; // alone in the pot: when the ghost comes
 
 function renderCountdown() {
   clearInterval(countdownTimer);

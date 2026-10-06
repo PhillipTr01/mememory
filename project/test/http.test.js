@@ -58,6 +58,16 @@ test("register rejects invalid input with 4xx and never 500", async () => {
   }
 });
 
+test("register: the name of the jackpot's ghost can't be taken", async () => {
+  const bodies = [
+    { email: "g@b.de", username: "Ghost", password: "Passw0rd!", repeatPassword: "Passw0rd!" },
+    { email: "g@b.de", username: "ghost", password: "Passw0rd!", repeatPassword: "Passw0rd!" },
+  ];
+  for (const body of bodies) {
+    await assert.rejects(auth.register(body), (err) => err.status === 409 && /username/.test(err.message));
+  }
+});
+
 test("password policy", () => {
   assert.ok(isStrongPassword("Passw0rd!"));
   assert.ok(!isStrongPassword("password"));

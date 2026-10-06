@@ -8,8 +8,9 @@ const version = require("../game/version");
 const persist = require("../game/persist");
 
 const ROOM = "jackpot"; // everybody is in the same (socket.io) room
-// The house when a player is alone too long: a space, so no username can be the same
-const GHOST = "Ghost bet";
+// The house when a player is alone too long ("Ghost" can't be taken as a username)
+const GHOST = "Ghost";
+const OLD_GHOST = "Ghost bet"; // its name before (in a pot saved before the rename)
 const PHASE = {
   OPEN: "open", // waiting for a second player
   COUNTDOWN: "countdown", // the draw starts at endsAt
@@ -34,7 +35,7 @@ module.exports = function (io) {
     draw: null, // {winner, ticket, total} while drawing
     mode: randomMode(), // the animation of this round (the same for everybody)
     timer: null,
-    ghostTimer: null, // a player alone in the pot: the ghost bet comes
+    ghostTimer: null, // a player alone in the pot: the ghost comes
     ghostAt: null,
     history: [], // [{round, winner, total, coins}] newest first
     // Every bet in the pot, oldest first. Each bet has its own tickets
@@ -116,7 +117,7 @@ module.exports = function (io) {
   }
 
   function addToPot(bet) {
-    // A real player joins: the ghost bet is gone, the countdown goes on
+    // A real player joins: the ghost is gone, the countdown goes on
     if (bet.name !== GHOST && hasGhost() && !pot.entries.some((e) => e.name === bet.name)) removeGhost();
     const current = pot.entries.find((e) => e.name === bet.name);
     if (current != null) current.coins += bet.amount;
@@ -126,11 +127,11 @@ module.exports = function (io) {
     if (pot.phase === PHASE.OPEN && pot.entries.length >= 2) startCountdown();
     // Alone against the ghost and more coins in: the ghost answers (no sniping the pot)
     if (bet.name !== GHOST && current != null && hasGhost() && pot.entries.length === 2) addToPot({ name: GHOST, amount: ghostAmount(bet.amount) });
-    // The first player: alone too long, the ghost bet comes
+    // The first player: alone too long, the ghost comes
     if (pot.phase === PHASE.OPEN && pot.entries.length === 1 && pot.ghostTimer == null) startGhostTimer();
   }
 
-  /* ---------- The ghost bet ---------- */
+  /* ---------- The ghost ---------- */
 
   function hasGhost() {
     return pot.entries.some((entry) => entry.name === GHOST);
@@ -222,14 +223,14 @@ module.exports = function (io) {
   }
 
   // Paid right away, so nothing is lost if the page (or the server) goes away
-  // during the animation (the ghost bet wins: the house keeps the pot)
+  // during the animation (the ghost wins: the house keeps the pot)
   async function payWinner() {
     if (pot.paid) return;
     pot.paid = true;
     const winner = pot.entries.find((entry) => entry.name === pot.draw.winner);
     if (winner.name === GHOST) return;
     try {
-      await coins.add(winner.name, pot.draw.total, { quiet: true, reason: "jackpot win", note: hasGhost() ? "against the ghost bet" : undefined });
+      await coins.add(winner.name, pot.draw.total, { quiet: true, reason: "jackpot win", note: hasGhost() ? "against the ghost" : undefined });
     } catch (error) {
       console.error("[jackpot] Could not pay the winner:", error);
     }
@@ -291,6 +292,8 @@ module.exports = function (io) {
       safe("bet", async (data) => {
         const amount = data != null ? data.amount : null;
         if (!Number.isInteger(amount) || amount <= 0) return;
+        // An old account with the name of the house can't play here
+        if (username.toLowerCase() === GHOST.toLowerCase()) return socket.emit("betError", "This name is reserved.");
         // One bet at a time per user (two tabs, fast clicks)
         if (betting.has(username)) return;
         // Any amount, but at most a few separate bets per round (during a draw: for the next one)
@@ -371,6 +374,11 @@ module.exports = function (io) {
     clearTimeout(pot.timer);
     stopGhostTimer();
     pot.incoming.forEach((bet) => clearTimeout(bet.timer));
+    // Saved before the ghost was renamed
+    const rename = (item) => item && item.name === OLD_GHOST && (item.name = GHOST);
+    (saved.entries || []).forEach(rename);
+    (saved.bets || []).forEach(rename);
+    if (saved.draw && saved.draw.winner === OLD_GHOST) saved.draw.winner = GHOST;
     Object.assign(pot, saved, { timer: null, ghostTimer: null });
     const now = Date.now();
     const grace = config.RESTORE_GRACE;

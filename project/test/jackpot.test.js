@@ -192,7 +192,7 @@ test("jackpot: two players start the countdown, the winner gets the whole pot", 
   assert.strictEqual(next.round, drawing.round + 1);
 });
 
-test("jackpot: alone in the pot - a ghost bet of 50-150% joins, a real player makes it disappear", async () => {
+test("jackpot: alone in the pot - a ghost of 50-150% joins, a real player makes it disappear", async () => {
   h.setCoins("alice", 5000);
   h.setCoins("bob", 5000);
   const alice = client("alice");
@@ -209,16 +209,16 @@ test("jackpot: alone in the pot - a ghost bet of 50-150% joins, a real player ma
   assert.ok((await alone).ghostIn > 0);
   const withGhost = await ghosted;
   const ghost = withGhost.entries.find((e) => e.ghost);
-  assert.strictEqual(ghost.name, "Ghost bet");
+  assert.strictEqual(ghost.name, "Ghost");
   assert.ok(ghost.coins >= 500 && ghost.coins <= 1500, `ghost: ${ghost.coins}`);
   assert.strictEqual(withGhost.phase, "countdown", "the ghost starts the countdown");
-  assert.deepStrictEqual(withGhost.bets.map((b) => [b.name, b.from, b.to]), [["alice", 1, 1000], ["Ghost bet", 1001, 1000 + ghost.coins]]);
+  assert.deepStrictEqual(withGhost.bets.map((b) => [b.name, b.from, b.to]), [["alice", 1, 1000], ["Ghost", 1001, 1000 + ghost.coins]]);
 
   // Alice puts in more: the ghost answers right away with 50-150% of it
   const answered = waitFor(alice, "jackpotState", (s) => s.bets.length === 4);
   alice.emit("bet", { amount: 400 });
   const more = await answered;
-  assert.deepStrictEqual(more.bets.map((b) => b.name), ["alice", "Ghost bet", "alice", "Ghost bet"]);
+  assert.deepStrictEqual(more.bets.map((b) => b.name), ["alice", "Ghost", "alice", "Ghost"]);
   const answer = more.bets[3].amount;
   assert.ok(answer >= 200 && answer <= 600, `ghost answer: ${answer}`);
   assert.strictEqual(more.entries.find((e) => e.ghost).coins, ghost.coins + answer);
@@ -241,7 +241,7 @@ test("jackpot: alone in the pot - a ghost bet of 50-150% joins, a real player ma
   server.jackpot.pot.fair.number = "0.999999999999"; // the last ticket: the ghost's
   const before = h.coinsOf("alice");
   const drawn = await waitFor(alice, "jackpotState", (s) => s.phase === "drawing", 5000);
-  assert.strictEqual(drawn.draw.winner, "Ghost bet");
+  assert.strictEqual(drawn.draw.winner, "Ghost");
   await waitFor(alice, "jackpotState", (s) => s.phase === "open" && s.total === 0, 5000);
   assert.strictEqual(h.coinsOf("alice"), before, "nothing back");
   Object.assign(config, { JACKPOT_GHOST_AFTER: 60000, JACKPOT_COUNTDOWN: 200 });

@@ -30,8 +30,8 @@ async function register(body) {
         throw httpError(409, "email: Path `email` is already in use.");
     }
 
-    /* Check if username is already taken */
-    if (await User.findOne({usernameLowerCase: data.username.toLowerCase()})) {
+    /* Check if username is already taken (or reserved: "Ghost" is the house in the jackpot) */
+    if (data.username.toLowerCase() === "ghost" || await User.findOne({usernameLowerCase: data.username.toLowerCase()})) {
         throw httpError(409, "username: Path `username` is already taken.");
     }
 
