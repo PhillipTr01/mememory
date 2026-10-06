@@ -16,7 +16,7 @@
 .rarity-gold { --rarity: var(--rarity-gold); }
 
 .bt-main {
-  max-width: 980px;
+  max-width: 1240px;
   margin: 0 auto;
   padding: 1.5rem;
   display: flex;
