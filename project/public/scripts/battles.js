@@ -84,6 +84,8 @@ socket.on("battleError", (message) => showToast(message, "error"));
 
 // The new battle of this page: open it
 socket.on("battleCreated", (id) => {
+  // Opened right away - the list with the new battle may come a moment later
+  justCreated = id;
   picked = [];
   renderCreate();
   // Back from the battle: the open battles (with the new one)
@@ -439,16 +441,8 @@ function caseStrip(battle, current) {
   battle.cases.slice(from, to).forEach((id, n) => {
     var index = from + n;
     var box = caseById(id);
-    var item = el(box ? "button" : "span", "bt-strip-case", box ? box.icon : "?");
-    item.title = box ? box.name + " · 🪙 " + formatCoins(box.price) + " - click for the odds" : id;
-    if (box) {
-      item.type = "button";
-      item.setAttribute("aria-label", "What's inside " + box.name);
-      item.addEventListener("click", (event) => {
-        event.stopPropagation();
-        showContents(box);
-      });
-    }
+    var item = el("span", "bt-strip-case", box ? box.icon : "?");
+    item.title = box ? box.name + " · 🪙 " + formatCoins(box.price) : id;
     if (current != null) {
       if (index < current) item.classList.add("done");
       if (index == current) item.classList.add("current");
@@ -569,11 +563,16 @@ function renderHistory() {
 
 var battlesLoaded = false; // the first list came: an unknown battle is gone, not loading
 var lastViewed = null; // the open battle: a finished one stays open after the server drops it
+var justCreated = null; // the battle just created: opened even before the list has it
 
 function currentBattle() {
   var battle = battles.find((battle) => battle.id == viewId) || null;
-  if (battle) lastViewed = battle;
-  else if (lastViewed && lastViewed.id == viewId && lastViewed.phase == "done") battle = lastViewed;
+  if (battle) {
+    lastViewed = battle;
+    if (battle.id == justCreated) justCreated = null;
+  } else if (lastViewed && lastViewed.id == viewId && lastViewed.phase == "done") {
+    battle = lastViewed;
+  }
   return battle;
 }
 
@@ -610,7 +609,7 @@ function renderBattle() {
     pushView(null);
     showView();
   });
-  if (battle == null && !battlesLoaded) {
+  if (battle == null && (!battlesLoaded || viewId == justCreated)) {
     view.replaceChildren(back);
     return;
   }

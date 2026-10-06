@@ -1248,28 +1248,3 @@
   border-color: var(--mm-danger);
   color: #fff;
 }
-
-/* The cases of a battle open what's inside */
-button.bt-strip-case {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.bt-strip.big button.bt-strip-case {
-  border: 1px solid var(--mm-border);
-  background: var(--mm-surface-2);
-  font-size: 1.3rem;
-}
-
-button.bt-strip-case:hover {
-  transform: scale(1.12);
-}
-
-.bt-strip.big button.bt-strip-case:hover {
-  border-color: rgba(var(--mm-accent-rgb), 0.6);
-  opacity: 1;
-}
