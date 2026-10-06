@@ -2213,10 +2213,6 @@ body.jackpot-theme {
   pointer-events: none;
 }
 
-.jp-reel.warming .jp-reel-track {
-  filter: blur(0.6px);
-}
-
 .jp-reel.spinning .jp-reel-track {
   filter: blur(1.5px);
 }

@@ -1372,7 +1372,8 @@ var slotsDraw = {
       var from = 0;
       var to = -height * round.length;
       reel.track.animate([{ transform: `translateY(${from}px)` }, { transform: `translateY(${to}px)` }], {
-        duration: round.length * (260 + i * 70),
+        // Slow: about one face per second, each reel a bit different
+        duration: round.length * (850 + i * 180),
         iterations: Infinity,
         easing: "linear",
       });
