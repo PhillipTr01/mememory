@@ -162,14 +162,17 @@ function renderSeats() {
 
       if (seat == null) {
         spot.classList.add("empty");
+        // A chair: free to sit down (or just empty when I'm already at the table)
+        var sit = el("button", "pk-sit");
+        sit.type = "button";
+        sit.append(el("span", "pk-sit-chair", "🪑"), el("span", "pk-sit-text", me < 0 ? "Sit down" : "Empty"));
         if (me < 0) {
-          var sit = el("button", "mm-btn mm-btn-sm pk-sit", "Sit");
-          sit.type = "button";
+          sit.title = "Sit down with your coins";
           sit.addEventListener("click", () => buyIn(i));
-          spot.appendChild(sit);
         } else {
-          spot.appendChild(el("span", "pk-empty", "Empty"));
+          sit.disabled = true;
         }
+        spot.appendChild(sit);
         return spot;
       }
 

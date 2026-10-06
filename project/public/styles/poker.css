@@ -227,8 +227,49 @@
   background: var(--mm-surface);
 }
 
+/* A free chair: round, dashed, glows when you can sit down */
 .pk-sit {
-  border-style: dashed;
+  width: 68px;
+  height: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  padding: 0;
+  border: 2px dashed rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.35));
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pk-sit-chair {
+  font-size: 1.35rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.pk-sit:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.06);
+  border-color: var(--mm-accent);
+  border-style: solid;
+  color: var(--mm-accent);
+  box-shadow: 0 0 0 4px rgba(var(--mm-accent-rgb), 0.15), 0 0 18px rgba(var(--mm-accent-rgb), 0.45);
+}
+
+.pk-sit:hover:not(:disabled) .pk-sit-chair {
+  transform: rotate(-8deg) scale(1.1);
+}
+
+.pk-sit:disabled {
+  cursor: default;
+  opacity: 0.4;
+  box-shadow: none;
 }
 
 .pk-hole {
@@ -568,6 +609,16 @@
 }
 
 @media (max-width: 575px) {
+  .pk-sit {
+    width: 52px;
+    height: 52px;
+    font-size: 0.56rem;
+  }
+
+  .pk-sit-chair {
+    font-size: 1.05rem;
+  }
+
   .pk-main {
     padding: 1rem;
   }
