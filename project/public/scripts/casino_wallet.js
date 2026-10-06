@@ -165,6 +165,39 @@
   // Only for players with payouts: otherwise the coins are just shown
   button.addEventListener("click", () => payout && payoutDialog());
 
+  /* ---------- Who is online in the casino (in the chat head) ---------- */
+
+  var onlineButton = document.getElementById("chatOnline");
+  var onlineList = document.getElementById("chatOnlineList");
+  if (onlineButton) {
+    socket.on("casinoOnline", (data) => {
+      var names = data.names || [];
+      onlineButton.hidden = names.length == 0;
+      var faces = el("span", "chat-online-faces");
+      names.slice(0, 3).forEach((name) => faces.appendChild(createAvatar(name, "sm")));
+      onlineButton.replaceChildren(faces, el("span", "chat-online-dot"), el("span", "chat-online-count", names.length + " online"));
+      onlineButton.title = names.join(", ");
+      onlineList.replaceChildren(
+        el("div", "chat-online-title", "Online in the casino"),
+        ...names.map((name) => {
+          var row = el("div", "chat-online-row");
+          row.append(createAvatar(name, "sm"), el("span", "", name == myName ? name + " (you)" : name));
+          return row;
+        }),
+      );
+    });
+    var toggle = (open) => {
+      onlineList.hidden = !open;
+      onlineButton.setAttribute("aria-expanded", open);
+    };
+    onlineButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggle(onlineList.hidden);
+    });
+    document.addEventListener("click", (event) => !onlineList.contains(event.target) && toggle(false));
+    document.addEventListener("keydown", (event) => event.key == "Escape" && toggle(false));
+  }
+
   /* ---------- A case battle of mine starts (on every casino page) ---------- */
 
   var notice = null;

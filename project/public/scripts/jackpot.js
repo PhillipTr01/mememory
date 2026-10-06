@@ -87,7 +87,6 @@ function render() {
   if (state == null) return;
   document.getElementById("jpRound").innerText = "Round " + state.round;
   document.getElementById("jpTotal").innerText = "🪙 " + formatCoins(state.total);
-  document.getElementById("jpViewers").innerText = state.viewers + " here";
   // The pot is in the middle of the wheel, the other draws show it above
   document.getElementById("jpPotbar").hidden = state.mode == "wheel";
   // A running animation keeps its scene, a finished one stays until the next round
@@ -292,8 +291,9 @@ function renderRecords() {
 function renderHistory() {
   var list = document.getElementById("jpHistory");
   document.getElementById("jpHistoryEmpty").hidden = state.history.length > 0;
+  // Only the last three winners
   list.replaceChildren(
-    ...state.history.map((round) => {
+    ...state.history.slice(0, 3).map((round) => {
       var item = document.createElement("li");
       var name = document.createElement("span");
       name.className = "jp-history-name";

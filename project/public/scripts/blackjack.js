@@ -107,7 +107,6 @@ function myEmptySeat() {
 function render() {
   if (state == null) return;
   document.getElementById("bjLimits").innerText = formatCoins(state.rules.minBet) + " - " + formatCoins(state.rules.maxBet) + " per seat";
-  document.getElementById("bjViewers").innerText = state.viewers == 1 ? "1 here" : state.viewers + " here";
   // The seat to bet on: one of mine (the one without a bet first)
   if (selected != null && !(state.seats[selected] && state.seats[selected].name == myName)) selected = null;
   var empty = myEmptySeat();

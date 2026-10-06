@@ -238,6 +238,19 @@ test("jackpot: alone in the pot - a ghost bet of 50-150% joins, a real player ma
   Object.assign(config, { JACKPOT_GHOST_AFTER: 60000, JACKPOT_COUNTDOWN: 200 });
 });
 
+test("casino: the chat shows who is online on any casino page - once per player", async () => {
+  const pages = [server.client("/jackpot", tokens.alice), server.client("/poker", tokens.alice), server.client("/blackjack", tokens.carol)];
+  sockets.push(...pages);
+  const seen = waitFor(pages[2], "casinoOnline", (d) => d.names.includes("alice") && d.names.includes("carol"));
+  await Promise.all(pages.map((s) => h.once(s, "connect")));
+  const online = await seen;
+  assert.strictEqual(online.names.filter((n) => n === "alice").length, 1, "two tabs, one name");
+  // Carol leaves: the others hear it
+  const left = waitFor(pages[0], "casinoOnline", (d) => !d.names.includes("carol"));
+  pages[2].close();
+  await left;
+});
+
 test("jackpot: invalid bets are rejected", async () => {
   h.setCoins("carol", 20);
   const carol = client("carol");

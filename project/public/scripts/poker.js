@@ -138,7 +138,6 @@ function isWinningCard(card) {
 function render() {
   if (state == null) return;
   document.getElementById("pkBlinds").innerText = "Blinds " + state.rules.smallBlind + " / " + state.rules.bigBlind;
-  document.getElementById("pkViewers").innerText = state.viewers == 1 ? "1 here" : state.viewers + " here";
   renderSeats();
   renderBoard();
   renderStatus();

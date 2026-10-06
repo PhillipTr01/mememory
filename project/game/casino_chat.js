@@ -2,9 +2,9 @@ const config = require("./config");
 const { cleanText } = require("./chat");
 
 /*
- * One chat for every hidden game (lobby, jackpot, case battles, poker): a
+ * One chat for every hidden game (jackpot, case battles, poker, blackjack): a
  * message written on one page shows up on all of them. Only messages of the
- * players, no info messages.
+ * players, no info messages. The chat also shows who is online in the casino.
  */
 const history = [];
 const pages = []; // [{namespace, room}] every page that shows the chat
@@ -17,6 +17,28 @@ function attach(namespace, room) {
 
 function join(socket) {
   socket.emit("chatHistory", history);
+  socket.emit("casinoOnline", online());
+  sendOnline();
+  socket.on("disconnect", sendOnline);
+}
+
+// Everybody with a casino page open (once per player, however many tabs)
+function online() {
+  const names = new Set();
+  for (const page of pages) for (const socket of page.namespace.sockets.values()) names.add(socket.data.username);
+  return { names: [...names].sort((a, b) => a.localeCompare(b)) };
+}
+
+// Joins and leaves come in bursts (page changes): one update for them
+let onlineTimer = null;
+function sendOnline() {
+  if (onlineTimer) return;
+  onlineTimer = setTimeout(() => {
+    onlineTimer = null;
+    const data = online();
+    for (const page of pages) page.namespace.to(page.room).emit("casinoOnline", data);
+  }, 150);
+  onlineTimer.unref();
 }
 
 function fromUser(socket, data) {

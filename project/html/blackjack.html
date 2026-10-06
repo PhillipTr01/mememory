@@ -158,7 +158,6 @@
                 <div class="mm-card side-card jp-history-card">
                     <div class="side-head">
                         <span class="fw-semibold"><i class="bi bi-clock-history me-2"></i>Last rounds</span>
-                        <span id="bjViewers" class="mm-badge"></span>
                     </div>
                     <ol id="bjHistory" class="jp-history"></ol>
                     <p id="bjHistoryEmpty" class="jp-empty mm-muted">No rounds yet - take a seat!</p>
@@ -167,6 +166,10 @@
                 <div class="mm-card chat-card">
                     <div class="chat-head">
                         <span class="fw-semibold"><i class="bi bi-chat-dots me-2"></i>Chat</span>
+                        <div class="chat-online-wrap">
+                            <button type="button" id="chatOnline" class="chat-online" aria-expanded="false" hidden></button>
+                            <div id="chatOnlineList" class="chat-online-list" hidden></div>
+                        </div>
                     </div>
                     <div class="chat-body-wrap">
                         <div id="chat-content" class="chat-body" aria-live="polite"></div>

@@ -162,7 +162,6 @@
                 <div class="mm-card side-card">
                     <div class="side-head">
                         <span class="fw-semibold"><i class="bi bi-people me-2"></i>In the pot</span>
-                        <span id="jpViewers" class="mm-badge"></span>
                     </div>
                     <div id="jpPlayers" class="player-list"></div>
                     <p id="jpEmpty" class="jp-empty mm-muted">Nobody is in yet - be the first!</p>
@@ -179,6 +178,10 @@
                 <div class="mm-card chat-card">
                     <div class="chat-head">
                         <span class="fw-semibold"><i class="bi bi-chat-dots me-2"></i>Chat</span>
+                        <div class="chat-online-wrap">
+                            <button type="button" id="chatOnline" class="chat-online" aria-expanded="false" hidden></button>
+                            <div id="chatOnlineList" class="chat-online-list" hidden></div>
+                        </div>
                     </div>
                     <div class="chat-body-wrap">
                         <div id="chat-content" class="chat-body" aria-live="polite"></div>
