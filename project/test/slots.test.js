@@ -1,0 +1,111 @@
+const { test, before, after } = require("node:test");
+const assert = require("node:assert");
+const h = require("./helpers");
+const config = require("../game/config");
+const slots = require("../game/slots");
+
+/* ---------- The machine ---------- */
+
+test("slots: 5 reels, 3 rows, 9 lines; pays back about 95% (exactly computed)", () => {
+  assert.strictEqual(slots.STRIPS.length, 5);
+  assert.strictEqual(slots.LINES.length, 9);
+  assert.ok(slots.LINES.every((rows) => rows.length === 5 && rows.every((row) => row >= 0 && row <= 2)));
+  // Nine different lines
+  assert.strictEqual(new Set(slots.LINES.map((rows) => rows.join())).size, 9);
+  const { rtp, lineHit } = slots.rtp();
+  assert.ok(rtp > 0.93 && rtp < 0.97, `payback ${(rtp * 100).toFixed(2)}%`);
+  assert.ok(lineHit > 0.05, "a line wins often enough");
+});
+
+test("slots: a line wins from the left, the wild stands for every symbol", () => {
+  const pays = (id) => slots.SYMBOLS.find((s) => s.id === id).pays;
+  assert.deepStrictEqual(slots.lineWin(["pepe", "pepe", "pepe", "doge", "pepe"]), { multiplier: pays("pepe")[0], symbol: "pepe", count: 3 });
+  assert.strictEqual(slots.lineWin(["doge", "pepe", "pepe", "pepe", "pepe"]).multiplier, 0, "only from the left");
+  assert.deepStrictEqual(slots.lineWin(["wild", "moai", "wild", "moai", "banana"]), { multiplier: pays("moai")[1], symbol: "moai", count: 4 });
+  assert.deepStrictEqual(slots.lineWin(["wild", "wild", "wild", "wild", "wild"]), { multiplier: pays("wild")[2], symbol: "wild", count: 5 });
+  // Three wilds and a banana: the wilds pay more on their own
+  assert.deepStrictEqual(slots.lineWin(["wild", "wild", "wild", "banana", "doge"]), { multiplier: pays("wild")[0], symbol: "wild", count: 3 });
+  assert.strictEqual(slots.lineWin(["banana", "doge", "banana", "banana", "banana"]).multiplier, 0);
+});
+
+test("slots: a spin pays a ninth of the bet per line times the multiplier", () => {
+  // Every reel stops where its middle row is a diamond (or a wild)
+  const stops = slots.STRIPS.map((strip) => strip.indexOf("diamond"));
+  let n = 0;
+  const result = slots.spin(900, () => stops[n++]);
+  assert.deepStrictEqual(result.grid.map((reel) => reel[1]), ["diamond", "diamond", "diamond", "diamond", "diamond"]);
+  const middle = result.lines.find((line) => line.line === 0);
+  assert.deepStrictEqual([middle.symbol, middle.count, middle.win], ["diamond", 5, 100 * 1000]);
+  assert.strictEqual(result.win, Math.floor((900 * result.lines.reduce((sum, line) => sum + line.multiplier, 0)) / 9));
+});
+
+/* ---------- The page ---------- */
+
+let server;
+const tokens = {};
+const sockets = [];
+
+before(async () => {
+  server = await h.startServer();
+  tokens.alice = h.addUser("alice");
+  tokens.bob = h.addUser("bob");
+});
+
+after(async () => {
+  sockets.forEach((s) => s.close());
+  await server.close();
+});
+
+function client(name) {
+  const socket = server.client("/slots", tokens[name]);
+  sockets.push(socket);
+  return socket;
+}
+
+test("slots: a spin costs the bet, the win comes right away, the others see it", async () => {
+  Object.assign(config, { SLOTS_MIN_GAP: 0, SLOTS_SPIN: 10 });
+  h.setCoins("alice", 5000);
+  const alice = client("alice");
+  const bob = client("bob");
+  const setup = await h.once(alice, "slotsSetup");
+  assert.deepStrictEqual([setup.rules.minBet, setup.rules.maxBet, setup.rules.lines], [10, 1000, 9]);
+  await h.once(bob, "slotsFeed");
+  const feeds = [];
+  bob.on("slotsFeed", (feed) => feeds.push(feed));
+
+  // Out of the limits: nothing happens to the coins
+  for (const bet of [5, 1001]) {
+    const refused = h.once(alice, "slotsError");
+    alice.emit("spin", { bet });
+    assert.match(await refused, /10 to 1,000/);
+  }
+  assert.strictEqual(h.coinsOf("alice"), 5000);
+
+  // Spins until one wins: every spin costs 100, every win is paid
+  let spent = 0;
+  let won = 0;
+  let winning = null;
+  for (let i = 0; i < 200 && !winning; i++) {
+    const result = h.once(alice, "slotsResult");
+    alice.emit("spin", { bet: 100 });
+    const r = await result;
+    spent += 100;
+    won += r.win;
+    assert.strictEqual(r.grid.length, 5);
+    if (r.win > 0) winning = r;
+  }
+  assert.ok(winning, "a win within 200 spins");
+  await h.wait(30);
+  assert.strictEqual(h.coinsOf("alice"), 5000 - spent + won);
+  const feed = feeds[feeds.length - 1];
+  assert.ok(feed, "bob saw the win");
+  assert.strictEqual(feed[0].name, "alice");
+  assert.strictEqual(feed[0].win, winning.win);
+
+  // Not enough coins
+  h.setCoins("alice", 50);
+  const poor = h.once(alice, "slotsError");
+  alice.emit("spin", { bet: 100 });
+  assert.match(await poor, /enough coins/);
+  Object.assign(config, { SLOTS_MIN_GAP: 600, SLOTS_SPIN: 2200 });
+});

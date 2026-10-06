@@ -10,6 +10,7 @@ const GAMES = [
   { id: "battles", key: "GAME_BATTLES", name: "Case battles", page: "/battles", tab: "battles", namespace: "/battles" },
   { id: "poker", key: "GAME_POKER", name: "Poker", page: "/poker", tab: "poker", namespace: "/poker" },
   { id: "blackjack", key: "GAME_BLACKJACK", name: "Blackjack", page: "/blackjack", tab: "blackjack", namespace: "/blackjack" },
+  { id: "slots", key: "GAME_SLOTS", name: "Slots", page: "/slots", tab: "slots", namespace: "/slots" },
 ];
 
 function enabled(id) {

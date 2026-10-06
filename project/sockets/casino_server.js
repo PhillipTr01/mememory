@@ -3,7 +3,7 @@ const settings = require("../game/settings");
 const games = require("../game/games");
 const { notices } = require("../game/notices");
 
-const GAMES = ["/jackpot", "/battles", "/poker", "/blackjack"];
+const GAMES = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots"];
 
 function socketsOf(io, username) {
   const list = [];

@@ -52,6 +52,7 @@ module.exports = {
   GAME_BATTLES: true,
   GAME_POKER: true,
   GAME_BLACKJACK: true,
+  GAME_SLOTS: true,
 
   // Coins (hidden jackpot): start amount, free coins for everybody once a day
   START_COINS: 25000,
@@ -141,6 +142,13 @@ module.exports = {
   BJ_CLASSIC_MAX: 2500,
   BJ_HIGH_MIN: 1000,
   BJ_HIGH_MAX: 5000,
+  // Slots (hidden, see game/slots.js): the bet is for a whole spin (all 9 lines)
+  SLOTS_MIN_BET: 10,
+  SLOTS_MAX_BET: 1000,
+  SLOTS_SPIN: 2200, // the reels turn this long on the page
+  SLOTS_MIN_GAP: 600, // at least this long between two spins of a player
+  SLOTS_FEED: 12, // last wins in the list
+
   // The tables of the lobby (in this order, limits from the keys above); a page without a table opens "classic"
   BJ_TABLES: [
     { id: "casual", name: "Casual Corner", icon: "🍀", minKey: "BJ_CASUAL_MIN", maxKey: "BJ_CASUAL_MAX", about: "Small stakes, no stress - learn the ropes." },

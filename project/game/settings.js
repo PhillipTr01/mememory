@@ -28,6 +28,9 @@ const FIELDS = [
   { group: "poker", section: "Poker", key: "GAME_POKER", type: "toggle", label: "Poker is on", hint: "Off: no tab, nobody can open it." },
   { group: "poker", section: "Buy-in", key: "POKER_MIN_BUYIN", label: "Min buy-in", min: 1, max: 100000000 },
   { group: "poker", section: "Buy-in", key: "POKER_MAX_BUYIN", label: "Max buy-in", min: 1, max: 100000000 },
+  { group: "slots", section: "Slots", key: "GAME_SLOTS", type: "toggle", label: "Slots are on", hint: "Off: no tab, nobody can open it." },
+  { group: "slots", section: "Bets", key: "SLOTS_MIN_BET", label: "Min bet per spin", hint: "For all 9 lines together.", min: 9, max: 100000000 },
+  { group: "slots", section: "Bets", key: "SLOTS_MAX_BET", label: "Max bet per spin", hint: "For all 9 lines together.", min: 9, max: 100000000 },
   { group: "blackjack", section: "Blackjack", key: "GAME_BLACKJACK", type: "toggle", label: "Blackjack is on", hint: "Off: no tab, nobody can open it." },
   { group: "blackjack", section: "Seats", key: "BJ_MY_SEATS", label: "Seats per player", hint: "At one table at a time.", min: 1, max: 5 },
   { group: "blackjack", section: "Casual Corner", key: "BJ_CASUAL_MIN", label: "Min bet", hint: "Per seat.", min: 1, max: 100000000 },
@@ -84,6 +87,7 @@ function check(input) {
   for (const table of config.BJ_TABLES) {
     if (next[table.minKey] > next[table.maxKey]) return { error: `${table.name}: the min bet is higher than the max bet.` };
   }
+  if (next.SLOTS_MIN_BET > next.SLOTS_MAX_BET) return { error: "Slots: the min bet is higher than the max bet." };
   if (next.POKER_MIN_BUYIN > next.POKER_MAX_BUYIN) return { error: "Poker: the min buy-in is higher than the max buy-in." };
   return { values: values };
 }

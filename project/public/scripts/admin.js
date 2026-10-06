@@ -15,6 +15,8 @@ var REASONS = [
   "poker refund",
   "game win",
   "daily bonus",
+  "slots bet",
+  "slots win",
   "withdrawal",
   "withdrawal refund",
   "admin",
@@ -74,6 +76,7 @@ var SETTING_GROUPS = {
   battles: ["Case battles", "Turn case battles on or off, how big a battle can be."],
   poker: ["Poker", "Turn poker on or off, the buy-ins."],
   blackjack: ["Blackjack", "Turn blackjack on or off, the seats and the limits of every table."],
+  slots: ["Slots", "Turn slots on or off, the bet per spin."],
 };
 var settingsGroup = "general";
 
@@ -227,6 +230,8 @@ function renderLive(games) {
   if (bt) rows.push(liveRow("⚔️", "Case battles", bt.waiting + " waiting · " + bt.running + " running", "🪙 " + formatCoins(bt.pot), bt.running > 0));
   var pk = games.poker;
   if (pk) rows.push(liveRow("🃏", "Poker", (PHASE_TEXT[pk.phase] || pk.phase) + (pk.hand ? " · hand " + pk.hand : ""), pk.seated + " / " + pk.seats + " seats", pk.seated > 0));
+  var sl = games.slots;
+  if (sl) rows.push(liveRow("🎰", "Slots", sl.playing + (sl.playing == 1 ? " player" : " players") + " at the machines", formatCoins(sl.spins) + " spins", sl.playing > 0));
   (games.blackjack || []).forEach((t) => rows.push(liveRow(t.icon, "Blackjack · " + t.name, (PHASE_TEXT[t.phase] || t.phase) + " · round " + t.round, t.taken + " / " + t.seats + " seats", t.taken > 0)));
   document.getElementById("adLive").replaceChildren(...(rows.length ? rows : [el("p", "ad-empty", "No game is running.")]));
 }

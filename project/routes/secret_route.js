@@ -52,6 +52,7 @@ module.exports = function (auth) {
   router.get("/battles", auth, approved, gamePage("battles", "battles.html"));
   router.get("/poker", auth, approved, gamePage("poker", "poker.html"));
   router.get("/blackjack", auth, approved, gamePage("blackjack", "blackjack.html"));
+  router.get("/slots", auth, approved, gamePage("slots", "slots.html"));
   router.get("/leaderboard", auth, approved, page("leaderboard.html", hideOff));
 
   router.use(express.json({ limit: "2kb" }));

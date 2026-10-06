@@ -7,7 +7,7 @@
     "start": "node app.js",
     "dev": "nodemon app.js",
     "admin-password": "node scripts/admin_password.js",
-    "test": "node --test test/http.test.js test/sockets.test.js test/tictactoe.test.js test/powerups.test.js test/avatar.test.js test/jackpot.test.js test/battles.test.js test/poker.test.js test/admin.test.js test/blackjack.test.js test/access.test.js test/persist.test.js test/restart.test.js test/leaderboard.test.js"
+    "test": "node --test test/http.test.js test/sockets.test.js test/tictactoe.test.js test/powerups.test.js test/avatar.test.js test/jackpot.test.js test/battles.test.js test/poker.test.js test/admin.test.js test/blackjack.test.js test/slots.test.js test/access.test.js test/persist.test.js test/restart.test.js test/leaderboard.test.js"
   },
   "author": "",
   "license": "ISC",

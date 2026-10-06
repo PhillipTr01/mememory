@@ -2,7 +2,7 @@
 <html lang="en" class="min-h-100">
 
 <head>
-    <title>Blackjack - MemeMory</title>
+    <title>Slots - MemeMory</title>
 
     <!-- Required meta tags -->
     <meta charset="utf-8">
@@ -18,8 +18,7 @@
     <link rel="stylesheet" href="/static/styles/theme.css">
     <link rel="stylesheet" href="/static/styles/room.css">
     <link rel="stylesheet" href="/static/styles/jackpot.css">
-    <link rel="stylesheet" href="/static/styles/poker.css">
-    <link rel="stylesheet" href="/static/styles/blackjack.css">
+    <link rel="stylesheet" href="/static/styles/slots.css">
 
     <!--- Icons --->
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico">
@@ -84,71 +83,49 @@
     <main class="room-page">
         <div class="room-layout">
             <div class="room-main">
-                <section class="mm-card bj-main">
-
+                <section class="mm-card sl-main">
                     <div class="jp-head">
                         <div>
-                            <h1 class="jp-title"><span class="bj-icon big" aria-hidden="true">21</span> Blackjack <span id="bjTableName" class="bj-table-name"></span> <span class="mm-badge" id="bjLimits"></span></h1>
-                            <p id="bjStatus" class="jp-status" aria-live="polite"></p>
+                            <h1 class="jp-title"><svg class="cs-title-icon" viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="9" width="32" height="32" rx="6" fill="#d4a017" /><rect x="6" y="9" width="32" height="7" rx="3" fill="#dc2626" /><rect x="10" y="19" width="24" height="14" rx="2.5" fill="#1f1f1f" /><rect x="11.5" y="20.5" width="6.5" height="11" rx="1.2" fill="#fff" /><rect x="18.75" y="20.5" width="6.5" height="11" rx="1.2" fill="#fff" /><rect x="26" y="20.5" width="6.5" height="11" rx="1.2" fill="#fff" /><text x="14.75" y="29.5" text-anchor="middle" font-family="Poppins, sans-serif" font-size="8.5" font-weight="800" fill="#dc2626">7</text><text x="22" y="29.5" text-anchor="middle" font-family="Poppins, sans-serif" font-size="8.5" font-weight="800" fill="#dc2626">7</text><text x="29.25" y="29.5" text-anchor="middle" font-family="Poppins, sans-serif" font-size="8.5" font-weight="800" fill="#dc2626">7</text><path d="M40 30 V16" stroke="#9ca3af" stroke-width="2.4" stroke-linecap="round" /><circle cx="40" cy="14" r="3.2" fill="#dc2626" /><rect x="10" y="36" width="24" height="2.6" rx="1.3" fill="#8a5a00" /></svg> Slots <span class="mm-badge">9 lines</span></h1>
                         </div>
-                        <a id="bjBackToLobby" href="blackjack" class="mm-btn mm-btn-sm bj-lobby-back" hidden><i class="bi bi-grid"></i> All tables</a>
+                        <button type="button" id="slPaytable" class="mm-btn mm-btn-sm"><i class="bi bi-list-ol"></i> Paytable</button>
                     </div>
 
-                    <!--- The lobby: one card per table --->
-                    <div id="bjLobby" class="bj-lobby" hidden></div>
+                    <!--- The machine: 5 reels, 3 rows, the 9 lines drawn over it --->
+                    <div class="sl-machine">
+                        <div class="sl-line-numbers left" id="slNumbersLeft"></div>
+                        <div class="sl-window">
+                            <div id="slReels" class="sl-reels"></div>
+                            <svg id="slLines" class="sl-lines" aria-hidden="true"></svg>
+                        </div>
+                        <div class="sl-line-numbers right" id="slNumbersRight"></div>
+                    </div>
 
-                    <div id="bjTableView" hidden>
-                    <!--- The table: the dealer at the top, 5 seats in an arc --->
-                    <div class="bj-table">
-                        <div class="bj-dealer">
-                            <div id="bjDealerCards" class="bj-cards"></div>
-                            <span id="bjDealerValue" class="bj-value" hidden></span>
-                            <!--- The betting time runs --->
-                            <div id="bjClock" class="bj-clock" hidden>
-                                <svg viewBox="0 0 60 60" aria-hidden="true">
-                                    <circle class="bj-clock-bg" cx="30" cy="30" r="26"></circle>
-                                    <circle id="bjClockRing" class="bj-clock-ring" cx="30" cy="30" r="26"></circle>
-                                </svg>
-                                <span id="bjClockNum" class="bj-clock-num"></span>
-                                <span class="bj-clock-text">Place your bets</span>
+                    <!--- The win of the last spin --->
+                    <div id="slWinBar" class="sl-winbar" aria-live="polite">
+                        <span id="slWinText" class="sl-win-text">Good luck!</span>
+                        <span id="slWinDetail" class="sl-win-detail"></span>
+                    </div>
+
+                    <!--- Bet and spin --->
+                    <div class="sl-controls">
+                        <div class="jp-wallet">
+                            <span class="jp-wallet-label">Your coins</span>
+                            <span id="slCoins" class="jp-coins">-</span>
+                        </div>
+                        <div class="sl-bet">
+                            <span class="jp-wallet-label">Bet per spin</span>
+                            <div class="sl-bet-row">
+                                <button type="button" class="sl-step" id="slLess" aria-label="Less">−</button>
+                                <input id="slBet" class="mm-input sl-bet-input" type="number" min="10" max="1000" step="1" inputmode="numeric" aria-label="Bet per spin">
+                                <button type="button" class="sl-step" id="slMore" aria-label="More">+</button>
                             </div>
+                            <div class="sl-presets" id="slPresets"></div>
                         </div>
-                        <p class="bj-rules">Blackjack pays 3 to 2 · Dealer stands on 17</p>
-                        <div id="bjSeats" class="bj-seats"></div>
-                    </div>
-
-                    <!--- One click: the bets of the last round again --->
-                    <div id="bjRebet" class="bj-rebet" hidden>
-                        <button type="button" id="bjRebetButton" class="mm-btn mm-btn-primary"><i class="bi bi-arrow-repeat"></i> <span id="bjRebetText">Same bet</span></button>
-                    </div>
-
-                    <!--- Betting: on a free seat or an own one --->
-                    <div id="bjBetBar" class="bj-bar" hidden>
-                        <span id="bjBetSeat" class="bj-bar-label"></span>
-                        <div class="bj-chips">
-                            <button type="button" class="bj-chip" data-chip="10">10</button>
-                            <button type="button" class="bj-chip" data-chip="50">50</button>
-                            <button type="button" class="bj-chip" data-chip="100">100</button>
-                            <button type="button" class="bj-chip" data-chip="500">500</button>
-                            <button type="button" class="bj-chip" data-chip="1000">1K</button>
-                            <button type="button" class="bj-chip" data-chip="5000">5K</button>
-                        </div>
-                        <input id="bjAmount" class="mm-input bj-amount" type="number" min="1" step="1" inputmode="numeric" placeholder="Coins" aria-label="Coins to bet">
-                        <button type="button" id="bjBet" class="mm-btn mm-btn-primary">Bet</button>
-                        <button type="button" id="bjClear" class="mm-btn" title="Leave the seat - the bet comes back">Stand up</button>
-                    </div>
-
-                    <!--- Playing: the own hand --->
-                    <div id="bjActions" class="bj-bar pk-actions" hidden>
-                        <div class="bj-turn-bar"><span id="bjTurnFill"></span></div>
-                        <span id="bjActionLabel" class="bj-bar-label"></span>
-                        <div class="pk-action-buttons">
-                            <button type="button" class="mm-btn mm-btn-primary" data-action="hit">Hit</button>
-                            <button type="button" class="mm-btn" data-action="stand">Stand</button>
-                            <button type="button" class="mm-btn" data-action="double">Double</button>
-                            <button type="button" class="mm-btn" data-action="split">Split</button>
-                        </div>
-                    </div>
+                        <button type="button" id="slSpin" class="sl-spin">
+                            <span class="sl-spin-label">Spin</span>
+                            <span class="sl-spin-sub" id="slSpinSub">Space</span>
+                        </button>
                     </div>
                 </section>
             </div>
@@ -156,12 +133,11 @@
             <aside class="room-side">
                 <div class="mm-card side-card jp-history-card">
                     <div class="side-head">
-                        <span class="fw-semibold"><i class="bi bi-clock-history me-2"></i>Last rounds</span>
+                        <span class="fw-semibold"><i class="bi bi-trophy me-2"></i>Last wins</span>
                     </div>
-                    <ol id="bjHistory" class="jp-history"></ol>
-                    <p id="bjHistoryEmpty" class="jp-empty mm-muted" data-icon="♠️">No rounds yet - take a seat!</p>
+                    <ol id="slFeed" class="jp-history"></ol>
+                    <p id="slFeedEmpty" class="jp-empty mm-muted" data-icon="🎰">No wins yet - spin the first one!</p>
                 </div>
-
                 <div class="mm-card chat-card">
                     <div class="chat-head">
                         <span class="fw-semibold"><i class="bi bi-chat-dots me-2"></i>Chat</span>
@@ -256,11 +232,11 @@
               </svg>
               <span class="cs-dock-name">Poker</span>
             </a>
-            <a href="blackjack" class="cs-tab active" aria-current="page">
+            <a href="blackjack" class="cs-tab">
               <span class="cs-dock-icon cs-dock-21" aria-hidden="true"><span class="bj-icon">21</span></span>
               <span class="cs-dock-name">Blackjack</span>
             </a>
-            <a href="slots" class="cs-tab">
+            <a href="slots" class="cs-tab active" aria-current="page">
               <svg class="cs-dock-icon" viewBox="0 0 48 48" aria-hidden="true">
                 <!--- A slot machine with three sevens --->
                 <rect x="6" y="9" width="32" height="32" rx="6" fill="#d4a017" />
@@ -302,7 +278,7 @@
     <script src="/static/scripts/ui.js"></script>
     <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/casino_dock.js"></script>
-    <script src="/static/scripts/blackjack.js"></script>
+    <script src="/static/scripts/slots.js"></script>
     <script src="/static/scripts/casino_wallet.js"></script>
     <script src="/static/scripts/chat.js"></script>
 </body>
