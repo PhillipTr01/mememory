@@ -32,11 +32,13 @@ module.exports = function (io) {
     mode: randomMode(), // the animation of this round (the same for everybody)
     timer: null,
     history: [], // [{round, winner, total, coins}] newest first
-    // Every bet of the round, oldest first. A bet is shown to the others at
-    // shownAt (a few seconds later) and gets its own tickets then: the tickets
-    // go through the bets in the order they were shown, a later bet gets the
-    // tickets at the end of the pot.
-    bets: [], // [{name, amount, shownAt}]
+    // Every bet in the pot, oldest first. Each bet has its own tickets
+    // (from..to, counted from 1) in the order of the bets: a later bet gets
+    // the tickets at the end of the pot.
+    bets: [], // [{name, amount, from, to}]
+    // Bets on their way: they get into the pot only after a few seconds (no
+    // sniping). Too late for the draw: the coins go back.
+    incoming: [], // [{name, amount, landsAt, timer}]
     fair: newFairRound(), // winning number of the round, only its hash is public
     // Records of the day: biggest pot, luckiest win (smallest chance)
     records: { day: today(), biggest: null, luckiest: null },
@@ -52,45 +54,23 @@ module.exports = function (io) {
   }
   const betting = new Set(); // users with a bet in progress (two tabs, fast clicks)
 
-  // The bets in the order they are shown, with their tickets (from..to)
-  function ticketed() {
-    let before = 0;
-    return pot.bets
-      .map((bet, index) => ({ bet: bet, index: index }))
-      .sort((a, b) => a.bet.shownAt - b.bet.shownAt || a.index - b.index)
-      .map(({ bet }) => {
-        const tickets = { name: bet.name, amount: bet.amount, shownAt: bet.shownAt, from: before + 1, to: before + bet.amount };
-        before += bet.amount;
-        return tickets;
-      });
-  }
-
   /*
-   * What a player sees: the bets of the others only after their delay, the
-   * own ones right away (still without tickets while hidden from the others).
-   * While drawing everybody sees everything.
+   * What a player sees: the pot (only bets that arrived) and the own bets
+   * that are still on their way.
    */
   function serialize(viewer) {
     const now = Date.now();
-    const all = pot.phase === PHASE.DRAWING;
-    const shown = ticketed().filter((bet) => all || bet.shownAt <= now);
-    const pending = all ? [] : pot.bets.filter((bet) => bet.name === viewer && bet.shownAt > now);
-    const visible = shown.concat(pending);
-    const entries = pot.entries
-      .map((entry) => ({ name: entry.name, coins: visible.filter((bet) => bet.name === entry.name).reduce((sum, bet) => sum + bet.amount, 0) }))
-      .filter((entry) => entry.coins > 0);
     return {
       round: pot.round,
       phase: pot.phase,
       mode: pot.mode,
-      entries: entries,
-      total: entries.reduce((sum, entry) => sum + entry.coins, 0),
+      entries: pot.entries.map((entry) => ({ name: entry.name, coins: entry.coins })),
+      total: total(),
       // Time left (ms) instead of a timestamp: the clocks of the clients may differ
       endsIn: pot.endsAt != null ? Math.max(0, pot.endsAt - now) : null,
       draw: pot.draw,
-      bets: shown.map((bet) => ({ name: bet.name, amount: bet.amount, from: bet.from, to: bet.to })),
-      // Own bets the others don't see yet (their tickets come when they are shown)
-      pending: pending.map((bet) => ({ name: bet.name, amount: bet.amount, in: bet.shownAt - now })),
+      bets: pot.bets,
+      pending: pot.incoming.filter((bet) => bet.name === viewer).map((bet) => ({ name: bet.name, amount: bet.amount, in: Math.max(0, bet.landsAt - now) })),
       // The number and the secret are shown after the draw (provably fair)
       fair: pot.phase === PHASE.DRAWING ? pot.fair : { hash: pot.fair.hash },
       records: pot.records,
@@ -99,6 +79,35 @@ module.exports = function (io) {
       history: pot.history,
       viewers: jackpot.sockets.size,
     };
+  }
+
+  function total() {
+    return pot.entries.reduce((sum, entry) => sum + entry.coins, 0);
+  }
+
+  function tellUser(username, event, data) {
+    for (const socket of jackpot.sockets.values()) if (socket.data.username === username) socket.emit(event, data);
+  }
+
+  // A bet arrives in the pot (gets its tickets now)
+  function land(bet) {
+    pot.incoming.splice(pot.incoming.indexOf(bet), 1);
+    const current = pot.entries.find((e) => e.name === bet.name);
+    if (current != null) current.coins += bet.amount;
+    else pot.entries.push({ name: bet.name, coins: bet.amount });
+    const before = pot.bets.length > 0 ? pot.bets[pot.bets.length - 1].to : 0;
+    pot.bets.push({ name: bet.name, amount: bet.amount, from: before + 1, to: before + bet.amount });
+    if (pot.phase === PHASE.OPEN && pot.entries.length >= 2) startCountdown();
+    emitState();
+  }
+
+  // The draw starts: bets still on their way are too late, their coins go back
+  function bounceIncoming() {
+    for (const bet of pot.incoming.splice(0)) {
+      clearTimeout(bet.timer);
+      coins.add(bet.name, bet.amount, { reason: "jackpot refund", note: "too late for the draw" }).catch((error) => console.error("[jackpot] Could not refund:", error));
+      tellUser(bet.name, "betError", "Too late - your bet didn't arrive before the draw. The coins are back.");
+    }
   }
 
   // Any change of a balance (here, in a game, on another page): the open tabs get it
@@ -130,11 +139,12 @@ module.exports = function (io) {
     if (pot.phase !== PHASE.COUNTDOWN) return;
     pot.phase = PHASE.DRAWING;
     pot.endsAt = null;
+    bounceIncoming();
 
     // The ticket decides: every coin is one ticket, so the chance is the share of
     // the pot. Which ticket was fixed at the start of the round (provably fair).
     // The tickets go through the bets in their order (not per player).
-    pot.draw = fairWinner(ticketed().map((bet) => ({ name: bet.name, coins: bet.amount })), pot.fair.number);
+    pot.draw = fairWinner(pot.bets.map((bet) => ({ name: bet.name, coins: bet.amount })), pot.fair.number);
     const sum = pot.draw.total;
     const winner = pot.entries.find((entry) => entry.name === pot.draw.winner);
 
@@ -200,7 +210,7 @@ module.exports = function (io) {
         // One bet at a time per user (two tabs, fast clicks)
         if (betting.has(username)) return;
         // Any amount, but at most a few separate bets per round
-        if (pot.bets.filter((bet) => bet.name === username).length >= config.JACKPOT_MAX_BETS) {
+        if (pot.bets.concat(pot.incoming).filter((bet) => bet.name === username).length >= config.JACKPOT_MAX_BETS) {
           socket.emit("betError", `At most ${config.JACKPOT_MAX_BETS} bets per round.`);
           return;
         }
@@ -217,18 +227,12 @@ module.exports = function (io) {
             socket.emit("betError", "Too late - the draw already started.");
             return;
           }
-          const current = pot.entries.find((e) => e.name === username);
-          if (current != null) {
-            current.coins += amount;
-          } else {
-            pot.entries.push({ name: username, coins: amount });
-          }
-          // Counts right away, the others see it a little later
+          // On its way: in the pot only after a few seconds (nobody can answer a bet in the last second)
           const [low, high] = config.JACKPOT_BET_DELAY;
           const delay = Math.round(low + Math.random() * (high - low));
-          pot.bets.push({ name: username, amount: amount, shownAt: Date.now() + delay });
-          if (delay > 0) setTimeout(() => round === pot.round && emitState(), delay + 20);
-          if (pot.phase === PHASE.OPEN && pot.entries.length >= 2) startCountdown();
+          const bet = { name: username, amount: amount, landsAt: Date.now() + delay, timer: null };
+          pot.incoming.push(bet);
+          bet.timer = setTimeout(() => land(bet), delay);
           emitState();
         } finally {
           betting.delete(username);

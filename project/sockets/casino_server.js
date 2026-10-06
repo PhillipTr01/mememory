@@ -18,9 +18,7 @@ module.exports = function (io, games) {
 
   function summary() {
     const pot = games.jackpot.pot;
-    const now = Date.now();
-    // Only the bets everybody can see already
-    const shown = pot.bets.filter((bet) => pot.phase === "drawing" || bet.shownAt <= now);
+    const shown = pot.bets; // only bets that arrived
     const battles = [...games.battles.lobby.list.values()];
     const seats = games.poker.table.seats;
     return {

@@ -247,10 +247,10 @@ function renderBets() {
   var count = bets.length + pending.length;
   document.getElementById("jpBetsEmpty").hidden = count > 0;
   document.getElementById("jpBetCount").innerText = count == 1 ? "1 bet" : count + " bets";
-  // Own bets the others don't see yet: on top, without tickets
+  // Own bets on their way to the pot (in it after a few seconds): on top, without tickets
   var hidden = pending.map((bet) => {
     var row = personRow(bet.name, "pending");
-    row.sub.innerText = "Hidden from the others for " + Math.max(1, Math.ceil(bet.in / 1000)) + "s - then it gets its tickets";
+    row.sub.innerText = "On its way - in the pot in a few seconds (if before the draw)";
     row.points.innerText = "+" + formatCoins(bet.amount);
     var li = document.createElement("li");
     li.appendChild(row.item);

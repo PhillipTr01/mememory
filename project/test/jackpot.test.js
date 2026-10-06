@@ -216,8 +216,8 @@ test("jackpot: one chat for every hidden game, no info messages", async () => {
   assert.ok(history.every((m) => m.type === "user"));
 });
 
-test("jackpot: a new bet is hidden from the others for a few seconds, the pot counts it right away", async () => {
-  Object.assign(config, { JACKPOT_BET_DELAY: [300, 300], JACKPOT_COUNTDOWN: 2000 });
+test("jackpot: a bet gets into the pot only after a few seconds - too late for the draw: coins back", async () => {
+  Object.assign(config, { JACKPOT_BET_DELAY: [300, 300], JACKPOT_COUNTDOWN: 1000 });
   try {
     h.setCoins("alice", 100);
     h.setCoins("bob", 100);
@@ -229,29 +229,39 @@ test("jackpot: a new bet is hidden from the others for a few seconds, the pot co
       waitFor(bob, "coins", (d) => d.coins === 100),
     ]);
     assert.ok(config.JACKPOT_DRAWS.includes(before.mode), "the animation of the round is chosen by the server");
+    const start = before.total; // what is in the pot from before
 
-    // Alice sees her own bet at once (without tickets yet), bob doesn't see it
+    // On its way: the coins are reserved, but the pot doesn't have it yet - for nobody
     const own = waitFor(alice, "jackpotState", (s) => s.pending.length === 1);
     const forBob = waitFor(bob, "jackpotState", () => true);
     alice.emit("bet", { amount: 30 });
     const mine = await own;
-    const start = before.total; // what is in the pot from before
-    assert.strictEqual(mine.total, start + 30);
-    assert.ok(mine.bets.every((bet) => bet.name !== "alice"), "no tickets yet");
-    const other = await forBob;
-    assert.strictEqual(other.total, start);
-    assert.deepStrictEqual(other.pending, []);
-    assert.strictEqual(h.coinsOf("alice"), 70, "paid right away");
+    assert.strictEqual(mine.total, start, "not in the pot yet");
+    assert.ok(mine.bets.every((bet) => bet.name !== "alice"));
+    assert.strictEqual((await forBob).total, start);
+    assert.deepStrictEqual((await forBob).pending, [], "the others don't know about it");
+    assert.strictEqual(h.coinsOf("alice"), 70, "reserved right away");
 
-    // After the delay everybody sees it, with its tickets
-    const shown = await waitFor(bob, "jackpotState", (s) => s.total === start + 30);
-    assert.deepStrictEqual(shown.bets[shown.bets.length - 1], { name: "alice", amount: 30, from: start + 1, to: start + 30 });
+    // After the delay it is in the pot, with its tickets
+    const landed = await waitFor(bob, "jackpotState", (s) => s.total === start + 30);
+    assert.deepStrictEqual(landed.bets[landed.bets.length - 1], { name: "alice", amount: 30, from: start + 1, to: start + 30 });
 
-    // A bet in the last seconds counts in the draw, shown to everybody when it starts
+    // Bob's bet counts when it arrives (a second player: the countdown runs)
     bob.emit("bet", { amount: 10 });
+    const counting = await waitFor(alice, "jackpotState", (s) => s.total === start + 40);
+    assert.strictEqual(counting.phase, "countdown");
+
+    // A bet that doesn't arrive before the draw doesn't count: the coins come back
+    await h.wait(Math.max(0, counting.endsIn - 150)); // the bet would arrive after the draw started
+    const bounced = h.once(bob, "betError");
+    bob.emit("bet", { amount: 20 });
     const drawing = await waitFor(alice, "jackpotState", (s) => s.phase === "drawing", 4000);
-    assert.strictEqual(drawing.total, start + 40);
-    assert.strictEqual(drawing.draw.total, start + 40);
+    assert.strictEqual(drawing.draw.total, start + 40, "the late bet is not in the draw");
+    assert.match(await bounced, /Too late/);
+    await h.wait(50);
+    const winner = drawing.draw.winner;
+    // 100 - 10 (bet) - 20 (back again) + 20 = 90, plus the pot if bob won
+    assert.strictEqual(h.coinsOf("bob"), 90 + (winner === "bob" ? start + 40 : 0));
     assert.strictEqual(drawing.mode, before.mode, "the same animation for everybody");
     await waitFor(alice, "jackpotState", (s) => s.phase === "open", 4000);
   } finally {
