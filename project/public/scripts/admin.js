@@ -190,12 +190,15 @@ async function loadAccess() {
         var actions = el("td", "ad-actions");
         actions.appendChild(button);
         // May the player pay coins out? (otherwise there is no payout for them)
-        var payout = el("label", "ad-check");
+        var payout = el("label", "ad-switch");
+        payout.title = "May " + p.username + " pay coins out?";
         var box = document.createElement("input");
         box.type = "checkbox";
         box.checked = p.payout;
-        box.addEventListener("change", () => setPayout(p, box));
-        payout.append(box, el("span", "", "allowed"));
+        box.setAttribute("aria-label", "Payout for " + p.username);
+        var text = el("span", "ad-switch-text", p.payout ? "On" : "Off");
+        box.addEventListener("change", () => setPayout(p, box, text));
+        payout.append(box, el("span", "ad-switch-track"), text);
         var payoutCell = el("td");
         payoutCell.appendChild(payout);
         var statusCell = el("td");
@@ -226,14 +229,16 @@ async function setAccess(player, approve, button) {
   }
 }
 
-async function setPayout(player, box) {
+async function setPayout(player, box, text) {
   box.disabled = true;
+  text.innerText = box.checked ? "On" : "Off";
   try {
     await api("payout", { username: player.username, allowed: box.checked });
     player.payout = box.checked;
     showToast(player.username + (box.checked ? " can pay out now" : " can't pay out any more"));
   } catch (error) {
     box.checked = !box.checked;
+    text.innerText = box.checked ? "On" : "Off";
     fail(error);
   } finally {
     box.disabled = false;
