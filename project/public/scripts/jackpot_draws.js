@@ -190,7 +190,7 @@ var wheelDraw = {
       wheel.appendChild(svgNode("svg", { viewBox: "0 0 200 200", "aria-hidden": "true" }));
       wheel.appendChild(el("div", "jp-wheel-avatars"));
       var center = el("div", "jp-wheel-center");
-      center.append(el("span", "jp-total jp-mirror-total"), el("span", "jp-pot-label", "coins in the pot"), el("span", "jp-center-status jp-mirror-status"));
+      center.append(el("span", "jp-total jp-mirror-total"), el("span", "jp-center-status jp-mirror-status"));
       wrap.append(el("div", "jp-pointer"), wheel, center);
       root.appendChild(wrap);
     }

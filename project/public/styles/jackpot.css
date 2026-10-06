@@ -52,14 +52,18 @@ body.jackpot-theme {
 /* Pot above the stage (not for the wheel, it has the pot in its middle) */
 .jp-potbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: center;
-  gap: 0.6rem;
+  gap: 0.15rem 0.6rem;
 }
 
+/* Waiting / countdown: its own line under the pot */
 .jp-potbar .jp-center-status {
+  flex-basis: 100%;
   margin: 0;
   max-width: none;
+  text-align: center;
 }
 
 /* ---------- Stage: where the draw happens ---------- */
@@ -1425,35 +1429,98 @@ body.jackpot-theme {
   white-space: nowrap;
 }
 
-/* ---------- Choice of the hidden games (tabs on every page) ---------- */
-.cs-nav {
+/* ---------- The games: a bar in the middle at the bottom (casino_dock.js) ---------- */
+.cs-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  z-index: 40;
   display: flex;
-  gap: 0.35rem;
-  padding: 4px;
-  border: 1px solid var(--mm-border);
-  border-radius: var(--mm-radius);
-  background: var(--mm-surface-2);
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
-.cs-tab {
-  flex: 1;
+.cs-dock.ready {
+  transition: transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Closed: the bar slides down, only the handle stays */
+.cs-dock.closed {
+  transform: translate(-50%, calc(100% - 16px));
+}
+
+.cs-dock-toggle {
+  pointer-events: auto;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.45rem 0.5rem;
-  border-radius: 6px;
+  gap: 0.35rem;
+  height: 30px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: var(--mm-surface);
   color: var(--mm-muted);
-  font-size: 0.88rem;
+  font-size: 0.75rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.cs-dock-toggle:hover {
+  color: var(--mm-text);
+}
+
+.cs-dock-chevron {
+  display: inline-block;
+  font-size: 1rem;
+  line-height: 0.6;
+  transition: transform 0.3s ease;
+}
+
+.cs-dock.closed .cs-dock-chevron {
+  transform: rotate(180deg) translateY(-3px);
+}
+
+.cs-dock-bar {
+  pointer-events: auto;
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.4rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 18px;
+  background: rgba(30, 30, 30, 0.92);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+/* Icon on top, name below - like the game choice in the lobby */
+.cs-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 6.5rem;
+  padding: 0.4rem 0.75rem 0.35rem;
+  border-radius: 12px;
+  color: var(--mm-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .cs-tab:hover {
+  background: var(--mm-surface-2);
   color: var(--mm-text);
-  background: var(--mm-surface-3);
+}
+
+.cs-tab:hover .cs-dock-icon {
+  transform: translateY(-2px) scale(1.06);
 }
 
 .cs-tab.active {
@@ -1461,13 +1528,42 @@ body.jackpot-theme {
   color: var(--mm-text);
 }
 
-.cs-tab-icon {
-  font-size: 1.05rem;
+.cs-dock-icon {
+  width: 36px;
+  height: 36px;
+  transition: transform 0.2s ease;
+}
+
+/* Room below the page for the bar */
+.room-page {
+  padding-bottom: 110px;
 }
 
 @media (max-width: 575px) {
-  .cs-tab-label {
-    display: none;
+  .cs-dock {
+    bottom: 8px;
+    width: calc(100% - 16px);
+  }
+
+  .cs-dock.closed {
+    transform: translate(-50%, calc(100% - 22px));
+  }
+
+  .cs-dock-bar {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .cs-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.35rem 0.2rem;
+    font-size: 0.66rem;
+  }
+
+  .cs-dock-icon {
+    width: 30px;
+    height: 30px;
   }
 }
 
@@ -2337,4 +2433,12 @@ body.jackpot-theme {
   .jp-rocket-ship {
     font-size: 1.5rem;
   }
+}
+
+/* The hint over the empty reels: readable */
+.jp-scene-slots .jp-scene-empty {
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.88);
+  color: var(--mm-text);
 }
