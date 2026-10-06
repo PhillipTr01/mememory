@@ -93,7 +93,6 @@
                     <div class="jp-head">
                         <div>
                             <h1 class="jp-title"><svg class="cs-title-icon" viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="17" cy="37" rx="11" ry="4" fill="#9a6b12" /><rect x="6" y="29" width="22" height="8" fill="#b8860b" /><ellipse cx="17" cy="29" rx="11" ry="4" fill="#e0a92e" /><rect x="6" y="23" width="22" height="6" fill="#b8860b" /><ellipse cx="17" cy="23" rx="11" ry="4" fill="#f5c542" /><circle cx="31" cy="20" r="13" fill="#d4a017" /><circle cx="31" cy="20" r="10" fill="#f5c542" /><text x="31" y="25.5" text-anchor="middle" font-family="Poppins, sans-serif" font-size="14" font-weight="800" fill="#8a5a00">$</text></svg> Jackpot <span id="jpRound" class="mm-badge"></span></h1>
-                            <p id="jpStatus" class="jp-status" aria-live="polite"></p>
                         </div>
                     </div>
 
@@ -102,7 +101,10 @@
                     <div id="jpPotbar" class="jp-potbar">
                         <span id="jpTotal" class="jp-total">0</span>
                         <span id="jpCenter" class="jp-center-status"></span>
-                        <span id="jpPlayerCount" class="jp-player-count"></span>
+                        <span class="jp-potbar-right">
+                            <span id="jpGhostIn" class="jp-ghost-in" hidden></span>
+                            <span id="jpPlayerCount" class="jp-player-count"></span>
+                        </span>
                     </div>
 
                     <!--- The draw: wheel, slots, race, ... (chosen by the server for every round) --->

@@ -1493,8 +1493,10 @@ var launchDraw = {
   },
 
   // Height a rocket can fly (to the orbit line)
+  // How far up a rocket flies to the orbit: its tip just through the orbit line
   ceiling(parts, rocket) {
-    return rocket.parentElement.clientHeight - rocket.offsetHeight - 34;
+    var line = parts.sky.querySelector(".jp-orbit").offsetTop;
+    return Math.max(0, rocket.offsetTop - line + 10);
   },
 
   async play(stage, draw, duration, short) {
@@ -1535,7 +1537,8 @@ var launchDraw = {
       // Random thrust in every part: they overtake each other
       var speeds = [];
       for (var i = 0; i < 6; i++) speeds.push(randomBetween(0.6, 1.5));
-      var reach = rocket == winner ? 1 : randomBetween(0.85, 1.05);
+      // Only the winner reaches the orbit - the others never get near the line
+      var reach = rocket == winner ? 1 : rocket == order[order.length - 1] && story == "close" ? randomBetween(0.68, 0.76) : randomBetween(0.4, 0.72);
       if (rocket == order[order.length - 1] && story == "close") speeds = speeds.map((v, i) => v * (1.5 - i * 0.12));
       var sum = speeds.reduce((a, b) => a + b, 0);
       var height = 0;

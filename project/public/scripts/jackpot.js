@@ -107,30 +107,26 @@ function render() {
 }
 
 function renderStatus() {
-  var status = document.getElementById("jpStatus");
   var center = document.getElementById("jpCenter");
+  // Alone in the pot: a small 👻 countdown next to the players
+  var ghost = document.getElementById("jpGhostIn");
+  var ghostSeconds = state.phase == "open" && ghostEnd != null ? Math.max(0, Math.ceil((ghostEnd - Date.now()) / 1000)) : null;
+  ghost.hidden = ghostSeconds == null;
+  if (ghostSeconds != null) {
+    ghost.innerText = ghostSeconds + "s";
+    ghost.title = "The ghost joins in " + ghostSeconds + "s";
+  }
   if (state.phase == "open") {
-    var ghostSeconds = ghostEnd != null ? Math.max(0, Math.ceil((ghostEnd - Date.now()) / 1000)) : null;
-    status.innerText =
-      state.entries.length == 0
-        ? "Put in coins - the more you put in, the higher your chance."
-        : ghostSeconds != null
-          ? "👻 joins in " + ghostSeconds + "s"
-          : "Waiting for a second player...";
     center.innerText = state.entries.length == 0 ? "Waiting for players" : "Waiting for a 2nd player";
     center.className = "jp-center-status";
   } else if (state.phase == "countdown") {
     var seconds = Math.ceil(timeLeft() / 1000);
-    // The countdown is in the bar over the draw - no second one here
-    status.innerText = "";
     center.innerText = "0:" + String(seconds).padStart(2, "0");
     center.className = "jp-center-status timer" + (seconds <= 5 ? " urgent" : "");
   } else if (spinning) {
-    status.innerText = "Drawing...";
     center.innerText = "Drawing...";
     center.className = "jp-center-status";
   } else if (state.draw) {
-    status.innerText = "Next round in a moment...";
     center.innerText = state.draw.winner;
     center.className = "jp-center-status winner";
   }
