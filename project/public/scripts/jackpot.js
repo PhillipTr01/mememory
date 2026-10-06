@@ -56,12 +56,11 @@ socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
   document.getElementById("jpCoins").innerText = "🪙 " + formatCoins(data.coins);
-  document.getElementById("jpBonus").hidden = !data.bonus;
   renderBet();
 });
 
-socket.on("bonusClaimed", (amount) => showError("+" + amount + " free coins - good luck!", true));
 socket.on("betError", (message) => showError(message));
+socket.on("betInfo", (message) => showError(message, true));
 
 socket.on("jackpotState", (data) => {
   var previous = state;
@@ -78,28 +77,6 @@ socket.on("jackpotState", (data) => {
     document.getElementById("jpStage").replaceChildren();
   }
   render();
-});
-
-/*
- * Psst: the last letters typed on the page (not in a field) go to the server,
- * the right word gives coins. Which word? Only the server knows.
- */
-var typed = "";
-
-document.addEventListener("keydown", (event) => {
-  if (event.target.closest && event.target.closest("input, textarea")) return;
-  if (event.ctrlKey || event.metaKey || event.altKey || !/^[a-z]$/i.test(event.key)) return;
-  typed = (typed + event.key.toLowerCase()).slice(-32);
-  if (typed.length >= 4) socket.emit("typed", typed);
-});
-
-socket.on("secretCoins", (amount) => {
-  typed = "";
-  showError("🤫 +" + amount + " coins", true);
-  var coins = document.getElementById("jpCoins");
-  coins.classList.remove("jp-coins-pop");
-  void coins.offsetWidth; // restart the animation
-  coins.classList.add("jp-coins-pop");
 });
 
 /* ---------- Rendering ---------- */
@@ -250,7 +227,7 @@ function renderBets() {
   // Own bets on their way to the pot (in it after a few seconds): on top, without tickets
   var hidden = pending.map((bet) => {
     var row = personRow(bet.name, "pending");
-    row.sub.innerText = "On its way - in the pot in a few seconds (if before the draw)";
+    row.sub.innerText = bet.next ? "Waiting for the next pot" : "On its way - in the pot in a few seconds";
     row.points.innerText = "+" + formatCoins(bet.amount);
     var li = document.createElement("li");
     li.appendChild(row.item);
@@ -433,5 +410,4 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  document.getElementById("jpBonus").addEventListener("click", () => socket.emit("claimBonus"));
 });

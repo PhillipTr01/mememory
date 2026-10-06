@@ -44,17 +44,23 @@ async function ensure(username) {
   if (changed(reset)) log(username, config.START_COINS, "start coins");
 }
 
-function bonusAvailable(user, now = Date.now()) {
-  if (user == null || user.coins >= config.BONUS_BELOW) return false;
-  return user.coinBonusAt == null || now - new Date(user.coinBonusAt).getTime() >= config.BONUS_EVERY;
+// Time (ms) until the next free coins can be claimed (0: now)
+function bonusIn(user, now = Date.now()) {
+  if (user == null) return config.BONUS_EVERY;
+  if (user.coinBonusAt == null) return 0;
+  return Math.max(0, new Date(user.coinBonusAt).getTime() + config.BONUS_EVERY - now);
 }
 
-// { coins, bonus } - bonus: the daily free coins can be claimed now
+function bonusAvailable(user, now = Date.now()) {
+  return user != null && bonusIn(user, now) === 0;
+}
+
+// { coins, bonus, bonusIn } - bonus: the daily free coins can be claimed now
 async function get(username) {
   await ensure(username);
   const user = await User.findOne({ username: username }).select("coins coinBonusAt");
-  if (user == null) return { coins: 0, bonus: false };
-  return { coins: user.coins || 0, bonus: bonusAvailable(user) };
+  if (user == null) return { coins: 0, bonus: false, bonusIn: config.BONUS_EVERY };
+  return { coins: user.coins || 0, bonus: bonusAvailable(user), bonusIn: bonusIn(user), bonusAmount: config.DAILY_BONUS };
 }
 
 /*
@@ -98,13 +104,12 @@ async function set(username, amount, note) {
   return amount;
 }
 
-// Free coins once a day for players who are (almost) broke
+// Free coins once a day, for everybody
 async function claimBonus(username, now = Date.now()) {
   await ensure(username);
   const result = await User.updateOne(
     {
       username: username,
-      coins: { $lt: config.BONUS_BELOW },
       $or: [{ coinBonusAt: { $exists: false } }, { coinBonusAt: null }, { coinBonusAt: { $lte: new Date(now - config.BONUS_EVERY) } }],
     },
     { $inc: { coins: config.DAILY_BONUS }, $set: { coinBonusAt: new Date(now) } },

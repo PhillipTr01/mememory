@@ -1447,6 +1447,41 @@ body.jackpot-theme {
 }
 
 /* ---------- Own coins in the top bar (only in the secret casino) ---------- */
+/* Free coins once a day: next to the balance */
+.nav-bonus {
+  margin-right: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-muted);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.nav-bonus:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.nav-bonus.ready {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  color: var(--mm-accent);
+  animation: nav-bonus-glow 1.8s ease-in-out infinite;
+}
+
+.nav-bonus.claimed {
+  animation: nav-coins-up 0.6s ease;
+}
+
+@keyframes nav-bonus-glow {
+  50% {
+    box-shadow: 0 0 14px rgba(var(--mm-accent-rgb), 0.55);
+  }
+}
+
 .nav-coins {
   margin-right: 0.6rem;
   padding: 0.35rem 0.8rem;
@@ -1580,5 +1615,16 @@ body.jackpot-theme {
   .nav-coins {
     padding: 0.3rem 0.6rem;
     font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .nav-bonus {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.82rem;
+  }
+
+  .nav-bonus:not(.ready) #navBonusText {
+    display: none;
   }
 }

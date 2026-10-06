@@ -39,6 +39,8 @@ module.exports = function (io) {
     // Bets on their way: they get into the pot only after a few seconds (no
     // sniping). Too late for the draw: the coins go back.
     incoming: [], // [{name, amount, landsAt, timer}]
+    // Bets that arrived while the draw was running: they go into the next pot
+    waiting: [], // [{name, amount}]
     fair: newFairRound(), // winning number of the round, only its hash is public
     // Records of the day: biggest pot, luckiest win (smallest chance)
     records: { day: today(), biggest: null, luckiest: null },
@@ -70,7 +72,11 @@ module.exports = function (io) {
       endsIn: pot.endsAt != null ? Math.max(0, pot.endsAt - now) : null,
       draw: pot.draw,
       bets: pot.bets,
-      pending: pot.incoming.filter((bet) => bet.name === viewer).map((bet) => ({ name: bet.name, amount: bet.amount, in: Math.max(0, bet.landsAt - now) })),
+      // Own bets that are not in the pot yet: on their way, or waiting for the next round
+      pending: pot.incoming
+        .map((bet) => ({ name: bet.name, amount: bet.amount, in: Math.max(0, bet.landsAt - now), next: pot.phase === PHASE.DRAWING }))
+        .concat(pot.waiting.map((bet) => ({ name: bet.name, amount: bet.amount, in: 0, next: true })))
+        .filter((bet) => bet.name === viewer),
       // The number and the secret are shown after the draw (provably fair)
       fair: pot.phase === PHASE.DRAWING ? pot.fair : { hash: pot.fair.hash },
       records: pot.records,
@@ -89,25 +95,27 @@ module.exports = function (io) {
     for (const socket of jackpot.sockets.values()) if (socket.data.username === username) socket.emit(event, data);
   }
 
-  // A bet arrives in the pot (gets its tickets now)
+  // A bet arrives: in the pot (gets its tickets now) - or, while a draw is
+  // running, it waits for the next pot
   function land(bet) {
     pot.incoming.splice(pot.incoming.indexOf(bet), 1);
+    if (pot.phase === PHASE.DRAWING) {
+      pot.waiting.push({ name: bet.name, amount: bet.amount });
+      tellUser(bet.name, "betInfo", "The draw had already started - your bet goes into the next pot.");
+      emitState();
+      return;
+    }
+    addToPot(bet);
+    emitState();
+  }
+
+  function addToPot(bet) {
     const current = pot.entries.find((e) => e.name === bet.name);
     if (current != null) current.coins += bet.amount;
     else pot.entries.push({ name: bet.name, coins: bet.amount });
     const before = pot.bets.length > 0 ? pot.bets[pot.bets.length - 1].to : 0;
     pot.bets.push({ name: bet.name, amount: bet.amount, from: before + 1, to: before + bet.amount });
     if (pot.phase === PHASE.OPEN && pot.entries.length >= 2) startCountdown();
-    emitState();
-  }
-
-  // The draw starts: bets still on their way are too late, their coins go back
-  function bounceIncoming() {
-    for (const bet of pot.incoming.splice(0)) {
-      clearTimeout(bet.timer);
-      coins.add(bet.name, bet.amount, { reason: "jackpot refund", note: "too late for the draw" }).catch((error) => console.error("[jackpot] Could not refund:", error));
-      tellUser(bet.name, "betError", "Too late - your bet didn't arrive before the draw. The coins are back.");
-    }
   }
 
   // Any change of a balance (here, in a game, on another page): the open tabs get it
@@ -139,7 +147,6 @@ module.exports = function (io) {
     if (pot.phase !== PHASE.COUNTDOWN) return;
     pot.phase = PHASE.DRAWING;
     pot.endsAt = null;
-    bounceIncoming();
 
     // The ticket decides: every coin is one ticket, so the chance is the share of
     // the pot. Which ticket was fixed at the start of the round (provably fair).
@@ -182,6 +189,8 @@ module.exports = function (io) {
     pot.mode = randomMode();
     pot.endsAt = null;
     pot.draw = null;
+    // The bets that came during the draw are the first ones in the new pot
+    pot.waiting.splice(0).forEach(addToPot);
     emitState();
   }
 
@@ -203,28 +212,18 @@ module.exports = function (io) {
       safe("bet", async (data) => {
         const amount = data != null ? data.amount : null;
         if (!Number.isInteger(amount) || amount <= 0) return;
-        if (pot.phase === PHASE.DRAWING) {
-          socket.emit("betError", "The draw is running - wait for the next round.");
-          return;
-        }
         // One bet at a time per user (two tabs, fast clicks)
         if (betting.has(username)) return;
-        // Any amount, but at most a few separate bets per round
-        if (pot.bets.concat(pot.incoming).filter((bet) => bet.name === username).length >= config.JACKPOT_MAX_BETS) {
+        // Any amount, but at most a few separate bets per round (during a draw: for the next one)
+        const round = pot.phase === PHASE.DRAWING ? [] : pot.bets;
+        if (round.concat(pot.incoming, pot.waiting).filter((bet) => bet.name === username).length >= config.JACKPOT_MAX_BETS) {
           socket.emit("betError", `At most ${config.JACKPOT_MAX_BETS} bets per round.`);
           return;
         }
         betting.add(username);
-        const round = pot.round;
         try {
           if (!(await coins.spend(username, amount, { reason: "jackpot bet" }))) {
             socket.emit("betError", "You don't have enough coins.");
-            return;
-          }
-          // The round changed (draw started) while the coins were taken: give them back
-          if (pot.round !== round || pot.phase === PHASE.DRAWING) {
-            await coins.add(username, amount, { reason: "jackpot refund" });
-            socket.emit("betError", "Too late - the draw already started.");
             return;
           }
           // On its way: in the pot only after a few seconds (nobody can answer a bet in the last second)
@@ -241,25 +240,7 @@ module.exports = function (io) {
       }),
     );
 
-    /*
-     * Secret code: the page sends the last letters typed on it, the server
-     * checks them (the word itself is not in the page's code).
-     */
-    socket.on(
-      "typed",
-      safe("typed", async (letters) => {
-        if (typeof letters !== "string" || letters.length > 32) return;
-        if (!letters.toLowerCase().endsWith(config.JACKPOT_SECRET)) return;
-        const now = Date.now();
-        if (now - (socket.data.secretAt || 0) < config.JACKPOT_SECRET_COOLDOWN) return;
-        socket.data.secretAt = now;
-        if (await coins.add(username, config.JACKPOT_SECRET_COINS, { reason: "secret word" })) {
-          socket.emit("secretCoins", config.JACKPOT_SECRET_COINS);
-        }
-      }),
-    );
-
-    // Free coins once a day when (almost) broke
+    // Free coins once a day (the button next to the balance at the top)
     socket.on(
       "claimBonus",
       safe("claimBonus", async () => {

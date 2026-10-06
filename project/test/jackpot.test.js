@@ -90,7 +90,9 @@ after(async () => {
 });
 
 test("coins: old accounts start with the start coins, spending needs enough coins", async () => {
-  assert.deepStrictEqual(await coins.get("dave"), { coins: config.START_COINS, bonus: false });
+  const first = await coins.get("dave");
+  assert.strictEqual(first.coins, config.START_COINS);
+  assert.strictEqual(first.bonus, true, "the free coins of the first day are there");
   assert.strictEqual(await coins.spend("dave", config.START_COINS + 1), false);
   assert.strictEqual(await coins.spend("dave", 40), true);
   assert.strictEqual(await coins.spend("dave", 1.5), false);
@@ -103,15 +105,19 @@ test("coins: old accounts start with the start coins, spending needs enough coin
   assert.strictEqual(h.coinsOf("dave"), config.START_COINS - 40 + config.COIN_REWARDS.expert);
 });
 
-test("coins: free coins once a day, only when (almost) broke", async () => {
-  h.setCoins("dave", 50);
-  assert.strictEqual(await coins.claimBonus("dave"), false, "not broke");
-  h.setCoins("dave", 3);
-  assert.strictEqual((await coins.get("dave")).bonus, true);
-  assert.strictEqual(await coins.claimBonus("dave"), true);
-  assert.strictEqual(h.coinsOf("dave"), 3 + config.DAILY_BONUS);
-  h.setCoins("dave", 0);
+test("coins: free coins for everybody once a day, whatever the balance", async () => {
+  h.setCoins("dave", 50000);
+  const before = await coins.get("dave");
+  assert.strictEqual(before.bonus, true);
+  assert.strictEqual(before.bonusIn, 0);
+  assert.strictEqual(before.bonusAmount, config.DAILY_BONUS);
+  assert.strictEqual(await coins.claimBonus("dave"), true, "not only when broke");
+  assert.strictEqual(h.coinsOf("dave"), 50000 + config.DAILY_BONUS);
+  // Once a day: the page knows when the next ones come
   assert.strictEqual(await coins.claimBonus("dave"), false, "once a day");
+  const after = await coins.get("dave");
+  assert.strictEqual(after.bonus, false);
+  assert.ok(after.bonusIn > config.BONUS_EVERY - 5000 && after.bonusIn <= config.BONUS_EVERY);
   assert.strictEqual(await coins.claimBonus("dave", Date.now() + config.BONUS_EVERY + 1000), true);
 });
 
@@ -216,7 +222,7 @@ test("jackpot: one chat for every hidden game, no info messages", async () => {
   assert.ok(history.every((m) => m.type === "user"));
 });
 
-test("jackpot: a bet gets into the pot only after a few seconds - too late for the draw: coins back", async () => {
+test("jackpot: a bet gets into the pot only after a few seconds - too late for the draw: the next pot", async () => {
   Object.assign(config, { JACKPOT_BET_DELAY: [300, 300], JACKPOT_COUNTDOWN: 1000 });
   try {
     h.setCoins("alice", 100);
@@ -251,50 +257,29 @@ test("jackpot: a bet gets into the pot only after a few seconds - too late for t
     const counting = await waitFor(alice, "jackpotState", (s) => s.total === start + 40);
     assert.strictEqual(counting.phase, "countdown");
 
-    // A bet that doesn't arrive before the draw doesn't count: the coins come back
-    await h.wait(Math.max(0, counting.endsIn - 150)); // the bet would arrive after the draw started
-    const bounced = h.once(bob, "betError");
+    // A bet that doesn't arrive before the draw doesn't count in it - it goes into the next pot
+    await h.wait(Math.max(0, counting.endsIn - 150)); // the bet arrives after the draw started
+    const moved = h.once(bob, "betInfo");
+    const waiting = waitFor(bob, "jackpotState", (s) => s.pending.some((b) => b.next), 5000);
     bob.emit("bet", { amount: 20 });
     const drawing = await waitFor(alice, "jackpotState", (s) => s.phase === "drawing", 4000);
     assert.strictEqual(drawing.draw.total, start + 40, "the late bet is not in the draw");
-    assert.match(await bounced, /Too late/);
-    await h.wait(50);
+    assert.match(await moved, /next pot/);
+    const waitingForBob = await waiting;
+    assert.deepStrictEqual(waitingForBob.pending.map((b) => [b.amount, b.next]), [[20, true]]);
     const winner = drawing.draw.winner;
-    // 100 - 10 (bet) - 20 (back again) + 20 = 90, plus the pot if bob won
-    assert.strictEqual(h.coinsOf("bob"), 90 + (winner === "bob" ? start + 40 : 0));
+    // Not given back: 100 - 10 - 20 = 70, plus the pot if bob won
+    assert.strictEqual(h.coinsOf("bob"), 70 + (winner === "bob" ? start + 40 : 0));
     assert.strictEqual(drawing.mode, before.mode, "the same animation for everybody");
-    await waitFor(alice, "jackpotState", (s) => s.phase === "open", 4000);
+
+    // The next round starts with bob's bet in it
+    const next = await waitFor(alice, "jackpotState", (s) => s.phase === "open" && s.round === drawing.round + 1, 4000);
+    assert.deepStrictEqual(next.bets, [{ name: "bob", amount: 20, from: 1, to: 20 }]);
+    assert.strictEqual(next.total, 20);
+    // ... and bets during a draw are fine too: they also wait for the next pot
   } finally {
     Object.assign(config, { JACKPOT_BET_DELAY: [0, 0], JACKPOT_COUNTDOWN: 200 });
   }
-});
-
-test("jackpot: the secret word gives coins every time (not too fast)", async () => {
-  h.setCoins("carol", 0);
-  const carol = client("carol");
-  await waitFor(carol, "coins", (data) => data.coins === 0);
-
-  // Wrong letters: nothing
-  carol.emit("typed", "money");
-  carol.emit("typed", 12345);
-  carol.emit("typed", "x".repeat(40) + config.JACKPOT_SECRET);
-  await h.wait(100);
-  assert.strictEqual(h.coinsOf("carol"), 0);
-
-  const got = h.once(carol, "secretCoins");
-  carol.emit("typed", "abc" + config.JACKPOT_SECRET);
-  assert.strictEqual(await got, config.JACKPOT_SECRET_COINS);
-  assert.strictEqual(h.coinsOf("carol"), config.JACKPOT_SECRET_COINS);
-
-  // Right away again: too fast, after the cooldown: again
-  carol.emit("typed", config.JACKPOT_SECRET);
-  await h.wait(100);
-  assert.strictEqual(h.coinsOf("carol"), config.JACKPOT_SECRET_COINS);
-  await h.wait(config.JACKPOT_SECRET_COOLDOWN);
-  const again = h.once(carol, "secretCoins");
-  carol.emit("typed", config.JACKPOT_SECRET);
-  await again;
-  assert.strictEqual(h.coinsOf("carol"), 2 * config.JACKPOT_SECRET_COINS);
 });
 
 /* ---------- Secret address, start coins ---------- */

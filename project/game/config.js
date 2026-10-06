@@ -47,32 +47,26 @@ module.exports = {
   // Speed round: shorter "who starts" animation
   SPEED_START_ANIMATION: 2600,
 
-  // Coins (hidden jackpot): start amount, free coins once a day when (almost) broke
+  // Coins (hidden jackpot): start amount, free coins for everybody once a day
   START_COINS: 100000,
   // Every account gets START_COINS once for this id: a new id resets everybody's coins
   COIN_RESET: "reset-100k",
-  DAILY_BONUS: 50,
-  BONUS_BELOW: 10,
+  DAILY_BONUS: 1000,
   BONUS_EVERY: 24 * 60 * 60 * 1000,
   // Coins for a win (only real wins: no surrender / left opponent)
   COIN_REWARDS: { easy: 5, medium: 10, hard: 20, expert: 40, multiplayer: 15, tictactoe: 5 },
 
   // Jackpot: the draw starts this long after the second player joined the pot
   JACKPOT_COUNTDOWN: 30 * 1000,
-  JACKPOT_SPIN: 8000, // the draw animation (wheel, roulette, bowling, ...)
+  JACKPOT_SPIN: 12000, // the draw animation (wheel, roulette, bowling, ...): about 11 s
   JACKPOT_PAUSE: 5000, // result is shown, then a new round starts
   JACKPOT_MAX_BETS: 5, // separate bets per player and round (any amount)
   // A new bet gets into the pot only after a random 3-5 s (no sniping:
-  // nobody can answer a bet in the last second). Too late for the draw: coins back.
+  // nobody can answer a bet in the last second). Too late for the draw: the next pot.
   JACKPOT_BET_DELAY: [3000, 5000],
   // The animation of a round, one for everybody, chosen at random per round
   JACKPOT_DRAWS: ["wheel", "roulette", "bowling", "plinko", "race", "claw", "royale", "coinrain", "revolver"],
   JACKPOT_HISTORY: 10,
-  // Secret word on the jackpot page (typed anywhere, not in a field): +1000 coins
-  // every time. Only the server knows it, it can be changed with JACKPOT_SECRET.
-  JACKPOT_SECRET: (process.env.JACKPOT_SECRET || "moneyrain").toLowerCase(),
-  JACKPOT_SECRET_COINS: 1000,
-  JACKPOT_SECRET_COOLDOWN: 1000, // ms between two uses (no flooding)
 
   // The secret address of the jackpot (and its case battles and poker):
   // not linked anywhere. Can be changed with JACKPOT_PATH.

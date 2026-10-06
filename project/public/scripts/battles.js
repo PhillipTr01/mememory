@@ -65,7 +65,6 @@ socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  document.getElementById("btBonus").hidden = !data.bonus;
   renderCreate();
   renderList();
   if (!spinning) renderBattle();
@@ -78,7 +77,6 @@ socket.on("cases", (data) => {
 });
 
 socket.on("battleError", (message) => showToast(message, "error"));
-socket.on("bonusClaimed", (amount) => showToast("+" + amount + " free coins - good luck!"));
 
 // The new battle of this page: open it
 socket.on("battleCreated", (id) => {
@@ -782,7 +780,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }),
   );
 
-  document.getElementById("btBonus").addEventListener("click", () => socket.emit("claimBonus"));
 
   document.getElementById("btCreate").addEventListener("click", () => {
     if (picked.length == 0) return;

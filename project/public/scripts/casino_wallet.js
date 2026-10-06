@@ -5,13 +5,54 @@
  */
 (function () {
   var button = document.getElementById("navCoins");
+  var bonusButton = document.getElementById("navBonus");
   var coins = 0;
+  var bonusAt = null; // when the next free coins can be claimed (null: now)
+  var bonusAmount = 0;
+  var bonusTimer = null;
 
   function format(value) {
     return Number(value).toLocaleString("en-US");
   }
 
+  /* ---------- Free coins once a day ---------- */
+
+  function renderBonus() {
+    var text = document.getElementById("navBonusText");
+    var ready = bonusAt == null || Date.now() >= bonusAt;
+    bonusButton.hidden = false;
+    bonusButton.classList.toggle("ready", ready);
+    bonusButton.disabled = !ready;
+    if (ready) {
+      text.innerText = "+" + format(bonusAmount);
+      bonusButton.title = "Your free coins for today";
+    } else {
+      var minutes = Math.ceil((bonusAt - Date.now()) / 60000);
+      text.innerText = minutes >= 60 ? Math.floor(minutes / 60) + "h " + String(minutes % 60).padStart(2, "0") + "m" : minutes + "m";
+      bonusButton.title = "The next free coins come in " + text.innerText;
+    }
+  }
+
+  bonusButton.addEventListener("click", () => {
+    bonusButton.disabled = true;
+    socket.emit("claimBonus");
+  });
+
+  socket.on("bonusClaimed", (amount) => {
+    showToast("🎁 +" + format(amount) + " free coins - see you tomorrow!");
+    bonusButton.classList.remove("claimed");
+    void bonusButton.offsetWidth; // restart the animation
+    bonusButton.classList.add("claimed");
+  });
+
   socket.on("coins", (data) => {
+    if (data.bonusIn != null) {
+      bonusAt = data.bonus ? null : Date.now() + data.bonusIn;
+      bonusAmount = data.bonusAmount || bonusAmount;
+      renderBonus();
+      clearInterval(bonusTimer);
+      bonusTimer = setInterval(renderBonus, 30000);
+    }
     var before = coins;
     coins = data.coins;
     button.hidden = false;

@@ -26,10 +26,8 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
-  document.getElementById("csBonus").hidden = !data.bonus;
 });
 
-socket.on("bonusClaimed", (amount) => showToast("+" + amount + " free coins - good luck!"));
 
 function live(id, text, hot) {
   var element = document.getElementById(id);
@@ -55,5 +53,4 @@ socket.on("summary", (data) => {
 
 document.addEventListener("DOMContentLoaded", () => {
   setupChat();
-  document.getElementById("csBonus").addEventListener("click", () => socket.emit("claimBonus"));
 });

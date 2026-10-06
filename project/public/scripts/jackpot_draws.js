@@ -52,7 +52,7 @@ function pick(list) {
  */
 function spinEnding(from, to, step) {
   var way = to - from;
-  var kind = pick(["straight", "overshoot", "creep", "creep"]);
+  var kind = pick(["overshoot", "creep", "creep"]);
   if (kind == "overshoot") {
     return [
       { value: from, offset: 0, easing: SLOW_END },
@@ -412,22 +412,23 @@ var bowlingDraw = {
       duration: 700 * t + 200,
       easing: "ease-out",
     });
-    // Sometimes one pin wobbles and only falls at the very end
-    var late = others.length && Math.random() < 0.5 ? pick(others) : null;
-    if (late && !short) {
+    // A few pins wobble like the winner's ... and fall one after the other, the last one right at the end
+    var wobblers = short ? [] : others.slice().sort(() => Math.random() - 0.5).slice(0, Math.min(others.length, Math.round(randomBetween(1, 3))));
+    wobblers.forEach((pin, n) => {
+      var wobble = (1300 * t + 300) * ((n + 1) / wobblers.length) * randomBetween(0.85, 1);
       animate(
-        late,
+        pin,
         [0, 1, 2, 3, 4, 5, 6].map((i) => ({ transform: `translate(-50%, -50%) rotate(${(i % 2 ? -1 : 1) * (24 - i * 3)}deg)` })),
-        { duration: 1300 * t + 300, fill: "none" },
+        { duration: wobble, fill: "none" },
       ).then(() =>
-        animate(late, [{ transform: "translate(-50%, -50%) rotate(0deg)", opacity: 1 }, { transform: `translate(calc(-50% + 40px), calc(-50% + 60px)) rotate(95deg)`, opacity: 0 }], {
-          duration: 500,
+        animate(pin, [{ transform: "translate(-50%, -50%) rotate(0deg)", opacity: 1 }, { transform: `translate(calc(-50% + 40px), calc(-50% + 60px)) rotate(95deg)`, opacity: 0 }], {
+          duration: 450,
           easing: "ease-in",
         }),
       );
-    }
+    });
     others.forEach((pin) => {
-      if (pin == late && !short) return;
+      if (wobblers.includes(pin)) return;
       animate(
         pin,
         [
@@ -524,11 +525,14 @@ var plinkoDraw = {
     var steps = this.ROWS + 1;
     var x = startX;
     for (var row = 0; row <= this.ROWS; row++) {
-      // Bounce from peg to peg, a bit random, but always closer to the target
-      var progress = (row + 1) / steps;
-      var wanted = startX + (targetX - startX) * progress;
-      var jitter = (1 - progress) * width * randomBetween(0.05, 0.14);
-      var next = row == this.ROWS ? targetX : wanted + randomBetween(-jitter, jitter);
+      // Bounce from peg to peg at random - only the last rows lead to the slot
+      var left = this.ROWS - row; // rows still to come
+      var next;
+      if (left >= 3) {
+        next = Math.max(width * 0.06, Math.min(width * 0.94, x + randomBetween(-1, 1) * width * 0.09));
+      } else {
+        next = left == 0 ? targetX : x + (targetX - x) / (left + 1) + randomBetween(-1, 1) * width * 0.03;
+      }
       var y = height * 0.12 + row * rowHeight;
       // Small hop up after each peg
       frames.push({ transform: `translate(${(x + next) / 2}px, ${y - rowHeight * 0.35}px)`, offset: (row + 0.5) / (steps + 1) });
@@ -602,15 +606,19 @@ var raceDraw = {
     // The winner reaches the line at the end, the others just before (photo finish).
     var finishers = [];
     // The story of the race: a late sprint, start to finish, or a stumble
-    var story = pick(["sprint", "leader", "stumble", "open"]);
+    var story = pick(["sprint", "sprint", "stumble", "open", "leader"]);
     var stumbler = pick(parts.runners);
+    var others = parts.runners.filter((runner) => runner.dataset.name != draw.winner);
+    var rival = others.length ? pick(others) : null; // leads for a long time
     var animations = parts.runners.map((runner) => {
       var isWinner = runner.dataset.name == draw.winner;
-      var end = isWinner ? 1 : randomBetween(story == "leader" ? 0.7 : 0.84, 0.985);
+      var end = isWinner ? 1 : runner == rival ? randomBetween(0.975, 0.993) : randomBetween(story == "leader" ? 0.8 : 0.88, 0.985);
       var speeds = [];
       for (var i = 0; i < 8; i++) speeds.push(randomBetween(0.6, 1.4));
       if (isWinner && story == "sprint") speeds = [0.4, 0.5, 0.6, 0.7, 0.9, 1.4, 1.9, 2.3].map((v) => v * randomBetween(0.85, 1.15));
       if (isWinner && story == "leader") speeds = [2, 1.7, 1.4, 1.1, 0.9, 0.8, 0.7, 0.7].map((v) => v * randomBetween(0.85, 1.15));
+      // The rival is in front until the last part
+      if (runner == rival && story != "leader") speeds = [1.6, 1.5, 1.3, 1.2, 1.1, 1, 0.7, 0.35].map((v) => v * randomBetween(0.9, 1.1));
       // A stumble: almost standing still for a moment
       if (story == "stumble" && runner == stumbler) speeds[Math.floor(randomBetween(2, 6))] = 0.05;
       var sum = speeds.reduce((a, b) => a + b, 0);
@@ -705,7 +713,13 @@ var clawDraw = {
 
     // Sometimes it goes for the wrong plush first ... and it slips out
     var others = parts.plushes.filter((plush) => plush != prize);
-    var decoy = !short && others.length && Math.random() < 0.4 ? pick(others) : null;
+    var decoy = !short && others.length && Math.random() < 0.65 ? pick(others) : null;
+    // Before going down: back and forth between the prize and another one
+    if (!short && others.length && !decoy) {
+      var other = pick(others);
+      var otherX = other.offsetLeft + other.offsetWidth / 2;
+      search.splice(search.length - 1, 0, setClaw(otherX, 0), setClaw(target, 0), setClaw(otherX, 0));
+    }
     if (decoy) {
       var decoyX = decoy.offsetLeft + decoy.offsetWidth / 2;
       search[search.length - 1] = setClaw(decoyX, 0);
@@ -819,15 +833,25 @@ var royaleDraw = {
     var zone = parts.zone;
     var winnerX = parseFloat(winner.style.left);
     var winnerY = parseFloat(winner.style.top);
-    // First it wanders somewhere else, then it closes in on the winner
+    // First it wanders somewhere else, then it closes in on the last two -
+    // between them, so nobody knows who is left in the end
+    var last = losers[losers.length - 1];
+    var lastX = last ? parseFloat(last.style.left) : winnerX;
+    var lastY = last ? parseFloat(last.style.top) : winnerY;
+    var playTime = duration * (short ? 1 : 0.88);
     animate(
       zone,
       [
         { left: "50%", top: "50%", width: "120%", height: "190%" },
         { left: randomBetween(30, 70) + "%", top: randomBetween(35, 70) + "%", width: randomBetween(55, 75) + "%", height: randomBetween(90, 120) + "%", offset: randomBetween(0.35, 0.55) },
-        { left: winnerX + "%", top: winnerY + "%", width: "16%", height: "30%" },
+        {
+          left: (winnerX + lastX) / 2 + "%",
+          top: (winnerY + lastY) / 2 + "%",
+          width: Math.abs(winnerX - lastX) + 22 + "%",
+          height: Math.abs(winnerY - lastY) * 1.6 + 40 + "%",
+        },
       ],
-      { duration: duration, easing: SLOW_END },
+      { duration: playTime, easing: SLOW_END },
     );
 
     // Everybody moves a little (they fight)
@@ -843,12 +867,13 @@ var royaleDraw = {
     var count = losers.length;
     var weights = losers.map((_, i) => (1 + i * 0.7) * randomBetween(0.6, 1.4));
     var sum = weights.reduce((a, b) => a + b, 0);
-    var playTime = duration * (short ? 1 : 0.88);
     for (var i = 0; i < count; i++) {
       await wait((weights[i] / sum) * playTime);
       this.eliminate(parts, losers[i], short);
       if (count - i - 1 == 1 && !short) shout(parts.root, pick(["FINAL DUEL", "LAST TWO!", "1 VS 1"]), "small");
     }
+    // Only now the zone closes around the one who is left
+    animate(zone, [{ left: winnerX + "%", top: winnerY + "%", width: "16%", height: "30%" }], { duration: short ? 1 : 450, easing: "ease-out" });
     await wait(short ? 0 : 300);
     winner.classList.add("champion");
     if (!short) {
@@ -1040,7 +1065,7 @@ var coinRainDraw = {
    */
   plan(winner, rivals) {
     var pick = (list) => list[Math.floor(Math.random() * list.length)];
-    var stories = ["comeback", "runaway", "photo", "seesaw", "underdog"];
+    var stories = ["comeback", "photo", "photo", "seesaw", "underdog", "comeback", "runaway"];
     var story = rivals.length ? pick(stories) : "runaway";
     var threat = rivals.length ? pick(rivals) : null; // not always the biggest one
     var jitter = (speeds) => speeds.map((speed) => speed * randomBetween(0.85, 1.15));

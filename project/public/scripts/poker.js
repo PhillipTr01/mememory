@@ -85,10 +85,8 @@ socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  document.getElementById("pkBonus").hidden = !data.bonus;
 });
 
-socket.on("bonusClaimed", (amount) => showToast("+" + amount + " free coins - good luck!"));
 socket.on("pokerError", (message) => showToast(message, "error"));
 
 socket.on("pokerState", (data) => {
@@ -477,5 +475,4 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("pkStand").addEventListener("click", () => socket.emit("stand"));
   document.getElementById("pkAddChips").addEventListener("click", addChips);
-  document.getElementById("pkBonus").addEventListener("click", () => socket.emit("claimBonus"));
 });
