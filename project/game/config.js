@@ -118,7 +118,7 @@ module.exports = {
   BJ_SEATS: 5,
   BJ_MIN_BET: 10,
   BJ_MAX_BET: 5000, // per seat (a double or a split adds the same again)
-  BJ_BETTING: 10000, // after the first bet: time for the others to bet
+  BJ_BETTING: 10000, BJ_SIT: 20000, // after the first bet: time for the others to bet
   BJ_TURN: 15000, // time for a decision, then the hand stands
   BJ_STEP: 700, // dealer cards, one after the other
   BJ_RESULT: 5000, // the result is shown this long

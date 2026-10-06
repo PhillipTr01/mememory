@@ -91,12 +91,12 @@
                         <a href="jackpot" class="cs-tab"><span class="cs-tab-icon">🪙</span><span class="cs-tab-label">Jackpot</span></a>
                         <a href="battles" class="cs-tab"><span class="cs-tab-icon">⚔️</span><span class="cs-tab-label">Case Battles</span></a>
                         <a href="poker" class="cs-tab"><span class="cs-tab-icon">🃏</span><span class="cs-tab-label">Poker</span></a>
-                        <a href="blackjack" class="cs-tab active" aria-current="page"><span class="cs-tab-icon">🂡</span><span class="cs-tab-label">Blackjack</span></a>
+                        <a href="blackjack" class="cs-tab active" aria-current="page"><span class="cs-tab-icon"><span class="bj-icon" aria-hidden="true">21</span></span><span class="cs-tab-label">Blackjack</span></a>
                     </nav>
 
                     <div class="jp-head">
                         <div>
-                            <h1 class="jp-title">🂡 Blackjack <span class="mm-badge" id="bjLimits"></span></h1>
+                            <h1 class="jp-title"><span class="bj-icon big" aria-hidden="true">21</span> Blackjack <span class="mm-badge" id="bjLimits"></span></h1>
                             <p id="bjStatus" class="jp-status" aria-live="polite"></p>
                         </div>
                         <div class="bt-head-right">
@@ -111,6 +111,15 @@
                         <div class="bj-dealer">
                             <div id="bjDealerCards" class="bj-cards"></div>
                             <span id="bjDealerValue" class="bj-value" hidden></span>
+                            <!--- The betting time runs --->
+                            <div id="bjClock" class="bj-clock" hidden>
+                                <svg viewBox="0 0 60 60" aria-hidden="true">
+                                    <circle class="bj-clock-bg" cx="30" cy="30" r="26"></circle>
+                                    <circle id="bjClockRing" class="bj-clock-ring" cx="30" cy="30" r="26"></circle>
+                                </svg>
+                                <span id="bjClockNum" class="bj-clock-num"></span>
+                                <span class="bj-clock-text">Place your bets</span>
+                            </div>
                         </div>
                         <p class="bj-rules">Blackjack pays 3 to 2 · Dealer stands on 17 · A new shoe every round</p>
                         <div id="bjSeats" class="bj-seats"></div>
@@ -129,11 +138,12 @@
                         </div>
                         <input id="bjAmount" class="mm-input bj-amount" type="number" min="1" step="1" inputmode="numeric" placeholder="Coins" aria-label="Coins to bet">
                         <button type="button" id="bjBet" class="mm-btn mm-btn-primary">Bet</button>
-                        <button type="button" id="bjClear" class="mm-btn" hidden>Take back</button>
+                        <button type="button" id="bjClear" class="mm-btn" title="Leave the seat - the bet comes back">Stand up</button>
                     </div>
 
                     <!--- Playing: the own hand --->
                     <div id="bjActions" class="bj-bar pk-actions" hidden>
+                        <div class="bj-turn-bar"><span id="bjTurnFill"></span></div>
                         <span id="bjActionLabel" class="bj-bar-label"></span>
                         <div class="pk-action-buttons">
                             <button type="button" class="mm-btn mm-btn-primary" data-action="hit">Hit</button>

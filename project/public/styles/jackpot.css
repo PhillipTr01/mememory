@@ -1650,3 +1650,27 @@ body.jackpot-theme {
     display: none;
   }
 }
+
+/* The icon of blackjack: a little card with a red 21 */
+.bj-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35em;
+  height: 1.75em;
+  border-radius: 0.18em;
+  background: linear-gradient(160deg, #fff, #e5e7eb);
+  color: #dc2626;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25), 0.08em 0.08em 0 rgba(220, 38, 38, 0.55);
+  font-size: 0.68em;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  transform: rotate(-8deg);
+  vertical-align: middle;
+}
+
+.bj-icon.big {
+  font-size: 0.9em;
+  margin-right: 0.2em;
+}

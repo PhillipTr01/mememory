@@ -51,23 +51,24 @@ socket.on("blackjackError", (message) => showToast(message, "error"));
 socket.on("blackjackState", (data) => {
   previous = state;
   state = data;
-  // The seat to bet on is gone (taken by somebody else)
-  if (selected != null && state.seats[selected] && state.seats[selected].name != myName) selected = null;
   render();
 });
 
 /* ---------- Cards ---------- */
 
-function cardElement(card, fresh, index) {
+var DEAL_STEP = 280; // ms between two cards of the first deal
+
+function cardElement(card, fresh, delay) {
+  var element;
   if (card == null) {
-    var back = el("div", "pk-card back" + (fresh ? " deal" : ""));
-    return back;
+    element = el("div", "pk-card back" + (fresh ? " deal" : ""));
+  } else {
+    var red = card[1] == "h" || card[1] == "d";
+    element = el("div", "pk-card" + (red ? " red" : "") + (fresh ? " deal" : ""));
+    var rank = card[0] == "T" ? "10" : card[0];
+    element.append(el("span", "pk-rank", rank), el("span", "pk-suit", SUITS[card[1]]));
   }
-  var red = card[1] == "h" || card[1] == "d";
-  var element = el("div", "pk-card" + (red ? " red" : "") + (fresh ? " deal" : ""));
-  if (fresh) element.style.animationDelay = index * 90 + "ms";
-  var rank = card[0] == "T" ? "10" : card[0];
-  element.append(el("span", "pk-rank", rank), el("span", "pk-suit", SUITS[card[1]]));
+  if (fresh && delay > 0) element.style.animationDelay = delay + "ms";
   return element;
 }
 
@@ -76,12 +77,41 @@ function valueText(value, blackjack) {
   return value.soft && value.total <= 21 ? value.total - 10 + "/" + value.total : String(value.total);
 }
 
+/*
+ * The first deal goes round clockwise: from the right seat (seat 1) to the
+ * left one, then the dealer - two times. Delay of card `n` of seat position `p`.
+ */
+function firstDeal() {
+  return previous != null && previous.round == state.round && previous.phase == "betting" && state.phase != "betting";
+}
+
+function dealOrder() {
+  return state.seats.map((seat, i) => (seat && seat.hands.length ? i : -1)).filter((i) => i >= 0);
+}
+
+function dealDelay(n, position, count) {
+  return (n * (count + 1) + position) * DEAL_STEP;
+}
+
 /* ---------- Rendering ---------- */
+
+function mySeats() {
+  return state.seats.map((seat, i) => (seat && seat.name == myName ? i : -1)).filter((i) => i >= 0);
+}
+
+// A seat of mine without a bet: first a bet there, then another seat
+function myEmptySeat() {
+  return mySeats().find((i) => state.seats[i].bet == 0 && state.seats[i].hands.length == 0);
+}
 
 function render() {
   if (state == null) return;
   document.getElementById("bjLimits").innerText = formatCoins(state.rules.minBet) + " - " + formatCoins(state.rules.maxBet) + " per seat";
   document.getElementById("bjViewers").innerText = state.viewers == 1 ? "1 here" : state.viewers + " here";
+  // The seat to bet on: one of mine (the one without a bet first)
+  if (selected != null && !(state.seats[selected] && state.seats[selected].name == myName)) selected = null;
+  var empty = myEmptySeat();
+  if (empty != null && (selected == null || state.seats[selected].bet > 0)) selected = empty;
   renderDealer();
   renderSeats();
   renderStatus();
@@ -91,12 +121,15 @@ function render() {
 
 function renderDealer() {
   var before = previous && previous.round == state.round ? previous.dealer.cards : [];
+  var dealing = firstDeal();
+  var count = dealOrder().length;
   var cards = document.getElementById("bjDealerCards");
   cards.replaceChildren(
     ...state.dealer.cards.map((card, i) => {
       // New, or just turned over
       var fresh = i >= before.length || (before[i] == null && card != null);
-      return cardElement(card, fresh, i - before.length);
+      var delay = dealing && i < 2 ? dealDelay(i, count, count) : (i - before.length) * 90;
+      return cardElement(card, fresh, delay);
     }),
   );
   var value = document.getElementById("bjDealerValue");
@@ -105,30 +138,44 @@ function renderDealer() {
     var total = state.dealer.value.total;
     value.innerText = state.dealer.hidden ? String(total) + " + ?" : total > 21 ? "Bust " + total : valueText(state.dealer.value, !state.dealer.hidden && state.dealer.cards.length == 2 && total == 21);
     value.classList.toggle("bust", total > 21);
+    // Shown when the dealer's cards are there
+    value.classList.remove("bj-late");
+    value.style.animationDelay = "";
+    if (dealing) {
+      void value.offsetWidth;
+      value.classList.add("bj-late");
+      value.style.animationDelay = dealDelay(1, count, count) + "ms";
+    }
   }
 }
 
 function renderSeats() {
   var container = document.getElementById("bjSeats");
   var betting = state.phase == "betting";
+  var dealing = firstDeal();
+  var order = dealOrder();
+  var blocked = myEmptySeat() != null;
   container.replaceChildren(
     ...state.seats.map((seat, i) => {
       var spot = el("div", "bj-seat");
-      // In an arc: the middle seats lower
+      // Seat 1 on the right: the cards go round clockwise from there
+      spot.style.gridColumn = String(state.seats.length - i);
+      spot.style.gridRow = "1";
       spot.style.setProperty("--lift", [0, 26, 36, 26, 0][i % 5] + "px");
       if (selected == i && betting) spot.classList.add("selected");
 
       if (seat == null) {
         spot.classList.add("empty");
-        var take = el("button", "bj-seat-empty", betting ? "Bet here" : "");
+        var take = el("button", "bj-seat-empty");
         take.type = "button";
-        take.disabled = !betting;
+        take.append(el("span", "bj-seat-chair", "🪑"), el("span", "", "Sit down"));
+        take.disabled = blocked;
+        take.title = blocked ? "Bet on your seat first" : "Seat " + (i + 1);
         take.addEventListener("click", () => {
           selected = i;
-          render();
-          document.getElementById("bjAmount").focus();
+          socket.emit("sit", i);
         });
-        spot.appendChild(take);
+        spot.append(take, el("span", "bj-seat-no", String(i + 1)));
         return spot;
       }
 
@@ -139,14 +186,19 @@ function renderSeats() {
       // The hands (more than one after a split)
       var hands = el("div", "bj-hands");
       var old = previous && previous.round == state.round && previous.seats[i] ? previous.seats[i].hands : [];
+      var position = order.indexOf(i);
       seat.hands.forEach((hand, h) => {
         var box = el("div", "bj-hand");
         if (state.current && state.current.seat == i && state.current.hand == h) box.classList.add("active");
         if (hand.result) box.classList.add(hand.result);
         var cards = el("div", "bj-cards small");
         var seen = old[h] ? old[h].cards.length : 0;
-        cards.append(...hand.cards.map((card, n) => cardElement(card, n >= seen, n - seen)));
+        cards.append(...hand.cards.map((card, n) => cardElement(card, n >= seen, dealing && n < 2 ? dealDelay(n, position, order.length) : (n - seen) * 90)));
         var value = el("span", "bj-value" + (hand.value.total > 21 ? " bust" : ""), hand.value.total > 21 ? "Bust" : valueText(hand.value, hand.blackjack));
+        if (dealing) {
+          value.classList.add("bj-late");
+          value.style.animationDelay = dealDelay(1, position, order.length) + "ms";
+        }
         box.append(cards, value);
         if (hand.result && hand.result != "bust") {
           var gain = hand.payout - hand.bet;
@@ -156,7 +208,13 @@ function renderSeats() {
       });
 
       var bet = seat.hands.length ? seat.hands.reduce((sum, hand) => sum + hand.bet, 0) : seat.bet;
-      var chip = el("span", "bj-bet", bet > 0 ? "🪙 " + formatCoins(bet) : "No bet");
+      var chip = el("span", "bj-bet" + (bet > 0 ? "" : " empty"), bet > 0 ? "🪙 " + formatCoins(bet) : mine ? "Place a bet" : "No bet");
+      // No bet yet: the seat is free again soon
+      if (seat.standIn != null && bet == 0) {
+        var stand = el("span", "bj-stand");
+        stand.dataset.end = Date.now() + seat.standIn;
+        hands.appendChild(stand);
+      }
       var who = el("div", "bj-who");
       who.append(createAvatar(seat.name, "sm"), el("span", "bj-name", mine ? "You" : seat.name));
       spot.append(hands, chip, who);
@@ -171,6 +229,16 @@ function renderSeats() {
       return spot;
     }),
   );
+  tickStand();
+}
+
+// "Stands up in 12s" under the seats without a bet
+function tickStand() {
+  document.querySelectorAll(".bj-stand").forEach((element) => {
+    var left = Math.max(0, Math.ceil((Number(element.dataset.end) - Date.now()) / 1000));
+    element.innerText = "Stands up in " + left + "s";
+    element.classList.toggle("hurry", left <= 5);
+  });
 }
 
 function myTurn() {
@@ -180,26 +248,41 @@ function myTurn() {
   return { seat: seat, hand: seat.hands[state.current.hand] };
 }
 
+// The big clock in the middle of the table while the bets come in
+function renderClock() {
+  var clock = document.getElementById("bjClock");
+  var running = state.phase == "betting" && renderStatus.end != null;
+  clock.hidden = !running;
+  if (!running) return;
+  var left = Math.max(0, renderStatus.end - Date.now());
+  var seconds = Math.ceil(left / 1000);
+  document.getElementById("bjClockNum").innerText = seconds;
+  var ring = document.getElementById("bjClockRing");
+  var length = 2 * Math.PI * 26;
+  ring.style.strokeDasharray = length;
+  ring.style.strokeDashoffset = length * (1 - left / state.rules.betting);
+  clock.classList.toggle("hurry", seconds <= 3);
+}
+
 function renderStatus() {
   var status = document.getElementById("bjStatus");
-  if (state.phase == "betting") {
-    if (state.startIn != null) {
-      var end = Date.now() + state.startIn;
-      clearInterval(renderStatus.timer);
-      var tick = () => {
-        var left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
-        status.innerText = "Place your bets - cards in " + left + "s";
-        if (left <= 0) clearInterval(renderStatus.timer);
-      };
-      tick();
-      renderStatus.timer = setInterval(tick, 250);
-      return;
+  clearInterval(renderStatus.timer);
+  renderStatus.end = state.phase == "betting" && state.startIn != null ? Date.now() + state.startIn : null;
+  var tick = () => {
+    if (renderStatus.end != null) {
+      var left = Math.max(0, Math.ceil((renderStatus.end - Date.now()) / 1000));
+      status.innerText = "Place your bets - cards in " + left + "s";
     }
-    clearInterval(renderStatus.timer);
-    status.innerText = "Place a bet on a seat to start the round";
+    renderClock();
+    tickStand();
+  };
+  if (state.phase == "betting") {
+    if (renderStatus.end == null) status.innerText = "Sit down and place a bet to start the round";
+    tick();
+    renderStatus.timer = setInterval(tick, 100);
     return;
   }
-  clearInterval(renderStatus.timer);
+  renderClock();
   if (state.phase == "playing") {
     var turn = myTurn();
     var seat = state.current ? state.seats[state.current.seat] : null;
@@ -217,9 +300,8 @@ function renderBars() {
   betBar.hidden = !canBet;
   if (canBet) {
     var seat = state.seats[selected];
-    var already = seat && seat.name == myName ? seat.bet : 0;
+    var already = seat ? seat.bet : 0;
     document.getElementById("bjBetSeat").innerText = "Seat " + (selected + 1) + (already ? " · 🪙 " + formatCoins(already) + " on it" : "");
-    document.getElementById("bjClear").hidden = !already;
     var room = Math.min(state.rules.maxBet - already, myCoins);
     document.getElementById("bjAmount").max = room;
     document.querySelectorAll(".bj-chip").forEach((chip) => (chip.disabled = Number(chip.dataset.chip) > room));
@@ -235,6 +317,13 @@ function renderBars() {
     var value = (card) => ("TJQK".includes(card[0]) ? 10 : card[0] == "A" ? 11 : Number(card[0]));
     document.querySelector('[data-action="double"]').disabled = !two || myCoins < hand.bet;
     document.querySelector('[data-action="split"]').disabled = !two || value(hand.cards[0]) != value(hand.cards[1]) || turn.seat.hands.length >= 4 || myCoins < hand.bet;
+    // The time for the move runs out
+    var fill = document.getElementById("bjTurnFill");
+    fill.style.transition = "none";
+    fill.style.width = (100 * state.turnIn) / state.rules.turn + "%";
+    void fill.offsetWidth;
+    fill.style.transition = "width " + state.turnIn + "ms linear";
+    fill.style.width = "0%";
   }
 }
 
@@ -272,6 +361,7 @@ document.addEventListener("DOMContentLoaded", () => {
     socket.emit("bet", { seat: selected, amount: value });
     amount.value = "";
   });
+  // Stand up: the bet on the seat comes back
   document.getElementById("bjClear").addEventListener("click", () => {
     socket.emit("clearBet", selected);
     selected = null;

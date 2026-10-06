@@ -285,6 +285,146 @@
   color: var(--mm-danger);
 }
 
+/* A value that comes with the dealt cards */
+.bj-late {
+  animation: bj-fade 0.25s ease-out both;
+}
+
+@keyframes bj-fade {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+/* ---------- The betting time: a big clock where the dealer's cards come ---------- */
+.bj-clock {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  margin-bottom: 1rem;
+  display: grid;
+  place-items: center;
+  animation: bj-fade 0.3s ease-out both;
+}
+
+.bj-clock[hidden] {
+  display: none;
+}
+
+.bj-clock svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.bj-clock-bg {
+  fill: rgba(0, 0, 0, 0.35);
+  stroke: rgba(255, 255, 255, 0.15);
+  stroke-width: 4;
+}
+
+.bj-clock-ring {
+  fill: none;
+  stroke: var(--mm-accent);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.1s linear, stroke 0.2s ease;
+}
+
+.bj-clock-num {
+  color: #fff;
+  font-size: 2.1rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.bj-clock-text {
+  position: absolute;
+  top: calc(100% + 4px);
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.bj-clock.hurry .bj-clock-ring {
+  stroke: var(--mm-danger);
+}
+
+.bj-clock.hurry .bj-clock-num {
+  color: #fca5a5;
+  animation: bj-hurry 1s ease-in-out infinite;
+}
+
+@keyframes bj-hurry {
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+/* ---------- Seats: sit down first ---------- */
+.bj-seat-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+}
+
+.bj-seat-chair {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.bj-seat-no {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.bj-bet.empty {
+  background: rgba(var(--mm-accent-rgb), 0.25);
+  color: var(--mm-accent);
+}
+
+.bj-stand {
+  align-self: flex-end;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.bj-stand.hurry {
+  color: #fca5a5;
+}
+
+/* The time for the own move */
+.bj-turn-bar {
+  flex-basis: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.bj-turn-bar span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--mm-accent);
+}
+
 @media (max-width: 767px) {
   .bj-table {
     min-height: 380px;
