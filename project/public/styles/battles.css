@@ -1274,3 +1274,67 @@ button.bt-strip-case:hover {
   border-color: rgba(var(--mm-accent-rgb), 0.6);
   opacity: 1;
 }
+
+/* ---------- The bar over a battle: back, then pills (price, cases, crazy), the pot on the right ---------- */
+.bt-battle-top {
+  flex-wrap: wrap;
+  padding: 0.5rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+}
+
+.bt-battle-top .bt-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+}
+
+.bt-battle-top .bt-row-tags {
+  gap: 0.4rem;
+}
+
+.bt-battle-top .bt-row-price,
+.bt-battle-top .bt-chip,
+.bt-battle-top .bt-crazy-tag,
+.bt-battle-top .bt-pot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 28px;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bt-battle-top .bt-row-price {
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.35);
+}
+
+.bt-battle-top .bt-chip {
+  background: var(--mm-surface);
+  border: 1px solid var(--mm-border);
+  color: var(--mm-text);
+}
+
+.bt-battle-top .bt-crazy-tag {
+  background: rgba(168, 85, 247, 0.14);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+/* The pot: on the right, gold */
+.bt-battle-top .bt-pot {
+  margin-left: auto;
+  height: 32px;
+  padding: 0 0.95rem;
+  background: var(--mm-accent);
+  color: var(--mm-on-accent, #1a1305);
+  font-size: 0.88rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
