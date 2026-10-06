@@ -48,9 +48,10 @@ test("cases: balanced cases are safe, high risk cases have a big jackpot", () =>
 
 test("cases: the roll picks the item by its chance, provably fair", () => {
   const box = cases.caseById("starter");
+  const first = box.items[0].weight / cases.WEIGHT_TOTAL; // the chance of the first item
   assert.strictEqual(cases.itemFor(box, 0), 0);
-  assert.strictEqual(cases.itemFor(box, 0.29999), 0);
-  assert.strictEqual(cases.itemFor(box, 0.3), 1);
+  assert.strictEqual(cases.itemFor(box, first - 0.00001), 0);
+  assert.strictEqual(cases.itemFor(box, first), 1);
   assert.strictEqual(cases.itemFor(box, 0.99999), box.items.length - 1);
 
   const { seed, hash } = cases.newSeed();
