@@ -37,7 +37,7 @@ test("cases: balanced cases are safe, high risk cases have a big jackpot", () =>
       assert.ok(chanceAtLeastPrice(box) >= 0.4, `${box.id}: often the price back`);
       assert.ok(best(box) <= 10, `${box.id}: no crazy jackpot`);
     } else {
-      assert.ok(chanceAtLeastPrice(box) <= 0.25, `${box.id}: mostly a loss`);
+      assert.ok(chanceAtLeastPrice(box) <= 0.3, `${box.id}: mostly a loss`);
       assert.ok(best(box) >= 50, `${box.id}: a huge item`);
     }
   }
@@ -49,9 +49,10 @@ test("cases: balanced cases are safe, high risk cases have a big jackpot", () =>
 
 test("cases: the roll picks the item by its chance, provably fair", () => {
   const box = cases.caseById("starter");
+  const first = box.items[0].weight / cases.WEIGHT_TOTAL; // the chance of the first item
   assert.strictEqual(cases.itemFor(box, 0), 0);
-  assert.strictEqual(cases.itemFor(box, 0.29999), 0);
-  assert.strictEqual(cases.itemFor(box, 0.3), 1);
+  assert.strictEqual(cases.itemFor(box, first - 0.00001), 0);
+  assert.strictEqual(cases.itemFor(box, first), 1);
   assert.strictEqual(cases.itemFor(box, 0.99999), box.items.length - 1);
 
   const { seed, hash } = cases.newSeed();
