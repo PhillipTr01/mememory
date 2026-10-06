@@ -10,14 +10,13 @@ Object.assign(config, { BATTLE_START: 50, BATTLE_ROUND: 50, BATTLE_KEEP: 5000 })
 
 /* ---------- Cases ---------- */
 
-test("cases: the chances add up, every case gives back less than it costs - high risk the least", () => {
+test("cases: the chances add up, every case gives back about 92.5% on average", () => {
   for (const box of cases.CASES) {
     const weights = box.items.reduce((sum, item) => sum + item.weight, 0);
     assert.strictEqual(weights, cases.WEIGHT_TOTAL, `${box.id}: chances add up to 100%`);
     const back = cases.expectedValue(box) / box.price;
-    // High risk gives back less on average (the price of the big jackpots)
-    const [low, high] = box.risk === "high" ? [0.8, 0.88] : [0.88, 0.97];
-    assert.ok(back > low && back < high, `${box.id}: ${Math.round(back * 100)}% back on average`);
+    // Every case gives back about 92.5% on average, whatever the risk
+    assert.ok(Math.abs(back - 0.925) < 0.005, `${box.id}: ${(back * 100).toFixed(1)}% back on average`);
     assert.ok(["low", "balanced", "high"].includes(box.risk));
   }
 });
