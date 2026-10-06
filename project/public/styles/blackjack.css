@@ -269,7 +269,6 @@
 .bj-chip[data-chip="500"] { background: #6d28d9; }
 .bj-chip[data-chip="1000"] { background: #b45309; }
 .bj-chip[data-chip="5000"] { background: #a16207; border-color: #fde68a; }
-.bj-chip[data-chip="10000"] { background: #111827; border-color: #f5c542; color: #f5c542; }
 
 .bj-chip:hover:not(:disabled) {
   transform: translateY(-3px);
