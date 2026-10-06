@@ -120,6 +120,15 @@ function pots(players) {
  */
 function payout(potList, hands, order) {
   const won = new Map();
+  for (const pot of payoutByPot(potList, hands, order)) {
+    for (const w of pot.winners) won.set(w.seat, (won.get(w.seat) || 0) + w.amount);
+  }
+  return won;
+}
+
+// The same, pot by pot: [{amount, eligible, winners: [{seat, amount}]}]
+function payoutByPot(potList, hands, order) {
+  const result = [];
   for (const pot of potList) {
     let best = null;
     let winners = [];
@@ -138,12 +147,29 @@ function payout(potList, hands, order) {
     winners.sort((a, b) => order.indexOf(a) - order.indexOf(b));
     const share = Math.floor(pot.amount / winners.length);
     let odd = pot.amount - share * winners.length;
-    for (const seat of winners) {
-      won.set(seat, (won.get(seat) || 0) + share + (odd > 0 ? 1 : 0));
-      odd--;
-    }
+    result.push({
+      amount: pot.amount,
+      eligible: pot.eligible,
+      winners: winners.map((seat) => ({ seat: seat, amount: share + (odd-- > 0 ? 1 : 0) })),
+    });
   }
-  return won;
+  return result;
 }
 
-module.exports = { newDeck, shuffle, score5, bestHand, compare, pots, payout, HAND_NAMES };
+/*
+ * What a player has right now (2 to 7 cards): before the flop only pairs
+ * count, from 5 cards on the best hand.
+ */
+function handName(cards) {
+  if (cards.length >= 5) return bestHand(cards).name;
+  const counts = new Map();
+  cards.forEach((card) => counts.set(card[0], (counts.get(card[0]) || 0) + 1));
+  const groups = [...counts.values()].sort((a, b) => b - a);
+  if (groups[0] === 4) return HAND_NAMES[7];
+  if (groups[0] === 3) return HAND_NAMES[3];
+  if (groups[0] === 2 && groups[1] === 2) return HAND_NAMES[2];
+  if (groups[0] === 2) return HAND_NAMES[1];
+  return HAND_NAMES[0];
+}
+
+module.exports = { newDeck, shuffle, score5, bestHand, compare, pots, payout, payoutByPot, handName, HAND_NAMES };

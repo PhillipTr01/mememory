@@ -17,7 +17,7 @@ var PLACES = [
 ];
 // Where the bet of a seat lies on the felt
 var BET_PLACES = [
-  { x: 50, y: 72 },
+  { x: 63, y: 76 }, // next to the own cards (they are big)
   { x: 22, y: 58 },
   { x: 30, y: 30 },
   { x: 70, y: 30 },
@@ -208,6 +208,12 @@ function renderSeats() {
 
       spot.append(cards, avatarWrap, info);
       if (tag) spot.appendChild(tag);
+      // What the player has right now (own cards, or cards that are shown) - not again at the end
+      if (seat.handName && state.phase != "showdown") {
+        var hand = el("span", "pk-handname", seat.handName);
+        hand.title = i == me ? "Your hand right now" : seat.name + " has";
+        spot.appendChild(hand);
+      }
       return spot;
     }),
   );
@@ -238,18 +244,38 @@ function renderBoard() {
   }
   board.replaceChildren(...cards);
 
+  // The pot - with side pots each one on its own (who plays for it: on hover)
   var pot = document.getElementById("pkPot");
   var bets = state.seats.reduce((sum, seat) => sum + (seat ? seat.bet : 0), 0);
-  pot.innerText = state.pot + bets > 0 ? "Pot 🪙 " + formatCoins(state.pot + bets) : "";
-
-  var result = document.getElementById("pkResult");
-  if (state.result) {
-    result.innerText = state.result.winners
-      .map((w) => (w.name == myName ? "You win " : w.name + " wins ") + formatCoins(w.amount) + (w.hand ? " with " + w.hand.toLowerCase() : ""))
-      .join(" · ");
-    result.classList.toggle("won", state.result.winners.some((w) => w.name == myName));
+  var pots = state.pots || [];
+  if (pots.length > 1) {
+    pot.replaceChildren(
+      ...pots.map((p, n) => {
+        var chip = el("span", "pk-pot-part" + (n ? " side" : ""), (n == 0 ? "Main pot" : pots.length > 2 ? "Side pot " + n : "Side pot") + " 🪙 " + formatCoins(p.amount));
+        chip.title = "For " + p.players.join(", ");
+        return chip;
+      }),
+    );
   } else {
-    result.innerText = "";
+    pot.innerText = state.pot + bets > 0 ? "Pot 🪙 " + formatCoins(state.pot + bets) : "";
+  }
+
+  // The result pot by pot: how big, who won it, with what
+  var result = document.getElementById("pkResult");
+  result.classList.toggle("won", Boolean(state.result && state.result.winners.some((w) => w.name == myName)));
+  if (state.result && state.result.pots && state.result.pots.length) {
+    var rows = state.result.pots.map((p, n) => {
+      var row = el("div", "pk-result-pot" + (p.winners.some((w) => w.name == myName) ? " mine" : ""));
+      var label = state.result.pots.length == 1 ? "Pot" : n == 0 ? "Main pot" : state.result.pots.length > 2 ? "Side pot " + n : "Side pot";
+      row.appendChild(el("span", "pk-result-label", label + " 🪙 " + formatCoins(p.amount)));
+      var who = p.winners.map((w) => (w.name == myName ? "You" : w.name)).join(" & ");
+      var hand = p.winners[0] && p.winners[0].hand ? " · " + p.winners[0].hand : "";
+      row.appendChild(el("span", "pk-result-who", (p.winners.length > 1 ? who + " split" : who) + hand));
+      return row;
+    });
+    result.replaceChildren(...rows);
+  } else {
+    result.replaceChildren();
   }
 }
 

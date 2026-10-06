@@ -95,8 +95,12 @@ module.exports = function (io) {
             leaving: seat.leaving === true,
             // Only the own cards - the others' only after a showdown
             cards: seat.name === viewer || seat.shown ? seat.cards : seat.cards.map(() => null),
+            // What the player has right now (only where the cards can be seen)
+            handName: (seat.name === viewer || seat.shown) && seat.cards.length && !seat.folded ? poker.handName(seat.cards.concat(table.board)) : null,
           },
       ),
+      // Main pot and side pots (with what is bet on this street): who plays for how much
+      pots: table.phase === "showdown" || table.phase === "waiting" ? [] : potsNow(),
       board: table.board,
       button: table.button,
       sb: table.sb,
@@ -119,6 +123,34 @@ module.exports = function (io) {
         turn: config.POKER_TURN,
       },
     };
+  }
+
+  /*
+   * The pots during a hand: a side pot only starts where somebody is all-in
+   * (a bet that wasn't called yet is no side pot - the others still can).
+   */
+  function potsNow() {
+    const seats = indexes().filter(inHand);
+    const live = seats.filter((i) => !table.seats[i].folded);
+    const levels = [...new Set(live.filter((i) => table.seats[i].allIn).map((i) => table.seats[i].total))].sort((a, b) => a - b);
+    const result = [];
+    let below = 0;
+    const add = (amount, eligible) => {
+      if (amount <= 0) return;
+      const last = result[result.length - 1];
+      if (last && last.eligible.join() === eligible.join()) last.amount += amount;
+      else result.push({ amount: amount, eligible: eligible });
+    };
+    for (const level of levels) {
+      const amount = seats.reduce((sum, i) => sum + Math.max(0, Math.min(table.seats[i].total, level) - below), 0);
+      add(amount, live.filter((i) => !table.seats[i].allIn || table.seats[i].total >= level));
+      below = level;
+    }
+    add(
+      seats.reduce((sum, i) => sum + Math.max(0, table.seats[i].total - below), 0),
+      live.filter((i) => !table.seats[i].allIn || table.seats[i].total > below),
+    );
+    return result.map((pot) => ({ amount: pot.amount, players: pot.eligible.map((i) => table.seats[i].name) }));
   }
 
   function emitState() {
@@ -322,7 +354,12 @@ module.exports = function (io) {
     const seat = table.seats[i];
     const amount = table.seats.reduce((sum, s) => sum + (s && s.inHand ? s.total : 0), 0);
     seat.stack += amount;
-    table.result = { showdown: false, winners: [{ seat: i, name: seat.name, amount: amount }], hands: [] };
+    table.result = {
+      showdown: false,
+      winners: [{ seat: i, name: seat.name, amount: amount }],
+      hands: [],
+      pots: [{ amount: amount, players: [seat.name], winners: [{ seat: i, name: seat.name, amount: amount, hand: null }] }],
+    };
     finishHand();
   }
 
@@ -333,7 +370,9 @@ module.exports = function (io) {
     // Odd chips: first to the players left of the button
     const order = [];
     for (let i = nextFrom(table.button, () => true), n = 0; n < table.seats.length; n++, i = (i + 1) % table.seats.length) order.push(i);
-    const won = poker.payout(potList, hands, order);
+    const byPot = poker.payoutByPot(potList, hands, order);
+    const won = new Map();
+    byPot.forEach((pot) => pot.winners.forEach((w) => won.set(w.seat, (won.get(w.seat) || 0) + w.amount)));
     won.forEach((amount, i) => (table.seats[i].stack += amount));
     alive.forEach((i) => (table.seats[i].shown = true));
     table.result = {
@@ -346,6 +385,12 @@ module.exports = function (io) {
         cards: hands.get(i).cards,
       })),
       hands: alive.map((i) => ({ seat: i, hand: hands.get(i).name })),
+      // Pot by pot: how big, who could win it, who got what
+      pots: byPot.map((pot) => ({
+        amount: pot.amount,
+        players: pot.eligible.map((i) => table.seats[i].name),
+        winners: pot.winners.map((w) => ({ seat: w.seat, name: table.seats[w.seat].name, amount: w.amount, hand: hands.get(w.seat).name })),
+      })),
     };
     finishHand();
   }

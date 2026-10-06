@@ -54,11 +54,75 @@
 
 .pk-result {
   min-height: 1.3em;
-  max-width: 70%;
+  max-width: 80%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
   text-align: center;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #f1f5f9;
+}
+
+/* One line per pot: "Main pot 300 | alice · Flush" */
+.pk-result-pot {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.1rem 0.25rem 0.1rem 0.1rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  animation: pk-bet 0.3s ease-out both;
+}
+
+.pk-result-pot:nth-child(2) {
+  animation-delay: 0.25s;
+}
+
+.pk-result-pot:nth-child(3) {
+  animation-delay: 0.5s;
+}
+
+.pk-result-label {
+  padding: 0.05rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.pk-result-who {
+  padding-right: 0.4rem;
+  white-space: nowrap;
+}
+
+.pk-result-pot.mine .pk-result-label {
+  background: var(--mm-accent);
+  color: var(--mm-on-accent);
+}
+
+/* Side pots next to each other */
+.pk-pot-part {
+  display: inline-block;
+  margin: 0 0.15rem;
+}
+
+.pk-pot-part.side {
+  padding-left: 0.5rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* What a player has right now ("Pair", "Full house", ...) */
+.pk-handname {
+  margin-top: 3px;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fde68a;
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .pk-result.won {

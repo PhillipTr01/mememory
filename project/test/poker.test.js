@@ -2,7 +2,7 @@ const { test, before, after } = require("node:test");
 const assert = require("node:assert");
 const h = require("./helpers");
 const config = require("../game/config");
-const { bestHand, compare, pots, payout, newDeck, shuffle } = require("../game/poker");
+const { bestHand, compare, pots, payout, payoutByPot, handName, newDeck, shuffle } = require("../game/poker");
 
 // Short timings for the tests
 Object.assign(config, { POKER_START: 30, POKER_SHOWDOWN: 60, POKER_STREET: 10, POKER_TURN: 3000, POKER_AWAY: 100 });
@@ -69,6 +69,27 @@ test("poker: side pots - an all-in player only wins what was matched", () => {
   assert.strictEqual(split.get(1), 50);
 });
 
+test("poker: pot by pot - who gets which pot, and what a player has right now", () => {
+  const potList = [
+    { amount: 120, eligible: [0, 1, 2] },
+    { amount: 160, eligible: [1, 2] },
+  ];
+  const hands = new Map([
+    [0, { score: [5, 14] }],
+    [1, { score: [2, 9] }],
+    [2, { score: [2, 9] }],
+  ]);
+  assert.deepStrictEqual(payoutByPot(potList, hands, [0, 1, 2]), [
+    { amount: 120, eligible: [0, 1, 2], winners: [{ seat: 0, amount: 120 }] },
+    { amount: 160, eligible: [1, 2], winners: [{ seat: 1, amount: 80 }, { seat: 2, amount: 80 }] },
+  ]);
+  // Before the flop only pairs count, later the best hand
+  assert.strictEqual(handName(["Ah", "Ad"]), "Pair");
+  assert.strictEqual(handName(["Ah", "Kd"]), "High card");
+  assert.strictEqual(handName(["Ah", "Ad", "Kc", "Ks", "2d"]), "Two pair");
+  assert.strictEqual(handName(["9h", "9d", "9c", "4s", "4h", "2c"]), "Full house");
+});
+
 /* ---------- The table ---------- */
 
 let server;
@@ -132,8 +153,11 @@ test("poker: sit down with coins, only the own cards are visible, check down to 
   bob.emit("sit", { seat: 3, buyIn: 300 });
   const [state, bobState] = await Promise.all([dealt, dealtBob]);
 
-  // Own cards yes, the other's no
+  // Own cards yes, the other's no - and what the own hand is right now
   assert.strictEqual(state.seats[0].cards.length, 2);
+  assert.ok(["Pair", "High card"].includes(state.seats[0].handName));
+  assert.strictEqual(state.seats[3].handName, null, "not for the cards of the others");
+  assert.deepStrictEqual(state.pots.map((p) => p.amount), [15]);
   assert.ok(state.seats[0].cards.every((card) => typeof card === "string"));
   assert.deepStrictEqual(state.seats[3].cards, [null, null]);
   assert.deepStrictEqual(bobState.seats[0].cards, [null, null]);
@@ -168,6 +192,9 @@ test("poker: sit down with coins, only the own cards are visible, check down to 
   }
 
   const end = await waitFor(alice, "pokerState", (x) => x.phase === "showdown");
+  // The result pot by pot
+  assert.strictEqual(end.result.pots.reduce((sum, p) => sum + p.amount, 0), 20);
+  assert.ok(end.result.pots[0].winners[0].hand);
   assert.strictEqual(end.result.showdown, true);
   // Now both hands are shown
   assert.ok(end.seats[3].cards.every((card) => typeof card === "string"));
