@@ -149,7 +149,7 @@ module.exports = function (io) {
     pot.ghostAt = null;
   }
 
-  // 50-150% of the coins of the player who bet first (the house plays against them)
+  // 85-115% of the coins of the player who bet first (the house plays against them)
   function addGhost() {
     pot.ghostTimer = null;
     pot.ghostAt = null;

@@ -54,15 +54,22 @@ function change(row) {
 
 function podiumSpot(row) {
   var spot = el("div", "lb-spot place-" + row.rank + (row.username == myName ? " mine" : ""));
-  spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), createAvatar(row.username, "lg"), el("span", "lb-name", row.username), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)), change(row));
+  spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), createAvatar(row.username, "lg"), nameOf(row.username, "lb-name"), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)), change(row));
   spot.appendChild(el("div", "lb-step", String(row.rank)));
   return spot;
+}
+
+// The name, with the "You" tag on your own row
+function nameOf(username, className) {
+  var name = el("span", className, username);
+  if (username == myName) name.appendChild(el("span", "you-tag", "You"));
+  return name;
 }
 
 function listRow(row) {
   var item = el("li", "lb-row" + (row.username == myName ? " mine" : ""));
   var who = el("span", "lb-who");
-  who.append(createAvatar(row.username, "sm"), el("span", "lb-name", row.username));
+  who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name"));
   item.append(el("span", "lb-rank", "#" + row.rank), who, change(row), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
   return item;
 }

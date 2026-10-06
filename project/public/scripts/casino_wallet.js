@@ -181,7 +181,8 @@
         el("div", "chat-online-title", "Online in the casino"),
         ...names.map((name) => {
           var row = el("div", "chat-online-row");
-          row.append(createAvatar(name, "sm"), el("span", "", name == myName ? name + " (you)" : name));
+          row.append(createAvatar(name, "sm"), el("span", "", name));
+          if (name == myName) row.appendChild(el("span", "you-tag", "You"));
           return row;
         }),
       );

@@ -70,9 +70,9 @@ module.exports = {
   JACKPOT_HISTORY: 10,
   // After a restart: at least this long until a countdown or a turn ends (time to come back)
   RESTORE_GRACE: 10 * 1000,
-  // Alone in the pot this long: a ghost (the house) of 50-150% of the first player's coins joins
+  // Alone in the pot this long: a ghost (the house) of 85-115% of the first player's coins joins
   JACKPOT_GHOST_AFTER: 15 * 1000,
-  JACKPOT_GHOST_SHARE: [0.5, 1.5],
+  JACKPOT_GHOST_SHARE: [0.85, 1.15],
 
   // The secret address of the jackpot (and its case battles and poker):
   // not linked anywhere. Can be changed with JACKPOT_PATH.
