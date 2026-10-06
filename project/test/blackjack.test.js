@@ -6,6 +6,8 @@ const bj = require("../game/blackjack");
 
 // Short timings for the tests
 Object.assign(config, { BJ_BETTING: 80, BJ_STEP: 10, BJ_RESULT: 80, BJ_TURN: 3000 });
+// The classic table (the default one) with wide limits for the tests
+Object.assign(config, { BJ_CLASSIC_MIN: 10, BJ_CLASSIC_MAX: 5000 });
 
 /* ---------- Rules ---------- */
 
@@ -416,7 +418,8 @@ test("blackjack: three tables in the lobby, each with its own limits and seats",
   assert.deepStrictEqual(list.map((t) => t.id), ["casual", "classic", "highroller"]);
   assert.ok(list.every((t) => t.seats === 5));
   const high = list.find((t) => t.id === "highroller");
-  assert.deepStrictEqual([high.minBet, high.maxBet], [500, 25000]);
+  assert.deepStrictEqual([high.minBet, high.maxBet], [1000, 5000]);
+  assert.deepStrictEqual(list.map((t) => [t.minBet, t.maxBet]).slice(0, 1), [[100, 1000]]);
 
   // A seat at the high roller table: the lobby sees it, the classic table doesn't
   h.setCoins("carol", 5000);
@@ -430,7 +433,7 @@ test("blackjack: three tables in the lobby, each with its own limits and seats",
   assert.strictEqual(seen.find((t) => t.id === "classic").free, 5);
   const refused = h.once(carol, "blackjackError");
   carol.emit("bet", { seat: 2, amount: 100 });
-  assert.match(await refused, /At least 500/);
+  assert.match(await refused, /At least 1,000/);
   carol.close();
   await waitFor(lobby, "blackjackTables", (l) => l.find((t) => t.id === "highroller").free === 5);
 });

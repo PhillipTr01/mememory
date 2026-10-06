@@ -128,13 +128,18 @@ module.exports = {
   // Blackjack (hidden): one table against the dealer, a player can take several seats
   BJ_SEATS: 5, // seats per table
   BJ_MY_SEATS: 3, // seats one player can have at a time (per table)
-  BJ_MIN_BET: 10, // the classic table (the default one)
-  BJ_MAX_BET: 5000, // per seat (a double or a split adds the same again)
-  // The tables of the lobby (in this order); a page without a table opens "classic"
+  // Bets per seat (a double or a split adds the same again), per table
+  BJ_CASUAL_MIN: 100,
+  BJ_CASUAL_MAX: 1000,
+  BJ_CLASSIC_MIN: 500,
+  BJ_CLASSIC_MAX: 2500,
+  BJ_HIGH_MIN: 1000,
+  BJ_HIGH_MAX: 5000,
+  // The tables of the lobby (in this order, limits from the keys above); a page without a table opens "classic"
   BJ_TABLES: [
-    { id: "casual", name: "Casual Corner", icon: "🍀", minBet: 10, maxBet: 500, about: "Small stakes, no stress - learn the ropes." },
-    { id: "classic", name: "Classic Table", icon: "🃏", minBet: null, maxBet: null, about: "The usual table: from a few coins up to 5k a seat." },
-    { id: "highroller", name: "High Roller", icon: "💎", minBet: 500, maxBet: 25000, about: "Big chips only. Win big, lose big." },
+    { id: "casual", name: "Casual Corner", icon: "🍀", minKey: "BJ_CASUAL_MIN", maxKey: "BJ_CASUAL_MAX", about: "Small stakes, no stress - learn the ropes." },
+    { id: "classic", name: "Classic Table", icon: "🃏", minKey: "BJ_CLASSIC_MIN", maxKey: "BJ_CLASSIC_MAX", about: "The usual table: medium stakes for every round." },
+    { id: "highroller", name: "High Roller", icon: "💎", minKey: "BJ_HIGH_MIN", maxKey: "BJ_HIGH_MAX", about: "Big chips only. Win big, lose big." },
   ],
   BJ_DEFAULT_TABLE: "classic",
   BJ_BETTING: 10000, // after the first bet: time for the others to bet

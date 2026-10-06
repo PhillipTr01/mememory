@@ -47,8 +47,9 @@ module.exports = function (io) {
   }
 
   function createTable(def) {
-    const minBet = () => (def.minBet != null ? def.minBet : config.BJ_MIN_BET);
-    const maxBet = () => (def.maxBet != null ? def.maxBet : config.BJ_MAX_BET);
+    // The limits per seat (can be changed in the admin panel)
+    const minBet = () => config[def.minKey];
+    const maxBet = () => config[def.maxKey];
 
     const table = {
       id: def.id,

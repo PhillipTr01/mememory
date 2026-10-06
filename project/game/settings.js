@@ -17,8 +17,12 @@ const FIELDS = [
   { section: "Jackpot", key: "JACKPOT_COUNTDOWN", label: "Countdown", hint: "From the second player to the draw.", unit: "s", scale: 1000, min: 5, max: 600 },
   { section: "Case battles", key: "BATTLE_MAX_CASES", label: "Max cases per battle", min: 1, max: 1000 },
   { section: "Case battles", key: "BATTLE_MAX_OPEN", label: "Open battles per player", min: 1, max: 50 },
-  { section: "Blackjack", key: "BJ_MIN_BET", label: "Classic table: min bet", hint: "Per seat (the other tables have their own limits).", min: 1, max: 100000000 },
-  { section: "Blackjack", key: "BJ_MAX_BET", label: "Classic table: max bet", hint: "Per seat.", min: 1, max: 100000000 },
+  { section: "Blackjack", key: "BJ_CASUAL_MIN", label: "Casual Corner: min bet", hint: "Per seat.", min: 1, max: 100000000 },
+  { section: "Blackjack", key: "BJ_CASUAL_MAX", label: "Casual Corner: max bet", hint: "Per seat.", min: 1, max: 100000000 },
+  { section: "Blackjack", key: "BJ_CLASSIC_MIN", label: "Classic Table: min bet", hint: "Per seat.", min: 1, max: 100000000 },
+  { section: "Blackjack", key: "BJ_CLASSIC_MAX", label: "Classic Table: max bet", hint: "Per seat.", min: 1, max: 100000000 },
+  { section: "Blackjack", key: "BJ_HIGH_MIN", label: "High Roller: min bet", hint: "Per seat.", min: 1, max: 100000000 },
+  { section: "Blackjack", key: "BJ_HIGH_MAX", label: "High Roller: max bet", hint: "Per seat.", min: 1, max: 100000000 },
   { section: "Blackjack", key: "BJ_MY_SEATS", label: "Seats per player", min: 1, max: 5 },
   { section: "Poker", key: "POKER_MIN_BUYIN", label: "Min buy-in", min: 1, max: 100000000 },
   { section: "Poker", key: "POKER_MAX_BUYIN", label: "Max buy-in", min: 1, max: 100000000 },
@@ -60,7 +64,9 @@ function check(input) {
     values[key] = field.scale ? value * field.scale : value;
   }
   const next = { ...config, ...values };
-  if (next.BJ_MIN_BET > next.BJ_MAX_BET) return { error: "Blackjack: the min bet is higher than the max bet." };
+  for (const table of config.BJ_TABLES) {
+    if (next[table.minKey] > next[table.maxKey]) return { error: `${table.name}: the min bet is higher than the max bet.` };
+  }
   if (next.POKER_MIN_BUYIN > next.POKER_MAX_BUYIN) return { error: "Poker: the min buy-in is higher than the max buy-in." };
   return { values: values };
 }

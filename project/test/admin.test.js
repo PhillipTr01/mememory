@@ -228,7 +228,7 @@ test("admin: settings - start coins, daily bonus ... are changed, checked and st
   assert.deepStrictEqual(stored.value, { START_COINS: 30000, DAILY_BONUS: 1000, JACKPOT_GHOST_AFTER: 20000 });
 
   // Wrong values: nothing changes
-  for (const values of [{ START_COINS: -1 }, { START_COINS: 1.5 }, { NOPE: 1 }, { BJ_MIN_BET: 9000, BJ_MAX_BET: 100 }]) {
+  for (const values of [{ START_COINS: -1 }, { START_COINS: 1.5 }, { NOPE: 1 }, { BJ_CLASSIC_MIN: 9000, BJ_CLASSIC_MAX: 100 }]) {
     res = await adminApi("settings", { values });
     assert.strictEqual(res.status, 400, JSON.stringify(values));
   }
