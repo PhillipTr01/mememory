@@ -161,56 +161,97 @@ function pickedIds() {
   return picked.flatMap((group) => new Array(group.count).fill(group.id));
 }
 
+// All rounds of a case (it can be at several places in the order)
 function countOf(id) {
-  var group = picked.find((g) => g.id == id);
-  return group ? group.count : 0;
+  return picked.filter((g) => g.id == id).reduce((sum, g) => sum + g.count, 0);
 }
 
-// A case (with all its rounds) to another place in the order
+// Next to each other, the same case is one block
+function tidyPicked() {
+  picked = picked.filter((g) => g.count > 0);
+  for (var i = picked.length - 1; i > 0; i--) {
+    if (picked[i].id == picked[i - 1].id) {
+      picked[i - 1].count += picked[i].count;
+      picked.splice(i, 1);
+    }
+  }
+}
+
+// A block of rounds to another place in the order
 function movePicked(from, to) {
   if (!Number.isInteger(from) || to < 0 || to >= picked.length || from == to) return;
   var [group] = picked.splice(from, 1);
   picked.splice(to, 0, group);
+  tidyPicked();
   renderCreate();
 }
 
 function shufflePicked() {
-  for (var i = picked.length - 1; i > 0; i--) {
+  // Every single round gets a new place (then the same cases next to each other are one block again)
+  var rounds = pickedIds();
+  for (var i = rounds.length - 1; i > 0; i--) {
     var j = Math.floor(Math.random() * (i + 1));
-    [picked[i], picked[j]] = [picked[j], picked[i]];
+    [rounds[i], rounds[j]] = [rounds[j], rounds[i]];
   }
+  picked = rounds.map((id) => ({ id: id, count: 1 }));
+  tidyPicked();
   renderCreate();
 }
 
+/*
+ * The card of a case: more = new rounds at the end (Whale, Vault, Whale is
+ * possible), fewer = the last rounds of this case go.
+ */
 function setCount(id, count) {
   count = Math.max(0, Math.floor(Number(count)) || 0);
-  var group = picked.find((g) => g.id == id);
-  if (group == null && count > 0) picked.push({ id: id, count: count });
-  else if (group && count == 0) picked.splice(picked.indexOf(group), 1);
-  else if (group) group.count = count;
+  var diff = count - countOf(id);
+  if (diff > 0) {
+    var last = picked[picked.length - 1];
+    if (last && last.id == id) last.count += diff;
+    else picked.push({ id: id, count: diff });
+  }
+  for (var i = picked.length - 1; i >= 0 && diff < 0; i--) {
+    if (picked[i].id != id) continue;
+    var take = Math.min(picked[i].count, -diff);
+    picked[i].count -= take;
+    diff += take;
+  }
+  tidyPicked();
   renderCreate();
 }
 
-function stepper(id, extraClass) {
+// One block of the order: its own number of rounds
+function setGroupCount(index, count) {
+  if (picked[index] == null) return;
+  picked[index].count = Math.max(0, Math.floor(Number(count)) || 0);
+  tidyPicked();
+  renderCreate();
+}
+
+// - count +: for a case on its card, or for one block in the order
+function stepper(id, extraClass, index) {
   var box = el("div", "bt-stepper" + (extraClass ? " " + extraClass : ""));
   box.addEventListener("click", (event) => event.stopPropagation());
+  var block = index != null;
+  var get = () => (block ? picked[index].count : countOf(id));
+  var put = (value) => (block ? setGroupCount(index, value) : setCount(id, value));
   var minus = el("button", "", "−");
   minus.type = "button";
   minus.setAttribute("aria-label", "One less");
-  minus.addEventListener("click", () => setCount(id, countOf(id) - 1));
+  minus.addEventListener("click", () => put(get() - 1));
   var input = el("input", "bt-stepper-count");
   input.type = "number";
   input.min = 0;
   input.inputMode = "numeric";
-  input.dataset.id = id;
+  if (!block) input.dataset.id = id;
   input.setAttribute("aria-label", "How many");
-  input.value = countOf(id);
-  input.addEventListener("change", () => setCount(id, input.value));
+  input.value = get();
+  input.addEventListener("change", () => put(input.value));
   input.addEventListener("keydown", (event) => event.stopPropagation());
   var plus = el("button", "", "+");
   plus.type = "button";
   plus.setAttribute("aria-label", "One more");
-  plus.addEventListener("click", () => setCount(id, countOf(id) + 1));
+  plus.addEventListener("click", () => put(get() + 1));
   box.append(minus, input, plus);
   return box;
 }
@@ -301,7 +342,7 @@ function renderCreate() {
         right.title = "Later";
         right.disabled = index == picked.length - 1;
         right.addEventListener("click", () => movePicked(index, index + 1));
-        chip.append(left, order, el("span", "bt-chip-icon", box.icon), el("span", "bt-chip-name", box.name), el("span", "bt-chip-price", "🪙 " + formatCoins(box.price * group.count)), stepper(group.id), right);
+        chip.append(left, order, el("span", "bt-chip-icon", box.icon), el("span", "bt-chip-name", box.name), el("span", "bt-chip-price", "🪙 " + formatCoins(box.price * group.count)), stepper(group.id, "", index), right);
         chip.addEventListener("dragstart", (event) => {
           event.dataTransfer.effectAllowed = "move";
           event.dataTransfer.setData("text/plain", String(index));

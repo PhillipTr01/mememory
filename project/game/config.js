@@ -83,10 +83,13 @@ module.exports = {
   WITHDRAW_STEP: 1000, // only whole thousands
   WITHDRAW_MAX_OPEN: 5, // open payouts per player
 
-  // Admin panel: a secret address and a password (only from the environment,
-  // without ADMIN_PASSWORD there is no admin panel)
+  // Admin panel: a secret address and a password (ADMIN_PASSWORD or the
+  // hash below; without both there is no admin panel)
   ADMIN_PATH: "/" + (process.env.ADMIN_PATH || "🛠️🦆"),
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || "",
+  // Or only a salted scrypt hash of the password (make one with
+  // `npm run admin-password`). ADMIN_PASSWORD wins if both are set.
+  ADMIN_PASSWORD_HASH: process.env.ADMIN_PASSWORD_HASH || "",
   ADMIN_SESSION: 12 * 60 * 60, // seconds an admin login lasts
 
   // The ways a secret address can arrive: emojis like 🛠️ have an invisible

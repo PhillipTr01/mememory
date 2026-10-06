@@ -90,7 +90,7 @@ app.use(config.addresses(config.JACKPOT_PATH), secretRoute(Auth));
 // The admin panel: a secret address and a password (ADMIN_PASSWORD)
 app.use(config.addresses(config.ADMIN_PATH), adminRoute());
 console.log(
-  config.ADMIN_PASSWORD
+  config.ADMIN_PASSWORD || config.ADMIN_PASSWORD_HASH
     ? `Admin panel: ${config.ADMIN_PATH}/ (also ${encodeURI(config.ADMIN_PATH)}/)`
     : "Admin panel is off - set ADMIN_PASSWORD (and ADMIN_PATH) in the environment / .env to turn it on.",
 );

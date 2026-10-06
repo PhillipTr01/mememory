@@ -14,23 +14,32 @@ const MAX_TRIES = 5; // wrong passwords per address and minute
 
 /*
  * The admin panel: a secret address (config.ADMIN_PATH) and a password
- * (ADMIN_PASSWORD, only from the environment). Without a password there is no
- * admin panel at all - every address under it is a 404.
+ * (ADMIN_PASSWORD from the environment, or the one behind ADMIN_PASSWORD_HASH).
+ * Without both there is no admin panel at all - every address under it is a 404.
  */
 module.exports = function () {
   const router = express.Router({ strict: true });
   const tries = new Map(); // ip -> [times of wrong passwords]
 
-  router.use((req, res, next) => (config.ADMIN_PASSWORD ? next() : res.status(404).send("Not found")));
+  const enabled = () => Boolean(config.ADMIN_PASSWORD || config.ADMIN_PASSWORD_HASH);
+  router.use((req, res, next) => (enabled() ? next() : res.status(404).send("Not found")));
   router.use(express.json({ limit: "4kb" }));
   router.use(express.urlencoded({ extended: false, limit: "2kb" }));
 
   // Compares in constant time (no hints from how long it takes)
   function rightPassword(password) {
-    if (typeof password !== "string") return false;
-    const a = crypto.createHash("sha256").update(password).digest();
-    const b = crypto.createHash("sha256").update(config.ADMIN_PASSWORD).digest();
-    return crypto.timingSafeEqual(a, b);
+    if (typeof password !== "string" || password.length > 200) return false;
+    if (config.ADMIN_PASSWORD) {
+      const a = crypto.createHash("sha256").update(password).digest();
+      const b = crypto.createHash("sha256").update(config.ADMIN_PASSWORD).digest();
+      return crypto.timingSafeEqual(a, b);
+    }
+    // "scrypt:<salt hex>:<hash hex>"
+    const [kind, salt, hash] = String(config.ADMIN_PASSWORD_HASH).split(":");
+    if (kind !== "scrypt" || !salt || !hash) return false;
+    const expected = Buffer.from(hash, "hex");
+    const actual = crypto.scryptSync(password, Buffer.from(salt, "hex"), expected.length);
+    return crypto.timingSafeEqual(actual, expected);
   }
 
   function isAdmin(req) {

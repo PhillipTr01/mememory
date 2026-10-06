@@ -146,18 +146,32 @@ test("admin: the address works with and without the invisible emoji character", 
   assert.strictEqual(redirect.headers.get("location"), plain + "/");
 });
 
-test("admin: too many wrong passwords - wait a minute", async () => {
-  for (let i = 0; i < 5; i++) assert.strictEqual((await call(ADMIN + "/login", { json: { password: "no" } })).status, 401);
-  assert.strictEqual((await call(ADMIN + "/login", { json: { password: "very-secret-pass" } })).status, 429);
+test("admin: the stored hash - only the right password fits", async () => {
+  const crypto = require("crypto");
+  const saved = { password: config.ADMIN_PASSWORD, hash: config.ADMIN_PASSWORD_HASH };
+  const salt = crypto.randomBytes(16);
+  config.ADMIN_PASSWORD = "";
+  config.ADMIN_PASSWORD_HASH = "scrypt:" + salt.toString("hex") + ":" + crypto.scryptSync("hash-pass", salt, 32).toString("hex");
+  try {
+    assert.strictEqual((await call(ADMIN + "/login", { json: { password: "nope" } })).status, 401);
+    assert.strictEqual((await call(ADMIN + "/login", { json: { password: "hash-pass" } })).status, 200);
+  } finally {
+    Object.assign(config, { ADMIN_PASSWORD: saved.password, ADMIN_PASSWORD_HASH: saved.hash });
+  }
 });
 
-test("admin: without ADMIN_PASSWORD there is no admin panel", async () => {
-  const saved = config.ADMIN_PASSWORD;
-  config.ADMIN_PASSWORD = "";
+test("admin: without a password (and hash) there is no admin panel", async () => {
+  const saved = { password: config.ADMIN_PASSWORD, hash: config.ADMIN_PASSWORD_HASH };
+  Object.assign(config, { ADMIN_PASSWORD: "", ADMIN_PASSWORD_HASH: "" });
   try {
     assert.strictEqual((await call(ADMIN + "/")).status, 404);
     assert.strictEqual((await call(ADMIN + "/login", { json: { password: "" } })).status, 404);
   } finally {
-    config.ADMIN_PASSWORD = saved;
+    Object.assign(config, { ADMIN_PASSWORD: saved.password, ADMIN_PASSWORD_HASH: saved.hash });
   }
+});
+
+test("admin: too many wrong passwords - wait a minute", async () => {
+  for (let i = 0; i < 5; i++) assert.strictEqual((await call(ADMIN + "/login", { json: { password: "no" } })).status, 401);
+  assert.strictEqual((await call(ADMIN + "/login", { json: { password: "very-secret-pass" } })).status, 429);
 });
