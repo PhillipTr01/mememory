@@ -214,13 +214,22 @@ test("jackpot: alone in the pot - a ghost bet of 50-150% joins, a real player ma
   assert.strictEqual(withGhost.phase, "countdown", "the ghost starts the countdown");
   assert.deepStrictEqual(withGhost.bets.map((b) => [b.name, b.from, b.to]), [["alice", 1, 1000], ["Ghost bet", 1001, 1000 + ghost.coins]]);
 
+  // Alice puts in more: the ghost answers right away with 50-150% of it
+  const answered = waitFor(alice, "jackpotState", (s) => s.bets.length === 4);
+  alice.emit("bet", { amount: 400 });
+  const more = await answered;
+  assert.deepStrictEqual(more.bets.map((b) => b.name), ["alice", "Ghost bet", "alice", "Ghost bet"]);
+  const answer = more.bets[3].amount;
+  assert.ok(answer >= 200 && answer <= 600, `ghost answer: ${answer}`);
+  assert.strictEqual(more.entries.find((e) => e.ghost).coins, ghost.coins + answer);
+
   // Bob joins before the draw: the ghost is gone, the tickets are counted again
   const gone = waitFor(alice, "jackpotState", (s) => s.entries.some((e) => e.name === "bob"));
   bob.emit("bet", { amount: 200 });
   const real = await gone;
   assert.deepStrictEqual(real.entries.map((e) => e.name), ["alice", "bob"]);
-  assert.deepStrictEqual(real.bets.map((b) => [b.name, b.from, b.to]), [["alice", 1, 1000], ["bob", 1001, 1200]]);
-  assert.strictEqual(real.total, 1200);
+  assert.deepStrictEqual(real.bets.map((b) => [b.name, b.from, b.to]), [["alice", 1, 1000], ["alice", 1001, 1400], ["bob", 1401, 1600]]);
+  assert.strictEqual(real.total, 1600);
   assert.strictEqual(real.phase, "countdown", "the countdown goes on");
   await waitFor(alice, "jackpotState", (s) => s.phase === "open" && s.total === 0, 5000);
   assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 10000, "only real coins in the pot");

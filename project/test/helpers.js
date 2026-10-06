@@ -90,8 +90,12 @@ function memoryModel(Model) {
   Model.find = (filter = {}) => list(docs.filter((d) => matches(d, filter)));
   Model.findOne = (filter = {}) => query(docs.find((d) => matches(d, filter)) || null);
   Model.countDocuments = async (filter = {}) => docs.filter((d) => matches(d, filter)).length;
-  Model.updateOne = async (filter, update) => {
+  Model.updateOne = async (filter, update, options) => {
     const doc = docs.find((d) => matches(d, filter));
+    if (doc == null && options && options.upsert) {
+      docs.push({ _id: `doc${next++}`, ...filter, ...(update.$set || {}) });
+      return { n: 1, nModified: 0, upserted: 1 };
+    }
     if (doc == null) return { n: 0, nModified: 0 };
     Object.assign(doc, update.$set || {});
     return { n: 1, nModified: 1 };
@@ -142,6 +146,7 @@ async function startServer() {
     io,
     port,
     jackpot,
+    battles,
     poker,
     blackjack,
     client(namespace, token) {

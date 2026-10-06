@@ -5,6 +5,7 @@ const cases = require("../game/cases");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
 const notices = require("../game/notices");
+const persist = require("../game/persist");
 const safe = require("./safe_handler");
 const version = require("../game/version");
 
@@ -79,6 +80,7 @@ module.exports = function (io) {
       .sort((a, b) => order[a.phase] - order[b.phase] || b.createdAt - a.createdAt)
       .map(serialize);
     battles.to(ROOM).emit("battles", { list: list, history: lobby.history, round: config.BATTLE_ROUND });
+    persist.changed("battles");
   }
 
   // Sends the balance to every open tab of the user
@@ -143,31 +145,34 @@ module.exports = function (io) {
     }
 
     // A short countdown, then one round after the other
-    const begin = Date.now() + config.BATTLE_START;
-    battle.nextAt = begin;
+    battle.begin = Date.now() + config.BATTLE_START;
+    battle.nextAt = battle.begin;
     emitList();
     // Everybody in it hears it, on whatever casino page they are
     const players = battle.seats.map((seat) => seat.name);
     for (const seat of humans(battle)) {
       notices.send(seat.name, "battleStarted", { id: battle.id, price: battle.price, cases: battle.cases.length, players: players, crazy: battle.crazy });
     }
+    scheduleReveal(battle);
+  }
+
+  // One round after the other (round r is shown at begin + r * BATTLE_ROUND), then the end
+  function scheduleReveal(battle) {
     const reveal = () => {
       battle.revealed++;
-      if (battle.revealed < battle.cases.length) {
-        battle.nextAt = begin + battle.revealed * config.BATTLE_ROUND;
-        battle.timer = setTimeout(reveal, battle.nextAt - Date.now());
-      } else {
-        battle.nextAt = begin + battle.cases.length * config.BATTLE_ROUND;
-        battle.timer = setTimeout(() => finish(battle), battle.nextAt - Date.now());
-      }
+      battle.nextAt = battle.begin + battle.revealed * config.BATTLE_ROUND;
+      if (battle.revealed < battle.cases.length) battle.timer = setTimeout(reveal, battle.nextAt - Date.now());
+      else battle.timer = setTimeout(() => finish(battle), battle.nextAt - Date.now());
       emitList();
     };
-    battle.timer = setTimeout(reveal, config.BATTLE_START);
+    if (battle.revealed < battle.cases.length) battle.timer = setTimeout(reveal, battle.nextAt - Date.now());
+    else battle.timer = setTimeout(() => finish(battle), battle.nextAt - Date.now());
   }
 
   function finish(battle) {
     battle.phase = PHASE.DONE;
     battle.nextAt = null;
+    battle.doneAt = Date.now();
     const winner = battle.seats[battle.winner];
     lobby.history.unshift({ id: battle.id, winner: winner.name, bot: winner.bot, total: battle.payout, price: battle.price });
     lobby.history.length = Math.min(lobby.history.length, config.BATTLE_HISTORY);
@@ -307,6 +312,38 @@ module.exports = function (io) {
       safe("sendChatMessage", (data) => casinoChat.fromUser(socket, data)),
     );
   });
+
+  /* ---------- Restart of the server ---------- */
+
+  persist.register(
+    "battles",
+    () => ({ list: [...lobby.list.values()].filter((battle) => battle.phase !== PHASE.CANCELLED), history: lobby.history }),
+    restore,
+  );
+
+  // The saved battles again: waiting ones wait on, running ones go on (after a short pause)
+  function restore(saved) {
+    for (const battle of lobby.list.values()) clearTimeout(battle.timer);
+    lobby.list = new Map();
+    lobby.history = saved.history || [];
+    const now = Date.now();
+    for (const battle of saved.list || []) {
+      battle.timer = null;
+      lobby.list.set(battle.id, battle);
+      if (battle.phase === PHASE.WAITING) {
+        battle.timer = setTimeout(() => cancel(battle), Math.max(config.RESTORE_GRACE, battle.createdAt + config.BATTLE_EXPIRE - now));
+      } else if (battle.phase === PHASE.RUNNING) {
+        // The next round a few seconds after the start, the rest as planned from there
+        const shift = Math.max(0, now + 3000 - battle.nextAt);
+        battle.begin += shift;
+        battle.nextAt += shift;
+        scheduleReveal(battle);
+      } else if (battle.phase === PHASE.DONE) {
+        remove(battle, Math.max(config.RESTORE_GRACE, (battle.doneAt || now) + config.BATTLE_KEEP - now));
+      }
+    }
+    emitList();
+  }
 
   return { lobby };
 };

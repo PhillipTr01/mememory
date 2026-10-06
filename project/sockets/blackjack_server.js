@@ -5,6 +5,7 @@ const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 const version = require("../game/version");
+const persist = require("../game/persist");
 
 const ROOM = "blackjack";
 
@@ -83,6 +84,7 @@ module.exports = function (io) {
 
   function emitState() {
     for (const socket of room.sockets.values()) socket.emit("blackjackState", serialize(socket.data.username));
+    persist.changed("blackjack");
   }
 
   async function sendCoins(username) {
@@ -105,15 +107,15 @@ module.exports = function (io) {
   /* ---------- Seats ---------- */
 
   // Without a bet a seat is only kept for a while (in the betting time)
-  function startStandTimer(i) {
+  function startStandTimer(i, after = config.BJ_SIT) {
     const seat = table.seats[i];
     clearTimeout(seat.standTimer);
-    seat.standAt = Date.now() + config.BJ_SIT;
+    seat.standAt = Date.now() + after;
     seat.standTimer = setTimeout(() => {
       if (table.seats[i] !== seat || seat.bet > 0 || table.phase !== "betting") return;
       standUp(i);
       emitState();
-    }, config.BJ_SIT);
+    }, after);
   }
 
   function stopStandTimer(seat) {
@@ -189,16 +191,8 @@ module.exports = function (io) {
       for (let h = 0; h < hands.length; h++) {
         if (!hands[h].done) {
           table.current = { seat: i, hand: h };
-          const seat = table.seats[i];
           // Nobody at the page: no long wait for the others
-          const time = connected(seat.name) ? config.BJ_TURN : 1500;
-          table.turnAt = Date.now() + time;
-          const round = table.round;
-          table.turnTimer = setTimeout(() => {
-            if (table.round !== round || !table.current || table.current.seat !== i || table.current.hand !== h) return;
-            hands[h].done = true;
-            nextTurn();
-          }, time);
+          armTurn(i, h, connected(table.seats[i].name) ? config.BJ_TURN : 1500);
           emitState();
           return;
         }
@@ -207,6 +201,18 @@ module.exports = function (io) {
     table.current = null;
     table.turnAt = null;
     dealerTurn();
+  }
+
+  // The time for a hand: then it stands
+  function armTurn(i, h, time) {
+    clearTimeout(table.turnTimer);
+    table.turnAt = Date.now() + time;
+    const round = table.round;
+    table.turnTimer = setTimeout(() => {
+      if (table.round !== round || !table.current || table.current.seat !== i || table.current.hand !== h) return;
+      table.seats[i].hands[h].done = true;
+      nextTurn();
+    }, time);
   }
 
   // The dealer turns the card and draws to 17 (one card after the other)
@@ -493,6 +499,54 @@ module.exports = function (io) {
     table.seats.forEach((seat) => seat && stopStandTimer(seat));
     table.seats.fill(null);
     await Promise.all(payments);
+  }
+
+  /* ---------- Restart of the server ---------- */
+
+  persist.register(
+    "blackjack",
+    () => ({
+      round: table.round,
+      phase: table.phase,
+      seats: table.seats,
+      dealer: table.dealer,
+      shoe: table.shoe,
+      current: table.current,
+      turnAt: table.turnAt,
+      startAt: table.startAt,
+      history: table.history,
+      lastBets: table.lastBets,
+    }),
+    restore,
+  );
+
+  // The saved table again: the round goes on where it was (with a little time to come back)
+  function restore(saved) {
+    clearTimeout(table.timer);
+    clearTimeout(table.turnTimer);
+    table.seats.forEach((seat) => seat && clearTimeout(seat.standTimer));
+    Object.assign(table, saved, { timer: null, turnTimer: null });
+    if (!(table.lastBets instanceof Map)) table.lastBets = new Map();
+    const now = Date.now();
+    const grace = config.RESTORE_GRACE;
+    const left = (at) => Math.max(grace, (at || 0) - now);
+    table.seats.forEach((seat) => seat && (seat.standTimer = null));
+    if (table.phase === "betting") {
+      if (table.startAt != null) {
+        const after = left(table.startAt);
+        table.startAt = now + after;
+        table.timer = setTimeout(deal, after);
+      }
+      table.seats.forEach((seat, i) => seat && seat.bet === 0 && seat.standAt != null && startStandTimer(i, left(seat.standAt)));
+    } else if (table.phase === "playing") {
+      if (table.current) armTurn(table.current.seat, table.current.hand, left(table.turnAt));
+      else nextTurn();
+    } else if (table.phase === "dealer") {
+      dealerTurn();
+    } else if (table.phase === "result") {
+      table.timer = setTimeout(newRound, config.BJ_RESULT);
+    }
+    emitState();
   }
 
   return { table, refundAll };

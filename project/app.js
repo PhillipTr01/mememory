@@ -19,6 +19,7 @@ const PORT = process.env.PORT || 5000;
 
 const { page, staticHeaders } = require("./utils/pages");
 const { notFound, errorHandler } = require("./utils/errors");
+const persist = require("./game/persist");
 const config = require("./game/config");
 
 const app = express();
@@ -41,10 +42,10 @@ require("./sockets/lobby_server")(io);
 require("./sockets/singleplayer_server")(io);
 require("./sockets/multiplayer_server")(io);
 require("./sockets/tictactoe_server")(io);
-const jackpotGame = require("./sockets/jackpot_server")(io);
-const battlesGame = require("./sockets/battles_server")(io);
-const pokerTable = require("./sockets/poker_server")(io);
-const blackjackTable = require("./sockets/blackjack_server")(io);
+require("./sockets/jackpot_server")(io);
+require("./sockets/battles_server")(io);
+require("./sockets/poker_server")(io);
+require("./sockets/blackjack_server")(io);
 require("./sockets/casino_server")(io);
 
 /* Page routes */
@@ -115,6 +116,8 @@ async function connectDatabase(attempt = 1) {
       serverSelectionTimeoutMS: 10000,
     });
     console.log("Connected to database.");
+    // The games as they were before the restart (rounds, tables, history, chat)
+    await persist.restoreAll();
     startScraper();
   } catch (error) {
     if (shuttingDown) return;
@@ -156,9 +159,10 @@ function shutdown(code = 0) {
   // Force exit if closing takes too long
   setTimeout(() => process.exit(code), 5000).unref();
 
-  // The chips at the poker table and the open blackjack bets go back to the players first
-  Promise.all([pokerTable.refundAll(), blackjackTable.refundAll()])
-    .catch((error) => console.error("Refund failed:", error))
+  // Every game is saved as it is (running rounds, chips, bets) - it goes on after the restart
+  persist
+    .saveAll()
+    .catch((error) => console.error("Saving the games failed:", error))
     .finally(() => {
       io.close();
       server.close(() => {

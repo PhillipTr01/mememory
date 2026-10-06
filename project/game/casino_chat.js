@@ -1,5 +1,6 @@
 const config = require("./config");
 const { cleanText } = require("./chat");
+const persist = require("./persist");
 
 /*
  * One chat for every hidden game (jackpot, case battles, poker, blackjack): a
@@ -48,6 +49,17 @@ function fromUser(socket, data) {
   history.push(entry);
   if (history.length > config.CHAT_HISTORY) history.splice(0, history.length - config.CHAT_HISTORY);
   for (const page of pages) page.namespace.to(page.room).emit("chatMessage", entry);
+  persist.changed("chat");
 }
+
+// The messages survive a restart
+persist.register(
+  "chat",
+  () => ({ history: history, messageId: messageId }),
+  (saved) => {
+    history.splice(0, history.length, ...(saved.history || []));
+    messageId = Math.max(messageId, saved.messageId || 0);
+  },
+);
 
 module.exports = { attach, join, fromUser };

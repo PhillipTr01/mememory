@@ -5,6 +5,7 @@ const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 const version = require("../game/version");
+const persist = require("../game/persist");
 
 const ROOM = "jackpot"; // everybody is in the same (socket.io) room
 // The house when a player is alone too long: a space, so no username can be the same
@@ -123,6 +124,8 @@ module.exports = function (io) {
     const before = pot.bets.length > 0 ? pot.bets[pot.bets.length - 1].to : 0;
     pot.bets.push({ name: bet.name, amount: bet.amount, from: before + 1, to: before + bet.amount });
     if (pot.phase === PHASE.OPEN && pot.entries.length >= 2) startCountdown();
+    // Alone against the ghost and more coins in: the ghost answers (no sniping the pot)
+    if (bet.name !== GHOST && current != null && hasGhost() && pot.entries.length === 2) addToPot({ name: GHOST, amount: ghostAmount(bet.amount) });
     // The first player: alone too long, the ghost bet comes
     if (pot.phase === PHASE.OPEN && pot.entries.length === 1 && pot.ghostTimer == null) startGhostTimer();
   }
@@ -133,9 +136,9 @@ module.exports = function (io) {
     return pot.entries.some((entry) => entry.name === GHOST);
   }
 
-  function startGhostTimer() {
-    pot.ghostAt = Date.now() + config.JACKPOT_GHOST_AFTER;
-    pot.ghostTimer = setTimeout(addGhost, config.JACKPOT_GHOST_AFTER);
+  function startGhostTimer(after = config.JACKPOT_GHOST_AFTER) {
+    pot.ghostAt = Date.now() + after;
+    pot.ghostTimer = setTimeout(addGhost, after);
     pot.ghostTimer.unref();
   }
 
@@ -150,11 +153,13 @@ module.exports = function (io) {
     pot.ghostTimer = null;
     pot.ghostAt = null;
     if (pot.phase !== PHASE.OPEN || pot.entries.length !== 1) return;
-    const [low, high] = config.JACKPOT_GHOST_SHARE;
-    const share = low + Math.random() * (high - low);
-    const amount = Math.max(1, Math.round(pot.entries[0].coins * share));
-    addToPot({ name: GHOST, amount: amount });
+    addToPot({ name: GHOST, amount: ghostAmount(pot.entries[0].coins) });
     emitState();
+  }
+
+  function ghostAmount(coins) {
+    const [low, high] = config.JACKPOT_GHOST_SHARE;
+    return Math.max(1, Math.round(coins * (low + Math.random() * (high - low))));
   }
 
   // The tickets are counted again without the ghost's
@@ -175,6 +180,7 @@ module.exports = function (io) {
 
   function emitState() {
     for (const socket of jackpot.sockets.values()) socket.emit("jackpotState", serialize(socket.data.username));
+    persist.changed("jackpot");
   }
 
 
@@ -188,11 +194,11 @@ module.exports = function (io) {
 
   /* ---------- Round ---------- */
 
-  function startCountdown() {
+  function startCountdown(after = config.JACKPOT_COUNTDOWN) {
     pot.phase = PHASE.COUNTDOWN;
-    pot.endsAt = Date.now() + config.JACKPOT_COUNTDOWN;
+    pot.endsAt = Date.now() + after;
     clearTimeout(pot.timer);
-    pot.timer = setTimeout(() => runDraw().catch((error) => console.error("[jackpot] Draw failed:", error)), config.JACKPOT_COUNTDOWN);
+    pot.timer = setTimeout(() => runDraw().catch((error) => console.error("[jackpot] Draw failed:", error)), after);
   }
 
   async function runDraw() {
@@ -200,41 +206,53 @@ module.exports = function (io) {
     stopGhostTimer();
     pot.phase = PHASE.DRAWING;
     pot.endsAt = null;
+    pot.drawAt = Date.now();
+    pot.paid = false;
+    pot.announced = false;
 
     // The ticket decides: every coin is one ticket, so the chance is the share of
     // the pot. Which ticket was fixed at the start of the round (provably fair).
     // The tickets go through the bets in their order (not per player).
     pot.draw = fairWinner(pot.bets.map((bet) => ({ name: bet.name, coins: bet.amount })), pot.fair.number);
-    const sum = pot.draw.total;
-    const winner = pot.entries.find((entry) => entry.name === pot.draw.winner);
-    const ghostWon = winner.name === GHOST;
-
-    // Paid right away, so nothing is lost if the page (or the server) goes away
-    // during the animation (the ghost bet wins: the house keeps the pot)
-    if (!ghostWon) {
-      try {
-        await coins.add(winner.name, sum, { quiet: true, reason: "jackpot win", note: hasGhost() ? "against the ghost bet" : undefined });
-      } catch (error) {
-        console.error("[jackpot] Could not pay the winner:", error);
-      }
-    }
+    await payWinner();
     emitState();
 
     // Announced after the roulette, so the chat doesn't spoil it
-    pot.timer = setTimeout(() => {
-      const result = { round: pot.round, winner: winner.name, total: sum, coins: winner.coins };
-      pot.history.unshift(result);
-      if (pot.records.day !== today()) pot.records = { day: today(), biggest: null, luckiest: null };
-      // Records only for players
-      if (!ghostWon && (pot.records.biggest == null || sum > pot.records.biggest.total)) pot.records.biggest = result;
-      if (!ghostWon && (pot.records.luckiest == null || winner.coins / sum < pot.records.luckiest.coins / pot.records.luckiest.total)) {
-        pot.records.luckiest = result;
-      }
-      pot.history.length = Math.min(pot.history.length, config.JACKPOT_HISTORY);
-      if (!ghostWon) coins.notify(winner.name);
-      emitState();
-      pot.timer = setTimeout(newRound, config.JACKPOT_PAUSE);
-    }, config.JACKPOT_SPIN);
+    pot.timer = setTimeout(announce, config.JACKPOT_SPIN);
+  }
+
+  // Paid right away, so nothing is lost if the page (or the server) goes away
+  // during the animation (the ghost bet wins: the house keeps the pot)
+  async function payWinner() {
+    if (pot.paid) return;
+    pot.paid = true;
+    const winner = pot.entries.find((entry) => entry.name === pot.draw.winner);
+    if (winner.name === GHOST) return;
+    try {
+      await coins.add(winner.name, pot.draw.total, { quiet: true, reason: "jackpot win", note: hasGhost() ? "against the ghost bet" : undefined });
+    } catch (error) {
+      console.error("[jackpot] Could not pay the winner:", error);
+    }
+  }
+
+  // The animation is over: the winner in the history, then a new round
+  function announce() {
+    const sum = pot.draw.total;
+    const winner = pot.entries.find((entry) => entry.name === pot.draw.winner);
+    const ghostWon = winner.name === GHOST;
+    pot.announced = true;
+    const result = { round: pot.round, winner: winner.name, total: sum, coins: winner.coins };
+    pot.history.unshift(result);
+    if (pot.records.day !== today()) pot.records = { day: today(), biggest: null, luckiest: null };
+    // Records only for players
+    if (!ghostWon && (pot.records.biggest == null || sum > pot.records.biggest.total)) pot.records.biggest = result;
+    if (!ghostWon && (pot.records.luckiest == null || winner.coins / sum < pot.records.luckiest.coins / pot.records.luckiest.total)) {
+      pot.records.luckiest = result;
+    }
+    pot.history.length = Math.min(pot.history.length, config.JACKPOT_HISTORY);
+    if (!ghostWon) coins.notify(winner.name);
+    emitState();
+    pot.timer = setTimeout(newRound, config.JACKPOT_PAUSE);
   }
 
   function newRound() {
@@ -247,6 +265,9 @@ module.exports = function (io) {
     pot.mode = randomMode();
     pot.endsAt = null;
     pot.draw = null;
+    pot.drawAt = null;
+    pot.paid = false;
+    pot.announced = false;
     // The bets that came during the draw are the first ones in the new pot
     pot.waiting.splice(0).forEach(addToPot);
     emitState();
@@ -319,6 +340,56 @@ module.exports = function (io) {
       safe("disconnect", () => emitState()),
     );
   });
+
+  /* ---------- Restart of the server ---------- */
+
+  persist.register(
+    "jackpot",
+    () => ({
+      round: pot.round,
+      phase: pot.phase,
+      entries: pot.entries,
+      endsAt: pot.endsAt,
+      draw: pot.draw,
+      drawAt: pot.drawAt,
+      paid: pot.paid,
+      announced: pot.announced,
+      mode: pot.mode,
+      history: pot.history,
+      bets: pot.bets,
+      incoming: pot.incoming.map((bet) => ({ name: bet.name, amount: bet.amount, landsAt: bet.landsAt })),
+      waiting: pot.waiting,
+      fair: pot.fair,
+      records: pot.records,
+      ghostAt: pot.ghostAt,
+    }),
+    restore,
+  );
+
+  // The saved pot again - the round goes on where it was (with a little time to come back)
+  function restore(saved) {
+    clearTimeout(pot.timer);
+    stopGhostTimer();
+    pot.incoming.forEach((bet) => clearTimeout(bet.timer));
+    Object.assign(pot, saved, { timer: null, ghostTimer: null });
+    const now = Date.now();
+    const grace = config.RESTORE_GRACE;
+    pot.incoming = (saved.incoming || []).map((bet) => ({ ...bet, landsAt: Math.max(bet.landsAt, now + 500) }));
+    pot.incoming.forEach((bet) => (bet.timer = setTimeout(() => land(bet), bet.landsAt - now)));
+    if (pot.phase === PHASE.OPEN) {
+      if (pot.entries.length === 1) startGhostTimer(Math.max(grace, (saved.ghostAt || 0) - now));
+    } else if (pot.phase === PHASE.COUNTDOWN) {
+      startCountdown(Math.max(grace, (saved.endsAt || 0) - now));
+    } else if (pot.phase === PHASE.DRAWING) {
+      if (pot.announced) {
+        pot.timer = setTimeout(newRound, config.JACKPOT_PAUSE);
+      } else {
+        payWinner().catch(() => {});
+        pot.timer = setTimeout(announce, Math.max(1000, (pot.drawAt || 0) + config.JACKPOT_SPIN - now));
+      }
+    }
+    emitState();
+  }
 
   return { pot };
 };

@@ -5,6 +5,7 @@ const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 const version = require("../game/version");
+const persist = require("../game/persist");
 
 const ROOM = "poker"; // one table for everybody
 const BETTING = ["preflop", "flop", "turn", "river"];
@@ -155,6 +156,7 @@ module.exports = function (io) {
 
   function emitState() {
     for (const socket of room.sockets.values()) socket.emit("pokerState", serialize(socket.data.username));
+    persist.changed("poker");
   }
 
   async function sendCoins(username) {
@@ -252,10 +254,10 @@ module.exports = function (io) {
     nextStreet();
   }
 
-  function startTurn() {
+  function startTurn(after) {
     const seat = table.seats[table.current];
     // Nobody at the page: no long wait for the others
-    const time = seat.awaySince != null ? 1500 : config.POKER_TURN;
+    const time = after != null ? after : seat.awaySince != null ? 1500 : config.POKER_TURN;
     table.turnAt = Date.now() + time;
     const turn = table.current;
     const hand = table.hand;
@@ -633,6 +635,50 @@ module.exports = function (io) {
       if (chips > 0) payments.push(coins.add(seat.name, chips, { reason: "poker refund" }).catch((e) => console.error("[poker] Refund failed:", e)));
     });
     await Promise.all(payments);
+  }
+
+  /* ---------- Restart of the server ---------- */
+
+  persist.register(
+    "poker",
+    () => {
+      const saved = {};
+      for (const key of ["seats", "phase", "hand", "button", "sb", "bb", "board", "deck", "current", "lastActor", "turnAt", "highBet", "minRaise", "result", "history"]) saved[key] = table[key];
+      return saved;
+    },
+    restore,
+  );
+
+  // The saved table again: the hand goes on where it was. Players get time to
+  // come back - who doesn't, stands up (the chips go back as coins)
+  function restore(saved) {
+    clearTimeout(table.timer);
+    clearTimeout(table.turnTimer);
+    table.seats.forEach((seat) => seat && clearTimeout(seat.awayTimer));
+    Object.assign(table, saved, { timer: null, turnTimer: null, startAt: null });
+    const now = Date.now();
+    const grace = config.RESTORE_GRACE;
+    table.seats.forEach((seat, i) => {
+      if (seat == null) return;
+      seat.awaySince = null;
+      seat.awayTimer = setTimeout(() => {
+        if (table.seats[i] !== seat || connected(seat.name)) return;
+        seat.awaySince = Date.now();
+        standUp(i);
+        emitState();
+      }, Math.max(config.POKER_AWAY, grace));
+    });
+    if (table.phase === "waiting") {
+      scheduleStart();
+    } else if (table.phase === "showdown") {
+      table.timer = setTimeout(afterHand, config.POKER_SHOWDOWN);
+    } else if (table.current >= 0 && table.seats[table.current]) {
+      startTurn(Math.max(grace, (table.turnAt || 0) - now));
+    } else {
+      // All-in: the rest of the board
+      table.timer = setTimeout(nextStreet, config.POKER_STREET);
+    }
+    emitState();
   }
 
   return { table, refundAll };
