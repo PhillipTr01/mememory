@@ -414,6 +414,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("bjBackToLobby").hidden = !TABLE_ID;
   document.getElementById("bjLobby").hidden = !!TABLE_ID;
   document.getElementById("bjLimits").style.display = TABLE_ID ? "" : "none";
+  // The last rounds belong to a table, not to the lobby
+  document.getElementById("bjHistory").closest(".side-card").hidden = !TABLE_ID;
   if (!TABLE_ID) document.getElementById("bjStatus").innerText = "Pick a table - every table has its own stakes.";
   var amount = document.getElementById("bjAmount");
   document.querySelectorAll(".bj-chip").forEach((chip) =>

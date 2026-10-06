@@ -670,3 +670,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* The lobby has no last rounds (they belong to a table) */
+.side-card[hidden] {
+  display: none !important;
+}
