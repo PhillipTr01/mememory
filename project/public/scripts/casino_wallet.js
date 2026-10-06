@@ -30,7 +30,8 @@
     return element;
   }
 
-  var STATUS = { open: "⏳ waiting", paid: "✅ paid", rejected: "↩️ rejected - coins back" };
+  var STATUS = { open: "Waiting", paid: "Paid", rejected: "Rejected" };
+  var STATUS_HINT = { open: "The admin pays it out soon", paid: "Paid out", rejected: "The coins are back on your balance" };
 
   async function payoutDialog() {
     var backdrop = el("div", "mm-dialog-backdrop");
@@ -78,7 +79,14 @@
           ...(rows.length ? [el("div", "nav-payout-head", "Your last payouts")] : []),
           ...rows.map((w) => {
             var row = el("div", "nav-payout-row " + w.status);
-            row.append(el("span", "", "🪙 " + format(w.amount)), el("span", "", STATUS[w.status] + (w.note ? " · " + w.note : "")), el("span", "mm-muted", new Date(w.createdAt).toLocaleDateString()));
+            var amount = el("span", "nav-payout-amount", "🪙 " + format(w.amount));
+            var badge = el("span", "nav-payout-status " + w.status, STATUS[w.status]);
+            badge.title = STATUS_HINT[w.status];
+            var date = el("span", "nav-payout-date", new Date(w.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }));
+            var side = el("div", "nav-payout-side");
+            side.append(badge, date);
+            row.append(amount, side);
+            if (w.note) row.appendChild(el("span", "nav-payout-note", "“" + w.note + "”"));
             return row;
           }),
         );
