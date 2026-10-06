@@ -1,5 +1,5 @@
 /*
- * The five ways to show who wins the jackpot. Only the show is different:
+ * The ways to show who wins the jackpot. Only the show is different:
  * the winner (draw.ticket / draw.winner) always comes from the server.
  *
  * Every draw has
@@ -15,6 +15,8 @@ var DRAW_MODES = [
   { id: "race", icon: "🏇", label: "Race", description: "Every player runs - the winner crosses the line first" },
   { id: "claw", icon: "🕹️", label: "Claw", description: "The claw machine grabs the winner out of the pile" },
   { id: "royale", icon: "🪂", label: "Royale", description: "Battle royale - the zone shrinks, the last one standing wins" },
+  { id: "coinrain", icon: "🪙", label: "Coins", description: "Coins rain into everybody's jar - the first one to overflow wins" },
+  { id: "revolver", icon: "🔫", label: "Revolver", description: "Russian roulette - the revolver goes round, the last one alive wins" },
 ];
 
 /* ---------- Helpers ---------- */
@@ -775,7 +777,381 @@ var royaleDraw = {
   },
 };
 
+/* ---------- 8. Coin rain: the first jar that overflows wins ---------- */
+
+var coinRainDraw = {
+  build(stage, winner) {
+    var root = scene(stage, "coinrain");
+    root.replaceChildren();
+    var shelf = el("div", "jp-shelf");
+    var jars = playersFor(8, winner).map((player) => {
+      var column = el("div", "jp-jar-col");
+      column.style.setProperty("--share", shareColor(player.name));
+      var jar = el("div", "jp-jar");
+      var fill = el("div", "jp-jar-fill");
+      jar.appendChild(fill);
+      var label = el("div", "jp-jar-name");
+      label.append(createAvatar(player.name, "sm"), el("span", "", player.name));
+      column.append(jar, label);
+      shelf.appendChild(column);
+      return { name: player.name, column: column, jar: jar, fill: fill, level: 0, debt: 0 };
+    });
+    var crown = el("div", "jp-jar-crown", "👑");
+    root.append(shelf, crown);
+    if (jars.length == 0) emptyNote(root, "The jars fill with the first coins.");
+    return { root: root, jars: jars, crown: crown };
+  },
+
+  idle(stage) {
+    this.build(stage);
+  },
+
+  setLevel(jar, level) {
+    jar.level = level;
+    jar.fill.style.height = level * 100 + "%";
+  },
+
+  // Where the coins land in a jar (px in the scene)
+  spot(parts, jar) {
+    var root = parts.root.getBoundingClientRect();
+    var box = jar.jar.getBoundingClientRect();
+    return {
+      x: box.left - root.left + box.width / 2,
+      half: box.width / 2,
+      top: box.top - root.top,
+      surface: box.bottom - root.top - jar.level * box.height,
+      floor: root.height,
+    };
+  },
+
+  coin(parts, x, size) {
+    var coin = el("i", "jp-coin");
+    coin.style.left = x + "px";
+    if (size) coin.style.setProperty("--coin", size + "px");
+    parts.root.appendChild(coin);
+    return coin;
+  },
+
+  // One coin falls from the sky into a jar
+  drop(parts, jar, fall) {
+    var spot = this.spot(parts, jar);
+    var x = spot.x + randomBetween(-spot.half + 9, spot.half - 9);
+    var coin = this.coin(parts, x);
+    return animate(
+      coin,
+      [
+        { transform: `translate(calc(-50% + ${randomBetween(-18, 18)}px), -24px) rotate(0deg)` },
+        { transform: `translate(-50%, ${spot.surface - 10}px) rotate(${randomBetween(-300, 300)}deg)` },
+      ],
+      { duration: fall || randomBetween(380, 560), easing: "cubic-bezier(.45,0,1,1)" },
+    ).then(() => coin.remove());
+  },
+
+  // The crown sits on the jar that is the most full
+  crownOn(parts, jar) {
+    var spot = this.spot(parts, jar);
+    parts.crown.style.left = spot.x + "px";
+    parts.crown.style.top = spot.top - 30 + "px";
+    parts.crown.classList.add("on");
+    animate(parts.crown, [{ transform: "translate(-50%, -8px) scale(1.3)" }, { transform: "translate(-50%, 0) scale(1)" }], {
+      duration: 260,
+      easing: "ease-out",
+      fill: "none",
+    });
+  },
+
+  async play(stage, draw, duration, short) {
+    var parts = this.build(stage, draw.winner);
+    var jars = parts.jars;
+    var winner = jars.find((jar) => jar.name == draw.winner);
+    if (winner == null) return winnerLabel(parts.root, draw);
+
+    // How full each jar ends and how it gets there (bend > 1: late, < 1: early).
+    // The biggest rival leads for a long time and ends just below the rim.
+    var share = (jar) => (state.entries.find((e) => e.name == jar.name) || { coins: 0 }).coins;
+    var rivals = jars.filter((jar) => jar != winner).sort((a, b) => share(b) - share(a));
+    rivals.forEach((jar) => {
+      jar.final = randomBetween(0.55, 0.86);
+      jar.bend = randomBetween(0.7, 1.4);
+    });
+    if (rivals[0]) Object.assign(rivals[0], { final: randomBetween(0.94, 0.97), bend: randomBetween(0.55, 0.75) });
+    if (rivals[1]) Object.assign(rivals[1], { final: randomBetween(0.86, 0.93), bend: randomBetween(0.8, 1.1) });
+    winner.final = 1;
+    winner.bend = Math.random() < 0.65 ? randomBetween(1.4, 1.8) : randomBetween(0.9, 1.2);
+
+    if (short) {
+      jars.forEach((jar) => this.setLevel(jar, jar.final));
+      return this.overflow(parts, winner, draw, true);
+    }
+
+    // The rain: fast at first, slower and slower at the end
+    var rainTime = duration - 900;
+    var start = performance.now();
+    var leader = null;
+    var almost = false;
+    await new Promise((resolve) => {
+      var frame = (now) => {
+        // The first frame can be a little older than start
+        var t = Math.min(1, Math.max(0, (now - start) / rainTime));
+        var p = 1 - Math.pow(1 - t, 1.7);
+        jars.forEach((jar) => {
+          // The winner stays just below the rim until the last coin
+          var target = jar.final * Math.pow(p, jar.bend) * (jar == winner ? 0.985 : 1);
+          var level = Math.max(jar.level, target);
+          jar.debt = Math.min(jar.debt + (level - jar.level) * 36, 3);
+          for (; jar.debt >= 1; jar.debt--) this.drop(parts, jar);
+          this.setLevel(jar, level);
+          jar.column.classList.toggle("brim", level > 0.84);
+        });
+        var top = jars.reduce((best, jar) => (jar.level > best.level ? jar : best), jars[0]);
+        if (top != leader && top.level > 0.15) {
+          leader = top;
+          this.crownOn(parts, top);
+        }
+        if (!almost && t > 0.7) {
+          almost = true;
+          shout(parts.root, "ALMOST…", "small");
+        }
+        if (t < 1) requestAnimationFrame(frame);
+        else resolve();
+      };
+      requestAnimationFrame(frame);
+    });
+
+    // The last coin, big and slow
+    jars.forEach((jar) => jar.column.classList.remove("brim"));
+    winner.column.classList.add("brim");
+    var spot = this.spot(parts, winner);
+    var last = this.coin(parts, spot.x, 26);
+    await animate(
+      last,
+      [
+        { transform: "translate(-50%, -40px) rotate(0deg)" },
+        { transform: `translate(-50%, ${spot.top - 20}px) rotate(540deg)`, offset: 0.85 },
+        { transform: `translate(-50%, ${spot.surface - 18}px) rotate(720deg)` },
+      ],
+      { duration: 850, easing: "cubic-bezier(.4,0,.9,.6)" },
+    );
+    last.remove();
+    this.setLevel(winner, 1);
+    this.overflow(parts, winner, draw, false);
+  },
+
+  overflow(parts, winner, draw, short) {
+    parts.jars.forEach((jar) => jar.column.classList.toggle("lost", jar != winner));
+    winner.column.classList.remove("brim");
+    winner.column.classList.add("overflow");
+    parts.crown.classList.remove("on");
+    if (!short) {
+      var flash = el("div", "jp-flash");
+      parts.root.appendChild(flash);
+      animate(flash, [{ opacity: 0.75 }, { opacity: 0 }], { duration: 450 }).then(() => flash.remove());
+      animate(parts.root, [-6, 6, -4, 4, 0].map((x) => ({ transform: `translate(${x}px, ${-x / 2}px)` })), { duration: 320, fill: "none" });
+      // Coins spill over the rim and roll away
+      var spot = this.spot(parts, winner);
+      for (var i = 0; i < 30; i++) {
+        var side = i % 2 ? 1 : -1;
+        var coin = this.coin(parts, spot.x + randomBetween(-spot.half, spot.half) * 0.6);
+        var dx = side * randomBetween(30, 170);
+        animate(
+          coin,
+          [
+            { transform: `translate(-50%, ${spot.top - 6}px) rotate(0deg)` },
+            { transform: `translate(calc(-50% + ${dx * 0.4}px), ${spot.top - randomBetween(30, 90)}px) rotate(${side * 180}deg)`, offset: 0.35 },
+            { transform: `translate(calc(-50% + ${dx}px), ${spot.floor - 14}px) rotate(${side * 520}deg)` },
+          ],
+          { duration: randomBetween(700, 1100), delay: randomBetween(0, 500), easing: "cubic-bezier(.3,.5,.6,1)", fill: "both" },
+        ).then(((c) => () => c.remove())(coin));
+      }
+      // And a gold shower over everything
+      var width = parts.root.getBoundingClientRect().width;
+      for (var j = 0; j < 45; j++) {
+        var drop = this.coin(parts, randomBetween(0, width));
+        animate(drop, [{ transform: "translate(-50%, -24px)" }, { transform: `translate(-50%, ${spot.floor + 10}px) rotate(${randomBetween(-400, 400)}deg)` }], {
+          duration: randomBetween(700, 1300),
+          delay: randomBetween(100, 900),
+          easing: "cubic-bezier(.45,0,1,1)",
+          fill: "both",
+        }).then(((c) => () => c.remove())(drop));
+      }
+      shout(parts.root, "JACKPOT!", "strike");
+      confetti(parts.root);
+    }
+    winnerLabel(parts.root, draw);
+  },
+};
+
+/* ---------- 9. Russian roulette: the revolver goes round, the last one wins ---------- */
+
+var revolverDraw = {
+  build(stage, winner) {
+    var root = scene(stage, "revolver");
+    root.replaceChildren();
+    var table = el("div", "jp-table");
+    var players = playersFor(8, winner);
+    var seats = players.map((player, index) => {
+      // Around the table, the first player at the top
+      var angle = (index / players.length) * Math.PI * 2;
+      var seat = el("div", "jp-seat");
+      seat.dataset.name = player.name;
+      // A little lower, so the top seat stays free of the winner label
+      seat.style.left = 50 + Math.sin(angle) * 40 + "%";
+      seat.style.top = 56 - Math.cos(angle) * 33 + "%";
+      seat.style.setProperty("--share", shareColor(player.name));
+      seat.append(createAvatar(player.name), el("span", "jp-seat-name", player.name));
+      table.appendChild(seat);
+      return seat;
+    });
+    // The gun: a barrel and a cylinder with six chambers (one bullet per shot)
+    var gun = el("div", "jp-gun");
+    var barrel = el("div", "jp-barrel");
+    var cylinder = el("div", "jp-cylinder");
+    for (var i = 0; i < 6; i++) {
+      var chamber = el("i", "jp-chamber");
+      chamber.style.setProperty("--a", i * 60 + "deg");
+      cylinder.appendChild(chamber);
+    }
+    gun.append(barrel, cylinder);
+    table.appendChild(gun);
+    root.appendChild(table);
+    if (players.length == 0) emptyNote(table, "The players take their seats with the first coins.");
+    return { root: root, table: table, seats: seats, gun: gun, cylinder: cylinder, aim: 0, spin: 0 };
+  },
+
+  idle(stage) {
+    this.build(stage);
+  },
+
+  // Angle (clockwise from the top) from the middle of the table to a seat
+  angleTo(parts, seat) {
+    var table = parts.table.getBoundingClientRect();
+    var box = seat.getBoundingClientRect();
+    var dx = box.left + box.width / 2 - (table.left + table.width / 2);
+    var dy = box.top + box.height / 2 - (table.top + table.height / 2);
+    return (Math.atan2(dx, -dy) * 180) / Math.PI;
+  },
+
+  // Turns the gun (always clockwise, at least `extra` more turns) to a seat
+  aimAt(parts, seat, time, extra) {
+    var target = this.angleTo(parts, seat);
+    var turn = (((target - parts.aim) % 360) + 360) % 360 + 360 * (extra || 0);
+    if (turn < 20) turn += 360;
+    parts.aim += turn;
+    return animate(parts.gun, [{ transform: `translate(-50%, -50%) rotate(${parts.aim}deg)` }], { duration: time, easing: SLOW_END });
+  },
+
+  // The order of the shots: the losers go out one after the other (small shares
+  // first, with luck), with empty clicks in between, the final duel is long
+  plan(seats, winner) {
+    var losers = seats
+      .filter((seat) => seat != winner)
+      .map((seat) => {
+        var entry = state.entries.find((e) => e.name == seat.dataset.name);
+        return { seat: seat, order: (entry ? entry.coins / state.total : 0) + Math.random() * 0.5 };
+      })
+      .sort((a, b) => a.order - b.order)
+      .map((item) => item.seat);
+    var shots = [];
+    losers.forEach((loser, index) => {
+      var alive = [winner].concat(losers.slice(index));
+      if (index == losers.length - 1) {
+        // Final duel: click, click, click ... bang
+        var clicks = 2 + Math.floor(Math.random() * 3);
+        var first = Math.random() < 0.5 ? 0 : 1;
+        for (var i = 0; i < clicks; i++) shots.push({ seat: [winner, loser][(first + i) % 2], bang: false, duel: true });
+        shots.push({ seat: loser, bang: true, duel: true });
+      } else {
+        if (Math.random() < 0.55) shots.push({ seat: alive[Math.floor(Math.random() * alive.length)], bang: false });
+        shots.push({ seat: loser, bang: true });
+      }
+    });
+    return shots;
+  },
+
+  async play(stage, draw, duration, short) {
+    var parts = this.build(stage, draw.winner);
+    var winner = parts.seats.find((seat) => seat.dataset.name == draw.winner);
+    if (winner == null) return winnerLabel(parts.root, draw);
+    var shots = this.plan(parts.seats, winner);
+
+    if (short) {
+      shots.filter((shot) => shot.bang).forEach((shot) => shot.seat.classList.add("out"));
+      return this.survive(parts, winner, draw, true);
+    }
+
+    // The first spin is wild, every shot takes a little longer than the last
+    var weights = shots.map((shot, i) => (i == 0 ? 2.2 : 1 + i * 0.35) * (shot.duel ? 1.5 : 1));
+    var sum = weights.reduce((a, b) => a + b, 0);
+    var playTime = duration - 600;
+    var duelShouted = false;
+    for (var i = 0; i < shots.length; i++) {
+      var shot = shots[i];
+      var time = (weights[i] / sum) * playTime;
+      if (shot.duel && !duelShouted) {
+        duelShouted = true;
+        shout(parts.root, "FINAL DUEL", "small");
+      }
+      // Spin the cylinder, aim, wait (the target trembles), pull
+      parts.spin += 60 * (i == 0 ? 7 : 1 + Math.floor(Math.random() * 3));
+      animate(parts.cylinder, [{ transform: `translate(-50%, -50%) rotate(${parts.spin}deg)` }], { duration: time * 0.55, easing: SLOW_END });
+      await this.aimAt(parts, shot.seat, time * 0.55, i == 0 ? 2 : 0);
+      shot.seat.classList.add("aimed");
+      await wait(time * 0.45);
+      shot.seat.classList.remove("aimed");
+      if (shot.bang) this.bang(parts, shot.seat);
+      else this.click(parts, shot.seat);
+    }
+    await wait(450);
+    this.survive(parts, winner, draw, false);
+  },
+
+  // Empty chamber: a small "click" and a sigh of relief
+  click(parts, seat) {
+    var label = el("span", "jp-click", "click");
+    label.style.left = seat.style.left;
+    label.style.top = seat.style.top;
+    parts.table.appendChild(label);
+    animate(label, [{ transform: "translate(-50%, -150%) scale(0.6)", opacity: 1 }, { transform: "translate(-50%, -260%) scale(1)", opacity: 0 }], {
+      duration: 700,
+      easing: "ease-out",
+    }).then(() => label.remove());
+    animate(parts.gun, [{ translate: "0 0" }, { translate: "0 3px" }, { translate: "0 0" }], { duration: 120, fill: "none" });
+  },
+
+  bang(parts, seat) {
+    var boom = el("span", "jp-boom", "💥");
+    boom.style.left = seat.style.left;
+    boom.style.top = seat.style.top;
+    parts.table.appendChild(boom);
+    animate(boom, [{ transform: "translate(-50%, -50%) scale(0.3)", opacity: 1 }, { transform: "translate(-50%, -50%) scale(1.8)", opacity: 0 }], {
+      duration: 650,
+    }).then(() => boom.remove());
+    var flash = el("div", "jp-flash");
+    parts.root.appendChild(flash);
+    animate(flash, [{ opacity: 0.45 }, { opacity: 0 }], { duration: 250 }).then(() => flash.remove());
+    animate(parts.root, [{ transform: "translate(-5px, 2px)" }, { transform: "translate(5px, -2px)" }, { transform: "translate(0, 0)" }], {
+      duration: 200,
+      fill: "none",
+    });
+    seat.classList.add("out");
+    var mark = el("span", "jp-seat-x", "✖");
+    seat.appendChild(mark);
+  },
+
+  survive(parts, winner, draw, short) {
+    winner.classList.add("champion");
+    if (!short) {
+      this.aimAt(parts, winner, 900, 1);
+      shout(parts.root, "SURVIVED!", "strike");
+      confetti(parts.root);
+    }
+    winnerLabel(parts.root, draw);
+  },
+};
+
 var DRAWS = {
+  coinrain: coinRainDraw,
+  revolver: revolverDraw,
   claw: clawDraw,
   royale: royaleDraw,
   wheel: wheelDraw,
