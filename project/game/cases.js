@@ -19,10 +19,10 @@ const CASES = [
     price: 10,
     risk: "balanced",
     items: [
-      { name: "Rubber Duck", icon: "🦆", value: 2, weight: 30333 },
-      { name: "Deal With It", icon: "🕶️", value: 5, weight: 29667 },
+      { name: "Rubber Duck", icon: "🦆", value: 2, weight: 30062 },
+      { name: "Deal With It", icon: "🕶️", value: 5, weight: 30000 },
       { name: "Banana for Scale", icon: "🍌", value: 10, weight: 20000 },
-      { name: "Nyan Cat", icon: "🌈", value: 18, weight: 12000 },
+      { name: "Nyan Cat", icon: "🌈", value: 18, weight: 11938 },
       { name: "Dogecoin", icon: "🐕", value: 30, weight: 6000 },
       { name: "Trollface", icon: "😈", value: 60, weight: 2000 },
     ],
