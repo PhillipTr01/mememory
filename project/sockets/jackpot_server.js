@@ -380,6 +380,14 @@ module.exports = function (io) {
       ghostAt: pot.ghostAt,
     }),
     restore,
+    // Hard reset: the first pot again, with a new secret number
+    (initial) => {
+      restore(initial);
+      pot.fair = newFairRound();
+      pot.mode = randomMode();
+      pot.records = { day: today(), biggest: null, luckiest: null };
+      emitState();
+    },
   );
 
   // The saved pot again - the round goes on where it was (with a little time to come back)

@@ -19,6 +19,16 @@ module.exports = function (io) {
     for (const socket of socketsOf(io, username)) socket.emit(event, data);
   });
 
+  // Hard reset (admin panel): every open casino page is closed
+  access.changes.on("closeAll", () => {
+    for (const name of GAMES) {
+      for (const socket of io.of(name).sockets.values()) {
+        socket.emit("casinoClosed");
+        socket.disconnect(true);
+      }
+    }
+  });
+
   // Access taken away: every open casino page of the player is closed
   access.changes.on("revoked", (username) => {
     for (const socket of socketsOf(io, username)) {

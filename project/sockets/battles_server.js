@@ -222,6 +222,7 @@ module.exports = function (io) {
     socket.join(ROOM);
     socket.emit("joined", { username: username });
     socket.emit("cases", cases.catalog());
+    socket.emit("battleRules", { maxCases: config.BATTLE_MAX_CASES });
     casinoChat.join(socket);
     emitList();
     sendCoins(username).catch((error) => console.error("[battles] Could not load coins:", error));

@@ -35,8 +35,20 @@ function fromJSON(text) {
   });
 }
 
-function register(key, snapshot, restore) {
-  games.set(key, { snapshot: snapshot, restore: restore });
+// `fresh` (optional): starts the game anew from its first state (hard reset in
+// the admin panel) - without it the first state is simply restored
+function register(key, snapshot, restore, fresh) {
+  games.set(key, { snapshot: snapshot, restore: restore, fresh: fresh, initial: toJSON(snapshot()) });
+}
+
+// Hard reset: every game as on its very first start (and saved like that)
+async function resetAll() {
+  for (const [key, game] of games) {
+    const initial = fromJSON(game.initial);
+    if (game.fresh) game.fresh(initial);
+    else game.restore(initial);
+    await save(key).catch((error) => console.error(`[persist] Could not save ${key}:`, error));
+  }
 }
 
 // Something changed: saved soon
@@ -102,4 +114,4 @@ function reset() {
   restored = null;
 }
 
-module.exports = { register, changed, saveAll, restoreAll, expectRestore, whenRestored, reset, toJSON, fromJSON };
+module.exports = { register, changed, saveAll, restoreAll, resetAll, expectRestore, whenRestored, reset, toJSON, fromJSON };

@@ -414,6 +414,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("bjTableView").hidden = !TABLE_ID;
   document.getElementById("bjBackToLobby").hidden = !TABLE_ID;
   document.getElementById("bjLobby").hidden = !!TABLE_ID;
+  document.getElementById("bjLimits").style.display = TABLE_ID ? "" : "none";
   if (!TABLE_ID) document.getElementById("bjStatus").innerText = "Pick a table - every table has its own stakes.";
   var amount = document.getElementById("bjAmount");
   document.querySelectorAll(".bj-chip").forEach((chip) =>

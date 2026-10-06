@@ -7,6 +7,9 @@ const config = require("../game/config");
 const coins = require("../game/coins");
 const withdrawals = require("../game/withdrawals");
 const access = require("../game/access");
+const casinoChat = require("../game/casino_chat");
+const settings = require("../game/settings");
+const { hardReset } = require("../game/hard_reset");
 const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
 
@@ -263,6 +266,73 @@ module.exports = function () {
       const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 200));
       const rows = await CoinLog.find(filter).sort({ at: -1 }).limit(limit).lean();
       res.json(rows.map((row) => ({ username: row.username, amount: row.amount, reason: row.reason, note: row.note || null, at: row.at })));
+    }),
+  );
+
+  /* ---------- Chat of the casino ---------- */
+
+  // The messages (oldest first), the banned players, who is online
+  router.get("/api/chat", admin, (req, res) => {
+    res.json({ messages: casinoChat.messages(), bans: casinoChat.banList(), online: casinoChat.online().names });
+  });
+
+  router.post("/api/chat/delete", admin, (req, res) => {
+    const { id } = req.body || {};
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Message id." });
+    if (!casinoChat.remove(id)) return res.status(404).json({ error: "No such message." });
+    res.json({ ok: true });
+  });
+
+  router.post("/api/chat/clear", admin, (req, res) => {
+    casinoChat.clear();
+    res.json({ ok: true });
+  });
+
+  // {username, minutes} - minutes null: banned for good
+  router.post(
+    "/api/chat/ban",
+    admin,
+    asyncHandler(async (req, res) => {
+      const { username, minutes } = req.body || {};
+      if (typeof username !== "string") return res.status(400).json({ error: "Username." });
+      if (minutes != null && (!Number.isInteger(minutes) || minutes < 1 || minutes > 525600)) return res.status(400).json({ error: "Minutes: 1 to 525,600 (or for good)." });
+      const user = await User.findOne({ username: username }).select("username").lean();
+      if (user == null) return res.status(404).json({ error: "No such player." });
+      casinoChat.ban(user.username, minutes == null ? null : minutes);
+      res.json({ ok: true, bans: casinoChat.banList() });
+    }),
+  );
+
+  router.post("/api/chat/unban", admin, (req, res) => {
+    const { username } = req.body || {};
+    if (typeof username !== "string") return res.status(400).json({ error: "Username." });
+    casinoChat.unban(username);
+    res.json({ ok: true, bans: casinoChat.banList() });
+  });
+
+  /* ---------- Settings ---------- */
+
+  router.get("/api/settings", admin, (req, res) => res.json({ settings: settings.list() }));
+
+  // {values: {KEY: number}} or {defaults: true}
+  router.post(
+    "/api/settings",
+    admin,
+    asyncHandler(async (req, res) => {
+      const body = req.body || {};
+      const result = body.defaults === true ? await settings.resetToDefaults() : await settings.update(body.values);
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
+  // Everything anew - only with the word typed in
+  router.post(
+    "/api/reset",
+    admin,
+    asyncHandler(async (req, res) => {
+      if ((req.body || {}).confirm !== "RESET") return res.status(400).json({ error: 'Type "RESET" to confirm.' });
+      res.json({ ok: true, ...(await hardReset()) });
     }),
   );
 

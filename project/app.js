@@ -118,7 +118,11 @@ async function connectDatabase(attempt = 1) {
       serverSelectionTimeoutMS: 10000,
     });
     console.log("Connected to database.");
-    // The games as they were before the restart (rounds, tables, history, chat)
+    // The values changed in the admin panel, then the games as they were
+    // before the restart (rounds, tables, history, chat)
+    await require("./game/settings")
+      .load()
+      .catch((error) => console.error("Could not load the settings:", error));
     await persist.restoreAll();
     startScraper();
   } catch (error) {

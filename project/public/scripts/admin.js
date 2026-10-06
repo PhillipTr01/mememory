@@ -1,4 +1,4 @@
-/* Admin panel: balances, payouts, leaderboard and the history of every coin change. */
+/* Admin panel: balances, payouts, leaderboard, the history of every coin change, the casino chat and the settings. */
 
 var REASONS = [
   "start coins",
@@ -65,6 +65,8 @@ function showTab() {
   if (tab == "players") loadPlayers();
   if (tab == "payouts") loadPayouts();
   if (tab == "history") loadHistory();
+  if (tab == "chat") loadChat();
+  if (tab == "settings") loadSettings();
 }
 
 window.addEventListener("hashchange", showTab);
@@ -138,6 +140,13 @@ async function loadOverview() {
     var waitingBadge = document.getElementById("adWaitingBadge");
     waitingBadge.hidden = data.waiting == 0;
     waitingBadge.innerText = data.waiting;
+    // Something to do on the overview (requests, payouts): a count on its tab
+    var overviewBadge = document.getElementById("adOverviewBadge");
+    overviewBadge.hidden = ids.length + data.waiting == 0;
+    overviewBadge.innerText = ids.length + data.waiting;
+    overviewBadge.title = data.waiting + " request" + (data.waiting == 1 ? "" : "s") + ", " + ids.length + " payout" + (ids.length == 1 ? "" : "s");
+    badge.hidden = ids.length + data.waiting == 0;
+    badge.innerText = [data.waiting ? data.waiting + (data.waiting == 1 ? " request" : " requests") : "", ids.length ? ids.length + " open" : ""].filter(Boolean).join(" · ");
     var todo = ids.length + data.waiting;
     document.title = (todo ? "(" + todo + ") " : "") + "Admin - MemeMory";
     if (!players.length) {
@@ -379,6 +388,180 @@ async function loadHistory(event) {
   }
 }
 
+/* ---------- Chat ---------- */
+
+var chatTimer = null;
+
+async function loadChat() {
+  clearTimeout(chatTimer);
+  if (document.getElementById("tab-chat").hidden) return;
+  try {
+    var data = await api("chat");
+    var banned = new Set(data.bans.map((b) => b.username));
+    document.getElementById("adChatCount").innerText = data.messages.length;
+    var list = document.getElementById("adChatList");
+    var atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+    list.replaceChildren(
+      ...(data.messages.length
+        ? data.messages.map((m) => {
+            var row = el("div", "ad-chat-msg" + (banned.has(m.name) ? " banned" : ""));
+            var body = el("div", "");
+            body.append(el("span", "ad-chat-name", m.name), el("span", "ad-chat-text", m.text));
+            var actions = el("div", "ad-chat-actions");
+            var del = el("button", "ad-icon-btn", "🗑️");
+            del.type = "button";
+            del.title = "Delete this message";
+            del.addEventListener("click", () => chatAction("chat/delete", { id: m.id }, "Message deleted"));
+            actions.appendChild(del);
+            if (!banned.has(m.name)) {
+              var ban = el("button", "ad-icon-btn", "🚫");
+              ban.type = "button";
+              ban.title = "Ban " + m.name + " from the chat";
+              ban.addEventListener("click", () => {
+                document.getElementById("adBanUser").value = m.name;
+                document.getElementById("adBanTime").focus();
+              });
+              actions.appendChild(ban);
+            }
+            row.append(el("span", "ad-chat-time", new Date(m.time).toLocaleTimeString(undefined, { timeStyle: "short" })), body, actions);
+            return row;
+          })
+        : [el("p", "mm-muted mb-0", "No messages.")]),
+    );
+    if (atBottom) list.scrollTop = list.scrollHeight;
+
+    document.getElementById("adBanList").replaceChildren(
+      ...(data.bans.length
+        ? data.bans.map((b) => {
+            var row = el("div", "ad-ban-row");
+            var info = el("div", "");
+            info.append(el("b", "", b.username), el("div", "mm-muted small", b.until ? "until " + time(b.until) : "for good"));
+            var unban = el("button", "mm-btn mm-btn-sm", "Unban");
+            unban.type = "button";
+            unban.addEventListener("click", () => chatAction("chat/unban", { username: b.username }, b.username + " can write again"));
+            row.append(info, unban);
+            return row;
+          })
+        : [el("p", "mm-muted mb-0", "Nobody is banned.")]),
+    );
+    document.getElementById("adOnlineCount").innerText = data.online.length;
+    document.getElementById("adOnlineList").replaceChildren(...(data.online.length ? data.online.map((name) => el("span", "", name)) : [el("p", "mm-muted mb-0", "Nobody is in the casino.")]));
+  } catch (error) {
+    fail(error);
+  }
+  // New messages show up by themselves
+  chatTimer = setTimeout(loadChat, 4000);
+}
+
+async function chatAction(path, body, done) {
+  try {
+    await api(path, body);
+    showToast(done);
+    loadChat();
+  } catch (error) {
+    fail(error);
+  }
+}
+
+/* ---------- Settings ---------- */
+
+var settingsList = [];
+
+async function loadSettings() {
+  try {
+    settingsList = (await api("settings")).settings;
+    renderSettings();
+  } catch (error) {
+    fail(error);
+  }
+}
+
+function renderSettings() {
+  var sections = [];
+  settingsList.forEach((field) => {
+    var section = sections.find((s) => s.name == field.section);
+    if (!section) sections.push((section = { name: field.section, fields: [] }));
+    section.fields.push(field);
+  });
+  document.getElementById("adSettings").replaceChildren(
+    ...sections.map((section) => {
+      var card = el("div", "mm-card ad-card");
+      card.appendChild(el("h2", "ad-title", section.name));
+      section.fields.forEach((field) => {
+        var row = el("label", "ad-setting");
+        var label = el("span", "ad-setting-label", field.label);
+        if (field.value != field.default) label.appendChild(el("span", "changed", "default " + formatCoins(field.default)));
+        var input = el("input", "mm-input");
+        input.type = "number";
+        input.step = 1;
+        input.min = field.min;
+        input.max = field.max;
+        input.value = field.value;
+        input.dataset.key = field.key;
+        var box = el("span", "ad-setting-input");
+        box.appendChild(input);
+        if (field.unit) box.appendChild(el("span", "ad-setting-unit", field.unit));
+        row.append(label, box);
+        if (field.hint) row.appendChild(el("span", "ad-setting-hint", field.hint));
+        card.appendChild(row);
+      });
+      return card;
+    }),
+  );
+}
+
+async function saveSettings(event) {
+  event.preventDefault();
+  var values = {};
+  var problem = null;
+  document.querySelectorAll("#adSettings input[data-key]").forEach((input) => {
+    var field = settingsList.find((f) => f.key == input.dataset.key);
+    var value = Number(input.value);
+    if (!Number.isInteger(value)) problem = field.label + ": a whole number, please.";
+    else if (value != field.value) values[field.key] = value;
+  });
+  if (problem) return showToast(problem, "error");
+  if (Object.keys(values).length == 0) return showToast("Nothing changed.");
+  try {
+    settingsList = (await api("settings", { values: values })).settings;
+    renderSettings();
+    showToast("Saved - " + Object.keys(values).length + (Object.keys(values).length == 1 ? " setting" : " settings") + " changed");
+  } catch (error) {
+    fail(error);
+  }
+}
+
+async function settingsDefaults() {
+  if (!confirm("Every setting back to its default?")) return;
+  try {
+    settingsList = (await api("settings", { defaults: true })).settings;
+    renderSettings();
+    showToast("Back to the defaults");
+  } catch (error) {
+    fail(error);
+  }
+}
+
+async function hardReset(event) {
+  event.preventDefault();
+  var input = document.getElementById("adResetConfirm");
+  if (input.value != "RESET") return;
+  if (!confirm("Really delete everything and start the casino anew? This can't be undone.")) return;
+  var button = document.getElementById("adResetButton");
+  button.disabled = true;
+  try {
+    var result = await api("reset", { confirm: "RESET" });
+    input.value = "";
+    showToast("Everything is reset - " + formatCoins(result.history) + " history rows and " + formatCoins(result.payouts) + " payouts deleted");
+    players = [];
+    loadOverview();
+  } catch (error) {
+    fail(error);
+  } finally {
+    button.disabled = input.value != "RESET";
+  }
+}
+
 /* ---------- Setup ---------- */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -402,6 +585,23 @@ document.addEventListener("DOMContentLoaded", () => {
     await fetch("logout", { method: "POST" });
     window.location.reload();
   });
+
+  document.getElementById("adChatClear").addEventListener("click", () => {
+    if (confirm("Delete every message of the casino chat?")) chatAction("chat/clear", {}, "The chat is empty");
+  });
+  document.getElementById("adBanForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    var username = document.getElementById("adBanUser").value.trim();
+    var minutes = document.getElementById("adBanTime").value;
+    chatAction("chat/ban", { username: username, minutes: minutes ? Number(minutes) : null }, username + " is banned from the chat");
+    document.getElementById("adBanUser").value = "";
+  });
+  document.getElementById("adSettingsForm").addEventListener("submit", saveSettings);
+  document.getElementById("adSettingsDefaults").addEventListener("click", settingsDefaults);
+  document.getElementById("adResetConfirm").addEventListener("input", (event) => {
+    document.getElementById("adResetButton").disabled = event.target.value != "RESET";
+  });
+  document.getElementById("adResetForm").addEventListener("submit", hardReset);
 
   showTab();
   loadOverview();

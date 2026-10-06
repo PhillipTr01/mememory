@@ -72,6 +72,8 @@ socket.on("coins", (data) => {
   if (!spinning) renderBattle();
 });
 
+socket.on("battleRules", (data) => (MAX_CASES = data.maxCases));
+
 socket.on("cases", (data) => {
   CASES = data;
   renderCases();
@@ -203,7 +205,7 @@ function shufflePicked() {
  * The card of a case: more = new rounds at the end (Whale, Vault, Whale is
  * possible), fewer = the last rounds of this case go.
  */
-var MAX_CASES = 100; // cases per battle (the server checks it too)
+var MAX_CASES = 100; // cases per battle (from the server, which checks it too)
 
 function setCount(id, count) {
   count = Math.max(0, Math.floor(Number(count)) || 0);
