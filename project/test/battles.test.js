@@ -47,6 +47,20 @@ test("cases: balanced cases are safe, high risk cases have a big jackpot", () =>
   assert.strictEqual(Math.max(...cases.CASES.flatMap((box) => box.items.map((item) => item.value))), 125000);
 });
 
+test("cases: no case is another one with a different price - own chances, own payback", () => {
+  const shape = (box) => box.items.map((item) => `${(item.value / box.price).toFixed(3)}@${item.weight}`).join(",");
+  const shapes = new Set(cases.CASES.map(shape));
+  assert.strictEqual(shapes.size, cases.CASES.length, "every case has its own chances");
+  const paybacks = new Set(cases.CASES.map((box) => (cases.expectedValue(box) / box.price).toFixed(3)));
+  assert.strictEqual(paybacks.size, cases.CASES.length, "every case has its own payback");
+  // The jackpot items stay rare
+  for (const box of cases.CASES) {
+    const top = box.items.reduce((a, b) => (b.value > a.value ? b : a));
+    const limit = { low: 0.03, balanced: 0.01, high: 0.001 }[box.risk];
+    assert.ok(top.weight / cases.WEIGHT_TOTAL <= limit, `${box.id}: the best item at most ${limit * 100}%`);
+  }
+});
+
 test("cases: the roll picks the item by its chance, provably fair", () => {
   const box = cases.caseById("starter");
   const first = box.items[0].weight / cases.WEIGHT_TOTAL; // the chance of the first item
