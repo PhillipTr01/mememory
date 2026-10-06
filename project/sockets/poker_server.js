@@ -70,7 +70,7 @@ module.exports = function (io) {
     if (seat == null) return;
     clearTimeout(seat.awayTimer);
     table.seats[i] = null;
-    if (seat.stack > 0) coins.add(seat.name, seat.stack).catch((error) => console.error("[poker] Could not cash out:", error));
+    if (seat.stack > 0) coins.add(seat.name, seat.stack, { reason: "poker cash-out" }).catch((error) => console.error("[poker] Could not cash out:", error));
   }
 
   /* ---------- State ---------- */
@@ -451,13 +451,13 @@ module.exports = function (io) {
         if (table.seats[seat] != null || seatOf(username) >= 0 || busy.has(username)) return;
         busy.add(username);
         try {
-          if (!(await coins.spend(username, buyIn))) {
+          if (!(await coins.spend(username, buyIn, { reason: "poker buy-in" }))) {
             error("You don't have enough coins.");
             return;
           }
           // Somebody was faster
           if (table.seats[seat] != null || seatOf(username) >= 0) {
-            await coins.add(username, buyIn);
+            await coins.add(username, buyIn, { reason: "poker refund" });
             error("This seat was just taken.");
             return;
           }
@@ -500,12 +500,12 @@ module.exports = function (io) {
         }
         busy.add(username);
         try {
-          if (!(await coins.spend(username, amount))) {
+          if (!(await coins.spend(username, amount, { reason: "poker chips" }))) {
             error("You don't have enough coins.");
             return;
           }
           if (table.seats[i] !== seat) {
-            await coins.add(username, amount);
+            await coins.add(username, amount, { reason: "poker refund" });
             return;
           }
           seat.stack += amount;
@@ -585,7 +585,7 @@ module.exports = function (io) {
       clearTimeout(seat.awayTimer);
       const chips = seat.stack + (table.phase === "showdown" ? 0 : seat.total);
       table.seats[i] = null;
-      if (chips > 0) payments.push(coins.add(seat.name, chips).catch((e) => console.error("[poker] Refund failed:", e)));
+      if (chips > 0) payments.push(coins.add(seat.name, chips, { reason: "poker refund" }).catch((e) => console.error("[poker] Refund failed:", e)));
     });
     await Promise.all(payments);
   }

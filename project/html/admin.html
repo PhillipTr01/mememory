@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en" class="min-h-100">
+
+<head>
+    <title>Admin - MemeMory</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+    <link rel="stylesheet" href="/static/styles/index.css">
+    <link rel="stylesheet" href="/static/styles/theme.css">
+    <link rel="stylesheet" href="/static/styles/jackpot.css">
+    <link rel="stylesheet" href="/static/styles/admin.css">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.0/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body class="d-flex flex-column min-h-100 jackpot-theme">
+    <main class="ad-main">
+        <header class="ad-head">
+            <h1 class="jp-title">🛠️ Admin <span id="adOpenBadge" class="mm-badge ad-badge" hidden></span></h1>
+            <button type="button" id="adLogout" class="mm-btn mm-btn-sm"><i class="bi bi-box-arrow-right"></i> Log out</button>
+        </header>
+
+        <nav class="cs-nav" aria-label="Admin">
+            <a href="#overview" class="cs-tab" data-tab="overview"><span class="cs-tab-icon">📊</span><span class="cs-tab-label">Overview</span></a>
+            <a href="#players" class="cs-tab" data-tab="players"><span class="cs-tab-icon">🏆</span><span class="cs-tab-label">Players</span></a>
+            <a href="#payouts" class="cs-tab" data-tab="payouts"><span class="cs-tab-icon">💸</span><span class="cs-tab-label">Payouts</span></a>
+            <a href="#history" class="cs-tab" data-tab="history"><span class="cs-tab-icon">📜</span><span class="cs-tab-label">History</span></a>
+        </nav>
+
+        <!--- Overview: numbers and the open payouts --->
+        <section id="tab-overview" class="ad-tab">
+            <div class="ad-stats">
+                <div class="mm-card ad-stat"><span class="ad-stat-label">Players</span><span id="adPlayers" class="ad-stat-value">-</span></div>
+                <div class="mm-card ad-stat"><span class="ad-stat-label">Coins in the game</span><span id="adCoins" class="ad-stat-value">-</span></div>
+                <div class="mm-card ad-stat"><span class="ad-stat-label">Open payouts</span><span id="adOpen" class="ad-stat-value">-</span></div>
+                <div class="mm-card ad-stat"><span class="ad-stat-label">Coins to pay out</span><span id="adOpenCoins" class="ad-stat-value">-</span></div>
+            </div>
+            <div class="mm-card ad-card">
+                <h2 class="ad-title">Open payouts</h2>
+                <div id="adOpenList"></div>
+            </div>
+        </section>
+
+        <!--- Players: leaderboard, change a balance --->
+        <section id="tab-players" class="ad-tab" hidden>
+            <div class="mm-card ad-card">
+                <h2 class="ad-title">Change a balance</h2>
+                <form id="adBalance" class="ad-form" autocomplete="off">
+                    <input id="adBalUser" class="mm-input" placeholder="Username" list="adUserList" required>
+                    <datalist id="adUserList"></datalist>
+                    <select id="adBalMode" class="mm-input">
+                        <option value="add">Add (+/-)</option>
+                        <option value="set">Set to</option>
+                    </select>
+                    <input id="adBalAmount" class="mm-input" type="number" step="1" placeholder="Coins" required>
+                    <input id="adBalNote" class="mm-input" maxlength="300" placeholder="Note (optional)">
+                    <button type="submit" class="mm-btn mm-btn-primary">Save</button>
+                </form>
+            </div>
+            <div class="mm-card ad-card">
+                <div class="ad-card-head">
+                    <h2 class="ad-title">Leaderboard</h2>
+                    <input id="adSearch" class="mm-input ad-search" placeholder="Search a player">
+                </div>
+                <table class="ad-table">
+                    <thead><tr><th>#</th><th>Player</th><th class="num">Coins</th><th></th></tr></thead>
+                    <tbody id="adBoard"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!--- All payouts --->
+        <section id="tab-payouts" class="ad-tab" hidden>
+            <div class="mm-card ad-card">
+                <div class="ad-card-head">
+                    <h2 class="ad-title">Payouts</h2>
+                    <select id="adPayoutStatus" class="mm-input ad-search">
+                        <option value="">All</option>
+                        <option value="open">Open</option>
+                        <option value="paid">Paid</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div id="adPayoutList"></div>
+            </div>
+        </section>
+
+        <!--- History of every coin change --->
+        <section id="tab-history" class="ad-tab" hidden>
+            <div class="mm-card ad-card">
+                <div class="ad-card-head">
+                    <h2 class="ad-title">History</h2>
+                    <form id="adHistoryFilter" class="ad-form compact" autocomplete="off">
+                        <input id="adHistUser" class="mm-input" placeholder="Player" list="adUserList">
+                        <select id="adHistReason" class="mm-input">
+                            <option value="">Everything</option>
+                        </select>
+                        <button type="submit" class="mm-btn mm-btn-sm">Show</button>
+                    </form>
+                </div>
+                <table class="ad-table">
+                    <thead><tr><th>Time</th><th>Player</th><th>What</th><th class="num">Coins</th></tr></thead>
+                    <tbody id="adHistory"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="/static/scripts/ui.js"></script>
+    <script src="/static/scripts/admin.js"></script>
+</body>
+
+</html>

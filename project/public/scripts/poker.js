@@ -85,7 +85,6 @@ socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  document.getElementById("pkCoins").innerText = "🪙 " + formatCoins(data.coins);
   document.getElementById("pkBonus").hidden = !data.bonus;
 });
 

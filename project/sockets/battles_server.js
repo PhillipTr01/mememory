@@ -93,7 +93,7 @@ module.exports = function (io) {
 
   function refund(battle) {
     for (const seat of humans(battle)) {
-      coins.add(seat.name, battle.price).catch((error) => console.error("[battles] Could not refund:", error));
+      coins.add(seat.name, battle.price, { reason: "battle refund" }).catch((error) => console.error("[battles] Could not refund:", error));
     }
   }
 
@@ -135,7 +135,7 @@ module.exports = function (io) {
     const winner = battle.seats[battle.winner];
     if (!winner.bot && battle.payout > 0) {
       try {
-        await coins.add(winner.name, battle.payout, { quiet: true });
+        await coins.add(winner.name, battle.payout, { quiet: true, reason: "battle win" });
       } catch (error) {
         console.error("[battles] Could not pay the winner:", error);
       }
@@ -175,14 +175,14 @@ module.exports = function (io) {
     if (busy.has(username)) return false;
     busy.add(username);
     try {
-      if (!(await coins.spend(username, battle.price))) {
+      if (!(await coins.spend(username, battle.price, { reason: "battle" }))) {
         socket.emit("battleError", "You don't have enough coins.");
         return false;
       }
       const seat = battle.seats.indexOf(null);
       // Somebody else was faster (or the battle was cancelled): coins back
       if (battle.phase !== PHASE.WAITING || seat < 0 || battle.seats.some((s) => s && s.name === username)) {
-        await coins.add(username, battle.price);
+        await coins.add(username, battle.price, { reason: "battle refund" });
         socket.emit("battleError", "Too late - the battle is full.");
         return false;
       }

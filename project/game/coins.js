@@ -1,5 +1,6 @@
 const EventEmitter = require("events");
 const User = require("../models/User");
+const CoinLog = require("../models/CoinLog");
 const config = require("./config");
 
 /*
@@ -12,6 +13,13 @@ changes.setMaxListeners(0);
 
 function notify(username) {
   changes.emit("change", username);
+}
+
+// History of every change (for the admin panel); never blocks or breaks a game
+function log(username, amount, reason, note) {
+  Promise.resolve()
+    .then(() => CoinLog.create({ username: username, amount: amount, reason: reason || "other", note: note, at: new Date() }))
+    .catch((error) => console.error("[coins] Could not write the history:", error));
 }
 
 /*
@@ -29,10 +37,11 @@ function changed(result) {
  * all coins (config.COIN_RESET): coinReset remembers the last reset it got.
  */
 async function ensure(username) {
-  await User.updateOne(
+  const reset = await User.updateOne(
     { username: username, coinReset: { $ne: config.COIN_RESET } },
     { $set: { coins: config.START_COINS, coinReset: config.COIN_RESET } },
   );
+  if (changed(reset)) log(username, config.START_COINS, "start coins");
 }
 
 function bonusAvailable(user, now = Date.now()) {
@@ -48,24 +57,45 @@ async function get(username) {
   return { coins: user.coins || 0, bonus: bonusAvailable(user) };
 }
 
-// quiet: the pages are told later with notify() (a win that is shown after an animation)
+/*
+ * options.reason: why (for the history), options.note: more about it,
+ * options.quiet: the pages are told later with notify() (a win that is shown after an animation)
+ */
 async function add(username, amount, options) {
   if (!Number.isInteger(amount) || amount <= 0) return false;
+  options = options || {};
   await ensure(username);
   const done = changed(await User.updateOne({ username: username }, { $inc: { coins: amount } }));
-  if (done && !(options && options.quiet)) notify(username);
+  if (done) log(username, amount, options.reason, options.note);
+  if (done && !options.quiet) notify(username);
   return done;
 }
 
 // Takes the coins only if the user has enough (false otherwise)
-async function spend(username, amount) {
+async function spend(username, amount, options) {
   if (!Number.isInteger(amount) || amount <= 0) return false;
   await ensure(username);
   const done = changed(
     await User.updateOne({ username: username, coins: { $gte: amount } }, { $inc: { coins: -amount } }),
   );
-  if (done) notify(username);
+  if (done) {
+    log(username, -amount, (options && options.reason) || "other", options && options.note);
+    notify(username);
+  }
   return done;
+}
+
+// The admin sets a balance (returns the new balance, null: no such user)
+async function set(username, amount, note) {
+  if (!Number.isInteger(amount) || amount < 0) return null;
+  await ensure(username);
+  const user = await User.findOne({ username: username }).select("coins");
+  if (user == null) return null;
+  const before = user.coins || 0;
+  await User.updateOne({ username: username }, { $set: { coins: amount } });
+  log(username, amount - before, "admin", note);
+  notify(username);
+  return amount;
 }
 
 // Free coins once a day for players who are (almost) broke
@@ -79,7 +109,10 @@ async function claimBonus(username, now = Date.now()) {
     },
     { $inc: { coins: config.DAILY_BONUS }, $set: { coinBonusAt: new Date(now) } },
   );
-  if (changed(result)) notify(username);
+  if (changed(result)) {
+    log(username, config.DAILY_BONUS, "daily bonus");
+    notify(username);
+  }
   return changed(result);
 }
 
@@ -87,7 +120,7 @@ async function claimBonus(username, now = Date.now()) {
 function reward(username, mode) {
   const amount = config.COIN_REWARDS[mode];
   if (!amount) return;
-  add(username, amount).catch((error) => console.error("[coins] Could not add coins:", error));
+  add(username, amount, { reason: "game win", note: mode }).catch((error) => console.error("[coins] Could not add coins:", error));
 }
 
-module.exports = { get, add, spend, claimBonus, reward, bonusAvailable, changes, notify };
+module.exports = { get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };

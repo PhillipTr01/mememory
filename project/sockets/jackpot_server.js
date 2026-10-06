@@ -141,7 +141,7 @@ module.exports = function (io) {
     // Paid right away, so nothing is lost if the page (or the server) goes away
     // during the animation
     try {
-      await coins.add(winner.name, sum, { quiet: true });
+      await coins.add(winner.name, sum, { quiet: true, reason: "jackpot win" });
     } catch (error) {
       console.error("[jackpot] Could not pay the winner:", error);
     }
@@ -207,13 +207,13 @@ module.exports = function (io) {
         betting.add(username);
         const round = pot.round;
         try {
-          if (!(await coins.spend(username, amount))) {
+          if (!(await coins.spend(username, amount, { reason: "jackpot bet" }))) {
             socket.emit("betError", "You don't have enough coins.");
             return;
           }
           // The round changed (draw started) while the coins were taken: give them back
           if (pot.round !== round || pot.phase === PHASE.DRAWING) {
-            await coins.add(username, amount);
+            await coins.add(username, amount, { reason: "jackpot refund" });
             socket.emit("betError", "Too late - the draw already started.");
             return;
           }
@@ -249,7 +249,7 @@ module.exports = function (io) {
         const now = Date.now();
         if (now - (socket.data.secretAt || 0) < config.JACKPOT_SECRET_COOLDOWN) return;
         socket.data.secretAt = now;
-        if (await coins.add(username, config.JACKPOT_SECRET_COINS)) {
+        if (await coins.add(username, config.JACKPOT_SECRET_COINS, { reason: "secret word" })) {
           socket.emit("secretCoins", config.JACKPOT_SECRET_COINS);
         }
       }),

@@ -12,6 +12,8 @@ const { io: connect } = require("socket.io-client");
 const User = require("../models/User");
 const Statistic = require("../models/Statistic");
 const Meme = require("../models/Meme");
+const CoinLog = require("../models/CoinLog");
+const Withdrawal = require("../models/Withdrawal");
 
 const users = new Map(); // _id -> {_id, username, statistics}
 const increments = []; // [{username, field}]
@@ -52,6 +54,52 @@ User.updateOne = async (filter, update) => {
   for (const [key, amount] of Object.entries(update.$inc || {})) user[key] = (user[key] || 0) + amount;
   return { n: 1, nModified: 1 };
 };
+
+// find(): a tiny query with sort / limit / select / lean
+function list(rows) {
+  let result = rows.slice();
+  const q = {
+    sort(spec) {
+      const [key, dir] = Object.entries(spec)[0];
+      result.sort((a, b) => (a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0) * dir);
+      return q;
+    },
+    limit(n) {
+      result = result.slice(0, n);
+      return q;
+    },
+    select: () => q,
+    lean: () => Promise.resolve(result.map((row) => ({ ...row }))),
+    then: (res, rej) => Promise.resolve(result).then(res, rej),
+  };
+  return q;
+}
+
+User.find = (filter = {}) => list([...users.values()].filter((u) => matches(u, filter)));
+
+// In-memory version of a model: create, find, findOne, updateOne, countDocuments
+function memoryModel(Model) {
+  const docs = [];
+  let next = 1;
+  Model.create = async (doc) => {
+    const row = { _id: `doc${next++}`, ...doc };
+    docs.push(row);
+    return { ...row };
+  };
+  Model.find = (filter = {}) => list(docs.filter((d) => matches(d, filter)));
+  Model.findOne = (filter = {}) => query(docs.find((d) => matches(d, filter)) || null);
+  Model.countDocuments = async (filter = {}) => docs.filter((d) => matches(d, filter)).length;
+  Model.updateOne = async (filter, update) => {
+    const doc = docs.find((d) => matches(d, filter));
+    if (doc == null) return { n: 0, nModified: 0 };
+    Object.assign(doc, update.$set || {});
+    return { n: 1, nModified: 1 };
+  };
+  return docs;
+}
+
+const coinLogs = memoryModel(CoinLog);
+const withdrawals = memoryModel(Withdrawal);
 
 function userByName(username) {
   return [...users.values()].find((u) => u.username === username);
@@ -119,6 +167,8 @@ module.exports = {
   once,
   wait,
   increments,
+  coinLogs,
+  withdrawals,
   coinsOf: (username) => userByName(username).coins,
   // An account that already got its start coins
   setCoins: (username, amount) => { Object.assign(userByName(username), { coins: amount, coinReset: require("../game/config").COIN_RESET }); },

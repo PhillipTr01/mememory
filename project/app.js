@@ -51,6 +51,7 @@ const memeRoute = require("./routes/meme_route");
 const userRoute = require("./routes/user_route");
 const scoreboardRoute = require("./routes/scoreboard_route");
 const secretRoute = require("./routes/secret_route");
+const adminRoute = require("./routes/admin_route");
 
 /* API routes */
 const authenticationAPIRoute = require("./API/routes/authentication_route");
@@ -86,6 +87,8 @@ app.get("/singleplayer", Auth, page("singleplayer.html"));
 app.get("/tictactoe", Auth, page("tictactoe.html"));
 // Hidden: the games with coins (jackpot, case battles, poker) at a secret address
 app.use(encodeURI(config.JACKPOT_PATH), secretRoute(Auth));
+// The admin panel: a secret address and a password (ADMIN_PASSWORD)
+app.use(encodeURI(config.ADMIN_PATH), adminRoute());
 
 /* Error handling */
 app.use((req, res, next) => {

@@ -65,7 +65,6 @@ socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  document.getElementById("btCoins").innerText = "🪙 " + formatCoins(data.coins);
   document.getElementById("btBonus").hidden = !data.bonus;
   renderCreate();
   renderList();
@@ -167,6 +166,22 @@ function countOf(id) {
   return group ? group.count : 0;
 }
 
+// A case (with all its rounds) to another place in the order
+function movePicked(from, to) {
+  if (!Number.isInteger(from) || to < 0 || to >= picked.length || from == to) return;
+  var [group] = picked.splice(from, 1);
+  picked.splice(to, 0, group);
+  renderCreate();
+}
+
+function shufflePicked() {
+  for (var i = picked.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    [picked[i], picked[j]] = [picked[j], picked[i]];
+  }
+  renderCreate();
+}
+
 function setCount(id, count) {
   count = Math.max(0, Math.floor(Number(count)) || 0);
   var group = picked.find((g) => g.id == id);
@@ -264,11 +279,44 @@ function renderCreate() {
   if (picked.length == 0) {
     list.replaceChildren(el("span", "mm-muted small", "Click a case to add it - every case is one round, as many as you like."));
   } else {
+    // The order of the cases is the order of the rounds: drag a case or use the arrows
+    var round = 1;
     list.replaceChildren(
-      ...picked.map((group) => {
+      ...picked.map((group, index) => {
         var box = caseById(group.id);
         var chip = el("div", "bt-chip");
-        chip.append(el("span", "bt-chip-icon", box.icon), el("span", "bt-chip-name", box.name), el("span", "bt-chip-price", "🪙 " + formatCoins(box.price * group.count)), stepper(group.id));
+        chip.draggable = true;
+        chip.dataset.index = index;
+        var rounds = group.count == 1 ? "Round " + round : "Rounds " + round + "-" + (round + group.count - 1);
+        round += group.count;
+        var order = el("span", "bt-chip-order", index + 1);
+        order.title = rounds + " - drag to change the order";
+        var left = el("button", "bt-chip-move", "‹");
+        left.type = "button";
+        left.title = "Earlier";
+        left.disabled = index == 0;
+        left.addEventListener("click", () => movePicked(index, index - 1));
+        var right = el("button", "bt-chip-move", "›");
+        right.type = "button";
+        right.title = "Later";
+        right.disabled = index == picked.length - 1;
+        right.addEventListener("click", () => movePicked(index, index + 1));
+        chip.append(left, order, el("span", "bt-chip-icon", box.icon), el("span", "bt-chip-name", box.name), el("span", "bt-chip-price", "🪙 " + formatCoins(box.price * group.count)), stepper(group.id), right);
+        chip.addEventListener("dragstart", (event) => {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", String(index));
+          chip.classList.add("dragging");
+        });
+        chip.addEventListener("dragend", () => chip.classList.remove("dragging"));
+        chip.addEventListener("dragover", (event) => {
+          event.preventDefault();
+          chip.classList.add("drop");
+        });
+        chip.addEventListener("dragleave", () => chip.classList.remove("drop"));
+        chip.addEventListener("drop", (event) => {
+          event.preventDefault();
+          movePicked(Number(event.dataTransfer.getData("text/plain")), index);
+        });
         return chip;
       }),
     );
@@ -285,6 +333,7 @@ function renderCreate() {
     ? ids.length + (ids.length == 1 ? " round" : " rounds") + " · 🪙 " + formatCoins(cost) + " per player"
     : "";
   document.getElementById("btClear").hidden = ids.length == 0;
+  document.getElementById("btShuffle").hidden = picked.length < 2;
   var button = document.getElementById("btCreate");
   document.getElementById("btCreateLabel").innerText = ids.length ? "Create for 🪙 " + formatCoins(cost) : "Create";
   button.disabled = ids.length == 0 || cost > myCoins;
@@ -724,6 +773,8 @@ document.addEventListener("DOMContentLoaded", () => {
     sort = event.target.value;
     renderCases();
   });
+
+  document.getElementById("btShuffle").addEventListener("click", shufflePicked);
 
   document.getElementById("btClear").addEventListener("click", () => {
     picked = [];

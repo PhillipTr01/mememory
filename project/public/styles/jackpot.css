@@ -1445,3 +1445,83 @@ body.jackpot-theme {
     display: none;
   }
 }
+
+/* ---------- Own coins in the top bar (only in the secret casino) ---------- */
+.nav-coins {
+  margin-right: 0.6rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.45);
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.1);
+  color: var(--mm-accent);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.nav-coins:hover {
+  background: rgba(var(--mm-accent-rgb), 0.2);
+}
+
+.nav-coins.up {
+  animation: nav-coins-up 0.6s ease;
+}
+
+.nav-coins.down {
+  animation: nav-coins-down 0.6s ease;
+}
+
+@keyframes nav-coins-up {
+  40% {
+    transform: scale(1.12);
+    box-shadow: 0 0 14px rgba(var(--mm-accent-rgb), 0.7);
+  }
+}
+
+@keyframes nav-coins-down {
+  40% {
+    transform: scale(0.94);
+    color: var(--mm-danger);
+  }
+}
+
+.nav-payout-balance {
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  color: var(--mm-accent);
+}
+
+.nav-payout .mm-input {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.nav-payout-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 1rem;
+  font-size: 0.82rem;
+}
+
+.nav-payout-head {
+  font-weight: 700;
+  color: var(--mm-muted);
+}
+
+.nav-payout-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  background: var(--mm-surface-2);
+}
+
+@media (max-width: 575px) {
+  .nav-coins {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.85rem;
+  }
+}

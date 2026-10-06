@@ -43,7 +43,8 @@
                         </div>
                     </div>
                     <div class="col-6 d-flex justify-content-end align-items-center">
-                        <div class="ms-auto profile-menu" id="profileMenu">
+                        <button type="button" id="navCoins" class="nav-coins ms-auto" title="Your coins - click to pay out" hidden>🪙 <span id="navCoinsValue">-</span></button>
+                        <div class="profile-menu" id="profileMenu">
                   <button type="button" class="profile-trigger" id="profileTrigger" aria-haspopup="true" aria-expanded="false">
                     <span id="profileAvatar" class="mm-avatar sm"></span>
                     <span class="profile-name" id="username"></span>
@@ -98,7 +99,6 @@
                             <button type="button" id="pkBonus" class="mm-btn mm-btn-sm" title="Claim your free daily coins" hidden>
                                 <i class="bi bi-gift"></i> Free coins
                             </button>
-                            <span id="pkCoins" class="bt-wallet" title="The same coins as in the jackpot">🪙 -</span>
                             <a href="/lobby" class="icon-btn" title="Back to the lobby" aria-label="Back to the lobby">
                                 <i class="bi bi-box-arrow-left"></i>
                             </a>
@@ -204,6 +204,7 @@
     <script src="/static/scripts/ui.js"></script>
     <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/poker.js"></script>
+    <script src="/static/scripts/casino_wallet.js"></script>
     <script src="/static/scripts/chat.js"></script>
 </body>
 

@@ -289,13 +289,10 @@
 }
 
 .bt-summary {
+  flex: 1;
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--mm-accent);
-}
-
-.bt-create-head .mm-btn {
-  margin-left: auto;
 }
 
 .bt-chip {
@@ -307,6 +304,50 @@
   border-radius: 999px;
   background: var(--mm-surface-3);
   font-size: 0.8rem;
+}
+
+.bt-chip {
+  cursor: grab;
+}
+
+.bt-chip.dragging {
+  opacity: 0.4;
+}
+
+.bt-chip.drop {
+  border-color: var(--mm-accent);
+}
+
+.bt-chip-order {
+  min-width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(var(--mm-accent-rgb), 0.2);
+  color: var(--mm-accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.bt-chip-move {
+  width: 20px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--mm-muted);
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.bt-chip-move:hover:not(:disabled) {
+  color: var(--mm-text);
+}
+
+.bt-chip-move:disabled {
+  opacity: 0.25;
 }
 
 .bt-chip-icon {

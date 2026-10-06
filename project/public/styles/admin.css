@@ -1,0 +1,245 @@
+/* ---------- Admin panel ---------- */
+.ad-main,
+.ad-login-page {
+  color: var(--mm-text);
+}
+
+.ad-main h1,
+.ad-main h2,
+.ad-login h1 {
+  color: var(--mm-text);
+}
+
+.ad-reason {
+  color: var(--mm-text);
+}
+
+.ad-login-page {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.ad-login {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 1.6rem;
+}
+
+.ad-main {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ad-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ad-badge {
+  background: var(--mm-danger);
+  color: #fff;
+}
+
+.ad-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ad-tab[hidden] {
+  display: none;
+}
+
+.ad-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.ad-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 1rem;
+}
+
+.ad-stat-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--mm-muted);
+}
+
+.ad-stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.ad-card {
+  padding: 1rem 1.2rem;
+}
+
+.ad-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.ad-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ad-card-head .ad-title {
+  margin: 0;
+}
+
+.ad-search {
+  width: auto;
+  min-width: 200px;
+}
+
+.ad-form {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 0.8fr 1.6fr auto;
+  gap: 0.5rem;
+}
+
+.ad-form.compact {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.ad-form.compact .mm-input {
+  width: auto;
+}
+
+.ad-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.ad-table th {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--mm-border);
+  color: var(--mm-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.ad-table td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.ad-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.ad-table .plus {
+  color: var(--mm-success);
+}
+
+.ad-table .minus {
+  color: var(--mm-danger);
+}
+
+.ad-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.ad-reason {
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ad-payout {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--mm-border);
+  border-left: 3px solid var(--mm-accent);
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface-2);
+}
+
+.ad-payout + .ad-payout {
+  margin-top: 0.4rem;
+}
+
+.ad-payout.paid {
+  border-left-color: var(--mm-success);
+}
+
+.ad-payout.rejected {
+  border-left-color: var(--mm-danger);
+  opacity: 0.7;
+}
+
+.ad-payout-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ad-payout-amount {
+  font-weight: 800;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.ad-status {
+  min-width: 70px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ad-status.paid {
+  color: var(--mm-success);
+}
+
+.ad-status.rejected {
+  color: var(--mm-danger);
+}
+
+@media (max-width: 767px) {
+  .ad-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ad-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ad-payout {
+    flex-wrap: wrap;
+  }
+}

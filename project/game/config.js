@@ -78,6 +78,16 @@ module.exports = {
   // not linked anywhere. Can be changed with JACKPOT_PATH.
   JACKPOT_PATH: "/" + (process.env.JACKPOT_PATH || "🤫🎰💸"),
 
+  // Payouts: a player takes coins off the balance, the admin pays them out
+  WITHDRAW_MIN: 100,
+  WITHDRAW_MAX_OPEN: 5, // open payouts per player
+
+  // Admin panel: a secret address and a password (only from the environment,
+  // without ADMIN_PASSWORD there is no admin panel)
+  ADMIN_PATH: "/" + (process.env.ADMIN_PATH || "🛠️🦆"),
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || "",
+  ADMIN_SESSION: 12 * 60 * 60, // seconds an admin login lasts
+
   // Case battles (hidden, opened from the jackpot page)
   BATTLE_START: 3000, // countdown when the battle is full
   BATTLE_ROUND: 4500, // one case for everybody: spin + a short look at the items

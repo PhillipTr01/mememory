@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" class="min-h-100">
+
+<head>
+    <title>Admin - MemeMory</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+    <link rel="stylesheet" href="/static/styles/index.css">
+    <link rel="stylesheet" href="/static/styles/theme.css">
+    <link rel="stylesheet" href="/static/styles/jackpot.css">
+    <link rel="stylesheet" href="/static/styles/admin.css">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.0/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body class="d-flex flex-column min-h-100 jackpot-theme">
+    <main class="ad-login-page">
+        <form id="adLogin" class="mm-card ad-login" autocomplete="off">
+            <h1 class="jp-title">🛠️ Admin</h1>
+            <p class="mm-muted small mb-0">Only for the owner of this site.</p>
+            <input id="adPassword" class="mm-input" type="password" placeholder="Password" aria-label="Password" autocomplete="current-password" required>
+            <button type="submit" class="mm-btn mm-btn-primary w-100"><i class="bi bi-unlock"></i> Log in</button>
+            <p id="adLoginError" class="jp-error" hidden></p>
+        </form>
+    </main>
+    <script>
+        document.getElementById("adLogin").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            var error = document.getElementById("adLoginError");
+            var res = await fetch("login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: document.getElementById("adPassword").value }) });
+            if (res.ok) return window.location.reload();
+            error.innerText = ((await res.json().catch(() => ({}))).error) || "Wrong password.";
+            error.hidden = false;
+        });
+    </script>
+</body>
+
+</html>

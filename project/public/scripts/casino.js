@@ -26,7 +26,6 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
-  document.getElementById("csCoins").innerText = "🪙 " + formatCoins(data.coins);
   document.getElementById("csBonus").hidden = !data.bonus;
 });
 
