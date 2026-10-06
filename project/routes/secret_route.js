@@ -5,6 +5,7 @@ const User = require("../models/User");
 const withdrawals = require("../game/withdrawals");
 const access = require("../game/access");
 const leaderboard = require("../game/leaderboard");
+const games = require("../game/games");
 
 /*
  * The hidden pages, mounted at the secret address (config.JACKPOT_PATH):
@@ -27,15 +28,31 @@ module.exports = function (auth) {
     res.redirect(req.baseUrl + "/");
   });
 
+  // The tabs of the games that are off are hidden (admin panel, Settings)
+  const hideOff = () => {
+    const off = games.GAMES.filter((game) => !games.enabled(game.id));
+    return off.length ? `<style>${off.map((game) => `.cs-tab[href="${game.tab}"]`).join(", ")} { display: none !important; }</style>` : "";
+  };
+
+  // A game page - or, when the game is off, the next game that is on
+  function gamePage(id, file) {
+    const send = page(file, hideOff);
+    return (req, res, next) => {
+      if (games.enabled(id)) return send(req, res, next);
+      const other = games.firstEnabled();
+      res.redirect(req.baseUrl + (other ? other.page : "/leaderboard"));
+    };
+  }
+
   // Always with a slash at the end, so the relative links work
   router.get("/", auth, (req, res, next) => (req.originalUrl.split("?")[0].endsWith("/") ? next() : res.redirect(req.baseUrl + "/")));
-  router.get("/", auth, approved, page("jackpot.html"));
+  router.get("/", auth, approved, gamePage("jackpot", "jackpot.html"));
   // The jackpot also under its own name
-  router.get("/jackpot", auth, approved, page("jackpot.html"));
-  router.get("/battles", auth, approved, page("battles.html"));
-  router.get("/poker", auth, approved, page("poker.html"));
-  router.get("/blackjack", auth, approved, page("blackjack.html"));
-  router.get("/leaderboard", auth, approved, page("leaderboard.html"));
+  router.get("/jackpot", auth, approved, gamePage("jackpot", "jackpot.html"));
+  router.get("/battles", auth, approved, gamePage("battles", "battles.html"));
+  router.get("/poker", auth, approved, gamePage("poker", "poker.html"));
+  router.get("/blackjack", auth, approved, gamePage("blackjack", "blackjack.html"));
+  router.get("/leaderboard", auth, approved, page("leaderboard.html", hideOff));
 
   router.use(express.json({ limit: "2kb" }));
 

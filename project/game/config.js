@@ -47,6 +47,12 @@ module.exports = {
   // Speed round: shorter "who starts" animation
   SPEED_START_ANIMATION: 2600,
 
+  // The games of the casino on / off (admin panel): an "off" game has no tab and no page
+  GAME_JACKPOT: true,
+  GAME_BATTLES: true,
+  GAME_POKER: true,
+  GAME_BLACKJACK: true,
+
   // Coins (hidden jackpot): start amount, free coins for everybody once a day
   START_COINS: 25000,
   // Every account gets START_COINS once for this id: a new id resets everybody's coins
@@ -67,7 +73,7 @@ module.exports = {
   // nobody can answer a bet in the last second). Too late for the draw: the next pot.
   JACKPOT_BET_DELAY: [3000, 5000],
   // The animation of a round, one for everybody, chosen at random per round
-  JACKPOT_DRAWS: ["wheel", "roulette", "bowling", "plinko", "race", "claw", "royale", "coinrain", "revolver", "slots", "launch", "scratch", "ghosthunt"],
+  JACKPOT_DRAWS: ["wheel", "roulette", "bowling", "race", "claw", "royale", "coinrain", "revolver", "slots", "launch", "scratch", "ghosthunt"],
   JACKPOT_HISTORY: 10,
   // After a restart: at least this long until a countdown or a turn ends (time to come back)
   RESTORE_GRACE: 10 * 1000,

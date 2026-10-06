@@ -34,6 +34,14 @@
                 <a href="#history" class="ad-nav-item" data-tab="history"><span class="ad-nav-icon">📜</span><span class="ad-nav-label">History</span></a>
                 <a href="#chat" class="ad-nav-item" data-tab="chat"><span class="ad-nav-icon">💬</span><span class="ad-nav-label">Chat</span></a>
                 <a href="#settings" class="ad-nav-item" data-tab="settings"><span class="ad-nav-icon">⚙️</span><span class="ad-nav-label">Settings</span></a>
+                <!--- The pages of the settings: general and one per game --->
+                <div class="ad-subnav" id="adSettingsNav">
+                    <a href="#settings/general" class="ad-nav-item ad-sub" data-group="general"><span class="ad-nav-label">General</span></a>
+                    <a href="#settings/jackpot" class="ad-nav-item ad-sub" data-group="jackpot"><span class="ad-nav-label">Jackpot</span><span class="ad-state" data-game="GAME_JACKPOT"></span></a>
+                    <a href="#settings/battles" class="ad-nav-item ad-sub" data-group="battles"><span class="ad-nav-label">Case battles</span><span class="ad-state" data-game="GAME_BATTLES"></span></a>
+                    <a href="#settings/poker" class="ad-nav-item ad-sub" data-group="poker"><span class="ad-nav-label">Poker</span><span class="ad-state" data-game="GAME_POKER"></span></a>
+                    <a href="#settings/blackjack" class="ad-nav-item ad-sub" data-group="blackjack"><span class="ad-nav-label">Blackjack</span><span class="ad-state" data-game="GAME_BLACKJACK"></span></a>
+                </div>
             </nav>
             <button type="button" id="adLogout" class="ad-nav-item ad-logout"><span class="ad-nav-icon">↩</span><span class="ad-nav-label">Log out</span></button>
         </aside>
@@ -207,7 +215,7 @@
                     </div>
                 </form>
 
-                <div class="ad-card ad-danger">
+                <div class="ad-card ad-danger" id="adDanger">
                     <div class="ad-card-head"><h2 class="ad-title">Danger zone</h2><span class="ad-pill danger">can't be undone</span></div>
                     <p><b>Hard reset:</b> the casino starts anew. This deletes the <b>whole coin history</b>, <b>every payout</b>, <b>every access</b> (and request) and <b>all coins</b>, and resets every game (jackpot, battles, poker, blackjack, chat). The accounts stay - players ask for access again and get the start coins.</p>
                     <form id="adResetForm" class="ad-reset-form" autocomplete="off">

@@ -47,6 +47,8 @@ socket.on("connect_error", (error) => {
 });
 // The admin took the access away
 socket.on("casinoClosed", () => (window.location.href = "/"));
+// The admin turned this game off: on to another one
+socket.on("gameOff", () => (window.location.href = "./"));
 
 window.addEventListener("pagehide", () => socket.disconnect());
 window.addEventListener("pageshow", (event) => {

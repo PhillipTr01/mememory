@@ -43,12 +43,15 @@ function render(file) {
   return html;
 }
 
-// Express handler that sends a page with versioned asset links
-function page(file) {
+// Express handler that sends a page with versioned asset links;
+// extraHead(req): optional HTML for the end of <head> (made per request)
+function page(file, extraHead) {
   return (req, res, next) => {
     try {
       res.set("Cache-Control", "no-cache");
-      res.type("html").send(render(file));
+      const html = render(file);
+      const extra = extraHead ? extraHead(req) : "";
+      res.type("html").send(extra ? html.replace(/<\/head>/i, extra + "\n</head>") : html);
     } catch (error) {
       next(error);
     }

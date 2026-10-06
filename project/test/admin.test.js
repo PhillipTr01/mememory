@@ -238,6 +238,40 @@ test("admin: settings - start coins, daily bonus ... are changed, checked and st
   assert.deepStrictEqual([config.START_COINS, config.DAILY_BONUS, config.JACKPOT_GHOST_AFTER], [before.start, before.bonus, before.ghost]);
 });
 
+test("admin: a game turned off - no tab, its page leads to the next game, its open pages go", async () => {
+  const settings = require("../game/settings");
+  const turnedOff = [];
+  const listener = (values) => turnedOff.push(values);
+  settings.changes.on("change", listener);
+  const as = (name) => ({ cookie: `token=${tokens[name]}` });
+  // All on: every tab, every page
+  let page = await call(CASINO + "/poker", as("paula"));
+  assert.strictEqual(page.status, 200);
+  assert.doesNotMatch(await page.text(), /display: none !important/);
+
+  assert.strictEqual((await adminApi("settings", { values: { GAME_POKER: "no" } })).status, 400, "on or off only");
+  let res = await adminApi("settings", { values: { GAME_POKER: false } });
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.body.settings.find((f) => f.key === "GAME_POKER").value, false);
+  assert.deepStrictEqual(turnedOff.pop(), { GAME_POKER: false }, "the open poker pages are told");
+  // The page leads to the jackpot, the other pages have no poker tab
+  page = await call(CASINO + "/poker", as("paula"));
+  assert.strictEqual(page.status, 302);
+  assert.match(page.headers.get("location"), /\/jackpot$/);
+  const battles = await (await call(CASINO + "/battles", as("paula"))).text();
+  assert.match(battles, /\.cs-tab\[href="poker"\] \{ display: none !important; \}/);
+
+  // The jackpot off too: the casino starts with the next game that is on
+  await adminApi("settings", { values: { GAME_JACKPOT: false } });
+  page = await call(CASINO + "/", as("paula"));
+  assert.strictEqual(page.status, 302);
+  assert.match(page.headers.get("location"), /\/battles$/);
+
+  await adminApi("settings", { defaults: true });
+  assert.strictEqual((await call(CASINO + "/poker", as("paula"))).status, 200, "on again");
+  settings.changes.off("change", listener);
+});
+
 // The last test: everything is gone afterwards
 test("admin: the hard reset - history, payouts, accesses and coins are gone", async () => {
   const CoinLog = require("../models/CoinLog");

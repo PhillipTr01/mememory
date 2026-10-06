@@ -142,6 +142,39 @@
   margin-top: auto;
 }
 
+/* The pages of the settings, under "Settings" (only while it is open) */
+.ad-subnav {
+  display: none;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.15rem 0 0.25rem 1.6rem;
+  padding-left: 0.6rem;
+  border-left: 1px solid var(--mm-border);
+}
+
+.ad-subnav.open {
+  display: flex;
+}
+
+.ad-nav-item.ad-sub {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.84rem;
+}
+
+/* On / off of a game: a small dot */
+.ad-state {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mm-success);
+  box-shadow: 0 0 6px rgba(127, 174, 110, 0.7);
+}
+
+.ad-state.off {
+  background: var(--mm-surface-3);
+  box-shadow: none;
+}
+
 .ad-count {
   min-width: 1.35rem;
   padding: 0 0.4rem;
@@ -748,6 +781,42 @@
   color: var(--mm-muted);
 }
 
+.ad-settings-bar[hidden] {
+  display: none;
+}
+
+/* A game on / off: over the whole width, green when on */
+.ad-toggle-card {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-left: 4px solid var(--mm-success);
+}
+
+.ad-toggle-card.off {
+  border-left-color: var(--mm-surface-3);
+}
+
+.ad-toggle-card .ad-note {
+  margin: 0.25rem 0 0;
+}
+
+.ad-switch-big .ad-switch-track {
+  width: 48px;
+  height: 28px;
+}
+
+.ad-switch-big .ad-switch-track::after {
+  width: 22px;
+  height: 22px;
+}
+
+.ad-switch-big input:checked + .ad-switch-track::after {
+  transform: translateX(20px);
+}
+
 .ad-settings-bar {
   display: flex;
   justify-content: flex-end;
@@ -813,6 +882,12 @@
 
   .ad-nav {
     flex-direction: row;
+  }
+
+  .ad-subnav.open {
+    flex-direction: row;
+    margin: 0;
+    padding-left: 0.5rem;
   }
 
   .ad-nav-item {

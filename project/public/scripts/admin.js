@@ -67,13 +67,28 @@ var PAGES = {
   settings: ["Settings", "Values of the games, and the hard reset."],
 };
 
+// The pages of the settings: general and one per game
+var SETTING_GROUPS = {
+  general: ["General settings", "Coins for everybody - and the hard reset."],
+  jackpot: ["Jackpot", "Turn the jackpot on or off, its bets and timing."],
+  battles: ["Case battles", "Turn case battles on or off, how big a battle can be."],
+  poker: ["Poker", "Turn poker on or off, the buy-ins."],
+  blackjack: ["Blackjack", "Turn blackjack on or off, the seats and the limits of every table."],
+};
+var settingsGroup = "general";
+
 function showTab() {
-  var tab = (location.hash || "#overview").slice(1);
+  var parts = (location.hash || "#overview").slice(1).split("/");
+  var tab = parts[0];
   if (!PAGES[tab]) tab = "overview";
+  settingsGroup = SETTING_GROUPS[parts[1]] ? parts[1] : "general";
   document.querySelectorAll(".ad-tab").forEach((section) => (section.hidden = section.id != "tab-" + tab));
   document.querySelectorAll(".ad-nav-item[data-tab]").forEach((link) => link.classList.toggle("active", link.dataset.tab == tab));
-  document.getElementById("adPageTitle").innerText = PAGES[tab][0];
-  document.getElementById("adPageSub").innerText = PAGES[tab][1];
+  document.getElementById("adPageTitle").innerText = tab == "settings" ? SETTING_GROUPS[settingsGroup][0] : PAGES[tab][0];
+  document.getElementById("adPageSub").innerText = tab == "settings" ? SETTING_GROUPS[settingsGroup][1] : PAGES[tab][1];
+  document.getElementById("adSettingsNav").classList.toggle("open", tab == "settings");
+  document.querySelectorAll(".ad-sub").forEach((link) => link.classList.toggle("active", tab == "settings" && link.dataset.group == settingsGroup));
+  document.getElementById("adDanger").hidden = settingsGroup != "general";
   if (tab == "access") loadAccess();
   if (tab == "players") loadPlayers();
   if (tab == "payouts") loadPayouts();
@@ -536,14 +551,25 @@ async function loadSettings() {
 }
 
 function renderSettings() {
-  var sections = [];
-  settingsList.forEach((field) => {
-    var section = sections.find((s) => s.name == field.section);
-    if (!section) sections.push((section = { name: field.section, fields: [] }));
-    section.fields.push(field);
+  // On / off of every game in the navigation
+  document.querySelectorAll(".ad-state[data-game]").forEach((dot) => {
+    var field = settingsList.find((f) => f.key == dot.dataset.game);
+    dot.classList.toggle("off", field != null && field.value === false);
+    dot.title = field && field.value === false ? "Off" : "On";
   });
+  var sections = [];
+  settingsList
+    .filter((field) => field.group == settingsGroup)
+    .forEach((field) => {
+      var section = sections.find((s) => s.name == field.section);
+      if (!section) sections.push((section = { name: field.section, fields: [] }));
+      section.fields.push(field);
+    });
   document.getElementById("adSettings").replaceChildren(
     ...sections.map((section) => {
+      // A game on / off: a card of its own, over the whole width
+      var toggle = section.fields.find((field) => field.type == "toggle");
+      if (toggle) return toggleCard(toggle);
       var card = el("div", "ad-card");
       var head = el("div", "ad-card-head");
       head.appendChild(el("h2", "ad-title", section.name));
@@ -569,6 +595,38 @@ function renderSettings() {
       return card;
     }),
   );
+  // Nothing to save on a page without numbers
+  document.querySelector(".ad-settings-bar").hidden = !settingsList.some((field) => field.group == settingsGroup && field.type != "toggle");
+}
+
+// A game on / off: saved right away
+function toggleCard(field) {
+  var on = field.value !== false;
+  var card = el("div", "ad-card ad-toggle-card" + (on ? " on" : " off"));
+  var info = el("div", "ad-toggle-info");
+  info.append(el("h2", "ad-title", on ? field.label : field.label.replace(/ (is|are) on$/, " $1 off")), el("p", "ad-note", on ? "Players can find and play it." : "Hidden: no tab, the page leads to another game."));
+  var label = el("label", "ad-switch ad-switch-big");
+  var box = document.createElement("input");
+  box.type = "checkbox";
+  box.checked = on;
+  box.setAttribute("aria-label", field.label);
+  label.append(box, el("span", "ad-switch-track"), el("span", "ad-switch-text", on ? "On" : "Off"));
+  box.addEventListener("change", async () => {
+    if (!box.checked && !confirm("Turn it off? Players on it right now are sent to another game.")) {
+      box.checked = true;
+      return;
+    }
+    box.disabled = true;
+    try {
+      settingsList = (await api("settings", { values: { [field.key]: box.checked } })).settings;
+      showToast(box.checked ? "It's on again" : "It's off now");
+    } catch (error) {
+      fail(error);
+    }
+    renderSettings();
+  });
+  card.append(info, label);
+  return card;
 }
 
 async function saveSettings(event) {

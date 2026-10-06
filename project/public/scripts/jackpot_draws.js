@@ -11,7 +11,6 @@ var DRAW_MODES = [
   { id: "wheel", icon: "🎡", label: "Wheel", description: "A wheel with everybody's tickets - the pointer picks the winner" },
   { id: "roulette", icon: "🖼️", label: "Roulette", description: "A strip of pictures runs past the marker" },
   { id: "bowling", icon: "🎳", label: "Bowling", description: "Every player is a pin - only the winner stays standing" },
-  { id: "plinko", icon: "🔻", label: "Plinko", description: "A ball falls through the pegs into the winning slot" },
   { id: "race", icon: "🏇", label: "Race", description: "Every player runs - the winner crosses the line first" },
   { id: "claw", icon: "🕹️", label: "Claw", description: "The claw machine grabs the winner out of the pile" },
   { id: "royale", icon: "🪂", label: "Royale", description: "Battle royale - the zone shrinks, the last one standing wins" },
@@ -469,98 +468,6 @@ var bowlingDraw = {
     }
     winnerLabel(root, draw);
     await wait(short ? 0 : 400);
-  },
-};
-
-/* ---------- 4. Plinko: the ball falls into the winning slot ---------- */
-
-var plinkoDraw = {
-  ROWS: 8,
-
-  build(stage) {
-    var root = scene(stage, "plinko");
-    root.replaceChildren();
-    var board = el("div", "jp-plinko");
-    // Pegs: rows of dots, every other row shifted
-    for (var row = 0; row < this.ROWS; row++) {
-      var count = row % 2 ? 11 : 12;
-      for (var i = 0; i < count; i++) {
-        var peg = el("i", "jp-peg");
-        peg.style.left = ((i + (row % 2 ? 1 : 0.5)) / 12) * 100 + "%";
-        peg.style.top = 12 + row * 9 + "%";
-        board.appendChild(peg);
-      }
-    }
-    // Slots at the bottom: one per bet, as wide as its tickets
-    var slots = el("div", "jp-slots");
-    var bets = drawBets();
-    bets.forEach((bet) => {
-      var slot = el("div", "jp-slot");
-      slot.style.flexGrow = bet.coins;
-      slot.style.setProperty("--share", shareColor(bet.name));
-      slot.title = bet.name + ": tickets #" + bet.from + " - #" + bet.to;
-      if (bet.coins / state.total > 0.06) slot.appendChild(createAvatar(bet.name, "sm"));
-      slot.dataset.from = bet.from;
-      slot.dataset.to = bet.to;
-      slots.appendChild(slot);
-    });
-    board.appendChild(slots);
-    var ball = el("div", "jp-plinko-ball");
-    board.appendChild(ball);
-    root.appendChild(board);
-    if (bets.length == 0) emptyNote(board, "The slots appear with the first coins.");
-    return { root: root, board: board, ball: ball, slots: slots };
-  },
-
-  idle(stage) {
-    this.build(stage);
-  },
-
-  async play(stage, draw, duration, short) {
-    var parts = this.build(stage);
-    var board = parts.board;
-    var width = board.clientWidth;
-    var height = board.clientHeight;
-    // Where the winning ticket is at the bottom
-    var targetX = ((draw.ticket + 0.5) / draw.total) * width;
-    var startX = randomBetween(width * 0.15, width * 0.85);
-    var rowHeight = height * 0.09;
-    var frames = [{ transform: `translate(${startX}px, 0px)`, offset: 0 }];
-    var steps = this.ROWS + 1;
-    var x = startX;
-    for (var row = 0; row <= this.ROWS; row++) {
-      // Bounce from peg to peg at random - only the last rows lead to the slot
-      var left = this.ROWS - row; // rows still to come
-      var next;
-      if (left >= 3) {
-        next = Math.max(width * 0.06, Math.min(width * 0.94, x + randomBetween(-1, 1) * width * 0.09));
-      } else {
-        next = left == 0 ? targetX : x + (targetX - x) / (left + 1) + randomBetween(-1, 1) * width * 0.03;
-      }
-      var y = height * 0.12 + row * rowHeight;
-      // Small hop up after each peg
-      frames.push({ transform: `translate(${(x + next) / 2}px, ${y - rowHeight * 0.35}px)`, offset: (row + 0.5) / (steps + 1) });
-      frames.push({ transform: `translate(${next}px, ${y}px)`, offset: (row + 1) / (steps + 1) });
-      x = next;
-    }
-    // Sometimes it jumps over into the slot next to it ... and back
-    if (!short && Math.random() < 0.45) {
-      var side = targetX + (Math.random() < 0.5 ? -1 : 1) * width * randomBetween(0.05, 0.09);
-      frames.forEach((f) => (f.offset *= 0.86));
-      frames.push({ transform: `translate(${(targetX + side) / 2}px, ${height * 0.78}px)`, offset: 0.9 });
-      frames.push({ transform: `translate(${side}px, ${height * 0.86}px)`, offset: 0.93 });
-      frames.push({ transform: `translate(${targetX}px, ${height * 0.8}px)`, offset: 0.97 });
-    }
-    frames.push({ transform: `translate(${targetX}px, ${height * 0.9}px)`, offset: 1 });
-    await animate(parts.ball, frames, { duration: duration, easing: SLOW_END });
-
-    // The slot of the winning ticket lights up
-    var winner = [...parts.slots.children].find(
-      (slot) => Number(slot.dataset.from) <= draw.ticket + 1 && Number(slot.dataset.to) >= draw.ticket + 1,
-    );
-    if (winner) winner.classList.add("won");
-    if (!short) confetti(parts.root);
-    winnerLabel(parts.root, draw);
   },
 };
 
@@ -1922,7 +1829,6 @@ var DRAWS = {
   wheel: wheelDraw,
   roulette: rouletteDraw,
   bowling: bowlingDraw,
-  plinko: plinkoDraw,
   race: raceDraw,
   slots: slotsDraw,
   launch: launchDraw,
