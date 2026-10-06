@@ -1342,14 +1342,41 @@ var slotsDraw = {
   },
 
   idle(stage) {
+    // The same players in the same phase: the reels keep turning (no restart on every update)
+    var key = state.phase + "|" + state.entries.map((entry) => entry.name).join(",");
+    var current = stage.firstElementChild;
+    if (current && current.dataset.scene == "slots" && current.dataset.key == key) return;
     var parts = this.build(stage);
+    parts.root.dataset.key = key;
     if (state.entries.length == 0) {
       parts.reels.forEach((reel) => reel.track.replaceChildren());
       emptyNote(parts.root, "The faces appear on the reels with the first coins.");
       return;
     }
     var names = state.entries.map((entry) => entry.name);
+    if (state.phase == "countdown") return this.warmUp(parts, names);
     parts.reels.forEach((reel, i) => this.show(reel, [0, 1, 2].map((n) => names[(n + i) % names.length]), 1));
+  },
+
+  // The countdown runs: the reels already turn, slowly and endlessly
+  warmUp(parts, names) {
+    parts.reels.forEach((reel, i) => {
+      // One round of faces (each player as often as their share), twice - so the loop has no jump
+      var round = [];
+      for (var n = 0; n < 10; n++) round.push(names[(n * 7 + i * 3) % names.length]);
+      state.entries.forEach((entry) => {
+        if (entry.coins / state.total > 0.3) round.push(entry.name);
+      });
+      var height = this.show(reel, round.concat(round), 1);
+      var from = 0;
+      var to = -height * round.length;
+      reel.track.animate([{ transform: `translateY(${from}px)` }, { transform: `translateY(${to}px)` }], {
+        duration: round.length * (260 + i * 70),
+        iterations: Infinity,
+        easing: "linear",
+      });
+      reel.reel.classList.add("warming");
+    });
   },
 
   pull(parts) {
@@ -1393,6 +1420,7 @@ var slotsDraw = {
 
   async play(stage, draw, duration, short) {
     var parts = this.build(stage);
+    parts.root.dataset.key = "";
     var winner = draw.winner;
     if (short) {
       var names = state.entries.map((entry) => entry.name);

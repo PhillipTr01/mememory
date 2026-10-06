@@ -325,7 +325,7 @@ async function loadAccess() {
 }
 
 async function setAccess(player, approve, button) {
-  if (!approve && !confirm("Take " + player.username + "'s access away? Their open casino pages close, the coins stay.")) return;
+  if (!approve && !(await confirmDialog({ title: "Take " + player.username + "'s access away?", text: "Their open casino pages close right away. The coins stay for a later approval.", confirmLabel: "Revoke access", danger: true }))) return;
   button.disabled = true;
   try {
     var result = await api("access", { username: player.username, approve: approve });
@@ -612,7 +612,7 @@ function toggleCard(field) {
   box.setAttribute("aria-label", field.label);
   label.append(box, el("span", "ad-switch-track"), el("span", "ad-switch-text", on ? "On" : "Off"));
   box.addEventListener("change", async () => {
-    if (!box.checked && !confirm("Turn it off? Players on it right now are sent to another game.")) {
+    if (!box.checked && !(await confirmDialog({ title: "Turn " + field.label.replace(/ (is|are) on$/, "") + " off?", text: "It disappears from the game bar. Players on it right now are sent to another game - seats are given up, bets come back.", confirmLabel: "Turn off", danger: true }))) {
       box.checked = true;
       return;
     }
@@ -651,7 +651,7 @@ async function saveSettings(event) {
 }
 
 async function settingsDefaults() {
-  if (!confirm("Every setting back to its default?")) return;
+  if (!(await confirmDialog({ title: "Back to the defaults?", text: "Every setting (and every game on / off) goes back to how it was at the start.", confirmLabel: "Reset settings" }))) return;
   try {
     settingsList = (await api("settings", { defaults: true })).settings;
     renderSettings();
@@ -665,7 +665,7 @@ async function hardReset(event) {
   event.preventDefault();
   var input = document.getElementById("adResetConfirm");
   if (input.value != "RESET") return;
-  if (!confirm("Really delete everything and start the casino anew? This can't be undone.")) return;
+  if (!(await confirmDialog({ title: "Delete everything?", text: "The whole coin history, every payout, every access and all coins are deleted, every game starts anew. This can't be undone.", confirmLabel: "Reset everything", danger: true }))) return;
   var button = document.getElementById("adResetButton");
   button.disabled = true;
   try {
@@ -705,8 +705,8 @@ document.addEventListener("DOMContentLoaded", () => {
     window.location.reload();
   });
 
-  document.getElementById("adChatClear").addEventListener("click", () => {
-    if (confirm("Delete every message of the casino chat?")) chatAction("chat/clear", {}, "The chat is empty");
+  document.getElementById("adChatClear").addEventListener("click", async () => {
+    if (await confirmDialog({ title: "Clear the chat?", text: "Every message of the casino chat is deleted for everybody.", confirmLabel: "Clear the chat", danger: true })) chatAction("chat/clear", {}, "The chat is empty");
   });
   document.getElementById("adBanForm").addEventListener("submit", (event) => {
     event.preventDefault();

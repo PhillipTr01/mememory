@@ -1455,9 +1455,11 @@ body.jackpot-theme {
   pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: center;
+  gap: 0.4rem;
   height: 30px;
-  padding: 0 0.9rem;
+  padding: 0 0.9rem 0 1rem;
+  line-height: 1;
   border: 1px solid var(--mm-border);
   border-bottom: 0;
   border-radius: 12px 12px 0 0;
@@ -1475,14 +1477,15 @@ body.jackpot-theme {
 }
 
 .cs-dock-chevron {
-  display: inline-block;
-  font-size: 1rem;
-  line-height: 0.6;
+  display: block;
+  width: 12px;
+  height: 12px;
   transition: transform 0.3s ease;
 }
 
+/* Closed: the arrow points up (open it) */
 .cs-dock.closed .cs-dock-chevron {
-  transform: rotate(180deg) translateY(-3px);
+  transform: rotate(180deg);
 }
 
 .cs-dock-bar {
@@ -2034,6 +2037,10 @@ body.jackpot-theme {
   inset: 0;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), transparent 30%, transparent 70%, rgba(0, 0, 0, 0.45));
   pointer-events: none;
+}
+
+.jp-reel.warming .jp-reel-track {
+  filter: blur(0.6px);
 }
 
 .jp-reel.spinning .jp-reel-track {
