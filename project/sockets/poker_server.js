@@ -423,8 +423,8 @@ module.exports = function (io) {
       seat.total = 0;
       seat.cards = [];
       seat.lastAction = null;
-      // Out of chips, standing up or gone: off the table
-      if (seat.leaving || seat.stack === 0) cashOut(i);
+      // Out of chips, standing up or gone (left the page during the hand): off the table
+      if (seat.leaving || seat.stack === 0 || (seat.awaySince != null && !connected(seat.name))) cashOut(i);
     });
     table.board = [];
     table.result = null;
@@ -605,9 +605,15 @@ module.exports = function (io) {
           const seat = table.seats[i];
           seat.awaySince = Date.now();
           clearTimeout(seat.awayTimer);
-          seat.awayTimer = setTimeout(() => {
-            if (table.seats[i] === seat && !connected(username)) standUp(i);
-          }, config.POKER_AWAY);
+          // Not in a hand: off the table right away (after a reload-sized wait);
+          // in a hand: the seat stays until the hand is over (or POKER_AWAY)
+          const inHand = seat.inHand && table.phase !== "waiting";
+          seat.awayTimer = setTimeout(
+            () => {
+              if (table.seats[i] === seat && !connected(username)) standUp(i);
+            },
+            inHand ? config.POKER_AWAY : Math.min(config.POKER_AWAY, config.CASINO_LEAVE),
+          );
           // Their turn right now: the others don't wait the whole time
           if (table.current === i) {
             clearTimeout(table.turnTimer);

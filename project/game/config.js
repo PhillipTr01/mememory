@@ -119,14 +119,24 @@ module.exports = {
   POKER_START: 3000, // pause before a hand starts
   POKER_STREET: 1200, // all-in: pause between the cards of the board
   POKER_SHOWDOWN: 6000, // the result is shown this long
-  POKER_AWAY: 30 * 1000, // a player without an open page leaves the table
+  POKER_AWAY: 30 * 1000, // in a hand: a player without an open page leaves the table
+  // Poker / blackjack: gone from the page (another page, tab closed) and not in a
+  // round: off the seat after this short wait (a reload keeps the seat)
+  CASINO_LEAVE: 3000,
   POKER_HISTORY: 10,
 
   // Blackjack (hidden): one table against the dealer, a player can take several seats
-  BJ_SEATS: 7,
-  BJ_MY_SEATS: 3, // seats one player can have at a time
-  BJ_MIN_BET: 10,
+  BJ_SEATS: 5, // seats per table
+  BJ_MY_SEATS: 3, // seats one player can have at a time (per table)
+  BJ_MIN_BET: 10, // the classic table (the default one)
   BJ_MAX_BET: 5000, // per seat (a double or a split adds the same again)
+  // The tables of the lobby (in this order); a page without a table opens "classic"
+  BJ_TABLES: [
+    { id: "casual", name: "Casual Corner", icon: "🍀", minBet: 10, maxBet: 500, about: "Small stakes, no stress - learn the ropes." },
+    { id: "classic", name: "Classic Table", icon: "🃏", minBet: null, maxBet: null, about: "The usual table: from a few coins up to 5k a seat." },
+    { id: "highroller", name: "High Roller", icon: "💎", minBet: 500, maxBet: 25000, about: "Big chips only. Win big, lose big." },
+  ],
+  BJ_DEFAULT_TABLE: "classic",
   BJ_BETTING: 10000, // after the first bet: time for the others to bet
   BJ_SIT: 20000, // a seat without a bet: the player stands up after this
   BJ_TURN: 15000, // time for a decision, then the hand stands

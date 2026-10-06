@@ -1,5 +1,7 @@
-/* Hidden blackjack: the server deals and decides, this page only shows the table. */
-const socket = io("/blackjack");
+/* Hidden blackjack: the server deals and decides, this page only shows the table (or the lobby). */
+// ?table=<id>: that table, without: the lobby with every table
+var TABLE_ID = new URLSearchParams(location.search).get("table");
+const socket = io("/blackjack", { query: { table: TABLE_ID || "lobby" } });
 
 var myName = null;
 var myCoins = 0;
@@ -54,6 +56,48 @@ socket.on("blackjackState", (data) => {
   render();
 });
 
+socket.on("blackjackTables", renderLobby);
+
+/* ---------- Lobby ---------- */
+
+var PHASES = { betting: "Taking bets", playing: "Cards on the table", dealer: "Dealer's turn", result: "Paying out" };
+
+function renderLobby(list) {
+  var lobby = document.getElementById("bjLobby");
+  lobby.replaceChildren(
+    ...list.map((t) => {
+      var card = el("a", "mm-card bj-lobby-card" + (t.free == 0 ? " full" : "") + (t.mine > 0 ? " mine" : ""));
+      card.href = "blackjack?table=" + encodeURIComponent(t.id);
+      var head = el("div", "bj-lobby-head");
+      head.append(el("span", "bj-lobby-icon", t.icon), el("span", "bj-lobby-name", t.name));
+      var limits = el("div", "bj-lobby-limits", "🪙 " + formatCoins(t.minBet) + " – " + formatCoins(t.maxBet));
+      limits.appendChild(el("span", "mm-muted", " per seat"));
+      // The seats: taken or free
+      var seats = el("div", "bj-lobby-seats");
+      for (var i = 0; i < t.seats; i++) seats.appendChild(el("span", "bj-lobby-seat" + (i < t.seats - t.free ? " taken" : "")));
+      seats.appendChild(el("span", "bj-lobby-free", t.free == 0 ? "Full" : t.free + " of " + t.seats + " seats free"));
+      var players = el("div", "bj-lobby-players");
+      if (t.players.length) {
+        t.players.slice(0, 5).forEach((name) => {
+          var avatar = createAvatar(name, "sm");
+          avatar.title = name;
+          players.appendChild(avatar);
+        });
+        players.appendChild(el("span", "mm-muted small", t.players.length == 1 ? "1 player" : t.players.length + " players"));
+      } else {
+        players.appendChild(el("span", "mm-muted small", "Nobody here yet"));
+      }
+      var foot = el("div", "bj-lobby-foot");
+      foot.append(
+        el("span", "bj-lobby-phase " + t.phase, t.players.length ? PHASES[t.phase] + " · round " + t.round : "Waiting for players"),
+        el("span", "mm-btn mm-btn-sm mm-btn-primary", t.mine > 0 ? "Back to your seat" : t.free == 0 ? "Watch" : "Take a seat"),
+      );
+      card.append(head, el("p", "bj-lobby-about", t.about), limits, seats, players, foot);
+      return card;
+    }),
+  );
+}
+
 /* ---------- Cards ---------- */
 
 var DEAL_STEP = 280; // ms between two cards of the first deal
@@ -106,6 +150,7 @@ function myEmptySeat() {
 
 function render() {
   if (state == null) return;
+  document.getElementById("bjTableName").innerText = "· " + state.table.icon + " " + state.table.name;
   document.getElementById("bjLimits").innerText = formatCoins(state.rules.minBet) + " - " + formatCoins(state.rules.maxBet) + " per seat";
   // The seat to bet on: one of mine (the one without a bet first)
   if (selected != null && !(state.seats[selected] && state.seats[selected].name == myName)) selected = null;
@@ -365,6 +410,11 @@ function renderHistory() {
 
 document.addEventListener("DOMContentLoaded", () => {
   setupChat();
+  // A table or the lobby
+  document.getElementById("bjTableView").hidden = !TABLE_ID;
+  document.getElementById("bjBackToLobby").hidden = !TABLE_ID;
+  document.getElementById("bjLobby").hidden = !!TABLE_ID;
+  if (!TABLE_ID) document.getElementById("bjStatus").innerText = "Pick a table - every table has its own stakes.";
   var amount = document.getElementById("bjAmount");
   document.querySelectorAll(".bj-chip").forEach((chip) =>
     chip.addEventListener("click", () => {

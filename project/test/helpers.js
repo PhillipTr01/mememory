@@ -149,8 +149,9 @@ async function startServer() {
     battles,
     poker,
     blackjack,
-    client(namespace, token) {
+    client(namespace, token, query) {
       return connect(`http://localhost:${port}${namespace}`, {
+        query: query || {},
         transports: ["websocket"],
         reconnection: false,
         forceNew: true,

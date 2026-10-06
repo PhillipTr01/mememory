@@ -28,9 +28,10 @@ function stopGames(server) {
   clearTimeout(server.jackpot.pot.timer);
   clearTimeout(server.jackpot.pot.ghostTimer);
   server.jackpot.pot.incoming.forEach((bet) => clearTimeout(bet.timer));
-  for (const table of [server.poker.table, server.blackjack.table]) {
+  for (const table of [server.poker.table, ...[...server.blackjack.tables.values()].map((t) => t.table)]) {
     clearTimeout(table.timer);
     clearTimeout(table.turnTimer);
+    if (table.leaveTimers) table.leaveTimers.forEach((timer) => clearTimeout(timer));
     table.seats.forEach((seat) => seat && (clearTimeout(seat.awayTimer), clearTimeout(seat.standTimer)));
   }
   for (const battle of server.battles.lobby.list.values()) clearTimeout(battle.timer);

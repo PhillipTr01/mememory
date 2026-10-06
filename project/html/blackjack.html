@@ -96,11 +96,16 @@
 
                     <div class="jp-head">
                         <div>
-                            <h1 class="jp-title"><span class="bj-icon big" aria-hidden="true">21</span> Blackjack <span class="mm-badge" id="bjLimits"></span></h1>
+                            <h1 class="jp-title"><span class="bj-icon big" aria-hidden="true">21</span> Blackjack <span id="bjTableName" class="bj-table-name"></span> <span class="mm-badge" id="bjLimits"></span></h1>
                             <p id="bjStatus" class="jp-status" aria-live="polite"></p>
                         </div>
+                        <a id="bjBackToLobby" href="blackjack" class="mm-btn mm-btn-sm bj-lobby-back" hidden><i class="bi bi-grid"></i> All tables</a>
                     </div>
 
+                    <!--- The lobby: one card per table --->
+                    <div id="bjLobby" class="bj-lobby" hidden></div>
+
+                    <div id="bjTableView" hidden>
                     <!--- The table: the dealer at the top, 5 seats in an arc --->
                     <div class="bj-table">
                         <div class="bj-dealer">
@@ -135,6 +140,7 @@
                             <button type="button" class="bj-chip" data-chip="500">500</button>
                             <button type="button" class="bj-chip" data-chip="1000">1K</button>
                             <button type="button" class="bj-chip" data-chip="5000">5K</button>
+                            <button type="button" class="bj-chip" data-chip="10000">10K</button>
                         </div>
                         <input id="bjAmount" class="mm-input bj-amount" type="number" min="1" step="1" inputmode="numeric" placeholder="Coins" aria-label="Coins to bet">
                         <button type="button" id="bjBet" class="mm-btn mm-btn-primary">Bet</button>
@@ -151,6 +157,7 @@
                             <button type="button" class="mm-btn" data-action="double">Double</button>
                             <button type="button" class="mm-btn" data-action="split">Split</button>
                         </div>
+                    </div>
                     </div>
                 </section>
             </div>

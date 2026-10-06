@@ -90,7 +90,7 @@
   width: 100%;
   margin-top: auto;
   display: grid;
-  grid-template-columns: repeat(var(--seats, 7), minmax(0, 1fr));
+  grid-template-columns: repeat(var(--seats, 5), minmax(0, 1fr));
   gap: 0.5rem;
   align-items: start;
 }
@@ -484,7 +484,7 @@
   }
 }
 
-/* Seven seats on a phone: only the chair */
+/* Five seats on a phone: only the chair */
 @media (max-width: 575px) {
   .bj-seats {
     gap: 0.1rem;
@@ -521,5 +521,151 @@
     height: 36px;
     font-size: 0.66rem;
     border-width: 2px;
+  }
+}
+
+/* ---------- Lobby: one card per table ---------- */
+.bj-table-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+}
+
+.bj-lobby-back {
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.bj-lobby {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.bj-lobby-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1.1rem;
+  color: inherit;
+  text-decoration: none;
+  background: radial-gradient(circle at 50% -20%, rgba(22, 101, 52, 0.35), transparent 70%), var(--mm-surface);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bj-lobby-card:hover,
+.bj-lobby-card:focus-visible {
+  color: inherit;
+  transform: translateY(-3px);
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.bj-lobby-card.mine {
+  border-color: var(--mm-accent);
+}
+
+.bj-lobby-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.bj-lobby-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  font-size: 1.5rem;
+}
+
+.bj-lobby-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.bj-lobby-about {
+  margin: 0;
+  min-height: 2.6em;
+  font-size: 0.85rem;
+  color: var(--mm-muted);
+}
+
+.bj-lobby-limits {
+  font-weight: 800;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.bj-lobby-limits .mm-muted {
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.bj-lobby-seats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.bj-lobby-seat {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(74, 222, 128, 0.7);
+}
+
+.bj-lobby-seat.taken {
+  border-color: var(--mm-accent);
+  background: var(--mm-accent);
+}
+
+.bj-lobby-free {
+  margin-left: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.bj-lobby-card.full .bj-lobby-free {
+  color: var(--mm-danger);
+}
+
+.bj-lobby-players {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 28px;
+}
+
+.bj-lobby-players .mm-muted {
+  margin-left: 0.3rem;
+}
+
+.bj-lobby-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.bj-lobby-phase {
+  font-size: 0.75rem;
+  color: var(--mm-muted);
+}
+
+.bj-lobby-phase.playing,
+.bj-lobby-phase.dealer {
+  color: #4ade80;
+}
+
+@media (max-width: 991px) {
+  .bj-lobby {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

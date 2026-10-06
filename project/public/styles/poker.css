@@ -317,6 +317,7 @@
 .pk-avatar {
   position: relative;
   z-index: 1;
+  line-height: 0;
 }
 
 .pk-avatar .mm-avatar {
@@ -364,12 +365,15 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Over the avatar (a big avatar or the own cards never hide the name) */
 .pk-info {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   max-width: 100%;
-  margin-top: 4px;
+  margin-top: 6px;
   padding: 0.15rem 0.6rem;
   border-radius: var(--mm-radius);
   background: rgba(20, 20, 20, 0.85);
