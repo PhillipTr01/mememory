@@ -441,8 +441,17 @@ function caseStrip(battle, current) {
   battle.cases.slice(from, to).forEach((id, n) => {
     var index = from + n;
     var box = caseById(id);
-    var item = el("span", "bt-strip-case", box ? box.icon : "?");
+    var item = el(box ? "button" : "span", "bt-strip-case", box ? box.icon : "?");
     item.title = box ? box.name + " · 🪙 " + formatCoins(box.price) : id;
+    // A click shows what's inside (the odds)
+    if (box) {
+      item.type = "button";
+      item.setAttribute("aria-label", "What's inside " + box.name);
+      item.addEventListener("click", (event) => {
+        event.stopPropagation();
+        showContents(box);
+      });
+    }
     if (current != null) {
       if (index < current) item.classList.add("done");
       if (index == current) item.classList.add("current");

@@ -17,6 +17,10 @@ var DRAW_MODES = [
   { id: "royale", icon: "🪂", label: "Royale", description: "Battle royale - the zone shrinks, the last one standing wins" },
   { id: "coinrain", icon: "🪙", label: "Coins", description: "Coins rain into everybody's jar - the first one to overflow wins" },
   { id: "revolver", icon: "🔫", label: "Revolver", description: "Russian roulette - the revolver goes round, the last one alive wins" },
+  { id: "slots", icon: "🎰", label: "Slots", description: "Three reels of faces - three of a kind wins" },
+  { id: "launch", icon: "🚀", label: "Launch", description: "Every player gets a rocket - only one reaches orbit" },
+  { id: "scratch", icon: "🎟️", label: "Scratch", description: "A scratch card full of faces - the first to match three wins" },
+  { id: "ghosthunt", icon: "🔦", label: "Ghost hunt", description: "Lights out - the ghost takes them one by one, the last one wins" },
 ];
 
 /* ---------- Helpers ---------- */
@@ -1368,6 +1372,548 @@ var revolverDraw = {
   },
 };
 
+/* ---------- Helpers of the newer draws ---------- */
+
+// A random player, as likely as their share of the pot
+function weightedName() {
+  var bets = drawBets();
+  if (bets.length == 0) return state.entries.length ? state.entries[0].name : "";
+  var ticket = Math.random() * state.total;
+  return (bets.find((bet) => bet.to > ticket) || bets[bets.length - 1]).name;
+}
+
+function shuffled(list) {
+  var copy = list.slice();
+  for (var i = copy.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = copy[i];
+    copy[i] = copy[j];
+    copy[j] = t;
+  }
+  return copy;
+}
+
+/* ---------- 10. Slot machine: three of a kind ---------- */
+
+var slotsDraw = {
+  build(stage) {
+    var root = scene(stage, "slots");
+    root.replaceChildren();
+    var machine = el("div", "jp-slotm");
+    var top = el("div", "jp-slots-top");
+    top.append(el("span", "jp-slots-bulbs"), el("span", "jp-slots-title", "JACKPOT"), el("span", "jp-slots-bulbs"));
+    var window_ = el("div", "jp-slots-window");
+    var reels = [0, 1, 2].map(() => {
+      var reel = el("div", "jp-reel");
+      var track = el("div", "jp-reel-track");
+      reel.appendChild(track);
+      window_.appendChild(reel);
+      return { reel: reel, track: track };
+    });
+    window_.appendChild(el("div", "jp-slots-line"));
+    var lever = el("div", "jp-slots-lever");
+    lever.appendChild(el("span", "jp-slots-knob"));
+    machine.append(top, window_, lever);
+    root.appendChild(machine);
+    return { root: root, machine: machine, reels: reels, lever: lever };
+  },
+
+  tile(name) {
+    var tile = el("div", "jp-reel-tile");
+    tile.dataset.name = name;
+    tile.style.setProperty("--share", shareColor(name));
+    tile.appendChild(createAvatar(name));
+    return tile;
+  },
+
+  // A reel with these names; `center` is the one on the line
+  show(reel, names, center) {
+    reel.track.replaceChildren(...names.map((name) => this.tile(name)));
+    var height = reel.track.firstElementChild.offsetHeight;
+    reel.track.style.transform = `translateY(${height * (1 - center)}px)`;
+    return height;
+  },
+
+  idle(stage) {
+    var parts = this.build(stage);
+    if (state.entries.length == 0) {
+      parts.reels.forEach((reel) => reel.track.replaceChildren());
+      emptyNote(parts.root, "The faces appear on the reels with the first coins.");
+      return;
+    }
+    var names = state.entries.map((entry) => entry.name);
+    parts.reels.forEach((reel, i) => this.show(reel, [0, 1, 2].map((n) => names[(n + i) % names.length]), 1));
+  },
+
+  pull(parts) {
+    animate(parts.lever, [{ transform: "rotate(0deg)" }, { transform: "rotate(38deg)", offset: 0.35 }, { transform: "rotate(0deg)" }], {
+      duration: 700,
+      easing: "ease-in-out",
+      fill: "none",
+    });
+  },
+
+  // One spin: every reel stops on its name of `finals`, from left to right
+  async spin(parts, finals, time, tease) {
+    var spins = parts.reels.map((reel, i) => {
+      var count = Math.round(randomBetween(26, 34) + i * 10 + (tease && i == 2 ? 10 : 0));
+      var names = [];
+      for (var n = 0; n < count; n++) names.push(weightedName());
+      var target = count - 2;
+      names[target] = finals[i];
+      // The faces next to the line: the last ones of the old reel
+      var height = this.show(reel, names, 1);
+      var from = 0;
+      var to = height * (1 - target);
+      var reelTime = time * (i == 2 ? 1 : 0.5 + i * 0.22);
+      var frames = (i == 2 && tease ? spinEnding(from, to, height) : [{ value: from, offset: 0, easing: SLOW_END }, { value: to, offset: 1 }]).map((f) => ({
+        transform: `translateY(${f.value}px)`,
+        offset: f.offset,
+        easing: f.easing,
+      }));
+      reel.reel.classList.add("spinning");
+      return animate(reel.track, frames, { duration: reelTime }).then(() => {
+        reel.reel.classList.remove("spinning");
+        reel.track.style.transform = `translateY(${to}px)`;
+        reel.track.getAnimations().forEach((a) => a.cancel());
+        var landed = reel.track.children[target];
+        landed.classList.add("landed");
+        return landed;
+      });
+    });
+    return Promise.all(spins);
+  },
+
+  async play(stage, draw, duration, short) {
+    var parts = this.build(stage);
+    var winner = draw.winner;
+    if (short) {
+      var names = state.entries.map((entry) => entry.name);
+      parts.reels.forEach((reel) => this.show(reel, [pick(names), winner, pick(names)], 1).toString());
+      parts.reels.forEach((reel) => reel.track.children[1].classList.add("win"));
+      return winnerLabel(parts.root, draw);
+    }
+    var others = state.entries.map((entry) => entry.name).filter((name) => name != winner);
+    var rival = others.length ? pick(others) : winner;
+    var story = pick(["tease", "tease", "respin", "straight"]);
+    var time = duration - 700;
+
+    if (story == "respin" && rival != winner) {
+      // First pull: so close - two of a kind, the third one doesn't fit
+      this.pull(parts);
+      var first = time * 0.38;
+      await this.spin(parts, [rival, rival, winner], first, false);
+      shout(parts.root, pick(["SO CLOSE!", "ALMOST!", "NOT YET..."]), "small");
+      await wait(700);
+      time = time - first - 700;
+    }
+    this.pull(parts);
+    // Two in a row: the last reel takes its time
+    if (story != "straight") setTimeout(() => shout(parts.root, pick(["TWO IN A ROW...", "ONE MORE...", "COME ON..."]), "small"), time * 0.78);
+    var landed = await this.spin(parts, [winner, winner, winner], time, story != "straight");
+    landed.forEach((tile) => tile.classList.add("win"));
+    parts.machine.classList.add("jackpot");
+    shout(parts.root, pick(["JACKPOT!", "777!", "THREE OF A KIND!"]), "strike");
+    confetti(parts.root);
+    winnerLabel(parts.root, draw);
+  },
+};
+
+/* ---------- 11. Space launch: only one rocket reaches orbit ---------- */
+
+var launchDraw = {
+  build(stage, winner) {
+    var root = scene(stage, "launch");
+    root.replaceChildren();
+    var sky = el("div", "jp-launch");
+    for (var i = 0; i < 28; i++) {
+      var star = el("i", "jp-star");
+      star.style.left = randomBetween(0, 100) + "%";
+      star.style.top = randomBetween(0, 70) + "%";
+      star.style.animationDelay = randomBetween(0, 3) + "s";
+      sky.appendChild(star);
+    }
+    sky.appendChild(el("div", "jp-orbit", "ORBIT"));
+    var players = playersFor(6, winner);
+    var rockets = players.map((player) => {
+      var lane = el("div", "jp-launch-lane");
+      var rocket = el("div", "jp-rocket");
+      rocket.dataset.name = player.name;
+      rocket.style.setProperty("--share", shareColor(player.name));
+      var ship = el("span", "jp-rocket-ship", "🚀");
+      rocket.append(el("span", "jp-rocket-flame"), ship, createAvatar(player.name, "sm"));
+      lane.append(rocket, el("span", "jp-launch-pad", Math.round((player.coins / state.total) * 100) + "%"));
+      sky.appendChild(lane);
+      return rocket;
+    });
+    root.appendChild(sky);
+    if (players.length == 0) emptyNote(sky, "Every player gets a rocket on the launch pad.");
+    return { root: root, sky: sky, rockets: rockets };
+  },
+
+  idle(stage) {
+    this.build(stage);
+  },
+
+  // Height a rocket can fly (to the orbit line)
+  ceiling(parts, rocket) {
+    return rocket.parentElement.clientHeight - rocket.offsetHeight - 34;
+  },
+
+  async play(stage, draw, duration, short) {
+    var parts = this.build(stage, draw.winner);
+    var winner = parts.rockets.find((rocket) => rocket.dataset.name == draw.winner);
+    if (winner == null) return winnerLabel(parts.root, draw);
+    var losers = parts.rockets.filter((rocket) => rocket != winner);
+    if (short) {
+      losers.forEach((rocket) => rocket.classList.add("lost"));
+      winner.classList.add("orbit");
+      winner.style.transform = `translateY(${-this.ceiling(parts, winner)}px)`;
+      return winnerLabel(parts.root, draw);
+    }
+
+    // 3, 2, 1 ...
+    var count = 0;
+    for (var n of ["3", "2", "1"]) {
+      shout(parts.root, n, "small");
+      await wait(380);
+      count += 380;
+    }
+    shout(parts.root, "LIFTOFF!", "small");
+    parts.sky.classList.add("flying");
+    var flight = duration - count - 600;
+
+    // When which rocket fails: spread over the flight, the last one just before the orbit
+    var story = pick(["close", "close", "chaos", "fizzle"]);
+    var order = shuffled(losers);
+    var fails = order.map((_, i) => {
+      if (story == "chaos" && i < order.length - 1) return randomBetween(0.12, 0.45);
+      return 0.2 + (0.7 * (i + 1)) / order.length + randomBetween(-0.05, 0.03);
+    });
+    if (order.length) fails[fails.length - 1] = story == "close" ? randomBetween(0.86, 0.93) : Math.max(fails[fails.length - 1], 0.7);
+
+    var flights = parts.rockets.map((rocket) => {
+      rocket.classList.add("burning");
+      var top = this.ceiling(parts, rocket);
+      // Random thrust in every part: they overtake each other
+      var speeds = [];
+      for (var i = 0; i < 6; i++) speeds.push(randomBetween(0.6, 1.5));
+      var reach = rocket == winner ? 1 : randomBetween(0.85, 1.05);
+      if (rocket == order[order.length - 1] && story == "close") speeds = speeds.map((v, i) => v * (1.5 - i * 0.12));
+      var sum = speeds.reduce((a, b) => a + b, 0);
+      var height = 0;
+      var frames = [{ transform: "translateY(0px)", offset: 0 }];
+      speeds.forEach((speed, i) => {
+        height += (speed / sum) * reach;
+        frames.push({ transform: `translateY(${-Math.min(1, height) * top}px)`, offset: (i + 1) / speeds.length });
+      });
+      return rocket.animate(frames, { duration: flight, easing: "cubic-bezier(0.45, 0.05, 0.55, 0.95)", fill: "forwards" });
+    });
+
+    order.forEach((rocket, i) => {
+      setTimeout(() => {
+        var flightAnimation = flights[parts.rockets.indexOf(rocket)];
+        flightAnimation.pause();
+        var fizzle = story == "fizzle" && i % 2 == 0;
+        this.fail(parts, rocket, fizzle);
+        if (i == order.length - 1 && story == "close") shout(parts.root, pick(["SO CLOSE!", "HOUSTON...", "NOOO!"]), "small");
+      }, flight * fails[i]);
+    });
+    if (story == "chaos") setTimeout(() => shout(parts.root, pick(["MAYDAY!", "CHAOS!"]), "small"), flight * 0.3);
+
+    await flights[parts.rockets.indexOf(winner)].finished.catch(() => {});
+    winner.classList.remove("burning");
+    winner.classList.add("orbit");
+    shout(parts.root, pick(["ORBIT!", "TO THE MOON!", "WE HAVE LIFTOFF!"]), "strike");
+    confetti(parts.root);
+    winnerLabel(parts.root, draw);
+  },
+
+  // A rocket fails: it explodes, or the engine dies and it falls back
+  fail(parts, rocket, fizzle) {
+    rocket.classList.remove("burning");
+    if (fizzle) {
+      var now = new DOMMatrixReadOnly(getComputedStyle(rocket).transform).m42;
+      rocket.getAnimations().forEach((a) => a.cancel());
+      rocket.style.transform = `translateY(${now}px)`;
+      animate(rocket, [{ transform: `translateY(${now}px) rotate(0deg)` }, { transform: "translateY(0px) rotate(160deg)", opacity: 0.35 }], {
+        duration: 1200,
+        easing: "cubic-bezier(0.5, 0, 1, 1)",
+      }).then(() => rocket.classList.add("lost"));
+      return;
+    }
+    var boom = el("span", "jp-boom", "💥");
+    rocket.appendChild(boom);
+    animate(boom, [{ transform: "translate(-50%, -50%) scale(0.3)", opacity: 1 }, { transform: "translate(-50%, -50%) scale(2)", opacity: 0 }], { duration: 700 }).then(() =>
+      boom.remove(),
+    );
+    animate(parts.root, [{ transform: "translate(-4px, 2px)" }, { transform: "translate(4px, -2px)" }, { transform: "translate(0, 0)" }], { duration: 180, fill: "none" });
+    rocket.classList.add("lost");
+  },
+};
+
+/* ---------- 12. Scratch card: the first to match three wins ---------- */
+
+var scratchDraw = {
+  build(stage) {
+    var root = scene(stage, "scratch");
+    root.replaceChildren();
+    var card = el("div", "jp-scratch");
+    var head = el("div", "jp-scratch-head");
+    head.append(el("span", "", "🍀 LUCKY CARD"), el("span", "jp-scratch-rule", "Match 3 to win"));
+    var grid = el("div", "jp-scratch-grid");
+    var fields = [];
+    for (var i = 0; i < 9; i++) {
+      var field = el("div", "jp-scratch-field");
+      var foil = el("div", "jp-scratch-foil");
+      foil.appendChild(el("span", "", "?"));
+      field.appendChild(foil);
+      grid.appendChild(field);
+      fields.push(field);
+    }
+    var coin = el("span", "jp-scratch-coin", "🪙");
+    card.append(head, grid, coin);
+    root.appendChild(card);
+    return { root: root, card: card, fields: fields, coin: coin };
+  },
+
+  idle(stage) {
+    var parts = this.build(stage);
+    if (state.entries.length == 0) emptyNote(parts.root, "The faces hide under the foil.");
+  },
+
+  // What is under the fields, in the order they are scratched: the winner's
+  // third face comes last, nobody else gets more than two
+  plan(winner) {
+    var others = shuffled(state.entries.map((entry) => entry.name).filter((name) => name != winner));
+    var pool = [];
+    others.forEach((name) => pool.push(name, name));
+    var most = Math.min(6, pool.length);
+    var rivals = shuffled(pool).slice(0, Math.round(randomBetween(Math.min(3, most), most)));
+    var order = shuffled(rivals.concat([winner, winner]));
+    // A rival on two before the end: who gets the third one?
+    order.push(winner);
+    return order;
+  },
+
+  async scratch(parts, field, time) {
+    var foil = field.querySelector(".jp-scratch-foil");
+    var x = field.offsetLeft;
+    var y = field.offsetTop;
+    var w = field.offsetWidth;
+    var h = field.offsetHeight;
+    var coin = parts.coin;
+    coin.style.opacity = 1;
+    // Zig-zag over the field, the foil goes with it
+    animate(
+      coin,
+      [
+        { transform: `translate(${x}px, ${y}px)` },
+        { transform: `translate(${x + w * 0.8}px, ${y + h * 0.15}px)` },
+        { transform: `translate(${x}px, ${y + h * 0.45}px)` },
+        { transform: `translate(${x + w * 0.8}px, ${y + h * 0.6}px)` },
+        { transform: `translate(${x + w * 0.1}px, ${y + h * 0.8}px)` },
+      ],
+      { duration: time, easing: "linear" },
+    );
+    await animate(
+      foil,
+      [
+        { clipPath: "inset(0 0 0 0)", opacity: 1 },
+        { clipPath: "inset(30% 0 0 0)", opacity: 1, offset: 0.3 },
+        { clipPath: "inset(60% 0 0 0)", opacity: 0.9, offset: 0.65 },
+        { clipPath: "inset(100% 0 0 0)", opacity: 0.6 },
+      ],
+      { duration: time, easing: "linear" },
+    );
+    foil.remove();
+  },
+
+  async play(stage, draw, duration, short) {
+    var parts = this.build(stage);
+    var order = this.plan(draw.winner);
+    var cells = shuffled(parts.fields).slice(0, order.length);
+    cells.forEach((field, i) => {
+      var face = el("div", "jp-scratch-face");
+      face.style.setProperty("--share", shareColor(order[i]));
+      face.dataset.name = order[i];
+      face.append(createAvatar(order[i]));
+      field.insertBefore(face, field.firstChild);
+    });
+    var mark = () => cells.filter((field) => field.firstChild.dataset.name == draw.winner).forEach((field) => field.classList.add("match"));
+    if (short) {
+      cells.forEach((field) => field.querySelector(".jp-scratch-foil").remove());
+      mark();
+      return winnerLabel(parts.root, draw);
+    }
+    // Slower and slower, the last field very slowly
+    var weights = order.map((_, i) => (i == order.length - 1 ? 2.6 : 1 + i * 0.08));
+    var sum = weights.reduce((a, b) => a + b, 0);
+    var time = duration - 600;
+    var counts = {};
+    var tense = false;
+    for (var i = 0; i < order.length; i++) {
+      var name = order[i];
+      await this.scratch(parts, cells[i], ((weights[i] / sum) * time) * 0.82);
+      counts[name] = (counts[name] || 0) + 1;
+      if (counts[name] == 2) cells.filter((field, n) => n <= i && field.firstChild.dataset.name == name).forEach((field) => field.classList.add("two"));
+      // Two players on two: the next face decides
+      var onTwo = Object.keys(counts).filter((key) => counts[key] == 2).length;
+      if (!tense && onTwo >= 2 && i < order.length - 1) {
+        tense = true;
+        shout(parts.root, pick(["WHO GETS THREE?", "NECK AND NECK!"]), "small");
+      }
+      await wait(((weights[i] / sum) * time) * 0.18);
+    }
+    parts.coin.style.opacity = 0;
+    mark();
+    shout(parts.root, pick(["MATCH 3!", "WINNER!", "LUCKY!"]), "strike");
+    confetti(parts.root);
+    winnerLabel(parts.root, draw);
+  },
+};
+
+/* ---------- 13. Ghost hunt: lights out, the last one left wins ---------- */
+
+var ghostHuntDraw = {
+  build(stage, winner) {
+    var root = scene(stage, "ghosthunt");
+    root.replaceChildren();
+    var room = el("div", "jp-haunt");
+    var players = playersFor(8, winner);
+    var columns = Math.ceil(players.length / 2) || 1;
+    var hiders = players.map((player, index) => {
+      var hider = el("div", "jp-hider");
+      hider.dataset.name = player.name;
+      hider.style.setProperty("--share", shareColor(player.name));
+      // Two rows, a bit out of line (the same places while the pot doesn't change)
+      var column = Math.floor(index / 2);
+      var row = index % 2;
+      var jitter = ((index * 37) % 9) - 4;
+      hider.style.left = ((column + 0.5) / columns) * 84 + 8 + jitter * 0.6 + "%";
+      hider.style.top = (row ? 70 : 36) + jitter + "%";
+      hider.append(createAvatar(player.name), el("span", "jp-hider-name", player.name));
+      room.appendChild(hider);
+      return hider;
+    });
+    var light = el("div", "jp-flashlight");
+    room.appendChild(light);
+    root.appendChild(room);
+    if (players.length == 0) emptyNote(room, "Somebody has to be in the dark house first...");
+    return { root: root, room: room, hiders: hiders, light: light, x: room.clientWidth / 2, y: room.clientHeight / 2 };
+  },
+
+  idle(stage) {
+    var parts = this.build(stage);
+    parts.light.classList.add("wander");
+    this.place(parts, parts.x, parts.y);
+  },
+
+  place(parts, x, y) {
+    parts.x = x;
+    parts.y = y;
+    parts.light.style.transform = `translate(${x}px, ${y}px)`;
+  },
+
+  // The light moves to a point (over a curve, a bit nervous)
+  async move(parts, x, y, time) {
+    var from = { x: parts.x, y: parts.y };
+    var mid = { x: (from.x + x) / 2 + randomBetween(-60, 60), y: (from.y + y) / 2 + randomBetween(-40, 40) };
+    parts.x = x;
+    parts.y = y;
+    await animate(
+      parts.light,
+      [{ transform: `translate(${from.x}px, ${from.y}px)` }, { transform: `translate(${mid.x}px, ${mid.y}px)`, offset: 0.55 }, { transform: `translate(${x}px, ${y}px)` }],
+      { duration: time, easing: "ease-in-out" },
+    );
+    parts.light.style.transform = `translate(${x}px, ${y}px)`;
+    parts.light.getAnimations().forEach((a) => a.cancel());
+  },
+
+  at(hider) {
+    return { x: hider.offsetLeft, y: hider.offsetTop };
+  },
+
+  take(parts, hider) {
+    var ghost = el("span", "jp-ghost", "👻");
+    ghost.style.left = hider.style.left;
+    ghost.style.top = hider.style.top;
+    parts.room.appendChild(ghost);
+    animate(ghost, [{ transform: "translate(-50%, -20%) scale(0.3)", opacity: 0 }, { transform: "translate(-50%, -90%) scale(1.3)", opacity: 1, offset: 0.4 }, { transform: "translate(-50%, -160%) scale(1)", opacity: 0 }], {
+      duration: 1100,
+      easing: "ease-out",
+    }).then(() => ghost.remove());
+    var boo = el("span", "jp-boo", "BOO!");
+    boo.style.left = hider.style.left;
+    boo.style.top = hider.style.top;
+    parts.room.appendChild(boo);
+    animate(boo, [{ transform: "translate(-50%, -50%) scale(0.5)", opacity: 1 }, { transform: "translate(-50%, -180%) scale(1.2)", opacity: 0 }], { duration: 900 }).then(() => boo.remove());
+    hider.classList.add("taken");
+  },
+
+  async play(stage, draw, duration, short) {
+    var parts = this.build(stage, draw.winner);
+    var winner = parts.hiders.find((hider) => hider.dataset.name == draw.winner);
+    if (winner == null) return winnerLabel(parts.root, draw);
+    var losers = shuffled(parts.hiders.filter((hider) => hider != winner));
+    if (short) {
+      losers.forEach((hider) => hider.classList.add("taken"));
+      parts.room.classList.add("lit");
+      winner.classList.add("survivor");
+      return winnerLabel(parts.root, draw);
+    }
+    this.place(parts, parts.room.clientWidth / 2, -40);
+    shout(parts.root, pick(["LIGHTS OUT...", "WHO'S THERE?"]), "small");
+    var story = pick(["steady", "flicker", "flicker", "double"]);
+    var steps = losers.map((hider) => [hider]);
+    // Two at once: the ghost takes a pair
+    if (story == "double" && steps.length >= 3) {
+      var pair = steps.splice(1, 2);
+      steps.splice(1, 0, pair[0].concat(pair[1]));
+    }
+    var time = duration - 1300;
+    var weights = steps.map((_, i) => 1 + i * 0.25).concat([1.4]);
+    var sum = weights.reduce((a, b) => a + b, 0);
+    var flickerAt = story == "flicker" ? Math.floor(randomBetween(0, steps.length)) : -1;
+    for (var i = 0; i < steps.length; i++) {
+      var stepTime = (weights[i] / sum) * time;
+      var targets = steps[i];
+      // First past somebody else (phew), then to the one the ghost takes
+      var decoys = parts.hiders.filter((hider) => !hider.classList.contains("taken") && !targets.includes(hider));
+      if (decoys.length && Math.random() < 0.6) {
+        var decoy = this.at(pick(decoys));
+        await this.move(parts, decoy.x, decoy.y, stepTime * 0.3);
+        await wait(stepTime * 0.08);
+      }
+      var spot = this.at(targets[0]);
+      await this.move(parts, spot.x, spot.y, stepTime * 0.32);
+      if (i == flickerAt) {
+        // The light dies for a moment - and somebody is gone
+        parts.room.classList.add("blackout");
+        await wait(Math.min(700, stepTime * 0.25));
+        targets.forEach((hider) => hider.classList.add("taken"));
+        parts.room.classList.remove("blackout");
+        shout(parts.root, pick(["GONE!", "WHERE DID THEY GO?"]), "small");
+        await wait(stepTime * 0.1);
+      } else {
+        await wait(stepTime * 0.15);
+        targets.forEach((hider) => this.take(parts, hider));
+        if (targets.length > 1) shout(parts.root, "DOUBLE BOO!", "small");
+        await wait(stepTime * 0.2);
+      }
+    }
+    // The last one in the light - then the lights go on
+    var last = this.at(winner);
+    await this.move(parts, last.x, last.y, (weights[weights.length - 1] / sum) * time * 0.6);
+    await wait(300);
+    parts.room.classList.add("lit");
+    winner.classList.add("survivor");
+    shout(parts.root, pick(["SURVIVED!", "NOT AFRAID!", "LAST ONE STANDING!"]), "strike");
+    confetti(parts.root);
+    winnerLabel(parts.root, draw);
+  },
+};
+
 var DRAWS = {
   coinrain: coinRainDraw,
   revolver: revolverDraw,
@@ -1378,4 +1924,8 @@ var DRAWS = {
   bowling: bowlingDraw,
   plinko: plinkoDraw,
   race: raceDraw,
+  slots: slotsDraw,
+  launch: launchDraw,
+  scratch: scratchDraw,
+  ghosthunt: ghostHuntDraw,
 };

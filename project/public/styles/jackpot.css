@@ -1849,3 +1849,475 @@ body.jackpot-theme {
 .chat-online-row:hover {
   background: var(--mm-surface-2);
 }
+
+/* ---------- 10. Slots ---------- */
+.jp-scene-slots {
+  background: radial-gradient(circle at 50% 30%, #3b1f4a, #1a1020 75%);
+}
+
+.jp-slotm {
+  --tile: 72px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px 16px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #b8860b, #7a5a0b);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+.jp-slots-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jp-slots-title {
+  font-weight: 900;
+  font-size: 1.2rem;
+  letter-spacing: 0.25em;
+  color: #fff7d6;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.jp-slots-bulbs {
+  width: 46px;
+  height: 8px;
+  border-radius: 4px;
+  background: repeating-linear-gradient(90deg, #fff3b0 0 8px, transparent 8px 14px);
+  animation: jp-bulbs 0.6s steps(2) infinite;
+}
+
+@keyframes jp-bulbs {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.jp-slots-window {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 14px;
+  background: #1a1a1a;
+}
+
+.jp-reel {
+  position: relative;
+  width: calc(var(--tile) + 10px);
+  height: calc(var(--tile) * 3);
+  overflow: hidden;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #d9d9d9, #fff 30%, #fff 70%, #d9d9d9);
+}
+
+/* Dark at the top and bottom: the reel is round */
+.jp-reel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), transparent 30%, transparent 70%, rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+}
+
+.jp-reel.spinning .jp-reel-track {
+  filter: blur(1.5px);
+}
+
+.jp-reel-track {
+  will-change: transform;
+}
+
+.jp-reel-tile {
+  height: var(--tile);
+  display: grid;
+  place-items: center;
+}
+
+.jp-reel-tile .mm-avatar {
+  --size: calc(var(--tile) - 22px);
+  box-shadow: 0 0 0 3px var(--share);
+}
+
+.jp-reel-tile.win .mm-avatar {
+  box-shadow: 0 0 0 3px var(--mm-accent), 0 0 18px var(--mm-accent);
+  animation: jp-pulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes jp-pulse {
+  to {
+    transform: scale(1.08);
+  }
+}
+
+.jp-slots-line {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 50%;
+  height: 2px;
+  background: rgba(224, 103, 90, 0.85);
+  box-shadow: 0 0 8px rgba(224, 103, 90, 0.8);
+  pointer-events: none;
+}
+
+.jp-slotm.jackpot {
+  animation: jp-slots-glow 0.4s ease-in-out 6 alternate;
+}
+
+@keyframes jp-slots-glow {
+  to {
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 0 40px #f5d76e;
+  }
+}
+
+.jp-slots-lever {
+  position: absolute;
+  right: -26px;
+  top: 40%;
+  width: 8px;
+  height: 70px;
+  border-radius: 4px;
+  background: #9ca3af;
+  transform-origin: 50% 100%;
+}
+
+.jp-slots-knob {
+  position: absolute;
+  top: -12px;
+  left: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ff8a80, #c62828);
+}
+
+/* ---------- 11. Space launch ---------- */
+.jp-launch {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: space-around;
+  padding: 0 12px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #050816, #12204a 70%, #26385f);
+}
+
+.jp-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #fff;
+  animation: jp-twinkle 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes jp-twinkle {
+  from {
+    opacity: 0.2;
+  }
+  to {
+    opacity: 0.9;
+  }
+}
+
+.jp-orbit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 22px;
+  padding-left: 10px;
+  border-top: 2px dashed rgba(167, 139, 250, 0.55);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: rgba(167, 139, 250, 0.8);
+}
+
+.jp-launch-lane {
+  position: relative;
+  flex: 1;
+  max-width: 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: 6px;
+}
+
+.jp-launch-pad {
+  width: 70%;
+  padding: 2px 0;
+  border-radius: 4px 4px 0 0;
+  background: #4b5563;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.jp-rocket {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  will-change: transform;
+}
+
+.jp-rocket-ship {
+  font-size: 2rem;
+  line-height: 1;
+  transform: rotate(-45deg);
+}
+
+.jp-rocket .mm-avatar {
+  margin-top: 2px;
+  box-shadow: 0 0 0 2px var(--share);
+}
+
+.jp-rocket-flame {
+  position: absolute;
+  top: 32px;
+  width: 12px;
+  height: 0;
+  border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
+  background: linear-gradient(180deg, #fff3b0, #f97316 60%, transparent);
+  opacity: 0;
+  z-index: -1;
+}
+
+.jp-rocket.burning .jp-rocket-flame {
+  height: 46px;
+  opacity: 1;
+  animation: jp-flame 0.12s linear infinite alternate;
+}
+
+@keyframes jp-flame {
+  to {
+    transform: scaleY(1.25);
+  }
+}
+
+.jp-rocket.lost {
+  opacity: 0.25;
+  filter: grayscale(1);
+}
+
+.jp-rocket.orbit .mm-avatar {
+  box-shadow: 0 0 0 3px var(--mm-accent), 0 0 18px var(--mm-accent);
+}
+
+.jp-rocket .jp-boom {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  font-size: 2.4rem;
+}
+
+/* ---------- 12. Scratch card ---------- */
+.jp-scene-scratch {
+  background: radial-gradient(circle at 50% 30%, #1f3b2b, #0f1d15 75%);
+}
+
+.jp-scratch {
+  position: relative;
+  padding: 10px 14px 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  color: #3f2d0b;
+}
+
+.jp-scratch-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 8px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.jp-scratch-rule {
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.jp-scratch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 72px);
+  grid-auto-rows: 72px;
+  gap: 6px;
+}
+
+.jp-scratch-field {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #fffbeb;
+  border: 2px solid rgba(63, 45, 11, 0.2);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.jp-scratch-face .mm-avatar {
+  --size: 52px;
+  box-shadow: 0 0 0 2px var(--share);
+}
+
+.jp-scratch-field.two {
+  border-color: #f59e0b;
+}
+
+.jp-scratch-field.match {
+  border-color: var(--mm-danger);
+  box-shadow: 0 0 16px rgba(224, 103, 90, 0.8);
+  animation: jp-pulse 0.5s ease-in-out infinite alternate;
+}
+
+.jp-scratch-foil {
+  position: absolute;
+  inset: -2px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: repeating-linear-gradient(135deg, #c0c4cc 0 6px, #a1a6b0 6px 12px);
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.jp-scratch-coin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  font-size: 1.5rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+/* ---------- 13. Ghost hunt ---------- */
+.jp-haunt {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: repeating-linear-gradient(90deg, #2a2335 0 40px, #2f2740 40px 80px);
+}
+
+.jp-hider {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.6s ease, transform 0.6s ease, filter 0.6s ease;
+}
+
+.jp-hider .mm-avatar {
+  --size: 46px;
+  box-shadow: 0 0 0 2px var(--share);
+}
+
+.jp-hider-name {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #e5e7eb;
+}
+
+.jp-hider.taken {
+  opacity: 0;
+  filter: blur(3px);
+  transform: translate(-50%, -90%) scale(0.6);
+}
+
+.jp-hider.survivor .mm-avatar {
+  box-shadow: 0 0 0 3px var(--mm-accent), 0 0 22px var(--mm-accent);
+}
+
+/* The light: everything outside the circle is dark */
+.jp-flashlight {
+  position: absolute;
+  left: -90px;
+  top: -90px;
+  z-index: 4;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 244, 200, 0.12) 0 45%, rgba(4, 4, 10, 0.94) 72%);
+  box-shadow: 0 0 0 2000px rgba(4, 4, 10, 0.94);
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.jp-flashlight.wander {
+  animation: jp-wander 7s ease-in-out infinite alternate;
+}
+
+@keyframes jp-wander {
+  from {
+    margin-left: -140px;
+  }
+  to {
+    margin-left: 140px;
+  }
+}
+
+.jp-haunt.blackout .jp-flashlight {
+  background: rgba(4, 4, 10, 0.98);
+}
+
+.jp-haunt.lit .jp-flashlight {
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+.jp-ghost,
+.jp-boo {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.jp-ghost {
+  font-size: 2.6rem;
+}
+
+.jp-boo {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #c4b5fd;
+  text-shadow: 0 0 10px #7c3aed;
+}
+
+@media (max-width: 575px) {
+  .jp-slotm {
+    --tile: 64px;
+    padding: 8px 12px 12px;
+  }
+
+  .jp-scratch-grid {
+    grid-template-columns: repeat(3, 58px);
+    grid-auto-rows: 58px;
+  }
+
+  .jp-scratch-face .mm-avatar {
+    --size: 42px;
+  }
+
+  .jp-rocket-ship {
+    font-size: 1.5rem;
+  }
+}
