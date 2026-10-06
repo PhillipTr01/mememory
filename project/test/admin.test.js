@@ -20,7 +20,7 @@ before(async () => {
   const app = express();
   app.use(cookieParser());
   app.use(CASINO, secretRoute(PageAuth));
-  app.use(ADMIN, adminRoute());
+  app.use(config.addresses(config.ADMIN_PATH), adminRoute());
   server = app.listen(0);
   base = `http://localhost:${server.address().port}`;
   for (const name of ["paula", "quinn", "rosa"]) tokens[name] = h.addUser(name);
@@ -132,6 +132,18 @@ test("admin: leaderboard, the richest first", async () => {
   assert.strictEqual(board[0].username, "rosa");
   for (let i = 1; i < board.length; i++) assert.ok(board[i - 1].coins >= board[i].coins);
   assert.deepStrictEqual((await adminApi("users?q=ros")).body.map((p) => p.username), ["rosa"]);
+});
+
+test("admin: the address works with and without the invisible emoji character", async () => {
+  const plain = encodeURI(config.ADMIN_PATH.replace(/\uFE0F/g, ""));
+  assert.notStrictEqual(plain, ADMIN, "the default address has such a character");
+  const res = await call(plain + "/", { cookie: adminCookie });
+  assert.strictEqual(res.status, 200);
+  assert.match(await res.text(), /adBalance/);
+  // Without the slash: to the address with the slash
+  const redirect = await call(plain);
+  assert.strictEqual(redirect.status, 302);
+  assert.strictEqual(redirect.headers.get("location"), plain + "/");
 });
 
 test("admin: too many wrong passwords - wait a minute", async () => {

@@ -86,9 +86,14 @@ app.get("/play", Auth, page("multiplayer.html"));
 app.get("/singleplayer", Auth, page("singleplayer.html"));
 app.get("/tictactoe", Auth, page("tictactoe.html"));
 // Hidden: the games with coins (jackpot, case battles, poker) at a secret address
-app.use(encodeURI(config.JACKPOT_PATH), secretRoute(Auth));
+app.use(config.addresses(config.JACKPOT_PATH), secretRoute(Auth));
 // The admin panel: a secret address and a password (ADMIN_PASSWORD)
-app.use(encodeURI(config.ADMIN_PATH), adminRoute());
+app.use(config.addresses(config.ADMIN_PATH), adminRoute());
+console.log(
+  config.ADMIN_PASSWORD
+    ? `Admin panel: ${config.ADMIN_PATH}/ (also ${encodeURI(config.ADMIN_PATH)}/)`
+    : "Admin panel is off - set ADMIN_PASSWORD (and ADMIN_PATH) in the environment / .env to turn it on.",
+);
 
 /* Error handling */
 app.use((req, res, next) => {

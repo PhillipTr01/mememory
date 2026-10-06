@@ -89,6 +89,12 @@ module.exports = {
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || "",
   ADMIN_SESSION: 12 * 60 * 60, // seconds an admin login lasts
 
+  // The ways a secret address can arrive: emojis like 🛠️ have an invisible
+  // second character (U+FE0F) that is sometimes missing when typed or copied
+  addresses(path) {
+    return [...new Set([path, path.replace(/\uFE0F/g, "")])].map((p) => encodeURI(p));
+  },
+
   // Case battles (hidden, opened from the jackpot page)
   BATTLE_START: 3000, // countdown when the battle is full
   BATTLE_ROUND: 4500, // one case for everybody: spin + a short look at the items
