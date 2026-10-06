@@ -1769,6 +1769,18 @@ var ghostHuntDraw = {
     return { x: hider.offsetLeft, y: hider.offsetTop };
   },
 
+  // A place in the room away from every player who is still there (null: none found)
+  emptySpot(parts) {
+    var width = parts.room.clientWidth;
+    var height = parts.room.clientHeight;
+    var players = parts.hiders.filter((hider) => !hider.classList.contains("taken")).map((hider) => this.at(hider));
+    for (var n = 0; n < 30; n++) {
+      var point = { x: randomBetween(0.08, 0.92) * width, y: randomBetween(0.12, 0.88) * height };
+      if (players.every((p) => Math.hypot(p.x - point.x, p.y - point.y) > 130)) return point;
+    }
+    return null;
+  },
+
   take(parts, hider) {
     var ghost = el("span", "jp-ghost", "👻");
     ghost.style.left = hider.style.left;
@@ -1813,14 +1825,11 @@ var ghostHuntDraw = {
     for (var i = 0; i < steps.length; i++) {
       var stepTime = (weights[i] / sum) * time;
       var targets = steps[i];
-      // First past somebody else (phew), then to the one the ghost takes
-      var decoys = parts.hiders.filter((hider) => !hider.classList.contains("taken") && !targets.includes(hider));
-      if (decoys.length && Math.random() < 0.6) {
-        var decoy = this.at(pick(decoys));
-        await this.move(parts, decoy.x, decoy.y, stepTime * 0.3);
-        await wait(stepTime * 0.08);
-      }
+      // The light searches the room (where nobody is), then stops on the one the ghost takes -
+      // it never stops on a player who stays
       var spot = this.at(targets[0]);
+      var search = this.emptySpot(parts);
+      if (search) await this.move(parts, search.x, search.y, stepTime * 0.3);
       await this.move(parts, spot.x, spot.y, stepTime * 0.32);
       if (i == flickerAt) {
         // The light dies for a moment - and somebody is gone
