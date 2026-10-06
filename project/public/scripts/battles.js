@@ -632,7 +632,7 @@ function renderBattle() {
   if (battle.phase == "waiting" && battle.creator == myName) {
     var cancel = el("button", "mm-btn mm-btn-sm bt-cancel");
     cancel.type = "button";
-    cancel.append(createIcon("bi-x-circle"), document.createTextNode(" Cancel battle (coins back)"));
+    cancel.append(createIcon("bi-x-circle"), document.createTextNode(" Cancel battle"));
     cancel.addEventListener("click", () => socket.emit("cancelBattle", battle.id));
     parts.push(cancel);
   }

@@ -675,6 +675,8 @@ body.jackpot-theme {
 
 .jp-plush {
   position: absolute;
+  /* flex: no line height under the avatar - a circle, not an oval */
+  display: flex;
   padding: 4px;
   border-radius: 50%;
   background: var(--share);
