@@ -90,6 +90,8 @@ function render() {
   document.getElementById("jpRound").innerText = "Round " + state.round;
   // The coin in front of the number is drawn by the style (.jp-total::before)
   document.getElementById("jpTotal").innerText = formatCoins(state.total);
+  var players = state.entries.length;
+  document.getElementById("jpPlayerCount").innerText = players == 1 ? "1 player" : players + " players";
   // The pot is in the middle of the wheel, the other draws show it above
   document.getElementById("jpPotbar").hidden = state.mode == "wheel";
   // A running animation keeps its scene, a finished one stays until the next round

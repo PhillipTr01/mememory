@@ -50,37 +50,95 @@ body.jackpot-theme {
 }
 
 /* Pot above the stage (not for the wheel, it has the pot in its middle) */
+/* Over the draw, in one line with it: pot left, countdown / info in the middle, players right */
 .jp-potbar {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 0.4rem;
+  gap: 1rem;
+  margin-bottom: -1.1rem; /* sits right on the stage */
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--mm-border);
+  border-bottom: 0;
+  border-radius: var(--mm-radius) var(--mm-radius) 0 0;
+  background: var(--mm-surface-2);
 }
 
-/* The wheel shows the pot in its middle: no second one above */
+/* The wheel shows the pot in its middle: no bar above */
 .jp-potbar[hidden] {
   display: none;
 }
 
-/* Waiting / countdown: its own line under the pot */
-.jp-potbar .jp-center-status {
-  margin: 0;
-  max-width: none;
-  text-align: center;
+.jp-potbar[hidden] + .jp-stage .jp-scene {
+  border-radius: var(--mm-radius);
 }
 
-/* The countdown: a small pill */
-.jp-potbar .jp-center-status.timer {
-  padding: 0.15rem 0.75rem;
-  border-radius: 999px;
-  background: var(--mm-surface-2);
-  border: 1px solid var(--mm-border);
-  font-size: 1rem;
+/* The stage under the bar: square top corners (the scene and a full-size picture in it) */
+.jp-potbar:not([hidden]) + .jp-stage :is(.jp-race, .jp-launch, .jp-haunt),
+.jp-potbar:not([hidden]) + .jp-stage .jp-scene {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.jp-potbar .jp-total {
+  justify-self: start;
+  font-size: 1.15rem;
+}
+
+/* Countdown and info: the same size, in the middle */
+.jp-potbar .jp-center-status,
+.jp-potbar .jp-center-status.timer,
+.jp-potbar .jp-center-status.winner {
+  margin: 0;
+  max-width: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--mm-text);
+  font-variant-numeric: tabular-nums;
 }
 
 .jp-potbar .jp-center-status.timer.urgent {
-  border-color: rgba(224, 103, 90, 0.6);
-  background: rgba(224, 103, 90, 0.12);
+  color: var(--mm-danger);
+}
+
+.jp-potbar .jp-center-status.winner {
+  color: var(--mm-accent);
+}
+
+.jp-player-count {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+}
+
+/* Two little heads in front of the number */
+.jp-player-count::before {
+  content: "";
+  width: 1.1em;
+  height: 0.9em;
+  background: currentColor;
+  -webkit-mask: radial-gradient(circle at 30% 30%, #000 0.2em, transparent 0.21em), radial-gradient(ellipse at 30% 100%, #000 0.36em, transparent 0.37em),
+    radial-gradient(circle at 75% 30%, #000 0.17em, transparent 0.18em), radial-gradient(ellipse at 75% 100%, #000 0.3em, transparent 0.31em);
+  mask: radial-gradient(circle at 30% 30%, #000 0.2em, transparent 0.21em), radial-gradient(ellipse at 30% 100%, #000 0.36em, transparent 0.37em),
+    radial-gradient(circle at 75% 30%, #000 0.17em, transparent 0.18em), radial-gradient(ellipse at 75% 100%, #000 0.3em, transparent 0.31em);
+}
+
+@media (max-width: 575px) {
+  .jp-potbar {
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .jp-potbar .jp-total,
+  .jp-potbar .jp-center-status,
+  .jp-player-count {
+    font-size: 0.85rem;
+  }
 }
 
 /* ---------- Stage: where the draw happens ---------- */
