@@ -6,6 +6,7 @@ const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
 const notices = require("../game/notices");
 const persist = require("../game/persist");
+const live = require("../game/live");
 const safe = require("./safe_handler");
 const version = require("../game/version");
 
@@ -316,6 +317,12 @@ module.exports = function (io) {
       "sendChatMessage",
       safe("sendChatMessage", (data) => casinoChat.fromUser(socket, data)),
     );
+  });
+
+  live.register("battles", () => {
+    const list = [...lobby.list.values()];
+    const count = (phase) => list.filter((battle) => battle.phase === phase).length;
+    return { waiting: count(PHASE.WAITING), running: count(PHASE.RUNNING), pot: list.filter((b) => b.phase === PHASE.RUNNING).reduce((sum, b) => sum + b.price * b.size, 0) };
   });
 
   /* ---------- Restart of the server ---------- */

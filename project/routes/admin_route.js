@@ -8,6 +8,7 @@ const coins = require("../game/coins");
 const withdrawals = require("../game/withdrawals");
 const access = require("../game/access");
 const casinoChat = require("../game/casino_chat");
+const live = require("../game/live");
 const settings = require("../game/settings");
 const { hardReset } = require("../game/hard_reset");
 const User = require("../models/User");
@@ -145,6 +146,9 @@ module.exports = function () {
         openCoins: open.reduce((sum, w) => sum + w.amount, 0),
         requests: (await requests()).map((user) => ({ username: user.username, requestedAt: user.requestedAt })),
         waiting: (await requests()).length,
+        online: casinoChat.online().names,
+        games: live.snapshot(),
+        activity: (await CoinLog.find({}).sort({ at: -1 }).limit(8).lean()).map((row) => ({ username: row.username, amount: row.amount, reason: row.reason, at: row.at })),
       });
     }),
   );

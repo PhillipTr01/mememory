@@ -57,10 +57,23 @@ function fail(error) {
 
 /* ---------- Tabs ---------- */
 
+var PAGES = {
+  overview: ["Overview", "Everything at a glance - what needs you, and what is going on right now."],
+  access: ["Access", "Who may play in the casino, and who may pay coins out."],
+  players: ["Players", "Balances of every player - change one by hand."],
+  payouts: ["Payouts", "Coins players took off to be paid out."],
+  history: ["History", "Every change of a balance, newest first."],
+  chat: ["Chat", "The chat of the casino - delete messages, ban players."],
+  settings: ["Settings", "Values of the games, and the hard reset."],
+};
+
 function showTab() {
   var tab = (location.hash || "#overview").slice(1);
+  if (!PAGES[tab]) tab = "overview";
   document.querySelectorAll(".ad-tab").forEach((section) => (section.hidden = section.id != "tab-" + tab));
-  document.querySelectorAll(".cs-tab").forEach((link) => link.classList.toggle("active", link.dataset.tab == tab));
+  document.querySelectorAll(".ad-nav-item[data-tab]").forEach((link) => link.classList.toggle("active", link.dataset.tab == tab));
+  document.getElementById("adPageTitle").innerText = PAGES[tab][0];
+  document.getElementById("adPageSub").innerText = PAGES[tab][1];
   if (tab == "access") loadAccess();
   if (tab == "players") loadPlayers();
   if (tab == "payouts") loadPayouts();
@@ -74,10 +87,10 @@ window.addEventListener("hashchange", showTab);
 /* ---------- Overview (every few seconds) ---------- */
 
 function payoutRow(w) {
-  var row = el("div", "ad-payout " + w.status);
-  var info = el("div", "ad-payout-info");
-  info.append(el("b", "", w.username), el("span", "mm-muted small", time(w.createdAt) + (w.note ? " · " + w.note : "")));
-  var amount = el("span", "ad-payout-amount", "🪙 " + formatCoins(w.amount));
+  var row = el("div", "ad-row ad-payout " + w.status);
+  var info = el("div", "ad-row-main ad-payout-info");
+  info.append(el("b", "", w.username), el("span", "ad-row-meta", time(w.createdAt) + (w.note ? " · " + w.note : "")));
+  var amount = el("span", "ad-row-value", "🪙 " + formatCoins(w.amount));
   row.append(info, amount);
   if (w.status == "open") {
     var paid = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Paid");
@@ -90,7 +103,7 @@ function payoutRow(w) {
     reject.addEventListener("click", () => handle(w, "reject"));
     row.append(paid, reject);
   } else {
-    row.appendChild(el("span", "ad-status " + w.status, w.status));
+    row.appendChild(el("span", "ad-pill " + (w.status == "paid" ? "success" : "danger"), w.status));
   }
   return row;
 }
@@ -116,10 +129,33 @@ async function loadOverview() {
     document.getElementById("adOpen").innerText = data.open.length;
     document.getElementById("adOpenCoins").innerText = "🪙 " + formatCoins(data.openCoins);
     document.getElementById("adWaiting").innerText = data.requests.length;
+    document.getElementById("adOnline").innerText = data.online.length;
+    document.getElementById("adOnlineNames").innerText = data.online.length ? data.online.slice(0, 3).join(", ") + (data.online.length > 3 ? " +" + (data.online.length - 3) : "") : "nobody in the casino";
     var requests = document.getElementById("adRequestList");
-    requests.replaceChildren(...(data.requests.length ? data.requests.map(requestRow) : [el("p", "mm-muted mb-0", "Nobody is waiting.")]));
+    requests.replaceChildren(...(data.requests.length ? data.requests.map(requestRow) : [el("p", "ad-empty", "Nobody is waiting.")]));
     var list = document.getElementById("adOpenList");
-    list.replaceChildren(...(data.open.length ? data.open.map(payoutRow) : [el("p", "mm-muted mb-0", "Nothing to pay out.")]));
+    list.replaceChildren(...(data.open.length ? data.open.map(payoutRow) : [el("p", "ad-empty", "Nothing to pay out.")]));
+    renderLive(data.games || {});
+    document.getElementById("adTopList").replaceChildren(
+      ...(data.leaderboard.length
+        ? data.leaderboard.slice(0, 5).map((p, i) => {
+            var row = el("div", "ad-row");
+            row.append(el("span", "ad-rank", i + 1), el("span", "ad-row-main fw-semibold", p.username), el("span", "ad-row-value", "🪙 " + formatCoins(p.coins)));
+            return row;
+          })
+        : [el("p", "ad-empty", "No players yet.")]),
+    );
+    document.getElementById("adActivity").replaceChildren(
+      ...(data.activity && data.activity.length
+        ? data.activity.map((a) => {
+            var row = el("div", "ad-row");
+            var main = el("div", "ad-row-main");
+            main.append(el("b", "", a.username), el("span", "ad-reason", a.reason));
+            row.append(main, el("span", "ad-row-meta", new Date(a.at).toLocaleTimeString(undefined, { timeStyle: "short" })), el("span", "ad-row-value " + (a.amount < 0 ? "minus" : "plus"), (a.amount > 0 ? "+" : "") + formatCoins(a.amount)));
+            return row;
+          })
+        : [el("p", "ad-empty", "Nothing yet.")]),
+    );
 
     // New payouts since the last look: a note
     var ids = data.open.map((w) => w.id);
@@ -130,7 +166,6 @@ async function loadOverview() {
     knownOpen = ids;
     var badge = document.getElementById("adOpenBadge");
     badge.hidden = ids.length == 0;
-    badge.innerText = ids.length + " open";
     // Players who want into the casino
     if (knownWaiting != null && data.waiting > knownWaiting) {
       showToast("🔑 " + (data.waiting - knownWaiting == 1 ? "A player wants" : data.waiting - knownWaiting + " players want") + " into the casino");
@@ -158,13 +193,36 @@ async function loadOverview() {
   }
 }
 
+// What the games are doing right now
+var PHASE_TEXT = { open: "waiting for bets", countdown: "countdown", drawing: "drawing", betting: "taking bets", playing: "playing", dealer: "dealer's turn", result: "paying out", waiting: "waiting", preflop: "pre-flop", flop: "flop", turn: "turn", river: "river", showdown: "showdown" };
+
+function liveRow(icon, name, detail, value, active) {
+  var row = el("div", "ad-row");
+  var main = el("div", "ad-row-main");
+  main.append(el("b", "", name), el("span", "ad-row-meta", detail));
+  row.append(el("span", "ad-row-icon", icon), main, el("span", "ad-dot" + (active ? " on" : ""), ""), el("span", "ad-row-value", value));
+  return row;
+}
+
+function renderLive(games) {
+  var rows = [];
+  var jp = games.jackpot;
+  if (jp) rows.push(liveRow("🪙", "Jackpot", "Round " + jp.round + " · " + (PHASE_TEXT[jp.phase] || jp.phase) + " · " + jp.players + (jp.players == 1 ? " player" : " players"), "🪙 " + formatCoins(jp.total), jp.total > 0));
+  var bt = games.battles;
+  if (bt) rows.push(liveRow("⚔️", "Case battles", bt.waiting + " waiting · " + bt.running + " running", "🪙 " + formatCoins(bt.pot), bt.running > 0));
+  var pk = games.poker;
+  if (pk) rows.push(liveRow("🃏", "Poker", (PHASE_TEXT[pk.phase] || pk.phase) + (pk.hand ? " · hand " + pk.hand : ""), pk.seated + " / " + pk.seats + " seats", pk.seated > 0));
+  (games.blackjack || []).forEach((t) => rows.push(liveRow(t.icon, "Blackjack · " + t.name, (PHASE_TEXT[t.phase] || t.phase) + " · round " + t.round, t.taken + " / " + t.seats + " seats", t.taken > 0)));
+  document.getElementById("adLive").replaceChildren(...(rows.length ? rows : [el("p", "ad-empty", "No game is running.")]));
+}
+
 /* ---------- Access ---------- */
 
 // A player who asked for access (overview): let in or say no
 function requestRow(request) {
-  var row = el("div", "ad-payout open");
-  var info = el("div", "ad-payout-info");
-  info.append(el("b", "", request.username), el("span", "mm-muted small", "asked " + time(request.requestedAt)));
+  var row = el("div", "ad-row ad-payout open");
+  var info = el("div", "ad-row-main ad-payout-info");
+  info.append(el("b", "", request.username), el("span", "ad-row-meta", "asked " + time(request.requestedAt)));
   var approve = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Approve");
   approve.type = "button";
   approve.addEventListener("click", () => setAccess({ username: request.username, approved: false }, true, approve));
@@ -183,7 +241,7 @@ function requestRow(request) {
       fail(error);
     }
   });
-  row.append(el("span", "ad-request-icon", "🔑"), info, approve, decline);
+  row.append(el("span", "ad-row-icon", "🔑"), info, approve, decline);
   return row;
 }
 
@@ -219,10 +277,10 @@ async function loadAccess() {
       ...data.players.map((p) => {
         var row = el("tr", p.approved ? "" : p.requestedAt ? "ad-waiting" : "");
         var status = p.approved
-          ? el("span", "ad-status paid", "approved" + (p.approvedAt ? " · " + day(p.approvedAt) : ""))
+          ? el("span", "ad-pill success", "approved" + (p.approvedAt ? " · " + day(p.approvedAt) : ""))
           : p.requestedAt
-            ? el("span", "ad-status open", "wants in · " + time(p.requestedAt))
-            : el("span", "ad-status none", "no access");
+            ? el("span", "ad-pill accent", "wants in · " + time(p.requestedAt))
+            : el("span", "ad-pill", "no access");
         var button = el("button", "mm-btn mm-btn-sm" + (p.approved ? "" : " mm-btn-primary"), p.approved ? "Revoke" : "Approve");
         button.type = "button";
         button.addEventListener("click", () => setAccess(p, !p.approved, button));
@@ -347,7 +405,7 @@ async function loadPayouts() {
   try {
     var status = document.getElementById("adPayoutStatus").value;
     var list = await api("withdrawals" + (status ? "?status=" + status : ""));
-    document.getElementById("adPayoutList").replaceChildren(...(list.length ? list.map(payoutRow) : [el("p", "mm-muted mb-0", "No payouts.")]));
+    document.getElementById("adPayoutList").replaceChildren(...(list.length ? list.map(payoutRow) : [el("p", "ad-empty", "No payouts.")]));
   } catch (error) {
     fail(error);
   }
@@ -426,26 +484,27 @@ async function loadChat() {
             row.append(el("span", "ad-chat-time", new Date(m.time).toLocaleTimeString(undefined, { timeStyle: "short" })), body, actions);
             return row;
           })
-        : [el("p", "mm-muted mb-0", "No messages.")]),
+        : [el("p", "ad-empty", "No messages.")]),
     );
     if (atBottom) list.scrollTop = list.scrollHeight;
 
     document.getElementById("adBanList").replaceChildren(
       ...(data.bans.length
         ? data.bans.map((b) => {
-            var row = el("div", "ad-ban-row");
+            var row = el("div", "ad-row");
             var info = el("div", "");
-            info.append(el("b", "", b.username), el("div", "mm-muted small", b.until ? "until " + time(b.until) : "for good"));
+            info.className = "ad-row-main";
+            info.append(el("b", "", b.username), el("span", "ad-row-meta", b.until ? "until " + time(b.until) : "for good"));
             var unban = el("button", "mm-btn mm-btn-sm", "Unban");
             unban.type = "button";
             unban.addEventListener("click", () => chatAction("chat/unban", { username: b.username }, b.username + " can write again"));
             row.append(info, unban);
             return row;
           })
-        : [el("p", "mm-muted mb-0", "Nobody is banned.")]),
+        : [el("p", "ad-empty", "Nobody is banned.")]),
     );
     document.getElementById("adOnlineCount").innerText = data.online.length;
-    document.getElementById("adOnlineList").replaceChildren(...(data.online.length ? data.online.map((name) => el("span", "", name)) : [el("p", "mm-muted mb-0", "Nobody is in the casino.")]));
+    document.getElementById("adOnlineList").replaceChildren(...(data.online.length ? data.online.map((name) => el("span", "", name)) : [el("p", "ad-empty", "Nobody is in the casino.")]));
   } catch (error) {
     fail(error);
   }
@@ -485,8 +544,10 @@ function renderSettings() {
   });
   document.getElementById("adSettings").replaceChildren(
     ...sections.map((section) => {
-      var card = el("div", "mm-card ad-card");
-      card.appendChild(el("h2", "ad-title", section.name));
+      var card = el("div", "ad-card");
+      var head = el("div", "ad-card-head");
+      head.appendChild(el("h2", "ad-title", section.name));
+      card.appendChild(head);
       section.fields.forEach((field) => {
         var row = el("label", "ad-setting");
         var label = el("span", "ad-setting-label", field.label);

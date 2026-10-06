@@ -6,6 +6,7 @@ const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 const version = require("../game/version");
 const persist = require("../game/persist");
+const live = require("../game/live");
 
 const ROOM = "jackpot"; // everybody is in the same (socket.io) room
 // The house when a player is alone too long ("Ghost" can't be taken as a username)
@@ -356,6 +357,8 @@ module.exports = function (io) {
       safe("disconnect", () => emitState()),
     );
   });
+
+  live.register("jackpot", () => ({ round: pot.round, phase: pot.phase, total: total(), players: pot.entries.length, mode: pot.mode }));
 
   /* ---------- Restart of the server ---------- */
 

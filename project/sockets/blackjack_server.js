@@ -6,6 +6,7 @@ const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 const version = require("../game/version");
 const persist = require("../game/persist");
+const live = require("../game/live");
 
 const ROOM = "blackjack";
 
@@ -666,6 +667,8 @@ module.exports = function (io) {
   async function refundAll() {
     await Promise.all([...tables.values()].map((t) => t.refundAll()));
   }
+
+  live.register("blackjack", () => [...tables.values()].map((t) => ({ name: t.def.name, icon: t.def.icon, phase: t.table.phase, round: t.table.round, taken: t.table.seats.filter(Boolean).length, seats: t.table.seats.length })));
 
   persist.register(
     "blackjack",

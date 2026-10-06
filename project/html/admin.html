@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="min-h-100">
+<html lang="en">
 
 <head>
     <title>Admin - MemeMory</title>
@@ -18,179 +18,206 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
 </head>
 
-<body class="d-flex flex-column min-h-100 jackpot-theme">
-    <main class="ad-main">
-        <header class="ad-head">
-            <h1 class="jp-title">🛠️ Admin <span id="adOpenBadge" class="mm-badge ad-badge" hidden></span></h1>
-            <button type="button" id="adLogout" class="mm-btn mm-btn-sm"><i class="bi bi-box-arrow-right"></i> Log out</button>
-        </header>
-
-        <nav class="cs-nav" aria-label="Admin">
-            <a href="#overview" class="cs-tab" data-tab="overview"><span class="cs-tab-icon">📊</span><span class="cs-tab-label">Overview <span id="adOverviewBadge" class="ad-count" hidden></span></span></a>
-            <a href="#access" class="cs-tab" data-tab="access"><span class="cs-tab-icon">🔑</span><span class="cs-tab-label">Access <span id="adWaitingBadge" class="ad-count" hidden></span></span></a>
-            <a href="#players" class="cs-tab" data-tab="players"><span class="cs-tab-icon">🏆</span><span class="cs-tab-label">Players</span></a>
-            <a href="#payouts" class="cs-tab" data-tab="payouts"><span class="cs-tab-icon">💸</span><span class="cs-tab-label">Payouts</span></a>
-            <a href="#history" class="cs-tab" data-tab="history"><span class="cs-tab-icon">📜</span><span class="cs-tab-label">History</span></a>
-            <a href="#chat" class="cs-tab" data-tab="chat"><span class="cs-tab-icon">💬</span><span class="cs-tab-label">Chat</span></a>
-            <a href="#settings" class="cs-tab" data-tab="settings"><span class="cs-tab-icon">⚙️</span><span class="cs-tab-label">Settings</span></a>
-        </nav>
-
-        <!--- Overview: numbers and the open payouts --->
-        <section id="tab-overview" class="ad-tab">
-            <div class="ad-stats">
-                <div class="mm-card ad-stat"><span class="ad-stat-label">Players</span><span id="adPlayers" class="ad-stat-value">-</span></div>
-                <div class="mm-card ad-stat"><span class="ad-stat-label">Coins in the game</span><span id="adCoins" class="ad-stat-value">-</span></div>
-                <div class="mm-card ad-stat"><span class="ad-stat-label">Open requests</span><span id="adWaiting" class="ad-stat-value">-</span></div>
-                <div class="mm-card ad-stat"><span class="ad-stat-label">Open payouts</span><span id="adOpen" class="ad-stat-value">-</span><span id="adOpenCoins" class="ad-stat-sub"></span></div>
+<body class="jackpot-theme ad-body">
+    <div class="ad-shell">
+        <!--- Navigation --->
+        <aside class="ad-side">
+            <div class="ad-brand">
+                <span class="ad-brand-icon">🛠️</span>
+                <div class="ad-brand-text"><b>MemeMory</b><span>Casino admin</span></div>
             </div>
-            <div class="mm-card ad-card">
-                <h2 class="ad-title">Open requests</h2>
-                <div id="adRequestList"></div>
-            </div>
-            <div class="mm-card ad-card">
-                <h2 class="ad-title">Open payouts</h2>
-                <div id="adOpenList"></div>
-            </div>
-        </section>
+            <nav class="ad-nav" aria-label="Admin">
+                <a href="#overview" class="ad-nav-item" data-tab="overview"><span class="ad-nav-icon">📊</span><span class="ad-nav-label">Overview</span><span id="adOverviewBadge" class="ad-count" hidden></span></a>
+                <a href="#access" class="ad-nav-item" data-tab="access"><span class="ad-nav-icon">🔑</span><span class="ad-nav-label">Access</span><span id="adWaitingBadge" class="ad-count" hidden></span></a>
+                <a href="#players" class="ad-nav-item" data-tab="players"><span class="ad-nav-icon">🏆</span><span class="ad-nav-label">Players</span></a>
+                <a href="#payouts" class="ad-nav-item" data-tab="payouts"><span class="ad-nav-icon">💸</span><span class="ad-nav-label">Payouts</span></a>
+                <a href="#history" class="ad-nav-item" data-tab="history"><span class="ad-nav-icon">📜</span><span class="ad-nav-label">History</span></a>
+                <a href="#chat" class="ad-nav-item" data-tab="chat"><span class="ad-nav-icon">💬</span><span class="ad-nav-label">Chat</span></a>
+                <a href="#settings" class="ad-nav-item" data-tab="settings"><span class="ad-nav-icon">⚙️</span><span class="ad-nav-label">Settings</span></a>
+            </nav>
+            <button type="button" id="adLogout" class="ad-nav-item ad-logout"><span class="ad-nav-icon">↩</span><span class="ad-nav-label">Log out</span></button>
+        </aside>
 
-        <!--- Access: who may play in the casino --->
-        <section id="tab-access" class="ad-tab" hidden>
-            <div class="mm-card ad-card">
-                <div class="ad-card-head">
-                    <h2 class="ad-title">Access to the casino</h2>
-                    <input id="adAccessSearch" class="mm-input ad-search" placeholder="Search a player">
+        <main class="ad-main">
+            <header class="ad-page-head">
+                <div>
+                    <h1 id="adPageTitle" class="ad-page-title">Overview</h1>
+                    <p id="adPageSub" class="ad-page-sub"></p>
                 </div>
-                <p id="adAccessInfo" class="ad-access-info"></p>
-                <table class="ad-table">
-                    <thead><tr><th>Player</th><th>Status</th><th>Payout</th><th></th></tr></thead>
-                    <tbody id="adAccessList"></tbody>
-                </table>
-            </div>
-        </section>
+                <span id="adOpenBadge" class="ad-pill danger" hidden></span>
+            </header>
 
-        <!--- Players: leaderboard, change a balance --->
-        <section id="tab-players" class="ad-tab" hidden>
-            <div class="mm-card ad-card">
-                <h2 class="ad-title">Change a balance</h2>
-                <form id="adBalance" class="ad-form" autocomplete="off">
-                    <input id="adBalUser" class="mm-input" placeholder="Username" list="adUserList" required>
-                    <datalist id="adUserList"></datalist>
-                    <select id="adBalMode" class="mm-input">
-                        <option value="add">Add (+/-)</option>
-                        <option value="set">Set to</option>
-                    </select>
-                    <input id="adBalAmount" class="mm-input" type="number" step="1" placeholder="Coins" required>
-                    <input id="adBalNote" class="mm-input" maxlength="300" placeholder="Note (optional)">
-                    <button type="submit" class="mm-btn mm-btn-primary">Save</button>
-                </form>
-            </div>
-            <div class="mm-card ad-card">
-                <div class="ad-card-head">
-                    <h2 class="ad-title">Leaderboard</h2>
-                    <input id="adSearch" class="mm-input ad-search" placeholder="Search a player">
+            <!--- Overview: numbers, what needs attention, the games right now --->
+            <section id="tab-overview" class="ad-tab">
+                <div class="ad-stats">
+                    <div class="ad-card ad-stat"><span class="ad-label">Players</span><span id="adPlayers" class="ad-stat-value">-</span><span class="ad-stat-sub">in the casino</span></div>
+                    <div class="ad-card ad-stat"><span class="ad-label">Coins in the game</span><span id="adCoins" class="ad-stat-value">-</span><span class="ad-stat-sub">all balances together</span></div>
+                    <div class="ad-card ad-stat"><span class="ad-label">Online now</span><span id="adOnline" class="ad-stat-value">-</span><span id="adOnlineNames" class="ad-stat-sub"></span></div>
+                    <div class="ad-card ad-stat"><span class="ad-label">Open requests</span><span id="adWaiting" class="ad-stat-value">-</span><span class="ad-stat-sub">want into the casino</span></div>
+                    <div class="ad-card ad-stat"><span class="ad-label">Open payouts</span><span id="adOpen" class="ad-stat-value">-</span><span id="adOpenCoins" class="ad-stat-sub"></span></div>
                 </div>
-                <table class="ad-table">
-                    <thead><tr><th>#</th><th>Player</th><th class="num">Coins</th><th></th></tr></thead>
-                    <tbody id="adBoard"></tbody>
-                </table>
-            </div>
-        </section>
 
-        <!--- All payouts --->
-        <section id="tab-payouts" class="ad-tab" hidden>
-            <div class="mm-card ad-card">
-                <div class="ad-card-head">
-                    <h2 class="ad-title">Payouts</h2>
-                    <select id="adPayoutStatus" class="mm-input ad-search">
-                        <option value="">All</option>
-                        <option value="open">Open</option>
-                        <option value="paid">Paid</option>
-                        <option value="rejected">Rejected</option>
-                    </select>
+                <div class="ad-grid">
+                    <div class="ad-card">
+                        <div class="ad-card-head"><h2 class="ad-title">Needs attention</h2></div>
+                        <h3 class="ad-label ad-sublabel">Access requests</h3>
+                        <div id="adRequestList" class="ad-list"></div>
+                        <h3 class="ad-label ad-sublabel">Payouts</h3>
+                        <div id="adOpenList" class="ad-list"></div>
+                    </div>
+                    <div class="ad-card">
+                        <div class="ad-card-head"><h2 class="ad-title">Games right now</h2><span class="ad-pill">live</span></div>
+                        <div id="adLive" class="ad-list"></div>
+                    </div>
+                    <div class="ad-card">
+                        <div class="ad-card-head"><h2 class="ad-title">Richest players</h2><a href="#players" class="ad-link">All players</a></div>
+                        <div id="adTopList" class="ad-list"></div>
+                    </div>
+                    <div class="ad-card">
+                        <div class="ad-card-head"><h2 class="ad-title">Latest coin changes</h2><a href="#history" class="ad-link">History</a></div>
+                        <div id="adActivity" class="ad-list"></div>
+                    </div>
                 </div>
-                <div id="adPayoutList"></div>
-            </div>
-        </section>
+            </section>
 
-        <!--- History of every coin change --->
-        <section id="tab-history" class="ad-tab" hidden>
-            <div class="mm-card ad-card">
-                <div class="ad-card-head">
-                    <h2 class="ad-title">History</h2>
-                    <form id="adHistoryFilter" class="ad-form compact" autocomplete="off">
-                        <input id="adHistUser" class="mm-input" placeholder="Player" list="adUserList">
-                        <select id="adHistReason" class="mm-input">
-                            <option value="">Everything</option>
+            <!--- Access: who may play in the casino --->
+            <section id="tab-access" class="ad-tab" hidden>
+                <div class="ad-card">
+                    <div class="ad-card-head">
+                        <h2 class="ad-title">Every account</h2>
+                        <input id="adAccessSearch" class="mm-input ad-search" placeholder="Search a player">
+                    </div>
+                    <p id="adAccessInfo" class="ad-note"></p>
+                    <table class="ad-table">
+                        <thead><tr><th>Player</th><th>Status</th><th>Payout</th><th></th></tr></thead>
+                        <tbody id="adAccessList"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!--- Players: leaderboard, change a balance --->
+            <section id="tab-players" class="ad-tab" hidden>
+                <div class="ad-card">
+                    <div class="ad-card-head"><h2 class="ad-title">Change a balance</h2></div>
+                    <form id="adBalance" class="ad-form" autocomplete="off">
+                        <input id="adBalUser" class="mm-input" placeholder="Username" list="adUserList" required>
+                        <datalist id="adUserList"></datalist>
+                        <select id="adBalMode" class="mm-input">
+                            <option value="add">Add (+/-)</option>
+                            <option value="set">Set to</option>
                         </select>
-                        <button type="submit" class="mm-btn mm-btn-sm">Show</button>
+                        <input id="adBalAmount" class="mm-input" type="number" step="1" placeholder="Coins" required>
+                        <input id="adBalNote" class="mm-input" maxlength="300" placeholder="Note (optional)">
+                        <button type="submit" class="mm-btn mm-btn-primary">Save</button>
                     </form>
                 </div>
-                <table class="ad-table">
-                    <thead><tr><th>Time</th><th>Player</th><th>What</th><th class="num">Coins</th></tr></thead>
-                    <tbody id="adHistory"></tbody>
-                </table>
-            </div>
-        </section>
-
-        <!--- The chat of the casino: delete, clear, ban --->
-        <section id="tab-chat" class="ad-tab" hidden>
-            <div class="ad-chat-grid">
-                <div class="mm-card ad-card">
+                <div class="ad-card">
                     <div class="ad-card-head">
-                        <h2 class="ad-title">Casino chat <span id="adChatCount" class="mm-badge"></span></h2>
-                        <button type="button" id="adChatClear" class="mm-btn mm-btn-sm mm-btn-danger">🗑️ Clear the chat</button>
+                        <h2 class="ad-title">Leaderboard</h2>
+                        <input id="adSearch" class="mm-input ad-search" placeholder="Search a player">
                     </div>
-                    <div id="adChatList" class="ad-chat-list"></div>
+                    <table class="ad-table">
+                        <thead><tr><th>#</th><th>Player</th><th class="num">Coins</th><th></th></tr></thead>
+                        <tbody id="adBoard"></tbody>
+                    </table>
                 </div>
-                <div class="ad-chat-side">
-                    <div class="mm-card ad-card">
-                        <h2 class="ad-title">Ban a player</h2>
-                        <form id="adBanForm" class="ad-ban-form" autocomplete="off">
-                            <input id="adBanUser" class="mm-input" placeholder="Username" list="adUserList" required>
-                            <select id="adBanTime" class="mm-input">
-                                <option value="10">10 minutes</option>
-                                <option value="60">1 hour</option>
-                                <option value="1440">1 day</option>
-                                <option value="10080">1 week</option>
-                                <option value="">For good</option>
+            </section>
+
+            <!--- All payouts --->
+            <section id="tab-payouts" class="ad-tab" hidden>
+                <div class="ad-card">
+                    <div class="ad-card-head">
+                        <h2 class="ad-title">Payouts</h2>
+                        <select id="adPayoutStatus" class="mm-input ad-search">
+                            <option value="">All</option>
+                            <option value="open">Open</option>
+                            <option value="paid">Paid</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div id="adPayoutList" class="ad-list"></div>
+                </div>
+            </section>
+
+            <!--- History of every coin change --->
+            <section id="tab-history" class="ad-tab" hidden>
+                <div class="ad-card">
+                    <div class="ad-card-head">
+                        <h2 class="ad-title">Every coin change</h2>
+                        <form id="adHistoryFilter" class="ad-form compact" autocomplete="off">
+                            <input id="adHistUser" class="mm-input" placeholder="Player" list="adUserList">
+                            <select id="adHistReason" class="mm-input">
+                                <option value="">Everything</option>
                             </select>
-                            <button type="submit" class="mm-btn mm-btn-sm mm-btn-danger">Ban</button>
+                            <button type="submit" class="mm-btn mm-btn-sm">Show</button>
                         </form>
-                        <p class="mm-muted small mb-0 mt-2">A banned player can still play, but not write in the chat.</p>
                     </div>
-                    <div class="mm-card ad-card">
-                        <h2 class="ad-title">Banned</h2>
-                        <div id="adBanList"></div>
+                    <table class="ad-table">
+                        <thead><tr><th>Time</th><th>Player</th><th>What</th><th class="num">Coins</th></tr></thead>
+                        <tbody id="adHistory"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!--- The chat of the casino: delete, clear, ban --->
+            <section id="tab-chat" class="ad-tab" hidden>
+                <div class="ad-grid ad-grid-side">
+                    <div class="ad-card">
+                        <div class="ad-card-head">
+                            <h2 class="ad-title">Messages <span id="adChatCount" class="ad-pill"></span></h2>
+                            <button type="button" id="adChatClear" class="mm-btn mm-btn-sm mm-btn-danger">Clear the chat</button>
+                        </div>
+                        <div id="adChatList" class="ad-chat-list"></div>
                     </div>
-                    <div class="mm-card ad-card">
-                        <h2 class="ad-title">Online <span id="adOnlineCount" class="mm-badge"></span></h2>
-                        <div id="adOnlineList" class="ad-online"></div>
+                    <div class="ad-stack">
+                        <div class="ad-card">
+                            <div class="ad-card-head"><h2 class="ad-title">Ban a player</h2></div>
+                            <form id="adBanForm" class="ad-ban-form" autocomplete="off">
+                                <input id="adBanUser" class="mm-input" placeholder="Username" list="adUserList" required>
+                                <select id="adBanTime" class="mm-input">
+                                    <option value="10">10 minutes</option>
+                                    <option value="60">1 hour</option>
+                                    <option value="1440">1 day</option>
+                                    <option value="10080">1 week</option>
+                                    <option value="">For good</option>
+                                </select>
+                                <button type="submit" class="mm-btn mm-btn-sm mm-btn-danger">Ban</button>
+                            </form>
+                            <p class="ad-note">A banned player can still play, but not write in the chat.</p>
+                        </div>
+                        <div class="ad-card">
+                            <div class="ad-card-head"><h2 class="ad-title">Banned</h2></div>
+                            <div id="adBanList" class="ad-list"></div>
+                        </div>
+                        <div class="ad-card">
+                            <div class="ad-card-head"><h2 class="ad-title">Online <span id="adOnlineCount" class="ad-pill"></span></h2></div>
+                            <div id="adOnlineList" class="ad-chips"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!--- Settings and the hard reset --->
-        <section id="tab-settings" class="ad-tab" hidden>
-            <form id="adSettingsForm" autocomplete="off">
-                <div id="adSettings" class="ad-settings"></div>
-                <div class="ad-settings-bar">
-                    <button type="button" id="adSettingsDefaults" class="mm-btn mm-btn-sm">Back to the defaults</button>
-                    <button type="submit" class="mm-btn mm-btn-primary">Save</button>
-                </div>
-            </form>
-
-            <div class="mm-card ad-card ad-danger">
-                <h2 class="ad-title">⚠️ Danger zone</h2>
-                <p class="mb-2"><b>Hard reset:</b> the casino starts anew. This deletes the <b>whole coin history</b>, <b>every payout</b>, <b>every access</b> (and request) and <b>all coins</b>, and resets every game (jackpot, battles, poker, blackjack, chat). The accounts stay - players ask for access again and get the start coins.</p>
-                <p class="mm-muted small">This can't be undone. Type <code>RESET</code> to confirm.</p>
-                <form id="adResetForm" class="ad-reset-form" autocomplete="off">
-                    <input id="adResetConfirm" class="mm-input" placeholder="RESET" aria-label="Type RESET to confirm">
-                    <button type="submit" id="adResetButton" class="mm-btn mm-btn-danger-solid" disabled>Reset everything</button>
+            <!--- Settings and the hard reset --->
+            <section id="tab-settings" class="ad-tab" hidden>
+                <form id="adSettingsForm" autocomplete="off">
+                    <div id="adSettings" class="ad-grid"></div>
+                    <div class="ad-settings-bar">
+                        <button type="button" id="adSettingsDefaults" class="mm-btn mm-btn-sm">Back to the defaults</button>
+                        <button type="submit" class="mm-btn mm-btn-primary">Save</button>
+                    </div>
                 </form>
-            </div>
-        </section>
-    </main>
+
+                <div class="ad-card ad-danger">
+                    <div class="ad-card-head"><h2 class="ad-title">Danger zone</h2><span class="ad-pill danger">can't be undone</span></div>
+                    <p><b>Hard reset:</b> the casino starts anew. This deletes the <b>whole coin history</b>, <b>every payout</b>, <b>every access</b> (and request) and <b>all coins</b>, and resets every game (jackpot, battles, poker, blackjack, chat). The accounts stay - players ask for access again and get the start coins.</p>
+                    <form id="adResetForm" class="ad-reset-form" autocomplete="off">
+                        <input id="adResetConfirm" class="mm-input" placeholder="Type RESET" aria-label="Type RESET to confirm">
+                        <button type="submit" id="adResetButton" class="mm-btn mm-btn-danger-solid" disabled>Reset everything</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
 
     <script src="/static/scripts/ui.js"></script>
     <script src="/static/scripts/admin.js"></script>

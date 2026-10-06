@@ -6,6 +6,7 @@ const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 const version = require("../game/version");
 const persist = require("../game/persist");
+const liveGames = require("../game/live");
 
 const ROOM = "poker"; // one table for everybody
 const BETTING = ["preflop", "flop", "turn", "river"];
@@ -644,6 +645,8 @@ module.exports = function (io) {
   }
 
   /* ---------- Restart of the server ---------- */
+
+  liveGames.register("poker", () => ({ phase: table.phase, hand: table.hand, seated: table.seats.filter(Boolean).length, seats: table.seats.length }));
 
   persist.register(
     "poker",
