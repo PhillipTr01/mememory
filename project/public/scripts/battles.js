@@ -84,6 +84,8 @@ socket.on("battleError", (message) => showToast(message, "error"));
 socket.on("battleCreated", (id) => {
   picked = [];
   renderCreate();
+  // Back from the battle: the open battles (with the new one)
+  showPane("battles");
   openBattle(id);
 });
 
@@ -148,6 +150,11 @@ function showView() {
   spinning = false;
   document.getElementById("btListView").hidden = viewId != null;
   document.getElementById("btBattleView").hidden = viewId == null;
+  // Main page: no status of a battle
+  if (viewId == null) {
+    clearInterval(statusTimer);
+    document.getElementById("btStatus").innerText = "";
+  }
   renderBattle();
 }
 
@@ -457,11 +464,42 @@ function phaseText(battle) {
   return (winner.name == myName ? "You won" : winner.name + " won") + " 🪙 " + formatCoins(battle.payout);
 }
 
+/* ---------- The two parts of the main page: open battles / create a battle ---------- */
+
+var pane = "battles";
+
+function showPane(name) {
+  pane = name;
+  document.getElementById("btPaneBattles").hidden = name != "battles";
+  document.getElementById("btPaneCreate").hidden = name != "create";
+  document.querySelectorAll("#btPanes button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.pane == name);
+    button.setAttribute("aria-selected", button.dataset.pane == name);
+  });
+}
+
+// Back on the main page to create a battle - with these cases already chosen
+function createAgain(battle) {
+  picked = battle.cases.slice();
+  size = battle.size;
+  crazy = battle.crazy;
+  document.querySelectorAll("#btSizes button").forEach((b) => b.classList.toggle("active", Number(b.dataset.size) == size));
+  var crazyButton = document.getElementById("btCrazy");
+  crazyButton.classList.toggle("on", crazy);
+  crazyButton.setAttribute("aria-pressed", crazy);
+  renderCreate();
+  pushView(null);
+  showView();
+  showPane("create");
+}
+
 function renderList() {
   var list = document.getElementById("btBattles");
   document.getElementById("btBattlesEmpty").hidden = battles.length > 0;
   var open = battles.filter((b) => b.phase == "waiting").length;
-  document.getElementById("btCount").innerText = open == 1 ? "1 open" : open + " open";
+  var count = document.getElementById("btOpenCount");
+  count.hidden = open == 0;
+  count.innerText = open;
   list.replaceChildren(
     ...battles.map((battle) => {
       var row = el("div", "bt-row phase-" + battle.phase + (isIn(battle) ? " mine" : ""));
@@ -633,7 +671,10 @@ function renderBattle() {
     var cancel = el("button", "mm-btn mm-btn-sm bt-cancel");
     cancel.type = "button";
     cancel.append(createIcon("bi-x-circle"), document.createTextNode(" Cancel battle"));
-    cancel.addEventListener("click", () => socket.emit("cancelBattle", battle.id));
+    cancel.addEventListener("click", () => {
+      socket.emit("cancelBattle", battle.id);
+      createAgain(battle);
+    });
     parts.push(cancel);
   }
   parts.push(fairLine(battle));
@@ -879,5 +920,7 @@ document.addEventListener("DOMContentLoaded", () => {
     crazyButton.setAttribute("aria-pressed", crazy);
   });
 
+  document.querySelectorAll("[data-pane]").forEach((button) => button.addEventListener("click", () => showPane(button.dataset.pane)));
+  showPane("battles");
   showView();
 });

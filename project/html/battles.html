@@ -100,8 +100,26 @@
 
                     <!--- All battles and a new one --->
                     <div id="btListView" class="bt-view">
+                        <!--- Two parts: the open battles (first) and a new one --->
+                        <div id="btPanes" class="bt-subtabs" role="tablist" aria-label="Case battles">
+                            <button type="button" class="active" role="tab" data-pane="battles">⚔️ Open battles <span id="btOpenCount" class="bt-subtab-count" hidden></span></button>
+                            <button type="button" role="tab" data-pane="create">➕ Create a battle</button>
+                        </div>
+
+                        <!--- The battles to join or watch --->
+                        <div id="btPaneBattles" class="bt-pane">
+                            <div id="btBattles" class="bt-battles"></div>
+                            <div id="btBattlesEmpty" class="bt-empty">
+                                <span class="bt-empty-icon">⚔️</span>
+                                <p class="mb-0">No open battles right now.</p>
+                                <button type="button" class="mm-btn mm-btn-primary" data-pane="create">➕ Create the first one</button>
+                            </div>
+                        </div>
+
+                        <!--- A new battle --->
+                        <div id="btPaneCreate" class="bt-pane" hidden>
                         <div class="bt-section-head">
-                            <span class="fw-semibold">Create a battle</span>
+                            <span class="fw-semibold">Choose the cases</span>
                             <div class="bt-tools">
                                 <div id="btFilter" class="bt-tabs" role="tablist" aria-label="Risk">
                                     <button type="button" class="active" data-risk="all">All</button>
@@ -143,13 +161,7 @@
                                 </button>
                             </div>
                         </div>
-
-                        <div class="bt-section-head">
-                            <span class="fw-semibold">Battles</span>
-                            <span id="btCount" class="mm-badge"></span>
                         </div>
-                        <div id="btBattles" class="bt-battles"></div>
-                        <p id="btBattlesEmpty" class="jp-empty mm-muted">No battles yet - create the first one!</p>
                     </div>
 
                     <!--- One battle --->
