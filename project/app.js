@@ -40,9 +40,10 @@ require("./sockets/lobby_server")(io);
 require("./sockets/singleplayer_server")(io);
 require("./sockets/multiplayer_server")(io);
 require("./sockets/tictactoe_server")(io);
-require("./sockets/jackpot_server")(io);
-require("./sockets/battles_server")(io);
+const jackpotGame = require("./sockets/jackpot_server")(io);
+const battlesGame = require("./sockets/battles_server")(io);
 const pokerTable = require("./sockets/poker_server")(io);
+require("./sockets/casino_server")(io, { jackpot: jackpotGame, battles: battlesGame, poker: pokerTable });
 
 /* Page routes */
 const authenticationRoute = require("./routes/authentication_route");
@@ -83,7 +84,7 @@ app.get("/settings", Auth, page("settings.html"));
 app.get("/play", Auth, page("multiplayer.html"));
 app.get("/singleplayer", Auth, page("singleplayer.html"));
 app.get("/tictactoe", Auth, page("tictactoe.html"));
-// Hidden: the jackpot (and its case battles and poker) at a secret address
+// Hidden: the games with coins (jackpot, case battles, poker) at a secret address
 app.use(encodeURI(config.JACKPOT_PATH), secretRoute(Auth));
 
 /* Error handling */

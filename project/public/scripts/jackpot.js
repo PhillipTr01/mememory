@@ -111,7 +111,7 @@ function render() {
   document.getElementById("jpViewers").innerText = state.viewers + " here";
   renderModes();
   // The pot is in the middle of the wheel, the other draws show it above
-  document.getElementById("jpPotbar").hidden = drawMode == "wheel";
+  document.getElementById("jpPotbar").hidden = state.mode == "wheel";
   // A running animation keeps its scene, a finished one stays until the next round
   if (!spinning && !(state.phase == "drawing" && spunRound == state.round)) currentDraw().idle(document.getElementById("jpStage"));
   renderStatus();
@@ -158,48 +158,18 @@ function renderStatus() {
 
 /* ---------- The draw (see jackpot_draws.js) ---------- */
 
-// Which animation this viewer wants to see (only on this device)
-var drawMode = "wheel";
-try {
-  drawMode = localStorage.getItem("jackpotDrawMode") || "wheel";
-} catch (error) {
-  // storage blocked: the wheel
-}
-
+// The animation of the round: chosen by the server, the same for everybody
 function currentDraw() {
-  return DRAWS[drawMode] || DRAWS.wheel;
+  return DRAWS[state.mode] || DRAWS.wheel;
 }
 
 function renderModes() {
-  var modes = document.getElementById("jpModes");
-  modes.replaceChildren(
-    ...DRAW_MODES.map((mode) => {
-      var button = document.createElement("button");
-      button.type = "button";
-      button.className = "jp-mode" + (mode.id == drawMode ? " active" : "");
-      button.setAttribute("role", "radio");
-      button.setAttribute("aria-checked", mode.id == drawMode);
-      button.disabled = spinning;
-      button.title = mode.description;
-      var icon = document.createElement("span");
-      icon.className = "jp-mode-icon";
-      icon.innerText = mode.icon;
-      var label = document.createElement("span");
-      label.innerText = mode.label;
-      button.append(icon, label);
-      button.addEventListener("click", () => {
-        if (spinning || mode.id == drawMode) return;
-        drawMode = mode.id;
-        try {
-          localStorage.setItem("jackpotDrawMode", drawMode);
-        } catch (error) {
-          // only for this page then
-        }
-        document.getElementById("jpStage").replaceChildren();
-        render();
-      });
-      return button;
-    }),
+  var mode = DRAW_MODES.find((m) => m.id == state.mode) || DRAW_MODES[0];
+  var label = document.getElementById("jpModes");
+  label.title = mode.description;
+  label.replaceChildren(
+    Object.assign(document.createElement("span"), { className: "jp-mode-icon", innerText: mode.icon }),
+    Object.assign(document.createElement("span"), { innerText: "This round: " + mode.label }),
   );
 }
 
@@ -284,9 +254,21 @@ function percent(value) {
 function renderBets() {
   var list = document.getElementById("jpBets");
   var bets = state.bets || [];
-  document.getElementById("jpBetsEmpty").hidden = bets.length > 0;
-  document.getElementById("jpBetCount").innerText = bets.length == 1 ? "1 bet" : bets.length + " bets";
+  var pending = state.pending || [];
+  var count = bets.length + pending.length;
+  document.getElementById("jpBetsEmpty").hidden = count > 0;
+  document.getElementById("jpBetCount").innerText = count == 1 ? "1 bet" : count + " bets";
+  // Own bets the others don't see yet: on top, without tickets
+  var hidden = pending.map((bet) => {
+    var row = personRow(bet.name, "pending");
+    row.sub.innerText = "Hidden from the others for " + Math.max(1, Math.ceil(bet.in / 1000)) + "s - then it gets its tickets";
+    row.points.innerText = "+" + formatCoins(bet.amount);
+    var li = document.createElement("li");
+    li.appendChild(row.item);
+    return li;
+  });
   list.replaceChildren(
+    ...hidden,
     ...bets
       .slice()
       .reverse()
@@ -388,7 +370,7 @@ function renderBet() {
   if (state == null) return;
   var mine = myEntry();
   var inPot = mine ? mine.coins : 0;
-  var myBets = (state.bets || []).filter((bet) => bet.name == myName).length;
+  var myBets = (state.bets || []).concat(state.pending || []).filter((bet) => bet.name == myName).length;
   var betsLeft = Math.max(0, state.maxBets - myBets);
   var room = betsLeft > 0 ? myCoins : 0;
   var open = state.phase != "drawing";

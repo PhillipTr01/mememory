@@ -16,7 +16,7 @@ test("cases: the chances add up and every case gives back a bit less than it cos
     assert.strictEqual(weights, cases.WEIGHT_TOTAL, `${box.id}: chances add up to 100%`);
     const back = cases.expectedValue(box) / box.price;
     assert.ok(back > 0.88 && back < 0.97, `${box.id}: ${Math.round(back * 100)}% back on average`);
-    assert.ok(["balanced", "high"].includes(box.risk));
+    assert.ok(["low", "balanced", "high"].includes(box.risk));
   }
 });
 
@@ -25,7 +25,13 @@ test("cases: balanced cases are safe, high risk cases have a big jackpot", () =>
     box.items.filter((item) => item.value >= box.price).reduce((sum, item) => sum + item.weight, 0) / cases.WEIGHT_TOTAL;
   const best = (box) => Math.max(...box.items.map((item) => item.value)) / box.price;
   for (const box of cases.CASES) {
-    if (box.risk === "balanced") {
+    assert.ok(best(box) * box.price <= 50000, `${box.id}: at most 50k`);
+    assert.ok(box.price <= 1000, `${box.id}: at most 1k per case`);
+    if (box.risk === "low") {
+      assert.ok(chanceAtLeastPrice(box) >= 0.5, `${box.id}: mostly the price back`);
+      assert.ok(best(box) <= 3, `${box.id}: no big jackpot`);
+      assert.ok(Math.min(...box.items.map((item) => item.value)) >= box.price * 0.4, `${box.id}: no junk`);
+    } else if (box.risk === "balanced") {
       assert.ok(chanceAtLeastPrice(box) >= 0.4, `${box.id}: often the price back`);
       assert.ok(best(box) <= 10, `${box.id}: no crazy jackpot`);
     } else {
@@ -33,7 +39,10 @@ test("cases: balanced cases are safe, high risk cases have a big jackpot", () =>
       assert.ok(best(box) >= 50, `${box.id}: a huge item`);
     }
   }
-  assert.ok(cases.CASES.some((box) => box.risk === "balanced") && cases.CASES.some((box) => box.risk === "high"));
+  for (const risk of ["low", "balanced", "high"]) assert.ok(cases.CASES.filter((box) => box.risk === risk).length >= 5, risk);
+  // Up to 1k per case, the biggest win is 50k
+  assert.strictEqual(Math.max(...cases.CASES.map((box) => box.price)), 1000);
+  assert.strictEqual(Math.max(...cases.CASES.flatMap((box) => box.items.map((item) => item.value))), 50000);
 });
 
 test("cases: the roll picks the item by its chance, provably fair", () => {
@@ -207,12 +216,27 @@ test("battles: the same coins as the jackpot - every change reaches the page rig
   carol.off("coins", listener);
 });
 
+test("battles: no limit of cases per battle", async () => {
+  h.setCoins("bob", 100000);
+  const bob = client("bob");
+  await waitFor(bob, "coins", (d) => d.coins === 100000);
+  const created = h.once(bob, "battleCreated");
+  const listed = waitFor(bob, "battles", (data) => data.list.some((b) => b.cases.length === 40));
+  bob.emit("createBattle", { cases: new Array(40).fill("piggy"), size: 2 });
+  const id = await created;
+  const battle = battleIn(await listed, id);
+  assert.strictEqual(battle.cases.length, 40);
+  assert.strictEqual(battle.price, 400);
+  bob.emit("cancelBattle", id);
+  await waitFor(bob, "battles", (data) => !battleIn(data, id));
+});
+
 test("battles: invalid battles, not enough coins, cancel gives the coins back", async () => {
   h.setCoins("alice", 30);
   const alice = client("alice");
   await waitFor(alice, "coins", (data) => data.coins === 30);
 
-  for (const data of [null, {}, { cases: [] }, { cases: ["nope"], size: 2 }, { cases: ["starter"], size: 5 }, { cases: new Array(11).fill("starter"), size: 2 }]) {
+  for (const data of [null, {}, { cases: [] }, { cases: ["nope"], size: 2 }, { cases: ["starter"], size: 5 }]) {
     alice.emit("createBattle", data);
   }
   const poor = h.once(alice, "battleError");

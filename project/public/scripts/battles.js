@@ -8,9 +8,11 @@ var battles = []; // every battle the server knows
 var lastBattles = []; // finished battles, newest first
 var roundTime = 4500;
 
-var picked = []; // case ids of the new battle (in order)
+var picked = []; // the new battle: [{id, count}] in the order they were chosen (every case is one round)
 var size = 2;
 var filter = "all";
+var sort = "price-asc";
+var crazy = false;
 
 var viewId = null; // the battle that is open (location.hash)
 var seen = {}; // id -> {phase, revealed} the last state this page saw
@@ -20,7 +22,6 @@ var celebrated = new Set();
 var statusTimer = null;
 
 var SLOW_END = "cubic-bezier(0.22, 0.61, 0.36, 1)";
-var MAX_ROUNDS = 10;
 var TILE = 72; // height of an item in the reel
 
 // Used by chat.js
@@ -146,15 +147,75 @@ window.addEventListener("popstate", showView);
 
 /* ---------- Cases and the new battle ---------- */
 
+var RISKS = { low: "🛡️ Low risk", balanced: "⚖️ Balanced", high: "🔥 High risk" };
+
 function riskBadge(risk) {
-  return el("span", "bt-risk " + risk, risk == "high" ? "High risk" : "Balanced");
+  return el("span", "bt-risk " + risk, RISKS[risk] || risk);
+}
+
+function bestItem(box) {
+  return box.items.reduce((best, item) => (item.value > best.value ? item : best), box.items[0]);
+}
+
+// Every round of the new battle, in order
+function pickedIds() {
+  return picked.flatMap((group) => new Array(group.count).fill(group.id));
+}
+
+function countOf(id) {
+  var group = picked.find((g) => g.id == id);
+  return group ? group.count : 0;
+}
+
+function setCount(id, count) {
+  count = Math.max(0, Math.floor(Number(count)) || 0);
+  var group = picked.find((g) => g.id == id);
+  if (group == null && count > 0) picked.push({ id: id, count: count });
+  else if (group && count == 0) picked.splice(picked.indexOf(group), 1);
+  else if (group) group.count = count;
+  renderCreate();
+}
+
+function stepper(id, extraClass) {
+  var box = el("div", "bt-stepper" + (extraClass ? " " + extraClass : ""));
+  box.addEventListener("click", (event) => event.stopPropagation());
+  var minus = el("button", "", "−");
+  minus.type = "button";
+  minus.setAttribute("aria-label", "One less");
+  minus.addEventListener("click", () => setCount(id, countOf(id) - 1));
+  var input = el("input", "bt-stepper-count");
+  input.type = "number";
+  input.min = 0;
+  input.inputMode = "numeric";
+  input.dataset.id = id;
+  input.setAttribute("aria-label", "How many");
+  input.value = countOf(id);
+  input.addEventListener("change", () => setCount(id, input.value));
+  input.addEventListener("keydown", (event) => event.stopPropagation());
+  var plus = el("button", "", "+");
+  plus.type = "button";
+  plus.setAttribute("aria-label", "One more");
+  plus.addEventListener("click", () => setCount(id, countOf(id) + 1));
+  box.append(minus, input, plus);
+  return box;
+}
+
+function sortedCases() {
+  var list = CASES.filter((box) => filter == "all" || box.risk == filter);
+  var by = {
+    "price-asc": (a, b) => a.price - b.price,
+    "price-desc": (a, b) => b.price - a.price,
+    "best-desc": (a, b) => bestItem(b).value - bestItem(a).value,
+  }[sort];
+  return list.slice().sort((a, b) => by(a, b) || a.name.localeCompare(b.name));
 }
 
 function renderCases() {
   var grid = document.getElementById("btCases");
   grid.replaceChildren(
-    ...CASES.filter((box) => filter == "all" || box.risk == filter).map((box) => {
+    ...sortedCases().map((box) => {
       var card = el("div", "bt-case " + box.risk);
+      card.dataset.id = box.id;
       card.tabIndex = 0;
       card.title = "Add " + box.name;
       var info = el("button", "bt-case-info");
@@ -166,17 +227,20 @@ function renderCases() {
         event.stopPropagation();
         showContents(box);
       });
-      var count = el("span", "bt-case-count");
-      count.dataset.id = box.id;
-      card.append(info, count, el("span", "bt-case-icon", box.icon), el("span", "bt-case-name", box.name), riskBadge(box.risk), el("span", "bt-case-price", "🪙 " + formatCoins(box.price)));
-      var add = () => {
-        if (picked.length >= MAX_ROUNDS) {
-          showToast("At most " + MAX_ROUNDS + " cases per battle.", "error");
-          return;
-        }
-        picked.push(box.id);
-        renderCreate();
-      };
+      var best = bestItem(box);
+      var top = el("span", "bt-case-best rarity-" + best.rarity);
+      top.title = "Best item: " + best.name;
+      top.append(el("span", "", best.icon), document.createTextNode(" up to 🪙 " + formatCoins(best.value)));
+      card.append(
+        info,
+        el("span", "bt-case-icon", box.icon),
+        el("span", "bt-case-name", box.name),
+        riskBadge(box.risk),
+        top,
+        el("span", "bt-case-price", "🪙 " + formatCoins(box.price)),
+        stepper(box.id, "on-card"),
+      );
+      var add = () => setCount(box.id, countOf(box.id) + 1);
       card.addEventListener("click", add);
       card.addEventListener("keydown", (event) => {
         if (event.key == "Enter" || event.key == " ") {
@@ -195,32 +259,35 @@ function price(ids) {
 }
 
 function renderCreate() {
+  var ids = pickedIds();
   var list = document.getElementById("btPicked");
   if (picked.length == 0) {
-    list.replaceChildren(el("span", "mm-muted small", "Click cases to add them - every case is one round."));
+    list.replaceChildren(el("span", "mm-muted small", "Click a case to add it - every case is one round, as many as you like."));
   } else {
     list.replaceChildren(
-      ...picked.map((id, index) => {
-        var chip = el("button", "bt-chip");
-        chip.type = "button";
-        chip.title = "Remove";
-        chip.append(el("span", "", caseById(id).icon), el("span", "", caseById(id).name), createIcon("bi-x"));
-        chip.addEventListener("click", () => {
-          picked.splice(index, 1);
-          renderCreate();
-        });
+      ...picked.map((group) => {
+        var box = caseById(group.id);
+        var chip = el("div", "bt-chip");
+        chip.append(el("span", "bt-chip-icon", box.icon), el("span", "bt-chip-name", box.name), el("span", "bt-chip-price", "🪙 " + formatCoins(box.price * group.count)), stepper(group.id));
         return chip;
       }),
     );
   }
-  document.querySelectorAll(".bt-case-count").forEach((count) => {
-    var n = picked.filter((id) => id == count.dataset.id).length;
-    count.innerText = n > 0 ? "×" + n : "";
+  // The counters on the cards (not the one being typed in)
+  document.querySelectorAll(".bt-case").forEach((card) => {
+    var n = countOf(card.dataset.id);
+    card.classList.toggle("picked", n > 0);
+    var input = card.querySelector(".bt-stepper-count");
+    if (input && document.activeElement != input) input.value = n;
   });
-  var cost = price(picked);
+  var cost = price(ids);
+  document.getElementById("btSummary").innerText = ids.length
+    ? ids.length + (ids.length == 1 ? " round" : " rounds") + " · 🪙 " + formatCoins(cost) + " per player"
+    : "";
+  document.getElementById("btClear").hidden = ids.length == 0;
   var button = document.getElementById("btCreate");
-  document.getElementById("btCreateLabel").innerText = picked.length ? "Create for 🪙 " + formatCoins(cost) : "Create";
-  button.disabled = picked.length == 0 || cost > myCoins;
+  document.getElementById("btCreateLabel").innerText = ids.length ? "Create for 🪙 " + formatCoins(cost) : "Create";
+  button.disabled = ids.length == 0 || cost > myCoins;
   button.title = cost > myCoins ? "Not enough coins" : "";
 }
 
@@ -268,9 +335,15 @@ function isIn(battle) {
   return battle.seats.some((seat) => seat && seat.name == myName);
 }
 
+// The cases of a battle; many cases: only a window (around the current round)
 function caseStrip(battle, current) {
   var strip = el("div", "bt-strip");
-  battle.cases.forEach((id, index) => {
+  var size = current != null ? 13 : 10;
+  var from = current != null ? Math.max(0, Math.min(current - 3, battle.cases.length - size)) : 0;
+  var to = Math.min(battle.cases.length, from + size);
+  if (from > 0) strip.appendChild(el("span", "bt-strip-more", "+" + from));
+  battle.cases.slice(from, to).forEach((id, n) => {
+    var index = from + n;
     var box = caseById(id);
     var item = el("span", "bt-strip-case", box ? box.icon : "?");
     item.title = box ? box.name + " · 🪙 " + box.price : id;
@@ -280,6 +353,7 @@ function caseStrip(battle, current) {
     }
     strip.appendChild(item);
   });
+  if (to < battle.cases.length) strip.appendChild(el("span", "bt-strip-more", "+" + (battle.cases.length - to)));
   return strip;
 }
 
@@ -316,7 +390,7 @@ function renderList() {
       var info = el("div", "bt-row-info");
       var tags = el("div", "bt-row-tags");
       tags.append(el("span", "bt-row-price", "🪙 " + formatCoins(battle.price)), el("span", "mm-muted", battle.cases.length + (battle.cases.length == 1 ? " case" : " cases")));
-      if (battle.crazy) tags.appendChild(el("span", "bt-crazy-tag", "Crazy"));
+      if (battle.crazy) tags.appendChild(el("span", "bt-crazy-tag", "🤡 Crazy"));
       info.append(caseStrip(battle), tags);
       var actions = el("div", "bt-row-actions");
       actions.appendChild(el("span", "bt-row-phase", phaseText(battle)));
@@ -408,7 +482,7 @@ function renderBattle() {
   var top = el("div", "bt-battle-top");
   var badges = el("div", "bt-row-tags");
   badges.append(el("span", "bt-row-price", "🪙 " + formatCoins(battle.price) + " to join"));
-  if (battle.crazy) badges.appendChild(el("span", "bt-crazy-tag", "Crazy - lowest wins"));
+  if (battle.crazy) badges.appendChild(el("span", "bt-crazy-tag", "🤡 Crazy - lowest wins"));
   var pot = 0;
   battle.seats.forEach((_, seat) => (pot += totalOf(battle, seat, rounds)));
   badges.appendChild(el("span", "bt-pot", "Pot 🪙 " + formatCoins(pot)));
@@ -643,7 +717,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("btCreate").addEventListener("click", () => {
     if (picked.length == 0) return;
-    socket.emit("createBattle", { cases: picked, size: size, crazy: document.getElementById("btCrazy").checked });
+    socket.emit("createBattle", { cases: pickedIds(), size: size, crazy: crazy });
+  });
+
+  document.getElementById("btSort").addEventListener("change", (event) => {
+    sort = event.target.value;
+    renderCases();
+  });
+
+  document.getElementById("btClear").addEventListener("click", () => {
+    picked = [];
+    renderCreate();
+  });
+
+  // Crazy mode: a switch with a clown
+  var crazyButton = document.getElementById("btCrazy");
+  crazyButton.addEventListener("click", () => {
+    crazy = !crazy;
+    crazyButton.classList.toggle("on", crazy);
+    crazyButton.setAttribute("aria-pressed", crazy);
   });
 
   showView();

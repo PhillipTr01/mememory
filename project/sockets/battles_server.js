@@ -2,7 +2,7 @@ const crypto = require("crypto");
 const config = require("../game/config");
 const coins = require("../game/coins");
 const cases = require("../game/cases");
-const chat = require("../game/chat");
+const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 const version = require("../game/version");
@@ -25,11 +25,11 @@ const BOT_NAMES = ["Bot Pepe", "Bot Doge", "Bot Wojak"];
 module.exports = function (io) {
   const battles = io.of("/battles");
   battles.use(socketAuth);
+  casinoChat.attach(battles, ROOM);
 
   const lobby = {
     list: new Map(), // id -> battle
     history: [], // [{id, winner, total, price}] newest first
-    chat: [],
   };
   const busy = new Set(); // users with a payment in progress (two tabs, fast clicks)
 
@@ -165,7 +165,6 @@ module.exports = function (io) {
     const winner = battle.seats[battle.winner];
     lobby.history.unshift({ id: battle.id, winner: winner.name, bot: winner.bot, total: battle.payout, price: battle.price });
     lobby.history.length = Math.min(lobby.history.length, config.BATTLE_HISTORY);
-    chat.system(battles, ROOM, lobby, `${winner.name} wins a case battle: ${battle.payout} coins!`, "trophy");
     if (!winner.bot) coins.notify(winner.name);
     emitList();
     remove(battle, config.BATTLE_KEEP);
@@ -212,7 +211,7 @@ module.exports = function (io) {
     socket.join(ROOM);
     socket.emit("joined", { username: username });
     socket.emit("cases", cases.catalog());
-    socket.emit("chatHistory", lobby.chat);
+    casinoChat.join(socket);
     emitList();
     sendCoins(username).catch((error) => console.error("[battles] Could not load coins:", error));
 
@@ -221,7 +220,8 @@ module.exports = function (io) {
       safe("createBattle", async (data) => {
         if (data == null || !Array.isArray(data.cases)) return;
         const ids = data.cases;
-        if (ids.length < 1 || ids.length > config.BATTLE_MAX_ROUNDS || !ids.every((id) => cases.caseById(id))) return;
+        // Any number of cases (one round each)
+        if (ids.length < 1 || !ids.every((id) => cases.caseById(id))) return;
         if (!SIZES.includes(data.size)) return;
         const open = [...lobby.list.values()].filter((b) => b.creator === username && b.phase === PHASE.WAITING);
         if (open.length >= config.BATTLE_MAX_OPEN) {
@@ -247,6 +247,7 @@ module.exports = function (io) {
         if (!(await sit(socket, battle, username))) return;
         lobby.list.set(battle.id, battle);
         battle.timer = setTimeout(() => cancel(battle), config.BATTLE_EXPIRE);
+        battle.timer.unref(); // a waiting battle doesn't keep the process alive
         socket.emit("battleCreated", battle.id);
         emitList();
       }),
@@ -297,7 +298,7 @@ module.exports = function (io) {
 
     socket.on(
       "sendChatMessage",
-      safe("sendChatMessage", (data) => chat.fromUser(battles, socket, lobby, data, false)),
+      safe("sendChatMessage", (data) => casinoChat.fromUser(socket, data)),
     );
   });
 

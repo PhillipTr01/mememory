@@ -1,7 +1,7 @@
 const config = require("../game/config");
 const coins = require("../game/coins");
 const poker = require("../game/poker");
-const chat = require("../game/chat");
+const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 const version = require("../game/version");
@@ -17,6 +17,7 @@ const BETTING = ["preflop", "flop", "turn", "river"];
 module.exports = function (io) {
   const room = io.of("/poker");
   room.use(socketAuth);
+  casinoChat.attach(room, ROOM);
 
   const table = {
     seats: new Array(config.POKER_SEATS).fill(null),
@@ -37,7 +38,6 @@ module.exports = function (io) {
     timer: null, // next hand / next street
     turnTimer: null,
     history: [], // [{hand, winners: [{name, amount, hand}]}] newest first
-    chat: [],
   };
   const busy = new Set(); // users with a coin payment in progress
 
@@ -63,9 +63,6 @@ module.exports = function (io) {
     return false;
   }
 
-  function systemMessage(text, icon) {
-    chat.system(room, ROOM, table, text, icon);
-  }
 
   // Chips back to coins, the seat is free again
   function cashOut(i) {
@@ -74,7 +71,6 @@ module.exports = function (io) {
     clearTimeout(seat.awayTimer);
     table.seats[i] = null;
     if (seat.stack > 0) coins.add(seat.name, seat.stack).catch((error) => console.error("[poker] Could not cash out:", error));
-    systemMessage(`${seat.name} left the table${seat.stack > 0 ? ` with ${seat.stack} coins` : ""}.`, "leave");
   }
 
   /* ---------- State ---------- */
@@ -367,9 +363,6 @@ module.exports = function (io) {
       winners: winners.map((w) => ({ name: w.name, amount: w.amount, hand: w.hand || null })),
     });
     table.history.length = Math.min(table.history.length, config.POKER_HISTORY);
-    for (const w of winners) {
-      systemMessage(`${w.name} wins ${w.amount} coins${w.hand ? ` with ${w.hand.toLowerCase()}` : ""}.`, "trophy");
-    }
     emitState();
     table.timer = setTimeout(afterHand, config.POKER_SHOWDOWN);
   }
@@ -432,7 +425,7 @@ module.exports = function (io) {
     socket.gameID = ROOM; // for the chat
     socket.join(ROOM);
     socket.emit("joined", { username: username });
-    socket.emit("chatHistory", table.chat);
+    casinoChat.join(socket);
     sendCoins(username).catch((error) => console.error("[poker] Could not load coins:", error));
 
     // Back (reload, second tab): the seat is still there
@@ -482,7 +475,6 @@ module.exports = function (io) {
             awaySince: null,
             awayTimer: null,
           };
-          systemMessage(`${username} sits down with ${buyIn} coins.`, "join");
           scheduleStart();
           emitState();
         } finally {
@@ -554,7 +546,7 @@ module.exports = function (io) {
 
     socket.on(
       "sendChatMessage",
-      safe("sendChatMessage", (data) => chat.fromUser(room, socket, table, data, false)),
+      safe("sendChatMessage", (data) => casinoChat.fromUser(socket, data)),
     );
 
     // The last page of a player is gone: a short wait (reload), then off the table

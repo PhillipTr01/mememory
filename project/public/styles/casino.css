@@ -1,0 +1,85 @@
+/* ---------- Start page of the hidden games ---------- */
+.cs-main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.cs-games {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.cs-game {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 1.2rem;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.cs-game:hover {
+  color: var(--mm-text);
+  border-color: var(--mm-accent);
+  transform: translateY(-3px);
+}
+
+.cs-game.jackpot {
+  background: linear-gradient(160deg, rgba(212, 166, 74, 0.14), transparent 55%), var(--mm-surface-2);
+}
+
+.cs-game.battles {
+  background: linear-gradient(160deg, rgba(239, 68, 68, 0.12), transparent 55%), var(--mm-surface-2);
+}
+
+.cs-game.poker {
+  background: linear-gradient(160deg, rgba(63, 174, 107, 0.14), transparent 55%), var(--mm-surface-2);
+}
+
+.cs-game-icon {
+  font-size: 2.6rem;
+  line-height: 1.1;
+}
+
+.cs-game-name {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.cs-game-text {
+  flex: 1;
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+}
+
+.cs-game-live {
+  min-height: 1.4em;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+}
+
+.cs-game-live.hot {
+  color: var(--mm-accent);
+}
+
+@media (max-width: 767px) {
+  .cs-games {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 575px) {
+  .cs-main {
+    padding: 1rem;
+  }
+}

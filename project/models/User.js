@@ -13,8 +13,8 @@ const schema = mongoose.Schema({
     avatar: {type: mongoose.Schema.Types.Mixed, default: null},
     // Coins for the hidden jackpot (earned by winning games, see game/coins.js)
     coins: {type: Number, min: 0},
-    // Start coins this account got (see game/coins.js)
-    coinStart: {type: Number},
+    // The last reset of all coins this account got (see game/coins.js)
+    coinReset: {type: String},
     coinBonusAt: {type: Date},
 	// active: {type: String, required: true, default: false}
 });

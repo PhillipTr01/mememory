@@ -35,6 +35,7 @@ function matches(doc, filter) {
     const value = doc[key];
     if (condition !== null && typeof condition === "object" && !(condition instanceof Date)) {
       if ("$exists" in condition && (value !== undefined) !== condition.$exists) return false;
+      if ("$ne" in condition && value === condition.$ne) return false;
       if ("$gte" in condition && !(value >= condition.$gte)) return false;
       if ("$lt" in condition && !(value < condition.$lt)) return false;
       if ("$lte" in condition && !(value <= condition.$lte)) return false;
@@ -77,9 +78,10 @@ async function startServer() {
   require("../sockets/singleplayer_server")(io);
   require("../sockets/multiplayer_server")(io);
   require("../sockets/tictactoe_server")(io);
-  require("../sockets/jackpot_server")(io);
-  require("../sockets/battles_server")(io);
+  const jackpot = require("../sockets/jackpot_server")(io);
+  const battles = require("../sockets/battles_server")(io);
   const poker = require("../sockets/poker_server")(io);
+  require("../sockets/casino_server")(io, { jackpot, battles, poker });
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
 
@@ -119,6 +121,6 @@ module.exports = {
   increments,
   coinsOf: (username) => userByName(username).coins,
   // An account that already got its start coins
-  setCoins: (username, amount) => { Object.assign(userByName(username), { coins: amount, coinStart: require("../game/config").START_COINS }); },
+  setCoins: (username, amount) => { Object.assign(userByName(username), { coins: amount, coinReset: require("../game/config").COIN_RESET }); },
   setMemeCount: (count) => { memeCount = count; },
 };

@@ -1,7 +1,7 @@
 const config = require("../game/config");
 const coins = require("../game/coins");
 const { newFairRound, fairWinner } = require("../game/jackpot");
-const chat = require("../game/chat");
+const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 const version = require("../game/version");
@@ -21,6 +21,7 @@ const PHASE = {
 module.exports = function (io) {
   const jackpot = io.of("/jackpot");
   jackpot.use(socketAuth);
+  casinoChat.attach(jackpot, ROOM);
 
   const pot = {
     round: 1,
@@ -28,37 +29,68 @@ module.exports = function (io) {
     entries: [], // [{name, coins}] in the order of the first bet
     endsAt: null,
     draw: null, // {winner, ticket, total} while drawing
+    mode: randomMode(), // the animation of this round (the same for everybody)
     timer: null,
     history: [], // [{round, winner, total, coins}] newest first
-    // Every bet of the round, oldest first. Each bet has its own tickets
-    // (from..to, counted from 1) in the order of the bets: a later bet gets
-    // the tickets at the end of the pot.
-    bets: [], // [{name, amount, from, to}]
+    // Every bet of the round, oldest first. A bet is shown to the others at
+    // shownAt (a few seconds later) and gets its own tickets then: the tickets
+    // go through the bets in the order they were shown, a later bet gets the
+    // tickets at the end of the pot.
+    bets: [], // [{name, amount, shownAt}]
     fair: newFairRound(), // winning number of the round, only its hash is public
     // Records of the day: biggest pot, luckiest win (smallest chance)
     records: { day: today(), biggest: null, luckiest: null },
-    chat: [],
   };
+
+  function randomMode() {
+    const modes = config.JACKPOT_DRAWS;
+    return modes[Math.floor(Math.random() * modes.length)];
+  }
 
   function today() {
     return new Date().toISOString().slice(0, 10);
   }
   const betting = new Set(); // users with a bet in progress (two tabs, fast clicks)
 
-  function total() {
-    return pot.entries.reduce((sum, entry) => sum + entry.coins, 0);
+  // The bets in the order they are shown, with their tickets (from..to)
+  function ticketed() {
+    let before = 0;
+    return pot.bets
+      .map((bet, index) => ({ bet: bet, index: index }))
+      .sort((a, b) => a.bet.shownAt - b.bet.shownAt || a.index - b.index)
+      .map(({ bet }) => {
+        const tickets = { name: bet.name, amount: bet.amount, shownAt: bet.shownAt, from: before + 1, to: before + bet.amount };
+        before += bet.amount;
+        return tickets;
+      });
   }
 
-  function serialize() {
+  /*
+   * What a player sees: the bets of the others only after their delay, the
+   * own ones right away (still without tickets while hidden from the others).
+   * While drawing everybody sees everything.
+   */
+  function serialize(viewer) {
+    const now = Date.now();
+    const all = pot.phase === PHASE.DRAWING;
+    const shown = ticketed().filter((bet) => all || bet.shownAt <= now);
+    const pending = all ? [] : pot.bets.filter((bet) => bet.name === viewer && bet.shownAt > now);
+    const visible = shown.concat(pending);
+    const entries = pot.entries
+      .map((entry) => ({ name: entry.name, coins: visible.filter((bet) => bet.name === entry.name).reduce((sum, bet) => sum + bet.amount, 0) }))
+      .filter((entry) => entry.coins > 0);
     return {
       round: pot.round,
       phase: pot.phase,
-      entries: pot.entries.map((entry) => ({ name: entry.name, coins: entry.coins })),
-      total: total(),
+      mode: pot.mode,
+      entries: entries,
+      total: entries.reduce((sum, entry) => sum + entry.coins, 0),
       // Time left (ms) instead of a timestamp: the clocks of the clients may differ
-      endsIn: pot.endsAt != null ? Math.max(0, pot.endsAt - Date.now()) : null,
+      endsIn: pot.endsAt != null ? Math.max(0, pot.endsAt - now) : null,
       draw: pot.draw,
-      bets: pot.bets,
+      bets: shown.map((bet) => ({ name: bet.name, amount: bet.amount, from: bet.from, to: bet.to })),
+      // Own bets the others don't see yet (their tickets come when they are shown)
+      pending: pending.map((bet) => ({ name: bet.name, amount: bet.amount, in: bet.shownAt - now })),
       // The number and the secret are shown after the draw (provably fair)
       fair: pot.phase === PHASE.DRAWING ? pot.fair : { hash: pot.fair.hash },
       records: pot.records,
@@ -73,12 +105,9 @@ module.exports = function (io) {
   coins.changes.on("change", (username) => sendCoins(username).catch(() => {}));
 
   function emitState() {
-    jackpot.to(ROOM).emit("jackpotState", serialize());
+    for (const socket of jackpot.sockets.values()) socket.emit("jackpotState", serialize(socket.data.username));
   }
 
-  function systemMessage(text, icon) {
-    chat.system(jackpot, ROOM, pot, text, icon);
-  }
 
   // Sends the balance to every open tab of the user
   async function sendCoins(username) {
@@ -105,7 +134,7 @@ module.exports = function (io) {
     // The ticket decides: every coin is one ticket, so the chance is the share of
     // the pot. Which ticket was fixed at the start of the round (provably fair).
     // The tickets go through the bets in their order (not per player).
-    pot.draw = fairWinner(pot.bets.map((bet) => ({ name: bet.name, coins: bet.amount })), pot.fair.number);
+    pot.draw = fairWinner(ticketed().map((bet) => ({ name: bet.name, coins: bet.amount })), pot.fair.number);
     const sum = pot.draw.total;
     const winner = pot.entries.find((entry) => entry.name === pot.draw.winner);
 
@@ -120,8 +149,6 @@ module.exports = function (io) {
 
     // Announced after the roulette, so the chat doesn't spoil it
     pot.timer = setTimeout(() => {
-      const chance = Math.round((winner.coins / sum) * 100);
-      systemMessage(`${winner.name} wins the jackpot: ${sum} coins (${chance}% chance)!`, "trophy");
       const result = { round: pot.round, winner: winner.name, total: sum, coins: winner.coins };
       pot.history.unshift(result);
       if (pot.records.day !== today()) pot.records = { day: today(), biggest: null, luckiest: null };
@@ -142,6 +169,7 @@ module.exports = function (io) {
     pot.entries = [];
     pot.bets = [];
     pot.fair = newFairRound();
+    pot.mode = randomMode();
     pot.endsAt = null;
     pot.draw = null;
     emitState();
@@ -155,7 +183,7 @@ module.exports = function (io) {
     socket.gameID = ROOM; // for the chat
     socket.join(ROOM);
     socket.emit("joined", { username: username });
-    socket.emit("chatHistory", pot.chat);
+    casinoChat.join(socket);
     emitState();
     sendCoins(username).catch((error) => console.error("[jackpot] Could not load coins:", error));
 
@@ -195,8 +223,11 @@ module.exports = function (io) {
           } else {
             pot.entries.push({ name: username, coins: amount });
           }
-          const before = pot.bets.length > 0 ? pot.bets[pot.bets.length - 1].to : 0;
-          pot.bets.push({ name: username, amount: amount, from: before + 1, to: before + amount });
+          // Counts right away, the others see it a little later
+          const [low, high] = config.JACKPOT_BET_DELAY;
+          const delay = Math.round(low + Math.random() * (high - low));
+          pot.bets.push({ name: username, amount: amount, shownAt: Date.now() + delay });
+          if (delay > 0) setTimeout(() => round === pot.round && emitState(), delay + 20);
           if (pot.phase === PHASE.OPEN && pot.entries.length >= 2) startCountdown();
           emitState();
         } finally {
@@ -237,7 +268,7 @@ module.exports = function (io) {
 
     socket.on(
       "sendChatMessage",
-      safe("sendChatMessage", (data) => chat.fromUser(jackpot, socket, pot, data, false)),
+      safe("sendChatMessage", (data) => casinoChat.fromUser(socket, data)),
     );
 
     socket.on(

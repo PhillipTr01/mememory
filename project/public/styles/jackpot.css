@@ -43,46 +43,25 @@ body.jackpot-theme {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Draw menu ---------- */
-.jp-modes {
-  display: grid;
-  grid-template-columns: repeat(9, minmax(0, 1fr));
-  gap: 0.4rem;
-}
-
-.jp-mode {
+/* ---------- The animation of this round ---------- */
+.jp-mode-now {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.3rem;
-  padding: 0.45rem 0.25rem;
-  border: 1px solid var(--mm-border);
-  border-radius: var(--mm-radius);
-  background: var(--mm-surface-2);
+  gap: 0.4rem;
   color: var(--mm-muted);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-}
-
-.jp-mode:hover:not(:disabled) {
-  color: var(--mm-text);
-}
-
-.jp-mode.active {
-  border-color: var(--mm-accent);
-  background: rgba(var(--mm-accent-rgb), 0.12);
-  color: var(--mm-text);
-}
-
-.jp-mode:disabled {
-  opacity: 0.6;
-  cursor: default;
 }
 
 .jp-mode-icon {
   font-size: 1.05rem;
+}
+
+/* An own bet the others don't see yet */
+.jp-player.pending {
+  opacity: 0.65;
+  border-style: dashed;
 }
 
 /* Pot above the stage (not for the wheel, it has the pot in its middle) */
@@ -1388,14 +1367,6 @@ body.jackpot-theme {
 }
 
 @media (max-width: 575px) {
-  .jp-modes {
-    grid-template-columns: repeat(9, minmax(0, 1fr));
-  }
-
-  .jp-mode span:last-child {
-    display: none;
-  }
-
   .jp-shout {
     font-size: 2.2rem;
   }
@@ -1442,4 +1413,50 @@ body.jackpot-theme {
   color: var(--mm-accent);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* ---------- Choice of the hidden games (tabs on every page) ---------- */
+.cs-nav {
+  display: flex;
+  gap: 0.35rem;
+  padding: 4px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface-2);
+}
+
+.cs-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 6px;
+  color: var(--mm-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.cs-tab:hover {
+  color: var(--mm-text);
+  background: var(--mm-surface-3);
+}
+
+.cs-tab.active {
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  color: var(--mm-text);
+}
+
+.cs-tab-icon {
+  font-size: 1.05rem;
+}
+
+@media (max-width: 575px) {
+  .cs-tab-label {
+    display: none;
+  }
 }

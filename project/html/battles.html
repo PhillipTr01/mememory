@@ -82,6 +82,13 @@
         <div class="room-layout">
             <div class="room-main">
                 <section class="mm-card bt-main">
+                    <!--- Choice of the hidden games --->
+                    <nav class="cs-nav" aria-label="Games">
+                        <a href="./" class="cs-tab"><span class="cs-tab-icon">🤫</span><span class="cs-tab-label">Games</span></a>
+                        <a href="jackpot" class="cs-tab"><span class="cs-tab-icon">🪙</span><span class="cs-tab-label">Jackpot</span></a>
+                        <a href="battles" class="cs-tab active" aria-current="page"><span class="cs-tab-icon">⚔️</span><span class="cs-tab-label">Case Battles</span></a>
+                        <a href="poker" class="cs-tab"><span class="cs-tab-icon">🃏</span><span class="cs-tab-label">Poker</span></a>
+                    </nav>
                     <div class="jp-head">
                         <div>
                             <h1 class="jp-title">⚔️ Case Battles <span class="mm-badge">Hidden</span></h1>
@@ -92,7 +99,7 @@
                                 <i class="bi bi-gift"></i> Free coins
                             </button>
                             <span id="btCoins" class="bt-wallet" title="The same coins as in the jackpot">🪙 -</span>
-                            <a href="./" class="icon-btn" title="Back to the jackpot" aria-label="Back to the jackpot">
+                            <a href="/lobby" class="icon-btn" title="Back to the lobby" aria-label="Back to the lobby">
                                 <i class="bi bi-box-arrow-left"></i>
                             </a>
                         </div>
@@ -102,15 +109,29 @@
                     <div id="btListView" class="bt-view">
                         <div class="bt-section-head">
                             <span class="fw-semibold">Create a battle</span>
-                            <div id="btFilter" class="bt-tabs" role="tablist" aria-label="Cases">
-                                <button type="button" class="active" data-risk="all">All</button>
-                                <button type="button" data-risk="balanced">Balanced</button>
-                                <button type="button" data-risk="high">High risk</button>
+                            <div class="bt-tools">
+                                <div id="btFilter" class="bt-tabs" role="tablist" aria-label="Risk">
+                                    <button type="button" class="active" data-risk="all">All</button>
+                                    <button type="button" data-risk="low" title="Low risk">🛡️ Low</button>
+                                    <button type="button" data-risk="balanced">⚖️ Balanced</button>
+                                    <button type="button" data-risk="high" title="High risk">🔥 High</button>
+                                </div>
+                                <select id="btSort" class="mm-input bt-sort" aria-label="Sort cases">
+                                    <option value="price-asc">Price ↑</option>
+                                    <option value="price-desc">Price ↓</option>
+                                    <option value="best-desc">Best item ↓</option>
+                                </select>
                             </div>
                         </div>
                         <div id="btCases" class="bt-cases"></div>
 
+                        <!--- The new battle: chosen cases, players, mode --->
                         <div class="bt-create">
+                            <div class="bt-create-head">
+                                <span class="fw-semibold">Your battle</span>
+                                <span id="btSummary" class="bt-summary"></span>
+                                <button type="button" id="btClear" class="mm-btn mm-btn-sm" hidden><i class="bi bi-trash"></i> Clear</button>
+                            </div>
                             <div id="btPicked" class="bt-picked"></div>
                             <div class="bt-create-row">
                                 <div id="btSizes" class="bt-tabs" role="radiogroup" aria-label="Players">
@@ -118,9 +139,11 @@
                                     <button type="button" data-size="3">1v1v1</button>
                                     <button type="button" data-size="4">1v1v1v1</button>
                                 </div>
-                                <label class="bt-crazy" title="Crazy mode: the lowest total wins">
-                                    <input type="checkbox" id="btCrazy"> Crazy
-                                </label>
+                                <button type="button" id="btCrazy" class="bt-crazy" aria-pressed="false" title="Crazy mode: the LOWEST total wins">
+                                    <span class="bt-crazy-icon">🤡</span>
+                                    <span class="bt-crazy-text"><b>Crazy mode</b><small>lowest total wins</small></span>
+                                    <span class="bt-switch" aria-hidden="true"></span>
+                                </button>
                                 <button type="button" id="btCreate" class="mm-btn mm-btn-primary" disabled>
                                     <i class="bi bi-plus-circle"></i> <span id="btCreateLabel">Create</span>
                                 </button>

@@ -81,22 +81,27 @@
         <div class="room-layout">
             <div class="room-main">
                 <section class="mm-card jp-main">
+                    <!--- Choice of the hidden games --->
+                    <nav class="cs-nav" aria-label="Games">
+                        <a href="./" class="cs-tab"><span class="cs-tab-icon">🤫</span><span class="cs-tab-label">Games</span></a>
+                        <a href="jackpot" class="cs-tab active" aria-current="page"><span class="cs-tab-icon">🪙</span><span class="cs-tab-label">Jackpot</span></a>
+                        <a href="battles" class="cs-tab"><span class="cs-tab-icon">⚔️</span><span class="cs-tab-label">Case Battles</span></a>
+                        <a href="poker" class="cs-tab"><span class="cs-tab-icon">🃏</span><span class="cs-tab-label">Poker</span></a>
+                    </nav>
                     <div class="jp-head">
                         <div>
                             <h1 class="jp-title">🪙 Jackpot <span id="jpRound" class="mm-badge"></span></h1>
                             <p id="jpStatus" class="jp-status" aria-live="polite"></p>
                         </div>
                         <div class="bt-head-right">
-                            <a href="battles" class="icon-btn" title="Case battles" aria-label="Case battles">⚔️</a>
-                            <a href="poker" class="icon-btn" title="Poker" aria-label="Poker">🃏</a>
                             <a href="/lobby" class="icon-btn" title="Back to the lobby" aria-label="Back to the lobby">
                                 <i class="bi bi-box-arrow-left"></i>
                             </a>
                         </div>
                     </div>
 
-                    <!--- How the winner is shown (only for this viewer, the server decides the winner) --->
-                    <div id="jpModes" class="jp-modes" role="radiogroup" aria-label="Draw animation"></div>
+                    <!--- How the winner is shown this round (chosen at random, the same for everybody) --->
+                    <div id="jpModes" class="jp-mode-now"></div>
 
                     <!--- Pot and countdown (in the wheel it is in the middle) --->
                     <div id="jpPotbar" class="jp-potbar">

@@ -7,7 +7,7 @@ const crypto = require("crypto");
 const { pickWinner, newFairRound, fairHash, fairWinner } = require("../game/jackpot");
 
 // Short timings for the tests
-Object.assign(config, { JACKPOT_COUNTDOWN: 200, JACKPOT_SPIN: 100, JACKPOT_PAUSE: 100 });
+Object.assign(config, { JACKPOT_COUNTDOWN: 200, JACKPOT_SPIN: 100, JACKPOT_PAUSE: 100, JACKPOT_BET_DELAY: [0, 0] });
 
 /* ---------- Pure logic ---------- */
 
@@ -194,11 +194,69 @@ test("jackpot: invalid bets are rejected", async () => {
   assert.strictEqual(h.coinsOf("carol"), 5000 - 2000 - (config.JACKPOT_MAX_BETS - 1));
 });
 
-test("jackpot: chat works like in the other games", async () => {
+test("jackpot: one chat for every hidden game, no info messages", async () => {
   const alice = client("alice");
-  const message = waitFor(alice, "chatMessage", (m) => m.type === "user" && m.text === "good luck");
+  const onPoker = server.client("/poker", tokens.bob);
+  const onBattles = server.client("/battles", tokens.carol);
+  const onCasino = server.client("/casino", tokens.dave);
+  sockets.push(onPoker, onBattles, onCasino);
+  await Promise.all([alice, onPoker, onBattles, onCasino].map((s) => h.once(s, "connect")));
+  await h.wait(50);
+  const everywhere = [alice, onPoker, onBattles, onCasino].map((s) => waitFor(s, "chatMessage", (m) => m.text === "good luck"));
   alice.emit("sendChatMessage", { message: "good luck" });
-  assert.strictEqual((await message).name, "alice");
+  for (const message of await Promise.all(everywhere)) {
+    assert.strictEqual(message.name, "alice");
+    assert.strictEqual(message.type, "user");
+  }
+  // A new page gets the history - only messages of players
+  const late = server.client("/battles", tokens.bob);
+  sockets.push(late);
+  const history = await h.once(late, "chatHistory");
+  assert.ok(history.some((m) => m.text === "good luck"));
+  assert.ok(history.every((m) => m.type === "user"));
+});
+
+test("jackpot: a new bet is hidden from the others for a few seconds, the pot counts it right away", async () => {
+  Object.assign(config, { JACKPOT_BET_DELAY: [300, 300], JACKPOT_COUNTDOWN: 2000 });
+  try {
+    h.setCoins("alice", 100);
+    h.setCoins("bob", 100);
+    const alice = client("alice");
+    const bob = client("bob");
+    const [before] = await Promise.all([
+      waitFor(alice, "jackpotState", (s) => s.phase === "open"),
+      waitFor(alice, "coins", (d) => d.coins === 100),
+      waitFor(bob, "coins", (d) => d.coins === 100),
+    ]);
+    assert.ok(config.JACKPOT_DRAWS.includes(before.mode), "the animation of the round is chosen by the server");
+
+    // Alice sees her own bet at once (without tickets yet), bob doesn't see it
+    const own = waitFor(alice, "jackpotState", (s) => s.pending.length === 1);
+    const forBob = waitFor(bob, "jackpotState", () => true);
+    alice.emit("bet", { amount: 30 });
+    const mine = await own;
+    const start = before.total; // what is in the pot from before
+    assert.strictEqual(mine.total, start + 30);
+    assert.ok(mine.bets.every((bet) => bet.name !== "alice"), "no tickets yet");
+    const other = await forBob;
+    assert.strictEqual(other.total, start);
+    assert.deepStrictEqual(other.pending, []);
+    assert.strictEqual(h.coinsOf("alice"), 70, "paid right away");
+
+    // After the delay everybody sees it, with its tickets
+    const shown = await waitFor(bob, "jackpotState", (s) => s.total === start + 30);
+    assert.deepStrictEqual(shown.bets[shown.bets.length - 1], { name: "alice", amount: 30, from: start + 1, to: start + 30 });
+
+    // A bet in the last seconds counts in the draw, shown to everybody when it starts
+    bob.emit("bet", { amount: 10 });
+    const drawing = await waitFor(alice, "jackpotState", (s) => s.phase === "drawing", 4000);
+    assert.strictEqual(drawing.total, start + 40);
+    assert.strictEqual(drawing.draw.total, start + 40);
+    assert.strictEqual(drawing.mode, before.mode, "the same animation for everybody");
+    await waitFor(alice, "jackpotState", (s) => s.phase === "open", 4000);
+  } finally {
+    Object.assign(config, { JACKPOT_BET_DELAY: [0, 0], JACKPOT_COUNTDOWN: 200 });
+  }
 });
 
 test("jackpot: the secret word gives coins every time (not too fast)", async () => {
@@ -231,7 +289,7 @@ test("jackpot: the secret word gives coins every time (not too fast)", async () 
 
 /* ---------- Secret address, start coins ---------- */
 
-test("jackpot: lives at a secret address, battles and poker under it", async () => {
+test("casino: a secret address with the choice of games, jackpot, battles and poker under it", async () => {
   const express = require("express");
   const http = require("http");
   const secretRoute = require("../routes/secret_route");
@@ -254,7 +312,8 @@ test("jackpot: lives at a secret address, battles and poker under it", async () 
     const redirect = await get(base);
     assert.strictEqual(redirect.status, 302);
     assert.strictEqual(redirect.location, base + "/");
-    assert.match((await get(base + "/")).body, /<title>Jackpot/);
+    assert.match((await get(base + "/")).body, /<title>Secret Casino/);
+    assert.match((await get(base + "/jackpot")).body, /<title>Jackpot/);
     assert.match((await get(base + "/battles")).body, /<title>Case Battles/);
     assert.match((await get(base + "/poker")).body, /<title>Poker/);
     // The old, easy addresses are gone
@@ -272,17 +331,25 @@ test("jackpot: the Konami code gets the secret address from the server", async (
   assert.strictEqual(url, encodeURI("/🤫🎰💸") + "/");
 });
 
-test("coins: everybody gets 2500 start coins - old accounts get the difference once", async () => {
-  assert.strictEqual(config.START_COINS, 2500);
+test("coins: everybody starts with 100k - a reset gives every account 100k once", async () => {
+  assert.strictEqual(config.START_COINS, 100000);
   // A new account
   h.addUser("erin");
-  assert.strictEqual((await coins.get("erin")).coins, 2500);
-  // An account from before (100 start coins, 30 left): +2400, only once
+  assert.strictEqual((await coins.get("erin")).coins, 100000);
+  // An account from before the reset (30 coins left): 100k, only once
   h.addUser("frank");
   const User = require("../models/User");
-  await User.updateOne({ username: "frank" }, { $set: { coins: 30 } });
-  assert.strictEqual((await coins.get("frank")).coins, 2430);
-  assert.strictEqual((await coins.get("frank")).coins, 2430);
-  assert.strictEqual(await coins.spend("frank", 2430), true);
-  assert.strictEqual((await coins.get("frank")).coins, 0, "no new start coins when broke");
+  await User.updateOne({ username: "frank" }, { $set: { coins: 30, coinReset: "an-old-reset" } });
+  assert.strictEqual((await coins.get("frank")).coins, 100000);
+  assert.strictEqual(await coins.spend("frank", 99000), true);
+  assert.strictEqual((await coins.get("frank")).coins, 1000, "no second reset");
+});
+
+test("casino: the start page shows what is going on in every game", async () => {
+  const page = server.client("/casino", tokens.carol);
+  sockets.push(page);
+  const summary = await h.once(page, "summary");
+  assert.deepStrictEqual(Object.keys(summary).sort(), ["battles", "jackpot", "poker"]);
+  assert.strictEqual(summary.poker.seats, config.POKER_SEATS);
+  assert.ok(typeof summary.jackpot.total === "number");
 });

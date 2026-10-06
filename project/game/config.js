@@ -48,7 +48,9 @@ module.exports = {
   SPEED_START_ANIMATION: 2600,
 
   // Coins (hidden jackpot): start amount, free coins once a day when (almost) broke
-  START_COINS: 2500,
+  START_COINS: 100000,
+  // Every account gets START_COINS once for this id: a new id resets everybody's coins
+  COIN_RESET: "reset-100k",
   DAILY_BONUS: 50,
   BONUS_BELOW: 10,
   BONUS_EVERY: 24 * 60 * 60 * 1000,
@@ -60,6 +62,11 @@ module.exports = {
   JACKPOT_SPIN: 8000, // the draw animation (wheel, roulette, bowling, ...)
   JACKPOT_PAUSE: 5000, // result is shown, then a new round starts
   JACKPOT_MAX_BETS: 5, // separate bets per player and round (any amount)
+  // A new bet is shown to the others only after a random 5-7 s (no sniping:
+  // nobody can see a bet and answer it in the last second). It counts right away.
+  JACKPOT_BET_DELAY: [5000, 7000],
+  // The animation of a round, one for everybody, chosen at random per round
+  JACKPOT_DRAWS: ["wheel", "roulette", "bowling", "plinko", "race", "claw", "royale", "coinrain", "revolver"],
   JACKPOT_HISTORY: 10,
   // Secret word on the jackpot page (typed anywhere, not in a field): +1000 coins
   // every time. Only the server knows it, it can be changed with JACKPOT_SECRET.
@@ -74,7 +81,6 @@ module.exports = {
   // Case battles (hidden, opened from the jackpot page)
   BATTLE_START: 3000, // countdown when the battle is full
   BATTLE_ROUND: 4500, // one case for everybody: spin + a short look at the items
-  BATTLE_MAX_ROUNDS: 10, // cases per battle
   BATTLE_MAX_OPEN: 3, // waiting battles per creator
   BATTLE_KEEP: 60 * 1000, // a finished battle stays in the list this long
   BATTLE_EXPIRE: 15 * 60 * 1000, // nobody joined: cancelled, coins back
@@ -85,7 +91,7 @@ module.exports = {
   POKER_SMALL_BLIND: 5,
   POKER_BIG_BLIND: 10,
   POKER_MIN_BUYIN: 100,
-  POKER_MAX_BUYIN: 2000,
+  POKER_MAX_BUYIN: 10000,
   POKER_TURN: 20 * 1000, // time to act, then check (or fold)
   POKER_START: 3000, // pause before a hand starts
   POKER_STREET: 1200, // all-in: pause between the cards of the board

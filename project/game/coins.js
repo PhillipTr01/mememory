@@ -17,29 +17,21 @@ function notify(username) {
 /*
  * Coins for the hidden jackpot. Stored on the user, every change is a single
  * atomic update, so two games (or tabs) can't spend the same coins twice.
- * Users from before the coins existed get the start coins on first use.
+ * Every account gets the start coins on first use (and after a reset).
  */
 
 function changed(result) {
   return result != null && (result.nModified > 0 || result.modifiedCount > 0);
 }
 
-// Accounts from before the start coins were raised got this much
-const OLD_START_COINS = 100;
-
 /*
- * Everybody gets the start coins once: accounts without coins get them now,
- * accounts that only got the old (smaller) start coins get the difference.
- * coinStart remembers what an account got.
+ * New accounts get the start coins, and every account once after a reset of
+ * all coins (config.COIN_RESET): coinReset remembers the last reset it got.
  */
 async function ensure(username) {
   await User.updateOne(
-    { username: username, coins: { $exists: false } },
-    { $set: { coins: config.START_COINS, coinStart: config.START_COINS } },
-  );
-  await User.updateOne(
-    { username: username, coins: { $exists: true }, coinStart: { $exists: false } },
-    { $inc: { coins: Math.max(0, config.START_COINS - OLD_START_COINS) }, $set: { coinStart: config.START_COINS } },
+    { username: username, coinReset: { $ne: config.COIN_RESET } },
+    { $set: { coins: config.START_COINS, coinReset: config.COIN_RESET } },
   );
 }
 
