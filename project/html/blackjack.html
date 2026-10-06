@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en" class="min-h-100">
+
+<head>
+    <title>Blackjack - MemeMory</title>
+
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+
+    <!--- Custom CSS-->
+    <!--- identical to index.html --->
+    <link rel="stylesheet" href="/static/styles/index.css">
+    <link rel="stylesheet" href="/static/styles/theme.css">
+    <link rel="stylesheet" href="/static/styles/room.css">
+    <link rel="stylesheet" href="/static/styles/jackpot.css">
+    <link rel="stylesheet" href="/static/styles/poker.css">
+    <link rel="stylesheet" href="/static/styles/blackjack.css">
+
+    <!--- Icons --->
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.0/font/bootstrap-icons.css">
+
+    <!--- Font --->
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body class="d-flex flex-column min-h-100 jackpot-theme">
+
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container-fluid px-3">
+                <div class="row displ-content">
+                    <div class="col-6">
+                        <div class="navbar-brand active">
+                            <a href="/">
+                                <img src="/static/images/logo.png" alt="logo" class="img-fluid logo">
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-6 d-flex justify-content-end align-items-center">
+                        <button type="button" id="navBonus" class="nav-bonus ms-auto" hidden>🎁 <span id="navBonusText">Free coins</span></button>
+                        <button type="button" id="navCoins" class="nav-coins" title="Your coins - click to pay out" hidden>🪙 <span id="navCoinsValue">-</span></button>
+                        <div class="profile-menu" id="profileMenu">
+                  <button type="button" class="profile-trigger" id="profileTrigger" aria-haspopup="true" aria-expanded="false">
+                    <span id="profileAvatar" class="mm-avatar sm"></span>
+                    <span class="profile-name" id="username"></span>
+                    <i class="bi bi-chevron-down profile-caret"></i>
+                  </button>
+                  <div class="profile-dropdown" id="profileDropdown" hidden>
+                    <div class="profile-head">
+                      <span id="profileAvatarLarge" class="mm-avatar"></span>
+                      <div class="overflow-hidden">
+                        <div class="profile-head-name" id="profileName"></div>
+                        <div class="mm-muted small">Signed in</div>
+                      </div>
+                    </div>
+                    <a href="/lobby" class="profile-item"><i class="bi bi-controller"></i> Play</a>
+                    <a href="/home" class="profile-item"><i class="bi bi-trophy"></i> Scoreboard</a>
+                    <a href="/user" class="profile-item"><i class="bi bi-bar-chart-line"></i> Profile</a>
+                    <a href="/settings" class="profile-item"><i class="bi bi-gear"></i> Settings</a>
+                    <div class="profile-divider"></div>
+                    <button type="button" class="profile-item danger" id="logoutButton">
+                      <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                  </div>
+                </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!--- Shown while the connection is lost --->
+    <div id="connectionBanner" class="connection-banner" hidden>
+        <span class="spinner"></span> Connection lost - reconnecting...
+    </div>
+
+    <main class="room-page">
+        <div class="room-layout">
+            <div class="room-main">
+                <section class="mm-card bj-main">
+                    <!--- Choice of the hidden games --->
+                    <nav class="cs-nav" aria-label="Games">
+                        <a href="./" class="cs-tab"><span class="cs-tab-icon">🪙</span><span class="cs-tab-label">Jackpot</span></a>
+                        <a href="battles" class="cs-tab"><span class="cs-tab-icon">⚔️</span><span class="cs-tab-label">Case Battles</span></a>
+                        <a href="poker" class="cs-tab"><span class="cs-tab-icon">🃏</span><span class="cs-tab-label">Poker</span></a>
+                        <a href="blackjack" class="cs-tab active" aria-current="page"><span class="cs-tab-icon"><span class="bj-icon" aria-hidden="true">21</span></span><span class="cs-tab-label">Blackjack</span></a>
+                        <a href="leaderboard" class="cs-tab"><span class="cs-tab-icon">🏆</span><span class="cs-tab-label">Leaderboard</span></a>
+                    </nav>
+
+                    <div class="jp-head">
+                        <div>
+                            <h1 class="jp-title"><span class="bj-icon big" aria-hidden="true">21</span> Blackjack <span class="mm-badge" id="bjLimits"></span></h1>
+                            <p id="bjStatus" class="jp-status" aria-live="polite"></p>
+                        </div>
+                    </div>
+
+                    <!--- The table: the dealer at the top, 5 seats in an arc --->
+                    <div class="bj-table">
+                        <div class="bj-dealer">
+                            <div id="bjDealerCards" class="bj-cards"></div>
+                            <span id="bjDealerValue" class="bj-value" hidden></span>
+                            <!--- The betting time runs --->
+                            <div id="bjClock" class="bj-clock" hidden>
+                                <svg viewBox="0 0 60 60" aria-hidden="true">
+                                    <circle class="bj-clock-bg" cx="30" cy="30" r="26"></circle>
+                                    <circle id="bjClockRing" class="bj-clock-ring" cx="30" cy="30" r="26"></circle>
+                                </svg>
+                                <span id="bjClockNum" class="bj-clock-num"></span>
+                                <span class="bj-clock-text">Place your bets</span>
+                            </div>
+                        </div>
+                        <p class="bj-rules">Blackjack pays 3 to 2 · Dealer stands on 17</p>
+                        <div id="bjSeats" class="bj-seats"></div>
+                    </div>
+
+                    <!--- One click: the bets of the last round again --->
+                    <div id="bjRebet" class="bj-rebet" hidden>
+                        <button type="button" id="bjRebetButton" class="mm-btn mm-btn-primary"><i class="bi bi-arrow-repeat"></i> <span id="bjRebetText">Same bet</span></button>
+                    </div>
+
+                    <!--- Betting: on a free seat or an own one --->
+                    <div id="bjBetBar" class="bj-bar" hidden>
+                        <span id="bjBetSeat" class="bj-bar-label"></span>
+                        <div class="bj-chips">
+                            <button type="button" class="bj-chip" data-chip="10">10</button>
+                            <button type="button" class="bj-chip" data-chip="50">50</button>
+                            <button type="button" class="bj-chip" data-chip="100">100</button>
+                            <button type="button" class="bj-chip" data-chip="500">500</button>
+                            <button type="button" class="bj-chip" data-chip="1000">1K</button>
+                            <button type="button" class="bj-chip" data-chip="5000">5K</button>
+                        </div>
+                        <input id="bjAmount" class="mm-input bj-amount" type="number" min="1" step="1" inputmode="numeric" placeholder="Coins" aria-label="Coins to bet">
+                        <button type="button" id="bjBet" class="mm-btn mm-btn-primary">Bet</button>
+                        <button type="button" id="bjClear" class="mm-btn" title="Leave the seat - the bet comes back">Stand up</button>
+                    </div>
+
+                    <!--- Playing: the own hand --->
+                    <div id="bjActions" class="bj-bar pk-actions" hidden>
+                        <div class="bj-turn-bar"><span id="bjTurnFill"></span></div>
+                        <span id="bjActionLabel" class="bj-bar-label"></span>
+                        <div class="pk-action-buttons">
+                            <button type="button" class="mm-btn mm-btn-primary" data-action="hit">Hit</button>
+                            <button type="button" class="mm-btn" data-action="stand">Stand</button>
+                            <button type="button" class="mm-btn" data-action="double">Double</button>
+                            <button type="button" class="mm-btn" data-action="split">Split</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <aside class="room-side">
+                <div class="mm-card side-card jp-history-card">
+                    <div class="side-head">
+                        <span class="fw-semibold"><i class="bi bi-clock-history me-2"></i>Last rounds</span>
+                    </div>
+                    <ol id="bjHistory" class="jp-history"></ol>
+                    <p id="bjHistoryEmpty" class="jp-empty mm-muted">No rounds yet - take a seat!</p>
+                </div>
+
+                <div class="mm-card chat-card">
+                    <div class="chat-head">
+                        <span class="fw-semibold"><i class="bi bi-chat-dots me-2"></i>Chat</span>
+                        <div class="chat-online-wrap">
+                            <button type="button" id="chatOnline" class="chat-online" aria-expanded="false" hidden></button>
+                            <div id="chatOnlineList" class="chat-online-list" hidden></div>
+                        </div>
+                    </div>
+                    <div class="chat-body-wrap">
+                        <div id="chat-content" class="chat-body" aria-live="polite"></div>
+                        <div id="chat-empty" class="chat-empty">
+                            <span>👋</span>
+                            <p class="mb-0">No messages yet - say hi!</p>
+                        </div>
+                        <button type="button" id="newMessages" class="new-messages" hidden>
+                            New messages <i class="bi bi-arrow-down"></i>
+                        </button>
+                    </div>
+                    <p id="chat-error" class="chat-error" hidden></p>
+                    <div class="chat-quick" aria-label="Quick emojis">
+                        <button type="button" data-emoji="😂">😂</button>
+                        <button type="button" data-emoji="🔥">🔥</button>
+                        <button type="button" data-emoji="👏">👏</button>
+                        <button type="button" data-emoji="😭">😭</button>
+                        <button type="button" data-emoji="🤯">🤯</button>
+                        <button type="button" data-emoji="💀">💀</button>
+                        <button type="button" data-emoji="🤡">🤡</button>
+                        <button type="button" data-emoji="GG">GG</button>
+                    </div>
+                    <form id="chat-form" class="chat-form" autocomplete="off">
+                        <input id="chat-input" class="chat-input" type="text" maxlength="300"
+                            placeholder="Write a message..." aria-label="Chat message">
+                        <span id="chat-counter" class="chat-counter" hidden></span>
+                        <button id="send-message-btn" type="submit" class="chat-send" aria-label="Send" disabled>
+                            <i class="bi bi-arrow-up"></i>
+                        </button>
+                    </form>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!--- JavaScript --->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous">
+    </script>
+    <!--- Custom JS --->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/static/scripts/avatar.js"></script>
+    <script src="/static/scripts/ui.js"></script>
+    <script src="/static/scripts/nav.js"></script>
+    <script src="/static/scripts/blackjack.js"></script>
+    <script src="/static/scripts/casino_wallet.js"></script>
+    <script src="/static/scripts/chat.js"></script>
+</body>
+
+</html>

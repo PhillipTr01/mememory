@@ -138,6 +138,13 @@ a.mm-btn.mm-btn-primary:focus,
   user-select: none;
 }
 
+/* The ghost bet of the jackpot */
+.mm-avatar.ghost {
+  background: radial-gradient(circle at 50% 35%, #4b5563, #1f2937);
+  font-size: calc(var(--size) * 0.6);
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.45);
+}
+
 /* Own avatar (avatar maker): the drawing fills the circle */
 .mm-avatar.has-avatar {
   background: transparent !important;

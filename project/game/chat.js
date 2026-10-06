@@ -18,19 +18,27 @@ function system(namespace, gameID, room, text, icon) {
   add(namespace, gameID, room, { type: "system", text: text, icon: icon || "info" });
 }
 
-// Message from a user: cleaned up, limited in length and speed
-function fromUser(namespace, socket, room, data, spectator) {
-  if (room == null || data == null || typeof data.message !== "string") return;
+// The text of a user's message: cleaned up, limited in length and speed (null: nothing to send)
+function cleanText(socket, data) {
+  if (data == null || typeof data.message !== "string") return null;
 
   const text = data.message.replace(/\s+/g, " ").trim().slice(0, config.MAX_CHAT_LENGTH);
-  if (text.length == 0) return;
+  if (text.length == 0) return null;
 
   const now = Date.now();
   if (now - (socket.lastChatMessage || 0) < config.CHAT_COOLDOWN) {
     socket.emit("chatError", "You are sending messages too fast.");
-    return;
+    return null;
   }
   socket.lastChatMessage = now;
+  return text;
+}
+
+// Message from a user
+function fromUser(namespace, socket, room, data, spectator) {
+  if (room == null) return;
+  const text = cleanText(socket, data);
+  if (text == null) return;
 
   add(namespace, socket.gameID, room, {
     type: "user",
@@ -40,4 +48,4 @@ function fromUser(namespace, socket, room, data, spectator) {
   });
 }
 
-module.exports = { add, system, fromUser };
+module.exports = { add, system, fromUser, cleanText };

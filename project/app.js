@@ -18,6 +18,11 @@ if (missing.length > 0) {
 const PORT = process.env.PORT || 5000;
 
 const { page, staticHeaders } = require("./utils/pages");
+const { notFound, errorHandler } = require("./utils/errors");
+const persist = require("./game/persist");
+// The games of the last run come back before anybody can join one
+persist.expectRestore();
+const config = require("./game/config");
 
 const app = express();
 const server = http.createServer(app);
@@ -39,12 +44,19 @@ require("./sockets/lobby_server")(io);
 require("./sockets/singleplayer_server")(io);
 require("./sockets/multiplayer_server")(io);
 require("./sockets/tictactoe_server")(io);
+require("./sockets/jackpot_server")(io);
+require("./sockets/battles_server")(io);
+require("./sockets/poker_server")(io);
+require("./sockets/blackjack_server")(io);
+require("./sockets/casino_server")(io);
 
 /* Page routes */
 const authenticationRoute = require("./routes/authentication_route");
 const memeRoute = require("./routes/meme_route");
 const userRoute = require("./routes/user_route");
 const scoreboardRoute = require("./routes/scoreboard_route");
+const secretRoute = require("./routes/secret_route");
+const adminRoute = require("./routes/admin_route");
 
 /* API routes */
 const authenticationAPIRoute = require("./API/routes/authentication_route");
@@ -78,36 +90,20 @@ app.get("/settings", Auth, page("settings.html"));
 app.get("/play", Auth, page("multiplayer.html"));
 app.get("/singleplayer", Auth, page("singleplayer.html"));
 app.get("/tictactoe", Auth, page("tictactoe.html"));
+// Hidden: the games with coins (jackpot, case battles, poker) at a secret address
+app.use(config.addresses(config.JACKPOT_PATH), secretRoute(Auth));
+// The admin panel: a secret address and a password (ADMIN_PASSWORD)
+app.use(config.addresses(config.ADMIN_PATH), adminRoute());
+console.log(
+  config.ADMIN_PASSWORD || config.ADMIN_PASSWORD_HASH
+    ? `Admin panel: ${config.ADMIN_PATH}/ (also ${encodeURI(config.ADMIN_PATH)}/), password from ` +
+        (config.ADMIN_PASSWORD ? `ADMIN_PASSWORD (${config.ADMIN_PASSWORD.length} characters)` : "ADMIN_PASSWORD_HASH")
+    : "Admin panel is off - set ADMIN_PASSWORD (and ADMIN_PATH) in the environment / .env to turn it on.",
+);
 
 /* Error handling */
-app.use((req, res, next) => {
-  const err = new Error("Error! Ressource not found!");
-  err.status = 404;
-  next(err);
-});
-
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-  const status = err.status || err.statusCode || 500;
-
-  if (status >= 500) {
-    // Log the real problem, but don't show internals to the client.
-    console.error(`[${req.method} ${req.originalUrl}]`, err);
-  }
-
-  if (res.headersSent) {
-    return;
-  }
-
-  res.status(status);
-  if (status == 404) {
-    res.send();
-    return;
-  }
-
-  const message = status >= 500 ? "Internal server error." : err.message;
-  res.send({ error: { status: status, message: message } });
-});
+app.use(notFound);
+app.use(errorHandler);
 
 /* Connect to Database - retry instead of giving up when MongoDB isn't up yet */
 let scraperInterval = null;
@@ -122,6 +118,8 @@ async function connectDatabase(attempt = 1) {
       serverSelectionTimeoutMS: 10000,
     });
     console.log("Connected to database.");
+    // The games as they were before the restart (rounds, tables, history, chat)
+    await persist.restoreAll();
     startScraper();
   } catch (error) {
     if (shuttingDown) return;
@@ -163,10 +161,16 @@ function shutdown(code = 0) {
   // Force exit if closing takes too long
   setTimeout(() => process.exit(code), 5000).unref();
 
-  io.close();
-  server.close(() => {
-    mongoose.connection.close(false, () => process.exit(code));
-  });
+  // Every game is saved as it is (running rounds, chips, bets) - it goes on after the restart
+  persist
+    .saveAll()
+    .catch((error) => console.error("Saving the games failed:", error))
+    .finally(() => {
+      io.close();
+      server.close(() => {
+        mongoose.connection.close(false, () => process.exit(code));
+      });
+    });
 }
 
 process.on("SIGINT", () => shutdown(0));

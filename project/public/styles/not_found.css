@@ -1,0 +1,144 @@
+/* ---------- 404: three memory cards flip over and show 4 0 4 ---------- */
+html,
+body.nf-page {
+  height: 100%;
+  margin: 0;
+}
+
+body.nf-page {
+  background: radial-gradient(ellipse at 50% 30%, #1f2633, var(--mm-bg) 65%);
+  color: var(--mm-text);
+  font-family: "Poppins", system-ui, sans-serif;
+  overflow: hidden;
+}
+
+.nf-main {
+  min-height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 16px;
+  text-align: center;
+}
+
+.nf-logo img {
+  height: 46px;
+  opacity: 0.9;
+}
+
+.nf-cards {
+  display: flex;
+  gap: 0.9rem;
+  margin: 1rem 0 0.5rem;
+  perspective: 900px;
+}
+
+.nf-card {
+  width: clamp(76px, 22vw, 116px);
+  aspect-ratio: 3 / 4;
+  animation: nf-float 3.2s ease-in-out calc(var(--i) * 0.35s + 1.6s) infinite;
+}
+
+.nf-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform: rotateY(180deg);
+  animation: nf-flip 0.7s cubic-bezier(0.3, 1.4, 0.5, 1) calc(var(--i) * 0.25s + 0.3s) forwards;
+}
+
+.nf-back,
+.nf-front {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  backface-visibility: hidden;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* The back: like the cards in the game */
+.nf-back {
+  transform: rotateY(180deg);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.06) 0 8px, transparent 8px 16px), linear-gradient(135deg, var(--mm-accent), #1e3a8a);
+}
+
+.nf-front {
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--mm-border);
+  background: linear-gradient(160deg, var(--mm-surface-3), var(--mm-surface));
+  font-size: clamp(2.8rem, 12vw, 4.6rem);
+  font-weight: 800;
+  color: var(--mm-text);
+}
+
+/* The zero doesn't match - it shakes */
+.nf-zero {
+  color: var(--mm-danger);
+  border-color: rgba(224, 103, 90, 0.6);
+  animation: nf-shake 0.5s ease-in-out 1.5s 2;
+}
+
+@keyframes nf-flip {
+  to {
+    transform: rotateY(0deg);
+  }
+}
+
+@keyframes nf-float {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes nf-shake {
+  25% {
+    transform: translateX(-6px) rotate(-4deg);
+  }
+  75% {
+    transform: translateX(6px) rotate(4deg);
+  }
+}
+
+.nf-title {
+  margin: 0.5rem 0 0;
+  font-size: clamp(1.5rem, 5vw, 2.1rem);
+  font-weight: 800;
+}
+
+.nf-text {
+  max-width: 420px;
+  margin: 0;
+  color: var(--mm-muted);
+}
+
+.nf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.nf-actions .mm-btn {
+  text-decoration: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nf-card,
+  .nf-card-inner,
+  .nf-zero {
+    animation: none;
+    transform: none;
+  }
+}
+
+.nf-actions .mm-btn {
+  font-family: inherit;
+  font-size: 1rem;
+}

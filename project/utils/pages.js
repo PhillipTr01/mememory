@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { BOOT_ID } = require("../game/version");
 
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const HTML_DIR = path.join(__dirname, "..", "html");
@@ -34,7 +35,10 @@ function render(file) {
   if (process.env.NODE_ENV === "production" && cache.has(file)) {
     return cache.get(file);
   }
-  const html = addVersions(fs.readFileSync(path.join(HTML_DIR, file), "utf8"));
+  const html = addVersions(fs.readFileSync(path.join(HTML_DIR, file), "utf8")).replace(
+    /<head>/i,
+    `<head>\n    <meta name="app-version" content="${BOOT_ID}">`,
+  );
   cache.set(file, html);
   return html;
 }

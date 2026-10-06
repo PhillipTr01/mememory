@@ -1,4 +1,5 @@
 const Statistic = require("../models/Statistic");
+const coins = require("../game/coins");
 const rooms = require("../game/rooms");
 const config = require("../game/config");
 const ttt = require("../game/tictactoe");
@@ -6,6 +7,7 @@ const { STATUS, seatOf, serialize, graceFor } = require("../game/tictactoe_room"
 const { notifyLobby } = require("../game/multiplayer_room");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
+const version = require("../game/version");
 const chat = require("../game/chat");
 
 module.exports = function (io) {
@@ -143,6 +145,7 @@ module.exports = function (io) {
   /* ---------- Connection ---------- */
 
   tictactoe.on("connection", (socket) => {
+    version.announce(socket);
     const username = socket.data.username;
 
     socket.on(
@@ -241,6 +244,8 @@ module.exports = function (io) {
           recordRound(room);
           if (room.game.winner != null) {
             room.seats[room.game.winner].wins++;
+            // Coins for the hidden jackpot (only for a real win, not a forfeit)
+            coins.reward(username, "tictactoe");
             systemMessage(socket.gameID, room, `${username} wins the round!`, "trophy");
           } else {
             systemMessage(socket.gameID, room, "Draw - nobody can move anymore.", "info");
@@ -337,6 +342,24 @@ module.exports = function (io) {
       }
     }
   }
+
+  /*
+   * After a restart of the server: the game is there again, the players get
+   * the usual time to come back (their pages reload and join again)
+   */
+  rooms.onRestore("tictactoe", (gameID, room) => {
+    const now = Date.now();
+    room.spectators = new Map();
+    room.emptySince = now;
+    room.seats.forEach((seat) => {
+      if (seat == null) return;
+      if (seat.connected) {
+        seat.connected = false;
+        seat.disconnectedAt = now;
+      }
+      seat.socketId = null;
+    });
+  });
 
   const ticker = setInterval(() => {
     try {

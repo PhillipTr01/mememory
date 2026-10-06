@@ -58,6 +58,16 @@ test("register rejects invalid input with 4xx and never 500", async () => {
   }
 });
 
+test("register: the name of the jackpot's ghost can't be taken", async () => {
+  const bodies = [
+    { email: "g@b.de", username: "Ghost", password: "Passw0rd!", repeatPassword: "Passw0rd!" },
+    { email: "g@b.de", username: "ghost", password: "Passw0rd!", repeatPassword: "Passw0rd!" },
+  ];
+  for (const body of bodies) {
+    await assert.rejects(auth.register(body), (err) => err.status === 409 && /username/.test(err.message));
+  }
+});
+
 test("password policy", () => {
   assert.ok(isStrongPassword("Passw0rd!"));
   assert.ok(!isStrongPassword("password"));
@@ -82,4 +92,20 @@ test("page auth middleware redirects invalid sessions", async () => {
   const res = await request(app, "/home", { headers: { cookie: "token=garbage" } });
   assert.strictEqual(res.status, 302);
   assert.strictEqual(res.headers.get("location"), "/");
+});
+
+test("404: pages get the 404 page, the API a short JSON answer", async () => {
+  const { notFound, errorHandler } = require("../utils/errors");
+  const app = express();
+  app.use(notFound);
+  app.use(errorHandler);
+
+  const page = await request(app, "/jackpot", { headers: { accept: "text/html,application/xhtml+xml,*/*;q=0.8" } });
+  assert.strictEqual(page.status, 404);
+  assert.match(page.headers.get("content-type"), /html/);
+  assert.match(await page.text(), /No match for this one/);
+
+  const api = await request(app, "/api/nothing", { headers: { accept: "application/json" } });
+  assert.strictEqual(api.status, 404);
+  assert.deepStrictEqual(await api.json(), { error: { status: 404, message: "Not found." } });
 });

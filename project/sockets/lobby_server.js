@@ -4,6 +4,8 @@ const multiplayerRoom = require("../game/multiplayer_room");
 const tictactoeRoom = require("../game/tictactoe_room");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
+const version = require("../game/version");
+const config = require("../game/config");
 
 // Name & how much the computer can remember for every difficulty
 const BOTS = [
@@ -19,8 +21,17 @@ module.exports = function (io) {
   multiplayerRoom.attachLobby(lobby);
 
   lobby.on("connection", (socket) => {
+    version.announce(socket);
     // Open multiplayer rooms
     socket.emit("roomList", multiplayerRoom.publicRooms(socket.data.username));
+
+    // The Konami code was typed: the secret address of the jackpot (not in the page's code)
+    socket.on(
+      "secretDoor",
+      safe("secretDoor", (answer) => {
+        if (typeof answer === "function") answer(encodeURI(config.JACKPOT_PATH) + "/");
+      }),
+    );
 
     socket.on(
       "playSingleplayer",

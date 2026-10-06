@@ -1,9 +1,11 @@
 const Statistic = require("../models/Statistic");
+const coins = require("../game/coins");
 const rooms = require("../game/rooms");
 const config = require("../game/config");
 const { CARD_COUNT, createBoard, isValidCardId } = require("../game/board");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
+const version = require("../game/version");
 
 const DIFFICULTIES = ["easy", "medium", "hard", "expert"];
 
@@ -27,6 +29,7 @@ module.exports = function (io) {
   });
 
   singlePlayer.on("connection", (socket) => {
+    version.announce(socket);
     const username = socket.data.username;
 
     socket.on(
@@ -143,18 +146,35 @@ module.exports = function (io) {
           return;
         }
         stopTimers(game);
-        clearTimeout(room.awayTimer);
-        room.awayTimer = setTimeout(() => {
-          if (room.socketId != null || game.finished || room.game !== game) return;
-          // Didn't come back in time: counts as a loss, like surrendering
-          surrender(room)
-            .catch((error) => console.error("[singleplayer] Could not end game:", error))
-            .finally(() => {
-              if (room.socketId == null) rooms.remove(gameID);
-            });
-        }, config.REJOIN_GRACE_PLAYING);
+        waitForPlayer(gameID, room);
       }),
     );
+  });
+
+  // The player is gone (reload, lost connection, restart): some time to come back
+  function waitForPlayer(gameID, room) {
+    const game = room.game;
+    clearTimeout(room.awayTimer);
+    room.awayTimer = setTimeout(() => {
+      if (room.socketId != null || game.finished || room.game !== game) return;
+      // Didn't come back in time: counts as a loss, like surrendering
+      surrender(room)
+        .catch((error) => console.error("[singleplayer] Could not end game:", error))
+        .finally(() => {
+          if (room.socketId == null) rooms.remove(gameID);
+        });
+    }, config.REJOIN_GRACE_PLAYING);
+  }
+
+  // After a restart of the server: the game is there again, paused until the player is back
+  rooms.onRestore("singleplayer", (gameID, room) => {
+    room.socketId = null;
+    room.initializing = false;
+    const game = room.game;
+    if (game == null) return;
+    game.timeouts = [];
+    game.interval = null;
+    if (!game.finished) waitForPlayer(gameID, room);
   });
 
   /* ---------- Connection ---------- */
@@ -450,6 +470,8 @@ module.exports = function (io) {
     // A surrender always loses (there are 33 pairs, so no draw otherwise)
     game.winner = !game.surrendered && game.user.points > game.computer.points ? 0 : 1;
     const field = DIFFICULTIES[game.difficulty] + (game.winner == 0 ? "Win" : "Lose");
+    // Coins for the hidden jackpot
+    if (game.winner == 0) coins.reward(game.user.name, DIFFICULTIES[game.difficulty]);
 
     // Change Statistic in Database - a database problem must not stop the game from ending.
     try {

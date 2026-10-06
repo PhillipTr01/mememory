@@ -1,4 +1,5 @@
 const randomstring = require("randomstring");
+const persist = require("./persist");
 
 /*
  * In-memory store of all open games.
@@ -91,4 +92,38 @@ const sweeper = setInterval(sweep, SWEEP_INTERVAL);
 // Don't keep the process alive just for the sweeper.
 sweeper.unref();
 
-module.exports = { create, get, touch, remove, removeUnused, list, onRemove, sweep, size: () => rooms.size };
+/*
+ * Running games survive a restart: the rooms are saved (every second, only
+ * when something changed) and come back with the server. Every game type
+ * gets its rooms back to restart its timers and give the players time to
+ * come back (onRestore).
+ */
+const restorers = new Map(); // type -> (gameID, room) => void
+
+function onRestore(type, restore) {
+  restorers.set(type, restore);
+}
+
+persist.register(
+  "rooms",
+  () => [...rooms],
+  (saved) => {
+    for (const [gameID, room] of saved) {
+      rooms.set(gameID, room);
+      // Nobody is connected right after the restart
+      room.lastActivity = Date.now();
+      const restore = restorers.get(room.type);
+      try {
+        if (restore) restore(gameID, room);
+      } catch (error) {
+        console.error(`[rooms] Could not restore ${room.type} room:`, error);
+        rooms.delete(gameID);
+      }
+    }
+  },
+);
+
+const saver = setInterval(() => persist.changed("rooms"), 1000);
+saver.unref();
+
+module.exports = { create, get, touch, remove, removeUnused, list, onRemove, onRestore, sweep, size: () => rooms.size };

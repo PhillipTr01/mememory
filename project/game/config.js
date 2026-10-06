@@ -46,4 +46,89 @@ module.exports = {
 
   // Speed round: shorter "who starts" animation
   SPEED_START_ANIMATION: 2600,
+
+  // Coins (hidden jackpot): start amount, free coins for everybody once a day
+  START_COINS: 50000,
+  // Every account gets START_COINS once for this id: a new id resets everybody's coins
+  COIN_RESET: "reset-100k",
+  DAILY_BONUS: 2500,
+  // The daily bonus comes back at midnight in this time zone
+  BONUS_TZ: process.env.BONUS_TZ || "Europe/Berlin",
+  // Coins for a win (only real wins: no surrender / left opponent)
+  COIN_REWARDS: { easy: 5, medium: 10, hard: 20, expert: 40, multiplayer: 15, tictactoe: 5 },
+
+  // Jackpot: the draw starts this long after the second player joined the pot
+  JACKPOT_COUNTDOWN: 30 * 1000,
+  JACKPOT_SPIN: 12000, // the draw animation (wheel, roulette, bowling, ...): about 11 s
+  JACKPOT_PAUSE: 5000, // result is shown, then a new round starts
+  JACKPOT_MAX_BETS: 5, // separate bets per player and round (any amount)
+  // A new bet gets into the pot only after a random 3-5 s (no sniping:
+  // nobody can answer a bet in the last second). Too late for the draw: the next pot.
+  JACKPOT_BET_DELAY: [3000, 5000],
+  // The animation of a round, one for everybody, chosen at random per round
+  JACKPOT_DRAWS: ["wheel", "roulette", "bowling", "plinko", "race", "claw", "royale", "coinrain", "revolver"],
+  JACKPOT_HISTORY: 10,
+  // After a restart: at least this long until a countdown or a turn ends (time to come back)
+  RESTORE_GRACE: 10 * 1000,
+  // Alone in the pot this long: a ghost (the house) of 85-115% of the first player's coins joins
+  JACKPOT_GHOST_AFTER: 15 * 1000,
+  JACKPOT_GHOST_SHARE: [0.85, 1.15],
+
+  // The secret address of the jackpot (and its case battles and poker):
+  // not linked anywhere. Can be changed with JACKPOT_PATH.
+  JACKPOT_PATH: "/" + (process.env.JACKPOT_PATH || "🤫🎰💸"),
+
+  // Payouts: a player takes coins off the balance, the admin pays them out
+  WITHDRAW_MIN: 5000,
+  WITHDRAW_STEP: 1000, // only whole thousands
+  WITHDRAW_MAX_OPEN: 5, // open payouts per player
+
+  // Admin panel: a secret address and a password (ADMIN_PASSWORD or the
+  // hash below; without both there is no admin panel)
+  // Only emojis without an invisible variation selector: the address bar shows them as they are
+  ADMIN_PATH: "/" + (process.env.ADMIN_PATH || "🦆🔧"),
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || "",
+  // Or only a salted scrypt hash of the password (make one with
+  // `npm run admin-password`). ADMIN_PASSWORD wins if both are set.
+  ADMIN_PASSWORD_HASH: process.env.ADMIN_PASSWORD_HASH || "",
+  ADMIN_SESSION: 12 * 60 * 60, // seconds an admin login lasts
+
+  // The ways a secret address can arrive: emojis like 🛠️ have an invisible
+  // second character (U+FE0F) that is sometimes missing when typed or copied
+  addresses(path) {
+    return [...new Set([path, path.replace(/\uFE0F/g, "")])].map((p) => encodeURI(p));
+  },
+
+  // Case battles (hidden, opened from the jackpot page)
+  BATTLE_START: 3000, // countdown when the battle is full
+  BATTLE_ROUND: 4500, // one case for everybody: spin + a short look at the items
+  BATTLE_MAX_OPEN: 3, // waiting battles per creator
+  BATTLE_KEEP: 60 * 1000, // a finished battle stays in the list this long
+  BATTLE_EXPIRE: 15 * 60 * 1000, // nobody joined: cancelled, coins back
+  BATTLE_HISTORY: 10,
+
+  // Poker (hidden, opened from the jackpot page): one table, texas hold'em
+  POKER_SEATS: 5,
+  POKER_SMALL_BLIND: 5,
+  POKER_BIG_BLIND: 10,
+  POKER_MIN_BUYIN: 100,
+  POKER_MAX_BUYIN: 10000,
+  POKER_TURN: 20 * 1000, // time to act, then check (or fold)
+  POKER_START: 3000, // pause before a hand starts
+  POKER_STREET: 1200, // all-in: pause between the cards of the board
+  POKER_SHOWDOWN: 6000, // the result is shown this long
+  POKER_AWAY: 30 * 1000, // a player without an open page leaves the table
+  POKER_HISTORY: 10,
+
+  // Blackjack (hidden): one table against the dealer, a player can take several seats
+  BJ_SEATS: 7,
+  BJ_MY_SEATS: 3, // seats one player can have at a time
+  BJ_MIN_BET: 10,
+  BJ_MAX_BET: 5000, // per seat (a double or a split adds the same again)
+  BJ_BETTING: 10000, // after the first bet: time for the others to bet
+  BJ_SIT: 20000, // a seat without a bet: the player stands up after this
+  BJ_TURN: 15000, // time for a decision, then the hand stands
+  BJ_STEP: 700, // dealer cards, one after the other
+  BJ_RESULT: 5000, // the result is shown this long
+  BJ_HISTORY: 10,
 };

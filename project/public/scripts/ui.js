@@ -11,16 +11,30 @@ function avatarColor(name) {
 
 // Avatar with the first letter of the name (built with DOM nodes, no innerHTML).
 // Users with an own avatar (avatar maker) get it as soon as it is loaded.
+// The house in the jackpot when a player is alone (see sockets/jackpot_server.js)
+var GHOST_BET = "Ghost";
+
 function createAvatar(name, size, online) {
   var avatar = document.createElement("span");
   avatar.className = "mm-avatar" + (size ? " " + size : "");
+  if (name == GHOST_BET) {
+    avatar.classList.add("ghost");
+    avatar.innerText = "👻";
+    avatar.title = name;
+    avatar.dataset.name = name;
+    return avatar;
+  }
   avatar.style.background = avatarColor(name);
   avatar.innerText = name.charAt(0);
   avatar.title = name;
   avatar.dataset.name = name;
   if (typeof drawAvatar == "function") {
-    if (name in avatarCache) applyAvatar(avatar, avatarCache[name]);
-    else requestAvatar(name);
+    // Right away: the saved one, or the default avatar of the name (no flicker
+    // for most users); an own avatar replaces it once it is loaded
+    applyAvatar(avatar, name in avatarCache ? avatarCache[name] : null);
+    // The cache is only for the first moment: every page asks once for the
+    // current avatar, so changes by others show up
+    if (!avatarChecked.has(name)) requestAvatar(name);
   }
 
   if (online !== undefined) {
@@ -41,6 +55,7 @@ try {
   avatarCache = {};
 }
 var avatarQueue = new Set();
+var avatarChecked = new Set(); // names this page already asked the server for
 var avatarTimer = null;
 
 function saveAvatarCache() {
@@ -51,12 +66,15 @@ function saveAvatarCache() {
   }
 }
 
-// The letter avatar becomes the drawn one (the online dot stays)
+// config: own avatar, null = the default avatar of the name, "letter" = letter
+// (the online dot stays)
 function applyAvatar(element, config) {
   var old = element.querySelector(".mm-avatar-svg");
   if (old) old.remove();
-  element.classList.toggle("has-avatar", config != null);
-  if (config == null) {
+  if (config == null) config = nameAvatar(element.dataset.name);
+  var letter = config == AVATAR_LETTER;
+  element.classList.toggle("has-avatar", !letter);
+  if (letter) {
     if (element.firstChild == null || element.firstChild.nodeType != Node.TEXT_NODE) {
       element.insertBefore(document.createTextNode(element.dataset.name.charAt(0)), element.firstChild);
     }
@@ -74,8 +92,9 @@ function requestAvatar(name) {
 }
 
 function loadAvatars() {
-  var names = [...avatarQueue].filter((name) => !(name in avatarCache));
+  var names = [...avatarQueue].filter((name) => !avatarChecked.has(name));
   avatarQueue.clear();
+  names.forEach((name) => avatarChecked.add(name));
   if (names.length == 0) return;
   fetch("/requests/user/avatars?names=" + encodeURIComponent(names.join(",")), { credentials: "same-origin" })
     .then((response) => (response.ok ? response.json() : null))
@@ -88,12 +107,26 @@ function loadAvatars() {
 
 // Updates the cache and every avatar of this user on the page
 function setAvatarConfig(name, config) {
+  // Unchanged (the usual case): nothing to redraw
+  if (name in avatarCache && JSON.stringify(avatarCache[name]) == JSON.stringify(config)) return;
   avatarCache[name] = config;
   saveAvatarCache();
   document.querySelectorAll(".mm-avatar").forEach((element) => {
     if (element.dataset.name == name) applyAvatar(element, config);
   });
 }
+
+/*
+ * The server was restarted / updated while the page was open (the socket
+ * reconnected by itself): reload, so the page code fits the server again.
+ */
+document.addEventListener("DOMContentLoaded", () => {
+  var meta = document.querySelector('meta[name="app-version"]');
+  if (meta == null || typeof socket == "undefined") return;
+  socket.on("appVersion", (current) => {
+    if (current && current != meta.content) window.location.reload();
+  });
+});
 
 // Small square button with only an icon; the label is the hover tooltip
 function createIconButton(icon, label, extraClass, onClick) {

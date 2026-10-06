@@ -1,4 +1,5 @@
 const Statistic = require("../models/Statistic");
+const coins = require("../game/coins");
 const rooms = require("../game/rooms");
 const config = require("../game/config");
 const { CARD_COUNT, isValidCardId, createBoard } = require("../game/board");
@@ -11,6 +12,7 @@ const {
 } = require("../game/multiplayer_room");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
+const version = require("../game/version");
 const chat = require("../game/chat");
 const powerups = require("../game/powerups");
 
@@ -75,6 +77,7 @@ module.exports = function (io) {
   /* ---------- Connection ---------- */
 
   multiPlayer.on("connection", (socket) => {
+    version.announce(socket);
     const username = socket.data.username;
 
     /*
@@ -568,6 +571,29 @@ module.exports = function (io) {
     return running && room.players.some((player) => player.active) ? config.REJOIN_GRACE_PLAYING : 0;
   }
 
+  /*
+   * After a restart of the server: the room is there again, the players get
+   * the usual time to come back (their pages reload and join again). A game
+   * that was just starting starts, the clock of a speed round starts again.
+   */
+  rooms.onRestore("multiplayer", (gameID, room) => {
+    const now = Date.now();
+    room.timers = [];
+    room.spectators = new Map();
+    room.emptySince = now;
+    room.closingCard = null;
+    if (!(room.banned instanceof Set)) room.banned = new Set(room.banned || []);
+    room.players.forEach((player) => {
+      if (player.connected) {
+        player.connected = false;
+        player.disconnectedAt = now;
+      }
+      player.socketId = null;
+    });
+    if (room.status === STATUS.STARTING) room.status = STATUS.PLAYING;
+    if (room.status === STATUS.PLAYING) startTurnTimer(gameID, room);
+  });
+
   const ticker = setInterval(() => tick().catch(() => {}), config.TICK);
   ticker.unref();
 
@@ -1034,6 +1060,12 @@ module.exports = function (io) {
     const winners = active
       .filter((player) => player.points === highestPoints)
       .map((player) => player.name);
+
+    // Coins for the hidden jackpot: only for a game that was played to the end
+    // (not when the others surrendered or left)
+    if (room.foundMatches.length === CARD_COUNT) {
+      winners.forEach((name) => coins.reward(name, "multiplayer"));
+    }
 
     for (let i = 0; i < CARD_COUNT; i++) {
       multiPlayer.to(gameID).emit("turnCard", cardData(room, i));
