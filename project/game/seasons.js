@@ -68,6 +68,7 @@ function publicSeason(season) {
     budget: season.budget,
     dailyBonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : null,
     secondChances: season.secondChances || 0,
+    closeWait: closeWaitOf(season) / 1000,
     every: season.every,
     color: season.color || null,
     prizesOn: season.prizesOn,
@@ -112,6 +113,11 @@ async function load() {
   loaded = true;
 }
 
+// How long the countdown before the start and the end runs (ms): the season's own - or the setting
+function closeWaitOf(season) {
+  return Number.isInteger(season.closeWait) ? season.closeWait * 1000 : config.SEASON_CLOSE_WAIT;
+}
+
 // What the casino closes for: "start" (a season starts) or "end" (the running one ends)
 function closingKind() {
   return state.closing ? state.closing.kind || "start" : null;
@@ -136,10 +142,10 @@ async function closeFor(season, kind, now) {
   }
   // Every game quiet (or waited long enough): the countdown
   if (state.closing.startsAt == null && (casinoLock.busyGames().length === 0 || now - state.closing.since >= config.SEASON_CLOSE_MAX)) {
-    state.closing.startsAt = now + config.SEASON_CLOSE_WAIT;
+    state.closing.startsAt = now + closeWaitOf(season);
     await save();
     changes.emit("closing", closingInfo(now));
-    soon(config.SEASON_CLOSE_WAIT + 100);
+    soon(closeWaitOf(season) + 100);
   }
   if (state.closing.startsAt != null && now >= state.closing.startsAt) {
     state.closing = null;
@@ -185,6 +191,9 @@ function check(input, current) {
   if (color != null && !/^#[0-9a-f]{6}$/.test(color)) return { error: "A color like #d4a64a." };
   const secondChances = input.secondChances == null || input.secondChances === "" ? 0 : Number(input.secondChances);
   if (!Number.isInteger(secondChances) || secondChances < 0 || secondChances > 20) return { error: "Second chances: 0 to 20." };
+  // The countdown before the start and the end (seconds; not given: the setting, 1 minute)
+  const closeWait = input.closeWait == null || input.closeWait === "" ? null : Number(input.closeWait);
+  if (closeWait != null && (!Number.isInteger(closeWait) || closeWait < 0 || closeWait > 3600)) return { error: "The countdown: 0 to 3600 seconds." };
   const every = Number(input.every);
   if (!INTERVALS.includes(every)) return { error: "Unknown update interval." };
   const prizesOn = input.prizesOn === true;
@@ -212,7 +221,7 @@ function check(input, current) {
   // Never two seasons at the same time
   const other = state.seasons.find((season) => season !== current && !season.ended && season.start < end && start < season.end);
   if (other) return { error: `It overlaps with "${other.name}".` };
-  return { season: { name: name, icon: icon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, color: color, every: every, prizesOn: prizesOn, prizes: clean } };
+  return { season: { name: name, icon: icon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, closeWait: closeWait, color: color, every: every, prizesOn: prizesOn, prizes: clean } };
 }
 
 async function create(input) {

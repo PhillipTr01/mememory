@@ -171,18 +171,26 @@
 
             <!--- Seasons: planned ahead, every account starts with the budget, the winners at the end --->
             <section id="tab-seasons" class="ad-tab" hidden>
-                <div class="ad-grid ad-grid-side ad-seasons-grid">
-                    <div class="ad-stack">
-                        <div id="adSeasonNow" class="ad-card ad-season-now"></div>
-                        <div class="ad-card">
-                            <div class="ad-card-head"><h2 class="ad-title">All seasons</h2></div>
-                            <div id="adSeasonList" class="ad-season-list"></div>
-                        </div>
-                    </div>
+                <!--- #seasons: what runs now and every season --->
+                <div id="adSeasonsMain" class="ad-stack">
+                    <div id="adSeasonNow" class="ad-card ad-season-now"></div>
                     <div class="ad-card">
                         <div class="ad-card-head">
+                            <h2 class="ad-title">All seasons</h2>
+                            <a href="#seasons/new" class="mm-btn mm-btn-sm mm-btn-primary">+ New season</a>
+                        </div>
+                        <div id="adSeasonList" class="ad-season-list"></div>
+                    </div>
+                </div>
+                <!--- #seasons/new and #seasons/<id>: the details of one season, the form to plan / edit it --->
+                <div id="adSeasonPage" class="ad-grid ad-grid-side ad-seasons-grid" hidden>
+                    <div class="ad-stack">
+                        <a href="#seasons" class="ad-back">‹ All seasons</a>
+                        <div id="adSeasonDetail" class="ad-card"></div>
+                    </div>
+                    <div id="adSeasonFormCard" class="ad-card">
+                        <div class="ad-card-head">
                             <h2 class="ad-title" id="adSeasonFormTitle">New season</h2>
-                            <button type="button" id="adSeasonCancel" class="mm-btn mm-btn-sm" hidden>Cancel</button>
                         </div>
                         <form id="adSeasonForm" class="ad-season-form" autocomplete="off">
                             <div class="ad-season-name">
@@ -228,6 +236,11 @@
                                 <span class="ad-label">Second chances</span>
                                 <input id="adSeasonChances" class="mm-input" type="number" min="0" max="20" step="1" value="0">
                                 <span class="ad-setting-hint">A player who lost everything (0 coins, nothing in play) starts again with the budget - this many times. The first right away, every further one from the next day on.</span>
+                            </label>
+                            <label class="ad-field">
+                                <span class="ad-label">Countdown before start and end</span>
+                                <span class="ad-inline-input"><input id="adSeasonWait" class="mm-input" type="number" min="0" max="3600" step="1" value="60"><span class="ad-setting-unit">s</span></span>
+                                <span class="ad-setting-hint">When the start (and the end) comes, the casino closes: no new bets, running rounds finish - then this long until the season starts (ends).</span>
                             </label>
                             <label class="ad-field">
                                 <span class="ad-label">Leaderboard updates</span>

@@ -1072,6 +1072,34 @@ a.ad-link:focus-visible {
   grid-template-columns: minmax(0, 1fr) 360px;
 }
 
+/* A season's page: back to all of them */
+.ad-back {
+  align-self: flex-start;
+  color: var(--mm-muted);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ad-back:hover {
+  color: var(--mm-text);
+}
+
+.ad-season-row:not(.detail) {
+  cursor: pointer;
+}
+
+.ad-season-row.detail {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.ad-inline-input {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .ad-season-now {
   display: flex;
   flex-direction: column;
@@ -1488,4 +1516,15 @@ a.ad-link:focus-visible {
 .ad-picker-foot {
   display: flex;
   justify-content: space-between;
+}
+
+.ad-season-row:not(.detail):hover {
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+}
+
+/* (the pages of the seasons: one at a time) */
+#adSeasonsMain[hidden],
+#adSeasonPage[hidden],
+#adSeasonFormCard[hidden] {
+  display: none;
 }

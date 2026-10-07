@@ -154,7 +154,7 @@ test("seasons: before the start the casino closes - running games finish, no new
   seasons.changes.on("closing", onClosing);
   config.SEASON_CLOSE_WAIT = 60 * 1000;
   try {
-    const made = await seasons.create({ name: "Closing", icon: "🚪", start: now - 500, end: now + 3600 * 1000, budget: 900, every: 0 });
+    const made = await seasons.create({ name: "Closing", icon: "🚪", start: now - 500, end: now + 3600 * 1000, budget: 900, every: 0, closeWait: 30 });
     // A round still runs: closed, but no countdown yet
     await seasons.tick(now);
     assert.ok(casinoLock.locked(), "no new bets");
@@ -162,17 +162,17 @@ test("seasons: before the start the casino closes - running games finish, no new
     assert.strictEqual(seasons.running(), null);
     assert.strictEqual(seasons.closingInfo(now).startsIn, null);
     assert.strictEqual(seasons.list().find((x) => x.id === made.season.id).status, "starting");
-    // The round is over: one minute, then the season
+    // The round is over: the countdown of the season (30 s, not the 1 minute of the setting), then the season
     busy = false;
     await seasons.tick(now + 5000);
-    assert.strictEqual(seasons.closingInfo(now + 5000).startsIn, 60 * 1000);
-    await seasons.tick(now + 30 * 1000);
+    assert.strictEqual(seasons.closingInfo(now + 5000).startsIn, 30 * 1000);
+    await seasons.tick(now + 20 * 1000);
     assert.strictEqual(seasons.running(), null, "still waiting");
     assert.ok(casinoLock.locked());
-    await seasons.tick(now + 66 * 1000);
+    await seasons.tick(now + 36 * 1000);
     assert.strictEqual(seasons.running().name, "Closing");
     assert.ok(!casinoLock.locked(), "open again");
-    assert.deepStrictEqual(events.map((e) => e.startsIn), [null, 60 * 1000]);
+    assert.deepStrictEqual(events.map((e) => e.startsIn), [null, 30 * 1000]);
     await seasons.endNow(made.season.id);
   } finally {
     config.SEASON_CLOSE_WAIT = 0;

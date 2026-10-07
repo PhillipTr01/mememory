@@ -98,7 +98,12 @@ function showTab() {
   if (tab == "payouts") loadPayouts();
   if (tab == "history") loadHistory();
   if (tab == "chat") loadChat();
-  if (tab == "seasons") loadSeasons();
+  if (tab == "seasons") {
+    seasonView = parts[1] == "new" ? "new" : parts[1] ? Number(parts[1]) : null;
+    seasonFormFor = undefined;
+    closePicker();
+    loadSeasons();
+  }
   if (tab == "settings") loadSettings();
 }
 
@@ -507,7 +512,9 @@ var SEASON_COLORS = ["#d4a64a", "#e0675a", "#e8913a", "#6fa784", "#4fb3a9", "#5b
 var GOLD = "#d4a64a";
 var SEASON_ICONS = ["🏆", "🔥", "❄️", "🌸", "☀️", "🍂", "🎃", "🎄", "💎", "🚀", "👑", "🐸"];
 var EVERY_NAMES = { 0: "live", 5: "every 5 min", 15: "every 15 min", 60: "every hour", 360: "every 6 hours", 1440: "once a day" };
-var STATUS_NAMES = { planned: "Planned", running: "Running", ended: "Over" };
+var STATUS_NAMES = { planned: "Planned", starting: "Starting", running: "Running", ended: "Over" };
+var seasonView = null; // the page of the seasons: null (all of them), "new" or the id of one
+var seasonFormFor = undefined; // the page the form was filled for (it stays as it is while editing)
 
 function dateText(value) {
   return new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -536,13 +543,45 @@ async function loadSeasons(quiet) {
     seasonList = data.seasons;
     dailyBonusSetting = data.dailyBonus;
     renderSeasons();
-    if (!quiet && editingSeason == null && !document.getElementById("adSeasonName").value) seasonDefaults();
+    // The form: filled once per page (not by the refresh every few seconds)
+    if (seasonFormFor !== seasonView) fillSeasonPage();
   } catch (error) {
     fail(error);
   }
 }
 
+// #seasons/new: an empty form; #seasons/<id>: the season in it (not one that is over)
+function fillSeasonPage() {
+  seasonFormFor = seasonView;
+  if (seasonView == null) return;
+  if (seasonView == "new") return seasonDefaults();
+  var season = seasonList.find((s) => s.id == seasonView);
+  if (!season) {
+    location.hash = "#seasons";
+    return;
+  }
+  if (season.status != "ended") {
+    editingSeason = season.id;
+    fillSeasonForm(season);
+  }
+}
+
 function renderSeasons() {
+  var view = seasonView == null || seasonView == "new" ? null : seasonList.find((s) => s.id == seasonView);
+  document.getElementById("adSeasonsMain").hidden = seasonView != null;
+  document.getElementById("adSeasonPage").hidden = seasonView == null;
+  if (seasonView != null) {
+    document.getElementById("adPageTitle").innerText = view ? view.icon + " " + view.name : "New season";
+    document.getElementById("adPageSub").innerText = view ? STATUS_NAMES[view.status] + " · " + dateText(view.start) + " → " + dateText(view.end) : "Plan a season: everybody who hits Start begins with the same budget, the most coins win.";
+    document.getElementById("adSeasonFormCard").hidden = view != null && view.status == "ended";
+    var detail = document.getElementById("adSeasonDetail");
+    if (view) detail.replaceChildren(seasonRow(view, true));
+    else
+      detail.replaceChildren(
+        el("h2", "ad-title", "How a season goes"),
+        el("p", "ad-note", "At the start the casino closes: no new bets, running rounds finish, then the countdown - and the season starts. Every player hits Start to join with the budget; only they are on the leaderboard. At the end the same closing, then the final places (with the prizes) - and everybody gets the coins from before back, with what they won on top."),
+      );
+  }
   var running = seasonList.find((s) => s.status == "running");
   var next = seasonList.filter((s) => s.status == "planned").sort((a, b) => a.start - b.start)[0];
   document.getElementById("adSeasonBadge").hidden = !running;
@@ -559,11 +598,11 @@ function renderSeasons() {
     now.replaceChildren(
       el("span", "ad-label", "No season running"),
       el("p", "ad-season-idle", "The leaderboard is the normal one - live, all the time."),
-      el("p", "ad-note", next ? "Next: " + next.icon + " " + next.name + " starts in " + span(next.start - Date.now()) + " (" + dateText(next.start) + ")." : "Plan a season on the right."),
+      el("p", "ad-note", next ? "Next: " + next.icon + " " + next.name + " starts in " + span(next.start - Date.now()) + " (" + dateText(next.start) + ")." : "Plan one with + New season."),
     );
   }
   var list = document.getElementById("adSeasonList");
-  list.replaceChildren(...(seasonList.length ? seasonList.map(seasonRow) : [el("p", "ad-empty", "No seasons yet.")]));
+  list.replaceChildren(...(seasonList.length ? seasonList.map((s) => seasonRow(s)) : [el("p", "ad-empty", "No seasons yet.")]));
 }
 
 function seasonHead(season) {
@@ -577,10 +616,19 @@ function seasonHead(season) {
   return head;
 }
 
-function seasonRow(season) {
-  var row = el("div", "ad-season-row " + season.status);
+// A season in the list (a click opens its page) - or on its page (detail: more facts)
+function seasonRow(season, detail) {
+  var row = el("div", "ad-season-row " + season.status + (detail ? " detail" : ""));
   row.appendChild(seasonHead(season));
+  if (!detail)
+    row.addEventListener("click", (event) => {
+      if (!event.target.closest("button")) location.hash = "#seasons/" + season.id;
+    });
   var facts = el("div", "ad-season-facts");
+  if (detail) {
+    var left = season.status == "planned" || season.status == "starting" ? "starts in " + span(season.start - Date.now()) : season.status == "running" ? "ends in " + span(season.end - Date.now()) : "over " + dateText(season.endedAt || season.end);
+    facts.append(el("span", "", "⏱️ " + left), el("span", "", "👥 " + (season.players || 0) + (season.players == 1 ? " player" : " players")), el("span", "", "⏳ " + season.closeWait + " s countdown"));
+  }
   facts.append(el("span", "", "🪙 " + formatCoins(season.budget) + " start"), el("span", "", "🎁 " + formatCoins(season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting) + " a day"), el("span", "", "💔 " + (season.secondChances || 0) + " second chance" + (season.secondChances == 1 ? "" : "s")), el("span", "", "📊 " + EVERY_NAMES[season.every]), el("span", "", season.prizesOn ? "🏅 " + season.prizes.length + (season.prizes.length == 1 ? " prize" : " prizes") : "no prizes"));
   if (season.status == "ended" && season.winner) facts.append(el("span", "ad-season-winner", "🥇 " + season.winner.username + " · 🪙 " + formatCoins(season.winner.coins)));
   row.appendChild(facts);
@@ -596,7 +644,7 @@ function seasonRow(season) {
     b.addEventListener("click", handler);
     actions.appendChild(b);
   };
-  if (season.status != "ended") button("Edit", "", () => editSeason(season));
+  if (!detail) button(season.status == "ended" ? "Details" : "Open", "", () => (location.hash = "#seasons/" + season.id));
   if (season.status == "running") button("End now", "mm-btn-danger", () => endSeason(season));
   if (season.status != "running") button("Delete", "", () => deleteSeason(season));
   row.appendChild(actions);
@@ -622,6 +670,7 @@ function fillSeasonForm(season) {
   document.getElementById("adSeasonBudget").value = season.budget;
   document.getElementById("adSeasonBonus").value = season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting;
   document.getElementById("adSeasonChances").value = season.secondChances || 0;
+  document.getElementById("adSeasonWait").value = season.closeWait != null ? season.closeWait : 60;
   document.getElementById("adSeasonColor").value = season.color || GOLD;
   markColor();
   document.getElementById("adSeasonEvery").value = season.every;
@@ -634,9 +683,8 @@ function fillSeasonForm(season) {
   document.getElementById("adSeasonPrizes").replaceChildren(...season.prizes.map(prizeRow));
   if (season.prizes.length == 0) document.getElementById("adSeasonPrizes").appendChild(prizeRow({ place: 1, prize: "" }));
   showPrizes();
-  document.getElementById("adSeasonFormTitle").innerText = editingSeason == null ? "New season" : "Edit " + season.name;
+  document.getElementById("adSeasonFormTitle").innerText = editingSeason == null ? "New season" : "Edit";
   document.getElementById("adSeasonSave").innerText = editingSeason == null ? "Plan the season" : "Save";
-  document.getElementById("adSeasonCancel").hidden = editingSeason == null;
   markIcon();
 }
 
@@ -866,12 +914,6 @@ function markIcon() {
   document.querySelectorAll("#adSeasonIcons button").forEach((b) => b.classList.toggle("active", b.innerText == icon));
 }
 
-function editSeason(season) {
-  editingSeason = season.id;
-  fillSeasonForm(season);
-  document.getElementById("adSeasonName").focus();
-}
-
 async function saveSeason(event) {
   event.preventDefault();
   var prizes = [...document.querySelectorAll("#adSeasonPrizes .ad-prize-row")]
@@ -885,6 +927,7 @@ async function saveSeason(event) {
     budget: Number(document.getElementById("adSeasonBudget").value),
     dailyBonus: Number(document.getElementById("adSeasonBonus").value),
     secondChances: Number(document.getElementById("adSeasonChances").value) || 0,
+    closeWait: Number(document.getElementById("adSeasonWait").value),
     // The gold of the casino: no own color
     color: document.getElementById("adSeasonColor").value.toLowerCase() == GOLD ? null : document.getElementById("adSeasonColor").value,
     every: Number(document.getElementById("adSeasonEvery").value),
@@ -898,8 +941,9 @@ async function saveSeason(event) {
     var data = await api(editingSeason == null ? "seasons" : "seasons/" + editingSeason, body);
     seasonList = data.seasons;
     showToast(editingSeason == null ? body.icon + " " + body.name + " is planned" : "Saved");
-    seasonDefaults();
-    renderSeasons();
+    // A new one: its page (the form with it)
+    if (editingSeason == null && data.season) location.hash = "#seasons/" + data.season.id;
+    else renderSeasons();
   } catch (error) {
     fail(error);
   }
@@ -911,7 +955,7 @@ async function endSeason(season) {
     seasonList = (await api("seasons/" + season.id + "/end", {})).seasons;
     renderSeasons();
     var over = seasonList.find((s) => s.id == season.id);
-    showToast(over && over.status == "ended" ? season.name + " is over" : season.name + " ends in a minute - the casino is closing");
+    showToast(over && over.status == "ended" ? season.name + " is over" : season.name + " ends in " + season.closeWait + " s once the games are done - the casino is closing");
   } catch (error) {
     fail(error);
   }
@@ -921,8 +965,9 @@ async function deleteSeason(season) {
   if (!(await confirmDialog({ title: "Delete " + season.name + "?", text: season.status == "ended" ? "Its winner page is gone too." : "It won't start.", confirmLabel: "Delete", danger: true }))) return;
   try {
     seasonList = (await api("seasons/" + season.id + "/delete", {})).seasons;
-    if (editingSeason == season.id) seasonDefaults();
-    renderSeasons();
+    showToast(season.name + " is deleted");
+    if (seasonView != null) location.hash = "#seasons";
+    else renderSeasons();
   } catch (error) {
     fail(error);
   }
@@ -1270,7 +1315,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("adResetForm").addEventListener("submit", hardReset);
   // Seasons
   document.getElementById("adSeasonForm").addEventListener("submit", saveSeason);
-  document.getElementById("adSeasonCancel").addEventListener("click", seasonDefaults);
   document.getElementById("adSeasonPrizesOn").addEventListener("change", showPrizes);
   document.getElementById("adSeasonAddPrize").addEventListener("click", () => {
     var rows = document.querySelectorAll("#adSeasonPrizes .ad-prize-row");

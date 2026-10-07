@@ -549,10 +549,7 @@
   socket.on("seasonClosing", showClosing);
 
   // A new season: the casino starts anew - the page loads again (new coins, the games from the start)
-  socket.on("seasonStarted", (season) => {
-    showToast((season.icon || "🏆") + " " + season.name + " starts - everybody has 🪙 " + format(season.budget) + "!");
-    setTimeout(() => location.reload(), 2500);
-  });
+  socket.on("seasonStarted", () => location.reload());
 
   // A season is over: everything is as before it - the page loads again (a game page), then a notice
   // with the way to the winners
