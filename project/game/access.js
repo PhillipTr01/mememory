@@ -42,7 +42,7 @@ function startCoins(first, now = Date.now()) {
   const base = coins.base();
   const from = first == null ? null : Math.max(new Date(first).getTime(), base.since || 0);
   const missed = from == null ? 0 : Math.max(0, days.dayNumber(now) - days.dayNumber(from));
-  return { coins: base.start + missed * config.DAILY_BONUS, missed: missed };
+  return { coins: base.start + missed * coins.dailyBonus(), missed: missed };
 }
 
 // Let a player in: {username, coins, missed, again} or {error}

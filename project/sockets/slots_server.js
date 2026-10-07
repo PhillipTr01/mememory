@@ -240,7 +240,7 @@ module.exports = function (io) {
     socket.on(
       "claimBonus",
       safe("claimBonus", async () => {
-        if (await coins.claimBonus(username)) socket.emit("bonusClaimed", config.DAILY_BONUS);
+        if (await coins.claimBonus(username)) socket.emit("bonusClaimed", coins.dailyBonus());
         await sendCoins(username);
       }),
     );

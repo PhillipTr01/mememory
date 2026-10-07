@@ -488,6 +488,7 @@ async function loadHistory(event) {
 /* ---------- Seasons ---------- */
 
 var seasonList = [];
+var dailyBonusSetting = 2500; // the daily bonus of the settings (a new season starts with it)
 var editingSeason = null; // id of the season in the form (null: a new one)
 var SEASON_ICONS = ["🏆", "🔥", "❄️", "🌸", "☀️", "🍂", "🎃", "🎄", "💎", "🚀", "👑", "🐸"];
 var EVERY_NAMES = { 0: "live", 5: "every 5 min", 15: "every 15 min", 60: "every hour", 360: "every 6 hours", 1440: "once a day" };
@@ -518,6 +519,7 @@ async function loadSeasons(quiet) {
   try {
     var data = await api("seasons");
     seasonList = data.seasons;
+    dailyBonusSetting = data.dailyBonus;
     renderSeasons();
     if (!quiet && editingSeason == null && !document.getElementById("adSeasonName").value) seasonDefaults();
   } catch (error) {
@@ -561,7 +563,7 @@ function seasonRow(season) {
   var row = el("div", "ad-season-row " + season.status);
   row.appendChild(seasonHead(season));
   var facts = el("div", "ad-season-facts");
-  facts.append(el("span", "", "🪙 " + formatCoins(season.budget) + " start"), el("span", "", "📊 " + EVERY_NAMES[season.every]), el("span", "", season.prizesOn ? "🎁 " + season.prizes.length + (season.prizes.length == 1 ? " prize" : " prizes") : "no prizes"));
+  facts.append(el("span", "", "🪙 " + formatCoins(season.budget) + " start"), el("span", "", "🎁 " + formatCoins(season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting) + " a day"), el("span", "", "📊 " + EVERY_NAMES[season.every]), el("span", "", season.prizesOn ? "🏅 " + season.prizes.length + (season.prizes.length == 1 ? " prize" : " prizes") : "no prizes"));
   if (season.status == "ended" && season.winner) facts.append(el("span", "ad-season-winner", "🥇 " + season.winner.username + " · 🪙 " + formatCoins(season.winner.coins)));
   row.appendChild(facts);
   if (season.prizesOn && season.prizes.length) {
@@ -591,7 +593,7 @@ function seasonDefaults() {
   start.setHours(start.getHours() + 1);
   var last = seasonList.filter((s) => s.status != "ended").sort((a, b) => b.end - a.end)[0];
   if (last && last.end > start.getTime()) start = new Date(last.end);
-  fillSeasonForm({ name: "Season " + (seasonList.length + 1), icon: "🏆", start: start.getTime(), end: start.getTime() + 7 * 24 * 3600 * 1000, budget: 25000, every: 0, prizesOn: false, prizes: [] });
+  fillSeasonForm({ name: "Season " + (seasonList.length + 1), icon: "🏆", start: start.getTime(), end: start.getTime() + 7 * 24 * 3600 * 1000, budget: 25000, dailyBonus: dailyBonusSetting, every: 0, prizesOn: false, prizes: [] });
 }
 
 function fillSeasonForm(season) {
@@ -600,6 +602,7 @@ function fillSeasonForm(season) {
   document.getElementById("adSeasonStart").value = localInput(season.start);
   document.getElementById("adSeasonEnd").value = localInput(season.end);
   document.getElementById("adSeasonBudget").value = season.budget;
+  document.getElementById("adSeasonBonus").value = season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting;
   document.getElementById("adSeasonEvery").value = season.every;
   document.getElementById("adSeasonPrizesOn").checked = season.prizesOn;
   // A running season: start and budget happened already
@@ -668,6 +671,7 @@ async function saveSeason(event) {
     start: new Date(document.getElementById("adSeasonStart").value).getTime(),
     end: new Date(document.getElementById("adSeasonEnd").value).getTime(),
     budget: Number(document.getElementById("adSeasonBudget").value),
+    dailyBonus: Number(document.getElementById("adSeasonBonus").value),
     every: Number(document.getElementById("adSeasonEvery").value),
     prizesOn: document.getElementById("adSeasonPrizesOn").checked,
     prizes: prizes,

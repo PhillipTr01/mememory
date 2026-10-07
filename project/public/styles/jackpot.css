@@ -2990,3 +2990,113 @@ body.jackpot-theme {
   margin-left: auto;
   margin-right: auto;
 }
+
+/* ---------- The leaderboard in the bar at the top (the season, when one runs) ---------- */
+.nav-board {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-right: 0.45rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.nav-board:hover,
+.nav-board.active {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  background: rgba(var(--mm-accent-rgb), 0.1);
+  color: var(--mm-accent);
+}
+
+.nav-board.season {
+  border-color: rgba(var(--mm-accent-rgb), 0.45);
+}
+
+.nav-board-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.nav-board-text {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 767px) {
+  /* Small screens: only the icon */
+  .nav-board {
+    padding: 0.35rem 0.55rem;
+  }
+  .nav-board-text {
+    display: none;
+  }
+}
+
+/* A season is over: a notice at the bottom with the way to the winners */
+.cs-season-notice {
+  position: fixed;
+  left: 50%;
+  bottom: 110px;
+  z-index: 1080;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: min(560px, calc(100vw - 32px));
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.6);
+  border-radius: 16px;
+  background: var(--mm-surface);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(var(--mm-accent-rgb), 0.2);
+  transform: translateX(-50%);
+  animation: cs-season-in 0.4s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+@keyframes cs-season-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+}
+
+.cs-season-notice-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.cs-season-notice-text span {
+  font-size: 0.85rem;
+  color: var(--mm-muted);
+}
+
+.cs-season-notice-link {
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  background: var(--mm-accent);
+  color: #1a1206;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.cs-season-notice-link:hover {
+  color: #1a1206;
+  filter: brightness(1.08);
+}
+
+.cs-season-notice-close {
+  border: 0;
+  background: none;
+  color: var(--mm-muted);
+  font-size: 0.9rem;
+}

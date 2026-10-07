@@ -2,6 +2,7 @@ const EventEmitter = require("events");
 const User = require("../models/User");
 const Setting = require("../models/Setting");
 const coins = require("./coins");
+const config = require("./config");
 const { seasonReset } = require("./hard_reset");
 
 /*
@@ -44,6 +45,7 @@ function publicSeason(season) {
     start: season.start,
     end: season.end,
     budget: season.budget,
+    dailyBonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : null,
     every: season.every,
     prizesOn: season.prizesOn,
     prizes: season.prizes,
@@ -99,6 +101,9 @@ function check(input, current) {
   if (end <= start) return { error: "The end comes after the start." };
   const budget = Number(input.budget);
   if (!Number.isInteger(budget) || budget < 0 || budget > 1000000000) return { error: "A start budget from 0 to 1,000,000,000." };
+  // (not given: the daily bonus of the settings)
+  const dailyBonus = input.dailyBonus == null || input.dailyBonus === "" ? config.DAILY_BONUS : Number(input.dailyBonus);
+  if (!Number.isInteger(dailyBonus) || dailyBonus < 0 || dailyBonus > 10000000) return { error: "A daily bonus from 0 to 10,000,000." };
   const every = Number(input.every);
   if (!INTERVALS.includes(every)) return { error: "Unknown update interval." };
   const prizesOn = input.prizesOn === true;
@@ -126,7 +131,7 @@ function check(input, current) {
   // Never two seasons at the same time
   const other = state.seasons.find((season) => season !== current && !season.ended && season.start < end && start < season.end);
   if (other) return { error: `It overlaps with "${other.name}".` };
-  return { season: { name: name, icon: icon, start: start, end: end, budget: budget, every: every, prizesOn: prizesOn, prizes: clean } };
+  return { season: { name: name, icon: icon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, every: every, prizesOn: prizesOn, prizes: clean } };
 }
 
 async function create(input) {
@@ -146,6 +151,11 @@ async function update(id, input) {
   const result = check(input, season);
   if (result.error) return result;
   Object.assign(season, result.season);
+  // The running season: its daily bonus counts right away
+  if (status(season) === "running" && state.base) {
+    state.base.bonus = season.dailyBonus;
+    coins.setBase(state.base);
+  }
   await save();
   await tick();
   return { season: publicSeason(season) };
@@ -166,7 +176,7 @@ async function remove(id) {
 async function startSeason(season, now) {
   season.started = true;
   season.startedAt = now;
-  state.base = { reset: "season-" + season.id, start: season.budget, since: now };
+  state.base = { reset: "season-" + season.id, start: season.budget, since: now, bonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : null };
   coins.setBase(state.base);
   await save();
   const players = await User.find({ casinoApproved: true }).select("username").lean();
@@ -183,6 +193,11 @@ async function endSeason(season, now) {
   season.final = { at: now, rows: rows.map((row) => (prizes.has(row.rank) ? { ...row, prize: prizes.get(row.rank) } : row)) };
   season.ended = true;
   season.endedAt = now;
+  // The coins stay until the next season - the daily bonus is the normal one again
+  if (state.base) {
+    state.base.bonus = null;
+    coins.setBase(state.base);
+  }
   await save();
   changes.emit("ended", publicSeason(season));
 }

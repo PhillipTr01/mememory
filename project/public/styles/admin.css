@@ -1182,3 +1182,7 @@ a.ad-link:focus-visible {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+#adSeasonCancel[hidden] {
+  display: none;
+}

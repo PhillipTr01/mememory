@@ -45,7 +45,9 @@
                         </div>
                     </div>
                     <div class="col-6 d-flex justify-content-end align-items-center">
-                        <button type="button" id="navBonus" class="nav-bonus ms-auto" hidden>🎁 <span id="navBonusText">Free coins</span></button>
+                        <!--- The leaderboard (with the season, when one runs) --->
+                        <a href="leaderboard" id="navBoard" class="nav-board ms-auto" title="Leaderboard"><span id="navBoardIcon" class="nav-board-icon" aria-hidden="true">🏆</span><span id="navBoardText" class="nav-board-text">Leaderboard</span></a>
+                        <button type="button" id="navBonus" class="nav-bonus" hidden>🎁 <span id="navBonusText">Free coins</span></button>
                         <button type="button" id="navCoins" class="nav-coins" title="Your coins - click to pay out" hidden>🪙 <span id="navCoinsValue">-</span></button>
                         <div class="profile-menu" id="profileMenu">
                   <button type="button" class="profile-trigger" id="profileTrigger" aria-haspopup="true" aria-expanded="false">
@@ -85,14 +87,22 @@
     <main class="room-page">
         <div class="room-layout">
             <div class="room-main">
-                <section class="mm-card lb-main">
+                <!--- The winner page of a season that is over --->
+                <section id="lbWinners" class="mm-card lb-winners" hidden></section>
+
+                <section id="lbBoard" class="mm-card lb-main">
 
                     <div class="jp-head">
                         <div>
                             <h1 class="jp-title" data-info="leaderboard"><svg class="cs-title-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M14 8 H34 V20 Q34 30 24 30 Q14 30 14 20 Z" fill="#f5c542" /><path d="M14 11 H8 Q8 21 15 22 M34 11 H40 Q40 21 33 22" fill="none" stroke="#d4a017" stroke-width="2.6" /><rect x="21" y="29" width="6" height="6" fill="#d4a017" /><rect x="15" y="35" width="18" height="6" rx="2" fill="#8a5a00" /><path d="M24 12 L25.6 16 L29.8 16.2 L26.5 18.8 L27.6 22.8 L24 20.5 L20.4 22.8 L21.5 18.8 L18.2 16.2 L22.4 16 Z" fill="#fff7d6" /></svg> Leaderboard</h1>
-                            <p id="lbStatus" class="jp-status">Updated once a day at midnight</p>
+                            <p id="lbStatus" class="jp-status">Live</p>
                         </div>
+                        <!--- The season that runs --->
+                        <div id="lbSeason" class="lb-season" hidden></div>
                     </div>
+
+                    <!--- The last season is over: the way to its winners --->
+                    <button type="button" id="lbLastSeason" class="lb-last-season" hidden></button>
 
                     <!--- The top three --->
                     <div id="lbPodium" class="lb-podium"></div>
@@ -109,10 +119,10 @@
             <aside class="room-side">
                 <div class="mm-card side-card">
                     <div class="side-head">
-                        <span class="fw-semibold"><i class="bi bi-clock-history me-2"></i>Next update</span>
+                        <span class="fw-semibold" id="lbNextTitle"><i class="bi bi-clock-history me-2"></i>Next update</span>
                     </div>
                     <p id="lbNext" class="lb-next">-</p>
-                    <p class="mm-muted small mb-0">The places are counted once a day at midnight - the arrows show the change since the day before.</p>
+                    <p id="lbNextNote" class="mm-muted small mb-0">The places are counted all the time - the arrows show the change since midnight.</p>
                 </div>
 
                 <div class="mm-card chat-card">
@@ -232,17 +242,6 @@
                 <circle cx="41" cy="12" r="1.1" fill="#fecaca" />
               </svg>
               <span class="cs-dock-name">Slots</span>
-            </a>
-            <a href="leaderboard" class="cs-tab active" aria-current="page">
-              <svg class="cs-dock-icon" viewBox="0 0 48 48" aria-hidden="true">
-                <!--- A trophy --->
-                <path d="M14 8 H34 V20 Q34 30 24 30 Q14 30 14 20 Z" fill="#f5c542" />
-                <path d="M14 11 H8 Q8 21 15 22 M34 11 H40 Q40 21 33 22" fill="none" stroke="#d4a017" stroke-width="2.6" />
-                <rect x="21" y="29" width="6" height="6" fill="#d4a017" />
-                <rect x="15" y="35" width="18" height="6" rx="2" fill="#8a5a00" />
-                <path d="M24 12 L25.6 16 L29.8 16.2 L26.5 18.8 L27.6 22.8 L24 20.5 L20.4 22.8 L21.5 18.8 L18.2 16.2 L22.4 16 Z" fill="#fff7d6" />
-              </svg>
-              <span class="cs-dock-name">Leaderboard</span>
             </a>
         </nav>
     </div>

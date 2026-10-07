@@ -267,4 +267,48 @@
       }, 900);
     }
   });
+
+  /* ---------- Seasons: the link to the leaderboard, a season starting or ending ---------- */
+
+  var board = document.getElementById("navBoard");
+  function showSeason(data) {
+    if (!board) return;
+    var season = data && data.season;
+    document.getElementById("navBoardIcon").innerText = season ? season.icon : "🏆";
+    document.getElementById("navBoardText").innerText = season ? season.name : "Leaderboard";
+    board.classList.toggle("season", !!season);
+    board.title = season ? season.name + " - the leaderboard of the season" : "Leaderboard";
+  }
+  if (board) {
+    // The leaderboard page itself: marked
+    if (/\/leaderboard\/?$/.test(location.pathname)) board.classList.add("active");
+    fetch("season", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then(showSeason)
+      .catch(() => {});
+  }
+
+  // A new season: the casino starts anew - the page loads again (new coins, the games from the start)
+  socket.on("seasonStarted", (season) => {
+    showToast((season.icon || "🏆") + " " + season.name + " starts - everybody has 🪙 " + format(season.budget) + "!");
+    setTimeout(() => location.reload(), 2500);
+  });
+
+  // A season is over: a notice with the way to the winners
+  socket.on("seasonEnded", (season) => {
+    showSeason(null);
+    var notice = el("div", "cs-season-notice");
+    var text = el("div", "cs-season-notice-text");
+    text.append(el("b", "", (season.icon || "🏆") + " " + season.name + " is over!"), el("span", "", season.winner ? "🥇 " + season.winner.username + " wins with 🪙 " + format(season.winner.coins) : "The final places are in."));
+    var link = el("a", "cs-season-notice-link", "See the winners");
+    link.href = "leaderboard?season=" + season.id;
+    var close = el("button", "cs-season-notice-close", "✕");
+    close.type = "button";
+    close.setAttribute("aria-label", "Close");
+    close.addEventListener("click", () => notice.remove());
+    notice.append(text, link, close);
+    document.body.appendChild(notice);
+    // On the leaderboard: the winner page right away
+    if (window.showWinners) window.showWinners(season.id);
+  });
 })();

@@ -1,4 +1,5 @@
 const config = require("./config");
+const coins = require("./coins");
 const slots = require("./slots");
 
 /*
@@ -157,8 +158,9 @@ const GAMES = {
         heading: "How it works",
         items: [
           "All players by their coins.",
-          "It is made once a day at midnight and stays the same until the next day. The arrows show who went up or down since the day before.",
-          `🪙 ${n(config.DAILY_BONUS)} free coins every day for everybody.`,
+          "Without a season it is live - always up to date. The arrows show who went up or down since midnight.",
+          "In a season everybody starts with the same budget, the leaderboard is updated as often as the season says - and at the end the best win (with prizes, if the season has any).",
+          `🪙 ${n(coins.dailyBonus())} free coins every day for everybody.`,
         ],
       },
     ],

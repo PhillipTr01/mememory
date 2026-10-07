@@ -48,6 +48,11 @@ function base() {
   return seasonBase || { reset: config.COIN_RESET, start: config.START_COINS, since: null };
 }
 
+// The free coins of the day: the running season's - or the setting
+function dailyBonus() {
+  return seasonBase && Number.isInteger(seasonBase.bonus) ? seasonBase.bonus : config.DAILY_BONUS;
+}
+
 // The balance as the player sees it (accounts from before a reset get the start coins)
 function balanceOf(user) {
   const now = base();
@@ -82,7 +87,7 @@ async function get(username) {
   await ensure(username);
   const user = await User.findOne({ username: username }).select("coins coinBonusAt payoutAllowed");
   if (user == null) return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), payout: false };
-  return { coins: user.coins || 0, bonus: bonusAvailable(user), bonusIn: bonusIn(user), bonusAmount: config.DAILY_BONUS, payout: user.payoutAllowed === true };
+  return { coins: user.coins || 0, bonus: bonusAvailable(user), bonusIn: bonusIn(user), bonusAmount: dailyBonus(), payout: user.payoutAllowed === true };
 }
 
 /*
@@ -134,10 +139,10 @@ async function claimBonus(username, now = Date.now()) {
       username: username,
       $or: [{ coinBonusAt: { $exists: false } }, { coinBonusAt: null }, { coinBonusAt: { $lt: new Date(days.dayStart(now)) } }],
     },
-    { $inc: { coins: config.DAILY_BONUS }, $set: { coinBonusAt: new Date(now) } },
+    { $inc: { coins: dailyBonus() }, $set: { coinBonusAt: new Date(now) } },
   );
   if (changed(result)) {
-    log(username, config.DAILY_BONUS, "daily bonus");
+    log(username, dailyBonus(), "daily bonus");
     notify(username);
   }
   return changed(result);
@@ -150,4 +155,4 @@ function reward(username, mode) {
   add(username, amount, { reason: "game win", note: mode }).catch((error) => console.error("[coins] Could not add coins:", error));
 }
 
-module.exports = { setBase, base, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };
+module.exports = { setBase, base, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };

@@ -341,7 +341,7 @@ module.exports = function (io) {
       "claimBonus",
       safe("claimBonus", async () => {
         if (await coins.claimBonus(username)) {
-          socket.emit("bonusClaimed", config.DAILY_BONUS);
+          socket.emit("bonusClaimed", coins.dailyBonus());
         }
         await sendCoins(username);
       }),

@@ -61,6 +61,10 @@ test("seasons: planned ahead - at the start every account gets the budget, at th
   assert.ok(h.coinLogs.every((row) => row.reason === "season start"));
   assert.strictEqual(coins.base().start, 50000);
   await h.wait(10);
+  // The daily bonus of the season (changed while it runs)
+  assert.strictEqual(coins.dailyBonus(), 2500, "the setting when none was given");
+  assert.ok((await seasons.update(made.season.id, { ...seasons.publicSeason(seasons.running()), dailyBonus: 777 })).season);
+  assert.strictEqual(coins.dailyBonus(), 777);
   // A player let in now starts with the budget too
   assert.strictEqual(access.startCoins(null).coins, 50000);
 
@@ -87,8 +91,9 @@ test("seasons: planned ahead - at the start every account gets the budget, at th
   const after = await leaderboard.view("anna", end + 2000);
   assert.ok(after.live && after.season === null);
   assert.strictEqual(after.lastSeason.id, made.season.id);
-  // The coins stay as they were until the next season
+  // The coins stay as they were until the next season, the daily bonus is the normal one again
   assert.strictEqual(h.coinsOf("cleo"), 80000);
+  assert.strictEqual(coins.dailyBonus(), 2500);
 });
 
 test("seasons: a running season can't be deleted, it can end early; start and budget stay", async () => {
