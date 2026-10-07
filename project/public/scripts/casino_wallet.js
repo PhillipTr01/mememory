@@ -218,7 +218,7 @@
     notice.setAttribute("role", "status");
     var text = el("div", "bt-notice-text");
     text.append(
-      el("b", "", data.crazy ? "Your crazy battle starts!" : "Your case battle starts!"),
+      el("b", "", data.mode == "random" ? "Your random battle starts!" : data.crazy ? "Your crazy battle starts!" : "Your case battle starts!"),
       el("span", "", data.players.join(" vs ") + " · " + data.cases + (data.cases == 1 ? " case" : " cases") + " · 🪙 " + format(data.price)),
     );
     var watch = el("button", "mm-btn mm-btn-primary mm-btn-sm", "Watch");
@@ -237,7 +237,7 @@
       watchBattle(data.id);
     });
     close.addEventListener("click", hide);
-    notice.append(el("span", "bt-notice-icon", data.crazy ? "🤡" : "⚔️"), text, watch, close);
+    notice.append(el("span", "bt-notice-icon", data.mode == "random" ? "❓" : data.crazy ? "🤡" : "⚔️"), text, watch, close);
     document.body.appendChild(notice);
     setTimeout(hide, 12000);
 

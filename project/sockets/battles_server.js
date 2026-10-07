@@ -18,12 +18,15 @@ const PHASE = {
   CANCELLED: "cancelled",
 };
 const SIZES = [2, 3, 4];
+const MODES = ["classic", "crazy", "random"];
 const BOT_NAMES = ["Bot Pepe", "Bot Doge", "Bot Wojak"];
 
 /*
  * Hidden case battles (like on csgofast): 2-4 players pay the same cases, every
  * round all of them open the same case. Whoever has the most worth in items at
  * the end gets everything (crazy mode: the least). Paid out in coins.
+ * The mode: classic (most wins), crazy (least wins) or random - one of the
+ * two, decided by the seed (provably fair) and shown only at the end.
  */
 module.exports = function (io) {
   const battles = io.of("/battles");
@@ -51,6 +54,11 @@ module.exports = function (io) {
     );
   }
 
+  // classic | crazy | random (battles from before there were modes: from crazy)
+  function modeOf(battle) {
+    return battle.mode || (battle.crazy ? "crazy" : "classic");
+  }
+
   function serialize(battle) {
     const done = battle.phase === PHASE.DONE;
     const rounds = battle.results.slice(0, battle.revealed);
@@ -58,7 +66,9 @@ module.exports = function (io) {
       id: battle.id,
       creator: battle.creator,
       size: battle.size,
-      crazy: battle.crazy,
+      mode: modeOf(battle),
+      // Random: which mode it is only comes out at the end
+      crazy: modeOf(battle) === "random" && !done ? null : battle.crazy,
       cases: battle.cases,
       price: battle.price,
       seats: battle.seats,
@@ -127,6 +137,8 @@ module.exports = function (io) {
     battle.results = battle.cases.map((id, round) =>
       battle.seats.map((_, seat) => cases.itemFor(cases.caseById(id), cases.roll(battle.fair.seed, `${battle.id}:${round}:${seat}`))),
     );
+    // Random: the seed decides the mode (and nobody sees it before the end)
+    if (modeOf(battle) === "random") battle.crazy = cases.roll(battle.fair.seed, `${battle.id}:mode`) < 0.5;
     const all = totals(battle, battle.results);
     const best = battle.crazy ? Math.min(...all) : Math.max(...all);
     const tied = all.map((total, seat) => (total === best ? seat : -1)).filter((seat) => seat >= 0);
@@ -146,7 +158,7 @@ module.exports = function (io) {
     // Everybody in it hears it, on whatever casino page they are
     const players = battle.seats.map((seat) => seat.name);
     for (const seat of humans(battle)) {
-      notices.send(seat.name, "battleStarted", { id: battle.id, price: battle.price, cases: battle.cases.length, players: players, crazy: battle.crazy });
+      notices.send(seat.name, "battleStarted", { id: battle.id, price: battle.price, cases: battle.cases.length, players: players, crazy: modeOf(battle) === "random" ? null : battle.crazy, mode: modeOf(battle) });
     }
     scheduleReveal(battle);
   }
@@ -182,7 +194,9 @@ module.exports = function (io) {
     battle.phase = PHASE.DONE;
     battle.nextAt = null;
     battle.doneAt = Date.now();
-    payWinner(battle);
+    // Random: the pages show which mode it was first - then the coins come
+    if (modeOf(battle) === "random") setTimeout(() => payWinner(battle), config.BATTLE_MODE_REVEAL).unref();
+    else payWinner(battle);
     const winner = battle.seats[battle.winner];
     lobby.history.unshift({ id: battle.id, winner: winner.name, bot: winner.bot, total: battle.payout, price: battle.price });
     lobby.history.length = Math.min(lobby.history.length, config.BATTLE_HISTORY);
@@ -258,7 +272,8 @@ module.exports = function (io) {
           id: newId(),
           creator: username,
           size: data.size,
-          crazy: data.crazy === true,
+          mode: MODES.includes(data.mode) ? data.mode : data.crazy === true ? "crazy" : "classic",
+          crazy: data.mode === "crazy" || (data.mode == null && data.crazy === true),
           cases: ids.slice(),
           price: ids.reduce((sum, id) => sum + cases.caseById(id).price, 0),
           seats: new Array(data.size).fill(null),

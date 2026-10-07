@@ -6,7 +6,7 @@ const cases = require("../game/cases");
 const coins = require("../game/coins");
 
 // Short timings for the tests
-Object.assign(config, { BATTLE_START: 50, BATTLE_ROUND: 50, BATTLE_KEEP: 5000 });
+Object.assign(config, { BATTLE_START: 50, BATTLE_ROUND: 50, BATTLE_KEEP: 5000, BATTLE_MODE_REVEAL: 20 });
 
 /* ---------- Cases ---------- */
 
@@ -206,6 +206,28 @@ test("battles: crazy mode - the lowest total wins; bots fill the seats", async (
   assert.strictEqual(h.coinsOf("carol"), expected);
 });
 
+test("battles: random mode - classic or crazy, decided by the seed, only shown at the end", async () => {
+  h.setCoins("carol", 1000);
+  const carol = client("carol");
+  await waitFor(carol, "coins", (data) => data.coins === 1000);
+  const created = h.once(carol, "battleCreated");
+  carol.emit("createBattle", { cases: ["lottery", "moon"], size: 2, mode: "random" });
+  const id = await created;
+  const running = waitFor(carol, "battles", (data) => battleIn(data, id) && battleIn(data, id).phase === "running");
+  carol.emit("addBot", id);
+  const during = battleIn(await running, id);
+  assert.deepStrictEqual([during.mode, during.crazy], ["random", null], "not known while it runs");
+  const done = battleIn(await waitFor(carol, "battles", (data) => battleIn(data, id) && battleIn(data, id).phase === "done"), id);
+  assert.strictEqual(typeof done.crazy, "boolean");
+  // The seed decided it - anybody can check that afterwards
+  const cases = require("../game/cases");
+  assert.strictEqual(done.crazy, cases.roll(done.fair.seed, `${id}:mode`) < 0.5);
+  const best = done.crazy ? Math.min(...done.totals) : Math.max(...done.totals);
+  assert.strictEqual(done.totals[done.winner], best);
+  // (the pot comes after the reveal of the mode - before the next test)
+  await h.wait(80);
+});
+
 test("battles: the same coins as the jackpot - every change reaches the page right away", async () => {
   h.setCoins("carol", 100);
   const carol = client("carol");
@@ -308,7 +330,7 @@ test("battles: everybody in a battle hears that it starts - on every casino page
   await h.once(carol, "connect");
   carol.emit("joinBattle", id);
   for (const notice of await Promise.all(heard)) {
-    assert.deepStrictEqual(notice, { id: id, price: notice.price, cases: 1, players: ["alice", "carol"], crazy: true });
+    assert.deepStrictEqual(notice, { id: id, price: notice.price, cases: 1, players: ["alice", "carol"], crazy: true, mode: "crazy" });
   }
   await h.wait(50);
   assert.strictEqual(bobHeard, false, "only the players of the battle");

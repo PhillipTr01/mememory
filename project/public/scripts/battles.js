@@ -12,7 +12,17 @@ var picked = []; // the new battle: case ids, one per round, in their order
 var size = 2;
 var filter = "all";
 var sort = "price-asc";
-var crazy = false;
+var mode = "classic"; // classic | crazy | random
+var MODES = { classic: { icon: "👑", name: "Classic" }, crazy: { icon: "🤡", name: "Crazy" }, random: { icon: "❓", name: "Random" } };
+var modeShown = {}; // battle id -> the mode of a random battle was revealed on this page
+var seenRunning = {}; // battle id -> this page saw it running (so the reveal is played)
+
+// The mode of a battle as a short label ("❓ Random", after the end "❓ → 🤡 Crazy")
+function modeLabel(battle) {
+  var m = battle.mode || (battle.crazy ? "crazy" : "classic");
+  if (m == "random" && battle.crazy != null && modeShown[battle.id] !== false) return "❓ → " + (battle.crazy ? "🤡 Crazy" : "👑 Classic");
+  return MODES[m].icon + " " + MODES[m].name;
+}
 
 var viewId = null; // the battle that is open (location.hash)
 var seen = {}; // id -> {phase, revealed} the last state this page saw
@@ -504,11 +514,9 @@ function showPane(name) {
 function createAgain(battle) {
   picked = battle.cases.slice();
   size = battle.size;
-  crazy = battle.crazy;
+  mode = battle.mode || (battle.crazy ? "crazy" : "classic");
   document.querySelectorAll("#btSizes button").forEach((b) => b.classList.toggle("active", Number(b.dataset.size) == size));
-  var crazyButton = document.getElementById("btCrazy");
-  crazyButton.classList.toggle("on", crazy);
-  crazyButton.setAttribute("aria-pressed", crazy);
+  document.querySelectorAll("#btModes button").forEach((b) => b.classList.toggle("active", b.dataset.mode == mode));
   renderCreate();
   pushView(null);
   showView();
@@ -528,7 +536,7 @@ function renderList() {
       var info = el("div", "bt-row-info");
       var tags = el("div", "bt-row-tags");
       tags.append(el("span", "bt-row-price", "🪙 " + formatCoins(battle.price)), el("span", "mm-muted", battle.cases.length + (battle.cases.length == 1 ? " case" : " cases")));
-      if (battle.crazy) tags.appendChild(el("span", "bt-crazy-tag", "🤡 Crazy"));
+      if ((battle.mode || "classic") != "classic" || battle.crazy) tags.appendChild(el("span", "bt-crazy-tag", modeLabel(battle)));
       info.append(caseStrip(battle), tags);
       var actions = el("div", "bt-row-actions");
       actions.appendChild(el("span", "bt-row-phase", phaseText(battle)));
@@ -635,6 +643,10 @@ function renderBattle() {
 
   var rounds = shownRounds(battle);
   var over = battle.phase == "done" && rounds == battle.cases.length && !spinning;
+  // Random: the mode is revealed first (on a page that saw the battle run), then the end
+  if (battle.phase == "running") seenRunning[battle.id] = true;
+  var reveal = over && battle.mode == "random" && seenRunning[battle.id] && !modeShown[battle.id];
+  if (reveal) over = false;
 
   // One quiet line: price, cases, crazy - then the pot (gold) and leaving
   var top = el("div", "bt-battle-top");
@@ -642,7 +654,7 @@ function renderBattle() {
   var price = el("span", "", "🪙 " + formatCoins(battle.price));
   price.title = "Price to join";
   facts.append(price, el("span", "", battle.cases.length + (battle.cases.length == 1 ? " case" : " cases")));
-  if (battle.crazy) facts.appendChild(el("span", "bt-top-crazy", "🤡 Crazy"));
+  facts.appendChild(el("span", battle.crazy || battle.mode == "random" ? "bt-top-crazy" : "", reveal ? "❓ Random" : modeLabel(battle)));
   var pot = 0;
   battle.seats.forEach((_, seat) => (pot += totalOf(battle, seat, rounds)));
   var potBox = el("span", "bt-top-pot");
@@ -656,6 +668,8 @@ function renderBattle() {
   grid.style.setProperty("--seats", battle.size);
   var totals = battle.seats.map((_, seat) => totalOf(battle, seat, rounds));
   var best = battle.crazy ? Math.min(...totals) : Math.max(...totals);
+  // (random while it runs: no leader - nobody knows yet what counts)
+  if (battle.crazy == null || reveal) best = null;
   var places = over ? placesOf(battle, totals) : null;
   battle.seats.forEach((seat, index) => {
     var column = el("div", "bt-seat");
@@ -715,6 +729,7 @@ function renderBattle() {
   var stripRow = el("div", "bt-strip-row");
   stripRow.append(el("span"), strip, potBox);
   var parts = over ? [resultHero(battle), stripRow, grid] : [stripRow, grid];
+  if (reveal) playModeReveal(battle, grid);
   if (battle.phase == "waiting" && battle.creator == myName) {
     var cancel = el("button", "bt-cancel");
     cancel.type = "button";
@@ -753,6 +768,43 @@ function placesOf(battle, totals) {
   return places;
 }
 
+/*
+ * Random mode, at the very end: one spin through the two icons, slowing down,
+ * it stops on the mode the seed chose - then the winner is shown.
+ */
+var revealing = {};
+function playModeReveal(battle, grid) {
+  var box = el("div", "bt-mode-reveal");
+  var face = el("span", "bt-mode-face", "👑");
+  var name = el("span", "bt-mode-name", "Classic or crazy?");
+  box.append(el("span", "bt-mode-title", "THE MODE IS..."), face, name);
+  grid.appendChild(box);
+  if (revealing[battle.id]) return;
+  revealing[battle.id] = true;
+  var icons = ["👑", "🤡"];
+  var steps = 14 + (battle.crazy ? 1 : 0); // ends on the right one (even: crown, odd: clown)
+  var n = 0;
+  var next = () => {
+    n++;
+    var current = document.querySelector(".bt-mode-face");
+    if (current) {
+      current.innerText = icons[n % 2];
+      current.animate([{ transform: "translateY(-30%) scale(0.85)", opacity: 0.4 }, { transform: "none", opacity: 1 }], { duration: 120 });
+    }
+    if (n < steps) return setTimeout(next, 45 + Math.pow(n / steps, 3) * 330);
+    // Stopped: the mode, a moment to see it, then the end of the battle
+    var label = document.querySelector(".bt-mode-name");
+    if (label) label.innerText = battle.crazy ? "Crazy - the lowest total wins!" : "Classic - the highest total wins!";
+    if (current) current.parentElement.classList.add("done");
+    setTimeout(() => {
+      modeShown[battle.id] = true;
+      renderBattle();
+      celebrate(battle);
+    }, 900);
+  };
+  setTimeout(next, 200);
+}
+
 function finalTile(battle, seat, place, total) {
   var tile = el("div", "bt-final place-" + (place + 1));
   tile.append(el("span", "bt-final-medal", MEDALS[place]), el("span", "bt-final-place", PLACE_NAMES[place]));
@@ -789,7 +841,7 @@ function resultHero(battle) {
   again.append(createIcon("bi-arrow-repeat"), document.createTextNode(" Battle again · 🪙 " + formatCoins(battle.price)));
   again.disabled = battle.price > myCoins;
   again.title = "The same cases again, a new battle";
-  again.addEventListener("click", () => socket.emit("createBattle", { cases: battle.cases.slice(), size: battle.size, crazy: battle.crazy }));
+  again.addEventListener("click", () => socket.emit("createBattle", { cases: battle.cases.slice(), size: battle.size, mode: battle.mode || (battle.crazy ? "crazy" : "classic") }));
   hero.appendChild(again);
   return hero;
 }
@@ -893,6 +945,8 @@ function flash(column, rarity) {
 // The winner: once per battle, only when it was seen live
 function celebrate(battle) {
   if (celebrated.has(battle.id) || battle.id != viewId || spinning) return;
+  // Random: first the mode (the reveal celebrates when it is over)
+  if (battle.mode == "random" && seenRunning[battle.id] && !modeShown[battle.id]) return;
   if (shownRounds(battle) < battle.cases.length) return;
   celebrated.add(battle.id);
   // After the page has drawn the end of the battle
@@ -945,7 +999,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btCreate").addEventListener("click", () => {
     if (picked.length == 0) return;
     askForNotifications();
-    socket.emit("createBattle", { cases: pickedIds(), size: size, crazy: crazy });
+    socket.emit("createBattle", { cases: pickedIds(), size: size, mode: mode });
   });
 
   document.getElementById("btSort").addEventListener("change", (event) => {
@@ -960,13 +1014,13 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCreate();
   });
 
-  // Crazy mode: a switch with a clown
-  var crazyButton = document.getElementById("btCrazy");
-  crazyButton.addEventListener("click", () => {
-    crazy = !crazy;
-    crazyButton.classList.toggle("on", crazy);
-    crazyButton.setAttribute("aria-pressed", crazy);
-  });
+  // Who wins: classic, crazy or random
+  document.querySelectorAll("#btModes button").forEach((button) =>
+    button.addEventListener("click", () => {
+      mode = button.dataset.mode;
+      document.querySelectorAll("#btModes button").forEach((b) => b.classList.toggle("active", b == button));
+    }),
+  );
 
   document.querySelectorAll("[data-pane]").forEach((button) => button.addEventListener("click", () => showPane(button.dataset.pane)));
   showPane("battles");

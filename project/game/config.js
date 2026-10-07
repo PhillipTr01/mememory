@@ -112,6 +112,7 @@ module.exports = {
   BATTLE_ROUND: 4500, // one case for everybody: spin + a short look at the items
   BATTLE_MAX_OPEN: 3, // waiting battles per creator
   BATTLE_MAX_CASES: 100, // cases (rounds) per battle
+  BATTLE_MODE_REVEAL: 2600, // random mode: the pages show which mode it was, then the winner is paid
   BATTLE_KEEP: 60 * 1000, // a finished battle stays in the list this long
   BATTLE_EXPIRE: 15 * 60 * 1000, // nobody joined: cancelled, coins back
   BATTLE_HISTORY: 10,
