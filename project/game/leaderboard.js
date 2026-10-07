@@ -18,7 +18,8 @@ const KEY = "leaderboard";
 const SIZE = 100;
 
 async function build(now, before) {
-  const users = await User.find({ casinoApproved: true }).select("username coins coinReset").lean();
+  // (in a season: only who hit "Start")
+  const users = (await User.find({ casinoApproved: true }).select("username coins coinReset").lean()).filter((user) => seasons.joined(user.username) !== false);
   const placeBefore = new Map(((before && before.rows) || []).map((row) => [row.username, row.rank]));
   const rows = users
     .map((user) => ({ username: user.username, coins: coins.balanceOf(user) }))
@@ -51,6 +52,25 @@ async function snapshot(now, seasonId, every) {
   }
   return board;
 }
+
+// A player hits "Start" in the season: on the board right away (with the start coins) - the
+// others stay as they were at the last update
+let adding = Promise.resolve();
+seasons.changes.on("joined", (username) => {
+  adding = adding
+    .then(async () => {
+      const season = seasons.running();
+      const board = await load();
+      if (!season || board == null || board.season !== season.id || board.rows.some((row) => row.username === username)) return;
+      const user = await User.findOne({ username: username }).select("username coins coinReset").lean();
+      if (user == null) return;
+      const rows = [...board.rows, { username: username, coins: coins.balanceOf(user), before: null }]
+        .sort((a, b) => b.coins - a.coins || a.username.localeCompare(b.username))
+        .map((row, index) => ({ ...row, rank: index + 1 }));
+      await Setting.updateOne({ key: KEY }, { $set: { value: JSON.stringify({ ...board, rows: rows }) } }, { upsert: true });
+    })
+    .catch((error) => console.error("[leaderboard] Could not add a player:", error));
+});
 
 // Today's / this update's leaderboard: {at, rows, live, next}
 async function get(now = Date.now()) {

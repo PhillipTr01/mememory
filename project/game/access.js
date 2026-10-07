@@ -42,6 +42,8 @@ async function setFirstApproval(now) {
 function startCoins(first, now = Date.now()) {
   const base = coins.base();
   if (!base.active || !base.since) return { coins: base.start, missed: 0, since: null };
+  // A running season: the player starts it themselves (game/seasons.js join) - the budget comes then
+  if (base.join) return { coins: 0, missed: 0, since: base.since };
   const missed = Math.max(0, days.dayNumber(now) - days.dayNumber(base.since));
   return { coins: base.start + missed * coins.dailyBonus(), missed: missed, since: base.since };
 }

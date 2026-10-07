@@ -31,7 +31,7 @@ test("leaderboard: without a season it is live - the arrows show the change sinc
   assert.strictEqual(later.updatedAt, morning + 60 * 1000);
 });
 
-test("seasons: planned ahead - at the start every account gets the budget, at the end the winners with their prizes", async () => {
+test("seasons: planned ahead - at the start each player hits Start and gets the budget, at the end the winners with their prizes", async () => {
   seasons.reset();
   const now = Date.now();
   const start = now + 60 * 60 * 1000;
@@ -56,27 +56,39 @@ test("seasons: planned ahead - at the start every account gets the budget, at th
   await seasons.tick(start - 1000);
   assert.strictEqual(h.coinsOf("anna"), 1000);
 
-  // The start: everybody in the casino has the budget (not dora - she is not in)
+  // The start: everybody in the casino at 0, watching - until they hit "Start" (not dora - she is not in)
   await seasons.tick(start + 1000);
   assert.strictEqual(seasons.running().id, made.season.id);
-  assert.deepStrictEqual(["anna", "ben", "cleo"].map(h.coinsOf), [50000, 50000, 50000]);
+  assert.deepStrictEqual(["anna", "ben", "cleo"].map(h.coinsOf), [0, 0, 0]);
   assert.strictEqual(h.coinsOf("dora"), 99999);
+  assert.strictEqual(seasons.joined("anna"), false);
+  assert.strictEqual(await coins.claimBonus("anna", start + 1500), false, "no daily bonus before the start");
+  assert.strictEqual((await coins.get("anna")).joined, false);
+  assert.strictEqual((await leaderboard.view("anna", start + 1500)).rows.length, 0, "nobody on the board yet");
+  for (const name of ["anna", "ben", "cleo"]) assert.deepStrictEqual(await seasons.join(name, start + 1500), { coins: 50000, missed: 0 });
+  assert.match((await seasons.join("anna", start + 1600)).error, /already/);
+  assert.match((await seasons.join("dora", start + 1600)).error, /Not in the casino/);
+  assert.deepStrictEqual(["anna", "ben", "cleo"].map(h.coinsOf), [50000, 50000, 50000]);
+  assert.strictEqual((await coins.get("anna")).joined, true);
+  await h.wait(10);
+  assert.deepStrictEqual((await leaderboard.view("anna", start + 1700)).rows.map((r) => [r.username, r.coins]), [["anna", 50000], ["ben", 50000], ["cleo", 50000]], "on the board right away");
   // Like a hard reset: the coin history shown starts anew (the one from before is kept apart)
   await h.wait(10);
   const shown = () => h.coinLogs.filter((row) => Object.entries(coins.eraFilter()).every(([key, c]) => (c && c.$exists === false ? row[key] === undefined : row[key] === c)));
   assert.ok(shown().length > 0 && shown().every((row) => row.reason === "season start"));
   // Payouts wait until the season is over
   assert.match((await require("../game/withdrawals").request("anna", 1000)).error, /paused/);
-  assert.strictEqual(coins.base().start, 50000);
+  assert.strictEqual(coins.base().start, 0, "the budget comes with Start");
   await h.wait(10);
   // The daily bonus of the season (changed while it runs)
   assert.strictEqual(coins.dailyBonus(), 1000, "the season setting when none was given");
   assert.ok((await seasons.update(made.season.id, { ...seasons.publicSeason(seasons.running()), dailyBonus: 777 })).season);
   assert.strictEqual(coins.dailyBonus(), 777);
-  // A player let in now starts with the budget too - three days later with the 3 daily bonuses missed
-  assert.strictEqual(access.startCoins(null, start + 2000).coins, 50000);
+  // A player let in now starts at 0 too - "Start" gives the budget; three days later with the 3 daily bonuses missed
+  assert.strictEqual(access.startCoins(null, start + 2000).coins, 0);
+  assert.deepStrictEqual(seasons.joinCoins(start + 2000), { coins: 50000, missed: 0 });
   const later = days.dayStart(start) + 3 * 24 * 3600 * 1000 + 5 * 3600 * 1000;
-  assert.deepStrictEqual([access.startCoins(null, later).coins, access.startCoins(null, later).missed], [50000 + 3 * 777, 3]);
+  assert.deepStrictEqual(seasons.joinCoins(later), { coins: 50000 + 3 * 777, missed: 3 });
 
   // The leaderboard of the season: updated every hour, not in between
   const first = await leaderboard.view("anna", start + 2000);
@@ -178,6 +190,8 @@ test("seasons: second chances - 0 coins and nothing in play, then the budget aga
   const made = await seasons.create({ name: "Comeback", icon: "🔁", start: now - 1000, end: now + 30 * 24 * 3600 * 1000, budget: 5000, every: 0, secondChances: 2 });
   assert.strictEqual(made.season.secondChances, 2);
   await seasons.tick(now);
+  assert.strictEqual((await seasons.chanceStatus("anna", now)).reason, "notJoined", "only who started the season");
+  await seasons.join("anna", now);
   // Still coins: no second chance; the balance from before is shown with the coins
   assert.strictEqual((await seasons.chanceStatus("anna", now)).reason, "coins");
   assert.strictEqual((await coins.get("anna")).stored, seasons.storedOf("anna"));
@@ -203,10 +217,11 @@ test("seasons: second chances - 0 coins and nothing in play, then the budget aga
   assert.strictEqual((await seasons.useChance("anna", tomorrow)).left, 0);
   h.setCoins("anna", 0);
   assert.strictEqual((await seasons.chanceStatus("anna", days.nextDay(tomorrow) + 1000)).reason, "used");
-  // A player who joined the season today: the first one only from tomorrow
+  // A player who started the season a day later: the first one only from the day after
   h.addUser("newbie");
-  const User = require("../models/User");
-  await User.updateOne({ username: "newbie" }, { $set: { casinoApprovedAt: new Date(now + 500), coins: 0, coinReset: coins.base().reset } });
-  assert.strictEqual((await seasons.chanceStatus("newbie", now + 2000)).reason, "cooldown");
+  await seasons.join("newbie", tomorrow);
+  h.setCoins("newbie", 0);
+  const newbie = await seasons.chanceStatus("newbie", tomorrow + 1000);
+  assert.deepStrictEqual([newbie.reason, newbie.nextAt], ["cooldown", days.nextDay(tomorrow)]);
   seasons.reset();
 });

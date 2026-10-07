@@ -67,6 +67,16 @@ function setStoredLookup(lookup) {
   storedLookup = lookup;
 }
 
+// In a running season: did the player start it (game/seasons.js sets the lookup)? null: no season
+let joinedLookup = () => null;
+function setJoinedLookup(lookup) {
+  joinedLookup = lookup;
+}
+// Not started the running season: watching only (no coins, no daily bonus)
+function watching(username) {
+  return era() != null && joinedLookup(username) === false;
+}
+
 // The free coins of the day: the running season's - or the setting
 function dailyBonus() {
   return seasonBase && Number.isInteger(seasonBase.bonus) ? seasonBase.bonus : config.DAILY_BONUS;
@@ -106,7 +116,8 @@ async function get(username) {
   await ensure(username);
   const user = await User.findOne({ username: username }).select("coins coinBonusAt payoutAllowed");
   if (user == null) return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), payout: false };
-  return { coins: user.coins || 0, bonus: bonusAvailable(user), bonusIn: bonusIn(user), bonusAmount: dailyBonus(), payout: user.payoutAllowed === true, stored: storedLookup(username) };
+  const joined = joinedLookup(username);
+  return { coins: user.coins || 0, bonus: bonusAvailable(user) && joined !== false, bonusIn: bonusIn(user), bonusAmount: dailyBonus(), payout: user.payoutAllowed === true, stored: storedLookup(username), joined: era() != null ? joined !== false : null };
 }
 
 /*
@@ -152,6 +163,7 @@ async function set(username, amount, note) {
 
 // Free coins once a day (calendar day), for everybody
 async function claimBonus(username, now = Date.now()) {
+  if (watching(username)) return false;
   await ensure(username);
   const result = await User.updateOne(
     {
@@ -174,4 +186,4 @@ function reward(username, mode) {
   add(username, amount, { reason: "game win", note: mode }).catch((error) => console.error("[coins] Could not add coins:", error));
 }
 
-module.exports = { setStoredLookup, setBase, base, era, eraFilter, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };
+module.exports = { setJoinedLookup, watching, setStoredLookup, setBase, base, era, eraFilter, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };

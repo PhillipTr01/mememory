@@ -39,7 +39,7 @@ async function hardReset() {
  * A season starts (game/seasons.js): the casino starts anew like after the
  * hard reset - every game (not the chat), the leaderboard, the coin history shown (the one
  * from before is kept apart and comes back after the season) - but everybody
- * who is in stays in and starts with the season's budget. Returns the state
+ * who is in stays in, at 0 until they start the season (game/seasons.js join). Returns the state
  * of every game before (restored after the season).
  */
 // The chat stays as it is (through the start and the end of a season)

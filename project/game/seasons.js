@@ -19,9 +19,13 @@ const casinoLock = require("./casino_lock");
  * history are as they were before it - with the balance of the season on
  * top.
  *
+ * Nobody is in a season by themselves: each player hits "Start" (join) and
+ * gets the budget then (and the daily bonuses missed since the start) - only
+ * players who started are on the leaderboard. Until then: 0 coins, watching.
+ *
  * Second chances: a season can give a player who lost everything (0 coins,
  * nothing in play anywhere) a few new starts with the budget. The first one
- * right away (a player who joined that day: from the next day on), every
+ * right away (a player who started the season on a later day: from the next day on), every
  * further one only from the next day on.
  *
  * Without a running season the leaderboard is the normal one (live).
@@ -69,7 +73,7 @@ function publicSeason(season) {
     prizes: season.prizes,
     status: state.closing && state.closing.id === season.id ? "starting" : status(season),
     endedAt: season.endedAt || null,
-    players: season.final ? season.final.rows.length : null,
+    players: season.final ? season.final.rows.length : Object.keys(season.joined || {}).length,
     winner: season.final && season.final.rows.length ? season.final.rows[0] : null,
   };
 }
@@ -224,17 +228,56 @@ async function startSeason(season, now) {
   season.baseBefore = state.base;
   season.started = true;
   season.startedAt = now;
-  state.base = { reset: "season-" + season.id, start: season.budget, since: now, active: true, bonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : null };
+  season.joined = {};
+  // Everybody at 0 - the budget comes with "Start" (join)
+  state.base = { reset: "season-" + season.id, start: 0, budget: season.budget, join: true, since: now, active: true, bonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : null };
   coins.setBase(state.base);
   await save();
   const players = await User.find({ casinoApproved: true }).select("username").lean();
-  const games = await seasonReset(season.budget, state.base.reset);
+  const games = await seasonReset(0, state.base.reset);
   // The games from before the season (restored when it is over)
   await Setting.updateOne({ key: BACKUP + season.id }, { $set: { value: JSON.stringify(games) } }, { upsert: true });
-  for (const player of players) coins.log(player.username, season.budget, "season start", season.name);
   changes.emit("started", publicSeason(season));
   for (const player of players) coins.notify(player.username);
 }
+
+// What "Start" gives now: the budget and a daily bonus for every day since the start - {coins, missed}
+function joinCoins(now = Date.now()) {
+  const season = running();
+  if (season == null) return null;
+  const missed = Math.max(0, days.dayNumber(now) - days.dayNumber(season.startedAt || season.start));
+  return { coins: season.budget + missed * coins.dailyBonus(), missed: missed };
+}
+
+// The player hits "Start": in the season with the budget (and a daily bonus for every day missed
+// since the start - today's one they claim themselves) - {coins, missed} or {error}
+async function join(username, now = Date.now()) {
+  const season = running();
+  if (season == null) return { error: "No season runs." };
+  season.joined = season.joined || {};
+  if (season.joined[username]) return { error: "You are in the season already." };
+  const user = await User.findOne({ username: username }).select("username casinoApproved").lean();
+  if (user == null || user.casinoApproved !== true) return { error: "Not in the casino." };
+  if (season.joined[username]) return { error: "You are in the season already." };
+  season.joined[username] = now;
+  const { coins: amount, missed } = joinCoins(now);
+  await save();
+  await User.updateOne({ username: username }, { $set: { coins: amount, coinReset: coins.base().reset } });
+  coins.log(username, amount, "season start", missed > 0 ? `${season.name}: ${season.budget.toLocaleString("en-US")} + ${missed} missed daily bonus${missed === 1 ? "" : "es"}` : season.name);
+  coins.notify(username);
+  changes.emit("joined", username);
+  return { coins: amount, missed: missed };
+}
+
+// In the running season: did the player start it? (null: no season)
+function joined(username) {
+  const season = running();
+  if (season == null) return null;
+  // (a season from before "Start" existed: everybody is in)
+  if (season.joined == null) return true;
+  return !!season.joined[username];
+}
+coins.setJoinedLookup(joined);
 
 // The final places (everybody in the casino, by coins) - with the prizes
 async function endSeason(season, now) {
@@ -270,10 +313,11 @@ async function endSeason(season, now) {
   for (const username of players) coins.notify(username);
 }
 
-// Everybody in the casino by coins: [{rank, username, coins}]
+// Everybody in the season (who hit "Start") by coins: [{rank, username, coins}]
 async function standings() {
   const users = await User.find({ casinoApproved: true }).select("username coins coinReset").lean();
   return users
+    .filter((user) => joined(user.username) !== false)
     .map((user) => ({ username: user.username, coins: coins.balanceOf(user) }))
     .sort((a, b) => b.coins - a.coins || a.username.localeCompare(b.username))
     .map((row, index) => ({ rank: index + 1, ...row }));
@@ -346,14 +390,15 @@ async function chanceStatus(username, now = Date.now()) {
   const record = (season.chances && season.chances[username]) || { used: 0, lastAt: null };
   const left = Math.max(0, total - record.used);
   const result = { can: false, left: left, total: total, budget: season.budget, nextAt: null };
+  if (joined(username) === false) return { ...result, reason: "notJoined" };
   if (left === 0) return { ...result, reason: "used" };
-  // After a second chance: the next one from the next day on. Joined the season today: the first one too.
+  // After a second chance: the next one from the next day on. Started the season on a later day
+  // than its start: the first one only from the next day on too.
   let from = null;
   if (record.used > 0) from = days.nextDay(record.lastAt);
   else {
-    const user = await User.findOne({ username: username }).select("casinoApprovedAt").lean();
-    const joined = user && user.casinoApprovedAt ? new Date(user.casinoApprovedAt).getTime() : null;
-    if (joined != null && joined > (season.startedAt || season.start)) from = days.nextDay(joined);
+    const at = season.joined && season.joined[username];
+    if (at && days.dayNumber(at) > days.dayNumber(season.startedAt || season.start)) from = days.nextDay(at);
   }
   if (from != null && now < from) return { ...result, reason: "cooldown", nextAt: from };
   if ((await coins.get(username)).coins > 0) return { ...result, reason: "coins" };
@@ -433,4 +478,4 @@ function accentStyle() {
   return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
 }
 
-module.exports = { closingInfo, chanceStatus, useChance, storedOf, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+module.exports = { join, joined, joinCoins, closingInfo, chanceStatus, useChance, storedOf, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };

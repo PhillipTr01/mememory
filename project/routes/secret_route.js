@@ -6,6 +6,7 @@ const withdrawals = require("../game/withdrawals");
 const access = require("../game/access");
 const leaderboard = require("../game/leaderboard");
 const seasons = require("../game/seasons");
+const coins = require("../game/coins");
 const games = require("../game/games");
 const info = require("../game/info");
 
@@ -129,7 +130,19 @@ module.exports = function (auth) {
     }),
   );
 
-  // The season now (for the link in the navigation bar): {season, lastSeason}
+  // "Start": the player is in the running season (the budget, on the leaderboard)
+  router.post(
+    "/season/join",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      const result = await seasons.join(req.username);
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
+  // The season now (for the link in the navigation bar): {season, lastSeason, joined, closing}
   router.get(
     "/season",
     auth,
@@ -138,7 +151,25 @@ module.exports = function (auth) {
       const season = seasons.running();
       const ended = seasons.lastEnded();
       res.json({
-        season: season ? { id: season.id, name: season.name, icon: season.icon, end: season.end, color: season.color || null } : null,
+        season: season
+          ? {
+              id: season.id,
+              name: season.name,
+              icon: season.icon,
+              start: season.startedAt || season.start,
+              end: season.end,
+              color: season.color || null,
+              budget: season.budget,
+              dailyBonus: coins.dailyBonus(),
+              secondChances: season.secondChances || 0,
+              prizes: season.prizesOn ? season.prizes : [],
+              players: Object.keys(season.joined || {}).length,
+            }
+          : null,
+        // In the season (hit "Start")? null: no season
+        joined: seasons.joined(req.username),
+        // What "Start" gives now (the budget and the daily bonuses missed since the start)
+        joinCoins: season && !seasons.joined(req.username) ? seasons.joinCoins() : null,
         lastSeason: ended ? { id: ended.id, name: ended.name, icon: ended.icon, endedAt: ended.endedAt } : null,
         // The casino closes for a season right now (the pages show it)
         closing: seasons.closingInfo(),

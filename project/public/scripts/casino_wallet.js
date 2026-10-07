@@ -426,8 +426,108 @@
     .then((data) => {
       showSeason(data);
       if (data && data.closing) showClosing(data.closing);
+      else if (data && data.season && data.joined === false) offerSeason(data);
     })
     .catch(() => {});
+
+  /* ---------- "Start": a player is in a running season only after hitting it ---------- */
+
+  var joinPill = null;
+  var JOIN_KEY = "csSeasonOffered";
+
+  // Not in the season yet: a pill next to the free coins (opens the start again) - the start by
+  // itself once per season and tab
+  function offerSeason(data) {
+    var chance = document.getElementById("navChance");
+    if (chance && !joinPill) {
+      joinPill = el("button", "nav-chance nav-join", "▶ Start season");
+      joinPill.title = (data.season.icon || "") + " " + data.season.name;
+      joinPill.type = "button";
+      joinPill.addEventListener("click", () => showJoin(data));
+      chance.parentNode.insertBefore(joinPill, chance);
+    }
+    var key = JOIN_KEY + data.season.id;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch (e) {
+      // no storage: shown on every page
+    }
+    showJoin(data);
+  }
+
+  // How long a time is: "12 days 5 hours", "5 hours 20 minutes", "20 minutes"
+  function duration(ms) {
+    var m = Math.max(0, Math.round(ms / 60000));
+    var d = Math.floor(m / 1440);
+    var h = Math.floor((m % 1440) / 60);
+    var part = (n, word) => n + " " + word + (n == 1 ? "" : "s");
+    if (d > 0) return part(d, "day") + (h > 0 ? " " + part(h, "hour") : "");
+    if (h > 0) return part(h, "hour") + (m % 60 > 0 ? " " + part(m % 60, "minute") : "");
+    return part(m % 60, "minute");
+  }
+
+  function showJoin(data) {
+    var season = data.season;
+    document.querySelectorAll(".cs-join").forEach((n) => n.remove());
+    var box = el("div", "cs-join");
+    var card = el("div", "cs-join-card");
+    var when = (t) => new Date(t).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+    card.append(
+      el("div", "cs-join-icon", season.icon || "🏆"),
+      el("h2", "cs-join-title", season.name),
+      el("p", "cs-join-time", "Runs until " + when(season.end) + " · " + duration(season.end - Date.now()) + " left"),
+    );
+    // What the season is: the coins, the bonus, the second chances, the players so far
+    var facts = el("div", "cs-join-facts");
+    var fact = (icon, value, label) => {
+      var row = el("div", "cs-join-fact");
+      row.append(el("span", "cs-join-fact-icon", icon), el("b", "", value), el("span", "", label));
+      facts.appendChild(row);
+    };
+    var start = data.joinCoins || { coins: season.budget, missed: 0 };
+    fact("🪙", format(start.coins), start.missed > 0 ? "to start (with " + start.missed + " missed daily bonus" + (start.missed == 1 ? "" : "es") + ")" : "to start with");
+    fact("🎁", format(season.dailyBonus), "free every day");
+    if (season.secondChances > 0) fact("💔", season.secondChances, "second chance" + (season.secondChances == 1 ? "" : "s") + " if you lose it all");
+    fact("👥", season.players, "player" + (season.players == 1 ? "" : "s") + " in so far");
+    card.appendChild(facts);
+    // The prizes
+    if (season.prizes && season.prizes.length) {
+      var prizes = el("div", "cs-join-prizes");
+      prizes.appendChild(el("div", "cs-join-prizes-title", "🏆 Prizes"));
+      var medal = (place) => ["🥇", "🥈", "🥉"][place - 1] || "#" + place;
+      season.prizes.forEach((p) => {
+        var row = el("div", "cs-join-prize");
+        row.append(el("span", "cs-join-place", medal(p.place)), el("span", "", p.prize));
+        prizes.appendChild(row);
+      });
+      card.appendChild(prizes);
+    }
+    card.appendChild(el("p", "cs-join-text", "Everybody starts with the same coins - the most coins at the end wins. Only players who hit Start are on the leaderboard. Your coins from before wait for you and come back after the season, with what you win on top."));
+    var go = el("button", "cs-join-btn", "Start · 🪙 " + format(start.coins));
+    go.type = "button";
+    go.addEventListener("click", async () => {
+      go.disabled = true;
+      try {
+        var res = await fetch("season/join", { method: "POST" });
+        var result = await res.json();
+        if (!res.ok) throw new Error(result.error || "Could not start the season.");
+        box.remove();
+        if (joinPill) joinPill.remove();
+        joinPill = null;
+        showToast((season.icon || "🏆") + " You are in " + season.name + " with 🪙 " + format(result.coins) + " - good luck!");
+      } catch (error) {
+        showToast(error.message, "error");
+        go.disabled = false;
+      }
+    });
+    var later = el("button", "cs-chance-later", "Just watch for now");
+    later.type = "button";
+    later.addEventListener("click", () => box.remove());
+    card.append(go, later);
+    box.appendChild(card);
+    document.body.appendChild(box);
+  }
 
   // A season starts soon: the casino closes - open rounds finish, no new bets, then a countdown.
   // Can't be clicked away (it goes with the start of the season: the page loads again)

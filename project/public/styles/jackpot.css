@@ -3437,3 +3437,129 @@ body.jackpot-theme {
   font-size: 0.95rem;
   color: rgba(255, 255, 255, 0.82);
 }
+
+/* "Start" a season: what it is, the prizes, how long it goes */
+.cs-join {
+  position: fixed;
+  inset: 0;
+  z-index: 1090;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  animation: cs-backdrop-in 0.25s ease-out;
+}
+
+.cs-join-card {
+  box-sizing: border-box;
+  width: min(440px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.6rem 1.4rem 1.2rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.55);
+  border-radius: 20px;
+  background: var(--mm-surface);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), 0 0 40px rgba(var(--mm-accent-rgb), 0.18);
+  text-align: center;
+  color: #fff;
+  animation: cs-card-in 0.3s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+.cs-join-icon {
+  font-size: 2.8rem;
+  line-height: 1;
+}
+
+.cs-join-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+
+.cs-join-time {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--mm-accent);
+}
+
+.cs-join-facts,
+.cs-join-prizes {
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+  text-align: left;
+}
+
+.cs-join-fact,
+.cs-join-prize {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.cs-join-fact b {
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-join-fact-icon,
+.cs-join-place {
+  flex: 0 0 1.6rem;
+  text-align: center;
+}
+
+.cs-join-prizes-title {
+  font-weight: 800;
+  color: var(--mm-accent);
+}
+
+.cs-join-text {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--mm-muted);
+}
+
+.cs-join-btn {
+  width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mm-accent);
+  color: #1a1206;
+  font-weight: 900;
+}
+
+.cs-join-btn:hover {
+  background: var(--mm-accent-hover);
+}
+
+.cs-join-btn:disabled {
+  opacity: 0.6;
+}
+
+/* Not in the running season yet: the pill to start it (in the color of the season) */
+.nav-chance.nav-join {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  background: rgba(var(--mm-accent-rgb), 0.14);
+  color: var(--mm-accent);
+  animation: nav-join-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes nav-join-glow {
+  50% {
+    box-shadow: 0 0 14px rgba(var(--mm-accent-rgb), 0.5);
+  }
+}
