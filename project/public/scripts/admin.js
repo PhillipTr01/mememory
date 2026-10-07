@@ -649,14 +649,63 @@ function dateOf(input) {
   return input.value ? new Date(input.value) : new Date();
 }
 
-// The buttons show the dates of their inputs (and can't be used when the input is disabled)
+// A date as it is typed: "07.10.2026, 18:00"
+function typedDate(date) {
+  var pad = (n) => String(n).padStart(2, "0");
+  return pad(date.getDate()) + "." + pad(date.getMonth() + 1) + "." + date.getFullYear() + ", " + pad(date.getHours()) + ":" + pad(date.getMinutes());
+}
+
+// What was typed: "7.10.2026 18:00", "07.10.2026, 18:00" or "2026-10-07 18:00" - a Date, or null
+function parseTyped(text) {
+  var m = text.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4}),?\s*(\d{1,2})[:.](\d{2})$/);
+  var iso = text.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})[ T,]+(\d{1,2}):(\d{2})$/);
+  var [d, mo, y, h, mi] = m ? m.slice(1).map(Number) : iso ? [iso[3], iso[2], iso[1], iso[4], iso[5]].map(Number) : [];
+  if (y == null || h > 23 || mi > 59) return null;
+  var date = new Date(y, mo - 1, d, h, mi);
+  // (no 31.02.)
+  return date.getDate() == d && date.getMonth() == mo - 1 ? date : null;
+}
+
+// The fields show the dates of their inputs (and can't be used when the input is disabled)
 function syncDates() {
-  document.querySelectorAll(".ad-date-btn").forEach((button) => {
-    var input = document.getElementById(button.dataset.for);
-    button.disabled = input.disabled;
-    button.replaceChildren(el("span", "ad-date-icon", "📅"), el("span", "", input.value ? dateText(dateOf(input)) : "Choose..."));
+  document.querySelectorAll(".ad-date-text").forEach((text) => {
+    var input = document.getElementById(text.dataset.for);
+    text.disabled = input.disabled;
+    text.closest(".ad-date-field").querySelector(".ad-date-btn").disabled = input.disabled;
+    text.closest(".ad-date-field").classList.toggle("disabled", input.disabled);
+    text.closest(".ad-date-field").classList.remove("invalid");
+    // (not while it is being typed in)
+    if (document.activeElement != text) text.value = input.value ? typedDate(dateOf(input)) : "";
   });
 }
+
+// Typed by hand: taken as soon as it is a date; leaving a wrong one shows the date before again
+document.addEventListener("input", (event) => {
+  var text = event.target.closest && event.target.closest(".ad-date-text");
+  if (!text) return;
+  var date = parseTyped(text.value);
+  text.closest(".ad-date-field").classList.toggle("invalid", date == null && text.value.trim() != "");
+  if (date) {
+    document.getElementById(text.dataset.for).value = localInput(date);
+    if (picker && picker.input.id == text.dataset.for) {
+      picker.month = new Date(date.getFullYear(), date.getMonth(), 1);
+      renderPicker();
+    }
+  }
+});
+document.addEventListener(
+  "blur",
+  (event) => {
+    if (event.target.classList && event.target.classList.contains("ad-date-text")) setTimeout(syncDates);
+  },
+  true,
+);
+document.addEventListener("keydown", (event) => {
+  if (event.key == "Enter" && event.target.classList && event.target.classList.contains("ad-date-text")) {
+    event.preventDefault();
+    event.target.blur();
+  }
+});
 
 function setDate(input, date) {
   input.value = localInput(date);
@@ -670,15 +719,15 @@ function openPicker(button) {
   var box = el("div", "ad-picker");
   box.setAttribute("role", "dialog");
   picker = { input: input, button: button, month: new Date(current.getFullYear(), current.getMonth(), 1), box: box };
-  button.parentElement.appendChild(box);
-  button.classList.add("open");
+  button.closest(".ad-date").appendChild(box);
+  button.closest(".ad-date-field").classList.add("open");
   renderPicker();
 }
 
 function closePicker() {
   if (!picker) return;
   picker.box.remove();
-  picker.button.classList.remove("open");
+  picker.button.closest(".ad-date-field").classList.remove("open");
   picker = null;
 }
 
@@ -767,7 +816,7 @@ document.addEventListener("click", (event) => {
     return;
   }
   // (a click in the picker draws it anew - its button is gone then, but it was inside)
-  if (picker && event.target.isConnected && !event.target.closest(".ad-picker")) closePicker();
+  if (picker && event.target.isConnected && !event.target.closest(".ad-picker") && !event.target.closest(".ad-date-field")) closePicker();
 });
 
 document.addEventListener("keydown", (event) => {
