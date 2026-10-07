@@ -341,6 +341,8 @@ test("battles: a tie - the winners split the pot (not the creator alone)", async
   const itemFor = cases.itemFor;
   cases.itemFor = (box) => itemFor(box, 0.5);
   try {
+    // (late payouts of the battles before are in first)
+    await h.wait(150);
     h.setCoins("alice", 500);
     h.setCoins("bob", 500);
     const alice = client("alice");
