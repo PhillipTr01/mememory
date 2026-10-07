@@ -22,9 +22,11 @@
     var timer = null;
     var zoom = 1;
     var tallest = 0; // the highest the game was in this full screen: the zoom never grows back (no jumping)
+    // The game's own parts (taken when the full screen starts - dialogs that come in later aren't zoomed)
+    var own = [];
     var parts = () =>
-      Array.prototype.slice.call(target.children).filter(function (part) {
-        return !part.classList.contains("cs-fs-coins");
+      own.filter(function (part) {
+        return part.isConnected;
       });
     function fit() {
       var style = getComputedStyle(target);
@@ -55,6 +57,9 @@
       },
       start: function () {
         if (!width) this.measure();
+        own = Array.prototype.slice.call(target.children).filter(function (part) {
+          return !part.classList.contains("cs-fs-coins");
+        });
         zoom = 1;
         tallest = 0;
         parts().forEach(function (part) {
@@ -142,7 +147,42 @@
     };
   }
 
+  // In full screen only the game is seen: what opens on the page meanwhile (dialogs like the buy-in,
+  // toasts, prompts) goes into it - and back to the page afterwards
+  var moved = [];
+  function observeBody() {
+    if (!document.body) return;
+    new MutationObserver(function (changes) {
+      var screen = document.fullscreenElement;
+      if (!screen) return;
+      changes.forEach(function (change) {
+        change.addedNodes.forEach(function (node) {
+          if (node.nodeType != 1 || node.tagName == "SCRIPT" || node.parentNode != document.body) return;
+          screen.appendChild(node);
+          moved.push(node);
+        });
+      });
+    }).observe(document.body, { childList: true });
+  }
+  document.addEventListener("fullscreenchange", function () {
+    if (document.fullscreenElement) {
+      // (already open ones too: a dialog opened just before)
+      Array.prototype.slice.call(document.body.children).forEach(function (node) {
+        if (/mm-dialog-backdrop|cs-chance|cs-join|toast/.test((node.className || "") + " " + node.id)) {
+          document.fullscreenElement.appendChild(node);
+          moved.push(node);
+        }
+      });
+      return;
+    }
+    moved.forEach(function (node) {
+      if (node.isConnected) document.body.appendChild(node);
+    });
+    moved = [];
+  });
+
   document.addEventListener("DOMContentLoaded", function () {
+    observeBody();
     document.querySelectorAll("[data-fullscreen]").forEach(function (button) {
       var target = document.querySelector(button.dataset.fullscreen);
       if (!target) return;
