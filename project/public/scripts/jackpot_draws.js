@@ -48,30 +48,20 @@ function pick(list) {
 }
 
 /*
- * The end of a spin, different every time: straight to the stop, a bit too
- * far and back, or nearly stopping before it and creeping on.
- * Keyframes of a value (deg / px) from `from` to `to` (step: size of one
- * field, so "nearly" means one field before).
+ * The end of a spin, like a real wheel with friction: one smooth slow-down,
+ * always forward, never back and never a stop before the end. Different every
+ * time: braking evenly, or a long slow tail where it creeps over the last
+ * fields. Keyframes of a value (deg / px) from `from` to `to` (step: the size
+ * of one field - kept for the callers).
  */
 function spinEnding(from, to, step) {
-  var way = to - from;
-  var kind = pick(["overshoot", "creep", "creep"]);
-  if (kind == "overshoot") {
-    return [
-      { value: from, offset: 0, easing: SLOW_END },
-      { value: to + Math.sign(way) * step * randomBetween(0.25, 0.45), offset: 0.9, easing: "ease-in-out" },
-      { value: to, offset: 1 },
-    ];
-  }
-  if (kind == "creep") {
-    return [
-      { value: from, offset: 0, easing: SLOW_END },
-      { value: to - Math.sign(way) * step * randomBetween(0.55, 0.9), offset: randomBetween(0.78, 0.86), easing: "linear" },
-      { value: to, offset: 1 },
-    ];
-  }
+  var easing = pick([
+    "cubic-bezier(0.33, 0.66, 0.66, 1)", // even braking (friction)
+    "cubic-bezier(0.2, 0.7, 0.3, 1)", // a longer, slower tail
+    "cubic-bezier(0.15, 0.75, 0.15, 1)", // creeps over the last fields
+  ]);
   return [
-    { value: from, offset: 0, easing: SLOW_END },
+    { value: from, offset: 0, easing: easing },
     { value: to, offset: 1 },
   ];
 }
@@ -617,34 +607,32 @@ var clawDraw = {
     var t = duration / 7100;
     var setClaw = (x, drop) => ({ transform: `translate(${x}px, ${drop}px)` });
 
-    // 1. Searching: left and right over the pile, slower and slower, then above the winner
+    // 1. Searching: the claw moves on over the pile (only forward, like the joystick is held),
+    // stops over a plush or two to look, then stops above the winner
     var search = [setClaw(start, 0)];
     var spots = [];
-    if (!short) for (var n = Math.round(randomBetween(2, 5)); n > 0; n--) spots.push(randomBetween(width * 0.3, width * 0.85));
-    spots.forEach((x) => search.push(setClaw(x, 0)));
+    if (!short) for (var n = Math.round(randomBetween(1, 3)); n > 0; n--) spots.push(randomBetween(start + 30, target - 30));
+    spots
+      .filter((x) => x > start && x < target)
+      .sort((a, b) => a - b)
+      .forEach((x) => search.push(setClaw(x, 0), setClaw(x, 0)));
     search.push(setClaw(target, 0));
 
     // Sometimes it goes for the wrong plush first ... and it slips out
     var others = parts.plushes.filter((plush) => plush != prize);
-    var decoy = !short && others.length && Math.random() < 0.65 ? pick(others) : null;
-    // Before going down: back and forth between the prize and another one
-    if (!short && others.length && !decoy) {
-      var other = pick(others);
-      var otherX = other.offsetLeft + other.offsetWidth / 2;
-      search.splice(search.length - 1, 0, setClaw(otherX, 0), setClaw(target, 0), setClaw(otherX, 0));
-    }
+    var decoy = !short && others.length && Math.random() < 0.5 ? pick(others) : null;
     if (decoy) {
       var decoyX = decoy.offsetLeft + decoy.offsetWidth / 2;
       search[search.length - 1] = setClaw(decoyX, 0);
-      await animate(claw, search, { duration: 1500 * t, easing: SLOW_END });
+      await animate(claw, search, { duration: 1000 * t, easing: SLOW_END });
       var decoyDrop = decoy.offsetTop - 40;
-      await animate(claw, [setClaw(decoyX, 0), setClaw(decoyX, decoyDrop)], { duration: 700 * t, easing: SLOW_END });
+      await animate(claw, [setClaw(decoyX, 0), setClaw(decoyX, decoyDrop)], { duration: 600 * t, easing: SLOW_END });
       claw.classList.add("closed");
-      await animate(claw, [setClaw(decoyX, decoyDrop), setClaw(decoyX, decoyDrop * 0.4)], { duration: 500 * t, easing: "ease-out" });
+      await animate(claw, [setClaw(decoyX, decoyDrop), setClaw(decoyX, decoyDrop * 0.4)], { duration: 400 * t, easing: "ease-out" });
       claw.classList.remove("closed");
       shout(parts.root, pick(["SLIPPED!", "NOPE!", "SO CLOSE!"]), "small");
       animate(decoy, [{ transform: "rotate(0deg)" }, { transform: "rotate(20deg)" }, { transform: "rotate(-12deg)" }, { transform: "rotate(0deg)" }], { duration: 500, fill: "none" });
-      await animate(claw, [setClaw(decoyX, decoyDrop * 0.4), setClaw(target, 0)], { duration: 700 * t, easing: SLOW_END });
+      await animate(claw, [setClaw(decoyX, decoyDrop * 0.4), setClaw(target, 0)], { duration: 600 * t, easing: SLOW_END });
     } else {
       await animate(claw, search, { duration: 2600 * t, easing: SLOW_END });
     }
@@ -1110,14 +1098,23 @@ var coinRainDraw = {
 
 /* ---------- 9. Russian roulette: the revolver goes round, the last one wins ---------- */
 
+/*
+ * The rules, as in the real game: one bullet in six chambers. The revolver
+ * goes round the table in seat order (clockwise) - every player pulls once,
+ * then hands it to the next one. Each pull turns the cylinder one chamber on:
+ * at most five empty clicks, the sixth is the bullet. Bang: that player is
+ * out, the revolver is loaded again (cylinder spun) and goes on with the next
+ * player. Nobody pulls twice in a row (except in the duel of the last two).
+ */
 var revolverDraw = {
   build(stage, winner) {
     var root = scene(stage, "revolver");
     root.replaceChildren();
     var table = el("div", "jp-table");
+    table.appendChild(el("div", "jp-table-ring"));
     var players = playersFor(8, winner);
     var seats = players.map((player, index) => {
-      // Around the table, the first player at the top
+      // Around the table, clockwise, the first player at the top
       var angle = (index / players.length) * Math.PI * 2;
       var seat = el("div", "jp-seat");
       seat.dataset.name = player.name;
@@ -1129,7 +1126,7 @@ var revolverDraw = {
       table.appendChild(seat);
       return seat;
     });
-    // The gun: a barrel and a cylinder with six chambers (one bullet per shot)
+    // The gun: a barrel and a cylinder with six chambers (which one has the bullet: nobody knows)
     var gun = el("div", "jp-gun");
     var barrel = el("div", "jp-barrel");
     var cylinder = el("div", "jp-cylinder");
@@ -1140,8 +1137,11 @@ var revolverDraw = {
     }
     gun.append(barrel, cylinder);
     table.appendChild(gun);
+    // The odds of the next pull
+    var odds = el("div", "jp-odds", "1 in 6");
+    table.appendChild(odds);
     root.appendChild(table);
-    return { root: root, table: table, seats: seats, gun: gun, cylinder: cylinder, aim: 0, spin: 0 };
+    return { root: root, table: table, seats: seats, gun: gun, cylinder: cylinder, odds: odds, aim: 0, spin: 0 };
   },
 
   idle(stage) {
@@ -1157,41 +1157,47 @@ var revolverDraw = {
     return (Math.atan2(dx, -dy) * 180) / Math.PI;
   },
 
-  // Turns the gun (always clockwise, at least `extra` more turns) to a seat
+  // Turns the gun to a seat - always clockwise (the way it is passed on), `extra` more full turns
   aimAt(parts, seat, time, extra) {
     var target = this.angleTo(parts, seat);
-    var turn = (((target - parts.aim) % 360) + 360) % 360 + 360 * (extra || 0);
-    if (turn < 20) turn += 360;
+    var turn = ((((target - parts.aim) % 360) + 360) % 360) + 360 * (extra || 0);
     parts.aim += turn;
-    return animate(parts.gun, [{ transform: `translate(-50%, -50%) rotate(${parts.aim}deg)` }], { duration: time, easing: SLOW_END });
+    return animate(parts.gun, [{ transform: `translate(-50%, -50%) rotate(${parts.aim}deg)` }], { duration: time, easing: "cubic-bezier(0.45, 0, 0.25, 1)" });
   },
 
-  // The order of the shots: the losers go out one after the other (small shares
-  // first, with luck), with empty clicks in between, the final duel is long
+  /*
+   * Every pull, in order: {seat, bang, chamber (0-5: how many clicks before
+   * in this cylinder), reload (a new cylinder before this pull), duel}.
+   * The bullet always lands on a loser - the winner (fixed by the server)
+   * only ever hears clicks. Not too many clicks, so it fits the draw time.
+   */
   plan(seats, winner) {
-    var losers = seats
-      .filter((seat) => seat != winner)
-      .map((seat) => {
-        var entry = state.entries.find((e) => e.name == seat.dataset.name);
-        return { seat: seat, order: (entry ? entry.coins / state.total : 0) + Math.random() * 1.2 };
-      })
-      .sort((a, b) => a.order - b.order)
-      .map((item) => item.seat);
+    var alive = seats.slice();
+    var turn = Math.floor(Math.random() * alive.length);
+    var budget = Math.max(5, 17 - alive.length); // empty clicks in the whole draw
     var shots = [];
-    var nerves = randomBetween(0.3, 0.8); // how many empty clicks this time
-    losers.forEach((loser, index) => {
-      var alive = [winner].concat(losers.slice(index));
-      if (index == losers.length - 1) {
-        // Final duel: click, click, click ... bang
-        var clicks = 1 + Math.floor(Math.random() * 5);
-        var first = Math.random() < 0.5 ? 0 : 1;
-        for (var i = 0; i < clicks; i++) shots.push({ seat: [winner, loser][(first + i) % 2], bang: false, duel: true });
-        shots.push({ seat: loser, bang: true, duel: true });
-      } else {
-        while (Math.random() < nerves && shots.length < 14) shots.push({ seat: alive[Math.floor(Math.random() * alive.length)], bang: false });
-        shots.push({ seat: loser, bang: true });
+    var reload = true;
+    while (alive.length > 1) {
+      var duel = alive.length == 2;
+      var left = alive.length - 1; // bangs still to come
+      // Clicks this cylinder may have: the duel can use all (up to 5), the others share the rest
+      var most = duel ? Math.min(5, Math.max(1, budget)) : Math.min(5, Math.max(0, Math.floor((budget - 2) / left) * 2));
+      var options = [];
+      for (var k = 0; k <= most; k++) if (alive[(turn + k) % alive.length] != winner) options.push(k);
+      // The winner holds it and no clicks are left: one click, then the next one
+      if (options.length == 0) options.push(1);
+      // In the duel: rather a long one
+      var clicks = duel && options.length > 1 && Math.random() < 0.7 ? options[options.length - 1 - Math.floor(Math.random() * 2)] : pick(options);
+      for (var j = 0; j <= clicks; j++) {
+        shots.push({ seat: alive[(turn + j) % alive.length], bang: j == clicks, chamber: j, reload: reload && j == 0, duel: duel });
       }
-    });
+      budget -= clicks;
+      reload = true;
+      var out = (turn + clicks) % alive.length;
+      alive.splice(out, 1);
+      // The next player after the one who is out
+      turn = out % alive.length;
+    }
     return shots;
   },
 
@@ -1202,36 +1208,52 @@ var revolverDraw = {
     var shots = this.plan(parts.seats, winner);
 
     if (short) {
-      shots.filter((shot) => shot.bang).forEach((shot) => shot.seat.classList.add("out"));
+      shots.filter((shot) => shot.bang).forEach((shot) => this.out(shot.seat));
       return this.survive(parts, winner, draw, true);
     }
 
-    // The first spin is wild, every shot takes a little longer than the last
-    var weights = shots.map((shot, i) => (i == 0 ? randomBetween(1.6, 2.8) : 1 + i * 0.35) * (shot.duel ? 1.5 : 1) * randomBetween(0.7, 1.3));
+    // A reload (spinning the cylinder) takes longer, the duel is slow, the last pull the slowest
+    var weights = shots.map((shot, i) => (shot.reload ? 1.7 : 1) * (shot.duel ? 1.35 : 1) * (i == shots.length - 1 ? 1.4 : 1));
     var sum = weights.reduce((a, b) => a + b, 0);
-    var playTime = duration - 600;
+    var playTime = duration - 700;
     var duelShouted = false;
+    var holder = null;
     for (var i = 0; i < shots.length; i++) {
       var shot = shots[i];
       var time = (weights[i] / sum) * playTime;
       if (shot.duel && !duelShouted) {
         duelShouted = true;
-        shout(parts.root, pick(["FINAL DUEL", "ONE OF YOU...", "LAST TWO"]), "small");
+        shout(parts.root, pick(["FINAL DUEL", "LAST TWO"]), "small");
       }
-      // Spin the cylinder, aim, wait (the target trembles), pull
-      parts.spin += 60 * (i == 0 ? 5 + Math.floor(Math.random() * 6) : 1 + Math.floor(Math.random() * 3));
-      animate(parts.cylinder, [{ transform: `translate(-50%, -50%) rotate(${parts.spin}deg)` }], { duration: time * 0.55, easing: SLOW_END });
-      // Aim and hold: sometimes a long, nervous hold
-      var aim = randomBetween(0.4, 0.65);
-      await this.aimAt(parts, shot.seat, time * aim, i == 0 ? Math.round(randomBetween(1, 3)) : 0);
-      shot.seat.classList.add("aimed");
-      await wait(time * (1 - aim));
+      // A new cylinder: loaded and spun (it slows down by itself), the odds start at 1 in 6
+      if (shot.reload) {
+        parts.spin += 360 * (2 + Math.floor(Math.random() * 2)) + 60 * Math.floor(Math.random() * 6);
+        animate(parts.cylinder, [{ transform: `translate(-50%, -50%) rotate(${parts.spin}deg)` }], { duration: time * 0.45, easing: "cubic-bezier(0.33, 0.66, 0.66, 1)" });
+      }
+      this.setOdds(parts, shot.chamber);
+      // Passed on to the next player (clockwise)
+      if (holder) holder.classList.remove("holding");
+      holder = shot.seat;
+      await this.aimAt(parts, shot.seat, time * (shot.reload ? 0.45 : 0.3), i == 0 ? 1 : 0);
+      shot.seat.classList.add("holding", "aimed");
+      // The nervous moment before the pull
+      await wait(time * (shot.reload ? 0.35 : 0.45));
       shot.seat.classList.remove("aimed");
+      // The hammer turns the cylinder one chamber on
+      parts.spin += 60;
+      animate(parts.cylinder, [{ transform: `translate(-50%, -50%) rotate(${parts.spin}deg)` }], { duration: 90, easing: "ease-out" });
       if (shot.bang) this.bang(parts, shot.seat);
       else this.click(parts, shot.seat);
+      await wait(time * (shot.reload ? 0.2 : 0.25));
     }
+    if (holder) holder.classList.remove("holding");
     await wait(450);
     this.survive(parts, winner, draw, false);
+  },
+
+  setOdds(parts, chamber) {
+    parts.odds.innerText = chamber >= 5 ? "the last chamber" : "1 in " + (6 - chamber);
+    parts.odds.classList.toggle("hot", chamber >= 3);
   },
 
   // Empty chamber: a small "click" and a sigh of relief
@@ -1258,19 +1280,27 @@ var revolverDraw = {
     var flash = el("div", "jp-flash");
     parts.root.appendChild(flash);
     animate(flash, [{ opacity: 0.45 }, { opacity: 0 }], { duration: 250 }).then(() => flash.remove());
+    // The recoil: the gun kicks, the table shakes
+    animate(parts.gun, [{ translate: "0 0" }, { translate: "0 7px" }, { translate: "0 0" }], { duration: 220, fill: "none" });
     animate(parts.root, [{ transform: "translate(-5px, 2px)" }, { transform: "translate(5px, -2px)" }, { transform: "translate(0, 0)" }], {
       duration: 200,
       fill: "none",
     });
+    this.out(seat);
+  },
+
+  out(seat) {
+    seat.classList.remove("holding");
     seat.classList.add("out");
-    var mark = el("span", "jp-seat-x", "✖");
-    seat.appendChild(mark);
+    seat.appendChild(el("span", "jp-seat-x", "✖"));
   },
 
   survive(parts, winner, draw, short) {
     winner.classList.add("champion");
+    parts.odds.hidden = true;
     if (!short) {
-      this.aimAt(parts, winner, 900, 1);
+      // The revolver goes to the survivor one last time - to keep
+      this.aimAt(parts, winner, 700, 0);
       shout(parts.root, pick(["SURVIVED!", "STILL STANDING!", "LUCKY ONE!"]), "strike");
       confetti(parts.root);
     }
