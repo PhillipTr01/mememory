@@ -977,9 +977,9 @@ var RULE_TEXT = {
   jackpot: "Jackpot - a draw, your worth is your chance!",
   bestof: "Best of - the most rounds won win!",
 };
-var REVEAL_WAIT = 3000; // the last case is seen this long before the reel comes
+var REVEAL_WAIT = 1500; // the last case is seen this long before the reel comes
 var REVEAL_SPIN = 7000; // the reel rolls this long
-var REVEAL_HOLD = 1100; // the mode is shown this long before the winner
+var REVEAL_HOLD = 1600; // the mode is shown this long before the winner
 var revealing = {}; // battle id -> when the reel starts
 function playModeReveal(battle, grid) {
   // The first render after the last case: the reel in REVEAL_WAIT, the winner after it
