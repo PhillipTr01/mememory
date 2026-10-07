@@ -105,10 +105,18 @@ module.exports = function () {
     return coins.balanceOf(user);
   }
 
-  // The players in the casino (approved), richest first
+  // In the running season (hit "Start")? Its icon - null: not in it, or no season
+  function seasonOf(username) {
+    const season = seasons.running();
+    return season && seasons.joined(username) === true ? season.icon : null;
+  }
+
+  // The players in the casino (approved): who is in the running season first, then the richest first
   async function players() {
     const users = await User.find({ casinoApproved: true }).select("username coins coinReset").lean();
-    return users.map((user) => ({ username: user.username, coins: balance(user) })).sort((a, b) => b.coins - a.coins || a.username.localeCompare(b.username));
+    return users
+      .map((user) => ({ username: user.username, coins: balance(user), season: seasonOf(user.username) }))
+      .sort((a, b) => !!b.season - !!a.season || b.coins - a.coins || a.username.localeCompare(b.username));
   }
 
   // Everybody with the access state: the approved players first, then who wants in, then the rest
@@ -122,9 +130,10 @@ module.exports = function () {
         approvedAt: user.casinoApprovedAt || null,
         requestedAt: user.casinoRequestedAt || null,
         payout: user.payoutAllowed === true,
+        season: user.casinoApproved === true ? seasonOf(user.username) : null,
       }))
       .filter((user) => user.username.toLowerCase().includes(q))
-      .sort((a, b) => rank(a) - rank(b) || new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0) || a.username.localeCompare(b.username));
+      .sort((a, b) => rank(a) - rank(b) || !!b.season - !!a.season || new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0) || a.username.localeCompare(b.username));
   }
 
   // Who asked for access, the newest first

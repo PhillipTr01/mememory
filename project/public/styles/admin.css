@@ -363,6 +363,14 @@ a.ad-link:focus-visible {
   white-space: nowrap;
 }
 
+/* In the running season (hit "Start") */
+.ad-pill.ad-season-pill {
+  margin-left: 0.35rem;
+  background: rgba(180, 150, 230, 0.16);
+  color: #cdb8f0;
+  vertical-align: middle;
+}
+
 .ad-pill[hidden] {
   display: none;
 }

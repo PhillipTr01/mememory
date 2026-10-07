@@ -177,7 +177,9 @@ async function loadOverview() {
       ...(data.leaderboard.length
         ? data.leaderboard.slice(0, 5).map((p, i) => {
             var row = el("div", "ad-row");
-            row.append(el("span", "ad-rank", i + 1), el("span", "ad-row-main fw-semibold", p.username), el("span", "ad-row-value", "🪙 " + formatCoins(p.coins)));
+            var name = el("span", "ad-row-main fw-semibold", p.username);
+            if (p.season) name.append(" ", seasonPill(p.season));
+            row.append(el("span", "ad-rank", i + 1), name, el("span", "ad-row-value", "🪙 " + formatCoins(p.coins)));
             return row;
           })
         : [el("p", "ad-empty", "No players yet.")]),
@@ -340,6 +342,7 @@ async function loadAccess() {
         payoutCell.appendChild(payout);
         var statusCell = el("td");
         statusCell.appendChild(status);
+        if (p.season) statusCell.append(" ", seasonPill(p.season));
         row.append(el("td", "fw-semibold", p.username), statusCell, payoutCell, actions);
         return row;
       }),
@@ -384,6 +387,13 @@ async function setPayout(player, box, text) {
 
 /* ---------- Players ---------- */
 
+// A player who is in the running season (hit "Start"): a pill with its icon
+function seasonPill(icon) {
+  var pill = el("span", "ad-pill ad-season-pill", icon + " in season");
+  pill.title = "Plays in the running season";
+  return pill;
+}
+
 function fillUserList() {
   document.getElementById("adUserList").replaceChildren(...players.map((p) => Object.assign(document.createElement("option"), { value: p.username })));
 }
@@ -411,7 +421,9 @@ async function loadPlayers() {
         });
         var actions = el("td", "ad-actions");
         actions.append(edit, history);
-        row.append(el("td", "mm-muted", i + 1), el("td", "fw-semibold", p.username), el("td", "num", "🪙 " + formatCoins(p.coins)), actions);
+        var name = el("td", "fw-semibold", p.username);
+        if (p.season) name.append(" ", seasonPill(p.season));
+        row.append(el("td", "mm-muted", i + 1), name, el("td", "num", "🪙 " + formatCoins(p.coins)), actions);
         return row;
       }),
     );

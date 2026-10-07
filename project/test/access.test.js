@@ -125,7 +125,7 @@ test("access: asking for access - the admin sees the request, can approve or dec
   // The approved players first, then who asked, then the rest
   assert.deepStrictEqual(res.body.players.map((p) => p.username), ["old", "tom", "uma", "vic"]);
   const tom = res.body.players[1];
-  assert.deepStrictEqual(tom, { username: "tom", approved: false, approvedAt: null, requestedAt: tom.requestedAt, payout: false });
+  assert.deepStrictEqual(tom, { username: "tom", approved: false, approvedAt: null, requestedAt: tom.requestedAt, payout: false, season: null });
   assert.ok(tom.requestedAt);
   // Not in the casino: not on the leaderboard, no balance to change
   assert.ok(!(await adminApi("users")).body.some((p) => p.username === "tom"));
