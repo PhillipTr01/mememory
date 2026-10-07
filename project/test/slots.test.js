@@ -54,8 +54,8 @@ test("slots: three 🎁 start the bonus game - free spins with a growing multipl
   const bonusStops = slots.STRIPS.map((strip, reel) => ([0, 2, 4].includes(reel) ? strip.indexOf("bonus") : 0));
   const spinsTicket = 40 + 26; // the first ticket of field 2
   const multiplierTicket = 50 + 30;
-  // Every free spin: the middle row all diamonds (5x diamond on line 1)
-  const diamonds = slots.STRIPS.map((strip) => strip.indexOf("diamond"));
+  // Every free spin: the middle row all diamonds (5x diamond on line 1) - the free spins turn their own strips
+  const diamonds = slots.FREE_STRIPS.map((strip) => strip.indexOf("diamond"));
   const rolls = bonusStops.concat([spinsTicket, multiplierTicket]);
   for (let n = 0; n < 8; n++) rolls.push(...diamonds);
   let i = 0;
@@ -70,7 +70,7 @@ test("slots: three 🎁 start the bonus game - free spins with a growing multipl
   // 5 free spins from x1 (stops without a 🎁 in sight: no retrigger) - every win is the line win times
   // the multiplier, which climbs by one
   const start = bonusStops.concat([0, 0]);
-  const plain = slots.STRIPS.map((strip) => strip.findIndex((_, i) => [-1, 0, 1].every((d) => strip[(i + d + strip.length) % strip.length] !== "bonus")));
+  const plain = slots.FREE_STRIPS.map((strip) => strip.findIndex((_, i) => [-1, 0, 1].every((d) => strip[(i + d + strip.length) % strip.length] !== "bonus")));
   let k = 0;
   let r = 0;
   const random = slots.spin(100, () => (k < start.length ? start[k++] : plain[r++ % 5]));
@@ -78,7 +78,9 @@ test("slots: three 🎁 start the bonus game - free spins with a growing multipl
   random.bonus.freeSpins.forEach((f) => assert.strictEqual(f.win, f.lineWin * f.multiplier));
 
   // Three 🎁 in a free spin: 5 free spins more (5 + 5 = 10, multiplier 1 to 10)
-  const again = bonusStops.concat([0, 0], bonusStops);
+  // (the 🎁 of the free spins: on their own strips)
+  const freeBonusStops = slots.FREE_STRIPS.map((strip, reel) => ([0, 2, 4].includes(reel) ? strip.indexOf("bonus") : 0));
+  const again = bonusStops.concat([0, 0], freeBonusStops);
   let j = 0;
   r = 0;
   const retriggered = slots.spin(100, () => (j < again.length ? again[j++] : plain[r++ % 5]));
@@ -91,6 +93,20 @@ test("slots: three 🎁 start the bonus game - free spins with a growing multipl
   const { bonusChance, rtp } = slots.rtp();
   assert.ok(bonusChance > 1 / 250 && bonusChance < 1 / 150, `bonus 1 of ${Math.round(1 / bonusChance)}`);
   assert.ok(rtp > 0.93 && rtp < 0.97);
+});
+
+test("slots: no 🪙 in the free spins (their strips are the same without them)", () => {
+  slots.FREE_STRIPS.forEach((strip, reel) => {
+    assert.ok(!strip.includes("coin"));
+    assert.deepStrictEqual(strip, slots.STRIPS[reel].filter((id) => id !== "coin"));
+    // Still never two 🎁 in one window
+    const at = strip.map((s, i) => (s === "bonus" ? i : -1)).filter((i) => i >= 0);
+    at.forEach((i, n) => at.length > 1 && assert.ok((at[(n + 1) % at.length] - i + strip.length) % strip.length >= 3));
+  });
+  for (let i = 0; i < 20; i++) {
+    const result = slots.spin(100, undefined, { forceBonus: "free" });
+    result.bonus.freeSpins.forEach((free) => assert.ok(!free.grid.flat().includes("coin")));
+  }
 });
 
 test("slots: five 🪙 start the coin game - respins until three in a row bring nothing, every coin pays", () => {

@@ -211,7 +211,9 @@ function spin() {
 }
 
 // The reels turn and stop on `grid` (one after the other); `time`: how long the first reel turns
-function animateReels(grid, time, sweatTime, stopped) {
+function animateReels(grid, time, sweatTime, stopped, strips) {
+  // (the free spins have their own strips: no 🪙)
+  strips = strips || setup.strips;
   var reels = [...document.querySelectorAll(".sl-reel")];
   // The size of a symbol now (full screen or not)
   TILE = document.querySelector(".sl-cell").offsetHeight;
@@ -219,7 +221,7 @@ function animateReels(grid, time, sweatTime, stopped) {
   var sweat = sweatTime > 0 && hasTwoGifts(grid) ? sweatTime : 0;
   return Promise.all(
     reels.map((reel, i) => {
-      var strip = setup.strips[i];
+      var strip = strips[i];
       var track = reel.querySelector(".sl-track");
       reel.classList.add("spinning");
       // Not too many symbols: the reels turn at a speed the eye can follow
@@ -470,7 +472,7 @@ async function playFreeSpins(result, from, progress) {
     clearLines();
     count.innerText = n + 1 + " / " + spins;
     text.innerText = "🪙 " + formatCoins(total);
-    await animateReels(free.grid, spinTime * 0.55, setup.rules.sweatTime * 0.6);
+    await animateReels(free.grid, spinTime * 0.55, setup.rules.sweatTime * 0.6, null, setup.freeStrips);
     // Three 🎁 again: more free spins
     if (free.retrigger > 0) {
       document.querySelectorAll(".sl-cell.scatter").forEach((c) => c.classList.add("hit"));

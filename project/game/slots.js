@@ -19,13 +19,13 @@ const crypto = require("crypto");
  * when the bonus reaches it, it ends right there.
  */
 const SYMBOLS = [
-  { id: "banana", icon: "🍌", name: "Banana", count: 9, pays: [3, 9, 28] },
-  { id: "pepe", icon: "🐸", name: "Pepe", count: 8, pays: [4, 15, 42] },
-  { id: "doge", icon: "🐕", name: "Doge", count: 6, pays: [7, 23, 88] },
-  { id: "money", icon: "💰", name: "Money bag", count: 4, pays: [14, 40, 174] },
-  { id: "rocket", icon: "🚀", name: "To the moon", count: 3, pays: [20, 71, 350] },
-  { id: "diamond", icon: "💎", name: "Diamond hands", count: 1, pays: [34, 174, 874] },
-  { id: "wild", icon: "👑", name: "Wild", count: 2, pays: [52, 263, 1748], wild: true },
+  { id: "banana", icon: "🍌", name: "Banana", count: 9, pays: [3, 8, 25] },
+  { id: "pepe", icon: "🐸", name: "Pepe", count: 8, pays: [4, 13, 38] },
+  { id: "doge", icon: "🐕", name: "Doge", count: 6, pays: [7, 22, 83] },
+  { id: "money", icon: "💰", name: "Money bag", count: 4, pays: [13, 38, 164] },
+  { id: "rocket", icon: "🚀", name: "To the moon", count: 3, pays: [19, 67, 329] },
+  { id: "diamond", icon: "💎", name: "Diamond hands", count: 1, pays: [32, 164, 822] },
+  { id: "wild", icon: "👑", name: "Wild", count: 2, pays: [49, 247, 1643], wild: true },
   // Pays no line - three in sight (reels 1, 3, 5) start the bonus
   { id: "bonus", icon: "🎁", name: "Bonus", count: 0, pays: [0, 0, 0], scatter: true },
   // Pays no line - five in sight (anywhere) start the coin game; every coin carries a value
@@ -149,6 +149,9 @@ const STRIPS = [11, 23, 37, 41, 53].map((seed, reel) => {
   return strip;
 });
 
+// The free spins turn other strips: the same, without the 🪙 (no coin game in the free spins)
+const FREE_STRIPS = STRIPS.map((strip) => strip.filter((id) => id !== COIN));
+
 // The multiplier of one line (symbols from the left), and what it is made of
 function lineWin(symbols) {
   let wilds = 0;
@@ -174,9 +177,9 @@ function window(strip, stop) {
 }
 
 // The reels stop and the 9 lines are paid: {stops, grid, lines, multiplier (all lines), lineWin}
-function reels(bet, randomInt, fixed) {
-  const stops = STRIPS.map((strip, reel) => (fixed && fixed[reel] != null ? fixed[reel] : randomInt(strip.length)));
-  const grid = STRIPS.map((strip, reel) => window(strip, stops[reel]));
+function reels(bet, randomInt, fixed, strips = STRIPS) {
+  const stops = strips.map((strip, reel) => (fixed && fixed[reel] != null ? fixed[reel] : randomInt(strip.length)));
+  const grid = strips.map((strip, reel) => window(strip, stops[reel]));
   const lines = [];
   let multiplier = 0;
   LINES.forEach((rows, line) => {
@@ -267,7 +270,7 @@ function spin(bet, randomInt = crypto.randomInt, options = {}) {
     const startSpins = BONUS_SPINS[spinsField].spins;
     bonus = { spinsField: spinsField, multiplierField: multiplierField, startSpins: startSpins, spins: startSpins, multiplier: BONUS_MULTIPLIERS[multiplierField].multiplier, freeSpins: [], win: 0 };
     for (let n = 0; n < bonus.spins && !capped; n++) {
-      const free = reels(bet, randomInt);
+      const free = reels(bet, randomInt, null, FREE_STRIPS);
       // Three 🎁 again: more free spins (the spin counts as well)
       const more = BONUS_REELS.every((reel) => free.grid[reel].includes(BONUS)) ? Math.min(RETRIGGER, MAX_FREE_SPINS - bonus.spins) : 0;
       bonus.spins += more;
@@ -299,8 +302,49 @@ function spin(bet, randomInt = crypto.randomInt, options = {}) {
  * chance -> the average multiplier of a line = the share of the bet paid back.
  */
 function rtp() {
+  // The normal spins and the free spins (their own strips, without the 🪙)
+  const base = lineStats(STRIPS);
+  const free = lineStats(FREE_STRIPS);
+  const paid = base.paid;
+  const bonusChance = base.bonusChance;
+  const retriggerChance = free.bonusChance;
+  // The bonus game: free spin k (0, 1, ...) pays a free spin times (start + k * step), if it is
+  // played at all. A free spin pays on average `free.paid` whatever came before:
+  // E[bonus] = free.paid * sum over k of (start + k * step) * P(free spin k is played). Retriggers (three
+  // 🎁 in a free spin: RETRIGGER more, at most MAX_FREE_SPINS) make later spins possible.
+  const start = BONUS_MULTIPLIERS.reduce((sum, f) => sum + f.multiplier * f.weight, 0) / total(BONUS_MULTIPLIERS);
+  let played = 0; // E[number of free spins]
+  let playedK = 0; // E[sum of k over the played free spins]
+  BONUS_SPINS.forEach((f) => {
+    const weight = f.weight / total(BONUS_SPINS);
+    // Chance of every total of free spins so far, spin after spin
+    let totals = new Map([[f.spins, 1]]);
+    for (let k = 0; k < MAX_FREE_SPINS; k++) {
+      let p = 0;
+      const next = new Map();
+      const add = (spins, q) => next.set(spins, (next.get(spins) || 0) + q);
+      totals.forEach((q, spins) => {
+        if (k >= spins) return add(spins, q); // over
+        p += q;
+        add(Math.min(MAX_FREE_SPINS, spins + RETRIGGER), q * retriggerChance);
+        add(spins, q * (1 - retriggerChance));
+      });
+      played += weight * p;
+      playedK += weight * p * k;
+      totals = next;
+    }
+  });
+  // (without the max win - the true payback is a tiny bit lower)
+  const bonusAverage = free.paid * (played * start + BONUS_STEP * playedK);
+  const coin = coinRtp();
+  return { rtp: paid + bonusChance * bonusAverage + coin.rtp, lines: paid, freeLines: free.paid, lineHit: base.hits, bonusChance: bonusChance, bonusRtp: bonusChance * bonusAverage, bonusAverage: bonusAverage, coinChance: coin.chance, coinRtp: coin.rtp, coinAverage: coin.average, ultraChance: coin.ultra };
+}
+
+// One kind of strips: the average line multiplier (= the payback of the lines), how often a line
+// wins, and the chance of three 🎁 (one in the window of each bonus reel - at most one fits)
+function lineStats(strips) {
   const ids = SYMBOLS.map((symbol) => symbol.id);
-  const chance = STRIPS.map((strip) => new Map(ids.map((id) => [id, strip.filter((s) => s === id).length / strip.length])));
+  const chance = strips.map((strip) => new Map(ids.map((id) => [id, strip.filter((s) => s === id).length / strip.length])));
   let paid = 0;
   let hits = 0;
   const line = [];
@@ -319,39 +363,8 @@ function rtp() {
     }
   })(0, 1);
   // Every line gets a ninth of the bet and there are nine of them: the average line multiplier is the payback
-  // The bonus: a 🎁 in the window of each bonus reel (at most one fits in a window)
-  const inWindow = (reel) => (STRIPS[reel].filter((s) => s === BONUS).length * ROWS) / STRIPS[reel].length;
-  const bonusChance = BONUS_REELS.reduce((p, reel) => p * inWindow(reel), 1);
-  // The bonus game: free spin k (0, 1, ...) pays a normal spin times (start + k * step), if it is
-  // played at all. A free spin is a normal spin, so it pays on average `paid` whatever came before:
-  // E[bonus] = paid * sum over k of (start + k * step) * P(free spin k is played). Retriggers (three
-  // 🎁 in a free spin: RETRIGGER more, at most MAX_FREE_SPINS) make later spins possible.
-  const start = BONUS_MULTIPLIERS.reduce((sum, f) => sum + f.multiplier * f.weight, 0) / total(BONUS_MULTIPLIERS);
-  let played = 0; // E[number of free spins]
-  let playedK = 0; // E[sum of k over the played free spins]
-  BONUS_SPINS.forEach((f) => {
-    const weight = f.weight / total(BONUS_SPINS);
-    // Chance of every total of free spins so far, spin after spin
-    let totals = new Map([[f.spins, 1]]);
-    for (let k = 0; k < MAX_FREE_SPINS; k++) {
-      let p = 0;
-      const next = new Map();
-      const add = (spins, q) => next.set(spins, (next.get(spins) || 0) + q);
-      totals.forEach((q, spins) => {
-        if (k >= spins) return add(spins, q); // over
-        p += q;
-        add(Math.min(MAX_FREE_SPINS, spins + RETRIGGER), q * bonusChance);
-        add(spins, q * (1 - bonusChance));
-      });
-      played += weight * p;
-      playedK += weight * p * k;
-      totals = next;
-    }
-  });
-  // (without the max win - the true payback is a tiny bit lower)
-  const bonusAverage = paid * (played * start + BONUS_STEP * playedK);
-  const coin = coinRtp();
-  return { rtp: paid + bonusChance * bonusAverage + coin.rtp, lines: paid, lineHit: hits, bonusChance: bonusChance, bonusRtp: bonusChance * bonusAverage, bonusAverage: bonusAverage, coinChance: coin.chance, coinRtp: coin.rtp, coinAverage: coin.average, ultraChance: coin.ultra };
+  const inWindow = (reel) => (strips[reel].filter((s) => s === BONUS).length * ROWS) / strips[reel].length;
+  return { paid: paid, hits: hits, bonusChance: BONUS_REELS.reduce((p, reel) => p * inWindow(reel), 1) };
 }
 
 /*
@@ -423,10 +436,11 @@ function catalog() {
     symbols: SYMBOLS.map((symbol) => ({ id: symbol.id, icon: symbol.icon, name: symbol.name, pays: symbol.pays, wild: symbol.wild === true, scatter: symbol.scatter === true, coin: symbol.coin === true })),
     lines: LINES,
     strips: STRIPS,
+    freeStrips: FREE_STRIPS,
     bonus: { spins: BONUS_SPINS.map((f) => f.spins), multipliers: BONUS_MULTIPLIERS.map((f) => f.multiplier), step: BONUS_STEP, retrigger: RETRIGGER, maxSpins: MAX_FREE_SPINS },
     coins: { trigger: COIN_TRIGGER, respins: COIN_RESPINS, values: COIN_VALUES.filter((f) => !f.prize).map((f) => f.x), prizes: COIN_VALUES.filter((f) => f.prize).map((f) => ({ prize: f.prize, x: f.x })), ultra: ULTRA, maxWin: COIN_MAX_WIN },
     maxWin: MAX_WIN,
   };
 }
 
-module.exports = { SYMBOLS, LINES, STRIPS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, lineWin, spin, coinGame, rtp, catalog };
+module.exports = { SYMBOLS, LINES, STRIPS, FREE_STRIPS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, lineWin, spin, coinGame, rtp, catalog };
