@@ -112,7 +112,7 @@ module.exports = {
   BATTLE_ROUND: 4500, // one case for everybody: spin + a short look at the items
   BATTLE_MAX_OPEN: 3, // waiting battles per creator
   BATTLE_MAX_CASES: 100, // cases (rounds) per battle
-  BATTLE_MODE_REVEAL: 2600, // random mode: the pages show which mode it was, then the winner is paid
+  BATTLE_MODE_REVEAL: 5800, // random mode: the pages show which mode it was, then the winner is paid
   BATTLE_KEEP: 60 * 1000, // a finished battle stays in the list this long
   BATTLE_EXPIRE: 15 * 60 * 1000, // nobody joined: cancelled, coins back
   BATTLE_HISTORY: 10,
@@ -162,12 +162,15 @@ module.exports = {
   SLOTS_HOLD: 24 * 60 * 60 * 1000, // a bonus game waits this long for the player to come back, then it is paid
   SLOTS_BONUS_END: 4000, // the bonus win is counted up and shown
   SLOTS_RETRIGGER_TIME: 900, // more free spins (three 🎁 in a free spin) are shown
+  SLOTS_COIN_INTRO: 1800, // the coin game: the coins lock in before the first respin
+  SLOTS_RESPIN: 1500, // one respin of the coin game on the page
+  SLOTS_ULTRA_TIME: 4500, // all 15 spots full: the ULTRA show
   SLOTS_BIG_WIN: 15, // a win of this many times the bet gets the big show
   SLOTS_COUNT_TIME: 1800, // the win is counted up (and the slow last reel)
   SLOTS_BIG_TIME: 3000, // the big-win show on top
   SLOTS_MIN_GAP: 600, // at least this long between two spins of a player
   SLOTS_FEED: 12, // last wins in the list
-  SLOTS_TEST_BONUS: false, // admin panel, for testing: every spin starts the bonus game
+  SLOTS_TEST_BONUS: "off", // admin panel, for testing: every spin starts a bonus game ("free" spins or the "coins" game)
 
   // The tables of the lobby (in this order, limits from the keys above); a page without a table opens "classic"
   BJ_TABLES: [

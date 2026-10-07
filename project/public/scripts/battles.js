@@ -769,40 +769,41 @@ function placesOf(battle, totals) {
 }
 
 /*
- * Random mode, at the very end: one spin through the two icons, slowing down,
- * it stops on the mode the seed chose - then the winner is shown.
+ * Random mode, at the very end: a reel of crowns and clowns rolls, slows down
+ * smoothly and stops on the mode the seed chose - then the winner is shown.
+ * (A new render of the page picks the reel up where it was.)
  */
-var revealing = {};
+var REVEAL_SPIN = 4400; // the reel rolls this long
+var REVEAL_HOLD = 1100; // the mode is shown this long before the winner
+var revealing = {}; // battle id -> when the reel started
 function playModeReveal(battle, grid) {
   var box = el("div", "bt-mode-reveal");
-  var face = el("span", "bt-mode-face", "👑");
+  var face = el("span", "bt-mode-face");
+  var track = el("span", "bt-mode-track");
+  // Many icons in turn, the last one is the mode (even: crown, odd: clown)
+  var count = 28 + (battle.crazy ? 1 : 0);
+  for (var n = 0; n <= count; n++) track.appendChild(el("span", "bt-mode-icon", n % 2 ? "🤡" : "👑"));
+  face.appendChild(track);
   var name = el("span", "bt-mode-name", "Classic or crazy?");
   box.append(el("span", "bt-mode-title", "THE MODE IS..."), face, name);
   grid.appendChild(box);
-  if (revealing[battle.id]) return;
-  revealing[battle.id] = true;
-  var icons = ["👑", "🤡"];
-  var steps = 14 + (battle.crazy ? 1 : 0); // ends on the right one (even: crown, odd: clown)
-  var n = 0;
-  var next = () => {
-    n++;
-    var current = document.querySelector(".bt-mode-face");
-    if (current) {
-      current.innerText = icons[n % 2];
-      current.animate([{ transform: "translateY(-30%) scale(0.85)", opacity: 0.4 }, { transform: "none", opacity: 1 }], { duration: 120 });
-    }
-    if (n < steps) return setTimeout(next, 45 + Math.pow(n / steps, 3) * 330);
-    // Stopped: the mode, a moment to see it, then the end of the battle
-    var label = document.querySelector(".bt-mode-name");
-    if (label) label.innerText = battle.crazy ? "Crazy - the lowest total wins!" : "Classic - the highest total wins!";
-    if (current) current.parentElement.classList.add("done");
-    setTimeout(() => {
-      modeShown[battle.id] = true;
-      renderBattle();
-      celebrate(battle);
-    }, 900);
+  var first = !revealing[battle.id];
+  var started = revealing[battle.id] || (revealing[battle.id] = Date.now());
+  var spin = track.animate([{ transform: "translateY(0)" }, { transform: "translateY(" + -count * 100 + "%)" }], { duration: REVEAL_SPIN, easing: "cubic-bezier(0.15, 0.55, 0.12, 1)", fill: "forwards" });
+  spin.currentTime = Math.min(REVEAL_SPIN, Date.now() - started);
+  var stopped = () => {
+    name.innerText = battle.crazy ? "Crazy - the lowest total wins!" : "Classic - the highest total wins!";
+    box.classList.add("done");
   };
-  setTimeout(next, 200);
+  if (Date.now() - started >= REVEAL_SPIN) return stopped();
+  spin.finished.then(stopped, () => {});
+  // Only the first render ends the reveal
+  if (!first) return;
+  setTimeout(() => {
+    modeShown[battle.id] = true;
+    renderBattle();
+    celebrate(battle);
+  }, REVEAL_SPIN + REVEAL_HOLD);
 }
 
 function finalTile(battle, seat, place, total) {
