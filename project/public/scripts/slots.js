@@ -211,14 +211,16 @@ function spin() {
 }
 
 // The reels turn and stop on `grid` (one after the other); `time`: how long the first reel turns
-function animateReels(grid, time, sweatTime, stopped, strips) {
+function animateReels(grid, time, sweatTime, stopped, strips, stops) {
   // (the free spins have their own strips: no 🪙)
   strips = strips || setup.strips;
   var reels = [...document.querySelectorAll(".sl-reel")];
   // The size of a symbol now (full screen or not)
   TILE = document.querySelector(".sl-cell").offsetHeight;
-  // The sweat: 🎁 on reels 1 and 3 - the last reel turns longer, slower, lit up
-  var sweat = sweatTime > 0 && hasTwoGifts(grid) ? sweatTime : 0;
+  // The sweat: 🎁 on reels 1 and 3, or 3-4 🪙 on the first four reels (the coin game is still
+  // possible) - the last reel turns longer, slower, they light up
+  var kind = hasTwoGifts(grid) ? "gifts" : stops && hasCoinChance(grid, stops) ? "coins" : null;
+  var sweat = sweatTime > 0 && kind ? sweatTime : 0;
   return Promise.all(
     reels.map((reel, i) => {
       var strip = strips[i];
@@ -248,16 +250,18 @@ function animateReels(grid, time, sweatTime, stopped, strips) {
       return animation.finished.then(() => {
         reel.classList.remove("spinning");
         reel.classList.remove("sweat");
-        // Two 🎁 in sight: they light up, the last reel sweats
-        if (sweat && i == 2) {
-          [0, 2].forEach((r) => reels[r].querySelectorAll(".sl-cell.scatter").forEach((c) => c.classList.add("hit")));
-          reels[4].classList.add("sweat");
-        }
         // Keep only the 3 symbols that are shown
         showGrid(i, grid[i]);
-        // The sweat is over without a third 🎁: the two stop glowing
-        if (sweat && i == 4 && !grid[4].includes("bonus")) document.querySelectorAll(".sl-cell.scatter.hit").forEach((c) => c.classList.remove("hit"));
         if (stopped) stopped(i);
+        // Two 🎁 in sight (after reel 3) - or enough 🪙 (after reel 4): they light up, the last reel sweats
+        var light = kind == "gifts" ? ".sl-cell.scatter" : ".sl-cell.coin";
+        if (sweat && i == (kind == "gifts" ? 2 : 3)) {
+          reels.slice(0, i + 1).forEach((r) => r.querySelectorAll(light).forEach((c) => c.classList.add("hit")));
+          reels[4].classList.add("sweat");
+        }
+        // The sweat is over without the bonus: they stop glowing
+        var made = kind == "gifts" ? grid[4].includes("bonus") : grid.flat().filter((id) => id == "coin").length >= setup.coins.trigger;
+        if (sweat && i == 4 && !made) document.querySelectorAll(light + ".hit").forEach((c) => c.classList.remove("hit"));
       });
     }),
   );
@@ -276,15 +280,23 @@ function hasTwoGifts(grid) {
   return grid[0].includes("bonus") && grid[2].includes("bonus");
 }
 
+// The coin game still possible on the last reel (the same rule as the server, slots.coinSweat):
+// 4 🪙 on the first four reels - or 3 (one on reel 4) in 2 of 5 spins (by the stops)
+function hasCoinChance(grid, stops) {
+  var coins = grid.slice(0, 4).flat().filter((id) => id == "coin").length;
+  if (coins == setup.coins.trigger - 1) return true;
+  return coins == setup.coins.trigger - 2 && grid[3].includes("coin") && stops.reduce((sum, stop) => sum + stop, 0) % 5 < 2;
+}
+
 async function playSpin(result) {
   // (only two 🎁 make the last reel turn longer - the sweat); a 🪙 shows its value when its reel stops
   var coins = result.coins || [];
-  await animateReels(result.grid, setup.rules.spinTime, setup.rules.sweatTime, (reel) =>
+  var shown = (reel) =>
     showCoins(
       coins.filter((c) => c.reel == reel),
       result.bet,
-    ),
-  );
+    );
+  await animateReels(result.grid, setup.rules.spinTime, setup.rules.sweatTime, shown, null, result.stops);
   // Three 🎁: the bonus game first - five 🪙: the coin game
   if (result.bonus) await playBonus(result);
   if (result.coinGame) await playCoinGame(result);

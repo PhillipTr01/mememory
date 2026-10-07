@@ -37,12 +37,14 @@ module.exports = function (io) {
    * can't be played elsewhere before the spin is over on the screen.
    */
   function showTime(bet, result) {
-    return config.SLOTS_SPIN + sweat(result.grid) + restTime(bet, result, 0, config.SLOTS_BONUS_TIME);
+    return config.SLOTS_SPIN + sweat(result.grid, 1, result.stops) + restTime(bet, result, 0, config.SLOTS_BONUS_TIME);
   }
 
-  // 🎁 on reels 1 and 3: the last reel turns longer on the page (the sweat)
-  function sweat(grid, share = 1) {
-    return grid[0].includes("bonus") && grid[2].includes("bonus") ? config.SLOTS_SWEAT * share : 0;
+  // 🎁 on reels 1 and 3 - or the coin game still possible (see slots.coinSweat, only normal spins):
+  // the last reel turns longer on the page (the sweat)
+  function sweat(grid, share = 1, stops = null) {
+    const gifts = grid[0].includes("bonus") && grid[2].includes("bonus");
+    return gifts || (stops && slots.coinSweat(grid, stops)) ? config.SLOTS_SWEAT * share : 0;
   }
 
   // The show from free spin (or respin of the coin game) `shown` on (after `intro`: the wheels,

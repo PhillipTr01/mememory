@@ -95,6 +95,19 @@ test("slots: three 🎁 start the bonus game - free spins with a growing multipl
   assert.ok(rtp > 0.93 && rtp < 0.97);
 });
 
+test("slots: the coin sweat - the coin game still possible on the last reel, about as often as the 🎁 sweat", () => {
+  const coin = (n) => Array.from({ length: 4 }, (_, reel) => [reel < n ? "coin" : "pepe", "doge", "banana"]).concat([["pepe", "doge", "banana"]]);
+  assert.strictEqual(slots.coinSweat(coin(4), [0, 0, 0, 0, 0]), true, "4 coins: always");
+  assert.strictEqual(slots.coinSweat(coin(2), [0, 0, 0, 0, 0]), false);
+  let sweats = 0;
+  const N = 40000;
+  for (let i = 0; i < N; i++) {
+    const r = slots.spin(100);
+    if (slots.coinSweat(r.grid, r.stops)) sweats++;
+  }
+  assert.ok(sweats / N > 1 / 55 && sweats / N < 1 / 30, `1 of ${Math.round(N / sweats)}`);
+});
+
 test("slots: no 🪙 in the free spins (their strips are the same without them)", () => {
   slots.FREE_STRIPS.forEach((strip, reel) => {
     assert.ok(!strip.includes("coin"));

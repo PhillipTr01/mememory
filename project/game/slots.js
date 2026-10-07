@@ -233,6 +233,18 @@ function coinGame(bet, start, randomInt) {
 }
 
 /*
+ * The coin sweat (the last reel turns longer): 4 🪙 on the first four reels -
+ * or 3 (one of them on reel 4) in 2 of 5 spins (by the stops), so it comes
+ * about as often as the sweat of two 🎁 (1 of 40 spins). The page uses the
+ * same rule.
+ */
+function coinSweat(grid, stops) {
+  const coins = grid.slice(0, 4).flat().filter((id) => id === COIN).length;
+  if (coins === COIN_TRIGGER - 1) return true;
+  return coins === COIN_TRIGGER - 2 && grid[3].includes(COIN) && stops.reduce((sum, stop) => sum + stop, 0) % 5 < 2;
+}
+
+/*
  * One spin for `bet` coins: {stops, grid (grid[reel][row]), lines: [{line,
  * symbol, count, multiplier, win}], lineWin, bonus, win, capped}. With three
  * 🎁 the bonus game is played here too: bonus = {spinsField, multiplierField,
@@ -443,4 +455,4 @@ function catalog() {
   };
 }
 
-module.exports = { SYMBOLS, LINES, STRIPS, FREE_STRIPS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, lineWin, spin, coinGame, rtp, catalog };
+module.exports = { SYMBOLS, LINES, STRIPS, FREE_STRIPS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, lineWin, spin, coinGame, coinSweat, rtp, catalog };
