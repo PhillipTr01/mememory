@@ -175,7 +175,7 @@
 }
 
 .pk-card.flip {
-  animation: pk-flip 0.45s ease-out both;
+  animation: pk-flip 0.7s ease-out both;
 }
 
 @keyframes pk-flip {

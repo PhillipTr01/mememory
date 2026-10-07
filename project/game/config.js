@@ -138,7 +138,7 @@ module.exports = {
   POKER_DEFAULT_BUYIN: 10000, // what the buy-in starts with when sitting down (100 big blinds)
   POKER_TURN: 20 * 1000, // time to act, then check (or fold)
   POKER_START: 3000, // pause before a hand starts
-  POKER_STREET: 1200, // all-in: pause between the cards of the board
+  POKER_STREET: 1800, // all-in: pause between the cards of the board (the flop takes ~1.5 s to turn)
   POKER_SHOWDOWN: 6000, // the result is shown this long
   POKER_DECIDE: 5000, // after the hand: time to show or muck the cards (then mucked)
   POKER_AFTER_DECIDE: 2500, // the decisions are shown at least this long before the next hand

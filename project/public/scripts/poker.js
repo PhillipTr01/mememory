@@ -266,7 +266,8 @@ function renderBoard() {
       continue;
     }
     var c = cardElement(card, (n >= before ? "flip" : "") + winningClass(card));
-    if (n >= before) c.style.animationDelay = (n - before) * 150 + "ms";
+    // (the flop one card after the other, slowly)
+    if (n >= before) c.style.animationDelay = (n - before) * 380 + "ms";
     cards.push(c);
   }
   board.replaceChildren(...cards);
@@ -387,17 +388,31 @@ function renderActions() {
   slider.min = l.min;
   slider.max = l.max;
   slider.step = "any";
-  amount.min = l.min;
-  amount.max = l.max;
-  if (!keep || Number(amount.value) < l.min || Number(amount.value) > l.max) {
-    slider.value = l.min;
-    amount.value = l.min;
-  }
+  if (!keep || raiseValue < l.min || raiseValue > l.max) raiseValue = l.min;
+  slider.value = raiseValue;
+  showAmount();
   updateRaiseLabel();
 }
 
+// The raise (in coins); the field shows it in coins or big blinds, like the chips at the table
+var raiseValue = 0;
+function showAmount() {
+  var amount = document.getElementById("pkAmount");
+  var bb = state.rules.bigBlind;
+  amount.step = inBB ? 0.5 : 1;
+  amount.value = inBB ? Math.round((raiseValue / bb) * 10) / 10 : raiseValue;
+  amount.setAttribute("aria-label", inBB ? "Raise to (big blinds)" : "Raise to");
+  amount.classList.toggle("in-bb", inBB);
+}
+
+// What is typed in the field: coins - or big blinds
+function typedAmount(text) {
+  var value = Number(text) || 0;
+  return inBB ? value * state.rules.bigBlind : value;
+}
+
 function updateRaiseLabel() {
-  var value = Number(document.getElementById("pkAmount").value) || 0;
+  var value = raiseValue;
   var l = limits();
   var label = value >= l.max ? "All-in " + chips(l.max) : (state.highBet == 0 ? "Bet " : "Raise to ") + chips(value);
   document.getElementById("pkRaise").innerText = label;
@@ -415,8 +430,9 @@ function setRaise(value, fromSlider) {
   var l = limits();
   value = Math.max(l.min, Math.min(l.max, Math.round(value)));
   if (fromSlider) value = snap(value, l.min, l.max);
+  raiseValue = value;
   document.getElementById("pkSlider").value = value;
-  document.getElementById("pkAmount").value = value;
+  showAmount();
   updateRaiseLabel();
 }
 
@@ -639,13 +655,13 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("pkFold").addEventListener("click", () => send("fold"));
   document.getElementById("pkCall").addEventListener("click", () => send(limits().toCall > 0 ? "call" : "check"));
   document.getElementById("pkRaise").addEventListener("click", () => {
-    var value = Number(document.getElementById("pkAmount").value);
+    var value = raiseValue;
     var l = limits();
     if (value >= l.max) send("allin");
     else send("raise", value);
   });
   document.getElementById("pkSlider").addEventListener("input", (event) => setRaise(Number(event.target.value), true));
-  document.getElementById("pkAmount").addEventListener("change", (event) => setRaise(Number(event.target.value)));
+  document.getElementById("pkAmount").addEventListener("change", (event) => setRaise(typedAmount(event.target.value)));
   renderPresets();
   document.getElementById("pkPresetEdit").addEventListener("click", editPresets);
   // The mouse wheel moves the raise (50 per step, like the slider)
@@ -654,8 +670,7 @@ document.addEventListener("DOMContentLoaded", () => {
     (event) => {
       if (!state || document.getElementById("pkRaiseBox").hidden) return;
       event.preventDefault();
-      var value = Number(document.getElementById("pkAmount").value) || 0;
-      setRaise(value + (event.deltaY < 0 ? 1 : -1) * SLIDER_STEP, true);
+      setRaise(raiseValue + (event.deltaY < 0 ? 1 : -1) * SLIDER_STEP, true);
     },
     { passive: false },
   );
