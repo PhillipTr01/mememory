@@ -32,6 +32,7 @@
                 <a href="#players" class="ad-nav-item" data-tab="players"><span class="ad-nav-icon">🏆</span><span class="ad-nav-label">Players</span></a>
                 <a href="#payouts" class="ad-nav-item" data-tab="payouts"><span class="ad-nav-icon">💸</span><span class="ad-nav-label">Payouts</span></a>
                 <a href="#history" class="ad-nav-item" data-tab="history"><span class="ad-nav-icon">📜</span><span class="ad-nav-label">History</span></a>
+                <a href="#seasons" class="ad-nav-item" data-tab="seasons"><span class="ad-nav-icon">🗓️</span><span class="ad-nav-label">Seasons</span><span id="adSeasonBadge" class="ad-state on" hidden></span></a>
                 <a href="#chat" class="ad-nav-item" data-tab="chat"><span class="ad-nav-icon">💬</span><span class="ad-nav-label">Chat</span></a>
                 <a href="#settings" class="ad-nav-item" data-tab="settings"><span class="ad-nav-icon">⚙️</span><span class="ad-nav-label">Settings</span></a>
                 <!--- The pages of the settings: general and one per game --->
@@ -165,6 +166,72 @@
                         <thead><tr><th>Time</th><th>Player</th><th>What</th><th class="num">Coins</th></tr></thead>
                         <tbody id="adHistory"></tbody>
                     </table>
+                </div>
+            </section>
+
+            <!--- Seasons: planned ahead, every account starts with the budget, the winners at the end --->
+            <section id="tab-seasons" class="ad-tab" hidden>
+                <div class="ad-grid ad-grid-side ad-seasons-grid">
+                    <div class="ad-stack">
+                        <div id="adSeasonNow" class="ad-card ad-season-now"></div>
+                        <div class="ad-card">
+                            <div class="ad-card-head"><h2 class="ad-title">All seasons</h2></div>
+                            <div id="adSeasonList" class="ad-season-list"></div>
+                        </div>
+                    </div>
+                    <div class="ad-card">
+                        <div class="ad-card-head">
+                            <h2 class="ad-title" id="adSeasonFormTitle">New season</h2>
+                            <button type="button" id="adSeasonCancel" class="mm-btn mm-btn-sm" hidden>Cancel</button>
+                        </div>
+                        <form id="adSeasonForm" class="ad-season-form" autocomplete="off">
+                            <div class="ad-season-name">
+                                <label class="ad-field ad-field-icon">
+                                    <span class="ad-label">Icon</span>
+                                    <input id="adSeasonIcon" class="mm-input" maxlength="8" value="🏆" required>
+                                </label>
+                                <label class="ad-field">
+                                    <span class="ad-label">Name</span>
+                                    <input id="adSeasonName" class="mm-input" maxlength="40" placeholder="Season 1" required>
+                                </label>
+                            </div>
+                            <div id="adSeasonIcons" class="ad-icon-picks" aria-label="Icons"></div>
+                            <label class="ad-field">
+                                <span class="ad-label">Start</span>
+                                <input id="adSeasonStart" class="mm-input" type="datetime-local" required>
+                            </label>
+                            <label class="ad-field">
+                                <span class="ad-label">End</span>
+                                <input id="adSeasonEnd" class="mm-input" type="datetime-local" required>
+                            </label>
+                            <label class="ad-field">
+                                <span class="ad-label">Start budget</span>
+                                <input id="adSeasonBudget" class="mm-input" type="number" min="0" step="1" value="25000" required>
+                                <span class="ad-setting-hint">Every account in the casino is reset to this when the season starts.</span>
+                            </label>
+                            <label class="ad-field">
+                                <span class="ad-label">Leaderboard updates</span>
+                                <select id="adSeasonEvery" class="mm-input">
+                                    <option value="0">All the time (live)</option>
+                                    <option value="5">Every 5 minutes</option>
+                                    <option value="15">Every 15 minutes</option>
+                                    <option value="60">Every hour</option>
+                                    <option value="360">Every 6 hours</option>
+                                    <option value="1440">Once a day (midnight)</option>
+                                </select>
+                            </label>
+                            <div class="ad-field">
+                                <label class="ad-switch">
+                                    <input type="checkbox" id="adSeasonPrizesOn">
+                                    <span class="ad-switch-track"></span>
+                                    <span class="ad-switch-text">Prizes</span>
+                                </label>
+                                <div id="adSeasonPrizes" class="ad-prize-list" hidden></div>
+                                <button type="button" id="adSeasonAddPrize" class="mm-btn mm-btn-sm ad-add-prize" hidden>+ Add a prize</button>
+                            </div>
+                            <button type="submit" id="adSeasonSave" class="mm-btn mm-btn-primary w-100">Plan the season</button>
+                        </form>
+                    </div>
                 </div>
             </section>
 

@@ -2,12 +2,13 @@ const EventEmitter = require("events");
 const User = require("../models/User");
 const Setting = require("../models/Setting");
 const coins = require("./coins");
-const persist = require("./persist");
+const { seasonReset } = require("./hard_reset");
 
 /*
  * Seasons (admin panel): planned ahead from a start to an end. When a season
- * starts, every account in the casino is reset to its start budget and the
- * games start anew; the leaderboard shows the season (updated as often as
+ * starts, the casino starts anew like after the hard reset (games, coin
+ * history, payouts) - everybody who is in stays in and gets the season's
+ * start budget; the leaderboard shows the season (updated as often as
  * the season says). When it ends, the final places are kept - with the
  * prizes, if the season has any - and shown on the winner page.
  *
@@ -169,9 +170,8 @@ async function startSeason(season, now) {
   coins.setBase(state.base);
   await save();
   const players = await User.find({ casinoApproved: true }).select("username").lean();
-  await User.updateMany({ casinoApproved: true }, { $set: { coins: season.budget, coinReset: state.base.reset, coinBonusAt: null } });
+  await seasonReset(season.budget, state.base.reset);
   for (const player of players) coins.log(player.username, season.budget, "season start", season.name);
-  await persist.resetAll();
   changes.emit("started", publicSeason(season));
   for (const player of players) coins.notify(player.username);
 }

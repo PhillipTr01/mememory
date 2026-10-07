@@ -57,7 +57,10 @@ test("seasons: planned ahead - at the start every account gets the budget, at th
   assert.strictEqual(seasons.running().id, made.season.id);
   assert.deepStrictEqual(["anna", "ben", "cleo"].map(h.coinsOf), [50000, 50000, 50000]);
   assert.strictEqual(h.coinsOf("dora"), 99999);
+  // Like a hard reset: the coin history starts anew (with the season's start coins)
+  assert.ok(h.coinLogs.every((row) => row.reason === "season start"));
   assert.strictEqual(coins.base().start, 50000);
+  await h.wait(10);
   // A player let in now starts with the budget too
   assert.strictEqual(access.startCoins(null).coins, 50000);
 

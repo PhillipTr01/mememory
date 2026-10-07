@@ -35,4 +35,17 @@ async function hardReset() {
   };
 }
 
-module.exports = { hardReset };
+/*
+ * A season starts (game/seasons.js): the casino starts anew like after the
+ * hard reset - every game, the history of coins, the payouts, the leaderboard -
+ * but everybody who is in stays in and starts with the season's budget.
+ */
+async function seasonReset(budget, reset) {
+  await persist.resetAll();
+  const [logs, payouts] = await Promise.all([CoinLog.deleteMany({}), Withdrawal.deleteMany({})]);
+  await User.updateMany({ casinoApproved: true }, { $set: { coins: budget, coinReset: reset }, $unset: { coinBonusAt: 1 } });
+  await Setting.deleteMany({ key: { $in: ["leaderboard"] } });
+  return { history: logs.deletedCount || 0, payouts: payouts.deletedCount || 0 };
+}
+
+module.exports = { hardReset, seasonReset };

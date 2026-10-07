@@ -987,3 +987,198 @@ a.ad-link:focus-visible {
     width: 100%;
   }
 }
+
+/* ---------- Seasons ---------- */
+.ad-state[hidden] {
+  display: none;
+}
+
+.ad-nav-item .ad-state {
+  margin-left: auto;
+}
+
+.ad-seasons-grid {
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+.ad-season-now {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ad-season-idle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ad-season-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+  overflow: hidden;
+}
+
+.ad-season-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(var(--mm-accent-rgb), 0.6), var(--mm-accent));
+}
+
+.ad-season-now .ad-note {
+  margin: 0;
+}
+
+.ad-season-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ad-season-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+}
+
+.ad-season-row.running {
+  border-color: rgba(127, 174, 110, 0.5);
+}
+
+.ad-season-row.ended {
+  opacity: 0.8;
+}
+
+.ad-season-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ad-season-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--mm-surface-3);
+  font-size: 1.4rem;
+}
+
+.ad-season-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  font-size: 0.82rem;
+  color: var(--mm-muted);
+}
+
+.ad-season-winner {
+  color: var(--mm-accent);
+  font-weight: 700;
+}
+
+.ad-season-prizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ad-season-row .ad-actions {
+  justify-content: flex-end;
+}
+
+/* The form */
+.ad-season-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.ad-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+}
+
+.ad-season-name {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.ad-field-icon .mm-input {
+  text-align: center;
+  font-size: 1.2rem;
+}
+
+.ad-icon-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: -0.4rem;
+}
+
+.ad-icon-pick {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--mm-surface-2);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ad-icon-pick:hover,
+.ad-icon-pick.active {
+  border-color: var(--mm-accent);
+}
+
+.ad-season-form .mm-input:disabled {
+  opacity: 0.55;
+}
+
+.ad-prize-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.ad-prize-list[hidden],
+.ad-add-prize[hidden] {
+  display: none;
+}
+
+.ad-prize-row {
+  display: grid;
+  grid-template-columns: auto 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ad-prize-hash {
+  font-weight: 800;
+  color: var(--mm-muted);
+}
+
+.ad-add-prize {
+  align-self: flex-start;
+  margin-top: 0.4rem;
+}
+
+@media (max-width: 991px) {
+  .ad-seasons-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

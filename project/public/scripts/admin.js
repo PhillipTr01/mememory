@@ -66,6 +66,7 @@ var PAGES = {
   payouts: ["Payouts", "Coins players took off to be paid out."],
   history: ["History", "Every change of a balance, newest first."],
   chat: ["Chat", "The chat of the casino - delete messages, ban players."],
+  seasons: ["Seasons", "Plan seasons: everybody starts with the same budget, the best win."],
   settings: ["Settings", "Values of the games, and the hard reset."],
 };
 
@@ -97,13 +98,14 @@ function showTab() {
   if (tab == "payouts") loadPayouts();
   if (tab == "history") loadHistory();
   if (tab == "chat") loadChat();
+  if (tab == "seasons") loadSeasons();
   if (tab == "settings") loadSettings();
 }
 
 window.addEventListener("hashchange", showTab);
 
 // Keeps the open page up to date (the chat has its own timer, the settings stay as they are while editing)
-var REFRESH = { access: () => loadAccess(), players: () => loadPlayers(), payouts: () => loadPayouts(), history: () => loadHistory() };
+var REFRESH = { access: () => loadAccess(), players: () => loadPlayers(), payouts: () => loadPayouts(), history: () => loadHistory(), seasons: () => loadSeasons(true) };
 
 function refresh() {
   if (document.visibilityState != "visible") return;
@@ -483,6 +485,229 @@ async function loadHistory(event) {
   }
 }
 
+/* ---------- Seasons ---------- */
+
+var seasonList = [];
+var editingSeason = null; // id of the season in the form (null: a new one)
+var SEASON_ICONS = ["🏆", "🔥", "❄️", "🌸", "☀️", "🍂", "🎃", "🎄", "💎", "🚀", "👑", "🐸"];
+var EVERY_NAMES = { 0: "live", 5: "every 5 min", 15: "every 15 min", 60: "every hour", 360: "every 6 hours", 1440: "once a day" };
+var STATUS_NAMES = { planned: "Planned", running: "Running", ended: "Over" };
+
+function dateText(value) {
+  return new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+// "3d 4h" / "5h 12m" / "8m"
+function span(ms) {
+  var minutes = Math.max(0, Math.round(ms / 60000));
+  var d = Math.floor(minutes / 1440);
+  var h = Math.floor((minutes % 1440) / 60);
+  var m = minutes % 60;
+  return d > 0 ? d + "d " + h + "h" : h > 0 ? h + "h " + m + "m" : m + "m";
+}
+
+// For <input type="datetime-local">: the local time without seconds
+function localInput(value) {
+  var d = new Date(value);
+  var pad = (n) => String(n).padStart(2, "0");
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+
+// quiet: the refresh every few seconds - the form stays as it is
+async function loadSeasons(quiet) {
+  try {
+    var data = await api("seasons");
+    seasonList = data.seasons;
+    renderSeasons();
+    if (!quiet && editingSeason == null && !document.getElementById("adSeasonName").value) seasonDefaults();
+  } catch (error) {
+    fail(error);
+  }
+}
+
+function renderSeasons() {
+  var running = seasonList.find((s) => s.status == "running");
+  var next = seasonList.filter((s) => s.status == "planned").sort((a, b) => a.start - b.start)[0];
+  document.getElementById("adSeasonBadge").hidden = !running;
+  // Now: the running season (with how far it is), the next one - or the normal leaderboard
+  var now = document.getElementById("adSeasonNow");
+  if (running) {
+    var done = Math.min(1, (Date.now() - running.start) / (running.end - running.start));
+    var bar = el("div", "ad-season-progress");
+    var fill = el("span");
+    fill.style.width = (done * 100).toFixed(1) + "%";
+    bar.appendChild(fill);
+    now.replaceChildren(el("span", "ad-label", "Running now"), seasonHead(running), bar, el("p", "ad-note", "Ends in " + span(running.end - Date.now()) + " · " + dateText(running.end) + " · leaderboard " + EVERY_NAMES[running.every]));
+  } else {
+    now.replaceChildren(
+      el("span", "ad-label", "No season running"),
+      el("p", "ad-season-idle", "The leaderboard is the normal one - live, all the time."),
+      el("p", "ad-note", next ? "Next: " + next.icon + " " + next.name + " starts in " + span(next.start - Date.now()) + " (" + dateText(next.start) + ")." : "Plan a season on the right."),
+    );
+  }
+  var list = document.getElementById("adSeasonList");
+  list.replaceChildren(...(seasonList.length ? seasonList.map(seasonRow) : [el("p", "ad-empty", "No seasons yet.")]));
+}
+
+function seasonHead(season) {
+  var head = el("div", "ad-season-head");
+  var text = el("div", "ad-row-main");
+  text.append(el("b", "", season.name), el("span", "ad-row-meta", dateText(season.start) + " → " + dateText(season.end)));
+  head.append(el("span", "ad-season-icon", season.icon), text, el("span", "ad-pill " + (season.status == "running" ? "success" : season.status == "planned" ? "accent" : ""), STATUS_NAMES[season.status]));
+  return head;
+}
+
+function seasonRow(season) {
+  var row = el("div", "ad-season-row " + season.status);
+  row.appendChild(seasonHead(season));
+  var facts = el("div", "ad-season-facts");
+  facts.append(el("span", "", "🪙 " + formatCoins(season.budget) + " start"), el("span", "", "📊 " + EVERY_NAMES[season.every]), el("span", "", season.prizesOn ? "🎁 " + season.prizes.length + (season.prizes.length == 1 ? " prize" : " prizes") : "no prizes"));
+  if (season.status == "ended" && season.winner) facts.append(el("span", "ad-season-winner", "🥇 " + season.winner.username + " · 🪙 " + formatCoins(season.winner.coins)));
+  row.appendChild(facts);
+  if (season.prizesOn && season.prizes.length) {
+    var prizes = el("div", "ad-season-prizes");
+    season.prizes.forEach((p) => prizes.appendChild(el("span", "ad-pill", "#" + p.place + " " + p.prize)));
+    row.appendChild(prizes);
+  }
+  var actions = el("div", "ad-actions");
+  var button = (label, cls, handler) => {
+    var b = el("button", "mm-btn mm-btn-sm " + (cls || ""), label);
+    b.type = "button";
+    b.addEventListener("click", handler);
+    actions.appendChild(b);
+  };
+  if (season.status != "ended") button("Edit", "", () => editSeason(season));
+  if (season.status == "running") button("End now", "mm-btn-danger", () => endSeason(season));
+  if (season.status != "running") button("Delete", "", () => deleteSeason(season));
+  row.appendChild(actions);
+  return row;
+}
+
+// The form for a new season: starts at the next full hour, runs a week
+function seasonDefaults() {
+  editingSeason = null;
+  var start = new Date();
+  start.setMinutes(0, 0, 0);
+  start.setHours(start.getHours() + 1);
+  var last = seasonList.filter((s) => s.status != "ended").sort((a, b) => b.end - a.end)[0];
+  if (last && last.end > start.getTime()) start = new Date(last.end);
+  fillSeasonForm({ name: "Season " + (seasonList.length + 1), icon: "🏆", start: start.getTime(), end: start.getTime() + 7 * 24 * 3600 * 1000, budget: 25000, every: 0, prizesOn: false, prizes: [] });
+}
+
+function fillSeasonForm(season) {
+  document.getElementById("adSeasonName").value = season.name;
+  document.getElementById("adSeasonIcon").value = season.icon;
+  document.getElementById("adSeasonStart").value = localInput(season.start);
+  document.getElementById("adSeasonEnd").value = localInput(season.end);
+  document.getElementById("adSeasonBudget").value = season.budget;
+  document.getElementById("adSeasonEvery").value = season.every;
+  document.getElementById("adSeasonPrizesOn").checked = season.prizesOn;
+  // A running season: start and budget happened already
+  var running = season.status == "running";
+  document.getElementById("adSeasonStart").disabled = running;
+  document.getElementById("adSeasonBudget").disabled = running;
+  document.getElementById("adSeasonPrizes").replaceChildren(...season.prizes.map(prizeRow));
+  if (season.prizes.length == 0) document.getElementById("adSeasonPrizes").appendChild(prizeRow({ place: 1, prize: "" }));
+  showPrizes();
+  document.getElementById("adSeasonFormTitle").innerText = editingSeason == null ? "New season" : "Edit " + season.name;
+  document.getElementById("adSeasonSave").innerText = editingSeason == null ? "Plan the season" : "Save";
+  document.getElementById("adSeasonCancel").hidden = editingSeason == null;
+  markIcon();
+}
+
+function prizeRow(prize) {
+  var row = el("div", "ad-prize-row");
+  var place = el("input", "mm-input ad-prize-place");
+  place.type = "number";
+  place.min = 1;
+  place.value = prize.place;
+  place.setAttribute("aria-label", "Place");
+  var text = el("input", "mm-input");
+  text.maxLength = 80;
+  text.placeholder = "The prize";
+  text.value = prize.prize;
+  var remove = el("button", "ad-icon-btn", "✕");
+  remove.type = "button";
+  remove.title = "Remove";
+  remove.addEventListener("click", () => {
+    row.remove();
+    if (!document.querySelector("#adSeasonPrizes .ad-prize-row")) document.getElementById("adSeasonPrizesOn").checked = false;
+    showPrizes();
+  });
+  row.append(el("span", "ad-prize-hash", "#"), place, text, remove);
+  return row;
+}
+
+function showPrizes() {
+  var on = document.getElementById("adSeasonPrizesOn").checked;
+  var list = document.getElementById("adSeasonPrizes");
+  if (on && !list.children.length) list.appendChild(prizeRow({ place: 1, prize: "" }));
+  list.hidden = !on;
+  document.getElementById("adSeasonAddPrize").hidden = !on;
+}
+
+function markIcon() {
+  var icon = document.getElementById("adSeasonIcon").value.trim();
+  document.querySelectorAll("#adSeasonIcons button").forEach((b) => b.classList.toggle("active", b.innerText == icon));
+}
+
+function editSeason(season) {
+  editingSeason = season.id;
+  fillSeasonForm(season);
+  document.getElementById("adSeasonName").focus();
+}
+
+async function saveSeason(event) {
+  event.preventDefault();
+  var prizes = [...document.querySelectorAll("#adSeasonPrizes .ad-prize-row")]
+    .map((row) => ({ place: Number(row.querySelector(".ad-prize-place").value), prize: row.querySelector("input:not(.ad-prize-place)").value.trim() }))
+    .filter((p) => p.prize);
+  var body = {
+    name: document.getElementById("adSeasonName").value.trim(),
+    icon: document.getElementById("adSeasonIcon").value.trim(),
+    start: new Date(document.getElementById("adSeasonStart").value).getTime(),
+    end: new Date(document.getElementById("adSeasonEnd").value).getTime(),
+    budget: Number(document.getElementById("adSeasonBudget").value),
+    every: Number(document.getElementById("adSeasonEvery").value),
+    prizesOn: document.getElementById("adSeasonPrizesOn").checked,
+    prizes: prizes,
+  };
+  // A running season keeps its start and budget
+  var current = seasonList.find((s) => s.id == editingSeason);
+  if (current && current.status == "running") Object.assign(body, { start: current.start, budget: current.budget });
+  try {
+    var data = await api(editingSeason == null ? "seasons" : "seasons/" + editingSeason, body);
+    seasonList = data.seasons;
+    showToast(editingSeason == null ? body.icon + " " + body.name + " is planned" : "Saved");
+    seasonDefaults();
+    renderSeasons();
+  } catch (error) {
+    fail(error);
+  }
+}
+
+async function endSeason(season) {
+  if (!(await confirmDialog({ title: "End " + season.name + " now?", text: "The places right now are final - the winner page shows them, with the prizes.", confirmLabel: "End now", danger: true }))) return;
+  try {
+    seasonList = (await api("seasons/" + season.id + "/end", {})).seasons;
+    renderSeasons();
+    showToast(season.name + " is over");
+  } catch (error) {
+    fail(error);
+  }
+}
+
+async function deleteSeason(season) {
+  if (!(await confirmDialog({ title: "Delete " + season.name + "?", text: season.status == "ended" ? "Its winner page is gone too." : "It won't start.", confirmLabel: "Delete", danger: true }))) return;
+  try {
+    seasonList = (await api("seasons/" + season.id + "/delete", {})).seasons;
+    if (editingSeason == season.id) seasonDefaults();
+    renderSeasons();
+  } catch (error) {
+    fail(error);
+  }
+}
+
 /* ---------- Chat ---------- */
 
 var chatTimer = null;
@@ -778,6 +1003,29 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("adResetButton").disabled = event.target.value != "RESET";
   });
   document.getElementById("adResetForm").addEventListener("submit", hardReset);
+  // Seasons
+  document.getElementById("adSeasonForm").addEventListener("submit", saveSeason);
+  document.getElementById("adSeasonCancel").addEventListener("click", seasonDefaults);
+  document.getElementById("adSeasonPrizesOn").addEventListener("change", showPrizes);
+  document.getElementById("adSeasonAddPrize").addEventListener("click", () => {
+    var rows = document.querySelectorAll("#adSeasonPrizes .ad-prize-row");
+    var last = rows.length ? Number(rows[rows.length - 1].querySelector(".ad-prize-place").value) || rows.length : 0;
+    var row = prizeRow({ place: last + 1, prize: "" });
+    document.getElementById("adSeasonPrizes").appendChild(row);
+    row.querySelector("input:not(.ad-prize-place)").focus();
+  });
+  document.getElementById("adSeasonIcons").replaceChildren(
+    ...SEASON_ICONS.map((icon) => {
+      var b = el("button", "ad-icon-pick", icon);
+      b.type = "button";
+      b.addEventListener("click", () => {
+        document.getElementById("adSeasonIcon").value = icon;
+        markIcon();
+      });
+      return b;
+    }),
+  );
+  document.getElementById("adSeasonIcon").addEventListener("input", markIcon);
 
   showTab();
   loadOverview();
