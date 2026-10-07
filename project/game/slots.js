@@ -10,7 +10,7 @@ const crypto = require("crypto");
  * the line's share times the multiplier. The payback is exact: see rtp() and
  * the tests.
  *
- * Bonus: the 🎁 is only on reels 1, 3 and 5 (twice each, never two in one
+ * Bonus: the 🎁 is only on reels 1, 3 and 5 (see BONUS_COUNT, never two in one
  * window). All three in sight start the bonus game: a double wheel decides
  * how many free spins (outer ring) and the multiplier to start with (inner
  * ring). The free spins play by themselves on the same reels; the multiplier
@@ -19,19 +19,21 @@ const crypto = require("crypto");
  * when the bonus reaches it, it ends right there.
  */
 const SYMBOLS = [
-  { id: "banana", icon: "🍌", name: "Banana", count: 9, pays: [3, 8, 24] },
-  { id: "pepe", icon: "🐸", name: "Pepe", count: 8, pays: [4, 12, 36] },
-  { id: "doge", icon: "🐕", name: "Doge", count: 6, pays: [7, 21, 79] },
-  { id: "money", icon: "💰", name: "Money bag", count: 4, pays: [12, 36, 157] },
-  { id: "rocket", icon: "🚀", name: "To the moon", count: 3, pays: [18, 64, 315] },
-  { id: "diamond", icon: "💎", name: "Diamond hands", count: 1, pays: [31, 157, 787] },
-  { id: "wild", icon: "👑", name: "Wild", count: 2, pays: [47, 236, 1573], wild: true },
+  { id: "banana", icon: "🍌", name: "Banana", count: 9, pays: [3, 8, 25] },
+  { id: "pepe", icon: "🐸", name: "Pepe", count: 8, pays: [4, 13, 38] },
+  { id: "doge", icon: "🐕", name: "Doge", count: 6, pays: [7, 22, 83] },
+  { id: "money", icon: "💰", name: "Money bag", count: 4, pays: [13, 38, 164] },
+  { id: "rocket", icon: "🚀", name: "To the moon", count: 3, pays: [19, 67, 329] },
+  { id: "diamond", icon: "💎", name: "Diamond hands", count: 1, pays: [32, 164, 822] },
+  { id: "wild", icon: "👑", name: "Wild", count: 2, pays: [49, 247, 1644], wild: true },
   // Pays no line - three in sight (reels 1, 3, 5) start the bonus
   { id: "bonus", icon: "🎁", name: "Bonus", count: 0, pays: [0, 0, 0], scatter: true },
 ];
 const BONUS = "bonus";
 const BONUS_REELS = [0, 2, 4];
-const BONUS_COUNT = 2; // on each of these reels
+// How many 🎁 on each reel: often on reels 1 and 3 (two in sight happen often - the sweat),
+// seldom on reel 5 - the bonus itself comes as often as before (about 1 of 200 spins)
+const BONUS_COUNT = [3, 0, 3, 0, 1];
 const MAX_WIN = 250; // times the bet, for a whole spin
 
 // The bonus wheels: free spins (outer ring) and the start multiplier (inner ring), with weights
@@ -94,12 +96,14 @@ function makeStrip(seed) {
   }
   return strip;
 }
-// Reels 1, 3, 5: the 🎁 twice, half a strip apart (never two in the same window)
+// Reels 1, 3, 5: the 🎁 (BONUS_COUNT of them), spread over the strip (never two in the same window)
 const STRIPS = [11, 23, 37, 41, 53].map((seed, reel) => {
   const strip = makeStrip(seed);
-  if (!BONUS_REELS.includes(reel)) return strip;
-  const step = Math.floor((strip.length + BONUS_COUNT) / BONUS_COUNT);
-  for (let n = 0; n < BONUS_COUNT; n++) strip.splice(n * step, 0, BONUS);
+  const count = BONUS_COUNT[reel];
+  if (!count) return strip;
+  // Spread out: never two in one window
+  const step = Math.floor((strip.length + count) / count);
+  for (let n = 0; n < count; n++) strip.splice(n * step, 0, BONUS);
   return strip;
 });
 

@@ -209,16 +209,18 @@ function spin() {
 }
 
 // The reels turn and stop on `grid` (one after the other); `time`: how long the first reel turns
-function animateReels(grid, time, tease) {
+function animateReels(grid, time, tease, sweatTime) {
   var reels = [...document.querySelectorAll(".sl-reel")];
   // The size of a symbol now (full screen or not)
   TILE = document.querySelector(".sl-cell").offsetHeight;
+  // The sweat: 🎁 on reels 1 and 3 - the last reel turns longer, slower, lit up
+  var sweat = sweatTime > 0 && hasTwoGifts(grid) ? sweatTime : 0;
   return Promise.all(
     reels.map((reel, i) => {
       var strip = setup.strips[i];
       var track = reel.querySelector(".sl-track");
       reel.classList.add("spinning");
-      var count = Math.round((14 + i * 5) * Math.min(1, time / setup.rules.spinTime)) + 4 + (tease && i == 4 ? 10 : 0);
+      var count = Math.round((14 + i * 5) * Math.min(1, time / setup.rules.spinTime)) + 4 + (tease && i == 4 ? 10 : 0) + (sweat && i == 4 ? Math.round(sweat / 90) : 0);
       var ids = [];
       // The faces on top now, then random ones, then the result
       var now = [...track.children].map((c) => c.dataset.symbol);
@@ -229,7 +231,7 @@ function animateReels(grid, time, tease) {
       track.replaceChildren(...ids.map(cell));
       track.style.transform = "translateY(0px)";
       var end = -(ids.length - 3) * TILE;
-      var duration = time * (0.5 + i * 0.12) + (tease && i == 4 ? 700 : 0);
+      var duration = time * (0.5 + i * 0.12) + (tease && i == 4 ? 700 : 0) + (sweat && i == 4 ? sweat : 0);
       var animation = track.animate(
         [
           { transform: "translateY(0px)", easing: "cubic-bezier(0.45, 0, 0.6, 1)" },
@@ -240,6 +242,12 @@ function animateReels(grid, time, tease) {
       );
       return animation.finished.then(() => {
         reel.classList.remove("spinning");
+        reel.classList.remove("sweat");
+        // Two 🎁 in sight: they light up, the last reel sweats
+        if (sweat && i == 2) {
+          [0, 2].forEach((r) => reels[r].querySelectorAll(".sl-cell.scatter").forEach((c) => c.classList.add("hit")));
+          reels[4].classList.add("sweat");
+        }
         // Keep only the 3 symbols that are shown
         showGrid(i, grid[i]);
       });
@@ -255,10 +263,15 @@ function showGrid(reel, symbols) {
   track.style.transform = "translateY(0px)";
 }
 
+// 🎁 in sight on reels 1 and 3 (the third would start the bonus)
+function hasTwoGifts(grid) {
+  return grid[0].includes("bonus") && grid[2].includes("bonus");
+}
+
 async function playSpin(result) {
   // Two wilds or the start of a big line on the first reels: the last reel takes longer
   var tease = result.grid.slice(0, 3).flat().filter((id) => id == "wild" || id == "diamond").length >= 2;
-  await animateReels(result.grid, setup.rules.spinTime, tease);
+  await animateReels(result.grid, setup.rules.spinTime, tease, setup.rules.sweatTime);
   // Three 🎁: the bonus game first
   if (result.bonus) await playBonus(result);
   await showResult(result);
@@ -449,7 +462,7 @@ async function playFreeSpins(result, from, progress) {
     clearLines();
     count.innerText = n + 1 + " / " + spins;
     text.innerText = "🪙 " + formatCoins(total);
-    await animateReels(free.grid, spinTime * 0.5, false);
+    await animateReels(free.grid, spinTime * 0.5, false, setup.rules.sweatTime * 0.6);
     // Three 🎁 again: more free spins
     if (free.retrigger > 0) {
       document.querySelectorAll(".sl-cell.scatter").forEach((c) => c.classList.add("hit"));
@@ -687,8 +700,12 @@ function renderFeed(feed) {
     ...feed.map((entry) => {
       var symbol = symbolOf(entry.symbol);
       var multiple = entry.win / entry.bet;
-      var sub = entry.count + "× " + (symbol ? symbol.icon : "") + " · bet 🪙 " + formatCoins(entry.bet) + " · " + (multiple >= 10 ? Math.round(multiple) : multiple.toFixed(1)) + "x";
-      return historyItem(createAvatar(entry.name, "sm"), entry.name, sub, "🪙 " + formatCoins(entry.win));
+      // A win from a bonus game: said so (with its free spins)
+      var what = entry.bonus ? "🎁 Bonus · " + entry.bonus + " free spins" : entry.count + "× " + (symbol ? symbol.icon : "");
+      var sub = what + " · bet 🪙 " + formatCoins(entry.bet) + " · " + (multiple >= 10 ? Math.round(multiple) : multiple.toFixed(1)) + "x";
+      var item = historyItem(createAvatar(entry.name, "sm"), entry.name, sub, "🪙 " + formatCoins(entry.win));
+      if (entry.bonus) item.classList.add("sl-feed-bonus");
+      return item;
     }),
   );
 }

@@ -43,8 +43,12 @@ test("slots: three 🎁 start the bonus game - free spins with a growing multipl
   // The 🎁 only on reels 1, 3, 5, never two in one window
   slots.STRIPS.forEach((strip, reel) => {
     const at = strip.map((s, i) => (s === "bonus" ? i : -1)).filter((i) => i >= 0);
-    assert.strictEqual(at.length, [0, 2, 4].includes(reel) ? 2 : 0);
-    if (at.length === 2) assert.ok(Math.min(at[1] - at[0], strip.length - (at[1] - at[0])) >= 3);
+    assert.strictEqual(at.length, [3, 0, 3, 0, 1][reel]);
+    // Never two in one window (3 rows): at least 3 apart, also round the end of the strip
+    at.forEach((i, n) => {
+      const next = at[(n + 1) % at.length];
+      if (at.length > 1) assert.ok((next - i + strip.length) % strip.length >= 3);
+    });
   });
   // The middle row of reels 1, 3, 5 on a 🎁; the wheels: 8 free spins (field 2), start x3 (field 2)
   const bonusStops = slots.STRIPS.map((strip, reel) => ([0, 2, 4].includes(reel) ? strip.indexOf("bonus") : 0));
@@ -113,7 +117,7 @@ function client(name) {
 }
 
 test("slots: a spin costs the bet, the win comes right away, the others see it", async () => {
-  Object.assign(config, { SLOTS_MIN_GAP: 0, SLOTS_SPIN: 10, SLOTS_COUNT_TIME: 0, SLOTS_BONUS_TIME: 0, SLOTS_FREE_SPIN: 0, SLOTS_BONUS_END: 0, SLOTS_RETRIGGER_TIME: 0, SLOTS_BIG_TIME: 0 });
+  Object.assign(config, { SLOTS_MIN_GAP: 0, SLOTS_SPIN: 10, SLOTS_COUNT_TIME: 0, SLOTS_BONUS_TIME: 0, SLOTS_FREE_SPIN: 0, SLOTS_BONUS_END: 0, SLOTS_RETRIGGER_TIME: 0, SLOTS_BIG_TIME: 0, SLOTS_SWEAT: 0 });
   h.setCoins("alice", 5000);
   const alice = client("alice");
   const bob = client("bob");
@@ -157,7 +161,7 @@ test("slots: a spin costs the bet, the win comes right away, the others see it",
   const poor = h.once(alice, "slotsError");
   alice.emit("spin", { bet: 100 });
   assert.match(await poor, /enough coins/);
-  Object.assign(config, { SLOTS_MIN_GAP: 600, SLOTS_SPIN: 2200, SLOTS_COUNT_TIME: 1800, SLOTS_BONUS_TIME: 6000, SLOTS_FREE_SPIN: 1600, SLOTS_BONUS_END: 4000, SLOTS_RETRIGGER_TIME: 900, SLOTS_BIG_TIME: 3000 });
+  Object.assign(config, { SLOTS_MIN_GAP: 600, SLOTS_SPIN: 1600, SLOTS_COUNT_TIME: 1800, SLOTS_BONUS_TIME: 6000, SLOTS_FREE_SPIN: 2400, SLOTS_BONUS_END: 4000, SLOTS_RETRIGGER_TIME: 900, SLOTS_BIG_TIME: 3000, SLOTS_SWEAT: 1800 });
 });
 
 test("slots: the admin test switch - every spin starts the bonus game", () => {

@@ -870,3 +870,27 @@
     box-shadow: 0 0 0 0 rgba(var(--mm-accent-rgb), 0);
   }
 }
+
+/* ---------- The sweat: two 🎁 in sight, the last reel turns longer and lit up ---------- */
+.sl-reel.sweat {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 0 1px rgba(var(--mm-accent-rgb), 0.6), 0 0 26px rgba(var(--mm-accent-rgb), 0.45);
+  animation: sl-sweat 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes sl-sweat {
+  to {
+    box-shadow: 0 0 0 1px rgba(var(--mm-accent-rgb), 0.9), 0 0 40px rgba(var(--mm-accent-rgb), 0.7);
+  }
+}
+
+/* (less blur on the sweating reel: you can almost see what comes) */
+.sl-reel.sweat.spinning .sl-track {
+  filter: blur(0.6px);
+}
+
+/* A bonus win in "last wins": a gold edge */
+.sl-feed-bonus {
+  border-color: rgba(var(--mm-accent-rgb), 0.55) !important;
+  background: rgba(var(--mm-accent-rgb), 0.08) !important;
+}

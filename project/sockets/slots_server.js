@@ -37,7 +37,12 @@ module.exports = function (io) {
    * can't be played elsewhere before the spin is over on the screen.
    */
   function showTime(bet, result) {
-    return config.SLOTS_SPIN + restTime(bet, result, 0, config.SLOTS_BONUS_TIME);
+    return config.SLOTS_SPIN + sweat(result.grid) + restTime(bet, result, 0, config.SLOTS_BONUS_TIME);
+  }
+
+  // 🎁 on reels 1 and 3: the last reel turns longer on the page (the sweat)
+  function sweat(grid, share = 1) {
+    return grid[0].includes("bonus") && grid[2].includes("bonus") ? config.SLOTS_SWEAT * share : 0;
   }
 
   // The show from free spin `shown` on (after `intro`: the wheels, "welcome back" or nothing)
@@ -46,7 +51,7 @@ module.exports = function (io) {
     if (result.bonus) {
       const left = result.bonus.freeSpins.slice(Math.max(0, shown));
       const retriggers = left.filter((free) => free.retrigger > 0).length;
-      time += intro + left.length * config.SLOTS_FREE_SPIN + retriggers * config.SLOTS_RETRIGGER_TIME + config.SLOTS_BONUS_END;
+      time += intro + left.reduce((sum, free) => sum + config.SLOTS_FREE_SPIN + sweat(free.grid, 0.6), 0) + retriggers * config.SLOTS_RETRIGGER_TIME + config.SLOTS_BONUS_END;
     }
     if (result.win >= bet * config.SLOTS_BIG_WIN) time += config.SLOTS_BIG_TIME;
     return time;
@@ -120,7 +125,7 @@ module.exports = function (io) {
   }
 
   function rules() {
-    return { minBet: config.SLOTS_MIN_BET, maxBet: config.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, bonusTime: config.SLOTS_BONUS_TIME, freeSpinTime: config.SLOTS_FREE_SPIN, bonusEndTime: config.SLOTS_BONUS_END, resumeTime: config.SLOTS_RESUME_TIME, retriggerTime: config.SLOTS_RETRIGGER_TIME, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
+    return { minBet: config.SLOTS_MIN_BET, maxBet: config.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, bonusTime: config.SLOTS_BONUS_TIME, freeSpinTime: config.SLOTS_FREE_SPIN, bonusEndTime: config.SLOTS_BONUS_END, resumeTime: config.SLOTS_RESUME_TIME, sweatTime: config.SLOTS_SWEAT, retriggerTime: config.SLOTS_RETRIGGER_TIME, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
   }
 
   async function sendCoins(username) {
