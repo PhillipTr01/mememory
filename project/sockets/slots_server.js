@@ -187,6 +187,20 @@ module.exports = function (io) {
       }),
     );
 
+    // The page played the bonus game to its end (the player went on): paid now - SLOTS_COUNT_TIME, while it
+    // is counted up - not only when the time reckoned for the show is over
+    socket.on(
+      "bonusDone",
+      safe("bonusDone", (data) => {
+        const entry = machine.pending.find((e) => e.id === (data && data.id) && e.name === username);
+        if (!entry || !entry.result || entry.state !== "playing") return;
+        if (Date.now() + config.SLOTS_COUNT_TIME >= entry.at) return;
+        entry.at = Date.now() + config.SLOTS_COUNT_TIME;
+        schedulePay(entry, config.SLOTS_COUNT_TIME);
+        persist.changed("slots");
+      }),
+    );
+
     // The last slots page of the player is gone: a running bonus game waits
     socket.on("disconnect", () => {
       if (![...room.sockets.values()].some((other) => other !== socket && other.data.username === username)) pause(username);

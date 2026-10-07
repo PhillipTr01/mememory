@@ -418,7 +418,13 @@ async function playBonus(result, from, started) {
   }
   progress(from);
   await playFreeSpins(result, from, progress);
+  bonusDone(result);
   activeBonus = null;
+}
+
+// The bonus game was seen to its end (the player went on): the win is paid right away (countTime)
+function bonusDone(result) {
+  if (result.id) socket.emit("bonusDone", { id: result.id });
 }
 
 // "You won free spins" (or the coin game): waits for the player's click (or Enter / space) - then it starts
@@ -752,6 +758,7 @@ async function playCoinGame(result, from, started) {
   // Back to the spin that started it
   result.grid.forEach((symbols, reel) => showGrid(reel, symbols));
   showCoins(result.coins, bet);
+  bonusDone(result);
   activeBonus = null;
 }
 

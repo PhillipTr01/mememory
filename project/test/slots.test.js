@@ -273,6 +273,32 @@ test("slots: a bonus game waits while the player is away and goes on when they c
   }
 });
 
+test("slots: the page played the bonus game to its end - paid right away (the count time), not after the reckoned show", async () => {
+  const timing = { SLOTS_HOLD: 60000, SLOTS_MIN_GAP: 0, SLOTS_SPIN: 20, SLOTS_COUNT_TIME: 30, SLOTS_BONUS_TIME: 2000, SLOTS_FREE_SPIN: 2000, SLOTS_RETRIGGER_TIME: 10, SLOTS_BONUS_END: 2000, SLOTS_BIG_TIME: 2000, SLOTS_TEST_BONUS: "free" };
+  const before = Object.fromEntries(Object.keys(timing).map((key) => [key, config[key]]));
+  Object.assign(config, timing);
+  try {
+    sockets.forEach((socket) => socket.close());
+    await h.wait(50);
+    h.setCoins("alice", 5000);
+    const page = client("alice");
+    await h.once(page, "slotsSetup");
+    const result = h.once(page, "slotsResult");
+    page.emit("spin", { bet: 100 });
+    const spin = await result;
+    page.emit("bonusStart", { id: spin.id });
+    await h.wait(30);
+    // (another id - or someone else's - changes nothing)
+    page.emit("bonusDone", { id: "nope" });
+    page.emit("bonusDone", { id: spin.id });
+    await h.wait(150);
+    assert.strictEqual(h.coinsOf("alice"), 4900 + spin.win, "paid a moment after the end on the page");
+    page.close();
+  } finally {
+    Object.assign(config, before);
+  }
+});
+
 test("slots: the coin game waits for the click too and is paid when it is over", async () => {
   const timing = { SLOTS_HOLD: 60000, SLOTS_MIN_GAP: 0, SLOTS_SPIN: 20, SLOTS_COUNT_TIME: 20, SLOTS_COIN_INTRO: 30, SLOTS_RESPIN: 20, SLOTS_ULTRA_TIME: 20, SLOTS_BONUS_END: 20, SLOTS_BIG_TIME: 20, SLOTS_SWEAT: 0, SLOTS_TEST_BONUS: "coins" };
   const before = Object.fromEntries(Object.keys(timing).map((key) => [key, config[key]]));
