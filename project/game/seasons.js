@@ -25,8 +25,7 @@ const casinoLock = require("./casino_lock");
  *
  * Second chances: a season can give a player who lost everything (0 coins,
  * nothing in play anywhere) a few new starts with the budget. The first one
- * from the day after starting the season on, every further one only from the
- * next day on.
+ * right away, every further one only from the next day on.
  *
  * Without a running season the leaderboard is the normal one (live).
  *
@@ -439,14 +438,8 @@ async function chanceStatus(username, now = Date.now()) {
   const result = { can: false, left: left, total: total, budget: season.budget, nextAt: null };
   if (joined(username) === false) return { ...result, reason: "notJoined" };
   if (left === 0) return { ...result, reason: "used" };
-  // After a second chance: the next one from the next day on. The first one: from the day after
-  // starting the season on (never on the day of the start)
-  let from = null;
-  if (record.used > 0) from = days.nextDay(record.lastAt);
-  else {
-    const at = (season.joined && season.joined[username]) || season.startedAt || season.start;
-    from = days.nextDay(at);
-  }
+  // The first one right away - after a second chance, the next one only from the next day on
+  const from = record.used > 0 ? days.nextDay(record.lastAt) : null;
   if (from != null && now < from) return { ...result, reason: "cooldown", nextAt: from };
   if ((await coins.get(username)).coins > 0) return { ...result, reason: "coins" };
   if (inPlay.where(username).length) return { ...result, reason: "inPlay" };

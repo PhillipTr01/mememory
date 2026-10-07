@@ -248,7 +248,7 @@ test("seasons: the daily bonuses add up - a day not claimed comes with the next 
   seasons.reset();
 });
 
-test("seasons: second chances - 0 coins and nothing in play, then the budget again; from the day after starting, the next one only the next day", async () => {
+test("seasons: second chances - 0 coins and nothing in play, then the budget again; the first right away, the next one only the next day", async () => {
   seasons.reset();
   const inPlay = require("../game/in_play");
   let playing = false;
@@ -259,10 +259,9 @@ test("seasons: second chances - 0 coins and nothing in play, then the budget aga
   await seasons.tick(now);
   assert.strictEqual((await seasons.chanceStatus("anna", now)).reason, "notJoined", "only who started the season");
   await seasons.join("anna", now);
-  // The day of the start: none yet, even with nothing left
+  // The day of the start: the first one right away
   h.setCoins("anna", 0);
-  const first = await seasons.chanceStatus("anna", now + 1000);
-  assert.deepStrictEqual([first.reason, first.nextAt], ["cooldown", days.nextDay(now)]);
+  assert.strictEqual((await seasons.chanceStatus("anna", now + 1000)).can, true);
   // The next day - still coins: no second chance; the balance from before is shown with the coins
   const day2 = days.nextDay(now) + 1000;
   h.setCoins("anna", 100);
@@ -290,12 +289,11 @@ test("seasons: second chances - 0 coins and nothing in play, then the budget aga
   assert.strictEqual((await seasons.useChance("anna", day3)).left, 0);
   h.setCoins("anna", 0);
   assert.strictEqual((await seasons.chanceStatus("anna", days.nextDay(day3) + 1000)).reason, "used");
-  // A player who started the season later: the first one only from the day after that
+  // A player who started the season later: the first one right away, too
   h.addUser("newbie");
   await seasons.join("newbie", day3);
   h.setCoins("newbie", 0);
-  const newbie = await seasons.chanceStatus("newbie", day3 + 1000);
-  assert.deepStrictEqual([newbie.reason, newbie.nextAt], ["cooldown", days.nextDay(day3)]);
+  assert.strictEqual((await seasons.chanceStatus("newbie", day3 + 1000)).can, true);
   assert.strictEqual(seasons.joinedAt("newbie"), day3);
   seasons.reset();
 });
