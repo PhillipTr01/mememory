@@ -1338,3 +1338,24 @@ button.bt-strip-case:hover {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
+
+/* The battle bar sits on the level of the title */
+.bt-head-bar {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.bt-head-bar:empty {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .bt-main .jp-head {
+    flex-direction: column;
+  }
+
+  .bt-head-bar {
+    justify-content: flex-start;
+  }
+}

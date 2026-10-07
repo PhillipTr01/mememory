@@ -606,6 +606,8 @@ function itemTile(item, extraClass) {
 
 function renderBattle() {
   var view = document.getElementById("btBattleView");
+  var headBar = document.getElementById("btHeadBar");
+  headBar.replaceChildren();
   if (viewId == null) return;
   var battle = currentBattle();
   clearInterval(statusTimer);
@@ -617,7 +619,8 @@ function renderBattle() {
     showView();
   });
   if (battle == null && (!battlesLoaded || viewId == justCreated)) {
-    view.replaceChildren(back);
+    view.replaceChildren();
+    headBar.replaceChildren(back);
     return;
   }
   if (battle == null) {
@@ -700,7 +703,8 @@ function renderBattle() {
     grid.appendChild(column);
   });
 
-  var parts = over ? [top, resultHero(battle), strip, grid] : [top, strip, grid];
+  headBar.replaceChildren(top);
+  var parts = over ? [resultHero(battle), strip, grid] : [strip, grid];
   if (battle.phase == "waiting" && battle.creator == myName) {
     var cancel = el("button", "bt-cancel");
     cancel.type = "button";
