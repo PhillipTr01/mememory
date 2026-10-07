@@ -1015,13 +1015,14 @@ var coinRainDraw = {
   },
 
   /*
-   * The story of this draw (random): a comeback, a runaway leader, a photo
-   * finish, a back and forth or an underdog. The winner is fixed (server),
+   * The story of this draw (random): a comeback, a runaway leader, in front
+   * from start to end, a photo finish, a back and forth or an underdog. The winner is fixed (server),
    * only the way there changes.
    */
   plan(winner, rivals) {
     var pick = (list) => list[Math.floor(Math.random() * list.length)];
-    var stories = ["comeback", "photo", "photo", "seesaw", "underdog", "comeback", "runaway"];
+    // (not always a comeback: often the one in front just stays in front)
+    var stories = ["comeback", "photo", "seesaw", "underdog", "runaway", "runaway", "wire", "wire"];
     var story = rivals.length ? pick(stories) : "runaway";
     var threat = rivals.length ? pick(rivals) : null; // not always the biggest one
     var jitter = (speeds) => speeds.map((speed) => speed * randomBetween(0.85, 1.15));
@@ -1043,6 +1044,14 @@ var coinRainDraw = {
       rivals.forEach((jar) => (jar.final = randomBetween(0.55, 0.85)));
       if (threat) Object.assign(threat, { final: randomBetween(0.88, 0.94), pace: this.pace(jitter([0.5, 0.8, 1.1, 1.4, 1.5])) });
       shouts.push({ at: randomBetween(0.5, 0.65), text: pick(["CAN ANYONE CATCH UP?", "WAY AHEAD!", "RUNAWAY!"]) });
+    } else if (story == "wire") {
+      // In front from the first coin to the last - nobody comes close
+      winner.pace = this.pace(jitter([1.3, 1.1, 1, 0.95, 0.9]));
+      rivals.forEach((jar) => {
+        jar.final = randomBetween(0.4, 0.78);
+        jar.pace = this.pace(this.randomSpeeds(0.8, 1.2));
+      });
+      shouts.push({ at: randomBetween(0.45, 0.6), text: pick(["UNTOUCHABLE!", "WIRE TO WIRE!", "NOBODY CLOSE!"]) });
     } else if (story == "photo") {
       rivals.slice(0, 3).forEach((jar) => {
         jar.final = randomBetween(0.955, 0.98);
