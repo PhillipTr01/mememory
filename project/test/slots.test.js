@@ -63,23 +63,25 @@ test("slots: three 🎁 start the bonus game - free spins with a growing multipl
   assert.ok(big.bonus.freeSpins.length < 8);
   assert.strictEqual(big.bonus.win + big.lineWin, big.win);
 
-  // Random free spins: 5 of them from x1 - every win is the line win times the multiplier, which climbs by one
+  // 5 free spins from x1 (stops without a 🎁 in sight: no retrigger) - every win is the line win times
+  // the multiplier, which climbs by one
   const start = bonusStops.concat([0, 0]);
+  const plain = slots.STRIPS.map((strip) => strip.findIndex((_, i) => [-1, 0, 1].every((d) => strip[(i + d + strip.length) % strip.length] !== "bonus")));
   let k = 0;
-  const random = slots.spin(100, (max) => (k < start.length ? start[k++] : Math.floor(Math.random() * max)));
+  let r = 0;
+  const random = slots.spin(100, () => (k < start.length ? start[k++] : plain[r++ % 5]));
   assert.deepStrictEqual(random.bonus.freeSpins.map((f) => f.multiplier), [1, 2, 3, 4, 5]);
   random.bonus.freeSpins.forEach((f) => assert.strictEqual(f.win, f.lineWin * f.multiplier));
 
   // Three 🎁 in a free spin: 5 free spins more (5 + 5 = 10, multiplier 1 to 10)
   const again = bonusStops.concat([0, 0], bonusStops);
   let j = 0;
-  const retriggered = slots.spin(100, (max) => (j < again.length ? again[j++] : Math.floor(Math.random() * max)));
-  if (!retriggered.capped) {
-    assert.strictEqual(retriggered.bonus.freeSpins[0].retrigger, slots.RETRIGGER);
-    assert.strictEqual(retriggered.bonus.spins, 5 + slots.RETRIGGER);
-    assert.ok(retriggered.bonus.freeSpins.length >= 10);
-    assert.strictEqual(retriggered.bonus.freeSpins[9].multiplier, 10);
-  }
+  r = 0;
+  const retriggered = slots.spin(100, () => (j < again.length ? again[j++] : plain[r++ % 5]));
+  assert.strictEqual(retriggered.bonus.freeSpins[0].retrigger, slots.RETRIGGER);
+  assert.strictEqual(retriggered.bonus.spins, 5 + slots.RETRIGGER);
+  assert.strictEqual(retriggered.bonus.freeSpins.length, 10);
+  assert.strictEqual(retriggered.bonus.freeSpins[9].multiplier, 10);
 
   // Rare: the bonus about 1 of 200 spins, the max win in very few bonuses 
   const { bonusChance, rtp } = slots.rtp();
