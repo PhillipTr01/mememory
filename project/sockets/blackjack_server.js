@@ -94,6 +94,8 @@ module.exports = function (io) {
             seat && {
               name: seat.name,
               bet: seat.bet,
+              side: seat.side || { pairs: 0, plus3: 0 },
+              sideResults: seat.sideResults || [],
               standIn: seat.standAt != null ? Math.max(0, seat.standAt - Date.now()) : null,
               hands: seat.hands.map((hand) => ({
                 cards: hand.cards,
@@ -113,7 +115,7 @@ module.exports = function (io) {
         startIn: table.startAt != null ? Math.max(0, table.startAt - Date.now()) : null,
         history: table.history,
         viewers: pages().length,
-        rules: { minBet: minBet(), maxBet: maxBet(), mySeats: config.BJ_MY_SEATS, turn: config.BJ_TURN, betting: config.BJ_BETTING, sit: config.BJ_SIT, decks: bj.DECKS },
+        rules: { sideShare: config.BJ_SIDE_SHARE, minBet: minBet(), maxBet: maxBet(), mySeats: config.BJ_MY_SEATS, turn: config.BJ_TURN, betting: config.BJ_BETTING, sit: config.BJ_SIT, decks: bj.DECKS },
         lastBets: table.lastBets.get(viewer) || null,
       };
     }
@@ -155,6 +157,18 @@ module.exports = function (io) {
     }
 
     /* ---------- Seats ---------- */
+
+    // side: the side bets ({pairs, plus3}), sideResults: what they paid after the deal
+    function newSeat(name) {
+      return { name: name, bet: 0, side: { pairs: 0, plus3: 0 }, sideResults: [], hands: [], standAt: null, standTimer: null };
+    }
+
+    const sideTotal = (seat) => (seat.side ? seat.side.pairs + seat.side.plus3 : 0);
+
+    // Everything a seat has in play (main bet or hands, side bets) - for refunds
+    function staked(seat) {
+      return (seat.hands && seat.hands.length ? seat.hands.reduce((sum, hand) => sum + hand.bet, 0) : seat.bet) + sideTotal(seat);
+    }
 
     // Without a bet a seat is only kept for a while (in the betting time)
     function startStandTimer(i, after = config.BJ_SIT) {
@@ -202,7 +216,7 @@ module.exports = function (io) {
       seats.forEach((i) => {
         const seat = table.seats[i];
         if (!bets.has(seat.name)) bets.set(seat.name, []);
-        bets.get(seat.name).push({ seat: i, amount: seat.bet });
+        bets.get(seat.name).push({ seat: i, amount: seat.bet, side: { ...seat.side } });
       });
       bets.forEach((list, name) => table.lastBets.set(name, list));
       if (seats.length === 0) {
@@ -219,6 +233,11 @@ module.exports = function (io) {
         table.dealer.cards.push(draw());
       }
       table.phase = "playing";
+      // The side bets are decided by the first cards (paid at the end of the round)
+      seats.forEach((i) => {
+        const seat = table.seats[i];
+        seat.sideResults = bj.SIDE_BETS.filter((type) => seat.side[type] > 0).map((type) => bj.settleSide(type, seat.side[type], seat.hands[0].cards, table.dealer.cards[0]));
+      });
 
       // The dealer looks at the second card when the first is an ace or worth 10
       if (bj.cardValue(table.dealer.cards[0]) >= 10 && bj.isBlackjack(table.dealer.cards, false)) {
@@ -301,6 +320,11 @@ module.exports = function (io) {
           if (payout > 0) coins.add(seat.name, payout, { reason: "blackjack win", note: result }).catch((error) => console.error("[blackjack] Could not pay:", error));
           results.push({ name: seat.name, result: result, bet: hand.bet, payout: payout });
         }
+        // The side bets: paid now, with the round
+        for (const side of seat.sideResults || []) {
+          if (side.payout > 0) coins.add(seat.name, side.payout, { reason: "blackjack win", note: side.name }).catch((error) => console.error("[blackjack] Could not pay:", error));
+          results.push({ name: seat.name, result: "side", side: side.type, bet: side.bet, payout: side.payout });
+        }
       }
       table.history.unshift({ round: table.round, dealer: bj.handValue(table.dealer.cards).total, results: results });
       table.history.length = Math.min(table.history.length, config.BJ_HISTORY);
@@ -316,6 +340,8 @@ module.exports = function (io) {
       table.seats.forEach((seat, i) => {
         if (seat == null) return;
         seat.bet = 0;
+        seat.side = { pairs: 0, plus3: 0 };
+        seat.sideResults = [];
         seat.hands = [];
         // Gone from the page: the seat is free again; otherwise a new bet in time
         if (!connected(seat.name)) standUp(i);
@@ -396,7 +422,7 @@ module.exports = function (io) {
         const mine = table.seats.filter((seat) => seat && seat.name === username);
         if (mine.some((seat) => seat.bet === 0)) return error("Bet on your seat first, then take another one.");
         if (mine.length >= config.BJ_MY_SEATS) return error(`At most ${config.BJ_MY_SEATS} seats at a time.`);
-        table.seats[s] = { name: username, bet: 0, hands: [], standAt: null, standTimer: null };
+        table.seats[s] = newSeat(username);
         // During a round: the stand-up time starts with the next betting time
         if (table.phase === "betting") startStandTimer(s);
         emitState();
@@ -432,6 +458,32 @@ module.exports = function (io) {
         }
       },
 
+      // A side bet (Perfect Pairs or 21+3) on an own seat with a bet: at most half the main bet each
+      async sideBet(username, error, data) {
+        if (data == null) return;
+        const { seat: s, type, amount } = data;
+        if (!Number.isInteger(s) || s < 0 || s >= table.seats.length || !bj.SIDE_BETS.includes(type) || !Number.isInteger(amount) || amount <= 0) return;
+        if (table.phase !== "betting") return error("Wait for the next round.");
+        const seat = table.seats[s];
+        if (seat == null || seat.name !== username) return error("Sit down first.");
+        if (seat.bet <= 0) return error("Place the main bet first.");
+        const most = Math.floor(seat.bet * config.BJ_SIDE_SHARE);
+        if (seat.side[type] + amount > most) return error(`A side bet is at most ${most.toLocaleString("en-US")} coins here (half the main bet).`);
+        if (busy.has(username)) return;
+        busy.add(username);
+        try {
+          if (!(await coins.spend(username, amount, { reason: "blackjack bet", note: type }))) return error("You don't have enough coins.");
+          if (table.phase !== "betting" || table.seats[s] !== seat) {
+            await coins.add(username, amount, { reason: "blackjack refund" });
+            return error("Too late for this seat.");
+          }
+          seat.side[type] += amount;
+          emitState();
+        } finally {
+          busy.delete(username);
+        }
+      },
+
       /*
        * The same bets as last round, with one click. The seats: first the ones
        * the player sits on right now, then the old ones (if free), then the
@@ -445,7 +497,8 @@ module.exports = function (io) {
         if (busy.has(username)) return;
         busy.add(username);
         try {
-          const total = last.reduce((sum, bet) => sum + bet.amount, 0);
+          const sides = (bet) => (bet.side ? (bet.side.pairs || 0) + (bet.side.plus3 || 0) : 0);
+          const total = last.reduce((sum, bet) => sum + bet.amount + sides(bet), 0);
           if (!(await coins.spend(username, total, { reason: "blackjack bet", note: "same bet" }))) return error("You don't have enough coins.");
           // The seats now (the round may have started, others may have sat down meanwhile)
           let refund = 0;
@@ -461,11 +514,12 @@ module.exports = function (io) {
             ];
             const s = table.phase === "betting" ? order.find((i) => own(i) || (table.seats[i] == null && held < config.BJ_MY_SEATS)) : undefined;
             if (s === undefined) {
-              refund += bet.amount;
+              refund += bet.amount + sides(bet);
               continue;
             }
-            if (table.seats[s] == null) table.seats[s] = { name: username, bet: 0, hands: [], standAt: null, standTimer: null };
+            if (table.seats[s] == null) table.seats[s] = newSeat(username);
             table.seats[s].bet = bet.amount;
+            table.seats[s].side = { pairs: (bet.side && bet.side.pairs) || 0, plus3: (bet.side && bet.side.plus3) || 0 };
             stopStandTimer(table.seats[s]);
             placed++;
           }
@@ -504,7 +558,7 @@ module.exports = function (io) {
         clearTimeout(table.timer);
         table.startAt = null;
       }
-      if (seat.bet > 0) await coins.add(seat.name, seat.bet, { reason: "blackjack refund" });
+      if (staked(seat) > 0) await coins.add(seat.name, staked(seat), { reason: "blackjack refund" });
     }
 
     // A page of this table opened: back in time, the seats stay
@@ -545,7 +599,7 @@ module.exports = function (io) {
       if (table.phase !== "result") {
         table.seats.forEach((seat) => {
           if (seat == null) return;
-          const amount = seat.hands.length ? seat.hands.reduce((sum, hand) => sum + hand.bet, 0) : seat.bet;
+          const amount = staked(seat);
           if (amount > 0) payments.push(coins.add(seat.name, amount, { reason: "blackjack refund", note: "server stop" }).catch(() => {}));
         });
       }
@@ -582,7 +636,7 @@ module.exports = function (io) {
       if (!Array.isArray(table.seats)) table.seats = [];
       table.seats.slice(config.BJ_SEATS).forEach((seat) => {
         if (seat == null) return;
-        const amount = seat.hands && seat.hands.length ? seat.hands.reduce((sum, hand) => sum + hand.bet, 0) : seat.bet;
+        const amount = staked(seat);
         if (amount > 0 && table.phase !== "result") coins.add(seat.name, amount, { reason: "blackjack refund", note: "table changed" }).catch(() => {});
       });
       table.seats = table.seats.slice(0, config.BJ_SEATS).concat(new Array(Math.max(0, config.BJ_SEATS - table.seats.length)).fill(null));
@@ -590,7 +644,13 @@ module.exports = function (io) {
       const now = Date.now();
       const grace = config.RESTORE_GRACE;
       const left = (at) => Math.max(grace, (at || 0) - now);
-      table.seats.forEach((seat) => seat && (seat.standTimer = null));
+      table.seats.forEach((seat) => {
+        if (seat == null) return;
+        seat.standTimer = null;
+        // Saved before there were side bets
+        if (seat.side == null) seat.side = { pairs: 0, plus3: 0 };
+        if (!Array.isArray(seat.sideResults)) seat.sideResults = [];
+      });
       if (table.phase === "betting") {
         if (table.startAt != null) {
           const after = left(table.startAt);

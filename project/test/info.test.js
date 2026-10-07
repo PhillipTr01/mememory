@@ -13,7 +13,7 @@ test("every game explains itself, with the limits of now", () => {
   assert.strictEqual(info.get("nothing"), null);
   assert.strictEqual(info.get("constructor"), null);
   // The 3 blackjack rooms and the changed slots limit
-  assert.strictEqual(info.get("blackjack").sections[1].items.length, 3);
+  assert.strictEqual(info.get("blackjack").sections.find((s) => s.heading === "The 3 rooms").items.length, 3);
   const before = config.SLOTS_MAX_BET;
   config.SLOTS_MAX_BET = 4321;
   try {

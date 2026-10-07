@@ -149,13 +149,14 @@ module.exports = {
   BJ_CLASSIC_MAX: 2500,
   BJ_HIGH_MIN: 1000,
   BJ_HIGH_MAX: 5000,
+  BJ_SIDE_SHARE: 0.5, // a side bet (Perfect Pairs, 21+3) is at most this share of the main bet
   // Slots (hidden, see game/slots.js): the bet is for a whole spin (all 9 lines)
   SLOTS_MIN_BET: 10,
   SLOTS_MAX_BET: 1000,
   SLOTS_SPIN: 2200, // the reels turn this long on the page
   SLOTS_BONUS_TIME: 6000, // the bonus wheels (free spins, multiplier) on the page
   SLOTS_FREE_SPIN: 1600, // one free spin of the bonus game on the page
-  SLOTS_BONUS_END: 2500, // the bonus win is shown
+  SLOTS_BONUS_END: 4000, // the bonus win is counted up and shown
   SLOTS_RETRIGGER_TIME: 900, // more free spins (three 🎁 in a free spin) are shown
   SLOTS_BIG_WIN: 15, // a win of this many times the bet gets the big show
   SLOTS_COUNT_TIME: 1800, // the win is counted up (and the slow last reel)

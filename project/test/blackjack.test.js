@@ -341,7 +341,8 @@ test("blackjack: the same bets as last round with one click", async () => {
   }
   await end;
   const next = await fresh(carol);
-  assert.deepStrictEqual(next.lastBets, [{ seat: 0, amount: 300 }, { seat: 1, amount: 200 }, { seat: 2, amount: 100 }]);
+  const noSide = { pairs: 0, plus3: 0 };
+  assert.deepStrictEqual(next.lastBets, [{ seat: 0, amount: 300, side: noSide }, { seat: 1, amount: 200, side: noSide }, { seat: 2, amount: 100, side: noSide }]);
   await h.wait(30);
   const before = h.coinsOf("carol");
 
@@ -436,6 +437,63 @@ test("blackjack: three tables in the lobby, each with its own limits and seats",
   assert.match(await refused, /At least 1,000/);
   carol.close();
   await waitFor(lobby, "blackjackTables", (l) => l.find((t) => t.id === "highroller").free === 5);
+});
+
+test("blackjack: side bets - Perfect Pairs and 21+3, at most half the main bet, paid with the round", async () => {
+  // The rules
+  assert.deepStrictEqual(bj.perfectPairs(["8s", "8s"]), { name: "Perfect pair", odds: 25 });
+  assert.deepStrictEqual(bj.perfectPairs(["8s", "8c"]), { name: "Coloured pair", odds: 12 });
+  assert.deepStrictEqual(bj.perfectPairs(["8s", "8h"]), { name: "Mixed pair", odds: 6 });
+  assert.strictEqual(bj.perfectPairs(["8s", "9s"]), null);
+  assert.strictEqual(bj.plus3(["8s", "8s"], "8s").odds, 100);
+  assert.strictEqual(bj.plus3(["7s", "8s"], "9s").odds, 40);
+  assert.strictEqual(bj.plus3(["8s", "8c"], "8h").odds, 30);
+  assert.strictEqual(bj.plus3(["Qs", "Kc"], "Ah").odds, 10, "the ace high");
+  assert.strictEqual(bj.plus3(["As", "2c"], "3h").odds, 10, "the ace low");
+  assert.strictEqual(bj.plus3(["2s", "9s"], "Ks").odds, 5);
+  assert.strictEqual(bj.plus3(["Ks", "Ac"], "2h"), null, "no straight round the corner");
+
+  h.setCoins("alice", 20000);
+  const alice = client("alice");
+  await waitFor(alice, "coins", (d) => d.coins === 20000);
+  // 8♠ 8♠ for alice, the dealer shows 8♥ (and has 18): a perfect pair, three of a kind - and 16 loses
+  shoe("8s", "8h", "8s", "Td", "2c", "2c", "2c");
+  config.BJ_BETTING = 1000;
+  alice.emit("sit", 0);
+  await waitFor(alice, "blackjackState", (s) => s.seats[0] && s.seats[0].name === "alice");
+  let refused = h.once(alice, "blackjackError");
+  alice.emit("sideBet", { seat: 0, type: "pairs", amount: 100 });
+  assert.match(await refused, /main bet first/);
+  const dealt = waitFor(alice, "blackjackState", (s) => s.phase === "playing");
+  alice.emit("bet", { seat: 0, amount: 1000 });
+  await waitFor(alice, "blackjackState", (s) => s.seats[0] && s.seats[0].bet === 1000);
+  refused = h.once(alice, "blackjackError");
+  alice.emit("sideBet", { seat: 0, type: "pairs", amount: 600 });
+  assert.match(await refused, /at most 500/);
+  alice.emit("sideBet", { seat: 0, type: "pairs", amount: 500 });
+  await waitFor(alice, "blackjackState", (s) => s.seats[0].side.pairs === 500);
+  alice.emit("sideBet", { seat: 0, type: "plus3", amount: 200 });
+  await waitFor(alice, "blackjackState", (s) => s.seats[0].side.pairs === 500 && s.seats[0].side.plus3 === 200);
+  assert.strictEqual(h.coinsOf("alice"), 20000 - 1700);
+
+  const state = await dealt;
+  assert.deepStrictEqual(
+    state.seats[0].sideResults.map((r) => [r.type, r.name, r.payout]),
+    [
+      ["pairs", "Perfect pair", 500 * 26],
+      ["plus3", "Three of a kind", 200 * 31],
+    ],
+  );
+  assert.strictEqual(h.coinsOf("alice"), 20000 - 1700, "not paid before the round is over");
+  const end = over(alice);
+  alice.emit("action", "stand");
+  await end;
+  await h.wait(30);
+  assert.strictEqual(h.coinsOf("alice"), 20000 - 1700 + 13000 + 6200);
+  config.BJ_BETTING = 80;
+  await fresh(alice);
+  alice.emit("clearBet", 0);
+  await h.wait(30);
 });
 
 test("blackjack: a server stop gives every open bet back", async () => {

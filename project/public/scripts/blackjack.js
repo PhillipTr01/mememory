@@ -141,6 +141,8 @@ function dealDelay(n, position, count) {
 
 /* ---------- Rendering ---------- */
 
+var betTarget = "main"; // the chips go to: main, pairs or plus3
+
 function mySeats() {
   return state.seats.map((seat, i) => (seat && seat.name == myName ? i : -1)).filter((i) => i >= 0);
 }
@@ -257,13 +259,18 @@ function renderSeats() {
       });
 
       var bet = seat.hands.length ? seat.hands.reduce((sum, hand) => sum + hand.bet, 0) : seat.bet;
-      var chip = el("span", "bj-bet" + (bet > 0 ? "" : " empty"), bet > 0 ? "🪙 " + formatCoins(bet) : mine ? "Place a bet" : "No bet");
-      // No bet yet: the seat is free again soon
+      var side = seat.side.pairs + seat.side.plus3;
+      // One pill: the bet (and the side bets) - or, without a bet, how long the seat is kept
+      var chip = el("span", "bj-bet" + (bet > 0 ? "" : " empty"), bet > 0 ? "🪙 " + formatCoins(bet) : mine ? "Place a bet" : "");
+      if (bet > 0 && side > 0) chip.appendChild(el("span", "bj-bet-side", " +" + formatCoins(side)));
       if (seat.standIn != null && bet == 0) {
-        var stand = el("span", "bj-stand");
-        stand.dataset.end = Date.now() + seat.standIn;
-        hands.appendChild(stand);
+        chip.classList.add("bj-stand");
+        chip.dataset.end = Date.now() + seat.standIn;
+        chip.dataset.label = mine ? "Place a bet · " : "";
       }
+      // Side bets that won (decided by the first cards)
+      var sideWins = seat.sideResults.filter((r) => r.payout > 0);
+      if (sideWins.length) hands.appendChild(el("span", "bj-side-win", sideWins.map((r) => r.name + " +" + formatCoins(r.payout - r.bet)).join(" · ")));
       var who = el("div", "bj-who");
       who.append(createAvatar(seat.name, "sm"), el("span", "bj-name", mine ? "You" : seat.name));
       spot.append(hands, chip, who);
@@ -281,11 +288,12 @@ function renderSeats() {
   tickStand();
 }
 
-// "Stands up in 12s" under the seats without a bet
+// The seats without a bet: "Place a bet · 12s" (then the seat is free again)
 function tickStand() {
   document.querySelectorAll(".bj-stand").forEach((element) => {
     var left = Math.max(0, Math.ceil((Number(element.dataset.end) - Date.now()) / 1000));
-    element.innerText = "Stands up in " + left + "s";
+    element.innerText = element.dataset.label + left + "s";
+    element.title = "Without a bet the seat is free again in " + left + "s";
     element.classList.toggle("hurry", left <= 5);
   });
 }
@@ -364,8 +372,20 @@ function renderBars() {
   if (canBet) {
     var seat = state.seats[selected];
     var already = seat ? seat.bet : 0;
-    document.getElementById("bjBetSeat").innerText = "Seat " + (selected + 1) + (already ? " · 🪙 " + formatCoins(already) + " on it" : "");
-    var room = Math.min(state.rules.maxBet - already, myCoins);
+    var side = seat ? seat.side : { pairs: 0, plus3: 0 };
+    var sideMax = Math.floor(already * state.rules.sideShare);
+    // Side bets only with a main bet
+    if (already == 0) betTarget = "main";
+    document.querySelectorAll(".bj-target").forEach((tab) => {
+      var target = tab.dataset.target;
+      tab.classList.toggle("active", target == betTarget);
+      tab.setAttribute("aria-selected", target == betTarget ? "true" : "false");
+      tab.disabled = target != "main" && already == 0;
+    });
+    document.getElementById("bjOnMain").innerText = already ? "🪙 " + formatCoins(already) : "";
+    document.getElementById("bjOnPairs").innerText = side.pairs ? "🪙 " + formatCoins(side.pairs) : already ? "max " + formatCoins(sideMax) : "";
+    document.getElementById("bjOnPlus3").innerText = side.plus3 ? "🪙 " + formatCoins(side.plus3) : already ? "max " + formatCoins(sideMax) : "";
+    var room = Math.min(betTarget == "main" ? state.rules.maxBet - already : sideMax - side[betTarget], myCoins);
     document.getElementById("bjAmount").max = room;
     document.querySelectorAll(".bj-chip").forEach((chip) => (chip.disabled = Number(chip.dataset.chip) > room));
   }
@@ -397,9 +417,11 @@ function renderHistory() {
     ...state.history.map((round) => {
       var mine = round.results.filter((r) => r.name == myName);
       var gain = mine.reduce((sum, r) => sum + r.payout - r.bet, 0);
-      var won = round.results.filter((r) => r.payout > r.bet).length;
+      // Hands (side bets count only for the own plus / minus)
+      var hands = round.results.filter((r) => r.result != "side");
+      var won = hands.filter((r) => r.payout > r.bet).length;
       var title = round.dealer > 21 ? "Dealer bust" : "Dealer " + round.dealer;
-      var sub = "Round " + round.round + " · " + won + " of " + round.results.length + (round.results.length == 1 ? " hand" : " hands") + " won";
+      var sub = "Round " + round.round + " · " + won + " of " + hands.length + (hands.length == 1 ? " hand" : " hands") + " won";
       // Own result: plus or minus; not played: nothing
       var value = mine.length ? (gain > 0 ? "+" : gain < 0 ? "−" : "±") + formatCoins(Math.abs(gain)) : "–";
       return historyItem(round.dealer > 21 ? "💥" : "🃏", title, sub, value, mine.length ? (gain > 0 ? "plus" : gain < 0 ? "minus" : "") : "muted");
@@ -428,9 +450,18 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("bjBet").addEventListener("click", () => {
     var value = Number(amount.value);
     if (!Number.isInteger(value) || value <= 0 || selected == null) return showToast("Enter the coins for the seat.", "error");
-    socket.emit("bet", { seat: selected, amount: value });
+    if (betTarget == "main") socket.emit("bet", { seat: selected, amount: value });
+    else socket.emit("sideBet", { seat: selected, type: betTarget, amount: value });
     amount.value = "";
   });
+  // Main bet or a side bet
+  document.querySelectorAll(".bj-target").forEach((tab) =>
+    tab.addEventListener("click", () => {
+      betTarget = tab.dataset.target;
+      amount.value = "";
+      if (state) renderBars();
+    }),
+  );
   // Stand up: the bet on the seat comes back
   document.getElementById("bjClear").addEventListener("click", () => {
     socket.emit("clearBet", selected);

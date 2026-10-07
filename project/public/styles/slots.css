@@ -743,3 +743,75 @@
   color: var(--mm-accent);
   font-variant-numeric: tabular-nums;
 }
+
+/* The paytable button next to the title: a quiet pill */
+.sl-paytable-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 34px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.sl-paytable-btn:hover,
+.sl-paytable-btn:focus-visible {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+}
+
+.sl-paytable-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---------- The end of the bonus game: the win counted up ---------- */
+.sl-stage.bonus-end .sl-big-title {
+  position: relative;
+}
+
+.sl-bonus-amount {
+  position: relative;
+  font-size: 2.6rem;
+  color: var(--mm-accent);
+  text-shadow: 0 0 24px rgba(var(--mm-accent-rgb), 0.55);
+}
+
+/* A slow, turning gold glow behind the win */
+.sl-bonus-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150%;
+  aspect-ratio: 1;
+  background: conic-gradient(from 0deg, transparent 0 10%, rgba(var(--mm-accent-rgb), 0.16) 10% 15%, transparent 15% 35%, rgba(var(--mm-accent-rgb), 0.16) 35% 40%, transparent 40% 60%, rgba(var(--mm-accent-rgb), 0.16) 60% 65%, transparent 65% 85%, rgba(var(--mm-accent-rgb), 0.16) 85% 90%, transparent 90%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: sl-glow-turn 8s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes sl-glow-turn {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.sl-bonus-sub {
+  position: relative;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.sl-bonus-sub.show {
+  opacity: 1;
+  transform: none;
+}

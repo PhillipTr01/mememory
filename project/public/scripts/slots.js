@@ -379,13 +379,24 @@ async function playBonus(result) {
   clearLines();
   machine.classList.remove("bonus-mode");
 
-  // 3. What the bonus paid
+  // 3. What the free spins paid: counted up from 0, with a glow and falling coins (not given away below)
+  text.innerText = "";
+  detail.innerText = "";
+  var end = setup.rules.bonusEndTime;
   stage.hidden = false;
-  stage.className = "sl-stage big";
+  stage.className = "sl-stage big bonus-end" + (result.capped ? " epic" : "");
   var times = bonus.win / result.bet;
-  stage.replaceChildren(el("div", "sl-stage-title", result.capped ? "MAX WIN" : "BONUS WIN"), el("div", "sl-big-amount", "🪙 " + formatCoins(bonus.win)), el("div", "sl-stage-sub", bonus.freeSpins.length + " free spins · " + (times >= 10 ? Math.round(times) : times.toFixed(1)) + "× your bet"));
-  if (times >= 20) coinShower(stage, times >= 100 ? 70 : 40);
-  await wait(setup.rules.bonusEndTime);
+  var amount = el("div", "sl-big-amount sl-bonus-amount", "🪙 0");
+  var sub = el("div", "sl-stage-sub sl-bonus-sub", bonus.freeSpins.length + " free spins · " + (times >= 10 ? Math.round(times) : times.toFixed(1)) + "× your bet");
+  stage.replaceChildren(el("div", "sl-bonus-glow"), el("div", "sl-big-title", result.capped ? "MAX WIN" : "BONUS WIN"), amount, sub);
+  coinShower(stage, Math.min(80, 15 + Math.round(times)));
+  var counting = end * 0.55;
+  countUp(amount, bonus.win, counting);
+  await wait(counting);
+  // Done counting: the amount pops, the details come
+  amount.animate([{ transform: "scale(1)" }, { transform: "scale(1.18)" }, { transform: "scale(1)" }], { duration: 450, easing: "ease-out" });
+  sub.classList.add("show");
+  await wait(end - counting);
   stage.hidden = true;
   stage.replaceChildren();
   // Back to the spin that started it

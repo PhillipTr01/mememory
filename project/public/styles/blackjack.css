@@ -395,14 +395,6 @@
 }
 
 .bj-stand {
-  align-self: flex-end;
-  padding: 0 0.45rem;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.45);
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.68rem;
-  font-weight: 700;
-  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
@@ -674,4 +666,134 @@
 /* The lobby has no last rounds (they belong to a table) */
 .side-card[hidden] {
   display: none !important;
+}
+
+/* ---------- The bet bar: where the chips go (main, side bets), then chips and amount ---------- */
+.bj-betbar {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.7rem;
+}
+
+.bj-targets {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.bj-target {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  background: var(--mm-surface);
+  color: var(--mm-muted);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.bj-target.active {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  color: var(--mm-text);
+}
+
+.bj-target:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.bj-target-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bj-target-value {
+  min-height: 1em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--mm-accent);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.bj-target-value:empty::before {
+  content: "–";
+  color: var(--mm-muted);
+}
+
+/* Stand up: an icon on the right */
+.bj-leave {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  margin-left: auto;
+  align-self: center;
+  padding: 0;
+  border: 1px solid var(--mm-border);
+  border-radius: 50%;
+  background: var(--mm-surface);
+  color: var(--mm-muted);
+  cursor: pointer;
+}
+
+.bj-leave:hover {
+  border-color: var(--mm-danger);
+  color: var(--mm-danger);
+}
+
+.bj-leave svg {
+  width: 18px;
+  height: 18px;
+}
+
+.bj-bet-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.bj-bet-input {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* On the seat: the side bets small next to the bet */
+.bj-bet-side {
+  opacity: 0.7;
+  font-weight: 700;
+}
+
+.bj-side-win {
+  align-self: center;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.9);
+  color: #1a1305;
+  font-size: 0.66rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@media (max-width: 575px) {
+  .bj-target {
+    padding: 0.3rem 0.5rem;
+  }
+
+  .bj-target-name {
+    font-size: 0.7rem;
+  }
+}
+
+.bj-bet:empty {
+  display: none;
 }
