@@ -53,9 +53,9 @@ module.exports = function (io) {
   }
 
   /*
-   * A bonus game is paid only when it was played on the page: after the
-   * wheels it waits for the player's click ("waiting"), then the free spins
-   * play ("playing"). A player who leaves meanwhile finds it again - waiting,
+   * A bonus game is paid only when it was played on the page: it waits for
+   * the player's click ("waiting"), then the wheels and the free spins play
+   * ("playing"). A player who leaves meanwhile finds it again - waiting,
    * or held where it was ("paused"). After SLOTS_HOLD it is paid anyway.
    */
   function hold(entry, state) {
@@ -150,7 +150,8 @@ module.exports = function (io) {
       "bonusStart",
       safe("bonusStart", (data) => {
         const entry = machine.pending.find((e) => e.id === (data && data.id) && e.name === username);
-        if (entry && entry.result && entry.state === "waiting") play(entry, 0);
+        // (the wheels come first, then the free spins)
+        if (entry && entry.result && entry.state === "waiting") play(entry, config.SLOTS_BONUS_TIME);
       }),
     );
 

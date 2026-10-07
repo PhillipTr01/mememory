@@ -325,9 +325,10 @@ function spinRing(ring, fields, value, turns, direction, time) {
 }
 
 /*
- * The bonus game. Fresh: the wheels, then "you won free spins" waits for a
- * click. Back after a break (`from`: free spins seen, `started`: clicked
- * before): the start screen again, or "welcome back" and on from there.
+ * The bonus game. Fresh: "you won free spins" waits for a click, then the
+ * wheels decide how many and the multiplier. Back after a break (`from`:
+ * free spins seen, `started`: clicked before): the start screen again, or
+ * "welcome back" and on from there.
  */
 async function playBonus(result, from, started) {
   var bonus = result.bonus;
@@ -338,10 +339,10 @@ async function playBonus(result, from, started) {
   var progress = (shown) => result.id && socket.emit("bonusProgress", { id: result.id, shown: shown });
   var resumed = from != null;
   from = Math.max(0, from || 0);
-  if (!resumed) await playWheels(result, stage, time);
   if (!resumed || !started) {
     await startScreen(result, stage);
     if (result.id) socket.emit("bonusStart", { id: result.id });
+    await playWheels(result, stage, time);
   } else {
     // Back after a break: a moment to see where it goes on
     stage.hidden = false;
@@ -357,18 +358,19 @@ async function playBonus(result, from, started) {
   activeBonus = null;
 }
 
-// "You won N free spins": waits for the player's click (or Enter / space)
+// "You won free spins": waits for the player's click (or Enter / space) - then the wheels
 function startScreen(result, stage) {
-  var bonus = result.bonus;
   return new Promise((resolve) => {
+    // The 🎁 light up behind it
+    document.querySelectorAll(".sl-cell.scatter").forEach((c) => c.classList.add("hit"));
     stage.hidden = false;
     stage.className = "sl-stage bonus start";
-    var start = el("button", "sl-start-btn", "Start free spins");
+    var start = el("button", "sl-start-btn", "Spin the wheels");
     start.type = "button";
     stage.replaceChildren(
-      el("div", "sl-stage-title", "🎁 YOU WON"),
-      el("div", "sl-big-title", bonus.startSpins + " FREE SPINS"),
-      el("div", "sl-stage-sub won", "Start multiplier × " + bonus.multiplier + " · +" + setup.bonus.step + " every spin"),
+      el("div", "sl-stage-title", "🎁 🎁 🎁"),
+      el("div", "sl-big-title", "YOU WON FREE SPINS"),
+      el("div", "sl-stage-sub won", "The wheels decide how many - and your multiplier"),
       start,
     );
     coinShower(stage, 25);
