@@ -30,9 +30,10 @@ const casinoLock = require("./casino_lock");
  *
  * Without a running season the leaderboard is the normal one (live).
  *
- * Before a season starts the casino closes (game/casino_lock.js): no new
- * bets, running rounds go to their end. When every game is quiet (or after
- * SEASON_CLOSE_MAX), SEASON_CLOSE_WAIT more - then the season starts.
+ * Before a season starts - and before it ends - the casino closes
+ * (game/casino_lock.js): no new bets, running rounds go to their end. When
+ * every game is quiet (or after SEASON_CLOSE_MAX), SEASON_CLOSE_WAIT more -
+ * then the season starts (ends).
  *
  * changes: "closing" (info, again when the countdown starts), "started" (season), "ended" (season)
  */
@@ -71,7 +72,7 @@ function publicSeason(season) {
     color: season.color || null,
     prizesOn: season.prizesOn,
     prizes: season.prizes,
-    status: state.closing && state.closing.id === season.id ? "starting" : status(season),
+    status: state.closing && state.closing.id === season.id && closingKind() === "start" ? "starting" : status(season),
     endedAt: season.endedAt || null,
     players: season.final ? season.final.rows.length : Object.keys(season.joined || {}).length,
     winner: season.final && season.final.rows.length ? season.final.rows[0] : null,
@@ -111,12 +112,49 @@ async function load() {
   loaded = true;
 }
 
-// The casino closes for a season: {id, name, icon, startsIn (ms, null: the games are still finishing)}
+// What the casino closes for: "start" (a season starts) or "end" (the running one ends)
+function closingKind() {
+  return state.closing ? state.closing.kind || "start" : null;
+}
+
+// The casino closes for a season: {id, name, icon, kind, startsIn (ms until it starts / ends, null: the games are still finishing)}
 function closingInfo(now = Date.now()) {
   const closing = state.closing;
   const season = closing && byId(closing.id);
   if (!season) return null;
-  return { id: season.id, name: season.name, icon: season.icon, startsIn: closing.startsAt == null ? null : Math.max(0, closing.startsAt - now) };
+  return { id: season.id, name: season.name, icon: season.icon, kind: closingKind(), startsIn: closing.startsAt == null ? null : Math.max(0, closing.startsAt - now) };
+}
+
+// The casino closes for the start or the end of a season: true when it is time (every game was
+// quiet - or waited long enough - and then SEASON_CLOSE_WAIT); the casino opens again after it
+async function closeFor(season, kind, now) {
+  if (!state.closing || state.closing.id !== season.id || closingKind() !== kind) {
+    state.closing = { id: season.id, kind: kind, since: now, startsAt: null };
+    casinoLock.lock();
+    await save();
+    changes.emit("closing", closingInfo(now));
+  }
+  // Every game quiet (or waited long enough): the countdown
+  if (state.closing.startsAt == null && (casinoLock.busyGames().length === 0 || now - state.closing.since >= config.SEASON_CLOSE_MAX)) {
+    state.closing.startsAt = now + config.SEASON_CLOSE_WAIT;
+    await save();
+    changes.emit("closing", closingInfo(now));
+    soon(config.SEASON_CLOSE_WAIT + 100);
+  }
+  if (state.closing.startsAt != null && now >= state.closing.startsAt) {
+    state.closing = null;
+    return true;
+  }
+  if (state.closing.startsAt == null) soon(2000);
+  return false;
+}
+
+// The casino was closing for something that is off now (the end moved later): open again
+async function stopClosing() {
+  state.closing = null;
+  casinoLock.unlock();
+  await save();
+  changes.emit("closing", null);
 }
 
 // While closing: look again soon (not only every TICK)
@@ -339,30 +377,18 @@ function tick(now = Date.now()) {
           await save();
           continue;
         }
-        if (!season.started && season.start <= now && !running()) {
-          // First the casino closes: running rounds go to their end, nothing new
-          if (!state.closing || state.closing.id !== season.id) {
-            state.closing = { id: season.id, since: now, startsAt: null };
-            casinoLock.lock();
-            await save();
-            changes.emit("closing", closingInfo(now));
-          }
-          // Every game quiet (or waited long enough): the countdown to the start
-          if (state.closing.startsAt == null && (casinoLock.busyGames().length === 0 || now - state.closing.since >= config.SEASON_CLOSE_MAX)) {
-            state.closing.startsAt = now + config.SEASON_CLOSE_WAIT;
-            await save();
-            changes.emit("closing", closingInfo(now));
-            soon(config.SEASON_CLOSE_WAIT + 100);
-          }
-          if (state.closing.startsAt != null && now >= state.closing.startsAt) {
-            state.closing = null;
-            await startSeason(season, now);
-            casinoLock.unlock();
-          } else if (state.closing.startsAt == null) {
-            soon(2000);
-          }
+        // The start: first the casino closes - running rounds go to their end, nothing new
+        if (!season.started && season.start <= now && !running() && (await closeFor(season, "start", now))) {
+          await startSeason(season, now);
+          casinoLock.unlock();
         }
-        if (season.started && !season.ended && season.end <= now) await endSeason(season, now);
+        // The end: the same
+        if (season.started && !season.ended && season.end <= now && (await closeFor(season, "end", now))) {
+          await endSeason(season, now);
+          casinoLock.unlock();
+        }
+        // Closing for the end, but the admin moved the end later: open again
+        if (state.closing && state.closing.id === season.id && closingKind() === "end" && !season.ended && season.end > now) await stopClosing();
       }
     })
     .catch((error) => console.error("[seasons] Could not start or end a season:", error));
@@ -428,12 +454,13 @@ function storedOf(username) {
 }
 coins.setStoredLookup(storedOf);
 
-// The admin ends the running season right now
+// The admin ends the running season right now (the casino closes first, like at the end time)
 async function endNow(id, now = Date.now()) {
   const season = byId(id);
   if (season == null || status(season) !== "running") return { error: "The season doesn't run." };
-  season.end = now;
-  await endSeason(season, now);
+  season.end = Math.min(season.end, now);
+  await save();
+  await tick(now);
   return { season: publicSeason(season) };
 }
 

@@ -857,11 +857,12 @@ async function saveSeason(event) {
 }
 
 async function endSeason(season) {
-  if (!(await confirmDialog({ title: "End " + season.name + " now?", text: "The places right now are final - the winner page shows them, with the prizes.", confirmLabel: "End now", danger: true }))) return;
+  if (!(await confirmDialog({ title: "End " + season.name + " now?", text: "The casino closes first: no new bets, running rounds finish, then one more minute. The places then are final - the winner page shows them, with the prizes.", confirmLabel: "End now", danger: true }))) return;
   try {
     seasonList = (await api("seasons/" + season.id + "/end", {})).seasons;
     renderSeasons();
-    showToast(season.name + " is over");
+    var over = seasonList.find((s) => s.id == season.id);
+    showToast(over && over.status == "ended" ? season.name + " is over" : season.name + " ends in a minute - the casino is closing");
   } catch (error) {
     fail(error);
   }

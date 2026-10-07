@@ -507,8 +507,8 @@
     document.body.appendChild(box);
   }
 
-  // A season starts soon: the casino closes - open rounds finish, no new bets (the server refuses
-  // them), then a countdown. A notice like a battle starting; it goes with the start of the
+  // A season starts (or ends) soon: the casino closes - open rounds finish, no new bets (the server
+  // refuses them), then a countdown. A notice like a battle starting; it goes with the start of the
   // season (the page loads again)
   var closing = null;
   var closingTimer = null;
@@ -528,15 +528,16 @@
       document.body.appendChild(closing);
     }
     closing.querySelector(".cs-closing-icon").innerText = info.icon || "🏆";
-    closing.querySelector(".cs-closing-title").innerText = info.name + " starts soon!";
+    var ending = info.kind == "end";
+    closing.querySelector(".cs-closing-title").innerText = info.name + (ending ? " ends soon!" : " starts soon!");
     var count = closing.querySelector(".cs-closing-count");
     var text = closing.querySelector(".cs-closing-text");
     if (info.startsIn == null) {
       count.innerText = "⏳";
-      text.innerText = "Open games are finishing - no new bets until it starts.";
+      text.innerText = ending ? "Open games are finishing - no new bets, the final places come next." : "Open games are finishing - no new bets until it starts.";
       return;
     }
-    text.innerText = "All games closed - no new bets until it starts.";
+    text.innerText = ending ? "All games closed - the final places are counted then." : "All games closed - no new bets until it starts.";
     var startsAt = Date.now() + info.startsIn;
     var show = () => {
       var left = Math.max(0, Math.ceil((startsAt - Date.now()) / 1000));
