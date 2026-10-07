@@ -413,8 +413,8 @@ function updateRaiseLabel() {
   document.getElementById("pkRaise").innerText = label;
 }
 
-// A slider moves in steps of 100 (the ends - the least and all-in - are always possible)
-var SLIDER_STEP = 100;
+// A slider (and the mouse wheel) moves in steps of 50 (the ends - the least and all-in - are always possible)
+var SLIDER_STEP = 50;
 function snap(value, min, max) {
   if (value >= max - SLIDER_STEP / 2) return max;
   if (value <= min + SLIDER_STEP / 2) return min;
@@ -588,7 +588,6 @@ function buyIn(seat) {
     text: "Your coins become chips. When you stand up, the chips are coins again.",
     min: state.rules.minBuyIn,
     max: state.rules.maxBuyIn,
-    // 10,000 to start (or what the coins and the table allow)
     // (5,000 to start with - or less, with fewer coins)
     value: Math.max(state.rules.minBuyIn, Math.min(state.rules.defaultBuyIn || 5000, state.rules.maxBuyIn, myCoins)),
     button: "Sit down",
@@ -659,14 +658,14 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("pkAmount").addEventListener("change", (event) => setRaise(Number(event.target.value)));
   renderPresets();
   document.getElementById("pkPresetEdit").addEventListener("click", editPresets);
-  // The mouse wheel moves the raise (one big blind per step)
+  // The mouse wheel moves the raise (50 per step, like the slider)
   document.getElementById("pkRaiseBox").addEventListener(
     "wheel",
     (event) => {
       if (!state || document.getElementById("pkRaiseBox").hidden) return;
       event.preventDefault();
       var value = Number(document.getElementById("pkAmount").value) || 0;
-      setRaise(value + (event.deltaY < 0 ? 1 : -1) * state.rules.bigBlind);
+      setRaise(value + (event.deltaY < 0 ? 1 : -1) * SLIDER_STEP, true);
     },
     { passive: false },
   );
