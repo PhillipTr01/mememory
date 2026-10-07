@@ -261,21 +261,23 @@
 .bj-chip {
   width: 42px;
   height: 42px;
-  border: 3px dashed rgba(255, 255, 255, 0.55);
+  border: 3px dashed rgba(255, 255, 255, 0.35);
   border-radius: 50%;
-  background: #1f2937;
-  color: #fff;
+  background: var(--chip, #4f5868);
+  color: rgba(255, 255, 255, 0.92);
   font-size: 0.75rem;
   font-weight: 800;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
   transition: transform 0.12s ease;
 }
 
-.bj-chip[data-chip="50"] { background: #b91c1c; }
-.bj-chip[data-chip="100"] { background: #1d4ed8; }
-.bj-chip[data-chip="500"] { background: #6d28d9; }
-.bj-chip[data-chip="1000"] { background: #b45309; }
-.bj-chip[data-chip="5000"] { background: #a16207; border-color: #fde68a; }
+/* Soft colours per value (the same on the bet fields) */
+.bj-chip[data-chip="10"] { --chip: #4f5868; }
+.bj-chip[data-chip="50"] { --chip: #a65f59; }
+.bj-chip[data-chip="100"] { --chip: #5a77a3; }
+.bj-chip[data-chip="500"] { --chip: #7c6a9c; }
+.bj-chip[data-chip="1000"] { --chip: #b07c4c; }
+.bj-chip[data-chip="5000"] { --chip: #b29548; }
 
 .bj-chip:hover:not(:disabled) {
   transform: translateY(-3px);
@@ -665,7 +667,7 @@
 .bj-chip.active {
   transform: translateY(-4px);
   border-style: solid;
-  border-color: #fff;
+  border-color: rgba(255, 255, 255, 0.75);
   box-shadow: 0 0 0 3px var(--mm-accent), 0 6px 14px rgba(0, 0, 0, 0.5);
 }
 
@@ -795,8 +797,8 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: #1f2937;
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.85), inset 0 0 0 5px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.4);
+  background: var(--chip, #4f5868);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.5), inset 0 0 0 5px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.4);
   color: #fff;
   font-size: 0.62rem;
   font-weight: 800;
@@ -808,18 +810,19 @@
 }
 
 .bj-chipface.stacked {
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.85), inset 0 0 0 5px rgba(0, 0, 0, 0.25), 0 3px 0 rgba(0, 0, 0, 0.35), 0 5px 6px rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.5), inset 0 0 0 5px rgba(0, 0, 0, 0.2), 0 3px 0 rgba(0, 0, 0, 0.35), 0 5px 6px rgba(0, 0, 0, 0.35);
 }
 
 .bj-chipface.tall {
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.85), inset 0 0 0 5px rgba(0, 0, 0, 0.25), 0 3px 0 rgba(0, 0, 0, 0.35), 0 6px 0 rgba(0, 0, 0, 0.25), 0 8px 8px rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.5), inset 0 0 0 5px rgba(0, 0, 0, 0.2), 0 3px 0 rgba(0, 0, 0, 0.35), 0 6px 0 rgba(0, 0, 0, 0.25), 0 8px 8px rgba(0, 0, 0, 0.35);
 }
 
-.bj-chipface[data-chip="50"] { background: #b91c1c; }
-.bj-chipface[data-chip="100"] { background: #1d4ed8; }
-.bj-chipface[data-chip="500"] { background: #6d28d9; }
-.bj-chipface[data-chip="1000"] { background: #b45309; }
-.bj-chipface[data-chip="5000"] { background: #a16207; }
+.bj-chipface[data-chip="10"] { --chip: #4f5868; }
+.bj-chipface[data-chip="50"] { --chip: #a65f59; }
+.bj-chipface[data-chip="100"] { --chip: #5a77a3; }
+.bj-chipface[data-chip="500"] { --chip: #7c6a9c; }
+.bj-chipface[data-chip="1000"] { --chip: #b07c4c; }
+.bj-chipface[data-chip="5000"] { --chip: #b29548; }
 
 /* Next to "All tables": stand up, round, like at the poker table */
 .bj-icon-btn {
@@ -1109,15 +1112,16 @@
   font-size: 0.55rem;
 }
 
-/* A won side bet: a small gold chip with the win */
+/* A won side bet: a small chip with the win, in the soft gold of the chips */
 .bj-side-chip.won {
   min-width: 26px;
   width: auto;
   padding: 0 0.3rem;
   border-radius: 999px;
-  background: radial-gradient(circle at 40% 35%, #f5d76e, #b8860b);
-  box-shadow: 0 0 10px rgba(var(--mm-accent-rgb), 0.55);
-  color: #1a1305;
+  /* the soft gold of the chips - flat, no glow */
+  background: #b29548;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35), 0 2px 4px rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.95);
   font-weight: 800;
   cursor: default;
 }
