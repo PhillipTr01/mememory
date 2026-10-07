@@ -800,10 +800,23 @@ function placesOf(battle, totals) {
  * smoothly and stops on the mode the seed chose - then the winner is shown.
  * (A new render of the page picks the reel up where it was.)
  */
+var REVEAL_WAIT = 3000; // the last case is seen this long before the reel comes
 var REVEAL_SPIN = 4400; // the reel rolls this long
 var REVEAL_HOLD = 1100; // the mode is shown this long before the winner
-var revealing = {}; // battle id -> when the reel started
+var revealing = {}; // battle id -> when the reel starts
 function playModeReveal(battle, grid) {
+  // The first render after the last case: the reel in REVEAL_WAIT, the winner after it
+  if (!revealing[battle.id]) {
+    revealing[battle.id] = Date.now() + REVEAL_WAIT;
+    setTimeout(renderBattle, REVEAL_WAIT);
+    setTimeout(() => {
+      modeShown[battle.id] = true;
+      renderBattle();
+      celebrate(battle);
+    }, REVEAL_WAIT + REVEAL_SPIN + REVEAL_HOLD);
+  }
+  var started = revealing[battle.id];
+  if (Date.now() < started) return;
   var box = el("div", "bt-mode-reveal");
   var face = el("span", "bt-mode-face");
   var track = el("span", "bt-mode-track");
@@ -814,8 +827,6 @@ function playModeReveal(battle, grid) {
   var name = el("span", "bt-mode-name", "Which mode?");
   box.append(el("span", "bt-mode-title", "THE MODE IS..."), face, name);
   grid.appendChild(box);
-  var first = !revealing[battle.id];
-  var started = revealing[battle.id] || (revealing[battle.id] = Date.now());
   var spin = track.animate([{ transform: "translateY(0)" }, { transform: "translateY(" + -count * 100 + "%)" }], { duration: REVEAL_SPIN, easing: "cubic-bezier(0.15, 0.55, 0.12, 1)", fill: "forwards" });
   spin.currentTime = Math.min(REVEAL_SPIN, Date.now() - started);
   var stopped = () => {
@@ -824,13 +835,6 @@ function playModeReveal(battle, grid) {
   };
   if (Date.now() - started >= REVEAL_SPIN) return stopped();
   spin.finished.then(stopped, () => {});
-  // Only the first render ends the reveal
-  if (!first) return;
-  setTimeout(() => {
-    modeShown[battle.id] = true;
-    renderBattle();
-    celebrate(battle);
-  }, REVEAL_SPIN + REVEAL_HOLD);
 }
 
 function finalTile(battle, seat, place, total) {
@@ -870,6 +874,8 @@ function resultHero(battle) {
     me.append(el("span", "bt-hero-label", "You"), el("b", "", (profit >= 0 ? "+" : "−") + formatCoins(Math.abs(profit))));
     hero.appendChild(me);
   }
+  // The same battle again: only for who made this one
+  if (battle.creator != myName) return hero;
   var again = el("button", "mm-btn mm-btn-primary mm-btn-sm bt-again");
   again.type = "button";
   again.append(createIcon("bi-arrow-repeat"), document.createTextNode(" Battle again · 🪙 " + formatCoins(battle.price)));

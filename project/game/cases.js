@@ -139,12 +139,12 @@ const CASES = [
     price: 500,
     risk: "high",
     items: [
-      { name: "Sad Pepe", icon: "😢", value: 10, weight: 42801 },
-      { name: "Smug Pepe", icon: "😏", value: 100, weight: 19865 },
-      { name: "Pepe Hands", icon: "🙌", value: 450, weight: 26246 },
-      { name: "Rare Pepe", icon: "🖼️", value: 1800, weight: 9620 },
-      { name: "Feels Good Man", icon: "😌", value: 6000, weight: 1439 },
-      { name: "Golden Pepe", icon: "🐸", value: 25000, weight: 29 },
+      { name: "Sad Pepe", icon: "😢", value: 10, weight: 29440 },
+      { name: "Smug Pepe", icon: "😏", value: 100, weight: 25000 },
+      { name: "Pepe Hands", icon: "🙌", value: 300, weight: 25000 },
+      { name: "Rare Pepe", icon: "🖼️", value: 1000, weight: 18000 },
+      { name: "Feels Good Man", icon: "😌", value: 5000, weight: 2500 },
+      { name: "Golden Pepe", icon: "🐸", value: 25000, weight: 60 },
     ],
   },
   {
@@ -274,12 +274,12 @@ const CASES = [
     price: 250,
     risk: "high",
     items: [
-      { name: "Rug Pull", icon: "🧹", value: 10, weight: 42777 },
+      { name: "Rug Pull", icon: "🧹", value: 10, weight: 42738 },
       { name: "Bag Holder", icon: "👜", value: 50, weight: 29651 },
       { name: "Hodl", icon: "💪", value: 250, weight: 12250 },
       { name: "Pump", icon: "⛽", value: 750, weight: 13518 },
       { name: "Moon Bag", icon: "🌙", value: 2600, weight: 1765 },
-      { name: "Satoshi Wallet", icon: "₿", value: 25000, weight: 39 },
+      { name: "Satoshi Wallet", icon: "₿", value: 12500, weight: 78 },
     ],
   },
   {

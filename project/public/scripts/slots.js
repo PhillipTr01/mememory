@@ -888,7 +888,6 @@ async function bigWin(result) {
   stage.replaceChildren();
 }
 
-// The win: every winning line, the cells pulse; then line after line with its win
 // Before a bonus game: what the lines of the spin itself won (it is paid with the rest)
 async function showLineWinFirst(result) {
   var bar = document.getElementById("slWinBar");
@@ -908,6 +907,7 @@ async function showLineWinFirst(result) {
   document.querySelectorAll(".sl-cell.hit").forEach((c) => c.classList.remove("hit"));
 }
 
+// The win: every winning line, the cells pulse; then line after line with its win
 async function showResult(result) {
   var bar = document.getElementById("slWinBar");
   var text = document.getElementById("slWinText");
