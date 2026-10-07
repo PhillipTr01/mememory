@@ -106,9 +106,10 @@ module.exports = function () {
   }
 
   // In the running season (hit "Start")? Its icon - null: not in it, or no season
+  // ... and since when: {icon, joinedAt}
   function seasonOf(username) {
     const season = seasons.running();
-    return season && seasons.joined(username) === true ? season.icon : null;
+    return season && seasons.joined(username) === true ? { icon: season.icon, joinedAt: seasons.joinedAt(username) } : null;
   }
 
   // The players in the casino (approved): who is in the running season first, then the richest first

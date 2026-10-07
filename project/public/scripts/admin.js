@@ -393,9 +393,10 @@ async function setPayout(player, box, text) {
 /* ---------- Players ---------- */
 
 // A player who is in the running season (hit "Start"): a pill with its icon
-function seasonPill(icon) {
-  var pill = el("span", "ad-pill ad-season-pill", icon + " in season");
-  pill.title = "Plays in the running season";
+function seasonPill(season) {
+  var since = season.joinedAt ? new Date(season.joinedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : null;
+  var pill = el("span", "ad-pill ad-season-pill", season.icon + " in season" + (since ? " · since " + since : ""));
+  pill.title = season.joinedAt ? "Hit Start in the running season on " + dateText(season.joinedAt) : "Plays in the running season";
   return pill;
 }
 

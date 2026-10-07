@@ -25,8 +25,8 @@ const casinoLock = require("./casino_lock");
  *
  * Second chances: a season can give a player who lost everything (0 coins,
  * nothing in play anywhere) a few new starts with the budget. The first one
- * right away (a player who started the season on a later day: from the next day on), every
- * further one only from the next day on.
+ * from the day after starting the season on, every further one only from the
+ * next day on.
  *
  * Without a running season the leaderboard is the normal one (live).
  *
@@ -128,7 +128,7 @@ function closingInfo(now = Date.now()) {
   const closing = state.closing;
   const season = closing && byId(closing.id);
   if (!season) return null;
-  return { id: season.id, name: season.name, icon: season.icon, kind: closingKind(), startsIn: closing.startsAt == null ? null : Math.max(0, closing.startsAt - now) };
+  return { id: season.id, name: season.name, icon: season.icon, color: season.color || null, kind: closingKind(), startsIn: closing.startsAt == null ? null : Math.max(0, closing.startsAt - now) };
 }
 
 // The casino closes for the start or the end of a season: true when it is time (every game was
@@ -316,6 +316,12 @@ async function join(username, now = Date.now()) {
   return { coins: amount, missed: missed };
 }
 
+// When the player hit "Start" in the running season (null: not in it, or no season)
+function joinedAt(username) {
+  const season = running();
+  return season && season.joined && season.joined[username] ? season.joined[username] : null;
+}
+
 // In the running season: did the player start it? (null: no season)
 function joined(username) {
   const season = running();
@@ -433,13 +439,13 @@ async function chanceStatus(username, now = Date.now()) {
   const result = { can: false, left: left, total: total, budget: season.budget, nextAt: null };
   if (joined(username) === false) return { ...result, reason: "notJoined" };
   if (left === 0) return { ...result, reason: "used" };
-  // After a second chance: the next one from the next day on. Started the season on a later day
-  // than its start: the first one only from the next day on too.
+  // After a second chance: the next one from the next day on. The first one: from the day after
+  // starting the season on (never on the day of the start)
   let from = null;
   if (record.used > 0) from = days.nextDay(record.lastAt);
   else {
-    const at = season.joined && season.joined[username];
-    if (at && days.dayNumber(at) > days.dayNumber(season.startedAt || season.start)) from = days.nextDay(at);
+    const at = (season.joined && season.joined[username]) || season.startedAt || season.start;
+    from = days.nextDay(at);
   }
   if (from != null && now < from) return { ...result, reason: "cooldown", nextAt: from };
   if ((await coins.get(username)).coins > 0) return { ...result, reason: "coins" };
@@ -520,4 +526,4 @@ function accentStyle() {
   return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
 }
 
-module.exports = { join, joined, joinCoins, closingInfo, chanceStatus, useChance, storedOf, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+module.exports = { joinedAt, join, joined, joinCoins, closingInfo, chanceStatus, useChance, storedOf, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };

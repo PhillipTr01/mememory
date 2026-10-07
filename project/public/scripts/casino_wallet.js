@@ -530,6 +530,10 @@
       document.body.appendChild(closing);
     }
     closing.querySelector(".cs-closing-icon").innerText = info.icon || "🏆";
+    // In the color of the season that starts (or ends)
+    var rgb = info.color && /^#[0-9a-f]{6}$/i.test(info.color) ? [1, 3, 5].map((i) => parseInt(info.color.slice(i, i + 2), 16)) : null;
+    closing.style.setProperty("--mm-accent", rgb ? info.color : "");
+    closing.style.setProperty("--mm-accent-rgb", rgb ? rgb.join(", ") : "");
     var ending = info.kind == "end";
     closing.querySelector(".cs-closing-title").innerText = info.name + (ending ? " ends soon!" : " starts soon!");
     var count = closing.querySelector(".cs-closing-count");
