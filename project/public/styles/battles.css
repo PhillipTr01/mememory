@@ -1671,3 +1671,8 @@ button.bt-strip-case:hover {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* The result only pops in once */
+.bt-hero.seen {
+  animation: none;
+}

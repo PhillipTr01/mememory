@@ -17,6 +17,7 @@ var MODES = { classic: { icon: "👑", name: "Classic" }, crazy: { icon: "🤡",
 var modeShown = {}; // battle id -> the mode of a random battle was revealed on this page
 var seenRunning = {}; // battle id -> this page saw it running (so the reveal is played)
 var drawShown = {}; // battle id -> the jackpot roulette was played on this page
+var heroShown = {}; // battle id -> its result popped in on this page already
 var lastCaseAt = {}; // battle id -> when the animation of its last case ended on this page
 
 // Under the modes: what the picked one means
@@ -1040,7 +1041,9 @@ function resultHero(battle) {
   var mySeat = seats.find((seat) => battle.seats[seat].name == myName);
   var mine = isIn(battle);
   var won = mySeat != null;
-  var hero = el("div", "bt-hero" + (won ? " won" : mine ? " lost" : ""));
+  // (it pops in once - a later new drawing of the page, like the list coming again, leaves it be)
+  var hero = el("div", "bt-hero" + (won ? " won" : mine ? " lost" : "") + (heroShown[battle.id] ? " seen" : ""));
+  heroShown[battle.id] = true;
   hero.appendChild(el("span", "bt-hero-trophy", split ? "🤝" : won ? "🏆" : mine ? "💀" : "🏆"));
   var main = el("div", "bt-hero-main");
   var how = ruleOf(battle) == "jackpot" ? jackpotChance(battle, seats[0]) : ruleOf(battle) == "bestof" ? "most rounds won" : battle.crazy ? "lowest total" : null;
