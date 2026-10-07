@@ -274,20 +274,57 @@
 
   var chanceTimer = null;
   var chanceShown = false;
+  // The pill next to the free coins: a second chance now - or when the next one comes (only at 0 coins)
+  var chancePill = document.getElementById("navChance");
+  var chanceStatus = null;
+  var chanceTick = null;
+
+  function renderChancePill() {
+    clearInterval(chanceTick);
+    var status = chanceStatus;
+    var show = coins == 0 && status != null && (status.can || status.reason == "cooldown");
+    if (!chancePill) return;
+    chancePill.hidden = !show;
+    if (!show) return;
+    var text = document.getElementById("navChanceText");
+    chancePill.classList.toggle("ready", status.can);
+    if (status.can) {
+      text.innerText = "Second chance";
+      chancePill.title = "Start again with 🪙 " + format(status.budget);
+      return;
+    }
+    // Cooldown: how long until the next one (then look again)
+    var update = () => {
+      var left = Math.max(0, status.nextAt - Date.now());
+      var minutes = Math.ceil(left / 60000);
+      text.innerText = minutes >= 60 ? Math.floor(minutes / 60) + "h " + String(minutes % 60).padStart(2, "0") + "m" : minutes + "m";
+      chancePill.title = "Your next second chance comes in " + text.innerText;
+      if (left == 0) {
+        clearInterval(chanceTick);
+        checkChance();
+      }
+    };
+    update();
+    chanceTick = setInterval(update, 30000);
+  }
+
+  if (chancePill) chancePill.addEventListener("click", () => chanceStatus && showChance(chanceStatus));
+
   function watchChance(value) {
     clearTimeout(chanceTimer);
     if (value > 0) {
       chanceShown = false;
+      chanceStatus = null;
+      renderChancePill();
       document.querySelectorAll(".cs-chance").forEach((n) => n.remove());
       return;
     }
-    if (chanceShown) return;
     // 3 seconds after losing everything (a win may still be on its way)
     chanceTimer = setTimeout(checkChance, 3000);
   }
 
   async function checkChance() {
-    if (coins > 0 || chanceShown) return;
+    if (coins > 0) return;
     var status;
     try {
       var res = await fetch("second-chance", { cache: "no-store" });
@@ -298,13 +335,17 @@
     }
     // Coins still in a game: look again in a moment
     if (status.reason == "inPlay") return (chanceTimer = setTimeout(checkChance, 5000));
-    if (status.can || status.reason == "cooldown") showChance(status);
+    chanceStatus = status;
+    renderChancePill();
+    // The prompt by itself only once (the pill opens it again)
+    if ((status.can || status.reason == "cooldown") && !chanceShown) showChance(status);
   }
 
   function showChance(status) {
     chanceShown = true;
     var box = el("div", "cs-chance" + (status.can ? "" : " waiting"));
     var card = el("div", "cs-chance-card");
+    document.querySelectorAll(".cs-chance").forEach((n) => n.remove());
     card.append(el("div", "cs-chance-icon", status.can ? "💔" : "⏳"), el("h2", "cs-chance-title", status.can ? "Second chance!" : "Out of coins"));
     if (status.can) {
       card.append(
@@ -320,6 +361,8 @@
           var data = await res.json();
           if (!res.ok) throw new Error(data.error || "No second chance right now.");
           box.remove();
+          chanceStatus = null;
+          renderChancePill();
           showToast("💔 Back in the game with 🪙 " + format(data.coins) + "!");
         } catch (error) {
           showToast(error.message, "error");

@@ -3315,3 +3315,37 @@ body.jackpot-theme {
   color: var(--mm-muted);
   font-weight: 700;
 }
+
+/* A second chance (in a season, at 0 coins): next to the free coins - ready, or how long until */
+.nav-chance {
+  margin-right: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid rgba(224, 103, 90, 0.45);
+  border-radius: 999px;
+  background: rgba(224, 103, 90, 0.1);
+  color: #e8a39b;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.nav-chance[hidden] {
+  display: none;
+}
+
+.nav-chance:hover {
+  background: rgba(224, 103, 90, 0.18);
+}
+
+.nav-chance.ready {
+  border-color: #e0675a;
+  background: rgba(224, 103, 90, 0.2);
+  color: #ffd2cc;
+  animation: nav-chance-glow 1.6s ease-in-out infinite;
+}
+
+@keyframes nav-chance-glow {
+  50% {
+    box-shadow: 0 0 14px rgba(224, 103, 90, 0.55);
+  }
+}
