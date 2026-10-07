@@ -3521,11 +3521,12 @@ body.jackpot-theme > header {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
-/* Full screen: the coins in the top right corner (the bar at the top is gone) */
+/* Full screen: the coins at the top in the middle, as high as the title (the bar at the top is gone) */
 .cs-fs-coins {
   position: fixed;
   top: 12px;
-  right: 16px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 20;
   display: inline-flex;
   align-items: center;
@@ -3538,8 +3539,4 @@ body.jackpot-theme > header {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
-}
-
-.cs-fullscreen.cs-fs-with-coins {
-  padding-top: 3.6rem !important;
 }

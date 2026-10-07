@@ -8,8 +8,8 @@
  * allows - looked at again and again, so what comes later (the action bar)
  * fits too.
  *
- * In full screen the coins (of the bar at the top, which is gone then) show in
- * the top right corner.
+ * In full screen the coins (of the bar at the top, which is gone then) show at
+ * the top in the middle, on the height of the game's title.
  */
 (function () {
   var ICON =
@@ -78,11 +78,39 @@
     };
   }
 
-  // The coins in the corner: a copy of the bar's, kept up to date
+  // The coins at the top: a copy of the bar's, kept up to date - in the middle, as high as the title
   function coinsCorner(target) {
     var source = document.getElementById("navCoinsValue");
     var box = null;
     var watcher = null;
+    var timer = null;
+    // In the room between the title and the buttons on the right (too narrow: the top right corner)
+    function place() {
+      var title = target.querySelector("h1");
+      if (!box || !title) return;
+      var rect = title.getBoundingClientRect();
+      var right = Math.min.apply(
+        null,
+        Array.prototype.slice
+          .call(target.querySelectorAll(".cs-head-actions, .pk-seatbar:not([hidden]), .cs-fs-btn"))
+          .map(function (el) {
+            return el.getBoundingClientRect().left;
+          })
+          .concat([window.innerWidth]),
+      );
+      var room = right - rect.right;
+      if (room >= box.offsetWidth + 24) {
+        box.style.left = (rect.right + right) / 2 + "px";
+        box.style.right = "auto";
+        box.style.transform = "translateX(-50%)";
+        box.style.top = Math.max(8, rect.top + rect.height / 2 - box.offsetHeight / 2) + "px";
+      } else {
+        box.style.left = "auto";
+        box.style.right = "16px";
+        box.style.transform = "none";
+        box.style.top = "12px";
+      }
+    }
     return {
       show: function () {
         if (!source || box) return;
@@ -97,14 +125,15 @@
         watcher = new MutationObserver(copy);
         watcher.observe(source, { childList: true, characterData: true, subtree: true });
         target.appendChild(box);
-        target.classList.add("cs-fs-with-coins");
+        place();
+        timer = setInterval(place, 300);
       },
       hide: function () {
+        clearInterval(timer);
         if (watcher) watcher.disconnect();
         if (box) box.remove();
         box = null;
         watcher = null;
-        target.classList.remove("cs-fs-with-coins");
       },
     };
   }
