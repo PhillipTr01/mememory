@@ -51,7 +51,7 @@ module.exports = function (io) {
   };
   const busy = new Set(); // users with a coin payment in progress
 
-  /* ---------- Blinds: up every few hands, back to the start after a while ---------- */
+  /* ---------- Blinds: up every few hands, back to the start when the table was empty a while ---------- */
 
   function blindsAt(level) {
     const steps = config.POKER_BLIND_STEPS || [1];
@@ -67,10 +67,9 @@ module.exports = function (io) {
     return (config.POKER_BLIND_STEPS || [1]).length - 1;
   }
 
-  // At the start of a hand: back to the first level when POKER_BLIND_RESET is over - otherwise up a level
-  // after POKER_LEVEL_HANDS hands
+  // At the start of a hand: up a level after POKER_LEVEL_HANDS hands (the first hand after a reset: the first level)
   function updateLevel(now = Date.now()) {
-    if (table.levelSince == null || now - table.levelSince >= config.POKER_BLIND_RESET) {
+    if (table.levelSince == null) {
       table.level = 0;
       table.levelSince = now;
       table.levelHands = 0;
@@ -182,13 +181,11 @@ module.exports = function (io) {
       result: table.result,
       history: table.history,
       viewers: room.sockets.size,
-      // The blinds now, after how many hands (and to what) they go up, when they start low again
+      // The blinds now, after how many hands (and to what) they go up
       level: {
         number: table.level + 1,
         handsLeft: table.levelSince != null && table.level < lastLevel() ? Math.max(0, config.POKER_LEVEL_HANDS - table.levelHands) : null,
         next: table.level < lastLevel() ? blindsAt(table.level + 1) : null,
-        resetIn: table.levelSince != null && table.level > 0 ? Math.max(0, table.levelSince + config.POKER_BLIND_RESET - Date.now()) : null,
-        first: blindsAt(0),
       },
       decideIn: table.decideUntil != null ? Math.max(0, table.decideUntil - Date.now()) : null,
       decideTime: config.POKER_DECIDE,
@@ -472,6 +469,8 @@ module.exports = function (io) {
         amount: amount,
         hand: hands.get(i).name,
         cards: hands.get(i).cards,
+        // (the cards of the hand itself - the others in `cards` are kickers)
+        made: hands.get(i).made,
       })),
       hands: alive.map((i) => ({ seat: i, hand: table.seats[i].deciding ? null : hands.get(i).name, mucked: false, deciding: table.seats[i].deciding })),
       // Pot by pot: how big, who could win it, who got what

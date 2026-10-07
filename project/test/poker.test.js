@@ -301,9 +301,9 @@ test("poker: all-in, standing up in a hand and wrong buy-ins", async () => {
   assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 2000, "every coin is back");
 });
 
-test("poker: the blinds go up every few hands, start low again after a while - and when the table was empty", async () => {
-  const before = { POKER_LEVEL_HANDS: config.POKER_LEVEL_HANDS, POKER_BLIND_RESET: config.POKER_BLIND_RESET, POKER_LEVEL_RESET: config.POKER_LEVEL_RESET };
-  Object.assign(config, { POKER_LEVEL_HANDS: 1, POKER_BLIND_RESET: 600, POKER_LEVEL_RESET: 200 });
+test("poker: the blinds go up every few hands and stay up while people play - back to the start when the table was empty", async () => {
+  const before = { POKER_LEVEL_HANDS: config.POKER_LEVEL_HANDS, POKER_LEVEL_RESET: config.POKER_LEVEL_RESET };
+  Object.assign(config, { POKER_LEVEL_HANDS: 1, POKER_LEVEL_RESET: 200 });
   try {
     // A fresh table (the hands of the tests before started the level clock)
     Object.assign(server.poker.table, { level: 0, levelSince: null, levelHands: 0 });
@@ -320,7 +320,6 @@ test("poker: the blinds go up every few hands, start low again after a while - a
     assert.deepStrictEqual([hand1.level.number, hand1.rules.smallBlind, hand1.rules.bigBlind], [1, config.POKER_SMALL_BLIND, config.POKER_BIG_BLIND]);
     assert.deepStrictEqual(hand1.level.next, { small: config.POKER_SMALL_BLIND * 2, big: config.POKER_BIG_BLIND * 2 });
     assert.strictEqual(hand1.level.handsLeft, 0, "up with the next hand");
-    assert.strictEqual(hand1.level.resetIn, null, "at the first level");
 
     // After the hands of a level: the blinds are doubled
     const fold = async (hand) => {
@@ -330,16 +329,13 @@ test("poker: the blinds go up every few hands, start low again after a while - a
     };
     const hand2 = await fold(hand1);
     assert.deepStrictEqual([hand2.level.number, hand2.rules.bigBlind, hand2.seats[hand2.bb].bet], [2, config.POKER_BIG_BLIND * 2, config.POKER_BIG_BLIND * 2]);
-    assert.ok(hand2.level.resetIn > 0, "when they start low again");
 
-    // The time is over: the next hand starts at the first level again
-    await h.wait(650);
+    // Playing on (even longer than the reset time of an empty table): the blinds stay up - and go on up
+    await h.wait(300);
     const hand3 = await fold(hand2);
-    assert.deepStrictEqual([hand3.level.number, hand3.rules.bigBlind], [1, config.POKER_BIG_BLIND]);
+    assert.deepStrictEqual([hand3.level.number, hand3.rules.bigBlind], [3, config.POKER_BIG_BLIND * 4]);
 
-    // Up again - then everybody stands up: after a while the blinds are back at the start
-    const hand4 = await fold(hand3);
-    assert.strictEqual(hand4.level.number, 2);
+    // Everybody stands up: after a while the blinds are back at the start
     await clearTable([alice, bob]);
     const reset = await waitFor(alice, "pokerState", (s) => s.level.number === 1, 3000);
     assert.strictEqual(reset.rules.bigBlind, config.POKER_BIG_BLIND);

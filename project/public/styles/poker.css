@@ -196,10 +196,14 @@
   }
 }
 
-/* The cards of the winning hand */
+/* The cards of the winning hand - the kickers (only counting when hands are equal) faint */
 .pk-card.best {
   box-shadow: 0 0 0 2px var(--mm-accent), 0 0 14px var(--mm-accent);
   transform: translateY(-4px);
+}
+
+.pk-card.kicker {
+  box-shadow: 0 0 0 1px rgba(var(--mm-accent-rgb), 0.45);
 }
 
 /* ---------- Seats ---------- */

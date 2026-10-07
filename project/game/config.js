@@ -131,10 +131,8 @@ module.exports = {
   // The blinds go up: level n = the first blinds times POKER_BLIND_STEPS[n], a new level every POKER_LEVEL_HANDS hands
   POKER_BLIND_STEPS: [1, 2, 4, 10, 20, 40, 100],
   POKER_LEVEL_HANDS: 15,
-  // This long after they started at the first level, the blinds start there again (with the next hand)
-  POKER_BLIND_RESET: 10 * 60 * 1000,
-  // Nobody at the table this long: back to the first level
-  POKER_LEVEL_RESET: 5 * 60 * 1000,
+  // Nobody at the table this long: back to the first level (while people play the blinds stay up)
+  POKER_LEVEL_RESET: 10 * 60 * 1000,
   POKER_MIN_BUYIN: 1000, // (10 big blinds of the first level)
   POKER_MAX_BUYIN: 10000,
   POKER_DEFAULT_BUYIN: 10000, // what the buy-in starts with when sitting down (100 big blinds)

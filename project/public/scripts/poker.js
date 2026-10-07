@@ -146,8 +146,13 @@ function winnerOf(seat) {
   return state.result ? state.result.winners.find((w) => w.seat == seat) : null;
 }
 
-function isWinningCard(card) {
-  return state.result && state.result.showdown && state.result.winners.some((w) => w.cards && w.cards.includes(card));
+// A card of the winning hand: " best" (it makes the hand - the pair, the flush ...), " kicker" (one of
+// the five, only counting when hands are equal) or ""
+function winningClass(card) {
+  if (!state.result || !state.result.showdown) return "";
+  var winners = state.result.winners.filter((w) => w.cards && w.cards.includes(card));
+  if (!winners.length) return "";
+  return winners.some((w) => !w.made || w.made.includes(card)) ? " best" : " kicker";
 }
 
 /* ---------- Rendering ---------- */
@@ -203,7 +208,7 @@ function renderSeats() {
       // Cards (own big, the others small)
       var cards = el("div", "pk-hole");
       seat.cards.forEach((card, n) => {
-        var c = cardElement(card, (newHand ? "deal" : "") + (isWinningCard(card) ? " best" : ""));
+        var c = cardElement(card, (newHand ? "deal" : "") + winningClass(card));
         if (newHand) c.style.animationDelay = n * 120 + placeOf(i) * 60 + "ms";
         cards.appendChild(c);
       });
@@ -260,7 +265,7 @@ function renderBoard() {
       cards.push(el("div", "pk-card slot"));
       continue;
     }
-    var c = cardElement(card, (n >= before ? "flip" : "") + (isWinningCard(card) ? " best" : ""));
+    var c = cardElement(card, (n >= before ? "flip" : "") + winningClass(card));
     if (n >= before) c.style.animationDelay = (n - before) * 150 + "ms";
     cards.push(c);
   }
@@ -316,32 +321,17 @@ function renderStatus() {
   }
 }
 
-/* ---------- Blinds: up every few hands, back to the start after a while ---------- */
-
-var resetAt = null; // when the blinds start low again (null: at the first level)
-var levelTimer = null;
+/* ---------- Blinds: up every few hands (back to the start when the table was empty a while) ---------- */
 
 function renderBlinds() {
-  resetAt = state.level && state.level.resetIn != null ? Date.now() + state.level.resetIn : null;
-  clearInterval(levelTimer);
-  tickBlinds();
-  if (resetAt != null) levelTimer = setInterval(tickBlinds, 1000);
-}
-
-function tickBlinds() {
   var badge = document.getElementById("pkBlinds");
   var text = "Blinds " + formatCoins(state.rules.smallBlind) + " / " + formatCoins(state.rules.bigBlind);
   var level = state.level;
   if (level) text += " · Level " + level.number;
   // Up after a few more hands
   if (level && level.next && level.handsLeft != null) text += " · " + formatCoins(level.next.small) + " / " + formatCoins(level.next.big) + (level.handsLeft <= 0 ? " next hand" : " in " + level.handsLeft + (level.handsLeft == 1 ? " hand" : " hands"));
-  // Back to the start
-  if (resetAt != null) {
-    var left = Math.max(0, Math.ceil((resetAt - Date.now()) / 1000));
-    text += " · back to " + formatCoins(level.first.small) + " / " + formatCoins(level.first.big) + (left == 0 ? " next hand" : " in " + Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0"));
-  }
   badge.innerText = text;
-  badge.title = "The blinds go up every few hands - and start low again after a while (or when the table was empty)";
+  badge.title = "The blinds go up every few hands - and start low again when nobody played for a while";
 }
 
 /* ---------- Actions ---------- */

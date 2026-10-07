@@ -82,7 +82,6 @@ const GAMES = {
           heading: "Blinds",
           items: [
             `They go up every ${n(config.POKER_LEVEL_HANDS)} hands: ${config.POKER_BLIND_STEPS.map(level).join(" → ")}.`,
-            `${minutes(config.POKER_BLIND_RESET)} after they started at ${level(1)}, the next hand starts there again.`,
             `When the table is empty for ${minutes(config.POKER_LEVEL_RESET)}, the blinds start again at ${level(1)}.`,
           ],
         },
