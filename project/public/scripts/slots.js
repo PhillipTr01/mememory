@@ -387,7 +387,7 @@ async function playBonus(result) {
   stage.className = "sl-stage big bonus-end" + (result.capped ? " epic" : "");
   var times = bonus.win / result.bet;
   var amount = el("div", "sl-big-amount sl-bonus-amount", "🪙 0");
-  var sub = el("div", "sl-stage-sub sl-bonus-sub", bonus.freeSpins.length + " free spins · " + (times >= 10 ? Math.round(times) : times.toFixed(1)) + "× your bet");
+  var sub = el("div", "sl-stage-sub sl-bonus-sub", bonus.freeSpins.length + " free spins");
   stage.replaceChildren(el("div", "sl-bonus-glow"), el("div", "sl-big-title", result.capped ? "MAX WIN" : "BONUS WIN"), amount, sub);
   coinShower(stage, Math.min(80, 15 + Math.round(times)));
   var counting = end * 0.55;

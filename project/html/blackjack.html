@@ -125,27 +125,17 @@
 
                     <!--- Betting: on a free seat or an own one --->
                     <div id="bjBetBar" class="bj-bar bj-betbar" hidden>
-                        <!--- Where the chips go: the main bet or a side bet (each at most half the main bet) --->
-                        <div class="bj-targets" role="tablist" aria-label="Bet on">
-                            <button type="button" class="bj-target active" role="tab" data-target="main"><span class="bj-target-name">Main bet</span><span class="bj-target-value" id="bjOnMain"></span></button>
-                            <button type="button" class="bj-target" role="tab" data-target="pairs" title="Your first two cards are a pair: 6:1, 12:1 (same colour), 25:1 (same suit)"><span class="bj-target-name">Perfect Pairs</span><span class="bj-target-value" id="bjOnPairs"></span></button>
-                            <button type="button" class="bj-target" role="tab" data-target="plus3" title="Your two cards and the dealer's up card: flush 5:1, straight 10:1, three of a kind 30:1, straight flush 40:1, suited trips 100:1"><span class="bj-target-name">21+3</span><span class="bj-target-value" id="bjOnPlus3"></span></button>
-                            <button type="button" id="bjClear" class="bj-leave" title="Stand up - the bets come back" aria-label="Stand up"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+                        <!--- Like at the table: pick a chip, then click a bet field on your seat --->
+                        <div class="bj-chips" role="radiogroup" aria-label="Chip">
+                            <button type="button" class="bj-chip" role="radio" data-chip="10">10</button>
+                            <button type="button" class="bj-chip" role="radio" data-chip="50">50</button>
+                            <button type="button" class="bj-chip" role="radio" data-chip="100">100</button>
+                            <button type="button" class="bj-chip" role="radio" data-chip="500">500</button>
+                            <button type="button" class="bj-chip" role="radio" data-chip="1000">1K</button>
+                            <button type="button" class="bj-chip" role="radio" data-chip="5000">5K</button>
                         </div>
-                        <div class="bj-bet-row">
-                            <div class="bj-chips">
-                                <button type="button" class="bj-chip" data-chip="10">10</button>
-                                <button type="button" class="bj-chip" data-chip="50">50</button>
-                                <button type="button" class="bj-chip" data-chip="100">100</button>
-                                <button type="button" class="bj-chip" data-chip="500">500</button>
-                                <button type="button" class="bj-chip" data-chip="1000">1K</button>
-                                <button type="button" class="bj-chip" data-chip="5000">5K</button>
-                            </div>
-                            <div class="bj-bet-input">
-                                <input id="bjAmount" class="mm-input bj-amount" type="number" min="1" step="1" inputmode="numeric" placeholder="Coins" aria-label="Coins to bet">
-                                <button type="button" id="bjBet" class="mm-btn mm-btn-primary">Bet</button>
-                            </div>
-                        </div>
+                        <span id="bjBetHint" class="bj-bet-hint"></span>
+                        <button type="button" id="bjClear" class="bj-leave" title="Stand up - the bets come back" aria-label="Stand up"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
                     </div>
 
                     <!--- Playing: the own hand --->

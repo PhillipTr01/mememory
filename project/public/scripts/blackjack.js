@@ -141,7 +141,57 @@ function dealDelay(n, position, count) {
 
 /* ---------- Rendering ---------- */
 
-var betTarget = "main"; // the chips go to: main, pairs or plus3
+// The chip in the hand: a click on a bet field of an own seat puts it there
+var CHIP_KEY = "bjChip";
+var chipValue = 100;
+try {
+  chipValue = Number(localStorage.getItem(CHIP_KEY)) || 100;
+} catch (error) {
+  // only for now
+}
+var SIDE_NAMES = { pairs: "Perfect Pairs", plus3: "21+3" };
+
+// Puts the chip in the hand on a bet field (main, pairs, plus3) of an own seat
+function placeChip(seatIndex, field) {
+  var seat = state.seats[seatIndex];
+  if (!seat || seat.name != myName || state.phase != "betting") return;
+  selected = seatIndex;
+  if (field == "main") {
+    // The first chip at least the table minimum
+    var amount = seat.bet == 0 ? Math.max(chipValue, state.rules.minBet) : chipValue;
+    amount = Math.min(amount, state.rules.maxBet - seat.bet);
+    if (amount <= 0) return showToast("The most for this seat: 🪙 " + formatCoins(state.rules.maxBet) + ".", "error");
+    socket.emit("bet", { seat: seatIndex, amount: amount });
+  } else {
+    if (seat.bet == 0) return showToast("Place the main bet first.", "error");
+    var room = Math.floor(seat.bet * state.rules.sideShare) - seat.side[field];
+    if (room <= 0) return showToast(SIDE_NAMES[field] + ": at most half the main bet.", "error");
+    socket.emit("sideBet", { seat: seatIndex, type: field, amount: Math.min(chipValue, room) });
+  }
+}
+
+// The three bet fields of an own seat while betting: Perfect Pairs, the bet, 21+3
+function betFields(seat, i) {
+  var fields = el("div", "bj-fields");
+  [
+    ["pairs", "PP"],
+    ["main", "BET"],
+    ["plus3", "21+3"],
+  ].forEach(([field, label]) => {
+    var value = field == "main" ? seat.bet : seat.side[field];
+    var spot = el("button", "bj-field " + field + (value > 0 ? " filled" : ""));
+    spot.type = "button";
+    spot.title = field == "main" ? "Your bet - click to put the chip here" : SIDE_NAMES[field] + " - up to half the bet";
+    spot.disabled = field != "main" && seat.bet == 0;
+    spot.appendChild(el("span", "bj-field-label", value > 0 ? (field == "main" ? "" : label + " ") + formatCoins(value) : label));
+    spot.addEventListener("click", (event) => {
+      event.stopPropagation();
+      placeChip(i, field);
+    });
+    fields.appendChild(spot);
+  });
+  return fields;
+}
 
 function mySeats() {
   return state.seats.map((seat, i) => (seat && seat.name == myName ? i : -1)).filter((i) => i >= 0);
@@ -273,7 +323,14 @@ function renderSeats() {
       if (sideWins.length) hands.appendChild(el("span", "bj-side-win", sideWins.map((r) => r.name + " +" + formatCoins(r.payout - r.bet)).join(" · ")));
       var who = el("div", "bj-who");
       who.append(createAvatar(seat.name, "sm"), el("span", "bj-name", mine ? "You" : seat.name));
-      spot.append(hands, chip, who);
+      // While betting the own seats show their bet fields (the time to bet is in the pill under them)
+      if (mine && betting) {
+        var timer = seat.standIn != null && bet == 0 ? chip : null;
+        if (timer) timer.dataset.label = "";
+        spot.append(hands, betFields(seat, i));
+        if (timer) spot.appendChild(timer);
+        spot.appendChild(who);
+      } else spot.append(hands, chip, who);
       // The own seats: click to bet more on them
       if (mine && betting) {
         spot.classList.add("clickable");
@@ -371,23 +428,13 @@ function renderBars() {
   betBar.hidden = !canBet;
   if (canBet) {
     var seat = state.seats[selected];
-    var already = seat ? seat.bet : 0;
-    var side = seat ? seat.side : { pairs: 0, plus3: 0 };
-    var sideMax = Math.floor(already * state.rules.sideShare);
-    // Side bets only with a main bet
-    if (already == 0) betTarget = "main";
-    document.querySelectorAll(".bj-target").forEach((tab) => {
-      var target = tab.dataset.target;
-      tab.classList.toggle("active", target == betTarget);
-      tab.setAttribute("aria-selected", target == betTarget ? "true" : "false");
-      tab.disabled = target != "main" && already == 0;
+    document.querySelectorAll(".bj-chip").forEach((chip) => {
+      var on = Number(chip.dataset.chip) == chipValue;
+      chip.classList.toggle("active", on);
+      chip.setAttribute("aria-checked", on ? "true" : "false");
+      chip.disabled = Number(chip.dataset.chip) > myCoins;
     });
-    document.getElementById("bjOnMain").innerText = already ? "🪙 " + formatCoins(already) : "";
-    document.getElementById("bjOnPairs").innerText = side.pairs ? "🪙 " + formatCoins(side.pairs) : already ? "max " + formatCoins(sideMax) : "";
-    document.getElementById("bjOnPlus3").innerText = side.plus3 ? "🪙 " + formatCoins(side.plus3) : already ? "max " + formatCoins(sideMax) : "";
-    var room = Math.min(betTarget == "main" ? state.rules.maxBet - already : sideMax - side[betTarget], myCoins);
-    document.getElementById("bjAmount").max = room;
-    document.querySelectorAll(".bj-chip").forEach((chip) => (chip.disabled = Number(chip.dataset.chip) > room));
+    document.getElementById("bjBetHint").innerText = seat && seat.bet > 0 ? "Click BET, PP or 21+3 on your seat to add the chip" : "Click BET on your seat to place the chip";
   }
 
   var actions = document.getElementById("bjActions");
@@ -441,24 +488,15 @@ document.addEventListener("DOMContentLoaded", () => {
   // The last rounds belong to a table, not to the lobby
   document.getElementById("bjHistory").closest(".side-card").hidden = !TABLE_ID;
   if (!TABLE_ID) document.getElementById("bjStatus").innerText = "Pick a table - every table has its own stakes.";
-  var amount = document.getElementById("bjAmount");
+  // Pick a chip (it stays picked)
   document.querySelectorAll(".bj-chip").forEach((chip) =>
     chip.addEventListener("click", () => {
-      amount.value = Math.min(Number(amount.max) || Infinity, (Number(amount.value) || 0) + Number(chip.dataset.chip));
-    }),
-  );
-  document.getElementById("bjBet").addEventListener("click", () => {
-    var value = Number(amount.value);
-    if (!Number.isInteger(value) || value <= 0 || selected == null) return showToast("Enter the coins for the seat.", "error");
-    if (betTarget == "main") socket.emit("bet", { seat: selected, amount: value });
-    else socket.emit("sideBet", { seat: selected, type: betTarget, amount: value });
-    amount.value = "";
-  });
-  // Main bet or a side bet
-  document.querySelectorAll(".bj-target").forEach((tab) =>
-    tab.addEventListener("click", () => {
-      betTarget = tab.dataset.target;
-      amount.value = "";
+      chipValue = Number(chip.dataset.chip);
+      try {
+        localStorage.setItem(CHIP_KEY, String(chipValue));
+      } catch (error) {
+        // only for now
+      }
       if (state) renderBars();
     }),
   );

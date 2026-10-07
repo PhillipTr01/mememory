@@ -278,10 +278,6 @@
   opacity: 0.35;
 }
 
-.bj-amount {
-  width: 110px;
-}
-
 .jp-history-won.minus {
   color: var(--mm-danger);
 }
@@ -668,63 +664,86 @@
   display: none !important;
 }
 
-/* ---------- The bet bar: where the chips go (main, side bets), then chips and amount ---------- */
+/* ---------- The bet bar: pick a chip (then click a bet field on the seat) ---------- */
 .bj-betbar {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.7rem;
+  gap: 1rem;
 }
 
-.bj-targets {
-  display: flex;
-  align-items: stretch;
-  gap: 0.4rem;
+.bj-chip.active {
+  transform: translateY(-4px);
+  border-style: solid;
+  border-color: #fff;
+  box-shadow: 0 0 0 3px var(--mm-accent), 0 6px 14px rgba(0, 0, 0, 0.5);
 }
 
-.bj-target {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 0;
-  padding: 0.35rem 0.75rem;
-  border: 1px solid var(--mm-border);
-  border-radius: 10px;
-  background: var(--mm-surface);
+.bj-bet-hint {
+  font-size: 0.82rem;
   color: var(--mm-muted);
-  text-align: left;
+}
+
+/* ---------- The bet fields on an own seat: PP · BET · 21+3 ---------- */
+.bj-fields {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.bj-field {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 2px dashed rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.18);
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
 }
 
-.bj-target.active {
+.bj-field.main {
+  width: 54px;
+  height: 54px;
+  border-color: rgba(var(--mm-accent-rgb), 0.8);
+}
+
+.bj-field:hover:not(:disabled) {
   border-color: var(--mm-accent);
-  background: rgba(var(--mm-accent-rgb), 0.12);
-  color: var(--mm-text);
+  background: rgba(var(--mm-accent-rgb), 0.2);
 }
 
-.bj-target:disabled {
-  opacity: 0.45;
+.bj-field:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.bj-field:disabled {
+  opacity: 0.35;
   cursor: default;
 }
 
-.bj-target-name {
-  font-size: 0.78rem;
-  font-weight: 700;
-  white-space: nowrap;
+/* With coins on it: a gold chip (also under the mouse) */
+.bj-field.filled,
+.bj-field.filled:hover:not(:disabled) {
+  border-style: solid;
+  border-color: #fde68a;
+  background: radial-gradient(circle at 40% 35%, #f5d76e, #b8860b);
+  color: #1a1305;
 }
 
-.bj-target-value {
-  min-height: 1em;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--mm-accent);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
+.bj-field-label {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.56rem;
+  font-weight: 800;
+  line-height: 1.05;
+  text-align: center;
+  white-space: normal;
 }
 
-.bj-target-value:empty::before {
-  content: "–";
-  color: var(--mm-muted);
+.bj-field.main .bj-field-label {
+  font-size: 0.7rem;
 }
 
 /* Stand up: an icon on the right */
@@ -754,19 +773,6 @@
   height: 18px;
 }
 
-.bj-bet-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-}
-
-.bj-bet-input {
-  display: flex;
-  gap: 0.4rem;
-}
-
 /* On the seat: the side bets small next to the bet */
 .bj-bet-side {
   opacity: 0.7;
@@ -784,16 +790,23 @@
   white-space: nowrap;
 }
 
-@media (max-width: 575px) {
-  .bj-target {
-    padding: 0.3rem 0.5rem;
-  }
-
-  .bj-target-name {
-    font-size: 0.7rem;
-  }
-}
 
 .bj-bet:empty {
   display: none;
+}
+
+@media (max-width: 767px) {
+  .bj-bet-hint {
+    display: none;
+  }
+
+  .bj-field {
+    width: 30px;
+    height: 30px;
+  }
+
+  .bj-field.main {
+    width: 42px;
+    height: 42px;
+  }
 }
