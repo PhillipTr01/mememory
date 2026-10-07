@@ -102,6 +102,23 @@ function showTab() {
 
 window.addEventListener("hashchange", showTab);
 
+// Keeps the open page up to date (the chat has its own timer, the settings stay as they are while editing)
+var REFRESH = { access: () => loadAccess(), players: () => loadPlayers(), payouts: () => loadPayouts(), history: () => loadHistory() };
+
+function refresh() {
+  if (document.visibilityState != "visible") return;
+  loadOverview();
+  var tab = (location.hash || "#overview").slice(1).split("/")[0];
+  // Not while typing in the page (a field in a row would lose what is typed)
+  var focus = document.activeElement;
+  if (focus && focus.closest(".ad-tab") && /^(INPUT|SELECT|TEXTAREA)$/.test(focus.tagName)) return;
+  if (REFRESH[tab]) REFRESH[tab]();
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState == "visible") refresh();
+});
+
 /* ---------- Overview (every few seconds) ---------- */
 
 function payoutRow(w) {
@@ -732,6 +749,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   showTab();
   loadOverview();
-  // New payouts show up by themselves
-  setInterval(loadOverview, 5000);
+  // New payouts, balances and history show up by themselves
+  setInterval(refresh, 5000);
 });
