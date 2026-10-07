@@ -16,33 +16,30 @@ function powerupInfo(id) {
 
 function canUsePowerup(state, id) {
   if (state.mode != "powerups" || state.status != "playing" || !isMyTurn(state)) return false;
-  if (state.turnPowerUsed || state.checkingCards) return false;
-  // Moving cards only works when no card is open, second chance before the second card
+  // Only before the first card of the turn (Steal is used in the turn of somebody else)
+  if (state.turnPowerUsed || state.checkingCards || state.turnBegun) return false;
+  if (powerupInfo(id).reactive) return false;
+  // Moving cards only works when no card is open
   if (["shuffle", "swap", "rotate", "rowShift"].includes(id) && state.openedCount > 0) return false;
-  if (id == "secondChance" && state.openedCount > 1) return false;
   return true;
 }
 
-/* ---------- Own hand ---------- */
+// Steal: somebody else opened their first card - a moment to take the second guess
+function canSnatch(state) {
+  var mine = getMyPlayer(state);
+  return state.mode == "powerups" && state.status == "playing" && !isMyTurn(state) && state.stealIn > 0 && mine != null && mine.active && mine.powerups.includes("snatch");
+}
 
-var endTurnReady = false; // for opening the bar when the turn can be ended
-var barTurnKey = null; // a new turn closes the bar
+/* ---------- Own hand: the bar over the board, always open ---------- */
 
-/*
- * Floating action bar:
- * - power-up mode: power-ups + End turn, can be opened and closed
- * - classic: only End turn, it pops up when the turn can be ended
- */
+var stealTimer = null;
+
 function renderPowerups(state) {
   var bar = document.getElementById("actionBar");
   var mine = getMyPlayer(state);
   var player = state.status == "playing" && mine != null && mine.active && !me.spectator;
-  var ready = player && isMyTurn(state) && state.checkingCards && state.openedCount >= 2;
-  var powerMode = state.mode == "powerups";
-  var show = player && (powerMode || (state.mode == "classic" && ready));
+  var show = player && state.mode == "powerups";
   bar.hidden = !show;
-  bar.classList.toggle("end-only", !powerMode);
-  document.body.classList.toggle("has-action-bar", show);
 
   // Fog: the cards I open in my turn are blurred (see isFogged / turnCard)
   var fogged = !!(mine && mine.fog && isMyTurn(state));
@@ -50,43 +47,34 @@ function renderPowerups(state) {
   if (!fogged) clearFog();
   if (!show) {
     cancelTargeting();
-    endTurnReady = false;
     return;
   }
+  if (targeting && (targeting.snatch ? !canSnatch(state) : !canUsePowerup(state, targeting.id))) cancelTargeting();
 
-  var endButton = document.getElementById("actionEndTurn");
-  if (!powerMode) {
-    // Classic: the bar only exists while the turn can be ended
-    setActionBarOpen(true);
-    endButton.disabled = false;
-    endButton.classList.add("mm-btn-primary", "ready");
-    endTurnReady = true;
-    return;
-  }
-  if (targeting && !canUsePowerup(state, targeting.id)) cancelTargeting();
+  // The steal window ends by itself: draw the bar again then
+  clearTimeout(stealTimer);
+  if (state.stealIn > 0) stealTimer = setTimeout(() => room && renderPowerups(room), state.stealIn + 50);
 
-  // Every new turn starts with the bar closed, so it doesn't cover the board
-  var turnKey = state.turn + ":" + state.players.map((p) => p.name).join(",");
-  if (turnKey != barTurnKey) {
-    barTurnKey = turnKey;
-    setActionBarOpen(false);
-  }
-
-  // While choosing cards, the bar says what to do
-  document.querySelector("#actionToggle .action-toggle-label").innerText = !targeting
-    ? "⚡ Power-ups"
-    : targeting.player
-      ? "Choose a player in the list"
-      : targeting.needed == 2
-        ? "Choose two closed cards"
-        : "Choose a closed card";
-
-  // Two wrong cards: End turn right away (the bar opens if it was closed)
-  endButton.disabled = !ready;
-  endButton.classList.toggle("mm-btn-primary", ready);
-  endButton.classList.toggle("ready", ready);
-  if (ready && !endTurnReady) setActionBarOpen(true);
-  endTurnReady = ready;
+  // What the player can do now
+  var snatchNow = canSnatch(state);
+  var hint = document.getElementById("powerHint");
+  hint.innerText = targeting
+    ? targeting.snatch
+      ? "🦊 Quick - pick the second card!"
+      : targeting.player
+        ? "Choose a player in the list"
+        : targeting.needed == 2
+          ? "Choose two closed cards"
+          : "Choose a closed card"
+    : snatchNow
+      ? "🦊 Steal the guess - now!"
+      : !isMyTurn(state)
+        ? "Use them at the start of your turn"
+        : state.turnBegun || state.turnPowerUsed
+          ? "Again next turn"
+          : "Use one before your first card";
+  bar.classList.toggle("ready", isMyTurn(state) && !state.turnBegun && !state.turnPowerUsed);
+  bar.classList.toggle("stealing", snatchNow);
 
   var slots = document.getElementById("powerupSlots");
   slots.replaceChildren();
@@ -99,11 +87,11 @@ function renderPowerups(state) {
       continue;
     }
     var info = powerupInfo(id);
+    var usable = id == "snatch" ? snatchNow : canUsePowerup(state, id);
     var button = document.createElement("button");
     button.type = "button";
-    button.className =
-      "powerup-slot rarity-" + info.rarity + (targeting && targeting.id == id ? " active" : "");
-    button.disabled = !canUsePowerup(state, id);
+    button.className = "powerup-slot rarity-" + info.rarity + (usable ? " usable" : "") + (targeting && targeting.id == id ? " active" : "");
+    button.disabled = !usable;
     button.title = info.name + " (" + info.rarity + ") - " + info.description;
     // Same emoji as in the chat
     var icon = document.createElement("span");
@@ -116,7 +104,6 @@ function renderPowerups(state) {
     button.addEventListener("click", startPowerup.bind(null, id));
     slots.appendChild(button);
   }
-
 }
 
 // Small icons in the player list: power-ups in the hand and running effects
@@ -145,34 +132,19 @@ function createPowerupIcons(player) {
   return icons;
 }
 
-/* ---------- Action bar: open / close ---------- */
-
-function setActionBarOpen(open) {
-  var bar = document.getElementById("actionBar");
-  bar.classList.toggle("collapsed", !open);
-  document.getElementById("actionToggle").setAttribute("aria-expanded", open);
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  setActionBarOpen(false);
-
-  document.getElementById("actionToggle").addEventListener("click", () => {
-    setActionBarOpen(document.getElementById("actionBar").classList.contains("collapsed"));
-  });
-  document.getElementById("actionEndTurn").addEventListener("click", () => {
-    if (endTurnReady) emitEndTurn();
-  });
-});
-
-// Enter ends the turn when it can be ended (not while typing in the chat)
-document.addEventListener("keydown", (event) => {
-  if (event.key != "Enter" || !endTurnReady || event.target.closest("input, textarea, button")) return;
-  emitEndTurn();
-});
-
 /* ---------- Using power-ups ---------- */
 
 function startPowerup(id) {
+  // Steal: the next click on a closed card is the second guess
+  if (id == "snatch") {
+    if (!room || !canSnatch(room)) return;
+    if (targeting && targeting.snatch) return cancelTargeting();
+    cancelTargeting();
+    targeting = { id: id, needed: 1, picked: [], snatch: true };
+    document.getElementById("board").classList.add("targeting");
+    renderPowerups(room);
+    return;
+  }
   if (!room || !canUsePowerup(room, id)) return;
   var info = powerupInfo(id);
   if (targeting && targeting.id == id) {
@@ -226,6 +198,11 @@ function handlePowerupTarget(id) {
   }
   targeting.picked.push(id);
   card.classList.add("target-picked");
+  if (targeting.snatch) {
+    socket.emit("snatch", id);
+    cancelTargeting();
+    return true;
+  }
   if (targeting.picked.length == targeting.needed) {
     socket.emit("usePowerup", { id: targeting.id, targets: targeting.picked });
     cancelTargeting();
@@ -241,6 +218,7 @@ function cancelTargeting() {
   document.getElementById("board").classList.remove("targeting");
   document.querySelectorAll(".card.target-picked").forEach((card) => card.classList.remove("target-picked"));
   if (room && !document.getElementById("actionBar").hidden) renderPowerups(room);
+  return undefined;
 }
 
 document.addEventListener("keydown", (event) => {
