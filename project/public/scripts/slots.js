@@ -819,7 +819,8 @@ async function showResult(result) {
   text.innerText = "";
   // (after a bonus game its own win screen was shown already)
   if (big && !result.bonus && !result.coinGame) await bigWin(result);
-  countUp(text, result.win, big ? 300 : Math.min(900, setup.rules.countTime));
+  var counting = big ? 300 : Math.min(900, setup.rules.countTime);
+  countUp(text, result.win, counting);
   detail.innerText = result.bonus ? "Bonus game · " + result.bonus.freeSpins.length + " free spins" : result.coinGame ? "Coin game · " + result.coinGame.coins.length + " coins" + (result.coinGame.ultra ? " · ULTRA" : "") : result.lines.length == 1 ? "1 line" : result.lines.length + " lines";
   var reels = [...document.querySelectorAll(".sl-reel")];
   var hit = (line) =>
@@ -829,6 +830,8 @@ async function showResult(result) {
     result.lines.map((l) => l.line),
     true,
   );
+  // The next spin only when the win is counted up (and seen a moment)
+  await wait(counting + 350);
   if (result.lines.length == 0 || result.bonus || result.coinGame) return;
   // Then one line after the other, with what it paid
   if (result.lines.length > 1) {
@@ -843,7 +846,7 @@ async function showResult(result) {
       index++;
       lineTimer = setTimeout(next, 1300);
     };
-    lineTimer = setTimeout(next, 1600);
+    lineTimer = setTimeout(next, 400);
   } else {
     var only = result.lines[0];
     detail.innerText = "Line " + (only.line + 1) + " · " + only.count + "× " + symbolOf(only.symbol).icon;
