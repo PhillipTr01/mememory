@@ -38,7 +38,10 @@ module.exports = function (io) {
    */
   function showTime(bet, result) {
     let time = config.SLOTS_SPIN + config.SLOTS_COUNT_TIME;
-    if (result.bonus) time += config.SLOTS_BONUS_TIME + result.bonus.freeSpins.length * config.SLOTS_FREE_SPIN + config.SLOTS_BONUS_END;
+    if (result.bonus) {
+      const retriggers = result.bonus.freeSpins.filter((free) => free.retrigger > 0).length;
+      time += config.SLOTS_BONUS_TIME + result.bonus.freeSpins.length * config.SLOTS_FREE_SPIN + retriggers * config.SLOTS_RETRIGGER_TIME + config.SLOTS_BONUS_END;
+    }
     if (result.win >= bet * config.SLOTS_BIG_WIN) time += config.SLOTS_BIG_TIME;
     return time;
   }
@@ -71,7 +74,7 @@ module.exports = function (io) {
   }
 
   function rules() {
-    return { minBet: config.SLOTS_MIN_BET, maxBet: config.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, bonusTime: config.SLOTS_BONUS_TIME, freeSpinTime: config.SLOTS_FREE_SPIN, bonusEndTime: config.SLOTS_BONUS_END, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
+    return { minBet: config.SLOTS_MIN_BET, maxBet: config.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, bonusTime: config.SLOTS_BONUS_TIME, freeSpinTime: config.SLOTS_FREE_SPIN, bonusEndTime: config.SLOTS_BONUS_END, retriggerTime: config.SLOTS_RETRIGGER_TIME, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
   }
 
   async function sendCoins(username) {

@@ -127,6 +127,7 @@ const GAMES = {
             "👑 is wild: it stands for every symbol.",
             `🎁 on reels 1, 3 and 5 at the same time start the bonus game: two wheels decide your free spins (${spins}) and the start multiplier (${starts}).`,
             `The free spins play by themselves. Every win is paid times the multiplier - and it grows by ${slots.BONUS_STEP} after every free spin.`,
+            `Three 🎁 again during the free spins: ${slots.RETRIGGER} free spins more (up to ${slots.MAX_FREE_SPINS} in one bonus).`,
             `A spin with its bonus pays at most ${slots.MAX_WIN}× the bet (then the bonus ends). On average the machine pays back about 95-96% of the bets.`,
             "Your coins come when the spin is over on the screen.",
           ],

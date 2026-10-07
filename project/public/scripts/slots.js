@@ -322,12 +322,12 @@ async function playBonus(result) {
   stage.replaceChildren(el("div", "sl-stage-title", "BONUS GAME"), wheel, label);
   var spinTime = time * 0.62;
   await Promise.all([
-    spinRing(outer, SPIN_FIELDS, bonus.spins, 4, 1, spinTime),
+    spinRing(outer, SPIN_FIELDS, bonus.startSpins, 4, 1, spinTime),
     spinRing(inner, MULTIPLIER_FIELDS, bonus.multiplier, 3, -1, spinTime * 0.86).then(() => {
       label.innerText = "Start × " + bonus.multiplier + " ...";
     }),
   ]);
-  label.innerText = bonus.spins + " free spins · start × " + bonus.multiplier;
+  label.innerText = bonus.startSpins + " free spins · start × " + bonus.multiplier;
   label.classList.add("won");
   await wait(time * 0.2);
   stage.hidden = true;
@@ -341,12 +341,26 @@ async function playBonus(result) {
   bar.className = "sl-winbar bonus";
   var total = 0;
   var spinTime = setup.rules.freeSpinTime;
+  var counter = document.getElementById("slFreeCounter");
+  var count = document.getElementById("slFreeCount");
+  var spins = bonus.startSpins;
+  counter.hidden = false;
+  detail.innerText = "Bonus win";
   for (var n = 0; n < bonus.freeSpins.length; n++) {
     var free = bonus.freeSpins[n];
     clearLines();
-    detail.innerText = "Free spin " + (n + 1) + " / " + bonus.spins + " · × " + free.multiplier;
+    count.innerText = n + 1 + " / " + spins;
     text.innerText = "🪙 " + formatCoins(total);
     await animateReels(free.grid, spinTime * 0.5, false);
+    // Three 🎁 again: more free spins
+    if (free.retrigger > 0) {
+      document.querySelectorAll(".sl-cell.scatter").forEach((c) => c.classList.add("hit"));
+      floatWin("+" + free.retrigger + " FREE SPINS");
+      spins = free.spins;
+      count.innerText = n + 1 + " / " + spins;
+      counter.animate([{ transform: "scale(1)" }, { transform: "scale(1.25)" }, { transform: "scale(1)" }], { duration: 600, easing: "ease-out" });
+      await wait(setup.rules.retriggerTime);
+    }
     if (free.win > 0) {
       var reels = [...document.querySelectorAll(".sl-reel")];
       free.lines.forEach((line) => setup.lines[line.line].slice(0, line.count).forEach((row, reel) => reels[reel].querySelectorAll(".sl-cell")[row].classList.add("hit")));
@@ -361,6 +375,7 @@ async function playBonus(result) {
     await wait(spinTime * (free.win > 0 ? 0.5 : 0.3));
   }
   if (result.capped) detail.innerText = "Max win reached!";
+  counter.hidden = true;
   clearLines();
   machine.classList.remove("bonus-mode");
 
@@ -609,7 +624,9 @@ function showPaytable() {
       setup.bonus.multipliers.join(", ×") +
       "). The multiplier grows by " +
       setup.bonus.step +
-      " after every free spin. A spin with its bonus pays at most " +
+      " after every free spin. Three 🎁 in a free spin: " +
+      setup.bonus.retrigger +
+      " free spins more. A spin with its bonus pays at most " +
       setup.maxWin +
       "× the bet.",
   );

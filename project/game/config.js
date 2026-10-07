@@ -156,6 +156,7 @@ module.exports = {
   SLOTS_BONUS_TIME: 6000, // the bonus wheels (free spins, multiplier) on the page
   SLOTS_FREE_SPIN: 1600, // one free spin of the bonus game on the page
   SLOTS_BONUS_END: 2500, // the bonus win is shown
+  SLOTS_RETRIGGER_TIME: 900, // more free spins (three 🎁 in a free spin) are shown
   SLOTS_BIG_WIN: 15, // a win of this many times the bet gets the big show
   SLOTS_COUNT_TIME: 1800, // the win is counted up (and the slow last reel)
   SLOTS_BIG_TIME: 3000, // the big-win show on top
