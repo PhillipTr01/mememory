@@ -201,7 +201,7 @@ module.exports = function (io) {
           return error(`A spin is ${config.SLOTS_MIN_BET.toLocaleString("en-US")} to ${config.SLOTS_MAX_BET.toLocaleString("en-US")} coins.`);
         }
         // Closing time before a season: no new spins
-        if (casinoLock.locked()) return error(casinoLock.MESSAGE);
+        if (casinoLock.locked()) return error(casinoLock.message());
         // One spin at a time - and not faster than the reels turn
         if (busy.has(username) || Date.now() - (lastSpin.get(username) || 0) < config.SLOTS_MIN_GAP) return;
         busy.add(username);

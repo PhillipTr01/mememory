@@ -108,7 +108,7 @@ async function load() {
   }
   coins.setBase(state.base);
   // (the server stopped while the casino was closing for a season: closed again)
-  if (state.closing) casinoLock.lock();
+  if (state.closing) casinoLock.lock(closingKind());
   loaded = true;
 }
 
@@ -130,7 +130,7 @@ function closingInfo(now = Date.now()) {
 async function closeFor(season, kind, now) {
   if (!state.closing || state.closing.id !== season.id || closingKind() !== kind) {
     state.closing = { id: season.id, kind: kind, since: now, startsAt: null };
-    casinoLock.lock();
+    casinoLock.lock(kind);
     await save();
     changes.emit("closing", closingInfo(now));
   }

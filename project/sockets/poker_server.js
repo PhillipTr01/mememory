@@ -613,7 +613,7 @@ module.exports = function (io) {
     socket.on(
       "sit",
       safe("sit", async (data) => {
-        if (casinoLock.locked()) return error(casinoLock.MESSAGE);
+        if (casinoLock.locked()) return error(casinoLock.message());
         if (data == null) return;
         const { seat, buyIn } = data;
         if (!Number.isInteger(seat) || seat < 0 || seat >= table.seats.length) return;
@@ -660,7 +660,7 @@ module.exports = function (io) {
     socket.on(
       "addChips",
       safe("addChips", async (amount) => {
-        if (casinoLock.locked()) return error(casinoLock.MESSAGE);
+        if (casinoLock.locked()) return error(casinoLock.message());
         const i = seatOf(username);
         if (i < 0 || !Number.isInteger(amount) || amount <= 0 || busy.has(username)) return;
         const seat = table.seats[i];

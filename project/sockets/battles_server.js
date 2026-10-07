@@ -280,7 +280,7 @@ module.exports = function (io) {
       "createBattle",
       safe("createBattle", async (data) => {
         if (data == null || !Array.isArray(data.cases)) return;
-        if (casinoLock.locked()) return socket.emit("battleError", casinoLock.MESSAGE);
+        if (casinoLock.locked()) return socket.emit("battleError", casinoLock.message());
         const ids = data.cases;
         // Up to BATTLE_MAX_CASES cases (one round each)
         if (ids.length < 1 || !ids.every((id) => cases.caseById(id))) return;
@@ -326,7 +326,7 @@ module.exports = function (io) {
       safe("joinBattle", async (id) => {
         const battle = lobby.list.get(id);
         if (battle == null || battle.phase !== PHASE.WAITING) return;
-        if (casinoLock.locked()) return socket.emit("battleError", casinoLock.MESSAGE);
+        if (casinoLock.locked()) return socket.emit("battleError", casinoLock.message());
         if (battle.seats.some((seat) => seat && seat.name === username)) return;
         if (await sit(socket, battle, username)) startIfFull(battle);
       }),
@@ -338,7 +338,7 @@ module.exports = function (io) {
       safe("addBot", (id) => {
         const battle = lobby.list.get(id);
         if (battle == null || battle.phase !== PHASE.WAITING || battle.creator !== username) return;
-        if (casinoLock.locked()) return socket.emit("battleError", casinoLock.MESSAGE);
+        if (casinoLock.locked()) return socket.emit("battleError", casinoLock.message());
         const seat = battle.seats.indexOf(null);
         if (seat < 0) return;
         const name = BOT_NAMES.find((bot) => !battle.seats.some((s) => s && s.name === bot));

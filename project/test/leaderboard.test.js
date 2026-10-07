@@ -158,6 +158,7 @@ test("seasons: before the start the casino closes - running games finish, no new
     // A round still runs: closed, but no countdown yet
     await seasons.tick(now);
     assert.ok(casinoLock.locked(), "no new bets");
+    assert.match(casinoLock.message(), /new season starts/);
     assert.strictEqual(seasons.running(), null);
     assert.strictEqual(seasons.closingInfo(now).startsIn, null);
     assert.strictEqual(seasons.list().find((x) => x.id === made.season.id).status, "starting");
@@ -201,6 +202,7 @@ test("seasons: before the end the casino closes too - the last rounds finish, th
     await seasons.tick(end);
     assert.ok(casinoLock.locked());
     assert.strictEqual(seasons.closingInfo(end).kind, "end");
+    assert.match(casinoLock.message(), /season ends/, "a refused bet says why");
     assert.strictEqual(seasons.running().name, "Ending", "not over yet");
     // The admin moves the end later: open again
     const season = seasons.publicSeason(seasons.running());

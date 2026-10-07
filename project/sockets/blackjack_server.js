@@ -731,7 +731,7 @@ module.exports = function (io) {
         name,
         safe(name, (data) => {
           // Closing time before a season: no new seats or bets (a round that runs goes on)
-          if (casinoLock.locked() && ["sit", "bet", "sideBet", "rebet"].includes(name)) return error(casinoLock.MESSAGE);
+          if (casinoLock.locked() && ["sit", "bet", "sideBet", "rebet"].includes(name)) return error(casinoLock.message());
           return current.handlers[name](username, error, data);
         }),
       );

@@ -299,7 +299,7 @@ module.exports = function (io) {
         // An old account with the name of the house can't play here
         if (username.toLowerCase() === GHOST.toLowerCase()) return socket.emit("betError", "This name is reserved.");
         // Closing time before a season: no new bets
-        if (casinoLock.locked()) return socket.emit("betError", casinoLock.MESSAGE);
+        if (casinoLock.locked()) return socket.emit("betError", casinoLock.message());
         // One bet at a time per user (two tabs, fast clicks)
         if (betting.has(username)) return;
         // Any amount, but at most a few separate bets per round (during a draw: for the next one)
