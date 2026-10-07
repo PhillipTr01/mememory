@@ -604,12 +604,14 @@ function renderSettings() {
   document.querySelector(".ad-settings-bar").hidden = !settingsList.some((field) => field.group == settingsGroup && field.type != "toggle");
 }
 
-// A game on / off: saved right away
+// A game on / off (or another switch, like a test mode): saved right away
 function toggleCard(field) {
   var on = field.value !== false;
-  var card = el("div", "ad-card ad-toggle-card" + (on ? " on" : " off"));
+  var game = field.key.startsWith("GAME_");
+  var card = el("div", "ad-card ad-toggle-card" + (on ? " on" : " off") + (game ? "" : " ad-toggle-test"));
   var info = el("div", "ad-toggle-info");
-  info.append(el("h2", "ad-title", on ? field.label : field.label.replace(/ (is|are) on$/, " $1 off")), el("p", "ad-note", on ? "Players can find and play it." : "Hidden: no tab, the page leads to another game."));
+  if (game) info.append(el("h2", "ad-title", on ? field.label : field.label.replace(/ (is|are) on$/, " $1 off")), el("p", "ad-note", on ? "Players can find and play it." : "Hidden: no tab, the page leads to another game."));
+  else info.append(el("h2", "ad-title", field.label), el("p", "ad-note", field.hint || ""));
   var label = el("label", "ad-switch ad-switch-big");
   var box = document.createElement("input");
   box.type = "checkbox";
@@ -617,14 +619,14 @@ function toggleCard(field) {
   box.setAttribute("aria-label", field.label);
   label.append(box, el("span", "ad-switch-track"), el("span", "ad-switch-text", on ? "On" : "Off"));
   box.addEventListener("change", async () => {
-    if (!box.checked && !(await confirmDialog({ title: "Turn " + field.label.replace(/ (is|are) on$/, "") + " off?", text: "It disappears from the game bar. Players on it right now are sent to another game - seats are given up, bets come back.", confirmLabel: "Turn off", danger: true }))) {
+    if (game && !box.checked && !(await confirmDialog({ title: "Turn " + field.label.replace(/ (is|are) on$/, "") + " off?", text: "It disappears from the game bar. Players on it right now are sent to another game - seats are given up, bets come back.", confirmLabel: "Turn off", danger: true }))) {
       box.checked = true;
       return;
     }
     box.disabled = true;
     try {
       settingsList = (await api("settings", { values: { [field.key]: box.checked } })).settings;
-      showToast(box.checked ? "It's on again" : "It's off now");
+      showToast(box.checked ? (game ? "It's on again" : "On") : game ? "It's off now" : "Off");
     } catch (error) {
       fail(error);
     }

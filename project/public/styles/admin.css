@@ -799,6 +799,12 @@
   border-left-color: var(--mm-surface-3);
 }
 
+/* A test switch: amber while it is on (it changes the game for everybody) */
+.ad-toggle-card.ad-toggle-test.on {
+  border-left-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.06);
+}
+
 .ad-toggle-card .ad-note {
   margin: 0.25rem 0 0;
 }

@@ -425,31 +425,51 @@
 
 .sl-wheel {
   position: relative;
-  width: calc(var(--tile) * 2.2);
-  height: calc(var(--tile) * 2.2);
+  width: calc(var(--tile) * 2.3);
+  height: calc(var(--tile) * 2.3);
 }
 
-.sl-wheel-disc {
-  width: 100%;
-  height: 100%;
+/* Two rings on top of each other: free spins outside, the multiplier inside */
+.sl-ring {
+  position: absolute;
   border-radius: 50%;
+}
+
+.sl-ring.outer {
+  inset: 0;
   box-shadow: 0 0 0 3px rgba(var(--mm-accent-rgb), 0.7), 0 0 30px rgba(var(--mm-accent-rgb), 0.25);
 }
 
-.sl-wheel-svg {
+.sl-ring.inner {
+  inset: 17%;
+  box-shadow: 0 0 0 2px rgba(var(--mm-accent-rgb), 0.55);
+}
+
+.sl-ring-svg {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-.sl-wheel-text {
+.sl-ring-text {
   fill: #fff;
-  font-size: 5.4px;
+  font-size: 7px;
   font-weight: 800;
 }
 
-.sl-wheel-text.big {
-  fill: #1a1305;
+.sl-ring.inner .sl-ring-text {
+  font-size: 9px;
+}
+
+.sl-ring-hub {
+  position: absolute;
+  inset: 38%;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--mm-accent);
+  border-radius: 50%;
+  background: #1f1f1f;
+  font-size: calc(var(--tile) * 0.22);
 }
 
 /* The pointer at the top, pointing down */
@@ -660,4 +680,42 @@
   .sl-spin {
     min-width: 0;
   }
+}
+
+/* ---------- Free spins ---------- */
+.sl-machine.bonus-mode {
+  border-color: rgba(var(--mm-accent-rgb), 0.7);
+  box-shadow: 0 0 0 1px rgba(var(--mm-accent-rgb), 0.3), 0 0 40px rgba(var(--mm-accent-rgb), 0.18);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.sl-machine.bonus-mode .sl-reel {
+  border-color: rgba(var(--mm-accent-rgb), 0.45);
+}
+
+.sl-winbar.bonus .sl-win-text {
+  color: var(--mm-accent);
+}
+
+.sl-winbar.bonus .sl-win-detail {
+  font-weight: 700;
+  color: var(--mm-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The win of one free spin rises over the reels */
+.sl-float {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  z-index: 5;
+  padding: 0.2rem 0.8rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.6);
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.85);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--mm-accent);
+  white-space: nowrap;
+  pointer-events: none;
 }

@@ -30,6 +30,7 @@ const FIELDS = [
   { group: "poker", section: "Buy-in", key: "POKER_MAX_BUYIN", label: "Max buy-in", min: 1, max: 100000000 },
   { group: "slots", section: "Slots", key: "GAME_SLOTS", type: "toggle", label: "Slots are on", hint: "Off: no tab, nobody can open it." },
   { group: "slots", section: "Bets", key: "SLOTS_MIN_BET", label: "Min bet per spin", hint: "For all 9 lines together.", min: 9, max: 100000000 },
+  { group: "slots", section: "Testing", key: "SLOTS_TEST_BONUS", type: "toggle", label: "Every spin starts the bonus", hint: "For testing only: every spin of every player gets the bonus game. Turn it off again afterwards!" },
   { group: "slots", section: "Bets", key: "SLOTS_MAX_BET", label: "Max bet per spin", hint: "For all 9 lines together.", min: 9, max: 100000000 },
   { group: "blackjack", section: "Blackjack", key: "GAME_BLACKJACK", type: "toggle", label: "Blackjack is on", hint: "Off: no tab, nobody can open it." },
   { group: "blackjack", section: "Seats", key: "BJ_MY_SEATS", label: "Seats per player", hint: "At one table at a time.", min: 1, max: 5 },

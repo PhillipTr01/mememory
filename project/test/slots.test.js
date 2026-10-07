@@ -39,25 +39,41 @@ test("slots: a spin pays a ninth of the bet per line times the multiplier", () =
   assert.strictEqual(result.win, Math.floor((900 * result.lines.reduce((sum, line) => sum + line.multiplier, 0)) / 9));
 });
 
-test("slots: three 🎁 start the bonus wheel; a spin never pays more than 250x the bet", () => {
+test("slots: three 🎁 start the bonus game - free spins with a growing multiplier, at most 250x the bet", () => {
   // The 🎁 only on reels 1, 3, 5, never two in one window
   slots.STRIPS.forEach((strip, reel) => {
     const at = strip.map((s, i) => (s === "bonus" ? i : -1)).filter((i) => i >= 0);
     assert.strictEqual(at.length, [0, 2, 4].includes(reel) ? 2 : 0);
     if (at.length === 2) assert.ok(Math.min(at[1] - at[0], strip.length - (at[1] - at[0])) >= 3);
   });
-  // The middle row of reels 1, 3, 5 on a 🎁: the bonus; the wheel decides the multiplier
-  const stops = slots.STRIPS.map((strip, reel) => ([0, 2, 4].includes(reel) ? strip.indexOf("bonus") : 0));
-  const rolls = stops.concat([9999]); // the last field of the wheel: 250x
-  let n = 0;
-  const result = slots.spin(100, () => rolls[n++]);
-  assert.deepStrictEqual([result.bonus.multiplier, result.bonus.win], [250, 25000]);
-  assert.ok(result.win <= 100 * slots.MAX_WIN, "capped at 250x");
-  // 250x is very rare: 3 of 10,000 bonus wheels (like the top item of a high-risk case), the bonus about 1 of 200 spins
-  const { bonusChance } = slots.rtp();
-  assert.ok(bonusChance > 1 / 250 && bonusChance < 1 / 120, `bonus 1 of ${Math.round(1 / bonusChance)}`);
-  const wheel = slots.BONUS_WHEEL.reduce((sum, f) => sum + f.weight, 0);
-  assert.ok(slots.BONUS_WHEEL.find((f) => f.multiplier === 250).weight / wheel <= 0.0003);
+  // The middle row of reels 1, 3, 5 on a 🎁; the wheels: 8 free spins (field 2), start x3 (field 2)
+  const bonusStops = slots.STRIPS.map((strip, reel) => ([0, 2, 4].includes(reel) ? strip.indexOf("bonus") : 0));
+  const spinsTicket = 40 + 26; // the first ticket of field 2
+  const multiplierTicket = 50 + 30;
+  // Every free spin: the middle row all diamonds (5x diamond on line 1)
+  const diamonds = slots.STRIPS.map((strip) => strip.indexOf("diamond"));
+  const rolls = bonusStops.concat([spinsTicket, multiplierTicket]);
+  for (let n = 0; n < 8; n++) rolls.push(...diamonds);
+  let i = 0;
+  const big = slots.spin(100, () => rolls[i++]);
+  assert.deepStrictEqual([big.bonus.spins, big.bonus.multiplier], [8, 3]);
+  // Diamonds every time: the max win is reached in the first free spins and the bonus ends there
+  assert.strictEqual(big.win, 100 * slots.MAX_WIN);
+  assert.ok(big.capped);
+  assert.ok(big.bonus.freeSpins.length < 8);
+  assert.strictEqual(big.bonus.win + big.lineWin, big.win);
+
+  // Random free spins: 5 of them from x1 - every win is the line win times the multiplier, which climbs by one
+  const start = bonusStops.concat([0, 0]);
+  let k = 0;
+  const random = slots.spin(100, (max) => (k < start.length ? start[k++] : Math.floor(Math.random() * max)));
+  assert.deepStrictEqual(random.bonus.freeSpins.map((f) => f.multiplier), [1, 2, 3, 4, 5]);
+  random.bonus.freeSpins.forEach((f) => assert.strictEqual(f.win, f.lineWin * f.multiplier));
+
+  // Rare: the bonus about 1 of 200 spins, the max win in very few bonuses 
+  const { bonusChance, rtp } = slots.rtp();
+  assert.ok(bonusChance > 1 / 250 && bonusChance < 1 / 150, `bonus 1 of ${Math.round(1 / bonusChance)}`);
+  assert.ok(rtp > 0.93 && rtp < 0.97);
 });
 
 /* ---------- The page ---------- */
@@ -84,7 +100,7 @@ function client(name) {
 }
 
 test("slots: a spin costs the bet, the win comes right away, the others see it", async () => {
-  Object.assign(config, { SLOTS_MIN_GAP: 0, SLOTS_SPIN: 10, SLOTS_COUNT_TIME: 0, SLOTS_BONUS_TIME: 0, SLOTS_BIG_TIME: 0 });
+  Object.assign(config, { SLOTS_MIN_GAP: 0, SLOTS_SPIN: 10, SLOTS_COUNT_TIME: 0, SLOTS_BONUS_TIME: 0, SLOTS_FREE_SPIN: 0, SLOTS_BONUS_END: 0, SLOTS_BIG_TIME: 0 });
   h.setCoins("alice", 5000);
   const alice = client("alice");
   const bob = client("bob");
@@ -128,5 +144,14 @@ test("slots: a spin costs the bet, the win comes right away, the others see it",
   const poor = h.once(alice, "slotsError");
   alice.emit("spin", { bet: 100 });
   assert.match(await poor, /enough coins/);
-  Object.assign(config, { SLOTS_MIN_GAP: 600, SLOTS_SPIN: 2200, SLOTS_COUNT_TIME: 1800, SLOTS_BONUS_TIME: 6500, SLOTS_BIG_TIME: 3000 });
+  Object.assign(config, { SLOTS_MIN_GAP: 600, SLOTS_SPIN: 2200, SLOTS_COUNT_TIME: 1800, SLOTS_BONUS_TIME: 6000, SLOTS_FREE_SPIN: 1600, SLOTS_BONUS_END: 2500, SLOTS_BIG_TIME: 3000 });
+});
+
+test("slots: the admin test switch - every spin starts the bonus game", () => {
+  for (let i = 0; i < 20; i++) {
+    const result = slots.spin(100, undefined, { forceBonus: true });
+    assert.ok(result.bonus, "a bonus every time");
+    assert.ok([0, 2, 4].every((reel) => result.grid[reel].includes("bonus")));
+    assert.ok(result.win <= 100 * slots.MAX_WIN);
+  }
 });

@@ -153,12 +153,15 @@ module.exports = {
   SLOTS_MIN_BET: 10,
   SLOTS_MAX_BET: 1000,
   SLOTS_SPIN: 2200, // the reels turn this long on the page
-  SLOTS_BONUS_TIME: 6500, // the bonus wheel on the page
+  SLOTS_BONUS_TIME: 6000, // the bonus wheels (free spins, multiplier) on the page
+  SLOTS_FREE_SPIN: 1600, // one free spin of the bonus game on the page
+  SLOTS_BONUS_END: 2500, // the bonus win is shown
   SLOTS_BIG_WIN: 15, // a win of this many times the bet gets the big show
   SLOTS_COUNT_TIME: 1800, // the win is counted up (and the slow last reel)
   SLOTS_BIG_TIME: 3000, // the big-win show on top
   SLOTS_MIN_GAP: 600, // at least this long between two spins of a player
   SLOTS_FEED: 12, // last wins in the list
+  SLOTS_TEST_BONUS: false, // admin panel, for testing: every spin starts the bonus game
 
   // The tables of the lobby (in this order, limits from the keys above); a page without a table opens "classic"
   BJ_TABLES: [

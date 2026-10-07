@@ -114,7 +114,8 @@ const GAMES = {
   }),
 
   slots: () => {
-    const wheel = slots.BONUS_WHEEL.map((f) => f.multiplier + "×").join(", ");
+    const spins = slots.BONUS_SPINS.map((f) => f.spins).join(", ");
+    const starts = slots.BONUS_MULTIPLIERS.map((f) => "×" + f.multiplier).join(", ");
     return {
       title: "Slots",
       sections: [
@@ -124,8 +125,9 @@ const GAMES = {
             `5 reels, 3 rows, ${slots.LINE_COUNT} lines - all lines play every spin. The bet is for the whole spin.`,
             "3, 4 or 5 of the same symbol on a line, from the left reel, win. The paytable shows what each pays.",
             "👑 is wild: it stands for every symbol.",
-            `🎁 on reels 1, 3 and 5 at the same time start the bonus: a wheel spins for a multiplier of your bet (${wheel}).`,
-            `A spin pays at most ${slots.MAX_WIN}× the bet. On average the machine pays back about 96% of the bets.`,
+            `🎁 on reels 1, 3 and 5 at the same time start the bonus game: two wheels decide your free spins (${spins}) and the start multiplier (${starts}).`,
+            `The free spins play by themselves. Every win is paid times the multiplier - and it grows by ${slots.BONUS_STEP} after every free spin.`,
+            `A spin with its bonus pays at most ${slots.MAX_WIN}× the bet (then the bonus ends). On average the machine pays back about 95-96% of the bets.`,
             "Your coins come when the spin is over on the screen.",
           ],
         },

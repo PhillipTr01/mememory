@@ -38,7 +38,7 @@ module.exports = function (io) {
    */
   function showTime(bet, result) {
     let time = config.SLOTS_SPIN + config.SLOTS_COUNT_TIME;
-    if (result.bonus) time += config.SLOTS_BONUS_TIME;
+    if (result.bonus) time += config.SLOTS_BONUS_TIME + result.bonus.freeSpins.length * config.SLOTS_FREE_SPIN + config.SLOTS_BONUS_END;
     if (result.win >= bet * config.SLOTS_BIG_WIN) time += config.SLOTS_BIG_TIME;
     return time;
   }
@@ -71,7 +71,7 @@ module.exports = function (io) {
   }
 
   function rules() {
-    return { minBet: config.SLOTS_MIN_BET, maxBet: config.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, bonusTime: config.SLOTS_BONUS_TIME, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
+    return { minBet: config.SLOTS_MIN_BET, maxBet: config.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, bonusTime: config.SLOTS_BONUS_TIME, freeSpinTime: config.SLOTS_FREE_SPIN, bonusEndTime: config.SLOTS_BONUS_END, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
   }
 
   async function sendCoins(username) {
@@ -108,19 +108,19 @@ module.exports = function (io) {
         try {
           if (!(await coins.spend(username, bet, { reason: "slots bet" }))) return error("You don't have enough coins.");
           lastSpin.set(username, Date.now());
-          const result = slots.spin(bet);
+          const result = slots.spin(bet, undefined, { forceBonus: config.SLOTS_TEST_BONUS === true });
           machine.spins++;
           const payIn = showTime(bet, result);
           if (result.win > 0) {
             const best = result.lines.length ? result.lines.reduce((a, b) => (b.multiplier > a.multiplier ? b : a)) : null;
-            const note = result.bonus ? `bonus ${result.bonus.multiplier}x` : `${best.count}x ${best.symbol}`;
+            const note = result.bonus ? `bonus ${result.bonus.spins} free spins x${result.bonus.multiplier}` : `${best.count}x ${best.symbol}`;
             const entry = {
               id: ++pendingId + ":" + Date.now(),
               name: username,
               win: result.win,
               note: note,
               at: Date.now() + payIn,
-              feed: { name: username, bet: bet, win: result.win, symbol: best ? best.symbol : "bonus", count: best ? best.count : 3, bonus: result.bonus ? result.bonus.multiplier : null, at: Date.now() },
+              feed: { name: username, bet: bet, win: result.win, symbol: best ? best.symbol : "bonus", count: best ? best.count : 3, bonus: result.bonus ? result.bonus.spins : null, at: Date.now() },
             };
             machine.pending.push(entry);
             persist.changed("slots");
