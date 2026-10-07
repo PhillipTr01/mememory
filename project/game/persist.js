@@ -41,9 +41,10 @@ function register(key, snapshot, restore, fresh) {
   games.set(key, { snapshot: snapshot, restore: restore, fresh: fresh, initial: toJSON(snapshot()) });
 }
 
-// Hard reset: every game as on its very first start (and saved like that)
-async function resetAll() {
+// Hard reset: every game as on its very first start (and saved like that); keep: keys left as they are
+async function resetAll(keep = []) {
   for (const [key, game] of games) {
+    if (keep.includes(key)) continue;
     const initial = fromJSON(game.initial);
     if (game.fresh) game.fresh(initial);
     else game.restore(initial);
@@ -110,9 +111,10 @@ function snapshotAll() {
   return Object.fromEntries([...games].map(([key, game]) => [key, toJSON(game.snapshot())]));
 }
 
-// The season is over: every game as it was before (games not in it: as on the first start)
-async function restoreSnapshots(saved) {
+// The season is over: every game as it was before (games not in it: as on the first start); keep: keys left as they are
+async function restoreSnapshots(saved, keep = []) {
   for (const [key, game] of games) {
+    if (keep.includes(key)) continue;
     const text = saved && typeof saved[key] === "string" ? saved[key] : game.initial;
     try {
       game.restore(fromJSON(text));

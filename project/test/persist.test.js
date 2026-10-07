@@ -205,3 +205,15 @@ test("persist: a season saves every game and puts it back afterwards", async () 
   await persist.restoreSnapshots(before);
   assert.strictEqual(game.rounds, 7);
 });
+
+test("persist: the chat stays through a season (start and end)", async () => {
+  const chat = { messages: ["before"] };
+  persist.register("chatTest", () => chat, (saved) => Object.assign(chat, saved));
+  const before = persist.snapshotAll();
+  await persist.resetAll(["chatTest"]);
+  chat.messages.push("during");
+  await persist.restoreSnapshots(before, ["chatTest"]);
+  assert.deepStrictEqual(chat.messages, ["before", "during"]);
+  // (the season really keeps "chat")
+  assert.match(require("fs").readFileSync(require.resolve("../game/hard_reset"), "utf8"), /SEASON_KEEP = \["chat"\]/);
+});

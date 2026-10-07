@@ -67,7 +67,7 @@ function fromUser(socket, data) {
   if (text == null) return;
   const entry = { id: ++messageId, time: Date.now(), type: "user", name: socket.data.username, spectator: false, text: text };
   history.push(entry);
-  if (history.length > config.CHAT_HISTORY) history.splice(0, history.length - config.CHAT_HISTORY);
+  if (history.length > config.CASINO_CHAT_HISTORY) history.splice(0, history.length - config.CASINO_CHAT_HISTORY);
   for (const page of pages) page.namespace.to(page.room).emit("chatMessage", entry);
   persist.changed("chat");
 }

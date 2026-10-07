@@ -37,14 +37,17 @@ async function hardReset() {
 
 /*
  * A season starts (game/seasons.js): the casino starts anew like after the
- * hard reset - every game, the leaderboard, the coin history shown (the one
+ * hard reset - every game (not the chat), the leaderboard, the coin history shown (the one
  * from before is kept apart and comes back after the season) - but everybody
  * who is in stays in and starts with the season's budget. Returns the state
  * of every game before (restored after the season).
  */
+// The chat stays as it is (through the start and the end of a season)
+const SEASON_KEEP = ["chat"];
+
 async function seasonReset(budget, reset) {
   const games = persist.snapshotAll();
-  await persist.resetAll();
+  await persist.resetAll(SEASON_KEEP);
   await User.updateMany({ casinoApproved: true }, { $set: { coins: budget, coinReset: reset }, $unset: { coinBonusAt: 1 } });
   await Setting.deleteMany({ key: { $in: ["leaderboard"] } });
   return games;
@@ -52,7 +55,7 @@ async function seasonReset(budget, reset) {
 
 // The season is over: the games as before it, its own coin history gone
 async function seasonRestore(games, reset) {
-  await persist.restoreSnapshots(games);
+  await persist.restoreSnapshots(games, SEASON_KEEP);
   await CoinLog.deleteMany({ era: reset });
   await Setting.deleteMany({ key: { $in: ["leaderboard"] } });
 }
