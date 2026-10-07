@@ -569,7 +569,7 @@ function seasonRow(season) {
   var row = el("div", "ad-season-row " + season.status);
   row.appendChild(seasonHead(season));
   var facts = el("div", "ad-season-facts");
-  facts.append(el("span", "", "🪙 " + formatCoins(season.budget) + " start"), el("span", "", "🎁 " + formatCoins(season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting) + " a day"), el("span", "", "🔁 " + (season.secondChances || 0) + " second chance" + (season.secondChances == 1 ? "" : "s")), el("span", "", "📊 " + EVERY_NAMES[season.every]), el("span", "", season.prizesOn ? "🏅 " + season.prizes.length + (season.prizes.length == 1 ? " prize" : " prizes") : "no prizes"));
+  facts.append(el("span", "", "🪙 " + formatCoins(season.budget) + " start"), el("span", "", "🎁 " + formatCoins(season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting) + " a day"), el("span", "", "💔 " + (season.secondChances || 0) + " second chance" + (season.secondChances == 1 ? "" : "s")), el("span", "", "📊 " + EVERY_NAMES[season.every]), el("span", "", season.prizesOn ? "🏅 " + season.prizes.length + (season.prizes.length == 1 ? " prize" : " prizes") : "no prizes"));
   if (season.status == "ended" && season.winner) facts.append(el("span", "ad-season-winner", "🥇 " + season.winner.username + " · 🪙 " + formatCoins(season.winner.coins)));
   row.appendChild(facts);
   if (season.prizesOn && season.prizes.length) {

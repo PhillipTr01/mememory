@@ -305,7 +305,7 @@
     chanceShown = true;
     var box = el("div", "cs-chance" + (status.can ? "" : " waiting"));
     var card = el("div", "cs-chance-card");
-    card.append(el("div", "cs-chance-icon", status.can ? "🔁" : "⏳"), el("h2", "cs-chance-title", status.can ? "Second chance!" : "Out of coins"));
+    card.append(el("div", "cs-chance-icon", status.can ? "💔" : "⏳"), el("h2", "cs-chance-title", status.can ? "Second chance!" : "Out of coins"));
     if (status.can) {
       card.append(
         el("p", "cs-chance-text", "You lost everything - start again with 🪙 " + format(status.budget) + " and fight your way back to the top."),
@@ -320,7 +320,7 @@
           var data = await res.json();
           if (!res.ok) throw new Error(data.error || "No second chance right now.");
           box.remove();
-          showToast("🔁 Back in the game with 🪙 " + format(data.coins) + "!");
+          showToast("💔 Back in the game with 🪙 " + format(data.coins) + "!");
         } catch (error) {
           showToast(error.message, "error");
           box.remove();
