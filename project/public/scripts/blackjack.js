@@ -171,6 +171,30 @@ function placeChip(seatIndex, field) {
 }
 
 // The three bet fields of an own seat while betting: Perfect Pairs, the bet, 21+3
+// The chips on a field as a stack (the biggest at the bottom), like on a real table
+var CHIPS = [5000, 1000, 500, 100, 50, 10];
+function chipStack(amount) {
+  var discs = [];
+  var rest = amount;
+  CHIPS.forEach((chip) => {
+    while (rest >= chip && discs.length < 40) {
+      discs.push(chip);
+      rest -= chip;
+    }
+  });
+  // Odd coins (a table minimum like 25): one more small chip
+  if (rest > 0) discs.push(10);
+  var stack = el("span", "bj-stack");
+  // At most 8 to see - a high stack stays a stack
+  discs.slice(0, 8).forEach((chip, n) => {
+    var disc = el("span", "bj-disc");
+    disc.dataset.chip = chip;
+    disc.style.setProperty("--n", n);
+    stack.appendChild(disc);
+  });
+  return stack;
+}
+
 function betFields(seat, i) {
   var fields = el("div", "bj-fields");
   [
@@ -183,7 +207,8 @@ function betFields(seat, i) {
     spot.type = "button";
     spot.title = field == "main" ? "Your bet - click to put the chip here" : SIDE_NAMES[field] + " - up to half the bet";
     spot.disabled = field != "main" && seat.bet == 0;
-    spot.appendChild(el("span", "bj-field-label", value > 0 ? (field == "main" ? "" : label + " ") + formatCoins(value) : label));
+    if (value > 0) spot.append(chipStack(value), el("span", "bj-field-amount", formatCoins(value)));
+    else spot.appendChild(el("span", "bj-field-label", label));
     spot.addEventListener("click", (event) => {
       event.stopPropagation();
       placeChip(i, field);
@@ -434,7 +459,6 @@ function renderBars() {
       chip.setAttribute("aria-checked", on ? "true" : "false");
       chip.disabled = Number(chip.dataset.chip) > myCoins;
     });
-    document.getElementById("bjBetHint").innerText = seat && seat.bet > 0 ? "Click BET, PP or 21+3 on your seat to add the chip" : "Click BET on your seat to place the chip";
   }
 
   var actions = document.getElementById("bjActions");
@@ -488,16 +512,24 @@ document.addEventListener("DOMContentLoaded", () => {
   // The last rounds belong to a table, not to the lobby
   document.getElementById("bjHistory").closest(".side-card").hidden = !TABLE_ID;
   if (!TABLE_ID) document.getElementById("bjStatus").innerText = "Pick a table - every table has its own stakes.";
-  // Pick a chip (it stays picked)
-  document.querySelectorAll(".bj-chip").forEach((chip) =>
-    chip.addEventListener("click", () => {
-      chipValue = Number(chip.dataset.chip);
-      try {
-        localStorage.setItem(CHIP_KEY, String(chipValue));
-      } catch (error) {
-        // only for now
-      }
-      if (state) renderBars();
+  // Pick a chip (it stays picked) - by click or with the arrows
+  var pickChip = (value) => {
+    chipValue = value;
+    try {
+      localStorage.setItem(CHIP_KEY, String(chipValue));
+    } catch (error) {
+      // only for now
+    }
+    if (state) renderBars();
+  };
+  document.querySelectorAll(".bj-chip").forEach((chip) => chip.addEventListener("click", () => pickChip(Number(chip.dataset.chip))));
+  document.querySelectorAll(".bj-chip-arrow").forEach((arrow) =>
+    arrow.addEventListener("click", () => {
+      var values = [...document.querySelectorAll(".bj-chip:not(:disabled)")].map((chip) => Number(chip.dataset.chip));
+      if (values.length == 0) return;
+      var at = values.indexOf(chipValue);
+      var next = at < 0 ? 0 : Math.min(values.length - 1, Math.max(0, at + Number(arrow.dataset.step)));
+      pickChip(values[next]);
     }),
   );
   // Stand up: the bet on the seat comes back

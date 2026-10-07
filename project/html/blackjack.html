@@ -126,15 +126,19 @@
                     <!--- Betting: on a free seat or an own one --->
                     <div id="bjBetBar" class="bj-bar bj-betbar" hidden>
                         <!--- Like at the table: pick a chip, then click a bet field on your seat --->
-                        <div class="bj-chips" role="radiogroup" aria-label="Chip">
-                            <button type="button" class="bj-chip" role="radio" data-chip="10">10</button>
-                            <button type="button" class="bj-chip" role="radio" data-chip="50">50</button>
-                            <button type="button" class="bj-chip" role="radio" data-chip="100">100</button>
-                            <button type="button" class="bj-chip" role="radio" data-chip="500">500</button>
-                            <button type="button" class="bj-chip" role="radio" data-chip="1000">1K</button>
-                            <button type="button" class="bj-chip" role="radio" data-chip="5000">5K</button>
+                        <span class="bj-bar-side" aria-hidden="true"></span>
+                        <div class="bj-chip-picker">
+                            <button type="button" class="bj-chip-arrow" data-step="-1" aria-label="Smaller chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+                            <div class="bj-chips" role="radiogroup" aria-label="Chip">
+                                <button type="button" class="bj-chip" role="radio" data-chip="10">10</button>
+                                <button type="button" class="bj-chip" role="radio" data-chip="50">50</button>
+                                <button type="button" class="bj-chip" role="radio" data-chip="100">100</button>
+                                <button type="button" class="bj-chip" role="radio" data-chip="500">500</button>
+                                <button type="button" class="bj-chip" role="radio" data-chip="1000">1K</button>
+                                <button type="button" class="bj-chip" role="radio" data-chip="5000">5K</button>
+                            </div>
+                            <button type="button" class="bj-chip-arrow" data-step="1" aria-label="Bigger chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
                         </div>
-                        <span id="bjBetHint" class="bj-bet-hint"></span>
                         <button type="button" id="bjClear" class="bj-leave" title="Stand up - the bets come back" aria-label="Stand up"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
                     </div>
 
