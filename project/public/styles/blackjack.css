@@ -1225,45 +1225,41 @@
   color: var(--mm-danger);
 }
 
-/* Clear bets / leave: pills with their name (gold when hovered / red for leaving) */
+/* Clear bets / leave: like the other buttons of the site (mm-btn) - with their name */
 .bj-betbar .bj-bar-right .bj-icon-btn {
   width: auto;
   height: 40px;
-  gap: 0.45rem;
-  padding: 0 1rem 0 0.8rem;
-  border-color: var(--mm-border);
-  background: linear-gradient(180deg, var(--mm-surface-3), var(--mm-surface-2));
-  font-size: 0.82rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  transition: transform 0.12s ease, border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  gap: 0.5rem;
+  padding: 0 1rem 0 0.85rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .bj-betbar .bj-bar-right .bj-icon-btn svg {
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
+  opacity: 0.85;
 }
 
 .bj-betbar .bj-bar-right .bj-icon-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
+  background: var(--mm-surface-3);
+  border-color: #4a4a55;
+  color: var(--mm-text);
 }
 
-.bj-betbar .bj-bar-right .bj-icon-btn.clear:hover:not(:disabled) {
-  border-color: rgba(var(--mm-accent-rgb), 0.7);
-  color: var(--mm-accent);
-  background: rgba(var(--mm-accent-rgb), 0.1);
-}
-
-.bj-betbar .bj-bar-right .bj-icon-btn.leave {
-  border-color: rgba(224, 103, 90, 0.45);
-  color: #f0a39a;
+/* Leaving: only the icon a little red - red all over when hovered */
+.bj-betbar .bj-bar-right .bj-icon-btn.leave svg {
+  color: var(--mm-danger);
 }
 
 .bj-betbar .bj-bar-right .bj-icon-btn.leave:hover:not(:disabled) {
-  border-color: var(--mm-danger);
-  color: #fff;
-  background: rgba(224, 103, 90, 0.85);
+  border-color: rgba(224, 103, 90, 0.6);
+  background: rgba(224, 103, 90, 0.12);
 }
 
 @media (max-width: 575px) {
