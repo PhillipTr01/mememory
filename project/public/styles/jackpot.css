@@ -2734,3 +2734,65 @@ body.jackpot-theme {
   border-radius: 4px;
   background: var(--mm-surface-3);
 }
+
+/* ---------- The "i" next to a game title: how it works ---------- */
+.cs-info-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin-left: 0.15rem;
+  padding: 0;
+  border: 1px solid var(--mm-border);
+  border-radius: 50%;
+  background: var(--mm-surface-2);
+  color: var(--mm-muted);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.8rem;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.cs-info-btn:hover,
+.cs-info-btn:focus-visible {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+}
+
+.cs-info {
+  max-width: 520px;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.cs-info-heading {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--mm-accent);
+  text-transform: uppercase;
+}
+
+.cs-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0 0 0.5rem;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--mm-text);
+}
+
+.cs-info-list li::marker {
+  color: var(--mm-muted);
+}
+
+.cs-info .mm-btn {
+  margin-top: 0.75rem;
+}

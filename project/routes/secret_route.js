@@ -6,6 +6,7 @@ const withdrawals = require("../game/withdrawals");
 const access = require("../game/access");
 const leaderboard = require("../game/leaderboard");
 const games = require("../game/games");
+const info = require("../game/info");
 
 /*
  * The hidden pages, mounted at the secret address (config.JACKPOT_PATH):
@@ -54,6 +55,13 @@ module.exports = function (auth) {
   router.get("/blackjack", auth, approved, gamePage("blackjack", "blackjack.html"));
   router.get("/slots", auth, approved, gamePage("slots", "slots.html"));
   router.get("/leaderboard", auth, approved, page("leaderboard.html", hideOff));
+
+  // How a game works (the "i" next to the title)
+  router.get("/info/:game", auth, approved, (req, res) => {
+    const about = info.get(req.params.game);
+    if (about == null) return res.status(404).json({ error: "Unknown game." });
+    res.json(about);
+  });
 
   router.use(express.json({ limit: "2kb" }));
 
