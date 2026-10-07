@@ -209,7 +209,7 @@ function spin() {
 }
 
 // The reels turn and stop on `grid` (one after the other); `time`: how long the first reel turns
-function animateReels(grid, time, tease, sweatTime) {
+function animateReels(grid, time, sweatTime) {
   var reels = [...document.querySelectorAll(".sl-reel")];
   // The size of a symbol now (full screen or not)
   TILE = document.querySelector(".sl-cell").offsetHeight;
@@ -220,7 +220,8 @@ function animateReels(grid, time, tease, sweatTime) {
       var strip = setup.strips[i];
       var track = reel.querySelector(".sl-track");
       reel.classList.add("spinning");
-      var count = Math.round((14 + i * 5) * Math.min(1, time / setup.rules.spinTime)) + 4 + (tease && i == 4 ? 10 : 0) + (sweat && i == 4 ? Math.round(sweat / 90) : 0);
+      // Not too many symbols: the reels turn at a speed the eye can follow
+      var count = Math.round((8 + i * 3) * Math.min(1, time / setup.rules.spinTime)) + 3 + (sweat && i == 4 ? Math.round(sweat / 140) : 0);
       var ids = [];
       // The faces on top now, then random ones, then the result
       var now = [...track.children].map((c) => c.dataset.symbol);
@@ -231,7 +232,7 @@ function animateReels(grid, time, tease, sweatTime) {
       track.replaceChildren(...ids.map(cell));
       track.style.transform = "translateY(0px)";
       var end = -(ids.length - 3) * TILE;
-      var duration = time * (0.5 + i * 0.12) + (tease && i == 4 ? 700 : 0) + (sweat && i == 4 ? sweat : 0);
+      var duration = time * (0.5 + i * 0.12) + (sweat && i == 4 ? sweat : 0);
       var animation = track.animate(
         [
           { transform: "translateY(0px)", easing: "cubic-bezier(0.45, 0, 0.6, 1)" },
@@ -269,9 +270,8 @@ function hasTwoGifts(grid) {
 }
 
 async function playSpin(result) {
-  // Two wilds or the start of a big line on the first reels: the last reel takes longer
-  var tease = result.grid.slice(0, 3).flat().filter((id) => id == "wild" || id == "diamond").length >= 2;
-  await animateReels(result.grid, setup.rules.spinTime, tease, setup.rules.sweatTime);
+  // (only two 🎁 make the last reel turn longer - the sweat)
+  await animateReels(result.grid, setup.rules.spinTime, setup.rules.sweatTime);
   // Three 🎁: the bonus game first
   if (result.bonus) await playBonus(result);
   await showResult(result);
@@ -462,7 +462,7 @@ async function playFreeSpins(result, from, progress) {
     clearLines();
     count.innerText = n + 1 + " / " + spins;
     text.innerText = "🪙 " + formatCoins(total);
-    await animateReels(free.grid, spinTime * 0.5, false, setup.rules.sweatTime * 0.6);
+    await animateReels(free.grid, spinTime * 0.55, setup.rules.sweatTime * 0.6);
     // Three 🎁 again: more free spins
     if (free.retrigger > 0) {
       document.querySelectorAll(".sl-cell.scatter").forEach((c) => c.classList.add("hit"));
@@ -483,7 +483,7 @@ async function playFreeSpins(result, from, progress) {
       countUp(text, total + free.win, spinTime * 0.3, total);
       total += free.win;
     }
-    await wait(spinTime * (free.win > 0 ? 0.5 : 0.3));
+    await wait(spinTime * (free.win > 0 ? 0.45 : 0.3));
     progress(n + 1);
   }
   if (result.capped) detail.innerText = "Max win reached!";

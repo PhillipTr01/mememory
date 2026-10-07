@@ -154,10 +154,10 @@ module.exports = {
   // Slots (hidden, see game/slots.js): the bet is for a whole spin (all 9 lines)
   SLOTS_MIN_BET: 10,
   SLOTS_MAX_BET: 1000,
-  SLOTS_SPIN: 1600, // the reels turn this long on the page
+  SLOTS_SPIN: 2000, // the reels turn this long on the page
   SLOTS_SWEAT: 1800, // two 🎁 in sight: the last reel turns this much longer (the sweat)
   SLOTS_BONUS_TIME: 6000, // the bonus wheels (free spins, multiplier) on the page
-  SLOTS_FREE_SPIN: 2400, // one free spin of the bonus game on the page
+  SLOTS_FREE_SPIN: 3000, // one free spin of the bonus game on the page
   SLOTS_RESUME_TIME: 1500, // back on the page: "the bonus goes on" before the next free spin
   SLOTS_HOLD: 24 * 60 * 60 * 1000, // a bonus game waits this long for the player to come back, then it is paid
   SLOTS_BONUS_END: 4000, // the bonus win is counted up and shown
