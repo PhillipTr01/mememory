@@ -831,6 +831,7 @@ async function showResult(result) {
   text.innerText = "";
   // (after a bonus game its own win screen was shown already)
   if (big && !result.bonus && !result.coinGame) await bigWin(result);
+  // (the balance comes from the server meanwhile - setup.rules.countTime after the reels)
   var counting = big ? 300 : Math.min(900, setup.rules.countTime);
   countUp(text, result.win, counting);
   detail.innerText = result.bonus ? "Bonus game · " + result.bonus.freeSpins.length + " free spins" : result.coinGame ? "Coin game · " + result.coinGame.coins.length + " coins" + (result.coinGame.ultra ? " · ULTRA" : "") : result.lines.length == 1 ? "1 line" : result.lines.length + " lines";

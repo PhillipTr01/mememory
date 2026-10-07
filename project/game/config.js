@@ -167,7 +167,7 @@ module.exports = {
   SLOTS_RESPIN: 2800, // one respin of the coin game on the page
   SLOTS_ULTRA_TIME: 4500, // all 15 spots full: the ULTRA show
   SLOTS_BIG_WIN: 15, // a win of this many times the bet gets the big show
-  SLOTS_COUNT_TIME: 1800, // the win is counted up (and the slow last reel)
+  SLOTS_COUNT_TIME: 800, // after the reels (and the big-win show) the win is paid this soon - while it is counted up
   SLOTS_BIG_TIME: 3000, // the big-win show on top
   SLOTS_MIN_GAP: 600, // at least this long between two spins of a player
   SLOTS_FEED: 12, // last wins in the list
