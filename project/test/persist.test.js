@@ -175,10 +175,11 @@ test("restart during the draw: the winner is paid once, the round ends and the h
   const drawing = await waitFor(alice, "jackpotState", (s) => s.phase === "drawing", 5000);
   await h.wait(50);
   const total = h.coinsOf("alice") + h.coinsOf("bob");
-  assert.strictEqual(total, 2000 - 200 + 200, "paid when the draw starts");
+  assert.strictEqual(total, 2000 - 200, "not paid while the draw is running");
 
   await persist.saveAll();
   persist.reset();
+  stopGames(first); // the old server is gone (its draw timer too)
   sockets.splice(0).forEach((s) => s.close());
   const second = await h.startServer();
   servers.push(second);

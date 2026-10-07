@@ -217,22 +217,22 @@ module.exports = function (io) {
     // the pot. Which ticket was fixed at the start of the round (provably fair).
     // The tickets go through the bets in their order (not per player).
     pot.draw = fairWinner(pot.bets.map((bet) => ({ name: bet.name, coins: bet.amount })), pot.fair.number);
-    await payWinner();
     emitState();
 
     // Announced after the roulette, so the chat doesn't spoil it
     pot.timer = setTimeout(announce, config.JACKPOT_SPIN);
   }
 
-  // Paid right away, so nothing is lost if the page (or the server) goes away
-  // during the animation (the ghost wins: the house keeps the pot)
+  // Paid when the animation is over (not before: the coins can't be played
+  // elsewhere while the draw is still running). Once - a draw saved before this
+  // was paid at its start (pot.paid). The ghost wins: the house keeps the pot.
   async function payWinner() {
     if (pot.paid) return;
     pot.paid = true;
     const winner = pot.entries.find((entry) => entry.name === pot.draw.winner);
     if (winner.name === GHOST) return;
     try {
-      await coins.add(winner.name, pot.draw.total, { quiet: true, reason: "jackpot win", note: hasGhost() ? "against the ghost" : undefined });
+      await coins.add(winner.name, pot.draw.total, { reason: "jackpot win", note: hasGhost() ? "against the ghost" : undefined });
     } catch (error) {
       console.error("[jackpot] Could not pay the winner:", error);
     }
@@ -253,7 +253,7 @@ module.exports = function (io) {
       pot.records.luckiest = result;
     }
     pot.history.length = Math.min(pot.history.length, config.JACKPOT_HISTORY);
-    if (!ghostWon) coins.notify(winner.name);
+    payWinner().catch(() => {});
     emitState();
     pot.timer = setTimeout(newRound, config.JACKPOT_PAUSE);
   }
@@ -416,7 +416,6 @@ module.exports = function (io) {
       if (pot.announced) {
         pot.timer = setTimeout(newRound, config.JACKPOT_PAUSE);
       } else {
-        payWinner().catch(() => {});
         pot.timer = setTimeout(announce, Math.max(1000, (pot.drawAt || 0) + config.JACKPOT_SPIN - now));
       }
     }
