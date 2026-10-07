@@ -575,7 +575,7 @@
 /* The prizes of the coin game in the paytable */
 .sl-prize-table {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 0.4rem 0.75rem;
   margin: 0.25rem 0 1rem;
@@ -616,11 +616,6 @@
 
 .sl-prize-badge.prize-ultra {
   --prize: var(--prize-ultra);
-}
-
-.sl-prize-when {
-  font-size: 0.8rem;
-  color: var(--mm-muted);
 }
 
 .sl-prize-amount {

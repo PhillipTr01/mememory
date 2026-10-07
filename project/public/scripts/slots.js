@@ -999,11 +999,11 @@ function showPaytable() {
     c.trigger + " or more 🪙 anywhere start the coin game. The coins stay, the empty spots spin again - " + c.respins + " respins, every new coin brings them back to " + c.respins + ". The coin game pays all its coins (at most " + c.maxWin + "× the bet).",
   );
   var prizeTable = el("div", "sl-prize-table");
-  var row = (badge, when, amount) => prizeTable.append(badge, el("span", "sl-prize-when", when), el("span", "sl-prize-amount", amount));
+  var row = (badge, amount) => prizeTable.append(badge, el("span", "sl-prize-amount", amount));
   var values = c.values;
-  row(el("span", "sl-prize-badge plain", "🪙 coin"), "most coins", "🪙 " + formatCoins(Math.floor(bet * values[0])) + " - " + formatCoins(Math.floor(bet * values[values.length - 1])));
-  c.prizes.forEach((p) => row(el("span", "sl-prize-badge prize-" + p.prize, p.prize.toUpperCase()), "on a coin", "🪙 " + formatCoins(Math.floor(bet * p.x))));
-  row(el("span", "sl-prize-badge prize-ultra", "ULTRA"), "all 15 spots full, on top", "🪙 " + formatCoins(bet * c.ultra));
+  row(el("span", "sl-prize-badge plain", "🪙 coin"), "🪙 " + formatCoins(Math.floor(bet * values[0])) + " - " + formatCoins(Math.floor(bet * values[values.length - 1])));
+  c.prizes.forEach((p) => row(el("span", "sl-prize-badge prize-" + p.prize, p.prize.toUpperCase()), "🪙 " + formatCoins(Math.floor(bet * p.x))));
+  row(el("span", "sl-prize-badge prize-ultra", "ULTRA"), "🪙 " + formatCoins(bet * c.ultra));
   dialog.append(table, el("h3", "sl-pays-title", "Bonus"), bonus, el("h3", "sl-pays-title", "Coin game"), coinText, prizeTable, el("h3", "sl-pays-title", "The 9 lines"), lines, close);
   backdrop.appendChild(dialog);
   // (in full screen only the machine is seen: the paytable goes in there)
