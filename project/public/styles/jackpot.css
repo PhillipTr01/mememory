@@ -3532,3 +3532,21 @@ body.jackpot-theme {
   font-variant-numeric: tabular-nums;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
 }
+
+/* The right part of the bar comes along with the side column when scrolling (casino_wallet.js) */
+.nav-right-spot {
+  display: flex;
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+}
+
+.nav-right.floating {
+  position: fixed;
+  z-index: 1030;
+}
+

@@ -614,4 +614,57 @@
     // On the leaderboard: the winner page right away
     if (window.showWinners) window.showWinners(season.id);
   }
+  // The side column (second chance, free coins, coins, profile - and the cards below them) comes
+  // along when scrolling as one piece: the right part of the bar stays as far above the cards as it is
+  (function columnInSight() {
+    var coinsPill = document.getElementById("navCoins");
+    var side = document.querySelector(".room-side");
+    var layout = document.querySelector(".room-layout");
+    if (!coinsPill || !side || !layout) return;
+    var bar = coinsPill.parentNode;
+    var spot = el("div", "nav-right-spot"); // keeps its place in the bar
+    var right = el("div", "nav-right");
+    ["navChance", "navBonus", "navCoins", "profileMenu"].forEach((id) => {
+      var node = document.getElementById(id);
+      if (node && node.parentNode == bar) right.appendChild(node);
+    });
+    spot.appendChild(right);
+    bar.appendChild(spot);
+    var TOP = 12;
+    var fromRight = 0; // how far the pills are from the right edge in the bar
+    var place = () => {
+      var wide = window.innerWidth >= 992;
+      var at = spot.getBoundingClientRect();
+      var gap = layout.getBoundingClientRect().top - at.top; // from the pills to the cards
+      side.style.top = wide ? TOP + gap + "px" : "";
+      // The pills stay right above the cards (also when the end of the page pushes the cards up)
+      var top = side.getBoundingClientRect().top - gap;
+      var follow = wide && at.top < top - 0.5;
+      if (!right.classList.contains("floating")) fromRight = document.documentElement.clientWidth - right.getBoundingClientRect().right;
+      if (follow && !right.classList.contains("floating")) {
+        spot.style.minWidth = right.offsetWidth + "px";
+        spot.style.height = right.offsetHeight + "px";
+      }
+      right.classList.toggle("floating", follow);
+      right.style.top = follow ? top + "px" : "";
+      right.style.right = follow ? fromRight + "px" : "";
+      if (!follow) spot.style.minWidth = spot.style.height = "";
+    };
+    // As high as the screen has room for between the pills and the end of the page - so the end of
+    // the page never pushes the column up
+    var size = () => {
+      side.style.height = "";
+      if (window.innerWidth < 992) return;
+      var gap = layout.getBoundingClientRect().top - spot.getBoundingClientRect().top;
+      var below = document.documentElement.scrollHeight - (layout.getBoundingClientRect().bottom + window.scrollY);
+      side.style.height = Math.max(420, window.innerHeight - TOP - gap - below) + "px";
+    };
+    window.addEventListener("scroll", place, { passive: true });
+    window.addEventListener("resize", () => {
+      size();
+      place();
+    });
+    size();
+    place();
+  })();
 })();
