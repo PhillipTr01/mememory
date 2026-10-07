@@ -197,6 +197,7 @@ module.exports = function (io) {
         bigBlind: blinds().big,
         minBuyIn: config.POKER_MIN_BUYIN,
         maxBuyIn: config.POKER_MAX_BUYIN,
+        defaultBuyIn: config.POKER_DEFAULT_BUYIN,
         turn: config.POKER_TURN,
       },
     };
