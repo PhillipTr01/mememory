@@ -308,12 +308,15 @@
 
 /* The last season is over: the way to its winners */
 .lb-last-season {
-  display: flex;
+  /* Small: a pill under the title, not a bar over the whole width */
+  display: inline-flex;
+  align-self: flex-start;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.7rem 1rem;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem 0.35rem 0.6rem;
   border: 1px solid rgba(var(--mm-accent-rgb), 0.5);
-  border-radius: var(--mm-radius);
+  border-radius: 999px;
+  font-size: 0.82rem;
   background: linear-gradient(90deg, rgba(var(--mm-accent-rgb), 0.14), transparent);
   color: var(--mm-text);
   font-weight: 700;
@@ -325,11 +328,10 @@
 }
 
 .lb-last-icon {
-  font-size: 1.3rem;
+  font-size: 1rem;
 }
 
 .lb-last-arrow {
-  margin-left: auto;
   color: var(--mm-accent);
 }
 

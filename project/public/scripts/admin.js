@@ -491,6 +491,8 @@ async function loadHistory(event) {
 var seasonList = [];
 var dailyBonusSetting = 2500; // the daily bonus of the settings (a new season starts with it)
 var editingSeason = null; // id of the season in the form (null: a new one)
+var SEASON_COLORS = ["#d4a64a", "#e0675a", "#e8913a", "#6fa784", "#4fb3a9", "#5b8fd6", "#9d84c2", "#d77fb0"];
+var GOLD = "#d4a64a";
 var SEASON_ICONS = ["🏆", "🔥", "❄️", "🌸", "☀️", "🍂", "🎃", "🎄", "💎", "🚀", "👑", "🐸"];
 var EVERY_NAMES = { 0: "live", 5: "every 5 min", 15: "every 15 min", 60: "every hour", 360: "every 6 hours", 1440: "once a day" };
 var STATUS_NAMES = { planned: "Planned", running: "Running", ended: "Over" };
@@ -556,7 +558,10 @@ function seasonHead(season) {
   var head = el("div", "ad-season-head");
   var text = el("div", "ad-row-main");
   text.append(el("b", "", season.name), el("span", "ad-row-meta", dateText(season.start) + " → " + dateText(season.end)));
-  head.append(el("span", "ad-season-icon", season.icon), text, el("span", "ad-pill " + (season.status == "running" ? "success" : season.status == "planned" ? "accent" : ""), STATUS_NAMES[season.status]));
+  var icon = el("span", "ad-season-icon", season.icon);
+  // (the accent color of the season around the icon)
+  icon.style.boxShadow = "inset 0 0 0 2px " + (season.color || GOLD);
+  head.append(icon, text, el("span", "ad-pill " + (season.status == "running" ? "success" : season.status == "planned" ? "accent" : ""), STATUS_NAMES[season.status]));
   return head;
 }
 
@@ -604,6 +609,8 @@ function fillSeasonForm(season) {
   document.getElementById("adSeasonEnd").value = localInput(season.end);
   document.getElementById("adSeasonBudget").value = season.budget;
   document.getElementById("adSeasonBonus").value = season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting;
+  document.getElementById("adSeasonColor").value = season.color || GOLD;
+  markColor();
   document.getElementById("adSeasonEvery").value = season.every;
   document.getElementById("adSeasonPrizesOn").checked = season.prizesOn;
   // A running season: start and budget happened already
@@ -650,6 +657,13 @@ function showPrizes() {
   document.getElementById("adSeasonAddPrize").hidden = !on;
 }
 
+function markColor() {
+  var color = document.getElementById("adSeasonColor").value.toLowerCase();
+  // (the hex field shows it too - any color can be typed in there)
+  if (document.activeElement != document.getElementById("adSeasonHex")) document.getElementById("adSeasonHex").value = color;
+  document.querySelectorAll("#adSeasonColors button").forEach((b) => b.classList.toggle("active", b.dataset.color == color));
+}
+
 function markIcon() {
   var icon = document.getElementById("adSeasonIcon").value.trim();
   document.querySelectorAll("#adSeasonIcons button").forEach((b) => b.classList.toggle("active", b.innerText == icon));
@@ -673,6 +687,8 @@ async function saveSeason(event) {
     end: new Date(document.getElementById("adSeasonEnd").value).getTime(),
     budget: Number(document.getElementById("adSeasonBudget").value),
     dailyBonus: Number(document.getElementById("adSeasonBonus").value),
+    // The gold of the casino: no own color
+    color: document.getElementById("adSeasonColor").value.toLowerCase() == GOLD ? null : document.getElementById("adSeasonColor").value,
     every: Number(document.getElementById("adSeasonEvery").value),
     prizesOn: document.getElementById("adSeasonPrizesOn").checked,
     prizes: prizes,
@@ -1031,6 +1047,30 @@ document.addEventListener("DOMContentLoaded", () => {
     }),
   );
   document.getElementById("adSeasonIcon").addEventListener("input", markIcon);
+  document.getElementById("adSeasonColors").replaceChildren(
+    ...SEASON_COLORS.map((color) => {
+      var b = el("button", "ad-color-pick");
+      b.type = "button";
+      b.dataset.color = color;
+      b.style.background = color;
+      b.title = color;
+      b.addEventListener("click", () => {
+        document.getElementById("adSeasonColor").value = color;
+        markColor();
+      });
+      return b;
+    }),
+  );
+  document.getElementById("adSeasonColor").addEventListener("input", markColor);
+  document.getElementById("adSeasonHex").addEventListener("input", (event) => {
+    var value = event.target.value.trim();
+    if (!value.startsWith("#")) value = "#" + value;
+    // #abc -> #aabbcc
+    if (/^#[0-9a-f]{3}$/i.test(value)) value = "#" + [...value.slice(1)].map((c) => c + c).join("");
+    if (!/^#[0-9a-f]{6}$/i.test(value)) return;
+    document.getElementById("adSeasonColor").value = value.toLowerCase();
+    markColor();
+  });
 
   showTab();
   loadOverview();

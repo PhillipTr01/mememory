@@ -17,9 +17,11 @@ function notify(username) {
 }
 
 // History of every change (for the admin panel); never blocks or breaks a game
+// (during a season tagged with it - the history from before stays apart)
 function log(username, amount, reason, note) {
+  const now = era();
   Promise.resolve()
-    .then(() => CoinLog.create({ username: username, amount: amount, reason: reason || "other", note: note, at: new Date() }))
+    .then(() => CoinLog.create({ username: username, amount: amount, reason: reason || "other", note: note, at: new Date(), ...(now ? { era: now } : {}) }))
     .catch((error) => console.error("[coins] Could not write the history:", error));
 }
 
@@ -46,6 +48,17 @@ function setBase(value) {
 
 function base() {
   return seasonBase || { reset: config.COIN_RESET, start: config.START_COINS, since: null };
+}
+
+// The running season (its reset id) - null without one
+function era() {
+  return seasonBase && seasonBase.active ? seasonBase.reset : null;
+}
+
+// The coin history to show: the season's - or everything outside of seasons
+function eraFilter() {
+  const now = era();
+  return now ? { era: now } : { era: { $exists: false } };
 }
 
 // The free coins of the day: the running season's - or the setting
@@ -155,4 +168,4 @@ function reward(username, mode) {
   add(username, amount, { reason: "game win", note: mode }).catch((error) => console.error("[coins] Could not add coins:", error));
 }
 
-module.exports = { setBase, base, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };
+module.exports = { setBase, base, era, eraFilter, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };

@@ -271,13 +271,38 @@
   /* ---------- Seasons: the link to the leaderboard, a season starting or ending ---------- */
 
   var board = document.getElementById("navBoard");
+  var seasonEnd = null;
+  var seasonTimer = null;
+
+  // How long the season still runs: "6d 23h 12m", the last hour to the second
+  function seasonLeft() {
+    var timer = document.getElementById("navBoardTimer");
+    if (seasonEnd == null) return;
+    var left = Math.max(0, seasonEnd - Date.now());
+    var s = Math.floor(left / 1000);
+    var d = Math.floor(s / 86400);
+    var h = Math.floor((s % 86400) / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var pad = (n) => String(n).padStart(2, "0");
+    timer.innerText = left == 0 ? "ending..." : d > 0 ? d + "d " + h + "h " + pad(m) + "m" : h > 0 ? h + "h " + pad(m) + "m " + pad(s % 60) + "s" : m + "m " + pad(s % 60) + "s";
+    timer.classList.toggle("soon", left < 3600 * 1000);
+  }
+
   function showSeason(data) {
     if (!board) return;
     var season = data && data.season;
     document.getElementById("navBoardIcon").innerText = season ? season.icon : "🏆";
     document.getElementById("navBoardText").innerText = season ? season.name : "Leaderboard";
     board.classList.toggle("season", !!season);
-    board.title = season ? season.name + " - the leaderboard of the season" : "Leaderboard";
+    board.title = season ? season.name + " - ends " + new Date(season.end).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Leaderboard";
+    // The countdown to the end of the season, inside the pill
+    seasonEnd = season ? season.end : null;
+    document.getElementById("navBoardTimer").hidden = !season;
+    clearInterval(seasonTimer);
+    if (season) {
+      seasonLeft();
+      seasonTimer = setInterval(seasonLeft, 1000);
+    }
   }
   if (board) {
     // The leaderboard page itself: marked
@@ -294,8 +319,31 @@
     setTimeout(() => location.reload(), 2500);
   });
 
-  // A season is over: a notice with the way to the winners
+  // A season is over: everything is as before it - the page loads again (a game page), then a notice
+  // with the way to the winners
+  var ENDED_KEY = "csSeasonEnded";
   socket.on("seasonEnded", (season) => {
+    if (!window.showWinners) {
+      try {
+        sessionStorage.setItem(ENDED_KEY, JSON.stringify(season));
+        return location.reload();
+      } catch (e) {
+        // no storage: the notice right here
+      }
+    }
+    seasonOver(season);
+  });
+  try {
+    var ended = sessionStorage.getItem(ENDED_KEY);
+    if (ended) {
+      sessionStorage.removeItem(ENDED_KEY);
+      setTimeout(() => seasonOver(JSON.parse(ended)), 400);
+    }
+  } catch (e) {
+    // no storage
+  }
+
+  function seasonOver(season) {
     showSeason(null);
     var notice = el("div", "cs-season-notice");
     var text = el("div", "cs-season-notice-text");
@@ -310,5 +358,5 @@
     document.body.appendChild(notice);
     // On the leaderboard: the winner page right away
     if (window.showWinners) window.showWinners(season.id);
-  });
+  }
 })();

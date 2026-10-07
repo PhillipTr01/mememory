@@ -31,9 +31,10 @@ module.exports = function (auth) {
   });
 
   // The tabs of the games that are off are hidden (admin panel, Settings)
+  // (and the accent color of the running season)
   const hideOff = () => {
     const off = games.GAMES.filter((game) => !games.enabled(game.id));
-    return off.length ? `<style>${off.map((game) => `.cs-tab[href="${game.tab}"]`).join(", ")} { display: none !important; }</style>` : "";
+    return (off.length ? `<style>${off.map((game) => `.cs-tab[href="${game.tab}"]`).join(", ")} { display: none !important; }</style>` : "") + seasons.accentStyle();
   };
 
   // A game page - or, when the game is off, the next game that is on
@@ -118,7 +119,7 @@ module.exports = function (auth) {
       const season = seasons.running();
       const ended = seasons.lastEnded();
       res.json({
-        season: season ? { id: season.id, name: season.name, icon: season.icon, end: season.end } : null,
+        season: season ? { id: season.id, name: season.name, icon: season.icon, end: season.end, color: season.color || null } : null,
         lastSeason: ended ? { id: ended.id, name: ended.name, icon: ended.icon, endedAt: ended.endedAt } : null,
       });
     }),

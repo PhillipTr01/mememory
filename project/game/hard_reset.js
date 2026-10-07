@@ -37,15 +37,24 @@ async function hardReset() {
 
 /*
  * A season starts (game/seasons.js): the casino starts anew like after the
- * hard reset - every game, the history of coins, the payouts, the leaderboard -
- * but everybody who is in stays in and starts with the season's budget.
+ * hard reset - every game, the leaderboard, the coin history shown (the one
+ * from before is kept apart and comes back after the season) - but everybody
+ * who is in stays in and starts with the season's budget. Returns the state
+ * of every game before (restored after the season).
  */
 async function seasonReset(budget, reset) {
+  const games = persist.snapshotAll();
   await persist.resetAll();
-  const [logs, payouts] = await Promise.all([CoinLog.deleteMany({}), Withdrawal.deleteMany({})]);
   await User.updateMany({ casinoApproved: true }, { $set: { coins: budget, coinReset: reset }, $unset: { coinBonusAt: 1 } });
   await Setting.deleteMany({ key: { $in: ["leaderboard"] } });
-  return { history: logs.deletedCount || 0, payouts: payouts.deletedCount || 0 };
+  return games;
 }
 
-module.exports = { hardReset, seasonReset };
+// The season is over: the games as before it, its own coin history gone
+async function seasonRestore(games, reset) {
+  await persist.restoreSnapshots(games);
+  await CoinLog.deleteMany({ era: reset });
+  await Setting.deleteMany({ key: { $in: ["leaderboard"] } });
+}
+
+module.exports = { hardReset, seasonReset, seasonRestore };

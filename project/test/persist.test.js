@@ -191,3 +191,17 @@ test("restart during the draw: the winner is paid once, the round ends and the h
   assert.strictEqual(done.history[0].winner, drawing.draw.winner);
   assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 2000, "paid exactly once");
 });
+
+test("persist: a season saves every game and puts it back afterwards", async () => {
+  // A tiny game of its own
+  const game = { rounds: 7 };
+  persist.register("seasonTest", () => game, (saved) => Object.assign(game, saved));
+  const before = persist.snapshotAll();
+  assert.strictEqual(JSON.parse(before.seasonTest).rounds, 7);
+  // The season: everything anew, then played on
+  await persist.resetAll();
+  game.rounds = 99;
+  // Over: as before the season
+  await persist.restoreSnapshots(before);
+  assert.strictEqual(game.rounds, 7);
+});

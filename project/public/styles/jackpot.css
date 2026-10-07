@@ -7,6 +7,47 @@ body.jackpot-theme {
   --mm-on-accent: #1b1b1b; /* dark text on gold */
 }
 
+/*
+ * A season can have its own accent color (set on the body by the server).
+ * The coins always stay gold: these elements get the gold back.
+ */
+.nav-coins,
+.nav-bonus,
+.nav-payout-balance,
+.nav-payout-amount,
+.lb-coins,
+.lb-champion-coins,
+.jp-total,
+.jp-coins,
+.jp-player-coins,
+.jp-record-amount,
+.jp-bet,
+.bt-case-price,
+.bt-round-price,
+.bt-row-price,
+.bt-pot,
+.bt-hero-pot,
+.bt-final-total,
+.bt-seat-total,
+.bt-item-value,
+.bt-contents-value,
+.bt-top-pot,
+.pk-pot,
+.pk-stack,
+.pk-bet,
+.pk-amount,
+.pk-mychips-value,
+.bj-bet,
+.sl-coins,
+.sl-coin-value,
+.sl-win-text,
+.sl-big-amount,
+.sl-prize-value {
+  --mm-accent: #d4a64a;
+  --mm-accent-rgb: 212, 166, 74;
+  --mm-accent-hover: #bf9238;
+}
+
 .jp-main {
   max-width: 1240px;
   margin: 0 auto;
@@ -2995,9 +3036,10 @@ body.jackpot-theme {
 .nav-board {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.55rem;
   margin-right: 0.45rem;
-  padding: 0.35rem 0.8rem;
+  padding: 0.45rem 1.1rem 0.45rem 0.8rem;
+  font-size: 1.02rem;
   border: 1px solid var(--mm-border);
   border-radius: 999px;
   background: var(--mm-surface-2);
@@ -3020,23 +3062,72 @@ body.jackpot-theme {
 }
 
 .nav-board-icon {
-  font-size: 1.05rem;
+  font-size: 1.45rem;
   line-height: 1;
 }
 
+.nav-board-main {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+
 .nav-board-text {
-  max-width: 160px;
+  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 800;
+}
+
+/* How long the season still runs */
+.nav-board-timer {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.nav-board-timer[hidden] {
+  display: none;
+}
+
+.nav-board-timer.soon {
+  color: var(--mm-danger);
+}
+
+.nav-board.season {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  background: rgba(var(--mm-accent-rgb), 0.1);
+  color: var(--mm-accent);
+  box-shadow: 0 0 18px rgba(var(--mm-accent-rgb), 0.15);
+}
+
+/* Big screens: in the middle of the bar */
+@media (min-width: 992px) {
+  .navbar:has(.nav-board) {
+    position: relative;
+  }
+  .nav-board {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin: 0;
+    transform: translate(-50%, -50%);
+  }
 }
 
 @media (max-width: 767px) {
-  /* Small screens: only the icon */
+  /* Small screens: the icon and the time */
   .nav-board {
-    padding: 0.35rem 0.55rem;
+    padding: 0.3rem 0.6rem;
   }
   .nav-board-text {
     display: none;
+  }
+  .nav-board-timer {
+    font-size: 0.7rem;
   }
 }
 

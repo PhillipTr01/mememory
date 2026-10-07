@@ -105,6 +105,24 @@ function whenRestored() {
   return restored || Promise.resolve();
 }
 
+// A season starts: the state of every game now (to be restored after it)
+function snapshotAll() {
+  return Object.fromEntries([...games].map(([key, game]) => [key, toJSON(game.snapshot())]));
+}
+
+// The season is over: every game as it was before (games not in it: as on the first start)
+async function restoreSnapshots(saved) {
+  for (const [key, game] of games) {
+    const text = saved && typeof saved[key] === "string" ? saved[key] : game.initial;
+    try {
+      game.restore(fromJSON(text));
+    } catch (error) {
+      console.error(`[persist] Could not restore ${key}:`, error);
+    }
+    await save(key).catch((error) => console.error(`[persist] Could not save ${key}:`, error));
+  }
+}
+
 // Tests: start again without anything saved or loaded
 function reset() {
   for (const timer of timers.values()) clearTimeout(timer);
@@ -114,4 +132,4 @@ function reset() {
   restored = null;
 }
 
-module.exports = { register, changed, saveAll, restoreAll, resetAll, expectRestore, whenRestored, reset, toJSON, fromJSON };
+module.exports = { register, changed, saveAll, restoreAll, resetAll, snapshotAll, restoreSnapshots, expectRestore, whenRestored, reset, toJSON, fromJSON };

@@ -49,6 +49,9 @@ test("seasons: planned ahead - at the start every account gets the budget, at th
   // Before the start: nothing changes
   h.setCoins("anna", 1000);
   h.setCoins("ben", 2000);
+  await coins.add("ben", 1, { reason: "before the season" });
+  h.setCoins("ben", 2000);
+  await h.wait(10);
   await seasons.tick(start - 1000);
   assert.strictEqual(h.coinsOf("anna"), 1000);
 
@@ -57,8 +60,12 @@ test("seasons: planned ahead - at the start every account gets the budget, at th
   assert.strictEqual(seasons.running().id, made.season.id);
   assert.deepStrictEqual(["anna", "ben", "cleo"].map(h.coinsOf), [50000, 50000, 50000]);
   assert.strictEqual(h.coinsOf("dora"), 99999);
-  // Like a hard reset: the coin history starts anew (with the season's start coins)
-  assert.ok(h.coinLogs.every((row) => row.reason === "season start"));
+  // Like a hard reset: the coin history shown starts anew (the one from before is kept apart)
+  await h.wait(10);
+  const shown = () => h.coinLogs.filter((row) => Object.entries(coins.eraFilter()).every(([key, c]) => (c && c.$exists === false ? row[key] === undefined : row[key] === c)));
+  assert.ok(shown().length > 0 && shown().every((row) => row.reason === "season start"));
+  // Payouts wait until the season is over
+  assert.match((await require("../game/withdrawals").request("anna", 1000)).error, /paused/);
   assert.strictEqual(coins.base().start, 50000);
   await h.wait(10);
   // The daily bonus of the season (changed while it runs)
@@ -93,8 +100,12 @@ test("seasons: planned ahead - at the start every account gets the budget, at th
   const after = await leaderboard.view("anna", end + 2000);
   assert.ok(after.live && after.season === null);
   assert.strictEqual(after.lastSeason.id, made.season.id);
-  // The coins stay as they were until the next season, the daily bonus is the normal one again
-  assert.strictEqual(h.coinsOf("cleo"), 80000);
+  // The history from before the season is back, the season's own is gone
+  await h.wait(10);
+  assert.deepStrictEqual(shown().map((row) => row.reason), ["before the season"]);
+  // Everybody has the balance from before the season again, the daily bonus is the normal one again
+  assert.deepStrictEqual(["anna", "ben", "cleo"].map(h.coinsOf), [1000, 2000, 3000]);
+  assert.strictEqual((await leaderboard.view("anna", end + 3000)).rows[0].coins, 3000);
   assert.strictEqual(coins.dailyBonus(), 2500);
 });
 
@@ -107,7 +118,12 @@ test("seasons: a running season can't be deleted, it can end early; start and bu
   assert.match((await seasons.remove(made.season.id)).error, /end it first/);
   assert.match((await seasons.update(made.season.id, { ...made.season, budget: 5 })).error, /can't change/);
   assert.ok((await seasons.update(made.season.id, { ...made.season, name: "Quick one" })).season);
+  // The accent color: checked, and on every casino page while the season runs
+  assert.match((await seasons.update(made.season.id, { ...made.season, name: "Quick one", color: "purple" })).error, /color/);
+  assert.ok((await seasons.update(made.season.id, { ...made.season, name: "Quick one", color: "#9D84C2" })).season);
+  assert.match(seasons.accentStyle(), /--mm-accent: #9d84c2; --mm-accent-rgb: 157, 132, 194;/);
   const over = await seasons.endNow(made.season.id);
+  assert.strictEqual(seasons.accentStyle(), "", "the gold again after the season");
   assert.strictEqual(over.season.status, "ended");
   assert.ok((await seasons.remove(made.season.id)).ok, "deleted afterwards");
   seasons.reset();

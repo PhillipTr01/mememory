@@ -7,6 +7,8 @@ const schema = mongoose.Schema({
     reason: {type: String, required: true}, // e.g. "jackpot bet", "poker cash-out", "admin"
     note: {type: String, maxLength: 300},
     at: {type: Date, default: Date.now, index: true},
+    // Written during a season: its reset id (the history from before the season comes back after it)
+    era: {type: String, index: true},
 });
 
 module.exports = mongoose.model('coinlog', schema, 'coinlog');

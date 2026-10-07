@@ -3,7 +3,7 @@ const User = require("../models/User");
 const Setting = require("../models/Setting");
 const coins = require("./coins");
 const config = require("./config");
-const { seasonReset } = require("./hard_reset");
+const { seasonReset, seasonRestore } = require("./hard_reset");
 
 /*
  * Seasons (admin panel): planned ahead from a start to an end. When a season
@@ -11,13 +11,16 @@ const { seasonReset } = require("./hard_reset");
  * history, payouts) - everybody who is in stays in and gets the season's
  * start budget; the leaderboard shows the season (updated as often as
  * the season says). When it ends, the final places are kept - with the
- * prizes, if the season has any - and shown on the winner page.
+ * prizes, if the season has any - and shown on the winner page; everybody
+ * gets the balance from before the season back - and the games and the coin
+ * history are as they were before it.
  *
  * Without a running season the leaderboard is the normal one (live).
  *
  * changes: "started" (season), "ended" (season)
  */
 const KEY = "seasons";
+const BACKUP = "seasonGames:"; // + id: the games from before the season
 // How often the leaderboard of a season is updated (minutes; 0: all the time, 1440: once a day at midnight)
 const INTERVALS = [0, 5, 15, 60, 360, 1440];
 const MAX_PRIZES = 20;
@@ -47,6 +50,7 @@ function publicSeason(season) {
     budget: season.budget,
     dailyBonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : null,
     every: season.every,
+    color: season.color || null,
     prizesOn: season.prizesOn,
     prizes: season.prizes,
     status: status(season),
@@ -104,6 +108,9 @@ function check(input, current) {
   // (not given: the daily bonus of the settings)
   const dailyBonus = input.dailyBonus == null || input.dailyBonus === "" ? config.DAILY_BONUS : Number(input.dailyBonus);
   if (!Number.isInteger(dailyBonus) || dailyBonus < 0 || dailyBonus > 10000000) return { error: "A daily bonus from 0 to 10,000,000." };
+  // The accent color of the season (null: the gold of the casino)
+  const color = input.color == null || input.color === "" ? null : String(input.color).toLowerCase();
+  if (color != null && !/^#[0-9a-f]{6}$/.test(color)) return { error: "A color like #d4a64a." };
   const every = Number(input.every);
   if (!INTERVALS.includes(every)) return { error: "Unknown update interval." };
   const prizesOn = input.prizesOn === true;
@@ -131,7 +138,7 @@ function check(input, current) {
   // Never two seasons at the same time
   const other = state.seasons.find((season) => season !== current && !season.ended && season.start < end && start < season.end);
   if (other) return { error: `It overlaps with "${other.name}".` };
-  return { season: { name: name, icon: icon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, every: every, prizesOn: prizesOn, prizes: clean } };
+  return { season: { name: name, icon: icon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, color: color, every: every, prizesOn: prizesOn, prizes: clean } };
 }
 
 async function create(input) {
@@ -174,13 +181,19 @@ async function remove(id) {
 
 // Every account in the casino starts with the budget, the games start anew
 async function startSeason(season, now) {
+  // The balances before the season: everybody gets them back when it is over
+  const before = await User.find({ casinoApproved: true }).select("username coins coinReset").lean();
+  season.saved = Object.fromEntries(before.map((user) => [user.username, coins.balanceOf(user)]));
+  season.baseBefore = state.base;
   season.started = true;
   season.startedAt = now;
   state.base = { reset: "season-" + season.id, start: season.budget, since: now, active: true, bonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : null };
   coins.setBase(state.base);
   await save();
   const players = await User.find({ casinoApproved: true }).select("username").lean();
-  await seasonReset(season.budget, state.base.reset);
+  const games = await seasonReset(season.budget, state.base.reset);
+  // The games from before the season (restored when it is over)
+  await Setting.updateOne({ key: BACKUP + season.id }, { $set: { value: JSON.stringify(games) } }, { upsert: true });
   for (const player of players) coins.log(player.username, season.budget, "season start", season.name);
   changes.emit("started", publicSeason(season));
   for (const player of players) coins.notify(player.username);
@@ -193,14 +206,27 @@ async function endSeason(season, now) {
   season.final = { at: now, rows: rows.map((row) => (prizes.has(row.rank) ? { ...row, prize: prizes.get(row.rank) } : row)) };
   season.ended = true;
   season.endedAt = now;
-  // The coins stay until the next season - the daily bonus is the normal one again
-  if (state.base) {
-    state.base.bonus = null;
-    state.base.active = false;
-    coins.setBase(state.base);
-  }
+  // Everything as before the season: the balances (who came during the season gets the normal
+  // start coins), the daily bonus, the games, the coin history
+  const seasonEra = state.base ? state.base.reset : null;
+  state.base = season.baseBefore ? { ...season.baseBefore, active: false, bonus: null } : null;
+  coins.setBase(state.base);
   await save();
+  const saved = season.saved || {};
+  for (const [username, amount] of Object.entries(saved)) {
+    await User.updateOne({ username: username }, { $set: { coins: amount, coinReset: coins.base().reset } });
+  }
+  const backup = await Setting.findOne({ key: BACKUP + season.id }).lean();
+  let games = null;
+  try {
+    games = backup && typeof backup.value === "string" ? JSON.parse(backup.value) : null;
+  } catch (error) {
+    console.error("[seasons] Could not read the games from before the season:", error);
+  }
+  if (seasonEra) await seasonRestore(games, seasonEra);
+  await Setting.deleteMany({ key: { $in: [BACKUP + season.id] } });
   changes.emit("ended", publicSeason(season));
+  for (const username of Object.keys(saved)) coins.notify(username);
 }
 
 // Everybody in the casino by coins: [{rank, username, coins}]
@@ -236,6 +262,16 @@ function tick(now = Date.now()) {
   return ticking;
 }
 
+// Coins that belong to the balance from before the running season (a payout from before it was
+// rejected): they come with that balance after the season. false: no season runs.
+async function addToSaved(username, amount) {
+  const season = running();
+  if (season == null || season.saved == null) return false;
+  season.saved[username] = (season.saved[username] || 0) + amount;
+  await save();
+  return true;
+}
+
 // The admin ends the running season right now
 async function endNow(id, now = Date.now()) {
   const season = byId(id);
@@ -264,4 +300,14 @@ function reset() {
   loaded = true;
 }
 
-module.exports = { INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+// The running season's accent color for the casino pages: a <style> (or "")
+function accentStyle() {
+  const season = running();
+  const color = season && season.color;
+  if (!color || !/^#[0-9a-f]{6}$/.test(color)) return "";
+  const rgb = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
+  const hover = "#" + rgb.map((v) => Math.round(v * 0.86).toString(16).padStart(2, "0")).join("");
+  return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
+}
+
+module.exports = { accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };

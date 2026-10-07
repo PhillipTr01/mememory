@@ -149,7 +149,7 @@ module.exports = function () {
         waiting: (await requests()).length,
         online: casinoChat.online().names,
         games: live.snapshot(),
-        activity: (await CoinLog.find({}).sort({ at: -1 }).limit(8).lean()).map((row) => ({ username: row.username, amount: row.amount, reason: row.reason, at: row.at })),
+        activity: (await CoinLog.find(coins.eraFilter()).sort({ at: -1 }).limit(8).lean()).map((row) => ({ username: row.username, amount: row.amount, reason: row.reason, at: row.at })),
       });
     }),
   );
@@ -265,7 +265,8 @@ module.exports = function () {
     "/api/history",
     admin,
     asyncHandler(async (req, res) => {
-      const filter = {};
+      // (in a season its history, otherwise the one outside of seasons)
+      const filter = coins.eraFilter();
       if (req.query.username) filter.username = String(req.query.username);
       if (req.query.reason) filter.reason = String(req.query.reason);
       const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 200));
