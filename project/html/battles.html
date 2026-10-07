@@ -157,13 +157,14 @@
                                 <!--- Who wins: the most, the least - or random (one of the modes, picked at the end) --->
                                 <div class="bt-setting">
                                     <span class="bt-setting-label">Mode</span>
-                                    <div id="btModes" class="bt-pick" role="radiogroup" aria-label="Mode">
+                                    <div id="btModes" class="bt-pick bt-modes" role="radiogroup" aria-label="Mode">
                                         <button type="button" class="active" data-mode="classic" title="Classic: the highest total wins"><span class="bt-pick-icon">👑</span><span class="bt-pick-text"><b>Classic</b><small>highest wins</small></span></button>
                                         <button type="button" data-mode="crazy" title="Crazy: the lowest total wins"><span class="bt-pick-icon">🤡</span><span class="bt-pick-text"><b>Crazy</b><small>lowest wins</small></span></button>
                                         <button type="button" data-mode="jackpot" title="Jackpot: one player gets everything - the more your items are worth, the bigger your chance"><span class="bt-pick-icon">🎰</span><span class="bt-pick-text"><b>Jackpot</b><small>worth = your chance</small></span></button>
                                         <button type="button" data-mode="bestof" title="Best of: the best item wins the round - the most rounds win it all"><span class="bt-pick-icon">🏅</span><span class="bt-pick-text"><b>Best of</b><small>most rounds won</small></span></button>
                                         <button type="button" data-mode="random" title="Random: one of the other modes, picked at random at the very end"><span class="bt-pick-icon">❓</span><span class="bt-pick-text"><b>Random</b><small>a mode is picked at the end</small></span></button>
                                     </div>
+                                    <span id="btModeHint" class="bt-mode-hint">Highest total wins</span>
                                 </div>
                                 <button type="button" id="btCreate" class="mm-btn mm-btn-primary" disabled>
                                     <i class="bi bi-plus-circle"></i> <span id="btCreateLabel">Create</span>

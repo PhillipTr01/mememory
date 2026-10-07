@@ -1579,3 +1579,95 @@ button.bt-strip-case:hover {
 .bt-seat.leading .bt-seat-extra {
   color: var(--mm-accent);
 }
+
+/* Jackpot: the roulette of the players - a window with a pointer in the middle */
+.bt-draw-window {
+  position: relative;
+  width: min(620px, 92%);
+  height: 78px;
+  overflow: hidden;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.6);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+  box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.55);
+}
+
+.bt-draw-track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+
+.bt-draw-slot {
+  flex: 0 0 66px;
+  display: grid;
+  place-items: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--seat) 30%, transparent), color-mix(in srgb, var(--seat) 12%, transparent));
+}
+
+.bt-draw-slot .mm-avatar {
+  box-shadow: 0 0 0 2px var(--seat);
+}
+
+.bt-draw-pointer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 3px;
+  background: var(--mm-accent);
+  box-shadow: 0 0 12px var(--mm-accent);
+  transform: translateX(-50%);
+}
+
+.bt-draw-pointer::before,
+.bt-draw-pointer::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  border: 7px solid transparent;
+  transform: translateX(-50%);
+}
+
+.bt-draw-pointer::before {
+  top: 0;
+  border-top-color: var(--mm-accent);
+}
+
+.bt-draw-pointer::after {
+  bottom: 0;
+  border-bottom-color: var(--mm-accent);
+}
+
+/* The modes: small - icon and name, all as wide as each other; what the picked one means below */
+.bt-modes {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+
+.bt-modes button {
+  justify-content: center;
+  padding: 0.4rem 0.7rem;
+}
+
+.bt-modes .bt-pick-text small {
+  display: none;
+}
+
+.bt-modes .bt-pick-icon {
+  font-size: 1.1rem;
+}
+
+.bt-mode-hint {
+  display: block;
+  height: 1.1rem;
+  margin-top: 0.3rem;
+  overflow: hidden;
+  color: var(--mm-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

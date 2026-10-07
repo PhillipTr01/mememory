@@ -273,11 +273,20 @@ module.exports = function (io) {
     battle.nextAt = null;
     battle.doneAt = Date.now();
     // Random: the pages show which mode it was first - then the coins come
-    if (modeOf(battle) === "random") setTimeout(() => payWinner(battle), config.BATTLE_MODE_REVEAL).unref();
-    else payWinner(battle);
-    const winners = winnersOf(battle).map((seat) => battle.seats[seat]);
-    lobby.history.unshift({ id: battle.id, winner: winners[0].name, winners: winners.map((w) => w.name), bot: winners.every((w) => w.bot), total: battle.payout, price: battle.price });
-    lobby.history.length = Math.min(lobby.history.length, config.BATTLE_HISTORY);
+    // (jackpot: the roulette rolls on the pages first)
+    // (random -> jackpot: the roulette right after the reveal - without its own pause of 3 s)
+    const random = modeOf(battle) === "random";
+    const wait = (random ? config.BATTLE_MODE_REVEAL : 0) + (ruleOf(battle) === "jackpot" ? Math.max(0, config.BATTLE_JACKPOT_DRAW - (random ? 3000 : 0)) : 0);
+    // The last battles (with the winner) only when the pages showed it - not during a reveal
+    const done = () => {
+      payWinner(battle);
+      const winners = winnersOf(battle).map((seat) => battle.seats[seat]);
+      lobby.history.unshift({ id: battle.id, winner: winners[0].name, winners: winners.map((w) => w.name), bot: winners.every((w) => w.bot), total: battle.payout, price: battle.price });
+      lobby.history.length = Math.min(lobby.history.length, config.BATTLE_HISTORY);
+      if (wait > 0) emitList();
+    };
+    if (wait > 0) setTimeout(done, wait).unref();
+    else done();
 
     emitList();
     remove(battle, config.BATTLE_KEEP);

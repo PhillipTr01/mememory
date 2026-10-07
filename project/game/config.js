@@ -119,7 +119,8 @@ module.exports = {
   BATTLE_MAX_OPEN: 3, // waiting battles per creator
   BATTLE_CASES_OFF: [], // ids of cases the admin turned off (not in the shop, no new battles with them)
   BATTLE_MAX_CASES: 50, // cases (rounds) per battle
-  BATTLE_MODE_REVEAL: 8800, // random mode: the last case a moment, then which mode it was - then the winner is paid
+  BATTLE_JACKPOT_DRAW: 15000, // jackpot mode: 3 s, the roulette of the players (10 s), 2 s - then the winner is paid
+  BATTLE_MODE_REVEAL: 11500, // random mode: the last case a moment, then which mode it was - then the winner is paid
   BATTLE_KEEP: 60 * 1000, // a finished battle stays in the list this long
   BATTLE_EXPIRE: 15 * 60 * 1000, // nobody joined: cancelled, coins back
   BATTLE_HISTORY: 10,

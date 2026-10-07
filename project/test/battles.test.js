@@ -6,7 +6,7 @@ const cases = require("../game/cases");
 const coins = require("../game/coins");
 
 // Short timings for the tests
-Object.assign(config, { BATTLE_START: 50, BATTLE_ROUND: 50, BATTLE_KEEP: 5000, BATTLE_MODE_REVEAL: 20 });
+Object.assign(config, { BATTLE_START: 50, BATTLE_ROUND: 50, BATTLE_KEEP: 5000, BATTLE_MODE_REVEAL: 20, BATTLE_JACKPOT_DRAW: 20 });
 
 /* ---------- Cases ---------- */
 
