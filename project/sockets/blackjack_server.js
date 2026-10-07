@@ -113,6 +113,8 @@ module.exports = function (io) {
         current: table.current,
         turnIn: table.turnAt != null ? Math.max(0, table.turnAt - Date.now()) : null,
         startIn: table.startAt != null ? Math.max(0, table.startAt - Date.now()) : null,
+        // The dealer checks the hidden card (and has a blackjack)
+        peeking: table.peeking === true,
         history: table.history,
         viewers: pages().length,
         rules: { sideShare: config.BJ_SIDE_SHARE, minBet: minBet(), maxBet: maxBet(), mySeats: config.BJ_MY_SEATS, turn: config.BJ_TURN, betting: config.BJ_BETTING, sit: config.BJ_SIT, decks: bj.DECKS },
@@ -239,10 +241,14 @@ module.exports = function (io) {
         seat.sideResults = bj.SIDE_BETS.filter((type) => seat.side[type] > 0).map((type) => bj.settleSide(type, seat.side[type], seat.hands[0].cards, table.dealer.cards[0]));
       });
 
-      // The dealer looks at the second card when the first is an ace or worth 10
+      // The dealer looks at the second card when the first is an ace or worth 10.
+      // A blackjack: first the cards are seen (and the dealer checking), then the card is turned, then the result.
       if (bj.cardValue(table.dealer.cards[0]) >= 10 && bj.isBlackjack(table.dealer.cards, false)) {
         seats.forEach((i) => table.seats[i].hands.forEach((hand) => (hand.done = true)));
-        return finishRound();
+        table.peeking = true;
+        emitState();
+        table.timer = setTimeout(revealBlackjack, config.BJ_PEEK);
+        return;
       }
       // A blackjack is done right away
       seats.forEach((i) => {
@@ -250,6 +256,15 @@ module.exports = function (io) {
         if (bj.isBlackjack(hand.cards, false)) hand.done = true;
       });
       nextTurn();
+    }
+
+    // The dealer's blackjack: the card is turned, a moment later the result
+    function revealBlackjack() {
+      table.peeking = false;
+      table.phase = "dealer";
+      table.dealer.hidden = false;
+      emitState();
+      table.timer = setTimeout(finishRound, config.BJ_REVEAL);
     }
 
     // The next hand that still has to play (seat by seat, hand by hand)
@@ -337,6 +352,7 @@ module.exports = function (io) {
       table.phase = "betting";
       table.dealer = { cards: [], hidden: true };
       table.current = null;
+      table.peeking = false;
       table.seats.forEach((seat, i) => {
         if (seat == null) return;
         seat.bet = 0;
@@ -622,6 +638,7 @@ module.exports = function (io) {
         startAt: table.startAt,
         history: table.history,
         lastBets: table.lastBets,
+        peeking: table.peeking === true,
       };
     }
 
@@ -658,6 +675,8 @@ module.exports = function (io) {
           table.timer = setTimeout(deal, after);
         }
         table.seats.forEach((seat, i) => seat && seat.bet === 0 && seat.standAt != null && startStandTimer(i, left(seat.standAt)));
+      } else if (table.phase === "playing" && table.peeking) {
+        table.timer = setTimeout(revealBlackjack, left(now + config.BJ_PEEK));
       } else if (table.phase === "playing") {
         if (table.current) armTurn(table.current.seat, table.current.hand, left(table.turnAt));
         else nextTurn();

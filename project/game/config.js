@@ -178,6 +178,8 @@ module.exports = {
   BJ_SIT: 20000, // a seat without a bet: the player stands up after this
   BJ_TURN: 15000, // time for a decision, then the hand stands
   BJ_STEP: 700, // dealer cards, one after the other
+  BJ_PEEK: 3800, // the dealer has a blackjack: the deal is seen, the dealer checks the card ...
+  BJ_REVEAL: 1500, // ... turns it - and then the result
   BJ_RESULT: 5000, // the result is shown this long
   BJ_HISTORY: 10,
 };

@@ -225,6 +225,11 @@
 }
 
 /* Bet and action bars under the table */
+.bj-main {
+  /* The colour of the bars under the table and of their bumps (solid, so they are one shape) */
+  --bar-bg: color-mix(in srgb, var(--mm-accent) 6%, var(--mm-surface));
+}
+
 .bj-bar {
   /* A bit away from the table (the seats reach down to its edge) */
   margin-top: 1.25rem;
@@ -235,7 +240,7 @@
   padding: 0.75rem;
   border: 1px solid var(--mm-accent);
   border-radius: var(--mm-radius);
-  background: rgba(var(--mm-accent-rgb), 0.06);
+  background: var(--bar-bg);
 }
 
 .bj-bar[hidden] {
@@ -664,8 +669,9 @@
   box-shadow: 0 0 0 3px var(--mm-accent), 0 6px 14px rgba(0, 0, 0, 0.5);
 }
 
-/* Same bet on the left, the chips in the middle (arrows to switch), leave on the right */
+/* The chips in the middle (arrows to switch), leave on the right, same bet as a tab on top */
 .bj-betbar {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -675,32 +681,9 @@
   grid-column: 2;
 }
 
-.bj-betbar .bj-icon-btn.rebet {
-  grid-column: 1;
-  justify-self: start;
-}
-
 .bj-betbar .bj-icon-btn.leave {
   grid-column: 3;
   justify-self: end;
-}
-
-/* Same bet: gold, it is the quick way */
-.bj-icon-btn.rebet {
-  width: 40px;
-  height: 40px;
-  border-color: var(--mm-accent);
-  background: var(--mm-accent);
-  color: #1a1305;
-}
-
-.bj-icon-btn.rebet:hover:not(:disabled) {
-  filter: brightness(1.08);
-}
-
-.bj-icon-btn.rebet:disabled {
-  opacity: 0.45;
-  cursor: default;
 }
 
 .bj-betbar .bj-icon-btn {
@@ -872,16 +855,6 @@
   font-weight: 700;
 }
 
-.bj-side-win {
-  align-self: center;
-  padding: 0 0.45rem;
-  border-radius: 999px;
-  background: rgba(var(--mm-accent-rgb), 0.9);
-  color: #1a1305;
-  font-size: 0.66rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
 
 
 .bj-bet:empty {
@@ -901,5 +874,271 @@
   .bj-field.main {
     width: 44px;
     height: 44px;
+  }
+}
+
+/* ---------- Same bet: a tab on top of the bar, over the chips ---------- */
+/* A bump on top of a bar: grows out of it (same colour, soft shoulders) */
+.bj-bump {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  height: 40px;
+  padding: 0 1.1rem;
+  border: 1px solid var(--mm-accent);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  background: var(--bar-bg);
+  color: var(--mm-text);
+  font-size: 0.85rem;
+  font-weight: 800;
+  white-space: nowrap;
+  /* (bottom: 100% is the inside of the bar's border: the bump covers that line - one shape with the bar) */
+  transform: translateX(-50%);
+}
+
+.bj-bump::before,
+.bj-bump::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  clip-path: inset(0);
+  pointer-events: none;
+}
+
+.bj-bump::before {
+  left: -14px;
+  border-right: 1px solid var(--mm-accent);
+  border-bottom: 1px solid var(--mm-accent);
+  border-bottom-right-radius: 14px;
+  box-shadow: 7px 7px 0 7px var(--bar-bg);
+}
+
+.bj-bump::after {
+  right: -14px;
+  border-left: 1px solid var(--mm-accent);
+  border-bottom: 1px solid var(--mm-accent);
+  border-bottom-left-radius: 14px;
+  box-shadow: -7px 7px 0 7px var(--bar-bg);
+}
+
+.bj-bump[hidden] {
+  display: none;
+}
+
+.bj-bar:has(.bj-bump:not([hidden])) {
+  margin-top: 3rem;
+}
+
+/* Same bet: the arrow in a gold coin, the amount in gold */
+.bj-rebet-tab {
+  padding-left: 0.45rem;
+  cursor: pointer;
+}
+
+.bj-rebet-tab svg {
+  width: 28px;
+  height: 28px;
+  padding: 6px;
+  border-radius: 50%;
+  background: var(--mm-accent);
+  color: #1a1305;
+  transition: transform 0.4s ease;
+}
+
+.bj-rebet-tab:hover:not(:disabled) svg {
+  transform: rotate(-180deg);
+}
+
+.bj-rebet-amount {
+  padding-left: 0.55rem;
+  border-left: 1px solid rgba(var(--mm-accent-rgb), 0.35);
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.bj-rebet-tab:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ---------- Playing: the hand on top, the moves in the middle ---------- */
+.bj-actionbar {
+  position: relative;
+  justify-content: center;
+  padding: 0.85rem;
+}
+
+.bj-turn-info {
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+  height: 44px;
+  min-width: 170px;
+  color: var(--mm-accent);
+}
+
+/* The time for the move: a thin line in the bump */
+.bj-turn-info .bj-turn-bar {
+  flex-basis: auto;
+  width: 100%;
+  height: 3px;
+}
+
+.bj-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.bj-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 44px;
+  padding: 0 1.2rem 0 0.45rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.bj-act-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--mm-surface-3);
+  color: var(--mm-accent);
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+.bj-act:hover:not(:disabled) {
+  border-color: var(--mm-accent);
+}
+
+.bj-act:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.bj-act.hit {
+  border-color: var(--mm-accent);
+  background: var(--mm-accent);
+  color: #1a1305;
+}
+
+.bj-act.hit .bj-act-icon {
+  background: rgba(0, 0, 0, 0.18);
+  color: #1a1305;
+}
+
+.bj-act:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ---------- The side bets after the deal: next to the bet ---------- */
+.bj-bet-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.3rem;
+  width: 100%;
+}
+
+.bj-side-slot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.bj-side-slot:last-child {
+  justify-content: flex-start;
+}
+
+.bj-side-chip {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  font-size: 0.55rem;
+}
+
+/* A won side bet: a small gold chip with the win */
+.bj-side-chip.won {
+  min-width: 26px;
+  width: auto;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: radial-gradient(circle at 40% 35%, #f5d76e, #b8860b);
+  box-shadow: 0 0 10px rgba(var(--mm-accent-rgb), 0.55);
+  color: #1a1305;
+  font-weight: 800;
+  cursor: default;
+}
+
+/* ---------- The dealer's blackjack: checked, turned, said ---------- */
+.bj-dealer {
+  position: relative;
+}
+
+/* The hidden card lifts at the corner: the dealer looks */
+.pk-card.back.peek {
+  transform-origin: 50% 100%;
+  animation: bj-peek 1.4s ease-in-out 2;
+}
+
+.pk-card.back.peek.deal {
+  animation: pk-deal 0.35s ease-out both, bj-peek 1.4s ease-in-out 2;
+}
+
+@keyframes bj-peek {
+  0%,
+  100% {
+    transform: none;
+  }
+  35%,
+  65% {
+    transform: perspective(300px) rotateX(28deg) translateY(-4px);
+    box-shadow: 0 10px 14px rgba(0, 0, 0, 0.45);
+  }
+}
+
+.bj-dealer-banner {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  z-index: 3;
+  padding: 0.35rem 1.1rem;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f5d76e, #b8860b);
+  color: #1a1305;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, -50%);
+  animation: bj-banner-in 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
+  pointer-events: none;
+}
+
+@keyframes bj-banner-in {
+  from {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
   }
 }

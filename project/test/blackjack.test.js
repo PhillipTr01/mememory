@@ -5,7 +5,7 @@ const config = require("../game/config");
 const bj = require("../game/blackjack");
 
 // Short timings for the tests
-Object.assign(config, { BJ_BETTING: 80, BJ_STEP: 10, BJ_RESULT: 80, BJ_TURN: 3000 });
+Object.assign(config, { BJ_BETTING: 80, BJ_STEP: 10, BJ_RESULT: 80, BJ_TURN: 3000, BJ_PEEK: 20, BJ_REVEAL: 10 });
 // The classic table (the default one) with wide limits for the tests
 Object.assign(config, { BJ_CLASSIC_MIN: 10, BJ_CLASSIC_MAX: 5000 });
 

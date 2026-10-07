@@ -121,8 +121,8 @@
                     <!--- Betting: on a free seat or an own one --->
                     <div id="bjBetBar" class="bj-bar bj-betbar" hidden>
                         <!--- Like at the table: pick a chip, then click a bet field on your seat --->
-                        <!--- Left: the bets of the last round again (one click) --->
-                        <button type="button" id="bjRebetButton" class="bj-icon-btn rebet" aria-label="Same bet" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+                        <!--- On top of the bar (a tab over the chips): the bets of the last round again --->
+                        <button type="button" id="bjRebetButton" class="bj-bump bj-rebet-tab" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg><span>Same bet</span><span id="bjRebetText" class="bj-rebet-amount"></span></button>
                         <div class="bj-chip-picker">
                             <button type="button" class="bj-chip-arrow" data-step="-1" aria-label="Smaller chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
                             <div class="bj-chips" role="radiogroup" aria-label="Chip">
@@ -140,15 +140,19 @@
                     </div>
 
                     <!--- Playing: the own hand --->
-                    <div id="bjActions" class="bj-bar pk-actions" hidden>
-                        <div class="bj-turn-bar"><span id="bjTurnFill"></span></div>
-                        <span id="bjActionLabel" class="bj-bar-label"></span>
-                        <div class="pk-action-buttons">
-                            <button type="button" class="mm-btn mm-btn-primary" data-action="hit">Hit</button>
-                            <button type="button" class="mm-btn" data-action="stand">Stand</button>
-                            <button type="button" class="mm-btn" data-action="double">Double</button>
-                            <button type="button" class="mm-btn" data-action="split">Split</button>
+                    <div id="bjActions" class="bj-bar bj-actionbar" hidden>
+                        <!--- On top (a bump like "same bet"): which hand, its value, the time for the move --->
+                        <div class="bj-bump bj-turn-info">
+                            <span id="bjActionLabel"></span>
+                            <span class="bj-turn-bar"><span id="bjTurnFill"></span></span>
                         </div>
+                        <div class="bj-action-buttons">
+                            <button type="button" class="bj-act hit" data-action="hit"><span class="bj-act-icon" aria-hidden="true">+</span>Hit</button>
+                            <button type="button" class="bj-act" data-action="stand"><span class="bj-act-icon" aria-hidden="true">−</span>Stand</button>
+                            <button type="button" class="bj-act" data-action="double"><span class="bj-act-icon" aria-hidden="true">×2</span>Double</button>
+                            <button type="button" class="bj-act" data-action="split"><span class="bj-act-icon" aria-hidden="true">⇆</span>Split</button>
+                        </div>
+                    </div>
                     </div>
                     </div>
                 </section>
