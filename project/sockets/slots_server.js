@@ -47,7 +47,7 @@ module.exports = function (io) {
     const gifts = grid[0].includes("bonus") && grid[2].includes("bonus");
     if (gifts) return config.SLOTS_SWEAT * share;
     // (the coin sweat can start a reel earlier: then two reels sweat)
-    return stops ? slots.coinSweatReels(grid, stops) * config.SLOTS_SWEAT * share : 0;
+    return stops ? slots.sweatShare(slots.coinSweatReels(grid, stops)) * config.SLOTS_SWEAT * share : 0;
   }
 
   // The show from free spin (or respin of the coin game) `shown` on (after `intro`: the wheels,

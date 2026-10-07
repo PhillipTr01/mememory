@@ -67,6 +67,10 @@ function serialize(gameID, room) {
     turnStartsIn: room.turnEndsAt != null ? Math.max(0, (room.turnStartsAt || 0) - Date.now()) : 0,
     pairsLeft: (CARD_COUNT - room.foundMatches.length) / 2,
     turnPowerUsed: room.turnPowerUsed === true,
+    // Power-ups only before the first card of a turn
+    turnBegun: room.turnBegun === true,
+    // Power-up Steal: somebody can steal the second guess right now (ms left)
+    stealIn: room.stealWindow && room.stealWindow.until > Date.now() ? room.stealWindow.until - Date.now() : null,
     rejoinSeconds: Math.round(config.REJOIN_GRACE_PLAYING / 1000),
     openedCount: room.openedCards.length,
     checkingCards: room.checkingCards === true,

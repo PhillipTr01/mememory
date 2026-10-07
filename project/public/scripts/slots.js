@@ -235,7 +235,8 @@ function animateReels(grid, time, sweatTime, stopped, strips, stops) {
   var kind = hasTwoGifts(grid) ? "gifts" : coinReels ? "coins" : null;
   var sweat = sweatTime > 0 && kind ? sweatTime : 0;
   var from = kind == "coins" ? 5 - coinReels : 4;
-  var extra = (i) => (sweat && i >= from ? sweat * (i - from + 1) : 0);
+  // (the first sweating reel the sweat, every further one half of it more - the same as the server)
+  var extra = (i) => (sweat && i >= from ? sweat * (1 + 0.5 * (i - from)) : 0);
   return Promise.all(
     reels.map((reel, i) => {
       var strip = strips[i];
@@ -299,13 +300,16 @@ function hasTwoGifts(grid) {
 
 // The coin game still possible (the same rule as the server, slots.coinSweat / coinSweatReels):
 // 4 🪙 on the first four reels - or 3 (one on reel 4) in 2 of 5 spins (by the stops).
-// How many reels sweat: 2 when the first three reels show 3 🪙 already, otherwise 1
+// How many reels sweat: from the reel after the one where 3 🪙 are in sight
 function coinSweatReels(grid, stops) {
   var trigger = setup.coins.trigger;
   var coins = grid.slice(0, 4).flat().filter((id) => id == "coin").length;
   var sweat = coins == trigger - 1 || (coins == trigger - 2 && grid[3].includes("coin") && stops.reduce((sum, stop) => sum + stop, 0) % 5 < 2);
   if (!sweat) return 0;
-  return grid.slice(0, 3).flat().filter((id) => id == "coin").length >= trigger - 2 ? 2 : 1;
+  for (var reel = 2; reel <= 4; reel++) {
+    if (grid.slice(0, reel).flat().filter((id) => id == "coin").length >= trigger - 2) return 5 - reel;
+  }
+  return 1;
 }
 
 async function playSpin(result) {

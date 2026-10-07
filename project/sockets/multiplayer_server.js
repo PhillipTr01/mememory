@@ -336,13 +336,19 @@ module.exports = function (io) {
           !room.foundMatches.includes(id)
         ) {
           if (room.closingCard === id) return;
-          if (room.openedCards.length < openLimit(room) && !room.checkingCards && isPlayersTurn(room, username)) {
+          // (the second card waits while somebody could steal the guess)
+          const stealing = room.stealWindow && room.stealWindow.until > Date.now();
+          if (room.openedCards.length < openLimit(room) && !room.checkingCards && !stealing && isPlayersTurn(room, username)) {
             rooms.touch(room);
             room.openedCards.push(id);
             room.cardCounter[id]++;
+            room.turnBegun = true;
             multiPlayer.to(socket.gameID).emit("turnCard", cardData(room, id));
 
             checkGame(socket, room);
+            // The first card of a turn: who holds Steal has a moment to take the second guess
+            // (everybody sees the turn has begun: no more power-ups for it)
+            if (room.openedCards.length === 1 && !room.checkingCards && !openStealWindow(socket.gameID, room)) emitRoomState(socket.gameID, room);
           }
         } else {
           socket.emit("zoomImage", id);
@@ -378,6 +384,16 @@ module.exports = function (io) {
           }
           emitRoomState(socket.gameID, room);
         }
+      }),
+    );
+
+    // Power-up Steal: the second card of somebody else's turn
+    socket.on(
+      "snatch",
+      safe("snatch", (id) => {
+        const room = rooms.get(socket.gameID, "multiplayer");
+        if (room == null || !isValidCardId(id)) return;
+        snatch(socket, room, id);
       }),
     );
 
@@ -684,10 +700,16 @@ module.exports = function (io) {
     const player = room.players[room.turn];
     if (player != null && room.status === STATUS.PLAYING) {
       if (room.turnPairs === 0) {
-        player.unlucky++;
+        player.unlucky = Math.min(powerups.UNLUCKY_TURNS, player.unlucky + 1);
         if (player.unlucky >= powerups.UNLUCKY_TURNS) {
-          player.unlucky = 0;
-          grantPowerup(gameID, room, player, "had bad luck and gets");
+          // A full hand: the bad-luck power-up waits until a slot is free (and the next turn goes wrong too)
+          if (player.powerups.length < powerups.HAND_LIMIT) {
+            player.unlucky = 0;
+            grantPowerup(gameID, room, player, "had bad luck and gets");
+          } else if (!player.unluckyWaiting) {
+            player.unluckyWaiting = true;
+            systemMessage(gameID, room, `${player.name} had bad luck - the power-up comes when a slot is free.`, "info");
+          }
         }
       } else {
         player.unlucky = 0;
@@ -695,6 +717,7 @@ module.exports = function (io) {
       player.fog = false;
       player.armed = noneArmed();
     }
+    if (player != null && player.unlucky < powerups.UNLUCKY_TURNS) player.unluckyWaiting = false;
     room.turnPowerUsed = false;
     room.turnPairs = 0;
   }
@@ -730,6 +753,9 @@ module.exports = function (io) {
       !isPlayersTurn(room, username) ||
       room.turnPowerUsed ||
       room.checkingCards ||
+      // Only before the first card of the turn
+      room.turnBegun ||
+      info.reactive ||
       !player.powerups.includes(id)
     ) {
       return;
@@ -753,7 +779,7 @@ module.exports = function (io) {
     if (["shuffle", "swap", "rotate", "rowShift"].includes(id) && room.openedCards.length > 0) return;
     const rowPerm = id === "rowShift" ? powerups.rowShiftPermutation(room, targets[0]) : null;
     if (id === "rowShift" && rowPerm == null) return; // nothing would move
-    if (id === "secondChance" && (room.openedCards.length > 1 || player.armed.secondChance)) return;
+    if (id === "secondChance" && player.armed.secondChance) return;
 
     player.powerups.splice(player.powerups.indexOf(id), 1);
     room.turnPowerUsed = true;
@@ -924,9 +950,27 @@ module.exports = function (io) {
         config.SPEED_MISS_DELAY,
       );
     } else {
-      socket.emit("activateEndTurn");
-      // Everybody sees that two wrong cards are open (power-up mode: End turn in the bar)
+      // Everybody sees the two wrong cards a moment - then the turn ends by itself
+      // (extra turn: the cards close and the player goes on)
+      room.turnToken++;
+      const token = room.turnToken;
       emitRoomState(gameID, room);
+      roomTimeout(
+        room,
+        () => {
+          if (room.status !== STATUS.PLAYING || room.turnToken !== token) return;
+          const current = room.players[room.turn];
+          if (room.mode === "powerups" && current.armed.extraTurn) {
+            current.armed.extraTurn = false;
+            closeOpenCards(gameID, room);
+            systemMessage(gameID, room, `${current.name} uses the extra turn.`, "info");
+          } else {
+            nextTurn(gameID, room);
+          }
+          emitRoomState(gameID, room);
+        },
+        config.MISS_DELAY,
+      );
     }
   }
 
@@ -1014,7 +1058,103 @@ module.exports = function (io) {
     // Reset turn
     room.openedCards = [];
     room.checkingCards = false;
+    room.turnBegun = false;
+    room.stealWindow = null;
     startTurnTimer(gameID, room);
+  }
+
+  /* ---------- Power-up Steal ---------- */
+
+  // Somebody else (active, here) holds Steal: the second card waits a moment
+  // (true: opened - the room state went out)
+  function openStealWindow(gameID, room) {
+    if (room.mode !== "powerups") return false;
+    const current = room.players[room.turn];
+    const thieves = room.players.filter((p) => p !== current && p.active && p.connected && p.powerups.includes("snatch"));
+    if (thieves.length === 0) return false;
+    const until = Date.now() + config.STEAL_WINDOW;
+    room.stealWindow = { until: until, first: room.openedCards[0] };
+    emitRoomState(gameID, room);
+    roomTimeout(
+      room,
+      () => {
+        if (room.stealWindow && room.stealWindow.until === until) {
+          room.stealWindow = null;
+          emitRoomState(gameID, room);
+        }
+      },
+      config.STEAL_WINDOW,
+    );
+    return true;
+  }
+
+  // A thief picks the second card: right - the pair and the turn; wrong - the turn ends
+  function snatch(socket, room, id) {
+    const username = socket.data.username;
+    const gameID = socket.gameID;
+    const thief = findPlayer(room, username);
+    const window = room.stealWindow;
+    if (
+      room.mode !== "powerups" ||
+      room.status !== STATUS.PLAYING ||
+      thief == null ||
+      thief.socketId !== socket.id ||
+      !thief.active ||
+      isPlayersTurn(room, username) ||
+      window == null ||
+      window.until <= Date.now() ||
+      !thief.powerups.includes("snatch") ||
+      room.openedCards.length !== 1 ||
+      !isClosed(room, id)
+    ) {
+      return;
+    }
+    room.stealWindow = null;
+    thief.powerups.splice(thief.powerups.indexOf("snatch"), 1);
+    rooms.touch(room);
+    const victim = room.players[room.turn];
+    const first = room.openedCards[0];
+    room.openedCards.push(id);
+    room.cardCounter[id]++;
+    multiPlayer.to(gameID).emit("turnCard", cardData(room, id));
+    systemMessage(gameID, room, `${powerupLabel("snatch")}! ${thief.name} steals the guess from ${victim.name}.`, "info");
+
+    if (room.cardPairs[first] === id) {
+      // Right: the pair is the thief's - and the turn too (everybody else skipped)
+      room.foundMatches.push(first, id);
+      roomTimeout(room, () => multiPlayer.to(gameID).emit("understateCard", first), 500);
+      roomTimeout(room, () => multiPlayer.to(gameID).emit("understateCard", id), 500);
+      thief.points++;
+      multiPlayer.to(gameID).emit("matchFound", { name: thief.name, ids: [first, id] });
+      if (room.powerCards.includes(first)) grantPowerup(gameID, room, thief, "found a power-up pair");
+      systemMessage(gameID, room, `${thief.name} found the pair - and it's their turn now!`, "trophy");
+      endPowerupTurn(gameID, room);
+      room.turn = room.players.indexOf(thief);
+      room.openedCards = [];
+      room.checkingCards = false;
+      room.turnBegun = false;
+      startTurnTimer(gameID, room);
+      emitRoomState(gameID, room);
+      if (room.foundMatches.length == CARD_COUNT) {
+        getWinner(gameID, room).catch((error) => console.error("[multiplayer] Could not finish game:", error));
+      }
+      return;
+    }
+    // Wrong: a moment to see the cards, then the turn of the robbed player is over
+    room.checkingCards = true;
+    room.turnToken++;
+    const token = room.turnToken;
+    systemMessage(gameID, room, `${thief.name} missed - ${victim.name}'s turn is over.`, "info");
+    emitRoomState(gameID, room);
+    roomTimeout(
+      room,
+      () => {
+        if (room.status !== STATUS.PLAYING || room.turnToken !== token) return;
+        nextTurn(gameID, room);
+        emitRoomState(gameID, room);
+      },
+      config.MISS_DELAY,
+    );
   }
 
   /*

@@ -238,10 +238,20 @@ function coinGame(bet, start, randomInt) {
  * about as often as the sweat of two 🎁 (1 of 40 spins). The page uses the
  * same rule.
  */
-// How many reels sweat (0, 1 or 2): with 3 🪙 on the first three reels already, reels 4 and 5 both
+// How many reels sweat (0 to 3): from the reel after the one where 3 🪙 are in sight - the earlier
+// the coins come, the more reels sweat
 function coinSweatReels(grid, stops) {
   if (!coinSweat(grid, stops)) return 0;
-  return grid.slice(0, 3).flat().filter((id) => id === COIN).length >= COIN_TRIGGER - 2 ? 2 : 1;
+  for (let reel = 2; reel <= 4; reel++) {
+    if (grid.slice(0, reel).flat().filter((id) => id === COIN).length >= COIN_TRIGGER - 2) return REELS - reel;
+  }
+  return 1;
+}
+
+// The extra time of the sweat (times SLOTS_SWEAT) for the last reel: the first sweating reel 1,
+// every further one half of it more
+function sweatShare(reels) {
+  return reels > 0 ? 1 + 0.5 * (reels - 1) : 0;
 }
 
 function coinSweat(grid, stops) {
@@ -461,4 +471,4 @@ function catalog() {
   };
 }
 
-module.exports = { SYMBOLS, LINES, STRIPS, FREE_STRIPS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, lineWin, spin, coinGame, coinSweat, coinSweatReels, rtp, catalog };
+module.exports = { SYMBOLS, LINES, STRIPS, FREE_STRIPS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, lineWin, spin, coinGame, coinSweat, coinSweatReels, sweatShare, rtp, catalog };

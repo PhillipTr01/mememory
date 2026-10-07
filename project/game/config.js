@@ -35,6 +35,8 @@ module.exports = {
   SPEED_TURN_TIME: 10 * 1000,
   SPEED_TURN_OPTIONS: [3, 5, 10, 15],
   SPEED_MISS_DELAY: 950,
+  MISS_DELAY: 1600, // a wrong pair: the cards stay open this long, then the turn ends by itself
+  STEAL_WINDOW: 2600, // power-up Steal: after the first card of a turn, this long to steal the second guess
   // The clock starts after the card animations (the flip takes 0.6s on the client)
   SPEED_ANIMATION_GRACE: 700,
   // Singleplayer: who starts (0 = player, 1 = bot, null = random)
