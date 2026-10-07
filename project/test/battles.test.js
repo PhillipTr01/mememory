@@ -201,8 +201,10 @@ test("battles: crazy mode - the lowest total wins; bots fill the seats", async (
   assert.deepStrictEqual(done.seats.map((seat) => seat.bot), [false, true, true]);
   assert.notStrictEqual(done.seats[1].name, done.seats[2].name);
   assert.strictEqual(done.totals[done.winner], Math.min(...done.totals));
-  // A bot's win stays with the house
-  const expected = done.winner === 0 ? 1000 - 70 + done.payout : 1000 - 70;
+  // A bot's win stays with the house (a tie: carol gets her share of the pot)
+  const mine = done.winners.indexOf(0);
+  const expected = 1000 - 70 + (mine >= 0 ? done.shares[mine] : 0);
+  await h.wait(30);
   assert.strictEqual(h.coinsOf("carol"), expected);
 });
 

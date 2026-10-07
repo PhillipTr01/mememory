@@ -293,6 +293,16 @@ function stop() {
   timer = null;
 }
 
+// Hard reset (admin panel): every season is gone - planned, running and over (with their winner pages)
+async function clear() {
+  const ids = state.seasons.map((season) => season.id);
+  const wasRunning = running();
+  state = { seasons: [], base: null, next: 1 };
+  coins.setBase(null);
+  await Setting.deleteMany({ key: { $in: [KEY, ...ids.map((id) => BACKUP + id)] } });
+  if (wasRunning) changes.emit("cleared");
+}
+
 // Tests: everything forgotten
 function reset() {
   state = { seasons: [], base: null, next: 1 };
@@ -310,4 +320,4 @@ function accentStyle() {
   return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
 }
 
-module.exports = { accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+module.exports = { clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };

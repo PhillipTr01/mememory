@@ -384,7 +384,10 @@ module.exports = function () {
     admin,
     asyncHandler(async (req, res) => {
       if ((req.body || {}).confirm !== "RESET") return res.status(400).json({ error: 'Type "RESET" to confirm.' });
-      res.json({ ok: true, ...(await hardReset()) });
+      const result = await hardReset();
+      // The seasons too: the casino as on its very first day
+      await seasons.clear();
+      res.json({ ok: true, ...result });
     }),
   );
 

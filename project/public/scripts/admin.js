@@ -968,7 +968,7 @@ async function hardReset(event) {
   event.preventDefault();
   var input = document.getElementById("adResetConfirm");
   if (input.value != "RESET") return;
-  if (!(await confirmDialog({ title: "Delete everything?", text: "The whole coin history, every payout, every access and all coins are deleted, every game starts anew. This can't be undone.", confirmLabel: "Reset everything", danger: true }))) return;
+  if (!(await confirmDialog({ title: "Delete everything?", text: "The whole coin history, every payout, every access, all coins and every season (planned, running and over) are deleted, every game starts anew. This can't be undone.", confirmLabel: "Reset everything", danger: true }))) return;
   var button = document.getElementById("adResetButton");
   button.disabled = true;
   try {

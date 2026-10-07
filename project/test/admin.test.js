@@ -273,9 +273,17 @@ test("admin: a game turned off - no tab, its page leads to the next game, its op
 });
 
 // The last test: everything is gone afterwards
-test("admin: the hard reset - history, payouts, accesses and coins are gone", async () => {
+test("admin: the hard reset - history, payouts, accesses, coins and seasons are gone", async () => {
   const CoinLog = require("../models/CoinLog");
   const access = require("../game/access");
+  const seasons = require("../game/seasons");
+  seasons.reset();
+  // A running season and a planned one
+  const now = Date.now();
+  await seasons.create({ name: "Running", icon: "🔥", start: now - 1000, end: now + 3600 * 1000, budget: 1234, every: 0 });
+  await seasons.create({ name: "Later", icon: "❄️", start: now + 7200 * 1000, end: now + 9000 * 1000, budget: 1, every: 0 });
+  await seasons.tick(now);
+  assert.strictEqual(seasons.running().name, "Running");
   await coins.add("rosa", 500, { reason: "admin" });
   assert.ok((await CoinLog.countDocuments({})) > 0);
   let closed = 0;
@@ -288,6 +296,8 @@ test("admin: the hard reset - history, payouts, accesses and coins are gone", as
   assert.strictEqual(res.status, 200);
   assert.strictEqual(closed, 1, "every casino page closes");
   assert.strictEqual(await CoinLog.countDocuments({}), 0);
+  assert.deepStrictEqual([seasons.list(), seasons.running()], [[], null], "no seasons anymore");
+  assert.strictEqual(require("../game/coins").base().start, config.START_COINS);
   const rosa = await require("../models/User").findOne({ username: "rosa" }).lean();
   assert.deepStrictEqual([rosa.casinoApproved, rosa.casinoApprovedAt, rosa.coins, rosa.payoutAllowed], [false, undefined, 0, false]);
   assert.strictEqual((await adminApi("overview")).body.players, 0);
