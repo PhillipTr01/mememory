@@ -501,12 +501,20 @@ async function playFreeSpins(result, from, progress) {
   var counter = document.getElementById("slFreeCounter");
   var count = document.getElementById("slFreeCount");
   var spins = from > 0 ? bonus.freeSpins[from - 1].spins : bonus.startSpins;
+  var multCounter = document.getElementById("slMultCounter");
+  var mult = document.getElementById("slMultCount");
   counter.hidden = false;
+  multCounter.hidden = false;
   detail.innerText = "Bonus win";
   for (var n = from; n < bonus.freeSpins.length; n++) {
     var free = bonus.freeSpins[n];
     clearLines();
     count.innerText = n + 1 + " / " + spins;
+    // The multiplier of this spin (it climbs after every spin)
+    if (mult.innerText != "× " + free.multiplier) {
+      mult.innerText = "× " + free.multiplier;
+      if (n > from) mult.animate([{ transform: "scale(1)" }, { transform: "scale(1.3)" }, { transform: "scale(1)" }], { duration: 450, easing: "ease-out" });
+    }
     text.innerText = "🪙 " + formatCoins(total);
     await animateReels(free.grid, spinTime * 0.55, setup.rules.sweatTime * 0.6, null, setup.freeStrips);
     // Three 🎁 again: more free spins
@@ -534,6 +542,8 @@ async function playFreeSpins(result, from, progress) {
   }
   if (result.capped) detail.innerText = "Max win reached!";
   counter.hidden = true;
+  multCounter.hidden = true;
+  mult.innerText = "";
   clearLines();
   machine.classList.remove("bonus-mode");
 

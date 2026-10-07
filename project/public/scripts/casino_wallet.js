@@ -432,27 +432,8 @@
 
   /* ---------- "Start": a player is in a running season only after hitting it ---------- */
 
-  var joinPill = null;
-  var JOIN_KEY = "csSeasonOffered";
-
-  // Not in the season yet: a pill next to the free coins (opens the start again) - the start by
-  // itself once per season and tab
+  // Not in the season yet: the start, on every page until the player hits it (can't be clicked away)
   function offerSeason(data) {
-    var chance = document.getElementById("navChance");
-    if (chance && !joinPill) {
-      joinPill = el("button", "nav-chance nav-join", "▶ Start season");
-      joinPill.title = (data.season.icon || "") + " " + data.season.name;
-      joinPill.type = "button";
-      joinPill.addEventListener("click", () => showJoin(data));
-      chance.parentNode.insertBefore(joinPill, chance);
-    }
-    var key = JOIN_KEY + data.season.id;
-    try {
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, "1");
-    } catch (e) {
-      // no storage: shown on every page
-    }
     showJoin(data);
   }
 
@@ -471,6 +452,8 @@
     var season = data.season;
     document.querySelectorAll(".cs-join").forEach((n) => n.remove());
     var box = el("div", "cs-join");
+    box.setAttribute("role", "alertdialog");
+    box.setAttribute("aria-modal", "true");
     var card = el("div", "cs-join-card");
     var when = (t) => new Date(t).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
     card.append(
@@ -503,7 +486,7 @@
       });
       card.appendChild(prizes);
     }
-    card.appendChild(el("p", "cs-join-text", "Everybody starts with the same coins - the most coins at the end wins. Only players who hit Start are on the leaderboard. Your coins from before wait for you and come back after the season, with what you win on top."));
+    card.appendChild(el("p", "cs-join-text", "Everybody starts with the same coins - the most coins at the end wins. Hit Start to play - only players in the season are on the leaderboard. Your coins from before wait for you and come back after the season, with what you win on top."));
     var go = el("button", "cs-join-btn", "Start · 🪙 " + format(start.coins));
     go.type = "button";
     go.addEventListener("click", async () => {
@@ -513,18 +496,13 @@
         var result = await res.json();
         if (!res.ok) throw new Error(result.error || "Could not start the season.");
         box.remove();
-        if (joinPill) joinPill.remove();
-        joinPill = null;
         showToast((season.icon || "🏆") + " You are in " + season.name + " with 🪙 " + format(result.coins) + " - good luck!");
       } catch (error) {
         showToast(error.message, "error");
         go.disabled = false;
       }
     });
-    var later = el("button", "cs-chance-later", "Just watch for now");
-    later.type = "button";
-    later.addEventListener("click", () => box.remove());
-    card.append(go, later);
+    card.appendChild(go);
     box.appendChild(card);
     document.body.appendChild(box);
   }

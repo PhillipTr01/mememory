@@ -799,6 +799,13 @@
   transform: translateY(-50%);
 }
 
+/* The multiplier of the free spins: the same, on the left */
+.sl-free-counter.sl-mult-counter {
+  right: auto;
+  left: 0;
+  align-items: flex-start;
+}
+
 .sl-free-counter[hidden] {
   display: none;
 }

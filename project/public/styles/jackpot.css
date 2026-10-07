@@ -3549,17 +3549,3 @@ body.jackpot-theme {
 .cs-join-btn:disabled {
   opacity: 0.6;
 }
-
-/* Not in the running season yet: the pill to start it (in the color of the season) */
-.nav-chance.nav-join {
-  border-color: rgba(var(--mm-accent-rgb), 0.6);
-  background: rgba(var(--mm-accent-rgb), 0.14);
-  color: var(--mm-accent);
-  animation: nav-join-glow 1.8s ease-in-out infinite;
-}
-
-@keyframes nav-join-glow {
-  50% {
-    box-shadow: 0 0 14px rgba(var(--mm-accent-rgb), 0.5);
-  }
-}
