@@ -534,7 +534,8 @@ function bumpShape(bump) {
   svg.style.left = -s + "px";
   var line = `M0 ${y} Q${s} ${y} ${s} ${y - s} V${r} Q${s} 0.5 ${s + r} 0.5 H${s + w - r} Q${s + w} 0.5 ${s + w} ${r} V${y - s} Q${s + w} ${y} ${w + 2 * s} ${y}`;
   svg.lastChild.setAttribute("d", line);
-  svg.firstChild.setAttribute("d", line + ` V${h} H0 Z`);
+  // (the fill reaches a little into the bar: its top border never shows under the bump - also when zoomed)
+  svg.firstChild.setAttribute("d", line + ` V${h + 3} H0 Z`);
 }
 
 // The own seats one can leave now (not while their cards are played)

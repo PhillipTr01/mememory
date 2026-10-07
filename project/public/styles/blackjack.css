@@ -1283,3 +1283,8 @@
   min-height: 118px;
   box-sizing: border-box;
 }
+
+/* Not the own turn: no time line in the bump */
+.bj-actionbar.idle .bj-turn-bar {
+  visibility: hidden;
+}
