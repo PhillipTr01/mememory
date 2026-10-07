@@ -1,5 +1,6 @@
 const config = require("../game/config");
 const coins = require("../game/coins");
+const inPlay = require("../game/in_play");
 const bj = require("../game/blackjack");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
@@ -756,6 +757,11 @@ module.exports = function (io) {
   async function refundAll() {
     await Promise.all([...tables.values()].map((t) => t.refundAll()));
   }
+
+  // Coins in play: a bet (or side bet, or a hand) on a seat at any table
+  inPlay.register("blackjack", (name) =>
+    [...tables.values()].some((t) => t.table.seats.some((seat) => seat && seat.name === name && (seat.bet > 0 || (seat.side && seat.side.pairs + seat.side.plus3 > 0) || (seat.hands || []).length > 0))),
+  );
 
   live.register("blackjack", () => [...tables.values()].map((t) => ({ name: t.def.name, icon: t.def.icon, phase: t.table.phase, round: t.table.round, taken: t.table.seats.filter(Boolean).length, seats: t.table.seats.length })));
 

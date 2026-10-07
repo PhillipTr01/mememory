@@ -61,6 +61,19 @@
     button.classList.toggle("no-payout", !payout);
     button.title = payout ? "Your coins - click to pay out" : "Your coins";
     document.getElementById("navCoinsValue").innerText = format(coins);
+    // In a season: the balance from before it (it comes back after the season, with the season's on top)
+    var stored = document.getElementById("navCoinsStored");
+    if (data.stored != null) {
+      if (!stored) {
+        stored = el("span", "nav-coins-stored");
+        stored.id = "navCoinsStored";
+        button.appendChild(stored);
+      }
+      stored.innerText = "🏦 " + format(data.stored);
+      stored.title = "Your balance from before the season - you get it back when the season is over, with your season coins on top";
+    } else if (stored) stored.remove();
+    // Everything lost: a second chance (if the season has one) - after a moment
+    watchChance(coins);
     if (before && coins != before) {
       button.classList.remove("up", "down");
       void button.offsetWidth; // restart the animation
@@ -267,6 +280,76 @@
       }, 900);
     }
   });
+
+  /* ---------- Second chance (in a season): 0 coins, nothing in play - start again ---------- */
+
+  var chanceTimer = null;
+  var chanceShown = false;
+  function watchChance(value) {
+    clearTimeout(chanceTimer);
+    if (value > 0) {
+      chanceShown = false;
+      document.querySelectorAll(".cs-chance").forEach((n) => n.remove());
+      return;
+    }
+    if (chanceShown) return;
+    // 3 seconds after losing everything (a win may still be on its way)
+    chanceTimer = setTimeout(checkChance, 3000);
+  }
+
+  async function checkChance() {
+    if (coins > 0 || chanceShown) return;
+    var status;
+    try {
+      var res = await fetch("second-chance", { cache: "no-store" });
+      if (!res.ok) return;
+      status = await res.json();
+    } catch (e) {
+      return;
+    }
+    // Coins still in a game: look again in a moment
+    if (status.reason == "inPlay") return (chanceTimer = setTimeout(checkChance, 5000));
+    if (status.can || status.reason == "cooldown") showChance(status);
+  }
+
+  function showChance(status) {
+    chanceShown = true;
+    var box = el("div", "cs-chance" + (status.can ? "" : " waiting"));
+    var card = el("div", "cs-chance-card");
+    card.append(el("div", "cs-chance-icon", status.can ? "🔁" : "⏳"), el("h2", "cs-chance-title", status.can ? "Second chance!" : "Out of coins"));
+    if (status.can) {
+      card.append(
+        el("p", "cs-chance-text", "You lost everything - start again with 🪙 " + format(status.budget) + " and fight your way back to the top."),
+        el("p", "cs-chance-left", status.left + " of " + status.total + " second chance" + (status.total == 1 ? "" : "s") + " left"),
+      );
+      var take = el("button", "cs-chance-btn", "Start again · 🪙 " + format(status.budget));
+      take.type = "button";
+      take.addEventListener("click", async () => {
+        take.disabled = true;
+        try {
+          var res = await fetch("second-chance", { method: "POST" });
+          var data = await res.json();
+          if (!res.ok) throw new Error(data.error || "No second chance right now.");
+          box.remove();
+          showToast("🔁 Back in the game with 🪙 " + format(data.coins) + "!");
+        } catch (error) {
+          showToast(error.message, "error");
+          box.remove();
+          chanceShown = false;
+        }
+      });
+      card.appendChild(take);
+    } else {
+      var at = new Date(status.nextAt).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" });
+      card.append(el("p", "cs-chance-text", "Your next second chance comes " + at + ". Until then: the daily bonus, or watch the others."), el("p", "cs-chance-left", status.left + " of " + status.total + " left"));
+    }
+    var later = el("button", "cs-chance-later", status.can ? "Later" : "OK");
+    later.type = "button";
+    later.addEventListener("click", () => box.remove());
+    card.appendChild(later);
+    box.appendChild(card);
+    document.body.appendChild(box);
+  }
 
   /* ---------- Seasons: the link to the leaderboard, a season starting or ending ---------- */
 

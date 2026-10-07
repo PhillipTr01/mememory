@@ -110,6 +110,25 @@ module.exports = function (auth) {
     }),
   );
 
+  // A second chance in the season: can the player take one now? (see game/seasons.js)
+  router.get(
+    "/second-chance",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => res.json(await seasons.chanceStatus(req.username))),
+  );
+
+  router.post(
+    "/second-chance",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      const result = await seasons.useChance(req.username);
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
   // The season now (for the link in the navigation bar): {season, lastSeason}
   router.get(
     "/season",

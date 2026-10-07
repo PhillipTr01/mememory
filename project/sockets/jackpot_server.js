@@ -1,5 +1,6 @@
 const config = require("../game/config");
 const coins = require("../game/coins");
+const inPlay = require("../game/in_play");
 const { newFairRound, fairWinner } = require("../game/jackpot");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
@@ -421,6 +422,9 @@ module.exports = function (io) {
     }
     emitState();
   }
+
+  // Coins in play: a bet in the pot (until the next round starts), on its way or waiting for the next pot
+  inPlay.register("jackpot", (name) => pot.entries.some((e) => e.name === name) || pot.incoming.some((b) => b.name === name) || pot.waiting.some((b) => b.name === name));
 
   return { pot };
 };

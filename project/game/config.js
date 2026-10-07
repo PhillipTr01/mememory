@@ -60,6 +60,7 @@ module.exports = {
   // Every account gets START_COINS once for this id: a new id resets everybody's coins
   COIN_RESET: "reset-100k",
   DAILY_BONUS: 2500,
+  SEASON_DAILY_BONUS: 1000, // the daily bonus of a new season (each season can have its own)
   // The daily bonus comes back at midnight in this time zone
   BONUS_TZ: process.env.BONUS_TZ || "Europe/Berlin",
   // Coins for a win (only real wins: no surrender / left opponent)

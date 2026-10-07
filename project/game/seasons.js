@@ -4,6 +4,8 @@ const Setting = require("../models/Setting");
 const coins = require("./coins");
 const config = require("./config");
 const { seasonReset, seasonRestore } = require("./hard_reset");
+const days = require("./days");
+const inPlay = require("./in_play");
 
 /*
  * Seasons (admin panel): planned ahead from a start to an end. When a season
@@ -13,7 +15,13 @@ const { seasonReset, seasonRestore } = require("./hard_reset");
  * the season says). When it ends, the final places are kept - with the
  * prizes, if the season has any - and shown on the winner page; everybody
  * gets the balance from before the season back - and the games and the coin
- * history are as they were before it.
+ * history are as they were before it - with the balance of the season on
+ * top.
+ *
+ * Second chances: a season can give a player who lost everything (0 coins,
+ * nothing in play anywhere) a few new starts with the budget. The first one
+ * right away (a player who joined that day: from the next day on), every
+ * further one only from the next day on.
  *
  * Without a running season the leaderboard is the normal one (live).
  *
@@ -49,6 +57,7 @@ function publicSeason(season) {
     end: season.end,
     budget: season.budget,
     dailyBonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : null,
+    secondChances: season.secondChances || 0,
     every: season.every,
     color: season.color || null,
     prizesOn: season.prizesOn,
@@ -105,12 +114,14 @@ function check(input, current) {
   if (end <= start) return { error: "The end comes after the start." };
   const budget = Number(input.budget);
   if (!Number.isInteger(budget) || budget < 0 || budget > 1000000000) return { error: "A start budget from 0 to 1,000,000,000." };
-  // (not given: the daily bonus of the settings)
-  const dailyBonus = input.dailyBonus == null || input.dailyBonus === "" ? config.DAILY_BONUS : Number(input.dailyBonus);
+  // (not given: the daily bonus of seasons in the settings)
+  const dailyBonus = input.dailyBonus == null || input.dailyBonus === "" ? config.SEASON_DAILY_BONUS : Number(input.dailyBonus);
   if (!Number.isInteger(dailyBonus) || dailyBonus < 0 || dailyBonus > 10000000) return { error: "A daily bonus from 0 to 10,000,000." };
   // The accent color of the season (null: the gold of the casino)
   const color = input.color == null || input.color === "" ? null : String(input.color).toLowerCase();
   if (color != null && !/^#[0-9a-f]{6}$/.test(color)) return { error: "A color like #d4a64a." };
+  const secondChances = input.secondChances == null || input.secondChances === "" ? 0 : Number(input.secondChances);
+  if (!Number.isInteger(secondChances) || secondChances < 0 || secondChances > 20) return { error: "Second chances: 0 to 20." };
   const every = Number(input.every);
   if (!INTERVALS.includes(every)) return { error: "Unknown update interval." };
   const prizesOn = input.prizesOn === true;
@@ -138,7 +149,7 @@ function check(input, current) {
   // Never two seasons at the same time
   const other = state.seasons.find((season) => season !== current && !season.ended && season.start < end && start < season.end);
   if (other) return { error: `It overlaps with "${other.name}".` };
-  return { season: { name: name, icon: icon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, color: color, every: every, prizesOn: prizesOn, prizes: clean } };
+  return { season: { name: name, icon: icon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, color: color, every: every, prizesOn: prizesOn, prizes: clean } };
 }
 
 async function create(input) {
@@ -212,9 +223,13 @@ async function endSeason(season, now) {
   state.base = season.baseBefore ? { ...season.baseBefore, active: false, bonus: null } : null;
   coins.setBase(state.base);
   await save();
+  // The balance from before the season (who came during it: the start coins) - and what was won in the season on top
   const saved = season.saved || {};
-  for (const [username, amount] of Object.entries(saved)) {
-    await User.updateOne({ username: username }, { $set: { coins: amount, coinReset: coins.base().reset } });
+  const seasonCoins = new Map(rows.map((row) => [row.username, row.coins]));
+  const players = new Set([...Object.keys(saved), ...seasonCoins.keys()]);
+  for (const username of players) {
+    const before = username in saved ? saved[username] : coins.base().start;
+    await User.updateOne({ username: username }, { $set: { coins: before + (seasonCoins.get(username) || 0), coinReset: coins.base().reset } });
   }
   const backup = await Setting.findOne({ key: BACKUP + season.id }).lean();
   let games = null;
@@ -226,7 +241,7 @@ async function endSeason(season, now) {
   if (seasonEra) await seasonRestore(games, seasonEra);
   await Setting.deleteMany({ key: { $in: [BACKUP + season.id] } });
   changes.emit("ended", publicSeason(season));
-  for (const username of Object.keys(saved)) coins.notify(username);
+  for (const username of players) coins.notify(username);
 }
 
 // Everybody in the casino by coins: [{rank, username, coins}]
@@ -271,6 +286,54 @@ async function addToSaved(username, amount) {
   await save();
   return true;
 }
+
+/* ---------- Second chances ---------- */
+
+// {can, left, total, budget, nextAt, reason}: reason "none" (no season / no second chances), "used",
+// "cooldown" (nextAt), "coins" (still has coins), "inPlay" (coins in a game)
+async function chanceStatus(username, now = Date.now()) {
+  const season = running();
+  const total = season ? season.secondChances || 0 : 0;
+  if (!season || total === 0) return { can: false, reason: "none", left: 0, total: 0 };
+  const record = (season.chances && season.chances[username]) || { used: 0, lastAt: null };
+  const left = Math.max(0, total - record.used);
+  const result = { can: false, left: left, total: total, budget: season.budget, nextAt: null };
+  if (left === 0) return { ...result, reason: "used" };
+  // After a second chance: the next one from the next day on. Joined the season today: the first one too.
+  let from = null;
+  if (record.used > 0) from = days.nextDay(record.lastAt);
+  else {
+    const user = await User.findOne({ username: username }).select("casinoApprovedAt").lean();
+    const joined = user && user.casinoApprovedAt ? new Date(user.casinoApprovedAt).getTime() : null;
+    if (joined != null && joined > (season.startedAt || season.start)) from = days.nextDay(joined);
+  }
+  if (from != null && now < from) return { ...result, reason: "cooldown", nextAt: from };
+  if ((await coins.get(username)).coins > 0) return { ...result, reason: "coins" };
+  if (inPlay.where(username).length) return { ...result, reason: "inPlay" };
+  return { ...result, can: true, reason: null };
+}
+
+// Takes a second chance: the budget again (no missed bonuses) - {coins, left} or {error}
+async function useChance(username, now = Date.now()) {
+  const status = await chanceStatus(username, now);
+  if (!status.can) return { error: status.reason === "cooldown" ? "Your next second chance comes tomorrow." : "No second chance right now.", status: status };
+  const season = running();
+  season.chances = season.chances || {};
+  const record = season.chances[username] || { used: 0, lastAt: null };
+  season.chances[username] = { used: record.used + 1, lastAt: now };
+  await save();
+  await User.updateOne({ username: username }, { $set: { coins: season.budget, coinReset: coins.base().reset } });
+  coins.log(username, season.budget, "second chance", season.name);
+  coins.notify(username);
+  return { coins: season.budget, left: status.left - 1 };
+}
+
+// The balance from before the running season (shown next to the coins), null without a season
+function storedOf(username) {
+  const season = running();
+  return season && season.saved && username in season.saved ? season.saved[username] : null;
+}
+coins.setStoredLookup(storedOf);
 
 // The admin ends the running season right now
 async function endNow(id, now = Date.now()) {
@@ -320,4 +383,4 @@ function accentStyle() {
   return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
 }
 
-module.exports = { clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+module.exports = { chanceStatus, useChance, storedOf, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };

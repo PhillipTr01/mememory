@@ -3211,3 +3211,86 @@ body.jackpot-theme {
   color: var(--mm-muted);
   font-size: 0.9rem;
 }
+
+/* In a season: the balance from before it, small next to the coins */
+.nav-coins-stored {
+  margin-left: 0.5rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid rgba(var(--mm-accent-rgb), 0.35);
+  font-size: 0.78em;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+/* A second chance: over the whole page */
+.cs-chance {
+  position: fixed;
+  inset: 0;
+  z-index: 1090;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  animation: cs-season-in 0.3s ease-out;
+}
+
+.cs-chance-card {
+  width: min(400px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.6rem 1.4rem 1.2rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.55);
+  border-radius: 20px;
+  background: var(--mm-surface);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), 0 0 40px rgba(var(--mm-accent-rgb), 0.18);
+  text-align: center;
+}
+
+.cs-chance-icon {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.cs-chance-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #fff;
+}
+
+.cs-chance-text {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.cs-chance-left {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--mm-accent);
+}
+
+.cs-chance-btn {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mm-accent);
+  color: #1a1206;
+  font-weight: 900;
+}
+
+.cs-chance-btn:disabled {
+  opacity: 0.6;
+}
+
+.cs-chance-later {
+  border: 0;
+  background: none;
+  color: var(--mm-muted);
+  font-weight: 700;
+}

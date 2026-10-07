@@ -161,6 +161,8 @@ const GAMES = {
           "All players by their coins.",
           "Without a season it is live - always up to date. The arrows show who went up or down since midnight.",
           "In a season everybody starts with the same budget, the leaderboard is updated as often as the season says - and at the end the best win (with prizes, if the season has any).",
+          "Your balance from before the season is kept (🏦 next to your coins) - when the season is over you get it back, with your season coins on top.",
+          "Lost everything in a season? It can have second chances: start again with the budget (the first right away, every further one from the next day on).",
           `🪙 ${n(coins.dailyBonus())} free coins every day for everybody.`,
         ],
       },

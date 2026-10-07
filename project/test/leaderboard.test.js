@@ -69,7 +69,7 @@ test("seasons: planned ahead - at the start every account gets the budget, at th
   assert.strictEqual(coins.base().start, 50000);
   await h.wait(10);
   // The daily bonus of the season (changed while it runs)
-  assert.strictEqual(coins.dailyBonus(), 2500, "the setting when none was given");
+  assert.strictEqual(coins.dailyBonus(), 1000, "the season setting when none was given");
   assert.ok((await seasons.update(made.season.id, { ...seasons.publicSeason(seasons.running()), dailyBonus: 777 })).season);
   assert.strictEqual(coins.dailyBonus(), 777);
   // A player let in now starts with the budget too - three days later with the 3 daily bonuses missed
@@ -103,9 +103,9 @@ test("seasons: planned ahead - at the start every account gets the budget, at th
   // The history from before the season is back, the season's own is gone
   await h.wait(10);
   assert.deepStrictEqual(shown().map((row) => row.reason), ["before the season"]);
-  // Everybody has the balance from before the season again, the daily bonus is the normal one again
-  assert.deepStrictEqual(["anna", "ben", "cleo"].map(h.coinsOf), [1000, 2000, 3000]);
-  assert.strictEqual((await leaderboard.view("anna", end + 3000)).rows[0].coins, 3000);
+  // Everybody has the balance from before the season again - with the season's on top; the daily bonus is the normal one again
+  assert.deepStrictEqual(["anna", "ben", "cleo"].map(h.coinsOf), [1000 + 50000, 2000 + 60000, 3000 + 80000]);
+  assert.strictEqual((await leaderboard.view("anna", end + 3000)).rows[0].coins, 83000);
   assert.strictEqual(coins.dailyBonus(), 2500);
 });
 
@@ -126,5 +126,47 @@ test("seasons: a running season can't be deleted, it can end early; start and bu
   assert.strictEqual(seasons.accentStyle(), "", "the gold again after the season");
   assert.strictEqual(over.season.status, "ended");
   assert.ok((await seasons.remove(made.season.id)).ok, "deleted afterwards");
+  seasons.reset();
+});
+
+test("seasons: second chances - 0 coins and nothing in play, then the budget again; the next one only the next day", async () => {
+  seasons.reset();
+  const inPlay = require("../game/in_play");
+  let playing = false;
+  inPlay.register("test", (name) => playing && name === "anna");
+  const now = Date.now();
+  const made = await seasons.create({ name: "Comeback", icon: "🔁", start: now - 1000, end: now + 30 * 24 * 3600 * 1000, budget: 5000, every: 0, secondChances: 2 });
+  assert.strictEqual(made.season.secondChances, 2);
+  await seasons.tick(now);
+  // Still coins: no second chance; the balance from before is shown with the coins
+  assert.strictEqual((await seasons.chanceStatus("anna", now)).reason, "coins");
+  assert.strictEqual((await coins.get("anna")).stored, seasons.storedOf("anna"));
+  assert.ok(seasons.storedOf("anna") != null);
+  // Everything lost - but a bet is still in a game
+  h.setCoins("anna", 0);
+  playing = true;
+  assert.strictEqual((await seasons.chanceStatus("anna", now)).reason, "inPlay");
+  playing = false;
+  const status = await seasons.chanceStatus("anna", now);
+  assert.deepStrictEqual([status.can, status.left, status.total], [true, 2, 2]);
+  const used = await seasons.useChance("anna", now);
+  assert.deepStrictEqual(used, { coins: 5000, left: 1 });
+  assert.strictEqual(h.coinsOf("anna"), 5000);
+  // Lost again the same day: the next one only tomorrow
+  h.setCoins("anna", 0);
+  const later = await seasons.chanceStatus("anna", now + 1000);
+  assert.strictEqual(later.reason, "cooldown");
+  assert.strictEqual(later.nextAt, days.nextDay(now));
+  assert.match((await seasons.useChance("anna", now + 1000)).error, /tomorrow/);
+  // The next day: the last one
+  const tomorrow = days.nextDay(now) + 1000;
+  assert.strictEqual((await seasons.useChance("anna", tomorrow)).left, 0);
+  h.setCoins("anna", 0);
+  assert.strictEqual((await seasons.chanceStatus("anna", days.nextDay(tomorrow) + 1000)).reason, "used");
+  // A player who joined the season today: the first one only from tomorrow
+  h.addUser("newbie");
+  const User = require("../models/User");
+  await User.updateOne({ username: "newbie" }, { $set: { casinoApprovedAt: new Date(now + 500), coins: 0, coinReset: coins.base().reset } });
+  assert.strictEqual((await seasons.chanceStatus("newbie", now + 2000)).reason, "cooldown");
   seasons.reset();
 });

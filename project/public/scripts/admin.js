@@ -569,7 +569,7 @@ function seasonRow(season) {
   var row = el("div", "ad-season-row " + season.status);
   row.appendChild(seasonHead(season));
   var facts = el("div", "ad-season-facts");
-  facts.append(el("span", "", "🪙 " + formatCoins(season.budget) + " start"), el("span", "", "🎁 " + formatCoins(season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting) + " a day"), el("span", "", "📊 " + EVERY_NAMES[season.every]), el("span", "", season.prizesOn ? "🏅 " + season.prizes.length + (season.prizes.length == 1 ? " prize" : " prizes") : "no prizes"));
+  facts.append(el("span", "", "🪙 " + formatCoins(season.budget) + " start"), el("span", "", "🎁 " + formatCoins(season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting) + " a day"), el("span", "", "🔁 " + (season.secondChances || 0) + " second chance" + (season.secondChances == 1 ? "" : "s")), el("span", "", "📊 " + EVERY_NAMES[season.every]), el("span", "", season.prizesOn ? "🏅 " + season.prizes.length + (season.prizes.length == 1 ? " prize" : " prizes") : "no prizes"));
   if (season.status == "ended" && season.winner) facts.append(el("span", "ad-season-winner", "🥇 " + season.winner.username + " · 🪙 " + formatCoins(season.winner.coins)));
   row.appendChild(facts);
   if (season.prizesOn && season.prizes.length) {
@@ -609,6 +609,7 @@ function fillSeasonForm(season) {
   document.getElementById("adSeasonEnd").value = localInput(season.end);
   document.getElementById("adSeasonBudget").value = season.budget;
   document.getElementById("adSeasonBonus").value = season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting;
+  document.getElementById("adSeasonChances").value = season.secondChances || 0;
   document.getElementById("adSeasonColor").value = season.color || GOLD;
   markColor();
   document.getElementById("adSeasonEvery").value = season.every;
@@ -687,6 +688,7 @@ async function saveSeason(event) {
     end: new Date(document.getElementById("adSeasonEnd").value).getTime(),
     budget: Number(document.getElementById("adSeasonBudget").value),
     dailyBonus: Number(document.getElementById("adSeasonBonus").value),
+    secondChances: Number(document.getElementById("adSeasonChances").value) || 0,
     // The gold of the casino: no own color
     color: document.getElementById("adSeasonColor").value.toLowerCase() == GOLD ? null : document.getElementById("adSeasonColor").value,
     every: Number(document.getElementById("adSeasonEvery").value),

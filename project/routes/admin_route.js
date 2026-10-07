@@ -334,7 +334,7 @@ module.exports = function () {
 
   /* ---------- Seasons ---------- */
 
-  router.get("/api/seasons", admin, (req, res) => res.json({ seasons: seasons.list(), intervals: seasons.INTERVALS, dailyBonus: config.DAILY_BONUS, now: Date.now() }));
+  router.get("/api/seasons", admin, (req, res) => res.json({ seasons: seasons.list(), intervals: seasons.INTERVALS, dailyBonus: config.SEASON_DAILY_BONUS, now: Date.now() }));
 
   // A new season: {name, icon, start, end (ms), budget, every (minutes), prizesOn, prizes: [{place, prize}]}
   router.post(

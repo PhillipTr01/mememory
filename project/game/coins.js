@@ -61,6 +61,12 @@ function eraFilter() {
   return now ? { era: now } : { era: { $exists: false } };
 }
 
+// The balance from before a running season (game/seasons.js sets the lookup) - shown next to the coins
+let storedLookup = () => null;
+function setStoredLookup(lookup) {
+  storedLookup = lookup;
+}
+
 // The free coins of the day: the running season's - or the setting
 function dailyBonus() {
   return seasonBase && Number.isInteger(seasonBase.bonus) ? seasonBase.bonus : config.DAILY_BONUS;
@@ -100,7 +106,7 @@ async function get(username) {
   await ensure(username);
   const user = await User.findOne({ username: username }).select("coins coinBonusAt payoutAllowed");
   if (user == null) return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), payout: false };
-  return { coins: user.coins || 0, bonus: bonusAvailable(user), bonusIn: bonusIn(user), bonusAmount: dailyBonus(), payout: user.payoutAllowed === true };
+  return { coins: user.coins || 0, bonus: bonusAvailable(user), bonusIn: bonusIn(user), bonusAmount: dailyBonus(), payout: user.payoutAllowed === true, stored: storedLookup(username) };
 }
 
 /*
@@ -168,4 +174,4 @@ function reward(username, mode) {
   add(username, amount, { reason: "game win", note: mode }).catch((error) => console.error("[coins] Could not add coins:", error));
 }
 
-module.exports = { setBase, base, era, eraFilter, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };
+module.exports = { setStoredLookup, setBase, base, era, eraFilter, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };

@@ -1,5 +1,6 @@
 const config = require("../game/config");
 const coins = require("../game/coins");
+const inPlay = require("../game/in_play");
 const poker = require("../game/poker");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
@@ -764,6 +765,9 @@ module.exports = function (io) {
   }
 
   /* ---------- Restart of the server ---------- */
+
+  // Coins in play: a seat with chips (or chips in the pot)
+  inPlay.register("poker", (name) => table.seats.some((seat) => seat && seat.name === name && (seat.stack > 0 || (table.phase !== "waiting" && table.phase !== "showdown" && !seat.folded && seat.total > 0))));
 
   liveGames.register("poker", () => ({ phase: table.phase, hand: table.hand, seated: table.seats.filter(Boolean).length, seats: table.seats.length }));
 

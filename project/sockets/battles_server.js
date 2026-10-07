@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const config = require("../game/config");
 const coins = require("../game/coins");
+const inPlay = require("../game/in_play");
 const cases = require("../game/cases");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
@@ -399,6 +400,15 @@ module.exports = function (io) {
     }
     emitList();
   }
+
+  // Coins in play: a seat in a battle that is not over - or a win not paid yet
+  inPlay.register("battles", (name) =>
+    [...lobby.list.values()].some((battle) => {
+      if (!battle.seats.some((seat) => seat && seat.name === name)) return false;
+      if (battle.phase === PHASE.WAITING || battle.phase === PHASE.RUNNING) return true;
+      return battle.phase === PHASE.DONE && battle.payAtEnd && !battle.paid && winnersOf(battle).some((seat) => battle.seats[seat].name === name);
+    }),
+  );
 
   return { lobby };
 };

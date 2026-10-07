@@ -1,5 +1,6 @@
 const config = require("../game/config");
 const coins = require("../game/coins");
+const inPlay = require("../game/in_play");
 const slots = require("../game/slots");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
@@ -274,6 +275,9 @@ module.exports = function (io) {
   async function payAll() {
     await Promise.all(machine.pending.slice().map(payPending));
   }
+
+  // Coins in play: a win (or a bonus game) not paid yet
+  inPlay.register("slots", (name) => machine.pending.some((entry) => entry.name === name));
 
   return { machine, payAll };
 };
