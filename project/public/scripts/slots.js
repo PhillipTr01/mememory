@@ -224,22 +224,22 @@ function animateReels(grid, time, sweatTime, stopped) {
       reel.classList.add("spinning");
       // Not too many symbols: the reels turn at a speed the eye can follow
       var count = Math.round((8 + i * 3) * Math.min(1, time / setup.rules.spinTime)) + 3 + (sweat && i == 4 ? Math.round(sweat / 140) : 0);
-      var ids = [];
-      // The faces on top now, then random ones, then the result
-      var now = [...track.children].map((c) => c.dataset.symbol);
-      ids.push(...now);
+      // The symbols fall from the top: the result on top, random ones, the faces now at the bottom -
+      // the track starts at the bottom (what is shown now) and slides down to the result
+      var ids = grid[i].slice();
       for (var n = 0; n < count; n++) ids.push(strip[Math.floor(Math.random() * strip.length)]);
-      ids.push(...grid[i]);
+      ids.push(...[...track.children].map((c) => c.dataset.symbol));
       track.getAnimations().forEach((a) => a.cancel());
       track.replaceChildren(...ids.map(cell));
-      track.style.transform = "translateY(0px)";
-      var end = -(ids.length - 3) * TILE;
+      var start = -(ids.length - 3) * TILE;
+      track.style.transform = `translateY(${start}px)`;
       var duration = time * (0.5 + i * 0.12) + (sweat && i == 4 ? sweat : 0);
+      // (a little too far down at the end, then back: the reel settles)
       var animation = track.animate(
         [
-          { transform: "translateY(0px)", easing: "cubic-bezier(0.45, 0, 0.6, 1)" },
-          { transform: `translateY(${end - TILE * 0.18}px)`, offset: 0.93, easing: "ease-out" },
-          { transform: `translateY(${end}px)` },
+          { transform: `translateY(${start}px)`, easing: "cubic-bezier(0.45, 0, 0.6, 1)" },
+          { transform: `translateY(${TILE * 0.18}px)`, offset: 0.93, easing: "ease-out" },
+          { transform: "translateY(0px)" },
         ],
         { duration: duration, fill: "forwards" },
       );
@@ -704,14 +704,16 @@ async function playCoinGame(result, from, started) {
 
 // An empty spot spins: blanks and coins roll by, it stops on `result` (a coin cell) or stays empty
 function miniSpin(box, result, time) {
+  // (falls from the top: the result first, the track slides down to it)
   var strip = el("div", "sl-mini-track");
   var faces = 7 + Math.floor(Math.random() * 3);
-  for (var i = 0; i < faces; i++) strip.appendChild(el("div", "sl-mini-face", Math.random() < 0.4 ? "🪙" : ""));
   strip.appendChild(el("div", "sl-mini-face", result ? "🪙" : ""));
+  // (the last one is empty - what the spot shows now)
+  for (var i = 0; i < faces; i++) strip.appendChild(el("div", "sl-mini-face", i < faces - 1 && Math.random() < 0.4 ? "🪙" : ""));
   box.replaceChildren(strip);
   box.classList.add("rolling");
   return strip
-    .animate([{ transform: "translateY(0)" }, { transform: "translateY(" + -faces * 100 + "%)" }], { duration: time, easing: "cubic-bezier(0.3, 0.1, 0.25, 1)", fill: "forwards" })
+    .animate([{ transform: "translateY(" + -faces * 100 + "%)" }, { transform: "translateY(0)" }], { duration: time, easing: "cubic-bezier(0.3, 0.1, 0.25, 1)", fill: "forwards" })
     .finished.then(() => {
       box.classList.remove("rolling");
       if (!result) return box.replaceChildren();
