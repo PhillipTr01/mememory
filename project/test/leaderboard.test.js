@@ -1,6 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert");
 const h = require("./helpers");
+require("../game/config").SEASON_CLOSE_WAIT = 0; // the season starts right away in the tests
 const leaderboard = require("../game/leaderboard");
 const seasons = require("../game/seasons");
 const coins = require("../game/coins");
@@ -127,6 +128,45 @@ test("seasons: a running season can't be deleted, it can end early; start and bu
   assert.strictEqual(over.season.status, "ended");
   assert.ok((await seasons.remove(made.season.id)).ok, "deleted afterwards");
   seasons.reset();
+});
+
+test("seasons: before the start the casino closes - running games finish, no new bets, then the wait", async () => {
+  seasons.reset();
+  const config = require("../game/config");
+  const casinoLock = require("../game/casino_lock");
+  const now = Date.now() + 1000; // the ticks of the test: after the start
+  let busy = true;
+  casinoLock.registerRunning("test-game", () => busy);
+  const events = [];
+  const onClosing = (info) => events.push(info);
+  seasons.changes.on("closing", onClosing);
+  config.SEASON_CLOSE_WAIT = 60 * 1000;
+  try {
+    const made = await seasons.create({ name: "Closing", icon: "🚪", start: now - 500, end: now + 3600 * 1000, budget: 900, every: 0 });
+    // A round still runs: closed, but no countdown yet
+    await seasons.tick(now);
+    assert.ok(casinoLock.locked(), "no new bets");
+    assert.strictEqual(seasons.running(), null);
+    assert.strictEqual(seasons.closingInfo(now).startsIn, null);
+    assert.strictEqual(seasons.list().find((x) => x.id === made.season.id).status, "starting");
+    // The round is over: one minute, then the season
+    busy = false;
+    await seasons.tick(now + 5000);
+    assert.strictEqual(seasons.closingInfo(now + 5000).startsIn, 60 * 1000);
+    await seasons.tick(now + 30 * 1000);
+    assert.strictEqual(seasons.running(), null, "still waiting");
+    assert.ok(casinoLock.locked());
+    await seasons.tick(now + 66 * 1000);
+    assert.strictEqual(seasons.running().name, "Closing");
+    assert.ok(!casinoLock.locked(), "open again");
+    assert.deepStrictEqual(events.map((e) => e.startsIn), [null, 60 * 1000]);
+    await seasons.endNow(made.season.id);
+  } finally {
+    config.SEASON_CLOSE_WAIT = 0;
+    busy = false;
+    seasons.changes.off("closing", onClosing);
+    seasons.reset();
+  }
 });
 
 test("seasons: second chances - 0 coins and nothing in play, then the budget again; the next one only the next day", async () => {

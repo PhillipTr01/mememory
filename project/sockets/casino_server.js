@@ -48,6 +48,11 @@ module.exports = function (io) {
     for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonStarted", season);
   });
 
+  // The casino closes for a season (and the countdown to its start): every open casino page shows it
+  seasons.changes.on("closing", (info) => {
+    for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonClosing", info);
+  });
+
   // A season is over: every open casino page shows it (with a link to the winners)
   seasons.changes.on("ended", (season) => {
     for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonEnded", { id: season.id, name: season.name, icon: season.icon, winner: season.winner });

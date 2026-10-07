@@ -62,6 +62,8 @@ module.exports = {
   // Every account gets START_COINS once for this id: a new id resets everybody's coins
   COIN_RESET: "reset-100k",
   DAILY_BONUS: 2500,
+  SEASON_CLOSE_WAIT: 60 * 1000, // before a season starts: when every game is quiet, this long until the start
+  SEASON_CLOSE_MAX: 5 * 60 * 1000, // ... and at most this long waiting for the games to get quiet
   SEASON_DAILY_BONUS: 1000, // the daily bonus of a new season (each season can have its own)
   // The daily bonus comes back at midnight in this time zone
   BONUS_TZ: process.env.BONUS_TZ || "Europe/Berlin",

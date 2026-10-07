@@ -140,6 +140,8 @@ module.exports = function (auth) {
       res.json({
         season: season ? { id: season.id, name: season.name, icon: season.icon, end: season.end, color: season.color || null } : null,
         lastSeason: ended ? { id: ended.id, name: ended.name, icon: ended.icon, endedAt: ended.endedAt } : null,
+        // The casino closes for a season right now (the pages show it)
+        closing: seasons.closingInfo(),
       });
     }),
   );

@@ -1,6 +1,7 @@
 const config = require("../game/config");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
+const casinoLock = require("../game/casino_lock");
 const poker = require("../game/poker");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
@@ -243,7 +244,7 @@ module.exports = function (io) {
 
   // Two players with chips: the next hand starts soon
   function scheduleStart() {
-    if (table.phase !== "waiting" || table.startAt != null || players().length < 2) return;
+    if (table.phase !== "waiting" || table.startAt != null || players().length < 2 || casinoLock.locked()) return;
     table.startAt = Date.now() + config.POKER_START;
     table.timer = setTimeout(() => {
       table.startAt = null;
@@ -540,9 +541,23 @@ module.exports = function (io) {
     table.result = null;
     table.current = -1;
     table.phase = "waiting";
+    // Closing time before a season: no next hand - everybody gets the chips back
+    if (casinoLock.locked()) return closeTable();
     if (players().length >= 2) startHand();
     else emitState();
   }
+
+  // Everybody stands up, the chips go back (closing time before a season)
+  function closeTable() {
+    clearTimeout(table.timer);
+    table.startAt = null;
+    table.seats.forEach((seat, i) => seat && cashOut(i));
+    emitState();
+  }
+  casinoLock.changes.on("locked", () => {
+    if (table.phase === "waiting") closeTable();
+  });
+  casinoLock.registerRunning("poker", () => table.phase !== "waiting" || table.seats.some((seat) => seat && seat.stack > 0));
 
   // Standing up: folds a running hand, the chips come back at its end
   function standUp(i) {
@@ -598,6 +613,7 @@ module.exports = function (io) {
     socket.on(
       "sit",
       safe("sit", async (data) => {
+        if (casinoLock.locked()) return error(casinoLock.MESSAGE);
         if (data == null) return;
         const { seat, buyIn } = data;
         if (!Number.isInteger(seat) || seat < 0 || seat >= table.seats.length) return;
@@ -644,6 +660,7 @@ module.exports = function (io) {
     socket.on(
       "addChips",
       safe("addChips", async (amount) => {
+        if (casinoLock.locked()) return error(casinoLock.MESSAGE);
         const i = seatOf(username);
         if (i < 0 || !Number.isInteger(amount) || amount <= 0 || busy.has(username)) return;
         const seat = table.seats[i];

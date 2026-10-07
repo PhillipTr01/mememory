@@ -1,6 +1,7 @@
 const config = require("../game/config");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
+const casinoLock = require("../game/casino_lock");
 const { newFairRound, fairWinner } = require("../game/jackpot");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
@@ -297,6 +298,8 @@ module.exports = function (io) {
         if (!Number.isInteger(amount) || amount <= 0) return;
         // An old account with the name of the house can't play here
         if (username.toLowerCase() === GHOST.toLowerCase()) return socket.emit("betError", "This name is reserved.");
+        // Closing time before a season: no new bets
+        if (casinoLock.locked()) return socket.emit("betError", casinoLock.MESSAGE);
         // One bet at a time per user (two tabs, fast clicks)
         if (betting.has(username)) return;
         // Any amount, but at most a few separate bets per round (during a draw: for the next one)
@@ -424,6 +427,8 @@ module.exports = function (io) {
   }
 
   // Coins in play: a bet in the pot (until the next round starts), on its way or waiting for the next pot
+  // Something still runs: bets in the pot (or on their way), a draw
+  casinoLock.registerRunning("jackpot", () => pot.entries.length > 0 || pot.incoming.length > 0 || pot.waiting.length > 0 || pot.phase === PHASE.DRAWING);
   inPlay.register("jackpot", (name) => pot.entries.some((e) => e.name === name) || pot.incoming.some((b) => b.name === name) || pot.waiting.some((b) => b.name === name));
 
   return { pot };

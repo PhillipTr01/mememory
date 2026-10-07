@@ -6,6 +6,7 @@ const config = require("./config");
 const { seasonReset, seasonRestore } = require("./hard_reset");
 const days = require("./days");
 const inPlay = require("./in_play");
+const casinoLock = require("./casino_lock");
 
 /*
  * Seasons (admin panel): planned ahead from a start to an end. When a season
@@ -25,7 +26,11 @@ const inPlay = require("./in_play");
  *
  * Without a running season the leaderboard is the normal one (live).
  *
- * changes: "started" (season), "ended" (season)
+ * Before a season starts the casino closes (game/casino_lock.js): no new
+ * bets, running rounds go to their end. When every game is quiet (or after
+ * SEASON_CLOSE_MAX), SEASON_CLOSE_WAIT more - then the season starts.
+ *
+ * changes: "closing" (info, again when the countdown starts), "started" (season), "ended" (season)
  */
 const KEY = "seasons";
 const BACKUP = "seasonGames:"; // + id: the games from before the season
@@ -62,7 +67,7 @@ function publicSeason(season) {
     color: season.color || null,
     prizesOn: season.prizesOn,
     prizes: season.prizes,
-    status: status(season),
+    status: state.closing && state.closing.id === season.id ? "starting" : status(season),
     endedAt: season.endedAt || null,
     players: season.final ? season.final.rows.length : null,
     winner: season.final && season.final.rows.length ? season.final.rows[0] : null,
@@ -97,7 +102,23 @@ async function load() {
     console.error("[seasons] Could not read the seasons:", error);
   }
   coins.setBase(state.base);
+  // (the server stopped while the casino was closing for a season: closed again)
+  if (state.closing) casinoLock.lock();
   loaded = true;
+}
+
+// The casino closes for a season: {id, name, icon, startsIn (ms, null: the games are still finishing)}
+function closingInfo(now = Date.now()) {
+  const closing = state.closing;
+  const season = closing && byId(closing.id);
+  if (!season) return null;
+  return { id: season.id, name: season.name, icon: season.icon, startsIn: closing.startsAt == null ? null : Math.max(0, closing.startsAt - now) };
+}
+
+// While closing: look again soon (not only every TICK)
+function soon(ms) {
+  if (!timer) return;
+  setTimeout(() => tick(), ms).unref();
 }
 
 /* ---------- Checking what the admin entered ---------- */
@@ -184,6 +205,11 @@ async function remove(id) {
   if (season == null) return { error: "No such season." };
   if (status(season) === "running") return { error: "The season runs - end it first." };
   state.seasons.splice(state.seasons.indexOf(season), 1);
+  if (state.closing && state.closing.id === season.id) {
+    state.closing = null;
+    casinoLock.unlock();
+    changes.emit("closing", null);
+  }
   await save();
   return { ok: true };
 }
@@ -269,7 +295,29 @@ function tick(now = Date.now()) {
           await save();
           continue;
         }
-        if (!season.started && season.start <= now && !running()) await startSeason(season, now);
+        if (!season.started && season.start <= now && !running()) {
+          // First the casino closes: running rounds go to their end, nothing new
+          if (!state.closing || state.closing.id !== season.id) {
+            state.closing = { id: season.id, since: now, startsAt: null };
+            casinoLock.lock();
+            await save();
+            changes.emit("closing", closingInfo(now));
+          }
+          // Every game quiet (or waited long enough): the countdown to the start
+          if (state.closing.startsAt == null && (casinoLock.busyGames().length === 0 || now - state.closing.since >= config.SEASON_CLOSE_MAX)) {
+            state.closing.startsAt = now + config.SEASON_CLOSE_WAIT;
+            await save();
+            changes.emit("closing", closingInfo(now));
+            soon(config.SEASON_CLOSE_WAIT + 100);
+          }
+          if (state.closing.startsAt != null && now >= state.closing.startsAt) {
+            state.closing = null;
+            await startSeason(season, now);
+            casinoLock.unlock();
+          } else if (state.closing.startsAt == null) {
+            soon(2000);
+          }
+        }
         if (season.started && !season.ended && season.end <= now) await endSeason(season, now);
       }
     })
@@ -362,6 +410,7 @@ async function clear() {
   const wasRunning = running();
   state = { seasons: [], base: null, next: 1 };
   coins.setBase(null);
+  casinoLock.unlock();
   await Setting.deleteMany({ key: { $in: [KEY, ...ids.map((id) => BACKUP + id)] } });
   if (wasRunning) changes.emit("cleared");
 }
@@ -370,6 +419,7 @@ async function clear() {
 function reset() {
   state = { seasons: [], base: null, next: 1 };
   coins.setBase(null);
+  casinoLock.unlock();
   loaded = true;
 }
 
@@ -383,4 +433,4 @@ function accentStyle() {
   return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
 }
 
-module.exports = { chanceStatus, useChance, storedOf, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+module.exports = { closingInfo, chanceStatus, useChance, storedOf, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };

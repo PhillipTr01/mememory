@@ -3,6 +3,7 @@ const assert = require("node:assert");
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const h = require("./helpers");
+require("../game/config").SEASON_CLOSE_WAIT = 0; // the season starts right away in the tests
 const config = require("../game/config");
 const coins = require("../game/coins");
 const PageAuth = require("../middleware/auth");

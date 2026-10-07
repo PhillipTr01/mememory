@@ -1,6 +1,7 @@
 const config = require("../game/config");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
+const casinoLock = require("../game/casino_lock");
 const slots = require("../game/slots");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
@@ -199,6 +200,8 @@ module.exports = function (io) {
         if (bet < config.SLOTS_MIN_BET || bet > config.SLOTS_MAX_BET) {
           return error(`A spin is ${config.SLOTS_MIN_BET.toLocaleString("en-US")} to ${config.SLOTS_MAX_BET.toLocaleString("en-US")} coins.`);
         }
+        // Closing time before a season: no new spins
+        if (casinoLock.locked()) return error(casinoLock.MESSAGE);
         // One spin at a time - and not faster than the reels turn
         if (busy.has(username) || Date.now() - (lastSpin.get(username) || 0) < config.SLOTS_MIN_GAP) return;
         busy.add(username);
@@ -279,6 +282,11 @@ module.exports = function (io) {
   }
 
   // Coins in play: a win (or a bonus game) not paid yet
+  // Closing time before a season: every win (and bonus game) still waiting is paid now
+  casinoLock.changes.on("locked", () => {
+    payAll().catch((error) => console.error("[slots] Could not pay before the season:", error));
+  });
+  casinoLock.registerRunning("slots", () => machine.pending.length > 0);
   inPlay.register("slots", (name) => machine.pending.some((entry) => entry.name === name));
 
   return { machine, payAll };

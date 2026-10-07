@@ -59,7 +59,7 @@
     payout = data.payout === true;
     button.hidden = false;
     button.classList.toggle("no-payout", !payout);
-    button.title = payout ? "Your coins - click to pay out" : "Your coins";
+    button.removeAttribute("title");
     document.getElementById("navCoinsValue").innerText = format(coins);
     // In a season: the balance from before it (it comes back after the season, with the season's on top)
     var stored = document.getElementById("navCoinsStored");
@@ -419,14 +419,55 @@
       seasonTimer = setInterval(seasonLeft, 1000);
     }
   }
-  if (board) {
-    // The leaderboard page itself: marked
-    if (/\/leaderboard\/?$/.test(location.pathname)) board.classList.add("active");
-    fetch("season", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then(showSeason)
-      .catch(() => {});
+  // The leaderboard page itself: marked
+  if (board && /\/leaderboard\/?$/.test(location.pathname)) board.classList.add("active");
+  fetch("season", { cache: "no-store" })
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data) => {
+      showSeason(data);
+      if (data && data.closing) showClosing(data.closing);
+    })
+    .catch(() => {});
+
+  // A season starts soon: the casino closes - open rounds finish, no new bets, then a countdown.
+  // Can't be clicked away (it goes with the start of the season: the page loads again)
+  var closing = null;
+  var closingTimer = null;
+  function showClosing(info) {
+    clearInterval(closingTimer);
+    if (!info) {
+      if (closing) closing.remove();
+      closing = null;
+      return;
+    }
+    if (!closing) {
+      closing = el("div", "cs-closing");
+      closing.setAttribute("role", "alertdialog");
+      closing.setAttribute("aria-modal", "true");
+      var card = el("div", "cs-closing-card");
+      card.append(el("div", "cs-closing-icon"), el("div", "cs-closing-title"), el("div", "cs-closing-count"), el("div", "cs-closing-text"));
+      closing.appendChild(card);
+      document.body.appendChild(closing);
+    }
+    closing.querySelector(".cs-closing-icon").innerText = info.icon || "🏆";
+    closing.querySelector(".cs-closing-title").innerText = info.name + " starts soon!";
+    var count = closing.querySelector(".cs-closing-count");
+    var text = closing.querySelector(".cs-closing-text");
+    if (info.startsIn == null) {
+      count.innerText = "⏳";
+      text.innerText = "The open games are finishing - no new bets until the season starts.";
+      return;
+    }
+    text.innerText = "All games are closed - the season starts in a moment.";
+    var startsAt = Date.now() + info.startsIn;
+    var show = () => {
+      var s = Math.max(0, Math.ceil((startsAt - Date.now()) / 1000));
+      count.innerText = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+    };
+    show();
+    closingTimer = setInterval(show, 250);
   }
+  socket.on("seasonClosing", showClosing);
 
   // A new season: the casino starts anew - the page loads again (new coins, the games from the start)
   socket.on("seasonStarted", (season) => {

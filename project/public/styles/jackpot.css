@@ -3253,10 +3253,26 @@ body.jackpot-theme {
   padding: 16px;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(3px);
-  animation: cs-season-in 0.3s ease-out;
+  animation: cs-backdrop-in 0.25s ease-out;
+}
+
+/* The popups over the whole screen: the shadow fades in, the card pops */
+@keyframes cs-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes cs-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
 }
 
 .cs-chance-card {
+  box-sizing: border-box;
+  animation: cs-card-in 0.3s cubic-bezier(0.2, 1.2, 0.4, 1);
   width: min(400px, 100%);
   display: flex;
   flex-direction: column;
@@ -3367,4 +3383,57 @@ body.jackpot-theme {
 
 .cs-chance-btn:hover {
   background: #c4aaf0;
+}
+
+/* A season starts soon: over everything, can't be clicked away (the same look as the second chance) */
+.cs-closing {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  animation: cs-backdrop-in 0.25s ease-out;
+}
+
+.cs-closing-card {
+  box-sizing: border-box;
+  width: min(400px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.6rem 1.4rem 1.4rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.55);
+  border-radius: 20px;
+  background: var(--mm-surface);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), 0 0 40px rgba(var(--mm-accent-rgb), 0.18);
+  text-align: center;
+  color: #fff;
+  animation: cs-card-in 0.3s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+.cs-closing-icon {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.cs-closing-title {
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+
+.cs-closing-count {
+  margin: 0.3rem 0;
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: rgb(var(--mm-accent-rgb));
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-closing-text {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.82);
 }

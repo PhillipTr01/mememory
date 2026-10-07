@@ -1,6 +1,7 @@
 const config = require("../game/config");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
+const casinoLock = require("../game/casino_lock");
 const bj = require("../game/blackjack");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
@@ -728,7 +729,11 @@ module.exports = function (io) {
     for (const name of Object.keys(current ? current.handlers : {})) {
       socket.on(
         name,
-        safe(name, (data) => current.handlers[name](username, error, data)),
+        safe(name, (data) => {
+          // Closing time before a season: no new seats or bets (a round that runs goes on)
+          if (casinoLock.locked() && ["sit", "bet", "sideBet", "rebet"].includes(name)) return error(casinoLock.MESSAGE);
+          return current.handlers[name](username, error, data);
+        }),
       );
     }
 
@@ -759,6 +764,8 @@ module.exports = function (io) {
   }
 
   // Coins in play: a bet (or side bet, or a hand) on a seat at any table
+  // Something still runs: a round after the betting, or bets on the table
+  casinoLock.registerRunning("blackjack", () => [...tables.values()].some((t) => t.table.phase !== "betting" || t.table.seats.some((seat) => seat && (seat.bet > 0 || (seat.side && seat.side.pairs + seat.side.plus3 > 0)))));
   inPlay.register("blackjack", (name) =>
     [...tables.values()].some((t) => t.table.seats.some((seat) => seat && seat.name === name && (seat.bet > 0 || (seat.side && seat.side.pairs + seat.side.plus3 > 0) || (seat.hands || []).length > 0))),
   );
