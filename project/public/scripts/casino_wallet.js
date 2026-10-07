@@ -405,6 +405,8 @@
 
   function showSeason(data) {
     if (!board) return;
+    // (hidden until it is known whether a season runs - no "Leaderboard" flashing first)
+    board.classList.add("ready");
     var season = data && data.season;
     document.getElementById("navBoardIcon").innerText = season ? season.icon : "🏆";
     document.getElementById("navBoardText").innerText = season ? season.name : "Leaderboard";
@@ -428,7 +430,7 @@
       if (data && data.closing) showClosing(data.closing);
       else if (data && data.season && data.joined === false) offerSeason(data);
     })
-    .catch(() => {});
+    .catch(() => showSeason(null));
 
   /* ---------- "Start": a player is in a running season only after hitting it ---------- */
 

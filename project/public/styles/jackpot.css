@@ -3505,3 +3505,18 @@ body.jackpot-theme {
 .cs-closing-notice .bt-notice-text span {
   white-space: normal;
 }
+
+/* The leaderboard pill: only once it is known whether a season runs (no "Leaderboard" flashing first) */
+.nav-board:not(.ready) {
+  visibility: hidden;
+}
+
+.nav-board.ready {
+  animation: nav-board-in 0.2s ease-out;
+}
+
+@keyframes nav-board-in {
+  from {
+    opacity: 0;
+  }
+}
