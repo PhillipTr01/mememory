@@ -845,10 +845,13 @@ function placesOf(battle, totals) {
  * smooth, a little too far and back, a whole slot too far and falling back,
  * or creeping onto it at the very end. `to` and `slot` in `unit`.
  */
-function landing(prop, unit, to, slot, key) {
+// stayOn: never past the slot it stops on (the roulette: no other picture on the way back)
+function landing(prop, unit, to, slot, key, stayOn) {
   var hash = [...String(key)].reduce((h, c) => (h * 33 + c.charCodeAt(0)) >>> 0, 5381);
   var at = (v) => prop + "(" + -v + unit + ")";
-  switch (hash % 4) {
+  var kind = hash % 4;
+  if (stayOn && kind == 2) kind = 3;
+  switch (kind) {
     case 1: // a bit too far, back
       return [
         { transform: at(0), offset: 0, easing: "cubic-bezier(0.15, 0.55, 0.2, 1)" },
@@ -887,6 +890,7 @@ var DRAW_LAPS = 5;
 var SLOT_WIDTH = 66;
 var SEAT_COLORS = ["#d4a64a", "#3b82f6", "#e0675a", "#3fae6b"];
 var drawing = {}; // battle id -> when the roulette started
+var drawBoxes = {}; // battle id -> its roulette (the same one through every render)
 
 // The slots of one round: every seat by its share (at least one), mixed - the same on every page
 function drawSlots(battle) {
@@ -921,6 +925,9 @@ function playJackpotDraw(battle, grid) {
   }
   var started = drawing[battle.id];
   if (Date.now() < started) return;
+  // Already rolling on this page: the same roulette goes on (a new one would start a frame at the
+  // first picture)
+  if (drawBoxes[battle.id]) return grid.appendChild(drawBoxes[battle.id]);
   var winner = winnersOf(battle)[0];
   var lap = drawSlots(battle);
   var box = el("div", "bt-mode-reveal bt-draw");
@@ -938,6 +945,7 @@ function playJackpotDraw(battle, grid) {
   var name = el("span", "bt-mode-name", "Who gets it all?");
   box.append(el("span", "bt-mode-title", "THE JACKPOT GOES TO..."), windowBox, name);
   grid.appendChild(box);
+  drawBoxes[battle.id] = box;
   // The stop: a slot of the winner in the last round, in the middle of the window
   var target = (DRAW_LAPS - 1) * lap.length + Math.max(0, lap.indexOf(winner));
   var finish = () => {
@@ -949,7 +957,7 @@ function playJackpotDraw(battle, grid) {
     // (the slots as wide as they really are - with their border)
     var slotWidth = track.firstChild ? track.firstChild.getBoundingClientRect().width : SLOT_WIDTH;
     var offset = target * slotWidth + slotWidth / 2 - windowBox.clientWidth / 2;
-    var spin = track.animate(landing("translateX", "px", offset, slotWidth, battle.id + ":draw"), { duration: DRAW_SPIN, fill: "forwards" });
+    var spin = track.animate(landing("translateX", "px", offset, slotWidth, battle.id + ":draw", true), { duration: DRAW_SPIN, fill: "forwards" });
     spin.currentTime = Math.min(DRAW_SPIN, Date.now() - started);
     if (Date.now() - started >= DRAW_SPIN) return finish();
     spin.finished.then(finish, () => {});
