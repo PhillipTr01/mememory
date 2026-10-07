@@ -651,16 +651,6 @@
 }
 
 /* ---------- One battle ---------- */
-.bt-battle-top {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-}
-
-.bt-battle-top .bt-row-tags {
-  flex: 1;
-}
-
 .bt-arena {
   position: relative;
   display: grid;
@@ -1275,68 +1265,71 @@ button.bt-strip-case:hover {
   opacity: 1;
 }
 
-/* ---------- The bar over a battle: back, then pills (price, cases, crazy), the pot on the right ---------- */
+/* ---------- The bar over a battle: price · cases · crazy, the pot, leave (far right) ---------- */
 .bt-battle-top {
-  flex-wrap: wrap;
-  padding: 0.5rem;
-  border: 1px solid var(--mm-border);
-  border-radius: 14px;
-  background: var(--mm-surface-2);
-}
-
-.bt-battle-top .bt-back {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
-  border-radius: 999px;
-  padding: 0.3rem 0.85rem;
+  gap: 1rem;
 }
 
-.bt-battle-top .bt-row-tags {
-  gap: 0.4rem;
-}
-
-.bt-battle-top .bt-row-price,
-.bt-battle-top .bt-chip,
-.bt-battle-top .bt-crazy-tag,
-.bt-battle-top .bt-pot {
-  display: inline-flex;
+.bt-top-facts {
+  display: flex;
   align-items: center;
-  gap: 0.3rem;
-  height: 28px;
-  padding: 0 0.75rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--mm-muted);
   white-space: nowrap;
 }
 
-.bt-battle-top .bt-row-price {
-  background: rgba(var(--mm-accent-rgb), 0.12);
-  border: 1px solid rgba(var(--mm-accent-rgb), 0.35);
+/* A thin dot between the facts */
+.bt-top-facts > span + span::before {
+  content: "·";
+  margin: 0 0.5rem;
+  opacity: 0.6;
 }
 
-.bt-battle-top .bt-chip {
-  background: var(--mm-surface);
-  border: 1px solid var(--mm-border);
-  color: var(--mm-text);
+.bt-top-crazy {
+  color: #c084fc;
 }
 
-.bt-battle-top .bt-crazy-tag {
-  background: rgba(168, 85, 247, 0.14);
-  border: 1px solid rgba(168, 85, 247, 0.4);
-}
-
-/* The pot: on the right, gold */
-.bt-battle-top .bt-pot {
-  margin-left: auto;
-  height: 32px;
-  padding: 0 0.95rem;
-  background: var(--mm-accent);
-  color: var(--mm-on-accent, #1a1305);
-  font-size: 0.88rem;
+.bt-top-pot {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 1.05rem;
   font-weight: 800;
+  color: var(--mm-accent);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bt-top-pot-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--mm-muted);
+  text-transform: uppercase;
+}
+
+.bt-leave {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--mm-border);
+  border-radius: 50%;
+  background: var(--mm-surface-2);
+  color: var(--mm-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.bt-leave:hover,
+.bt-leave:focus-visible {
+  border-color: var(--mm-accent);
+  color: var(--mm-text);
 }
 
 /* The battle bar sits on the level of the title */

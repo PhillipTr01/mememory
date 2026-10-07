@@ -16,14 +16,13 @@ const crypto = require("crypto");
  * MAX_WIN times the bet.
  */
 const SYMBOLS = [
-  { id: "banana", icon: "🍌", name: "Banana", count: 8, pays: [4, 11, 33] },
-  { id: "doge", icon: "🐕", name: "Doge", count: 7, pays: [7, 17, 55] },
-  { id: "pepe", icon: "🐸", name: "Pepe", count: 5, pays: [9, 26, 88] },
-  { id: "moai", icon: "🗿", name: "Moai", count: 4, pays: [11, 33, 130] },
-  { id: "rocket", icon: "🚀", name: "To the moon", count: 3, pays: [17, 55, 220] },
-  { id: "stonks", icon: "📈", name: "Stonks", count: 2, pays: [26, 88, 440] },
-  { id: "diamond", icon: "💎", name: "Diamond hands", count: 1, pays: [44, 220, 1100] },
-  { id: "wild", icon: "😎", name: "Wild", count: 2, pays: [66, 330, 2200], wild: true },
+  { id: "banana", icon: "🍌", name: "Banana", count: 9, pays: [3, 9, 27] },
+  { id: "pepe", icon: "🐸", name: "Pepe", count: 8, pays: [5, 13, 41] },
+  { id: "doge", icon: "🐕", name: "Doge", count: 6, pays: [8, 24, 90] },
+  { id: "rocket", icon: "🚀", name: "To the moon", count: 4, pays: [13, 41, 179] },
+  { id: "money", icon: "💰", name: "Money bag", count: 3, pays: [20, 73, 359] },
+  { id: "diamond", icon: "💎", name: "Diamond hands", count: 1, pays: [36, 179, 897] },
+  { id: "wild", icon: "👑", name: "Wild", count: 2, pays: [54, 269, 1793], wild: true },
   // Pays no line - three in sight (reels 1, 3, 5) start the bonus
   { id: "bonus", icon: "🎁", name: "Bonus", count: 0, pays: [0, 0, 0], scatter: true },
 ];
@@ -32,16 +31,17 @@ const BONUS_REELS = [0, 2, 4];
 const BONUS_COUNT = 2; // on each of these reels
 const MAX_WIN = 250; // times the bet, for a whole spin
 
-// The bonus wheel: multiplier and weight (of 1000)
+// The bonus wheel: multiplier and weight (of 10,000). 250x as rare as the top
+// item of a high-risk case: 3 of 10,000 (0.03%)
 const BONUS_WHEEL = [
-  { multiplier: 2, weight: 300 },
-  { multiplier: 3, weight: 250 },
-  { multiplier: 5, weight: 200 },
-  { multiplier: 10, weight: 130 },
-  { multiplier: 20, weight: 70 },
-  { multiplier: 50, weight: 40 },
-  { multiplier: 100, weight: 9 },
-  { multiplier: 250, weight: 1 },
+  { multiplier: 2, weight: 3000 },
+  { multiplier: 3, weight: 2500 },
+  { multiplier: 5, weight: 2000 },
+  { multiplier: 10, weight: 1350 },
+  { multiplier: 20, weight: 720 },
+  { multiplier: 50, weight: 390 },
+  { multiplier: 100, weight: 37 },
+  { multiplier: 250, weight: 3 },
 ];
 const WHEEL_TOTAL = BONUS_WHEEL.reduce((sum, field) => sum + field.weight, 0);
 const BY_ID = new Map(SYMBOLS.map((symbol) => [symbol.id, symbol]));

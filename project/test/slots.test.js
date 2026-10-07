@@ -21,7 +21,7 @@ test("slots: a line wins from the left, the wild stands for every symbol", () =>
   const pays = (id) => slots.SYMBOLS.find((s) => s.id === id).pays;
   assert.deepStrictEqual(slots.lineWin(["pepe", "pepe", "pepe", "doge", "pepe"]), { multiplier: pays("pepe")[0], symbol: "pepe", count: 3 });
   assert.strictEqual(slots.lineWin(["doge", "pepe", "pepe", "pepe", "pepe"]).multiplier, 0, "only from the left");
-  assert.deepStrictEqual(slots.lineWin(["wild", "moai", "wild", "moai", "banana"]), { multiplier: pays("moai")[1], symbol: "moai", count: 4 });
+  assert.deepStrictEqual(slots.lineWin(["wild", "rocket", "wild", "rocket", "banana"]), { multiplier: pays("rocket")[1], symbol: "rocket", count: 4 });
   assert.deepStrictEqual(slots.lineWin(["wild", "wild", "wild", "wild", "wild"]), { multiplier: pays("wild")[2], symbol: "wild", count: 5 });
   // Three wilds and a banana: the wilds pay more on their own
   assert.deepStrictEqual(slots.lineWin(["wild", "wild", "wild", "banana", "doge"]), { multiplier: pays("wild")[0], symbol: "wild", count: 3 });
@@ -48,15 +48,16 @@ test("slots: three 🎁 start the bonus wheel; a spin never pays more than 250x 
   });
   // The middle row of reels 1, 3, 5 on a 🎁: the bonus; the wheel decides the multiplier
   const stops = slots.STRIPS.map((strip, reel) => ([0, 2, 4].includes(reel) ? strip.indexOf("bonus") : 0));
-  const rolls = stops.concat([999]); // the last field of the wheel: 250x
+  const rolls = stops.concat([9999]); // the last field of the wheel: 250x
   let n = 0;
   const result = slots.spin(100, () => rolls[n++]);
   assert.deepStrictEqual([result.bonus.multiplier, result.bonus.win], [250, 25000]);
   assert.ok(result.win <= 100 * slots.MAX_WIN, "capped at 250x");
-  // 250x is very rare: 1 of 1000 bonus wheels, the bonus about 1 of 180 spins
+  // 250x is very rare: 3 of 10,000 bonus wheels (like the top item of a high-risk case), the bonus about 1 of 200 spins
   const { bonusChance } = slots.rtp();
   assert.ok(bonusChance > 1 / 250 && bonusChance < 1 / 120, `bonus 1 of ${Math.round(1 / bonusChance)}`);
-  assert.strictEqual(slots.BONUS_WHEEL.find((f) => f.multiplier === 250).weight, 1);
+  const wheel = slots.BONUS_WHEEL.reduce((sum, f) => sum + f.weight, 0);
+  assert.ok(slots.BONUS_WHEEL.find((f) => f.multiplier === 250).weight / wheel <= 0.0003);
 });
 
 /* ---------- The page ---------- */

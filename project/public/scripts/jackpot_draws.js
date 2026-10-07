@@ -52,9 +52,18 @@ function pick(list) {
  * always forward, never back and never a stop before the end. Different every
  * time: braking evenly, or a long slow tail where it creeps over the last
  * fields. Keyframes of a value (deg / px) from `from` to `to` (step: the size
- * of one field - kept for the callers).
+ * of one field - kept for the callers). With `near`: the rare little push -
+ * it almost stops at `near` (still on the player before) and creeps over.
  */
-function spinEnding(from, to, step) {
+function spinEnding(from, to, step, near) {
+  // Rare: it nearly stops on the player before ... and creeps over to the next one
+  if (near != null) {
+    return [
+      { value: from, offset: 0, easing: "cubic-bezier(0.2, 0.65, 0.35, 0.985)" },
+      { value: near, offset: 0.86, easing: "cubic-bezier(0.45, 0.15, 0.55, 1)" },
+      { value: to, offset: 1 },
+    ];
+  }
   var easing = pick([
     "cubic-bezier(0.33, 0.66, 0.66, 1)", // even braking (friction)
     "cubic-bezier(0.2, 0.7, 0.3, 1)", // a longer, slower tail
@@ -231,9 +240,20 @@ var wheelDraw = {
       await animate(wheel, [{ transform: "rotate(0deg)" }, { transform: `rotate(${end}deg)` }], { duration: duration, easing: SLOW_END });
     } else {
       // A different ending every time (the size of the winner's field: how far "nearly" is)
-      var bet = drawBets().find((b) => b.from <= draw.ticket + 1 && b.to >= draw.ticket + 1);
+      var bets = drawBets();
+      var bet = bets.find((b) => b.from <= draw.ticket + 1 && b.to >= draw.ticket + 1);
       var field = Math.min(40, bet ? (bet.coins / draw.total) * 360 : 20);
-      var frames = spinEnding(0, end, field).map((f) => ({ transform: `rotate(${f.value}deg)`, offset: f.offset, easing: f.easing }));
+      // Rare: nearly stopped on the player before, then a little push into the winner's field.
+      // The wheel turns clockwise: the pointer comes into the field at its end, from the next bet
+      var near = null;
+      var before = bet ? bets.find((b) => b.from == bet.to + 1) || bets[0] : null;
+      if (before && before.name != bet.name && Math.random() < 0.06) {
+        var entry = (bet.to / draw.total) * 360;
+        var inside = Math.min(field * 0.3, 2.5);
+        end = Math.round(turns) * 360 - (entry - inside);
+        near = end - inside - Math.min(2, (before.coins / draw.total) * 360 * 0.4);
+      }
+      var frames = spinEnding(0, end, field, near).map((f) => ({ transform: `rotate(${f.value}deg)`, offset: f.offset, easing: f.easing }));
       await animate(wheel, frames, { duration: duration });
     }
     wheel.style.transform = `rotate(${end}deg)`;
@@ -306,8 +326,14 @@ var rouletteDraw = {
     var tile = track.children[target];
     var tileWidth = tile.offsetWidth + 8;
     var offset = target * tileWidth + tile.offsetWidth * randomBetween(0.2, 0.8);
+    var near = null;
+    // Rare: it nearly stops on the picture before ... and creeps on to the winner
+    if (Math.random() < 0.06) {
+      offset = target * tileWidth + tile.offsetWidth * 0.1;
+      near = strip.clientWidth / 2 - (target * tileWidth - 14);
+    }
     var end = strip.clientWidth / 2 - offset;
-    var frames = spinEnding(0, end, tileWidth).map((f) => ({ transform: `translateX(${f.value}px)`, offset: f.offset, easing: f.easing }));
+    var frames = spinEnding(0, end, tileWidth, near).map((f) => ({ transform: `translateX(${f.value}px)`, offset: f.offset, easing: f.easing }));
     await animate(track, frames, { duration: duration });
     tile.classList.add("chosen");
   },
@@ -624,15 +650,43 @@ var clawDraw = {
     if (decoy) {
       var decoyX = decoy.offsetLeft + decoy.offsetWidth / 2;
       search[search.length - 1] = setClaw(decoyX, 0);
-      await animate(claw, search, { duration: 1000 * t, easing: SLOW_END });
+      await animate(claw, search, { duration: 700 * t, easing: SLOW_END });
       var decoyDrop = decoy.offsetTop - 40;
-      await animate(claw, [setClaw(decoyX, 0), setClaw(decoyX, decoyDrop)], { duration: 600 * t, easing: SLOW_END });
+      await animate(claw, [setClaw(decoyX, 0), setClaw(decoyX, decoyDrop)], { duration: 500 * t, easing: SLOW_END });
       claw.classList.add("closed");
-      await animate(claw, [setClaw(decoyX, decoyDrop), setClaw(decoyX, decoyDrop * 0.4)], { duration: 400 * t, easing: "ease-out" });
-      claw.classList.remove("closed");
-      shout(parts.root, pick(["SLIPPED!", "NOPE!", "SO CLOSE!"]), "small");
-      animate(decoy, [{ transform: "rotate(0deg)" }, { transform: "rotate(20deg)" }, { transform: "rotate(-12deg)" }, { transform: "rotate(0deg)" }], { duration: 500, fill: "none" });
-      await animate(claw, [setClaw(decoyX, decoyDrop * 0.4), setClaw(target, 0)], { duration: 600 * t, easing: SLOW_END });
+      if (Math.random() < 0.6) {
+        // Grabbed ... up it goes, it dangles - and slips out, falls back onto the pile
+        var held = el("div", "jp-plush held");
+        held.style.setProperty("--share", shareColor(decoy.dataset.name));
+        held.appendChild(createAvatar(decoy.dataset.name));
+        decoy.style.visibility = "hidden";
+        claw.appendChild(held);
+        await animate(claw, [setClaw(decoyX, decoyDrop), setClaw(decoyX, decoyDrop * 0.4)], { duration: 400 * t, easing: "ease-out" });
+        await animate(held, [0, 1, 2, 3].map((i) => ({ transform: `translateX(-50%) rotate(${(i % 2 ? -1 : 1) * (16 - i * 4)}deg)` })), { duration: 250 * t });
+        claw.classList.remove("closed");
+        held.remove();
+        decoy.style.visibility = "";
+        shout(parts.root, pick(["SLIPPED!", "NOPE!", "SO CLOSE!"]), "small");
+        // Free fall (faster and faster), then a small bounce on the pile
+        var rise = decoyDrop * 0.6;
+        await animate(
+          decoy,
+          [
+            { transform: `translateX(-50%) translateY(${-rise}px)`, easing: "cubic-bezier(0.55, 0, 1, 0.45)" },
+            { transform: "translateX(-50%) translateY(0)", offset: 0.7, easing: "ease-out" },
+            { transform: "translateX(-50%) translateY(-10px)", offset: 0.85, easing: "ease-in" },
+            { transform: "translateX(-50%) translateY(0)" },
+          ],
+          { duration: 350 * t, fill: "none" },
+        );
+      } else {
+        // Closes on it - and it slides right out of the arms
+        await animate(claw, [setClaw(decoyX, decoyDrop), setClaw(decoyX, decoyDrop * 0.4)], { duration: 400 * t, easing: "ease-out" });
+        claw.classList.remove("closed");
+        shout(parts.root, pick(["SLIPPED!", "NOPE!", "SO CLOSE!"]), "small");
+        animate(decoy, [0, 20, -12, 0].map((deg) => ({ transform: `translateX(-50%) rotate(${deg}deg)` })), { duration: 500, fill: "none" });
+      }
+      await animate(claw, [setClaw(decoyX, decoyDrop * 0.4), setClaw(target, 0)], { duration: 500 * t, easing: SLOW_END });
     } else {
       await animate(claw, search, { duration: 2600 * t, easing: SLOW_END });
     }

@@ -611,9 +611,12 @@ function renderBattle() {
   if (viewId == null) return;
   var battle = currentBattle();
   clearInterval(statusTimer);
-  var back = el("button", "mm-btn mm-btn-sm bt-back");
+  // Leave the battle (back to all battles): an icon on the far right
+  var back = el("button", "bt-leave");
   back.type = "button";
-  back.append(createIcon("bi-arrow-left"), document.createTextNode(" All battles"));
+  back.title = "Back to all battles";
+  back.setAttribute("aria-label", "Back to all battles");
+  back.appendChild(createIcon("bi-x-lg"));
   back.addEventListener("click", () => {
     pushView(null);
     showView();
@@ -633,14 +636,18 @@ function renderBattle() {
   var rounds = shownRounds(battle);
   var over = battle.phase == "done" && rounds == battle.cases.length && !spinning;
 
+  // One quiet line: price, cases, crazy - then the pot (gold) and leaving
   var top = el("div", "bt-battle-top");
-  var badges = el("div", "bt-row-tags");
-  badges.append(el("span", "bt-row-price", "🪙 " + formatCoins(battle.price) + " to join"), el("span", "bt-chip", "📦 " + battle.cases.length + (battle.cases.length == 1 ? " case" : " cases")));
-  if (battle.crazy) badges.appendChild(el("span", "bt-crazy-tag", "🤡 Crazy"));
+  var facts = el("div", "bt-top-facts");
+  var price = el("span", "", "🪙 " + formatCoins(battle.price));
+  price.title = "Price to join";
+  facts.append(price, el("span", "", battle.cases.length + (battle.cases.length == 1 ? " case" : " cases")));
+  if (battle.crazy) facts.appendChild(el("span", "bt-top-crazy", "🤡 Crazy"));
   var pot = 0;
   battle.seats.forEach((_, seat) => (pot += totalOf(battle, seat, rounds)));
-  badges.appendChild(el("span", "bt-pot", "Pot 🪙 " + formatCoins(pot)));
-  top.append(back, badges);
+  var potBox = el("span", "bt-top-pot");
+  potBox.append(el("span", "bt-top-pot-label", "Pot"), document.createTextNode("🪙 " + formatCoins(pot)));
+  top.append(facts, potBox, back);
 
   var strip = caseStrip(battle, battle.phase == "running" ? rounds : null);
   strip.classList.add("big");

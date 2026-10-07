@@ -5,7 +5,7 @@ const config = require("../game/config");
 const { bestHand, compare, pots, payout, payoutByPot, handName, newDeck, shuffle } = require("../game/poker");
 
 // Short timings for the tests
-Object.assign(config, { POKER_START: 30, POKER_SHOWDOWN: 60, POKER_STREET: 10, POKER_TURN: 3000, POKER_AWAY: 100 });
+Object.assign(config, { POKER_START: 30, POKER_SHOWDOWN: 60, POKER_DECIDE: 400, POKER_AFTER_DECIDE: 50, POKER_STREET: 10, POKER_TURN: 3000, POKER_AWAY: 100 });
 
 /* ---------- Hands ---------- */
 
@@ -144,10 +144,6 @@ test("poker: sit down with coins, only the own cards are visible, check down to 
   const bob = client("bob");
   await Promise.all([waitFor(alice, "coins", (d) => d.coins === 1000), waitFor(bob, "coins", (d) => d.coins === 1000)]);
 
-  // Both show their hands at the showdown (no mucking)
-  alice.emit("setMuck", false);
-  bob.emit("setMuck", false);
-  await Promise.all([waitFor(alice, "pokerState", (s) => s.muck === false), waitFor(bob, "pokerState", (s) => s.muck === false)]);
   alice.emit("sit", { seat: 0, buyIn: 200 });
   await waitFor(alice, "pokerState", (s) => s.seats[0] != null);
   assert.strictEqual(h.coinsOf("alice"), 800);
@@ -200,8 +196,12 @@ test("poker: sit down with coins, only the own cards are visible, check down to 
   assert.strictEqual(end.result.pots.reduce((sum, p) => sum + p.amount, 0), 20);
   assert.ok(end.result.pots[0].winners[0].hand);
   assert.strictEqual(end.result.showdown, true);
-  // Now both hands are shown
-  assert.ok(end.seats[3].cards.every((card) => typeof card === "string"));
+  // The winner shows; who lost decides (show or muck) - here they show
+  const losers = [0, 3].filter((i) => !end.result.winners.some((w) => w.seat === i));
+  losers.forEach((i) => assert.strictEqual(end.seats[i].deciding, true));
+  losers.forEach((i) => player(i).emit("decide", { show: true }));
+  const shown = losers.length ? await waitFor(alice, "pokerState", (x) => losers.every((i) => x.seats[i].shown)) : end;
+  assert.ok([0, 3].every((i) => shown.seats[i].cards.every((card) => typeof card === "string")), "now both hands are shown");
   assert.ok(end.result.winners.length >= 1);
   assert.strictEqual(end.result.winners.reduce((sum, w) => sum + w.amount, 0), 20);
   assert.strictEqual(stacks(end), 500, "no chip is lost");
@@ -333,16 +333,12 @@ test("poker: the blinds go up over time - and back to the start when the table w
   Object.assign(config, { POKER_LEVEL_TIME: 10 * 60 * 1000, POKER_LEVEL_RESET: 5 * 60 * 1000 });
 });
 
-test("poker: a losing hand is mucked (hidden) - unless the player shows; the winner can show after a fold", async () => {
+test("poker: after a hand the player decides to show or muck - with a timer, then mucked", async () => {
   h.setCoins("alice", 5000);
   h.setCoins("bob", 5000);
   const alice = client("alice");
   const bob = client("bob");
   await Promise.all([waitFor(alice, "coins", (d) => d.coins === 5000), waitFor(bob, "coins", (d) => d.coins === 5000)]);
-  // Both muck (the default)
-  alice.emit("setMuck", true);
-  bob.emit("setMuck", true);
-  await Promise.all([waitFor(alice, "pokerState", (s) => s.muck === true), waitFor(bob, "pokerState", (s) => s.muck === true)]);
   alice.emit("sit", { seat: 0, buyIn: 1000 });
   await waitFor(alice, "pokerState", (s) => s.seats[0] != null);
   const dealt = waitFor(alice, "pokerState", (s) => s.phase === "preflop");
@@ -356,11 +352,14 @@ test("poker: a losing hand is mucked (hidden) - unless the player shows; the win
   player(state.current).emit("action", { type: "fold" });
   let end = await over;
   assert.strictEqual(end.result.showdown, false);
+  assert.strictEqual(end.seats[winner].deciding, true, "the winner decides");
+  assert.ok(end.decideIn > 0 && end.decideIn <= config.POKER_DECIDE);
   const other = winner === 0 ? 1 : 0;
   const seen = waitFor(player(other), "pokerState", (s) => s.phase === "showdown" && s.seats[winner] && s.seats[winner].shown);
-  player(winner).emit("showCards");
+  player(winner).emit("decide", { show: true });
   const shown = await seen;
   assert.ok(shown.seats[winner].cards.every((card) => typeof card === "string"), "the winner showed the cards");
+  assert.strictEqual(shown.decideIn, null, "nobody decides anymore");
   await clearTable([alice, bob]);
 });
 

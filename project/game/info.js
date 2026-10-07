@@ -73,7 +73,7 @@ const GAMES = {
             "Everybody gets 2 cards, then 5 cards come on the board (flop, turn, river). The best 5 of your 7 cards win the pot.",
             "Bet with the slider or the mouse wheel (in big blinds), or with your own preset buttons.",
             `${seconds(config.POKER_TURN)} per decision - then you check, or fold if you can't check.`,
-            "At the showdown you can muck a losing hand (hide it) or show it.",
+            `After every hand you decide within ${seconds(config.POKER_DECIDE)}: show your cards or muck them (hide them) - no decision means muck. The winner of a showdown always shows.`,
           ],
         },
         {
@@ -123,7 +123,7 @@ const GAMES = {
           items: [
             `5 reels, 3 rows, ${slots.LINE_COUNT} lines - all lines play every spin. The bet is for the whole spin.`,
             "3, 4 or 5 of the same symbol on a line, from the left reel, win. The paytable shows what each pays.",
-            "😎 is wild: it stands for every symbol.",
+            "👑 is wild: it stands for every symbol.",
             `🎁 on reels 1, 3 and 5 at the same time start the bonus: a wheel spins for a multiplier of your bet (${wheel}).`,
             `A spin pays at most ${slots.MAX_WIN}× the bet. On average the machine pays back about 96% of the bets.`,
             "Your coins come when the spin is over on the screen.",

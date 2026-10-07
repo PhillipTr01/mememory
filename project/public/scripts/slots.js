@@ -455,7 +455,7 @@ function renderControls() {
   var button = document.getElementById("slSpin");
   button.disabled = spinning || bet > myCoins;
   button.classList.toggle("busy", spinning);
-  document.getElementById("slSpinSub").innerText = spinning ? "Good luck..." : bet > myCoins ? "Not enough coins" : "🪙 " + formatCoins(bet);
+  button.title = bet > myCoins ? "Not enough coins" : "Spin (space)";
   document.querySelectorAll(".sl-preset").forEach((preset) => preset.classList.toggle("active", Number(preset.dataset.value) == bet));
   document.getElementById("slLess").disabled = spinning || bet <= setup.rules.minBet;
   document.getElementById("slMore").disabled = spinning || bet >= setup.rules.maxBet;
@@ -493,7 +493,7 @@ function showPaytable() {
   dialog.setAttribute("role", "dialog");
   dialog.setAttribute("aria-modal", "true");
   var bet = currentBet();
-  dialog.append(el("h2", "mm-dialog-title", "Paytable"), el("p", "mm-dialog-text", "Wins for a bet of 🪙 " + formatCoins(bet) + " per spin - 3, 4 or 5 in a row on a line, from the left. 😎 stands for every symbol."));
+  dialog.append(el("h2", "mm-dialog-title", "Paytable"), el("p", "mm-dialog-text", "Wins for a bet of 🪙 " + formatCoins(bet) + " per spin - 3, 4 or 5 in a row on a line, from the left. 👑 stands for every symbol."));
   var table = el("div", "sl-pays");
   table.append(el("span", "sl-pays-head", ""), el("span", "sl-pays-head", "3×"), el("span", "sl-pays-head", "4×"), el("span", "sl-pays-head", "5×"));
   setup.symbols

@@ -94,13 +94,10 @@
                         <div id="pkSeatBar" class="pk-seatbar" hidden>
                             <div class="pk-mychips">
                                 <span id="pkMyLabel" class="pk-mychips-label">Your chips</span>
-                                <span id="pkMyInfo" class="pk-mychips-value"></span>
+                                <button type="button" id="pkMyInfo" class="pk-mychips-value" title="Click: coins or big blinds"></button>
                             </div>
-                            <button type="button" id="pkShow" class="pk-pill accent" hidden>👁 Show cards</button>
-                            <button type="button" id="pkInBB" class="pk-pill toggle" title="Chips in big blinds" aria-pressed="false">BB</button>
-                            <button type="button" id="pkMuck" class="pk-pill toggle" aria-pressed="true"><span aria-hidden="true">🂠</span> <span id="pkMuckText">Muck</span></button>
-                            <button type="button" id="pkAddChips" class="pk-pill accent"><span aria-hidden="true">＋</span> Add chips</button>
-                            <button type="button" id="pkStand" class="pk-pill leave"><span aria-hidden="true">↥</span> Stand up</button>
+                            <button type="button" id="pkAddChips" class="pk-pill accent icon" title="Add chips" aria-label="Add chips"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></svg></button>
+                            <button type="button" id="pkStand" class="pk-pill leave icon" title="Stand up" aria-label="Stand up"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
                         </div>
                     </div>
 
@@ -114,6 +111,19 @@
                             </div>
                             <div id="pkSeats"></div>
                         </div>
+                    </div>
+
+                    <!--- After the hand: show my cards or muck them (with a timer, then mucked) --->
+                    <div id="pkDecide" class="pk-decide" hidden>
+                        <div class="pk-decide-text">
+                            <span class="pk-decide-title">Show your cards?</span>
+                            <span id="pkDecideHand" class="pk-decide-hand"></span>
+                        </div>
+                        <div class="pk-decide-buttons">
+                            <button type="button" id="pkMuckNow" class="mm-btn"><span aria-hidden="true">🂠</span> Muck</button>
+                            <button type="button" id="pkShowNow" class="mm-btn mm-btn-primary"><span aria-hidden="true">👁</span> Show</button>
+                        </div>
+                        <div class="pk-decide-timer"><i id="pkDecideBar"></i></div>
                     </div>
 
                     <!--- What I can do --->

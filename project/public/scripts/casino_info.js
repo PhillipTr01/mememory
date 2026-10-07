@@ -59,7 +59,14 @@
           .then(show)
           .catch(function () {});
       });
-      title.appendChild(button);
+      // Right behind the name of the game, before the tags
+      var name = Array.prototype.find.call(title.childNodes, function (node) {
+        return node.nodeType == 3 && node.textContent.trim() != "";
+      });
+      if (name) {
+        name.textContent = name.textContent.replace(/\s+$/, "");
+        title.insertBefore(button, name.nextSibling);
+      } else title.appendChild(button);
     });
   });
 })();

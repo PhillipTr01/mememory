@@ -465,6 +465,7 @@
   background: rgba(var(--mm-accent-rgb), 0.06);
 }
 
+.pk-decide[hidden],
 .pk-actions[hidden],
 .pk-seatbar[hidden],
 .pk-raise[hidden],
@@ -540,6 +541,12 @@
 }
 
 .pk-mychips-value {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px dashed rgba(var(--mm-accent-rgb), 0.45);
+  background: none;
+  text-align: left;
+  cursor: pointer;
   font-size: 1rem;
   font-weight: 800;
   color: var(--mm-accent);
@@ -580,6 +587,18 @@
   color: var(--mm-danger);
 }
 
+/* Icon only (add chips, stand up): round */
+.pk-pill.icon {
+  justify-content: center;
+  width: 34px;
+  padding: 0;
+}
+
+.pk-pill.icon svg {
+  width: 17px;
+  height: 17px;
+}
+
 .pk-pill:disabled {
   opacity: 0.45;
   cursor: default;
@@ -605,7 +624,7 @@
     padding-left: 0.6rem;
   }
 
-  .pk-pill {
+  .pk-pill:not(.icon) {
     padding: 0 0.6rem;
     font-size: 0.75rem;
   }
@@ -760,4 +779,59 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
   margin-bottom: 1rem;
+}
+
+/* ---------- After the hand: show or muck (with a timer) ---------- */
+.pk-decide {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem 1rem;
+  overflow: hidden;
+  border: 1px solid var(--mm-accent);
+  border-radius: var(--mm-radius);
+  background: rgba(var(--mm-accent-rgb), 0.06);
+}
+
+.pk-decide-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.pk-decide-title {
+  font-weight: 700;
+}
+
+.pk-decide-hand {
+  font-size: 0.82rem;
+  color: var(--mm-muted);
+}
+
+.pk-decide-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* The time left: a thin gold bar at the bottom that runs out */
+.pk-decide-timer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(var(--mm-accent-rgb), 0.15);
+}
+
+.pk-decide-timer i {
+  display: block;
+  height: 100%;
+  background: var(--mm-accent);
+  transform-origin: left;
+}
+
+.pk-tag.muted {
+  opacity: 0.7;
 }

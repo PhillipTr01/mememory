@@ -304,26 +304,27 @@
   color: var(--mm-accent);
 }
 
-/* The spin button: a dark key with a gold rim, like the reels */
+/* The spin button: clean, gold outline like the machine, the arrow turns while the reels do */
 .sl-spin {
   justify-self: end;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  min-width: 190px;
-  padding: 0.85rem 1.4rem 0.85rem 1rem;
-  border: 1px solid rgba(var(--mm-accent-rgb), 0.65);
+  justify-content: center;
+  gap: 0.6rem;
+  min-width: 168px;
+  height: 56px;
+  padding: 0 1.6rem;
+  border: 1px solid var(--mm-accent);
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(var(--mm-accent-rgb), 0.16), rgba(var(--mm-accent-rgb), 0.05)), var(--mm-surface);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 18px rgba(var(--mm-accent-rgb), 0.12);
-  color: var(--mm-text);
+  background: var(--mm-accent);
+  color: #1a1305;
   cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.2s ease, transform 0.1s ease;
+  transition: filter 0.15s ease, box-shadow 0.2s ease, transform 0.1s ease;
 }
 
 .sl-spin:hover:not(:disabled) {
-  border-color: var(--mm-accent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 26px rgba(var(--mm-accent-rgb), 0.28);
+  filter: brightness(1.08);
+  box-shadow: 0 0 22px rgba(var(--mm-accent-rgb), 0.35);
 }
 
 .sl-spin:active:not(:disabled) {
@@ -332,25 +333,22 @@
 
 .sl-spin:disabled {
   border-color: var(--mm-border);
-  background: var(--mm-surface);
-  box-shadow: none;
-  opacity: 0.6;
+  background: var(--mm-surface-2);
+  color: var(--mm-muted);
   cursor: default;
+}
+
+/* While spinning: still gold, only the arrow turns */
+.sl-spin.busy:disabled {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.14);
+  color: var(--mm-accent);
 }
 
 .sl-spin-icon {
   flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  padding: 6px;
-  border-radius: 50%;
-  background: var(--mm-accent);
-  color: #1a1305;
-}
-
-.sl-spin:disabled .sl-spin-icon {
-  background: var(--mm-surface-3);
-  color: var(--mm-muted);
+  width: 22px;
+  height: 22px;
 }
 
 .sl-spin.busy .sl-spin-icon {
@@ -363,25 +361,11 @@
   }
 }
 
-.sl-spin-text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.15;
-}
-
 .sl-spin-label {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-.sl-spin-sub {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--mm-muted);
-  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Bonus wheel and big wins (over the reels) ---------- */

@@ -131,6 +131,8 @@ module.exports = {
   POKER_START: 3000, // pause before a hand starts
   POKER_STREET: 1200, // all-in: pause between the cards of the board
   POKER_SHOWDOWN: 6000, // the result is shown this long
+  POKER_DECIDE: 5000, // after the hand: time to show or muck the cards (then mucked)
+  POKER_AFTER_DECIDE: 2500, // the decisions are shown at least this long before the next hand
   POKER_AWAY: 30 * 1000, // in a hand: a player without an open page leaves the table
   // Poker / blackjack: gone from the page (another page, tab closed) and not in a
   // round: off the seat after this short wait (a reload keeps the seat)

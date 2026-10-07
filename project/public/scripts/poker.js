@@ -159,6 +159,7 @@ function render() {
   renderBoard();
   renderStatus();
   renderActions();
+  renderDecide();
   renderSeatBar();
   renderHistory();
   runTimer();
@@ -221,7 +222,7 @@ function renderSeats() {
       if (won) tag = el("span", "pk-tag win", "+" + chips(won.amount).replace("🪙 ", "") + (won.hand ? " · " + won.hand : ""));
       else if (state.result && state.result.showdown && !seat.folded && seat.inHand) {
         var shown = state.result.hands.find((h) => h.seat == i);
-        if (shown) tag = el("span", "pk-tag", shown.hand);
+        if (shown) tag = el("span", "pk-tag" + (shown.hand ? "" : " muted"), shown.deciding ? "Show or muck..." : shown.mucked ? "Mucked" : shown.hand);
       } else if (seat.leaving) tag = el("span", "pk-tag", "Leaving");
       else if (seat.away) tag = el("span", "pk-tag", "Away");
       else if (seat.lastAction) tag = el("span", "pk-tag" + (seat.lastAction == "All-in" ? " allin" : ""), seat.lastAction);
@@ -347,6 +348,28 @@ function limits() {
   var max = me.bet + me.stack;
   var min = Math.min(max, state.highBet + state.minRaise);
   return { toCall: toCall, min: min, max: max, me: me };
+}
+
+// After the hand: show or muck - the bar runs out, then the cards are mucked
+var decideAnimation = null;
+var decideFor = null;
+function renderDecide() {
+  var me = mySeat();
+  var seat = me >= 0 ? state.seats[me] : null;
+  var box = document.getElementById("pkDecide");
+  var show = seat != null && seat.deciding && state.decideIn != null;
+  box.hidden = !show;
+  if (!show) {
+    decideFor = null;
+    return;
+  }
+  document.getElementById("pkDecideHand").innerText = seat.handName ? "You have " + seat.handName : "";
+  // The timer starts once per hand
+  if (decideFor == state.hand) return;
+  decideFor = state.hand;
+  if (decideAnimation) decideAnimation.cancel();
+  var start = 1 - state.decideIn / state.decideTime;
+  decideAnimation = document.getElementById("pkDecideBar").animate([{ transform: `scaleX(${1 - start})` }, { transform: "scaleX(0)" }], { duration: state.decideIn, fill: "forwards" });
 }
 
 function renderActions() {
@@ -497,17 +520,7 @@ function renderSeatBar() {
   document.getElementById("pkMyLabel").innerText = seat.leaving ? "Leaving after this hand" : "Your chips";
   document.getElementById("pkAddChips").disabled = (seat.inHand && state.phase != "showdown") || seat.stack >= state.rules.maxBuyIn;
   document.getElementById("pkStand").disabled = seat.leaving;
-  // After the hand: show the own cards (also when everybody else folded)
-  var show = document.getElementById("pkShow");
-  show.hidden = !(state.phase == "showdown" && seat.inHand && seat.cards.length && !seat.shown);
-  var muck = document.getElementById("pkMuck");
-  muck.classList.toggle("on", state.muck);
-  muck.setAttribute("aria-pressed", state.muck ? "true" : "false");
-  muck.title = state.muck ? "Losing hands are mucked (hidden) at a showdown - click to show them" : "Losing hands are shown at a showdown - click to muck them";
-  document.getElementById("pkMuckText").innerText = state.muck ? "Muck" : "Show";
-  var bb = document.getElementById("pkInBB");
-  bb.classList.toggle("on", inBB);
-  bb.setAttribute("aria-pressed", inBB ? "true" : "false");
+  document.getElementById("pkMyInfo").title = inBB ? "In big blinds - click for coins" : "In coins - click for big blinds";
 }
 
 // Buy-in / more chips: a small dialog with a slider
@@ -638,9 +651,10 @@ document.addEventListener("DOMContentLoaded", () => {
     },
     { passive: false },
   );
-  document.getElementById("pkShow").addEventListener("click", () => socket.emit("showCards"));
-  document.getElementById("pkMuck").addEventListener("click", () => state && socket.emit("setMuck", !state.muck));
-  document.getElementById("pkInBB").addEventListener("click", () => {
+  document.getElementById("pkShowNow").addEventListener("click", () => socket.emit("decide", { show: true }));
+  document.getElementById("pkMuckNow").addEventListener("click", () => socket.emit("decide", { show: false }));
+  // A click on my chips: coins or big blinds (everywhere at the table)
+  document.getElementById("pkMyInfo").addEventListener("click", () => {
     inBB = !inBB;
     try {
       localStorage.setItem(BB_KEY, inBB ? "1" : "0");
