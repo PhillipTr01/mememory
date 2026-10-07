@@ -390,7 +390,7 @@
       card.appendChild(take);
     } else {
       var at = new Date(status.nextAt).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" });
-      card.append(el("p", "cs-chance-text", "Your next second chance comes " + at + ". Until then: the daily bonus, or watch the others."), el("p", "cs-chance-left", status.left + " of " + status.total + " left"));
+      card.append(el("p", "cs-chance-text", "Your next second chance comes " + at + ". Until then, use the daily bonus or watch the others."), el("p", "cs-chance-left", status.left + " of " + status.total + " left"));
     }
     // Not now: the second chance waits - the 💔 in the top bar takes it any time
     var later = el("button", "cs-chance-later", status.can ? "Not now" : "OK");
