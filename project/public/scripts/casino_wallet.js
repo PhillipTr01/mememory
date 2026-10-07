@@ -507,8 +507,9 @@
     document.body.appendChild(box);
   }
 
-  // A season starts soon: the casino closes - open rounds finish, no new bets, then a countdown.
-  // Can't be clicked away (it goes with the start of the season: the page loads again)
+  // A season starts soon: the casino closes - open rounds finish, no new bets (the server refuses
+  // them), then a countdown. A notice like a battle starting; it goes with the start of the
+  // season (the page loads again)
   var closing = null;
   var closingTimer = null;
   function showClosing(info) {
@@ -519,12 +520,11 @@
       return;
     }
     if (!closing) {
-      closing = el("div", "cs-closing");
-      closing.setAttribute("role", "alertdialog");
-      closing.setAttribute("aria-modal", "true");
-      var card = el("div", "cs-closing-card");
-      card.append(el("div", "cs-closing-icon"), el("div", "cs-closing-title"), el("div", "cs-closing-count"), el("div", "cs-closing-text"));
-      closing.appendChild(card);
+      closing = el("div", "bt-notice cs-closing-notice");
+      closing.setAttribute("role", "status");
+      var text = el("div", "bt-notice-text");
+      text.append(el("b", "cs-closing-title"), el("span", "cs-closing-text"));
+      closing.append(el("span", "bt-notice-icon cs-closing-icon"), text, el("span", "cs-closing-count"));
       document.body.appendChild(closing);
     }
     closing.querySelector(".cs-closing-icon").innerText = info.icon || "🏆";
@@ -533,14 +533,14 @@
     var text = closing.querySelector(".cs-closing-text");
     if (info.startsIn == null) {
       count.innerText = "⏳";
-      text.innerText = "The open games are finishing - no new bets until the season starts.";
+      text.innerText = "Open games are finishing - no new bets until it starts.";
       return;
     }
-    text.innerText = "All games are closed - the season starts in a moment.";
+    text.innerText = "All games closed - no new bets until it starts.";
     var startsAt = Date.now() + info.startsIn;
     var show = () => {
-      var s = Math.max(0, Math.ceil((startsAt - Date.now()) / 1000));
-      count.innerText = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+      var left = Math.max(0, Math.ceil((startsAt - Date.now()) / 1000));
+      count.innerText = Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
     };
     show();
     closingTimer = setInterval(show, 250);
