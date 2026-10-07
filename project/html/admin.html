@@ -186,6 +186,14 @@
                 <div id="adSeasonPage" class="ad-stack ad-season-page" hidden>
                     <a href="#seasons" class="ad-back">‹ All seasons</a>
                     <div id="adSeasonDetail" class="ad-card ad-season-detail"></div>
+                    <!--- A season that is over: its whole leaderboard --->
+                    <div id="adSeasonFinal" class="ad-card" hidden>
+                        <div class="ad-card-head"><h2 class="ad-title">Final leaderboard</h2><span id="adSeasonFinalCount" class="ad-cases-count"></span></div>
+                        <table class="ad-table">
+                            <thead><tr><th>#</th><th>Player</th><th class="num">Coins</th><th>Prize</th></tr></thead>
+                            <tbody id="adSeasonFinalRows"></tbody>
+                        </table>
+                    </div>
                     <div id="adSeasonFormCard" class="ad-card">
                         <div class="ad-card-head">
                             <h2 class="ad-title" id="adSeasonFormTitle">New season</h2>

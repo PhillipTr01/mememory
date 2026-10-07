@@ -101,6 +101,7 @@ function showTab() {
   if (tab == "seasons") {
     seasonView = parts[1] == "new" ? "new" : parts[1] ? Number(parts[1]) : null;
     seasonFormFor = undefined;
+    finalLoaded = null;
     closePicker();
     loadSeasons();
   }
@@ -577,6 +578,37 @@ function fillSeasonPage() {
   }
 }
 
+// The final places of a season that is over (loaded once per season - they don't change)
+var finalLoaded = null;
+async function loadSeasonFinal(id) {
+  if (finalLoaded == id) return;
+  finalLoaded = id;
+  var body = document.getElementById("adSeasonFinalRows");
+  body.replaceChildren();
+  try {
+    var data = await api("seasons/" + id + "/final");
+    document.getElementById("adSeasonFinalCount").innerText = data.rows.length + (data.rows.length == 1 ? " player" : " players");
+    if (!data.rows.length) {
+      var empty = el("tr");
+      var cell = el("td", "mm-muted", "Nobody played this season.");
+      cell.colSpan = 4;
+      empty.appendChild(cell);
+      return body.replaceChildren(empty);
+    }
+    var MEDALS = ["🥇", "🥈", "🥉"];
+    body.replaceChildren(
+      ...data.rows.map((row) => {
+        var tr = el("tr", row.rank <= 3 ? "ad-final-top" : "");
+        tr.append(el("td", "mm-muted", MEDALS[row.rank - 1] || row.rank), el("td", "fw-semibold", row.username), el("td", "num", "🪙 " + formatCoins(row.coins)), el("td", row.prize ? "" : "mm-muted", row.prize || "–"));
+        return tr;
+      }),
+    );
+  } catch (error) {
+    finalLoaded = null;
+    fail(error);
+  }
+}
+
 function renderSeasons() {
   var view = seasonView == null || seasonView == "new" ? null : seasonList.find((s) => s.id == seasonView);
   document.getElementById("adSeasonsMain").hidden = seasonView != null;
@@ -585,6 +617,9 @@ function renderSeasons() {
     document.getElementById("adPageTitle").innerText = view ? view.icon + " " + view.name : "New season";
     document.getElementById("adPageSub").innerText = view ? STATUS_NAMES[view.status] + " · " + dateText(view.start) + " → " + dateText(view.end) : "Plan a season: everybody who hits Start begins with the same budget, the most coins win.";
     document.getElementById("adSeasonFormCard").hidden = view != null && view.status == "ended";
+    // Over: the whole leaderboard instead of the form
+    document.getElementById("adSeasonFinal").hidden = !(view && view.status == "ended");
+    if (view && view.status == "ended") loadSeasonFinal(view.id);
     var detail = document.getElementById("adSeasonDetail");
     if (view) detail.replaceChildren(...seasonDetail(view));
     else

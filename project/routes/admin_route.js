@@ -380,6 +380,13 @@ module.exports = function () {
     }),
   );
 
+  // A season that is over: all its final places (with the prizes)
+  router.get("/api/seasons/:id/final", admin, (req, res) => {
+    const season = seasons.byId(req.params.id);
+    if (season == null || !season.ended || !season.final) return res.status(404).json({ error: "Not over yet." });
+    res.json({ at: season.final.at, rows: season.final.rows });
+  });
+
   // The running season ends right now (the final places, the winner page)
   router.post(
     "/api/seasons/:id/end",

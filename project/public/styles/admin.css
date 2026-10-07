@@ -1525,6 +1525,7 @@ a.ad-link:focus-visible {
 /* (the pages of the seasons: one at a time) */
 #adSeasonsMain[hidden],
 #adSeasonPage[hidden],
+#adSeasonFinal[hidden],
 #adSeasonFormCard[hidden] {
   display: none;
 }
@@ -1645,4 +1646,13 @@ a.ad-link:focus-visible {
   font-size: 0.72rem;
   font-weight: 600;
   text-align: right;
+}
+
+/* The final leaderboard of a season: the podium a little brighter */
+.ad-final-top td {
+  color: var(--mm-text);
+}
+
+.ad-final-top td:first-child {
+  font-size: 1.1rem;
 }
