@@ -510,13 +510,13 @@ function showPane(name) {
   });
 }
 
-// How many players (2 to 4): the number and how it plays (1v1, 1v1v1, ...)
+// How many players (2 to 4)
 var MIN_SIZE = 2;
 var MAX_SIZE = 4;
 function setSize(value) {
   size = Math.max(MIN_SIZE, Math.min(MAX_SIZE, value));
   var box = document.getElementById("btSizeValue");
-  box.replaceChildren(el("b", "", size), el("small", "", Array(size).fill("1").join("v")));
+  box.replaceChildren(el("b", "", size));
   document.getElementById("btSizeMinus").disabled = size <= MIN_SIZE;
   document.getElementById("btSizePlus").disabled = size >= MAX_SIZE;
 }

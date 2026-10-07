@@ -75,18 +75,18 @@ const COIN_GROUPS = [
   [1, 1],
   [2, 1],
 ];
-// In a respin every empty spot gets a 🪙 with this chance (in 1000)
-const COIN_LAND = 50;
+// In a respin every empty spot gets a 🪙 with this chance (in 1000) - often, the values small
+const COIN_LAND = 60;
 // The value of a coin: times the bet, or a prize (also times the bet), with weights
 const COIN_VALUES = [
-  { x: 0.5, weight: 300 },
+  { x: 0.5, weight: 400 },
   { x: 1, weight: 300 },
-  { x: 2, weight: 180 },
-  { x: 3, weight: 100 },
-  { x: 5, weight: 60 },
-  { x: 10, weight: 30 },
-  { x: 15, prize: "mini", weight: 18 },
-  { x: 40, prize: "major", weight: 6 },
+  { x: 2, weight: 160 },
+  { x: 3, weight: 80 },
+  { x: 5, weight: 45 },
+  { x: 10, weight: 22 },
+  { x: 15, prize: "mini", weight: 16 },
+  { x: 40, prize: "major", weight: 5 },
   { x: 100, prize: "mega", weight: 1 },
 ];
 const ULTRA = 500; // all 15 spots full: this many times the bet on top

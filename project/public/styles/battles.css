@@ -359,14 +359,9 @@
 }
 
 .bt-size-value b {
-  font-size: 1.05rem;
+  font-size: 1.15rem;
 }
 
-.bt-size-value small {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--mm-muted);
-}
 
 
 /* ---------- Case selection ---------- */
