@@ -125,6 +125,10 @@ async function connectDatabase(attempt = 1) {
       .load()
       .catch((error) => console.error("Could not load the settings:", error));
     await persist.restoreAll();
+    // The seasons (and the coins of the season that started last), then they start / end on time
+    const seasons = require("./game/seasons");
+    await seasons.load().catch((error) => console.error("Could not load the seasons:", error));
+    seasons.start();
     startScraper();
   } catch (error) {
     if (shuttingDown) return;

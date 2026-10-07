@@ -164,8 +164,9 @@ function placeChip(seatIndex, field) {
     socket.emit("bet", { seat: seatIndex, amount: amount });
   } else {
     if (seat.bet == 0) return showToast("Place the main bet first.", "error");
-    var room = Math.floor(seat.bet * state.rules.sideShare) - seat.side[field];
-    if (room <= 0) return showToast(SIDE_NAMES[field] + ": at most as much as the main bet.", "error");
+    // At most half the table's max bet per side bet
+    var room = Math.floor(state.rules.maxBet * state.rules.sideShare) - seat.side[field];
+    if (room <= 0) return showToast(SIDE_NAMES[field] + ": at most 🪙 " + formatCoins(Math.floor(state.rules.maxBet * state.rules.sideShare)) + " (half the max bet).", "error");
     socket.emit("sideBet", { seat: seatIndex, type: field, amount: Math.min(chipValue, room) });
   }
 }

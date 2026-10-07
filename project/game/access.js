@@ -37,9 +37,12 @@ async function setFirstApproval(now) {
 }
 
 // What a player gets who is let in now: {coins, missed} - a bonus for every day since the day of the first approval (today's one they claim themselves)
+// (in a season: the season's budget, and the bonuses since the season started)
 function startCoins(first, now = Date.now()) {
-  const missed = first == null ? 0 : Math.max(0, days.dayNumber(now) - days.dayNumber(new Date(first).getTime()));
-  return { coins: config.START_COINS + missed * config.DAILY_BONUS, missed: missed };
+  const base = coins.base();
+  const from = first == null ? null : Math.max(new Date(first).getTime(), base.since || 0);
+  const missed = from == null ? 0 : Math.max(0, days.dayNumber(now) - days.dayNumber(from));
+  return { coins: base.start + missed * config.DAILY_BONUS, missed: missed };
 }
 
 // Let a player in: {username, coins, missed, again} or {error}
@@ -58,10 +61,10 @@ async function approve(username, now = Date.now()) {
   const start = startCoins(first, now);
   const result = await User.updateOne(
     { username: username, casinoApproved: { $ne: true } },
-    { $set: { casinoApproved: true, casinoApprovedAt: new Date(now), casinoRequestedAt: null, coins: start.coins, coinReset: config.COIN_RESET, coinBonusAt: null } },
+    { $set: { casinoApproved: true, casinoApprovedAt: new Date(now), casinoRequestedAt: null, coins: start.coins, coinReset: coins.base().reset, coinBonusAt: null } },
   );
   if (!(result.nModified > 0 || result.modifiedCount > 0)) return { error: "Already approved." };
-  const note = start.missed > 0 ? `approved: ${config.START_COINS.toLocaleString("en-US")} + ${start.missed} missed daily bonus${start.missed === 1 ? "" : "es"}` : "approved";
+  const note = start.missed > 0 ? `approved: ${coins.base().start.toLocaleString("en-US")} + ${start.missed} missed daily bonus${start.missed === 1 ? "" : "es"}` : "approved";
   coins.log(username, start.coins, "start coins", note);
   coins.notify(username);
   return { username: username, coins: start.coins, missed: start.missed, again: false };

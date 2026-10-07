@@ -34,16 +34,35 @@ function changed(result) {
 }
 
 /*
+ * The coins everybody starts with: config.COIN_RESET / START_COINS - or, once
+ * a season started (game/seasons.js), the season's reset and budget.
+ * since: when it started (for the daily bonuses a late player missed).
+ */
+let seasonBase = null;
+
+function setBase(value) {
+  seasonBase = value && typeof value.reset === "string" ? value : null;
+}
+
+function base() {
+  return seasonBase || { reset: config.COIN_RESET, start: config.START_COINS, since: null };
+}
+
+// The balance as the player sees it (accounts from before a reset get the start coins)
+function balanceOf(user) {
+  const now = base();
+  return user.coinReset === now.reset ? user.coins || 0 : now.start;
+}
+
+/*
  * Approved players (see game/access.js) get the start coins once more after a
- * reset of all coins (config.COIN_RESET): coinReset remembers the last reset
- * they got. The first start coins come with the approval.
+ * reset of all coins (base().reset): coinReset remembers the last reset they
+ * got. The first start coins come with the approval.
  */
 async function ensure(username) {
-  const reset = await User.updateOne(
-    { username: username, casinoApproved: true, coinReset: { $ne: config.COIN_RESET } },
-    { $set: { coins: config.START_COINS, coinReset: config.COIN_RESET } },
-  );
-  if (changed(reset)) log(username, config.START_COINS, "start coins");
+  const now = base();
+  const reset = await User.updateOne({ username: username, casinoApproved: true, coinReset: { $ne: now.reset } }, { $set: { coins: now.start, coinReset: now.reset } });
+  if (changed(reset)) log(username, now.start, "start coins");
 }
 
 // Time (ms) until the next free coins can be claimed (0: now) - once per calendar day, new ones at midnight
@@ -131,4 +150,4 @@ function reward(username, mode) {
   add(username, amount, { reason: "game win", note: mode }).catch((error) => console.error("[coins] Could not add coins:", error));
 }
 
-module.exports = { log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };
+module.exports = { setBase, base, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };

@@ -2,6 +2,7 @@ const access = require("../game/access");
 const settings = require("../game/settings");
 const games = require("../game/games");
 const { notices } = require("../game/notices");
+const seasons = require("../game/seasons");
 
 const GAMES = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots"];
 
@@ -40,6 +41,16 @@ module.exports = function (io) {
         socket.disconnect(true);
       }
     }
+  });
+
+  // A season starts: every open casino page loads anew (new coins, the games start anew)
+  seasons.changes.on("started", (season) => {
+    for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonStarted", season);
+  });
+
+  // A season is over: every open casino page shows it (with a link to the winners)
+  seasons.changes.on("ended", (season) => {
+    for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonEnded", { id: season.id, name: season.name, icon: season.icon, winner: season.winner });
   });
 
   // Access taken away: every open casino page of the player is closed

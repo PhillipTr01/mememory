@@ -109,7 +109,7 @@ const GAMES = {
       {
         heading: "Side bets",
         items: [
-          "Up to your main bet on each, before the cards are dealt. They are decided by the first cards and paid at the end of the round.",
+          "Up to half the table's max bet on each (a main bet first), before the cards are dealt. They are decided by the first cards and paid at the end of the round.",
           "Perfect Pairs - your first two cards are a pair: mixed (red and black) 6:1, coloured (same colour) 12:1, perfect (same suit) 25:1.",
           "21+3 - your two cards and the dealer's up card as a poker hand: flush 5:1, straight 10:1, three of a kind 30:1, straight flush 40:1, suited trips 100:1.",
         ],

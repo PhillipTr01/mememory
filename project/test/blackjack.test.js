@@ -439,7 +439,7 @@ test("blackjack: three tables in the lobby, each with its own limits and seats",
   await waitFor(lobby, "blackjackTables", (l) => l.find((t) => t.id === "highroller").free === 5);
 });
 
-test("blackjack: side bets - Perfect Pairs and 21+3, at most half the main bet, paid with the round", async () => {
+test("blackjack: side bets - Perfect Pairs and 21+3, at most half the table's max bet, paid with the round", async () => {
   // The rules
   assert.deepStrictEqual(bj.perfectPairs(["8s", "8s"]), { name: "Perfect pair", odds: 25 });
   assert.deepStrictEqual(bj.perfectPairs(["8s", "8c"]), { name: "Coloured pair", odds: 12 });
@@ -468,8 +468,9 @@ test("blackjack: side bets - Perfect Pairs and 21+3, at most half the main bet, 
   alice.emit("bet", { seat: 0, amount: 1000 });
   await waitFor(alice, "blackjackState", (s) => s.seats[0] && s.seats[0].bet === 1000);
   refused = h.once(alice, "blackjackError");
-  alice.emit("sideBet", { seat: 0, type: "pairs", amount: 1100 });
-  assert.match(await refused, /at most 1,000/);
+  // The classic table here: max 5,000 - a side bet at most 2,500 (whatever the main bet)
+  alice.emit("sideBet", { seat: 0, type: "pairs", amount: 2600 });
+  assert.match(await refused, /at most 2,500/);
   alice.emit("sideBet", { seat: 0, type: "pairs", amount: 500 });
   await waitFor(alice, "blackjackState", (s) => s.seats[0].side.pairs === 500);
   alice.emit("sideBet", { seat: 0, type: "plus3", amount: 200 });

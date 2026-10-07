@@ -11,6 +11,7 @@ const casinoChat = require("../game/casino_chat");
 const live = require("../game/live");
 const settings = require("../game/settings");
 const { hardReset } = require("../game/hard_reset");
+const seasons = require("../game/seasons");
 const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
 
@@ -101,7 +102,7 @@ module.exports = function () {
 
   // Balance as the player sees it (accounts from before a reset get the start coins)
   function balance(user) {
-    return user.coinReset === config.COIN_RESET ? user.coins || 0 : config.START_COINS;
+    return coins.balanceOf(user);
   }
 
   // The players in the casino (approved), richest first
@@ -196,7 +197,7 @@ module.exports = function () {
       const first = await access.firstApproval();
       const start = access.startCoins(first);
       const all = await accessList(String(req.query.q || "").toLowerCase());
-      res.json({ firstApproval: first, startCoins: start.coins, baseCoins: config.START_COINS, missed: start.missed, players: all.slice(0, 200) });
+      res.json({ firstApproval: first, startCoins: start.coins, baseCoins: coins.base().start, missed: start.missed, players: all.slice(0, 200) });
     }),
   );
 
@@ -327,6 +328,52 @@ module.exports = function () {
       const result = body.defaults === true ? await settings.resetToDefaults() : await settings.update(body.values);
       if (result.error) return res.status(400).json(result);
       res.json(result);
+    }),
+  );
+
+  /* ---------- Seasons ---------- */
+
+  router.get("/api/seasons", admin, (req, res) => res.json({ seasons: seasons.list(), intervals: seasons.INTERVALS, now: Date.now() }));
+
+  // A new season: {name, icon, start, end (ms), budget, every (minutes), prizesOn, prizes: [{place, prize}]}
+  router.post(
+    "/api/seasons",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await seasons.create(req.body);
+      if (result.error) return res.status(400).json(result);
+      res.json({ ...result, seasons: seasons.list() });
+    }),
+  );
+
+  router.post(
+    "/api/seasons/:id",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await seasons.update(req.params.id, req.body);
+      if (result.error) return res.status(400).json(result);
+      res.json({ ...result, seasons: seasons.list() });
+    }),
+  );
+
+  router.post(
+    "/api/seasons/:id/delete",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await seasons.remove(req.params.id);
+      if (result.error) return res.status(400).json(result);
+      res.json({ seasons: seasons.list() });
+    }),
+  );
+
+  // The running season ends right now (the final places, the winner page)
+  router.post(
+    "/api/seasons/:id/end",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await seasons.endNow(req.params.id);
+      if (result.error) return res.status(400).json(result);
+      res.json({ ...result, seasons: seasons.list() });
     }),
   );
 

@@ -203,6 +203,6 @@ module.exports = {
   coinsOf: (username) => userByName(username).coins,
   userOf: userByName,
   // An account that already got its start coins
-  setCoins: (username, amount) => { Object.assign(userByName(username), { coins: amount, coinReset: require("../game/config").COIN_RESET }); },
+  setCoins: (username, amount) => { Object.assign(userByName(username), { coins: amount, coinReset: require("../game/coins").base().reset }); },
   setMemeCount: (count) => { memeCount = count; },
 };

@@ -5,6 +5,7 @@ const User = require("../models/User");
 const withdrawals = require("../game/withdrawals");
 const access = require("../game/access");
 const leaderboard = require("../game/leaderboard");
+const seasons = require("../game/seasons");
 const games = require("../game/games");
 const info = require("../game/info");
 
@@ -87,13 +88,40 @@ module.exports = function (auth) {
     }),
   );
 
-  /* ---------- Leaderboard (made once a day) ---------- */
+  /* ---------- Leaderboard (live, or as often as the season says) ---------- */
 
   router.get(
     "/leaderboard/data",
     auth,
     approved,
     asyncHandler(async (req, res) => res.json(await leaderboard.view(req.username))),
+  );
+
+  // The winner page of a season that is over
+  router.get(
+    "/leaderboard/season/:id",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      const result = leaderboard.final(req.params.id, req.username);
+      if (result == null) return res.status(404).json({ error: "No such season." });
+      res.json(result);
+    }),
+  );
+
+  // The season now (for the link in the navigation bar): {season, lastSeason}
+  router.get(
+    "/season",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      const season = seasons.running();
+      const ended = seasons.lastEnded();
+      res.json({
+        season: season ? { id: season.id, name: season.name, icon: season.icon, end: season.end } : null,
+        lastSeason: ended ? { id: ended.id, name: ended.name, icon: ended.icon, endedAt: ended.endedAt } : null,
+      });
+    }),
   );
 
   /* ---------- Payouts of the logged in player ---------- */

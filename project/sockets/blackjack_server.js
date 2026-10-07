@@ -474,7 +474,7 @@ module.exports = function (io) {
         }
       },
 
-      // A side bet (Perfect Pairs or 21+3) on an own seat with a bet: at most as much as the main bet each
+      // A side bet (Perfect Pairs or 21+3) on an own seat with a bet: at most half the table's max bet each
       async sideBet(username, error, data) {
         if (data == null) return;
         const { seat: s, type, amount } = data;
@@ -483,8 +483,8 @@ module.exports = function (io) {
         const seat = table.seats[s];
         if (seat == null || seat.name !== username) return error("Sit down first.");
         if (seat.bet <= 0) return error("Place the main bet first.");
-        const most = Math.floor(seat.bet * config.BJ_SIDE_SHARE);
-        if (seat.side[type] + amount > most) return error(`A side bet is at most ${most.toLocaleString("en-US")} coins here (as much as the main bet).`);
+        const most = Math.floor(maxBet() * config.BJ_SIDE_SHARE);
+        if (seat.side[type] + amount > most) return error(`A side bet is at most ${most.toLocaleString("en-US")} coins here (half the max bet).`);
         if (busy.has(username)) return;
         busy.add(username);
         try {
