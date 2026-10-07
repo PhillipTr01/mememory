@@ -39,8 +39,7 @@
     socket.emit("claimBonus");
   });
 
-  socket.on("bonusClaimed", (amount) => {
-    showToast("🎁 +" + format(amount) + " free coins - see you tomorrow!");
+  socket.on("bonusClaimed", () => {
     bonusButton.classList.remove("claimed");
     void bonusButton.offsetWidth; // restart the animation
     bonusButton.classList.add("claimed");

@@ -20,19 +20,6 @@ var drawShown = {}; // battle id -> the jackpot roulette was played on this page
 var heroShown = {}; // battle id -> its result popped in on this page already
 var lastCaseAt = {}; // battle id -> when the animation of its last case ended on this page
 
-// Under the modes: what the picked one means
-var MODE_HINTS = {
-  classic: "Highest total wins",
-  crazy: "Lowest total wins",
-  jackpot: "One gets it all - your worth is your chance",
-  bestof: "Best item wins the round - most rounds win",
-  random: "A mode is picked at the very end",
-};
-function showModeHint() {
-  var hint = document.getElementById("btModeHint");
-  if (hint) hint.innerText = MODE_HINTS[mode] || "";
-}
-
 // The rule that counts: the mode - or, in random, the one picked (null while it is still hidden)
 function ruleOf(battle) {
   if (battle.mode != "random") return battle.mode || (battle.crazy ? "crazy" : "classic");
@@ -579,7 +566,6 @@ function createAgain(battle) {
   picked = battle.cases.filter((id) => caseById(id) && !caseById(id).off);
   size = battle.size;
   mode = battle.mode || (battle.crazy ? "crazy" : "classic");
-  showModeHint();
   setSize(size);
   document.querySelectorAll("#btModes button").forEach((b) => b.classList.toggle("active", b.dataset.mode == mode));
   renderCreate();
@@ -1251,7 +1237,6 @@ document.addEventListener("DOMContentLoaded", () => {
     button.addEventListener("click", () => {
       mode = button.dataset.mode;
       document.querySelectorAll("#btModes button").forEach((b) => b.classList.toggle("active", b == button));
-      showModeHint();
       renderCreate();
     }),
   );

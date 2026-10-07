@@ -1660,19 +1660,23 @@ button.bt-strip-case:hover {
   font-size: 1.1rem;
 }
 
-.bt-mode-hint {
-  display: block;
-  height: 1.1rem;
-  margin-top: 0.3rem;
-  overflow: hidden;
-  color: var(--mm-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
 /* The result only pops in once */
 .bt-hero.seen {
   animation: none;
+}
+
+/* Players, modes and the create button: one line, all as high as each other */
+.bt-create-row {
+  align-items: flex-end;
+}
+
+.bt-size-stepper,
+.bt-modes,
+.bt-create-row #btCreate {
+  box-sizing: border-box;
+  height: calc(2.6rem + 8px);
+}
+
+.bt-modes button {
+  height: 100%;
 }
