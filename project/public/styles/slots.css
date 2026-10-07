@@ -1,6 +1,6 @@
 /* ---------- Slots: 5 reels, 3 rows, 9 lines (the site's look: dark surfaces, thin lines, gold) ---------- */
 .sl-main {
-  max-width: 1240px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 1.5rem;
   display: flex;
@@ -9,8 +9,9 @@
 }
 
 .sl-machine {
-  --tile: 92px;
-  --reel: 104px;
+  /* The symbols grow with the screen */
+  --tile: clamp(72px, 8vw, 128px);
+  --reel: calc(var(--tile) * 1.15);
   display: flex;
   align-items: stretch;
   justify-content: center;
@@ -636,13 +637,6 @@
 }
 
 /* ---------- Smaller screens ---------- */
-@media (max-width: 1199px) {
-  .sl-machine {
-    --tile: 78px;
-    --reel: 88px;
-  }
-}
-
 @media (max-width: 767px) {
   .sl-main {
     padding: 1rem;
@@ -814,4 +808,45 @@
 .sl-bonus-sub.show {
   opacity: 1;
   transform: none;
+}
+
+/* The buttons next to the title: paytable and full screen */
+.sl-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.sl-icon-only {
+  width: 34px;
+  padding: 0;
+  justify-content: center;
+}
+
+.sl-fs-close,
+.sl-icon-only.on .sl-fs-open {
+  display: none;
+}
+
+.sl-icon-only.on .sl-fs-close {
+  display: inline;
+}
+
+/* ---------- Full screen: the machine as big as the screen allows ---------- */
+.sl-main:fullscreen {
+  max-width: none;
+  justify-content: center;
+  padding: 2rem 3rem;
+  overflow: auto;
+  background: var(--mm-bg, #111);
+}
+
+.sl-main:fullscreen .sl-machine {
+  --tile: min(17vh, 11vw);
+}
+
+.sl-main:fullscreen .sl-controls {
+  width: min(100%, 1200px);
+  margin: 0 auto;
 }

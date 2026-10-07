@@ -188,6 +188,8 @@ function spin() {
 // The reels turn and stop on `grid` (one after the other); `time`: how long the first reel turns
 function animateReels(grid, time, tease) {
   var reels = [...document.querySelectorAll(".sl-reel")];
+  // The size of a symbol now (full screen or not)
+  TILE = document.querySelector(".sl-cell").offsetHeight;
   return Promise.all(
     reels.map((reel, i) => {
       var strip = setup.strips[i];
@@ -671,6 +673,19 @@ document.addEventListener("DOMContentLoaded", () => {
     if (tag == "INPUT" || tag == "TEXTAREA" || tag == "BUTTON" || document.querySelector(".mm-dialog-backdrop")) return;
     event.preventDefault();
     spin();
+  });
+  // Full screen: the whole machine (Esc or the button again to leave)
+  var main = document.querySelector(".sl-main");
+  document.getElementById("slFullscreen").addEventListener("click", () => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else if (main.requestFullscreen) main.requestFullscreen().catch(() => showToast("Full screen isn't possible here.", "error"));
+  });
+  document.addEventListener("fullscreenchange", () => {
+    var on = document.fullscreenElement == main;
+    var button = document.getElementById("slFullscreen");
+    button.classList.toggle("on", on);
+    button.title = on ? "Leave full screen" : "Full screen";
+    if (setup && !spinning) TILE = document.querySelector(".sl-cell").offsetHeight;
   });
   window.addEventListener("resize", () => {
     if (setup && !spinning) TILE = document.querySelector(".sl-cell").offsetHeight;
