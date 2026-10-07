@@ -3530,12 +3530,13 @@ body.jackpot-theme > header {
   z-index: 20;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.85rem;
-  border: 1px solid rgba(var(--mm-accent-rgb), 0.5);
+  gap: 0.5rem;
+  padding: 0.55rem 1.3rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.55);
   border-radius: 999px;
-  background: rgba(20, 20, 20, 0.9);
+  background: rgba(20, 20, 20, 0.92);
   color: var(--mm-accent);
+  font-size: 1.35rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);

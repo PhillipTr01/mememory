@@ -299,3 +299,26 @@ test("seasons: second chances - 0 coins and nothing in play, then the budget aga
   assert.strictEqual(seasons.joinedAt("newbie"), day3);
   seasons.reset();
 });
+
+test("seasons: a restart doesn't touch the balances - the coins wait until the season is loaded", async () => {
+  seasons.reset();
+  const now = Date.now();
+  const made = await seasons.create({ name: "Restart", icon: "🔄", start: now - 1000, end: now + 3600 * 1000, budget: 5000, every: 0 });
+  await seasons.tick(now);
+  await seasons.join("anna", now);
+  h.setCoins("anna", 7777);
+  const saved = coins.base();
+  // The server starts again: the season isn't loaded yet, a page asks for the coins
+  coins.hold();
+  coins.setBase(null);
+  const asked = coins.get("anna");
+  await h.wait(20);
+  assert.strictEqual(h.coinsOf("anna"), 7777, "nothing reset while waiting");
+  // The season is loaded: now the answer - the season balance as it was
+  coins.setBase(saved);
+  coins.release();
+  assert.strictEqual((await asked).coins, 7777);
+  assert.strictEqual(h.coinsOf("anna"), 7777);
+  await seasons.endNow(made.season.id);
+  seasons.reset();
+});

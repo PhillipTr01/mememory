@@ -95,11 +95,29 @@ function balanceOf(user) {
 }
 
 /*
+ * While the server starts, the coins wait: the running season (its reset, its
+ * start coins) is only known once it is loaded - checking a balance before
+ * that would take every season balance for an old one and reset it. app.js
+ * holds them until the season is loaded.
+ */
+let gate = Promise.resolve();
+let openGate = null;
+function hold() {
+  if (openGate) return;
+  gate = new Promise((resolve) => (openGate = resolve));
+}
+function release() {
+  if (openGate) openGate();
+  openGate = null;
+}
+
+/*
  * Approved players (see game/access.js) get the start coins once more after a
  * reset of all coins (base().reset): coinReset remembers the last reset they
  * got. The first start coins come with the approval.
  */
 async function ensure(username) {
+  await gate;
   const now = base();
   const reset = await User.updateOne({ username: username, casinoApproved: true, coinReset: { $ne: now.reset } }, { $set: { coins: now.start, coinReset: now.reset } });
   if (changed(reset)) log(username, now.start, "start coins");
@@ -215,4 +233,4 @@ function reward(username, mode) {
   add(username, amount, { reason: "game win", note: mode }).catch((error) => console.error("[coins] Could not add coins:", error));
 }
 
-module.exports = { claim, bonusDue, setJoinedAtLookup, setJoinedLookup, watching, setStoredLookup, setBase, base, era, eraFilter, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };
+module.exports = { hold, release, claim, bonusDue, setJoinedAtLookup, setJoinedLookup, watching, setStoredLookup, setBase, base, era, eraFilter, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };

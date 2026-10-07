@@ -124,10 +124,13 @@ async function connectDatabase(attempt = 1) {
     await require("./game/settings")
       .load()
       .catch((error) => console.error("Could not load the settings:", error));
-    await persist.restoreAll();
-    // The seasons (and the coins of the season that started last), then they start / end on time
+    // The seasons first (and the coins of the season that started last) - a restored game may pay coins
     const seasons = require("./game/seasons");
     await seasons.load().catch((error) => console.error("Could not load the seasons:", error));
+    // The season is known: the coins can be looked at (and changed) - then the games come back
+    require("./game/coins").release();
+    await persist.restoreAll();
+    // ... and the seasons start / end on time
     seasons.start();
     startScraper();
   } catch (error) {
@@ -191,5 +194,7 @@ server.on("error", (error) => {
   process.exit(1);
 });
 
+// No balance is looked at before the season is loaded (see game/coins.js hold)
+require("./game/coins").hold();
 server.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
 connectDatabase();
