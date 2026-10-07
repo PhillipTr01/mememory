@@ -43,7 +43,7 @@ test("slots: three 🎁 start the bonus game - free spins with a growing multipl
   // The 🎁 only on reels 1, 3, 5, never two in one window
   slots.STRIPS.forEach((strip, reel) => {
     const at = strip.map((s, i) => (s === "bonus" ? i : -1)).filter((i) => i >= 0);
-    assert.strictEqual(at.length, [3, 0, 3, 0, 1][reel]);
+    assert.strictEqual(at.length, [2, 0, 2, 0, 3][reel]);
     // Never two in one window (3 rows): at least 3 apart, also round the end of the strip
     at.forEach((i, n) => {
       const next = at[(n + 1) % at.length];
@@ -91,6 +91,37 @@ test("slots: three 🎁 start the bonus game - free spins with a growing multipl
   const { bonusChance, rtp } = slots.rtp();
   assert.ok(bonusChance > 1 / 250 && bonusChance < 1 / 150, `bonus 1 of ${Math.round(1 / bonusChance)}`);
   assert.ok(rtp > 0.93 && rtp < 0.97);
+});
+
+test("slots: five 🪙 start the coin game - respins until three in a row bring nothing, every coin pays", () => {
+  // The 🪙 on every reel
+  slots.STRIPS.forEach((strip) => assert.ok(strip.includes("coin")));
+  const { coinChance, coinRtp, rtp } = slots.rtp();
+  assert.ok(coinChance > 1 / 200 && coinChance < 1 / 80, `coin game 1 of ${Math.round(1 / coinChance)}`);
+  assert.ok(coinRtp > 0.08 && coinRtp < 0.25);
+  assert.ok(rtp > 0.94 && rtp < 0.97, `payback ${(rtp * 100).toFixed(2)}%`);
+  for (let i = 0; i < 200; i++) {
+    const result = slots.spin(100, undefined, { forceBonus: "coins" });
+    const game = result.coinGame;
+    assert.ok(game && !result.bonus, "the coin game every time");
+    assert.ok(game.start.length >= slots.COIN_TRIGGER);
+    // The respins: a new coin brings them back to 3, an empty one takes one away; ends at 0 or all 15
+    let left = slots.COIN_RESPINS;
+    game.respins.forEach((r) => {
+      left = r.coins.length ? slots.COIN_RESPINS : left - 1;
+      assert.strictEqual(r.left, left);
+    });
+    assert.ok(left === 0 || game.coins.length === 15);
+    // Never two coins on one spot
+    assert.strictEqual(new Set(game.coins.map((c) => c.reel * 3 + c.row)).size, game.coins.length);
+    assert.strictEqual(game.ultra, game.coins.length === 15);
+    const x = game.coins.reduce((sum, c) => sum + c.x, 0) + (game.ultra ? slots.ULTRA : 0);
+    assert.strictEqual(game.win, Math.min(Math.floor(100 * x), 100 * slots.COIN_MAX_WIN));
+    assert.strictEqual(result.win, Math.min(result.lineWin, 100 * slots.MAX_WIN) + game.win);
+  }
+  // Every coin a value or a prize
+  const prizes = slots.COIN_VALUES.filter((v) => v.prize).map((v) => v.prize);
+  assert.deepStrictEqual(prizes, ["mini", "major", "mega"]);
 });
 
 /* ---------- The page ---------- */
@@ -166,6 +197,7 @@ test("slots: a spin costs the bet, the win comes right away, the others see it",
 
 test("slots: the admin test switch - every spin starts the bonus game", () => {
   for (let i = 0; i < 20; i++) {
+    assert.ok(slots.spin(100, undefined, { forceBonus: "coins" }).coinGame, "or the coin game");
     const result = slots.spin(100, undefined, { forceBonus: true });
     assert.ok(result.bonus, "a bonus every time");
     assert.ok([0, 2, 4].every((reel) => result.grid[reel].includes("bonus")));
@@ -174,7 +206,7 @@ test("slots: the admin test switch - every spin starts the bonus game", () => {
 });
 
 test("slots: a bonus game waits while the player is away and goes on when they come back", async () => {
-  const timing = { SLOTS_HOLD: 60000, SLOTS_MIN_GAP: 0, SLOTS_SPIN: 50, SLOTS_COUNT_TIME: 50, SLOTS_BONUS_TIME: 100, SLOTS_FREE_SPIN: 100, SLOTS_RETRIGGER_TIME: 10, SLOTS_BONUS_END: 50, SLOTS_RESUME_TIME: 50, SLOTS_BIG_TIME: 50, SLOTS_TEST_BONUS: true };
+  const timing = { SLOTS_HOLD: 60000, SLOTS_MIN_GAP: 0, SLOTS_SPIN: 50, SLOTS_COUNT_TIME: 50, SLOTS_BONUS_TIME: 100, SLOTS_FREE_SPIN: 100, SLOTS_RETRIGGER_TIME: 10, SLOTS_BONUS_END: 50, SLOTS_RESUME_TIME: 50, SLOTS_BIG_TIME: 50, SLOTS_TEST_BONUS: "free" };
   const before = Object.fromEntries(Object.keys(timing).map((key) => [key, config[key]]));
   Object.assign(config, timing);
   try {
@@ -207,6 +239,31 @@ test("slots: a bonus game waits while the player is away and goes on when they c
     await h.wait(resumed.payIn + 200);
     assert.strictEqual(h.coinsOf("alice"), 4900 + spin.win);
     again.close();
+  } finally {
+    Object.assign(config, before);
+  }
+});
+
+test("slots: the coin game waits for the click too and is paid when it is over", async () => {
+  const timing = { SLOTS_HOLD: 60000, SLOTS_MIN_GAP: 0, SLOTS_SPIN: 20, SLOTS_COUNT_TIME: 20, SLOTS_COIN_INTRO: 30, SLOTS_RESPIN: 20, SLOTS_ULTRA_TIME: 20, SLOTS_BONUS_END: 20, SLOTS_BIG_TIME: 20, SLOTS_SWEAT: 0, SLOTS_TEST_BONUS: "coins" };
+  const before = Object.fromEntries(Object.keys(timing).map((key) => [key, config[key]]));
+  Object.assign(config, timing);
+  try {
+    sockets.forEach((socket) => socket.close());
+    await h.wait(50);
+    h.setCoins("alice", 5000);
+    const page = client("alice");
+    await h.once(page, "slotsSetup");
+    const result = h.once(page, "slotsResult");
+    page.emit("spin", { bet: 100 });
+    const spin = await result;
+    assert.ok(spin.coinGame && spin.id && spin.coins.length >= 5);
+    await h.wait(300);
+    assert.strictEqual(h.coinsOf("alice"), 4900, "nothing paid before the start");
+    page.emit("bonusStart", { id: spin.id });
+    await h.wait(30 + spin.coinGame.respins.length * 20 + 300);
+    assert.strictEqual(h.coinsOf("alice"), 4900 + spin.win);
+    page.close();
   } finally {
     Object.assign(config, before);
   }

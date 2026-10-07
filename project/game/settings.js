@@ -13,7 +13,7 @@ const changes = new EventEmitter();
 const KEY = "admin:settings";
 
 // group: the page of the admin panel (general or a game), section: a card on it.
-// type "toggle": on / off (a game), everything else a whole number.
+// type "toggle": on / off (a game), "choice": one of `options` ({value, label}), everything else a whole number.
 const FIELDS = [
   { group: "general", section: "Coins", key: "START_COINS", label: "Start coins", hint: "What a newly approved player gets (plus every daily bonus missed since the first approval).", min: 0, max: 100000000 },
   { group: "general", section: "Coins", key: "DAILY_BONUS", label: "Daily bonus", hint: "Free coins once a day for every player.", min: 0, max: 10000000 },
@@ -30,7 +30,7 @@ const FIELDS = [
   { group: "poker", section: "Buy-in", key: "POKER_MAX_BUYIN", label: "Max buy-in", min: 1, max: 100000000 },
   { group: "slots", section: "Slots", key: "GAME_SLOTS", type: "toggle", label: "Slots are on", hint: "Off: no tab, nobody can open it." },
   { group: "slots", section: "Bets", key: "SLOTS_MIN_BET", label: "Min bet per spin", hint: "For all 9 lines together.", min: 9, max: 100000000 },
-  { group: "slots", section: "Testing", key: "SLOTS_TEST_BONUS", type: "toggle", label: "Every spin starts the bonus", hint: "For testing only: every spin of every player gets the bonus game. Turn it off again afterwards!" },
+  { group: "slots", section: "Testing", key: "SLOTS_TEST_BONUS", type: "choice", label: "Every spin starts a bonus", hint: "For testing only: every spin of every player gets this bonus game. Turn it off again afterwards!", options: [{ value: "off", label: "Off" }, { value: "free", label: "🎁 Free spins" }, { value: "coins", label: "🪙 Coin game" }] },
   { group: "slots", section: "Bets", key: "SLOTS_MAX_BET", label: "Max bet per spin", hint: "For all 9 lines together.", min: 9, max: 100000000 },
   { group: "blackjack", section: "Blackjack", key: "GAME_BLACKJACK", type: "toggle", label: "Blackjack is on", hint: "Off: no tab, nobody can open it." },
   { group: "blackjack", section: "Seats", key: "BJ_MY_SEATS", label: "Seats per player", hint: "At one table at a time.", min: 1, max: 5 },
@@ -62,6 +62,7 @@ function list() {
     unit: field.unit || null,
     min: field.min,
     max: field.max,
+    options: field.options || null,
     value: shown(field, config[field.key]),
     default: shown(field, DEFAULTS[field.key]),
   }));
@@ -76,6 +77,11 @@ function check(input) {
     if (field == null) return { error: `Unknown setting ${key}.` };
     if (field.type === "toggle") {
       if (typeof value !== "boolean") return { error: `${field.label}: on or off.` };
+      values[key] = value;
+      continue;
+    }
+    if (field.type === "choice") {
+      if (!field.options.some((option) => option.value === value)) return { error: `${field.label}: one of ${field.options.map((o) => o.label).join(", ")}.` };
       values[key] = value;
       continue;
     }
@@ -121,7 +127,8 @@ async function load() {
   if (row == null || row.value == null || typeof row.value !== "object") return;
   for (const [key, value] of Object.entries(row.value)) {
     const field = BY_KEY.get(key);
-    if (field && (field.type === "toggle" ? typeof value === "boolean" : Number.isInteger(value))) config[key] = value;
+    const fits = field && (field.type === "toggle" ? typeof value === "boolean" : field.type === "choice" ? field.options.some((option) => option.value === value) : Number.isInteger(value));
+    if (fits) config[key] = value;
   }
 }
 

@@ -894,3 +894,211 @@
   border-color: rgba(var(--mm-accent-rgb), 0.55) !important;
   background: rgba(var(--mm-accent-rgb), 0.08) !important;
 }
+
+/* ---------- Coin game ---------- */
+.sl-machine {
+  position: relative;
+}
+
+/* A 🪙 with its value (a pill at the bottom of the cell) */
+.sl-cell.coin {
+  position: relative;
+}
+
+.sl-cell.coin .sl-symbol {
+  filter: drop-shadow(0 0 6px rgba(var(--mm-accent-rgb), 0.35));
+}
+
+.sl-coin-value {
+  position: absolute;
+  left: 50%;
+  bottom: 9%;
+  transform: translateX(-50%);
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(20, 16, 8, 0.85);
+  box-shadow: inset 0 0 0 1px rgba(var(--mm-accent-rgb), 0.6);
+  color: #f3d27a;
+  font-size: calc(var(--tile) * 0.15);
+  font-weight: 800;
+  line-height: 1.35;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.sl-cell.prize-mini .sl-coin-value {
+  background: #3f7a55;
+  box-shadow: none;
+  color: #fff;
+}
+
+.sl-cell.prize-major .sl-coin-value {
+  background: #4b6aa3;
+  box-shadow: none;
+  color: #fff;
+}
+
+.sl-cell.prize-mega .sl-coin-value {
+  background: #8a55a8;
+  box-shadow: none;
+  color: #fff;
+}
+
+/* The board of the coin game: held coins glow, empty spots are dark */
+.sl-machine.coin-mode .sl-reel {
+  background: #121212;
+}
+
+.sl-machine.coin-mode .sl-reel::after {
+  display: none;
+}
+
+.sl-cell.held {
+  background: radial-gradient(circle, rgba(var(--mm-accent-rgb), 0.22), transparent 70%);
+  box-shadow: inset 0 0 0 1px rgba(var(--mm-accent-rgb), 0.25);
+  border-radius: 12px;
+}
+
+.sl-cell.empty {
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+}
+
+.sl-mini-track {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.sl-mini-face {
+  flex: 0 0 100%;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--tile) * 0.52);
+  line-height: 1;
+  opacity: 0.55;
+}
+
+.sl-cell.rolling .sl-mini-track {
+  filter: blur(0.6px);
+}
+
+/* The respins left: three dots */
+.sl-free-count:has(.sl-respin-dot) {
+  display: flex;
+  gap: 5px;
+  padding: 0.3rem 0;
+}
+
+.sl-respin-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--mm-surface-3);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sl-respin-dot.on {
+  background: var(--mm-accent);
+  box-shadow: 0 0 8px rgba(var(--mm-accent-rgb), 0.6);
+}
+
+/* The prizes over the machine (only in the coin game) */
+.sl-prizes {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  gap: 6px;
+  transform: translate(-50%, -55%);
+  animation: sl-stage-in 0.3s ease-out;
+}
+
+.sl-prizes[hidden] {
+  display: none;
+}
+
+.sl-prize {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 76px;
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+  background: var(--prize, #444);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  line-height: 1.15;
+}
+
+.sl-prize.prize-mini {
+  --prize: #3f7a55;
+}
+
+.sl-prize.prize-major {
+  --prize: #4b6aa3;
+}
+
+.sl-prize.prize-mega {
+  --prize: #8a55a8;
+}
+
+.sl-prize.prize-ultra {
+  --prize: linear-gradient(135deg, #b8452f, #c79a3a);
+}
+
+.sl-prize-name {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.sl-prize-value {
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ULTRA: the whole machine glows */
+.sl-main.ultra .sl-machine {
+  animation: sl-ultra 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes sl-ultra {
+  from {
+    box-shadow: 0 0 30px rgba(199, 154, 58, 0.35);
+  }
+  to {
+    box-shadow: 0 0 70px rgba(199, 80, 50, 0.6);
+  }
+}
+
+.sl-ultra-title {
+  font-size: clamp(3rem, 9vw, 6rem);
+  background: linear-gradient(135deg, #ffd46b, #ff7a45, #ffd46b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: sl-ultra-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes sl-ultra-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .sl-prize {
+    min-width: 0;
+    padding: 0.15rem 0.4rem;
+  }
+  .sl-prize-value {
+    font-size: 0.66rem;
+  }
+}

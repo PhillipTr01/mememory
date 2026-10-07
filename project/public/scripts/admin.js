@@ -592,6 +592,8 @@ function renderSettings() {
       // A game on / off: a card of its own, over the whole width
       var toggle = section.fields.find((field) => field.type == "toggle");
       if (toggle) return toggleCard(toggle);
+      var choice = section.fields.find((field) => field.type == "choice");
+      if (choice) return choiceCard(choice);
       var card = el("div", "ad-card");
       var head = el("div", "ad-card-head");
       head.appendChild(el("h2", "ad-title", section.name));
@@ -618,7 +620,37 @@ function renderSettings() {
     }),
   );
   // Nothing to save on a page without numbers
-  document.querySelector(".ad-settings-bar").hidden = !settingsList.some((field) => field.group == settingsGroup && field.type != "toggle");
+  document.querySelector(".ad-settings-bar").hidden = !settingsList.some((field) => field.group == settingsGroup && field.type == "number");
+}
+
+// One of a few options (like the test bonus of the slots): saved right away
+function choiceCard(field) {
+  var on = field.value != field.default;
+  var card = el("div", "ad-card ad-toggle-card ad-toggle-test" + (on ? " on" : " off"));
+  var info = el("div", "ad-toggle-info");
+  info.append(el("h2", "ad-title", field.label), el("p", "ad-note", field.hint || ""));
+  var options = el("div", "ad-choice");
+  options.setAttribute("role", "radiogroup");
+  options.setAttribute("aria-label", field.label);
+  field.options.forEach((option) => {
+    var button = el("button", "ad-choice-option" + (option.value == field.value ? " active" : ""), option.label);
+    button.type = "button";
+    button.setAttribute("role", "radio");
+    button.setAttribute("aria-checked", option.value == field.value);
+    button.addEventListener("click", async () => {
+      if (option.value == field.value) return;
+      options.querySelectorAll("button").forEach((b) => (b.disabled = true));
+      try {
+        settingsList = (await api("settings", { values: { [field.key]: option.value } })).settings;
+      } catch (error) {
+        fail(error);
+      }
+      renderSettings();
+    });
+    options.appendChild(button);
+  });
+  card.append(info, options);
+  return card;
 }
 
 // A game on / off (or another switch, like a test mode): saved right away

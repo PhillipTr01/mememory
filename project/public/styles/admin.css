@@ -818,6 +818,51 @@ a.ad-link:focus-visible {
   margin: 0.25rem 0 0;
 }
 
+/* One of a few options: a segmented row */
+.ad-choice {
+  display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+}
+
+.ad-choice-option {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--mm-muted);
+  background: transparent;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ad-choice-option:hover:not(.active) {
+  color: var(--mm-text);
+}
+
+.ad-choice-option.active {
+  color: var(--mm-text);
+  background: var(--mm-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.ad-toggle-card.on .ad-choice-option.active {
+  background: #f59e0b;
+  color: #1a1206;
+}
+
+@media (max-width: 600px) {
+  .ad-toggle-card:has(.ad-choice) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 .ad-switch-big .ad-switch-track {
   width: 48px;
   height: 28px;

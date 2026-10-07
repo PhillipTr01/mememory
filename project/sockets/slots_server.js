@@ -45,9 +45,14 @@ module.exports = function (io) {
     return grid[0].includes("bonus") && grid[2].includes("bonus") ? config.SLOTS_SWEAT * share : 0;
   }
 
-  // The show from free spin `shown` on (after `intro`: the wheels, "welcome back" or nothing)
+  // The show from free spin (or respin of the coin game) `shown` on (after `intro`: the wheels,
+  // the coins locking in, "welcome back" or nothing)
   function restTime(bet, result, shown, intro) {
     let time = config.SLOTS_COUNT_TIME;
+    if (result.coinGame) {
+      time += intro + result.coinGame.respins.slice(Math.max(0, shown)).length * config.SLOTS_RESPIN + config.SLOTS_BONUS_END;
+      if (result.coinGame.ultra) time += config.SLOTS_ULTRA_TIME;
+    }
     if (result.bonus) {
       const left = result.bonus.freeSpins.slice(Math.max(0, shown));
       const retriggers = left.filter((free) => free.retrigger > 0).length;
@@ -57,8 +62,13 @@ module.exports = function (io) {
     return time;
   }
 
+  // What the page shows before the free spins / respins: the wheels, or the coins locking in
+  const introTime = (result) => (result.coinGame ? config.SLOTS_COIN_INTRO : config.SLOTS_BONUS_TIME);
+  // How many steps the bonus game has: free spins or respins
+  const steps = (result) => (result.coinGame ? result.coinGame.respins.length : result.bonus.freeSpins.length);
+
   /*
-   * A bonus game is paid only when it was played on the page: it waits for
+   * A bonus game (free spins or the coin game) is paid only when it was played on the page: it waits for
    * the player's click ("waiting"), then the wheels and the free spins play
    * ("playing"). A player who leaves meanwhile finds it again - waiting,
    * or held where it was ("paused"). After SLOTS_HOLD it is paid anyway.
@@ -125,7 +135,7 @@ module.exports = function (io) {
   }
 
   function rules() {
-    return { minBet: config.SLOTS_MIN_BET, maxBet: config.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, bonusTime: config.SLOTS_BONUS_TIME, freeSpinTime: config.SLOTS_FREE_SPIN, bonusEndTime: config.SLOTS_BONUS_END, resumeTime: config.SLOTS_RESUME_TIME, sweatTime: config.SLOTS_SWEAT, retriggerTime: config.SLOTS_RETRIGGER_TIME, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
+    return { minBet: config.SLOTS_MIN_BET, maxBet: config.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, bonusTime: config.SLOTS_BONUS_TIME, freeSpinTime: config.SLOTS_FREE_SPIN, respinTime: config.SLOTS_RESPIN, coinIntroTime: config.SLOTS_COIN_INTRO, ultraTime: config.SLOTS_ULTRA_TIME, bonusEndTime: config.SLOTS_BONUS_END, resumeTime: config.SLOTS_RESUME_TIME, sweatTime: config.SLOTS_SWEAT, retriggerTime: config.SLOTS_RETRIGGER_TIME, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
   }
 
   async function sendCoins(username) {
@@ -156,7 +166,7 @@ module.exports = function (io) {
       safe("bonusStart", (data) => {
         const entry = machine.pending.find((e) => e.id === (data && data.id) && e.name === username);
         // (the wheels come first, then the free spins)
-        if (entry && entry.result && entry.state === "waiting") play(entry, config.SLOTS_BONUS_TIME);
+        if (entry && entry.result && entry.state === "waiting") play(entry, introTime(entry.result));
       }),
     );
 
@@ -166,7 +176,7 @@ module.exports = function (io) {
       safe("bonusProgress", (data) => {
         const entry = machine.pending.find((e) => e.id === (data && data.id) && e.name === username);
         if (!entry || !entry.result || !Number.isInteger(data.shown)) return;
-        entry.shown = Math.max(entry.shown, Math.min(data.shown, entry.result.bonus.freeSpins.length));
+        entry.shown = Math.max(entry.shown, Math.min(data.shown, steps(entry.result)));
         persist.changed("slots");
       }),
     );
@@ -190,14 +200,17 @@ module.exports = function (io) {
         try {
           if (!(await coins.spend(username, bet, { reason: "slots bet" }))) return error("You don't have enough coins.");
           lastSpin.set(username, Date.now());
-          const result = slots.spin(bet, undefined, { forceBonus: config.SLOTS_TEST_BONUS === true });
+          const test = config.SLOTS_TEST_BONUS;
+          const result = slots.spin(bet, undefined, { forceBonus: test === "free" || test === "coins" ? test : test === true ? "free" : null });
           machine.spins++;
           const payIn = showTime(bet, result);
           let id = null;
           // Every win - and every bonus game (also one without a win: it can be held and resumed)
-          if (result.win > 0 || result.bonus) {
+          const special = result.bonus || result.coinGame;
+          if (result.win > 0 || special) {
             const best = result.lines.length ? result.lines.reduce((a, b) => (b.multiplier > a.multiplier ? b : a)) : null;
-            const note = result.bonus ? `bonus ${result.bonus.spins} free spins x${result.bonus.multiplier}` : `${best.count}x ${best.symbol}`;
+            const game = result.coinGame;
+            const note = result.bonus ? `bonus ${result.bonus.spins} free spins x${result.bonus.multiplier}` : game ? `coin game ${game.coins.length} coins${game.ultra ? " ULTRA" : ""}` : `${best.count}x ${best.symbol}`;
             id = ++pendingId + ":" + Date.now();
             const entry = {
               id: id,
@@ -206,18 +219,18 @@ module.exports = function (io) {
               note: note,
               at: Date.now() + payIn,
               // A bonus game: everything to show it again, how far it was seen
-              result: result.bonus ? { bet: bet, grid: result.grid, stops: result.stops, lines: result.lines, lineWin: result.lineWin, bonus: result.bonus, win: result.win, capped: result.capped } : null,
+              result: special ? { bet: bet, grid: result.grid, stops: result.stops, lines: result.lines, lineWin: result.lineWin, coins: result.coins, bonus: result.bonus, coinGame: result.coinGame, win: result.win, capped: result.capped } : null,
               shown: 0,
               state: null,
-              feed: { name: username, bet: bet, win: result.win, symbol: best ? best.symbol : "bonus", count: best ? best.count : 3, bonus: result.bonus ? result.bonus.spins : null, at: Date.now() },
+              feed: { name: username, bet: bet, win: result.win, symbol: best ? best.symbol : game ? "coin" : "bonus", count: best ? best.count : 3, bonus: result.bonus ? result.bonus.spins : null, coins: game ? game.coins.length : null, ultra: game ? game.ultra : false, at: Date.now() },
             };
             machine.pending.push(entry);
             persist.changed("slots");
-            // A bonus game waits for the player's click after the wheels
+            // A bonus game waits for the player's click
             if (entry.result) hold(entry, "waiting");
             else schedulePay(entry, payIn);
           }
-          socket.emit("slotsResult", { id: id, bet: bet, grid: result.grid, stops: result.stops, lines: result.lines, lineWin: result.lineWin, bonus: result.bonus, win: result.win, capped: result.capped, payIn: payIn });
+          socket.emit("slotsResult", { id: id, bet: bet, grid: result.grid, stops: result.stops, lines: result.lines, lineWin: result.lineWin, coins: result.coins, bonus: result.bonus, coinGame: result.coinGame, win: result.win, capped: result.capped, payIn: payIn });
         } finally {
           busy.delete(username);
         }
