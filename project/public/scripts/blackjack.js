@@ -494,7 +494,8 @@ function renderRebet() {
   button.disabled = total > myCoins;
   // The whole amount: bets and side bets
   document.getElementById("bjRebetText").innerText = "🪙 " + formatCoins(total) + (last.length > 1 ? " · " + last.length + " seats" : "");
-  button.title = total > myCoins ? "Not enough coins" : "The same bets as last round";
+  button.title = total > myCoins ? "Not enough coins" : "Same bet as last round";
+  button.setAttribute("aria-label", "Same bet as last round: " + formatCoins(total) + " coins");
 }
 
 // The own seats one can leave now (not while their cards are played)

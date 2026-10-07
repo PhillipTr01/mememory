@@ -936,16 +936,23 @@
   margin-top: 3rem;
 }
 
-/* Same bet: the arrow in a gold coin, the amount in gold */
+.bj-bar:has(.bj-rebet-tab:not([hidden])) {
+  margin-top: 2.6rem;
+}
+
+/* Same bet: small - the arrow in a gold coin and the amount */
 .bj-rebet-tab {
-  padding-left: 0.45rem;
+  height: 32px;
+  gap: 0.4rem;
+  padding: 0 0.75rem 0 0.35rem;
+  font-size: 0.78rem;
   cursor: pointer;
 }
 
 .bj-rebet-tab svg {
-  width: 28px;
-  height: 28px;
-  padding: 6px;
+  width: 22px;
+  height: 22px;
+  padding: 5px;
   border-radius: 50%;
   background: var(--mm-accent);
   color: #1a1305;
@@ -957,8 +964,6 @@
 }
 
 .bj-rebet-amount {
-  padding-left: 0.55rem;
-  border-left: 1px solid rgba(var(--mm-accent-rgb), 0.35);
   color: var(--mm-accent);
   font-variant-numeric: tabular-nums;
 }

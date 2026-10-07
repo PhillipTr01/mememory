@@ -85,6 +85,16 @@ socket.on("jackpotState", (data) => {
 
 /* ---------- Rendering ---------- */
 
+// The scene before the draw - only built again when the pot changed (every update made it flicker)
+var idleKey = null;
+function showIdle() {
+  var stage = document.getElementById("jpStage");
+  var key = [state.mode, state.round, state.total, ...state.entries.map((entry) => entry.name + ":" + entry.coins)].join("|");
+  if (key == idleKey && stage.firstElementChild) return;
+  idleKey = key;
+  currentDraw().idle(stage);
+}
+
 function render() {
   if (state == null) return;
   document.getElementById("jpRound").innerText = "Round " + state.round;
@@ -95,7 +105,7 @@ function render() {
   // The pot is in the middle of the wheel, the other draws show it above
   document.getElementById("jpPotbar").hidden = state.mode == "wheel";
   // A running animation keeps its scene, a finished one stays until the next round
-  if (!spinning && !(state.phase == "drawing" && spunRound == state.round)) currentDraw().idle(document.getElementById("jpStage"));
+  if (!spinning && !(state.phase == "drawing" && spunRound == state.round)) showIdle();
   renderStatus();
   renderPlayers();
   renderBets();
@@ -155,6 +165,8 @@ function playDraw(short) {
   var duration = short ? 900 : state.spin - 900;
   var stage = document.getElementById("jpStage");
   spinning = true;
+  // (after the draw the waiting scene is built again)
+  idleKey = null;
   document.getElementById("jpResult").hidden = true;
   render();
   currentDraw()
