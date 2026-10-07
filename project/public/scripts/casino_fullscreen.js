@@ -94,6 +94,7 @@
     var watcher = null;
     var timer = null;
     var spot = null; // "middle" or "corner" - for this full screen
+    var middleX = null;
     // In the room between the title and the buttons on the right (too narrow: the top right corner)
     function place() {
       var title = target.querySelector("h1");
@@ -112,7 +113,9 @@
       if (spot == null) spot = right - rect.right >= box.offsetWidth + 24 ? "middle" : "corner";
       box.style.visibility = "";
       if (spot == "middle") {
-        box.style.left = (rect.right + right) / 2 + "px";
+        // (where it is decided once too - standing up, a bar going away doesn't move it)
+        if (middleX == null) middleX = (rect.right + right) / 2;
+        box.style.left = middleX + "px";
         box.style.right = "auto";
         box.style.transform = "translateX(-50%)";
         box.style.top = Math.max(8, rect.top + rect.height / 2 - box.offsetHeight / 2) + "px";
@@ -139,6 +142,7 @@
         // Hidden until it has its place (the zoom of the game settles first)
         box.style.visibility = "hidden";
         spot = null;
+        middleX = null;
         target.appendChild(box);
         setTimeout(place, 350);
         timer = setInterval(place, 300);
