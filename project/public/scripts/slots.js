@@ -253,6 +253,8 @@ function animateReels(grid, time, sweatTime, stopped) {
         }
         // Keep only the 3 symbols that are shown
         showGrid(i, grid[i]);
+        // The sweat is over without a third 🎁: the two stop glowing
+        if (sweat && i == 4 && !grid[4].includes("bonus")) document.querySelectorAll(".sl-cell.scatter.hit").forEach((c) => c.classList.remove("hit"));
         if (stopped) stopped(i);
       });
     }),
