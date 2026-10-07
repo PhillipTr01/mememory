@@ -3118,16 +3118,32 @@ body.jackpot-theme {
   }
 }
 
-@media (max-width: 767px) {
-  /* Small screens: the icon and the time */
+/* Smaller screens: no room next to the logo - the pill gets its own row under the bar, centered */
+@media (max-width: 991px) {
+  .navbar:has(.nav-board) {
+    position: relative;
+    padding-bottom: 3.4rem;
+  }
   .nav-board {
-    padding: 0.3rem 0.6rem;
+    position: absolute;
+    left: 50%;
+    bottom: 0.45rem;
+    margin: 0;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 32px);
+    padding: 0.3rem 0.9rem 0.3rem 0.65rem;
+    font-size: 0.92rem;
+  }
+  .nav-board-icon {
+    font-size: 1.25rem;
+  }
+  .nav-board-main {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.5rem;
   }
   .nav-board-text {
-    display: none;
-  }
-  .nav-board-timer {
-    font-size: 0.7rem;
+    max-width: 46vw;
   }
 }
 
@@ -3165,9 +3181,13 @@ body.jackpot-theme {
   gap: 0.1rem;
 }
 
+.cs-season-notice-text b {
+  color: #fff;
+}
+
 .cs-season-notice-text span {
   font-size: 0.85rem;
-  color: var(--mm-muted);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .cs-season-notice-link {

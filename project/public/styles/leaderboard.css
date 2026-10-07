@@ -516,3 +516,14 @@
     display: none;
   }
 }
+
+/* Small screens: the season under the title, over the whole width */
+@media (max-width: 767px) {
+  .lb-main .jp-head {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .lb-season {
+    width: 100%;
+  }
+}
