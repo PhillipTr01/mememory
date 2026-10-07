@@ -1528,3 +1528,25 @@ a.ad-link:focus-visible {
 #adSeasonFormCard[hidden] {
   display: none;
 }
+
+/* The seasons in groups: open, planned, over */
+.ad-season-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ad-season-group-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.ad-season-group-count {
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+  color: var(--mm-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}

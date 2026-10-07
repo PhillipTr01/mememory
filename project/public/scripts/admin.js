@@ -602,7 +602,23 @@ function renderSeasons() {
     );
   }
   var list = document.getElementById("adSeasonList");
-  list.replaceChildren(...(seasonList.length ? seasonList.map((s) => seasonRow(s)) : [el("p", "ad-empty", "No seasons yet.")]));
+  // In groups: open (running or starting), planned (the next first), over (the last first)
+  var groups = [
+    ["Open", seasonList.filter((s) => s.status == "running" || s.status == "starting")],
+    ["Planned", seasonList.filter((s) => s.status == "planned").sort((a, b) => a.start - b.start)],
+    ["Over", seasonList.filter((s) => s.status == "ended").sort((a, b) => (b.endedAt || b.end) - (a.endedAt || a.end))],
+  ].filter((group) => group[1].length);
+  list.replaceChildren(
+    ...(groups.length
+      ? groups.map(([name, seasons]) => {
+          var group = el("div", "ad-season-group");
+          var head = el("div", "ad-season-group-head");
+          head.append(el("span", "ad-label", name), el("span", "ad-season-group-count", seasons.length));
+          group.append(head, ...seasons.map((s) => seasonRow(s)));
+          return group;
+        })
+      : [el("p", "ad-empty", "No seasons yet.")]),
+  );
 }
 
 function seasonHead(season) {
