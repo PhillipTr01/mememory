@@ -47,6 +47,18 @@ socket.on("casinoClosed", () => (window.location.href = "/"));
 socket.on("gameOff", () => (window.location.href = "./"));
 
 window.addEventListener("pagehide", () => socket.disconnect());
+
+// A phone puts the page away (other app, screen off) during a bonus game: the server holds it
+// (as if the page was closed) - back on the page it goes on with "welcome back"
+var awayInBonus = false;
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && activeBonus) {
+    awayInBonus = true;
+    socket.disconnect();
+  } else if (!document.hidden && awayInBonus) {
+    location.reload();
+  }
+});
 window.addEventListener("pageshow", (event) => {
   if (event.persisted) socket.connect();
 });
@@ -217,17 +229,20 @@ function animateReels(grid, time, sweatTime, stopped, strips, stops) {
   var reels = [...document.querySelectorAll(".sl-reel")];
   // The size of a symbol now (full screen or not)
   TILE = document.querySelector(".sl-cell").offsetHeight;
-  // The sweat: 🎁 on reels 1 and 3, or 3-4 🪙 on the first four reels (the coin game is still
-  // possible) - the last reel turns longer, slower, they light up
-  var kind = hasTwoGifts(grid) ? "gifts" : stops && hasCoinChance(grid, stops) ? "coins" : null;
+  // The sweat: 🎁 on reels 1 and 3, or the coin game still possible - the last reel(s) turn longer,
+  // slower, they light up. `from`: the first reel that sweats (the coin sweat can start at reel 4)
+  var coinReels = stops ? coinSweatReels(grid, stops) : 0;
+  var kind = hasTwoGifts(grid) ? "gifts" : coinReels ? "coins" : null;
   var sweat = sweatTime > 0 && kind ? sweatTime : 0;
+  var from = kind == "coins" ? 5 - coinReels : 4;
+  var extra = (i) => (sweat && i >= from ? sweat * (i - from + 1) : 0);
   return Promise.all(
     reels.map((reel, i) => {
       var strip = strips[i];
       var track = reel.querySelector(".sl-track");
       reel.classList.add("spinning");
       // Not too many symbols: the reels turn at a speed the eye can follow
-      var count = Math.round((8 + i * 3) * Math.min(1, time / setup.rules.spinTime)) + 3 + (sweat && i == 4 ? Math.round(sweat / 140) : 0);
+      var count = Math.round((8 + i * 3) * Math.min(1, time / setup.rules.spinTime)) + 3 + Math.round(extra(i) / 140);
       // The symbols fall from the top: the result on top, random ones, the faces now at the bottom -
       // the track starts at the bottom (what is shown now) and slides down to the result
       var ids = grid[i].slice();
@@ -237,7 +252,7 @@ function animateReels(grid, time, sweatTime, stopped, strips, stops) {
       track.replaceChildren(...ids.map(cell));
       var start = -(ids.length - 3) * TILE;
       track.style.transform = `translateY(${start}px)`;
-      var duration = time * (0.5 + i * 0.12) + (sweat && i == 4 ? sweat : 0);
+      var duration = time * (0.5 + i * 0.12) + extra(i);
       // (a little too far down at the end, then back: the reel settles)
       var animation = track.animate(
         [
@@ -253,12 +268,14 @@ function animateReels(grid, time, sweatTime, stopped, strips, stops) {
         // Keep only the 3 symbols that are shown
         showGrid(i, grid[i]);
         if (stopped) stopped(i);
-        // Two 🎁 in sight (after reel 3) - or enough 🪙 (after reel 4): they light up, the last reel sweats
+        // Two 🎁 in sight (after reel 3) - or enough 🪙: they light up, the reels still turning sweat
         var light = kind == "gifts" ? ".sl-cell.scatter" : ".sl-cell.coin";
-        if (sweat && i == (kind == "gifts" ? 2 : 3)) {
+        if (sweat && i == (kind == "gifts" ? 2 : from - 1)) {
           reels.slice(0, i + 1).forEach((r) => r.querySelectorAll(light).forEach((c) => c.classList.add("hit")));
-          reels[4].classList.add("sweat");
+          reels.slice(from).forEach((r) => r.classList.add("sweat"));
         }
+        // A coin on a sweating reel lights up too
+        if (sweat && kind == "coins" && i >= from && i < 4) reel.querySelectorAll(light).forEach((c) => c.classList.add("hit"));
         // The sweat is over without the bonus: they stop glowing
         var made = kind == "gifts" ? grid[4].includes("bonus") : grid.flat().filter((id) => id == "coin").length >= setup.coins.trigger;
         if (sweat && i == 4 && !made) document.querySelectorAll(light + ".hit").forEach((c) => c.classList.remove("hit"));
@@ -280,12 +297,15 @@ function hasTwoGifts(grid) {
   return grid[0].includes("bonus") && grid[2].includes("bonus");
 }
 
-// The coin game still possible on the last reel (the same rule as the server, slots.coinSweat):
-// 4 🪙 on the first four reels - or 3 (one on reel 4) in 2 of 5 spins (by the stops)
-function hasCoinChance(grid, stops) {
+// The coin game still possible (the same rule as the server, slots.coinSweat / coinSweatReels):
+// 4 🪙 on the first four reels - or 3 (one on reel 4) in 2 of 5 spins (by the stops).
+// How many reels sweat: 2 when the first three reels show 3 🪙 already, otherwise 1
+function coinSweatReels(grid, stops) {
+  var trigger = setup.coins.trigger;
   var coins = grid.slice(0, 4).flat().filter((id) => id == "coin").length;
-  if (coins == setup.coins.trigger - 1) return true;
-  return coins == setup.coins.trigger - 2 && grid[3].includes("coin") && stops.reduce((sum, stop) => sum + stop, 0) % 5 < 2;
+  var sweat = coins == trigger - 1 || (coins == trigger - 2 && grid[3].includes("coin") && stops.reduce((sum, stop) => sum + stop, 0) % 5 < 2);
+  if (!sweat) return 0;
+  return grid.slice(0, 3).flat().filter((id) => id == "coin").length >= trigger - 2 ? 2 : 1;
 }
 
 async function playSpin(result) {
@@ -531,6 +551,8 @@ async function playFreeSpins(result, from, progress) {
   amount.animate([{ transform: "scale(1)" }, { transform: "scale(1.18)" }, { transform: "scale(1)" }], { duration: 450, easing: "ease-out" });
   sub.classList.add("show");
   await wait(end - counting);
+  // Stays until the player goes on
+  await continueButton(stage);
   stage.hidden = true;
   stage.replaceChildren();
   // Back to the spin that started it
@@ -707,6 +729,8 @@ async function playCoinGame(result, from, started) {
   amount.animate([{ transform: "scale(1)" }, { transform: "scale(1.18)" }, { transform: "scale(1)" }], { duration: 450, easing: "ease-out" });
   sub.classList.add("show");
   await wait(end - counting);
+  // Stays until the player goes on
+  await continueButton(stage);
   stage.hidden = true;
   stage.replaceChildren();
   machine.classList.remove("bonus-mode", "coin-mode");
@@ -761,6 +785,30 @@ async function ultraShow(result) {
   stage.replaceChildren();
 }
 
+// A win screen stays until the player clicks on (or Enter / space)
+function continueButton(stage) {
+  return new Promise((resolve) => {
+    var button = el("button", "sl-start-btn sl-continue", "Continue");
+    button.type = "button";
+    stage.appendChild(button);
+    var done = () => {
+      document.removeEventListener("keydown", onKey, true);
+      resolve();
+    };
+    var onKey = (event) => {
+      if (event.key == "Enter" || event.code == "Space") {
+        event.preventDefault();
+        event.stopPropagation();
+        done();
+      }
+    };
+    button.addEventListener("click", done);
+    document.addEventListener("keydown", onKey, true);
+    button.animate([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], { duration: 300, easing: "ease-out" });
+    button.focus();
+  });
+}
+
 // "+ 🪙 120" rises over the reels
 function floatWin(label) {
   var tag = el("div", "sl-float", label);
@@ -811,6 +859,7 @@ async function bigWin(result) {
   coinShower(stage, times >= 50 ? 70 : 40);
   countUp(amount, result.win, setup.rules.bigTime * 0.7);
   await wait(setup.rules.bigTime);
+  await continueButton(stage);
   stage.hidden = true;
   stage.replaceChildren();
 }

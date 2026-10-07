@@ -45,7 +45,9 @@ module.exports = function (io) {
   // the last reel turns longer on the page (the sweat)
   function sweat(grid, share = 1, stops = null) {
     const gifts = grid[0].includes("bonus") && grid[2].includes("bonus");
-    return gifts || (stops && slots.coinSweat(grid, stops)) ? config.SLOTS_SWEAT * share : 0;
+    if (gifts) return config.SLOTS_SWEAT * share;
+    // (the coin sweat can start a reel earlier: then two reels sweat)
+    return stops ? slots.coinSweatReels(grid, stops) * config.SLOTS_SWEAT * share : 0;
   }
 
   // The show from free spin (or respin of the coin game) `shown` on (after `intro`: the wheels,

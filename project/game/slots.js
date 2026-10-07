@@ -19,8 +19,8 @@ const crypto = require("crypto");
  * when the bonus reaches it, it ends right there.
  */
 const SYMBOLS = [
-  { id: "banana", icon: "🍌", name: "Banana", count: 9, pays: [3, 8, 25] },
-  { id: "pepe", icon: "🐸", name: "Pepe", count: 8, pays: [4, 13, 38] },
+  { id: "banana", icon: "🍌", name: "Banana", count: 9, pays: [3, 8, 24] },
+  { id: "pepe", icon: "🐸", name: "Pepe", count: 8, pays: [4, 13, 36] },
   { id: "doge", icon: "🐕", name: "Doge", count: 6, pays: [7, 22, 83] },
   { id: "money", icon: "💰", name: "Money bag", count: 4, pays: [13, 38, 164] },
   { id: "rocket", icon: "🚀", name: "To the moon", count: 3, pays: [19, 67, 329] },
@@ -73,21 +73,21 @@ const COIN_GROUPS = [
   [1, 2],
   [2, 1],
   [1, 1],
-  [2, 1],
+  [1, 1],
 ];
 // In a respin every empty spot gets a 🪙 with this chance (in 1000) - often, the values small
 const COIN_LAND = 60;
 // The value of a coin: times the bet, or a prize (also times the bet), with weights
 const COIN_VALUES = [
-  { x: 0.5, weight: 400 },
-  { x: 1, weight: 300 },
-  { x: 2, weight: 160 },
-  { x: 3, weight: 80 },
-  { x: 5, weight: 45 },
-  { x: 10, weight: 22 },
-  { x: 15, prize: "mini", weight: 16 },
-  { x: 40, prize: "major", weight: 5 },
-  { x: 100, prize: "mega", weight: 1 },
+  { x: 1, weight: 400 },
+  { x: 2, weight: 300 },
+  { x: 3, weight: 160 },
+  { x: 5, weight: 80 },
+  { x: 8, weight: 45 },
+  { x: 15, weight: 22 },
+  { x: 25, prize: "mini", weight: 16 },
+  { x: 60, prize: "major", weight: 5 },
+  { x: 150, prize: "mega", weight: 1 },
 ];
 const ULTRA = 500; // all 15 spots full: this many times the bet on top
 const COIN_MAX_WIN = 1000; // the coin game never pays more than this many times the bet
@@ -238,6 +238,12 @@ function coinGame(bet, start, randomInt) {
  * about as often as the sweat of two 🎁 (1 of 40 spins). The page uses the
  * same rule.
  */
+// How many reels sweat (0, 1 or 2): with 3 🪙 on the first three reels already, reels 4 and 5 both
+function coinSweatReels(grid, stops) {
+  if (!coinSweat(grid, stops)) return 0;
+  return grid.slice(0, 3).flat().filter((id) => id === COIN).length >= COIN_TRIGGER - 2 ? 2 : 1;
+}
+
 function coinSweat(grid, stops) {
   const coins = grid.slice(0, 4).flat().filter((id) => id === COIN).length;
   if (coins === COIN_TRIGGER - 1) return true;
@@ -455,4 +461,4 @@ function catalog() {
   };
 }
 
-module.exports = { SYMBOLS, LINES, STRIPS, FREE_STRIPS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, lineWin, spin, coinGame, coinSweat, rtp, catalog };
+module.exports = { SYMBOLS, LINES, STRIPS, FREE_STRIPS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, lineWin, spin, coinGame, coinSweat, coinSweatReels, rtp, catalog };
