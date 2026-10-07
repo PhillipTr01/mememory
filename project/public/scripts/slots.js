@@ -78,7 +78,7 @@ socket.on("slotsFeed", renderFeed);
 
 function cell(id) {
   var symbol = symbolOf(id);
-  var box = el("div", "sl-cell" + (symbol && symbol.wild ? " wild" : ""));
+  var box = el("div", "sl-cell" + (symbol && symbol.wild ? " wild" : "") + (symbol && symbol.scatter ? " scatter" : ""));
   box.dataset.symbol = id;
   box.appendChild(el("span", "sl-symbol", symbol ? symbol.icon : "?"));
   return box;
@@ -222,14 +222,136 @@ async function playSpin(result) {
     });
   });
   await Promise.all(stops);
+  // Three 🎁: the bonus wheel first
+  if (result.bonus) await playBonus(result);
+  await showResult(result);
   spinning = false;
+  // The win comes with the next "coins" from the server (after the count)
   renderCoins(myCoins);
-  showResult(result);
   renderControls();
 }
 
+/* ---------- Bonus: the wheel of multipliers ---------- */
+
+// The fields on the wheel (every multiplier at least once, the small ones more often)
+var WHEEL_FIELDS = [2, 5, 3, 10, 2, 20, 3, 5, 2, 50, 3, 10, 2, 100, 5, 250];
+var WHEEL_COLORS = { 2: "#3b3b3b", 3: "#454545", 5: "#2f5d8a", 10: "#2f7a55", 20: "#7a4ea0", 50: "#a8742a", 100: "#b0413e", 250: "#d4a017" };
+
+function polar(r, angle) {
+  var a = ((angle - 90) * Math.PI) / 180;
+  return [50 + r * Math.cos(a), 50 + r * Math.sin(a)];
+}
+
+function wheelSvg() {
+  var NS = "http://www.w3.org/2000/svg";
+  var svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 100 100");
+  svg.setAttribute("class", "sl-wheel-svg");
+  var step = 360 / WHEEL_FIELDS.length;
+  WHEEL_FIELDS.forEach((value, i) => {
+    var [x1, y1] = polar(48, i * step);
+    var [x2, y2] = polar(48, (i + 1) * step);
+    var path = document.createElementNS(NS, "path");
+    path.setAttribute("d", `M50 50 L${x1} ${y1} A48 48 0 0 1 ${x2} ${y2} Z`);
+    path.setAttribute("fill", WHEEL_COLORS[value]);
+    path.setAttribute("stroke", "#1a1a1a");
+    path.setAttribute("stroke-width", "0.6");
+    svg.appendChild(path);
+    var [tx, ty] = polar(36, (i + 0.5) * step);
+    var text = document.createElementNS(NS, "text");
+    text.setAttribute("x", tx);
+    text.setAttribute("y", ty);
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("dominant-baseline", "central");
+    text.setAttribute("transform", `rotate(${(i + 0.5) * step} ${tx} ${ty})`);
+    text.setAttribute("class", "sl-wheel-text" + (value >= 100 ? " big" : ""));
+    text.textContent = value + "×";
+    svg.appendChild(text);
+  });
+  var hub = document.createElementNS(NS, "circle");
+  hub.setAttribute("cx", 50);
+  hub.setAttribute("cy", 50);
+  hub.setAttribute("r", 9);
+  hub.setAttribute("fill", "#1f1f1f");
+  hub.setAttribute("stroke", "#d4a017");
+  hub.setAttribute("stroke-width", "1.5");
+  svg.appendChild(hub);
+  return svg;
+}
+
+async function playBonus(result) {
+  var stage = document.getElementById("slStage");
+  var time = setup.rules.bonusTime;
+  // The 🎁 light up
+  document.querySelectorAll(".sl-cell.scatter").forEach((c) => c.classList.add("hit"));
+  await wait(Math.min(900, time * 0.15));
+  stage.hidden = false;
+  stage.className = "sl-stage bonus";
+  var title = el("div", "sl-stage-title", "🎁 BONUS");
+  var wheel = el("div", "sl-wheel");
+  var disc = el("div", "sl-wheel-disc");
+  disc.appendChild(wheelSvg());
+  wheel.append(el("div", "sl-wheel-pointer"), disc);
+  var label = el("div", "sl-stage-sub", "Spinning for a multiplier...");
+  stage.replaceChildren(title, wheel, label);
+  // One field with this multiplier, under the pointer at the top - only forward, slowing down
+  var fields = WHEEL_FIELDS.map((v, i) => (v == result.bonus.multiplier ? i : -1)).filter((i) => i >= 0);
+  var field = fields[Math.floor(Math.random() * fields.length)];
+  var step = 360 / WHEEL_FIELDS.length;
+  var inside = (0.2 + Math.random() * 0.6) * step;
+  var end = 360 * (5 + Math.floor(Math.random() * 2)) - (field * step + inside);
+  var spinTime = time * 0.6;
+  await disc.animate([{ transform: "rotate(0deg)" }, { transform: `rotate(${end}deg)` }], { duration: spinTime, easing: "cubic-bezier(0.12, 0.6, 0.15, 1)", fill: "forwards" }).finished;
+  label.innerText = "× " + result.bonus.multiplier + " = 🪙 " + formatCoins(result.bonus.win);
+  label.classList.add("won");
+  if (result.bonus.multiplier >= 50) coinShower(stage, 50);
+  await wait(time * 0.25);
+  stage.hidden = true;
+  stage.replaceChildren();
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/* ---------- Big wins ---------- */
+
+function coinShower(root, count) {
+  for (var i = 0; i < count; i++) {
+    var coin = el("span", "sl-coin", "🪙");
+    coin.style.left = Math.random() * 100 + "%";
+    root.appendChild(coin);
+    var drop = 160 + Math.random() * 200;
+    // Falls: faster and faster (gravity), turning
+    coin.animate(
+      [
+        { transform: "translateY(-30px) rotate(0deg)", opacity: 0 },
+        { opacity: 1, offset: 0.05 },
+        { transform: `translateY(${drop}px) rotate(${Math.random() * 720 - 360}deg)`, opacity: 0.9, offset: 0.85 },
+        { transform: `translateY(${drop + 20}px) rotate(0deg)`, opacity: 0 },
+      ],
+      { duration: 1100 + Math.random() * 900, delay: Math.random() * 600, easing: "cubic-bezier(0.55, 0, 1, 0.45)", fill: "both" },
+    ).finished.then(((c) => () => c.remove())(coin));
+  }
+}
+
+// BIG / MEGA / EPIC: the win counted up big over the reels
+async function bigWin(result) {
+  var times = result.win / result.bet;
+  var stage = document.getElementById("slStage");
+  stage.hidden = false;
+  stage.className = "sl-stage big" + (times >= 100 ? " epic" : times >= 50 ? " mega" : "");
+  var amount = el("div", "sl-big-amount", "🪙 0");
+  stage.replaceChildren(el("div", "sl-big-title", times >= 100 ? "EPIC WIN" : times >= 50 ? "MEGA WIN" : "BIG WIN"), amount, el("div", "sl-stage-sub", Math.round(times) + "× your bet"));
+  coinShower(stage, times >= 50 ? 70 : 40);
+  countUp(amount, result.win, setup.rules.bigTime * 0.7);
+  await wait(setup.rules.bigTime);
+  stage.hidden = true;
+  stage.replaceChildren();
+}
+
 // The win: every winning line, the cells pulse; then line after line with its win
-function showResult(result) {
+async function showResult(result) {
   var bar = document.getElementById("slWinBar");
   var text = document.getElementById("slWinText");
   var detail = document.getElementById("slWinDetail");
@@ -239,10 +361,12 @@ function showResult(result) {
     detail.innerText = "Try again!";
     return;
   }
-  var big = result.win >= result.bet * 10;
+  var big = result.win >= result.bet * setup.rules.bigWin;
   bar.className = "sl-winbar won" + (big ? " big" : "");
-  countUp(text, result.win, big ? 1400 : 600);
-  detail.innerText = result.lines.length == 1 ? "1 line" : result.lines.length + " lines";
+  text.innerText = "";
+  if (big) await bigWin(result);
+  countUp(text, result.win, big ? 300 : Math.min(900, setup.rules.countTime));
+  detail.innerText = result.bonus && result.lines.length == 0 ? "Bonus × " + result.bonus.multiplier : result.lines.length == 1 ? "1 line" : result.lines.length + " lines";
   var reels = [...document.querySelectorAll(".sl-reel")];
   var hit = (line) =>
     setup.lines[line.line].slice(0, line.count).forEach((row, reel) => reels[reel].querySelectorAll(".sl-cell")[row].classList.add("hit"));
@@ -251,11 +375,7 @@ function showResult(result) {
     result.lines.map((l) => l.line),
     true,
   );
-  if (big) {
-    var flash = el("div", "sl-flash");
-    document.querySelector(".sl-window").appendChild(flash);
-    setTimeout(() => flash.remove(), 1200);
-  }
+  if (result.lines.length == 0) return;
   // Then one line after the other, with what it paid
   if (result.lines.length > 1) {
     var index = 0;
@@ -326,7 +446,7 @@ function renderPresets() {
 }
 
 function renderCoins(value) {
-  document.getElementById("slCoins").innerText = formatCoins(value);
+  document.getElementById("slCoins").innerText = "🪙 " + formatCoins(value);
 }
 
 function renderControls() {
@@ -377,7 +497,7 @@ function showPaytable() {
   var table = el("div", "sl-pays");
   table.append(el("span", "sl-pays-head", ""), el("span", "sl-pays-head", "3×"), el("span", "sl-pays-head", "4×"), el("span", "sl-pays-head", "5×"));
   setup.symbols
-    .slice()
+    .filter((symbol) => !symbol.scatter)
     .reverse()
     .forEach((symbol) => {
       var name = el("span", "sl-pays-symbol");
@@ -397,7 +517,8 @@ function showPaytable() {
   });
   var close = el("button", "mm-btn w-100", "Close");
   close.type = "button";
-  dialog.append(table, el("h3", "sl-pays-title", "The 9 lines"), lines, close);
+  var bonus = el("p", "sl-pays-bonus", "🎁 on reels 1, 3 and 5 at the same time: the bonus wheel spins for a multiplier of your bet - " + setup.wheel.map((m) => m + "×").join(", ") + ". A spin pays at most " + setup.maxWin + "× the bet.");
+  dialog.append(table, el("h3", "sl-pays-title", "Bonus"), bonus, el("h3", "sl-pays-title", "The 9 lines"), lines, close);
   backdrop.appendChild(dialog);
   document.body.appendChild(backdrop);
   var done = () => {

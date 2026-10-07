@@ -151,6 +151,10 @@ module.exports = {
   SLOTS_MIN_BET: 10,
   SLOTS_MAX_BET: 1000,
   SLOTS_SPIN: 2200, // the reels turn this long on the page
+  SLOTS_BONUS_TIME: 6500, // the bonus wheel on the page
+  SLOTS_BIG_WIN: 15, // a win of this many times the bet gets the big show
+  SLOTS_COUNT_TIME: 1800, // the win is counted up (and the slow last reel)
+  SLOTS_BIG_TIME: 3000, // the big-win show on top
   SLOTS_MIN_GAP: 600, // at least this long between two spins of a player
   SLOTS_FEED: 12, // last wins in the list
 

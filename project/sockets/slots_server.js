@@ -22,14 +22,56 @@ module.exports = function (io) {
   casinoChat.attach(room, ROOM);
 
   const machine = {
-    feed: [], // [{name, bet, win, symbol, count, at}] newest first
+    feed: [], // [{name, bet, win, symbol, count, bonus, at}] newest first
     spins: 0, // spins since the start (for the admin overview)
+    pending: [], // wins not paid yet: [{id, name, win, note, at}] - paid when the page has shown them
   };
+  const timers = new Map(); // id of a pending win -> its timer
+  let pendingId = 0;
   const busy = new Set(); // a spin in progress (two tabs, fast clicks)
   const lastSpin = new Map(); // username -> time of the last spin
 
+  /*
+   * How long the page shows a spin before the win is counted up: the reels,
+   * the bonus wheel, the big-win show. The coins come only after that - they
+   * can't be played elsewhere before the spin is over on the screen.
+   */
+  function showTime(bet, result) {
+    let time = config.SLOTS_SPIN + config.SLOTS_COUNT_TIME;
+    if (result.bonus) time += config.SLOTS_BONUS_TIME;
+    if (result.win >= bet * config.SLOTS_BIG_WIN) time += config.SLOTS_BIG_TIME;
+    return time;
+  }
+
+  async function payPending(entry) {
+    clearTimeout(timers.get(entry.id));
+    timers.delete(entry.id);
+    const index = machine.pending.indexOf(entry);
+    if (index < 0) return;
+    machine.pending.splice(index, 1);
+    persist.changed("slots");
+    try {
+      await coins.add(entry.name, entry.win, { reason: "slots win", note: entry.note });
+    } catch (error) {
+      console.error("[slots] Could not pay a win:", error);
+    }
+    if (entry.feed) {
+      machine.feed.unshift(entry.feed);
+      machine.feed.length = Math.min(machine.feed.length, config.SLOTS_FEED);
+      room.to(ROOM).emit("slotsFeed", machine.feed);
+      persist.changed("slots");
+    }
+  }
+
+  function schedulePay(entry, after) {
+    clearTimeout(timers.get(entry.id));
+    const timer = setTimeout(() => payPending(entry), Math.max(0, after));
+    timer.unref();
+    timers.set(entry.id, timer);
+  }
+
   function rules() {
-    return { minBet: config.SLOTS_MIN_BET, maxBet: config.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN };
+    return { minBet: config.SLOTS_MIN_BET, maxBet: config.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, bonusTime: config.SLOTS_BONUS_TIME, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
   }
 
   async function sendCoins(username) {
@@ -68,19 +110,23 @@ module.exports = function (io) {
           lastSpin.set(username, Date.now());
           const result = slots.spin(bet);
           machine.spins++;
+          const payIn = showTime(bet, result);
           if (result.win > 0) {
-            const best = result.lines.reduce((a, b) => (b.multiplier > a.multiplier ? b : a));
-            await coins.add(username, result.win, { reason: "slots win", note: `${best.count}x ${best.symbol}` });
-            machine.feed.unshift({ name: username, bet: bet, win: result.win, symbol: best.symbol, count: best.count, at: Date.now() });
-            machine.feed.length = Math.min(machine.feed.length, config.SLOTS_FEED);
-          }
-          socket.emit("slotsResult", { bet: bet, grid: result.grid, stops: result.stops, lines: result.lines, win: result.win });
-          // The others see the win when the reels of the player have stopped
-          if (result.win > 0) {
-            const feed = machine.feed.slice();
-            setTimeout(() => room.to(ROOM).emit("slotsFeed", feed), config.SLOTS_SPIN).unref();
+            const best = result.lines.length ? result.lines.reduce((a, b) => (b.multiplier > a.multiplier ? b : a)) : null;
+            const note = result.bonus ? `bonus ${result.bonus.multiplier}x` : `${best.count}x ${best.symbol}`;
+            const entry = {
+              id: ++pendingId + ":" + Date.now(),
+              name: username,
+              win: result.win,
+              note: note,
+              at: Date.now() + payIn,
+              feed: { name: username, bet: bet, win: result.win, symbol: best ? best.symbol : "bonus", count: best ? best.count : 3, bonus: result.bonus ? result.bonus.multiplier : null, at: Date.now() },
+            };
+            machine.pending.push(entry);
             persist.changed("slots");
+            schedulePay(entry, payIn);
           }
+          socket.emit("slotsResult", { bet: bet, grid: result.grid, stops: result.stops, lines: result.lines, lineWin: result.lineWin, bonus: result.bonus, win: result.win, payIn: payIn });
         } finally {
           busy.delete(username);
         }
@@ -104,13 +150,23 @@ module.exports = function (io) {
   // The last wins survive a restart
   persist.register(
     "slots",
-    () => ({ feed: machine.feed, spins: machine.spins }),
+    () => ({ feed: machine.feed, spins: machine.spins, pending: machine.pending }),
     (saved) => {
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
       machine.feed = Array.isArray(saved.feed) ? saved.feed : [];
       machine.spins = saved.spins || 0;
+      // Wins that were not paid before the stop: paid now (or when their show is over)
+      machine.pending = Array.isArray(saved.pending) ? saved.pending : [];
+      machine.pending.forEach((entry) => schedulePay(entry, (entry.at || 0) - Date.now()));
       room.to(ROOM).emit("slotsFeed", machine.feed);
     },
   );
 
-  return { machine };
+  // The server stops: every win that is still waiting is paid
+  async function payAll() {
+    await Promise.all(machine.pending.slice().map(payPending));
+  }
+
+  return { machine, payAll };
 };

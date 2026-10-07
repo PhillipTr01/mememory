@@ -127,26 +127,6 @@
   }
 }
 
-/* A big win: a soft gold flash over the window */
-.sl-flash {
-  position: absolute;
-  inset: -6px;
-  z-index: 3;
-  border-radius: 18px;
-  background: radial-gradient(circle, rgba(var(--mm-accent-rgb), 0.35), transparent 70%);
-  pointer-events: none;
-  animation: sl-flash 1.2s ease-out forwards;
-}
-
-@keyframes sl-flash {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
 /* The numbers of the lines on both sides */
 .sl-line-numbers {
   display: flex;
@@ -261,7 +241,38 @@
 
 .sl-bet-input {
   width: 110px;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
   text-align: center;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* No arrows in the field: the number sits in the middle */
+.sl-bet-input::-webkit-outer-spin-button,
+.sl-bet-input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.sl-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--mm-muted);
+  text-transform: uppercase;
+}
+
+.sl-wallet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.sl-coins {
+  font-size: 1.35rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -293,61 +304,244 @@
   color: var(--mm-accent);
 }
 
-/* The spin button: big, round, gold */
+/* The spin button: a dark key with a gold rim, like the reels */
 .sl-spin {
   justify-self: end;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 124px;
-  height: 124px;
-  border: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #f5d76e, var(--mm-accent) 55%, #a5761a);
-  box-shadow: 0 0 0 6px rgba(var(--mm-accent-rgb), 0.15), 0 10px 24px rgba(0, 0, 0, 0.4);
-  color: #1a1305;
+  gap: 0.75rem;
+  min-width: 190px;
+  padding: 0.85rem 1.4rem 0.85rem 1rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.65);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(var(--mm-accent-rgb), 0.16), rgba(var(--mm-accent-rgb), 0.05)), var(--mm-surface);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 18px rgba(var(--mm-accent-rgb), 0.12);
+  color: var(--mm-text);
   cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  transition: border-color 0.15s ease, box-shadow 0.2s ease, transform 0.1s ease;
 }
 
 .sl-spin:hover:not(:disabled) {
-  transform: scale(1.04);
-  box-shadow: 0 0 0 8px rgba(var(--mm-accent-rgb), 0.22), 0 12px 28px rgba(0, 0, 0, 0.45);
+  border-color: var(--mm-accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 26px rgba(var(--mm-accent-rgb), 0.28);
 }
 
 .sl-spin:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: translateY(1px);
 }
 
 .sl-spin:disabled {
-  filter: grayscale(0.6) brightness(0.75);
+  border-color: var(--mm-border);
+  background: var(--mm-surface);
+  box-shadow: none;
+  opacity: 0.6;
   cursor: default;
 }
 
-.sl-spin.busy .sl-spin-label {
-  animation: sl-busy 0.8s linear infinite;
+.sl-spin-icon {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 6px;
+  border-radius: 50%;
+  background: var(--mm-accent);
+  color: #1a1305;
 }
 
-@keyframes sl-busy {
-  50% {
-    opacity: 0.5;
+.sl-spin:disabled .sl-spin-icon {
+  background: var(--mm-surface-3);
+  color: var(--mm-muted);
+}
+
+.sl-spin.busy .sl-spin-icon {
+  animation: sl-turn 0.9s linear infinite;
+}
+
+@keyframes sl-turn {
+  to {
+    transform: rotate(360deg);
   }
 }
 
+.sl-spin-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+
 .sl-spin-label {
-  font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .sl-spin-sub {
-  max-width: 100px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  opacity: 0.8;
-  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--mm-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Bonus wheel and big wins (over the reels) ---------- */
+.sl-stage {
+  position: absolute;
+  inset: -6px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  overflow: hidden;
+  border-radius: 16px;
+  background: rgba(12, 12, 12, 0.86);
+  backdrop-filter: blur(3px);
+  animation: sl-stage-in 0.3s ease-out;
+}
+
+.sl-stage[hidden] {
+  display: none;
+}
+
+@keyframes sl-stage-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.sl-stage-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--mm-accent);
+}
+
+.sl-stage-sub {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--mm-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sl-stage-sub.won {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--mm-accent);
+  animation: sl-pop 0.4s ease-out;
+}
+
+@keyframes sl-pop {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+}
+
+.sl-wheel {
+  position: relative;
+  width: calc(var(--tile) * 2.2);
+  height: calc(var(--tile) * 2.2);
+}
+
+.sl-wheel-disc {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(var(--mm-accent-rgb), 0.7), 0 0 30px rgba(var(--mm-accent-rgb), 0.25);
+}
+
+.sl-wheel-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sl-wheel-text {
+  fill: #fff;
+  font-size: 5.4px;
+  font-weight: 800;
+}
+
+.sl-wheel-text.big {
+  fill: #1a1305;
+}
+
+/* The pointer at the top, pointing down */
+.sl-wheel-pointer {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  z-index: 1;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 16px solid var(--mm-accent);
+  transform: translateX(-50%);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+}
+
+.sl-big-title {
+  font-size: 2.4rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: var(--mm-accent);
+  text-shadow: 0 0 24px rgba(var(--mm-accent-rgb), 0.6);
+  animation: sl-big-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.sl-stage.mega .sl-big-title {
+  font-size: 2.8rem;
+}
+
+.sl-stage.epic .sl-big-title {
+  font-size: 3.2rem;
+  background: linear-gradient(90deg, #f5d76e, #fff3c4, #d4a017, #f5d76e);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: sl-big-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1), sl-shine 1.6s linear infinite;
+}
+
+@keyframes sl-big-in {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+@keyframes sl-shine {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.sl-big-amount {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--mm-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.sl-coin {
+  position: absolute;
+  top: 0;
+  font-size: 1.4rem;
+  pointer-events: none;
+}
+
+/* 🎁 on the reels when the bonus starts */
+.sl-cell.scatter .sl-symbol {
+  filter: drop-shadow(0 0 6px rgba(var(--mm-accent-rgb), 0.35));
+}
+
+.sl-pays-bonus {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--mm-muted);
 }
 
 /* ---------- Paytable ---------- */
@@ -480,7 +674,6 @@
   }
 
   .sl-spin {
-    width: 100px;
-    height: 100px;
+    min-width: 0;
   }
 }
