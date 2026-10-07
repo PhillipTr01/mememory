@@ -21,6 +21,7 @@
     var width = null;
     var timer = null;
     var zoom = 1;
+    var tallest = 0; // the highest the game was in this full screen: the zoom never grows back (no jumping)
     var parts = () =>
       Array.prototype.slice.call(target.children).filter(function (part) {
         return !part.classList.contains("cs-fs-coins");
@@ -37,6 +38,8 @@
       });
       if (!shown.length) return;
       var natural = (shown[shown.length - 1].getBoundingClientRect().bottom - shown[0].getBoundingClientRect().top) / zoom;
+      tallest = Math.max(tallest, natural);
+      natural = tallest;
       var next = Math.max(0.5, Math.min(room.x / width, room.y / natural));
       if (Math.abs(next - zoom) < 0.01) return;
       zoom = next;
@@ -53,6 +56,7 @@
       start: function () {
         if (!width) this.measure();
         zoom = 1;
+        tallest = 0;
         parts().forEach(function (part) {
           part.style.width = "100%";
           part.style.maxWidth = width + "px";

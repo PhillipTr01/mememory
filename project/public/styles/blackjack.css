@@ -1276,3 +1276,10 @@
     padding: 0;
   }
 }
+
+/* The bet bar and the action bar are as high as each other: switching between them moves nothing */
+.bj-betbar,
+.bj-actionbar {
+  min-height: 118px;
+  box-sizing: border-box;
+}
