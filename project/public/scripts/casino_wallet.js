@@ -319,8 +319,8 @@
       document.querySelectorAll(".cs-chance").forEach((n) => n.remove());
       return;
     }
-    // 3 seconds after losing everything (a win may still be on its way)
-    chanceTimer = setTimeout(checkChance, 3000);
+    // Right away (a bet still in a game: checkChance looks again in a moment)
+    chanceTimer = setTimeout(checkChance, 0);
   }
 
   async function checkChance() {
@@ -337,13 +337,31 @@
     if (status.reason == "inPlay") return (chanceTimer = setTimeout(checkChance, 5000));
     chanceStatus = status;
     renderChancePill();
-    // The prompt by itself only once (the pill opens it again)
-    if ((status.can || status.reason == "cooldown") && !chanceShown) showChance(status);
+    // The prompt by itself only once - for this cooldown, for this second chance (the pill opens it again)
+    if ((status.can || status.reason == "cooldown") && !chanceShown && !promptSeen(status)) showChance(status);
+  }
+
+  // Which prompt was shown already (in this browser): the same one doesn't come by itself again
+  var SEEN_KEY = "csChanceSeen";
+  function promptKey(status) {
+    return status.can ? "can:" + status.left : "cooldown:" + status.nextAt;
+  }
+  function promptSeen(status) {
+    try {
+      return localStorage.getItem(SEEN_KEY) == promptKey(status);
+    } catch (e) {
+      return false;
+    }
   }
 
   function showChance(status) {
     chanceShown = true;
-    var box = el("div", "cs-chance" + (status.can ? "" : " waiting"));
+    try {
+      localStorage.setItem(SEEN_KEY, promptKey(status));
+    } catch (e) {
+      // only this time
+    }
+    var box = el("div", "cs-chance" + (status.can ? "" : " cs-chance-wait"));
     var card = el("div", "cs-chance-card");
     document.querySelectorAll(".cs-chance").forEach((n) => n.remove());
     card.append(el("div", "cs-chance-icon", status.can ? "💔" : "⏳"), el("h2", "cs-chance-title", status.can ? "Second chance!" : "Out of coins"));
