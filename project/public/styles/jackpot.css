@@ -2658,8 +2658,9 @@ body.jackpot-theme {
   width: 180px;
   height: 180px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 244, 200, 0.12) 0 45%, rgba(4, 4, 10, 0.94) 72%);
-  box-shadow: 0 0 0 2000px rgba(4, 4, 10, 0.94);
+  /* Pitch dark outside the light: nobody can be seen before the light is on them */
+  background: radial-gradient(circle, rgba(255, 244, 200, 0.1) 0 38%, rgba(2, 2, 6, 0.75) 56%, #020206 70%);
+  box-shadow: 0 0 0 2000px #020206;
   pointer-events: none;
   transition: opacity 0.15s ease;
 }
@@ -2678,12 +2679,39 @@ body.jackpot-theme {
 }
 
 .jp-haunt.blackout .jp-flashlight {
-  background: rgba(4, 4, 10, 0.98);
+  background: #020206;
 }
 
 .jp-haunt.lit .jp-flashlight {
   opacity: 0;
   transition: opacity 0.8s ease;
+}
+
+/* A caught player: a small 👻 stays, floating, glowing in the dark */
+.jp-ghost-left {
+  position: absolute;
+  z-index: 5;
+  font-size: 1.6rem;
+  opacity: 0;
+  filter: drop-shadow(0 0 8px rgba(196, 181, 253, 0.8));
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: jp-ghost-left 2.4s ease-in-out infinite alternate both;
+}
+
+@keyframes jp-ghost-left {
+  from {
+    opacity: 0.55;
+    transform: translate(-50%, -50%);
+  }
+  to {
+    opacity: 0.8;
+    transform: translate(-50%, -62%);
+  }
+}
+
+.jp-haunt.lit .jp-ghost-left {
+  filter: none;
 }
 
 .jp-ghost,

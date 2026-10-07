@@ -1883,6 +1883,17 @@ var ghostHuntDraw = {
     parts.room.appendChild(boo);
     animate(boo, [{ transform: "translate(-50%, -50%) scale(0.5)", opacity: 1 }, { transform: "translate(-50%, -180%) scale(1.2)", opacity: 0 }], { duration: 900 }).then(() => boo.remove());
     hider.classList.add("taken");
+    this.mark(parts, hider, 900);
+  },
+
+  // Where somebody was caught: a little 👻 stays and floats there, glowing in the dark
+  mark(parts, hider, after) {
+    var left = el("span", "jp-ghost-left", "👻");
+    left.style.left = hider.style.left;
+    left.style.top = hider.style.top;
+    left.style.animationDelay = (after || 0) + "ms";
+    left.title = hider.dataset.name + " was caught";
+    parts.room.appendChild(left);
   },
 
   async play(stage, draw, duration, short) {
@@ -1922,7 +1933,10 @@ var ghostHuntDraw = {
         // The light dies for a moment - and somebody is gone
         parts.room.classList.add("blackout");
         await wait(Math.min(700, stepTime * 0.25));
-        targets.forEach((hider) => hider.classList.add("taken"));
+        targets.forEach((hider) => {
+          hider.classList.add("taken");
+          this.mark(parts, hider, 0);
+        });
         parts.room.classList.remove("blackout");
         shout(parts.root, pick(["GONE!", "WHERE DID THEY GO?"]), "small");
         await wait(stepTime * 0.1);
