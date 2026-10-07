@@ -109,7 +109,14 @@ function render() {
     var text = el("div", "lb-season-text");
     text.append(el("b", "", season.name), el("span", "", "ends in " + spanText(left)));
     parts.push(text);
+    // The season to look at: like its start screen
+    var info = el("button", "cs-info-btn lb-season-info", "i");
+    info.type = "button";
+    info.title = "About the season";
+    info.setAttribute("aria-label", "About the season");
+    parts.push(info);
     box.replaceChildren(...parts);
+    box.onclick = () => window.showSeasonInfo && window.showSeasonInfo();
     box.title = "Ends " + new Date(season.end).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
   }
   // Prizes of the season: next to the places

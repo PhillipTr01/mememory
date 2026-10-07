@@ -449,6 +449,15 @@
     })
     .catch(() => showSeason(null));
 
+  // The running season to look at (the season on the leaderboard)
+  window.showSeasonInfo = () =>
+    fetch("season", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.season) showJoin(data, true);
+      })
+      .catch(() => {});
+
   /* ---------- "Start": a player is in a running season only after hitting it ---------- */
 
   // Not in the season yet: the start, on every page until the player hits it (can't be clicked away)
@@ -467,7 +476,8 @@
     return part(m % 60, "minute");
   }
 
-  function showJoin(data) {
+  // view: only to look at it (from the season on the leaderboard) - closes, no Start
+  function showJoin(data, view) {
     var season = data.season;
     document.querySelectorAll(".cs-join").forEach((n) => n.remove());
     var box = el("div", "cs-join");
@@ -487,7 +497,7 @@
       row.append(el("span", "cs-join-fact-icon", icon), el("b", "", value), el("span", "", label));
       facts.appendChild(row);
     };
-    var start = data.joinCoins || { coins: season.budget, missed: 0 };
+    var start = (!view && data.joinCoins) || { coins: season.budget, missed: 0 };
     fact("🪙", format(start.coins), start.missed > 0 ? "to start (with " + start.missed + " missed daily bonus" + (start.missed == 1 ? "" : "es") + ")" : "to start with");
     fact("🎁", format(season.dailyBonus), "free every day");
     if (season.secondChances > 0) fact("💔", season.secondChances, "second chance" + (season.secondChances == 1 ? "" : "s") + " if you lose it all");
@@ -504,6 +514,28 @@
         prizes.appendChild(row);
       });
       card.appendChild(prizes);
+    }
+    if (view) {
+      card.appendChild(el("p", "cs-join-text", "Everybody starts with the same coins - the most coins at the end wins. Only players in the season are on the leaderboard. Your coins from before wait for you and come back after the season, with what you win on top."));
+      var ok = el("button", "mm-btn w-100", "Got it");
+      ok.type = "button";
+      var close = () => {
+        box.remove();
+        document.removeEventListener("keydown", onKey);
+      };
+      var onKey = (event) => {
+        if (event.key == "Escape") close();
+      };
+      ok.addEventListener("click", close);
+      box.addEventListener("click", (event) => {
+        if (event.target == box) close();
+      });
+      document.addEventListener("keydown", onKey);
+      card.appendChild(ok);
+      box.appendChild(card);
+      document.body.appendChild(box);
+      ok.focus();
+      return;
     }
     card.appendChild(el("p", "cs-join-text", "Everybody starts with the same coins - the most coins at the end wins. Hit Start to play - only players in the season are on the leaderboard. Your coins from before wait for you and come back after the season, with what you win on top."));
     var go = el("button", "cs-join-btn", "Start · 🪙 " + format(start.coins));

@@ -527,3 +527,17 @@
     width: 100%;
   }
 }
+
+/* A click on the season: what it is (like its start screen) */
+.lb-season {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lb-season:hover {
+  background: rgba(var(--mm-accent-rgb), 0.14);
+}
+
+.lb-season .lb-season-info {
+  margin-left: 0.2rem;
+}
