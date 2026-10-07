@@ -1559,10 +1559,6 @@ body.jackpot-theme {
 
 #jpBonus,
 .jp-error {
-  grid-column: 1 / -1;
-}
-
-.jp-error {
   margin: 0;
   font-size: 0.85rem;
   color: var(--mm-danger);
