@@ -433,16 +433,17 @@ function renderStatus() {
 }
 
 // One click: the same bets as last round
+// One click: the same bets as last round - only for a player at the table who hasn't bet yet
 function renderRebet() {
-  var bar = document.getElementById("bjRebet");
+  var button = document.getElementById("bjRebetButton");
   var last = state.lastBets;
   var betNow = mySeats().some((i) => state.seats[i].bet > 0);
-  var total = last ? last.reduce((sum, bet) => sum + bet.amount, 0) : 0;
-  bar.hidden = !(state.phase == "betting" && last && last.length && !betNow);
-  if (bar.hidden) return;
-  var button = document.getElementById("bjRebetButton");
+  var sides = (bet) => (bet.side ? bet.side.pairs + bet.side.plus3 : 0);
+  var total = last ? last.reduce((sum, bet) => sum + bet.amount + sides(bet), 0) : 0;
+  button.hidden = !(state.phase == "betting" && mySeats().length > 0 && last && last.length && !betNow);
+  if (button.hidden) return;
   button.disabled = total > myCoins;
-  document.getElementById("bjRebetText").innerText = "🪙 " + formatCoins(total) + (last.length > 1 ? " · " + last.length + " seats" : "");
+  button.title = "Same bet as last round · 🪙 " + formatCoins(total) + (last.length > 1 ? " on " + last.length + " seats" : "");
 }
 
 // The own seats one can leave now (not while their cards are played)

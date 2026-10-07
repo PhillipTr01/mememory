@@ -415,70 +415,6 @@
 }
 
 /* The bets of the last round again */
-.bj-rebet {
-  display: flex;
-  justify-content: center;
-}
-
-.bj-rebet[hidden] {
-  display: none;
-}
-
-.bj-rebet {
-  margin: 0.4rem 0;
-}
-
-/* Same bet: the icon, then what and how much on two lines - room to breathe */
-.bj-rebet-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.6rem 1.5rem 0.6rem 0.75rem;
-  border: 1px solid rgba(var(--mm-accent-rgb), 0.6);
-  border-radius: 999px;
-  background: rgba(var(--mm-accent-rgb), 0.1);
-  color: var(--mm-text);
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.bj-rebet-btn:hover:not(:disabled) {
-  border-color: var(--mm-accent);
-  background: rgba(var(--mm-accent-rgb), 0.18);
-}
-
-.bj-rebet-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.bj-rebet-icon {
-  width: 34px;
-  height: 34px;
-  padding: 8px;
-  border-radius: 50%;
-  background: var(--mm-accent);
-  color: #1a1305;
-}
-
-.bj-rebet-text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.2;
-}
-
-.bj-rebet-title {
-  font-size: 0.95rem;
-  font-weight: 800;
-}
-
-.bj-rebet-sub {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--mm-muted);
-  font-variant-numeric: tabular-nums;
-}
 
 @media (max-width: 767px) {
   .bj-table {
@@ -726,10 +662,48 @@
   box-shadow: 0 0 0 3px var(--mm-accent), 0 6px 14px rgba(0, 0, 0, 0.5);
 }
 
-/* Chips in the middle, arrows to switch */
+/* Same bet on the left, the chips in the middle (arrows to switch), leave on the right */
 .bj-betbar {
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+
+.bj-betbar .bj-chip-picker {
+  grid-column: 2;
+}
+
+.bj-betbar .bj-icon-btn.rebet {
+  grid-column: 1;
+  justify-self: start;
+}
+
+.bj-betbar .bj-icon-btn.leave {
+  grid-column: 3;
+  justify-self: end;
+}
+
+/* Same bet: gold, it is the quick way */
+.bj-icon-btn.rebet {
+  width: 40px;
+  height: 40px;
+  border-color: var(--mm-accent);
+  background: var(--mm-accent);
+  color: #1a1305;
+}
+
+.bj-icon-btn.rebet:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.bj-icon-btn.rebet:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.bj-betbar .bj-icon-btn {
+  width: 40px;
+  height: 40px;
 }
 
 .bj-chip-picker {
@@ -861,13 +835,6 @@
 .bj-chipface[data-chip="5000"] { background: #a16207; }
 
 /* Next to "All tables": stand up, round, like at the poker table */
-.bj-head-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
 .bj-icon-btn {
   display: inline-flex;
   align-items: center;
