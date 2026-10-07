@@ -142,6 +142,11 @@ function renderStatus() {
   }
   // The wheel shows the pot and the status in its middle
   document.querySelectorAll(".jp-mirror-total").forEach((total) => (total.innerText = document.getElementById("jpTotal").innerText));
+  document.querySelectorAll(".jp-mirror-ghost").forEach((mirror) => {
+    mirror.hidden = ghost.hidden;
+    mirror.innerText = ghost.innerText;
+    mirror.title = ghost.title;
+  });
   document.querySelectorAll(".jp-mirror-status").forEach((mirror) => {
     mirror.innerText = center.innerText;
     mirror.className = center.className + " jp-mirror-status";

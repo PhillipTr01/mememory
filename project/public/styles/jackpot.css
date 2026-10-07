@@ -2853,3 +2853,13 @@ body.jackpot-theme {
 .cs-info .mm-btn {
   margin-top: 0.75rem;
 }
+
+/* In the middle of the wheel: the 👻 countdown small under the status */
+.jp-wheel-center .jp-mirror-ghost {
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+}
+
+.jp-wheel-center .jp-mirror-ghost::before {
+  font-size: 0.75rem;
+}

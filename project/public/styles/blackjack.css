@@ -672,6 +672,8 @@
 /* The chips in the middle (arrows to switch), leave on the right, same bet as a tab on top */
 .bj-betbar {
   position: relative;
+  /* more room on top: the picked chip lifts up */
+  padding: 1.3rem 0.85rem 0.95rem;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -926,22 +928,23 @@
 }
 
 .bj-bar:has(.bj-rebet-tab:not([hidden])) {
-  margin-top: 2.3rem;
+  margin-top: 2.8rem;
 }
 
 /* Same bet: small - the arrow in a gold coin and the amount */
 .bj-rebet-tab {
-  height: 28px;
-  gap: 0.35rem;
-  padding: 0 0.65rem 0 0.4rem;
-  font-size: 0.75rem;
+  height: 36px;
+  gap: 0.45rem;
+  padding: 0 0.9rem 0 0.45rem;
+  font-size: 0.85rem;
   cursor: pointer;
 }
 
 .bj-rebet-tab > svg:not(.bj-bump-shape) {
-  width: 18px;
-  height: 18px;
-  padding: 4px;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  padding: 6px;
   border-radius: 50%;
   background: var(--mm-accent);
   color: #1a1305;
@@ -966,7 +969,8 @@
 .bj-actionbar {
   position: relative;
   justify-content: center;
-  padding: 0.85rem;
+  /* more room on top: the bump and the buttons don't crowd each other */
+  padding: 1.4rem 0.85rem 1rem;
 }
 
 .bj-turn-info {
@@ -993,7 +997,7 @@
 
 /* A move: a round button with its colour, the name under it */
 .bj-act {
-  --c: var(--mm-accent);
+  --c: #d4d4d8;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1005,16 +1009,9 @@
   cursor: pointer;
 }
 
-.bj-act.stand {
-  --c: #ef4444;
-}
-
-.bj-act.double {
-  --c: #22c55e;
-}
-
-.bj-act.split {
-  --c: #60a5fa;
+/* Hit: the usual move, in gold */
+.bj-act.hit {
+  --c: var(--mm-accent);
 }
 
 .bj-act-icon {
@@ -1022,9 +1019,9 @@
   place-items: center;
   width: 50px;
   height: 50px;
-  border: 2px solid var(--c);
+  border: 2px solid color-mix(in srgb, var(--c) 55%, transparent);
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--c) 28%, var(--mm-surface-2)), var(--mm-surface-2) 75%);
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--c) 12%, var(--mm-surface-2)), var(--mm-surface-2) 75%);
   color: var(--c);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
   transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s ease;
@@ -1054,6 +1051,8 @@
 }
 
 .bj-act:hover:not(:disabled) .bj-act-icon {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
   transform: translateY(-2px);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 22%, transparent), 0 6px 14px rgba(0, 0, 0, 0.4);
 }

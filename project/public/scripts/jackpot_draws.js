@@ -185,7 +185,10 @@ var wheelDraw = {
       wheel.appendChild(svgNode("svg", { viewBox: "0 0 200 200", "aria-hidden": "true" }));
       wheel.appendChild(el("div", "jp-wheel-avatars"));
       var center = el("div", "jp-wheel-center");
-      center.append(el("span", "jp-total jp-mirror-total"), el("span", "jp-center-status jp-mirror-status"));
+      // (the 👻 countdown too: the bar above is hidden with the wheel)
+      var ghost = el("span", "jp-ghost-in jp-mirror-ghost");
+      ghost.hidden = true;
+      center.append(el("span", "jp-total jp-mirror-total"), el("span", "jp-center-status jp-mirror-status"), ghost);
       wrap.append(el("div", "jp-pointer"), wheel, center);
       root.appendChild(wrap);
     }
