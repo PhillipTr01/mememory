@@ -575,12 +575,26 @@ test("singleplayer: after the player's turn the computer plays", async () => {
     }
   }
 
+  // The computer's two flips can come right after each other: one listener for both, set up before they come
+  const flips = [];
+  const twoFlips = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("The computer did not flip two cards")), 8000);
+    const onCard = (card) => {
+      flips.push(card);
+      if (flips.length < 2) return;
+      clearTimeout(timer);
+      socket.off("turnCard", onCard);
+      resolve();
+    };
+    socket.on("turnCard", onCard);
+  });
+
   const cards = await closed;
   assert.ok(cards[1] != null && cards[2] != null);
   assert.strictEqual((await highlight).turn, 1);
 
   // The computer flips two cards on its own
-  const flips = [await h.once(socket, "turnCard", 8000), await h.once(socket, "turnCard", 8000)];
+  await twoFlips;
   assert.strictEqual(flips.length, 2);
 });
 
