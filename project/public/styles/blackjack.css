@@ -878,54 +878,43 @@
 }
 
 /* ---------- Same bet: a tab on top of the bar, over the chips ---------- */
-/* A bump on top of a bar: grows out of it (same colour, soft shoulders) */
+/* A bump on top of a bar: grows out of it - its outline (with soft shoulders) is one SVG path, see bumpShape() */
 .bj-bump {
   position: absolute;
   left: 50%;
   bottom: 100%;
   z-index: 1;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
   height: 40px;
   padding: 0 1.1rem;
-  border: 1px solid var(--mm-accent);
-  border-bottom: 0;
-  border-radius: 16px 16px 0 0;
-  background: var(--bar-bg);
+  border: 0;
+  background: none;
   color: var(--mm-text);
   font-size: 0.85rem;
   font-weight: 800;
   white-space: nowrap;
-  /* (bottom: 100% is the inside of the bar's border: the bump covers that line - one shape with the bar) */
   transform: translateX(-50%);
 }
 
-.bj-bump::before,
-.bj-bump::after {
-  content: "";
+.bj-bump-shape {
   position: absolute;
-  bottom: 0;
-  width: 14px;
-  height: 14px;
-  clip-path: inset(0);
+  top: 0;
+  z-index: -1;
+  overflow: visible;
   pointer-events: none;
 }
 
-.bj-bump::before {
-  left: -14px;
-  border-right: 1px solid var(--mm-accent);
-  border-bottom: 1px solid var(--mm-accent);
-  border-bottom-right-radius: 14px;
-  box-shadow: 7px 7px 0 7px var(--bar-bg);
+.bj-bump-shape .fill {
+  fill: var(--bar-bg);
 }
 
-.bj-bump::after {
-  right: -14px;
-  border-left: 1px solid var(--mm-accent);
-  border-bottom: 1px solid var(--mm-accent);
-  border-bottom-left-radius: 14px;
-  box-shadow: -7px 7px 0 7px var(--bar-bg);
+.bj-bump-shape .line {
+  fill: none;
+  stroke: var(--mm-accent);
+  stroke-width: 1;
 }
 
 .bj-bump[hidden] {
@@ -937,29 +926,29 @@
 }
 
 .bj-bar:has(.bj-rebet-tab:not([hidden])) {
-  margin-top: 2.6rem;
+  margin-top: 2.3rem;
 }
 
 /* Same bet: small - the arrow in a gold coin and the amount */
 .bj-rebet-tab {
-  height: 32px;
-  gap: 0.4rem;
-  padding: 0 0.75rem 0 0.35rem;
-  font-size: 0.78rem;
+  height: 28px;
+  gap: 0.35rem;
+  padding: 0 0.65rem 0 0.4rem;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 
-.bj-rebet-tab svg {
-  width: 22px;
-  height: 22px;
-  padding: 5px;
+.bj-rebet-tab > svg:not(.bj-bump-shape) {
+  width: 18px;
+  height: 18px;
+  padding: 4px;
   border-radius: 50%;
   background: var(--mm-accent);
   color: #1a1305;
   transition: transform 0.4s ease;
 }
 
-.bj-rebet-tab:hover:not(:disabled) svg {
+.bj-rebet-tab:hover:not(:disabled) > svg:not(.bj-bump-shape) {
   transform: rotate(-180deg);
 }
 
@@ -998,60 +987,87 @@
 
 .bj-action-buttons {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: 0.6rem;
+  gap: 1.4rem;
 }
 
+/* A move: a round button with its colour, the name under it */
 .bj-act {
-  display: inline-flex;
+  --c: var(--mm-accent);
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  height: 44px;
-  padding: 0 1.2rem 0 0.45rem;
-  border: 1px solid var(--mm-border);
-  border-radius: 999px;
-  background: var(--mm-surface-2);
+  gap: 0.3rem;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--mm-text);
-  font-size: 0.9rem;
-  font-weight: 800;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.bj-act.stand {
+  --c: #ef4444;
+}
+
+.bj-act.double {
+  --c: #22c55e;
+}
+
+.bj-act.split {
+  --c: #60a5fa;
 }
 
 .bj-act-icon {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 50px;
+  height: 50px;
+  border: 2px solid var(--c);
   border-radius: 50%;
-  background: var(--mm-surface-3);
-  color: var(--mm-accent);
-  font-size: 0.85rem;
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--c) 28%, var(--mm-surface-2)), var(--mm-surface-2) 75%);
+  color: var(--c);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.bj-act-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bj-act-text {
+  font-size: 0.95rem;
   font-weight: 900;
 }
 
-.bj-act:hover:not(:disabled) {
-  border-color: var(--mm-accent);
+.bj-act-name {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--mm-muted);
+  text-transform: uppercase;
 }
 
-.bj-act:active:not(:disabled) {
-  transform: translateY(1px);
+.bj-act:hover:not(:disabled) .bj-act-icon {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 22%, transparent), 0 6px 14px rgba(0, 0, 0, 0.4);
 }
 
-.bj-act.hit {
-  border-color: var(--mm-accent);
-  background: var(--mm-accent);
-  color: #1a1305;
+.bj-act:hover:not(:disabled) .bj-act-name {
+  color: var(--mm-text);
 }
 
-.bj-act.hit .bj-act-icon {
-  background: rgba(0, 0, 0, 0.18);
-  color: #1a1305;
+.bj-act:active:not(:disabled) .bj-act-icon {
+  transform: scale(0.95);
 }
 
 .bj-act:disabled {
-  opacity: 0.35;
+  opacity: 0.3;
   cursor: default;
 }
 

@@ -498,6 +498,41 @@ function renderRebet() {
   button.setAttribute("aria-label", "Same bet as last round: " + formatCoins(total) + " coins");
 }
 
+/*
+ * The outline of a bump on a bar: the top with round corners, the sides go
+ * down into soft shoulders that end on the line of the bar. One SVG path, so
+ * it is smooth at every size (drawn again when the bump changes its size).
+ */
+var BUMP_SHOULDER = 12;
+var BUMP_RADIUS = 12;
+var bumpSizes = new ResizeObserver((entries) => entries.forEach((entry) => bumpShape(entry.target)));
+function bumpShape(bump) {
+  var w = bump.offsetWidth;
+  var h = bump.offsetHeight;
+  if (!w || !h) return;
+  var NS = "http://www.w3.org/2000/svg";
+  var svg = bump.querySelector(":scope > .bj-bump-shape");
+  if (!svg) {
+    svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("class", "bj-bump-shape");
+    svg.setAttribute("aria-hidden", "true");
+    svg.append(document.createElementNS(NS, "path"), document.createElementNS(NS, "path"));
+    svg.firstChild.setAttribute("class", "fill");
+    svg.lastChild.setAttribute("class", "line");
+    bump.prepend(svg);
+    bumpSizes.observe(bump);
+  }
+  var s = BUMP_SHOULDER;
+  var r = Math.min(BUMP_RADIUS, h / 2);
+  var y = h - 0.5; // the middle of the bar's line (the bump's last pixel row)
+  svg.setAttribute("width", w + 2 * s);
+  svg.setAttribute("height", h);
+  svg.style.left = -s + "px";
+  var line = `M0 ${y} Q${s} ${y} ${s} ${y - s} V${r} Q${s} 0.5 ${s + r} 0.5 H${s + w - r} Q${s + w} 0.5 ${s + w} ${r} V${y - s} Q${s + w} ${y} ${w + 2 * s} ${y}`;
+  svg.lastChild.setAttribute("d", line);
+  svg.firstChild.setAttribute("d", line + ` V${h} H0 Z`);
+}
+
 // The own seats one can leave now (not while their cards are played)
 function standable() {
   return mySeats().filter((i) => state.phase == "betting" || state.seats[i].hands.length == 0);
@@ -505,6 +540,7 @@ function standable() {
 
 function renderBars() {
   renderRebet();
+  requestAnimationFrame(() => document.querySelectorAll(".bj-bump:not([hidden])").forEach(bumpShape));
   var stand = document.getElementById("bjStand");
   stand.hidden = standable().length == 0;
   var betBar = document.getElementById("bjBetBar");
