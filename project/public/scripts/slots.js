@@ -55,7 +55,8 @@ socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
   // While the reels turn, the balance shows the coins before the win
-  if (!spinning) renderCoins(myCoins);
+  // (during a spin the old balance stays - but a page that comes back into a bonus game needs one)
+  if (!spinning || document.getElementById("slCoins").innerText == "-") renderCoins(myCoins);
   renderControls();
 });
 socket.on("slotsError", (message) => {
@@ -72,6 +73,28 @@ socket.on("slotsSetup", (data) => {
 });
 
 socket.on("slotsResult", (result) => playSpin(result));
+
+// Back on the page: a bonus game that waited goes on where it was
+var activeBonus = null; // id of the bonus game playing on this page
+socket.on("slotsResume", (result) => {
+  if (setup == null) return setTimeout(() => socket.listeners("slotsResume")[0](result), 200);
+  // (only a short break in the connection: it is still playing here)
+  if (activeBonus == result.id) return;
+  resumeBonus(result);
+});
+
+async function resumeBonus(result) {
+  spinning = true;
+  clearTimeout(lineTimer);
+  clearLines();
+  renderControls();
+  result.grid.forEach((symbols, reel) => showGrid(reel, symbols));
+  await playBonus(result, result.shown, result.started);
+  await showResult(result);
+  spinning = false;
+  renderCoins(myCoins);
+  renderControls();
+}
 socket.on("slotsFeed", renderFeed);
 
 /* ---------- The machine ---------- */
@@ -301,11 +324,76 @@ function spinRing(ring, fields, value, turns, direction, time) {
   return ring.animate([{ transform: "rotate(0deg)" }, { transform: `rotate(${end}deg)` }], { duration: time, easing: "cubic-bezier(0.12, 0.6, 0.15, 1)", fill: "forwards" }).finished;
 }
 
-async function playBonus(result) {
+/*
+ * The bonus game. Fresh: the wheels, then "you won free spins" waits for a
+ * click. Back after a break (`from`: free spins seen, `started`: clicked
+ * before): the start screen again, or "welcome back" and on from there.
+ */
+async function playBonus(result, from, started) {
   var bonus = result.bonus;
   var stage = document.getElementById("slStage");
-  var machine = document.querySelector(".sl-machine");
   var time = setup.rules.bonusTime;
+  activeBonus = result.id;
+  // The server keeps how far this page got (to go on there after a break)
+  var progress = (shown) => result.id && socket.emit("bonusProgress", { id: result.id, shown: shown });
+  var resumed = from != null;
+  from = Math.max(0, from || 0);
+  if (!resumed) await playWheels(result, stage, time);
+  if (!resumed || !started) {
+    await startScreen(result, stage);
+    if (result.id) socket.emit("bonusStart", { id: result.id });
+  } else {
+    // Back after a break: a moment to see where it goes on
+    stage.hidden = false;
+    stage.className = "sl-stage bonus";
+    var at = Math.min(from + 1, bonus.freeSpins.length);
+    stage.replaceChildren(el("div", "sl-stage-title", "BONUS GAME"), el("div", "sl-big-title", "WELCOME BACK"), el("div", "sl-stage-sub won", "Free spin " + at + " of " + (from > 0 ? bonus.freeSpins[from - 1].spins : bonus.startSpins) + " · start × " + bonus.multiplier));
+    await wait(setup.rules.resumeTime);
+    stage.hidden = true;
+    stage.replaceChildren();
+  }
+  progress(from);
+  await playFreeSpins(result, from, progress);
+  activeBonus = null;
+}
+
+// "You won N free spins": waits for the player's click (or Enter / space)
+function startScreen(result, stage) {
+  var bonus = result.bonus;
+  return new Promise((resolve) => {
+    stage.hidden = false;
+    stage.className = "sl-stage bonus start";
+    var start = el("button", "sl-start-btn", "Start free spins");
+    start.type = "button";
+    stage.replaceChildren(
+      el("div", "sl-stage-title", "🎁 YOU WON"),
+      el("div", "sl-big-title", bonus.startSpins + " FREE SPINS"),
+      el("div", "sl-stage-sub won", "Start multiplier × " + bonus.multiplier + " · +" + setup.bonus.step + " every spin"),
+      start,
+    );
+    coinShower(stage, 25);
+    var go = () => {
+      document.removeEventListener("keydown", onKey, true);
+      stage.hidden = true;
+      stage.replaceChildren();
+      resolve();
+    };
+    var onKey = (event) => {
+      if (event.key == "Enter" || event.code == "Space") {
+        event.preventDefault();
+        event.stopPropagation();
+        go();
+      }
+    };
+    start.addEventListener("click", go);
+    document.addEventListener("keydown", onKey, true);
+    start.focus();
+  });
+}
+
+// 1. The two wheels: outer = free spins, inner = start multiplier (turning the other way)
+async function playWheels(result, stage, time) {
+  var bonus = result.bonus;
   // The 🎁 light up
   document.querySelectorAll(".sl-cell.scatter").forEach((c) => c.classList.add("hit"));
   await wait(Math.min(900, time * 0.15));
@@ -334,21 +422,27 @@ async function playBonus(result) {
   await wait(time * 0.2);
   stage.hidden = true;
   stage.replaceChildren();
+}
 
-  // 2. The free spins: the multiplier climbs after every spin
+// 2. The free spins (from free spin `from` on): the multiplier climbs after every spin
+async function playFreeSpins(result, from, progress) {
+  var bonus = result.bonus;
+  var stage = document.getElementById("slStage");
+  var machine = document.querySelector(".sl-machine");
   machine.classList.add("bonus-mode");
   var bar = document.getElementById("slWinBar");
   var text = document.getElementById("slWinText");
   var detail = document.getElementById("slWinDetail");
   bar.className = "sl-winbar bonus";
-  var total = 0;
+  // What the free spins before paid (after a break)
+  var total = bonus.freeSpins.slice(0, from).reduce((sum, free) => sum + free.win, 0);
   var spinTime = setup.rules.freeSpinTime;
   var counter = document.getElementById("slFreeCounter");
   var count = document.getElementById("slFreeCount");
-  var spins = bonus.startSpins;
+  var spins = from > 0 ? bonus.freeSpins[from - 1].spins : bonus.startSpins;
   counter.hidden = false;
   detail.innerText = "Bonus win";
-  for (var n = 0; n < bonus.freeSpins.length; n++) {
+  for (var n = from; n < bonus.freeSpins.length; n++) {
     var free = bonus.freeSpins[n];
     clearLines();
     count.innerText = n + 1 + " / " + spins;
@@ -375,6 +469,7 @@ async function playBonus(result) {
       total += free.win;
     }
     await wait(spinTime * (free.win > 0 ? 0.5 : 0.3));
+    progress(n + 1);
   }
   if (result.capped) detail.innerText = "Max win reached!";
   counter.hidden = true;

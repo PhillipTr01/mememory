@@ -850,3 +850,38 @@
   width: min(100%, 1200px);
   margin: 0 auto;
 }
+
+/* ---------- "You won free spins": waits for the click ---------- */
+.sl-stage.start .sl-big-title {
+  animation: sl-big-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.sl-start-btn {
+  position: relative;
+  margin-top: 0.6rem;
+  padding: 0.75rem 2rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mm-accent);
+  color: #1a1305;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 rgba(var(--mm-accent-rgb), 0.6);
+  animation: sl-start-pulse 1.6s ease-out infinite;
+}
+
+.sl-start-btn:hover {
+  filter: brightness(1.08);
+}
+
+@keyframes sl-start-pulse {
+  70% {
+    box-shadow: 0 0 0 16px rgba(var(--mm-accent-rgb), 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--mm-accent-rgb), 0);
+  }
+}

@@ -166,3 +166,42 @@ test("slots: the admin test switch - every spin starts the bonus game", () => {
     assert.ok(result.win <= 100 * slots.MAX_WIN);
   }
 });
+
+test("slots: a bonus game waits while the player is away and goes on when they come back", async () => {
+  const timing = { SLOTS_HOLD: 60000, SLOTS_MIN_GAP: 0, SLOTS_SPIN: 50, SLOTS_COUNT_TIME: 50, SLOTS_BONUS_TIME: 100, SLOTS_FREE_SPIN: 100, SLOTS_RETRIGGER_TIME: 10, SLOTS_BONUS_END: 50, SLOTS_RESUME_TIME: 50, SLOTS_BIG_TIME: 50, SLOTS_TEST_BONUS: true };
+  const before = Object.fromEntries(Object.keys(timing).map((key) => [key, config[key]]));
+  Object.assign(config, timing);
+  try {
+    // No other page of alice open (from the tests before)
+    sockets.forEach((socket) => socket.close());
+    await h.wait(50);
+    h.setCoins("alice", 5000);
+    const page = client("alice");
+    await h.once(page, "slotsSetup");
+    const result = h.once(page, "slotsResult");
+    page.emit("spin", { bet: 100 });
+    const spin = await result;
+    assert.ok(spin.bonus && spin.id, "a bonus game with an id");
+    // "You won free spins" waits for the click: nothing is paid meanwhile
+    await h.wait(spin.payIn + 200);
+    assert.strictEqual(h.coinsOf("alice"), 4900, "nothing paid before the start");
+    // Started - one free spin seen, then the player leaves
+    page.emit("bonusStart", { id: spin.id });
+    page.emit("bonusProgress", { id: spin.id, shown: 1 });
+    await h.wait(30);
+    page.close();
+    await h.wait(spin.payIn + 200);
+    assert.strictEqual(h.coinsOf("alice"), 4900, "nothing paid while away");
+
+    // Back: the bonus goes on after the first free spin, paid when it is over
+    const again = client("alice");
+    const resumed = await h.once(again, "slotsResume");
+    assert.deepStrictEqual([resumed.id, resumed.shown, resumed.started, resumed.win], [spin.id, 1, true, spin.win]);
+    assert.ok(resumed.payIn < spin.payIn);
+    await h.wait(resumed.payIn + 200);
+    assert.strictEqual(h.coinsOf("alice"), 4900 + spin.win);
+    again.close();
+  } finally {
+    Object.assign(config, before);
+  }
+});

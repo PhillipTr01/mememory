@@ -37,13 +37,59 @@ module.exports = function (io) {
    * can't be played elsewhere before the spin is over on the screen.
    */
   function showTime(bet, result) {
-    let time = config.SLOTS_SPIN + config.SLOTS_COUNT_TIME;
+    return config.SLOTS_SPIN + restTime(bet, result, 0, config.SLOTS_BONUS_TIME);
+  }
+
+  // The show from free spin `shown` on (after `intro`: the wheels, "welcome back" or nothing)
+  function restTime(bet, result, shown, intro) {
+    let time = config.SLOTS_COUNT_TIME;
     if (result.bonus) {
-      const retriggers = result.bonus.freeSpins.filter((free) => free.retrigger > 0).length;
-      time += config.SLOTS_BONUS_TIME + result.bonus.freeSpins.length * config.SLOTS_FREE_SPIN + retriggers * config.SLOTS_RETRIGGER_TIME + config.SLOTS_BONUS_END;
+      const left = result.bonus.freeSpins.slice(Math.max(0, shown));
+      const retriggers = left.filter((free) => free.retrigger > 0).length;
+      time += intro + left.length * config.SLOTS_FREE_SPIN + retriggers * config.SLOTS_RETRIGGER_TIME + config.SLOTS_BONUS_END;
     }
     if (result.win >= bet * config.SLOTS_BIG_WIN) time += config.SLOTS_BIG_TIME;
     return time;
+  }
+
+  /*
+   * A bonus game is paid only when it was played on the page: after the
+   * wheels it waits for the player's click ("waiting"), then the free spins
+   * play ("playing"). A player who leaves meanwhile finds it again - waiting,
+   * or held where it was ("paused"). After SLOTS_HOLD it is paid anyway.
+   */
+  function hold(entry, state) {
+    entry.state = state;
+    entry.at = Date.now() + config.SLOTS_HOLD;
+    schedulePay(entry, config.SLOTS_HOLD);
+    persist.changed("slots");
+  }
+
+  function play(entry, intro) {
+    entry.state = "playing";
+    const rest = restTime(entry.result.bet, entry.result, entry.shown, intro);
+    entry.at = Date.now() + rest;
+    schedulePay(entry, rest);
+    persist.changed("slots");
+    return rest;
+  }
+
+  function pause(username) {
+    for (const entry of machine.pending) {
+      if (entry.name === username && entry.result && entry.state === "playing" && Date.now() < entry.at) hold(entry, "paused");
+    }
+  }
+
+  function resume(socket, username) {
+    for (const entry of machine.pending) {
+      if (entry.name !== username || !entry.result) continue;
+      if (entry.state === "paused") {
+        const rest = play(entry, config.SLOTS_RESUME_TIME);
+        socket.emit("slotsResume", { ...entry.result, id: entry.id, shown: entry.shown, started: true, payIn: rest });
+      } else if (entry.state === "waiting") {
+        socket.emit("slotsResume", { ...entry.result, id: entry.id, shown: 0, started: false });
+      }
+    }
   }
 
   async function payPending(entry) {
@@ -54,11 +100,11 @@ module.exports = function (io) {
     machine.pending.splice(index, 1);
     persist.changed("slots");
     try {
-      await coins.add(entry.name, entry.win, { reason: "slots win", note: entry.note });
+      if (entry.win > 0) await coins.add(entry.name, entry.win, { reason: "slots win", note: entry.note });
     } catch (error) {
       console.error("[slots] Could not pay a win:", error);
     }
-    if (entry.feed) {
+    if (entry.feed && entry.win > 0) {
       machine.feed.unshift(entry.feed);
       machine.feed.length = Math.min(machine.feed.length, config.SLOTS_FEED);
       room.to(ROOM).emit("slotsFeed", machine.feed);
@@ -74,7 +120,7 @@ module.exports = function (io) {
   }
 
   function rules() {
-    return { minBet: config.SLOTS_MIN_BET, maxBet: config.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, bonusTime: config.SLOTS_BONUS_TIME, freeSpinTime: config.SLOTS_FREE_SPIN, bonusEndTime: config.SLOTS_BONUS_END, retriggerTime: config.SLOTS_RETRIGGER_TIME, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
+    return { minBet: config.SLOTS_MIN_BET, maxBet: config.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, bonusTime: config.SLOTS_BONUS_TIME, freeSpinTime: config.SLOTS_FREE_SPIN, bonusEndTime: config.SLOTS_BONUS_END, resumeTime: config.SLOTS_RESUME_TIME, retriggerTime: config.SLOTS_RETRIGGER_TIME, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
   }
 
   async function sendCoins(username) {
@@ -96,6 +142,33 @@ module.exports = function (io) {
     casinoChat.join(socket);
     sendCoins(username).catch((error) => console.error("[slots] Could not load coins:", error));
     const error = (message) => socket.emit("slotsError", message);
+    // A bonus game that waited for the player: on with it
+    resume(socket, username);
+
+    // The player clicked "start": the free spins play (and are paid when they are over)
+    socket.on(
+      "bonusStart",
+      safe("bonusStart", (data) => {
+        const entry = machine.pending.find((e) => e.id === (data && data.id) && e.name === username);
+        if (entry && entry.result && entry.state === "waiting") play(entry, 0);
+      }),
+    );
+
+    // How far the page is in a bonus game (to go on there after a break)
+    socket.on(
+      "bonusProgress",
+      safe("bonusProgress", (data) => {
+        const entry = machine.pending.find((e) => e.id === (data && data.id) && e.name === username);
+        if (!entry || !entry.result || !Number.isInteger(data.shown)) return;
+        entry.shown = Math.max(entry.shown, Math.min(data.shown, entry.result.bonus.freeSpins.length));
+        persist.changed("slots");
+      }),
+    );
+
+    // The last slots page of the player is gone: a running bonus game waits
+    socket.on("disconnect", () => {
+      if (![...room.sockets.values()].some((other) => other !== socket && other.data.username === username)) pause(username);
+    });
 
     socket.on(
       "spin",
@@ -114,22 +187,31 @@ module.exports = function (io) {
           const result = slots.spin(bet, undefined, { forceBonus: config.SLOTS_TEST_BONUS === true });
           machine.spins++;
           const payIn = showTime(bet, result);
-          if (result.win > 0) {
+          let id = null;
+          // Every win - and every bonus game (also one without a win: it can be held and resumed)
+          if (result.win > 0 || result.bonus) {
             const best = result.lines.length ? result.lines.reduce((a, b) => (b.multiplier > a.multiplier ? b : a)) : null;
             const note = result.bonus ? `bonus ${result.bonus.spins} free spins x${result.bonus.multiplier}` : `${best.count}x ${best.symbol}`;
+            id = ++pendingId + ":" + Date.now();
             const entry = {
-              id: ++pendingId + ":" + Date.now(),
+              id: id,
               name: username,
               win: result.win,
               note: note,
               at: Date.now() + payIn,
+              // A bonus game: everything to show it again, how far it was seen
+              result: result.bonus ? { bet: bet, grid: result.grid, stops: result.stops, lines: result.lines, lineWin: result.lineWin, bonus: result.bonus, win: result.win, capped: result.capped } : null,
+              shown: 0,
+              state: null,
               feed: { name: username, bet: bet, win: result.win, symbol: best ? best.symbol : "bonus", count: best ? best.count : 3, bonus: result.bonus ? result.bonus.spins : null, at: Date.now() },
             };
             machine.pending.push(entry);
             persist.changed("slots");
-            schedulePay(entry, payIn);
+            // A bonus game waits for the player's click after the wheels
+            if (entry.result) hold(entry, "waiting");
+            else schedulePay(entry, payIn);
           }
-          socket.emit("slotsResult", { bet: bet, grid: result.grid, stops: result.stops, lines: result.lines, lineWin: result.lineWin, bonus: result.bonus, win: result.win, payIn: payIn });
+          socket.emit("slotsResult", { id: id, bet: bet, grid: result.grid, stops: result.stops, lines: result.lines, lineWin: result.lineWin, bonus: result.bonus, win: result.win, capped: result.capped, payIn: payIn });
         } finally {
           busy.delete(username);
         }
@@ -161,6 +243,7 @@ module.exports = function (io) {
       machine.spins = saved.spins || 0;
       // Wins that were not paid before the stop: paid now (or when their show is over)
       machine.pending = Array.isArray(saved.pending) ? saved.pending : [];
+      // (a held bonus game keeps waiting - until the player comes back, or SLOTS_HOLD is over)
       machine.pending.forEach((entry) => schedulePay(entry, (entry.at || 0) - Date.now()));
       room.to(ROOM).emit("slotsFeed", machine.feed);
     },
