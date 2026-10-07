@@ -15,7 +15,7 @@ module.exports = {
   DEFAULT_MAX_PLAYERS: Math.min(4, MAX_PLAYERS),
   MAX_CHAT_LENGTH: 300,
   CHAT_HISTORY: 50,
-  CASINO_CHAT_HISTORY: 100, // the casino chat keeps this many messages (older ones go)
+  CASINO_CHAT_HISTORY: 50, // the casino chat keeps this many messages (older ones go)
   CHAT_COOLDOWN: 500, // ms between two chat messages of one player
 
   // A disconnected player keeps the seat this long (reload, bad connection, ...)
