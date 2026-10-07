@@ -3320,10 +3320,10 @@ body.jackpot-theme {
 .nav-chance {
   margin-right: 0.45rem;
   padding: 0.35rem 0.75rem;
-  border: 1px solid rgba(224, 103, 90, 0.45);
+  border: 1px solid rgba(180, 150, 230, 0.45);
   border-radius: 999px;
-  background: rgba(224, 103, 90, 0.1);
-  color: #e8a39b;
+  background: rgba(180, 150, 230, 0.1);
+  color: #cdb8f0;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -3334,18 +3334,18 @@ body.jackpot-theme {
 }
 
 .nav-chance:hover {
-  background: rgba(224, 103, 90, 0.18);
+  background: rgba(180, 150, 230, 0.18);
 }
 
 .nav-chance.ready {
-  border-color: #e0675a;
-  background: rgba(224, 103, 90, 0.2);
-  color: #ffd2cc;
+  border-color: #b496e6;
+  background: rgba(180, 150, 230, 0.2);
+  color: #ece2fc;
   animation: nav-chance-glow 1.6s ease-in-out infinite;
 }
 
 @keyframes nav-chance-glow {
   50% {
-    box-shadow: 0 0 14px rgba(224, 103, 90, 0.55);
+    box-shadow: 0 0 14px rgba(180, 150, 230, 0.55);
   }
 }
