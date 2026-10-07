@@ -162,8 +162,8 @@ module.exports = {
   SLOTS_HOLD: 24 * 60 * 60 * 1000, // a bonus game waits this long for the player to come back, then it is paid
   SLOTS_BONUS_END: 4000, // the bonus win is counted up and shown
   SLOTS_RETRIGGER_TIME: 900, // more free spins (three 🎁 in a free spin) are shown
-  SLOTS_COIN_INTRO: 1800, // the coin game: the coins lock in before the first respin
-  SLOTS_RESPIN: 1500, // one respin of the coin game on the page
+  SLOTS_COIN_INTRO: 3000, // the coin game: the coins lock in before the first respin
+  SLOTS_RESPIN: 2800, // one respin of the coin game on the page
   SLOTS_ULTRA_TIME: 4500, // all 15 spots full: the ULTRA show
   SLOTS_BIG_WIN: 15, // a win of this many times the bet gets the big show
   SLOTS_COUNT_TIME: 1800, // the win is counted up (and the slow last reel)

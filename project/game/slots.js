@@ -424,7 +424,7 @@ function catalog() {
     lines: LINES,
     strips: STRIPS,
     bonus: { spins: BONUS_SPINS.map((f) => f.spins), multipliers: BONUS_MULTIPLIERS.map((f) => f.multiplier), step: BONUS_STEP, retrigger: RETRIGGER, maxSpins: MAX_FREE_SPINS },
-    coins: { trigger: COIN_TRIGGER, respins: COIN_RESPINS, prizes: COIN_VALUES.filter((f) => f.prize).map((f) => ({ prize: f.prize, x: f.x })), ultra: ULTRA, maxWin: COIN_MAX_WIN },
+    coins: { trigger: COIN_TRIGGER, respins: COIN_RESPINS, values: COIN_VALUES.filter((f) => !f.prize).map((f) => f.x), prizes: COIN_VALUES.filter((f) => f.prize).map((f) => ({ prize: f.prize, x: f.x })), ultra: ULTRA, maxWin: COIN_MAX_WIN },
     maxWin: MAX_WIN,
   };
 }

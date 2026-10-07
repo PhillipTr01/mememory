@@ -16,7 +16,9 @@
   align-items: stretch;
   justify-content: center;
   gap: 10px;
-  padding: 18px 12px;
+  /* (room on top for the prizes of the coin game, half over the edge) */
+  margin-top: 26px;
+  padding: 38px 12px 18px;
   border: 1px solid var(--mm-border);
   border-radius: 18px;
   background: radial-gradient(ellipse at 50% 0%, rgba(var(--mm-accent-rgb), 0.08), transparent 60%), var(--mm-surface-2);
@@ -553,6 +555,78 @@
 /* ---------- Paytable ---------- */
 .sl-paytable {
   max-width: 460px;
+  /* Long: it scrolls (the close button stays at the bottom) */
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sl-paytable .sl-paytable-close {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  margin-top: 0.5rem;
+  box-shadow: 0 -14px 18px 4px var(--mm-surface);
+}
+
+/* The prizes of the coin game in the paytable */
+.sl-prize-table {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  margin: 0.25rem 0 1rem;
+}
+
+.sl-prize-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 92px;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--prize);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.sl-prize-badge.plain {
+  background: var(--mm-surface-3);
+  color: #f3d27a;
+  letter-spacing: 0;
+}
+
+.sl-prize-badge.prize-mini {
+  --prize: var(--prize-mini);
+}
+
+.sl-prize-badge.prize-major {
+  --prize: var(--prize-major);
+}
+
+.sl-prize-badge.prize-mega {
+  --prize: var(--prize-mega);
+}
+
+.sl-prize-badge.prize-ultra {
+  --prize: var(--prize-ultra);
+}
+
+.sl-prize-when {
+  font-size: 0.8rem;
+  color: var(--mm-muted);
+}
+
+.sl-prize-amount {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .sl-pays {
@@ -646,7 +720,9 @@
     --tile: 58px;
     --reel: 56px;
     gap: 4px;
-    padding: 12px 4px;
+    /* (room on top for the prizes) */
+    margin-top: 20px;
+    padding: 26px 4px 12px;
   }
 
   .sl-reels {
@@ -896,6 +972,13 @@
 }
 
 /* ---------- Coin game ---------- */
+/* The prizes: soft colors (the same as the actions of blackjack) */
+:root {
+  --prize-mini: #6fa784;
+  --prize-major: #7895c4;
+  --prize-mega: #9d84c2;
+  --prize-ultra: linear-gradient(135deg, #c2706a, #c9a24a);
+}
 .sl-machine {
   position: relative;
 }
@@ -927,19 +1010,19 @@
 }
 
 .sl-cell.prize-mini .sl-coin-value {
-  background: #3f7a55;
+  background: var(--prize-mini);
   box-shadow: none;
   color: #fff;
 }
 
 .sl-cell.prize-major .sl-coin-value {
-  background: #4b6aa3;
+  background: var(--prize-major);
   box-shadow: none;
   color: #fff;
 }
 
 .sl-cell.prize-mega .sl-coin-value {
-  background: #8a55a8;
+  background: var(--prize-mega);
   box-shadow: none;
   color: #fff;
 }
@@ -1013,7 +1096,7 @@
   top: 0;
   z-index: 5;
   display: flex;
-  gap: 6px;
+  gap: 10px;
   transform: translate(-50%, -55%);
   animation: sl-stage-in 0.3s ease-out;
 }
@@ -1026,9 +1109,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 76px;
-  padding: 0.2rem 0.6rem;
-  border-radius: 10px;
+  min-width: 124px;
+  padding: 0.35rem 1rem;
+  border-radius: 12px;
   background: var(--prize, #444);
   color: #fff;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
@@ -1036,29 +1119,30 @@
 }
 
 .sl-prize.prize-mini {
-  --prize: #3f7a55;
+  --prize: var(--prize-mini);
 }
 
 .sl-prize.prize-major {
-  --prize: #4b6aa3;
+  --prize: var(--prize-major);
 }
 
 .sl-prize.prize-mega {
-  --prize: #8a55a8;
+  --prize: var(--prize-mega);
 }
 
 .sl-prize.prize-ultra {
-  --prize: linear-gradient(135deg, #b8452f, #c79a3a);
+  --prize: var(--prize-ultra);
 }
 
 .sl-prize-name {
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   font-weight: 900;
   letter-spacing: 0.12em;
 }
 
 .sl-prize-value {
-  font-size: 0.78rem;
+  font-size: 1.05rem;
+  white-space: nowrap;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -1094,11 +1178,18 @@
 }
 
 @media (max-width: 600px) {
+  .sl-prizes {
+    gap: 4px;
+  }
   .sl-prize {
     min-width: 0;
     padding: 0.15rem 0.4rem;
+    border-radius: 8px;
+  }
+  .sl-prize-name {
+    font-size: 0.6rem;
   }
   .sl-prize-value {
-    font-size: 0.66rem;
+    font-size: 0.68rem;
   }
 }

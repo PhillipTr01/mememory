@@ -554,10 +554,9 @@ function showCoins(coins, bet) {
 }
 
 // The prizes over the machine (for this bet)
-function showPrizes(bet, on) {
+function showPrizes(bet) {
   var bar = document.getElementById("slPrizes");
-  bar.hidden = !on;
-  if (!on) return;
+  bar.hidden = false;
   var c = setup.coins;
   bar.replaceChildren(
     ...c.prizes.concat([{ prize: "ultra", x: c.ultra }]).map((p) => {
@@ -607,7 +606,7 @@ async function playCoinGame(result, from, started) {
   // The board: the coins so far, every other spot empty
   clearLines();
   machine.classList.add("bonus-mode", "coin-mode");
-  showPrizes(bet, true);
+  showPrizes(bet);
   var held = new Map(); // reel * 3 + row -> coin
   game.start.concat(...game.respins.slice(0, from).map((r) => r.coins)).forEach((coin) => held.set(coin.reel * 3 + coin.row, coin));
   document.querySelectorAll(".sl-reel").forEach((reel, i) => {
@@ -638,8 +637,10 @@ async function playCoinGame(result, from, started) {
   // The coins lock in, one after the other
   if (fresh) {
     var locks = [...document.querySelectorAll(".sl-cell.held")];
-    locks.forEach((box, n) => box.animate([{ transform: "scale(1)" }, { transform: "scale(1.18)", filter: "brightness(1.6)" }, { transform: "scale(1)" }], { duration: 420, delay: n * 110, easing: "ease-out" }));
-    await wait(Math.min(setup.rules.coinIntroTime * 0.9, 500 + locks.length * 110));
+    // (one after the other, not too fast: every coin is seen)
+    var gap = Math.min(220, (setup.rules.coinIntroTime * 0.9 - 700) / Math.max(1, locks.length));
+    locks.forEach((box, n) => box.animate([{ transform: "scale(1)" }, { transform: "scale(1.18)", filter: "brightness(1.6)" }, { transform: "scale(1)" }], { duration: 600, delay: n * gap, easing: "ease-out" }));
+    await wait(Math.min(setup.rules.coinIntroTime * 0.9, 700 + locks.length * gap));
   }
 
   var time = setup.rules.respinTime;
@@ -652,7 +653,7 @@ async function playCoinGame(result, from, started) {
       reel.querySelectorAll(".sl-track > .sl-cell").forEach((box, row) => {
         if (held.has(i * 3 + row)) return;
         var coin = landed.get(i * 3 + row);
-        spins.push(miniSpin(box, coin ? coinCell(coin, bet) : null, time * (0.45 + i * 0.07)));
+        spins.push(miniSpin(box, coin ? coinCell(coin, bet) : null, time * (0.4 + i * 0.08)));
       });
     });
     await Promise.all(spins);
@@ -695,7 +696,7 @@ async function playCoinGame(result, from, started) {
   stage.hidden = true;
   stage.replaceChildren();
   machine.classList.remove("bonus-mode", "coin-mode");
-  showPrizes(bet, false);
+  showPrizes(currentBet());
   // Back to the spin that started it
   result.grid.forEach((symbols, reel) => showGrid(reel, symbols));
   showCoins(result.coins, bet);
@@ -706,7 +707,7 @@ async function playCoinGame(result, from, started) {
 function miniSpin(box, result, time) {
   // (falls from the top: the result first, the track slides down to it)
   var strip = el("div", "sl-mini-track");
-  var faces = 7 + Math.floor(Math.random() * 3);
+  var faces = 6 + Math.floor(Math.random() * 3);
   strip.appendChild(el("div", "sl-mini-face", result ? "🪙" : ""));
   // (the last one is empty - what the spot shows now)
   for (var i = 0; i < faces; i++) strip.appendChild(el("div", "sl-mini-face", i < faces - 1 && Math.random() < 0.4 ? "🪙" : ""));
@@ -719,7 +720,7 @@ function miniSpin(box, result, time) {
       if (!result) return box.replaceChildren();
       result.classList.add("held");
       box.replaceWith(result);
-      result.animate([{ transform: "scale(0.6)", filter: "brightness(2)" }, { transform: "scale(1.15)" }, { transform: "scale(1)" }], { duration: 450, easing: "ease-out" });
+      result.animate([{ transform: "scale(0.6)", filter: "brightness(2)" }, { transform: "scale(1.15)" }, { transform: "scale(1)" }], { duration: 650, easing: "ease-out" });
     });
 }
 
@@ -876,6 +877,8 @@ function setBet(value) {
   if (setup == null) return;
   var bet = Math.max(setup.rules.minBet, Math.min(setup.rules.maxBet, Math.round(value)));
   document.getElementById("slBet").value = bet;
+  // The prizes of the coin game for this bet (over the machine, always)
+  if (!activeBonus) showPrizes(bet);
   try {
     localStorage.setItem(BET_KEY, bet);
   } catch (error) {
@@ -971,7 +974,7 @@ function showPaytable() {
     map.appendChild(grid);
     lines.appendChild(map);
   });
-  var close = el("button", "mm-btn w-100", "Close");
+  var close = el("button", "mm-btn w-100 sl-paytable-close", "Close");
   close.type = "button";
   var bonus = el(
     "p",
@@ -988,26 +991,23 @@ function showPaytable() {
       setup.maxWin +
       "× the bet.",
   );
+  // The coin game: how it works, then every prize as a colored badge with what it pays for this bet
   var c = setup.coins;
   var coinText = el(
     "p",
     "sl-pays-bonus",
-    c.trigger +
-      " or more 🪙 anywhere start the coin game. The coins stay, the empty spots spin again - " +
-      c.respins +
-      " respins, and every new coin brings them back to " +
-      c.respins +
-      ". Every coin pays its value - or a prize: " +
-      c.prizes.map((p) => p.prize.toUpperCase() + " 🪙 " + formatCoins(Math.floor(bet * p.x))).join(", ") +
-      ". All 15 spots full: ULTRA 🪙 " +
-      formatCoins(bet * c.ultra) +
-      " on top. The coin game pays at most " +
-      c.maxWin +
-      "× the bet.",
+    c.trigger + " or more 🪙 anywhere start the coin game. The coins stay, the empty spots spin again - " + c.respins + " respins, every new coin brings them back to " + c.respins + ". The coin game pays all its coins (at most " + c.maxWin + "× the bet).",
   );
-  dialog.append(table, el("h3", "sl-pays-title", "Bonus"), bonus, el("h3", "sl-pays-title", "Coin game"), coinText, el("h3", "sl-pays-title", "The 9 lines"), lines, close);
+  var prizeTable = el("div", "sl-prize-table");
+  var row = (badge, when, amount) => prizeTable.append(badge, el("span", "sl-prize-when", when), el("span", "sl-prize-amount", amount));
+  var values = c.values;
+  row(el("span", "sl-prize-badge plain", "🪙 coin"), "most coins", "🪙 " + formatCoins(Math.floor(bet * values[0])) + " - " + formatCoins(Math.floor(bet * values[values.length - 1])));
+  c.prizes.forEach((p) => row(el("span", "sl-prize-badge prize-" + p.prize, p.prize.toUpperCase()), "on a coin", "🪙 " + formatCoins(Math.floor(bet * p.x))));
+  row(el("span", "sl-prize-badge prize-ultra", "ULTRA"), "all 15 spots full, on top", "🪙 " + formatCoins(bet * c.ultra));
+  dialog.append(table, el("h3", "sl-pays-title", "Bonus"), bonus, el("h3", "sl-pays-title", "Coin game"), coinText, prizeTable, el("h3", "sl-pays-title", "The 9 lines"), lines, close);
   backdrop.appendChild(dialog);
-  document.body.appendChild(backdrop);
+  // (in full screen only the machine is seen: the paytable goes in there)
+  (document.fullscreenElement || document.body).appendChild(backdrop);
   var done = () => {
     backdrop.remove();
     document.removeEventListener("keydown", onKey);
