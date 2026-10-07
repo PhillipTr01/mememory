@@ -3551,9 +3551,3 @@ body.jackpot-theme {
 }
 
 
-/* Under "Start again": the second chance waits when it isn't taken now */
-.cs-chance-hint {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--mm-text-muted, #a1a1aa);
-}

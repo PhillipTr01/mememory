@@ -393,7 +393,6 @@
       card.append(el("p", "cs-chance-text", "Your next second chance comes " + at + ". Until then: the daily bonus, or watch the others."), el("p", "cs-chance-left", status.left + " of " + status.total + " left"));
     }
     // Not now: the second chance waits - the 💔 in the top bar takes it any time
-    if (status.can) card.appendChild(el("p", "cs-chance-hint", "Not now? It waits for you - 💔 Second chance in the top bar."));
     var later = el("button", "cs-chance-later", status.can ? "Not now" : "OK");
     later.type = "button";
     later.addEventListener("click", () => box.remove());
