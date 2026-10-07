@@ -758,16 +758,6 @@
 }
 
 /* The quick bets and the ⚙ to pick them */
-.pk-preset-edit {
-  width: 30px;
-  height: 30px;
-  border: 1px solid var(--mm-border);
-  border-radius: 8px;
-  background: var(--mm-surface-2);
-  color: var(--mm-muted);
-  cursor: pointer;
-}
-
 .pk-preset-edit:hover {
   color: var(--mm-accent);
   border-color: rgba(var(--mm-accent-rgb), 0.5);

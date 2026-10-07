@@ -126,14 +126,16 @@ module.exports = {
 
   // Poker (hidden, opened from the jackpot page): one table, texas hold'em
   POKER_SEATS: 5,
-  POKER_SMALL_BLIND: 5, // the blinds of the first level
-  POKER_BIG_BLIND: 10,
-  // The blinds go up: level n = the first blinds times POKER_BLIND_STEPS[n], a new level every POKER_LEVEL_TIME
+  POKER_SMALL_BLIND: 50, // the blinds of the first level
+  POKER_BIG_BLIND: 100,
+  // The blinds go up: level n = the first blinds times POKER_BLIND_STEPS[n], a new level every POKER_LEVEL_HANDS hands
   POKER_BLIND_STEPS: [1, 2, 4, 10, 20, 40, 100],
-  POKER_LEVEL_TIME: 10 * 60 * 1000,
+  POKER_LEVEL_HANDS: 15,
+  // This long after they started at the first level, the blinds start there again (with the next hand)
+  POKER_BLIND_RESET: 10 * 60 * 1000,
   // Nobody at the table this long: back to the first level
   POKER_LEVEL_RESET: 5 * 60 * 1000,
-  POKER_MIN_BUYIN: 100,
+  POKER_MIN_BUYIN: 1000, // (10 big blinds of the first level)
   POKER_MAX_BUYIN: 10000,
   POKER_TURN: 20 * 1000, // time to act, then check (or fold)
   POKER_START: 3000, // pause before a hand starts

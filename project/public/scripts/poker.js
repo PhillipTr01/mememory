@@ -316,28 +316,32 @@ function renderStatus() {
   }
 }
 
-/* ---------- Blinds: they go up over time ---------- */
+/* ---------- Blinds: up every few hands, back to the start after a while ---------- */
 
-var levelEnd = null; // when the blinds go up next (null: not running)
+var resetAt = null; // when the blinds start low again (null: at the first level)
 var levelTimer = null;
 
 function renderBlinds() {
-  levelEnd = state.level && state.level.nextIn != null ? Date.now() + state.level.nextIn : null;
+  resetAt = state.level && state.level.resetIn != null ? Date.now() + state.level.resetIn : null;
   clearInterval(levelTimer);
   tickBlinds();
-  if (levelEnd != null) levelTimer = setInterval(tickBlinds, 1000);
+  if (resetAt != null) levelTimer = setInterval(tickBlinds, 1000);
 }
 
 function tickBlinds() {
   var badge = document.getElementById("pkBlinds");
   var text = "Blinds " + formatCoins(state.rules.smallBlind) + " / " + formatCoins(state.rules.bigBlind);
-  if (state.level) text += " · Level " + state.level.number;
-  if (levelEnd != null && state.level.next) {
-    var left = Math.max(0, Math.ceil((levelEnd - Date.now()) / 1000));
-    text += " · " + formatCoins(state.level.next.small) + " / " + formatCoins(state.level.next.big) + " in " + Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
+  var level = state.level;
+  if (level) text += " · Level " + level.number;
+  // Up after a few more hands
+  if (level && level.next && level.handsLeft != null) text += " · " + formatCoins(level.next.small) + " / " + formatCoins(level.next.big) + (level.handsLeft <= 0 ? " next hand" : " in " + level.handsLeft + (level.handsLeft == 1 ? " hand" : " hands"));
+  // Back to the start
+  if (resetAt != null) {
+    var left = Math.max(0, Math.ceil((resetAt - Date.now()) / 1000));
+    text += " · back to " + formatCoins(level.first.small) + " / " + formatCoins(level.first.big) + (left == 0 ? " next hand" : " in " + Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0"));
   }
   badge.innerText = text;
-  badge.title = "The blinds go up every few minutes - and start low again when the table was empty for a while";
+  badge.title = "The blinds go up every few hands - and start low again after a while (or when the table was empty)";
 }
 
 /* ---------- Actions ---------- */

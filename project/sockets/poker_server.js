@@ -43,14 +43,15 @@ module.exports = function (io) {
     turnTimer: null,
     history: [], // [{hand, winners: [{name, amount, hand}]}] newest first
     level: 0, // the blind level (see blinds())
-    levelSince: null, // when this level began (null: with the next hand)
+    levelSince: null, // when the blinds started at the first level (null: with the next hand)
+    levelHands: 0, // hands played at this level
     emptySince: null, // nobody at the table since then
     resetTimer: null,
     decideUntil: null, // after a hand: until then the players decide to show or muck their cards
   };
   const busy = new Set(); // users with a coin payment in progress
 
-  /* ---------- Blinds: they go up over time ---------- */
+  /* ---------- Blinds: up every few hands, back to the start after a while ---------- */
 
   function blindsAt(level) {
     const steps = config.POKER_BLIND_STEPS || [1];
@@ -66,13 +67,18 @@ module.exports = function (io) {
     return (config.POKER_BLIND_STEPS || [1]).length - 1;
   }
 
-  // At the start of a hand: up a level when its time is over
+  // At the start of a hand: back to the first level when POKER_BLIND_RESET is over - otherwise up a level
+  // after POKER_LEVEL_HANDS hands
   function updateLevel(now = Date.now()) {
-    if (table.levelSince == null) table.levelSince = now;
-    while (table.level < lastLevel() && now - table.levelSince >= config.POKER_LEVEL_TIME) {
+    if (table.levelSince == null || now - table.levelSince >= config.POKER_BLIND_RESET) {
+      table.level = 0;
+      table.levelSince = now;
+      table.levelHands = 0;
+    } else if (table.level < lastLevel() && table.levelHands >= config.POKER_LEVEL_HANDS) {
       table.level++;
-      table.levelSince += config.POKER_LEVEL_TIME;
+      table.levelHands = 0;
     }
+    table.levelHands++;
   }
 
   // Nobody sits at the table for a while: the blinds start low again
@@ -92,6 +98,7 @@ module.exports = function (io) {
       if (!table.seats.every((seat) => seat == null)) return;
       table.level = 0;
       table.levelSince = null;
+      table.levelHands = 0;
       emitState();
     }, config.POKER_LEVEL_RESET);
     table.resetTimer.unref();
@@ -175,11 +182,13 @@ module.exports = function (io) {
       result: table.result,
       history: table.history,
       viewers: room.sockets.size,
-      // The blinds now, and when (and to what) they go up
+      // The blinds now, after how many hands (and to what) they go up, when they start low again
       level: {
         number: table.level + 1,
-        nextIn: table.levelSince != null && table.level < lastLevel() ? Math.max(0, table.levelSince + config.POKER_LEVEL_TIME - Date.now()) : null,
+        handsLeft: table.levelSince != null && table.level < lastLevel() ? Math.max(0, config.POKER_LEVEL_HANDS - table.levelHands) : null,
         next: table.level < lastLevel() ? blindsAt(table.level + 1) : null,
+        resetIn: table.levelSince != null && table.level > 0 ? Math.max(0, table.levelSince + config.POKER_BLIND_RESET - Date.now()) : null,
+        first: blindsAt(0),
       },
       decideIn: table.decideUntil != null ? Math.max(0, table.decideUntil - Date.now()) : null,
       decideTime: config.POKER_DECIDE,
@@ -793,7 +802,7 @@ module.exports = function (io) {
     "poker",
     () => {
       const saved = {};
-      for (const key of ["seats", "phase", "hand", "button", "sb", "bb", "board", "deck", "current", "lastActor", "turnAt", "highBet", "minRaise", "result", "history", "level", "levelSince", "decideUntil"]) saved[key] = table[key];
+      for (const key of ["seats", "phase", "hand", "button", "sb", "bb", "board", "deck", "current", "lastActor", "turnAt", "highBet", "minRaise", "result", "history", "level", "levelSince", "levelHands", "decideUntil"]) saved[key] = table[key];
       return saved;
     },
     restore,
@@ -809,6 +818,7 @@ module.exports = function (io) {
     Object.assign(table, saved, { timer: null, turnTimer: null, decideTimer: null, startAt: null, resetTimer: null, emptySince: null });
     if (!Number.isInteger(table.level)) table.level = 0;
     if (table.levelSince === undefined) table.levelSince = null;
+    if (!Number.isInteger(table.levelHands)) table.levelHands = 0;
     const now = Date.now();
     const grace = config.RESTORE_GRACE;
     table.seats.forEach((seat, i) => {

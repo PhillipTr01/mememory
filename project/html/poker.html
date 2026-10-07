@@ -100,6 +100,8 @@
                                 <span id="pkMyLabel" class="pk-mychips-label">Your chips</span>
                                 <button type="button" id="pkMyInfo" class="pk-mychips-value" title="Click: coins or big blinds"></button>
                             </div>
+                            <!--- The quick bets of the raise box (in big blinds): always at hand while seated --->
+                            <button type="button" id="pkPresetEdit" class="pk-pill icon pk-preset-edit" title="Your quick bets" aria-label="Change the quick bets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" /><circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="2.2" /><circle cx="10" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="2.2" /></svg></button>
                             <button type="button" id="pkAddChips" class="pk-pill accent icon" title="Add chips" aria-label="Add chips"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></svg></button>
                             <button type="button" id="pkStand" class="pk-pill leave icon" title="Stand up" aria-label="Stand up"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
                         </div>
@@ -141,7 +143,6 @@
                         </div>
                         <div id="pkRaiseBox" class="pk-raise">
                             <div id="pkPresets" class="pk-presets"></div>
-                            <button type="button" id="pkPresetEdit" class="pk-preset-edit" title="Your quick bets" aria-label="Change the quick bets">⚙</button>
                             <input id="pkSlider" type="range" class="pk-slider" aria-label="Raise to">
                             <input id="pkAmount" type="number" class="mm-input pk-amount" inputmode="numeric" aria-label="Raise to">
                         </div>
