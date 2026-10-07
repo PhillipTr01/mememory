@@ -92,7 +92,10 @@
                             <h1 class="jp-title" data-info="blackjack"><span class="bj-icon big" aria-hidden="true">21</span> Blackjack <span id="bjTableName" class="bj-table-name"></span> <span class="mm-badge" id="bjLimits"></span></h1>
                             <p id="bjStatus" class="jp-status" aria-live="polite"></p>
                         </div>
+                        <div class="cs-head-actions">
+                            <button type="button" class="cs-fs-btn" data-fullscreen=".bj-main"></button>
                         <a id="bjBackToLobby" href="blackjack" class="mm-btn mm-btn-sm bj-lobby-back" hidden><i class="bi bi-grid"></i> All tables</a>
+                        </div>
                     </div>
 
                     <!--- The lobby: one card per table --->
@@ -112,6 +115,8 @@
                                 </svg>
                                 <span id="bjClockNum" class="bj-clock-num"></span>
                                 <span class="bj-clock-text">Place your bets</span>
+                                <!--- Alone at the table: no need to wait --->
+                                <button type="button" id="bjDealNow" class="bj-deal-now" hidden>Deal now</button>
                             </div>
                         </div>
                         <p class="bj-rules">Blackjack pays 3 to 2 · Dealer stands on 17</p>
@@ -309,6 +314,7 @@
     <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/casino_dock.js"></script>
     <script src="/static/scripts/casino_info.js"></script>
+    <script src="/static/scripts/casino_fullscreen.js"></script>
     <script src="/static/scripts/blackjack.js"></script>
     <script src="/static/scripts/casino_wallet.js"></script>
     <script src="/static/scripts/chat.js"></script>

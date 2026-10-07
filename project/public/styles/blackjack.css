@@ -774,9 +774,9 @@
   cursor: default;
 }
 
+/* With chips on it the field stays (the chips lie on it) */
 .bj-field.filled {
-  border-color: transparent;
-  background: none;
+  border-style: solid;
 }
 
 .bj-field-label {
@@ -791,14 +791,16 @@
 }
 
 /* The coins on a field: one chip with the amount (a thicker edge for a stack) */
+/* A chip lying on the field (smaller than the field), seen a bit from the side: a stack shows its edges */
 .bj-chipface {
+  --edge: color-mix(in srgb, var(--chip, #4f5868) 70%, #000);
   display: grid;
   place-items: center;
-  width: 100%;
-  height: 100%;
+  width: 72%;
+  height: 72%;
   border-radius: 50%;
   background: var(--chip, #4f5868);
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.5), inset 0 0 0 5px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45), 0 2px 0 var(--edge), 0 3px 4px rgba(0, 0, 0, 0.35);
   color: #fff;
   font-size: 0.62rem;
   font-weight: 800;
@@ -809,12 +811,15 @@
   font-size: 0.8rem;
 }
 
+/* More chips: a higher stack (the top chip lifts, the edges show under it) */
 .bj-chipface.stacked {
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.5), inset 0 0 0 5px rgba(0, 0, 0, 0.2), 0 3px 0 rgba(0, 0, 0, 0.35), 0 5px 6px rgba(0, 0, 0, 0.35);
+  transform: translateY(-3px);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45), 0 2px 0 var(--edge), 0 3px 0 rgba(255, 255, 255, 0.35), 0 5px 0 var(--edge), 0 6px 5px rgba(0, 0, 0, 0.35);
 }
 
 .bj-chipface.tall {
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.5), inset 0 0 0 5px rgba(0, 0, 0, 0.2), 0 3px 0 rgba(0, 0, 0, 0.35), 0 6px 0 rgba(0, 0, 0, 0.25), 0 8px 8px rgba(0, 0, 0, 0.35);
+  transform: translateY(-6px);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45), 0 2px 0 var(--edge), 0 3px 0 rgba(255, 255, 255, 0.35), 0 5px 0 var(--edge), 0 6px 0 rgba(255, 255, 255, 0.35), 0 8px 0 var(--edge), 0 9px 0 rgba(255, 255, 255, 0.35), 0 11px 0 var(--edge), 0 12px 6px rgba(0, 0, 0, 0.35);
 }
 
 .bj-chipface[data-chip="10"] { --chip: #4f5868; }
@@ -1178,4 +1183,31 @@
     transform: translate(-50%, -50%) scale(0.3);
     opacity: 0;
   }
+}
+
+/* Alone at the table: "Deal now" next to the clock */
+.bj-deal-now {
+  position: absolute;
+  left: calc(100% + 1rem);
+  top: 50%;
+  white-space: nowrap;
+  transform: translateY(-50%);
+  padding: 0.35rem 1.1rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.7);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--mm-accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.bj-deal-now:hover {
+  background: rgba(var(--mm-accent-rgb), 0.2);
+}
+
+.bj-deal-now[hidden] {
+  display: none;
 }

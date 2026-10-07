@@ -818,23 +818,8 @@
   flex-shrink: 0;
 }
 
-.sl-icon-only {
-  width: 34px;
-  padding: 0;
-  justify-content: center;
-}
-
-.sl-fs-close,
-.sl-icon-only.on .sl-fs-open {
-  display: none;
-}
-
-.sl-icon-only.on .sl-fs-close {
-  display: inline;
-}
-
 /* ---------- Full screen: the machine as big as the screen allows ---------- */
-.sl-main:fullscreen {
+.sl-main.cs-fullscreen {
   max-width: none;
   justify-content: center;
   padding: 2rem 3rem;
@@ -842,11 +827,11 @@
   background: var(--mm-bg, #111);
 }
 
-.sl-main:fullscreen .sl-machine {
+.sl-main.cs-fullscreen .sl-machine {
   --tile: min(17vh, 11vw);
 }
 
-.sl-main:fullscreen .sl-controls {
+.sl-main.cs-fullscreen .sl-controls {
   width: min(100%, 1200px);
   margin: 0 auto;
 }

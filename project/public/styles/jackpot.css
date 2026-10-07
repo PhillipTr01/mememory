@@ -2785,20 +2785,10 @@ body.jackpot-theme {
   justify-content: center;
 }
 
+/* (still - a pulse here looked like flickering) */
 .jp-tile.blank {
   border-bottom-color: var(--mm-border);
-  opacity: 0.55;
-  animation: jp-blank 2.4s ease-in-out infinite;
-}
-
-.jp-tile.blank:nth-child(even) {
-  animation-delay: 1.2s;
-}
-
-@keyframes jp-blank {
-  50% {
-    opacity: 0.3;
-  }
+  opacity: 0.5;
 }
 
 .jp-tile-blank-face {
@@ -2883,11 +2873,94 @@ body.jackpot-theme {
 }
 
 /* In the middle of the wheel: the 👻 countdown small under the status */
+/* (under the status, out of the flow: the pot and the countdown don't move when it comes) */
 .jp-wheel-center .jp-mirror-ghost {
-  margin-top: 0.3rem;
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 2.3rem);
   font-size: 0.7rem;
+  transform: translateX(-50%);
+}
+
+/* The countdown in the middle of the wheel: a bit smaller */
+.jp-wheel-center .jp-center-status.timer {
+  font-size: 1.15rem;
 }
 
 .jp-wheel-center .jp-mirror-ghost::before {
   font-size: 0.75rem;
+}
+
+/* ---------- Full screen (slots, poker, blackjack): the button and the game on the whole screen ---------- */
+.cs-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.cs-fs-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--mm-border);
+  border-radius: 50%;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.cs-fs-btn:hover,
+.cs-fs-btn:focus-visible {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+}
+
+.cs-fs-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cs-fs-close,
+.cs-fs-btn.on .cs-fs-open {
+  display: none;
+}
+
+.cs-fs-btn.on .cs-fs-close {
+  display: inline;
+}
+
+.cs-fullscreen {
+  max-width: none !important;
+  padding: 1.5rem 2.5rem !important;
+  overflow: auto;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--mm-bg, #141414) !important;
+}
+
+/* Poker: the table as big as the screen's height allows */
+.pk-main.cs-fullscreen .pk-table {
+  max-width: calc((100vh - 280px) * 2.1);
+  margin: 0 auto;
+}
+
+/* Blackjack: a bigger table */
+.bj-main.cs-fullscreen .bj-table {
+  min-height: calc(100vh - 360px);
+}
+
+.bj-main.cs-fullscreen .bj-bar {
+  max-width: 1300px;
+  margin-left: auto;
+  margin-right: auto;
 }

@@ -179,13 +179,7 @@ function playDraw(short) {
     .catch((error) => console.error("Draw animation failed:", error))
     .finally(() => {
       spinning = false;
-      var result = document.getElementById("jpResult");
-      var won = draw.winner == myName;
-      result.innerText = won
-        ? "You win " + formatCoins(draw.total) + " coins!"
-        : draw.winner + " wins " + formatCoins(draw.total) + " coins";
-      result.classList.toggle("won", won);
-      result.hidden = false;
+      // (no "X wins N coins" line under the draw - the draw shows the winner)
       render();
     });
 }

@@ -543,7 +543,6 @@
 .pk-mychips-value {
   padding: 0;
   border: 0;
-  border-bottom: 1px dashed rgba(var(--mm-accent-rgb), 0.45);
   background: none;
   text-align: left;
   cursor: pointer;

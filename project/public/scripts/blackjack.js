@@ -165,7 +165,7 @@ function placeChip(seatIndex, field) {
   } else {
     if (seat.bet == 0) return showToast("Place the main bet first.", "error");
     var room = Math.floor(seat.bet * state.rules.sideShare) - seat.side[field];
-    if (room <= 0) return showToast(SIDE_NAMES[field] + ": at most half the main bet.", "error");
+    if (room <= 0) return showToast(SIDE_NAMES[field] + ": at most as much as the main bet.", "error");
     socket.emit("sideBet", { seat: seatIndex, type: field, amount: Math.min(chipValue, room) });
   }
 }
@@ -232,7 +232,7 @@ function betFields(seat, i) {
     var wrap = el("div", "bj-field-wrap " + field);
     var spot = el("button", "bj-field " + field + (value > 0 ? " filled" : ""));
     spot.type = "button";
-    spot.title = field == "main" ? "Your bet - click to put the chip here" : SIDE_NAMES[field] + " - up to half the bet";
+    spot.title = field == "main" ? "Your bet - click to put the chip here" : SIDE_NAMES[field] + " - up to the bet";
     spot.disabled = field != "main" && seat.bet == 0;
     if (value > 0) spot.appendChild(chipFace(value));
     spot.addEventListener("click", (event) => {
@@ -440,6 +440,9 @@ function renderClock() {
   var running = state.phase == "betting" && renderStatus.end != null;
   clock.hidden = !running;
   if (!running) return;
+  // Alone at the table with a bet: deal right away
+  var seated = state.seats.filter(Boolean);
+  document.getElementById("bjDealNow").hidden = !(seated.length && seated.every((seat) => seat.name == myName) && seated.some((seat) => seat.bet > 0));
   var left = Math.max(0, renderStatus.end - Date.now());
   var seconds = Math.ceil(left / 1000);
   document.getElementById("bjClockNum").innerText = seconds;
@@ -633,6 +636,7 @@ document.addEventListener("DOMContentLoaded", () => {
     selected = null;
   });
   document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", () => socket.emit("action", button.dataset.action)));
+  document.getElementById("bjDealNow").addEventListener("click", () => socket.emit("dealNow"));
   document.getElementById("bjRebetButton").addEventListener("click", () => {
     selected = null;
     socket.emit("rebet");

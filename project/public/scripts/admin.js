@@ -626,7 +626,8 @@ function toggleCard(field) {
     box.disabled = true;
     try {
       settingsList = (await api("settings", { values: { [field.key]: box.checked } })).settings;
-      showToast(box.checked ? (game ? "It's on again" : "On") : game ? "It's off now" : "Off");
+      // (a test switch shows its state on the card - no toast)
+      if (game) showToast(box.checked ? "It's on again" : "It's off now");
     } catch (error) {
       fail(error);
     }

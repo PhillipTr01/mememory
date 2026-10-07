@@ -149,7 +149,7 @@ module.exports = {
   BJ_CLASSIC_MAX: 2500,
   BJ_HIGH_MIN: 1000,
   BJ_HIGH_MAX: 5000,
-  BJ_SIDE_SHARE: 0.5, // a side bet (Perfect Pairs, 21+3) is at most this share of the main bet
+  BJ_SIDE_SHARE: 1, // a side bet (Perfect Pairs, 21+3) is at most this share of the main bet (1: as much as the bet)
   // Slots (hidden, see game/slots.js): the bet is for a whole spin (all 9 lines)
   SLOTS_MIN_BET: 10,
   SLOTS_MAX_BET: 1000,

@@ -771,17 +771,8 @@ document.addEventListener("DOMContentLoaded", () => {
     event.preventDefault();
     spin();
   });
-  // Full screen: the whole machine (Esc or the button again to leave)
-  var main = document.querySelector(".sl-main");
-  document.getElementById("slFullscreen").addEventListener("click", () => {
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    else if (main.requestFullscreen) main.requestFullscreen().catch(() => showToast("Full screen isn't possible here.", "error"));
-  });
+  // Full screen (casino_fullscreen.js): the symbols change their size
   document.addEventListener("fullscreenchange", () => {
-    var on = document.fullscreenElement == main;
-    var button = document.getElementById("slFullscreen");
-    button.classList.toggle("on", on);
-    button.title = on ? "Leave full screen" : "Full screen";
     if (setup && !spinning) TILE = document.querySelector(".sl-cell").offsetHeight;
   });
   window.addEventListener("resize", () => {

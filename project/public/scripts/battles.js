@@ -616,7 +616,7 @@ function renderBattle() {
   back.type = "button";
   back.title = "Back to all battles";
   back.setAttribute("aria-label", "Back to all battles");
-  back.appendChild(createIcon("bi-x-lg"));
+  back.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>';
   back.addEventListener("click", () => {
     pushView(null);
     showView();

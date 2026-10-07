@@ -468,8 +468,8 @@ test("blackjack: side bets - Perfect Pairs and 21+3, at most half the main bet, 
   alice.emit("bet", { seat: 0, amount: 1000 });
   await waitFor(alice, "blackjackState", (s) => s.seats[0] && s.seats[0].bet === 1000);
   refused = h.once(alice, "blackjackError");
-  alice.emit("sideBet", { seat: 0, type: "pairs", amount: 600 });
-  assert.match(await refused, /at most 500/);
+  alice.emit("sideBet", { seat: 0, type: "pairs", amount: 1100 });
+  assert.match(await refused, /at most 1,000/);
   alice.emit("sideBet", { seat: 0, type: "pairs", amount: 500 });
   await waitFor(alice, "blackjackState", (s) => s.seats[0].side.pairs === 500);
   alice.emit("sideBet", { seat: 0, type: "plus3", amount: 200 });
@@ -492,6 +492,38 @@ test("blackjack: side bets - Perfect Pairs and 21+3, at most half the main bet, 
   assert.strictEqual(h.coinsOf("alice"), 20000 - 1700 + 13000 + 6200);
   config.BJ_BETTING = 80;
   await fresh(alice);
+  alice.emit("clearBet", 0);
+  await h.wait(30);
+});
+
+test("blackjack: alone at the table the cards can come right away (deal now)", async () => {
+  h.setCoins("alice", 5000);
+  h.setCoins("bob", 5000);
+  const alice = client("alice");
+  const bob = client("bob");
+  await Promise.all([waitFor(alice, "coins", (d) => d.coins === 5000), waitFor(bob, "coins", (d) => d.coins === 5000)]);
+  config.BJ_BETTING = 60000;
+  try {
+    alice.emit("sit", 0);
+    await waitFor(alice, "blackjackState", (s) => s.seats[0] && s.seats[0].name === "alice");
+    alice.emit("bet", { seat: 0, amount: 100 });
+    await waitFor(alice, "blackjackState", (s) => s.seats[0].bet === 100 && s.startIn > 0);
+    // With bob at the table: no
+    bob.emit("sit", 1);
+    await waitFor(alice, "blackjackState", (s) => s.seats[1] && s.seats[1].name === "bob");
+    const refused = h.once(alice, "blackjackError");
+    alice.emit("dealNow");
+    assert.match(await refused, /alone/);
+    bob.emit("clearBet", 1);
+    await waitFor(alice, "blackjackState", (s) => s.seats[1] == null);
+    // Alone: the cards come now
+    const dealt = waitFor(alice, "blackjackState", (s) => s.phase !== "betting");
+    alice.emit("dealNow");
+    await dealt;
+  } finally {
+    config.BJ_BETTING = 80;
+  }
+  await waitFor(alice, "blackjackState", (s) => s.phase === "betting" && s.seats.every((seat) => !seat || seat.bet === 0), 8000);
   alice.emit("clearBet", 0);
   await h.wait(30);
 });

@@ -392,7 +392,7 @@ function renderActions() {
   var keep = previous && previous.current == state.current && previous.hand == state.hand && previous.phase == state.phase;
   slider.min = l.min;
   slider.max = l.max;
-  slider.step = 1;
+  slider.step = "any";
   amount.min = l.min;
   amount.max = l.max;
   if (!keep || Number(amount.value) < l.min || Number(amount.value) > l.max) {
@@ -409,9 +409,18 @@ function updateRaiseLabel() {
   document.getElementById("pkRaise").innerText = label;
 }
 
-function setRaise(value) {
+// A slider moves in steps of 100 (the ends - the least and all-in - are always possible)
+var SLIDER_STEP = 100;
+function snap(value, min, max) {
+  if (value >= max - SLIDER_STEP / 2) return max;
+  if (value <= min + SLIDER_STEP / 2) return min;
+  return Math.max(min, Math.min(max, Math.round(value / SLIDER_STEP) * SLIDER_STEP));
+}
+
+function setRaise(value, fromSlider) {
   var l = limits();
   value = Math.max(l.min, Math.min(l.max, Math.round(value)));
+  if (fromSlider) value = snap(value, l.min, l.max);
   document.getElementById("pkSlider").value = value;
   document.getElementById("pkAmount").value = value;
   updateRaiseLabel();
@@ -536,9 +545,13 @@ function chipsDialog(options) {
   slider.type = "range";
   slider.min = options.min;
   slider.max = Math.max(options.min, max);
+  slider.step = "any";
   slider.value = Math.max(options.min, Math.min(max, options.value));
   var value = el("div", "pk-dialog-value", "🪙 " + formatCoins(slider.value));
-  slider.addEventListener("input", () => (value.innerText = "🪙 " + formatCoins(slider.value)));
+  slider.addEventListener("input", () => {
+    slider.value = snap(Number(slider.value), Number(slider.min), Number(slider.max));
+    value.innerText = "🪙 " + formatCoins(slider.value);
+  });
   var buttons = el("div", "mm-dialog-actions");
   var cancel = el("button", "mm-btn", "Cancel");
   cancel.type = "button";
@@ -637,7 +650,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (value >= l.max) send("allin");
     else send("raise", value);
   });
-  document.getElementById("pkSlider").addEventListener("input", (event) => setRaise(Number(event.target.value)));
+  document.getElementById("pkSlider").addEventListener("input", (event) => setRaise(Number(event.target.value), true));
   document.getElementById("pkAmount").addEventListener("change", (event) => setRaise(Number(event.target.value)));
   renderPresets();
   document.getElementById("pkPresetEdit").addEventListener("click", editPresets);
