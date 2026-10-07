@@ -226,6 +226,8 @@
 
 /* Bet and action bars under the table */
 .bj-bar {
+  /* A bit away from the table (the seats reach down to its edge) */
+  margin-top: 1.25rem;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
