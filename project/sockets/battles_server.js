@@ -20,13 +20,17 @@ const PHASE = {
   CANCELLED: "cancelled",
 };
 const SIZES = [2, 3, 4];
-const MODES = ["classic", "crazy", "random"];
+const MODES = ["classic", "crazy", "random", "jackpot", "bestof"];
 const BOT_NAMES = ["Bot Pepe", "Bot Doge", "Bot Wojak"];
 
 /*
  * Hidden case battles (like on csgofast): 2-4 players pay the same cases, every
  * round all of them open the same case. Whoever has the most worth in items at
  * the end gets everything (crazy mode: the least). Paid out in coins.
+ * Jackpot: one of the players gets everything - drawn from the seed, the
+ * chance as big as the share of the pot the own items are worth. Best of:
+ * every case is a round, the best item wins it - the most rounds win (equal:
+ * the bigger total, still equal: split).
  * The mode: classic (most wins), crazy (least wins) or random - one of the
  * two, decided by the seed (provably fair) and shown only at the end.
  */
@@ -56,7 +60,20 @@ module.exports = function (io) {
     );
   }
 
-  // classic | crazy | random (battles from before there were modes: from crazy)
+  // Best of: the rounds every seat won (the best item of a round - equal: all of them)
+  function roundPoints(battle, rounds) {
+    const points = battle.seats.map(() => 0);
+    rounds.forEach((round, index) => {
+      const values = round.map((item) => cases.caseById(battle.cases[index]).items[item].value);
+      const best = Math.max(...values);
+      values.forEach((value, seat) => {
+        if (value === best) points[seat]++;
+      });
+    });
+    return points;
+  }
+
+  // classic | crazy | random | jackpot | bestof (battles from before there were modes: from crazy)
   function modeOf(battle) {
     return battle.mode || (battle.crazy ? "crazy" : "classic");
   }
@@ -78,6 +95,10 @@ module.exports = function (io) {
       revealed: battle.revealed,
       rounds: rounds, // [[item index per seat] per shown round]
       totals: totals(battle, rounds),
+      // Best of: the rounds won so far
+      points: modeOf(battle) === "bestof" ? roundPoints(battle, rounds) : null,
+      // Jackpot: the drawn ticket (in coins of the pot) - after the end
+      ticket: done && modeOf(battle) === "jackpot" ? battle.ticket : null,
       nextIn: battle.nextAt != null ? Math.max(0, battle.nextAt - Date.now()) : null,
       winner: done ? battle.winner : null, // seat (the first one of a tie)
       winners: done ? winnersOf(battle) : null, // seats - a tie: all of them, they split the pot
@@ -144,8 +165,27 @@ module.exports = function (io) {
     // Random: the seed decides the mode (and nobody sees it before the end)
     if (modeOf(battle) === "random") battle.crazy = cases.roll(battle.fair.seed, `${battle.id}:mode`) < 0.5;
     const all = totals(battle, battle.results);
-    const best = battle.crazy ? Math.min(...all) : Math.max(...all);
-    const tied = all.map((total, seat) => (total === best ? seat : -1)).filter((seat) => seat >= 0);
+    let tied;
+    if (modeOf(battle) === "jackpot") {
+      // A ticket in the pot: who's worth covers it, wins it all
+      battle.crazy = false;
+      const pot = all.reduce((sum, total) => sum + total, 0);
+      battle.ticket = cases.roll(battle.fair.seed, `${battle.id}:jackpot`) * pot;
+      let covered = 0;
+      const winner = all.findIndex((total) => (covered += total) > battle.ticket);
+      tied = [winner < 0 ? all.length - 1 : winner];
+    } else if (modeOf(battle) === "bestof") {
+      // The most rounds - equal: the bigger total - still equal: all of them
+      battle.crazy = false;
+      const points = roundPoints(battle, battle.results);
+      const most = Math.max(...points);
+      const leaders = points.map((p, seat) => (p === most ? seat : -1)).filter((seat) => seat >= 0);
+      const top = Math.max(...leaders.map((seat) => all[seat]));
+      tied = leaders.filter((seat) => all[seat] === top);
+    } else {
+      const best = battle.crazy ? Math.min(...all) : Math.max(...all);
+      tied = all.map((total, seat) => (total === best ? seat : -1)).filter((seat) => seat >= 0);
+    }
     // A tie: every one of them wins - the pot is split (a coin left over goes to the first)
     battle.winners = tied;
     battle.winner = tied[0];

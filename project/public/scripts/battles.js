@@ -12,8 +12,8 @@ var picked = []; // the new battle: case ids, one per round, in their order
 var size = 2;
 var filter = "all";
 var sort = "price-asc";
-var mode = "classic"; // classic | crazy | random
-var MODES = { classic: { icon: "👑", name: "Classic" }, crazy: { icon: "🤡", name: "Crazy" }, random: { icon: "❓", name: "Random" } };
+var mode = "classic"; // classic | crazy | random | jackpot | bestof
+var MODES = { classic: { icon: "👑", name: "Classic" }, crazy: { icon: "🤡", name: "Crazy" }, random: { icon: "❓", name: "Random" }, jackpot: { icon: "🎰", name: "Jackpot" }, bestof: { icon: "🏅", name: "Best of" } };
 var modeShown = {}; // battle id -> the mode of a random battle was revealed on this page
 var seenRunning = {}; // battle id -> this page saw it running (so the reveal is played)
 
@@ -491,6 +491,19 @@ function seatAvatars(battle) {
   return seats;
 }
 
+// Best of: the rounds every seat won in the first `rounds` (the best item of a round - equal: all of them)
+function pointsOf(battle, rounds) {
+  var points = battle.seats.map(() => 0);
+  for (var n = 0; n < rounds; n++) {
+    var values = battle.seats.map((_, seat) => itemOf(battle, n, seat).value);
+    var top = Math.max(...values);
+    values.forEach((value, seat) => {
+      if (value == top) points[seat]++;
+    });
+  }
+  return points;
+}
+
 // The winners (a tie: all of them - they split the pot) and what each gets
 function winnersOf(battle) {
   return battle.winners || [battle.winner];
@@ -696,12 +709,16 @@ function renderBattle() {
   var best = battle.crazy ? Math.min(...totals) : Math.max(...totals);
   // (random while it runs: no leader - nobody knows yet what counts)
   if (battle.crazy == null || reveal) best = null;
+  // Best of: the rounds won so far lead; jackpot: every one's chance (its share of the pot)
+  var points = battle.mode == "bestof" ? pointsOf(battle, rounds) : null;
+  var mostPoints = points ? Math.max(...points) : null;
+  var pot = totals.reduce((sum, t) => sum + t, 0);
   var places = over ? placesOf(battle, totals) : null;
   battle.seats.forEach((seat, index) => {
     var column = el("div", "bt-seat");
     column.dataset.seat = index;
     if (over) column.classList.add(winnersOf(battle).includes(index) ? "winner" : "lost");
-    else if (rounds > 0 && totals[index] == best) column.classList.add("leading");
+    else if (rounds > 0 && (points ? points[index] == mostPoints && mostPoints > 0 : totals[index] == best)) column.classList.add("leading");
     var head = el("div", "bt-seat-head");
     if (seat == null) {
       head.classList.add("empty");
@@ -730,6 +747,9 @@ function renderBattle() {
       if (seat.bot) name.appendChild(el("span", "player-tag", "Bot"));
       else if (seat.name == myName) name.appendChild(el("span", "player-tag", "You"));
       head.append(name, el("span", "bt-seat-total", "🪙 " + formatCoins(totals[index])));
+      // Best of: rounds won - jackpot: the chance to get it all
+      if (points) head.appendChild(el("span", "bt-seat-extra", "🏅 " + points[index] + (points[index] == 1 ? " round" : " rounds")));
+      if (battle.mode == "jackpot" && pot > 0) head.appendChild(el("span", "bt-seat-extra", "🎰 " + ((totals[index] / pot) * 100).toFixed(1) + "% chance"));
     }
     var items = el("div", "bt-won");
     if (over) {
@@ -789,7 +809,8 @@ var PLACE_NAMES = ["1st", "2nd", "3rd", "4th"];
 function placesOf(battle, totals) {
   var winners = winnersOf(battle);
   var order = battle.seats.map((_, seat) => seat);
-  order.sort((a, b) => (winners.includes(a) && !winners.includes(b) ? -1 : winners.includes(b) && !winners.includes(a) ? 1 : battle.crazy ? totals[a] - totals[b] : totals[b] - totals[a]));
+  var points = battle.mode == "bestof" ? pointsOf(battle, battle.rounds.length) : null;
+  order.sort((a, b) => (winners.includes(a) && !winners.includes(b) ? -1 : winners.includes(b) && !winners.includes(a) ? 1 : points && points[a] != points[b] ? points[b] - points[a] : battle.crazy ? totals[a] - totals[b] : totals[b] - totals[a]));
   var places = [];
   order.forEach((seat, place) => (places[seat] = winners.includes(seat) ? 0 : place));
   return places;
@@ -846,6 +867,12 @@ function finalTile(battle, seat, place, total) {
   return tile;
 }
 
+// Jackpot: the winner's chance ("drawn with 23.4%")
+function jackpotChance(battle, seat) {
+  var pot = battle.totals.reduce((sum, t) => sum + t, 0);
+  return pot > 0 ? "drawn with " + ((battle.totals[seat] / pot) * 100).toFixed(1) + "%" : "drawn";
+}
+
 // The big result on top: who won, the pot, what it was for me - and the same battle again
 function resultHero(battle) {
   var seats = winnersOf(battle);
@@ -856,7 +883,8 @@ function resultHero(battle) {
   var hero = el("div", "bt-hero" + (won ? " won" : mine ? " lost" : ""));
   hero.appendChild(el("span", "bt-hero-trophy", split ? "🤝" : won ? "🏆" : mine ? "💀" : "🏆"));
   var main = el("div", "bt-hero-main");
-  var label = el("span", "bt-hero-label", split ? (won ? "A tie - you split the pot!" : "A tie - the pot is split") : won ? "You won the battle!" : battle.crazy ? "Winner - lowest total" : "Winner");
+  var how = battle.mode == "jackpot" ? jackpotChance(battle, seats[0]) : battle.mode == "bestof" ? "most rounds won" : battle.crazy ? "lowest total" : null;
+  var label = el("span", "bt-hero-label", split ? (won ? "A tie - you split the pot!" : "A tie - the pot is split") : (won ? "You won the battle!" : "Winner") + (how ? " · " + how : ""));
   var name = el("div", "bt-hero-name");
   seats.forEach((seat, i) => {
     var winner = battle.seats[seat];

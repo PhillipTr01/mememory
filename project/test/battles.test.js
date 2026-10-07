@@ -393,3 +393,38 @@ test("cases: the admin turns cases off - gone from the list to pick from, no new
     await settings.update({ BATTLE_CASES_OFF: [] });
   }
 });
+
+test("battles: jackpot mode - one winner, drawn from the seed by the worth; best of - the most rounds win", async () => {
+  h.setCoins("carol", 50000);
+  const carol = client("carol");
+  await waitFor(carol, "coins", (d) => d.coins === 50000);
+  for (const kind of ["jackpot", "bestof"]) {
+    carol.emit("createBattle", { cases: ["starter", "classic", "doge"], size: 3, mode: kind });
+    const id = await h.once(carol, "battleCreated");
+    carol.emit("addBot", id);
+    carol.emit("addBot", id);
+    const done = await waitFor(carol, "battles", (data) => data.list.some((b) => b.id === id && b.phase === "done"), 8000).then((data) => data.list.find((b) => b.id === id));
+    assert.strictEqual(done.mode, kind);
+    assert.strictEqual(done.payout, done.totals.reduce((sum, t) => sum + t, 0));
+    if (kind === "jackpot") {
+      // The ticket from the seed, in the pot: whose worth covers it wins (alone)
+      const ticket = cases.roll(done.fair.seed, `${id}:jackpot`) * done.payout;
+      assert.ok(Math.abs(done.ticket - ticket) < 1e-6);
+      let covered = 0;
+      const winner = done.totals.findIndex((total) => (covered += total) > ticket);
+      assert.deepStrictEqual(done.winners, [winner]);
+    } else {
+      // The rounds: the best item of each - the most rounds win (equal: the bigger total)
+      const points = done.seats.map(() => 0);
+      done.rounds.forEach((round, r) => {
+        const values = round.map((item) => cases.caseById(done.cases[r]).items[item].value);
+        values.forEach((value, seat) => value === Math.max(...values) && points[seat]++);
+      });
+      assert.deepStrictEqual(done.points, points);
+      const most = Math.max(...points);
+      const top = Math.max(...points.map((p, seat) => (p === most ? done.totals[seat] : -1)));
+      assert.deepStrictEqual(done.winners, points.map((p, seat) => (p === most && done.totals[seat] === top ? seat : -1)).filter((seat) => seat >= 0));
+    }
+  }
+  carol.close();
+});

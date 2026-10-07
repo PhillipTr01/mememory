@@ -439,6 +439,41 @@
       seasonTimer = setInterval(seasonLeft, 1000);
     }
   }
+  // The right part of the bar (second chance, free coins, coins, profile) comes along when scrolling:
+  // in the top right corner once the bar is out of sight
+  (function keepInSight() {
+    var coinsPill = document.getElementById("navCoins");
+    if (!coinsPill) return;
+    var bar = coinsPill.parentNode;
+    var right = el("div", "nav-right");
+    ["navChance", "navBonus", "navCoins", "profileMenu"].forEach((id) => {
+      var node = document.getElementById(id);
+      if (node && node.parentNode == bar) right.appendChild(node);
+    });
+    bar.appendChild(right);
+    var naturalTop = 0; // where it is in the bar (page coordinates)
+    var place = () => {
+      if (!right.classList.contains("floating")) {
+        var rect = right.getBoundingClientRect();
+        naturalTop = rect.top + window.scrollY;
+        if (rect.top >= 12) return;
+        // As far from the right as in the bar
+        right.style.right = document.documentElement.clientWidth - rect.right + "px";
+        right.classList.add("floating");
+      } else if (window.scrollY + 12 <= naturalTop) {
+        right.classList.remove("floating");
+        right.style.right = "";
+      }
+    };
+    window.addEventListener("scroll", place, { passive: true });
+    window.addEventListener("resize", () => {
+      right.classList.remove("floating");
+      right.style.right = "";
+      place();
+    });
+    place();
+  })();
+
   // The leaderboard page itself: marked
   if (board && /\/leaderboard\/?$/.test(location.pathname)) board.classList.add("active");
   fetch("season", { cache: "no-store" })

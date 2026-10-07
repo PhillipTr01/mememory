@@ -3512,13 +3512,17 @@ body.jackpot-theme {
   }
 }
 
-/* The bar at the top stays while scrolling: the coins (and the free coins) always in sight */
-body.jackpot-theme > header {
-  position: sticky;
-  top: 0;
+/* The right part of the bar (second chance, free coins, coins, profile): it stays in sight while
+   scrolling - in the top right corner, like the chat beside the game (casino_wallet.js) */
+.nav-right {
+  display: flex;
+  align-items: center;
+}
+
+.nav-right.floating {
+  position: fixed;
+  top: 12px;
   z-index: 1030;
-  background: var(--mm-bg, #141414);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
 /* Full screen: the coins at the top in the middle, as high as the title (the bar at the top is gone) */

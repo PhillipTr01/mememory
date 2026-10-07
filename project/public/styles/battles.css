@@ -1567,3 +1567,15 @@ button.bt-strip-case:hover {
   color: var(--mm-muted);
   font-weight: 600;
 }
+
+/* Best of: rounds won - jackpot: the chance */
+.bt-seat-extra {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bt-seat.leading .bt-seat-extra {
+  color: var(--mm-accent);
+}

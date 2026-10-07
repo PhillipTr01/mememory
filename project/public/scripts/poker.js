@@ -66,10 +66,18 @@ try {
   // not remembered
 }
 
+// Chips as text: the number (or big blinds) - see chipsEl for one with the chip icon
 function chips(value) {
-  if (!inBB || !state) return "🪙 " + formatCoins(value);
+  if (!inBB || !state) return formatCoins(value);
   var bb = value / state.rules.bigBlind;
   return (Number.isInteger(bb) ? bb : bb.toFixed(1)) + " BB";
+}
+
+// Chips with the poker chip in front (not the coin: chips are what is on the table)
+function chipsEl(value, text) {
+  var box = el("span", "pk-chips");
+  box.append(el("i", "pk-chip-ico"), document.createTextNode((text || "") + chips(value)));
+  return box;
 }
 
 function formatCoins(value) {
@@ -221,10 +229,12 @@ function renderSeats() {
       var info = el("div", "pk-info");
       var name = el("span", "pk-name", seat.name);
       if (seat.away) name.title = "Away";
-      info.append(name, el("span", "pk-stack", chips(seat.stack)));
+      var stack = el("span", "pk-stack");
+      stack.appendChild(chipsEl(seat.stack));
+      info.append(name, stack);
 
       var tag = null;
-      if (won) tag = el("span", "pk-tag win", "+" + chips(won.amount).replace("🪙 ", "") + (won.hand ? " · " + won.hand : ""));
+      if (won) tag = el("span", "pk-tag win", "+" + chips(won.amount) + (won.hand ? " · " + won.hand : ""));
       else if (state.result && state.result.showdown && !seat.folded && seat.inHand) {
         var shown = state.result.hands.find((h) => h.seat == i);
         if (shown) tag = el("span", "pk-tag" + (shown.hand ? "" : " muted"), shown.deciding ? "Show or muck..." : shown.mucked ? "Mucked" : shown.hand);
@@ -248,7 +258,8 @@ function renderSeats() {
   state.seats.forEach((seat, i) => {
     if (seat == null || seat.bet <= 0) return;
     var betPlace = betPlaces()[placeOf(i)];
-    var bet = el("div", "pk-bet", chips(seat.bet));
+    var bet = el("div", "pk-bet");
+    bet.appendChild(chipsEl(seat.bet));
     bet.style.left = betPlace.x + "%";
     bet.style.top = betPlace.y + "%";
     container.appendChild(bet);
@@ -279,13 +290,15 @@ function renderBoard() {
   if (pots.length > 1) {
     pot.replaceChildren(
       ...pots.map((p, n) => {
-        var chip = el("span", "pk-pot-part" + (n ? " side" : ""), (n == 0 ? "Main pot" : pots.length > 2 ? "Side pot " + n : "Side pot") + " " + chips(p.amount));
+        var chip = el("span", "pk-pot-part" + (n ? " side" : ""), (n == 0 ? "Main pot" : pots.length > 2 ? "Side pot " + n : "Side pot") + " ");
+        chip.appendChild(chipsEl(p.amount));
         chip.title = "For " + p.players.join(", ");
         return chip;
       }),
     );
   } else {
-    pot.innerText = state.pot + bets > 0 ? "Pot " + chips(state.pot + bets) : "";
+    pot.replaceChildren();
+    if (state.pot + bets > 0) pot.append("Pot ", chipsEl(state.pot + bets));
   }
 
   // The result pot by pot: how big, who won it, with what
@@ -295,7 +308,9 @@ function renderBoard() {
     var rows = state.result.pots.map((p, n) => {
       var row = el("div", "pk-result-pot" + (p.winners.some((w) => w.name == myName) ? " mine" : ""));
       var label = state.result.pots.length == 1 ? "Pot" : n == 0 ? "Main pot" : state.result.pots.length > 2 ? "Side pot " + n : "Side pot";
-      row.appendChild(el("span", "pk-result-label", label + " " + chips(p.amount)));
+      var labelBox = el("span", "pk-result-label", label + " ");
+      labelBox.appendChild(chipsEl(p.amount));
+      row.appendChild(labelBox);
       var who = p.winners.map((w) => (w.name == myName ? "You" : w.name)).join(" & ");
       var hand = p.winners[0] && p.winners[0].hand ? " · " + p.winners[0].hand : "";
       row.appendChild(el("span", "pk-result-who", (p.winners.length > 1 ? who + " split" : who) + hand));
@@ -544,7 +559,7 @@ function renderSeatBar() {
   bar.hidden = me < 0;
   if (me < 0) return;
   var seat = state.seats[me];
-  document.getElementById("pkMyInfo").innerText = chips(seat.stack);
+  document.getElementById("pkMyInfo").replaceChildren(chipsEl(seat.stack));
   document.getElementById("pkMyLabel").innerText = seat.leaving ? "Leaving after this hand" : "Your chips";
   document.getElementById("pkAddChips").disabled = (seat.inHand && state.phase != "showdown") || seat.stack >= state.rules.maxBuyIn;
   document.getElementById("pkStand").disabled = seat.leaving;

@@ -896,3 +896,22 @@
 .pk-amount:disabled {
   pointer-events: none;
 }
+
+/* A poker chip (the chips at the table - not the coins): red, with the white dashed edge */
+.pk-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  white-space: nowrap;
+}
+
+.pk-chip-ico {
+  flex: 0 0 auto;
+  width: 1.05em;
+  height: 1.05em;
+  box-sizing: border-box;
+  border: 0.17em dashed #fff;
+  border-radius: 50%;
+  background: radial-gradient(circle, #e04848 0 34%, #fff 35% 42%, #c62f2f 43%);
+  box-shadow: 0 0 0 0.06em #7e1b1b, 0 1px 2px rgba(0, 0, 0, 0.4);
+}

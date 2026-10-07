@@ -93,6 +93,7 @@
     var box = null;
     var watcher = null;
     var timer = null;
+    var spot = null; // "middle" or "corner" - for this full screen
     // In the room between the title and the buttons on the right (too narrow: the top right corner)
     function place() {
       var title = target.querySelector("h1");
@@ -107,8 +108,10 @@
           })
           .concat([window.innerWidth]),
       );
-      var room = right - rect.right;
-      if (room >= box.offsetWidth + 24) {
+      // Middle or corner: decided once (it doesn't jump between them while the zoom settles)
+      if (spot == null) spot = right - rect.right >= box.offsetWidth + 24 ? "middle" : "corner";
+      box.style.visibility = "";
+      if (spot == "middle") {
         box.style.left = (rect.right + right) / 2 + "px";
         box.style.right = "auto";
         box.style.transform = "translateX(-50%)";
@@ -133,8 +136,11 @@
         copy();
         watcher = new MutationObserver(copy);
         watcher.observe(source, { childList: true, characterData: true, subtree: true });
+        // Hidden until it has its place (the zoom of the game settles first)
+        box.style.visibility = "hidden";
+        spot = null;
         target.appendChild(box);
-        place();
+        setTimeout(place, 350);
         timer = setInterval(place, 300);
       },
       hide: function () {
