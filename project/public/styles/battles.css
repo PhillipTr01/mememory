@@ -315,6 +315,57 @@
 
 .bt-create-row .mm-btn-primary {
   margin-left: auto;
+  align-self: flex-end;
+}
+
+/* A setting with its title on top (like the settings of a room) */
+.bt-setting {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.bt-setting-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
+
+/* - 2 + : as high as the mode picker next to it */
+.bt-size-stepper {
+  height: calc(2.6rem + 8px);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+}
+
+.bt-size-stepper button {
+  width: 38px;
+  height: 100%;
+}
+
+.bt-size-stepper svg {
+  width: 16px;
+  height: 16px;
+}
+
+.bt-size-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3.4rem;
+  line-height: 1.1;
+}
+
+.bt-size-value b {
+  font-size: 1.05rem;
+}
+
+.bt-size-value small {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--mm-muted);
 }
 
 
@@ -438,13 +489,6 @@
   text-align: left;
   white-space: nowrap;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-
-#btSizes button {
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-  line-height: 1.15;
 }
 
 .bt-pick button b {
@@ -1481,5 +1525,38 @@ button.bt-strip-case:hover {
 
   .bt-strip-row .bt-top-pot {
     justify-self: center;
+  }
+}
+
+/* Small screens: the settings one under the other, the modes wrap */
+@media (max-width: 600px) {
+  .bt-setting {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .bt-setting:has(#btModes) {
+    flex-basis: 100%;
+  }
+  #btModes {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  #btModes button {
+    flex: 1 1 30%;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.4rem 0.3rem;
+    text-align: center;
+    white-space: normal;
+  }
+  #btModes .bt-pick-text small {
+    display: none;
+  }
+  .bt-create-head {
+    flex-wrap: wrap;
+  }
+  .bt-summary {
+    order: 3;
+    flex-basis: 100%;
   }
 }

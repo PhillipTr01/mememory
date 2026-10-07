@@ -510,12 +510,23 @@ function showPane(name) {
   });
 }
 
+// How many players (2 to 4): the number and how it plays (1v1, 1v1v1, ...)
+var MIN_SIZE = 2;
+var MAX_SIZE = 4;
+function setSize(value) {
+  size = Math.max(MIN_SIZE, Math.min(MAX_SIZE, value));
+  var box = document.getElementById("btSizeValue");
+  box.replaceChildren(el("b", "", size), el("small", "", Array(size).fill("1").join("v")));
+  document.getElementById("btSizeMinus").disabled = size <= MIN_SIZE;
+  document.getElementById("btSizePlus").disabled = size >= MAX_SIZE;
+}
+
 // Back on the main page to create a battle - with these cases already chosen
 function createAgain(battle) {
   picked = battle.cases.slice();
   size = battle.size;
   mode = battle.mode || (battle.crazy ? "crazy" : "classic");
-  document.querySelectorAll("#btSizes button").forEach((b) => b.classList.toggle("active", Number(b.dataset.size) == size));
+  setSize(size);
   document.querySelectorAll("#btModes button").forEach((b) => b.classList.toggle("active", b.dataset.mode == mode));
   renderCreate();
   pushView(null);
@@ -784,7 +795,7 @@ function playModeReveal(battle, grid) {
   var count = 28 + (battle.crazy ? 1 : 0);
   for (var n = 0; n <= count; n++) track.appendChild(el("span", "bt-mode-icon", n % 2 ? "🤡" : "👑"));
   face.appendChild(track);
-  var name = el("span", "bt-mode-name", "Classic or crazy?");
+  var name = el("span", "bt-mode-name", "Which mode?");
   box.append(el("span", "bt-mode-title", "THE MODE IS..."), face, name);
   grid.appendChild(box);
   var first = !revealing[battle.id];
@@ -989,12 +1000,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }),
   );
 
-  document.querySelectorAll("#btSizes button").forEach((button) =>
-    button.addEventListener("click", () => {
-      size = Number(button.dataset.size);
-      document.querySelectorAll("#btSizes button").forEach((b) => b.classList.toggle("active", b == button));
-    }),
-  );
+  document.getElementById("btSizeMinus").addEventListener("click", () => setSize(size - 1));
+  document.getElementById("btSizePlus").addEventListener("click", () => setSize(size + 1));
+  setSize(size);
 
 
   document.getElementById("btCreate").addEventListener("click", () => {
