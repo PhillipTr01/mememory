@@ -208,7 +208,7 @@ test("battles: crazy mode - the lowest total wins; bots fill the seats", async (
   assert.strictEqual(h.coinsOf("carol"), expected);
 });
 
-test("battles: random mode - classic or crazy, decided by the seed, only shown at the end", async () => {
+test("battles: random mode - one of all the modes, decided by the seed, only shown at the end", async () => {
   h.setCoins("carol", 1000);
   const carol = client("carol");
   await waitFor(carol, "coins", (data) => data.coins === 1000);
@@ -218,14 +218,19 @@ test("battles: random mode - classic or crazy, decided by the seed, only shown a
   const running = waitFor(carol, "battles", (data) => battleIn(data, id) && battleIn(data, id).phase === "running");
   carol.emit("addBot", id);
   const during = battleIn(await running, id);
-  assert.deepStrictEqual([during.mode, during.crazy], ["random", null], "not known while it runs");
+  assert.deepStrictEqual([during.mode, during.crazy, during.picked, during.points], ["random", null, null, null], "not known while it runs");
   const done = battleIn(await waitFor(carol, "battles", (data) => battleIn(data, id) && battleIn(data, id).phase === "done"), id);
-  assert.strictEqual(typeof done.crazy, "boolean");
-  // The seed decided it - anybody can check that afterwards
+  // The seed picked one of all the modes (two cases: best of too) - anybody can check that afterwards
   const cases = require("../game/cases");
-  assert.strictEqual(done.crazy, cases.roll(done.fair.seed, `${id}:mode`) < 0.5);
-  const best = done.crazy ? Math.min(...done.totals) : Math.max(...done.totals);
-  assert.strictEqual(done.totals[done.winner], best);
+  const options = ["classic", "crazy", "jackpot", "bestof"];
+  assert.strictEqual(done.picked, options[Math.floor(cases.roll(done.fair.seed, `${id}:mode`) * options.length)]);
+  assert.strictEqual(done.crazy, done.picked === "crazy");
+  if (done.picked === "classic" || done.picked === "crazy") {
+    const best = done.crazy ? Math.min(...done.totals) : Math.max(...done.totals);
+    assert.strictEqual(done.totals[done.winner], best);
+  }
+  if (done.picked === "jackpot") assert.ok(done.ticket >= 0 && done.ticket < done.payout);
+  if (done.picked === "bestof") assert.ok(Array.isArray(done.points));
   // (the pot comes after the reveal of the mode - before the next test)
   await h.wait(80);
 });
@@ -398,6 +403,10 @@ test("battles: jackpot mode - one winner, drawn from the seed by the worth; best
   h.setCoins("carol", 50000);
   const carol = client("carol");
   await waitFor(carol, "coins", (d) => d.coins === 50000);
+  // Best of with one case: no rounds to win - refused
+  const refused = h.once(carol, "battleError");
+  carol.emit("createBattle", { cases: ["starter"], size: 2, mode: "bestof" });
+  assert.match(await refused, /at least 2 cases/);
   for (const kind of ["jackpot", "bestof"]) {
     carol.emit("createBattle", { cases: ["starter", "classic", "doge"], size: 3, mode: kind });
     const id = await h.once(carol, "battleCreated");

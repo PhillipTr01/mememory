@@ -17,10 +17,18 @@ var MODES = { classic: { icon: "👑", name: "Classic" }, crazy: { icon: "🤡",
 var modeShown = {}; // battle id -> the mode of a random battle was revealed on this page
 var seenRunning = {}; // battle id -> this page saw it running (so the reveal is played)
 
+// The rule that counts: the mode - or, in random, the one picked (null while it is still hidden)
+function ruleOf(battle) {
+  if (battle.mode != "random") return battle.mode || (battle.crazy ? "crazy" : "classic");
+  if (battle.picked) return battle.picked;
+  return battle.crazy == null ? null : battle.crazy ? "crazy" : "classic";
+}
+
 // The mode of a battle as a short label ("❓ Random", after the end "❓ → 🤡 Crazy")
 function modeLabel(battle) {
   var m = battle.mode || (battle.crazy ? "crazy" : "classic");
-  if (m == "random" && battle.crazy != null && modeShown[battle.id] !== false) return "❓ → " + (battle.crazy ? "🤡 Crazy" : "👑 Classic");
+  var picked = ruleOf(battle);
+  if (m == "random" && picked && modeShown[battle.id] !== false) return "❓ → " + MODES[picked].icon + " " + MODES[picked].name;
   return MODES[m].icon + " " + MODES[m].name;
 }
 
@@ -397,8 +405,11 @@ function renderCreate() {
   document.getElementById("btShuffle").hidden = picked.length < 2;
   var button = document.getElementById("btCreate");
   document.getElementById("btCreateLabel").innerText = ids.length ? "Create for 🪙 " + formatCoins(cost) : "Create";
-  button.disabled = ids.length == 0 || cost > myCoins;
-  button.title = cost > myCoins ? "Not enough coins" : "";
+  // Best of: rounds to win - at least 2 cases
+  var tooFew = mode == "bestof" && ids.length == 1;
+  button.disabled = ids.length == 0 || cost > myCoins || tooFew;
+  button.title = cost > myCoins ? "Not enough coins" : tooFew ? "Best of needs at least 2 cases" : "";
+  if (tooFew) document.getElementById("btCreateLabel").innerText = "Best of: at least 2 cases";
 }
 
 function showContents(box) {
@@ -710,7 +721,8 @@ function renderBattle() {
   // (random while it runs: no leader - nobody knows yet what counts)
   if (battle.crazy == null || reveal) best = null;
   // Best of: the rounds won so far lead; jackpot: every one's chance (its share of the pot)
-  var points = battle.mode == "bestof" ? pointsOf(battle, rounds) : null;
+  var rule = reveal ? null : ruleOf(battle);
+  var points = rule == "bestof" ? pointsOf(battle, rounds) : null;
   var mostPoints = points ? Math.max(...points) : null;
   var pot = totals.reduce((sum, t) => sum + t, 0);
   var places = over ? placesOf(battle, totals) : null;
@@ -749,7 +761,7 @@ function renderBattle() {
       head.append(name, el("span", "bt-seat-total", "🪙 " + formatCoins(totals[index])));
       // Best of: rounds won - jackpot: the chance to get it all
       if (points) head.appendChild(el("span", "bt-seat-extra", "🏅 " + points[index] + (points[index] == 1 ? " round" : " rounds")));
-      if (battle.mode == "jackpot" && pot > 0) head.appendChild(el("span", "bt-seat-extra", "🎰 " + ((totals[index] / pot) * 100).toFixed(1) + "% chance"));
+      if (rule == "jackpot" && pot > 0) head.appendChild(el("span", "bt-seat-extra", "🎰 " + ((totals[index] / pot) * 100).toFixed(1) + "% chance"));
     }
     var items = el("div", "bt-won");
     if (over) {
@@ -809,7 +821,7 @@ var PLACE_NAMES = ["1st", "2nd", "3rd", "4th"];
 function placesOf(battle, totals) {
   var winners = winnersOf(battle);
   var order = battle.seats.map((_, seat) => seat);
-  var points = battle.mode == "bestof" ? pointsOf(battle, battle.rounds.length) : null;
+  var points = ruleOf(battle) == "bestof" ? pointsOf(battle, battle.rounds.length) : null;
   order.sort((a, b) => (winners.includes(a) && !winners.includes(b) ? -1 : winners.includes(b) && !winners.includes(a) ? 1 : points && points[a] != points[b] ? points[b] - points[a] : battle.crazy ? totals[a] - totals[b] : totals[b] - totals[a]));
   var places = [];
   order.forEach((seat, place) => (places[seat] = winners.includes(seat) ? 0 : place));
@@ -821,6 +833,13 @@ function placesOf(battle, totals) {
  * smoothly and stops on the mode the seed chose - then the winner is shown.
  * (A new render of the page picks the reel up where it was.)
  */
+// What the picked mode means (the end of the random reveal)
+var RULE_TEXT = {
+  classic: "Classic - the highest total wins!",
+  crazy: "Crazy - the lowest total wins!",
+  jackpot: "Jackpot - a draw, your worth is your chance!",
+  bestof: "Best of - the most rounds won win!",
+};
 var REVEAL_WAIT = 3000; // the last case is seen this long before the reel comes
 var REVEAL_SPIN = 4400; // the reel rolls this long
 var REVEAL_HOLD = 1100; // the mode is shown this long before the winner
@@ -842,8 +861,11 @@ function playModeReveal(battle, grid) {
   var face = el("span", "bt-mode-face");
   var track = el("span", "bt-mode-track");
   // Many icons in turn, the last one is the mode (even: crown, odd: clown)
-  var count = 28 + (battle.crazy ? 1 : 0);
-  for (var n = 0; n <= count; n++) track.appendChild(el("span", "bt-mode-icon", n % 2 ? "🤡" : "👑"));
+  // Every mode it could be in turn - the last one is the one the seed picked
+  var options = ["classic", "crazy", "jackpot"].concat(battle.cases.length >= 2 ? ["bestof"] : []);
+  var at = Math.max(0, options.indexOf(ruleOf(battle)));
+  var count = 28 + ((at - (28 % options.length) + options.length) % options.length);
+  for (var n = 0; n <= count; n++) track.appendChild(el("span", "bt-mode-icon", MODES[options[n % options.length]].icon));
   face.appendChild(track);
   var name = el("span", "bt-mode-name", "Which mode?");
   box.append(el("span", "bt-mode-title", "THE MODE IS..."), face, name);
@@ -851,7 +873,7 @@ function playModeReveal(battle, grid) {
   var spin = track.animate([{ transform: "translateY(0)" }, { transform: "translateY(" + -count * 100 + "%)" }], { duration: REVEAL_SPIN, easing: "cubic-bezier(0.15, 0.55, 0.12, 1)", fill: "forwards" });
   spin.currentTime = Math.min(REVEAL_SPIN, Date.now() - started);
   var stopped = () => {
-    name.innerText = battle.crazy ? "Crazy - the lowest total wins!" : "Classic - the highest total wins!";
+    name.innerText = RULE_TEXT[ruleOf(battle)] || "";
     box.classList.add("done");
   };
   if (Date.now() - started >= REVEAL_SPIN) return stopped();
@@ -883,7 +905,7 @@ function resultHero(battle) {
   var hero = el("div", "bt-hero" + (won ? " won" : mine ? " lost" : ""));
   hero.appendChild(el("span", "bt-hero-trophy", split ? "🤝" : won ? "🏆" : mine ? "💀" : "🏆"));
   var main = el("div", "bt-hero-main");
-  var how = battle.mode == "jackpot" ? jackpotChance(battle, seats[0]) : battle.mode == "bestof" ? "most rounds won" : battle.crazy ? "lowest total" : null;
+  var how = ruleOf(battle) == "jackpot" ? jackpotChance(battle, seats[0]) : ruleOf(battle) == "bestof" ? "most rounds won" : battle.crazy ? "lowest total" : null;
   var label = el("span", "bt-hero-label", split ? (won ? "A tie - you split the pot!" : "A tie - the pot is split") : (won ? "You won the battle!" : "Winner") + (how ? " · " + how : ""));
   var name = el("div", "bt-hero-name");
   seats.forEach((seat, i) => {
@@ -1084,6 +1106,7 @@ document.addEventListener("DOMContentLoaded", () => {
     button.addEventListener("click", () => {
       mode = button.dataset.mode;
       document.querySelectorAll("#btModes button").forEach((b) => b.classList.toggle("active", b == button));
+      renderCreate();
     }),
   );
 
