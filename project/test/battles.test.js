@@ -335,3 +335,33 @@ test("battles: everybody in a battle hears that it starts - on every casino page
   await h.wait(50);
   assert.strictEqual(bobHeard, false, "only the players of the battle");
 });
+
+test("battles: a tie - the winners split the pot (not the creator alone)", async () => {
+  // Every case gives the same item: alice and bob have the same total
+  const itemFor = cases.itemFor;
+  cases.itemFor = (box) => itemFor(box, 0.5);
+  try {
+    h.setCoins("alice", 500);
+    h.setCoins("bob", 500);
+    const alice = client("alice");
+    const bob = client("bob");
+    await Promise.all([waitFor(alice, "coins", (d) => d.coins === 500), waitFor(bob, "coins", (d) => d.coins === 500)]);
+    const created = h.once(alice, "battleCreated");
+    alice.emit("createBattle", { cases: ["starter", "classic"], size: 2, mode: "classic" });
+    const id = await created;
+    await waitFor(bob, "battles", (data) => battleIn(data, id));
+    const done = waitFor(bob, "battles", (data) => battleIn(data, id) && battleIn(data, id).phase === "done");
+    bob.emit("joinBattle", id);
+    const battle = battleIn(await done, id);
+    assert.strictEqual(battle.totals[0], battle.totals[1]);
+    assert.deepStrictEqual(battle.winners, [0, 1]);
+    assert.strictEqual(battle.shares[0] + battle.shares[1], battle.payout);
+    assert.ok(Math.abs(battle.shares[0] - battle.shares[1]) <= 1);
+    await h.wait(50);
+    const price = battle.price;
+    assert.deepStrictEqual([h.coinsOf("alice"), h.coinsOf("bob")], [500 - price + battle.shares[0], 500 - price + battle.shares[1]]);
+    assert.deepStrictEqual(server.battles.lobby.history[0].winners, ["alice", "bob"]);
+  } finally {
+    cases.itemFor = itemFor;
+  }
+});

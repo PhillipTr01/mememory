@@ -489,11 +489,21 @@ function seatAvatars(battle) {
   return seats;
 }
 
+// The winners (a tie: all of them - they split the pot) and what each gets
+function winnersOf(battle) {
+  return battle.winners || [battle.winner];
+}
+function shareOf(battle, seat) {
+  var index = winnersOf(battle).indexOf(seat);
+  return index < 0 ? 0 : battle.shares ? battle.shares[index] : battle.payout;
+}
+
 function phaseText(battle) {
   if (battle.phase == "waiting") return battle.seats.filter((s) => s == null).length + " seat(s) free";
   if (battle.phase == "running") return battle.revealed == 0 ? "Starting..." : "Round " + battle.revealed + " / " + battle.cases.length;
-  var winner = battle.seats[battle.winner];
-  return (winner.name == myName ? "You won" : winner.name + " won") + " 🪙 " + formatCoins(battle.payout);
+  var winners = winnersOf(battle).map((seat) => battle.seats[seat].name);
+  if (winners.length > 1) return "Split: " + winners.join(" & ") + " · 🪙 " + formatCoins(shareOf(battle, winnersOf(battle)[0])) + " each";
+  return (winners[0] == myName ? "You won" : winners[0] + " won") + " 🪙 " + formatCoins(battle.payout);
 }
 
 /* ---------- The two parts of the main page: open battles / create a battle ---------- */
@@ -580,7 +590,9 @@ function renderHistory() {
     ...lastBattles.map((entry) => {
       var multiple = entry.price > 0 ? entry.total / entry.price : 0;
       var sub = "Paid 🪙 " + formatCoins(entry.price) + (multiple >= 1 ? " · " + (multiple >= 10 ? Math.round(multiple) : multiple.toFixed(1)) + "x" : "");
-      return historyItem(createAvatar(entry.winner, "sm"), entry.winner, sub, "🪙 " + formatCoins(entry.total));
+      // A split pot: every winner named
+      var names = entry.winners && entry.winners.length > 1 ? entry.winners.join(" & ") : entry.winner;
+      return historyItem(createAvatar(entry.winner, "sm"), names, entry.winners && entry.winners.length > 1 ? "Split pot · " + sub : sub, "🪙 " + formatCoins(entry.total));
     }),
   );
 }
@@ -685,7 +697,7 @@ function renderBattle() {
   battle.seats.forEach((seat, index) => {
     var column = el("div", "bt-seat");
     column.dataset.seat = index;
-    if (over) column.classList.add(battle.winner == index ? "winner" : "lost");
+    if (over) column.classList.add(winnersOf(battle).includes(index) ? "winner" : "lost");
     else if (rounds > 0 && totals[index] == best) column.classList.add("leading");
     var head = el("div", "bt-seat-head");
     if (seat == null) {
@@ -770,12 +782,13 @@ function renderBattle() {
 var MEDALS = ["🥇", "🥈", "🥉", "4"];
 var PLACE_NAMES = ["1st", "2nd", "3rd", "4th"];
 
-// Place of every seat: the winner first, then by the totals
+// Place of every seat: the winners first (a tie: all of them 1st), then by the totals
 function placesOf(battle, totals) {
+  var winners = winnersOf(battle);
   var order = battle.seats.map((_, seat) => seat);
-  order.sort((a, b) => (a == battle.winner ? -1 : b == battle.winner ? 1 : battle.crazy ? totals[a] - totals[b] : totals[b] - totals[a]));
+  order.sort((a, b) => (winners.includes(a) && !winners.includes(b) ? -1 : winners.includes(b) && !winners.includes(a) ? 1 : battle.crazy ? totals[a] - totals[b] : totals[b] - totals[a]));
   var places = [];
-  order.forEach((seat, place) => (places[seat] = place));
+  order.forEach((seat, place) => (places[seat] = winners.includes(seat) ? 0 : place));
   return places;
 }
 
@@ -822,28 +835,34 @@ function finalTile(battle, seat, place, total) {
   tile.append(el("span", "bt-final-medal", MEDALS[place]), el("span", "bt-final-place", PLACE_NAMES[place]));
   var value = el("span", "bt-final-total", "🪙 " + formatCoins(total));
   tile.appendChild(value);
-  if (seat == battle.winner) tile.appendChild(el("span", "bt-final-gain", "Takes 🪙 " + formatCoins(battle.payout)));
+  if (winnersOf(battle).includes(seat)) tile.appendChild(el("span", "bt-final-gain", (winnersOf(battle).length > 1 ? "Splits · 🪙 " : "Takes 🪙 ") + formatCoins(shareOf(battle, seat))));
   return tile;
 }
 
 // The big result on top: who won, the pot, what it was for me - and the same battle again
 function resultHero(battle) {
-  var winner = battle.seats[battle.winner];
+  var seats = winnersOf(battle);
+  var split = seats.length > 1;
+  var mySeat = seats.find((seat) => battle.seats[seat].name == myName);
   var mine = isIn(battle);
-  var won = winner.name == myName;
+  var won = mySeat != null;
   var hero = el("div", "bt-hero" + (won ? " won" : mine ? " lost" : ""));
-  hero.appendChild(el("span", "bt-hero-trophy", won ? "🏆" : mine ? "💀" : "🏆"));
+  hero.appendChild(el("span", "bt-hero-trophy", split ? "🤝" : won ? "🏆" : mine ? "💀" : "🏆"));
   var main = el("div", "bt-hero-main");
-  var label = el("span", "bt-hero-label", won ? "You won the battle!" : battle.crazy ? "Winner - lowest total" : "Winner");
+  var label = el("span", "bt-hero-label", split ? (won ? "A tie - you split the pot!" : "A tie - the pot is split") : won ? "You won the battle!" : battle.crazy ? "Winner - lowest total" : "Winner");
   var name = el("div", "bt-hero-name");
-  name.append(createAvatar(winner.name), el("span", "", winner.name));
-  if (winner.bot) name.appendChild(el("span", "player-tag", "Bot"));
+  seats.forEach((seat, i) => {
+    var winner = battle.seats[seat];
+    if (i > 0) name.appendChild(el("span", "bt-hero-and", "&"));
+    name.append(createAvatar(winner.name), el("span", "", winner.name));
+    if (winner.bot) name.appendChild(el("span", "player-tag", "Bot"));
+  });
   main.append(label, name);
   var pot = el("div", "bt-hero-pot");
   pot.append(el("span", "bt-hero-label", "Pot"), el("b", "", "🪙 " + formatCoins(battle.payout)));
   hero.append(main, pot);
   if (mine) {
-    var profit = (won ? battle.payout : 0) - battle.price;
+    var profit = (won ? shareOf(battle, mySeat) : 0) - battle.price;
     var me = el("div", "bt-hero-me " + (profit >= 0 ? "plus" : "minus"));
     me.append(el("span", "bt-hero-label", "You"), el("b", "", (profit >= 0 ? "+" : "−") + formatCoins(Math.abs(profit))));
     hero.appendChild(me);
@@ -967,7 +986,7 @@ function celebrate(battle) {
 
 function party(battle) {
   if (battle.id != viewId) return;
-  var column = document.querySelector(`#btBattleView .bt-seat[data-seat="${battle.winner}"]`);
+  var column = document.querySelector(`#btBattleView .bt-seat[data-seat="${winnersOf(battle)[0]}"]`);
   if (column == null) return;
   var colors = ["#d4a64a", "#e0675a", "#3b82f6", "#3fae6b", "#ec4899", "#f5d76e"];
   var arena = column.parentElement;

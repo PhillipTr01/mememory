@@ -42,6 +42,7 @@ const GAMES = {
           "Every round all players open the same case. The items are worth coins.",
           "Whoever has the most worth at the end wins all the items of everybody, paid in coins when the battle is over.",
           "🤡 Crazy mode: the lowest worth wins.",
+          "A tie: everybody tied for the win splits the pot.",
           "The creator can fill free seats with bots - their items go to the winner, too.",
           `Nobody joins within ${minutes(config.BATTLE_EXPIRE)}: the battle is cancelled and you get your coins back.`,
         ],

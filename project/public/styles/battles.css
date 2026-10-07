@@ -1555,3 +1555,13 @@ button.bt-strip-case:hover {
     flex-basis: 100%;
   }
 }
+
+/* A tie: every winner in the result, "&" between them */
+.bt-hero-name {
+  flex-wrap: wrap;
+}
+
+.bt-hero-and {
+  color: var(--mm-muted);
+  font-weight: 600;
+}

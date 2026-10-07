@@ -77,7 +77,9 @@ module.exports = function (io) {
       rounds: rounds, // [[item index per seat] per shown round]
       totals: totals(battle, rounds),
       nextIn: battle.nextAt != null ? Math.max(0, battle.nextAt - Date.now()) : null,
-      winner: done ? battle.winner : null, // seat
+      winner: done ? battle.winner : null, // seat (the first one of a tie)
+      winners: done ? winnersOf(battle) : null, // seats - a tie: all of them, they split the pot
+      shares: done ? sharesOf(battle) : null, // what each of them gets
       payout: done ? battle.payout : null,
       // The seed is shown after the battle (provably fair)
       fair: done ? battle.fair : { hash: battle.fair.hash },
@@ -142,9 +144,11 @@ module.exports = function (io) {
     const all = totals(battle, battle.results);
     const best = battle.crazy ? Math.min(...all) : Math.max(...all);
     const tied = all.map((total, seat) => (total === best ? seat : -1)).filter((seat) => seat >= 0);
-    // A tie: the seed decides between them
-    battle.winner = tied[Math.floor(cases.roll(battle.fair.seed, `${battle.id}:tie`) * tied.length)];
+    // A tie: every one of them wins - the pot is split (a coin left over goes to the first)
+    battle.winners = tied;
+    battle.winner = tied[0];
     battle.payout = all.reduce((sum, total) => sum + total, 0);
+    battle.shares = tied.map((_, i) => Math.floor(battle.payout / tied.length) + (i < battle.payout % tied.length ? 1 : 0));
 
     // The winner is paid when the battle is over (see finish) - not before:
     // the coins can't be played elsewhere while the cases are still opened
@@ -176,18 +180,32 @@ module.exports = function (io) {
     else battle.timer = setTimeout(() => finish(battle), battle.nextAt - Date.now());
   }
 
-  // The pot goes to the winner - once (battles from before payAtEnd were paid at the start)
+  // Who won (a tie: all of them) and what each gets
+  function winnersOf(battle) {
+    return Array.isArray(battle.winners) ? battle.winners : [battle.winner];
+  }
+  function sharesOf(battle) {
+    return Array.isArray(battle.shares) ? battle.shares : [battle.payout];
+  }
+
+  // The pot goes to the winner(s) - once (battles from before payAtEnd were paid at the start)
   async function payWinner(battle) {
-    const winner = battle.seats[battle.winner];
-    if (!battle.payAtEnd || battle.paid || winner.bot || battle.payout <= 0) return;
+    if (!battle.payAtEnd || battle.paid || battle.payout <= 0) return;
     battle.paid = true;
     persist.changed("battles");
-    try {
-      await coins.add(winner.name, battle.payout, { reason: "battle win" });
-    } catch (error) {
-      battle.paid = false;
-      console.error("[battles] Could not pay the winner:", error);
-    }
+    const shares = sharesOf(battle);
+    await Promise.all(
+      winnersOf(battle).map(async (seat, i) => {
+        const winner = battle.seats[seat];
+        // (a bot's share stays in the house)
+        if (winner.bot || shares[i] <= 0) return;
+        try {
+          await coins.add(winner.name, shares[i], { reason: "battle win", note: shares.length > 1 ? "split pot" : undefined });
+        } catch (error) {
+          console.error("[battles] Could not pay a winner:", error);
+        }
+      }),
+    );
   }
 
   function finish(battle) {
@@ -197,8 +215,8 @@ module.exports = function (io) {
     // Random: the pages show which mode it was first - then the coins come
     if (modeOf(battle) === "random") setTimeout(() => payWinner(battle), config.BATTLE_MODE_REVEAL).unref();
     else payWinner(battle);
-    const winner = battle.seats[battle.winner];
-    lobby.history.unshift({ id: battle.id, winner: winner.name, bot: winner.bot, total: battle.payout, price: battle.price });
+    const winners = winnersOf(battle).map((seat) => battle.seats[seat]);
+    lobby.history.unshift({ id: battle.id, winner: winners[0].name, winners: winners.map((w) => w.name), bot: winners.every((w) => w.bot), total: battle.payout, price: battle.price });
     lobby.history.length = Math.min(lobby.history.length, config.BATTLE_HISTORY);
 
     emitList();
