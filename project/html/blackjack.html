@@ -92,7 +92,10 @@
                             <h1 class="jp-title" data-info="blackjack"><span class="bj-icon big" aria-hidden="true">21</span> Blackjack <span id="bjTableName" class="bj-table-name"></span> <span class="mm-badge" id="bjLimits"></span></h1>
                             <p id="bjStatus" class="jp-status" aria-live="polite"></p>
                         </div>
-                        <a id="bjBackToLobby" href="blackjack" class="mm-btn mm-btn-sm bj-lobby-back" hidden><i class="bi bi-grid"></i> All tables</a>
+                        <div class="bj-head-actions">
+                            <button type="button" id="bjStand" class="bj-icon-btn leave" title="Stand up - the bets come back" aria-label="Stand up" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+                            <a id="bjBackToLobby" href="blackjack" class="mm-btn mm-btn-sm bj-lobby-back" hidden><i class="bi bi-grid"></i> All tables</a>
+                        </div>
                     </div>
 
                     <!--- The lobby: one card per table --->
@@ -120,13 +123,12 @@
 
                     <!--- One click: the bets of the last round again --->
                     <div id="bjRebet" class="bj-rebet" hidden>
-                        <button type="button" id="bjRebetButton" class="mm-btn mm-btn-primary"><i class="bi bi-arrow-repeat"></i> <span id="bjRebetText">Same bet</span></button>
+                        <button type="button" id="bjRebetButton" class="bj-rebet-btn"><svg class="bj-rebet-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg><span class="bj-rebet-text"><span class="bj-rebet-title">Same bet</span><span id="bjRebetText" class="bj-rebet-sub"></span></span></button>
                     </div>
 
                     <!--- Betting: on a free seat or an own one --->
                     <div id="bjBetBar" class="bj-bar bj-betbar" hidden>
                         <!--- Like at the table: pick a chip, then click a bet field on your seat --->
-                        <span class="bj-bar-side" aria-hidden="true"></span>
                         <div class="bj-chip-picker">
                             <button type="button" class="bj-chip-arrow" data-step="-1" aria-label="Smaller chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
                             <div class="bj-chips" role="radiogroup" aria-label="Chip">
@@ -139,7 +141,6 @@
                             </div>
                             <button type="button" class="bj-chip-arrow" data-step="1" aria-label="Bigger chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
                         </div>
-                        <button type="button" id="bjClear" class="bj-leave" title="Stand up - the bets come back" aria-label="Stand up"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
                     </div>
 
                     <!--- Playing: the own hand --->

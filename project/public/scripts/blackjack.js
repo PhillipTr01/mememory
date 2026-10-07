@@ -171,28 +171,25 @@ function placeChip(seatIndex, field) {
 }
 
 // The three bet fields of an own seat while betting: Perfect Pairs, the bet, 21+3
-// The chips on a field as a stack (the biggest at the bottom), like on a real table
+// The coins on a field as one chip (the colour of the biggest chip in it, the edge thicker for more chips)
 var CHIPS = [5000, 1000, 500, 100, 50, 10];
-function chipStack(amount) {
-  var discs = [];
+function shortCoins(value) {
+  if (value >= 1000) return (value / 1000).toFixed(value % 1000 ? 1 : 0).replace(".0", "") + "K";
+  return String(value);
+}
+
+function chipFace(amount) {
+  var top = CHIPS.find((chip) => chip <= amount) || 10;
+  var count = 0;
   var rest = amount;
   CHIPS.forEach((chip) => {
-    while (rest >= chip && discs.length < 40) {
-      discs.push(chip);
-      rest -= chip;
-    }
+    count += Math.floor(rest / chip);
+    rest %= chip;
   });
-  // Odd coins (a table minimum like 25): one more small chip
-  if (rest > 0) discs.push(10);
-  var stack = el("span", "bj-stack");
-  // At most 8 to see - a high stack stays a stack
-  discs.slice(0, 8).forEach((chip, n) => {
-    var disc = el("span", "bj-disc");
-    disc.dataset.chip = chip;
-    disc.style.setProperty("--n", n);
-    stack.appendChild(disc);
-  });
-  return stack;
+  var face = el("span", "bj-chipface" + (count > 3 ? " tall" : count > 1 ? " stacked" : ""), shortCoins(amount));
+  face.dataset.chip = top;
+  face.title = "🪙 " + formatCoins(amount);
+  return face;
 }
 
 function betFields(seat, i) {
@@ -203,17 +200,19 @@ function betFields(seat, i) {
     ["plus3", "21+3"],
   ].forEach(([field, label]) => {
     var value = field == "main" ? seat.bet : seat.side[field];
+    var wrap = el("div", "bj-field-wrap " + field);
     var spot = el("button", "bj-field " + field + (value > 0 ? " filled" : ""));
     spot.type = "button";
     spot.title = field == "main" ? "Your bet - click to put the chip here" : SIDE_NAMES[field] + " - up to half the bet";
     spot.disabled = field != "main" && seat.bet == 0;
-    if (value > 0) spot.append(chipStack(value), el("span", "bj-field-amount", formatCoins(value)));
-    else spot.appendChild(el("span", "bj-field-label", label));
+    if (value > 0) spot.appendChild(chipFace(value));
     spot.addEventListener("click", (event) => {
       event.stopPropagation();
       placeChip(i, field);
     });
-    fields.appendChild(spot);
+    spot.setAttribute("aria-label", label);
+    wrap.append(spot, el("span", "bj-field-label", label));
+    fields.appendChild(wrap);
   });
   return fields;
 }
@@ -443,11 +442,18 @@ function renderRebet() {
   if (bar.hidden) return;
   var button = document.getElementById("bjRebetButton");
   button.disabled = total > myCoins;
-  document.getElementById("bjRebetText").innerText = "Same bet · 🪙 " + formatCoins(total) + (last.length > 1 ? " on " + last.length + " seats" : "");
+  document.getElementById("bjRebetText").innerText = "🪙 " + formatCoins(total) + (last.length > 1 ? " · " + last.length + " seats" : "");
+}
+
+// The own seats one can leave now (not while their cards are played)
+function standable() {
+  return mySeats().filter((i) => state.phase == "betting" || state.seats[i].hands.length == 0);
 }
 
 function renderBars() {
   renderRebet();
+  var stand = document.getElementById("bjStand");
+  stand.hidden = standable().length == 0;
   var betBar = document.getElementById("bjBetBar");
   var canBet = state.phase == "betting" && selected != null;
   betBar.hidden = !canBet;
@@ -532,9 +538,9 @@ document.addEventListener("DOMContentLoaded", () => {
       pickChip(values[next]);
     }),
   );
-  // Stand up: the bet on the seat comes back
-  document.getElementById("bjClear").addEventListener("click", () => {
-    socket.emit("clearBet", selected);
+  // Stand up (every own seat that isn't dealt in): the bets come back
+  document.getElementById("bjStand").addEventListener("click", () => {
+    standable().forEach((i) => socket.emit("clearBet", i));
     selected = null;
   });
   document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", () => socket.emit("action", button.dataset.action)));

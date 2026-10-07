@@ -424,10 +424,60 @@
   display: none;
 }
 
-.bj-rebet .mm-btn {
-  padding: 0.65rem 1.4rem;
+.bj-rebet {
+  margin: 0.4rem 0;
+}
+
+/* Same bet: the icon, then what and how much on two lines - room to breathe */
+.bj-rebet-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.6rem 1.5rem 0.6rem 0.75rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.6);
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.1);
+  color: var(--mm-text);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.bj-rebet-btn:hover:not(:disabled) {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.18);
+}
+
+.bj-rebet-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.bj-rebet-icon {
+  width: 34px;
+  height: 34px;
+  padding: 8px;
+  border-radius: 50%;
+  background: var(--mm-accent);
+  color: #1a1305;
+}
+
+.bj-rebet-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.bj-rebet-title {
+  font-size: 0.95rem;
   font-weight: 800;
-  box-shadow: 0 0 18px rgba(var(--mm-accent-rgb), 0.35);
+}
+
+.bj-rebet-sub {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--mm-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 767px) {
@@ -676,11 +726,10 @@
   box-shadow: 0 0 0 3px var(--mm-accent), 0 6px 14px rgba(0, 0, 0, 0.5);
 }
 
-/* Chips in the middle, arrows to switch, stand up on the right */
+/* Chips in the middle, arrows to switch */
 .bj-betbar {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
+  display: flex;
+  justify-content: center;
 }
 
 .bj-chip-picker {
@@ -712,74 +761,31 @@
   height: 16px;
 }
 
-/* ---------- A stack of chips on a bet field ---------- */
-.bj-field {
-  position: relative;
-}
-
-.bj-stack {
-  position: absolute;
-  left: 50%;
-  bottom: 50%;
-  width: 78%;
-  aspect-ratio: 1;
-  transform: translate(-50%, 50%);
-  pointer-events: none;
-}
-
-/* One chip of the stack: every chip a little higher (seen from the side) */
-.bj-disc {
-  position: absolute;
-  left: 0;
-  bottom: calc(var(--n) * 3px);
-  width: 100%;
-  height: 100%;
-  border: 2px dashed rgba(255, 255, 255, 0.6);
-  border-radius: 50%;
-  background: #1f2937;
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
-}
-
-.bj-disc[data-chip="50"] { background: #b91c1c; }
-.bj-disc[data-chip="100"] { background: #1d4ed8; }
-.bj-disc[data-chip="500"] { background: #6d28d9; }
-.bj-disc[data-chip="1000"] { background: #b45309; }
-.bj-disc[data-chip="5000"] { background: #a16207; border-color: #fde68a; }
-
-/* How much is on it: under the field */
-.bj-field-amount {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 2px);
-  padding: 0 0.35rem;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  font-size: 0.6rem;
-  font-weight: 800;
-  white-space: nowrap;
-  transform: translateX(-50%);
-}
-
-/* ---------- The bet fields on an own seat: PP · BET · 21+3 ---------- */
+/* ---------- The bet fields on an own seat: PP · BET · 21+3 (the name under the circle) ---------- */
 .bj-fields {
-  margin-bottom: 0.9rem;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.55rem;
+}
+
+.bj-field-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
 }
 
 .bj-field {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
+  margin-top: 9px;
   padding: 0;
-  border: 2px dashed rgba(255, 255, 255, 0.45);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.18);
-  color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.16);
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
 }
@@ -787,16 +793,17 @@
 .bj-field.main {
   width: 54px;
   height: 54px;
-  border-color: rgba(var(--mm-accent-rgb), 0.8);
+  margin-top: 0;
+  border-color: rgba(var(--mm-accent-rgb), 0.75);
 }
 
 .bj-field:hover:not(:disabled) {
   border-color: var(--mm-accent);
-  background: rgba(var(--mm-accent-rgb), 0.2);
+  background: rgba(var(--mm-accent-rgb), 0.18);
 }
 
 .bj-field:active:not(:disabled) {
-  transform: scale(0.94);
+  transform: scale(0.95);
 }
 
 .bj-field:disabled {
@@ -804,52 +811,90 @@
   cursor: default;
 }
 
-/* With coins on it: the stack stands on it */
 .bj-field.filled {
-  border-style: solid;
-  border-color: rgba(255, 255, 255, 0.25);
+  border-color: transparent;
+  background: none;
 }
 
 .bj-field-label {
-  max-width: 100%;
-  overflow: hidden;
-  font-size: 0.56rem;
+  font-size: 0.6rem;
   font-weight: 800;
-  line-height: 1.05;
-  text-align: center;
-  white-space: normal;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.6);
 }
 
-.bj-field.main .bj-field-label {
-  font-size: 0.7rem;
+.bj-field-wrap.main .bj-field-label {
+  color: var(--mm-accent);
 }
 
-/* Stand up: an icon on the right */
-.bj-leave {
-  justify-self: end;
+/* The coins on a field: one chip with the amount (a thicker edge for a stack) */
+.bj-chipface {
   display: grid;
   place-items: center;
-  flex: 0 0 auto;
-  width: 38px;
-  height: 38px;
-  margin-left: auto;
-  align-self: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #1f2937;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.85), inset 0 0 0 5px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.bj-field.main .bj-chipface {
+  font-size: 0.8rem;
+}
+
+.bj-chipface.stacked {
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.85), inset 0 0 0 5px rgba(0, 0, 0, 0.25), 0 3px 0 rgba(0, 0, 0, 0.35), 0 5px 6px rgba(0, 0, 0, 0.35);
+}
+
+.bj-chipface.tall {
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.85), inset 0 0 0 5px rgba(0, 0, 0, 0.25), 0 3px 0 rgba(0, 0, 0, 0.35), 0 6px 0 rgba(0, 0, 0, 0.25), 0 8px 8px rgba(0, 0, 0, 0.35);
+}
+
+.bj-chipface[data-chip="50"] { background: #b91c1c; }
+.bj-chipface[data-chip="100"] { background: #1d4ed8; }
+.bj-chipface[data-chip="500"] { background: #6d28d9; }
+.bj-chipface[data-chip="1000"] { background: #b45309; }
+.bj-chipface[data-chip="5000"] { background: #a16207; }
+
+/* Next to "All tables": stand up, round, like at the poker table */
+.bj-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.bj-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
   padding: 0;
   border: 1px solid var(--mm-border);
-  border-radius: 50%;
+  border-radius: 999px;
   background: var(--mm-surface);
-  color: var(--mm-muted);
+  color: var(--mm-text);
   cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
 }
 
-.bj-leave:hover {
+.bj-icon-btn[hidden] {
+  display: none;
+}
+
+.bj-icon-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.bj-icon-btn.leave:hover {
   border-color: var(--mm-danger);
   color: var(--mm-danger);
-}
-
-.bj-leave svg {
-  width: 18px;
-  height: 18px;
 }
 
 /* On the seat: the side bets small next to the bet */
@@ -875,17 +920,8 @@
 }
 
 @media (max-width: 767px) {
-  .bj-betbar {
-    grid-template-columns: 1fr auto;
-  }
-
   .bj-chip-picker {
-    justify-self: center;
     gap: 0.25rem;
-  }
-
-  .bj-bar-side {
-    display: none;
   }
 
   .bj-field {
@@ -894,7 +930,7 @@
   }
 
   .bj-field.main {
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
   }
 }
