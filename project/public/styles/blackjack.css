@@ -923,17 +923,21 @@
   display: none;
 }
 
+/* With a bump: more room to the table (the seats reach down to its edge) */
 .bj-bar:has(.bj-bump:not([hidden])) {
-  margin-top: 3rem;
+  margin-top: 4.2rem;
 }
 
-.bj-bar:has(.bj-rebet-tab:not([hidden])) {
-  margin-top: 2.8rem;
+/* Both bumps (same bet, the hand) as wide as each other */
+.bj-bump {
+  box-sizing: border-box;
+  justify-content: center;
+  min-width: 240px;
 }
 
 /* Same bet: small - the arrow in a gold coin and the amount */
 .bj-rebet-tab {
-  height: 36px;
+  height: 44px;
   gap: 0.45rem;
   padding: 0 0.9rem 0 0.45rem;
   font-size: 0.85rem;
@@ -978,7 +982,6 @@
   justify-content: center;
   gap: 0.25rem;
   height: 44px;
-  min-width: 170px;
   color: var(--mm-accent);
 }
 
@@ -997,7 +1000,7 @@
 
 /* A move: a round button with its colour, the name under it */
 .bj-act {
-  --c: #d4d4d8;
+  --c: #a1a1aa;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1009,9 +1012,21 @@
   cursor: pointer;
 }
 
-/* Hit: the usual move, in gold */
+/* Each move its own colour - soft, not shiny */
 .bj-act.hit {
-  --c: var(--mm-accent);
+  --c: #c9a24a;
+}
+
+.bj-act.stand {
+  --c: #c2706a;
+}
+
+.bj-act.double {
+  --c: #6fa784;
+}
+
+.bj-act.split {
+  --c: #7895c4;
 }
 
 .bj-act-icon {
@@ -1019,11 +1034,10 @@
   place-items: center;
   width: 50px;
   height: 50px;
-  border: 2px solid color-mix(in srgb, var(--c) 55%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--c) 60%, transparent);
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--c) 12%, var(--mm-surface-2)), var(--mm-surface-2) 75%);
+  background: color-mix(in srgb, var(--c) 14%, var(--mm-surface-2));
   color: var(--c);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
   transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
@@ -1051,10 +1065,9 @@
 }
 
 .bj-act:hover:not(:disabled) .bj-act-icon {
-  border-color: var(--mm-accent);
-  color: var(--mm-accent);
+  border-color: var(--c);
+  background: color-mix(in srgb, var(--c) 24%, var(--mm-surface-2));
   transform: translateY(-2px);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 22%, transparent), 0 6px 14px rgba(0, 0, 0, 0.4);
 }
 
 .bj-act:hover:not(:disabled) .bj-act-name {
