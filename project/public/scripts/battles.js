@@ -647,7 +647,7 @@ function renderBattle() {
   battle.seats.forEach((_, seat) => (pot += totalOf(battle, seat, rounds)));
   var potBox = el("span", "bt-top-pot");
   potBox.append(el("span", "bt-top-pot-label", "Pot"), document.createTextNode("🪙 " + formatCoins(pot)));
-  top.append(facts, potBox, back);
+  top.append(facts, back);
 
   var strip = caseStrip(battle, battle.phase == "running" ? rounds : null);
   strip.classList.add("big");
@@ -711,7 +711,10 @@ function renderBattle() {
   });
 
   headBar.replaceChildren(top);
-  var parts = over ? [resultHero(battle), strip, grid] : [strip, grid];
+  // The cases in the middle, the pot beside them on the right
+  var stripRow = el("div", "bt-strip-row");
+  stripRow.append(el("span"), strip, potBox);
+  var parts = over ? [resultHero(battle), stripRow, grid] : [stripRow, grid];
   if (battle.phase == "waiting" && battle.creator == myName) {
     var cancel = el("button", "bt-cancel");
     cancel.type = "button";

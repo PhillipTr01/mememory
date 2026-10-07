@@ -1281,6 +1281,18 @@ button.bt-strip-case:hover {
   white-space: nowrap;
 }
 
+/* The cases (centered) with the pot on the right */
+.bt-strip-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bt-strip-row .bt-top-pot {
+  justify-self: end;
+}
+
 /* A thin dot between the facts */
 .bt-top-facts > span + span::before {
   content: "·";
@@ -1350,5 +1362,16 @@ button.bt-strip-case:hover {
 
   .bt-head-bar {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 767px) {
+  .bt-strip-row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .bt-strip-row .bt-top-pot {
+    justify-self: center;
   }
 }
