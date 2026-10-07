@@ -458,6 +458,16 @@
 }
 
 /* ---------- Actions ---------- */
+/* Not the own turn: the bar stays, quiet */
+.pk-actions.idle {
+  border-color: var(--mm-border);
+  background: var(--mm-surface);
+}
+
+.pk-actions.idle > * {
+  opacity: 0.45;
+}
+
 .pk-actions {
   display: flex;
   flex-wrap: wrap;

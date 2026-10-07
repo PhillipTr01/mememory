@@ -545,11 +545,14 @@ function standable() {
 function renderBars() {
   renderRebet();
   requestAnimationFrame(() => document.querySelectorAll(".bj-bump:not([hidden])").forEach(bumpShape));
+  // Leave: only the selected seat
   var stand = document.getElementById("bjStand");
-  stand.hidden = standable().length == 0;
+  stand.hidden = selected == null || !standable().includes(selected);
   var betBar = document.getElementById("bjBetBar");
   var canBet = state.phase == "betting" && selected != null;
   betBar.hidden = !canBet;
+  // Clear all bets: when there are own bets on the table
+  document.getElementById("bjClearBets").hidden = !(state.phase == "betting" && mySeats().some((i) => state.seats[i].bet > 0));
   if (canBet) {
     var seat = state.seats[selected];
     document.querySelectorAll(".bj-chip").forEach((chip) => {
@@ -560,10 +563,20 @@ function renderBars() {
     });
   }
 
+  // The action bar is always there (when the bet bar isn't): the moves only on the own turn
   var actions = document.getElementById("bjActions");
-  var turn = myTurn();
-  actions.hidden = !(state.phase == "playing" && turn);
+  var turn = state.phase == "playing" ? myTurn() : null;
+  actions.hidden = canBet;
+  actions.classList.toggle("idle", !turn);
+  if (!turn) {
+    document.getElementById("bjActionLabel").innerText = mySeats().length == 0 ? "Take a seat to play" : state.phase == "betting" ? "Pick your seat to bet" : "Waiting for your turn";
+    document.querySelectorAll("#bjActions [data-action]").forEach((button) => (button.disabled = true));
+    var idleFill = document.getElementById("bjTurnFill");
+    idleFill.style.transition = "none";
+    idleFill.style.width = "0%";
+  }
   if (turn) {
+    document.querySelectorAll("#bjActions [data-action]").forEach((button) => (button.disabled = false));
     var hand = turn.hand;
     document.getElementById("bjActionLabel").innerText = "Seat " + (state.current.seat + 1) + (turn.seat.hands.length > 1 ? " · hand " + (state.current.hand + 1) : "") + " · " + valueText(hand.value, false);
     var two = hand.cards.length == 2;
@@ -632,10 +645,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }),
   );
   // Stand up (every own seat that isn't dealt in): the bets come back
+  // Leave the selected seat (its bet comes back) - the other own seats stay
   document.getElementById("bjStand").addEventListener("click", () => {
-    standable().forEach((i) => socket.emit("clearBet", i));
+    if (selected == null || !standable().includes(selected)) return;
+    socket.emit("clearBet", selected);
     selected = null;
   });
+  // All own bets off the table, the seats stay
+  document.getElementById("bjClearBets").addEventListener("click", () => socket.emit("clearBets"));
   document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", () => socket.emit("action", button.dataset.action)));
   document.getElementById("bjDealNow").addEventListener("click", () => socket.emit("dealNow"));
   document.getElementById("bjRebetButton").addEventListener("click", () => {

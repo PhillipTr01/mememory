@@ -562,6 +562,32 @@ module.exports = function (io) {
         }
       },
 
+      // Every own bet off the table (the seats stay): the coins come back
+      async clearBets(username, error) {
+        if (table.phase !== "betting") return error("The round runs - wait for the next one.");
+        if (busy.has(username)) return;
+        busy.add(username);
+        try {
+          let back = 0;
+          table.seats.forEach((seat, i) => {
+            if (!seat || seat.name !== username || staked(seat) <= 0) return;
+            back += staked(seat);
+            seat.bet = 0;
+            seat.side = { pairs: 0, plus3: 0 };
+            startStandTimer(i);
+          });
+          if (back === 0) return;
+          if (playing().length === 0) {
+            clearTimeout(table.timer);
+            table.startAt = null;
+          }
+          await coins.add(username, back, { reason: "blackjack refund", note: "bets cleared" });
+          emitState();
+        } finally {
+          busy.delete(username);
+        }
+      },
+
       // Stand up (while betting, or before the own seat plays): the bet comes back
       async clearBet(username, error, s) {
         const seat = table.seats[s];

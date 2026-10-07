@@ -367,11 +367,20 @@ function renderDecide() {
   decideAnimation = document.getElementById("pkDecideBar").animate([{ transform: `scaleX(${1 - start})` }, { transform: "scaleX(0)" }], { duration: state.decideIn, fill: "forwards" });
 }
 
+// The action bar is always there - quiet (and nothing to click) while it isn't the own turn
 function renderActions() {
   var box = document.getElementById("pkActions");
   var show = myTurn();
-  box.hidden = !show;
-  if (!show) return;
+  box.hidden = false;
+  box.classList.toggle("idle", !show);
+  box.querySelectorAll("button, input").forEach((control) => (control.disabled = !show));
+  if (!show) {
+    document.getElementById("pkCall").innerText = "Check";
+    document.getElementById("pkRaise").innerText = "Raise";
+    document.getElementById("pkRaise").hidden = false;
+    document.getElementById("pkRaiseBox").hidden = false;
+    return;
+  }
   var l = limits();
   var call = document.getElementById("pkCall");
   if (l.toCall == 0) call.innerText = "Check";

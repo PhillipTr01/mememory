@@ -7,6 +7,9 @@
  * (cards, seats, chips, the bar - not only the table) as big as the screen
  * allows - looked at again and again, so what comes later (the action bar)
  * fits too.
+ *
+ * In full screen the coins (of the bar at the top, which is gone then) show in
+ * the top right corner.
  */
 (function () {
   var ICON =
@@ -18,7 +21,10 @@
     var width = null;
     var timer = null;
     var zoom = 1;
-    var parts = () => Array.prototype.slice.call(target.children);
+    var parts = () =>
+      Array.prototype.slice.call(target.children).filter(function (part) {
+        return !part.classList.contains("cs-fs-coins");
+      });
     function fit() {
       var style = getComputedStyle(target);
       var room = {
@@ -72,11 +78,43 @@
     };
   }
 
+  // The coins in the corner: a copy of the bar's, kept up to date
+  function coinsCorner(target) {
+    var source = document.getElementById("navCoinsValue");
+    var box = null;
+    var watcher = null;
+    return {
+      show: function () {
+        if (!source || box) return;
+        box = document.createElement("div");
+        box.className = "cs-fs-coins";
+        var value = document.createElement("span");
+        box.append("🪙 ", value);
+        var copy = function () {
+          value.textContent = source.textContent;
+        };
+        copy();
+        watcher = new MutationObserver(copy);
+        watcher.observe(source, { childList: true, characterData: true, subtree: true });
+        target.appendChild(box);
+        target.classList.add("cs-fs-with-coins");
+      },
+      hide: function () {
+        if (watcher) watcher.disconnect();
+        if (box) box.remove();
+        box = null;
+        watcher = null;
+        target.classList.remove("cs-fs-with-coins");
+      },
+    };
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("[data-fullscreen]").forEach(function (button) {
       var target = document.querySelector(button.dataset.fullscreen);
       if (!target) return;
       var zoom = button.hasAttribute("data-fullscreen-zoom") ? zoomer(target) : null;
+      var corner = coinsCorner(target);
       if (!button.innerHTML.trim()) button.innerHTML = ICON;
       button.title = "Full screen";
       button.setAttribute("aria-label", "Full screen");
@@ -92,6 +130,8 @@
         button.classList.toggle("on", on);
         button.title = on ? "Leave full screen" : "Full screen";
         target.classList.toggle("cs-fullscreen", on);
+        if (on) corner.show();
+        else corner.hide();
         if (zoom) {
           if (on) zoom.start();
           else zoom.stop();

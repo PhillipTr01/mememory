@@ -184,7 +184,15 @@ test("blackjack: sit down first, bets 10 to 5,000 per seat, a second seat after 
   }
   assert.strictEqual(h.coinsOf("alice"), 20000 - 3500);
 
-  // Taking the bets back: the coins come back, the seats are free
+  // Clear all bets: the coins come back, the seats stay
+  alice.emit("clearBets");
+  const cleared = await waitFor(alice, "blackjackState", (s) => s.seats[0] && s.seats[0].bet === 0 && s.seats[1] && s.seats[1].bet === 0);
+  assert.deepStrictEqual([cleared.seats[0].name, cleared.seats[1].name], ["alice", "alice"]);
+  assert.strictEqual(cleared.startIn, null, "no bet: no betting time");
+  await h.wait(30);
+  assert.strictEqual(h.coinsOf("alice"), 20000);
+
+  // Leaving the seats: they are free
   alice.emit("clearBet", 0);
   alice.emit("clearBet", 1);
   await waitFor(alice, "blackjackState", (s) => s.seats.every((seat) => seat == null));

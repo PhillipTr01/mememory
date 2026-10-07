@@ -3520,3 +3520,26 @@ body.jackpot-theme > header {
   background: var(--mm-bg, #141414);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
+
+/* Full screen: the coins in the top right corner (the bar at the top is gone) */
+.cs-fs-coins {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.85rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.5);
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.9);
+  color: var(--mm-accent);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.cs-fullscreen.cs-fs-with-coins {
+  padding-top: 3.6rem !important;
+}
