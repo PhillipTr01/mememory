@@ -215,7 +215,6 @@
   /* ---------- A case battle of mine starts (on every casino page) ---------- */
 
   var notice = null;
-  var titleTimer = null;
 
   function watchBattle(id) {
     // On the battles page: open it right there
@@ -267,17 +266,7 @@
           // not everywhere (mobile)
         }
       }
-      var original = document.title;
-      var on = false;
-      clearInterval(titleTimer);
-      titleTimer = setInterval(() => {
-        on = !on;
-        document.title = on ? "⚔️ Battle starts!" : original;
-        if (!document.hidden) {
-          clearInterval(titleTimer);
-          document.title = original;
-        }
-      }, 900);
+      // (the title of the tab stays as it is)
     }
   });
 

@@ -219,7 +219,7 @@ function shufflePicked() {
  * The card of a case: more = new rounds at the end (Whale, Vault, Whale is
  * possible), fewer = the last rounds of this case go.
  */
-var MAX_CASES = 100; // cases per battle (from the server, which checks it too)
+var MAX_CASES = 50; // cases per battle (from the server, which checks it too)
 
 function setCount(id, count) {
   count = Math.max(0, Math.floor(Number(count)) || 0);

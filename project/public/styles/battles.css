@@ -541,7 +541,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* Over the reels (the top of the seats), not down at the won items */
+  justify-content: flex-start;
+  padding-top: clamp(4.5rem, 9vw, 7rem);
   gap: 0.5rem;
   border-radius: var(--mm-radius);
   background: rgba(14, 14, 14, 0.82);
