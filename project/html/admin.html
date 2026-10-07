@@ -205,14 +205,15 @@
                                 </div>
                                 <span class="ad-setting-hint">The accent of the casino during the season (buttons, chat, highlights) - the coins stay gold.</span>
                             </div>
-                            <label class="ad-field">
+                            <!--- Start and end: the date picker of the site (admin.js), the value in the hidden input --->
+                            <div class="ad-field">
                                 <span class="ad-label">Start</span>
-                                <input id="adSeasonStart" class="mm-input" type="datetime-local" required>
-                            </label>
-                            <label class="ad-field">
+                                <div class="ad-date"><input id="adSeasonStart" type="hidden"><button type="button" class="mm-input ad-date-btn" data-for="adSeasonStart"></button></div>
+                            </div>
+                            <div class="ad-field">
                                 <span class="ad-label">End</span>
-                                <input id="adSeasonEnd" class="mm-input" type="datetime-local" required>
-                            </label>
+                                <div class="ad-date"><input id="adSeasonEnd" type="hidden"><button type="button" class="mm-input ad-date-btn" data-for="adSeasonEnd"></button></div>
+                            </div>
                             <label class="ad-field">
                                 <span class="ad-label">Start budget</span>
                                 <input id="adSeasonBudget" class="mm-input" type="number" min="0" step="1" value="25000" required>

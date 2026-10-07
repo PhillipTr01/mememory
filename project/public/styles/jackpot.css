@@ -3213,13 +3213,34 @@ body.jackpot-theme {
 }
 
 /* In a season: the balance from before it, small next to the coins */
+/* Only on hover: a small label under the coins */
+.nav-coins:has(.nav-coins-stored) {
+  position: relative;
+}
+
 .nav-coins-stored {
-  margin-left: 0.5rem;
-  padding-left: 0.5rem;
-  border-left: 1px solid rgba(var(--mm-accent-rgb), 0.35);
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.45);
+  border-radius: 999px;
+  background: var(--mm-surface);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
   font-size: 0.78em;
   font-weight: 700;
-  opacity: 0.8;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.nav-coins:hover .nav-coins-stored,
+.nav-coins:focus-visible .nav-coins-stored {
+  opacity: 1;
+  transform: none;
 }
 
 /* A second chance: over the whole page */

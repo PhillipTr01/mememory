@@ -618,6 +618,7 @@ function fillSeasonForm(season) {
   var running = season.status == "running";
   document.getElementById("adSeasonStart").disabled = running;
   document.getElementById("adSeasonBudget").disabled = running;
+  syncDates();
   document.getElementById("adSeasonPrizes").replaceChildren(...season.prizes.map(prizeRow));
   if (season.prizes.length == 0) document.getElementById("adSeasonPrizes").appendChild(prizeRow({ place: 1, prize: "" }));
   showPrizes();
@@ -626,6 +627,140 @@ function fillSeasonForm(season) {
   document.getElementById("adSeasonCancel").hidden = editingSeason == null;
   markIcon();
 }
+
+/* ---------- Date picker (in the style of the site) ---------- */
+
+var WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+var picker = null; // {input, button, month (Date of the 1st), box}
+
+function dateOf(input) {
+  return input.value ? new Date(input.value) : new Date();
+}
+
+// The buttons show the dates of their inputs (and can't be used when the input is disabled)
+function syncDates() {
+  document.querySelectorAll(".ad-date-btn").forEach((button) => {
+    var input = document.getElementById(button.dataset.for);
+    button.disabled = input.disabled;
+    button.replaceChildren(el("span", "ad-date-icon", "📅"), el("span", "", input.value ? dateText(dateOf(input)) : "Choose..."));
+  });
+}
+
+function setDate(input, date) {
+  input.value = localInput(date);
+  syncDates();
+}
+
+function openPicker(button) {
+  closePicker();
+  var input = document.getElementById(button.dataset.for);
+  var current = dateOf(input);
+  var box = el("div", "ad-picker");
+  box.setAttribute("role", "dialog");
+  picker = { input: input, button: button, month: new Date(current.getFullYear(), current.getMonth(), 1), box: box };
+  button.parentElement.appendChild(box);
+  button.classList.add("open");
+  renderPicker();
+}
+
+function closePicker() {
+  if (!picker) return;
+  picker.box.remove();
+  picker.button.classList.remove("open");
+  picker = null;
+}
+
+function renderPicker() {
+  var p = picker;
+  var value = dateOf(p.input);
+  var head = el("div", "ad-picker-head");
+  var prev = el("button", "ad-picker-nav", "‹");
+  var next = el("button", "ad-picker-nav", "›");
+  prev.type = next.type = "button";
+  prev.setAttribute("aria-label", "Previous month");
+  next.setAttribute("aria-label", "Next month");
+  prev.addEventListener("click", () => {
+    p.month = new Date(p.month.getFullYear(), p.month.getMonth() - 1, 1);
+    renderPicker();
+  });
+  next.addEventListener("click", () => {
+    p.month = new Date(p.month.getFullYear(), p.month.getMonth() + 1, 1);
+    renderPicker();
+  });
+  head.append(prev, el("span", "ad-picker-month", p.month.toLocaleDateString(undefined, { month: "long", year: "numeric" })), next);
+
+  var grid = el("div", "ad-picker-grid");
+  WEEKDAYS.forEach((d) => grid.appendChild(el("span", "ad-picker-wd", d)));
+  // From the Monday of the first week
+  var first = new Date(p.month);
+  first.setDate(1 - ((first.getDay() + 6) % 7));
+  var today = new Date();
+  for (var i = 0; i < 42; i++) {
+    var day = new Date(first.getFullYear(), first.getMonth(), first.getDate() + i);
+    var cell = el("button", "ad-picker-day", day.getDate());
+    cell.type = "button";
+    if (day.getMonth() != p.month.getMonth()) cell.classList.add("other");
+    if (day.toDateString() == today.toDateString()) cell.classList.add("today");
+    if (day.toDateString() == value.toDateString()) cell.classList.add("picked");
+    cell.addEventListener(
+      "click",
+      ((d) => () => {
+        var v = dateOf(p.input);
+        setDate(p.input, new Date(d.getFullYear(), d.getMonth(), d.getDate(), v.getHours(), v.getMinutes()));
+        p.month = new Date(d.getFullYear(), d.getMonth(), 1);
+        renderPicker();
+      })(day),
+    );
+    grid.appendChild(cell);
+  }
+
+  // The time: hour and minute (5-minute steps)
+  var time = el("div", "ad-picker-time");
+  var hours = el("select", "mm-input ad-picker-select");
+  var minutes = el("select", "mm-input ad-picker-select");
+  for (var h = 0; h < 24; h++) hours.appendChild(new Option(String(h).padStart(2, "0"), h));
+  for (var m = 0; m < 60; m += 5) minutes.appendChild(new Option(String(m).padStart(2, "0"), m));
+  hours.value = value.getHours();
+  minutes.value = Math.floor(value.getMinutes() / 5) * 5;
+  var setTime = () => {
+    var v = dateOf(p.input);
+    setDate(p.input, new Date(v.getFullYear(), v.getMonth(), v.getDate(), Number(hours.value), Number(minutes.value)));
+  };
+  hours.addEventListener("change", setTime);
+  minutes.addEventListener("change", setTime);
+  time.append(el("span", "ad-label", "Time"), hours, el("span", "ad-picker-colon", ":"), minutes);
+
+  var foot = el("div", "ad-picker-foot");
+  var now = el("button", "mm-btn mm-btn-sm", "Now");
+  var done = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Done");
+  now.type = done.type = "button";
+  now.addEventListener("click", () => {
+    var d = new Date();
+    d.setSeconds(0, 0);
+    d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5);
+    setDate(p.input, d);
+    p.month = new Date(d.getFullYear(), d.getMonth(), 1);
+    renderPicker();
+  });
+  done.addEventListener("click", closePicker);
+  foot.append(now, done);
+  p.box.replaceChildren(head, grid, time, foot);
+}
+
+document.addEventListener("click", (event) => {
+  var button = event.target.closest(".ad-date-btn");
+  if (button) {
+    if (picker && picker.button == button) closePicker();
+    else if (!button.disabled) openPicker(button);
+    return;
+  }
+  // (a click in the picker draws it anew - its button is gone then, but it was inside)
+  if (picker && event.target.isConnected && !event.target.closest(".ad-picker")) closePicker();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key == "Escape") closePicker();
+});
 
 function prizeRow(prize) {
   var row = el("div", "ad-prize-row");
