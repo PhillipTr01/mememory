@@ -186,7 +186,6 @@ async function loadOverview() {
         ? data.leaderboard.slice(0, 5).map((p, i) => {
             var row = el("div", "ad-row");
             var name = el("span", "ad-row-main fw-semibold", p.username);
-            if (p.season) name.append(" ", seasonPill(p.season));
             var value = el("span", "ad-row-value", "🪙 " + formatCoins(p.coins));
             if (p.bank != null) value.appendChild(el("small", "ad-bank", "🏦 " + formatCoins(p.bank)));
             row.append(el("span", "ad-rank", i + 1), name, value);
