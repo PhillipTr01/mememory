@@ -332,13 +332,19 @@ function renderBet() {
   if (state == null) return;
   var mine = myEntry();
   var inPot = mine ? mine.coins : 0;
-  var myBets = (state.bets || []).concat(state.pending || []).filter((bet) => bet.name == myName).length;
+  // During a draw a bet goes into the next pot: only the bets for that one count
+  var drawing = state.phase == "drawing";
+  var counted = drawing ? (state.pending || []).filter((bet) => bet.next) : (state.bets || []).concat(state.pending || []);
+  var myBets = counted.filter((bet) => bet.name == myName).length;
   var betsLeft = Math.max(0, state.maxBets - myBets);
   // All bets of a round together: at most maxCoins
-  var myAmount = (state.bets || []).concat(state.pending || []).filter((bet) => bet.name == myName).reduce((sum, bet) => sum + bet.amount, 0);
+  var myAmount = counted.filter((bet) => bet.name == myName).reduce((sum, bet) => sum + bet.amount, 0);
   var coinsLeft = state.maxCoins != null ? Math.max(0, state.maxCoins - myAmount) : Infinity;
   var room = betsLeft > 0 ? Math.min(myCoins, coinsLeft) : 0;
-  var open = state.phase != "drawing";
+  var open = true;
+  var button = document.getElementById("jpBetButton");
+  button.lastChild.textContent = drawing ? " Next pot" : " Put in";
+  button.title = drawing ? "The pot is being drawn - this goes into the next one" : "";
   document.getElementById("jpChance").innerText = mine
     ? "In the pot: " + formatCoins(inPot) + " · " + chance(mine) + "% chance · " +
       (betsLeft == 0 ? "no bets left" : betsLeft == 1 ? "1 bet left" : betsLeft + " bets left")
