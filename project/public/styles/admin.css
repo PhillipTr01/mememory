@@ -1167,6 +1167,15 @@ a.ad-link:focus-visible {
   gap: 0.35rem;
 }
 
+/* Remove a prize: a white ✕ (red on hover) */
+.ad-prize-row .ad-icon-btn {
+  color: #fff;
+}
+
+.ad-prize-row .ad-icon-btn:hover {
+  color: var(--mm-danger);
+}
+
 .ad-prize-hash {
   font-weight: 800;
   color: var(--mm-muted);
