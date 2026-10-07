@@ -3349,3 +3349,22 @@ body.jackpot-theme {
     box-shadow: 0 0 14px rgba(180, 150, 230, 0.55);
   }
 }
+
+/* The second chance in light purple (the pill and the prompt) */
+.cs-chance-card {
+  border-color: rgba(180, 150, 230, 0.6);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), 0 0 40px rgba(180, 150, 230, 0.2);
+}
+
+.cs-chance-left {
+  color: #cdb8f0;
+}
+
+.cs-chance-btn {
+  background: #b496e6;
+  color: #1c1230;
+}
+
+.cs-chance-btn:hover {
+  background: #c4aaf0;
+}
