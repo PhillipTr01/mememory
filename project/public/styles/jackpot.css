@@ -772,7 +772,7 @@ body.jackpot-theme {
     radial-gradient(circle at 75% 65%, rgba(0, 0, 0, 0.12) 0 10%, transparent 11%);
 }
 
-/* The safe zone: everything outside is the storm */
+/* The safe zone: everything outside is the storm - darker in every stage, the edge glows */
 .jp-zone {
   position: absolute;
   left: 50%;
@@ -781,9 +781,35 @@ body.jackpot-theme {
   height: 190%;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0 0 2000px rgba(124, 58, 237, 0.35);
+  border: 2px solid rgba(216, 180, 254, 0.9);
+  box-shadow: 0 0 0 2000px rgba(91, 33, 182, 0.3), 0 0 18px 4px rgba(168, 85, 247, 0.55), inset 0 0 18px rgba(168, 85, 247, 0.35);
   pointer-events: none;
+  transition: box-shadow 0.8s ease;
+}
+
+.jp-zone[data-stage="2"] {
+  box-shadow: 0 0 0 2000px rgba(91, 33, 182, 0.4), 0 0 22px 5px rgba(168, 85, 247, 0.65), inset 0 0 20px rgba(168, 85, 247, 0.4);
+}
+
+.jp-zone[data-stage="3"] {
+  box-shadow: 0 0 0 2000px rgba(76, 29, 149, 0.5), 0 0 26px 6px rgba(192, 132, 252, 0.75), inset 0 0 24px rgba(168, 85, 247, 0.45);
+  animation: jp-storm-pulse 1.2s ease-in-out infinite;
+}
+
+.jp-zone[data-stage="4"] {
+  box-shadow: 0 0 0 2000px rgba(59, 7, 100, 0.62), 0 0 30px 8px rgba(216, 180, 254, 0.85), inset 0 0 28px rgba(192, 132, 252, 0.5);
+  animation: jp-storm-pulse 0.7s ease-in-out infinite;
+}
+
+@keyframes jp-storm-pulse {
+  50% {
+    border-color: #fff;
+  }
+}
+
+.jp-storm-hit {
+  color: #e9d5ff;
+  text-shadow: 0 0 14px #a855f7, 0 0 4px #fff;
 }
 
 .jp-fighter {

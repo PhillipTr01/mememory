@@ -773,6 +773,12 @@ var royaleDraw = {
     this.build(stage);
   },
 
+  /*
+   * The storm closes in stages toward the middle - every stage slower than
+   * the one before, and it never closes completely. Everybody runs to the
+   * middle; who doesn't make it in time is caught at the edge of the storm.
+   * The winner (fixed by the server) reaches the middle.
+   */
   async play(stage, draw, duration, short) {
     var parts = this.build(stage, draw.winner, !short);
     var winner = parts.fighters.find((fighter) => fighter.dataset.name == draw.winner);
@@ -785,63 +791,102 @@ var royaleDraw = {
       })
       .sort((a, b) => a.order - b.order)
       .map((item) => item.fighter);
+    if (short) {
+      losers.forEach((fighter) => fighter.classList.add("out"));
+      winner.classList.add("champion");
+      return winnerLabel(parts.root, draw);
+    }
 
-    // The zone closes in on the winner (slower at the end)
+    var arena = parts.arena;
+    var W = arena.clientWidth;
+    var H = arena.clientHeight;
+    var cx = W / 2;
+    var cy = H / 2;
+    var R0 = Math.hypot(W, H) / 2 + 10;
+    var Rend = Math.min(W, H) * 0.13;
+    // The storm: [time 0..1, radius] - wait, close, wait (shorter), close (slower) ... to the middle
+    var steps = [
+      [0, R0],
+      [0.1, R0],
+      [0.26, R0 * 0.64],
+      [0.36, R0 * 0.64],
+      [0.54, R0 * 0.4],
+      [0.62, R0 * 0.4],
+      [0.82, R0 * 0.24],
+      [0.87, R0 * 0.24],
+      [1, Rend],
+    ];
+    var radius = (t) => {
+      for (var i = 1; i < steps.length; i++) {
+        if (t <= steps[i][0]) {
+          var k = (t - steps[i - 1][0]) / (steps[i][0] - steps[i - 1][0] || 1);
+          var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; // ease in-out
+          return steps[i - 1][1] + (steps[i][1] - steps[i - 1][1]) * e;
+        }
+      }
+      return Rend;
+    };
+    var playTime = duration * 0.9;
     var zone = parts.zone;
-    var winnerX = parseFloat(winner.style.left);
-    var winnerY = parseFloat(winner.style.top);
-    // First it wanders somewhere else, then it closes in on the last two -
-    // between them, so nobody knows who is left in the end
-    var last = losers[losers.length - 1];
-    var lastX = last ? parseFloat(last.style.left) : winnerX;
-    var lastY = last ? parseFloat(last.style.top) : winnerY;
-    var playTime = duration * (short ? 1 : 0.88);
-    animate(
-      zone,
-      [
-        { left: "50%", top: "50%", width: "120%", height: "190%" },
-        { left: randomBetween(30, 70) + "%", top: randomBetween(35, 70) + "%", width: randomBetween(55, 75) + "%", height: randomBetween(90, 120) + "%", offset: randomBetween(0.35, 0.55) },
-        {
-          left: (winnerX + lastX) / 2 + "%",
-          top: (winnerY + lastY) / 2 + "%",
-          width: Math.abs(winnerX - lastX) + 22 + "%",
-          height: Math.abs(winnerY - lastY) * 1.6 + 40 + "%",
-        },
-      ],
-      { duration: playTime, easing: SLOW_END },
+    var circle = (r) => ({ left: cx - r + "px", top: cy - r + "px", width: 2 * r + "px", height: 2 * r + "px" });
+    Object.assign(zone.style, circle(R0), { transform: "none" });
+    var frames = [];
+    for (var f = 0; f <= 60; f++) frames.push({ ...circle(radius(f / 60)), offset: f / 60 });
+    animate(zone, frames, { duration: playTime, easing: "linear" });
+    // The storm gets more intense in every stage
+    [0.1, 0.36, 0.62, 0.87].forEach((at, n) =>
+      setTimeout(() => {
+        zone.dataset.stage = n + 1;
+        if (n < 3) shout(parts.root, pick(["THE STORM IS CLOSING", "RUN TO THE MIDDLE!", "STORM INCOMING"]), "small");
+      }, at * playTime),
     );
 
-    // Everybody moves a little (they fight)
-    parts.fighters.forEach((fighter) => {
-      animate(
-        fighter,
-        [0, 1, 2, 3].map((i) => ({ transform: `translate(calc(-50% + ${randomBetween(-14, 14)}px), calc(-50% + ${randomBetween(-10, 10)}px))` })),
-        { duration: duration, easing: "ease-in-out", fill: "none" },
-      );
-    });
-
-    // Eliminations: quick at first, longer and longer pauses (the final duel is the longest)
+    // When everybody is caught: quick at first, longer and longer (the last one right before the end)
     var count = losers.length;
-    var weights = losers.map((_, i) => (1 + i * 0.7) * randomBetween(0.6, 1.4));
+    var weights = losers.map((_, i) => (1 + i * 0.6) * randomBetween(0.7, 1.3));
     var sum = weights.reduce((a, b) => a + b, 0);
+    var at = 0;
+    var times = weights.map((w) => (at += (w / sum) * 0.9) + 0.05);
+
+    // Running: everybody toward the middle - inside the storm's edge until their time is up
+    var position = (fighter) => ({ x: (parseFloat(fighter.style.left) / 100) * W, y: (parseFloat(fighter.style.top) / 100) * H });
+    var run = (fighter, until, end) => {
+      var from = position(fighter);
+      var angle = Math.atan2(from.y - cy, from.x - cx);
+      var d0 = Math.min(Math.hypot(from.x - cx, from.y - cy), R0 * 0.7);
+      var keyframes = [];
+      for (var k = 0; k <= 24; k++) {
+        var t = (k / 24) * until;
+        // Running in (a bit slower than the storm for the ones who are caught), always inside the zone
+        var d = d0 + (end - d0) * (k / 24);
+        if (k < 24) d = Math.min(d, radius(t) - 22);
+        d = Math.max(d, 0);
+        var wobble = Math.sin(k * 1.7 + angle * 3) * 0.12;
+        keyframes.push({ left: cx + Math.cos(angle + wobble) * d + "px", top: cy + Math.sin(angle + wobble) * d * (H / W > 0.9 ? 1 : 0.85) + "px", offset: k / 24 });
+      }
+      fighter.style.left = keyframes[0].left;
+      fighter.style.top = keyframes[0].top;
+      animate(fighter, keyframes, { duration: until * playTime, easing: "linear" });
+    };
+    losers.forEach((fighter, i) => run(fighter, times[i], radius(times[i]) + 10));
+    run(winner, 0.97, Math.min(Rend * 0.35, 18));
+
     for (var i = 0; i < count; i++) {
-      await wait((weights[i] / sum) * playTime);
-      this.eliminate(parts, losers[i], short);
-      if (count - i - 1 == 1 && !short) shout(parts.root, pick(["FINAL DUEL", "LAST TWO!", "1 VS 1"]), "small");
+      var waitFor = times[i] * playTime - (i ? times[i - 1] * playTime : 0);
+      await wait(waitFor);
+      this.eliminate(parts, losers[i], false);
+      if (count - i - 1 == 1) shout(parts.root, pick(["FINAL DUEL", "LAST TWO!", "1 VS 1"]), "small");
     }
-    // Only now the zone closes around the one who is left
-    animate(zone, [{ left: winnerX + "%", top: winnerY + "%", width: "16%", height: "30%" }], { duration: short ? 1 : 450, easing: "ease-out" });
-    await wait(short ? 0 : 300);
+    await wait(Math.max(0, playTime * (1 - times[count - 1] || 0)));
     winner.classList.add("champion");
-    if (!short) {
-      shout(parts.root, pick(["WINNER WINNER", "VICTORY ROYALE", "LAST ONE STANDING"]), "strike");
-      confetti(parts.root);
-    }
+    shout(parts.root, pick(["WINNER WINNER", "VICTORY ROYALE", "LAST ONE STANDING"]), "strike");
+    confetti(parts.root);
     winnerLabel(parts.root, draw);
   },
 
   eliminate(parts, fighter, short) {
-    var boom = el("span", "jp-boom", "💥");
+    // Caught by the storm: a purple flash where they stand
+    var boom = el("span", "jp-boom jp-storm-hit", "⚡");
     boom.style.left = fighter.style.left;
     boom.style.top = fighter.style.top;
     parts.arena.appendChild(boom);
@@ -851,7 +896,7 @@ var royaleDraw = {
     fighter.classList.add("out");
     // Kill feed (the newest on top, at most 4)
     var line = el("div", "jp-kill");
-    line.append(el("b", "", fighter.dataset.name), document.createTextNode(pick([" was eliminated", " got knocked out", " was caught by the storm", " was sniped", " fell off the map"])));
+    line.append(el("b", "", fighter.dataset.name), document.createTextNode(pick([" was caught by the storm", " was caught by the storm", " didn't make it", " ran out of time", " was caught by the storm"])));
     parts.feed.prepend(line);
     while (parts.feed.childElementCount > 4) parts.feed.lastElementChild.remove();
     if (!short) animate(parts.root, [{ transform: "translateX(-4px)" }, { transform: "translateX(4px)" }, { transform: "translateX(0)" }], { duration: 180, fill: "none" });
