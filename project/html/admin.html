@@ -183,16 +183,15 @@
                     </div>
                 </div>
                 <!--- #seasons/new and #seasons/<id>: the details of one season, the form to plan / edit it --->
-                <div id="adSeasonPage" class="ad-grid ad-grid-side ad-seasons-grid" hidden>
-                    <div class="ad-stack">
-                        <a href="#seasons" class="ad-back">‹ All seasons</a>
-                        <div id="adSeasonDetail" class="ad-card"></div>
-                    </div>
+                <div id="adSeasonPage" class="ad-stack ad-season-page" hidden>
+                    <a href="#seasons" class="ad-back">‹ All seasons</a>
+                    <div id="adSeasonDetail" class="ad-card ad-season-detail"></div>
                     <div id="adSeasonFormCard" class="ad-card">
                         <div class="ad-card-head">
                             <h2 class="ad-title" id="adSeasonFormTitle">New season</h2>
                         </div>
                         <form id="adSeasonForm" class="ad-season-form" autocomplete="off">
+                            <div class="ad-season-identity">
                             <div class="ad-season-name">
                                 <label class="ad-field ad-field-icon">
                                     <span class="ad-label">Icon</span>
@@ -204,6 +203,7 @@
                                 </label>
                             </div>
                             <div id="adSeasonIcons" class="ad-icon-picks" aria-label="Icons"></div>
+                            </div>
                             <div class="ad-field">
                                 <span class="ad-label">Accent color</span>
                                 <div class="ad-color-row">
@@ -235,7 +235,7 @@
                             <label class="ad-field">
                                 <span class="ad-label">Second chances</span>
                                 <input id="adSeasonChances" class="mm-input" type="number" min="0" max="20" step="1" value="0">
-                                <span class="ad-setting-hint">A player who lost everything (0 coins, nothing in play) starts again with the budget - this many times. The first right away, every further one from the next day on.</span>
+                                <span class="ad-setting-hint">A player who lost everything (0 coins, nothing in play) starts again with the budget - this many times. The first from the day after starting the season, every further one from the next day on.</span>
                             </label>
                             <label class="ad-field">
                                 <span class="ad-label">Countdown before start and end</span>
@@ -262,7 +262,7 @@
                                 <div id="adSeasonPrizes" class="ad-prize-list" hidden></div>
                                 <button type="button" id="adSeasonAddPrize" class="mm-btn mm-btn-sm ad-add-prize" hidden>+ Add a prize</button>
                             </div>
-                            <button type="submit" id="adSeasonSave" class="mm-btn mm-btn-primary w-100">Plan the season</button>
+                            <div class="ad-season-save"><button type="submit" id="adSeasonSave" class="mm-btn mm-btn-primary">Plan the season</button></div>
                         </form>
                     </div>
                 </div>

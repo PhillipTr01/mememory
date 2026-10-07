@@ -576,7 +576,7 @@ function renderSeasons() {
     document.getElementById("adPageSub").innerText = view ? STATUS_NAMES[view.status] + " · " + dateText(view.start) + " → " + dateText(view.end) : "Plan a season: everybody who hits Start begins with the same budget, the most coins win.";
     document.getElementById("adSeasonFormCard").hidden = view != null && view.status == "ended";
     var detail = document.getElementById("adSeasonDetail");
-    if (view) detail.replaceChildren(seasonRow(view, true));
+    if (view) detail.replaceChildren(...seasonDetail(view));
     else
       detail.replaceChildren(
         el("h2", "ad-title", "How a season goes"),
@@ -631,6 +631,52 @@ function seasonHead(season) {
   icon.style.boxShadow = "inset 0 0 0 2px " + (season.color || GOLD);
   head.append(icon, text, el("span", "ad-pill " + (season.status == "running" ? "success" : season.status == "planned" ? "accent" : ""), STATUS_NAMES[season.status]));
   return head;
+}
+
+// The page of one season: its head (with what can be done), the numbers as tiles, the prizes
+function seasonDetail(season) {
+  var head = el("div", "ad-season-detail-head");
+  head.appendChild(seasonHead(season));
+  var actions = el("div", "ad-actions");
+  var button = (label, cls, handler) => {
+    var b = el("button", "mm-btn mm-btn-sm " + (cls || ""), label);
+    b.type = "button";
+    b.addEventListener("click", handler);
+    actions.appendChild(b);
+  };
+  if (season.status == "running") button("End now", "mm-btn-danger", () => endSeason(season));
+  if (season.status != "running" && season.status != "starting") button("Delete", "", () => deleteSeason(season));
+  head.appendChild(actions);
+
+  var tile = (icon, value, label) => {
+    var box = el("div", "ad-season-tile");
+    box.append(el("span", "ad-season-tile-icon", icon), el("b", "", value), el("span", "", label));
+    return box;
+  };
+  var time =
+    season.status == "planned" || season.status == "starting"
+      ? tile("⏱️", span(season.start - Date.now()), "until the start")
+      : season.status == "running"
+        ? tile("⏱️", span(season.end - Date.now()), "left")
+        : tile("🏁", new Date(season.endedAt || season.end).toLocaleDateString(undefined, { day: "numeric", month: "short" }), "over since");
+  var tiles = el("div", "ad-season-tiles");
+  tiles.append(
+    time,
+    tile("👥", formatCoins(season.players || 0), season.status == "ended" ? "in the final places" : "players hit Start"),
+    tile("🪙", formatCoins(season.budget), "start budget"),
+    tile("🎁", formatCoins(season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting), "daily bonus"),
+    tile("💔", season.secondChances || 0, "second chances"),
+    tile("⏳", season.closeWait + " s", "countdown"),
+    tile("📊", EVERY_NAMES[season.every], "leaderboard"),
+  );
+  if (season.status == "ended" && season.winner) tiles.append(tile("🥇", season.winner.username, "🪙 " + formatCoins(season.winner.coins)));
+  var parts = [head, tiles];
+  if (season.prizesOn && season.prizes.length) {
+    var prizes = el("div", "ad-season-prizes");
+    season.prizes.forEach((p) => prizes.appendChild(el("span", "ad-pill", "#" + p.place + " " + p.prize)));
+    parts.push(prizes);
+  }
+  return parts;
 }
 
 // A season in the list (a click opens its page) - or on its page (detail: more facts)
