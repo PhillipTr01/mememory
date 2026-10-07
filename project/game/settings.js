@@ -1,6 +1,7 @@
 const EventEmitter = require("events");
 const Setting = require("../models/Setting");
 const config = require("./config");
+const cases = require("./cases");
 
 // "change" ({KEY: value}) after the admin changed values (e.g. a game turned off)
 const changes = new EventEmitter();
@@ -13,7 +14,8 @@ const changes = new EventEmitter();
 const KEY = "admin:settings";
 
 // group: the page of the admin panel (general or a game), section: a card on it.
-// type "toggle": on / off (a game), "choice": one of `options` ({value, label}), everything else a whole number.
+// type "toggle": on / off (a game), "choice": one of `options` ({value, label}), "cases": the cases turned off
+// (a list of ids, at least one stays on), everything else a whole number.
 const FIELDS = [
   { group: "general", section: "Coins", key: "START_COINS", label: "Start coins", hint: "What a newly approved player gets (in a season: the season's budget plus every daily bonus missed since it started).", min: 0, max: 100000000 },
   { group: "general", section: "Coins", key: "DAILY_BONUS", label: "Daily bonus", hint: "Free coins once a day for every player (outside of seasons).", min: 0, max: 10000000 },
@@ -24,6 +26,7 @@ const FIELDS = [
   { group: "jackpot", section: "Timing", key: "JACKPOT_GHOST_AFTER", label: "Ghost joins after", hint: "Alone in the pot this long: the 👻 joins.", unit: "s", scale: 1000, min: 1, max: 3600 },
   { group: "jackpot", section: "Timing", key: "JACKPOT_COUNTDOWN", label: "Countdown", hint: "From the second player to the draw.", unit: "s", scale: 1000, min: 5, max: 600 },
   { group: "battles", section: "Case battles", key: "GAME_BATTLES", type: "toggle", label: "Case battles are on", hint: "Off: no tab, nobody can open it." },
+  { group: "battles", section: "Cases", key: "BATTLE_CASES_OFF", type: "cases", label: "Cases", hint: "Turned off: gone from the case list, no new battles with it (running battles play to the end)." },
   { group: "battles", section: "Battles", key: "BATTLE_MAX_CASES", label: "Max cases per battle", min: 1, max: 1000 },
   { group: "battles", section: "Battles", key: "BATTLE_MAX_OPEN", label: "Open battles per player", min: 1, max: 50 },
   { group: "poker", section: "Poker", key: "GAME_POKER", type: "toggle", label: "Poker is on", hint: "Off: no tab, nobody can open it." },
@@ -63,7 +66,7 @@ function list() {
     unit: field.unit || null,
     min: field.min,
     max: field.max,
-    options: field.options || null,
+    options: field.type === "cases" ? cases.CASES.map((box) => ({ value: box.id, label: box.name, icon: box.icon, price: box.price, risk: box.risk })) : field.options || null,
     value: shown(field, config[field.key]),
     default: shown(field, DEFAULTS[field.key]),
   }));
@@ -79,6 +82,12 @@ function check(input) {
     if (field.type === "toggle") {
       if (typeof value !== "boolean") return { error: `${field.label}: on or off.` };
       values[key] = value;
+      continue;
+    }
+    if (field.type === "cases") {
+      if (!Array.isArray(value) || !value.every((id) => typeof id === "string" && cases.caseById(id))) return { error: `${field.label}: unknown case.` };
+      if (cases.CASES.every((box) => value.includes(box.id))) return { error: "At least one case stays on (or turn case battles off)." };
+      values[key] = [...new Set(value)];
       continue;
     }
     if (field.type === "choice") {
@@ -102,7 +111,8 @@ function check(input) {
 
 // The changed values (only the ones that differ from the default are stored)
 async function save() {
-  const changed = Object.fromEntries(FIELDS.filter((field) => config[field.key] !== DEFAULTS[field.key]).map((field) => [field.key, config[field.key]]));
+  const same = (field) => (field.type === "cases" ? JSON.stringify(config[field.key]) === JSON.stringify(DEFAULTS[field.key]) : config[field.key] === DEFAULTS[field.key]);
+  const changed = Object.fromEntries(FIELDS.filter((field) => !same(field)).map((field) => [field.key, config[field.key]]));
   await Setting.updateOne({ key: KEY }, { $set: { value: changed } }, { upsert: true });
 }
 
@@ -128,6 +138,10 @@ async function load() {
   if (row == null || row.value == null || typeof row.value !== "object") return;
   for (const [key, value] of Object.entries(row.value)) {
     const field = BY_KEY.get(key);
+    if (field && field.type === "cases") {
+      if (Array.isArray(value)) config[key] = value.filter((id) => cases.caseById(id));
+      continue;
+    }
     const fits = field && (field.type === "toggle" ? typeof value === "boolean" : field.type === "choice" ? field.options.some((option) => option.value === value) : Number.isInteger(value));
     if (fits) config[key] = value;
   }

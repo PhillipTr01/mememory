@@ -989,6 +989,8 @@ function renderSettings() {
       if (toggle) return toggleCard(toggle);
       var choice = section.fields.find((field) => field.type == "choice");
       if (choice) return choiceCard(choice);
+      var list = section.fields.find((field) => field.type == "cases");
+      if (list) return casesCard(list);
       var card = el("div", "ad-card");
       var head = el("div", "ad-card-head");
       head.appendChild(el("h2", "ad-title", section.name));
@@ -1016,6 +1018,49 @@ function renderSettings() {
   );
   // Nothing to save on a page without numbers
   document.querySelector(".ad-settings-bar").hidden = !settingsList.some((field) => field.group == settingsGroup && field.type == "number");
+}
+
+// The cases of the case battles: each one on / off, saved right away (at least one stays on)
+var RISK_TEXT = { low: "Low risk", balanced: "Balanced", high: "High risk" };
+function casesCard(field) {
+  var off = field.value || [];
+  var card = el("div", "ad-card ad-cases-card");
+  var head = el("div", "ad-card-head");
+  var title = el("h2", "ad-title", "Cases");
+  title.appendChild(el("span", "ad-cases-count", field.options.length - off.length + " of " + field.options.length + " on"));
+  var all = el("button", "mm-btn mm-btn-sm", "All on");
+  all.type = "button";
+  all.disabled = off.length == 0;
+  head.append(title, all);
+  card.append(head, el("p", "ad-note", field.hint || ""));
+  var save = async (next) => {
+    card.querySelectorAll("input, button").forEach((n) => (n.disabled = true));
+    try {
+      settingsList = (await api("settings", { values: { [field.key]: next } })).settings;
+    } catch (error) {
+      fail(error);
+    }
+    renderSettings();
+  };
+  all.addEventListener("click", () => save([]));
+  var grid = el("div", "ad-cases");
+  field.options.forEach((box) => {
+    var on = !off.includes(box.value);
+    var row = el("label", "ad-case" + (on ? "" : " off"));
+    var info = el("span", "ad-case-info");
+    info.append(el("b", "", box.label), el("span", "ad-case-meta", "🪙 " + formatCoins(box.price) + " · " + (RISK_TEXT[box.risk] || box.risk)));
+    var toggle = el("span", "ad-switch");
+    var input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = on;
+    input.setAttribute("aria-label", box.label);
+    input.addEventListener("change", () => save(input.checked ? off.filter((id) => id != box.value) : off.concat(box.value)));
+    toggle.append(input, el("span", "ad-switch-track"));
+    row.append(el("span", "ad-case-icon", box.icon), info, toggle);
+    grid.appendChild(row);
+  });
+  card.appendChild(grid);
+  return card;
 }
 
 // One of a few options (like the test bonus of the slots): saved right away

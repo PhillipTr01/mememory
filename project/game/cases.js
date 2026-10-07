@@ -381,10 +381,18 @@ function roll(seed, key) {
   return parseInt(hex.slice(0, 13), 16) / Math.pow(16, 13);
 }
 
-// The public list of cases for the page (without the weights as raw numbers)
+// Turned on in the admin panel (config.BATTLE_CASES_OFF) - a battle that has a case already plays it to the end
+function enabled(id) {
+  const off = require("./config").BATTLE_CASES_OFF;
+  return BY_ID.has(id) && !(Array.isArray(off) && off.includes(id));
+}
+
+// The public list of cases for the page (without the weights as raw numbers); off: turned off (not in the
+// list to pick from - but battles that have it still show it)
 function catalog() {
   return CASES.map((box) => ({
     id: box.id,
+    off: !enabled(box.id),
     name: box.name,
     icon: box.icon,
     price: box.price,
@@ -399,4 +407,4 @@ function catalog() {
   }));
 }
 
-module.exports = { CASES, WEIGHT_TOTAL, caseById, expectedValue, itemFor, newSeed, seedHash, roll, rarityOf, catalog };
+module.exports = { enabled, CASES, WEIGHT_TOTAL, caseById, expectedValue, itemFor, newSeed, seedHash, roll, rarityOf, catalog };

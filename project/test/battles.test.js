@@ -369,3 +369,27 @@ test("battles: a tie - the winners split the pot (not the creator alone)", async
     cases.itemFor = itemFor;
   }
 });
+
+test("cases: the admin turns cases off - gone from the list to pick from, no new battles with them, at least one stays on", async () => {
+  const settings = require("../game/settings");
+  const [first, second] = cases.CASES;
+  try {
+    assert.ok((await settings.update({ BATTLE_CASES_OFF: [first.id] })).settings);
+    assert.deepStrictEqual(config.BATTLE_CASES_OFF, [first.id]);
+    assert.strictEqual(cases.enabled(first.id), false);
+    assert.strictEqual(cases.enabled(second.id), true);
+    // Still in the catalog (battles that have it show it), marked off
+    assert.strictEqual(cases.catalog().find((box) => box.id === first.id).off, true);
+    assert.strictEqual(cases.catalog().find((box) => box.id === second.id).off, false);
+    // Unknown cases and all of them off: refused
+    assert.match((await settings.update({ BATTLE_CASES_OFF: ["nope"] })).error, /unknown case/);
+    assert.match((await settings.update({ BATTLE_CASES_OFF: cases.CASES.map((box) => box.id) })).error, /At least one/);
+    assert.deepStrictEqual(config.BATTLE_CASES_OFF, [first.id], "nothing changed");
+    // The admin panel lists every case with its switch
+    const field = settings.list().find((f) => f.key === "BATTLE_CASES_OFF");
+    assert.strictEqual(field.type, "cases");
+    assert.strictEqual(field.options.length, cases.CASES.length);
+  } finally {
+    await settings.update({ BATTLE_CASES_OFF: [] });
+  }
+});

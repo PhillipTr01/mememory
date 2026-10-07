@@ -259,6 +259,11 @@ module.exports = function (io) {
 
   /* ---------- Connection ---------- */
 
+  // The admin turned cases on or off: every open page gets the new list
+  require("../game/settings").changes.on("change", (values) => {
+    if ("BATTLE_CASES_OFF" in values) battles.emit("cases", cases.catalog());
+  });
+
   battles.on("connection", (socket) => {
     version.announce(socket);
     const username = socket.data.username;
@@ -279,6 +284,7 @@ module.exports = function (io) {
         const ids = data.cases;
         // Up to BATTLE_MAX_CASES cases (one round each)
         if (ids.length < 1 || !ids.every((id) => cases.caseById(id))) return;
+        if (!ids.every((id) => cases.enabled(id))) return socket.emit("battleError", "One of these cases is not available anymore.");
         if (ids.length > config.BATTLE_MAX_CASES) {
           socket.emit("battleError", `At most ${config.BATTLE_MAX_CASES} cases per battle.`);
           return;

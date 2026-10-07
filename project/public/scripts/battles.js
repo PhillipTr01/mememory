@@ -88,6 +88,8 @@ socket.on("battleRules", (data) => (MAX_CASES = data.maxCases));
 
 socket.on("cases", (data) => {
   CASES = data;
+  // A case turned off (admin panel): out of the new battle too
+  picked = picked.filter((id) => caseById(id) && !caseById(id).off);
   renderCases();
   renderCreate();
 });
@@ -263,7 +265,7 @@ function stepper(id, extraClass) {
 }
 
 function sortedCases() {
-  var list = CASES.filter((box) => filter == "all" || box.risk == filter);
+  var list = CASES.filter((box) => !box.off && (filter == "all" || box.risk == filter));
   var by = {
     "price-asc": (a, b) => a.price - b.price,
     "price-desc": (a, b) => b.price - a.price,
@@ -533,7 +535,8 @@ function setSize(value) {
 
 // Back on the main page to create a battle - with these cases already chosen
 function createAgain(battle) {
-  picked = battle.cases.slice();
+  // (without cases that are turned off now)
+  picked = battle.cases.filter((id) => caseById(id) && !caseById(id).off);
   size = battle.size;
   mode = battle.mode || (battle.crazy ? "crazy" : "classic");
   setSize(size);
