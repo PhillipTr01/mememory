@@ -988,8 +988,28 @@ function renderPresets() {
   );
 }
 
+// The balance: a win counts up (like the win in the middle), a bet is taken off right away
+var coinsShown = null;
+var coinsAnimation = 0;
 function renderCoins(value) {
-  document.getElementById("slCoins").innerText = "🪙 " + formatCoins(value);
+  var box = document.getElementById("slCoins");
+  var from = coinsShown;
+  coinsShown = value;
+  var run = ++coinsAnimation;
+  if (from == null || value <= from) {
+    box.innerText = "🪙 " + formatCoins(value);
+    return;
+  }
+  var time = Math.min(900, setup && setup.rules ? setup.rules.countTime : 800);
+  var start = performance.now();
+  var step = (now) => {
+    // (a newer balance came meanwhile: that one counts)
+    if (run != coinsAnimation) return;
+    var t = Math.min(1, (now - start) / time);
+    box.innerText = "🪙 " + formatCoins(Math.round(from + (value - from) * (1 - Math.pow(1 - t, 3))));
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
 function renderControls() {

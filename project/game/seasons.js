@@ -325,6 +325,12 @@ function joined(username) {
   return !!season.joined[username];
 }
 coins.setJoinedLookup(joined);
+// (since when the player is in it: the daily bonuses add up from that day on)
+coins.setJoinedAtLookup((username) => {
+  const season = running();
+  if (season == null) return null;
+  return (season.joined && season.joined[username]) || season.startedAt || season.start;
+});
 
 // The final places (everybody in the casino, by coins) - with the prizes
 async function endSeason(season, now) {

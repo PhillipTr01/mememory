@@ -72,6 +72,12 @@ let joinedLookup = () => null;
 function setJoinedLookup(lookup) {
   joinedLookup = lookup;
 }
+// When the player started the running season (game/seasons.js sets the lookup) - null: no season
+let joinedAtLookup = () => null;
+function setJoinedAtLookup(lookup) {
+  joinedAtLookup = lookup;
+}
+
 // Not started the running season: watching only (no coins, no daily bonus)
 function watching(username) {
   return era() != null && joinedLookup(username) === false;
@@ -111,13 +117,28 @@ function bonusAvailable(user, now = Date.now()) {
   return user != null && bonusIn(user, now) === 0;
 }
 
+// In a running season the daily bonuses add up - nobody misses one: every day since the last claim
+// (or since starting the season), today's included. Outside of seasons: today's.
+function bonusDays(user, now = Date.now()) {
+  if (era() == null || user == null) return 1;
+  const last = user.coinBonusAt ? new Date(user.coinBonusAt).getTime() : null;
+  const joined = joinedAtLookup(user.username);
+  const from = last != null ? days.dayNumber(last) + 1 : joined != null ? days.dayNumber(joined) : days.dayNumber(now);
+  return Math.max(1, days.dayNumber(now) - from + 1);
+}
+
+function bonusDue(user, now = Date.now()) {
+  return dailyBonus() * bonusDays(user, now);
+}
+
 // { coins, bonus, bonusIn, payout } - bonus: the daily free coins can be claimed now, payout: may pay coins out
 async function get(username) {
   await ensure(username);
-  const user = await User.findOne({ username: username }).select("coins coinBonusAt payoutAllowed");
+  const user = await User.findOne({ username: username }).select("username coins coinBonusAt payoutAllowed");
   if (user == null) return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), payout: false };
   const joined = joinedLookup(username);
-  return { coins: user.coins || 0, bonus: bonusAvailable(user) && joined !== false, bonusIn: bonusIn(user), bonusAmount: dailyBonus(), payout: user.payoutAllowed === true, stored: storedLookup(username), joined: era() != null ? joined !== false : null };
+  const available = bonusAvailable(user) && joined !== false;
+  return { coins: user.coins || 0, bonus: available, bonusIn: bonusIn(user), bonusAmount: available ? bonusDue(user) : dailyBonus(), payout: user.payoutAllowed === true, stored: storedLookup(username), joined: era() != null ? joined !== false : null };
 }
 
 /*
@@ -161,22 +182,30 @@ async function set(username, amount, note) {
   return amount;
 }
 
-// Free coins once a day (calendar day), for everybody
-async function claimBonus(username, now = Date.now()) {
-  if (watching(username)) return false;
+// Free coins once a day (calendar day), for everybody - in a season the days not claimed on top.
+// Returns what was paid (0: nothing, already claimed today)
+async function claim(username, now = Date.now()) {
+  if (watching(username)) return 0;
   await ensure(username);
+  const user = await User.findOne({ username: username }).select("username coinBonusAt").lean();
+  if (user == null || !bonusAvailable(user, now)) return 0;
+  const count = bonusDays(user, now);
+  const amount = dailyBonus() * count;
   const result = await User.updateOne(
     {
       username: username,
       $or: [{ coinBonusAt: { $exists: false } }, { coinBonusAt: null }, { coinBonusAt: { $lt: new Date(days.dayStart(now)) } }],
     },
-    { $inc: { coins: dailyBonus() }, $set: { coinBonusAt: new Date(now) } },
+    { $inc: { coins: amount }, $set: { coinBonusAt: new Date(now) } },
   );
-  if (changed(result)) {
-    log(username, dailyBonus(), "daily bonus");
-    notify(username);
-  }
-  return changed(result);
+  if (!changed(result)) return 0;
+  log(username, amount, "daily bonus", count > 1 ? `${count} days` : undefined);
+  notify(username);
+  return amount;
+}
+
+async function claimBonus(username, now = Date.now()) {
+  return (await claim(username, now)) > 0;
 }
 
 // Coins for a win in a game (never blocks or breaks the game)
@@ -186,4 +215,4 @@ function reward(username, mode) {
   add(username, amount, { reason: "game win", note: mode }).catch((error) => console.error("[coins] Could not add coins:", error));
 }
 
-module.exports = { setJoinedLookup, watching, setStoredLookup, setBase, base, era, eraFilter, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };
+module.exports = { claim, bonusDue, setJoinedAtLookup, setJoinedLookup, watching, setStoredLookup, setBase, base, era, eraFilter, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };

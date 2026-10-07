@@ -230,6 +230,24 @@ test("seasons: before the end the casino closes too - the last rounds finish, th
   }
 });
 
+test("seasons: the daily bonuses add up - a day not claimed comes with the next claim", async () => {
+  seasons.reset();
+  const now = Date.now();
+  const made = await seasons.create({ name: "Bonus", icon: "🎁", start: now - 1000, end: now + 30 * 24 * 3600 * 1000, budget: 1000, every: 0, dailyBonus: 100 });
+  await seasons.tick(now);
+  await seasons.join("ben", now);
+  assert.strictEqual(h.coinsOf("ben"), 1000);
+  assert.strictEqual(await coins.claim("ben", now), 100, "today's");
+  assert.strictEqual(await coins.claim("ben", now + 1000), 0, "once a day");
+  // Three days without a claim: the fourth day brings all four
+  const day4 = days.dayStart(now) + 3 * 24 * 3600 * 1000 + 12 * 3600 * 1000;
+  assert.strictEqual((await coins.get("ben")).bonusAmount, 100, "(already claimed today)");
+  assert.strictEqual(await coins.claim("ben", day4), 300, "days 2, 3 and 4");
+  assert.strictEqual(h.coinsOf("ben"), 1400);
+  await seasons.endNow(made.season.id);
+  seasons.reset();
+});
+
 test("seasons: second chances - 0 coins and nothing in play, then the budget again; the next one only the next day", async () => {
   seasons.reset();
   const inPlay = require("../game/in_play");

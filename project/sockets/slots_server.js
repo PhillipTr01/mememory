@@ -262,7 +262,8 @@ module.exports = function (io) {
     socket.on(
       "claimBonus",
       safe("claimBonus", async () => {
-        if (await coins.claimBonus(username)) socket.emit("bonusClaimed", coins.dailyBonus());
+        const paid = await coins.claim(username);
+        if (paid) socket.emit("bonusClaimed", paid);
         await sendCoins(username);
       }),
     );
