@@ -49,7 +49,8 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, var(--mm-surface), transparent 22%, transparent 78%, var(--mm-surface));
+  /* (light and thin: the top and bottom rows stay easy to see) */
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mm-surface) 45%, transparent), transparent 12%, transparent 88%, color-mix(in srgb, var(--mm-surface) 45%, transparent));
   pointer-events: none;
 }
 
