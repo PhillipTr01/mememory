@@ -134,7 +134,7 @@ test("access: asking for access - the admin sees the request, can approve or dec
   assert.strictEqual((await call(ADMIN + "/api/access", { json: { username: "tom", approve: true } })).status, 401);
 });
 
-test("access: the start money - start money plus the daily bonus of every day since the first approval", async () => {
+test("access: the start money - just the start coins without a season (missed bonuses only count in a season)", async () => {
   const days = require("../game/days");
   // The very first approval (3 calendar days ago): just the start money
   const first = days.dayStart(days.dayStart() - 2.5 * DAY) + 2 * 60 * 60 * 1000;
@@ -143,22 +143,21 @@ test("access: the start money - start money plus the daily bonus of every day si
   assert.strictEqual(h.coinsOf("tom"), config.START_COINS);
   assert.strictEqual((await access.approve("tom")).error, "Already approved.");
 
-  // Today: three days later - three bonuses missed
+  // Today: three days later - still just the start coins (no season runs)
   const res = await adminApi("access", { username: "uma", approve: true });
   assert.strictEqual(res.status, 200);
-  assert.deepStrictEqual(res.body, { username: "uma", coins: config.START_COINS + 3 * config.DAILY_BONUS, missed: 3, again: false });
-  assert.strictEqual(h.coinsOf("uma"), config.START_COINS + 3 * config.DAILY_BONUS);
+  assert.deepStrictEqual(res.body, { username: "uma", coins: config.START_COINS, missed: 0, again: false });
+  assert.strictEqual(h.coinsOf("uma"), config.START_COINS);
   const log = h.coinLogs.filter((row) => row.username === "uma");
-  assert.deepStrictEqual(log.map((row) => [row.amount, row.reason]), [[config.START_COINS + 3 * config.DAILY_BONUS, "start coins"]]);
-  assert.match(log[0].note, /3 missed daily bonuses/);
-  // The bonus of today is still hers
+  assert.deepStrictEqual(log.map((row) => [row.amount, row.reason]), [[config.START_COINS, "start coins"]]);
+  // The bonus of today is hers
   assert.strictEqual(await coins.claimBonus("uma"), true);
-  assert.strictEqual(h.coinsOf("uma"), config.START_COINS + 3 * config.DAILY_BONUS + config.DAILY_BONUS);
+  assert.strictEqual(h.coinsOf("uma"), config.START_COINS + config.DAILY_BONUS);
 
   // What the next one gets
   const list = (await adminApi("access")).body;
   assert.strictEqual(new Date(list.firstApproval).getTime(), first);
-  assert.deepStrictEqual([list.startCoins, list.missed], [config.START_COINS + 3 * config.DAILY_BONUS, 3]);
+  assert.deepStrictEqual([list.startCoins, list.missed, list.since], [config.START_COINS, 0, null]);
 
   // Now uma gets in
   assert.strictEqual((await call(CASINO + "/", as("uma"))).status, 200);

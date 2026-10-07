@@ -15,7 +15,7 @@ const KEY = "admin:settings";
 // group: the page of the admin panel (general or a game), section: a card on it.
 // type "toggle": on / off (a game), "choice": one of `options` ({value, label}), everything else a whole number.
 const FIELDS = [
-  { group: "general", section: "Coins", key: "START_COINS", label: "Start coins", hint: "What a newly approved player gets (plus every daily bonus missed since the first approval).", min: 0, max: 100000000 },
+  { group: "general", section: "Coins", key: "START_COINS", label: "Start coins", hint: "What a newly approved player gets (in a season: the season's budget plus every daily bonus missed since it started).", min: 0, max: 100000000 },
   { group: "general", section: "Coins", key: "DAILY_BONUS", label: "Daily bonus", hint: "Free coins once a day for every player.", min: 0, max: 10000000 },
   { group: "jackpot", section: "Jackpot", key: "GAME_JACKPOT", type: "toggle", label: "Jackpot is on", hint: "Off: no tab, nobody can open it." },
   { group: "jackpot", section: "Bets", key: "JACKPOT_MAX_COINS", label: "Max coins per round", hint: "All bets of one player in one round together.", min: 1, max: 100000000 },

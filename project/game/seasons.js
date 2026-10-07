@@ -176,7 +176,7 @@ async function remove(id) {
 async function startSeason(season, now) {
   season.started = true;
   season.startedAt = now;
-  state.base = { reset: "season-" + season.id, start: season.budget, since: now, bonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : null };
+  state.base = { reset: "season-" + season.id, start: season.budget, since: now, active: true, bonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : null };
   coins.setBase(state.base);
   await save();
   const players = await User.find({ casinoApproved: true }).select("username").lean();
@@ -196,6 +196,7 @@ async function endSeason(season, now) {
   // The coins stay until the next season - the daily bonus is the normal one again
   if (state.base) {
     state.base.bonus = null;
+    state.base.active = false;
     coins.setBase(state.base);
   }
   await save();

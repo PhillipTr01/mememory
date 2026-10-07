@@ -7,9 +7,10 @@ const days = require("./days");
 
 /*
  * The secret casino is only for players the admin let in (in the admin panel).
- * Who gets in the first time gets the start coins plus every daily bonus
- * missed since the very first player got in - so a late player starts like
- * somebody who was there from the beginning and claimed every bonus.
+ * Who gets in the first time gets the start coins. During a season: the
+ * season's budget plus every daily bonus missed since the season started -
+ * so a late player starts like somebody who was there from the beginning and
+ * claimed every bonus.
  */
 const FIRST = "casinoFirstApproval";
 
@@ -36,13 +37,13 @@ async function setFirstApproval(now) {
   return firstApproval();
 }
 
-// What a player gets who is let in now: {coins, missed} - a bonus for every day since the day of the first approval (today's one they claim themselves)
-// (in a season: the season's budget, and the bonuses since the season started)
+// What a player gets who is let in now: {coins, missed, since} - the start coins; in a running season
+// its budget and a bonus for every day since the season started (today's one they claim themselves)
 function startCoins(first, now = Date.now()) {
   const base = coins.base();
-  const from = first == null ? null : Math.max(new Date(first).getTime(), base.since || 0);
-  const missed = from == null ? 0 : Math.max(0, days.dayNumber(now) - days.dayNumber(from));
-  return { coins: base.start + missed * coins.dailyBonus(), missed: missed };
+  if (!base.active || !base.since) return { coins: base.start, missed: 0, since: null };
+  const missed = Math.max(0, days.dayNumber(now) - days.dayNumber(base.since));
+  return { coins: base.start + missed * coins.dailyBonus(), missed: missed, since: base.since };
 }
 
 // Let a player in: {username, coins, missed, again} or {error}

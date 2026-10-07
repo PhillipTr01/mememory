@@ -298,9 +298,10 @@ async function loadAccess() {
       el(
         "span",
         "mm-muted",
-        data.firstApproval
-          ? " (" + formatCoins(data.baseCoins) + " + " + data.missed + " missed daily bonus" + (data.missed == 1 ? "" : "es") + " since " + day(data.firstApproval) + ")"
-          : " - nobody is approved yet, the daily bonuses count from the first approval",
+        // In a running season: its budget and the daily bonuses missed since it started
+        data.since
+          ? " (" + formatCoins(data.baseCoins) + " + " + data.missed + " missed daily bonus" + (data.missed == 1 ? "" : "es") + " since the season started " + day(data.since) + ")"
+          : " - the start coins (in a season: its budget plus the daily bonuses missed since it started)",
       ),
     );
     var list = document.getElementById("adAccessList");

@@ -65,8 +65,10 @@ test("seasons: planned ahead - at the start every account gets the budget, at th
   assert.strictEqual(coins.dailyBonus(), 2500, "the setting when none was given");
   assert.ok((await seasons.update(made.season.id, { ...seasons.publicSeason(seasons.running()), dailyBonus: 777 })).season);
   assert.strictEqual(coins.dailyBonus(), 777);
-  // A player let in now starts with the budget too
-  assert.strictEqual(access.startCoins(null).coins, 50000);
+  // A player let in now starts with the budget too - three days later with the 3 daily bonuses missed
+  assert.strictEqual(access.startCoins(null, start + 2000).coins, 50000);
+  const later = days.dayStart(start) + 3 * 24 * 3600 * 1000 + 5 * 3600 * 1000;
+  assert.deepStrictEqual([access.startCoins(null, later).coins, access.startCoins(null, later).missed], [50000 + 3 * 777, 3]);
 
   // The leaderboard of the season: updated every hour, not in between
   const first = await leaderboard.view("anna", start + 2000);
