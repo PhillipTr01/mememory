@@ -677,7 +677,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("pkRaiseBox").addEventListener(
     "wheel",
     (event) => {
-      if (!state || document.getElementById("pkRaiseBox").hidden) return;
+      // (only on the own turn - otherwise the bar is there, but quiet)
+      if (!state || document.getElementById("pkRaiseBox").hidden || !myTurn()) return;
       event.preventDefault();
       setRaise(raiseValue + (event.deltaY < 0 ? 1 : -1) * SLIDER_STEP, true);
     },

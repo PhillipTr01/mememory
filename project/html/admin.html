@@ -61,7 +61,7 @@
             <section id="tab-overview" class="ad-tab">
                 <div class="ad-stats">
                     <div class="ad-card ad-stat"><span class="ad-label">Players</span><span id="adPlayers" class="ad-stat-value">-</span><span class="ad-stat-sub">in the casino</span></div>
-                    <div class="ad-card ad-stat"><span class="ad-label">Coins in the game</span><span id="adCoins" class="ad-stat-value">-</span><span class="ad-stat-sub">all balances together</span></div>
+                    <div class="ad-card ad-stat"><span class="ad-label">Coins in the game</span><span id="adCoins" class="ad-stat-value">-</span><span id="adCoinsSub" class="ad-stat-sub">all balances together</span></div>
                     <div class="ad-card ad-stat"><span class="ad-label">Online now</span><span id="adOnline" class="ad-stat-value">-</span><span id="adOnlineNames" class="ad-stat-sub"></span></div>
                     <div class="ad-card ad-stat"><span class="ad-label">Open requests</span><span id="adWaiting" class="ad-stat-value">-</span><span class="ad-stat-sub">want into the casino</span></div>
                     <div class="ad-card ad-stat"><span class="ad-label">Open payouts</span><span id="adOpen" class="ad-stat-value">-</span><span id="adOpenCoins" class="ad-stat-sub"></span></div>
@@ -127,7 +127,7 @@
                         <input id="adSearch" class="mm-input ad-search" placeholder="Search a player">
                     </div>
                     <table class="ad-table">
-                        <thead><tr><th>#</th><th>Player</th><th class="num">Coins</th><th></th></tr></thead>
+                        <thead><tr><th>#</th><th>Player</th><th class="num" id="adBoardCoins">Coins</th><th class="num" id="adBoardBank" hidden>🏦 Bank</th><th></th></tr></thead>
                         <tbody id="adBoard"></tbody>
                     </table>
                 </div>

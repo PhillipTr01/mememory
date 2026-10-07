@@ -885,3 +885,14 @@
 .pk-tag.muted {
   opacity: 0.7;
 }
+
+/* Not the own turn: the slider doesn't move */
+.pk-slider:disabled {
+  pointer-events: none;
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+
+.pk-amount:disabled {
+  pointer-events: none;
+}

@@ -168,6 +168,8 @@ async function loadOverview() {
     var data = await api("overview");
     document.getElementById("adPlayers").innerText = formatCoins(data.players);
     document.getElementById("adCoins").innerText = "🪙 " + formatCoins(data.coins);
+    // In a season: the season balances - and the ones from before it in the bank
+    document.getElementById("adCoinsSub").innerText = data.bank != null ? "season balances · 🏦 " + formatCoins(data.bank) + " in the bank" : "all balances together";
     document.getElementById("adOpen").innerText = data.open.length;
     document.getElementById("adOpenCoins").innerText = "🪙 " + formatCoins(data.openCoins);
     document.getElementById("adWaiting").innerText = data.requests.length;
@@ -184,7 +186,9 @@ async function loadOverview() {
             var row = el("div", "ad-row");
             var name = el("span", "ad-row-main fw-semibold", p.username);
             if (p.season) name.append(" ", seasonPill(p.season));
-            row.append(el("span", "ad-rank", i + 1), name, el("span", "ad-row-value", "🪙 " + formatCoins(p.coins)));
+            var value = el("span", "ad-row-value", "🪙 " + formatCoins(p.coins));
+            if (p.bank != null) value.appendChild(el("small", "ad-bank", "🏦 " + formatCoins(p.bank)));
+            row.append(el("span", "ad-rank", i + 1), name, value);
             return row;
           })
         : [el("p", "ad-empty", "No players yet.")]),
@@ -407,6 +411,10 @@ function fillUserList() {
 async function loadPlayers() {
   try {
     players = await api("users?q=" + encodeURIComponent(document.getElementById("adSearch").value.trim()));
+    // In a season: the season balance and the bank (the balance from before it) side by side
+    var inSeason = players.some((p) => p.bank != null);
+    document.getElementById("adBoardCoins").innerText = inSeason ? "🪙 Season" : "Coins";
+    document.getElementById("adBoardBank").hidden = !inSeason;
     fillUserList();
     document.getElementById("adBoard").replaceChildren(
       ...players.map((p, i) => {
@@ -429,7 +437,9 @@ async function loadPlayers() {
         actions.append(edit, history);
         var name = el("td", "fw-semibold", p.username);
         if (p.season) name.append(" ", seasonPill(p.season));
-        row.append(el("td", "mm-muted", i + 1), name, el("td", "num", "🪙 " + formatCoins(p.coins)), actions);
+        var bank = el("td", "num mm-muted", p.bank != null ? "🏦 " + formatCoins(p.bank) : "–");
+        bank.hidden = !inSeason;
+        row.append(el("td", "mm-muted", i + 1), name, el("td", "num", "🪙 " + formatCoins(p.coins)), bank, actions);
         return row;
       }),
     );

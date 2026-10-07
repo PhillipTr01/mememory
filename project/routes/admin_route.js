@@ -116,7 +116,8 @@ module.exports = function () {
   async function players() {
     const users = await User.find({ casinoApproved: true }).select("username coins coinReset").lean();
     return users
-      .map((user) => ({ username: user.username, coins: balance(user), season: seasonOf(user.username) }))
+      // (in a season: coins = the season balance, bank = the balance from before it - back after the season)
+      .map((user) => ({ username: user.username, coins: balance(user), bank: seasons.storedOf(user.username), season: seasonOf(user.username) }))
       .sort((a, b) => !!b.season - !!a.season || b.coins - a.coins || a.username.localeCompare(b.username));
   }
 
@@ -153,6 +154,8 @@ module.exports = function () {
         leaderboard: all.slice(0, 50),
         players: all.length,
         coins: all.reduce((sum, p) => sum + p.coins, 0),
+        // In a season: the balances from before it, waiting in the bank
+        bank: seasons.running() ? all.reduce((sum, p) => sum + (p.bank || 0), 0) : null,
         open: open,
         openCoins: open.reduce((sum, w) => sum + w.amount, 0),
         requests: (await requests()).map((user) => ({ username: user.username, requestedAt: user.requestedAt })),
