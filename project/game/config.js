@@ -137,7 +137,7 @@ module.exports = {
   POKER_LEVEL_RESET: 5 * 60 * 1000,
   POKER_MIN_BUYIN: 1000, // (10 big blinds of the first level)
   POKER_MAX_BUYIN: 10000,
-  POKER_DEFAULT_BUYIN: 5000, // what the buy-in starts with when sitting down (50 big blinds)
+  POKER_DEFAULT_BUYIN: 10000, // what the buy-in starts with when sitting down (100 big blinds)
   POKER_TURN: 20 * 1000, // time to act, then check (or fold)
   POKER_START: 3000, // pause before a hand starts
   POKER_STREET: 1200, // all-in: pause between the cards of the board

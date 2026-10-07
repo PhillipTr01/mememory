@@ -588,8 +588,8 @@ function buyIn(seat) {
     text: "Your coins become chips. When you stand up, the chips are coins again.",
     min: state.rules.minBuyIn,
     max: state.rules.maxBuyIn,
-    // (5,000 to start with - or less, with fewer coins)
-    value: Math.max(state.rules.minBuyIn, Math.min(state.rules.defaultBuyIn || 5000, state.rules.maxBuyIn, myCoins)),
+    // (10,000 to start with - or less, with fewer coins)
+    value: Math.max(state.rules.minBuyIn, Math.min(state.rules.defaultBuyIn || 10000, state.rules.maxBuyIn, myCoins)),
     button: "Sit down",
     done: (amount) => socket.emit("sit", { seat: seat, buyIn: amount }),
   });

@@ -804,6 +804,53 @@
   gap: 0.5rem;
 }
 
+/* Muck (quiet, red when hovered) or show (gold): two big pills with an icon */
+.pk-decide-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 42px;
+  padding: 0 1.25rem 0 1rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pk-decide-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.pk-decide-btn:hover {
+  transform: translateY(-1px);
+}
+
+.pk-decide-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.pk-decide-btn.muck:hover {
+  border-color: rgba(var(--mm-danger-rgb, 220, 70, 70), 0.7);
+  color: var(--mm-danger);
+  background: rgba(var(--mm-danger-rgb, 220, 70, 70), 0.08);
+}
+
+.pk-decide-btn.show {
+  border-color: transparent;
+  background: linear-gradient(180deg, #f0c870, var(--mm-accent));
+  color: #1a1305;
+  box-shadow: 0 6px 18px rgba(var(--mm-accent-rgb), 0.3);
+}
+
+.pk-decide-btn.show:hover {
+  box-shadow: 0 8px 24px rgba(var(--mm-accent-rgb), 0.45);
+}
+
 /* The time left: a thin gold bar at the bottom that runs out */
 .pk-decide-timer {
   position: absolute;

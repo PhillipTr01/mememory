@@ -3011,21 +3011,12 @@ body.jackpot-theme {
   background: var(--mm-bg, #141414) !important;
 }
 
-/* Poker: the table as big as the screen's height allows */
-.pk-main.cs-fullscreen .pk-table {
-  max-width: calc((100vh - 280px) * 2.1);
-  margin: 0 auto;
-}
-
-/* Blackjack: a bigger table */
-.bj-main.cs-fullscreen .bj-table {
-  min-height: calc(100vh - 360px);
-}
-
-.bj-main.cs-fullscreen .bj-bar {
-  max-width: 1300px;
-  margin-left: auto;
-  margin-right: auto;
+/* Poker and blackjack: zoomed as a whole (casino_fullscreen.js, data-fullscreen-zoom), in the middle */
+.pk-main.cs-fullscreen,
+.bj-main.cs-fullscreen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* ---------- The leaderboard in the bar at the top (the season, when one runs) ---------- */
