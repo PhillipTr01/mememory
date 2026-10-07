@@ -123,7 +123,7 @@
                                 <span id="jpCoins" class="jp-coins">-</span>
                                 <span id="jpChance" class="jp-chance"></span>
                             </div>
-                            <form id="jpForm" class="jp-form" autocomplete="off">
+                            <form id="jpForm" class="jp-form" autocomplete="off" novalidate>
                                 <div class="jp-quick">
                                     <button type="button" class="mm-btn mm-btn-sm" data-add="100">+100</button>
                                     <button type="button" class="mm-btn mm-btn-sm" data-add="500">+500</button>
@@ -131,7 +131,7 @@
                                     <button type="button" class="mm-btn mm-btn-sm" data-add="max">Max</button>
                                 </div>
                                 <div class="jp-input-row">
-                                    <input id="jpAmount" class="mm-input" type="number" min="1" step="1" inputmode="numeric" placeholder="Coins" aria-label="Coins to put in">
+                                    <input id="jpAmount" class="mm-input" type="number" min="1" step="100" inputmode="numeric" placeholder="Coins" aria-label="Coins to put in">
                                     <button id="jpBetButton" type="submit" class="mm-btn mm-btn-primary">
                                         <i class="bi bi-plus-circle"></i> Put in
                                     </button>

@@ -1196,3 +1196,33 @@
     font-size: 0.68rem;
   }
 }
+
+/* After a big win / a bonus: "click to continue" - a click anywhere on it goes on */
+.sl-stage.waiting-click {
+  cursor: pointer;
+}
+
+.sl-continue-hint {
+  margin-top: 0.9rem;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  animation: sl-continue-pulse 1.4s ease-in-out infinite, sl-continue-in 0.4s ease-out;
+  pointer-events: none;
+}
+
+@keyframes sl-continue-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes sl-continue-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}

@@ -3511,3 +3511,12 @@ body.jackpot-theme {
     opacity: 0;
   }
 }
+
+/* The bar at the top stays while scrolling: the coins (and the free coins) always in sight */
+body.jackpot-theme > header {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  background: var(--mm-bg, #141414);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}

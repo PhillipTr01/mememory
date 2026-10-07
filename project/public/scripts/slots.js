@@ -321,6 +321,8 @@ async function playSpin(result) {
       result.bet,
     );
   await animateReels(result.grid, setup.rules.spinTime, setup.rules.sweatTime, shown, null, result.stops);
+  // The lines of this spin won something too: they count first (lit, counted up) - then the bonus game
+  if ((result.bonus || result.coinGame) && result.lineWin > 0) await showLineWinFirst(result);
   // Three 🎁: the bonus game first - five 🪙: the coin game
   if (result.bonus) await playBonus(result);
   if (result.coinGame) await playCoinGame(result);
@@ -807,13 +809,16 @@ async function ultraShow(result) {
 }
 
 // A win screen stays until the player clicks on (or Enter / space)
+// "Click to continue": a click anywhere on the screen of the win (or Enter / space) goes on
 function continueButton(stage) {
   return new Promise((resolve) => {
-    var button = el("button", "sl-start-btn sl-continue", "Continue");
-    button.type = "button";
+    var button = el("div", "sl-continue-hint", "Click to continue");
     stage.appendChild(button);
+    stage.classList.add("waiting-click");
     var done = () => {
       document.removeEventListener("keydown", onKey, true);
+      stage.removeEventListener("click", done);
+      stage.classList.remove("waiting-click");
       resolve();
     };
     var onKey = (event) => {
@@ -823,10 +828,8 @@ function continueButton(stage) {
         done();
       }
     };
-    button.addEventListener("click", done);
+    stage.addEventListener("click", done);
     document.addEventListener("keydown", onKey, true);
-    button.animate([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], { duration: 300, easing: "ease-out" });
-    button.focus();
   });
 }
 
@@ -886,6 +889,25 @@ async function bigWin(result) {
 }
 
 // The win: every winning line, the cells pulse; then line after line with its win
+// Before a bonus game: what the lines of the spin itself won (it is paid with the rest)
+async function showLineWinFirst(result) {
+  var bar = document.getElementById("slWinBar");
+  var text = document.getElementById("slWinText");
+  var detail = document.getElementById("slWinDetail");
+  bar.className = "sl-winbar won";
+  var reels = [...document.querySelectorAll(".sl-reel")];
+  result.lines.forEach((line) => setup.lines[line.line].slice(0, line.count).forEach((row, reel) => reels[reel].querySelectorAll(".sl-cell")[row].classList.add("hit")));
+  showLines(
+    result.lines.map((l) => l.line),
+    true,
+  );
+  detail.innerText = (result.lines.length == 1 ? "1 line" : result.lines.length + " lines") + " · bonus next";
+  countUp(text, result.lineWin, Math.min(900, setup.rules.countTime));
+  await wait(1500);
+  clearLines();
+  document.querySelectorAll(".sl-cell.hit").forEach((c) => c.classList.remove("hit"));
+}
+
 async function showResult(result) {
   var bar = document.getElementById("slWinBar");
   var text = document.getElementById("slWinText");
@@ -1024,12 +1046,12 @@ function renderControls() {
   document.getElementById("slMore").disabled = spinning || bet >= setup.rules.maxBet;
 }
 
-// Next / previous step of the bet (the presets, in between: tens)
+// − / +: the bet in steps of 50 (to the next multiple of 50)
+var BET_STEP = 50;
 function stepBet(direction) {
   var bet = currentBet();
-  var values = PRESETS.filter((value) => value >= setup.rules.minBet && value <= setup.rules.maxBet);
-  var next = direction > 0 ? values.find((value) => value > bet) : values.slice().reverse().find((value) => value < bet);
-  setBet(next != null ? next : direction > 0 ? setup.rules.maxBet : setup.rules.minBet);
+  var next = direction > 0 ? Math.floor(bet / BET_STEP) * BET_STEP + BET_STEP : Math.ceil(bet / BET_STEP) * BET_STEP - BET_STEP;
+  setBet(Math.max(setup.rules.minBet, Math.min(setup.rules.maxBet, next)));
 }
 
 /* ---------- Last wins (everybody) ---------- */
