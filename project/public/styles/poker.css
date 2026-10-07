@@ -718,3 +718,46 @@
     padding: 1rem;
   }
 }
+
+/* Switches in the seat bar (big blinds, muck): gold when on */
+.pk-pill.toggle {
+  padding: 0 0.75rem;
+  color: var(--mm-muted);
+}
+
+.pk-pill.toggle.on {
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+  color: var(--mm-accent);
+}
+
+.pk-pill[hidden] {
+  display: none;
+}
+
+.pk-seatbar {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* The quick bets and the ⚙ to pick them */
+.pk-preset-edit {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--mm-border);
+  border-radius: 8px;
+  background: var(--mm-surface-2);
+  color: var(--mm-muted);
+  cursor: pointer;
+}
+
+.pk-preset-edit:hover {
+  color: var(--mm-accent);
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+}
+
+.pk-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}

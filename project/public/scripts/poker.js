@@ -57,6 +57,21 @@ function chatUsername() {
   return myName;
 }
 
+// Chips as coins - or in big blinds (the switch in the seat bar)
+var BB_KEY = "pokerInBB";
+var inBB = false;
+try {
+  inBB = localStorage.getItem(BB_KEY) == "1";
+} catch (error) {
+  // not remembered
+}
+
+function chips(value) {
+  if (!inBB || !state) return "🪙 " + formatCoins(value);
+  var bb = value / state.rules.bigBlind;
+  return (Number.isInteger(bb) ? bb : bb.toFixed(1)) + " BB";
+}
+
 function formatCoins(value) {
   return Number(value).toLocaleString("en-US");
 }
@@ -139,7 +154,7 @@ function isWinningCard(card) {
 
 function render() {
   if (state == null) return;
-  document.getElementById("pkBlinds").innerText = "Blinds " + state.rules.smallBlind + " / " + state.rules.bigBlind;
+  renderBlinds();
   renderSeats();
   renderBoard();
   renderStatus();
@@ -200,10 +215,10 @@ function renderSeats() {
       var info = el("div", "pk-info");
       var name = el("span", "pk-name", seat.name);
       if (seat.away) name.title = "Away";
-      info.append(name, el("span", "pk-stack", "🪙 " + formatCoins(seat.stack)));
+      info.append(name, el("span", "pk-stack", chips(seat.stack)));
 
       var tag = null;
-      if (won) tag = el("span", "pk-tag win", "+" + formatCoins(won.amount) + (won.hand ? " · " + won.hand : ""));
+      if (won) tag = el("span", "pk-tag win", "+" + chips(won.amount).replace("🪙 ", "") + (won.hand ? " · " + won.hand : ""));
       else if (state.result && state.result.showdown && !seat.folded && seat.inHand) {
         var shown = state.result.hands.find((h) => h.seat == i);
         if (shown) tag = el("span", "pk-tag", shown.hand);
@@ -227,7 +242,7 @@ function renderSeats() {
   state.seats.forEach((seat, i) => {
     if (seat == null || seat.bet <= 0) return;
     var betPlace = betPlaces()[placeOf(i)];
-    var bet = el("div", "pk-bet", "🪙 " + formatCoins(seat.bet));
+    var bet = el("div", "pk-bet", chips(seat.bet));
     bet.style.left = betPlace.x + "%";
     bet.style.top = betPlace.y + "%";
     container.appendChild(bet);
@@ -257,13 +272,13 @@ function renderBoard() {
   if (pots.length > 1) {
     pot.replaceChildren(
       ...pots.map((p, n) => {
-        var chip = el("span", "pk-pot-part" + (n ? " side" : ""), (n == 0 ? "Main pot" : pots.length > 2 ? "Side pot " + n : "Side pot") + " 🪙 " + formatCoins(p.amount));
+        var chip = el("span", "pk-pot-part" + (n ? " side" : ""), (n == 0 ? "Main pot" : pots.length > 2 ? "Side pot " + n : "Side pot") + " " + chips(p.amount));
         chip.title = "For " + p.players.join(", ");
         return chip;
       }),
     );
   } else {
-    pot.innerText = state.pot + bets > 0 ? "Pot 🪙 " + formatCoins(state.pot + bets) : "";
+    pot.innerText = state.pot + bets > 0 ? "Pot " + chips(state.pot + bets) : "";
   }
 
   // The result pot by pot: how big, who won it, with what
@@ -273,7 +288,7 @@ function renderBoard() {
     var rows = state.result.pots.map((p, n) => {
       var row = el("div", "pk-result-pot" + (p.winners.some((w) => w.name == myName) ? " mine" : ""));
       var label = state.result.pots.length == 1 ? "Pot" : n == 0 ? "Main pot" : state.result.pots.length > 2 ? "Side pot " + n : "Side pot";
-      row.appendChild(el("span", "pk-result-label", label + " 🪙 " + formatCoins(p.amount)));
+      row.appendChild(el("span", "pk-result-label", label + " " + chips(p.amount)));
       var who = p.winners.map((w) => (w.name == myName ? "You" : w.name)).join(" & ");
       var hand = p.winners[0] && p.winners[0].hand ? " · " + p.winners[0].hand : "";
       row.appendChild(el("span", "pk-result-who", (p.winners.length > 1 ? who + " split" : who) + hand));
@@ -300,6 +315,30 @@ function renderStatus() {
   }
 }
 
+/* ---------- Blinds: they go up over time ---------- */
+
+var levelEnd = null; // when the blinds go up next (null: not running)
+var levelTimer = null;
+
+function renderBlinds() {
+  levelEnd = state.level && state.level.nextIn != null ? Date.now() + state.level.nextIn : null;
+  clearInterval(levelTimer);
+  tickBlinds();
+  if (levelEnd != null) levelTimer = setInterval(tickBlinds, 1000);
+}
+
+function tickBlinds() {
+  var badge = document.getElementById("pkBlinds");
+  var text = "Blinds " + formatCoins(state.rules.smallBlind) + " / " + formatCoins(state.rules.bigBlind);
+  if (state.level) text += " · Level " + state.level.number;
+  if (levelEnd != null && state.level.next) {
+    var left = Math.max(0, Math.ceil((levelEnd - Date.now()) / 1000));
+    text += " · " + formatCoins(state.level.next.small) + " / " + formatCoins(state.level.next.big) + " in " + Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
+  }
+  badge.innerText = text;
+  badge.title = "The blinds go up every few minutes - and start low again when the table was empty for a while";
+}
+
 /* ---------- Actions ---------- */
 
 function limits() {
@@ -318,8 +357,8 @@ function renderActions() {
   var l = limits();
   var call = document.getElementById("pkCall");
   if (l.toCall == 0) call.innerText = "Check";
-  else if (l.toCall >= l.me.stack) call.innerText = "Call all-in " + formatCoins(l.me.stack);
-  else call.innerText = "Call " + formatCoins(l.toCall);
+  else if (l.toCall >= l.me.stack) call.innerText = "Call all-in " + chips(l.me.stack);
+  else call.innerText = "Call " + chips(l.toCall);
 
   // Raising is only possible with more chips than the call
   var canRaise = l.max > state.highBet && l.me.stack > l.toCall;
@@ -343,7 +382,7 @@ function renderActions() {
 function updateRaiseLabel() {
   var value = Number(document.getElementById("pkAmount").value) || 0;
   var l = limits();
-  var label = value >= l.max ? "All-in " + formatCoins(l.max) : (state.highBet == 0 ? "Bet " : "Raise to ") + formatCoins(value);
+  var label = value >= l.max ? "All-in " + chips(l.max) : (state.highBet == 0 ? "Bet " : "Raise to ") + chips(value);
   document.getElementById("pkRaise").innerText = label;
 }
 
@@ -355,15 +394,91 @@ function setRaise(value) {
   updateRaiseLabel();
 }
 
+// The quick bets: every player picks their own four (the ⚙ next to them)
+var PRESETS = {
+  min: "Min",
+  "pot-33": "⅓ Pot",
+  "pot-50": "½ Pot",
+  "pot-66": "⅔ Pot",
+  "pot-75": "¾ Pot",
+  "pot-100": "Pot",
+  "pot-200": "2× Pot",
+  "bb-2.5": "2.5 BB",
+  "bb-3": "3 BB",
+  "bb-4": "4 BB",
+  "bb-5": "5 BB",
+  max: "All-in",
+};
+var PRESETS_KEY = "pokerPresets";
+var myPresets = ["min", "pot-50", "pot-100", "max"];
+try {
+  var saved = JSON.parse(localStorage.getItem(PRESETS_KEY));
+  if (Array.isArray(saved) && saved.length == 4 && saved.every((kind) => PRESETS[kind])) myPresets = saved;
+} catch (error) {
+  // the default ones
+}
+
+function renderPresets() {
+  var box = document.getElementById("pkPresets");
+  box.replaceChildren(
+    ...myPresets.map((kind) => {
+      var button = el("button", "mm-btn mm-btn-sm", PRESETS[kind]);
+      button.type = "button";
+      button.addEventListener("click", () => preset(kind));
+      return button;
+    }),
+  );
+}
+
 function preset(kind) {
   var l = limits();
   var bets = state.seats.reduce((sum, seat) => sum + (seat ? seat.bet : 0), 0);
-  // Pot-sized raise: call first, then the whole pot on top
+  // Pot-sized raise: call first, then the pot on top
   var pot = state.pot + bets + l.toCall;
-  if (kind == "min") setRaise(l.min);
-  else if (kind == "half") setRaise(state.highBet + pot / 2);
-  else if (kind == "pot") setRaise(state.highBet + pot);
-  else setRaise(l.max);
+  if (kind == "min") return setRaise(l.min);
+  if (kind == "max") return setRaise(l.max);
+  var [type, size] = kind.split("-");
+  if (type == "pot") setRaise(state.highBet + (pot * Number(size)) / 100);
+  else setRaise(Number(size) * state.rules.bigBlind);
+}
+
+// The ⚙: four selects, saved in the browser
+function editPresets() {
+  var backdrop = el("div", "mm-dialog-backdrop");
+  var dialog = el("div", "mm-dialog pk-dialog");
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  dialog.append(el("h2", "mm-dialog-title", "Your quick bets"), el("p", "mm-dialog-text", "Pick the four buttons next to the raise slider."));
+  var selects = myPresets.map((kind, n) => {
+    var select = el("select", "mm-input pk-preset-select");
+    select.setAttribute("aria-label", "Button " + (n + 1));
+    Object.keys(PRESETS).forEach((key) => select.appendChild(Object.assign(document.createElement("option"), { value: key, innerText: PRESETS[key], selected: key == kind })));
+    return select;
+  });
+  var grid = el("div", "pk-preset-grid");
+  grid.append(...selects);
+  var actions = el("div", "mm-dialog-actions");
+  var cancel = el("button", "mm-btn", "Cancel");
+  cancel.type = "button";
+  var save = el("button", "mm-btn mm-btn-primary", "Save");
+  save.type = "button";
+  actions.append(cancel, save);
+  dialog.append(grid, actions);
+  backdrop.appendChild(dialog);
+  document.body.appendChild(backdrop);
+  var close = () => backdrop.remove();
+  cancel.addEventListener("click", close);
+  backdrop.addEventListener("click", (event) => event.target == backdrop && close());
+  save.addEventListener("click", () => {
+    myPresets = selects.map((select) => select.value);
+    try {
+      localStorage.setItem(PRESETS_KEY, JSON.stringify(myPresets));
+    } catch (error) {
+      // only for now
+    }
+    renderPresets();
+    close();
+  });
 }
 
 function send(type, amount) {
@@ -378,10 +493,21 @@ function renderSeatBar() {
   bar.hidden = me < 0;
   if (me < 0) return;
   var seat = state.seats[me];
-  document.getElementById("pkMyInfo").innerText = "🪙 " + formatCoins(seat.stack);
+  document.getElementById("pkMyInfo").innerText = chips(seat.stack);
   document.getElementById("pkMyLabel").innerText = seat.leaving ? "Leaving after this hand" : "Your chips";
   document.getElementById("pkAddChips").disabled = (seat.inHand && state.phase != "showdown") || seat.stack >= state.rules.maxBuyIn;
   document.getElementById("pkStand").disabled = seat.leaving;
+  // After the hand: show the own cards (also when everybody else folded)
+  var show = document.getElementById("pkShow");
+  show.hidden = !(state.phase == "showdown" && seat.inHand && seat.cards.length && !seat.shown);
+  var muck = document.getElementById("pkMuck");
+  muck.classList.toggle("on", state.muck);
+  muck.setAttribute("aria-pressed", state.muck ? "true" : "false");
+  muck.title = state.muck ? "Losing hands are mucked (hidden) at a showdown - click to show them" : "Losing hands are shown at a showdown - click to muck them";
+  document.getElementById("pkMuckText").innerText = state.muck ? "Muck" : "Show";
+  var bb = document.getElementById("pkInBB");
+  bb.classList.toggle("on", inBB);
+  bb.setAttribute("aria-pressed", inBB ? "true" : "false");
 }
 
 // Buy-in / more chips: a small dialog with a slider
@@ -499,7 +625,30 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("pkSlider").addEventListener("input", (event) => setRaise(Number(event.target.value)));
   document.getElementById("pkAmount").addEventListener("change", (event) => setRaise(Number(event.target.value)));
-  document.querySelectorAll("[data-preset]").forEach((button) => button.addEventListener("click", () => preset(button.dataset.preset)));
+  renderPresets();
+  document.getElementById("pkPresetEdit").addEventListener("click", editPresets);
+  // The mouse wheel moves the raise (one big blind per step)
+  document.getElementById("pkRaiseBox").addEventListener(
+    "wheel",
+    (event) => {
+      if (!state || document.getElementById("pkRaiseBox").hidden) return;
+      event.preventDefault();
+      var value = Number(document.getElementById("pkAmount").value) || 0;
+      setRaise(value + (event.deltaY < 0 ? 1 : -1) * state.rules.bigBlind);
+    },
+    { passive: false },
+  );
+  document.getElementById("pkShow").addEventListener("click", () => socket.emit("showCards"));
+  document.getElementById("pkMuck").addEventListener("click", () => state && socket.emit("setMuck", !state.muck));
+  document.getElementById("pkInBB").addEventListener("click", () => {
+    inBB = !inBB;
+    try {
+      localStorage.setItem(BB_KEY, inBB ? "1" : "0");
+    } catch (error) {
+      // only for now
+    }
+    render();
+  });
 
   document.getElementById("pkStand").addEventListener("click", () => socket.emit("stand"));
   document.getElementById("pkAddChips").addEventListener("click", addChips);

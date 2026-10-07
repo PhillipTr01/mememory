@@ -144,6 +144,10 @@ test("poker: sit down with coins, only the own cards are visible, check down to 
   const bob = client("bob");
   await Promise.all([waitFor(alice, "coins", (d) => d.coins === 1000), waitFor(bob, "coins", (d) => d.coins === 1000)]);
 
+  // Both show their hands at the showdown (no mucking)
+  alice.emit("setMuck", false);
+  bob.emit("setMuck", false);
+  await Promise.all([waitFor(alice, "pokerState", (s) => s.muck === false), waitFor(bob, "pokerState", (s) => s.muck === false)]);
   alice.emit("sit", { seat: 0, buyIn: 200 });
   await waitFor(alice, "pokerState", (s) => s.seats[0] != null);
   assert.strictEqual(h.coinsOf("alice"), 800);
@@ -293,6 +297,71 @@ test("poker: all-in, standing up in a hand and wrong buy-ins", async () => {
   await clearTable([alice, bob]);
   await h.wait(30);
   assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 2000, "every coin is back");
+});
+
+test("poker: the blinds go up over time - and back to the start when the table was empty", async () => {
+  Object.assign(config, { POKER_LEVEL_TIME: 150, POKER_LEVEL_RESET: 200 });
+  // A fresh table (the hands of the tests before started the level clock)
+  Object.assign(server.poker.table, { level: 0, levelSince: null });
+  h.setCoins("alice", 5000);
+  h.setCoins("bob", 5000);
+  const alice = client("alice");
+  const bob = client("bob");
+  await Promise.all([waitFor(alice, "coins", (d) => d.coins === 5000), waitFor(bob, "coins", (d) => d.coins === 5000)]);
+  alice.emit("sit", { seat: 0, buyIn: 2000 });
+  await waitFor(alice, "pokerState", (s) => s.seats[0] != null);
+  const first = waitFor(alice, "pokerState", (s) => s.phase === "preflop");
+  bob.emit("sit", { seat: 1, buyIn: 2000 });
+  const hand1 = await first;
+  assert.deepStrictEqual([hand1.level.number, hand1.rules.smallBlind, hand1.rules.bigBlind], [1, config.POKER_SMALL_BLIND, config.POKER_BIG_BLIND]);
+  assert.deepStrictEqual(hand1.level.next, { small: config.POKER_SMALL_BLIND * 2, big: config.POKER_BIG_BLIND * 2 });
+
+  // The next hand after the level time: the blinds are doubled
+  await h.wait(200);
+  const folder = hand1.current === 0 ? alice : bob;
+  const next = waitFor(alice, "pokerState", (s) => s.phase === "preflop" && s.hand === hand1.hand + 1, 5000);
+  folder.emit("action", { type: "fold" });
+  const hand2 = await next;
+  assert.ok(hand2.level.number >= 2, "a higher level");
+  assert.strictEqual(hand2.seats[hand2.bb].bet, hand2.rules.bigBlind);
+  assert.ok(hand2.rules.bigBlind >= config.POKER_BIG_BLIND * 2);
+
+  // Everybody stands up: after a while the blinds are back at the start
+  await clearTable([alice, bob]);
+  const reset = await waitFor(alice, "pokerState", (s) => s.level.number === 1, 3000);
+  assert.strictEqual(reset.rules.bigBlind, config.POKER_BIG_BLIND);
+  Object.assign(config, { POKER_LEVEL_TIME: 10 * 60 * 1000, POKER_LEVEL_RESET: 5 * 60 * 1000 });
+});
+
+test("poker: a losing hand is mucked (hidden) - unless the player shows; the winner can show after a fold", async () => {
+  h.setCoins("alice", 5000);
+  h.setCoins("bob", 5000);
+  const alice = client("alice");
+  const bob = client("bob");
+  await Promise.all([waitFor(alice, "coins", (d) => d.coins === 5000), waitFor(bob, "coins", (d) => d.coins === 5000)]);
+  // Both muck (the default)
+  alice.emit("setMuck", true);
+  bob.emit("setMuck", true);
+  await Promise.all([waitFor(alice, "pokerState", (s) => s.muck === true), waitFor(bob, "pokerState", (s) => s.muck === true)]);
+  alice.emit("sit", { seat: 0, buyIn: 1000 });
+  await waitFor(alice, "pokerState", (s) => s.seats[0] != null);
+  const dealt = waitFor(alice, "pokerState", (s) => s.phase === "preflop");
+  bob.emit("sit", { seat: 1, buyIn: 1000 });
+  let state = await dealt;
+  const player = (seat) => (seat === 0 ? alice : bob);
+
+  // Everybody else folds: no showdown, the cards stay hidden - the winner may show them
+  const winner = state.current === 0 ? 1 : 0;
+  const over = waitFor(alice, "pokerState", (s) => s.phase === "showdown");
+  player(state.current).emit("action", { type: "fold" });
+  let end = await over;
+  assert.strictEqual(end.result.showdown, false);
+  const other = winner === 0 ? 1 : 0;
+  const seen = waitFor(player(other), "pokerState", (s) => s.phase === "showdown" && s.seats[winner] && s.seats[winner].shown);
+  player(winner).emit("showCards");
+  const shown = await seen;
+  assert.ok(shown.seats[winner].cards.every((card) => typeof card === "string"), "the winner showed the cards");
+  await clearTable([alice, bob]);
 });
 
 test("poker: a server stop gives every chip back, also the ones in the pot", async () => {

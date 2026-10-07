@@ -96,6 +96,9 @@
                                 <span id="pkMyLabel" class="pk-mychips-label">Your chips</span>
                                 <span id="pkMyInfo" class="pk-mychips-value"></span>
                             </div>
+                            <button type="button" id="pkShow" class="pk-pill accent" hidden>👁 Show cards</button>
+                            <button type="button" id="pkInBB" class="pk-pill toggle" title="Chips in big blinds" aria-pressed="false">BB</button>
+                            <button type="button" id="pkMuck" class="pk-pill toggle" aria-pressed="true"><span aria-hidden="true">🂠</span> <span id="pkMuckText">Muck</span></button>
                             <button type="button" id="pkAddChips" class="pk-pill accent"><span aria-hidden="true">＋</span> Add chips</button>
                             <button type="button" id="pkStand" class="pk-pill leave"><span aria-hidden="true">↥</span> Stand up</button>
                         </div>
@@ -121,12 +124,8 @@
                             <button type="button" id="pkRaise" class="mm-btn mm-btn-primary">Raise</button>
                         </div>
                         <div id="pkRaiseBox" class="pk-raise">
-                            <div class="pk-presets">
-                                <button type="button" class="mm-btn mm-btn-sm" data-preset="min">Min</button>
-                                <button type="button" class="mm-btn mm-btn-sm" data-preset="half">½ Pot</button>
-                                <button type="button" class="mm-btn mm-btn-sm" data-preset="pot">Pot</button>
-                                <button type="button" class="mm-btn mm-btn-sm" data-preset="max">All-in</button>
-                            </div>
+                            <div id="pkPresets" class="pk-presets"></div>
+                            <button type="button" id="pkPresetEdit" class="pk-preset-edit" title="Your quick bets" aria-label="Change the quick bets">⚙</button>
                             <input id="pkSlider" type="range" class="pk-slider" aria-label="Raise to">
                             <input id="pkAmount" type="number" class="mm-input pk-amount" inputmode="numeric" aria-label="Raise to">
                         </div>
