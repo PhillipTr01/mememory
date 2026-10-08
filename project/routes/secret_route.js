@@ -18,6 +18,9 @@ const info = require("../game/info");
 module.exports = function (auth) {
   const router = express.Router({ caseSensitive: false, strict: true });
 
+  // The addresses of data (not pages) - without access: an error instead of the page to ask for it
+  const DATA = /^\/(withdraw|leaderboard\/|info\/|season|second-chance|request)/;
+
   // Only for players the admin let in - everybody else gets the page to ask for access
   const approved = asyncHandler(async (req, res, next) => {
     const user = await User.findOne({ _id: req._id }).select("username casinoApproved payoutAllowed").lean();
@@ -26,9 +29,10 @@ module.exports = function (auth) {
       req.payoutAllowed = user.payoutAllowed === true;
       return next();
     }
-    if (req.path.startsWith("/withdraw") || req.path.startsWith("/leaderboard/")) return res.status(403).json({ error: "No access." });
-    if (req.path === "/") return page("casino_request.html")(req, res, next);
-    res.redirect(req.baseUrl + "/");
+    // A page (any address of the casino): the page to ask for access - right there, it opens the
+    // page asked for once the access is there. Everything else (data): no access.
+    if (req.method === "GET" && !DATA.test(req.path)) return page("casino_request.html")(req, res, next);
+    res.status(403).json({ error: "No access." });
   });
 
   // The tabs of the games that are off are hidden (admin panel, Settings)
@@ -203,6 +207,9 @@ module.exports = function (auth) {
       res.json(await withdrawals.list({ username: name }, 10));
     }),
   );
+
+  // Any other address of the casino: without access the page to ask for it (with access: not found)
+  router.get(/.*/, auth, approved, (req, res, next) => next());
 
   return router;
 };

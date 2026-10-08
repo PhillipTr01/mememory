@@ -73,13 +73,15 @@ test("access: without the approval the secret address only shows the page to ask
   const html = await start.text();
   assert.match(html, /Ask for access/);
   assert.doesNotMatch(html, /<title>Jackpot/);
-  for (const path of ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/leaderboard"]) {
+  // Every address of the casino (also one that doesn't exist): the page to ask for access, right there
+  for (const path of ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/leaderboard", "/battles/xyz", "/nothing"]) {
     const res = await call(CASINO + path, as("tom"));
-    assert.strictEqual(res.status, 302, path);
-    assert.strictEqual(res.headers.get("location"), CASINO + "/", path);
+    assert.strictEqual(res.status, 200, path);
+    assert.match(await res.text(), /Ask for access/, path);
   }
-  // Not logged in: the landing page
-  assert.strictEqual((await call(CASINO + "/")).headers.get("location"), "/");
+  // Not logged in: the login - and then back to the page
+  assert.strictEqual((await call(CASINO + "/")).headers.get("location"), "/?next=" + encodeURIComponent(CASINO + "/"));
+  assert.strictEqual((await call(CASINO + "/battles")).headers.get("location"), "/?next=" + encodeURIComponent(CASINO + "/battles"));
   assert.strictEqual((await call(CASINO + "/withdraw", { ...as("tom"), json: { amount: 5000 } })).status, 403);
   assert.strictEqual((await call(CASINO + "/withdrawals", as("tom"))).status, 403);
   assert.strictEqual((await call(CASINO + "/leaderboard/data", as("tom"))).status, 403);

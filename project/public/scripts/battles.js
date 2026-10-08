@@ -82,10 +82,11 @@ function animate(element, frames, options) {
 socket.on("connect", () => (document.getElementById("connectionBanner").hidden = true));
 socket.on("disconnect", () => (document.getElementById("connectionBanner").hidden = false));
 socket.on("connect_error", (error) => {
-  if (error && error.message == "unauthorized") window.location.href = "/";
+  if (error && error.message == "unauthorized") window.location.href = "/?next=" + encodeURIComponent(location.pathname + location.search);
 });
 // The admin took the access away
-socket.on("casinoClosed", () => (window.location.href = "/"));
+// The admin took the access away: the page again - it asks for access now
+socket.on("casinoClosed", () => window.location.reload());
 // The admin turned this game off: on to another one
 socket.on("gameOff", () => (window.location.href = "./"));
 

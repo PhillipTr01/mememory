@@ -394,7 +394,7 @@ socket.on("disconnect", () => {
 });
 
 socket.on("connect_error", (error) => {
-  if (error && error.message == "unauthorized") window.location.href = "/";
+  if (error && error.message == "unauthorized") window.location.href = "/?next=" + encodeURIComponent(location.pathname + location.search);
 });
 
 socket.on("joined", (data) => {

@@ -91,7 +91,21 @@ test("page auth middleware redirects invalid sessions", async () => {
 
   const res = await request(app, "/home", { headers: { cookie: "token=garbage" } });
   assert.strictEqual(res.status, 302);
-  assert.strictEqual(res.headers.get("location"), "/");
+  // The login first - then back to the page
+  assert.strictEqual(res.headers.get("location"), "/?next=%2Fhome");
+});
+
+test("page auth middleware: logged in on the landing page with ?next= - straight there (only addresses on this site)", async () => {
+  const app = express();
+  app.use(cookieParser());
+  app.get("/", PageAuth, (req, res) => res.send("landing"));
+  const token = require("jsonwebtoken").sign({ _id: "someone" }, process.env.SECRET_KEY);
+  const go = async (next) => (await request(app, "/?next=" + encodeURIComponent(next), { headers: { cookie: "token=" + token } })).headers.get("location");
+  assert.strictEqual(await go("/casino/battles"), "/casino/battles");
+  assert.strictEqual(await go("//evil.example"), "/home");
+  assert.strictEqual(await go("https://evil.example"), "/home");
+  // Not logged in: the landing page itself (the login)
+  assert.strictEqual((await request(app, "/?next=%2Fhome")).status, 200);
 });
 
 test("404: pages get the 404 page, the API a short JSON answer", async () => {
