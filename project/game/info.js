@@ -174,8 +174,8 @@ const GAMES = {
         heading: "Ranking",
         items: [
           "The most coins first.",
-          "In a season every player shows 💔 the second chances used and 🎲 the bets made. The same coins: fewer second chances first - the same second chances: more bets first. Where this made the difference, it is marked.",
-          "Only players with the same coins, second chances and bets share a place - and its prize (two players 1st - the next one is 3rd).",
+          "In a season every player shows 💔 the second chances used and 🪙 the coins wagered. The same coins: fewer second chances first - the same second chances: more coins wagered first. Where this made the difference, it is marked.",
+          "Only players with the same coins, second chances and coins wagered share a place - and its prize (two players 1st - the next one is 3rd).",
           "Without a season: the same coins, the same place.",
         ],
       },

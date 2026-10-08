@@ -68,12 +68,12 @@ function podiumSpot(row) {
   return spot;
 }
 
-// In a season: the second chances and the bets of a player - highlighted where they decided a prize
+// In a season: the second chances and the coins wagered of a player - highlighted where they decided the place
 // (the same coins as others on a prize place)
 function decidedOf(row) {
-  if (row.bets == null && !row.decided) return null;
+  if (row.wagered == null && !row.decided) return null;
   var chances = row.chances != null ? row.chances : row.decided && row.decided.chances;
-  var bets = row.bets != null ? row.bets : row.decided && row.decided.bets;
+  var wagered = row.wagered != null ? row.wagered : row.decided && row.decided.wagered;
   var tag = el("span", "lb-decided" + (row.decided ? " decides" : ""));
   var long = [];
   var short = [];
@@ -81,13 +81,13 @@ function decidedOf(row) {
     long.push("💔 " + chances + " second chance" + (chances == 1 ? "" : "s"));
     short.push("💔 " + chances);
   }
-  if (bets != null) {
-    long.push("🎲 " + formatCoins(bets) + " bet" + (bets == 1 ? "" : "s"));
-    short.push("🎲 " + formatCoins(bets));
+  if (wagered != null) {
+    long.push("🪙 " + formatCoins(wagered) + " wagered");
+    short.push("🪙 " + formatCoins(wagered));
   }
   // (short on phones: only the icons and numbers)
   tag.append(el("span", "lb-decided-long", long.join(" · ")), el("span", "lb-decided-short", short.join(" · ")));
-  tag.title = row.decided ? "The same coins as others - this decided the place: fewer second chances first, then more bets" : "Second chances used · bets made in the season";
+  tag.title = row.decided ? "The same coins as others - this decided the place: fewer second chances first, then more coins wagered" : "Second chances used · coins wagered in the season";
   return tag;
 }
 

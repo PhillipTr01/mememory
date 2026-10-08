@@ -346,9 +346,9 @@ coins.setJoinedAtLookup((username) => {
 async function endSeason(season, now) {
   // (with the stats: the coin history of the season is gone after it)
   const rows = await withStats(season, await standings());
-  // The same coins, the same place - a prize between them: fewer second chances, then more bets
+  // The same coins, the same place - between them: fewer second chances, then more coins wagered
   const byName = new Map(rows.map((row) => [row.username, row]));
-  season.final = { at: now, rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, bets: byName.get(username).bets }) }) };
+  season.final = { at: now, rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, wagered: byName.get(username).wagered }) }) };
   season.ended = true;
   season.endedAt = now;
   // Everything as before the season: the balances (who came during the season gets the normal
@@ -431,15 +431,15 @@ function prizesOf(season) {
   return season && season.prizesOn && season.prizes && season.prizes.length ? new Map(season.prizes.map((p) => [p.place, p.prize])) : null;
 }
 
-// The second chances and bets of the players of the running season (on the leaderboard - and for
-// the prizes when players have the same coins): username -> {chances, bets}. The bets are counted
+// The second chances and coins wagered of the players of the running season (on the leaderboard -
+// and the order when players have the same coins): username -> {chances, wagered}. Counted
 // at most every 15 s (the coin history is read for it)
 let statsCache = { id: null, at: 0, stats: null };
 async function tieStats(season, now = Date.now()) {
   if (statsCache.id !== season.id || now - statsCache.at > 15000) statsCache = { id: season.id, at: now, stats: await seasonStats(season) };
   const stats = statsCache.stats;
   const chances = season.chances || {};
-  return (username) => ({ chances: (chances[username] && chances[username].used) || 0, bets: (stats[username] && stats[username].bets) || 0 });
+  return (username) => ({ chances: (chances[username] && chances[username].used) || 0, wagered: (stats[username] && stats[username].wagered) || 0 });
 }
 
 // The leaderboard rows with when they started, the second chances and the stats
@@ -462,7 +462,7 @@ async function board(id) {
   if (!season.started) return { ...result, at: null, rows: [] };
   const rows = await withStats(season, await standings());
   const byName = new Map(rows.map((row) => [row.username, row]));
-  return { ...result, at: Date.now(), rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, bets: byName.get(username).bets }) }) };
+  return { ...result, at: Date.now(), rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, wagered: byName.get(username).wagered }) }) };
 }
 
 let ticking = null;

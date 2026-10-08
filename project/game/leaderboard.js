@@ -26,7 +26,7 @@ async function build(now, before) {
 }
 
 // The places: the same coins, the same place - in a season every player with the second chances
-// and bets (shown on the board; a tie on a prize place goes by them)
+// and coins wagered (shown on the board; the same coins go by them)
 async function placed(rows) {
   const season = seasons.running();
   if (!season) return place(rows);
@@ -114,7 +114,7 @@ function final(id, username) {
   const season = seasons.byId(id);
   if (season == null || !season.ended || !season.final) return null;
   // (only the place, the coins and the prize - the stats of the players are for the admin panel)
-  const pub = (row) => row && { rank: row.rank, username: row.username, coins: row.coins, chances: row.chances, bets: row.bets, ...(row.prize ? { prize: row.prize } : {}), ...(row.decided ? { decided: row.decided } : {}) };
+  const pub = (row) => row && { rank: row.rank, username: row.username, coins: row.coins, chances: row.chances, wagered: row.wagered, ...(row.prize ? { prize: row.prize } : {}), ...(row.decided ? { decided: row.decided } : {}) };
   return {
     season: seasons.publicSeason(season),
     rows: season.final.rows.slice(0, SIZE).map(pub),

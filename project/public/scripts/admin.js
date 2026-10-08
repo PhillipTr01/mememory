@@ -606,9 +606,9 @@ function playerCell(row) {
   if (row.decided) {
     var parts = [];
     if (row.decided.chances != null) parts.push("💔 " + row.decided.chances);
-    if (row.decided.bets != null) parts.push("🎲 " + formatCoins(row.decided.bets) + " bets");
+    if (row.decided.wagered != null) parts.push("🪙 " + formatCoins(row.decided.wagered) + " wagered");
     var tag = el("span", "ad-pill ad-decided", "tie: " + parts.join(" · "));
-    tag.title = "The same coins as others on a prize place - fewer second chances first, then more bets";
+    tag.title = "The same coins as others - fewer second chances first, then more coins wagered";
     cell.append(" ", tag);
   }
   return cell;

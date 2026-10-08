@@ -5,21 +5,21 @@
  * same place (1, 1, 3).
  *
  * In a season (stats given): the most coins first; the same coins - fewer
- * second chances first, then more bets. Only players equal in all of it
- * share a place (and its prize). Where the second chances or the bets made
+ * second chances first, then more coins wagered. Only players equal in all of it
+ * share a place (and its prize). Where the second chances or the coins wagered made
  * the difference between players with the same coins, the row gets `decided`
  * (only what made the difference).
  *
- * rows: [{username, coins}] - stats(username): {chances, bets} - prizes: Map
+ * rows: [{username, coins}] - stats(username): {chances, wagered} - prizes: Map
  * place -> prize (or none). Returns the rows sorted, with rank (and prize,
  * decided).
  */
 function place(rows, options = {}) {
   const prizes = options.prizes && options.prizes.size ? options.prizes : null;
-  const keys = new Map(rows.map((row) => [row, { chances: 0, bets: 0, ...(options.stats ? options.stats(row.username) : {}) }]));
+  const keys = new Map(rows.map((row) => [row, { chances: 0, wagered: 0, ...(options.stats ? options.stats(row.username) : {}) }]));
   const key = (row) => keys.get(row);
-  const sorted = rows.slice().sort((a, b) => b.coins - a.coins || key(a).chances - key(b).chances || key(b).bets - key(a).bets || a.username.localeCompare(b.username));
-  const same = (a, b) => a.coins === b.coins && key(a).chances === key(b).chances && key(a).bets === key(b).bets;
+  const sorted = rows.slice().sort((a, b) => b.coins - a.coins || key(a).chances - key(b).chances || key(b).wagered - key(a).wagered || a.username.localeCompare(b.username));
+  const same = (a, b) => a.coins === b.coins && key(a).chances === key(b).chances && key(a).wagered === key(b).wagered;
   sorted.forEach((row, index) => {
     const prev = sorted[index - 1];
     row.rank = prev && same(prev, row) ? prev.rank : index + 1;
@@ -34,8 +34,8 @@ function place(rows, options = {}) {
     const chancesDiffer = new Set(group.map((row) => key(row).chances)).size > 1;
     group.forEach((row) => {
       const sameChances = group.filter((other) => key(other).chances === key(row).chances);
-      const betsDiffer = sameChances.length > 1 && new Set(sameChances.map((other) => key(other).bets)).size > 1;
-      if (chancesDiffer || betsDiffer) row.decided = { ...(chancesDiffer ? { chances: key(row).chances } : {}), ...(betsDiffer ? { bets: key(row).bets } : {}) };
+      const wageredDiffer = sameChances.length > 1 && new Set(sameChances.map((other) => key(other).wagered)).size > 1;
+      if (chancesDiffer || wageredDiffer) row.decided = { ...(chancesDiffer ? { chances: key(row).chances } : {}), ...(wageredDiffer ? { wagered: key(row).wagered } : {}) };
     });
   }
   return sorted;
