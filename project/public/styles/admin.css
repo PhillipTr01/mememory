@@ -1622,9 +1622,31 @@ a.ad-link:focus-visible {
 }
 
 
-/* The final leaderboard of a season: the podium a little brighter */
-.ad-final-top td {
+/* The leaderboard of a season: every row in the same white */
+.ad-season-board td {
   color: var(--mm-text);
+}
+
+.ad-season-board td.minus {
+  color: var(--mm-danger);
+}
+
+.ad-season-board td.plus {
+  color: var(--mm-success);
+}
+
+/* Under a number: what it came from (the bets under the coins wagered) */
+.ad-season-board .ad-sub {
+  display: block;
+  color: var(--mm-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* The day over the time */
+.ad-season-board td.ad-when {
+  white-space: pre-line;
+  line-height: 1.3;
 }
 
 .ad-final-top td:first-child {
@@ -1810,13 +1832,6 @@ a.ad-link:focus-visible {
   gap: 0.5rem;
 }
 
-/* The same coins on a prize place: what decided it */
-.ad-pill.ad-decided {
-  background: rgba(var(--mm-accent-rgb), 0.12);
-  color: var(--mm-accent);
-  font-size: 0.7rem;
-}
-
 /* A season's page: the whole width (the leaderboard has many columns) */
 .ad-main:has(#adSeasonPage:not([hidden])) {
   width: 100%;
@@ -1851,15 +1866,10 @@ a.ad-link:focus-visible {
   padding-right: 0.25rem;
 }
 
-/* The player: the tie tag under the name */
+/* The player: a long name may take two lines */
 .ad-season-board td:nth-child(2) {
   white-space: normal;
-  min-width: 8rem;
-}
-
-.ad-season-board .ad-decided {
-  display: table;
-  margin: 0.25rem 0 0;
+  min-width: 6rem;
 }
 
 #adSeasonFinal {
@@ -2215,5 +2225,97 @@ a.ad-case-row:hover {
   .ad-item-unit.chance {
     grid-column: 3;
     grid-row: 3;
+  }
+}
+
+/* Not enough room for every column: every player a card - the place, the name, the coins on top, the rest under it */
+.ad-table-scroll:has(.ad-season-board) {
+  container-type: inline-size;
+}
+
+@container (max-width: 1080px) {
+  .ad-season-board,
+  .ad-season-board tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .ad-season-board thead {
+    display: none;
+  }
+
+  .ad-season-board tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.7rem 1rem;
+    padding: 0.9rem 0.25rem;
+    border-bottom: 1px solid var(--mm-border);
+  }
+
+  .ad-season-board tr:last-child {
+    border-bottom: 0;
+  }
+
+  .ad-season-board td,
+  .ad-season-board td:first-child {
+    display: block;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+    max-width: none;
+    text-align: left;
+    white-space: normal;
+  }
+
+  /* The top line: # name ... edit - the rest under it, as many next to each other as fit */
+  .ad-season-board td {
+    order: 3;
+    flex: 1 1 7.5rem;
+  }
+
+  .ad-season-board td:first-child {
+    order: 0;
+    flex: 0 0 auto;
+    align-self: center;
+  }
+
+  .ad-season-board td:nth-child(2) {
+    order: 1;
+    flex: 1 1 0;
+    align-self: center;
+    font-size: 1rem;
+  }
+
+  .ad-season-board td.ad-actions {
+    order: 2;
+    flex: 0 0 auto;
+  }
+
+  /* (then a new line) */
+  .ad-season-board tr::after {
+    content: "";
+    order: 2;
+    flex-basis: 100%;
+    height: 0;
+  }
+
+  .ad-season-board td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.15rem;
+    color: var(--mm-muted);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .ad-season-board td.ad-when {
+    white-space: normal;
+  }
+
+  .ad-table.ad-season-board .num {
+    text-align: left;
   }
 }

@@ -588,31 +588,17 @@ var boardLoaded = { id: null, at: 0 };
 var BOARD_COLUMNS = [
   ["#", ""],
   ["Player", ""],
-  ["Coins", "num"],
+  ["🪙 Coins", "num"],
   ["Prize", ""],
   ["Started", ""],
   ["💔 2nd chances", "num"],
   ["🎁 Daily", "num"],
-  ["Bets", "num"],
-  ["Wagered", "num"],
+  ["🫴🏽 Wagered", "num"],
   ["Biggest win", "num"],
   ["From games", "num"],
   ["Favourite", ""],
   ["Last active", ""],
 ];
-// The name - and on a prize place shared with others: what decided the prize
-function playerCell(row) {
-  var cell = el("td", "fw-semibold", row.username);
-  if (row.decided) {
-    var parts = [];
-    if (row.decided.chances != null) parts.push("💔 " + row.decided.chances);
-    if (row.decided.wagered != null) parts.push("🫴🏽 " + formatCoins(row.decided.wagered));
-    var tag = el("span", "ad-pill ad-decided", parts.join(" · "));
-    tag.title = "The same coins as others - this decided the place: fewer 💔 second chances first, then more 🫴🏽 coins wagered";
-    cell.append(" ", tag);
-  }
-  return cell;
-}
 
 // Running: the season coins of a player can be set or changed
 function editCell(season, row) {
@@ -704,26 +690,35 @@ async function loadSeasonBoard(season) {
     }
     var MEDALS = ["🥇", "🥈", "🥉"];
     var dash = (value, text) => (value ? text : "–");
-    var when = (t) => (t ? new Date(t).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }) : "–");
+    // The day over the time (narrower)
+    var when = (t) => {
+      if (!t) return "–";
+      var date = new Date(t);
+      return date.toLocaleDateString(undefined, { day: "numeric", month: "short" }) + "\n" + date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
+    };
     body.replaceChildren(
       ...data.rows.map((row) => {
         var tr = el("tr", row.rank <= 3 ? "ad-final-top" : "");
         var cells = {
           "#": el("td", "mm-muted", MEDALS[row.rank - 1] || row.rank),
-          Player: playerCell(row),
-          Coins: el("td", "num", "🪙 " + formatCoins(row.coins)),
+          Player: el("td", "fw-semibold", row.username),
+          "🪙 Coins": el("td", "num", formatCoins(row.coins)),
           Prize: el("td", row.prize ? "" : "mm-muted", row.prize || "–"),
-          Started: el("td", "mm-muted small", when(row.joinedAt)),
+          Started: el("td", "small ad-when", when(row.joinedAt)),
           "💔 2nd chances": el("td", "num" + (row.chances ? "" : " mm-muted"), row.chances != null ? row.chances + (data.chancesTotal ? " / " + data.chancesTotal : "") : "–"),
           "🎁 Daily": el("td", "num mm-muted", row.dailyBonuses != null ? String(row.dailyBonuses) : "–"),
-          Bets: el("td", "num", row.bets != null ? formatCoins(row.bets) : "–"),
-          Wagered: el("td", "num mm-muted", row.wagered != null ? dash(row.wagered, "🫴🏽 " + formatCoins(row.wagered)) : "–"),
-          "Biggest win": el("td", "num", row.biggestWin != null ? dash(row.biggestWin, "🪙 " + formatCoins(row.biggestWin)) : "–"),
+          // (the bets under it)
+          "🫴🏽 Wagered": wageredCell(row),
+          "Biggest win": el("td", "num", row.biggestWin != null ? dash(row.biggestWin, formatCoins(row.biggestWin)) : "–"),
           "From games": el("td", "num " + (row.fromGames > 0 ? "plus" : row.fromGames < 0 ? "minus" : "mm-muted"), row.fromGames != null ? (row.fromGames > 0 ? "+" : "") + formatCoins(row.fromGames) : "–"),
           Favourite: el("td", row.favourite ? "" : "mm-muted", row.favourite || "–"),
-          "Last active": el("td", "mm-muted small", when(row.lastActive)),
+          "Last active": el("td", "small ad-when", when(row.lastActive)),
           "": editCell(season, row),
         };
+        // (the name of the column on every cell - shown when the rows are cards)
+        columns.forEach(([name]) => {
+          if (name && name != "#" && name != "Player") cells[name].dataset.label = name;
+        });
         tr.append(...columns.map(([name]) => cells[name]));
         return tr;
       }),
@@ -732,6 +727,14 @@ async function loadSeasonBoard(season) {
     boardLoaded = { id: null, at: 0 };
     fail(error);
   }
+}
+
+// The coins wagered of a player in a season - the number of bets under it
+function wageredCell(row) {
+  var cell = el("td", "num");
+  if (!row.wagered) return cell.appendChild(document.createTextNode("–")), cell;
+  cell.append(formatCoins(row.wagered), el("span", "ad-sub", formatCoins(row.bets || 0) + (row.bets == 1 ? " bet" : " bets")));
+  return cell;
 }
 
 function renderSeasons() {
