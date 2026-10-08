@@ -1748,3 +1748,23 @@ button.bt-strip-case:hover {
     letter-spacing: -0.02em;
   }
 }
+
+/* Random while the mode is hidden: the chance and the rounds won next to each other */
+.bt-seat-both {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.2rem 0.6rem;
+}
+
+@media (max-width: 575px) {
+  .bt-seat-both {
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+    white-space: nowrap;
+  }
+
+  .bt-seat-both .bt-seat-word {
+    display: none;
+  }
+}

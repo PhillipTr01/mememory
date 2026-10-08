@@ -748,7 +748,10 @@ function renderBattle() {
   if (battle.crazy == null || reveal) best = null;
   // Best of: the rounds won so far lead; jackpot: every one's chance (its share of the pot)
   var rule = reveal ? null : ruleOf(battle);
+  // Random while the mode is hidden: the chance and the rounds won side by side (it may be either)
+  var hidden = battle.mode == "random" && (reveal || !battle.picked);
   var points = rule == "bestof" ? pointsOf(battle, rounds) : null;
+  var hiddenPoints = hidden && battle.cases.length >= 2 ? pointsOf(battle, rounds) : null;
   var mostPoints = points ? Math.max(...points) : null;
   var pot = totals.reduce((sum, t) => sum + t, 0);
   var places = over ? placesOf(battle, totals) : null;
@@ -788,6 +791,17 @@ function renderBattle() {
       // Best of: rounds won - jackpot: the chance to get it all
       if (points) head.appendChild(el("span", "bt-seat-extra", "🏅 " + points[index] + (points[index] == 1 ? " round" : " rounds")));
       if (rule == "jackpot" && pot > 0) head.appendChild(el("span", "bt-seat-extra", "🎰 " + ((totals[index] / pot) * 100).toFixed(1) + "% chance"));
+      if (hidden && pot > 0) {
+        var both = el("span", "bt-seat-extra bt-seat-both");
+        both.append(el("span", "", "🎰 " + ((totals[index] / pot) * 100).toFixed(1) + "%"));
+        if (hiddenPoints) {
+          // (phones: only the number)
+          var won = el("span", "", "🏅 " + hiddenPoints[index]);
+          won.appendChild(el("span", "bt-seat-word", hiddenPoints[index] == 1 ? " round" : " rounds"));
+          both.append(won);
+        }
+        head.appendChild(both);
+      }
     }
     var items = el("div", "bt-won");
     if (over) {
