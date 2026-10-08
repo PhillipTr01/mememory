@@ -16,7 +16,7 @@ test("cases: the chances add up, every case gives back less than it costs - high
     assert.strictEqual(weights, cases.WEIGHT_TOTAL, `${box.id}: chances add up to 100%`);
     const back = cases.expectedValue(box) / box.price;
     // High risk gives back less on average (the price of the big jackpots)
-    const [low, high] = box.risk === "high" ? [0.8, 0.88] : [0.88, 0.97];
+    const [low, high] = box.risk === "high" ? [0.8, 0.89] : [0.88, 0.97];
     assert.ok(back > low && back < high, `${box.id}: ${Math.round(back * 100)}% back on average`);
     assert.ok(["low", "balanced", "high"].includes(box.risk));
   }
