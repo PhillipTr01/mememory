@@ -74,8 +74,8 @@ module.exports = {
   JACKPOT_COUNTDOWN: 30 * 1000,
   JACKPOT_SPIN: 12000, // the draw animation (wheel, roulette, bowling, ...): about 11 s
   JACKPOT_PAUSE: 5000, // result is shown, then a new round starts
-  JACKPOT_MAX_BETS: 5, // separate bets per player and round
-  JACKPOT_MAX_COINS: 100000, // all bets of a player in one round together
+  JACKPOT_MAX_BETS: 3, // separate bets per player and round
+  JACKPOT_MAX_COINS: 15000, // all bets of a player in one round together
   // A new bet gets into the pot only after a random 3-5 s (no sniping:
   // nobody can answer a bet in the last second). Too late for the draw: the next pot.
   JACKPOT_BET_DELAY: [3000, 5000],
@@ -118,7 +118,8 @@ module.exports = {
   BATTLE_ROUND: 4500, // one case for everybody: spin + a short look at the items
   BATTLE_MAX_OPEN: 3, // waiting battles per creator
   BATTLE_CASES_OFF: [], // ids of cases the admin turned off (not in the shop, no new battles with them)
-  BATTLE_MAX_CASES: 50, // cases (rounds) per battle
+  BATTLE_MAX_CASES: 25, // cases (rounds) per battle
+  BATTLE_MAX_COST: 20000, // what one seat of a battle may cost (all its cases together)
   BATTLE_JACKPOT_DRAW: 15000, // jackpot mode: 3 s, the roulette of the players (10 s), 2 s - then the winner is paid
   BATTLE_MODE_REVEAL: 11500, // random mode: the last case a moment, then which mode it was - then the winner is paid
   BATTLE_KEEP: 60 * 1000, // a finished battle stays in the list this long
@@ -135,7 +136,7 @@ module.exports = {
   // Nobody at the table this long: back to the first level (while people play the blinds stay up)
   POKER_LEVEL_RESET: 10 * 60 * 1000,
   POKER_MIN_BUYIN: 1000, // (10 big blinds of the first level)
-  POKER_MAX_BUYIN: 10000,
+  POKER_MAX_BUYIN: 25000,
   POKER_DEFAULT_BUYIN: 10000, // what the buy-in starts with when sitting down (100 big blinds)
   POKER_TURN: 20 * 1000, // time to act, then check (or fold)
   POKER_START: 3000, // pause before a hand starts
@@ -154,15 +155,15 @@ module.exports = {
   BJ_MY_SEATS: 3, // seats one player can have at a time (per table)
   // Bets per seat (a double or a split adds the same again), per table
   BJ_CASUAL_MIN: 100,
-  BJ_CASUAL_MAX: 1000,
-  BJ_CLASSIC_MIN: 500,
-  BJ_CLASSIC_MAX: 2500,
-  BJ_HIGH_MIN: 1000,
-  BJ_HIGH_MAX: 5000,
+  BJ_CASUAL_MAX: 500,
+  BJ_CLASSIC_MIN: 250,
+  BJ_CLASSIC_MAX: 1000,
+  BJ_HIGH_MIN: 500,
+  BJ_HIGH_MAX: 2000,
   BJ_SIDE_SHARE: 0.5, // a side bet (Perfect Pairs, 21+3) is at most this share of the table's max bet (each)
   // Slots (hidden, see game/slots.js): the bet is for a whole spin (all 9 lines)
   SLOTS_MIN_BET: 10,
-  SLOTS_MAX_BET: 1000,
+  SLOTS_MAX_BET: 250,
   SLOTS_SPIN: 2000, // the reels turn this long on the page
   SLOTS_SWEAT: 1800, // two 🎁 in sight: the last reel turns this much longer (the sweat)
   SLOTS_BONUS_TIME: 6000, // the bonus wheels (free spins, multiplier) on the page

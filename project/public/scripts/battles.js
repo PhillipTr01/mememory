@@ -104,7 +104,10 @@ socket.on("coins", (data) => {
   if (!spinning) renderBattle();
 });
 
-socket.on("battleRules", (data) => (MAX_CASES = data.maxCases));
+socket.on("battleRules", (data) => {
+  MAX_CASES = data.maxCases;
+  MAX_COST = data.maxCost || MAX_COST;
+});
 
 socket.on("cases", (data) => {
   CASES = data;
@@ -241,7 +244,8 @@ function shufflePicked() {
  * The card of a case: more = new rounds at the end (Whale, Vault, Whale is
  * possible), fewer = the last rounds of this case go.
  */
-var MAX_CASES = 50; // cases per battle (from the server, which checks it too)
+var MAX_CASES = 25; // cases per battle (from the server, which checks it too)
+var MAX_COST = 20000; // what one seat may cost, all cases together (from the server, which checks it too)
 
 function setCount(id, count) {
   count = Math.max(0, Math.floor(Number(count)) || 0);
@@ -249,6 +253,13 @@ function setCount(id, count) {
   if (diff > 0 && picked.length + diff > MAX_CASES) {
     diff = MAX_CASES - picked.length;
     showToast("At most " + MAX_CASES + " cases per battle.", "error");
+  }
+  // (and at most MAX_COST for all of them)
+  var price = caseById(id) ? caseById(id).price : 0;
+  var cost = picked.reduce((sum, other) => sum + (caseById(other) ? caseById(other).price : 0), 0);
+  if (diff > 0 && price > 0 && cost + diff * price > MAX_COST) {
+    diff = Math.max(0, Math.floor((MAX_COST - cost) / price));
+    showToast("A battle costs at most 🪙 " + formatCoins(MAX_COST) + " per player.", "error");
   }
   for (; diff > 0; diff--) picked.push(id);
   for (var i = picked.length - 1; i >= 0 && diff < 0; i--) {

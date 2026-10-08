@@ -340,7 +340,7 @@ module.exports = function (io) {
     socket.join(ROOM);
     socket.emit("joined", { username: username });
     socket.emit("cases", cases.catalog());
-    socket.emit("battleRules", { maxCases: config.BATTLE_MAX_CASES });
+    socket.emit("battleRules", { maxCases: config.BATTLE_MAX_CASES, maxCost: config.BATTLE_MAX_COST });
     casinoChat.join(socket);
     emitList();
     sendCoins(username).catch((error) => console.error("[battles] Could not load coins:", error));
@@ -358,6 +358,12 @@ module.exports = function (io) {
         if (data.mode === "bestof" && ids.length < 2) return socket.emit("battleError", "Best of needs at least 2 cases.");
         if (ids.length > config.BATTLE_MAX_CASES) {
           socket.emit("battleError", `At most ${config.BATTLE_MAX_CASES} cases per battle.`);
+          return;
+        }
+        // What one seat costs: all its cases together - at most BATTLE_MAX_COST
+        const cost = ids.reduce((sum, id) => sum + cases.caseById(id).price, 0);
+        if (cost > config.BATTLE_MAX_COST) {
+          socket.emit("battleError", `A battle costs at most 🪙 ${config.BATTLE_MAX_COST.toLocaleString("en-US")} per player.`);
           return;
         }
         if (!SIZES.includes(data.size)) return;

@@ -147,6 +147,8 @@ var CHIP_KEY = "bjChip";
 var chipValue = 100;
 try {
   chipValue = Number(localStorage.getItem(CHIP_KEY)) || 100;
+  // (a chip that is gone - the 5K: the biggest there is)
+  if (![10, 50, 100, 250, 500, 1000].includes(chipValue)) chipValue = 1000;
 } catch (error) {
   // only for now
 }
@@ -174,7 +176,7 @@ function placeChip(seatIndex, field) {
 
 // The three bet fields of an own seat while betting: Perfect Pairs, the bet, 21+3
 // The coins on a field as one chip (the colour of the biggest chip in it, the edge thicker for more chips)
-var CHIPS = [5000, 1000, 500, 100, 50, 10];
+var CHIPS = [1000, 500, 250, 100, 50, 10];
 function shortCoins(value) {
   if (value >= 1000) return (value / 1000).toFixed(value % 1000 ? 1 : 0).replace(".0", "") + "K";
   return String(value);

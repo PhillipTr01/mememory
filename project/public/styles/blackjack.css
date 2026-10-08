@@ -270,6 +270,7 @@
 .bj-chip[data-chip="10"] { --chip: #4f5868; }
 .bj-chip[data-chip="50"] { --chip: #a65f59; }
 .bj-chip[data-chip="100"] { --chip: #5a77a3; }
+.bj-chip[data-chip="250"] { --chip: #4f9a8a; }
 .bj-chip[data-chip="500"] { --chip: #7c6a9c; }
 .bj-chip[data-chip="1000"] { --chip: #b07c4c; }
 .bj-chip[data-chip="5000"] { --chip: #b29548; }
@@ -823,6 +824,7 @@
 .bj-chipface[data-chip="10"] { --chip: #4f5868; }
 .bj-chipface[data-chip="50"] { --chip: #a65f59; }
 .bj-chipface[data-chip="100"] { --chip: #5a77a3; }
+.bj-chipface[data-chip="250"] { --chip: #4f9a8a; }
 .bj-chipface[data-chip="500"] { --chip: #7c6a9c; }
 .bj-chipface[data-chip="1000"] { --chip: #b07c4c; }
 .bj-chipface[data-chip="5000"] { --chip: #b29548; }

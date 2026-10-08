@@ -21,7 +21,7 @@ const crypto = require("crypto");
 const SYMBOLS = [
   { id: "banana", icon: "🍌", name: "Banana", count: 9, pays: [3, 8, 24] },
   { id: "pepe", icon: "🐸", name: "Pepe", count: 8, pays: [4, 13, 36] },
-  { id: "doge", icon: "🐕", name: "Doge", count: 6, pays: [7, 22, 83] },
+  { id: "doge", icon: "🐕", name: "Doge", count: 6, pays: [8, 22, 83] },
   { id: "money", icon: "💰", name: "Money bag", count: 4, pays: [13, 38, 164] },
   { id: "rocket", icon: "🚀", name: "To the moon", count: 3, pays: [19, 67, 329] },
   { id: "diamond", icon: "💎", name: "Diamond hands", count: 1, pays: [32, 164, 822] },

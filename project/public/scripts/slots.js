@@ -7,7 +7,7 @@ var setup = null; // {symbols, lines, strips, rules}
 var spinning = false;
 var lineTimer = null;
 var BET_KEY = "slotsBet";
-var PRESETS = [10, 50, 100, 250, 500, 1000];
+var PRESETS = [10, 25, 50, 100, 200, 250];
 var TILE = 0; // height of one symbol (from the page)
 
 // Used by chat.js
@@ -1047,12 +1047,12 @@ function renderControls() {
   document.getElementById("slMore").disabled = spinning || bet >= setup.rules.maxBet;
 }
 
-// − / +: the bet in steps of 50 (to the next multiple of 50)
-var BET_STEP = 50;
+// − / +: to the next bet of the presets (10, 25, 50, 100, 200, 250)
 function stepBet(direction) {
   var bet = currentBet();
-  var next = direction > 0 ? Math.floor(bet / BET_STEP) * BET_STEP + BET_STEP : Math.ceil(bet / BET_STEP) * BET_STEP - BET_STEP;
-  setBet(Math.max(setup.rules.minBet, Math.min(setup.rules.maxBet, next)));
+  var steps = PRESETS.filter((value) => value >= setup.rules.minBet && value <= setup.rules.maxBet);
+  var next = direction > 0 ? steps.find((value) => value > bet) : steps.slice().reverse().find((value) => value < bet);
+  setBet(next != null ? next : direction > 0 ? setup.rules.maxBet : setup.rules.minBet);
 }
 
 /* ---------- Last wins (everybody) ---------- */

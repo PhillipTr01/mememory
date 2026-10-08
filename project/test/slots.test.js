@@ -6,14 +6,14 @@ const slots = require("../game/slots");
 
 /* ---------- The machine ---------- */
 
-test("slots: 5 reels, 3 rows, 9 lines; pays back about 95% (exactly computed)", () => {
+test("slots: 5 reels, 3 rows, 9 lines; pays back about 96.8% (exactly computed)", () => {
   assert.strictEqual(slots.STRIPS.length, 5);
   assert.strictEqual(slots.LINES.length, 9);
   assert.ok(slots.LINES.every((rows) => rows.length === 5 && rows.every((row) => row >= 0 && row <= 2)));
   // Nine different lines
   assert.strictEqual(new Set(slots.LINES.map((rows) => rows.join())).size, 9);
   const { rtp, lineHit } = slots.rtp();
-  assert.ok(rtp > 0.93 && rtp < 0.97, `payback ${(rtp * 100).toFixed(2)}%`);
+  assert.ok(rtp > 0.965 && rtp < 0.97, `payback ${(rtp * 100).toFixed(2)}%`);
   assert.ok(lineHit > 0.05, "a line wins often enough");
 });
 
@@ -128,7 +128,7 @@ test("slots: five 🪙 start the coin game - respins until three in a row bring 
   const { coinChance, coinRtp, rtp } = slots.rtp();
   assert.ok(coinChance > 1 / 200 && coinChance < 1 / 80, `coin game 1 of ${Math.round(1 / coinChance)}`);
   assert.ok(coinRtp > 0.08 && coinRtp < 0.25);
-  assert.ok(rtp > 0.94 && rtp < 0.97, `payback ${(rtp * 100).toFixed(2)}%`);
+  assert.ok(rtp > 0.965 && rtp < 0.97, `payback ${(rtp * 100).toFixed(2)}%`);
   for (let i = 0; i < 200; i++) {
     const result = slots.spin(100, undefined, { forceBonus: "coins" });
     const game = result.coinGame;
@@ -182,16 +182,16 @@ test("slots: a spin costs the bet, the win comes right away, the others see it",
   const alice = client("alice");
   const bob = client("bob");
   const setup = await h.once(alice, "slotsSetup");
-  assert.deepStrictEqual([setup.rules.minBet, setup.rules.maxBet, setup.rules.lines], [10, 1000, 9]);
+  assert.deepStrictEqual([setup.rules.minBet, setup.rules.maxBet, setup.rules.lines], [10, 250, 9]);
   await h.once(bob, "slotsFeed");
   const feeds = [];
   bob.on("slotsFeed", (feed) => feeds.push(feed));
 
   // Out of the limits: nothing happens to the coins
-  for (const bet of [5, 1001]) {
+  for (const bet of [5, 251]) {
     const refused = h.once(alice, "slotsError");
     alice.emit("spin", { bet });
-    assert.match(await refused, /10 to 1,000/);
+    assert.match(await refused, /10 to 250/);
   }
   assert.strictEqual(h.coinsOf("alice"), 5000);
 

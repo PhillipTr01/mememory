@@ -282,7 +282,7 @@ test("jackpot: invalid bets are rejected", async () => {
   }
   const overLimit = h.once(carol, "betError");
   carol.emit("bet", { amount: 1 });
-  assert.match(await overLimit, /At most 5 bets/);
+  assert.match(await overLimit, /At most 3 bets/);
   assert.strictEqual(h.coinsOf("carol"), 5000 - 2000 - (config.JACKPOT_MAX_BETS - 1));
 });
 

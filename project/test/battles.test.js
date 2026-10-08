@@ -16,7 +16,7 @@ test("cases: the chances add up, every case gives back less than it costs - high
     assert.strictEqual(weights, cases.WEIGHT_TOTAL, `${box.id}: chances add up to 100%`);
     const back = cases.expectedValue(box) / box.price;
     // High risk gives back less on average (the price of the big jackpots)
-    const [low, high] = box.risk === "high" ? [0.8, 0.89] : [0.88, 0.97];
+    const [low, high] = box.risk === "high" ? [0.89, 0.915] : [0.915, 0.955];
     assert.ok(back > low && back < high, `${box.id}: ${Math.round(back * 100)}% back on average`);
     assert.ok(["low", "balanced", "high"].includes(box.risk));
   }
@@ -265,19 +265,26 @@ test("battles: the same coins as the jackpot - every change reaches the page rig
   carol.off("coins", listener);
 });
 
-test("battles: no limit of cases per battle", async () => {
+test("battles: up to 25 cases and 20,000 coins per battle", async () => {
   h.setCoins("bob", 100000);
   const bob = client("bob");
   await waitFor(bob, "coins", (d) => d.coins === 100000);
   const created = h.once(bob, "battleCreated");
-  const listed = waitFor(bob, "battles", (data) => data.list.some((b) => b.cases.length === 40));
-  bob.emit("createBattle", { cases: new Array(40).fill("piggy"), size: 2 });
+  const listed = waitFor(bob, "battles", (data) => data.list.some((b) => b.cases.length === 25));
+  bob.emit("createBattle", { cases: new Array(25).fill("piggy"), size: 2 });
   const id = await created;
   const battle = battleIn(await listed, id);
-  assert.strictEqual(battle.cases.length, 40);
-  assert.strictEqual(battle.price, 400);
+  assert.strictEqual(battle.cases.length, 25);
+  assert.strictEqual(battle.price, 250);
   bob.emit("cancelBattle", id);
   await waitFor(bob, "battles", (data) => !battleIn(data, id));
+  // More cases - or more coins - than allowed
+  const tooMany = h.once(bob, "battleError");
+  bob.emit("createBattle", { cases: new Array(26).fill("piggy"), size: 2 });
+  assert.match(await tooMany, /At most 25 cases/);
+  const tooMuch = h.once(bob, "battleError");
+  bob.emit("createBattle", { cases: new Array(21).fill("vault"), size: 2 });
+  assert.match(await tooMuch, /at most 🪙 20,000/);
 });
 
 test("battles: invalid battles, not enough coins, cancel gives the coins back", async () => {
