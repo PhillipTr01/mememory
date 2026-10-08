@@ -175,6 +175,12 @@ async function add(username, amount, options) {
 }
 
 // Takes the coins only if the user has enough (false otherwise)
+// When a player last spent coins (a bet): for a moment the coins count as in a game - until the game has them
+const spentAt = new Map();
+function lastSpent(username) {
+  return spentAt.get(username) || 0;
+}
+
 async function spend(username, amount, options) {
   if (!Number.isInteger(amount) || amount <= 0) return false;
   await ensure(username);
@@ -182,6 +188,7 @@ async function spend(username, amount, options) {
     await User.updateOne({ username: username, coins: { $gte: amount } }, { $inc: { coins: -amount } }),
   );
   if (done) {
+    spentAt.set(username, Date.now());
     log(username, -amount, (options && options.reason) || "other", options && options.note);
     notify(username);
   }
@@ -234,4 +241,4 @@ function reward(username, mode) {
   add(username, amount, { reason: "game win", note: mode }).catch((error) => console.error("[coins] Could not add coins:", error));
 }
 
-module.exports = { hold, release, claim, bonusDue, setJoinedAtLookup, setJoinedLookup, watching, setStoredLookup, setBase, base, era, eraFilter, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };
+module.exports = { lastSpent, hold, release, claim, bonusDue, setJoinedAtLookup, setJoinedLookup, watching, setStoredLookup, setBase, base, era, eraFilter, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };

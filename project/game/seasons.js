@@ -521,6 +521,9 @@ async function addToSaved(username, amount) {
 
 /* ---------- Second chances ---------- */
 
+// A bet just made: in play for this long (until the game has it)
+const SPEND_GRACE = 2000;
+
 // {can, left, total, budget, nextAt, reason}: reason "none" (no season / no second chances), "used",
 // "cooldown" (nextAt), "coins" (still has coins), "inPlay" (coins in a game)
 async function chanceStatus(username, now = Date.now()) {
@@ -532,12 +535,14 @@ async function chanceStatus(username, now = Date.now()) {
   const result = { can: false, left: left, total: total, budget: season.budget, nextAt: null };
   if (joined(username) === false) return { ...result, reason: "notJoined" };
   if (left === 0) return { ...result, reason: "used" };
+  // Still coins - or coins in a game (a bet that is not over, or one just made that the game gets now): nothing yet
+  // (before the wait: no "out of coins" while a bet still runs)
+  if ((await coins.get(username)).coins > 0) return { ...result, reason: "coins" };
+  if (inPlay.where(username).length || now - coins.lastSpent(username) < SPEND_GRACE) return { ...result, reason: "inPlay" };
   // The first one right away - after a second chance, the next one after the delay (not set: the next day)
   const delay = chanceDelayOf(season);
   const from = record.used === 0 ? null : delay == null ? days.nextDay(record.lastAt) : record.lastAt + delay * 3600 * 1000;
   if (from != null && now < from) return { ...result, reason: "cooldown", nextAt: from };
-  if ((await coins.get(username)).coins > 0) return { ...result, reason: "coins" };
-  if (inPlay.where(username).length) return { ...result, reason: "inPlay" };
   return { ...result, can: true, reason: null };
 }
 

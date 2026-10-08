@@ -313,6 +313,15 @@ test("seasons: the wait between second chances - hours of its own, none, or the 
   const wait = await seasons.chanceStatus("zoe", now + 2000);
   assert.deepStrictEqual([wait.reason, wait.nextAt], ["cooldown", now + 1000 + 2 * 3600 * 1000]);
   assert.match((await seasons.useChance("zoe", now + 2000)).error, /later/);
+  // Waiting - but a bet still runs: in play, not "out of coins"
+  const inPlay = require("../game/in_play");
+  inPlay.register("test-wait", (name) => name === "zoe");
+  assert.strictEqual((await seasons.chanceStatus("zoe", now + 2000)).reason, "inPlay");
+  inPlay.register("test-wait", () => false);
+  // A bet just made (the game doesn't have it yet): in play, too
+  h.setCoins("zoe", 50);
+  assert.ok(await coins.spend("zoe", 50, { reason: "slots bet" }));
+  assert.strictEqual((await seasons.chanceStatus("zoe", Date.now())).reason, "inPlay");
   assert.strictEqual((await seasons.chanceStatus("zoe", now + 1000 + 2 * 3600 * 1000)).can, true);
   // None: right away - and back to the next day (not set)
   await seasons.update(made.season.id, { ...made.season, chanceDelay: 0 });
