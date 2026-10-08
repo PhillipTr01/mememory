@@ -3592,3 +3592,14 @@ body.jackpot-theme {
     margin-left: auto;
   }
 }
+
+/* Phones: the second chance in the bar is only the 💔 (glowing) - the time to wait stays */
+@media (max-width: 575px) {
+  .nav-chance.ready #navChanceText {
+    display: none;
+  }
+
+  .nav-chance {
+    padding: 0.35rem 0.6rem;
+  }
+}

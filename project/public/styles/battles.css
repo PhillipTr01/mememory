@@ -1729,3 +1729,33 @@ button.bt-strip-case:hover {
     margin-left: 0;
   }
 }
+
+/* Phones: every mode name fits its cell - on one line, small */
+@media (max-width: 600px) {
+  #btModes button {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  #btModes .bt-pick-text {
+    max-width: 100%;
+    align-items: center;
+  }
+
+  #btModes .bt-pick-text b {
+    font-size: 0.66rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  #btModes .bt-pick-icon {
+    font-size: 1.05rem;
+  }
+}
+
+@media (max-width: 374px) {
+  #btModes .bt-pick-text b {
+    font-size: 0.6rem;
+    letter-spacing: -0.02em;
+  }
+}
