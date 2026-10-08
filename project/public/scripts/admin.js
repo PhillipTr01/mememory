@@ -594,6 +594,87 @@ var BOARD_COLUMNS = [
   ["Favourite", ""],
   ["Last active", ""],
 ];
+// The name - and on a prize place shared with others: what decided the prize
+function playerCell(row) {
+  var cell = el("td", "fw-semibold", row.username);
+  if (row.decided) {
+    var parts = [];
+    if (row.decided.chances != null) parts.push("💔 " + row.decided.chances);
+    if (row.decided.bets != null) parts.push("🎲 " + formatCoins(row.decided.bets) + " bets");
+    var tag = el("span", "ad-pill ad-decided", "tie: " + parts.join(" · "));
+    tag.title = "The same coins as others on a prize place - fewer second chances first, then more bets";
+    cell.append(" ", tag);
+  }
+  return cell;
+}
+
+// Running: the season coins of a player can be set or changed
+function editCell(season, row) {
+  var cell = el("td", "ad-actions");
+  var button = el("button", "mm-btn mm-btn-sm", "Edit");
+  button.type = "button";
+  button.addEventListener("click", () => editSeasonCoins(season, row));
+  cell.appendChild(button);
+  return cell;
+}
+
+// A small dialog: set to / add (+/-), the amount, a note
+function editSeasonCoins(season, row) {
+  var backdrop = el("div", "mm-dialog-backdrop");
+  var dialog = el("form", "mm-dialog ad-coins-dialog");
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  var mode = el("select", "mm-input");
+  [["set", "Set to"], ["add", "Add (+/-)"]].forEach(([value, text]) => mode.appendChild(Object.assign(document.createElement("option"), { value: value, text: text })));
+  var amount = Object.assign(el("input", "mm-input"), { type: "number", step: 100, value: row.coins, required: true });
+  var note = Object.assign(el("input", "mm-input"), { placeholder: "Note (optional)", maxLength: 300 });
+  mode.addEventListener("change", () => {
+    amount.value = mode.value == "set" ? row.coins : "";
+    amount.focus();
+  });
+  var cancel = el("button", "mm-btn", "Cancel");
+  cancel.type = "button";
+  var save = el("button", "mm-btn mm-btn-primary", "Save");
+  save.type = "submit";
+  var actions = el("div", "mm-dialog-actions");
+  actions.append(cancel, save);
+  var fields = el("div", "ad-coins-fields");
+  fields.append(mode, amount);
+  dialog.append(el("h2", "mm-dialog-title", season.icon + " " + row.username), el("p", "mm-dialog-text", "Season coins now: 🪙 " + formatCoins(row.coins)), fields, note, actions);
+  backdrop.appendChild(dialog);
+  document.body.appendChild(backdrop);
+  var close = () => {
+    document.removeEventListener("keydown", onKey);
+    backdrop.remove();
+  };
+  var onKey = (event) => {
+    if (event.key == "Escape") close();
+  };
+  document.addEventListener("keydown", onKey);
+  cancel.addEventListener("click", close);
+  backdrop.addEventListener("click", (event) => {
+    if (event.target == backdrop) close();
+  });
+  dialog.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    var value = Number(amount.value);
+    if (!Number.isInteger(value)) return showToast("A whole number, please.", "error");
+    save.disabled = true;
+    try {
+      var result = await api("seasons/" + season.id + "/balance", { username: row.username, mode: mode.value, amount: value, note: note.value.trim() || undefined });
+      showToast(row.username + " has 🪙 " + formatCoins(result.coins) + " in " + season.name + " now");
+      close();
+      boardLoaded = { id: null, at: 0 };
+      loadSeasonBoard(season);
+    } catch (error) {
+      save.disabled = false;
+      fail(error);
+    }
+  });
+  amount.focus();
+  amount.select();
+}
+
 async function loadSeasonBoard(season) {
   var ended = season.status == "ended";
   if (boardLoaded.id == season.id && (ended || Date.now() - boardLoaded.at < 15000)) return;
@@ -602,7 +683,7 @@ async function loadSeasonBoard(season) {
   try {
     var data = await api("seasons/" + season.id + "/board");
     var withPrizes = data.rows.some((row) => row.prize);
-    var columns = BOARD_COLUMNS.filter(([name]) => name != "Prize" || withPrizes);
+    var columns = BOARD_COLUMNS.filter(([name]) => name != "Prize" || withPrizes).concat(ended ? [] : [["", "ad-actions"]]);
     document.getElementById("adSeasonBoardTitle").innerText = ended ? "Final leaderboard" : "Leaderboard";
     document.getElementById("adSeasonFinalCount").innerText = data.rows.length + (data.rows.length == 1 ? " player" : " players") + (ended ? "" : " · now");
     document.getElementById("adSeasonBoardHead").replaceChildren(...columns.map(([name, cls]) => el("th", cls, name)));
@@ -621,7 +702,7 @@ async function loadSeasonBoard(season) {
         var tr = el("tr", row.rank <= 3 ? "ad-final-top" : "");
         var cells = {
           "#": el("td", "mm-muted", MEDALS[row.rank - 1] || row.rank),
-          Player: el("td", "fw-semibold", row.username),
+          Player: playerCell(row),
           Coins: el("td", "num", "🪙 " + formatCoins(row.coins)),
           Prize: el("td", row.prize ? "" : "mm-muted", row.prize || "–"),
           Started: el("td", "mm-muted small", when(row.joinedAt)),
@@ -633,6 +714,7 @@ async function loadSeasonBoard(season) {
           "From games": el("td", "num " + (row.fromGames > 0 ? "plus" : row.fromGames < 0 ? "minus" : "mm-muted"), row.fromGames != null ? (row.fromGames > 0 ? "+" : "") + formatCoins(row.fromGames) : "–"),
           Favourite: el("td", row.favourite ? "" : "mm-muted", row.favourite || "–"),
           "Last active": el("td", "mm-muted small", when(row.lastActive)),
+          "": editCell(season, row),
         };
         tr.append(...columns.map(([name]) => cells[name]));
         return tr;

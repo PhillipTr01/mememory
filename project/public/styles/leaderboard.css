@@ -573,3 +573,20 @@
     font-size: 0.7rem;
   }
 }
+
+/* The same coins on a prize place: what decided the prize (second chances, bets) */
+.lb-decided {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border: 1px dashed rgba(var(--mm-accent-rgb), 0.45);
+  border-radius: 999px;
+  color: var(--mm-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lb-who {
+  flex-wrap: wrap;
+  row-gap: 0.25rem;
+}

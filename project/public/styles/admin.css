@@ -1790,3 +1790,23 @@ a.ad-link:focus-visible {
 .ad-season-board td {
   white-space: nowrap;
 }
+
+/* The season coins of a player: set to / add, the amount, a note */
+.ad-coins-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ad-coins-fields {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+/* The same coins on a prize place: what decided it */
+.ad-pill.ad-decided {
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  color: var(--mm-accent);
+  font-size: 0.7rem;
+}

@@ -61,8 +61,21 @@ function podiumSpot(row) {
   var spot = el("div", "lb-spot place-" + row.rank + (row.username == myName ? " mine" : ""));
   spot.dataset.rank = row.rank;
   spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), createAvatar(row.username, "lg"), nameOf(row.username, "lb-name"), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)), change(row));
+  if (row.prize) spot.appendChild(el("span", "lb-prize", "🎁 " + row.prize));
+  if (row.decided) spot.appendChild(decidedOf(row));
   spot.appendChild(el("div", "lb-step", String(row.rank)));
   return spot;
+}
+
+// The same coins on a prize place: what decided the prize (only then, only what made the difference)
+function decidedOf(row) {
+  if (!row.decided) return null;
+  var parts = [];
+  if (row.decided.chances != null) parts.push("💔 " + row.decided.chances + " second chance" + (row.decided.chances == 1 ? "" : "s"));
+  if (row.decided.bets != null) parts.push("🎲 " + formatCoins(row.decided.bets) + " bet" + (row.decided.bets == 1 ? "" : "s"));
+  var tag = el("span", "lb-decided", parts.join(" · "));
+  tag.title = "The same coins as others - for the prize: fewer second chances first, then more bets";
+  return tag;
 }
 
 // The name, with the "You" tag on your own row
@@ -77,6 +90,8 @@ function listRow(row) {
   item.dataset.rank = row.rank;
   var who = el("span", "lb-who");
   who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name"));
+  if (row.prize) who.appendChild(el("span", "lb-prize", "🎁 " + row.prize));
+  if (row.decided) who.appendChild(decidedOf(row));
   item.append(el("span", "lb-rank", "#" + row.rank), who, change(row), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
   return item;
 }
@@ -119,18 +134,6 @@ function render() {
     box.onclick = () => window.showSeasonInfo && window.showSeasonInfo();
     box.title = "Ends " + new Date(season.end).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
   }
-  // Prizes of the season: next to the places
-  prizes = season && season.prizesOn ? new Map(season.prizes.map((p) => [p.place, p.prize])) : new Map();
-  document.querySelectorAll("#lbPodium .lb-spot, #lbList .lb-row").forEach((node) => {
-    var prize = prizes.get(Number(node.dataset.rank));
-    if (!prize) return;
-    // (on the podium above the step)
-    var tag = el("span", "lb-prize", "🎁 " + prize);
-    var step = node.querySelector(".lb-step");
-    if (step) node.insertBefore(tag, step);
-    else node.appendChild(tag);
-  });
-
   // The last season that is over: the way to its winners
   var last = document.getElementById("lbLastSeason");
   last.hidden = !board.lastSeason || !!season;
@@ -146,7 +149,6 @@ function render() {
     : "The places of the season are counted " + (EVERY_TEXT[season && season.every] || "regularly") + " - the arrows show the change since the update before.";
 }
 
-var prizes = new Map();
 
 // "3d 4h" / "5h 12m" / "8m"
 function spanText(ms) {
@@ -211,6 +213,7 @@ function winnerSpot(row) {
   if (row.rank == 1) spot.appendChild(el("span", "lb-crown", "👑"));
   spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), createAvatar(row.username, "lg"), nameOf(row.username, "lb-name"), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
   if (row.prize) spot.appendChild(el("span", "lb-prize", "🎁 " + row.prize));
+  if (row.decided) spot.appendChild(decidedOf(row));
   spot.appendChild(el("div", "lb-step", String(row.rank)));
   return spot;
 }
@@ -256,6 +259,7 @@ async function showWinners(id) {
     var item = el("li", "lb-row" + (row.username == myName ? " mine" : ""));
     var who = el("span", "lb-who");
     who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name"));
+    if (row.decided) who.appendChild(decidedOf(row));
     item.append(el("span", "lb-rank", "#" + row.rank), who, row.prize ? el("span", "lb-prize", "🎁 " + row.prize) : el("span"), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
     list.appendChild(item);
   });

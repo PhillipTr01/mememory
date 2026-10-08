@@ -307,6 +307,14 @@ test("admin: in a season the players show their normal coins, changes go there; 
     [row.coins, row.joinedAt, row.chances, board.chancesTotal, row.bets, row.wagered, row.biggestWin, row.fromGames, row.favourite],
     [1600, now, 0, 2, 1, 300, 900, 600, "Slots"],
   );
+  // The season coins: set or changed in the season's page (only players in it)
+  let set = await adminApi("seasons/" + made.season.id + "/balance", { username: "rosa", mode: "set", amount: 5000 });
+  assert.strictEqual(set.body.coins, 5000);
+  set = await adminApi("seasons/" + made.season.id + "/balance", { username: "rosa", mode: "add", amount: -1000, note: "fix" });
+  assert.strictEqual(set.body.coins, 4000);
+  assert.strictEqual(seasons.normalOf("rosa"), normal + 250, "the normal coins stay");
+  assert.strictEqual((await adminApi("seasons/" + made.season.id + "/balance", { username: "quinn", mode: "set", amount: 1 })).status, 400, "not in the season");
+  assert.strictEqual((await adminApi("seasons/999/balance", { username: "rosa", mode: "set", amount: 1 })).status, 400);
   seasons.reset();
 });
 

@@ -412,6 +412,28 @@ module.exports = function () {
     }),
   );
 
+  // The season coins of a player in the running season: mode "set" (to the amount) or "add" (+/-)
+  router.post(
+    "/api/seasons/:id/balance",
+    admin,
+    asyncHandler(async (req, res) => {
+      const season = seasons.running();
+      if (season == null || String(season.id) !== String(req.params.id)) return res.status(400).json({ error: "Only the coins of the running season." });
+      const { username, mode, amount, note } = req.body || {};
+      const text = typeof note === "string" ? note.slice(0, 300) : undefined;
+      if (typeof username !== "string" || !Number.isInteger(amount)) return res.status(400).json({ error: "Username and a whole number." });
+      if (seasons.joined(username) !== true) return res.status(400).json({ error: "The player isn't in the season." });
+      if (mode === "set") {
+        if (amount < 0) return res.status(400).json({ error: "A balance can't be negative." });
+        await coins.set(username, amount, text);
+      } else if (mode === "add") {
+        const ok = amount >= 0 ? await coins.add(username, amount, { reason: "admin", note: text }) : await coins.spend(username, -amount, { reason: "admin", note: text });
+        if (amount !== 0 && !ok) return res.status(400).json({ error: "The player doesn't have that many coins." });
+      } else return res.status(400).json({ error: "Unknown mode." });
+      res.json({ username: username, coins: (await coins.get(username)).coins });
+    }),
+  );
+
   // A season that is over: all its final places (with the prizes)
   router.get("/api/seasons/:id/final", admin, (req, res) => {
     const season = seasons.byId(req.params.id);

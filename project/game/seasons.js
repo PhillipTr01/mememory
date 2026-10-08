@@ -8,6 +8,7 @@ const { seasonReset, seasonRestore } = require("./hard_reset");
 const days = require("./days");
 const inPlay = require("./in_play");
 const casinoLock = require("./casino_lock");
+const { place, tieOnPrize } = require("./places");
 
 /*
  * Seasons (admin panel): planned ahead from a start to an end. When a season
@@ -345,8 +346,9 @@ coins.setJoinedAtLookup((username) => {
 async function endSeason(season, now) {
   // (with the stats: the coin history of the season is gone after it)
   const rows = await withStats(season, await standings());
-  const prizes = season.prizesOn ? new Map(season.prizes.map((p) => [p.place, p.prize])) : new Map();
-  season.final = { at: now, rows: rows.map((row) => (prizes.has(row.rank) ? { ...row, prize: prizes.get(row.rank) } : row)) };
+  // The same coins, the same place - a prize between them: fewer second chances, then more bets
+  const byName = new Map(rows.map((row) => [row.username, row]));
+  season.final = { at: now, rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, bets: byName.get(username).bets }) }) };
   season.ended = true;
   season.endedAt = now;
   // Everything as before the season: the balances (who came during the season gets the normal
@@ -379,11 +381,7 @@ async function endSeason(season, now) {
 // Everybody in the season (who hit "Start") by coins: [{rank, username, coins}]
 async function standings() {
   const users = await User.find({ casinoApproved: true }).select("username coins coinReset").lean();
-  return users
-    .filter((user) => joined(user.username) !== false)
-    .map((user) => ({ username: user.username, coins: coins.balanceOf(user) }))
-    .sort((a, b) => b.coins - a.coins || a.username.localeCompare(b.username))
-    .map((row, index) => ({ rank: index + 1, ...row }));
+  return place(users.filter((user) => joined(user.username) !== false).map((user) => ({ username: user.username, coins: coins.balanceOf(user) })));
 }
 
 /* ---------- The leaderboard of a season for the admin panel ---------- */
@@ -428,6 +426,18 @@ async function seasonStats(season) {
   return stats;
 }
 
+// The prizes of a season (place -> prize) - null without
+function prizesOf(season) {
+  return season && season.prizesOn && season.prizes && season.prizes.length ? new Map(season.prizes.map((p) => [p.place, p.prize])) : null;
+}
+
+// For the prizes when players have the same coins: {username: {chances, bets}} of the running season
+async function tieStats(season) {
+  const stats = await seasonStats(season);
+  const chances = season.chances || {};
+  return (username) => ({ chances: (chances[username] && chances[username].used) || 0, bets: (stats[username] && stats[username].bets) || 0 });
+}
+
 // The leaderboard rows with when they started, the second chances and the stats
 async function withStats(season, rows) {
   const stats = await seasonStats(season);
@@ -446,7 +456,9 @@ async function board(id) {
   const result = { status: status(season), chancesTotal: season.secondChances || 0 };
   if (season.ended) return { ...result, at: season.final ? season.final.at : null, rows: season.final ? season.final.rows : [] };
   if (!season.started) return { ...result, at: null, rows: [] };
-  return { ...result, at: Date.now(), rows: await withStats(season, await standings()) };
+  const rows = await withStats(season, await standings());
+  const byName = new Map(rows.map((row) => [row.username, row]));
+  return { ...result, at: Date.now(), rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, bets: byName.get(username).bets }) }) };
 }
 
 let ticking = null;
@@ -611,4 +623,4 @@ function accentStyle() {
   return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
 }
 
-module.exports = { board, normalOf, changeNormal, joinedAt, join, joined, joinCoins, closingInfo, chanceStatus, useChance, storedOf, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+module.exports = { prizesOf, tieStats, tieOnPrize, board, normalOf, changeNormal, joinedAt, join, joined, joinCoins, closingInfo, chanceStatus, useChance, storedOf, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };

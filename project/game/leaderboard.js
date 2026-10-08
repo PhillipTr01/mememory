@@ -3,6 +3,7 @@ const Setting = require("../models/Setting");
 const coins = require("./coins");
 const days = require("./days");
 const seasons = require("./seasons");
+const { place } = require("./places");
 
 /*
  * The leaderboard of the casino: the approved players by their coins.
@@ -21,11 +22,16 @@ async function build(now, before) {
   // (in a season: only who hit "Start")
   const users = (await User.find({ casinoApproved: true }).select("username coins coinReset").lean()).filter((user) => seasons.joined(user.username) !== false);
   const placeBefore = new Map(((before && before.rows) || []).map((row) => [row.username, row.rank]));
-  const rows = users
-    .map((user) => ({ username: user.username, coins: coins.balanceOf(user) }))
-    .sort((a, b) => b.coins - a.coins || a.username.localeCompare(b.username))
-    .map((row, index) => ({ ...row, rank: index + 1, before: placeBefore.has(row.username) ? placeBefore.get(row.username) : null }));
-  return { at: now, rows: rows };
+  return { at: now, rows: (await placed(users.map((user) => ({ username: user.username, coins: coins.balanceOf(user) })))).map((row) => ({ ...row, before: placeBefore.has(row.username) ? placeBefore.get(row.username) : null })) };
+}
+
+// The places: the same coins, the same place - in a season with prizes a tie on a prize place goes
+// by the second chances and the bets (only then they are looked up)
+async function placed(rows) {
+  const season = seasons.running();
+  const prizes = seasons.prizesOf(season);
+  const stats = prizes && seasons.tieOnPrize(rows, prizes) ? await seasons.tieStats(season) : null;
+  return place(rows, { prizes: prizes, stats: stats });
 }
 
 async function load() {
@@ -64,9 +70,8 @@ seasons.changes.on("joined", (username) => {
       if (!season || board == null || board.season !== season.id || board.rows.some((row) => row.username === username)) return;
       const user = await User.findOne({ username: username }).select("username coins coinReset").lean();
       if (user == null) return;
-      const rows = [...board.rows, { username: username, coins: coins.balanceOf(user), before: null }]
-        .sort((a, b) => b.coins - a.coins || a.username.localeCompare(b.username))
-        .map((row, index) => ({ ...row, rank: index + 1 }));
+      const before = new Map(board.rows.map((row) => [row.username, row.before]));
+      const rows = (await placed([...board.rows.map((row) => ({ username: row.username, coins: row.coins })), { username: username, coins: coins.balanceOf(user) }])).map((row) => ({ ...row, before: before.has(row.username) ? before.get(row.username) : null }));
       await Setting.updateOne({ key: KEY }, { $set: { value: JSON.stringify({ ...board, rows: rows }) } }, { upsert: true });
     })
     .catch((error) => console.error("[leaderboard] Could not add a player:", error));
@@ -106,7 +111,7 @@ function final(id, username) {
   const season = seasons.byId(id);
   if (season == null || !season.ended || !season.final) return null;
   // (only the place, the coins and the prize - the stats of the players are for the admin panel)
-  const pub = (row) => row && { rank: row.rank, username: row.username, coins: row.coins, ...(row.prize ? { prize: row.prize } : {}) };
+  const pub = (row) => row && { rank: row.rank, username: row.username, coins: row.coins, ...(row.prize ? { prize: row.prize } : {}), ...(row.decided ? { decided: row.decided } : {}) };
   return {
     season: seasons.publicSeason(season),
     rows: season.final.rows.slice(0, SIZE).map(pub),
