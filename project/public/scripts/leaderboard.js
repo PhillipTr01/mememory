@@ -75,19 +75,19 @@ function decidedOf(row) {
   var chances = row.chances != null ? row.chances : row.decided && row.decided.chances;
   var wagered = row.wagered != null ? row.wagered : row.decided && row.decided.wagered;
   var tag = el("span", "lb-decided" + (row.decided ? " decides" : ""));
-  var long = [];
-  var short = [];
+  var parts = [];
+  var words = [];
   if (chances != null) {
-    long.push("💔 " + chances + " second chance" + (chances == 1 ? "" : "s"));
-    short.push("💔 " + chances);
+    parts.push("💔 " + chances);
+    words.push("💔 " + chances + " second chance" + (chances == 1 ? "" : "s") + " used");
   }
   if (wagered != null) {
-    long.push("🪙 " + formatCoins(wagered) + " wagered");
-    short.push("🪙 " + formatCoins(wagered));
+    parts.push("🫴🏽 " + formatCoins(wagered));
+    words.push("🫴🏽 " + formatCoins(wagered) + " coins wagered in the season");
   }
-  // (short on phones: only the icons and numbers)
-  tag.append(el("span", "lb-decided-long", long.join(" · ")), el("span", "lb-decided-short", short.join(" · ")));
-  tag.title = row.decided ? "The same coins as others - this decided the place: fewer second chances first, then more coins wagered" : "Second chances used · coins wagered in the season";
+  // Only the icons and numbers - the words on hover
+  tag.textContent = parts.join(" · ");
+  tag.title = words.join(" · ") + (row.decided ? "\nThe same coins as others - this decided the place: fewer second chances first, then more coins wagered" : "");
   return tag;
 }
 

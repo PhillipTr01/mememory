@@ -592,11 +592,7 @@
   row-gap: 0.25rem;
 }
 
-.lb-decided-short {
-  display: none;
-}
-
-/* Phones: the tags on the podium fit their spot (the prize cut with …, what decided it short) */
+/* Phones: the tags on the podium fit their spot (the prize cut with …) */
 @media (max-width: 575px) {
   .lb-spot .lb-prize,
   .lb-spot .lb-decided {
@@ -605,14 +601,6 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 0.62rem;
-  }
-
-  .lb-decided-long {
-    display: none;
-  }
-
-  .lb-decided-short {
-    display: inline;
   }
 
   /* The winner page: back on top on the right, the name of the season with all the room */

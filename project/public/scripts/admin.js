@@ -606,9 +606,9 @@ function playerCell(row) {
   if (row.decided) {
     var parts = [];
     if (row.decided.chances != null) parts.push("💔 " + row.decided.chances);
-    if (row.decided.wagered != null) parts.push("🪙 " + formatCoins(row.decided.wagered) + " wagered");
-    var tag = el("span", "ad-pill ad-decided", "tie: " + parts.join(" · "));
-    tag.title = "The same coins as others - fewer second chances first, then more coins wagered";
+    if (row.decided.wagered != null) parts.push("🫴🏽 " + formatCoins(row.decided.wagered));
+    var tag = el("span", "ad-pill ad-decided", parts.join(" · "));
+    tag.title = "The same coins as others - this decided the place: fewer 💔 second chances first, then more 🫴🏽 coins wagered";
     cell.append(" ", tag);
   }
   return cell;
@@ -717,7 +717,7 @@ async function loadSeasonBoard(season) {
           "💔 2nd chances": el("td", "num" + (row.chances ? "" : " mm-muted"), row.chances != null ? row.chances + (data.chancesTotal ? " / " + data.chancesTotal : "") : "–"),
           "🎁 Daily": el("td", "num mm-muted", row.dailyBonuses != null ? String(row.dailyBonuses) : "–"),
           Bets: el("td", "num", row.bets != null ? formatCoins(row.bets) : "–"),
-          Wagered: el("td", "num mm-muted", row.wagered != null ? dash(row.wagered, "🪙 " + formatCoins(row.wagered)) : "–"),
+          Wagered: el("td", "num mm-muted", row.wagered != null ? dash(row.wagered, "🫴🏽 " + formatCoins(row.wagered)) : "–"),
           "Biggest win": el("td", "num", row.biggestWin != null ? dash(row.biggestWin, "🪙 " + formatCoins(row.biggestWin)) : "–"),
           "From games": el("td", "num " + (row.fromGames > 0 ? "plus" : row.fromGames < 0 ? "minus" : "mm-muted"), row.fromGames != null ? (row.fromGames > 0 ? "+" : "") + formatCoins(row.fromGames) : "–"),
           Favourite: el("td", row.favourite ? "" : "mm-muted", row.favourite || "–"),
