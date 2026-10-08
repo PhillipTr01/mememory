@@ -1928,6 +1928,19 @@ body.jackpot-theme {
   border-color: var(--mm-accent);
   background: rgba(var(--mm-accent-rgb), 0.18);
   color: var(--mm-accent);
+  position: relative;
+}
+
+/* The glow: a layer of its own that only fades (no repaint of the page on every frame) */
+.nav-bonus.ready::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 14px rgba(var(--mm-accent-rgb), 0.55);
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
   animation: nav-bonus-glow 1.8s ease-in-out infinite;
 }
 
@@ -1937,7 +1950,7 @@ body.jackpot-theme {
 
 @keyframes nav-bonus-glow {
   50% {
-    box-shadow: 0 0 14px rgba(var(--mm-accent-rgb), 0.55);
+    opacity: 1;
   }
 }
 
@@ -3344,12 +3357,25 @@ body.jackpot-theme {
   border-color: #b496e6;
   background: rgba(180, 150, 230, 0.2);
   color: #ece2fc;
+  position: relative;
+}
+
+/* The glow: its own layer that only fades (the page isn't painted again on every frame) */
+.nav-chance.ready::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 14px rgba(180, 150, 230, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
   animation: nav-chance-glow 1.6s ease-in-out infinite;
 }
 
 @keyframes nav-chance-glow {
   50% {
-    box-shadow: 0 0 14px rgba(180, 150, 230, 0.55);
+    opacity: 1;
   }
 }
 

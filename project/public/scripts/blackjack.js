@@ -419,9 +419,16 @@ function renderSeats() {
 }
 
 // The seats without a bet: "Place a bet · 12s" (then the seat is free again)
+// Text only when it changes (the timers tick 10 times a second - the page is laid out again only once a second)
+function setText(element, text) {
+  if (element.textContent !== text) element.textContent = text;
+}
+
 function tickStand() {
   document.querySelectorAll(".bj-stand").forEach((element) => {
     var left = Math.max(0, Math.ceil((Number(element.dataset.end) - Date.now()) / 1000));
+    if (element.dataset.left == left) return;
+    element.dataset.left = left;
     element.innerText = element.dataset.label + left + "s";
     element.title = "Without a bet the seat is free again in " + left + "s";
     element.classList.toggle("hurry", left <= 5);
@@ -446,7 +453,7 @@ function renderClock() {
   document.getElementById("bjDealNow").hidden = !(seated.length && seated.every((seat) => seat.name == myName) && seated.some((seat) => seat.bet > 0));
   var left = Math.max(0, renderStatus.end - Date.now());
   var seconds = Math.ceil(left / 1000);
-  document.getElementById("bjClockNum").innerText = seconds;
+  setText(document.getElementById("bjClockNum"), String(seconds));
   var ring = document.getElementById("bjClockRing");
   var length = 2 * Math.PI * 26;
   ring.style.strokeDasharray = length;
@@ -461,7 +468,7 @@ function renderStatus() {
   var tick = () => {
     if (renderStatus.end != null) {
       var left = Math.max(0, Math.ceil((renderStatus.end - Date.now()) / 1000));
-      status.innerText = "Place your bets - cards in " + left + "s";
+      setText(status, "Place your bets - cards in " + left + "s");
     }
     renderClock();
     tickStand();
@@ -469,7 +476,8 @@ function renderStatus() {
   if (state.phase == "betting") {
     if (renderStatus.end == null) status.innerText = "Sit down and place a bet to start the round";
     tick();
-    renderStatus.timer = setInterval(tick, 100);
+    // Only while something counts down (the clock, a seat that is freed without a bet)
+    if (renderStatus.end != null || document.querySelector(".bj-stand")) renderStatus.timer = setInterval(tick, 100);
     return;
   }
   renderClock();

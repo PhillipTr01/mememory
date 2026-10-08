@@ -678,7 +678,8 @@
       var wide = window.innerWidth >= 992;
       var at = spot.getBoundingClientRect();
       var gap = layout.getBoundingClientRect().top - at.top; // from the pills to the cards
-      side.style.top = wide ? TOP + gap + "px" : "";
+      var sideTop = wide ? TOP + gap + "px" : "";
+      if (side.style.top != sideTop) side.style.top = sideTop;
       // The pills stay right above the cards (also when the end of the page pushes the cards up)
       var top = side.getBoundingClientRect().top - gap;
       var follow = wide && at.top < top - 0.5;
@@ -701,7 +702,20 @@
       var below = document.documentElement.scrollHeight - (layout.getBoundingClientRect().bottom + window.scrollY);
       side.style.height = Math.max(420, window.innerHeight - TOP - gap - below) + "px";
     };
-    window.addEventListener("scroll", place, { passive: true });
+    // At most once a frame (scroll events come more often than that on phones)
+    var queued = false;
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(() => {
+          queued = false;
+          place();
+        });
+      },
+      { passive: true },
+    );
     window.addEventListener("resize", () => {
       size();
       place();

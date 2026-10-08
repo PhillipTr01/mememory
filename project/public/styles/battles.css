@@ -1280,6 +1280,19 @@
   color: var(--mm-on-accent);
   font-size: 0.75rem;
   line-height: 1.3rem;
+  position: relative;
+}
+
+/* The ring around it: its own layer that only fades */
+.bt-subtab-count::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 4px rgba(var(--mm-accent-rgb), 0.25);
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
   animation: bt-count-pulse 2s ease-in-out infinite;
 }
 
@@ -1289,7 +1302,7 @@
 
 @keyframes bt-count-pulse {
   50% {
-    box-shadow: 0 0 0 4px rgba(var(--mm-accent-rgb), 0.25);
+    opacity: 1;
   }
 }
 
