@@ -16,6 +16,15 @@ function formatCoins(value) {
   return Number(value).toLocaleString("en-US");
 }
 
+// Short for the stats pill from a million on (12.3M, 1.5B) - the exact number on hover
+function shortCoins(value) {
+  var units = [[1e9, "B"], [1e6, "M"]];
+  for (var i = 0; i < units.length; i++) {
+    if (value >= units[i][0]) return String(Math.floor((value / units[i][0]) * 10) / 10) + units[i][1];
+  }
+  return formatCoins(value);
+}
+
 function el(tag, className, text) {
   var element = document.createElement(tag);
   if (className) element.className = className;
@@ -82,7 +91,7 @@ function decidedOf(row) {
     words.push("💔 " + chances + " second chance" + (chances == 1 ? "" : "s") + " used");
   }
   if (wagered != null) {
-    parts.push("🫴🏽 " + formatCoins(wagered));
+    parts.push("🫴🏽 " + shortCoins(wagered));
     words.push("🫴🏽 " + formatCoins(wagered) + " coins wagered in the season");
   }
   // Only the icons and numbers - the words on hover
