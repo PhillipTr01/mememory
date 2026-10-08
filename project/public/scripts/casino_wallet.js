@@ -840,6 +840,40 @@
     render();
   }
 
-  // A gift came: a toast on every open casino page
-  socket.on("giftReceived", (gift) => showToast("🎁 " + gift.from + " sent you 🪙 " + format(gift.amount) + "!"));
+  // A gift came: a popup on every open casino page (more gifts at once: one after the other)
+  var giftsWaiting = [];
+  socket.on("giftReceived", (gift) => {
+    giftsWaiting.push(gift);
+    if (!document.querySelector(".cs-got-backdrop")) showReceived();
+  });
+
+  function showReceived() {
+    var gift = giftsWaiting.shift();
+    if (!gift) return;
+    var backdrop = el("div", "mm-dialog-backdrop cs-gift-backdrop cs-got-backdrop");
+    var dialog = el("div", "mm-dialog cs-gift cs-got");
+    dialog.setAttribute("role", "alertdialog");
+    dialog.setAttribute("aria-modal", "true");
+    var close = () => {
+      backdrop.remove();
+      document.removeEventListener("keydown", onKey);
+      showReceived();
+    };
+    var onKey = (event) => (event.key == "Escape" || event.key == "Enter") && close();
+    var head = el("div", "cs-gift-head");
+    var pic = el("div", "cs-gift-pic");
+    pic.append(createAvatar(gift.from, "lg"), el("span", "cs-gift-bow", "🎁"));
+    head.append(pic, el("span", "cs-gift-label", "You got a gift!"), el("b", "cs-gift-name", gift.from));
+    var amount = el("div", "cs-got-amount", "🪙 " + format(gift.amount));
+    var text = el("p", "cs-gift-info", gift.from + " sent you coins - they are on your balance already.");
+    var ok = el("button", "cs-gift-send", "Nice, thanks! 🎉");
+    ok.type = "button";
+    ok.addEventListener("click", close);
+    dialog.append(head, amount, text, ok);
+    backdrop.appendChild(dialog);
+    backdrop.addEventListener("click", (event) => event.target == backdrop && close());
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(backdrop);
+    ok.focus();
+  }
 })();
