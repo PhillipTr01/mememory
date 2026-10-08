@@ -183,7 +183,7 @@ module.exports = {
   SLOTS_BIG_TIME: 3000, // the big-win show on top
   SLOTS_MIN_GAP: 600, // at least this long between two spins of a player
   SLOTS_FEED: 12, // last wins in the list
-  SLOTS_TEST_BONUS: "off", // admin panel, for testing: every spin starts a bonus game ("free" spins or the "coins" game)
+  SLOTS_TEST_BONUS: "off", // tests only: every spin starts a bonus game ("free" spins or the "coins" game) - not in the admin panel
 
   // The tables of the lobby (in this order, limits from the keys above); a page without a table opens "classic"
   BJ_TABLES: [

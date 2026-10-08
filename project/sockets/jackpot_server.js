@@ -248,7 +248,16 @@ module.exports = function (io) {
     const winner = pot.entries.find((entry) => entry.name === pot.draw.winner);
     const ghostWon = winner.name === GHOST;
     pot.announced = true;
-    const result = { round: pot.round, winner: winner.name, total: sum, payout: pot.draw.payout != null ? pot.draw.payout : sum, coins: winner.coins };
+    const result = {
+      round: pot.round,
+      winner: winner.name,
+      total: sum,
+      payout: pot.draw.payout != null ? pot.draw.payout : sum,
+      coins: winner.coins,
+      // Everybody who was in the pot (the popup of a round)
+      players: pot.entries.map((entry) => ({ name: entry.name, coins: entry.coins, ghost: entry.name === GHOST })),
+      at: Date.now(),
+    };
     pot.history.unshift(result);
     if (pot.records.day !== today()) pot.records = { day: today(), biggest: null, luckiest: null };
     // Records only for players

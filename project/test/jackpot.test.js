@@ -183,7 +183,9 @@ test("jackpot: two players start the countdown, the winner gets the pot minus th
 
   // The house keeps 5% of the 45 (2) - the winner gets 43
   assert.strictEqual(drawing.draw.payout, 43);
-  await waitFor(alice, "jackpotState", (s) => s.history.length > 0);
+  const after = await waitFor(alice, "jackpotState", (s) => s.history.length > 0);
+  // The round keeps everybody who was in it (the popup of a round)
+  assert.deepStrictEqual(after.history[0].players, [{ name: "alice", coins: 30, ghost: false }, { name: "bob", coins: 15, ghost: false }]);
   assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 198);
   const winner = drawing.draw.winner;
   assert.strictEqual(h.coinsOf(winner), (winner === "alice" ? 70 : 85) + 43);
