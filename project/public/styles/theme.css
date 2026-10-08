@@ -23,6 +23,13 @@
   --mm-shadow: none;
 }
 
+/* Nothing makes the page wider than the screen (confetti, animations flying out) - clip, not
+   hidden: sticky elements keep working */
+html,
+body {
+  overflow-x: clip;
+}
+
 /* An element with the hidden attribute is hidden - whatever display its class gives it */
 [hidden] {
   display: none !important;

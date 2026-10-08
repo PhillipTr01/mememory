@@ -808,7 +808,7 @@ function renderBattle() {
   parts.push(fairLine(battle));
   view.replaceChildren(...parts);
 
-  renderBattleStatus(battle);
+  renderBattleStatus(battle, reveal ? "reveal" : drawing ? "draw" : null);
   if (battle.phase == "running" && battle.revealed == 0 && battle.nextIn != null) {
     var startAt = Date.now() + battle.nextIn;
     statusTimer = setInterval(() => {
@@ -1071,10 +1071,13 @@ function resultHero(battle) {
   return hero;
 }
 
-function renderBattleStatus(battle) {
+// after: still to come at the end - "reveal" (random: the mode), "draw" (jackpot: the roulette)
+function renderBattleStatus(battle, after) {
   var status = document.getElementById("btStatus");
   if (battle.phase == "waiting") status.innerText = "Waiting for players";
   else if (battle.phase == "running") status.innerText = battle.revealed == 0 ? "Starting..." : "Round " + Math.max(1, battle.revealed) + " of " + battle.cases.length;
+  else if (after == "reveal") status.innerText = "All cases open - which mode counts?";
+  else if (after == "draw") status.innerText = "All cases open - the jackpot is drawn";
   else status.innerText = "Battle over";
 }
 

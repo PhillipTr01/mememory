@@ -1231,7 +1231,7 @@ var revolverDraw = {
       seat.dataset.name = player.name;
       // A little lower, so the top seat stays free of the winner label
       seat.style.left = 50 + Math.sin(angle) * 40 + "%";
-      seat.style.top = 56 - Math.cos(angle) * 33 + "%";
+      seat.style.top = 52 - Math.cos(angle) * 30 + "%"; // (the name under the lowest seat stays on the stage)
       seat.style.setProperty("--share", shareColor(player.name));
       seat.append(createAvatar(player.name), el("span", "jp-seat-name", player.name));
       table.appendChild(seat);

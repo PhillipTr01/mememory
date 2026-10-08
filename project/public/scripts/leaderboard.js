@@ -86,7 +86,7 @@ function decidedOf(row) {
   }
   // (short on phones: only the icons and numbers)
   tag.append(el("span", "lb-decided-long", long.join(" · ")), el("span", "lb-decided-short", short.join(" · ")));
-  tag.title = row.decided ? "The same coins as others - this decided the prize: fewer second chances first, then more bets" : "Second chances used · bets made in the season";
+  tag.title = row.decided ? "The same coins as others - this decided the place: fewer second chances first, then more bets" : "Second chances used · bets made in the season";
   return tag;
 }
 

@@ -8,7 +8,7 @@ const { seasonReset, seasonRestore } = require("./hard_reset");
 const days = require("./days");
 const inPlay = require("./in_play");
 const casinoLock = require("./casino_lock");
-const { place, tieOnPrize } = require("./places");
+const { place } = require("./places");
 
 /*
  * Seasons (admin panel): planned ahead from a start to an end. When a season
@@ -627,4 +627,4 @@ function accentStyle() {
   return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
 }
 
-module.exports = { prizesOf, tieStats, tieOnPrize, board, normalOf, changeNormal, joinedAt, join, joined, joinCoins, closingInfo, chanceStatus, useChance, storedOf, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+module.exports = { prizesOf, tieStats, board, normalOf, changeNormal, joinedAt, join, joined, joinCoins, closingInfo, chanceStatus, useChance, storedOf, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
