@@ -25,13 +25,16 @@ async function build(now, before) {
   return { at: now, rows: (await placed(users.map((user) => ({ username: user.username, coins: coins.balanceOf(user) })))).map((row) => ({ ...row, before: placeBefore.has(row.username) ? placeBefore.get(row.username) : null })) };
 }
 
-// The places: the same coins, the same place - in a season with prizes a tie on a prize place goes
-// by the second chances and the bets (only then they are looked up)
+// The places: the same coins, the same place - in a season every player with the second chances
+// and bets (shown on the board; a tie on a prize place goes by them)
 async function placed(rows) {
   const season = seasons.running();
-  const prizes = seasons.prizesOf(season);
-  const stats = prizes && seasons.tieOnPrize(rows, prizes) ? await seasons.tieStats(season) : null;
-  return place(rows, { prizes: prizes, stats: stats });
+  if (!season) return place(rows);
+  const stats = await seasons.tieStats(season);
+  return place(
+    rows.map((row) => ({ ...row, ...stats(row.username) })),
+    { prizes: seasons.prizesOf(season), stats: stats },
+  );
 }
 
 async function load() {
@@ -111,7 +114,7 @@ function final(id, username) {
   const season = seasons.byId(id);
   if (season == null || !season.ended || !season.final) return null;
   // (only the place, the coins and the prize - the stats of the players are for the admin panel)
-  const pub = (row) => row && { rank: row.rank, username: row.username, coins: row.coins, ...(row.prize ? { prize: row.prize } : {}), ...(row.decided ? { decided: row.decided } : {}) };
+  const pub = (row) => row && { rank: row.rank, username: row.username, coins: row.coins, chances: row.chances, bets: row.bets, ...(row.prize ? { prize: row.prize } : {}), ...(row.decided ? { decided: row.decided } : {}) };
   return {
     season: seasons.publicSeason(season),
     rows: season.final.rows.slice(0, SIZE).map(pub),

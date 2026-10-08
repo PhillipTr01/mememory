@@ -62,21 +62,31 @@ function podiumSpot(row) {
   spot.dataset.rank = row.rank;
   spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), createAvatar(row.username, "lg"), nameOf(row.username, "lb-name"), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)), change(row));
   if (row.prize) spot.appendChild(el("span", "lb-prize", "🎁 " + row.prize));
-  if (row.decided) spot.appendChild(decidedOf(row));
+  if (decidedOf(row)) spot.appendChild(decidedOf(row));
   spot.appendChild(el("div", "lb-step", String(row.rank)));
   return spot;
 }
 
-// The same coins on a prize place: what decided the prize (only then, only what made the difference)
+// In a season: the second chances and the bets of a player - highlighted where they decided a prize
+// (the same coins as others on a prize place)
 function decidedOf(row) {
-  if (!row.decided) return null;
-  var parts = [];
-  if (row.decided.chances != null) parts.push("💔 " + row.decided.chances + " second chance" + (row.decided.chances == 1 ? "" : "s"));
-  if (row.decided.bets != null) parts.push("🎲 " + formatCoins(row.decided.bets) + " bet" + (row.decided.bets == 1 ? "" : "s"));
-  var tag = el("span", "lb-decided");
+  if (row.bets == null && !row.decided) return null;
+  var chances = row.chances != null ? row.chances : row.decided && row.decided.chances;
+  var bets = row.bets != null ? row.bets : row.decided && row.decided.bets;
+  var tag = el("span", "lb-decided" + (row.decided ? " decides" : ""));
+  var long = [];
+  var short = [];
+  if (chances != null) {
+    long.push("💔 " + chances + " second chance" + (chances == 1 ? "" : "s"));
+    short.push("💔 " + chances);
+  }
+  if (bets != null) {
+    long.push("🎲 " + formatCoins(bets) + " bet" + (bets == 1 ? "" : "s"));
+    short.push("🎲 " + formatCoins(bets));
+  }
   // (short on phones: only the icons and numbers)
-  tag.append(el("span", "lb-decided-long", parts.join(" · ")), el("span", "lb-decided-short", parts.map((p) => p.replace(/ (second chances?|bets?)$/, "")).join(" · ")));
-  tag.title = "The same coins as others - for the prize: fewer second chances first, then more bets";
+  tag.append(el("span", "lb-decided-long", long.join(" · ")), el("span", "lb-decided-short", short.join(" · ")));
+  tag.title = row.decided ? "The same coins as others - this decided the prize: fewer second chances first, then more bets" : "Second chances used · bets made in the season";
   return tag;
 }
 
@@ -93,7 +103,7 @@ function listRow(row) {
   var who = el("span", "lb-who");
   who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name"));
   if (row.prize) who.appendChild(el("span", "lb-prize", "🎁 " + row.prize));
-  if (row.decided) who.appendChild(decidedOf(row));
+  if (decidedOf(row)) who.appendChild(decidedOf(row));
   item.append(el("span", "lb-rank", "#" + row.rank), who, change(row), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
   return item;
 }
@@ -215,7 +225,7 @@ function winnerSpot(row) {
   if (row.rank == 1) spot.appendChild(el("span", "lb-crown", "👑"));
   spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), createAvatar(row.username, "lg"), nameOf(row.username, "lb-name"), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
   if (row.prize) spot.appendChild(el("span", "lb-prize", "🎁 " + row.prize));
-  if (row.decided) spot.appendChild(decidedOf(row));
+  if (decidedOf(row)) spot.appendChild(decidedOf(row));
   spot.appendChild(el("div", "lb-step", String(row.rank)));
   return spot;
 }
@@ -261,7 +271,7 @@ async function showWinners(id) {
     var item = el("li", "lb-row" + (row.username == myName ? " mine" : ""));
     var who = el("span", "lb-who");
     who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name"));
-    if (row.decided) who.appendChild(decidedOf(row));
+    if (decidedOf(row)) who.appendChild(decidedOf(row));
     item.append(el("span", "lb-rank", "#" + row.rank), who, row.prize ? el("span", "lb-prize", "🎁 " + row.prize) : el("span"), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
     list.appendChild(item);
   });

@@ -431,9 +431,13 @@ function prizesOf(season) {
   return season && season.prizesOn && season.prizes && season.prizes.length ? new Map(season.prizes.map((p) => [p.place, p.prize])) : null;
 }
 
-// For the prizes when players have the same coins: {username: {chances, bets}} of the running season
-async function tieStats(season) {
-  const stats = await seasonStats(season);
+// The second chances and bets of the players of the running season (on the leaderboard - and for
+// the prizes when players have the same coins): username -> {chances, bets}. The bets are counted
+// at most every 15 s (the coin history is read for it)
+let statsCache = { id: null, at: 0, stats: null };
+async function tieStats(season, now = Date.now()) {
+  if (statsCache.id !== season.id || now - statsCache.at > 15000) statsCache = { id: season.id, at: now, stats: await seasonStats(season) };
+  const stats = statsCache.stats;
   const chances = season.chances || {};
   return (username) => ({ chances: (chances[username] && chances[username].used) || 0, bets: (stats[username] && stats[username].bets) || 0 });
 }

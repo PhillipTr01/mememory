@@ -171,6 +171,14 @@ const GAMES = {
         ],
       },
       {
+        heading: "Ranking",
+        items: [
+          "The most coins first. The same coins: the same place (two players 1st - the next one is 3rd).",
+          "In a season every player shows 💔 the second chances used and 🎲 the bets made.",
+          "Players with the same coins on a place with a prize: fewer second chances get the better prize - with the same second chances, more bets. Equal in all of it: the same prize. Where this decided a prize, it is marked.",
+        ],
+      },
+      {
         heading: "Seasons",
         items: [
           "A season runs from a start to an end. Hit Start to play in it - you get the start budget (and the daily coins you missed since it began). Only players who started are on the leaderboard.",

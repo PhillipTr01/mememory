@@ -578,7 +578,7 @@
 .lb-decided {
   display: inline-block;
   padding: 0.1rem 0.5rem;
-  border: 1px dashed rgba(var(--mm-accent-rgb), 0.45);
+  border: 1px solid transparent;
   border-radius: 999px;
   color: var(--mm-muted);
   font-size: 0.7rem;
@@ -655,4 +655,10 @@
   .lb-row > span:empty {
     display: none;
   }
+}
+
+/* Where the second chances and bets decided a prize: marked */
+.lb-decided.decides {
+  border: 1px dashed rgba(var(--mm-accent-rgb), 0.55);
+  color: var(--mm-text);
 }
