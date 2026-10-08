@@ -430,6 +430,27 @@ module.exports = function (io) {
       }),
     );
 
+    // Everybody but the creator, only while waiting: the seat is free again, the coins come back
+    socket.on(
+      "leaveBattle",
+      safe("leaveBattle", async (id) => {
+        const battle = lobby.list.get(id);
+        if (battle == null || battle.phase !== PHASE.WAITING || battle.creator === username || busy.has(username)) return;
+        const seat = battle.seats.findIndex((s) => s && !s.bot && s.name === username);
+        if (seat < 0) return;
+        busy.add(username);
+        try {
+          battle.seats[seat] = null;
+          emitList();
+          await coins.add(username, battle.price, { reason: "battle refund", note: "left" });
+        } finally {
+          busy.delete(username);
+          sendCoins(username).catch(() => {});
+        }
+        socket.emit("battleLeft", battle.id);
+      }),
+    );
+
     // Only the creator, only while waiting: everybody gets the coins back
     socket.on(
       "cancelBattle",

@@ -287,6 +287,36 @@ test("battles: up to 25 cases and 20,000 coins per battle", async () => {
   assert.match(await tooMuch, /at most 🪙 20,000/);
 });
 
+test("battles: a player who joined can leave before it starts - the coins come back, the host can't", async () => {
+  h.setCoins("alice", 1000);
+  h.setCoins("bob", 1000);
+  const alice = client("alice");
+  const bob = client("bob");
+  await Promise.all([waitFor(alice, "coins", (d) => d.coins === 1000), waitFor(bob, "coins", (d) => d.coins === 1000)]);
+  alice.emit("createBattle", { cases: ["piggy"], size: 3 });
+  const id = await h.once(alice, "battleCreated");
+  const joined = waitFor(alice, "battles", (data) => battleIn(data, id) && battleIn(data, id).seats.filter(Boolean).length === 2);
+  bob.emit("joinBattle", id);
+  await joined;
+  assert.strictEqual(h.coinsOf("bob"), 990);
+  // The host can't leave (only cancel)
+  alice.emit("leaveBattle", id);
+  // Bob leaves: his seat is free, his coins are back
+  const left = h.once(bob, "battleLeft");
+  const freed = waitFor(alice, "battles", (data) => battleIn(data, id) && battleIn(data, id).seats.filter(Boolean).length === 1);
+  bob.emit("leaveBattle", id);
+  assert.strictEqual(await left, id);
+  const after = battleIn(await freed, id);
+  assert.deepStrictEqual(after.seats.map((seat) => seat && seat.name), ["alice", null, null]);
+  assert.strictEqual(h.coinsOf("bob"), 1000);
+  assert.strictEqual(h.coinsOf("alice"), 990, "the host is still in");
+  // Not in it (anymore): nothing happens
+  bob.emit("leaveBattle", id);
+  alice.emit("cancelBattle", id);
+  await waitFor(alice, "battles", (data) => !battleIn(data, id));
+  assert.strictEqual(h.coinsOf("bob"), 1000);
+});
+
 test("battles: invalid battles, not enough coins, cancel gives the coins back", async () => {
   h.setCoins("alice", 30);
   const alice = client("alice");

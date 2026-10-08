@@ -118,6 +118,7 @@ socket.on("cases", (data) => {
 });
 
 socket.on("battleError", (message) => showToast(message, "error"));
+socket.on("battleLeft", () => showToast("You left the battle - your coins are back"));
 
 // The new battle of this page: open it
 socket.on("battleCreated", (id) => {
@@ -834,6 +835,17 @@ function renderBattle() {
       createAgain(battle);
     });
     parts.push(cancel);
+  }
+  // Everybody else who sits in it: out again, the coins back (only before it starts)
+  if (battle.phase == "waiting" && battle.creator != myName && battle.seats.some((seat) => seat && !seat.bot && seat.name == myName)) {
+    var leave = el("button", "bt-cancel bt-leave-battle");
+    leave.type = "button";
+    leave.append(document.createTextNode("🚪 Leave battle · 🪙 " + formatCoins(battle.price) + " back"));
+    leave.addEventListener("click", () => {
+      leave.disabled = true;
+      socket.emit("leaveBattle", battle.id);
+    });
+    parts.push(leave);
   }
   parts.push(fairLine(battle));
   view.replaceChildren(...parts);
