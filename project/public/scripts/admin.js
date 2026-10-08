@@ -129,6 +129,8 @@ function showTab() {
   if (tab == "chat") loadChat();
   if (tab == "seasons") {
     seasonView = parts[1] == "new" ? "new" : parts[1] ? Number(parts[1]) : null;
+    // #seasons/<id>/edit: the form of the season (its page is only to look at)
+    seasonEdit = parts[2] == "edit" && typeof seasonView == "number";
     seasonFormFor = undefined;
     boardLoaded = { id: null, at: 0 };
     closePicker();
@@ -876,6 +878,7 @@ var SEASON_ICONS = ["🏆", "🔥", "❄️", "🌸", "☀️", "🍂", "🎃", 
 var EVERY_NAMES = { 0: "live", 5: "every 5 min", 15: "every 15 min", 60: "every hour", 360: "every 6 hours", 1440: "once a day" };
 var STATUS_NAMES = { planned: "Planned", starting: "Starting", running: "Running", ended: "Over" };
 var seasonView = null; // the page of the seasons: null (all of them), "new" or the id of one
+var seasonEdit = false; // #seasons/<id>/edit: the form instead of the page of the season
 var seasonFormFor = undefined; // the page the form was filled for (it stays as it is while editing)
 
 function dateText(value) {
@@ -906,7 +909,7 @@ async function loadSeasons(quiet) {
     dailyBonusSetting = data.dailyBonus;
     renderSeasons();
     // The form: filled once per page (not by the refresh every few seconds)
-    if (seasonFormFor !== seasonView) fillSeasonPage();
+    if (seasonFormFor !== seasonView + (seasonEdit ? ":edit" : "")) fillSeasonPage();
   } catch (error) {
     fail(error);
   }
@@ -914,7 +917,7 @@ async function loadSeasons(quiet) {
 
 // #seasons/new: an empty form; #seasons/<id>: the season in it (not one that is over)
 function fillSeasonPage() {
-  seasonFormFor = seasonView;
+  seasonFormFor = seasonView + (seasonEdit ? ":edit" : "");
   if (seasonView == null) return;
   if (seasonView == "new") return seasonDefaults();
   var season = seasonList.find((s) => s.id == seasonView);
@@ -922,7 +925,9 @@ function fillSeasonPage() {
     location.hash = "#seasons";
     return;
   }
-  if (season.status != "ended") {
+  // (one that is over can't be changed: its page)
+  if (seasonEdit && season.status == "ended") return location.replace("#seasons/" + season.id);
+  if (seasonEdit) {
     editingSeason = season.id;
     fillSeasonForm(season);
   }
@@ -1050,11 +1055,17 @@ function renderSeasons() {
   document.getElementById("adSeasonsMain").hidden = seasonView != null;
   document.getElementById("adSeasonPage").hidden = seasonView == null;
   if (seasonView != null) {
-    document.getElementById("adPageTitle").innerText = view ? view.icon + " " + view.name : "New season";
+    document.getElementById("adPageTitle").innerText = view ? view.icon + " " + view.name + (seasonEdit ? " · Edit" : "") : "New season";
     document.getElementById("adPageSub").innerText = view ? STATUS_NAMES[view.status] + " · " + dateText(view.start) + " → " + dateText(view.end) : "Plan a season: everybody who hits Start begins with the same budget, the most coins win.";
-    document.getElementById("adSeasonFormCard").hidden = view != null && view.status == "ended";
-    // Running or over: the whole leaderboard (over: instead of the form)
-    var withBoard = view && (view.status == "running" || view.status == "ended");
+    // The page of a season: only to look at; its form: a page of its own (#seasons/<id>/edit) - and for a new one
+    var form = view == null || seasonEdit;
+    document.getElementById("adSeasonFormCard").hidden = !form;
+    document.getElementById("adSeasonDetail").hidden = view != null && seasonEdit;
+    var back = document.getElementById("adSeasonBack");
+    back.href = seasonEdit ? "#seasons/" + view.id : "#seasons";
+    back.innerText = seasonEdit ? "‹ " + view.name : "‹ All seasons";
+    // Running or over: the whole leaderboard
+    var withBoard = view && !seasonEdit && (view.status == "running" || view.status == "ended");
     document.getElementById("adSeasonFinal").hidden = !withBoard;
     if (withBoard) loadSeasonBoard(view);
     var detail = document.getElementById("adSeasonDetail");
@@ -1115,7 +1126,7 @@ function seasonHead(season) {
   return head;
 }
 
-// The page of one season: its head (with what can be done), the numbers as tiles, the prizes
+// The page of one season (only to look at): its head with what can be done, everything that is set as tiles, the prizes
 function seasonDetail(season) {
   var head = el("div", "ad-season-detail-head");
   head.appendChild(seasonHead(season));
@@ -1126,13 +1137,15 @@ function seasonDetail(season) {
     b.addEventListener("click", handler);
     actions.appendChild(b);
   };
+  if (season.status != "ended") button("✏️ Edit", "mm-btn-primary", () => (location.hash = "#seasons/" + season.id + "/edit"));
   if (season.status == "running") button("End now", "mm-btn-danger", () => endSeason(season));
   if (season.status != "running" && season.status != "starting") button("Delete", "", () => deleteSeason(season));
   head.appendChild(actions);
 
-  var tile = (icon, value, label) => {
+  var tile = (icon, value, label, extra) => {
     var box = el("div", "ad-season-tile");
     box.append(el("span", "ad-season-tile-icon", icon), el("b", "", value), el("span", "", label));
+    if (extra) box.appendChild(extra);
     return box;
   };
   var time =
@@ -1141,23 +1154,55 @@ function seasonDetail(season) {
       : season.status == "running"
         ? tile("⏱️", span(season.end - Date.now()), "left")
         : tile("🏁", new Date(season.endedAt || season.end).toLocaleDateString(undefined, { day: "numeric", month: "short" }), "over since");
-  var tiles = el("div", "ad-season-tiles");
-  tiles.append(
-    time,
-    tile("👥", formatCoins(season.players || 0), season.status == "ended" ? "in the final places" : "players hit Start"),
-    tile("🪙", formatCoins(season.budget), "start budget"),
-    tile("🎁", formatCoins(season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting), "daily bonus"),
-    tile("💔", season.secondChances || 0, "second chances" + (season.secondChances ? " · wait: " + chanceDelayText(season.chanceDelay) : "")),
-    tile("⏳", season.closeWait + " s", "countdown"),
-    tile("📊", EVERY_NAMES[season.every], "leaderboard"),
-  );
-  if (season.status == "ended" && season.winner) tiles.append(tile("🥇", season.winner.username, "🪙 " + formatCoins(season.winner.coins)));
-  var parts = [head, tiles];
+  var swatch = el("span", "ad-season-swatch");
+  swatch.style.background = season.color || GOLD;
+  var section = (title, ...tiles) => {
+    var box = el("div", "ad-season-section");
+    var row = el("div", "ad-season-tiles");
+    row.append(...tiles);
+    box.append(el("h3", "ad-label ad-sublabel", title), row);
+    return box;
+  };
+  var parts = [
+    head,
+    section(
+      "Now",
+      time,
+      tile("👥", formatCoins(season.players || 0), season.status == "ended" ? "in the final places" : "players hit Start"),
+      ...(season.status == "ended" && season.winner ? [tile("🥇", season.winner.username, "won with 🪙 " + formatCoins(season.winner.coins))] : []),
+    ),
+    section(
+      "Time",
+      tile("🟢", dateText(season.start), "start"),
+      tile("🔴", dateText(season.end), "end"),
+      tile("⏳", season.closeWait + " s", "countdown before start and end"),
+      tile("📊", EVERY_NAMES[season.every], "leaderboard updates"),
+    ),
+    section(
+      "Coins",
+      tile("🪙", formatCoins(season.budget), "start budget"),
+      tile("🎁", formatCoins(season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting), "daily bonus"),
+      tile("💔", String(season.secondChances || 0), "second chances"),
+      tile("⌛", season.secondChances ? chanceDelayText(season.chanceDelay) : "–", "wait between second chances"),
+    ),
+    section("Look", tile("🏷️", season.icon + " " + season.name, "icon and name"), tile("🎨", (season.color || GOLD).toUpperCase(), "accent color", swatch)),
+  ];
+  // The prizes: a place each, with its medal
+  var prizes = el("div", "ad-season-section");
+  prizes.appendChild(el("h3", "ad-label ad-sublabel", "Prizes"));
   if (season.prizesOn && season.prizes.length) {
-    var prizes = el("div", "ad-season-prizes");
-    season.prizes.forEach((p) => prizes.appendChild(el("span", "ad-pill", "#" + p.place + " " + p.prize)));
-    parts.push(prizes);
-  }
+    var list = el("div", "ad-season-prize-list");
+    season.prizes
+      .slice()
+      .sort((a, b) => a.place - b.place)
+      .forEach((p) => {
+        var row = el("div", "ad-season-prize");
+        row.append(el("span", "ad-season-prize-place", ["🥇", "🥈", "🥉"][p.place - 1] || "#" + p.place), el("span", "ad-season-prize-text", p.prize));
+        list.appendChild(row);
+      });
+    prizes.appendChild(list);
+  } else prizes.appendChild(el("p", "ad-note", "No prizes - the places only."));
+  parts.push(prizes);
   return parts;
 }
 
@@ -1492,9 +1537,9 @@ async function saveSeason(event) {
     var data = await api(editingSeason == null ? "seasons" : "seasons/" + editingSeason, body);
     seasonList = data.seasons;
     document.getElementById("adSeasonError").hidden = true;
-    if (editingSeason != null) flashSaved(document.getElementById("adSeasonSave"), document.getElementById("adSeasonSave").innerText);
-    // A new one: its page (the form with it)
-    if (editingSeason == null && data.season) location.hash = "#seasons/" + data.season.id;
+    // Saved: the page of the season (new or changed)
+    var id = editingSeason != null ? editingSeason : data.season && data.season.id;
+    if (id != null) location.hash = "#seasons/" + id;
     else renderSeasons();
   } catch (error) {
     // Next to the button - the form stays as it is
@@ -1677,6 +1722,9 @@ function renderSettings() {
   );
   // Nothing to save on a page without numbers (and maintenance has its own save)
   document.getElementById("adSettingsBar").hidden = settingsGroup == "maintenance" || !settingsList.some((field) => field.group == settingsGroup && field.type == "number");
+  // Back to Default: only when something on this page is not its default
+  var defaults = document.getElementById("adSettingsDefaults");
+  if (!defaults.classList.contains("ad-saved")) defaults.disabled = pageChanges().length == 0;
   settingsDirty();
 }
 
@@ -1826,16 +1874,26 @@ function flashSaved(button, label, text) {
     button.innerText = label;
     button.classList.remove("ad-saved");
     if (button.id == "adSettingsSave") settingsDirty();
+    else if (button.id == "adSettingsDefaults") button.disabled = pageChanges().length == 0;
     else button.disabled = false;
   }, 1800);
 }
 
+// The numbers of this page that are not their default (the on / off of the game stays as it is)
+function pageChanges() {
+  return settingsList.filter((field) => field.group == settingsGroup && field.type == "number" && field.value != field.default);
+}
+
+// Back to Default: only the numbers of this page
 async function settingsDefaults() {
-  if (!(await confirmDialog({ title: "Back to the defaults?", text: "Every setting (and every game on / off) goes back to how it was at the start.", confirmLabel: "Reset settings" }))) return;
+  var changed = pageChanges();
+  if (!changed.length) return;
+  var page = SETTING_GROUPS[settingsGroup][0];
+  if (!(await confirmDialog({ title: "Back to the defaults?", text: changed.map((f) => f.label + ": " + formatCoins(f.value) + " → " + formatCoins(f.default)).join("\n") + "\n\nOnly " + page + " - every other page stays as it is.", confirmLabel: "Back to Default" }))) return;
   try {
-    settingsList = (await api("settings", { defaults: true })).settings;
+    settingsList = (await api("settings", { values: Object.fromEntries(changed.map((f) => [f.key, f.default])) })).settings;
     renderSettings();
-    flashSaved(document.getElementById("adSettingsDefaults"), "All settings back to the defaults", "Back to the defaults ✓");
+    flashSaved(document.getElementById("adSettingsDefaults"), "Back to Default", "Back to Default ✓");
   } catch (error) {
     fail(error);
   }

@@ -2811,3 +2811,55 @@ a.ad-case-row:hover {
 .ad-body .bt-notice-text span {
   white-space: normal;
 }
+
+/* The case editor: the title of the payback over its tiles */
+.ad-case-stats > .ad-title {
+  margin-bottom: 0.75rem;
+}
+
+/* The page of a season (only to look at): everything that is set, in groups */
+.ad-season-section {
+  margin-top: 1rem;
+}
+
+.ad-season-section > .ad-sublabel {
+  margin: 0 0 0.5rem;
+}
+
+.ad-season-tile .ad-season-swatch {
+  width: 100%;
+  height: 6px;
+  margin-top: 0.35rem;
+  border-radius: 999px;
+}
+
+.ad-season-prize-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ad-season-prize {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+  font-weight: 600;
+}
+
+.ad-season-prize-place {
+  min-width: 2rem;
+  font-size: 1.15rem;
+  text-align: center;
+}
+
+/* (dates and names in full, on two lines when needed) */
+.ad-season-section .ad-season-tile b {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}

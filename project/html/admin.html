@@ -143,7 +143,7 @@
                             </div>
                             <select id="adHistReason" class="mm-input" aria-label="Kind"></select>
                             <select id="adHistScope" class="mm-input" aria-label="Coins" hidden>
-                                <option value="">Normal coins</option>
+                                <option value="">Off Season</option>
                                 <option value="season">Season</option>
                             </select>
                         </form>
@@ -176,7 +176,7 @@
                 </div>
                 <!--- #seasons/new and #seasons/<id>: the details of one season, the form to plan / edit it --->
                 <div id="adSeasonPage" class="ad-stack ad-season-page" hidden>
-                    <a href="#seasons" class="ad-back">‹ All seasons</a>
+                    <a href="#seasons" id="adSeasonBack" class="ad-back">‹ All seasons</a>
                     <div id="adSeasonDetail" class="ad-card ad-season-detail"></div>
                     <!--- A running season or one that is over: its whole leaderboard - when they started,
                           their second chances, what they did --->
@@ -335,7 +335,7 @@
                 <div class="ad-settings-bar" id="adSettingsBar">
                     <span id="adSettingsDirty" class="ad-settings-dirty" hidden>● Unsaved changes</span>
                     <span id="adSettingsError" class="ad-form-error" role="alert" hidden></span>
-                    <button type="button" id="adSettingsDefaults" class="mm-btn mm-btn-sm">All settings back to the defaults</button>
+                    <button type="button" id="adSettingsDefaults" class="mm-btn mm-btn-sm" title="The settings of this page as they were at the start">Back to Default</button>
                     <button type="submit" id="adSettingsSave" form="adSettingsForm" class="mm-btn mm-btn-primary" disabled>Save</button>
                 </div>
 
