@@ -212,3 +212,52 @@ test("access: payouts only for players the admin ticked", async () => {
   assert.strictEqual((await call(CASINO + "/withdraw", { ...as("tom"), json: { amount: 5000 } })).status, 403);
   assert.strictEqual((await adminApi("payout", { username: "nobody", allowed: true })).status, 400);
 });
+
+test("access: maintenance - only the whitelist gets in, the others see when it is most likely over", async () => {
+  const maintenance = require("../game/maintenance");
+  tokens.wes = h.addUser("wes");
+  tokens.xia = h.addUser("xia");
+  const until = Date.now() + 2 * 60 * 60 * 1000;
+  // An open page of a player not on the whitelist closes when it starts
+  const open = await connect("/jackpot", "xia");
+  assert.strictEqual(open.ok, true);
+  const closed = h.once(open.socket, "casinoClosed");
+  const on = await adminApi("maintenance", { on: true, whitelist: ["wes"], until: until, note: "New cases!" });
+  assert.strictEqual(on.status, 200);
+  assert.deepStrictEqual(on.body.maintenance, { on: true, whitelist: ["wes"], until: until, note: "New cases!" });
+  await closed;
+
+  // Not on the whitelist: the maintenance page everywhere, no data, no games
+  for (const path of ["/", "/slots", "/battles/xyz"]) {
+    const res = await call(CASINO + path, as("xia"));
+    assert.strictEqual(res.status, 200, path);
+    assert.match(await res.text(), /closed for maintenance/, path);
+  }
+  const data = await call(CASINO + "/leaderboard/data", as("xia"));
+  assert.strictEqual(data.status, 503);
+  assert.deepStrictEqual((await data.json()).maintenance, { on: true, until: until, note: "New cases!" });
+  assert.strictEqual((await connect("/slots", "xia")).ok, false);
+  // The maintenance page asks: still closed - when is it most likely over?
+  const info = await (await call(CASINO + "/maintenance", as("xia"))).json();
+  assert.deepStrictEqual(info, { on: true, until: until, note: "New cases!", allowed: false });
+
+  // On the whitelist: plays as always
+  const wes = await call(CASINO + "/", as("wes"));
+  assert.doesNotMatch(await wes.text(), /closed for maintenance/);
+  assert.strictEqual((await connect("/slots", "wes")).ok, true);
+  assert.strictEqual((await (await call(CASINO + "/maintenance", as("wes"))).json()).allowed, true);
+
+  // Wrong values change nothing
+  assert.strictEqual((await adminApi("maintenance", { on: "yes" })).status, 400);
+  assert.strictEqual((await adminApi("maintenance", { whitelist: "wes" })).status, 400);
+  assert.strictEqual(maintenance.get().on, true);
+  // The admin panel knows the players to put on the list
+  assert.ok((await adminApi("maintenance")).body.players.includes("xia"));
+
+  // Over: everybody is back in
+  await adminApi("maintenance", { on: false });
+  assert.doesNotMatch(await (await call(CASINO + "/", as("xia"))).text(), /closed for maintenance/);
+  assert.strictEqual((await connect("/slots", "xia")).ok, true);
+  assert.strictEqual(maintenance.get().whitelist[0], "wes", "the whitelist stays for the next time");
+  maintenance.reset();
+});

@@ -13,6 +13,7 @@ const settings = require("../game/settings");
 const { hardReset } = require("../game/hard_reset");
 const seasons = require("../game/seasons");
 const cases = require("../game/cases");
+const maintenance = require("../game/maintenance");
 const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
 
@@ -368,6 +369,28 @@ module.exports = function () {
     asyncHandler(async (req, res) => {
       const body = req.body || {};
       const result = body.defaults === true ? await settings.resetToDefaults() : await settings.update(body.values);
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
+  /* ---------- Maintenance ---------- */
+
+  // The state - and the players to put on the whitelist (everybody with access)
+  router.get(
+    "/api/maintenance",
+    admin,
+    asyncHandler(async (req, res) => {
+      res.json({ maintenance: maintenance.get(), players: (await players()).map((p) => p.username) });
+    }),
+  );
+
+  // {on, whitelist, until, note} (only what changes)
+  router.post(
+    "/api/maintenance",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await maintenance.update(req.body || {});
       if (result.error) return res.status(400).json(result);
       res.json(result);
     }),

@@ -55,7 +55,10 @@
                     <h1 id="adPageTitle" class="ad-page-title">Overview</h1>
                     <p id="adPageSub" class="ad-page-sub"></p>
                 </div>
-                <span id="adOpenBadge" class="ad-pill danger" hidden></span>
+                <span class="ad-head-pills">
+                    <a id="adMaintBadge" href="#settings/general" class="ad-pill ad-maint-pill" hidden>🔧 Maintenance on</a>
+                    <span id="adOpenBadge" class="ad-pill danger" hidden></span>
+                </span>
             </header>
 
             <!--- Overview: numbers, what needs attention, the games right now --->
@@ -370,6 +373,52 @@
                 <form id="adSettingsForm" autocomplete="off">
                     <div id="adSettings" class="ad-grid"></div>
                 </form>
+
+                <!--- Maintenance: only the whitelist gets in, the others see when it is most likely over --->
+                <div class="ad-card ad-maint" id="adMaint">
+                    <div class="ad-maint-head">
+                        <div>
+                            <h2 class="ad-title">🔧 Maintenance mode</h2>
+                            <p class="ad-note">Only the players on the whitelist get into the casino. Everybody else sees a maintenance page (with when it is most likely over) and gets in by themselves when you turn it off. Their open pages close right away - bets in running rounds play to the end.</p>
+                        </div>
+                        <label class="ad-switch ad-switch-big">
+                            <input type="checkbox" id="adMaintOn" aria-label="Maintenance mode">
+                            <span class="ad-switch-track"></span>
+                            <span class="ad-switch-text" id="adMaintOnText">Off</span>
+                        </label>
+                    </div>
+                    <div class="ad-maint-grid">
+                        <div class="ad-field">
+                            <span class="ad-label">Whitelist</span>
+                            <div class="ad-maint-add">
+                                <select id="adMaintPlayer" class="mm-input" aria-label="Player"></select>
+                                <button type="button" id="adMaintAdd" class="mm-btn mm-btn-sm">+ Add</button>
+                            </div>
+                            <div id="adMaintList" class="ad-maint-list"></div>
+                            <span class="ad-setting-hint">These players can play during the maintenance (e.g. to test).</span>
+                        </div>
+                        <div class="ad-field">
+                            <span class="ad-label">Most likely over</span>
+                            <input id="adMaintUntil" class="mm-input" type="datetime-local" aria-label="Most likely over">
+                            <div class="ad-maint-quick">
+                                <button type="button" class="mm-btn mm-btn-sm" data-add="30">+30 min</button>
+                                <button type="button" class="mm-btn mm-btn-sm" data-add="60">+1 h</button>
+                                <button type="button" class="mm-btn mm-btn-sm" data-add="120">+2 h</button>
+                                <button type="button" class="mm-btn mm-btn-sm" data-add="1440">+1 day</button>
+                                <button type="button" class="mm-btn mm-btn-sm" data-add="clear">No time</button>
+                            </div>
+                            <span class="ad-setting-hint">Shown to the players (with a countdown). Only a guess - the casino opens when you turn maintenance off.</span>
+                        </div>
+                        <label class="ad-field ad-maint-note">
+                            <span class="ad-label">Message to the players</span>
+                            <textarea id="adMaintNote" class="mm-input" rows="2" maxlength="300" placeholder="e.g. New cases are coming!"></textarea>
+                        </label>
+                    </div>
+                    <div class="ad-maint-bar">
+                        <span id="adMaintState" class="ad-note"></span>
+                        <button type="button" id="adMaintSave" class="mm-btn mm-btn-primary">Save maintenance</button>
+                    </div>
+                </div>
 
                 <div class="ad-card ad-danger" id="adDanger">
                     <div class="ad-card-head"><h2 class="ad-title">Danger zone</h2><span class="ad-pill danger">can't be undone</span></div>

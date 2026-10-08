@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const persist = require("../game/persist");
+const maintenance = require("../game/maintenance");
 
 function readCookie(header, name) {
   if (typeof header !== "string") return null;
@@ -34,7 +35,8 @@ function check(casino) {
       const user = await User.findOne({ _id: decode._id }).select("username casinoApproved");
 
       // The secret casino: only for players the admin let in
-      if (user == null || (casino && user.casinoApproved !== true)) {
+      // (and during maintenance only the players on the whitelist)
+      if (user == null || (casino && (user.casinoApproved !== true || !maintenance.allowed(user.username)))) {
         return next(new Error("unauthorized"));
       }
 

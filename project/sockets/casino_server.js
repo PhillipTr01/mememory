@@ -3,6 +3,7 @@ const settings = require("../game/settings");
 const games = require("../game/games");
 const { notices } = require("../game/notices");
 const seasons = require("../game/seasons");
+const maintenance = require("../game/maintenance");
 
 const GAMES = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots"];
 
@@ -56,6 +57,17 @@ module.exports = function (io) {
   // A season is over: every open casino page shows it (with a link to the winners)
   seasons.changes.on("ended", (season) => {
     for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonEnded", { id: season.id, name: season.name, icon: season.icon, winner: season.winner });
+  });
+
+  // Maintenance: every open casino page of a player not on the whitelist is closed (it shows the maintenance page)
+  maintenance.changes.on("change", () => {
+    for (const name of GAMES) {
+      for (const socket of io.of(name).sockets.values()) {
+        if (maintenance.allowed(socket.data.username)) continue;
+        socket.emit("casinoClosed");
+        socket.disconnect(true);
+      }
+    }
   });
 
   // Access taken away: every open casino page of the player is closed

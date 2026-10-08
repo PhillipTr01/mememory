@@ -63,7 +63,7 @@ var PAGES = {
 
 // The pages of the settings: general and one per game
 var SETTING_GROUPS = {
-  general: ["General settings", "Coins for everybody - and the hard reset."],
+  general: ["General settings", "Coins for everybody, maintenance - and the hard reset."],
   jackpot: ["Jackpot", "Turn the jackpot on or off, its bets and timing."],
   battles: ["Case battles", "Turn case battles on or off, how big a battle can be."],
   poker: ["Poker", "Turn poker on or off, the buy-ins."],
@@ -84,6 +84,7 @@ function showTab() {
   document.getElementById("adSettingsNav").classList.toggle("open", tab == "settings");
   document.querySelectorAll(".ad-sub").forEach((link) => link.classList.toggle("active", tab == "settings" && link.dataset.group == settingsGroup));
   document.getElementById("adDanger").hidden = settingsGroup != "general";
+  document.getElementById("adMaint").hidden = settingsGroup != "general";
   if (tab == "access") loadAccess();
   if (tab == "players") loadPlayers();
   if (tab == "payouts") loadPayouts();
@@ -96,7 +97,10 @@ function showTab() {
     closePicker();
     loadSeasons();
   }
-  if (tab == "settings") loadSettings();
+  if (tab == "settings") {
+    loadSettings();
+    loadMaintenance();
+  }
   if (tab == "cases") {
     caseView = parts[1] ? decodeURIComponent(parts[1]) : null;
     caseDraft = null;
@@ -518,6 +522,113 @@ async function loadHistory(event) {
   } catch (error) {
     fail(error);
   }
+}
+
+/* ---------- Maintenance: only the whitelist gets in ---------- */
+
+var maint = null; // {on, whitelist, until, note} as saved
+var maintForm = null; // the form while it is changed (whitelist, until, note)
+var maintPlayers = [];
+
+async function loadMaintenance() {
+  try {
+    var data = await api("maintenance");
+    maint = data.maintenance;
+    maintPlayers = data.players;
+    maintForm = { whitelist: maint.whitelist.slice() };
+    renderMaintenance(true);
+  } catch (error) {
+    fail(error);
+  }
+}
+
+// fill: the fields from what is saved (else they stay as typed)
+function renderMaintenance(fill) {
+  if (maint == null) return;
+  var badge = document.getElementById("adMaintBadge");
+  badge.hidden = !maint.on;
+  badge.title = maint.until ? "Most likely over " + dateText(maint.until) : "No time given";
+  var box = document.getElementById("adMaintOn");
+  box.checked = maint.on;
+  document.getElementById("adMaintOnText").innerText = maint.on ? "On" : "Off";
+  document.getElementById("adMaint").classList.toggle("on", maint.on);
+  if (fill) {
+    document.getElementById("adMaintUntil").value = maint.until ? localInput(maint.until) : "";
+    document.getElementById("adMaintNote").value = maint.note || "";
+  }
+  // The players to add: everybody with access who is not on the list yet
+  var select = document.getElementById("adMaintPlayer");
+  var free = maintPlayers.filter((name) => !maintForm.whitelist.includes(name));
+  select.replaceChildren(new Option(free.length ? "Choose a player..." : "Everybody is on it", ""), ...free.map((name) => new Option(name, name)));
+  document.getElementById("adMaintAdd").disabled = !free.length;
+  var list = document.getElementById("adMaintList");
+  list.replaceChildren(
+    ...(maintForm.whitelist.length
+      ? maintForm.whitelist.map((name) => {
+          var chip = el("span", "ad-maint-chip", name);
+          var remove = el("button", "", "✕");
+          remove.type = "button";
+          remove.setAttribute("aria-label", "Remove " + name);
+          remove.addEventListener("click", () => {
+            maintForm.whitelist = maintForm.whitelist.filter((other) => other != name);
+            renderMaintenance(false);
+          });
+          chip.appendChild(remove);
+          return chip;
+        })
+      : [el("span", "ad-note", "Nobody - only you (the admin panel) during the maintenance.")]),
+  );
+  var state = document.getElementById("adMaintState");
+  state.innerText = maint.on
+    ? "On" + (maint.until ? " · most likely over " + dateText(maint.until) + " (in " + span(maint.until - Date.now()) + ")" : " · no time given") + " · " + maint.whitelist.length + " on the whitelist"
+    : "Off - the casino is open for everybody.";
+}
+
+function maintValues(on) {
+  var until = document.getElementById("adMaintUntil").value;
+  return { on: on, whitelist: maintForm.whitelist, until: until ? new Date(until).getTime() : null, note: document.getElementById("adMaintNote").value };
+}
+
+async function saveMaintenance(on, message) {
+  try {
+    maint = (await api("maintenance", maintValues(on))).maintenance;
+    maintForm = { whitelist: maint.whitelist.slice() };
+    renderMaintenance(true);
+    showToast(message);
+  } catch (error) {
+    fail(error);
+    renderMaintenance(false);
+  }
+}
+
+function setupMaintenance() {
+  var box = document.getElementById("adMaintOn");
+  box.addEventListener("change", async () => {
+    if (box.checked) {
+      var who = maintForm.whitelist.length ? maintForm.whitelist.join(", ") + " can still play" : "nobody can play";
+      if (!(await confirmDialog({ title: "Start the maintenance?", text: "Every player not on the whitelist is sent out right away - " + who + ". Running rounds play to the end.", confirmLabel: "Start maintenance", danger: true }))) {
+        box.checked = false;
+        return;
+      }
+    }
+    await saveMaintenance(box.checked, box.checked ? "Maintenance is on" : "Maintenance is over - the casino is open");
+  });
+  document.getElementById("adMaintAdd").addEventListener("click", () => {
+    var name = document.getElementById("adMaintPlayer").value;
+    if (!name) return;
+    maintForm.whitelist.push(name);
+    renderMaintenance(false);
+  });
+  document.getElementById("adMaintSave").addEventListener("click", () => saveMaintenance(maint.on, "Saved"));
+  // +30 min, +1 h, ...: from the time given (or from now)
+  document.querySelectorAll(".ad-maint-quick button").forEach((button) =>
+    button.addEventListener("click", () => {
+      var input = document.getElementById("adMaintUntil");
+      if (button.dataset.add == "clear") return (input.value = "");
+      var from = input.value ? Math.max(Date.now(), new Date(input.value).getTime()) : Date.now();
+      input.value = localInput(from + Number(button.dataset.add) * 60000);
+    }),
+  );
 }
 
 // The player of the history: a list of the players under the field - typing narrows it (a part of the name is enough)
@@ -1678,6 +1789,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("adSettingsForm").addEventListener("submit", saveSettings);
   document.getElementById("adSettingsDefaults").addEventListener("click", settingsDefaults);
+  setupMaintenance();
+  loadMaintenance();
   document.getElementById("adResetConfirm").addEventListener("input", (event) => {
     document.getElementById("adResetButton").disabled = event.target.value != "RESET";
   });

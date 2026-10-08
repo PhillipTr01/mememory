@@ -2477,3 +2477,138 @@ a.ad-case-row:hover {
     text-align: left;
   }
 }
+
+/* ---------- Maintenance (Settings, General) ---------- */
+#adMaint[hidden] {
+  display: none;
+}
+
+.ad-maint.on {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  background: linear-gradient(160deg, rgba(var(--mm-accent-rgb), 0.08), var(--mm-surface) 60%);
+}
+
+.ad-maint-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ad-maint-head .ad-note {
+  margin: 0.35rem 0 0;
+  max-width: 60ch;
+}
+
+.ad-maint-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+}
+
+.ad-maint-note {
+  grid-column: 1 / -1;
+}
+
+.ad-maint-note textarea {
+  resize: vertical;
+}
+
+.ad-maint-add {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ad-maint-add select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ad-maint-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.ad-maint-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.35rem 0.25rem 0.7rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ad-maint-chip button {
+  width: 1.3rem;
+  height: 1.3rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--mm-surface-3);
+  color: var(--mm-muted);
+  font-size: 0.65rem;
+  cursor: pointer;
+}
+
+.ad-maint-chip button:hover {
+  color: var(--mm-danger);
+}
+
+.ad-maint-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.ad-maint-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.ad-maint-bar .ad-note {
+  margin: 0;
+}
+
+/* The page head: maintenance (on every page while it is on) and the open payouts */
+.ad-head-pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.ad-maint-pill {
+  background: rgba(var(--mm-accent-rgb), 0.15);
+  color: var(--mm-accent);
+  text-decoration: none;
+}
+
+.ad-maint-pill[hidden] {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .ad-maint-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ad-maint-head {
+    flex-direction: column;
+  }
+}
+
+.ad-maint-note textarea {
+  font-family: inherit;
+}
