@@ -1226,3 +1226,8 @@
     transform: translateY(8px);
   }
 }
+
+/* Full screen: no coins at the top of the slots (only here - the other games keep them) */
+.sl-main .cs-fs-coins {
+  display: none;
+}
