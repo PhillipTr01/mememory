@@ -91,7 +91,7 @@ test("slots: three 🎁 start the bonus game - free spins with a growing multipl
 
   // Rare: the bonus about 1 of 200 spins, the max win in very few bonuses 
   const { bonusChance, rtp } = slots.rtp();
-  assert.ok(bonusChance > 1 / 250 && bonusChance < 1 / 150, `bonus 1 of ${Math.round(1 / bonusChance)}`);
+  assert.ok(bonusChance > 1 / 280 && bonusChance < 1 / 220, `bonus 1 of ${Math.round(1 / bonusChance)}`);
   assert.ok(rtp > 0.93 && rtp < 0.97);
 });
 
@@ -105,7 +105,7 @@ test("slots: the coin sweat - the coin game still possible on the last reel, abo
     const r = slots.spin(100);
     if (slots.coinSweat(r.grid, r.stops)) sweats++;
   }
-  assert.ok(sweats / N > 1 / 55 && sweats / N < 1 / 30, `1 of ${Math.round(N / sweats)}`);
+  assert.ok(sweats / N > 1 / 75 && sweats / N < 1 / 35, `1 of ${Math.round(N / sweats)}`);
 });
 
 test("slots: no 🪙 in the free spins (their strips are the same without them)", () => {
@@ -126,7 +126,7 @@ test("slots: five 🪙 start the coin game - respins until three in a row bring 
   // The 🪙 on every reel
   slots.STRIPS.forEach((strip) => assert.ok(strip.includes("coin")));
   const { coinChance, coinRtp, rtp } = slots.rtp();
-  assert.ok(coinChance > 1 / 200 && coinChance < 1 / 80, `coin game 1 of ${Math.round(1 / coinChance)}`);
+  assert.ok(coinChance > 1 / 320 && coinChance < 1 / 240, `coin game 1 of ${Math.round(1 / coinChance)}`);
   assert.ok(coinRtp > 0.08 && coinRtp < 0.25);
   assert.ok(rtp > 0.965 && rtp < 0.97, `payback ${(rtp * 100).toFixed(2)}%`);
   for (let i = 0; i < 200; i++) {

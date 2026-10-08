@@ -820,7 +820,6 @@
         var data = await res.json();
         if (!res.ok) throw new Error(data.error || "That didn't work.");
         close();
-        showToast("🎁 " + name + " got 🪙 " + format(amount) + " from you");
       } catch (e) {
         error.innerText = e.message;
         error.hidden = false;
