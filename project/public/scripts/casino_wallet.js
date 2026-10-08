@@ -405,6 +405,7 @@
           box.remove();
           chanceStatus = null;
           renderChancePill();
+          showHint("💔 Back in the game with 🪙 " + format(data.coins) + " - good luck!", "success", document.getElementById("navCoins"), 5000);
         } catch (error) {
           box.remove();
           showHint(error.message, "error", document.getElementById("navCoins"));
@@ -574,6 +575,7 @@
         var result = await res.json();
         if (!res.ok) throw new Error(result.error || "Could not start the season.");
         box.remove();
+        showHint((season.icon || "🏆") + " You're in " + season.name + " with 🪙 " + format(result.coins) + " - good luck!", "success", document.getElementById("navCoins"), 5000);
       } catch (error) {
         showHint(error.message, "error", go);
         go.disabled = false;

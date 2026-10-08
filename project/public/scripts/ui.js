@@ -151,7 +151,8 @@ function createIcon(classes, title) {
 /*
  * No toasts: a short message sits as a small bubble on the control it is
  * about (the button just clicked, the field just used) and goes by itself.
- * showHint(message, type, anchor) - without an anchor: what was clicked last.
+ * showHint(message, type, anchor, ms) - without an anchor: what was clicked last.
+ * ms: a notification that stays longer (and through scrolling - its anchor is in the fixed bar).
  */
 var lastControl = null;
 document.addEventListener(
@@ -170,15 +171,19 @@ document.addEventListener(
   true,
 );
 
-function showHint(message, type, anchor) {
+function showHint(message, type, anchor, ms) {
   anchor = anchor || lastControl;
   // The control is gone (or hidden): the main panel of the page
   if (!anchor || !anchor.isConnected || anchor.getClientRects().length == 0) anchor = document.querySelector("[data-hint-home]") || document.querySelector("main") || document.body;
-  document.querySelectorAll(".mm-hint").forEach((old) => old.remove());
+  // One hint at a time - notifications (ms) may stand side by side
+  document.querySelectorAll(ms ? ".mm-hint.note" : ".mm-hint:not(.note)").forEach((old) => {
+    if (!ms || old.anchor == anchor) old.remove();
+  });
   var hint = document.createElement("div");
   hint.className = "mm-hint" + (type ? " " + type : "");
   hint.setAttribute("role", type == "error" ? "alert" : "status");
   hint.innerText = message;
+  hint.anchor = anchor;
   document.body.appendChild(hint);
   var box = anchor.getBoundingClientRect();
   var width = hint.offsetWidth;
@@ -187,16 +192,24 @@ function showHint(message, type, anchor) {
   var above = box.top - hint.offsetHeight - 10 > 8;
   var top = above ? box.top - hint.offsetHeight - 10 : Math.min(box.bottom + 10, window.innerHeight - hint.offsetHeight - 8);
   if (anchor == document.body || box.height > window.innerHeight * 0.6) top = Math.max(8, box.top + 12);
-  hint.style.left = left + "px";
-  hint.style.top = top + "px";
-  hint.style.setProperty("--arrow", Math.max(12, Math.min(width - 12, box.left + box.width / 2 - left)) + "px");
-  hint.classList.add(above ? "above" : "below");
+  // A side bar (data-hint-right): next to the item, not over the one above it
+  if (anchor.closest("[data-hint-right]") && window.innerWidth > 991) {
+    hint.style.left = box.right + 10 + "px";
+    hint.style.top = Math.max(8, box.top + box.height / 2 - hint.offsetHeight / 2) + "px";
+    hint.classList.add("right");
+  } else {
+    hint.style.left = left + "px";
+    hint.style.top = top + "px";
+    hint.style.setProperty("--arrow", Math.max(12, Math.min(width - 12, box.left + box.width / 2 - left)) + "px");
+    hint.classList.add(above ? "above" : "below");
+  }
   var remove = () => {
     hint.remove();
     window.removeEventListener("scroll", remove, true);
   };
-  window.addEventListener("scroll", remove, true);
-  setTimeout(remove, type == "error" ? 3500 : 1800);
+  if (!ms) window.addEventListener("scroll", remove, true);
+  else hint.classList.add("note");
+  setTimeout(remove, ms || (type == "error" ? 3500 : 1800));
 }
 
 // Small message at the bottom of the screen instead of alert() (the MemeMory pages - the casino uses showHint)
