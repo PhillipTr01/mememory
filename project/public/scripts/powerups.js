@@ -93,6 +93,7 @@ function renderPowerups(state) {
     button.className = "powerup-slot rarity-" + info.rarity + (usable ? " usable" : "") + (targeting && targeting.id == id ? " active" : "");
     button.disabled = !usable;
     button.title = info.name + " (" + info.rarity + ") - " + info.description;
+    button.setAttribute("aria-label", info.name);
     // Same emoji as in the chat
     var icon = document.createElement("span");
     icon.className = "powerup-icon";

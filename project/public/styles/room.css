@@ -1853,3 +1853,44 @@
     min-width: 0;
   }
 }
+
+/* The power-ups in the bar: small, only the icon (the name on hover), on the right */
+.power-bar .powerup-slots {
+  margin-left: auto;
+  gap: 0.4rem;
+}
+
+.power-bar .powerup-slot {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.power-bar .powerup-icon {
+  font-size: 1.25rem;
+}
+
+.power-bar .powerup-name {
+  display: none;
+}
+
+/* Phones too: the text on the left, the icons on the right - one row */
+@media (max-width: 767px) {
+  .power-bar {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .power-bar .powerup-slot {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+  }
+
+  .power-bar .powerup-icon {
+    font-size: 1.1rem;
+  }
+}
