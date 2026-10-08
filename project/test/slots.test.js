@@ -12,8 +12,9 @@ test("slots: 5 reels, 3 rows, 9 lines; pays back about 96.8% (exactly computed)"
   assert.ok(slots.LINES.every((rows) => rows.length === 5 && rows.every((row) => row >= 0 && row <= 2)));
   // Nine different lines
   assert.strictEqual(new Set(slots.LINES.map((rows) => rows.join())).size, 9);
+  // (exact, without the max win of 250x - it takes about 1%: the real payback is about 96.9%)
   const { rtp, lineHit } = slots.rtp();
-  assert.ok(rtp > 0.965 && rtp < 0.97, `payback ${(rtp * 100).toFixed(2)}%`);
+  assert.ok(rtp > 0.975 && rtp < 0.985, `payback ${(rtp * 100).toFixed(2)}%`);
   assert.ok(lineHit > 0.05, "a line wins often enough");
 });
 
@@ -43,7 +44,7 @@ test("slots: three 🎁 start the bonus game - free spins with a growing multipl
   // The 🎁 only on reels 1, 3, 5, never two in one window
   slots.STRIPS.forEach((strip, reel) => {
     const at = strip.map((s, i) => (s === "bonus" ? i : -1)).filter((i) => i >= 0);
-    assert.strictEqual(at.length, [2, 0, 2, 0, 3][reel]);
+    assert.strictEqual(at.length, [2, 0, 2, 0, 4][reel]);
     // Never two in one window (3 rows): at least 3 apart, also round the end of the strip
     at.forEach((i, n) => {
       const next = at[(n + 1) % at.length];
@@ -52,8 +53,9 @@ test("slots: three 🎁 start the bonus game - free spins with a growing multipl
   });
   // The middle row of reels 1, 3, 5 on a 🎁; the wheels: 8 free spins (field 2), start x3 (field 2)
   const bonusStops = slots.STRIPS.map((strip, reel) => ([0, 2, 4].includes(reel) ? strip.indexOf("bonus") : 0));
-  const spinsTicket = 40 + 26; // the first ticket of field 2
-  const multiplierTicket = 50 + 30;
+  // (the first ticket of field 2 of each wheel)
+  const spinsTicket = slots.BONUS_SPINS[0].weight + slots.BONUS_SPINS[1].weight;
+  const multiplierTicket = slots.BONUS_MULTIPLIERS[0].weight + slots.BONUS_MULTIPLIERS[1].weight;
   // Every free spin: the middle row all diamonds (5x diamond on line 1) - the free spins turn their own strips
   const diamonds = slots.FREE_STRIPS.map((strip) => strip.indexOf("diamond"));
   const rolls = bonusStops.concat([spinsTicket, multiplierTicket]);
@@ -89,10 +91,13 @@ test("slots: three 🎁 start the bonus game - free spins with a growing multipl
   assert.strictEqual(retriggered.bonus.freeSpins.length, 10);
   assert.strictEqual(retriggered.bonus.freeSpins[9].multiplier, 10);
 
-  // Rare: the bonus about 1 of 200 spins, the max win in very few bonuses 
+  // The bonus about 1 of 200 spins, a retrigger about 1 of 30 free spins
   const { bonusChance, rtp } = slots.rtp();
-  assert.ok(bonusChance > 1 / 280 && bonusChance < 1 / 220, `bonus 1 of ${Math.round(1 / bonusChance)}`);
-  assert.ok(rtp > 0.93 && rtp < 0.97);
+  assert.ok(bonusChance > 1 / 230 && bonusChance < 1 / 170, `bonus 1 of ${Math.round(1 / bonusChance)}`);
+  const inWindow = (reel) => (slots.FREE_STRIPS[reel].filter((s) => s === "bonus").length * 3) / slots.FREE_STRIPS[reel].length;
+  const retrigger = inWindow(0) * inWindow(2) * inWindow(4);
+  assert.ok(retrigger > 1 / 45 && retrigger < 1 / 20, `retrigger 1 of ${Math.round(1 / retrigger)}`);
+  assert.ok(rtp > 0.93 && rtp < 0.985);
 });
 
 test("slots: the coin sweat - the coin game still possible on the last reel, about as often as the 🎁 sweat", () => {
@@ -108,10 +113,14 @@ test("slots: the coin sweat - the coin game still possible on the last reel, abo
   assert.ok(sweats / N > 1 / 75 && sweats / N < 1 / 35, `1 of ${Math.round(N / sweats)}`);
 });
 
-test("slots: no 🪙 in the free spins (their strips are the same without them)", () => {
+test("slots: the free spins - no 🪙, fewer 🍌 (bigger wins), more 🎁 (retriggers)", () => {
   slots.FREE_STRIPS.forEach((strip, reel) => {
     assert.ok(!strip.includes("coin"));
-    assert.deepStrictEqual(strip, slots.STRIPS[reel].filter((id) => id !== "coin"));
+    const count = (list, id) => list.filter((s) => s === id).length;
+    assert.strictEqual(count(strip, "banana"), count(slots.STRIPS[reel], "banana") - slots.FREE_DROP);
+    assert.strictEqual(count(strip, "bonus"), slots.FREE_BONUS[reel]);
+    // The rest as on the normal reels
+    ["pepe", "doge", "money", "rocket", "diamond", "wild"].forEach((id) => assert.strictEqual(count(strip, id), count(slots.STRIPS[reel], id)));
     // Still never two 🎁 in one window
     const at = strip.map((s, i) => (s === "bonus" ? i : -1)).filter((i) => i >= 0);
     at.forEach((i, n) => at.length > 1 && assert.ok((at[(n + 1) % at.length] - i + strip.length) % strip.length >= 3));
@@ -126,9 +135,9 @@ test("slots: five 🪙 start the coin game - respins until three in a row bring 
   // The 🪙 on every reel
   slots.STRIPS.forEach((strip) => assert.ok(strip.includes("coin")));
   const { coinChance, coinRtp, rtp } = slots.rtp();
-  assert.ok(coinChance > 1 / 320 && coinChance < 1 / 240, `coin game 1 of ${Math.round(1 / coinChance)}`);
+  assert.ok(coinChance > 1 / 230 && coinChance < 1 / 175, `coin game 1 of ${Math.round(1 / coinChance)}`);
   assert.ok(coinRtp > 0.08 && coinRtp < 0.25);
-  assert.ok(rtp > 0.965 && rtp < 0.97, `payback ${(rtp * 100).toFixed(2)}%`);
+  assert.ok(rtp > 0.975 && rtp < 0.985, `payback ${(rtp * 100).toFixed(2)}%`);
   for (let i = 0; i < 200; i++) {
     const result = slots.spin(100, undefined, { forceBonus: "coins" });
     const game = result.coinGame;
@@ -206,6 +215,12 @@ test("slots: a spin costs the bet, the win comes right away, the others see it",
     spent += 100;
     won += r.win;
     assert.strictEqual(r.grid.length, 5);
+    // A bonus game waits for the click: played to its end right here (paid now, nothing left over for the next tests)
+    if (r.id && (r.bonus || r.coinGame)) {
+      alice.emit("bonusStart", { id: r.id });
+      alice.emit("bonusDone", { id: r.id });
+      continue;
+    }
     if (r.win > 0) winning = r;
   }
   assert.ok(winning, "a win within 200 spins");

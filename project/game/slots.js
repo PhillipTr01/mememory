@@ -19,13 +19,13 @@ const crypto = require("crypto");
  * when the bonus reaches it, it ends right there.
  */
 const SYMBOLS = [
-  { id: "banana", icon: "🍌", name: "Banana", count: 12, pays: [4, 10, 26] },
-  { id: "pepe", icon: "🐸", name: "Pepe", count: 10, pays: [6, 14, 36] },
-  { id: "doge", icon: "🐕", name: "Doge", count: 6, pays: [9, 22, 83] },
-  { id: "money", icon: "💰", name: "Money bag", count: 4, pays: [14, 38, 164] },
-  { id: "rocket", icon: "🚀", name: "To the moon", count: 3, pays: [19, 67, 329] },
-  { id: "diamond", icon: "💎", name: "Diamond hands", count: 1, pays: [32, 164, 822] },
-  { id: "wild", icon: "👑", name: "Wild", count: 2, pays: [49, 247, 1643], wild: true },
+  { id: "banana", icon: "🍌", name: "Banana", count: 12, pays: [3, 7, 19] },
+  { id: "pepe", icon: "🐸", name: "Pepe", count: 10, pays: [4, 10, 27] },
+  { id: "doge", icon: "🐕", name: "Doge", count: 6, pays: [7, 16, 61] },
+  { id: "money", icon: "💰", name: "Money bag", count: 4, pays: [10, 28, 121] },
+  { id: "rocket", icon: "🚀", name: "To the moon", count: 3, pays: [14, 50, 243] },
+  { id: "diamond", icon: "💎", name: "Diamond hands", count: 1, pays: [24, 121, 608] },
+  { id: "wild", icon: "👑", name: "Wild", count: 2, pays: [36, 183, 1216], wild: true },
   // Pays no line - three in sight (reels 1, 3, 5) start the bonus
   { id: "bonus", icon: "🎁", name: "Bonus", count: 0, pays: [0, 0, 0], scatter: true },
   // Pays no line - five in sight (anywhere) start the coin game; every coin carries a value
@@ -34,22 +34,22 @@ const SYMBOLS = [
 const BONUS = "bonus";
 const BONUS_REELS = [0, 2, 4];
 // How many 🎁 on each reel (two in sight on reels 1 and 3: the sweat)
-const BONUS_COUNT = [2, 0, 2, 0, 3];
+const BONUS_COUNT = [2, 0, 2, 0, 4];
 const MAX_WIN = 250; // times the bet, for a whole spin
 
 // The bonus wheels: free spins (outer ring) and the start multiplier (inner ring), with weights
 const BONUS_SPINS = [
-  { spins: 5, weight: 40 },
-  { spins: 6, weight: 26 },
-  { spins: 8, weight: 20 },
-  { spins: 10, weight: 10 },
-  { spins: 12, weight: 4 },
+  { spins: 5, weight: 25 },
+  { spins: 6, weight: 30 },
+  { spins: 8, weight: 25 },
+  { spins: 10, weight: 13 },
+  { spins: 12, weight: 7 },
 ];
 const BONUS_MULTIPLIERS = [
-  { multiplier: 1, weight: 50 },
-  { multiplier: 2, weight: 30 },
-  { multiplier: 3, weight: 15 },
-  { multiplier: 5, weight: 5 },
+  { multiplier: 1, weight: 35 },
+  { multiplier: 2, weight: 35 },
+  { multiplier: 3, weight: 22 },
+  { multiplier: 5, weight: 8 },
 ];
 const BONUS_STEP = 1; // the multiplier grows by this after every free spin
 const RETRIGGER = 5; // three 🎁 in a free spin: this many free spins more
@@ -73,21 +73,21 @@ const COIN_GROUPS = [
   [1, 2],
   [2, 1],
   [1, 1],
-  [1, 1],
+  [2, 1],
 ];
-// In a respin every empty spot gets a 🪙 with this chance (in 1000) - often, the values small
+// In a respin every empty spot gets a 🪙 with this chance (in 1000)
 const COIN_LAND = 60;
-// The value of a coin: times the bet, or a prize (also times the bet), with weights
+// The value of a coin: times the bet, or a prize (also times the bet), with weights (few ×1: the coin game pays more)
 const COIN_VALUES = [
-  { x: 1, weight: 400 },
-  { x: 2, weight: 300 },
-  { x: 3, weight: 160 },
-  { x: 5, weight: 80 },
-  { x: 8, weight: 45 },
-  { x: 15, weight: 22 },
-  { x: 25, prize: "mini", weight: 16 },
-  { x: 60, prize: "major", weight: 5 },
-  { x: 150, prize: "mega", weight: 1 },
+  { x: 1, weight: 750 },
+  { x: 2, weight: 1250 },
+  { x: 3, weight: 1100 },
+  { x: 5, weight: 750 },
+  { x: 8, weight: 400 },
+  { x: 15, weight: 200 },
+  { x: 25, prize: "mini", weight: 110 },
+  { x: 60, prize: "major", weight: 35 },
+  { x: 150, prize: "mega", weight: 6 },
 ];
 const ULTRA = 500; // all 15 spots full: this many times the bet on top
 const COIN_MAX_WIN = 1000; // the coin game never pays more than this many times the bet
@@ -149,8 +149,24 @@ const STRIPS = [11, 23, 37, 41, 53].map((seed, reel) => {
   return strip;
 });
 
-// The free spins turn other strips: the same, without the 🪙 (no coin game in the free spins)
-const FREE_STRIPS = STRIPS.map((strip) => strip.filter((id) => id !== COIN));
+/*
+ * The free spins turn other strips: the same, but without the 🪙 (no coin game
+ * in the free spins), with fewer 🍌 (fewer small wins - the wins of the free
+ * spins are bigger) and more 🎁 (three again: more free spins - retriggers
+ * come about once in 30 free spins).
+ */
+const FREE_DROP = 7; // this many 🍌 less on every reel
+const FREE_BONUS = [4, 0, 3, 0, 4]; // 🎁 on the reels of the free spins
+const FREE_STRIPS = STRIPS.map((strip, reel) => {
+  let dropped = 0;
+  const free = strip.filter((id) => id !== COIN && id !== BONUS && !(id === "banana" && dropped++ < FREE_DROP));
+  const count = FREE_BONUS[reel];
+  if (!count) return free;
+  // Spread out: never two in one window
+  const step = Math.floor((free.length + count) / count);
+  for (let n = 0; n < count; n++) free.splice(n * step, 0, BONUS);
+  return free;
+});
 
 // The multiplier of one line (symbols from the left), and what it is made of
 function lineWin(symbols) {
@@ -362,7 +378,7 @@ function rtp() {
       totals = next;
     }
   });
-  // (without the max win - the true payback is a tiny bit lower)
+  // (without the max win of 250x - it takes about 1%: the true payback is about 96.9%, see the tests)
   const bonusAverage = free.paid * (played * start + BONUS_STEP * playedK);
   const coin = coinRtp();
   return { rtp: paid + bonusChance * bonusAverage + coin.rtp, lines: paid, freeLines: free.paid, lineHit: base.hits, bonusChance: bonusChance, bonusRtp: bonusChance * bonusAverage, bonusAverage: bonusAverage, coinChance: coin.chance, coinRtp: coin.rtp, coinAverage: coin.average, ultraChance: coin.ultra };
@@ -471,4 +487,4 @@ function catalog() {
   };
 }
 
-module.exports = { SYMBOLS, LINES, STRIPS, FREE_STRIPS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, lineWin, spin, coinGame, coinSweat, coinSweatReels, sweatShare, rtp, catalog };
+module.exports = { SYMBOLS, LINES, STRIPS, FREE_STRIPS, FREE_DROP, FREE_BONUS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, lineWin, spin, coinGame, coinSweat, coinSweatReels, sweatShare, rtp, catalog };
