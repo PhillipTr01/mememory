@@ -302,7 +302,8 @@ module.exports = function (io) {
     payAll().catch((error) => console.error("[slots] Could not pay before the season:", error));
   });
   casinoLock.registerRunning("slots", () => machine.pending.length > 0);
-  inPlay.register("slots", (name) => machine.pending.some((entry) => entry.name === name));
+  // (a spin without a win too, while its reels still turn on the page)
+  inPlay.register("slots", (name) => machine.pending.some((entry) => entry.name === name) || Date.now() - (lastSpin.get(name) || 0) < config.SLOTS_SPIN + 500);
 
   return { machine, payAll };
 };

@@ -312,6 +312,7 @@
   function watchChance(value) {
     clearTimeout(chanceTimer);
     if (value > 0) {
+      settledAt = null;
       chanceShown = false;
       chanceStatus = null;
       renderChancePill();
@@ -322,8 +323,11 @@
     chanceTimer = setTimeout(checkChance, 0);
   }
 
+  // The prompt comes only 3 s after the last bet is over (0 coins and nothing in a game anymore)
+  var CHANCE_SETTLE = 3000;
+  var settledAt = null;
   async function checkChance() {
-    if (coins > 0) return;
+    if (coins > 0) return (settledAt = null);
     var status;
     try {
       var res = await fetch("second-chance", { cache: "no-store" });
@@ -333,7 +337,12 @@
       return;
     }
     // Coins still in a game: look again in a moment
-    if (status.reason == "inPlay") return (chanceTimer = setTimeout(checkChance, 5000));
+    if (status.reason == "inPlay") {
+      settledAt = null;
+      return (chanceTimer = setTimeout(checkChance, 1000));
+    }
+    if (settledAt == null) settledAt = Date.now();
+    if (Date.now() - settledAt < CHANCE_SETTLE) return (chanceTimer = setTimeout(checkChance, CHANCE_SETTLE - (Date.now() - settledAt)));
     chanceStatus = status;
     renderChancePill();
     // The prompt by itself only once - for this cooldown, for this second chance (the pill opens it again)
