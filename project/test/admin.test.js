@@ -51,7 +51,7 @@ test("admin: a secret address and a password - nothing works without the login",
   assert.strictEqual(page.status, 200);
   const html = await page.text();
   assert.match(html, /type="password"/, "the login");
-  assert.doesNotMatch(html, /adBalance/, "not the panel");
+  assert.doesNotMatch(html, /adPlayerFilter/, "not the panel");
   assert.strictEqual((await call(ADMIN + "/api/overview")).status, 401);
 
   const wrong = await call(ADMIN + "/login", { json: { password: "guess" } });
@@ -66,7 +66,7 @@ test("admin: a secret address and a password - nothing works without the login",
   assert.doesNotMatch(cookie, /Secure/i, "plain http: no secure cookie (the browser would throw it away)");
   adminCookie = cookie.split(";")[0];
 
-  assert.match(await (await call(ADMIN + "/", { cookie: adminCookie })).text(), /adBalance/, "the panel");
+  assert.match(await (await call(ADMIN + "/", { cookie: adminCookie })).text(), /adPlayerFilter/, "the panel");
   // A made-up token is no login
   assert.strictEqual((await call(ADMIN + "/api/overview", { cookie: "admin_token=forged" })).status, 401);
 });
@@ -141,7 +141,7 @@ test("admin: an address the address bar shows as it is - with or without invisib
   // A self chosen address with such a character works both ways
   assert.deepStrictEqual(config.addresses("/🛠️🦆"), [encodeURI("/🛠️🦆"), encodeURI("/🛠🦆")]);
   const res = await call(ADMIN + "/", { cookie: adminCookie });
-  assert.match(await res.text(), /adBalance/);
+  assert.match(await res.text(), /adPlayerFilter/);
   // Without the slash: to the address with the slash
   const redirect = await call(ADMIN);
   assert.strictEqual(redirect.status, 302);

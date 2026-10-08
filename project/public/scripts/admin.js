@@ -65,14 +65,11 @@ function fail(error) {
 
 var PAGES = {
   overview: ["Overview", "Everything at a glance - what needs you, and what is going on right now."],
-  access: ["Access", "Who may play in the casino, and who may pay coins out."],
-  players: ["Players", "Balances of every player - change one by hand."],
+  players: ["Players", "Who may play, who wants in, their coins and payouts."],
   payouts: ["Payouts", "Coins players took off to be paid out."],
   history: ["History", "Every coin change, newest first."],
   chat: ["Chat", "The chat of the casino - delete messages, ban players."],
   seasons: ["Seasons", "Plan seasons: everybody starts with the same budget, the best win."],
-  cases: ["Cases", "The cases of the case battles - change them, add new ones, balance their payback."],
-  settings: ["Settings", "Values of the games, and the hard reset."],
 };
 
 // The pages of the settings: general and one per game
@@ -80,31 +77,52 @@ var SETTING_GROUPS = {
   general: ["General settings", "Coins for everybody, gifts - and the hard reset."],
   maintenance: ["Maintenance", "Close the casino for everybody but a whitelist - with when it is most likely over."],
   jackpot: ["Jackpot", "Turn the jackpot on or off, its bets and timing."],
-  battles: ["Case battles", "Turn case battles on or off, how big a battle can be."],
+  battles: ["Case battles", "Turn case battles on or off, their limits - and the cases."],
   poker: ["Poker", "Turn poker on or off, the buy-ins."],
   blackjack: ["Blackjack", "Turn blackjack on or off, the seats and the limits of every table."],
   slots: ["Slots", "Turn slots on or off, the bet per spin."],
 };
 var settingsGroup = "general";
 
+var GAME_GROUPS = ["jackpot", "battles", "poker", "blackjack", "slots"];
+
+// Old addresses (bookmarks): to where it is now
+function redirect(parts) {
+  if (parts[0] == "access") return "#players";
+  if (parts[0] == "settings") return GAME_GROUPS.includes(parts[1]) ? "#games/" + parts[1] : "#casino/" + (parts[1] == "maintenance" ? "maintenance" : "general");
+  if (parts[0] == "cases") return "#games/battles" + (parts[1] ? "/case/" + parts[1] : "");
+  if (parts[0] == "games" && !GAME_GROUPS.includes(parts[1])) return "#games/jackpot";
+  if (parts[0] == "casino" && parts[1] != "maintenance" && parts[1] != "general") return "#casino/general";
+  return null;
+}
+
 function showTab() {
   var parts = (location.hash || "#overview").slice(1).split("/");
+  var moved = redirect(parts);
+  if (moved) return location.replace(moved);
   var tab = parts[0];
-  if (!PAGES[tab]) tab = "overview";
-  settingsGroup = SETTING_GROUPS[parts[1]] ? parts[1] : "general";
-  document.querySelectorAll(".ad-tab").forEach((section) => (section.hidden = section.id != "tab-" + tab));
+  // Games and casino: the settings page of that group (case battles: with its cases)
+  var settingsPage = tab == "games" || tab == "casino";
+  if (settingsPage) settingsGroup = parts[1];
+  var casePage = tab == "games" && parts[1] == "battles" && parts[2] == "case" && parts[3];
+  if (!settingsPage && !PAGES[tab]) tab = "overview";
+  var section = settingsPage ? "settings" : tab;
+  document.querySelectorAll(".ad-tab").forEach((page) => {
+    var show = page.id == "tab-" + section;
+    if (page.id == "tab-settings") show = settingsPage && !casePage;
+    if (page.id == "tab-cases") show = settingsPage && settingsGroup == "battles";
+    page.hidden = !show;
+  });
   document.querySelectorAll(".ad-nav-item[data-tab]").forEach((link) => link.classList.toggle("active", link.dataset.tab == tab));
-  document.getElementById("adPageTitle").innerText = tab == "settings" ? SETTING_GROUPS[settingsGroup][0] : PAGES[tab][0];
-  document.getElementById("adPageSub").innerText = tab == "settings" ? SETTING_GROUPS[settingsGroup][1] : PAGES[tab][1];
-  document.getElementById("adSettingsNav").classList.toggle("open", tab == "settings");
-  document.querySelectorAll(".ad-sub").forEach((link) => link.classList.toggle("active", tab == "settings" && link.dataset.group == settingsGroup));
+  document.querySelectorAll(".ad-nav-item[data-group]").forEach((link) => link.classList.toggle("active", settingsPage && link.dataset.group == settingsGroup));
+  document.getElementById("adPageTitle").innerText = settingsPage ? SETTING_GROUPS[settingsGroup][0] : PAGES[tab][0];
+  document.getElementById("adPageSub").innerText = settingsPage ? SETTING_GROUPS[settingsGroup][1] : PAGES[tab][1];
   document.getElementById("adDanger").hidden = settingsGroup != "general";
   // Maintenance: a page of its own (its own save) - the settings and their save bar on every other page
   var maintPage = settingsGroup == "maintenance";
   document.getElementById("adMaint").hidden = !maintPage;
   document.getElementById("adSettingsForm").hidden = maintPage;
   document.getElementById("adSettingsBar").hidden = maintPage;
-  if (tab == "access") loadAccess();
   if (tab == "players") loadPlayers();
   if (tab == "payouts") loadPayouts();
   if (tab == "history") loadHistory();
@@ -116,12 +134,12 @@ function showTab() {
     closePicker();
     loadSeasons();
   }
-  if (tab == "settings") {
+  if (settingsPage) {
     loadSettings();
-    loadMaintenance();
+    if (maintPage) loadMaintenance();
   }
-  if (tab == "cases") {
-    caseView = parts[1] ? decodeURIComponent(parts[1]) : null;
+  if (settingsPage && settingsGroup == "battles") {
+    caseView = casePage ? decodeURIComponent(parts[3]) : null;
     caseDraft = null;
     loadCases();
   }
@@ -130,7 +148,7 @@ function showTab() {
 window.addEventListener("hashchange", showTab);
 
 // Keeps the open page up to date (the chat has its own timer, the settings stay as they are while editing)
-var REFRESH = { access: () => loadAccess(), players: () => loadPlayers(), payouts: () => loadPayouts(), history: () => loadHistory(), seasons: () => loadSeasons(true) };
+var REFRESH = { players: () => loadPlayers(), payouts: () => loadPayouts(), history: () => loadHistory(), seasons: () => loadSeasons(true) };
 
 function refresh() {
   if (document.visibilityState != "visible") return;
@@ -175,7 +193,6 @@ async function handle(w, action) {
   if (note == null) return;
   try {
     await api("withdrawals/" + w.id, { action: action, note: note || undefined });
-    showToast(action == "paid" ? "Marked as paid" : "Rejected - the coins are back");
     loadOverview();
     if (!document.getElementById("tab-payouts").hidden) loadPayouts();
   } catch (error) {
@@ -226,15 +243,15 @@ async function loadOverview() {
     var ids = data.open.map((w) => w.id);
     if (knownOpen != null) {
       var fresh = data.open.filter((w) => !knownOpen.includes(w.id));
-      fresh.forEach((w) => showToast("💸 New payout: " + w.username + " - " + formatCoins(w.amount) + " coins"));
+      // (no note: the badge in the head and on the tab title count them)
+      if (fresh.length && !document.getElementById("tab-payouts").hidden) loadPayouts();
     }
     knownOpen = ids;
     var badge = document.getElementById("adOpenBadge");
     badge.hidden = ids.length == 0;
     // Players who want into the casino
     if (knownWaiting != null && data.waiting > knownWaiting) {
-      showToast("🔑 " + (data.waiting - knownWaiting == 1 ? "A player wants" : data.waiting - knownWaiting + " players want") + " into the casino");
-      if (!document.getElementById("tab-access").hidden) loadAccess();
+      if (!document.getElementById("tab-players").hidden) loadPlayers();
     }
     knownWaiting = data.waiting;
     var waitingBadge = document.getElementById("adWaitingBadge");
@@ -249,10 +266,6 @@ async function loadOverview() {
     badge.innerText = [data.waiting ? data.waiting + (data.waiting == 1 ? " request" : " requests") : "", ids.length ? ids.length + " open" : ""].filter(Boolean).join(" · ");
     var todo = ids.length + data.waiting;
     document.title = (todo ? "(" + todo + ") " : "") + "Admin - MemeMory";
-    if (!players.length) {
-      players = data.leaderboard;
-      fillUserList();
-    }
   } catch (error) {
     fail(error);
   }
@@ -300,9 +313,8 @@ function requestRow(request) {
     decline.disabled = true;
     try {
       await api("access/decline", { username: request.username });
-      showToast(request.username + "'s request is declined");
       loadOverview();
-      if (!document.getElementById("tab-access").hidden) loadAccess();
+      if (!document.getElementById("tab-players").hidden) loadPlayers();
     } catch (error) {
       decline.disabled = false;
       fail(error);
@@ -316,70 +328,114 @@ function day(value) {
   return new Date(value).toLocaleDateString(undefined, { dateStyle: "medium" });
 }
 
-async function loadAccess() {
+// The players: every account with its access, its coins, its payout - one list
+var playerFilter = "";
+var playerRows = [];
+
+async function loadPlayers() {
   try {
-    var data = await api("access?q=" + encodeURIComponent(document.getElementById("adAccessSearch").value.trim()));
+    var q = encodeURIComponent(document.getElementById("adSearch").value.trim());
+    var [data, balances] = await Promise.all([api("access?q=" + q), api("users?q=" + q)]);
+    players = balances;
+    var coinsOf = new Map(balances.map((p) => [p.username, p.coins]));
+    // What approving gives right now (a running season: what "Start" gives)
     var info = document.getElementById("adAccessInfo");
-    // A running season: the player gets the coins only with "Start"
-    if (data.join)
-      info.replaceChildren(
-        el("span", "", "Approved now, a player hits Start in the season and gets "),
-        el("b", "", "🪙 " + formatCoins(data.join.coins)),
-        el("span", "mm-muted", data.join.missed > 0 ? " (the budget + " + data.join.missed + " missed daily bonus" + (data.join.missed == 1 ? "" : "es") + ")" : " (the budget)"),
-      );
-    else info.replaceChildren(
-      el("span", "", "Approving a player now gives "),
-      el("b", "", "🪙 " + formatCoins(data.startCoins)),
-      el(
-        "span",
-        "mm-muted",
-        // In a running season: its budget and the daily bonuses missed since it started
-        data.since
-          ? " (" + formatCoins(data.baseCoins) + " + " + data.missed + " missed daily bonus" + (data.missed == 1 ? "" : "es") + " since the season started " + day(data.since) + ")"
-          : " - the start coins (in a season: its budget plus the daily bonuses missed since it started)",
-      ),
+    info.replaceChildren(
+      el("span", "", data.join ? "Approved now, a player hits Start in the season and gets " : "Approving a player now gives "),
+      el("b", "", "🪙 " + formatCoins(data.join ? data.join.coins : data.startCoins)),
+      el("span", "mm-muted", data.join ? " (the season's budget" + (data.join.missed > 0 ? " + " + data.join.missed + " missed daily bonus" + (data.join.missed == 1 ? "" : "es") : "") + ")" : " (the start coins)"),
     );
-    var list = document.getElementById("adAccessList");
-    if (data.players.length == 0) {
-      var empty = el("tr");
-      var cell = el("td", "mm-muted", "No players.");
-      cell.colSpan = 4;
-      empty.appendChild(cell);
-      list.replaceChildren(empty);
-      return;
-    }
-    list.replaceChildren(
-      ...data.players.map((p) => {
-        var row = el("tr", p.approved ? "" : p.requestedAt ? "ad-waiting" : "");
-        var status = p.approved
-          ? el("span", "ad-pill success", "approved" + (p.approvedAt && new Date(p.approvedAt).getTime() > 0 ? " · " + day(p.approvedAt) : ""))
-          : p.requestedAt
-            ? el("span", "ad-pill accent", "wants in · " + time(p.requestedAt))
-            : el("span", "ad-pill", "no access");
-        var button = el("button", "mm-btn mm-btn-sm" + (p.approved ? "" : " mm-btn-primary"), p.approved ? "Revoke" : "Approve");
-        button.type = "button";
-        button.addEventListener("click", () => setAccess(p, !p.approved, button));
-        var actions = el("td", "ad-actions");
-        actions.appendChild(button);
-        // May the player pay coins out? (otherwise there is no payout for them)
-        var payout = el("label", "ad-switch");
-        payout.title = "May " + p.username + " pay coins out?";
-        var box = document.createElement("input");
-        box.type = "checkbox";
-        box.checked = p.payout;
-        box.setAttribute("aria-label", "Payout for " + p.username);
-        var text = el("span", "ad-switch-text", p.payout ? "On" : "Off");
-        box.addEventListener("change", () => setPayout(p, box, text));
-        payout.append(box, el("span", "ad-switch-track"), text);
-        var payoutCell = el("td");
-        payoutCell.appendChild(payout);
-        var statusCell = el("td");
-        statusCell.appendChild(status);
-        row.append(playerCell(p.username), statusCell, payoutCell, actions);
-        return row;
-      }),
-    );
+    // Who wants in first, then the players by coins, then the rest
+    var kind = (p) => (p.approved ? "in" : p.requestedAt ? "waiting" : "none");
+    playerRows = data.players
+      .map((p) => ({ ...p, kind: kind(p), coins: coinsOf.has(p.username) ? coinsOf.get(p.username) : null }))
+      .sort((x, y) => ["waiting", "in", "none"].indexOf(x.kind) - ["waiting", "in", "none"].indexOf(y.kind) || (y.coins || 0) - (x.coins || 0) || x.username.localeCompare(y.username));
+    var count = (k) => playerRows.filter((p) => !k || p.kind == k).length;
+    document.getElementById("adCountAll").innerText = count("");
+    document.getElementById("adCountIn").innerText = count("in");
+    document.getElementById("adCountWaiting").innerText = count("waiting") || "";
+    document.getElementById("adCountNone").innerText = count("none");
+    renderPlayers();
   } catch (error) {
+    fail(error);
+  }
+}
+
+function renderPlayers() {
+  document.querySelectorAll("#adPlayerFilter button").forEach((b) => b.classList.toggle("active", b.dataset.filter == playerFilter));
+  var rows = playerRows.filter((p) => !playerFilter || p.kind == playerFilter);
+  var list = document.getElementById("adBoard");
+  if (rows.length == 0) {
+    var empty = el("tr");
+    var cell = el("td", "mm-muted", playerFilter == "waiting" ? "Nobody is waiting." : "No players.");
+    cell.colSpan = 5;
+    empty.appendChild(cell);
+    return list.replaceChildren(empty);
+  }
+  list.replaceChildren(...rows.map(playerRow));
+}
+
+function playerRow(p) {
+  var row = el("tr", p.kind == "waiting" ? "ad-waiting" : p.kind == "none" ? "ad-noaccess" : "");
+  var status =
+    p.kind == "in"
+      ? el("span", "ad-pill success", "in" + (p.approvedAt && new Date(p.approvedAt).getTime() > 0 ? " since " + day(p.approvedAt) : ""))
+      : p.kind == "waiting"
+        ? el("span", "ad-pill accent", "wants in · " + time(p.requestedAt))
+        : el("span", "ad-pill", "no access");
+  var statusCell = el("td");
+  statusCell.appendChild(status);
+  var coins = el("td", "num", p.coins != null && p.kind == "in" ? "🪙 " + formatCoins(p.coins) : "–");
+  // May the player pay coins out? (only who is in)
+  var payoutCell = el("td");
+  if (p.kind == "in") {
+    var payout = el("label", "ad-switch");
+    var box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = p.payout;
+    box.setAttribute("aria-label", "Payout for " + p.username);
+    var text = el("span", "ad-switch-text", p.payout ? "On" : "Off");
+    box.addEventListener("change", () => setPayout(p, box, text));
+    payout.append(box, el("span", "ad-switch-track"), text);
+    payoutCell.appendChild(payout);
+  } else payoutCell.appendChild(el("span", "mm-muted", "–"));
+  var actions = el("td", "ad-actions");
+  var button = (label, cls, handler) => {
+    var b = el("button", "mm-btn mm-btn-sm" + (cls ? " " + cls : ""), label);
+    b.type = "button";
+    b.addEventListener("click", () => handler(b));
+    actions.appendChild(b);
+    return b;
+  };
+  if (p.kind == "waiting") {
+    button("Approve", "mm-btn-primary", (b) => setAccess(p, true, b));
+    button("Decline", "", (b) => declineRequest(p.username, b));
+  } else if (p.kind == "in") {
+    button("Coins", "", () => editPlayerCoins(p));
+    button("History", "", () => showHistoryOf(p.username));
+    button("Revoke", "ad-btn-quiet-danger", (b) => setAccess(p, false, b));
+  } else {
+    button("Approve", "", (b) => setAccess(p, true, b));
+    button("History", "", () => showHistoryOf(p.username));
+  }
+  row.append(playerCell(p.username), statusCell, coins, payoutCell, actions);
+  return row;
+}
+
+function showHistoryOf(username) {
+  document.getElementById("adHistUser").value = username;
+  document.getElementById("adHistClear").hidden = false;
+  location.hash = "#history";
+}
+
+async function declineRequest(username, button) {
+  button.disabled = true;
+  try {
+    await api("access/decline", { username: username });
+    loadOverview();
+    if (!document.getElementById("tab-players").hidden) loadPlayers();
+  } catch (error) {
+    button.disabled = false;
     fail(error);
   }
 }
@@ -387,16 +443,14 @@ async function loadAccess() {
 async function setAccess(player, approve, button) {
   if (!approve && !(await confirmDialog({ title: "Take " + player.username + "'s access away?", text: "Their open casino pages close right away. The coins stay for a later approval.", confirmLabel: "Revoke access", danger: true }))) return;
   button.disabled = true;
+  button.innerText = approve ? "Approving..." : "Revoking...";
   try {
-    var result = await api("access", { username: player.username, approve: approve });
-    if (!approve) showToast(player.username + " has no access any more");
-    else if (result.again) showToast(player.username + " is back in (with the old coins)");
-    else showToast(player.username + " is in - 🪙 " + formatCoins(result.coins) + " start coins");
-    loadAccess();
+    await api("access", { username: player.username, approve: approve });
     loadOverview();
-    players = [];
+    if (!document.getElementById("tab-players").hidden) loadPlayers();
   } catch (error) {
     button.disabled = false;
+    button.innerText = approve ? "Approve" : "Revoke";
     fail(error);
   }
 }
@@ -407,7 +461,6 @@ async function setPayout(player, box, text) {
   try {
     await api("payout", { username: player.username, allowed: box.checked });
     player.payout = box.checked;
-    showToast(player.username + (box.checked ? " can pay out now" : " can't pay out any more"));
   } catch (error) {
     box.checked = !box.checked;
     text.innerText = box.checked ? "On" : "Off";
@@ -417,62 +470,78 @@ async function setPayout(player, box, text) {
   }
 }
 
-/* ---------- Players ---------- */
-
-function fillUserList() {
-  document.getElementById("adUserList").replaceChildren(...players.map((p) => Object.assign(document.createElement("option"), { value: p.username })));
+// Coins of a player: set to / add (+/-), a note - in a small dialog; the error in it, not as a toast
+// options: {title, text, current, step, save(mode, amount, note) -> Promise}
+function coinsDialog(options) {
+  var backdrop = el("div", "mm-dialog-backdrop");
+  var dialog = el("form", "mm-dialog ad-coins-dialog");
+  dialog.noValidate = true;
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  var mode = el("select", "mm-input");
+  [["set", "Set to"], ["add", "Add (+/-)"]].forEach(([value, text]) => mode.appendChild(Object.assign(document.createElement("option"), { value: value, text: text })));
+  var amount = Object.assign(el("input", "mm-input"), { type: "number", step: options.step || 1000, value: options.current });
+  amount.setAttribute("aria-label", "Coins");
+  var note = Object.assign(el("input", "mm-input"), { placeholder: "Note (optional) - shows in the history", maxLength: 300 });
+  var error = el("p", "ad-form-error");
+  error.hidden = true;
+  mode.addEventListener("change", () => {
+    amount.value = mode.value == "set" ? options.current : "";
+    amount.focus();
+  });
+  var cancel = el("button", "mm-btn", "Cancel");
+  cancel.type = "button";
+  var save = el("button", "mm-btn mm-btn-primary", "Save");
+  save.type = "submit";
+  var actions = el("div", "mm-dialog-actions");
+  actions.append(cancel, save);
+  var fields = el("div", "ad-coins-fields");
+  fields.append(mode, amount);
+  dialog.append(el("h2", "mm-dialog-title", options.title), el("p", "mm-dialog-text", options.text), fields, note, error, actions);
+  backdrop.appendChild(dialog);
+  document.body.appendChild(backdrop);
+  var close = () => {
+    document.removeEventListener("keydown", onKey);
+    backdrop.remove();
+  };
+  var onKey = (event) => event.key == "Escape" && close();
+  document.addEventListener("keydown", onKey);
+  cancel.addEventListener("click", close);
+  backdrop.addEventListener("click", (event) => event.target == backdrop && close());
+  dialog.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    var value = Number(amount.value);
+    error.hidden = true;
+    if (!Number.isInteger(value)) {
+      error.innerText = "A whole number, please.";
+      error.hidden = false;
+      return;
+    }
+    save.disabled = true;
+    try {
+      await options.save(mode.value, value, note.value.trim() || undefined);
+      close();
+    } catch (problem) {
+      save.disabled = false;
+      error.innerText = problem.message;
+      error.hidden = false;
+    }
+  });
+  amount.focus();
+  amount.select();
 }
 
-async function loadPlayers() {
-  try {
-    players = await api("users?q=" + encodeURIComponent(document.getElementById("adSearch").value.trim()));
-    fillUserList();
-    document.getElementById("adBoard").replaceChildren(
-      ...players.map((p, i) => {
-        var row = el("tr");
-        var edit = el("button", "mm-btn mm-btn-sm", "Edit");
-        edit.type = "button";
-        edit.addEventListener("click", () => {
-          document.getElementById("adBalUser").value = p.username;
-          document.getElementById("adBalMode").value = "set";
-          document.getElementById("adBalAmount").value = p.coins;
-          document.getElementById("adBalAmount").focus();
-        });
-        var history = el("button", "mm-btn mm-btn-sm", "History");
-        history.type = "button";
-        history.addEventListener("click", () => {
-          document.getElementById("adHistUser").value = p.username;
-          document.getElementById("adHistClear").hidden = false;
-          location.hash = "#history";
-        });
-        var actions = el("td", "ad-actions");
-        actions.append(edit, history);
-        row.append(el("td", "mm-muted", i + 1), playerCell(p.username), el("td", "num", "🪙 " + formatCoins(p.coins)), actions);
-        return row;
-      }),
-    );
-  } catch (error) {
-    fail(error);
-  }
-}
-
-async function saveBalance(event) {
-  event.preventDefault();
-  var username = document.getElementById("adBalUser").value.trim();
-  var mode = document.getElementById("adBalMode").value;
-  var amount = Number(document.getElementById("adBalAmount").value);
-  var note = document.getElementById("adBalNote").value.trim();
-  if (!Number.isInteger(amount)) return showToast("A whole number, please.", "error");
-  try {
-    var result = await api("balance", { username: username, mode: mode, amount: amount, note: note || undefined });
-    showToast(result.username + " has 🪙 " + formatCoins(result.coins) + " now");
-    document.getElementById("adBalAmount").value = "";
-    document.getElementById("adBalNote").value = "";
-    loadPlayers();
-    loadOverview();
-  } catch (error) {
-    fail(error);
-  }
+function editPlayerCoins(p) {
+  coinsDialog({
+    title: p.username,
+    text: "Normal coins now: 🪙 " + formatCoins(p.coins || 0) + (seasonList.some((s) => s.status == "running") ? " - the season coins are changed in the season's page." : ""),
+    current: p.coins || 0,
+    save: async (mode, amount, note) => {
+      await api("balance", { username: p.username, mode: mode, amount: amount, note: note });
+      loadPlayers();
+      loadOverview();
+    },
+  });
 }
 
 /* ---------- Payouts ---------- */
@@ -645,7 +714,7 @@ async function saveMaintenance(on, message) {
     maintForm = { whitelist: maint.whitelist.slice() };
     renderMaintenance(true);
     watchMaintenance();
-    showToast(message);
+    if (message == "Saved") flashSaved(document.getElementById("adMaintSave"), "Save maintenance");
   } catch (error) {
     fail(error);
     renderMaintenance(false);
@@ -892,61 +961,16 @@ function editCell(season, row) {
 
 // A small dialog: set to / add (+/-), the amount, a note
 function editSeasonCoins(season, row) {
-  var backdrop = el("div", "mm-dialog-backdrop");
-  var dialog = el("form", "mm-dialog ad-coins-dialog");
-  dialog.noValidate = true;
-  dialog.setAttribute("role", "dialog");
-  dialog.setAttribute("aria-modal", "true");
-  var mode = el("select", "mm-input");
-  [["set", "Set to"], ["add", "Add (+/-)"]].forEach(([value, text]) => mode.appendChild(Object.assign(document.createElement("option"), { value: value, text: text })));
-  // The arrows in steps of 1,000 (like the balances of the players) - every number can be typed in
-  var amount = Object.assign(el("input", "mm-input"), { type: "number", step: 1000, value: row.coins });
-  var note = Object.assign(el("input", "mm-input"), { placeholder: "Note (optional)", maxLength: 300 });
-  mode.addEventListener("change", () => {
-    amount.value = mode.value == "set" ? row.coins : "";
-    amount.focus();
-  });
-  var cancel = el("button", "mm-btn", "Cancel");
-  cancel.type = "button";
-  var save = el("button", "mm-btn mm-btn-primary", "Save");
-  save.type = "submit";
-  var actions = el("div", "mm-dialog-actions");
-  actions.append(cancel, save);
-  var fields = el("div", "ad-coins-fields");
-  fields.append(mode, amount);
-  dialog.append(el("h2", "mm-dialog-title", season.icon + " " + row.username), el("p", "mm-dialog-text", "Season coins now: 🪙 " + formatCoins(row.coins)), fields, note, actions);
-  backdrop.appendChild(dialog);
-  document.body.appendChild(backdrop);
-  var close = () => {
-    document.removeEventListener("keydown", onKey);
-    backdrop.remove();
-  };
-  var onKey = (event) => {
-    if (event.key == "Escape") close();
-  };
-  document.addEventListener("keydown", onKey);
-  cancel.addEventListener("click", close);
-  backdrop.addEventListener("click", (event) => {
-    if (event.target == backdrop) close();
-  });
-  dialog.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    var value = Number(amount.value);
-    if (!Number.isInteger(value)) return showToast("A whole number, please.", "error");
-    save.disabled = true;
-    try {
-      var result = await api("seasons/" + season.id + "/balance", { username: row.username, mode: mode.value, amount: value, note: note.value.trim() || undefined });
-      showToast(row.username + " has 🪙 " + formatCoins(result.coins) + " in " + season.name + " now");
-      close();
+  coinsDialog({
+    title: row.username,
+    text: "Coins in " + season.name + " now: 🪙 " + formatCoins(row.coins),
+    current: row.coins,
+    save: async (mode, amount, note) => {
+      await api("seasons/" + season.id + "/balance", { username: row.username, mode: mode, amount: amount, note: note });
       boardLoaded = { id: null, at: 0 };
       loadSeasonBoard(season);
-    } catch (error) {
-      save.disabled = false;
-      fail(error);
-    }
+    },
   });
-  amount.focus();
-  amount.select();
 }
 
 async function loadSeasonBoard(season) {
@@ -1463,12 +1487,16 @@ async function saveSeason(event) {
   try {
     var data = await api(editingSeason == null ? "seasons" : "seasons/" + editingSeason, body);
     seasonList = data.seasons;
-    showToast(editingSeason == null ? body.icon + " " + body.name + " is planned" : "Saved");
+    document.getElementById("adSeasonError").hidden = true;
+    if (editingSeason != null) flashSaved(document.getElementById("adSeasonSave"), document.getElementById("adSeasonSave").innerText);
     // A new one: its page (the form with it)
     if (editingSeason == null && data.season) location.hash = "#seasons/" + data.season.id;
     else renderSeasons();
   } catch (error) {
-    fail(error);
+    // Next to the button - the form stays as it is
+    var problem = document.getElementById("adSeasonError");
+    problem.innerText = error.message;
+    problem.hidden = false;
   }
 }
 
@@ -1477,8 +1505,6 @@ async function endSeason(season) {
   try {
     seasonList = (await api("seasons/" + season.id + "/end", {})).seasons;
     renderSeasons();
-    var over = seasonList.find((s) => s.id == season.id);
-    showToast(over && over.status == "ended" ? season.name + " is over" : season.name + " ends in " + season.closeWait + " s once the games are done - the casino is closing");
   } catch (error) {
     fail(error);
   }
@@ -1488,7 +1514,6 @@ async function deleteSeason(season) {
   if (!(await confirmDialog({ title: "Delete " + season.name + "?", text: season.status == "ended" ? "Its winner page is gone too." : "It won't start.", confirmLabel: "Delete", danger: true }))) return;
   try {
     seasonList = (await api("seasons/" + season.id + "/delete", {})).seasons;
-    showToast(season.name + " is deleted");
     if (seasonView != null) location.hash = "#seasons";
     else renderSeasons();
   } catch (error) {
@@ -1567,7 +1592,6 @@ async function loadChat() {
 async function chatAction(path, body, done) {
   try {
     await api(path, body);
-    showToast(done);
     loadChat();
   } catch (error) {
     fail(error);
@@ -1580,7 +1604,12 @@ var settingsList = [];
 
 async function loadSettings() {
   try {
-    settingsList = (await api("settings")).settings;
+    var [data, seasons] = await Promise.all([api("settings"), settingsGroup == "general" ? api("seasons") : null]);
+    settingsList = data.settings;
+    if (seasons) {
+      seasonList = seasons.seasons;
+      dailyBonusSetting = seasons.dailyBonus;
+    }
     renderSettings();
   } catch (error) {
     fail(error);
@@ -1596,21 +1625,21 @@ function renderSettings() {
   });
   var sections = [];
   settingsList
-    .filter((field) => field.group == settingsGroup)
+    // (the cases: switched on / off in the case list under the settings)
+    .filter((field) => field.group == settingsGroup && field.type != "cases")
     .forEach((field) => {
       var section = sections.find((s) => s.name == field.section);
       if (!section) sections.push((section = { name: field.section, fields: [] }));
       section.fields.push(field);
     });
   document.getElementById("adSettings").replaceChildren(
+    ...scopeNote(),
     ...sections.map((section) => {
       // A game on / off: a card of its own, over the whole width
       var toggle = section.fields.find((field) => field.type == "toggle");
       if (toggle) return toggleCard(toggle);
       var choice = section.fields.find((field) => field.type == "choice");
       if (choice) return choiceCard(choice);
-      var list = section.fields.find((field) => field.type == "cases");
-      if (list) return casesCard(list);
       var card = el("div", "ad-card");
       var head = el("div", "ad-card-head");
       head.appendChild(el("h2", "ad-title", section.name));
@@ -1618,10 +1647,12 @@ function renderSettings() {
       section.fields.forEach((field) => {
         var row = el("label", "ad-setting");
         var label = el("span", "ad-setting-label", field.label);
+        // Only outside of a season (in one: the season's own value)
+        if (field.scope == "outside") label.appendChild(el("span", "ad-scope", "outside seasons"));
         if (field.value != field.default) label.appendChild(el("span", "changed", "default " + formatCoins(field.default)));
         var input = el("input", "mm-input");
         input.type = "number";
-        input.step = 1;
+        input.step = field.step || 1;
         input.min = field.min;
         input.max = field.max;
         input.value = field.value;
@@ -1631,6 +1662,10 @@ function renderSettings() {
         if (field.unit) box.appendChild(el("span", "ad-setting-unit", field.unit));
         row.append(label, box);
         if (field.hint) row.appendChild(el("span", "ad-setting-hint", field.hint));
+        var error = el("span", "ad-setting-error");
+        error.dataset.errorFor = field.key;
+        error.hidden = true;
+        row.appendChild(error);
         card.appendChild(row);
       });
       return card;
@@ -1641,47 +1676,23 @@ function renderSettings() {
   settingsDirty();
 }
 
-// The cases of the case battles: each one on / off, saved right away (at least one stays on)
-var RISK_TEXT = { low: "Low risk", balanced: "Balanced", high: "High risk" };
-function casesCard(field) {
-  var off = field.value || [];
-  var card = el("div", "ad-card ad-cases-card");
-  var head = el("div", "ad-card-head");
-  var title = el("h2", "ad-title", "Cases");
-  title.appendChild(el("span", "ad-cases-count", field.options.length - off.length + " of " + field.options.length + " on"));
-  var all = el("button", "mm-btn mm-btn-sm", "All on");
-  all.type = "button";
-  all.disabled = off.length == 0;
-  head.append(title, all);
-  card.append(head, el("p", "ad-note", field.hint || ""));
-  var save = async (next) => {
-    card.querySelectorAll("input, button").forEach((n) => (n.disabled = true));
-    try {
-      settingsList = (await api("settings", { values: { [field.key]: next } })).settings;
-    } catch (error) {
-      fail(error);
-    }
-    renderSettings();
-  };
-  all.addEventListener("click", () => save([]));
-  var grid = el("div", "ad-cases");
-  field.options.forEach((box) => {
-    var on = !off.includes(box.value);
-    var row = el("label", "ad-case" + (on ? "" : " off"));
-    var info = el("span", "ad-case-info");
-    info.append(el("b", "", box.label), el("span", "ad-case-meta", "🪙 " + formatCoins(box.price) + " · " + (RISK_TEXT[box.risk] || box.risk)));
-    var toggle = el("span", "ad-switch");
-    var input = document.createElement("input");
-    input.type = "checkbox";
-    input.checked = on;
-    input.setAttribute("aria-label", box.label);
-    input.addEventListener("change", () => save(input.checked ? off.filter((id) => id != box.value) : off.concat(box.value)));
-    toggle.append(input, el("span", "ad-switch-track"));
-    row.append(el("span", "ad-case-icon", box.icon), info, toggle);
-    grid.appendChild(row);
-  });
-  card.appendChild(grid);
-  return card;
+// What counts where: the games always, the coins of the general page only outside of a season
+function scopeNote() {
+  if (settingsGroup != "general") return [el("p", "ad-note ad-scope-note", "These settings count always - in a season and outside of one.")];
+  var note = el("div", "ad-card ad-scope-card");
+  var running = seasonList.find((season) => season.status == "running");
+  var text = el("p", "ad-note");
+  text.append(el("span", "ad-scope", "outside seasons"), " Start coins and the daily bonus count only outside of a season - a season has its own budget and daily bonus. Gifts count always.");
+  note.appendChild(text);
+  if (running) {
+    var now = el("div", "ad-scope-now");
+    now.append(
+      el("span", "", (running.icon || "🗓️") + " " + running.name + " is running: start 🪙 " + formatCoins(running.budget) + " · daily bonus 🪙 " + formatCoins(running.dailyBonus != null ? running.dailyBonus : dailyBonusSetting || 0)),
+      Object.assign(el("a", "mm-btn mm-btn-sm", "Open the season ›"), { href: "#seasons/" + running.id }),
+    );
+    note.appendChild(now);
+  }
+  return [note];
 }
 
 // One of a few options (like the test bonus of the slots): saved right away
@@ -1736,8 +1747,6 @@ function toggleCard(field) {
     box.disabled = true;
     try {
       settingsList = (await api("settings", { values: { [field.key]: box.checked } })).settings;
-      // (a test switch shows its state on the card - no toast)
-      if (game) showToast(box.checked ? "It's on again" : "It's off now");
     } catch (error) {
       fail(error);
     }
@@ -1758,25 +1767,63 @@ function settingsDirty() {
   document.getElementById("adSettingsBar").classList.toggle("dirty", dirty);
 }
 
+// A problem with the settings: under the field (or next to Save, when it is about no single field)
+function settingsError(key, text) {
+  document.querySelectorAll("#adSettings [data-error-for]").forEach((error) => {
+    error.hidden = error.dataset.errorFor != key;
+    if (!error.hidden) error.innerText = text;
+  });
+  document.querySelectorAll("#adSettings input[data-key]").forEach((input) => input.classList.toggle("invalid", input.dataset.key == key));
+  var general = document.getElementById("adSettingsError");
+  general.hidden = key != null || !text;
+  general.innerText = key == null ? text || "" : "";
+}
+
 async function saveSettings(event) {
   event.preventDefault();
   var values = {};
   var problem = null;
   document.querySelectorAll("#adSettings input[data-key]").forEach((input) => {
+    if (problem) return;
     var field = settingsList.find((f) => f.key == input.dataset.key);
     var value = Number(input.value);
-    if (!Number.isInteger(value)) problem = field.label + ": a whole number, please.";
+    if (input.value.trim() == "" || !Number.isInteger(value)) problem = [field.key, "A whole number, please."];
+    else if (value < field.min || value > field.max) problem = [field.key, "From " + formatCoins(field.min) + " to " + formatCoins(field.max) + "."];
     else if (value != field.value) values[field.key] = value;
   });
-  if (problem) return showToast(problem, "error");
-  if (Object.keys(values).length == 0) return showToast("Nothing changed.");
+  if (problem) {
+    settingsError(problem[0], problem[1]);
+    return document.querySelector('#adSettings input[data-key="' + problem[0] + '"]').focus();
+  }
+  settingsError(null, "");
+  if (Object.keys(values).length == 0) return settingsDirty();
+  var button = document.getElementById("adSettingsSave");
+  button.disabled = true;
+  button.innerText = "Saving...";
   try {
     settingsList = (await api("settings", { values: values })).settings;
     renderSettings();
-    showToast("Saved - " + Object.keys(values).length + (Object.keys(values).length == 1 ? " setting" : " settings") + " changed");
+    flashSaved(button, "Save");
   } catch (error) {
-    fail(error);
+    button.innerText = "Save";
+    button.disabled = false;
+    // The server names the field by its label: under that field
+    var field = settingsList.find((f) => f.group == settingsGroup && f.type == "number" && error.message.startsWith(f.label));
+    settingsError(field ? field.key : null, error.message);
   }
+}
+
+// Done: the button says so for a moment (instead of a toast)
+function flashSaved(button, label, text) {
+  button.innerText = text || "Saved ✓";
+  button.classList.add("ad-saved");
+  button.disabled = true;
+  setTimeout(() => {
+    button.innerText = label;
+    button.classList.remove("ad-saved");
+    if (button.id == "adSettingsSave") settingsDirty();
+    else button.disabled = false;
+  }, 1800);
 }
 
 async function settingsDefaults() {
@@ -1784,7 +1831,7 @@ async function settingsDefaults() {
   try {
     settingsList = (await api("settings", { defaults: true })).settings;
     renderSettings();
-    showToast("Back to the defaults");
+    flashSaved(document.getElementById("adSettingsDefaults"), "All settings back to the defaults", "Back to the defaults ✓");
   } catch (error) {
     fail(error);
   }
@@ -1800,7 +1847,8 @@ async function hardReset(event) {
   try {
     var result = await api("reset", { confirm: "RESET" });
     input.value = "";
-    showToast("Everything is reset - " + formatCoins(result.history) + " history rows and " + formatCoins(result.payouts) + " payouts deleted");
+    document.getElementById("adResetDone").innerText = "✓ Everything is reset - " + formatCoins(result.history) + " history rows and " + formatCoins(result.payouts) + " payouts deleted.";
+    document.getElementById("adResetDone").hidden = false;
     players = [];
     loadOverview();
   } catch (error) {
@@ -1815,16 +1863,16 @@ async function hardReset(event) {
 document.addEventListener("DOMContentLoaded", () => {
   fillHistoryKinds();
 
-  document.getElementById("adBalance").addEventListener("submit", saveBalance);
   var searchTimer = null;
   document.getElementById("adSearch").addEventListener("input", () => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(loadPlayers, 250);
   });
-  var accessTimer = null;
-  document.getElementById("adAccessSearch").addEventListener("input", () => {
-    clearTimeout(accessTimer);
-    accessTimer = setTimeout(loadAccess, 250);
+  document.getElementById("adPlayerFilter").addEventListener("click", (event) => {
+    var chip = event.target.closest("button[data-filter]");
+    if (!chip) return;
+    playerFilter = chip.dataset.filter;
+    renderPlayers();
   });
   document.getElementById("adPayoutStatus").addEventListener("change", loadPayouts);
   // The history filters right away (typing: after a short pause)
@@ -1937,6 +1985,40 @@ async function loadCases() {
   }
 }
 
+// On / off of a case right in the list (in a link: the click does not open the case)
+function caseSwitch(box) {
+  var toggle = el("span", "ad-switch ad-case-switch");
+  var input = document.createElement("input");
+  input.type = "checkbox";
+  input.checked = !box.off;
+  input.tabIndex = -1;
+  input.setAttribute("aria-hidden", "true");
+  toggle.append(input, el("span", "ad-switch-track"));
+  toggle.setAttribute("role", "switch");
+  toggle.setAttribute("aria-checked", !box.off);
+  toggle.setAttribute("aria-label", box.name + " on");
+  toggle.tabIndex = 0;
+  toggle.title = box.off ? "Off - click to turn on" : "On - click to turn off";
+  var flip = async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    var off = caseList.filter((other) => other.off).map((other) => other.id);
+    var next = box.off ? off.filter((id) => id != box.id) : off.concat(box.id);
+    if (next.length == caseList.length) return fail(new Error("At least one case stays on."));
+    toggle.classList.add("busy");
+    try {
+      await api("settings", { values: { BATTLE_CASES_OFF: next } });
+      await loadCases();
+    } catch (error) {
+      toggle.classList.remove("busy");
+      fail(error);
+    }
+  };
+  toggle.addEventListener("click", flip);
+  toggle.addEventListener("keydown", (event) => (event.key == " " || event.key == "Enter") && flip(event));
+  return toggle;
+}
+
 // The payback of items (chances in percent, values) for a price
 function draftRtp(draft) {
   var total = draft.items.reduce((sum, item) => sum + (Number(item.chance) || 0), 0);
@@ -1957,7 +2039,7 @@ function renderCases() {
     list.replaceChildren(
       ...caseList.map((box) => {
         var row = el("a", "ad-case-row" + (box.off ? " off" : ""));
-        row.href = "#cases/" + encodeURIComponent(box.id);
+        row.href = "#games/battles/case/" + encodeURIComponent(box.id);
         var main = el("div", "ad-case-main");
         main.append(el("b", "", box.name), el("span", "ad-case-sub", RISK_NAMES[box.risk] + " · " + box.items.length + " items · up to " + Math.round(box.top) + "×"));
         var tags = el("div", "ad-case-tags");
@@ -1965,7 +2047,7 @@ function renderCases() {
         if (!box.builtIn) tags.appendChild(el("span", "ad-pill accent", "new"));
         else if (box.changed) tags.appendChild(el("span", "ad-pill", "changed"));
         var rtp = el("span", "ad-case-rtp " + rtpClass(box.rtp), "RTP " + pct(box.rtp));
-        row.append(el("span", "ad-case-icon", box.icon), main, tags, el("span", "ad-case-price", "🪙 " + formatCoins(box.price)), rtp);
+        row.append(el("span", "ad-case-icon", box.icon), main, tags, el("span", "ad-case-price", "🪙 " + formatCoins(box.price)), rtp, caseSwitch(box));
         return row;
       }),
       // Deleted ones: back with one click
@@ -1984,14 +2066,14 @@ function renderCases() {
             fail(error);
           }
         });
-        row.append(el("span", "ad-case-icon", box.icon), main, el("span", ""), el("span", "ad-case-price", "🪙 " + formatCoins(box.price)), back);
+        row.append(el("span", "ad-case-icon", box.icon), main, el("span", ""), el("span", "ad-case-price", "🪙 " + formatCoins(box.price)), el("span", ""), back);
         return row;
       }),
     );
     return;
   }
   var box = caseView == "new" ? null : caseList.find((other) => other.id == caseView);
-  if (caseView != "new" && !box) return (location.hash = "#cases");
+  if (caseView != "new" && !box) return (location.hash = "#games/battles");
   document.getElementById("adPageTitle").innerText = box ? box.icon + " " + box.name : "New case";
   document.getElementById("adPageSub").innerText = box ? (box.builtIn ? (box.changed ? "Built in - changed" : "Built in") : "Added in the admin panel") + " · " + (box.off ? "turned off" : "in the case battles") : "A new case for the case battles.";
   if (!caseDraft || caseDraft.id != (box ? box.id : "new")) caseDraft = draftOf(box);
@@ -2110,10 +2192,12 @@ function renderCaseEditor(box) {
   var add = el("button", "mm-btn mm-btn-sm", "+ Item");
   add.type = "button";
   add.addEventListener("click", () => {
-    if (draft.items.length >= 20) return showToast("At most 20 items.", "error");
     draft.items.push({ icon: "❓", name: "New item", value: draft.price, chance: 1 });
     renderCaseEditor(box);
   });
+  // At most 20 items: the button says so
+  add.disabled = draft.items.length >= 20;
+  if (add.disabled) add.title = "At most 20 items";
   itemsHead.append(el("h2", "ad-title", "Items"), add);
   var table = el("div", "ad-items");
   function renderItems() {
@@ -2135,12 +2219,12 @@ function renderCaseEditor(box) {
         row.append(
           input(item.icon, { maxLength: 8, className: "mm-input ad-item-icon", ariaLabel: "Icon" }, (v) => (item.icon = v)),
           input(item.name, { maxLength: 40, className: "mm-input ad-item-name", ariaLabel: "Name" }, (v) => (item.name = v)),
-          input(item.value, { type: "number", min: 0, className: "mm-input ad-item-value", ariaLabel: "Value" }, (v) => {
+          input(item.value, { type: "number", min: 0, step: 5, className: "mm-input ad-item-value", ariaLabel: "Value" }, (v) => {
             item.value = Number(v);
             showTimes();
           }),
           times,
-          input(item.chance, { type: "number", min: 0, step: 0.001, className: "mm-input ad-item-chance", ariaLabel: "Chance in %" }, (v) => (item.chance = Number(v))),
+          input(item.chance, { type: "number", min: 0, step: 0.1, className: "mm-input ad-item-chance", ariaLabel: "Chance in %" }, (v) => (item.chance = Number(v))),
           remove,
           // (phones: no column titles - the units next to the fields)
           el("span", "ad-item-unit value", "coins"),
@@ -2163,7 +2247,6 @@ function renderCaseEditor(box) {
     try {
       var result = await api("case-balance", { price: draft.price, target: draft.target, items: draft.items.map((item) => ({ icon: item.icon, name: item.name, value: item.value, weight: item.chance })) });
       draft.items = result.items.map((item) => ({ icon: item.icon, name: item.name, value: item.value, chance: Math.round((item.weight / 100000) * 100000) / 1000 }));
-      showToast("Balanced: RTP " + pct(result.rtp, 2));
       renderCaseEditor(box);
     } catch (error) {
       fail(error);
@@ -2194,9 +2277,8 @@ function renderCaseEditor(box) {
       var result = await api(box ? "cases/" + encodeURIComponent(box.id) : "cases", body);
       caseList = result.cases;
       caseDraft = null;
-      showToast((box ? "Saved" : "Created") + " - RTP " + pct(result.case.rtp, 2) + (box ? " (running battles keep the old version)" : ""));
       if (box) renderCases();
-      else location.hash = "#cases/" + encodeURIComponent(result.case.id);
+      else location.hash = "#games/battles/case/" + encodeURIComponent(result.case.id);
     } catch (error) {
       fail(error);
     } finally {
@@ -2239,7 +2321,7 @@ function renderCaseEditor(box) {
       if (!(await confirmDialog({ title: "Delete " + box.name + "?", text: "It is gone from the case battles. Battles that have it already stay as they are.", confirmLabel: "Delete", danger: true }))) return;
       try {
         caseList = (await api("cases/" + encodeURIComponent(box.id) + "/delete", {})).cases;
-        location.hash = "#cases";
+        location.hash = "#games/battles";
       } catch (error) {
         fail(error);
       }
@@ -2277,7 +2359,6 @@ function versionsCard(box) {
             caseDraft = draftOf({ ...version, id: box.id });
             renderCaseEditor(box);
             window.scrollTo({ top: 0, behavior: "smooth" });
-            showToast("Loaded - save to use it");
           });
           var back = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Restore");
           back.type = "button";
@@ -2286,7 +2367,6 @@ function versionsCard(box) {
             try {
               caseList = (await api("cases/" + encodeURIComponent(box.id) + "/versions/" + encodeURIComponent(version.key), {})).cases;
               caseDraft = null;
-              showToast("Restored");
               renderCases();
             } catch (error) {
               fail(error);
@@ -2304,7 +2384,6 @@ function versionsCard(box) {
               if (!(await confirmDialog({ title: "Remove this version?", text: "It is gone for good - it can't be restored anymore.", confirmLabel: "Remove", danger: true }))) return;
               try {
                 caseList = (await api("cases/" + encodeURIComponent(box.id) + "/versions/" + encodeURIComponent(version.key) + "/delete", {})).cases;
-                showToast("Version removed");
                 renderCases();
               } catch (error) {
                 fail(error);

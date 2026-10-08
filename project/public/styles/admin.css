@@ -142,23 +142,16 @@
   margin-top: auto;
 }
 
-/* The pages of the settings, under "Settings" (only while it is open) */
-.ad-subnav {
-  display: none;
-  flex-direction: column;
-  gap: 0.15rem;
-  margin: 0.15rem 0 0.25rem 1.6rem;
-  padding-left: 0.6rem;
-  border-left: 1px solid var(--mm-border);
-}
-
-.ad-subnav.open {
-  display: flex;
-}
-
-.ad-nav-item.ad-sub {
-  padding: 0.4rem 0.6rem;
-  font-size: 0.84rem;
+/* A group of the navigation: Games, Casino */
+.ad-nav-head {
+  margin: 0.9rem 0 0.2rem;
+  padding: 0 0.75rem;
+  color: var(--mm-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
 }
 
 /* On / off of a game: a small dot */
@@ -492,6 +485,89 @@ a.ad-link:focus-visible {
   border-radius: 999px;
   background: var(--mm-surface-2);
   font-size: 0.8rem;
+}
+
+/* Filter of a list (a segmented control): All / In the casino / ... with a count */
+.ad-filter {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+}
+
+.ad-filter button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--mm-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ad-filter button:hover {
+  color: var(--mm-text);
+}
+
+.ad-filter button.active {
+  background: var(--mm-surface-3);
+  color: var(--mm-text);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.ad-chip-count {
+  min-width: 1.2rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.ad-chip-count:empty {
+  display: none;
+}
+
+.ad-chip-count.accent {
+  background: var(--mm-accent);
+  color: #111;
+}
+
+.ad-noaccess td {
+  opacity: 0.7;
+}
+
+/* Revoke and the like: quiet until hovered */
+.ad-btn-quiet-danger:hover:not(:disabled) {
+  border-color: var(--mm-danger, #d9534f);
+  color: var(--mm-danger, #d9534f);
+}
+
+/* The coins of a player (a dialog): set to / add, the amount, the note, an error */
+.ad-coins-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ad-coins-fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem;
+}
+
+.ad-form-error {
+  margin: 0;
+  color: var(--mm-danger, #e06c6c);
+  font-size: 0.85rem;
 }
 
 /* ---------- Tables ---------- */
@@ -1038,10 +1114,8 @@ a.ad-link:focus-visible {
     flex-direction: row;
   }
 
-  .ad-subnav.open {
-    flex-direction: row;
-    margin: 0;
-    padding-left: 0.5rem;
+  .ad-nav-head {
+    display: none;
   }
 
   .ad-nav-item {
@@ -1684,23 +1758,19 @@ a.ad-link:focus-visible {
   font-size: 1.1rem;
 }
 
-/* Phones: the players and the access list - every row a small card instead of a table that is wider than the screen */
+/* Phones: the players - every row a small card instead of a table that is wider than the screen */
 @media (max-width: 600px) {
   .ad-table:has(#adBoard),
-  .ad-table:has(#adAccessList),
-  .ad-table:has(#adBoard) tbody,
-  .ad-table:has(#adAccessList) tbody {
+  .ad-table:has(#adBoard) tbody {
     display: block;
     width: 100%;
   }
 
-  .ad-table:has(#adBoard) thead,
-  .ad-table:has(#adAccessList) thead {
+  .ad-table:has(#adBoard) thead {
     display: none;
   }
 
-  #adBoard tr,
-  #adAccessList tr {
+  #adBoard tr {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -1709,53 +1779,48 @@ a.ad-link:focus-visible {
     border-bottom: 1px solid var(--mm-border);
   }
 
-  #adBoard tr:last-child,
-  #adAccessList tr:last-child {
+  #adBoard tr:last-child {
     border-bottom: 0;
   }
 
-  #adBoard td,
-  #adAccessList td {
+  #adBoard td {
     display: block;
     padding: 0;
     border: 0;
   }
 
-  /* Players: # name ... season bank / the buttons under them on the right */
-  #adBoard td:nth-child(2) {
+  /* The player and the coins on one line, the access and the payout under it, the buttons at the end */
+  #adBoard td:first-child {
     flex: 1 1 0;
     min-width: 0;
   }
 
+  #adBoard td:nth-child(2) {
+    order: 3;
+    flex: 1 1 auto;
+  }
+
+  #adBoard td:nth-child(4) {
+    order: 4;
+  }
+
   #adBoard td.ad-actions {
+    order: 5;
     flex-basis: 100%;
     display: flex;
     justify-content: flex-end;
     gap: 0.4rem;
   }
 
-  /* Access: the name, its status under it, then payout and the button on one line */
-  #adAccessList td:first-child {
-    flex-basis: 100%;
-  }
-
-  #adAccessList td:nth-child(2) {
-    flex: 1 1 100%;
-  }
-
-  #adAccessList td:last-child {
-    margin-left: auto;
-  }
-
   /* Who wants in: the whole card marked, not every cell on its own */
-  #adAccessList tr.ad-waiting {
+  #adBoard tr.ad-waiting {
     margin: 0 -0.5rem;
     padding: 0.75rem;
     border-radius: 10px;
     background: rgba(var(--mm-accent-rgb), 0.06);
   }
 
-  #adAccessList tr.ad-waiting td {
+  #adBoard tr.ad-waiting td {
     background: none;
   }
 }
@@ -2075,7 +2140,7 @@ a.ad-link:focus-visible {
 
 .ad-case-row {
   display: grid;
-  grid-template-columns: 2.6rem minmax(0, 1fr) auto auto 6.5rem;
+  grid-template-columns: 2.6rem minmax(0, 1fr) auto auto 6.5rem auto;
   align-items: center;
   gap: 0.8rem;
   padding: 0.6rem 0.8rem;
@@ -2334,7 +2399,7 @@ a.ad-case-row:hover {
 /* Phones */
 @media (max-width: 700px) {
   .ad-case-row {
-    grid-template-columns: 2.6rem minmax(0, 1fr) auto;
+    grid-template-columns: 2.6rem minmax(0, 1fr) auto auto;
   }
 
   .ad-case-tags,
@@ -2668,4 +2733,76 @@ a.ad-case-row:hover {
 .ad-pick-item .mm-avatar,
 .ad-maint-row .mm-avatar {
   flex: 0 0 auto;
+}
+
+.ad-case-switch {
+  cursor: pointer;
+}
+
+.ad-case-switch.busy {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Where a setting counts: a small tag ("outside seasons"), the note over the settings */
+.ad-scope {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(120, 160, 255, 0.14);
+  color: #9db6ff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+.ad-scope-note,
+.ad-scope-card {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.ad-scope-card .ad-note {
+  margin: 0;
+}
+
+.ad-scope-card .ad-scope {
+  margin: 0 0.3rem 0 0;
+}
+
+.ad-scope-now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+/* A value that can't be saved: the field red, the reason under it */
+.ad-setting-error {
+  grid-column: 1 / -1;
+  color: var(--mm-danger);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.mm-input.invalid {
+  border-color: var(--mm-danger);
+}
+
+/* Saved: the button says so for a moment */
+.mm-btn.ad-saved,
+.mm-btn.ad-saved:disabled {
+  background: var(--mm-success);
+  border-color: var(--mm-success);
+  color: #111;
+  opacity: 1;
 }
