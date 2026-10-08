@@ -73,7 +73,9 @@ function decidedOf(row) {
   var parts = [];
   if (row.decided.chances != null) parts.push("💔 " + row.decided.chances + " second chance" + (row.decided.chances == 1 ? "" : "s"));
   if (row.decided.bets != null) parts.push("🎲 " + formatCoins(row.decided.bets) + " bet" + (row.decided.bets == 1 ? "" : "s"));
-  var tag = el("span", "lb-decided", parts.join(" · "));
+  var tag = el("span", "lb-decided");
+  // (short on phones: only the icons and numbers)
+  tag.append(el("span", "lb-decided-long", parts.join(" · ")), el("span", "lb-decided-short", parts.map((p) => p.replace(/ (second chances?|bets?)$/, "")).join(" · ")));
   tag.title = "The same coins as others - for the prize: fewer second chances first, then more bets";
   return tag;
 }
@@ -143,7 +145,7 @@ function render() {
   }
 
   // The box on the right: when the next update comes
-  document.getElementById("lbNextTitle").lastChild.textContent = board.live ? "Live" : "Next update";
+  document.getElementById("lbNextTitle").lastChild.textContent = board.live ? "Updates" : "Next update";
   document.getElementById("lbNextNote").innerText = board.live
     ? "The places are counted all the time - the arrows show the change since midnight."
     : "The places of the season are counted " + (EVERY_TEXT[season && season.every] || "regularly") + " - the arrows show the change since the update before.";

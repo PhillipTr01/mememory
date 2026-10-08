@@ -590,3 +590,69 @@
   flex-wrap: wrap;
   row-gap: 0.25rem;
 }
+
+.lb-decided-short {
+  display: none;
+}
+
+/* Phones: the tags on the podium fit their spot (the prize cut with …, what decided it short) */
+@media (max-width: 575px) {
+  .lb-spot .lb-prize,
+  .lb-spot .lb-decided {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.62rem;
+  }
+
+  .lb-decided-long {
+    display: none;
+  }
+
+  .lb-decided-short {
+    display: inline;
+  }
+
+  /* The winner page: back on top on the right, the name of the season with all the room */
+  .lb-win-head {
+    position: relative;
+    flex-wrap: nowrap;
+    padding-top: 2.4rem;
+  }
+
+  .lb-win-back {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+
+  .lb-win-title {
+    min-width: 0;
+  }
+
+  .lb-win-title h1 {
+    font-size: 1.45rem;
+  }
+
+  .lb-win-icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  /* The list: the prize stays - under the name */
+  .lb-row .lb-prize {
+    display: inline-block;
+    justify-self: start;
+  }
+
+  .lb-row > .lb-prize {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  /* (the empty place of a prize: no cell) */
+  .lb-row > span:empty {
+    display: none;
+  }
+}
