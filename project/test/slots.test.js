@@ -117,7 +117,7 @@ test("slots: the free spins - no 🪙, fewer 🍌 (bigger wins), more 🎁 (retr
   slots.FREE_STRIPS.forEach((strip, reel) => {
     assert.ok(!strip.includes("coin"));
     const count = (list, id) => list.filter((s) => s === id).length;
-    assert.strictEqual(count(strip, "banana"), count(slots.STRIPS[reel], "banana") - slots.FREE_DROP);
+    assert.strictEqual(count(strip, "banana"), Math.max(0, count(slots.STRIPS[reel], "banana") - slots.FREE_DROP));
     assert.strictEqual(count(strip, "bonus"), slots.FREE_BONUS[reel]);
     // The rest as on the normal reels
     ["pepe", "doge", "money", "rocket", "diamond", "wild"].forEach((id) => assert.strictEqual(count(strip, id), count(slots.STRIPS[reel], id)));

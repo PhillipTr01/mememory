@@ -18,13 +18,15 @@ const crypto = require("crypto");
  * A spin (with its whole bonus) never pays more than MAX_WIN times the bet -
  * when the bonus reaches it, it ends right there.
  */
+// count: on every reel - or per reel: 🍌 and 🐸 are rare on reels 4 and 5 (long lines of them are rare - and
+// pay more), the higher symbols take their places there
 const SYMBOLS = [
-  { id: "banana", icon: "🍌", name: "Banana", count: 12, pays: [3, 7, 19] },
-  { id: "pepe", icon: "🐸", name: "Pepe", count: 10, pays: [4, 10, 27] },
-  { id: "doge", icon: "🐕", name: "Doge", count: 6, pays: [7, 16, 61] },
-  { id: "money", icon: "💰", name: "Money bag", count: 4, pays: [10, 28, 121] },
-  { id: "rocket", icon: "🚀", name: "To the moon", count: 3, pays: [14, 50, 243] },
-  { id: "diamond", icon: "💎", name: "Diamond hands", count: 1, pays: [24, 121, 608] },
+  { id: "banana", icon: "🍌", name: "Banana", count: [12, 12, 12, 4, 3], pays: [3, 10, 35] },
+  { id: "pepe", icon: "🐸", name: "Pepe", count: [10, 10, 10, 4, 3], pays: [4, 13, 45] },
+  { id: "doge", icon: "🐕", name: "Doge", count: [6, 6, 6, 12, 12], pays: [7, 16, 61] },
+  { id: "money", icon: "💰", name: "Money bag", count: [4, 4, 4, 8, 8], pays: [10, 28, 121] },
+  { id: "rocket", icon: "🚀", name: "To the moon", count: [3, 3, 3, 5, 6], pays: [14, 50, 243] },
+  { id: "diamond", icon: "💎", name: "Diamond hands", count: [1, 1, 1, 2, 3], pays: [24, 121, 608] },
   { id: "wild", icon: "👑", name: "Wild", count: 2, pays: [36, 183, 1216], wild: true },
   // Pays no line - three in sight (reels 1, 3, 5) start the bonus
   { id: "bonus", icon: "🎁", name: "Bonus", count: 0, pays: [0, 0, 0], scatter: true },
@@ -117,11 +119,13 @@ const LINES = [
   [1, 2, 2, 2, 1],
 ];
 
-// The strips: every symbol as often as its count, spread out (another order on every reel)
-function makeStrip(seed) {
+// The strips: every symbol as often as its count on that reel (a number: the same on every reel), spread out
+// (another order on every reel)
+const countOn = (symbol, reel) => (Array.isArray(symbol.count) ? symbol.count[reel] : symbol.count);
+function makeStrip(seed, reel) {
   const strip = [];
   SYMBOLS.forEach((symbol) => {
-    for (let i = 0; i < symbol.count; i++) strip.push(symbol.id);
+    for (let i = 0; i < countOn(symbol, reel); i++) strip.push(symbol.id);
   });
   let state = seed;
   const next = () => {
@@ -136,7 +140,7 @@ function makeStrip(seed) {
 }
 // Reels 1, 3, 5: the 🎁 (BONUS_COUNT of them), spread over the strip (never two in the same window)
 const STRIPS = [11, 23, 37, 41, 53].map((seed, reel) => {
-  const strip = makeStrip(seed);
+  const strip = makeStrip(seed, reel);
   // The 🪙 groups, spread over the strip (back to front: the places stay right)
   const groups = COIN_GROUPS[reel];
   const gap = Math.floor(strip.length / groups.length);
