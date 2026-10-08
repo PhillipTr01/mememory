@@ -1,4 +1,5 @@
 const config = require("../game/config");
+const { jackpotRake } = require("../game/rake");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
 const casinoLock = require("../game/casino_lock");
@@ -219,8 +220,9 @@ module.exports = function (io) {
     // the pot. Which ticket was fixed at the start of the round (provably fair).
     // The tickets go through the bets in their order (not per player).
     pot.draw = fairWinner(pot.bets.map((bet) => ({ name: bet.name, coins: bet.amount })), pot.fair.number);
-    // The house keeps its cut: the winner gets the rest
-    pot.draw.payout = pot.draw.total - Math.floor((pot.draw.total * config.JACKPOT_RAKE) / 100);
+    // The house keeps its cut (never more than half of the others' coins): the winner gets the rest
+    const own = pot.bets.filter((bet) => bet.name === pot.draw.winner).reduce((sum, bet) => sum + bet.amount, 0);
+    pot.draw.payout = pot.draw.total - jackpotRake(pot.draw.total, own, config.JACKPOT_RAKE);
     emitState();
 
     // Announced after the roulette, so the chat doesn't spoil it

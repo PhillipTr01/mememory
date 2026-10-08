@@ -23,7 +23,7 @@ const FIELDS = [
   { group: "general", section: "Coins", key: "DAILY_BONUS", label: "Daily bonus", scope: "outside", hint: "Free coins once a day for every player outside of a season (a season has its own).", step: 100, min: 0, max: 10000000 },
   { group: "jackpot", section: "Jackpot", key: "GAME_JACKPOT", type: "toggle", label: "Jackpot is on", hint: "Off: no tab, nobody can open it." },
   { group: "jackpot", section: "Bets", key: "JACKPOT_MAX_COINS", label: "Max coins per round", hint: "All bets of one player in one round together.", step: 1000, min: 1, max: 100000000 },
-  { group: "jackpot", section: "Bets", key: "JACKPOT_RAKE", label: "House cut", hint: "Percent of the pot the house keeps - the winner gets the rest (5%: a payback of 95%).", unit: "%", step: 1, min: 0, max: 50 },
+  { group: "jackpot", section: "Bets", key: "JACKPOT_RAKE", label: "House cut", hint: "Percent of the pot the house keeps - but never more than half of the others' coins (a winner never gets back less than the own bet).", unit: "%", step: 1, min: 0, max: 50 },
   { group: "jackpot", section: "Bets", key: "JACKPOT_MAX_BETS", label: "Bets per round", hint: "Separate bets of one player in one round.", step: 1, min: 1, max: 100 },
   { group: "jackpot", section: "Ghost", key: "JACKPOT_GHOST_MIN", label: "Ghost bets from", hint: "Percent of the coins of the player alone in the pot - the ghost picks a share between this and the next one.", unit: "%", step: 5, min: 1, max: 500 },
   { group: "jackpot", section: "Ghost", key: "JACKPOT_GHOST_TOP", label: "Ghost bets up to", hint: "Percent of the coins of the player alone in the pot.", unit: "%", step: 5, min: 1, max: 500 },
