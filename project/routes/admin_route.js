@@ -105,21 +105,21 @@ module.exports = function () {
     return coins.balanceOf(user);
   }
 
-  // In the running season (hit "Start")? Its icon - null: not in it, or no season
-  // ... and since when: {icon, joinedAt}
-  function seasonOf(username) {
-    const season = seasons.running();
-    return season && seasons.joined(username) === true ? { icon: season.icon, joinedAt: seasons.joinedAt(username) } : null;
+  // The normal coins of a player (during a season: the balance from before it - back after it;
+  // the season itself is only in the seasons tab)
+  function normalCoins(user) {
+    const normal = seasons.normalOf(user.username);
+    return normal != null ? normal : balance(user);
   }
 
-  // The players in the casino (approved): who is in the running season first, then the richest first
+  // The players in the casino (approved): the richest first
   async function players() {
     const users = await User.find({ casinoApproved: true }).select("username coins coinReset").lean();
-    return users
-      // (in a season: coins = the season balance, bank = the balance from before it - back after the season)
-      .map((user) => ({ username: user.username, coins: balance(user), bank: seasons.storedOf(user.username), season: seasonOf(user.username) }))
-      .sort((a, b) => !!b.season - !!a.season || b.coins - a.coins || a.username.localeCompare(b.username));
+    return users.map((user) => ({ username: user.username, coins: normalCoins(user) })).sort((a, b) => b.coins - a.coins || a.username.localeCompare(b.username));
   }
+
+  // The coin history outside of seasons
+  const NORMAL = { era: { $exists: false } };
 
   // Everybody with the access state: the approved players first, then who wants in, then the rest
   async function accessList(q) {
@@ -132,10 +132,9 @@ module.exports = function () {
         approvedAt: user.casinoApprovedAt || null,
         requestedAt: user.casinoRequestedAt || null,
         payout: user.payoutAllowed === true,
-        season: user.casinoApproved === true ? seasonOf(user.username) : null,
       }))
       .filter((user) => user.username.toLowerCase().includes(q))
-      .sort((a, b) => rank(a) - rank(b) || !!b.season - !!a.season || new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0) || a.username.localeCompare(b.username));
+      .sort((a, b) => rank(a) - rank(b) || new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0) || a.username.localeCompare(b.username));
   }
 
   // Who asked for access, the newest first
@@ -154,15 +153,13 @@ module.exports = function () {
         leaderboard: all.slice(0, 50),
         players: all.length,
         coins: all.reduce((sum, p) => sum + p.coins, 0),
-        // In a season: the balances from before it, waiting in the bank
-        bank: seasons.running() ? all.reduce((sum, p) => sum + (p.bank || 0), 0) : null,
         open: open,
         openCoins: open.reduce((sum, w) => sum + w.amount, 0),
         requests: (await requests()).map((user) => ({ username: user.username, requestedAt: user.requestedAt })),
         waiting: (await requests()).length,
         online: casinoChat.online().names,
         games: live.snapshot(),
-        activity: (await CoinLog.find(coins.eraFilter()).sort({ at: -1 }).limit(8).lean()).map((row) => ({ username: row.username, amount: row.amount, reason: row.reason, at: row.at })),
+        activity: (await CoinLog.find(NORMAL).sort({ at: -1 }).limit(8).lean()).map((row) => ({ username: row.username, amount: row.amount, reason: row.reason, at: row.at })),
       });
     }),
   );
@@ -187,6 +184,14 @@ module.exports = function () {
       const user = await User.findOne({ username: username }).select("username casinoApproved").lean();
       if (user == null) return res.status(404).json({ error: "No such player." });
       if (!access.approved(user)) return res.status(400).json({ error: "The player isn't approved for the casino." });
+      if (mode !== "set" && mode !== "add") return res.status(400).json({ error: "Unknown mode." });
+      if (mode === "set" && amount < 0) return res.status(400).json({ error: "A balance can't be negative." });
+      // During a season: the normal balance (it comes back after the season)
+      if (seasons.running()) {
+        const changed = await seasons.changeNormal(username, mode, amount, text);
+        if (changed.error) return res.status(400).json(changed);
+        return res.json({ username: username, coins: changed.coins });
+      }
       if (mode === "set") {
         if (amount < 0) return res.status(400).json({ error: "A balance can't be negative." });
         await coins.set(username, amount, text);
@@ -280,13 +285,26 @@ module.exports = function () {
     "/api/history",
     admin,
     asyncHandler(async (req, res) => {
-      // (in a season its history, otherwise the one outside of seasons)
-      const filter = coins.eraFilter();
-      if (req.query.username) filter.username = String(req.query.username);
-      if (req.query.reason) filter.reason = String(req.query.reason);
+      // The normal history - or (scope "season") the one of the running season
+      const filter = req.query.scope === "season" && coins.era() ? { era: coins.era() } : { ...NORMAL };
+      // A part of a name: every player whose name has it
+      const q = String(req.query.username || "").trim().toLowerCase();
+      if (q) {
+        const names = (await User.find({}).select("username").lean()).map((u) => u.username);
+        const exact = names.filter((name) => name.toLowerCase() === q);
+        filter.username = { $in: exact.length ? exact : names.filter((name) => name.toLowerCase().includes(q)) };
+      }
+      // One kind - or a few (a whole game: "jackpot bet,jackpot win")
+      if (req.query.reason) filter.reason = { $in: String(req.query.reason).split(",").slice(0, 20) };
       const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 200));
       const rows = await CoinLog.find(filter).sort({ at: -1 }).limit(limit).lean();
-      res.json(rows.map((row) => ({ username: row.username, amount: row.amount, reason: row.reason, note: row.note || null, at: row.at })));
+      const season = seasons.running();
+      res.json({
+        // The running season: its history can be picked instead
+        season: season ? { name: season.name, icon: season.icon } : null,
+        names: (await players()).map((p) => p.username),
+        rows: rows.map((row) => ({ username: row.username, amount: row.amount, reason: row.reason, note: row.note || null, at: row.at })),
+      });
     }),
   );
 
@@ -379,6 +397,18 @@ module.exports = function () {
       const result = await seasons.remove(req.params.id);
       if (result.error) return res.status(400).json(result);
       res.json({ seasons: seasons.list() });
+    }),
+  );
+
+  // The leaderboard of a season (running: now, over: the final places) - with when they started,
+  // the second chances and what they did
+  router.get(
+    "/api/seasons/:id/board",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await seasons.board(req.params.id);
+      if (result == null) return res.status(404).json({ error: "No such season." });
+      res.json(result);
     }),
   );
 

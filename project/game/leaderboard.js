@@ -105,11 +105,13 @@ async function view(username, now = Date.now()) {
 function final(id, username) {
   const season = seasons.byId(id);
   if (season == null || !season.ended || !season.final) return null;
+  // (only the place, the coins and the prize - the stats of the players are for the admin panel)
+  const pub = (row) => row && { rank: row.rank, username: row.username, coins: row.coins, ...(row.prize ? { prize: row.prize } : {}) };
   return {
     season: seasons.publicSeason(season),
-    rows: season.final.rows.slice(0, SIZE),
+    rows: season.final.rows.slice(0, SIZE).map(pub),
     players: season.final.rows.length,
-    me: season.final.rows.find((row) => row.username === username) || null,
+    me: pub(season.final.rows.find((row) => row.username === username)) || null,
   };
 }
 

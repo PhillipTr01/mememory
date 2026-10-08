@@ -1,6 +1,7 @@
 const EventEmitter = require("events");
 const User = require("../models/User");
 const Setting = require("../models/Setting");
+const CoinLog = require("../models/CoinLog");
 const coins = require("./coins");
 const config = require("./config");
 const { seasonReset, seasonRestore } = require("./hard_reset");
@@ -56,6 +57,9 @@ function status(season) {
   return "planned";
 }
 
+// The winner for the pages: the place, the name, the coins, the prize (not the stats)
+const winnerOf = (row) => ({ rank: row.rank, username: row.username, coins: row.coins, ...(row.prize ? { prize: row.prize } : {}) });
+
 // For the admin panel and the pages
 function publicSeason(season) {
   return {
@@ -75,7 +79,7 @@ function publicSeason(season) {
     status: state.closing && state.closing.id === season.id && closingKind() === "start" ? "starting" : status(season),
     endedAt: season.endedAt || null,
     players: season.final ? season.final.rows.length : Object.keys(season.joined || {}).length,
-    winner: season.final && season.final.rows.length ? season.final.rows[0] : null,
+    winner: season.final && season.final.rows.length ? winnerOf(season.final.rows[0]) : null,
   };
 }
 
@@ -339,7 +343,8 @@ coins.setJoinedAtLookup((username) => {
 
 // The final places (everybody in the casino, by coins) - with the prizes
 async function endSeason(season, now) {
-  const rows = await standings();
+  // (with the stats: the coin history of the season is gone after it)
+  const rows = await withStats(season, await standings());
   const prizes = season.prizesOn ? new Map(season.prizes.map((p) => [p.place, p.prize])) : new Map();
   season.final = { at: now, rows: rows.map((row) => (prizes.has(row.rank) ? { ...row, prize: prizes.get(row.rank) } : row)) };
   season.ended = true;
@@ -379,6 +384,69 @@ async function standings() {
     .map((user) => ({ username: user.username, coins: coins.balanceOf(user) }))
     .sort((a, b) => b.coins - a.coins || a.username.localeCompare(b.username))
     .map((row, index) => ({ rank: index + 1, ...row }));
+}
+
+/* ---------- The leaderboard of a season for the admin panel ---------- */
+
+// The bets and wins of the games (the coin history) - by the start of the reason
+const GAMES = [
+  ["jackpot", "Jackpot"],
+  ["battle", "Case battles"],
+  ["poker", "Poker"],
+  ["blackjack", "Blackjack"],
+  ["slots", "Slots"],
+];
+const BETS = ["jackpot bet", "battle", "poker buy-in", "poker chips", "blackjack bet", "slots bet"];
+const WINS = ["jackpot win", "battle win", "blackjack win", "slots win", "game win"];
+const gameOf = (reason) => (GAMES.find(([prefix]) => reason.startsWith(prefix)) || [null, null])[1];
+
+// What every player did in the season (from its coin history): {username: {...}}
+async function seasonStats(season) {
+  const era = "season-" + season.id;
+  const rows = await CoinLog.find({ era: era }).lean();
+  const stats = {};
+  for (const row of rows) {
+    const s = (stats[row.username] = stats[row.username] || { bets: 0, wagered: 0, biggestWin: 0, fromGames: 0, dailyBonuses: 0, lastActive: null, games: {} });
+    const at = new Date(row.at).getTime();
+    if (s.lastActive == null || at > s.lastActive) s.lastActive = at;
+    if (row.reason === "daily bonus") s.dailyBonuses++;
+    if (BETS.includes(row.reason)) {
+      s.bets++;
+      s.wagered += -row.amount;
+      const game = gameOf(row.reason);
+      s.games[game] = (s.games[game] || 0) + 1;
+    }
+    if (WINS.includes(row.reason)) s.biggestWin = Math.max(s.biggestWin, row.amount);
+    // Won or lost in the games: every bet, win, refund and cash-out
+    if (gameOf(row.reason) || row.reason === "game win") s.fromGames += row.amount;
+  }
+  for (const s of Object.values(stats)) {
+    const top = Object.entries(s.games).sort((a, b) => b[1] - a[1])[0];
+    s.favourite = top ? top[0] : null;
+    delete s.games;
+  }
+  return stats;
+}
+
+// The leaderboard rows with when they started, the second chances and the stats
+async function withStats(season, rows) {
+  const stats = await seasonStats(season);
+  return rows.map((row) => ({
+    ...row,
+    joinedAt: (season.joined && season.joined[row.username]) || null,
+    chances: (season.chances && season.chances[row.username] && season.chances[row.username].used) || 0,
+    ...(stats[row.username] || { bets: 0, wagered: 0, biggestWin: 0, fromGames: 0, dailyBonuses: 0, lastActive: null, favourite: null }),
+  }));
+}
+
+// For the admin panel: {status, at, chancesTotal, rows} - running: right now, over: the final places
+async function board(id) {
+  const season = byId(id);
+  if (season == null) return null;
+  const result = { status: status(season), chancesTotal: season.secondChances || 0 };
+  if (season.ended) return { ...result, at: season.final ? season.final.at : null, rows: season.final ? season.final.rows : [] };
+  if (!season.started) return { ...result, at: null, rows: [] };
+  return { ...result, at: Date.now(), rows: await withStats(season, await standings()) };
 }
 
 let ticking = null;
@@ -461,6 +529,30 @@ async function useChance(username, now = Date.now()) {
   return { coins: season.budget, left: status.left - 1 };
 }
 
+// The normal balance during the running season (from before it - back after it; who came during
+// the season: the normal start coins) - null without a season
+function normalOf(username) {
+  const season = running();
+  if (season == null) return null;
+  const saved = season.saved || {};
+  return username in saved ? saved[username] : season.baseBefore ? season.baseBefore.start : config.START_COINS;
+}
+
+// Admin: the normal balance changed during a season (mode "set" or "add") - {coins} or {error}
+async function changeNormal(username, mode, amount, note) {
+  const season = running();
+  if (season == null) return { error: "No season runs." };
+  const before = normalOf(username);
+  const after = mode === "set" ? amount : before + amount;
+  if (after < 0) return { error: "The player doesn't have that many coins." };
+  season.saved = season.saved || {};
+  season.saved[username] = after;
+  await save();
+  if (after !== before) coins.log(username, after - before, "admin", note, { normal: true });
+  coins.notify(username);
+  return { coins: after };
+}
+
 // The balance from before the running season (shown next to the coins), null without a season
 function storedOf(username) {
   const season = running();
@@ -519,4 +611,4 @@ function accentStyle() {
   return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
 }
 
-module.exports = { joinedAt, join, joined, joinCoins, closingInfo, chanceStatus, useChance, storedOf, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+module.exports = { board, normalOf, changeNormal, joinedAt, join, joined, joinCoins, closingInfo, chanceStatus, useChance, storedOf, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };

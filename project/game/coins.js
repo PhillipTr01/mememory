@@ -18,8 +18,9 @@ function notify(username) {
 
 // History of every change (for the admin panel); never blocks or breaks a game
 // (during a season tagged with it - the history from before stays apart)
-function log(username, amount, reason, note) {
-  const now = era();
+// options.normal: into the history outside of seasons (the normal balance, changed during a season)
+function log(username, amount, reason, note, options = {}) {
+  const now = options.normal ? null : era();
   Promise.resolve()
     .then(() => CoinLog.create({ username: username, amount: amount, reason: reason || "other", note: note, at: new Date(), ...(now ? { era: now } : {}) }))
     .catch((error) => console.error("[coins] Could not write the history:", error));

@@ -127,7 +127,7 @@
                         <input id="adSearch" class="mm-input ad-search" placeholder="Search a player">
                     </div>
                     <table class="ad-table">
-                        <thead><tr><th>#</th><th>Player</th><th class="num" id="adBoardCoins">Coins</th><th class="num" id="adBoardBank" hidden>🏦 Bank</th><th></th></tr></thead>
+                        <thead><tr><th>#</th><th>Player</th><th class="num">Coins</th><th></th></tr></thead>
                         <tbody id="adBoard"></tbody>
                     </table>
                 </div>
@@ -154,12 +154,15 @@
                 <div class="ad-card">
                     <div class="ad-card-head">
                         <h2 class="ad-title">Every coin change</h2>
-                        <form id="adHistoryFilter" class="ad-form compact" autocomplete="off">
-                            <input id="adHistUser" class="mm-input" placeholder="Player" list="adUserList">
-                            <select id="adHistReason" class="mm-input">
-                                <option value="">Everything</option>
+                        <!--- Filters right away: a player (a part of the name is enough), what kind, which coins --->
+                        <form id="adHistoryFilter" class="ad-form compact ad-hist-filter" autocomplete="off">
+                            <input id="adHistUser" class="mm-input" type="search" placeholder="🔍 Player" list="adHistNames" aria-label="Player">
+                            <datalist id="adHistNames"></datalist>
+                            <select id="adHistReason" class="mm-input" aria-label="Kind"></select>
+                            <select id="adHistScope" class="mm-input" aria-label="Coins" hidden>
+                                <option value="">Normal coins</option>
+                                <option value="season">Season</option>
                             </select>
-                            <button type="submit" class="mm-btn mm-btn-sm">Show</button>
                         </form>
                     </div>
                     <table class="ad-table">
@@ -186,13 +189,16 @@
                 <div id="adSeasonPage" class="ad-stack ad-season-page" hidden>
                     <a href="#seasons" class="ad-back">‹ All seasons</a>
                     <div id="adSeasonDetail" class="ad-card ad-season-detail"></div>
-                    <!--- A season that is over: its whole leaderboard --->
+                    <!--- A running season or one that is over: its whole leaderboard - when they started,
+                          their second chances, what they did --->
                     <div id="adSeasonFinal" class="ad-card" hidden>
-                        <div class="ad-card-head"><h2 class="ad-title">Final leaderboard</h2><span id="adSeasonFinalCount" class="ad-cases-count"></span></div>
-                        <table class="ad-table">
-                            <thead><tr><th>#</th><th>Player</th><th class="num">Coins</th><th>Prize</th></tr></thead>
-                            <tbody id="adSeasonFinalRows"></tbody>
-                        </table>
+                        <div class="ad-card-head"><h2 class="ad-title" id="adSeasonBoardTitle">Leaderboard</h2><span id="adSeasonFinalCount" class="ad-cases-count"></span></div>
+                        <div class="ad-table-scroll">
+                            <table class="ad-table ad-season-board">
+                                <thead><tr id="adSeasonBoardHead"></tr></thead>
+                                <tbody id="adSeasonFinalRows"></tbody>
+                            </table>
+                        </div>
                     </div>
                     <div id="adSeasonFormCard" class="ad-card">
                         <div class="ad-card-head">

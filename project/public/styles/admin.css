@@ -1797,7 +1797,22 @@ a.ad-link:focus-visible {
     flex: 1 1 100%;
   }
 
-  #adHistoryFilter #adHistReason {
+  #adHistoryFilter #adHistReason,
+  #adHistoryFilter #adHistScope {
     flex: 1 1 0;
+    min-width: 0;
   }
+}
+
+/* The leaderboard of a season: many columns - it scrolls sideways in its card when the screen is narrow */
+.ad-table-scroll {
+  overflow-x: auto;
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem;
+  scrollbar-width: thin;
+}
+
+.ad-season-board th,
+.ad-season-board td {
+  white-space: nowrap;
 }

@@ -82,7 +82,7 @@ test("admin: change balances, the history knows every change", async () => {
   assert.strictEqual((await adminApi("balance", { username: "nobody", mode: "add", amount: 5 })).status, 404);
   assert.strictEqual((await adminApi("balance", { username: "paula", mode: "set", amount: -5 })).status, 400);
 
-  const history = (await adminApi("history?username=paula")).body;
+  const history = (await adminApi("history?username=paula")).body.rows;
   assert.deepStrictEqual(
     history.map((row) => [row.reason, row.amount]),
     [["admin", -1000], ["admin", 5000 - config.START_COINS], ["start coins", config.START_COINS]],
@@ -124,7 +124,7 @@ test("admin: payouts - a player takes coins off, the admin pays or rejects (coin
   const own = await (await call(CASINO + "/withdrawals", player)).json();
   assert.deepStrictEqual(own.map((w) => [w.amount, w.status, w.note]).sort(), [[5000, "rejected", "nope"], [6000, "paid", null]]);
   assert.deepStrictEqual((await adminApi("withdrawals?status=open")).body, []);
-  const history = (await adminApi("history?username=quinn")).body.map((row) => row.reason);
+  const history = (await adminApi("history?username=quinn")).body.rows.map((row) => row.reason);
   assert.ok(history.includes("withdrawal") && history.includes("withdrawal refund"));
 });
 
@@ -271,6 +271,43 @@ test("admin: a game turned off - no tab, its page leads to the next game, its op
   await adminApi("settings", { defaults: true });
   assert.strictEqual((await call(CASINO + "/poker", as("paula"))).status, 200, "on again");
   settings.changes.off("change", listener);
+});
+
+test("admin: in a season the players show their normal coins, changes go there; the season board has the stats", async () => {
+  const seasons = require("../game/seasons");
+  seasons.reset();
+  const now = Date.now();
+  const made = await seasons.create({ name: "Board", icon: "📋", start: now - 1000, end: now + 3600 * 1000, budget: 1000, every: 0, secondChances: 2 });
+  await seasons.tick(now);
+  const normal = seasons.normalOf("rosa");
+  assert.ok(normal != null);
+  await seasons.join("rosa", now);
+  await coins.spend("rosa", 300, { reason: "slots bet" });
+  await coins.add("rosa", 900, { reason: "slots win" });
+  // The players: the normal coins, nothing of the season
+  const rosa = (await adminApi("users")).body.find((p) => p.username === "rosa");
+  assert.deepStrictEqual(rosa, { username: "rosa", coins: normal });
+  // A change goes to the normal coins - the season coins stay
+  const res = await adminApi("balance", { username: "rosa", mode: "add", amount: 250, note: "gift" });
+  assert.strictEqual(res.body.coins, normal + 250);
+  assert.strictEqual(seasons.normalOf("rosa"), normal + 250);
+  assert.strictEqual((await coins.get("rosa")).coins, 1600);
+  assert.strictEqual((await adminApi("balance", { username: "rosa", mode: "add", amount: -(normal + 999) })).status, 400);
+  // The history: the normal one (a part of the name is enough) - or the season's, by kinds
+  const normalHistory = (await adminApi("history?username=OS")).body;
+  assert.ok(normalHistory.rows.some((row) => row.username === "rosa" && row.reason === "admin" && row.amount === 250));
+  assert.ok(!normalHistory.rows.some((row) => row.reason === "slots bet"));
+  assert.deepStrictEqual(normalHistory.season, { name: "Board", icon: "📋" });
+  const seasonHistory = (await adminApi("history?username=rosa&scope=season&reason=" + encodeURIComponent("slots bet,slots win"))).body;
+  assert.deepStrictEqual(seasonHistory.rows.map((row) => row.reason).sort(), ["slots bet", "slots win"]);
+  // The board: when they started, second chances, what they did
+  const board = (await adminApi("seasons/" + made.season.id + "/board")).body;
+  const row = board.rows.find((r) => r.username === "rosa");
+  assert.deepStrictEqual(
+    [row.coins, row.joinedAt, row.chances, board.chancesTotal, row.bets, row.wagered, row.biggestWin, row.fromGames, row.favourite],
+    [1600, now, 0, 2, 1, 300, 900, 600, "Slots"],
+  );
+  seasons.reset();
 });
 
 // The last test: everything is gone afterwards

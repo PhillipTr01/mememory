@@ -1,26 +1,17 @@
 /* Admin panel: balances, payouts, leaderboard, the history of every coin change, the casino chat and the settings. */
 
-var REASONS = [
-  "start coins",
-  "jackpot bet",
-  "jackpot win",
-  "jackpot refund",
-  "secret word",
-  "battle",
-  "battle win",
-  "battle refund",
-  "poker buy-in",
-  "poker chips",
-  "poker cash-out",
-  "poker refund",
-  "game win",
-  "daily bonus",
-  "slots bet",
-  "slots win",
-  "withdrawal",
-  "withdrawal refund",
-  "admin",
+// The kinds of coin changes for the history filter - by game (a whole game: all of its kinds)
+var HISTORY_KINDS = [
+  ["Casino", [["start coins", "Start coins"], ["daily bonus", "Daily bonus"], ["admin", "Admin"], ["withdrawal", "Payout"], ["withdrawal refund", "Payout refund"]]],
+  ["Seasons", [["season start", "Season start"], ["second chance", "Second chance"]]],
+  ["Jackpot", [["jackpot bet", "Bet"], ["jackpot win", "Win"]]],
+  ["Case battles", [["battle", "Bet"], ["battle win", "Win"], ["battle refund", "Refund"]]],
+  ["Poker", [["poker buy-in", "Buy-in"], ["poker chips", "More chips"], ["poker cash-out", "Cash-out"], ["poker refund", "Refund"]]],
+  ["Blackjack", [["blackjack bet", "Bet"], ["blackjack win", "Win"], ["blackjack refund", "Refund"]]],
+  ["Slots", [["slots bet", "Bet"], ["slots win", "Win"]]],
+  ["Memory", [["game win", "Game win"]]],
 ];
+
 
 var knownOpen = null; // ids of the open payouts already seen (new ones get a note)
 var knownWaiting = null; // players waiting for access at the last look
@@ -101,7 +92,7 @@ function showTab() {
   if (tab == "seasons") {
     seasonView = parts[1] == "new" ? "new" : parts[1] ? Number(parts[1]) : null;
     seasonFormFor = undefined;
-    finalLoaded = null;
+    boardLoaded = { id: null, at: 0 };
     closePicker();
     loadSeasons();
   }
@@ -169,8 +160,6 @@ async function loadOverview() {
     var data = await api("overview");
     document.getElementById("adPlayers").innerText = formatCoins(data.players);
     document.getElementById("adCoins").innerText = "🪙 " + formatCoins(data.coins);
-    // In a season: the season balances - and the ones from before it in the bank
-    document.getElementById("adCoinsSub").innerText = data.bank != null ? "season balances · 🏦 " + formatCoins(data.bank) + " in the bank" : "all balances together";
     document.getElementById("adOpen").innerText = data.open.length;
     document.getElementById("adOpenCoins").innerText = "🪙 " + formatCoins(data.openCoins);
     document.getElementById("adWaiting").innerText = data.requests.length;
@@ -187,7 +176,6 @@ async function loadOverview() {
             var row = el("div", "ad-row");
             var name = el("span", "ad-row-main fw-semibold", p.username);
             var value = el("span", "ad-row-value", "🪙 " + formatCoins(p.coins));
-            if (p.bank != null) value.appendChild(el("small", "ad-bank", "🏦 " + formatCoins(p.bank)));
             row.append(el("span", "ad-rank", i + 1), name, value);
             return row;
           })
@@ -358,7 +346,6 @@ async function loadAccess() {
         payoutCell.appendChild(payout);
         var statusCell = el("td");
         statusCell.appendChild(status);
-        if (p.season) statusCell.append(" ", seasonPill(p.season));
         row.append(el("td", "fw-semibold", p.username), statusCell, payoutCell, actions);
         return row;
       }),
@@ -403,14 +390,6 @@ async function setPayout(player, box, text) {
 
 /* ---------- Players ---------- */
 
-// A player who is in the running season (hit "Start"): a pill with its icon
-function seasonPill(season) {
-  var since = season.joinedAt ? new Date(season.joinedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : null;
-  var pill = el("span", "ad-pill ad-season-pill", season.icon + " in season" + (since ? " · since " + since : ""));
-  pill.title = season.joinedAt ? "Hit Start in the running season on " + dateText(season.joinedAt) : "Plays in the running season";
-  return pill;
-}
-
 function fillUserList() {
   document.getElementById("adUserList").replaceChildren(...players.map((p) => Object.assign(document.createElement("option"), { value: p.username })));
 }
@@ -418,10 +397,6 @@ function fillUserList() {
 async function loadPlayers() {
   try {
     players = await api("users?q=" + encodeURIComponent(document.getElementById("adSearch").value.trim()));
-    // In a season: the season balance and the bank (the balance from before it) side by side
-    var inSeason = players.some((p) => p.bank != null);
-    document.getElementById("adBoardCoins").innerText = inSeason ? "🪙 Season" : "Coins";
-    document.getElementById("adBoardBank").hidden = !inSeason;
     fillUserList();
     document.getElementById("adBoard").replaceChildren(
       ...players.map((p, i) => {
@@ -442,11 +417,7 @@ async function loadPlayers() {
         });
         var actions = el("td", "ad-actions");
         actions.append(edit, history);
-        var name = el("td", "fw-semibold", p.username);
-        if (p.season) name.append(" ", seasonPill(p.season));
-        var bank = el("td", "num mm-muted", p.bank != null ? "🏦 " + formatCoins(p.bank) : "–");
-        bank.hidden = !inSeason;
-        row.append(el("td", "mm-muted", i + 1), name, el("td", "num", "🪙 " + formatCoins(p.coins)), bank, actions);
+        row.append(el("td", "mm-muted", i + 1), el("td", "fw-semibold", p.username), el("td", "num", "🪙 " + formatCoins(p.coins)), actions);
         return row;
       }),
     );
@@ -493,14 +464,22 @@ async function loadHistory(event) {
   var params = new URLSearchParams();
   var user = document.getElementById("adHistUser").value.trim();
   var reason = document.getElementById("adHistReason").value;
+  var scope = document.getElementById("adHistScope");
   if (user) params.set("username", user);
   if (reason) params.set("reason", reason);
+  if (!scope.hidden && scope.value) params.set("scope", scope.value);
   try {
-    var rows = await api("history?" + params.toString());
+    var data = await api("history?" + params.toString());
+    // The names to pick from - and in a season its own history
+    document.getElementById("adHistNames").replaceChildren(...data.names.map((name) => Object.assign(document.createElement("option"), { value: name })));
+    scope.hidden = !data.season;
+    if (data.season) scope.options[1].text = data.season.icon + " " + data.season.name;
+    else scope.value = "";
+    var rows = data.rows;
     var body = document.getElementById("adHistory");
     if (rows.length == 0) {
       var empty = el("tr");
-      var cell = el("td", "mm-muted", "Nothing yet.");
+      var cell = el("td", "mm-muted", user || reason ? "Nothing found." : "Nothing yet.");
       cell.colSpan = 4;
       empty.appendChild(cell);
       body.replaceChildren(empty);
@@ -519,6 +498,20 @@ async function loadHistory(event) {
   } catch (error) {
     fail(error);
   }
+}
+
+// The kinds in the filter: everything, then per game "all of it" and every kind of it
+function fillHistoryKinds() {
+  var select = document.getElementById("adHistReason");
+  var option = (value, text) => Object.assign(document.createElement("option"), { value: value, text: text });
+  select.replaceChildren(option("", "Every kind"));
+  HISTORY_KINDS.forEach(([game, kinds]) => {
+    var group = document.createElement("optgroup");
+    group.label = game;
+    if (kinds.length > 1) group.appendChild(option(kinds.map((k) => k[0]).join(","), "All of " + game));
+    kinds.forEach(([value, text]) => group.appendChild(option(value, text)));
+    select.appendChild(group);
+  });
 }
 
 /* ---------- Seasons ---------- */
@@ -584,33 +577,69 @@ function fillSeasonPage() {
   }
 }
 
-// The final places of a season that is over (loaded once per season - they don't change)
-var finalLoaded = null;
-async function loadSeasonFinal(id) {
-  if (finalLoaded == id) return;
-  finalLoaded = id;
+// The leaderboard of a season - running: now (again at most every 15 s), over: the final places (once)
+var boardLoaded = { id: null, at: 0 };
+var BOARD_COLUMNS = [
+  ["#", ""],
+  ["Player", ""],
+  ["Coins", "num"],
+  ["Prize", ""],
+  ["Started", ""],
+  ["💔 2nd chances", "num"],
+  ["🎁 Daily", "num"],
+  ["Bets", "num"],
+  ["Wagered", "num"],
+  ["Biggest win", "num"],
+  ["From games", "num"],
+  ["Favourite", ""],
+  ["Last active", ""],
+];
+async function loadSeasonBoard(season) {
+  var ended = season.status == "ended";
+  if (boardLoaded.id == season.id && (ended || Date.now() - boardLoaded.at < 15000)) return;
+  boardLoaded = { id: season.id, at: Date.now() };
   var body = document.getElementById("adSeasonFinalRows");
-  body.replaceChildren();
   try {
-    var data = await api("seasons/" + id + "/final");
-    document.getElementById("adSeasonFinalCount").innerText = data.rows.length + (data.rows.length == 1 ? " player" : " players");
+    var data = await api("seasons/" + season.id + "/board");
+    var withPrizes = data.rows.some((row) => row.prize);
+    var columns = BOARD_COLUMNS.filter(([name]) => name != "Prize" || withPrizes);
+    document.getElementById("adSeasonBoardTitle").innerText = ended ? "Final leaderboard" : "Leaderboard";
+    document.getElementById("adSeasonFinalCount").innerText = data.rows.length + (data.rows.length == 1 ? " player" : " players") + (ended ? "" : " · now");
+    document.getElementById("adSeasonBoardHead").replaceChildren(...columns.map(([name, cls]) => el("th", cls, name)));
     if (!data.rows.length) {
       var empty = el("tr");
-      var cell = el("td", "mm-muted", "Nobody played this season.");
-      cell.colSpan = 4;
+      var cell = el("td", "mm-muted", ended ? "Nobody played this season." : "Nobody hit Start yet.");
+      cell.colSpan = columns.length;
       empty.appendChild(cell);
       return body.replaceChildren(empty);
     }
     var MEDALS = ["🥇", "🥈", "🥉"];
+    var dash = (value, text) => (value ? text : "–");
+    var when = (t) => (t ? new Date(t).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "–");
     body.replaceChildren(
       ...data.rows.map((row) => {
         var tr = el("tr", row.rank <= 3 ? "ad-final-top" : "");
-        tr.append(el("td", "mm-muted", MEDALS[row.rank - 1] || row.rank), el("td", "fw-semibold", row.username), el("td", "num", "🪙 " + formatCoins(row.coins)), el("td", row.prize ? "" : "mm-muted", row.prize || "–"));
+        var cells = {
+          "#": el("td", "mm-muted", MEDALS[row.rank - 1] || row.rank),
+          Player: el("td", "fw-semibold", row.username),
+          Coins: el("td", "num", "🪙 " + formatCoins(row.coins)),
+          Prize: el("td", row.prize ? "" : "mm-muted", row.prize || "–"),
+          Started: el("td", "mm-muted small", when(row.joinedAt)),
+          "💔 2nd chances": el("td", "num" + (row.chances ? "" : " mm-muted"), row.chances != null ? row.chances + (data.chancesTotal ? " / " + data.chancesTotal : "") : "–"),
+          "🎁 Daily": el("td", "num mm-muted", row.dailyBonuses != null ? String(row.dailyBonuses) : "–"),
+          Bets: el("td", "num", row.bets != null ? formatCoins(row.bets) : "–"),
+          Wagered: el("td", "num mm-muted", row.wagered != null ? dash(row.wagered, "🪙 " + formatCoins(row.wagered)) : "–"),
+          "Biggest win": el("td", "num", row.biggestWin != null ? dash(row.biggestWin, "🪙 " + formatCoins(row.biggestWin)) : "–"),
+          "From games": el("td", "num " + (row.fromGames > 0 ? "plus" : row.fromGames < 0 ? "minus" : "mm-muted"), row.fromGames != null ? (row.fromGames > 0 ? "+" : "") + formatCoins(row.fromGames) : "–"),
+          Favourite: el("td", row.favourite ? "" : "mm-muted", row.favourite || "–"),
+          "Last active": el("td", "mm-muted small", when(row.lastActive)),
+        };
+        tr.append(...columns.map(([name]) => cells[name]));
         return tr;
       }),
     );
   } catch (error) {
-    finalLoaded = null;
+    boardLoaded = { id: null, at: 0 };
     fail(error);
   }
 }
@@ -623,9 +652,10 @@ function renderSeasons() {
     document.getElementById("adPageTitle").innerText = view ? view.icon + " " + view.name : "New season";
     document.getElementById("adPageSub").innerText = view ? STATUS_NAMES[view.status] + " · " + dateText(view.start) + " → " + dateText(view.end) : "Plan a season: everybody who hits Start begins with the same budget, the most coins win.";
     document.getElementById("adSeasonFormCard").hidden = view != null && view.status == "ended";
-    // Over: the whole leaderboard instead of the form
-    document.getElementById("adSeasonFinal").hidden = !(view && view.status == "ended");
-    if (view && view.status == "ended") loadSeasonFinal(view.id);
+    // Running or over: the whole leaderboard (over: instead of the form)
+    var withBoard = view && (view.status == "running" || view.status == "ended");
+    document.getElementById("adSeasonFinal").hidden = !withBoard;
+    if (withBoard) loadSeasonBoard(view);
     var detail = document.getElementById("adSeasonDetail");
     if (view) detail.replaceChildren(...seasonDetail(view));
     else
@@ -1390,8 +1420,7 @@ async function hardReset(event) {
 /* ---------- Setup ---------- */
 
 document.addEventListener("DOMContentLoaded", () => {
-  var reasons = document.getElementById("adHistReason");
-  REASONS.forEach((reason) => reasons.appendChild(Object.assign(document.createElement("option"), { value: reason, innerText: reason })));
+  fillHistoryKinds();
 
   document.getElementById("adBalance").addEventListener("submit", saveBalance);
   var searchTimer = null;
@@ -1405,7 +1434,15 @@ document.addEventListener("DOMContentLoaded", () => {
     accessTimer = setTimeout(loadAccess, 250);
   });
   document.getElementById("adPayoutStatus").addEventListener("change", loadPayouts);
+  // The history filters right away (typing: after a short pause)
+  var historyTyping = null;
   document.getElementById("adHistoryFilter").addEventListener("submit", loadHistory);
+  document.getElementById("adHistUser").addEventListener("input", () => {
+    clearTimeout(historyTyping);
+    historyTyping = setTimeout(loadHistory, 300);
+  });
+  document.getElementById("adHistReason").addEventListener("change", () => loadHistory());
+  document.getElementById("adHistScope").addEventListener("change", () => loadHistory());
   document.getElementById("adLogout").addEventListener("click", async () => {
     await fetch("logout", { method: "POST" });
     window.location.reload();
