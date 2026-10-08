@@ -3990,6 +3990,13 @@ body.jackpot-theme {
 
 .cs-gift-info b {
   color: var(--mm-accent);
+  white-space: nowrap;
+}
+
+.cs-gift-have {
+  display: block;
+  margin-top: 0.15rem;
+  white-space: nowrap;
 }
 
 .cs-gift-info.used b {

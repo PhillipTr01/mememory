@@ -1,4 +1,5 @@
 const config = require("./config");
+const days = require("./days");
 const coins = require("./coins");
 const seasons = require("./seasons");
 const access = require("./access");
@@ -8,13 +9,13 @@ const CoinLog = require("../models/CoinLog");
 
 /*
  * Coins as a gift to another player (a click on a name in the casino chat).
- * Every player can give at most GIFT_LIMIT coins in total - counted apart for
- * the normal coins and for every season (a new season: the full amount again).
+ * Every player can give at most GIFT_LIMIT coins a day (from midnight on: the
+ * full amount again).
  */
 
-// What the player gave so far (in the coins that count now: the season's or the normal ones)
-async function given(username) {
-  const rows = await CoinLog.find({ username: username, reason: "gift sent", ...coins.eraFilter() }).lean();
+// What the player gave today
+async function given(username, now = Date.now()) {
+  const rows = await CoinLog.find({ username: username, reason: "gift sent", at: { $gte: new Date(days.dayStart(now)) } }).lean();
   return rows.reduce((sum, row) => sum + Math.abs(row.amount), 0);
 }
 
@@ -35,7 +36,7 @@ async function give(from, to, amount) {
   // In a season: only between players who are in it (the coins are season coins)
   if (seasons.running() && (seasons.joined(from) === false || seasons.joined(to) === false)) return { error: `${to} hasn't started the season yet.` };
   const before = await status(from);
-  if (amount > before.left) return { error: before.left > 0 ? `You can give 🪙 ${before.left.toLocaleString("en-US")} more (of ${before.limit.toLocaleString("en-US")} in total).` : `You gave the most you can (🪙 ${before.limit.toLocaleString("en-US")} in total).` };
+  if (amount > before.left) return { error: before.left > 0 ? `You can give 🪙 ${before.left.toLocaleString("en-US")} more today (of ${before.limit.toLocaleString("en-US")} a day).` : `You gave the most you can today (🪙 ${before.limit.toLocaleString("en-US")} a day) - more tomorrow.` };
   if (!(await coins.spend(from, amount, { reason: "gift sent", note: "to " + to }))) return { error: "You don't have that many coins." };
   await coins.add(to, amount, { reason: "gift received", note: "from " + from });
   notify(to, "giftReceived", { from: from, amount: amount });

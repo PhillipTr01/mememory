@@ -826,10 +826,12 @@
     try {
       var status = await (await fetch("gift", { cache: "no-store" })).json();
       left = status.left;
+      // (the amounts never break in the middle - the own coins on a line of their own)
       info.replaceChildren(
         document.createTextNode("You can give "),
         el("b", "", "🪙 " + format(left)),
-        document.createTextNode(" more (of " + format(status.limit) + " in total) · you have 🪙 " + format(coins)),
+        document.createTextNode(" more today (of " + format(status.limit) + " a day)"),
+        el("span", "cs-gift-have", "You have 🪙 " + format(coins)),
       );
       if (left < 1) info.classList.add("used");
     } catch (e) {

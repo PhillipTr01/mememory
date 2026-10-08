@@ -272,7 +272,7 @@ test("access: maintenance - closes like a season (games finish, countdown), then
   maintenance.reset();
 });
 
-test("access: gifts - coins for another player, at most GIFT_LIMIT in total", async () => {
+test("access: gifts - coins for another player, at most GIFT_LIMIT a day", async () => {
   tokens.gia = h.addUser("gia");
   tokens.hal = h.addUser("hal");
   h.setCoins("gia", 20000);
@@ -299,7 +299,7 @@ test("access: gifts - coins for another player, at most GIFT_LIMIT in total", as
   assert.strictEqual(h.coinsOf("gia"), 14000);
   // The rest - then the limit is reached
   assert.strictEqual((await give("hal", 4000)).status, 200);
-  assert.match((await give("hal", 1)).body.error, /the most you can/);
+  assert.match((await give("hal", 1)).body.error, /the most you can today/);
   assert.strictEqual(h.coinsOf("hal"), 10100);
   // Not more than the own coins
   h.setCoins("hal", 50);

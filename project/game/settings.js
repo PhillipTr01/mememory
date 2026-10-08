@@ -18,7 +18,7 @@ const KEY = "admin:settings";
 // (a list of ids, at least one stays on), everything else a whole number.
 const FIELDS = [
   { group: "general", section: "Coins", key: "START_COINS", label: "Start coins", hint: "What a newly approved player gets (in a season: the season's budget plus every daily bonus missed since it started).", min: 0, max: 100000000 },
-  { group: "general", section: "Gifts", key: "GIFT_LIMIT", label: "Gifts per player", hint: "Coins a player can give others in total (a click on a name in the casino chat) - counted apart for the normal coins and every season.", min: 0, max: 100000000 },
+  { group: "general", section: "Gifts", key: "GIFT_LIMIT", label: "Gifts per player and day", hint: "Coins a player can give others a day (a click on a name in the casino chat) - from midnight on the full amount again.", min: 0, max: 100000000 },
   { group: "general", section: "Coins", key: "DAILY_BONUS", label: "Daily bonus", hint: "Free coins once a day for every player (outside of seasons).", min: 0, max: 10000000 },
   { group: "jackpot", section: "Jackpot", key: "GAME_JACKPOT", type: "toggle", label: "Jackpot is on", hint: "Off: no tab, nobody can open it." },
   { group: "jackpot", section: "Bets", key: "JACKPOT_MAX_COINS", label: "Max coins per round", hint: "All bets of one player in one round together.", min: 1, max: 100000000 },
