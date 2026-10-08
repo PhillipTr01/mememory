@@ -151,8 +151,7 @@ function createIcon(classes, title) {
 /*
  * No toasts: a short message sits as a small bubble on the control it is
  * about (the button just clicked, the field just used) and goes by itself.
- * showHint(message, type, anchor, ms) - without an anchor: what was clicked last.
- * ms: a notification that stays longer (and through scrolling - its anchor is in the fixed bar).
+ * showHint(message, type, anchor) - without an anchor: what was clicked last.
  */
 var lastControl = null;
 document.addEventListener(
@@ -171,19 +170,15 @@ document.addEventListener(
   true,
 );
 
-function showHint(message, type, anchor, ms) {
+function showHint(message, type, anchor) {
   anchor = anchor || lastControl;
   // The control is gone (or hidden): the main panel of the page
   if (!anchor || !anchor.isConnected || anchor.getClientRects().length == 0) anchor = document.querySelector("[data-hint-home]") || document.querySelector("main") || document.body;
-  // One hint at a time - notifications (ms) may stand side by side
-  document.querySelectorAll(ms ? ".mm-hint.note" : ".mm-hint:not(.note)").forEach((old) => {
-    if (!ms || old.anchor == anchor) old.remove();
-  });
+  document.querySelectorAll(".mm-hint").forEach((old) => old.remove());
   var hint = document.createElement("div");
   hint.className = "mm-hint" + (type ? " " + type : "");
   hint.setAttribute("role", type == "error" ? "alert" : "status");
   hint.innerText = message;
-  hint.anchor = anchor;
   document.body.appendChild(hint);
   var box = anchor.getBoundingClientRect();
   var width = hint.offsetWidth;
@@ -204,12 +199,14 @@ function showHint(message, type, anchor, ms) {
     hint.classList.add(above ? "above" : "below");
   }
   var remove = () => {
-    hint.remove();
     window.removeEventListener("scroll", remove, true);
+    hint.classList.add("out");
+    setTimeout(() => hint.remove(), 150);
   };
-  if (!ms) window.addEventListener("scroll", remove, true);
-  else hint.classList.add("note");
-  setTimeout(remove, ms || (type == "error" ? 3500 : 1800));
+  window.addEventListener("scroll", remove, true);
+  // Short: read it, then it fades (a click anywhere takes it away right away)
+  setTimeout(remove, type == "error" ? 1800 : 1200);
+  setTimeout(() => document.addEventListener("pointerdown", remove, { once: true, capture: true }), 0);
 }
 
 // Small message at the bottom of the screen instead of alert() (the MemeMory pages - the casino uses showHint)
@@ -229,6 +226,71 @@ function showToast(message, type) {
   toast.innerText = message;
   container.appendChild(toast);
   setTimeout(() => toast.remove(), 3500);
+}
+
+/*
+ * A notification of the casino (top right, like "Your case battle starts!"):
+ * casinoNotice({icon, title, text, action: {label, run}, ms, key})
+ * - several stack under each other; the same key replaces the one before.
+ */
+function noticeStack() {
+  var stack = document.getElementById("mm-notices");
+  if (stack == null) {
+    stack = document.createElement("div");
+    stack.id = "mm-notices";
+    stack.className = "bt-notice-stack";
+    document.body.appendChild(stack);
+  }
+  return stack;
+}
+
+function casinoNotice(options) {
+  var stack = noticeStack();
+  if (options.key) stack.querySelectorAll(".bt-notice").forEach((old) => old.dataset.key == options.key && old.remove());
+  var notice = document.createElement("div");
+  notice.className = "bt-notice";
+  notice.setAttribute("role", "status");
+  if (options.key) notice.dataset.key = options.key;
+  var icon = document.createElement("span");
+  icon.className = "bt-notice-icon";
+  icon.innerText = options.icon || "🔔";
+  var text = document.createElement("div");
+  text.className = "bt-notice-text";
+  var title = document.createElement("b");
+  title.innerText = options.title;
+  text.appendChild(title);
+  if (options.text) {
+    var line = document.createElement("span");
+    line.innerText = options.text;
+    text.appendChild(line);
+  }
+  var hide = () => {
+    if (notice.classList.contains("out")) return;
+    notice.classList.add("out");
+    setTimeout(() => notice.remove(), 250);
+  };
+  notice.append(icon, text);
+  if (options.action) {
+    var go = document.createElement("button");
+    go.type = "button";
+    go.className = "mm-btn mm-btn-primary mm-btn-sm";
+    go.innerText = options.action.label;
+    go.addEventListener("click", () => {
+      hide();
+      options.action.run();
+    });
+    notice.appendChild(go);
+  }
+  var close = document.createElement("button");
+  close.type = "button";
+  close.className = "bt-notice-close";
+  close.innerText = "×";
+  close.setAttribute("aria-label", "Close");
+  close.addEventListener("click", hide);
+  notice.appendChild(close);
+  stack.appendChild(notice);
+  setTimeout(hide, options.ms || 6000);
+  return { hide: hide };
 }
 
 function copyText(text, button) {

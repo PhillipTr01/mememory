@@ -2806,3 +2806,8 @@ a.ad-case-row:hover {
   color: #111;
   opacity: 1;
 }
+
+/* Notifications in the admin panel: the whole line */
+.ad-body .bt-notice-text span {
+  white-space: normal;
+}

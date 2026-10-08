@@ -2118,12 +2118,20 @@ body.jackpot-theme {
 }
 
 /* ---------- A case battle of mine starts (every casino page) ---------- */
-.bt-notice {
+/* (they stack under each other) */
+.bt-notice-stack {
   position: fixed;
   top: 84px;
   right: 16px;
   z-index: 1080;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
   width: min(380px, calc(100vw - 32px));
+}
+
+.bt-notice {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 0.7rem;

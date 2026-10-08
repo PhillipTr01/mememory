@@ -228,8 +228,6 @@
 
   /* ---------- A case battle of mine starts (on every casino page) ---------- */
 
-  var notice = null;
-
   function watchBattle(id) {
     // On the battles page: open it right there
     if (typeof openBattle == "function") openBattle(id);
@@ -239,33 +237,14 @@
   socket.on("battleStarted", (data) => {
     // Already watching it
     if (typeof viewId != "undefined" && viewId == data.id && !document.hidden) return;
-    if (notice) notice.remove();
-    notice = el("div", "bt-notice");
-    notice.setAttribute("role", "status");
-    var text = el("div", "bt-notice-text");
-    text.append(
-      el("b", "", data.mode == "random" ? "Your random battle starts!" : data.crazy ? "Your crazy battle starts!" : "Your case battle starts!"),
-      el("span", "", data.players.join(" vs ") + " · " + data.cases + (data.cases == 1 ? " case" : " cases") + " · 🪙 " + format(data.price)),
-    );
-    var watch = el("button", "mm-btn mm-btn-primary mm-btn-sm", "Watch");
-    watch.type = "button";
-    var close = el("button", "bt-notice-close", "×");
-    close.type = "button";
-    close.setAttribute("aria-label", "Close");
-    var shown = notice;
-    var hide = () => {
-      shown.classList.add("out");
-      setTimeout(() => shown.remove(), 250);
-      if (notice == shown) notice = null;
-    };
-    watch.addEventListener("click", () => {
-      hide();
-      watchBattle(data.id);
+    casinoNotice({
+      icon: data.mode == "random" ? "❓" : data.crazy ? "🤡" : "⚔️",
+      title: data.mode == "random" ? "Your random battle starts!" : data.crazy ? "Your crazy battle starts!" : "Your case battle starts!",
+      text: data.players.join(" vs ") + " · " + data.cases + (data.cases == 1 ? " case" : " cases") + " · 🪙 " + format(data.price),
+      action: { label: "Watch", run: () => watchBattle(data.id) },
+      ms: 12000,
+      key: "battle",
     });
-    close.addEventListener("click", hide);
-    notice.append(el("span", "bt-notice-icon", data.mode == "random" ? "❓" : data.crazy ? "🤡" : "⚔️"), text, watch, close);
-    document.body.appendChild(notice);
-    setTimeout(hide, 12000);
 
     // Another tab in front: the browser shows it, the title blinks
     if (document.hidden) {
@@ -405,7 +384,7 @@
           box.remove();
           chanceStatus = null;
           renderChancePill();
-          showHint("💔 Back in the game with 🪙 " + format(data.coins) + " - good luck!", "success", document.getElementById("navCoins"), 5000);
+          casinoNotice({ icon: "💔", title: "Back in the game!", text: "🪙 " + format(data.coins) + " to play with - good luck!", key: "chance" });
         } catch (error) {
           box.remove();
           showHint(error.message, "error", document.getElementById("navCoins"));
@@ -575,7 +554,7 @@
         var result = await res.json();
         if (!res.ok) throw new Error(result.error || "Could not start the season.");
         box.remove();
-        showHint((season.icon || "🏆") + " You're in " + season.name + " with 🪙 " + format(result.coins) + " - good luck!", "success", document.getElementById("navCoins"), 5000);
+        casinoNotice({ icon: season.icon || "🏆", title: "You're in " + season.name + "!", text: "🪙 " + format(result.coins) + " to start with - good luck!", key: "season" });
       } catch (error) {
         showHint(error.message, "error", go);
         go.disabled = false;
@@ -604,7 +583,8 @@
       var text = el("div", "bt-notice-text");
       text.append(el("b", "cs-closing-title"), el("span", "cs-closing-text"));
       closing.append(el("span", "bt-notice-icon cs-closing-icon"), text, el("span", "cs-closing-count"));
-      document.body.appendChild(closing);
+      // (on top of the other notifications)
+      noticeStack().prepend(closing);
     }
     closing.querySelector(".cs-closing-icon").innerText = info.icon || "🏆";
     // In the color of the season that starts (or ends)

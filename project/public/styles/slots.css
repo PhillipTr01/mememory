@@ -136,7 +136,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-around;
-  width: 32px;
+  width: 26px;
 }
 
 .sl-number-row {
@@ -149,13 +149,13 @@
 .sl-number {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   border: 1px solid var(--mm-border);
   border-radius: 50%;
   background: var(--mm-surface);
   color: var(--mm-muted);
-  font-size: 0.85rem;
+  font-size: 0.7rem;
   font-weight: 700;
   cursor: default;
   transition: all 0.15s ease;
@@ -726,13 +726,13 @@
   }
 
   .sl-line-numbers {
-    width: 22px;
+    width: 18px;
   }
 
   .sl-number {
-    width: 21px;
-    height: 21px;
-    font-size: 0.7rem;
+    width: 17px;
+    height: 17px;
+    font-size: 0.6rem;
   }
 
   .sl-controls {

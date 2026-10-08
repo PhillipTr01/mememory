@@ -245,7 +245,7 @@ async function loadOverview() {
       var fresh = data.open.filter((w) => !knownOpen.includes(w.id));
       if (fresh.length) {
         var sum = fresh.reduce((total, w) => total + w.amount, 0);
-        showHint("💸 New payout" + (fresh.length == 1 ? ": " + fresh[0].username + " · 🪙 " + formatCoins(sum) : "s: " + fresh.length + " · 🪙 " + formatCoins(sum)), "success", document.querySelector('.ad-nav-item[data-tab="payouts"]'), 6000);
+        casinoNotice({ icon: "💸", title: fresh.length == 1 ? "New payout" : fresh.length + " new payouts", text: (fresh.length == 1 ? fresh[0].username + " · " : "") + "🪙 " + formatCoins(sum), action: { label: "Open", run: () => (location.hash = "#payouts") }, ms: 10000, key: "payout" });
         if (!document.getElementById("tab-payouts").hidden) loadPayouts();
       }
     }
@@ -254,7 +254,7 @@ async function loadOverview() {
     badge.hidden = ids.length == 0;
     // Players who want into the casino
     if (knownWaiting != null && data.waiting > knownWaiting) {
-      showHint("🔑 " + (data.waiting - knownWaiting == 1 ? "A player wants" : data.waiting - knownWaiting + " players want") + " into the casino", "success", document.querySelector('.ad-nav-item[data-tab="players"]'), 6000);
+      casinoNotice({ icon: "🔑", title: data.waiting - knownWaiting == 1 ? "A player wants in" : data.waiting - knownWaiting + " players want in", text: "Approve or decline them in Players", action: { label: "Open", run: () => (location.hash = "#players") }, ms: 10000, key: "access" });
       if (!document.getElementById("tab-players").hidden) loadPlayers();
     }
     knownWaiting = data.waiting;

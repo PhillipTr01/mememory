@@ -120,7 +120,7 @@ socket.on("cases", (data) => {
 socket.on("battleError", (message) => showHint(message, "error"));
 socket.on("battleLeft", (id) => {
   var battle = battles.find((b) => b.id == id);
-  showHint("🚪 You left the battle" + (battle ? " - 🪙 " + formatCoins(battle.price) + " are back" : " - your coins are back"), "success", document.getElementById("navCoins"), 4500);
+  casinoNotice({ icon: "🚪", title: "You left the battle", text: (battle ? "🪙 " + formatCoins(battle.price) : "Your coins") + " are back in your balance", key: "battle" });
 });
 
 // The new battle of this page: open it
