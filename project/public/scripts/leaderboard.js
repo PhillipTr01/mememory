@@ -118,24 +118,29 @@ function listRow(row) {
   return item;
 }
 
+// Only when it is different (an equal text is not written again)
+function setText(element, text) {
+  if (element.textContent != text) element.textContent = text;
+}
+
 function render() {
   var rows = board.rows;
   document.getElementById("lbEmpty").hidden = rows.length > 0;
   // The podium: 2nd, 1st, 3rd
   var top = rows.slice(0, 3);
   var order = [top[1], top[0], top[2]].filter(Boolean);
-  document.getElementById("lbPodium").replaceChildren(...order.map(podiumSpot));
-  document.getElementById("lbList").replaceChildren(...rows.slice(3).map(listRow));
+  morphChildren(document.getElementById("lbPodium"), order.map(podiumSpot));
+  morphChildren(document.getElementById("lbList"), rows.slice(3).map(listRow));
 
   // The own place, also when it is not in the list
   var me = document.getElementById("lbMe");
   me.hidden = board.me == null;
   if (board.me) {
-    me.replaceChildren(el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", "#" + board.me.rank + " of " + board.players), change(board.me), el("span", "lb-coins", "🪙 " + formatCoins(board.me.coins)));
+    morphChildren(me, [el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", "#" + board.me.rank + " of " + board.players), change(board.me), el("span", "lb-coins", "🪙 " + formatCoins(board.me.coins))]);
   }
   var when = new Date(board.updatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
   var season = board.season;
-  document.getElementById("lbStatus").innerText = board.live ? "Live - always up to date" : "As of " + when + " - updated " + (EVERY_TEXT[season && season.every] || "regularly");
+  setText(document.getElementById("lbStatus"), board.live ? "Live - always up to date" : "As of " + when + " - updated " + (EVERY_TEXT[season && season.every] || "regularly"));
 
   // The season: its name, how long it runs, the prizes
   var box = document.getElementById("lbSeason");
@@ -152,7 +157,7 @@ function render() {
     info.title = "About the season";
     info.setAttribute("aria-label", "About the season");
     parts.push(info);
-    box.replaceChildren(...parts);
+    morphChildren(box, parts);
     box.onclick = () => window.showSeasonInfo && window.showSeasonInfo();
     box.title = "Ends " + new Date(season.end).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
   }
@@ -160,15 +165,18 @@ function render() {
   var last = document.getElementById("lbLastSeason");
   last.hidden = !board.lastSeason || !!season;
   if (board.lastSeason) {
-    last.replaceChildren(el("span", "lb-last-icon", board.lastSeason.icon), el("span", "", board.lastSeason.name + " is over - see the winners"), el("span", "lb-last-arrow", "→"));
+    morphChildren(last, [el("span", "lb-last-icon", board.lastSeason.icon), el("span", "", board.lastSeason.name + " is over - see the winners"), el("span", "lb-last-arrow", "→")]);
     last.onclick = () => showWinners(board.lastSeason.id);
   }
 
   // The box on the right: when the next update comes
   document.getElementById("lbNextTitle").lastChild.textContent = board.live ? "Updates" : "Next update";
-  document.getElementById("lbNextNote").innerText = board.live
-    ? "The places are counted all the time - the arrows show the change since midnight."
-    : "The places of the season are counted " + (EVERY_TEXT[season && season.every] || "regularly") + " - the arrows show the change since the update before.";
+  setText(
+    document.getElementById("lbNextNote"),
+    board.live
+      ? "The places are counted all the time - the arrows show the change since midnight."
+      : "The places of the season are counted " + (EVERY_TEXT[season && season.every] || "regularly") + " - the arrows show the change since the update before.",
+  );
 }
 
 
@@ -184,12 +192,13 @@ function spanText(ms) {
 function tick() {
   var next = document.getElementById("lbNext");
   if (board && board.live) {
-    next.replaceChildren(el("span", "lb-live-dot"), document.createTextNode("Live"));
+    morphChildren(next, [el("span", "lb-live-dot"), document.createTextNode("Live")]);
     return;
   }
   if (nextAt == null) return;
   var left = Math.max(0, nextAt - Date.now());
-  next.innerText = left == 0 ? "Any moment now" : "in " + spanText(left + 59000);
+  var label = left == 0 ? "Any moment now" : "in " + spanText(left + 59000);
+  if (next.textContent != label) next.textContent = label;
 }
 
 // Live: every few seconds; otherwise at the next update

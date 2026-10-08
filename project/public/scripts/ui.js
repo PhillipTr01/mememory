@@ -293,6 +293,49 @@ function casinoNotice(options) {
   return { hide: hide };
 }
 
+/*
+ * Updates `parent` to look like `nodes` - but only where something differs:
+ * equal parts stay as they are (no flicker, avatars are not drawn again),
+ * a changed number is just a changed text. (Listeners of the new nodes are not
+ * moved over to kept ones - for lists that are only shown.)
+ */
+function morphChildren(parent, nodes) {
+  nodes = nodes.filter((node) => node != null);
+  nodes.forEach((node, i) => {
+    var old = parent.childNodes[i];
+    if (old == null) parent.appendChild(node);
+    else morphNode(old, node);
+  });
+  while (parent.childNodes.length > nodes.length) parent.lastChild.remove();
+}
+
+function morphNode(old, fresh) {
+  if (old.nodeType != fresh.nodeType || old.nodeName != fresh.nodeName) return old.replaceWith(fresh);
+  if (old.nodeType != 1) {
+    if (old.nodeValue != fresh.nodeValue) old.nodeValue = fresh.nodeValue;
+    return;
+  }
+  // The same player's avatar: kept as it is (its picture may still be loading in the new one)
+  if (old.classList.contains("mm-avatar")) {
+    if (old.dataset.name != fresh.dataset.name || old.className != fresh.className) old.replaceWith(fresh);
+    return;
+  }
+  // (the tooltips move a title to data-tip - not a change)
+  var tip = old.dataset.tip;
+  for (var attr of [...old.attributes]) {
+    if (attr.name == "data-tip" || attr.name == "aria-label") continue;
+    if (!fresh.hasAttribute(attr.name)) old.removeAttribute(attr.name);
+  }
+  for (var attr2 of [...fresh.attributes]) {
+    if (attr2.name == "title" && tip != null) {
+      if (tip != attr2.value) old.dataset.tip = attr2.value;
+      continue;
+    }
+    if (old.getAttribute(attr2.name) != attr2.value) old.setAttribute(attr2.name, attr2.value);
+  }
+  morphChildren(old, [...fresh.childNodes]);
+}
+
 function copyText(text, button) {
   var done = () => {
     showToast("Copied to clipboard!");
