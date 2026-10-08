@@ -303,7 +303,14 @@ async function loadAccess() {
   try {
     var data = await api("access?q=" + encodeURIComponent(document.getElementById("adAccessSearch").value.trim()));
     var info = document.getElementById("adAccessInfo");
-    info.replaceChildren(
+    // A running season: the player gets the coins only with "Start"
+    if (data.join)
+      info.replaceChildren(
+        el("span", "", "Approved now, a player hits Start in the season and gets "),
+        el("b", "", "🪙 " + formatCoins(data.join.coins)),
+        el("span", "mm-muted", data.join.missed > 0 ? " (the budget + " + data.join.missed + " missed daily bonus" + (data.join.missed == 1 ? "" : "es") + ")" : " (the budget)"),
+      );
+    else info.replaceChildren(
       el("span", "", "Approving a player now gives "),
       el("b", "", "🪙 " + formatCoins(data.startCoins)),
       el(

@@ -1656,3 +1656,148 @@ a.ad-link:focus-visible {
 .ad-final-top td:first-child {
   font-size: 1.1rem;
 }
+
+/* Phones: the players and the access list - every row a small card instead of a table that is wider than the screen */
+@media (max-width: 600px) {
+  .ad-table:has(#adBoard),
+  .ad-table:has(#adAccessList),
+  .ad-table:has(#adBoard) tbody,
+  .ad-table:has(#adAccessList) tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .ad-table:has(#adBoard) thead,
+  .ad-table:has(#adAccessList) thead {
+    display: none;
+  }
+
+  #adBoard tr,
+  #adAccessList tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.75rem;
+    padding: 0.75rem 0.25rem;
+    border-bottom: 1px solid var(--mm-border);
+  }
+
+  #adBoard tr:last-child,
+  #adAccessList tr:last-child {
+    border-bottom: 0;
+  }
+
+  #adBoard td,
+  #adAccessList td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  /* Players: # name ... season bank / the buttons under them on the right */
+  #adBoard td:nth-child(2) {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  #adBoard td.ad-actions {
+    flex-basis: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.4rem;
+  }
+
+  /* Access: the name, its status under it, then payout and the button on one line */
+  #adAccessList td:first-child {
+    flex-basis: 100%;
+  }
+
+  #adAccessList td:nth-child(2) {
+    flex: 1 1 100%;
+  }
+
+  #adAccessList td:last-child {
+    margin-left: auto;
+  }
+
+  /* Who wants in: the whole card marked, not every cell on its own */
+  #adAccessList tr.ad-waiting {
+    margin: 0 -0.5rem;
+    padding: 0.75rem;
+    border-radius: 10px;
+    background: rgba(var(--mm-accent-rgb), 0.06);
+  }
+
+  #adAccessList tr.ad-waiting td {
+    background: none;
+  }
+}
+
+/* Phones: the history - name and coins on top, what it was and when under them */
+@media (max-width: 600px) {
+  .ad-table:has(#adHistory),
+  .ad-table:has(#adHistory) tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .ad-table:has(#adHistory) thead {
+    display: none;
+  }
+
+  #adHistory tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.6rem;
+    padding: 0.65rem 0.25rem;
+    border-bottom: 1px solid var(--mm-border);
+  }
+
+  #adHistory tr:last-child {
+    border-bottom: 0;
+  }
+
+  #adHistory td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  #adHistory td:nth-child(2) {
+    order: 1;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  #adHistory td:nth-child(4) {
+    order: 2;
+  }
+
+  #adHistory td:nth-child(3) {
+    order: 3;
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 0.82rem;
+  }
+
+  #adHistory td:nth-child(1) {
+    order: 4;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  /* The filter: the player field over the whole width */
+  #adHistoryFilter {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  #adHistoryFilter #adHistUser {
+    flex: 1 1 100%;
+  }
+
+  #adHistoryFilter #adHistReason {
+    flex: 1 1 0;
+  }
+}
