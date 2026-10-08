@@ -39,6 +39,7 @@
                 <!--- The pages of the settings: general and one per game --->
                 <div class="ad-subnav" id="adSettingsNav">
                     <a href="#settings/general" class="ad-nav-item ad-sub" data-group="general"><span class="ad-nav-label">General</span></a>
+                    <a href="#settings/maintenance" class="ad-nav-item ad-sub" data-group="maintenance"><span class="ad-nav-label">Maintenance</span><span id="adMaintDot" class="ad-state" hidden></span></a>
                     <a href="#settings/jackpot" class="ad-nav-item ad-sub" data-group="jackpot"><span class="ad-nav-label">Jackpot</span><span class="ad-state" data-game="GAME_JACKPOT"></span></a>
                     <a href="#settings/battles" class="ad-nav-item ad-sub" data-group="battles"><span class="ad-nav-label">Case battles</span><span class="ad-state" data-game="GAME_BATTLES"></span></a>
                     <a href="#settings/poker" class="ad-nav-item ad-sub" data-group="poker"><span class="ad-nav-label">Poker</span><span class="ad-state" data-game="GAME_POKER"></span></a>
@@ -56,7 +57,7 @@
                     <p id="adPageSub" class="ad-page-sub"></p>
                 </div>
                 <span class="ad-head-pills">
-                    <a id="adMaintBadge" href="#settings/general" class="ad-pill ad-maint-pill" hidden>🔧 Maintenance on</a>
+                    <a id="adMaintBadge" href="#settings/maintenance" class="ad-pill ad-maint-pill" hidden>🔧 Maintenance on</a>
                     <span id="adOpenBadge" class="ad-pill danger" hidden></span>
                 </span>
             </header>
@@ -127,7 +128,7 @@
                 </div>
                 <div class="ad-card">
                     <div class="ad-card-head">
-                        <h2 class="ad-title">Leaderboard</h2>
+                        <h2 class="ad-title">Players</h2>
                         <input id="adSearch" class="mm-input ad-search" placeholder="Search a player">
                     </div>
                     <table class="ad-table">
@@ -373,6 +374,12 @@
                 <form id="adSettingsForm" autocomplete="off">
                     <div id="adSettings" class="ad-grid"></div>
                 </form>
+                <!--- Save right under the settings (it lights up when something changed) --->
+                <div class="ad-settings-bar" id="adSettingsBar">
+                    <span id="adSettingsDirty" class="ad-settings-dirty" hidden>● Unsaved changes</span>
+                    <button type="button" id="adSettingsDefaults" class="mm-btn mm-btn-sm">All settings back to the defaults</button>
+                    <button type="submit" id="adSettingsSave" form="adSettingsForm" class="mm-btn mm-btn-primary" disabled>Save</button>
+                </div>
 
                 <!--- Maintenance: only the whitelist gets in, the others see when it is most likely over --->
                 <div class="ad-card ad-maint" id="adMaint">
@@ -434,16 +441,15 @@
                     </form>
                 </div>
 
-                <!--- Save at the very end (the buttons belong to the settings form above) --->
-                <div class="ad-settings-bar">
-                    <button type="button" id="adSettingsDefaults" class="mm-btn mm-btn-sm">Back to the defaults</button>
-                    <button type="submit" form="adSettingsForm" class="mm-btn mm-btn-primary">Save</button>
-                </div>
+
             </section>
         </main>
     </div>
 
+    <!--- The player avatars (the admin panel asks its own address for them) --->
+    <script>window.AVATAR_URL = "api/avatars";</script>
     <script src="/static/scripts/ui.js"></script>
+    <script src="/static/scripts/avatar.js"></script>
     <script src="/static/scripts/admin.js"></script>
 </body>
 

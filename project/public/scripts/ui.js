@@ -96,7 +96,8 @@ function loadAvatars() {
   avatarQueue.clear();
   names.forEach((name) => avatarChecked.add(name));
   if (names.length == 0) return;
-  fetch("/requests/user/avatars?names=" + encodeURIComponent(names.join(",")), { credentials: "same-origin" })
+  // (the admin panel asks its own address - it has no player login)
+  fetch((window.AVATAR_URL || "/requests/user/avatars") + "?names=" + encodeURIComponent(names.join(",")), { credentials: "same-origin" })
     .then((response) => (response.ok ? response.json() : null))
     .then((avatars) => {
       if (avatars == null) return;

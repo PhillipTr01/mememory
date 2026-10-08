@@ -28,6 +28,19 @@ function el(tag, className, text) {
   return element;
 }
 
+// A player: the avatar and the name (in a table cell or a row)
+function playerTag(name, tag) {
+  var box = el(tag || "span", "ad-player");
+  box.append(createAvatar(name, "sm"), el("span", "ad-player-name", name));
+  return box;
+}
+
+function playerCell(name) {
+  var cell = el("td", "fw-semibold");
+  cell.appendChild(playerTag(name));
+  return cell;
+}
+
 function time(value) {
   return new Date(value).toLocaleString(undefined, { dateStyle: "short", timeStyle: "medium" });
 }
@@ -64,7 +77,8 @@ var PAGES = {
 
 // The pages of the settings: general and one per game
 var SETTING_GROUPS = {
-  general: ["General settings", "Coins for everybody, maintenance - and the hard reset."],
+  general: ["General settings", "Coins for everybody, gifts - and the hard reset."],
+  maintenance: ["Maintenance", "Close the casino for everybody but a whitelist - with when it is most likely over."],
   jackpot: ["Jackpot", "Turn the jackpot on or off, its bets and timing."],
   battles: ["Case battles", "Turn case battles on or off, how big a battle can be."],
   poker: ["Poker", "Turn poker on or off, the buy-ins."],
@@ -85,7 +99,11 @@ function showTab() {
   document.getElementById("adSettingsNav").classList.toggle("open", tab == "settings");
   document.querySelectorAll(".ad-sub").forEach((link) => link.classList.toggle("active", tab == "settings" && link.dataset.group == settingsGroup));
   document.getElementById("adDanger").hidden = settingsGroup != "general";
-  document.getElementById("adMaint").hidden = settingsGroup != "general";
+  // Maintenance: a page of its own (its own save) - the settings and their save bar on every other page
+  var maintPage = settingsGroup == "maintenance";
+  document.getElementById("adMaint").hidden = !maintPage;
+  document.getElementById("adSettingsForm").hidden = maintPage;
+  document.getElementById("adSettingsBar").hidden = maintPage;
   if (tab == "access") loadAccess();
   if (tab == "players") loadPlayers();
   if (tab == "payouts") loadPayouts();
@@ -133,7 +151,7 @@ document.addEventListener("visibilitychange", () => {
 function payoutRow(w) {
   var row = el("div", "ad-row ad-payout " + w.status);
   var info = el("div", "ad-row-main ad-payout-info");
-  info.append(el("b", "", w.username), el("span", "ad-row-meta", time(w.createdAt) + (w.note ? " · " + w.note : "")));
+  info.append(playerTag(w.username, "b"), el("span", "ad-row-meta", time(w.createdAt) + (w.note ? " · " + w.note : "")));
   var amount = el("span", "ad-row-value", "🪙 " + formatCoins(w.amount));
   row.append(info, amount);
   if (w.status == "open") {
@@ -184,7 +202,8 @@ async function loadOverview() {
       ...(data.leaderboard.length
         ? data.leaderboard.slice(0, 5).map((p, i) => {
             var row = el("div", "ad-row");
-            var name = el("span", "ad-row-main fw-semibold", p.username);
+            var name = playerTag(p.username);
+            name.classList.add("ad-row-main", "fw-semibold");
             var value = el("span", "ad-row-value", "🪙 " + formatCoins(p.coins));
             row.append(el("span", "ad-rank", i + 1), name, value);
             return row;
@@ -270,7 +289,7 @@ function renderLive(games) {
 function requestRow(request) {
   var row = el("div", "ad-row ad-payout open");
   var info = el("div", "ad-row-main ad-payout-info");
-  info.append(el("b", "", request.username), el("span", "ad-row-meta", "asked " + time(request.requestedAt)));
+  info.append(playerTag(request.username, "b"), el("span", "ad-row-meta", "asked " + time(request.requestedAt)));
   var approve = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Approve");
   approve.type = "button";
   approve.addEventListener("click", () => setAccess({ username: request.username, approved: false }, true, approve));
@@ -333,7 +352,7 @@ async function loadAccess() {
       ...data.players.map((p) => {
         var row = el("tr", p.approved ? "" : p.requestedAt ? "ad-waiting" : "");
         var status = p.approved
-          ? el("span", "ad-pill success", "approved" + (p.approvedAt ? " · " + day(p.approvedAt) : ""))
+          ? el("span", "ad-pill success", "approved" + (p.approvedAt && new Date(p.approvedAt).getTime() > 0 ? " · " + day(p.approvedAt) : ""))
           : p.requestedAt
             ? el("span", "ad-pill accent", "wants in · " + time(p.requestedAt))
             : el("span", "ad-pill", "no access");
@@ -356,7 +375,7 @@ async function loadAccess() {
         payoutCell.appendChild(payout);
         var statusCell = el("td");
         statusCell.appendChild(status);
-        row.append(el("td", "fw-semibold", p.username), statusCell, payoutCell, actions);
+        row.append(playerCell(p.username), statusCell, payoutCell, actions);
         return row;
       }),
     );
@@ -428,7 +447,7 @@ async function loadPlayers() {
         });
         var actions = el("td", "ad-actions");
         actions.append(edit, history);
-        row.append(el("td", "mm-muted", i + 1), el("td", "fw-semibold", p.username), el("td", "num", "🪙 " + formatCoins(p.coins)), actions);
+        row.append(el("td", "mm-muted", i + 1), playerCell(p.username), el("td", "num", "🪙 " + formatCoins(p.coins)), actions);
         return row;
       }),
     );
@@ -516,7 +535,7 @@ async function loadHistory(event) {
         var what = el("td", "");
         what.append(el("span", "ad-reason", row.reason));
         if (row.note) what.append(el("span", "mm-muted small", " " + row.note));
-        tr.append(el("td", "mm-muted small", time(row.at)), el("td", "fw-semibold", row.username), what, el("td", "num " + (row.amount < 0 ? "minus" : "plus"), (row.amount > 0 ? "+" : "") + formatCoins(row.amount)));
+        tr.append(el("td", "mm-muted small", time(row.at)), playerCell(row.username), what, el("td", "num " + (row.amount < 0 ? "minus" : "plus"), (row.amount > 0 ? "+" : "") + formatCoins(row.amount)));
         return tr;
       }),
     );
@@ -550,6 +569,9 @@ function renderMaintenance(fill) {
   var active = maint.on || maint.closing != null;
   var badge = document.getElementById("adMaintBadge");
   badge.hidden = !active;
+  var dot = document.getElementById("adMaintDot");
+  dot.hidden = !active;
+  dot.title = maint.closing ? "Starting" : "On";
   badge.innerText = maint.closing ? "🔧 Maintenance starting" : "🔧 Maintenance on";
   badge.title = maint.until ? "Most likely over " + dateText(maint.until) : "No time given";
   var box = document.getElementById("adMaintOn");
@@ -579,7 +601,7 @@ function renderMaintenance(fill) {
             maintForm.whitelist = maintForm.whitelist.filter((other) => other != name);
             renderMaintenance(false);
           });
-          row.append(el("span", "ad-pick-avatar", name.charAt(0).toUpperCase()), el("span", "ad-maint-name", name), remove);
+          row.append(createAvatar(name, "sm"), el("span", "ad-maint-name", name), remove);
           return row;
         })
       : [el("div", "ad-maint-empty", "Nobody - only you (the admin panel) during the maintenance.")]),
@@ -682,7 +704,7 @@ function showPlayerPick() {
   var item = (name, index) => {
     var li = el("li", "ad-pick-item" + (index == pickActive ? " active" : "") + (name.toLowerCase() == current ? " picked" : ""));
     li.setAttribute("role", "option");
-    li.append(el("span", "ad-pick-avatar", name.charAt(0).toUpperCase()));
+    li.append(createAvatar(name, "sm"));
     var label = el("span", "ad-pick-name");
     var at = q ? name.toLowerCase().indexOf(q) : -1;
     // The typed part in bold
@@ -959,7 +981,7 @@ async function loadSeasonBoard(season) {
         var tr = el("tr", row.rank <= 3 ? "ad-final-top" : "");
         var cells = {
           "#": el("td", "mm-muted", MEDALS[row.rank - 1] || row.rank),
-          Player: el("td", "fw-semibold", row.username),
+          Player: playerCell(row.username),
           "🪙 Coins": el("td", "num", formatCoins(row.coins)),
           Prize: el("td", row.prize ? "" : "mm-muted", row.prize || "–"),
           Started: el("td", "small ad-when", when(row.joinedAt)),
@@ -1492,7 +1514,9 @@ async function loadChat() {
         ? data.messages.map((m) => {
             var row = el("div", "ad-chat-msg" + (banned.has(m.name) ? " banned" : ""));
             var body = el("div", "");
-            body.append(el("span", "ad-chat-name", m.name), el("span", "ad-chat-text", m.text));
+            var who = playerTag(m.name);
+            who.classList.add("ad-chat-name");
+            body.append(who, el("span", "ad-chat-text", m.text));
             var actions = el("div", "ad-chat-actions");
             var del = el("button", "ad-icon-btn", "🗑️");
             del.type = "button";
@@ -1522,7 +1546,7 @@ async function loadChat() {
             var row = el("div", "ad-row");
             var info = el("div", "");
             info.className = "ad-row-main";
-            info.append(el("b", "", b.username), el("span", "ad-row-meta", b.until ? "until " + time(b.until) : "for good"));
+            info.append(playerTag(b.username, "b"), el("span", "ad-row-meta", b.until ? "until " + time(b.until) : "for good"));
             var unban = el("button", "mm-btn mm-btn-sm", "Unban");
             unban.type = "button";
             unban.addEventListener("click", () => chatAction("chat/unban", { username: b.username }, b.username + " can write again"));
@@ -1532,7 +1556,7 @@ async function loadChat() {
         : [el("p", "ad-empty", "Nobody is banned.")]),
     );
     document.getElementById("adOnlineCount").innerText = data.online.length;
-    document.getElementById("adOnlineList").replaceChildren(...(data.online.length ? data.online.map((name) => el("span", "", name)) : [el("p", "ad-empty", "Nobody is in the casino.")]));
+    document.getElementById("adOnlineList").replaceChildren(...(data.online.length ? data.online.map((name) => playerTag(name)) : [el("p", "ad-empty", "Nobody is in the casino.")]));
   } catch (error) {
     fail(error);
   }
@@ -1612,8 +1636,9 @@ function renderSettings() {
       return card;
     }),
   );
-  // Nothing to save on a page without numbers
-  document.querySelector(".ad-settings-bar").hidden = !settingsList.some((field) => field.group == settingsGroup && field.type == "number");
+  // Nothing to save on a page without numbers (and maintenance has its own save)
+  document.getElementById("adSettingsBar").hidden = settingsGroup == "maintenance" || !settingsList.some((field) => field.group == settingsGroup && field.type == "number");
+  settingsDirty();
 }
 
 // The cases of the case battles: each one on / off, saved right away (at least one stays on)
@@ -1722,6 +1747,17 @@ function toggleCard(field) {
   return card;
 }
 
+// Something typed that isn't saved yet: the save bar says so (and only then Save can be clicked)
+function settingsDirty() {
+  var dirty = [...document.querySelectorAll("#adSettings input[data-key]")].some((input) => {
+    var field = settingsList.find((f) => f.key == input.dataset.key);
+    return field && String(input.value) != String(field.value);
+  });
+  document.getElementById("adSettingsDirty").hidden = !dirty;
+  document.getElementById("adSettingsSave").disabled = !dirty;
+  document.getElementById("adSettingsBar").classList.toggle("dirty", dirty);
+}
+
 async function saveSettings(event) {
   event.preventDefault();
   var values = {};
@@ -1819,6 +1855,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("adBanUser").value = "";
   });
   document.getElementById("adSettingsForm").addEventListener("submit", saveSettings);
+  document.getElementById("adSettingsForm").addEventListener("input", settingsDirty);
   document.getElementById("adSettingsDefaults").addEventListener("click", settingsDefaults);
   setupMaintenance();
   loadMaintenance();

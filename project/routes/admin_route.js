@@ -14,6 +14,7 @@ const { hardReset } = require("../game/hard_reset");
 const seasons = require("../game/seasons");
 const cases = require("../game/cases");
 const maintenance = require("../game/maintenance");
+const userController = require("../controllers/user_controller");
 const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
 
@@ -372,6 +373,13 @@ module.exports = function () {
       if (result.error) return res.status(400).json(result);
       res.json(result);
     }),
+  );
+
+  // The avatars of players (for the lists of the admin panel): ?names=alice,bob
+  router.get(
+    "/api/avatars",
+    admin,
+    asyncHandler(async (req, res) => res.json(await userController.getAvatars(req.query.names))),
   );
 
   /* ---------- Maintenance ---------- */

@@ -943,9 +943,39 @@ a.ad-link:focus-visible {
 
 .ad-settings-bar {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: var(--ad-gap);
+  margin: var(--ad-gap) 0;
+}
+
+/* Changes not saved yet: the bar stays in sight at the bottom, Save lights up */
+.ad-settings-bar.dirty {
+  position: sticky;
+  bottom: 0.75rem;
+  z-index: 5;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.5);
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+.ad-settings-dirty {
+  margin-right: auto;
+  color: var(--mm-accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.ad-settings-dirty[hidden] {
+  display: none;
+}
+
+#adSettingsForm[hidden],
+.ad-settings-bar[hidden] {
+  display: none;
 }
 
 .ad-danger {
@@ -2613,4 +2643,29 @@ a.ad-case-row:hover {
 
 .ad-maint-note textarea {
   font-family: inherit;
+}
+
+/* A player: the avatar and the name */
+.ad-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.ad-player .mm-avatar {
+  flex: 0 0 auto;
+}
+
+.ad-player-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ad-pick-item .mm-avatar,
+.ad-maint-row .mm-avatar {
+  flex: 0 0 auto;
 }
