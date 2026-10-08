@@ -213,8 +213,9 @@ test("access: payouts only for players the admin ticked", async () => {
   assert.strictEqual((await adminApi("payout", { username: "nobody", allowed: true })).status, 400);
 });
 
-test("access: maintenance - only the whitelist gets in, the others see when it is most likely over", async () => {
+test("access: maintenance - closes like a season (games finish, countdown), then only the whitelist gets in", async () => {
   const maintenance = require("../game/maintenance");
+  const casinoLock = require("../game/casino_lock");
   tokens.wes = h.addUser("wes");
   tokens.xia = h.addUser("xia");
   const until = Date.now() + 2 * 60 * 60 * 1000;
@@ -222,10 +223,18 @@ test("access: maintenance - only the whitelist gets in, the others see when it i
   const open = await connect("/jackpot", "xia");
   assert.strictEqual(open.ok, true);
   const closed = h.once(open.socket, "casinoClosed");
-  const on = await adminApi("maintenance", { on: true, whitelist: ["wes"], until: until, note: "New cases!" });
+  // First the casino closes (no new bets), every page sees the countdown - then it is on
+  const banner = h.once(open.socket, "seasonClosing");
+  const on = await adminApi("maintenance", { on: true, whitelist: ["wes"], until: until, note: "New cases!", wait: 1 });
   assert.strictEqual(on.status, 200);
-  assert.deepStrictEqual(on.body.maintenance, { on: true, whitelist: ["wes"], until: until, note: "New cases!" });
+  const started = on.body.maintenance;
+  assert.deepStrictEqual([started.on, started.whitelist, started.until, started.note, started.wait], [false, ["wes"], until, "New cases!", 1]);
+  assert.ok(started.closing && started.closing.startsAt > Date.now(), "nothing runs: the countdown right away");
+  assert.strictEqual(casinoLock.locked(), true, "no new bets while it closes");
+  assert.strictEqual((await banner).kind, "maintenance");
   await closed;
+  assert.strictEqual(maintenance.get().on, true);
+  assert.strictEqual(casinoLock.locked(), false, "the whitelist plays during the maintenance");
 
   // Not on the whitelist: the maintenance page everywhere, no data, no games
   for (const path of ["/", "/slots", "/battles/xyz"]) {
@@ -250,6 +259,7 @@ test("access: maintenance - only the whitelist gets in, the others see when it i
   // Wrong values change nothing
   assert.strictEqual((await adminApi("maintenance", { on: "yes" })).status, 400);
   assert.strictEqual((await adminApi("maintenance", { whitelist: "wes" })).status, 400);
+  assert.strictEqual((await adminApi("maintenance", { wait: -1 })).status, 400);
   assert.strictEqual(maintenance.get().on, true);
   // The admin panel knows the players to put on the list
   assert.ok((await adminApi("maintenance")).body.players.includes("xia"));

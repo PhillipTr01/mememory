@@ -59,6 +59,12 @@ module.exports = function (io) {
     for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonEnded", { id: season.id, name: season.name, icon: season.icon, winner: season.winner });
   });
 
+  // A maintenance comes: every open casino page shows it (like before a season) - over: the season's again, if any
+  maintenance.changes.on("closing", (info) => {
+    const shown = info || seasons.closingInfo();
+    for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonClosing", shown);
+  });
+
   // Maintenance: every open casino page of a player not on the whitelist is closed (it shows the maintenance page)
   maintenance.changes.on("change", () => {
     for (const name of GAMES) {

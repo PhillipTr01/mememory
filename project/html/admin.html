@@ -379,7 +379,7 @@
                     <div class="ad-maint-head">
                         <div>
                             <h2 class="ad-title">🔧 Maintenance mode</h2>
-                            <p class="ad-note">Only the players on the whitelist get into the casino. Everybody else sees a maintenance page (with when it is most likely over) and gets in by themselves when you turn it off. Their open pages close right away - bets in running rounds play to the end.</p>
+                            <p class="ad-note">Only the players on the whitelist get into the casino. Everybody else sees a maintenance page (with when it is most likely over) and gets in by themselves when you turn it off. It starts like a season: no new bets, the running games finish, then the countdown - then everybody else is out.</p>
                         </div>
                         <label class="ad-switch ad-switch-big">
                             <input type="checkbox" id="adMaintOn" aria-label="Maintenance mode">
@@ -409,6 +409,11 @@
                             </div>
                             <span class="ad-setting-hint">Shown to the players (with a countdown). Only a guess - the casino opens when you turn maintenance off.</span>
                         </div>
+                        <label class="ad-field">
+                            <span class="ad-label">Countdown before it starts</span>
+                            <span class="ad-inline-input"><input id="adMaintWait" class="mm-input" type="number" min="0" max="3600" step="1" value="60"><span class="ad-setting-unit">s</span></span>
+                            <span class="ad-setting-hint">After the running games are over (at most 5 minutes of waiting) - the players see the countdown.</span>
+                        </label>
                         <label class="ad-field ad-maint-note">
                             <span class="ad-label">Message to the players</span>
                             <textarea id="adMaintNote" class="mm-input" rows="2" maxlength="300" placeholder="e.g. New cases are coming!"></textarea>

@@ -537,6 +537,7 @@ async function loadMaintenance() {
     maintPlayers = data.players;
     maintForm = { whitelist: maint.whitelist.slice() };
     renderMaintenance(true);
+    watchMaintenance();
   } catch (error) {
     fail(error);
   }
@@ -545,16 +546,19 @@ async function loadMaintenance() {
 // fill: the fields from what is saved (else they stay as typed)
 function renderMaintenance(fill) {
   if (maint == null) return;
+  var active = maint.on || maint.closing != null;
   var badge = document.getElementById("adMaintBadge");
-  badge.hidden = !maint.on;
+  badge.hidden = !active;
+  badge.innerText = maint.closing ? "🔧 Maintenance starting" : "🔧 Maintenance on";
   badge.title = maint.until ? "Most likely over " + dateText(maint.until) : "No time given";
   var box = document.getElementById("adMaintOn");
-  box.checked = maint.on;
-  document.getElementById("adMaintOnText").innerText = maint.on ? "On" : "Off";
-  document.getElementById("adMaint").classList.toggle("on", maint.on);
+  box.checked = active;
+  document.getElementById("adMaintOnText").innerText = maint.on ? "On" : maint.closing ? "Starting" : "Off";
+  document.getElementById("adMaint").classList.toggle("on", active);
   if (fill) {
     document.getElementById("adMaintUntil").value = maint.until ? localInput(maint.until) : "";
     document.getElementById("adMaintNote").value = maint.note || "";
+    document.getElementById("adMaintWait").value = maint.wait != null ? maint.wait : 60;
   }
   // The players to add: everybody with access who is not on the list yet
   var select = document.getElementById("adMaintPlayer");
@@ -580,14 +584,36 @@ function renderMaintenance(fill) {
       : [el("div", "ad-maint-empty", "Nobody - only you (the admin panel) during the maintenance.")]),
   );
   var state = document.getElementById("adMaintState");
-  state.innerText = maint.on
+  var closing = maint.closing;
+  state.innerText = closing
+    ? closing.startsAt == null
+      ? "Starting · the running games are finishing (no new bets)..."
+      : "Starting · countdown: on in " + Math.max(0, Math.ceil((closing.startsAt - Date.now()) / 1000)) + " s"
+    : maint.on
     ? "On" + (maint.until ? " · most likely over " + dateText(maint.until) + " (in " + span(maint.until - Date.now()) + ")" : " · no time given") + " · " + maint.whitelist.length + " on the whitelist"
     : "Off - the casino is open for everybody.";
 }
 
 function maintValues(on) {
   var until = document.getElementById("adMaintUntil").value;
-  return { on: on, whitelist: maintForm.whitelist, until: until ? new Date(until).getTime() : null, note: document.getElementById("adMaintNote").value };
+  var wait = Number(document.getElementById("adMaintWait").value);
+  return { on: on, whitelist: maintForm.whitelist, until: until ? new Date(until).getTime() : null, note: document.getElementById("adMaintNote").value, wait: Number.isFinite(wait) ? Math.round(wait) : 60 };
+}
+
+// While it starts: the state again every second (the form stays as it is typed)
+var maintTimer = null;
+function watchMaintenance() {
+  clearTimeout(maintTimer);
+  if (!maint || !maint.closing) return;
+  maintTimer = setTimeout(async () => {
+    try {
+      maint = (await api("maintenance")).maintenance;
+    } catch (error) {
+      // the next try
+    }
+    renderMaintenance(false);
+    watchMaintenance();
+  }, 1000);
 }
 
 async function saveMaintenance(on, message) {
@@ -595,6 +621,7 @@ async function saveMaintenance(on, message) {
     maint = (await api("maintenance", maintValues(on))).maintenance;
     maintForm = { whitelist: maint.whitelist.slice() };
     renderMaintenance(true);
+    watchMaintenance();
     showToast(message);
   } catch (error) {
     fail(error);
@@ -606,13 +633,15 @@ function setupMaintenance() {
   var box = document.getElementById("adMaintOn");
   box.addEventListener("change", async () => {
     if (box.checked) {
-      var who = maintForm.whitelist.length ? maintForm.whitelist.join(", ") + " can still play" : "nobody can play";
-      if (!(await confirmDialog({ title: "Start the maintenance?", text: "Every player not on the whitelist is sent out right away - " + who + ". Running rounds play to the end.", confirmLabel: "Start maintenance", danger: true }))) {
+      var who = maintForm.whitelist.length ? maintForm.whitelist.join(", ") + " can play during it" : "nobody can play during it";
+      var wait = Number(document.getElementById("adMaintWait").value) || 0;
+      if (!(await confirmDialog({ title: "Start the maintenance?", text: "No new bets from now on - the running games finish, then a countdown of " + wait + " s. After it every player not on the whitelist is out - " + who + ".", confirmLabel: "Start maintenance", danger: true }))) {
         box.checked = false;
         return;
       }
     }
-    await saveMaintenance(box.checked, box.checked ? "Maintenance is on" : "Maintenance is over - the casino is open");
+    var was = maint && maint.closing;
+    await saveMaintenance(box.checked, box.checked ? (maint.on ? "Maintenance is on" : "Maintenance starts - the games are finishing") : was ? "Maintenance called off" : "Maintenance is over - the casino is open");
   });
   document.getElementById("adMaintAdd").addEventListener("click", () => {
     var name = document.getElementById("adMaintPlayer").value;

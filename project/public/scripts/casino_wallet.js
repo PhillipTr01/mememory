@@ -597,15 +597,16 @@
     closing.style.setProperty("--mm-accent", rgb ? info.color : "");
     closing.style.setProperty("--mm-accent-rgb", rgb ? rgb.join(", ") : "");
     var ending = info.kind == "end";
+    var maint = info.kind == "maintenance";
     closing.querySelector(".cs-closing-title").innerText = info.name + (ending ? " ends soon!" : " starts soon!");
     var count = closing.querySelector(".cs-closing-count");
     var text = closing.querySelector(".cs-closing-text");
     if (info.startsIn == null) {
       count.innerText = "⏳";
-      text.innerText = ending ? "Open games are finishing - no new bets, the final places come next." : "Open games are finishing - no new bets until it starts.";
+      text.innerText = maint ? "Open games are finishing - no new bets, then the casino closes for a while." : ending ? "Open games are finishing - no new bets, the final places come next." : "Open games are finishing - no new bets until it starts.";
       return;
     }
-    text.innerText = ending ? "All games closed - the final places are counted then." : "All games closed - no new bets until it starts.";
+    text.innerText = maint ? "All games closed - the casino closes for a while then." : ending ? "All games closed - the final places are counted then." : "All games closed - no new bets until it starts.";
     var startsAt = Date.now() + info.startsIn;
     var show = () => {
       var left = Math.max(0, Math.ceil((startsAt - Date.now()) / 1000));

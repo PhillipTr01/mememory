@@ -194,7 +194,7 @@ module.exports = function (auth) {
         joinCoins: season && !seasons.joined(req.username) ? seasons.joinCoins() : null,
         lastSeason: ended ? { id: ended.id, name: ended.name, icon: ended.icon, endedAt: ended.endedAt } : null,
         // The casino closes for a season right now (the pages show it)
-        closing: seasons.closingInfo(),
+        closing: seasons.closingInfo() || maintenance.closingInfo(),
       });
     }),
   );
