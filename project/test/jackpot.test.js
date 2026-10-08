@@ -245,7 +245,7 @@ test("jackpot: alone in the pot - a ghost of 50-75% (capped) joins once, a real 
   assert.strictEqual(drawn.draw.winner, "Ghost");
   await waitFor(alice, "jackpotState", (s) => s.phase === "open" && s.total === 0, 5000);
   assert.strictEqual(h.coinsOf("alice"), before, "nothing back");
-  Object.assign(config, { JACKPOT_GHOST_AFTER: 60000, JACKPOT_COUNTDOWN: 200, JACKPOT_GHOST_MAX: 5000 });
+  Object.assign(config, { JACKPOT_GHOST_AFTER: 60000, JACKPOT_COUNTDOWN: 200, JACKPOT_GHOST_MAX: 10000 });
 });
 
 test("casino: the chat shows who is online on any casino page - once per player", async () => {

@@ -88,7 +88,7 @@ module.exports = {
   // Alone in the pot this long after the first bet: a ghost (the house) of 50-75% of the first player's coins joins (at most JACKPOT_GHOST_MAX), once
   JACKPOT_GHOST_AFTER: 10 * 1000,
   JACKPOT_GHOST_SHARE: [0.5, 0.75], // the ghost bets this share of the coins of the player alone in the pot
-  JACKPOT_GHOST_MAX: 5000, // ... and never more than this
+  JACKPOT_GHOST_MAX: 10000, // ... and never more than this
 
   // The secret address of the jackpot (and its case battles and poker):
   // not linked anywhere. Can be changed with JACKPOT_PATH.
