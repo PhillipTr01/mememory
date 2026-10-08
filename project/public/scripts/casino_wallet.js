@@ -160,7 +160,7 @@
         var res = await fetch("withdraw", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount: amount }) });
         var data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "That didn't work.");
-        showToast("💸 " + format(amount) + " coins are on their way");
+        showHint("💸 " + format(amount) + " coins are on their way", "success", ok);
         input.value = "";
         loadList();
       } catch (e) {
@@ -405,10 +405,9 @@
           box.remove();
           chanceStatus = null;
           renderChancePill();
-          showToast("💔 Back in the game with 🪙 " + format(data.coins) + "!");
         } catch (error) {
-          showToast(error.message, "error");
           box.remove();
+          showHint(error.message, "error", document.getElementById("navCoins"));
           chanceShown = false;
         }
       });
@@ -575,9 +574,8 @@
         var result = await res.json();
         if (!res.ok) throw new Error(result.error || "Could not start the season.");
         box.remove();
-        showToast((season.icon || "🏆") + " You are in " + season.name + " with 🪙 " + format(result.coins) + " - good luck!");
       } catch (error) {
-        showToast(error.message, "error");
+        showHint(error.message, "error", go);
         go.disabled = false;
       }
     });

@@ -203,7 +203,7 @@ async function load(quiet) {
     render();
     tick();
   } catch (error) {
-    if (!quiet) showToast("The leaderboard couldn't be loaded.", "error");
+    if (!quiet) showHint("The leaderboard couldn't be loaded - trying again soon.", "error", document.querySelector("main"));
   }
   var wait = board && board.live ? 10000 : nextAt ? Math.max(3000, nextAt - Date.now() + 2000) : 30000;
   refreshTimer = setTimeout(() => load(true), Math.min(wait, 10 * 60 * 1000));
@@ -246,7 +246,7 @@ async function showWinners(id) {
     if (!res.ok) throw new Error();
     var data = await res.json();
   } catch (error) {
-    return showToast("The winners couldn't be loaded.", "error");
+    return showHint("The winners couldn't be loaded.", "error");
   }
   var season = data.season;
   var page = document.getElementById("lbWinners");

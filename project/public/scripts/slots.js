@@ -73,7 +73,7 @@ socket.on("coins", (data) => {
   renderControls();
 });
 socket.on("slotsError", (message) => {
-  showToast(message, "error");
+  showHint(message, "error", document.getElementById("slSpin"));
   spinning = false;
   renderControls();
 });
@@ -211,9 +211,9 @@ function spin() {
   if (spinning || setup == null) return;
   var bet = currentBet();
   if (!Number.isInteger(bet) || bet < setup.rules.minBet || bet > setup.rules.maxBet) {
-    return showToast("A spin is " + formatCoins(setup.rules.minBet) + " to " + formatCoins(setup.rules.maxBet) + " coins.", "error");
+    return showHint("A spin is " + formatCoins(setup.rules.minBet) + " to " + formatCoins(setup.rules.maxBet) + " coins.", "error");
   }
-  if (bet > myCoins) return showToast("You don't have enough coins.", "error");
+  if (bet > myCoins) return showHint("You don't have enough coins.", "error");
   spinning = true;
   clearTimeout(lineTimer);
   clearLines();

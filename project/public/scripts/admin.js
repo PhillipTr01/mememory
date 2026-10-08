@@ -58,7 +58,7 @@ async function api(path, body) {
 }
 
 function fail(error) {
-  if (error.message != "logged out") showToast(error.message, "error");
+  if (error.message != "logged out") showHint(error.message, "error");
 }
 
 /* ---------- Tabs ---------- */

@@ -82,6 +82,8 @@ module.exports = function (io) {
       // Time left (ms) instead of a timestamp: the clocks of the clients may differ
       endsIn: pot.endsAt != null ? Math.max(0, pot.endsAt - now) : null,
       draw: pot.draw,
+      // How long the draw still runs (a page opened in the middle of it plays the rest)
+      spinLeft: pot.phase === PHASE.DRAWING && pot.drawAt != null ? Math.max(0, pot.drawAt + config.JACKPOT_SPIN - now) : null,
       bets: pot.bets,
       // Own bets that are not in the pot yet: on their way, or waiting for the next round
       pending: pot.incoming

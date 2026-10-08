@@ -115,7 +115,7 @@ socket.on("coins", (data) => {
   myCoins = data.coins;
 });
 
-socket.on("pokerError", (message) => showToast(message, "error"));
+socket.on("pokerError", (message) => showHint(message, "error"));
 
 socket.on("pokerState", (data) => {
   previous = state;

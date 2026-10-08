@@ -121,6 +121,10 @@ module.exports = function (io) {
       // Jackpot: the drawn ticket (in coins of the pot) - after the end
       ticket: done && ruleOf(battle) === "jackpot" ? battle.ticket : null,
       nextIn: battle.nextAt != null ? Math.max(0, battle.nextAt - Date.now()) : null,
+      // A page opened in the middle: how long ago the last case started rolling, how long the end still plays
+      roundAgo: battle.phase === PHASE.RUNNING && battle.revealed > 0 ? Math.max(0, Date.now() - (battle.begin + (battle.revealed - 1) * config.BATTLE_ROUND)) : null,
+      endLeft: done && battle.doneAt ? Math.max(0, battle.doneAt + endWait(battle) - Date.now()) : null,
+      doneAgo: done && battle.doneAt ? Math.max(0, Date.now() - battle.doneAt) : null,
       winner: done ? battle.winner : null, // seat (the first one of a tie)
       winners: done ? winnersOf(battle) : null, // seats - a tie: all of them, they split the pot
       shares: done ? sharesOf(battle) : null, // what each of them gets
@@ -276,6 +280,12 @@ module.exports = function (io) {
     );
   }
 
+  // How long the pages play the end (random: the mode reveal, jackpot: the roulette) before the winner is paid
+  function endWait(battle) {
+    const random = modeOf(battle) === "random";
+    return (random ? config.BATTLE_MODE_REVEAL : 0) + (ruleOf(battle) === "jackpot" ? Math.max(0, config.BATTLE_JACKPOT_DRAW - (random ? 3000 : 0)) : 0);
+  }
+
   function finish(battle) {
     battle.phase = PHASE.DONE;
     battle.nextAt = null;
@@ -283,8 +293,7 @@ module.exports = function (io) {
     // Random: the pages show which mode it was first - then the coins come
     // (jackpot: the roulette rolls on the pages first)
     // (random -> jackpot: the roulette right after the reveal - without its own pause of 3 s)
-    const random = modeOf(battle) === "random";
-    const wait = (random ? config.BATTLE_MODE_REVEAL : 0) + (ruleOf(battle) === "jackpot" ? Math.max(0, config.BATTLE_JACKPOT_DRAW - (random ? 3000 : 0)) : 0);
+    const wait = endWait(battle);
     // The last battles (with the winner) only when the pages showed it - not during a reveal
     const done = () => {
       payWinner(battle);

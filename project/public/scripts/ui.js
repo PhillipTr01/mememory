@@ -148,7 +148,58 @@ function createIcon(classes, title) {
   return icon;
 }
 
-// Small message at the bottom of the screen instead of alert()
+/*
+ * No toasts: a short message sits as a small bubble on the control it is
+ * about (the button just clicked, the field just used) and goes by itself.
+ * showHint(message, type, anchor) - without an anchor: what was clicked last.
+ */
+var lastControl = null;
+document.addEventListener(
+  "pointerdown",
+  (event) => {
+    var control = event.target.closest && event.target.closest("button, input, select, a, [role=button], [data-hint-anchor]");
+    if (control) lastControl = control;
+  },
+  true,
+);
+document.addEventListener(
+  "keydown",
+  (event) => {
+    if (event.target && event.target.closest && event.target.closest("button, input, select, a, [role=button]")) lastControl = event.target;
+  },
+  true,
+);
+
+function showHint(message, type, anchor) {
+  anchor = anchor || lastControl;
+  // The control is gone (or hidden): the main panel of the page
+  if (!anchor || !anchor.isConnected || anchor.getClientRects().length == 0) anchor = document.querySelector("[data-hint-home]") || document.querySelector("main") || document.body;
+  document.querySelectorAll(".mm-hint").forEach((old) => old.remove());
+  var hint = document.createElement("div");
+  hint.className = "mm-hint" + (type ? " " + type : "");
+  hint.setAttribute("role", type == "error" ? "alert" : "status");
+  hint.innerText = message;
+  document.body.appendChild(hint);
+  var box = anchor.getBoundingClientRect();
+  var width = hint.offsetWidth;
+  var left = Math.max(8, Math.min(window.innerWidth - width - 8, box.left + box.width / 2 - width / 2));
+  // Over the control - under it when there is no room above
+  var above = box.top - hint.offsetHeight - 10 > 8;
+  var top = above ? box.top - hint.offsetHeight - 10 : Math.min(box.bottom + 10, window.innerHeight - hint.offsetHeight - 8);
+  if (anchor == document.body || box.height > window.innerHeight * 0.6) top = Math.max(8, box.top + 12);
+  hint.style.left = left + "px";
+  hint.style.top = top + "px";
+  hint.style.setProperty("--arrow", Math.max(12, Math.min(width - 12, box.left + box.width / 2 - left)) + "px");
+  hint.classList.add(above ? "above" : "below");
+  var remove = () => {
+    hint.remove();
+    window.removeEventListener("scroll", remove, true);
+  };
+  window.addEventListener("scroll", remove, true);
+  setTimeout(remove, type == "error" ? 3500 : 1800);
+}
+
+// Small message at the bottom of the screen instead of alert() (the MemeMory pages - the casino uses showHint)
 function showToast(message, type) {
   // The game pages show everything on the board / in the chat instead
   if (document.body.classList.contains("no-toasts")) return;

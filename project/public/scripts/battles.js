@@ -117,8 +117,7 @@ socket.on("cases", (data) => {
   renderCreate();
 });
 
-socket.on("battleError", (message) => showToast(message, "error"));
-socket.on("battleLeft", () => showToast("You left the battle - your coins are back"));
+socket.on("battleError", (message) => showHint(message, "error"));
 
 // The new battle of this page: open it
 socket.on("battleCreated", (id) => {
@@ -152,6 +151,7 @@ function track(battle) {
   seen[battle.id] = { phase: battle.phase, revealed: battle.revealed };
   if (!(battle.id in shown)) {
     shown[battle.id] = battle.revealed;
+    if (battle.id == viewId) catchUp(battle);
     return;
   }
   if (battle.id != viewId) {
@@ -165,6 +165,29 @@ function track(battle) {
     shown[battle.id] = battle.revealed;
   }
   if (battle.phase == "done" && before && before.phase == "running") celebrate(battle);
+}
+
+/*
+ * A battle opened in the middle (a reload, a link): what still rolls for the
+ * others rolls here too - the case of this round (the rest of its spin), the
+ * mode reveal and the roulette at the end. Nothing shows a result before it.
+ * true: it plays (and renders) by itself.
+ */
+function catchUp(battle) {
+  if (battle.phase == "running" && battle.revealed > 0 && battle.roundAgo != null && battle.roundAgo < roundTime - 900 && !spinning) {
+    shown[battle.id] = battle.revealed - 1;
+    seenRunning[battle.id] = true;
+    playRound(battle, battle.revealed - 1, battle.roundAgo);
+    return true;
+  }
+  if (battle.phase == "done" && battle.endLeft > 0) {
+    // The end still plays: from where it is now (the last case was seen this long ago)
+    seenRunning[battle.id] = true;
+    // (the last case stopped about half a second before the server's end)
+    lastCaseAt[battle.id] = Date.now() - (battle.doneAgo || 0) - 480;
+    joinedLate[battle.id] = true;
+  }
+  return false;
 }
 
 // Once: may the browser tell when a battle starts while another tab is open?
@@ -189,8 +212,11 @@ function pushView(id) {
 
 function showView() {
   viewId = location.hash.length > 1 ? location.hash.slice(1) : null;
-  if (viewId) shown[viewId] = (battles.find((b) => b.id == viewId) || { revealed: 0 }).revealed;
+  // (not known yet - a reload: the first list decides, see track)
+  if (viewId && battles.some((b) => b.id == viewId)) shown[viewId] = battles.find((b) => b.id == viewId).revealed;
   spinning = false;
+  var open = viewId && battles.find((b) => b.id == viewId);
+  if (open && catchUp(open)) return;
   document.getElementById("btListView").hidden = viewId != null;
   document.getElementById("btBattleView").hidden = viewId == null;
   // Main page: no status of a battle
@@ -253,14 +279,14 @@ function setCount(id, count) {
   var diff = count - countOf(id);
   if (diff > 0 && picked.length + diff > MAX_CASES) {
     diff = MAX_CASES - picked.length;
-    showToast("At most " + MAX_CASES + " cases per battle.", "error");
+    showHint("At most " + MAX_CASES + " cases per battle.", "error");
   }
   // (and at most MAX_COST for all of them)
   var price = caseById(id) ? caseById(id).price : 0;
   var cost = picked.reduce((sum, other) => sum + (caseById(other) ? caseById(other).price : 0), 0);
   if (diff > 0 && price > 0 && cost + diff * price > MAX_COST) {
     diff = Math.max(0, Math.floor((MAX_COST - cost) / price));
-    showToast("A battle costs at most 🪙 " + formatCoins(MAX_COST) + " per player.", "error");
+    showHint("A battle costs at most 🪙 " + formatCoins(MAX_COST) + " per player.", "error");
   }
   for (; diff > 0; diff--) picked.push(id);
   for (var i = picked.length - 1; i >= 0 && diff < 0; i--) {
@@ -635,6 +661,8 @@ function renderList() {
 function renderHistory() {
   var list = document.getElementById("btHistory");
   document.getElementById("btHistoryEmpty").hidden = lastBattles.length > 0;
+  // (phones: no empty card over the chat)
+  document.getElementById("btHistoryCard").classList.toggle("empty", lastBattles.length == 0);
   list.replaceChildren(
     ...lastBattles.map((entry) => {
       var multiple = entry.price > 0 ? entry.total / entry.price : 0;
@@ -959,14 +987,17 @@ function playJackpotDraw(battle, grid) {
   // The first render after the last case: the roulette after the same pause as the random reveal
   // (after a random reveal it comes right away), the end after it
   if (!drawing[battle.id]) {
-    var wait = battle.mode == "random" ? 0 : Math.max(0, (lastCaseAt[battle.id] || Date.now()) + REVEAL_WAIT - Date.now());
+    var wait = battle.mode == "random" ? 0 : (lastCaseAt[battle.id] || Date.now()) + REVEAL_WAIT - Date.now();
+    // (opened while it rolled: it goes on where it is - wait is below 0 then)
+    if (joinedLate[battle.id] && battle.mode == "random") wait = (revealing[battle.id] || Date.now()) + REVEAL_SPIN + REVEAL_HOLD - Date.now();
+    else if (!joinedLate[battle.id]) wait = Math.max(0, wait);
     drawing[battle.id] = Date.now() + wait;
-    if (wait) setTimeout(renderBattle, wait);
+    if (wait > 0) setTimeout(renderBattle, wait);
     setTimeout(() => {
       drawShown[battle.id] = true;
       renderBattle();
       celebrate(battle);
-    }, wait + DRAW_SPIN + DRAW_HOLD);
+    }, Math.max(0, wait + DRAW_SPIN + DRAW_HOLD));
   }
   var started = drawing[battle.id];
   if (Date.now() < started) return;
@@ -1022,22 +1053,28 @@ var REVEAL_WAIT = 1500; // the last case is seen this long before the reel comes
 var REVEAL_SPIN = 7000; // the reel rolls this long
 var REVEAL_HOLD = 1600; // the mode is shown this long before the winner
 var revealing = {}; // battle id -> when the reel starts
+var joinedLate = {}; // battle id -> opened while its end played: the reel / roulette go on where they are (not from the start)
+var revealBoxes = {}; // battle id -> its reel (the same one through every render)
 function playModeReveal(battle, grid) {
   // The first render after the last case: the reel in REVEAL_WAIT, the winner after it
   if (!revealing[battle.id]) {
     // (3 s after the animation of the last case - or right away, if that was longer ago)
-    var start = Math.max(Date.now(), (lastCaseAt[battle.id] || Date.now()) + REVEAL_WAIT);
+    var start = (lastCaseAt[battle.id] || Date.now()) + REVEAL_WAIT;
+    if (!joinedLate[battle.id]) start = Math.max(Date.now(), start);
     revealing[battle.id] = start;
-    setTimeout(renderBattle, start - Date.now());
+    setTimeout(renderBattle, Math.max(0, start - Date.now()));
     setTimeout(() => {
       modeShown[battle.id] = true;
       renderBattle();
       celebrate(battle);
-    }, start - Date.now() + REVEAL_SPIN + REVEAL_HOLD);
+    }, Math.max(0, start - Date.now() + REVEAL_SPIN + REVEAL_HOLD));
   }
   var started = revealing[battle.id];
   if (Date.now() < started) return;
+  // Already rolling on this page: the same reel goes on (a new one flickered at every update)
+  if (revealBoxes[battle.id]) return grid.appendChild(revealBoxes[battle.id]);
   var box = el("div", "bt-mode-reveal");
+  revealBoxes[battle.id] = box;
   var face = el("span", "bt-mode-face");
   var track = el("span", "bt-mode-track");
   // Many icons in turn, the last one is the mode (even: crown, odd: clown)
@@ -1153,12 +1190,13 @@ function randomItem(box) {
   return box.items.find((item) => (counted += item.chance) > roll) || box.items[0];
 }
 
-async function playRound(battle, round) {
+// elapsed: the round started this long ago (a page opened in the middle of it) - the rest of the spin
+async function playRound(battle, round, elapsed) {
   spinning = true;
   renderBattle();
   document.getElementById("btStatus").innerText = "Round " + (round + 1) + " of " + battle.cases.length;
   var box = caseById(battle.cases[round]);
-  var duration = Math.max(1200, roundTime - 1100);
+  var duration = Math.max(elapsed ? 700 : 1200, roundTime - 1100 - (elapsed || 0));
   var columns = document.querySelectorAll("#btBattleView .bt-seat");
   var stops = [];
   columns.forEach((column, seat) => {

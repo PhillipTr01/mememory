@@ -72,9 +72,10 @@ socket.on("jackpotState", (data) => {
   state = data;
   if (state.phase == "drawing" && state.draw && spunRound !== state.round) {
     spunRound = state.round;
-    // Opened in the middle of the draw: no long spin
-    var short = previous == null || previous.round !== state.round || previous.phase != "countdown";
-    playDraw(short);
+    // Opened in the middle of the draw: the rest of it (the winner only when the draw is over) - only at its very end a short one
+    var late = previous == null || previous.round !== state.round || previous.phase != "countdown";
+    var left = state.spinLeft != null ? state.spinLeft : state.spin;
+    playDraw(late && left < 2500, late ? Math.max(900, left - 900) : null);
     return;
   }
   if (state.phase == "open" && previous && previous.round !== state.round) {
@@ -167,9 +168,9 @@ function drawBets() {
   return (state.bets || []).map((bet) => ({ name: bet.name, coins: bet.amount, from: bet.from, to: bet.to }));
 }
 
-function playDraw(short) {
+function playDraw(short, length) {
   var draw = state.draw;
-  var duration = short ? 900 : state.spin - 900;
+  var duration = short ? 900 : length || state.spin - 900;
   var stage = document.getElementById("jpStage");
   spinning = true;
   // (after the draw the waiting scene is built again)

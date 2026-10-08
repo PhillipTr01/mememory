@@ -51,7 +51,7 @@ socket.on("coins", (data) => {
   myCoins = data.coins;
   if (state) renderBars();
 });
-socket.on("blackjackError", (message) => showToast(message, "error"));
+socket.on("blackjackError", (message) => showHint(message, "error"));
 
 socket.on("blackjackState", (data) => {
   previous = state;
@@ -163,13 +163,13 @@ function placeChip(seatIndex, field) {
     // The first chip at least the table minimum
     var amount = seat.bet == 0 ? Math.max(chipValue, state.rules.minBet) : chipValue;
     amount = Math.min(amount, state.rules.maxBet - seat.bet);
-    if (amount <= 0) return showToast("The most for this seat: 🪙 " + formatCoins(state.rules.maxBet) + ".", "error");
+    if (amount <= 0) return showHint("The most for this seat: 🪙 " + formatCoins(state.rules.maxBet) + ".", "error");
     socket.emit("bet", { seat: seatIndex, amount: amount });
   } else {
-    if (seat.bet == 0) return showToast("Place the main bet first.", "error");
+    if (seat.bet == 0) return showHint("Place the main bet first.", "error");
     // At most half the table's max bet per side bet
     var room = Math.floor(state.rules.maxBet * state.rules.sideShare) - seat.side[field];
-    if (room <= 0) return showToast(SIDE_NAMES[field] + ": at most 🪙 " + formatCoins(Math.floor(state.rules.maxBet * state.rules.sideShare)) + " (half the max bet).", "error");
+    if (room <= 0) return showHint(SIDE_NAMES[field] + ": at most 🪙 " + formatCoins(Math.floor(state.rules.maxBet * state.rules.sideShare)) + " (half the max bet).", "error");
     socket.emit("sideBet", { seat: seatIndex, type: field, amount: Math.min(chipValue, room) });
   }
 }

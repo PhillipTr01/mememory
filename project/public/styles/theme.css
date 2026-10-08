@@ -274,7 +274,7 @@ a.mm-btn.mm-btn-primary:focus,
   color: var(--mm-muted);
 }
 
-/* ---------- Toasts ---------- */
+/* ---------- Toasts (MemeMory pages) ---------- */
 #mm-toasts {
   position: fixed;
   left: 50%;
@@ -301,6 +301,58 @@ a.mm-btn.mm-btn-primary:focus,
 
 .mm-toast.error {
   border-color: rgba(248, 113, 113, 0.5);
+}
+
+/* ---------- Hints (casino): a short message on the control it is about (no toasts) ---------- */
+.mm-hint {
+  position: fixed;
+  z-index: 3000;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 9px;
+  background: var(--mm-surface-3);
+  color: var(--mm-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.35;
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  animation: mm-toast-in 0.18s ease;
+}
+
+.mm-hint::after {
+  content: "";
+  position: absolute;
+  left: var(--arrow, 50%);
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  background: inherit;
+  border: inherit;
+  transform: rotate(45deg);
+}
+
+.mm-hint.above::after {
+  bottom: -6px;
+  border-top: 0;
+  border-left: 0;
+}
+
+.mm-hint.below::after {
+  top: -6px;
+  border-bottom: 0;
+  border-right: 0;
+}
+
+.mm-hint.error {
+  border-color: rgba(248, 113, 113, 0.6);
+  background: #3a1f1f;
+}
+
+.mm-hint.success {
+  border-color: rgba(127, 174, 110, 0.6);
+  background: #1f2f1c;
 }
 
 /* ---------- Animations ---------- */
