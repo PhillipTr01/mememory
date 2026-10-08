@@ -1222,6 +1222,17 @@
   .bt-seat-name .player-name-text {
     display: none;
   }
+
+  /* Only the avatar - the You / Bot tag under it (beside it it doesn't fit) */
+  .bt-seat-name {
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .bt-seat-name .player-tag {
+    margin: 0;
+    font-size: 0.55rem;
+  }
 }
 
 /* ---------- Main page: open battles / create a battle ---------- */
@@ -1679,4 +1690,29 @@ button.bt-strip-case:hover {
 
 .bt-modes button {
   height: 100%;
+}
+
+/* Phones: the five modes in one row (icon over a small name), the create button the whole width */
+@media (max-width: 600px) {
+  #btModes {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+    height: auto;
+  }
+
+  #btModes button {
+    flex-direction: column;
+    gap: 0.1rem;
+    height: auto;
+    min-height: 3.1rem;
+    padding: 0.35rem 0.1rem;
+    font-size: 0.68rem;
+    letter-spacing: -0.01em;
+  }
+
+  .bt-create-row #btCreate {
+    width: 100%;
+    margin-left: 0;
+  }
 }

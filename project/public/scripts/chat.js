@@ -65,6 +65,8 @@ function sendChatMessage() {
 socket.on("chatHistory", (messages) => {
   document.getElementById("chat-content").replaceChildren();
   lastMessage = null;
+  var empty = document.getElementById("chat-empty");
+  if (empty) empty.hidden = messages.length > 0;
   messages.forEach((message) => addChatMessage(message, false));
   scrollChatDown();
 });

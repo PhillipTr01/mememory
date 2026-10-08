@@ -3551,3 +3551,18 @@ body.jackpot-theme {
 }
 
 
+
+/* Phones: the title and its buttons (all tables, full screen) wrap instead of sticking out */
+@media (max-width: 600px) {
+  .jp-head {
+    flex-wrap: wrap;
+  }
+
+  .jp-head > div:first-child {
+    min-width: 0;
+  }
+
+  .jp-head .cs-head-actions {
+    margin-left: auto;
+  }
+}

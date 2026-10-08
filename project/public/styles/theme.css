@@ -23,6 +23,11 @@
   --mm-shadow: none;
 }
 
+/* An element with the hidden attribute is hidden - whatever display its class gives it */
+[hidden] {
+  display: none !important;
+}
+
 /* ---------- Buttons ---------- */
 .mm-btn {
   display: inline-flex;

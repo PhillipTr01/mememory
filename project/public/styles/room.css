@@ -479,6 +479,10 @@
   pointer-events: none;
 }
 
+.chat-empty[hidden] {
+  display: none;
+}
+
 .chat-empty span {
   font-size: 2rem;
 }

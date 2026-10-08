@@ -541,3 +541,19 @@
 .lb-season .lb-season-info {
   margin-left: 0.2rem;
 }
+
+/* "#6 of 6" on one line - on phones the label gives way */
+.lb-me-rank {
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .lb-me {
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+  }
+
+  .lb-me-label {
+    font-size: 0.7rem;
+  }
+}

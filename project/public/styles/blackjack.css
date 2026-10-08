@@ -1284,3 +1284,62 @@
 .bj-actionbar.idle .bj-turn-bar {
   visibility: hidden;
 }
+
+/* ---------- Phones ---------- */
+@media (max-width: 575px) {
+  /* The title: the table's name and its limits wrap under the name of the game */
+  .bj-main .jp-title {
+    flex-wrap: wrap;
+    row-gap: 0.2rem;
+  }
+
+  /* The own seat: the bet on top, PP and 21+3 under it (side by side they are wider than a seat) */
+  .bj-fields {
+    flex-wrap: wrap;
+    gap: 0.15rem 0.3rem;
+    max-width: 66px;
+    margin: 0 auto;
+  }
+
+  .bj-field-wrap.main {
+    order: -1;
+    flex-basis: 100%;
+  }
+
+  .bj-field {
+    width: 28px;
+    height: 28px;
+    margin-top: 0;
+  }
+
+  .bj-field.main {
+    width: 44px;
+    height: 44px;
+  }
+
+  .bj-field-label {
+    font-size: 0.52rem;
+  }
+
+  /* The bet bar: the chips in one row (no arrows), the buttons under them */
+  .bj-betbar {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.7rem;
+    justify-items: center;
+  }
+
+  .bj-betbar .bj-chip-picker,
+  .bj-betbar .bj-bar-right {
+    grid-column: 1;
+    justify-self: center;
+  }
+
+  .bj-betbar .bj-chip-arrow {
+    display: none;
+  }
+
+  .bj-betbar .bj-chips {
+    flex-wrap: nowrap;
+    gap: 0.3rem;
+  }
+}
