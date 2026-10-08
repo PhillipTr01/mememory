@@ -3848,3 +3848,184 @@ body.jackpot-theme {
     display: none;
   }
 }
+
+/* ---------- Gifts: a click on a name in the chat ---------- */
+.msg-clickable {
+  cursor: pointer;
+}
+
+.msg-name.msg-clickable:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.avatar-slot.msg-clickable:hover .avatar {
+  box-shadow: 0 0 0 2px rgba(var(--mm-accent-rgb), 0.7);
+  border-radius: 50%;
+}
+
+.cs-gift {
+  position: relative;
+  width: min(380px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.6rem 1.25rem 1.25rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.45);
+  background: radial-gradient(ellipse at 50% 0%, rgba(var(--mm-accent-rgb), 0.18), transparent 60%), var(--mm-surface);
+  animation: cs-gift-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes cs-gift-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+}
+
+.cs-gift-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--mm-surface-3);
+  color: var(--mm-muted);
+  cursor: pointer;
+}
+
+.cs-gift-close:hover {
+  color: var(--mm-text);
+}
+
+.cs-gift-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  text-align: center;
+}
+
+.cs-gift-pic {
+  position: relative;
+  margin-bottom: 0.35rem;
+}
+
+.cs-gift-pic .avatar {
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(var(--mm-accent-rgb), 0.6), 0 8px 24px rgba(var(--mm-accent-rgb), 0.25);
+}
+
+.cs-gift-bow {
+  position: absolute;
+  right: -0.45rem;
+  bottom: -0.3rem;
+  font-size: 1.35rem;
+  animation: cs-gift-wiggle 2.4s ease-in-out infinite;
+}
+
+@keyframes cs-gift-wiggle {
+  45%,
+  55% {
+    transform: rotate(-12deg) scale(1.1);
+  }
+}
+
+.cs-gift-label {
+  color: var(--mm-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cs-gift-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.cs-gift-amount {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.cs-gift-quick {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.cs-gift-quick button {
+  padding: 0.4rem 0.2rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 8px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cs-gift-quick button:hover:not(:disabled) {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+}
+
+.cs-gift-quick button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cs-gift-info {
+  margin: 0;
+  color: var(--mm-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.cs-gift-info b {
+  color: var(--mm-accent);
+}
+
+.cs-gift-info.used b {
+  color: var(--mm-danger);
+}
+
+.cs-gift-error {
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  background: rgba(224, 103, 90, 0.1);
+  color: var(--mm-danger);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.cs-gift-error[hidden] {
+  display: none;
+}
+
+.cs-gift-send {
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-radius: 12px;
+  background: var(--mm-accent);
+  color: var(--mm-on-accent, #1b1405);
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cs-gift-send:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.cs-gift-send:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

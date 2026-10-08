@@ -18,12 +18,15 @@ const KEY = "admin:settings";
 // (a list of ids, at least one stays on), everything else a whole number.
 const FIELDS = [
   { group: "general", section: "Coins", key: "START_COINS", label: "Start coins", hint: "What a newly approved player gets (in a season: the season's budget plus every daily bonus missed since it started).", min: 0, max: 100000000 },
+  { group: "general", section: "Gifts", key: "GIFT_LIMIT", label: "Gifts per player", hint: "Coins a player can give others in total (a click on a name in the casino chat) - counted apart for the normal coins and every season.", min: 0, max: 100000000 },
   { group: "general", section: "Coins", key: "DAILY_BONUS", label: "Daily bonus", hint: "Free coins once a day for every player (outside of seasons).", min: 0, max: 10000000 },
   { group: "jackpot", section: "Jackpot", key: "GAME_JACKPOT", type: "toggle", label: "Jackpot is on", hint: "Off: no tab, nobody can open it." },
   { group: "jackpot", section: "Bets", key: "JACKPOT_MAX_COINS", label: "Max coins per round", hint: "All bets of one player in one round together.", min: 1, max: 100000000 },
   { group: "jackpot", section: "Bets", key: "JACKPOT_RAKE", label: "House cut", hint: "Percent of the pot the house keeps - the winner gets the rest (5%: a payback of 95%).", unit: "%", min: 0, max: 50 },
   { group: "jackpot", section: "Bets", key: "JACKPOT_MAX_BETS", label: "Bets per round", hint: "Separate bets of one player in one round.", min: 1, max: 100 },
-  { group: "jackpot", section: "Ghost", key: "JACKPOT_GHOST_MAX", label: "Ghost bets at most", hint: "The ghost bets 50-75% of the coins of the player alone in the pot - never more than this.", min: 1, max: 100000000 },
+  { group: "jackpot", section: "Ghost", key: "JACKPOT_GHOST_MIN", label: "Ghost bets from", hint: "Percent of the coins of the player alone in the pot - the ghost picks a share between this and the next one.", unit: "%", min: 1, max: 500 },
+  { group: "jackpot", section: "Ghost", key: "JACKPOT_GHOST_TOP", label: "Ghost bets up to", hint: "Percent of the coins of the player alone in the pot.", unit: "%", min: 1, max: 500 },
+  { group: "jackpot", section: "Ghost", key: "JACKPOT_GHOST_MAX", label: "Ghost bets at most", hint: "Whatever the share - the ghost never bets more coins than this.", min: 1, max: 100000000 },
   { group: "jackpot", section: "Timing", key: "JACKPOT_GHOST_AFTER", label: "Ghost joins after", hint: "Alone in the pot this long: the 👻 joins.", unit: "s", scale: 1000, min: 1, max: 3600 },
   { group: "jackpot", section: "Timing", key: "JACKPOT_COUNTDOWN", label: "Countdown", hint: "From the second player to the draw.", unit: "s", scale: 1000, min: 5, max: 600 },
   { group: "battles", section: "Case battles", key: "GAME_BATTLES", type: "toggle", label: "Case battles are on", hint: "Off: no tab, nobody can open it." },
@@ -107,6 +110,7 @@ function check(input) {
     if (next[table.minKey] > next[table.maxKey]) return { error: `${table.name}: the min bet is higher than the max bet.` };
   }
   if (next.SLOTS_MIN_BET > next.SLOTS_MAX_BET) return { error: "Slots: the min bet is higher than the max bet." };
+  if (next.JACKPOT_GHOST_MIN > next.JACKPOT_GHOST_TOP) return { error: "Ghost: the share from is higher than the share up to." };
   if (next.POKER_MIN_BUYIN > next.POKER_MAX_BUYIN) return { error: "Poker: the min buy-in is higher than the max buy-in." };
   return { values: values };
 }

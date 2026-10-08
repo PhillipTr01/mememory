@@ -4,6 +4,7 @@
 var HISTORY_KINDS = [
   ["Casino", [["start coins", "Start coins"], ["daily bonus", "Daily bonus"], ["admin", "Admin"], ["withdrawal", "Payout"], ["withdrawal refund", "Payout refund"]]],
   ["Seasons", [["season start", "Season start"], ["second chance", "Second chance"]]],
+  ["Gifts", [["gift sent", "Sent"], ["gift received", "Received"]]],
   ["Jackpot", [["jackpot bet", "Bet"], ["jackpot win", "Win"]]],
   ["Case battles", [["battle", "Bet"], ["battle win", "Win"], ["battle refund", "Refund"]]],
   ["Poker", [["poker buy-in", "Buy-in"], ["poker chips", "More chips"], ["poker cash-out", "Cash-out"], ["poker refund", "Refund"]]],

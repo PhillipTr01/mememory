@@ -62,6 +62,7 @@ module.exports = {
   // Every account gets START_COINS once for this id: a new id resets everybody's coins
   COIN_RESET: "reset-100k",
   DAILY_BONUS: 2500,
+  GIFT_LIMIT: 10000, // coins a player can give other players in total (the normal coins and every season apart)
   SEASON_CLOSE_WAIT: 60 * 1000, // before a season starts: when every game is quiet, this long until the start
   SEASON_CLOSE_MAX: 5 * 60 * 1000, // ... and at most this long waiting for the games to get quiet
   SEASON_DAILY_BONUS: 1000, // the daily bonus of a new season (each season can have its own)
@@ -85,9 +86,10 @@ module.exports = {
   JACKPOT_HISTORY: 10,
   // After a restart: at least this long until a countdown or a turn ends (time to come back)
   RESTORE_GRACE: 10 * 1000,
-  // Alone in the pot this long after the first bet: a ghost (the house) of 50-75% of the first player's coins joins (at most JACKPOT_GHOST_MAX), once
+  // Alone in the pot this long after the first bet: a ghost (the house) of JACKPOT_GHOST_MIN-TOP% of the first player's coins joins (at most JACKPOT_GHOST_MAX), once
   JACKPOT_GHOST_AFTER: 10 * 1000,
-  JACKPOT_GHOST_SHARE: [0.5, 0.75], // the ghost bets this share of the coins of the player alone in the pot
+  JACKPOT_GHOST_MIN: 60, // the ghost bets this many percent of the coins of the player alone in the pot ...
+  JACKPOT_GHOST_TOP: 80, // ... up to this many (random in between)
   JACKPOT_GHOST_MAX: 10000, // ... and never more than this
 
   // The secret address of the jackpot (and its case battles and poker):

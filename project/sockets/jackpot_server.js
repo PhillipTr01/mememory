@@ -153,7 +153,7 @@ module.exports = function (io) {
     pot.ghostAt = null;
   }
 
-  // 50-75% of the coins of the player who bet first, at most JACKPOT_GHOST_MAX (the house plays against them)
+  // JACKPOT_GHOST_MIN-TOP% of the coins of the player who bet first, at most JACKPOT_GHOST_MAX (the house plays against them)
   function addGhost() {
     pot.ghostTimer = null;
     pot.ghostAt = null;
@@ -163,7 +163,7 @@ module.exports = function (io) {
   }
 
   function ghostAmount(coins) {
-    const [low, high] = config.JACKPOT_GHOST_SHARE;
+    const [low, high] = [config.JACKPOT_GHOST_MIN / 100, config.JACKPOT_GHOST_TOP / 100];
     return Math.max(1, Math.min(config.JACKPOT_GHOST_MAX, Math.round(coins * (low + Math.random() * (high - low)))));
   }
 

@@ -21,7 +21,7 @@ const GAMES = {
           `Everybody puts coins into one pot. One player wins the pot - the house keeps ${config.JACKPOT_RAKE}% of it.`,
           "Your chance is your share of the pot: 1,000 of 4,000 coins = 25%.",
           `The countdown (${seconds(config.JACKPOT_COUNTDOWN)}) starts with the second player. Bets during the countdown still count.`,
-          `Alone in the pot for ${seconds(config.JACKPOT_GHOST_AFTER)}: the 👻 ghost (the house) joins with 50-75% of your coins (at most 🪙 ${n(config.JACKPOT_GHOST_MAX)}) - once: more coins of yours later make your chance bigger. If it wins, the house keeps the pot.`,
+          `Alone in the pot for ${seconds(config.JACKPOT_GHOST_AFTER)}: the 👻 ghost (the house) joins with ${config.JACKPOT_GHOST_MIN}-${config.JACKPOT_GHOST_TOP}% of your coins (at most 🪙 ${n(config.JACKPOT_GHOST_MAX)}) - once: more coins of yours later make your chance bigger. If it wins, the house keeps the pot.`,
           `A bet lands in the pot after ${seconds(config.JACKPOT_BET_DELAY[0])}-${seconds(config.JACKPOT_BET_DELAY[1])} (nobody can answer a bet in the last second). Too late for the draw: it goes into the next pot.`,
           "The winner is drawn with a random animation (wheel, roulette, race, ...). The pot is paid when the draw is over.",
         ],

@@ -10,6 +10,7 @@ const coins = require("../game/coins");
 const games = require("../game/games");
 const info = require("../game/info");
 const maintenance = require("../game/maintenance");
+const gifts = require("../game/gifts");
 
 /*
  * The hidden pages, mounted at the secret address (config.JACKPOT_PATH):
@@ -20,7 +21,7 @@ module.exports = function (auth) {
   const router = express.Router({ caseSensitive: false, strict: true });
 
   // The addresses of data (not pages) - without access: an error instead of the page to ask for it
-  const DATA = /^\/(withdraw|leaderboard\/|info\/|season|second-chance|request|maintenance)/;
+  const DATA = /^\/(withdraw|leaderboard\/|info\/|season|second-chance|request|maintenance|gift)/;
 
   // Only for players the admin let in - everybody else gets the page to ask for access
   const approved = asyncHandler(async (req, res, next) => {
@@ -88,6 +89,29 @@ module.exports = function (auth) {
       const user = await User.findOne({ _id: req._id }).select("casinoApproved casinoRequestedAt").lean();
       if (user == null) return res.status(401).json({ error: "Not logged in." });
       res.json({ approved: access.approved(user), requested: user.casinoRequestedAt != null, startCoins: access.startCoins(await access.firstApproval()).coins });
+    }),
+  );
+
+  /* ---------- Gifts: coins for another player (a click on a name in the chat) ---------- */
+
+  // How much the player can still give: {limit, given, left}
+  router.get(
+    "/gift",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => res.json(await gifts.status(req.username))),
+  );
+
+  // {to, amount} -> {coins, left} or {error}
+  router.post(
+    "/gift",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      const { to, amount } = req.body || {};
+      const result = await gifts.give(req.username, to, amount);
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
     }),
   );
 

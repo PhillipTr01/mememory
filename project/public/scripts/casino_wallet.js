@@ -727,4 +727,117 @@
     size();
     place();
   })();
+
+  /* ---------- Gifts: a click on a name in the chat - coins for that player ---------- */
+
+  window.chatNameClick = function (name) {
+    showGift(name);
+  };
+
+  async function showGift(name) {
+    document.querySelectorAll(".cs-gift-backdrop").forEach((n) => n.remove());
+    var backdrop = el("div", "mm-dialog-backdrop cs-gift-backdrop");
+    var dialog = el("form", "mm-dialog cs-gift");
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    dialog.noValidate = true;
+    var close = () => backdrop.remove();
+    var x = el("button", "cs-gift-close", "✕");
+    x.type = "button";
+    x.setAttribute("aria-label", "Close");
+    x.addEventListener("click", close);
+
+    var head = el("div", "cs-gift-head");
+    var pic = el("div", "cs-gift-pic");
+    pic.append(createAvatar(name, "lg"), el("span", "cs-gift-bow", "🎁"));
+    head.append(pic, el("span", "cs-gift-label", "Send coins to"), el("b", "cs-gift-name", name));
+
+    var input = el("input", "mm-input cs-gift-amount");
+    input.type = "number";
+    input.min = 1;
+    input.step = 1;
+    input.inputMode = "numeric";
+    input.placeholder = "Coins";
+    input.setAttribute("aria-label", "Coins");
+    var quick = el("div", "cs-gift-quick");
+    var info = el("p", "cs-gift-info", "…");
+    var error = el("p", "cs-gift-error");
+    error.hidden = true;
+    var sendButton = el("button", "cs-gift-send", "Send");
+    sendButton.type = "submit";
+
+    var left = 0;
+    var most = () => Math.max(0, Math.min(left, coins));
+    var render = () => {
+      var amount = Math.floor(Number(input.value) || 0);
+      sendButton.disabled = amount < 1 || amount > most();
+      sendButton.innerText = amount > 0 ? "🎁 Send 🪙 " + format(amount) : "Send";
+      quick.querySelectorAll("button").forEach((b) => (b.disabled = Number(b.dataset.value || most()) > most() || most() < 1));
+    };
+    [100, 500, 1000, 5000].forEach((value) => {
+      var b = el("button", "", format(value));
+      b.type = "button";
+      b.dataset.value = value;
+      b.addEventListener("click", () => {
+        input.value = Math.min(value, most());
+        render();
+      });
+      quick.appendChild(b);
+    });
+    var max = el("button", "", "Max");
+    max.type = "button";
+    max.addEventListener("click", () => {
+      input.value = most();
+      render();
+    });
+    quick.appendChild(max);
+    input.addEventListener("input", render);
+
+    dialog.append(x, head, input, quick, info, error, sendButton);
+    dialog.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      var amount = Math.floor(Number(input.value) || 0);
+      if (amount < 1) return;
+      sendButton.disabled = true;
+      error.hidden = true;
+      try {
+        var res = await fetch("gift", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: name, amount: amount }) });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || "That didn't work.");
+        close();
+        showToast("🎁 " + name + " got 🪙 " + format(amount) + " from you");
+      } catch (e) {
+        error.innerText = e.message;
+        error.hidden = false;
+        render();
+      }
+    });
+    backdrop.appendChild(dialog);
+    backdrop.addEventListener("click", (event) => event.target == backdrop && close());
+    document.addEventListener("keydown", function onKey(event) {
+      if (event.key != "Escape") return;
+      close();
+      document.removeEventListener("keydown", onKey);
+    });
+    document.body.appendChild(backdrop);
+    input.focus();
+
+    // How much is left to give (of the limit) - and the own coins
+    try {
+      var status = await (await fetch("gift", { cache: "no-store" })).json();
+      left = status.left;
+      info.replaceChildren(
+        document.createTextNode("You can give "),
+        el("b", "", "🪙 " + format(left)),
+        document.createTextNode(" more (of " + format(status.limit) + " in total) · you have 🪙 " + format(coins)),
+      );
+      if (left < 1) info.classList.add("used");
+    } catch (e) {
+      info.innerText = "";
+    }
+    render();
+  }
+
+  // A gift came: a toast on every open casino page
+  socket.on("giftReceived", (gift) => showToast("🎁 " + gift.from + " sent you 🪙 " + format(gift.amount) + "!"));
 })();

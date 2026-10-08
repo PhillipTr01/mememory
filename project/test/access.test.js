@@ -271,3 +271,38 @@ test("access: maintenance - closes like a season (games finish, countdown), then
   assert.strictEqual(maintenance.get().whitelist[0], "wes", "the whitelist stays for the next time");
   maintenance.reset();
 });
+
+test("access: gifts - coins for another player, at most GIFT_LIMIT in total", async () => {
+  tokens.gia = h.addUser("gia");
+  tokens.hal = h.addUser("hal");
+  h.setCoins("gia", 20000);
+  h.setCoins("hal", 100);
+  const give = async (to, amount) => {
+    const res = await call(CASINO + "/gift", { ...as("gia"), json: { to, amount } });
+    return { status: res.status, body: await res.json() };
+  };
+  assert.deepStrictEqual(await (await call(CASINO + "/gift", as("gia"))).json(), { limit: 10000, given: 0, left: 10000 });
+  // The other one hears it on every open casino page
+  const page = await connect("/jackpot", "hal");
+  const heard = h.once(page.socket, "giftReceived");
+  const first = await give("hal", 6000);
+  assert.strictEqual(first.status, 200);
+  assert.deepStrictEqual(first.body, { coins: 14000, left: 4000 });
+  assert.deepStrictEqual(await heard, { from: "gia", amount: 6000 });
+  assert.strictEqual(h.coinsOf("hal"), 6100);
+  // More than is left of the limit, to themselves, to nobody, no number: nothing happens
+  assert.match((await give("hal", 5000)).body.error, /4,000 more/);
+  assert.match((await give("gia", 10)).body.error, /yourself/);
+  assert.match((await give("nobody", 10)).body.error, /no such player/);
+  assert.strictEqual((await give("hal", 1.5)).status, 400);
+  assert.strictEqual((await give("hal", -5)).status, 400);
+  assert.strictEqual(h.coinsOf("gia"), 14000);
+  // The rest - then the limit is reached
+  assert.strictEqual((await give("hal", 4000)).status, 200);
+  assert.match((await give("hal", 1)).body.error, /the most you can/);
+  assert.strictEqual(h.coinsOf("hal"), 10100);
+  // Not more than the own coins
+  h.setCoins("hal", 50);
+  const poor = await call(CASINO + "/gift", { ...as("hal"), json: { to: "gia", amount: 51 } });
+  assert.match((await poor.json()).error, /that many coins/);
+});
