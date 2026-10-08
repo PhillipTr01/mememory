@@ -183,14 +183,12 @@ function addChatMessage(message, live) {
     name.style.color = own ? "var(--mm-accent)" : avatarColor(message.name);
     name.innerText = own ? "You" : message.name;
     if (message.spectator) name.appendChild(createIcon("bi-eye ms-1", "Spectator"));
-    // Casino pages: a click on somebody else's name (or picture) - coins for them
+    // Casino pages: a click on somebody else's picture - coins for them
     if (!own && typeof window.chatNameClick == "function") {
       var who = message.name;
-      [name, avatarSlot].forEach((part) => {
-        part.classList.add("msg-clickable");
-        part.title = "Send " + who + " coins";
-        part.addEventListener("click", () => window.chatNameClick(who));
-      });
+      avatarSlot.classList.add("msg-clickable");
+      avatarSlot.title = "Send " + who + " coins";
+      avatarSlot.addEventListener("click", () => window.chatNameClick(who));
     }
     var time = document.createElement("span");
     time.className = "msg-time";
