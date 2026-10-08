@@ -101,6 +101,7 @@ function render() {
   document.getElementById("jpRound").innerText = "Round " + state.round;
   // The coin in front of the number is drawn by the style (.jp-total::before)
   document.getElementById("jpTotal").innerText = formatCoins(state.total);
+  document.getElementById("jpTotal").title = state.rake ? "The pot - the winner gets it minus " + state.rake + "% for the house" : "";
   var players = state.entries.length;
   document.getElementById("jpPlayerCount").innerText = players == 1 ? "1 player" : players + " players";
   // The pot is in the middle of the wheel, the other draws show it above
@@ -297,7 +298,7 @@ function renderHistory() {
   // Only the last three winners
   list.replaceChildren(
     ...state.history.slice(0, 3).map((round) =>
-      historyItem(createAvatar(round.winner, "sm"), round.winner, "Round " + round.round + " · " + chanceOf(round.coins, round.total) + "% chance", "🪙 " + formatCoins(round.total)),
+      historyItem(createAvatar(round.winner, "sm"), round.winner, "Round " + round.round + " · " + chanceOf(round.coins, round.total) + "% chance", "🪙 " + formatCoins(round.payout != null ? round.payout : round.total)),
     ),
   );
 }

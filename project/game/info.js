@@ -18,7 +18,7 @@ const GAMES = {
       {
         heading: "How it works",
         items: [
-          "Everybody puts coins into one pot. One player wins the whole pot.",
+          `Everybody puts coins into one pot. One player wins the pot - the house keeps ${config.JACKPOT_RAKE}% of it.`,
           "Your chance is your share of the pot: 1,000 of 4,000 coins = 25%.",
           `The countdown (${seconds(config.JACKPOT_COUNTDOWN)}) starts with the second player. Bets during the countdown still count.`,
           `Alone in the pot for ${seconds(config.JACKPOT_GHOST_AFTER)}: the 👻 ghost (the house) joins with 85-115% of your coins. If it wins, the house keeps the pot.`,
@@ -79,6 +79,7 @@ const GAMES = {
           items: [
             `Texas Hold'em, up to ${config.POKER_SEATS} players at the table, played with chips.`,
             "Everybody gets 2 cards, then 5 cards come on the board (flop, turn, river). The best 5 of your 7 cards win the pot.",
+            `The house keeps ${config.POKER_RAKE}% of every pot that sees the flop (rake) - a hand that ends before the flop has none.`,
             "Bet with the slider or the mouse wheel (in big blinds), or with your own preset buttons.",
             `${seconds(config.POKER_TURN)} per decision - then you check, or fold if you can't check.`,
             `After every hand you decide within ${seconds(config.POKER_DECIDE)}: show your cards or muck them (hide them) - no decision means muck. The winner of a showdown always shows.`,

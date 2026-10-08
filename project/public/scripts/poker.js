@@ -317,6 +317,14 @@ function renderBoard() {
       row.appendChild(el("span", "pk-result-who", (p.winners.length > 1 ? who + " split" : who) + hand));
       return row;
     });
+    // What the house kept (rake)
+    if (state.result.rake > 0) {
+      var rake = el("div", "pk-result-pot pk-result-rake");
+      var rakeLabel = el("span", "pk-result-label", "Rake ");
+      rakeLabel.appendChild(chipsEl(state.result.rake));
+      rake.append(rakeLabel, el("span", "pk-result-who", "the house"));
+      rows.push(rake);
+    }
     result.replaceChildren(...rows);
   } else {
     result.replaceChildren();

@@ -7,7 +7,7 @@ const { bestHand, compare, pots, payout, payoutByPot, handName, newDeck, shuffle
 // Short timings for the tests
 Object.assign(config, { POKER_START: 30, POKER_SHOWDOWN: 60, POKER_DECIDE: 400, POKER_AFTER_DECIDE: 50, POKER_STREET: 10, POKER_TURN: 3000, POKER_AWAY: 100 });
 // (the amounts of these tests are made for small blinds - the levels are the same)
-Object.assign(config, { POKER_SMALL_BLIND: 5, POKER_BIG_BLIND: 10, POKER_MIN_BUYIN: 100 });
+Object.assign(config, { POKER_SMALL_BLIND: 5, POKER_BIG_BLIND: 10, POKER_MIN_BUYIN: 100, POKER_RAKE: 0 });
 
 /* ---------- Hands ---------- */
 
@@ -139,7 +139,8 @@ async function clearTable(players) {
   await waitFor(players[0], "pokerState", (s) => s.seats.every((seat) => seat == null), 5000);
 }
 
-test("poker: sit down with coins, only the own cards are visible, check down to the showdown", async () => {
+test("poker: sit down with coins, only the own cards are visible, check down to the showdown - the house takes its rake", async () => {
+  config.POKER_RAKE = 5;
   h.setCoins("alice", 1000);
   h.setCoins("bob", 1000);
   const alice = client("alice");
@@ -194,8 +195,9 @@ test("poker: sit down with coins, only the own cards are visible, check down to 
   }
 
   const end = await waitFor(alice, "pokerState", (x) => x.phase === "showdown");
-  // The result pot by pot
-  assert.strictEqual(end.result.pots.reduce((sum, p) => sum + p.amount, 0), 20);
+  // The result pot by pot - the house kept 5% of the 20 (the flop came): 1
+  assert.strictEqual(end.result.rake, 1);
+  assert.strictEqual(end.result.pots.reduce((sum, p) => sum + p.amount, 0), 19);
   assert.ok(end.result.pots[0].winners[0].hand);
   assert.strictEqual(end.result.showdown, true);
   // The winner shows; who lost decides (show or muck) - here they show
@@ -205,13 +207,14 @@ test("poker: sit down with coins, only the own cards are visible, check down to 
   const shown = losers.length ? await waitFor(alice, "pokerState", (x) => losers.every((i) => x.seats[i].shown)) : end;
   assert.ok([0, 3].every((i) => shown.seats[i].cards.every((card) => typeof card === "string")), "now both hands are shown");
   assert.ok(end.result.winners.length >= 1);
-  assert.strictEqual(end.result.winners.reduce((sum, w) => sum + w.amount, 0), 20);
-  assert.strictEqual(stacks(end), 500, "no chip is lost");
+  assert.strictEqual(end.result.winners.reduce((sum, w) => sum + w.amount, 0), 19);
+  assert.strictEqual(stacks(end), 499, "only the rake is gone");
 
   // Standing up: the chips are coins again
   await clearTable([alice, bob]);
   await h.wait(30);
-  assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 2000);
+  assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 1999);
+  config.POKER_RAKE = 0;
 });
 
 test("poker: a raise has to be answered, a fold gives the pot away", async () => {

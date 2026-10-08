@@ -93,6 +93,7 @@ module.exports = function (io) {
       spin: config.JACKPOT_SPIN,
       maxBets: config.JACKPOT_MAX_BETS,
       maxCoins: config.JACKPOT_MAX_COINS,
+      rake: config.JACKPOT_RAKE,
       history: pot.history,
       viewers: jackpot.sockets.size,
     };
@@ -219,6 +220,8 @@ module.exports = function (io) {
     // the pot. Which ticket was fixed at the start of the round (provably fair).
     // The tickets go through the bets in their order (not per player).
     pot.draw = fairWinner(pot.bets.map((bet) => ({ name: bet.name, coins: bet.amount })), pot.fair.number);
+    // The house keeps its cut: the winner gets the rest
+    pot.draw.payout = pot.draw.total - Math.floor((pot.draw.total * config.JACKPOT_RAKE) / 100);
     emitState();
 
     // Announced after the roulette, so the chat doesn't spoil it
@@ -234,7 +237,7 @@ module.exports = function (io) {
     const winner = pot.entries.find((entry) => entry.name === pot.draw.winner);
     if (winner.name === GHOST) return;
     try {
-      await coins.add(winner.name, pot.draw.total, { reason: "jackpot win", note: hasGhost() ? "against the ghost" : undefined });
+      await coins.add(winner.name, pot.draw.payout != null ? pot.draw.payout : pot.draw.total, { reason: "jackpot win", note: hasGhost() ? "against the ghost" : undefined });
     } catch (error) {
       console.error("[jackpot] Could not pay the winner:", error);
     }
@@ -246,7 +249,7 @@ module.exports = function (io) {
     const winner = pot.entries.find((entry) => entry.name === pot.draw.winner);
     const ghostWon = winner.name === GHOST;
     pot.announced = true;
-    const result = { round: pot.round, winner: winner.name, total: sum, coins: winner.coins };
+    const result = { round: pot.round, winner: winner.name, total: sum, payout: pot.draw.payout != null ? pot.draw.payout : sum, coins: winner.coins };
     pot.history.unshift(result);
     if (pot.records.day !== today()) pot.records = { day: today(), biggest: null, luckiest: null };
     // Records only for players

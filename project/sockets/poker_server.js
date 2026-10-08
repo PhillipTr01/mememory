@@ -429,12 +429,24 @@ module.exports = function (io) {
     return null;
   }
 
+  // The house's cut of a pot (rake): only once the flop came ("no flop, no drop")
+  function rakeOf(amount) {
+    return table.board.length >= 3 ? Math.floor((amount * config.POKER_RAKE) / 100) : 0;
+  }
+
   function winByFold(i) {
     const seat = table.seats[i];
-    const amount = table.seats.reduce((sum, s) => sum + (s && s.inHand ? s.total : 0), 0);
+    const all = table.seats.reduce((sum, s) => sum + (s && s.inHand ? s.total : 0), 0);
+    // Only what the others matched pays rake - the winner's own bet nobody called comes back whole
+    const others = table.seats.filter((s, k) => s && s.inHand && k !== i).map((s) => s.total);
+    const called = Math.min(seat.total, Math.max(0, ...others));
+    const contested = table.seats.reduce((sum, s) => sum + (s && s.inHand ? Math.min(s.total, called) : 0), 0);
+    const rake = rakeOf(contested);
+    const amount = all - rake;
     seat.stack += amount;
     table.result = {
       showdown: false,
+      rake: rake,
       winners: [{ seat: i, name: seat.name, amount: amount }],
       hands: [],
       pots: [{ amount: amount, players: [seat.name], winners: [{ seat: i, name: seat.name, amount: amount, hand: null }] }],
@@ -448,6 +460,14 @@ module.exports = function (io) {
     const alive = indexes().filter(live);
     const hands = new Map(alive.map((i) => [i, poker.bestHand(table.seats[i].cards.concat(table.board))]));
     const potList = poker.pots(indexes().filter(inHand).map((i) => ({ seat: i, total: table.seats[i].total, folded: table.seats[i].folded })));
+    // The rake: from every pot at least two players play for (not from chips nobody called)
+    let rake = 0;
+    potList.forEach((pot) => {
+      if (pot.eligible.length < 2) return;
+      const cut = rakeOf(pot.amount);
+      pot.amount -= cut;
+      rake += cut;
+    });
     // Odd chips: first to the players left of the button
     const order = [];
     for (let i = nextFrom(table.button, () => true), n = 0; n < table.seats.length; n++, i = (i + 1) % table.seats.length) order.push(i);
@@ -463,6 +483,7 @@ module.exports = function (io) {
     });
     table.result = {
       showdown: true,
+      rake: rake,
       winners: [...won.entries()].map(([i, amount]) => ({
         seat: i,
         name: table.seats[i].name,

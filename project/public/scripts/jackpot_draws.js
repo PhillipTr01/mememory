@@ -139,7 +139,7 @@ function confetti(root) {
 
 function winnerLabel(root, draw) {
   var label = el("div", "jp-scene-winner");
-  label.append(createAvatar(draw.winner, "sm"), el("span", "", draw.winner == myName ? "You win!" : draw.winner + " wins!"));
+  label.append(createAvatar(draw.winner, "sm"), el("span", "", draw.winner == myName ? "You win" + (draw.payout ? " 🪙 " + formatCoins(draw.payout) : "") + "!" : draw.winner + " wins!"));
   root.appendChild(label);
   animate(label, [{ opacity: 0, transform: "translate(-50%, 10px)" }, { opacity: 1, transform: "translate(-50%, 0)" }], {
     duration: 350,

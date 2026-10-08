@@ -76,6 +76,7 @@ module.exports = {
   JACKPOT_PAUSE: 5000, // result is shown, then a new round starts
   JACKPOT_MAX_BETS: 3, // separate bets per player and round
   JACKPOT_MAX_COINS: 15000, // all bets of a player in one round together
+  JACKPOT_RAKE: 5, // percent of the pot the house keeps (the winner gets the rest)
   // A new bet gets into the pot only after a random 3-5 s (no sniping:
   // nobody can answer a bet in the last second). Too late for the draw: the next pot.
   JACKPOT_BET_DELAY: [3000, 5000],
@@ -137,6 +138,7 @@ module.exports = {
   POKER_LEVEL_RESET: 10 * 60 * 1000,
   POKER_MIN_BUYIN: 1000, // (10 big blinds of the first level)
   POKER_MAX_BUYIN: 25000,
+  POKER_RAKE: 5, // percent of every pot the house keeps (only pots that saw the flop)
   POKER_DEFAULT_BUYIN: 10000, // what the buy-in starts with when sitting down (100 big blinds)
   POKER_TURN: 20 * 1000, // time to act, then check (or fold)
   POKER_START: 3000, // pause before a hand starts

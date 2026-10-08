@@ -7,6 +7,8 @@ const bj = require("../game/blackjack");
 
 // Long timers: nothing moves on by itself while the "server" restarts
 Object.assign(config, {
+  JACKPOT_RAKE: 0,
+  POKER_RAKE: 0,
   JACKPOT_BET_DELAY: [0, 0],
   JACKPOT_GHOST_AFTER: 60000,
   JACKPOT_COUNTDOWN: 60000,

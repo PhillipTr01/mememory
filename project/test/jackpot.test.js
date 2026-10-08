@@ -7,7 +7,7 @@ const crypto = require("crypto");
 const { pickWinner, newFairRound, fairHash, fairWinner } = require("../game/jackpot");
 
 // Short timings for the tests
-Object.assign(config, { JACKPOT_COUNTDOWN: 200, JACKPOT_SPIN: 100, JACKPOT_PAUSE: 100, JACKPOT_BET_DELAY: [0, 0], JACKPOT_GHOST_AFTER: 60000 });
+Object.assign(config, { JACKPOT_COUNTDOWN: 200, JACKPOT_SPIN: 100, JACKPOT_PAUSE: 100, JACKPOT_BET_DELAY: [0, 0], JACKPOT_GHOST_AFTER: 60000, JACKPOT_RAKE: 0 });
 
 /* ---------- Pure logic ---------- */
 
@@ -141,7 +141,8 @@ test("coins: the free coins come back at midnight (German time), not after 24 ho
 
 /* ---------- The pot ---------- */
 
-test("jackpot: two players start the countdown, the winner gets the whole pot", async () => {
+test("jackpot: two players start the countdown, the winner gets the pot minus the house's cut", async () => {
+  config.JACKPOT_RAKE = 5;
   h.setCoins("alice", 100);
   h.setCoins("bob", 100);
   const alice = client("alice");
@@ -180,11 +181,13 @@ test("jackpot: two players start the countdown, the winner gets the whole pot", 
   assert.strictEqual(drawing.draw.total, 45);
   assert.ok(drawing.draw.ticket >= 0 && drawing.draw.ticket < 45);
 
-  // Nothing is lost or created: 200 coins before, 200 after
+  // The house keeps 5% of the 45 (2) - the winner gets 43
+  assert.strictEqual(drawing.draw.payout, 43);
   await waitFor(alice, "jackpotState", (s) => s.history.length > 0);
-  assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 200);
+  assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 198);
   const winner = drawing.draw.winner;
-  assert.strictEqual(h.coinsOf(winner), (winner === "alice" ? 70 : 85) + 45);
+  assert.strictEqual(h.coinsOf(winner), (winner === "alice" ? 70 : 85) + 43);
+  config.JACKPOT_RAKE = 0;
 
   // A new, empty round follows
   const next = await waitFor(alice, "jackpotState", (s) => s.phase === "open");
