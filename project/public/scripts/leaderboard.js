@@ -16,11 +16,11 @@ function formatCoins(value) {
   return Number(value).toLocaleString("en-US");
 }
 
-// Short for the stats pill from a million on (12.3M, 1.5B) - the exact number on hover
+// Short for the stats pill from a million on, two decimals (12.34M, 1.50B) - the exact number on hover
 function shortCoins(value) {
   var units = [[1e9, "B"], [1e6, "M"]];
   for (var i = 0; i < units.length; i++) {
-    if (value >= units[i][0]) return String(Math.floor((value / units[i][0]) * 10) / 10) + units[i][1];
+    if (value >= units[i][0]) return (Math.floor((value / units[i][0]) * 100) / 100).toFixed(2) + units[i][1];
   }
   return formatCoins(value);
 }
