@@ -583,6 +583,14 @@ function fillSeasonPage() {
   }
 }
 
+// The wait between two second chances of a season (hours - null: the next day)
+function chanceDelayText(hours) {
+  if (hours == null) return "the next day";
+  if (hours == 0) return "none";
+  if (hours % 24 == 0 && hours >= 48) return hours / 24 + " days";
+  return hours + (hours == 1 ? " hour" : " hours");
+}
+
 // The leaderboard of a season - running: now (again at most every 15 s), over: the final places (once)
 var boardLoaded = { id: null, at: 0 };
 var BOARD_COLUMNS = [
@@ -839,7 +847,7 @@ function seasonDetail(season) {
     tile("👥", formatCoins(season.players || 0), season.status == "ended" ? "in the final places" : "players hit Start"),
     tile("🪙", formatCoins(season.budget), "start budget"),
     tile("🎁", formatCoins(season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting), "daily bonus"),
-    tile("💔", season.secondChances || 0, "second chances"),
+    tile("💔", season.secondChances || 0, "second chances" + (season.secondChances ? " · wait: " + chanceDelayText(season.chanceDelay) : "")),
     tile("⏳", season.closeWait + " s", "countdown"),
     tile("📊", EVERY_NAMES[season.every], "leaderboard"),
   );
@@ -907,6 +915,11 @@ function fillSeasonForm(season) {
   document.getElementById("adSeasonBudget").value = season.budget;
   document.getElementById("adSeasonBonus").value = season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting;
   document.getElementById("adSeasonChances").value = season.secondChances || 0;
+  var delay = document.getElementById("adSeasonChanceDelay");
+  var delayValue = season.chanceDelay == null ? "" : String(season.chanceDelay);
+  // (a wait not in the list - set some other way: added to it)
+  if (![...delay.options].some((option) => option.value == delayValue)) delay.appendChild(new Option(chanceDelayText(season.chanceDelay), delayValue));
+  delay.value = delayValue;
   document.getElementById("adSeasonWait").value = season.closeWait != null ? season.closeWait : 60;
   document.getElementById("adSeasonColor").value = season.color || GOLD;
   markColor();
@@ -1164,6 +1177,7 @@ async function saveSeason(event) {
     budget: Number(document.getElementById("adSeasonBudget").value),
     dailyBonus: Number(document.getElementById("adSeasonBonus").value),
     secondChances: Number(document.getElementById("adSeasonChances").value) || 0,
+    chanceDelay: document.getElementById("adSeasonChanceDelay").value === "" ? null : Number(document.getElementById("adSeasonChanceDelay").value),
     closeWait: Number(document.getElementById("adSeasonWait").value),
     // The gold of the casino: no own color
     color: document.getElementById("adSeasonColor").value.toLowerCase() == GOLD ? null : document.getElementById("adSeasonColor").value,

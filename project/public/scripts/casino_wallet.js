@@ -503,6 +503,8 @@
     );
     // What the season is: the coins, the bonus, the second chances, the players so far
     var facts = el("div", "cs-join-facts");
+    // How long between two second chances (hours - null: the next day)
+    var chanceWait = (hours) => (hours == null ? " (one a day)" : hours == 0 ? "" : " (" + (hours % 24 == 0 && hours >= 48 ? hours / 24 + " days" : hours + (hours == 1 ? " hour" : " hours")) + " apart)");
     var fact = (icon, value, label) => {
       var row = el("div", "cs-join-fact");
       row.append(el("span", "cs-join-fact-icon", icon), el("b", "", value), el("span", "", label));
@@ -511,7 +513,7 @@
     var start = (!view && data.joinCoins) || { coins: season.budget, missed: 0 };
     fact("🪙", format(start.coins), start.missed > 0 ? "to start (with " + start.missed + " missed daily bonus" + (start.missed == 1 ? "" : "es") + ")" : "to start with");
     fact("🎁", format(season.dailyBonus), "free every day");
-    if (season.secondChances > 0) fact("💔", season.secondChances, "second chance" + (season.secondChances == 1 ? "" : "s") + " if you lose it all");
+    if (season.secondChances > 0) fact("💔", season.secondChances, "second chance" + (season.secondChances == 1 ? "" : "s") + " if you lose it all" + (season.secondChances > 1 ? chanceWait(season.chanceDelay) : ""));
     fact("👥", season.players, "player" + (season.players == 1 ? "" : "s") + " in so far");
     card.appendChild(facts);
     // The prizes

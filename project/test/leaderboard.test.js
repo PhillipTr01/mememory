@@ -248,7 +248,7 @@ test("seasons: the daily bonuses add up - a day not claimed comes with the next 
   seasons.reset();
 });
 
-test("seasons: second chances - 0 coins and nothing in play, then the budget again; the first right away, the next one only the next day", async () => {
+test("seasons: second chances - 0 coins and nothing in play, then the budget again; the first right away, the next one only the next day (no wait set)", async () => {
   seasons.reset();
   const inPlay = require("../game/in_play");
   let playing = false;
@@ -295,6 +295,32 @@ test("seasons: second chances - 0 coins and nothing in play, then the budget aga
   h.setCoins("newbie", 0);
   assert.strictEqual((await seasons.chanceStatus("newbie", day3 + 1000)).can, true);
   assert.strictEqual(seasons.joinedAt("newbie"), day3);
+  seasons.reset();
+});
+
+test("seasons: the wait between second chances - hours of its own, none, or the next day", async () => {
+  seasons.reset();
+  const now = Date.now();
+  const made = await seasons.create({ name: "Quick", icon: "⚡", start: now - 1000, end: now + 30 * 24 * 3600 * 1000, budget: 5000, every: 0, secondChances: 3, chanceDelay: 2 });
+  assert.strictEqual(made.season.chanceDelay, 2);
+  await seasons.tick(now);
+  h.addUser("zoe");
+  await seasons.join("zoe", now);
+  h.setCoins("zoe", 0);
+  assert.strictEqual((await seasons.useChance("zoe", now + 1000)).left, 2);
+  h.setCoins("zoe", 0);
+  // 2 hours after the last one
+  const wait = await seasons.chanceStatus("zoe", now + 2000);
+  assert.deepStrictEqual([wait.reason, wait.nextAt], ["cooldown", now + 1000 + 2 * 3600 * 1000]);
+  assert.match((await seasons.useChance("zoe", now + 2000)).error, /later/);
+  assert.strictEqual((await seasons.chanceStatus("zoe", now + 1000 + 2 * 3600 * 1000)).can, true);
+  // None: right away - and back to the next day (not set)
+  await seasons.update(made.season.id, { ...made.season, chanceDelay: 0 });
+  assert.strictEqual((await seasons.chanceStatus("zoe", now + 3000)).can, true);
+  await seasons.update(made.season.id, { ...made.season, chanceDelay: null });
+  assert.strictEqual((await seasons.chanceStatus("zoe", now + 3000)).nextAt, days.nextDay(now + 1000));
+  assert.match((await seasons.update(made.season.id, { ...made.season, chanceDelay: 169 })).error, /0 to 168/);
+  assert.match((await seasons.update(made.season.id, { ...made.season, chanceDelay: 1.5 })).error, /0 to 168/);
   seasons.reset();
 });
 

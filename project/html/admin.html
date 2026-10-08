@@ -268,7 +268,24 @@
                             <label class="ad-field">
                                 <span class="ad-label">Second chances</span>
                                 <input id="adSeasonChances" class="mm-input" type="number" min="0" max="20" step="1" value="0">
-                                <span class="ad-setting-hint">A player who lost everything (0 coins, nothing in play) starts again with the budget - this many times. The first right away, every further one from the next day on.</span>
+                                <span class="ad-setting-hint">A player who lost everything (0 coins, nothing in play) starts again with the budget - this many times. The first right away, every further one after the wait below.</span>
+                            </label>
+                            <label class="ad-field">
+                                <span class="ad-label">Wait between second chances</span>
+                                <select id="adSeasonChanceDelay" class="mm-input">
+                                    <option value="">The next day (from midnight)</option>
+                                    <option value="0">None - right away</option>
+                                    <option value="1">1 hour</option>
+                                    <option value="2">2 hours</option>
+                                    <option value="3">3 hours</option>
+                                    <option value="6">6 hours</option>
+                                    <option value="12">12 hours</option>
+                                    <option value="24">24 hours</option>
+                                    <option value="48">2 days</option>
+                                    <option value="72">3 days</option>
+                                    <option value="168">1 week</option>
+                                </select>
+                                <span class="ad-setting-hint">After a second chance, how long until the next one can be taken (can change while the season runs).</span>
                             </label>
                             <label class="ad-field">
                                 <span class="ad-label">Countdown before start and end</span>

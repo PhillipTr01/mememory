@@ -27,7 +27,8 @@ const { place } = require("./places");
  *
  * Second chances: a season can give a player who lost everything (0 coins,
  * nothing in play anywhere) a few new starts with the budget. The first one
- * right away, every further one only from the next day on.
+ * right away, every further one after the delay of the season (chanceDelay:
+ * hours - not set: from the next day on).
  *
  * Without a running season the leaderboard is the normal one (live).
  *
@@ -72,6 +73,7 @@ function publicSeason(season) {
     budget: season.budget,
     dailyBonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : null,
     secondChances: season.secondChances || 0,
+    chanceDelay: chanceDelayOf(season),
     closeWait: closeWaitOf(season) / 1000,
     every: season.every,
     color: season.color || null,
@@ -118,6 +120,11 @@ async function load() {
 }
 
 // How long the countdown before the start and the end runs (ms): the season's own - or the setting
+// The wait between two second chances: hours (0: right away) - null: from the next day on
+function chanceDelayOf(season) {
+  return Number.isInteger(season.chanceDelay) ? season.chanceDelay : null;
+}
+
 function closeWaitOf(season) {
   return Number.isInteger(season.closeWait) ? season.closeWait * 1000 : config.SEASON_CLOSE_WAIT;
 }
@@ -195,6 +202,9 @@ function check(input, current) {
   if (color != null && !/^#[0-9a-f]{6}$/.test(color)) return { error: "A color like #d4a64a." };
   const secondChances = input.secondChances == null || input.secondChances === "" ? 0 : Number(input.secondChances);
   if (!Number.isInteger(secondChances) || secondChances < 0 || secondChances > 20) return { error: "Second chances: 0 to 20." };
+  // The wait between two second chances (hours; not given: from the next day on)
+  const chanceDelay = input.chanceDelay == null || input.chanceDelay === "" ? null : Number(input.chanceDelay);
+  if (chanceDelay != null && (!Number.isInteger(chanceDelay) || chanceDelay < 0 || chanceDelay > 168)) return { error: "The wait between second chances: 0 to 168 hours." };
   // The countdown before the start and the end (seconds; not given: the setting, 1 minute)
   const closeWait = input.closeWait == null || input.closeWait === "" ? null : Number(input.closeWait);
   if (closeWait != null && (!Number.isInteger(closeWait) || closeWait < 0 || closeWait > 3600)) return { error: "The countdown: 0 to 3600 seconds." };
@@ -225,7 +235,7 @@ function check(input, current) {
   // Never two seasons at the same time
   const other = state.seasons.find((season) => season !== current && !season.ended && season.start < end && start < season.end);
   if (other) return { error: `It overlaps with "${other.name}".` };
-  return { season: { name: name, icon: icon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, closeWait: closeWait, color: color, every: every, prizesOn: prizesOn, prizes: clean } };
+  return { season: { name: name, icon: icon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, chanceDelay: chanceDelay, closeWait: closeWait, color: color, every: every, prizesOn: prizesOn, prizes: clean } };
 }
 
 async function create(input) {
@@ -522,8 +532,9 @@ async function chanceStatus(username, now = Date.now()) {
   const result = { can: false, left: left, total: total, budget: season.budget, nextAt: null };
   if (joined(username) === false) return { ...result, reason: "notJoined" };
   if (left === 0) return { ...result, reason: "used" };
-  // The first one right away - after a second chance, the next one only from the next day on
-  const from = record.used > 0 ? days.nextDay(record.lastAt) : null;
+  // The first one right away - after a second chance, the next one after the delay (not set: the next day)
+  const delay = chanceDelayOf(season);
+  const from = record.used === 0 ? null : delay == null ? days.nextDay(record.lastAt) : record.lastAt + delay * 3600 * 1000;
   if (from != null && now < from) return { ...result, reason: "cooldown", nextAt: from };
   if ((await coins.get(username)).coins > 0) return { ...result, reason: "coins" };
   if (inPlay.where(username).length) return { ...result, reason: "inPlay" };
@@ -533,7 +544,7 @@ async function chanceStatus(username, now = Date.now()) {
 // Takes a second chance: the budget again (no missed bonuses) - {coins, left} or {error}
 async function useChance(username, now = Date.now()) {
   const status = await chanceStatus(username, now);
-  if (!status.can) return { error: status.reason === "cooldown" ? "Your next second chance comes tomorrow." : "No second chance right now.", status: status };
+  if (!status.can) return { error: status.reason === "cooldown" ? (chanceDelayOf(running()) == null ? "Your next second chance comes tomorrow." : "Your next second chance comes later.") : "No second chance right now.", status: status };
   const season = running();
   season.chances = season.chances || {};
   const record = season.chances[username] || { used: 0, lastAt: null };

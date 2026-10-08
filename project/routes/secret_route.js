@@ -166,6 +166,7 @@ module.exports = function (auth) {
               budget: season.budget,
               dailyBonus: coins.dailyBonus(),
               secondChances: season.secondChances || 0,
+              chanceDelay: Number.isInteger(season.chanceDelay) ? season.chanceDelay : null,
               prizes: season.prizesOn ? season.prizes : [],
               players: Object.keys(season.joined || {}).length,
             }
