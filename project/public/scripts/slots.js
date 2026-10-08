@@ -167,14 +167,18 @@ function buildNumbers() {
 }
 
 // Lines over the reels (SVG): through the middle of the cells
+// (full screen zooms the machine: the screen positions back to its own size - the size of the SVG)
 function linePoints(line) {
   var reels = [...document.querySelectorAll(".sl-reel")];
-  var window_ = document.querySelector(".sl-window").getBoundingClientRect();
+  var windowBox = document.querySelector(".sl-window");
+  var window_ = windowBox.getBoundingClientRect();
+  var zoom = windowBox.clientWidth ? window_.width / windowBox.clientWidth || 1 : 1;
+  var tile = document.querySelector(".sl-cell") ? document.querySelector(".sl-cell").offsetHeight || TILE : TILE;
   return setup.lines[line]
     .map((row, reel) => {
       var box = reels[reel].getBoundingClientRect();
-      var x = box.left - window_.left + box.width / 2;
-      var y = box.top - window_.top + TILE * row + TILE / 2;
+      var x = (box.left - window_.left + box.width / 2) / zoom;
+      var y = (box.top - window_.top) / zoom + tile * row + tile / 2;
       return x + "," + y;
     })
     .join(" ");

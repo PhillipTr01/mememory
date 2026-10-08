@@ -186,15 +186,30 @@
       var names = data.names || [];
       onlineButton.hidden = names.length == 0;
       var faces = el("span", "chat-online-faces");
-      names.slice(0, 3).forEach((name) => faces.appendChild(createAvatar(name, "sm")));
+      // (no tooltips here: the list says it all)
+      var quiet = (avatar) => {
+        avatar.removeAttribute("title");
+        return avatar;
+      };
+      names.slice(0, 3).forEach((name) => faces.appendChild(quiet(createAvatar(name, "sm"))));
       onlineButton.replaceChildren(faces, el("span", "chat-online-dot"), el("span", "chat-online-count", names.length + " online"));
-      onlineButton.title = names.join(", ");
+      onlineButton.removeAttribute("title");
+      onlineButton.removeAttribute("data-tip");
+      onlineButton.setAttribute("aria-label", names.length + " online: " + names.join(", "));
       onlineList.replaceChildren(
         el("div", "chat-online-title", "Online in the casino"),
         ...names.map((name) => {
           var row = el("div", "chat-online-row");
-          row.append(createAvatar(name, "sm"), el("span", "", name));
+          row.append(quiet(createAvatar(name, "sm")), el("span", "", name));
           if (name == myName) row.appendChild(el("span", "you-tag", "You"));
+          // Somebody else: a click - coins for them
+          else {
+            row.classList.add("clickable");
+            row.addEventListener("click", () => {
+              toggle(false);
+              showGift(name);
+            });
+          }
           return row;
         }),
       );

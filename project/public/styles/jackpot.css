@@ -4048,3 +4048,23 @@ body.jackpot-theme {
     transform: scale(0.6);
   }
 }
+
+/* Online in the casino: a click on somebody else - coins for them */
+.chat-online-row.clickable {
+  cursor: pointer;
+}
+
+.chat-online-row.clickable:hover {
+  background: rgba(var(--mm-accent-rgb), 0.12);
+}
+
+.chat-online-row.clickable::after {
+  content: "🎁";
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.chat-online-row.clickable:hover::after {
+  opacity: 1;
+}

@@ -978,7 +978,8 @@ function playJackpotDraw(battle, grid) {
   var box = el("div", "bt-mode-reveal bt-draw");
   var windowBox = el("div", "bt-draw-window");
   var track = el("div", "bt-draw-track");
-  for (var l = 0; l < DRAW_LAPS; l++) {
+  // (one lap more after the one it stops in: the window is never empty on the right)
+  for (var l = 0; l <= DRAW_LAPS; l++) {
     lap.forEach((seat) => {
       var slot = el("div", "bt-draw-slot");
       slot.style.setProperty("--seat", SEAT_COLORS[seat % SEAT_COLORS.length]);
@@ -1044,7 +1045,8 @@ function playModeReveal(battle, grid) {
   var options = ["classic", "crazy", "jackpot", "bestof", "worstof"];
   var at = Math.max(0, options.indexOf(ruleOf(battle)));
   var count = 28 + ((at - (28 % options.length) + options.length) % options.length);
-  for (var n = 0; n <= count; n++) track.appendChild(el("span", "bt-mode-icon", MODES[options[n % options.length]].icon));
+  // (a few more after the one it stops on: when it rolls a bit too far and back, there are icons - never an empty spot)
+  for (var n = 0; n <= count + 3; n++) track.appendChild(el("span", "bt-mode-icon", MODES[options[n % options.length]].icon));
   face.appendChild(track);
   var name = el("span", "bt-mode-name", "Which mode?");
   box.append(el("span", "bt-mode-title", "THE MODE IS..."), face, name);
