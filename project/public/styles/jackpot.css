@@ -25,7 +25,6 @@ body.jackpot-theme {
 .bt-case-price,
 .bt-round-price,
 .bt-row-price,
-.bt-pot,
 .bt-hero-pot,
 .bt-final-total,
 .bt-seat-total,
@@ -384,11 +383,6 @@ body.jackpot-theme {
   flex-shrink: 0;
   font-size: 0.9em;
   line-height: 1;
-}
-
-.jp-pot-label {
-  color: var(--mm-muted);
-  font-size: 0.75rem;
 }
 
 .jp-center-status {
@@ -1334,13 +1328,6 @@ body.jackpot-theme {
   opacity: 0.6;
 }
 
-.jp-record-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-}
-
 .jp-record-label {
   font-size: 0.7rem;
   font-weight: 600;
@@ -1499,11 +1486,6 @@ body.jackpot-theme {
   font-size: 1.5rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-}
-
-/* Secret coins: the balance pops */
-.jp-coins.jp-coins-pop {
-  animation: jp-pop 0.6s ease;
 }
 
 @keyframes jp-pop {
@@ -1743,25 +1725,6 @@ body.jackpot-theme {
     height: 280px;
     min-height: 280px;
   }
-}
-
-/* Buttons on the right of the head (case battles, back) */
-.bt-head-right {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* Own coins in the head (case battles, poker) */
-.bt-wallet {
-  padding: 0.3rem 0.7rem;
-  border: 1px solid var(--mm-border);
-  border-radius: 999px;
-  background: var(--mm-surface-2);
-  font-weight: 700;
-  color: var(--mm-accent);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 /* ---------- The games: a bar in the middle at the bottom (casino_dock.js) ---------- */
@@ -3575,8 +3538,6 @@ body.jackpot-theme {
   position: fixed;
   z-index: 1030;
 }
-
-
 
 /* Phones: the title and its buttons (all tables, full screen) wrap instead of sticking out */
 @media (max-width: 600px) {

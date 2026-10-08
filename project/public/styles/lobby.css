@@ -80,11 +80,6 @@
   color: var(--bot-color);
 }
 
-.bot-desc {
-  font-size: 0.8rem;
-  color: var(--mm-muted);
-}
-
 .bot-play {
   position: relative;
   font-size: 1.5rem;
@@ -320,10 +315,6 @@
   .bot-avatar {
     width: 44px;
     height: 44px;
-  }
-
-  .bot-desc {
-    font-size: 0.72rem;
   }
 }
 

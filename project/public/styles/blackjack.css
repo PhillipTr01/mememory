@@ -247,11 +247,6 @@
   display: none;
 }
 
-.bj-bar-label {
-  font-weight: 800;
-  color: var(--mm-accent);
-}
-
 .bj-chips {
   display: flex;
   flex-wrap: wrap;
@@ -867,8 +862,6 @@
   opacity: 0.7;
   font-weight: 700;
 }
-
-
 
 .bj-bet:empty {
   display: none;

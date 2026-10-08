@@ -140,7 +140,6 @@
   color: var(--mm-text);
 }
 
-
 .bt-risk {
   padding: 0.05rem 0.45rem;
   border-radius: 999px;
@@ -304,8 +303,6 @@
   opacity: 0.3;
 }
 
-
-
 .bt-create-row {
   display: flex;
   flex-wrap: wrap;
@@ -361,8 +358,6 @@
 .bt-size-value b {
   font-size: 1.15rem;
 }
-
-
 
 /* ---------- Case selection ---------- */
 .bt-tools {
@@ -697,12 +692,6 @@
   background: rgba(168, 85, 247, 0.18);
   color: #c084fc;
   font-weight: 700;
-}
-
-.bt-pot {
-  margin-left: auto;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
 }
 
 .bt-row-actions {

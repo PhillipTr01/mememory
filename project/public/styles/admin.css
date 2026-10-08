@@ -363,14 +363,6 @@ a.ad-link:focus-visible {
   white-space: nowrap;
 }
 
-/* In the running season (hit "Start") */
-.ad-pill.ad-season-pill {
-  margin-left: 0.35rem;
-  background: rgba(180, 150, 230, 0.16);
-  color: #cdb8f0;
-  vertical-align: middle;
-}
-
 .ad-pill[hidden] {
   display: none;
 }
@@ -1068,10 +1060,6 @@ a.ad-link:focus-visible {
   margin-left: auto;
 }
 
-.ad-seasons-grid {
-  grid-template-columns: minmax(0, 1fr) 360px;
-}
-
 /* A season's page: back to all of them */
 .ad-back {
   align-self: flex-start;
@@ -1283,12 +1271,6 @@ a.ad-link:focus-visible {
 .ad-add-prize {
   align-self: flex-start;
   margin-top: 0.4rem;
-}
-
-@media (max-width: 991px) {
-  .ad-seasons-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 #adSeasonCancel[hidden] {
@@ -1639,14 +1621,6 @@ a.ad-link:focus-visible {
   }
 }
 
-/* The bank (the balance from before the season) under the season balance */
-.ad-row-value .ad-bank {
-  display: block;
-  color: var(--mm-muted);
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-align: right;
-}
 
 /* The final leaderboard of a season: the podium a little brighter */
 .ad-final-top td {
