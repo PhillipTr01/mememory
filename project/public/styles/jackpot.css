@@ -2989,10 +2989,23 @@ body.jackpot-theme {
 
 /* Poker and blackjack: zoomed as a whole (casino_fullscreen.js, data-fullscreen-zoom), in the middle */
 .pk-main.cs-fullscreen,
-.bj-main.cs-fullscreen {
+.bj-main.cs-fullscreen,
+.sl-main.cs-fullscreen {
   display: flex;
   flex-direction: column;
   justify-content: center;
+}
+
+/* Nothing sticks out sideways (seats at the edge of the table) */
+.cs-fullscreen {
+  overflow-x: hidden;
+}
+
+/* Phones: less room around the game */
+@media (max-width: 900px) {
+  .cs-fullscreen {
+    padding: 0.75rem 0.75rem !important;
+  }
 }
 
 /* ---------- The leaderboard in the bar at the top (the season, when one runs) ---------- */

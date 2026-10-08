@@ -43,6 +43,8 @@
       tallest = Math.max(tallest, natural);
       natural = tallest;
       var next = Math.max(0.5, Math.min(room.x / width, room.y / natural));
+      // Phones: never bigger than on the page (what sticks out of a part grows with it)
+      if (window.innerWidth < 700) next = Math.min(1, next);
       if (Math.abs(next - zoom) < 0.01) return;
       zoom = next;
       parts().forEach(function (part) {
@@ -54,6 +56,10 @@
       measure: function () {
         var style = getComputedStyle(target);
         width = target.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        // (what sticks out of its part - like the line numbers next to the slot machine - counts too)
+        Array.prototype.forEach.call(target.children, function (part) {
+          if (!part.classList.contains("cs-fs-coins") && part.offsetParent != null) width = Math.max(width, part.scrollWidth);
+        });
       },
       start: function () {
         if (!width) this.measure();
