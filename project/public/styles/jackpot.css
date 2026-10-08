@@ -2074,6 +2074,7 @@ body.jackpot-theme {
 
 /* Phones: the coins and the bonus next to the logo without overlapping it */
 @media (max-width: 575px) {
+  .nav-chance,
   .nav-bonus,
   .nav-coins {
     margin-right: 0.3rem;
@@ -3579,9 +3580,7 @@ body.jackpot-theme {
     display: none;
   }
 
-  .nav-chance {
-    padding: 0.35rem 0.6rem;
-  }
+
 }
 
 /* Phones: the wheel fits the lower stage (it covered the bar of the round) */
@@ -3597,5 +3596,14 @@ body.jackpot-theme {
 
   .jp-scene {
     height: 280px;
+  }
+}
+
+/* Phones: the second chance as big as the free coins and the coins next to it (after its own rules) */
+@media (max-width: 575px) {
+  .nav-chance {
+    margin-right: 0.3rem;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.82rem;
   }
 }

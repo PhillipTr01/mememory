@@ -341,10 +341,11 @@
       settledAt = null;
       return (chanceTimer = setTimeout(checkChance, 1000));
     }
-    if (settledAt == null) settledAt = Date.now();
-    if (Date.now() - settledAt < CHANCE_SETTLE) return (chanceTimer = setTimeout(checkChance, CHANCE_SETTLE - (Date.now() - settledAt)));
+    // The pill right away - only the prompt waits until the last bet is over for a moment
     chanceStatus = status;
     renderChancePill();
+    if (settledAt == null) settledAt = Date.now();
+    if (Date.now() - settledAt < CHANCE_SETTLE) return (chanceTimer = setTimeout(checkChance, CHANCE_SETTLE - (Date.now() - settledAt)));
     // The prompt by itself only once - for this cooldown, for this second chance (the pill opens it again)
     if ((status.can || status.reason == "cooldown") && !chanceShown && !promptSeen(status)) showChance(status);
   }
