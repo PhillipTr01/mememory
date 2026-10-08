@@ -73,13 +73,15 @@ test("access: without the approval the secret address only shows the page to ask
   const html = await start.text();
   assert.match(html, /Ask for access/);
   assert.doesNotMatch(html, /<title>Jackpot/);
-  for (const path of ["/jackpot", "/battles", "/poker", "/blackjack", "/leaderboard"]) {
+  // Every address of the casino (also one that doesn't exist): the page to ask for access, right there
+  for (const path of ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/leaderboard", "/battles/xyz", "/nothing"]) {
     const res = await call(CASINO + path, as("tom"));
-    assert.strictEqual(res.status, 302, path);
-    assert.strictEqual(res.headers.get("location"), CASINO + "/", path);
+    assert.strictEqual(res.status, 200, path);
+    assert.match(await res.text(), /Ask for access/, path);
   }
-  // Not logged in: the landing page
-  assert.strictEqual((await call(CASINO + "/")).headers.get("location"), "/");
+  // Not logged in: the login - and then back to the page
+  assert.strictEqual((await call(CASINO + "/")).headers.get("location"), "/?next=" + encodeURIComponent(CASINO + "/"));
+  assert.strictEqual((await call(CASINO + "/battles")).headers.get("location"), "/?next=" + encodeURIComponent(CASINO + "/battles"));
   assert.strictEqual((await call(CASINO + "/withdraw", { ...as("tom"), json: { amount: 5000 } })).status, 403);
   assert.strictEqual((await call(CASINO + "/withdrawals", as("tom"))).status, 403);
   assert.strictEqual((await call(CASINO + "/leaderboard/data", as("tom"))).status, 403);
@@ -88,7 +90,7 @@ test("access: without the approval the secret address only shows the page to ask
   const board = await (await call(CASINO + "/leaderboard/data", as("old"))).json();
   assert.strictEqual(board.me.username, "old");
 
-  for (const namespace of ["/jackpot", "/battles", "/poker", "/blackjack"]) {
+  for (const namespace of ["/jackpot", "/battles", "/poker", "/blackjack", "/slots"]) {
     const result = await connect(namespace, "tom");
     assert.deepStrictEqual([result.ok, result.error], [false, "unauthorized"], namespace);
   }
@@ -134,7 +136,7 @@ test("access: asking for access - the admin sees the request, can approve or dec
   assert.strictEqual((await call(ADMIN + "/api/access", { json: { username: "tom", approve: true } })).status, 401);
 });
 
-test("access: the start money - 50,000 plus the daily bonus of every day since the first approval", async () => {
+test("access: the start money - just the start coins without a season (missed bonuses only count in a season)", async () => {
   const days = require("../game/days");
   // The very first approval (3 calendar days ago): just the start money
   const first = days.dayStart(days.dayStart() - 2.5 * DAY) + 2 * 60 * 60 * 1000;
@@ -143,22 +145,21 @@ test("access: the start money - 50,000 plus the daily bonus of every day since t
   assert.strictEqual(h.coinsOf("tom"), config.START_COINS);
   assert.strictEqual((await access.approve("tom")).error, "Already approved.");
 
-  // Today: three days later - three bonuses missed
+  // Today: three days later - still just the start coins (no season runs)
   const res = await adminApi("access", { username: "uma", approve: true });
   assert.strictEqual(res.status, 200);
-  assert.deepStrictEqual(res.body, { username: "uma", coins: config.START_COINS + 3 * config.DAILY_BONUS, missed: 3, again: false });
-  assert.strictEqual(h.coinsOf("uma"), 57500);
+  assert.deepStrictEqual(res.body, { username: "uma", coins: config.START_COINS, missed: 0, again: false });
+  assert.strictEqual(h.coinsOf("uma"), config.START_COINS);
   const log = h.coinLogs.filter((row) => row.username === "uma");
-  assert.deepStrictEqual(log.map((row) => [row.amount, row.reason]), [[57500, "start coins"]]);
-  assert.match(log[0].note, /3 missed daily bonuses/);
-  // The bonus of today is still hers
+  assert.deepStrictEqual(log.map((row) => [row.amount, row.reason]), [[config.START_COINS, "start coins"]]);
+  // The bonus of today is hers
   assert.strictEqual(await coins.claimBonus("uma"), true);
-  assert.strictEqual(h.coinsOf("uma"), 57500 + config.DAILY_BONUS);
+  assert.strictEqual(h.coinsOf("uma"), config.START_COINS + config.DAILY_BONUS);
 
   // What the next one gets
   const list = (await adminApi("access")).body;
   assert.strictEqual(new Date(list.firstApproval).getTime(), first);
-  assert.deepStrictEqual([list.startCoins, list.missed], [57500, 3]);
+  assert.deepStrictEqual([list.startCoins, list.missed, list.since], [config.START_COINS, 0, null]);
 
   // Now uma gets in
   assert.strictEqual((await call(CASINO + "/", as("uma"))).status, 200);
@@ -210,4 +211,63 @@ test("access: payouts only for players the admin ticked", async () => {
   await adminApi("payout", { username: "tom", allowed: false });
   assert.strictEqual((await call(CASINO + "/withdraw", { ...as("tom"), json: { amount: 5000 } })).status, 403);
   assert.strictEqual((await adminApi("payout", { username: "nobody", allowed: true })).status, 400);
+});
+
+test("access: maintenance - closes like a season (games finish, countdown), then only the whitelist gets in", async () => {
+  const maintenance = require("../game/maintenance");
+  const casinoLock = require("../game/casino_lock");
+  tokens.wes = h.addUser("wes");
+  tokens.xia = h.addUser("xia");
+  const until = Date.now() + 2 * 60 * 60 * 1000;
+  // An open page of a player not on the whitelist closes when it starts
+  const open = await connect("/jackpot", "xia");
+  assert.strictEqual(open.ok, true);
+  const closed = h.once(open.socket, "casinoClosed");
+  // First the casino closes (no new bets), every page sees the countdown - then it is on
+  const banner = h.once(open.socket, "seasonClosing");
+  const on = await adminApi("maintenance", { on: true, whitelist: ["wes"], until: until, note: "New cases!", wait: 1 });
+  assert.strictEqual(on.status, 200);
+  const started = on.body.maintenance;
+  assert.deepStrictEqual([started.on, started.whitelist, started.until, started.note, started.wait], [false, ["wes"], until, "New cases!", 1]);
+  assert.ok(started.closing && started.closing.startsAt > Date.now(), "nothing runs: the countdown right away");
+  assert.strictEqual(casinoLock.locked(), true, "no new bets while it closes");
+  assert.strictEqual((await banner).kind, "maintenance");
+  await closed;
+  assert.strictEqual(maintenance.get().on, true);
+  assert.strictEqual(casinoLock.locked(), false, "the whitelist plays during the maintenance");
+
+  // Not on the whitelist: the maintenance page everywhere, no data, no games
+  for (const path of ["/", "/slots", "/battles/xyz"]) {
+    const res = await call(CASINO + path, as("xia"));
+    assert.strictEqual(res.status, 200, path);
+    assert.match(await res.text(), /closed for maintenance/, path);
+  }
+  const data = await call(CASINO + "/leaderboard/data", as("xia"));
+  assert.strictEqual(data.status, 503);
+  assert.deepStrictEqual((await data.json()).maintenance, { on: true, until: until, note: "New cases!" });
+  assert.strictEqual((await connect("/slots", "xia")).ok, false);
+  // The maintenance page asks: still closed - when is it most likely over?
+  const info = await (await call(CASINO + "/maintenance", as("xia"))).json();
+  assert.deepStrictEqual(info, { on: true, until: until, note: "New cases!", allowed: false });
+
+  // On the whitelist: plays as always
+  const wes = await call(CASINO + "/", as("wes"));
+  assert.doesNotMatch(await wes.text(), /closed for maintenance/);
+  assert.strictEqual((await connect("/slots", "wes")).ok, true);
+  assert.strictEqual((await (await call(CASINO + "/maintenance", as("wes"))).json()).allowed, true);
+
+  // Wrong values change nothing
+  assert.strictEqual((await adminApi("maintenance", { on: "yes" })).status, 400);
+  assert.strictEqual((await adminApi("maintenance", { whitelist: "wes" })).status, 400);
+  assert.strictEqual((await adminApi("maintenance", { wait: -1 })).status, 400);
+  assert.strictEqual(maintenance.get().on, true);
+  // The admin panel knows the players to put on the list
+  assert.ok((await adminApi("maintenance")).body.players.includes("xia"));
+
+  // Over: everybody is back in
+  await adminApi("maintenance", { on: false });
+  assert.doesNotMatch(await (await call(CASINO + "/", as("xia"))).text(), /closed for maintenance/);
+  assert.strictEqual((await connect("/slots", "xia")).ok, true);
+  assert.strictEqual(maintenance.get().whitelist[0], "wes", "the whitelist stays for the next time");
+  maintenance.reset();
 });

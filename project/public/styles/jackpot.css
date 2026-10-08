@@ -7,8 +7,48 @@ body.jackpot-theme {
   --mm-on-accent: #1b1b1b; /* dark text on gold */
 }
 
+/*
+ * A season can have its own accent color (set on the body by the server).
+ * The coins always stay gold: these elements get the gold back.
+ */
+.nav-coins,
+.nav-bonus,
+.nav-payout-balance,
+.nav-payout-amount,
+.lb-coins,
+.lb-champion-coins,
+.jp-total,
+.jp-coins,
+.jp-player-coins,
+.jp-record-amount,
+.jp-bet,
+.bt-case-price,
+.bt-round-price,
+.bt-row-price,
+.bt-hero-pot,
+.bt-final-total,
+.bt-seat-total,
+.bt-item-value,
+.bt-contents-value,
+.bt-top-pot,
+.pk-pot,
+.pk-stack,
+.pk-bet,
+.pk-amount,
+.pk-mychips-value,
+.bj-bet,
+.sl-coins,
+.sl-coin-value,
+.sl-win-text,
+.sl-big-amount,
+.sl-prize-value {
+  --mm-accent: #d4a64a;
+  --mm-accent-rgb: 212, 166, 74;
+  --mm-accent-hover: #bf9238;
+}
+
 .jp-main {
-  max-width: 860px;
+  max-width: 1240px;
   margin: 0 auto;
   padding: 1.5rem;
   display: flex;
@@ -50,16 +90,132 @@ body.jackpot-theme {
 }
 
 /* Pot above the stage (not for the wheel, it has the pot in its middle) */
+/* Over the draw, in one line with it: pot left, countdown / info in the middle, players right */
 .jp-potbar {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: -1.1rem; /* sits right on the stage */
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--mm-border);
+  border-bottom: 0;
+  border-radius: var(--mm-radius) var(--mm-radius) 0 0;
+  background: var(--mm-surface-2);
+}
+
+/* The wheel shows the pot in its middle: no bar above */
+.jp-potbar[hidden] {
+  display: none;
+}
+
+.jp-potbar[hidden] + .jp-stage .jp-scene {
+  border-radius: var(--mm-radius);
+}
+
+/* The stage under the bar: square top corners (the scene and a full-size picture in it) */
+.jp-potbar:not([hidden]) + .jp-stage :is(.jp-race, .jp-launch, .jp-haunt),
+.jp-potbar:not([hidden]) + .jp-stage .jp-scene {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.jp-potbar .jp-total {
+  justify-self: start;
+  font-size: 1.15rem;
+}
+
+/* Countdown and info: the same size, in the middle */
+.jp-potbar .jp-center-status,
+.jp-potbar .jp-center-status.timer,
+.jp-potbar .jp-center-status.winner {
+  margin: 0;
+  max-width: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--mm-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.jp-potbar .jp-center-status.timer.urgent {
+  color: var(--mm-danger);
+}
+
+/* The countdown itself: bigger than the rest of the bar */
+.jp-potbar .jp-center-status.timer {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.jp-potbar .jp-center-status.winner {
+  color: var(--mm-accent);
+}
+
+.jp-potbar-right {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
   gap: 0.6rem;
 }
 
-.jp-potbar .jp-center-status {
-  margin: 0;
-  max-width: none;
+/* Alone in the pot: when the ghost comes (small, next to the players) */
+.jp-ghost-in {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.05rem 0.5rem 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(167, 139, 250, 0.14);
+  color: #c4b5fd;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.jp-ghost-in::before {
+  content: "👻";
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.jp-ghost-in[hidden] {
+  display: none;
+}
+
+.jp-player-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+}
+
+/* Two little heads in front of the number */
+.jp-player-count::before {
+  content: "";
+  width: 1.1em;
+  height: 0.9em;
+  background: currentColor;
+  -webkit-mask: radial-gradient(circle at 30% 30%, #000 0.2em, transparent 0.21em), radial-gradient(ellipse at 30% 100%, #000 0.36em, transparent 0.37em),
+    radial-gradient(circle at 75% 30%, #000 0.17em, transparent 0.18em), radial-gradient(ellipse at 75% 100%, #000 0.3em, transparent 0.31em);
+  mask: radial-gradient(circle at 30% 30%, #000 0.2em, transparent 0.21em), radial-gradient(ellipse at 30% 100%, #000 0.36em, transparent 0.37em),
+    radial-gradient(circle at 75% 30%, #000 0.17em, transparent 0.18em), radial-gradient(ellipse at 75% 100%, #000 0.3em, transparent 0.31em);
+}
+
+@media (max-width: 575px) {
+  .jp-potbar {
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .jp-potbar .jp-total,
+  .jp-potbar .jp-center-status,
+  .jp-player-count {
+    font-size: 0.85rem;
+  }
 }
 
 /* ---------- Stage: where the draw happens ---------- */
@@ -211,16 +367,22 @@ body.jackpot-theme {
 }
 
 .jp-total {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
   font-size: 1.7rem;
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1;
   color: var(--mm-accent);
   font-variant-numeric: tabular-nums;
 }
 
-.jp-pot-label {
-  color: var(--mm-muted);
-  font-size: 0.75rem;
+/* The coin in front of the pot: centered on the digits (not on the text line) */
+.jp-total::before {
+  content: "🪙";
+  flex-shrink: 0;
+  font-size: 0.9em;
+  line-height: 1;
 }
 
 .jp-center-status {
@@ -235,7 +397,7 @@ body.jackpot-theme {
 }
 
 .jp-center-status.timer {
-  font-size: 1.35rem;
+  font-size: 1.9rem;
   font-weight: 800;
   color: var(--mm-text);
   font-variant-numeric: tabular-nums;
@@ -431,66 +593,6 @@ body.jackpot-theme {
 
 .jp-pin.standing .mm-avatar {
   box-shadow: 0 0 0 3px var(--mm-accent), 0 0 18px var(--mm-accent);
-}
-
-/* ---------- 4. Plinko ---------- */
-.jp-plinko {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: var(--mm-radius);
-  background: var(--mm-surface-2);
-}
-
-.jp-peg {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  margin: -4px 0 0 -4px;
-  border-radius: 50%;
-  background: #4a4a4a;
-}
-
-.jp-slots {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 16%;
-  display: flex;
-  gap: 2px;
-}
-
-.jp-slot {
-  flex: 1 1 0;
-  min-width: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--share);
-  opacity: 0.75;
-  border-radius: 4px 4px 0 0;
-  transition: opacity 0.2s ease, transform 0.3s ease;
-}
-
-.jp-slot.won {
-  opacity: 1;
-  transform: translateY(-4px);
-  box-shadow: 0 0 0 2px #fff, 0 0 16px var(--share);
-}
-
-.jp-plinko-ball {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 18px;
-  height: 18px;
-  margin: -9px 0 0 -9px;
-  border-radius: 50%;
-  background: var(--mm-accent);
-  box-shadow: 0 0 10px rgba(var(--mm-accent-rgb), 0.8);
-  transform: translate(-100px, 0);
-  z-index: 2;
 }
 
 /* ---------- 5. Race ---------- */
@@ -705,7 +807,7 @@ body.jackpot-theme {
     radial-gradient(circle at 75% 65%, rgba(0, 0, 0, 0.12) 0 10%, transparent 11%);
 }
 
-/* The safe zone: everything outside is the storm */
+/* The safe zone: everything outside is the storm - darker in every stage, the edge glows */
 .jp-zone {
   position: absolute;
   left: 50%;
@@ -714,9 +816,35 @@ body.jackpot-theme {
   height: 190%;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0 0 2000px rgba(124, 58, 237, 0.35);
+  border: 2px solid rgba(216, 180, 254, 0.9);
+  box-shadow: 0 0 0 2000px rgba(91, 33, 182, 0.3), 0 0 18px 4px rgba(168, 85, 247, 0.55), inset 0 0 18px rgba(168, 85, 247, 0.35);
   pointer-events: none;
+  transition: box-shadow 0.8s ease;
+}
+
+.jp-zone[data-stage="2"] {
+  box-shadow: 0 0 0 2000px rgba(91, 33, 182, 0.4), 0 0 22px 5px rgba(168, 85, 247, 0.65), inset 0 0 20px rgba(168, 85, 247, 0.4);
+}
+
+.jp-zone[data-stage="3"] {
+  box-shadow: 0 0 0 2000px rgba(76, 29, 149, 0.5), 0 0 26px 6px rgba(192, 132, 252, 0.75), inset 0 0 24px rgba(168, 85, 247, 0.45);
+  animation: jp-storm-pulse 1.2s ease-in-out infinite;
+}
+
+.jp-zone[data-stage="4"] {
+  box-shadow: 0 0 0 2000px rgba(59, 7, 100, 0.62), 0 0 30px 8px rgba(216, 180, 254, 0.85), inset 0 0 28px rgba(192, 132, 252, 0.5);
+  animation: jp-storm-pulse 0.7s ease-in-out infinite;
+}
+
+@keyframes jp-storm-pulse {
+  50% {
+    border-color: #fff;
+  }
+}
+
+.jp-storm-hit {
+  color: #e9d5ff;
+  text-shadow: 0 0 14px #a855f7, 0 0 4px #fff;
 }
 
 .jp-fighter {
@@ -939,13 +1067,28 @@ body.jackpot-theme {
   opacity: 1;
 }
 
-/* ---------- 9. Russian roulette ---------- */
+/* ---------- 9. Russian roulette (the site's look: dark felt, thin rings, gold) ---------- */
 .jp-table {
   position: relative;
   width: 100%;
   height: 100%;
+  overflow: hidden;
   border-radius: var(--mm-radius);
-  background: radial-gradient(ellipse at 50% 56%, #3a2a22 0 36%, #241a16 37% 100%);
+  background: radial-gradient(ellipse at 50% 56%, rgba(var(--mm-accent-rgb), 0.07), transparent 55%), var(--mm-surface);
+}
+
+/* The table: a thin gold ring around the gun */
+.jp-table-ring {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  width: 62%;
+  height: 50%;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.35);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, var(--mm-surface-2), var(--mm-surface) 75%);
+  box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.02), inset 0 0 40px rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, -50%);
 }
 
 .jp-seat {
@@ -954,29 +1097,44 @@ body.jackpot-theme {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   transform: translate(-50%, -50%);
   transition: opacity 0.4s ease, filter 0.4s ease;
 }
 
 .jp-seat .mm-avatar {
   --size: 44px;
-  box-shadow: 0 0 0 3px var(--share);
+  box-shadow: 0 0 0 2px var(--mm-surface), 0 0 0 4px var(--share);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .jp-seat-name {
-  max-width: 90px;
+  max-width: 96px;
+  padding: 1px 8px;
   overflow: hidden;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.72rem;
   font-weight: 700;
-  color: #ddd;
+  color: var(--mm-text);
 }
 
-/* In the line of fire */
+/* Has the revolver now */
+.jp-seat.holding .mm-avatar {
+  box-shadow: 0 0 0 2px var(--mm-surface), 0 0 0 4px var(--mm-accent), 0 0 18px rgba(var(--mm-accent-rgb), 0.5);
+  transform: scale(1.08);
+}
+
+.jp-seat.holding .jp-seat-name {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  color: var(--mm-accent);
+}
+
+/* The moment before the pull */
 .jp-seat.aimed .mm-avatar {
-  box-shadow: 0 0 0 3px var(--mm-danger), 0 0 16px var(--mm-danger);
   animation: jp-jar-shake 0.12s linear infinite;
 }
 
@@ -999,7 +1157,7 @@ body.jackpot-theme {
 }
 
 .jp-seat.champion .mm-avatar {
-  box-shadow: 0 0 0 3px var(--mm-accent), 0 0 22px var(--mm-accent);
+  box-shadow: 0 0 0 2px var(--mm-surface), 0 0 0 4px var(--mm-accent), 0 0 26px var(--mm-accent);
 }
 
 /* The revolver in the middle: barrel up = angle 0 */
@@ -1015,52 +1173,79 @@ body.jackpot-theme {
 
 .jp-barrel {
   position: absolute;
-  left: -7px;
-  bottom: 18px;
-  width: 14px;
-  height: 62px;
-  border-radius: 4px 4px 2px 2px;
-  background: linear-gradient(90deg, #6b7280, #d1d5db 45%, #4b5563);
+  left: -6px;
+  bottom: 20px;
+  width: 12px;
+  height: 58px;
+  border-radius: 3px 3px 2px 2px;
+  background: linear-gradient(90deg, #3f3f46, #a1a1aa 45%, #3f3f46);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
+/* A thin gold sight on the barrel: where it points */
 .jp-barrel::before {
   content: "";
   position: absolute;
-  left: 3px;
-  top: 3px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #111;
+  left: 50%;
+  top: -3px;
+  width: 4px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--mm-accent);
+  transform: translateX(-50%);
 }
 
 .jp-cylinder {
   position: absolute;
   left: 0;
   top: 0;
-  width: 58px;
-  height: 58px;
+  width: 56px;
+  height: 56px;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.55);
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle, #9ca3af 0 18%, #6b7280 19% 60%, #4b5563 61%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  background: radial-gradient(circle, #52525b 0 16%, #27272a 17% 62%, #18181b 63%);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
 }
 
 .jp-chamber {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 13px;
-  height: 13px;
-  margin: -6.5px 0 0 -6.5px;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
   border-radius: 50%;
-  background: #1f2937;
-  transform: rotate(var(--a)) translateY(-18px);
+  background: #0b0b0d;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  transform: rotate(var(--a)) translateY(-17px);
 }
 
-/* The one bullet */
-.jp-chamber:first-child {
-  background: radial-gradient(circle at 40% 40%, #fde68a, #b45309);
+/* The odds of the next pull, under the gun */
+.jp-odds {
+  position: absolute;
+  left: 50%;
+  top: calc(56% + 44px);
+  z-index: 2;
+  padding: 2px 10px;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+  font-variant-numeric: tabular-nums;
+  transform: translateX(-50%);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.jp-odds.hot {
+  border-color: rgba(var(--mm-danger-rgb, 220, 53, 69), 0.6);
+  color: var(--mm-danger);
+}
+
+.jp-odds[hidden] {
+  display: none;
 }
 
 .jp-click {
@@ -1069,7 +1254,7 @@ body.jackpot-theme {
   font-size: 0.85rem;
   font-weight: 800;
   font-style: italic;
-  color: #ddd;
+  color: var(--mm-muted);
   pointer-events: none;
 }
 
@@ -1081,117 +1266,135 @@ body.jackpot-theme {
   min-width: 0;
 }
 
-/*
- * Page layout: the records of the day on the left of the game (wide screens),
- * on top of the side column (medium), under the game (phones) - so the
- * deposits are right under the bet
- */
-.jp-layout {
-  grid-template-columns: 230px minmax(0, 1fr) 340px;
-}
-
-.jp-left {
-  position: sticky;
-  top: 1rem;
-}
-
-@media (max-width: 1399px) {
-  .jp-layout {
-    grid-template-columns: minmax(0, 1fr) 340px;
-  }
-
-  .jp-layout > .room-main {
-    grid-column: 1;
-    grid-row: 1 / span 2;
-  }
-
-  .jp-layout > .jp-left {
-    position: static;
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .jp-layout > .room-side {
-    grid-column: 2;
-    grid-row: 2;
-  }
-}
-
-@media (max-width: 991px) {
-  .jp-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .jp-layout > .room-main,
-  .jp-layout > .jp-left,
-  .jp-layout > .room-side {
-    grid-column: 1;
-    grid-row: auto;
-  }
-}
-
-/* ---------- Records ---------- */
+/* ---------- Records of the day: a row of three cards on top of the game ---------- */
 .jp-records {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  max-width: 1240px;
+  margin: 0 auto 1rem;
   min-width: 0;
 }
 
-/* Medium screens: three slim cards on top of the side column */
-@media (min-width: 992px) and (max-width: 1399px) {
-  .jp-records {
-    gap: 0.4rem;
-  }
-
-  .jp-records .jp-record {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.15rem 0.6rem;
-    padding: 0.5rem 0.8rem;
-  }
-
-  .jp-records .jp-record-label {
-    flex-basis: 100%;
-  }
-}
-
+/* A record: picture left, label and name in the middle, pot and chance right */
+/* The label over the whole card, the name and the pot below it */
 .jp-record {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "picture label label"
+    "picture name amount"
+    "picture name chance";
+  align-items: center;
+  gap: 0.15rem 0.9rem;
   min-width: 0;
-  padding: 0.75rem 0.85rem;
+  padding: 0.9rem 1.1rem;
+}
+
+.jp-record-picture {
+  grid-area: picture;
+}
+
+.jp-record .jp-record-label {
+  grid-area: label;
+}
+
+.jp-record .jp-record-name {
+  grid-area: name;
+}
+
+.jp-record .jp-record-amount {
+  grid-area: amount;
+  justify-self: end;
+}
+
+.jp-record .jp-record-chance {
+  grid-area: chance;
+  justify-self: end;
+}
+
+.jp-record .mm-avatar {
+  --size: 48px;
+}
+
+.jp-record-placeholder {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 2px dashed var(--mm-border);
+  border-radius: 50%;
+  font-size: 1.3rem;
+  opacity: 0.6;
 }
 
 .jp-record-label {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: var(--mm-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jp-record-name {
+  font-size: 1.4rem;
+  line-height: 1.2;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.jp-record-who {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-width: 0;
+.jp-record.empty .jp-record-name {
+  font-size: 0.95rem;
   font-weight: 600;
-  font-size: 0.85rem;
+  color: var(--mm-muted);
 }
 
 .jp-record-amount {
-  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 1.15rem;
+  font-weight: 800;
   color: var(--mm-accent);
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.jp-record-none {
+/* The same coin as at the pot */
+.jp-record-amount::before {
+  content: "🪙";
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+.jp-record-chance {
+  font-size: 0.75rem;
+  font-weight: 600;
   color: var(--mm-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 1199px) {
+  .jp-record .mm-avatar,
+  .jp-record-placeholder {
+    --size: 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .jp-record-name {
+    font-size: 1.2rem;
+  }
+
+  .jp-record-amount {
+    font-size: 1rem;
+  }
 }
 
 /* ---------- Provably fair ---------- */
@@ -1228,7 +1431,7 @@ body.jackpot-theme {
 
 /* ---------- Deposits ---------- */
 .jp-deposits {
-  max-width: 860px;
+  max-width: 1240px;
   margin: 1rem auto 0;
   padding: 1.1rem 1.25rem;
 }
@@ -1285,11 +1488,6 @@ body.jackpot-theme {
   font-variant-numeric: tabular-nums;
 }
 
-/* Secret coins: the balance pops */
-.jp-coins.jp-coins-pop {
-  animation: jp-pop 0.6s ease;
-}
-
 @keyframes jp-pop {
   30% { transform: scale(1.25); color: var(--mm-accent); }
   100% { transform: scale(1); }
@@ -1343,10 +1541,6 @@ body.jackpot-theme {
 
 #jpBonus,
 .jp-error {
-  grid-column: 1 / -1;
-}
-
-.jp-error {
   margin: 0;
   font-size: 0.85rem;
   color: var(--mm-danger);
@@ -1370,42 +1564,118 @@ body.jackpot-theme {
   font-size: 0.85rem;
 }
 
+/* ---------- Side lists: the last rounds of every game ---------- */
 .jp-history {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--mm-surface-3) transparent;
 }
 
-.jp-history li {
-  display: flex;
+.jp-history-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.6rem;
-  font-size: 0.85rem;
+  gap: 0.65rem;
+  padding: 0.45rem 0.65rem 0.45rem 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--mm-surface-2);
 }
 
-.jp-history-name {
-  flex: 1 1 auto;
+/* The newest one a bit brighter */
+.jp-history-item:first-child {
+  border-color: rgba(var(--mm-accent-rgb), 0.3);
+  background: linear-gradient(90deg, rgba(var(--mm-accent-rgb), 0.12), var(--mm-surface-2) 70%);
+}
+
+.jp-history-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--mm-surface-3);
+  font-size: 0.95rem;
+}
+
+.jp-history-text {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  line-height: 1.25;
 }
 
-.jp-history-odds {
+.jp-history-text b,
+.jp-history-text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jp-history-text b {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.jp-history-text small {
+  font-size: 0.72rem;
   color: var(--mm-muted);
-  font-variant-numeric: tabular-nums;
 }
 
 .jp-history-won {
+  font-size: 0.86rem;
+  font-weight: 800;
   color: var(--mm-accent);
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.jp-history-won.plus {
+  color: var(--mm-success);
+}
+
+.jp-history-won.minus {
+  color: var(--mm-danger);
+}
+
+.jp-history-won.muted {
+  color: var(--mm-muted);
+  font-weight: 600;
+}
+
+/* Nothing there yet: a calm box with an icon instead of a lonely line */
+.jp-empty[data-icon] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 1rem 0.75rem;
+  border: 1px dashed var(--mm-border);
+  border-radius: 12px;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.jp-empty[data-icon]::before {
+  content: attr(data-icon);
+  font-size: 1.5rem;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.jp-empty[hidden] {
+  display: none;
+}
+
+/* An empty player list takes no room (no big gap above "nobody is in") */
+.side-card .player-list:empty {
+  display: none;
 }
 
 /* On big screens the side fits the screen: the lists scroll, the chat keeps its room */
@@ -1415,8 +1685,9 @@ body.jackpot-theme {
     overflow-y: auto;
   }
 
+  /* About four rows, then the list scrolls */
   .jp-history {
-    max-height: 16vh;
+    max-height: 228px;
     overflow-y: auto;
   }
 }
@@ -1441,15 +1712,6 @@ body.jackpot-theme {
   }
 }
 
-/* Phones: the records side by side in a row */
-@media (max-width: 991px) {
-  .jp-records {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.5rem;
-  }
-}
-
 @media (max-width: 575px) {
   .jp-records {
     grid-template-columns: minmax(0, 1fr);
@@ -1465,54 +1727,101 @@ body.jackpot-theme {
   }
 }
 
-/* Buttons on the right of the head (case battles, back) */
-.bt-head-right {
+/* ---------- The games: a bar in the middle at the bottom (casino_dock.js) ---------- */
+.cs-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  z-index: 40;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
-/* Own coins in the head (case battles, poker) */
-.bt-wallet {
-  padding: 0.3rem 0.7rem;
-  border: 1px solid var(--mm-border);
-  border-radius: 999px;
-  background: var(--mm-surface-2);
-  font-weight: 700;
-  color: var(--mm-accent);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+.cs-dock.ready {
+  transition: transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-/* ---------- Choice of the hidden games (tabs on every page) ---------- */
-.cs-nav {
-  display: flex;
-  gap: 0.35rem;
-  padding: 4px;
-  border: 1px solid var(--mm-border);
-  border-radius: var(--mm-radius);
-  background: var(--mm-surface-2);
+/* Closed: the bar slides down, only the handle stays */
+.cs-dock.closed {
+  transform: translate(-50%, calc(100% - 16px));
 }
 
-.cs-tab {
-  flex: 1;
+.cs-dock-toggle {
+  pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.45rem 0.5rem;
-  border-radius: 6px;
+  height: 30px;
+  padding: 0 0.9rem 0 1rem;
+  line-height: 1;
+  border: 1px solid var(--mm-border);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: var(--mm-surface);
   color: var(--mm-muted);
-  font-size: 0.88rem;
+  font-size: 0.75rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.cs-dock-toggle:hover {
+  color: var(--mm-text);
+}
+
+.cs-dock-chevron {
+  display: block;
+  width: 12px;
+  height: 12px;
+  transition: transform 0.3s ease;
+}
+
+/* Closed: the arrow points up (open it) */
+.cs-dock.closed .cs-dock-chevron {
+  transform: rotate(180deg);
+}
+
+.cs-dock-bar {
+  pointer-events: auto;
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.4rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 18px;
+  background: rgba(30, 30, 30, 0.92);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+/* Icon on top, name below - like the game choice in the lobby */
+.cs-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 6.5rem;
+  padding: 0.4rem 0.75rem 0.35rem;
+  border-radius: 12px;
+  color: var(--mm-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .cs-tab:hover {
+  background: var(--mm-surface-2);
   color: var(--mm-text);
-  background: var(--mm-surface-3);
+}
+
+.cs-tab:hover .cs-dock-icon {
+  transform: translateY(-2px) scale(1.06);
 }
 
 .cs-tab.active {
@@ -1520,13 +1829,42 @@ body.jackpot-theme {
   color: var(--mm-text);
 }
 
-.cs-tab-icon {
-  font-size: 1.05rem;
+.cs-dock-icon {
+  width: 36px;
+  height: 36px;
+  transition: transform 0.2s ease;
+}
+
+/* Room below the page for the bar */
+.room-page {
+  padding-bottom: 110px;
 }
 
 @media (max-width: 575px) {
-  .cs-tab-label {
-    display: none;
+  .cs-dock {
+    bottom: 8px;
+    width: calc(100% - 16px);
+  }
+
+  .cs-dock.closed {
+    transform: translate(-50%, calc(100% - 22px));
+  }
+
+  .cs-dock-bar {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .cs-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.35rem 0.2rem;
+    font-size: 0.66rem;
+  }
+
+  .cs-dock-icon {
+    width: 30px;
+    height: 30px;
   }
 }
 
@@ -1553,6 +1891,19 @@ body.jackpot-theme {
   border-color: var(--mm-accent);
   background: rgba(var(--mm-accent-rgb), 0.18);
   color: var(--mm-accent);
+  position: relative;
+}
+
+/* The glow: a layer of its own that only fades (no repaint of the page on every frame) */
+.nav-bonus.ready::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 14px rgba(var(--mm-accent-rgb), 0.55);
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
   animation: nav-bonus-glow 1.8s ease-in-out infinite;
 }
 
@@ -1562,7 +1913,7 @@ body.jackpot-theme {
 
 @keyframes nav-bonus-glow {
   50% {
-    box-shadow: 0 0 14px rgba(var(--mm-accent-rgb), 0.55);
+    opacity: 1;
   }
 }
 
@@ -1723,6 +2074,7 @@ body.jackpot-theme {
 
 /* Phones: the coins and the bonus next to the logo without overlapping it */
 @media (max-width: 575px) {
+  .nav-chance,
   .nav-bonus,
   .nav-coins {
     margin-right: 0.3rem;
@@ -1924,4 +2276,1334 @@ body.jackpot-theme {
 
 .chat-online-row:hover {
   background: var(--mm-surface-2);
+}
+
+/* ---------- 10. Slots: the site's own look (dark surfaces, thin lines, gold accent) ---------- */
+.jp-scene-slots {
+  background: radial-gradient(ellipse at 50% 0%, rgba(var(--mm-accent-rgb), 0.08), transparent 60%), var(--mm-surface-2);
+}
+
+.jp-slotm {
+  --tile: 64px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--mm-border);
+  border-radius: 18px;
+  background: var(--mm-surface);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.jp-slots-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  padding: 0 4px;
+}
+
+.jp-slots-title {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mm-accent);
+}
+
+.jp-slots-sub {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--mm-muted);
+}
+
+.jp-slots-window {
+  position: relative;
+  display: flex;
+  gap: 6px;
+}
+
+.jp-reel {
+  position: relative;
+  z-index: 1; /* over the win line: it only shows between the reels */
+  width: calc(var(--tile) + 12px);
+  height: calc(var(--tile) * 3);
+  overflow: hidden;
+  border: 1px solid var(--mm-border);
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+}
+
+/* Round reels: the faces fade out at the top and the bottom */
+.jp-reel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--mm-surface-2), transparent 30%, transparent 70%, var(--mm-surface-2));
+  pointer-events: none;
+}
+
+.jp-reel.spinning .jp-reel-track {
+  filter: blur(1.5px);
+}
+
+.jp-reel-track {
+  will-change: transform;
+}
+
+.jp-reel-tile {
+  height: var(--tile);
+  display: grid;
+  place-items: center;
+}
+
+.jp-reel-tile .mm-avatar {
+  --size: calc(var(--tile) - 18px);
+  box-shadow: 0 0 0 2px var(--share);
+}
+
+.jp-reel-tile.win .mm-avatar {
+  box-shadow: 0 0 0 3px var(--mm-accent), 0 0 16px rgba(var(--mm-accent-rgb), 0.7);
+  animation: jp-pulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes jp-pulse {
+  to {
+    transform: scale(1.08);
+  }
+}
+
+/* The win line: a thin gold line with a small mark on both sides */
+.jp-slots-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(var(--mm-accent-rgb), 0.55);
+  pointer-events: none;
+}
+
+.jp-slots-arrow {
+  position: absolute;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  transform: translateY(-50%);
+}
+
+.jp-slots-arrow.left {
+  left: -9px;
+  border-left: 7px solid var(--mm-accent);
+}
+
+.jp-slots-arrow.right {
+  right: -9px;
+  border-right: 7px solid var(--mm-accent);
+}
+
+/* Three of a kind: the machine lights up in gold */
+.jp-slotm.jackpot {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 0 1px var(--mm-accent), 0 0 32px rgba(var(--mm-accent-rgb), 0.35);
+}
+
+/* The lever: a thin line with a gold knob */
+.jp-slots-lever {
+  position: absolute;
+  right: -18px;
+  top: calc(50% - 40px);
+  width: 3px;
+  height: 56px;
+  border-radius: 2px;
+  background: var(--mm-border);
+  transform-origin: 50% 100%;
+}
+
+.jp-slots-knob {
+  position: absolute;
+  top: -8px;
+  left: -5px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--mm-accent);
+  box-shadow: 0 0 8px rgba(var(--mm-accent-rgb), 0.5);
+}
+
+/* ---------- 11. Space launch ---------- */
+.jp-launch {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: space-around;
+  padding: 0 12px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #050816, #12204a 70%, #26385f);
+}
+
+.jp-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #fff;
+  animation: jp-twinkle 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes jp-twinkle {
+  from {
+    opacity: 0.2;
+  }
+  to {
+    opacity: 0.9;
+  }
+}
+
+.jp-orbit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 22px;
+  padding-left: 10px;
+  border-top: 2px dashed rgba(167, 139, 250, 0.55);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: rgba(167, 139, 250, 0.8);
+}
+
+.jp-launch-lane {
+  position: relative;
+  flex: 1;
+  max-width: 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: 6px;
+}
+
+.jp-launch-pad {
+  width: 70%;
+  padding: 2px 0;
+  border-radius: 4px 4px 0 0;
+  background: #4b5563;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.jp-rocket {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  will-change: transform;
+}
+
+.jp-rocket-ship {
+  font-size: 2rem;
+  line-height: 1;
+  transform: rotate(-45deg);
+}
+
+.jp-rocket .mm-avatar {
+  margin-top: 2px;
+  box-shadow: 0 0 0 2px var(--share);
+}
+
+.jp-rocket-flame {
+  position: absolute;
+  top: 32px;
+  width: 12px;
+  height: 0;
+  border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
+  background: linear-gradient(180deg, #fff3b0, #f97316 60%, transparent);
+  opacity: 0;
+  z-index: -1;
+}
+
+.jp-rocket.burning .jp-rocket-flame {
+  height: 46px;
+  opacity: 1;
+  animation: jp-flame 0.12s linear infinite alternate;
+}
+
+@keyframes jp-flame {
+  to {
+    transform: scaleY(1.25);
+  }
+}
+
+.jp-rocket.lost {
+  opacity: 0.25;
+  filter: grayscale(1);
+}
+
+.jp-rocket.orbit .mm-avatar {
+  box-shadow: 0 0 0 3px var(--mm-accent), 0 0 18px var(--mm-accent);
+}
+
+.jp-rocket .jp-boom {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  font-size: 2.4rem;
+}
+
+/* ---------- 12. Scratch card ---------- */
+.jp-scene-scratch {
+  background: radial-gradient(circle at 50% 30%, #1f3b2b, #0f1d15 75%);
+}
+
+.jp-scratch {
+  position: relative;
+  padding: 10px 14px 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  color: #3f2d0b;
+}
+
+.jp-scratch-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 8px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.jp-scratch-rule {
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.jp-scratch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 72px);
+  grid-auto-rows: 72px;
+  gap: 6px;
+}
+
+.jp-scratch-field {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #fffbeb;
+  border: 2px solid rgba(63, 45, 11, 0.2);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.jp-scratch-face .mm-avatar {
+  --size: 52px;
+  box-shadow: 0 0 0 2px var(--share);
+}
+
+.jp-scratch-field.two {
+  border-color: #f59e0b;
+}
+
+.jp-scratch-field.match {
+  border-color: var(--mm-danger);
+  box-shadow: 0 0 16px rgba(224, 103, 90, 0.8);
+  animation: jp-pulse 0.5s ease-in-out infinite alternate;
+}
+
+.jp-scratch-foil {
+  position: absolute;
+  inset: -2px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: repeating-linear-gradient(135deg, #c0c4cc 0 6px, #a1a6b0 6px 12px);
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.jp-scratch-coin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  font-size: 1.5rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+/* ---------- 13. Ghost hunt ---------- */
+.jp-haunt {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: repeating-linear-gradient(90deg, #2a2335 0 40px, #2f2740 40px 80px);
+}
+
+.jp-hider {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.6s ease, transform 0.6s ease, filter 0.6s ease;
+}
+
+.jp-hider .mm-avatar {
+  --size: 46px;
+  box-shadow: 0 0 0 2px var(--share);
+}
+
+.jp-hider-name {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #e5e7eb;
+}
+
+.jp-hider.taken {
+  opacity: 0;
+  filter: blur(3px);
+  transform: translate(-50%, -90%) scale(0.6);
+}
+
+.jp-hider.survivor .mm-avatar {
+  box-shadow: 0 0 0 3px var(--mm-accent), 0 0 22px var(--mm-accent);
+}
+
+/* The light: everything outside the circle is dark */
+.jp-flashlight {
+  position: absolute;
+  left: -90px;
+  top: -90px;
+  z-index: 4;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  /* Pitch dark outside the light: nobody can be seen before the light is on them */
+  background: radial-gradient(circle, rgba(255, 244, 200, 0.1) 0 38%, rgba(2, 2, 6, 0.75) 56%, #020206 70%);
+  box-shadow: 0 0 0 2000px #020206;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.jp-flashlight.wander {
+  animation: jp-wander 7s ease-in-out infinite alternate;
+}
+
+@keyframes jp-wander {
+  from {
+    margin-left: -140px;
+  }
+  to {
+    margin-left: 140px;
+  }
+}
+
+.jp-haunt.blackout .jp-flashlight {
+  background: #020206;
+}
+
+.jp-haunt.lit .jp-flashlight {
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+/* A caught player: a small 👻 stays, floating, glowing in the dark */
+.jp-ghost-left {
+  position: absolute;
+  z-index: 5;
+  font-size: 1.6rem;
+  opacity: 0;
+  filter: drop-shadow(0 0 8px rgba(196, 181, 253, 0.8));
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: jp-ghost-left 2.4s ease-in-out infinite alternate both;
+}
+
+@keyframes jp-ghost-left {
+  from {
+    opacity: 0.55;
+    transform: translate(-50%, -50%);
+  }
+  to {
+    opacity: 0.8;
+    transform: translate(-50%, -62%);
+  }
+}
+
+.jp-haunt.lit .jp-ghost-left {
+  filter: none;
+}
+
+.jp-ghost,
+.jp-boo {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.jp-ghost {
+  font-size: 2.6rem;
+}
+
+.jp-boo {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #c4b5fd;
+  text-shadow: 0 0 10px #7c3aed;
+}
+
+@media (max-width: 575px) {
+  .jp-slotm {
+    --tile: 54px;
+    padding: 6px 12px 8px;
+  }
+
+  .jp-scratch-grid {
+    grid-template-columns: repeat(3, 58px);
+    grid-auto-rows: 58px;
+  }
+
+  .jp-scratch-face .mm-avatar {
+    --size: 42px;
+  }
+
+  .jp-rocket-ship {
+    font-size: 1.5rem;
+  }
+}
+
+/* The hint over the empty reels: readable */
+.jp-scene-slots .jp-scene-empty {
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.88);
+  color: var(--mm-text);
+}
+
+/* The icon of a game next to its name (the same as in the game bar) */
+.cs-title-icon {
+  flex-shrink: 0;
+  width: 1.4em;
+  height: 1.4em;
+}
+
+/* Blackjack in the game bar: the red "21" card of its page */
+.cs-dock-21 {
+  display: grid;
+  place-items: center;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+/* An empty status line takes no room */
+.jp-status:empty {
+  display: none;
+}
+
+/* Roulette with nobody in it yet: blank pictures under the marker */
+.jp-roulette.empty .jp-track {
+  justify-content: center;
+}
+
+/* (still - a pulse here looked like flickering) */
+.jp-tile.blank {
+  border-bottom-color: var(--mm-border);
+  opacity: 0.5;
+}
+
+.jp-tile-blank-face {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 2px dashed var(--mm-border);
+  border-radius: 50%;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--mm-muted);
+}
+
+.jp-tile .jp-tile-blank-name {
+  width: 56px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--mm-surface-3);
+}
+
+/* ---------- The "i" next to a game title: how it works ---------- */
+.cs-info-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin-left: 0.15rem;
+  padding: 0;
+  border: 1px solid var(--mm-border);
+  border-radius: 50%;
+  background: var(--mm-surface-2);
+  color: var(--mm-muted);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.8rem;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.cs-info-btn:hover,
+.cs-info-btn:focus-visible {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+}
+
+.cs-info {
+  max-width: 520px;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.cs-info-heading {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--mm-accent);
+  text-transform: uppercase;
+}
+
+.cs-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0 0 0.5rem;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--mm-text);
+}
+
+.cs-info-list li::marker {
+  color: var(--mm-muted);
+}
+
+.cs-info .mm-btn {
+  margin-top: 0.75rem;
+}
+
+/* In the middle of the wheel: the 👻 countdown small under the status */
+/* (under the status, out of the flow: the pot and the countdown don't move when it comes) */
+.jp-wheel-center .jp-mirror-ghost {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 2.3rem);
+  font-size: 0.7rem;
+  transform: translateX(-50%);
+}
+
+/* The countdown in the middle of the wheel: a bit smaller */
+.jp-wheel-center .jp-center-status.timer {
+  font-size: 1.15rem;
+}
+
+.jp-wheel-center .jp-mirror-ghost::before {
+  font-size: 0.75rem;
+}
+
+/* ---------- Full screen (slots, poker, blackjack): the button and the game on the whole screen ---------- */
+.cs-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.cs-fs-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--mm-border);
+  border-radius: 50%;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.cs-fs-btn:hover,
+.cs-fs-btn:focus-visible {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+}
+
+.cs-fs-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cs-fs-close,
+.cs-fs-btn.on .cs-fs-open {
+  display: none;
+}
+
+.cs-fs-btn.on .cs-fs-close {
+  display: inline;
+}
+
+.cs-fullscreen {
+  max-width: none !important;
+  padding: 1.5rem 2.5rem !important;
+  overflow: auto;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--mm-bg, #141414) !important;
+}
+
+/* Poker and blackjack: zoomed as a whole (casino_fullscreen.js, data-fullscreen-zoom), in the middle */
+.pk-main.cs-fullscreen,
+.bj-main.cs-fullscreen,
+.sl-main.cs-fullscreen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Nothing sticks out sideways (seats at the edge of the table) */
+.cs-fullscreen {
+  overflow-x: hidden;
+}
+
+/* Phones: less room around the game */
+@media (max-width: 900px) {
+  .cs-fullscreen {
+    padding: 0.75rem 0.75rem !important;
+  }
+}
+
+/* ---------- The leaderboard in the bar at the top (the season, when one runs) ---------- */
+.nav-board {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-right: 0.45rem;
+  padding: 0.45rem 1.1rem 0.45rem 0.8rem;
+  font-size: 1.02rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.nav-board:hover,
+.nav-board.active {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  background: rgba(var(--mm-accent-rgb), 0.1);
+  color: var(--mm-accent);
+}
+
+.nav-board.season {
+  border-color: rgba(var(--mm-accent-rgb), 0.45);
+}
+
+.nav-board-icon {
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.nav-board-main {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.nav-board-text {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 800;
+}
+
+/* How long the season still runs */
+.nav-board-timer {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.nav-board-timer[hidden] {
+  display: none;
+}
+
+.nav-board-timer.soon {
+  color: var(--mm-danger);
+}
+
+.nav-board.season {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  background: rgba(var(--mm-accent-rgb), 0.1);
+  color: var(--mm-accent);
+  box-shadow: 0 0 18px rgba(var(--mm-accent-rgb), 0.15);
+}
+
+/* Big screens: in the middle of the bar */
+@media (min-width: 992px) {
+  .navbar:has(.nav-board) {
+    position: relative;
+  }
+  .nav-board {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin: 0;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Smaller screens: no room next to the logo - the pill gets its own row under the bar, centered */
+@media (max-width: 991px) {
+  .navbar:has(.nav-board) {
+    position: relative;
+    padding-bottom: 3.4rem;
+  }
+  .nav-board {
+    position: absolute;
+    left: 50%;
+    bottom: 0.45rem;
+    margin: 0;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 32px);
+    padding: 0.3rem 0.9rem 0.3rem 0.65rem;
+    font-size: 0.92rem;
+  }
+  .nav-board-icon {
+    font-size: 1.25rem;
+  }
+  .nav-board-main {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+  .nav-board-text {
+    max-width: 46vw;
+  }
+}
+
+/* A season is over: a notice at the bottom with the way to the winners */
+.cs-season-notice {
+  position: fixed;
+  left: 50%;
+  bottom: 110px;
+  z-index: 1080;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: min(560px, calc(100vw - 32px));
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.6);
+  border-radius: 16px;
+  background: var(--mm-surface);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(var(--mm-accent-rgb), 0.2);
+  transform: translateX(-50%);
+  animation: cs-season-in 0.4s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+@keyframes cs-season-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+}
+
+.cs-season-notice-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.cs-season-notice-text b {
+  color: #fff;
+}
+
+.cs-season-notice-text span {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.cs-season-notice-link {
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  background: var(--mm-accent);
+  color: #1a1206;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.cs-season-notice-link:hover {
+  color: #1a1206;
+  filter: brightness(1.08);
+}
+
+.cs-season-notice-close {
+  border: 0;
+  background: none;
+  color: var(--mm-muted);
+  font-size: 0.9rem;
+}
+
+/* In a season: the balance from before it, small next to the coins */
+/* Only on hover: a small label under the coins */
+.nav-coins:has(.nav-coins-stored) {
+  position: relative;
+}
+
+.nav-coins-stored {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.45);
+  border-radius: 999px;
+  background: var(--mm-surface);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+  font-size: 0.78em;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.nav-coins:hover .nav-coins-stored,
+.nav-coins:focus-visible .nav-coins-stored {
+  opacity: 1;
+  transform: none;
+}
+
+/* A second chance: over the whole page */
+.cs-chance {
+  position: fixed;
+  inset: 0;
+  z-index: 1090;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  animation: cs-backdrop-in 0.25s ease-out;
+}
+
+/* The popups over the whole screen: the shadow fades in, the card pops */
+@keyframes cs-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes cs-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+}
+
+.cs-chance-card {
+  box-sizing: border-box;
+  animation: cs-card-in 0.3s cubic-bezier(0.2, 1.2, 0.4, 1);
+  width: min(400px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.6rem 1.4rem 1.2rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.55);
+  border-radius: 20px;
+  background: var(--mm-surface);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), 0 0 40px rgba(var(--mm-accent-rgb), 0.18);
+  text-align: center;
+}
+
+.cs-chance-icon {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.cs-chance-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #fff;
+}
+
+.cs-chance-text {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.cs-chance-left {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--mm-accent);
+}
+
+.cs-chance-btn {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mm-accent);
+  color: #1a1206;
+  font-weight: 900;
+}
+
+.cs-chance-btn:disabled {
+  opacity: 0.6;
+}
+
+.cs-chance-later {
+  border: 0;
+  background: none;
+  color: var(--mm-muted);
+  font-weight: 700;
+}
+
+/* A second chance (in a season, at 0 coins): next to the free coins - ready, or how long until */
+.nav-chance {
+  margin-right: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid rgba(180, 150, 230, 0.45);
+  border-radius: 999px;
+  background: rgba(180, 150, 230, 0.1);
+  color: #cdb8f0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.nav-chance[hidden] {
+  display: none;
+}
+
+.nav-chance:hover {
+  background: rgba(180, 150, 230, 0.18);
+}
+
+.nav-chance.ready {
+  border-color: #b496e6;
+  background: rgba(180, 150, 230, 0.2);
+  color: #ece2fc;
+  position: relative;
+}
+
+/* The glow: its own layer that only fades (the page isn't painted again on every frame) */
+.nav-chance.ready::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 14px rgba(180, 150, 230, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+  animation: nav-chance-glow 1.6s ease-in-out infinite;
+}
+
+@keyframes nav-chance-glow {
+  50% {
+    opacity: 1;
+  }
+}
+
+/* The second chance in light purple (the pill and the prompt) */
+.cs-chance-card {
+  border-color: rgba(180, 150, 230, 0.6);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), 0 0 40px rgba(180, 150, 230, 0.2);
+}
+
+.cs-chance-left {
+  color: #cdb8f0;
+}
+
+.cs-chance-btn {
+  background: #b496e6;
+  color: #1c1230;
+}
+
+.cs-chance-btn:hover {
+  background: #c4aaf0;
+}
+
+/* A season starts soon: a notice like a battle starting, with the countdown on the right */
+.cs-closing-count {
+  flex: 0 0 auto;
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Start" a season: what it is, the prizes, how long it goes */
+.cs-join {
+  position: fixed;
+  inset: 0;
+  z-index: 1090;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  animation: cs-backdrop-in 0.25s ease-out;
+}
+
+.cs-join-card {
+  box-sizing: border-box;
+  width: min(440px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.6rem 1.4rem 1.2rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.55);
+  border-radius: 20px;
+  background: var(--mm-surface);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), 0 0 40px rgba(var(--mm-accent-rgb), 0.18);
+  text-align: center;
+  color: #fff;
+  animation: cs-card-in 0.3s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+.cs-join-icon {
+  font-size: 2.8rem;
+  line-height: 1;
+}
+
+.cs-join-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+
+.cs-join-time {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--mm-accent);
+}
+
+.cs-join-facts,
+.cs-join-prizes {
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+  text-align: left;
+}
+
+.cs-join-fact,
+.cs-join-prize {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.cs-join-fact b {
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-join-fact-icon,
+.cs-join-place {
+  flex: 0 0 1.6rem;
+  text-align: center;
+}
+
+.cs-join-prizes-title {
+  font-weight: 800;
+  color: var(--mm-accent);
+}
+
+.cs-join-text {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--mm-muted);
+}
+
+.cs-join-btn {
+  width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mm-accent);
+  color: #1a1206;
+  font-weight: 900;
+}
+
+.cs-join-btn:hover {
+  background: var(--mm-accent-hover);
+}
+
+.cs-join-btn:disabled {
+  opacity: 0.6;
+}
+
+.cs-closing-notice .bt-notice-text span {
+  white-space: normal;
+}
+
+/* The leaderboard pill: only once it is known whether a season runs (no "Leaderboard" flashing first) */
+.nav-board:not(.ready) {
+  visibility: hidden;
+}
+
+.nav-board.ready {
+  animation: nav-board-in 0.2s ease-out;
+}
+
+@keyframes nav-board-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Full screen: the coins at the top in the middle, as high as the title (the bar at the top is gone) */
+.cs-fs-coins {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.3rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.55);
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.92);
+  color: var(--mm-accent);
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+/* The right part of the bar comes along with the side column when scrolling (casino_wallet.js) */
+.nav-right-spot {
+  display: flex;
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+}
+
+.nav-right.floating {
+  position: fixed;
+  z-index: 1030;
+}
+
+/* Phones: the title and its buttons (all tables, full screen) wrap instead of sticking out */
+@media (max-width: 600px) {
+  .jp-head {
+    flex-wrap: wrap;
+  }
+
+  .jp-head > div:first-child {
+    min-width: 0;
+  }
+
+  .jp-head .cs-head-actions {
+    margin-left: auto;
+  }
+
+  /* The title of a game: its badges (blinds, round, limits) wrap under the name */
+  .jp-title {
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+  }
+}
+
+/* Phones: the second chance in the bar is only the 💔 (glowing) - the time to wait stays */
+@media (max-width: 575px) {
+  .nav-chance.ready #navChanceText {
+    display: none;
+  }
+
+
+}
+
+/* Phones: the wheel fits the lower stage (it covered the bar of the round) */
+@media (max-width: 575px) {
+  .jp-wheel-wrap {
+    width: 240px;
+    height: 240px;
+  }
+
+  .jp-wheel-center {
+    inset: 56px;
+  }
+
+  .jp-scene {
+    height: 280px;
+  }
+}
+
+/* Phones: the second chance as big as the free coins and the coins next to it (after its own rules) */
+@media (max-width: 575px) {
+  .nav-chance {
+    margin-right: 0.3rem;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.82rem;
+  }
 }

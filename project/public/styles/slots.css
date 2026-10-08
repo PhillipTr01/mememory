@@ -1,0 +1,1233 @@
+/* ---------- Slots: 5 reels, 3 rows, 9 lines (the site's look: dark surfaces, thin lines, gold) ---------- */
+.sl-main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.sl-machine {
+  /* The symbols grow with the screen */
+  --tile: clamp(72px, 8vw, 128px);
+  --reel: calc(var(--tile) * 1.15);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 10px;
+  /* (room on top for the prizes of the coin game, half over the edge) */
+  margin-top: 26px;
+  padding: 38px 12px 18px;
+  border: 1px solid var(--mm-border);
+  border-radius: 18px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(var(--mm-accent-rgb), 0.08), transparent 60%), var(--mm-surface-2);
+}
+
+.sl-window {
+  position: relative;
+}
+
+/* The 5 reels side by side */
+.sl-reels {
+  display: flex;
+  gap: 8px;
+}
+
+.sl-reel {
+  position: relative;
+  width: var(--reel);
+  height: calc(var(--tile) * 3);
+  overflow: hidden;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface);
+}
+
+/* The symbols fade out at the top and the bottom (a round reel) */
+.sl-reel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  /* (light and thin: the top and bottom rows stay easy to see) */
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mm-surface) 45%, transparent), transparent 12%, transparent 88%, color-mix(in srgb, var(--mm-surface) 45%, transparent));
+  pointer-events: none;
+}
+
+.sl-reel.spinning .sl-track {
+  filter: blur(1.4px);
+}
+
+.sl-track {
+  will-change: transform;
+}
+
+.sl-cell {
+  height: var(--tile);
+  display: grid;
+  place-items: center;
+}
+
+.sl-symbol {
+  font-size: calc(var(--tile) * 0.52);
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+/* The wild: a gold ring */
+.sl-cell.wild .sl-symbol {
+  display: grid;
+  place-items: center;
+  width: calc(var(--tile) * 0.78);
+  height: calc(var(--tile) * 0.78);
+  border-radius: 50%;
+  background: rgba(var(--mm-accent-rgb), 0.14);
+  box-shadow: inset 0 0 0 2px rgba(var(--mm-accent-rgb), 0.7);
+  font-size: calc(var(--tile) * 0.44);
+}
+
+/* A symbol of a winning line */
+.sl-cell.hit .sl-symbol {
+  animation: sl-hit 0.55s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 10px rgba(var(--mm-accent-rgb), 0.85));
+}
+
+@keyframes sl-hit {
+  to {
+    transform: scale(1.14);
+  }
+}
+
+/* The lines over the reels */
+.sl-lines {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.sl-line {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sl-line.win {
+  stroke: var(--mm-accent);
+  stroke-width: 4;
+  filter: drop-shadow(0 0 6px rgba(var(--mm-accent-rgb), 0.8));
+  stroke-dasharray: 1200;
+  animation: sl-draw 0.6s ease-out;
+}
+
+@keyframes sl-draw {
+  from {
+    stroke-dashoffset: 1200;
+  }
+}
+
+/* The numbers of the lines on both sides */
+.sl-line-numbers {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  width: 26px;
+}
+
+.sl-number-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.sl-number {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--mm-border);
+  border-radius: 50%;
+  background: var(--mm-surface);
+  color: var(--mm-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: default;
+  transition: all 0.15s ease;
+}
+
+.sl-number.on {
+  border-color: var(--mm-accent);
+  background: var(--mm-accent);
+  color: var(--mm-on-accent, #1a1a1a);
+}
+
+/* ---------- The win of the last spin ---------- */
+.sl-winbar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-height: 3.6rem;
+  justify-content: center;
+}
+
+.sl-win-text {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--mm-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sl-win-detail {
+  font-size: 0.85rem;
+  color: var(--mm-muted);
+}
+
+.sl-winbar.won .sl-win-text {
+  color: var(--mm-accent);
+}
+
+.sl-winbar.big .sl-win-text {
+  font-size: 2.1rem;
+  text-shadow: 0 0 18px rgba(var(--mm-accent-rgb), 0.6);
+}
+
+/* ---------- Bet and spin ---------- */
+.sl-controls {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.sl-bet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sl-bet-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sl-step {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sl-step:hover:not(:disabled) {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+}
+
+.sl-step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sl-bet-input {
+  width: 110px;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+  text-align: center;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* No arrows in the field: the number sits in the middle */
+.sl-bet-input::-webkit-outer-spin-button,
+.sl-bet-input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.sl-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--mm-muted);
+  text-transform: uppercase;
+}
+
+.sl-wallet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.sl-coins {
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.sl-presets {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.sl-preset {
+  min-width: 2.6rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: none;
+  color: var(--mm-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sl-preset:hover {
+  color: var(--mm-text);
+}
+
+.sl-preset.active {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  color: var(--mm-accent);
+}
+
+/* The spin button: clean, gold outline like the machine, the arrow turns while the reels do */
+.sl-spin {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-width: 168px;
+  height: 56px;
+  padding: 0 1.6rem;
+  border: 1px solid var(--mm-accent);
+  border-radius: 14px;
+  background: var(--mm-accent);
+  color: #1a1305;
+  cursor: pointer;
+  transition: filter 0.15s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.sl-spin:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 0 22px rgba(var(--mm-accent-rgb), 0.35);
+}
+
+.sl-spin:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.sl-spin:disabled {
+  border-color: var(--mm-border);
+  background: var(--mm-surface-2);
+  color: var(--mm-muted);
+  cursor: default;
+}
+
+/* While spinning: still gold, only the arrow turns */
+.sl-spin.busy:disabled {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.14);
+  color: var(--mm-accent);
+}
+
+.sl-spin-icon {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+}
+
+.sl-spin.busy .sl-spin-icon {
+  animation: sl-turn 0.9s linear infinite;
+}
+
+@keyframes sl-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sl-spin-label {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ---------- Bonus wheel and big wins (over the reels) ---------- */
+.sl-stage {
+  position: absolute;
+  inset: -6px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  overflow: hidden;
+  border-radius: 16px;
+  background: rgba(12, 12, 12, 0.86);
+  backdrop-filter: blur(3px);
+  animation: sl-stage-in 0.3s ease-out;
+}
+
+.sl-stage[hidden] {
+  display: none;
+}
+
+@keyframes sl-stage-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.sl-stage-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--mm-accent);
+}
+
+.sl-stage-sub {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--mm-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sl-stage-sub.won {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--mm-accent);
+  animation: sl-pop 0.4s ease-out;
+}
+
+@keyframes sl-pop {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+}
+
+.sl-wheel {
+  position: relative;
+  width: calc(var(--tile) * 2.3);
+  height: calc(var(--tile) * 2.3);
+}
+
+/* Two rings on top of each other: free spins outside, the multiplier inside */
+.sl-ring {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.sl-ring.outer {
+  inset: 0;
+  box-shadow: 0 0 0 3px rgba(var(--mm-accent-rgb), 0.7), 0 0 30px rgba(var(--mm-accent-rgb), 0.25);
+}
+
+.sl-ring.inner {
+  inset: 17%;
+  box-shadow: 0 0 0 2px rgba(var(--mm-accent-rgb), 0.55);
+}
+
+.sl-ring-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sl-ring-text {
+  fill: #fff;
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.sl-ring.inner .sl-ring-text {
+  font-size: 9px;
+}
+
+.sl-ring-hub {
+  position: absolute;
+  inset: 38%;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--mm-accent);
+  border-radius: 50%;
+  background: #1f1f1f;
+  font-size: calc(var(--tile) * 0.22);
+}
+
+/* The pointer at the top, pointing down */
+.sl-wheel-pointer {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  z-index: 1;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 16px solid var(--mm-accent);
+  transform: translateX(-50%);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+}
+
+.sl-big-title {
+  font-size: 2.4rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: var(--mm-accent);
+  text-shadow: 0 0 24px rgba(var(--mm-accent-rgb), 0.6);
+  animation: sl-big-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.sl-stage.mega .sl-big-title {
+  font-size: 2.8rem;
+}
+
+.sl-stage.epic .sl-big-title {
+  font-size: 3.2rem;
+  background: linear-gradient(90deg, #f5d76e, #fff3c4, #d4a017, #f5d76e);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: sl-big-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1), sl-shine 1.6s linear infinite;
+}
+
+@keyframes sl-big-in {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+@keyframes sl-shine {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.sl-big-amount {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--mm-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.sl-coin {
+  position: absolute;
+  top: 0;
+  font-size: 1.4rem;
+  pointer-events: none;
+}
+
+/* 🎁 on the reels when the bonus starts */
+.sl-cell.scatter .sl-symbol {
+  filter: drop-shadow(0 0 6px rgba(var(--mm-accent-rgb), 0.35));
+}
+
+.sl-pays-bonus {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--mm-muted);
+}
+
+/* ---------- Paytable ---------- */
+.sl-paytable {
+  max-width: 460px;
+  /* Long: it scrolls (the close button stays at the bottom) */
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sl-paytable .sl-paytable-close {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  margin-top: 0.5rem;
+  box-shadow: 0 -14px 18px 4px var(--mm-surface);
+}
+
+/* The prizes of the coin game in the paytable */
+.sl-prize-table {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  margin: 0.25rem 0 1rem;
+}
+
+.sl-prize-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 92px;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--prize);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.sl-prize-badge.plain {
+  background: var(--mm-surface-3);
+  color: #f3d27a;
+  letter-spacing: 0;
+}
+
+.sl-prize-badge.prize-mini {
+  --prize: var(--prize-mini);
+}
+
+.sl-prize-badge.prize-major {
+  --prize: var(--prize-major);
+}
+
+.sl-prize-badge.prize-mega {
+  --prize: var(--prize-mega);
+}
+
+.sl-prize-badge.prize-ultra {
+  --prize: var(--prize-ultra);
+}
+
+.sl-prize-amount {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sl-pays {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, 70px);
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.sl-pays-head {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.sl-pays-symbol {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.sl-pays-icon {
+  font-size: 1.3rem;
+}
+
+.sl-pays-value {
+  text-align: right;
+  font-weight: 700;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.sl-pays-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+  text-transform: uppercase;
+}
+
+.sl-line-maps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.sl-line-map {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 8px;
+}
+
+.sl-line-map-number {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--mm-muted);
+}
+
+.sl-line-map-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 9px);
+  grid-auto-rows: 9px;
+  gap: 2px;
+}
+
+.sl-line-map-grid i {
+  border-radius: 2px;
+  background: var(--mm-surface-3);
+}
+
+.sl-line-map-grid i.on {
+  background: var(--mm-accent);
+}
+
+/* ---------- Smaller screens ---------- */
+@media (max-width: 767px) {
+  .sl-main {
+    padding: 1rem;
+  }
+
+  .sl-machine {
+    --tile: 58px;
+    --reel: 56px;
+    gap: 4px;
+    /* (room on top for the prizes) */
+    margin-top: 20px;
+    padding: 26px 4px 12px;
+  }
+
+  .sl-reels {
+    gap: 4px;
+  }
+
+  .sl-line-numbers {
+    width: 18px;
+  }
+
+  .sl-number {
+    width: 17px;
+    height: 17px;
+    font-size: 0.6rem;
+  }
+
+  .sl-controls {
+    grid-template-columns: 1fr auto;
+  }
+
+  .sl-bet {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .sl-spin {
+    min-width: 0;
+  }
+}
+
+/* ---------- Free spins ---------- */
+.sl-machine.bonus-mode {
+  border-color: rgba(var(--mm-accent-rgb), 0.7);
+  box-shadow: 0 0 0 1px rgba(var(--mm-accent-rgb), 0.3), 0 0 40px rgba(var(--mm-accent-rgb), 0.18);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.sl-machine.bonus-mode .sl-reel {
+  border-color: rgba(var(--mm-accent-rgb), 0.45);
+}
+
+.sl-winbar.bonus .sl-win-text {
+  color: var(--mm-accent);
+}
+
+.sl-winbar.bonus .sl-win-detail {
+  font-weight: 700;
+  color: var(--mm-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The win of one free spin rises over the reels */
+.sl-float {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  z-index: 5;
+  padding: 0.2rem 0.8rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.6);
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.85);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--mm-accent);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Free spin x / y: on the right of the win */
+.sl-free-counter {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  transform: translateY(-50%);
+}
+
+/* The multiplier of the free spins: the same, on the left */
+.sl-free-counter.sl-mult-counter {
+  right: auto;
+  left: 0;
+  align-items: flex-start;
+}
+
+.sl-free-counter[hidden] {
+  display: none;
+}
+
+.sl-free-count {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The paytable button next to the title: a quiet pill */
+.sl-paytable-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 34px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.sl-paytable-btn:hover,
+.sl-paytable-btn:focus-visible {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+}
+
+.sl-paytable-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---------- The end of the bonus game: the win counted up ---------- */
+.sl-stage.bonus-end .sl-big-title {
+  position: relative;
+}
+
+.sl-bonus-amount {
+  position: relative;
+  font-size: 2.6rem;
+  color: var(--mm-accent);
+  text-shadow: 0 0 24px rgba(var(--mm-accent-rgb), 0.55);
+}
+
+/* A slow, turning gold glow behind the win */
+.sl-bonus-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150%;
+  aspect-ratio: 1;
+  background: conic-gradient(from 0deg, transparent 0 10%, rgba(var(--mm-accent-rgb), 0.16) 10% 15%, transparent 15% 35%, rgba(var(--mm-accent-rgb), 0.16) 35% 40%, transparent 40% 60%, rgba(var(--mm-accent-rgb), 0.16) 60% 65%, transparent 65% 85%, rgba(var(--mm-accent-rgb), 0.16) 85% 90%, transparent 90%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: sl-glow-turn 8s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes sl-glow-turn {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.sl-bonus-sub {
+  position: relative;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.sl-bonus-sub.show {
+  opacity: 1;
+  transform: none;
+}
+
+/* The buttons next to the title: paytable and full screen */
+.sl-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* ---------- Full screen: the machine as big as the screen allows ---------- */
+.sl-main.cs-fullscreen {
+  max-width: none;
+  justify-content: center;
+  padding: 2rem 3rem;
+  overflow: auto;
+  background: var(--mm-bg, #111);
+}
+
+.sl-main.cs-fullscreen .sl-machine {
+  --tile: min(17vh, 11vw);
+}
+
+.sl-main.cs-fullscreen .sl-controls {
+  width: min(100%, 1200px);
+  margin: 0 auto;
+}
+
+/* ---------- "You won free spins": waits for the click ---------- */
+.sl-stage.start .sl-big-title {
+  animation: sl-big-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.sl-start-btn {
+  position: relative;
+  margin-top: 0.6rem;
+  padding: 0.75rem 2rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mm-accent);
+  color: #1a1305;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 rgba(var(--mm-accent-rgb), 0.6);
+  animation: sl-start-pulse 1.6s ease-out infinite;
+}
+
+.sl-start-btn:hover {
+  filter: brightness(1.08);
+}
+
+@keyframes sl-start-pulse {
+  70% {
+    box-shadow: 0 0 0 16px rgba(var(--mm-accent-rgb), 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--mm-accent-rgb), 0);
+  }
+}
+
+/* ---------- The sweat: two 🎁 in sight, the last reel turns longer and lit up ---------- */
+.sl-reel.sweat {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 0 1px rgba(var(--mm-accent-rgb), 0.6), 0 0 26px rgba(var(--mm-accent-rgb), 0.45);
+  animation: sl-sweat 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes sl-sweat {
+  to {
+    box-shadow: 0 0 0 1px rgba(var(--mm-accent-rgb), 0.9), 0 0 40px rgba(var(--mm-accent-rgb), 0.7);
+  }
+}
+
+/* (less blur on the sweating reel: you can almost see what comes) */
+.sl-reel.sweat.spinning .sl-track {
+  filter: blur(0.6px);
+}
+
+/* A bonus win in "last wins": a gold edge */
+.sl-feed-bonus {
+  border-color: rgba(var(--mm-accent-rgb), 0.55) !important;
+  background: rgba(var(--mm-accent-rgb), 0.08) !important;
+}
+
+/* ---------- Coin game ---------- */
+/* The prizes: soft colors (the same as the actions of blackjack) */
+:root {
+  --prize-mini: #6fa784;
+  --prize-major: #7895c4;
+  --prize-mega: #9d84c2;
+  --prize-ultra: linear-gradient(135deg, #c2706a, #c9a24a);
+}
+.sl-machine {
+  position: relative;
+}
+
+/* A 🪙 with its value (a pill at the bottom of the cell) */
+.sl-cell.coin {
+  position: relative;
+}
+
+.sl-cell.coin .sl-symbol {
+  filter: drop-shadow(0 0 6px rgba(var(--mm-accent-rgb), 0.35));
+}
+
+.sl-coin-value {
+  position: absolute;
+  left: 50%;
+  bottom: 9%;
+  transform: translateX(-50%);
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(20, 16, 8, 0.85);
+  box-shadow: inset 0 0 0 1px rgba(var(--mm-accent-rgb), 0.6);
+  color: #f3d27a;
+  font-size: calc(var(--tile) * 0.15);
+  font-weight: 800;
+  line-height: 1.35;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.sl-cell.prize-mini .sl-coin-value {
+  background: var(--prize-mini);
+  box-shadow: none;
+  color: #fff;
+}
+
+.sl-cell.prize-major .sl-coin-value {
+  background: var(--prize-major);
+  box-shadow: none;
+  color: #fff;
+}
+
+.sl-cell.prize-mega .sl-coin-value {
+  background: var(--prize-mega);
+  box-shadow: none;
+  color: #fff;
+}
+
+/* The board of the coin game: held coins glow, empty spots are dark */
+.sl-machine.coin-mode .sl-reel {
+  background: #121212;
+}
+
+.sl-machine.coin-mode .sl-reel::after {
+  display: none;
+}
+
+.sl-cell.held {
+  background: radial-gradient(circle, rgba(var(--mm-accent-rgb), 0.22), transparent 70%);
+  box-shadow: inset 0 0 0 1px rgba(var(--mm-accent-rgb), 0.25);
+  border-radius: 12px;
+}
+
+.sl-cell.empty {
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+}
+
+.sl-mini-track {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.sl-mini-face {
+  flex: 0 0 100%;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--tile) * 0.52);
+  line-height: 1;
+  opacity: 0.55;
+}
+
+.sl-cell.rolling .sl-mini-track {
+  filter: blur(0.6px);
+}
+
+/* The respins left: three dots */
+.sl-free-count:has(.sl-respin-dot) {
+  display: flex;
+  gap: 5px;
+  padding: 0.3rem 0;
+}
+
+.sl-respin-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--mm-surface-3);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sl-respin-dot.on {
+  background: var(--mm-accent);
+  box-shadow: 0 0 8px rgba(var(--mm-accent-rgb), 0.6);
+}
+
+/* The prizes over the machine (only in the coin game) */
+.sl-prizes {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  gap: 10px;
+  transform: translate(-50%, -55%);
+  animation: sl-stage-in 0.3s ease-out;
+}
+
+.sl-prizes[hidden] {
+  display: none;
+}
+
+.sl-prize {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 124px;
+  padding: 0.35rem 1rem;
+  border-radius: 12px;
+  background: var(--prize, #444);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  line-height: 1.15;
+}
+
+.sl-prize.prize-mini {
+  --prize: var(--prize-mini);
+}
+
+.sl-prize.prize-major {
+  --prize: var(--prize-major);
+}
+
+.sl-prize.prize-mega {
+  --prize: var(--prize-mega);
+}
+
+.sl-prize.prize-ultra {
+  --prize: var(--prize-ultra);
+}
+
+.sl-prize-name {
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.sl-prize-value {
+  font-size: 1.05rem;
+  white-space: nowrap;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ULTRA: the whole machine glows */
+.sl-main.ultra .sl-machine {
+  animation: sl-ultra 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes sl-ultra {
+  from {
+    box-shadow: 0 0 30px rgba(199, 154, 58, 0.35);
+  }
+  to {
+    box-shadow: 0 0 70px rgba(199, 80, 50, 0.6);
+  }
+}
+
+.sl-ultra-title {
+  font-size: clamp(3rem, 9vw, 6rem);
+  background: linear-gradient(135deg, #ffd46b, #ff7a45, #ffd46b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: sl-ultra-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes sl-ultra-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .sl-prizes {
+    gap: 4px;
+  }
+  .sl-prize {
+    min-width: 0;
+    padding: 0.15rem 0.4rem;
+    border-radius: 8px;
+  }
+  .sl-prize-name {
+    font-size: 0.6rem;
+  }
+  .sl-prize-value {
+    font-size: 0.68rem;
+  }
+}
+
+/* After a big win / a bonus: "click to continue" - a click anywhere on it goes on */
+.sl-stage.waiting-click {
+  cursor: pointer;
+}
+
+.sl-continue-hint {
+  margin-top: 0.9rem;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  animation: sl-continue-pulse 1.4s ease-in-out infinite, sl-continue-in 0.4s ease-out;
+  pointer-events: none;
+}
+
+@keyframes sl-continue-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes sl-continue-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Full screen: no coins at the top of the slots (only here - the other games keep them) */
+.sl-main .cs-fs-coins {
+  display: none;
+}

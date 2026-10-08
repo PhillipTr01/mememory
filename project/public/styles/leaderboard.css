@@ -1,6 +1,6 @@
 /* ---------- Leaderboard of the casino (gold theme from jackpot.css) ---------- */
 .lb-main {
-  max-width: 980px;
+  max-width: 1240px;
   margin: 0 auto;
   padding: 1.5rem;
   display: flex;
@@ -232,4 +232,422 @@
   .lb-row .lb-change {
     display: none;
   }
+}
+
+/* ---------- Seasons ---------- */
+.lb-main[hidden],
+.lb-winners[hidden],
+.lb-last-season[hidden],
+.lb-season[hidden] {
+  display: none;
+}
+
+.lb-main .jp-head {
+  align-items: center;
+}
+
+/* The season that runs: at the right of the title */
+.lb-season {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.9rem 0.5rem 0.55rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.45);
+  border-radius: 14px;
+  background: rgba(var(--mm-accent-rgb), 0.08);
+}
+
+.lb-season-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--mm-surface-3);
+  font-size: 1.35rem;
+}
+
+.lb-season-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.lb-season-text span {
+  font-size: 0.78rem;
+  color: var(--mm-muted);
+}
+
+/* A prize next to a place */
+.lb-prize {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(157, 132, 194, 0.18);
+  color: #c4b2e0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lb-row {
+  grid-template-columns: 3rem minmax(0, 1fr) auto 3.5rem auto;
+}
+
+.lb-row .lb-prize {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.lb-row:not(:has(.lb-prize)) {
+  grid-template-columns: 3rem minmax(0, 1fr) 3.5rem auto;
+}
+
+/* The last season is over: the way to its winners */
+.lb-last-season {
+  /* Small: a pill under the title, not a bar over the whole width */
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem 0.35rem 0.6rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.5);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  background: linear-gradient(90deg, rgba(var(--mm-accent-rgb), 0.14), transparent);
+  color: var(--mm-text);
+  font-weight: 700;
+  text-align: left;
+}
+
+.lb-last-season:hover {
+  background: linear-gradient(90deg, rgba(var(--mm-accent-rgb), 0.22), transparent);
+}
+
+.lb-last-icon {
+  font-size: 1rem;
+}
+
+.lb-last-arrow {
+  color: var(--mm-accent);
+}
+
+.lb-live-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  background: var(--mm-success);
+  position: relative;
+  vertical-align: 0.1em;
+}
+
+/* The ring that goes out: its own layer, only scaled and faded */
+.lb-live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(127, 174, 110, 0.6);
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: lb-live 1.6s ease-out infinite;
+}
+
+@keyframes lb-live {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+/* ---------- The winner page ---------- */
+.lb-winners {
+  position: relative;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 0%, rgba(var(--mm-accent-rgb), 0.16), transparent 55%), var(--mm-surface);
+}
+
+.lb-win-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.lb-win-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: var(--mm-surface-3);
+  font-size: 2.2rem;
+}
+
+.lb-win-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.lb-win-title h1 {
+  margin: 0.1rem 0;
+  font-size: 1.7rem;
+  font-weight: 900;
+}
+
+.lb-win-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mm-accent);
+}
+
+.lb-win-sub {
+  font-size: 0.85rem;
+  color: var(--mm-muted);
+}
+
+.lb-win-back {
+  align-self: flex-start;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lb-win-back:hover {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+}
+
+/* The winner, big */
+.lb-champion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.5rem 0 0;
+  text-align: center;
+}
+
+.lb-champion-name {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, #f3d27a, #c9a24a, #f3d27a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lb-champ 0.7s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+
+@keyframes lb-champ {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+.lb-champion-coins {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--mm-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-champion-prize {
+  margin-top: 0.3rem;
+  padding: 0.35rem 1rem;
+  border-radius: 999px;
+  background: rgba(157, 132, 194, 0.2);
+  color: #d5c6ec;
+  font-weight: 800;
+}
+
+.lb-win-podium .lb-spot {
+  position: relative;
+}
+
+.lb-win-podium .lb-prize {
+  margin-top: 0.2rem;
+}
+
+.lb-crown {
+  position: absolute;
+  top: -1.9rem;
+  font-size: 1.8rem;
+  animation: lb-crown 2.4s ease-in-out infinite;
+}
+
+@keyframes lb-crown {
+  50% {
+    transform: translateY(-4px) rotate(-6deg);
+  }
+}
+
+.lb-win-podium {
+  margin-top: 1.2rem;
+}
+
+.lb-confetti {
+  position: absolute;
+  top: 0;
+  z-index: 3;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+@media (max-width: 575px) {
+  .lb-winners {
+    padding: 1rem;
+  }
+  .lb-win-head {
+    flex-wrap: wrap;
+  }
+  .lb-row,
+  .lb-row:not(:has(.lb-prize)) {
+    grid-template-columns: 2.4rem minmax(0, 1fr) auto;
+  }
+  .lb-row .lb-prize {
+    display: none;
+  }
+}
+
+/* Small screens: the season under the title, over the whole width */
+@media (max-width: 767px) {
+  .lb-main .jp-head {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .lb-season {
+    width: 100%;
+  }
+}
+
+/* A click on the season: what it is (like its start screen) */
+.lb-season {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lb-season:hover {
+  background: rgba(var(--mm-accent-rgb), 0.14);
+}
+
+.lb-season .lb-season-info {
+  margin-left: 0.2rem;
+}
+
+/* "#6 of 6" on one line - on phones the label gives way */
+.lb-me-rank {
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .lb-me {
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+  }
+
+  .lb-me-label {
+    font-size: 0.7rem;
+  }
+}
+
+/* The same coins on a prize place: what decided the prize (second chances, bets) */
+.lb-decided {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  /* (every one with a quiet border - dashed in the color where it decided the place) */
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  color: var(--mm-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lb-who {
+  flex-wrap: wrap;
+  row-gap: 0.25rem;
+}
+
+/* Phones: the tags on the podium fit their spot (the prize cut with …) */
+@media (max-width: 575px) {
+  .lb-spot .lb-prize,
+  .lb-spot .lb-decided {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.62rem;
+  }
+
+  /* The winner page: back on top on the right, the name of the season with all the room */
+  .lb-win-head {
+    position: relative;
+    flex-wrap: nowrap;
+    padding-top: 2.4rem;
+  }
+
+  .lb-win-back {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+
+  .lb-win-title {
+    min-width: 0;
+  }
+
+  .lb-win-title h1 {
+    font-size: 1.45rem;
+  }
+
+  .lb-win-icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  /* The list: the prize stays - under the name */
+  .lb-row .lb-prize {
+    display: inline-block;
+    justify-self: start;
+  }
+
+  .lb-row > .lb-prize {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  /* (the empty place of a prize: no cell) */
+  .lb-row > span:empty {
+    display: none;
+  }
+}
+
+/* Where the second chances and bets decided a prize: marked */
+.lb-decided.decides {
+  border: 1px dashed rgba(var(--mm-accent-rgb), 0.55);
+  color: var(--mm-text);
 }

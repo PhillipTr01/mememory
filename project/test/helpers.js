@@ -38,6 +38,7 @@ function matches(doc, filter) {
     const value = doc[key];
     if (condition !== null && typeof condition === "object" && !(condition instanceof Date)) {
       if ("$exists" in condition && (value !== undefined) !== condition.$exists) return false;
+      if ("$in" in condition && !condition.$in.includes(value)) return false;
       if ("$ne" in condition && value === condition.$ne) return false;
       if ("$gte" in condition && !(value >= condition.$gte)) return false;
       if ("$lt" in condition && !(value < condition.$lt)) return false;
@@ -65,6 +66,10 @@ function list(rows) {
       result.sort((a, b) => (a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0) * dir);
       return q;
     },
+    skip(n) {
+      result = result.slice(n);
+      return q;
+    },
     limit(n) {
       result = result.slice(0, n);
       return q;
@@ -78,6 +83,15 @@ function list(rows) {
 
 User.find = (filter = {}) => list([...users.values()].filter((u) => matches(u, filter)));
 
+User.updateMany = async (filter, update) => {
+  const rows = [...users.values()].filter((u) => matches(u, filter));
+  rows.forEach((user) => {
+    Object.assign(user, update.$set || {});
+    for (const key of Object.keys(update.$unset || {})) delete user[key];
+  });
+  return { n: rows.length, nModified: rows.length };
+};
+
 // In-memory version of a model: create, find, findOne, updateOne, countDocuments
 function memoryModel(Model) {
   const docs = [];
@@ -90,6 +104,11 @@ function memoryModel(Model) {
   Model.find = (filter = {}) => list(docs.filter((d) => matches(d, filter)));
   Model.findOne = (filter = {}) => query(docs.find((d) => matches(d, filter)) || null);
   Model.countDocuments = async (filter = {}) => docs.filter((d) => matches(d, filter)).length;
+  Model.deleteMany = async (filter = {}) => {
+    const gone = docs.filter((d) => matches(d, filter));
+    gone.forEach((d) => docs.splice(docs.indexOf(d), 1));
+    return { deletedCount: gone.length };
+  };
   Model.updateOne = async (filter, update, options) => {
     const doc = docs.find((d) => matches(d, filter));
     if (doc == null && options && options.upsert) {
@@ -138,6 +157,7 @@ async function startServer() {
   const battles = require("../sockets/battles_server")(io);
   const poker = require("../sockets/poker_server")(io);
   const blackjack = require("../sockets/blackjack_server")(io);
+  const slots = require("../sockets/slots_server")(io);
   require("../sockets/casino_server")(io);
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
@@ -149,8 +169,10 @@ async function startServer() {
     battles,
     poker,
     blackjack,
-    client(namespace, token) {
+    slots,
+    client(namespace, token, query) {
       return connect(`http://localhost:${port}${namespace}`, {
+        query: query || {},
         transports: ["websocket"],
         reconnection: false,
         forceNew: true,
@@ -185,6 +207,6 @@ module.exports = {
   coinsOf: (username) => userByName(username).coins,
   userOf: userByName,
   // An account that already got its start coins
-  setCoins: (username, amount) => { Object.assign(userByName(username), { coins: amount, coinReset: require("../game/config").COIN_RESET }); },
+  setCoins: (username, amount) => { Object.assign(userByName(username), { coins: amount, coinReset: require("../game/coins").base().reset }); },
   setMemeCount: (count) => { memeCount = count; },
 };

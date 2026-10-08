@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Maintenance - MemeMory</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <link rel="stylesheet" href="/static/styles/theme.css" />
+    <link rel="stylesheet" href="/static/styles/not_found.css" />
+    <link rel="stylesheet" href="/static/styles/casino_request.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet" />
+  </head>
+
+  <body class="nf-page cr-page">
+    <main class="nf-main">
+      <div class="cr-card">
+        <span class="cr-icon cr-icon-tools" aria-hidden="true">🔧</span>
+        <h1 class="nf-title">Back soon!</h1>
+        <p class="nf-text">The casino is closed for maintenance. Your coins are safe - everything is as you left it.</p>
+        <p id="cmNote" class="cm-note" hidden></p>
+
+        <!--- When it is most likely over --->
+        <div id="cmUntil" class="cm-until" hidden>
+          <span class="cm-until-label">Most likely back</span>
+          <b id="cmUntilAt" class="cm-until-at"></b>
+          <span id="cmUntilIn" class="cm-until-in"></span>
+        </div>
+
+        <div class="cr-state">
+          <div class="cr-waiting"><span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"></span></div>
+          <p class="cr-hint">Keep this page open - you're let in by yourself when it's over.</p>
+        </div>
+      </div>
+      <a href="/" class="cr-back">← Back to MemeMory</a>
+    </main>
+
+    <script>
+      (function () {
+        var until = null;
+        var base = "/" + location.pathname.split("/")[1] + "/";
+
+        // "in 2 h 15 min" - or "any moment now"
+        function left(ms) {
+          if (ms <= 0) return "any moment now";
+          var minutes = Math.ceil(ms / 60000);
+          var days = Math.floor(minutes / 1440);
+          var hours = Math.floor((minutes % 1440) / 60);
+          var mins = minutes % 60;
+          var parts = [];
+          if (days) parts.push(days + " d");
+          if (hours) parts.push(hours + " h");
+          if (mins && !days) parts.push(mins + " min");
+          return "in " + parts.join(" ");
+        }
+
+        function render() {
+          document.getElementById("cmUntil").hidden = until == null;
+          if (until == null) return;
+          document.getElementById("cmUntilAt").innerText = new Date(until).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+          document.getElementById("cmUntilIn").innerText = left(until - Date.now());
+        }
+
+        async function load() {
+          try {
+            var res = await fetch(base + "maintenance", { cache: "no-store" });
+            if (!res.ok) return;
+            var state = await res.json();
+            // Over (or on the whitelist): back into the casino
+            if (!state.on || state.allowed) return window.location.reload();
+            until = state.until || null;
+            var note = document.getElementById("cmNote");
+            note.hidden = !state.note;
+            note.innerText = state.note || "";
+            render();
+          } catch (e) {
+            // offline for a moment: the next try
+          }
+        }
+
+        load();
+        setInterval(load, 10000);
+        setInterval(render, 30000);
+      })();
+    </script>
+  </body>
+</html>

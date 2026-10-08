@@ -5,7 +5,9 @@ const config = require("../game/config");
 const { bestHand, compare, pots, payout, payoutByPot, handName, newDeck, shuffle } = require("../game/poker");
 
 // Short timings for the tests
-Object.assign(config, { POKER_START: 30, POKER_SHOWDOWN: 60, POKER_STREET: 10, POKER_TURN: 3000, POKER_AWAY: 100 });
+Object.assign(config, { POKER_START: 30, POKER_SHOWDOWN: 60, POKER_DECIDE: 400, POKER_AFTER_DECIDE: 50, POKER_STREET: 10, POKER_TURN: 3000, POKER_AWAY: 100 });
+// (the amounts of these tests are made for small blinds - the levels are the same)
+Object.assign(config, { POKER_SMALL_BLIND: 5, POKER_BIG_BLIND: 10, POKER_MIN_BUYIN: 100, POKER_RAKE: 0 });
 
 /* ---------- Hands ---------- */
 
@@ -137,7 +139,8 @@ async function clearTable(players) {
   await waitFor(players[0], "pokerState", (s) => s.seats.every((seat) => seat == null), 5000);
 }
 
-test("poker: sit down with coins, only the own cards are visible, check down to the showdown", async () => {
+test("poker: sit down with coins, only the own cards are visible, check down to the showdown - the house takes its rake", async () => {
+  config.POKER_RAKE = 5;
   h.setCoins("alice", 1000);
   h.setCoins("bob", 1000);
   const alice = client("alice");
@@ -192,20 +195,26 @@ test("poker: sit down with coins, only the own cards are visible, check down to 
   }
 
   const end = await waitFor(alice, "pokerState", (x) => x.phase === "showdown");
-  // The result pot by pot
-  assert.strictEqual(end.result.pots.reduce((sum, p) => sum + p.amount, 0), 20);
+  // The result pot by pot - the house kept 5% of the 20 (the flop came): 1
+  assert.strictEqual(end.result.rake, 1);
+  assert.strictEqual(end.result.pots.reduce((sum, p) => sum + p.amount, 0), 19);
   assert.ok(end.result.pots[0].winners[0].hand);
   assert.strictEqual(end.result.showdown, true);
-  // Now both hands are shown
-  assert.ok(end.seats[3].cards.every((card) => typeof card === "string"));
+  // The winner shows; who lost decides (show or muck) - here they show
+  const losers = [0, 3].filter((i) => !end.result.winners.some((w) => w.seat === i));
+  losers.forEach((i) => assert.strictEqual(end.seats[i].deciding, true));
+  losers.forEach((i) => player(i).emit("decide", { show: true }));
+  const shown = losers.length ? await waitFor(alice, "pokerState", (x) => losers.every((i) => x.seats[i].shown)) : end;
+  assert.ok([0, 3].every((i) => shown.seats[i].cards.every((card) => typeof card === "string")), "now both hands are shown");
   assert.ok(end.result.winners.length >= 1);
-  assert.strictEqual(end.result.winners.reduce((sum, w) => sum + w.amount, 0), 20);
-  assert.strictEqual(stacks(end), 500, "no chip is lost");
+  assert.strictEqual(end.result.winners.reduce((sum, w) => sum + w.amount, 0), 19);
+  assert.strictEqual(stacks(end), 499, "only the rake is gone");
 
   // Standing up: the chips are coins again
   await clearTable([alice, bob]);
   await h.wait(30);
-  assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 2000);
+  assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 1999);
+  config.POKER_RAKE = 0;
 });
 
 test("poker: a raise has to be answered, a fold gives the pot away", async () => {
@@ -254,10 +263,10 @@ test("poker: all-in, standing up in a hand and wrong buy-ins", async () => {
   const bob = client("bob");
   await waitFor(bob, "coins", (d) => d.coins === 1000);
 
-  for (const buyIn of [50, 10001, 10.5, "100"]) {
+  for (const buyIn of [50, 25001, 10.5, "100"]) {
     const refused = h.once(alice, "pokerError");
     alice.emit("sit", { seat: 0, buyIn });
-    assert.match(await refused, /Buy in with 100 - 10000/);
+    assert.match(await refused, /Buy in with 100 - 25000/);
   }
   const poor = h.once(alice, "pokerError");
   h.setCoins("alice", 120);
@@ -293,6 +302,79 @@ test("poker: all-in, standing up in a hand and wrong buy-ins", async () => {
   await clearTable([alice, bob]);
   await h.wait(30);
   assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 2000, "every coin is back");
+});
+
+test("poker: the blinds go up every few hands and stay up while people play - back to the start when the table was empty", async () => {
+  const before = { POKER_LEVEL_HANDS: config.POKER_LEVEL_HANDS, POKER_LEVEL_RESET: config.POKER_LEVEL_RESET };
+  Object.assign(config, { POKER_LEVEL_HANDS: 1, POKER_LEVEL_RESET: 200 });
+  try {
+    // A fresh table (the hands of the tests before started the level clock)
+    Object.assign(server.poker.table, { level: 0, levelSince: null, levelHands: 0 });
+    h.setCoins("alice", 50000);
+    h.setCoins("bob", 50000);
+    const alice = client("alice");
+    const bob = client("bob");
+    await Promise.all([waitFor(alice, "coins", (d) => d.coins === 50000), waitFor(bob, "coins", (d) => d.coins === 50000)]);
+    alice.emit("sit", { seat: 0, buyIn: 5000 });
+    await waitFor(alice, "pokerState", (s) => s.seats[0] != null);
+    const first = waitFor(alice, "pokerState", (s) => s.phase === "preflop");
+    bob.emit("sit", { seat: 1, buyIn: 5000 });
+    const hand1 = await first;
+    assert.deepStrictEqual([hand1.level.number, hand1.rules.smallBlind, hand1.rules.bigBlind], [1, config.POKER_SMALL_BLIND, config.POKER_BIG_BLIND]);
+    assert.deepStrictEqual(hand1.level.next, { small: config.POKER_SMALL_BLIND * 2, big: config.POKER_BIG_BLIND * 2 });
+    assert.strictEqual(hand1.level.handsLeft, 0, "up with the next hand");
+
+    // After the hands of a level: the blinds are doubled
+    const fold = async (hand) => {
+      const next = waitFor(alice, "pokerState", (s) => s.phase === "preflop" && s.hand === hand.hand + 1, 5000);
+      (hand.current === 0 ? alice : bob).emit("action", { type: "fold" });
+      return next;
+    };
+    const hand2 = await fold(hand1);
+    assert.deepStrictEqual([hand2.level.number, hand2.rules.bigBlind, hand2.seats[hand2.bb].bet], [2, config.POKER_BIG_BLIND * 2, config.POKER_BIG_BLIND * 2]);
+
+    // Playing on (even longer than the reset time of an empty table): the blinds stay up - and go on up
+    await h.wait(300);
+    const hand3 = await fold(hand2);
+    assert.deepStrictEqual([hand3.level.number, hand3.rules.bigBlind], [3, config.POKER_BIG_BLIND * 4]);
+
+    // Everybody stands up: after a while the blinds are back at the start
+    await clearTable([alice, bob]);
+    const reset = await waitFor(alice, "pokerState", (s) => s.level.number === 1, 3000);
+    assert.strictEqual(reset.rules.bigBlind, config.POKER_BIG_BLIND);
+  } finally {
+    Object.assign(config, before);
+  }
+});
+
+test("poker: after a hand the player decides to show or muck - with a timer, then mucked", async () => {
+  h.setCoins("alice", 5000);
+  h.setCoins("bob", 5000);
+  const alice = client("alice");
+  const bob = client("bob");
+  await Promise.all([waitFor(alice, "coins", (d) => d.coins === 5000), waitFor(bob, "coins", (d) => d.coins === 5000)]);
+  alice.emit("sit", { seat: 0, buyIn: 1000 });
+  await waitFor(alice, "pokerState", (s) => s.seats[0] != null);
+  const dealt = waitFor(alice, "pokerState", (s) => s.phase === "preflop");
+  bob.emit("sit", { seat: 1, buyIn: 1000 });
+  let state = await dealt;
+  const player = (seat) => (seat === 0 ? alice : bob);
+
+  // Everybody else folds: no showdown, the cards stay hidden - the winner may show them
+  const winner = state.current === 0 ? 1 : 0;
+  const over = waitFor(alice, "pokerState", (s) => s.phase === "showdown");
+  player(state.current).emit("action", { type: "fold" });
+  let end = await over;
+  assert.strictEqual(end.result.showdown, false);
+  assert.strictEqual(end.seats[winner].deciding, true, "the winner decides");
+  assert.ok(end.decideIn > 0 && end.decideIn <= config.POKER_DECIDE);
+  const other = winner === 0 ? 1 : 0;
+  const seen = waitFor(player(other), "pokerState", (s) => s.phase === "showdown" && s.seats[winner] && s.seats[winner].shown);
+  player(winner).emit("decide", { show: true });
+  const shown = await seen;
+  assert.ok(shown.seats[winner].cards.every((card) => typeof card === "string"), "the winner showed the cards");
+  assert.strictEqual(shown.decideIn, null, "nobody decides anymore");
+  await clearTable([alice, bob]);
 });
 
 test("poker: a server stop gives every chip back, also the ones in the pot", async () => {

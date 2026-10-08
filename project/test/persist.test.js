@@ -7,6 +7,8 @@ const bj = require("../game/blackjack");
 
 // Long timers: nothing moves on by itself while the "server" restarts
 Object.assign(config, {
+  JACKPOT_RAKE: 0,
+  POKER_RAKE: 0,
   JACKPOT_BET_DELAY: [0, 0],
   JACKPOT_GHOST_AFTER: 60000,
   JACKPOT_COUNTDOWN: 60000,
@@ -28,9 +30,10 @@ function stopGames(server) {
   clearTimeout(server.jackpot.pot.timer);
   clearTimeout(server.jackpot.pot.ghostTimer);
   server.jackpot.pot.incoming.forEach((bet) => clearTimeout(bet.timer));
-  for (const table of [server.poker.table, server.blackjack.table]) {
+  for (const table of [server.poker.table, ...[...server.blackjack.tables.values()].map((t) => t.table)]) {
     clearTimeout(table.timer);
     clearTimeout(table.turnTimer);
+    if (table.leaveTimers) table.leaveTimers.forEach((timer) => clearTimeout(timer));
     table.seats.forEach((seat) => seat && (clearTimeout(seat.awayTimer), clearTimeout(seat.standTimer)));
   }
   for (const battle of server.battles.lobby.list.values()) clearTimeout(battle.timer);
@@ -84,12 +87,12 @@ test("restart: every game, its running round, its history and the chat are back 
   bob.emit("bet", { amount: 200 });
   const jackpot = await waitFor(chat, "jackpotState", (s) => s.phase === "countdown" && s.total === 500);
 
-  // Blackjack: a bet on seat 2, the betting time runs
+  // Blackjack: a bet on seat 2 (classic table), the betting time runs
   const table = client(first, "/blackjack", "carol");
   await h.once(table, "connect");
   table.emit("sit", 2);
-  table.emit("bet", { seat: 2, amount: 400 });
-  await waitFor(table, "blackjackState", (s) => s.seats[2] && s.seats[2].bet === 400);
+  table.emit("bet", { seat: 2, amount: 600 });
+  await waitFor(table, "blackjackState", (s) => s.seats[2] && s.seats[2].bet === 600);
 
   // Poker: a hand is running
   const p1 = client(first, "/poker", "dave");
@@ -130,7 +133,7 @@ test("restart: every game, its running round, its history and the chat are back 
   assert.ok(state.endsIn >= config.RESTORE_GRACE - 1000, "time to come back");
 
   const bjState = await h.once(client(second, "/blackjack", "carol"), "blackjackState");
-  assert.deepStrictEqual([bjState.phase, bjState.seats[2].name, bjState.seats[2].bet], ["betting", "carol", 400]);
+  assert.deepStrictEqual([bjState.phase, bjState.seats[2].name, bjState.seats[2].bet], ["betting", "carol", 600]);
 
   const pk = await h.once(client(second, "/poker", "dave"), "pokerState");
   assert.strictEqual(pk.phase, "preflop");
@@ -174,10 +177,11 @@ test("restart during the draw: the winner is paid once, the round ends and the h
   const drawing = await waitFor(alice, "jackpotState", (s) => s.phase === "drawing", 5000);
   await h.wait(50);
   const total = h.coinsOf("alice") + h.coinsOf("bob");
-  assert.strictEqual(total, 2000 - 200 + 200, "paid when the draw starts");
+  assert.strictEqual(total, 2000 - 200, "not paid while the draw is running");
 
   await persist.saveAll();
   persist.reset();
+  stopGames(first); // the old server is gone (its draw timer too)
   sockets.splice(0).forEach((s) => s.close());
   const second = await h.startServer();
   servers.push(second);
@@ -188,4 +192,30 @@ test("restart during the draw: the winner is paid once, the round ends and the h
   const done = await waitFor(watcher, "jackpotState", (s) => s.phase === "open" && s.history.some((r) => r.round === drawing.round), 5000);
   assert.strictEqual(done.history[0].winner, drawing.draw.winner);
   assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 2000, "paid exactly once");
+});
+
+test("persist: a season saves every game and puts it back afterwards", async () => {
+  // A tiny game of its own
+  const game = { rounds: 7 };
+  persist.register("seasonTest", () => game, (saved) => Object.assign(game, saved));
+  const before = persist.snapshotAll();
+  assert.strictEqual(JSON.parse(before.seasonTest).rounds, 7);
+  // The season: everything anew, then played on
+  await persist.resetAll();
+  game.rounds = 99;
+  // Over: as before the season
+  await persist.restoreSnapshots(before);
+  assert.strictEqual(game.rounds, 7);
+});
+
+test("persist: the chat stays through a season (start and end)", async () => {
+  const chat = { messages: ["before"] };
+  persist.register("chatTest", () => chat, (saved) => Object.assign(chat, saved));
+  const before = persist.snapshotAll();
+  await persist.resetAll(["chatTest"]);
+  chat.messages.push("during");
+  await persist.restoreSnapshots(before, ["chatTest"]);
+  assert.deepStrictEqual(chat.messages, ["before", "during"]);
+  // (the season really keeps "chat")
+  assert.match(require("fs").readFileSync(require.resolve("../game/hard_reset"), "utf8"), /SEASON_KEEP = \["chat"\]/);
 });

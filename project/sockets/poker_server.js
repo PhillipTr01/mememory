@@ -1,11 +1,14 @@
 const config = require("../game/config");
 const coins = require("../game/coins");
+const inPlay = require("../game/in_play");
+const casinoLock = require("../game/casino_lock");
 const poker = require("../game/poker");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 const version = require("../game/version");
 const persist = require("../game/persist");
+const liveGames = require("../game/live");
 
 const ROOM = "poker"; // one table for everybody
 const BETTING = ["preflop", "flop", "turn", "river"];
@@ -34,13 +37,71 @@ module.exports = function (io) {
     turnAt: null, // deadline of the current turn
     startAt: null, // the next hand starts (waiting)
     highBet: 0, // highest bet on this street
-    minRaise: config.POKER_BIG_BLIND,
+    minRaise: 0, // set with every hand (the big blind)
     result: null, // {showdown, winners: [{seat, name, amount, hand, cards}], hands: [{seat, hand}]}
     timer: null, // next hand / next street
     turnTimer: null,
     history: [], // [{hand, winners: [{name, amount, hand}]}] newest first
+    level: 0, // the blind level (see blinds())
+    levelSince: null, // when the blinds started at the first level (null: with the next hand)
+    levelHands: 0, // hands played at this level
+    emptySince: null, // nobody at the table since then
+    resetTimer: null,
+    decideUntil: null, // after a hand: until then the players decide to show or muck their cards
   };
   const busy = new Set(); // users with a coin payment in progress
+
+  /* ---------- Blinds: up every few hands, back to the start when the table was empty a while ---------- */
+
+  function blindsAt(level) {
+    const steps = config.POKER_BLIND_STEPS || [1];
+    const factor = steps[Math.min(level, steps.length - 1)];
+    return { small: config.POKER_SMALL_BLIND * factor, big: config.POKER_BIG_BLIND * factor };
+  }
+
+  function blinds() {
+    return blindsAt(table.level);
+  }
+
+  function lastLevel() {
+    return (config.POKER_BLIND_STEPS || [1]).length - 1;
+  }
+
+  // At the start of a hand: up a level after POKER_LEVEL_HANDS hands (the first hand after a reset: the first level)
+  function updateLevel(now = Date.now()) {
+    if (table.levelSince == null) {
+      table.level = 0;
+      table.levelSince = now;
+      table.levelHands = 0;
+    } else if (table.level < lastLevel() && table.levelHands >= config.POKER_LEVEL_HANDS) {
+      table.level++;
+      table.levelHands = 0;
+    }
+    table.levelHands++;
+  }
+
+  // Nobody sits at the table for a while: the blinds start low again
+  function watchEmpty() {
+    const empty = table.seats.every((seat) => seat == null);
+    if (!empty) {
+      table.emptySince = null;
+      clearTimeout(table.resetTimer);
+      table.resetTimer = null;
+      return;
+    }
+    if (table.emptySince != null) return;
+    table.emptySince = Date.now();
+    clearTimeout(table.resetTimer);
+    table.resetTimer = setTimeout(() => {
+      table.resetTimer = null;
+      if (!table.seats.every((seat) => seat == null)) return;
+      table.level = 0;
+      table.levelSince = null;
+      table.levelHands = 0;
+      emitState();
+    }, config.POKER_LEVEL_RESET);
+    table.resetTimer.unref();
+  }
 
   /* ---------- Seats ---------- */
 
@@ -94,8 +155,12 @@ module.exports = function (io) {
             lastAction: seat.lastAction,
             away: seat.awaySince != null,
             leaving: seat.leaving === true,
-            // Only the own cards - the others' only after a showdown
+            // Only the own cards - the others' only after a showdown (or when they show them)
             cards: seat.name === viewer || seat.shown ? seat.cards : seat.cards.map(() => null),
+            shown: seat.shown === true,
+            mucked: seat.mucked === true,
+            // After the hand: show or muck? (a decision with a timer)
+            deciding: seat.deciding === true,
             // What the player has right now (only where the cards can be seen)
             handName: (seat.name === viewer || seat.shown) && seat.cards.length && !seat.folded ? poker.handName(seat.cards.concat(table.board)) : null,
           },
@@ -116,11 +181,20 @@ module.exports = function (io) {
       result: table.result,
       history: table.history,
       viewers: room.sockets.size,
+      // The blinds now, after how many hands (and to what) they go up
+      level: {
+        number: table.level + 1,
+        handsLeft: table.levelSince != null && table.level < lastLevel() ? Math.max(0, config.POKER_LEVEL_HANDS - table.levelHands) : null,
+        next: table.level < lastLevel() ? blindsAt(table.level + 1) : null,
+      },
+      decideIn: table.decideUntil != null ? Math.max(0, table.decideUntil - Date.now()) : null,
+      decideTime: config.POKER_DECIDE,
       rules: {
-        smallBlind: config.POKER_SMALL_BLIND,
-        bigBlind: config.POKER_BIG_BLIND,
+        smallBlind: blinds().small,
+        bigBlind: blinds().big,
         minBuyIn: config.POKER_MIN_BUYIN,
         maxBuyIn: config.POKER_MAX_BUYIN,
+        defaultBuyIn: config.POKER_DEFAULT_BUYIN,
         turn: config.POKER_TURN,
       },
     };
@@ -155,6 +229,7 @@ module.exports = function (io) {
   }
 
   function emitState() {
+    watchEmpty();
     for (const socket of room.sockets.values()) socket.emit("pokerState", serialize(socket.data.username));
     persist.changed("poker");
   }
@@ -176,7 +251,7 @@ module.exports = function (io) {
 
   // Two players with chips: the next hand starts soon
   function scheduleStart() {
-    if (table.phase !== "waiting" || table.startAt != null || players().length < 2) return;
+    if (table.phase !== "waiting" || table.startAt != null || players().length < 2 || casinoLock.locked()) return;
     table.startAt = Date.now() + config.POKER_START;
     table.timer = setTimeout(() => {
       table.startAt = null;
@@ -203,13 +278,14 @@ module.exports = function (io) {
       emitState();
       return;
     }
+    updateLevel();
     table.hand++;
     table.result = null;
     table.board = [];
     table.deck = poker.shuffle(poker.newDeck());
     table.seats.forEach((seat, i) => {
       if (seat == null) return;
-      Object.assign(seat, { cards: [], bet: 0, total: 0, folded: false, allIn: false, acted: false, shown: false, lastAction: null });
+      Object.assign(seat, { cards: [], bet: 0, total: 0, folded: false, allIn: false, acted: false, shown: false, mucked: false, deciding: false, lastAction: null });
       seat.inHand = playing.includes(i);
     });
 
@@ -218,10 +294,11 @@ module.exports = function (io) {
     // Heads-up: the button is the small blind
     table.sb = playing.length === 2 ? table.button : nextFrom(table.button, isPlaying);
     table.bb = nextFrom(table.sb, isPlaying);
-    post(table.sb, config.POKER_SMALL_BLIND, "Small blind");
-    post(table.bb, config.POKER_BIG_BLIND, "Big blind");
+    const { small, big } = blinds();
+    post(table.sb, small, "Small blind");
+    post(table.bb, big, "Big blind");
     table.highBet = Math.max(table.seats[table.sb].bet, table.seats[table.bb].bet);
-    table.minRaise = config.POKER_BIG_BLIND;
+    table.minRaise = big;
 
     // Two cards each, one at a time, starting left of the button
     for (let round = 0; round < 2; round++) {
@@ -280,7 +357,7 @@ module.exports = function (io) {
       if (!seat.folded && !seat.allIn) seat.lastAction = null;
     });
     table.highBet = 0;
-    table.minRaise = config.POKER_BIG_BLIND;
+    table.minRaise = blinds().big;
     table.deck.pop(); // burn
     if (table.phase === "preflop") {
       table.board.push(table.deck.pop(), table.deck.pop(), table.deck.pop());
@@ -352,16 +429,30 @@ module.exports = function (io) {
     return null;
   }
 
+  // The house's cut of a pot (rake): only once the flop came ("no flop, no drop")
+  function rakeOf(amount) {
+    return table.board.length >= 3 ? Math.floor((amount * config.POKER_RAKE) / 100) : 0;
+  }
+
   function winByFold(i) {
     const seat = table.seats[i];
-    const amount = table.seats.reduce((sum, s) => sum + (s && s.inHand ? s.total : 0), 0);
+    const all = table.seats.reduce((sum, s) => sum + (s && s.inHand ? s.total : 0), 0);
+    // Only what the others matched pays rake - the winner's own bet nobody called comes back whole
+    const others = table.seats.filter((s, k) => s && s.inHand && k !== i).map((s) => s.total);
+    const called = Math.min(seat.total, Math.max(0, ...others));
+    const contested = table.seats.reduce((sum, s) => sum + (s && s.inHand ? Math.min(s.total, called) : 0), 0);
+    const rake = rakeOf(contested);
+    const amount = all - rake;
     seat.stack += amount;
     table.result = {
       showdown: false,
+      rake: rake,
       winners: [{ seat: i, name: seat.name, amount: amount }],
       hands: [],
       pots: [{ amount: amount, players: [seat.name], winners: [{ seat: i, name: seat.name, amount: amount, hand: null }] }],
     };
+    // Nobody has to show: the winner decides to show the cards or not
+    if (seat.cards.length && !seat.shown) seat.deciding = true;
     finishHand();
   }
 
@@ -369,6 +460,14 @@ module.exports = function (io) {
     const alive = indexes().filter(live);
     const hands = new Map(alive.map((i) => [i, poker.bestHand(table.seats[i].cards.concat(table.board))]));
     const potList = poker.pots(indexes().filter(inHand).map((i) => ({ seat: i, total: table.seats[i].total, folded: table.seats[i].folded })));
+    // The rake: from every pot at least two players play for (not from chips nobody called)
+    let rake = 0;
+    potList.forEach((pot) => {
+      if (pot.eligible.length < 2) return;
+      const cut = rakeOf(pot.amount);
+      pot.amount -= cut;
+      rake += cut;
+    });
     // Odd chips: first to the players left of the button
     const order = [];
     for (let i = nextFrom(table.button, () => true), n = 0; n < table.seats.length; n++, i = (i + 1) % table.seats.length) order.push(i);
@@ -376,17 +475,25 @@ module.exports = function (io) {
     const won = new Map();
     byPot.forEach((pot) => pot.winners.forEach((w) => won.set(w.seat, (won.get(w.seat) || 0) + w.amount)));
     won.forEach((amount, i) => (table.seats[i].stack += amount));
-    alive.forEach((i) => (table.seats[i].shown = true));
+    // The winners show their cards; who lost decides: show them or muck them (hidden)
+    alive.forEach((i) => {
+      const seat = table.seats[i];
+      if (won.has(i) || seat.shown) seat.shown = true;
+      else seat.deciding = true;
+    });
     table.result = {
       showdown: true,
+      rake: rake,
       winners: [...won.entries()].map(([i, amount]) => ({
         seat: i,
         name: table.seats[i].name,
         amount: amount,
         hand: hands.get(i).name,
         cards: hands.get(i).cards,
+        // (the cards of the hand itself - the others in `cards` are kickers)
+        made: hands.get(i).made,
       })),
-      hands: alive.map((i) => ({ seat: i, hand: hands.get(i).name })),
+      hands: alive.map((i) => ({ seat: i, hand: table.seats[i].deciding ? null : hands.get(i).name, mucked: false, deciding: table.seats[i].deciding })),
       // Pot by pot: how big, who could win it, who got what
       pots: byPot.map((pot) => ({
         amount: pot.amount,
@@ -410,29 +517,77 @@ module.exports = function (io) {
       winners: winners.map((w) => ({ name: w.name, amount: w.amount, hand: w.hand || null })),
     });
     table.history.length = Math.min(table.history.length, config.POKER_HISTORY);
+    // Show or muck: everybody who has to decide gets POKER_DECIDE, then the cards are mucked
+    const deciding = table.seats.some((seat) => seat && seat.deciding);
+    table.decideUntil = deciding ? Date.now() + config.POKER_DECIDE : null;
+    if (deciding) {
+      table.decideTimer = setTimeout(endDecisions, config.POKER_DECIDE);
+      table.decideTimer.unref();
+    }
     emitState();
-    table.timer = setTimeout(afterHand, config.POKER_SHOWDOWN);
+    table.timer = setTimeout(afterHand, deciding ? Math.max(config.POKER_SHOWDOWN, config.POKER_DECIDE + config.POKER_AFTER_DECIDE) : config.POKER_SHOWDOWN);
+  }
+
+  // One player decides: show the cards to the table (true) or muck them
+  function decide(i, show) {
+    const seat = table.seats[i];
+    if (seat == null || !seat.deciding) return;
+    seat.deciding = false;
+    seat.shown = show;
+    seat.mucked = !show;
+    const entry = table.result && table.result.hands.find((hand) => hand.seat === i);
+    if (entry) Object.assign(entry, { deciding: false, mucked: !show, hand: show ? poker.handName(seat.cards.concat(table.board)) : null });
+    if (!table.seats.some((s) => s && s.deciding)) {
+      clearTimeout(table.decideTimer);
+      table.decideUntil = null;
+    }
+  }
+
+  // The time is up: who didn't decide mucks
+  function endDecisions() {
+    clearTimeout(table.decideTimer);
+    table.seats.forEach((seat, i) => seat && seat.deciding && decide(i, false));
+    table.decideUntil = null;
+    emitState();
   }
 
   function afterHand() {
+    clearTimeout(table.decideTimer);
+    table.decideUntil = null;
     table.seats.forEach((seat, i) => {
       if (seat == null) return;
       seat.inHand = false;
       seat.shown = false;
+      seat.mucked = false;
+      seat.deciding = false;
       seat.bet = 0;
       seat.total = 0;
       seat.cards = [];
       seat.lastAction = null;
-      // Out of chips, standing up or gone: off the table
-      if (seat.leaving || seat.stack === 0) cashOut(i);
+      // Out of chips, standing up or gone (left the page during the hand): off the table
+      if (seat.leaving || seat.stack === 0 || (seat.awaySince != null && !connected(seat.name))) cashOut(i);
     });
     table.board = [];
     table.result = null;
     table.current = -1;
     table.phase = "waiting";
+    // Closing time before a season: no next hand - everybody gets the chips back
+    if (casinoLock.locked()) return closeTable();
     if (players().length >= 2) startHand();
     else emitState();
   }
+
+  // Everybody stands up, the chips go back (closing time before a season)
+  function closeTable() {
+    clearTimeout(table.timer);
+    table.startAt = null;
+    table.seats.forEach((seat, i) => seat && cashOut(i));
+    emitState();
+  }
+  casinoLock.changes.on("locked", () => {
+    if (table.phase === "waiting") closeTable();
+  });
+  casinoLock.registerRunning("poker", () => table.phase !== "waiting" || table.seats.some((seat) => seat && seat.stack > 0));
 
   // Standing up: folds a running hand, the chips come back at its end
   function standUp(i) {
@@ -488,6 +643,7 @@ module.exports = function (io) {
     socket.on(
       "sit",
       safe("sit", async (data) => {
+        if (casinoLock.locked()) return error(casinoLock.message());
         if (data == null) return;
         const { seat, buyIn } = data;
         if (!Number.isInteger(seat) || seat < 0 || seat >= table.seats.length) return;
@@ -534,6 +690,7 @@ module.exports = function (io) {
     socket.on(
       "addChips",
       safe("addChips", async (amount) => {
+        if (casinoLock.locked()) return error(casinoLock.message());
         const i = seatOf(username);
         if (i < 0 || !Number.isInteger(amount) || amount <= 0 || busy.has(username)) return;
         const seat = table.seats[i];
@@ -564,6 +721,17 @@ module.exports = function (io) {
       }),
     );
 
+    // After the hand: show the own cards to the table - or muck them (a decision with a timer)
+    socket.on(
+      "decide",
+      safe("decide", (data) => {
+        const i = seatOf(username);
+        if (i < 0 || table.phase !== "showdown" || data == null || typeof data.show !== "boolean") return;
+        decide(i, data.show);
+        emitState();
+      }),
+    );
+
     socket.on(
       "stand",
       safe("stand", () => {
@@ -586,7 +754,8 @@ module.exports = function (io) {
     socket.on(
       "claimBonus",
       safe("claimBonus", async () => {
-        if (await coins.claimBonus(username)) socket.emit("bonusClaimed", config.DAILY_BONUS);
+        const paid = await coins.claim(username);
+        if (paid) socket.emit("bonusClaimed", paid);
         await sendCoins(username);
       }),
     );
@@ -605,9 +774,15 @@ module.exports = function (io) {
           const seat = table.seats[i];
           seat.awaySince = Date.now();
           clearTimeout(seat.awayTimer);
-          seat.awayTimer = setTimeout(() => {
-            if (table.seats[i] === seat && !connected(username)) standUp(i);
-          }, config.POKER_AWAY);
+          // Not in a hand: off the table right away (after a reload-sized wait);
+          // in a hand: the seat stays until the hand is over (or POKER_AWAY)
+          const inHand = seat.inHand && table.phase !== "waiting";
+          seat.awayTimer = setTimeout(
+            () => {
+              if (table.seats[i] === seat && !connected(username)) standUp(i);
+            },
+            inHand ? config.POKER_AWAY : Math.min(config.POKER_AWAY, config.CASINO_LEAVE),
+          );
           // Their turn right now: the others don't wait the whole time
           if (table.current === i) {
             clearTimeout(table.turnTimer);
@@ -639,11 +814,16 @@ module.exports = function (io) {
 
   /* ---------- Restart of the server ---------- */
 
+  // Coins in play: a seat with chips (or chips in the pot)
+  inPlay.register("poker", (name) => table.seats.some((seat) => seat && seat.name === name && (seat.stack > 0 || (table.phase !== "waiting" && table.phase !== "showdown" && !seat.folded && seat.total > 0))));
+
+  liveGames.register("poker", () => ({ phase: table.phase, hand: table.hand, seated: table.seats.filter(Boolean).length, seats: table.seats.length }));
+
   persist.register(
     "poker",
     () => {
       const saved = {};
-      for (const key of ["seats", "phase", "hand", "button", "sb", "bb", "board", "deck", "current", "lastActor", "turnAt", "highBet", "minRaise", "result", "history"]) saved[key] = table[key];
+      for (const key of ["seats", "phase", "hand", "button", "sb", "bb", "board", "deck", "current", "lastActor", "turnAt", "highBet", "minRaise", "result", "history", "level", "levelSince", "levelHands", "decideUntil"]) saved[key] = table[key];
       return saved;
     },
     restore,
@@ -655,7 +835,11 @@ module.exports = function (io) {
     clearTimeout(table.timer);
     clearTimeout(table.turnTimer);
     table.seats.forEach((seat) => seat && clearTimeout(seat.awayTimer));
-    Object.assign(table, saved, { timer: null, turnTimer: null, startAt: null });
+    clearTimeout(table.decideTimer);
+    Object.assign(table, saved, { timer: null, turnTimer: null, decideTimer: null, startAt: null, resetTimer: null, emptySince: null });
+    if (!Number.isInteger(table.level)) table.level = 0;
+    if (table.levelSince === undefined) table.levelSince = null;
+    if (!Number.isInteger(table.levelHands)) table.levelHands = 0;
     const now = Date.now();
     const grace = config.RESTORE_GRACE;
     table.seats.forEach((seat, i) => {
@@ -671,7 +855,9 @@ module.exports = function (io) {
     if (table.phase === "waiting") {
       scheduleStart();
     } else if (table.phase === "showdown") {
-      table.timer = setTimeout(afterHand, config.POKER_SHOWDOWN);
+      // Still deciding: the rest of the time (at least the grace), then mucked
+      if (table.decideUntil != null) table.decideTimer = setTimeout(endDecisions, Math.max(grace, table.decideUntil - now));
+      table.timer = setTimeout(afterHand, Math.max(grace, (table.decideUntil || now) - now) + config.POKER_SHOWDOWN);
     } else if (table.current >= 0 && table.seats[table.current]) {
       startTurn(Math.max(grace, (table.turnAt || 0) - now));
     } else {

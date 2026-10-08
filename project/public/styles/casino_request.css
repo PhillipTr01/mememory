@@ -131,3 +131,61 @@ body.cr-page {
 .cr-back:hover {
   color: var(--mm-text);
 }
+
+/* ---------- Maintenance: the reason, when it is most likely over ---------- */
+.cr-icon-tools {
+  animation: cm-turn 2.4s ease-in-out infinite;
+}
+
+@keyframes cm-turn {
+  50% {
+    transform: rotate(-25deg);
+  }
+}
+
+.cm-note {
+  width: 100%;
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--mm-text);
+  font-size: 0.9rem;
+  text-align: center;
+  white-space: pre-line;
+}
+
+.cm-note[hidden],
+.cm-until[hidden] {
+  display: none;
+}
+
+.cm-until {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.35);
+  border-radius: 12px;
+  background: rgba(var(--mm-accent-rgb), 0.08);
+}
+
+.cm-until-label {
+  color: var(--mm-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cm-until-at {
+  color: var(--mm-accent);
+  font-size: 1.15rem;
+}
+
+.cm-until-in {
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+}

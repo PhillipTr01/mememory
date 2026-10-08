@@ -73,7 +73,7 @@ socket.on("resumeGame", (data) => {
 socket.on("connect_error", (error) => {
   // Not logged in (anymore)
   if (error && error.message == "unauthorized") {
-    window.location.href = "/";
+    window.location.href = "/?next=" + encodeURIComponent(location.pathname + location.search);
   }
 });
 

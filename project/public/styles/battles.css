@@ -16,7 +16,7 @@
 .rarity-gold { --rarity: var(--rarity-gold); }
 
 .bt-main {
-  max-width: 980px;
+  max-width: 1240px;
   margin: 0 auto;
   padding: 1.5rem;
   display: flex;
@@ -139,7 +139,6 @@
 .bt-case-info:hover {
   color: var(--mm-text);
 }
-
 
 .bt-risk {
   padding: 0.05rem 0.45rem;
@@ -304,8 +303,6 @@
   opacity: 0.3;
 }
 
-
-
 .bt-create-row {
   display: flex;
   flex-wrap: wrap;
@@ -315,8 +312,52 @@
 
 .bt-create-row .mm-btn-primary {
   margin-left: auto;
+  align-self: flex-end;
 }
 
+/* A setting with its title on top (like the settings of a room) */
+.bt-setting {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.bt-setting-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
+
+/* - 2 + : as high as the mode picker next to it */
+.bt-size-stepper {
+  height: calc(2.6rem + 8px);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+}
+
+.bt-size-stepper button {
+  width: 38px;
+  height: 100%;
+}
+
+.bt-size-stepper svg {
+  width: 16px;
+  height: 16px;
+}
+
+.bt-size-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3.4rem;
+  line-height: 1.1;
+}
+
+.bt-size-value b {
+  font-size: 1.15rem;
+}
 
 /* ---------- Case selection ---------- */
 .bt-tools {
@@ -416,81 +457,162 @@
   color: var(--mm-accent);
 }
 
-/* Crazy mode: a switch with a clown */
-.bt-crazy {
+/* ---------- Players and mode: two picks side by side ---------- */
+.bt-pick {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+}
+
+.bt-pick button {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.3rem 0.6rem 0.3rem 0.4rem;
-  border: 1px solid var(--mm-border);
-  border-radius: 999px;
-  background: var(--mm-surface-2);
+  gap: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
   color: var(--mm-muted);
   text-align: left;
-  transition: all 0.2s ease;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.bt-crazy-icon {
-  font-size: 1.5rem;
-  line-height: 1;
-  filter: grayscale(1);
-  opacity: 0.6;
-  transition: all 0.2s ease;
+.bt-pick button b {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 800;
 }
 
-.bt-crazy-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
+.bt-pick button small {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 600;
+  opacity: 0.8;
 }
 
-.bt-crazy-text b {
-  font-size: 0.82rem;
-}
-
-.bt-crazy-text small {
-  font-size: 0.7rem;
-}
-
-.bt-switch {
-  position: relative;
-  width: 34px;
-  height: 20px;
-  border-radius: 999px;
-  background: var(--mm-surface-3);
-  transition: background 0.2s ease;
-}
-
-.bt-switch::after {
-  content: "";
-  position: absolute;
-  left: 3px;
-  top: 3px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #ddd;
-  transition: transform 0.2s ease;
-}
-
-.bt-crazy.on {
-  border-color: #c084fc;
-  background: rgba(168, 85, 247, 0.14);
+.bt-pick button:hover:not(.active) {
   color: var(--mm-text);
 }
 
-.bt-crazy.on .bt-crazy-icon {
+.bt-pick button.active {
+  border-color: rgba(var(--mm-accent-rgb), 0.55);
+  background: rgba(var(--mm-accent-rgb), 0.14);
+  color: var(--mm-text);
+}
+
+.bt-pick-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  filter: grayscale(1);
+  opacity: 0.55;
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+.bt-pick button.active .bt-pick-icon {
   filter: none;
   opacity: 1;
   animation: bt-clown 0.5s ease;
 }
 
-.bt-crazy.on .bt-switch {
-  background: #a855f7;
+.bt-pick-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
 }
 
-.bt-crazy.on .bt-switch::after {
-  transform: translateX(14px);
+/* ---------- Random mode: the reveal at the end ---------- */
+.bt-arena {
+  position: relative;
+}
+
+.bt-mode-reveal {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Over the reels (the top of the seats), not down at the won items */
+  justify-content: flex-start;
+  padding-top: clamp(4.5rem, 9vw, 7rem);
+  gap: 0.5rem;
+  border-radius: var(--mm-radius);
+  background: rgba(14, 14, 14, 0.82);
+  backdrop-filter: blur(3px);
+  animation: bt-fade-in 0.3s ease-out;
+}
+
+@keyframes bt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.bt-mode-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--mm-muted);
+}
+
+.bt-mode-face {
+  position: relative;
+  display: block;
+  width: 110px;
+  height: 110px;
+  overflow: hidden;
+  border: 2px solid var(--mm-border);
+  border-radius: 50%;
+  background: var(--mm-surface-2);
+  font-size: 4rem;
+  line-height: 1;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  /* The icons fade in and out at the edges of the reel */
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 28%, #000 72%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 28%, #000 72%, transparent);
+}
+
+.bt-mode-track {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  will-change: transform;
+}
+
+.bt-mode-icon {
+  flex: 0 0 100%;
+  display: grid;
+  place-items: center;
+}
+
+.bt-mode-reveal.done .bt-mode-face {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.bt-mode-reveal.done .bt-mode-face {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 30px rgba(var(--mm-accent-rgb), 0.45);
+  animation: bt-mode-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes bt-mode-pop {
+  40% {
+    transform: scale(1.08);
+  }
+}
+
+.bt-mode-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.bt-mode-reveal.done .bt-mode-name {
+  color: var(--mm-accent);
 }
 
 @keyframes bt-clown {
@@ -572,12 +694,6 @@
   font-weight: 700;
 }
 
-.bt-pot {
-  margin-left: auto;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
 .bt-row-actions {
   display: flex;
   align-items: center;
@@ -626,6 +742,9 @@
   justify-content: center;
   flex-wrap: wrap;
   gap: 0.35rem;
+  /* Room for the glow of the current case (not cut off) */
+  overflow: visible;
+  padding: 4px;
 }
 
 .bt-strip.big .bt-strip-case {
@@ -651,16 +770,6 @@
 }
 
 /* ---------- One battle ---------- */
-.bt-battle-top {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-}
-
-.bt-battle-top .bt-row-tags {
-  flex: 1;
-}
-
 .bt-arena {
   position: relative;
   display: grid;
@@ -870,7 +979,8 @@
   flex-direction: column;
   align-items: center;
   gap: 0.35rem;
-  min-height: 74px;
+  /* The same height on every seat (empty or not): the reels stay in one line */
+  height: 86px;
   justify-content: center;
 }
 
@@ -1023,10 +1133,6 @@
   font-size: 1.5rem;
 }
 
-.bt-cancel {
-  align-self: center;
-}
-
 /* ---------- What's inside a case ---------- */
 .bt-contents {
   max-width: 420px;
@@ -1105,6 +1211,17 @@
   .bt-seat-name .player-name-text {
     display: none;
   }
+
+  /* Only the avatar - the You / Bot tag under it (beside it it doesn't fit) */
+  .bt-seat-name {
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .bt-seat-name .player-tag {
+    margin: 0;
+    font-size: 0.55rem;
+  }
 }
 
 /* ---------- Main page: open battles / create a battle ---------- */
@@ -1152,6 +1269,19 @@
   color: var(--mm-on-accent);
   font-size: 0.75rem;
   line-height: 1.3rem;
+  position: relative;
+}
+
+/* The ring around it: its own layer that only fades */
+.bt-subtab-count::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 4px rgba(var(--mm-accent-rgb), 0.25);
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
   animation: bt-count-pulse 2s ease-in-out infinite;
 }
 
@@ -1161,7 +1291,7 @@
 
 @keyframes bt-count-pulse {
   50% {
-    box-shadow: 0 0 0 4px rgba(var(--mm-accent-rgb), 0.25);
+    opacity: 1;
   }
 }
 
@@ -1194,4 +1324,444 @@
 .bt-empty-icon {
   font-size: 2.2rem;
   opacity: 0.7;
+}
+
+/* ---------- Add bot / cancel ---------- */
+.bt-add-bot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.95rem 0.4rem 0.45rem;
+  border: 1px dashed rgba(var(--mm-accent-rgb), 0.55);
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.08);
+  color: var(--mm-accent);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bt-add-bot-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  font-size: 0.95rem;
+}
+
+.bt-add-bot:hover,
+.bt-add-bot:focus-visible {
+  border-style: solid;
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  box-shadow: 0 0 14px rgba(var(--mm-accent-rgb), 0.3);
+  transform: translateY(-1px);
+}
+
+.bt-cancel {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1.1rem;
+  border: 1px solid rgba(224, 103, 90, 0.45);
+  border-radius: 999px;
+  background: rgba(224, 103, 90, 0.08);
+  color: var(--mm-danger);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.bt-cancel:hover,
+.bt-cancel:focus-visible {
+  background: var(--mm-danger);
+  border-color: var(--mm-danger);
+  color: #fff;
+}
+
+/* The cases of a battle show what's inside */
+button.bt-strip-case {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.bt-strip.big button.bt-strip-case {
+  border: 1px solid var(--mm-border);
+  background: var(--mm-surface-2);
+  font-size: 1.3rem;
+}
+
+button.bt-strip-case:hover {
+  transform: scale(1.12);
+}
+
+.bt-strip.big button.bt-strip-case:hover {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.bt-strip.big button.bt-strip-case:focus {
+  outline: none;
+}
+
+.bt-strip.big button.bt-strip-case:focus-visible {
+  outline: 2px solid rgba(var(--mm-accent-rgb), 0.6);
+  outline-offset: 2px;
+}
+
+/* ---------- The bar over a battle: price · cases · crazy, the pot, leave (far right) ---------- */
+.bt-battle-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bt-top-facts {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--mm-muted);
+  white-space: nowrap;
+}
+
+/* The cases (centered) with the pot on the right */
+.bt-strip-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bt-strip-row .bt-top-pot {
+  justify-self: end;
+}
+
+/* A thin dot between the facts */
+.bt-top-facts > span + span::before {
+  content: "·";
+  margin: 0 0.5rem;
+  opacity: 0.6;
+}
+
+.bt-top-crazy {
+  color: #c084fc;
+}
+
+.bt-top-pot {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bt-top-pot-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--mm-muted);
+  text-transform: uppercase;
+}
+
+.bt-leave {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--mm-border);
+  border-radius: 50%;
+  background: var(--mm-surface-2);
+  color: var(--mm-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.bt-leave svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.bt-leave:hover,
+.bt-leave:focus-visible {
+  border-color: var(--mm-accent);
+  color: var(--mm-text);
+}
+
+/* The battle bar sits on the level of the title */
+.bt-head-bar {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.bt-head-bar:empty {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .bt-main .jp-head {
+    flex-direction: column;
+  }
+
+  .bt-head-bar {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 767px) {
+  .bt-strip-row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .bt-strip-row .bt-top-pot {
+    justify-self: center;
+  }
+}
+
+/* Small screens: the settings one under the other, the modes wrap */
+@media (max-width: 600px) {
+  .bt-setting {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .bt-setting:has(#btModes) {
+    flex-basis: 100%;
+  }
+  #btModes {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  #btModes button {
+    flex: 1 1 30%;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.4rem 0.3rem;
+    text-align: center;
+    white-space: normal;
+  }
+  #btModes .bt-pick-text small {
+    display: none;
+  }
+  .bt-create-head {
+    flex-wrap: wrap;
+  }
+  .bt-summary {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+/* A tie: every winner in the result, "&" between them */
+.bt-hero-name {
+  flex-wrap: wrap;
+}
+
+.bt-hero-and {
+  color: var(--mm-muted);
+  font-weight: 600;
+}
+
+/* Best of: rounds won - jackpot: the chance */
+.bt-seat-extra {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bt-seat.leading .bt-seat-extra {
+  color: var(--mm-accent);
+}
+
+/* Jackpot: the roulette of the players - a window with a pointer in the middle */
+.bt-draw-window {
+  position: relative;
+  width: min(620px, 92%);
+  height: 78px;
+  overflow: hidden;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.6);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+  box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.55);
+}
+
+.bt-draw-track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+
+.bt-draw-slot {
+  flex: 0 0 66px;
+  display: grid;
+  place-items: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--seat) 30%, transparent), color-mix(in srgb, var(--seat) 12%, transparent));
+}
+
+.bt-draw-slot .mm-avatar {
+  box-shadow: 0 0 0 2px var(--seat);
+}
+
+.bt-draw-pointer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 3px;
+  background: var(--mm-accent);
+  box-shadow: 0 0 12px var(--mm-accent);
+  transform: translateX(-50%);
+}
+
+.bt-draw-pointer::before,
+.bt-draw-pointer::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  border: 7px solid transparent;
+  transform: translateX(-50%);
+}
+
+.bt-draw-pointer::before {
+  top: 0;
+  border-top-color: var(--mm-accent);
+}
+
+.bt-draw-pointer::after {
+  bottom: 0;
+  border-bottom-color: var(--mm-accent);
+}
+
+/* The modes: small - icon and name, all as wide as each other; what the picked one means below */
+.bt-modes {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+
+.bt-modes button {
+  justify-content: center;
+  padding: 0.4rem 0.7rem;
+}
+
+.bt-modes .bt-pick-text small {
+  display: none;
+}
+
+.bt-modes .bt-pick-icon {
+  font-size: 1.1rem;
+}
+
+/* The result only pops in once */
+.bt-hero.seen {
+  animation: none;
+}
+
+/* Players, modes and the create button: one line, all as high as each other */
+.bt-create-row {
+  align-items: flex-end;
+}
+
+.bt-size-stepper,
+.bt-modes,
+.bt-create-row #btCreate {
+  box-sizing: border-box;
+  height: calc(2.6rem + 8px);
+}
+
+.bt-modes button {
+  height: 100%;
+}
+
+/* Phones: the six modes in two rows of three (icon over a small name), the create button the whole width */
+@media (max-width: 600px) {
+  #btModes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-flow: row;
+    width: 100%;
+    height: auto;
+  }
+
+  #btModes button {
+    flex-direction: column;
+    gap: 0.1rem;
+    height: auto;
+    min-height: 3.1rem;
+    padding: 0.35rem 0.1rem;
+    font-size: 0.68rem;
+    letter-spacing: -0.01em;
+  }
+
+  .bt-create-row #btCreate {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+/* Phones: every mode name fits its cell - on one line, small */
+@media (max-width: 600px) {
+  #btModes button {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  #btModes .bt-pick-text {
+    max-width: 100%;
+    align-items: center;
+  }
+
+  #btModes .bt-pick-text b {
+    font-size: 0.66rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  #btModes .bt-pick-icon {
+    font-size: 1.05rem;
+  }
+}
+
+@media (max-width: 374px) {
+  #btModes .bt-pick-text b {
+    font-size: 0.6rem;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Random while the mode is hidden: the chance and the rounds won next to each other */
+.bt-seat-both {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.2rem 0.6rem;
+}
+
+@media (max-width: 575px) {
+  .bt-seat-both {
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+    white-space: nowrap;
+  }
 }

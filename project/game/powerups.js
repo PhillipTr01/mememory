@@ -34,7 +34,9 @@ const POWERUPS = {
   shuffle: { category: "attack", rarity: "rare", target: null, emoji: "🔀", name: "Shuffle", description: "Shuffles all closed cards." },
   fog: { category: "attack", rarity: "uncommon", target: "player", emoji: "🌫️", name: "Fog", description: "A player of your choice only sees blurred cards in their next turn." },
   skip: { category: "attack", rarity: "rare", target: "player", emoji: "⏭️", name: "Skip", description: "A player of your choice misses their next turn." },
-  steal: { category: "attack", rarity: "uncommon", target: "player", emoji: "🥷", name: "Steal", description: "Take a random power-up from a player of your choice." },
+  steal: { category: "attack", rarity: "uncommon", target: "player", emoji: "🥷", name: "Pickpocket", description: "Take a random power-up from a player of your choice." },
+  // Used in the turn of somebody else: right after their first card (see "snatch" in the server)
+  snatch: { category: "attack", rarity: "legendary", target: "card", emoji: "🦊", name: "Steal", description: "When another player opens their first card, you have a moment to pick the second one. Right: the pair and the turn are yours.", reactive: true },
   // Points
   shield: { category: "points", rarity: "common", target: null, emoji: "🛡️", name: "Shield", description: "Blocks the next attack against you (Fog, Skip, Steal)." },
   combo: { category: "points", rarity: "uncommon", target: null, emoji: "🎯", name: "Combo", description: "This turn every further pair gives bonus points (+1, +2, ...)." },
@@ -55,7 +57,7 @@ const IDS = Object.keys(POWERUPS);
  * Weights by impact: strong power-ups come less often, but still regularly
  * (common ~8%, uncommon ~4.7%, rare ~2.7% per draw each).
  */
-const RARITY = { common: 12, uncommon: 7, rare: 4 };
+const RARITY = { common: 12, uncommon: 7, rare: 4, legendary: 1.5 };
 
 // Every time a player got a power-up, it comes half as often for them
 const REPEAT_FACTOR = 0.5;
@@ -83,9 +85,11 @@ function randomPowerup(received, exclude = []) {
 }
 
 // Two power-ups from different categories (everybody starts with the same two)
+// (never the legendary ones - Steal only comes in the game)
 function startPowerups() {
-  const first = randomPowerup();
-  const second = weightedPick(IDS.filter((id) => POWERUPS[id].category !== POWERUPS[first].category));
+  const legendary = IDS.filter((id) => POWERUPS[id].rarity === "legendary");
+  const first = randomPowerup(undefined, legendary);
+  const second = weightedPick(IDS.filter((id) => POWERUPS[id].category !== POWERUPS[first].category && !legendary.includes(id)));
   return [first, second];
 }
 

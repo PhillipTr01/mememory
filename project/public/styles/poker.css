@@ -1,6 +1,6 @@
 /* ---------- Hidden poker (uses the gold theme of jackpot.css) ---------- */
 .pk-main {
-  max-width: 980px;
+  max-width: 1240px;
   margin: 0 auto;
   padding: 1.5rem;
   display: flex;
@@ -175,7 +175,7 @@
 }
 
 .pk-card.flip {
-  animation: pk-flip 0.45s ease-out both;
+  animation: pk-flip 0.7s ease-out both;
 }
 
 @keyframes pk-flip {
@@ -196,10 +196,14 @@
   }
 }
 
-/* The cards of the winning hand */
+/* The cards of the winning hand - the kickers (only counting when hands are equal) faint */
 .pk-card.best {
   box-shadow: 0 0 0 2px var(--mm-accent), 0 0 14px var(--mm-accent);
   transform: translateY(-4px);
+}
+
+.pk-card.kicker {
+  box-shadow: 0 0 0 1px rgba(var(--mm-accent-rgb), 0.45);
 }
 
 /* ---------- Seats ---------- */
@@ -317,6 +321,7 @@
 .pk-avatar {
   position: relative;
   z-index: 1;
+  line-height: 0;
 }
 
 .pk-avatar .mm-avatar {
@@ -338,14 +343,15 @@
   position: absolute;
   inset: -6px;
   border-radius: 50%;
-  background: conic-gradient(var(--mm-accent) calc(var(--left) * 360deg), transparent 0);
+  /* The used part grows clockwise from the top: what is left goes round like a clock hand */
+  background: conic-gradient(transparent calc((1 - var(--left)) * 360deg), var(--mm-accent) 0);
   -webkit-mask: radial-gradient(circle, transparent 27px, #000 28px);
   mask: radial-gradient(circle, transparent 27px, #000 28px);
   pointer-events: none;
 }
 
 .pk-timer.hurry {
-  background: conic-gradient(var(--mm-danger) calc(var(--left) * 360deg), transparent 0);
+  background: conic-gradient(transparent calc((1 - var(--left)) * 360deg), var(--mm-danger) 0);
 }
 
 .pk-dealer {
@@ -364,12 +370,15 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Over the avatar (a big avatar or the own cards never hide the name) */
 .pk-info {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   max-width: 100%;
-  margin-top: 4px;
+  margin-top: 6px;
   padding: 0.15rem 0.6rem;
   border-radius: var(--mm-radius);
   background: rgba(20, 20, 20, 0.85);
@@ -449,6 +458,16 @@
 }
 
 /* ---------- Actions ---------- */
+/* Not the own turn: the bar stays, quiet */
+.pk-actions.idle {
+  border-color: var(--mm-border);
+  background: var(--mm-surface);
+}
+
+.pk-actions.idle > * {
+  opacity: 0.45;
+}
+
 .pk-actions {
   display: flex;
   flex-wrap: wrap;
@@ -460,6 +479,7 @@
   background: rgba(var(--mm-accent-rgb), 0.06);
 }
 
+.pk-decide[hidden],
 .pk-actions[hidden],
 .pk-seatbar[hidden],
 .pk-raise[hidden],
@@ -504,16 +524,123 @@
   width: 90px;
 }
 
+/* My seat, in the head next to the title: chips, more chips, stand up */
 .pk-seatbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
 }
 
-.pk-seatbar-buttons {
+.pk-seatbar[hidden] {
+  display: none;
+}
+
+.pk-mychips {
   display: flex;
-  gap: 0.5rem;
+  flex-direction: column;
+  margin-right: 0.35rem;
+  line-height: 1.15;
+}
+
+.pk-mychips-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
+
+.pk-mychips-value {
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 34px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface);
+  color: var(--mm-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.pk-pill.accent {
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+  background: rgba(var(--mm-accent-rgb), 0.14);
+  color: var(--mm-accent);
+}
+
+.pk-pill.accent:hover:not(:disabled) {
+  background: var(--mm-accent);
+  color: var(--mm-on-accent, #1a1305);
+}
+
+.pk-pill.leave:hover:not(:disabled) {
+  border-color: var(--mm-danger);
+  color: var(--mm-danger);
+}
+
+/* Icon only (add chips, stand up): round */
+.pk-pill.icon {
+  justify-content: center;
+  width: 34px;
+  padding: 0;
+}
+
+.pk-pill.icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.pk-pill:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Small screens: the seat bar gets its own line under the title */
+@media (max-width: 767px) {
+  .pk-main .jp-head {
+    flex-wrap: wrap;
+  }
+
+  .pk-seatbar {
+    width: 100%;
+  }
+
+  .pk-mychips {
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 575px) {
+  .pk-seatbar {
+    padding-left: 0.6rem;
+  }
+
+  .pk-pill:not(.icon) {
+    padding: 0 0.6rem;
+    font-size: 0.75rem;
+  }
 }
 
 /* ---------- Buy-in ---------- */
@@ -622,4 +749,184 @@
   .pk-main {
     padding: 1rem;
   }
+}
+
+/* Switches in the seat bar (big blinds, muck): gold when on */
+.pk-pill.toggle {
+  padding: 0 0.75rem;
+  color: var(--mm-muted);
+}
+
+.pk-pill.toggle.on {
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+  color: var(--mm-accent);
+}
+
+.pk-pill[hidden] {
+  display: none;
+}
+
+.pk-seatbar {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* The quick bets and the ⚙ to pick them */
+.pk-preset-edit:hover {
+  color: var(--mm-accent);
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+}
+
+.pk-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* ---------- After the hand: show or muck (with a timer) ---------- */
+.pk-decide {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem 1rem;
+  overflow: hidden;
+  border: 1px solid var(--mm-accent);
+  border-radius: var(--mm-radius);
+  background: rgba(var(--mm-accent-rgb), 0.06);
+}
+
+.pk-decide-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.pk-decide-title {
+  font-weight: 700;
+}
+
+.pk-decide-hand {
+  font-size: 0.82rem;
+  color: var(--mm-muted);
+}
+
+.pk-decide-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Muck (quiet, red when hovered) or show (gold): two big pills with an icon */
+.pk-decide-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 42px;
+  padding: 0 1.25rem 0 1rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pk-decide-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.pk-decide-btn:hover {
+  transform: translateY(-1px);
+}
+
+.pk-decide-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.pk-decide-btn.muck:hover {
+  border-color: rgba(var(--mm-danger-rgb, 220, 70, 70), 0.7);
+  color: var(--mm-danger);
+  background: rgba(var(--mm-danger-rgb, 220, 70, 70), 0.08);
+}
+
+.pk-decide-btn.show {
+  border-color: transparent;
+  background: linear-gradient(180deg, #f0c870, var(--mm-accent));
+  color: #1a1305;
+  box-shadow: 0 6px 18px rgba(var(--mm-accent-rgb), 0.3);
+}
+
+.pk-decide-btn.show:hover {
+  box-shadow: 0 8px 24px rgba(var(--mm-accent-rgb), 0.45);
+}
+
+/* The time left: a thin gold bar at the bottom that runs out */
+.pk-decide-timer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(var(--mm-accent-rgb), 0.15);
+}
+
+.pk-decide-timer i {
+  display: block;
+  height: 100%;
+  background: var(--mm-accent);
+  transform-origin: left;
+}
+
+.pk-tag.muted {
+  opacity: 0.7;
+}
+
+/* Not the own turn: the slider doesn't move */
+.pk-slider:disabled {
+  pointer-events: none;
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+
+.pk-amount:disabled {
+  pointer-events: none;
+}
+
+/* A poker chip (the chips at the table - not the coins): red, with the white dashed edge */
+.pk-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  white-space: nowrap;
+}
+
+.pk-chip-ico {
+  flex: 0 0 auto;
+  width: 1.05em;
+  height: 1.05em;
+  box-sizing: border-box;
+  border: 0.17em dashed #fff;
+  border-radius: 50%;
+  background: radial-gradient(circle, #e04848 0 34%, #fff 35% 42%, #c62f2f 43%);
+  box-shadow: 0 0 0 0.06em #7e1b1b, 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Phones: the three buttons share the bar (none sticks out) */
+@media (max-width: 575px) {
+  .pk-action-buttons .mm-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+  }
+}
+
+/* The rake of the hand: quiet, under the pots */
+.pk-result-rake {
+  opacity: 0.6;
 }

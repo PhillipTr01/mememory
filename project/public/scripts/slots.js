@@ -1,0 +1,1177 @@
+/* Hidden slots: the server rolls the reels and pays, this page only shows the spin. */
+const socket = io("/slots");
+
+var myName = null;
+var myCoins = 0;
+var setup = null; // {symbols, lines, strips, rules}
+var spinning = false;
+var lineTimer = null;
+var BET_KEY = "slotsBet";
+var PRESETS = [10, 25, 50, 100, 200, 250];
+var TILE = 0; // height of one symbol (from the page)
+
+// Used by chat.js
+function chatUsername() {
+  return myName;
+}
+
+function formatCoins(value) {
+  return Number(value).toLocaleString("en-US");
+}
+
+function el(tag, className, text) {
+  var element = document.createElement(tag);
+  if (className) element.className = className;
+  if (text != null) element.innerText = text;
+  return element;
+}
+
+function symbolOf(id) {
+  return setup.symbols.find((symbol) => symbol.id == id);
+}
+
+/* ---------- Socket ---------- */
+
+socket.on("connect", () => (document.getElementById("connectionBanner").hidden = true));
+socket.on("disconnect", () => {
+  document.getElementById("connectionBanner").hidden = false;
+  spinning = false;
+  renderControls();
+});
+socket.on("connect_error", (error) => {
+  if (error && error.message == "unauthorized") window.location.href = "/?next=" + encodeURIComponent(location.pathname + location.search);
+});
+// The admin took the access away
+// The admin took the access away: the page again - it asks for access now
+socket.on("casinoClosed", () => window.location.reload());
+// The admin turned this game off: on to another one
+socket.on("gameOff", () => (window.location.href = "./"));
+
+window.addEventListener("pagehide", () => socket.disconnect());
+
+// A phone puts the page away (other app, screen off) during a bonus game: the server holds it
+// (as if the page was closed) - back on the page it goes on with "welcome back"
+var awayInBonus = false;
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && activeBonus) {
+    awayInBonus = true;
+    socket.disconnect();
+  } else if (!document.hidden && awayInBonus) {
+    location.reload();
+  }
+});
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) socket.connect();
+});
+
+socket.on("joined", (data) => (myName = data.username));
+socket.on("coins", (data) => {
+  myCoins = data.coins;
+  // While the reels turn, the balance shows the coins before the win
+  // (during a spin the old balance stays - but a page that comes back into a bonus game needs one)
+  if (!spinning || document.getElementById("slCoins").innerText == "-") renderCoins(myCoins);
+  renderControls();
+});
+socket.on("slotsError", (message) => {
+  showToast(message, "error");
+  spinning = false;
+  renderControls();
+});
+
+socket.on("slotsSetup", (data) => {
+  setup = data;
+  buildMachine();
+  renderPresets();
+  setBet(Number(readBet()) || 100);
+});
+
+socket.on("slotsResult", (result) => playSpin(result));
+
+// Back on the page: a bonus game that waited goes on where it was
+var activeBonus = null; // id of the bonus game playing on this page
+socket.on("slotsResume", (result) => {
+  if (setup == null) return setTimeout(() => socket.listeners("slotsResume")[0](result), 200);
+  // (only a short break in the connection: it is still playing here)
+  if (activeBonus == result.id) return;
+  resumeBonus(result);
+});
+
+async function resumeBonus(result) {
+  spinning = true;
+  clearTimeout(lineTimer);
+  clearLines();
+  renderControls();
+  result.grid.forEach((symbols, reel) => showGrid(reel, symbols));
+  showCoins(result.coins, result.bet);
+  if (result.coinGame) await playCoinGame(result, result.shown, result.started);
+  else await playBonus(result, result.shown, result.started);
+  await showResult(result);
+  spinning = false;
+  renderCoins(myCoins);
+  renderControls();
+}
+socket.on("slotsFeed", renderFeed);
+
+/* ---------- The machine ---------- */
+
+function cell(id) {
+  var symbol = symbolOf(id);
+  var box = el("div", "sl-cell" + (symbol && symbol.wild ? " wild" : "") + (symbol && symbol.scatter ? " scatter" : "") + (symbol && symbol.coin ? " coin" : ""));
+  box.dataset.symbol = id;
+  box.appendChild(el("span", "sl-symbol", symbol ? symbol.icon : "?"));
+  return box;
+}
+
+// Three symbols of a strip around a place (top, middle, bottom)
+function windowAt(strip, stop) {
+  var at = (i) => strip[(i + strip.length) % strip.length];
+  return [at(stop - 1), at(stop), at(stop + 1)];
+}
+
+function buildMachine() {
+  var reels = document.getElementById("slReels");
+  reels.replaceChildren(
+    ...setup.strips.map((strip) => {
+      var reel = el("div", "sl-reel");
+      var track = el("div", "sl-track");
+      var start = Math.floor(Math.random() * strip.length);
+      track.append(...windowAt(strip, start).map(cell));
+      reel.appendChild(track);
+      return reel;
+    }),
+  );
+  TILE = reels.querySelector(".sl-cell").offsetHeight;
+  buildNumbers();
+}
+
+// The numbers of the lines next to the reels: where a line starts / ends; hover shows it
+function buildNumbers() {
+  var sides = { left: document.getElementById("slNumbersLeft"), right: document.getElementById("slNumbersRight") };
+  ["left", "right"].forEach((side) => {
+    var column = sides[side];
+    column.replaceChildren(
+      ...[0, 1, 2].map((row) => {
+        var group = el("div", "sl-number-row");
+        setup.lines.forEach((rows, line) => {
+          if (rows[side == "left" ? 0 : rows.length - 1] != row) return;
+          var badge = el("span", "sl-number", line + 1);
+          badge.dataset.line = line;
+          badge.addEventListener("mouseenter", () => !spinning && showLines([line], false));
+          badge.addEventListener("mouseleave", () => !spinning && clearLines());
+          group.appendChild(badge);
+        });
+        return group;
+      }),
+    );
+  });
+}
+
+// Lines over the reels (SVG): through the middle of the cells
+function linePoints(line) {
+  var reels = [...document.querySelectorAll(".sl-reel")];
+  var window_ = document.querySelector(".sl-window").getBoundingClientRect();
+  return setup.lines[line]
+    .map((row, reel) => {
+      var box = reels[reel].getBoundingClientRect();
+      var x = box.left - window_.left + box.width / 2;
+      var y = box.top - window_.top + TILE * row + TILE / 2;
+      return x + "," + y;
+    })
+    .join(" ");
+}
+
+function showLines(lines, win) {
+  var svg = document.getElementById("slLines");
+  var window_ = document.querySelector(".sl-window");
+  svg.setAttribute("viewBox", "0 0 " + window_.clientWidth + " " + window_.clientHeight);
+  svg.replaceChildren(
+    ...lines.map((line) => {
+      var polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      polyline.setAttribute("points", linePoints(line));
+      polyline.setAttribute("class", "sl-line" + (win ? " win" : ""));
+      return polyline;
+    }),
+  );
+  document.querySelectorAll(".sl-number").forEach((badge) => badge.classList.toggle("on", lines.includes(Number(badge.dataset.line))));
+}
+
+function clearLines() {
+  document.getElementById("slLines").replaceChildren();
+  document.querySelectorAll(".sl-number.on").forEach((badge) => badge.classList.remove("on"));
+  document.querySelectorAll(".sl-cell.hit").forEach((cell) => cell.classList.remove("hit"));
+}
+
+/* ---------- A spin ---------- */
+
+function spin() {
+  if (spinning || setup == null) return;
+  var bet = currentBet();
+  if (!Number.isInteger(bet) || bet < setup.rules.minBet || bet > setup.rules.maxBet) {
+    return showToast("A spin is " + formatCoins(setup.rules.minBet) + " to " + formatCoins(setup.rules.maxBet) + " coins.", "error");
+  }
+  if (bet > myCoins) return showToast("You don't have enough coins.", "error");
+  spinning = true;
+  clearTimeout(lineTimer);
+  clearLines();
+  document.getElementById("slWinBar").className = "sl-winbar";
+  document.getElementById("slWinText").innerText = "Good luck!";
+  document.getElementById("slWinDetail").innerText = "";
+  // Right away: the coins go, the reels start (the result comes in a moment)
+  renderCoins(myCoins - bet);
+  renderControls();
+  document.querySelectorAll(".sl-reel").forEach((reel) => reel.classList.add("spinning"));
+  socket.emit("spin", { bet: bet });
+}
+
+// The reels turn and stop on `grid` (one after the other); `time`: how long the first reel turns
+function animateReels(grid, time, sweatTime, stopped, strips, stops) {
+  // (the free spins have their own strips: no 🪙)
+  strips = strips || setup.strips;
+  var reels = [...document.querySelectorAll(".sl-reel")];
+  // The size of a symbol now (full screen or not)
+  TILE = document.querySelector(".sl-cell").offsetHeight;
+  // The sweat: 🎁 on reels 1 and 3, or the coin game still possible - the last reel(s) turn longer,
+  // slower, they light up. `from`: the first reel that sweats (the coin sweat can start at reel 4)
+  var coinReels = stops ? coinSweatReels(grid, stops) : 0;
+  var kind = hasTwoGifts(grid) ? "gifts" : coinReels ? "coins" : null;
+  var sweat = sweatTime > 0 && kind ? sweatTime : 0;
+  var from = kind == "coins" ? 5 - coinReels : 4;
+  // (the first sweating reel the sweat, every further one half of it more - the same as the server)
+  var extra = (i) => (sweat && i >= from ? sweat * (1 + 0.5 * (i - from)) : 0);
+  return Promise.all(
+    reels.map((reel, i) => {
+      var strip = strips[i];
+      var track = reel.querySelector(".sl-track");
+      reel.classList.add("spinning");
+      // Not too many symbols: the reels turn at a speed the eye can follow
+      var count = Math.round((8 + i * 3) * Math.min(1, time / setup.rules.spinTime)) + 3 + Math.round(extra(i) / 140);
+      // The symbols fall from the top: the result on top, random ones, the faces now at the bottom -
+      // the track starts at the bottom (what is shown now) and slides down to the result
+      var ids = grid[i].slice();
+      for (var n = 0; n < count; n++) ids.push(strip[Math.floor(Math.random() * strip.length)]);
+      ids.push(...[...track.children].map((c) => c.dataset.symbol));
+      track.getAnimations().forEach((a) => a.cancel());
+      track.replaceChildren(...ids.map(cell));
+      var start = -(ids.length - 3) * TILE;
+      track.style.transform = `translateY(${start}px)`;
+      var duration = time * (0.5 + i * 0.12) + extra(i);
+      // (a little too far down at the end, then back: the reel settles)
+      var animation = track.animate(
+        [
+          { transform: `translateY(${start}px)`, easing: "cubic-bezier(0.45, 0, 0.6, 1)" },
+          { transform: `translateY(${TILE * 0.18}px)`, offset: 0.93, easing: "ease-out" },
+          { transform: "translateY(0px)" },
+        ],
+        { duration: duration, fill: "forwards" },
+      );
+      return animation.finished.then(() => {
+        reel.classList.remove("spinning");
+        reel.classList.remove("sweat");
+        // Keep only the 3 symbols that are shown
+        showGrid(i, grid[i]);
+        if (stopped) stopped(i);
+        // Two 🎁 in sight (after reel 3) - or enough 🪙: they light up, the reels still turning sweat
+        var light = kind == "gifts" ? ".sl-cell.scatter" : ".sl-cell.coin";
+        if (sweat && i == (kind == "gifts" ? 2 : from - 1)) {
+          reels.slice(0, i + 1).forEach((r) => r.querySelectorAll(light).forEach((c) => c.classList.add("hit")));
+          reels.slice(from).forEach((r) => r.classList.add("sweat"));
+        }
+        // A coin on a sweating reel lights up too
+        if (sweat && kind == "coins" && i >= from && i < 4) reel.querySelectorAll(light).forEach((c) => c.classList.add("hit"));
+        // The sweat is over without the bonus: they stop glowing
+        var made = kind == "gifts" ? grid[4].includes("bonus") : grid.flat().filter((id) => id == "coin").length >= setup.coins.trigger;
+        if (sweat && i == 4 && !made) document.querySelectorAll(light + ".hit").forEach((c) => c.classList.remove("hit"));
+      });
+    }),
+  );
+}
+
+// One reel shows these 3 symbols (no animation)
+function showGrid(reel, symbols) {
+  var track = document.querySelectorAll(".sl-reel")[reel].querySelector(".sl-track");
+  track.getAnimations().forEach((a) => a.cancel());
+  track.replaceChildren(...symbols.map(cell));
+  track.style.transform = "translateY(0px)";
+}
+
+// 🎁 in sight on reels 1 and 3 (the third would start the bonus)
+function hasTwoGifts(grid) {
+  return grid[0].includes("bonus") && grid[2].includes("bonus");
+}
+
+// The coin game still possible (the same rule as the server, slots.coinSweat / coinSweatReels):
+// 4 🪙 on the first four reels - or 3 (one on reel 4) in 2 of 5 spins (by the stops).
+// How many reels sweat: from the reel after the one where 3 🪙 are in sight
+function coinSweatReels(grid, stops) {
+  var trigger = setup.coins.trigger;
+  var coins = grid.slice(0, 4).flat().filter((id) => id == "coin").length;
+  var sweat = coins == trigger - 1 || (coins == trigger - 2 && grid[3].includes("coin") && stops.reduce((sum, stop) => sum + stop, 0) % 5 < 2);
+  if (!sweat) return 0;
+  for (var reel = 2; reel <= 4; reel++) {
+    if (grid.slice(0, reel).flat().filter((id) => id == "coin").length >= trigger - 2) return 5 - reel;
+  }
+  return 1;
+}
+
+async function playSpin(result) {
+  // (only two 🎁 make the last reel turn longer - the sweat); a 🪙 shows its value when its reel stops
+  var coins = result.coins || [];
+  var shown = (reel) =>
+    showCoins(
+      coins.filter((c) => c.reel == reel),
+      result.bet,
+    );
+  await animateReels(result.grid, setup.rules.spinTime, setup.rules.sweatTime, shown, null, result.stops);
+  // The lines of this spin won something too: they count first (lit, counted up) - then the bonus game
+  if ((result.bonus || result.coinGame) && result.lineWin > 0) await showLineWinFirst(result);
+  // Three 🎁: the bonus game first - five 🪙: the coin game
+  if (result.bonus) await playBonus(result);
+  if (result.coinGame) await playCoinGame(result);
+  await showResult(result);
+  spinning = false;
+  // The win comes with the next "coins" from the server (after the count)
+  renderCoins(myCoins);
+  renderControls();
+}
+
+/* ---------- Bonus game: two wheels (free spins, multiplier), then the free spins ---------- */
+
+// The fields of the two rings (every value at least once, the small ones more often)
+var SPIN_FIELDS = [5, 8, 6, 10, 5, 6, 12, 5, 8, 6];
+var MULTIPLIER_FIELDS = [1, 2, 1, 3, 1, 5, 2, 1, 3, 2];
+var RING_COLORS = ["#2b2b2b", "#363636"];
+
+function polar(r, angle) {
+  var a = ((angle - 90) * Math.PI) / 180;
+  return [50 + r * Math.cos(a), 50 + r * Math.sin(a)];
+}
+
+// A ring of fields (outer radius r1, inner r2) with a label in every field
+function ringSvg(fields, r1, r2, label, gold) {
+  var NS = "http://www.w3.org/2000/svg";
+  var svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 100 100");
+  svg.setAttribute("class", "sl-ring-svg");
+  var step = 360 / fields.length;
+  fields.forEach((value, i) => {
+    var [ax, ay] = polar(r1, i * step);
+    var [bx, by] = polar(r1, (i + 1) * step);
+    var [cx, cy] = polar(r2, (i + 1) * step);
+    var [dx, dy] = polar(r2, i * step);
+    var path = document.createElementNS(NS, "path");
+    path.setAttribute("d", `M${ax} ${ay} A${r1} ${r1} 0 0 1 ${bx} ${by} L${cx} ${cy} A${r2} ${r2} 0 0 0 ${dx} ${dy} Z`);
+    path.setAttribute("fill", gold(value) ? "#a8742a" : RING_COLORS[i % 2]);
+    path.setAttribute("stroke", "#141414");
+    path.setAttribute("stroke-width", "0.5");
+    svg.appendChild(path);
+    var [tx, ty] = polar((r1 + r2) / 2, (i + 0.5) * step);
+    var text = document.createElementNS(NS, "text");
+    text.setAttribute("x", tx);
+    text.setAttribute("y", ty);
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("dominant-baseline", "central");
+    text.setAttribute("transform", `rotate(${(i + 0.5) * step} ${tx} ${ty})`);
+    text.setAttribute("class", "sl-ring-text");
+    text.textContent = label(value);
+    svg.appendChild(text);
+  });
+  return svg;
+}
+
+// Turns a ring so a field with `value` stops under the pointer (top) - only one way, slowing down
+function spinRing(ring, fields, value, turns, direction, time) {
+  var options = fields.map((v, i) => (v == value ? i : -1)).filter((i) => i >= 0);
+  var field = options[Math.floor(Math.random() * options.length)];
+  var step = 360 / fields.length;
+  var inside = (0.25 + Math.random() * 0.5) * step;
+  // Clockwise (1): the field at angle a comes to the top at -a; the other way at 360 - a
+  var at = field * step + inside;
+  var end = direction > 0 ? 360 * turns - at : -(360 * turns) + (360 - at);
+  return ring.animate([{ transform: "rotate(0deg)" }, { transform: `rotate(${end}deg)` }], { duration: time, easing: "cubic-bezier(0.12, 0.6, 0.15, 1)", fill: "forwards" }).finished;
+}
+
+/*
+ * The bonus game. Fresh: "you won free spins" waits for a click, then the
+ * wheels decide how many and the multiplier. Back after a break (`from`:
+ * free spins seen, `started`: clicked before): the start screen again, or
+ * "welcome back" and on from there.
+ */
+async function playBonus(result, from, started) {
+  var bonus = result.bonus;
+  var stage = document.getElementById("slStage");
+  var time = setup.rules.bonusTime;
+  activeBonus = result.id;
+  // The server keeps how far this page got (to go on there after a break)
+  var progress = (shown) => result.id && socket.emit("bonusProgress", { id: result.id, shown: shown });
+  var resumed = from != null;
+  from = Math.max(0, from || 0);
+  if (!resumed || !started) {
+    await startScreen(result, stage);
+    if (result.id) socket.emit("bonusStart", { id: result.id });
+    await playWheels(result, stage, time);
+  } else {
+    // Back after a break: a moment to see where it goes on
+    stage.hidden = false;
+    stage.className = "sl-stage bonus";
+    var at = Math.min(from + 1, bonus.freeSpins.length);
+    stage.replaceChildren(el("div", "sl-stage-title", "BONUS GAME"), el("div", "sl-big-title", "WELCOME BACK"), el("div", "sl-stage-sub won", "Free spin " + at + " of " + (from > 0 ? bonus.freeSpins[from - 1].spins : bonus.startSpins) + " · start × " + bonus.multiplier));
+    await wait(setup.rules.resumeTime);
+    stage.hidden = true;
+    stage.replaceChildren();
+  }
+  progress(from);
+  await playFreeSpins(result, from, progress);
+  bonusDone(result);
+  activeBonus = null;
+}
+
+// The bonus game was seen to its end (the player went on): the win is paid right away (countTime)
+function bonusDone(result) {
+  if (result.id) socket.emit("bonusDone", { id: result.id });
+}
+
+// "You won free spins" (or the coin game): waits for the player's click (or Enter / space) - then it starts
+function startScreen(result, stage, texts) {
+  texts = texts || { icons: "🎁 🎁 🎁", title: "YOU WON FREE SPINS", sub: "The wheels decide how many - and your multiplier", button: "Spin the wheels", light: ".sl-cell.scatter" };
+  return new Promise((resolve) => {
+    // The 🎁 (or the 🪙) light up behind it
+    document.querySelectorAll(texts.light).forEach((c) => c.classList.add("hit"));
+    stage.hidden = false;
+    stage.className = "sl-stage bonus start" + (texts.coins ? " coin-start" : "");
+    var start = el("button", "sl-start-btn", texts.button);
+    start.type = "button";
+    stage.replaceChildren(el("div", "sl-stage-title", texts.icons), el("div", "sl-big-title", texts.title), el("div", "sl-stage-sub won", texts.sub), start);
+    coinShower(stage, 25);
+    var go = () => {
+      document.removeEventListener("keydown", onKey, true);
+      stage.hidden = true;
+      stage.replaceChildren();
+      resolve();
+    };
+    var onKey = (event) => {
+      if (event.key == "Enter" || event.code == "Space") {
+        event.preventDefault();
+        event.stopPropagation();
+        go();
+      }
+    };
+    start.addEventListener("click", go);
+    document.addEventListener("keydown", onKey, true);
+    start.focus();
+  });
+}
+
+// 1. The two wheels: outer = free spins, inner = start multiplier (turning the other way)
+async function playWheels(result, stage, time) {
+  var bonus = result.bonus;
+  // The 🎁 light up
+  document.querySelectorAll(".sl-cell.scatter").forEach((c) => c.classList.add("hit"));
+  await wait(Math.min(900, time * 0.15));
+
+  // 1. The two wheels: outer = free spins, inner = start multiplier (turning the other way)
+  stage.hidden = false;
+  stage.className = "sl-stage bonus";
+  var wheel = el("div", "sl-wheel");
+  var outer = el("div", "sl-ring outer");
+  outer.appendChild(ringSvg(SPIN_FIELDS, 49, 33, (v) => v, (v) => v >= 10));
+  var inner = el("div", "sl-ring inner");
+  inner.appendChild(ringSvg(MULTIPLIER_FIELDS, 49, 22, (v) => "×" + v, (v) => v >= 5));
+  var hub = el("div", "sl-ring-hub", "🎁");
+  wheel.append(el("div", "sl-wheel-pointer"), outer, inner, hub);
+  var label = el("div", "sl-stage-sub", "Free spins and multiplier...");
+  stage.replaceChildren(el("div", "sl-stage-title", "BONUS GAME"), wheel, label);
+  var spinTime = time * 0.62;
+  await Promise.all([
+    spinRing(outer, SPIN_FIELDS, bonus.startSpins, 4, 1, spinTime),
+    spinRing(inner, MULTIPLIER_FIELDS, bonus.multiplier, 3, -1, spinTime * 0.86).then(() => {
+      label.innerText = "Start × " + bonus.multiplier + " ...";
+    }),
+  ]);
+  label.innerText = bonus.startSpins + " free spins · start × " + bonus.multiplier;
+  label.classList.add("won");
+  await wait(time * 0.2);
+  stage.hidden = true;
+  stage.replaceChildren();
+}
+
+// 2. The free spins (from free spin `from` on): the multiplier climbs after every spin
+async function playFreeSpins(result, from, progress) {
+  var bonus = result.bonus;
+  var stage = document.getElementById("slStage");
+  var machine = document.querySelector(".sl-machine");
+  machine.classList.add("bonus-mode");
+  var bar = document.getElementById("slWinBar");
+  var text = document.getElementById("slWinText");
+  var detail = document.getElementById("slWinDetail");
+  bar.className = "sl-winbar bonus";
+  // What the free spins before paid (after a break)
+  var total = bonus.freeSpins.slice(0, from).reduce((sum, free) => sum + free.win, 0);
+  var spinTime = setup.rules.freeSpinTime;
+  var counter = document.getElementById("slFreeCounter");
+  var count = document.getElementById("slFreeCount");
+  var spins = from > 0 ? bonus.freeSpins[from - 1].spins : bonus.startSpins;
+  var multCounter = document.getElementById("slMultCounter");
+  var mult = document.getElementById("slMultCount");
+  counter.hidden = false;
+  multCounter.hidden = false;
+  detail.innerText = "Bonus win";
+  for (var n = from; n < bonus.freeSpins.length; n++) {
+    var free = bonus.freeSpins[n];
+    clearLines();
+    count.innerText = n + 1 + " / " + spins;
+    // The multiplier of this spin (it climbs after every spin)
+    if (mult.innerText != "× " + free.multiplier) {
+      mult.innerText = "× " + free.multiplier;
+      if (n > from) mult.animate([{ transform: "scale(1)" }, { transform: "scale(1.3)" }, { transform: "scale(1)" }], { duration: 450, easing: "ease-out" });
+    }
+    text.innerText = "🪙 " + formatCoins(total);
+    await animateReels(free.grid, spinTime * 0.55, setup.rules.sweatTime * 0.6, null, setup.freeStrips);
+    // Three 🎁 again: more free spins
+    if (free.retrigger > 0) {
+      document.querySelectorAll(".sl-cell.scatter").forEach((c) => c.classList.add("hit"));
+      floatWin("+" + free.retrigger + " FREE SPINS");
+      spins = free.spins;
+      count.innerText = n + 1 + " / " + spins;
+      counter.animate([{ transform: "scale(1)" }, { transform: "scale(1.25)" }, { transform: "scale(1)" }], { duration: 600, easing: "ease-out" });
+      await wait(setup.rules.retriggerTime);
+    }
+    if (free.win > 0) {
+      var reels = [...document.querySelectorAll(".sl-reel")];
+      free.lines.forEach((line) => setup.lines[line.line].slice(0, line.count).forEach((row, reel) => reels[reel].querySelectorAll(".sl-cell")[row].classList.add("hit")));
+      showLines(
+        free.lines.map((l) => l.line),
+        true,
+      );
+      floatWin("+🪙 " + formatCoins(free.win) + (free.multiplier > 1 ? "  (× " + free.multiplier + ")" : ""));
+      countUp(text, total + free.win, spinTime * 0.3, total);
+      total += free.win;
+    }
+    await wait(spinTime * (free.win > 0 ? 0.45 : 0.3));
+    progress(n + 1);
+  }
+  if (result.capped) detail.innerText = "Max win reached!";
+  counter.hidden = true;
+  multCounter.hidden = true;
+  mult.innerText = "";
+  clearLines();
+  machine.classList.remove("bonus-mode");
+
+  // 3. What the free spins paid: counted up from 0, with a glow and falling coins (not given away below)
+  text.innerText = "";
+  detail.innerText = "";
+  var end = setup.rules.bonusEndTime;
+  stage.hidden = false;
+  stage.className = "sl-stage big bonus-end" + (result.capped ? " epic" : "");
+  var times = bonus.win / result.bet;
+  var amount = el("div", "sl-big-amount sl-bonus-amount", "🪙 0");
+  var sub = el("div", "sl-stage-sub sl-bonus-sub", bonus.freeSpins.length + " free spins");
+  stage.replaceChildren(el("div", "sl-bonus-glow"), el("div", "sl-big-title", result.capped ? "MAX WIN" : "BONUS WIN"), amount, sub);
+  coinShower(stage, Math.min(80, 15 + Math.round(times)));
+  var counting = end * 0.55;
+  countUp(amount, bonus.win, counting);
+  await wait(counting);
+  // Done counting: the amount pops, the details come
+  amount.animate([{ transform: "scale(1)" }, { transform: "scale(1.18)" }, { transform: "scale(1)" }], { duration: 450, easing: "ease-out" });
+  sub.classList.add("show");
+  await wait(end - counting);
+  // Stays until the player goes on
+  await continueButton(stage);
+  stage.hidden = true;
+  stage.replaceChildren();
+  // Back to the spin that started it
+  result.grid.forEach((symbols, reel) => showGrid(reel, symbols));
+}
+
+/* ---------- Coin game: the coins stay, the empty spots spin again ---------- */
+
+// A coin's value for this bet: coins (short) or the prize
+function coinLabel(coin, bet) {
+  if (coin.prize) return coin.prize.toUpperCase();
+  var value = Math.floor(coin.x * bet);
+  return value >= 10000 ? (value / 1000).toFixed(value >= 100000 ? 0 : 1).replace(/\.0$/, "") + "K" : formatCoins(value);
+}
+
+// A 🪙 cell with its value
+function coinCell(coin, bet) {
+  var box = cell("coin");
+  box.classList.add("valued");
+  if (coin.prize) box.classList.add("prize", "prize-" + coin.prize);
+  box.appendChild(el("span", "sl-coin-value", coinLabel(coin, bet)));
+  return box;
+}
+
+function cellsOf(reel) {
+  return document.querySelectorAll(".sl-reel")[reel].querySelectorAll(".sl-track > .sl-cell");
+}
+
+// The 🪙 in sight get their values
+function showCoins(coins, bet) {
+  (coins || []).forEach((coin) => {
+    var old = cellsOf(coin.reel)[coin.row];
+    if (old && old.dataset.symbol == "coin") old.replaceWith(coinCell(coin, bet));
+  });
+}
+
+// The prizes over the machine (for this bet)
+function showPrizes(bet) {
+  var bar = document.getElementById("slPrizes");
+  bar.hidden = false;
+  var c = setup.coins;
+  bar.replaceChildren(
+    ...c.prizes.concat([{ prize: "ultra", x: c.ultra }]).map((p) => {
+      var pill = el("div", "sl-prize prize-" + p.prize);
+      pill.dataset.prize = p.prize;
+      pill.append(el("span", "sl-prize-name", p.prize.toUpperCase()), el("span", "sl-prize-value", "🪙 " + formatCoins(Math.floor(bet * p.x))));
+      return pill;
+    }),
+  );
+}
+
+// The respins left as three dots
+function showRespins(left, reset) {
+  var count = document.getElementById("slFreeCount");
+  count.replaceChildren(...[0, 1, 2].map((i) => el("i", "sl-respin-dot" + (i < left ? " on" : ""))));
+  if (reset) count.animate([{ transform: "scale(1)" }, { transform: "scale(1.3)" }, { transform: "scale(1)" }], { duration: 500, easing: "ease-out" });
+}
+
+/*
+ * The coin game. Fresh: "you won the coin game" waits for a click, the coins
+ * lock in, then the respins. Back after a break (`from`: respins seen,
+ * `started`: clicked before): the start screen again, or on from there.
+ */
+async function playCoinGame(result, from, started) {
+  var game = result.coinGame;
+  var bet = result.bet;
+  var stage = document.getElementById("slStage");
+  var machine = document.querySelector(".sl-machine");
+  activeBonus = result.id;
+  var progress = (shown) => result.id && socket.emit("bonusProgress", { id: result.id, shown: shown });
+  var resumed = from != null;
+  from = Math.max(0, from || 0);
+  var fresh = !resumed || !started;
+  if (fresh) {
+    await startScreen(result, stage, { icons: "🪙 🪙 🪙 🪙 🪙", title: "COIN GAME", sub: "The coins stay · " + setup.coins.respins + " respins · every new coin resets them", button: "Start", light: ".sl-cell.coin", coins: true });
+    if (result.id) socket.emit("bonusStart", { id: result.id });
+  } else {
+    stage.hidden = false;
+    stage.className = "sl-stage bonus";
+    stage.replaceChildren(el("div", "sl-stage-title", "COIN GAME"), el("div", "sl-big-title", "WELCOME BACK"), el("div", "sl-stage-sub won", "Respin " + Math.min(from + 1, game.respins.length) + " · " + (game.start.length + game.respins.slice(0, from).reduce((n, r) => n + r.coins.length, 0)) + " coins"));
+    await wait(setup.rules.resumeTime);
+    stage.hidden = true;
+    stage.replaceChildren();
+  }
+  progress(from);
+
+  // The board: the coins so far, every other spot empty
+  clearLines();
+  machine.classList.add("bonus-mode", "coin-mode");
+  showPrizes(bet);
+  var held = new Map(); // reel * 3 + row -> coin
+  game.start.concat(...game.respins.slice(0, from).map((r) => r.coins)).forEach((coin) => held.set(coin.reel * 3 + coin.row, coin));
+  document.querySelectorAll(".sl-reel").forEach((reel, i) => {
+    var track = reel.querySelector(".sl-track");
+    track.getAnimations().forEach((a) => a.cancel());
+    track.style.transform = "translateY(0px)";
+    track.replaceChildren(
+      ...[0, 1, 2].map((row) => {
+        var coin = held.get(i * 3 + row);
+        if (!coin) return el("div", "sl-cell empty");
+        var box = coinCell(coin, bet);
+        box.classList.add("held");
+        return box;
+      }),
+    );
+  });
+  var bar = document.getElementById("slWinBar");
+  var text = document.getElementById("slWinText");
+  var detail = document.getElementById("slWinDetail");
+  var counter = document.getElementById("slFreeCounter");
+  bar.className = "sl-winbar bonus";
+  counter.querySelector(".sl-label").innerText = "Respins";
+  counter.hidden = false;
+  var sum = () => Math.floor([...held.values()].reduce((s, c) => s + c.x, 0) * bet);
+  text.innerText = "🪙 " + formatCoins(sum());
+  detail.innerText = held.size + " coins";
+  showRespins(from > 0 ? game.respins[from - 1].left : setup.coins.respins);
+  // The coins lock in, one after the other
+  if (fresh) {
+    var locks = [...document.querySelectorAll(".sl-cell.held")];
+    // (one after the other, not too fast: every coin is seen)
+    var gap = Math.min(220, (setup.rules.coinIntroTime * 0.9 - 700) / Math.max(1, locks.length));
+    locks.forEach((box, n) => box.animate([{ transform: "scale(1)" }, { transform: "scale(1.18)", filter: "brightness(1.6)" }, { transform: "scale(1)" }], { duration: 600, delay: n * gap, easing: "ease-out" }));
+    await wait(Math.min(setup.rules.coinIntroTime * 0.9, 700 + locks.length * gap));
+  }
+
+  var time = setup.rules.respinTime;
+  for (var n = from; n < game.respins.length; n++) {
+    var respin = game.respins[n];
+    var landed = new Map(respin.coins.map((coin) => [coin.reel * 3 + coin.row, coin]));
+    // Every empty spot spins on its own (a little reel), reel after reel they stop
+    var spins = [];
+    document.querySelectorAll(".sl-reel").forEach((reel, i) => {
+      reel.querySelectorAll(".sl-track > .sl-cell").forEach((box, row) => {
+        if (held.has(i * 3 + row)) return;
+        var coin = landed.get(i * 3 + row);
+        spins.push(miniSpin(box, coin ? coinCell(coin, bet) : null, time * (0.4 + i * 0.08)));
+      });
+    });
+    await Promise.all(spins);
+    landed.forEach((coin, spot) => held.set(spot, coin));
+    if (landed.size) {
+      floatWin("+" + landed.size + (landed.size == 1 ? " COIN" : " COINS"));
+      text.innerText = "🪙 " + formatCoins(sum());
+      detail.innerText = held.size + " coins";
+      // A prize coin: its pill over the machine lights up
+      landed.forEach((coin) => coin.prize && flashPrize(coin.prize));
+    }
+    showRespins(respin.left, landed.size > 0);
+    progress(n + 1);
+    await wait(time * 0.25);
+  }
+  counter.hidden = true;
+  counter.querySelector(".sl-label").innerText = "Free spins";
+  document.getElementById("slFreeCount").replaceChildren();
+
+  // All 15 spots: ULTRA
+  if (game.ultra) await ultraShow(result);
+
+  // What the coin game paid: counted up, the prizes listed
+  text.innerText = "";
+  detail.innerText = "";
+  var end = setup.rules.bonusEndTime;
+  stage.hidden = false;
+  stage.className = "sl-stage big bonus-end coin-end" + (game.ultra ? " epic" : "");
+  var amount = el("div", "sl-big-amount sl-bonus-amount", "🪙 0");
+  var prizes = game.coins.filter((c) => c.prize).map((c) => c.prize.toUpperCase());
+  var sub = el("div", "sl-stage-sub sl-bonus-sub", game.coins.length + " coins" + (prizes.length ? " · " + prizes.join(" · ") : "") + (game.ultra ? " · ULTRA" : ""));
+  stage.replaceChildren(el("div", "sl-bonus-glow"), el("div", "sl-big-title", game.ultra ? "ULTRA WIN" : "COIN WIN"), amount, sub);
+  coinShower(stage, Math.min(80, 15 + Math.round(game.win / bet)));
+  var counting = end * 0.55;
+  countUp(amount, game.win, counting);
+  await wait(counting);
+  amount.animate([{ transform: "scale(1)" }, { transform: "scale(1.18)" }, { transform: "scale(1)" }], { duration: 450, easing: "ease-out" });
+  sub.classList.add("show");
+  await wait(end - counting);
+  // Stays until the player goes on
+  await continueButton(stage);
+  stage.hidden = true;
+  stage.replaceChildren();
+  machine.classList.remove("bonus-mode", "coin-mode");
+  showPrizes(currentBet());
+  // Back to the spin that started it
+  result.grid.forEach((symbols, reel) => showGrid(reel, symbols));
+  showCoins(result.coins, bet);
+  bonusDone(result);
+  activeBonus = null;
+}
+
+// An empty spot spins: blanks and coins roll by, it stops on `result` (a coin cell) or stays empty
+function miniSpin(box, result, time) {
+  // (falls from the top: the result first, the track slides down to it)
+  var strip = el("div", "sl-mini-track");
+  var faces = 6 + Math.floor(Math.random() * 3);
+  strip.appendChild(el("div", "sl-mini-face", result ? "🪙" : ""));
+  // (the last one is empty - what the spot shows now)
+  for (var i = 0; i < faces; i++) strip.appendChild(el("div", "sl-mini-face", i < faces - 1 && Math.random() < 0.4 ? "🪙" : ""));
+  box.replaceChildren(strip);
+  box.classList.add("rolling");
+  return strip
+    .animate([{ transform: "translateY(" + -faces * 100 + "%)" }, { transform: "translateY(0)" }], { duration: time, easing: "cubic-bezier(0.3, 0.1, 0.25, 1)", fill: "forwards" })
+    .finished.then(() => {
+      box.classList.remove("rolling");
+      if (!result) return box.replaceChildren();
+      result.classList.add("held");
+      box.replaceWith(result);
+      result.animate([{ transform: "scale(0.6)", filter: "brightness(2)" }, { transform: "scale(1.15)" }, { transform: "scale(1)" }], { duration: 650, easing: "ease-out" });
+    });
+}
+
+function flashPrize(prize) {
+  var pill = document.querySelector('.sl-prize[data-prize="' + prize + '"]');
+  if (pill) pill.animate([{ transform: "scale(1)" }, { transform: "scale(1.25)", filter: "brightness(1.5)" }, { transform: "scale(1)" }], { duration: 700, easing: "ease-out" });
+}
+
+// All 15 spots are coins: the ULTRA show over the whole machine
+async function ultraShow(result) {
+  var stage = document.getElementById("slStage");
+  var main = document.querySelector(".sl-main");
+  main.classList.add("ultra");
+  flashPrize("ultra");
+  stage.hidden = false;
+  stage.className = "sl-stage big ultra-show";
+  var amount = el("div", "sl-big-amount", "🪙 0");
+  stage.replaceChildren(el("div", "sl-bonus-glow"), el("div", "sl-stage-title", "ALL 15 SPOTS"), el("div", "sl-big-title sl-ultra-title", "ULTRA"), amount);
+  coinShower(stage, 90);
+  countUp(amount, result.bet * setup.coins.ultra, setup.rules.ultraTime * 0.6);
+  await wait(setup.rules.ultraTime * 0.95);
+  main.classList.remove("ultra");
+  stage.hidden = true;
+  stage.replaceChildren();
+}
+
+// A win screen stays until the player clicks on (or Enter / space)
+// "Click to continue": a click anywhere on the screen of the win (or Enter / space) goes on
+function continueButton(stage) {
+  return new Promise((resolve) => {
+    var button = el("div", "sl-continue-hint", "Click to continue");
+    stage.appendChild(button);
+    stage.classList.add("waiting-click");
+    var done = () => {
+      document.removeEventListener("keydown", onKey, true);
+      stage.removeEventListener("click", done);
+      stage.classList.remove("waiting-click");
+      resolve();
+    };
+    var onKey = (event) => {
+      if (event.key == "Enter" || event.code == "Space") {
+        event.preventDefault();
+        event.stopPropagation();
+        done();
+      }
+    };
+    stage.addEventListener("click", done);
+    document.addEventListener("keydown", onKey, true);
+  });
+}
+
+// "+ 🪙 120" rises over the reels
+function floatWin(label) {
+  var tag = el("div", "sl-float", label);
+  document.querySelector(".sl-window").appendChild(tag);
+  tag.animate(
+    [
+      { transform: "translate(-50%, 0) scale(0.8)", opacity: 0 },
+      { transform: "translate(-50%, -18px) scale(1)", opacity: 1, offset: 0.25 },
+      { transform: "translate(-50%, -46px) scale(1)", opacity: 0 },
+    ],
+    { duration: 1200, easing: "ease-out" },
+  ).finished.then(() => tag.remove());
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/* ---------- Big wins ---------- */
+
+function coinShower(root, count) {
+  for (var i = 0; i < count; i++) {
+    var coin = el("span", "sl-coin", "🪙");
+    coin.style.left = Math.random() * 100 + "%";
+    root.appendChild(coin);
+    var drop = 160 + Math.random() * 200;
+    // Falls: faster and faster (gravity), turning
+    coin.animate(
+      [
+        { transform: "translateY(-30px) rotate(0deg)", opacity: 0 },
+        { opacity: 1, offset: 0.05 },
+        { transform: `translateY(${drop}px) rotate(${Math.random() * 720 - 360}deg)`, opacity: 0.9, offset: 0.85 },
+        { transform: `translateY(${drop + 20}px) rotate(0deg)`, opacity: 0 },
+      ],
+      { duration: 1100 + Math.random() * 900, delay: Math.random() * 600, easing: "cubic-bezier(0.55, 0, 1, 0.45)", fill: "both" },
+    ).finished.then(((c) => () => c.remove())(coin));
+  }
+}
+
+// BIG / MEGA / EPIC: the win counted up big over the reels
+async function bigWin(result) {
+  var times = result.win / result.bet;
+  var stage = document.getElementById("slStage");
+  stage.hidden = false;
+  stage.className = "sl-stage big" + (times >= 100 ? " epic" : times >= 50 ? " mega" : "");
+  var amount = el("div", "sl-big-amount", "🪙 0");
+  stage.replaceChildren(el("div", "sl-big-title", times >= 100 ? "EPIC WIN" : times >= 50 ? "MEGA WIN" : "BIG WIN"), amount, el("div", "sl-stage-sub", Math.round(times) + "× your bet"));
+  coinShower(stage, times >= 50 ? 70 : 40);
+  countUp(amount, result.win, setup.rules.bigTime * 0.7);
+  await wait(setup.rules.bigTime);
+  await continueButton(stage);
+  stage.hidden = true;
+  stage.replaceChildren();
+}
+
+// Before a bonus game: what the lines of the spin itself won (it is paid with the rest)
+async function showLineWinFirst(result) {
+  var bar = document.getElementById("slWinBar");
+  var text = document.getElementById("slWinText");
+  var detail = document.getElementById("slWinDetail");
+  bar.className = "sl-winbar won";
+  var reels = [...document.querySelectorAll(".sl-reel")];
+  result.lines.forEach((line) => setup.lines[line.line].slice(0, line.count).forEach((row, reel) => reels[reel].querySelectorAll(".sl-cell")[row].classList.add("hit")));
+  showLines(
+    result.lines.map((l) => l.line),
+    true,
+  );
+  detail.innerText = (result.lines.length == 1 ? "1 line" : result.lines.length + " lines") + " · bonus next";
+  countUp(text, result.lineWin, Math.min(900, setup.rules.countTime));
+  await wait(1500);
+  clearLines();
+  document.querySelectorAll(".sl-cell.hit").forEach((c) => c.classList.remove("hit"));
+}
+
+// The win: every winning line, the cells pulse; then line after line with its win
+async function showResult(result) {
+  var bar = document.getElementById("slWinBar");
+  var text = document.getElementById("slWinText");
+  var detail = document.getElementById("slWinDetail");
+  if (result.win == 0) {
+    bar.className = "sl-winbar";
+    text.innerText = "No win";
+    detail.innerText = "Try again!";
+    return;
+  }
+  var big = result.win >= result.bet * setup.rules.bigWin;
+  bar.className = "sl-winbar won" + (big ? " big" : "");
+  text.innerText = "";
+  // (after a bonus game its own win screen was shown already)
+  if (big && !result.bonus && !result.coinGame) await bigWin(result);
+  // (the balance comes from the server meanwhile - setup.rules.countTime after the reels)
+  var counting = big ? 300 : Math.min(900, setup.rules.countTime);
+  countUp(text, result.win, counting);
+  detail.innerText = result.bonus ? "Bonus game · " + result.bonus.freeSpins.length + " free spins" : result.coinGame ? "Coin game · " + result.coinGame.coins.length + " coins" + (result.coinGame.ultra ? " · ULTRA" : "") : result.lines.length == 1 ? "1 line" : result.lines.length + " lines";
+  var reels = [...document.querySelectorAll(".sl-reel")];
+  var hit = (line) =>
+    setup.lines[line.line].slice(0, line.count).forEach((row, reel) => reels[reel].querySelectorAll(".sl-cell")[row].classList.add("hit"));
+  result.lines.forEach(hit);
+  showLines(
+    result.lines.map((l) => l.line),
+    true,
+  );
+  // The next spin only when the win is counted up (and seen a moment)
+  await wait(counting + 350);
+  if (result.lines.length == 0 || result.bonus || result.coinGame) return;
+  // Then one line after the other, with what it paid
+  if (result.lines.length > 1) {
+    var index = 0;
+    var next = () => {
+      if (spinning) return;
+      var line = result.lines[index % result.lines.length];
+      document.querySelectorAll(".sl-cell.hit").forEach((cell) => cell.classList.remove("hit"));
+      hit(line);
+      showLines([line.line], true);
+      detail.innerText = "Line " + (line.line + 1) + " · " + line.count + "× " + symbolOf(line.symbol).icon + " · 🪙 " + formatCoins(line.win);
+      index++;
+      lineTimer = setTimeout(next, 1300);
+    };
+    lineTimer = setTimeout(next, 400);
+  } else {
+    var only = result.lines[0];
+    detail.innerText = "Line " + (only.line + 1) + " · " + only.count + "× " + symbolOf(only.symbol).icon;
+  }
+}
+
+function countUp(element, value, time, from) {
+  var start = performance.now();
+  from = from || 0;
+  var step = (now) => {
+    var t = Math.min(1, (now - start) / time);
+    element.innerText = "🪙 " + formatCoins(Math.round(from + (value - from) * (1 - Math.pow(1 - t, 3))));
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+/* ---------- Bet ---------- */
+
+function readBet() {
+  try {
+    return localStorage.getItem(BET_KEY);
+  } catch (error) {
+    return null;
+  }
+}
+
+function currentBet() {
+  return Number(document.getElementById("slBet").value);
+}
+
+function setBet(value) {
+  if (setup == null) return;
+  var bet = Math.max(setup.rules.minBet, Math.min(setup.rules.maxBet, Math.round(value)));
+  document.getElementById("slBet").value = bet;
+  // The prizes of the coin game for this bet (over the machine, always)
+  if (!activeBonus) showPrizes(bet);
+  try {
+    localStorage.setItem(BET_KEY, bet);
+  } catch (error) {
+    // not remembered
+  }
+  renderControls();
+}
+
+function renderPresets() {
+  var box = document.getElementById("slPresets");
+  box.replaceChildren(
+    ...PRESETS.filter((value) => value >= setup.rules.minBet && value <= setup.rules.maxBet).map((value) => {
+      var button = el("button", "sl-preset", value >= 1000 ? value / 1000 + "K" : String(value));
+      button.type = "button";
+      button.dataset.value = value;
+      button.addEventListener("click", () => setBet(value));
+      return button;
+    }),
+  );
+}
+
+// The balance: a win counts up (like the win in the middle), a bet is taken off right away
+var coinsShown = null;
+var coinsAnimation = 0;
+function renderCoins(value) {
+  var box = document.getElementById("slCoins");
+  var from = coinsShown;
+  coinsShown = value;
+  var run = ++coinsAnimation;
+  if (from == null || value <= from) {
+    box.innerText = "🪙 " + formatCoins(value);
+    return;
+  }
+  var time = Math.min(900, setup && setup.rules ? setup.rules.countTime : 800);
+  var start = performance.now();
+  var step = (now) => {
+    // (a newer balance came meanwhile: that one counts)
+    if (run != coinsAnimation) return;
+    var t = Math.min(1, (now - start) / time);
+    box.innerText = "🪙 " + formatCoins(Math.round(from + (value - from) * (1 - Math.pow(1 - t, 3))));
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function renderControls() {
+  if (setup == null) return;
+  var bet = currentBet();
+  var button = document.getElementById("slSpin");
+  button.disabled = spinning || bet > myCoins;
+  button.classList.toggle("busy", spinning);
+  button.title = bet > myCoins ? "Not enough coins" : "Spin (space)";
+  document.querySelectorAll(".sl-preset").forEach((preset) => preset.classList.toggle("active", Number(preset.dataset.value) == bet));
+  document.getElementById("slLess").disabled = spinning || bet <= setup.rules.minBet;
+  document.getElementById("slMore").disabled = spinning || bet >= setup.rules.maxBet;
+}
+
+// − / +: to the next bet of the presets (10, 25, 50, 100, 200, 250)
+function stepBet(direction) {
+  var bet = currentBet();
+  var steps = PRESETS.filter((value) => value >= setup.rules.minBet && value <= setup.rules.maxBet);
+  var next = direction > 0 ? steps.find((value) => value > bet) : steps.slice().reverse().find((value) => value < bet);
+  setBet(next != null ? next : direction > 0 ? setup.rules.maxBet : setup.rules.minBet);
+}
+
+/* ---------- Last wins (everybody) ---------- */
+
+function renderFeed(feed) {
+  var list = document.getElementById("slFeed");
+  document.getElementById("slFeedEmpty").hidden = feed.length > 0;
+  if (setup == null) return setTimeout(() => renderFeed(feed), 200);
+  list.replaceChildren(
+    ...feed.map((entry) => {
+      var symbol = symbolOf(entry.symbol);
+      var multiple = entry.win / entry.bet;
+      // A win from a bonus game: said so (with its free spins)
+      var what = entry.bonus ? "🎁 Bonus · " + entry.bonus + " free spins" : entry.coins ? "🪙 Coin game · " + entry.coins + " coins" + (entry.ultra ? " · ULTRA" : "") : entry.count + "× " + (symbol ? symbol.icon : "");
+      var sub = what + " · bet 🪙 " + formatCoins(entry.bet) + " · " + (multiple >= 10 ? Math.round(multiple) : multiple.toFixed(1)) + "x";
+      var item = historyItem(createAvatar(entry.name, "sm"), entry.name, sub, "🪙 " + formatCoins(entry.win));
+      if (entry.bonus || entry.coins) item.classList.add("sl-feed-bonus");
+      return item;
+    }),
+  );
+}
+
+/* ---------- Paytable ---------- */
+
+function showPaytable() {
+  var backdrop = el("div", "mm-dialog-backdrop");
+  var dialog = el("div", "mm-dialog sl-paytable");
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  var bet = currentBet();
+  dialog.append(el("h2", "mm-dialog-title", "Paytable"), el("p", "mm-dialog-text", "Wins for a bet of 🪙 " + formatCoins(bet) + " per spin - 3, 4 or 5 in a row on a line, from the left. 👑 stands for every symbol."));
+  var table = el("div", "sl-pays");
+  table.append(el("span", "sl-pays-head", ""), el("span", "sl-pays-head", "3×"), el("span", "sl-pays-head", "4×"), el("span", "sl-pays-head", "5×"));
+  setup.symbols
+    .filter((symbol) => !symbol.scatter && !symbol.coin)
+    .reverse()
+    .forEach((symbol) => {
+      var name = el("span", "sl-pays-symbol");
+      name.append(el("span", "sl-pays-icon", symbol.icon), el("span", "", symbol.name));
+      table.appendChild(name);
+      symbol.pays.forEach((pay) => table.appendChild(el("span", "sl-pays-value", formatCoins(Math.floor((bet * pay) / setup.rules.lines)))));
+    });
+  // The 9 lines as little pictures
+  var lines = el("div", "sl-line-maps");
+  setup.lines.forEach((rows, line) => {
+    var map = el("div", "sl-line-map");
+    map.appendChild(el("span", "sl-line-map-number", line + 1));
+    var grid = el("div", "sl-line-map-grid");
+    for (var row = 0; row < 3; row++) for (var reel = 0; reel < 5; reel++) grid.appendChild(el("i", rows[reel] == row ? "on" : ""));
+    map.appendChild(grid);
+    lines.appendChild(map);
+  });
+  var close = el("button", "mm-btn w-100 sl-paytable-close", "Close");
+  close.type = "button";
+  var bonus = el(
+    "p",
+    "sl-pays-bonus",
+    "🎁 on reels 1, 3 and 5 at the same time start the bonus game. Two wheels decide your free spins (" +
+      setup.bonus.spins.join(", ") +
+      ") and the start multiplier (×" +
+      setup.bonus.multipliers.join(", ×") +
+      "). The multiplier grows by " +
+      setup.bonus.step +
+      " after every free spin. Three 🎁 in a free spin: " +
+      setup.bonus.retrigger +
+      " free spins more. A spin with its bonus pays at most " +
+      setup.maxWin +
+      "× the bet.",
+  );
+  // The coin game: how it works, then every prize as a colored badge with what it pays for this bet
+  var c = setup.coins;
+  var coinText = el(
+    "p",
+    "sl-pays-bonus",
+    c.trigger + " or more 🪙 anywhere start the coin game. The coins stay, the empty spots spin again - " + c.respins + " respins, every new coin brings them back to " + c.respins + ". The coin game pays all its coins (at most " + c.maxWin + "× the bet).",
+  );
+  var prizeTable = el("div", "sl-prize-table");
+  var row = (badge, amount) => prizeTable.append(badge, el("span", "sl-prize-amount", amount));
+  var values = c.values;
+  row(el("span", "sl-prize-badge plain", "🪙 coin"), "🪙 " + formatCoins(Math.floor(bet * values[0])) + " - " + formatCoins(Math.floor(bet * values[values.length - 1])));
+  c.prizes.forEach((p) => row(el("span", "sl-prize-badge prize-" + p.prize, p.prize.toUpperCase()), "🪙 " + formatCoins(Math.floor(bet * p.x))));
+  row(el("span", "sl-prize-badge prize-ultra", "ULTRA"), "🪙 " + formatCoins(bet * c.ultra));
+  dialog.append(table, el("h3", "sl-pays-title", "Bonus"), bonus, el("h3", "sl-pays-title", "Coin game"), coinText, prizeTable, el("h3", "sl-pays-title", "The 9 lines"), lines, close);
+  backdrop.appendChild(dialog);
+  // (in full screen only the machine is seen: the paytable goes in there)
+  (document.fullscreenElement || document.body).appendChild(backdrop);
+  var done = () => {
+    backdrop.remove();
+    document.removeEventListener("keydown", onKey);
+  };
+  var onKey = (event) => event.key == "Escape" && done();
+  document.addEventListener("keydown", onKey);
+  close.addEventListener("click", done);
+  backdrop.addEventListener("click", (event) => event.target == backdrop && done());
+  close.focus();
+}
+
+/* ---------- Setup ---------- */
+
+document.addEventListener("DOMContentLoaded", () => {
+  setupChat();
+  document.getElementById("slSpin").addEventListener("click", spin);
+  document.getElementById("slLess").addEventListener("click", () => stepBet(-1));
+  document.getElementById("slMore").addEventListener("click", () => stepBet(1));
+  document.getElementById("slBet").addEventListener("change", (event) => setBet(Number(event.target.value) || 0));
+  document.getElementById("slPaytable").addEventListener("click", () => setup && showPaytable());
+  // Space spins (not while typing)
+  document.addEventListener("keydown", (event) => {
+    if (event.code != "Space" || event.repeat) return;
+    var tag = document.activeElement && document.activeElement.tagName;
+    if (tag == "INPUT" || tag == "TEXTAREA" || tag == "BUTTON" || document.querySelector(".mm-dialog-backdrop")) return;
+    event.preventDefault();
+    spin();
+  });
+  // Full screen (casino_fullscreen.js): the symbols change their size
+  document.addEventListener("fullscreenchange", () => {
+    if (setup && !spinning) TILE = document.querySelector(".sl-cell").offsetHeight;
+  });
+  window.addEventListener("resize", () => {
+    if (setup && !spinning) TILE = document.querySelector(".sl-cell").offsetHeight;
+  });
+});

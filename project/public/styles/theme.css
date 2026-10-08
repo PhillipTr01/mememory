@@ -23,6 +23,18 @@
   --mm-shadow: none;
 }
 
+/* Nothing makes the page wider than the screen (confetti, animations flying out) - clip, not
+   hidden: sticky elements keep working */
+html,
+body {
+  overflow-x: clip;
+}
+
+/* An element with the hidden attribute is hidden - whatever display its class gives it */
+[hidden] {
+  display: none !important;
+}
+
 /* ---------- Buttons ---------- */
 .mm-btn {
   display: inline-flex;
@@ -642,18 +654,6 @@ a.mm-btn.mm-btn-primary:focus,
   animation: mm-dialog-fade 0.12s ease;
 }
 
-.mm-dialog-icon {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 0.9rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  background: var(--mm-surface-2);
-}
-
 .mm-dialog-title {
   font-size: 1.1rem;
   font-weight: 600;
@@ -801,7 +801,6 @@ html.flip-scroll {
   font-size: 1.4rem;
   transition: transform 0.25s ease;
 }
-
 
 .info-card p:last-child,
 .info-card ul:last-child {

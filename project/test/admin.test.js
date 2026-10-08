@@ -3,6 +3,7 @@ const assert = require("node:assert");
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const h = require("./helpers");
+require("../game/config").SEASON_CLOSE_WAIT = 0; // the season starts right away in the tests
 const config = require("../game/config");
 const coins = require("../game/coins");
 const PageAuth = require("../middleware/auth");
@@ -81,7 +82,7 @@ test("admin: change balances, the history knows every change", async () => {
   assert.strictEqual((await adminApi("balance", { username: "nobody", mode: "add", amount: 5 })).status, 404);
   assert.strictEqual((await adminApi("balance", { username: "paula", mode: "set", amount: -5 })).status, 400);
 
-  const history = (await adminApi("history?username=paula")).body;
+  const history = (await adminApi("history?username=paula")).body.rows;
   assert.deepStrictEqual(
     history.map((row) => [row.reason, row.amount]),
     [["admin", -1000], ["admin", 5000 - config.START_COINS], ["start coins", config.START_COINS]],
@@ -123,7 +124,7 @@ test("admin: payouts - a player takes coins off, the admin pays or rejects (coin
   const own = await (await call(CASINO + "/withdrawals", player)).json();
   assert.deepStrictEqual(own.map((w) => [w.amount, w.status, w.note]).sort(), [[5000, "rejected", "nope"], [6000, "paid", null]]);
   assert.deepStrictEqual((await adminApi("withdrawals?status=open")).body, []);
-  const history = (await adminApi("history?username=quinn")).body.map((row) => row.reason);
+  const history = (await adminApi("history?username=quinn")).body.rows.map((row) => row.reason);
   assert.ok(history.includes("withdrawal") && history.includes("withdrawal refund"));
 });
 
@@ -175,4 +176,184 @@ test("admin: without a password (and hash) there is no admin panel", async () =>
 test("admin: too many wrong passwords - wait a minute", async () => {
   for (let i = 0; i < 5; i++) assert.strictEqual((await call(ADMIN + "/login", { json: { password: "no" } })).status, 401);
   assert.strictEqual((await call(ADMIN + "/login", { json: { password: "very-secret-pass" } })).status, 429);
+});
+
+test("admin: the casino chat - delete a message, ban and unban a player, clear everything", async () => {
+  const casinoChat = require("../game/casino_chat");
+  const errors = [];
+  const socket = (name) => ({ data: { username: name }, emit: (event, text) => event === "chatError" && errors.push(text) });
+  casinoChat.fromUser(socket("paula"), { message: "hello casino" });
+  casinoChat.fromUser(socket("quinn"), { message: "spam spam" });
+  let res = await adminApi("chat");
+  assert.deepStrictEqual(res.body.messages.map((m) => [m.name, m.text]), [["paula", "hello casino"], ["quinn", "spam spam"]]);
+
+  // One message gone
+  const spam = res.body.messages[1];
+  assert.strictEqual((await adminApi("chat/delete", { id: spam.id })).status, 200);
+  assert.strictEqual((await adminApi("chat/delete", { id: spam.id })).status, 404);
+  assert.deepStrictEqual((await adminApi("chat")).body.messages.map((m) => m.text), ["hello casino"]);
+
+  // Banned: no more messages (for an hour, or for good)
+  assert.strictEqual((await adminApi("chat/ban", { username: "nobody-here", minutes: 60 })).status, 404);
+  assert.strictEqual((await adminApi("chat/ban", { username: "quinn", minutes: 0 })).status, 400);
+  res = await adminApi("chat/ban", { username: "quinn", minutes: 60 });
+  assert.strictEqual(res.body.bans[0].username, "quinn");
+  assert.ok(res.body.bans[0].until > Date.now());
+  casinoChat.fromUser(socket("quinn"), { message: "let me talk" });
+  assert.match(errors.pop(), /banned from the chat for 60 more min/);
+  await adminApi("chat/ban", { username: "quinn", minutes: null });
+  casinoChat.fromUser(socket("quinn"), { message: "please" });
+  assert.match(errors.pop(), /banned from the chat\./);
+  assert.strictEqual((await adminApi("chat")).body.messages.length, 1);
+
+  res = await adminApi("chat/unban", { username: "quinn" });
+  assert.deepStrictEqual(res.body.bans, []);
+  casinoChat.fromUser(socket("quinn"), { message: "thanks" });
+  assert.strictEqual((await adminApi("chat")).body.messages.length, 2);
+
+  await adminApi("chat/clear", {});
+  assert.deepStrictEqual((await adminApi("chat")).body.messages, []);
+});
+
+test("admin: settings - start coins, daily bonus ... are changed, checked and stored", async () => {
+  const before = { start: config.START_COINS, bonus: config.DAILY_BONUS, ghost: config.JACKPOT_GHOST_AFTER };
+  let res = await adminApi("settings");
+  const start = res.body.settings.find((f) => f.key === "START_COINS");
+  assert.deepStrictEqual([start.section, start.value, start.default], ["Coins", before.start, before.start]);
+  assert.strictEqual(res.body.settings.find((f) => f.key === "JACKPOT_GHOST_AFTER").value, before.ghost / 1000, "in seconds");
+
+  res = await adminApi("settings", { values: { START_COINS: 30000, DAILY_BONUS: 1000, JACKPOT_GHOST_AFTER: 20 } });
+  assert.strictEqual(res.status, 200);
+  assert.deepStrictEqual([config.START_COINS, config.DAILY_BONUS, config.JACKPOT_GHOST_AFTER], [30000, 1000, 20000]);
+  const stored = await require("../models/Setting").findOne({ key: "admin:settings" }).lean();
+  assert.deepStrictEqual(stored.value, { START_COINS: 30000, DAILY_BONUS: 1000, JACKPOT_GHOST_AFTER: 20000 });
+
+  // Wrong values: nothing changes
+  for (const values of [{ START_COINS: -1 }, { START_COINS: 1.5 }, { NOPE: 1 }, { BJ_CLASSIC_MIN: 9000, BJ_CLASSIC_MAX: 100 }]) {
+    res = await adminApi("settings", { values });
+    assert.strictEqual(res.status, 400, JSON.stringify(values));
+  }
+  assert.strictEqual(config.START_COINS, 30000);
+
+  res = await adminApi("settings", { defaults: true });
+  assert.deepStrictEqual([config.START_COINS, config.DAILY_BONUS, config.JACKPOT_GHOST_AFTER], [before.start, before.bonus, before.ghost]);
+});
+
+test("admin: a game turned off - no tab, its page leads to the next game, its open pages go", async () => {
+  const settings = require("../game/settings");
+  const turnedOff = [];
+  const listener = (values) => turnedOff.push(values);
+  settings.changes.on("change", listener);
+  const as = (name) => ({ cookie: `token=${tokens[name]}` });
+  // All on: every tab, every page
+  let page = await call(CASINO + "/poker", as("paula"));
+  assert.strictEqual(page.status, 200);
+  assert.doesNotMatch(await page.text(), /display: none !important/);
+
+  assert.strictEqual((await adminApi("settings", { values: { GAME_POKER: "no" } })).status, 400, "on or off only");
+  let res = await adminApi("settings", { values: { GAME_POKER: false } });
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.body.settings.find((f) => f.key === "GAME_POKER").value, false);
+  assert.deepStrictEqual(turnedOff.pop(), { GAME_POKER: false }, "the open poker pages are told");
+  // The page leads to the jackpot, the other pages have no poker tab
+  page = await call(CASINO + "/poker", as("paula"));
+  assert.strictEqual(page.status, 302);
+  assert.match(page.headers.get("location"), /\/jackpot$/);
+  const battles = await (await call(CASINO + "/battles", as("paula"))).text();
+  assert.match(battles, /\.cs-tab\[href="poker"\] \{ display: none !important; \}/);
+
+  // The jackpot off too: the casino starts with the next game that is on
+  await adminApi("settings", { values: { GAME_JACKPOT: false } });
+  page = await call(CASINO + "/", as("paula"));
+  assert.strictEqual(page.status, 302);
+  assert.match(page.headers.get("location"), /\/battles$/);
+
+  await adminApi("settings", { defaults: true });
+  assert.strictEqual((await call(CASINO + "/poker", as("paula"))).status, 200, "on again");
+  settings.changes.off("change", listener);
+});
+
+test("admin: in a season the players show their normal coins, changes go there; the season board has the stats", async () => {
+  const seasons = require("../game/seasons");
+  seasons.reset();
+  const now = Date.now();
+  const made = await seasons.create({ name: "Board", icon: "📋", start: now - 1000, end: now + 3600 * 1000, budget: 1000, every: 0, secondChances: 2 });
+  await seasons.tick(now);
+  const normal = seasons.normalOf("rosa");
+  assert.ok(normal != null);
+  await seasons.join("rosa", now);
+  await coins.spend("rosa", 300, { reason: "slots bet" });
+  await coins.add("rosa", 900, { reason: "slots win" });
+  // The players: the normal coins, nothing of the season
+  const rosa = (await adminApi("users")).body.find((p) => p.username === "rosa");
+  assert.deepStrictEqual(rosa, { username: "rosa", coins: normal });
+  // A change goes to the normal coins - the season coins stay
+  const res = await adminApi("balance", { username: "rosa", mode: "add", amount: 250, note: "gift" });
+  assert.strictEqual(res.body.coins, normal + 250);
+  assert.strictEqual(seasons.normalOf("rosa"), normal + 250);
+  assert.strictEqual((await coins.get("rosa")).coins, 1600);
+  assert.strictEqual((await adminApi("balance", { username: "rosa", mode: "add", amount: -(normal + 999) })).status, 400);
+  // The history: the normal one (a part of the name is enough) - or the season's, by kinds
+  const normalHistory = (await adminApi("history?username=OS")).body;
+  assert.ok(normalHistory.rows.some((row) => row.username === "rosa" && row.reason === "admin" && row.amount === 250));
+  assert.ok(!normalHistory.rows.some((row) => row.reason === "slots bet"));
+  assert.deepStrictEqual(normalHistory.season, { name: "Board", icon: "📋" });
+  const seasonHistory = (await adminApi("history?username=rosa&scope=season&reason=" + encodeURIComponent("slots bet,slots win"))).body;
+  assert.deepStrictEqual(seasonHistory.rows.map((row) => row.reason).sort(), ["slots bet", "slots win"]);
+  // In pages: the newest first, page by page
+  const first = (await adminApi("history?username=rosa&limit=1")).body;
+  assert.deepStrictEqual([first.page, first.pages, first.total, first.rows.length], [1, first.total, first.total, 1]);
+  const last = (await adminApi("history?username=rosa&limit=1&page=999")).body;
+  assert.strictEqual(last.page, first.pages, "too far: the last page");
+  assert.ok(last.rows[0].at <= first.rows[0].at);
+  // The board: when they started, second chances, what they did
+  const board = (await adminApi("seasons/" + made.season.id + "/board")).body;
+  const row = board.rows.find((r) => r.username === "rosa");
+  assert.deepStrictEqual(
+    [row.coins, row.joinedAt, row.chances, board.chancesTotal, row.bets, row.wagered, row.biggestWin, row.fromGames, row.favourite],
+    [1600, now, 0, 2, 1, 300, 900, 600, "Slots"],
+  );
+  // The season coins: set or changed in the season's page (only players in it)
+  let set = await adminApi("seasons/" + made.season.id + "/balance", { username: "rosa", mode: "set", amount: 5000 });
+  assert.strictEqual(set.body.coins, 5000);
+  set = await adminApi("seasons/" + made.season.id + "/balance", { username: "rosa", mode: "add", amount: -1000, note: "fix" });
+  assert.strictEqual(set.body.coins, 4000);
+  assert.strictEqual(seasons.normalOf("rosa"), normal + 250, "the normal coins stay");
+  assert.strictEqual((await adminApi("seasons/" + made.season.id + "/balance", { username: "quinn", mode: "set", amount: 1 })).status, 400, "not in the season");
+  assert.strictEqual((await adminApi("seasons/999/balance", { username: "rosa", mode: "set", amount: 1 })).status, 400);
+  seasons.reset();
+});
+
+// The last test: everything is gone afterwards
+test("admin: the hard reset - history, payouts, accesses, coins and seasons are gone", async () => {
+  const CoinLog = require("../models/CoinLog");
+  const access = require("../game/access");
+  const seasons = require("../game/seasons");
+  seasons.reset();
+  // A running season and a planned one
+  const now = Date.now();
+  await seasons.create({ name: "Running", icon: "🔥", start: now - 1000, end: now + 3600 * 1000, budget: 1234, every: 0 });
+  await seasons.create({ name: "Later", icon: "❄️", start: now + 7200 * 1000, end: now + 9000 * 1000, budget: 1, every: 0 });
+  await seasons.tick(now);
+  assert.strictEqual(seasons.running().name, "Running");
+  await coins.add("rosa", 500, { reason: "admin" });
+  assert.ok((await CoinLog.countDocuments({})) > 0);
+  let closed = 0;
+  access.changes.once("closeAll", () => closed++);
+
+  let res = await adminApi("reset", {});
+  assert.strictEqual(res.status, 400, "only with the word");
+  assert.strictEqual(closed, 0);
+  res = await adminApi("reset", { confirm: "RESET" });
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(closed, 1, "every casino page closes");
+  assert.strictEqual(await CoinLog.countDocuments({}), 0);
+  assert.deepStrictEqual([seasons.list(), seasons.running()], [[], null], "no seasons anymore");
+  assert.strictEqual(require("../game/coins").base().start, config.START_COINS);
+  const rosa = await require("../models/User").findOne({ username: "rosa" }).lean();
+  assert.deepStrictEqual([rosa.casinoApproved, rosa.casinoApprovedAt, rosa.coins, rosa.payoutAllowed], [false, undefined, 0, false]);
+  assert.strictEqual((await adminApi("overview")).body.players, 0);
+  // A new approval: the start coins again
+  const again = await access.approve("rosa");
+  assert.strictEqual(again.coins, config.START_COINS);
 });

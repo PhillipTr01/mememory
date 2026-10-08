@@ -67,7 +67,19 @@ function compare(a, b) {
   return 0;
 }
 
-// The best 5 of 5-7 cards: {score, cards, name}
+// The cards of five that make the hand (the pairs, the three of a kind ...) - the rest are kickers
+function madeCards(five, score) {
+  const kind = score[0];
+  // Straight, flush, full house, straight flush: all five
+  if (kind === 4 || kind === 5 || kind === 6 || kind === 8) return five.slice();
+  // High card: the highest
+  if (kind === 0) return five.filter((card) => rankOf(card) === score[1]).slice(0, 1);
+  // Pairs, three or four of a kind: the cards of a rank that is there more than once
+  const count = (card) => five.filter((other) => rankOf(other) === rankOf(card)).length;
+  return five.filter((card) => count(card) >= 2);
+}
+
+// The best 5 of 5-7 cards: {score, cards, made (the cards of the hand, without kickers), name}
 function bestHand(cards) {
   let best = null;
   const n = cards.length;
@@ -81,6 +93,7 @@ function bestHand(cards) {
             if (best == null || compare(score, best.score) > 0) best = { score: score, cards: five };
           }
   best.name = HAND_NAMES[best.score[0]];
+  best.made = madeCards(best.cards, best.score);
   return best;
 }
 

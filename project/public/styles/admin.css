@@ -1,24 +1,38 @@
-/* ---------- Admin panel ---------- */
-.ad-main,
-.ad-login-page {
+/*
+ * Admin panel. One small system for every page:
+ *   - type: page title 1.6rem/800, card title 1rem/700, labels 0.7rem uppercase
+ *   - space: 8px steps (0.5 / 0.75 / 1 / 1.5rem), cards 14px round, 1.25rem inside
+ *   - pieces: .ad-card, .ad-card-head, .ad-row (every list), .ad-pill, .ad-table
+ */
+.ad-body {
+  --ad-radius: 14px;
+  --ad-gap: 1rem;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--mm-text);
+  background: var(--mm-bg);
+}
+
+.ad-body *,
+.ad-body *::before,
+.ad-body *::after {
+  box-sizing: border-box;
+}
+
+.ad-body h1,
+.ad-body h2,
+.ad-body h3 {
+  margin: 0;
   color: var(--mm-text);
 }
 
-.ad-main h1,
-.ad-main h2,
-.ad-login h1 {
-  color: var(--mm-text);
-}
-
-.ad-reason {
-  color: var(--mm-text);
-}
-
+/* ---------- Login ---------- */
 .ad-login-page {
   flex: 1;
   display: grid;
   place-items: center;
   padding: 1rem;
+  color: var(--mm-text);
 }
 
 .ad-login {
@@ -29,64 +43,214 @@
   padding: 1.6rem;
 }
 
-.ad-main {
-  width: min(1100px, 100%);
-  margin: 0 auto;
-  padding: 1.5rem 1rem 3rem;
+.ad-login h1 {
+  color: var(--mm-text);
+}
+
+/* ---------- Shell: navigation on the left, the page on the right ---------- */
+.ad-shell {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.ad-side {
+  position: sticky;
+  top: 0;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem 0.75rem;
+  border-right: 1px solid var(--mm-border);
+  background: var(--mm-surface);
+}
+
+.ad-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 0.5rem;
+}
+
+.ad-brand-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(var(--mm-accent-rgb), 0.14);
+  font-size: 1.25rem;
+}
+
+.ad-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.ad-brand-text span {
+  font-size: 0.75rem;
+  color: var(--mm-muted);
+}
+
+.ad-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ad-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--mm-muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ad-nav-item:hover {
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+}
+
+.ad-nav-item.active {
+  background: rgba(var(--mm-accent-rgb), 0.14);
+  color: var(--mm-accent);
+}
+
+.ad-nav-icon {
+  width: 1.25rem;
+  text-align: center;
+}
+
+.ad-nav-label {
+  flex: 1;
+}
+
+.ad-logout {
+  margin-top: auto;
+}
+
+/* The pages of the settings, under "Settings" (only while it is open) */
+.ad-subnav {
+  display: none;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.15rem 0 0.25rem 1.6rem;
+  padding-left: 0.6rem;
+  border-left: 1px solid var(--mm-border);
+}
+
+.ad-subnav.open {
+  display: flex;
+}
+
+.ad-nav-item.ad-sub {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.84rem;
+}
+
+/* On / off of a game: a small dot */
+.ad-state {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mm-success);
+  box-shadow: 0 0 6px rgba(127, 174, 110, 0.7);
+}
+
+.ad-state.off {
+  background: var(--mm-surface-3);
+  box-shadow: none;
+}
+
+.ad-count {
+  min-width: 1.35rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--mm-danger);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.35rem;
+  text-align: center;
+}
+
+.ad-count[hidden] {
+  display: none;
+}
+
+/* ---------- Page ---------- */
+.ad-main {
+  width: min(1240px, 100%);
+  padding: 2rem 2rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.ad-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 1rem;
 }
 
-.ad-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.ad-page-title {
+  font-size: 1.6rem;
+  font-weight: 800;
 }
 
-.ad-badge {
-  background: var(--mm-danger);
-  color: #fff;
+.ad-page-sub {
+  margin: 0.25rem 0 0;
+  color: var(--mm-muted);
+  font-size: 0.9rem;
 }
 
 .ad-tab {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--ad-gap);
 }
 
 .ad-tab[hidden] {
   display: none;
 }
 
-.ad-stats {
+.ad-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ad-gap);
+  align-items: start;
 }
 
-.ad-stat {
+.ad-grid-side {
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.ad-stack {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  padding: 1rem;
+  gap: var(--ad-gap);
 }
 
-.ad-stat-label {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--mm-muted);
-}
-
-.ad-stat-value {
-  font-size: 1.4rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
+/* ---------- Cards ---------- */
 .ad-card {
-  padding: 1rem 1.2rem;
+  padding: 1.25rem;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--ad-radius);
+  background: var(--mm-surface);
 }
 
 .ad-card-head {
@@ -95,39 +259,242 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .ad-title {
-  margin: 0 0 0.75rem;
-  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
-.ad-card-head .ad-title {
+.ad-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
+
+.ad-sublabel {
+  margin: 1rem 0 0.25rem;
+}
+
+.ad-sublabel:first-of-type {
+  margin-top: 0;
+}
+
+.ad-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: var(--mm-muted);
+}
+
+.ad-card-head + .ad-note {
+  margin: -0.25rem 0 1rem;
+}
+
+.ad-empty {
   margin: 0;
+  padding: 0.5rem 0;
+  font-size: 0.85rem;
+  color: var(--mm-muted);
 }
 
-.ad-search {
-  width: auto;
-  min-width: 200px;
+/* A link in a card ("All players"): gold, a soft background under the mouse (also over Bootstrap's a:hover) */
+.ad-link,
+a.ad-link:hover,
+a.ad-link:focus-visible {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mm-accent);
+  text-decoration: none;
+  transition: background 0.15s ease;
 }
 
-.ad-form {
+a.ad-link:hover,
+a.ad-link:focus-visible {
+  background: rgba(var(--mm-accent-rgb), 0.14);
+}
+
+/* ---------- Numbers ---------- */
+.ad-stats {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr 0.8fr 1.6fr auto;
-  gap: 0.5rem;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--ad-gap);
 }
 
-.ad-form.compact {
+.ad-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ad-stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.ad-stat-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  color: var(--mm-muted);
+}
+
+/* ---------- Pills ---------- */
+.ad-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+  color: var(--mm-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ad-pill[hidden] {
+  display: none;
+}
+
+.ad-pill.accent {
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  color: var(--mm-accent);
+}
+
+.ad-pill.success {
+  background: rgba(127, 174, 110, 0.18);
+  color: var(--mm-success);
+}
+
+.ad-pill.danger {
+  background: rgba(224, 103, 90, 0.16);
+  color: var(--mm-danger);
+}
+
+.ad-page-head .ad-pill {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+/* ---------- Lists: one row style for everything ---------- */
+.ad-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ad-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 48px;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.ad-row:last-child {
+  border-bottom: 0;
+}
+
+.ad-row-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+}
+
+.ad-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.ad-row-main > b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ad-row-meta {
+  font-size: 0.78rem;
+  color: var(--mm-muted);
+}
+
+.ad-row-value {
+  font-weight: 700;
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ad-row-value.plus {
+  color: var(--mm-success);
+}
+
+.ad-row-value.minus {
+  color: var(--mm-danger);
+}
+
+.ad-rank {
+  width: 32px;
+  text-align: center;
+  font-weight: 800;
+  color: var(--mm-muted);
+}
+
+.ad-row:first-child .ad-rank {
+  color: var(--mm-accent);
+}
+
+.ad-row-main .ad-reason {
+  align-self: flex-start;
+}
+
+.ad-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mm-surface-3);
+}
+
+.ad-dot.on {
+  background: var(--mm-success);
+  box-shadow: 0 0 8px var(--mm-success);
+}
+
+.ad-payout.rejected {
+  opacity: 0.6;
+}
+
+.ad-chips {
   display: flex;
   flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
-.ad-form.compact .mm-input {
-  width: auto;
+.ad-chips span {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  font-size: 0.8rem;
 }
 
+/* ---------- Tables ---------- */
 .ad-table {
   width: 100%;
   border-collapse: collapse;
@@ -135,18 +502,24 @@
 }
 
 .ad-table th {
-  padding: 0.4rem 0.5rem;
+  padding: 0 0.5rem 0.5rem;
   border-bottom: 1px solid var(--mm-border);
   color: var(--mm-muted);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   text-align: left;
 }
 
 .ad-table td {
-  padding: 0.45rem 0.5rem;
+  padding: 0.6rem 0.5rem;
   border-bottom: 1px solid var(--mm-border);
+  vertical-align: middle;
+}
+
+.ad-table tr:last-child td {
+  border-bottom: 0;
 }
 
 .ad-table .num {
@@ -163,6 +536,10 @@
   color: var(--mm-danger);
 }
 
+.ad-table tr.ad-waiting td {
+  background: rgba(var(--mm-accent-rgb), 0.06);
+}
+
 .ad-actions {
   display: flex;
   justify-content: flex-end;
@@ -170,91 +547,35 @@
 }
 
 .ad-reason {
-  padding: 0.05rem 0.45rem;
+  white-space: nowrap;
+  display: inline-block;
+  padding: 0.05rem 0.5rem;
   border-radius: 999px;
   background: var(--mm-surface-3);
-  font-size: 0.75rem;
+  color: var(--mm-text);
+  font-size: 0.72rem;
   font-weight: 700;
 }
 
-.ad-payout {
+/* ---------- Forms ---------- */
+.ad-search {
+  width: auto;
+  min-width: 220px;
+}
+
+.ad-form {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 0.8fr 1.6fr auto;
+  gap: 0.5rem;
+}
+
+.ad-form.compact {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 0.8rem;
-  border: 1px solid var(--mm-border);
-  border-left: 3px solid var(--mm-accent);
-  border-radius: var(--mm-radius);
-  background: var(--mm-surface-2);
+  flex-wrap: wrap;
 }
 
-.ad-payout + .ad-payout {
-  margin-top: 0.4rem;
-}
-
-.ad-payout.paid {
-  border-left-color: var(--mm-success);
-}
-
-.ad-payout.rejected {
-  border-left-color: var(--mm-danger);
-  opacity: 0.7;
-}
-
-.ad-payout-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.ad-payout-amount {
-  font-weight: 800;
-  color: var(--mm-accent);
-  font-variant-numeric: tabular-nums;
-}
-
-.ad-stat-sub {
-  font-size: 0.8rem;
-  color: var(--mm-muted);
-}
-
-.ad-request-icon {
-  font-size: 1.2rem;
-}
-
-.ad-status {
-  min-width: 70px;
-  text-align: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.ad-status.paid {
-  color: var(--mm-success);
-}
-
-.ad-status.rejected {
-  color: var(--mm-danger);
-}
-
-/* ---------- Access to the casino ---------- */
-.ad-access-info {
-  margin: 0 0 0.75rem;
-  font-size: 0.9rem;
-}
-
-.ad-status.open {
-  color: var(--mm-accent);
-}
-
-.ad-status.none {
-  color: var(--mm-muted);
-}
-
-#tab-access .ad-status {
-  text-align: left;
+.ad-form.compact .mm-input {
+  width: auto;
 }
 
 /* Payout on / off: a switch */
@@ -319,7 +640,7 @@
 
 .ad-switch-text {
   min-width: 1.6rem;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   color: var(--mm-muted);
@@ -329,37 +650,1967 @@
   color: var(--mm-success);
 }
 
-.ad-table tr.ad-waiting td {
-  background: rgba(var(--mm-accent-rgb), 0.07);
+/* ---------- Chat ---------- */
+.ad-chat-list {
+  max-height: 65vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
-.ad-count {
-  display: inline-block;
-  min-width: 1.2rem;
-  margin-left: 0.25rem;
-  padding: 0 0.35rem;
+.ad-chat-msg {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.75rem;
+  padding: 0.5rem 0.5rem;
+  border-radius: 10px;
+}
+
+.ad-chat-msg:hover {
+  background: var(--mm-surface-2);
+}
+
+.ad-chat-msg.banned .ad-chat-name {
+  color: var(--mm-danger);
+}
+
+.ad-chat-time {
+  padding-top: 0.1rem;
+  font-size: 0.75rem;
+  color: var(--mm-muted);
+  white-space: nowrap;
+}
+
+.ad-chat-name {
+  margin-right: 0.4rem;
+  font-weight: 700;
+}
+
+.ad-chat-text {
+  overflow-wrap: anywhere;
+}
+
+.ad-chat-actions {
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.ad-chat-msg:hover .ad-chat-actions,
+.ad-chat-actions:focus-within {
+  opacity: 1;
+}
+
+.ad-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--mm-border);
+  border-radius: 8px;
+  background: var(--mm-surface);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.ad-icon-btn:hover {
+  border-color: var(--mm-danger);
+}
+
+.ad-ban-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.ad-ban-form .mm-input:first-child {
+  grid-column: 1 / -1;
+}
+
+/* ---------- Settings ---------- */
+.ad-setting {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.15rem 1rem;
+  margin: 0;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.ad-setting:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.ad-card-head + .ad-setting {
+  padding-top: 0;
+}
+
+.ad-setting-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.ad-setting-label .changed {
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.45rem;
   border-radius: 999px;
-  background: var(--mm-danger);
-  color: #fff;
-  font-size: 0.7rem;
-  line-height: 1.2rem;
-  text-align: center;
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  color: var(--mm-accent);
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 
-.ad-count[hidden] {
+.ad-setting-hint {
+  grid-column: 1;
+  font-size: 0.78rem;
+  color: var(--mm-muted);
+}
+
+.ad-setting-input {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ad-setting-input .mm-input {
+  width: 130px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ad-setting-unit {
+  width: 1rem;
+  font-size: 0.8rem;
+  color: var(--mm-muted);
+}
+
+.ad-settings-bar[hidden] {
   display: none;
 }
 
-@media (max-width: 767px) {
+/* A game on / off: over the whole width, green when on */
+.ad-toggle-card {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-left: 4px solid var(--mm-success);
+}
+
+.ad-toggle-card.off {
+  border-left-color: var(--mm-surface-3);
+}
+
+/* A test switch: amber while it is on (it changes the game for everybody) */
+.ad-toggle-card.ad-toggle-test.on {
+  border-left-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.ad-toggle-card .ad-note {
+  margin: 0.25rem 0 0;
+}
+
+/* One of a few options: a segmented row */
+.ad-choice {
+  display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+}
+
+.ad-choice-option {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--mm-muted);
+  background: transparent;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ad-choice-option:hover:not(.active) {
+  color: var(--mm-text);
+}
+
+.ad-choice-option.active {
+  color: var(--mm-text);
+  background: var(--mm-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.ad-toggle-card.on .ad-choice-option.active {
+  background: #f59e0b;
+  color: #1a1206;
+}
+
+@media (max-width: 600px) {
+  .ad-toggle-card:has(.ad-choice) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.ad-switch-big .ad-switch-track {
+  width: 48px;
+  height: 28px;
+}
+
+.ad-switch-big .ad-switch-track::after {
+  width: 22px;
+  height: 22px;
+}
+
+.ad-switch-big input:checked + .ad-switch-track::after {
+  transform: translateX(20px);
+}
+
+/* The cases of the case battles: each one on / off */
+.ad-cases-card {
+  grid-column: 1 / -1;
+}
+
+.ad-cases-count {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mm-muted);
+}
+
+.ad-cases {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.ad-case {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+  cursor: pointer;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.ad-case:hover {
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+}
+
+.ad-case.off {
+  opacity: 0.5;
+}
+
+.ad-case-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.ad-case-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ad-case-info b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ad-case-meta {
+  font-size: 0.75rem;
+  color: var(--mm-muted);
+}
+
+.ad-settings-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: var(--ad-gap);
+}
+
+.ad-danger {
+  border-color: rgba(224, 103, 90, 0.5);
+}
+
+.ad-danger .ad-title {
+  color: var(--mm-danger);
+}
+
+.ad-danger p {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.ad-reset-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ad-reset-form .mm-input {
+  width: 180px;
+  font-family: monospace;
+  letter-spacing: 0.1em;
+}
+
+/* ---------- Smaller screens ---------- */
+@media (max-width: 1199px) {
   .ad-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 991px) {
+  .ad-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The navigation: one row at the top */
+  .ad-side {
+    position: sticky;
+    z-index: 10;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--mm-border);
+    overflow-x: auto;
+  }
+
+  .ad-brand-text {
+    display: none;
+  }
+
+  .ad-nav {
+    flex-direction: row;
+  }
+
+  .ad-subnav.open {
+    flex-direction: row;
+    margin: 0;
+    padding-left: 0.5rem;
+  }
+
+  .ad-nav-item {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .ad-logout {
+    margin-top: 0;
+  }
+
+  .ad-main {
+    padding: 1.25rem 1rem 3rem;
+  }
+
+  .ad-grid,
+  .ad-grid-side {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .ad-form {
     grid-template-columns: minmax(0, 1fr);
   }
+}
 
-  .ad-payout {
-    flex-wrap: wrap;
+@media (max-width: 575px) {
+  .ad-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .ad-nav-label {
+    display: none;
+  }
+
+  .ad-search {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+/* ---------- Seasons ---------- */
+.ad-state[hidden] {
+  display: none;
+}
+
+.ad-nav-item .ad-state {
+  margin-left: auto;
+}
+
+/* A season's page: back to all of them */
+.ad-back {
+  align-self: flex-start;
+  color: var(--mm-muted);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ad-back:hover {
+  color: var(--mm-text);
+}
+
+.ad-season-row:not(.detail) {
+  cursor: pointer;
+}
+
+.ad-season-row.detail {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.ad-inline-input {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ad-season-now {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ad-season-idle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ad-season-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+  overflow: hidden;
+}
+
+.ad-season-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(var(--mm-accent-rgb), 0.6), var(--mm-accent));
+}
+
+.ad-season-now .ad-note {
+  margin: 0;
+}
+
+.ad-season-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ad-season-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+}
+
+.ad-season-row.running {
+  border-color: rgba(127, 174, 110, 0.5);
+}
+
+.ad-season-row.ended {
+  opacity: 0.8;
+}
+
+.ad-season-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ad-season-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--mm-surface-3);
+  font-size: 1.4rem;
+}
+
+.ad-season-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  font-size: 0.82rem;
+  color: var(--mm-muted);
+}
+
+.ad-season-winner {
+  color: var(--mm-accent);
+  font-weight: 700;
+}
+
+.ad-season-prizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ad-season-row .ad-actions {
+  justify-content: flex-end;
+}
+
+/* The form */
+.ad-season-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.ad-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+}
+
+.ad-season-name {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.ad-field-icon .mm-input {
+  text-align: center;
+  font-size: 1.2rem;
+}
+
+.ad-icon-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: -0.4rem;
+}
+
+.ad-icon-pick {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--mm-surface-2);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ad-icon-pick:hover,
+.ad-icon-pick.active {
+  border-color: var(--mm-accent);
+}
+
+.ad-season-form .mm-input:disabled {
+  opacity: 0.55;
+}
+
+.ad-prize-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.ad-prize-list[hidden],
+.ad-add-prize[hidden] {
+  display: none;
+}
+
+.ad-prize-row {
+  display: grid;
+  grid-template-columns: auto 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Remove a prize: a white ✕ (red on hover) */
+.ad-prize-row .ad-icon-btn {
+  color: #fff;
+}
+
+.ad-prize-row .ad-icon-btn:hover {
+  color: var(--mm-danger);
+}
+
+.ad-prize-hash {
+  font-weight: 800;
+  color: var(--mm-muted);
+}
+
+.ad-add-prize {
+  align-self: flex-start;
+  margin-top: 0.4rem;
+}
+
+#adSeasonCancel[hidden] {
+  display: none;
+}
+
+/* The accent color of a season */
+.ad-color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.ad-color-input {
+  flex-shrink: 0;
+  width: 44px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+  cursor: pointer;
+}
+
+.ad-color-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ad-color-pick {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.ad-color-pick.active {
+  border-color: var(--mm-text);
+}
+
+.ad-color-hex {
+  width: 96px;
+  flex-shrink: 0;
+  font-family: ui-monospace, monospace;
+  text-transform: lowercase;
+}
+
+.ad-color-row {
+  flex-wrap: wrap;
+}
+
+/* ---------- Date picker (season start / end) ---------- */
+.ad-date {
+  position: relative;
+}
+
+/* The date: typed by hand, or 📅 for the calendar */
+.ad-date-field {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.ad-date-field.open,
+.ad-date-field:focus-within {
+  border-color: var(--mm-accent);
+}
+
+.ad-date-field.invalid {
+  border-color: var(--mm-danger);
+}
+
+.ad-date-field.disabled {
+  opacity: 0.55;
+}
+
+.ad-date-btn {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ad-date-btn:disabled {
+  cursor: not-allowed;
+}
+
+.ad-date-text {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+
+.ad-date-text:disabled {
+  cursor: not-allowed;
+}
+
+.ad-picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+  animation: ad-picker-in 0.15s ease-out;
+}
+
+@keyframes ad-picker-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.ad-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ad-picker-month {
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.ad-picker-nav {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--mm-border);
+  border-radius: 8px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.ad-picker-nav:hover {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+}
+
+.ad-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.ad-picker-wd {
+  padding-bottom: 0.2rem;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+}
+
+.ad-picker-day {
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: none;
+  color: var(--mm-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ad-picker-day:hover {
+  background: var(--mm-surface-3);
+}
+
+.ad-picker-day.other {
+  color: var(--mm-muted);
+  opacity: 0.5;
+}
+
+.ad-picker-day.today {
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+}
+
+.ad-picker-day.picked {
+  background: var(--mm-accent);
+  color: #1a1206;
+  font-weight: 800;
+}
+
+.ad-picker-time {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ad-picker-time .ad-label {
+  margin-right: auto;
+}
+
+.ad-picker-select {
+  width: 72px;
+  padding: 0.3rem 0.5rem;
+  text-align: center;
+}
+
+.ad-picker-colon {
+  font-weight: 800;
+}
+
+.ad-picker-foot {
+  display: flex;
+  justify-content: space-between;
+}
+
+.ad-season-row:not(.detail):hover {
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+}
+
+/* (the pages of the seasons: one at a time) */
+#adSeasonsMain[hidden],
+#adSeasonPage[hidden],
+#adSeasonFinal[hidden],
+#adSeasonFormCard[hidden] {
+  display: none;
+}
+
+/* The seasons in groups: open, planned, over */
+.ad-season-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ad-season-group-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.ad-season-group-count {
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+  color: var(--mm-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* The page of one season: the whole width - the head and the numbers, then the form in two columns */
+.ad-season-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ad-season-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ad-season-detail-head .ad-season-head {
+  flex: 1;
+  min-width: 240px;
+}
+
+.ad-season-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(125px, 1fr));
+  gap: 0.6rem;
+}
+
+.ad-season-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+  font-size: 0.78rem;
+  color: var(--mm-muted);
+}
+
+.ad-season-tile b {
+  overflow: hidden;
+  color: var(--mm-text);
+  font-size: 1.1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ad-season-tile-icon {
+  font-size: 1.05rem;
+}
+
+.ad-season-page .ad-season-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.5rem;
+  align-items: start;
+}
+
+.ad-season-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ad-season-page .ad-season-form > .ad-field:has(#adSeasonPrizesOn),
+.ad-season-save {
+  grid-column: 1 / -1;
+}
+
+.ad-season-save {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ad-season-save .mm-btn {
+  min-width: 220px;
+}
+
+@media (max-width: 767px) {
+  .ad-season-page .ad-season-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ad-season-save .mm-btn {
+    width: 100%;
+  }
+}
+
+
+/* The leaderboard of a season: every row in the same white */
+.ad-season-board td {
+  color: var(--mm-text);
+}
+
+.ad-season-board td.minus {
+  color: var(--mm-danger);
+}
+
+.ad-season-board td.plus {
+  color: var(--mm-success);
+}
+
+/* Under a number: what it came from (the bets under the coins wagered) */
+.ad-season-board .ad-sub {
+  display: block;
+  color: var(--mm-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* The day over the time */
+.ad-season-board td.ad-when {
+  white-space: pre-line;
+  line-height: 1.3;
+}
+
+.ad-final-top td:first-child {
+  font-size: 1.1rem;
+}
+
+/* Phones: the players and the access list - every row a small card instead of a table that is wider than the screen */
+@media (max-width: 600px) {
+  .ad-table:has(#adBoard),
+  .ad-table:has(#adAccessList),
+  .ad-table:has(#adBoard) tbody,
+  .ad-table:has(#adAccessList) tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .ad-table:has(#adBoard) thead,
+  .ad-table:has(#adAccessList) thead {
+    display: none;
+  }
+
+  #adBoard tr,
+  #adAccessList tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.75rem;
+    padding: 0.75rem 0.25rem;
+    border-bottom: 1px solid var(--mm-border);
+  }
+
+  #adBoard tr:last-child,
+  #adAccessList tr:last-child {
+    border-bottom: 0;
+  }
+
+  #adBoard td,
+  #adAccessList td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  /* Players: # name ... season bank / the buttons under them on the right */
+  #adBoard td:nth-child(2) {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  #adBoard td.ad-actions {
+    flex-basis: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.4rem;
+  }
+
+  /* Access: the name, its status under it, then payout and the button on one line */
+  #adAccessList td:first-child {
+    flex-basis: 100%;
+  }
+
+  #adAccessList td:nth-child(2) {
+    flex: 1 1 100%;
+  }
+
+  #adAccessList td:last-child {
+    margin-left: auto;
+  }
+
+  /* Who wants in: the whole card marked, not every cell on its own */
+  #adAccessList tr.ad-waiting {
+    margin: 0 -0.5rem;
+    padding: 0.75rem;
+    border-radius: 10px;
+    background: rgba(var(--mm-accent-rgb), 0.06);
+  }
+
+  #adAccessList tr.ad-waiting td {
+    background: none;
+  }
+}
+
+/* The history: the filters on the full width of the card */
+.ad-hist-filter {
+  flex: 1 1 auto;
+  align-items: center;
+}
+
+/* Phones: the player on its own line, the kind and the coins next to each other under it */
+@media (max-width: 600px) {
+  .ad-hist-filter .ad-pick {
+    flex-basis: 100%;
+  }
+
+  .ad-form.compact.ad-hist-filter select.mm-input {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+/* The pages of the history */
+.ad-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.ad-pager[hidden] {
+  display: none;
+}
+
+.ad-pager-info {
+  color: var(--mm-muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+/* The player of the history: the field with the list of the players under it */
+.ad-pick {
+  position: relative;
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.ad-form.compact .ad-pick .mm-input {
+  width: 100%;
+  padding-left: 2.2rem;
+  padding-right: 2rem;
+}
+
+.ad-pick-icon {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  transform: translateY(-50%);
+  font-size: 0.9rem;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.ad-pick-clear {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  transform: translateY(-50%);
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--mm-surface-3, rgba(255, 255, 255, 0.08));
+  color: var(--mm-muted);
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ad-pick-clear:hover {
+  color: var(--mm-text);
+}
+
+.ad-pick-clear[hidden],
+.ad-pick-list[hidden] {
+  display: none;
+}
+
+.ad-pick-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  max-height: 18rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  background: var(--mm-surface-2, #242228);
+  border: 1px solid var(--mm-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.ad-pick-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.ad-pick-item:hover,
+.ad-pick-item.active {
+  background: rgba(var(--mm-accent-rgb), 0.14);
+}
+
+.ad-pick-item.picked .ad-pick-name {
+  color: var(--mm-accent);
+}
+
+.ad-pick-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  color: var(--mm-accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.ad-pick-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.ad-pick-name b {
+  color: var(--mm-accent);
+}
+
+.ad-pick-empty {
+  padding: 0.55rem;
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+}
+
+/* Phones: the history - name and coins on top, what it was and when under them */
+@media (max-width: 600px) {
+  .ad-table:has(#adHistory),
+  .ad-table:has(#adHistory) tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .ad-table:has(#adHistory) thead {
+    display: none;
+  }
+
+  #adHistory tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.6rem;
+    padding: 0.65rem 0.25rem;
+    border-bottom: 1px solid var(--mm-border);
+  }
+
+  #adHistory tr:last-child {
+    border-bottom: 0;
+  }
+
+  #adHistory td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  /* (the name takes the most of the first line - what and when go to the next one) */
+  #adHistory td:nth-child(2) {
+    order: 1;
+    flex: 1 1 55%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #adHistory td:nth-child(4) {
+    order: 2;
+  }
+
+  #adHistory td:nth-child(3) {
+    order: 3;
+    flex: 1 1 50%;
+    min-width: 0;
+    font-size: 0.82rem;
+  }
+
+  #adHistory td:nth-child(1) {
+    order: 4;
+    margin-left: auto;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  /* The filter: the player field over the whole width */
+  #adHistoryFilter {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  #adHistoryFilter #adHistUser {
+    flex: 1 1 100%;
+  }
+
+  #adHistoryFilter #adHistReason,
+  #adHistoryFilter #adHistScope {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+/* The leaderboard of a season: many columns - it scrolls sideways in its card when the screen is narrow */
+.ad-table-scroll {
+  overflow-x: auto;
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem;
+  scrollbar-width: thin;
+}
+
+.ad-season-board td {
+  white-space: nowrap;
+}
+
+/* The titles may take two lines (the numbers under them are short) */
+.ad-season-board th {
+  white-space: normal;
+  vertical-align: bottom;
+  line-height: 1.25;
+}
+
+/* The season coins of a player: set to / add, the amount, a note */
+.ad-coins-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ad-coins-fields {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+/* A season's page: the whole width (the leaderboard has many columns) */
+.ad-main:has(#adSeasonPage:not([hidden])) {
+  width: 100%;
+  max-width: none;
+}
+
+.ad-season-board th,
+.ad-season-board td {
+  padding-left: 0.55rem;
+  padding-right: 0.55rem;
+}
+
+/* A long prize may take two lines */
+.ad-season-board td:nth-child(4) {
+  min-width: 7rem;
+  max-width: 11rem;
+  white-space: normal;
+}
+
+.ad-season-board td {
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
+}
+
+.ad-season-board th:first-child,
+.ad-season-board td:first-child {
+  padding-left: 0.5rem;
+}
+
+/* Edit: always in sight at the end of the row */
+.ad-season-board td.ad-actions {
+  padding-right: 0.25rem;
+}
+
+/* The player: a long name may take two lines */
+.ad-season-board td:nth-child(2) {
+  white-space: normal;
+  min-width: 6rem;
+}
+
+#adSeasonFinal {
+  padding-left: 0.9rem;
+  padding-right: 0.9rem;
+}
+
+/* ---------- Cases: the list ---------- */
+.ad-case-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.ad-case-row {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1fr) auto auto 6.5rem;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+a.ad-case-row:hover {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  background: var(--mm-surface-3);
+  color: var(--mm-text);
+}
+
+.ad-case-row.off {
+  opacity: 0.6;
+}
+
+.ad-case-icon {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 10px;
+  background: var(--mm-surface-3);
+  font-size: 1.4rem;
+}
+
+.ad-case-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ad-case-sub {
+  color: var(--mm-muted);
+  font-size: 0.78rem;
+}
+
+.ad-case-tags {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.ad-case-price {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ad-case-rtp {
+  justify-self: end;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ad-case-rtp.ok {
+  background: rgba(127, 174, 110, 0.15);
+  color: var(--mm-success);
+}
+
+.ad-case-rtp.low,
+.ad-case-rtp.bad {
+  background: rgba(224, 103, 90, 0.15);
+  color: var(--mm-danger);
+}
+
+.ad-deleted-head {
+  margin: 0.8rem 0 0.2rem;
+}
+
+/* ---------- Cases: the page of a case ---------- */
+.ad-case-stats .ad-season-tile.rtp.ok b {
+  color: var(--mm-success);
+}
+
+.ad-case-stats .ad-season-tile.rtp.low b,
+.ad-case-stats .ad-season-tile.rtp.bad b {
+  color: var(--mm-danger);
+}
+
+.ad-case-stat-rtp {
+  margin-top: 1rem;
+}
+
+.ad-rtp-label {
+  margin-bottom: 0.4rem;
+  font-weight: 700;
+}
+
+/* The RTP on a bar from 0 to 120 %: the target as a line, 100 % dashed */
+.ad-rtp-bar {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+}
+
+.ad-rtp-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--mm-success);
+  transition: width 0.2s ease;
+}
+
+.ad-rtp-fill.low,
+.ad-rtp-fill.bad {
+  background: var(--mm-danger);
+}
+
+.ad-rtp-target,
+.ad-rtp-100 {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--mm-accent);
+}
+
+.ad-rtp-100 {
+  background: none;
+  border-left: 2px dashed var(--mm-muted);
+}
+
+.ad-case-fields {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr) 9rem 11rem;
+  gap: 0.75rem;
+}
+
+/* The items: icon, name, value, × price, chance, remove */
+.ad-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ad-item {
+  display: grid;
+  grid-template-columns: 3.4rem minmax(0, 1fr) 8rem 4.5rem 7rem 2rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ad-item-head span {
+  color: var(--mm-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ad-item .ad-item-icon {
+  text-align: center;
+  font-size: 1.2rem;
+  padding-left: 0.3rem;
+  padding-right: 0.3rem;
+}
+
+.ad-item-times {
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ad-item-remove {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 8px;
+  background: none;
+  color: var(--mm-muted);
+  cursor: pointer;
+}
+
+.ad-item-remove:hover:not(:disabled) {
+  border-color: var(--mm-danger);
+  color: var(--mm-danger);
+}
+
+.ad-item-remove:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.ad-balancer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.ad-balancer-row .ad-target {
+  width: 8rem;
+}
+
+.ad-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  cursor: pointer;
+}
+
+.ad-case-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.ad-danger-btn:hover:not(:disabled) {
+  border-color: var(--mm-danger);
+  color: var(--mm-danger);
+}
+
+/* Versions */
+.ad-version-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ad-version {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+}
+
+.ad-version.now {
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+  background: rgba(var(--mm-accent-rgb), 0.06);
+}
+
+.ad-version-when {
+  color: var(--mm-muted);
+  font-size: 0.8rem;
+}
+
+.ad-version-buttons {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* Phones */
+@media (max-width: 700px) {
+  .ad-case-row {
+    grid-template-columns: 2.6rem minmax(0, 1fr) auto;
+  }
+
+  .ad-case-tags,
+  .ad-case-price {
+    display: none;
+  }
+
+  .ad-case-fields {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+  }
+
+  .ad-item {
+    grid-template-columns: 3rem minmax(0, 1fr) 2rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--mm-border);
+  }
+
+  .ad-item-head {
+    display: none;
+  }
+
+  .ad-item .ad-item-value,
+  .ad-item .ad-item-chance {
+    grid-column: span 1;
+  }
+
+  .ad-item-remove {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .ad-item .ad-item-value {
+    grid-column: 1 / 3;
+    grid-row: 2;
+  }
+
+  .ad-item-times {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  .ad-item .ad-item-chance {
+    grid-column: 1 / 3;
+    grid-row: 3;
+  }
+
+  .ad-version {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ad-item-unit {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .ad-item-unit {
+    display: block;
+    color: var(--mm-muted);
+    font-size: 0.72rem;
+  }
+
+  .ad-item-times {
+    grid-row: 2;
+    grid-column: 3;
+  }
+
+  .ad-item-unit.value {
+    grid-column: 1 / 3;
+    grid-row: 2;
+    justify-self: end;
+    margin-right: 0.6rem;
+    pointer-events: none;
+  }
+
+  .ad-item-unit.chance {
+    grid-column: 3;
+    grid-row: 3;
+  }
+}
+
+/* Not enough room for every column: every player a card - the place, the name, the coins on top, the rest under it */
+.ad-table-scroll:has(.ad-season-board) {
+  container-type: inline-size;
+}
+
+@container (max-width: 1080px) {
+  .ad-season-board,
+  .ad-season-board tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .ad-season-board thead {
+    display: none;
+  }
+
+  .ad-season-board tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.7rem 1rem;
+    padding: 0.9rem 0.25rem;
+    border-bottom: 1px solid var(--mm-border);
+  }
+
+  .ad-season-board tr:last-child {
+    border-bottom: 0;
+  }
+
+  .ad-season-board td,
+  .ad-season-board td:first-child {
+    display: block;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+    max-width: none;
+    text-align: left;
+    white-space: normal;
+  }
+
+  /* The top line: # name ... edit - the rest under it, as many next to each other as fit */
+  .ad-season-board td {
+    order: 3;
+    flex: 1 1 7.5rem;
+  }
+
+  .ad-season-board td:first-child {
+    order: 0;
+    flex: 0 0 auto;
+    align-self: center;
+  }
+
+  .ad-season-board td:nth-child(2) {
+    order: 1;
+    flex: 1 1 0;
+    align-self: center;
+    font-size: 1rem;
+  }
+
+  .ad-season-board td.ad-actions {
+    order: 2;
+    flex: 0 0 auto;
+  }
+
+  /* (then a new line) */
+  .ad-season-board tr::after {
+    content: "";
+    order: 2;
+    flex-basis: 100%;
+    height: 0;
+  }
+
+  .ad-season-board td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.15rem;
+    color: var(--mm-muted);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .ad-season-board td.ad-when {
+    white-space: normal;
+  }
+
+  .ad-table.ad-season-board .num {
+    text-align: left;
+  }
+}
+
+/* ---------- Maintenance (Settings, General) ---------- */
+#adMaint[hidden] {
+  display: none;
+}
+
+.ad-maint.on {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  background: linear-gradient(160deg, rgba(var(--mm-accent-rgb), 0.08), var(--mm-surface) 60%);
+}
+
+.ad-maint-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ad-maint-head .ad-note {
+  margin: 0.35rem 0 0;
+  max-width: 60ch;
+}
+
+.ad-maint-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+}
+
+.ad-maint-note {
+  grid-column: 1 / -1;
+}
+
+.ad-maint-note textarea {
+  resize: vertical;
+}
+
+.ad-maint-add {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ad-maint-add select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ad-maint-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.5rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ad-maint-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.5rem 0.45rem 0.7rem;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.ad-maint-row:last-child {
+  border-bottom: 0;
+}
+
+.ad-maint-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.ad-maint-empty {
+  padding: 0.65rem 0.75rem;
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+}
+
+.ad-maint-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.ad-maint-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.ad-maint-bar .ad-note {
+  margin: 0;
+}
+
+/* The page head: maintenance (on every page while it is on) and the open payouts */
+.ad-head-pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.ad-maint-pill {
+  background: rgba(var(--mm-accent-rgb), 0.15);
+  color: var(--mm-accent);
+  text-decoration: none;
+}
+
+.ad-maint-pill[hidden] {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .ad-maint-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ad-maint-head {
+    flex-direction: column;
+  }
+}
+
+.ad-maint-note textarea {
+  font-family: inherit;
 }

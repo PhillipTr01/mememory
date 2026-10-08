@@ -11,12 +11,15 @@ var DRAW_MODES = [
   { id: "wheel", icon: "🎡", label: "Wheel", description: "A wheel with everybody's tickets - the pointer picks the winner" },
   { id: "roulette", icon: "🖼️", label: "Roulette", description: "A strip of pictures runs past the marker" },
   { id: "bowling", icon: "🎳", label: "Bowling", description: "Every player is a pin - only the winner stays standing" },
-  { id: "plinko", icon: "🔻", label: "Plinko", description: "A ball falls through the pegs into the winning slot" },
   { id: "race", icon: "🏇", label: "Race", description: "Every player runs - the winner crosses the line first" },
   { id: "claw", icon: "🕹️", label: "Claw", description: "The claw machine grabs the winner out of the pile" },
   { id: "royale", icon: "🪂", label: "Royale", description: "Battle royale - the zone shrinks, the last one standing wins" },
   { id: "coinrain", icon: "🪙", label: "Coins", description: "Coins rain into everybody's jar - the first one to overflow wins" },
   { id: "revolver", icon: "🔫", label: "Revolver", description: "Russian roulette - the revolver goes round, the last one alive wins" },
+  { id: "slots", icon: "🎰", label: "Slots", description: "Three reels of faces - three of a kind wins" },
+  { id: "launch", icon: "🚀", label: "Launch", description: "Every player gets a rocket - only one reaches orbit" },
+  { id: "scratch", icon: "🎟️", label: "Scratch", description: "A scratch card full of faces - the first to match three wins" },
+  { id: "ghosthunt", icon: "🔦", label: "Ghost hunt", description: "Lights out - the ghost takes them one by one, the last one wins" },
 ];
 
 /* ---------- Helpers ---------- */
@@ -45,30 +48,29 @@ function pick(list) {
 }
 
 /*
- * The end of a spin, different every time: straight to the stop, a bit too
- * far and back, or nearly stopping before it and creeping on.
- * Keyframes of a value (deg / px) from `from` to `to` (step: size of one
- * field, so "nearly" means one field before).
+ * The end of a spin, like a real wheel with friction: one smooth slow-down,
+ * always forward, never back and never a stop before the end. Different every
+ * time: braking evenly, or a long slow tail where it creeps over the last
+ * fields. Keyframes of a value (deg / px) from `from` to `to` (step: the size
+ * of one field - kept for the callers). With `near`: the rare little push -
+ * it almost stops at `near` (still on the player before) and creeps over.
  */
-function spinEnding(from, to, step) {
-  var way = to - from;
-  var kind = pick(["overshoot", "creep", "creep"]);
-  if (kind == "overshoot") {
+function spinEnding(from, to, step, near) {
+  // Rare: it nearly stops on the player before ... and creeps over to the next one
+  if (near != null) {
     return [
-      { value: from, offset: 0, easing: SLOW_END },
-      { value: to + Math.sign(way) * step * randomBetween(0.25, 0.45), offset: 0.9, easing: "ease-in-out" },
+      { value: from, offset: 0, easing: "cubic-bezier(0.2, 0.65, 0.35, 0.985)" },
+      { value: near, offset: 0.86, easing: "cubic-bezier(0.45, 0.15, 0.55, 1)" },
       { value: to, offset: 1 },
     ];
   }
-  if (kind == "creep") {
-    return [
-      { value: from, offset: 0, easing: SLOW_END },
-      { value: to - Math.sign(way) * step * randomBetween(0.55, 0.9), offset: randomBetween(0.78, 0.86), easing: "linear" },
-      { value: to, offset: 1 },
-    ];
-  }
+  var easing = pick([
+    "cubic-bezier(0.33, 0.66, 0.66, 1)", // even braking (friction)
+    "cubic-bezier(0.2, 0.7, 0.3, 1)", // a longer, slower tail
+    "cubic-bezier(0.15, 0.75, 0.15, 1)", // creeps over the last fields
+  ]);
   return [
-    { value: from, offset: 0, easing: SLOW_END },
+    { value: from, offset: 0, easing: easing },
     { value: to, offset: 1 },
   ];
 }
@@ -84,10 +86,6 @@ function scene(stage, name) {
   root.dataset.scene = name;
   stage.replaceChildren(root);
   return root;
-}
-
-function emptyNote(root, text) {
-  root.appendChild(el("p", "jp-scene-empty", text));
 }
 
 // The players of the round, at most `limit`, the winner always among them
@@ -141,7 +139,7 @@ function confetti(root) {
 
 function winnerLabel(root, draw) {
   var label = el("div", "jp-scene-winner");
-  label.append(createAvatar(draw.winner, "sm"), el("span", "", draw.winner == myName ? "You win!" : draw.winner + " wins!"));
+  label.append(createAvatar(draw.winner, "sm"), el("span", "", draw.winner == myName ? "You win" + (draw.payout ? " 🪙 " + formatCoins(draw.payout) : "") + "!" : draw.winner + " wins!"));
   root.appendChild(label);
   animate(label, [{ opacity: 0, transform: "translate(-50%, 10px)" }, { opacity: 1, transform: "translate(-50%, 0)" }], {
     duration: 350,
@@ -187,7 +185,10 @@ var wheelDraw = {
       wheel.appendChild(svgNode("svg", { viewBox: "0 0 200 200", "aria-hidden": "true" }));
       wheel.appendChild(el("div", "jp-wheel-avatars"));
       var center = el("div", "jp-wheel-center");
-      center.append(el("span", "jp-total jp-mirror-total"), el("span", "jp-pot-label", "coins in the pot"), el("span", "jp-center-status jp-mirror-status"));
+      // (the 👻 countdown too: the bar above is hidden with the wheel)
+      var ghost = el("span", "jp-ghost-in jp-mirror-ghost");
+      ghost.hidden = true;
+      center.append(el("span", "jp-total jp-mirror-total"), el("span", "jp-center-status jp-mirror-status"), ghost);
       wrap.append(el("div", "jp-pointer"), wheel, center);
       root.appendChild(wrap);
     }
@@ -242,9 +243,20 @@ var wheelDraw = {
       await animate(wheel, [{ transform: "rotate(0deg)" }, { transform: `rotate(${end}deg)` }], { duration: duration, easing: SLOW_END });
     } else {
       // A different ending every time (the size of the winner's field: how far "nearly" is)
-      var bet = drawBets().find((b) => b.from <= draw.ticket + 1 && b.to >= draw.ticket + 1);
+      var bets = drawBets();
+      var bet = bets.find((b) => b.from <= draw.ticket + 1 && b.to >= draw.ticket + 1);
       var field = Math.min(40, bet ? (bet.coins / draw.total) * 360 : 20);
-      var frames = spinEnding(0, end, field).map((f) => ({ transform: `rotate(${f.value}deg)`, offset: f.offset, easing: f.easing }));
+      // Rare: nearly stopped on the player before, then a little push into the winner's field.
+      // The wheel turns clockwise: the pointer comes into the field at its end, from the next bet
+      var near = null;
+      var before = bet ? bets.find((b) => b.from == bet.to + 1) || bets[0] : null;
+      if (before && before.name != bet.name && Math.random() < 0.06) {
+        var entry = (bet.to / draw.total) * 360;
+        var inside = Math.min(field * 0.3, 2.5);
+        end = Math.round(turns) * 360 - (entry - inside);
+        near = end - inside - Math.min(2, (before.coins / draw.total) * 360 * 0.4);
+      }
+      var frames = spinEnding(0, end, field, near).map((f) => ({ transform: `rotate(${f.value}deg)`, offset: f.offset, easing: f.easing }));
       await animate(wheel, frames, { duration: duration });
     }
     wheel.style.transform = `rotate(${end}deg)`;
@@ -267,7 +279,16 @@ var rouletteDraw = {
     var root = scene(stage, "roulette");
     root.replaceChildren();
     if (state.entries.length == 0) {
-      emptyNote(root, "Nobody is in yet - the pictures appear here.");
+      // Empty: the strip with blank pictures, waiting for the first coins
+      var empty = el("div", "jp-roulette empty");
+      var blanks = el("div", "jp-track");
+      for (var i = 0; i < 14; i++) {
+        var blank = el("div", "jp-tile blank");
+        blank.append(el("span", "jp-tile-blank-face", "?"), el("span", "jp-tile-blank-name"));
+        blanks.appendChild(blank);
+      }
+      empty.append(el("div", "jp-marker"), blanks);
+      root.appendChild(empty);
       return;
     }
     var strip = el("div", "jp-roulette");
@@ -308,8 +329,14 @@ var rouletteDraw = {
     var tile = track.children[target];
     var tileWidth = tile.offsetWidth + 8;
     var offset = target * tileWidth + tile.offsetWidth * randomBetween(0.2, 0.8);
+    var near = null;
+    // Rare: it nearly stops on the picture before ... and creeps on to the winner
+    if (Math.random() < 0.06) {
+      offset = target * tileWidth + tile.offsetWidth * 0.1;
+      near = strip.clientWidth / 2 - (target * tileWidth - 14);
+    }
     var end = strip.clientWidth / 2 - offset;
-    var frames = spinEnding(0, end, tileWidth).map((f) => ({ transform: `translateX(${f.value}px)`, offset: f.offset, easing: f.easing }));
+    var frames = spinEnding(0, end, tileWidth, near).map((f) => ({ transform: `translateX(${f.value}px)`, offset: f.offset, easing: f.easing }));
     await animate(track, frames, { duration: duration });
     tile.classList.add("chosen");
   },
@@ -354,7 +381,6 @@ var bowlingDraw = {
 
   idle(stage) {
     var parts = this.build(stage);
-    if (parts.pins.length == 0) emptyNote(parts.lane, "No pins yet - every player is a pin.");
   },
 
   async play(stage, draw, duration, short) {
@@ -468,98 +494,6 @@ var bowlingDraw = {
   },
 };
 
-/* ---------- 4. Plinko: the ball falls into the winning slot ---------- */
-
-var plinkoDraw = {
-  ROWS: 8,
-
-  build(stage) {
-    var root = scene(stage, "plinko");
-    root.replaceChildren();
-    var board = el("div", "jp-plinko");
-    // Pegs: rows of dots, every other row shifted
-    for (var row = 0; row < this.ROWS; row++) {
-      var count = row % 2 ? 11 : 12;
-      for (var i = 0; i < count; i++) {
-        var peg = el("i", "jp-peg");
-        peg.style.left = ((i + (row % 2 ? 1 : 0.5)) / 12) * 100 + "%";
-        peg.style.top = 12 + row * 9 + "%";
-        board.appendChild(peg);
-      }
-    }
-    // Slots at the bottom: one per bet, as wide as its tickets
-    var slots = el("div", "jp-slots");
-    var bets = drawBets();
-    bets.forEach((bet) => {
-      var slot = el("div", "jp-slot");
-      slot.style.flexGrow = bet.coins;
-      slot.style.setProperty("--share", shareColor(bet.name));
-      slot.title = bet.name + ": tickets #" + bet.from + " - #" + bet.to;
-      if (bet.coins / state.total > 0.06) slot.appendChild(createAvatar(bet.name, "sm"));
-      slot.dataset.from = bet.from;
-      slot.dataset.to = bet.to;
-      slots.appendChild(slot);
-    });
-    board.appendChild(slots);
-    var ball = el("div", "jp-plinko-ball");
-    board.appendChild(ball);
-    root.appendChild(board);
-    if (bets.length == 0) emptyNote(board, "The slots appear with the first coins.");
-    return { root: root, board: board, ball: ball, slots: slots };
-  },
-
-  idle(stage) {
-    this.build(stage);
-  },
-
-  async play(stage, draw, duration, short) {
-    var parts = this.build(stage);
-    var board = parts.board;
-    var width = board.clientWidth;
-    var height = board.clientHeight;
-    // Where the winning ticket is at the bottom
-    var targetX = ((draw.ticket + 0.5) / draw.total) * width;
-    var startX = randomBetween(width * 0.15, width * 0.85);
-    var rowHeight = height * 0.09;
-    var frames = [{ transform: `translate(${startX}px, 0px)`, offset: 0 }];
-    var steps = this.ROWS + 1;
-    var x = startX;
-    for (var row = 0; row <= this.ROWS; row++) {
-      // Bounce from peg to peg at random - only the last rows lead to the slot
-      var left = this.ROWS - row; // rows still to come
-      var next;
-      if (left >= 3) {
-        next = Math.max(width * 0.06, Math.min(width * 0.94, x + randomBetween(-1, 1) * width * 0.09));
-      } else {
-        next = left == 0 ? targetX : x + (targetX - x) / (left + 1) + randomBetween(-1, 1) * width * 0.03;
-      }
-      var y = height * 0.12 + row * rowHeight;
-      // Small hop up after each peg
-      frames.push({ transform: `translate(${(x + next) / 2}px, ${y - rowHeight * 0.35}px)`, offset: (row + 0.5) / (steps + 1) });
-      frames.push({ transform: `translate(${next}px, ${y}px)`, offset: (row + 1) / (steps + 1) });
-      x = next;
-    }
-    // Sometimes it jumps over into the slot next to it ... and back
-    if (!short && Math.random() < 0.45) {
-      var side = targetX + (Math.random() < 0.5 ? -1 : 1) * width * randomBetween(0.05, 0.09);
-      frames.forEach((f) => (f.offset *= 0.86));
-      frames.push({ transform: `translate(${(targetX + side) / 2}px, ${height * 0.78}px)`, offset: 0.9 });
-      frames.push({ transform: `translate(${side}px, ${height * 0.86}px)`, offset: 0.93 });
-      frames.push({ transform: `translate(${targetX}px, ${height * 0.8}px)`, offset: 0.97 });
-    }
-    frames.push({ transform: `translate(${targetX}px, ${height * 0.9}px)`, offset: 1 });
-    await animate(parts.ball, frames, { duration: duration, easing: SLOW_END });
-
-    // The slot of the winning ticket lights up
-    var winner = [...parts.slots.children].find(
-      (slot) => Number(slot.dataset.from) <= draw.ticket + 1 && Number(slot.dataset.to) >= draw.ticket + 1,
-    );
-    if (winner) winner.classList.add("won");
-    if (!short) confetti(parts.root);
-    winnerLabel(parts.root, draw);
-  },
-};
-
 /* ---------- 5. Race: the winner crosses the line first ---------- */
 
 var raceDraw = {
@@ -580,7 +514,6 @@ var raceDraw = {
     });
     track.appendChild(el("div", "jp-finish"));
     root.appendChild(track);
-    if (players.length == 0) emptyNote(track, "No runners yet - every player gets a lane.");
     return { root: root, track: track, runners: runners };
   },
 
@@ -682,7 +615,6 @@ var clawDraw = {
     root.appendChild(machine);
     // The claw waits above the chute
     claw.style.transform = `translate(${machine.clientWidth * 0.11}px, 0px)`;
-    if (players.length == 0) emptyNote(machine, "The plushies drop in with the first coins.");
     return { root: root, machine: machine, claw: claw, plushes: plushes };
   },
 
@@ -704,34 +636,60 @@ var clawDraw = {
     var t = duration / 7100;
     var setClaw = (x, drop) => ({ transform: `translate(${x}px, ${drop}px)` });
 
-    // 1. Searching: left and right over the pile, slower and slower, then above the winner
+    // 1. Searching: the claw moves on over the pile (only forward, like the joystick is held),
+    // stops over a plush or two to look, then stops above the winner
     var search = [setClaw(start, 0)];
     var spots = [];
-    if (!short) for (var n = Math.round(randomBetween(2, 5)); n > 0; n--) spots.push(randomBetween(width * 0.3, width * 0.85));
-    spots.forEach((x) => search.push(setClaw(x, 0)));
+    if (!short) for (var n = Math.round(randomBetween(1, 3)); n > 0; n--) spots.push(randomBetween(start + 30, target - 30));
+    spots
+      .filter((x) => x > start && x < target)
+      .sort((a, b) => a - b)
+      .forEach((x) => search.push(setClaw(x, 0), setClaw(x, 0)));
     search.push(setClaw(target, 0));
 
     // Sometimes it goes for the wrong plush first ... and it slips out
     var others = parts.plushes.filter((plush) => plush != prize);
-    var decoy = !short && others.length && Math.random() < 0.65 ? pick(others) : null;
-    // Before going down: back and forth between the prize and another one
-    if (!short && others.length && !decoy) {
-      var other = pick(others);
-      var otherX = other.offsetLeft + other.offsetWidth / 2;
-      search.splice(search.length - 1, 0, setClaw(otherX, 0), setClaw(target, 0), setClaw(otherX, 0));
-    }
+    var decoy = !short && others.length && Math.random() < 0.5 ? pick(others) : null;
     if (decoy) {
       var decoyX = decoy.offsetLeft + decoy.offsetWidth / 2;
       search[search.length - 1] = setClaw(decoyX, 0);
-      await animate(claw, search, { duration: 1500 * t, easing: SLOW_END });
+      await animate(claw, search, { duration: 700 * t, easing: SLOW_END });
       var decoyDrop = decoy.offsetTop - 40;
-      await animate(claw, [setClaw(decoyX, 0), setClaw(decoyX, decoyDrop)], { duration: 700 * t, easing: SLOW_END });
+      await animate(claw, [setClaw(decoyX, 0), setClaw(decoyX, decoyDrop)], { duration: 500 * t, easing: SLOW_END });
       claw.classList.add("closed");
-      await animate(claw, [setClaw(decoyX, decoyDrop), setClaw(decoyX, decoyDrop * 0.4)], { duration: 500 * t, easing: "ease-out" });
-      claw.classList.remove("closed");
-      shout(parts.root, pick(["SLIPPED!", "NOPE!", "SO CLOSE!"]), "small");
-      animate(decoy, [{ transform: "rotate(0deg)" }, { transform: "rotate(20deg)" }, { transform: "rotate(-12deg)" }, { transform: "rotate(0deg)" }], { duration: 500, fill: "none" });
-      await animate(claw, [setClaw(decoyX, decoyDrop * 0.4), setClaw(target, 0)], { duration: 700 * t, easing: SLOW_END });
+      if (Math.random() < 0.6) {
+        // Grabbed ... up it goes, it dangles - and slips out, falls back onto the pile
+        var held = el("div", "jp-plush held");
+        held.style.setProperty("--share", shareColor(decoy.dataset.name));
+        held.appendChild(createAvatar(decoy.dataset.name));
+        decoy.style.visibility = "hidden";
+        claw.appendChild(held);
+        await animate(claw, [setClaw(decoyX, decoyDrop), setClaw(decoyX, decoyDrop * 0.4)], { duration: 400 * t, easing: "ease-out" });
+        await animate(held, [0, 1, 2, 3].map((i) => ({ transform: `translateX(-50%) rotate(${(i % 2 ? -1 : 1) * (16 - i * 4)}deg)` })), { duration: 250 * t });
+        claw.classList.remove("closed");
+        held.remove();
+        decoy.style.visibility = "";
+        shout(parts.root, pick(["SLIPPED!", "NOPE!", "SO CLOSE!"]), "small");
+        // Free fall (faster and faster), then a small bounce on the pile
+        var rise = decoyDrop * 0.6;
+        await animate(
+          decoy,
+          [
+            { transform: `translateX(-50%) translateY(${-rise}px)`, easing: "cubic-bezier(0.55, 0, 1, 0.45)" },
+            { transform: "translateX(-50%) translateY(0)", offset: 0.7, easing: "ease-out" },
+            { transform: "translateX(-50%) translateY(-10px)", offset: 0.85, easing: "ease-in" },
+            { transform: "translateX(-50%) translateY(0)" },
+          ],
+          { duration: 350 * t, fill: "none" },
+        );
+      } else {
+        // Closes on it - and it slides right out of the arms
+        await animate(claw, [setClaw(decoyX, decoyDrop), setClaw(decoyX, decoyDrop * 0.4)], { duration: 400 * t, easing: "ease-out" });
+        claw.classList.remove("closed");
+        shout(parts.root, pick(["SLIPPED!", "NOPE!", "SO CLOSE!"]), "small");
+        animate(decoy, [0, 20, -12, 0].map((deg) => ({ transform: `translateX(-50%) rotate(${deg}deg)` })), { duration: 500, fill: "none" });
+      }
+      await animate(claw, [setClaw(decoyX, decoyDrop * 0.4), setClaw(target, 0)], { duration: 500 * t, easing: SLOW_END });
     } else {
       await animate(claw, search, { duration: 2600 * t, easing: SLOW_END });
     }
@@ -808,7 +766,6 @@ var royaleDraw = {
       return fighter;
     });
     root.append(arena, feed);
-    if (players.length == 0) emptyNote(arena, "The arena fills with the first coins.");
     return { root: root, arena: arena, zone: zone, feed: feed, fighters: fighters };
   },
 
@@ -816,6 +773,12 @@ var royaleDraw = {
     this.build(stage);
   },
 
+  /*
+   * The storm closes in stages toward the middle - every stage slower than
+   * the one before, and it never closes completely. Everybody runs to the
+   * middle; who doesn't make it in time is caught at the edge of the storm.
+   * The winner (fixed by the server) reaches the middle.
+   */
   async play(stage, draw, duration, short) {
     var parts = this.build(stage, draw.winner, !short);
     var winner = parts.fighters.find((fighter) => fighter.dataset.name == draw.winner);
@@ -828,63 +791,102 @@ var royaleDraw = {
       })
       .sort((a, b) => a.order - b.order)
       .map((item) => item.fighter);
+    if (short) {
+      losers.forEach((fighter) => fighter.classList.add("out"));
+      winner.classList.add("champion");
+      return winnerLabel(parts.root, draw);
+    }
 
-    // The zone closes in on the winner (slower at the end)
+    var arena = parts.arena;
+    var W = arena.clientWidth;
+    var H = arena.clientHeight;
+    var cx = W / 2;
+    var cy = H / 2;
+    var R0 = Math.hypot(W, H) / 2 + 10;
+    var Rend = Math.min(W, H) * 0.13;
+    // The storm: [time 0..1, radius] - wait, close, wait (shorter), close (slower) ... to the middle
+    var steps = [
+      [0, R0],
+      [0.1, R0],
+      [0.26, R0 * 0.64],
+      [0.36, R0 * 0.64],
+      [0.54, R0 * 0.4],
+      [0.62, R0 * 0.4],
+      [0.82, R0 * 0.24],
+      [0.87, R0 * 0.24],
+      [1, Rend],
+    ];
+    var radius = (t) => {
+      for (var i = 1; i < steps.length; i++) {
+        if (t <= steps[i][0]) {
+          var k = (t - steps[i - 1][0]) / (steps[i][0] - steps[i - 1][0] || 1);
+          var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; // ease in-out
+          return steps[i - 1][1] + (steps[i][1] - steps[i - 1][1]) * e;
+        }
+      }
+      return Rend;
+    };
+    var playTime = duration * 0.9;
     var zone = parts.zone;
-    var winnerX = parseFloat(winner.style.left);
-    var winnerY = parseFloat(winner.style.top);
-    // First it wanders somewhere else, then it closes in on the last two -
-    // between them, so nobody knows who is left in the end
-    var last = losers[losers.length - 1];
-    var lastX = last ? parseFloat(last.style.left) : winnerX;
-    var lastY = last ? parseFloat(last.style.top) : winnerY;
-    var playTime = duration * (short ? 1 : 0.88);
-    animate(
-      zone,
-      [
-        { left: "50%", top: "50%", width: "120%", height: "190%" },
-        { left: randomBetween(30, 70) + "%", top: randomBetween(35, 70) + "%", width: randomBetween(55, 75) + "%", height: randomBetween(90, 120) + "%", offset: randomBetween(0.35, 0.55) },
-        {
-          left: (winnerX + lastX) / 2 + "%",
-          top: (winnerY + lastY) / 2 + "%",
-          width: Math.abs(winnerX - lastX) + 22 + "%",
-          height: Math.abs(winnerY - lastY) * 1.6 + 40 + "%",
-        },
-      ],
-      { duration: playTime, easing: SLOW_END },
+    var circle = (r) => ({ left: cx - r + "px", top: cy - r + "px", width: 2 * r + "px", height: 2 * r + "px" });
+    Object.assign(zone.style, circle(R0), { transform: "none" });
+    var frames = [];
+    for (var f = 0; f <= 60; f++) frames.push({ ...circle(radius(f / 60)), offset: f / 60 });
+    animate(zone, frames, { duration: playTime, easing: "linear" });
+    // The storm gets more intense in every stage
+    [0.1, 0.36, 0.62, 0.87].forEach((at, n) =>
+      setTimeout(() => {
+        zone.dataset.stage = n + 1;
+        if (n < 3) shout(parts.root, pick(["THE STORM IS CLOSING", "RUN TO THE MIDDLE!", "STORM INCOMING"]), "small");
+      }, at * playTime),
     );
 
-    // Everybody moves a little (they fight)
-    parts.fighters.forEach((fighter) => {
-      animate(
-        fighter,
-        [0, 1, 2, 3].map((i) => ({ transform: `translate(calc(-50% + ${randomBetween(-14, 14)}px), calc(-50% + ${randomBetween(-10, 10)}px))` })),
-        { duration: duration, easing: "ease-in-out", fill: "none" },
-      );
-    });
-
-    // Eliminations: quick at first, longer and longer pauses (the final duel is the longest)
+    // When everybody is caught: quick at first, longer and longer (the last one right before the end)
     var count = losers.length;
-    var weights = losers.map((_, i) => (1 + i * 0.7) * randomBetween(0.6, 1.4));
+    var weights = losers.map((_, i) => (1 + i * 0.6) * randomBetween(0.7, 1.3));
     var sum = weights.reduce((a, b) => a + b, 0);
+    var at = 0;
+    var times = weights.map((w) => (at += (w / sum) * 0.9) + 0.05);
+
+    // Running: everybody toward the middle - inside the storm's edge until their time is up
+    var position = (fighter) => ({ x: (parseFloat(fighter.style.left) / 100) * W, y: (parseFloat(fighter.style.top) / 100) * H });
+    var run = (fighter, until, end) => {
+      var from = position(fighter);
+      var angle = Math.atan2(from.y - cy, from.x - cx);
+      var d0 = Math.min(Math.hypot(from.x - cx, from.y - cy), R0 * 0.7);
+      var keyframes = [];
+      for (var k = 0; k <= 24; k++) {
+        var t = (k / 24) * until;
+        // Running in (a bit slower than the storm for the ones who are caught), always inside the zone
+        var d = d0 + (end - d0) * (k / 24);
+        if (k < 24) d = Math.min(d, radius(t) - 22);
+        d = Math.max(d, 0);
+        var wobble = Math.sin(k * 1.7 + angle * 3) * 0.12;
+        keyframes.push({ left: cx + Math.cos(angle + wobble) * d + "px", top: cy + Math.sin(angle + wobble) * d * (H / W > 0.9 ? 1 : 0.85) + "px", offset: k / 24 });
+      }
+      fighter.style.left = keyframes[0].left;
+      fighter.style.top = keyframes[0].top;
+      animate(fighter, keyframes, { duration: until * playTime, easing: "linear" });
+    };
+    losers.forEach((fighter, i) => run(fighter, times[i], radius(times[i]) + 10));
+    run(winner, 0.97, Math.min(Rend * 0.35, 18));
+
     for (var i = 0; i < count; i++) {
-      await wait((weights[i] / sum) * playTime);
-      this.eliminate(parts, losers[i], short);
-      if (count - i - 1 == 1 && !short) shout(parts.root, pick(["FINAL DUEL", "LAST TWO!", "1 VS 1"]), "small");
+      var waitFor = times[i] * playTime - (i ? times[i - 1] * playTime : 0);
+      await wait(waitFor);
+      this.eliminate(parts, losers[i], false);
+      if (count - i - 1 == 1) shout(parts.root, pick(["FINAL DUEL", "LAST TWO!", "1 VS 1"]), "small");
     }
-    // Only now the zone closes around the one who is left
-    animate(zone, [{ left: winnerX + "%", top: winnerY + "%", width: "16%", height: "30%" }], { duration: short ? 1 : 450, easing: "ease-out" });
-    await wait(short ? 0 : 300);
+    await wait(Math.max(0, playTime * (1 - times[count - 1] || 0)));
     winner.classList.add("champion");
-    if (!short) {
-      shout(parts.root, pick(["WINNER WINNER", "VICTORY ROYALE", "LAST ONE STANDING"]), "strike");
-      confetti(parts.root);
-    }
+    shout(parts.root, pick(["WINNER WINNER", "VICTORY ROYALE", "LAST ONE STANDING"]), "strike");
+    confetti(parts.root);
     winnerLabel(parts.root, draw);
   },
 
   eliminate(parts, fighter, short) {
-    var boom = el("span", "jp-boom", "💥");
+    // Caught by the storm: a purple flash where they stand
+    var boom = el("span", "jp-boom jp-storm-hit", "⚡");
     boom.style.left = fighter.style.left;
     boom.style.top = fighter.style.top;
     parts.arena.appendChild(boom);
@@ -894,7 +896,7 @@ var royaleDraw = {
     fighter.classList.add("out");
     // Kill feed (the newest on top, at most 4)
     var line = el("div", "jp-kill");
-    line.append(el("b", "", fighter.dataset.name), document.createTextNode(pick([" was eliminated", " got knocked out", " was caught by the storm", " was sniped", " fell off the map"])));
+    line.append(el("b", "", fighter.dataset.name), document.createTextNode(pick([" was caught by the storm", " was caught by the storm", " didn't make it", " ran out of time", " was caught by the storm"])));
     parts.feed.prepend(line);
     while (parts.feed.childElementCount > 4) parts.feed.lastElementChild.remove();
     if (!short) animate(parts.root, [{ transform: "translateX(-4px)" }, { transform: "translateX(4px)" }, { transform: "translateX(0)" }], { duration: 180, fill: "none" });
@@ -922,7 +924,6 @@ var coinRainDraw = {
     });
     var crown = el("div", "jp-jar-crown", "👑");
     root.append(shelf, crown);
-    if (jars.length == 0) emptyNote(root, "The jars fill with the first coins.");
     return { root: root, jars: jars, crown: crown };
   },
 
@@ -1059,13 +1060,14 @@ var coinRainDraw = {
   },
 
   /*
-   * The story of this draw (random): a comeback, a runaway leader, a photo
-   * finish, a back and forth or an underdog. The winner is fixed (server),
+   * The story of this draw (random): a comeback, a runaway leader, in front
+   * from start to end, a photo finish, a back and forth or an underdog. The winner is fixed (server),
    * only the way there changes.
    */
   plan(winner, rivals) {
     var pick = (list) => list[Math.floor(Math.random() * list.length)];
-    var stories = ["comeback", "photo", "photo", "seesaw", "underdog", "comeback", "runaway"];
+    // (not always a comeback: often the one in front just stays in front)
+    var stories = ["comeback", "photo", "seesaw", "underdog", "runaway", "runaway", "wire", "wire"];
     var story = rivals.length ? pick(stories) : "runaway";
     var threat = rivals.length ? pick(rivals) : null; // not always the biggest one
     var jitter = (speeds) => speeds.map((speed) => speed * randomBetween(0.85, 1.15));
@@ -1087,6 +1089,14 @@ var coinRainDraw = {
       rivals.forEach((jar) => (jar.final = randomBetween(0.55, 0.85)));
       if (threat) Object.assign(threat, { final: randomBetween(0.88, 0.94), pace: this.pace(jitter([0.5, 0.8, 1.1, 1.4, 1.5])) });
       shouts.push({ at: randomBetween(0.5, 0.65), text: pick(["CAN ANYONE CATCH UP?", "WAY AHEAD!", "RUNAWAY!"]) });
+    } else if (story == "wire") {
+      // In front from the first coin to the last - nobody comes close
+      winner.pace = this.pace(jitter([1.3, 1.1, 1, 0.95, 0.9]));
+      rivals.forEach((jar) => {
+        jar.final = randomBetween(0.4, 0.78);
+        jar.pace = this.pace(this.randomSpeeds(0.8, 1.2));
+      });
+      shouts.push({ at: randomBetween(0.45, 0.6), text: pick(["UNTOUCHABLE!", "WIRE TO WIRE!", "NOBODY CLOSE!"]) });
     } else if (story == "photo") {
       rivals.slice(0, 3).forEach((jar) => {
         jar.final = randomBetween(0.955, 0.98);
@@ -1199,26 +1209,35 @@ var coinRainDraw = {
 
 /* ---------- 9. Russian roulette: the revolver goes round, the last one wins ---------- */
 
+/*
+ * The rules, as in the real game: one bullet in six chambers. The revolver
+ * goes round the table in seat order (clockwise) - every player pulls once,
+ * then hands it to the next one. Each pull turns the cylinder one chamber on:
+ * at most five empty clicks, the sixth is the bullet. Bang: that player is
+ * out, the revolver is loaded again (cylinder spun) and goes on with the next
+ * player. Nobody pulls twice in a row (except in the duel of the last two).
+ */
 var revolverDraw = {
   build(stage, winner) {
     var root = scene(stage, "revolver");
     root.replaceChildren();
     var table = el("div", "jp-table");
+    table.appendChild(el("div", "jp-table-ring"));
     var players = playersFor(8, winner);
     var seats = players.map((player, index) => {
-      // Around the table, the first player at the top
+      // Around the table, clockwise, the first player at the top
       var angle = (index / players.length) * Math.PI * 2;
       var seat = el("div", "jp-seat");
       seat.dataset.name = player.name;
       // A little lower, so the top seat stays free of the winner label
       seat.style.left = 50 + Math.sin(angle) * 40 + "%";
-      seat.style.top = 56 - Math.cos(angle) * 33 + "%";
+      seat.style.top = 52 - Math.cos(angle) * 30 + "%"; // (the name under the lowest seat stays on the stage)
       seat.style.setProperty("--share", shareColor(player.name));
       seat.append(createAvatar(player.name), el("span", "jp-seat-name", player.name));
       table.appendChild(seat);
       return seat;
     });
-    // The gun: a barrel and a cylinder with six chambers (one bullet per shot)
+    // The gun: a barrel and a cylinder with six chambers (which one has the bullet: nobody knows)
     var gun = el("div", "jp-gun");
     var barrel = el("div", "jp-barrel");
     var cylinder = el("div", "jp-cylinder");
@@ -1229,9 +1248,11 @@ var revolverDraw = {
     }
     gun.append(barrel, cylinder);
     table.appendChild(gun);
+    // The odds of the next pull
+    var odds = el("div", "jp-odds", "1 in 6");
+    table.appendChild(odds);
     root.appendChild(table);
-    if (players.length == 0) emptyNote(table, "The players take their seats with the first coins.");
-    return { root: root, table: table, seats: seats, gun: gun, cylinder: cylinder, aim: 0, spin: 0 };
+    return { root: root, table: table, seats: seats, gun: gun, cylinder: cylinder, odds: odds, aim: 0, spin: 0 };
   },
 
   idle(stage) {
@@ -1247,41 +1268,47 @@ var revolverDraw = {
     return (Math.atan2(dx, -dy) * 180) / Math.PI;
   },
 
-  // Turns the gun (always clockwise, at least `extra` more turns) to a seat
+  // Turns the gun to a seat - always clockwise (the way it is passed on), `extra` more full turns
   aimAt(parts, seat, time, extra) {
     var target = this.angleTo(parts, seat);
-    var turn = (((target - parts.aim) % 360) + 360) % 360 + 360 * (extra || 0);
-    if (turn < 20) turn += 360;
+    var turn = ((((target - parts.aim) % 360) + 360) % 360) + 360 * (extra || 0);
     parts.aim += turn;
-    return animate(parts.gun, [{ transform: `translate(-50%, -50%) rotate(${parts.aim}deg)` }], { duration: time, easing: SLOW_END });
+    return animate(parts.gun, [{ transform: `translate(-50%, -50%) rotate(${parts.aim}deg)` }], { duration: time, easing: "cubic-bezier(0.45, 0, 0.25, 1)" });
   },
 
-  // The order of the shots: the losers go out one after the other (small shares
-  // first, with luck), with empty clicks in between, the final duel is long
+  /*
+   * Every pull, in order: {seat, bang, chamber (0-5: how many clicks before
+   * in this cylinder), reload (a new cylinder before this pull), duel}.
+   * The bullet always lands on a loser - the winner (fixed by the server)
+   * only ever hears clicks. Not too many clicks, so it fits the draw time.
+   */
   plan(seats, winner) {
-    var losers = seats
-      .filter((seat) => seat != winner)
-      .map((seat) => {
-        var entry = state.entries.find((e) => e.name == seat.dataset.name);
-        return { seat: seat, order: (entry ? entry.coins / state.total : 0) + Math.random() * 1.2 };
-      })
-      .sort((a, b) => a.order - b.order)
-      .map((item) => item.seat);
+    var alive = seats.slice();
+    var turn = Math.floor(Math.random() * alive.length);
+    var budget = Math.max(5, 17 - alive.length); // empty clicks in the whole draw
     var shots = [];
-    var nerves = randomBetween(0.3, 0.8); // how many empty clicks this time
-    losers.forEach((loser, index) => {
-      var alive = [winner].concat(losers.slice(index));
-      if (index == losers.length - 1) {
-        // Final duel: click, click, click ... bang
-        var clicks = 1 + Math.floor(Math.random() * 5);
-        var first = Math.random() < 0.5 ? 0 : 1;
-        for (var i = 0; i < clicks; i++) shots.push({ seat: [winner, loser][(first + i) % 2], bang: false, duel: true });
-        shots.push({ seat: loser, bang: true, duel: true });
-      } else {
-        while (Math.random() < nerves && shots.length < 14) shots.push({ seat: alive[Math.floor(Math.random() * alive.length)], bang: false });
-        shots.push({ seat: loser, bang: true });
+    var reload = true;
+    while (alive.length > 1) {
+      var duel = alive.length == 2;
+      var left = alive.length - 1; // bangs still to come
+      // Clicks this cylinder may have: the duel can use all (up to 5), the others share the rest
+      var most = duel ? Math.min(5, Math.max(1, budget)) : Math.min(5, Math.max(0, Math.floor((budget - 2) / left) * 2));
+      var options = [];
+      for (var k = 0; k <= most; k++) if (alive[(turn + k) % alive.length] != winner) options.push(k);
+      // The winner holds it and no clicks are left: one click, then the next one
+      if (options.length == 0) options.push(1);
+      // In the duel: rather a long one
+      var clicks = duel && options.length > 1 && Math.random() < 0.7 ? options[options.length - 1 - Math.floor(Math.random() * 2)] : pick(options);
+      for (var j = 0; j <= clicks; j++) {
+        shots.push({ seat: alive[(turn + j) % alive.length], bang: j == clicks, chamber: j, reload: reload && j == 0, duel: duel });
       }
-    });
+      budget -= clicks;
+      reload = true;
+      var out = (turn + clicks) % alive.length;
+      alive.splice(out, 1);
+      // The next player after the one who is out
+      turn = out % alive.length;
+    }
     return shots;
   },
 
@@ -1292,36 +1319,52 @@ var revolverDraw = {
     var shots = this.plan(parts.seats, winner);
 
     if (short) {
-      shots.filter((shot) => shot.bang).forEach((shot) => shot.seat.classList.add("out"));
+      shots.filter((shot) => shot.bang).forEach((shot) => this.out(shot.seat));
       return this.survive(parts, winner, draw, true);
     }
 
-    // The first spin is wild, every shot takes a little longer than the last
-    var weights = shots.map((shot, i) => (i == 0 ? randomBetween(1.6, 2.8) : 1 + i * 0.35) * (shot.duel ? 1.5 : 1) * randomBetween(0.7, 1.3));
+    // A reload (spinning the cylinder) takes longer, the duel is slow, the last pull the slowest
+    var weights = shots.map((shot, i) => (shot.reload ? 1.7 : 1) * (shot.duel ? 1.35 : 1) * (i == shots.length - 1 ? 1.4 : 1));
     var sum = weights.reduce((a, b) => a + b, 0);
-    var playTime = duration - 600;
+    var playTime = duration - 700;
     var duelShouted = false;
+    var holder = null;
     for (var i = 0; i < shots.length; i++) {
       var shot = shots[i];
       var time = (weights[i] / sum) * playTime;
       if (shot.duel && !duelShouted) {
         duelShouted = true;
-        shout(parts.root, pick(["FINAL DUEL", "ONE OF YOU...", "LAST TWO"]), "small");
+        shout(parts.root, pick(["FINAL DUEL", "LAST TWO"]), "small");
       }
-      // Spin the cylinder, aim, wait (the target trembles), pull
-      parts.spin += 60 * (i == 0 ? 5 + Math.floor(Math.random() * 6) : 1 + Math.floor(Math.random() * 3));
-      animate(parts.cylinder, [{ transform: `translate(-50%, -50%) rotate(${parts.spin}deg)` }], { duration: time * 0.55, easing: SLOW_END });
-      // Aim and hold: sometimes a long, nervous hold
-      var aim = randomBetween(0.4, 0.65);
-      await this.aimAt(parts, shot.seat, time * aim, i == 0 ? Math.round(randomBetween(1, 3)) : 0);
-      shot.seat.classList.add("aimed");
-      await wait(time * (1 - aim));
+      // A new cylinder: loaded and spun (it slows down by itself), the odds start at 1 in 6
+      if (shot.reload) {
+        parts.spin += 360 * (2 + Math.floor(Math.random() * 2)) + 60 * Math.floor(Math.random() * 6);
+        animate(parts.cylinder, [{ transform: `translate(-50%, -50%) rotate(${parts.spin}deg)` }], { duration: time * 0.45, easing: "cubic-bezier(0.33, 0.66, 0.66, 1)" });
+      }
+      this.setOdds(parts, shot.chamber);
+      // Passed on to the next player (clockwise)
+      if (holder) holder.classList.remove("holding");
+      holder = shot.seat;
+      await this.aimAt(parts, shot.seat, time * (shot.reload ? 0.45 : 0.3), i == 0 ? 1 : 0);
+      shot.seat.classList.add("holding", "aimed");
+      // The nervous moment before the pull
+      await wait(time * (shot.reload ? 0.35 : 0.45));
       shot.seat.classList.remove("aimed");
+      // The hammer turns the cylinder one chamber on
+      parts.spin += 60;
+      animate(parts.cylinder, [{ transform: `translate(-50%, -50%) rotate(${parts.spin}deg)` }], { duration: 90, easing: "ease-out" });
       if (shot.bang) this.bang(parts, shot.seat);
       else this.click(parts, shot.seat);
+      await wait(time * (shot.reload ? 0.2 : 0.25));
     }
+    if (holder) holder.classList.remove("holding");
     await wait(450);
     this.survive(parts, winner, draw, false);
+  },
+
+  setOdds(parts, chamber) {
+    parts.odds.innerText = chamber >= 5 ? "the last chamber" : "1 in " + (6 - chamber);
+    parts.odds.classList.toggle("hot", chamber >= 3);
   },
 
   // Empty chamber: a small "click" and a sigh of relief
@@ -1348,22 +1391,624 @@ var revolverDraw = {
     var flash = el("div", "jp-flash");
     parts.root.appendChild(flash);
     animate(flash, [{ opacity: 0.45 }, { opacity: 0 }], { duration: 250 }).then(() => flash.remove());
+    // The recoil: the gun kicks, the table shakes
+    animate(parts.gun, [{ translate: "0 0" }, { translate: "0 7px" }, { translate: "0 0" }], { duration: 220, fill: "none" });
     animate(parts.root, [{ transform: "translate(-5px, 2px)" }, { transform: "translate(5px, -2px)" }, { transform: "translate(0, 0)" }], {
       duration: 200,
       fill: "none",
     });
+    this.out(seat);
+  },
+
+  out(seat) {
+    seat.classList.remove("holding");
     seat.classList.add("out");
-    var mark = el("span", "jp-seat-x", "✖");
-    seat.appendChild(mark);
+    seat.appendChild(el("span", "jp-seat-x", "✖"));
   },
 
   survive(parts, winner, draw, short) {
     winner.classList.add("champion");
+    parts.odds.hidden = true;
     if (!short) {
-      this.aimAt(parts, winner, 900, 1);
+      // The revolver goes to the survivor one last time - to keep
+      this.aimAt(parts, winner, 700, 0);
       shout(parts.root, pick(["SURVIVED!", "STILL STANDING!", "LUCKY ONE!"]), "strike");
       confetti(parts.root);
     }
+    winnerLabel(parts.root, draw);
+  },
+};
+
+/* ---------- Helpers of the newer draws ---------- */
+
+// A random player, as likely as their share of the pot
+function weightedName() {
+  var bets = drawBets();
+  if (bets.length == 0) return state.entries.length ? state.entries[0].name : "";
+  var ticket = Math.random() * state.total;
+  return (bets.find((bet) => bet.to > ticket) || bets[bets.length - 1]).name;
+}
+
+function shuffled(list) {
+  var copy = list.slice();
+  for (var i = copy.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = copy[i];
+    copy[i] = copy[j];
+    copy[j] = t;
+  }
+  return copy;
+}
+
+/* ---------- 10. Slot machine: three of a kind ---------- */
+
+var slotsDraw = {
+  build(stage) {
+    var root = scene(stage, "slots");
+    root.replaceChildren();
+    var machine = el("div", "jp-slotm");
+    var top = el("div", "jp-slots-top");
+    top.append(el("span", "jp-slots-title", "Jackpot"), el("span", "jp-slots-sub", "3 in a row wins"));
+    var window_ = el("div", "jp-slots-window");
+    var reels = [0, 1, 2].map(() => {
+      var reel = el("div", "jp-reel");
+      var track = el("div", "jp-reel-track");
+      reel.appendChild(track);
+      window_.appendChild(reel);
+      return { reel: reel, track: track };
+    });
+    // The win line through the middle, marked on both sides
+    window_.append(el("div", "jp-slots-line"), el("span", "jp-slots-arrow left"), el("span", "jp-slots-arrow right"));
+    var lever = el("div", "jp-slots-lever");
+    lever.appendChild(el("span", "jp-slots-knob"));
+    machine.append(top, window_, lever);
+    root.appendChild(machine);
+    return { root: root, machine: machine, reels: reels, lever: lever };
+  },
+
+  tile(name) {
+    var tile = el("div", "jp-reel-tile");
+    tile.dataset.name = name;
+    tile.style.setProperty("--share", shareColor(name));
+    tile.appendChild(createAvatar(name));
+    return tile;
+  },
+
+  // A reel with these names; `center` is the one on the line
+  show(reel, names, center) {
+    reel.track.replaceChildren(...names.map((name) => this.tile(name)));
+    var height = reel.track.firstElementChild.offsetHeight;
+    reel.track.style.transform = `translateY(${height * (1 - center)}px)`;
+    return height;
+  },
+
+  idle(stage) {
+    // The same players in the same phase: the reels keep turning (no restart on every update)
+    var key = state.phase + "|" + state.entries.map((entry) => entry.name).join(",");
+    var current = stage.firstElementChild;
+    if (current && current.dataset.scene == "slots" && current.dataset.key == key) return;
+    var parts = this.build(stage);
+    parts.root.dataset.key = key;
+    if (state.entries.length == 0) {
+      parts.reels.forEach((reel) => reel.track.replaceChildren());
+      return;
+    }
+    var names = state.entries.map((entry) => entry.name);
+    if (state.phase == "countdown") return this.warmUp(parts, names);
+    parts.reels.forEach((reel, i) => this.show(reel, [0, 1, 2].map((n) => names[(n + i) % names.length]), 1));
+  },
+
+  // The countdown runs: the reels already turn, slowly and endlessly
+  warmUp(parts, names) {
+    parts.reels.forEach((reel, i) => {
+      // One round of faces (each player as often as their share), twice - so the loop has no jump
+      var round = [];
+      for (var n = 0; n < 10; n++) round.push(names[(n * 7 + i * 3) % names.length]);
+      state.entries.forEach((entry) => {
+        if (entry.coins / state.total > 0.3) round.push(entry.name);
+      });
+      var height = this.show(reel, round.concat(round), 1);
+      var from = 0;
+      var to = -height * round.length;
+      reel.track.animate([{ transform: `translateY(${from}px)` }, { transform: `translateY(${to}px)` }], {
+        // Slow: about one face per second, each reel a bit different
+        duration: round.length * (850 + i * 180),
+        iterations: Infinity,
+        easing: "linear",
+      });
+      reel.reel.classList.add("warming");
+    });
+  },
+
+  pull(parts) {
+    animate(parts.lever, [{ transform: "rotate(0deg)" }, { transform: "rotate(38deg)", offset: 0.35 }, { transform: "rotate(0deg)" }], {
+      duration: 700,
+      easing: "ease-in-out",
+      fill: "none",
+    });
+  },
+
+  // One spin: every reel stops on its name of `finals`, from left to right
+  async spin(parts, finals, time, tease) {
+    var spins = parts.reels.map((reel, i) => {
+      var count = Math.round(randomBetween(26, 34) + i * 10 + (tease && i == 2 ? 10 : 0));
+      var names = [];
+      for (var n = 0; n < count; n++) names.push(weightedName());
+      var target = count - 2;
+      names[target] = finals[i];
+      // The faces next to the line: the last ones of the old reel
+      var height = this.show(reel, names, 1);
+      var from = 0;
+      var to = height * (1 - target);
+      var reelTime = time * (i == 2 ? 1 : 0.5 + i * 0.22);
+      var frames = (i == 2 && tease ? spinEnding(from, to, height) : [{ value: from, offset: 0, easing: SLOW_END }, { value: to, offset: 1 }]).map((f) => ({
+        transform: `translateY(${f.value}px)`,
+        offset: f.offset,
+        easing: f.easing,
+      }));
+      reel.reel.classList.add("spinning");
+      return animate(reel.track, frames, { duration: reelTime }).then(() => {
+        reel.reel.classList.remove("spinning");
+        reel.track.style.transform = `translateY(${to}px)`;
+        reel.track.getAnimations().forEach((a) => a.cancel());
+        var landed = reel.track.children[target];
+        landed.classList.add("landed");
+        return landed;
+      });
+    });
+    return Promise.all(spins);
+  },
+
+  async play(stage, draw, duration, short) {
+    var parts = this.build(stage);
+    parts.root.dataset.key = "";
+    var winner = draw.winner;
+    if (short) {
+      var names = state.entries.map((entry) => entry.name);
+      parts.reels.forEach((reel) => this.show(reel, [pick(names), winner, pick(names)], 1).toString());
+      parts.reels.forEach((reel) => reel.track.children[1].classList.add("win"));
+      return winnerLabel(parts.root, draw);
+    }
+    var others = state.entries.map((entry) => entry.name).filter((name) => name != winner);
+    var rival = others.length ? pick(others) : winner;
+    var story = pick(["tease", "tease", "respin", "straight"]);
+    var time = duration - 700;
+
+    if (story == "respin" && rival != winner) {
+      // First pull: so close - two of a kind, the third one doesn't fit
+      this.pull(parts);
+      var first = time * 0.38;
+      await this.spin(parts, [rival, rival, winner], first, false);
+      shout(parts.root, pick(["SO CLOSE!", "ALMOST!", "NOT YET..."]), "small");
+      await wait(700);
+      time = time - first - 700;
+    }
+    this.pull(parts);
+    // Two in a row: the last reel takes its time
+    if (story != "straight") setTimeout(() => shout(parts.root, pick(["TWO IN A ROW...", "ONE MORE...", "COME ON..."]), "small"), time * 0.78);
+    var landed = await this.spin(parts, [winner, winner, winner], time, story != "straight");
+    landed.forEach((tile) => tile.classList.add("win"));
+    parts.machine.classList.add("jackpot");
+    shout(parts.root, pick(["JACKPOT!", "777!", "THREE OF A KIND!"]), "strike");
+    confetti(parts.root);
+    winnerLabel(parts.root, draw);
+  },
+};
+
+/* ---------- 11. Space launch: only one rocket reaches orbit ---------- */
+
+var launchDraw = {
+  build(stage, winner) {
+    var root = scene(stage, "launch");
+    root.replaceChildren();
+    var sky = el("div", "jp-launch");
+    for (var i = 0; i < 28; i++) {
+      var star = el("i", "jp-star");
+      star.style.left = randomBetween(0, 100) + "%";
+      star.style.top = randomBetween(0, 70) + "%";
+      star.style.animationDelay = randomBetween(0, 3) + "s";
+      sky.appendChild(star);
+    }
+    sky.appendChild(el("div", "jp-orbit", "ORBIT"));
+    var players = playersFor(6, winner);
+    var rockets = players.map((player) => {
+      var lane = el("div", "jp-launch-lane");
+      var rocket = el("div", "jp-rocket");
+      rocket.dataset.name = player.name;
+      rocket.style.setProperty("--share", shareColor(player.name));
+      var ship = el("span", "jp-rocket-ship", "🚀");
+      rocket.append(el("span", "jp-rocket-flame"), ship, createAvatar(player.name, "sm"));
+      lane.append(rocket, el("span", "jp-launch-pad", Math.round((player.coins / state.total) * 100) + "%"));
+      sky.appendChild(lane);
+      return rocket;
+    });
+    root.appendChild(sky);
+    return { root: root, sky: sky, rockets: rockets };
+  },
+
+  idle(stage) {
+    this.build(stage);
+  },
+
+  // Height a rocket can fly (to the orbit line)
+  // How far up a rocket flies to the orbit: its tip just through the orbit line
+  ceiling(parts, rocket) {
+    var line = parts.sky.querySelector(".jp-orbit").offsetTop;
+    return Math.max(0, rocket.offsetTop - line + 10);
+  },
+
+  async play(stage, draw, duration, short) {
+    var parts = this.build(stage, draw.winner);
+    var winner = parts.rockets.find((rocket) => rocket.dataset.name == draw.winner);
+    if (winner == null) return winnerLabel(parts.root, draw);
+    var losers = parts.rockets.filter((rocket) => rocket != winner);
+    if (short) {
+      losers.forEach((rocket) => rocket.classList.add("lost"));
+      winner.classList.add("orbit");
+      winner.style.transform = `translateY(${-this.ceiling(parts, winner)}px)`;
+      return winnerLabel(parts.root, draw);
+    }
+
+    // 3, 2, 1 ...
+    var count = 0;
+    for (var n of ["3", "2", "1"]) {
+      shout(parts.root, n, "small");
+      await wait(380);
+      count += 380;
+    }
+    shout(parts.root, "LIFTOFF!", "small");
+    parts.sky.classList.add("flying");
+    var flight = duration - count - 600;
+
+    // When which rocket fails: spread over the flight, the last one just before the orbit
+    var story = pick(["close", "close", "chaos", "fizzle"]);
+    var order = shuffled(losers);
+    var fails = order.map((_, i) => {
+      if (story == "chaos" && i < order.length - 1) return randomBetween(0.12, 0.45);
+      return 0.2 + (0.7 * (i + 1)) / order.length + randomBetween(-0.05, 0.03);
+    });
+    if (order.length) fails[fails.length - 1] = story == "close" ? randomBetween(0.86, 0.93) : Math.max(fails[fails.length - 1], 0.7);
+
+    var flights = parts.rockets.map((rocket) => {
+      rocket.classList.add("burning");
+      var top = this.ceiling(parts, rocket);
+      // Random thrust in every part: they overtake each other
+      var speeds = [];
+      for (var i = 0; i < 6; i++) speeds.push(randomBetween(0.6, 1.5));
+      // Only the winner reaches the orbit - the others never get near the line
+      var reach = rocket == winner ? 1 : rocket == order[order.length - 1] && story == "close" ? randomBetween(0.68, 0.76) : randomBetween(0.4, 0.72);
+      if (rocket == order[order.length - 1] && story == "close") speeds = speeds.map((v, i) => v * (1.5 - i * 0.12));
+      var sum = speeds.reduce((a, b) => a + b, 0);
+      var height = 0;
+      var frames = [{ transform: "translateY(0px)", offset: 0 }];
+      speeds.forEach((speed, i) => {
+        height += (speed / sum) * reach;
+        frames.push({ transform: `translateY(${-Math.min(1, height) * top}px)`, offset: (i + 1) / speeds.length });
+      });
+      return rocket.animate(frames, { duration: flight, easing: "cubic-bezier(0.45, 0.05, 0.55, 0.95)", fill: "forwards" });
+    });
+
+    order.forEach((rocket, i) => {
+      setTimeout(() => {
+        var flightAnimation = flights[parts.rockets.indexOf(rocket)];
+        flightAnimation.pause();
+        var fizzle = story == "fizzle" && i % 2 == 0;
+        this.fail(parts, rocket, fizzle);
+        if (i == order.length - 1 && story == "close") shout(parts.root, pick(["SO CLOSE!", "HOUSTON...", "NOOO!"]), "small");
+      }, flight * fails[i]);
+    });
+    if (story == "chaos") setTimeout(() => shout(parts.root, pick(["MAYDAY!", "CHAOS!"]), "small"), flight * 0.3);
+
+    await flights[parts.rockets.indexOf(winner)].finished.catch(() => {});
+    winner.classList.remove("burning");
+    winner.classList.add("orbit");
+    shout(parts.root, pick(["ORBIT!", "TO THE MOON!", "WE HAVE LIFTOFF!"]), "strike");
+    confetti(parts.root);
+    winnerLabel(parts.root, draw);
+  },
+
+  // A rocket fails: it explodes, or the engine dies and it falls back
+  fail(parts, rocket, fizzle) {
+    rocket.classList.remove("burning");
+    if (fizzle) {
+      var now = new DOMMatrixReadOnly(getComputedStyle(rocket).transform).m42;
+      rocket.getAnimations().forEach((a) => a.cancel());
+      rocket.style.transform = `translateY(${now}px)`;
+      animate(rocket, [{ transform: `translateY(${now}px) rotate(0deg)` }, { transform: "translateY(0px) rotate(160deg)", opacity: 0.35 }], {
+        duration: 1200,
+        easing: "cubic-bezier(0.5, 0, 1, 1)",
+      }).then(() => rocket.classList.add("lost"));
+      return;
+    }
+    var boom = el("span", "jp-boom", "💥");
+    rocket.appendChild(boom);
+    animate(boom, [{ transform: "translate(-50%, -50%) scale(0.3)", opacity: 1 }, { transform: "translate(-50%, -50%) scale(2)", opacity: 0 }], { duration: 700 }).then(() =>
+      boom.remove(),
+    );
+    animate(parts.root, [{ transform: "translate(-4px, 2px)" }, { transform: "translate(4px, -2px)" }, { transform: "translate(0, 0)" }], { duration: 180, fill: "none" });
+    rocket.classList.add("lost");
+  },
+};
+
+/* ---------- 12. Scratch card: the first to match three wins ---------- */
+
+var scratchDraw = {
+  build(stage) {
+    var root = scene(stage, "scratch");
+    root.replaceChildren();
+    var card = el("div", "jp-scratch");
+    var head = el("div", "jp-scratch-head");
+    head.append(el("span", "", "🍀 LUCKY CARD"), el("span", "jp-scratch-rule", "Match 3 to win"));
+    var grid = el("div", "jp-scratch-grid");
+    var fields = [];
+    for (var i = 0; i < 9; i++) {
+      var field = el("div", "jp-scratch-field");
+      var foil = el("div", "jp-scratch-foil");
+      foil.appendChild(el("span", "", "?"));
+      field.appendChild(foil);
+      grid.appendChild(field);
+      fields.push(field);
+    }
+    var coin = el("span", "jp-scratch-coin", "🪙");
+    card.append(head, grid, coin);
+    root.appendChild(card);
+    return { root: root, card: card, fields: fields, coin: coin };
+  },
+
+  idle(stage) {
+    var parts = this.build(stage);
+  },
+
+  // What is under the fields, in the order they are scratched: the winner's
+  // third face comes last, nobody else gets more than two
+  plan(winner) {
+    var others = shuffled(state.entries.map((entry) => entry.name).filter((name) => name != winner));
+    var pool = [];
+    others.forEach((name) => pool.push(name, name));
+    var most = Math.min(6, pool.length);
+    var rivals = shuffled(pool).slice(0, Math.round(randomBetween(Math.min(3, most), most)));
+    var order = shuffled(rivals.concat([winner, winner]));
+    // A rival on two before the end: who gets the third one?
+    order.push(winner);
+    return order;
+  },
+
+  async scratch(parts, field, time) {
+    var foil = field.querySelector(".jp-scratch-foil");
+    var x = field.offsetLeft;
+    var y = field.offsetTop;
+    var w = field.offsetWidth;
+    var h = field.offsetHeight;
+    var coin = parts.coin;
+    coin.style.opacity = 1;
+    // Zig-zag over the field, the foil goes with it
+    animate(
+      coin,
+      [
+        { transform: `translate(${x}px, ${y}px)` },
+        { transform: `translate(${x + w * 0.8}px, ${y + h * 0.15}px)` },
+        { transform: `translate(${x}px, ${y + h * 0.45}px)` },
+        { transform: `translate(${x + w * 0.8}px, ${y + h * 0.6}px)` },
+        { transform: `translate(${x + w * 0.1}px, ${y + h * 0.8}px)` },
+      ],
+      { duration: time, easing: "linear" },
+    );
+    await animate(
+      foil,
+      [
+        { clipPath: "inset(0 0 0 0)", opacity: 1 },
+        { clipPath: "inset(30% 0 0 0)", opacity: 1, offset: 0.3 },
+        { clipPath: "inset(60% 0 0 0)", opacity: 0.9, offset: 0.65 },
+        { clipPath: "inset(100% 0 0 0)", opacity: 0.6 },
+      ],
+      { duration: time, easing: "linear" },
+    );
+    foil.remove();
+  },
+
+  async play(stage, draw, duration, short) {
+    var parts = this.build(stage);
+    var order = this.plan(draw.winner);
+    var cells = shuffled(parts.fields).slice(0, order.length);
+    cells.forEach((field, i) => {
+      var face = el("div", "jp-scratch-face");
+      face.style.setProperty("--share", shareColor(order[i]));
+      face.dataset.name = order[i];
+      face.append(createAvatar(order[i]));
+      field.insertBefore(face, field.firstChild);
+    });
+    var mark = () => cells.filter((field) => field.firstChild.dataset.name == draw.winner).forEach((field) => field.classList.add("match"));
+    if (short) {
+      cells.forEach((field) => field.querySelector(".jp-scratch-foil").remove());
+      mark();
+      return winnerLabel(parts.root, draw);
+    }
+    // Slower and slower, the last field very slowly
+    var weights = order.map((_, i) => (i == order.length - 1 ? 2.6 : 1 + i * 0.08));
+    var sum = weights.reduce((a, b) => a + b, 0);
+    var time = duration - 600;
+    var counts = {};
+    var tense = false;
+    for (var i = 0; i < order.length; i++) {
+      var name = order[i];
+      await this.scratch(parts, cells[i], ((weights[i] / sum) * time) * 0.82);
+      counts[name] = (counts[name] || 0) + 1;
+      if (counts[name] == 2) cells.filter((field, n) => n <= i && field.firstChild.dataset.name == name).forEach((field) => field.classList.add("two"));
+      // Two players on two: the next face decides
+      var onTwo = Object.keys(counts).filter((key) => counts[key] == 2).length;
+      if (!tense && onTwo >= 2 && i < order.length - 1) {
+        tense = true;
+        shout(parts.root, pick(["WHO GETS THREE?", "NECK AND NECK!"]), "small");
+      }
+      await wait(((weights[i] / sum) * time) * 0.18);
+    }
+    parts.coin.style.opacity = 0;
+    mark();
+    shout(parts.root, pick(["MATCH 3!", "WINNER!", "LUCKY!"]), "strike");
+    confetti(parts.root);
+    winnerLabel(parts.root, draw);
+  },
+};
+
+/* ---------- 13. Ghost hunt: lights out, the last one left wins ---------- */
+
+var ghostHuntDraw = {
+  build(stage, winner) {
+    var root = scene(stage, "ghosthunt");
+    root.replaceChildren();
+    var room = el("div", "jp-haunt");
+    var players = playersFor(8, winner);
+    var columns = Math.ceil(players.length / 2) || 1;
+    var hiders = players.map((player, index) => {
+      var hider = el("div", "jp-hider");
+      hider.dataset.name = player.name;
+      hider.style.setProperty("--share", shareColor(player.name));
+      // Two rows, a bit out of line (the same places while the pot doesn't change)
+      var column = Math.floor(index / 2);
+      var row = index % 2;
+      var jitter = ((index * 37) % 9) - 4;
+      hider.style.left = ((column + 0.5) / columns) * 84 + 8 + jitter * 0.6 + "%";
+      hider.style.top = (row ? 70 : 36) + jitter + "%";
+      hider.append(createAvatar(player.name), el("span", "jp-hider-name", player.name));
+      room.appendChild(hider);
+      return hider;
+    });
+    var light = el("div", "jp-flashlight");
+    room.appendChild(light);
+    root.appendChild(room);
+    return { root: root, room: room, hiders: hiders, light: light, x: room.clientWidth / 2, y: room.clientHeight / 2 };
+  },
+
+  idle(stage) {
+    var parts = this.build(stage);
+    parts.light.classList.add("wander");
+    this.place(parts, parts.x, parts.y);
+  },
+
+  place(parts, x, y) {
+    parts.x = x;
+    parts.y = y;
+    parts.light.style.transform = `translate(${x}px, ${y}px)`;
+  },
+
+  // The light moves to a point (over a curve, a bit nervous)
+  async move(parts, x, y, time) {
+    var from = { x: parts.x, y: parts.y };
+    var mid = { x: (from.x + x) / 2 + randomBetween(-60, 60), y: (from.y + y) / 2 + randomBetween(-40, 40) };
+    parts.x = x;
+    parts.y = y;
+    await animate(
+      parts.light,
+      [{ transform: `translate(${from.x}px, ${from.y}px)` }, { transform: `translate(${mid.x}px, ${mid.y}px)`, offset: 0.55 }, { transform: `translate(${x}px, ${y}px)` }],
+      { duration: time, easing: "ease-in-out" },
+    );
+    parts.light.style.transform = `translate(${x}px, ${y}px)`;
+    parts.light.getAnimations().forEach((a) => a.cancel());
+  },
+
+  at(hider) {
+    return { x: hider.offsetLeft, y: hider.offsetTop };
+  },
+
+  // A place in the room away from every player who is still there (null: none found)
+  emptySpot(parts) {
+    var width = parts.room.clientWidth;
+    var height = parts.room.clientHeight;
+    var players = parts.hiders.filter((hider) => !hider.classList.contains("taken")).map((hider) => this.at(hider));
+    for (var n = 0; n < 30; n++) {
+      var point = { x: randomBetween(0.08, 0.92) * width, y: randomBetween(0.12, 0.88) * height };
+      if (players.every((p) => Math.hypot(p.x - point.x, p.y - point.y) > 130)) return point;
+    }
+    return null;
+  },
+
+  take(parts, hider) {
+    var ghost = el("span", "jp-ghost", "👻");
+    ghost.style.left = hider.style.left;
+    ghost.style.top = hider.style.top;
+    parts.room.appendChild(ghost);
+    animate(ghost, [{ transform: "translate(-50%, -20%) scale(0.3)", opacity: 0 }, { transform: "translate(-50%, -90%) scale(1.3)", opacity: 1, offset: 0.4 }, { transform: "translate(-50%, -160%) scale(1)", opacity: 0 }], {
+      duration: 1100,
+      easing: "ease-out",
+    }).then(() => ghost.remove());
+    var boo = el("span", "jp-boo", "BOO!");
+    boo.style.left = hider.style.left;
+    boo.style.top = hider.style.top;
+    parts.room.appendChild(boo);
+    animate(boo, [{ transform: "translate(-50%, -50%) scale(0.5)", opacity: 1 }, { transform: "translate(-50%, -180%) scale(1.2)", opacity: 0 }], { duration: 900 }).then(() => boo.remove());
+    hider.classList.add("taken");
+    this.mark(parts, hider, 900);
+  },
+
+  // Where somebody was caught: a little 👻 stays and floats there, glowing in the dark
+  mark(parts, hider, after) {
+    var left = el("span", "jp-ghost-left", "👻");
+    left.style.left = hider.style.left;
+    left.style.top = hider.style.top;
+    left.style.animationDelay = (after || 0) + "ms";
+    left.title = hider.dataset.name + " was caught";
+    parts.room.appendChild(left);
+  },
+
+  async play(stage, draw, duration, short) {
+    var parts = this.build(stage, draw.winner);
+    var winner = parts.hiders.find((hider) => hider.dataset.name == draw.winner);
+    if (winner == null) return winnerLabel(parts.root, draw);
+    var losers = shuffled(parts.hiders.filter((hider) => hider != winner));
+    if (short) {
+      losers.forEach((hider) => hider.classList.add("taken"));
+      parts.room.classList.add("lit");
+      winner.classList.add("survivor");
+      return winnerLabel(parts.root, draw);
+    }
+    this.place(parts, parts.room.clientWidth / 2, -40);
+    shout(parts.root, pick(["LIGHTS OUT...", "WHO'S THERE?"]), "small");
+    var story = pick(["steady", "flicker", "flicker", "double"]);
+    var steps = losers.map((hider) => [hider]);
+    // Two at once: the ghost takes a pair
+    if (story == "double" && steps.length >= 3) {
+      var pair = steps.splice(1, 2);
+      steps.splice(1, 0, pair[0].concat(pair[1]));
+    }
+    var time = duration - 1300;
+    var weights = steps.map((_, i) => 1 + i * 0.25).concat([1.4]);
+    var sum = weights.reduce((a, b) => a + b, 0);
+    var flickerAt = story == "flicker" ? Math.floor(randomBetween(0, steps.length)) : -1;
+    for (var i = 0; i < steps.length; i++) {
+      var stepTime = (weights[i] / sum) * time;
+      var targets = steps[i];
+      // The light searches the room (where nobody is), then stops on the one the ghost takes -
+      // it never stops on a player who stays
+      var spot = this.at(targets[0]);
+      var search = this.emptySpot(parts);
+      if (search) await this.move(parts, search.x, search.y, stepTime * 0.3);
+      await this.move(parts, spot.x, spot.y, stepTime * 0.32);
+      if (i == flickerAt) {
+        // The light dies for a moment - and somebody is gone
+        parts.room.classList.add("blackout");
+        await wait(Math.min(700, stepTime * 0.25));
+        targets.forEach((hider) => {
+          hider.classList.add("taken");
+          this.mark(parts, hider, 0);
+        });
+        parts.room.classList.remove("blackout");
+        shout(parts.root, pick(["GONE!", "WHERE DID THEY GO?"]), "small");
+        await wait(stepTime * 0.1);
+      } else {
+        await wait(stepTime * 0.15);
+        targets.forEach((hider) => this.take(parts, hider));
+        if (targets.length > 1) shout(parts.root, "DOUBLE BOO!", "small");
+        await wait(stepTime * 0.2);
+      }
+    }
+    // The last one in the light - then the lights go on
+    var last = this.at(winner);
+    await this.move(parts, last.x, last.y, (weights[weights.length - 1] / sum) * time * 0.6);
+    await wait(300);
+    parts.room.classList.add("lit");
+    winner.classList.add("survivor");
+    shout(parts.root, pick(["SURVIVED!", "NOT AFRAID!", "LAST ONE STANDING!"]), "strike");
+    confetti(parts.root);
     winnerLabel(parts.root, draw);
   },
 };
@@ -1376,6 +2021,9 @@ var DRAWS = {
   wheel: wheelDraw,
   roulette: rouletteDraw,
   bowling: bowlingDraw,
-  plinko: plinkoDraw,
   race: raceDraw,
+  slots: slotsDraw,
+  launch: launchDraw,
+  scratch: scratchDraw,
+  ghosthunt: ghostHuntDraw,
 };

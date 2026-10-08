@@ -1,11 +1,14 @@
 const crypto = require("crypto");
 const config = require("../game/config");
 const coins = require("../game/coins");
+const inPlay = require("../game/in_play");
+const casinoLock = require("../game/casino_lock");
 const cases = require("../game/cases");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
 const notices = require("../game/notices");
 const persist = require("../game/persist");
+const live = require("../game/live");
 const safe = require("./safe_handler");
 const version = require("../game/version");
 
@@ -17,12 +20,21 @@ const PHASE = {
   CANCELLED: "cancelled",
 };
 const SIZES = [2, 3, 4];
+const MODES = ["classic", "crazy", "random", "jackpot", "bestof", "worstof"];
 const BOT_NAMES = ["Bot Pepe", "Bot Doge", "Bot Wojak"];
 
 /*
  * Hidden case battles (like on csgofast): 2-4 players pay the same cases, every
  * round all of them open the same case. Whoever has the most worth in items at
  * the end gets everything (crazy mode: the least). Paid out in coins.
+ * Jackpot: one of the players gets everything - drawn from the seed, the
+ * chance as big as the share of the pot the own items are worth. Best of:
+ * every case is a round, the best item wins it - the most rounds win (equal:
+ * the bigger total, still equal: split). Worst of: the same, but the least
+ * item wins the round (equal rounds: the smaller total).
+ * The mode: classic (most wins), crazy (least wins), jackpot, best of, worst of -
+ * or random: one of all the others, decided by the seed (provably fair) and
+ * shown only at the end.
  */
 module.exports = function (io) {
   const battles = io.of("/battles");
@@ -50,6 +62,41 @@ module.exports = function (io) {
     );
   }
 
+  // Best of: the rounds every seat won (the best item of a round - equal: all of them)
+  // (worst of: the least item wins the round)
+  function roundPoints(battle, rounds, least = false) {
+    const points = battle.seats.map(() => 0);
+    rounds.forEach((round, index) => {
+      const values = round.map((item) => cases.caseById(battle.cases[index]).items[item].value);
+      const best = least ? Math.min(...values) : Math.max(...values);
+      values.forEach((value, seat) => {
+        if (value === best) points[seat]++;
+      });
+    });
+    return points;
+  }
+
+  // Random: what the seed picks - every other mode
+  function randomOptions() {
+    return ["classic", "crazy", "jackpot", "bestof", "worstof"];
+  }
+
+  // Best of / worst of: the rounds won so far (null in the other modes)
+  function pointsNow(battle, rounds, rule) {
+    return rule === "bestof" || rule === "worstof" ? roundPoints(battle, rounds, rule === "worstof") : null;
+  }
+
+  // The rule that counts: the mode - or, in random, the one picked (battles from before: classic / crazy)
+  function ruleOf(battle) {
+    if (modeOf(battle) !== "random") return modeOf(battle);
+    return battle.picked || (battle.crazy ? "crazy" : "classic");
+  }
+
+  // classic | crazy | random | jackpot | bestof (battles from before there were modes: from crazy)
+  function modeOf(battle) {
+    return battle.mode || (battle.crazy ? "crazy" : "classic");
+  }
+
   function serialize(battle) {
     const done = battle.phase === PHASE.DONE;
     const rounds = battle.results.slice(0, battle.revealed);
@@ -57,7 +104,11 @@ module.exports = function (io) {
       id: battle.id,
       creator: battle.creator,
       size: battle.size,
-      crazy: battle.crazy,
+      mode: modeOf(battle),
+      // Random: which mode it is only comes out at the end
+      crazy: modeOf(battle) === "random" && !done ? null : battle.crazy,
+      // Random: the mode it picked - only at the end
+      picked: modeOf(battle) === "random" ? (done ? ruleOf(battle) : null) : null,
       cases: battle.cases,
       price: battle.price,
       seats: battle.seats,
@@ -65,8 +116,14 @@ module.exports = function (io) {
       revealed: battle.revealed,
       rounds: rounds, // [[item index per seat] per shown round]
       totals: totals(battle, rounds),
+      // Best of: the rounds won so far
+      points: pointsNow(battle, rounds, modeOf(battle) === "random" ? (done ? ruleOf(battle) : null) : modeOf(battle)),
+      // Jackpot: the drawn ticket (in coins of the pot) - after the end
+      ticket: done && ruleOf(battle) === "jackpot" ? battle.ticket : null,
       nextIn: battle.nextAt != null ? Math.max(0, battle.nextAt - Date.now()) : null,
-      winner: done ? battle.winner : null, // seat
+      winner: done ? battle.winner : null, // seat (the first one of a tie)
+      winners: done ? winnersOf(battle) : null, // seats - a tie: all of them, they split the pot
+      shares: done ? sharesOf(battle) : null, // what each of them gets
       payout: done ? battle.payout : null,
       // The seed is shown after the battle (provably fair)
       fair: done ? battle.fair : { hash: battle.fair.hash },
@@ -126,23 +183,45 @@ module.exports = function (io) {
     battle.results = battle.cases.map((id, round) =>
       battle.seats.map((_, seat) => cases.itemFor(cases.caseById(id), cases.roll(battle.fair.seed, `${battle.id}:${round}:${seat}`))),
     );
-    const all = totals(battle, battle.results);
-    const best = battle.crazy ? Math.min(...all) : Math.max(...all);
-    const tied = all.map((total, seat) => (total === best ? seat : -1)).filter((seat) => seat >= 0);
-    // A tie: the seed decides between them
-    battle.winner = tied[Math.floor(cases.roll(battle.fair.seed, `${battle.id}:tie`) * tied.length)];
-    battle.payout = all.reduce((sum, total) => sum + total, 0);
-
-    // Paid right away (nothing is lost if the page goes away during the show),
-    // the new balance is sent at the end so it doesn't spoil anything
-    const winner = battle.seats[battle.winner];
-    if (!winner.bot && battle.payout > 0) {
-      try {
-        await coins.add(winner.name, battle.payout, { quiet: true, reason: "battle win" });
-      } catch (error) {
-        console.error("[battles] Could not pay the winner:", error);
-      }
+    // Random: the seed decides the mode (and nobody sees it before the end)
+    if (modeOf(battle) === "random") {
+      const options = randomOptions(battle);
+      battle.picked = options[Math.floor(cases.roll(battle.fair.seed, `${battle.id}:mode`) * options.length)];
+      battle.crazy = battle.picked === "crazy";
     }
+    const all = totals(battle, battle.results);
+    let tied;
+    if (ruleOf(battle) === "jackpot") {
+      // A ticket in the pot: who's worth covers it, wins it all
+      battle.crazy = false;
+      const pot = all.reduce((sum, total) => sum + total, 0);
+      battle.ticket = cases.roll(battle.fair.seed, `${battle.id}:jackpot`) * pot;
+      let covered = 0;
+      const winner = all.findIndex((total) => (covered += total) > battle.ticket);
+      tied = [winner < 0 ? all.length - 1 : winner];
+    } else if (ruleOf(battle) === "bestof" || ruleOf(battle) === "worstof") {
+      // The most rounds - equal: the bigger total (worst of: the smaller) - still equal: all of them
+      const least = ruleOf(battle) === "worstof";
+      battle.crazy = false;
+      const points = roundPoints(battle, battle.results, least);
+      const most = Math.max(...points);
+      const leaders = points.map((p, seat) => (p === most ? seat : -1)).filter((seat) => seat >= 0);
+      const top = least ? Math.min(...leaders.map((seat) => all[seat])) : Math.max(...leaders.map((seat) => all[seat]));
+      tied = leaders.filter((seat) => all[seat] === top);
+    } else {
+      const best = battle.crazy ? Math.min(...all) : Math.max(...all);
+      tied = all.map((total, seat) => (total === best ? seat : -1)).filter((seat) => seat >= 0);
+    }
+    // A tie: every one of them wins - the pot is split (a coin left over goes to the first)
+    battle.winners = tied;
+    battle.winner = tied[0];
+    battle.payout = all.reduce((sum, total) => sum + total, 0);
+    battle.shares = tied.map((_, i) => Math.floor(battle.payout / tied.length) + (i < battle.payout % tied.length ? 1 : 0));
+
+    // The winner is paid when the battle is over (see finish) - not before:
+    // the coins can't be played elsewhere while the cases are still opened
+    battle.payAtEnd = true;
+    battle.paid = false;
 
     // A short countdown, then one round after the other
     battle.begin = Date.now() + config.BATTLE_START;
@@ -151,7 +230,7 @@ module.exports = function (io) {
     // Everybody in it hears it, on whatever casino page they are
     const players = battle.seats.map((seat) => seat.name);
     for (const seat of humans(battle)) {
-      notices.send(seat.name, "battleStarted", { id: battle.id, price: battle.price, cases: battle.cases.length, players: players, crazy: battle.crazy });
+      notices.send(seat.name, "battleStarted", { id: battle.id, price: battle.price, cases: battle.cases.length, players: players, crazy: modeOf(battle) === "random" ? null : battle.crazy, mode: modeOf(battle) });
     }
     scheduleReveal(battle);
   }
@@ -169,14 +248,54 @@ module.exports = function (io) {
     else battle.timer = setTimeout(() => finish(battle), battle.nextAt - Date.now());
   }
 
+  // Who won (a tie: all of them) and what each gets
+  function winnersOf(battle) {
+    return Array.isArray(battle.winners) ? battle.winners : [battle.winner];
+  }
+  function sharesOf(battle) {
+    return Array.isArray(battle.shares) ? battle.shares : [battle.payout];
+  }
+
+  // The pot goes to the winner(s) - once (battles from before payAtEnd were paid at the start)
+  async function payWinner(battle) {
+    if (!battle.payAtEnd || battle.paid || battle.payout <= 0) return;
+    battle.paid = true;
+    persist.changed("battles");
+    const shares = sharesOf(battle);
+    await Promise.all(
+      winnersOf(battle).map(async (seat, i) => {
+        const winner = battle.seats[seat];
+        // (a bot's share stays in the house)
+        if (winner.bot || shares[i] <= 0) return;
+        try {
+          await coins.add(winner.name, shares[i], { reason: "battle win", note: shares.length > 1 ? "split pot" : undefined });
+        } catch (error) {
+          console.error("[battles] Could not pay a winner:", error);
+        }
+      }),
+    );
+  }
+
   function finish(battle) {
     battle.phase = PHASE.DONE;
     battle.nextAt = null;
     battle.doneAt = Date.now();
-    const winner = battle.seats[battle.winner];
-    lobby.history.unshift({ id: battle.id, winner: winner.name, bot: winner.bot, total: battle.payout, price: battle.price });
-    lobby.history.length = Math.min(lobby.history.length, config.BATTLE_HISTORY);
-    if (!winner.bot) coins.notify(winner.name);
+    // Random: the pages show which mode it was first - then the coins come
+    // (jackpot: the roulette rolls on the pages first)
+    // (random -> jackpot: the roulette right after the reveal - without its own pause of 3 s)
+    const random = modeOf(battle) === "random";
+    const wait = (random ? config.BATTLE_MODE_REVEAL : 0) + (ruleOf(battle) === "jackpot" ? Math.max(0, config.BATTLE_JACKPOT_DRAW - (random ? 3000 : 0)) : 0);
+    // The last battles (with the winner) only when the pages showed it - not during a reveal
+    const done = () => {
+      payWinner(battle);
+      const winners = winnersOf(battle).map((seat) => battle.seats[seat]);
+      lobby.history.unshift({ id: battle.id, winner: winners[0].name, winners: winners.map((w) => w.name), bot: winners.every((w) => w.bot), total: battle.payout, price: battle.price });
+      lobby.history.length = Math.min(lobby.history.length, config.BATTLE_HISTORY);
+      if (wait > 0) emitList();
+    };
+    if (wait > 0) setTimeout(done, wait).unref();
+    else done();
+
     emitList();
     remove(battle, config.BATTLE_KEEP);
   }
@@ -215,6 +334,13 @@ module.exports = function (io) {
 
   /* ---------- Connection ---------- */
 
+  // The admin turned cases on or off: every open page gets the new list
+  require("../game/settings").changes.on("change", (values) => {
+    if ("BATTLE_CASES_OFF" in values) battles.emit("cases", cases.catalog());
+  });
+  // ... or changed, added, deleted one in the case editor
+  cases.changes.on("change", () => battles.emit("cases", cases.catalog()));
+
   battles.on("connection", (socket) => {
     version.announce(socket);
     const username = socket.data.username;
@@ -222,6 +348,7 @@ module.exports = function (io) {
     socket.join(ROOM);
     socket.emit("joined", { username: username });
     socket.emit("cases", cases.catalog());
+    socket.emit("battleRules", { maxCases: config.BATTLE_MAX_CASES, maxCost: config.BATTLE_MAX_COST });
     casinoChat.join(socket);
     emitList();
     sendCoins(username).catch((error) => console.error("[battles] Could not load coins:", error));
@@ -230,9 +357,21 @@ module.exports = function (io) {
       "createBattle",
       safe("createBattle", async (data) => {
         if (data == null || !Array.isArray(data.cases)) return;
+        if (casinoLock.locked()) return socket.emit("battleError", casinoLock.message());
         const ids = data.cases;
-        // Any number of cases (one round each)
+        // Up to BATTLE_MAX_CASES cases (one round each)
         if (ids.length < 1 || !ids.every((id) => cases.caseById(id))) return;
+        if (!ids.every((id) => cases.enabled(id))) return socket.emit("battleError", "One of these cases is not available anymore.");
+        if (ids.length > config.BATTLE_MAX_CASES) {
+          socket.emit("battleError", `At most ${config.BATTLE_MAX_CASES} cases per battle.`);
+          return;
+        }
+        // What one seat costs: all its cases together - at most BATTLE_MAX_COST
+        const cost = ids.reduce((sum, id) => sum + cases.caseById(id).price, 0);
+        if (cost > config.BATTLE_MAX_COST) {
+          socket.emit("battleError", `A battle costs at most 🪙 ${config.BATTLE_MAX_COST.toLocaleString("en-US")} per player.`);
+          return;
+        }
         if (!SIZES.includes(data.size)) return;
         const open = [...lobby.list.values()].filter((b) => b.creator === username && b.phase === PHASE.WAITING);
         if (open.length >= config.BATTLE_MAX_OPEN) {
@@ -243,7 +382,8 @@ module.exports = function (io) {
           id: newId(),
           creator: username,
           size: data.size,
-          crazy: data.crazy === true,
+          mode: MODES.includes(data.mode) ? data.mode : data.crazy === true ? "crazy" : "classic",
+          crazy: data.mode === "crazy" || (data.mode == null && data.crazy === true),
           cases: ids.slice(),
           price: ids.reduce((sum, id) => sum + cases.caseById(id).price, 0),
           seats: new Array(data.size).fill(null),
@@ -269,6 +409,7 @@ module.exports = function (io) {
       safe("joinBattle", async (id) => {
         const battle = lobby.list.get(id);
         if (battle == null || battle.phase !== PHASE.WAITING) return;
+        if (casinoLock.locked()) return socket.emit("battleError", casinoLock.message());
         if (battle.seats.some((seat) => seat && seat.name === username)) return;
         if (await sit(socket, battle, username)) startIfFull(battle);
       }),
@@ -280,6 +421,7 @@ module.exports = function (io) {
       safe("addBot", (id) => {
         const battle = lobby.list.get(id);
         if (battle == null || battle.phase !== PHASE.WAITING || battle.creator !== username) return;
+        if (casinoLock.locked()) return socket.emit("battleError", casinoLock.message());
         const seat = battle.seats.indexOf(null);
         if (seat < 0) return;
         const name = BOT_NAMES.find((bot) => !battle.seats.some((s) => s && s.name === bot));
@@ -302,7 +444,8 @@ module.exports = function (io) {
     socket.on(
       "claimBonus",
       safe("claimBonus", async () => {
-        if (await coins.claimBonus(username)) socket.emit("bonusClaimed", config.DAILY_BONUS);
+        const paid = await coins.claim(username);
+        if (paid) socket.emit("bonusClaimed", paid);
         await sendCoins(username);
       }),
     );
@@ -313,7 +456,16 @@ module.exports = function (io) {
     );
   });
 
+  live.register("battles", () => {
+    const list = [...lobby.list.values()];
+    const count = (phase) => list.filter((battle) => battle.phase === phase).length;
+    return { waiting: count(PHASE.WAITING), running: count(PHASE.RUNNING), pot: list.filter((b) => b.phase === PHASE.RUNNING).reduce((sum, b) => sum + b.price * b.size, 0) };
+  });
+
   /* ---------- Restart of the server ---------- */
+
+  // The case versions battles here still have (they can't be removed in the case editor)
+  cases.setUsedLookup(() => new Set([...lobby.list.values()].flatMap((battle) => battle.cases)));
 
   persist.register(
     "battles",
@@ -339,11 +491,27 @@ module.exports = function (io) {
         battle.nextAt += shift;
         scheduleReveal(battle);
       } else if (battle.phase === PHASE.DONE) {
+        payWinner(battle);
         remove(battle, Math.max(config.RESTORE_GRACE, (battle.doneAt || now) + config.BATTLE_KEEP - now));
       }
     }
     emitList();
   }
+
+  // Coins in play: a seat in a battle that is not over - or a win not paid yet
+  // Closing time before a season: open battles are cancelled (the coins back), running ones go on
+  casinoLock.changes.on("locked", () => {
+    for (const battle of [...lobby.list.values()]) if (battle.phase === PHASE.WAITING) cancel(battle);
+  });
+  casinoLock.registerRunning("battles", () => [...lobby.list.values()].some((b) => b.phase === PHASE.WAITING || b.phase === PHASE.RUNNING || (b.phase === PHASE.DONE && b.payAtEnd && !b.paid)));
+
+  inPlay.register("battles", (name) =>
+    [...lobby.list.values()].some((battle) => {
+      if (!battle.seats.some((seat) => seat && seat.name === name)) return false;
+      if (battle.phase === PHASE.WAITING || battle.phase === PHASE.RUNNING) return true;
+      return battle.phase === PHASE.DONE && battle.payAtEnd && !battle.paid && winnersOf(battle).some((seat) => battle.seats[seat].name === name);
+    }),
+  );
 
   return { lobby };
 };

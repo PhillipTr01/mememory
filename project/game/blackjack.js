@@ -75,4 +75,46 @@ function settle(hand, dealerCards) {
   return { result: "lose", payout: 0 };
 }
 
-module.exports = { newShoe, cardValue, handValue, isBlackjack, dealerHits, canSplit, settle, testing, DECKS };
+/*
+ * Side bets, decided by the first cards (each at most half the main bet):
+ *   Perfect Pairs: the player's first two cards are a pair -
+ *     mixed (other colour) 6:1, coloured (same colour) 12:1, perfect (same suit) 25:1
+ *   21+3: the player's two cards and the dealer's up card as a poker hand -
+ *     flush 5:1, straight 10:1, three of a kind 30:1, straight flush 40:1, suited trips 100:1
+ * {name, odds} of the win, or null. Payout: the side bet times (odds + 1).
+ */
+const SIDE_BETS = ["pairs", "plus3"];
+const red = (card) => card[1] === "h" || card[1] === "d";
+const RANKS = "A23456789TJQK";
+
+function perfectPairs(cards) {
+  const [a, b] = cards;
+  if (a[0] !== b[0]) return null;
+  if (a[1] === b[1]) return { name: "Perfect pair", odds: 25 };
+  if (red(a) === red(b)) return { name: "Coloured pair", odds: 12 };
+  return { name: "Mixed pair", odds: 6 };
+}
+
+function plus3(cards, up) {
+  const three = [cards[0], cards[1], up];
+  const flush = three.every((card) => card[1] === three[0][1]);
+  const trips = three.every((card) => card[0] === three[0][0]);
+  // A straight: three ranks in a row (the ace low or high: A23, QKA)
+  const ranks = three.map((card) => RANKS.indexOf(card[0])).sort((x, y) => x - y);
+  const inRow = (r) => r[1] === r[0] + 1 && r[2] === r[1] + 1;
+  const straight = inRow(ranks) || (ranks[0] === 0 && inRow([ranks[1], ranks[2], 13]));
+  if (trips && flush) return { name: "Suited trips", odds: 100 };
+  if (straight && flush) return { name: "Straight flush", odds: 40 };
+  if (trips) return { name: "Three of a kind", odds: 30 };
+  if (straight) return { name: "Straight", odds: 10 };
+  if (flush) return { name: "Flush", odds: 5 };
+  return null;
+}
+
+// What a side bet pays after the deal: {type, bet, name, payout} (payout 0: lost)
+function settleSide(type, bet, cards, up) {
+  const win = type === "pairs" ? perfectPairs(cards) : plus3(cards, up);
+  return { type: type, bet: bet, name: win ? win.name : null, payout: win ? bet * (win.odds + 1) : 0 };
+}
+
+module.exports = { newShoe, cardValue, handValue, isBlackjack, dealerHits, canSplit, settle, perfectPairs, plus3, settleSide, SIDE_BETS, testing, DECKS };

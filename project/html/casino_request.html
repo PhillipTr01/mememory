@@ -18,7 +18,7 @@
       <div class="cr-card">
         <span class="cr-icon" aria-hidden="true">🤫</span>
         <h1 class="nf-title">Psst... you found it.</h1>
-        <p class="nf-text">This place is invite only. Ask for access - as soon as you're let in, you start with <b id="crCoins" class="cr-coins">🪙 50,000</b>.</p>
+        <p class="nf-text">This place is invite only. Ask for access - as soon as you're let in, you start with <b id="crCoins" class="cr-coins">🪙 25,000</b>.</p>
 
         <!--- Not asked yet --->
         <div id="crAsk" class="cr-state" hidden>
@@ -52,10 +52,12 @@
           waiting.hidden = !state.requested;
         }
 
-        // The address next to this page (the secret one is in no file)
+        // The address of the casino (the secret one is in no file): the first part of this page's address -
+        // the page can be shown on any address of the casino
+        var base = "/" + location.pathname.split("/")[1] + "/";
         async function load() {
           try {
-            var res = await fetch("request", { cache: "no-store" });
+            var res = await fetch(base + "request", { cache: "no-store" });
             if (res.ok) show(await res.json());
           } catch (e) {
             // offline for a moment: the next try
@@ -66,7 +68,7 @@
           button.disabled = true;
           error.hidden = true;
           try {
-            var res = await fetch("request", { method: "POST" });
+            var res = await fetch(base + "request", { method: "POST" });
             if (!res.ok) throw new Error();
             await load();
           } catch (e) {

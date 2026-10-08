@@ -23,12 +23,14 @@ test("powerups: strong power-ups are rarer, but every power-up comes", () => {
     const id = powerups.randomPowerup();
     counts[id] = (counts[id] || 0) + 1;
   }
-  for (const id of powerups.IDS) assert.ok(counts[id] > 500, `${id} comes regularly`);
+  // (the legendary ones - Steal - much less often)
+  for (const id of powerups.IDS) assert.ok(counts[id] > (powerups.POWERUPS[id].rarity === "legendary" ? 150 : 500), `${id} comes regularly`);
   const share = (rarity) =>
     powerups.IDS.filter((id) => powerups.POWERUPS[id].rarity === rarity).reduce((sum, id) => sum + counts[id], 0) /
     powerups.IDS.filter((id) => powerups.POWERUPS[id].rarity === rarity).length;
   assert.ok(share("common") > share("uncommon"));
   assert.ok(share("uncommon") > share("rare"));
+  assert.ok(share("rare") > share("legendary"));
 });
 
 test("powerups: a power-up gets rarer for a player every time they got it", () => {
@@ -243,7 +245,7 @@ test("powerups game: skip lets the opponent sit out, a shield blocks it", async 
   const [a, b] = wrongPair(room);
   current.emit("openCard", a);
   current.emit("openCard", b);
-  await h.once(current, "activateEndTurn");
+  await waitFor(current, "roomState", (s) => s.checkingCards);
   const next = waitFor(current, "roomState", (s) => !s.players.find((p) => p.name === otherName).skipNext);
   current.emit("endTurn");
   const state = await next;
@@ -293,7 +295,7 @@ test("powerups game: unlucky bonus after five turns without a pair", async () =>
   const [a, b] = wrongPair(room);
   current.emit("openCard", a);
   current.emit("openCard", b);
-  await h.once(current, "activateEndTurn");
+  await waitFor(current, "roomState", (s) => s.checkingCards);
   const bonus = waitFor(current, "chatMessage", (m) => /bad luck/.test(m.text));
   current.emit("endTurn");
   await bonus;
@@ -317,6 +319,7 @@ test("powerups game: second chance and extra turn", async () => {
 
   // Extra turn (next turn, after the cards are closed)
   room.turnPowerUsed = false;
+  room.turnBegun = false;
   room.openedCards = [];
   me.powerups = ["extraTurn"];
   current.emit("usePowerup", { id: "extraTurn" });
@@ -325,7 +328,7 @@ test("powerups game: second chance and extra turn", async () => {
   const [c, d] = wrongPair(room);
   current.emit("openCard", c);
   current.emit("openCard", d);
-  await h.once(current, "activateEndTurn");
+  await waitFor(current, "roomState", (s) => s.checkingCards);
   const kept = waitFor(current, "chatMessage", (m) => /extra turn/.test(m.text));
   current.emit("endTurn");
   await kept;
@@ -413,7 +416,7 @@ test("powerups game: triple flip - a pair among three cards counts, the third cl
   const [d, e] = wrongPair(room);
   current.emit("openCard", d);
   current.emit("openCard", e);
-  await h.once(current, "activateEndTurn");
+  await waitFor(current, "roomState", (s) => s.checkingCards);
 });
 
 test("powerups game: double or nothing", async () => {
@@ -434,7 +437,7 @@ test("powerups game: double or nothing", async () => {
   const [b, c] = wrongPair(room);
   current.emit("openCard", b);
   current.emit("openCard", c);
-  await h.once(current, "activateEndTurn");
+  await waitFor(current, "roomState", (s) => s.checkingCards);
   assert.strictEqual(me.points, -1);
 });
 
@@ -473,4 +476,72 @@ test("powerups game: row shift moves the closed cards of the row", async () => {
   assert.strictEqual((await changed).type, "rowShift");
   assert.deepStrictEqual(room.cardImages.slice(0, 11), [images[10], ...images.slice(0, 10)]);
   assertConsistent(room);
+});
+
+test("powerups game: the turn ends by itself after a wrong pair; power-ups only before the first card", async () => {
+  const { room, current, currentName } = await powerupGame();
+  const me = room.players.find((p) => p.name === currentName);
+  me.powerups = ["shield"];
+  const [a, b] = wrongPair(room);
+  current.emit("openCard", a);
+  await waitFor(current, "roomState", (s) => s.turnBegun);
+  // The turn has begun: no power-up anymore
+  current.emit("usePowerup", { id: "shield" });
+  await h.wait(50);
+  assert.deepStrictEqual(me.powerups, ["shield"]);
+  current.emit("openCard", b);
+  // Nobody presses anything: the next player's turn
+  await waitFor(current, "roomState", (s) => s.players[s.turn].name !== currentName && !s.turnBegun, 4000);
+});
+
+test("powerups game: a full hand keeps the bad-luck power-up until a slot is free", async () => {
+  const { room, current, currentName } = await powerupGame();
+  const me = room.players.find((p) => p.name === currentName);
+  me.powerups = ["map", "peek", "bomb"];
+  me.unlucky = powerups.UNLUCKY_TURNS - 1;
+  const [a, b] = wrongPair(room);
+  current.emit("openCard", a);
+  current.emit("openCard", b);
+  await waitFor(current, "roomState", (s) => s.checkingCards);
+  const waiting = waitFor(current, "chatMessage", (m) => /comes when a slot is free/.test(m.text));
+  current.emit("endTurn");
+  await waiting;
+  assert.strictEqual(me.unlucky, powerups.UNLUCKY_TURNS, "not lost");
+  // A slot free, the next turn goes wrong too: there it is
+  me.powerups = ["map"];
+  room.turn = room.players.indexOf(me);
+  room.openedCards = [];
+  room.checkingCards = false;
+  room.turnBegun = false;
+  const [c, d] = wrongPair(room);
+  current.emit("openCard", c);
+  current.emit("openCard", d);
+  await waitFor(current, "roomState", (s) => s.checkingCards);
+  const bonus = waitFor(current, "chatMessage", (m) => /bad luck and gets/.test(m.text));
+  current.emit("endTurn");
+  await bonus;
+  assert.strictEqual(me.powerups.length, 2);
+  assert.strictEqual(me.unlucky, 0);
+});
+
+test("powerups game: Steal - the second guess of somebody else's turn", async () => {
+  const { room, current, other, currentName, otherName } = await powerupGame();
+  const thief = room.players.find((p) => p.name === otherName);
+  thief.powerups = ["snatch"];
+  // The first card of the turn: a moment for the thief, the player can't open the second one meanwhile
+  const first = [...Array(CARD_COUNT).keys()].find((id) => !room.powerCards.includes(id));
+  current.emit("openCard", first);
+  await waitFor(other, "roomState", (s) => s.stealIn > 0);
+  const partner = room.cardPairs[first];
+  const notPartner = [...Array(CARD_COUNT).keys()].find((id) => id !== first && id !== partner);
+  current.emit("openCard", notPartner);
+  await h.wait(50);
+  assert.deepStrictEqual(room.openedCards, [first], "the second card waits");
+  // Right: the pair and the turn are the thief's
+  other.emit("snatch", partner);
+  const state = await waitFor(other, "roomState", (s) => s.players[s.turn].name === otherName);
+  assert.strictEqual(state.players.find((p) => p.name === otherName).points, 1);
+  assert.ok(room.foundMatches.includes(first) && room.foundMatches.includes(partner));
+  assert.deepStrictEqual(thief.powerups, [], "used up");
+  assert.ok(!state.players.find((p) => p.name === currentName).powerups.includes("snatch"));
 });

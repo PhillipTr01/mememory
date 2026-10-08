@@ -35,8 +35,21 @@ function fromJSON(text) {
   });
 }
 
-function register(key, snapshot, restore) {
-  games.set(key, { snapshot: snapshot, restore: restore });
+// `fresh` (optional): starts the game anew from its first state (hard reset in
+// the admin panel) - without it the first state is simply restored
+function register(key, snapshot, restore, fresh) {
+  games.set(key, { snapshot: snapshot, restore: restore, fresh: fresh, initial: toJSON(snapshot()) });
+}
+
+// Hard reset: every game as on its very first start (and saved like that); keep: keys left as they are
+async function resetAll(keep = []) {
+  for (const [key, game] of games) {
+    if (keep.includes(key)) continue;
+    const initial = fromJSON(game.initial);
+    if (game.fresh) game.fresh(initial);
+    else game.restore(initial);
+    await save(key).catch((error) => console.error(`[persist] Could not save ${key}:`, error));
+  }
 }
 
 // Something changed: saved soon
@@ -93,6 +106,25 @@ function whenRestored() {
   return restored || Promise.resolve();
 }
 
+// A season starts: the state of every game now (to be restored after it)
+function snapshotAll() {
+  return Object.fromEntries([...games].map(([key, game]) => [key, toJSON(game.snapshot())]));
+}
+
+// The season is over: every game as it was before (games not in it: as on the first start); keep: keys left as they are
+async function restoreSnapshots(saved, keep = []) {
+  for (const [key, game] of games) {
+    if (keep.includes(key)) continue;
+    const text = saved && typeof saved[key] === "string" ? saved[key] : game.initial;
+    try {
+      game.restore(fromJSON(text));
+    } catch (error) {
+      console.error(`[persist] Could not restore ${key}:`, error);
+    }
+    await save(key).catch((error) => console.error(`[persist] Could not save ${key}:`, error));
+  }
+}
+
 // Tests: start again without anything saved or loaded
 function reset() {
   for (const timer of timers.values()) clearTimeout(timer);
@@ -102,4 +134,4 @@ function reset() {
   restored = null;
 }
 
-module.exports = { register, changed, saveAll, restoreAll, expectRestore, whenRestored, reset, toJSON, fromJSON };
+module.exports = { register, changed, saveAll, restoreAll, resetAll, snapshotAll, restoreSnapshots, expectRestore, whenRestored, reset, toJSON, fromJSON };

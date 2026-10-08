@@ -31,7 +31,7 @@ function formatCoins(value) {
 }
 
 function chanceOf(coins, total) {
-  return total > 0 ? Math.round((coins / total) * 100) : 0;
+  return total > 0 ? ((coins / total) * 100).toFixed(2) : "0.00";
 }
 
 function chance(entry) {
@@ -43,10 +43,13 @@ function chance(entry) {
 socket.on("connect", () => (document.getElementById("connectionBanner").hidden = true));
 socket.on("disconnect", () => (document.getElementById("connectionBanner").hidden = false));
 socket.on("connect_error", (error) => {
-  if (error && error.message == "unauthorized") window.location.href = "/";
+  if (error && error.message == "unauthorized") window.location.href = "/?next=" + encodeURIComponent(location.pathname + location.search);
 });
 // The admin took the access away
-socket.on("casinoClosed", () => (window.location.href = "/"));
+// The admin took the access away: the page again - it asks for access now
+socket.on("casinoClosed", () => window.location.reload());
+// The admin turned this game off: on to another one
+socket.on("gameOff", () => (window.location.href = "./"));
 
 window.addEventListener("pagehide", () => socket.disconnect());
 window.addEventListener("pageshow", (event) => {
@@ -83,14 +86,28 @@ socket.on("jackpotState", (data) => {
 
 /* ---------- Rendering ---------- */
 
+// The scene before the draw - only built again when the pot changed (every update made it flicker)
+var idleKey = null;
+function showIdle() {
+  var stage = document.getElementById("jpStage");
+  var key = [state.mode, state.round, state.total, ...state.entries.map((entry) => entry.name + ":" + entry.coins)].join("|");
+  if (key == idleKey && stage.firstElementChild) return;
+  idleKey = key;
+  currentDraw().idle(stage);
+}
+
 function render() {
   if (state == null) return;
   document.getElementById("jpRound").innerText = "Round " + state.round;
-  document.getElementById("jpTotal").innerText = "🪙 " + formatCoins(state.total);
+  // The coin in front of the number is drawn by the style (.jp-total::before)
+  document.getElementById("jpTotal").innerText = formatCoins(state.total);
+  document.getElementById("jpTotal").title = state.rake ? "The pot - the winner gets it minus " + state.rake + "% for the house" : "";
+  var players = state.entries.length;
+  document.getElementById("jpPlayerCount").innerText = players == 1 ? "1 player" : players + " players";
   // The pot is in the middle of the wheel, the other draws show it above
   document.getElementById("jpPotbar").hidden = state.mode == "wheel";
   // A running animation keeps its scene, a finished one stays until the next round
-  if (!spinning && !(state.phase == "drawing" && spunRound == state.round)) currentDraw().idle(document.getElementById("jpStage"));
+  if (!spinning && !(state.phase == "drawing" && spunRound == state.round)) showIdle();
   renderStatus();
   renderPlayers();
   renderBets();
@@ -102,34 +119,36 @@ function render() {
 }
 
 function renderStatus() {
-  var status = document.getElementById("jpStatus");
   var center = document.getElementById("jpCenter");
+  // Alone in the pot: a small 👻 countdown next to the players
+  var ghost = document.getElementById("jpGhostIn");
+  var ghostSeconds = state.phase == "open" && ghostEnd != null ? Math.max(0, Math.ceil((ghostEnd - Date.now()) / 1000)) : null;
+  ghost.hidden = ghostSeconds == null;
+  if (ghostSeconds != null) {
+    ghost.innerText = ghostSeconds + "s";
+    ghost.title = "The ghost joins in " + ghostSeconds + "s";
+  }
   if (state.phase == "open") {
-    var ghostSeconds = ghostEnd != null ? Math.max(0, Math.ceil((ghostEnd - Date.now()) / 1000)) : null;
-    status.innerText =
-      state.entries.length == 0
-        ? "Put in coins - the more you put in, the higher your chance."
-        : ghostSeconds != null
-          ? "Waiting for a second player - a 👻 ghost joins in " + ghostSeconds + "s"
-          : "Waiting for a second player...";
     center.innerText = state.entries.length == 0 ? "Waiting for players" : "Waiting for a 2nd player";
     center.className = "jp-center-status";
   } else if (state.phase == "countdown") {
     var seconds = Math.ceil(timeLeft() / 1000);
-    status.innerText = "The draw starts in " + seconds + "s";
     center.innerText = "0:" + String(seconds).padStart(2, "0");
     center.className = "jp-center-status timer" + (seconds <= 5 ? " urgent" : "");
   } else if (spinning) {
-    status.innerText = "Drawing...";
     center.innerText = "Drawing...";
     center.className = "jp-center-status";
   } else if (state.draw) {
-    status.innerText = "Next round in a moment...";
     center.innerText = state.draw.winner;
     center.className = "jp-center-status winner";
   }
   // The wheel shows the pot and the status in its middle
   document.querySelectorAll(".jp-mirror-total").forEach((total) => (total.innerText = document.getElementById("jpTotal").innerText));
+  document.querySelectorAll(".jp-mirror-ghost").forEach((mirror) => {
+    mirror.hidden = ghost.hidden;
+    mirror.innerText = ghost.innerText;
+    mirror.title = ghost.title;
+  });
   document.querySelectorAll(".jp-mirror-status").forEach((mirror) => {
     mirror.innerText = center.innerText;
     mirror.className = center.className + " jp-mirror-status";
@@ -153,6 +172,8 @@ function playDraw(short) {
   var duration = short ? 900 : state.spin - 900;
   var stage = document.getElementById("jpStage");
   spinning = true;
+  // (after the draw the waiting scene is built again)
+  idleKey = null;
   document.getElementById("jpResult").hidden = true;
   render();
   currentDraw()
@@ -160,13 +181,7 @@ function playDraw(short) {
     .catch((error) => console.error("Draw animation failed:", error))
     .finally(() => {
       spinning = false;
-      var result = document.getElementById("jpResult");
-      var won = draw.winner == myName;
-      result.innerText = won
-        ? "You win " + formatCoins(draw.total) + " coins!"
-        : draw.winner + " wins " + formatCoins(draw.total) + " coins";
-      result.classList.toggle("won", won);
-      result.hidden = false;
+      // (no "X wins N coins" line under the draw - the draw shows the winner)
       render();
     });
 }
@@ -217,7 +232,7 @@ function renderPlayers() {
 
 function percent(value) {
   var number = (value / state.total) * 100;
-  return (number >= 10 || number == 0 ? Math.round(number) : number.toFixed(1)) + "%";
+  return number.toFixed(2) + "%";
 }
 
 // Every bet of the round, newest first, with its tickets (from..to)
@@ -256,36 +271,25 @@ function renderBets() {
   );
 }
 
-function recordCard(id, label, round) {
+// One record: the picture left, what and who in the middle, the pot and the chance right
+function recordCard(id, label, round, icon) {
   var card = document.getElementById(id);
-  var title = document.createElement("span");
-  title.className = "jp-record-label";
-  title.innerText = label;
-  if (round == null) {
-    var none = document.createElement("span");
-    none.className = "jp-record-none";
-    none.innerText = "-";
-    card.replaceChildren(title, none);
-    return;
-  }
-  var who = document.createElement("div");
-  who.className = "jp-record-who";
-  var name = document.createElement("span");
-  name.className = "player-name-text";
-  name.innerText = round.winner;
-  who.append(createAvatar(round.winner, "sm"), name);
-  var amount = document.createElement("span");
-  amount.className = "jp-record-amount";
-  amount.innerText = "🪙 " + formatCoins(round.total) + " · " + chanceOf(round.coins, round.total) + "%";
-  card.replaceChildren(title, who, amount);
+  card.classList.toggle("empty", round == null);
+  var picture = round ? createAvatar(round.winner, "lg") : el("span", "jp-record-placeholder", icon);
+  picture.classList.add("jp-record-picture");
+  var title = el("span", "jp-record-label", icon + " " + label);
+  var name = el("span", "jp-record-name", round ? round.winner : "Nobody yet");
+  var parts = [picture, title, name];
+  if (round) parts.push(el("span", "jp-record-amount", formatCoins(round.total)), el("span", "jp-record-chance", chanceOf(round.coins, round.total) + "% chance"));
+  card.replaceChildren(...parts);
 }
 
 function renderRecords() {
   // While the wheel spins, the last winner is still the one before
-  recordCard("jpLastWinner", "Last winner", state.history[0] || null);
+  recordCard("jpLastWinner", "Last winner", state.history[0] || null, "👑");
   var records = state.records || {};
-  recordCard("jpBiggest", "Biggest pot today", records.biggest || null);
-  recordCard("jpLuckiest", "Luckiest win today", records.luckiest || null);
+  recordCard("jpBiggest", "Biggest pot today", records.biggest || null, "💰");
+  recordCard("jpLuckiest", "Luckiest win today", records.luckiest || null, "🍀");
 }
 
 function renderHistory() {
@@ -293,20 +297,9 @@ function renderHistory() {
   document.getElementById("jpHistoryEmpty").hidden = state.history.length > 0;
   // Only the last three winners
   list.replaceChildren(
-    ...state.history.slice(0, 3).map((round) => {
-      var item = document.createElement("li");
-      var name = document.createElement("span");
-      name.className = "jp-history-name";
-      name.append(createAvatar(round.winner, "sm"), document.createTextNode(round.winner));
-      var won = document.createElement("span");
-      won.className = "jp-history-won";
-      won.innerText = "🪙 " + formatCoins(round.total);
-      var odds = document.createElement("span");
-      odds.className = "jp-history-odds";
-      odds.innerText = chanceOf(round.coins, round.total) + "%";
-      item.append(name, odds, won);
-      return item;
-    }),
+    ...state.history.slice(0, 3).map((round) =>
+      historyItem(createAvatar(round.winner, "sm"), round.winner, "Round " + round.round + " · " + chanceOf(round.coins, round.total) + "% chance", "🪙 " + formatCoins(round.payout != null ? round.payout : round.total)),
+    ),
   );
 }
 
@@ -341,10 +334,19 @@ function renderBet() {
   if (state == null) return;
   var mine = myEntry();
   var inPot = mine ? mine.coins : 0;
-  var myBets = (state.bets || []).concat(state.pending || []).filter((bet) => bet.name == myName).length;
+  // During a draw a bet goes into the next pot: only the bets for that one count
+  var drawing = state.phase == "drawing";
+  var counted = drawing ? (state.pending || []).filter((bet) => bet.next) : (state.bets || []).concat(state.pending || []);
+  var myBets = counted.filter((bet) => bet.name == myName).length;
   var betsLeft = Math.max(0, state.maxBets - myBets);
-  var room = betsLeft > 0 ? myCoins : 0;
-  var open = state.phase != "drawing";
+  // All bets of a round together: at most maxCoins
+  var myAmount = counted.filter((bet) => bet.name == myName).reduce((sum, bet) => sum + bet.amount, 0);
+  var coinsLeft = state.maxCoins != null ? Math.max(0, state.maxCoins - myAmount) : Infinity;
+  var room = betsLeft > 0 ? Math.min(myCoins, coinsLeft) : 0;
+  var open = true;
+  var button = document.getElementById("jpBetButton");
+  button.lastChild.textContent = drawing ? " Next pot" : " Put in";
+  button.title = drawing ? "The pot is being drawn - this goes into the next one" : "";
   document.getElementById("jpChance").innerText = mine
     ? "In the pot: " + formatCoins(inPot) + " · " + chance(mine) + "% chance · " +
       (betsLeft == 0 ? "no bets left" : betsLeft == 1 ? "1 bet left" : betsLeft + " bets left")
@@ -415,7 +417,7 @@ document.addEventListener("DOMContentLoaded", () => {
     bet();
   });
 
-  // +10 / +50 / +100 add up, Max = everything that is still allowed
+  // +100 / +500 / +1,000 add up, Max = everything that is still allowed
   document.querySelectorAll(".jp-quick button").forEach((button) => {
     button.addEventListener("click", () => {
       var input = document.getElementById("jpAmount");

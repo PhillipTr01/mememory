@@ -48,6 +48,7 @@ require("./sockets/jackpot_server")(io);
 require("./sockets/battles_server")(io);
 require("./sockets/poker_server")(io);
 require("./sockets/blackjack_server")(io);
+require("./sockets/slots_server")(io);
 require("./sockets/casino_server")(io);
 
 /* Page routes */
@@ -118,8 +119,26 @@ async function connectDatabase(attempt = 1) {
       serverSelectionTimeoutMS: 10000,
     });
     console.log("Connected to database.");
-    // The games as they were before the restart (rounds, tables, history, chat)
+    // The values changed in the admin panel, then the games as they were
+    // before the restart (rounds, tables, history, chat)
+    // The cases (the admin may have changed them - the settings and the battles need them)
+    await require("./game/cases")
+      .load()
+      .catch((error) => console.error("Could not load the cases:", error));
+    await require("./game/settings")
+      .load()
+      .catch((error) => console.error("Could not load the settings:", error));
+    await require("./game/maintenance")
+      .load()
+      .catch((error) => console.error("Could not load the maintenance:", error));
+    // The seasons first (and the coins of the season that started last) - a restored game may pay coins
+    const seasons = require("./game/seasons");
+    await seasons.load().catch((error) => console.error("Could not load the seasons:", error));
+    // The season is known: the coins can be looked at (and changed) - then the games come back
+    require("./game/coins").release();
     await persist.restoreAll();
+    // ... and the seasons start / end on time
+    seasons.start();
     startScraper();
   } catch (error) {
     if (shuttingDown) return;
@@ -182,5 +201,7 @@ server.on("error", (error) => {
   process.exit(1);
 });
 
+// No balance is looked at before the season is loaded (see game/coins.js hold)
+require("./game/coins").hold();
 server.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
 connectDatabase();

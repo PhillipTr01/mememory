@@ -7,9 +7,10 @@ const days = require("./days");
 
 /*
  * The secret casino is only for players the admin let in (in the admin panel).
- * Who gets in the first time gets the start coins plus every daily bonus
- * missed since the very first player got in - so a late player starts like
- * somebody who was there from the beginning and claimed every bonus.
+ * Who gets in the first time gets the start coins. During a season: the
+ * season's budget plus every daily bonus missed since the season started -
+ * so a late player starts like somebody who was there from the beginning and
+ * claimed every bonus.
  */
 const FIRST = "casinoFirstApproval";
 
@@ -36,10 +37,15 @@ async function setFirstApproval(now) {
   return firstApproval();
 }
 
-// What a player gets who is let in now: {coins, missed} - a bonus for every day since the day of the first approval (today's one they claim themselves)
+// What a player gets who is let in now: {coins, missed, since} - the start coins; in a running season
+// its budget and a bonus for every day since the season started (today's one they claim themselves)
 function startCoins(first, now = Date.now()) {
-  const missed = first == null ? 0 : Math.max(0, days.dayNumber(now) - days.dayNumber(new Date(first).getTime()));
-  return { coins: config.START_COINS + missed * config.DAILY_BONUS, missed: missed };
+  const base = coins.base();
+  if (!base.active || !base.since) return { coins: base.start, missed: 0, since: null };
+  // A running season: the player starts it themselves (game/seasons.js join) - the budget comes then
+  if (base.join) return { coins: 0, missed: 0, since: base.since };
+  const missed = Math.max(0, days.dayNumber(now) - days.dayNumber(base.since));
+  return { coins: base.start + missed * coins.dailyBonus(), missed: missed, since: base.since };
 }
 
 // Let a player in: {username, coins, missed, again} or {error}
@@ -58,10 +64,10 @@ async function approve(username, now = Date.now()) {
   const start = startCoins(first, now);
   const result = await User.updateOne(
     { username: username, casinoApproved: { $ne: true } },
-    { $set: { casinoApproved: true, casinoApprovedAt: new Date(now), casinoRequestedAt: null, coins: start.coins, coinReset: config.COIN_RESET, coinBonusAt: null } },
+    { $set: { casinoApproved: true, casinoApprovedAt: new Date(now), casinoRequestedAt: null, coins: start.coins, coinReset: coins.base().reset, coinBonusAt: null } },
   );
   if (!(result.nModified > 0 || result.modifiedCount > 0)) return { error: "Already approved." };
-  const note = start.missed > 0 ? `approved: ${config.START_COINS.toLocaleString("en-US")} + ${start.missed} missed daily bonus${start.missed === 1 ? "" : "es"}` : "approved";
+  const note = start.missed > 0 ? `approved: ${coins.base().start.toLocaleString("en-US")} + ${start.missed} missed daily bonus${start.missed === 1 ? "" : "es"}` : "approved";
   coins.log(username, start.coins, "start coins", note);
   coins.notify(username);
   return { username: username, coins: start.coins, missed: start.missed, again: false };

@@ -112,6 +112,12 @@ function registerUser() {
   }));
 }
 
+// The page that sent here for the login (?next=...) - only an address on this site
+function nextPage() {
+  var next = new URLSearchParams(window.location.search).get("next");
+  return next && next.charAt(0) == "/" && next.charAt(1) != "/" && next.charAt(1) != "\\" ? next : null;
+}
+
 function loginUser(username, password) {
   var identifier = username || document.getElementById("loginUsername").value; // Identifier is either the e-mail or the username;
   var inputPassword = password || document.getElementById("loginPassword").value;
@@ -127,7 +133,8 @@ function loginUser(username, password) {
 
       if (this.status == 200) {
 
-        window.location.href = "/home";
+        // Back to the page that needed the login (only an address on this site)
+        window.location.href = nextPage() || "/home";
 
       } else if (this.status == 401) {
         var response = JSON.parse(this.responseText).error.message;

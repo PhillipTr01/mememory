@@ -39,8 +39,7 @@
     socket.emit("claimBonus");
   });
 
-  socket.on("bonusClaimed", (amount) => {
-    showToast("🎁 +" + format(amount) + " free coins - see you tomorrow!");
+  socket.on("bonusClaimed", () => {
     bonusButton.classList.remove("claimed");
     void bonusButton.offsetWidth; // restart the animation
     bonusButton.classList.add("claimed");
@@ -59,8 +58,21 @@
     payout = data.payout === true;
     button.hidden = false;
     button.classList.toggle("no-payout", !payout);
-    button.title = payout ? "Your coins - click to pay out" : "Your coins";
+    button.removeAttribute("title");
     document.getElementById("navCoinsValue").innerText = format(coins);
+    // In a season: the balance from before it (it comes back after the season, with the season's on top)
+    var stored = document.getElementById("navCoinsStored");
+    if (data.stored != null) {
+      if (!stored) {
+        stored = el("span", "nav-coins-stored");
+        stored.id = "navCoinsStored";
+        button.appendChild(stored);
+      }
+      stored.innerText = "🏦 " + format(data.stored);
+      stored.title = "Your balance from before the season - you get it back when the season is over, with your season coins on top";
+    } else if (stored) stored.remove();
+    // Everything lost: a second chance (if the season has one) - after a moment
+    watchChance(coins);
     if (before && coins != before) {
       button.classList.remove("up", "down");
       void button.offsetWidth; // restart the animation
@@ -202,7 +214,6 @@
   /* ---------- A case battle of mine starts (on every casino page) ---------- */
 
   var notice = null;
-  var titleTimer = null;
 
   function watchBattle(id) {
     // On the battles page: open it right there
@@ -218,7 +229,7 @@
     notice.setAttribute("role", "status");
     var text = el("div", "bt-notice-text");
     text.append(
-      el("b", "", data.crazy ? "Your crazy battle starts!" : "Your case battle starts!"),
+      el("b", "", data.mode == "random" ? "Your random battle starts!" : data.crazy ? "Your crazy battle starts!" : "Your case battle starts!"),
       el("span", "", data.players.join(" vs ") + " · " + data.cases + (data.cases == 1 ? " case" : " cases") + " · 🪙 " + format(data.price)),
     );
     var watch = el("button", "mm-btn mm-btn-primary mm-btn-sm", "Watch");
@@ -237,7 +248,7 @@
       watchBattle(data.id);
     });
     close.addEventListener("click", hide);
-    notice.append(el("span", "bt-notice-icon", data.crazy ? "🤡" : "⚔️"), text, watch, close);
+    notice.append(el("span", "bt-notice-icon", data.mode == "random" ? "❓" : data.crazy ? "🤡" : "⚔️"), text, watch, close);
     document.body.appendChild(notice);
     setTimeout(hide, 12000);
 
@@ -254,17 +265,466 @@
           // not everywhere (mobile)
         }
       }
-      var original = document.title;
-      var on = false;
-      clearInterval(titleTimer);
-      titleTimer = setInterval(() => {
-        on = !on;
-        document.title = on ? "⚔️ Battle starts!" : original;
-        if (!document.hidden) {
-          clearInterval(titleTimer);
-          document.title = original;
-        }
-      }, 900);
+      // (the title of the tab stays as it is)
     }
   });
+
+  /* ---------- Second chance (in a season): 0 coins, nothing in play - start again ---------- */
+
+  var chanceTimer = null;
+  var chanceShown = false;
+  // The pill next to the free coins: a second chance now - or when the next one comes (only at 0 coins)
+  var chancePill = document.getElementById("navChance");
+  var chanceStatus = null;
+  var chanceTick = null;
+
+  function renderChancePill() {
+    clearInterval(chanceTick);
+    var status = chanceStatus;
+    var show = coins == 0 && status != null && (status.can || status.reason == "cooldown");
+    if (!chancePill) return;
+    chancePill.hidden = !show;
+    if (!show) return;
+    var text = document.getElementById("navChanceText");
+    chancePill.classList.toggle("ready", status.can);
+    if (status.can) {
+      text.innerText = "Second chance";
+      chancePill.title = "Start again with 🪙 " + format(status.budget);
+      return;
+    }
+    // Cooldown: how long until the next one (then look again)
+    var update = () => {
+      var left = Math.max(0, status.nextAt - Date.now());
+      var minutes = Math.ceil(left / 60000);
+      text.innerText = minutes >= 60 ? Math.floor(minutes / 60) + "h " + String(minutes % 60).padStart(2, "0") + "m" : minutes + "m";
+      chancePill.title = "Your next second chance comes in " + text.innerText;
+      if (left == 0) {
+        clearInterval(chanceTick);
+        checkChance();
+      }
+    };
+    update();
+    chanceTick = setInterval(update, 30000);
+  }
+
+  if (chancePill) chancePill.addEventListener("click", () => chanceStatus && showChance(chanceStatus));
+
+  function watchChance(value) {
+    clearTimeout(chanceTimer);
+    if (value > 0) {
+      settledAt = null;
+      chanceShown = false;
+      chanceStatus = null;
+      renderChancePill();
+      document.querySelectorAll(".cs-chance").forEach((n) => n.remove());
+      return;
+    }
+    // Right away (a bet still in a game: checkChance looks again in a moment)
+    chanceTimer = setTimeout(checkChance, 0);
+  }
+
+  // The prompt comes only 3 s after the last bet is over (0 coins and nothing in a game anymore)
+  var CHANCE_SETTLE = 3000;
+  var settledAt = null;
+  async function checkChance() {
+    if (coins > 0) return (settledAt = null);
+    var status;
+    try {
+      var res = await fetch("second-chance", { cache: "no-store" });
+      if (!res.ok) return;
+      status = await res.json();
+    } catch (e) {
+      return;
+    }
+    // Coins still in a game: look again in a moment
+    if (status.reason == "inPlay") {
+      settledAt = null;
+      return (chanceTimer = setTimeout(checkChance, 1000));
+    }
+    // The pill right away - only the prompt waits until the last bet is over for a moment
+    chanceStatus = status;
+    renderChancePill();
+    if (settledAt == null) settledAt = Date.now();
+    if (Date.now() - settledAt < CHANCE_SETTLE) return (chanceTimer = setTimeout(checkChance, CHANCE_SETTLE - (Date.now() - settledAt)));
+    // The prompt by itself only once - for this cooldown, for this second chance (the pill opens it again)
+    if ((status.can || status.reason == "cooldown") && !chanceShown && !promptSeen(status)) showChance(status);
+  }
+
+  // Which prompt was shown already (in this browser): the same one doesn't come by itself again
+  var SEEN_KEY = "csChanceSeen";
+  function promptKey(status) {
+    return status.can ? "can:" + status.left : "cooldown:" + status.nextAt;
+  }
+  function promptSeen(status) {
+    try {
+      return localStorage.getItem(SEEN_KEY) == promptKey(status);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function showChance(status) {
+    chanceShown = true;
+    try {
+      localStorage.setItem(SEEN_KEY, promptKey(status));
+    } catch (e) {
+      // only this time
+    }
+    var box = el("div", "cs-chance" + (status.can ? "" : " cs-chance-wait"));
+    var card = el("div", "cs-chance-card");
+    document.querySelectorAll(".cs-chance").forEach((n) => n.remove());
+    card.append(el("div", "cs-chance-icon", status.can ? "💔" : "⏳"), el("h2", "cs-chance-title", status.can ? "Second chance!" : "Out of coins"));
+    if (status.can) {
+      card.append(
+        el("p", "cs-chance-text", "You lost everything - start again with 🪙 " + format(status.budget) + " and fight your way back to the top."),
+        el("p", "cs-chance-left", status.left + " of " + status.total + " second chance" + (status.total == 1 ? "" : "s") + " left"),
+      );
+      var take = el("button", "cs-chance-btn", "Start again · 🪙 " + format(status.budget));
+      take.type = "button";
+      take.addEventListener("click", async () => {
+        take.disabled = true;
+        try {
+          var res = await fetch("second-chance", { method: "POST" });
+          var data = await res.json();
+          if (!res.ok) throw new Error(data.error || "No second chance right now.");
+          box.remove();
+          chanceStatus = null;
+          renderChancePill();
+          showToast("💔 Back in the game with 🪙 " + format(data.coins) + "!");
+        } catch (error) {
+          showToast(error.message, "error");
+          box.remove();
+          chanceShown = false;
+        }
+      });
+      card.appendChild(take);
+    } else {
+      var at = new Date(status.nextAt).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" });
+      card.append(el("p", "cs-chance-text", "Your next second chance comes " + at + ". Until then, use the daily bonus or watch the others."), el("p", "cs-chance-left", status.left + " of " + status.total + " left"));
+    }
+    // Not now: the second chance waits - the 💔 in the top bar takes it any time
+    var later = el("button", "cs-chance-later", status.can ? "Not now" : "OK");
+    later.type = "button";
+    later.addEventListener("click", () => box.remove());
+    card.appendChild(later);
+    box.appendChild(card);
+    document.body.appendChild(box);
+  }
+
+  /* ---------- Seasons: the link to the leaderboard, a season starting or ending ---------- */
+
+  var board = document.getElementById("navBoard");
+  var seasonEnd = null;
+  var seasonTimer = null;
+
+  // How long the season still runs: "6d 23h 12m", the last hour to the second
+  function seasonLeft() {
+    var timer = document.getElementById("navBoardTimer");
+    if (seasonEnd == null) return;
+    var left = Math.max(0, seasonEnd - Date.now());
+    var s = Math.floor(left / 1000);
+    var d = Math.floor(s / 86400);
+    var h = Math.floor((s % 86400) / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var pad = (n) => String(n).padStart(2, "0");
+    timer.innerText = left == 0 ? "ending..." : d > 0 ? d + "d " + h + "h " + pad(m) + "m" : h > 0 ? h + "h " + pad(m) + "m " + pad(s % 60) + "s" : m + "m " + pad(s % 60) + "s";
+    timer.classList.toggle("soon", left < 3600 * 1000);
+  }
+
+  function showSeason(data) {
+    if (!board) return;
+    // (hidden until it is known whether a season runs - no "Leaderboard" flashing first)
+    board.classList.add("ready");
+    var season = data && data.season;
+    document.getElementById("navBoardIcon").innerText = season ? season.icon : "🏆";
+    document.getElementById("navBoardText").innerText = season ? season.name : "Leaderboard";
+    board.classList.toggle("season", !!season);
+    board.title = season ? season.name + " - ends " + new Date(season.end).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Leaderboard";
+    // The countdown to the end of the season, inside the pill
+    seasonEnd = season ? season.end : null;
+    document.getElementById("navBoardTimer").hidden = !season;
+    clearInterval(seasonTimer);
+    if (season) {
+      seasonLeft();
+      seasonTimer = setInterval(seasonLeft, 1000);
+    }
+  }
+  // The leaderboard page itself: marked
+  if (board && /\/leaderboard\/?$/.test(location.pathname)) board.classList.add("active");
+  fetch("season", { cache: "no-store" })
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data) => {
+      showSeason(data);
+      if (data && data.closing) showClosing(data.closing);
+      else if (data && data.season && data.joined === false) offerSeason(data);
+    })
+    .catch(() => showSeason(null));
+
+  // The running season to look at (the season on the leaderboard)
+  window.showSeasonInfo = () =>
+    fetch("season", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.season) showJoin(data, true);
+      })
+      .catch(() => {});
+
+  /* ---------- "Start": a player is in a running season only after hitting it ---------- */
+
+  // Not in the season yet: the start, on every page until the player hits it (can't be clicked away)
+  function offerSeason(data) {
+    showJoin(data);
+  }
+
+  // How long a time is: "12 days 5 hours", "5 hours 20 minutes", "20 minutes"
+  function duration(ms) {
+    var m = Math.max(0, Math.round(ms / 60000));
+    var d = Math.floor(m / 1440);
+    var h = Math.floor((m % 1440) / 60);
+    var part = (n, word) => n + " " + word + (n == 1 ? "" : "s");
+    if (d > 0) return part(d, "day") + (h > 0 ? " " + part(h, "hour") : "");
+    if (h > 0) return part(h, "hour") + (m % 60 > 0 ? " " + part(m % 60, "minute") : "");
+    return part(m % 60, "minute");
+  }
+
+  // view: only to look at it (from the season on the leaderboard) - closes, no Start
+  function showJoin(data, view) {
+    var season = data.season;
+    document.querySelectorAll(".cs-join").forEach((n) => n.remove());
+    var box = el("div", "cs-join");
+    box.setAttribute("role", "alertdialog");
+    box.setAttribute("aria-modal", "true");
+    var card = el("div", "cs-join-card");
+    var when = (t) => new Date(t).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+    card.append(
+      el("div", "cs-join-icon", season.icon || "🏆"),
+      el("h2", "cs-join-title", season.name),
+      el("p", "cs-join-time", "Runs until " + when(season.end) + " · " + duration(season.end - Date.now()) + " left"),
+    );
+    // What the season is: the coins, the bonus, the second chances, the players so far
+    var facts = el("div", "cs-join-facts");
+    // How long between two second chances (hours - null: the next day)
+    var chanceWait = (hours) => (hours == null ? " (one a day)" : hours == 0 ? "" : " (" + (hours % 24 == 0 && hours >= 48 ? hours / 24 + " days" : hours + (hours == 1 ? " hour" : " hours")) + " apart)");
+    var fact = (icon, value, label) => {
+      var row = el("div", "cs-join-fact");
+      row.append(el("span", "cs-join-fact-icon", icon), el("b", "", value), el("span", "", label));
+      facts.appendChild(row);
+    };
+    var start = (!view && data.joinCoins) || { coins: season.budget, missed: 0 };
+    fact("🪙", format(start.coins), start.missed > 0 ? "to start (with " + start.missed + " missed daily bonus" + (start.missed == 1 ? "" : "es") + ")" : "to start with");
+    fact("🎁", format(season.dailyBonus), "free every day");
+    if (season.secondChances > 0) fact("💔", season.secondChances, "second chance" + (season.secondChances == 1 ? "" : "s") + " if you lose it all" + (season.secondChances > 1 ? chanceWait(season.chanceDelay) : ""));
+    fact("👥", season.players, "player" + (season.players == 1 ? "" : "s") + " in so far");
+    card.appendChild(facts);
+    // The prizes
+    if (season.prizes && season.prizes.length) {
+      var prizes = el("div", "cs-join-prizes");
+      prizes.appendChild(el("div", "cs-join-prizes-title", "🏆 Prizes"));
+      var medal = (place) => ["🥇", "🥈", "🥉"][place - 1] || "#" + place;
+      season.prizes.forEach((p) => {
+        var row = el("div", "cs-join-prize");
+        row.append(el("span", "cs-join-place", medal(p.place)), el("span", "", p.prize));
+        prizes.appendChild(row);
+      });
+      card.appendChild(prizes);
+    }
+    if (view) {
+      card.appendChild(el("p", "cs-join-text", "Everybody starts with the same coins - the most coins at the end wins. Only players in the season are on the leaderboard. Your coins from before wait for you and come back after the season, with what you win on top."));
+      var ok = el("button", "mm-btn w-100", "Got it");
+      ok.type = "button";
+      var close = () => {
+        box.remove();
+        document.removeEventListener("keydown", onKey);
+      };
+      var onKey = (event) => {
+        if (event.key == "Escape") close();
+      };
+      ok.addEventListener("click", close);
+      box.addEventListener("click", (event) => {
+        if (event.target == box) close();
+      });
+      document.addEventListener("keydown", onKey);
+      card.appendChild(ok);
+      box.appendChild(card);
+      document.body.appendChild(box);
+      ok.focus();
+      return;
+    }
+    card.appendChild(el("p", "cs-join-text", "Everybody starts with the same coins - the most coins at the end wins. Hit Start to play - only players in the season are on the leaderboard. Your coins from before wait for you and come back after the season, with what you win on top."));
+    var go = el("button", "cs-join-btn", "Start · 🪙 " + format(start.coins));
+    go.type = "button";
+    go.addEventListener("click", async () => {
+      go.disabled = true;
+      try {
+        var res = await fetch("season/join", { method: "POST" });
+        var result = await res.json();
+        if (!res.ok) throw new Error(result.error || "Could not start the season.");
+        box.remove();
+        showToast((season.icon || "🏆") + " You are in " + season.name + " with 🪙 " + format(result.coins) + " - good luck!");
+      } catch (error) {
+        showToast(error.message, "error");
+        go.disabled = false;
+      }
+    });
+    card.appendChild(go);
+    box.appendChild(card);
+    document.body.appendChild(box);
+  }
+
+  // A season starts (or ends) soon: the casino closes - open rounds finish, no new bets (the server
+  // refuses them), then a countdown. A notice like a battle starting; it goes with the start of the
+  // season (the page loads again)
+  var closing = null;
+  var closingTimer = null;
+  function showClosing(info) {
+    clearInterval(closingTimer);
+    if (!info) {
+      if (closing) closing.remove();
+      closing = null;
+      return;
+    }
+    if (!closing) {
+      closing = el("div", "bt-notice cs-closing-notice");
+      closing.setAttribute("role", "status");
+      var text = el("div", "bt-notice-text");
+      text.append(el("b", "cs-closing-title"), el("span", "cs-closing-text"));
+      closing.append(el("span", "bt-notice-icon cs-closing-icon"), text, el("span", "cs-closing-count"));
+      document.body.appendChild(closing);
+    }
+    closing.querySelector(".cs-closing-icon").innerText = info.icon || "🏆";
+    // In the color of the season that starts (or ends)
+    var rgb = info.color && /^#[0-9a-f]{6}$/i.test(info.color) ? [1, 3, 5].map((i) => parseInt(info.color.slice(i, i + 2), 16)) : null;
+    closing.style.setProperty("--mm-accent", rgb ? info.color : "");
+    closing.style.setProperty("--mm-accent-rgb", rgb ? rgb.join(", ") : "");
+    var ending = info.kind == "end";
+    var maint = info.kind == "maintenance";
+    closing.querySelector(".cs-closing-title").innerText = info.name + (ending ? " ends soon!" : " starts soon!");
+    var count = closing.querySelector(".cs-closing-count");
+    var text = closing.querySelector(".cs-closing-text");
+    if (info.startsIn == null) {
+      count.innerText = "⏳";
+      text.innerText = maint ? "Open games are finishing - no new bets, then the casino closes for a while." : ending ? "Open games are finishing - no new bets, the final places come next." : "Open games are finishing - no new bets until it starts.";
+      return;
+    }
+    text.innerText = maint ? "All games closed - the casino closes for a while then." : ending ? "All games closed - the final places are counted then." : "All games closed - no new bets until it starts.";
+    var startsAt = Date.now() + info.startsIn;
+    var show = () => {
+      var left = Math.max(0, Math.ceil((startsAt - Date.now()) / 1000));
+      count.innerText = Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
+    };
+    show();
+    closingTimer = setInterval(show, 250);
+  }
+  socket.on("seasonClosing", showClosing);
+
+  // A new season: the casino starts anew - the page loads again (new coins, the games from the start)
+  socket.on("seasonStarted", () => location.reload());
+
+  // A season is over: everything is as before it - the page loads again (a game page), then a notice
+  // with the way to the winners
+  var ENDED_KEY = "csSeasonEnded";
+  socket.on("seasonEnded", (season) => {
+    if (!window.showWinners) {
+      try {
+        sessionStorage.setItem(ENDED_KEY, JSON.stringify(season));
+        return location.reload();
+      } catch (e) {
+        // no storage: the notice right here
+      }
+    }
+    seasonOver(season);
+  });
+  try {
+    var ended = sessionStorage.getItem(ENDED_KEY);
+    if (ended) {
+      sessionStorage.removeItem(ENDED_KEY);
+      setTimeout(() => seasonOver(JSON.parse(ended)), 400);
+    }
+  } catch (e) {
+    // no storage
+  }
+
+  function seasonOver(season) {
+    showSeason(null);
+    var notice = el("div", "cs-season-notice");
+    var text = el("div", "cs-season-notice-text");
+    text.append(el("b", "", (season.icon || "🏆") + " " + season.name + " is over!"), el("span", "", season.winner ? "🥇 " + season.winner.username + " wins with 🪙 " + format(season.winner.coins) : "The final places are in."));
+    var link = el("a", "cs-season-notice-link", "See the winners");
+    link.href = "leaderboard?season=" + season.id;
+    var close = el("button", "cs-season-notice-close", "✕");
+    close.type = "button";
+    close.setAttribute("aria-label", "Close");
+    close.addEventListener("click", () => notice.remove());
+    notice.append(text, link, close);
+    document.body.appendChild(notice);
+    // On the leaderboard: the winner page right away
+    if (window.showWinners) window.showWinners(season.id);
+  }
+  // The side column (second chance, free coins, coins, profile - and the cards below them) comes
+  // along when scrolling as one piece: the right part of the bar stays as far above the cards as it is
+  (function columnInSight() {
+    var coinsPill = document.getElementById("navCoins");
+    var side = document.querySelector(".room-side");
+    var layout = document.querySelector(".room-layout");
+    if (!coinsPill || !side || !layout) return;
+    var bar = coinsPill.parentNode;
+    var spot = el("div", "nav-right-spot"); // keeps its place in the bar
+    var right = el("div", "nav-right");
+    ["navChance", "navBonus", "navCoins", "profileMenu"].forEach((id) => {
+      var node = document.getElementById(id);
+      if (node && node.parentNode == bar) right.appendChild(node);
+    });
+    spot.appendChild(right);
+    bar.appendChild(spot);
+    var TOP = 12;
+    var fromRight = 0; // how far the pills are from the right edge in the bar
+    var place = () => {
+      var wide = window.innerWidth >= 992;
+      var at = spot.getBoundingClientRect();
+      var gap = layout.getBoundingClientRect().top - at.top; // from the pills to the cards
+      var sideTop = wide ? TOP + gap + "px" : "";
+      if (side.style.top != sideTop) side.style.top = sideTop;
+      // The pills stay right above the cards (also when the end of the page pushes the cards up)
+      var top = side.getBoundingClientRect().top - gap;
+      var follow = wide && at.top < top - 0.5;
+      if (!right.classList.contains("floating")) fromRight = document.documentElement.clientWidth - right.getBoundingClientRect().right;
+      if (follow && !right.classList.contains("floating")) {
+        spot.style.minWidth = right.offsetWidth + "px";
+        spot.style.height = right.offsetHeight + "px";
+      }
+      right.classList.toggle("floating", follow);
+      right.style.top = follow ? top + "px" : "";
+      right.style.right = follow ? fromRight + "px" : "";
+      if (!follow) spot.style.minWidth = spot.style.height = "";
+    };
+    // As high as the screen has room for between the pills and the end of the page - so the end of
+    // the page never pushes the column up
+    var size = () => {
+      side.style.height = "";
+      if (window.innerWidth < 992) return;
+      var gap = layout.getBoundingClientRect().top - spot.getBoundingClientRect().top;
+      var below = document.documentElement.scrollHeight - (layout.getBoundingClientRect().bottom + window.scrollY);
+      side.style.height = Math.max(420, window.innerHeight - TOP - gap - below) + "px";
+    };
+    // At most once a frame (scroll events come more often than that on phones)
+    var queued = false;
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(() => {
+          queued = false;
+          place();
+        });
+      },
+      { passive: true },
+    );
+    window.addEventListener("resize", () => {
+      size();
+      place();
+    });
+    size();
+    place();
+  })();
 })();

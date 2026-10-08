@@ -479,6 +479,10 @@
   pointer-events: none;
 }
 
+.chat-empty[hidden] {
+  display: none;
+}
+
 .chat-empty span {
   font-size: 2rem;
 }
@@ -752,14 +756,6 @@
   color: var(--mm-text);
   width: 100%;
   max-width: 420px;
-}
-
-.start-kicker {
-  text-transform: uppercase;
-  letter-spacing: 0.25em;
-  font-size: 0.8rem;
-  color: var(--mm-accent);
-  margin-bottom: 0.25rem;
 }
 
 .start-title {
@@ -1064,28 +1060,6 @@
   padding: 0.45rem 0.9rem;
 }
 
-/* Surrender next to the own name */
-.player-surrender {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin-left: auto;
-  padding: 0.1rem 0.45rem;
-  border: 1px solid rgba(224, 103, 90, 0.4);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--mm-danger);
-  font-size: 0.68rem;
-  font-weight: 600;
-  line-height: 1.4;
-  transition: background 0.15s ease;
-}
-
-.player-surrender:hover {
-  background: rgba(224, 103, 90, 0.12);
-}
-
 /* ---------- Result screen with trophy ---------- */
 .result-trophy-icon {
   width: 76px;
@@ -1222,14 +1196,6 @@
 
 .turn-seconds {
   font-variant-numeric: tabular-nums;
-}
-
-.mode-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
 }
 
 #turnTimeSetting[hidden] {
@@ -1645,13 +1611,6 @@
 }
 
 /* Start animation: two small reels for the start power-ups */
-.start-subtitle {
-  margin: 0.5rem 0 0.6rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--mm-muted);
-}
-
 .powerup-reels {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1739,119 +1698,14 @@
   font-size: 0.7rem;
 }
 
-/* ---------- Power-up mode: floating action bar ---------- */
-.action-bar {
-  position: fixed;
-  z-index: 1500;
-  bottom: 1rem;
-  /* Centered over the board (the side column is 340px + gap) */
-  left: calc((100vw - 340px - 1.25rem) / 2);
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0.35rem 0.75rem 0.75rem;
-  border: 1px solid var(--mm-border);
-  border-radius: 14px;
-  background: rgba(27, 27, 27, 0.94);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(6px);
-  /* Own animation: mm-fade-up would overwrite the centering transform */
-  animation: action-in 0.25s ease;
-}
-
 @keyframes action-in {
   from { opacity: 0; transform: translate(-50%, 10px); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
-@media (max-width: 991px) {
-  .action-bar {
-    left: 50%;
-  }
-}
-
-.action-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0 0.5rem 0.3rem;
-  border: 0;
-  background: none;
-  color: var(--mm-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.action-toggle:hover {
-  color: var(--mm-text);
-}
-
-.action-toggle .bi {
-  transition: transform 0.2s ease;
-}
-
-.action-content {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.action-end {
-  height: 60px;
-  white-space: nowrap;
-}
-
-/* Two wrong cards: End turn is the next step */
-.action-end.ready {
-  animation: action-pulse 1.4s ease-in-out infinite;
-}
-
 @keyframes action-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(var(--mm-accent-rgb), 0.55); }
   50% { box-shadow: 0 0 0 6px rgba(var(--mm-accent-rgb), 0); }
-}
-
-/* Collapsed: only the small pill */
-.action-bar.collapsed {
-  padding: 0.35rem 0.75rem;
-}
-
-.action-bar.collapsed .action-content {
-  display: none;
-}
-
-.action-bar.collapsed .action-toggle {
-  padding: 0;
-  color: var(--mm-text);
-}
-
-.action-bar.collapsed .action-toggle .bi {
-  transform: rotate(180deg);
-}
-
-/* Classic: only the End turn button, no box around it */
-.action-bar.end-only {
-  padding: 0;
-  border: 0;
-  background: none;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-.action-bar.end-only .action-end {
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
-}
-
-.action-bar.end-only .action-toggle,
-.action-bar.end-only .powerup-slots {
-  display: none;
-}
-
-.action-bar.end-only .action-end {
-  height: auto;
-  padding: 0.75rem 1.6rem;
-  font-size: 1.05rem;
 }
 
 /* "+1" floating up from a score */
@@ -1885,4 +1739,158 @@
 .player-item.targetable:hover {
   background: rgba(var(--mm-accent-rgb), 0.12);
   box-shadow: inset 0 0 0 2px var(--mm-accent);
+}
+
+/* ---------- Power-up mode: the own power-ups over the board (always open) ---------- */
+.power-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.power-bar[hidden] {
+  display: none;
+}
+
+/* The start of the own turn: now they can be used */
+.power-bar.ready {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  box-shadow: 0 0 0 1px rgba(var(--mm-accent-rgb), 0.25), 0 0 22px rgba(var(--mm-accent-rgb), 0.15);
+}
+
+/* Steal: a moment to take the second guess */
+.power-bar.stealing {
+  border-color: #e8913a;
+  box-shadow: 0 0 24px rgba(232, 145, 58, 0.35);
+  animation: power-steal 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes power-steal {
+  to {
+    box-shadow: 0 0 34px rgba(232, 145, 58, 0.6);
+  }
+}
+
+.power-bar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.power-bar-title {
+  font-weight: 800;
+}
+
+.power-bar-hint {
+  font-size: 0.8rem;
+  color: var(--mm-muted);
+}
+
+.power-bar.ready .power-bar-hint,
+.power-bar.stealing .power-bar-hint {
+  color: var(--mm-text);
+  font-weight: 700;
+}
+
+.power-bar .powerup-slots {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.power-bar .powerup-slot {
+  flex-direction: row;
+  aspect-ratio: auto;
+  width: 150px;
+  height: 48px;
+  padding: 0.3rem 0.7rem;
+  justify-content: flex-start;
+  gap: 0.5rem;
+}
+
+.power-bar .powerup-icon {
+  font-size: 1.4rem;
+}
+
+.power-bar .powerup-name {
+  font-size: 0.82rem;
+}
+
+/* Usable right now: they light up */
+.power-bar .powerup-slot.usable {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  box-shadow: 0 0 12px rgba(var(--mm-accent-rgb), 0.3);
+}
+
+.power-bar .powerup-slot.rarity-legendary {
+  border-color: rgba(232, 145, 58, 0.55);
+}
+
+.power-bar .powerup-slot.rarity-legendary.usable {
+  border-color: #e8913a;
+  background: rgba(232, 145, 58, 0.18);
+  box-shadow: 0 0 16px rgba(232, 145, 58, 0.5);
+  animation: power-steal 0.6s ease-in-out infinite alternate;
+}
+
+@media (max-width: 767px) {
+  .power-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  .power-bar .powerup-slot {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
+}
+
+/* The power-ups in the bar: small, only the icon (the name on hover), on the right */
+.power-bar .powerup-slots {
+  margin-left: auto;
+  gap: 0.4rem;
+}
+
+.power-bar .powerup-slot {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.power-bar .powerup-icon {
+  font-size: 1.25rem;
+}
+
+.power-bar .powerup-name {
+  display: none;
+}
+
+/* Phones too: the text on the left, the icons on the right - one row */
+@media (max-width: 767px) {
+  .power-bar {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .power-bar .powerup-slot {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+  }
+
+  .power-bar .powerup-icon {
+    font-size: 1.1rem;
+  }
 }
