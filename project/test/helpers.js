@@ -66,6 +66,10 @@ function list(rows) {
       result.sort((a, b) => (a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0) * dir);
       return q;
     },
+    skip(n) {
+      result = result.slice(n);
+      return q;
+    },
     limit(n) {
       result = result.slice(0, n);
       return q;

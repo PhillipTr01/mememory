@@ -297,13 +297,20 @@ module.exports = function () {
       }
       // One kind - or a few (a whole game: "jackpot bet,jackpot win")
       if (req.query.reason) filter.reason = { $in: String(req.query.reason).split(",").slice(0, 20) };
-      const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 200));
-      const rows = await CoinLog.find(filter).sort({ at: -1 }).limit(limit).lean();
+      // In pages (page 1: the newest)
+      const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 50));
+      const total = await CoinLog.countDocuments(filter);
+      const pages = Math.max(1, Math.ceil(total / limit));
+      const page = Math.min(pages, Math.max(1, Math.floor(Number(req.query.page)) || 1));
+      const rows = await CoinLog.find(filter).sort({ at: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).lean();
       const season = seasons.running();
       res.json({
         // The running season: its history can be picked instead
         season: season ? { name: season.name, icon: season.icon } : null,
         names: (await players()).map((p) => p.username),
+        page: page,
+        pages: pages,
+        total: total,
         rows: rows.map((row) => ({ username: row.username, amount: row.amount, reason: row.reason, note: row.note || null, at: row.at })),
       });
     }),

@@ -9,7 +9,6 @@ var HISTORY_KINDS = [
   ["Poker", [["poker buy-in", "Buy-in"], ["poker chips", "More chips"], ["poker cash-out", "Cash-out"], ["poker refund", "Refund"]]],
   ["Blackjack", [["blackjack bet", "Bet"], ["blackjack win", "Win"], ["blackjack refund", "Refund"]]],
   ["Slots", [["slots bet", "Bet"], ["slots win", "Win"]]],
-  ["Memory", [["game win", "Game win"]]],
 ];
 
 
@@ -55,7 +54,7 @@ var PAGES = {
   access: ["Access", "Who may play in the casino, and who may pay coins out."],
   players: ["Players", "Balances of every player - change one by hand."],
   payouts: ["Payouts", "Coins players took off to be paid out."],
-  history: ["History", "Every change of a balance, newest first."],
+  history: ["History", "Every coin change, newest first."],
   chat: ["Chat", "The chat of the casino - delete messages, ban players."],
   seasons: ["Seasons", "Plan seasons: everybody starts with the same budget, the best win."],
   cases: ["Cases", "The cases of the case battles - change them, add new ones, balance their payback."],
@@ -419,6 +418,7 @@ async function loadPlayers() {
         history.type = "button";
         history.addEventListener("click", () => {
           document.getElementById("adHistUser").value = p.username;
+          document.getElementById("adHistClear").hidden = false;
           location.hash = "#history";
         });
         var actions = el("td", "ad-actions");
@@ -465,8 +465,12 @@ async function loadPayouts() {
 
 /* ---------- History ---------- */
 
+// The page of the history (1: the newest) - a filter changed: back to the first
+var historyPage = 1;
+var historyFilter = "";
+
 async function loadHistory(event) {
-  if (event) event.preventDefault();
+  if (event && event.preventDefault) event.preventDefault();
   var params = new URLSearchParams();
   var user = document.getElementById("adHistUser").value.trim();
   var reason = document.getElementById("adHistReason").value;
@@ -474,10 +478,20 @@ async function loadHistory(event) {
   if (user) params.set("username", user);
   if (reason) params.set("reason", reason);
   if (!scope.hidden && scope.value) params.set("scope", scope.value);
+  if (params.toString() != historyFilter) historyPage = 1;
+  historyFilter = params.toString();
+  params.set("page", historyPage);
   try {
     var data = await api("history?" + params.toString());
+    historyPage = data.page;
+    var pager = document.getElementById("adHistPager");
+    pager.hidden = data.pages <= 1;
+    document.getElementById("adHistPage").innerText = "Page " + data.page + " of " + data.pages + " · " + formatCoins(data.total) + " changes";
+    document.getElementById("adHistPrev").disabled = data.page <= 1;
+    document.getElementById("adHistNext").disabled = data.page >= data.pages;
     // The names to pick from - and in a season its own history
-    document.getElementById("adHistNames").replaceChildren(...data.names.map((name) => Object.assign(document.createElement("option"), { value: name })));
+    historyNames = data.names;
+    if (!document.getElementById("adHistNames").hidden) showPlayerPick();
     scope.hidden = !data.season;
     if (data.season) scope.options[1].text = data.season.icon + " " + data.season.name;
     else scope.value = "";
@@ -504,6 +518,100 @@ async function loadHistory(event) {
   } catch (error) {
     fail(error);
   }
+}
+
+// The player of the history: a list of the players under the field - typing narrows it (a part of the name is enough)
+var historyNames = [];
+var pickActive = -1;
+var pickTyped = false; // typed since the field got focus: the list narrowed to it (else: everybody)
+
+function pickMatches() {
+  var q = pickTyped ? document.getElementById("adHistUser").value.trim().toLowerCase() : "";
+  return historyNames.filter((name) => name.toLowerCase().includes(q)).slice(0, 50);
+}
+
+function showPlayerPick() {
+  var input = document.getElementById("adHistUser");
+  var list = document.getElementById("adHistNames");
+  var q = pickTyped ? input.value.trim().toLowerCase() : "";
+  var current = input.value.trim().toLowerCase();
+  var names = pickMatches();
+  pickActive = Math.min(pickActive, names.length - 1);
+  var item = (name, index) => {
+    var li = el("li", "ad-pick-item" + (index == pickActive ? " active" : "") + (name.toLowerCase() == current ? " picked" : ""));
+    li.setAttribute("role", "option");
+    li.append(el("span", "ad-pick-avatar", name.charAt(0).toUpperCase()));
+    var label = el("span", "ad-pick-name");
+    var at = q ? name.toLowerCase().indexOf(q) : -1;
+    // The typed part in bold
+    if (at >= 0) label.append(name.slice(0, at), el("b", "", name.slice(at, at + q.length)), name.slice(at + q.length));
+    else label.textContent = name;
+    li.append(label);
+    li.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      pickPlayer(name);
+    });
+    return li;
+  };
+  list.replaceChildren(...(names.length ? names.map(item) : [el("li", "ad-pick-empty", "No player like that")]));
+  list.hidden = false;
+  input.setAttribute("aria-expanded", "true");
+  var active = list.querySelector(".active");
+  if (active) active.scrollIntoView({ block: "nearest" });
+}
+
+function hidePlayerPick() {
+  document.getElementById("adHistNames").hidden = true;
+  document.getElementById("adHistUser").setAttribute("aria-expanded", "false");
+  pickActive = -1;
+}
+
+function pickPlayer(name) {
+  document.getElementById("adHistUser").value = name;
+  document.getElementById("adHistClear").hidden = !name;
+  hidePlayerPick();
+  loadHistory();
+}
+
+function setupPlayerPick() {
+  var input = document.getElementById("adHistUser");
+  var typing = null;
+  input.addEventListener("focus", () => {
+    pickTyped = false;
+    showPlayerPick();
+  });
+  input.addEventListener("blur", () => hidePlayerPick());
+  input.addEventListener("input", () => {
+    document.getElementById("adHistClear").hidden = !input.value;
+    pickTyped = true;
+    pickActive = -1;
+    showPlayerPick();
+    clearTimeout(typing);
+    typing = setTimeout(loadHistory, 300);
+  });
+  input.addEventListener("keydown", (event) => {
+    var names = pickMatches();
+    if (event.key == "ArrowDown" || event.key == "ArrowUp") {
+      event.preventDefault();
+      if (!names.length) return;
+      pickActive = (pickActive + (event.key == "ArrowDown" ? 1 : -1) + names.length) % names.length;
+      showPlayerPick();
+    } else if (event.key == "Enter") {
+      event.preventDefault();
+      if (pickActive >= 0 && names[pickActive]) pickPlayer(names[pickActive]);
+      else if (names.length == 1) pickPlayer(names[0]);
+      else {
+        hidePlayerPick();
+        loadHistory();
+      }
+    } else if (event.key == "Escape") {
+      hidePlayerPick();
+    }
+  });
+  document.getElementById("adHistClear").addEventListener("click", () => {
+    pickPlayer("");
+    input.focus();
+  });
 }
 
 // The kinds in the filter: everything, then per game "all of it" and every kind of it
@@ -1542,12 +1650,15 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("adPayoutStatus").addEventListener("change", loadPayouts);
   // The history filters right away (typing: after a short pause)
-  var historyTyping = null;
   document.getElementById("adHistoryFilter").addEventListener("submit", loadHistory);
-  document.getElementById("adHistUser").addEventListener("input", () => {
-    clearTimeout(historyTyping);
-    historyTyping = setTimeout(loadHistory, 300);
-  });
+  setupPlayerPick();
+  // The pages: newer / older
+  var toPage = (step) => {
+    historyPage += step;
+    loadHistory().then(() => document.getElementById("tab-history").scrollIntoView({ block: "start" }));
+  };
+  document.getElementById("adHistPrev").addEventListener("click", () => toPage(-1));
+  document.getElementById("adHistNext").addEventListener("click", () => toPage(1));
   document.getElementById("adHistReason").addEventListener("change", () => loadHistory());
   document.getElementById("adHistScope").addEventListener("change", () => loadHistory());
   document.getElementById("adLogout").addEventListener("click", async () => {

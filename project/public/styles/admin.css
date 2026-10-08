@@ -547,6 +547,7 @@ a.ad-link:focus-visible {
 }
 
 .ad-reason {
+  white-space: nowrap;
   display: inline-block;
   padding: 0.05rem 0.5rem;
   border-radius: 999px;
@@ -1729,6 +1730,158 @@ a.ad-link:focus-visible {
   }
 }
 
+/* The history: the filters on the full width of the card */
+.ad-hist-filter {
+  flex: 1 1 auto;
+  align-items: center;
+}
+
+/* Phones: the player on its own line, the kind and the coins next to each other under it */
+@media (max-width: 600px) {
+  .ad-hist-filter .ad-pick {
+    flex-basis: 100%;
+  }
+
+  .ad-form.compact.ad-hist-filter select.mm-input {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+/* The pages of the history */
+.ad-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.ad-pager[hidden] {
+  display: none;
+}
+
+.ad-pager-info {
+  color: var(--mm-muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+/* The player of the history: the field with the list of the players under it */
+.ad-pick {
+  position: relative;
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.ad-form.compact .ad-pick .mm-input {
+  width: 100%;
+  padding-left: 2.2rem;
+  padding-right: 2rem;
+}
+
+.ad-pick-icon {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  transform: translateY(-50%);
+  font-size: 0.9rem;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.ad-pick-clear {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  transform: translateY(-50%);
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--mm-surface-3, rgba(255, 255, 255, 0.08));
+  color: var(--mm-muted);
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ad-pick-clear:hover {
+  color: var(--mm-text);
+}
+
+.ad-pick-clear[hidden],
+.ad-pick-list[hidden] {
+  display: none;
+}
+
+.ad-pick-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  max-height: 18rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  background: var(--mm-surface-2, #242228);
+  border: 1px solid var(--mm-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.ad-pick-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.ad-pick-item:hover,
+.ad-pick-item.active {
+  background: rgba(var(--mm-accent-rgb), 0.14);
+}
+
+.ad-pick-item.picked .ad-pick-name {
+  color: var(--mm-accent);
+}
+
+.ad-pick-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  color: var(--mm-accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.ad-pick-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.ad-pick-name b {
+  color: var(--mm-accent);
+}
+
+.ad-pick-empty {
+  padding: 0.55rem;
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+}
+
 /* Phones: the history - name and coins on top, what it was and when under them */
 @media (max-width: 600px) {
   .ad-table:has(#adHistory),
@@ -1760,10 +1913,14 @@ a.ad-link:focus-visible {
     border: 0;
   }
 
+  /* (the name takes the most of the first line - what and when go to the next one) */
   #adHistory td:nth-child(2) {
     order: 1;
-    flex: 1 1 0;
+    flex: 1 1 55%;
     min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   #adHistory td:nth-child(4) {
@@ -1772,13 +1929,14 @@ a.ad-link:focus-visible {
 
   #adHistory td:nth-child(3) {
     order: 3;
-    flex: 1 1 0;
+    flex: 1 1 50%;
     min-width: 0;
     font-size: 0.82rem;
   }
 
   #adHistory td:nth-child(1) {
     order: 4;
+    margin-left: auto;
     font-size: 0.75rem;
     white-space: nowrap;
   }

@@ -300,6 +300,12 @@ test("admin: in a season the players show their normal coins, changes go there; 
   assert.deepStrictEqual(normalHistory.season, { name: "Board", icon: "📋" });
   const seasonHistory = (await adminApi("history?username=rosa&scope=season&reason=" + encodeURIComponent("slots bet,slots win"))).body;
   assert.deepStrictEqual(seasonHistory.rows.map((row) => row.reason).sort(), ["slots bet", "slots win"]);
+  // In pages: the newest first, page by page
+  const first = (await adminApi("history?username=rosa&limit=1")).body;
+  assert.deepStrictEqual([first.page, first.pages, first.total, first.rows.length], [1, first.total, first.total, 1]);
+  const last = (await adminApi("history?username=rosa&limit=1&page=999")).body;
+  assert.strictEqual(last.page, first.pages, "too far: the last page");
+  assert.ok(last.rows[0].at <= first.rows[0].at);
   // The board: when they started, second chances, what they did
   const board = (await adminApi("seasons/" + made.season.id + "/board")).body;
   const row = board.rows.find((r) => r.username === "rosa");

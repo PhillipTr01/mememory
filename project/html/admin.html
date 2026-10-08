@@ -154,11 +154,14 @@
             <section id="tab-history" class="ad-tab" hidden>
                 <div class="ad-card">
                     <div class="ad-card-head">
-                        <h2 class="ad-title">Every coin change</h2>
                         <!--- Filters right away: a player (a part of the name is enough), what kind, which coins --->
                         <form id="adHistoryFilter" class="ad-form compact ad-hist-filter" autocomplete="off">
-                            <input id="adHistUser" class="mm-input" type="search" placeholder="🔍 Player" list="adHistNames" aria-label="Player">
-                            <datalist id="adHistNames"></datalist>
+                            <div class="ad-pick">
+                                <span class="ad-pick-icon" aria-hidden="true">👤</span>
+                                <input id="adHistUser" class="mm-input" type="text" placeholder="All players" aria-label="Player" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="adHistNames">
+                                <button id="adHistClear" class="ad-pick-clear" type="button" aria-label="All players" hidden>✕</button>
+                                <ul id="adHistNames" class="ad-pick-list" role="listbox" hidden></ul>
+                            </div>
                             <select id="adHistReason" class="mm-input" aria-label="Kind"></select>
                             <select id="adHistScope" class="mm-input" aria-label="Coins" hidden>
                                 <option value="">Normal coins</option>
@@ -170,6 +173,12 @@
                         <thead><tr><th>Time</th><th>Player</th><th>What</th><th class="num">Coins</th></tr></thead>
                         <tbody id="adHistory"></tbody>
                     </table>
+                    <!--- The pages: newest first --->
+                    <nav id="adHistPager" class="ad-pager" aria-label="Pages" hidden>
+                        <button id="adHistPrev" class="mm-btn mm-btn-sm" type="button">‹ Newer</button>
+                        <span id="adHistPage" class="ad-pager-info"></span>
+                        <button id="adHistNext" class="mm-btn mm-btn-sm" type="button">Older ›</button>
+                    </nav>
                 </div>
             </section>
 
