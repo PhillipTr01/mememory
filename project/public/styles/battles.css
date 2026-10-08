@@ -1694,11 +1694,12 @@ button.bt-strip-case:hover {
   height: 100%;
 }
 
-/* Phones: the five modes in one row (icon over a small name), the create button the whole width */
+/* Phones: the six modes in two rows of three (icon over a small name), the create button the whole width */
 @media (max-width: 600px) {
   #btModes {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-flow: row;
     width: 100%;
     height: auto;
   }
@@ -1762,9 +1763,5 @@ button.bt-strip-case:hover {
     flex-wrap: nowrap;
     gap: 0.35rem;
     white-space: nowrap;
-  }
-
-  .bt-seat-both .bt-seat-word {
-    display: none;
   }
 }

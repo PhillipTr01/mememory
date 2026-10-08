@@ -20,7 +20,7 @@ const PHASE = {
   CANCELLED: "cancelled",
 };
 const SIZES = [2, 3, 4];
-const MODES = ["classic", "crazy", "random", "jackpot", "bestof"];
+const MODES = ["classic", "crazy", "random", "jackpot", "bestof", "worstof"];
 const BOT_NAMES = ["Bot Pepe", "Bot Doge", "Bot Wojak"];
 
 /*
@@ -30,10 +30,11 @@ const BOT_NAMES = ["Bot Pepe", "Bot Doge", "Bot Wojak"];
  * Jackpot: one of the players gets everything - drawn from the seed, the
  * chance as big as the share of the pot the own items are worth. Best of:
  * every case is a round, the best item wins it - the most rounds win (equal:
- * the bigger total, still equal: split).
- * The mode: classic (most wins), crazy (least wins), jackpot, best of - or
- * random: one of all the others (best of only with two cases or more),
- * decided by the seed (provably fair) and shown only at the end.
+ * the bigger total, still equal: split). Worst of: the same, but the least
+ * item wins the round (equal rounds: the smaller total).
+ * The mode: classic (most wins), crazy (least wins), jackpot, best of, worst of -
+ * or random: one of all the others, decided by the seed (provably fair) and
+ * shown only at the end.
  */
 module.exports = function (io) {
   const battles = io.of("/battles");
@@ -62,11 +63,12 @@ module.exports = function (io) {
   }
 
   // Best of: the rounds every seat won (the best item of a round - equal: all of them)
-  function roundPoints(battle, rounds) {
+  // (worst of: the least item wins the round)
+  function roundPoints(battle, rounds, least = false) {
     const points = battle.seats.map(() => 0);
     rounds.forEach((round, index) => {
       const values = round.map((item) => cases.caseById(battle.cases[index]).items[item].value);
-      const best = Math.max(...values);
+      const best = least ? Math.min(...values) : Math.max(...values);
       values.forEach((value, seat) => {
         if (value === best) points[seat]++;
       });
@@ -74,9 +76,14 @@ module.exports = function (io) {
     return points;
   }
 
-  // Random: what the seed picks - every other mode (best of only with two cases or more)
-  function randomOptions(battle) {
-    return ["classic", "crazy", "jackpot", ...(battle.cases.length >= 2 ? ["bestof"] : [])];
+  // Random: what the seed picks - every other mode
+  function randomOptions() {
+    return ["classic", "crazy", "jackpot", "bestof", "worstof"];
+  }
+
+  // Best of / worst of: the rounds won so far (null in the other modes)
+  function pointsNow(battle, rounds, rule) {
+    return rule === "bestof" || rule === "worstof" ? roundPoints(battle, rounds, rule === "worstof") : null;
   }
 
   // The rule that counts: the mode - or, in random, the one picked (battles from before: classic / crazy)
@@ -110,7 +117,7 @@ module.exports = function (io) {
       rounds: rounds, // [[item index per seat] per shown round]
       totals: totals(battle, rounds),
       // Best of: the rounds won so far
-      points: modeOf(battle) === "bestof" || (done && ruleOf(battle) === "bestof") ? roundPoints(battle, rounds) : null,
+      points: pointsNow(battle, rounds, modeOf(battle) === "random" ? (done ? ruleOf(battle) : null) : modeOf(battle)),
       // Jackpot: the drawn ticket (in coins of the pot) - after the end
       ticket: done && ruleOf(battle) === "jackpot" ? battle.ticket : null,
       nextIn: battle.nextAt != null ? Math.max(0, battle.nextAt - Date.now()) : null,
@@ -192,13 +199,14 @@ module.exports = function (io) {
       let covered = 0;
       const winner = all.findIndex((total) => (covered += total) > battle.ticket);
       tied = [winner < 0 ? all.length - 1 : winner];
-    } else if (ruleOf(battle) === "bestof") {
-      // The most rounds - equal: the bigger total - still equal: all of them
+    } else if (ruleOf(battle) === "bestof" || ruleOf(battle) === "worstof") {
+      // The most rounds - equal: the bigger total (worst of: the smaller) - still equal: all of them
+      const least = ruleOf(battle) === "worstof";
       battle.crazy = false;
-      const points = roundPoints(battle, battle.results);
+      const points = roundPoints(battle, battle.results, least);
       const most = Math.max(...points);
       const leaders = points.map((p, seat) => (p === most ? seat : -1)).filter((seat) => seat >= 0);
-      const top = Math.max(...leaders.map((seat) => all[seat]));
+      const top = least ? Math.min(...leaders.map((seat) => all[seat])) : Math.max(...leaders.map((seat) => all[seat]));
       tied = leaders.filter((seat) => all[seat] === top);
     } else {
       const best = battle.crazy ? Math.min(...all) : Math.max(...all);
@@ -354,8 +362,6 @@ module.exports = function (io) {
         // Up to BATTLE_MAX_CASES cases (one round each)
         if (ids.length < 1 || !ids.every((id) => cases.caseById(id))) return;
         if (!ids.every((id) => cases.enabled(id))) return socket.emit("battleError", "One of these cases is not available anymore.");
-        // Best of: rounds to win - at least two
-        if (data.mode === "bestof" && ids.length < 2) return socket.emit("battleError", "Best of needs at least 2 cases.");
         if (ids.length > config.BATTLE_MAX_CASES) {
           socket.emit("battleError", `At most ${config.BATTLE_MAX_CASES} cases per battle.`);
           return;

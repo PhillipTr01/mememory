@@ -220,9 +220,9 @@ test("battles: random mode - one of all the modes, decided by the seed, only sho
   const during = battleIn(await running, id);
   assert.deepStrictEqual([during.mode, during.crazy, during.picked, during.points], ["random", null, null, null], "not known while it runs");
   const done = battleIn(await waitFor(carol, "battles", (data) => battleIn(data, id) && battleIn(data, id).phase === "done"), id);
-  // The seed picked one of all the modes (two cases: best of too) - anybody can check that afterwards
+  // The seed picked one of all the modes - anybody can check that afterwards
   const cases = require("../game/cases");
-  const options = ["classic", "crazy", "jackpot", "bestof"];
+  const options = ["classic", "crazy", "jackpot", "bestof", "worstof"];
   assert.strictEqual(done.picked, options[Math.floor(cases.roll(done.fair.seed, `${id}:mode`) * options.length)]);
   assert.strictEqual(done.crazy, done.picked === "crazy");
   if (done.picked === "classic" || done.picked === "crazy") {
@@ -230,7 +230,7 @@ test("battles: random mode - one of all the modes, decided by the seed, only sho
     assert.strictEqual(done.totals[done.winner], best);
   }
   if (done.picked === "jackpot") assert.ok(done.ticket >= 0 && done.ticket < done.payout);
-  if (done.picked === "bestof") assert.ok(Array.isArray(done.points));
+  if (done.picked === "bestof" || done.picked === "worstof") assert.ok(Array.isArray(done.points));
   // (the pot comes after the reveal of the mode - before the next test)
   await h.wait(80);
 });
@@ -406,15 +406,15 @@ test("cases: the admin turns cases off - gone from the list to pick from, no new
   }
 });
 
-test("battles: jackpot mode - one winner, drawn from the seed by the worth; best of - the most rounds win", async () => {
+test("battles: jackpot mode - one winner, drawn from the seed by the worth; best of / worst of - the most rounds win", async () => {
   h.setCoins("carol", 50000);
   const carol = client("carol");
   await waitFor(carol, "coins", (d) => d.coins === 50000);
-  // Best of with one case: no rounds to win - refused
-  const refused = h.once(carol, "battleError");
+  // Best of with one case: fine (one round decides)
   carol.emit("createBattle", { cases: ["starter"], size: 2, mode: "bestof" });
-  assert.match(await refused, /at least 2 cases/);
-  for (const kind of ["jackpot", "bestof"]) {
+  const single = await h.once(carol, "battleCreated");
+  carol.emit("cancelBattle", single);
+  for (const kind of ["jackpot", "bestof", "worstof"]) {
     carol.emit("createBattle", { cases: ["starter", "classic", "doge"], size: 3, mode: kind });
     const id = await h.once(carol, "battleCreated");
     carol.emit("addBot", id);
@@ -430,15 +430,17 @@ test("battles: jackpot mode - one winner, drawn from the seed by the worth; best
       const winner = done.totals.findIndex((total) => (covered += total) > ticket);
       assert.deepStrictEqual(done.winners, [winner]);
     } else {
-      // The rounds: the best item of each - the most rounds win (equal: the bigger total)
+      // The rounds: the best item of each (worst of: the worst) - the most rounds win (equal: the bigger total - worst of: the smaller)
+      const least = kind === "worstof";
+      const pick = (list) => (least ? Math.min(...list) : Math.max(...list));
       const points = done.seats.map(() => 0);
       done.rounds.forEach((round, r) => {
         const values = round.map((item) => cases.caseById(done.cases[r]).items[item].value);
-        values.forEach((value, seat) => value === Math.max(...values) && points[seat]++);
+        values.forEach((value, seat) => value === pick(values) && points[seat]++);
       });
       assert.deepStrictEqual(done.points, points);
       const most = Math.max(...points);
-      const top = Math.max(...points.map((p, seat) => (p === most ? done.totals[seat] : -1)));
+      const top = pick(points.map((p, seat) => (p === most ? done.totals[seat] : least ? Infinity : -1)));
       assert.deepStrictEqual(done.winners, points.map((p, seat) => (p === most && done.totals[seat] === top ? seat : -1)).filter((seat) => seat >= 0));
     }
   }
