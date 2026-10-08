@@ -58,6 +58,7 @@ var PAGES = {
   history: ["History", "Every change of a balance, newest first."],
   chat: ["Chat", "The chat of the casino - delete messages, ban players."],
   seasons: ["Seasons", "Plan seasons: everybody starts with the same budget, the best win."],
+  cases: ["Cases", "The cases of the case battles - change them, add new ones, balance their payback."],
   settings: ["Settings", "Values of the games, and the hard reset."],
 };
 
@@ -97,6 +98,11 @@ function showTab() {
     loadSeasons();
   }
   if (tab == "settings") loadSettings();
+  if (tab == "cases") {
+    caseView = parts[1] ? decodeURIComponent(parts[1]) : null;
+    caseDraft = null;
+    loadCases();
+  }
 }
 
 window.addEventListener("hashchange", showTab);
@@ -1600,3 +1606,408 @@ document.addEventListener("DOMContentLoaded", () => {
   // New payouts, balances and history show up by themselves
   setInterval(refresh, 5000);
 });
+
+
+/* ---------- Cases of the case battles: the list, a page per case (items, RTP balancer) ---------- */
+
+var caseList = [];
+var caseView = null; // null: the list, "new", or the id of a case
+var caseDraft = null; // the case on its page, as it is being changed
+var deletedCases = []; // deleted cases (their last version) - to bring back
+var RISK_NAMES = { low: "🛡️ Low risk", balanced: "⚖️ Balanced", high: "🔥 High risk" };
+var DEFAULT_TARGET = 0.9;
+
+async function loadCases() {
+  try {
+    var data = await api("cases");
+    caseList = data.cases;
+    deletedCases = data.deleted || [];
+    renderCases();
+  } catch (error) {
+    fail(error);
+  }
+}
+
+// The payback of items (chances in percent, values) for a price
+function draftRtp(draft) {
+  var total = draft.items.reduce((sum, item) => sum + (Number(item.chance) || 0), 0);
+  if (!total || !draft.price) return 0;
+  return draft.items.reduce((sum, item) => sum + ((Number(item.chance) || 0) / total) * (Number(item.value) || 0), 0) / draft.price;
+}
+
+function pct(value, digits) {
+  return (value * 100).toFixed(digits == null ? 1 : digits) + "%";
+}
+
+function renderCases() {
+  var onPage = caseView != null;
+  document.getElementById("adCasesMain").hidden = onPage;
+  document.getElementById("adCasePage").hidden = !onPage;
+  if (!onPage) {
+    var list = document.getElementById("adCaseList");
+    list.replaceChildren(
+      ...caseList.map((box) => {
+        var row = el("a", "ad-case-row" + (box.off ? " off" : ""));
+        row.href = "#cases/" + encodeURIComponent(box.id);
+        var main = el("div", "ad-case-main");
+        main.append(el("b", "", box.name), el("span", "ad-case-sub", RISK_NAMES[box.risk] + " · " + box.items.length + " items · up to " + Math.round(box.top) + "×"));
+        var tags = el("div", "ad-case-tags");
+        if (box.off) tags.appendChild(el("span", "ad-pill", "off"));
+        if (!box.builtIn) tags.appendChild(el("span", "ad-pill accent", "new"));
+        else if (box.changed) tags.appendChild(el("span", "ad-pill", "changed"));
+        var rtp = el("span", "ad-case-rtp " + rtpClass(box.rtp), "RTP " + pct(box.rtp));
+        row.append(el("span", "ad-case-icon", box.icon), main, tags, el("span", "ad-case-price", "🪙 " + formatCoins(box.price)), rtp);
+        return row;
+      }),
+      // Deleted ones: back with one click
+      ...(deletedCases.length ? [el("h3", "ad-label ad-deleted-head", "Deleted")] : []),
+      ...deletedCases.map((box) => {
+        var row = el("div", "ad-case-row off");
+        var main = el("div", "ad-case-main");
+        main.append(el("b", "", box.name), el("span", "ad-case-sub", "deleted " + (box.retiredAt ? dateText(box.retiredAt) : "") + " · RTP " + pct(box.rtp)));
+        var back = el("button", "mm-btn mm-btn-sm", "↺ Bring back");
+        back.type = "button";
+        back.addEventListener("click", async () => {
+          try {
+            caseList = (await api("cases/" + encodeURIComponent(box.id) + "/versions/" + encodeURIComponent(box.key), {})).cases;
+            loadCases();
+          } catch (error) {
+            fail(error);
+          }
+        });
+        row.append(el("span", "ad-case-icon", box.icon), main, el("span", ""), el("span", "ad-case-price", "🪙 " + formatCoins(box.price)), back);
+        return row;
+      }),
+    );
+    return;
+  }
+  var box = caseView == "new" ? null : caseList.find((other) => other.id == caseView);
+  if (caseView != "new" && !box) return (location.hash = "#cases");
+  document.getElementById("adPageTitle").innerText = box ? box.icon + " " + box.name : "New case";
+  document.getElementById("adPageSub").innerText = box ? (box.builtIn ? (box.changed ? "Built in - changed" : "Built in") : "Added in the admin panel") + " · " + (box.off ? "turned off" : "in the case battles") : "A new case for the case battles.";
+  if (!caseDraft || caseDraft.id != (box ? box.id : "new")) caseDraft = draftOf(box);
+  renderCaseEditor(box);
+}
+
+// The payback by color: very low red, normal green, above 100% (the house loses) red too
+function rtpClass(rtp) {
+  return rtp >= 1 ? "bad" : rtp < 0.75 ? "low" : "ok";
+}
+
+function draftOf(box) {
+  if (!box)
+    return {
+      id: "new",
+      name: "",
+      icon: "🎁",
+      price: 100,
+      risk: "balanced",
+      target: DEFAULT_TARGET,
+      autoBalance: true,
+      items: [
+        { icon: "🪨", name: "Pebble", value: 20, chance: 40 },
+        { icon: "🍕", name: "Pizza Slice", value: 70, chance: 35 },
+        { icon: "🎮", name: "Controller", value: 150, chance: 20 },
+        { icon: "💎", name: "Diamond", value: 600, chance: 5 },
+      ],
+    };
+  return {
+    id: box.id,
+    name: box.name,
+    icon: box.icon,
+    price: box.price,
+    risk: box.risk,
+    target: box.target != null ? box.target : Math.round(box.rtp * 1000) / 1000,
+    autoBalance: box.target != null,
+    items: box.items.map((item) => ({ icon: item.icon, name: item.name, value: item.value, chance: Math.round(item.chance * 100000) / 1000 })),
+  };
+}
+
+function renderCaseEditor(box) {
+  var draft = caseDraft;
+  var wrap = document.getElementById("adCaseEditor");
+
+  // The numbers of the case: RTP (now / target), house edge, the top item, the chance to win more than the price
+  var stats = el("div", "ad-card ad-case-stats");
+  var statsRow = el("div", "ad-season-tiles");
+  var rtpBox = el("div", "ad-case-stat-rtp");
+  function refreshStats() {
+    var rtp = draftRtp(draft);
+    var total = draft.items.reduce((sum, item) => sum + (Number(item.chance) || 0), 0) || 1;
+    var profit = draft.items.filter((item) => Number(item.value) > draft.price).reduce((sum, item) => sum + (Number(item.chance) || 0), 0) / total;
+    var top = Math.max(...draft.items.map((item) => Number(item.value) || 0)) / (draft.price || 1);
+    var stat = (icon, value, label, cls) => {
+      var cell = el("div", "ad-season-tile" + (cls ? " " + cls : ""));
+      cell.append(el("span", "ad-season-tile-icon", icon), el("b", "", value), el("span", "", label));
+      return cell;
+    };
+    statsRow.replaceChildren(
+      stat("🎯", pct(rtp, 2), "RTP now", "rtp " + rtpClass(rtp)),
+      stat("🏠", pct(1 - rtp, 2), "house edge"),
+      stat("📈", pct(profit, 1), "chance to win more than the price"),
+      stat("🚀", Math.round(top * 10) / 10 + "×", "best item / price"),
+      stat("∑", (Math.round(total * 1000) / 1000) + "%", "chances together" + (Math.abs(total - 100) > 0.001 ? " - scaled to 100% on saving" : "")),
+    );
+    // The RTP on a bar: 0 - 120 %, the target marked
+    var bar = el("div", "ad-rtp-bar");
+    var fill = el("span", "ad-rtp-fill " + rtpClass(rtp));
+    fill.style.width = Math.min(100, (rtp / 1.2) * 100) + "%";
+    var mark = el("span", "ad-rtp-target");
+    mark.style.left = Math.min(100, (Number(draft.target) / 1.2) * 100) + "%";
+    mark.title = "Target " + pct(Number(draft.target));
+    var hundred = el("span", "ad-rtp-100");
+    hundred.style.left = (1 / 1.2) * 100 + "%";
+    bar.append(fill, mark, hundred);
+    rtpBox.replaceChildren(
+      el("div", "ad-rtp-label", "RTP " + pct(rtp, 2) + " · target " + pct(Number(draft.target) || 0, 1)),
+      bar,
+      el("p", "ad-note", "Of every 100 coins spent on this case, about " + (Math.round(rtp * 1000) / 10) + " come back as items" + (rtp < 1 ? " - " + (Math.round((1 - rtp) * 1000) / 10) + " stay with the house." : " - the house loses coins on it!")),
+    );
+  }
+  stats.append(el("h2", "ad-title", "Payback"), statsRow, rtpBox);
+
+  // Name, icon, price, risk
+  var head = el("div", "ad-card");
+  var fields = el("div", "ad-case-fields");
+  var field = (label, input) => {
+    var wrap = el("label", "ad-field");
+    wrap.append(el("span", "ad-label", label), input);
+    return wrap;
+  };
+  var input = (value, attrs, onInput) => {
+    var node = Object.assign(el("input", "mm-input"), attrs);
+    node.value = value;
+    node.addEventListener("input", () => {
+      onInput(node.value);
+      refreshStats();
+    });
+    return node;
+  };
+  var risk = el("select", "mm-input");
+  Object.keys(RISK_NAMES).forEach((key) => risk.appendChild(Object.assign(document.createElement("option"), { value: key, text: RISK_NAMES[key] })));
+  risk.value = draft.risk;
+  risk.addEventListener("change", () => (draft.risk = risk.value));
+  fields.append(
+    field("Icon", input(draft.icon, { maxLength: 8 }, (v) => (draft.icon = v))),
+    field("Name", input(draft.name, { maxLength: 40, placeholder: "Meme Box" }, (v) => (draft.name = v))),
+    field("Price", input(draft.price, { type: "number", min: 1, step: 10 }, (v) => (draft.price = Number(v)))),
+    field("Risk", risk),
+  );
+  head.append(el("h2", "ad-title", "The case"), fields);
+
+  // The items: icon, name, value (and × the price), chance in % - add and remove
+  var itemsCard = el("div", "ad-card");
+  var itemsHead = el("div", "ad-card-head");
+  var add = el("button", "mm-btn mm-btn-sm", "+ Item");
+  add.type = "button";
+  add.addEventListener("click", () => {
+    if (draft.items.length >= 20) return showToast("At most 20 items.", "error");
+    draft.items.push({ icon: "❓", name: "New item", value: draft.price, chance: 1 });
+    renderCaseEditor(box);
+  });
+  itemsHead.append(el("h2", "ad-title", "Items"), add);
+  var table = el("div", "ad-items");
+  function renderItems() {
+    table.replaceChildren(
+      el("div", "ad-item ad-item-head"),
+      ...draft.items.map((item, index) => {
+        var row = el("div", "ad-item");
+        var times = el("span", "ad-item-times");
+        var showTimes = () => (times.innerText = (Math.round(((Number(item.value) || 0) / (draft.price || 1)) * 100) / 100) + "×");
+        showTimes();
+        var remove = el("button", "ad-item-remove", "×");
+        remove.type = "button";
+        remove.title = "Remove the item";
+        remove.disabled = draft.items.length <= 2;
+        remove.addEventListener("click", () => {
+          draft.items.splice(index, 1);
+          renderCaseEditor(box);
+        });
+        row.append(
+          input(item.icon, { maxLength: 8, className: "mm-input ad-item-icon", ariaLabel: "Icon" }, (v) => (item.icon = v)),
+          input(item.name, { maxLength: 40, className: "mm-input ad-item-name", ariaLabel: "Name" }, (v) => (item.name = v)),
+          input(item.value, { type: "number", min: 0, className: "mm-input ad-item-value", ariaLabel: "Value" }, (v) => {
+            item.value = Number(v);
+            showTimes();
+          }),
+          times,
+          input(item.chance, { type: "number", min: 0, step: 0.001, className: "mm-input ad-item-chance", ariaLabel: "Chance in %" }, (v) => (item.chance = Number(v))),
+          remove,
+          // (phones: no column titles - the units next to the fields)
+          el("span", "ad-item-unit value", "coins"),
+          el("span", "ad-item-unit chance", "% chance"),
+        );
+        return row;
+      }),
+    );
+    table.firstChild.append(el("span", "", "Icon"), el("span", "", "Name"), el("span", "", "Value"), el("span", "", "× price"), el("span", "", "Chance %"), el("span", ""));
+  }
+  renderItems();
+  itemsCard.append(itemsHead, table);
+
+  // The RTP balancer: the chances move (the values stay) until the case pays back the target
+  var balancer = el("div", "ad-card ad-balancer");
+  var target = input(Math.round(Number(draft.target) * 1000) / 10, { type: "number", min: 10, max: 199, step: 0.5, className: "mm-input ad-target" }, (v) => (draft.target = Number(v) / 100));
+  var balanceBtn = el("button", "mm-btn", "⚖️ Balance now");
+  balanceBtn.type = "button";
+  balanceBtn.addEventListener("click", async () => {
+    try {
+      var result = await api("case-balance", { price: draft.price, target: draft.target, items: draft.items.map((item) => ({ icon: item.icon, name: item.name, value: item.value, weight: item.chance })) });
+      draft.items = result.items.map((item) => ({ icon: item.icon, name: item.name, value: item.value, chance: Math.round((item.weight / 100000) * 100000) / 1000 }));
+      showToast("Balanced: RTP " + pct(result.rtp, 2));
+      renderCaseEditor(box);
+    } catch (error) {
+      fail(error);
+    }
+  });
+  var auto = Object.assign(document.createElement("input"), { type: "checkbox", checked: !!draft.autoBalance });
+  auto.addEventListener("change", () => (draft.autoBalance = auto.checked));
+  var autoLabel = el("label", "ad-check");
+  autoLabel.append(auto, el("span", "", "Balance automatically when saving"));
+  var targetRow = el("div", "ad-balancer-row");
+  var targetField = el("label", "ad-field");
+  targetField.append(el("span", "ad-label", "Target RTP %"), target);
+  targetRow.append(targetField, balanceBtn, autoLabel);
+  balancer.append(
+    el("h2", "ad-title", "⚖️ RTP balancer"),
+    el("p", "ad-note", "Sets the chances so the case pays back the target on average - the values stay. The order of the items stays too: a lower target makes the expensive items rarer, a higher one more common (every chance is scaled by the same factor per coin of value). The target has to lie between the cheapest and the most expensive item."),
+    targetRow,
+  );
+
+  // Save, turn on / off, restore, delete
+  var actions = el("div", "ad-card ad-case-actions");
+  var save = el("button", "mm-btn mm-btn-primary", box ? "Save" : "Create case");
+  save.type = "button";
+  save.addEventListener("click", async () => {
+    save.disabled = true;
+    try {
+      var body = { name: draft.name, icon: draft.icon, price: draft.price, risk: draft.risk, target: draft.target, autoBalance: draft.autoBalance, items: draft.items.map((item) => ({ icon: item.icon, name: item.name, value: item.value, weight: item.chance })) };
+      var result = await api(box ? "cases/" + encodeURIComponent(box.id) : "cases", body);
+      caseList = result.cases;
+      caseDraft = null;
+      showToast((box ? "Saved" : "Created") + " - RTP " + pct(result.case.rtp, 2) + (box ? " (running battles keep the old version)" : ""));
+      if (box) renderCases();
+      else location.hash = "#cases/" + encodeURIComponent(result.case.id);
+    } catch (error) {
+      fail(error);
+    } finally {
+      save.disabled = false;
+    }
+  });
+  actions.appendChild(save);
+  if (box) {
+    var toggle = el("button", "mm-btn", box.off ? "Turn on" : "Turn off");
+    toggle.type = "button";
+    toggle.addEventListener("click", async () => {
+      var off = caseList.filter((other) => other.off).map((other) => other.id);
+      var next = box.off ? off.filter((id) => id != box.id) : off.concat(box.id);
+      try {
+        await api("settings", { values: { BATTLE_CASES_OFF: next } });
+        loadCases();
+      } catch (error) {
+        fail(error);
+      }
+    });
+    actions.appendChild(toggle);
+    if (box.builtIn && box.changed) {
+      var restore = el("button", "mm-btn", "↺ Back to the original");
+      restore.type = "button";
+      restore.addEventListener("click", async () => {
+        if (!(await confirmDialog({ title: "Back to the original?", text: box.name + " gets its built-in items and chances again.", confirmLabel: "Restore" }))) return;
+        try {
+          caseList = (await api("cases/" + encodeURIComponent(box.id) + "/restore", {})).cases;
+          caseDraft = null;
+          renderCases();
+        } catch (error) {
+          fail(error);
+        }
+      });
+      actions.appendChild(restore);
+    }
+    var remove = el("button", "mm-btn ad-danger-btn", "Delete");
+    remove.type = "button";
+    remove.addEventListener("click", async () => {
+      if (!(await confirmDialog({ title: "Delete " + box.name + "?", text: "It is gone from the case battles. Battles that have it already stay as they are.", confirmLabel: "Delete", danger: true }))) return;
+      try {
+        caseList = (await api("cases/" + encodeURIComponent(box.id) + "/delete", {})).cases;
+        location.hash = "#cases";
+      } catch (error) {
+        fail(error);
+      }
+    });
+    actions.appendChild(remove);
+  }
+  actions.appendChild(el("span", "ad-note", "A change makes a new version: running battles and the history keep the one they have."));
+
+  wrap.replaceChildren(stats, head, itemsCard, balancer, actions);
+  if (box) wrap.appendChild(versionsCard(box));
+  refreshStats();
+}
+
+// The earlier versions of a case: look at one in the editor, or bring it back right away
+function versionsCard(box) {
+  var card = el("div", "ad-card ad-versions");
+  var list = el("div", "ad-version-list");
+  card.append(el("div", "ad-card-head"), list);
+  card.firstChild.append(el("h2", "ad-title", "🕘 Versions"), el("span", "ad-cases-count", box.versions ? box.versions + " earlier" : ""));
+  list.appendChild(el("p", "ad-empty", "Loading..."));
+  api("cases/" + encodeURIComponent(box.id) + "/versions")
+    .then((data) => {
+      var when = (t) => (t ? dateText(t) : "built in");
+      var now = el("div", "ad-version now");
+      now.append(el("span", "ad-version-when", "Now · " + (box.savedAt ? "since " + dateText(box.savedAt) : "built in")), el("span", "ad-version-sum", "🪙 " + formatCoins(box.price) + " · " + box.items.length + " items · RTP " + pct(box.rtp, 2)), el("span", "ad-pill success", "in use"));
+      if (!data.versions.length) return list.replaceChildren(now, el("p", "ad-empty", "No earlier versions yet - every save keeps the one before."));
+      list.replaceChildren(
+        now,
+        ...data.versions.map((version) => {
+          var row = el("div", "ad-version");
+          var load = el("button", "mm-btn mm-btn-sm", "Load into editor");
+          load.type = "button";
+          load.title = "Puts this version into the editor above - nothing is saved yet";
+          load.addEventListener("click", () => {
+            caseDraft = draftOf({ ...version, id: box.id });
+            renderCaseEditor(box);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            showToast("Loaded - save to use it");
+          });
+          var back = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Restore");
+          back.type = "button";
+          back.addEventListener("click", async () => {
+            if (!(await confirmDialog({ title: "Restore this version?", text: "The case gets these items and chances again (as a new version - the one now is kept too).", confirmLabel: "Restore" }))) return;
+            try {
+              caseList = (await api("cases/" + encodeURIComponent(box.id) + "/versions/" + encodeURIComponent(version.key), {})).cases;
+              caseDraft = null;
+              showToast("Restored");
+              renderCases();
+            } catch (error) {
+              fail(error);
+            }
+          });
+          var buttons = el("div", "ad-version-buttons");
+          buttons.append(load, back);
+          // Not in any battle anymore: can go
+          if (version.used) buttons.prepend(el("span", "ad-pill", "in a battle"));
+          else {
+            var drop = el("button", "mm-btn mm-btn-sm ad-danger-btn", "Remove");
+            drop.type = "button";
+            drop.title = "No battle has this version - remove it for good";
+            drop.addEventListener("click", async () => {
+              if (!(await confirmDialog({ title: "Remove this version?", text: "It is gone for good - it can't be restored anymore.", confirmLabel: "Remove", danger: true }))) return;
+              try {
+                caseList = (await api("cases/" + encodeURIComponent(box.id) + "/versions/" + encodeURIComponent(version.key) + "/delete", {})).cases;
+                showToast("Version removed");
+                renderCases();
+              } catch (error) {
+                fail(error);
+              }
+            });
+            buttons.appendChild(drop);
+          }
+          row.append(el("span", "ad-version-when", when(version.savedAt) + " → " + when(version.retiredAt)), el("span", "ad-version-sum", version.icon + " " + version.name + " · 🪙 " + formatCoins(version.price) + " · " + version.items.length + " items · RTP " + pct(version.rtp, 2)), buttons);
+          return row;
+        }),
+      );
+    })
+    .catch(fail);
+  return card;
+}

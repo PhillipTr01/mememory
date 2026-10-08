@@ -121,6 +121,10 @@ async function connectDatabase(attempt = 1) {
     console.log("Connected to database.");
     // The values changed in the admin panel, then the games as they were
     // before the restart (rounds, tables, history, chat)
+    // The cases (the admin may have changed them - the settings and the battles need them)
+    await require("./game/cases")
+      .load()
+      .catch((error) => console.error("Could not load the cases:", error));
     await require("./game/settings")
       .load()
       .catch((error) => console.error("Could not load the settings:", error));

@@ -330,6 +330,8 @@ module.exports = function (io) {
   require("../game/settings").changes.on("change", (values) => {
     if ("BATTLE_CASES_OFF" in values) battles.emit("cases", cases.catalog());
   });
+  // ... or changed, added, deleted one in the case editor
+  cases.changes.on("change", () => battles.emit("cases", cases.catalog()));
 
   battles.on("connection", (socket) => {
     version.announce(socket);
@@ -449,6 +451,9 @@ module.exports = function (io) {
   });
 
   /* ---------- Restart of the server ---------- */
+
+  // The case versions battles here still have (they can't be removed in the case editor)
+  cases.setUsedLookup(() => new Set([...lobby.list.values()].flatMap((battle) => battle.cases)));
 
   persist.register(
     "battles",

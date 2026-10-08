@@ -32,6 +32,7 @@
                 <a href="#players" class="ad-nav-item" data-tab="players"><span class="ad-nav-icon">🏆</span><span class="ad-nav-label">Players</span></a>
                 <a href="#payouts" class="ad-nav-item" data-tab="payouts"><span class="ad-nav-icon">💸</span><span class="ad-nav-label">Payouts</span></a>
                 <a href="#history" class="ad-nav-item" data-tab="history"><span class="ad-nav-icon">📜</span><span class="ad-nav-label">History</span></a>
+                <a href="#cases" class="ad-nav-item" data-tab="cases"><span class="ad-nav-icon">🎁</span><span class="ad-nav-label">Cases</span></a>
                 <a href="#seasons" class="ad-nav-item" data-tab="seasons"><span class="ad-nav-icon">🗓️</span><span class="ad-nav-label">Seasons</span><span id="adSeasonBadge" class="ad-state on" hidden></span></a>
                 <a href="#chat" class="ad-nav-item" data-tab="chat"><span class="ad-nav-icon">💬</span><span class="ad-nav-label">Chat</span></a>
                 <a href="#settings" class="ad-nav-item" data-tab="settings"><span class="ad-nav-icon">⚙️</span><span class="ad-nav-label">Settings</span></a>
@@ -173,6 +174,24 @@
             </section>
 
             <!--- Seasons: planned ahead, every account starts with the budget, the winners at the end --->
+            <!--- The cases of the case battles: every case, a page per case with its items and the RTP balancer --->
+            <section id="tab-cases" class="ad-tab" hidden>
+                <div id="adCasesMain" class="ad-stack">
+                    <div class="ad-card">
+                        <div class="ad-card-head">
+                            <h2 class="ad-title">All cases</h2>
+                            <a href="#cases/new" class="mm-btn mm-btn-sm mm-btn-primary">+ New case</a>
+                        </div>
+                        <p class="ad-note">RTP (return to player): what a case pays back on average - 92% means of every 100 coins spent on it, 92 come back as items and 8 stay with the house. Click a case to change it.</p>
+                        <div id="adCaseList" class="ad-case-list"></div>
+                    </div>
+                </div>
+                <div id="adCasePage" class="ad-stack" hidden>
+                    <a href="#cases" class="ad-back">‹ All cases</a>
+                    <div id="adCaseEditor" class="ad-stack"></div>
+                </div>
+            </section>
+
             <section id="tab-seasons" class="ad-tab" hidden>
                 <!--- #seasons: what runs now and every season --->
                 <div id="adSeasonsMain" class="ad-stack">

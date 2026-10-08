@@ -12,6 +12,7 @@ const live = require("../game/live");
 const settings = require("../game/settings");
 const { hardReset } = require("../game/hard_reset");
 const seasons = require("../game/seasons");
+const cases = require("../game/cases");
 const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
 
@@ -364,6 +365,28 @@ module.exports = function () {
       res.json(result);
     }),
   );
+
+  /* ---------- The cases of the case battles ---------- */
+
+  const caseResult = (res, result) => (result.error ? res.status(400).json(result) : res.json({ ...result, cases: cases.list() }));
+  router.get("/api/cases", admin, (req, res) => res.json({ cases: cases.list(), deleted: cases.deletedCases(), weightTotal: cases.WEIGHT_TOTAL }));
+  // The earlier versions of a case - and one of them back
+  router.get("/api/cases/:id/versions", admin, (req, res) => res.json({ versions: cases.versions(req.params.id) }));
+  router.post("/api/cases/:id/versions/:key/delete", admin, asyncHandler(async (req, res) => caseResult(res, await cases.removeVersion(req.params.id, req.params.key))));
+  router.post("/api/cases/:id/versions/:key", admin, asyncHandler(async (req, res) => caseResult(res, await cases.restoreVersion(req.params.id, req.params.key))));
+  router.post("/api/cases", admin, asyncHandler(async (req, res) => caseResult(res, await cases.create(req.body))));
+  router.post("/api/cases/:id", admin, asyncHandler(async (req, res) => caseResult(res, await cases.update(req.params.id, req.body))));
+  router.post("/api/cases/:id/delete", admin, asyncHandler(async (req, res) => caseResult(res, await cases.remove(req.params.id))));
+  router.post("/api/cases/:id/restore", admin, asyncHandler(async (req, res) => caseResult(res, await cases.restore(req.params.id))));
+  // The RTP balancer: the chances for a payback (nothing is saved) - {items, rtp} or {error}
+  router.post("/api/case-balance", admin, (req, res) => {
+    const { items, price, target } = req.body || {};
+    const checked = cases.check({ name: "x", icon: "x", price: price, risk: "low", items: items }, "x");
+    if (checked.error) return res.status(400).json(checked);
+    const result = cases.balance(checked.case.items, checked.case.price, Number(target));
+    if (result.error) return res.status(400).json(result);
+    res.json(result);
+  });
 
   /* ---------- Seasons ---------- */
 
