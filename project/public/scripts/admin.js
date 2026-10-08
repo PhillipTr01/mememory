@@ -565,18 +565,19 @@ function renderMaintenance(fill) {
   list.replaceChildren(
     ...(maintForm.whitelist.length
       ? maintForm.whitelist.map((name) => {
-          var chip = el("span", "ad-maint-chip", name);
-          var remove = el("button", "", "✕");
+          // One row per player: the first letter, the name, remove
+          var row = el("div", "ad-maint-row");
+          var remove = el("button", "mm-btn mm-btn-sm", "Remove");
           remove.type = "button";
           remove.setAttribute("aria-label", "Remove " + name);
           remove.addEventListener("click", () => {
             maintForm.whitelist = maintForm.whitelist.filter((other) => other != name);
             renderMaintenance(false);
           });
-          chip.appendChild(remove);
-          return chip;
+          row.append(el("span", "ad-pick-avatar", name.charAt(0).toUpperCase()), el("span", "ad-maint-name", name), remove);
+          return row;
         })
-      : [el("span", "ad-note", "Nobody - only you (the admin panel) during the maintenance.")]),
+      : [el("div", "ad-maint-empty", "Nobody - only you (the admin panel) during the maintenance.")]),
   );
   var state = document.getElementById("adMaintState");
   state.innerText = maint.on

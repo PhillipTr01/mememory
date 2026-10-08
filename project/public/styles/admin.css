@@ -2527,36 +2527,38 @@ a.ad-case-row:hover {
 
 .ad-maint-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  flex-direction: column;
   margin-top: 0.5rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-.ad-maint-chip {
-  display: inline-flex;
+.ad-maint-row {
+  display: flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.35rem 0.25rem 0.7rem;
-  border: 1px solid var(--mm-border);
-  border-radius: 999px;
-  background: var(--mm-surface-2);
-  font-size: 0.85rem;
+  gap: 0.6rem;
+  padding: 0.45rem 0.5rem 0.45rem 0.7rem;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.ad-maint-row:last-child {
+  border-bottom: 0;
+}
+
+.ad-maint-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 600;
 }
 
-.ad-maint-chip button {
-  width: 1.3rem;
-  height: 1.3rem;
-  border: 0;
-  border-radius: 50%;
-  background: var(--mm-surface-3);
+.ad-maint-empty {
+  padding: 0.65rem 0.75rem;
   color: var(--mm-muted);
-  font-size: 0.65rem;
-  cursor: pointer;
-}
-
-.ad-maint-chip button:hover {
-  color: var(--mm-danger);
+  font-size: 0.85rem;
 }
 
 .ad-maint-quick {
