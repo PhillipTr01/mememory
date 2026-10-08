@@ -23,6 +23,7 @@ const FIELDS = [
   { group: "jackpot", section: "Bets", key: "JACKPOT_MAX_COINS", label: "Max coins per round", hint: "All bets of one player in one round together.", min: 1, max: 100000000 },
   { group: "jackpot", section: "Bets", key: "JACKPOT_RAKE", label: "House cut", hint: "Percent of the pot the house keeps - the winner gets the rest (5%: a payback of 95%).", unit: "%", min: 0, max: 50 },
   { group: "jackpot", section: "Bets", key: "JACKPOT_MAX_BETS", label: "Bets per round", hint: "Separate bets of one player in one round.", min: 1, max: 100 },
+  { group: "jackpot", section: "Ghost", key: "JACKPOT_GHOST_MAX", label: "Ghost bets at most", hint: "The ghost bets 50-75% of the coins of the player alone in the pot - never more than this.", min: 1, max: 100000000 },
   { group: "jackpot", section: "Timing", key: "JACKPOT_GHOST_AFTER", label: "Ghost joins after", hint: "Alone in the pot this long: the 👻 joins.", unit: "s", scale: 1000, min: 1, max: 3600 },
   { group: "jackpot", section: "Timing", key: "JACKPOT_COUNTDOWN", label: "Countdown", hint: "From the second player to the draw.", unit: "s", scale: 1000, min: 5, max: 600 },
   { group: "battles", section: "Case battles", key: "GAME_BATTLES", type: "toggle", label: "Case battles are on", hint: "Off: no tab, nobody can open it." },

@@ -195,7 +195,7 @@ test("jackpot: two players start the countdown, the winner gets the pot minus th
   assert.strictEqual(next.round, drawing.round + 1);
 });
 
-test("jackpot: alone in the pot - a ghost of 85-115% joins, a real player makes it disappear", async () => {
+test("jackpot: alone in the pot - a ghost of 50-75% (capped) joins once, a real player makes it disappear", async () => {
   h.setCoins("alice", 5000);
   h.setCoins("bob", 5000);
   const alice = client("alice");
@@ -203,7 +203,7 @@ test("jackpot: alone in the pot - a ghost of 85-115% joins, a real player makes 
   await waitFor(alice, "coins", (data) => data.coins === 5000);
   await waitFor(bob, "coins", (data) => data.coins === 5000);
   assert.strictEqual(server.jackpot.pot.phase, "open");
-  Object.assign(config, { JACKPOT_GHOST_AFTER: 150, JACKPOT_COUNTDOWN: 1500 });
+  Object.assign(config, { JACKPOT_GHOST_AFTER: 150, JACKPOT_COUNTDOWN: 1500, JACKPOT_GHOST_MAX: 600 });
 
   // Alice alone: the page knows when the ghost comes, then it is in the pot
   const alone = waitFor(alice, "jackpotState", (s) => s.total === 1000);
@@ -213,18 +213,16 @@ test("jackpot: alone in the pot - a ghost of 85-115% joins, a real player makes 
   const withGhost = await ghosted;
   const ghost = withGhost.entries.find((e) => e.ghost);
   assert.strictEqual(ghost.name, "Ghost");
-  assert.ok(ghost.coins >= 850 && ghost.coins <= 1150, `ghost: ${ghost.coins}`);
+  assert.ok(ghost.coins >= 500 && ghost.coins <= 600, `ghost: ${ghost.coins} (50-75% of 1,000, at most 600)`);
   assert.strictEqual(withGhost.phase, "countdown", "the ghost starts the countdown");
   assert.deepStrictEqual(withGhost.bets.map((b) => [b.name, b.from, b.to]), [["alice", 1, 1000], ["Ghost", 1001, 1000 + ghost.coins]]);
 
-  // Alice puts in more: the ghost answers right away with 85-115% of it
-  const answered = waitFor(alice, "jackpotState", (s) => s.bets.length === 4);
+  // Alice puts in more: the ghost doesn't answer - her chance gets bigger
+  const added = waitFor(alice, "jackpotState", (s) => s.bets.length === 3);
   alice.emit("bet", { amount: 400 });
-  const more = await answered;
-  assert.deepStrictEqual(more.bets.map((b) => b.name), ["alice", "Ghost", "alice", "Ghost"]);
-  const answer = more.bets[3].amount;
-  assert.ok(answer >= 340 && answer <= 460, `ghost answer: ${answer}`);
-  assert.strictEqual(more.entries.find((e) => e.ghost).coins, ghost.coins + answer);
+  const more = await added;
+  assert.deepStrictEqual(more.bets.map((b) => b.name), ["alice", "Ghost", "alice"]);
+  assert.strictEqual(more.entries.find((e) => e.ghost).coins, ghost.coins);
 
   // Bob joins before the draw: the ghost is gone, the tickets are counted again
   const gone = waitFor(alice, "jackpotState", (s) => s.entries.some((e) => e.name === "bob"));
@@ -247,7 +245,7 @@ test("jackpot: alone in the pot - a ghost of 85-115% joins, a real player makes 
   assert.strictEqual(drawn.draw.winner, "Ghost");
   await waitFor(alice, "jackpotState", (s) => s.phase === "open" && s.total === 0, 5000);
   assert.strictEqual(h.coinsOf("alice"), before, "nothing back");
-  Object.assign(config, { JACKPOT_GHOST_AFTER: 60000, JACKPOT_COUNTDOWN: 200 });
+  Object.assign(config, { JACKPOT_GHOST_AFTER: 60000, JACKPOT_COUNTDOWN: 200, JACKPOT_GHOST_MAX: 5000 });
 });
 
 test("casino: the chat shows who is online on any casino page - once per player", async () => {

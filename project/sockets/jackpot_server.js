@@ -130,8 +130,7 @@ module.exports = function (io) {
     const before = pot.bets.length > 0 ? pot.bets[pot.bets.length - 1].to : 0;
     pot.bets.push({ name: bet.name, amount: bet.amount, from: before + 1, to: before + bet.amount });
     if (pot.phase === PHASE.OPEN && pot.entries.length >= 2) startCountdown();
-    // Alone against the ghost and more coins in: the ghost answers (no sniping the pot)
-    if (bet.name !== GHOST && current != null && hasGhost() && pot.entries.length === 2) addToPot({ name: GHOST, amount: ghostAmount(bet.amount) });
+    // (the ghost answers only once: more coins of the player later make their share bigger)
     // The first player: alone too long, the ghost comes
     if (pot.phase === PHASE.OPEN && pot.entries.length === 1 && pot.ghostTimer == null) startGhostTimer();
   }
@@ -154,7 +153,7 @@ module.exports = function (io) {
     pot.ghostAt = null;
   }
 
-  // 85-115% of the coins of the player who bet first (the house plays against them)
+  // 50-75% of the coins of the player who bet first, at most JACKPOT_GHOST_MAX (the house plays against them)
   function addGhost() {
     pot.ghostTimer = null;
     pot.ghostAt = null;
@@ -165,7 +164,7 @@ module.exports = function (io) {
 
   function ghostAmount(coins) {
     const [low, high] = config.JACKPOT_GHOST_SHARE;
-    return Math.max(1, Math.round(coins * (low + Math.random() * (high - low))));
+    return Math.max(1, Math.min(config.JACKPOT_GHOST_MAX, Math.round(coins * (low + Math.random() * (high - low)))));
   }
 
   // The tickets are counted again without the ghost's
