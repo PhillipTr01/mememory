@@ -622,11 +622,13 @@ function editCell(season, row) {
 function editSeasonCoins(season, row) {
   var backdrop = el("div", "mm-dialog-backdrop");
   var dialog = el("form", "mm-dialog ad-coins-dialog");
+  dialog.noValidate = true;
   dialog.setAttribute("role", "dialog");
   dialog.setAttribute("aria-modal", "true");
   var mode = el("select", "mm-input");
   [["set", "Set to"], ["add", "Add (+/-)"]].forEach(([value, text]) => mode.appendChild(Object.assign(document.createElement("option"), { value: value, text: text })));
-  var amount = Object.assign(el("input", "mm-input"), { type: "number", step: 100, value: row.coins, required: true });
+  // The arrows in steps of 1,000 (like the balances of the players) - every number can be typed in
+  var amount = Object.assign(el("input", "mm-input"), { type: "number", step: 1000, value: row.coins });
   var note = Object.assign(el("input", "mm-input"), { placeholder: "Note (optional)", maxLength: 300 });
   mode.addEventListener("change", () => {
     amount.value = mode.value == "set" ? row.coins : "";
@@ -696,7 +698,7 @@ async function loadSeasonBoard(season) {
     }
     var MEDALS = ["🥇", "🥈", "🥉"];
     var dash = (value, text) => (value ? text : "–");
-    var when = (t) => (t ? new Date(t).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "–");
+    var when = (t) => (t ? new Date(t).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }) : "–");
     body.replaceChildren(
       ...data.rows.map((row) => {
         var tr = el("tr", row.rank <= 3 ? "ad-final-top" : "");

@@ -1786,9 +1786,15 @@ a.ad-link:focus-visible {
   scrollbar-width: thin;
 }
 
-.ad-season-board th,
 .ad-season-board td {
   white-space: nowrap;
+}
+
+/* The titles may take two lines (the numbers under them are short) */
+.ad-season-board th {
+  white-space: normal;
+  vertical-align: bottom;
+  line-height: 1.25;
 }
 
 /* The season coins of a player: set to / add, the amount, a note */
@@ -1809,4 +1815,54 @@ a.ad-link:focus-visible {
   background: rgba(var(--mm-accent-rgb), 0.12);
   color: var(--mm-accent);
   font-size: 0.7rem;
+}
+
+/* A season's page: the whole width (the leaderboard has many columns) */
+.ad-main:has(#adSeasonPage:not([hidden])) {
+  width: 100%;
+  max-width: none;
+}
+
+.ad-season-board th,
+.ad-season-board td {
+  padding-left: 0.55rem;
+  padding-right: 0.55rem;
+}
+
+/* A long prize may take two lines */
+.ad-season-board td:nth-child(4) {
+  min-width: 7rem;
+  max-width: 11rem;
+  white-space: normal;
+}
+
+.ad-season-board td {
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
+}
+
+.ad-season-board th:first-child,
+.ad-season-board td:first-child {
+  padding-left: 0.5rem;
+}
+
+/* Edit: always in sight at the end of the row */
+.ad-season-board td.ad-actions {
+  padding-right: 0.25rem;
+}
+
+/* The player: the tie tag under the name */
+.ad-season-board td:nth-child(2) {
+  white-space: normal;
+  min-width: 8rem;
+}
+
+.ad-season-board .ad-decided {
+  display: table;
+  margin: 0.25rem 0 0;
+}
+
+#adSeasonFinal {
+  padding-left: 0.9rem;
+  padding-right: 0.9rem;
 }
