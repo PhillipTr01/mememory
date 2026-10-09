@@ -292,14 +292,15 @@
 .rl-place {
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.1rem;
+  justify-content: center;
+  gap: 0.15rem 0.4rem;
   width: 100%;
-  padding: 0.75rem 0.5rem;
+  padding: 0.4rem 0.5rem;
   border: 1px solid rgba(var(--rl-rgb), 0.4);
-  border-top: 3px solid var(--rl-color);
-  border-radius: 12px;
+  border-top: 2px solid var(--rl-color);
+  border-radius: 10px;
   background: rgba(var(--rl-rgb), 0.1);
   color: var(--rl-color);
   transition: background 0.15s ease, transform 0.12s ease, opacity 0.2s ease;
@@ -319,19 +320,18 @@
 }
 
 .rl-place-name {
-  font-size: 1rem;
+  font-size: 0.88rem;
   font-weight: 800;
 }
 
 .rl-place-x {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--mm-muted);
 }
 
 .rl-place-mine {
-  margin-top: 0.2rem;
-  padding: 0.05rem 0.5rem;
+  padding: 0 0.45rem;
   border-radius: 999px;
   background: rgba(var(--rl-rgb), 0.18);
   color: var(--mm-text);
@@ -441,7 +441,7 @@
   }
 
   .rl-place {
-    padding: 0.6rem 0.25rem;
+    padding: 0.35rem 0.25rem;
   }
 
   .rl-board-sum {
