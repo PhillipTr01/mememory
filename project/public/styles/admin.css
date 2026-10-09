@@ -3656,3 +3656,22 @@ a.ad-case-row:hover {
   flex: 0 0 110px;
   width: 110px;
 }
+
+/* The sidebar on a short screen: everything still fits - it scrolls instead of running over */
+@media (min-width: 992px) {
+  .ad-side {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    gap: 1rem;
+  }
+
+  .ad-side > * {
+    flex-shrink: 0;
+  }
+
+  .ad-nav-item {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}

@@ -768,6 +768,8 @@ async function loadRains() {
     return fail(error);
   }
   document.getElementById("adRainWorldField").hidden = !data.season;
+  // The season: with its icon, name and coin
+  if (data.season) document.querySelector('#adRainWorld option[value="season"]').textContent = data.season.icon + " " + data.season.name + " (" + data.season.coinIcon + ")";
   if (!data.season) document.getElementById("adRainWorld").value = "normal";
   // The time field: in an hour (rounded)
   var at = document.getElementById("adRainAt");

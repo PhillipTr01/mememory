@@ -611,7 +611,7 @@ module.exports = function () {
   /* ---------- Money rains (game/money_rain.js) ---------- */
 
   const rain = require("../game/money_rain");
-  router.get("/api/rains", admin, (req, res) => res.json({ ...rain.list(), now: Date.now(), season: seasons.running() ? { name: seasons.running().name, icon: seasons.running().icon } : null }));
+  router.get("/api/rains", admin, (req, res) => res.json({ ...rain.list(), now: Date.now(), season: seasons.running() ? { name: seasons.running().name, icon: seasons.running().icon, coinIcon: seasons.publicSeason(seasons.running()).coinIcon } : null }));
 
   // How many it would reach right now: {players, total, names}
   router.post(

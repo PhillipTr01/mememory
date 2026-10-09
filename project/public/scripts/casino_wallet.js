@@ -478,9 +478,9 @@
       state.id = "navBoardState";
       board.appendChild(state);
     }
-    state.innerText = !season ? "Info" : inSeasonWorld ? "" : data.joined ? "Switch" : "Join";
-    // (in the season world: no label - the glow of the pill and the line at the top show it)
-    state.hidden = !!season && inSeasonWorld;
+    state.innerText = !season ? "Info" : data.joined ? "" : "Join";
+    // (joined: no label - a click switches; in the season world the glow and the line at the top show it)
+    state.hidden = !!season && (inSeasonWorld || !!data.joined);
     state.className = "nav-board-state" + (!season ? " info" : inSeasonWorld ? " playing" : data.joined ? " switch" : " join");
     board.title = !season
       ? shown.name + " - starts " + new Date(shown.start).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
@@ -905,14 +905,34 @@
       if (room < below) side.style.marginBottom = -(below - room) + "px";
       // Everything fits on the screen but the column: a little shorter - no page scroll for a few pixels
       var extra = document.documentElement.scrollHeight - window.innerHeight;
-      var main = layout.firstElementChild == side ? layout.lastElementChild : layout.firstElementChild;
-      var sideLongest = main && side.getBoundingClientRect().bottom >= main.getBoundingClientRect().bottom;
-      if (extra > 0 && sideLongest && height - extra >= 420) side.style.height = height - extra + "px";
+      // (the column is the longest part of the page only when no other part of the layout goes further down)
+      var others = [...layout.children].filter((child) => child != side);
+      var lowest = others.reduce((max, child) => Math.max(max, child.getBoundingClientRect().bottom), 0);
+      var sideLongest = side.getBoundingClientRect().bottom >= lowest;
+      if (extra > 0 && sideLongest && height - extra >= 420) {
+        side.style.height = height - extra + "px";
+        // (the page still scrolls - the game itself is that long: then the column keeps its full height)
+        if (document.documentElement.scrollHeight > window.innerHeight) side.style.height = height + "px";
+      }
     };
     window.casinoGrowChat = () => {
       size();
       place();
     };
+    // The game's part of the page grows or shrinks (its state came, a list got longer): the column again
+    if (window.ResizeObserver) {
+      var lastHeight = null;
+      var watch = new ResizeObserver(() => {
+        var height = [...layout.children].filter((child) => child != side).reduce((sum, child) => sum + child.offsetHeight, 0);
+        if (height == lastHeight) return;
+        lastHeight = height;
+        requestAnimationFrame(() => {
+          size();
+          place();
+        });
+      });
+      [...layout.children].filter((child) => child != side).forEach((child) => watch.observe(child));
+    }
     // At most once a frame (scroll events come more often than that on phones)
     var queued = false;
     window.addEventListener(
