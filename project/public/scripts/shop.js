@@ -158,15 +158,12 @@ function setView(view) {
   var main = document.querySelector(".sh-main");
   var avatar = view == "avatar";
   main.classList.toggle("view-avatar", avatar);
-  document.querySelectorAll(".sh-view-tab").forEach((tab) => {
-    tab.classList.toggle("active", tab.dataset.view == view);
-    tab.setAttribute("aria-selected", tab.dataset.view == view ? "true" : "false");
-  });
   document.getElementById("shTitleIcon").innerText = VIEWS[view].icon;
   document.getElementById("shTitle").innerText = VIEWS[view].title;
   document.getElementById("shSubtitle").innerText = VIEWS[view].text;
-  if (avatar && document.getElementById("avatarEditor").hidden) openEditor();
   if (!avatar && !document.getElementById("avatarEditor").hidden) closeEditor();
+  // (the avatar view: always the saved avatar first)
+  else if (avatar) openEditor();
   var hash = avatar ? "#avatar" : "";
   if (location.hash != hash) history.replaceState(null, "", location.pathname + location.search + hash);
 }
@@ -177,7 +174,10 @@ function takeOverEditor() {
   openEditor = openAvatarEditor;
   closeEditor = closeAvatarEditor;
   openAvatarEditor = () => setView("avatar");
-  closeAvatarEditor = () => setView("shop");
+  // (saved: the avatar view stays - the editor shows the saved avatar again)
+  closeAvatarEditor = () => openEditor();
+  // The shop again (the profile menu's Shop, back in the browser): the shop view
+  window.addEventListener("hashchange", () => location.hash != "#avatar" && setView("shop"));
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -188,6 +188,5 @@ document.addEventListener("DOMContentLoaded", () => {
     myName = myName || username;
     load();
   });
-  document.getElementById("shEditAvatar").addEventListener("click", () => setView("avatar"));
-  document.querySelectorAll(".sh-view-tab").forEach((tab) => tab.addEventListener("click", () => setView(tab.dataset.view)));
+
 });

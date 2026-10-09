@@ -18,6 +18,26 @@ function openAvatarEditor() {
     document.getElementById('avatarEditor').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+// The avatar as it is saved (null: the letter) - and: does the editor show something else?
+function savedAvatar() {
+    var current = avatarCache[myName];
+    return current == AVATAR_LETTER ? null : current || nameAvatar(myName);
+}
+
+function avatarChanged() {
+    var clean = (config) => JSON.stringify(config == null ? null : cleanAvatar(config));
+    return clean(editing) != clean(savedAvatar());
+}
+
+// Save only when something changed (and Reset only then too)
+function updateAvatarButtons() {
+    var changed = avatarChanged();
+    var save = document.getElementById('avatarSave');
+    if (save && !save.dataset.busy) save.disabled = !changed;
+    var reset = document.getElementById('avatarReset');
+    if (reset) reset.disabled = !changed;
+}
+
 function closeAvatarEditor() {
     document.getElementById('avatarEditor').hidden = true;
     editing = null;
@@ -30,6 +50,7 @@ function renderAvatarEditor() {
     fresh.id = 'avatarPreview';
     preview.replaceWith(fresh);
     document.getElementById('avatarLetter').disabled = editing == null;
+    updateAvatarButtons();
 
     // Tabs: one per part
     var tabs = document.getElementById('avatarTabs');
@@ -97,6 +118,7 @@ function renderAvatarEditor() {
             fresh.id = 'avatarPreview';
             document.getElementById('avatarPreview').replaceWith(fresh);
             custom.style.background = picker.value;
+            updateAvatarButtons();
         });
         picker.addEventListener('change', renderAvatarEditor);
         custom.append(createIcon('bi-eyedropper'), picker);
@@ -142,7 +164,7 @@ function saveAvatar() {
             avatarMessage('Avatar saved.', 'success');
         })
         .catch(() => avatarMessage('Could not save your avatar.', 'error'))
-        .finally(() => (button.disabled = false));
+        .finally(() => updateAvatarButtons());
 }
 
 // A message about the avatar: a toast (MemeMory) or a hint (the casino has no toasts)
@@ -177,6 +199,14 @@ document.addEventListener('DOMContentLoaded', () => {
         editing = null;
         renderAvatarEditor();
     });
-    document.getElementById('avatarCancel').addEventListener('click', closeAvatarEditor);
+    // Cancel (the profile) - or Reset (the shop: back to the saved avatar, the editor stays)
+    var cancel = document.getElementById('avatarCancel');
+    if (cancel) cancel.addEventListener('click', closeAvatarEditor);
+    var reset = document.getElementById('avatarReset');
+    if (reset) reset.addEventListener('click', () => {
+        var saved = savedAvatar();
+        editing = saved == null ? null : Object.assign({}, saved);
+        renderAvatarEditor();
+    });
     document.getElementById('avatarSave').addEventListener('click', saveAvatar);
 });
