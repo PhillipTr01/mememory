@@ -538,11 +538,11 @@
                     <div class="ad-card ad-test-tools">
                         <div class="ad-card-head">
                             <h2 class="ad-title">🛠️ Debug tools</h2>
-                            <span class="ad-note">Test world only · every lever works once · bots bet with nobody's coins</span>
+                            <span class="ad-note ad-tool-note">Test world only · every lever works once · bots bet with nobody's coins</span>
                         </div>
                         <div class="ad-tool-grid">
-                            <div class="ad-tool-card">
-                                <h4 class="ad-tool-title">💰 Jackpot</h4>
+                            <div class="ad-tool-card" data-tool="jackpot">
+                                <h4 class="ad-tool-title"><span class="ad-tool-icon">💰</span>Jackpot</h4>
                                 <div class="ad-tool-row">
                                     <span class="ad-tool-label">Bots</span>
                                     <div class="ad-tool-controls">
@@ -555,7 +555,7 @@
                                     <span class="ad-tool-label">Draw</span>
                                     <div class="ad-tool-controls">
                                         <select id="adToolJackpotMode" class="mm-input" aria-label="Draw animation"></select>
-                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="jackpot:mode:#adToolJackpotMode">Set</button>
+                                        <button type="button" class="mm-btn mm-btn-sm ad-tool-go" data-lever="jackpot:mode:#adToolJackpotMode">Set</button>
                                     </div>
                                 </div>
                                 <div class="ad-tool-row">
@@ -567,7 +567,7 @@
                                             <option value="bot">A bot</option>
                                             <option value="Ghost">The ghost</option>
                                         </select>
-                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="jackpot:winner:#adToolJackpotWinner">Set</button>
+                                        <button type="button" class="mm-btn mm-btn-sm ad-tool-go" data-lever="jackpot:winner:#adToolJackpotWinner">Set</button>
                                     </div>
                                 </div>
                                 <div class="ad-tool-row">
@@ -579,8 +579,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="ad-tool-card">
-                                <h4 class="ad-tool-title">🎡 Roulette</h4>
+                            <div class="ad-tool-card" data-tool="roulette">
+                                <h4 class="ad-tool-title"><span class="ad-tool-icon">🎡</span>Roulette</h4>
                                 <div class="ad-tool-row">
                                     <span class="ad-tool-label">Bots</span>
                                     <div class="ad-tool-controls">
@@ -594,7 +594,7 @@
                                     <span class="ad-tool-label">Result</span>
                                     <div class="ad-tool-controls">
                                         <select id="adToolRouletteColor" class="mm-input" aria-label="Next result"><option value="">Fair (the seed)</option><option value="red">🔥 Red</option><option value="blue">💧 Blue</option><option value="green">🍀 Green</option></select>
-                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="roulette:color:#adToolRouletteColor">Set</button>
+                                        <button type="button" class="mm-btn mm-btn-sm ad-tool-go" data-lever="roulette:color:#adToolRouletteColor">Set</button>
                                     </div>
                                 </div>
                                 <div class="ad-tool-row">
@@ -604,11 +604,11 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="ad-tool-card">
-                                <h4 class="ad-tool-title">🎰 Slots</h4>
+                            <div class="ad-tool-card" data-tool="slots">
+                                <h4 class="ad-tool-title"><span class="ad-tool-icon">🎰</span>Slots</h4>
                                 <div class="ad-tool-row">
                                     <span class="ad-tool-label">Next spin</span>
-                                    <div class="ad-tool-controls">
+                                    <div class="ad-tool-controls ad-tool-choices">
                                         <button type="button" class="mm-btn mm-btn-sm" data-lever="slots:bonus:free">🎁 Free spins</button>
                                         <button type="button" class="mm-btn mm-btn-sm" data-lever="slots:bonus:coins">🪙 Coin game</button>
                                         <button type="button" class="mm-btn mm-btn-sm" data-lever="slots:bonus:chest">🧰 Chest</button>
@@ -616,23 +616,23 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="ad-tool-card">
-                                <h4 class="ad-tool-title">🃏 Blackjack</h4>
+                            <div class="ad-tool-card" data-tool="blackjack">
+                                <h4 class="ad-tool-title"><span class="ad-tool-icon">🃏</span>Blackjack</h4>
                                 <div class="ad-tool-row">
                                     <span class="ad-tool-label">Next deal</span>
                                     <div class="ad-tool-controls">
                                         <select id="adToolDeal" class="mm-input" aria-label="Next deal"></select>
-                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="blackjack:deal:#adToolDeal">Stack</button>
+                                        <button type="button" class="mm-btn mm-btn-sm ad-tool-go" data-lever="blackjack:deal:#adToolDeal">Stack</button>
                                     </div>
                                 </div>
                             </div>
-                            <div class="ad-tool-card">
-                                <h4 class="ad-tool-title">⚔️ Case battles</h4>
+                            <div class="ad-tool-card" data-tool="battles">
+                                <h4 class="ad-tool-title"><span class="ad-tool-icon">⚔️</span>Case battles</h4>
                                 <div class="ad-tool-row">
                                     <span class="ad-tool-label">Random</span>
                                     <div class="ad-tool-controls">
                                         <select id="adToolBattleMode" class="mm-input" aria-label="Random picks"></select>
-                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="battles:mode:#adToolBattleMode">Set</button>
+                                        <button type="button" class="mm-btn mm-btn-sm ad-tool-go" data-lever="battles:mode:#adToolBattleMode">Set</button>
                                     </div>
                                 </div>
                                 <div class="ad-tool-row">

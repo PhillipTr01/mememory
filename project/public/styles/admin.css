@@ -3035,18 +3035,61 @@ a.ad-case-row:hover {
 /* The debug tools: a card per game */
 .ad-tool-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 0.85rem;
 }
 
+/* A game's levers: a card with its color on top, the rows as label | controls */
 .ad-tool-card {
+  --tool: var(--mm-accent);
+  --tool-rgb: var(--mm-accent-rgb);
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.85rem 0.9rem;
+  overflow: hidden;
+  padding: 0.95rem 1rem 0.55rem;
   border: 1px solid var(--mm-border);
-  border-radius: 12px;
-  background: var(--mm-surface-2);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(var(--tool-rgb), 0.08), transparent 70px), var(--mm-surface-2);
+  transition: border-color 0.15s;
+}
+
+.ad-tool-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--tool);
+  opacity: 0.85;
+}
+
+.ad-tool-card:hover {
+  border-color: rgba(var(--tool-rgb), 0.45);
+}
+
+.ad-tool-card[data-tool="jackpot"] {
+  --tool: #e0b04a;
+  --tool-rgb: 224, 176, 74;
+}
+
+.ad-tool-card[data-tool="roulette"] {
+  --tool: #d9604f;
+  --tool-rgb: 217, 96, 79;
+}
+
+.ad-tool-card[data-tool="slots"] {
+  --tool: #9d84c2;
+  --tool-rgb: 157, 132, 194;
+}
+
+.ad-tool-card[data-tool="blackjack"] {
+  --tool: #5fa77c;
+  --tool-rgb: 95, 167, 124;
+}
+
+.ad-tool-card[data-tool="battles"] {
+  --tool: #6f93c9;
+  --tool-rgb: 111, 147, 201;
 }
 
 .ad-tool-card .ad-note {
@@ -3054,12 +3097,46 @@ a.ad-case-row:hover {
 }
 
 .ad-tool-title {
-  margin: 0 0 0.15rem;
-  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
   font-weight: 800;
 }
 
+.ad-tool-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: rgba(var(--tool-rgb), 0.16);
+  box-shadow: inset 0 0 0 1px rgba(var(--tool-rgb), 0.3);
+  font-size: 1rem;
+}
+
 .ad-tool-row {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0;
+}
+
+.ad-tool-row + .ad-tool-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ad-tool-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
+
+.ad-tool-controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -3072,11 +3149,57 @@ a.ad-case-row:hover {
   max-width: 170px;
   height: 32px;
   padding: 0.2rem 0.55rem;
+  border-radius: 8px;
   font-size: 0.85rem;
 }
 
 .ad-tool-row input.mm-input {
-  width: 110px;
+  width: 96px;
+}
+
+.ad-tool-row select.mm-input {
+  flex: 1 1 120px;
+}
+
+.ad-tool-controls .mm-btn-sm {
+  height: 32px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 8px;
+  background: var(--mm-surface-3);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ad-tool-controls .mm-btn-sm:hover:not(:disabled) {
+  border-color: rgba(var(--tool-rgb), 0.6);
+  background: rgba(var(--tool-rgb), 0.12);
+}
+
+/* Set / Stack: the action of the row, in the game's color */
+.ad-tool-controls .mm-btn-sm.ad-tool-go {
+  border-color: transparent;
+  background: rgba(var(--tool-rgb), 0.22);
+  color: var(--mm-text);
+}
+
+.ad-tool-controls .mm-btn-sm.ad-tool-go:hover:not(:disabled) {
+  background: rgba(var(--tool-rgb), 0.38);
+}
+
+/* The next spin of the slots: four even tiles */
+.ad-tool-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ad-tool-choices .mm-btn-sm {
+  height: 38px;
+}
+
+.ad-tool-note {
+  font-size: 0.78rem;
 }
 
 .ad-season-names {
@@ -3662,8 +3785,13 @@ a.ad-case-row:hover {
   .ad-side {
     overflow-y: auto;
     overscroll-behavior: contain;
-    scrollbar-width: thin;
-    gap: 1rem;
+    /* (no scrollbar: on a normal screen it fits, on a very short one it still scrolls with the wheel) */
+    scrollbar-width: none;
+    gap: 0.75rem;
+  }
+
+  .ad-side::-webkit-scrollbar {
+    display: none;
   }
 
   .ad-side > * {
@@ -3671,8 +3799,8 @@ a.ad-case-row:hover {
   }
 
   .ad-nav-item {
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
+    padding-top: 0.42rem;
+    padding-bottom: 0.42rem;
   }
 }
 
