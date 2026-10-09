@@ -273,7 +273,7 @@
                             <label class="ad-field">
                                 <span class="ad-label">Countdown before start and end</span>
                                 <span class="ad-inline-input"><input id="adSeasonWait" class="mm-input" type="number" min="0" max="3600" step="5" value="60"><span class="ad-setting-unit">s</span></span>
-                                <span class="ad-setting-hint">When the start (and the end) comes, the casino closes: no new bets, running rounds finish - then this long until the season starts (ends).</span>
+                                <span class="ad-setting-hint">The start: this long after the start time the season world opens (the normal casino goes on). The end: the season world closes - no new bets, its running rounds finish - then this long until the final places.</span>
                             </label>
                             <label class="ad-field">
                                 <span class="ad-label">Leaderboard updates</span>
@@ -294,6 +294,24 @@
                                 </label>
                                 <div id="adSeasonPrizes" class="ad-prize-list" hidden></div>
                                 <button type="button" id="adSeasonAddPrize" class="mm-btn mm-btn-sm ad-add-prize" hidden>+ Add a prize</button>
+                            </div>
+                            <div class="ad-field">
+                                <span class="ad-label">Who may play</span>
+                                <select id="adSeasonAccess" class="mm-input">
+                                    <option value="all">Everybody</option>
+                                    <option value="whitelist">Only the whitelist (a closed round)</option>
+                                    <option value="banlist">Everybody but the banlist</option>
+                                </select>
+                                <textarea id="adSeasonNames" class="mm-input ad-season-names" rows="2" placeholder="Player names, separated by commas" hidden></textarea>
+                                <span class="ad-setting-hint">Who can't play in the season doesn't see it at all.</span>
+                            </div>
+                            <div class="ad-field">
+                                <label class="ad-switch">
+                                    <input type="checkbox" id="adSeasonHighlight">
+                                    <span class="ad-switch-track"></span>
+                                    <span class="ad-switch-text">Highlight before the start</span>
+                                </label>
+                                <span class="ad-setting-hint">The pill at the top of the casino shows when it starts - a click shows everything about it.</span>
                             </div>
                             <div class="ad-season-save"><span id="adSeasonError" class="ad-form-error" role="alert" hidden></span><button type="submit" id="adSeasonSave" class="mm-btn mm-btn-primary">Plan the season</button></div>
                         </form>

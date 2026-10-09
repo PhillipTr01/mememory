@@ -3097,7 +3097,7 @@ body.jackpot-theme {
 
 /* Big screens: in the middle of the bar */
 @media (min-width: 992px) {
-  .navbar:has(.nav-board) {
+  .navbar:has(.nav-board:not([hidden])) {
     position: relative;
   }
   .nav-board {
@@ -3111,7 +3111,7 @@ body.jackpot-theme {
 
 /* Smaller screens: no room next to the logo - the pill gets its own row under the bar, centered */
 @media (max-width: 991px) {
-  .navbar:has(.nav-board) {
+  .navbar:has(.nav-board:not([hidden])) {
     position: relative;
     padding-bottom: 3.4rem;
   }
@@ -4091,4 +4091,142 @@ body.jackpot-theme {
   font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.05em;
+}
+
+/* ---------- The season pill: join, switch, what is coming (only when there is a season) ---------- */
+.nav-board[hidden] {
+  display: none !important;
+}
+
+.nav-board {
+  cursor: pointer;
+}
+
+.nav-board-state {
+  margin-left: 0.15rem;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--mm-accent);
+  color: #1a1206;
+}
+
+.nav-board-state.info,
+.nav-board-state.switch {
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  color: var(--mm-accent);
+}
+
+.nav-board-state.join {
+  animation: nav-state-pulse 1.8s ease-in-out infinite;
+}
+
+/* Playing in the season world: a live dot and a glow */
+.nav-board-state.playing {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(74, 222, 128, 0.16);
+  color: #4ade80;
+}
+
+.nav-board-state.playing::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 6px #4ade80;
+  animation: nav-live 1.4s ease-in-out infinite;
+}
+
+.nav-board.in-season {
+  border-color: rgba(var(--mm-accent-rgb), 0.85);
+  box-shadow: 0 0 0 3px rgba(var(--mm-accent-rgb), 0.15), 0 0 22px rgba(var(--mm-accent-rgb), 0.35);
+}
+
+.nav-board.upcoming {
+  border-style: dashed;
+}
+
+@keyframes nav-state-pulse {
+  50% {
+    box-shadow: 0 0 0 5px rgba(var(--mm-accent-rgb), 0.18);
+  }
+}
+
+@keyframes nav-live {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* The season world: a line in the season's color over the whole page - always clear where you play */
+body.cs-season-world::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3000;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, var(--mm-accent) 20%, var(--mm-accent) 80%, transparent);
+  box-shadow: 0 0 14px rgba(var(--mm-accent-rgb), 0.7);
+  pointer-events: none;
+}
+
+/* The season card: join / later, switch / close */
+.cs-join-kicker {
+  margin-bottom: -0.4rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mm-accent);
+}
+
+.cs-join-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.cs-join-later {
+  padding: 0.55rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mm-muted);
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+}
+
+.cs-join-later:hover {
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+}
+
+.profile-icon.purple {
+  --tone: 167, 139, 250;
+}
+
+/* The dock: a line between the games and the leaderboard at the end */
+.cs-dock-sep {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 1px;
+  margin: 0.45rem 0.3rem;
+  background: linear-gradient(180deg, transparent, var(--mm-border) 20%, var(--mm-border) 80%, transparent);
+}
+
+@media (max-width: 575px) {
+  .cs-dock-sep {
+    margin: 0.4rem 0.1rem;
+  }
 }

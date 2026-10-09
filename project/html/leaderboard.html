@@ -172,9 +172,9 @@
     <!--- The games: a bar at the bottom, can be closed (see casino_dock.js) --->
     <div id="csDock" class="cs-dock">
         <button type="button" id="csDockToggle" class="cs-dock-toggle" aria-expanded="true" aria-controls="csDockBar">
-            <span class="cs-dock-toggle-label">Games</span><svg class="cs-dock-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            <span class="cs-dock-toggle-label">Menu</span><svg class="cs-dock-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
         </button>
-        <nav id="csDockBar" class="cs-dock-bar" aria-label="Games">
+        <nav id="csDockBar" class="cs-dock-bar" aria-label="Menu">
             <a href="./" class="cs-tab">
               <svg class="cs-dock-icon" viewBox="0 0 48 48" aria-hidden="true">
                 <!--- A stack of coins and one big coin --->
@@ -257,6 +257,19 @@
                 <circle cx="41" cy="12" r="1.1" fill="#fecaca" />
               </svg>
               <span class="cs-dock-name">Slots</span>
+            </a>
+            <span class="cs-dock-sep" aria-hidden="true"></span>
+            <a href="leaderboard" class="cs-tab cs-tab-board active" aria-current="page">
+              <svg class="cs-dock-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <!--- A golden trophy on a stand --->
+                <path d="M15 9 H33 V20 Q33 30 24 31 Q15 30 15 20 Z" fill="#f5c542" />
+                <path d="M15 12 H9 Q8 21 16 23 M33 12 H39 Q40 21 32 23" fill="none" stroke="#d4a017" stroke-width="2.6" stroke-linecap="round" />
+                <path d="M19 11 V20 Q19 25 23 27" fill="none" stroke="#fff1c4" stroke-width="2" stroke-linecap="round" opacity="0.8" />
+                <rect x="21" y="30" width="6" height="6" fill="#d4a017" />
+                <rect x="14" y="36" width="20" height="6" rx="2" fill="#8a5a00" />
+                <rect x="18" y="38" width="12" height="2" rx="1" fill="#f5c542" />
+              </svg>
+              <span class="cs-dock-name">Leaderboard</span>
             </a>
         </nav>
     </div>

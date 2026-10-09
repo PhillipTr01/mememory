@@ -1398,7 +1398,7 @@ function seasonDetail(season) {
     section(
       "Now",
       time,
-      tile("👥", formatCoins(season.players || 0), season.status == "ended" ? "in the final places" : "players hit Start"),
+      tile("👥", formatCoins(season.players || 0), season.status == "ended" ? "in the final places" : "players joined"),
       ...(season.status == "ended" && season.winner ? [tile("🥇", season.winner.username, "won with 🪙 " + formatCoins(season.winner.coins))] : []),
     ),
     section(
@@ -1406,6 +1406,7 @@ function seasonDetail(season) {
       tile("🟢", dateText(season.start), "start"),
       tile("🔴", dateText(season.end), "end"),
       tile("⏳", season.closeWait + " s", "countdown before start and end"),
+      tile(season.highlight ? "✨" : "–", season.highlight ? "Highlighted" : "Not highlighted", "before the start"),
       tile("📊", EVERY_NAMES[season.every], "leaderboard updates"),
     ),
     section(
@@ -1414,6 +1415,10 @@ function seasonDetail(season) {
       tile("🎁", formatCoins(season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting), "daily bonus"),
       tile("💔", String(season.secondChances || 0), "second chances"),
       tile("⌛", season.secondChances ? chanceDelayText(season.chanceDelay) : "–", "wait between second chances"),
+    ),
+    section(
+      "Who may play",
+      tile(season.access && season.access.mode == "whitelist" ? "🔒" : season.access && season.access.mode == "banlist" ? "🚫" : "🌍", season.access && season.access.mode == "whitelist" ? "Whitelist" : season.access && season.access.mode == "banlist" ? "Banlist" : "Everybody", season.access && season.access.mode != "all" ? season.access.names.length + " on the list" : "open season"),
     ),
     section("Look", tile("🏷️", season.icon + " " + season.name, "icon and name"), tile("🎨", (season.color || GOLD).toUpperCase(), "accent color", swatch), tile(season.coinIcon || "💎", "Season coins", "coin icon")),
   ];
@@ -1502,6 +1507,11 @@ function fillSeasonForm(season) {
   markColor();
   document.getElementById("adSeasonEvery").value = season.every;
   document.getElementById("adSeasonPrizesOn").checked = season.prizesOn;
+  var access = season.access || { mode: "all", names: [] };
+  document.getElementById("adSeasonAccess").value = access.mode;
+  document.getElementById("adSeasonNames").value = access.names.join(", ");
+  document.getElementById("adSeasonNames").hidden = access.mode == "all";
+  document.getElementById("adSeasonHighlight").checked = season.highlight === true;
   // A running season: start and budget happened already
   var running = season.status == "running";
   document.getElementById("adSeasonStart").disabled = running;
@@ -1770,6 +1780,9 @@ async function saveSeason(event) {
     every: Number(document.getElementById("adSeasonEvery").value),
     prizesOn: document.getElementById("adSeasonPrizesOn").checked,
     prizes: prizes,
+    accessMode: document.getElementById("adSeasonAccess").value,
+    accessNames: document.getElementById("adSeasonAccess").value == "all" ? [] : document.getElementById("adSeasonNames").value,
+    highlight: document.getElementById("adSeasonHighlight").checked,
   };
   // A running season keeps its start and budget
   var current = seasonList.find((s) => s.id == editingSeason);
@@ -2216,6 +2229,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("adResetForm").addEventListener("submit", hardReset);
   // Seasons
   document.getElementById("adSeasonForm").addEventListener("submit", saveSeason);
+  document.getElementById("adSeasonAccess").addEventListener("change", (event) => {
+    document.getElementById("adSeasonNames").hidden = event.target.value == "all";
+  });
   document.getElementById("adSeasonPrizesOn").addEventListener("change", showPrizes);
   document.getElementById("adSeasonAddPrize").addEventListener("click", () => {
     var rows = document.querySelectorAll("#adSeasonPrizes .ad-prize-row");

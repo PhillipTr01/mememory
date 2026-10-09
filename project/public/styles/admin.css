@@ -3066,3 +3066,9 @@ a.ad-case-row:hover {
 .ad-tool-row input.mm-input {
   width: 110px;
 }
+
+.ad-season-names {
+  margin-top: 0.4rem;
+  resize: vertical;
+  min-height: 2.6rem;
+}

@@ -68,21 +68,21 @@
     // The admin's test mode: test coins (nothing is saved)
     button.classList.toggle("test", data.test === true);
     if (data.test) button.title = "🧪 Test mode - test coins, nothing is saved";
-    // In a season: the balance from before it (it comes back after the season, with the season's on top)
+    // The season world: the normal 🪙 next to the season's coins (they stay in the normal casino)
     var stored = document.getElementById("navCoinsStored");
-    if (data.stored != null) {
+    if (data.normal != null) {
       if (!stored) {
         stored = el("span", "nav-coins-stored");
         stored.id = "navCoinsStored";
         button.appendChild(stored);
       }
-      // (the 🪙 stays a 🪙: the money outside the season - the season has a coin of its own)
+      // (the 🪙 stays a 🪙: the money of the normal casino - the season has a coin of its own)
       stored.dataset.coin = "real";
-      stored.innerText = "🪙 " + format(data.stored);
-      stored.title = "Your balance from before the season - you get it back when the season is over, with your season coins on top";
+      stored.innerText = "🪙 " + format(data.normal);
+      stored.title = "Your coins in the normal casino - your season coins go on top when the season is over";
     } else if (stored) stored.remove();
     // Everything lost: a second chance (if the season has one) - after a moment
-    watchChance(coins);
+    if (window.CASINO_WORLD == "season") watchChance(coins);
     if (before && coins != before) {
       button.classList.remove("up", "down");
       void button.offsetWidth; // restart the animation
@@ -415,70 +415,144 @@
     document.body.appendChild(box);
   }
 
-  /* ---------- Seasons: the link to the leaderboard, a season starting or ending ---------- */
+  /* ---------- Seasons: a world of their own - the pill at the top is the join button and the switch ---------- */
 
   var board = document.getElementById("navBoard");
-  var seasonEnd = null;
-  var seasonTimer = null;
+  var seasonData = null; // the last answer of "season"
+  var pillTimer = null;
+  var inSeasonWorld = window.CASINO_WORLD == "season";
+  if (inSeasonWorld) document.body.classList.add("cs-season-world");
 
-  // How long the season still runs: "6d 23h 12m", the last hour to the second
-  function seasonLeft() {
-    var timer = document.getElementById("navBoardTimer");
-    if (seasonEnd == null) return;
-    var left = Math.max(0, seasonEnd - Date.now());
+  // How long until a time: "6d 23h 12m", the last hour to the second
+  function countdown(at) {
+    var left = Math.max(0, at - Date.now());
     var s = Math.floor(left / 1000);
     var d = Math.floor(s / 86400);
     var h = Math.floor((s % 86400) / 3600);
     var m = Math.floor((s % 3600) / 60);
     var pad = (n) => String(n).padStart(2, "0");
-    timer.innerText = left == 0 ? "ending..." : d > 0 ? d + "d " + h + "h " + pad(m) + "m" : h > 0 ? h + "h " + pad(m) + "m " + pad(s % 60) + "s" : m + "m " + pad(s % 60) + "s";
-    timer.classList.toggle("soon", left < 3600 * 1000);
+    return { left: left, text: d > 0 ? d + "d " + h + "h " + pad(m) + "m" : h > 0 ? h + "h " + pad(m) + "m " + pad(s % 60) + "s" : m + "m " + pad(s % 60) + "s" };
   }
 
+  // The pill: only when a season runs (or a planned one is highlighted) - who can't play in it doesn't see it
   function showSeason(data) {
+    seasonData = data;
+    clearInterval(pillTimer);
     if (!board) return;
-    // (hidden until it is known whether a season runs - no "Leaderboard" flashing first)
-    board.classList.add("ready");
     var season = data && data.season;
-    document.getElementById("navBoardIcon").innerText = season ? season.icon : "🏆";
-    document.getElementById("navBoardText").innerText = season ? season.name : "Leaderboard";
-    board.classList.toggle("season", !!season);
-    board.title = season ? season.name + " - ends " + new Date(season.end).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Leaderboard";
-    // The countdown to the end of the season, inside the pill
-    seasonEnd = season ? season.end : null;
-    document.getElementById("navBoardTimer").hidden = !season;
-    clearInterval(seasonTimer);
-    if (season) {
-      seasonLeft();
-      seasonTimer = setInterval(seasonLeft, 1000);
+    var upcoming = data && data.upcoming;
+    var shown = season || upcoming;
+    board.classList.add("ready");
+    board.hidden = !shown;
+    document.body.classList.toggle("cs-has-season-pill", !!shown);
+    if (!shown) return;
+    document.getElementById("navBoardIcon").innerText = shown.icon || "🏆";
+    document.getElementById("navBoardText").innerText = shown.name;
+    board.classList.add("season");
+    board.classList.toggle("upcoming", !season);
+    board.classList.toggle("in-season", !!season && inSeasonWorld);
+    var state = document.getElementById("navBoardState");
+    if (!state) {
+      state = el("span", "nav-board-state");
+      state.id = "navBoardState";
+      board.appendChild(state);
+    }
+    state.innerText = !season ? "Info" : inSeasonWorld ? "Playing" : data.joined ? "Switch" : "Join";
+    state.className = "nav-board-state" + (!season ? " info" : inSeasonWorld ? " playing" : data.joined ? " switch" : " join");
+    board.title = !season
+      ? shown.name + " - starts " + new Date(shown.start).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+      : inSeasonWorld
+        ? "You're playing in " + shown.name + " - click to switch back to the normal casino"
+        : data.joined
+          ? "Switch to " + shown.name
+          : "Join " + shown.name;
+    var timer = document.getElementById("navBoardTimer");
+    timer.hidden = false;
+    var tick = () => {
+      var c = countdown(season ? season.end : upcoming.start);
+      timer.innerText = season ? (c.left == 0 ? "ending..." : "ends in " + c.text) : c.left == 0 ? "starting..." : "starts in " + c.text;
+      timer.classList.toggle("soon", c.left < 3600 * 1000);
+    };
+    tick();
+    pillTimer = setInterval(tick, 1000);
+  }
+
+  // The pill opens the season (join - switch - or what is coming)
+  if (board) {
+    board.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (!seasonData) return;
+      if (seasonData.season) showJoin(seasonData, seasonData.joined ? "switch" : "join");
+      else if (seasonData.upcoming) showJoin({ season: seasonData.upcoming }, "upcoming");
+    });
+  }
+
+  // Into the other world: the page loads again there (the server sends "worldChanged")
+  var WORLD_KEY = "csWorldNotice";
+  async function switchWorld(to) {
+    try {
+      var res = await fetch("season/world", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: to }) });
+      var result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Could not switch.");
+      worldChanged({ world: to });
+    } catch (error) {
+      showHint(error.message, "error", board || document.getElementById("navCoins"));
     }
   }
-  // The leaderboard page itself: marked
-  if (board && /\/leaderboard\/?$/.test(location.pathname)) board.classList.add("active");
-  fetch("season", { cache: "no-store" })
-    .then((res) => (res.ok ? res.json() : null))
-    .then((data) => {
-      showSeason(data);
-      if (data && data.closing) showClosing(data.closing);
-      else if (data && data.season && data.joined === false) offerSeason(data);
-    })
-    .catch(() => showSeason(null));
+
+  function worldChanged(data) {
+    try {
+      sessionStorage.setItem(WORLD_KEY, data.world);
+    } catch (e) {
+      // no notice after the reload
+    }
+    location.reload();
+  }
+  socket.on("worldChanged", worldChanged);
+  // (the page of the other world: refused - it loads again in the right one)
+  socket.on("connect_error", (error) => {
+    if (error && error.message == "world") location.reload();
+  });
+
+  function loadSeason() {
+    return fetch("season", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .catch(() => null);
+  }
+
+  // The popup when a season runs that the player hasn't joined: once per season (Later: the pill or the menu)
+  var LATER_KEY = "csSeasonLater";
+  function laterFor(season) {
+    try {
+      return localStorage.getItem(LATER_KEY) == String(season.id);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  loadSeason().then((data) => {
+    showSeason(data);
+    if (data && data.closing) showClosing(data.closing);
+    else if (data && data.season && data.joined === false && !laterFor(data.season)) showJoin(data, "join");
+    // Just switched: where the player is now
+    try {
+      var moved = sessionStorage.getItem(WORLD_KEY);
+      if (moved) {
+        sessionStorage.removeItem(WORLD_KEY);
+        var season = data && data.season;
+        if (moved == "season" && season) casinoNotice({ icon: season.icon || "🏆", title: "You're playing in " + season.name, text: "Season coins, season games, the season's leaderboard - switch back any time at the top.", key: "world" });
+        else casinoNotice({ icon: "🪙", title: "You're in the normal casino", text: season ? "Your season coins wait for you - switch back any time at the top." : "Your 🪙 coins.", key: "world" });
+      }
+    } catch (e) {
+      // no storage
+    }
+  });
 
   // The running season to look at (the season on the leaderboard)
   window.showSeasonInfo = () =>
-    fetch("season", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && data.season) showJoin(data, true);
-      })
-      .catch(() => {});
-
-  /* ---------- "Start": a player is in a running season only after hitting it ---------- */
-
-  // Not in the season yet: the start, on every page until the player hits it (can't be clicked away)
-  function offerSeason(data) {
-    showJoin(data);
-  }
+    loadSeason().then((data) => {
+      if (data && data.season) showJoin(data, "view");
+    });
 
   // How long a time is: "12 days 5 hours", "5 hours 20 minutes", "20 minutes"
   function duration(ms) {
@@ -491,36 +565,43 @@
     return part(m % 60, "minute");
   }
 
-  // view: only to look at it (from the season on the leaderboard) - closes, no Start
-  function showJoin(data, view) {
+  // The season card. mode: "join" (join or later), "switch" (into the other world), "upcoming" (what is
+  // coming - planned and highlighted), "view" (only to look at it)
+  function showJoin(data, mode) {
     var season = data.season;
+    var coin = season.coinIcon || "💎";
     document.querySelectorAll(".cs-join").forEach((n) => n.remove());
     var box = el("div", "cs-join");
-    box.setAttribute("role", "alertdialog");
+    box.setAttribute("role", "dialog");
     box.setAttribute("aria-modal", "true");
     var card = el("div", "cs-join-card");
+    // In the color of the season
+    if (season.color && /^#[0-9a-f]{6}$/i.test(season.color)) {
+      card.style.setProperty("--mm-accent", season.color);
+      card.style.setProperty("--mm-accent-rgb", [1, 3, 5].map((i) => parseInt(season.color.slice(i, i + 2), 16)).join(", "));
+    }
     var when = (t) => new Date(t).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+    var upcoming = mode == "upcoming";
     card.append(
       el("div", "cs-join-icon", season.icon || "🏆"),
+      el("div", "cs-join-kicker", upcoming ? "Coming soon" : season.closed ? "Closed season" : "Season"),
       el("h2", "cs-join-title", season.name),
-      el("p", "cs-join-time", "Runs until " + when(season.end) + " · " + duration(season.end - Date.now()) + " left"),
+      el("p", "cs-join-time", upcoming ? "Starts " + when(season.start) + " · in " + duration(season.start - Date.now()) + " · runs " + duration(season.end - season.start) : "Runs until " + when(season.end) + " · " + duration(season.end - Date.now()) + " left"),
     );
     // What the season is: the coins, the bonus, the second chances, the players so far
     var facts = el("div", "cs-join-facts");
-    // How long between two second chances (hours - null: the next day)
     var chanceWait = (hours) => (hours == null ? " (one a day)" : hours == 0 ? "" : " (" + (hours % 24 == 0 && hours >= 48 ? hours / 24 + " days" : hours + (hours == 1 ? " hour" : " hours")) + " apart)");
     var fact = (icon, value, label) => {
       var row = el("div", "cs-join-fact");
       row.append(el("span", "cs-join-fact-icon", icon), el("b", "", value), el("span", "", label));
       facts.appendChild(row);
     };
-    var start = (!view && data.joinCoins) || { coins: season.budget, missed: 0 };
-    fact("🪙", format(start.coins), start.missed > 0 ? "to start (with " + start.missed + " missed daily bonus" + (start.missed == 1 ? "" : "es") + ")" : "to start with");
+    var start = (mode == "join" && data.joinCoins) || { coins: season.budget, missed: 0 };
+    fact(coin, format(start.coins), start.missed > 0 ? "to start (with " + start.missed + " missed daily bonus" + (start.missed == 1 ? "" : "es") + ")" : "to start with");
     fact("🎁", format(season.dailyBonus), "free every day");
     if (season.secondChances > 0) fact("💔", season.secondChances, "second chance" + (season.secondChances == 1 ? "" : "s") + " if you lose it all" + (season.secondChances > 1 ? chanceWait(season.chanceDelay) : ""));
-    fact("👥", season.players, "player" + (season.players == 1 ? "" : "s") + " in so far");
+    if (!upcoming) fact("👥", season.players, "player" + (season.players == 1 ? "" : "s") + " in so far");
     card.appendChild(facts);
-    // The prizes
     if (season.prizes && season.prizes.length) {
       var prizes = el("div", "cs-join-prizes");
       prizes.appendChild(el("div", "cs-join-prizes-title", "🏆 Prizes"));
@@ -532,52 +613,76 @@
       });
       card.appendChild(prizes);
     }
-    if (view) {
-      card.appendChild(el("p", "cs-join-text", "Everybody starts with the same coins - the most coins at the end wins. Only players in the season are on the leaderboard. Your coins from before wait for you and come back after the season, with what you win on top."));
-      var ok = el("button", "mm-btn w-100", "Got it");
-      ok.type = "button";
-      var close = () => {
-        box.remove();
-        document.removeEventListener("keydown", onKey);
-      };
-      var onKey = (event) => {
-        if (event.key == "Escape") close();
-      };
-      ok.addEventListener("click", close);
-      box.addEventListener("click", (event) => {
-        if (event.target == box) close();
-      });
-      document.addEventListener("keydown", onKey);
-      card.appendChild(ok);
-      box.appendChild(card);
-      document.body.appendChild(box);
-      ok.focus();
-      return;
-    }
-    card.appendChild(el("p", "cs-join-text", "Everybody starts with the same coins - the most coins at the end wins. Hit Start to play - only players in the season are on the leaderboard. Your coins from before wait for you and come back after the season, with what you win on top."));
-    var go = el("button", "cs-join-btn", "Start · 🪙 " + format(start.coins));
-    go.type = "button";
-    go.addEventListener("click", async () => {
-      go.disabled = true;
-      try {
-        var res = await fetch("season/join", { method: "POST" });
-        var result = await res.json();
-        if (!res.ok) throw new Error(result.error || "Could not start the season.");
-        box.remove();
-        casinoNotice({ icon: season.icon || "🏆", title: "You're in " + season.name + "!", text: "🪙 " + format(result.coins) + " to start with - good luck!", key: "season" });
-      } catch (error) {
-        showHint(error.message, "error", go);
-        go.disabled = false;
+    var about = card.appendChild(el("p", "cs-join-text", "A world of its own: everybody starts with the same " + coin + " coins and plays the games of the season - the most coins at the end wins. Your 🪙 stay in the normal casino, you can switch between both any time. When the season is over, your season coins go to your 🪙 on top."));
+    about.dataset.coin = "real";
+
+    var close = () => {
+      box.remove();
+      document.removeEventListener("keydown", onKey);
+    };
+    var onKey = (event) => {
+      if (event.key == "Escape") later();
+    };
+    // Later: the popup doesn't come by itself again for this season
+    var later = () => {
+      if (mode == "join") {
+        try {
+          localStorage.setItem(LATER_KEY, String(season.id));
+        } catch (e) {
+          // only this time
+        }
       }
+      close();
+    };
+    box.addEventListener("click", (event) => {
+      if (event.target == box) later();
     });
-    card.appendChild(go);
+    document.addEventListener("keydown", onKey);
+    var buttons = el("div", "cs-join-actions");
+    if (mode == "join") {
+      var go = el("button", "cs-join-btn", "Join · " + coin + " " + format(start.coins));
+      go.type = "button";
+      go.addEventListener("click", async () => {
+        go.disabled = true;
+        try {
+          var res = await fetch("season/join", { method: "POST" });
+          var result = await res.json();
+          if (!res.ok) throw new Error(result.error || "Could not join the season.");
+          // (into the season world: the page loads again)
+          worldChanged({ world: "season" });
+        } catch (error) {
+          showHint(error.message, "error", go);
+          go.disabled = false;
+        }
+      });
+      buttons.appendChild(go);
+    } else if (mode == "switch") {
+      var sw = el("button", "cs-join-btn", inSeasonWorld ? "🪙 Back to the normal casino" : "Play in " + season.name);
+      sw.type = "button";
+      sw.dataset.coin = "real";
+      sw.addEventListener("click", () => {
+        sw.disabled = true;
+        switchWorld(inSeasonWorld ? "normal" : "season");
+      });
+      buttons.appendChild(sw);
+      if (inSeasonWorld) {
+        var lb = el("a", "cs-join-later", "Season leaderboard");
+        lb.href = "leaderboard";
+        buttons.appendChild(lb);
+      }
+    }
+    var no = el("button", "cs-join-later", mode == "join" ? "Later" : "Close");
+    no.type = "button";
+    no.addEventListener("click", later);
+    buttons.appendChild(no);
+    card.appendChild(buttons);
     box.appendChild(card);
     document.body.appendChild(box);
+    (buttons.querySelector(".cs-join-btn") || no).focus();
   }
 
-  // A season starts (or ends) soon: the casino closes - open rounds finish, no new bets (the server
-  // refuses them), then a countdown. A notice like a battle starting; it goes with the start of the
-  // season (the page loads again)
+  // A season starts soon (the countdown) - or the season world closes before its end (open rounds
+  // finish, no new bets, then a countdown). A notice like a battle starting.
   var closing = null;
   var closingTimer = null;
   function showClosing(info) {
@@ -597,21 +702,20 @@
       noticeStack().prepend(closing);
     }
     closing.querySelector(".cs-closing-icon").innerText = info.icon || "🏆";
-    // In the color of the season that starts (or ends)
     var rgb = info.color && /^#[0-9a-f]{6}$/i.test(info.color) ? [1, 3, 5].map((i) => parseInt(info.color.slice(i, i + 2), 16)) : null;
     closing.style.setProperty("--mm-accent", rgb ? info.color : "");
     closing.style.setProperty("--mm-accent-rgb", rgb ? rgb.join(", ") : "");
     var ending = info.kind == "end";
     var maint = info.kind == "maintenance";
-    closing.querySelector(".cs-closing-title").innerText = info.name + (ending ? " ends soon!" : " starts soon!");
+    closing.querySelector(".cs-closing-title").innerText = maint ? info.name + " soon" : info.name + (ending ? " ends soon!" : " starts soon!");
     var count = closing.querySelector(".cs-closing-count");
     var text = closing.querySelector(".cs-closing-text");
     if (info.startsIn == null) {
       count.innerText = "⏳";
-      text.innerText = maint ? "Open games are finishing - no new bets, then the casino closes for a while." : ending ? "Open games are finishing - no new bets, the final places come next." : "Open games are finishing - no new bets until it starts.";
+      text.innerText = maint ? "Open games are finishing - no new bets, then the casino closes for a while." : "The season's games are finishing - no new bets there, the final places come next.";
       return;
     }
-    text.innerText = maint ? "All games closed - the casino closes for a while then." : ending ? "All games closed - the final places are counted then." : "All games closed - no new bets until it starts.";
+    text.innerText = maint ? "All games closed - the casino closes for a while then." : ending ? "The season's games are closed - the final places are counted then." : "Get ready - you can join right when it starts.";
     var startsAt = Date.now() + info.startsIn;
     var show = () => {
       var left = Math.max(0, Math.ceil((startsAt - Date.now()) / 1000));
@@ -622,20 +726,32 @@
   }
   socket.on("seasonClosing", showClosing);
 
-  // A new season: the casino starts anew - the page loads again (new coins, the games from the start)
-  socket.on("seasonStarted", () => location.reload());
+  // A new season: the popup to join it (or later) - nothing else changes
+  socket.on("seasonStarted", () => {
+    showClosing(null);
+    loadSeason().then((data) => {
+      showSeason(data);
+      if (data && data.season && data.joined === false) showJoin(data, "join");
+    });
+  });
 
-  // A season is over: everything is as before it - the page loads again (a game page), then a notice
-  // with the way to the winners
+  // A season is over: a notice with the way to the winners (the season world: the page loads again
+  // in the normal casino - with the season's coins in the wallet)
   var ENDED_KEY = "csSeasonEnded";
   socket.on("seasonEnded", (season) => {
-    if (!window.showWinners) {
+    showClosing(null);
+    if (inSeasonWorld || !window.showWinners) {
       try {
         sessionStorage.setItem(ENDED_KEY, JSON.stringify(season));
-        return location.reload();
       } catch (e) {
         // no storage: the notice right here
       }
+      if (inSeasonWorld) return;
+    }
+    try {
+      sessionStorage.removeItem(ENDED_KEY);
+    } catch (e) {
+      // no storage
     }
     seasonOver(season);
   });
@@ -653,7 +769,7 @@
     showSeason(null);
     var notice = el("div", "cs-season-notice");
     var text = el("div", "cs-season-notice-text");
-    text.append(el("b", "", (season.icon || "🏆") + " " + season.name + " is over!"), el("span", "", season.winner ? "🥇 " + season.winner.username + " wins with 🪙 " + format(season.winner.coins) : "The final places are in."));
+    text.append(el("b", "", (season.icon || "🏆") + " " + season.name + " is over!"), el("span", "", season.winner ? "🥇 " + season.winner.username + " wins with " + format(season.winner.coins) + " - your season coins are in your 🪙 now" : "The final places are in - your season coins are in your 🪙 now."));
     var link = el("a", "cs-season-notice-link", "See the winners");
     link.href = "leaderboard?season=" + season.id;
     var close = el("button", "cs-season-notice-close", "✕");
