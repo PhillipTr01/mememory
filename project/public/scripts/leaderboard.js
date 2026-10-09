@@ -156,7 +156,9 @@ function render() {
   document.getElementById("lbPending").hidden = pending.length == 0;
   if (pending.length) {
     var x = board.season && board.season.wagerX;
-    setText(document.getElementById("lbPendingNote"), x ? "Wager " + x + "× the start coins per chance to get a place" : "");
+    var note = document.getElementById("lbPendingNote");
+    if (x) morphChildren(note, [document.createTextNode("Wager needed: "), el("b", "lb-pending-x", x + "×")]);
+    else note.replaceChildren();
     morphChildren(document.getElementById("lbPendingList"), pending.map(pendingRow));
   }
 
@@ -330,7 +332,7 @@ async function showWinners(id) {
   if (unplaced.length) {
     var rest = el("div", "lb-pending");
     var pendingHead = el("div", "lb-pending-head");
-    pendingHead.append(el("span", "lb-pending-title", "🎲 No place - not wagered enough"));
+    pendingHead.append(el("span", "lb-pending-title", "🫴🏽 No place - not wagered enough"));
     var pendingList = el("ol", "lb-list");
     pendingList.append(...unplaced.map((row) => (row.wager ? pendingRow(row) : el("li", "lb-row pending", row.username))));
     rest.append(pendingHead, pendingList);

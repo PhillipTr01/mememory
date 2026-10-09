@@ -732,3 +732,12 @@
     order: 5;
   }
 }
+
+.lb-pending-x {
+  margin-left: 0.15rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  color: var(--mm-accent);
+  font-weight: 800;
+}
