@@ -12,7 +12,7 @@ var AVATAR_PARTS = {
   skin: ["#ffe8d6", "#fbe3cc", "#f3d2b3", "#e8b98f", "#d9a577", "#c48a5a", "#a86f43", "#8a5a36", "#5e3b22", "#3d2414"],
   hair: [
     "none", "buzz", "short", "crew", "quiff", "side", "undercut", "messy", "wavy",
-    "long", "bob", "curly", "afro", "bun", "ponytail", "pigtails", "mohawk", "hijab",
+    "long", "bob", "curly", "afro", "bun", "ponytail", "pigtails", "mohawk",
   ],
   hairColor: [
     "#0d0b0a", "#1f1b18", "#3b2a20", "#4a2f1d", "#6b3e26", "#8b5a2b", "#b07b3c", "#d9b36c",
@@ -251,13 +251,6 @@ var HAIR = {
     top: "M44 31 Q43 10 50 5 Q57 10 56 31 Z",
     strands: "M48 10 L48 28 M52 10 L52 28",
   },
-  // A head scarf: around the head and over the shoulders, the face free
-  hijab: {
-    back: "M21 50 Q19 13 50 13 Q81 13 79 50 Q80 68 84 80 Q50 94 16 80 Q20 68 21 50 Z",
-    cap: "M10 0 H90 V90 L71.5 90 L71.5 48 Q71 29 50 28 Q29 29 28.5 48 L28.5 90 L10 90 Z",
-    wrap: "M28 62 Q32 74 50 75 Q68 74 72 62 L76 70 Q70 84 50 85 Q30 84 24 70 Z",
-    noEars: true,
-  },
 };
 
 var avatarClipId = 0;
@@ -286,7 +279,7 @@ function drawHairBack(svg, c, headwear) {
 // How high the hair goes (y of the top), so crowns sit on the hair
 var HAIR_TOP = {
   none: 21, buzz: 20, short: 13, crew: 16, quiff: 9, side: 15, undercut: 12, messy: 8, wavy: 18,
-  long: 18, bob: 18, curly: 10, afro: 6, bun: 20, ponytail: 21, pigtails: 21, mohawk: 20, hijab: 13,
+  long: 18, bob: 18, curly: 10, afro: 6, bun: 20, ponytail: 21, pigtails: 21, mohawk: 20,
 };
 
 // On the head; with a hat only the hair below the hat shows,
@@ -536,7 +529,7 @@ var BROWS = {
 function drawBrows(svg, c) {
   var path = c.eyes in BROWS ? BROWS[c.eyes] : "M36 40.5 Q41 37.5 46 40 M54 40 Q59 37.5 64 40.5";
   if (path == null) return;
-  var color = c.hair == "none" || c.hair == "hijab" ? shade(c.skin, 70) : shade(c.hairColor, 20);
+  var color = c.hair == "none" ? shade(c.skin, 70) : shade(c.hairColor, 20);
   svgAdd(svg, "path", withLine({ d: path }, color, 2.2));
 }
 
