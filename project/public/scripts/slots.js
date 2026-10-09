@@ -906,7 +906,8 @@ function pickChest(result, coin) {
       return box;
     });
     row.append(...boxes);
-    var sub = el("div", "sl-stage-sub", "Pick one: MINI · MAJOR · MEGA");
+    // (empty until the pick: then the prize)
+    var sub = el("div", "sl-stage-sub", "");
     stage.replaceChildren(el("div", "sl-bonus-glow"), el("div", "sl-stage-title", "TREASURE CHEST"), el("div", "sl-big-title", "PICK A CHEST"), row, sub);
     boxes[0].focus();
     var chosen = false;
