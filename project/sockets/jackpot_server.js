@@ -225,6 +225,12 @@ module.exports = function (io, options = {}) {
     // the pot. Which ticket was fixed at the start of the round (provably fair).
     // The tickets go through the bets in their order (not per player).
     pot.draw = fairWinner(pot.bets.map((bet) => ({ name: bet.name, coins: bet.amount })), pot.fair.number);
+    // (debug, the test world only: a winner picked by the admin - a ticket of theirs)
+    if (forcedWinner) {
+      const bet = pot.bets.find((b) => b.name === forcedWinner);
+      if (bet) pot.draw = { ...pot.draw, winner: bet.name, ticket: bet.from - 1 };
+      forcedWinner = null;
+    }
     // The house keeps its cut (never more than half of the others' coins): the winner gets the rest
     const own = pot.bets.filter((bet) => bet.name === pot.draw.winner).reduce((sum, bet) => sum + bet.amount, 0);
     pot.draw.payout = pot.draw.total - jackpotRake(pot.draw.total, own, config.JACKPOT_RAKE);
@@ -450,6 +456,44 @@ module.exports = function (io, options = {}) {
 
   /* ---------- Debug (the admin's test world) ---------- */
 
+  let forcedWinner = null;
+
+  // The animation of this round (one of JACKPOT_DRAWS)
+  function setMode(mode) {
+    if (!config.JACKPOT_DRAWS.includes(mode) || pot.phase === PHASE.DRAWING) return false;
+    pot.mode = mode;
+    emitState();
+    return true;
+  }
+
+  // Who wins the next draw (someone in the pot: a name, "bot" - any bot, null: the fair number)
+  function forceWinner(name) {
+    forcedWinner = name === "bot" ? (pot.entries.find((e) => e.name.startsWith("🤖")) || {}).name || null : name || null;
+    return forcedWinner != null || !name;
+  }
+
+  // The ghost now (a player alone in the pot)
+  function ghostNow() {
+    if (pot.phase !== PHASE.OPEN || pot.entries.length !== 1) return false;
+    stopGhostTimer();
+    addGhost();
+    return true;
+  }
+
+  // A new round right away - the testers get their coins back (the bots' are nobody's)
+  function clearPot() {
+    if (pot.phase === PHASE.DRAWING) return false;
+    const back = new Map();
+    for (const bet of [...pot.bets, ...pot.incoming, ...pot.waiting]) if (!bet.name.startsWith("🤖") && bet.name !== GHOST) back.set(bet.name, (back.get(bet.name) || 0) + bet.amount);
+    pot.incoming.forEach((bet) => clearTimeout(bet.timer));
+    pot.incoming = [];
+    pot.waiting = [];
+    clearTimeout(pot.timer);
+    back.forEach((amount, name) => coins.add(name, amount, { reason: "jackpot refund" }).catch(() => {}));
+    newRound();
+    return true;
+  }
+
   // A bot puts coins in (nobody's coins - its win is gone with it)
   function botBet(name, amount) {
     if (pot.phase === PHASE.DRAWING) pot.waiting.push({ name: name, amount: amount });
@@ -465,5 +509,5 @@ module.exports = function (io, options = {}) {
     return true;
   }
 
-  return { pot, botBet, drawNow };
+  return { pot, botBet, drawNow, setMode, forceWinner, ghostNow, clearPot };
 };

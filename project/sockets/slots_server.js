@@ -230,7 +230,9 @@ module.exports = function (io, options = {}) {
           if (early > 0) await new Promise((resolve) => setTimeout(resolve, early));
           if (!(await coins.spend(username, bet, { reason: "slots bet" }))) return error("You don't have enough coins.");
           lastSpin.set(username, Date.now());
-          const test = config.SLOTS_TEST_BONUS;
+          // (debug, the test world only: the next spin starts the bonus the admin picked)
+          const test = nextBonus || config.SLOTS_TEST_BONUS;
+          nextBonus = null;
           const result = slots.spin(bet, undefined, { forceBonus: test === "free" || test === "coins" ? test : test === true ? "free" : null });
           machine.spins++;
           const payIn = showTime(bet, result);
@@ -313,5 +315,12 @@ module.exports = function (io, options = {}) {
   // (a spin without a win too, while its reels still turn on the page)
   inPlay.register("slots", (name) => machine.pending.some((entry) => entry.name === name) || Date.now() - (lastSpin.get(name) || 0) < config.SLOTS_SPIN + 500);
 
-  return { machine, payAll };
+  // Debug (the admin's test world): the next spin starts the free spins ("free") or the coin game ("coins")
+  let nextBonus = null;
+  function forceBonus(kind) {
+    nextBonus = kind === "free" || kind === "coins" ? kind : null;
+    return true;
+  }
+
+  return { machine, payAll, forceBonus };
 };

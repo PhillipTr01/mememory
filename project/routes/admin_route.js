@@ -413,7 +413,13 @@ module.exports = function () {
     "/api/test",
     admin,
     asyncHandler(async (req, res) => {
-      res.json({ testers: testMode.list(), players: (await players()).map((p) => p.username), defaultCoins: testMode.DEFAULT_COINS });
+      res.json({
+        testers: testMode.list(),
+        players: (await players()).map((p) => p.username),
+        defaultCoins: testMode.DEFAULT_COINS,
+        // What the debug tools can pick from
+        options: { draws: config.JACKPOT_DRAWS, deals: (worlds.servers.get("blackjack") || {}).DEALS || [], modes: ["classic", "crazy", "jackpot", "bestof", "worstof"] },
+      });
     }),
   );
   // {username, coins}: start (again: the balance back to the start)
@@ -451,6 +457,33 @@ module.exports = function () {
     }
     res.status(400).json({ error: "Bots only for the jackpot and the roulette (case battles have their own)." });
   });
+  // One lever of the debug tools: {game, action, value} - only the test world
+  router.post("/api/test/debug", admin, async (req, res) => {
+    const { game, action, value } = req.body || {};
+    const server = worlds.servers.get(game);
+    if (!server) return res.status(400).json({ error: "Unknown game." });
+    const levers = {
+      jackpot: {
+        mode: () => server.setMode(value) || "Not during a draw.",
+        winner: () => server.forceWinner(value) || "Nobody of that name in the pot (bots: add one first).",
+        ghost: () => server.ghostNow() || "The ghost comes only to a player alone in the pot.",
+        clear: () => server.clearPot() || "Not during a draw.",
+      },
+      roulette: { color: () => server.forceColor(value) },
+      slots: { bonus: () => server.forceBonus(value) },
+      blackjack: { deal: () => server.stackDeal(value) || "Unknown deal." },
+      battles: {
+        mode: () => server.forceMode(value),
+        fill: async () => (await server.fillWithBots(String(value || ""))) || "That player has no waiting battle.",
+      },
+    };
+    const lever = levers[game] && levers[game][action];
+    if (!lever) return res.status(400).json({ error: "Unknown lever." });
+    const done = await lever();
+    if (done !== true) return res.status(400).json({ error: typeof done === "string" ? done : "That didn't work." });
+    res.json({ ok: true });
+  });
+
   router.post("/api/test/now", admin, (req, res) => {
     const game = req.body && req.body.game;
     const server = worlds.servers.get(game);

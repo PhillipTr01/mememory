@@ -195,6 +195,11 @@ module.exports = function (io, options = {}) {
     if (modeOf(battle) === "random") {
       const options = randomOptions(battle);
       battle.picked = options[Math.floor(cases.roll(battle.fair.seed, `${battle.id}:mode`) * options.length)];
+      // (debug, the test world only: the mode the admin picked)
+      if (forcedMode) {
+        battle.picked = forcedMode;
+        forcedMode = null;
+      }
       battle.crazy = battle.picked === "crazy";
     }
     const all = totals(battle, battle.results);
@@ -556,5 +561,22 @@ module.exports = function (io, options = {}) {
     }),
   );
 
-  return { lobby };
+  // Debug (the admin's test world): the mode the next random battle picks; a waiting battle filled with bots
+  let forcedMode = null;
+  function forceMode(mode) {
+    forcedMode = randomOptions().includes(mode) ? mode : null;
+    return true;
+  }
+  async function fillWithBots(username) {
+    const battle = [...lobby.list.values()].find((b) => b.phase === PHASE.WAITING && b.seats.some((s) => s && s.name === username));
+    if (!battle) return false;
+    while (battle.phase === PHASE.WAITING && battle.seats.includes(null)) {
+      const name = BOT_NAMES.find((bot) => !battle.seats.some((s) => s && s.name === bot));
+      battle.seats[battle.seats.indexOf(null)] = { name: name, bot: true };
+    }
+    startIfFull(battle);
+    return true;
+  }
+
+  return { lobby, forceMode, fillWithBots };
 };

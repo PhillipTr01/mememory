@@ -233,6 +233,11 @@ module.exports = function (io, options = {}) {
       }
       // A new shoe for every round: nothing to count
       table.shoe = bj.newShoe();
+      // (debug, the test world only: the first cards the admin picked, on top of the shoe)
+      if (nextDeal) {
+        table.shoe.push(...stacked(nextDeal, seats.length).reverse());
+        nextDeal = null;
+      }
       seats.forEach((i) => (table.seats[i].hands = [{ cards: [], bet: table.seats[i].bet, split: false, doubled: false, done: false }]));
       table.dealer = { cards: [], hidden: true };
       for (let n = 0; n < 2; n++) {
@@ -812,6 +817,36 @@ module.exports = function (io, options = {}) {
     },
   );
 
+  /* ---------- Debug (the admin's test world): the cards of the next deal ---------- */
+
+  let nextDeal = null;
+  const DEALS = {
+    // every seat: [first, second] - the dealer: [up, hole] - then what is drawn next
+    blackjack: { seat: ["As", "Kh"], dealer: ["9c", "7d"], then: ["5s", "Td"] },
+    pair: { seat: ["8s", "8s"], dealer: ["Tc", "7d"], then: ["3h", "9c", "Kd"] },
+    split: { seat: ["8h", "8d"], dealer: ["6c", "Td"], then: ["3s", "2c", "Th", "9s", "Kc"] },
+    double: { seat: ["6h", "5d"], dealer: ["6c", "Td"], then: ["Ks", "Tc", "9h"] },
+    "dealer-bust": { seat: ["Th", "8d"], dealer: ["6c", "Td"], then: ["Ks", "Qc", "Jh"] },
+    "dealer-blackjack": { seat: ["Th", "9d"], dealer: ["Ac", "Kd"], then: ["5s", "4c"] },
+    "21+3": { seat: ["7h", "7d"], dealer: ["7s", "Td"], then: ["9c", "4h"] },
+  };
+
+  // The cards in the order they are drawn: a card for every seat and the dealer, twice - then the rest
+  function stacked(kind, seats) {
+    const deal = DEALS[kind];
+    const cards = [];
+    for (let n = 0; n < 2; n++) {
+      for (let i = 0; i < seats; i++) cards.push(deal.seat[n]);
+      cards.push(deal.dealer[n]);
+    }
+    return cards.concat(deal.then);
+  }
+
+  function stackDeal(kind) {
+    nextDeal = DEALS[kind] ? kind : null;
+    return nextDeal != null || kind == null;
+  }
+
   const main = tables.get(config.BJ_DEFAULT_TABLE);
-  return { table: main.table, tables, refundAll };
+  return { table: main.table, tables, refundAll, stackDeal, DEALS: Object.keys(DEALS) };
 };

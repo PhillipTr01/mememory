@@ -426,25 +426,81 @@
                         <div id="adTestList" class="ad-test-list"></div>
                         <p id="adTestEmpty" class="ad-note">Nobody is testing.</p>
                     </div>
-                    <!--- Debug tools: only in the test world --->
+                    <!--- Debug tools: only in the test world, a card per game --->
                     <div class="ad-test-tools">
                         <h3 class="ad-label ad-sublabel">Debug tools (test world)</h3>
-                        <div class="ad-test-tool">
-                            <span class="ad-test-tool-name">💰 Jackpot</span>
-                            <span class="ad-inline-input"><span class="ad-setting-unit">🪙</span><input id="adBotJackpotAmount" class="mm-input" type="number" min="1" step="100" value="1000" aria-label="Jackpot bot bet"></span>
-                            <button type="button" class="mm-btn mm-btn-sm" data-bots="jackpot" data-count="1">+ 1 bot</button>
-                            <button type="button" class="mm-btn mm-btn-sm" data-bots="jackpot" data-count="3">+ 3 bots</button>
-                            <button type="button" class="mm-btn mm-btn-sm" data-now="jackpot">Draw now</button>
+                        <div class="ad-tool-grid">
+                            <div class="ad-tool-card">
+                                <h4 class="ad-tool-title">💰 Jackpot</h4>
+                                <div class="ad-tool-row">
+                                    <span class="ad-inline-input"><span class="ad-setting-unit">🪙</span><input id="adBotJackpotAmount" class="mm-input" type="number" min="1" step="100" value="1000" aria-label="Jackpot bot bet"></span>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-bots="jackpot" data-count="1">+ 1 bot</button>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-bots="jackpot" data-count="3">+ 3 bots</button>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <select id="adToolJackpotMode" class="mm-input" aria-label="Draw animation"></select>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-lever="jackpot:mode:#adToolJackpotMode">Use this draw</button>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <select id="adToolJackpotWinner" class="mm-input" aria-label="Winner">
+                                        <option value="">Fair (the number)</option>
+                                        <option value="me">Me (the tester)</option>
+                                        <option value="bot">A bot</option>
+                                        <option value="Ghost">The ghost</option>
+                                    </select>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-lever="jackpot:winner:#adToolJackpotWinner">Next winner</button>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <button type="button" class="mm-btn mm-btn-sm" data-now="jackpot">⏩ Draw now</button>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-lever="jackpot:ghost">👻 Ghost now</button>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-lever="jackpot:clear">🧹 Clear the pot</button>
+                                </div>
+                            </div>
+                            <div class="ad-tool-card">
+                                <h4 class="ad-tool-title">🎡 Roulette</h4>
+                                <div class="ad-tool-row">
+                                    <span class="ad-inline-input"><span class="ad-setting-unit">🪙</span><input id="adBotRouletteAmount" class="mm-input" type="number" min="1" step="100" value="500" aria-label="Roulette bot bet"></span>
+                                    <select id="adBotRouletteColor" class="mm-input" aria-label="Color"><option value="">Red or blue</option><option value="red">Red</option><option value="blue">Blue</option><option value="green">Green</option></select>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <button type="button" class="mm-btn mm-btn-sm" data-bots="roulette" data-count="1">+ 1 bot</button>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-bots="roulette" data-count="3">+ 3 bots</button>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-now="roulette">⏩ Roll now</button>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <select id="adToolRouletteColor" class="mm-input" aria-label="Next result"><option value="">Fair (the seed)</option><option value="red">🔥 Red</option><option value="blue">💧 Blue</option><option value="green">🍀 Green</option></select>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-lever="roulette:color:#adToolRouletteColor">Next result</button>
+                                </div>
+                            </div>
+                            <div class="ad-tool-card">
+                                <h4 class="ad-tool-title">🎰 Slots</h4>
+                                <p class="ad-note">The next spin (of anybody in the test world) starts:</p>
+                                <div class="ad-tool-row">
+                                    <button type="button" class="mm-btn mm-btn-sm" data-lever="slots:bonus:free">🎁 Free spins</button>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-lever="slots:bonus:coins">🪙 Coin game</button>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-lever="slots:bonus:">Normal</button>
+                                </div>
+                            </div>
+                            <div class="ad-tool-card">
+                                <h4 class="ad-tool-title">🃏 Blackjack</h4>
+                                <p class="ad-note">The cards of the next deal (every seat the same):</p>
+                                <div class="ad-tool-row">
+                                    <select id="adToolDeal" class="mm-input" aria-label="Next deal"></select>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-lever="blackjack:deal:#adToolDeal">Stack the deal</button>
+                                </div>
+                            </div>
+                            <div class="ad-tool-card">
+                                <h4 class="ad-tool-title">⚔️ Case battles</h4>
+                                <div class="ad-tool-row">
+                                    <select id="adToolBattleMode" class="mm-input" aria-label="Random picks"></select>
+                                    <button type="button" class="mm-btn mm-btn-sm" data-lever="battles:mode:#adToolBattleMode">Random picks this</button>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <button type="button" class="mm-btn mm-btn-sm" data-lever="battles:fill:me">🤖 Fill my waiting battle with bots</button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="ad-test-tool">
-                            <span class="ad-test-tool-name">🎡 Roulette</span>
-                            <span class="ad-inline-input"><span class="ad-setting-unit">🪙</span><input id="adBotRouletteAmount" class="mm-input" type="number" min="1" step="100" value="500" aria-label="Roulette bot bet"></span>
-                            <select id="adBotRouletteColor" class="mm-input" aria-label="Color"><option value="">Red or blue</option><option value="red">Red</option><option value="blue">Blue</option><option value="green">Green</option></select>
-                            <button type="button" class="mm-btn mm-btn-sm" data-bots="roulette" data-count="1">+ 1 bot</button>
-                            <button type="button" class="mm-btn mm-btn-sm" data-bots="roulette" data-count="3">+ 3 bots</button>
-                            <button type="button" class="mm-btn mm-btn-sm" data-now="roulette">Roll now</button>
-                        </div>
-                        <p class="ad-note">Bots bet with nobody's coins - what they win is gone with them. Case battles: fill the seats with the bots of the battle.</p>
+                        <p class="ad-note">Bots bet with nobody's coins - what they win is gone with them. Every lever works once (the next draw, roll, spin, deal or battle).</p>
                     </div>
                 </div>
 

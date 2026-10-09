@@ -98,6 +98,12 @@ module.exports = function (io, options = {}) {
     table.endsAt = null;
     table.rollAt = Date.now();
     table.slot = roulette.slotFor(table.fair.seed, table.round);
+    // (debug, the test world only: the color the admin picked)
+    if (forcedColor) {
+      const slots = roulette.WHEEL.map((slot, i) => (slot.color === forcedColor ? i : -1)).filter((i) => i >= 0);
+      table.slot = slots[Math.floor(Math.random() * slots.length)];
+      forcedColor = null;
+    }
     table.paid = false;
     emitState();
     timer = setTimeout(finish, config.ROULETTE_SPIN);
@@ -239,6 +245,13 @@ module.exports = function (io, options = {}) {
 
   /* ---------- Debug (the admin's test world) ---------- */
 
+  let forcedColor = null;
+  // The color of the next roll (null: the seed's)
+  function forceColor(color) {
+    forcedColor = roulette.COLORS.includes(color) ? color : null;
+    return true;
+  }
+
   // A bot bets (nobody's coins - its win is gone with it)
   function botBet(name, color, amount) {
     if (table.phase === PHASE.ROLLING || !roulette.COLORS.includes(color)) return false;
@@ -255,5 +268,5 @@ module.exports = function (io, options = {}) {
     return true;
   }
 
-  return { table, roll, botBet, rollNow, stop: () => clearTimeout(timer) };
+  return { table, roll, botBet, rollNow, forceColor, stop: () => clearTimeout(timer) };
 };

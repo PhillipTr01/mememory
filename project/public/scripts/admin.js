@@ -651,6 +651,15 @@ async function loadTest() {
   var coins = document.getElementById("adTestCoins");
   if (!coins.value) coins.value = data.defaultCoins;
   renderTesters(data.testers);
+  // The choices of the debug tools
+  var fill = (id, values, label) => {
+    var box = document.getElementById(id);
+    if (box.options.length) return;
+    box.replaceChildren(...values.map((value) => new Option(label ? label(value) : value, value)));
+  };
+  fill("adToolJackpotMode", data.options.draws);
+  fill("adToolDeal", data.options.deals, (deal) => deal.replace("-", " "));
+  fill("adToolBattleMode", data.options.modes);
 }
 
 function renderTesters(testers) {
@@ -705,6 +714,25 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         var data = await api("test/bots", body);
         showHint("🤖 " + data.added + (data.added == 1 ? " bot" : " bots") + " in the " + game + ".", "success", button);
+      } catch (error) {
+        showHint(error.message, "error", button);
+      } finally {
+        button.disabled = false;
+      }
+    }),
+  );
+  // A lever: data-lever="game:action[:value or #select]" ("me": the first tester)
+  document.querySelectorAll("[data-lever]").forEach((button) =>
+    button.addEventListener("click", async () => {
+      var [game, action, ...rest] = button.dataset.lever.split(":");
+      var value = rest.join(":");
+      if (value.startsWith("#")) value = document.querySelector(value).value;
+      var tester = document.querySelector(".ad-test-row b");
+      if (value == "me") value = tester ? tester.innerText : "";
+      button.disabled = true;
+      try {
+        await api("test/debug", { game: game, action: action, value: value || null });
+        showHint("✓ " + button.innerText.replace(/^\W+\s*/, ""), "success", button);
       } catch (error) {
         showHint(error.message, "error", button);
       } finally {

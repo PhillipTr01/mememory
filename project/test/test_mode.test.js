@@ -8,7 +8,7 @@ const shop = require("../game/shop");
 const gifts = require("../game/gifts");
 const withdrawals = require("../game/withdrawals");
 
-Object.assign(config, { ROULETTE_TIMER: 100, ROULETTE_SPIN: 50, ROULETTE_PAUSE: 50, JACKPOT_BET_DELAY: [10, 20], JACKPOT_SPIN: 50, JACKPOT_PAUSE: 50 });
+Object.assign(config, { ROULETTE_TIMER: 100, ROULETTE_SPIN: 50, ROULETTE_PAUSE: 50, JACKPOT_BET_DELAY: [10, 20], JACKPOT_SPIN: 50, JACKPOT_PAUSE: 50, SLOTS_MIN_GAP: 0, SLOTS_SPIN: 10 });
 
 let server;
 const tokens = {};
@@ -96,4 +96,45 @@ test("test mode: a world of its own - testers only there, real players never; ja
   assert.ok(server.test.jackpot.drawNow());
   assert.strictEqual(h.coinsOf("real1"), 5000);
   testMode.stop("admin1");
+});
+
+test("test mode debug levers: the next winner, roulette color, slots bonus, stacked blackjack deal, the draw animation", async () => {
+  const roulette = require("../game/roulette");
+  testMode.start("admin1", 1000000);
+  try {
+    // Jackpot: a bot and me - the bot wins, the animation picked
+    const jp = server.test.jackpot;
+    // (the draw of the test before: over first)
+    while (jp.pot.phase === "drawing") await h.wait(20);
+    jp.botBet("🤖Botty", 100);
+    jp.botBet("🤖Clanky", 100);
+    assert.ok(jp.setMode("claw"));
+    assert.strictEqual(jp.pot.mode, "claw");
+    assert.ok(jp.forceWinner("🤖Clanky"));
+    assert.ok(jp.drawNow());
+    await h.wait(20);
+    assert.strictEqual(jp.pot.draw.winner, "🤖Clanky");
+
+    // Roulette: green next
+    const rl = server.test.roulette;
+    rl.forceColor("green");
+    rl.botBet("🤖Botty", "red", 100);
+    assert.ok(rl.rollNow());
+    assert.strictEqual(roulette.WHEEL[rl.table.slot].color, "green");
+
+    // Slots: the next spin starts the coin game
+    server.test.slots.forceBonus("coins");
+    const slots = server.client("/test/slots", tokens.admin1);
+    sockets.push(slots);
+    await h.once(slots, "slotsSetup");
+    const result = h.once(slots, "slotsResult");
+    slots.emit("spin", { bet: 10 });
+    assert.ok((await result).coinGame, "the coin game");
+
+    // Blackjack: the next deal is stacked
+    assert.ok(server.test.blackjack.stackDeal("blackjack"));
+    assert.ok(!server.test.blackjack.stackDeal("nonsense"));
+  } finally {
+    testMode.stop("admin1");
+  }
 });
