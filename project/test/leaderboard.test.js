@@ -45,7 +45,7 @@ test("seasons: a world of its own - at the start everybody may join (the budget,
   assert.match((await seasons.create({ name: "S", icon: "🔥", start: end, end: start, budget: 1000, every: 60 })).error, /after the start/);
   assert.match((await seasons.create({ name: "S", icon: "🔥", start, end, budget: 1000, every: 7 })).error, /interval/);
   assert.match((await seasons.create({ name: "S", icon: "🔥", start, end, budget: 1000, every: 60, prizesOn: true, prizes: [] })).error, /at least one/);
-  const made = await seasons.create({ name: "Season 1", icon: "🔥", start, end, budget: 50000, every: 60, prizesOn: true, prizes: [{ place: 2, prize: "A meme T-shirt" }, { place: 1, prize: "🏆 The golden pepe" }] });
+  const made = await seasons.create({ name: "Season 1", icon: "🔥", start, end, budget: 50000, every: 60, wagerX: 0, prizesOn: true, prizes: [{ place: 2, prize: "A meme T-shirt" }, { place: 1, prize: "🏆 The golden pepe" }] });
   assert.strictEqual(made.season.status, "planned");
   assert.deepStrictEqual(made.season.prizes.map((p) => p.place), [1, 2], "sorted by place");
   assert.deepStrictEqual(made.season.access, { mode: "all", names: [] }, "open for everybody");
@@ -435,5 +435,41 @@ test("seasons: a season from before the worlds were apart moves into the season 
   assert.strictEqual(await Setting.findOne({ key: "seasonGames:77" }).lean(), null);
   await seasons.endNow(77);
   await Setting.deleteMany({ key: { $in: ["seasons", "game:migrate-game", "game:season/migrate-game"] } });
+  seasons.reset();
+});
+
+test("seasons: a place only after wagering 7x the start (again for every second chance) - until then on the board without a place", async () => {
+  seasons.reset();
+  const now = Date.now();
+  const made = await seasons.create({ name: "Wager", icon: "🎲", start: now - 1000, end: now + 3600 * 1000, budget: 100, every: 0, secondChances: 1, prizesOn: true, prizes: [{ place: 1, prize: "🏆" }] });
+  assert.strictEqual(made.season.wagerX, 7, "7x by default");
+  assert.match((await seasons.create({ name: "X", icon: "🎲", start: now + 7200 * 1000, end: now + 9000 * 1000, budget: 100, every: 0, wagerX: -1 })).error, /0 to 1000/);
+  await seasons.tick(now);
+  for (const name of ["anna", "ben", "cleo"]) await seasons.join(name, now);
+  // anna: 700 wagered (7 x 100) - ben: 500 - cleo: nothing, but the most coins
+  setSeasonCoins("anna", 50);
+  setSeasonCoins("ben", 900);
+  setSeasonCoins("cleo", 5000);
+  await coins.season.add("anna", 700, { reason: "test" });
+  assert.ok(await coins.season.spend("anna", 700, { reason: "slots bet" }));
+  assert.ok(await coins.season.spend("ben", 500, { reason: "roulette bet" }));
+  setSeasonCoins("ben", 900);
+  await h.wait(20);
+  const board = await seasons.board(made.season.id);
+  const row = (name) => board.rows.find((r) => r.username === name);
+  assert.strictEqual(row("anna").rank, 1, "wagered enough: the place (and the prize)");
+  assert.strictEqual(row("anna").prize, "🏆");
+  assert.deepStrictEqual([row("cleo").rank, row("cleo").pending, row("cleo").wager.need], [null, true, 700], "the most coins - but no place yet");
+  assert.deepStrictEqual([row("ben").rank, row("ben").wager.done, row("ben").wager.need], [null, 500, 700]);
+  assert.deepStrictEqual(board.rows.map((r) => r.username), ["anna", "cleo", "ben"], "who has a place first, then the others by coins");
+  // A second chance: 7x more to wager before the place counts again
+  setSeasonCoins("anna", 0);
+  await seasons.useChance("anna", now + 5000);
+  assert.strictEqual(seasons.wagerNeed(seasons.running(), "anna"), 1400);
+  const after = await seasons.board(made.season.id);
+  assert.strictEqual(after.rows.find((r) => r.username === "anna").rank, null);
+  // The end: only who has a place wins
+  await seasons.endNow(made.season.id);
+  assert.strictEqual(seasons.publicSeason(seasons.byId(made.season.id)).winner, null, "nobody wagered enough at the end");
   seasons.reset();
 });

@@ -123,20 +123,49 @@ function setText(element, text) {
   if (element.textContent != text) element.textContent = text;
 }
 
+// How much of the wager for a place is done: a bar and the numbers
+function wagerBar(wager) {
+  var box = el("span", "lb-wager");
+  var bar = el("span", "lb-wager-bar");
+  var fill = el("span", "lb-wager-fill");
+  fill.style.width = Math.min(100, (wager.done / Math.max(1, wager.need)) * 100).toFixed(1) + "%";
+  bar.appendChild(fill);
+  box.append(bar, el("span", "lb-wager-text", shortCoins(wager.done) + " / " + shortCoins(wager.need)));
+  box.title = formatCoins(wager.done) + " of " + formatCoins(wager.need) + " coins wagered - then the place counts";
+  return box;
+}
+
+function pendingRow(row) {
+  var item = el("li", "lb-row pending" + (row.username == myName ? " mine" : ""));
+  var who = el("span", "lb-who");
+  who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name"));
+  item.append(el("span", "lb-rank", "–"), who, wagerBar(row.wager), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
+  return item;
+}
+
 function render() {
-  var rows = board.rows;
-  document.getElementById("lbEmpty").hidden = rows.length > 0;
+  // (a season: who hasn't wagered enough yet has no place - in a list of its own below)
+  var pending = board.rows.filter((row) => row.pending);
+  var rows = board.rows.filter((row) => !row.pending);
+  document.getElementById("lbEmpty").hidden = rows.length + pending.length > 0;
   // The podium: 2nd, 1st, 3rd
   var top = rows.slice(0, 3);
   var order = [top[1], top[0], top[2]].filter(Boolean);
   morphChildren(document.getElementById("lbPodium"), order.map(podiumSpot));
   morphChildren(document.getElementById("lbList"), rows.slice(3).map(listRow));
+  document.getElementById("lbPending").hidden = pending.length == 0;
+  if (pending.length) {
+    var x = board.season && board.season.wagerX;
+    setText(document.getElementById("lbPendingNote"), x ? "Wager " + x + "× the start coins to get a place - again after every second chance" : "");
+    morphChildren(document.getElementById("lbPendingList"), pending.map(pendingRow));
+  }
 
   // The own place, also when it is not in the list
   var me = document.getElementById("lbMe");
   me.hidden = board.me == null;
   if (board.me) {
-    morphChildren(me, [el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", "#" + board.me.rank + " of " + board.players), change(board.me), el("span", "lb-coins", "🪙 " + formatCoins(board.me.coins))]);
+    if (board.me.pending) morphChildren(me, [el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", "No place yet"), wagerBar(board.me.wager), el("span", "lb-coins", "🪙 " + formatCoins(board.me.coins))]);
+    else morphChildren(me, [el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", "#" + board.me.rank + " of " + (board.counted != null ? board.counted : board.players)), change(board.me), el("span", "lb-coins", "🪙 " + formatCoins(board.me.coins))]);
   }
   var when = new Date(board.updatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
   var season = board.season;
@@ -268,25 +297,28 @@ async function showWinners(id) {
   head.append(el("span", "lb-win-icon", season.icon), title, back);
 
   var parts = [head];
-  if (data.rows.length) {
-    var champ = data.rows[0];
+  // (who didn't wager enough got no place: below, without a place)
+  var placed = data.rows.filter((row) => !row.pending);
+  var unplaced = data.rows.filter((row) => row.pending);
+  if (placed.length) {
+    var champ = placed[0];
     var hero = el("div", "lb-champion");
     hero.append(el("span", "lb-win-label", "The winner"), el("div", "lb-champion-name", champ.username + (champ.username == myName ? " (you!)" : "")), el("div", "lb-champion-coins", "🪙 " + formatCoins(champ.coins)));
     if (champ.prize) hero.appendChild(el("div", "lb-champion-prize", "🎁 " + champ.prize));
     parts.push(hero);
-    var top = data.rows.slice(0, 3);
+    var top = placed.slice(0, 3);
     var podium = el("div", "lb-podium lb-win-podium");
     podium.append(...[top[1], top[0], top[2]].filter(Boolean).map(winnerSpot));
     parts.push(podium);
   }
   if (data.me) {
     var me = el("div", "lb-me");
-    me.append(el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", "#" + data.me.rank + " of " + data.players), el("span", "lb-coins", "🪙 " + formatCoins(data.me.coins)));
+    me.append(el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", data.me.pending ? "No place - not wagered enough" : "#" + data.me.rank + " of " + placed.length), el("span", "lb-coins", "🪙 " + formatCoins(data.me.coins)));
     if (data.me.prize) me.appendChild(el("span", "lb-prize", "🎁 " + data.me.prize));
     parts.push(me);
   }
   var list = el("ol", "lb-list");
-  data.rows.slice(3).forEach((row) => {
+  placed.slice(3).forEach((row) => {
     var item = el("li", "lb-row" + (row.username == myName ? " mine" : ""));
     var who = el("span", "lb-who");
     who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name"));
@@ -295,6 +327,15 @@ async function showWinners(id) {
     list.appendChild(item);
   });
   parts.push(list);
+  if (unplaced.length) {
+    var rest = el("div", "lb-pending");
+    var pendingHead = el("div", "lb-pending-head");
+    pendingHead.append(el("span", "lb-pending-title", "🎲 No place - not wagered enough"));
+    var pendingList = el("ol", "lb-list");
+    pendingList.append(...unplaced.map((row) => (row.wager ? pendingRow(row) : el("li", "lb-row pending", row.username))));
+    rest.append(pendingHead, pendingList);
+    parts.push(rest);
+  }
   if (!data.rows.length) parts.push(el("p", "jp-empty mm-muted", "Nobody played this season."));
   page.replaceChildren(...parts);
   page.hidden = false;

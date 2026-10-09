@@ -68,18 +68,19 @@
     // The admin's test mode: test coins (nothing is saved)
     button.classList.toggle("test", data.test === true);
     if (data.test) button.title = "🧪 Test mode - test coins, nothing is saved";
-    // The season world: the normal 🪙 next to the season's coins (they stay in the normal casino)
+    // The season world: on hover, how much is still to wager for a place on the leaderboard
     var stored = document.getElementById("navCoinsStored");
-    if (data.normal != null) {
+    var wager = data.wager;
+    if (wager && wager.need > 0) {
       if (!stored) {
         stored = el("span", "nav-coins-stored");
         stored.id = "navCoinsStored";
         button.appendChild(stored);
       }
-      // (the 🪙 stays a 🪙: the money of the normal casino - the season has a coin of its own)
-      stored.dataset.coin = "real";
-      stored.innerText = "🪙 " + format(data.normal);
-      stored.title = "Your coins outside the season - your season coins go on top when the season is over";
+      var left = Math.max(0, wager.need - wager.done);
+      stored.classList.toggle("done", left == 0);
+      stored.innerText = left == 0 ? "🎲 Wagered enough - your place counts" : "🎲 " + format(left) + " more to wager for a place";
+      stored.title = format(wager.done) + " of " + format(wager.need) + " wagered";
     } else if (stored) stored.remove();
     // Everything lost: a second chance (if the season has one) - after a moment
     if (window.CASINO_WORLD == "season") watchChance(coins);
@@ -621,6 +622,7 @@
     var start = (mode == "join" && data.joinCoins) || { coins: season.budget, missed: 0 };
     fact(coin, format(start.coins), start.missed > 0 ? "to start (with " + start.missed + " missed daily bonus" + (start.missed == 1 ? "" : "es") + ")" : "to start with");
     fact("🎁", format(season.dailyBonus), "free every day");
+    if (season.wagerX > 0) fact("🎲", season.wagerX + "×", "your start coins to wager for a place on the leaderboard" + (season.secondChances > 0 ? " (again after a second chance)" : ""));
     if (season.secondChances > 0) fact("💔", season.secondChances, "second chance" + (season.secondChances == 1 ? "" : "s") + " if you lose it all" + (season.secondChances > 1 ? chanceWait(season.chanceDelay) : ""));
     if (!upcoming) fact("👥", season.players, "player" + (season.players == 1 ? "" : "s") + " in so far");
     card.appendChild(facts);
@@ -677,7 +679,7 @@
       });
       buttons.appendChild(go);
     } else if (mode == "switch") {
-      var sw = el("button", "cs-join-btn", inSeasonWorld ? "Switch to your 🪙 · come back any time" : "Play in " + season.name);
+      var sw = el("button", "cs-join-btn", inSeasonWorld ? "Switch to your 🪙" : "Play in " + season.name);
       sw.type = "button";
       sw.dataset.coin = "real";
       sw.addEventListener("click", () => {

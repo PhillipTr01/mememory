@@ -230,6 +230,7 @@ module.exports = function (auth) {
     prizes: season.prizesOn ? season.prizes : [],
     players: Object.keys(season.joined || {}).length,
     closed: seasons.accessOf(season).mode !== "all",
+    wagerX: seasons.wagerXOf(season),
   });
   router.get(
     "/season",

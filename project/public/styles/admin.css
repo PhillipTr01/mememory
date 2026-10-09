@@ -3607,3 +3607,7 @@ a.ad-case-row:hover {
 .ad-kv-list-row .mm-avatar.sm {
   --size: 22px;
 }
+
+.ad-wager-short {
+  color: var(--mm-muted);
+}

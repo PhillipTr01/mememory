@@ -67,6 +67,8 @@ module.exports = {
   SEASON_CLOSE_WAIT: 60 * 1000, // before a season starts: when every game is quiet, this long until the start
   SEASON_CLOSE_MAX: 5 * 60 * 1000, // ... and at most this long waiting for the games to get quiet
   SEASON_DAILY_BONUS: 1000, // the daily bonus of a new season (each season can have its own)
+  // To get a place on the leaderboard of a season: wager this many times the start budget (again for every second chance)
+  SEASON_WAGER_X: 7,
   // The daily bonus comes back at midnight in this time zone
   BONUS_TZ: process.env.BONUS_TZ || "Europe/Berlin",
   // Coins for a win (only real wins: no surrender / left opponent)

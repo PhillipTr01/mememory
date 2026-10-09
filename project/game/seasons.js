@@ -92,12 +92,13 @@ function publicSeason(season) {
     color: season.color || null,
     prizesOn: season.prizesOn,
     prizes: season.prizes,
+    wagerX: wagerXOf(season),
     highlight: season.highlight === true,
     access: accessOf(season),
     status: state.closing && state.closing.id === season.id && closingKind() === "start" ? "starting" : status(season),
     endedAt: season.endedAt || null,
     players: season.final ? season.final.rows.length : Object.keys(season.joined || {}).length,
-    winner: season.final && season.final.rows.length ? winnerOf(season.final.rows[0]) : null,
+    winner: season.final && season.final.rows.length && season.final.rows[0].rank === 1 ? winnerOf(season.final.rows[0]) : null,
   };
 }
 
@@ -115,6 +116,17 @@ function allowed(season, username) {
   if (access.mode === "whitelist") return listed;
   if (access.mode === "banlist") return !listed;
   return true;
+}
+
+// To get a place: wager this many times the start budget - again for every second chance
+function wagerXOf(season) {
+  return Number.isInteger(season.wagerX) ? season.wagerX : config.SEASON_WAGER_X;
+}
+
+// The coins a player has to wager in the season to get a place on its leaderboard
+function wagerNeed(season, username) {
+  const used = (season.chances && season.chances[username] && season.chances[username].used) || 0;
+  return wagerXOf(season) * season.budget * (1 + used);
 }
 
 function list() {
@@ -321,6 +333,9 @@ function check(input, current) {
   if (accessNames.some((name) => name.length > 40)) return { error: "A name on the list is too long." };
   if (accessMode === "whitelist" && accessNames.length === 0) return { error: "The whitelist is on - add at least one player." };
   const highlight = input.highlight === true;
+  // To get a place: wager this many times the start budget (not given: the setting, 7x)
+  const wagerX = input.wagerX == null || input.wagerX === "" ? config.SEASON_WAGER_X : Number(input.wagerX);
+  if (!Number.isInteger(wagerX) || wagerX < 0 || wagerX > 1000) return { error: "Wager to get a place: 0 to 1000 times the start budget." };
 
   // A running season: the start and the budget are given (they happened already)
   if (current && current.started) {
@@ -332,7 +347,7 @@ function check(input, current) {
   // Never two seasons at the same time
   const other = state.seasons.find((season) => season !== current && !season.ended && season.start < end && start < season.end);
   if (other) return { error: `It overlaps with "${other.name}".` };
-  return { season: { name: name, icon: icon, coinIcon: coinIcon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, chanceDelay: chanceDelay, closeWait: closeWait, color: color, every: every, prizesOn: prizesOn, prizes: clean, access: { mode: accessMode, names: accessNames }, highlight: highlight } };
+  return { season: { name: name, icon: icon, coinIcon: coinIcon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, chanceDelay: chanceDelay, closeWait: closeWait, color: color, every: every, prizesOn: prizesOn, prizes: clean, access: { mode: accessMode, names: accessNames }, highlight: highlight, wagerX: wagerX } };
 }
 
 async function create(input) {
@@ -447,6 +462,14 @@ coins.setJoinedAtLookup((username) => {
   return (season.joined && season.joined[username]) || season.startedAt || season.start;
 });
 
+// The wager for a place of a player right now: {done, need} - read from the season's coin history
+coins.setWagerLookup(async (username) => {
+  const season = running();
+  if (season == null || !wagerXOf(season)) return null;
+  const rows = await CoinLog.find({ era: "season-" + season.id, username: username, reason: { $in: BETS } }).lean();
+  return { done: rows.reduce((sum, row) => sum - row.amount, 0), need: wagerNeed(season, username) };
+});
+
 // Plays the player in the season world now? (joined it and switched there)
 function inSeasonWorld(username) {
   const season = running();
@@ -484,7 +507,7 @@ async function endSeason(season, now) {
   const rows = await withStats(season, await standings());
   // The same coins, the same place - between them: fewer second chances, then more coins wagered
   const byName = new Map(rows.map((row) => [row.username, row]));
-  season.final = { at: now, rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, wagered: byName.get(username).wagered }) }) };
+  season.final = { at: now, rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, wagered: byName.get(username).wagered }), need: (username) => wagerNeed(season, username) }) };
   season.ended = true;
   season.endedAt = now;
   const seasonEra = state.base ? state.base.reset : null;
@@ -592,7 +615,7 @@ async function board(id) {
   if (!season.started) return { ...result, at: null, rows: [] };
   const rows = await withStats(season, await standings());
   const byName = new Map(rows.map((row) => [row.username, row]));
-  return { ...result, at: Date.now(), rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, wagered: byName.get(username).wagered }) }) };
+  return { ...result, at: Date.now(), rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, wagered: byName.get(username).wagered }), need: (username) => wagerNeed(season, username) }) };
 }
 
 let ticking = null;
@@ -731,4 +754,4 @@ function accentStyle(username) {
   return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
 }
 
-module.exports = { prizesOf, tieStats, board, joinedAt, join, joined, joinCoins, allowed, accessOf, inSeasonWorld, switchWorld, upcoming, closingInfo, closingKind, chanceStatus, useChance, clear, accentStyle, coinScript, INTERVALS, ACCESS, BOARD_KEY, SEASON_WORLD, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+module.exports = { wagerNeed, wagerXOf, prizesOf, tieStats, board, joinedAt, join, joined, joinCoins, allowed, accessOf, inSeasonWorld, switchWorld, upcoming, closingInfo, closingKind, chanceStatus, useChance, clear, accentStyle, coinScript, INTERVALS, ACCESS, BOARD_KEY, SEASON_WORLD, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };

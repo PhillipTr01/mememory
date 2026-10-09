@@ -1386,7 +1386,7 @@ async function loadSeasonBoard(season) {
       ...data.rows.map((row) => {
         var tr = el("tr", row.rank <= 3 ? "ad-final-top" : "");
         var cells = {
-          "#": el("td", "mm-muted", MEDALS[row.rank - 1] || row.rank),
+          "#": el("td", "mm-muted", row.pending ? "–" : MEDALS[row.rank - 1] || row.rank),
           Player: playerCell(row.username),
           "🪙 Coins": el("td", "num", formatCoins(row.coins)),
           Prize: el("td", row.prize ? "" : "mm-muted", row.prize || "–"),
@@ -1417,9 +1417,13 @@ async function loadSeasonBoard(season) {
 
 // The coins wagered of a player in a season - the number of bets under it
 function wageredCell(row) {
-  var cell = el("td", "num");
-  if (!row.wagered) return cell.appendChild(document.createTextNode("–")), cell;
-  cell.append(formatCoins(row.wagered), el("span", "ad-sub", formatCoins(row.bets || 0) + (row.bets == 1 ? " bet" : " bets")));
+  var cell = el("td", "num" + (row.pending ? " ad-wager-short" : ""));
+  cell.append(row.wagered ? formatCoins(row.wagered) : "–");
+  // (a place only after wagering enough - how much is still missing)
+  if (row.wager && row.wager.need) {
+    cell.appendChild(el("span", "ad-sub", row.pending ? "of " + formatCoins(row.wager.need) + " - no place yet" : "✓ " + formatCoins(row.wager.need) + " needed"));
+    cell.title = formatCoins(row.wager.done) + " of " + formatCoins(row.wager.need) + " wagered" + (row.bets ? " · " + formatCoins(row.bets) + (row.bets == 1 ? " bet" : " bets") : "");
+  } else if (row.wagered) cell.appendChild(el("span", "ad-sub", formatCoins(row.bets || 0) + (row.bets == 1 ? " bet" : " bets")));
   return cell;
 }
 
@@ -1665,9 +1669,10 @@ function seasonDetail(season) {
       tile("", season.highlight ? "✨ yes" : "no", "highlighted before the start"),
     ),
     card(
-      "💔",
-      "Second chances",
-      tile("", String(season.secondChances || 0), "per player"),
+      "🎲",
+      "Rules",
+      tile("", season.wagerX ? season.wagerX + "× the start" : "none", "wager for a place"),
+      tile("", String(season.secondChances || 0), "second chances"),
       tile("", season.secondChances ? chanceDelayText(season.chanceDelay) : "–", "wait between them"),
     ),
     card(
@@ -1755,6 +1760,7 @@ function fillSeasonForm(season) {
   document.getElementById("adSeasonBudget").value = season.budget;
   document.getElementById("adSeasonBonus").value = season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting;
   document.getElementById("adSeasonChances").value = season.secondChances || 0;
+  document.getElementById("adSeasonWagerX").value = season.wagerX != null ? season.wagerX : 7;
   var delay = document.getElementById("adSeasonChanceDelay");
   var delayValue = season.chanceDelay == null ? "" : String(season.chanceDelay);
   // (a wait not in the list - set some other way: added to it)
@@ -2032,6 +2038,7 @@ async function saveSeason(event) {
     budget: Number(document.getElementById("adSeasonBudget").value),
     dailyBonus: Number(document.getElementById("adSeasonBonus").value),
     secondChances: Number(document.getElementById("adSeasonChances").value) || 0,
+    wagerX: Number(document.getElementById("adSeasonWagerX").value),
     chanceDelay: document.getElementById("adSeasonChanceDelay").value === "" ? null : Number(document.getElementById("adSeasonChanceDelay").value),
     closeWait: Number(document.getElementById("adSeasonWait").value),
     // The gold of the casino: no own color

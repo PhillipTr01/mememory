@@ -76,6 +76,12 @@ let joinedAtLookup = () => null;
 function setJoinedAtLookup(lookup) {
   joinedAtLookup = lookup;
 }
+// The wager for a place on the season's leaderboard: {done, need} (game/seasons.js sets the lookup)
+let wagerLookup = async () => null;
+function setWagerLookup(lookup) {
+  wagerLookup = lookup;
+}
+
 // (old: the balance from before a season - the normal wallet is apart now, nothing to look up)
 function setStoredLookup() {}
 
@@ -200,6 +206,7 @@ function makeWallet(kind) {
       // (payouts: only the normal coins)
       payout: !season && user.payoutAllowed === true,
       normal: season ? normalWallet.balanceOf(user) : null,
+      wager: season ? await wagerLookup(username).catch(() => null) : null,
       world: kind,
       joined: season ? true : null,
     };
@@ -321,6 +328,7 @@ module.exports = {
   setJoinedAtLookup,
   setJoinedLookup,
   setStoredLookup,
+  setWagerLookup,
   setBase,
   seasonBase: () => seasonBase,
   base,
