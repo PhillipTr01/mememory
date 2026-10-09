@@ -177,29 +177,44 @@ function showResult(state) {
 
 var statusFrame = null;
 var barAnimation = null;
+var timerRound = null;
+var timerEndsAt = 0;
 function renderStatus() {
-  cancelAnimationFrame(statusFrame);
   var status = document.getElementById("rlStatus");
   var bar = document.getElementById("rlTimer");
   if (table.phase != "betting") {
+    cancelAnimationFrame(statusFrame);
     if (barAnimation) barAnimation.cancel();
     barAnimation = null;
+    timerRound = null;
     bar.style.width = "0%";
     status.className = "rl-status-text";
     if (table.phase == "idle") status.innerText = "Place a bet to start the round";
     else if (rolling) status.innerText = "Rolling...";
     return;
   }
-  // Betting: the bar runs down in one smooth animation (from where it is now), the text every frame
+  // The timer of this round runs already: it goes on as it is (every new bet sends the state again -
+  // starting over from the server's time left would make it jump back and forth by the delay)
   var endsAt = performance.now() + table.timeLeft;
+  if (timerRound == table.round && barAnimation && Math.abs(endsAt - timerEndsAt) < 400) return;
+  timerRound = table.round;
+  timerEndsAt = endsAt;
+  cancelAnimationFrame(statusFrame);
+  // The bar runs down in one smooth animation (from where it is now)
   var from = Math.min(1, table.timeLeft / rules.timer);
   if (barAnimation) barAnimation.cancel();
   bar.style.width = "100%";
   barAnimation = bar.animate([{ transform: "scaleX(" + from + ")" }, { transform: "scaleX(0)" }], { duration: table.timeLeft, easing: "linear", fill: "forwards" });
-  status.className = "rl-status-text";
+  // The text: whole seconds, a small pop on each one (tenths flicker and look laggy)
+  var shown = null;
   var tick = () => {
-    var left = Math.max(0, endsAt - performance.now());
-    status.innerText = "Rolling in " + (left / 1000).toFixed(1) + " s";
+    var left = Math.max(0, timerEndsAt - performance.now());
+    var seconds = Math.ceil(left / 1000);
+    if (seconds != shown) {
+      shown = seconds;
+      status.className = "rl-status-text";
+      status.replaceChildren("Rolling in ", el("span", "rl-seconds" + (seconds <= 3 ? " soon" : ""), seconds + "s"));
+    }
     if (left > 0) statusFrame = requestAnimationFrame(tick);
   };
   tick();

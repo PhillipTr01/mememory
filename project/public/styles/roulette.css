@@ -208,6 +208,29 @@
   color: var(--mm-text);
 }
 
+.rl-seconds {
+  display: inline-block;
+  min-width: 2.2ch;
+  text-align: left;
+  color: var(--mm-accent);
+  animation: rl-second-pop 0.35s ease-out;
+}
+
+.rl-seconds.soon {
+  color: #e0675a;
+}
+
+@keyframes rl-second-pop {
+  0% {
+    transform: scale(1.35);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .rl-status-text.red {
   color: #e0675a;
 }
