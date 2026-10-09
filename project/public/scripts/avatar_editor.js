@@ -63,8 +63,12 @@ function renderAvatarEditor() {
         } else {
             var config = Object.assign({}, base);
             config[editTab] = value;
-            option.appendChild(createAvatarPreview(config));
-            option.title = value;
+            option.classList.add('tile');
+            var label = document.createElement('span');
+            label.className = 'avatar-option-label';
+            label.innerText = optionLabel(value);
+            option.append(createAvatarPreview(config), label);
+            option.title = label.innerText;
         }
         option.addEventListener('click', () => {
             editing = Object.assign({}, base);
@@ -98,6 +102,12 @@ function renderAvatarEditor() {
         custom.append(createIcon('bi-eyedropper'), picker);
         options.appendChild(custom);
     }
+}
+
+// "roundglasses" -> "Round glasses", "dealwithit" -> "Deal with it"
+var OPTION_LABELS = { roundglasses: 'Round glasses', dealwithit: 'Deal with it', partyhat: 'Party hat', eyepatch: 'Eye patch', tshirt: 'T-shirt', vneck: 'V-neck', bucktooth: 'Buck tooth', chinstrap: 'Chinstrap', scumbag: 'Scumbag', none: 'None' };
+function optionLabel(value) {
+    return OPTION_LABELS[value] || value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 // Avatar from a config (not from the cache), for the preview and the options
