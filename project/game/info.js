@@ -207,7 +207,7 @@ const GAMES = {
       },
       {
         heading: "Limits",
-        items: [`At least 🪙 ${n(L.BAUCUA_MIN_BET)} per bet, at most 🪙 ${n(L.BAUCUA_MAX_BET)} per round (all animals together).`],
+        items: [`At least 🪙 ${n(L.BAUCUA_MIN_BET)} per bet, at most 🪙 ${n(L.BAUCUA_MAX_BET)} per round (all animals together).`, `Up to ${n(L.BAUCUA_MAX_BETS)} bets per round.`],
       },
     ],
   }),

@@ -143,3 +143,17 @@ test("baucua: the admin's test world - a forced triple, bots", () => {
   assert.ok(dice[0] === dice[1] && dice[1] === dice[2]);
   test.stop();
 });
+
+test("baucua: at most BAUCUA_MAX_BETS separate bets per player and round (3 by default)", async () => {
+  assert.strictEqual(config.BAUCUA_MAX_BETS, 3);
+  h.setCoins("bc_alice", 5000);
+  const alice = client("bc_alice");
+  await waitFor(alice, "baucuaState", (s) => s.phase === "idle" && s.rules.maxBets === 3);
+  for (const animal of ["crab", "fish", "crab"]) alice.emit("bet", { animal, amount: 100 });
+  await waitFor(alice, "baucuaState", (s) => s.bets.filter((b) => b.name === "bc_alice").length === 3);
+  const refused = h.once(alice, "baucuaError");
+  alice.emit("bet", { animal: "tiger", amount: 100 });
+  assert.match(await refused, /At most 3 bets per round/);
+  assert.strictEqual(h.coinsOf("bc_alice"), 4700);
+  await waitFor(alice, "baucuaState", (s) => s.phase === "idle", 3000);
+});

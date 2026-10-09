@@ -372,6 +372,11 @@ function myTotal() {
   return table ? table.bets.filter((bet) => bet.name == myName).reduce((sum, bet) => sum + bet.amount, 0) : 0;
 }
 
+// How many separate bets I placed this round
+function myBetCount() {
+  return table ? table.bets.filter((bet) => bet.name == myName).length : 0;
+}
+
 // What is still allowed this round
 function roomLeft() {
   return Math.max(0, rules.maxBet - myTotal());
@@ -406,8 +411,9 @@ function renderControls() {
   document.querySelectorAll(".bc-animal").forEach((tile) => {
     var name = animalOf(tile.dataset.animal).name.toLowerCase();
     var overCap = value > capLeft(myTotal());
-    tile.disabled = !open || !(value >= rules.minBet) || value > myCoins || value > roomLeft() || overCap;
-    tile.title = !open ? "The dice are rolling - the next round soon" : value > roomLeft() ? "At most 🪙 " + formatCoins(rules.maxBet) + " per round" : value > myCoins ? "Not enough coins" : overCap ? "With your balance at most 🪙 " + formatCoins(capLeft(myTotal())) + " more this round" : "Bet 🪙 " + formatCoins(value || 0) + " on the " + name;
+    var noBetsLeft = myBetCount() >= rules.maxBets;
+    tile.disabled = !open || !(value >= rules.minBet) || value > myCoins || value > roomLeft() || overCap || noBetsLeft;
+    tile.title = !open ? "The dice are rolling - the next round soon" : noBetsLeft ? "At most " + rules.maxBets + " bets per round" : value > roomLeft() ? "At most 🪙 " + formatCoins(rules.maxBet) + " per round" : value > myCoins ? "Not enough coins" : overCap ? "With your balance at most 🪙 " + formatCoins(capLeft(myTotal())) + " more this round" : "Bet 🪙 " + formatCoins(value || 0) + " on the " + name;
   });
 }
 

@@ -207,6 +207,7 @@ module.exports = {
   // Bầu cua (see game/baucua.js): three dice with six animals - 1 / 2 / 3 dice of the animal: 2x / 3x / 10x
   BAUCUA_MIN_BET: 10,
   BAUCUA_MAX_BET: 10000, // all bets of a player in one round together
+  BAUCUA_MAX_BETS: 3, // separate bets of a player in one round
   BAUCUA_TIMER: 20000, // the first bet of a round starts it - then the bowl shakes
   BAUCUA_SPIN: 6500, // the bowl shakes and is lifted on the pages
   BAUCUA_PAUSE: 3500, // the dice are shown, then the next round waits for a bet

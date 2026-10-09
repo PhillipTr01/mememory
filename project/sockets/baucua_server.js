@@ -46,7 +46,7 @@ module.exports = function (io, options = {}) {
   }
 
   function rules() {
-    return { minBet: limits.BAUCUA_MIN_BET, maxBet: limits.BAUCUA_MAX_BET, timer: config.BAUCUA_TIMER, spin: config.BAUCUA_SPIN, pause: config.BAUCUA_PAUSE, payout: baucua.PAYOUT, animals: baucua.ANIMALS };
+    return { minBet: limits.BAUCUA_MIN_BET, maxBet: limits.BAUCUA_MAX_BET, maxBets: limits.BAUCUA_MAX_BETS, timer: config.BAUCUA_TIMER, spin: config.BAUCUA_SPIN, pause: config.BAUCUA_PAUSE, payout: baucua.PAYOUT, animals: baucua.ANIMALS };
   }
 
   function state() {
@@ -169,6 +169,7 @@ module.exports = function (io, options = {}) {
         if (amount < limits.BAUCUA_MIN_BET) return error(`At least 🪙 ${limits.BAUCUA_MIN_BET.toLocaleString("en-US")} per bet.`);
         // One bet of a player after the other (fast clicks, two tabs): none gets lost
         const place = async () => {
+          if (table.bets.filter((bet) => bet.name === username).length >= limits.BAUCUA_MAX_BETS) return error(`At most ${limits.BAUCUA_MAX_BETS} bets per round.`);
           const total = Object.values(betsOf(username)).reduce((sum, value) => sum + value, 0);
           if (total + amount > limits.BAUCUA_MAX_BET) return error(`At most 🪙 ${limits.BAUCUA_MAX_BET.toLocaleString("en-US")} per round (all animals together).`);
           if (!(await coins.spend(username, amount, { reason: "baucua bet", note: data.animal, round: total }))) return error(coins.refusal(username) || "You don't have enough coins.");

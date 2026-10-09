@@ -53,6 +53,7 @@ const FIELDS = [
   { group: "baucua", section: "Bầu Cua", key: "GAME_BAUCUA", type: "toggle", label: "Bầu Cua is on", hint: "Off: no tab, nobody can open it." },
   { group: "baucua", section: "Bets", key: "BAUCUA_MIN_BET", season: true, label: "Min bet", step: 10, min: 1, max: 100000000 },
   { group: "baucua", section: "Bets", key: "BAUCUA_MAX_BET", season: true, label: "Max bet per round", hint: "All animals of a player together.", step: 1000, min: 1, max: 100000000 },
+  { group: "baucua", section: "Bets", key: "BAUCUA_MAX_BETS", season: true, label: "Bets per round", hint: "Separate bets of one player in one round (more on the same animal counts as a bet too).", step: 1, min: 1, max: 100 },
   { group: "baucua", section: "Round", key: "BAUCUA_TIMER", label: "Time to bet", hint: "Starts with the first bet of a round.", unit: "s", scale: 1000, step: 1, min: 3, max: 120 },
   { group: "blackjack", section: "Blackjack", key: "GAME_BLACKJACK", type: "toggle", label: "Blackjack is on", hint: "Off: no tab, nobody can open it." },
   { group: "blackjack", section: "Seats", key: "BJ_MY_SEATS", season: true, label: "Seats per player", hint: "At one table at a time.", step: 1, min: 1, max: 5 },
