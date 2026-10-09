@@ -104,6 +104,12 @@ module.exports = function (io) {
   async function finish() {
     await pay();
     const slot = roulette.WHEEL[table.slot];
+    // (once per round - a restart in the middle of the end doesn't add it again)
+    if (table.history[0] && table.history[0].round === table.round) {
+      clearTimeout(timer);
+      timer = setTimeout(newRound, config.ROULETTE_PAUSE);
+      return emitState();
+    }
     const last = table.last || { total: 0, winners: [] };
     table.history.unshift({ round: table.round, slot: table.slot, number: slot.number, color: slot.color, at: Date.now(), total: last.total, players: new Set(table.bets.map((b) => b.name)).size, winners: last.winners.slice(0, 3) });
     table.history.length = Math.min(table.history.length, config.ROULETTE_HISTORY);

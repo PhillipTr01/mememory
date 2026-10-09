@@ -12,6 +12,9 @@ var AMOUNT_KEY = "rouletteAmount";
 var TILE = 76; // width of a slot with its gap (from the page)
 var COPIES = 9; // the wheel this many times in a row: room to roll
 var COLOR_NAMES = { red: "Red", blue: "Blue", green: "Green" };
+// No numbers on the wheel: an icon per color
+var ICONS = { red: "🔥", blue: "💧", green: "🍀" };
+var shownRolls = null; // the rounds in the row of last rolls (a new one fades in)
 
 // Used by chat.js
 function chatUsername() {
@@ -76,7 +79,7 @@ function buildReel() {
   var tiles = [];
   for (var copy = 0; copy < COPIES; copy++) {
     rules.wheel.forEach((slot, index) => {
-      var tile = el("div", "rl-tile " + slot.color, String(slot.number));
+      var tile = el("div", "rl-tile " + slot.color, ICONS[slot.color]);
       tile.dataset.slot = index;
       tiles.push(tile);
     });
@@ -166,7 +169,7 @@ function showResult(state) {
   var won = mine.filter((bet) => bet.color == color).reduce((sum, bet) => sum + bet.amount * rules.payout[color], 0);
   var status = document.getElementById("rlStatus");
   status.className = "rl-status-text " + color;
-  status.innerText = won > 0 ? "You won 🪙 " + formatCoins(won) + "!" : COLOR_NAMES[color] + " " + rules.wheel[state.slot].number;
+  status.innerText = won > 0 ? "You won 🪙 " + formatCoins(won) + "!" : ICONS[color] + " " + COLOR_NAMES[color];
   renderCoins();
 }
 
@@ -237,7 +240,12 @@ function renderHistory() {
   var list = document.getElementById("rlHistory");
   // (while the reel rolls the newest is not known on this page yet)
   var history = table.history.filter((entry) => !(rolling && entry.round == table.round));
-  list.replaceChildren(...history.map((entry) => el("span", "rl-dot " + entry.color, String(entry.number))));
+  // (one per round - and only the new one fades in with its color)
+  var seen = new Set();
+  history = history.filter((entry) => !seen.has(entry.round) && seen.add(entry.round));
+  var before = shownRolls;
+  shownRolls = new Set(history.map((entry) => entry.round));
+  list.replaceChildren(...history.slice(0, 14).map((entry) => el("span", "rl-dot " + entry.color + (before && !before.has(entry.round) ? " fresh" : ""), ICONS[entry.color])));
 }
 
 function renderRounds() {
@@ -247,7 +255,7 @@ function renderRounds() {
   list.replaceChildren(
     ...history.slice(0, 10).map((entry) => {
       var item = el("li", "jp-history-item rl-round");
-      item.appendChild(el("span", "rl-dot " + entry.color, String(entry.number)));
+      item.appendChild(el("span", "rl-dot " + entry.color, ICONS[entry.color]));
       var info = el("div", "jp-history-text");
       var top = entry.winners && entry.winners[0];
       info.append(

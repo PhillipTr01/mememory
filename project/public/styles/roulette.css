@@ -49,32 +49,54 @@
   gap: 0.3rem;
   min-width: 0;
   overflow: hidden;
-  mask-image: linear-gradient(90deg, #000 80%, transparent);
 }
 
 .rl-dot {
+  --rl-rgb: 160, 160, 160;
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: #1b1b1b;
-  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(var(--rl-rgb), 0.5);
+  background: rgba(var(--rl-rgb), 0.2);
+  font-size: 0.85rem;
+  line-height: 1;
 }
 
 .rl-dot.red {
-  background: #e0675a;
+  --rl-rgb: 224, 103, 90;
 }
 
 .rl-dot.blue {
-  background: #5b8fd6;
+  --rl-rgb: 91, 143, 214;
 }
 
 .rl-dot.green {
-  background: #6fa784;
+  --rl-rgb: 111, 167, 132;
+}
+
+/* A new roll: it fades in with its color */
+.rl-dot.fresh {
+  animation: rl-dot-in 0.9s ease-out both;
+}
+
+@keyframes rl-dot-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+    background: transparent;
+    border-color: transparent;
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.12);
+    background: rgba(var(--rl-rgb), 0.55);
+  }
+  to {
+    transform: scale(1);
+  }
 }
 
 /* ---------- The reel ---------- */
@@ -106,9 +128,8 @@
   border-radius: 12px;
   background: rgba(var(--rl-rgb), 0.16);
   color: var(--rl-color);
-  font-size: 1.3rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
+  font-size: 1.7rem;
+  line-height: 1;
   box-shadow: inset 0 -3px 0 rgba(var(--rl-rgb), 0.55);
   transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
 }
@@ -435,7 +456,7 @@
   .rl-tile {
     width: 56px;
     height: 56px;
-    font-size: 1.1rem;
+    font-size: 1.35rem;
   }
 
   .rl-boards {
