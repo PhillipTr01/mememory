@@ -248,7 +248,8 @@ window.casinoFitGame = function (part, watch) {
     part.style.margin = "";
     if (window.innerWidth < 992) return;
     var dock = document.getElementById("csDock");
-    var room = dock ? window.innerHeight - (parseFloat(getComputedStyle(dock).bottom) || 0) - dock.offsetHeight - 16 : window.innerHeight - 16;
+    // (the same room above the menu as the chat column keeps - casino_wallet.js - and a few pixels more)
+    var room = dock ? window.innerHeight - (parseFloat(getComputedStyle(dock).bottom) || 0) - dock.offsetHeight - 28 : window.innerHeight - 28;
     var card = part.closest(".mm-card") || part.parentNode;
     var over = card.getBoundingClientRect().bottom + window.scrollY - room;
     if (over <= 0) return;
@@ -265,5 +266,21 @@ window.casinoFitGame = function (part, watch) {
   setTimeout(fit, 600);
   var observer = new MutationObserver(() => requestAnimationFrame(fit));
   (watch || []).forEach((node) => node && observer.observe(node, { attributes: true, attributeFilter: ["hidden"] }));
+  // The card grew or shrank (the game's state came, a list got longer): fit again - once per change of its
+  // height (the fit itself changes it too: that one doesn't count)
+  if (window.ResizeObserver) {
+    var card = part.closest(".mm-card") || part.parentNode;
+    var fitted = null;
+    var pending = false;
+    new ResizeObserver(() => {
+      if (pending || card.offsetHeight == fitted) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        fit();
+        fitted = card.offsetHeight;
+      });
+    }).observe(card);
+  }
   return fit;
 };

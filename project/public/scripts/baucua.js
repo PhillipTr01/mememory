@@ -431,3 +431,6 @@ document.addEventListener("DOMContentLoaded", () => {
   input.value = saved || 100;
   input.addEventListener("input", () => setAmount(amount()));
 });
+
+// The whole game a bit smaller when the screen isn't high enough (casino_fullscreen.js)
+window.casinoFitGame(document.querySelector(".bc-game"));

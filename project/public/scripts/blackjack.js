@@ -738,3 +738,7 @@ document.addEventListener("DOMContentLoaded", () => {
     socket.emit("rebet");
   });
 });
+
+// The whole table with its bars (seats, cards, chips, the buttons) a bit smaller when the screen isn't high enough (casino_fullscreen.js) -
+// again when the bet bar / the action bar comes or goes, and from the lobby to a table
+window.casinoFitGame(document.getElementById("bjTableView"), [document.getElementById("bjBetBar"), document.getElementById("bjActions"), document.getElementById("bjTableView")]);

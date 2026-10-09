@@ -922,6 +922,8 @@
       size();
       place();
     };
+    // The game was fitted to the screen (casino_fullscreen.js): the column to the new height of the page
+    window.addEventListener("casinofit", () => requestAnimationFrame(window.casinoGrowChat));
     // The game's part of the page grows or shrinks (its state came, a list got longer): the column again
     if (window.ResizeObserver) {
       var lastHeight = null;

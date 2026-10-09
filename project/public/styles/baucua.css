@@ -439,3 +439,10 @@
     padding-top: 1rem;
   }
 }
+
+/* The game under the title: the same gaps as the card (roulette.css .rl-main) */
+.bc-game {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
