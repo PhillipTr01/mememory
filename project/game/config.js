@@ -183,7 +183,8 @@ module.exports = {
   SLOTS_BIG_WIN: 15, // a win of this many times the bet gets the big show
   SLOTS_COUNT_TIME: 800, // after the reels (and the big-win show) the win is paid this soon - while it is counted up
   SLOTS_BIG_TIME: 3000, // the big-win show on top
-  SLOTS_MIN_GAP: 600, // at least this long between two spins of a player
+  SLOTS_PAUSE: 1000, // after a spin is shown, the next one can start only this much later (the page)
+  SLOTS_MIN_GAP: 3000, // at least this long from one spin to the next of a player (the reels + the pause)
   SLOTS_FEED: 12, // last wins in the list
   SLOTS_TEST_BONUS: "off", // tests only: every spin starts a bonus game ("free" spins or the "coins" game) - not in the admin panel
 

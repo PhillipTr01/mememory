@@ -5,6 +5,8 @@ var myName = null;
 var myCoins = 0;
 var setup = null; // {symbols, lines, strips, rules}
 var spinning = false;
+var pausedUntil = 0; // after a spin: the next one only from then on (a short pause)
+var spunAt = 0; // when the last spin started (the server wants a gap between two spins too)
 var lineTimer = null;
 var BET_KEY = "slotsBet";
 var PRESETS = [10, 25, 50, 100, 200, 250];
@@ -98,6 +100,7 @@ socket.on("slotsResume", (result) => {
 
 async function resumeBonus(result) {
   spinning = true;
+  spunAt = Date.now();
   clearTimeout(lineTimer);
   clearLines();
   renderControls();
@@ -208,7 +211,7 @@ function clearLines() {
 /* ---------- A spin ---------- */
 
 function spin() {
-  if (spinning || setup == null) return;
+  if (spinning || setup == null || Date.now() < pausedUntil) return;
   var bet = currentBet();
   if (!Number.isInteger(bet) || bet < setup.rules.minBet || bet > setup.rules.maxBet) {
     return showHint("A spin is " + formatCoins(setup.rules.minBet) + " to " + formatCoins(setup.rules.maxBet) + " coins.", "error");
@@ -333,6 +336,12 @@ async function playSpin(result) {
   if (result.coinGame) await playCoinGame(result);
   await showResult(result);
   spinning = false;
+  // A short pause before the next spin (at least the gap the server wants from the start of this one)
+  var pause = Math.max(setup.rules.pauseTime || 0, spunAt + (setup.rules.minGap || 0) - Date.now());
+  pausedUntil = Date.now() + pause;
+  var button = document.getElementById("slSpin");
+  button.style.setProperty("--pause", pause + "ms");
+  setTimeout(renderControls, pause + 20);
   // The win comes with the next "coins" from the server (after the count)
   renderCoins(myCoins);
   renderControls();
@@ -1043,8 +1052,11 @@ function renderControls() {
   if (setup == null) return;
   var bet = currentBet();
   var button = document.getElementById("slSpin");
-  button.disabled = spinning || bet > myCoins;
+  var paused = !spinning && Date.now() < pausedUntil;
+  button.disabled = spinning || paused || bet > myCoins;
   button.classList.toggle("busy", spinning);
+  // The pause after a spin: a bar runs out, then it can spin again
+  button.classList.toggle("paused", paused);
   button.title = bet > myCoins ? "Not enough coins" : "Spin (space)";
   document.querySelectorAll(".sl-preset").forEach((preset) => preset.classList.toggle("active", Number(preset.dataset.value) == bet));
   document.getElementById("slLess").disabled = spinning || bet <= setup.rules.minBet;

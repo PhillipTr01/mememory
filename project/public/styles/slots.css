@@ -1231,3 +1231,31 @@
 .sl-main .cs-fs-coins {
   display: none;
 }
+
+/* The short pause after a spin: the button fills up, then it can spin again */
+.sl-spin.paused:disabled {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  color: var(--mm-accent);
+}
+
+.sl-spin.paused::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3px;
+  background: var(--mm-accent);
+  transform-origin: left;
+  animation: sl-pause var(--pause, 1s) linear forwards;
+}
+
+@keyframes sl-pause {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
