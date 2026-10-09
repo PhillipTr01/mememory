@@ -225,3 +225,51 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ---------- Two views: the shop - and the avatar maker ---------- */
+.sh-views {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+}
+
+.sh-view-tab {
+  padding: 0.45rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mm-muted);
+  font-weight: 800;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sh-view-tab:hover {
+  color: var(--mm-text);
+}
+
+.sh-view-tab.active {
+  background: var(--mm-accent);
+  color: #1a1206;
+  box-shadow: 0 4px 12px rgba(var(--mm-accent-rgb), 0.3);
+}
+
+/* The avatar view: only the avatar maker */
+.sh-main.view-avatar .sh-hero,
+.sh-main.view-avatar .sh-section {
+  display: none;
+}
+
+.sh-main.view-avatar .avatar-editor {
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 575px) {
+  .sh-main .jp-head {
+    flex-wrap: wrap;
+  }
+}

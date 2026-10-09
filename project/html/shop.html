@@ -92,8 +92,13 @@
                 <section class="mm-card sh-main">
                     <div class="jp-head">
                         <div>
-                            <h1 class="jp-title"><span class="cs-title-icon sh-title-icon" aria-hidden="true">🛍️</span> Shop</h1>
-                            <p class="jp-status">Frames and animations for your avatar - everybody in the casino sees them.</p>
+                            <h1 class="jp-title"><span id="shTitleIcon" class="cs-title-icon sh-title-icon" aria-hidden="true">🛍️</span> <span id="shTitle">Shop</span></h1>
+                            <p id="shSubtitle" class="jp-status">Frames and animations for your avatar - everybody in the casino sees them.</p>
+                        </div>
+                        <!--- Two views: the shop - and the avatar maker --->
+                        <div class="sh-views" role="tablist" aria-label="Shop or avatar">
+                            <button type="button" class="sh-view-tab active" data-view="shop" role="tab" aria-selected="true">🛍️ Shop</button>
+                            <button type="button" class="sh-view-tab" data-view="avatar" role="tab" aria-selected="false">🎨 Avatar</button>
                         </div>
                     </div>
 
@@ -114,7 +119,7 @@
                         </div>
                     </div>
 
-                    <!--- The avatar maker (opens under the avatar) --->
+                    <!--- The avatar maker (the avatar view) --->
                     <section id="avatarEditor" class="panel avatar-editor" hidden>
                         <div class="avatar-editor-preview">
                             <span id="avatarPreview" class="mm-avatar avatar-xl"></span>

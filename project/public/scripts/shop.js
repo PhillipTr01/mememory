@@ -145,15 +145,49 @@ function wear(kind, id, button) {
   post("shop/wear", { kind: kind, id: id }, button);
 }
 
+/* ---------- Two views: the shop and the avatar maker (shop#avatar) ---------- */
+
+var openEditor = null;
+var closeEditor = null;
+var VIEWS = {
+  shop: { icon: "🛍️", title: "Shop", text: "Frames and animations for your avatar - everybody in the casino sees them." },
+  avatar: { icon: "🎨", title: "Avatar", text: "Your face in the casino - the frame and the animation from the shop come on top." },
+};
+
+function setView(view) {
+  var main = document.querySelector(".sh-main");
+  var avatar = view == "avatar";
+  main.classList.toggle("view-avatar", avatar);
+  document.querySelectorAll(".sh-view-tab").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.view == view);
+    tab.setAttribute("aria-selected", tab.dataset.view == view ? "true" : "false");
+  });
+  document.getElementById("shTitleIcon").innerText = VIEWS[view].icon;
+  document.getElementById("shTitle").innerText = VIEWS[view].title;
+  document.getElementById("shSubtitle").innerText = VIEWS[view].text;
+  if (avatar && document.getElementById("avatarEditor").hidden) openEditor();
+  if (!avatar && !document.getElementById("avatarEditor").hidden) closeEditor();
+  var hash = avatar ? "#avatar" : "";
+  if (location.hash != hash) history.replaceState(null, "", location.pathname + location.search + hash);
+}
+
+// The editor opens / closes (the edit buttons, #avatar, Cancel, Save): the view goes with it
+// (avatar_editor.js comes after this file: taken over once the page is there)
+function takeOverEditor() {
+  openEditor = openAvatarEditor;
+  closeEditor = closeAvatarEditor;
+  openAvatarEditor = () => setView("avatar");
+  closeAvatarEditor = () => setView("shop");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  takeOverEditor();
   setupChat();
   userPromise.then((username) => {
     if (!username) return;
     myName = myName || username;
     load();
   });
-  document.getElementById("shEditAvatar").addEventListener("click", () => {
-    if (document.getElementById("avatarEditor").hidden) openAvatarEditor();
-    else closeAvatarEditor();
-  });
+  document.getElementById("shEditAvatar").addEventListener("click", () => setView("avatar"));
+  document.querySelectorAll(".sh-view-tab").forEach((tab) => tab.addEventListener("click", () => setView(tab.dataset.view)));
 });

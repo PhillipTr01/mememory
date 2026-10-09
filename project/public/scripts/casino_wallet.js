@@ -79,7 +79,7 @@
       }
       var left = Math.max(0, wager.need - wager.done);
       stored.classList.toggle("done", left == 0);
-      stored.innerText = left == 0 ? "🎲 Wagered enough - your place counts" : "🎲 " + format(left) + " more to wager for a place";
+      stored.innerText = left == 0 ? "🫴🏽 Wagered enough - your place counts" : "🫴🏽 " + format(left) + " wager left";
       stored.title = format(wager.done) + " of " + format(wager.need) + " wagered";
     } else if (stored) stored.remove();
     // Everything lost: a second chance (if the season has one) - after a moment
