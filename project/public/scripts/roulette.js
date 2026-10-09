@@ -275,7 +275,7 @@ function renderRounds() {
       // The color it came on as the title - how many of the players won under it (not who)
       var players = entry.players || 0;
       var won = entry.won != null ? entry.won : (entry.winners || []).length;
-      info.append(el("b", "rl-round-color " + entry.color, COLOR_NAMES[entry.color]), el("small", "", "Round " + entry.round + " · " + won + " of " + players + (players == 1 ? " player" : " players") + " won"));
+      info.append(el("b", "rl-round-color " + entry.color, COLOR_NAMES[entry.color]), el("small", "", "Round " + entry.round + " · " + won + " / " + players + (players == 1 ? " player" : " players") + " won"));
       item.appendChild(info);
       // What was paid out in the round
       var paid = entry.paid != null ? entry.paid : (entry.winners || []).reduce((sum, w) => sum + w.win, 0);

@@ -616,7 +616,7 @@ function renderHistory() {
       var hands = round.results.filter((r) => r.result != "side");
       var won = hands.filter((r) => r.payout > r.bet).length;
       var title = round.dealer > 21 ? "Dealer bust" : "Dealer " + round.dealer;
-      var sub = "Round " + round.round + " · " + won + " of " + hands.length + (hands.length == 1 ? " hand" : " hands") + " won";
+      var sub = "Round " + round.round + " · " + won + " / " + hands.length + (hands.length == 1 ? " hand" : " hands") + " won";
       // Own result: plus or minus; not played: nothing
       var value = mine.length ? (gain > 0 ? "+" : gain < 0 ? "−" : "±") + formatCoins(Math.abs(gain)) : "–";
       return historyItem(round.dealer > 21 ? "💥" : "🃏", title, sub, value, mine.length ? (gain > 0 ? "plus" : gain < 0 ? "minus" : "") : "muted");

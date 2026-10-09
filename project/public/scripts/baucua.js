@@ -271,7 +271,7 @@ function renderRounds() {
       item.appendChild(rollChip(entry, false));
       var info = el("div", "jp-history-text");
       var players = entry.players || 0;
-      info.append(el("b", "", "Round " + entry.round), el("small", "", entry.won + " of " + players + (players == 1 ? " player" : " players") + " won"));
+      info.append(el("b", "", "Round " + entry.round), el("small", "", entry.won + " / " + players + (players == 1 ? " player" : " players") + " won"));
       item.appendChild(info);
       item.appendChild(el("span", "jp-history-won", entry.paid > 0 ? "🪙 " + formatCoins(entry.paid) : ""));
       return item;
