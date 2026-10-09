@@ -33,6 +33,8 @@ module.exports = function (io, options = {}) {
   const room = io.of(world + "/blackjack");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
+  // The biggest wins of blackjack, every table together (the side of the page)
+  const best = require("../game/best_wins").attach(room, "blackjack win", world);
 
   const tables = new Map(config.BJ_TABLES.map((def) => [def.id, createTable(def)]));
   const LOBBY = "lobby";
@@ -342,12 +344,18 @@ module.exports = function (io, options = {}) {
           hand.result = result;
           hand.payout = payout;
           hand.done = true;
-          if (payout > 0) coins.add(seat.name, payout, { reason: "blackjack win", note: result }).catch((error) => console.error("[blackjack] Could not pay:", error));
+          if (payout > 0) {
+            coins.add(seat.name, payout, { reason: "blackjack win", note: result }).catch((error) => console.error("[blackjack] Could not pay:", error));
+            best.changed();
+          }
           results.push({ name: seat.name, result: result, bet: hand.bet, payout: payout });
         }
         // The side bets: paid now, with the round
         for (const side of seat.sideResults || []) {
-          if (side.payout > 0) coins.add(seat.name, side.payout, { reason: "blackjack win", note: side.name }).catch((error) => console.error("[blackjack] Could not pay:", error));
+          if (side.payout > 0) {
+            coins.add(seat.name, side.payout, { reason: "blackjack win", note: side.name }).catch((error) => console.error("[blackjack] Could not pay:", error));
+            best.changed();
+          }
           results.push({ name: seat.name, result: "side", side: side.type, bet: side.bet, payout: side.payout });
         }
       }

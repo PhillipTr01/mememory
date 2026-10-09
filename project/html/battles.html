@@ -181,7 +181,18 @@
             </div>
 
             <aside class="room-side">
-                <div id="btHistoryCard" class="mm-card side-card jp-history-card">
+                <div class="mm-card side-card jp-history-card cs-best-card" id="csBest" data-game="battles">
+                    <div class="side-head">
+                        <span class="fw-semibold"><i class="bi bi-trophy me-2"></i>Best wins</span>
+                        <div class="cs-best-tabs" role="group" aria-label="Best wins of">
+                            <button type="button" data-best-span="today">Today</button>
+                            <button type="button" data-best-span="all">All time</button>
+                        </div>
+                    </div>
+                    <ol class="jp-history cs-best-list"></ol>
+                    <p class="jp-empty mm-muted cs-best-empty" data-icon="🏆">No wins yet today - be the first!</p>
+                </div>
+                <div data-replaced hidden id="btHistoryCard" class="mm-card side-card jp-history-card">
                     <div class="side-head">
                         <span class="fw-semibold"><i class="bi bi-clock-history me-2"></i>Last battles</span>
                     </div>
@@ -357,6 +368,7 @@
     <script src="/static/scripts/casino_dock.js"></script>
     <script src="/static/scripts/casino_info.js"></script>
     <script src="/static/scripts/battles.js"></script>
+    <script src="/static/scripts/casino_best.js"></script>
     <script src="/static/scripts/casino_wallet.js"></script>
     <script src="/static/scripts/chat.js"></script>
 </body>

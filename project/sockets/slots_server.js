@@ -25,6 +25,8 @@ module.exports = function (io, options = {}) {
   const room = io.of(world + "/slots");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
+  // The biggest wins of the slots (the side of the page)
+  const best = require("../game/best_wins").attach(room, "slots win", world);
 
   const machine = {
     feed: [], // [{name, bet, win, symbol, count, bonus, at}] newest first
@@ -141,7 +143,10 @@ module.exports = function (io, options = {}) {
     machine.pending.splice(index, 1);
     persist.changed("slots");
     try {
-      if (entry.win > 0) await coins.add(entry.name, entry.win, { reason: "slots win", note: entry.note });
+      if (entry.win > 0) {
+        await coins.add(entry.name, entry.win, { reason: "slots win", note: entry.note });
+        best.changed();
+      }
     } catch (error) {
       console.error("[slots] Could not pay a win:", error);
     }

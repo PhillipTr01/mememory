@@ -4306,3 +4306,120 @@ body.jackpot-theme::before {
   background: radial-gradient(circle, rgba(var(--mm-accent-rgb), 0.25), rgba(var(--mm-accent-rgb), 0.06));
   font-size: 2.4rem;
 }
+
+/* ---------- Best wins (the side of a game, casino_best.js): today / all time ---------- */
+/* (the list it replaces stays in the page for its script - never shown) */
+[data-replaced] {
+  display: none !important;
+}
+
+.cs-best-card .side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cs-best-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+}
+
+.cs-best-tabs button {
+  padding: 0.2rem 0.65rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mm-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cs-best-tabs button.active {
+  background: var(--mm-surface);
+  color: var(--mm-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.cs-best-row {
+  grid-template-columns: 1.9rem minmax(0, 1fr) auto;
+}
+
+.cs-best-rank {
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--mm-muted);
+}
+
+.cs-best-row.top .cs-best-rank {
+  font-size: 1.15rem;
+}
+
+.cs-best-row.top-1 {
+  border-color: rgba(var(--mm-accent-rgb), 0.35);
+  background: linear-gradient(90deg, rgba(var(--mm-accent-rgb), 0.12), var(--mm-surface-2) 70%);
+}
+
+/* (the first row is not "the newest" here) */
+.cs-best-row:first-child:not(.top-1) {
+  border-color: transparent;
+  background: var(--mm-surface-2);
+}
+
+.cs-best-row.mine {
+  box-shadow: inset 0 0 0 1px rgba(var(--mm-accent-rgb), 0.45);
+}
+
+.cs-best-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.cs-best-name > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-best-name .mm-avatar {
+  --size: 22px;
+  flex-shrink: 0;
+}
+
+.cs-best-note {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-best-dice {
+  display: inline-flex;
+  gap: 2px;
+  vertical-align: middle;
+}
+
+.cs-best-dice .bc-art {
+  width: 18px;
+  height: 18px;
+}
+
+.cs-best-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+}
+
+.cs-best-when {
+  font-size: 0.68rem;
+  color: var(--mm-muted);
+}

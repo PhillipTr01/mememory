@@ -30,6 +30,8 @@ module.exports = function (io, options = {}) {
   const room = io.of(world + "/roulette");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
+  // The biggest wins of the roulette (the side of the page)
+  const best = require("../game/best_wins").attach(room, "roulette win", world);
 
   const table = {
     round: 1,
@@ -151,6 +153,7 @@ module.exports = function (io, options = {}) {
         coins.add(name, win, { reason: "roulette win", note: slot.color }).catch((error) => console.error("[roulette] Could not pay a win:", error)),
       ),
     );
+    if (wins.size) best.changed();
   }
 
   function newRound() {

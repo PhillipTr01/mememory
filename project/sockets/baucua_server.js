@@ -24,6 +24,8 @@ module.exports = function (io, options = {}) {
   const room = io.of(world + "/baucua");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
+  // The biggest wins of Bầu cua (the side of the page)
+  const best = require("../game/best_wins").attach(room, "baucua win", world);
 
   const table = {
     round: 1,
@@ -130,6 +132,7 @@ module.exports = function (io, options = {}) {
     await Promise.all(
       [...wins].map(([name, win]) => coins.add(name, win, { reason: "baucua win", note: table.dice.join(" ") }).catch((error) => console.error("[baucua] Could not pay a win:", error))),
     );
+    if (wins.size) best.changed();
   }
 
   function newRound() {

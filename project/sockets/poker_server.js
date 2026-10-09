@@ -25,6 +25,8 @@ module.exports = function (io, options = {}) {
   const room = io.of(world + "/poker");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
+  // The biggest pots won (the side of the page) - a pot becomes chips, not coins: written down here
+  const best = require("../game/best_wins").attachRecorded(room, "poker-best", persist);
 
   const table = {
     seats: new Array(config.POKER_SEATS).fill(null),
@@ -515,6 +517,7 @@ module.exports = function (io, options = {}) {
     table.current = -1;
     table.turnAt = null;
     const winners = table.result.winners;
+    winners.forEach((w) => best.record(w.name, w.amount, w.hand || (table.result.showdown ? null : "everybody folded")));
     table.history.unshift({
       hand: table.hand,
       winners: winners.map((w) => ({ name: w.name, amount: w.amount, hand: w.hand || null })),

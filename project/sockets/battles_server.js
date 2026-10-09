@@ -44,6 +44,8 @@ module.exports = function (io, options = {}) {
   const battles = io.of(world + "/battles");
   battles.use(socketAuth.casino);
   casinoChat.attach(battles, ROOM);
+  // The biggest wins of the case battles (the side of the page)
+  const best = require("../game/best_wins").attach(battles, "battle win", world);
 
   const lobby = {
     list: new Map(), // id -> battle
@@ -281,7 +283,9 @@ module.exports = function (io, options = {}) {
         // (a bot's share stays in the house)
         if (winner.bot || shares[i] <= 0) return;
         try {
-          await coins.add(winner.name, shares[i], { reason: "battle win", note: shares.length > 1 ? "split pot" : undefined });
+          // (the note: the mode and how many played - for the best wins)
+          await coins.add(winner.name, shares[i], { reason: "battle win", note: [battle.mode, battle.seats.length + " players", shares.length > 1 ? "split pot" : null].filter(Boolean).join(" · ") });
+          best.changed();
         } catch (error) {
           console.error("[battles] Could not pay a winner:", error);
         }
