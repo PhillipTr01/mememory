@@ -3575,3 +3575,35 @@ a.ad-case-row:hover {
   border-radius: 999px;
   background: rgba(var(--mm-accent-rgb), 0.08);
 }
+
+/* Who may play (a season's page): the players on the list, scrolling */
+.ad-kv-list-count {
+  margin: 0.45rem 0 0.3rem;
+  color: var(--mm-muted);
+  font-size: 0.82rem;
+}
+
+.ad-kv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 150px;
+  overflow-y: auto;
+  margin-bottom: 0.4rem;
+  padding-right: 0.2rem;
+}
+
+.ad-kv-list-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 8px;
+  background: var(--mm-surface);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.ad-kv-list-row .mm-avatar.sm {
+  --size: 22px;
+}

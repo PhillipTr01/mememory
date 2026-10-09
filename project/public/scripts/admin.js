@@ -1636,6 +1636,22 @@ function seasonDetail(season) {
     return box;
   };
   var accessMode = season.access ? season.access.mode : "all";
+  // The players on the list: a small list that scrolls
+  var accessList = (names) => {
+    var list = el("div", "ad-kv-list");
+    if (!names.length) list.appendChild(el("span", "ad-note", "Nobody on the list."));
+    names
+      .slice()
+      .sort((x, y) => x.localeCompare(y))
+      .forEach((name) => {
+        var row = el("div", "ad-kv-list-row");
+        row.append(createAvatar(name, "sm"), el("span", "", name));
+        list.appendChild(row);
+      });
+    var box = el("div", "");
+    box.append(el("div", "ad-kv-list-count", names.length + (names.length == 1 ? " player" : " players")), list);
+    return box;
+  };
   var parts = [
     head,
     strip,
@@ -1658,7 +1674,7 @@ function seasonDetail(season) {
       accessMode == "whitelist" ? "🔒" : accessMode == "banlist" ? "🚫" : "🌍",
       "Who may play",
       tile("", accessMode == "whitelist" ? "Whitelist" : accessMode == "banlist" ? "Banlist" : "Everybody", "mode"),
-      ...(accessMode != "all" ? [tile("", (season.access.names || []).join(", ") || "–", season.access.names.length + (season.access.names.length == 1 ? " player" : " players"))] : []),
+      ...(accessMode != "all" ? [accessList(season.access.names || [])] : []),
     ),
     card("🎨", "Look", tile("", (season.color || GOLD).toUpperCase(), "accent color", swatch), tile("", season.coinIcon || "💎", "coin")),
   ];
