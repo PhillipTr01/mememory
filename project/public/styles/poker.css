@@ -17,9 +17,6 @@
   position: relative;
   width: 100%;
   aspect-ratio: 2.1 / 1;
-  /* As wide as the screen's height lets it be: the whole table above the menu, no scrolling */
-  max-width: max(420px, calc((100vh - 530px) * 2.1));
-  margin: 0 auto;
 }
 
 .pk-felt {

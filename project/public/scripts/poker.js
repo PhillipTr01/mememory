@@ -724,3 +724,35 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("pkStand").addEventListener("click", () => socket.emit("stand"));
   document.getElementById("pkAddChips").addEventListener("click", addChips);
 });
+
+/*
+ * The whole table (seats, cards, chips) a bit smaller when the screen isn't high enough - everything
+ * keeps its place on the felt, nothing overlaps, and the page doesn't scroll (the menu stays free)
+ */
+(function fitTable() {
+  var wrap = document.querySelector(".pk-table-wrap");
+  if (!wrap || !("zoom" in document.body.style)) return;
+  var fit = () => {
+    wrap.style.zoom = "";
+    wrap.style.width = "";
+    wrap.style.margin = "";
+    if (window.innerWidth < 992) return;
+    var dock = document.getElementById("csDock");
+    var room = dock ? window.innerHeight - (parseFloat(getComputedStyle(dock).bottom) || 0) - dock.offsetHeight - 16 : window.innerHeight - 16;
+    var card = wrap.closest(".mm-card") || wrap.parentNode;
+    var over = card.getBoundingClientRect().bottom + window.scrollY - room;
+    if (over <= 0) return;
+    var height = wrap.offsetHeight;
+    // (a fixed width: a zoomed element of 100% width would fill the same room again)
+    wrap.style.width = wrap.offsetWidth + "px";
+    wrap.style.margin = "0 auto";
+    wrap.style.zoom = Math.max(0.6, (height - over) / height).toFixed(3);
+  };
+  window.addEventListener("resize", fit);
+  fit();
+  // (the seat bar and the controls come once the table is known)
+  setTimeout(fit, 600);
+  // (the seat bar or the show / muck question comes or goes: the room changes)
+  var watch = new MutationObserver(() => requestAnimationFrame(fit));
+  ["pkSeatBar", "pkDecide"].forEach((id) => document.getElementById(id) && watch.observe(document.getElementById(id), { attributes: true, attributeFilter: ["hidden"] }));
+})();
