@@ -198,7 +198,8 @@
                             <h2 class="ad-title" id="adSeasonFormTitle">New season</h2>
                         </div>
                         <form id="adSeasonForm" class="ad-season-form" autocomplete="off" novalidate>
-                            <div class="ad-season-identity">
+                            <div class="ad-season-main">
+                                <div class="ad-span2 ad-season-identity">
                             <div class="ad-season-name">
                                 <label class="ad-field ad-field-icon">
                                     <span class="ad-label">Icon</span>
@@ -211,7 +212,7 @@
                             </div>
                             <div id="adSeasonIcons" class="ad-icon-picks" aria-label="Icons"></div>
                             </div>
-                            <div class="ad-field">
+                                <div class="ad-field">
                                 <span class="ad-label">Accent color</span>
                                 <div class="ad-color-row">
                                     <input id="adSeasonColor" class="ad-color-input" type="color" value="#d4a64a" aria-label="Accent color">
@@ -220,7 +221,7 @@
                                 </div>
                                 <span class="ad-setting-hint">The accent of the casino during the season (buttons, chat, highlights) - the coins stay gold.</span>
                             </div>
-                            <div class="ad-field">
+                                <div class="ad-field">
                                 <span class="ad-label">Coin icon</span>
                                 <div class="ad-season-name">
                                     <label class="ad-field ad-field-icon">
@@ -230,31 +231,42 @@
                                 </div>
                                 <span class="ad-setting-hint">How the coins of the season look in the casino. Never the 🪙 - that is the money outside seasons (shown next to them during the season).</span>
                             </div>
-                            <!--- Start and end: the date picker of the site (admin.js), the value in the hidden input --->
-                            <div class="ad-field">
+                                <div class="ad-field">
                                 <span class="ad-label">Start</span>
                                 <div class="ad-date"><input id="adSeasonStart" type="hidden"><div class="mm-input ad-date-field"><button type="button" class="ad-date-btn" data-for="adSeasonStart" aria-label="Choose in the calendar">📅</button><input type="text" class="ad-date-text" data-for="adSeasonStart" inputmode="numeric" placeholder="DD.MM.YYYY, HH:MM" autocomplete="off"></div></div>
                             </div>
-                            <div class="ad-field">
+                                <div class="ad-field">
                                 <span class="ad-label">End</span>
                                 <div class="ad-date"><input id="adSeasonEnd" type="hidden"><div class="mm-input ad-date-field"><button type="button" class="ad-date-btn" data-for="adSeasonEnd" aria-label="Choose in the calendar">📅</button><input type="text" class="ad-date-text" data-for="adSeasonEnd" inputmode="numeric" placeholder="DD.MM.YYYY, HH:MM" autocomplete="off"></div></div>
                             </div>
-                            <label class="ad-field">
+                                <label class="ad-field">
+                                <span class="ad-label">Countdown before start and end</span>
+                                <span class="ad-inline-input"><input id="adSeasonWait" class="mm-input" type="number" min="0" max="3600" step="5" value="60"><span class="ad-setting-unit">s</span></span>
+                                <span class="ad-setting-hint">The start: this long after the start time the season world opens (the normal casino goes on). The end: the season world closes - no new bets, its running rounds finish - then this long until the final places.</span>
+                            </label>
+                                <div class="ad-field">
+                                <label class="ad-switch">
+                                    <input type="checkbox" id="adSeasonHighlight">
+                                    <span class="ad-switch-track"></span>
+                                    <span class="ad-switch-text">Highlight before the start</span>
+                                </label>
+                            </div>
+                                <label class="ad-field">
                                 <span class="ad-label">Start budget</span>
                                 <input id="adSeasonBudget" class="mm-input" type="number" min="0" step="1000" value="25000" required>
                                 <span class="ad-setting-hint">What a player gets when joining the season (plus the daily bonuses missed since the start).</span>
                             </label>
-                            <label class="ad-field">
+                                <label class="ad-field">
                                 <span class="ad-label">Daily bonus</span>
                                 <input id="adSeasonBonus" class="mm-input" type="number" min="0" step="100" required>
                                 <span class="ad-setting-hint">Free coins once a day during the season (can change while it runs).</span>
                             </label>
-                            <label class="ad-field">
+                                <label class="ad-field">
                                 <span class="ad-label">Second chances</span>
                                 <input id="adSeasonChances" class="mm-input" type="number" min="0" max="20" step="1" value="0">
                                 <span class="ad-setting-hint">A player who lost everything (0 coins, nothing in play) starts again with the budget - this many times. The first right away, every further one after the wait below.</span>
                             </label>
-                            <label class="ad-field">
+                                <label class="ad-field">
                                 <span class="ad-label">Wait between second chances</span>
                                 <select id="adSeasonChanceDelay" class="mm-input">
                                     <option value="">The next day (from midnight)</option>
@@ -271,12 +283,7 @@
                                 </select>
                                 <span class="ad-setting-hint">After a second chance, how long until the next one can be taken (can change while the season runs).</span>
                             </label>
-                            <label class="ad-field">
-                                <span class="ad-label">Countdown before start and end</span>
-                                <span class="ad-inline-input"><input id="adSeasonWait" class="mm-input" type="number" min="0" max="3600" step="5" value="60"><span class="ad-setting-unit">s</span></span>
-                                <span class="ad-setting-hint">The start: this long after the start time the season world opens (the normal casino goes on). The end: the season world closes - no new bets, its running rounds finish - then this long until the final places.</span>
-                            </label>
-                            <label class="ad-field">
+                                <label class="ad-field">
                                 <span class="ad-label">Leaderboard updates</span>
                                 <select id="adSeasonEvery" class="mm-input">
                                     <option value="0">All the time (live)</option>
@@ -287,7 +294,7 @@
                                     <option value="1440">Once a day (midnight)</option>
                                 </select>
                             </label>
-                            <div class="ad-field">
+                                <div class="ad-span2 ad-field">
                                 <label class="ad-switch">
                                     <input type="checkbox" id="adSeasonPrizesOn">
                                     <span class="ad-switch-track"></span>
@@ -296,14 +303,9 @@
                                 <div id="adSeasonPrizes" class="ad-prize-list" hidden></div>
                                 <button type="button" id="adSeasonAddPrize" class="mm-btn mm-btn-sm ad-add-prize" hidden>+ Add a prize</button>
                             </div>
-                            <div class="ad-field">
-                                <label class="ad-switch">
-                                    <input type="checkbox" id="adSeasonHighlight">
-                                    <span class="ad-switch-track"></span>
-                                    <span class="ad-switch-text">Highlight before the start</span>
-                                </label>
                             </div>
-                            <div class="ad-field">
+                            <div class="ad-season-aside">
+                                <div class="ad-field">
                                 <span class="ad-label">Who may play</span>
                                 <select id="adSeasonAccess" class="mm-input">
                                     <option value="all">Everybody</option>
@@ -325,6 +327,7 @@
                                     </div>
                                 </div>
                                 <span class="ad-setting-hint">Who can't play in the season doesn't see it at all.</span>
+                            </div>
                             </div>
                             <div class="ad-season-save"><span id="adSeasonError" class="ad-form-error" role="alert" hidden></span><button type="submit" id="adSeasonSave" class="mm-btn mm-btn-primary">Plan the season</button></div>
                         </form>

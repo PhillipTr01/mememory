@@ -3223,13 +3223,18 @@ a.ad-case-row:hover {
 
 .ad-pick-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
 }
 
 .ad-pick-bar .mm-input {
-  flex: 1 1 auto;
+  flex: 1 1 100%;
   min-width: 0;
+}
+
+.ad-pick-count {
+  margin-right: auto;
 }
 
 .ad-pick-count {
@@ -3283,4 +3288,63 @@ a.ad-case-row:hover {
 
 .ad-pick-name .mm-avatar.sm {
   --size: 24px;
+}
+
+/* ---------- The season form: every setting on the left (two by two), who may play on the right ---------- */
+.ad-season-page .ad-season-form,
+.ad-season-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(340px, 1fr);
+  gap: 1rem 1.75rem;
+  align-items: start;
+}
+
+.ad-season-main {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+  align-items: start;
+}
+
+.ad-season-main .ad-span2 {
+  grid-column: 1 / -1;
+}
+
+/* (the switch in line with the countdown next to it) */
+.ad-season-main .ad-field:has(#adSeasonHighlight) {
+  padding-top: 1.75rem;
+}
+
+.ad-season-aside {
+  position: sticky;
+  top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+}
+
+.ad-season-form > .ad-season-save {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1100px) {
+  .ad-season-page .ad-season-form,
+  .ad-season-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ad-season-aside {
+    position: static;
+  }
+}
+
+@media (max-width: 700px) {
+  .ad-season-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ad-season-main .ad-field:has(#adSeasonHighlight) {
+    padding-top: 0;
+  }
 }
