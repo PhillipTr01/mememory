@@ -3640,3 +3640,19 @@ a.ad-case-row:hover {
   width: 1.1rem;
   height: 1.1rem;
 }
+
+/* A number with its unit next to it: the unit on one line */
+.ad-inline-input .ad-setting-unit {
+  white-space: nowrap;
+}
+
+.ad-wager-input {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.ad-wager-input .mm-input {
+  flex: 0 0 110px;
+  width: 110px;
+}
