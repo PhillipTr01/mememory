@@ -622,6 +622,18 @@ a.ad-link:focus-visible {
   gap: 0.35rem;
 }
 
+/* In a table: a cell like the others (a flex cell falls out of the table - no line, a shifted head) */
+.ad-table td.ad-actions,
+.ad-table th.ad-actions {
+  display: table-cell;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ad-table td.ad-actions > * + * {
+  margin-left: 0.35rem;
+}
+
 .ad-reason {
   white-space: nowrap;
   display: inline-block;
