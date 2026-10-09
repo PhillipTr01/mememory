@@ -5,7 +5,11 @@ const socket = io((window.CASINO_NS || "") + "/blackjack", { query: { table: TAB
 
 var myName = null;
 var myCoins = 0;
-var myCap = null; // the most one bet may take with my balance (null: no cap - the max bet by balance)
+var myCapRule = null; // the max bet by balance ({floor, share} - null: no cap), see casinoCapLeft
+// What more I may bet this round (`already`: my coins in it)
+function capLeft(already) {
+  return casinoCapLeft(myCapRule, myCoins, already);
+}
 var state = null;
 var previous = null;
 var selected = null; // the seat to bet on
@@ -50,7 +54,7 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  myCap = data.betCap != null ? data.betCap : null;
+  myCapRule = data.betCapRule || null;
   if (state) renderBars();
 });
 socket.on("blackjackError", (message) => showHint(message, "error"));
@@ -164,7 +168,10 @@ function placeChip(seatIndex, field) {
   if (field == "main") {
     // The first chip at least the table minimum
     var amount = seat.bet == 0 ? Math.max(chipValue, state.rules.minBet) : chipValue;
-    amount = Math.min(amount, state.rules.maxBet - seat.bet, myCap != null ? myCap : Infinity);
+    // (all my coins on the table this round count for the max bet by balance)
+    var onTable = state.seats.reduce((sum, s) => (s && s.name == myName ? sum + (s.bet || 0) + (s.side ? (s.side.pairs || 0) + (s.side.plus3 || 0) : 0) : sum), 0);
+    amount = Math.min(amount, state.rules.maxBet - seat.bet, capLeft(onTable));
+    if (amount <= 0 && capLeft(onTable) <= 0) return showHint("With your balance you can't bet more this round.", "error");
     if (amount <= 0) return showHint("The most for this seat: 🪙 " + formatCoins(state.rules.maxBet) + ".", "error");
     socket.emit("bet", { seat: seatIndex, amount: amount });
   } else {

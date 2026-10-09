@@ -1,4 +1,16 @@
 /*
+ * The max bet by balance (game/limits.js): what more a player may bet this round. `rule` ({floor, share} - null: no
+ * cap) comes with the balance, `already`: the player's coins in this round (a pot, a table, open battles). The cap
+ * counts for the round together, from the balance before it (what is left + what is in).
+ */
+function casinoCapLeft(rule, balance, already) {
+  if (!rule) return Infinity;
+  already = already || 0;
+  var cap = Math.max(rule.floor, Math.floor(((balance + already) * rule.share) / 100));
+  return Math.max(0, cap - already);
+}
+
+/*
  * The coins of a season: the admin can give a season its own coin icon
  * (game/seasons.js) - the page gets it as window.CASINO_COIN. Every 🪙 of the
  * page (text, titles, the coin in front of the pot) shows it instead, also in

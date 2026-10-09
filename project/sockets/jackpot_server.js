@@ -346,7 +346,8 @@ module.exports = function (io, options = {}) {
         }
         betting.add(username);
         try {
-          if (!(await coins.spend(username, amount, { reason: "jackpot bet" }))) {
+          // (the max bet by balance: for all bets of the round together)
+          if (!(await coins.spend(username, amount, { reason: "jackpot bet", round: limits.JACKPOT_MAX_COINS - left }))) {
             socket.emit("betError", coins.refusal(username) || "You don't have enough coins.");
             return;
           }

@@ -194,7 +194,7 @@ module.exports = function (io, options = {}) {
           if (!roulette.allowed(sums, data.color)) return error(data.color === "red" ? "You bet on blue - red only in the next round." : "You bet on red - blue only in the next round.");
           const total = sums.red + sums.blue + sums.green;
           if (total + amount > limits.ROULETTE_MAX_BET) return error(`At most 🪙 ${limits.ROULETTE_MAX_BET.toLocaleString("en-US")} per round (all colors together).`);
-          if (!(await coins.spend(username, amount, { reason: "roulette bet", note: data.color }))) return error(coins.refusal(username) || "You don't have enough coins.");
+          if (!(await coins.spend(username, amount, { reason: "roulette bet", note: data.color, round: total }))) return error(coins.refusal(username) || "You don't have enough coins.");
           // (the round may have moved on while the coins were taken)
           if (table.phase === PHASE.ROLLING) {
             await coins.add(username, amount, { reason: "roulette refund" });

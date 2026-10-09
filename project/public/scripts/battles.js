@@ -3,7 +3,11 @@ const socket = io((window.CASINO_NS || "") + "/battles");
 
 var myName = null;
 var myCoins = 0;
-var myCap = null; // the most one bet may take with my balance (null: no cap - the max bet by balance)
+var myCapRule = null; // the max bet by balance ({floor, share} - null: no cap), see casinoCapLeft
+// What more I may bet this round (`already`: my coins in it)
+function capLeft(already) {
+  return casinoCapLeft(myCapRule, myCoins, already);
+}
 var CASES = []; // catalog from the server
 var battles = []; // every battle the server knows
 var lastBattles = []; // finished battles, newest first
@@ -100,7 +104,7 @@ socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  myCap = data.betCap != null ? data.betCap : null;
+  myCapRule = data.betCapRule || null;
   renderCreate();
   renderList();
   if (!spinning) renderBattle();
@@ -469,9 +473,9 @@ function renderCreate() {
   document.getElementById("btShuffle").hidden = picked.length < 2;
   var button = document.getElementById("btCreate");
   document.getElementById("btCreateLabel").innerText = ids.length ? "Create for 🪙 " + formatCoins(cost) : "Create";
-  var overCap = myCap != null && cost > myCap;
+  var overCap = cost > capLeft(inBattles());
   button.disabled = ids.length == 0 || cost > myCoins || overCap;
-  button.title = cost > myCoins ? "Not enough coins" : overCap ? "With your balance a bet is at most 🪙 " + formatCoins(myCap) : "";
+  button.title = cost > myCoins ? "Not enough coins" : overCap ? "With your balance at most 🪙 " + formatCoins(capLeft(inBattles())) + " more in battles now" : "";
 }
 
 function showContents(box) {
@@ -516,6 +520,11 @@ function chanceText(chance) {
 
 function isIn(battle) {
   return battle.seats.some((seat) => seat && seat.name == myName);
+}
+
+// My coins in battles that wait or run - the max bet by balance counts for them together
+function inBattles() {
+  return battles.filter((battle) => (battle.phase == "waiting" || battle.phase == "running") && isIn(battle)).reduce((sum, battle) => sum + battle.price, 0);
 }
 
 // The cases of a battle; many cases: only a window (around the current round)
@@ -655,7 +664,7 @@ function renderList() {
       if (battle.phase == "waiting" && !isIn(battle)) {
         var join = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Join");
         join.type = "button";
-        join.disabled = battle.price > myCoins || (myCap != null && battle.price > myCap);
+        join.disabled = battle.price > myCoins || battle.price > capLeft(inBattles());
         join.addEventListener("click", (event) => {
           event.stopPropagation();
           askForNotifications();
@@ -816,7 +825,7 @@ function renderBattle() {
       if (battle.phase == "waiting" && !isIn(battle)) {
         var join = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Join 🪙 " + formatCoins(battle.price));
         join.type = "button";
-        join.disabled = battle.price > myCoins || (myCap != null && battle.price > myCap);
+        join.disabled = battle.price > myCoins || battle.price > capLeft(inBattles());
         join.addEventListener("click", () => {
           askForNotifications();
           socket.emit("joinBattle", battle.id);

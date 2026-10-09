@@ -294,9 +294,16 @@ test("coins: the max bet by balance - all in up to the floor, above it a share o
     // Too few coins: no cap message
     assert.strictEqual(await coins.spend("capper", 60000, { reason: "slots bet" }), false);
     assert.strictEqual(coins.refusal("capper"), null);
+    // Several bets in one round count together - from the balance before the round (1,000,000: 250,000 in all)
+    h.setCoins("capper", 1000000);
+    assert.strictEqual(await coins.spend("capper", 200000, { reason: "jackpot bet", round: 0 }), true);
+    assert.strictEqual(await coins.spend("capper", 100000, { reason: "jackpot bet", round: 200000 }), false, "300,000 in one round");
+    assert.match(coins.refusal("capper"), /per round .* 200,000 are in already, 50,000 more/);
+    assert.strictEqual(await coins.spend("capper", 50000, { reason: "jackpot bet", round: 200000 }), true, "250,000 in all");
     // The pages get the cap with the balance (for their "Max")
     h.setCoins("capper", 1000000);
     assert.strictEqual((await coins.get("capper")).betCap, 250000);
+    assert.deepStrictEqual((await coins.get("capper")).betCapRule, { floor: 100000, share: 25 });
     h.setCoins("capper", 40000);
     assert.strictEqual((await coins.get("capper")).betCap, 100000, "the floor");
     // 100%: no cap

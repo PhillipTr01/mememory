@@ -3,7 +3,11 @@ const socket = io((window.CASINO_NS || "") + "/roulette");
 
 var myName = null;
 var myCoins = 0;
-var myCap = null; // the most one bet may take with my balance (null: no cap - the max bet by balance)
+var myCapRule = null; // the max bet by balance ({floor, share} - null: no cap), see casinoCapLeft
+// What more I may bet this round (`already`: my coins in it)
+function capLeft(already) {
+  return casinoCapLeft(myCapRule, myCoins, already);
+}
 var table = null; // the last state of the round
 var rules = null;
 var rolledRound = null; // the round whose roll plays (or played) on this page
@@ -52,7 +56,7 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  myCap = data.betCap != null ? data.betCap : null;
+  myCapRule = data.betCapRule || null;
   // While the reel rolls the balance shows the coins before the win
   if (!rolling) renderCoins();
   renderControls();
@@ -321,6 +325,12 @@ function setAmount(value) {
   renderControls();
 }
 
+// My bets this round, all colors together
+function myTotal() {
+  var mine = myBets();
+  return mine.red + mine.blue + mine.green;
+}
+
 // What is still allowed this round (all colors together)
 function roomLeft() {
   var mine = myBets();
@@ -334,7 +344,7 @@ var CHIPS = [
   ["+1K", (v) => v + 1000],
   ["½", (v) => v / 2],
   ["×2", (v) => v * 2],
-  ["Max", () => Math.min(myCoins, roomLeft(), myCap != null ? myCap : Infinity)],
+  ["Max", () => Math.min(myCoins, roomLeft(), capLeft(myTotal()))],
 ];
 
 function buildChips() {
@@ -357,10 +367,10 @@ function renderControls() {
   document.querySelectorAll(".rl-place").forEach((button) => {
     var color = button.dataset.color;
     var blocked = (color == "red" && mine.blue > 0) || (color == "blue" && mine.red > 0);
-    var overCap = myCap != null && value > myCap;
+    var overCap = value > capLeft(myTotal());
     button.disabled = !open || blocked || !(value >= rules.minBet) || value > myCoins || value > roomLeft() || overCap;
     button.closest(".rl-board").classList.toggle("blocked", blocked);
-    button.title = blocked ? "You bet on " + (color == "red" ? "blue" : "red") + " this round" : !open ? "The reel rolls - the next round soon" : value > roomLeft() ? "At most 🪙 " + formatCoins(rules.maxBet) + " per round" : value > myCoins ? "Not enough coins" : overCap ? "With your balance a bet is at most 🪙 " + formatCoins(myCap) : "Bet 🪙 " + formatCoins(value || 0) + " on " + COLOR_NAMES[color].toLowerCase();
+    button.title = blocked ? "You bet on " + (color == "red" ? "blue" : "red") + " this round" : !open ? "The reel rolls - the next round soon" : value > roomLeft() ? "At most 🪙 " + formatCoins(rules.maxBet) + " per round" : value > myCoins ? "Not enough coins" : overCap ? "With your balance at most 🪙 " + formatCoins(capLeft(myTotal())) + " more this round" : "Bet 🪙 " + formatCoins(value || 0) + " on " + COLOR_NAMES[color].toLowerCase();
     // My bet on the color
     var mineBox = button.querySelector(".rl-place-mine");
     if (mine[color] > 0) {

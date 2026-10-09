@@ -198,7 +198,7 @@ function makeWallet(kind) {
     // Test mode (the admin): the sandbox - the real balance stays as it is
     if (testMode().active(username)) {
       const balance = testMode().balance(username);
-      return { coins: balance, bonus: true, bonusIn: 0, bonusAmount: dailyBonus(), payout: false, normal: null, world: kind, joined: null, test: true, betCap: limits.betCap(balance, "normal") === Infinity ? null : limits.betCap(balance, "normal") };
+      return { coins: balance, bonus: true, bonusIn: 0, bonusAmount: dailyBonus(), payout: false, normal: null, world: kind, joined: null, test: true, betCap: limits.betCap(balance, "normal") === Infinity ? null : limits.betCap(balance, "normal"), betCapRule: limits.capRule("normal") };
     }
     // (after a restart: the season is known first)
     await gate;
@@ -212,6 +212,7 @@ function makeWallet(kind) {
     return {
       coins: user[f.coins] || 0,
       betCap: capFor(user[f.coins] || 0),
+      betCapRule: limits.capRule(kind),
       bonus: available,
       bonusIn: bonusInAt(bonusAtOf(user)),
       bonusAmount: available ? bonusDue(user) : dailyBonus(),
@@ -251,22 +252,30 @@ function makeWallet(kind) {
     refusals.delete(username);
     return text;
   }
-  function capText(cap) {
-    const L = limits.forWorld(kind);
-    return `With your balance a bet is at most ${cap.toLocaleString("en-US")} coins (${L.BET_CAP_SHARE}% of your coins - all in only up to ${L.BET_CAP_FLOOR.toLocaleString("en-US")}).`;
+  // cap: the most for the whole round, round: what is in already
+  function capText(cap, round, world = kind) {
+    const L = limits.forWorld(world);
+    const why = `${L.BET_CAP_SHARE}% of your coins - all in only up to ${L.BET_CAP_FLOOR.toLocaleString("en-US")}`;
+    if (round > 0) return `With your balance you can bet at most ${cap.toLocaleString("en-US")} coins per round (${why}) - ${round.toLocaleString("en-US")} are in already, ${Math.max(0, cap - round).toLocaleString("en-US")} more.`;
+    return `With your balance a bet is at most ${cap.toLocaleString("en-US")} coins (${why}).`;
   }
 
-  // Takes the coins only if the user has enough (false otherwise) - and, for a bet, not more than the max bet by balance
+  /*
+   * Takes the coins only if the user has enough (false otherwise) - and, for a bet, not more than the max bet by
+   * balance. options.round: the coins of the player already in this round (a pot, a table): the cap counts for the
+   * round together - worked out from the balance before the round (what is left + what is in).
+   */
   async function spend(username, amount, options) {
     if (!Number.isInteger(amount) || amount <= 0) return false;
     refusals.delete(username);
     const capped = BET_REASONS.includes(options && options.reason) && !(options && options.nocap);
+    const round = capped ? Math.max(0, Math.floor(Number(options && options.round) || 0)) : 0;
     if (testMode().active(username)) {
       // (never coins of other players for test coins - the games check it too, with a message)
       if (testMode().BLOCKED_REASONS.includes(options && options.reason)) return false;
-      const cap = capped ? limits.betCap(testMode().balance(username), "normal") : Infinity;
-      if (amount > cap) {
-        refusals.set(username, capText(cap));
+      const cap = capped ? limits.betCap(testMode().balance(username) + round, "normal") : Infinity;
+      if (amount + round > cap) {
+        refusals.set(username, capText(cap, round, "normal"));
         return false;
       }
       testMode().spend(username, amount);
@@ -276,14 +285,15 @@ function makeWallet(kind) {
     }
     if (watching(username)) return false;
     await ensure(username);
-    // (the cap: amount <= share% of the balance - or not over the floor)
+    // (the cap: round + amount <= share% of (balance + round) - or not over the floor)
     const L = limits.forWorld(kind);
-    const need = capped && L.BET_CAP_SHARE < 100 && amount > L.BET_CAP_FLOOR ? Math.max(amount, Math.ceil((amount * 100) / L.BET_CAP_SHARE)) : amount;
+    const total = amount + round;
+    const need = capped && L.BET_CAP_SHARE < 100 && total > L.BET_CAP_FLOOR ? Math.max(amount, Math.ceil((total * 100) / L.BET_CAP_SHARE) - round) : amount;
     const done = changed(await User.updateOne({ username: username, [f.coins]: { $gte: need } }, { $inc: { [f.coins]: -amount } }));
     if (!done && need > amount) {
       const user = await User.findOne({ username: username }).select(f.coins).lean();
       const balance = user ? user[f.coins] || 0 : 0;
-      if (balance >= amount) refusals.set(username, capText(limits.betCap(balance, kind)));
+      if (balance >= amount) refusals.set(username, capText(limits.betCap(balance + round, kind), round));
     }
     if (done) {
       spentAt.set(username, Date.now());

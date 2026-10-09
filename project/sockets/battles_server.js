@@ -318,6 +318,11 @@ module.exports = function (io, options = {}) {
     remove(battle, config.BATTLE_KEEP);
   }
 
+  // The coins of a player in battles that wait or run - the max bet by balance counts for them together
+  function inBattles(username) {
+    return [...lobby.list.values()].filter((b) => (b.phase === PHASE.WAITING || b.phase === PHASE.RUNNING) && b.seats.some((seat) => seat && !seat.bot && seat.name === username)).reduce((sum, b) => sum + b.price, 0);
+  }
+
   // Takes the coins and puts the user (or a bot) into a free seat
   async function sit(socket, battle, username) {
     if (busy.has(username)) return false;
@@ -329,7 +334,7 @@ module.exports = function (io, options = {}) {
     }
     busy.add(username);
     try {
-      if (!(await coins.spend(username, battle.price, { reason: "battle" }))) {
+      if (!(await coins.spend(username, battle.price, { reason: "battle", round: inBattles(username) }))) {
         socket.emit("battleError", coins.refusal(username) || "You don't have enough coins.");
         return false;
       }

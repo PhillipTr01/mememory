@@ -3,7 +3,11 @@ const socket = io((window.CASINO_NS || "") + "/slots");
 
 var myName = null;
 var myCoins = 0;
-var myCap = null; // the most one bet may take with my balance (null: no cap - the max bet by balance)
+var myCapRule = null; // the max bet by balance ({floor, share} - null: no cap), see casinoCapLeft
+// What more I may bet this round (`already`: my coins in it)
+function capLeft(already) {
+  return casinoCapLeft(myCapRule, myCoins, already);
+}
 var setup = null; // {symbols, lines, strips, rules}
 var spinning = false;
 var pausedUntil = 0; // after a spin: the next one only from then on (a short pause)
@@ -71,7 +75,7 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  myCap = data.betCap != null ? data.betCap : null;
+  myCapRule = data.betCapRule || null;
   // While the reels turn, the balance shows the coins before the win
   // (during a spin the old balance stays - but a page that comes back into a bonus game needs one)
   if (!spinning || document.getElementById("slCoins").innerText == "-") renderCoins(myCoins);
@@ -1190,7 +1194,7 @@ function setBet(value) {
 
 // The highest bet now: the max bet per spin - or less, the max bet by balance
 function maxNow() {
-  return Math.max(setup.rules.minBet, Math.min(setup.rules.maxBet, myCap != null ? myCap : Infinity));
+  return Math.max(setup.rules.minBet, Math.min(setup.rules.maxBet, capLeft(0)));
 }
 
 // A round number near `value`, divisible by 5 (1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5 times a power of ten)

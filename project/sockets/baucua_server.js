@@ -171,7 +171,7 @@ module.exports = function (io, options = {}) {
         const place = async () => {
           const total = Object.values(betsOf(username)).reduce((sum, value) => sum + value, 0);
           if (total + amount > limits.BAUCUA_MAX_BET) return error(`At most 🪙 ${limits.BAUCUA_MAX_BET.toLocaleString("en-US")} per round (all animals together).`);
-          if (!(await coins.spend(username, amount, { reason: "baucua bet", note: data.animal }))) return error(coins.refusal(username) || "You don't have enough coins.");
+          if (!(await coins.spend(username, amount, { reason: "baucua bet", note: data.animal, round: total }))) return error(coins.refusal(username) || "You don't have enough coins.");
           // (the round may have moved on while the coins were taken)
           if (table.phase === PHASE.ROLLING) {
             await coins.add(username, amount, { reason: "baucua refund" });

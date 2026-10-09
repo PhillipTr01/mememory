@@ -440,6 +440,11 @@ module.exports = function (io, options = {}) {
 
     /* ---------- Actions of a player ---------- */
 
+    // The coins of a player on this table this round (every seat, the side bets too) - the max bet by balance
+    // counts for them together
+    const inRound = (username) =>
+      table.seats.reduce((sum, seat) => (seat && seat.name === username ? sum + (seat.bet || 0) + (seat.side ? (seat.side.pairs || 0) + (seat.side.plus3 || 0) : 0) : sum), 0);
+
     const handlers = {
       // Sit down on a free seat - a second one only when the others have a bet
       sit(username, error, s) {
@@ -469,7 +474,7 @@ module.exports = function (io, options = {}) {
         if (busy.has(username)) return;
         busy.add(username);
         try {
-          if (!(await coins.spend(username, amount, { reason: "blackjack bet" }))) return error(coins.refusal(username) || "You don't have enough coins.");
+          if (!(await coins.spend(username, amount, { reason: "blackjack bet", round: inRound(username) }))) return error(coins.refusal(username) || "You don't have enough coins.");
           // The round started, or the player stood up meanwhile
           if (table.phase !== "betting" || table.seats[s] !== seat) {
             await coins.add(username, amount, { reason: "blackjack refund" });
@@ -498,7 +503,7 @@ module.exports = function (io, options = {}) {
         if (busy.has(username)) return;
         busy.add(username);
         try {
-          if (!(await coins.spend(username, amount, { reason: "blackjack bet", note: type }))) return error(coins.refusal(username) || "You don't have enough coins.");
+          if (!(await coins.spend(username, amount, { reason: "blackjack bet", note: type, round: inRound(username) }))) return error(coins.refusal(username) || "You don't have enough coins.");
           if (table.phase !== "betting" || table.seats[s] !== seat) {
             await coins.add(username, amount, { reason: "blackjack refund" });
             return error("Too late for this seat.");

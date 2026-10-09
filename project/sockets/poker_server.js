@@ -707,7 +707,7 @@ module.exports = function (io, options = {}) {
         }
         busy.add(username);
         try {
-          if (!(await coins.spend(username, amount, { reason: "poker chips" }))) {
+          if (!(await coins.spend(username, amount, { reason: "poker chips", round: seat.stack }))) {
             error(coins.refusal(username) || "You don't have enough coins.");
             return;
           }

@@ -4,7 +4,11 @@ const socket = io((window.CASINO_NS || "") + "/jackpot");
 var state = null;
 var myName = null;
 var myCoins = 0;
-var myCap = null; // the most one bet may take with my balance (null: no cap - the max bet by balance)
+var myCapRule = null; // the max bet by balance ({floor, share} - null: no cap), see casinoCapLeft
+// What more I may bet this round (`already`: my coins in it)
+function capLeft(already) {
+  return casinoCapLeft(myCapRule, myCoins, already);
+}
 var spunRound = null; // the draw animation runs once per round
 var spinning = false;
 var countdownTimer = null;
@@ -61,7 +65,7 @@ socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  myCap = data.betCap != null ? data.betCap : null;
+  myCapRule = data.betCapRule || null;
   document.getElementById("jpCoins").innerText = "🪙 " + formatCoins(data.coins);
   renderBet();
 });
@@ -413,7 +417,7 @@ function renderBet() {
   var myAmount = counted.filter((bet) => bet.name == myName).reduce((sum, bet) => sum + bet.amount, 0);
   var coinsLeft = state.maxCoins != null ? Math.max(0, state.maxCoins - myAmount) : Infinity;
   // (and never more than the max bet by balance)
-  var room = betsLeft > 0 ? Math.min(myCoins, coinsLeft, myCap != null ? myCap : Infinity) : 0;
+  var room = betsLeft > 0 ? Math.min(myCoins, coinsLeft, capLeft(myAmount)) : 0;
   var open = true;
   var button = document.getElementById("jpBetButton");
   button.lastChild.textContent = drawing ? " Next pot" : " Put in";

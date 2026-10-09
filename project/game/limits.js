@@ -24,4 +24,10 @@ function betCap(balance, world) {
   return Math.max(limits.BET_CAP_FLOOR, Math.floor((balance * limits.BET_CAP_SHARE) / 100));
 }
 
-module.exports = { forWorld, betCap };
+// The rule for the pages ({floor, share} - null: no cap): they work out what is left of a round themselves
+function capRule(world) {
+  const limits = forWorld(world);
+  return limits.BET_CAP_SHARE < 100 ? { floor: limits.BET_CAP_FLOOR, share: limits.BET_CAP_SHARE } : null;
+}
+
+module.exports = { forWorld, betCap, capRule };
