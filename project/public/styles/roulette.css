@@ -211,6 +211,8 @@
   width: 0;
   height: 100%;
   border-radius: 3px;
+  transform-origin: left;
+  will-change: transform;
   background: var(--mm-accent);
 }
 

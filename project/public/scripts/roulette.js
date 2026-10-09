@@ -166,44 +166,40 @@ function showResult(state) {
   var won = mine.filter((bet) => bet.color == color).reduce((sum, bet) => sum + bet.amount * rules.payout[color], 0);
   var status = document.getElementById("rlStatus");
   status.className = "rl-status-text " + color;
-  if (!mine.length) status.innerText = COLOR_NAMES[color] + " " + rules.wheel[state.slot].number;
-  else if (won > 0) status.innerText = "You won 🪙 " + formatCoins(won) + "!";
-  else status.innerText = COLOR_NAMES[color] + " " + rules.wheel[state.slot].number + " - not this time";
+  status.innerText = won > 0 ? "You won 🪙 " + formatCoins(won) + "!" : COLOR_NAMES[color] + " " + rules.wheel[state.slot].number;
   renderCoins();
 }
 
 /* ---------- The round ---------- */
 
-var statusTimer = null;
+var statusFrame = null;
+var barAnimation = null;
 function renderStatus() {
-  clearInterval(statusTimer);
+  cancelAnimationFrame(statusFrame);
   var status = document.getElementById("rlStatus");
   var bar = document.getElementById("rlTimer");
-  if (table.phase == "idle") {
+  if (table.phase != "betting") {
+    if (barAnimation) barAnimation.cancel();
+    barAnimation = null;
+    bar.style.width = "0%";
     status.className = "rl-status-text";
-    status.innerText = "Place a bet to start the round";
-    bar.style.width = "0%";
+    if (table.phase == "idle") status.innerText = "Place a bet to start the round";
+    else if (rolling) status.innerText = "Rolling...";
     return;
   }
-  if (table.phase == "rolling") {
-    bar.style.width = "0%";
-    if (rolling) {
-      status.className = "rl-status-text";
-      status.innerText = "Rolling...";
-    }
-    return;
-  }
-  // Betting: the timer runs
-  var endsAt = Date.now() + table.timeLeft;
+  // Betting: the bar runs down in one smooth animation (from where it is now), the text every frame
+  var endsAt = performance.now() + table.timeLeft;
+  var from = Math.min(1, table.timeLeft / rules.timer);
+  if (barAnimation) barAnimation.cancel();
+  bar.style.width = "100%";
+  barAnimation = bar.animate([{ transform: "scaleX(" + from + ")" }, { transform: "scaleX(0)" }], { duration: table.timeLeft, easing: "linear", fill: "forwards" });
+  status.className = "rl-status-text";
   var tick = () => {
-    var left = Math.max(0, endsAt - Date.now());
-    status.className = "rl-status-text";
+    var left = Math.max(0, endsAt - performance.now());
     status.innerText = "Rolling in " + (left / 1000).toFixed(1) + " s";
-    bar.style.width = (left / rules.timer) * 100 + "%";
-    if (left <= 0) clearInterval(statusTimer);
+    if (left > 0) statusFrame = requestAnimationFrame(tick);
   };
   tick();
-  statusTimer = setInterval(tick, 100);
 }
 
 // My bets this round: {red, blue, green}
