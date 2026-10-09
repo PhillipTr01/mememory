@@ -462,7 +462,7 @@
     board.title = !season
       ? shown.name + " - starts " + new Date(shown.start).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
       : inSeasonWorld
-        ? "You're playing in " + shown.name + " - click to leave the season (your season coins wait for you)"
+        ? "You're playing in " + shown.name + " - click to switch to your 🪙 (come back any time)"
         : data.joined
           ? "Switch to " + shown.name
           : "Join " + shown.name;
@@ -541,7 +541,7 @@
         sessionStorage.removeItem(WORLD_KEY);
         var season = data && data.season;
         if (moved == "season" && season) casinoNotice({ icon: season.icon || "🏆", title: "You're playing in " + season.name, text: "Season coins, season games, the season's leaderboard - switch back any time at the top.", key: "world" });
-        else casinoNotice({ icon: "🪙", title: season ? "You left " + season.name : "You left the season", text: season ? "You play with your 🪙 now - your season coins wait for you, switch back any time at the top." : "You play with your 🪙 now.", key: "world" });
+        else casinoNotice({ icon: "🪙", title: "You play with your 🪙 now", text: season ? "Your " + season.name + " coins wait for you - switch back any time at the top." : "Your season coins wait for you.", key: "world" });
       }
     } catch (e) {
       // no storage
@@ -655,7 +655,7 @@
       });
       buttons.appendChild(go);
     } else if (mode == "switch") {
-      var sw = el("button", "cs-join-btn", inSeasonWorld ? "Leave the season · back to 🪙" : "Play in " + season.name);
+      var sw = el("button", "cs-join-btn", inSeasonWorld ? "Switch to your 🪙 · come back any time" : "Play in " + season.name);
       sw.type = "button";
       sw.dataset.coin = "real";
       sw.addEventListener("click", () => {
