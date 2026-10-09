@@ -623,9 +623,47 @@ async function playFreeSpins(result, from, progress) {
 
 /* ---------- Coin game: the coins stay, the empty spots spin again ---------- */
 
+// A treasure chest, drawn (closed - or open, full of gold). No gradients: many of them can be on the page
+var CHEST_BODY =
+  '<path d="M7 31h50v21a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4z" fill="#8a4b1f"/>' +
+  '<path d="M7 39h50M7 47h50" stroke="#5b2e10" stroke-width="1.6"/>' +
+  '<path d="M7 31h50v4H7z" fill="#5b2e10" opacity=".55"/>' +
+  '<path d="M13 31h6v25h-6zM45 31h6v25h-6z" fill="#e9b949"/>' +
+  '<path d="M13 31h2v25h-2zM45 31h2v25h-2z" fill="#fff3c4" opacity=".55"/>' +
+  '<path d="M7 31h50v21a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4z" fill="none" stroke="#3a1a07" stroke-width="2.2" stroke-linejoin="round"/>';
+var CHEST_CLOSED =
+  '<svg viewBox="0 0 64 64" aria-hidden="true">' +
+  '<path d="M7 31V21C7 11 18 7 32 7s25 4 25 14v10z" fill="#a85a26"/>' +
+  '<path d="M11 18c3-6 11-8 21-8s16 2 19 6" stroke="#d98a4a" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7"/>' +
+  '<path d="M13 31V13.5c1.8-1.3 4-2.3 6-2.9V31zM45 31V10.6c2.2.6 4.2 1.6 6 2.9V31z" fill="#e9b949"/>' +
+  '<path d="M7 31V21C7 11 18 7 32 7s25 4 25 14v10z" fill="none" stroke="#3a1a07" stroke-width="2.2" stroke-linejoin="round"/>' +
+  CHEST_BODY +
+  '<path d="M5 28h54v6H5z" fill="#e9b949" stroke="#3a1a07" stroke-width="2" stroke-linejoin="round"/>' +
+  '<rect x="26" y="26" width="12" height="14" rx="2.5" fill="#f4cd5c" stroke="#3a1a07" stroke-width="2"/>' +
+  '<circle cx="32" cy="31.5" r="2.2" fill="#3a1a07"/><path d="M31 32.5h2l.6 4h-3.2z" fill="#3a1a07"/>' +
+  "</svg>";
+var CHEST_OPEN =
+  '<svg viewBox="0 0 64 64" aria-hidden="true">' +
+  '<path d="M9 27 13 5h38l4 22z" fill="#6e3814" stroke="#3a1a07" stroke-width="2.2" stroke-linejoin="round"/>' +
+  '<path d="M13 9h38" stroke="#e9b949" stroke-width="3"/>' +
+  '<ellipse cx="32" cy="30" rx="24" ry="7" fill="#ffd75e"/>' +
+  '<circle cx="20" cy="26" r="4.5" fill="#ffe28a" stroke="#c98f1d" stroke-width="1.4"/><circle cx="31" cy="23" r="5" fill="#ffe28a" stroke="#c98f1d" stroke-width="1.4"/>' +
+  '<circle cx="43" cy="26" r="4.5" fill="#ffe28a" stroke="#c98f1d" stroke-width="1.4"/><circle cx="37" cy="28" r="3.6" fill="#ffd040" stroke="#c98f1d" stroke-width="1.2"/>' +
+  '<path d="M48 17l1.2 2.8 2.8 1.2-2.8 1.2L48 25l-1.2-2.8-2.8-1.2 2.8-1.2zM15 15l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z" fill="#fff8d6"/>' +
+  CHEST_BODY +
+  '<rect x="26" y="31" width="12" height="9" rx="2" fill="#f4cd5c" stroke="#3a1a07" stroke-width="2"/>' +
+  "</svg>";
+
+function chestIcon(open) {
+  var icon = el("span", "sl-chest-svg");
+  icon.innerHTML = open ? CHEST_OPEN : CHEST_CLOSED;
+  return icon;
+}
+
 // A coin's value for this bet: coins (short) or the prize
 function coinLabel(coin, bet) {
   if (coin.prize) return coin.prize.toUpperCase();
+  if (coin.chest) return "CHEST";
   var value = Math.floor(coin.x * bet);
   return value >= 10000 ? (value / 1000).toFixed(value >= 100000 ? 0 : 1).replace(/\.0$/, "") + "K" : formatCoins(value);
 }
@@ -634,6 +672,11 @@ function coinLabel(coin, bet) {
 function coinCell(coin, bet) {
   var box = cell("coin");
   box.classList.add("valued");
+  // A treasure chest (closed: 🧰 - opened: the prize it gave)
+  if (coin.chest) {
+    box.classList.add("chest");
+    box.querySelector(".sl-symbol").replaceChildren(chestIcon(!!coin.prize));
+  }
   if (coin.prize) box.classList.add("prize", "prize-" + coin.prize);
   box.appendChild(el("span", "sl-coin-value", coinLabel(coin, bet)));
   return box;
@@ -740,6 +783,22 @@ async function playCoinGame(result, from, started) {
     locks.forEach((box, n) => box.animate([{ transform: "scale(1)" }, { transform: "scale(1.18)", filter: "brightness(1.6)" }, { transform: "scale(1)" }], { duration: 600, delay: n * gap, easing: "ease-out" }));
     await wait(Math.min(setup.rules.coinIntroTime * 0.9, 700 + locks.length * gap));
   }
+  // A 🧰 among the coins: the player picks a box
+  var openAll = async (coins) => {
+    for (var coin of coins) {
+      if (!coin.chest || coin.prize) continue;
+      await pickChest(result, coin);
+      // The coin shows its prize now
+      var old = cellsOf(coin.reel)[coin.row];
+      var box = coinCell(coin, bet);
+      box.classList.add("held");
+      if (old) old.replaceWith(box);
+      box.animate([{ transform: "scale(0.6)", filter: "brightness(2)" }, { transform: "scale(1.2)" }, { transform: "scale(1)" }], { duration: 700, easing: "ease-out" });
+      flashPrize(coin.prize);
+      text.innerText = "🪙 " + formatCoins(sum());
+    }
+  };
+  await openAll([...held.values()]);
 
   var time = setup.rules.respinTime;
   for (var n = from; n < game.respins.length; n++) {
@@ -766,6 +825,7 @@ async function playCoinGame(result, from, started) {
     showRespins(respin.left, landed.size > 0);
     progress(n + 1);
     await wait(time * 0.25);
+    await openAll([...landed.values()]);
   }
   counter.hidden = true;
   counter.querySelector(".sl-label").innerText = "Free spins";
@@ -802,6 +862,92 @@ async function playCoinGame(result, from, started) {
   showCoins(result.coins, bet);
   bonusDone(result);
   activeBonus = null;
+}
+
+/*
+ * A 🧰 landed: three closed chests - MINI, MAJOR and MEGA are behind them,
+ * shuffled on the server. The player picks one, the server opens it (and
+ * shows what the others had). Every copy of the coin gets the prize.
+ */
+var chestAnswers = new Map(); // "reel|row" -> the answer of the server
+socket.on("chestOpened", (data) => {
+  var waiting = chestAnswers.get(data.reel + "|" + data.row);
+  if (typeof waiting == "function") waiting(data);
+  else chestAnswers.set(data.reel + "|" + data.row, data);
+});
+
+function applyChest(result, data) {
+  var game = result.coinGame;
+  [result.coins || [], game.start, game.coins, ...game.respins.map((r) => r.coins)].forEach((list) =>
+    list.forEach((coin) => {
+      if (coin.reel == data.reel && coin.row == data.row && coin.chest) Object.assign(coin, { x: setup.coins.prizes.find((p) => p.prize == data.prize).x, prize: data.prize });
+    }),
+  );
+  game.x = data.x;
+  game.win = data.gameWin;
+  result.win = data.win;
+}
+
+function pickChest(result, coin) {
+  var stage = document.getElementById("slStage");
+  if (result.id) socket.emit("chestShow", { id: result.id });
+  return new Promise((resolve) => {
+    stage.hidden = false;
+    stage.className = "sl-stage bonus chest-stage";
+    var row = el("div", "sl-chests");
+    var boxes = [0, 1, 2].map((i) => {
+      var box = el("button", "sl-chest");
+      box.type = "button";
+      box.setAttribute("aria-label", "Chest " + (i + 1));
+      var icon = el("span", "sl-chest-icon");
+      icon.appendChild(chestIcon(false));
+      box.append(icon, el("span", "sl-chest-prize", "?"));
+      box.addEventListener("click", () => choose(i));
+      return box;
+    });
+    row.append(...boxes);
+    var sub = el("div", "sl-stage-sub", "Pick one: MINI · MAJOR · MEGA");
+    stage.replaceChildren(el("div", "sl-bonus-glow"), el("div", "sl-stage-title", "TREASURE CHEST"), el("div", "sl-big-title", "PICK A CHEST"), row, sub);
+    boxes[0].focus();
+    var chosen = false;
+    var key = coin.reel + "|" + coin.row;
+    async function choose(pick) {
+      if (chosen) return;
+      chosen = true;
+      boxes.forEach((box, i) => {
+        box.disabled = true;
+        box.classList.toggle("picked", i == pick);
+      });
+      boxes[pick].animate([{ transform: "rotate(0)" }, { transform: "rotate(-8deg)" }, { transform: "rotate(8deg)" }, { transform: "rotate(-5deg)" }, { transform: "rotate(0)" }], { duration: 650, iterations: 2 });
+      socket.emit("chestPick", { id: result.id, reel: coin.reel, row: coin.row, pick: pick });
+      // The answer (it may have come already) - or, without one, go on (the server picks at the payout)
+      var data = chestAnswers.get(key);
+      if (!data) data = await Promise.race([new Promise((done) => chestAnswers.set(key, done)), wait(8000).then(() => null)]);
+      chestAnswers.delete(key);
+      await wait(700);
+      if (data) {
+        applyChest(result, data);
+        // The picked chest first, then what the others had
+        var show = (i) => {
+          var box = boxes[i];
+          box.classList.add("open", "prize-" + data.boxes[i]);
+          box.querySelector(".sl-chest-prize").innerText = data.boxes[i].toUpperCase();
+          box.querySelector(".sl-chest-icon").replaceChildren(chestIcon(true));
+        };
+        show(pick);
+        var prize = setup.coins.prizes.find((p) => p.prize == data.prize);
+        sub.className = "sl-stage-sub won";
+        sub.innerText = data.prize.toUpperCase() + " · 🪙 " + formatCoins(Math.floor(result.bet * prize.x));
+        coinShower(stage, data.prize == "mega" ? 60 : data.prize == "major" ? 35 : 20);
+        await wait(1100);
+        boxes.forEach((_, i) => i != pick && show(i));
+        await wait(1500);
+      }
+      stage.hidden = true;
+      stage.replaceChildren();
+      resolve(data);
+    }
+  });
 }
 
 // An empty spot spins: blanks and coins roll by, it stops on `result` (a coin cell) or stays empty
@@ -1174,6 +1320,9 @@ function showPaytable() {
   row(el("span", "sl-prize-badge plain", "🪙 coin"), "🪙 " + formatCoins(Math.floor(bet * values[0])) + " - " + formatCoins(Math.floor(bet * values[values.length - 1])));
   c.prizes.forEach((p) => row(el("span", "sl-prize-badge prize-" + p.prize, p.prize.toUpperCase()), "🪙 " + formatCoins(Math.floor(bet * p.x))));
   row(el("span", "sl-prize-badge prize-ultra", "ULTRA"), "🪙 " + formatCoins(bet * c.ultra));
+  var chestBadge = el("span", "sl-prize-badge plain sl-chest-badge", " chest");
+  chestBadge.prepend(chestIcon(false));
+  row(chestBadge, "Pick 1 of 3 chests: MINI, MAJOR or MEGA");
   dialog.append(table, el("h3", "sl-pays-title", "Bonus"), bonus, el("h3", "sl-pays-title", "Coin game"), coinText, prizeTable, el("h3", "sl-pays-title", "The 9 lines"), lines, close);
   backdrop.appendChild(dialog);
   // (in full screen only the machine is seen: the paytable goes in there)

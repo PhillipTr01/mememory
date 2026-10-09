@@ -1231,3 +1231,123 @@
 .sl-main .cs-fs-coins {
   display: none;
 }
+
+/* ---------- Treasure chest: a coin of the coin game - pick one of three ---------- */
+.sl-cell.chest .sl-symbol {
+  filter: drop-shadow(0 0 8px rgba(255, 196, 80, 0.6));
+}
+
+.sl-cell.chest:not(.prize) .sl-coin-value {
+  background: linear-gradient(135deg, #8a5a2b, #c9a24a);
+  box-shadow: none;
+  color: #fff;
+}
+
+.sl-stage.chest-stage {
+  gap: 0.5rem;
+}
+
+.sl-chests {
+  display: flex;
+  gap: clamp(0.5rem, 3vw, 1.4rem);
+  margin: 0.4rem 0;
+}
+
+.sl-chest {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  width: clamp(4.4rem, 15vw, 7.5rem);
+  padding: 0.7rem 0.4rem 0.55rem;
+  border: 2px solid rgba(var(--mm-accent-rgb), 0.45);
+  border-radius: 16px;
+  background: radial-gradient(circle at 50% 30%, rgba(var(--mm-accent-rgb), 0.22), rgba(20, 16, 8, 0.9));
+  color: #f3d27a;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s, opacity 0.3s;
+}
+
+.sl-chest:hover:not(:disabled),
+.sl-chest:focus-visible {
+  transform: translateY(-4px) scale(1.05);
+  border-color: var(--mm-accent);
+  outline: none;
+}
+
+.sl-chest:disabled {
+  cursor: default;
+}
+
+.sl-chest-svg {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  line-height: 0;
+}
+
+.sl-chest-svg svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sl-chest-icon {
+  font-size: clamp(2.8rem, 9vw, 4.4rem);
+  line-height: 1;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+}
+
+.sl-chest.open .sl-chest-icon {
+  animation: sl-pop 0.45s ease-out;
+}
+
+.sl-chest:not(.picked).open .sl-chest-icon {
+  filter: grayscale(0.6) brightness(0.8);
+}
+
+.sl-chest-badge .sl-chest-svg {
+  vertical-align: -0.15em;
+}
+
+.sl-chest-prize {
+  min-width: 3.6rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.sl-chests:has(.picked) .sl-chest:not(.picked) {
+  opacity: 0.55;
+}
+
+.sl-chest.picked {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 24px rgba(var(--mm-accent-rgb), 0.55);
+}
+
+.sl-chest.open .sl-chest-prize {
+  color: #fff;
+  animation: sl-pop 0.4s ease-out;
+}
+
+.sl-chest.open.prize-mini .sl-chest-prize {
+  background: var(--prize-mini);
+}
+
+.sl-chest.open.prize-major .sl-chest-prize {
+  background: var(--prize-major);
+}
+
+.sl-chest.open.prize-mega .sl-chest-prize {
+  background: var(--prize-mega);
+}
+
+.sl-cell.chest .sl-chest-svg {
+  width: 1.2em;
+  height: 1.2em;
+  margin-top: -0.12em;
+}

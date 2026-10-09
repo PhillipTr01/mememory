@@ -174,6 +174,67 @@ before(async () => {
   tokens.bob = h.addUser("bob");
 });
 
+test("slots: a 🧰 in the coin game - the player picks one of three boxes (MINI, MAJOR, MEGA shuffled on the server), the pick pays", async () => {
+  const timing = { SLOTS_HOLD: 60000, SLOTS_MIN_GAP: 0, SLOTS_SPIN: 20, SLOTS_COUNT_TIME: 20, SLOTS_COIN_INTRO: 30, SLOTS_RESPIN: 20, SLOTS_ULTRA_TIME: 20, SLOTS_BONUS_END: 20, SLOTS_BIG_TIME: 20, SLOTS_SWEAT: 0, SLOTS_TEST_BONUS: "chest" };
+  const before = Object.fromEntries(Object.keys(timing).map((key) => [key, config[key]]));
+  Object.assign(config, timing);
+  try {
+    sockets.forEach((socket) => socket.close());
+    await h.wait(50);
+    h.setCoins("alice", 5000);
+    const page = client("alice");
+    await h.once(page, "slotsSetup");
+    const result = h.once(page, "slotsResult");
+    page.emit("spin", { bet: 100 });
+    const spin = await result;
+    const chest = spin.coinGame.start.find((c) => c.chest);
+    assert.ok(chest && chest.x === 0 && !chest.prize, "a closed chest - worth nothing yet");
+    assert.ok(!JSON.stringify(spin).includes("boxes"), "the boxes stay on the server");
+    page.emit("bonusStart", { id: spin.id });
+    await h.wait(10);
+    // The chest is on the screen: the coin game waits for the pick (no payout meanwhile)
+    page.emit("chestShow", { id: spin.id });
+    await h.wait(30 + spin.coinGame.respins.length * 20 + 300);
+    assert.strictEqual(h.coinsOf("alice"), 4900, "waits for the pick");
+    // Wrong picks: nothing
+    page.emit("chestPick", { id: spin.id, reel: chest.reel, row: chest.row, pick: 3 });
+    page.emit("chestPick", { id: "nope", reel: chest.reel, row: chest.row, pick: 0 });
+    const opened = h.once(page, "chestOpened");
+    page.emit("chestPick", { id: spin.id, reel: chest.reel, row: chest.row, pick: 1 });
+    const data = await opened;
+    assert.deepStrictEqual([...data.boxes].sort(), ["major", "mega", "mini"]);
+    assert.strictEqual(data.prize, data.boxes[1], "the picked box");
+    const prizeX = slots.COIN_VALUES.find((v) => v.prize === data.prize).x;
+    assert.strictEqual(data.win, spin.win + Math.min(spin.coinGame.win + 100 * prizeX, 100 * slots.COIN_MAX_WIN) - spin.coinGame.win);
+    // A second pick of the same chest: nothing
+    let again = false;
+    page.once("chestOpened", () => (again = true));
+    page.emit("chestPick", { id: spin.id, reel: chest.reel, row: chest.row, pick: 0 });
+    await h.wait(30 + spin.coinGame.respins.length * 20 + 300);
+    assert.strictEqual(again, false);
+    assert.strictEqual(h.coinsOf("alice"), 4900 + data.win, "the prize of the pick is paid");
+    page.close();
+  } finally {
+    Object.assign(config, before);
+  }
+});
+
+test("slots: the chests take their weight from MINI, MAJOR and MEGA in equal parts - every prize as likely as before, the payback stays", () => {
+  const weight = (prize) => slots.COIN_VALUES.find((v) => v.prize === prize).weight;
+  const chest = slots.COIN_VALUES.find((v) => v.chest).weight;
+  assert.strictEqual(chest % 3, 0);
+  assert.deepStrictEqual(["mini", "major", "mega"].map((p) => weight(p) + chest / 3), [110, 35, 6]);
+  for (let i = 0; i < 50; i++) assert.deepStrictEqual([...slots.chestBoxes()].sort(), ["major", "mega", "mini"]);
+  // Opened: every copy of the coin gets the prize, the coin game and the spin pay it
+  const result = slots.spin(100, undefined, { forceBonus: "chest" });
+  const { reel, row } = result.coins.find((c) => c.chest);
+  const before = result.win;
+  const more = slots.openChest(result, 100, reel, row, "major");
+  assert.strictEqual(result.win, before + more);
+  assert.ok(more > 0 || result.coinGame.win === 100 * slots.COIN_MAX_WIN);
+  [result.coins, result.coinGame.start, result.coinGame.coins].forEach((list) => assert.strictEqual(list.find((c) => c.reel === reel && c.row === row).prize, "major"));
+});
+
 after(async () => {
   sockets.forEach((s) => s.close());
   await server.close();
@@ -359,7 +420,9 @@ test("slots: the coin game waits for the click too and is paid when it is over",
     assert.strictEqual(h.coinsOf("alice"), 4900, "nothing paid before the start");
     page.emit("bonusStart", { id: spin.id });
     await h.wait(30 + spin.coinGame.respins.length * 20 + 300);
-    assert.strictEqual(h.coinsOf("alice"), 4900 + spin.win);
+    // (a 🧰 nobody picked: opened at random at the payout - it pays on top)
+    if (spin.coinGame.coins.some((c) => c.chest)) assert.ok(h.coinsOf("alice") > 4900 + spin.win);
+    else assert.strictEqual(h.coinsOf("alice"), 4900 + spin.win);
     page.close();
   } finally {
     Object.assign(config, before);

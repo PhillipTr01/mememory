@@ -116,7 +116,24 @@ module.exports = function (io, options = {}) {
     }
   }
 
+  /*
+   * A 🧰 of the coin game opened: the box the player picked (0 - 2) - what is behind it was shuffled at the
+   * spin and stays on the server until then. Pays its prize; the answer shows every box.
+   */
+  function openChest(entry, chest, pick) {
+    chest.pick = pick;
+    const prize = chest.boxes[pick];
+    const more = slots.openChest(entry.result, entry.result.bet, chest.reel, chest.row, prize);
+    entry.win += more;
+    if (entry.feed) entry.feed.win = entry.win;
+    entry.note += ` · chest ${prize.toUpperCase()}`;
+    persist.changed("slots");
+    return { id: entry.id, reel: chest.reel, row: chest.row, boxes: chest.boxes, pick: pick, prize: prize, x: entry.result.coinGame.x, gameWin: entry.result.coinGame.win, win: entry.win };
+  }
+
   async function payPending(entry) {
+    // (a chest nobody picked: a box at random - every box is worth the same on average)
+    (entry.chests || []).filter((chest) => chest.pick == null).forEach((chest) => openChest(entry, chest, Math.floor(Math.random() * chest.boxes.length)));
     clearTimeout(timers.get(entry.id));
     timers.delete(entry.id);
     const index = machine.pending.indexOf(entry);
@@ -179,6 +196,30 @@ module.exports = function (io, options = {}) {
       }),
     );
 
+    // A 🧰 is on the screen: the coin game waits for the pick (paid anyway after SLOTS_HOLD, a box at random)
+    socket.on(
+      "chestShow",
+      safe("chestShow", (data) => {
+        const entry = machine.pending.find((e) => e.id === (data && data.id) && e.name === username);
+        if (!entry || !entry.result || !(entry.chests || []).some((chest) => chest.pick == null)) return;
+        if (entry.state === "playing") hold(entry, "paused");
+      }),
+    );
+
+    // The player picked a box of a 🧰: what is behind every box, the prize paid
+    socket.on(
+      "chestPick",
+      safe("chestPick", (data) => {
+        if (data == null || !Number.isInteger(data.pick)) return;
+        const entry = machine.pending.find((e) => e.id === data.id && e.name === username);
+        const chest = entry && (entry.chests || []).find((c) => c.reel === data.reel && c.row === data.row);
+        if (!chest || chest.pick != null || data.pick < 0 || data.pick >= chest.boxes.length) return;
+        socket.emit("chestOpened", openChest(entry, chest, data.pick));
+        // On with the coin game (from where the page is)
+        if (entry.state === "paused") play(entry, 0);
+      }),
+    );
+
     // How far the page is in a bonus game (to go on there after a break)
     socket.on(
       "bonusProgress",
@@ -233,7 +274,7 @@ module.exports = function (io, options = {}) {
           // (debug, the test world only: the next spin starts the bonus the admin picked)
           const test = nextBonus || config.SLOTS_TEST_BONUS;
           nextBonus = null;
-          const result = slots.spin(bet, undefined, { forceBonus: test === "free" || test === "coins" ? test : test === true ? "free" : null });
+          const result = slots.spin(bet, undefined, { forceBonus: ["free", "coins", "chest"].includes(test) ? test : test === true ? "free" : null });
           machine.spins++;
           const payIn = showTime(bet, result);
           let id = null;
@@ -256,6 +297,11 @@ module.exports = function (io, options = {}) {
               state: null,
               feed: { name: username, bet: bet, win: result.win, symbol: best ? best.symbol : game ? "coin" : "bonus", count: best ? best.count : 3, bonus: result.bonus ? result.bonus.spins : null, coins: game ? game.coins.length : null, ultra: game ? game.ultra : false, at: Date.now() },
             };
+            // The 🧰 of the coin game: their boxes, shuffled now - nobody sees them before the pick
+            if (game) {
+              entry.chests = game.coins.filter((coin) => coin.chest).map((coin) => ({ reel: coin.reel, row: coin.row, boxes: slots.chestBoxes(), pick: null }));
+              if (!entry.chests.length) delete entry.chests;
+            }
             machine.pending.push(entry);
             persist.changed("slots");
             // A bonus game waits for the player's click
@@ -315,10 +361,10 @@ module.exports = function (io, options = {}) {
   // (a spin without a win too, while its reels still turn on the page)
   inPlay.register("slots", (name) => machine.pending.some((entry) => entry.name === name) || Date.now() - (lastSpin.get(name) || 0) < config.SLOTS_SPIN + 500);
 
-  // Debug (the admin's test world): the next spin starts the free spins ("free") or the coin game ("coins")
+  // Debug (the admin's test world): the next spin starts the free spins ("free"), the coin game ("coins") or the coin game with a 🧰 ("chest")
   let nextBonus = null;
   function forceBonus(kind) {
-    nextBonus = kind === "free" || kind === "coins" ? kind : null;
+    nextBonus = ["free", "coins", "chest"].includes(kind) ? kind : null;
     return true;
   }
 

@@ -156,7 +156,7 @@ const GAMES = {
             `The free spins play by themselves. Every win is paid times the multiplier - and it grows by ${slots.BONUS_STEP} after every free spin.`,
             `The free spins turn their own reels: fewer 🍌, more 🎁 - three 🎁 again: ${slots.RETRIGGER} free spins more (up to ${slots.MAX_FREE_SPINS} in one bonus).`,
             `${slots.COIN_TRIGGER} or more 🪙 anywhere start the coin game: the coins stay, the empty spots get ${slots.COIN_RESPINS} respins - every new coin brings them back to ${slots.COIN_RESPINS}.`,
-            `Every 🪙 pays its value or a prize: ${slots.COIN_VALUES.filter((v) => v.prize).map((v) => v.prize.toUpperCase() + " " + v.x + "×").join(", ")} the bet. All 15 spots full: ULTRA, ${slots.ULTRA}× the bet on top (the coin game pays at most ${slots.COIN_MAX_WIN}×).`,
+            `Every 🪙 pays its value or a prize: ${slots.COIN_VALUES.filter((v) => v.prize).map((v) => v.prize.toUpperCase() + " " + v.x + "×").join(", ")} the bet. A 🧰 treasure chest: pick one of three closed chests - MINI, MAJOR and MEGA are behind them, shuffled. All 15 spots full: ULTRA, ${slots.ULTRA}× the bet on top (the coin game pays at most ${slots.COIN_MAX_WIN}×).`,
             `The free spins pay at most ${slots.MAX_WIN}× the bet (then the bonus ends). On average the machine pays back about ${slotsRtp()}% of the bets.`,
             "The line wins of a spin that starts a bonus count as well - first the lines, then the bonus.",
             "Your coins come when the spin is over on the screen.",

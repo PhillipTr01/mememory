@@ -64,6 +64,11 @@ const MAX_FREE_SPINS = 50; // never more free spins than this in one bonus
  * when the respins are used up or all 15 spots are coins. Every coin carries
  * a value (times the bet) or a prize: MINI, MAJOR, MEGA. All 15 spots full:
  * the ULTRA prize on top. The coin game pays everything on its coins.
+ * A 🧰 treasure chest coin: the player picks one of three closed boxes -
+ * behind them MINI, MAJOR and MEGA, shuffled (game/slots chestBoxes, kept on
+ * the server until the pick). A chest is a MINI, MAJOR or MEGA with the same
+ * chance each - its weight comes from the three prizes in equal parts, so
+ * every prize is exactly as likely as without chests: the payback stays.
  * (Three 🎁 and five 🪙 at once: the free spins win, the coins pay nothing.)
  */
 const COIN = "coin";
@@ -87,10 +92,16 @@ const COIN_VALUES = [
   { x: 5, weight: 750 },
   { x: 8, weight: 400 },
   { x: 15, weight: 200 },
-  { x: 25, prize: "mini", weight: 110 },
-  { x: 60, prize: "major", weight: 35 },
-  { x: 150, prize: "mega", weight: 6 },
+  { x: 25, prize: "mini", weight: 106 },
+  { x: 60, prize: "major", weight: 31 },
+  { x: 150, prize: "mega", weight: 2 },
+  // (4 of every prize's weight: MINI 110, MAJOR 35, MEGA 6 together with the chests)
+  { chest: true, weight: 12 },
 ];
+const CHEST_PRIZES = ["mini", "major", "mega"];
+const prizeX = (prize) => COIN_VALUES.find((field) => field.prize === prize).x;
+// What a chest is worth on average (one of the three prizes, each as likely)
+const CHEST_X = CHEST_PRIZES.reduce((sum, prize) => sum + prizeX(prize), 0) / CHEST_PRIZES.length;
 const ULTRA = 500; // all 15 spots full: this many times the bet on top
 const COIN_MAX_WIN = 1000; // the coin game never pays more than this many times the bet
 const total = (list) => list.reduce((sum, field) => sum + field.weight, 0);
@@ -216,6 +227,8 @@ function reels(bet, randomInt, fixed, strips = STRIPS) {
 // A coin's value (times the bet) or prize
 function coinValue(randomInt) {
   const field = COIN_VALUES[roll(COIN_VALUES, randomInt)];
+  // (a chest is worth nothing until it is opened)
+  if (field.chest) return { x: 0, chest: true };
   return field.prize ? { x: field.x, prize: field.prize } : { x: field.x };
 }
 
@@ -247,9 +260,44 @@ function coinGame(bet, start, randomInt) {
     left = fresh.length ? COIN_RESPINS : left - 1;
     respins.push({ coins: fresh, left: left });
   }
-  const ultra = taken.size === REELS * ROWS;
-  const x = coins.reduce((sum, c) => sum + c.x, 0) + (ultra ? ULTRA : 0);
-  return { start: start, respins: respins, coins: coins, ultra: ultra, x: x, win: Math.min(Math.floor(bet * x), bet * COIN_MAX_WIN) };
+  const game = { start: start, respins: respins, coins: coins, ultra: taken.size === REELS * ROWS };
+  return settle(game, bet);
+}
+
+// What the coin game pays from its coins now (again after a chest is opened)
+function settle(game, bet) {
+  game.x = game.coins.reduce((sum, c) => sum + c.x, 0) + (game.ultra ? ULTRA : 0);
+  game.win = Math.min(Math.floor(bet * game.x), bet * COIN_MAX_WIN);
+  return game;
+}
+
+// The three boxes of a chest: MINI, MAJOR and MEGA in a random order
+function chestBoxes(randomInt = crypto.randomInt) {
+  const boxes = CHEST_PRIZES.slice();
+  for (let i = boxes.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [boxes[i], boxes[j]] = [boxes[j], boxes[i]];
+  }
+  return boxes;
+}
+
+/*
+ * A chest of the coin game is opened with a prize: every copy of the coin
+ * (in sight, at the start, in its respin) gets it, the coin game and the
+ * spin pay it. Returns the coins more the spin pays.
+ */
+function openChest(result, bet, reel, row, prize) {
+  const game = result.coinGame;
+  const lists = [result.coins || [], game.start, game.coins, ...game.respins.map((r) => r.coins)];
+  for (const list of lists) {
+    for (const coin of list) {
+      if (coin.reel === reel && coin.row === row && coin.chest) Object.assign(coin, { x: prizeX(prize), prize: prize });
+    }
+  }
+  const before = game.win;
+  settle(game, bet);
+  result.win += game.win - before;
+  return game.win - before;
 }
 
 /*
@@ -302,7 +350,7 @@ function spin(bet, randomInt = crypto.randomInt, options = {}) {
       return at[randomInt(at.length)];
     });
   // ... or a 🪙 on every reel (and no 🎁): the coin game every time
-  if (force === "coins")
+  if (force === "coins" || force === "chest")
     fixed = STRIPS.map((strip) => {
       const at = stopsWhere(strip, (w) => w.includes(COIN) && !w.includes(BONUS));
       return at[randomInt(at.length)];
@@ -336,6 +384,8 @@ function spin(bet, randomInt = crypto.randomInt, options = {}) {
   }
   // The 🪙 in sight (with their values); five of them start the coin game (not with the free spins)
   const coins = coinsIn(base.grid, randomInt);
+  // (testing: the first 🪙 is a 🧰)
+  if (force === "chest" && coins.length) coins[0] = { reel: coins[0].reel, row: coins[0].row, x: 0, chest: true };
   let coinResult = null;
   if (!bonus && coins.length >= COIN_TRIGGER) {
     coinResult = coinGame(bet, coins, randomInt);
@@ -462,7 +512,7 @@ function coinRtp() {
     memo.set(key, result);
     return result;
   }
-  const mean = COIN_VALUES.reduce((sum, f) => sum + f.x * f.weight, 0) / total(COIN_VALUES);
+  const mean = COIN_VALUES.reduce((sum, f) => sum + (f.chest ? CHEST_X : f.x) * f.weight, 0) / total(COIN_VALUES);
   let chance = 0;
   let paid = 0;
   let ultra = 0;
@@ -486,9 +536,9 @@ function catalog() {
     strips: STRIPS,
     freeStrips: FREE_STRIPS,
     bonus: { spins: BONUS_SPINS.map((f) => f.spins), multipliers: BONUS_MULTIPLIERS.map((f) => f.multiplier), step: BONUS_STEP, retrigger: RETRIGGER, maxSpins: MAX_FREE_SPINS },
-    coins: { trigger: COIN_TRIGGER, respins: COIN_RESPINS, values: COIN_VALUES.filter((f) => !f.prize).map((f) => f.x), prizes: COIN_VALUES.filter((f) => f.prize).map((f) => ({ prize: f.prize, x: f.x })), ultra: ULTRA, maxWin: COIN_MAX_WIN },
+    coins: { trigger: COIN_TRIGGER, respins: COIN_RESPINS, values: COIN_VALUES.filter((f) => !f.prize && !f.chest).map((f) => f.x), prizes: COIN_VALUES.filter((f) => f.prize).map((f) => ({ prize: f.prize, x: f.x })), chest: CHEST_PRIZES.length, ultra: ULTRA, maxWin: COIN_MAX_WIN },
     maxWin: MAX_WIN,
   };
 }
 
-module.exports = { SYMBOLS, LINES, STRIPS, FREE_STRIPS, FREE_DROP, FREE_BONUS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, lineWin, spin, coinGame, coinSweat, coinSweatReels, sweatShare, rtp, catalog };
+module.exports = { SYMBOLS, LINES, STRIPS, FREE_STRIPS, FREE_DROP, FREE_BONUS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, CHEST_PRIZES, lineWin, spin, coinGame, chestBoxes, openChest, coinSweat, coinSweatReels, sweatShare, rtp, catalog };
