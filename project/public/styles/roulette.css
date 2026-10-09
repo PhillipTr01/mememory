@@ -385,10 +385,11 @@
 .rl-bets {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.45rem;
   max-height: 220px;
   margin: 0;
-  padding: 0;
+  /* (room for a crown or flames at the top and bottom row) */
+  padding: 0.3rem 0;
   overflow-y: auto;
   list-style: none;
   scrollbar-width: thin;

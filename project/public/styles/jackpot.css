@@ -1442,7 +1442,7 @@ body.jackpot-theme {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.55rem;
 }
 
 .jp-bets .player-item {
@@ -1571,7 +1571,7 @@ body.jackpot-theme {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.55rem;
   scrollbar-width: thin;
   scrollbar-color: var(--mm-surface-3) transparent;
 }

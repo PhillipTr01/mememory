@@ -54,6 +54,8 @@
 
 .lb-spot .mm-avatar.lg {
   box-shadow: 0 0 0 3px var(--mm-surface-3);
+  /* Room for what a frame or an animation puts over and under the avatar (crown, halo, flames, gem) */
+  margin: calc(var(--size) * 0.42) 0 calc(var(--size) * 0.18);
 }
 
 .lb-spot.place-1 .mm-avatar.lg {

@@ -1151,3 +1151,49 @@ input[type="number"]::-webkit-outer-spin-button {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+/* ---------- Scrollbars of the casino: thin, rounded, in the casino's colors ---------- */
+
+/* (Chrome / Edge / Safari: the rounded scrollbar below - only without the standard properties) */
+body.jackpot-theme * {
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+}
+
+/* Firefox: the standard ones (it has no rounded thumb) */
+@supports (-moz-appearance: none) {
+  body.jackpot-theme * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+  }
+}
+
+.jackpot-theme ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.jackpot-theme ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.jackpot-theme ::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14) padding-box;
+}
+
+.jackpot-theme ::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--mm-accent-rgb), 0.55) padding-box;
+}
+
+.jackpot-theme ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* The player list of the jackpot: a bit of room on the right for the scrollbar, a little at the top and bottom
+   (a crown, a halo or flames of the first and the last row) */
+.jackpot-theme .player-list {
+  gap: 0.55rem;
+  padding: 0.3rem 0.35rem 0.3rem 0;
+}
