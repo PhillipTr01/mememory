@@ -1338,3 +1338,17 @@
     gap: 0.3rem;
   }
 }
+
+/* The chips of a table go from its min to its max bet: the colour by place, the smallest grey ... the biggest copper */
+.bj-chip[data-rank="0"],
+.bj-chipface[data-rank="0"] { --chip: #4f5868; }
+.bj-chip[data-rank="1"],
+.bj-chipface[data-rank="1"] { --chip: #a65f59; }
+.bj-chip[data-rank="2"],
+.bj-chipface[data-rank="2"] { --chip: #5a77a3; }
+.bj-chip[data-rank="3"],
+.bj-chipface[data-rank="3"] { --chip: #4f9a8a; }
+.bj-chip[data-rank="4"],
+.bj-chipface[data-rank="4"] { --chip: #7c6a9c; }
+.bj-chip[data-rank="5"],
+.bj-chipface[data-rank="5"] { --chip: #b07c4c; }

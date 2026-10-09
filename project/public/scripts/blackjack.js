@@ -153,10 +153,62 @@ var CHIP_KEY = "bjChip";
 var chipValue = 100;
 try {
   chipValue = Number(localStorage.getItem(CHIP_KEY)) || 100;
-  // (a chip that is gone - the 5K: the biggest there is)
-  if (![10, 50, 100, 250, 500, 1000].includes(chipValue)) chipValue = 1000;
 } catch (error) {
   // only for now
+}
+
+/*
+ * The chips of a table: from its min bet (left) to its max bet (right), round steps in between that grow evenly -
+ * so they fit the limits the admin set. The colours go by place (the smallest grey ... the biggest copper).
+ */
+var CHIP_COUNT = 6;
+var CHIPS = [1000, 500, 250, 100, 50, 10]; // the chips of the table now, the biggest first (for the stacks on the fields)
+
+// A round number near `value` (1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5 times a power of ten)
+function roundChip(value) {
+  var power = Math.pow(10, Math.floor(Math.log10(Math.max(1, value))));
+  var best = null;
+  [1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5, 10].forEach((m) => {
+    var candidate = m * power;
+    if (candidate != Math.round(candidate)) return;
+    if (best == null || Math.abs(candidate - value) < Math.abs(best - value)) best = candidate;
+  });
+  return best != null ? best : Math.round(value);
+}
+
+function tableChips(min, max) {
+  if (!(max > min)) return [min];
+  var list = [min];
+  for (var i = 1; i < CHIP_COUNT - 1; i++) {
+    var value = roundChip(min * Math.pow(max / min, i / (CHIP_COUNT - 1)));
+    if (value > list[list.length - 1] && value < max) list.push(value);
+  }
+  list.push(max);
+  return list;
+}
+
+// The chip buttons for the limits of the table (built again only when they change)
+var shownChips = "";
+function renderChips() {
+  var list = tableChips(state.rules.minBet, state.rules.maxBet);
+  CHIPS = list.slice().reverse();
+  // The chip in the hand: one of these (the nearest)
+  if (!list.includes(chipValue)) chipValue = list.reduce((best, value) => (Math.abs(value - chipValue) < Math.abs(best - chipValue) ? value : best), list[0]);
+  var key = list.join(",");
+  if (key == shownChips) return;
+  shownChips = key;
+  document.querySelector(".bj-chips").replaceChildren(
+    ...list.map((value, i) => {
+      var chip = el("button", "bj-chip", shortCoins(value));
+      chip.type = "button";
+      chip.setAttribute("role", "radio");
+      chip.dataset.chip = value;
+      // (the colour by place - the biggest always copper)
+      chip.dataset.rank = String(CHIP_COUNT - list.length + i);
+      chip.title = "🪙 " + formatCoins(value);
+      return chip;
+    }),
+  );
 }
 var SIDE_NAMES = { pairs: "Perfect Pairs", plus3: "21+3" };
 
@@ -184,15 +236,14 @@ function placeChip(seatIndex, field) {
 }
 
 // The three bet fields of an own seat while betting: Perfect Pairs, the bet, 21+3
-// The coins on a field as one chip (the colour of the biggest chip in it, the edge thicker for more chips)
-var CHIPS = [1000, 500, 250, 100, 50, 10];
+// The coins on a field as one chip (the colour of the biggest chip of the table in it, the edge thicker for more chips)
 function shortCoins(value) {
   if (value >= 1000) return (value / 1000).toFixed(value % 1000 ? 1 : 0).replace(".0", "") + "K";
   return String(value);
 }
 
 function chipFace(amount) {
-  var top = CHIPS.find((chip) => chip <= amount) || 10;
+  var top = CHIPS.find((chip) => chip <= amount) || CHIPS[CHIPS.length - 1];
   var count = 0;
   var rest = amount;
   CHIPS.forEach((chip) => {
@@ -201,6 +252,7 @@ function chipFace(amount) {
   });
   var face = el("span", "bj-chipface" + (count > 3 ? " tall" : count > 1 ? " stacked" : ""), shortCoins(amount));
   face.dataset.chip = top;
+  face.dataset.rank = String(CHIP_COUNT - CHIPS.length + (CHIPS.length - 1 - CHIPS.indexOf(top)));
   face.title = "🪙 " + formatCoins(amount);
   return face;
 }
@@ -574,6 +626,7 @@ function renderBars() {
   betBar.hidden = !canBet;
   // Clear all bets: when there are own bets on the table
   document.getElementById("bjClearBets").hidden = !(state.phase == "betting" && mySeats().some((i) => state.seats[i].bet > 0));
+  if (state.rules) renderChips();
   if (canBet) {
     var seat = state.seats[selected];
     document.querySelectorAll(".bj-chip").forEach((chip) => {
@@ -655,7 +708,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (state) renderBars();
   };
-  document.querySelectorAll(".bj-chip").forEach((chip) => chip.addEventListener("click", () => pickChip(Number(chip.dataset.chip))));
+  // (the chips are made for every table: one listener for all of them)
+  document.querySelector(".bj-chips").addEventListener("click", (event) => {
+    var chip = event.target.closest(".bj-chip");
+    if (chip && !chip.disabled) pickChip(Number(chip.dataset.chip));
+  });
   document.querySelectorAll(".bj-chip-arrow").forEach((arrow) =>
     arrow.addEventListener("click", () => {
       var values = [...document.querySelectorAll(".bj-chip:not(:disabled)")].map((chip) => Number(chip.dataset.chip));
