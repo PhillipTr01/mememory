@@ -3611,3 +3611,32 @@ a.ad-case-row:hover {
 .ad-wager-short {
   color: var(--mm-muted);
 }
+
+/* Who may play: compact rows - about five in sight, then it scrolls */
+.ad-pick-scroll {
+  max-height: 228px;
+  overflow-y: auto;
+}
+
+.ad-pick-table {
+  border-spacing: 0 0.22rem;
+}
+
+.ad-pick-table td {
+  padding: 0.3rem 0.55rem;
+}
+
+.ad-pick-name .mm-avatar,
+.ad-pick-name .mm-avatar.sm {
+  --size: 24px;
+}
+
+.ad-pick-name {
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.ad-pick-check input {
+  width: 1.1rem;
+  height: 1.1rem;
+}
