@@ -312,9 +312,17 @@
                                 </select>
                                 <textarea id="adSeasonNames" hidden></textarea>
                                 <div id="adSeasonPicker" class="ad-players-pick" hidden>
-                                    <div id="adSeasonChips" class="ad-chips"></div>
-                                    <input id="adSeasonPick" class="mm-input" list="adSeasonPlayers" placeholder="Add a player ..." autocomplete="off">
-                                    <datalist id="adSeasonPlayers"></datalist>
+                                    <div class="ad-pick-bar">
+                                        <input id="adSeasonPick" class="mm-input" type="search" placeholder="Search a player ..." autocomplete="off" aria-label="Search a player">
+                                        <span id="adSeasonPickCount" class="ad-pick-count"></span>
+                                        <button type="button" id="adSeasonPickAll" class="mm-btn mm-btn-sm">All</button>
+                                        <button type="button" id="adSeasonPickNone" class="mm-btn mm-btn-sm">None</button>
+                                    </div>
+                                    <div class="ad-pick-scroll">
+                                        <table class="ad-table ad-pick-table">
+                                            <tbody id="adSeasonPickRows"></tbody>
+                                        </table>
+                                    </div>
                                 </div>
                                 <span class="ad-setting-hint">Who can't play in the season doesn't see it at all.</span>
                             </div>

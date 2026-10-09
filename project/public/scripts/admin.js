@@ -1502,15 +1502,16 @@ function seasonHead(season) {
 // The page of one season (only to look at): its head with what can be done, everything that is set as tiles, the prizes
 /* ---------- Who may play in a season: the players picked (whitelist / banlist) ---------- */
 
-var pickPlayers = [];
+var pickPlayers = null; // [{username, coins}]
 async function loadPickPlayers() {
-  if (pickPlayers.length) return;
+  if (pickPlayers) return;
   try {
-    pickPlayers = (await api("users?limit=1000")).map((p) => p.username);
+    pickPlayers = await api("users?limit=1000");
   } catch (error) {
+    pickPlayers = null;
     return;
   }
-  document.getElementById("adSeasonPlayers").replaceChildren(...pickPlayers.map((name) => new Option(name, name)));
+  renderPlayerPicks();
 }
 
 function pickedNames() {
@@ -1524,24 +1525,42 @@ function setPicked(names) {
   renderPlayerPicks();
 }
 
+// A table of every player in the casino: a check for who is on the list (the picked first)
 function renderPlayerPicks() {
-  var chips = document.getElementById("adSeasonChips");
-  var names = pickedNames();
-  chips.replaceChildren(
-    ...(names.length
-      ? names.map((name) => {
-          var chip = el("span", "ad-chip");
-          chip.append(createAvatar(name, "sm"), el("span", "", name));
-          var remove = el("button", "ad-chip-x", "✕");
-          remove.type = "button";
-          remove.setAttribute("aria-label", "Remove " + name);
-          remove.addEventListener("click", () => setPicked(pickedNames().filter((n) => n != name)));
-          chip.appendChild(remove);
-          return chip;
+  if (document.getElementById("adSeasonAccess").value == "all") return;
+  if (!pickPlayers) return loadPickPlayers();
+  var picked = new Set(pickedNames().map((n) => n.toLowerCase()));
+  var q = document.getElementById("adSeasonPick").value.trim().toLowerCase();
+  var rows = pickPlayers
+    .filter((p) => !q || p.username.toLowerCase().includes(q))
+    .sort((a, b) => picked.has(b.username.toLowerCase()) - picked.has(a.username.toLowerCase()) || a.username.localeCompare(b.username));
+  document.getElementById("adSeasonPickCount").innerText = picked.size + " of " + pickPlayers.length + " picked";
+  document.getElementById("adSeasonPickRows").replaceChildren(
+    ...(rows.length
+      ? rows.map((p) => {
+          var tr = el("tr", picked.has(p.username.toLowerCase()) ? "picked" : "");
+          var check = document.createElement("input");
+          check.type = "checkbox";
+          check.checked = picked.has(p.username.toLowerCase());
+          check.setAttribute("aria-label", p.username);
+          var toggle = () => setPicked(check.checked ? [...pickedNames(), p.username] : pickedNames().filter((n) => n.toLowerCase() != p.username.toLowerCase()));
+          check.addEventListener("change", toggle);
+          var box = el("td", "ad-pick-check");
+          box.appendChild(check);
+          var name = el("td", "");
+          var who = el("span", "ad-pick-name");
+          who.append(createAvatar(p.username, "sm"), el("span", "", p.username));
+          name.appendChild(who);
+          tr.append(box, name, el("td", "num mm-muted", "🪙 " + formatCoins(p.coins)));
+          tr.addEventListener("click", (event) => {
+            if (event.target == check) return;
+            check.checked = !check.checked;
+            toggle();
+          });
+          return tr;
         })
-      : [el("span", "ad-note", "Nobody on the list yet.")]),
+      : [el("tr", "", "")]),
   );
-  if (document.getElementById("adSeasonAccess").value != "all") loadPickPlayers();
 }
 
 function seasonDetail(season) {
@@ -2425,24 +2444,16 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("adSeasonForm").addEventListener("submit", saveSeason);
   document.getElementById("adSeasonAccess").addEventListener("change", (event) => {
     document.getElementById("adSeasonPicker").hidden = event.target.value == "all";
-    if (event.target.value != "all") loadPickPlayers();
+    if (event.target.value != "all") renderPlayerPicks();
   });
-  // The player picker: a name from the list (or typed) - Enter or picking it adds it
-  var pick = document.getElementById("adSeasonPick");
-  var addPick = () => {
-    var name = pick.value.trim();
-    if (!name) return;
-    var known = pickPlayers.find((p) => p.toLowerCase() == name.toLowerCase());
-    setPicked([...pickedNames(), known || name]);
-    pick.value = "";
-  };
-  pick.addEventListener("keydown", (event) => {
-    if (event.key == "Enter") {
-      event.preventDefault();
-      addPick();
-    }
+  // The player table: search, all (the ones shown) / none
+  document.getElementById("adSeasonPick").addEventListener("input", renderPlayerPicks);
+  document.getElementById("adSeasonPick").addEventListener("keydown", (event) => event.key == "Enter" && event.preventDefault());
+  document.getElementById("adSeasonPickAll").addEventListener("click", () => {
+    var q = document.getElementById("adSeasonPick").value.trim().toLowerCase();
+    setPicked([...pickedNames(), ...(pickPlayers || []).filter((p) => !q || p.username.toLowerCase().includes(q)).map((p) => p.username)]);
   });
-  pick.addEventListener("change", addPick);
+  document.getElementById("adSeasonPickNone").addEventListener("click", () => setPicked([]));
   document.getElementById("adSeasonPrizesOn").addEventListener("change", showPrizes);
   document.getElementById("adSeasonAddPrize").addEventListener("click", () => {
     var rows = document.querySelectorAll("#adSeasonPrizes .ad-prize-row");
