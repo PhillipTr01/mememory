@@ -236,8 +236,11 @@ function renderBoard() {
     tile.querySelector(".bc-animal-mine").innerText = mine ? "You: 🪙 " + formatCoins(mine) : "";
     tile.classList.toggle("has-mine", mine > 0);
   });
-  // A new round with bets: the result of the last one goes
-  if (table.phase != "rolling" && !rolling && table.bets.length) clearResult();
+  // A new round (after the pause of the last one): the board is clean again, the dice of the last roll pale
+  if (table.phase != "rolling" && !rolling) {
+    clearResult();
+    document.getElementById("bcDice").classList.add("idle");
+  }
 }
 
 /* ---------- Last rolls ---------- */
@@ -307,8 +310,7 @@ function renderStatus() {
     if (rolling) {
       status.className = "rl-status-text";
       status.innerText = "Shaking...";
-    } else if (table.phase == "idle" && !(document.querySelector(".bc-animal.hit") && table.bets.length == 0)) {
-      // (the result of the last round stays until the next bet)
+    } else if (table.phase == "idle") {
       status.className = "rl-status-text";
       status.innerText = "Place a bet to start the round";
     }

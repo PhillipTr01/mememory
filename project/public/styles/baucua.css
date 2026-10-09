@@ -334,8 +334,8 @@
 }
 
 .bc-animal-players .mm-avatar {
-  width: 22px;
-  height: 22px;
+  --size: 22px;
+  flex-shrink: 0;
   margin-left: -6px;
   box-shadow: 0 0 0 2px var(--mm-surface);
 }
@@ -432,8 +432,7 @@
   }
 
   .bc-animal-players .mm-avatar {
-    width: 20px;
-    height: 20px;
+    --size: 20px;
   }
 
   .bc-stage {
