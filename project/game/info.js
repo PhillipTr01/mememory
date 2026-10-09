@@ -59,7 +59,7 @@ const GAMES = {
         items: [
           "Click a case to see every item and its chance.",
           "Low risk: items close to the price. High risk: mostly cheap items, but a small chance of up to 50x.",
-          "Every case pays back a little less than it costs on average: low risk about 95%, balanced about 92-93%, high risk about 90-91% (the price of the big jackpots).",
+          "Every case pays back a little less than it costs on average: low risk about 97%, balanced about 92-93%, high risk about 87-88% (the price of the big jackpots).",
           "Provably fair: the seed is fixed (and its hash shown) before the battle and revealed after it.",
         ],
       },
