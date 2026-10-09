@@ -500,3 +500,25 @@ test("battles: a player has at most BATTLE_MAX_OPEN battles at a time - one fill
     Object.assign(config, old);
   }
 });
+
+test("battles: while the end plays (the mode reveal) nobody in the battle has lost yet - no second chance before it", async () => {
+  const inPlay = require("../game/in_play");
+  const old = config.BATTLE_MODE_REVEAL;
+  config.BATTLE_MODE_REVEAL = 600;
+  try {
+    h.setCoins("carol", 1000);
+    const carol = client("carol");
+    await waitFor(carol, "coins", (data) => data.coins === 1000);
+    const created = h.once(carol, "battleCreated");
+    carol.emit("createBattle", { cases: ["starter"], size: 2, mode: "random" });
+    const id = await created;
+    carol.emit("addBot", id);
+    const done = battleIn(await waitFor(carol, "battles", (data) => battleIn(data, id) && battleIn(data, id).phase === "done"), id);
+    assert.ok(inPlay.where("carol").includes("battles"), "the reveal still plays");
+    await h.wait(750);
+    // Over: nothing in play any more (a winner is paid by now)
+    assert.ok(!inPlay.where("carol").includes("battles"), done.winners.includes(0) ? "won and paid" : "lost");
+  } finally {
+    config.BATTLE_MODE_REVEAL = old;
+  }
+});

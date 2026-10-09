@@ -540,6 +540,8 @@ module.exports = function (io) {
     [...lobby.list.values()].some((battle) => {
       if (!battle.seats.some((seat) => seat && seat.name === name)) return false;
       if (battle.phase === PHASE.WAITING || battle.phase === PHASE.RUNNING) return true;
+      // The end still plays on the pages (the mode reveal, the jackpot roulette): nobody lost yet
+      if (battle.phase === PHASE.DONE && battle.doneAt && Date.now() < battle.doneAt + endWait(battle)) return true;
       return battle.phase === PHASE.DONE && battle.payAtEnd && !battle.paid && winnersOf(battle).some((seat) => battle.seats[seat].name === name);
     }),
   );
