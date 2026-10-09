@@ -71,7 +71,9 @@
         stored.id = "navCoinsStored";
         button.appendChild(stored);
       }
-      stored.innerText = "🏦 " + format(data.stored);
+      // (the 🪙 stays a 🪙: the money outside the season - the season has a coin of its own)
+      stored.dataset.coin = "real";
+      stored.innerText = "🪙 " + format(data.stored);
       stored.title = "Your balance from before the season - you get it back when the season is over, with your season coins on top";
     } else if (stored) stored.remove();
     // Everything lost: a second chance (if the season has one) - after a moment

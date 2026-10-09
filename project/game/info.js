@@ -208,7 +208,7 @@ const GAMES = {
           "A season runs from a start to an end. Hit Start to play in it - you get the start budget (and the daily coins you missed since it began). Only players who started are on the leaderboard.",
           "Everybody starts with the same coins - the most coins at the end wins (the prizes, if the season has any). The winners stay on the winner page.",
           "In a season the leaderboard is updated as often as the season says - the arrows show the change since the update before.",
-          "Your balance from before the season is kept (🏦 next to your coins) - when the season is over you get it back, with your season coins on top.",
+          "Your balance from before the season is kept (🪙 next to the coins of the season) - when the season is over you get it back, with your season coins on top.",
           "Lost everything? A season can have second chances: start again with the budget - the first right away, every further one after the wait the season sets (usually the next day).",
           "Before a season starts and before it ends, the casino closes for a moment: running games finish, no new bets, then a short countdown.",
           "Click the season next to the title to see it: how long it runs, the coins, the prizes.",

@@ -71,11 +71,14 @@ function render() {
   var hero = avatarWith({ frame: shopData.frame, effect: shopData.effect }, "lg");
   hero.id = "shHeroAvatar";
   document.getElementById("shHeroAvatar").replaceWith(hero);
-  document.getElementById("shBalance").innerText = "🪙 " + formatCoins(shopData.balance);
-  document.getElementById("shBalanceLabel").innerText = shopData.season ? "Coins from before the season" : "Your coins";
+  // The shop takes the 🪙 (the money outside seasons) - also in a season: the 🪙 stays a 🪙 here
+  var balance = document.getElementById("shBalance");
+  balance.dataset.coin = "real";
+  balance.innerText = "🪙 " + formatCoins(shopData.balance);
+  document.getElementById("shBalanceLabel").innerText = "Your coins";
   var note = document.getElementById("shBalanceNote");
-  note.hidden = !shopData.season && !shopData.free;
-  note.innerText = shopData.free ? "🧪 Everything is free right now - wear what you like." : "The shop never takes the coins of the season.";
+  note.hidden = !shopData.free;
+  note.innerText = "🧪 Everything is free right now - wear what you like.";
   if (typeof refreshLooks == "function") refreshLooks(myName, { frame: shopData.frame, effect: shopData.effect });
   renderGrid("shFrames", "frame");
   renderGrid("shEffects", "effect");
@@ -105,6 +108,7 @@ function renderGrid(id, kind) {
           button.addEventListener("click", () => wear(kind, item.id, button));
         } else {
           button = el("button", "mm-btn mm-btn-sm mm-btn-primary sh-btn", "🪙 " + formatCoins(item.price));
+          button.dataset.coin = "real";
           button.disabled = shopData.balance < item.price;
           button.title = button.disabled ? (shopData.season ? "Not enough coins from before the season" : "Not enough coins") : "Buy " + item.name;
           button.addEventListener("click", () => buy(item, button));

@@ -15,11 +15,18 @@
   style.textContent = '.jp-total::before, .jp-record-amount::before { content: ' + JSON.stringify(coin) + '; }';
   document.head.appendChild(style);
 
+  // (the money outside the season stays the 🪙: [data-coin="real"])
+  function real(node) {
+    var element = node.nodeType == Node.ELEMENT_NODE ? node : node.parentElement;
+    return element != null && element.closest('[data-coin="real"]') != null;
+  }
+
   function swapText(node) {
-    if (node.nodeValue && node.nodeValue.includes(NORMAL)) node.nodeValue = node.nodeValue.split(NORMAL).join(coin);
+    if (node.nodeValue && node.nodeValue.includes(NORMAL) && !real(node)) node.nodeValue = node.nodeValue.split(NORMAL).join(coin);
   }
 
   function swapElement(element) {
+    if (real(element)) return;
     ATTRIBUTES.forEach((name) => {
       var value = element.getAttribute(name);
       if (value && value.includes(NORMAL)) element.setAttribute(name, value.split(NORMAL).join(coin));

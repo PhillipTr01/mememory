@@ -111,7 +111,7 @@ module.exports = function (io) {
       return emitState();
     }
     const last = table.last || { total: 0, winners: [] };
-    table.history.unshift({ round: table.round, slot: table.slot, number: slot.number, color: slot.color, at: Date.now(), total: last.total, players: new Set(table.bets.map((b) => b.name)).size, winners: last.winners.slice(0, 3) });
+    table.history.unshift({ round: table.round, slot: table.slot, number: slot.number, color: slot.color, at: Date.now(), total: last.total, players: new Set(table.bets.map((b) => b.name)).size, winners: last.winners.slice(0, 3), won: last.winners.length, paid: last.winners.reduce((sum, w) => sum + w.win, 0) });
     table.history.length = Math.min(table.history.length, config.ROULETTE_HISTORY);
     emitState();
     clearTimeout(timer);

@@ -257,12 +257,14 @@ function renderRounds() {
       var item = el("li", "jp-history-item rl-round");
       item.appendChild(el("span", "rl-dot " + entry.color, ICONS[entry.color]));
       var info = el("div", "jp-history-text");
-      var top = entry.winners && entry.winners[0];
-      // The color it came on as the title - who won under it
-      var who = top ? top.name + (entry.winners.length > 1 ? " +" + (entry.winners.length - 1) : "") + " won" : (entry.players || 0) + (entry.players == 1 ? " player" : " players") + " · nobody won";
-      info.append(el("b", "rl-round-color " + entry.color, COLOR_NAMES[entry.color]), el("small", "", "Round " + entry.round + " · " + who + " · 🪙 " + formatCoins(entry.total || 0) + " bet"));
+      // The color it came on as the title - how many of the players won under it (not who)
+      var players = entry.players || 0;
+      var won = entry.won != null ? entry.won : (entry.winners || []).length;
+      info.append(el("b", "rl-round-color " + entry.color, COLOR_NAMES[entry.color]), el("small", "", "Round " + entry.round + " · " + won + " of " + players + (players == 1 ? " player" : " players") + " won"));
       item.appendChild(info);
-      item.appendChild(el("span", "jp-history-won", top ? "🪙 " + formatCoins(top.win) : ""));
+      // What was paid out in the round
+      var paid = entry.paid != null ? entry.paid : (entry.winners || []).reduce((sum, w) => sum + w.win, 0);
+      item.appendChild(el("span", "jp-history-won", paid > 0 ? "🪙 " + formatCoins(paid) : ""));
       return item;
     }),
   );

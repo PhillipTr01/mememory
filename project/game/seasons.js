@@ -40,6 +40,8 @@ const { place } = require("./places");
  * changes: "closing" (info, again when the countdown starts), "started" (season), "ended" (season)
  */
 const KEY = "seasons";
+// The coin of a season that has none of its own (the 🪙 is the money outside seasons)
+const SEASON_COIN = "💎";
 const BACKUP = "seasonGames:"; // + id: the games from before the season
 // How often the leaderboard of a season is updated (minutes; 0: all the time, 1440: once a day at midnight)
 const INTERVALS = [0, 5, 15, 60, 360, 1440];
@@ -68,7 +70,7 @@ function publicSeason(season) {
     id: season.id,
     name: season.name,
     icon: season.icon,
-    coinIcon: season.coinIcon || null,
+    coinIcon: season.coinIcon || SEASON_COIN,
     start: season.start,
     end: season.end,
     budget: season.budget,
@@ -189,9 +191,10 @@ function check(input, current) {
   if (name.length < 1 || name.length > 40) return { error: "A name, up to 40 characters." };
   const icon = typeof input.icon === "string" ? input.icon.trim() : "";
   if (icon.length < 1 || [...icon].length > 4) return { error: "An icon (one emoji)." };
-  // The coins of the season (null: the 🪙 of the casino)
-  const coinIcon = typeof input.coinIcon === "string" && input.coinIcon.trim() && input.coinIcon.trim() !== "🪙" ? input.coinIcon.trim() : null;
-  if (coinIcon != null && ([...coinIcon].length > 4 || /[<>&"'\s]/.test(coinIcon))) return { error: "A coin icon (one emoji)." };
+  // The coins of the season: never the 🪙 (that is the money outside seasons) - not given: 💎
+  const coinIcon = typeof input.coinIcon === "string" && input.coinIcon.trim() ? input.coinIcon.trim() : SEASON_COIN;
+  if (coinIcon === "🪙") return { error: "The 🪙 is the money outside seasons - pick another coin for the season." };
+  if ([...coinIcon].length > 4 || /[<>&"'\s]/.test(coinIcon)) return { error: "A coin icon (one emoji)." };
   const start = Number(input.start);
   const end = Number(input.end);
   if (!Number.isFinite(start) || !Number.isFinite(end)) return { error: "A start and an end." };
@@ -652,8 +655,8 @@ function reset() {
 // The coin icon of the running season for the casino pages (see casino_coin.js) - nothing: the 🪙
 function coinScript() {
   const season = running();
-  const icon = season && season.coinIcon;
-  if (!icon) return "";
+  if (!season) return "";
+  const icon = season.coinIcon || SEASON_COIN;
   return `<script>window.CASINO_COIN = ${JSON.stringify(icon).replace(/</g, "\\u003c")};</script>`;
 }
 
