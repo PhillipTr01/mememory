@@ -342,6 +342,11 @@
   cursor: not-allowed;
 }
 
+.rl-place-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
 .rl-place-name {
   font-size: 0.95rem;
   font-weight: 800;

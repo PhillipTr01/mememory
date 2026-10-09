@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="/static/styles/theme.css">
     <link rel="stylesheet" href="/static/styles/room.css">
     <link rel="stylesheet" href="/static/styles/jackpot.css">
+    <link rel="stylesheet" href="/static/styles/looks.css">
     <link rel="stylesheet" href="/static/styles/roulette.css">
 
     <!--- Icons --->
@@ -131,17 +132,17 @@
                     <!--- The three colors: bet on one, the bets of everybody under it --->
                     <div class="rl-boards">
                         <div class="rl-board red" data-color="red">
-                            <button type="button" class="rl-place" data-color="red"><span class="rl-place-name">Red</span><span class="rl-place-x">2×</span></button>
+                            <button type="button" class="rl-place" data-color="red"><span class="rl-place-icon" aria-hidden="true">🔥</span><span class="rl-place-name">Red</span><span class="rl-place-x">2×</span></button>
                             <div class="rl-board-sum"><span class="rl-count" data-count="red">0 bets</span><span class="rl-total" data-total="red">🪙 0</span></div>
                             <ol class="rl-bets" data-bets="red"></ol>
                         </div>
                         <div class="rl-board green" data-color="green">
-                            <button type="button" class="rl-place" data-color="green"><span class="rl-place-name">Green</span><span class="rl-place-x">14×</span></button>
+                            <button type="button" class="rl-place" data-color="green"><span class="rl-place-icon" aria-hidden="true">🍀</span><span class="rl-place-name">Green</span><span class="rl-place-x">14×</span></button>
                             <div class="rl-board-sum"><span class="rl-count" data-count="green">0 bets</span><span class="rl-total" data-total="green">🪙 0</span></div>
                             <ol class="rl-bets" data-bets="green"></ol>
                         </div>
                         <div class="rl-board blue" data-color="blue">
-                            <button type="button" class="rl-place" data-color="blue"><span class="rl-place-name">Blue</span><span class="rl-place-x">2×</span></button>
+                            <button type="button" class="rl-place" data-color="blue"><span class="rl-place-icon" aria-hidden="true">💧</span><span class="rl-place-name">Blue</span><span class="rl-place-x">2×</span></button>
                             <div class="rl-board-sum"><span class="rl-count" data-count="blue">0 bets</span><span class="rl-total" data-total="blue">🪙 0</span></div>
                             <ol class="rl-bets" data-bets="blue"></ol>
                         </div>
@@ -301,6 +302,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="/static/scripts/avatar.js"></script>
     <script src="/static/scripts/ui.js"></script>
+    <script src="/static/scripts/casino_looks.js"></script>
     <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/casino_dock.js"></script>
     <script src="/static/scripts/casino_info.js"></script>
