@@ -1,0 +1,227 @@
+/* The accessory shop of the casino: frames and animations for the avatar */
+
+.sh-main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sh-title-icon {
+  display: inline-grid;
+  place-items: center;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+/* ---------- Me ---------- */
+
+.sh-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: linear-gradient(90deg, rgba(var(--mm-accent-rgb), 0.1), var(--mm-surface-2) 60%);
+}
+
+.sh-hero-avatar .mm-avatar.lg {
+  --size: 72px;
+}
+
+.sh-hero-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.sh-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.sh-edit-link {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.sh-edit-link:hover {
+  background: var(--mm-surface-3);
+}
+
+.sh-wallet {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  margin-left: auto;
+  text-align: right;
+}
+
+.sh-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--mm-muted);
+  text-transform: uppercase;
+}
+
+.sh-balance {
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.sh-note {
+  font-size: 0.72rem;
+  color: var(--mm-muted);
+}
+
+/* The avatar maker in the casino: a card like the others */
+.sh-main .avatar-editor {
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+}
+
+/* ---------- The items ---------- */
+
+.sh-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sh-heading {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--mm-muted);
+  text-transform: uppercase;
+}
+
+.sh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.sh-item {
+  --tone: 160, 160, 160;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.9rem 0.75rem 0.85rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+  text-align: center;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.sh-item:hover {
+  border-color: rgba(var(--tone), 0.5);
+  transform: translateY(-2px);
+}
+
+.sh-item.rare {
+  --tone: 91, 143, 214;
+}
+
+.sh-item.epic {
+  --tone: 157, 132, 194;
+}
+
+.sh-item.legendary {
+  --tone: 212, 166, 74;
+}
+
+.sh-item.worn {
+  border-color: rgba(var(--mm-accent-rgb), 0.7);
+  box-shadow: 0 0 0 1px rgba(var(--mm-accent-rgb), 0.35);
+}
+
+/* The preview: room for crowns, halos and flames */
+.sh-stage {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 92px;
+  border-radius: 10px;
+  background: radial-gradient(circle at 50% 55%, rgba(var(--tone), 0.16), transparent 70%);
+}
+
+.sh-stage .mm-avatar.lg {
+  --size: 56px;
+}
+
+.sh-rarity {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgb(var(--tone));
+  text-transform: uppercase;
+}
+
+.sh-item-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.sh-btn {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.sh-worn-tag {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  color: var(--mm-accent);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 575px) {
+  .sh-main {
+    padding: 1rem;
+  }
+
+  .sh-hero {
+    flex-wrap: wrap;
+    gap: 0.9rem;
+  }
+
+  .sh-wallet {
+    align-items: flex-start;
+    margin-left: 0;
+    text-align: left;
+    width: 100%;
+  }
+
+  .sh-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

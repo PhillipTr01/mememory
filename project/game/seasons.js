@@ -520,6 +520,16 @@ async function addToSaved(username, amount) {
   return true;
 }
 
+// The shop in a season: paid with the balance from before it (false: not that much)
+async function spendSaved(username, amount) {
+  const season = running();
+  if (season == null || season.saved == null || !Number.isInteger(amount) || amount <= 0) return false;
+  if (!((season.saved[username] || 0) >= amount)) return false;
+  season.saved[username] -= amount;
+  await save();
+  return true;
+}
+
 /* ---------- Second chances ---------- */
 
 // A bet just made: in play for this long (until the game has it)
@@ -644,4 +654,4 @@ function accentStyle() {
   return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
 }
 
-module.exports = { prizesOf, tieStats, board, normalOf, changeNormal, joinedAt, join, joined, joinCoins, closingInfo, chanceStatus, useChance, storedOf, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+module.exports = { prizesOf, tieStats, board, normalOf, changeNormal, joinedAt, join, joined, joinCoins, closingInfo, chanceStatus, useChance, storedOf, spendSaved, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };

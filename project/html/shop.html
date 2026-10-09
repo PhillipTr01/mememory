@@ -2,7 +2,7 @@
 <html lang="en" class="min-h-100">
 
 <head>
-    <title>Blackjack - MemeMory</title>
+    <title>Shop - MemeMory</title>
 
     <!-- Required meta tags -->
     <meta charset="utf-8">
@@ -19,8 +19,8 @@
     <link rel="stylesheet" href="/static/styles/room.css">
     <link rel="stylesheet" href="/static/styles/jackpot.css">
     <link rel="stylesheet" href="/static/styles/looks.css">
-    <link rel="stylesheet" href="/static/styles/poker.css">
-    <link rel="stylesheet" href="/static/styles/blackjack.css">
+        <link rel="stylesheet" href="/static/styles/avatar_editor.css">
+    <link rel="stylesheet" href="/static/styles/shop.css">
 
     <!--- Icons --->
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico">
@@ -89,95 +89,62 @@
     <main class="room-page">
         <div class="room-layout">
             <div class="room-main">
-                <section class="mm-card bj-main">
-
+                <section class="mm-card sh-main">
                     <div class="jp-head">
                         <div>
-                            <h1 class="jp-title" data-info="blackjack"><span class="bj-icon big" aria-hidden="true">21</span> Blackjack <span id="bjTableName" class="bj-table-name"></span> <span class="mm-badge" id="bjLimits"></span></h1>
-                            <p id="bjStatus" class="jp-status" aria-live="polite"></p>
-                        </div>
-                        <div class="cs-head-actions">
-                            <a id="bjBackToLobby" href="blackjack" class="mm-btn mm-btn-sm bj-lobby-back" hidden><i class="bi bi-grid"></i> All tables</a>
-                            <button type="button" class="cs-fs-btn" data-fullscreen=".bj-main" data-fullscreen-zoom></button>
+                            <h1 class="jp-title"><span class="cs-title-icon sh-title-icon" aria-hidden="true">🛍️</span> Shop</h1>
+                            <p class="jp-status">Frames and animations for your avatar - everybody in the casino sees them.</p>
                         </div>
                     </div>
 
-                    <!--- The lobby: one card per table --->
-                    <div id="bjLobby" class="bj-lobby" hidden></div>
+                    <!--- Me: my avatar with what I wear, the coins I pay with --->
+                    <div class="sh-hero">
+                        <button type="button" id="editAvatarButton" class="hero-avatar sh-hero-avatar" title="Edit avatar" aria-label="Edit avatar">
+                            <span id="shHeroAvatar" class="mm-avatar lg"></span>
+                            <span class="hero-avatar-edit"><i class="bi bi-pencil-fill"></i></span>
+                        </button>
+                        <div class="sh-hero-text">
+                            <div id="shName" class="sh-name"></div>
+                            <button type="button" id="shEditAvatar" class="sh-edit-link">🎨 Edit avatar</button>
+                        </div>
+                        <div class="sh-wallet">
+                            <span class="sh-label" id="shBalanceLabel">Your coins</span>
+                            <span id="shBalance" class="sh-balance">-</span>
+                            <span id="shBalanceNote" class="sh-note" hidden></span>
+                        </div>
+                    </div>
 
-                    <div id="bjTableView" hidden>
-                    <!--- The table: the dealer at the top, 5 seats in an arc --->
-                    <div class="bj-table">
-                        <div class="bj-dealer">
-                            <div id="bjDealerCards" class="bj-cards"></div>
-                            <span id="bjDealerValue" class="bj-value" hidden></span>
-                            <!--- The betting time runs --->
-                            <div id="bjClock" class="bj-clock" hidden>
-                                <svg viewBox="0 0 60 60" aria-hidden="true">
-                                    <circle class="bj-clock-bg" cx="30" cy="30" r="26"></circle>
-                                    <circle id="bjClockRing" class="bj-clock-ring" cx="30" cy="30" r="26"></circle>
-                                </svg>
-                                <span id="bjClockNum" class="bj-clock-num"></span>
-                                <span class="bj-clock-text">Place your bets</span>
-                                <!--- Alone at the table: no need to wait --->
-                                <button type="button" id="bjDealNow" class="bj-deal-now" hidden>Deal now</button>
+                    <!--- The avatar maker (opens under the avatar) --->
+                    <section id="avatarEditor" class="panel avatar-editor" hidden>
+                        <div class="avatar-editor-preview">
+                            <span id="avatarPreview" class="mm-avatar avatar-xl"></span>
+                            <div class="avatar-editor-actions">
+                                <button type="button" id="avatarRandom" class="mm-btn mm-btn-sm"><i class="bi bi-shuffle"></i> Random</button>
+                                <button type="button" id="avatarLetter" class="mm-btn mm-btn-sm"><i class="bi bi-fonts"></i> Use letter</button>
                             </div>
                         </div>
-                        <p class="bj-rules">Blackjack pays 3 to 2 · Dealer stands on 17</p>
-                        <div id="bjSeats" class="bj-seats"></div>
-                    </div>
-
-                    <!--- Betting: on a free seat or an own one --->
-                    <div id="bjBetBar" class="bj-bar bj-betbar" hidden>
-                        <!--- Like at the table: pick a chip, then click a bet field on your seat --->
-                        <!--- On top of the bar (a tab over the chips): the bets of the last round again --->
-                        <button type="button" id="bjRebetButton" class="bj-bump bj-rebet-tab" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg><span id="bjRebetText" class="bj-rebet-amount"></span></button>
-                        <div class="bj-chip-picker">
-                            <button type="button" class="bj-chip-arrow" data-step="-1" aria-label="Smaller chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
-                            <div class="bj-chips" role="radiogroup" aria-label="Chip">
-                                <button type="button" class="bj-chip" role="radio" data-chip="10">10</button>
-                                <button type="button" class="bj-chip" role="radio" data-chip="50">50</button>
-                                <button type="button" class="bj-chip" role="radio" data-chip="100">100</button>
-                                <button type="button" class="bj-chip" role="radio" data-chip="250">250</button>
-                                <button type="button" class="bj-chip" role="radio" data-chip="500">500</button>
-                                <button type="button" class="bj-chip" role="radio" data-chip="1000">1K</button>
+                        <div class="avatar-editor-main">
+                            <div id="avatarTabs" class="avatar-tabs" role="tablist" aria-label="Avatar parts"></div>
+                            <div id="avatarOptions" class="avatar-options"></div>
+                            <div class="avatar-editor-footer">
+                                <button type="button" id="avatarCancel" class="mm-btn">Cancel</button>
+                                <button type="button" id="avatarSave" class="mm-btn mm-btn-primary"><i class="bi bi-check-lg"></i> Save avatar</button>
                             </div>
-                            <button type="button" class="bj-chip-arrow" data-step="1" aria-label="Bigger chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
                         </div>
-                        <!--- Right: all own bets off the table (the seats stay) - and leave the selected seat --->
-                        <div class="bj-bar-right">
-                            <button type="button" id="bjClearBets" class="bj-icon-btn clear" title="Clear all bets - the coins come back" aria-label="Clear all bets" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5h9l1-12.5M10 11v5.5M14 11v5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg><span>Clear bets</span></button>
-                            <button type="button" id="bjStand" class="bj-icon-btn leave" title="Leave this seat - its bet comes back" aria-label="Leave this seat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg><span>Leave</span></button>
-                        </div>
-                    </div>
+                    </section>
 
-                    <!--- Playing: the own hand --->
-                    <div id="bjActions" class="bj-bar bj-actionbar" hidden>
-                        <!--- On top (a bump like "same bet"): which hand, its value, the time for the move --->
-                        <div class="bj-bump bj-turn-info">
-                            <span id="bjActionLabel"></span>
-                            <span class="bj-turn-bar"><span id="bjTurnFill"></span></span>
-                        </div>
-                        <div class="bj-action-buttons">
-                            <button type="button" class="bj-act hit" data-action="hit"><span class="bj-act-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></span><span class="bj-act-name">Hit</span></button>
-                            <button type="button" class="bj-act stand" data-action="stand"><span class="bj-act-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12" /></svg></span><span class="bj-act-name">Stand</span></button>
-                            <button type="button" class="bj-act double" data-action="double"><span class="bj-act-icon"><span class="bj-act-text">2×</span></span><span class="bj-act-name">Double</span></button>
-                            <button type="button" class="bj-act split" data-action="split"><span class="bj-act-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21v-8M12 13L6.5 5.5M12 13l5.5-7.5M6.5 5.5h3.5M6.5 5.5V9M17.5 5.5H14M17.5 5.5V9" /></svg></span><span class="bj-act-name">Split</span></button>
-                        </div>
+                    <div class="sh-section">
+                        <h2 class="sh-heading">Frames</h2>
+                        <div id="shFrames" class="sh-grid"></div>
                     </div>
+                    <div class="sh-section">
+                        <h2 class="sh-heading">Animations</h2>
+                        <div id="shEffects" class="sh-grid"></div>
                     </div>
                 </section>
             </div>
 
             <aside class="room-side">
-                <div class="mm-card side-card jp-history-card">
-                    <div class="side-head">
-                        <span class="fw-semibold"><i class="bi bi-clock-history me-2"></i>Last rounds</span>
-                    </div>
-                    <ol id="bjHistory" class="jp-history"></ol>
-                    <p id="bjHistoryEmpty" class="jp-empty mm-muted" data-icon="♠️">No rounds yet - take a seat!</p>
-                </div>
-
                 <div class="mm-card chat-card">
                     <div class="chat-head">
                         <span class="fw-semibold"><i class="bi bi-chat-dots me-2"></i>Chat</span>
@@ -285,7 +252,7 @@
               </svg>
               <span class="cs-dock-name">Poker</span>
             </a>
-            <a href="blackjack" class="cs-tab active" aria-current="page">
+            <a href="blackjack" class="cs-tab">
               <span class="cs-dock-icon cs-dock-21" aria-hidden="true"><span class="bj-icon">21</span></span>
               <span class="cs-dock-name">Blackjack</span>
             </a>
@@ -324,8 +291,8 @@
     <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/casino_dock.js"></script>
     <script src="/static/scripts/casino_info.js"></script>
-    <script src="/static/scripts/casino_fullscreen.js"></script>
-    <script src="/static/scripts/blackjack.js"></script>
+    <script src="/static/scripts/shop.js"></script>
+    <script src="/static/scripts/avatar_editor.js"></script>
     <script src="/static/scripts/casino_wallet.js"></script>
     <script src="/static/scripts/chat.js"></script>
 </body>

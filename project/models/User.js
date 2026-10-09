@@ -21,6 +21,8 @@ const schema = mongoose.Schema({
     casinoApprovedAt: {type: Date}, // the first time - the start coins come only once
     casinoRequestedAt: {type: Date}, // tried to open the casino without access
     payoutAllowed: {type: Boolean, default: false}, // may pay coins out (set by the admin)
+    // The casino's accessory shop: {owned: [id], frame: id, effect: id} (see game/shop.js)
+    looks: {type: mongoose.Schema.Types.Mixed, default: null},
 	// active: {type: String, required: true, default: false}
 });
 

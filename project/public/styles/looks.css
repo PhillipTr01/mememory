@@ -1,0 +1,235 @@
+/*
+ * The casino's avatar looks (the accessory shop, game/shop.js): a frame around
+ * the avatar (.look-frame-*) and an animation of it (.look-fx-*). Only the
+ * casino pages load this file. The ring scales with the avatar (--size).
+ */
+
+.mm-avatar[class*="look-"] {
+  --ring: max(2px, calc(var(--size) * 0.07));
+  isolation: isolate;
+}
+
+/* ---------- Frames ---------- */
+
+.mm-avatar.look-frame-silver {
+  box-shadow: 0 0 0 var(--ring) #c9ced6, 0 0 0 calc(var(--ring) + 1px) rgba(0, 0, 0, 0.35);
+}
+
+.mm-avatar.look-frame-gold {
+  box-shadow: 0 0 0 var(--ring) #d4a64a, 0 0 calc(var(--ring) * 2) rgba(212, 166, 74, 0.45);
+}
+
+.mm-avatar.look-frame-neon {
+  box-shadow: 0 0 0 var(--ring) #5fd4e0, 0 0 calc(var(--ring) * 3) rgba(95, 212, 224, 0.7), 0 0 calc(var(--ring) * 6) rgba(155, 132, 194, 0.45);
+}
+
+.mm-avatar.look-frame-ice {
+  box-shadow: 0 0 0 var(--ring) #a9d8f0, 0 0 calc(var(--ring) * 3) rgba(169, 216, 240, 0.6);
+}
+
+.mm-avatar.look-frame-ice::before {
+  content: "❄";
+  position: absolute;
+  top: calc(var(--size) * -0.12);
+  right: calc(var(--size) * -0.08);
+  z-index: 2;
+  font-size: calc(var(--size) * 0.32);
+  line-height: 1;
+  color: #e6f6ff;
+  text-shadow: 0 0 4px rgba(169, 216, 240, 0.9);
+}
+
+/* Animated rings: a turning gradient behind the avatar, cut to a ring */
+.mm-avatar.look-frame-fire::after,
+.mm-avatar.look-frame-rainbow::after,
+.mm-avatar.look-frame-royal::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--ring) * -1);
+  z-index: -1;
+  border-radius: 50%;
+  /* only the ring outside the avatar */
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring) - 0.5px), #000 calc(100% - var(--ring)));
+  mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring) - 0.5px), #000 calc(100% - var(--ring)));
+  animation: look-turn 3s linear infinite;
+}
+
+.mm-avatar.look-frame-fire::after {
+  background: conic-gradient(#e0675a, #e8913a, #f5c542, #e8913a, #e0675a);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.5) rgba(232, 145, 58, 0.7));
+}
+
+.mm-avatar.look-frame-rainbow::after {
+  background: conic-gradient(#e0675a, #e8913a, #f5c542, #6fa784, #4fb3a9, #5b8fd6, #9d84c2, #d77fb0, #e0675a);
+}
+
+.mm-avatar.look-frame-royal::after {
+  background: conic-gradient(#d4a64a, #fff1c4, #d4a64a, #9a6b12, #d4a64a);
+  animation-duration: 5s;
+}
+
+/* Royal: a crown on top */
+.mm-avatar.look-frame-royal::before {
+  content: "👑";
+  position: absolute;
+  top: calc(var(--size) * -0.42);
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%) rotate(-8deg);
+  font-size: calc(var(--size) * 0.42);
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+@keyframes look-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Animations ---------- */
+
+.mm-avatar.look-fx-pulse {
+  animation: look-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes look-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 rgba(var(--mm-accent-rgb, 212, 166, 74), 0));
+  }
+  50% {
+    filter: drop-shadow(0 0 calc(var(--size) * 0.18) rgba(var(--mm-accent-rgb, 212, 166, 74), 0.85));
+  }
+}
+
+.mm-avatar.look-fx-float {
+  animation: look-float 2.6s ease-in-out infinite;
+}
+
+@keyframes look-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 calc(var(--size) * -0.08);
+  }
+}
+
+/* Sparkles, orbit, flames, halo: a small thing next to the avatar (a span, see casino_looks.js) */
+.look-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  font-size: calc(var(--size) * 0.3);
+  line-height: 1;
+}
+
+.look-fx-sparkles .look-fx::before,
+.look-fx-sparkles .look-fx::after {
+  content: "✦";
+  position: absolute;
+  color: #fff1c4;
+  text-shadow: 0 0 4px #f5c542;
+  animation: look-twinkle 1.8s ease-in-out infinite;
+}
+
+.look-fx-sparkles .look-fx::before {
+  top: -12%;
+  left: -8%;
+}
+
+.look-fx-sparkles .look-fx::after {
+  right: -10%;
+  bottom: -6%;
+  animation-delay: 0.9s;
+  font-size: 0.8em;
+}
+
+@keyframes look-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+
+.look-fx-orbit .look-fx {
+  animation: look-turn 2.4s linear infinite;
+}
+
+.look-fx-orbit .look-fx::before {
+  content: "";
+  position: absolute;
+  top: calc(var(--size) * -0.06);
+  left: 50%;
+  width: calc(var(--size) * 0.16);
+  height: calc(var(--size) * 0.16);
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #f5c542;
+  box-shadow: 0 0 6px #f5c542;
+}
+
+.look-fx-flames .look-fx::before {
+  content: "🔥";
+  position: absolute;
+  bottom: calc(var(--size) * -0.14);
+  right: calc(var(--size) * -0.12);
+  font-size: calc(var(--size) * 0.38);
+  animation: look-flicker 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes look-flicker {
+  from {
+    transform: scale(0.9) rotate(-6deg);
+  }
+  to {
+    transform: scale(1.1) rotate(6deg);
+  }
+}
+
+.look-fx-halo .look-fx::before {
+  content: "";
+  position: absolute;
+  top: calc(var(--size) * -0.2);
+  left: 50%;
+  width: calc(var(--size) * 0.62);
+  height: calc(var(--size) * 0.18);
+  transform: translateX(-50%);
+  border: max(2px, calc(var(--size) * 0.05)) solid #fff1c4;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 241, 196, 0.9);
+  animation: look-halo 2.4s ease-in-out infinite;
+}
+
+@keyframes look-halo {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 calc(var(--size) * -0.05);
+  }
+}
+
+/* (a royal crown and a halo together: the crown wins the top) */
+.look-frame-royal.look-fx-halo .look-fx::before {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-avatar[class*="look-"],
+  .mm-avatar[class*="look-"]::after,
+  .look-fx,
+  .look-fx::before,
+  .look-fx::after {
+    animation: none !important;
+  }
+}

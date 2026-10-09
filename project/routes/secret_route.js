@@ -11,6 +11,7 @@ const games = require("../game/games");
 const info = require("../game/info");
 const maintenance = require("../game/maintenance");
 const gifts = require("../game/gifts");
+const shop = require("../game/shop");
 
 /*
  * The hidden pages, mounted at the secret address (config.JACKPOT_PATH):
@@ -21,7 +22,7 @@ module.exports = function (auth) {
   const router = express.Router({ caseSensitive: false, strict: true });
 
   // The addresses of data (not pages) - without access: an error instead of the page to ask for it
-  const DATA = /^\/(withdraw|leaderboard\/|info\/|season|second-chance|request|maintenance|gift)/;
+  const DATA = /^\/(withdraw|leaderboard\/|info\/|season|second-chance|request|maintenance|gift|shop\/|looks)/;
 
   // Only for players the admin let in - everybody else gets the page to ask for access
   const approved = asyncHandler(async (req, res, next) => {
@@ -70,6 +71,7 @@ module.exports = function (auth) {
   router.get("/slots", auth, approved, gamePage("slots", "slots.html"));
   router.get("/roulette", auth, approved, gamePage("roulette", "roulette.html"));
   router.get("/leaderboard", auth, approved, page("leaderboard.html", hideOff));
+  router.get("/shop", auth, approved, page("shop.html", hideOff));
 
   // How a game works (the "i" next to the title)
   router.get("/info/:game", auth, approved, (req, res) => {
@@ -248,6 +250,48 @@ module.exports = function (auth) {
     asyncHandler(async (req, res) => {
       const name = req.username;
       res.json(await withdrawals.list({ username: name }, 10));
+    }),
+  );
+
+  // The accessory shop: frames and animations for the avatar (see game/shop.js)
+  router.get(
+    "/shop/data",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => res.json(await shop.view(req.username))),
+  );
+
+  router.post(
+    "/shop/buy",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      const result = await shop.buy(req.username, String((req.body && req.body.id) || ""));
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
+  router.post(
+    "/shop/wear",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      const body = req.body || {};
+      const result = await shop.wear(req.username, String(body.kind || ""), body.id == null ? null : String(body.id));
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
+  // What players wear (the avatars of a casino page): /looks?names=alice,bob
+  router.get(
+    "/looks",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      const names = String(req.query.names || "").split(",").map((n) => n.trim()).filter(Boolean).slice(0, 100);
+      res.json(names.length ? await shop.worn(names) : {});
     }),
   );
 
