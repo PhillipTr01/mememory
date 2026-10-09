@@ -236,7 +236,7 @@ test("slots: a spin costs the bet, the win comes right away, the others see it",
   const poor = h.once(alice, "slotsError");
   alice.emit("spin", { bet: 100 });
   assert.match(await poor, /enough coins/);
-  Object.assign(config, { SLOTS_MIN_GAP: 3000, SLOTS_SPIN: 2000, SLOTS_COUNT_TIME: 800, SLOTS_BONUS_TIME: 6000, SLOTS_FREE_SPIN: 3000, SLOTS_BONUS_END: 4000, SLOTS_RETRIGGER_TIME: 900, SLOTS_BIG_TIME: 3000, SLOTS_SWEAT: 1800 });
+  Object.assign(config, { SLOTS_MIN_GAP: 2250, SLOTS_SPIN: 2000, SLOTS_COUNT_TIME: 800, SLOTS_BONUS_TIME: 6000, SLOTS_FREE_SPIN: 3000, SLOTS_BONUS_END: 4000, SLOTS_RETRIGGER_TIME: 900, SLOTS_BIG_TIME: 3000, SLOTS_SWEAT: 1800 });
 });
 
 test("slots: the admin test switch - every spin starts the bonus game", () => {

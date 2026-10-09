@@ -210,8 +210,14 @@ function clearLines() {
 
 /* ---------- A spin ---------- */
 
+var queuedSpin = null; // a click in the short pause: the spin starts right after it
+
 function spin() {
-  if (spinning || setup == null || Date.now() < pausedUntil) return;
+  if (spinning || setup == null) return;
+  if (Date.now() < pausedUntil) {
+    if (!queuedSpin) queuedSpin = setTimeout(() => ((queuedSpin = null), spin()), pausedUntil - Date.now() + 10);
+    return;
+  }
   var bet = currentBet();
   if (!Number.isInteger(bet) || bet < setup.rules.minBet || bet > setup.rules.maxBet) {
     return showHint("A spin is " + formatCoins(setup.rules.minBet) + " to " + formatCoins(setup.rules.maxBet) + " coins.", "error");
@@ -339,9 +345,6 @@ async function playSpin(result) {
   // A short pause before the next spin (at least the gap the server wants from the start of this one)
   var pause = Math.max(setup.rules.pauseTime || 0, spunAt + (setup.rules.minGap || 0) - Date.now());
   pausedUntil = Date.now() + pause;
-  var button = document.getElementById("slSpin");
-  button.style.setProperty("--pause", pause + "ms");
-  setTimeout(renderControls, pause + 20);
   // The win comes with the next "coins" from the server (after the count)
   renderCoins(myCoins);
   renderControls();
@@ -1052,11 +1055,8 @@ function renderControls() {
   if (setup == null) return;
   var bet = currentBet();
   var button = document.getElementById("slSpin");
-  var paused = !spinning && Date.now() < pausedUntil;
-  button.disabled = spinning || paused || bet > myCoins;
+  button.disabled = spinning || bet > myCoins;
   button.classList.toggle("busy", spinning);
-  // The pause after a spin: a bar runs out, then it can spin again
-  button.classList.toggle("paused", paused);
   button.title = bet > myCoins ? "Not enough coins" : "Spin (space)";
   document.querySelectorAll(".sl-preset").forEach((preset) => preset.classList.toggle("active", Number(preset.dataset.value) == bet));
   document.getElementById("slLess").disabled = spinning || bet <= setup.rules.minBet;
