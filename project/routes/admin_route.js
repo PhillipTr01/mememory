@@ -607,6 +607,52 @@ module.exports = function () {
     }),
   );
 
+  /* ---------- Money rains (game/money_rain.js) ---------- */
+
+  const rain = require("../game/money_rain");
+  router.get("/api/rains", admin, (req, res) => res.json({ ...rain.list(), now: Date.now(), season: seasons.running() ? { name: seasons.running().name, icon: seasons.running().icon } : null }));
+
+  // How many it would reach right now: {players, total, names}
+  router.post(
+    "/api/rains/preview",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await rain.preview(req.body);
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
+  router.post(
+    "/api/rains",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await rain.create(req.body);
+      if (result.error) return res.status(400).json(result);
+      res.json({ ...result, ...rain.list() });
+    }),
+  );
+
+  router.post(
+    "/api/rains/:id/now",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await rain.now(req.params.id);
+      if (result.error) return res.status(400).json(result);
+      res.json({ ...result, ...rain.list() });
+    }),
+  );
+
+  router.post(
+    "/api/rains/:id/cancel",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await rain.cancel(req.params.id);
+      if (result.error) return res.status(400).json(result);
+      res.json(rain.list());
+    }),
+  );
+
   // Everything anew - only with the word typed in
   router.post(
     "/api/reset",

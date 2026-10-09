@@ -77,6 +77,7 @@ var PAGES = {
 var SETTING_GROUPS = {
   general: ["General settings", "Coins for everybody, gifts - and the hard reset."],
   test: ["Test mode", "Try the casino with a sandbox balance - nothing is saved, nobody else is touched."],
+  rain: ["Money rain", "Coins for many players at once - now or planned, for everybody, who is online, the last of the leaderboard or who has little."],
   shop: ["Shop", "The frames and animations of the casino: on or off, the prices - and free for all to test them."],
   maintenance: ["Maintenance", "Close the casino for everybody but a whitelist - with when it is most likely over."],
   jackpot: ["Jackpot", "Turn the jackpot on or off, its bets and timing."],
@@ -96,7 +97,7 @@ function redirect(parts) {
   if (parts[0] == "settings") return GAME_GROUPS.includes(parts[1]) ? "#games/" + parts[1] : "#casino/" + (parts[1] == "maintenance" ? "maintenance" : "general");
   if (parts[0] == "cases") return "#games/battles" + (parts[1] ? "/case/" + parts[1] : "");
   if (parts[0] == "games" && !GAME_GROUPS.includes(parts[1])) return "#games/jackpot";
-  if (parts[0] == "casino" && !["maintenance", "general", "shop", "test"].includes(parts[1])) return "#casino/general";
+  if (parts[0] == "casino" && !["maintenance", "general", "shop", "test", "rain"].includes(parts[1])) return "#casino/general";
   return null;
 }
 
@@ -126,11 +127,13 @@ function showTab() {
   var maintPage = settingsGroup == "maintenance";
   var shopPage = settingsPage && settingsGroup == "shop";
   var testPage = settingsPage && settingsGroup == "test";
+  var rainPage = settingsPage && settingsGroup == "rain";
+  document.getElementById("adRain").hidden = !rainPage;
   document.getElementById("adMaint").hidden = !maintPage;
   document.getElementById("adShop").hidden = !shopPage;
   document.getElementById("adTest").hidden = !testPage;
-  document.getElementById("adSettingsForm").hidden = maintPage || shopPage || testPage;
-  document.getElementById("adSettingsBar").hidden = maintPage || shopPage || testPage;
+  document.getElementById("adSettingsForm").hidden = maintPage || shopPage || testPage || rainPage;
+  document.getElementById("adSettingsBar").hidden = maintPage || shopPage || testPage || rainPage;
   if (tab == "players") loadPlayers();
   if (tab == "payouts") loadPayouts();
   if (tab == "history") loadHistory();
@@ -149,6 +152,7 @@ function showTab() {
     if (maintPage) loadMaintenance();
     if (shopPage) loadShop();
     if (testPage) loadTest();
+    if (rainPage) loadRains();
   }
   if (settingsPage && settingsGroup == "battles") {
     caseView = casePage ? decodeURIComponent(parts[3]) : null;
@@ -636,6 +640,145 @@ var maintForm = null; // the form while it is changed (whitelist, until, note)
 var maintPlayers = [];
 
 /* ---------- Test mode ---------- */
+
+/* ---------- Money rains ---------- */
+
+var RAIN_TARGETS = { all: "every player", online: "who is online", bottom: "the last %", below: "less than" };
+var RAIN_REPEATS = { none: "", daily: " · every day", weekly: " · every week" };
+
+function rainInput() {
+  var target = document.getElementById("adRainTarget").value;
+  var later = document.getElementById("adRainWhen").value == "later";
+  var at = later && document.getElementById("adRainAt").value ? new Date(document.getElementById("adRainAt").value).getTime() : null;
+  return {
+    amount: Number(document.getElementById("adRainAmount").value),
+    target: target,
+    percent: Number(document.getElementById("adRainPercent").value),
+    below: Number(document.getElementById("adRainBelow").value),
+    world: document.getElementById("adRainWorld").value,
+    repeat: document.getElementById("adRainRepeat").value,
+    note: document.getElementById("adRainNote").value,
+    at: at,
+  };
+}
+
+function rainWho(rain) {
+  var who = rain.target == "bottom" ? "the last " + rain.percent + "% of the leaderboard" : rain.target == "below" ? "everybody with less than 🪙 " + formatCoins(rain.below) : RAIN_TARGETS[rain.target];
+  return who + (rain.world == "season" ? " (season)" : "");
+}
+
+var rainPreviewTimer = null;
+function rainFormChanged() {
+  var input = rainInput();
+  document.getElementById("adRainPercentField").hidden = input.target != "bottom";
+  document.getElementById("adRainBelowField").hidden = input.target != "below";
+  var later = document.getElementById("adRainWhen").value == "later";
+  document.getElementById("adRainAtField").hidden = !later;
+  document.getElementById("adRainGo").innerText = later ? "📅 Plan the money rain" : "💸 Let it rain now";
+  clearTimeout(rainPreviewTimer);
+  rainPreviewTimer = setTimeout(async () => {
+    var box = document.getElementById("adRainPreview");
+    try {
+      var p = await api("rains/preview", input);
+      box.innerText = "Right now: " + p.players + (p.players == 1 ? " player" : " players") + " · 🪙 " + formatCoins(p.total) + " in total" + (input.target == "online" || later ? " (who gets it is decided when it rains)" : "");
+      box.title = p.names.join(", ");
+    } catch (error) {
+      box.innerText = error.message;
+      box.title = "";
+    }
+  }, 250);
+}
+
+function rainRow(rain, planned) {
+  var row = el("div", "ad-rain-row");
+  var main = el("div", "ad-rain-main");
+  main.append(
+    el("b", "", "🪙 " + formatCoins(rain.amount) + " for " + rainWho(rain)),
+    el("span", "ad-note", planned ? new Date(rain.at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) + RAIN_REPEATS[rain.repeat] + (rain.note ? " · “" + rain.note + "”" : "") : new Date(rain.doneAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) + " · " + rain.players + (rain.players == 1 ? " player" : " players") + " · 🪙 " + formatCoins(rain.paid) + (rain.note ? " · “" + rain.note + "”" : "")),
+  );
+  row.appendChild(main);
+  if (planned) {
+    var now = el("button", "mm-btn mm-btn-sm", "Now");
+    now.type = "button";
+    now.addEventListener("click", async () => {
+      now.disabled = true;
+      try {
+        renderRains(await api("rains/" + rain.id + "/now", {}));
+      } catch (error) {
+        fail(error);
+        now.disabled = false;
+      }
+    });
+    var cancel = el("button", "mm-btn mm-btn-sm ad-danger-btn", "Cancel");
+    cancel.type = "button";
+    cancel.addEventListener("click", async () => {
+      if (!confirm("Cancel this money rain?")) return;
+      try {
+        renderRains(await api("rains/" + rain.id + "/cancel", {}));
+      } catch (error) {
+        fail(error);
+      }
+    });
+    row.append(now, cancel);
+  }
+  return row;
+}
+
+function renderRains(data) {
+  document.getElementById("adRainPlanned").replaceChildren(...(data.planned.length ? data.planned.map((r) => rainRow(r, true)) : [el("p", "ad-note", "Nothing planned.")]));
+  document.getElementById("adRainDone").replaceChildren(...(data.done.length ? data.done.map((r) => rainRow(r, false)) : [el("p", "ad-note", "No money rain yet.")]));
+  document.getElementById("adRainDot").hidden = !data.planned.length;
+}
+
+var rainWired = false;
+async function loadRains() {
+  if (!rainWired) {
+    rainWired = true;
+    ["adRainAmount", "adRainTarget", "adRainPercent", "adRainBelow", "adRainWorld", "adRainWhen", "adRainAt", "adRainRepeat"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", rainFormChanged);
+      document.getElementById(id).addEventListener("change", rainFormChanged);
+    });
+    document.getElementById("adRainGo").addEventListener("click", async () => {
+      var button = document.getElementById("adRainGo");
+      var error = document.getElementById("adRainError");
+      error.hidden = true;
+      var input = rainInput();
+      if (document.getElementById("adRainWhen").value == "later" && input.at == null) {
+        error.innerText = "Pick a date and time.";
+        error.hidden = false;
+        return;
+      }
+      button.disabled = true;
+      try {
+        var result = await api("rains", input);
+        renderRains(result);
+        var rain = result.rain;
+        showHint(rain.status == "done" ? "💸 It rained: " + rain.players + (rain.players == 1 ? " player" : " players") + " got 🪙 " + formatCoins(rain.amount) : "📅 Money rain planned", "success", button);
+      } catch (e) {
+        error.innerText = e.message;
+        error.hidden = false;
+      }
+      button.disabled = false;
+    });
+  }
+  var data;
+  try {
+    data = await api("rains");
+  } catch (error) {
+    return fail(error);
+  }
+  document.getElementById("adRainWorldField").hidden = !data.season;
+  if (!data.season) document.getElementById("adRainWorld").value = "normal";
+  // The time field: in an hour (rounded)
+  var at = document.getElementById("adRainAt");
+  if (!at.value) {
+    var soon = new Date(Date.now() + 3600 * 1000);
+    soon.setMinutes(0, 0, 0);
+    at.value = new Date(soon.getTime() - soon.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  }
+  renderRains(data);
+  rainFormChanged();
+}
 
 async function loadTest() {
   var data;

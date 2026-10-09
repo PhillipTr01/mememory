@@ -154,6 +154,11 @@ async function connectDatabase(attempt = 1) {
     await persist.restoreAll();
     // ... and the seasons start / end on time
     seasons.start();
+    // The money rains of the admin (planned ones come on time)
+    const rain = require("./game/money_rain");
+    await rain.load().catch((error) => console.error("Could not load the money rains:", error));
+    rain.setOnline(() => require("./game/casino_chat").online().names);
+    rain.start();
     startScraper();
   } catch (error) {
     if (shuttingDown) return;

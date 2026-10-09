@@ -4230,3 +4230,37 @@ body.cs-season-world::before {
     margin: 0.4rem 0.1rem;
   }
 }
+
+/* A money rain: coins fall over the page */
+.cs-rain {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cs-rain-drop {
+  position: absolute;
+  top: -50px;
+  opacity: 0;
+  animation: cs-rain-fall 2s cubic-bezier(0.4, 0, 0.8, 1) forwards;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
+}
+
+@keyframes cs-rain-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(-20deg);
+  }
+  10% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(110vh) rotate(25deg);
+  }
+}

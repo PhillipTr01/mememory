@@ -105,6 +105,16 @@ module.exports = function (io) {
     }
   });
 
+  // A money rain: every open casino page of who got coins shows it (in the world it rained in)
+  require("../game/money_rain").changes.on("rain", (rain) => {
+    const names = new Set(rain.names);
+    const world = rain.world === "season" ? worlds.SEASON : "";
+    for (const name of GAMES) {
+      if (worlds.worldOfNamespace(name) !== world) continue;
+      for (const socket of io.of(name).sockets.values()) if (names.has(socket.data.username)) socket.emit("moneyRain", { amount: rain.amount, note: rain.note || null });
+    }
+  });
+
   // Test mode started or stopped: the open casino pages of the player load again - in the other world
   testMode.changes.on("change", (username) => {
     for (const socket of socketsOf(io, username)) {

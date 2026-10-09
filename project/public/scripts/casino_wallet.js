@@ -665,11 +665,6 @@
         switchWorld(inSeasonWorld ? "normal" : "season");
       });
       buttons.appendChild(sw);
-      if (inSeasonWorld) {
-        var lb = el("a", "cs-join-later", "Season leaderboard");
-        lb.href = "leaderboard";
-        buttons.appendChild(lb);
-      }
     }
     var no = el("button", "cs-join-later", mode == "join" ? "Later" : "Close");
     no.type = "button";
@@ -781,6 +776,24 @@
     // On the leaderboard: the winner page right away
     if (window.showWinners) window.showWinners(season.id);
   }
+  /* ---------- A money rain of the admin: coins fall, a notice says how many ---------- */
+
+  socket.on("moneyRain", (rain) => {
+    casinoNotice({ icon: "💸", title: "Money rain! +🪙 " + format(rain.amount), text: rain.note || "Coins for you - have fun!", key: "rain" });
+    var sky = el("div", "cs-rain");
+    sky.setAttribute("aria-hidden", "true");
+    for (var i = 0; i < 36; i++) {
+      var drop = el("span", "cs-rain-drop", i % 5 == 0 ? "💸" : "🪙");
+      drop.style.left = Math.random() * 100 + "%";
+      drop.style.animationDelay = (Math.random() * 1.6).toFixed(2) + "s";
+      drop.style.animationDuration = (1.6 + Math.random() * 1.4).toFixed(2) + "s";
+      drop.style.fontSize = (18 + Math.random() * 18).toFixed(0) + "px";
+      sky.appendChild(drop);
+    }
+    document.body.appendChild(sky);
+    setTimeout(() => sky.remove(), 4800);
+  });
+
   // The side column (second chance, free coins, coins, profile - and the cards below them) comes
   // along when scrolling as one piece: the right part of the bar stays as far above the cards as it is
   (function columnInSight() {

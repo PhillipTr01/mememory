@@ -45,6 +45,7 @@
                 <span class="ad-nav-head">Casino</span>
                 <a href="#casino/general" class="ad-nav-item" data-group="general"><span class="ad-nav-icon">⚙️</span><span class="ad-nav-label">General</span></a>
                 <a href="#casino/test" class="ad-nav-item" data-group="test"><span class="ad-nav-icon">🧪</span><span class="ad-nav-label">Test mode</span><span id="adTestDot" class="ad-state" hidden></span></a>
+                <a href="#casino/rain" class="ad-nav-item" data-group="rain"><span class="ad-nav-icon">💸</span><span class="ad-nav-label">Money rain</span><span id="adRainDot" class="ad-state on" hidden></span></a>
                 <a href="#casino/shop" class="ad-nav-item" data-group="shop"><span class="ad-nav-icon">🛍️</span><span class="ad-nav-label">Shop</span><span id="adShopDot" class="ad-state" hidden></span></a>
                 <a href="#casino/maintenance" class="ad-nav-item" data-group="maintenance"><span class="ad-nav-icon">🔧</span><span class="ad-nav-label">Maintenance</span><span id="adMaintDot" class="ad-state" hidden></span></a>
             </nav>
@@ -422,6 +423,80 @@
                 </div>
 
                 <!--- Test mode: a player (the admin's own) plays with a sandbox balance - nothing is saved --->
+                <div class="ad-stack ad-rain" id="adRain" hidden>
+                    <div class="ad-card ad-rain-card">
+                        <div>
+                            <h2 class="ad-title">💸 Let it rain</h2>
+                            <p class="ad-note">Coins for many players at once - right now or at a time you pick, once or again every day / week. Every player who gets coins sees them fall on their open casino page.</p>
+                        </div>
+                        <div class="ad-rain-form">
+                            <label class="ad-field">
+                                <span class="ad-label">Coins per player</span>
+                                <span class="ad-inline-input"><span class="ad-setting-unit">🪙</span><input id="adRainAmount" class="mm-input" type="number" min="1" step="500" value="5000"></span>
+                            </label>
+                            <label class="ad-field">
+                                <span class="ad-label">Who gets them</span>
+                                <select id="adRainTarget" class="mm-input">
+                                    <option value="all">Every player in the casino</option>
+                                    <option value="online">Who is online right then</option>
+                                    <option value="bottom">The last % of the leaderboard</option>
+                                    <option value="below">Everybody with less than ...</option>
+                                </select>
+                            </label>
+                            <label class="ad-field" id="adRainPercentField" hidden>
+                                <span class="ad-label">The last</span>
+                                <span class="ad-inline-input"><input id="adRainPercent" class="mm-input" type="number" min="1" max="100" step="1" value="10"><span class="ad-setting-unit">%</span></span>
+                            </label>
+                            <label class="ad-field" id="adRainBelowField" hidden>
+                                <span class="ad-label">Less than</span>
+                                <span class="ad-inline-input"><span class="ad-setting-unit">🪙</span><input id="adRainBelow" class="mm-input" type="number" min="1" step="1000" value="5000"></span>
+                            </label>
+                            <label class="ad-field" id="adRainWorldField">
+                                <span class="ad-label">Where</span>
+                                <select id="adRainWorld" class="mm-input">
+                                    <option value="normal">Normal casino (🪙)</option>
+                                    <option value="season">The running season (its coins)</option>
+                                </select>
+                            </label>
+                            <label class="ad-field">
+                                <span class="ad-label">When</span>
+                                <select id="adRainWhen" class="mm-input">
+                                    <option value="now">Right now</option>
+                                    <option value="later">At a time ...</option>
+                                </select>
+                            </label>
+                            <label class="ad-field" id="adRainAtField" hidden>
+                                <span class="ad-label">Date and time</span>
+                                <input id="adRainAt" class="mm-input" type="datetime-local">
+                            </label>
+                            <label class="ad-field">
+                                <span class="ad-label">Again</span>
+                                <select id="adRainRepeat" class="mm-input">
+                                    <option value="none">Once</option>
+                                    <option value="daily">Every day</option>
+                                    <option value="weekly">Every week</option>
+                                </select>
+                            </label>
+                            <label class="ad-field ad-rain-note">
+                                <span class="ad-label">Message (optional)</span>
+                                <input id="adRainNote" class="mm-input" maxlength="80" placeholder="Happy weekend!">
+                            </label>
+                        </div>
+                        <div class="ad-rain-foot">
+                            <span id="adRainPreview" class="ad-rain-preview">…</span>
+                            <span id="adRainError" class="ad-form-error" role="alert" hidden></span>
+                            <button type="button" id="adRainGo" class="mm-btn mm-btn-primary">💸 Let it rain now</button>
+                        </div>
+                    </div>
+                    <div class="ad-card">
+                        <div class="ad-card-head"><h2 class="ad-title">Planned</h2></div>
+                        <div id="adRainPlanned" class="ad-rain-list"></div>
+                    </div>
+                    <div class="ad-card">
+                        <div class="ad-card-head"><h2 class="ad-title">Done</h2></div>
+                        <div id="adRainDone" class="ad-rain-list"></div>
+                    </div>
+                </div>
                 <div class="ad-card ad-test" id="adTest" hidden>
                     <div>
                         <h2 class="ad-title">🧪 Play with test coins</h2>
