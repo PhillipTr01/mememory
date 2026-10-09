@@ -185,6 +185,33 @@ function client(name) {
   return socket;
 }
 
+test("slots: a spin a moment too early waits for the gap, one far too early is refused - the page always hears back", async () => {
+  const old = { SLOTS_MIN_GAP: config.SLOTS_MIN_GAP, SLOTS_SPIN: config.SLOTS_SPIN };
+  Object.assign(config, { SLOTS_MIN_GAP: 400, SLOTS_SPIN: 10 });
+  try {
+    h.setCoins("bob", 5000);
+    const bob = client("bob");
+    await h.once(bob, "slotsSetup");
+    const first = h.once(bob, "slotsResult");
+    bob.emit("spin", { bet: 10 });
+    await first;
+    const start = Date.now();
+    const second = h.once(bob, "slotsResult");
+    bob.emit("spin", { bet: 10 });
+    await second;
+    assert.ok(Date.now() - start >= 300, "waited for the gap");
+    // Far too early: refused out loud (the coins stay)
+    config.SLOTS_MIN_GAP = 5000;
+    const coinsBefore = h.coinsOf("bob");
+    const skipped = h.once(bob, "slotsSkip");
+    bob.emit("spin", { bet: 10 });
+    await skipped;
+    assert.strictEqual(h.coinsOf("bob"), coinsBefore);
+  } finally {
+    Object.assign(config, old);
+  }
+});
+
 test("slots: a spin costs the bet, the win comes right away, the others see it", async () => {
   Object.assign(config, { SLOTS_MIN_GAP: 0, SLOTS_SPIN: 10, SLOTS_COUNT_TIME: 0, SLOTS_BONUS_TIME: 0, SLOTS_FREE_SPIN: 0, SLOTS_BONUS_END: 0, SLOTS_RETRIGGER_TIME: 0, SLOTS_BIG_TIME: 0, SLOTS_SWEAT: 0 });
   h.setCoins("alice", 5000);

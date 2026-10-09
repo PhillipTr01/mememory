@@ -216,10 +216,15 @@ module.exports = function (io) {
         }
         // Closing time before a season: no new spins
         if (casinoLock.locked()) return error(casinoLock.message());
-        // One spin at a time - and not faster than the reels turn
-        if (busy.has(username) || Date.now() - (lastSpin.get(username) || 0) < config.SLOTS_MIN_GAP) return;
+        // One spin at a time - and not faster than the reels turn. A spin a moment too early
+        // (the clocks of page and server) waits for the gap; one far too early is refused - the page
+        // always hears back (it never waits for nothing)
+        if (busy.has(username)) return socket.emit("slotsSkip");
+        const early = config.SLOTS_MIN_GAP - (Date.now() - (lastSpin.get(username) || 0));
+        if (early > 1000) return socket.emit("slotsSkip");
         busy.add(username);
         try {
+          if (early > 0) await new Promise((resolve) => setTimeout(resolve, early));
           if (!(await coins.spend(username, bet, { reason: "slots bet" }))) return error("You don't have enough coins.");
           lastSpin.set(username, Date.now());
           const test = config.SLOTS_TEST_BONUS;

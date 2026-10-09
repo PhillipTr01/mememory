@@ -75,6 +75,7 @@ socket.on("coins", (data) => {
   renderControls();
 });
 socket.on("slotsError", (message) => {
+  clearTimeout(spinWatch);
   showHint(message, "error", document.getElementById("slSpin"));
   spinning = false;
   renderControls();
@@ -87,7 +88,12 @@ socket.on("slotsSetup", (data) => {
   setBet(Number(readBet()) || 100);
 });
 
-socket.on("slotsResult", (result) => playSpin(result));
+var reelsTurning = false; // the result came: the spin plays (no skip any more)
+socket.on("slotsResult", (result) => {
+  clearTimeout(spinWatch);
+  reelsTurning = true;
+  playSpin(result).finally(() => (reelsTurning = false));
+});
 
 // Back on the page: a bonus game that waited goes on where it was
 var activeBonus = null; // id of the bonus game playing on this page
@@ -233,8 +239,25 @@ function spin() {
   renderCoins(myCoins - bet);
   renderControls();
   document.querySelectorAll(".sl-reel").forEach((reel) => reel.classList.add("spinning"));
+  spunAt = Date.now();
   socket.emit("spin", { bet: bet });
+  // No answer (the connection): the button works again after a while
+  clearTimeout(spinWatch);
+  spinWatch = setTimeout(skipSpin, 8000);
 }
+
+// The server didn't take the spin (too fast, another tab): as if nothing happened
+var spinWatch = null;
+function skipSpin() {
+  clearTimeout(spinWatch);
+  if (!spinning || reelsTurning) return;
+  spinning = false;
+  document.querySelectorAll(".sl-reel").forEach((reel) => reel.classList.remove("spinning"));
+  document.getElementById("slWinText").innerText = "";
+  renderCoins(myCoins);
+  renderControls();
+}
+socket.on("slotsSkip", skipSpin);
 
 // The reels turn and stop on `grid` (one after the other); `time`: how long the first reel turns
 function animateReels(grid, time, sweatTime, stopped, strips, stops) {
@@ -343,7 +366,7 @@ async function playSpin(result) {
   await showResult(result);
   spinning = false;
   // A short pause before the next spin (at least the gap the server wants from the start of this one)
-  var pause = Math.max(setup.rules.pauseTime || 0, spunAt + (setup.rules.minGap || 0) - Date.now());
+  var pause = Math.max(setup.rules.pauseTime || 0, spunAt + (setup.rules.minGap || 0) + 100 - Date.now());
   pausedUntil = Date.now() + pause;
   // The win comes with the next "coins" from the server (after the count)
   renderCoins(myCoins);
