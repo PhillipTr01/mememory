@@ -83,6 +83,8 @@ socket.on("coins", (data) => {
 });
 socket.on("slotsError", (message) => {
   clearTimeout(spinWatch);
+  holding = false;
+  if (autoOn()) stopAuto();
   showHint(message, "error", document.getElementById("slSpin"));
   spinning = false;
   renderControls();
@@ -225,6 +227,54 @@ function clearLines() {
 
 var queuedSpin = null; // a click in the short pause: the spin starts right after it
 
+/*
+ * Hold and auto: the spin button (or space) held down spins again and again until it is let go;
+ * auto spins play a number of spins (or until stopped) - a bit slower, with a pause between them.
+ * Both stop for a bonus game (it waits for a click) and when the coins run out.
+ */
+var holding = false; // the button / space is held down
+var autoLeft = 0; // auto spins still to play (0: off)
+var AUTO_MAX = 100; // never more auto spins at once
+var autoTimer = null;
+var AUTO_GAP = 1100; // the extra pause between two auto spins
+
+function autoOn() {
+  return autoLeft > 0;
+}
+
+function startAuto(count) {
+  if (!(count > 0)) return;
+  autoLeft = Math.min(AUTO_MAX, Math.floor(count));
+  document.getElementById("slAutoMenu").hidden = true;
+  document.getElementById("slAuto").setAttribute("aria-expanded", "false");
+  renderControls();
+  if (!spinning) spin();
+}
+
+function stopAuto() {
+  autoLeft = 0;
+  clearTimeout(autoTimer);
+  autoTimer = null;
+  renderControls();
+}
+
+// A spin is over (shown): the next one when the button is held or auto spins run
+function nextSpin(result) {
+  // (a bonus game waits for the player: auto spins and holding stop there)
+  if (result && (result.bonus || result.coinGame)) {
+    holding = false;
+    stopAuto();
+    return;
+  }
+  if (holding) return spin();
+  if (!autoOn()) return;
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(() => {
+    autoTimer = null;
+    if (autoOn() && !spinning) spin();
+  }, AUTO_GAP);
+}
+
 function spin() {
   if (spinning || setup == null) return;
   if (Date.now() < pausedUntil) {
@@ -235,8 +285,14 @@ function spin() {
   if (!Number.isInteger(bet) || bet < setup.rules.minBet || bet > setup.rules.maxBet) {
     return showHint("A spin is " + formatCoins(setup.rules.minBet) + " to " + formatCoins(setup.rules.maxBet) + " coins.", "error");
   }
-  if (bet > myCoins) return showHint("You don't have enough coins.", "error");
+  if (bet > myCoins) {
+    holding = false;
+    if (autoOn()) stopAuto();
+    return showHint("You don't have enough coins.", "error");
+  }
   spinning = true;
+  // (an auto spin: one less to go)
+  if (autoOn()) autoLeft--;
   clearTimeout(lineTimer);
   clearLines();
   document.getElementById("slWinBar").className = "sl-winbar";
@@ -378,6 +434,7 @@ async function playSpin(result) {
   // The win comes with the next "coins" from the server (after the count)
   renderCoins(myCoins);
   renderControls();
+  nextSpin(result);
 }
 
 /* ---------- Bonus game: two wheels (free spins, multiplier), then the free spins ---------- */
@@ -1267,9 +1324,17 @@ function renderControls() {
   if (setup == null) return;
   var bet = currentBet();
   var button = document.getElementById("slSpin");
-  button.disabled = spinning || bet > myCoins;
-  button.classList.toggle("busy", spinning);
-  button.title = bet > myCoins ? "Not enough coins" : "Spin (space)";
+  // Auto spins running: the button stops them (with how many are left)
+  var auto = autoOn();
+  button.disabled = !auto && (spinning || bet > myCoins);
+  button.classList.toggle("busy", spinning && !auto);
+  button.classList.toggle("auto", auto);
+  button.querySelector(".sl-spin-label").innerText = auto ? "Stop" : "Spin";
+  var left = document.getElementById("slAutoLeft");
+  left.hidden = !auto;
+  left.innerText = String(autoLeft);
+  button.title = auto ? "Stop the auto spins" : bet > myCoins ? "Not enough coins" : "Spin (space) - hold to keep spinning";
+  document.getElementById("slAuto").disabled = auto || bet > myCoins;
   document.querySelectorAll(".sl-preset").forEach((preset) => preset.classList.toggle("active", Number(preset.dataset.value) == bet));
   document.getElementById("slLess").disabled = spinning || bet <= setup.rules.minBet;
   document.getElementById("slMore").disabled = spinning || bet >= maxNow();
@@ -1387,18 +1452,57 @@ function showPaytable() {
 
 document.addEventListener("DOMContentLoaded", () => {
   setupChat();
-  document.getElementById("slSpin").addEventListener("click", spin);
+  // Spin: a press spins - held down, it spins again and again (until let go); during auto spins it stops them
+  var spinButton = document.getElementById("slSpin");
+  var pressedByPointer = false;
+  spinButton.addEventListener("pointerdown", (event) => {
+    if (event.button != 0) return;
+    pressedByPointer = true;
+    if (autoOn()) return stopAuto();
+    holding = true;
+    spin();
+  });
+  // (let go anywhere - the button is disabled while it spins and hears nothing then)
+  var letGo = () => (holding = false);
+  ["pointerup", "pointercancel"].forEach((type) => window.addEventListener(type, letGo, true));
+  window.addEventListener("blur", letGo);
+  // (the keyboard: Enter on the button - a click without a pointer)
+  spinButton.addEventListener("click", () => {
+    if (pressedByPointer) return (pressedByPointer = false);
+    if (autoOn()) return stopAuto();
+    spin();
+  });
+  // Auto spins: the menu with the numbers
+  var autoButton = document.getElementById("slAuto");
+  var autoMenu = document.getElementById("slAutoMenu");
+  autoButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    autoMenu.hidden = !autoMenu.hidden;
+    autoButton.setAttribute("aria-expanded", autoMenu.hidden ? "false" : "true");
+  });
+  autoMenu.querySelectorAll("[data-auto]").forEach((option) => option.addEventListener("click", () => startAuto(Number(option.dataset.auto))));
+  document.addEventListener("click", (event) => {
+    if (!autoMenu.hidden && !event.target.closest(".sl-auto")) {
+      autoMenu.hidden = true;
+      autoButton.setAttribute("aria-expanded", "false");
+    }
+  });
   document.getElementById("slLess").addEventListener("click", () => stepBet(-1));
   document.getElementById("slMore").addEventListener("click", () => stepBet(1));
   document.getElementById("slBet").addEventListener("change", (event) => setBet(Number(event.target.value) || 0));
   document.getElementById("slPaytable").addEventListener("click", () => setup && showPaytable());
-  // Space spins (not while typing)
+  // Space spins (not while typing) - held down, again and again; during auto spins it stops them
   document.addEventListener("keydown", (event) => {
     if (event.code != "Space" || event.repeat) return;
     var tag = document.activeElement && document.activeElement.tagName;
     if (tag == "INPUT" || tag == "TEXTAREA" || tag == "BUTTON" || document.querySelector(".mm-dialog-backdrop")) return;
     event.preventDefault();
+    if (autoOn()) return stopAuto();
+    holding = true;
     spin();
+  });
+  document.addEventListener("keyup", (event) => {
+    if (event.code == "Space") holding = false;
   });
   // Full screen (casino_fullscreen.js): the symbols change their size
   document.addEventListener("fullscreenchange", () => {

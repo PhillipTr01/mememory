@@ -312,6 +312,10 @@
 /* The spin button: clean, gold outline like the machine, the arrow turns while the reels do */
 .sl-spin {
   justify-self: end;
+  /* (held down on a phone: no menu, no text selection) */
+  -webkit-touch-callout: none;
+  user-select: none;
+  touch-action: manipulation;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -354,6 +358,10 @@
   flex: 0 0 auto;
   width: 22px;
   height: 22px;
+}
+
+.sl-spin.auto .sl-spin-icon {
+  animation: sl-turn 1.4s linear infinite;
 }
 
 .sl-spin.busy .sl-spin-icon {
@@ -1350,4 +1358,135 @@
   width: 1.2em;
   height: 1.2em;
   margin-top: -0.12em;
+}
+
+/* ---------- Spin with auto spins next to it ---------- */
+.sl-spin-group {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sl-auto {
+  position: relative;
+}
+
+.sl-auto-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.sl-auto-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sl-auto-btn:hover:not(:disabled),
+.sl-auto-btn[aria-expanded="true"] {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.12);
+}
+
+.sl-auto-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* The numbers: over the button */
+.sl-auto-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 230px;
+  padding: 0.75rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5);
+}
+
+.sl-auto-menu[hidden] {
+  display: none;
+}
+
+.sl-auto-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.sl-auto-options button {
+  height: 36px;
+  border: 1px solid var(--mm-border);
+  border-radius: 9px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.sl-auto-options button:hover {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+}
+
+.sl-auto-note {
+  font-size: 0.72rem;
+  color: var(--mm-muted);
+}
+
+/* Auto spins running: the button stops them, the spins left in a badge */
+.sl-spin.auto {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  color: var(--mm-accent);
+}
+
+.sl-auto-left {
+  min-width: 1.8rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--mm-accent);
+  color: #1a1305;
+  font-size: 0.8rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.sl-auto-left[hidden] {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .sl-spin-group .sl-spin {
+    min-width: 0;
+  }
+
+  /* (a phone: the menu in the middle over the button - never past the edge of the screen) */
+  .sl-auto-menu {
+    left: 50%;
+    right: auto;
+    width: min(230px, calc(100vw - 32px));
+    transform: translateX(-50%);
+  }
 }
