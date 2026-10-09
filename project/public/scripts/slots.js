@@ -230,7 +230,8 @@ var queuedSpin = null; // a click in the short pause: the spin starts right afte
 /*
  * Hold and auto: the spin button (or space) held down spins again and again until it is let go;
  * auto spins play a number of spins (or until stopped) - a bit slower, with a pause between them.
- * Both stop for a bonus game (it waits for a click) and when the coins run out.
+ * Holding stops at a bonus game; auto spins wait for it (its start and "continue" are clicks) and go on
+ * afterwards. Both stop when the coins run out.
  */
 var holding = false; // the button / space is held down
 var autoLeft = 0; // auto spins still to play (0: off)
@@ -260,12 +261,8 @@ function stopAuto() {
 
 // A spin is over (shown): the next one when the button is held or auto spins run
 function nextSpin(result) {
-  // (a bonus game waits for the player: auto spins and holding stop there)
-  if (result && (result.bonus || result.coinGame)) {
-    holding = false;
-    stopAuto();
-    return;
-  }
+  // (a bonus game waited for the player - holding stops there; auto spins go on after its "continue", if any are left)
+  if (result && (result.bonus || result.coinGame)) holding = false;
   if (holding) return spin();
   if (!autoOn()) return;
   clearTimeout(autoTimer);
