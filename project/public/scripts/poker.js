@@ -733,6 +733,8 @@ document.addEventListener("DOMContentLoaded", () => {
   var wrap = document.querySelector(".pk-table-wrap");
   if (!wrap || !("zoom" in document.body.style)) return;
   var fit = () => {
+    // (full screen zooms the whole game by itself - its styles stay untouched; this one only for the page)
+    if (document.fullscreenElement) return;
     wrap.style.zoom = "";
     wrap.style.width = "";
     wrap.style.margin = "";
@@ -749,6 +751,7 @@ document.addEventListener("DOMContentLoaded", () => {
     wrap.style.zoom = Math.max(0.6, (height - over) / height).toFixed(3);
   };
   window.addEventListener("resize", fit);
+  document.addEventListener("fullscreenchange", () => requestAnimationFrame(fit));
   fit();
   // (the seat bar and the controls come once the table is known)
   setTimeout(fit, 600);
