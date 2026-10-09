@@ -457,7 +457,9 @@
       state.id = "navBoardState";
       board.appendChild(state);
     }
-    state.innerText = !season ? "Info" : inSeasonWorld ? "Playing" : data.joined ? "Switch" : "Join";
+    state.innerText = !season ? "Info" : inSeasonWorld ? "" : data.joined ? "Switch" : "Join";
+    // (in the season world: no label - the glow of the pill and the line at the top show it)
+    state.hidden = !!season && inSeasonWorld;
     state.className = "nav-board-state" + (!season ? " info" : inSeasonWorld ? " playing" : data.joined ? " switch" : " join");
     board.title = !season
       ? shown.name + " - starts " + new Date(shown.start).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
