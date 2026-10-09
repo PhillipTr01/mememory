@@ -62,12 +62,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 /*
  * The items of the profile menu: MemeMory has its games, scoreboard and
- * profile - the casino (body.jackpot-theme) only what it needs (the avatar,
+ * profile (Play and the scoreboard are on the pages themselves) - the casino (body.jackpot-theme) only what it needs (the avatar,
  * the accessory shop). Every item with a colored icon tile.
  */
 var MENU_MEMEMORY = [
-  { href: "/lobby", icon: "🎮", tone: "blue", label: "Play" },
-  { href: "/home", icon: "🏆", tone: "gold", label: "Scoreboard" },
   { href: "/user", icon: "📊", tone: "green", label: "Profile" },
   { href: "/user#avatar", icon: "🎨", tone: "pink", label: "Avatar" },
   { href: "/settings", icon: "⚙️", tone: "gray", label: "Settings" },
