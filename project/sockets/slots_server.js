@@ -21,7 +21,7 @@ const ROOM = "slots";
 module.exports = function (io, options = {}) {
   // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
   const world = options.world || "";
-  const { coins, persist, live, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
+  const { coins, persist, live, inPlay, casinoLock, casinoChat, limits } = require("../game/worlds").services(world);
   const room = io.of(world + "/slots");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
@@ -144,7 +144,7 @@ module.exports = function (io, options = {}) {
   }
 
   function rules() {
-    return { minBet: config.SLOTS_MIN_BET, maxBet: config.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, pauseTime: config.SLOTS_PAUSE, minGap: config.SLOTS_MIN_GAP, bonusTime: config.SLOTS_BONUS_TIME, freeSpinTime: config.SLOTS_FREE_SPIN, respinTime: config.SLOTS_RESPIN, coinIntroTime: config.SLOTS_COIN_INTRO, ultraTime: config.SLOTS_ULTRA_TIME, bonusEndTime: config.SLOTS_BONUS_END, resumeTime: config.SLOTS_RESUME_TIME, sweatTime: config.SLOTS_SWEAT, retriggerTime: config.SLOTS_RETRIGGER_TIME, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
+    return { minBet: limits.SLOTS_MIN_BET, maxBet: limits.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, pauseTime: config.SLOTS_PAUSE, minGap: config.SLOTS_MIN_GAP, bonusTime: config.SLOTS_BONUS_TIME, freeSpinTime: config.SLOTS_FREE_SPIN, respinTime: config.SLOTS_RESPIN, coinIntroTime: config.SLOTS_COIN_INTRO, ultraTime: config.SLOTS_ULTRA_TIME, bonusEndTime: config.SLOTS_BONUS_END, resumeTime: config.SLOTS_RESUME_TIME, sweatTime: config.SLOTS_SWEAT, retriggerTime: config.SLOTS_RETRIGGER_TIME, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
   }
 
   async function sendCoins(username) {
@@ -214,8 +214,8 @@ module.exports = function (io, options = {}) {
       safe("spin", async (data) => {
         const bet = data != null ? data.bet : null;
         if (!Number.isInteger(bet)) return;
-        if (bet < config.SLOTS_MIN_BET || bet > config.SLOTS_MAX_BET) {
-          return error(`A spin is ${config.SLOTS_MIN_BET.toLocaleString("en-US")} to ${config.SLOTS_MAX_BET.toLocaleString("en-US")} coins.`);
+        if (bet < limits.SLOTS_MIN_BET || bet > limits.SLOTS_MAX_BET) {
+          return error(`A spin is ${limits.SLOTS_MIN_BET.toLocaleString("en-US")} to ${limits.SLOTS_MAX_BET.toLocaleString("en-US")} coins.`);
         }
         // Closing time before a season: no new spins
         if (casinoLock.locked()) return error(casinoLock.message());
@@ -228,7 +228,7 @@ module.exports = function (io, options = {}) {
         busy.add(username);
         try {
           if (early > 0) await new Promise((resolve) => setTimeout(resolve, early));
-          if (!(await coins.spend(username, bet, { reason: "slots bet" }))) return error("You don't have enough coins.");
+          if (!(await coins.spend(username, bet, { reason: "slots bet" }))) return error(coins.refusal(username) || "You don't have enough coins.");
           lastSpin.set(username, Date.now());
           // (debug, the test world only: the next spin starts the bonus the admin picked)
           const test = nextBonus || config.SLOTS_TEST_BONUS;

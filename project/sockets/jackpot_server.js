@@ -29,7 +29,7 @@ const PHASE = {
 module.exports = function (io, options = {}) {
   // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
   const world = options.world || "";
-  const { coins, persist, live, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
+  const { coins, persist, live, inPlay, casinoLock, casinoChat, limits } = require("../game/worlds").services(world);
   const jackpot = io.of(world + "/jackpot");
   jackpot.use(socketAuth.casino);
   casinoChat.attach(jackpot, ROOM);
@@ -97,8 +97,8 @@ module.exports = function (io, options = {}) {
       fair: pot.phase === PHASE.DRAWING ? pot.fair : { hash: pot.fair.hash },
       records: pot.records,
       spin: config.JACKPOT_SPIN,
-      maxBets: config.JACKPOT_MAX_BETS,
-      maxCoins: config.JACKPOT_MAX_COINS,
+      maxBets: limits.JACKPOT_MAX_BETS,
+      maxCoins: limits.JACKPOT_MAX_COINS,
       rake: config.JACKPOT_RAKE,
       history: pot.history,
       viewers: jackpot.sockets.size,
@@ -329,25 +329,25 @@ module.exports = function (io, options = {}) {
         // Any amount, but at most a few separate bets per round (during a draw: for the next one)
         const round = pot.phase === PHASE.DRAWING ? [] : pot.bets;
         const mine = round.concat(pot.incoming, pot.waiting).filter((bet) => bet.name === username);
-        if (mine.length >= config.JACKPOT_MAX_BETS) {
-          socket.emit("betError", `At most ${config.JACKPOT_MAX_BETS} bets per round.`);
+        if (mine.length >= limits.JACKPOT_MAX_BETS) {
+          socket.emit("betError", `At most ${limits.JACKPOT_MAX_BETS} bets per round.`);
           return;
         }
         // All bets of a round together: at most JACKPOT_MAX_COINS
-        const left = config.JACKPOT_MAX_COINS - mine.reduce((sum, bet) => sum + bet.amount, 0);
+        const left = limits.JACKPOT_MAX_COINS - mine.reduce((sum, bet) => sum + bet.amount, 0);
         if (amount > left) {
           socket.emit(
             "betError",
             left > 0
-              ? `At most 🪙 ${config.JACKPOT_MAX_COINS.toLocaleString("en-US")} per round - you can put in 🪙 ${left.toLocaleString("en-US")} more.`
-              : `At most 🪙 ${config.JACKPOT_MAX_COINS.toLocaleString("en-US")} per round.`,
+              ? `At most 🪙 ${limits.JACKPOT_MAX_COINS.toLocaleString("en-US")} per round - you can put in 🪙 ${left.toLocaleString("en-US")} more.`
+              : `At most 🪙 ${limits.JACKPOT_MAX_COINS.toLocaleString("en-US")} per round.`,
           );
           return;
         }
         betting.add(username);
         try {
           if (!(await coins.spend(username, amount, { reason: "jackpot bet" }))) {
-            socket.emit("betError", "You don't have enough coins.");
+            socket.emit("betError", coins.refusal(username) || "You don't have enough coins.");
             return;
           }
           // On its way: in the pot only after a few seconds (nobody can answer a bet in the last second)

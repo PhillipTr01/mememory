@@ -359,13 +359,18 @@ module.exports = function () {
 
   router.get("/api/settings", admin, (req, res) => res.json({ settings: settings.list() }));
 
-  // {values: {KEY: number}} or {defaults: true}
+  // {values: {KEY: number}}, {season: {KEY: number | null}} (the season world's own limits) or {defaults: true[, season: true]}
   router.post(
     "/api/settings",
     admin,
     asyncHandler(async (req, res) => {
       const body = req.body || {};
-      const result = body.defaults === true ? await settings.resetToDefaults() : await settings.update(body.values);
+      const result =
+        body.defaults === true
+          ? await settings.resetToDefaults({ season: body.season === true })
+          : body.season != null
+            ? await settings.updateSeason(body.season)
+            : await settings.update(body.values);
       if (result.error) return res.status(400).json(result);
       res.json(result);
     }),

@@ -5,6 +5,7 @@ const inPlay = require("./in_play");
 const casinoLock = require("./casino_lock");
 const casinoChat = require("./casino_chat");
 const coins = require("./coins");
+const limits = require("./limits");
 
 /*
  * The worlds of the casino - like tenants, they share nothing but the chat:
@@ -19,7 +20,8 @@ const coins = require("./coins");
  *   of its own, nothing closes it and it isn't in the overview of the admin
  *   panel or the second chances.
  *
- * services(world): what a game server uses - the ones of its world.
+ * services(world): what a game server uses - the ones of its world (limits:
+ * like config, with the season world's own bet limits).
  */
 const TEST = "/test";
 const SEASON = "/season";
@@ -36,9 +38,9 @@ const testChat = casinoChat.create("test-chat", { save: false });
 const seasonPersist = persist.scoped("season/");
 
 function services(world) {
-  if (world === TEST) return { coins: coins, persist: quiet, live: quiet, inPlay: quiet, casinoLock: testLock, casinoChat: testChat };
-  if (world === SEASON) return { coins: coins.season, persist: seasonPersist, live: quiet, inPlay: inPlay.season, casinoLock: casinoLock.season, casinoChat: casinoChat };
-  return { coins: coins, persist, live, inPlay, casinoLock, casinoChat };
+  if (world === TEST) return { coins: coins, persist: quiet, live: quiet, inPlay: quiet, casinoLock: testLock, casinoChat: testChat, limits: limits.forWorld(world) };
+  if (world === SEASON) return { coins: coins.season, persist: seasonPersist, live: quiet, inPlay: inPlay.season, casinoLock: casinoLock.season, casinoChat: casinoChat, limits: limits.forWorld(world) };
+  return { coins: coins, persist, live, inPlay, casinoLock, casinoChat, limits: limits.forWorld(world) };
 }
 
 // The game servers of the test world (for the debug tools of the admin panel): name -> what the server returns

@@ -85,7 +85,7 @@ module.exports = function (auth) {
 
   // How a game works (the "i" next to the title)
   router.get("/info/:game", auth, approved, (req, res) => {
-    const about = info.get(req.params.game);
+    const about = info.get(req.params.game, worlds.worldOf(req.username));
     if (about == null) return res.status(404).json({ error: "Unknown game." });
     res.json(about);
   });

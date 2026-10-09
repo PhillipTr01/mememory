@@ -9,6 +9,7 @@ function slotsRtp() {
   return slotsRtpText;
 }
 const roulette = require("./roulette");
+const limits = require("./limits");
 
 /*
  * How every game works, for the little "i" next to the title. Made from the
@@ -20,7 +21,7 @@ const seconds = (ms) => `${Math.round(ms / 1000)} s`;
 const minutes = (ms) => `${Math.round(ms / 60000)} min`;
 
 const GAMES = {
-  jackpot: () => ({
+  jackpot: (L) => ({
     title: "Jackpot",
     sections: [
       {
@@ -36,12 +37,12 @@ const GAMES = {
       },
       {
         heading: "Limits",
-        items: [`Up to ${n(config.JACKPOT_MAX_BETS)} bets per round.`, `At most 🪙 ${n(config.JACKPOT_MAX_COINS)} per player and round.`],
+        items: [`Up to ${n(L.JACKPOT_MAX_BETS)} bets per round.`, `At most 🪙 ${n(L.JACKPOT_MAX_COINS)} per player and round.`],
       },
     ],
   }),
 
-  battles: () => ({
+  battles: (L) => ({
     title: "Case Battles",
     sections: [
       {
@@ -73,12 +74,12 @@ const GAMES = {
       },
       {
         heading: "Limits",
-        items: [`Up to ${n(config.BATTLE_MAX_CASES)} cases per battle, 🪙 ${n(config.BATTLE_MAX_COST)} at most per player.`, `Up to ${n(config.BATTLE_MAX_OPEN)} battles of your own at a time.`],
+        items: [`Up to ${n(L.BATTLE_MAX_CASES)} cases per battle, 🪙 ${n(L.BATTLE_MAX_COST)} at most per player.`, `Up to ${n(L.BATTLE_MAX_OPEN)} battles of your own at a time.`],
       },
     ],
   }),
 
-  poker: () => {
+  poker: (L) => {
     const level = (step) => `${n(config.POKER_SMALL_BLIND * step)}/${n(config.POKER_BIG_BLIND * step)}`;
     return {
       title: "Poker",
@@ -103,13 +104,13 @@ const GAMES = {
         },
         {
           heading: "Buy-in",
-          items: [`🪙 ${n(config.POKER_MIN_BUYIN)} to ${n(config.POKER_MAX_BUYIN)} coins become chips.`, "Your chips become coins again when you stand up."],
+          items: [`🪙 ${n(L.POKER_MIN_BUYIN)} to ${n(L.POKER_MAX_BUYIN)} coins become chips.`, "Your chips become coins again when you stand up."],
         },
       ],
     };
   },
 
-  blackjack: () => ({
+  blackjack: (L) => ({
     title: "Blackjack",
     sections: [
       {
@@ -121,7 +122,7 @@ const GAMES = {
           "The dealer draws up to 16 and stands on every 17.",
           "Win: 2x your bet back. Blackjack (ace + 10 with the first two cards): 3:2. Same total: you get your bet back.",
           "Every round is dealt from a new shoe of 6 decks - counting cards doesn't help.",
-          `You can take up to ${config.BJ_MY_SEATS} seats at a table. ${seconds(config.BJ_TURN)} per decision, then the hand stands.`,
+          `You can take up to ${L.BJ_MY_SEATS} seats at a table. ${seconds(config.BJ_TURN)} per decision, then the hand stands.`,
         ],
       },
       {
@@ -134,12 +135,12 @@ const GAMES = {
       },
       {
         heading: "The 3 rooms",
-        items: config.BJ_TABLES.map((table) => `${table.icon} ${table.name}: 🪙 ${n(config[table.minKey])} to ${n(config[table.maxKey])} per seat. ${table.about}`),
+        items: config.BJ_TABLES.map((table) => `${table.icon} ${table.name}: 🪙 ${n(L[table.minKey])} to ${n(L[table.maxKey])} per seat. ${table.about}`),
       },
     ],
   }),
 
-  slots: () => {
+  slots: (L) => {
     const spins = slots.BONUS_SPINS.map((f) => f.spins).join(", ");
     const starts = slots.BONUS_MULTIPLIERS.map((f) => "×" + f.multiplier).join(", ");
     return {
@@ -163,13 +164,13 @@ const GAMES = {
         },
         {
           heading: "Limits",
-          items: [`🪙 ${n(config.SLOTS_MIN_BET)} to ${n(config.SLOTS_MAX_BET)} per spin.`],
+          items: [`🪙 ${n(L.SLOTS_MIN_BET)} to ${n(L.SLOTS_MAX_BET)} per spin.`],
         },
       ],
     };
   },
 
-  roulette: () => ({
+  roulette: (L) => ({
     title: "Roulette",
     sections: [
       {
@@ -184,7 +185,7 @@ const GAMES = {
       },
       {
         heading: "Limits",
-        items: [`At least 🪙 ${n(config.ROULETTE_MIN_BET)} per bet, at most 🪙 ${n(config.ROULETTE_MAX_BET)} per round (all colors together).`],
+        items: [`At least 🪙 ${n(L.ROULETTE_MIN_BET)} per bet, at most 🪙 ${n(L.ROULETTE_MAX_BET)} per round (all colors together).`],
       },
     ],
   }),
@@ -225,8 +226,20 @@ const GAMES = {
   }),
 };
 
-function get(game) {
-  return Object.hasOwn(GAMES, game) ? GAMES[game]() : null;
+// The max bet by balance (every game but the overview), null: no cap
+function capText(L) {
+  if (!(L.BET_CAP_SHARE < 100)) return null;
+  return `Up to 🪙 ${n(L.BET_CAP_FLOOR)} you can bet all your coins - with more, one bet is at most ${L.BET_CAP_SHARE}% of your coins.`;
+}
+
+// world: the limits of that world ("/season": the season's own ones)
+function get(game, world = "") {
+  if (!Object.hasOwn(GAMES, game)) return null;
+  const L = limits.forWorld(world);
+  const about = GAMES[game](L);
+  const cap = capText(L);
+  if (cap && game !== "leaderboard") about.sections.push({ heading: "Max bet", items: [cap] });
+  return about;
 }
 
 module.exports = { get, GAMES };

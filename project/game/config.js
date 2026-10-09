@@ -65,6 +65,11 @@ module.exports = {
   DAILY_BONUS: 2500,
   GIFT_LIMIT: 10000, // coins a player can give other players a day
   SEASON_GIFT_LIMIT: 5000, // ... in the season world a day (its coins - an own limit)
+  // Max bet by balance: up to BET_CAP_FLOOR a player can bet everything, above it at most BET_CAP_SHARE % of the balance per bet
+  BET_CAP_FLOOR: 100000,
+  BET_CAP_SHARE: 25, // 100: no cap
+  // The limits of the season world that differ from the normal casino ({KEY: value}, game/settings.js - the admin sets them)
+  SEASON_LIMITS: {},
   SEASON_CLOSE_WAIT: 60 * 1000, // before a season starts: when every game is quiet, this long until the start
   SEASON_CLOSE_MAX: 5 * 60 * 1000, // ... and at most this long waiting for the games to get quiet
   SEASON_DAILY_BONUS: 1000, // the daily bonus of a new season (each season can have its own)

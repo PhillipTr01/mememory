@@ -29,7 +29,7 @@ const ROOM = "blackjack";
 module.exports = function (io, options = {}) {
   // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
   const world = options.world || "";
-  const { coins, persist, live, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
+  const { coins, persist, live, inPlay, casinoLock, casinoChat, limits } = require("../game/worlds").services(world);
   const room = io.of(world + "/blackjack");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
@@ -54,8 +54,8 @@ module.exports = function (io, options = {}) {
 
   function createTable(def) {
     // The limits per seat (can be changed in the admin panel)
-    const minBet = () => config[def.minKey];
-    const maxBet = () => config[def.maxKey];
+    const minBet = () => limits[def.minKey];
+    const maxBet = () => limits[def.maxKey];
 
     const table = {
       id: def.id,
@@ -122,7 +122,7 @@ module.exports = function (io, options = {}) {
         peeking: table.peeking === true,
         history: table.history,
         viewers: pages().length,
-        rules: { sideShare: config.BJ_SIDE_SHARE, minBet: minBet(), maxBet: maxBet(), mySeats: config.BJ_MY_SEATS, turn: config.BJ_TURN, betting: config.BJ_BETTING, sit: config.BJ_SIT, decks: bj.DECKS },
+        rules: { sideShare: config.BJ_SIDE_SHARE, minBet: minBet(), maxBet: maxBet(), mySeats: limits.BJ_MY_SEATS, turn: config.BJ_TURN, betting: config.BJ_BETTING, sit: config.BJ_SIT, decks: bj.DECKS },
         lastBets: table.lastBets.get(viewer) || null,
       };
     }
@@ -407,7 +407,7 @@ module.exports = function (io, options = {}) {
       if (busy.has(username)) return null;
       busy.add(username);
       try {
-        if (!(await coins.spend(username, hand.bet, { reason: "blackjack bet", note: type }))) return "You don't have enough coins.";
+        if (!(await coins.spend(username, hand.bet, { reason: "blackjack bet", note: type, nocap: true }))) return coins.refusal(username) || "You don't have enough coins.";
         // Still the same hand after the payment?
         if (table.current == null || table.current.seat !== s || table.current.hand !== h || table.seats[s] !== seat) {
           await coins.add(username, hand.bet, { reason: "blackjack refund" });
@@ -447,7 +447,7 @@ module.exports = function (io, options = {}) {
         if (table.seats[s]) return table.seats[s].name === username ? undefined : error("This seat is taken.");
         const mine = table.seats.filter((seat) => seat && seat.name === username);
         if (mine.some((seat) => seat.bet === 0)) return error("Bet on your seat first, then take another one.");
-        if (mine.length >= config.BJ_MY_SEATS) return error(`At most ${config.BJ_MY_SEATS} seats at a time.`);
+        if (mine.length >= limits.BJ_MY_SEATS) return error(`At most ${limits.BJ_MY_SEATS} seats at a time.`);
         table.seats[s] = newSeat(username);
         // During a round: the stand-up time starts with the next betting time
         if (table.phase === "betting") startStandTimer(s);
@@ -469,7 +469,7 @@ module.exports = function (io, options = {}) {
         if (busy.has(username)) return;
         busy.add(username);
         try {
-          if (!(await coins.spend(username, amount, { reason: "blackjack bet" }))) return error("You don't have enough coins.");
+          if (!(await coins.spend(username, amount, { reason: "blackjack bet" }))) return error(coins.refusal(username) || "You don't have enough coins.");
           // The round started, or the player stood up meanwhile
           if (table.phase !== "betting" || table.seats[s] !== seat) {
             await coins.add(username, amount, { reason: "blackjack refund" });
@@ -498,7 +498,7 @@ module.exports = function (io, options = {}) {
         if (busy.has(username)) return;
         busy.add(username);
         try {
-          if (!(await coins.spend(username, amount, { reason: "blackjack bet", note: type }))) return error("You don't have enough coins.");
+          if (!(await coins.spend(username, amount, { reason: "blackjack bet", note: type }))) return error(coins.refusal(username) || "You don't have enough coins.");
           if (table.phase !== "betting" || table.seats[s] !== seat) {
             await coins.add(username, amount, { reason: "blackjack refund" });
             return error("Too late for this seat.");
@@ -535,7 +535,7 @@ module.exports = function (io, options = {}) {
         try {
           const sides = (bet) => (bet.side ? (bet.side.pairs || 0) + (bet.side.plus3 || 0) : 0);
           const total = last.reduce((sum, bet) => sum + bet.amount + sides(bet), 0);
-          if (!(await coins.spend(username, total, { reason: "blackjack bet", note: "same bet" }))) return error("You don't have enough coins.");
+          if (!(await coins.spend(username, total, { reason: "blackjack bet", note: "same bet" }))) return error(coins.refusal(username) || "You don't have enough coins.");
           // The seats now (the round may have started, others may have sat down meanwhile)
           let refund = 0;
           let placed = 0;
@@ -548,7 +548,7 @@ module.exports = function (io, options = {}) {
               ...(Number.isInteger(bet.seat) && bet.seat >= 0 && bet.seat < table.seats.length ? [bet.seat] : []),
               ...indexes.slice().sort((x, y) => Math.abs(x - bet.seat) - Math.abs(y - bet.seat) || x - y),
             ];
-            const s = table.phase === "betting" ? order.find((i) => own(i) || (table.seats[i] == null && held < config.BJ_MY_SEATS)) : undefined;
+            const s = table.phase === "betting" ? order.find((i) => own(i) || (table.seats[i] == null && held < limits.BJ_MY_SEATS)) : undefined;
             if (s === undefined) {
               refund += bet.amount + sides(bet);
               continue;

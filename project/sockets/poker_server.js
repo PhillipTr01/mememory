@@ -21,7 +21,7 @@ const BETTING = ["preflop", "flop", "turn", "river"];
 module.exports = function (io, options = {}) {
   // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
   const world = options.world || "";
-  const { coins, persist, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
+  const { coins, persist, inPlay, casinoLock, casinoChat, limits } = require("../game/worlds").services(world);
   const room = io.of(world + "/poker");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
@@ -195,8 +195,8 @@ module.exports = function (io, options = {}) {
       rules: {
         smallBlind: blinds().small,
         bigBlind: blinds().big,
-        minBuyIn: config.POKER_MIN_BUYIN,
-        maxBuyIn: config.POKER_MAX_BUYIN,
+        minBuyIn: limits.POKER_MIN_BUYIN,
+        maxBuyIn: limits.POKER_MAX_BUYIN,
         defaultBuyIn: config.POKER_DEFAULT_BUYIN,
         turn: config.POKER_TURN,
       },
@@ -650,15 +650,15 @@ module.exports = function (io, options = {}) {
         if (data == null) return;
         const { seat, buyIn } = data;
         if (!Number.isInteger(seat) || seat < 0 || seat >= table.seats.length) return;
-        if (!Number.isInteger(buyIn) || buyIn < config.POKER_MIN_BUYIN || buyIn > config.POKER_MAX_BUYIN) {
-          error(`Buy in with ${config.POKER_MIN_BUYIN} - ${config.POKER_MAX_BUYIN} coins.`);
+        if (!Number.isInteger(buyIn) || buyIn < limits.POKER_MIN_BUYIN || buyIn > limits.POKER_MAX_BUYIN) {
+          error(`Buy in with ${limits.POKER_MIN_BUYIN} - ${limits.POKER_MAX_BUYIN} coins.`);
           return;
         }
         if (table.seats[seat] != null || seatOf(username) >= 0 || busy.has(username)) return;
         busy.add(username);
         try {
           if (!(await coins.spend(username, buyIn, { reason: "poker buy-in" }))) {
-            error("You don't have enough coins.");
+            error(coins.refusal(username) || "You don't have enough coins.");
             return;
           }
           // Somebody was faster
@@ -701,14 +701,14 @@ module.exports = function (io, options = {}) {
           error("Add chips between hands.");
           return;
         }
-        if (seat.stack + amount > config.POKER_MAX_BUYIN) {
-          error(`At most ${config.POKER_MAX_BUYIN} chips at the table.`);
+        if (seat.stack + amount > limits.POKER_MAX_BUYIN) {
+          error(`At most ${limits.POKER_MAX_BUYIN} chips at the table.`);
           return;
         }
         busy.add(username);
         try {
           if (!(await coins.spend(username, amount, { reason: "poker chips" }))) {
-            error("You don't have enough coins.");
+            error(coins.refusal(username) || "You don't have enough coins.");
             return;
           }
           if (table.seats[i] !== seat) {

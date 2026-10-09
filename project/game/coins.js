@@ -3,6 +3,10 @@ const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
 const config = require("./config");
 const days = require("./days");
+const limits = require("./limits");
+
+// Bets (every game): one may take at most limits.betCap of the balance - more only with options.nocap (a double, a split)
+const BET_REASONS = ["jackpot bet", "battle", "poker buy-in", "poker chips", "blackjack bet", "slots bet", "roulette bet"];
 
 /*
  * "change" (username) after every change of a balance: every page that shows
@@ -232,12 +236,31 @@ function makeWallet(kind) {
     return done;
   }
 
-  // Takes the coins only if the user has enough (false otherwise)
+  // Why the last spend of a player was refused, if not for too few coins (a bet over the max bet by balance)
+  const refusals = new Map();
+  function refusal(username) {
+    const text = refusals.get(username) || null;
+    refusals.delete(username);
+    return text;
+  }
+  function capText(cap) {
+    const L = limits.forWorld(kind);
+    return `With your balance a bet is at most ${cap.toLocaleString("en-US")} coins (${L.BET_CAP_SHARE}% of your coins - all in only up to ${L.BET_CAP_FLOOR.toLocaleString("en-US")}).`;
+  }
+
+  // Takes the coins only if the user has enough (false otherwise) - and, for a bet, not more than the max bet by balance
   async function spend(username, amount, options) {
     if (!Number.isInteger(amount) || amount <= 0) return false;
+    refusals.delete(username);
+    const capped = BET_REASONS.includes(options && options.reason) && !(options && options.nocap);
     if (testMode().active(username)) {
       // (never coins of other players for test coins - the games check it too, with a message)
       if (testMode().BLOCKED_REASONS.includes(options && options.reason)) return false;
+      const cap = capped ? limits.betCap(testMode().balance(username), "normal") : Infinity;
+      if (amount > cap) {
+        refusals.set(username, capText(cap));
+        return false;
+      }
       testMode().spend(username, amount);
       spentAt.set(username, Date.now());
       notify(username);
@@ -245,7 +268,15 @@ function makeWallet(kind) {
     }
     if (watching(username)) return false;
     await ensure(username);
-    const done = changed(await User.updateOne({ username: username, [f.coins]: { $gte: amount } }, { $inc: { [f.coins]: -amount } }));
+    // (the cap: amount <= share% of the balance - or not over the floor)
+    const L = limits.forWorld(kind);
+    const need = capped && L.BET_CAP_SHARE < 100 && amount > L.BET_CAP_FLOOR ? Math.max(amount, Math.ceil((amount * 100) / L.BET_CAP_SHARE)) : amount;
+    const done = changed(await User.updateOne({ username: username, [f.coins]: { $gte: need } }, { $inc: { [f.coins]: -amount } }));
+    if (!done && need > amount) {
+      const user = await User.findOne({ username: username }).select(f.coins).lean();
+      const balance = user ? user[f.coins] || 0 : 0;
+      if (balance >= amount) refusals.set(username, capText(limits.betCap(balance, kind)));
+    }
     if (done) {
       spentAt.set(username, Date.now());
       log(username, -amount, (options && options.reason) || "other", options && options.note);
@@ -296,7 +327,7 @@ function makeWallet(kind) {
     return (await claim(username, now)) > 0;
   }
 
-  return { kind, fields: f, changes, notify, lastSpent, base: walletBase, era: walletEra, log, watching, dailyBonus, balanceOf, ensure, bonusAvailable, bonusDue, get, add, spend, set, claim, claimBonus };
+  return { kind, fields: f, changes, notify, lastSpent, base: walletBase, era: walletEra, log, watching, dailyBonus, balanceOf, ensure, bonusAvailable, bonusDue, get, add, spend, refusal, set, claim, claimBonus };
 }
 
 const normalWallet = makeWallet("normal");

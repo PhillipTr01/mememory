@@ -26,7 +26,7 @@ const PHASE = {
 module.exports = function (io, options = {}) {
   // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
   const world = options.world || "";
-  const { coins, persist, live, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
+  const { coins, persist, live, inPlay, casinoLock, casinoChat, limits } = require("../game/worlds").services(world);
   const room = io.of(world + "/roulette");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
@@ -69,7 +69,7 @@ module.exports = function (io, options = {}) {
   }
 
   function rules() {
-    return { minBet: config.ROULETTE_MIN_BET, maxBet: config.ROULETTE_MAX_BET, timer: config.ROULETTE_TIMER, spin: config.ROULETTE_SPIN, pause: config.ROULETTE_PAUSE, payout: roulette.PAYOUT, wheel: roulette.WHEEL };
+    return { minBet: limits.ROULETTE_MIN_BET, maxBet: limits.ROULETTE_MAX_BET, timer: config.ROULETTE_TIMER, spin: config.ROULETTE_SPIN, pause: config.ROULETTE_PAUSE, payout: roulette.PAYOUT, wheel: roulette.WHEEL };
   }
 
   function emitState() {
@@ -187,14 +187,14 @@ module.exports = function (io, options = {}) {
         const amount = data.amount;
         if (casinoLock.locked()) return error(casinoLock.message());
         if (table.phase === PHASE.ROLLING) return error("The reel rolls - bet on the next round.");
-        if (amount < config.ROULETTE_MIN_BET) return error(`At least 🪙 ${config.ROULETTE_MIN_BET.toLocaleString("en-US")} per bet.`);
+        if (amount < limits.ROULETTE_MIN_BET) return error(`At least 🪙 ${limits.ROULETTE_MIN_BET.toLocaleString("en-US")} per bet.`);
         // One bet of a player after the other (fast clicks, two tabs): none gets lost
         const place = async () => {
           const sums = betsOf(username);
           if (!roulette.allowed(sums, data.color)) return error(data.color === "red" ? "You bet on blue - red only in the next round." : "You bet on red - blue only in the next round.");
           const total = sums.red + sums.blue + sums.green;
-          if (total + amount > config.ROULETTE_MAX_BET) return error(`At most 🪙 ${config.ROULETTE_MAX_BET.toLocaleString("en-US")} per round (all colors together).`);
-          if (!(await coins.spend(username, amount, { reason: "roulette bet", note: data.color }))) return error("You don't have enough coins.");
+          if (total + amount > limits.ROULETTE_MAX_BET) return error(`At most 🪙 ${limits.ROULETTE_MAX_BET.toLocaleString("en-US")} per round (all colors together).`);
+          if (!(await coins.spend(username, amount, { reason: "roulette bet", note: data.color }))) return error(coins.refusal(username) || "You don't have enough coins.");
           // (the round may have moved on while the coins were taken)
           if (table.phase === PHASE.ROLLING) {
             await coins.add(username, amount, { reason: "roulette refund" });

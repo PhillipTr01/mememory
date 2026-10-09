@@ -40,7 +40,7 @@ const BOT_NAMES = ["Bot Pepe", "Bot Doge", "Bot Wojak"];
 module.exports = function (io, options = {}) {
   // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
   const world = options.world || "";
-  const { coins, persist, live, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
+  const { coins, persist, live, inPlay, casinoLock, casinoChat, limits } = require("../game/worlds").services(world);
   const battles = io.of(world + "/battles");
   battles.use(socketAuth.casino);
   casinoChat.attach(battles, ROOM);
@@ -330,7 +330,7 @@ module.exports = function (io, options = {}) {
     busy.add(username);
     try {
       if (!(await coins.spend(username, battle.price, { reason: "battle" }))) {
-        socket.emit("battleError", "You don't have enough coins.");
+        socket.emit("battleError", coins.refusal(username) || "You don't have enough coins.");
         return false;
       }
       const seat = battle.seats.indexOf(null);
@@ -372,7 +372,7 @@ module.exports = function (io, options = {}) {
     socket.join(ROOM);
     socket.emit("joined", { username: username });
     socket.emit("cases", cases.catalog());
-    socket.emit("battleRules", { maxCases: config.BATTLE_MAX_CASES, maxCost: config.BATTLE_MAX_COST });
+    socket.emit("battleRules", { maxCases: limits.BATTLE_MAX_CASES, maxCost: limits.BATTLE_MAX_COST });
     casinoChat.join(socket);
     emitList();
     sendCoins(username).catch((error) => console.error("[battles] Could not load coins:", error));
@@ -386,21 +386,21 @@ module.exports = function (io, options = {}) {
         // Up to BATTLE_MAX_CASES cases (one round each)
         if (ids.length < 1 || !ids.every((id) => cases.caseById(id))) return;
         if (!ids.every((id) => cases.enabled(id))) return socket.emit("battleError", "One of these cases is not available anymore.");
-        if (ids.length > config.BATTLE_MAX_CASES) {
-          socket.emit("battleError", `At most ${config.BATTLE_MAX_CASES} cases per battle.`);
+        if (ids.length > limits.BATTLE_MAX_CASES) {
+          socket.emit("battleError", `At most ${limits.BATTLE_MAX_CASES} cases per battle.`);
           return;
         }
         // What one seat costs: all its cases together - at most BATTLE_MAX_COST
         const cost = ids.reduce((sum, id) => sum + cases.caseById(id).price, 0);
-        if (cost > config.BATTLE_MAX_COST) {
-          socket.emit("battleError", `A battle costs at most 🪙 ${config.BATTLE_MAX_COST.toLocaleString("en-US")} per player.`);
+        if (cost > limits.BATTLE_MAX_COST) {
+          socket.emit("battleError", `A battle costs at most 🪙 ${limits.BATTLE_MAX_COST.toLocaleString("en-US")} per player.`);
           return;
         }
         if (!SIZES.includes(data.size)) return;
         // Waiting and running battles of the creator count (a battle filled with bots is still one of theirs)
         const open = [...lobby.list.values()].filter((b) => b.creator === username && (b.phase === PHASE.WAITING || b.phase === PHASE.RUNNING));
-        if (open.length >= config.BATTLE_MAX_OPEN) {
-          socket.emit("battleError", `At most ${config.BATTLE_MAX_OPEN} battles of yours at a time - wait until one is over.`);
+        if (open.length >= limits.BATTLE_MAX_OPEN) {
+          socket.emit("battleError", `At most ${limits.BATTLE_MAX_OPEN} battles of yours at a time - wait until one is over.`);
           return;
         }
         const battle = {
