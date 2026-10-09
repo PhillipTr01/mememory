@@ -5,7 +5,12 @@ const { notices } = require("../game/notices");
 const seasons = require("../game/seasons");
 const maintenance = require("../game/maintenance");
 
-const GAMES = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/roulette"];
+const testMode = require("../game/test_mode");
+const worlds = require("../game/worlds");
+
+// The games - in the real casino and in the admin's test world (game/worlds.js)
+const REAL = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/roulette"];
+const GAMES = [...REAL, ...REAL.map((name) => worlds.TEST + name)];
 
 function socketsOf(io, username) {
   const list = [];
@@ -27,7 +32,7 @@ module.exports = function (io) {
   settings.changes.on("change", (values) => {
     for (const game of games.GAMES) {
       if (values[game.key] !== false) continue;
-      for (const socket of io.of(game.namespace).sockets.values()) {
+      for (const socket of [...io.of(game.namespace).sockets.values(), ...io.of(worlds.TEST + game.namespace).sockets.values()]) {
         socket.emit("gameOff");
         socket.disconnect(true);
       }
@@ -73,6 +78,14 @@ module.exports = function (io) {
         socket.emit("casinoClosed");
         socket.disconnect(true);
       }
+    }
+  });
+
+  // Test mode started or stopped: the open casino pages of the player load again - in the other world
+  testMode.changes.on("change", (username) => {
+    for (const socket of socketsOf(io, username)) {
+      socket.emit("casinoClosed");
+      socket.disconnect(true);
     }
   });
 

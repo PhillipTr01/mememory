@@ -1,5 +1,5 @@
 /* Hidden jackpot: the server decides everything, this page only shows the pot. */
-const socket = io("/jackpot");
+const socket = io((window.CASINO_NS || "") + "/jackpot");
 
 var state = null;
 var myName = null;

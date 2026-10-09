@@ -50,6 +50,13 @@ require("./sockets/poker_server")(io);
 require("./sockets/blackjack_server")(io);
 require("./sockets/slots_server")(io);
 require("./sockets/roulette_server")(io);
+// The admin's test world: every game once more (/test/...), only for players in test mode
+{
+  const worlds = require("./game/worlds");
+  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette"]) {
+    worlds.servers.set(game, require(`./sockets/${game}_server`)(io, { world: worlds.TEST }));
+  }
+}
 require("./sockets/casino_server")(io);
 
 /* Page routes */

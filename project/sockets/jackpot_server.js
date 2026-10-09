@@ -1,5 +1,4 @@
 const config = require("../game/config");
-const testMode = require("../game/test_mode");
 const { jackpotRake } = require("../game/rake");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
@@ -27,8 +26,11 @@ const PHASE = {
  * players are in, a countdown starts. Then a random ticket decides who wins
  * the whole pot - the more coins somebody put in, the higher the chance.
  */
-module.exports = function (io) {
-  const jackpot = io.of("/jackpot");
+module.exports = function (io, options = {}) {
+  // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
+  const world = options.world || "";
+  const { persist, live, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
+  const jackpot = io.of(world + "/jackpot");
   jackpot.use(socketAuth.casino);
   casinoChat.attach(jackpot, ROOM);
 
@@ -336,7 +338,6 @@ module.exports = function (io) {
           );
           return;
         }
-        if (testMode.active(username)) return socket.emit("betError", testMode.MESSAGE);
         betting.add(username);
         try {
           if (!(await coins.spend(username, amount, { reason: "jackpot bet" }))) {
@@ -447,5 +448,22 @@ module.exports = function (io) {
   casinoLock.registerRunning("jackpot", () => pot.entries.length > 0 || pot.incoming.length > 0 || pot.waiting.length > 0 || pot.phase === PHASE.DRAWING);
   inPlay.register("jackpot", (name) => pot.entries.some((e) => e.name === name) || pot.incoming.some((b) => b.name === name) || pot.waiting.some((b) => b.name === name));
 
-  return { pot };
+  /* ---------- Debug (the admin's test world) ---------- */
+
+  // A bot puts coins in (nobody's coins - its win is gone with it)
+  function botBet(name, amount) {
+    if (pot.phase === PHASE.DRAWING) pot.waiting.push({ name: name, amount: amount });
+    else addToPot({ name: name, amount: amount });
+    emitState();
+  }
+
+  // The countdown is over now (false: no countdown runs)
+  function drawNow() {
+    if (pot.phase !== PHASE.COUNTDOWN) return false;
+    clearTimeout(pot.timer);
+    runDraw().catch((error) => console.error("[jackpot] Draw failed:", error));
+    return true;
+  }
+
+  return { pot, botBet, drawNow };
 };

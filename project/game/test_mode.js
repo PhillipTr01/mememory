@@ -1,22 +1,21 @@
 /*
- * The admin's test mode: a player account (the admin's own) plays with a
- * sandbox balance - as good as unlimited, refilled by itself - and every item
- * of the shop to wear. Nothing of it is saved: no coin history, no change to
- * the real balance, the leaderboard or the season. Stopped (or a restart of
- * the server): it is gone, the account is as it was.
+ * The admin's test mode: a player account (the admin's own) plays in a world
+ * of its own (game/worlds.js: every game once more, only for testers - real
+ * players never see it) with a sandbox balance - as good as unlimited,
+ * refilled by itself - and every item of the shop to wear. Nothing of it is
+ * saved: no coin history, no change to the real balance, the leaderboard or
+ * the season. Stopped (or a restart of the server): it is gone, the account
+ * is as it was. Test coins never go to real players (no gifts, no payouts).
  *
- * Test coins never mix with the coins of real players: the games where the
- * coins go from one player to another (jackpot, poker, gifts, payouts, a case
- * battle with other people) are closed while testing. Roulette, slots,
- * blackjack and case battles against bots are open.
- *
- * changes: "change" (username) - started, stopped, refilled
+ * changes: "change" (username) - started or stopped (the pages load again, in
+ * the other world); "coins" (username) - refilled
  */
 const EventEmitter = require("events");
 
 const DEFAULT_COINS = 10000000;
-const BLOCKED_REASONS = ["jackpot bet", "poker buy-in", "poker chips", "gift sent", "withdrawal"];
-const MESSAGE = "🧪 Test mode: not here - this game is played with the coins of other players.";
+// (testers play in a world of their own - game/worlds.js; coins to or from real players: never)
+const BLOCKED_REASONS = ["gift sent", "withdrawal"];
+const MESSAGE = "🧪 Test mode: not with test coins - they never go to real players.";
 
 const testers = new Map(); // username -> {coins, start, since, looks: {frame, effect}}
 const changes = new EventEmitter();
@@ -31,7 +30,8 @@ function start(username, coins = DEFAULT_COINS) {
   if (!Number.isInteger(coins) || coins < 1 || coins > 1000000000000) return { error: "Coins from 1 to 1,000,000,000,000." };
   const before = testers.get(username);
   testers.set(username, { coins: coins, start: coins, since: before ? before.since : Date.now(), looks: before ? before.looks : { frame: null, effect: null } });
-  changes.emit("change", username);
+  // (again: only the balance - the pages stay where they are)
+  changes.emit(before ? "coins" : "change", username);
   return { tester: view(username) };
 }
 

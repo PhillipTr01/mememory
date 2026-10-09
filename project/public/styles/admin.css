@@ -2991,3 +2991,31 @@ a.ad-case-row:hover {
 .ad-test-who .ad-note {
   margin: 0;
 }
+
+.ad-test-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.ad-test-tool {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ad-test-tool-name {
+  min-width: 110px;
+  font-weight: 700;
+}
+
+.ad-test-tool .mm-input {
+  width: 120px;
+}
+
+.ad-test-tool select.mm-input {
+  width: auto;
+}

@@ -1,5 +1,5 @@
 /* Hidden case battles: the server decides every item, this page only shows them. */
-const socket = io("/battles");
+const socket = io((window.CASINO_NS || "") + "/battles");
 
 var myName = null;
 var myCoins = 0;

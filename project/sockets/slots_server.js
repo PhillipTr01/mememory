@@ -18,8 +18,11 @@ const ROOM = "slots";
  * game/slots.js) and pays the win right away. The page only shows it.
  * Every win lands in a list for everybody ("last wins").
  */
-module.exports = function (io) {
-  const room = io.of("/slots");
+module.exports = function (io, options = {}) {
+  // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
+  const world = options.world || "";
+  const { persist, live, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
+  const room = io.of(world + "/slots");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
 

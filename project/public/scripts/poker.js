@@ -1,5 +1,5 @@
 /* Hidden poker: the server deals and decides, this page only shows the table. */
-const socket = io("/poker");
+const socket = io((window.CASINO_NS || "") + "/poker");
 
 var myName = null;
 var myCoins = 0;

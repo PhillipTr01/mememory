@@ -1,7 +1,7 @@
 /* Hidden blackjack: the server deals and decides, this page only shows the table (or the lobby). */
 // ?table=<id>: that table, without: the lobby with every table
 var TABLE_ID = new URLSearchParams(location.search).get("table");
-const socket = io("/blackjack", { query: { table: TABLE_ID || "lobby" } });
+const socket = io((window.CASINO_NS || "") + "/blackjack", { query: { table: TABLE_ID || "lobby" } });
 
 var myName = null;
 var myCoins = 0;

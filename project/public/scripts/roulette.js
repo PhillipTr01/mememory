@@ -1,5 +1,5 @@
 /* Hidden roulette: the server takes the bets, rolls and pays - this page shows the round. */
-const socket = io("/roulette");
+const socket = io((window.CASINO_NS || "") + "/roulette");
 
 var myName = null;
 var myCoins = 0;

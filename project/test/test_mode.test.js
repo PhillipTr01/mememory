@@ -8,7 +8,7 @@ const shop = require("../game/shop");
 const gifts = require("../game/gifts");
 const withdrawals = require("../game/withdrawals");
 
-Object.assign(config, { ROULETTE_TIMER: 100, ROULETTE_SPIN: 50, ROULETTE_PAUSE: 50 });
+Object.assign(config, { ROULETTE_TIMER: 100, ROULETTE_SPIN: 50, ROULETTE_PAUSE: 50, JACKPOT_BET_DELAY: [10, 20], JACKPOT_SPIN: 50, JACKPOT_PAUSE: 50 });
 
 let server;
 const tokens = {};
@@ -43,7 +43,7 @@ test("test mode: a sandbox balance - the real coins, the history and the shop st
   assert.strictEqual(h.coinLogs.filter((row) => row.username === "admin1").length, logs, "no coin history");
 
   // Coins of other players: never
-  assert.ok(!(await coins.spend("admin1", 100, { reason: "jackpot bet" })));
+  assert.ok(!(await coins.spend("admin1", 100, { reason: "gift sent" })));
   assert.match((await gifts.give("admin1", "real1", 100)).error, /Test mode/);
   assert.match((await withdrawals.request("admin1", 10000)).error, /Test mode/);
 
@@ -60,23 +60,40 @@ test("test mode: a sandbox balance - the real coins, the history and the shop st
   assert.deepStrictEqual(await shop.worn(["admin1"]), {});
 });
 
-test("test mode: roulette with test coins pays into the sandbox; jackpot is closed", async () => {
+test("test mode: a world of its own - testers only there, real players never; jackpot with bots, roulette pays into the sandbox", async () => {
   h.setCoins("admin1", 100);
+  h.setCoins("real1", 5000);
   testMode.start("admin1", 1000000);
-  const socket = server.client("/roulette", tokens.admin1);
+  // The real casino: no tester - the test world: no real player ("testMode": the page loads again)
+  const wrong = server.client("/roulette", tokens.admin1);
+  sockets.push(wrong);
+  assert.strictEqual((await h.once(wrong, "connect_error")).message, "testMode");
+  const outsider = server.client("/test/jackpot", tokens.real1);
+  sockets.push(outsider);
+  assert.strictEqual((await h.once(outsider, "connect_error")).message, "testMode");
+
+  // Roulette in the test world: test coins in and out
+  const socket = server.client("/test/roulette", tokens.admin1);
   sockets.push(socket);
   await h.once(socket, "rouletteState");
   socket.emit("bet", { color: "green", amount: 10000 });
   await new Promise((resolve) => socket.on("rouletteState", (s) => s.phase === "idle" && s.history.length && resolve()));
-  const won = server.roulette.table.history[0].color === "green";
+  const won = server.test.roulette.table.history[0].color === "green";
   assert.strictEqual(testMode.balance("admin1"), 1000000 - 10000 + (won ? 140000 : 0));
   assert.strictEqual(h.coinsOf("admin1"), 100);
+  assert.strictEqual(server.roulette.table.history.length, 0, "the real roulette saw nothing");
 
-  const jackpot = server.client("/jackpot", tokens.admin1);
+  // Jackpot in the test world: open for testers - bots join, the draw now
+  const jackpot = server.client("/test/jackpot", tokens.admin1);
   sockets.push(jackpot);
   await h.once(jackpot, "jackpotState");
-  const refused = h.once(jackpot, "betError");
-  jackpot.emit("bet", { amount: 100 });
-  assert.match(await refused, /Test mode/);
+  const landed = new Promise((resolve) => jackpot.on("jackpotState", (s) => s.entries && s.entries.length >= 2 && resolve(s)));
+  server.test.jackpot.botBet("🤖Botty", 500);
+  jackpot.emit("bet", { amount: 1000 });
+  const state = await landed;
+  assert.ok(state.entries.some((e) => e.name === "🤖Botty"));
+  assert.strictEqual(server.jackpot.pot.entries.length, 0, "the real jackpot saw nothing");
+  assert.ok(server.test.jackpot.drawNow());
+  assert.strictEqual(h.coinsOf("real1"), 5000);
   testMode.stop("admin1");
 });

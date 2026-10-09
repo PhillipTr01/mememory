@@ -23,8 +23,11 @@ const PHASE = {
  * reel rolls (ROULETTE_SPIN) and the winners are paid when it stops. A short
  * pause (ROULETTE_PAUSE) shows the result, then the next round waits for a bet.
  */
-module.exports = function (io) {
-  const room = io.of("/roulette");
+module.exports = function (io, options = {}) {
+  // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
+  const world = options.world || "";
+  const { persist, live, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
+  const room = io.of(world + "/roulette");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
 
@@ -234,5 +237,23 @@ module.exports = function (io) {
   casinoLock.registerRunning("roulette", () => table.bets.length > 0);
   inPlay.register("roulette", (name) => table.bets.some((bet) => bet.name === name));
 
-  return { table, roll, stop: () => clearTimeout(timer) };
+  /* ---------- Debug (the admin's test world) ---------- */
+
+  // A bot bets (nobody's coins - its win is gone with it)
+  function botBet(name, color, amount) {
+    if (table.phase === PHASE.ROLLING || !roulette.COLORS.includes(color)) return false;
+    table.bets.push({ name: name, color: color, amount: amount });
+    if (table.phase === PHASE.IDLE) startTimer();
+    emitState();
+    return true;
+  }
+
+  // The time to bet is over now
+  function rollNow() {
+    if (table.phase !== PHASE.BETTING) return false;
+    roll();
+    return true;
+  }
+
+  return { table, roll, botBet, rollNow, stop: () => clearTimeout(timer) };
 };

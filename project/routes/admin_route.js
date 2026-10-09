@@ -16,6 +16,7 @@ const cases = require("../game/cases");
 const maintenance = require("../game/maintenance");
 const shop = require("../game/shop");
 const testMode = require("../game/test_mode");
+const worlds = require("../game/worlds");
 const userController = require("../controllers/user_controller");
 const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
@@ -426,6 +427,36 @@ module.exports = function () {
     const result = testMode.stop(String((req.body && req.body.username) || ""));
     if (result.error) return res.status(400).json(result);
     res.json({ ...result, testers: testMode.list() });
+  });
+
+  // Debug in the test world: bots that bet (nobody's coins), the draw now
+  const BOT_NAMES = ["Botty", "RoboRita", "ChipBot", "LuckyBot", "BeepBoop", "Clanky", "Sprocket", "Gizmo", "Widget", "Bolt"];
+  const botName = () => "🤖" + BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + (Math.floor(Math.random() * 90) + 10);
+  router.post("/api/test/bots", admin, (req, res) => {
+    const body = req.body || {};
+    const count = Math.max(1, Math.min(10, Math.floor(Number(body.count) || 1)));
+    const amount = Math.floor(Number(body.amount));
+    if (!Number.isInteger(amount) || amount < 1 || amount > 100000000) return res.status(400).json({ error: "An amount from 1 to 100,000,000." });
+    const server = worlds.servers.get(body.game);
+    if (body.game === "jackpot" && server) {
+      for (let i = 0; i < count; i++) server.botBet(botName(), amount);
+      return res.json({ ok: true, added: count });
+    }
+    if (body.game === "roulette" && server) {
+      const colors = ["red", "blue", "green"];
+      let added = 0;
+      for (let i = 0; i < count; i++) if (server.botBet(botName(), colors.includes(body.color) ? body.color : colors[Math.floor(Math.random() * 2)], amount)) added++;
+      if (!added) return res.status(400).json({ error: "The reel rolls - in a moment." });
+      return res.json({ ok: true, added: added });
+    }
+    res.status(400).json({ error: "Bots only for the jackpot and the roulette (case battles have their own)." });
+  });
+  router.post("/api/test/now", admin, (req, res) => {
+    const game = req.body && req.body.game;
+    const server = worlds.servers.get(game);
+    const done = game === "jackpot" && server ? server.drawNow() : game === "roulette" && server ? server.rollNow() : false;
+    if (!done) return res.status(400).json({ error: game === "jackpot" ? "No countdown runs (two players needed)." : "No round runs (a bet starts it)." });
+    res.json({ ok: true });
   });
 
   /* ---------- The accessory shop: items on / off, prices, free for all ---------- */

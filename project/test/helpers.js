@@ -159,6 +159,13 @@ async function startServer() {
   const blackjack = require("../sockets/blackjack_server")(io);
   const slots = require("../sockets/slots_server")(io);
   const roulette = require("../sockets/roulette_server")(io);
+  // The admin's test world (game/worlds.js)
+  const worlds = require("../game/worlds");
+  const test = {};
+  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette"]) {
+    test[game] = require(`../sockets/${game}_server`)(io, { world: worlds.TEST });
+    worlds.servers.set(game, test[game]);
+  }
   require("../sockets/casino_server")(io);
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
@@ -172,6 +179,7 @@ async function startServer() {
     blackjack,
     slots,
     roulette,
+    test,
     client(namespace, token, query) {
       return connect(`http://localhost:${port}${namespace}`, {
         query: query || {},

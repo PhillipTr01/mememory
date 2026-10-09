@@ -408,7 +408,7 @@
                     <div>
                         <h2 class="ad-title">🧪 Play with test coins</h2>
                         <p class="ad-note">Pick your own player account: it gets a sandbox balance that fills up by itself (as good as unlimited), every shop item to wear, the daily bonus as often as you like. Nothing of it is saved - your real coins, the coin history, the leaderboard and the season stay as they are. Stop it (or restart the server) and it's gone.</p>
-                        <p class="ad-note">To keep test coins away from real ones, the jackpot, poker, gifts, payouts and case battles with other people are closed while testing. Roulette, slots, blackjack and case battles against bots are open.</p>
+                        <p class="ad-note">You play in a test world of your own: every game once more, only for players in test mode - real players never see it and never get in your way. Gifts and payouts stay closed (test coins never go to real players).</p>
                     </div>
                     <div class="ad-test-form">
                         <label class="ad-field">
@@ -425,6 +425,26 @@
                         <h3 class="ad-label ad-sublabel">Testing now</h3>
                         <div id="adTestList" class="ad-test-list"></div>
                         <p id="adTestEmpty" class="ad-note">Nobody is testing.</p>
+                    </div>
+                    <!--- Debug tools: only in the test world --->
+                    <div class="ad-test-tools">
+                        <h3 class="ad-label ad-sublabel">Debug tools (test world)</h3>
+                        <div class="ad-test-tool">
+                            <span class="ad-test-tool-name">💰 Jackpot</span>
+                            <span class="ad-inline-input"><span class="ad-setting-unit">🪙</span><input id="adBotJackpotAmount" class="mm-input" type="number" min="1" step="100" value="1000" aria-label="Jackpot bot bet"></span>
+                            <button type="button" class="mm-btn mm-btn-sm" data-bots="jackpot" data-count="1">+ 1 bot</button>
+                            <button type="button" class="mm-btn mm-btn-sm" data-bots="jackpot" data-count="3">+ 3 bots</button>
+                            <button type="button" class="mm-btn mm-btn-sm" data-now="jackpot">Draw now</button>
+                        </div>
+                        <div class="ad-test-tool">
+                            <span class="ad-test-tool-name">🎡 Roulette</span>
+                            <span class="ad-inline-input"><span class="ad-setting-unit">🪙</span><input id="adBotRouletteAmount" class="mm-input" type="number" min="1" step="100" value="500" aria-label="Roulette bot bet"></span>
+                            <select id="adBotRouletteColor" class="mm-input" aria-label="Color"><option value="">Red or blue</option><option value="red">Red</option><option value="blue">Blue</option><option value="green">Green</option></select>
+                            <button type="button" class="mm-btn mm-btn-sm" data-bots="roulette" data-count="1">+ 1 bot</button>
+                            <button type="button" class="mm-btn mm-btn-sm" data-bots="roulette" data-count="3">+ 3 bots</button>
+                            <button type="button" class="mm-btn mm-btn-sm" data-now="roulette">Roll now</button>
+                        </div>
+                        <p class="ad-note">Bots bet with nobody's coins - what they win is gone with them. Case battles: fill the seats with the bots of the battle.</p>
                     </div>
                 </div>
 

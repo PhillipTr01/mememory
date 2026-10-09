@@ -1,5 +1,4 @@
 const config = require("../game/config");
-const testMode = require("../game/test_mode");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
 const casinoLock = require("../game/casino_lock");
@@ -19,8 +18,11 @@ const BETTING = ["preflop", "flop", "turn", "river"];
  * with coins (the same coins as in the jackpot) and get their chips back as
  * coins when they stand up. The server deals, only the own cards are sent.
  */
-module.exports = function (io) {
-  const room = io.of("/poker");
+module.exports = function (io, options = {}) {
+  // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
+  const world = options.world || "";
+  const { persist, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
+  const room = io.of(world + "/poker");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
 
@@ -652,7 +654,6 @@ module.exports = function (io) {
           error(`Buy in with ${config.POKER_MIN_BUYIN} - ${config.POKER_MAX_BUYIN} coins.`);
           return;
         }
-        if (testMode.active(username)) return error(testMode.MESSAGE);
         if (table.seats[seat] != null || seatOf(username) >= 0 || busy.has(username)) return;
         busy.add(username);
         try {

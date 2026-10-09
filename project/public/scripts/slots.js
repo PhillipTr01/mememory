@@ -1,5 +1,5 @@
 /* Hidden slots: the server rolls the reels and pays, this page only shows the spin. */
-const socket = io("/slots");
+const socket = io((window.CASINO_NS || "") + "/slots");
 
 var myName = null;
 var myCoins = 0;

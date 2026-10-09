@@ -45,6 +45,11 @@
     bonusButton.classList.add("claimed");
   });
 
+  // Test mode started or stopped meanwhile: the page again (it connects to the right world then)
+  socket.on("connect_error", (error) => {
+    if (error && error.message == "testMode") window.location.reload();
+  });
+
   socket.on("coins", (data) => {
     if (data.bonusIn != null) {
       bonusAt = data.bonus ? null : Date.now() + data.bonusIn;

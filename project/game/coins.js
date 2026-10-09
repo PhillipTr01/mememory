@@ -269,5 +269,6 @@ function reward(username, mode) {
 
 // Test mode started or stopped: the pages of the player get the balance (the sandbox - or the real one again)
 testMode().changes.on("change", (username) => notify(username));
+testMode().changes.on("coins", (username) => notify(username));
 
 module.exports = { lastSpent, hold, release, claim, bonusDue, setJoinedAtLookup, setJoinedLookup, watching, setStoredLookup, setBase, base, era, eraFilter, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };

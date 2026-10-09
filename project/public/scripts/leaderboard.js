@@ -3,7 +3,7 @@
  * often as the season says (the server decides). After a season: its winner page.
  */
 // The connection of the jackpot: the chat, the coins at the top and the daily bonus
-const socket = io("/jackpot");
+const socket = io((window.CASINO_NS || "") + "/jackpot");
 
 var myName = null;
 

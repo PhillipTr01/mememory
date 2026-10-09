@@ -696,6 +696,35 @@ async function startTest(username, coins, button) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("[data-bots]").forEach((button) =>
+    button.addEventListener("click", async () => {
+      var game = button.dataset.bots;
+      var body = { game: game, count: Number(button.dataset.count), amount: Math.floor(Number(document.getElementById(game == "jackpot" ? "adBotJackpotAmount" : "adBotRouletteAmount").value)) };
+      if (game == "roulette") body.color = document.getElementById("adBotRouletteColor").value;
+      button.disabled = true;
+      try {
+        var data = await api("test/bots", body);
+        showHint("🤖 " + data.added + (data.added == 1 ? " bot" : " bots") + " in the " + game + ".", "success", button);
+      } catch (error) {
+        showHint(error.message, "error", button);
+      } finally {
+        button.disabled = false;
+      }
+    }),
+  );
+  document.querySelectorAll("[data-now]").forEach((button) =>
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        await api("test/now", { game: button.dataset.now });
+        showHint("Done.", "success", button);
+      } catch (error) {
+        showHint(error.message, "error", button);
+      } finally {
+        button.disabled = false;
+      }
+    }),
+  );
   document.getElementById("adTestStart").addEventListener("click", (event) => {
     startTest(document.getElementById("adTestPlayer").value, Math.floor(Number(document.getElementById("adTestCoins").value)), event.currentTarget);
   });

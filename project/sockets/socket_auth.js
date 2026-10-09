@@ -40,6 +40,13 @@ function check(casino) {
         return next(new Error("unauthorized"));
       }
 
+      // The admin's test mode: a tester plays only in the test world, everybody else never there
+      // ("testMode": the page loads again - into the right world)
+      if (casino) {
+        const tester = require("../game/test_mode").active(user.username);
+        if (tester !== require("../game/worlds").isTest(socket.nsp.name)) return next(new Error("testMode"));
+      }
+
       socket.data.username = user.username;
       return next();
     } catch (error) {

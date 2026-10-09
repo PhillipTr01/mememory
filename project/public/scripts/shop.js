@@ -4,7 +4,7 @@
  * balance from before it. The avatar maker is on this page too (avatar_editor.js).
  */
 // The connection of the jackpot: the chat, the coins at the top and the daily bonus
-const socket = io("/jackpot");
+const socket = io((window.CASINO_NS || "") + "/jackpot");
 
 var myName = null;
 var shopData = null; // {items, owned, frame, effect, balance, season}

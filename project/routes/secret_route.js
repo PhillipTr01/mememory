@@ -12,6 +12,8 @@ const info = require("../game/info");
 const maintenance = require("../game/maintenance");
 const gifts = require("../game/gifts");
 const shop = require("../game/shop");
+const testMode = require("../game/test_mode");
+const worlds = require("../game/worlds");
 
 /*
  * The hidden pages, mounted at the secret address (config.JACKPOT_PATH):
@@ -45,10 +47,13 @@ module.exports = function (auth) {
 
   // The tabs of the games that are off are hidden (admin panel, Settings)
   // (and the accent color of the running season)
-  const hideOff = () => {
+  const hideOff = (req) => {
     const off = games.GAMES.filter((game) => !games.enabled(game.id));
-    return (off.length ? `<style>${off.map((game) => `.cs-tab[href="${game.tab}"]`).join(", ")} { display: none !important; }</style>` : "") + seasons.accentStyle() + seasons.coinScript();
+    return (off.length ? `<style>${off.map((game) => `.cs-tab[href="${game.tab}"]`).join(", ")} { display: none !important; }</style>` : "") + seasons.accentStyle() + seasons.coinScript() + worldScript(req);
   };
+
+  // The admin's test mode: the pages connect to the test world (game/worlds.js) - and say so
+  const worldScript = (req) => (req && req.username && testMode.active(req.username) ? `<script>window.CASINO_NS = ${JSON.stringify(worlds.TEST)};</script>` : "");
 
   // A game page - or, when the game is off, the next game that is on
   function gamePage(id, file) {
