@@ -146,6 +146,7 @@ function wear(kind, id, button) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  setupChat();
   userPromise.then((username) => {
     if (!username) return;
     myName = myName || username;

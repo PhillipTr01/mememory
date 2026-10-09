@@ -360,6 +360,7 @@ function place(color) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  setupChat();
   buildChips();
   var input = document.getElementById("rlAmount");
   var saved = null;
