@@ -79,7 +79,7 @@
       // (the 🪙 stays a 🪙: the money of the normal casino - the season has a coin of its own)
       stored.dataset.coin = "real";
       stored.innerText = "🪙 " + format(data.normal);
-      stored.title = "Your coins in the normal casino - your season coins go on top when the season is over";
+      stored.title = "Your coins outside the season - your season coins go on top when the season is over";
     } else if (stored) stored.remove();
     // Everything lost: a second chance (if the season has one) - after a moment
     if (window.CASINO_WORLD == "season") watchChance(coins);
@@ -462,7 +462,7 @@
     board.title = !season
       ? shown.name + " - starts " + new Date(shown.start).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
       : inSeasonWorld
-        ? "You're playing in " + shown.name + " - click to switch back to the normal casino"
+        ? "You're playing in " + shown.name + " - click to leave the season (your season coins wait for you)"
         : data.joined
           ? "Switch to " + shown.name
           : "Join " + shown.name;
@@ -541,7 +541,7 @@
         sessionStorage.removeItem(WORLD_KEY);
         var season = data && data.season;
         if (moved == "season" && season) casinoNotice({ icon: season.icon || "🏆", title: "You're playing in " + season.name, text: "Season coins, season games, the season's leaderboard - switch back any time at the top.", key: "world" });
-        else casinoNotice({ icon: "🪙", title: "You're in the normal casino", text: season ? "Your season coins wait for you - switch back any time at the top." : "Your 🪙 coins.", key: "world" });
+        else casinoNotice({ icon: "🪙", title: season ? "You left " + season.name : "You left the season", text: season ? "You play with your 🪙 now - your season coins wait for you, switch back any time at the top." : "You play with your 🪙 now.", key: "world" });
       }
     } catch (e) {
       // no storage
@@ -655,7 +655,7 @@
       });
       buttons.appendChild(go);
     } else if (mode == "switch") {
-      var sw = el("button", "cs-join-btn", inSeasonWorld ? "🪙 Back to the normal casino" : "Play in " + season.name);
+      var sw = el("button", "cs-join-btn", inSeasonWorld ? "Leave the season · back to 🪙" : "Play in " + season.name);
       sw.type = "button";
       sw.dataset.coin = "real";
       sw.addEventListener("click", () => {
@@ -852,7 +852,13 @@
       if (window.innerWidth < 992) return;
       var gap = layout.getBoundingClientRect().top - spot.getBoundingClientRect().top;
       var below = document.documentElement.scrollHeight - (layout.getBoundingClientRect().bottom + window.scrollY);
-      side.style.height = Math.max(420, window.innerHeight - TOP - gap - below) + "px";
+      var height = Math.max(420, window.innerHeight - TOP - gap - below);
+      side.style.height = height + "px";
+      // Everything fits on the screen but the column: a little shorter - no page scroll for a few pixels
+      var extra = document.documentElement.scrollHeight - window.innerHeight;
+      var main = layout.firstElementChild == side ? layout.lastElementChild : layout.firstElementChild;
+      var sideLongest = main && side.getBoundingClientRect().bottom >= main.getBoundingClientRect().bottom;
+      if (extra > 0 && sideLongest && height - extra >= 420) side.style.height = height - extra + "px";
     };
     // At most once a frame (scroll events come more often than that on phones)
     var queued = false;
