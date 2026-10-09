@@ -703,10 +703,16 @@
 
                 <div class="ad-card ad-danger" id="adDanger">
                     <div class="ad-card-head"><h2 class="ad-title">Danger zone</h2><span class="ad-pill danger">can't be undone</span></div>
-                    <p><b>Hard reset:</b> the casino starts anew. This deletes the <b>whole coin history</b>, <b>every payout</b>, <b>every access</b> (and request), <b>all coins</b> and <b>every season</b> (planned, running and over), and resets every game (jackpot, battles, poker, blackjack, chat). The accounts stay - players ask for access again and get the start coins.</p>
+                    <p><b>Hard reset:</b> pick what starts anew. The records go, what you set up stays - unless you tick it too. The accounts always stay.</p>
+                    <div class="ad-reset-presets">
+                        <button type="button" class="mm-btn mm-btn-sm" data-reset-preset="records">Records only</button>
+                        <button type="button" class="mm-btn mm-btn-sm" data-reset-preset="all">Everything</button>
+                        <button type="button" class="mm-btn mm-btn-sm" data-reset-preset="none">Nothing</button>
+                    </div>
+                    <div id="adResetParts" class="ad-reset-parts"></div>
                     <form id="adResetForm" class="ad-reset-form" autocomplete="off">
                         <input id="adResetConfirm" class="mm-input" placeholder="Type RESET" aria-label="Type RESET to confirm">
-                        <button type="submit" id="adResetButton" class="mm-btn mm-btn-danger-solid" disabled>Reset everything</button>
+                        <button type="submit" id="adResetButton" class="mm-btn mm-btn-danger-solid" disabled>Reset</button>
                     </form>
                     <p id="adResetDone" class="ad-note" role="status" hidden></p>
                 </div>

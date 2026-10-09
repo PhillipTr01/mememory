@@ -125,6 +125,7 @@ function showTab() {
   document.getElementById("adPageTitle").innerText = settingsPage ? SETTING_GROUPS[settingsGroup][0] : PAGES[tab][0];
   document.getElementById("adPageSub").innerText = settingsPage ? SETTING_GROUPS[settingsGroup][1] : PAGES[tab][1];
   document.getElementById("adDanger").hidden = settingsGroup != "general";
+  if (settingsPage && settingsGroup == "general") loadResetParts();
   // Maintenance: a page of its own (its own save) - the settings and their save bar on every other page
   var maintPage = settingsGroup == "maintenance";
   var shopPage = settingsPage && settingsGroup == "shop";
@@ -2508,24 +2509,85 @@ async function settingsDefaults() {
   }
 }
 
+// The parts of the hard reset (from the server): checkboxes in two groups - records ticked, the set-up not
+var resetParts = [];
+var RESET_GROUPS = { records: ["Records", "What was played - ticked to start with."], setup: ["What you set up", "Stays unless you tick it."] };
+
+async function loadResetParts() {
+  if (resetParts.length) return renderResetParts();
+  try {
+    resetParts = (await api("reset")).parts;
+    renderResetParts(resetParts.filter((part) => part.group == "records").map((part) => part.id));
+  } catch (error) {
+    fail(error);
+  }
+}
+
+function pickedResetParts() {
+  return [...document.querySelectorAll("#adResetParts input:checked")].map((box) => box.value);
+}
+
+function renderResetParts(picked) {
+  picked = picked || pickedResetParts();
+  document.getElementById("adResetParts").replaceChildren(
+    ...Object.entries(RESET_GROUPS).map(([group, [title, note]]) => {
+      var box = el("div", "ad-reset-group " + group);
+      var head = el("div", "ad-reset-group-head");
+      head.append(el("b", "", title), el("span", "ad-note", note));
+      box.appendChild(head);
+      resetParts
+        .filter((part) => part.group == group)
+        .forEach((part) => {
+          var row = el("label", "ad-reset-part");
+          var check = document.createElement("input");
+          check.type = "checkbox";
+          check.value = part.id;
+          check.checked = picked.includes(part.id);
+          check.addEventListener("change", renderResetButton);
+          var text = el("span", "ad-reset-part-text");
+          text.append(el("b", "", part.label), el("span", "ad-note", part.about));
+          row.append(check, text);
+          box.appendChild(row);
+        });
+      return box;
+    }),
+  );
+  renderResetButton();
+}
+
+function renderResetButton() {
+  var picked = pickedResetParts();
+  var button = document.getElementById("adResetButton");
+  button.disabled = document.getElementById("adResetConfirm").value != "RESET" || picked.length == 0;
+  button.innerText = picked.length == 0 ? "Pick something" : picked.length == resetParts.length ? "Reset everything" : "Reset " + picked.length + (picked.length == 1 ? " part" : " parts");
+}
+
 async function hardReset(event) {
   event.preventDefault();
   var input = document.getElementById("adResetConfirm");
-  if (input.value != "RESET") return;
-  if (!(await confirmDialog({ title: "Delete everything?", text: "The whole coin history, every payout, every access, all coins and every season (planned, running and over) are deleted, every game starts anew. This can't be undone.", confirmLabel: "Reset everything", danger: true }))) return;
+  var picked = pickedResetParts();
+  if (input.value != "RESET" || !picked.length) return;
+  var parts = resetParts.filter((part) => picked.includes(part.id));
+  var kept = resetParts.filter((part) => !picked.includes(part.id));
+  var text = "Gone:\n" + parts.map((part) => "• " + part.label + " - " + part.about).join("\n") + (kept.length ? "\n\nStays: " + kept.map((part) => part.label).join(", ") + "." : "") + "\n\nThis can't be undone.";
+  if (!(await confirmDialog({ title: picked.length == resetParts.length ? "Reset everything?" : "Reset " + parts.map((part) => part.label.toLowerCase()).join(", ") + "?", text: text, confirmLabel: "Reset", danger: true }))) return;
   var button = document.getElementById("adResetButton");
   button.disabled = true;
   try {
-    var result = await api("reset", { confirm: "RESET" });
+    var result = await api("reset", { confirm: "RESET", parts: picked });
     input.value = "";
-    document.getElementById("adResetDone").innerText = "✓ Everything is reset - " + formatCoins(result.history) + " history rows and " + formatCoins(result.payouts) + " payouts deleted.";
+    var details = [];
+    if (result.done.includes("history")) details.push(formatCoins(result.history) + " history rows");
+    if (result.done.includes("payouts")) details.push(formatCoins(result.payouts) + " payouts");
+    document.getElementById("adResetDone").innerText = "✓ Reset: " + parts.map((part) => part.label).join(", ") + (details.length ? " - " + details.join(" and ") + " deleted." : ".");
     document.getElementById("adResetDone").hidden = false;
     players = [];
     loadOverview();
+    if (result.done.includes("settings")) loadSettings();
   } catch (error) {
     fail(error);
   } finally {
-    button.disabled = input.value != "RESET";
+    renderResetButton();
   }
 }
 
@@ -2578,8 +2640,14 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("adSettingsDefaults").addEventListener("click", settingsDefaults);
   setupMaintenance();
   loadMaintenance();
+  document.querySelectorAll("[data-reset-preset]").forEach((button) =>
+    button.addEventListener("click", () => {
+      var preset = button.dataset.resetPreset;
+      renderResetParts(resetParts.filter((part) => preset == "all" || (preset == "records" && part.group == "records")).map((part) => part.id));
+    }),
+  );
   document.getElementById("adResetConfirm").addEventListener("input", (event) => {
-    document.getElementById("adResetButton").disabled = event.target.value != "RESET";
+    renderResetButton();
   });
   document.getElementById("adResetForm").addEventListener("submit", hardReset);
   // Seasons

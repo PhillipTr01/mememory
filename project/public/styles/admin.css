@@ -1080,6 +1080,80 @@ a.ad-link:focus-visible {
   line-height: 1.55;
 }
 
+/* The parts of the hard reset: two groups of checkboxes */
+.ad-reset-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.ad-reset-parts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.ad-reset-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+}
+
+.ad-reset-group.records {
+  border-color: rgba(224, 103, 90, 0.35);
+}
+
+.ad-reset-group-head {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.35rem;
+}
+
+.ad-reset-group-head .ad-note {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.ad-reset-part {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.4rem 0.35rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.ad-reset-part:hover {
+  background: var(--mm-surface-3);
+}
+
+.ad-reset-part input {
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+  margin-top: 0.15rem;
+  accent-color: var(--mm-danger);
+}
+
+.ad-reset-part-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 0.88rem;
+}
+
+.ad-reset-part-text .ad-note {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .ad-reset-form {
   display: flex;
   flex-wrap: wrap;

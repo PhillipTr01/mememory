@@ -393,6 +393,40 @@ test("admin: in a season the players show their normal coins, changes go there; 
   seasons.reset();
 });
 
+test("admin: the hard reset part by part - the records go, access, purchases, seasons and settings stay", async () => {
+  const CoinLog = require("../models/CoinLog");
+  const User = require("../models/User");
+  const seasons = require("../game/seasons");
+  seasons.reset();
+  const now = Date.now();
+  await seasons.create({ name: "Kept", icon: "🌱", start: now + 7200 * 1000, end: now + 9000 * 1000, budget: 1, every: 0 });
+  await adminApi("settings", { values: { DAILY_BONUS: 1234 } });
+  h.addUser("keeper");
+  await User.updateOne({ username: "keeper" }, { $set: { casinoApproved: true, looks: { frame: "gold" } } });
+  await coins.add("keeper", 700, { reason: "admin" });
+  assert.ok((await CoinLog.countDocuments({})) > 0);
+
+  const parts = (await adminApi("reset")).body.parts;
+  assert.deepStrictEqual(parts.filter((p) => p.group === "records").map((p) => p.id), ["history", "payouts", "coins", "games", "chat"]);
+  assert.strictEqual((await adminApi("reset", { confirm: "RESET", parts: [] })).status, 400, "something has to be picked");
+  assert.strictEqual((await adminApi("reset", { confirm: "RESET", parts: ["nope"] })).status, 400);
+
+  const res = await adminApi("reset", { confirm: "RESET", parts: ["history", "payouts", "coins", "games", "chat"] });
+  assert.strictEqual(res.status, 200);
+  assert.deepStrictEqual(res.body.done, ["history", "payouts", "coins", "games", "chat"]);
+  assert.strictEqual(await CoinLog.countDocuments({}), 0, "the history is gone");
+  const keeper = await User.findOne({ username: "keeper" }).lean();
+  assert.strictEqual(keeper.coins, 0, "the coins are gone");
+  assert.strictEqual(keeper.casinoApproved, true, "the access stays");
+  assert.deepStrictEqual(keeper.looks, { frame: "gold" }, "the purchases stay");
+  assert.deepStrictEqual(seasons.list().map((season) => season.name), ["Kept"], "the seasons stay");
+  assert.strictEqual(config.DAILY_BONUS, 1234, "the settings stay");
+  // The settings alone: back to their defaults
+  await adminApi("reset", { confirm: "RESET", parts: ["settings"] });
+  assert.notStrictEqual(config.DAILY_BONUS, 1234);
+  seasons.reset();
+});
+
 // The last test: everything is gone afterwards
 test("admin: the hard reset - history, payouts, accesses, coins and seasons are gone", async () => {
   const CoinLog = require("../models/CoinLog");

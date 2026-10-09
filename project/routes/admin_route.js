@@ -10,7 +10,7 @@ const access = require("../game/access");
 const casinoChat = require("../game/casino_chat");
 const live = require("../game/live");
 const settings = require("../game/settings");
-const { hardReset } = require("../game/hard_reset");
+const { hardReset, PARTS: RESET_PARTS } = require("../game/hard_reset");
 const seasons = require("../game/seasons");
 const cases = require("../game/cases");
 const maintenance = require("../game/maintenance");
@@ -667,15 +667,19 @@ module.exports = function () {
     }),
   );
 
-  // Everything anew - only with the word typed in
+  // What the hard reset can reset (the checkboxes of the danger zone)
+  router.get("/api/reset", admin, (req, res) => res.json({ parts: RESET_PARTS }));
+
+  // The picked parts anew - only with the word typed in
   router.post(
     "/api/reset",
     admin,
     asyncHandler(async (req, res) => {
-      if ((req.body || {}).confirm !== "RESET") return res.status(400).json({ error: 'Type "RESET" to confirm.' });
-      const result = await hardReset();
-      // The seasons too: the casino as on its very first day
-      await seasons.clear();
+      const body = req.body || {};
+      if (body.confirm !== "RESET") return res.status(400).json({ error: 'Type "RESET" to confirm.' });
+      // parts: what to reset (game/hard_reset.js) - none given: the records, access, purchases and seasons
+      const result = await hardReset(body.parts);
+      if (result.error) return res.status(400).json(result);
       res.json({ ok: true, ...result });
     }),
   );

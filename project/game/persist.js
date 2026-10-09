@@ -52,6 +52,11 @@ async function resetAll(keep = []) {
   }
 }
 
+// The keys of every game that is saved (for the hard reset: what to keep)
+function keys() {
+  return [...games.keys()];
+}
+
 // A new season: the games of the season world (keys "season/...") as on their very first start
 async function resetPrefix(prefix) {
   for (const [key, game] of games) {
@@ -154,4 +159,4 @@ function reset() {
   restored = null;
 }
 
-module.exports = { register, changed, resetPrefix, scoped, saveAll, restoreAll, resetAll, snapshotAll, restoreSnapshots, expectRestore, whenRestored, reset, toJSON, fromJSON };
+module.exports = { register, changed, resetPrefix, scoped, saveAll, restoreAll, resetAll, snapshotAll, restoreSnapshots, expectRestore, whenRestored, reset, toJSON, fromJSON, keys };
