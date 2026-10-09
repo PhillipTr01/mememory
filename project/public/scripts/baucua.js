@@ -258,7 +258,7 @@ function renderHistory() {
   var history = table.history.filter((entry) => !(rolling && entry.round == table.round));
   var before = shownRolls;
   shownRolls = new Set(history.map((entry) => entry.round));
-  list.replaceChildren(...history.slice(0, 10).map((entry) => rollChip(entry, before && !before.has(entry.round))));
+  list.replaceChildren(...history.slice(0, 5).map((entry) => rollChip(entry, before && !before.has(entry.round))));
 }
 
 function renderRounds() {
