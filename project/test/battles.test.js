@@ -116,7 +116,7 @@ const battleIn = (data, id) => data.list.find((battle) => battle.id === id);
 
 before(async () => {
   server = await h.startServer();
-  for (const name of ["alice", "bob", "carol"]) tokens[name] = h.addUser(name);
+  for (const name of ["alice", "bob", "carol", "erin"]) tokens[name] = h.addUser(name);
 });
 
 after(async () => {
@@ -475,4 +475,28 @@ test("battles: jackpot mode - one winner, drawn from the seed by the worth; best
     }
   }
   carol.close();
+});
+
+test("battles: a player has at most BATTLE_MAX_OPEN battles at a time - one filled with bots counts while it runs", async () => {
+  const old = { BATTLE_MAX_OPEN: config.BATTLE_MAX_OPEN, BATTLE_START: config.BATTLE_START };
+  Object.assign(config, { BATTLE_MAX_OPEN: 2, BATTLE_START: 5000 });
+  try {
+    h.setCoins("erin", 1000);
+    const erin = client("erin");
+    await waitFor(erin, "coins", (data) => data.coins === 1000);
+    const first = h.once(erin, "battleCreated");
+    erin.emit("createBattle", { cases: ["piggy"], size: 2 });
+    const id = await first;
+    // Filled with a bot: it runs (the countdown is long here) - still one of hers
+    erin.emit("addBot", id);
+    await waitFor(erin, "battles", (data) => battleIn(data, id) && battleIn(data, id).phase === "running");
+    const second = h.once(erin, "battleCreated");
+    erin.emit("createBattle", { cases: ["piggy"], size: 2 });
+    await second;
+    const refused = h.once(erin, "battleError");
+    erin.emit("createBattle", { cases: ["piggy"], size: 2 });
+    assert.match(await refused, /At most 2 battles/);
+  } finally {
+    Object.assign(config, old);
+  }
 });

@@ -382,9 +382,10 @@ module.exports = function (io) {
           return;
         }
         if (!SIZES.includes(data.size)) return;
-        const open = [...lobby.list.values()].filter((b) => b.creator === username && b.phase === PHASE.WAITING);
+        // Waiting and running battles of the creator count (a battle filled with bots is still one of theirs)
+        const open = [...lobby.list.values()].filter((b) => b.creator === username && (b.phase === PHASE.WAITING || b.phase === PHASE.RUNNING));
         if (open.length >= config.BATTLE_MAX_OPEN) {
-          socket.emit("battleError", `At most ${config.BATTLE_MAX_OPEN} open battles at a time.`);
+          socket.emit("battleError", `At most ${config.BATTLE_MAX_OPEN} battles of yours at a time - wait until one is over.`);
           return;
         }
         const battle = {

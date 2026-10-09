@@ -134,8 +134,15 @@ socket.on("battleCreated", (id) => {
   openBattle(id);
 });
 
+var listTimer = null;
+
 socket.on("battles", (data) => {
   battles = data.list;
+  // The end still plays in the battle (the mode reveal, the jackpot roulette): until then no winner in the list
+  battles.forEach((battle) => (battle.endAt = battle.endLeft > 0 ? Date.now() + battle.endLeft : 0));
+  var ending = battles.filter((battle) => battle.endAt > 0).map((battle) => battle.endLeft);
+  clearTimeout(listTimer);
+  if (ending.length) listTimer = setTimeout(renderList, Math.min(...ending) + 50);
   battlesLoaded = true;
   lastBattles = data.history;
   roundTime = data.round;
@@ -219,10 +226,11 @@ function showView() {
   // (not known yet - a reload: the first list decides, see track)
   if (viewId && battles.some((b) => b.id == viewId)) shown[viewId] = battles.find((b) => b.id == viewId).revealed;
   spinning = false;
-  var open = viewId && battles.find((b) => b.id == viewId);
-  if (open && catchUp(open)) return;
+  // (first the right view - a battle caught up in the middle plays in it right away)
   document.getElementById("btListView").hidden = viewId != null;
   document.getElementById("btBattleView").hidden = viewId == null;
+  var open = viewId && battles.find((b) => b.id == viewId);
+  if (open && catchUp(open)) return;
   // Main page: no status of a battle
   if (viewId == null) {
     clearInterval(statusTimer);
@@ -579,6 +587,7 @@ function shareOf(battle, seat) {
 function phaseText(battle) {
   if (battle.phase == "waiting") return battle.seats.filter((s) => s == null).length + " seat(s) free";
   if (battle.phase == "running") return battle.revealed == 0 ? "Starting..." : "Round " + battle.revealed + " / " + battle.cases.length;
+  if (battle.endAt > Date.now()) return (battle.mode || "classic") == "random" ? "Revealing the mode..." : "Drawing the winner...";
   var winners = winnersOf(battle).map((seat) => battle.seats[seat].name);
   if (winners.length > 1) return "Split: " + winners.join(" & ") + " · 🪙 " + formatCoins(shareOf(battle, winnersOf(battle)[0])) + " each";
   return (winners[0] == myName ? "You won" : winners[0] + " won") + " 🪙 " + formatCoins(battle.payout);
@@ -652,9 +661,14 @@ function renderList() {
         });
         actions.appendChild(join);
       }
-      var view = el("button", "mm-btn mm-btn-sm", "View");
-      view.type = "button";
-      view.addEventListener("click", () => openBattle(battle.id));
+      // A link: a middle click (or ctrl / cmd) opens the battle in a new tab
+      var view = el("a", "mm-btn mm-btn-sm", "View");
+      view.href = "#" + battle.id;
+      view.addEventListener("click", (event) => {
+        if (event.button != 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+        event.preventDefault();
+        openBattle(battle.id);
+      });
       actions.appendChild(view);
       row.append(seatAvatars(battle), info, actions);
       return row;
@@ -1200,7 +1214,10 @@ async function playRound(battle, round, elapsed) {
   renderBattle();
   document.getElementById("btStatus").innerText = "Round " + (round + 1) + " of " + battle.cases.length;
   var box = caseById(battle.cases[round]);
-  var duration = Math.max(elapsed ? 700 : 1200, roundTime - 1100 - (elapsed || 0));
+  // Opened in the middle of a round: the same spin as for everybody else, from where it is now
+  // (not the whole reel in the rest of the time - that raced past like a flicker)
+  var duration = Math.max(1200, roundTime - 1100);
+  var skip = Math.min(elapsed || 0, duration - 500);
   var columns = document.querySelectorAll("#btBattleView .bt-seat");
   var stops = [];
   columns.forEach((column, seat) => {
@@ -1218,8 +1235,10 @@ async function playRound(battle, round, elapsed) {
     window_.replaceChildren(reel);
     var height = window_.clientHeight;
     var offset = stop * TILE - (height - TILE) / 2 + (Math.random() - 0.5) * TILE * 0.6;
+    var roll = reel.animate([{ transform: "translateY(0)" }, { transform: `translateY(${-offset}px)` }], { duration: duration + seat * 120, easing: SLOW_END, fill: "forwards" });
+    roll.currentTime = skip;
     stops.push(
-      animate(reel, [{ transform: "translateY(0)" }, { transform: `translateY(${-offset}px)` }], { duration: duration + seat * 120, easing: SLOW_END }).then(() =>
+      roll.finished.catch(() => {}).then(() =>
         animate(reel, [{ transform: `translateY(${-offset}px)` }, { transform: `translateY(${-(stop * TILE - (height - TILE) / 2)}px)` }], { duration: 220, easing: "ease-out" }),
       ),
     );

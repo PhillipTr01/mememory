@@ -34,7 +34,7 @@ const FIELDS = [
   { group: "battles", section: "Cases", key: "BATTLE_CASES_OFF", type: "cases", label: "Cases", hint: "Turned off: gone from the case list, no new battles with it (running battles play to the end)." },
   { group: "battles", section: "Battles", key: "BATTLE_MAX_CASES", label: "Max cases per battle", step: 1, min: 1, max: 1000 },
   { group: "battles", section: "Battles", key: "BATTLE_MAX_COST", label: "Max cost per battle", hint: "What one seat may cost - all cases of the battle together.", step: 1000, min: 1, max: 100000000 },
-  { group: "battles", section: "Battles", key: "BATTLE_MAX_OPEN", label: "Open battles per player", step: 1, min: 1, max: 50 },
+  { group: "battles", section: "Battles", key: "BATTLE_MAX_OPEN", label: "Battles per player at a time", hint: "Created ones that wait or run (filled with bots too).", step: 1, min: 1, max: 50 },
   { group: "poker", section: "Poker", key: "GAME_POKER", type: "toggle", label: "Poker is on", hint: "Off: no tab, nobody can open it." },
   { group: "poker", section: "Buy-in", key: "POKER_MIN_BUYIN", label: "Min buy-in", step: 100, min: 1, max: 100000000 },
   { group: "poker", section: "Buy-in", key: "POKER_MAX_BUYIN", label: "Max buy-in", step: 500, min: 1, max: 100000000 },

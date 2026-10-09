@@ -120,7 +120,7 @@ module.exports = {
   // Case battles (hidden, opened from the jackpot page)
   BATTLE_START: 3000, // countdown when the battle is full
   BATTLE_ROUND: 4500, // one case for everybody: spin + a short look at the items
-  BATTLE_MAX_OPEN: 3, // waiting battles per creator
+  BATTLE_MAX_OPEN: 3, // waiting or running battles per creator
   BATTLE_CASES_OFF: [], // ids of cases the admin turned off (not in the shop, no new battles with them)
   BATTLE_MAX_CASES: 25, // cases (rounds) per battle
   BATTLE_MAX_COST: 20000, // what one seat of a battle may cost (all its cases together)

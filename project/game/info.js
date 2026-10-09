@@ -65,7 +65,7 @@ const GAMES = {
       },
       {
         heading: "Limits",
-        items: [`Up to ${n(config.BATTLE_MAX_CASES)} cases per battle, 🪙 ${n(config.BATTLE_MAX_COST)} at most per player.`, `Up to ${n(config.BATTLE_MAX_OPEN)} open battles per player.`],
+        items: [`Up to ${n(config.BATTLE_MAX_CASES)} cases per battle, 🪙 ${n(config.BATTLE_MAX_COST)} at most per player.`, `Up to ${n(config.BATTLE_MAX_OPEN)} battles of your own at a time.`],
       },
     ],
   }),
