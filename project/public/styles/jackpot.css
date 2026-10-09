@@ -4164,8 +4164,8 @@ body.jackpot-theme {
   }
 }
 
-/* The season world: a line in the season's color over the whole page - always clear where you play */
-body.cs-season-world::before {
+/* A line in the accent color over every casino page (gold - in the season world the season's color) */
+body.jackpot-theme::before {
   content: "";
   position: fixed;
   top: 0;
