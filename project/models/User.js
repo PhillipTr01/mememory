@@ -16,6 +16,10 @@ const schema = mongoose.Schema({
     // The last reset of all coins this account got (see game/coins.js)
     coinReset: {type: String},
     coinBonusAt: {type: Date},
+    // The season world (see game/seasons.js): the coins of the running season, apart from the normal ones
+    seasonCoins: {type: Number, min: 0},
+    seasonReset: {type: String}, // the season these coins are of ("season-<id>")
+    seasonBonusAt: {type: Date},
     // The secret casino: only for players the admin let in (see game/access.js)
     casinoApproved: {type: Boolean, default: false},
     casinoApprovedAt: {type: Date}, // the first time - the start coins come only once

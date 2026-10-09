@@ -2,7 +2,6 @@ const config = require("./config");
 const testMode = require("./test_mode");
 const days = require("./days");
 const coins = require("./coins");
-const seasons = require("./seasons");
 const access = require("./access");
 const { send: notify } = require("./notices");
 const User = require("../models/User");
@@ -35,8 +34,6 @@ async function give(from, to, amount) {
   if (!Number.isInteger(amount) || amount < 1) return { error: "A whole number of coins, please." };
   const user = await User.findOne({ username: to }).select("username casinoApproved").lean();
   if (user == null || !access.approved(user)) return { error: "There's no such player in the casino." };
-  // In a season: only between players who are in it (the coins are season coins)
-  if (seasons.running() && (seasons.joined(from) === false || seasons.joined(to) === false)) return { error: `${to} hasn't started the season yet.` };
   const before = await status(from);
   if (amount > before.left) return { error: before.left > 0 ? `You can give 🪙 ${before.left.toLocaleString("en-US")} more today (of ${before.limit.toLocaleString("en-US")} a day).` : `You gave the most you can today (🪙 ${before.limit.toLocaleString("en-US")} a day) - more tomorrow.` };
   if (!(await coins.spend(from, amount, { reason: "gift sent", note: "to " + to }))) return { error: "You don't have that many coins." };

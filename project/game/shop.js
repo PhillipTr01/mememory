@@ -1,15 +1,12 @@
 const User = require("../models/User");
 const Setting = require("../models/Setting");
 const coins = require("./coins");
-const seasons = require("./seasons");
 const testMode = require("./test_mode");
 
 /*
  * The accessory shop of the casino: frames around the avatar and animations
  * of it (like the profile decorations of Discord). Only the casino shows them.
- * Paid with the balance outside a season - in a season with the balance from
- * before it (the one that comes back after the season), never with the
- * coins of the season.
+ * Paid with the normal 🪙 - never with the coins of a season.
  *
  * A player: user.looks = {owned: [id], frame: id|null, effect: id|null}
  *
@@ -60,8 +57,8 @@ const ITEMS = [
   { id: "glitch", kind: "effect", name: "Glitch", price: 1200000, rarity: "epic" },
   { id: "lightning", kind: "effect", name: "Lightning", price: 1300000, rarity: "epic" },
   { id: "confetti", kind: "effect", name: "Confetti", price: 1800000, rarity: "epic" },
-  { id: "aura", kind: "effect", name: "Aura", price: 2000000, rarity: "epic" },
-  { id: "money", kind: "effect", name: "Money Rain", price: 2400000, rarity: "legendary" },
+  { id: "money", kind: "effect", name: "Money Rain", price: 2000000, rarity: "epic" },
+  { id: "aura", kind: "effect", name: "Aura", price: 2400000, rarity: "legendary" },
   { id: "halo", kind: "effect", name: "Halo", price: 3200000, rarity: "legendary" },
   { id: "fireworks", kind: "effect", name: "Fireworks", price: 5000000, rarity: "legendary" },
   { id: "vortex", kind: "effect", name: "Vortex", price: 7000000, rarity: "legendary" },
@@ -97,7 +94,6 @@ function looksOf(user) {
 
 // The coins the shop takes: outside a season the balance, in a season the one from before it
 async function balanceOf(username) {
-  if (seasons.running()) return seasons.storedOf(username) || 0;
   const data = await coins.get(username);
   return data.coins;
 }
@@ -111,7 +107,7 @@ async function view(username) {
     return { items: items().filter((item) => item.on), owned: [], frame: wearable(worn.frame), effect: wearable(worn.effect), free: true, test: true, balance: testMode.balance(username), season: false };
   }
   const user = await User.findOne({ username: username }).lean();
-  return { items: items().filter((item) => item.on), ...looksOf(user), free: setup.free, balance: await balanceOf(username), season: seasons.running() != null };
+  return { items: items().filter((item) => item.on), ...looksOf(user), free: setup.free, balance: await balanceOf(username), season: false };
 }
 
 async function buy(username, id) {
@@ -121,8 +117,9 @@ async function buy(username, id) {
   const user = await User.findOne({ username: username }).lean();
   const looks = looksOf(user);
   if (looks.owned.includes(id)) return { error: "You have it already." };
-  const paid = seasons.running() ? await seasons.spendSaved(username, item.price) : await coins.spend(username, item.price, { reason: "shop", note: item.name });
-  if (!paid) return { error: seasons.running() ? "Not enough coins from before the season." : "You don't have enough coins." };
+  // (always the normal 🪙 - the season's coins stay in the season world)
+  const paid = await coins.spend(username, item.price, { reason: "shop", note: item.name });
+  if (!paid) return { error: "You don't have enough coins." };
   // Bought: worn right away (instead of the one of its kind)
   const next = { ...looks, owned: [...looks.owned, id], [item.kind]: id };
   await User.updateOne({ username: username }, { $set: { looks: next } });

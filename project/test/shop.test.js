@@ -31,25 +31,23 @@ test("shop: buy with the coins, wear it right away, take it off, wear it again -
   assert.match((await shop.wear("sam", "effect", "neon")).error, /don't have/);
 });
 
-test("shop: in a season it takes the coins from before the season - never the season's", async () => {
-  h.setCoins("tess", 50000);
-  const original = { running: seasons.running, storedOf: seasons.storedOf, spendSaved: seasons.spendSaved };
-  const saved = { tess: 120000 };
-  Object.assign(seasons, {
-    running: () => ({ id: 1 }),
-    storedOf: (name) => saved[name] ?? null,
-    spendSaved: async (name, amount) => (saved[name] >= amount ? ((saved[name] -= amount), true) : false),
-  });
+test("shop: always the normal 🪙 - also while a season runs (never the season's coins)", async () => {
+  h.setCoins("tess", 500000);
+  seasons.reset();
+  const now = Date.now();
+  const made = await seasons.create({ name: "Shop", icon: "🛍", start: now - 1000, end: now + 3600 * 1000, budget: 999999, every: 0, closeWait: 0 });
+  await seasons.tick(now);
+  await seasons.join("tess", now);
   try {
     const view = await shop.view("tess");
-    assert.deepStrictEqual([view.balance, view.season], [120000, true]);
-    assert.match((await shop.buy("tess", "ice")).error, /before the season/);
+    assert.deepStrictEqual([view.balance, view.season], [500000, false]);
     const bought = await shop.buy("tess", "gold");
     assert.ok(!bought.error);
-    assert.strictEqual(saved.tess, 20000);
-    assert.strictEqual(h.coinsOf("tess"), 50000, "the season's coins stay");
+    assert.strictEqual(h.coinsOf("tess"), 400000);
+    assert.strictEqual(h.userOf("tess").seasonCoins, 999999, "the season's coins stay");
   } finally {
-    Object.assign(seasons, original);
+    await seasons.endNow(made.season.id);
+    seasons.reset();
   }
 });
 

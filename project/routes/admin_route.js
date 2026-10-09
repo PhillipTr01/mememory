@@ -111,11 +111,9 @@ module.exports = function () {
     return coins.balanceOf(user);
   }
 
-  // The normal coins of a player (during a season: the balance from before it - back after it;
-  // the season itself is only in the seasons tab)
+  // The normal coins of a player (the season's are in a world of their own - in the seasons tab)
   function normalCoins(user) {
-    const normal = seasons.normalOf(user.username);
-    return normal != null ? normal : balance(user);
+    return balance(user);
   }
 
   // The players in the casino (approved): the richest first
@@ -192,12 +190,6 @@ module.exports = function () {
       if (!access.approved(user)) return res.status(400).json({ error: "The player isn't approved for the casino." });
       if (mode !== "set" && mode !== "add") return res.status(400).json({ error: "Unknown mode." });
       if (mode === "set" && amount < 0) return res.status(400).json({ error: "A balance can't be negative." });
-      // During a season: the normal balance (it comes back after the season)
-      if (seasons.running()) {
-        const changed = await seasons.changeNormal(username, mode, amount, text);
-        if (changed.error) return res.status(400).json(changed);
-        return res.json({ username: username, coins: changed.coins });
-      }
       if (mode === "set") {
         if (amount < 0) return res.status(400).json({ error: "A balance can't be negative." });
         await coins.set(username, amount, text);
@@ -222,7 +214,7 @@ module.exports = function () {
       const start = access.startCoins(first);
       const all = await accessList(String(req.query.q || "").toLowerCase());
       // A running season that players start themselves: what "Start" gives now
-      const join = coins.base().join ? seasons.joinCoins() : null;
+      const join = seasons.running() ? seasons.joinCoins() : null;
       res.json({ firstApproval: first, startCoins: start.coins, baseCoins: coins.base().start, missed: start.missed, since: start.since, join: join, players: all.slice(0, 200) });
     }),
   );
@@ -585,14 +577,15 @@ module.exports = function () {
       const text = typeof note === "string" ? note.slice(0, 300) : undefined;
       if (typeof username !== "string" || !Number.isInteger(amount)) return res.status(400).json({ error: "Username and a whole number." });
       if (seasons.joined(username) !== true) return res.status(400).json({ error: "The player isn't in the season." });
+      const wallet = coins.season;
       if (mode === "set") {
         if (amount < 0) return res.status(400).json({ error: "A balance can't be negative." });
-        await coins.set(username, amount, text);
+        await wallet.set(username, amount, text);
       } else if (mode === "add") {
-        const ok = amount >= 0 ? await coins.add(username, amount, { reason: "admin", note: text }) : await coins.spend(username, -amount, { reason: "admin", note: text });
+        const ok = amount >= 0 ? await wallet.add(username, amount, { reason: "admin", note: text }) : await wallet.spend(username, -amount, { reason: "admin", note: text });
         if (amount !== 0 && !ok) return res.status(400).json({ error: "The player doesn't have that many coins." });
       } else return res.status(400).json({ error: "Unknown mode." });
-      res.json({ username: username, coins: (await coins.get(username)).coins });
+      res.json({ username: username, coins: (await wallet.get(username)).coins });
     }),
   );
 

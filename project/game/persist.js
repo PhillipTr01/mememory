@@ -52,6 +52,26 @@ async function resetAll(keep = []) {
   }
 }
 
+// A new season: the games of the season world (keys "season/...") as on their very first start
+async function resetPrefix(prefix) {
+  for (const [key, game] of games) {
+    if (!key.startsWith(prefix)) continue;
+    const initial = fromJSON(game.initial);
+    if (game.fresh) game.fresh(initial);
+    else game.restore(initial);
+    await save(key).catch((error) => console.error(`[persist] Could not save ${key}:`, error));
+  }
+}
+
+// The games of another world (game/worlds.js): the same, under keys of their own ("season/jackpot")
+function scoped(prefix) {
+  return {
+    register: (key, ...rest) => register(prefix + key, ...rest),
+    changed: (key) => changed(prefix + key),
+    whenRestored,
+  };
+}
+
 // Something changed: saved soon
 function changed(key) {
   if (!ready || timers.has(key)) return;
@@ -134,4 +154,4 @@ function reset() {
   restored = null;
 }
 
-module.exports = { register, changed, saveAll, restoreAll, resetAll, snapshotAll, restoreSnapshots, expectRestore, whenRestored, reset, toJSON, fromJSON };
+module.exports = { register, changed, resetPrefix, scoped, saveAll, restoreAll, resetAll, snapshotAll, restoreSnapshots, expectRestore, whenRestored, reset, toJSON, fromJSON };

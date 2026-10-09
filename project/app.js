@@ -56,6 +56,10 @@ require("./sockets/roulette_server")(io);
   for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette"]) {
     worlds.servers.set(game, require(`./sockets/${game}_server`)(io, { world: worlds.TEST }));
   }
+  // The season world: every game once more (/season/...), only for players in the running season
+  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette"]) {
+    worlds.seasonServers.set(game, require(`./sockets/${game}_server`)(io, { world: worlds.SEASON }));
+  }
 }
 require("./sockets/casino_server")(io);
 

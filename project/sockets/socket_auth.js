@@ -40,11 +40,14 @@ function check(casino) {
         return next(new Error("unauthorized"));
       }
 
-      // The admin's test mode: a tester plays only in the test world, everybody else never there
-      // ("testMode": the page loads again - into the right world)
+      // The worlds (game/worlds.js): a player plays only in the own one - the test world (test mode),
+      // the season world (joined and switched there) or the normal casino
+      // ("testMode" / "world": the page loads again - into the right world)
       if (casino) {
+        const worlds = require("../game/worlds");
         const tester = require("../game/test_mode").active(user.username);
-        if (tester !== require("../game/worlds").isTest(socket.nsp.name)) return next(new Error("testMode"));
+        if (tester !== worlds.isTest(socket.nsp.name)) return next(new Error("testMode"));
+        if (worlds.worldOf(user.username) !== worlds.worldOfNamespace(socket.nsp.name)) return next(new Error("world"));
       }
 
       socket.data.username = user.username;

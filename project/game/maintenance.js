@@ -87,7 +87,7 @@ function later(ms) {
 // Closing: every game quiet (or waited long enough) - the countdown; over - the maintenance is on
 async function tick(now = Date.now()) {
   if (!state.closing) return;
-  if (state.closing.startsAt == null && (casinoLock.busyGames().length === 0 || now - state.closing.since >= config.SEASON_CLOSE_MAX)) {
+  if (state.closing.startsAt == null && (casinoLock.allBusy().length === 0 || now - state.closing.since >= config.SEASON_CLOSE_MAX)) {
     state.closing.startsAt = now + state.wait * 1000;
     await save();
     changes.emit("closing", closingInfo(now));

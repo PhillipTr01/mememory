@@ -4,45 +4,55 @@ const Setting = require("../models/Setting");
 const CoinLog = require("../models/CoinLog");
 const coins = require("./coins");
 const config = require("./config");
-const { seasonReset, seasonRestore } = require("./hard_reset");
 const days = require("./days");
-const inPlay = require("./in_play");
-const casinoLock = require("./casino_lock");
+const inPlay = require("./in_play").season;
+const casinoLock = require("./casino_lock").season;
+const persist = require("./persist");
 const { place } = require("./places");
 
 /*
- * Seasons (admin panel): planned ahead from a start to an end. When a season
- * starts, the casino starts anew like after the hard reset (games, coin
- * history, payouts) - everybody who is in stays in and gets the season's
- * start budget; the leaderboard shows the season (updated as often as
- * the season says). When it ends, the final places are kept - with the
- * prizes, if the season has any - and shown on the winner page; everybody
- * gets the balance from before the season back - and the games and the coin
- * history are as they were before it - with the balance of the season on
- * top.
+ * Seasons (admin panel): planned ahead from a start to an end. A season is a
+ * world of its own (game/worlds.js "/season"), next to the normal casino -
+ * like another tenant: its own coins (user.seasonCoins), its own games, its
+ * own leaderboard. Only the chat is the same. The normal casino goes on as
+ * it is, nothing of it changes.
  *
- * Nobody is in a season by themselves: each player hits "Start" (join) and
- * gets the budget then (and the daily bonuses missed since the start) - only
- * players who started are on the leaderboard. Until then: 0 coins, watching.
+ * At the start (after a short countdown) the season world opens - its games
+ * start anew. Every player gets asked to join (or later: the season pill at
+ * the top, the profile menu); joining gives the budget (and the daily
+ * bonuses missed since the start) and switches to the season world. A
+ * player who joined can switch between the worlds at any time.
+ *
+ * Only one season at a time. A season can be open for everybody (default),
+ * only for the players on its whitelist - or for everybody but the ones on
+ * its banlist: who can't play in it doesn't see it.
+ *
+ * Before the end the season world closes (game/casino_lock.js): no new bets,
+ * running rounds go to their end - when every game of it is quiet (or after
+ * SEASON_CLOSE_MAX), the countdown - then the final places are kept (with the
+ * prizes, if the season has any, on the winner page) and the coins of the
+ * season go to the normal wallet of every player.
  *
  * Second chances: a season can give a player who lost everything (0 coins,
  * nothing in play anywhere) a few new starts with the budget. The first one
  * right away, every further one after the delay of the season (chanceDelay:
  * hours - not set: from the next day on).
  *
- * Without a running season the leaderboard is the normal one (live).
+ * A planned season can be highlighted: the pill at the top shows when it
+ * starts (and everything about it on a click).
  *
- * Before a season starts - and before it ends - the casino closes
- * (game/casino_lock.js): no new bets, running rounds go to their end. When
- * every game is quiet (or after SEASON_CLOSE_MAX), SEASON_CLOSE_WAIT more -
- * then the season starts (ends).
- *
- * changes: "closing" (info, again when the countdown starts), "started" (season), "ended" (season)
+ * changes: "closing" (info, again when the countdown starts), "started" (season), "ended" (season),
+ * "joined" (username), "world" (username, world: "/season" or "")
  */
 const KEY = "seasons";
 // The coin of a season that has none of its own (the 🪙 is the money outside seasons)
 const SEASON_COIN = "💎";
-const BACKUP = "seasonGames:"; // + id: the games from before the season
+const BACKUP = "seasonGames:"; // + id: the games from before the season (old seasons, see migrate)
+// Who may play in a season: everybody - only the whitelist - everybody but the banlist
+const ACCESS = ["all", "whitelist", "banlist"];
+const SEASON_WORLD = "/season";
+// The leaderboard of the running season (game/leaderboard.js keeps it there)
+const BOARD_KEY = "leaderboard:season";
 // How often the leaderboard of a season is updated (minutes; 0: all the time, 1440: once a day at midnight)
 const INTERVALS = [0, 5, 15, 60, 360, 1440];
 const MAX_PRIZES = 20;
@@ -82,11 +92,29 @@ function publicSeason(season) {
     color: season.color || null,
     prizesOn: season.prizesOn,
     prizes: season.prizes,
+    highlight: season.highlight === true,
+    access: accessOf(season),
     status: state.closing && state.closing.id === season.id && closingKind() === "start" ? "starting" : status(season),
     endedAt: season.endedAt || null,
     players: season.final ? season.final.rows.length : Object.keys(season.joined || {}).length,
     winner: season.final && season.final.rows.length ? winnerOf(season.final.rows[0]) : null,
   };
+}
+
+// Who may play in it: {mode: "all" | "whitelist" | "banlist", names: [...]}
+function accessOf(season) {
+  const access = season && season.access;
+  return { mode: access && ACCESS.includes(access.mode) ? access.mode : "all", names: access && Array.isArray(access.names) ? access.names : [] };
+}
+
+// May the player play in (and see) the season?
+function allowed(season, username) {
+  if (season == null) return false;
+  const access = accessOf(season);
+  const listed = access.names.some((name) => name.toLowerCase() === String(username).toLowerCase());
+  if (access.mode === "whitelist") return listed;
+  if (access.mode === "banlist") return !listed;
+  return true;
 }
 
 function list() {
@@ -116,10 +144,61 @@ async function load() {
   } catch (error) {
     console.error("[seasons] Could not read the seasons:", error);
   }
+  await migrate();
   coins.setBase(state.base);
-  // (the server stopped while the casino was closing for a season: closed again)
-  if (state.closing) casinoLock.lock(closingKind());
+  // (the server stopped while the season world was closing for the end: closed again)
+  if (state.closing && closingKind() === "end") casinoLock.lock("end");
   loaded = true;
+}
+
+/*
+ * A season that started before the worlds were apart: the whole casino was the
+ * season then (user.coins: the season's coins, season.saved: the normal ones,
+ * the games of before in a backup). Now: the season's coins and games go to
+ * the season world, the normal ones come back - who joined plays on in the
+ * season world.
+ */
+async function migrate() {
+  const season = running();
+  if (season == null || season.world === true || season.saved == null) return;
+  const era = state.base && state.base.reset;
+  const saved = season.saved || {};
+  const normalStart = season.baseBefore ? season.baseBefore.start : config.START_COINS;
+  const users = await User.find({ casinoApproved: true }).select("username coins coinReset coinBonusAt").lean();
+  for (const user of users) {
+    const inIt = season.joined == null || !!(season.joined && season.joined[user.username]);
+    const seasonCoins = inIt && user.coinReset === era ? user.coins || 0 : 0;
+    const normal = user.username in saved ? saved[user.username] : normalStart;
+    await User.updateOne(
+      { username: user.username },
+      { $set: { seasonCoins: seasonCoins, seasonReset: era, ...(user.coinBonusAt ? { seasonBonusAt: user.coinBonusAt } : {}), coins: normal, coinReset: config.COIN_RESET }, $unset: { coinBonusAt: 1 } },
+    );
+  }
+  // The games: the ones of the season to the season world, the ones from before back
+  const backup = await Setting.findOne({ key: BACKUP + season.id }).lean();
+  let before = {};
+  try {
+    before = backup && typeof backup.value === "string" ? JSON.parse(backup.value) || {} : {};
+  } catch (error) {
+    before = {};
+  }
+  const rows = await Setting.find({ key: { $regex: "^game:" } }).lean();
+  for (const row of rows) {
+    const key = row.key.slice("game:".length);
+    if (key === "chat" || key.startsWith("season/")) continue;
+    await Setting.updateOne({ key: "game:season/" + key }, { $set: { value: row.value } }, { upsert: true });
+    if (typeof before[key] === "string") await Setting.updateOne({ key: row.key }, { $set: { value: before[key] } }, { upsert: true });
+    else await Setting.deleteMany({ key: { $in: [row.key] } });
+  }
+  await Setting.deleteMany({ key: { $in: [BACKUP + season.id] } });
+  // Who joined plays on in the season world
+  season.here = Object.fromEntries(Object.keys(season.joined || {}).map((name) => [name, true]));
+  season.world = true;
+  delete season.saved;
+  delete season.baseBefore;
+  if (state.base) state.base.active = true;
+  await save();
+  console.log(`[seasons] "${season.name}" moved to the season world (${users.length} players).`);
 }
 
 // How long the countdown before the start and the end runs (ms): the season's own - or the setting
@@ -149,12 +228,14 @@ function closingInfo(now = Date.now()) {
 // quiet - or waited long enough - and then SEASON_CLOSE_WAIT); the casino opens again after it
 async function closeFor(season, kind, now) {
   if (!state.closing || state.closing.id !== season.id || closingKind() !== kind) {
-    state.closing = { id: season.id, kind: kind, since: now, startsAt: null };
-    casinoLock.lock(kind);
+    // The start: only the countdown (the normal casino goes on) - the end: the season world closes first
+    state.closing = { id: season.id, kind: kind, since: now, startsAt: kind === "start" ? now + closeWaitOf(season) : null };
+    if (kind === "end") casinoLock.lock("end");
     await save();
     changes.emit("closing", closingInfo(now));
+    if (kind === "start") soon(closeWaitOf(season) + 100);
   }
-  // Every game quiet (or waited long enough): the countdown
+  // Every game of the season world quiet (or waited long enough): the countdown
   if (state.closing.startsAt == null && (casinoLock.busyGames().length === 0 || now - state.closing.since >= config.SEASON_CLOSE_MAX)) {
     state.closing.startsAt = now + closeWaitOf(season);
     await save();
@@ -172,7 +253,7 @@ async function closeFor(season, kind, now) {
 // The casino was closing for something that is off now (the end moved later): open again
 async function stopClosing() {
   state.closing = null;
-  casinoLock.unlock();
+  casinoLock.unlock("end");
   await save();
   changes.emit("closing", null);
 }
@@ -231,6 +312,15 @@ function check(input, current) {
   }
   clean.sort((a, b) => a.place - b.place);
   if (prizesOn && clean.length === 0) return { error: "Prizes are on - add at least one." };
+  // Who may play: everybody (default) - the whitelist only - everybody but the banlist
+  const accessMode = input.accessMode == null || input.accessMode === "" ? "all" : String(input.accessMode);
+  if (!ACCESS.includes(accessMode)) return { error: "Unknown access (everybody, whitelist or banlist)." };
+  const rawNames = Array.isArray(input.accessNames) ? input.accessNames : String(input.accessNames || "").split(/[\s,;]+/);
+  const accessNames = [...new Set(rawNames.map((name) => String(name).trim()).filter(Boolean))];
+  if (accessNames.length > 500) return { error: "At most 500 names on the list." };
+  if (accessNames.some((name) => name.length > 40)) return { error: "A name on the list is too long." };
+  if (accessMode === "whitelist" && accessNames.length === 0) return { error: "The whitelist is on - add at least one player." };
+  const highlight = input.highlight === true;
 
   // A running season: the start and the budget are given (they happened already)
   if (current && current.started) {
@@ -242,7 +332,7 @@ function check(input, current) {
   // Never two seasons at the same time
   const other = state.seasons.find((season) => season !== current && !season.ended && season.start < end && start < season.end);
   if (other) return { error: `It overlaps with "${other.name}".` };
-  return { season: { name: name, icon: icon, coinIcon: coinIcon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, chanceDelay: chanceDelay, closeWait: closeWait, color: color, every: every, prizesOn: prizesOn, prizes: clean } };
+  return { season: { name: name, icon: icon, coinIcon: coinIcon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, chanceDelay: chanceDelay, closeWait: closeWait, color: color, every: every, prizesOn: prizesOn, prizes: clean, access: { mode: accessMode, names: accessNames }, highlight: highlight } };
 }
 
 async function create(input) {
@@ -288,68 +378,66 @@ async function remove(id) {
 
 /* ---------- Start and end ---------- */
 
-// Every account in the casino starts with the budget, the games start anew
+// The season world opens: its games start anew, everybody may join (the budget comes with joining)
 async function startSeason(season, now) {
-  // The balances before the season: everybody gets them back when it is over
-  const before = await User.find({ casinoApproved: true }).select("username coins coinReset").lean();
-  season.saved = Object.fromEntries(before.map((user) => [user.username, coins.balanceOf(user)]));
-  season.baseBefore = state.base;
   season.started = true;
   season.startedAt = now;
   season.joined = {};
-  // Everybody at 0 - the budget comes with "Start" (join)
+  season.here = {};
+  season.world = true;
   state.base = { reset: "season-" + season.id, start: 0, budget: season.budget, join: true, since: now, active: true, bonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : null };
   coins.setBase(state.base);
   await save();
-  const players = await User.find({ casinoApproved: true }).select("username").lean();
-  const games = await seasonReset(0, state.base.reset);
-  // The games from before the season (restored when it is over)
-  await Setting.updateOne({ key: BACKUP + season.id }, { $set: { value: JSON.stringify(games) } }, { upsert: true });
+  await persist.resetPrefix("season/");
+  await Setting.deleteMany({ key: { $in: [BOARD_KEY] } });
   changes.emit("started", publicSeason(season));
-  for (const player of players) coins.notify(player.username);
 }
 
-// What "Start" gives now: the budget and a daily bonus for every day since the start - {coins, missed}
+// What joining gives now: the budget and a daily bonus for every day since the start - {coins, missed}
 function joinCoins(now = Date.now()) {
   const season = running();
   if (season == null) return null;
   const missed = Math.max(0, days.dayNumber(now) - days.dayNumber(season.startedAt || season.start));
-  return { coins: season.budget + missed * coins.dailyBonus(), missed: missed };
+  return { coins: season.budget + missed * coins.season.dailyBonus(), missed: missed };
 }
 
-// The player hits "Start": in the season with the budget (and a daily bonus for every day missed
-// since the start - today's one they claim themselves) - {coins, missed} or {error}
+// The player joins the season: the budget (and a daily bonus for every day missed since the start -
+// today's one they claim themselves) - and the season world. {coins, missed} or {error}
 async function join(username, now = Date.now()) {
   const season = running();
   if (season == null) return { error: "No season runs." };
+  if (!allowed(season, username)) return { error: "This season is closed - you're not on its list." };
   season.joined = season.joined || {};
   if (season.joined[username]) return { error: "You are in the season already." };
   const user = await User.findOne({ username: username }).select("username casinoApproved").lean();
   if (user == null || user.casinoApproved !== true) return { error: "Not in the casino." };
   if (season.joined[username]) return { error: "You are in the season already." };
   season.joined[username] = now;
+  season.here = season.here || {};
+  season.here[username] = true;
   const { coins: amount, missed } = joinCoins(now);
   await save();
-  await User.updateOne({ username: username }, { $set: { coins: amount, coinReset: coins.base().reset } });
-  coins.log(username, amount, "season start", missed > 0 ? `${season.name}: ${season.budget.toLocaleString("en-US")} + ${missed} missed daily bonus${missed === 1 ? "" : "es"}` : season.name);
+  await User.updateOne({ username: username }, { $set: { seasonCoins: amount, seasonReset: state.base.reset }, $unset: { seasonBonusAt: 1 } });
+  coins.season.log(username, amount, "season start", missed > 0 ? `${season.name}: ${season.budget.toLocaleString("en-US")} + ${missed} missed daily bonus${missed === 1 ? "" : "es"}` : season.name);
   coins.notify(username);
   changes.emit("joined", username);
+  changes.emit("world", username, SEASON_WORLD);
   return { coins: amount, missed: missed };
 }
 
-// When the player hit "Start" in the running season (null: not in it, or no season)
+// When the player joined the running season (null: not in it, or no season)
 function joinedAt(username) {
   const season = running();
   return season && season.joined && season.joined[username] ? season.joined[username] : null;
 }
 
-// In the running season: did the player start it? (null: no season)
+// In the running season: did the player join it? (null: no season)
 function joined(username) {
   const season = running();
   if (season == null) return null;
-  // (a season from before "Start" existed: everybody is in)
-  if (season.joined == null) return true;
-  return !!season.joined[username];
+  // (a season from before joining existed: everybody is in)
+  if (season.joined == null) return allowed(season, username);
+  return !!season.joined[username] && allowed(season, username);
 }
 coins.setJoinedLookup(joined);
 // (since when the player is in it: the daily bonuses add up from that day on)
@@ -359,7 +447,38 @@ coins.setJoinedAtLookup((username) => {
   return (season.joined && season.joined[username]) || season.startedAt || season.start;
 });
 
-// The final places (everybody in the casino, by coins) - with the prizes
+// Plays the player in the season world now? (joined it and switched there)
+function inSeasonWorld(username) {
+  const season = running();
+  return !!(season && season.here && season.here[username] && joined(username));
+}
+
+// The player switches the world: "season" (only who joined the running season) or "normal"
+async function switchWorld(username, to) {
+  const season = running();
+  if (to === "season") {
+    if (season == null) return { error: "No season runs." };
+    if (!joined(username)) return { error: "Join the season first." };
+    season.here = season.here || {};
+    season.here[username] = true;
+  } else if (to === "normal") {
+    if (season && season.here) delete season.here[username];
+  } else return { error: "Unknown world." };
+  await save();
+  const world = to === "season" ? SEASON_WORLD : "";
+  changes.emit("world", username, world);
+  return { world: to };
+}
+
+// The season the pill at the top shows to a player: the running one - or a highlighted planned one
+function upcoming(username, now = Date.now()) {
+  const season = state.seasons
+    .filter((s) => !s.started && !s.ended && s.highlight === true && s.end > now && allowed(s, username))
+    .sort((a, b) => a.start - b.start)[0];
+  return season || null;
+}
+
+// The final places (everybody who joined, by coins) - with the prizes; the coins of the season go to the normal wallet
 async function endSeason(season, now) {
   // (with the stats: the coin history of the season is gone after it)
   const rows = await withStats(season, await standings());
@@ -368,37 +487,30 @@ async function endSeason(season, now) {
   season.final = { at: now, rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, wagered: byName.get(username).wagered }) }) };
   season.ended = true;
   season.endedAt = now;
-  // Everything as before the season: the balances (who came during the season gets the normal
-  // start coins), the daily bonus, the games, the coin history
   const seasonEra = state.base ? state.base.reset : null;
-  state.base = season.baseBefore ? { ...season.baseBefore, active: false, bonus: null } : null;
-  coins.setBase(state.base);
+  const players = Object.keys(season.here || {});
+  season.here = {};
+  state.base = null;
+  coins.setBase(null);
   await save();
-  // The balance from before the season (who came during it: the start coins) - and what was won in the season on top
-  const saved = season.saved || {};
-  const seasonCoins = new Map(rows.map((row) => [row.username, row.coins]));
-  const players = new Set([...Object.keys(saved), ...seasonCoins.keys()]);
-  for (const username of players) {
-    const before = username in saved ? saved[username] : coins.base().start;
-    await User.updateOne({ username: username }, { $set: { coins: before + (seasonCoins.get(username) || 0), coinReset: coins.base().reset } });
+  // The coins of the season: into the normal wallet
+  for (const row of rows) {
+    if (row.coins > 0) await coins.add(row.username, row.coins, { reason: "season payout", note: season.name });
   }
-  const backup = await Setting.findOne({ key: BACKUP + season.id }).lean();
-  let games = null;
-  try {
-    games = backup && typeof backup.value === "string" ? JSON.parse(backup.value) : null;
-  } catch (error) {
-    console.error("[seasons] Could not read the games from before the season:", error);
-  }
-  if (seasonEra) await seasonRestore(games, seasonEra);
-  await Setting.deleteMany({ key: { $in: [BACKUP + season.id] } });
+  await User.updateMany({ seasonReset: seasonEra }, { $set: { seasonCoins: 0 } });
+  // The season world: empty again (its games, its history)
+  await persist.resetPrefix("season/");
+  if (seasonEra) await CoinLog.deleteMany({ era: seasonEra });
+  await Setting.deleteMany({ key: { $in: [BOARD_KEY] } });
   changes.emit("ended", publicSeason(season));
-  for (const username of players) coins.notify(username);
+  for (const username of players) changes.emit("world", username, "");
+  for (const row of rows) coins.notify(row.username);
 }
 
-// Everybody in the season (who hit "Start") by coins: [{rank, username, coins}]
+// Everybody in the season (who joined) by the season's coins: [{rank, username, coins}]
 async function standings() {
-  const users = await User.find({ casinoApproved: true }).select("username coins coinReset").lean();
-  return place(users.filter((user) => joined(user.username) !== false).map((user) => ({ username: user.username, coins: coins.balanceOf(user) })));
+  const users = await User.find({ casinoApproved: true }).select("username seasonCoins seasonReset").lean();
+  return place(users.filter((user) => joined(user.username) === true).map((user) => ({ username: user.username, coins: coins.season.balanceOf(user) })));
 }
 
 /* ---------- The leaderboard of a season for the admin panel ---------- */
@@ -502,12 +614,11 @@ function tick(now = Date.now()) {
         // The start: first the casino closes - running rounds go to their end, nothing new
         if (!season.started && season.start <= now && !running() && (await closeFor(season, "start", now))) {
           await startSeason(season, now);
-          casinoLock.unlock();
         }
         // The end: the same
         if (season.started && !season.ended && season.end <= now && (await closeFor(season, "end", now))) {
           await endSeason(season, now);
-          casinoLock.unlock();
+          casinoLock.unlock("end");
         }
         // Closing for the end, but the admin moved the end later: open again
         if (state.closing && state.closing.id === season.id && closingKind() === "end" && !season.ended && season.end > now) await stopClosing();
@@ -515,26 +626,6 @@ function tick(now = Date.now()) {
     })
     .catch((error) => console.error("[seasons] Could not start or end a season:", error));
   return ticking;
-}
-
-// Coins that belong to the balance from before the running season (a payout from before it was
-// rejected): they come with that balance after the season. false: no season runs.
-async function addToSaved(username, amount) {
-  const season = running();
-  if (season == null || season.saved == null) return false;
-  season.saved[username] = (season.saved[username] || 0) + amount;
-  await save();
-  return true;
-}
-
-// The shop in a season: paid with the balance from before it (false: not that much)
-async function spendSaved(username, amount) {
-  const season = running();
-  if (season == null || season.saved == null || !Number.isInteger(amount) || amount <= 0) return false;
-  if (!((season.saved[username] || 0) >= amount)) return false;
-  season.saved[username] -= amount;
-  await save();
-  return true;
 }
 
 /* ---------- Second chances ---------- */
@@ -555,7 +646,7 @@ async function chanceStatus(username, now = Date.now()) {
   if (left === 0) return { ...result, reason: "used" };
   // Still coins - or coins in a game (a bet that is not over, or one just made that the game gets now): nothing yet
   // (before the wait: no "out of coins" while a bet still runs)
-  if ((await coins.get(username)).coins > 0) return { ...result, reason: "coins" };
+  if ((await coins.season.get(username)).coins > 0) return { ...result, reason: "coins" };
   if (inPlay.where(username).length || now - coins.lastSpent(username) < SPEND_GRACE) return { ...result, reason: "inPlay" };
   // The first one right away - after a second chance, the next one after the delay (not set: the next day)
   const delay = chanceDelayOf(season);
@@ -573,42 +664,11 @@ async function useChance(username, now = Date.now()) {
   const record = season.chances[username] || { used: 0, lastAt: null };
   season.chances[username] = { used: record.used + 1, lastAt: now };
   await save();
-  await User.updateOne({ username: username }, { $set: { coins: season.budget, coinReset: coins.base().reset } });
-  coins.log(username, season.budget, "second chance", season.name);
+  await User.updateOne({ username: username }, { $set: { seasonCoins: season.budget, seasonReset: state.base.reset } });
+  coins.season.log(username, season.budget, "second chance", season.name);
   coins.notify(username);
   return { coins: season.budget, left: status.left - 1 };
 }
-
-// The normal balance during the running season (from before it - back after it; who came during
-// the season: the normal start coins) - null without a season
-function normalOf(username) {
-  const season = running();
-  if (season == null) return null;
-  const saved = season.saved || {};
-  return username in saved ? saved[username] : season.baseBefore ? season.baseBefore.start : config.START_COINS;
-}
-
-// Admin: the normal balance changed during a season (mode "set" or "add") - {coins} or {error}
-async function changeNormal(username, mode, amount, note) {
-  const season = running();
-  if (season == null) return { error: "No season runs." };
-  const before = normalOf(username);
-  const after = mode === "set" ? amount : before + amount;
-  if (after < 0) return { error: "The player doesn't have that many coins." };
-  season.saved = season.saved || {};
-  season.saved[username] = after;
-  await save();
-  if (after !== before) coins.log(username, after - before, "admin", note, { normal: true });
-  coins.notify(username);
-  return { coins: after };
-}
-
-// The balance from before the running season (shown next to the coins), null without a season
-function storedOf(username) {
-  const season = running();
-  return season && season.saved && username in season.saved ? season.saved[username] : null;
-}
-coins.setStoredLookup(storedOf);
 
 // The admin ends the running season right now (the casino closes first, like at the end time)
 async function endNow(id, now = Date.now()) {
@@ -638,8 +698,8 @@ async function clear() {
   const wasRunning = running();
   state = { seasons: [], base: null, next: 1 };
   coins.setBase(null);
-  casinoLock.unlock();
-  await Setting.deleteMany({ key: { $in: [KEY, ...ids.map((id) => BACKUP + id)] } });
+  casinoLock.unlock("end");
+  await Setting.deleteMany({ key: { $in: [KEY, BOARD_KEY, ...ids.map((id) => BACKUP + id)] } });
   if (wasRunning) changes.emit("cleared");
 }
 
@@ -647,21 +707,23 @@ async function clear() {
 function reset() {
   state = { seasons: [], base: null, next: 1 };
   coins.setBase(null);
-  casinoLock.unlock();
+  casinoLock.unlock("end");
   loaded = true;
 }
 
 // The running season's accent color for the casino pages: a <style> (or "")
 // The coin icon of the running season for the casino pages (see casino_coin.js) - nothing: the 🪙
-function coinScript() {
+// (only in the season world: the normal casino keeps the 🪙 and its gold)
+function coinScript(username) {
   const season = running();
-  if (!season) return "";
+  if (!season || !inSeasonWorld(username)) return "";
   const icon = season.coinIcon || SEASON_COIN;
   return `<script>window.CASINO_COIN = ${JSON.stringify(icon).replace(/</g, "\\u003c")};</script>`;
 }
 
-function accentStyle() {
+function accentStyle(username) {
   const season = running();
+  if (!season || !inSeasonWorld(username)) return "";
   const color = season && season.color;
   if (!color || !/^#[0-9a-f]{6}$/.test(color)) return "";
   const rgb = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
@@ -669,4 +731,4 @@ function accentStyle() {
   return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
 }
 
-module.exports = { prizesOf, tieStats, board, normalOf, changeNormal, joinedAt, join, joined, joinCoins, closingInfo, chanceStatus, useChance, storedOf, spendSaved, clear, accentStyle, coinScript, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+module.exports = { prizesOf, tieStats, board, joinedAt, join, joined, joinCoins, allowed, accessOf, inSeasonWorld, switchWorld, upcoming, closingInfo, closingKind, chanceStatus, useChance, clear, accentStyle, coinScript, INTERVALS, ACCESS, BOARD_KEY, SEASON_WORLD, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };

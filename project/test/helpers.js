@@ -166,6 +166,12 @@ async function startServer() {
     test[game] = require(`../sockets/${game}_server`)(io, { world: worlds.TEST });
     worlds.servers.set(game, test[game]);
   }
+  // The season world (game/seasons.js)
+  const season = {};
+  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette"]) {
+    season[game] = require(`../sockets/${game}_server`)(io, { world: worlds.SEASON });
+    worlds.seasonServers.set(game, season[game]);
+  }
   require("../sockets/casino_server")(io);
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
@@ -180,6 +186,7 @@ async function startServer() {
     slots,
     roulette,
     test,
+    season,
     client(namespace, token, query) {
       return connect(`http://localhost:${port}${namespace}`, {
         query: query || {},

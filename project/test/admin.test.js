@@ -279,19 +279,18 @@ test("admin: in a season the players show their normal coins, changes go there; 
   const now = Date.now();
   const made = await seasons.create({ name: "Board", icon: "📋", start: now - 1000, end: now + 3600 * 1000, budget: 1000, every: 0, secondChances: 2 });
   await seasons.tick(now);
-  const normal = seasons.normalOf("rosa");
-  assert.ok(normal != null);
+  const normal = (await coins.get("rosa")).coins;
   await seasons.join("rosa", now);
-  await coins.spend("rosa", 300, { reason: "slots bet" });
-  await coins.add("rosa", 900, { reason: "slots win" });
+  await coins.season.spend("rosa", 300, { reason: "slots bet" });
+  await coins.season.add("rosa", 900, { reason: "slots win" });
   // The players: the normal coins, nothing of the season
   const rosa = (await adminApi("users")).body.find((p) => p.username === "rosa");
   assert.deepStrictEqual(rosa, { username: "rosa", coins: normal });
   // A change goes to the normal coins - the season coins stay
   const res = await adminApi("balance", { username: "rosa", mode: "add", amount: 250, note: "gift" });
   assert.strictEqual(res.body.coins, normal + 250);
-  assert.strictEqual(seasons.normalOf("rosa"), normal + 250);
-  assert.strictEqual((await coins.get("rosa")).coins, 1600);
+  assert.strictEqual((await coins.get("rosa")).coins, normal + 250);
+  assert.strictEqual((await coins.season.get("rosa")).coins, 1600);
   assert.strictEqual((await adminApi("balance", { username: "rosa", mode: "add", amount: -(normal + 999) })).status, 400);
   // The history: the normal one (a part of the name is enough) - or the season's, by kinds
   const normalHistory = (await adminApi("history?username=OS")).body;
@@ -318,7 +317,7 @@ test("admin: in a season the players show their normal coins, changes go there; 
   assert.strictEqual(set.body.coins, 5000);
   set = await adminApi("seasons/" + made.season.id + "/balance", { username: "rosa", mode: "add", amount: -1000, note: "fix" });
   assert.strictEqual(set.body.coins, 4000);
-  assert.strictEqual(seasons.normalOf("rosa"), normal + 250, "the normal coins stay");
+  assert.strictEqual((await coins.get("rosa")).coins, normal + 250, "the normal coins stay");
   assert.strictEqual((await adminApi("seasons/" + made.season.id + "/balance", { username: "quinn", mode: "set", amount: 1 })).status, 400, "not in the season");
   assert.strictEqual((await adminApi("seasons/999/balance", { username: "rosa", mode: "set", amount: 1 })).status, 400);
   seasons.reset();

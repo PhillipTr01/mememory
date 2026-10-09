@@ -2,7 +2,6 @@ const Withdrawal = require("../models/Withdrawal");
 const testMode = require("./test_mode");
 const coins = require("./coins");
 const config = require("./config");
-const seasons = require("./seasons");
 
 /*
  * Payouts: a player takes coins off the balance, the admin pays them out
@@ -12,8 +11,6 @@ const seasons = require("./seasons");
 
 // {ok, withdrawal} or {error}
 async function request(username, amount) {
-  // The coins of a season are only for the season
-  if (seasons.running()) return { error: "Payouts are paused while a season runs." };
   if (testMode.active(username)) return { error: "🧪 Test mode: no payouts with test coins." };
   if (!Number.isInteger(amount) || amount < config.WITHDRAW_MIN) return { error: `At least ${config.WITHDRAW_MIN.toLocaleString("en-US")} coins.` };
   if (amount % config.WITHDRAW_STEP !== 0) return { error: `Only in steps of ${config.WITHDRAW_STEP.toLocaleString("en-US")} coins.` };
@@ -48,8 +45,8 @@ async function handle(id, action, note) {
   const result = await Withdrawal.updateOne({ _id: id, status: "open" }, { $set: { status: status, note: note || undefined, handledAt: new Date() } });
   // Somebody (another tab) was faster
   if (!(result.nModified > 0 || result.modifiedCount > 0)) return { error: "This payout was already handled." };
-  // (rejected during a season: the coins go to the balance from before the season - back after it)
-  if (status === "rejected" && !(await seasons.addToSaved(withdrawal.username, withdrawal.amount))) {
+  // (payouts are always the normal coins - the season's are in a world of their own)
+  if (status === "rejected") {
     await coins.add(withdrawal.username, withdrawal.amount, { reason: "withdrawal refund", note: note });
   }
   return { ok: true };

@@ -40,7 +40,7 @@ const BOT_NAMES = ["Bot Pepe", "Bot Doge", "Bot Wojak"];
 module.exports = function (io, options = {}) {
   // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
   const world = options.world || "";
-  const { persist, live, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
+  const { coins, persist, live, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
   const battles = io.of(world + "/battles");
   battles.use(socketAuth.casino);
   casinoChat.attach(battles, ROOM);

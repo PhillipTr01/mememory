@@ -8,9 +8,10 @@ const maintenance = require("../game/maintenance");
 const testMode = require("../game/test_mode");
 const worlds = require("../game/worlds");
 
-// The games - in the real casino and in the admin's test world (game/worlds.js)
+// The games - in the normal casino, the season world and the admin's test world (game/worlds.js)
 const REAL = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/roulette"];
-const GAMES = [...REAL, ...REAL.map((name) => worlds.TEST + name)];
+const SEASON = REAL.map((name) => worlds.SEASON + name);
+const GAMES = [...REAL, ...SEASON, ...REAL.map((name) => worlds.TEST + name)];
 
 function socketsOf(io, username) {
   const list = [];
@@ -32,7 +33,7 @@ module.exports = function (io) {
   settings.changes.on("change", (values) => {
     for (const game of games.GAMES) {
       if (values[game.key] !== false) continue;
-      for (const socket of [...io.of(game.namespace).sockets.values(), ...io.of(worlds.TEST + game.namespace).sockets.values()]) {
+      for (const socket of [...io.of(game.namespace).sockets.values(), ...io.of(worlds.SEASON + game.namespace).sockets.values(), ...io.of(worlds.TEST + game.namespace).sockets.values()]) {
         socket.emit("gameOff");
         socket.disconnect(true);
       }
@@ -49,19 +50,42 @@ module.exports = function (io) {
     }
   });
 
-  // A season starts: every open casino page loads anew (new coins, the games start anew)
+  // The open casino pages of the players who may play in a season (who can't doesn't see it)
+  function* seasonSockets(season) {
+    for (const name of GAMES) for (const socket of io.of(name).sockets.values()) if (seasons.allowed(season, socket.data.username)) yield socket;
+  }
+
+  // A season starts: every open casino page asks to join (or later) - nothing else changes
   seasons.changes.on("started", (season) => {
-    for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonStarted", season);
+    const full = seasons.byId(season.id);
+    for (const socket of seasonSockets(full)) socket.emit("seasonStarted", season);
   });
 
-  // The casino closes for a season (and the countdown to its start): every open casino page shows it
+  // The countdown to the start of a season - and the season world closing before its end: the pages show it
   seasons.changes.on("closing", (info) => {
-    for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonClosing", info);
+    const season = info && seasons.byId(info.id);
+    if (info == null) {
+      for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonClosing", null);
+      return;
+    }
+    for (const socket of seasonSockets(season)) socket.emit("seasonClosing", info);
   });
 
-  // A season is over: every open casino page shows it (with a link to the winners)
+  // A season is over: every open casino page shows it (with a link to the winners) - the pages of
+  // the season world load again (in the normal casino, the season's coins in the wallet)
   seasons.changes.on("ended", (season) => {
-    for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonEnded", { id: season.id, name: season.name, icon: season.icon, winner: season.winner });
+    const full = seasons.byId(season.id);
+    for (const socket of seasonSockets(full)) socket.emit("seasonEnded", { id: season.id, name: season.name, icon: season.icon, winner: season.winner });
+  });
+
+  // A player switched the world (joined the season, the switch in the menu, the end of the season):
+  // the open casino pages of the player load again - in the other world
+  seasons.changes.on("world", (username, world) => {
+    for (const socket of socketsOf(io, username)) {
+      if (worlds.worldOfNamespace(socket.nsp.name) === world) continue;
+      socket.emit("worldChanged", { world: world ? "season" : "normal" });
+      socket.disconnect(true);
+    }
   });
 
   // A maintenance comes: every open casino page shows it (like before a season) - over: the season's again, if any

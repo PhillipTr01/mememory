@@ -29,7 +29,7 @@ const ROOM = "blackjack";
 module.exports = function (io, options = {}) {
   // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
   const world = options.world || "";
-  const { persist, live, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
+  const { coins, persist, live, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
   const room = io.of(world + "/blackjack");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);

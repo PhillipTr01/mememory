@@ -208,14 +208,13 @@ test("persist: a season saves every game and puts it back afterwards", async () 
   assert.strictEqual(game.rounds, 7);
 });
 
-test("persist: the chat stays through a season (start and end)", async () => {
-  const chat = { messages: ["before"] };
-  persist.register("chatTest", () => chat, (saved) => Object.assign(chat, saved));
-  const before = persist.snapshotAll();
-  await persist.resetAll(["chatTest"]);
-  chat.messages.push("during");
-  await persist.restoreSnapshots(before, ["chatTest"]);
-  assert.deepStrictEqual(chat.messages, ["before", "during"]);
-  // (the season really keeps "chat")
-  assert.match(require("fs").readFileSync(require.resolve("../game/hard_reset"), "utf8"), /SEASON_KEEP = \["chat"\]/);
+test("persist: the season world has its games under keys of their own - a new season starts only them anew (the chat is shared)", async () => {
+  const normal = { round: 5 };
+  const season = { round: 7 };
+  persist.register("worldTest", () => normal, (saved) => Object.assign(normal, saved));
+  persist.scoped("season/").register("worldTest", () => season, (saved) => Object.assign(season, saved), (fresh) => Object.assign(season, fresh, { round: 0 }));
+  await persist.resetPrefix("season/");
+  assert.deepStrictEqual([normal.round, season.round], [5, 0]);
+  // (the season world uses the chat of the normal casino)
+  assert.strictEqual(require("../game/worlds").services("/season").casinoChat, require("../game/casino_chat"));
 });

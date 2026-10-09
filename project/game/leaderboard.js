@@ -6,30 +6,36 @@ const seasons = require("./seasons");
 const { place } = require("./places");
 
 /*
- * The leaderboard of the casino: the approved players by their coins.
+ * The leaderboards of the casino - one per world (game/worlds.js):
  *
- * No season running: live - every look shows the coins right now, the arrows
- * show the change since midnight. A season running: updated as often as the
- * season says (every few minutes, hours, once a day - or live as well); the
- * arrows show the change since the update before.
+ * The normal casino: the approved players by their 🪙, live - every look
+ * shows the coins right now, the arrows show the change since midnight.
+ *
+ * The season world: who joined the running season by its coins - updated as
+ * often as the season says (every few minutes, hours, once a day - or live
+ * as well); the arrows show the change since the update before.
  *
  * A snapshot is kept for the arrows (and for the places between the updates).
  */
 const KEY = "leaderboard";
 const SIZE = 100;
+const keyOf = (season) => (season ? seasons.BOARD_KEY : KEY);
 
-async function build(now, before) {
-  // (in a season: only who hit "Start")
-  const users = (await User.find({ casinoApproved: true }).select("username coins coinReset").lean()).filter((user) => seasons.joined(user.username) !== false);
+async function build(now, before, season) {
   const placeBefore = new Map(((before && before.rows) || []).map((row) => [row.username, row.rank]));
-  return { at: now, rows: (await placed(users.map((user) => ({ username: user.username, coins: coins.balanceOf(user) })))).map((row) => ({ ...row, before: placeBefore.has(row.username) ? placeBefore.get(row.username) : null })) };
+  let rows;
+  if (season) {
+    rows = await placed(season, (await seasons.standings()).map((row) => ({ username: row.username, coins: row.coins })));
+  } else {
+    const users = await User.find({ casinoApproved: true }).select("username coins coinReset").lean();
+    rows = place(users.map((user) => ({ username: user.username, coins: coins.balanceOf(user) })));
+  }
+  return { at: now, rows: rows.map((row) => ({ ...row, before: placeBefore.has(row.username) ? placeBefore.get(row.username) : null })) };
 }
 
-// The places: the same coins, the same place - in a season every player with the second chances
+// The places of a season: the same coins, the same place - every player with the second chances
 // and coins wagered (shown on the board; the same coins go by them)
-async function placed(rows) {
-  const season = seasons.running();
-  if (!season) return place(rows);
+async function placed(season, rows) {
   const stats = await seasons.tieStats(season);
   return place(
     rows.map((row) => ({ ...row, ...stats(row.username) })),
@@ -37,8 +43,8 @@ async function placed(rows) {
   );
 }
 
-async function load() {
-  const row = await Setting.findOne({ key: KEY }).lean();
+async function load(season) {
+  const row = await Setting.findOne({ key: keyOf(season) }).lean();
   try {
     return row && typeof row.value === "string" ? JSON.parse(row.value) : null;
   } catch (error) {
@@ -51,50 +57,53 @@ function nextUpdate(now, every) {
   return every >= 1440 || every <= 0 ? days.nextDay(now) : now + every * 60 * 1000;
 }
 
-// The snapshot (made anew when it is time - or a season started / ended)
-async function snapshot(now, seasonId, every) {
-  let board = await load();
+// The snapshot (made anew when it is time - or another season)
+async function snapshot(now, season, every) {
+  let board = await load(season);
+  const seasonId = season ? season.id : null;
   const same = board != null && (board.season || null) === seasonId;
   if (!same || now >= (board.next || 0)) {
-    board = { ...(await build(now, same ? board : null)), season: seasonId, next: nextUpdate(now, every) };
-    await Setting.updateOne({ key: KEY }, { $set: { value: JSON.stringify(board) } }, { upsert: true });
+    board = { ...(await build(now, same ? board : null, season)), season: seasonId, next: nextUpdate(now, every) };
+    await Setting.updateOne({ key: keyOf(season) }, { $set: { value: JSON.stringify(board) } }, { upsert: true });
   }
   return board;
 }
 
-// A player hits "Start" in the season: on the board right away (with the start coins) - the
+// A player joins the season: on its board right away (with the start coins) - the
 // others stay as they were at the last update
 let adding = Promise.resolve();
 seasons.changes.on("joined", (username) => {
   adding = adding
     .then(async () => {
       const season = seasons.running();
-      const board = await load();
+      const board = await load(season);
       if (!season || board == null || board.season !== season.id || board.rows.some((row) => row.username === username)) return;
-      const user = await User.findOne({ username: username }).select("username coins coinReset").lean();
+      const user = await User.findOne({ username: username }).select("username seasonCoins seasonReset").lean();
       if (user == null) return;
       const before = new Map(board.rows.map((row) => [row.username, row.before]));
-      const rows = (await placed([...board.rows.map((row) => ({ username: row.username, coins: row.coins })), { username: username, coins: coins.balanceOf(user) }])).map((row) => ({ ...row, before: before.has(row.username) ? before.get(row.username) : null }));
-      await Setting.updateOne({ key: KEY }, { $set: { value: JSON.stringify({ ...board, rows: rows }) } }, { upsert: true });
+      const rows = (await placed(season, [...board.rows.map((row) => ({ username: row.username, coins: row.coins })), { username: username, coins: coins.season.balanceOf(user) }])).map((row) => ({ ...row, before: before.has(row.username) ? before.get(row.username) : null }));
+      await Setting.updateOne({ key: keyOf(season) }, { $set: { value: JSON.stringify({ ...board, rows: rows }) } }, { upsert: true });
     })
     .catch((error) => console.error("[leaderboard] Could not add a player:", error));
 });
 
-// Today's / this update's leaderboard: {at, rows, live, next}
-async function get(now = Date.now()) {
+// The leaderboard of a world: {at, rows, live, next} - season: true for the running season's
+async function get(now = Date.now(), world = "") {
   await seasons.tick(now);
-  const season = seasons.running();
+  const season = world === seasons.SEASON_WORLD ? seasons.running() : null;
   const every = season ? season.every : 0;
   // Live: the snapshot only for the arrows (once a day)
-  const board = await snapshot(now, season ? season.id : null, every === 0 ? 1440 : every);
-  if (every === 0) return { ...(await build(now, board)), live: true, next: null };
+  const board = await snapshot(now, season, every === 0 ? 1440 : every);
+  if (every === 0) return { ...(await build(now, board, season)), live: true, next: null };
   return { at: board.at, rows: board.rows, live: false, next: board.next };
 }
 
-// What a page shows: the top players, the own place, the season, when the next update comes
+// What a page shows: the leaderboard of the player's world - the top players, the own place, the
+// season (in the season world), when the next update comes
 async function view(username, now = Date.now()) {
-  const board = await get(now);
-  const season = seasons.running();
+  const world = seasons.inSeasonWorld(username) ? seasons.SEASON_WORLD : "";
+  const board = await get(now, world);
+  const season = world ? seasons.running() : null;
   const ended = seasons.lastEnded();
   return {
     updatedAt: board.at,
@@ -104,6 +113,7 @@ async function view(username, now = Date.now()) {
     rows: board.rows.slice(0, SIZE),
     me: board.rows.find((row) => row.username === username) || null,
     season: season ? seasons.publicSeason(season) : null,
+    world: world ? "season" : "normal",
     // The last season that is over (the winner page)
     lastSeason: ended ? { id: ended.id, name: ended.name, icon: ended.icon, endedAt: ended.endedAt } : null,
   };
