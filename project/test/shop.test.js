@@ -52,3 +52,42 @@ test("shop: in a season it takes the coins from before the season - never the se
     Object.assign(seasons, original);
   }
 });
+
+test("shop admin: prices and items off - free for all lets everybody wear everything, off again it comes off (bought stays)", async () => {
+  h.addUser("uma");
+  h.setCoins("uma", 20000);
+  shop.reset();
+  try {
+    // A new price, an item off: not in the shop, can't be bought or worn
+    let config = await shop.update({ items: { gold: { price: 1234 }, neon: { on: false } } });
+    assert.strictEqual(config.items.find((i) => i.id === "gold").price, 1234);
+    assert.strictEqual(config.items.find((i) => i.id === "gold").defaultPrice, 10000);
+    assert.ok(!(await shop.view("uma")).items.some((i) => i.id === "neon"));
+    assert.match((await shop.buy("uma", "neon")).error, /exist/);
+    assert.ok(!(await shop.buy("uma", "gold")).error);
+    assert.strictEqual(h.coinsOf("uma"), 20000 - 1234);
+    assert.match((await shop.update({ items: { gold: { price: -5 } } })).error, /price/);
+
+    // Free for all: everything that is on, without buying - no shopping meanwhile
+    await shop.update({ free: true });
+    assert.ok(!(await shop.wear("uma", "effect", "halo")).error);
+    assert.ok(!(await shop.wear("uma", "frame", "galaxy")).error);
+    assert.match((await shop.wear("uma", "frame", "neon")).error, /don't have/, "off stays off");
+    assert.match((await shop.buy("uma", "royal")).error, /free/);
+    assert.deepStrictEqual(await shop.worn(["uma"]), { uma: { frame: "galaxy", effect: "halo" } });
+
+    // Off again: what was not bought comes off - in the database too
+    await shop.update({ free: false });
+    assert.deepStrictEqual(await shop.worn(["uma"]), {});
+    assert.deepStrictEqual([h.userOf("uma").looks.frame, h.userOf("uma").looks.effect], [null, null]);
+    assert.deepStrictEqual(h.userOf("uma").looks.owned, ["gold"]);
+    // An item turned off: who bought it doesn't wear it (and keeps it)
+    await shop.wear("uma", "frame", "gold");
+    await shop.update({ items: { gold: { on: false } } });
+    assert.deepStrictEqual(await shop.worn(["uma"]), {});
+    await shop.update({ items: { gold: { on: true } } });
+    assert.deepStrictEqual(await shop.worn(["uma"]), { uma: { frame: "gold", effect: null } });
+  } finally {
+    shop.reset();
+  }
+});

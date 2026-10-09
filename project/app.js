@@ -132,6 +132,9 @@ async function connectDatabase(attempt = 1) {
     await require("./game/maintenance")
       .load()
       .catch((error) => console.error("Could not load the maintenance:", error));
+    await require("./game/shop")
+      .load()
+      .catch((error) => console.error("Could not load the shop:", error));
     // The seasons first (and the coins of the season that started last) - a restored game may pay coins
     const seasons = require("./game/seasons");
     await seasons.load().catch((error) => console.error("Could not load the seasons:", error));

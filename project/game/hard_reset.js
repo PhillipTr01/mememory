@@ -22,7 +22,8 @@ async function hardReset() {
       {},
       {
         $set: { casinoApproved: false, payoutAllowed: false, coins: 0 },
-        $unset: { casinoApprovedAt: 1, casinoRequestedAt: 1, coinReset: 1, coinBonusAt: 1 },
+        // (and everything bought in the shop)
+        $unset: { casinoApprovedAt: 1, casinoRequestedAt: 1, coinReset: 1, coinBonusAt: 1, looks: 1 },
       },
     ),
   ]);

@@ -76,6 +76,7 @@ var PAGES = {
 // The pages of the settings: general and one per game
 var SETTING_GROUPS = {
   general: ["General settings", "Coins for everybody, gifts - and the hard reset."],
+  shop: ["Shop", "The frames and animations of the casino: on or off, the prices - and free for all to test them."],
   maintenance: ["Maintenance", "Close the casino for everybody but a whitelist - with when it is most likely over."],
   jackpot: ["Jackpot", "Turn the jackpot on or off, its bets and timing."],
   battles: ["Case battles", "Turn case battles on or off, their limits - and the cases."],
@@ -94,7 +95,7 @@ function redirect(parts) {
   if (parts[0] == "settings") return GAME_GROUPS.includes(parts[1]) ? "#games/" + parts[1] : "#casino/" + (parts[1] == "maintenance" ? "maintenance" : "general");
   if (parts[0] == "cases") return "#games/battles" + (parts[1] ? "/case/" + parts[1] : "");
   if (parts[0] == "games" && !GAME_GROUPS.includes(parts[1])) return "#games/jackpot";
-  if (parts[0] == "casino" && parts[1] != "maintenance" && parts[1] != "general") return "#casino/general";
+  if (parts[0] == "casino" && !["maintenance", "general", "shop"].includes(parts[1])) return "#casino/general";
   return null;
 }
 
@@ -122,9 +123,11 @@ function showTab() {
   document.getElementById("adDanger").hidden = settingsGroup != "general";
   // Maintenance: a page of its own (its own save) - the settings and their save bar on every other page
   var maintPage = settingsGroup == "maintenance";
+  var shopPage = settingsPage && settingsGroup == "shop";
   document.getElementById("adMaint").hidden = !maintPage;
-  document.getElementById("adSettingsForm").hidden = maintPage;
-  document.getElementById("adSettingsBar").hidden = maintPage;
+  document.getElementById("adShop").hidden = !shopPage;
+  document.getElementById("adSettingsForm").hidden = maintPage || shopPage;
+  document.getElementById("adSettingsBar").hidden = maintPage || shopPage;
   if (tab == "players") loadPlayers();
   if (tab == "payouts") loadPayouts();
   if (tab == "history") loadHistory();
@@ -141,6 +144,7 @@ function showTab() {
   if (settingsPage) {
     loadSettings();
     if (maintPage) loadMaintenance();
+    if (shopPage) loadShop();
   }
   if (settingsPage && settingsGroup == "battles") {
     caseView = casePage ? decodeURIComponent(parts[3]) : null;
@@ -626,6 +630,103 @@ async function loadHistory(event) {
 var maint = null; // {on, whitelist, until, note} as saved
 var maintForm = null; // the form while it is changed (whitelist, until, note)
 var maintPlayers = [];
+
+/* ---------- The accessory shop ---------- */
+
+var shopSaved = null; // {items, free} as on the server
+var shopDraft = null; // {items: {id: {on, price}}, free} - what changed here
+
+async function loadShop() {
+  try {
+    shopSaved = await api("shop");
+  } catch (error) {
+    return fail(error);
+  }
+  shopDraft = { items: {}, free: shopSaved.free };
+  renderShop();
+}
+
+function shopValue(item, key) {
+  var change = shopDraft.items[item.id];
+  return change && key in change ? change[key] : item[key];
+}
+
+function shopDirty() {
+  return shopDraft.free != shopSaved.free || Object.keys(shopDraft.items).some((id) => {
+    var item = shopSaved.items.find((i) => i.id == id);
+    return Object.keys(shopDraft.items[id]).some((key) => shopDraft.items[id][key] !== item[key]);
+  });
+}
+
+function setShop(id, key, value) {
+  shopDraft.items[id] = Object.assign({}, shopDraft.items[id], { [key]: value });
+  document.getElementById("adShopSave").disabled = !shopDirty();
+}
+
+function renderShop() {
+  var free = document.getElementById("adShopFree");
+  free.checked = shopDraft.free;
+  document.getElementById("adShopFreeText").innerText = shopDraft.free ? "On" : "Off";
+  document.getElementById("adShopDot").hidden = !shopSaved.free;
+  ["frame", "effect"].forEach((kind) => {
+    document.getElementById(kind == "frame" ? "adShopFrames" : "adShopEffects").replaceChildren(
+      ...shopSaved.items
+        .filter((item) => item.kind == kind)
+        .map((item) => {
+          var row = el("div", "ad-shop-row" + (shopValue(item, "on") ? "" : " off"));
+          var name = el("div", "ad-shop-name");
+          name.append(el("b", "", item.name), el("small", "ad-shop-rarity " + item.rarity, item.rarity));
+          var price = el("span", "ad-inline-input");
+          var input = el("input", "mm-input ad-shop-price");
+          input.type = "number";
+          input.min = 0;
+          input.step = 500;
+          input.value = shopValue(item, "price");
+          input.setAttribute("aria-label", item.name + " price");
+          input.addEventListener("input", () => setShop(item.id, "price", Math.max(0, Math.floor(Number(input.value) || 0))));
+          price.append(el("span", "ad-setting-unit", "🪙"), input);
+          if (shopValue(item, "price") != item.defaultPrice) price.title = "Normally " + formatCoins(item.defaultPrice);
+          var toggle = el("label", "ad-switch");
+          var box = el("input");
+          box.type = "checkbox";
+          box.checked = shopValue(item, "on");
+          box.setAttribute("aria-label", item.name + " on");
+          box.addEventListener("change", () => {
+            setShop(item.id, "on", box.checked);
+            row.classList.toggle("off", !box.checked);
+          });
+          toggle.append(box, el("span", "ad-switch-track"));
+          row.append(toggle, name, price);
+          return row;
+        }),
+    );
+  });
+  document.getElementById("adShopSave").disabled = !shopDirty();
+}
+
+async function saveShop() {
+  var button = document.getElementById("adShopSave");
+  button.disabled = true;
+  var endsFree = shopSaved.free && !shopDraft.free;
+  try {
+    shopSaved = await api("shop", shopDraft);
+    shopDraft = { items: {}, free: shopSaved.free };
+    renderShop();
+    showHint(endsFree ? "Saved - everything nobody bought came off." : "Saved.", "success", button);
+  } catch (error) {
+    fail(error);
+    button.disabled = !shopDirty();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("adShopFree").addEventListener("change", (event) => {
+    shopDraft.free = event.target.checked;
+    document.getElementById("adShopFreeText").innerText = shopDraft.free ? "On" : "Off";
+    document.getElementById("adShopSave").disabled = !shopDirty();
+  });
+  document.getElementById("adShopSave").addEventListener("click", saveShop);
+});
 
 async function loadMaintenance() {
   try {

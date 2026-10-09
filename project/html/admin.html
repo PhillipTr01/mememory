@@ -44,6 +44,7 @@
                 <!--- The whole casino --->
                 <span class="ad-nav-head">Casino</span>
                 <a href="#casino/general" class="ad-nav-item" data-group="general"><span class="ad-nav-icon">⚙️</span><span class="ad-nav-label">General</span></a>
+                <a href="#casino/shop" class="ad-nav-item" data-group="shop"><span class="ad-nav-icon">🛍️</span><span class="ad-nav-label">Shop</span><span id="adShopDot" class="ad-state" hidden></span></a>
                 <a href="#casino/maintenance" class="ad-nav-item" data-group="maintenance"><span class="ad-nav-icon">🔧</span><span class="ad-nav-label">Maintenance</span><span id="adMaintDot" class="ad-state" hidden></span></a>
             </nav>
             <button type="button" id="adLogout" class="ad-nav-item ad-logout"><span class="ad-nav-icon">↩</span><span class="ad-nav-label">Log out</span></button>
@@ -398,6 +399,35 @@
                     <div class="ad-maint-bar">
                         <span id="adMaintState" class="ad-note"></span>
                         <button type="button" id="adMaintSave" class="mm-btn mm-btn-primary">Save maintenance</button>
+                    </div>
+                </div>
+
+                <!--- The accessory shop: every item on / off, its price - and free for all (testing) --->
+                <div class="ad-card ad-shop" id="adShop" hidden>
+                    <div class="ad-maint-head">
+                        <div>
+                            <h2 class="ad-title">🧪 Free for all</h2>
+                            <p class="ad-note">For testing: every player can wear every item that is on - without buying it. Turned off again, everything nobody bought comes off everybody's avatar (what was bought stays).</p>
+                        </div>
+                        <label class="ad-switch ad-switch-big">
+                            <input type="checkbox" id="adShopFree" aria-label="Free for all">
+                            <span class="ad-switch-track"></span>
+                            <span class="ad-switch-text" id="adShopFreeText">Off</span>
+                        </label>
+                    </div>
+                    <div class="ad-shop-lists">
+                        <div>
+                            <h3 class="ad-label ad-sublabel">Frames</h3>
+                            <div id="adShopFrames" class="ad-shop-list"></div>
+                        </div>
+                        <div>
+                            <h3 class="ad-label ad-sublabel">Animations</h3>
+                            <div id="adShopEffects" class="ad-shop-list"></div>
+                        </div>
+                    </div>
+                    <div class="ad-maint-bar">
+                        <span id="adShopState" class="ad-note">An item that is off is not in the shop and nobody wears it - who bought it keeps it for when it is on again.</span>
+                        <button type="button" id="adShopSave" class="mm-btn mm-btn-primary" disabled>Save shop</button>
                     </div>
                 </div>
 

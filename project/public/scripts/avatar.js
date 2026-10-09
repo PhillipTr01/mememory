@@ -36,7 +36,7 @@ var AVATAR_PARTS = {
   ],
   accessory: [
     "none", "glasses", "roundglasses", "sunglasses", "dealwithit", "monocle", "eyepatch",
-    "scumbag", "cap", "beanie", "partyhat", "crown", "halo", "headphones", "flower",
+    "scumbag", "cap", "beanie", "partyhat", "headphones", "flower",
   ],
 };
 

@@ -14,6 +14,7 @@ const { hardReset } = require("../game/hard_reset");
 const seasons = require("../game/seasons");
 const cases = require("../game/cases");
 const maintenance = require("../game/maintenance");
+const shop = require("../game/shop");
 const userController = require("../controllers/user_controller");
 const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
@@ -399,6 +400,19 @@ module.exports = function () {
     admin,
     asyncHandler(async (req, res) => {
       const result = await maintenance.update(req.body || {});
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
+  /* ---------- The accessory shop: items on / off, prices, free for all ---------- */
+
+  router.get("/api/shop", admin, (req, res) => res.json(shop.config()));
+  router.post(
+    "/api/shop",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await shop.update(req.body || {});
       if (result.error) return res.status(400).json(result);
       res.json(result);
     }),

@@ -74,8 +74,8 @@ function render() {
   document.getElementById("shBalance").innerText = "🪙 " + formatCoins(shopData.balance);
   document.getElementById("shBalanceLabel").innerText = shopData.season ? "Coins from before the season" : "Your coins";
   var note = document.getElementById("shBalanceNote");
-  note.hidden = !shopData.season;
-  note.innerText = "The shop never takes the coins of the season.";
+  note.hidden = !shopData.season && !shopData.free;
+  note.innerText = shopData.free ? "🧪 Everything is free right now - wear what you like." : "The shop never takes the coins of the season.";
   if (typeof refreshLooks == "function") refreshLooks(myName, { frame: shopData.frame, effect: shopData.effect });
   renderGrid("shFrames", "frame");
   renderGrid("shEffects", "effect");
@@ -88,7 +88,8 @@ function renderGrid(id, kind) {
       .filter((item) => item.kind == kind)
       .sort((a, b) => a.price - b.price)
       .map((item) => {
-        var owned = shopData.owned.includes(item.id);
+        // (free for all: everything can be worn without buying it)
+        var owned = shopData.free || shopData.owned.includes(item.id);
         var worn = shopData[kind] == item.id;
         var card = el("div", "sh-item " + item.rarity + (worn ? " worn" : "") + (owned ? " owned" : ""));
         var stage = el("div", "sh-stage");
