@@ -56,9 +56,12 @@
       measure: function () {
         var style = getComputedStyle(target);
         width = target.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-        // (what sticks out of its part - like the line numbers next to the slot machine - counts too)
+        // (what sticks out of its part - like the line numbers next to the slot machine - counts too; what a
+        // part cuts off - the long strip of the roulette's reel - doesn't)
         Array.prototype.forEach.call(target.children, function (part) {
-          if (!part.classList.contains("cs-fs-coins") && part.offsetParent != null) width = Math.max(width, part.scrollWidth);
+          if (part.classList.contains("cs-fs-coins") || part.offsetParent == null) return;
+          var clips = getComputedStyle(part).overflowX != "visible";
+          width = Math.max(width, clips ? part.offsetWidth : part.scrollWidth);
         });
       },
       start: function () {

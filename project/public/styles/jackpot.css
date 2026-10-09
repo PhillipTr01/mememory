@@ -3014,10 +3014,11 @@ body.jackpot-theme {
   background: var(--mm-bg, #141414) !important;
 }
 
-/* Poker and blackjack: zoomed as a whole (casino_fullscreen.js, data-fullscreen-zoom), in the middle */
+/* Poker, blackjack, slots, roulette and Bầu cua: zoomed as a whole (casino_fullscreen.js, data-fullscreen-zoom), in the middle */
 .pk-main.cs-fullscreen,
 .bj-main.cs-fullscreen,
-.sl-main.cs-fullscreen {
+.sl-main.cs-fullscreen,
+.rl-main.cs-fullscreen {
   display: flex;
   flex-direction: column;
   justify-content: center;
