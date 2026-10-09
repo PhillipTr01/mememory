@@ -3348,3 +3348,230 @@ a.ad-case-row:hover {
     padding-top: 0;
   }
 }
+
+/* ---------- Who may play: the player list, tidy (rows as small cards, a round check) ---------- */
+.ad-pick-scroll {
+  max-height: 300px;
+  padding: 0.3rem;
+  border-radius: 12px;
+  background: var(--mm-surface);
+}
+
+.ad-pick-table {
+  border-collapse: separate;
+  border-spacing: 0 0.3rem;
+}
+
+.ad-pick-table td {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid transparent;
+  border-width: 1px 0;
+  background: var(--mm-surface-2);
+  vertical-align: middle;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ad-pick-table td:first-child {
+  border-left-width: 1px;
+  border-radius: 10px 0 0 10px;
+}
+
+.ad-pick-table td:last-child {
+  border-right-width: 1px;
+  border-radius: 0 10px 10px 0;
+}
+
+.ad-pick-table tr:hover td {
+  background: var(--mm-surface-3);
+}
+
+.ad-pick-table tr.picked td {
+  border-color: rgba(var(--mm-accent-rgb), 0.45);
+  background: rgba(var(--mm-accent-rgb), 0.1);
+}
+
+.ad-pick-check {
+  width: 2.2rem;
+}
+
+.ad-pick-check input {
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  border: 2px solid var(--mm-border);
+  border-radius: 50%;
+  background: var(--mm-surface);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ad-pick-check input:checked {
+  border-color: var(--mm-accent);
+  background: var(--mm-accent);
+}
+
+.ad-pick-check input:checked::after {
+  content: "";
+  width: 0.32rem;
+  height: 0.6rem;
+  margin-top: -0.12rem;
+  border: solid #1a1206;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+
+.ad-pick-name {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  line-height: 1.2;
+}
+
+.ad-pick-name .mm-avatar,
+.ad-pick-name .mm-avatar.sm {
+  --size: 30px;
+}
+
+.ad-pick-table td.num {
+  text-align: right;
+  white-space: nowrap;
+  font-size: 0.82rem;
+}
+
+.ad-pick-bar {
+  padding-bottom: 0.15rem;
+}
+
+.ad-pick-count {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  color: var(--mm-accent);
+  font-weight: 700;
+}
+
+/* ---------- A season's page: big numbers, the time as a bar, the details in cards ---------- */
+.ad-season-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.ad-season-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(var(--mm-accent-rgb), 0.08), transparent 70%), var(--mm-surface-2);
+}
+
+.ad-season-stat-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 12px;
+  background: rgba(var(--mm-accent-rgb), 0.14);
+  font-size: 1.2rem;
+}
+
+.ad-season-stat-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.ad-season-stat-text b {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ad-season-stat-text span {
+  color: var(--mm-muted);
+  font-size: 0.78rem;
+}
+
+.ad-season-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.9rem 0 0.2rem;
+  color: var(--mm-muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ad-season-progress {
+  flex: 1 1 auto;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+}
+
+.ad-season-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(var(--mm-accent-rgb), 0.55), var(--mm-accent));
+  box-shadow: 0 0 10px rgba(var(--mm-accent-rgb), 0.5);
+}
+
+.ad-kv-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.ad-kv-group {
+  padding: 0.7rem 0.9rem 0.4rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+}
+
+.ad-kv-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
+
+.ad-kv-title-icon {
+  font-size: 1rem;
+}
+
+.ad-kv {
+  border-bottom: 1px solid var(--mm-border);
+}
+
+/* The prizes: medal chips in a row */
+.ad-season-prize-list {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.ad-season-prize {
+  padding: 0.45rem 0.9rem 0.45rem 0.6rem;
+  border-color: rgba(var(--mm-accent-rgb), 0.35);
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.08);
+}

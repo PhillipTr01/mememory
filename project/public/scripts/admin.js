@@ -1601,39 +1601,69 @@ function seasonDetail(season) {
     box.append(el("h3", "ad-label ad-sublabel", title), ...tiles);
     return box;
   };
+  // At a glance: big numbers - and how far the season is
+  var strip = el("div", "ad-season-strip");
+  var stat = (icon, value, label) => {
+    var box = el("div", "ad-season-stat");
+    var text = el("div", "ad-season-stat-text");
+    text.append(el("b", "", value), el("span", "", label));
+    box.append(el("span", "ad-season-stat-icon", icon), text);
+    return box;
+  };
+  var timeText = time.querySelector(".ad-kv-value").innerText + " " + time.querySelector(".ad-kv-label").innerText;
+  strip.append(
+    stat(season.status == "ended" ? "🏁" : "⏱️", time.querySelector(".ad-kv-value").innerText, time.querySelector(".ad-kv-label").innerText),
+    stat("👥", formatCoins(season.players || 0), season.status == "ended" ? "in the final places" : "players joined"),
+    stat(season.coinIcon || "💎", formatCoins(season.budget), "to start with"),
+    stat("🎁", formatCoins(season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting), "free every day"),
+    ...(season.status == "ended" && season.winner ? [stat("🥇", season.winner.username, "won with " + formatCoins(season.winner.coins))] : []),
+  );
+  var progress = el("div", "ad-season-progress");
+  var done = Math.min(1, Math.max(0, (Date.now() - season.start) / (season.end - season.start)));
+  var fill = el("span", "ad-season-progress-fill");
+  fill.style.width = (season.status == "ended" ? 100 : done * 100).toFixed(1) + "%";
+  progress.append(fill);
+  var progressRow = el("div", "ad-season-progress-row");
+  progressRow.append(el("span", "", dateText(season.start)), progress, el("span", "", dateText(season.end)));
+  void timeText;
+
   var grid = el("div", "ad-kv-grid");
+  var card = (icon, title, ...rows) => {
+    var box = el("div", "ad-kv-group");
+    var titleRow = el("h3", "ad-kv-title");
+    titleRow.append(el("span", "ad-kv-title-icon", icon), el("span", "", title));
+    box.append(titleRow, ...rows);
+    return box;
+  };
+  var accessMode = season.access ? season.access.mode : "all";
   var parts = [
     head,
+    strip,
+    progressRow,
     grid,
-    section(
-      "Now",
-      time,
-      tile("👥", formatCoins(season.players || 0), season.status == "ended" ? "in the final places" : "players joined"),
-      ...(season.status == "ended" && season.winner ? [tile("🥇", season.winner.username, "won with 🪙 " + formatCoins(season.winner.coins))] : []),
-    ),
-    section(
+    card(
+      "🗓️",
       "Time",
-      tile("🟢", dateText(season.start), "start"),
-      tile("🔴", dateText(season.end), "end"),
-      tile("⏳", season.closeWait + " s", "countdown"),
-      tile("✨", season.highlight ? "yes" : "no", "highlight before the start"),
-      tile("📊", EVERY_NAMES[season.every], "leaderboard updates"),
+      tile("", season.closeWait + " s", "countdown"),
+      tile("", EVERY_NAMES[season.every], "leaderboard updates"),
+      tile("", season.highlight ? "✨ yes" : "no", "highlighted before the start"),
     ),
-    section(
-      "Coins",
-      tile("🪙", formatCoins(season.budget), "start budget"),
-      tile("🎁", formatCoins(season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting), "daily bonus"),
-      tile("💔", String(season.secondChances || 0), "second chances"),
-      tile("⌛", season.secondChances ? chanceDelayText(season.chanceDelay) : "–", "wait between them"),
+    card(
+      "💔",
+      "Second chances",
+      tile("", String(season.secondChances || 0), "per player"),
+      tile("", season.secondChances ? chanceDelayText(season.chanceDelay) : "–", "wait between them"),
     ),
-    section(
+    card(
+      accessMode == "whitelist" ? "🔒" : accessMode == "banlist" ? "🚫" : "🌍",
       "Who may play",
-      tile("🌍", season.access && season.access.mode == "whitelist" ? "Whitelist (" + season.access.names.length + ")" : season.access && season.access.mode == "banlist" ? "Banlist (" + season.access.names.length + ")" : "Everybody", "players"),
+      tile("", accessMode == "whitelist" ? "Whitelist" : accessMode == "banlist" ? "Banlist" : "Everybody", "mode"),
+      ...(accessMode != "all" ? [tile("", (season.access.names || []).join(", ") || "–", season.access.names.length + (season.access.names.length == 1 ? " player" : " players"))] : []),
     ),
-    section("Look", tile("🏷️", season.icon + " " + season.name, "icon and name"), tile("🎨", (season.color || GOLD).toUpperCase(), "accent color", swatch), tile(season.coinIcon || "💎", season.coinIcon || "💎", "coin icon")),
+    card("🎨", "Look", tile("", (season.color || GOLD).toUpperCase(), "accent color", swatch), tile("", season.coinIcon || "💎", "coin")),
   ];
-  // (the sections side by side in one grid)
-  grid.append(...parts.splice(2));
+  // (the cards side by side in one grid)
+  grid.append(...parts.splice(4));
   // The prizes: a place each, with its medal
   var prizes = el("div", "ad-season-section");
   prizes.appendChild(el("h3", "ad-label ad-sublabel", "Prizes"));
