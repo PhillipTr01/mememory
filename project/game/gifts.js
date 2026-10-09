@@ -1,4 +1,5 @@
 const config = require("./config");
+const testMode = require("./test_mode");
 const days = require("./days");
 const coins = require("./coins");
 const seasons = require("./seasons");
@@ -30,6 +31,7 @@ async function give(from, to, amount) {
   if (typeof to !== "string" || !to.trim()) return { error: "To whom?" };
   to = to.trim();
   if (to === from) return { error: "Not to yourself." };
+  if (testMode.active(from) || testMode.active(to)) return { error: testMode.MESSAGE };
   if (!Number.isInteger(amount) || amount < 1) return { error: "A whole number of coins, please." };
   const user = await User.findOne({ username: to }).select("username casinoApproved").lean();
   if (user == null || !access.approved(user)) return { error: "There's no such player in the casino." };

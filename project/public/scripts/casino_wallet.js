@@ -60,6 +60,9 @@
     button.classList.toggle("no-payout", !payout);
     button.removeAttribute("title");
     document.getElementById("navCoinsValue").innerText = format(coins);
+    // The admin's test mode: test coins (nothing is saved)
+    button.classList.toggle("test", data.test === true);
+    if (data.test) button.title = "🧪 Test mode - test coins, nothing is saved";
     // In a season: the balance from before it (it comes back after the season, with the season's on top)
     var stored = document.getElementById("navCoinsStored");
     if (data.stored != null) {

@@ -1,4 +1,5 @@
 const Withdrawal = require("../models/Withdrawal");
+const testMode = require("./test_mode");
 const coins = require("./coins");
 const config = require("./config");
 const seasons = require("./seasons");
@@ -13,6 +14,7 @@ const seasons = require("./seasons");
 async function request(username, amount) {
   // The coins of a season are only for the season
   if (seasons.running()) return { error: "Payouts are paused while a season runs." };
+  if (testMode.active(username)) return { error: "🧪 Test mode: no payouts with test coins." };
   if (!Number.isInteger(amount) || amount < config.WITHDRAW_MIN) return { error: `At least ${config.WITHDRAW_MIN.toLocaleString("en-US")} coins.` };
   if (amount % config.WITHDRAW_STEP !== 0) return { error: `Only in steps of ${config.WITHDRAW_STEP.toLocaleString("en-US")} coins.` };
   const open = await Withdrawal.countDocuments({ username: username, status: "open" });

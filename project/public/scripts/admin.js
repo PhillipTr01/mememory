@@ -76,6 +76,7 @@ var PAGES = {
 // The pages of the settings: general and one per game
 var SETTING_GROUPS = {
   general: ["General settings", "Coins for everybody, gifts - and the hard reset."],
+  test: ["Test mode", "Try the casino with a sandbox balance - nothing is saved, nobody else is touched."],
   shop: ["Shop", "The frames and animations of the casino: on or off, the prices - and free for all to test them."],
   maintenance: ["Maintenance", "Close the casino for everybody but a whitelist - with when it is most likely over."],
   jackpot: ["Jackpot", "Turn the jackpot on or off, its bets and timing."],
@@ -95,7 +96,7 @@ function redirect(parts) {
   if (parts[0] == "settings") return GAME_GROUPS.includes(parts[1]) ? "#games/" + parts[1] : "#casino/" + (parts[1] == "maintenance" ? "maintenance" : "general");
   if (parts[0] == "cases") return "#games/battles" + (parts[1] ? "/case/" + parts[1] : "");
   if (parts[0] == "games" && !GAME_GROUPS.includes(parts[1])) return "#games/jackpot";
-  if (parts[0] == "casino" && !["maintenance", "general", "shop"].includes(parts[1])) return "#casino/general";
+  if (parts[0] == "casino" && !["maintenance", "general", "shop", "test"].includes(parts[1])) return "#casino/general";
   return null;
 }
 
@@ -124,10 +125,12 @@ function showTab() {
   // Maintenance: a page of its own (its own save) - the settings and their save bar on every other page
   var maintPage = settingsGroup == "maintenance";
   var shopPage = settingsPage && settingsGroup == "shop";
+  var testPage = settingsPage && settingsGroup == "test";
   document.getElementById("adMaint").hidden = !maintPage;
   document.getElementById("adShop").hidden = !shopPage;
-  document.getElementById("adSettingsForm").hidden = maintPage || shopPage;
-  document.getElementById("adSettingsBar").hidden = maintPage || shopPage;
+  document.getElementById("adTest").hidden = !testPage;
+  document.getElementById("adSettingsForm").hidden = maintPage || shopPage || testPage;
+  document.getElementById("adSettingsBar").hidden = maintPage || shopPage || testPage;
   if (tab == "players") loadPlayers();
   if (tab == "payouts") loadPayouts();
   if (tab == "history") loadHistory();
@@ -145,6 +148,7 @@ function showTab() {
     loadSettings();
     if (maintPage) loadMaintenance();
     if (shopPage) loadShop();
+    if (testPage) loadTest();
   }
   if (settingsPage && settingsGroup == "battles") {
     caseView = casePage ? decodeURIComponent(parts[3]) : null;
@@ -630,6 +634,72 @@ async function loadHistory(event) {
 var maint = null; // {on, whitelist, until, note} as saved
 var maintForm = null; // the form while it is changed (whitelist, until, note)
 var maintPlayers = [];
+
+/* ---------- Test mode ---------- */
+
+async function loadTest() {
+  var data;
+  try {
+    data = await api("test");
+  } catch (error) {
+    return fail(error);
+  }
+  var select = document.getElementById("adTestPlayer");
+  var picked = select.value;
+  select.replaceChildren(...data.players.map((name) => new Option(name, name)));
+  if (picked && data.players.includes(picked)) select.value = picked;
+  var coins = document.getElementById("adTestCoins");
+  if (!coins.value) coins.value = data.defaultCoins;
+  renderTesters(data.testers);
+}
+
+function renderTesters(testers) {
+  document.getElementById("adTestDot").hidden = testers.length == 0;
+  document.getElementById("adTestEmpty").hidden = testers.length > 0;
+  document.getElementById("adTestList").replaceChildren(
+    ...testers.map((tester) => {
+      var row = el("div", "ad-test-row");
+      var who = el("div", "ad-test-who");
+      who.append(createAvatar(tester.username, "sm"), el("b", "", tester.username), el("span", "ad-note", "🪙 " + formatCoins(tester.coins) + " now · started " + new Date(tester.since).toLocaleTimeString()));
+      var refill = el("button", "mm-btn mm-btn-sm", "Refill");
+      refill.type = "button";
+      refill.title = "Back to 🪙 " + formatCoins(tester.start);
+      refill.addEventListener("click", () => startTest(tester.username, tester.start, refill));
+      var stop = el("button", "mm-btn mm-btn-sm mm-btn-danger-solid", "Stop");
+      stop.type = "button";
+      stop.addEventListener("click", async () => {
+        stop.disabled = true;
+        try {
+          renderTesters((await api("test/stop", { username: tester.username })).testers);
+          showHint("Test mode over - " + tester.username + " has the real coins again.", "success", document.getElementById("adTestStart"));
+        } catch (error) {
+          fail(error);
+          stop.disabled = false;
+        }
+      });
+      row.append(who, refill, stop);
+      return row;
+    }),
+  );
+}
+
+async function startTest(username, coins, button) {
+  button.disabled = true;
+  try {
+    renderTesters((await api("test", { username: username, coins: coins })).testers);
+    showHint("🧪 " + username + " plays with test coins now.", "success", button);
+  } catch (error) {
+    fail(error);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("adTestStart").addEventListener("click", (event) => {
+    startTest(document.getElementById("adTestPlayer").value, Math.floor(Number(document.getElementById("adTestCoins").value)), event.currentTarget);
+  });
+});
 
 /* ---------- The accessory shop ---------- */
 

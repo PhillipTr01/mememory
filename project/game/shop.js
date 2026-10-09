@@ -2,6 +2,7 @@ const User = require("../models/User");
 const Setting = require("../models/Setting");
 const coins = require("./coins");
 const seasons = require("./seasons");
+const testMode = require("./test_mode");
 
 /*
  * The accessory shop of the casino: frames around the avatar and animations
@@ -83,6 +84,12 @@ async function balanceOf(username) {
 
 // The shop of a player: the items that are on, what they have and wear, what they can pay with
 async function view(username) {
+  // Test mode: every item that is on, worn only in the sandbox (nothing saved)
+  if (testMode.active(username)) {
+    const worn = testMode.looks(username);
+    const wearable = (id) => (id && isOn(id) ? id : null);
+    return { items: items().filter((item) => item.on), owned: [], frame: wearable(worn.frame), effect: wearable(worn.effect), free: true, test: true, balance: testMode.balance(username), season: false };
+  }
   const user = await User.findOne({ username: username }).lean();
   return { items: items().filter((item) => item.on), ...looksOf(user), free: setup.free, balance: await balanceOf(username), season: seasons.running() != null };
 }
@@ -90,7 +97,7 @@ async function view(username) {
 async function buy(username, id) {
   const item = byId(id) && itemNow(byId(id));
   if (item == null || !item.on) return { error: "This item doesn't exist." };
-  if (setup.free) return { error: "Everything is free right now - just wear it." };
+  if (setup.free || testMode.active(username)) return { error: "Everything is free right now - just wear it." };
   const user = await User.findOne({ username: username }).lean();
   const looks = looksOf(user);
   if (looks.owned.includes(id)) return { error: "You have it already." };
@@ -106,6 +113,11 @@ async function buy(username, id) {
 // Wear an item (or nothing of its kind: id null)
 async function wear(username, kind, id) {
   if (!KINDS.includes(kind)) return { error: "Unknown kind." };
+  if (testMode.active(username)) {
+    if (id != null && (!byId(id) || byId(id).kind !== kind || !isOn(id))) return { error: "You don't have this item." };
+    testMode.wear(username, kind, id);
+    return view(username);
+  }
   const user = await User.findOne({ username: username }).lean();
   const looks = looksOf(user);
   if (id != null) {
@@ -121,7 +133,9 @@ async function worn(names) {
   const users = await User.find({ username: { $in: names } }).select("username looks").lean();
   const result = {};
   for (const user of users) {
-    const looks = looksOf(user);
+    // (a tester: what they wear in the sandbox)
+    const test = testMode.active(user.username) ? testMode.looks(user.username) : null;
+    const looks = test ? { frame: test.frame && isOn(test.frame) ? test.frame : null, effect: test.effect && isOn(test.effect) ? test.effect : null } : looksOf(user);
     if (looks.frame || looks.effect) result[user.username] = { frame: looks.frame, effect: looks.effect };
   }
   return result;

@@ -4076,3 +4076,19 @@ body.jackpot-theme {
 .chat-online-row.clickable:hover::after {
   opacity: 1;
 }
+
+/* The admin's test mode: the coins are test coins */
+.nav-coins.test {
+  border-style: dashed;
+}
+
+.nav-coins.test::after {
+  content: "🧪 TEST";
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.2);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}

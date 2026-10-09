@@ -1,4 +1,5 @@
 const config = require("../game/config");
+const testMode = require("../game/test_mode");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
 const casinoLock = require("../game/casino_lock");
@@ -651,6 +652,7 @@ module.exports = function (io) {
           error(`Buy in with ${config.POKER_MIN_BUYIN} - ${config.POKER_MAX_BUYIN} coins.`);
           return;
         }
+        if (testMode.active(username)) return error(testMode.MESSAGE);
         if (table.seats[seat] != null || seatOf(username) >= 0 || busy.has(username)) return;
         busy.add(username);
         try {

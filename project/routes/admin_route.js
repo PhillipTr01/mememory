@@ -15,6 +15,7 @@ const seasons = require("../game/seasons");
 const cases = require("../game/cases");
 const maintenance = require("../game/maintenance");
 const shop = require("../game/shop");
+const testMode = require("../game/test_mode");
 const userController = require("../controllers/user_controller");
 const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
@@ -404,6 +405,28 @@ module.exports = function () {
       res.json(result);
     }),
   );
+
+  /* ---------- Test mode: a player plays with a sandbox balance (nothing is saved) ---------- */
+
+  router.get(
+    "/api/test",
+    admin,
+    asyncHandler(async (req, res) => {
+      res.json({ testers: testMode.list(), players: (await players()).map((p) => p.username), defaultCoins: testMode.DEFAULT_COINS });
+    }),
+  );
+  // {username, coins}: start (again: the balance back to the start)
+  router.post("/api/test", admin, (req, res) => {
+    const body = req.body || {};
+    const result = testMode.start(String(body.username || ""), body.coins == null ? testMode.DEFAULT_COINS : Number(body.coins));
+    if (result.error) return res.status(400).json(result);
+    res.json({ ...result, testers: testMode.list() });
+  });
+  router.post("/api/test/stop", admin, (req, res) => {
+    const result = testMode.stop(String((req.body && req.body.username) || ""));
+    if (result.error) return res.status(400).json(result);
+    res.json({ ...result, testers: testMode.list() });
+  });
 
   /* ---------- The accessory shop: items on / off, prices, free for all ---------- */
 

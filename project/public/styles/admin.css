@@ -2943,3 +2943,51 @@ a.ad-case-row:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Test mode (Casino, Test mode) ---------- */
+
+.ad-test {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.ad-test-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.ad-test-form .ad-field {
+  min-width: 200px;
+}
+
+.ad-test-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.ad-test-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.35);
+  border-radius: 10px;
+  background: rgba(var(--mm-accent-rgb), 0.08);
+}
+
+.ad-test-who {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.ad-test-who .ad-note {
+  margin: 0;
+}

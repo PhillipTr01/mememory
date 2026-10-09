@@ -81,7 +81,7 @@ function setJoinedAtLookup(lookup) {
 
 // Not started the running season: watching only (no coins, no daily bonus)
 function watching(username) {
-  return era() != null && joinedLookup(username) === false;
+  return era() != null && joinedLookup(username) === false && !testMode().active(username);
 }
 
 // The free coins of the day: the running season's - or the setting
@@ -101,6 +101,9 @@ function balanceOf(user) {
  * that would take every season balance for an old one and reset it. app.js
  * holds them until the season is loaded.
  */
+// (required when needed: test_mode has no requires, but keeps the load order simple)
+const testMode = () => require("./test_mode");
+
 let gate = Promise.resolve();
 let openGate = null;
 function hold() {
@@ -152,6 +155,10 @@ function bonusDue(user, now = Date.now()) {
 
 // { coins, bonus, bonusIn, payout } - bonus: the daily free coins can be claimed now, payout: may pay coins out
 async function get(username) {
+  // Test mode (the admin): the sandbox - the real balance stays as it is
+  if (testMode().active(username)) {
+    return { coins: testMode().balance(username), bonus: true, bonusIn: 0, bonusAmount: dailyBonus(), payout: false, stored: null, joined: era() != null ? true : null, test: true };
+  }
   await ensure(username);
   const user = await User.findOne({ username: username }).select("username coins coinBonusAt payoutAllowed");
   if (user == null) return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), payout: false };
@@ -167,6 +174,11 @@ async function get(username) {
 async function add(username, amount, options) {
   if (!Number.isInteger(amount) || amount <= 0) return false;
   options = options || {};
+  if (testMode().active(username)) {
+    testMode().add(username, amount);
+    if (!options.quiet) notify(username);
+    return true;
+  }
   await ensure(username);
   const done = changed(await User.updateOne({ username: username }, { $inc: { coins: amount } }));
   if (done) log(username, amount, options.reason, options.note);
@@ -183,6 +195,14 @@ function lastSpent(username) {
 
 async function spend(username, amount, options) {
   if (!Number.isInteger(amount) || amount <= 0) return false;
+  if (testMode().active(username)) {
+    // (never coins of other players for test coins - the games check it too, with a message)
+    if (testMode().BLOCKED_REASONS.includes(options && options.reason)) return false;
+    testMode().spend(username, amount);
+    spentAt.set(username, Date.now());
+    notify(username);
+    return true;
+  }
   await ensure(username);
   const done = changed(
     await User.updateOne({ username: username, coins: { $gte: amount } }, { $inc: { coins: -amount } }),
@@ -211,6 +231,12 @@ async function set(username, amount, note) {
 // Free coins once a day (calendar day), for everybody - in a season the days not claimed on top.
 // Returns what was paid (0: nothing, already claimed today)
 async function claim(username, now = Date.now()) {
+  // Test mode: the daily bonus as often as wanted (in the sandbox)
+  if (testMode().active(username)) {
+    testMode().add(username, dailyBonus());
+    notify(username);
+    return dailyBonus();
+  }
   if (watching(username)) return 0;
   await ensure(username);
   const user = await User.findOne({ username: username }).select("username coinBonusAt").lean();
@@ -240,5 +266,8 @@ function reward(username, mode) {
   if (!amount) return;
   add(username, amount, { reason: "game win", note: mode }).catch((error) => console.error("[coins] Could not add coins:", error));
 }
+
+// Test mode started or stopped: the pages of the player get the balance (the sandbox - or the real one again)
+testMode().changes.on("change", (username) => notify(username));
 
 module.exports = { lastSpent, hold, release, claim, bonusDue, setJoinedAtLookup, setJoinedLookup, watching, setStoredLookup, setBase, base, era, eraFilter, dailyBonus, balanceOf, log, get, add, spend, set, claimBonus, reward, bonusAvailable, changes, notify };

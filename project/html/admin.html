@@ -44,6 +44,7 @@
                 <!--- The whole casino --->
                 <span class="ad-nav-head">Casino</span>
                 <a href="#casino/general" class="ad-nav-item" data-group="general"><span class="ad-nav-icon">⚙️</span><span class="ad-nav-label">General</span></a>
+                <a href="#casino/test" class="ad-nav-item" data-group="test"><span class="ad-nav-icon">🧪</span><span class="ad-nav-label">Test mode</span><span id="adTestDot" class="ad-state" hidden></span></a>
                 <a href="#casino/shop" class="ad-nav-item" data-group="shop"><span class="ad-nav-icon">🛍️</span><span class="ad-nav-label">Shop</span><span id="adShopDot" class="ad-state" hidden></span></a>
                 <a href="#casino/maintenance" class="ad-nav-item" data-group="maintenance"><span class="ad-nav-icon">🔧</span><span class="ad-nav-label">Maintenance</span><span id="adMaintDot" class="ad-state" hidden></span></a>
             </nav>
@@ -399,6 +400,31 @@
                     <div class="ad-maint-bar">
                         <span id="adMaintState" class="ad-note"></span>
                         <button type="button" id="adMaintSave" class="mm-btn mm-btn-primary">Save maintenance</button>
+                    </div>
+                </div>
+
+                <!--- Test mode: a player (the admin's own) plays with a sandbox balance - nothing is saved --->
+                <div class="ad-card ad-test" id="adTest" hidden>
+                    <div>
+                        <h2 class="ad-title">🧪 Play with test coins</h2>
+                        <p class="ad-note">Pick your own player account: it gets a sandbox balance that fills up by itself (as good as unlimited), every shop item to wear, the daily bonus as often as you like. Nothing of it is saved - your real coins, the coin history, the leaderboard and the season stay as they are. Stop it (or restart the server) and it's gone.</p>
+                        <p class="ad-note">To keep test coins away from real ones, the jackpot, poker, gifts, payouts and case battles with other people are closed while testing. Roulette, slots, blackjack and case battles against bots are open.</p>
+                    </div>
+                    <div class="ad-test-form">
+                        <label class="ad-field">
+                            <span class="ad-label">Player</span>
+                            <select id="adTestPlayer" class="mm-input" aria-label="Player"></select>
+                        </label>
+                        <label class="ad-field">
+                            <span class="ad-label">Test coins</span>
+                            <span class="ad-inline-input"><span class="ad-setting-unit">🪙</span><input id="adTestCoins" class="mm-input" type="number" min="1" step="100000"></span>
+                        </label>
+                        <button type="button" id="adTestStart" class="mm-btn mm-btn-primary">Start test mode</button>
+                    </div>
+                    <div>
+                        <h3 class="ad-label ad-sublabel">Testing now</h3>
+                        <div id="adTestList" class="ad-test-list"></div>
+                        <p id="adTestEmpty" class="ad-note">Nobody is testing.</p>
                     </div>
                 </div>
 

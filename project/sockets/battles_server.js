@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const testMode = require("../game/test_mode");
 const config = require("../game/config");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
@@ -312,6 +313,12 @@ module.exports = function (io) {
   // Takes the coins and puts the user (or a bot) into a free seat
   async function sit(socket, battle, username) {
     if (busy.has(username)) return false;
+    // Test coins never play against real coins: a tester only with bots (and only alone among people)
+    const others = battle.seats.filter((seat) => seat && !seat.bot && seat.name !== username);
+    if (others.some((seat) => testMode.active(seat.name) !== testMode.active(username))) {
+      socket.emit("battleError", testMode.active(username) ? testMode.MESSAGE : "🧪 This battle is a test of the admin - only bots can join it.");
+      return false;
+    }
     busy.add(username);
     try {
       if (!(await coins.spend(username, battle.price, { reason: "battle" }))) {

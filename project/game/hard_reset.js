@@ -13,6 +13,7 @@ const persist = require("./persist");
  * again a player asks for access again and gets the start coins.
  */
 async function hardReset() {
+  require("./test_mode").reset();
   access.changes.emit("closeAll");
   await persist.resetAll();
   const [logs, payouts, users] = await Promise.all([

@@ -1,4 +1,5 @@
 const config = require("../game/config");
+const testMode = require("../game/test_mode");
 const { jackpotRake } = require("../game/rake");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
@@ -335,6 +336,7 @@ module.exports = function (io) {
           );
           return;
         }
+        if (testMode.active(username)) return socket.emit("betError", testMode.MESSAGE);
         betting.add(username);
         try {
           if (!(await coins.spend(username, amount, { reason: "jackpot bet" }))) {
