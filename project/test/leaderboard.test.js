@@ -462,12 +462,13 @@ test("seasons: a place only after wagering 7x the start (again for every second 
   assert.deepStrictEqual([row("cleo").rank, row("cleo").pending, row("cleo").wager.need], [null, true, 700], "the most coins - but no place yet");
   assert.deepStrictEqual([row("ben").rank, row("ben").wager.done, row("ben").wager.need], [null, 500, 700]);
   assert.deepStrictEqual(board.rows.map((r) => r.username), ["anna", "cleo", "ben"], "who has a place first, then the others by coins");
-  // A second chance: 7x more to wager before the place counts again
+  // A second chance: a new chance - 7x again, counted from the second chance on (the season's whole wager still breaks ties)
   setSeasonCoins("anna", 0);
   await seasons.useChance("anna", now + 5000);
-  assert.strictEqual(seasons.wagerNeed(seasons.running(), "anna"), 1400);
+  assert.strictEqual(seasons.wagerNeed(seasons.running()), 700);
   const after = await seasons.board(made.season.id);
-  assert.strictEqual(after.rows.find((r) => r.username === "anna").rank, null);
+  const anna = after.rows.find((r) => r.username === "anna");
+  assert.deepStrictEqual([anna.rank, anna.wager.done, anna.wager.need, anna.wagered], [null, 0, 700, 700]);
   // The end: only who has a place wins
   await seasons.endNow(made.season.id);
   assert.strictEqual(seasons.publicSeason(seasons.byId(made.season.id)).winner, null, "nobody wagered enough at the end");

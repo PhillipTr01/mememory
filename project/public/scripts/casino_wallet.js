@@ -622,7 +622,7 @@
     var start = (mode == "join" && data.joinCoins) || { coins: season.budget, missed: 0 };
     fact(coin, format(start.coins), start.missed > 0 ? "to start (with " + start.missed + " missed daily bonus" + (start.missed == 1 ? "" : "es") + ")" : "to start with");
     fact("🎁", format(season.dailyBonus), "free every day");
-    if (season.wagerX > 0) fact("🎲", season.wagerX + "×", "your start coins to wager for a place on the leaderboard" + (season.secondChances > 0 ? " (again after a second chance)" : ""));
+    if (season.wagerX > 0) fact("🎲", season.wagerX + "×", "your start coins to wager for a place on the leaderboard" + (season.secondChances > 0 ? " (per chance)" : ""));
     if (season.secondChances > 0) fact("💔", season.secondChances, "second chance" + (season.secondChances == 1 ? "" : "s") + " if you lose it all" + (season.secondChances > 1 ? chanceWait(season.chanceDelay) : ""));
     if (!upcoming) fact("👥", season.players, "player" + (season.players == 1 ? "" : "s") + " in so far");
     card.appendChild(facts);

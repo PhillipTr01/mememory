@@ -1421,8 +1421,8 @@ function wageredCell(row) {
   cell.append(row.wagered ? formatCoins(row.wagered) : "–");
   // (a place only after wagering enough - how much is still missing)
   if (row.wager && row.wager.need) {
-    cell.appendChild(el("span", "ad-sub", row.pending ? "of " + formatCoins(row.wager.need) + " - no place yet" : "✓ " + formatCoins(row.wager.need) + " needed"));
-    cell.title = formatCoins(row.wager.done) + " of " + formatCoins(row.wager.need) + " wagered" + (row.bets ? " · " + formatCoins(row.bets) + (row.bets == 1 ? " bet" : " bets") : "");
+    cell.appendChild(el("span", "ad-sub", row.pending ? "this chance " + formatCoins(row.wager.done) + " / " + formatCoins(row.wager.need) + " - no place yet" : "✓ this chance " + formatCoins(row.wager.need)));
+    cell.title = "In the season: " + formatCoins(row.wagered || 0) + " · this chance: " + formatCoins(row.wager.done) + " of " + formatCoins(row.wager.need) + (row.bets ? " · " + formatCoins(row.bets) + (row.bets == 1 ? " bet" : " bets") : "");
   } else if (row.wagered) cell.appendChild(el("span", "ad-sub", formatCoins(row.bets || 0) + (row.bets == 1 ? " bet" : " bets")));
   return cell;
 }

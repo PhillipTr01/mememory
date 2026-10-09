@@ -92,11 +92,11 @@ function decidedOf(row) {
   }
   if (wagered != null) {
     parts.push("🫴🏽 " + shortCoins(wagered));
-    words.push("🫴🏽 " + formatCoins(wagered) + " coins wagered in the season");
+    words.push("🫴🏽 " + formatCoins(wagered) + " wagered in the season");
   }
   // Only the icons and numbers - the words on hover
   tag.textContent = parts.join(" · ");
-  tag.title = words.join(" · ") + (row.decided ? "\nThe same coins as others - this decided the place: fewer second chances first, then more coins wagered" : "");
+  tag.title = words.join(" · ");
   return tag;
 }
 
@@ -156,7 +156,7 @@ function render() {
   document.getElementById("lbPending").hidden = pending.length == 0;
   if (pending.length) {
     var x = board.season && board.season.wagerX;
-    setText(document.getElementById("lbPendingNote"), x ? "Wager " + x + "× the start coins to get a place - again after every second chance" : "");
+    setText(document.getElementById("lbPendingNote"), x ? "Wager " + x + "× the start coins per chance to get a place" : "");
     morphChildren(document.getElementById("lbPendingList"), pending.map(pendingRow));
   }
 

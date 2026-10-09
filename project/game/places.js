@@ -14,7 +14,8 @@
  * place -> prize (or none). Returns the rows sorted, with rank (and prize,
  * decided).
  *
- * need(username) (a season): the coins a player has to wager to get a place.
+ * need(username) (a season): the coins a player has to wager to get a place
+ * (counted with stats().chanceWagered: the wager since the current chance began).
  * Who hasn't wagered that much yet stays on the board - after everybody with a
  * place, without a place or a prize (rank null, pending: true) - every row with
  * wager: {done, need}.
@@ -22,7 +23,11 @@
 function place(rows, options = {}) {
   if (options.need) {
     const { need, ...rest } = options;
-    const done = (row) => (options.stats ? options.stats(row.username).wagered || 0 : 0);
+    // (the wager of the current chance - or of the whole season, when not given per chance)
+    const done = (row) => {
+      const s = options.stats ? options.stats(row.username) : {};
+      return (s.chanceWagered != null ? s.chanceWagered : s.wagered) || 0;
+    };
     const counted = [];
     const pending = [];
     for (const row of rows) {

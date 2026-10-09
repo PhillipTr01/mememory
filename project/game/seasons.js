@@ -123,10 +123,16 @@ function wagerXOf(season) {
   return Number.isInteger(season.wagerX) ? season.wagerX : config.SEASON_WAGER_X;
 }
 
-// The coins a player has to wager in the season to get a place on its leaderboard
-function wagerNeed(season, username) {
-  const used = (season.chances && season.chances[username] && season.chances[username].used) || 0;
-  return wagerXOf(season) * season.budget * (1 + used);
+// The coins a player has to wager to get a place on the season's leaderboard - per chance: the start
+// and every second chance need it again (counted from that chance on)
+function wagerNeed(season) {
+  return wagerXOf(season) * season.budget;
+}
+
+// When the player's current chance began (the last second chance - 0: the start)
+function chanceStart(season, username) {
+  const record = season.chances && season.chances[username];
+  return record && record.used > 0 && record.lastAt ? record.lastAt : 0;
 }
 
 function list() {
@@ -467,7 +473,8 @@ coins.setWagerLookup(async (username) => {
   const season = running();
   if (season == null || !wagerXOf(season)) return null;
   const rows = await CoinLog.find({ era: "season-" + season.id, username: username, reason: { $in: BETS } }).lean();
-  return { done: rows.reduce((sum, row) => sum - row.amount, 0), need: wagerNeed(season, username) };
+  const from = chanceStart(season, username);
+  return { done: rows.filter((row) => new Date(row.at).getTime() >= from).reduce((sum, row) => sum - row.amount, 0), need: wagerNeed(season) };
 });
 
 // Plays the player in the season world now? (joined it and switched there)
@@ -507,7 +514,7 @@ async function endSeason(season, now) {
   const rows = await withStats(season, await standings());
   // The same coins, the same place - between them: fewer second chances, then more coins wagered
   const byName = new Map(rows.map((row) => [row.username, row]));
-  season.final = { at: now, rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, wagered: byName.get(username).wagered }), need: (username) => wagerNeed(season, username) }) };
+  season.final = { at: now, rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, wagered: byName.get(username).wagered, chanceWagered: byName.get(username).chanceWagered }), need: () => wagerNeed(season) }) };
   season.ended = true;
   season.endedAt = now;
   const seasonEra = state.base ? state.base.reset : null;
@@ -557,13 +564,15 @@ async function seasonStats(season) {
   const rows = await CoinLog.find({ era: era }).lean();
   const stats = {};
   for (const row of rows) {
-    const s = (stats[row.username] = stats[row.username] || { bets: 0, wagered: 0, biggestWin: 0, fromGames: 0, dailyBonuses: 0, lastActive: null, games: {} });
+    const s = (stats[row.username] = stats[row.username] || { bets: 0, wagered: 0, chanceWagered: 0, biggestWin: 0, fromGames: 0, dailyBonuses: 0, lastActive: null, games: {} });
     const at = new Date(row.at).getTime();
     if (s.lastActive == null || at > s.lastActive) s.lastActive = at;
     if (row.reason === "daily bonus") s.dailyBonuses++;
     if (BETS.includes(row.reason)) {
       s.bets++;
       s.wagered += -row.amount;
+      // (the wager for a place counts per chance: only since the last second chance)
+      if (at >= chanceStart(season, row.username)) s.chanceWagered += -row.amount;
       const game = gameOf(row.reason);
       s.games[game] = (s.games[game] || 0) + 1;
     }
@@ -592,7 +601,7 @@ async function tieStats(season, now = Date.now()) {
   if (statsCache.id !== season.id || now - statsCache.at > 15000) statsCache = { id: season.id, at: now, stats: await seasonStats(season) };
   const stats = statsCache.stats;
   const chances = season.chances || {};
-  return (username) => ({ chances: (chances[username] && chances[username].used) || 0, wagered: (stats[username] && stats[username].wagered) || 0 });
+  return (username) => ({ chances: (chances[username] && chances[username].used) || 0, wagered: (stats[username] && stats[username].wagered) || 0, chanceWagered: (stats[username] && stats[username].chanceWagered) || 0 });
 }
 
 // The leaderboard rows with when they started, the second chances and the stats
@@ -602,7 +611,7 @@ async function withStats(season, rows) {
     ...row,
     joinedAt: (season.joined && season.joined[row.username]) || null,
     chances: (season.chances && season.chances[row.username] && season.chances[row.username].used) || 0,
-    ...(stats[row.username] || { bets: 0, wagered: 0, biggestWin: 0, fromGames: 0, dailyBonuses: 0, lastActive: null, favourite: null }),
+    ...(stats[row.username] || { bets: 0, wagered: 0, chanceWagered: 0, biggestWin: 0, fromGames: 0, dailyBonuses: 0, lastActive: null, favourite: null }),
   }));
 }
 
@@ -615,7 +624,7 @@ async function board(id) {
   if (!season.started) return { ...result, at: null, rows: [] };
   const rows = await withStats(season, await standings());
   const byName = new Map(rows.map((row) => [row.username, row]));
-  return { ...result, at: Date.now(), rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, wagered: byName.get(username).wagered }), need: (username) => wagerNeed(season, username) }) };
+  return { ...result, at: Date.now(), rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, wagered: byName.get(username).wagered, chanceWagered: byName.get(username).chanceWagered }), need: () => wagerNeed(season) }) };
 }
 
 let ticking = null;

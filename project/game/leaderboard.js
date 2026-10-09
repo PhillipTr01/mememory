@@ -40,7 +40,7 @@ async function placed(season, rows) {
   // (who hasn't wagered enough yet: on the board, after the places - without a place)
   return place(
     rows.map((row) => ({ ...row, ...stats(row.username) })),
-    { prizes: seasons.prizesOf(season), stats: stats, need: (username) => seasons.wagerNeed(season, username) },
+    { prizes: seasons.prizesOf(season), stats: stats, need: () => seasons.wagerNeed(season) },
   );
 }
 
