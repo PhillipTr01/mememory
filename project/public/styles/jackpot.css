@@ -4264,3 +4264,8 @@ body.cs-season-world::before {
     transform: translateY(110vh) rotate(25deg);
   }
 }
+
+/* The menu closed: only the room for its handle below the page */
+body.cs-dock-closed .room-page {
+  padding-bottom: 40px;
+}

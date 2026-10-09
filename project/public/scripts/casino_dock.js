@@ -7,6 +7,9 @@
 
   function setOpen(dock, toggle, open) {
     dock.classList.toggle("closed", !open);
+    // (closed: less room below the page - the chat can take it)
+    document.body.classList.toggle("cs-dock-closed", !open);
+    if (window.casinoGrowChat) requestAnimationFrame(window.casinoGrowChat);
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
     toggle.title = open ? "Hide the menu" : "Show the menu";
   }

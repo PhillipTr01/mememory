@@ -833,8 +833,24 @@
     };
     // As high as the screen has room for between the pills and the end of the page - so the end of
     // the page never pushes the column up
+    // Phones and small windows (the column under the game): the chat as high as the screen has room
+    // for when the page is scrolled to its end - no empty space below it
+    var chatCard = side.querySelector(".chat-card");
+    var chatBody = document.getElementById("chat-content");
+    var growChat = () => {
+      if (!chatCard || !chatBody) return;
+      chatBody.style.height = "";
+      if (window.innerWidth >= 992) return;
+      var page = document.querySelector(".room-page");
+      var reserve = page ? parseFloat(getComputedStyle(page).paddingBottom) || 0 : 0;
+      var around = chatCard.offsetHeight - chatBody.offsetHeight;
+      var target = window.innerHeight - around - reserve - 16;
+      if (target > chatBody.offsetHeight) chatBody.style.height = Math.round(target) + "px";
+    };
+    window.casinoGrowChat = growChat;
     var size = () => {
       side.style.height = "";
+      growChat();
       if (window.innerWidth < 992) return;
       var gap = layout.getBoundingClientRect().top - spot.getBoundingClientRect().top;
       var below = document.documentElement.scrollHeight - (layout.getBoundingClientRect().bottom + window.scrollY);
