@@ -258,10 +258,9 @@ function renderRounds() {
       item.appendChild(el("span", "rl-dot " + entry.color, ICONS[entry.color]));
       var info = el("div", "jp-history-text");
       var top = entry.winners && entry.winners[0];
-      info.append(
-        el("b", "", top ? top.name + (entry.winners.length > 1 ? " +" + (entry.winners.length - 1) : "") : "Nobody won"),
-        el("small", "", "Round " + entry.round + " · " + (entry.players || 0) + (entry.players == 1 ? " player" : " players") + " · 🪙 " + formatCoins(entry.total || 0) + " bet"),
-      );
+      // The color it came on as the title - who won under it
+      var who = top ? top.name + (entry.winners.length > 1 ? " +" + (entry.winners.length - 1) : "") + " won" : (entry.players || 0) + (entry.players == 1 ? " player" : " players") + " · nobody won";
+      info.append(el("b", "rl-round-color " + entry.color, COLOR_NAMES[entry.color]), el("small", "", "Round " + entry.round + " · " + who + " · 🪙 " + formatCoins(entry.total || 0) + " bet"));
       item.appendChild(info);
       item.appendChild(el("span", "jp-history-won", top ? "🪙 " + formatCoins(top.win) : ""));
       return item;

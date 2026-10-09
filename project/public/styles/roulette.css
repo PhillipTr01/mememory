@@ -449,7 +449,19 @@
   filter: grayscale(0.8);
 }
 
-/* The last rounds (side) */
+/* The last rounds (side): the color as the title */
+.rl-round-color.red {
+  color: #e0675a;
+}
+
+.rl-round-color.blue {
+  color: #5b8fd6;
+}
+
+.rl-round-color.green {
+  color: #6fa784;
+}
+
 .rl-round .rl-dot {
   width: 28px;
   height: 28px;
