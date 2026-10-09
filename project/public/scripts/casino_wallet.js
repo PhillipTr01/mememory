@@ -801,7 +801,10 @@
   /* ---------- A money rain of the admin: coins fall, a notice says how many ---------- */
 
   socket.on("moneyRain", (rain) => {
-    casinoNotice({ icon: "💸", title: "Money rain! +🪙 " + format(rain.amount), text: rain.note || "Coins for you - have fun!", key: "rain" });
+    // (while away: a popup now - like a gift)
+    if (rain.missed) return window.casinoShowMissed({ ...rain, type: "rain" });
+    var coin = rain.world == "season" ? rain.coinIcon || "💎" : "🪙";
+    casinoNotice({ icon: "💸", title: "Money rain! +" + coin + " " + format(rain.amount), text: (rain.note || "Coins for you - have fun!") + (rain.elsewhere ? (rain.world == "season" ? " (in the season)" : " (your 🪙 outside the season)") : ""), key: "rain" });
     var sky = el("div", "cs-rain");
     sky.setAttribute("aria-hidden", "true");
     for (var i = 0; i < 36; i++) {
@@ -1066,12 +1069,20 @@
     render();
   }
 
-  // A gift came: a popup on every open casino page (more gifts at once: one after the other)
+  // A gift came: a popup on every open casino page (more gifts at once: one after the other) - also a
+  // gift or a money rain from while the player was away (missed: on the next visit)
   var giftsWaiting = [];
   socket.on("giftReceived", (gift) => {
-    giftsWaiting.push(gift);
+    giftsWaiting.push({ ...gift, type: "gift" });
     if (!document.querySelector(".cs-got-backdrop")) showReceived();
   });
+
+  // The coins of a gift / rain: the 🪙 (normal casino) - or the season's coin
+  function coinsText(item, amount) {
+    var span = el("span", "", (item.world == "season" ? (item.coinIcon || "💎") : "🪙") + " " + format(amount));
+    if (item.world != "season") span.dataset.coin = "real";
+    return span;
+  }
 
   function showReceived() {
     var gift = giftsWaiting.shift();
@@ -1088,10 +1099,20 @@
     var onKey = (event) => (event.key == "Escape" || event.key == "Enter") && close();
     var head = el("div", "cs-gift-head");
     var pic = el("div", "cs-gift-pic");
-    pic.append(createAvatar(gift.from, "lg"), el("span", "cs-gift-bow", "🎁"));
-    head.append(pic, el("span", "cs-gift-label", "You got a gift!"), el("b", "cs-gift-name", gift.from));
-    var amount = el("div", "cs-got-amount", "🪙 " + format(gift.amount));
-    var text = el("p", "cs-gift-info", gift.from + " sent you coins - they are on your balance already.");
+    var where = gift.world == "season" ? " (in the season)" : window.CASINO_WORLD == "season" ? " (your 🪙 outside the season)" : "";
+    var text;
+    if (gift.type == "rain") {
+      pic.append(el("span", "cs-got-rain", "💸"));
+      head.append(pic, el("span", "cs-gift-label", gift.missed ? "While you were away" : "Money rain!"), el("b", "cs-gift-name", "Money rain"));
+      text = el("p", "cs-gift-info", (gift.note ? "“" + gift.note + "” - " : "") + "the coins are on your balance already" + where + ".");
+    } else {
+      pic.append(createAvatar(gift.from, "lg"), el("span", "cs-gift-bow", "🎁"));
+      head.append(pic, el("span", "cs-gift-label", gift.missed ? "While you were away - a gift!" : "You got a gift!"), el("b", "cs-gift-name", gift.from));
+      text = el("p", "cs-gift-info", gift.from + " sent you coins - they are on your balance already" + where + ".");
+    }
+    if (where.includes("🪙")) text.dataset.coin = "real";
+    var amount = el("div", "cs-got-amount");
+    amount.appendChild(coinsText(gift, gift.amount));
     var ok = el("button", "cs-gift-send", "Nice, thanks! 🎉");
     ok.type = "button";
     ok.addEventListener("click", close);
@@ -1102,4 +1123,8 @@
     document.body.appendChild(backdrop);
     ok.focus();
   }
+  window.casinoShowMissed = (item) => {
+    giftsWaiting.push(item);
+    if (!document.querySelector(".cs-got-backdrop")) showReceived();
+  };
 })();

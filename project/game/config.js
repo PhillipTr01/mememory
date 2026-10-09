@@ -64,6 +64,7 @@ module.exports = {
   COIN_RESET: "reset-100k",
   DAILY_BONUS: 2500,
   GIFT_LIMIT: 10000, // coins a player can give other players a day
+  SEASON_GIFT_LIMIT: 5000, // ... in the season world a day (its coins - an own limit)
   SEASON_CLOSE_WAIT: 60 * 1000, // before a season starts: when every game is quiet, this long until the start
   SEASON_CLOSE_MAX: 5 * 60 * 1000, // ... and at most this long waiting for the games to get quiet
   SEASON_DAILY_BONUS: 1000, // the daily bonus of a new season (each season can have its own)

@@ -19,7 +19,8 @@ const KEY = "admin:settings";
 // scope "outside": only outside of a season (a season has its own value) - everything else counts always.
 const FIELDS = [
   { group: "general", section: "Coins", key: "START_COINS", label: "Start coins", scope: "outside", hint: "What a newly approved player gets outside of a season (in a season: the season's budget instead).", step: 1000, min: 0, max: 100000000 },
-  { group: "general", section: "Gifts", key: "GIFT_LIMIT", label: "Gifts per player and day", hint: "Coins a player can give others a day (a click on a name in the casino chat) - from midnight on the full amount again.", step: 1000, min: 0, max: 100000000 },
+  { group: "general", section: "Gifts", key: "GIFT_LIMIT", label: "Gifts per player and day", hint: "🪙 a player can give others a day (a click on a name in the casino chat) - from midnight on the full amount again.", step: 1000, min: 0, max: 100000000 },
+  { group: "general", section: "Gifts", key: "SEASON_GIFT_LIMIT", label: "Gifts per player and day in a season", hint: "Season coins a player can give others in the season world a day - apart from the 🪙 above (both can be sent).", step: 1000, min: 0, max: 100000000 },
   { group: "general", section: "Coins", key: "DAILY_BONUS", label: "Daily bonus", scope: "outside", hint: "Free coins once a day for every player outside of a season (a season has its own).", step: 100, min: 0, max: 10000000 },
   { group: "jackpot", section: "Jackpot", key: "GAME_JACKPOT", type: "toggle", label: "Jackpot is on", hint: "Off: no tab, nobody can open it." },
   { group: "jackpot", section: "Bets", key: "JACKPOT_MAX_COINS", label: "Max coins per round", hint: "All bets of one player in one round together.", step: 1000, min: 1, max: 100000000 },

@@ -4282,3 +4282,14 @@ body.jackpot-theme::before {
   line-height: 1.5;
   vertical-align: 1px;
 }
+
+/* A money rain in the popup (while away): the money where the avatar of a giver is */
+.cs-got-rain {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--mm-accent-rgb), 0.25), rgba(var(--mm-accent-rgb), 0.06));
+  font-size: 2.4rem;
+}

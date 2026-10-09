@@ -7,6 +7,7 @@ const maintenance = require("../game/maintenance");
 
 const testMode = require("../game/test_mode");
 const worlds = require("../game/worlds");
+const inbox = require("../game/inbox");
 
 // The games - in the normal casino, the season world and the admin's test world (game/worlds.js)
 const REAL = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/roulette"];
@@ -25,9 +26,32 @@ function socketsOf(io, username) {
  * every open casino page of the player is closed.
  */
 module.exports = function (io) {
+  // (a gift while the player has no casino page open: kept for the next visit - game/inbox.js)
   notices.on("notice", (username, event, data) => {
-    for (const socket of socketsOf(io, username)) socket.emit(event, data);
+    const sockets = socketsOf(io, username);
+    for (const socket of sockets) socket.emit(event, data);
+    if (event === "giftReceived" && sockets.length === 0) inbox.add(username, { type: "gift", ...data }).catch((error) => console.error("[inbox] Could not keep a gift:", error));
   });
+
+  // A casino page opens: what happened while the player was away (gifts, money rains) - as popups
+  const delivering = new Set();
+  async function deliverInbox(socket) {
+    const username = socket.data.username;
+    if (!username || delivering.has(username)) return;
+    delivering.add(username);
+    try {
+      const items = await inbox.take(username);
+      for (const item of items) {
+        if (item.type === "gift") socket.emit("giftReceived", { ...item, missed: true });
+        if (item.type === "rain") socket.emit("moneyRain", { ...item, missed: true });
+      }
+    } catch (error) {
+      console.error("[inbox] Could not deliver:", error);
+    } finally {
+      delivering.delete(username);
+    }
+  }
+  for (const name of GAMES) io.of(name).on("connection", (socket) => setTimeout(() => deliverInbox(socket), 800));
 
   // A game turned off (admin panel): its open pages go to another game
   settings.changes.on("change", (values) => {
@@ -106,12 +130,23 @@ module.exports = function (io) {
   });
 
   // A money rain: every open casino page of who got coins shows it (in the world it rained in)
+  // (who has no casino page open: a popup on the next visit)
   require("../game/money_rain").changes.on("rain", (rain) => {
     const names = new Set(rain.names);
     const world = rain.world === "season" ? worlds.SEASON : "";
+    const seasonCoin = rain.world === "season" && seasons.running() ? seasons.publicSeason(seasons.running()).coinIcon : null;
+    const online = new Set();
     for (const name of GAMES) {
-      if (worlds.worldOfNamespace(name) !== world) continue;
-      for (const socket of io.of(name).sockets.values()) if (names.has(socket.data.username)) socket.emit("moneyRain", { amount: rain.amount, note: rain.note || null });
+      for (const socket of io.of(name).sockets.values()) {
+        if (!names.has(socket.data.username)) continue;
+        online.add(socket.data.username);
+        if (worlds.worldOfNamespace(name) === world) socket.emit("moneyRain", { amount: rain.amount, note: rain.note || null, world: rain.world, coinIcon: seasonCoin });
+        // (in the other world: told as a popup there, the coins are in the other wallet)
+        else socket.emit("moneyRain", { amount: rain.amount, note: rain.note || null, world: rain.world, coinIcon: seasonCoin, elsewhere: true });
+      }
+    }
+    for (const username of names) {
+      if (!online.has(username)) inbox.add(username, { type: "rain", amount: rain.amount, note: rain.note || null, world: rain.world, coinIcon: seasonCoin }).catch((error) => console.error("[inbox] Could not keep a money rain:", error));
     }
   });
 

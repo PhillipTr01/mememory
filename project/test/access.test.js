@@ -281,14 +281,14 @@ test("access: gifts - coins for another player, at most GIFT_LIMIT a day", async
     const res = await call(CASINO + "/gift", { ...as("gia"), json: { to, amount } });
     return { status: res.status, body: await res.json() };
   };
-  assert.deepStrictEqual(await (await call(CASINO + "/gift", as("gia"))).json(), { limit: 10000, given: 0, left: 10000 });
+  assert.deepStrictEqual(await (await call(CASINO + "/gift", as("gia"))).json(), { limit: 10000, given: 0, left: 10000, world: "normal" });
   // The other one hears it on every open casino page
   const page = await connect("/jackpot", "hal");
   const heard = h.once(page.socket, "giftReceived");
   const first = await give("hal", 6000);
   assert.strictEqual(first.status, 200);
-  assert.deepStrictEqual(first.body, { coins: 14000, left: 4000 });
-  assert.deepStrictEqual(await heard, { from: "gia", amount: 6000 });
+  assert.deepStrictEqual(first.body, { coins: 14000, left: 4000, world: "normal" });
+  assert.deepStrictEqual(await heard, { from: "gia", amount: 6000, world: "normal", coinIcon: null });
   assert.strictEqual(h.coinsOf("hal"), 6100);
   // More than is left of the limit, to themselves, to nobody, no number: nothing happens
   assert.match((await give("hal", 5000)).body.error, /4,000 more/);
@@ -305,4 +305,48 @@ test("access: gifts - coins for another player, at most GIFT_LIMIT a day", async
   h.setCoins("hal", 50);
   const poor = await call(CASINO + "/gift", { ...as("hal"), json: { to: "gia", amount: 51 } });
   assert.match((await poor.json()).error, /that many coins/);
+});
+
+test("access: away - a gift and a money rain wait for the next visit (a popup then), the season's gifts with their own limit", async () => {
+  const config = require("../game/config");
+  const seasons = require("../game/seasons");
+  const rain = require("../game/money_rain");
+  tokens.ivy = h.addUser("ivy");
+  tokens.jon = h.addUser("jon");
+  h.setCoins("ivy", 50000);
+  h.setCoins("jon", 100);
+  // jon has no casino page open: the gift waits
+  assert.strictEqual((await call(CASINO + "/gift", { ...as("ivy"), json: { to: "jon", amount: 500 } })).status, 200);
+  rain.reset();
+  await rain.create({ amount: 300, target: "below", below: 1000, note: "Rainy day" });
+  const page = await connect("/jackpot", "jon");
+  const gift = await h.once(page.socket, "giftReceived", 4000);
+  assert.deepStrictEqual([gift.from, gift.amount, gift.missed], ["ivy", 500, true]);
+  assert.strictEqual(h.coinsOf("jon"), 100 + 500 + 300);
+  assert.deepStrictEqual(h.userOf("jon").inbox, [], "shown once");
+
+  // In the season world: the season's coins, its own limit, only to players in the season
+  seasons.reset();
+  const before = config.SEASON_GIFT_LIMIT;
+  config.SEASON_GIFT_LIMIT = 1000;
+  try {
+    const now = Date.now();
+    await seasons.create({ name: "Gifts", icon: "🎁", start: now - 1000, end: now + 3600 * 1000, budget: 5000, every: 0, closeWait: 0 });
+    await seasons.tick(now);
+    await seasons.join("ivy", now);
+    const status = await (await call(CASINO + "/gift", as("ivy"))).json();
+    assert.deepStrictEqual([status.limit, status.world], [1000, "season"]);
+    assert.match((await (await call(CASINO + "/gift", { ...as("ivy"), json: { to: "jon", amount: 100 } })).json()).error, /isn't in the season/);
+    await seasons.join("jon", now);
+    const sent = await (await call(CASINO + "/gift", { ...as("ivy"), json: { to: "jon", amount: 800 } })).json();
+    assert.deepStrictEqual([sent.world, sent.left], ["season", 200]);
+    assert.deepStrictEqual([h.userOf("ivy").seasonCoins, h.userOf("jon").seasonCoins, h.coinsOf("ivy")], [4200, 5800, 49500], "the 🪙 stay");
+    assert.match((await (await call(CASINO + "/gift", { ...as("ivy"), json: { to: "jon", amount: 300 } })).json()).error, /200 more/);
+    // Back in the normal casino: the 🪙 with their limit again
+    await seasons.switchWorld("ivy", "normal");
+    assert.deepStrictEqual(await (await call(CASINO + "/gift", as("ivy"))).json(), { limit: 10000, given: 500, left: 9500, world: "normal" });
+  } finally {
+    config.SEASON_GIFT_LIMIT = before;
+    seasons.reset();
+  }
 });
