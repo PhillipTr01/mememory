@@ -186,12 +186,19 @@ function makeWallet(kind) {
     return dailyBonus() * bonusDays(user, now);
   }
 
-  // { coins, bonus, bonusIn, payout, world } - bonus: the daily free coins can be claimed now, payout: may pay coins out
+  // The most one bet may take with this balance (null: no cap) - the pages use it for their "Max"
+  function capFor(balance) {
+    const cap = limits.betCap(balance, kind);
+    return Number.isFinite(cap) ? cap : null;
+  }
+
+  // { coins, bonus, bonusIn, payout, world, betCap } - bonus: the daily free coins can be claimed now, payout: may pay coins out
   // (in the season: normal - the normal balance, shown next to the season's)
   async function get(username) {
     // Test mode (the admin): the sandbox - the real balance stays as it is
     if (testMode().active(username)) {
-      return { coins: testMode().balance(username), bonus: true, bonusIn: 0, bonusAmount: dailyBonus(), payout: false, normal: null, world: kind, joined: null, test: true };
+      const balance = testMode().balance(username);
+      return { coins: balance, bonus: true, bonusIn: 0, bonusAmount: dailyBonus(), payout: false, normal: null, world: kind, joined: null, test: true, betCap: limits.betCap(balance, "normal") === Infinity ? null : limits.betCap(balance, "normal") };
     }
     // (after a restart: the season is known first)
     await gate;
@@ -204,6 +211,7 @@ function makeWallet(kind) {
     const available = bonusAvailable(user);
     return {
       coins: user[f.coins] || 0,
+      betCap: capFor(user[f.coins] || 0),
       bonus: available,
       bonusIn: bonusInAt(bonusAtOf(user)),
       bonusAmount: available ? bonusDue(user) : dailyBonus(),

@@ -294,8 +294,14 @@ test("coins: the max bet by balance - all in up to the floor, above it a share o
     // Too few coins: no cap message
     assert.strictEqual(await coins.spend("capper", 60000, { reason: "slots bet" }), false);
     assert.strictEqual(coins.refusal("capper"), null);
+    // The pages get the cap with the balance (for their "Max")
+    h.setCoins("capper", 1000000);
+    assert.strictEqual((await coins.get("capper")).betCap, 250000);
+    h.setCoins("capper", 40000);
+    assert.strictEqual((await coins.get("capper")).betCap, 100000, "the floor");
     // 100%: no cap
     config.BET_CAP_SHARE = 100;
+    assert.strictEqual((await coins.get("capper")).betCap, null);
     h.setCoins("capper", 1000000);
     assert.strictEqual(await coins.spend("capper", 1000000, { reason: "slots bet" }), true);
   } finally {

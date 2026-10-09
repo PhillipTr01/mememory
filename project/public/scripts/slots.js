@@ -3,13 +3,15 @@ const socket = io((window.CASINO_NS || "") + "/slots");
 
 var myName = null;
 var myCoins = 0;
+var myCap = null; // the most one bet may take with my balance (null: no cap - the max bet by balance)
 var setup = null; // {symbols, lines, strips, rules}
 var spinning = false;
 var pausedUntil = 0; // after a spin: the next one only from then on (a short pause)
 var spunAt = 0; // when the last spin started (the server wants a gap between two spins too)
 var lineTimer = null;
 var BET_KEY = "slotsBet";
-var PRESETS = [10, 25, 50, 100, 200, 250];
+// The bets to pick: from the lowest (left) to the highest (right) - made from the limits (presets())
+var PRESET_COUNT = 6;
 var TILE = 0; // height of one symbol (from the page)
 
 // Used by chat.js
@@ -69,6 +71,7 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
+  myCap = data.betCap != null ? data.betCap : null;
   // While the reels turn, the balance shows the coins before the win
   // (during a spin the old balance stays - but a page that comes back into a bonus game needs one)
   if (!spinning || document.getElementById("slCoins").innerText == "-") renderCoins(myCoins);
@@ -1172,7 +1175,8 @@ function currentBet() {
 
 function setBet(value) {
   if (setup == null) return;
-  var bet = Math.max(setup.rules.minBet, Math.min(setup.rules.maxBet, Math.round(value)));
+  // (never more than the max bet by balance)
+  var bet = Math.max(setup.rules.minBet, Math.min(maxNow(), Math.round(value)));
   document.getElementById("slBet").value = bet;
   // The prizes of the coin game for this bet (over the machine, always)
   if (!activeBonus) showPrizes(bet);
@@ -1184,10 +1188,44 @@ function setBet(value) {
   renderControls();
 }
 
+// The highest bet now: the max bet per spin - or less, the max bet by balance
+function maxNow() {
+  return Math.max(setup.rules.minBet, Math.min(setup.rules.maxBet, myCap != null ? myCap : Infinity));
+}
+
+// A round number near `value`, divisible by 5 (1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5 times a power of ten)
+function niceBet(value) {
+  var power = Math.pow(10, Math.floor(Math.log10(Math.max(1, value))));
+  var best = null;
+  [1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5, 10].forEach((m) => {
+    var candidate = Math.round(m * power);
+    if (candidate % 5 != 0) return;
+    if (best == null || Math.abs(candidate - value) < Math.abs(best - value)) best = candidate;
+  });
+  return best != null ? best : Math.round(value / 5) * 5;
+}
+
+// The presets: the lowest and the highest bet (divisible by 5) and round steps in between, growing evenly
+function presets() {
+  var lo = Math.ceil(setup.rules.minBet / 5) * 5;
+  var hi = Math.floor(maxNow() / 5) * 5;
+  if (hi <= lo) return [Math.max(setup.rules.minBet, Math.min(lo, maxNow()))];
+  var list = [lo];
+  for (var i = 1; i < PRESET_COUNT - 1; i++) {
+    var value = niceBet(lo * Math.pow(hi / lo, i / (PRESET_COUNT - 1)));
+    if (value > list[list.length - 1] && value < hi) list.push(value);
+  }
+  list.push(hi);
+  return list;
+}
+
+var shownPresets = "";
 function renderPresets() {
   var box = document.getElementById("slPresets");
+  var list = presets();
+  shownPresets = list.join(",");
   box.replaceChildren(
-    ...PRESETS.filter((value) => value >= setup.rules.minBet && value <= setup.rules.maxBet).map((value) => {
+    ...list.map((value) => {
       var button = el("button", "sl-preset", value >= 1000 ? value / 1000 + "K" : String(value));
       button.type = "button";
       button.dataset.value = value;
@@ -1230,15 +1268,17 @@ function renderControls() {
   button.title = bet > myCoins ? "Not enough coins" : "Spin (space)";
   document.querySelectorAll(".sl-preset").forEach((preset) => preset.classList.toggle("active", Number(preset.dataset.value) == bet));
   document.getElementById("slLess").disabled = spinning || bet <= setup.rules.minBet;
-  document.getElementById("slMore").disabled = spinning || bet >= setup.rules.maxBet;
+  document.getElementById("slMore").disabled = spinning || bet >= maxNow();
+  // (the balance changed the highest bet: other presets)
+  if (presets().join(",") != shownPresets) renderPresets();
 }
 
-// − / +: to the next bet of the presets (10, 25, 50, 100, 200, 250)
+// − / +: to the next bet of the presets
 function stepBet(direction) {
   var bet = currentBet();
-  var steps = PRESETS.filter((value) => value >= setup.rules.minBet && value <= setup.rules.maxBet);
+  var steps = presets();
   var next = direction > 0 ? steps.find((value) => value > bet) : steps.slice().reverse().find((value) => value < bet);
-  setBet(next != null ? next : direction > 0 ? setup.rules.maxBet : setup.rules.minBet);
+  setBet(next != null ? next : direction > 0 ? maxNow() : setup.rules.minBet);
 }
 
 /* ---------- Last wins (everybody) ---------- */

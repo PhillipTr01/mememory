@@ -5,6 +5,7 @@ const socket = io((window.CASINO_NS || "") + "/blackjack", { query: { table: TAB
 
 var myName = null;
 var myCoins = 0;
+var myCap = null; // the most one bet may take with my balance (null: no cap - the max bet by balance)
 var state = null;
 var previous = null;
 var selected = null; // the seat to bet on
@@ -49,6 +50,7 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
+  myCap = data.betCap != null ? data.betCap : null;
   if (state) renderBars();
 });
 socket.on("blackjackError", (message) => showHint(message, "error"));
@@ -162,7 +164,7 @@ function placeChip(seatIndex, field) {
   if (field == "main") {
     // The first chip at least the table minimum
     var amount = seat.bet == 0 ? Math.max(chipValue, state.rules.minBet) : chipValue;
-    amount = Math.min(amount, state.rules.maxBet - seat.bet);
+    amount = Math.min(amount, state.rules.maxBet - seat.bet, myCap != null ? myCap : Infinity);
     if (amount <= 0) return showHint("The most for this seat: 🪙 " + formatCoins(state.rules.maxBet) + ".", "error");
     socket.emit("bet", { seat: seatIndex, amount: amount });
   } else {

@@ -3,6 +3,7 @@ const socket = io((window.CASINO_NS || "") + "/poker");
 
 var myName = null;
 var myCoins = 0;
+var myCap = null; // the most one bet may take with my balance (null: no cap - the max bet by balance)
 var state = null;
 var previous = null;
 var timerFrame = null;
@@ -113,6 +114,7 @@ socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
   myCoins = data.coins;
+  myCap = data.betCap != null ? data.betCap : null;
 });
 
 socket.on("pokerError", (message) => showHint(message, "error"));
@@ -626,9 +628,10 @@ function buyIn(seat) {
     title: "Take a seat",
     text: "Your coins become chips. When you stand up, the chips are coins again.",
     min: state.rules.minBuyIn,
-    max: state.rules.maxBuyIn,
+    // (never more than the max bet by balance)
+    max: Math.max(state.rules.minBuyIn, Math.min(state.rules.maxBuyIn, myCap != null ? myCap : Infinity)),
     // (10,000 to start with - or less, with fewer coins)
-    value: Math.max(state.rules.minBuyIn, Math.min(state.rules.defaultBuyIn || 10000, state.rules.maxBuyIn, myCoins)),
+    value: Math.max(state.rules.minBuyIn, Math.min(state.rules.defaultBuyIn || 10000, state.rules.maxBuyIn, myCoins, myCap != null ? myCap : Infinity)),
     button: "Sit down",
     done: (amount) => socket.emit("sit", { seat: seat, buyIn: amount }),
   });
@@ -636,7 +639,7 @@ function buyIn(seat) {
 
 function addChips() {
   var seat = state.seats[mySeat()];
-  var room = state.rules.maxBuyIn - seat.stack;
+  var room = Math.min(state.rules.maxBuyIn - seat.stack, myCap != null ? myCap : Infinity);
   chipsDialog({
     title: "Add chips",
     text: "Up to " + formatCoins(state.rules.maxBuyIn) + " chips at the table.",

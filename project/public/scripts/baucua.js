@@ -3,6 +3,7 @@ const socket = io((window.CASINO_NS || "") + "/baucua");
 
 var myName = null;
 var myCoins = 0;
+var myCap = null; // the most one bet may take with my balance (null: no cap - the max bet by balance)
 var table = null; // the last state of the round
 var rules = null;
 var rolledRound = null; // the round whose roll plays (or played) on this page
@@ -53,6 +54,7 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
+  myCap = data.betCap != null ? data.betCap : null;
   // While the bowl shakes the balance shows the coins before the win
   if (!rolling) renderCoins();
   renderControls();
@@ -378,7 +380,7 @@ var CHIPS = [
   ["+1K", (v) => v + 1000],
   ["½", (v) => v / 2],
   ["×2", (v) => v * 2],
-  ["Max", () => Math.min(myCoins, roomLeft())],
+  ["Max", () => Math.min(myCoins, roomLeft(), myCap != null ? myCap : Infinity)],
 ];
 
 function buildChips() {
@@ -399,8 +401,9 @@ function renderControls() {
   var open = table.phase != "rolling" && !rolling;
   document.querySelectorAll(".bc-animal").forEach((tile) => {
     var name = animalOf(tile.dataset.animal).name.toLowerCase();
-    tile.disabled = !open || !(value >= rules.minBet) || value > myCoins || value > roomLeft();
-    tile.title = !open ? "The dice are rolling - the next round soon" : value > roomLeft() ? "At most 🪙 " + formatCoins(rules.maxBet) + " per round" : value > myCoins ? "Not enough coins" : "Bet 🪙 " + formatCoins(value || 0) + " on the " + name;
+    var overCap = myCap != null && value > myCap;
+    tile.disabled = !open || !(value >= rules.minBet) || value > myCoins || value > roomLeft() || overCap;
+    tile.title = !open ? "The dice are rolling - the next round soon" : value > roomLeft() ? "At most 🪙 " + formatCoins(rules.maxBet) + " per round" : value > myCoins ? "Not enough coins" : overCap ? "With your balance a bet is at most 🪙 " + formatCoins(myCap) : "Bet 🪙 " + formatCoins(value || 0) + " on the " + name;
   });
 }
 

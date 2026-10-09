@@ -3,6 +3,7 @@ const socket = io((window.CASINO_NS || "") + "/battles");
 
 var myName = null;
 var myCoins = 0;
+var myCap = null; // the most one bet may take with my balance (null: no cap - the max bet by balance)
 var CASES = []; // catalog from the server
 var battles = []; // every battle the server knows
 var lastBattles = []; // finished battles, newest first
@@ -99,6 +100,7 @@ socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
   myCoins = data.coins;
+  myCap = data.betCap != null ? data.betCap : null;
   renderCreate();
   renderList();
   if (!spinning) renderBattle();
@@ -467,8 +469,9 @@ function renderCreate() {
   document.getElementById("btShuffle").hidden = picked.length < 2;
   var button = document.getElementById("btCreate");
   document.getElementById("btCreateLabel").innerText = ids.length ? "Create for 🪙 " + formatCoins(cost) : "Create";
-  button.disabled = ids.length == 0 || cost > myCoins;
-  button.title = cost > myCoins ? "Not enough coins" : "";
+  var overCap = myCap != null && cost > myCap;
+  button.disabled = ids.length == 0 || cost > myCoins || overCap;
+  button.title = cost > myCoins ? "Not enough coins" : overCap ? "With your balance a bet is at most 🪙 " + formatCoins(myCap) : "";
 }
 
 function showContents(box) {
@@ -652,7 +655,7 @@ function renderList() {
       if (battle.phase == "waiting" && !isIn(battle)) {
         var join = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Join");
         join.type = "button";
-        join.disabled = battle.price > myCoins;
+        join.disabled = battle.price > myCoins || (myCap != null && battle.price > myCap);
         join.addEventListener("click", (event) => {
           event.stopPropagation();
           askForNotifications();
@@ -813,7 +816,7 @@ function renderBattle() {
       if (battle.phase == "waiting" && !isIn(battle)) {
         var join = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Join 🪙 " + formatCoins(battle.price));
         join.type = "button";
-        join.disabled = battle.price > myCoins;
+        join.disabled = battle.price > myCoins || (myCap != null && battle.price > myCap);
         join.addEventListener("click", () => {
           askForNotifications();
           socket.emit("joinBattle", battle.id);
