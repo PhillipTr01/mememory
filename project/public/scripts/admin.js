@@ -1760,7 +1760,7 @@ function fillSeasonForm(season) {
   document.getElementById("adSeasonBudget").value = season.budget;
   document.getElementById("adSeasonBonus").value = season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting;
   document.getElementById("adSeasonChances").value = season.secondChances || 0;
-  document.getElementById("adSeasonWagerX").value = season.wagerX != null ? season.wagerX : 7;
+  document.getElementById("adSeasonWagerX").value = season.wagerX != null ? season.wagerX : 3;
   var delay = document.getElementById("adSeasonChanceDelay");
   var delayValue = season.chanceDelay == null ? "" : String(season.chanceDelay);
   // (a wait not in the list - set some other way: added to it)

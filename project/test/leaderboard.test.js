@@ -438,37 +438,37 @@ test("seasons: a season from before the worlds were apart moves into the season 
   seasons.reset();
 });
 
-test("seasons: a place only after wagering 7x the start (again for every second chance) - until then on the board without a place", async () => {
+test("seasons: a place only after wagering 3x the start (again for every second chance) - until then on the board without a place", async () => {
   seasons.reset();
   const now = Date.now();
   const made = await seasons.create({ name: "Wager", icon: "🎲", start: now - 1000, end: now + 3600 * 1000, budget: 100, every: 0, secondChances: 1, prizesOn: true, prizes: [{ place: 1, prize: "🏆" }] });
-  assert.strictEqual(made.season.wagerX, 7, "7x by default");
+  assert.strictEqual(made.season.wagerX, 3, "3x by default");
   assert.match((await seasons.create({ name: "X", icon: "🎲", start: now + 7200 * 1000, end: now + 9000 * 1000, budget: 100, every: 0, wagerX: -1 })).error, /0 to 1000/);
   await seasons.tick(now);
   for (const name of ["anna", "ben", "cleo"]) await seasons.join(name, now);
-  // anna: 700 wagered (7 x 100) - ben: 500 - cleo: nothing, but the most coins
+  // anna: 300 wagered (3 x 100) - ben: 200 - cleo: nothing, but the most coins
   setSeasonCoins("anna", 50);
   setSeasonCoins("ben", 900);
   setSeasonCoins("cleo", 5000);
-  await coins.season.add("anna", 700, { reason: "test" });
-  assert.ok(await coins.season.spend("anna", 700, { reason: "slots bet" }));
-  assert.ok(await coins.season.spend("ben", 500, { reason: "roulette bet" }));
+  await coins.season.add("anna", 300, { reason: "test" });
+  assert.ok(await coins.season.spend("anna", 300, { reason: "slots bet" }));
+  assert.ok(await coins.season.spend("ben", 200, { reason: "roulette bet" }));
   setSeasonCoins("ben", 900);
   await h.wait(20);
   const board = await seasons.board(made.season.id);
   const row = (name) => board.rows.find((r) => r.username === name);
   assert.strictEqual(row("anna").rank, 1, "wagered enough: the place (and the prize)");
   assert.strictEqual(row("anna").prize, "🏆");
-  assert.deepStrictEqual([row("cleo").rank, row("cleo").pending, row("cleo").wager.need], [null, true, 700], "the most coins - but no place yet");
-  assert.deepStrictEqual([row("ben").rank, row("ben").wager.done, row("ben").wager.need], [null, 500, 700]);
+  assert.deepStrictEqual([row("cleo").rank, row("cleo").pending, row("cleo").wager.need], [null, true, 300], "the most coins - but no place yet");
+  assert.deepStrictEqual([row("ben").rank, row("ben").wager.done, row("ben").wager.need], [null, 200, 300]);
   assert.deepStrictEqual(board.rows.map((r) => r.username), ["anna", "cleo", "ben"], "who has a place first, then the others by coins");
-  // A second chance: a new chance - 7x again, counted from the second chance on (the season's whole wager still breaks ties)
+  // A second chance: a new chance - 3x again, counted from the second chance on (the season's whole wager still breaks ties)
   setSeasonCoins("anna", 0);
   await seasons.useChance("anna", now + 5000);
-  assert.strictEqual(seasons.wagerNeed(seasons.running()), 700);
+  assert.strictEqual(seasons.wagerNeed(seasons.running()), 300);
   const after = await seasons.board(made.season.id);
   const anna = after.rows.find((r) => r.username === "anna");
-  assert.deepStrictEqual([anna.rank, anna.wager.done, anna.wager.need, anna.wagered], [null, 0, 700, 700]);
+  assert.deepStrictEqual([anna.rank, anna.wager.done, anna.wager.need, anna.wagered], [null, 0, 300, 300]);
   // The end: only who has a place wins
   await seasons.endNow(made.season.id);
   assert.strictEqual(seasons.publicSeason(seasons.byId(made.season.id)).winner, null, "nobody wagered enough at the end");

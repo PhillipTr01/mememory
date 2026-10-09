@@ -339,7 +339,7 @@ function check(input, current) {
   if (accessNames.some((name) => name.length > 40)) return { error: "A name on the list is too long." };
   if (accessMode === "whitelist" && accessNames.length === 0) return { error: "The whitelist is on - add at least one player." };
   const highlight = input.highlight === true;
-  // To get a place: wager this many times the start budget (not given: the setting, 7x)
+  // To get a place: wager this many times the start budget (not given: the setting, 3x)
   const wagerX = input.wagerX == null || input.wagerX === "" ? config.SEASON_WAGER_X : Number(input.wagerX);
   if (!Number.isInteger(wagerX) || wagerX < 0 || wagerX > 1000) return { error: "Wager to get a place: 0 to 1000 times the start budget." };
 
