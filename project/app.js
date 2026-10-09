@@ -49,6 +49,7 @@ require("./sockets/battles_server")(io);
 require("./sockets/poker_server")(io);
 require("./sockets/blackjack_server")(io);
 require("./sockets/slots_server")(io);
+require("./sockets/roulette_server")(io);
 require("./sockets/casino_server")(io);
 
 /* Page routes */

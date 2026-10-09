@@ -10,6 +10,7 @@ var HISTORY_KINDS = [
   ["Poker", [["poker buy-in", "Buy-in"], ["poker chips", "More chips"], ["poker cash-out", "Cash-out"], ["poker refund", "Refund"]]],
   ["Blackjack", [["blackjack bet", "Bet"], ["blackjack win", "Win"], ["blackjack refund", "Refund"]]],
   ["Slots", [["slots bet", "Bet"], ["slots win", "Win"]]],
+  ["Roulette", [["roulette bet", "Bet"], ["roulette win", "Win"], ["roulette refund", "Refund"]]],
 ];
 
 
@@ -81,10 +82,11 @@ var SETTING_GROUPS = {
   poker: ["Poker", "Turn poker on or off, the buy-ins."],
   blackjack: ["Blackjack", "Turn blackjack on or off, the seats and the limits of every table."],
   slots: ["Slots", "Turn slots on or off, the bet per spin."],
+  roulette: ["Roulette", "Turn the roulette on or off, the bets, the time to bet."],
 };
 var settingsGroup = "general";
 
-var GAME_GROUPS = ["jackpot", "battles", "poker", "blackjack", "slots"];
+var GAME_GROUPS = ["jackpot", "roulette", "battles", "poker", "blackjack", "slots"];
 
 // Old addresses (bookmarks): to where it is now
 function redirect(parts) {

@@ -262,11 +262,11 @@ test("admin: a game turned off - no tab, its page leads to the next game, its op
   const battles = await (await call(CASINO + "/battles", as("paula"))).text();
   assert.match(battles, /\.cs-tab\[href="poker"\] \{ display: none !important; \}/);
 
-  // The jackpot off too: the casino starts with the next game that is on
+  // The jackpot off too: the casino starts with the next game that is on (the roulette)
   await adminApi("settings", { values: { GAME_JACKPOT: false } });
   page = await call(CASINO + "/", as("paula"));
   assert.strictEqual(page.status, 302);
-  assert.match(page.headers.get("location"), /\/battles$/);
+  assert.match(page.headers.get("location"), /\/roulette$/);
 
   await adminApi("settings", { defaults: true });
   assert.strictEqual((await call(CASINO + "/poker", as("paula"))).status, 200, "on again");

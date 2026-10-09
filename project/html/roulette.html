@@ -2,7 +2,7 @@
 <html lang="en" class="min-h-100">
 
 <head>
-    <title>Leaderboard - MemeMory</title>
+    <title>Roulette - MemeMory</title>
 
     <!-- Required meta tags -->
     <meta charset="utf-8">
@@ -18,8 +18,7 @@
     <link rel="stylesheet" href="/static/styles/theme.css">
     <link rel="stylesheet" href="/static/styles/room.css">
     <link rel="stylesheet" href="/static/styles/jackpot.css">
-    <link rel="stylesheet" href="/static/styles/poker.css">
-    <link rel="stylesheet" href="/static/styles/leaderboard.css">
+    <link rel="stylesheet" href="/static/styles/roulette.css">
 
     <!--- Icons --->
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon/favicon.ico">
@@ -88,44 +87,78 @@
     <main class="room-page">
         <div class="room-layout">
             <div class="room-main">
-                <!--- The winner page of a season that is over --->
-                <section id="lbWinners" class="mm-card lb-winners" hidden></section>
-
-                <section id="lbBoard" class="mm-card lb-main">
-
+                <section class="mm-card rl-main">
                     <div class="jp-head">
                         <div>
-                            <h1 class="jp-title" data-info="leaderboard"><svg class="cs-title-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M14 8 H34 V20 Q34 30 24 30 Q14 30 14 20 Z" fill="#f5c542" /><path d="M14 11 H8 Q8 21 15 22 M34 11 H40 Q40 21 33 22" fill="none" stroke="#d4a017" stroke-width="2.6" /><rect x="21" y="29" width="6" height="6" fill="#d4a017" /><rect x="15" y="35" width="18" height="6" rx="2" fill="#8a5a00" /><path d="M24 12 L25.6 16 L29.8 16.2 L26.5 18.8 L27.6 22.8 L24 20.5 L20.4 22.8 L21.5 18.8 L18.2 16.2 L22.4 16 Z" fill="#fff7d6" /></svg> Leaderboard</h1>
-                            <p id="lbStatus" class="jp-status">Live</p>
+                            <h1 class="jp-title" data-info="roulette"><svg class="cs-title-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="#3b2a12" /><circle cx="24" cy="24" r="17" fill="#e0675a" /><path d="M24 7 A17 17 0 0 1 36 12 L24 24 Z M41 24 A17 17 0 0 1 36 36 L24 24 Z M24 41 A17 17 0 0 1 12 36 L24 24 Z M7 24 A17 17 0 0 1 12 12 L24 24 Z" fill="#5b8fd6" /><path d="M36 12 A17 17 0 0 1 41 24 L24 24 Z" fill="#6fa784" /><circle cx="24" cy="24" r="8" fill="#d4a017" /><circle cx="24" cy="24" r="4" fill="#f5c542" /><circle cx="33" cy="9.5" r="2.4" fill="#fff" /></svg> Roulette</h1>
                         </div>
-                        <!--- The season that runs --->
-                        <div id="lbSeason" class="lb-season" hidden></div>
+                        <div class="rl-head-actions"><button type="button" class="cs-fs-btn" data-fullscreen=".rl-main" data-fullscreen-zoom></button></div>
                     </div>
 
-                    <!--- The last season is over: the way to its winners --->
-                    <button type="button" id="lbLastSeason" class="lb-last-season" hidden></button>
+                    <!--- The last results, newest left --->
+                    <div class="rl-history-row">
+                        <span class="rl-label">Last rolls</span>
+                        <div id="rlHistory" class="rl-history"></div>
+                    </div>
 
-                    <!--- The top three --->
-                    <div id="lbPodium" class="lb-podium"></div>
+                    <!--- The reel: rolls sideways, the marker in the middle --->
+                    <div class="rl-reel">
+                        <div id="rlTrack" class="rl-track"></div>
+                        <div class="rl-marker" aria-hidden="true"></div>
+                    </div>
 
-                    <!--- The own place --->
-                    <div id="lbMe" class="lb-me" hidden></div>
+                    <!--- What happens now: waiting for a bet / the timer / the result --->
+                    <div class="rl-status">
+                        <span id="rlStatus" class="rl-status-text">Place a bet to start the round</span>
+                        <div class="rl-timer"><div id="rlTimer" class="rl-timer-bar"></div></div>
+                    </div>
 
-                    <!--- Everybody else --->
-                    <ol id="lbList" class="lb-list"></ol>
-                    <p id="lbEmpty" class="jp-empty mm-muted" hidden>Nobody on the leaderboard yet.</p>
+                    <!--- The amount --->
+                    <div class="rl-controls">
+                        <div class="rl-wallet">
+                            <span class="rl-label">Your coins</span>
+                            <span id="rlCoins" class="rl-coins">-</span>
+                        </div>
+                        <div class="rl-amount">
+                            <span class="rl-label">Bet amount</span>
+                            <div class="rl-amount-row">
+                                <input id="rlAmount" class="mm-input rl-amount-input" type="number" min="10" step="10" inputmode="numeric" aria-label="Bet amount">
+                                <div class="rl-chips" id="rlChips"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!--- The three colors: bet on one, the bets of everybody under it --->
+                    <div class="rl-boards">
+                        <div class="rl-board red" data-color="red">
+                            <button type="button" class="rl-place" data-color="red"><span class="rl-place-name">Red</span><span class="rl-place-x">2×</span></button>
+                            <div class="rl-board-sum"><span class="rl-count" data-count="red">0 bets</span><span class="rl-total" data-total="red">🪙 0</span></div>
+                            <ol class="rl-bets" data-bets="red"></ol>
+                        </div>
+                        <div class="rl-board green" data-color="green">
+                            <button type="button" class="rl-place" data-color="green"><span class="rl-place-name">Green</span><span class="rl-place-x">14×</span></button>
+                            <div class="rl-board-sum"><span class="rl-count" data-count="green">0 bets</span><span class="rl-total" data-total="green">🪙 0</span></div>
+                            <ol class="rl-bets" data-bets="green"></ol>
+                        </div>
+                        <div class="rl-board blue" data-color="blue">
+                            <button type="button" class="rl-place" data-color="blue"><span class="rl-place-name">Blue</span><span class="rl-place-x">2×</span></button>
+                            <div class="rl-board-sum"><span class="rl-count" data-count="blue">0 bets</span><span class="rl-total" data-total="blue">🪙 0</span></div>
+                            <ol class="rl-bets" data-bets="blue"></ol>
+                        </div>
+                    </div>
+
+                    <div id="rlFair" class="jp-fair"></div>
                 </section>
             </div>
 
             <aside class="room-side">
-                <div class="mm-card side-card">
+                <div class="mm-card side-card jp-history-card">
                     <div class="side-head">
-                        <span class="fw-semibold" id="lbNextTitle"><i class="bi bi-clock-history me-2"></i>Next update</span>
+                        <span class="fw-semibold"><i class="bi bi-clock-history me-2"></i>Last rounds</span>
                     </div>
-                    <p id="lbNext" class="lb-next">-</p>
-                    <p id="lbNextNote" class="mm-muted small mb-0">The places are counted all the time - the arrows show the change since midnight.</p>
+                    <ol id="rlRounds" class="jp-history"></ol>
+                    <p id="rlRoundsEmpty" class="jp-empty mm-muted" data-icon="🎡">No rounds yet - bet the first one!</p>
                 </div>
-
                 <div class="mm-card chat-card">
                     <div class="chat-head">
                         <span class="fw-semibold"><i class="bi bi-chat-dots me-2"></i>Chat</span>
@@ -188,7 +221,7 @@
               </svg>
               <span class="cs-dock-name">Jackpot</span>
             </a>
-            <a href="roulette" class="cs-tab">
+            <a href="roulette" class="cs-tab active" aria-current="page">
               <svg class="cs-dock-icon" viewBox="0 0 48 48" aria-hidden="true">
                 <!--- A roulette wheel: red, blue and one green, a gold middle, the ball --->
                 <circle cx="24" cy="24" r="20" fill="#3b2a12" />
@@ -271,7 +304,8 @@
     <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/casino_dock.js"></script>
     <script src="/static/scripts/casino_info.js"></script>
-    <script src="/static/scripts/leaderboard.js"></script>
+    <script src="/static/scripts/casino_fullscreen.js"></script>
+    <script src="/static/scripts/roulette.js"></script>
     <script src="/static/scripts/casino_wallet.js"></script>
     <script src="/static/scripts/chat.js"></script>
 </body>

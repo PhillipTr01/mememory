@@ -5,7 +5,7 @@ const { notices } = require("../game/notices");
 const seasons = require("../game/seasons");
 const maintenance = require("../game/maintenance");
 
-const GAMES = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots"];
+const GAMES = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/roulette"];
 
 function socketsOf(io, username) {
   const list = [];

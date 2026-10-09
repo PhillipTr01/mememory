@@ -1,6 +1,7 @@
 const config = require("./config");
 const coins = require("./coins");
 const slots = require("./slots");
+const roulette = require("./roulette");
 
 /*
  * How every game works, for the little "i" next to the title. Made from the
@@ -160,6 +161,26 @@ const GAMES = {
       ],
     };
   },
+
+  roulette: () => ({
+    title: "Roulette",
+    sections: [
+      {
+        heading: "How it works",
+        items: [
+          "A reel of 15 slots: 7 🟥 red, 7 🟦 blue and 1 🟩 green. Everybody bets on the same roll.",
+          `🟥 Red and 🟦 blue pay 2× the bet, 🟩 green pays 14×. On average the wheel pays back about ${(roulette.rtp("red") * 100).toFixed(1)}%.`,
+          "Red or blue - never both in one round. Green goes with either of them.",
+          `The first bet of a round starts the timer (${seconds(config.ROULETTE_TIMER)}) - more bets until it runs out, then the reel rolls. Nobody bets: no round.`,
+          "Provably fair: the hash of the round's seed is shown before the bets, the seed after the roll.",
+        ],
+      },
+      {
+        heading: "Limits",
+        items: [`At least 🪙 ${n(config.ROULETTE_MIN_BET)} per bet, at most 🪙 ${n(config.ROULETTE_MAX_BET)} per round (all colors together).`],
+      },
+    ],
+  }),
 
   leaderboard: () => ({
     title: "Leaderboard",

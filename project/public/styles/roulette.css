@@ -1,0 +1,466 @@
+/* Hidden roulette: a reel of 15 slots that rolls sideways, three colors to bet on */
+
+.rl-main {
+  /* The soft colors of the casino (the same as the seasons) */
+  --rl-red: #e0675a;
+  --rl-red-rgb: 224, 103, 90;
+  --rl-blue: #5b8fd6;
+  --rl-blue-rgb: 91, 143, 214;
+  --rl-green: #6fa784;
+  --rl-green-rgb: 111, 167, 132;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (max-width: 575px) {
+  .rl-main {
+    padding: 1rem;
+  }
+}
+
+.rl-head-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.rl-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--mm-muted);
+  text-transform: uppercase;
+}
+
+/* ---------- Last rolls ---------- */
+
+.rl-history-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.rl-history {
+  display: flex;
+  gap: 0.3rem;
+  min-width: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, #000 80%, transparent);
+}
+
+.rl-dot {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #1b1b1b;
+  font-variant-numeric: tabular-nums;
+}
+
+.rl-dot.red {
+  background: #e0675a;
+}
+
+.rl-dot.blue {
+  background: #5b8fd6;
+}
+
+.rl-dot.green {
+  background: #6fa784;
+}
+
+/* ---------- The reel ---------- */
+
+.rl-reel {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 0;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+.rl-track {
+  display: flex;
+  gap: 6px;
+  width: max-content;
+  will-change: transform;
+}
+
+.rl-tile {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  border: 1px solid rgba(var(--rl-rgb), 0.45);
+  border-radius: 12px;
+  background: rgba(var(--rl-rgb), 0.16);
+  color: var(--rl-color);
+  font-size: 1.3rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 -3px 0 rgba(var(--rl-rgb), 0.55);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.rl-tile.red,
+.rl-board.red {
+  --rl-color: var(--rl-red);
+  --rl-rgb: var(--rl-red-rgb);
+}
+
+.rl-tile.blue,
+.rl-board.blue {
+  --rl-color: var(--rl-blue);
+  --rl-rgb: var(--rl-blue-rgb);
+}
+
+.rl-tile.green,
+.rl-board.green {
+  --rl-color: var(--rl-green);
+  --rl-rgb: var(--rl-green-rgb);
+}
+
+/* The slot it stopped on */
+.rl-tile.won {
+  transform: scale(1.06);
+  background: rgba(var(--rl-rgb), 0.32);
+  box-shadow: inset 0 -3px 0 rgba(var(--rl-rgb), 0.7), 0 0 0 2px var(--rl-color), 0 0 18px rgba(var(--rl-rgb), 0.35);
+}
+
+/* The marker in the middle */
+.rl-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 3px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: var(--mm-accent);
+  box-shadow: 0 0 8px rgba(var(--mm-accent-rgb), 0.5);
+  pointer-events: none;
+}
+
+.rl-marker::before,
+.rl-marker::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+}
+
+.rl-marker::before {
+  top: -2px;
+  border-top-color: var(--mm-accent);
+}
+
+.rl-marker::after {
+  bottom: -2px;
+  border-bottom-color: var(--mm-accent);
+}
+
+/* ---------- Status and timer ---------- */
+
+.rl-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rl-status-text {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--mm-text);
+}
+
+.rl-status-text.red {
+  color: #e0675a;
+}
+
+.rl-status-text.blue {
+  color: #5b8fd6;
+}
+
+.rl-status-text.green {
+  color: #6fa784;
+}
+
+.rl-timer {
+  width: min(420px, 100%);
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--mm-surface-3);
+}
+
+.rl-timer-bar {
+  width: 0;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--mm-accent);
+}
+
+/* ---------- Amount ---------- */
+
+.rl-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.rl-wallet,
+.rl-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.rl-coins {
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.rl-amount-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rl-amount-input {
+  width: 130px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.rl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.rl-chip {
+  min-width: 40px;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 8px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.rl-chip:hover {
+  background: var(--mm-surface-3);
+}
+
+/* ---------- The three colors ---------- */
+
+.rl-boards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.rl-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  transition: opacity 0.3s ease;
+}
+
+.rl-place {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  width: 100%;
+  padding: 0.75rem 0.5rem;
+  border: 1px solid rgba(var(--rl-rgb), 0.4);
+  border-top: 3px solid var(--rl-color);
+  border-radius: 12px;
+  background: rgba(var(--rl-rgb), 0.1);
+  color: var(--rl-color);
+  transition: background 0.15s ease, transform 0.12s ease, opacity 0.2s ease;
+}
+
+.rl-place:not(:disabled):hover {
+  background: rgba(var(--rl-rgb), 0.2);
+}
+
+.rl-place:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.rl-place:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.rl-place-name {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.rl-place-x {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+}
+
+.rl-place-mine {
+  margin-top: 0.2rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(var(--rl-rgb), 0.18);
+  color: var(--mm-text);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.rl-board-sum {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0 0.25rem;
+  font-size: 0.75rem;
+  color: var(--mm-muted);
+}
+
+.rl-total {
+  font-weight: 700;
+  color: var(--mm-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.rl-bets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 220px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.rl-bet {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 8px;
+  background: var(--mm-surface-2);
+  font-size: 0.8rem;
+}
+
+.rl-bet.mine {
+  box-shadow: inset 0 0 0 1px rgba(var(--mm-accent-rgb), 0.45);
+}
+
+.rl-bet-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.rl-bet-name > span:not(.you-tag):not(.mm-avatar) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rl-bet-amount {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* After the roll: the color that won shines, the others step back */
+.rl-board.won .rl-place:disabled {
+  opacity: 1;
+  filter: none;
+}
+
+.rl-board.won .rl-place {
+  background: rgba(var(--rl-rgb), 0.24);
+  box-shadow: 0 0 0 1px var(--rl-color), 0 0 16px rgba(var(--rl-rgb), 0.3);
+}
+
+.rl-board.lost {
+  opacity: 0.45;
+}
+
+/* Red or blue this round: the other one is closed */
+.rl-board.blocked .rl-place {
+  filter: grayscale(0.8);
+}
+
+/* The last rounds (side) */
+.rl-round .rl-dot {
+  width: 28px;
+  height: 28px;
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 575px) {
+  .rl-tile {
+    width: 56px;
+    height: 56px;
+    font-size: 1.1rem;
+  }
+
+  .rl-boards {
+    gap: 0.4rem;
+  }
+
+  .rl-place {
+    padding: 0.6rem 0.25rem;
+  }
+
+  .rl-board-sum {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .rl-bet {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+  }
+
+  .rl-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rl-amount-input {
+    width: 100%;
+  }
+}

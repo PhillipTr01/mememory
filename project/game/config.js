@@ -56,6 +56,7 @@ module.exports = {
   GAME_POKER: true,
   GAME_BLACKJACK: true,
   GAME_SLOTS: true,
+  GAME_ROULETTE: true,
 
   // Coins (hidden jackpot): start amount, free coins for everybody once a day
   START_COINS: 25000,
@@ -187,6 +188,13 @@ module.exports = {
   SLOTS_MIN_GAP: 2250, // at least this long from one spin to the next of a player (the reels + the pause)
   SLOTS_FEED: 12, // last wins in the list
   SLOTS_TEST_BONUS: "off", // tests only: every spin starts a bonus game ("free" spins or the "coins" game) - not in the admin panel
+  // Roulette (hidden, see game/roulette.js): 7 red, 7 blue, 1 green - red / blue 2x, green 14x
+  ROULETTE_MIN_BET: 10,
+  ROULETTE_MAX_BET: 10000, // all bets of a player in one round together
+  ROULETTE_TIMER: 20000, // the first bet of a round starts it - then the reel rolls
+  ROULETTE_SPIN: 6000, // the reel rolls this long on the pages
+  ROULETTE_PAUSE: 3000, // the result is shown, then the next round waits for a bet
+  ROULETTE_HISTORY: 20, // last results in the row
 
   // The tables of the lobby (in this order, limits from the keys above); a page without a table opens "classic"
   BJ_TABLES: [

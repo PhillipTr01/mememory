@@ -158,6 +158,7 @@ async function startServer() {
   const poker = require("../sockets/poker_server")(io);
   const blackjack = require("../sockets/blackjack_server")(io);
   const slots = require("../sockets/slots_server")(io);
+  const roulette = require("../sockets/roulette_server")(io);
   require("../sockets/casino_server")(io);
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
@@ -170,6 +171,7 @@ async function startServer() {
     poker,
     blackjack,
     slots,
+    roulette,
     client(namespace, token, query) {
       return connect(`http://localhost:${port}${namespace}`, {
         query: query || {},
