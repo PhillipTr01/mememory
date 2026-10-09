@@ -68,6 +68,7 @@ function publicSeason(season) {
     id: season.id,
     name: season.name,
     icon: season.icon,
+    coinIcon: season.coinIcon || null,
     start: season.start,
     end: season.end,
     budget: season.budget,
@@ -188,6 +189,9 @@ function check(input, current) {
   if (name.length < 1 || name.length > 40) return { error: "A name, up to 40 characters." };
   const icon = typeof input.icon === "string" ? input.icon.trim() : "";
   if (icon.length < 1 || [...icon].length > 4) return { error: "An icon (one emoji)." };
+  // The coins of the season (null: the 🪙 of the casino)
+  const coinIcon = typeof input.coinIcon === "string" && input.coinIcon.trim() && input.coinIcon.trim() !== "🪙" ? input.coinIcon.trim() : null;
+  if (coinIcon != null && ([...coinIcon].length > 4 || /[<>&"'\s]/.test(coinIcon))) return { error: "A coin icon (one emoji)." };
   const start = Number(input.start);
   const end = Number(input.end);
   if (!Number.isFinite(start) || !Number.isFinite(end)) return { error: "A start and an end." };
@@ -235,7 +239,7 @@ function check(input, current) {
   // Never two seasons at the same time
   const other = state.seasons.find((season) => season !== current && !season.ended && season.start < end && start < season.end);
   if (other) return { error: `It overlaps with "${other.name}".` };
-  return { season: { name: name, icon: icon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, chanceDelay: chanceDelay, closeWait: closeWait, color: color, every: every, prizesOn: prizesOn, prizes: clean } };
+  return { season: { name: name, icon: icon, coinIcon: coinIcon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, chanceDelay: chanceDelay, closeWait: closeWait, color: color, every: every, prizesOn: prizesOn, prizes: clean } };
 }
 
 async function create(input) {
@@ -645,6 +649,14 @@ function reset() {
 }
 
 // The running season's accent color for the casino pages: a <style> (or "")
+// The coin icon of the running season for the casino pages (see casino_coin.js) - nothing: the 🪙
+function coinScript() {
+  const season = running();
+  const icon = season && season.coinIcon;
+  if (!icon) return "";
+  return `<script>window.CASINO_COIN = ${JSON.stringify(icon).replace(/</g, "\\u003c")};</script>`;
+}
+
 function accentStyle() {
   const season = running();
   const color = season && season.color;
@@ -654,4 +666,4 @@ function accentStyle() {
   return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
 }
 
-module.exports = { prizesOf, tieStats, board, normalOf, changeNormal, joinedAt, join, joined, joinCoins, closingInfo, chanceStatus, useChance, storedOf, spendSaved, clear, accentStyle, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+module.exports = { prizesOf, tieStats, board, normalOf, changeNormal, joinedAt, join, joined, joinCoins, closingInfo, chanceStatus, useChance, storedOf, spendSaved, clear, accentStyle, coinScript, addToSaved, INTERVALS, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };

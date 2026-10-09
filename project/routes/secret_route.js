@@ -47,7 +47,7 @@ module.exports = function (auth) {
   // (and the accent color of the running season)
   const hideOff = () => {
     const off = games.GAMES.filter((game) => !games.enabled(game.id));
-    return (off.length ? `<style>${off.map((game) => `.cs-tab[href="${game.tab}"]`).join(", ")} { display: none !important; }</style>` : "") + seasons.accentStyle();
+    return (off.length ? `<style>${off.map((game) => `.cs-tab[href="${game.tab}"]`).join(", ")} { display: none !important; }</style>` : "") + seasons.accentStyle() + seasons.coinScript();
   };
 
   // A game page - or, when the game is off, the next game that is on

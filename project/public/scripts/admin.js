@@ -1187,7 +1187,7 @@ function seasonDetail(season) {
       tile("💔", String(season.secondChances || 0), "second chances"),
       tile("⌛", season.secondChances ? chanceDelayText(season.chanceDelay) : "–", "wait between second chances"),
     ),
-    section("Look", tile("🏷️", season.icon + " " + season.name, "icon and name"), tile("🎨", (season.color || GOLD).toUpperCase(), "accent color", swatch)),
+    section("Look", tile("🏷️", season.icon + " " + season.name, "icon and name"), tile("🎨", (season.color || GOLD).toUpperCase(), "accent color", swatch), tile(season.coinIcon || "🪙", season.coinIcon ? "Own coins" : "Normal coins", "coin icon")),
   ];
   // The prizes: a place each, with its medal
   var prizes = el("div", "ad-season-section");
@@ -1257,6 +1257,8 @@ function seasonDefaults() {
 function fillSeasonForm(season) {
   document.getElementById("adSeasonName").value = season.name;
   document.getElementById("adSeasonIcon").value = season.icon;
+  document.getElementById("adSeasonCoin").value = season.coinIcon || "🪙";
+  markCoin();
   document.getElementById("adSeasonStart").value = localInput(season.start);
   document.getElementById("adSeasonEnd").value = localInput(season.end);
   document.getElementById("adSeasonBudget").value = season.budget;
@@ -1506,6 +1508,13 @@ function markColor() {
   document.querySelectorAll("#adSeasonColors button").forEach((b) => b.classList.toggle("active", b.dataset.color == color));
 }
 
+// The coins of a season: one of these or any emoji
+var COIN_ICONS = ["🪙", "💎", "⭐", "🍬", "🎃", "❄️", "🌸", "🍀", "🔥", "🪐", "🍪", "🥚"];
+function markCoin() {
+  var icon = document.getElementById("adSeasonCoin").value.trim();
+  document.querySelectorAll("#adSeasonCoins button").forEach((b) => b.classList.toggle("active", b.innerText == icon));
+}
+
 function markIcon() {
   var icon = document.getElementById("adSeasonIcon").value.trim();
   document.querySelectorAll("#adSeasonIcons button").forEach((b) => b.classList.toggle("active", b.innerText == icon));
@@ -1519,6 +1528,7 @@ async function saveSeason(event) {
   var body = {
     name: document.getElementById("adSeasonName").value.trim(),
     icon: document.getElementById("adSeasonIcon").value.trim(),
+    coinIcon: document.getElementById("adSeasonCoin").value.trim() || "🪙",
     start: new Date(document.getElementById("adSeasonStart").value).getTime(),
     end: new Date(document.getElementById("adSeasonEnd").value).getTime(),
     budget: Number(document.getElementById("adSeasonBudget").value),
@@ -1997,6 +2007,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }),
   );
   document.getElementById("adSeasonIcon").addEventListener("input", markIcon);
+  document.getElementById("adSeasonCoins").replaceChildren(
+    ...COIN_ICONS.map((icon) => {
+      var b = el("button", "ad-icon-pick", icon);
+      b.type = "button";
+      b.addEventListener("click", () => {
+        document.getElementById("adSeasonCoin").value = icon;
+        markCoin();
+      });
+      return b;
+    }),
+  );
+  document.getElementById("adSeasonCoin").addEventListener("input", markCoin);
   document.getElementById("adSeasonColors").replaceChildren(
     ...SEASON_COLORS.map((color) => {
       var b = el("button", "ad-color-pick");
