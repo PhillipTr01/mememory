@@ -9,7 +9,8 @@
     dock.classList.toggle("closed", !open);
     // (closed: less room below the page - the chat can take it)
     document.body.classList.toggle("cs-dock-closed", !open);
-    if (window.casinoGrowChat) requestAnimationFrame(window.casinoGrowChat);
+    // (after the menu moved: the chat as high as there is room now)
+    if (window.casinoGrowChat) setTimeout(window.casinoGrowChat, 260);
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
     toggle.title = open ? "Hide the menu" : "Show the menu";
   }

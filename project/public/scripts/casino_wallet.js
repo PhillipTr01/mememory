@@ -194,6 +194,14 @@
   if (onlineButton) {
     socket.on("casinoOnline", (data) => {
       var names = data.names || [];
+      // Who plays in the season world: the season's icon next to their names in the chat
+      var inSeason = new Set(data.season || []);
+      window.casinoSeasonNames = inSeason;
+      if (data.seasonIcon) document.body.style.setProperty("--season-icon", JSON.stringify(data.seasonIcon));
+      document.querySelectorAll(".msg-name[data-name]").forEach((node) => {
+        node.classList.toggle("in-season", inSeason.has(node.dataset.name));
+        node.title = inSeason.has(node.dataset.name) ? "Plays in " + (data.seasonName || "the season") : "";
+      });
       onlineButton.hidden = names.length == 0;
       var faces = el("span", "chat-online-faces");
       // (no tooltips here: the list says it all)
@@ -210,7 +218,8 @@
         el("div", "chat-online-title", "Online in the casino"),
         ...names.map((name) => {
           var row = el("div", "chat-online-row");
-          row.append(quiet(createAvatar(name, "sm")), el("span", "", name));
+          row.append(quiet(createAvatar(name, "sm")), el("span", inSeason.has(name) ? "in-season" : "", name));
+          if (inSeason.has(name)) row.title = "Plays in " + (data.seasonName || "the season");
           if (name == myName) row.appendChild(el("span", "you-tag", "You"));
           // Somebody else: a click - coins for them
           else {
@@ -833,34 +842,61 @@
     };
     // As high as the screen has room for between the pills and the end of the page - so the end of
     // the page never pushes the column up
-    // Phones and small windows (the column under the game): the chat as high as the screen has room
-    // for when the page is scrolled to its end - no empty space below it
+    // How much of the screen to keep free below a part of the page: above the menu where the menu
+    // is under it - otherwise only a small margin (the menu doesn't cover it)
+    var page = document.querySelector(".room-page");
+    var dockBar = document.getElementById("csDockBar");
+    var dockToggle = document.getElementById("csDockToggle");
+    var roomBelow = (node) => {
+      if (!dockBar || !node) return 16;
+      var bar = dockBar.getBoundingClientRect();
+      var top = Math.min(bar.top, dockToggle ? dockToggle.getBoundingClientRect().top : bar.top);
+      var r = node.getBoundingClientRect();
+      var under = bar.left < r.right && bar.right > r.left;
+      return under ? Math.max(16, Math.ceil(window.innerHeight - top) + 12) : 16;
+    };
+
+    // Phones and small windows (the column under the game): the chat right down to the menu at the
+    // end of the page - no empty space below it
     var chatCard = side.querySelector(".chat-card");
     var chatBody = document.getElementById("chat-content");
     var growChat = () => {
       if (!chatCard || !chatBody) return;
       chatBody.style.height = "";
+      if (page) page.style.paddingBottom = "";
       if (window.innerWidth >= 992) return;
-      var page = document.querySelector(".room-page");
-      var reserve = page ? parseFloat(getComputedStyle(page).paddingBottom) || 0 : 0;
+      var room = roomBelow(chatCard);
+      if (page) page.style.paddingBottom = room + "px";
       var around = chatCard.offsetHeight - chatBody.offsetHeight;
-      var target = window.innerHeight - around - reserve - 16;
-      if (target > chatBody.offsetHeight) chatBody.style.height = Math.round(target) + "px";
+      // At least a screen high (minus the menu) ...
+      var height = Math.max(chatBody.offsetHeight, Math.round(window.innerHeight - around - room - 16));
+      chatBody.style.height = height + "px";
+      // ... and down to the room for the menu at the end of the page
+      var gap = document.documentElement.scrollHeight - (chatCard.getBoundingClientRect().bottom + window.scrollY) - room;
+      if (gap > 0) chatBody.style.height = height + gap + "px";
     };
-    window.casinoGrowChat = growChat;
     var size = () => {
       side.style.height = "";
+      side.style.marginBottom = "";
       growChat();
       if (window.innerWidth < 992) return;
       var gap = layout.getBoundingClientRect().top - spot.getBoundingClientRect().top;
       var below = document.documentElement.scrollHeight - (layout.getBoundingClientRect().bottom + window.scrollY);
-      var height = Math.max(420, window.innerHeight - TOP - gap - below);
+      // The menu not under the column: the column goes down to the end of the screen (into the room
+      // kept for the menu below the page - that room doesn't grow the page)
+      var room = Math.min(below, roomBelow(side));
+      var height = Math.max(420, window.innerHeight - TOP - gap - room);
       side.style.height = height + "px";
+      if (room < below) side.style.marginBottom = -(below - room) + "px";
       // Everything fits on the screen but the column: a little shorter - no page scroll for a few pixels
       var extra = document.documentElement.scrollHeight - window.innerHeight;
       var main = layout.firstElementChild == side ? layout.lastElementChild : layout.firstElementChild;
       var sideLongest = main && side.getBoundingClientRect().bottom >= main.getBoundingClientRect().bottom;
       if (extra > 0 && sideLongest && height - extra >= 420) side.style.height = height - extra + "px";
+    };
+    window.casinoGrowChat = () => {
+      size();
+      place();
     };
     // At most once a frame (scroll events come more often than that on phones)
     var queued = false;

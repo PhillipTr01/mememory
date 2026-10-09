@@ -4273,3 +4273,17 @@ body.cs-dock-closed .room-page {
 .nav-board-state[hidden] {
   display: none;
 }
+
+/* Plays in the season world right now: the season's icon next to the name (chat, online list) */
+.msg-name.in-season::after,
+.chat-online-row .in-season::after {
+  content: var(--season-icon, "🏆");
+  display: inline-block;
+  margin-left: 0.3rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  font-size: 0.72em;
+  line-height: 1.5;
+  vertical-align: 1px;
+}

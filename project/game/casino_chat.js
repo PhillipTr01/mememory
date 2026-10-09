@@ -30,11 +30,24 @@ function create(key, options = {}) {
     socket.on("disconnect", sendOnline);
   }
 
-  // Everybody with a casino page open (once per player, however many tabs)
+  // Everybody with a casino page open (once per player, however many tabs) - season: who plays in
+  // the season world right now (the chat marks them with the season's icon)
   function online() {
     const names = new Set();
-    for (const page of pages) for (const socket of page.namespace.sockets.values()) names.add(socket.data.username);
-    return { names: [...names].sort((a, b) => a.localeCompare(b)) };
+    const season = new Set();
+    for (const page of pages) {
+      for (const socket of page.namespace.sockets.values()) {
+        names.add(socket.data.username);
+        if (page.namespace.name.startsWith("/season/")) season.add(socket.data.username);
+      }
+    }
+    const running = season.size ? require("./seasons").running() : null;
+    return {
+      names: [...names].sort((a, b) => a.localeCompare(b)),
+      season: [...season].sort((a, b) => a.localeCompare(b)),
+      seasonIcon: running ? running.icon : null,
+      seasonName: running ? running.name : null,
+    };
   }
 
   // Joins and leaves come in bursts (page changes): one update for them
@@ -71,6 +84,8 @@ function create(key, options = {}) {
     const text = cleanText(socket, data);
     if (text == null) return;
     const entry = { id: ++messageId, time: Date.now(), type: "user", name: socket.data.username, spectator: false, text: text };
+    // (sent from the season world: the others see the season badge right away)
+    if (socket.nsp && socket.nsp.name.startsWith("/season/")) sendOnline();
     history.push(entry);
     if (history.length > config.CASINO_CHAT_HISTORY) history.splice(0, history.length - config.CASINO_CHAT_HISTORY);
     for (const page of pages) page.namespace.to(page.room).emit("chatMessage", entry);
