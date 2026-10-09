@@ -5,12 +5,16 @@
 (function () {
   var KEY = "casinoDockClosed";
 
-  function setOpen(dock, toggle, open) {
+  // now: right away (the page opens - no animation to wait for)
+  function setOpen(dock, toggle, open, now) {
     dock.classList.toggle("closed", !open);
     // (closed: less room below the page - the chat can take it)
     document.body.classList.toggle("cs-dock-closed", !open);
     // (after the menu moved: the chat as high as there is room now)
-    if (window.casinoGrowChat) setTimeout(window.casinoGrowChat, 260);
+    if (window.casinoGrowChat) {
+      if (now) window.casinoGrowChat();
+      else setTimeout(window.casinoGrowChat, 260);
+    }
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
     toggle.title = open ? "Hide the menu" : "Show the menu";
   }
@@ -25,7 +29,7 @@
     } catch (error) {
       // no storage: open
     }
-    setOpen(dock, toggle, !closed);
+    setOpen(dock, toggle, !closed, true);
     // No animation when the page opens
     requestAnimationFrame(() => dock.classList.add("ready"));
     toggle.addEventListener("click", () => {

@@ -3151,3 +3151,248 @@ a.ad-case-row:hover {
 .ad-rain-main .ad-note {
   margin: 0;
 }
+
+/* ---------- A season's page: the facts compact, side by side ---------- */
+.ad-kv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.6rem 1.6rem;
+  margin: 0.4rem 0 0.2rem;
+}
+
+.ad-kv-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ad-kv-group .ad-sublabel {
+  margin: 0 0 0.25rem;
+}
+
+.ad-kv {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.32rem 0;
+  border-bottom: 1px dashed var(--mm-border);
+  font-size: 0.88rem;
+}
+
+.ad-kv:last-child {
+  border-bottom: 0;
+}
+
+.ad-kv-label {
+  color: var(--mm-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ad-kv-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ad-kv-value .ad-season-swatch {
+  width: 0.8rem;
+  height: 0.8rem;
+  margin: 0;
+  border-radius: 50%;
+}
+
+/* Who may play: the picked players as chips, a field to add more */
+.ad-players-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+}
+
+.ad-players-pick[hidden] {
+  display: none;
+}
+
+.ad-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ad-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.3rem 0.2rem 0.25rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ad-chip .mm-avatar,
+.ad-chip .mm-avatar.sm {
+  --size: 22px;
+}
+
+.ad-chip-x {
+  width: 1.3rem;
+  height: 1.3rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--mm-muted);
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.ad-chip-x:hover {
+  background: var(--mm-danger, #e0675a);
+  color: #fff;
+}
+
+/* ---------- Test mode: one compact card, the debug tools in a tidy grid ---------- */
+.ad-test-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.ad-test-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem 1.5rem;
+}
+
+.ad-test-intro .ad-note {
+  margin: 0.2rem 0 0;
+}
+
+.ad-test .ad-test-form {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ad-test .ad-test-form select {
+  min-width: 160px;
+}
+
+.ad-test .ad-test-form .ad-inline-input .mm-input {
+  width: 140px;
+}
+
+.ad-test-empty {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px dashed var(--mm-border);
+  border-radius: 10px;
+  color: var(--mm-muted);
+  font-size: 0.88rem;
+}
+
+.ad-test-empty[hidden] {
+  display: none;
+}
+
+.ad-test-list:empty {
+  display: none;
+}
+
+.ad-test-tools .ad-card-head .ad-note {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.ad-test-tools .ad-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.4rem;
+}
+
+.ad-test-tools .ad-tool-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+}
+
+.ad-test-tools .ad-tool-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.ad-test-tools .ad-tool-row {
+  display: grid;
+  grid-template-columns: 4.6rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--mm-border);
+}
+
+.ad-tool-label {
+  color: var(--mm-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ad-tool-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.ad-test-tools .ad-tool-controls .mm-input {
+  width: auto;
+  flex: 1 1 120px;
+  min-width: 0;
+  height: 2.1rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.ad-test-tools .ad-tool-controls .ad-tool-amount {
+  flex: 0 1 120px;
+}
+
+.ad-test-tools .ad-tool-controls .ad-tool-amount .mm-input {
+  width: 100%;
+}
+
+.ad-test-tools .ad-tool-controls .ad-tool-small {
+  flex: 0 1 110px;
+}
+
+.ad-test-tools .ad-tool-controls .mm-btn-sm {
+  height: 2.1rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .ad-test .ad-test-form {
+    flex-wrap: wrap;
+  }
+}

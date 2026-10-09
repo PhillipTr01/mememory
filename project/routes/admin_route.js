@@ -173,7 +173,8 @@ module.exports = function () {
     admin,
     asyncHandler(async (req, res) => {
       const q = String(req.query.q || "").toLowerCase();
-      res.json((await players()).filter((p) => p.username.toLowerCase().includes(q)).slice(0, 50));
+      const limit = Math.min(1000, Math.max(1, Number(req.query.limit) || 50));
+      res.json((await players()).filter((p) => p.username.toLowerCase().includes(q)).slice(0, limit));
     }),
   );
 

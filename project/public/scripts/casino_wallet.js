@@ -430,6 +430,12 @@
   var seasonData = null; // the last answer of "season"
   var pillTimer = null;
   var inSeasonWorld = window.CASINO_WORLD == "season";
+  // (the pill as on the last page: no jump when it turns out there is none)
+  try {
+    if (board && sessionStorage.getItem("csPill") == "0") board.hidden = true;
+  } catch (e) {
+    // no storage
+  }
   if (inSeasonWorld) document.body.classList.add("cs-season-world");
 
   // How long until a time: "6d 23h 12m", the last hour to the second
@@ -453,6 +459,11 @@
     var shown = season || upcoming;
     board.classList.add("ready");
     board.hidden = !shown;
+    try {
+      sessionStorage.setItem("csPill", shown ? "1" : "0");
+    } catch (e) {
+      // no storage
+    }
     document.body.classList.toggle("cs-has-season-pill", !!shown);
     if (!shown) return;
     document.getElementById("navBoardIcon").innerText = shown.icon || "🏆";
@@ -848,12 +859,12 @@
     var dockBar = document.getElementById("csDockBar");
     var dockToggle = document.getElementById("csDockToggle");
     var roomBelow = (node) => {
-      if (!dockBar || !node) return 16;
+      if (!dockBar || !node) return 32;
       var bar = dockBar.getBoundingClientRect();
       var top = Math.min(bar.top, dockToggle ? dockToggle.getBoundingClientRect().top : bar.top);
       var r = node.getBoundingClientRect();
       var under = bar.left < r.right && bar.right > r.left;
-      return under ? Math.max(16, Math.ceil(window.innerHeight - top) + 12) : 16;
+      return under ? Math.max(32, Math.ceil(window.innerHeight - top) + 20) : 32;
     };
 
     // Phones and small windows (the column under the game): the chat right down to the menu at the

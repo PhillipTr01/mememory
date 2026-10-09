@@ -1500,6 +1500,50 @@ function seasonHead(season) {
 }
 
 // The page of one season (only to look at): its head with what can be done, everything that is set as tiles, the prizes
+/* ---------- Who may play in a season: the players picked (whitelist / banlist) ---------- */
+
+var pickPlayers = [];
+async function loadPickPlayers() {
+  if (pickPlayers.length) return;
+  try {
+    pickPlayers = (await api("users?limit=1000")).map((p) => p.username);
+  } catch (error) {
+    return;
+  }
+  document.getElementById("adSeasonPlayers").replaceChildren(...pickPlayers.map((name) => new Option(name, name)));
+}
+
+function pickedNames() {
+  return document.getElementById("adSeasonNames").value.split(/[\s,;]+/).filter(Boolean);
+}
+
+function setPicked(names) {
+  var seen = new Set();
+  var clean = names.filter((name) => !seen.has(name.toLowerCase()) && seen.add(name.toLowerCase()));
+  document.getElementById("adSeasonNames").value = clean.join(", ");
+  renderPlayerPicks();
+}
+
+function renderPlayerPicks() {
+  var chips = document.getElementById("adSeasonChips");
+  var names = pickedNames();
+  chips.replaceChildren(
+    ...(names.length
+      ? names.map((name) => {
+          var chip = el("span", "ad-chip");
+          chip.append(createAvatar(name, "sm"), el("span", "", name));
+          var remove = el("button", "ad-chip-x", "✕");
+          remove.type = "button";
+          remove.setAttribute("aria-label", "Remove " + name);
+          remove.addEventListener("click", () => setPicked(pickedNames().filter((n) => n != name)));
+          chip.appendChild(remove);
+          return chip;
+        })
+      : [el("span", "ad-note", "Nobody on the list yet.")]),
+  );
+  if (document.getElementById("adSeasonAccess").value != "all") loadPickPlayers();
+}
+
 function seasonDetail(season) {
   var head = el("div", "ad-season-detail-head");
   head.appendChild(seasonHead(season));
@@ -1515,10 +1559,14 @@ function seasonDetail(season) {
   if (season.status != "running" && season.status != "starting") button("Delete", "", () => deleteSeason(season));
   head.appendChild(actions);
 
+  // One fact per line: the name on the left, the value on the right
   var tile = (icon, value, label, extra) => {
-    var box = el("div", "ad-season-tile");
-    box.append(el("span", "ad-season-tile-icon", icon), el("b", "", value), el("span", "", label));
-    if (extra) box.appendChild(extra);
+    var box = el("div", "ad-kv");
+    var name = el("span", "ad-kv-label", label);
+    var val = el("b", "ad-kv-value", value);
+    if (extra) val.prepend(extra);
+    box.append(name, val);
+    box.title = label;
     return box;
   };
   var time =
@@ -1530,14 +1578,14 @@ function seasonDetail(season) {
   var swatch = el("span", "ad-season-swatch");
   swatch.style.background = season.color || GOLD;
   var section = (title, ...tiles) => {
-    var box = el("div", "ad-season-section");
-    var row = el("div", "ad-season-tiles");
-    row.append(...tiles);
-    box.append(el("h3", "ad-label ad-sublabel", title), row);
+    var box = el("div", "ad-kv-group");
+    box.append(el("h3", "ad-label ad-sublabel", title), ...tiles);
     return box;
   };
+  var grid = el("div", "ad-kv-grid");
   var parts = [
     head,
+    grid,
     section(
       "Now",
       time,
@@ -1548,8 +1596,8 @@ function seasonDetail(season) {
       "Time",
       tile("🟢", dateText(season.start), "start"),
       tile("🔴", dateText(season.end), "end"),
-      tile("⏳", season.closeWait + " s", "countdown before start and end"),
-      tile(season.highlight ? "✨" : "–", season.highlight ? "Highlighted" : "Not highlighted", "before the start"),
+      tile("⏳", season.closeWait + " s", "countdown"),
+      tile("✨", season.highlight ? "yes" : "no", "highlight before the start"),
       tile("📊", EVERY_NAMES[season.every], "leaderboard updates"),
     ),
     section(
@@ -1557,14 +1605,16 @@ function seasonDetail(season) {
       tile("🪙", formatCoins(season.budget), "start budget"),
       tile("🎁", formatCoins(season.dailyBonus != null ? season.dailyBonus : dailyBonusSetting), "daily bonus"),
       tile("💔", String(season.secondChances || 0), "second chances"),
-      tile("⌛", season.secondChances ? chanceDelayText(season.chanceDelay) : "–", "wait between second chances"),
+      tile("⌛", season.secondChances ? chanceDelayText(season.chanceDelay) : "–", "wait between them"),
     ),
     section(
       "Who may play",
-      tile(season.access && season.access.mode == "whitelist" ? "🔒" : season.access && season.access.mode == "banlist" ? "🚫" : "🌍", season.access && season.access.mode == "whitelist" ? "Whitelist" : season.access && season.access.mode == "banlist" ? "Banlist" : "Everybody", season.access && season.access.mode != "all" ? season.access.names.length + " on the list" : "open season"),
+      tile("🌍", season.access && season.access.mode == "whitelist" ? "Whitelist (" + season.access.names.length + ")" : season.access && season.access.mode == "banlist" ? "Banlist (" + season.access.names.length + ")" : "Everybody", "players"),
     ),
-    section("Look", tile("🏷️", season.icon + " " + season.name, "icon and name"), tile("🎨", (season.color || GOLD).toUpperCase(), "accent color", swatch), tile(season.coinIcon || "💎", "Season coins", "coin icon")),
+    section("Look", tile("🏷️", season.icon + " " + season.name, "icon and name"), tile("🎨", (season.color || GOLD).toUpperCase(), "accent color", swatch), tile(season.coinIcon || "💎", season.coinIcon || "💎", "coin icon")),
   ];
+  // (the sections side by side in one grid)
+  grid.append(...parts.splice(2));
   // The prizes: a place each, with its medal
   var prizes = el("div", "ad-season-section");
   prizes.appendChild(el("h3", "ad-label ad-sublabel", "Prizes"));
@@ -1653,7 +1703,8 @@ function fillSeasonForm(season) {
   var access = season.access || { mode: "all", names: [] };
   document.getElementById("adSeasonAccess").value = access.mode;
   document.getElementById("adSeasonNames").value = access.names.join(", ");
-  document.getElementById("adSeasonNames").hidden = access.mode == "all";
+  document.getElementById("adSeasonPicker").hidden = access.mode == "all";
+  renderPlayerPicks();
   document.getElementById("adSeasonHighlight").checked = season.highlight === true;
   // A running season: start and budget happened already
   var running = season.status == "running";
@@ -2373,8 +2424,25 @@ document.addEventListener("DOMContentLoaded", () => {
   // Seasons
   document.getElementById("adSeasonForm").addEventListener("submit", saveSeason);
   document.getElementById("adSeasonAccess").addEventListener("change", (event) => {
-    document.getElementById("adSeasonNames").hidden = event.target.value == "all";
+    document.getElementById("adSeasonPicker").hidden = event.target.value == "all";
+    if (event.target.value != "all") loadPickPlayers();
   });
+  // The player picker: a name from the list (or typed) - Enter or picking it adds it
+  var pick = document.getElementById("adSeasonPick");
+  var addPick = () => {
+    var name = pick.value.trim();
+    if (!name) return;
+    var known = pickPlayers.find((p) => p.toLowerCase() == name.toLowerCase());
+    setPicked([...pickedNames(), known || name]);
+    pick.value = "";
+  };
+  pick.addEventListener("keydown", (event) => {
+    if (event.key == "Enter") {
+      event.preventDefault();
+      addPick();
+    }
+  });
+  pick.addEventListener("change", addPick);
   document.getElementById("adSeasonPrizesOn").addEventListener("change", showPrizes);
   document.getElementById("adSeasonAddPrize").addEventListener("click", () => {
     var rows = document.querySelectorAll("#adSeasonPrizes .ad-prize-row");
