@@ -10,6 +10,7 @@ function slotsRtp() {
 }
 const roulette = require("./roulette");
 const limits = require("./limits");
+const baucua = require("./baucua");
 
 /*
  * How every game works, for the little "i" next to the title. Made from the
@@ -186,6 +187,27 @@ const GAMES = {
       {
         heading: "Limits",
         items: [`At least 🪙 ${n(L.ROULETTE_MIN_BET)} per bet, at most 🪙 ${n(L.ROULETTE_MAX_BET)} per round (all colors together).`],
+      },
+    ],
+  }),
+
+  baucua: (L) => ({
+    title: "Bầu Cua",
+    sections: [
+      {
+        heading: "How it works",
+        items: [
+          "Three dice, every die shows one of six animals: Tiger, Gourd, Rooster, Fish, Crab and Shrimp. Everybody bets on the same roll.",
+          "Bet on one animal or on several. The bowl is lifted - every bet pays by how many dice show its animal:",
+          `1 die: ${baucua.PAYOUT[1]}× the bet · 2 dice: ${baucua.PAYOUT[2]}× · all 3 dice: ${baucua.PAYOUT[3]}× (your bet included). No die: the bet is lost.`,
+          `On average a bet pays back about ${(baucua.rtp() * 100).toFixed(1)}% - the same for every animal.`,
+          `The first bet of a round starts the timer (${seconds(config.BAUCUA_TIMER)}) - more bets until it runs out, then the bowl shakes. Nobody bets: no round.`,
+          "Provably fair: the hash of the round's seed is shown before the bets, the seed after the roll.",
+        ],
+      },
+      {
+        heading: "Limits",
+        items: [`At least 🪙 ${n(L.BAUCUA_MIN_BET)} per bet, at most 🪙 ${n(L.BAUCUA_MAX_BET)} per round (all animals together).`],
       },
     ],
   }),

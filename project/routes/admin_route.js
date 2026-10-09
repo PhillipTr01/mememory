@@ -453,7 +453,14 @@ module.exports = function () {
       if (!added) return res.status(400).json({ error: "The reel rolls - in a moment." });
       return res.json({ ok: true, added: added });
     }
-    res.status(400).json({ error: "Bots only for the jackpot and the roulette (case battles have their own)." });
+    if (body.game === "baucua" && server) {
+      const animals = require("../game/baucua").IDS;
+      let added = 0;
+      for (let i = 0; i < count; i++) if (server.botBet(botName(), animals.includes(body.animal) ? body.animal : animals[Math.floor(Math.random() * animals.length)], amount)) added++;
+      if (!added) return res.status(400).json({ error: "The dice are rolling - in a moment." });
+      return res.json({ ok: true, added: added });
+    }
+    res.status(400).json({ error: "Bots only for the jackpot, the roulette and Bầu Cua (case battles have their own)." });
   });
   // One lever of the debug tools: {game, action, value} - only the test world
   router.post("/api/test/debug", admin, async (req, res) => {
@@ -468,6 +475,7 @@ module.exports = function () {
         clear: () => server.clearPot() || "Not during a draw.",
       },
       roulette: { color: () => server.forceColor(value) },
+      baucua: { dice: () => server.forceDice(value) },
       slots: { bonus: () => server.forceBonus(value) },
       blackjack: { deal: () => server.stackDeal(value) || "Unknown deal." },
       battles: {
@@ -485,7 +493,7 @@ module.exports = function () {
   router.post("/api/test/now", admin, (req, res) => {
     const game = req.body && req.body.game;
     const server = worlds.servers.get(game);
-    const done = game === "jackpot" && server ? server.drawNow() : game === "roulette" && server ? server.rollNow() : false;
+    const done = game === "jackpot" && server ? server.drawNow() : (game === "roulette" || game === "baucua") && server ? server.rollNow() : false;
     if (!done) return res.status(400).json({ error: game === "jackpot" ? "No countdown runs (two players needed)." : "No round runs (a bet starts it)." });
     res.json({ ok: true });
   });

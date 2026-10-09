@@ -37,6 +37,7 @@
                 <span class="ad-nav-head">Games</span>
                 <a href="#games/jackpot" class="ad-nav-item" data-group="jackpot"><span class="ad-nav-icon">💰</span><span class="ad-nav-label">Jackpot</span><span class="ad-state" data-game="GAME_JACKPOT"></span></a>
                 <a href="#games/roulette" class="ad-nav-item" data-group="roulette"><span class="ad-nav-icon">🎡</span><span class="ad-nav-label">Roulette</span><span class="ad-state" data-game="GAME_ROULETTE"></span></a>
+                <a href="#games/baucua" class="ad-nav-item" data-group="baucua"><span class="ad-nav-icon">🦀</span><span class="ad-nav-label">Bầu Cua</span><span class="ad-state" data-game="GAME_BAUCUA"></span></a>
                 <a href="#games/battles" class="ad-nav-item" data-group="battles"><span class="ad-nav-icon">🎁</span><span class="ad-nav-label">Case battles</span><span class="ad-state" data-game="GAME_BATTLES"></span></a>
                 <a href="#games/poker" class="ad-nav-item" data-group="poker"><span class="ad-nav-icon">♠️</span><span class="ad-nav-label">Poker</span><span class="ad-state" data-game="GAME_POKER"></span></a>
                 <a href="#games/blackjack" class="ad-nav-item" data-group="blackjack"><span class="ad-nav-icon">🃏</span><span class="ad-nav-label">Blackjack</span><span class="ad-state" data-game="GAME_BLACKJACK"></span></a>
@@ -601,6 +602,31 @@
                                     <span class="ad-tool-label">Now</span>
                                     <div class="ad-tool-controls">
                                         <button type="button" class="mm-btn mm-btn-sm" data-now="roulette">⏩ Roll</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ad-tool-card" data-tool="baucua">
+                                <h4 class="ad-tool-title"><span class="ad-tool-icon">🦀</span>Bầu Cua</h4>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Bots</span>
+                                    <div class="ad-tool-controls">
+                                        <span class="ad-inline-input ad-tool-amount"><span class="ad-setting-unit">🪙</span><input id="adBotBaucuaAmount" class="mm-input" type="number" min="1" step="100" value="500" aria-label="Bầu Cua bot bet"></span>
+                                        <select id="adBotBaucuaAnimal" class="mm-input ad-tool-small" aria-label="Animal"><option value="">Any animal</option><option value="tiger">Tiger</option><option value="gourd">Gourd</option><option value="rooster">Rooster</option><option value="fish">Fish</option><option value="crab">Crab</option><option value="shrimp">Shrimp</option></select>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-bots="baucua" data-count="1">+1</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-bots="baucua" data-count="3">+3</button>
+                                    </div>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Dice</span>
+                                    <div class="ad-tool-controls">
+                                        <select id="adToolBaucuaDice" class="mm-input" aria-label="Next dice"><option value="">Fair (the seed)</option><option value="single">Three different</option><option value="pair">A pair</option><option value="triple">A triple</option></select>
+                                        <button type="button" class="mm-btn mm-btn-sm ad-tool-go" data-lever="baucua:dice:#adToolBaucuaDice">Set</button>
+                                    </div>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Now</span>
+                                    <div class="ad-tool-controls">
+                                        <button type="button" class="mm-btn mm-btn-sm" data-now="baucua">⏩ Roll</button>
                                     </div>
                                 </div>
                             </div>

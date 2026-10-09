@@ -80,6 +80,7 @@ module.exports = function (auth) {
   router.get("/blackjack", auth, approved, gamePage("blackjack", "blackjack.html"));
   router.get("/slots", auth, approved, gamePage("slots", "slots.html"));
   router.get("/roulette", auth, approved, gamePage("roulette", "roulette.html"));
+  router.get("/baucua", auth, approved, gamePage("baucua", "baucua.html"));
   router.get("/leaderboard", auth, approved, page("leaderboard.html", hideOff));
   router.get("/shop", auth, approved, page("shop.html", hideOff));
 

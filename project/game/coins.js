@@ -6,7 +6,7 @@ const days = require("./days");
 const limits = require("./limits");
 
 // Bets (every game): one may take at most limits.betCap of the balance - more only with options.nocap (a double, a split)
-const BET_REASONS = ["jackpot bet", "battle", "poker buy-in", "poker chips", "blackjack bet", "slots bet", "roulette bet"];
+const BET_REASONS = ["jackpot bet", "battle", "poker buy-in", "poker chips", "blackjack bet", "slots bet", "roulette bet", "baucua bet"];
 
 /*
  * "change" (username) after every change of a balance: every page that shows

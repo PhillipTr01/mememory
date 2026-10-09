@@ -11,6 +11,7 @@ var HISTORY_KINDS = [
   ["Blackjack", [["blackjack bet", "Bet"], ["blackjack win", "Win"], ["blackjack refund", "Refund"]]],
   ["Slots", [["slots bet", "Bet"], ["slots win", "Win"]]],
   ["Roulette", [["roulette bet", "Bet"], ["roulette win", "Win"], ["roulette refund", "Refund"]]],
+  ["Bầu Cua", [["baucua bet", "Bet"], ["baucua win", "Win"], ["baucua refund", "Refund"]]],
 ];
 
 
@@ -86,10 +87,11 @@ var SETTING_GROUPS = {
   blackjack: ["Blackjack", "Turn blackjack on or off, the seats and the limits of every table."],
   slots: ["Slots", "Turn slots on or off, the bet per spin."],
   roulette: ["Roulette", "Turn the roulette on or off, the bets, the time to bet."],
+  baucua: ["Bầu Cua", "Turn Bầu Cua on or off, the bets, the time to bet."],
 };
 var settingsGroup = "general";
 
-var GAME_GROUPS = ["jackpot", "roulette", "battles", "poker", "blackjack", "slots"];
+var GAME_GROUPS = ["jackpot", "roulette", "baucua", "battles", "poker", "blackjack", "slots"];
 
 // Old addresses (bookmarks): to where it is now
 function redirect(parts) {
@@ -292,7 +294,7 @@ async function loadOverview() {
 }
 
 // What the games are doing right now
-var PHASE_TEXT = { open: "waiting for bets", countdown: "countdown", drawing: "drawing", betting: "taking bets", playing: "playing", dealer: "dealer's turn", result: "paying out", waiting: "waiting", preflop: "pre-flop", flop: "flop", turn: "turn", river: "river", showdown: "showdown" };
+var PHASE_TEXT = { idle: "waiting for bets", rolling: "rolling", open: "waiting for bets", countdown: "countdown", drawing: "drawing", betting: "taking bets", playing: "playing", dealer: "dealer's turn", result: "paying out", waiting: "waiting", preflop: "pre-flop", flop: "flop", turn: "turn", river: "river", showdown: "showdown" };
 
 function liveRow(icon, name, detail, value, active) {
   var row = el("div", "ad-row");
@@ -306,6 +308,14 @@ function renderLive(games) {
   var rows = [];
   var jp = games.jackpot;
   if (jp) rows.push(liveRow("🪙", "Jackpot", "Round " + jp.round + " · " + (PHASE_TEXT[jp.phase] || jp.phase) + " · " + jp.players + (jp.players == 1 ? " player" : " players"), "🪙 " + formatCoins(jp.total), jp.total > 0));
+  // The shared rounds: roulette and Bầu cua
+  [
+    ["roulette", "🎡", "Roulette"],
+    ["baucua", "🦀", "Bầu Cua"],
+  ].forEach(([key, icon, name]) => {
+    var g = games[key];
+    if (g) rows.push(liveRow(icon, name, "Round " + g.round + " · " + (PHASE_TEXT[g.phase] || g.phase) + " · " + g.players + (g.players == 1 ? " player" : " players"), "🪙 " + formatCoins(g.total), g.total > 0));
+  });
   var bt = games.battles;
   if (bt) rows.push(liveRow("⚔️", "Case battles", bt.waiting + " waiting · " + bt.running + " running", "🪙 " + formatCoins(bt.pot), bt.running > 0));
   var pk = games.poker;
@@ -853,8 +863,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("[data-bots]").forEach((button) =>
     button.addEventListener("click", async () => {
       var game = button.dataset.bots;
-      var body = { game: game, count: Number(button.dataset.count), amount: Math.floor(Number(document.getElementById(game == "jackpot" ? "adBotJackpotAmount" : "adBotRouletteAmount").value)) };
+      var body = { game: game, count: Number(button.dataset.count), amount: Math.floor(Number(document.getElementById(game == "jackpot" ? "adBotJackpotAmount" : game == "baucua" ? "adBotBaucuaAmount" : "adBotRouletteAmount").value)) };
       if (game == "roulette") body.color = document.getElementById("adBotRouletteColor").value;
+      if (game == "baucua") body.animal = document.getElementById("adBotBaucuaAnimal").value;
       button.disabled = true;
       try {
         var data = await api("test/bots", body);

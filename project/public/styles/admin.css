@@ -3077,6 +3077,11 @@ a.ad-case-row:hover {
   --tool-rgb: 217, 96, 79;
 }
 
+.ad-tool-card[data-tool="baucua"] {
+  --tool: #c98bb9;
+  --tool-rgb: 201, 139, 185;
+}
+
 .ad-tool-card[data-tool="slots"] {
   --tool: #9d84c2;
   --tool-rgb: 157, 132, 194;

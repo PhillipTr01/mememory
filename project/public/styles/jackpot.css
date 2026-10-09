@@ -1864,13 +1864,25 @@ body.jackpot-theme {
   .cs-tab {
     flex: 1 1 0;
     min-width: 0;
-    padding: 0.35rem 0.2rem;
-    font-size: 0.66rem;
+    padding: 0.35rem 0.1rem;
+    font-size: 0.6rem;
+  }
+
+  /* (eight games: a long name is cut, never runs into the next one) */
+  .cs-dock-name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .cs-dock-icon {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .cs-dock-bar {
+    gap: 0.1rem;
+    padding: 0.3rem;
   }
 }
 

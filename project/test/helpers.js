@@ -159,16 +159,17 @@ async function startServer() {
   const blackjack = require("../sockets/blackjack_server")(io);
   const slots = require("../sockets/slots_server")(io);
   const roulette = require("../sockets/roulette_server")(io);
+  const baucua = require("../sockets/baucua_server")(io);
   // The admin's test world (game/worlds.js)
   const worlds = require("../game/worlds");
   const test = {};
-  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette"]) {
+  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua"]) {
     test[game] = require(`../sockets/${game}_server`)(io, { world: worlds.TEST });
     worlds.servers.set(game, test[game]);
   }
   // The season world (game/seasons.js)
   const season = {};
-  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette"]) {
+  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua"]) {
     season[game] = require(`../sockets/${game}_server`)(io, { world: worlds.SEASON });
     worlds.seasonServers.set(game, season[game]);
   }
@@ -185,6 +186,7 @@ async function startServer() {
     blackjack,
     slots,
     roulette,
+    baucua,
     test,
     season,
     client(namespace, token, query) {

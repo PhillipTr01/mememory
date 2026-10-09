@@ -50,6 +50,10 @@ const FIELDS = [
   { group: "roulette", section: "Bets", key: "ROULETTE_MIN_BET", season: true, label: "Min bet", step: 10, min: 1, max: 100000000 },
   { group: "roulette", section: "Bets", key: "ROULETTE_MAX_BET", season: true, label: "Max bet per round", hint: "All colors of a player together.", step: 1000, min: 1, max: 100000000 },
   { group: "roulette", section: "Round", key: "ROULETTE_TIMER", label: "Time to bet", hint: "Starts with the first bet of a round.", unit: "s", scale: 1000, step: 1, min: 3, max: 120 },
+  { group: "baucua", section: "Bầu Cua", key: "GAME_BAUCUA", type: "toggle", label: "Bầu Cua is on", hint: "Off: no tab, nobody can open it." },
+  { group: "baucua", section: "Bets", key: "BAUCUA_MIN_BET", season: true, label: "Min bet", step: 10, min: 1, max: 100000000 },
+  { group: "baucua", section: "Bets", key: "BAUCUA_MAX_BET", season: true, label: "Max bet per round", hint: "All animals of a player together.", step: 1000, min: 1, max: 100000000 },
+  { group: "baucua", section: "Round", key: "BAUCUA_TIMER", label: "Time to bet", hint: "Starts with the first bet of a round.", unit: "s", scale: 1000, step: 1, min: 3, max: 120 },
   { group: "blackjack", section: "Blackjack", key: "GAME_BLACKJACK", type: "toggle", label: "Blackjack is on", hint: "Off: no tab, nobody can open it." },
   { group: "blackjack", section: "Seats", key: "BJ_MY_SEATS", season: true, label: "Seats per player", hint: "At one table at a time.", step: 1, min: 1, max: 5 },
   { group: "blackjack", section: "Casual Corner", key: "BJ_CASUAL_MIN", season: true, label: "Min bet", hint: "Per seat.", step: 10, min: 1, max: 100000000 },
@@ -103,6 +107,7 @@ function mismatch(next, prefix = "") {
   }
   if (next.SLOTS_MIN_BET > next.SLOTS_MAX_BET) return `${prefix}Slots: the min bet is higher than the max bet.`;
   if (next.ROULETTE_MIN_BET > next.ROULETTE_MAX_BET) return `${prefix}Roulette: the min bet is higher than the max bet.`;
+  if (next.BAUCUA_MIN_BET > next.BAUCUA_MAX_BET) return `${prefix}Bầu Cua: the min bet is higher than the max bet.`;
   if (next.JACKPOT_GHOST_MIN > next.JACKPOT_GHOST_TOP) return `${prefix}Ghost: the share from is higher than the share up to.`;
   if (next.POKER_MIN_BUYIN > next.POKER_MAX_BUYIN) return `${prefix}Poker: the min buy-in is higher than the max buy-in.`;
   return null;

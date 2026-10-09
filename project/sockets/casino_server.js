@@ -10,7 +10,7 @@ const worlds = require("../game/worlds");
 const inbox = require("../game/inbox");
 
 // The games - in the normal casino, the season world and the admin's test world (game/worlds.js)
-const REAL = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/roulette"];
+const REAL = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/roulette", "/baucua"];
 const SEASON = REAL.map((name) => worlds.SEASON + name);
 const GAMES = [...REAL, ...SEASON, ...REAL.map((name) => worlds.TEST + name)];
 

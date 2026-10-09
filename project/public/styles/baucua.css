@@ -1,0 +1,442 @@
+/* Bầu cua: a plate with three dice under a bowl, the six animals to bet on - as soft as the colors of the roulette (roulette.css) */
+
+.bc-main {
+  --bc-red: #d9776c;
+  --bc-blue: #6b97d2;
+  --bc-blue-rgb: 107, 151, 210;
+  --bc-gold: #d4ae5c;
+  --bc-gold-rgb: 212, 174, 92;
+}
+
+/* Every animal a soft color of its own */
+[data-animal="tiger"] {
+  --rl-color: #e3a15f;
+  --rl-rgb: 227, 161, 95;
+}
+
+[data-animal="gourd"] {
+  --rl-color: #7fae7c;
+  --rl-rgb: 127, 174, 124;
+}
+
+[data-animal="rooster"] {
+  --rl-color: #d4ae5c;
+  --rl-rgb: 212, 174, 92;
+}
+
+[data-animal="fish"] {
+  --rl-color: #6b97d2;
+  --rl-rgb: 107, 151, 210;
+}
+
+[data-animal="crab"] {
+  --rl-color: #d9776c;
+  --rl-rgb: 217, 119, 108;
+}
+
+[data-animal="shrimp"] {
+  --rl-color: #c592b8;
+  --rl-rgb: 197, 146, 184;
+}
+
+.bc-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* ---------- Last rolls: three small animals each ---------- */
+
+.bc-history {
+  display: flex;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.bc-roll {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 6px;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+}
+
+.bc-roll .bc-art {
+  width: 20px;
+  height: 20px;
+}
+
+.bc-roll.triple {
+  border-color: rgba(var(--bc-gold-rgb), 0.7);
+  background: rgba(var(--bc-gold-rgb), 0.14);
+}
+
+.bc-roll.fresh {
+  animation: bc-roll-in 0.6s ease-out;
+}
+
+@keyframes bc-roll-in {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+.bc-round .bc-roll .bc-art {
+  width: 22px;
+  height: 22px;
+}
+
+/* ---------- The plate, the dice, the bowl ---------- */
+
+.bc-stage {
+  display: flex;
+  justify-content: center;
+  padding: 1.4rem 0 0.2rem;
+}
+
+.bc-plate {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(340px, 100%);
+  aspect-ratio: 2.2;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 42%, #ece6dc 0 54%, #dbd2c3 62%, transparent 63%), radial-gradient(ellipse at 50% 50%, var(--bc-gold) 0 66%, transparent 67%), radial-gradient(ellipse at 50% 50%, var(--bc-red) 0 100%);
+  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.4), inset 0 -6px 0 rgba(0, 0, 0, 0.18);
+}
+
+.bc-dice {
+  display: flex;
+  gap: clamp(0.4rem, 2.5vw, 0.8rem);
+  margin-top: -6%;
+  transition: opacity 0.3s;
+}
+
+.bc-dice.hidden {
+  visibility: hidden;
+}
+
+/* An old roll (or the start): the dice wait a bit pale */
+.bc-dice.idle {
+  opacity: 0.55;
+}
+
+.bc-die {
+  --tilt: 0deg;
+  display: block;
+  width: clamp(54px, 14vw, 74px);
+  aspect-ratio: 1;
+  padding: 7px;
+  border-radius: 22%;
+  background: #f4efe7;
+  box-shadow: inset 0 -5px 0 #e0d7c8, 0 5px 0 #c2b6a2, 0 8px 12px rgba(0, 0, 0, 0.3);
+  transform: rotate(var(--tilt));
+}
+
+.bc-die .bc-art {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+/* A die with an animal I bet on: a ring in the accent color */
+.bc-die.mine {
+  box-shadow: inset 0 -5px 0 #e0d7c8, 0 0 0 3px var(--mm-accent), 0 5px 0 #c2b6a2, 0 8px 16px rgba(var(--mm-accent-rgb), 0.4);
+}
+
+.bc-plate.triple .bc-die {
+  animation: bc-triple 0.9s ease-in-out 3;
+}
+
+@keyframes bc-triple {
+  50% {
+    transform: rotate(var(--tilt)) translateY(-8px) scale(1.06);
+  }
+}
+
+/* The bowl: white porcelain with soft blue - only while it covers the plate */
+.bc-bowl {
+  position: absolute;
+  left: 50%;
+  bottom: 22%;
+  z-index: 2;
+  display: none;
+  width: 74%;
+  height: 128%;
+  border-radius: 50% 50% 44% 44% / 64% 64% 36% 36%;
+  background: radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.9) 0 8%, transparent 26%),
+    linear-gradient(180deg, transparent 0 56%, var(--bc-blue) 56% 63%, transparent 63% 70%, var(--bc-blue) 70% 72%, transparent 72%),
+    radial-gradient(ellipse at 50% 30%, #f6f4ef 0 40%, #dfe3ea 75%, #bcc6d3 100%);
+  box-shadow: inset 0 -8px 0 rgba(var(--bc-blue-rgb), 0.3), 0 16px 24px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, 0);
+  transform-origin: 50% 100%;
+}
+
+.bc-bowl.down {
+  display: block;
+}
+
+/* The pattern on the bowl: a ring of small blue dots */
+.bc-bowl::before {
+  content: "";
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  top: 34%;
+  height: 12%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--bc-blue) 0 28%, transparent 30%) 0 50% / 14% 100% repeat-x;
+  opacity: 0.85;
+}
+
+.bc-bowl-knob {
+  position: absolute;
+  left: 50%;
+  top: -7%;
+  width: 18%;
+  height: 12%;
+  border-radius: 50% 50% 30% 30%;
+  background: #f0ede6;
+  box-shadow: inset 0 -3px 0 var(--bc-blue);
+  transform: translateX(-50%);
+}
+
+.bc-plate.shaking {
+  animation: bc-plate-shake 0.26s linear infinite;
+}
+
+@keyframes bc-plate-shake {
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
+.rl-status-text.bc-won {
+  color: var(--mm-accent);
+}
+
+/* ---------- The board: six animals, tinted as softly as the boards of the roulette ---------- */
+
+.bc-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.bc-animal {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "art name" "art mine" "foot foot";
+  align-items: center;
+  column-gap: 0.6rem;
+  min-width: 0;
+  padding: 0.55rem 0.7rem 0.45rem;
+  border: 1px solid rgba(var(--rl-rgb), 0.4);
+  border-top: 2px solid var(--rl-color);
+  border-radius: 10px;
+  background: rgba(var(--rl-rgb), 0.1);
+  color: var(--mm-text);
+  text-align: left;
+  transition: background 0.15s ease, transform 0.12s ease, opacity 0.25s ease, box-shadow 0.2s ease;
+}
+
+.bc-animal:not(:disabled):hover {
+  background: rgba(var(--rl-rgb), 0.2);
+}
+
+.bc-animal:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.bc-animal:disabled {
+  cursor: not-allowed;
+}
+
+.bc-animal-art {
+  grid-area: art;
+  width: clamp(40px, 5vw, 56px);
+  aspect-ratio: 1;
+  transition: transform 0.2s;
+}
+
+.bc-animal:not(:disabled):hover .bc-animal-art {
+  transform: scale(1.06) rotate(-3deg);
+}
+
+.bc-animal-name {
+  grid-area: name;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.bc-animal-name b {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--rl-color);
+}
+
+.bc-animal-name small {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
+
+/* My bet on the animal */
+.bc-animal-mine {
+  grid-area: mine;
+  justify-self: start;
+  min-height: 1.2rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bc-animal.has-mine .bc-animal-mine {
+  background: rgba(var(--rl-rgb), 0.22);
+}
+
+/* Who bet on it, what is on it */
+.bc-animal-foot {
+  grid-area: foot;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  min-height: 24px;
+  margin-top: 0.3rem;
+  padding-top: 0.3rem;
+  border-top: 1px solid rgba(var(--rl-rgb), 0.2);
+}
+
+.bc-animal-players {
+  display: flex;
+}
+
+.bc-animal-players .mm-avatar {
+  width: 22px;
+  height: 22px;
+  margin-left: -6px;
+  box-shadow: 0 0 0 2px var(--mm-surface);
+}
+
+.bc-animal-players .mm-avatar:first-child {
+  margin-left: 0;
+}
+
+.bc-more {
+  margin-left: 3px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--mm-muted);
+}
+
+.bc-animal-total {
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* After the roll: the animals that came shine with what they pay, the others step back (like the roulette) */
+.bc-hit {
+  position: absolute;
+  top: -9px;
+  right: -6px;
+  z-index: 1;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--rl-color);
+  color: #1d1a16;
+  font-size: 0.85rem;
+  font-weight: 900;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  animation: bc-hit-in 0.45s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+.bc-hit[hidden] {
+  display: none;
+}
+
+.bc-hit.triple {
+  background: var(--bc-gold);
+  font-size: 1rem;
+}
+
+@keyframes bc-hit-in {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+}
+
+.bc-animal.hit {
+  background: rgba(var(--rl-rgb), 0.24);
+  box-shadow: 0 0 0 1px var(--rl-color), 0 0 16px rgba(var(--rl-rgb), 0.3);
+}
+
+.bc-animal.hit:disabled {
+  cursor: default;
+}
+
+.bc-animal.miss {
+  opacity: 0.45;
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 575px) {
+  .bc-board {
+    gap: 0.4rem;
+  }
+
+  .bc-animal {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "art" "name" "mine" "foot";
+    justify-items: center;
+    padding: 0.45rem 0.3rem 0.35rem;
+    text-align: center;
+  }
+
+  .bc-animal-mine {
+    justify-self: center;
+  }
+
+  .bc-animal-name small {
+    display: none;
+  }
+
+  .bc-animal-foot {
+    flex-direction: column;
+    gap: 0.1rem;
+    width: 100%;
+  }
+
+  .bc-animal-players .mm-avatar {
+    width: 20px;
+    height: 20px;
+  }
+
+  .bc-stage {
+    padding-top: 1rem;
+  }
+}
