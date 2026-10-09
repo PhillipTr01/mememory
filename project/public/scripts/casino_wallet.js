@@ -859,12 +859,14 @@
     var dockBar = document.getElementById("csDockBar");
     var dockToggle = document.getElementById("csDockToggle");
     var roomBelow = (node) => {
-      if (!dockBar || !node) return 32;
+      var dock = document.getElementById("csDock");
+      if (!dockBar || !node || !dock) return 32;
+      // (always where the open menu is - open or closed, the chat keeps its height)
       var bar = dockBar.getBoundingClientRect();
-      var top = Math.min(bar.top, dockToggle ? dockToggle.getBoundingClientRect().top : bar.top);
       var r = node.getBoundingClientRect();
       var under = bar.left < r.right && bar.right > r.left;
-      return under ? Math.max(32, Math.ceil(window.innerHeight - top) + 20) : 32;
+      var openTop = window.innerHeight - (parseFloat(getComputedStyle(dock).bottom) || 0) - dock.offsetHeight;
+      return under ? Math.max(32, Math.ceil(window.innerHeight - openTop) + 20) : 32;
     };
 
     // Phones and small windows (the column under the game): the chat right down to the menu at the

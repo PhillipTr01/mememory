@@ -4265,11 +4265,6 @@ body.cs-season-world::before {
   }
 }
 
-/* The menu closed: only the room for its handle below the page */
-body.cs-dock-closed .room-page {
-  padding-bottom: 40px;
-}
-
 .nav-board-state[hidden] {
   display: none;
 }
