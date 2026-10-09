@@ -229,3 +229,38 @@
     });
   });
 })();
+
+/*
+ * A game that is too high for the screen: its main part (`part`) a bit smaller as a whole - nothing
+ * moves on it, nothing overlaps, the page doesn't scroll and the menu at the bottom stays free.
+ * Only on big screens and not in full screen (that zooms the whole game by itself). watch: elements
+ * whose showing / hiding changes the room (refit then).
+ */
+window.casinoFitGame = function (part, watch) {
+  if (!part || !("zoom" in document.body.style)) return;
+  var fit = () => {
+    if (document.fullscreenElement) return;
+    part.style.zoom = "";
+    part.style.width = "";
+    part.style.margin = "";
+    if (window.innerWidth < 992) return;
+    var dock = document.getElementById("csDock");
+    var room = dock ? window.innerHeight - (parseFloat(getComputedStyle(dock).bottom) || 0) - dock.offsetHeight - 16 : window.innerHeight - 16;
+    var card = part.closest(".mm-card") || part.parentNode;
+    var over = card.getBoundingClientRect().bottom + window.scrollY - room;
+    if (over <= 0) return;
+    var height = part.offsetHeight;
+    // (a fixed width: a zoomed part of 100% width would fill the same room again)
+    part.style.width = part.offsetWidth + "px";
+    part.style.margin = "0 auto";
+    part.style.zoom = Math.max(0.6, (height - over) / height).toFixed(3);
+    window.dispatchEvent(new Event("casinofit"));
+  };
+  window.addEventListener("resize", fit);
+  document.addEventListener("fullscreenchange", () => requestAnimationFrame(fit));
+  fit();
+  setTimeout(fit, 600);
+  var observer = new MutationObserver(() => requestAnimationFrame(fit));
+  (watch || []).forEach((node) => node && observer.observe(node, { attributes: true, attributeFilter: ["hidden"] }));
+  return fit;
+};

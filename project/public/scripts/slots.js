@@ -1213,4 +1213,9 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("resize", () => {
     if (setup && !spinning) TILE = document.querySelector(".sl-cell").offsetHeight;
   });
+  // The machine a bit smaller when the screen isn't high enough (casino_fullscreen.js) - the lines follow
+  window.addEventListener("casinofit", () => {
+    if (setup && !spinning) TILE = document.querySelector(".sl-cell").offsetHeight;
+  });
+  window.casinoFitGame(document.querySelector(".sl-machine"));
 });

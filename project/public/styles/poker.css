@@ -233,8 +233,8 @@
 
 /* A free chair: round, dashed, glows when you can sit down */
 .pk-sit {
-  width: 68px;
-  height: 68px;
+  width: 92px;
+  height: 92px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -244,8 +244,8 @@
   border: 2px dashed rgba(255, 255, 255, 0.35);
   border-radius: 50%;
   background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.35));
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.66rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
@@ -253,7 +253,7 @@
 }
 
 .pk-sit-chair {
-  font-size: 1.35rem;
+  font-size: 1.9rem;
   line-height: 1;
   transition: transform 0.15s ease;
 }
