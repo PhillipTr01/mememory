@@ -613,8 +613,6 @@
       });
       card.appendChild(prizes);
     }
-    var about = card.appendChild(el("p", "cs-join-text", "A world of its own: everybody starts with the same " + coin + " coins and plays the games of the season - the most coins at the end wins. Your 🪙 stay in the normal casino, you can switch between both any time. When the season is over, your season coins go to your 🪙 on top."));
-    about.dataset.coin = "real";
 
     var close = () => {
       box.remove();
