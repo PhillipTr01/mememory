@@ -868,7 +868,7 @@ function renderBattle() {
       var reel = el("div", "bt-reel");
       var last = rounds > 0 ? itemOf(battle, rounds - 1, index) : null;
       var window_ = el("div", "bt-reel-window");
-      if (last && !spinning) window_.appendChild(itemTile(last, "big"));
+      if (last && !spinning) window_.appendChild(stillReel(battle, rounds - 1, index, last));
       else window_.appendChild(el("span", "bt-reel-idle", battle.phase == "waiting" ? "?" : ""));
       reel.appendChild(window_);
       for (var r = rounds - 1; r >= 0; r--) items.appendChild(itemTile(itemOf(battle, r, index)));
@@ -1209,6 +1209,32 @@ function fairPart(label, value) {
   var code = el("code", "", value);
   part.append(el("span", "jp-fair-label", label), code);
   return part;
+}
+
+/*
+ * Between the rounds: the reel as it stopped - the item won in the middle, items of the case above and below
+ * (picked from the battle, the seat and the round: the same at every render, nothing flickers)
+ */
+function stillReel(battle, round, seat, won) {
+  var box = caseById(battle.cases[round]);
+  var strip = el("div", "bt-reel-strip");
+  var stop = 2;
+  var seed = 0;
+  for (var c of battle.id + ":" + round + ":" + seat) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
+  for (var i = 0; i < 5; i++) {
+    var item = won;
+    if (i != stop && box) {
+      seed = (seed * 1103515245 + 12345) >>> 0;
+      var roll = seed / 4294967296;
+      var counted = 0;
+      item = box.items.find((it) => (counted += it.chance) > roll) || box.items[0];
+    }
+    strip.appendChild(itemTile(item, i == stop ? "big winner-tile" : "big"));
+  }
+  // (centered like a stopped spin)
+  strip.style.top = "50%";
+  strip.style.transform = "translateY(" + -(stop * TILE + TILE / 2) + "px)";
+  return strip;
 }
 
 /* ---------- The spin of a round ---------- */
