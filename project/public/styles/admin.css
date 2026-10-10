@@ -1922,7 +1922,7 @@ a.ad-link:focus-visible {
   min-width: 0;
 }
 
-.ad-form.compact .ad-pick .mm-input {
+.ad-pick .mm-input {
   width: 100%;
   padding-left: 2.2rem;
   padding-right: 2rem;

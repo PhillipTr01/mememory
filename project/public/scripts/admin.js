@@ -1182,7 +1182,7 @@ function renderMaintenance(fill) {
   // The picker: who isn't on the whitelist yet - picked: on it
   if (!maintPick) {
     maintPick = playerPick({
-      placeholder: "+ Add a player",
+      placeholder: "Add a player",
       icon: "➕",
       clearable: false,
       names: () => maintPlayers.filter((name) => !maintForm.whitelist.includes(name)),
@@ -2679,9 +2679,8 @@ function pageChanges() {
 async function settingsDefaults() {
   var changed = pageChanges();
   if (!changed.length) return;
-  var page = SETTING_GROUPS[settingsGroup][0];
   if (seasonMode()) {
-    if (!(await confirmDialog({ title: "Season: back to normal?", text: changed.map((f) => f.label + ": " + formatCoins(f.seasonValue) + " → " + formatCoins(f.value) + " (normal)").join("\n") + "\n\nOnly " + page + " - the season world uses the normal values here again.", confirmLabel: "Back to normal" }))) return;
+    if (!(await confirmDialog({ title: "Season: back to normal?", text: changed.map((f) => f.label + ": " + formatCoins(f.seasonValue) + " → " + formatCoins(f.value) + " (normal)").join("\n"), confirmLabel: "Back to normal" }))) return;
     try {
       settingsList = (await api("settings", { season: Object.fromEntries(changed.map((f) => [f.key, null])) })).settings;
       renderSettings();
@@ -2691,7 +2690,7 @@ async function settingsDefaults() {
     }
     return;
   }
-  if (!(await confirmDialog({ title: "Back to the defaults?", text: changed.map((f) => f.label + ": " + formatCoins(f.value) + " → " + formatCoins(f.default)).join("\n") + "\n\nOnly " + page + " - every other page stays as it is.", confirmLabel: "Back to Default" }))) return;
+  if (!(await confirmDialog({ title: "Back to the defaults?", text: changed.map((f) => f.label + ": " + formatCoins(f.value) + " → " + formatCoins(f.default)).join("\n"), confirmLabel: "Back to Default" }))) return;
   try {
     settingsList = (await api("settings", { values: Object.fromEntries(changed.map((f) => [f.key, f.default])) })).settings;
     renderSettings();
