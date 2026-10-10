@@ -283,7 +283,7 @@ function capText(L, world, game) {
   const share = Math.round(rule.share * 100) / 100;
   // (what counts: everything bet in the round - a spin, the open battles, the chips at the table)
   const what = { slots: "one spin", battles: "your open battles together", poker: "your chips at the table" }[game] || "all your bets of one round together";
-  return `Up to 🪙 ${n(rule.floor)} you can bet all your coins - with more, ${what} ${game === "slots" ? "is" : "are"} at most ${share}% of your coins.` + (x > 1 ? ` (Slots spin fast: 1/${x} of the max bet of the other games.)` : "");
+  return `Up to 🪙 ${n(rule.floor)} you can bet all your coins - with more, ${what} ${game === "slots" ? "is" : "are"} at most ${share}% of your coins (rounded up to the next 100).` + (x > 1 ? ` (Slots spin fast: 1/${x} of the max bet of the other games.)` : "");
 }
 
 // world: the limits of that world ("/season": the season's own ones)

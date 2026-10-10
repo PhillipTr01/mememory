@@ -17,7 +17,8 @@
 
   // The whole game zoomed: every part at the width it has outside of full screen (`width`), zoomed to
   // fill the screen's width - but never higher than the screen
-  function zoomer(target) {
+  // fill (data-fullscreen-fill): the game may get wider - it fills the screen's width at the zoom it gets
+  function zoomer(target, fill) {
     var width = null;
     var timer = null;
     var zoom = 1;
@@ -34,22 +35,34 @@
         x: target.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
         y: target.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom),
       };
-      // How high the parts are on the screen (from the top of the first to the bottom of the last) - at zoom 1
+      // How high the parts are (from the top of the first to the bottom of the last) - measured at zoom 1, put
+      // back before the screen is drawn: the same in every browser (they tell zoomed sizes differently)
       var shown = parts().filter(function (part) {
         return part.offsetParent != null;
       });
       if (!shown.length) return;
-      var natural = (shown[shown.length - 1].getBoundingClientRect().bottom - shown[0].getBoundingClientRect().top) / zoom;
+      shown.forEach(function (part) {
+        part.style.zoom = 1;
+      });
+      var natural = shown[shown.length - 1].getBoundingClientRect().bottom - shown[0].getBoundingClientRect().top;
+      shown.forEach(function (part) {
+        part.style.zoom = zoom;
+      });
       // (only a real growth counts - a line of text that comes and goes after a spin doesn't shrink the game)
       if (natural > tallest * 1.04 || tallest == 0) tallest = natural;
       natural = tallest;
       var next = Math.max(0.5, Math.min(room.x / width, room.y / natural));
       // Phones: never bigger than on the page (what sticks out of a part grows with it)
       if (window.innerWidth < 700) next = Math.min(1, next);
-      if (Math.abs(next - zoom) < 0.01) return;
+      // (the zoom only gets smaller in a full screen - and the game only wider: nothing goes back and forth)
+      if (zoom != 1 && next > zoom) next = zoom;
+      if (Math.abs(next - zoom) < 0.01 && zoom != 1) return;
       zoom = next;
+      // Fill: as wide as the screen at this zoom (the game lays itself out on the width)
+      var wide = fill ? Math.max(width, Math.floor(room.x / zoom)) : width;
       parts().forEach(function (part) {
         part.style.zoom = zoom;
+        part.style.maxWidth = wide + "px";
       });
     }
     return {
@@ -206,7 +219,7 @@
     document.querySelectorAll("[data-fullscreen]").forEach(function (button) {
       var target = document.querySelector(button.dataset.fullscreen);
       if (!target) return;
-      var zoom = button.hasAttribute("data-fullscreen-zoom") ? zoomer(target) : null;
+      var zoom = button.hasAttribute("data-fullscreen-zoom") ? zoomer(target, button.hasAttribute("data-fullscreen-fill")) : null;
       var corner = coinsCorner(target);
       if (!button.innerHTML.trim()) button.innerHTML = ICON;
       button.title = "Full screen";

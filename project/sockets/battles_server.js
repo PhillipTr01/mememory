@@ -495,15 +495,6 @@ module.exports = function (io, options = {}) {
       }),
     );
 
-    // Free coins once a day when (almost) broke - the same as on the jackpot page
-    socket.on(
-      "claimBonus",
-      safe("claimBonus", async () => {
-        const paid = await coins.claim(username);
-        if (paid) socket.emit("bonusClaimed", paid);
-        await sendCoins(username);
-      }),
-    );
 
     socket.on(
       "sendChatMessage",

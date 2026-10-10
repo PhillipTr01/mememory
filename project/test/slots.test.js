@@ -441,10 +441,11 @@ test("slots: their own share of the max bet by balance (1/x of its all-in amount
     assert.strictEqual(limits.betCap(40000, "", "slots"), 10000, "all in only up to 50,000 / 5");
     assert.strictEqual(limits.betCap(1000000, "", "slots"), 50000, "above it 25% / 5 of the coins");
     assert.strictEqual(limits.betCap(1000000, ""), 250000, "the other games: the whole cap");
+    assert.deepStrictEqual([limits.betCap(1000100, "", "slots"), limits.betCap(1234567, "")], [50100, 308700], "the share rounded up to the next 100");
     h.addUser("capper");
     h.setCoins("capper", 1000000);
     assert.strictEqual(await coins.spend("capper", 50001, { reason: "slots bet" }), false);
-    assert.match(coins.refusal("capper"), /1\/5/);
+    assert.match(coins.refusal("capper"), /Your max bet is 50,000\./);
     assert.strictEqual(await coins.spend("capper", 50000, { reason: "slots bet" }), true);
     assert.strictEqual(await coins.spend("capper", 200000, { reason: "roulette bet" }), true, "another game: the whole cap");
     assert.deepStrictEqual((await coins.get("capper")).slotsCapRule, { floor: 10000, share: 5 });

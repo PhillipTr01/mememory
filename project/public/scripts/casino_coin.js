@@ -6,7 +6,8 @@
 function casinoCapLeft(rule, balance, already) {
   if (!rule) return Infinity;
   already = already || 0;
-  var cap = Math.max(rule.floor, Math.floor(((balance + already) * rule.share) / 100));
+  // (rounded up to the next 100 - like the server, game/limits.js)
+  var cap = Math.max(rule.floor, Math.ceil(Math.round((((balance + already) * rule.share) / 100) * 1000) / 1000 / 100) * 100);
   return Math.max(0, cap - already);
 }
 

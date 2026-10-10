@@ -784,14 +784,6 @@ module.exports = function (io, options = {}) {
       );
     }
 
-    socket.on(
-      "claimBonus",
-      safe("claimBonus", async () => {
-        const paid = await coins.claim(username);
-        if (paid) socket.emit("bonusClaimed", paid);
-        await sendCoins(username);
-      }),
-    );
 
     socket.on(
       "sendChatMessage",

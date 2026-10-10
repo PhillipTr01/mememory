@@ -328,7 +328,7 @@
   height: 104px;
 }
 
-/* ---------- The sections: a row to flip to one, the page snaps to them ---------- */
+/* ---------- The sections: a row to go to one ---------- */
 .sh-sections {
   position: sticky;
   top: 0.5rem;
@@ -375,17 +375,7 @@
   display: none;
 }
 
-html:has(.sh-main:not(.view-avatar)) {
-  scroll-snap-type: y proximity;
-}
-
+/* (a click on a section: it scrolls to it - under the row of the sections) */
 .sh-main:not(.view-avatar) .sh-section {
-  scroll-snap-align: start;
-  /* (under the row of the sections) */
   scroll-margin-top: 4.25rem;
-}
-
-.sh-main {
-  scroll-snap-align: start;
-  scroll-margin-top: 1rem;
 }

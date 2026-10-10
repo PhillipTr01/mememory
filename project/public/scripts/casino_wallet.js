@@ -10,6 +10,7 @@
   var payout = false; // the admin allowed payouts for this player
   var bonusAt = null; // when the next free coins can be claimed (null: now)
   var bonusAmount = 0;
+  var bonusMissed = 0; // a season: days missed since the last claim (paid on top)
   var bonusTimer = null;
   var streak = null; // {on, day, next, rewards, after, grace, base} - the daily streak (none in test mode)
   var claimPopup = null; // the open popup of today's free coins ({claimed(paid), close})
@@ -34,6 +35,7 @@
       if (streak) {
         streak = { ...streak, next: streak.on ? (streak.day || 0) + 1 : 1 };
         bonusAmount = streak.on ? rewardOf(streak, streak.next) : streak.base;
+        bonusMissed = 0;
       }
     }
     var ready = bonusAt == null;
@@ -61,21 +63,24 @@
     }
   }
 
-  // (only to look at - the popup claims; test mode: a click opens it)
+  // (it tells the time to the next ones - ready: a click just takes them, like the popup)
   bonusButton.addEventListener("click", () => {
-    if (bonusAt == null && !claimPopup) openClaim();
+    if (bonusAt != null) return;
+    if (claimPopup && !claimPopup.busy()) return claimPopup.claim();
+    if (!claimPopup) socket.emit("claimBonus");
   });
 
   function openClaim() {
     var info = streak || { on: false, next: 1, base: bonusAmount, rewards: [100], after: "stay", grace: 0 };
-    claimPopup = bonusDialog(info, bonusAmount, () => socket.emit("claimBonus"));
+    claimPopup = bonusDialog(info, bonusAmount, () => socket.emit("claimBonus"), bonusMissed);
   }
 
   socket.on("bonusClaimed", (paid) => {
     bonusButton.classList.remove("claimed");
     void bonusButton.offsetWidth; // restart the animation
     bonusButton.classList.add("claimed");
-    if (claimPopup && typeof paid == "number") claimPopup.claimed(paid);
+    // Claimed: the popup goes - straight on playing (the coins go up at the top)
+    if (claimPopup) claimPopup.close();
   });
 
   // (test mode: the admin shows the streak popup with sample data)
@@ -159,7 +164,7 @@
    * The popup of the daily free coins: the streak's days, today's coins. With `claim`: a Claim button first
    * (it can't be closed before - the coins can't be forgotten), then "Nice!". Without: already paid (`amount`).
    */
-  function bonusDialog(info, amount, claim) {
+  function bonusDialog(info, amount, claim, missed) {
     var today = info.next || 1;
     var streakOn = info.on;
     var backdrop = el("div", "mm-dialog-backdrop");
@@ -171,6 +176,8 @@
     var title = el("h2", "mm-dialog-title");
     var coinsLine = el("div", "nav-streak-amount", "+" + format(amount));
     var parts = [flame, title, coinsLine];
+    // A season: the days missed since the last claim come on top (the plain bonus each)
+    if (missed > 0) parts.push(el("div", "nav-streak-missed", "+" + missed + " missed day" + (missed == 1 ? "" : "s") + " (" + format(missed * info.base) + ")"));
     if (streakOn) {
       // The days around today (a long streak: a window of 7 - today in it)
       var count = Math.min(7, Math.max(info.rewards.length, 1));
@@ -231,9 +238,10 @@
         ok.innerText = "Claiming...";
         claim();
       };
+      var claimNow = ok.onclick;
     } else showDone(amount);
     ok.focus();
-    return { backdrop: backdrop, claimed: showDone, close: close, done: () => done, busy: () => busy };
+    return { backdrop: backdrop, claimed: showDone, close: close, done: () => done, busy: () => busy, claim: () => claimNow && claimNow() };
   }
 
   // Test mode started or stopped meanwhile: the page again (it connects to the right world then)
@@ -253,6 +261,7 @@
     if (data.bonusIn != null) {
       bonusAt = data.bonus ? null : Date.now() + data.bonusIn;
       bonusAmount = data.bonusAmount || bonusAmount;
+      bonusMissed = data.bonusMissed || 0;
       streak = data.streak || null;
       renderBonus();
       clearInterval(bonusTimer);

@@ -36,11 +36,17 @@ function capRule(world, game) {
   return { floor: Math.floor(limits.BET_CAP_FLOOR / x), share: limits.BET_CAP_SHARE / x };
 }
 
+// Up to the next 100 (a whole 100 stays)
+function roundUp(value) {
+  return Math.ceil(Math.round(value * 1000) / 1000 / 100) * 100;
+}
+
 // The most one bet may take with this balance (Infinity: no cap)
 function betCap(balance, world, game) {
   const rule = capRule(world, game);
   if (rule == null) return Infinity;
-  return Math.max(rule.floor, Math.floor((balance * rule.share) / 100));
+  // (the share rounded up to the next 100)
+  return Math.max(rule.floor, roundUp((balance * rule.share) / 100));
 }
 
 // The game of a bet (the reason of the coin history): only games with their own share

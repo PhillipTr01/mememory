@@ -4600,8 +4600,10 @@ body.jackpot-theme::before {
   margin-bottom: 0.9rem;
 }
 
+/* (many things at once: they wrap - three a row, every card wide enough for its name) */
 .nav-reward-items {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 0.75rem;
   margin-bottom: 1.2rem;
@@ -4609,11 +4611,12 @@ body.jackpot-theme::before {
 
 .nav-reward-item {
   display: flex;
-  flex: 1 1 0;
+  /* (three a row, all as wide - fewer: as wide as well) */
+  flex: 0 0 calc((100% - 1.5rem) / 3);
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
-  max-width: 170px;
+  min-width: 0;
   padding: 0.8rem 0.5rem 0.7rem;
   border: 1px solid rgba(242, 196, 90, 0.45);
   border-radius: 14px;
@@ -4641,6 +4644,9 @@ body.jackpot-theme::before {
 
 .nav-reward-name {
   font-size: 0.9rem;
+  text-align: center;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .nav-reward .mm-dialog-actions {
@@ -4676,4 +4682,12 @@ body.jackpot-theme::before {
 /* A player flying to another spot (the seat swaps of the draws): above the others */
 .jp-seat-moving {
   z-index: 6;
+}
+
+/* The daily free coins in a season: the days missed since the last claim (paid on top) */
+.nav-streak-missed {
+  margin-top: -0.35rem;
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
 }

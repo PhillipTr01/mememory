@@ -8,6 +8,7 @@ const maintenance = require("../game/maintenance");
 const testMode = require("../game/test_mode");
 const worlds = require("../game/worlds");
 const inbox = require("../game/inbox");
+const safe = require("./safe_handler");
 
 // The games - in the normal casino, the season world and the admin's test world (game/worlds.js)
 const REAL = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/roulette", "/baucua"];
@@ -70,6 +71,23 @@ module.exports = function (io) {
     }
   }
   for (const name of GAMES) io.of(name).on("connection", (socket) => setTimeout(() => deliverInbox(socket), 800));
+
+  // The free coins of the day (the popup of every casino page) - in the world of the page: one handler for every game
+  for (const name of GAMES) {
+    const wallet = worlds.services(worlds.worldOfNamespace(name)).coins;
+    io.of(name).on("connection", (socket) =>
+      socket.on(
+        "claimBonus",
+        safe("claimBonus", async () => {
+          const username = socket.data.username;
+          const paid = await wallet.claim(username);
+          if (paid) socket.emit("bonusClaimed", paid);
+          // (the pages get the balance again - also when there was nothing to claim)
+          wallet.notify(username);
+        }),
+      ),
+    );
+  }
 
   // A game turned off (admin panel): its open pages go to another game
   settings.changes.on("change", (values) => {

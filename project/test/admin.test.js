@@ -283,7 +283,7 @@ test("coins: the max bet by balance - all in up to the floor, above it a share o
     assert.strictEqual(await coins.spend("capper", 80000, { reason: "baucua bet" }), true, "all in below the floor");
     h.setCoins("capper", 1000000);
     assert.strictEqual(await coins.spend("capper", 250001, { reason: "roulette bet" }), false);
-    assert.match(coins.refusal("capper"), /at most 250,000 coins/);
+    assert.match(coins.refusal("capper"), /Your max bet is 250,000\./);
     assert.strictEqual(coins.refusal("capper"), null, "told once");
     assert.strictEqual(await coins.spend("capper", 250000, { reason: "roulette bet" }), true);
     // 750,000 left: 187,500 a bet - but at least the floor
@@ -298,7 +298,7 @@ test("coins: the max bet by balance - all in up to the floor, above it a share o
     h.setCoins("capper", 1000000);
     assert.strictEqual(await coins.spend("capper", 200000, { reason: "jackpot bet", round: 0 }), true);
     assert.strictEqual(await coins.spend("capper", 100000, { reason: "jackpot bet", round: 200000 }), false, "300,000 in one round");
-    assert.match(coins.refusal("capper"), /per round .* 200,000 are in already, 50,000 more/);
+    assert.match(coins.refusal("capper"), /this round is 250,000 - 200,000 are in already, 50,000 more/);
     assert.strictEqual(await coins.spend("capper", 50000, { reason: "jackpot bet", round: 200000 }), true, "250,000 in all");
     // The pages get the cap with the balance (for their "Max")
     h.setCoins("capper", 1000000);
@@ -496,4 +496,15 @@ test("admin: the hard reset - history, payouts, accesses, coins and seasons are 
   // A new approval: the start coins again
   const again = await access.approve("rosa");
   assert.strictEqual(again.coins, config.START_COINS);
+});
+
+test("coins: the max bet rounded up to the next 100 - and a spend up to it goes through (the check in the database the same)", async () => {
+  const limits = require("../game/limits");
+  h.addUser("rounder");
+  h.setCoins("rounder", 123456);
+  const cap = limits.betCap(123456, "");
+  assert.strictEqual(cap % 100, 0);
+  assert.strictEqual(await coins.spend("rounder", cap + 1, { reason: "roulette bet" }), false);
+  assert.match(coins.refusal("rounder"), new RegExp("Your max bet is " + cap.toLocaleString("en-US")));
+  assert.strictEqual(await coins.spend("rounder", cap, { reason: "roulette bet" }), true);
 });

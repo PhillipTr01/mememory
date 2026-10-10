@@ -295,6 +295,11 @@ function spin() {
     if (autoOn()) stopAuto();
     return showHint("You don't have enough coins.", "error");
   }
+  if (bet > capLeft(0)) {
+    holding = false;
+    if (autoOn()) stopAuto();
+    return showHint("Your max bet is " + formatCoins(maxNow()) + ".", "error", document.getElementById("slBet"));
+  }
   spinning = true;
   // (an auto spin: one less to go)
   if (autoOn()) autoLeft--;
@@ -1251,12 +1256,13 @@ function currentBet() {
   return Number(document.getElementById("slBet").value);
 }
 
-// keepMax: the bet of max mode (another amount picked: max mode is over)
-function setBet(value, keepMax) {
+// keepMax: the bet of max mode (another amount picked: max mode is over) - typed: as typed (only within the
+// machine's min and max - over the max bet by balance it stays, the spin says what the max bet is)
+function setBet(value, keepMax, typed) {
   if (setup == null) return;
   if (!keepMax) maxMode = false;
-  // (never more than the max bet by balance)
-  var bet = Math.max(setup.rules.minBet, Math.min(maxNow(), Math.round(value)));
+  // (never more than the max bet by balance - unless typed)
+  var bet = Math.max(setup.rules.minBet, Math.min(typed ? setup.rules.maxBet : maxNow(), Math.round(value)));
   document.getElementById("slBet").value = bet;
   // The prizes of the coin game for this bet (over the machine, always)
   if (!activeBonus) showPrizes(bet);
@@ -1386,8 +1392,8 @@ function renderControls() {
   var left = document.getElementById("slAutoLeft");
   left.hidden = !auto;
   left.innerText = String(autoLeft);
-  button.title = auto ? "Stop the auto spins" : bet > myCoins ? "Not enough coins" : "Spin (space) - hold to keep spinning";
-  document.getElementById("slAuto").disabled = auto || bet > myCoins;
+  button.title = auto ? "Stop the auto spins" : bet > myCoins ? "Not enough coins" : bet > capLeft(0) ? "Your max bet is " + formatCoins(maxNow()) : "Spin (space) - hold to keep spinning";
+  document.getElementById("slAuto").disabled = auto || bet > myCoins || bet > capLeft(0);
   // (max mode: only Max is lit, not the amount it happens to be - set once, never on and off again)
   document.querySelectorAll(".sl-preset[data-value]").forEach((preset) => preset.classList.toggle("active", !maxMode && Number(preset.dataset.value) == bet));
   var maxButton = document.querySelector(".sl-preset-max");
@@ -1549,7 +1555,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("slLess").addEventListener("click", () => stepBet(-1));
   document.getElementById("slMore").addEventListener("click", () => stepBet(1));
-  document.getElementById("slBet").addEventListener("change", (event) => setBet(Number(event.target.value) || 0));
+  document.getElementById("slBet").addEventListener("change", (event) => setBet(Number(event.target.value) || 0, false, true));
   document.getElementById("slPaytable").addEventListener("click", () => setup && showPaytable());
   // Space spins (not while typing) - held down, again and again; during auto spins it stops them
   document.addEventListener("keydown", (event) => {

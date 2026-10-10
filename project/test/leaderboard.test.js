@@ -301,6 +301,11 @@ test("seasons: the daily bonuses add up - a day not claimed comes with the next 
   assert.strictEqual((await coins.season.get("ben")).bonusAmount, 100, "(already claimed today)");
   assert.strictEqual(await coins.season.claim("ben", day4), 300, "days 2, 3 and 4");
   assert.strictEqual(seasonCoinsOf("ben"), 1400);
+  // What the page gets: the days missed since the last claim (the popup shows them on top)
+  h.userOf("ben").seasonBonusAt = new Date(days.dayStart(Date.now()) - 2.5 * 24 * 3600 * 1000);
+  const waiting = await coins.season.get("ben");
+  assert.deepStrictEqual([waiting.bonus, waiting.bonusMissed], [true, 2]);
+  assert.strictEqual(waiting.bonusAmount, waiting.streak.base * (require("../game/streak").percentFor(waiting.streak.next, "season") / 100) + 2 * 100);
   await seasons.endNow(made.season.id);
   seasons.reset();
 });
