@@ -479,6 +479,10 @@ test("blackjack: side bets - Perfect Pairs and 21+3, at most half the table's ma
   // The classic table here: max 5,000 - a side bet at most 2,500 (whatever the main bet)
   alice.emit("sideBet", { seat: 0, type: "pairs", amount: 2600 });
   assert.match(await refused, /at most 2,500/);
+  // ... and at least a fifth of the table's min bet
+  refused = h.once(alice, "blackjackError");
+  alice.emit("sideBet", { seat: 0, type: "pairs", amount: 1 });
+  assert.match(await refused, /at least/);
   alice.emit("sideBet", { seat: 0, type: "pairs", amount: 500 });
   await waitFor(alice, "blackjackState", (s) => s.seats[0].side.pairs === 500);
   alice.emit("sideBet", { seat: 0, type: "plus3", amount: 200 });

@@ -158,8 +158,9 @@ try {
 }
 
 /*
- * The chips of a table: from its min bet (left) to its max bet (right), round steps in between that grow evenly -
- * so they fit the limits the admin set. The colours go by place (the smallest grey ... the biggest copper).
+ * The chips of a table: from the side bet minimum or its min bet, the smaller (left - chips for the side bets and
+ * to top a bet up) to its max bet (right), round steps in between that grow evenly, the min bet always one of them - so they fit
+ * the limits the admin set. The colours go by place (the smallest grey ... the biggest copper).
  */
 var CHIP_COUNT = 6;
 var CHIPS = [1000, 500, 250, 100, 50, 10]; // the chips of the table now, the biggest first (for the stacks on the fields)
@@ -177,13 +178,24 @@ function roundChip(value) {
 }
 
 function tableChips(min, max) {
-  if (!(max > min)) return [min];
-  var list = [min];
+  if (!(max >= min)) return [min];
+  var low = Math.min(min, state && state.rules.sideMin ? state.rules.sideMin : min);
+  if (!(max > low)) return [max];
+  var list = [low];
   for (var i = 1; i < CHIP_COUNT - 1; i++) {
-    var value = roundChip(min * Math.pow(max / min, i / (CHIP_COUNT - 1)));
+    var value = roundChip(low * Math.pow(max / low, i / (CHIP_COUNT - 1)));
     if (value > list[list.length - 1] && value < max) list.push(value);
   }
   list.push(max);
+  // The min bet is a chip too: in place of the step nearest to it (never the smallest or the biggest)
+  if (!list.includes(min)) {
+    var inner = list.slice(1, -1);
+    if (inner.length) {
+      var near = inner.reduce((best, value) => (Math.abs(Math.log(value / min)) < Math.abs(Math.log(best / min)) ? value : best), inner[0]);
+      list[list.indexOf(near)] = min;
+    } else list.splice(list.length - 1, 0, min);
+    list = list.filter((value, i) => i == 0 || value > list[i - 1]).sort((a, b) => a - b);
+  }
   return list;
 }
 
@@ -231,7 +243,9 @@ function placeChip(seatIndex, field) {
     // At most half the table's max bet per side bet
     var room = Math.floor(state.rules.maxBet * state.rules.sideShare) - seat.side[field];
     if (room <= 0) return showHint(SIDE_NAMES[field] + ": at most 🪙 " + formatCoins(Math.floor(state.rules.maxBet * state.rules.sideShare)) + " (half the max bet).", "error");
-    socket.emit("sideBet", { seat: seatIndex, type: field, amount: Math.min(chipValue, room) });
+    // The first chip at least the side bet minimum
+    var side = seat.side[field] == 0 ? Math.max(chipValue, state.rules.sideMin || 0) : chipValue;
+    socket.emit("sideBet", { seat: seatIndex, type: field, amount: Math.min(side, room) });
   }
 }
 

@@ -180,6 +180,7 @@ module.exports = {
   BJ_CLASSIC_MAX: 5000,
   BJ_HIGH_MIN: 7500,
   BJ_HIGH_MAX: 15000,
+  BJ_SIDE_MIN_SHARE: 0.2, // a side bet is at least this share of the table's min bet (each)
   BJ_SIDE_SHARE: 0.5, // a side bet (Perfect Pairs, 21+3) is at most this share of the table's max bet (each)
   // Slots (hidden, see game/slots.js): the bet is for a whole spin (all 9 lines)
   SLOTS_MIN_BET: 10,

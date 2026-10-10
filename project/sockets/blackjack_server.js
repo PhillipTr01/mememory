@@ -58,6 +58,8 @@ module.exports = function (io, options = {}) {
     // The limits per seat (can be changed in the admin panel)
     const minBet = () => limits[def.minKey];
     const maxBet = () => limits[def.maxKey];
+    // The least for a side bet: a fifth of the table's min bet - at most what a side bet may be at this table
+    const sideMin = () => Math.max(1, Math.min(Math.ceil(minBet() * config.BJ_SIDE_MIN_SHARE), Math.floor(maxBet() * config.BJ_SIDE_SHARE)));
 
     const table = {
       id: def.id,
@@ -124,7 +126,7 @@ module.exports = function (io, options = {}) {
         peeking: table.peeking === true,
         history: table.history,
         viewers: pages().length,
-        rules: { sideShare: config.BJ_SIDE_SHARE, minBet: minBet(), maxBet: maxBet(), mySeats: limits.BJ_MY_SEATS, turn: config.BJ_TURN, betting: config.BJ_BETTING, sit: config.BJ_SIT, decks: bj.DECKS },
+        rules: { sideShare: config.BJ_SIDE_SHARE, sideMin: sideMin(), minBet: minBet(), maxBet: maxBet(), mySeats: limits.BJ_MY_SEATS, turn: config.BJ_TURN, betting: config.BJ_BETTING, sit: config.BJ_SIT, decks: bj.DECKS },
         lastBets: table.lastBets.get(viewer) || null,
       };
     }
@@ -497,7 +499,7 @@ module.exports = function (io, options = {}) {
         }
       },
 
-      // A side bet (Perfect Pairs or 21+3) on an own seat with a bet: at most half the table's max bet each
+      // A side bet (Perfect Pairs or 21+3) on an own seat with a bet: from a fifth of the table's min bet to half its max bet each
       async sideBet(username, error, data) {
         if (data == null) return;
         const { seat: s, type, amount } = data;
@@ -508,6 +510,7 @@ module.exports = function (io, options = {}) {
         if (seat.bet <= 0) return error("Place the main bet first.");
         const most = Math.floor(maxBet() * config.BJ_SIDE_SHARE);
         if (seat.side[type] + amount > most) return error(`A side bet is at most ${most.toLocaleString("en-US")} coins here (half the max bet).`);
+        if (seat.side[type] + amount < sideMin()) return error(`A side bet is at least ${sideMin().toLocaleString("en-US")} coins.`);
         if (busy.has(username)) return;
         busy.add(username);
         try {
