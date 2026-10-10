@@ -647,7 +647,10 @@ async function rewardDialog(p) {
       var body = { username: p.username, items: [frame.value, effect.value].filter(Boolean), coins: Math.floor(Number(coinsInput.value) || 0), prize: prize.value.trim(), note: note.value.trim() };
       await api("shop/give", body);
       close();
-      showHint("🎁 Reward sent to " + p.username + ".", "success");
+      // What went out: a notification (like a new payout) - with the way to the player's history
+      var itemName = (id) => (shopSaved.items.find((item) => item.id == id) || {}).name || id;
+      var sent = [...body.items.map(itemName), body.coins > 0 ? "🪙 " + formatCoins(body.coins) : null, body.prize ? "🎁 " + body.prize : null].filter(Boolean).join(" · ");
+      casinoNotice({ icon: "🎁", title: "Reward sent to " + p.username, text: sent + (body.note ? " - " + body.note : ""), action: { label: "History", run: () => showHistoryOf(p.username) }, ms: 8000, key: "reward" });
       loadPlayers();
       loadOverview();
     } catch (problem) {
