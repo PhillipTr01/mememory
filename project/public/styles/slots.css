@@ -174,19 +174,29 @@
   flex-direction: column;
   align-items: center;
   gap: 0.15rem;
-  min-height: 3.6rem;
+  /* Always as high: "Good luck!" (no detail), "No win", a win, a big win - the reels never move */
+  height: 4rem;
   justify-content: center;
 }
 
 .sl-win-text {
+  height: 2.6rem;
+  line-height: 2.6rem;
   font-size: 1.5rem;
   font-weight: 800;
   color: var(--mm-muted);
   font-variant-numeric: tabular-nums;
 }
 
+/* (one line, also when empty) */
 .sl-win-detail {
+  max-width: 100%;
+  min-height: 1.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.85rem;
+  line-height: 1.25rem;
   color: var(--mm-muted);
 }
 
@@ -312,6 +322,10 @@
 /* The spin button: clean, gold outline like the machine, the arrow turns while the reels do */
 .sl-spin {
   justify-self: end;
+  /* (held down on a phone: no menu, no text selection) */
+  -webkit-touch-callout: none;
+  user-select: none;
+  touch-action: manipulation;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -354,6 +368,10 @@
   flex: 0 0 auto;
   width: 22px;
   height: 22px;
+}
+
+.sl-spin.auto .sl-spin-icon {
+  animation: sl-turn 1.4s linear infinite;
 }
 
 .sl-spin.busy .sl-spin-icon {
@@ -1230,4 +1248,340 @@
 /* Full screen: no coins at the top of the slots (only here - the other games keep them) */
 .sl-main .cs-fs-coins {
   display: none;
+}
+
+/* ---------- Treasure chest: a coin of the coin game - pick one of three ---------- */
+.sl-cell.chest .sl-symbol {
+  filter: drop-shadow(0 0 8px rgba(255, 196, 80, 0.6));
+}
+
+.sl-cell.chest:not(.prize) .sl-coin-value {
+  background: linear-gradient(135deg, #8a5a2b, #c9a24a);
+  box-shadow: none;
+  color: #fff;
+}
+
+.sl-stage.chest-stage {
+  gap: 0.5rem;
+}
+
+.sl-chests {
+  display: flex;
+  gap: clamp(0.5rem, 3vw, 1.4rem);
+  margin: 0.4rem 0;
+}
+
+.sl-chest {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  width: clamp(4.4rem, 15vw, 7.5rem);
+  padding: 0.7rem 0.4rem 0.55rem;
+  border: 2px solid rgba(var(--mm-accent-rgb), 0.45);
+  border-radius: 16px;
+  background: radial-gradient(circle at 50% 30%, rgba(var(--mm-accent-rgb), 0.22), rgba(20, 16, 8, 0.9));
+  color: #f3d27a;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s, opacity 0.3s;
+}
+
+.sl-chest:hover:not(:disabled),
+.sl-chest:focus-visible {
+  transform: translateY(-4px) scale(1.05);
+  border-color: var(--mm-accent);
+  outline: none;
+}
+
+.sl-chest:disabled {
+  cursor: default;
+}
+
+.sl-chest-svg {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  line-height: 0;
+}
+
+.sl-chest-svg svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sl-chest-icon {
+  font-size: clamp(2.8rem, 9vw, 4.4rem);
+  line-height: 1;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+}
+
+.sl-chest.open .sl-chest-icon {
+  animation: sl-pop 0.45s ease-out;
+}
+
+.sl-chest:not(.picked).open .sl-chest-icon {
+  filter: grayscale(0.6) brightness(0.8);
+}
+
+.sl-chest-badge .sl-chest-svg {
+  vertical-align: -0.15em;
+}
+
+.sl-chest-prize {
+  min-width: 3.6rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.sl-chests:has(.picked) .sl-chest:not(.picked) {
+  opacity: 0.55;
+}
+
+.sl-chest.picked {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 24px rgba(var(--mm-accent-rgb), 0.55);
+}
+
+.sl-chest.open .sl-chest-prize {
+  color: #fff;
+  animation: sl-pop 0.4s ease-out;
+}
+
+.sl-chest.open.prize-mini .sl-chest-prize {
+  background: var(--prize-mini);
+}
+
+.sl-chest.open.prize-major .sl-chest-prize {
+  background: var(--prize-major);
+}
+
+.sl-chest.open.prize-mega .sl-chest-prize {
+  background: var(--prize-mega);
+}
+
+.sl-cell.chest .sl-chest-svg {
+  width: 1.2em;
+  height: 1.2em;
+  margin-top: -0.12em;
+}
+
+/* ---------- Spin with auto spins next to it ---------- */
+.sl-spin-group {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sl-auto {
+  position: relative;
+}
+
+.sl-auto-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.sl-auto-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sl-auto-btn:hover:not(:disabled),
+.sl-auto-btn[aria-expanded="true"] {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.12);
+}
+
+.sl-auto-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* The numbers: over the button */
+.sl-auto-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 230px;
+  padding: 0.75rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5);
+}
+
+.sl-auto-menu[hidden] {
+  display: none;
+}
+
+.sl-auto-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.sl-auto-options button {
+  height: 36px;
+  border: 1px solid var(--mm-border);
+  border-radius: 9px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.sl-auto-options button:hover {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+}
+
+.sl-auto-note {
+  font-size: 0.72rem;
+  color: var(--mm-muted);
+}
+
+/* Auto spins running: the button stops them, the spins left in a badge */
+.sl-spin.auto {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  color: var(--mm-accent);
+}
+
+.sl-auto-left {
+  min-width: 1.8rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--mm-accent);
+  color: #1a1305;
+  font-size: 0.8rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.sl-auto-left[hidden] {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .sl-spin-group .sl-spin {
+    min-width: 0;
+  }
+
+  /* (a phone: the menu in the middle over the button - never past the edge of the screen) */
+  .sl-auto-menu {
+    left: 50%;
+    right: auto;
+    width: min(230px, calc(100vw - 32px));
+    transform: translateX(-50%);
+  }
+}
+
+/* ---------- Phones: the reels grow with the screen - never wider than the card ---------- */
+@media (max-width: 480px) {
+  .sl-main {
+    padding: 0.85rem;
+  }
+
+  /* (the screen minus the gutters, the card, the machine, the line numbers and the gaps) */
+  .sl-machine {
+    --reel: min(56px, calc((100vw - 138px) / 5));
+    --tile: calc(var(--reel) * 1.25);
+    gap: 3px;
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+
+  .sl-reels {
+    gap: 3px;
+  }
+
+  .sl-reel {
+    border-radius: 10px;
+  }
+
+  .sl-line-numbers {
+    width: 15px;
+  }
+
+  .sl-number-row {
+    gap: 1px;
+  }
+
+  .sl-number {
+    width: 15px;
+    height: 14px;
+    font-size: 0.55rem;
+  }
+
+  .sl-controls {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+  }
+
+  .sl-wallet {
+    min-width: 0;
+  }
+
+  .sl-coins {
+    font-size: 1.15rem;
+    overflow-wrap: anywhere;
+  }
+
+  .sl-spin-group {
+    gap: 0.4rem;
+  }
+
+  .sl-auto-btn {
+    width: 50px;
+    height: 50px;
+  }
+
+  .sl-spin-group .sl-spin {
+    height: 50px;
+    padding: 0 0.9rem;
+    gap: 0.4rem;
+  }
+
+  .sl-presets {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .sl-preset {
+    min-width: 2.3rem;
+  }
+}
+
+/* Max: the most per spin right now - set apart from the amounts */
+.sl-preset-max {
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+  color: var(--mm-accent);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }

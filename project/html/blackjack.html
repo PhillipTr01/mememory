@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="/static/styles/theme.css">
     <link rel="stylesheet" href="/static/styles/room.css">
     <link rel="stylesheet" href="/static/styles/jackpot.css">
+    <link rel="stylesheet" href="/static/styles/looks.css">
     <link rel="stylesheet" href="/static/styles/poker.css">
     <link rel="stylesheet" href="/static/styles/blackjack.css">
 
@@ -126,6 +127,8 @@
                         <div id="bjSeats" class="bj-seats"></div>
                     </div>
 
+                    <!--- The two bars share one place (as high as the higher one): switching between them moves nothing --->
+                    <div class="bj-bars">
                     <!--- Betting: on a free seat or an own one --->
                     <div id="bjBetBar" class="bj-bar bj-betbar" hidden>
                         <!--- Like at the table: pick a chip, then click a bet field on your seat --->
@@ -165,11 +168,23 @@
                         </div>
                     </div>
                     </div>
+                    </div>
                 </section>
             </div>
 
             <aside class="room-side">
-                <div class="mm-card side-card jp-history-card">
+                <div class="mm-card side-card jp-history-card cs-best-card" id="csBest" data-game="blackjack">
+                    <div class="side-head">
+                        <span class="fw-semibold"><i class="bi bi-trophy me-2"></i>Best wins</span>
+                        <div class="cs-best-tabs" role="group" aria-label="Best wins of">
+                            <button type="button" data-best-span="today">Today</button>
+                            <button type="button" data-best-span="all">All time</button>
+                        </div>
+                    </div>
+                    <ol class="jp-history cs-best-list"></ol>
+                    <p class="jp-empty mm-muted cs-best-empty" data-icon="🏆">No wins yet today - be the first!</p>
+                </div>
+                <div data-replaced hidden class="mm-card side-card jp-history-card">
                     <div class="side-head">
                         <span class="fw-semibold"><i class="bi bi-clock-history me-2"></i>Last rounds</span>
                     </div>
@@ -222,9 +237,9 @@
     <!--- The games: a bar at the bottom, can be closed (see casino_dock.js) --->
     <div id="csDock" class="cs-dock">
         <button type="button" id="csDockToggle" class="cs-dock-toggle" aria-expanded="true" aria-controls="csDockBar">
-            <span class="cs-dock-toggle-label">Games</span><svg class="cs-dock-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            <span class="cs-dock-toggle-label">Menu</span><svg class="cs-dock-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
         </button>
-        <nav id="csDockBar" class="cs-dock-bar" aria-label="Games">
+        <nav id="csDockBar" class="cs-dock-bar" aria-label="Menu">
             <a href="./" class="cs-tab">
               <svg class="cs-dock-icon" viewBox="0 0 48 48" aria-hidden="true">
                 <!--- A stack of coins and one big coin --->
@@ -238,6 +253,26 @@
                 <text x="31" y="25.5" text-anchor="middle" font-family="Poppins, sans-serif" font-size="14" font-weight="800" fill="#8a5a00">$</text>
               </svg>
               <span class="cs-dock-name">Jackpot</span>
+            </a>
+            <a href="roulette" class="cs-tab">
+              <svg class="cs-dock-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <!--- A roulette wheel: red, blue and one green, a gold middle, the ball --->
+                <circle cx="24" cy="24" r="20" fill="#3b2a12" />
+                <circle cx="24" cy="24" r="17" fill="#e0675a" />
+                <path d="M24 7 A17 17 0 0 1 36 12 L24 24 Z M41 24 A17 17 0 0 1 36 36 L24 24 Z M24 41 A17 17 0 0 1 12 36 L24 24 Z M7 24 A17 17 0 0 1 12 12 L24 24 Z" fill="#5b8fd6" />
+                <path d="M36 12 A17 17 0 0 1 41 24 L24 24 Z" fill="#6fa784" />
+                <circle cx="24" cy="24" r="8" fill="#d4a017" />
+                <circle cx="24" cy="24" r="4" fill="#f5c542" />
+                <circle cx="33" cy="9.5" r="2.4" fill="#fff" />
+              </svg>
+              <span class="cs-dock-name">Roulette</span>
+            </a>
+            <a href="baucua" class="cs-tab">
+              <svg class="cs-dock-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <!--- Bầu cua: a red plate, two dice - a fish and a crab --->
+                <ellipse cx="24" cy="40" rx="21" ry="6" fill="#8a1d1d" /><ellipse cx="24" cy="38.5" rx="19" ry="5" fill="#c9302c" /><g transform="rotate(-12 15 22)"><rect x="4" y="13" width="22" height="22" rx="5" fill="#c9b48e" /><rect x="4" y="11" width="22" height="22" rx="5" fill="#fffaf0" /><g transform="translate(6 13) scale(0.28)"><path d="M46 32 60 20v24z" fill="#2f73b8"/><path d="M24 19c3-6 10-8 15-6l-3 7z" fill="#2f73b8"/><path d="M4 32c5-10 15-15 26-15 10 0 17 6 20 15-3 9-10 15-20 15C19 47 9 42 4 32z" fill="#4f9fe0"/><path d="M6 35c6 7 15 10 24 10 7 0 13-3 17-9-4 7-10 11-17 11C19 47 10 42 6 35z" fill="#3c86c9"/><path d="M9 34c6 5.5 13.5 8 21 8 5.5 0 10.5-2.2 14-6" stroke="#cfe8fb" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".8"/><path d="M26 26c2 2 2 6 0 8M33 25c2 2.5 2 7.5 0 10M40 26c2 2 2 6 0 8" stroke="#2f73b8" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="14" cy="29" r="3.4" fill="#fff"/><circle cx="14.6" cy="29" r="1.8" fill="#1f3550"/><path d="M27 45c2 4 6 5 9 4l-2-4z" fill="#2f73b8"/></g></g><g transform="rotate(9 32 26)"><rect x="21" y="17" width="22" height="22" rx="5" fill="#c9b48e" /><rect x="21" y="15" width="22" height="22" rx="5" fill="#fffaf0" /><g transform="translate(23 17) scale(0.28)"><path d="M14 38 5 42M14 43 6 49M15 47l-6 8M50 38l9 4M50 43l8 6M49 47l6 8" stroke="#b8321f" stroke-width="3.4" stroke-linecap="round"/><path d="M18 31c-6-2-10.5-7.5-9.5-14.5l5 4c1-3 3-5 6-6-1 4 0 7 2 9z" fill="#e5442f"/><path d="M46 31c6-2 10.5-7.5 9.5-14.5l-5 4c-1-3-3-5-6-6 1 4 0 7-2 9z" fill="#e5442f"/><path d="M27 27v-7M37 27v-7" stroke="#b8321f" stroke-width="2.6" stroke-linecap="round"/><circle cx="27" cy="18" r="3.6" fill="#fff" stroke="#b8321f" stroke-width="1.4"/><circle cx="37" cy="18" r="3.6" fill="#fff" stroke="#b8321f" stroke-width="1.4"/><circle cx="27.5" cy="18.4" r="1.8" fill="#3a2410"/><circle cx="36.5" cy="18.4" r="1.8" fill="#3a2410"/><path d="M12 39c0-8 9-13 20-13s20 5 20 13c0 7-9 12-20 12s-20-5-20-12z" fill="#e5442f"/><path d="M12.3 41c1.8 6 10 10 19.7 10s17.9-4 19.7-10c-3.8 4.2-11 6.8-19.7 6.8S16.1 45.2 12.3 41z" fill="#c4361f"/><path d="M19 34c3-3 8-4.5 13-4.5" stroke="#ff9c86" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="24" cy="40" r="1.7" fill="#a3241a"/><circle cx="32" cy="41.5" r="1.7" fill="#a3241a"/><circle cx="40" cy="40" r="1.7" fill="#a3241a"/></g></g>
+              </svg>
+              <span class="cs-dock-name">Bầu Cua</span>
             </a>
             <a href="battles" class="cs-tab">
               <svg class="cs-dock-icon" viewBox="0 0 48 48" aria-hidden="true">
@@ -295,6 +330,19 @@
               </svg>
               <span class="cs-dock-name">Slots</span>
             </a>
+            <span class="cs-dock-sep" aria-hidden="true"></span>
+            <a href="leaderboard" class="cs-tab cs-tab-board">
+              <svg class="cs-dock-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <!--- A golden trophy on a stand --->
+                <path d="M15 9 H33 V20 Q33 30 24 31 Q15 30 15 20 Z" fill="#f5c542" />
+                <path d="M15 12 H9 Q8 21 16 23 M33 12 H39 Q40 21 32 23" fill="none" stroke="#d4a017" stroke-width="2.6" stroke-linecap="round" />
+                <path d="M19 11 V20 Q19 25 23 27" fill="none" stroke="#fff1c4" stroke-width="2" stroke-linecap="round" opacity="0.8" />
+                <rect x="21" y="30" width="6" height="6" fill="#d4a017" />
+                <rect x="14" y="36" width="20" height="6" rx="2" fill="#8a5a00" />
+                <rect x="18" y="38" width="12" height="2" rx="1" fill="#f5c542" />
+              </svg>
+              <span class="cs-dock-name">Leaderboard</span>
+            </a>
         </nav>
     </div>
 
@@ -306,11 +354,14 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="/static/scripts/avatar.js"></script>
     <script src="/static/scripts/ui.js"></script>
+    <script src="/static/scripts/casino_looks.js"></script>
+    <script src="/static/scripts/casino_coin.js"></script>
     <script src="/static/scripts/nav.js"></script>
     <script src="/static/scripts/casino_dock.js"></script>
     <script src="/static/scripts/casino_info.js"></script>
     <script src="/static/scripts/casino_fullscreen.js"></script>
     <script src="/static/scripts/blackjack.js"></script>
+    <script src="/static/scripts/casino_best.js"></script>
     <script src="/static/scripts/casino_wallet.js"></script>
     <script src="/static/scripts/chat.js"></script>
 </body>

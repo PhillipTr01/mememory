@@ -1,0 +1,381 @@
+/* The accessory shop of the casino: frames and animations for the avatar */
+
+.sh-main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sh-title-icon {
+  display: inline-grid;
+  place-items: center;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+/* ---------- Me ---------- */
+
+.sh-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: linear-gradient(90deg, rgba(var(--mm-accent-rgb), 0.1), var(--mm-surface-2) 60%);
+}
+
+.sh-hero-avatar .mm-avatar.lg {
+  --size: 72px;
+}
+
+.sh-hero-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.sh-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.sh-edit-link {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.sh-edit-link:hover {
+  background: var(--mm-surface-3);
+}
+
+.sh-wallet {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  margin-left: auto;
+  text-align: right;
+}
+
+.sh-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--mm-muted);
+  text-transform: uppercase;
+}
+
+.sh-balance {
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.sh-note {
+  font-size: 0.72rem;
+  color: var(--mm-muted);
+}
+
+/* The avatar maker in the casino: a card like the others */
+.sh-main .avatar-editor {
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+}
+
+/* ---------- The items ---------- */
+
+.sh-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sh-heading {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--mm-muted);
+  text-transform: uppercase;
+}
+
+.sh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.sh-item {
+  --tone: 160, 160, 160;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.9rem 0.75rem 0.85rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+  text-align: center;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.sh-item:hover {
+  border-color: rgba(var(--tone), 0.5);
+  transform: translateY(-2px);
+}
+
+.sh-item.rare {
+  --tone: 91, 143, 214;
+}
+
+.sh-item.epic {
+  --tone: 157, 132, 194;
+}
+
+.sh-item.legendary {
+  --tone: 212, 166, 74;
+}
+
+.sh-item.worn {
+  border-color: rgba(var(--mm-accent-rgb), 0.7);
+  box-shadow: 0 0 0 1px rgba(var(--mm-accent-rgb), 0.35);
+}
+
+/* The preview: room for crowns, halos and flames */
+.sh-stage {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 92px;
+  border-radius: 10px;
+  background: radial-gradient(circle at 50% 55%, rgba(var(--tone), 0.16), transparent 70%);
+}
+
+.sh-stage .mm-avatar.lg {
+  --size: 56px;
+}
+
+.sh-rarity {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: rgb(var(--tone));
+  text-transform: uppercase;
+}
+
+/* Every card the same build: a long name takes two lines at most, the button always at the bottom */
+.sh-item-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.sh-btn {
+  width: 100%;
+  margin-top: auto;
+}
+
+.sh-worn-tag {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  color: var(--mm-accent);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 575px) {
+  .sh-main {
+    padding: 1rem;
+  }
+
+  .sh-hero {
+    flex-wrap: wrap;
+    gap: 0.9rem;
+  }
+
+  .sh-wallet {
+    align-items: flex-start;
+    margin-left: 0;
+    text-align: left;
+    width: 100%;
+  }
+
+  .sh-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- Two views: the shop - and the avatar maker ---------- */
+.sh-views {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+}
+
+.sh-view-tab {
+  padding: 0.45rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mm-muted);
+  font-weight: 800;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sh-view-tab:hover {
+  color: var(--mm-text);
+}
+
+.sh-view-tab.active {
+  background: var(--mm-accent);
+  color: #1a1206;
+  box-shadow: 0 4px 12px rgba(var(--mm-accent-rgb), 0.3);
+}
+
+/* The avatar view: only the avatar maker */
+.sh-main.view-avatar .sh-hero,
+.sh-main.view-avatar .sh-sections,
+.sh-main.view-avatar .sh-section {
+  display: none;
+}
+
+.sh-main.view-avatar .avatar-editor {
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 575px) {
+  .sh-main .jp-head {
+    flex-wrap: wrap;
+  }
+}
+
+/* ---------- Exclusive items: given, never bought ---------- */
+.sh-section-note {
+  margin: -0.4rem 0 0;
+  font-size: 0.82rem;
+  color: var(--mm-muted);
+}
+
+.sh-item.exclusive {
+  --tone: 242, 196, 90;
+  background: linear-gradient(180deg, rgba(var(--tone), 0.07), transparent 55%), var(--mm-surface-2);
+}
+
+.sh-item.exclusive.owned {
+  border-color: rgba(var(--tone), 0.45);
+}
+
+/* Locked: the preview a bit dark - you see what you could win */
+.sh-item.exclusive.locked .sh-stage {
+  filter: saturate(0.55) brightness(0.8);
+}
+
+.sh-item.exclusive.locked:hover .sh-stage {
+  filter: none;
+}
+
+.sh-season-origin {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: rgb(var(--tone));
+}
+
+.sh-season-origin.how {
+  color: var(--mm-muted);
+}
+
+.sh-item.exclusive .sh-stage {
+  height: 104px;
+}
+
+/* ---------- The sections: a row to go to one ---------- */
+.sh-sections {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 5;
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0.4rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mm-surface) 88%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.sh-sections::-webkit-scrollbar {
+  display: none;
+}
+
+.sh-sections button {
+  flex: 1 0 auto;
+  padding: 0.4rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sh-sections button:hover {
+  color: var(--mm-text);
+}
+
+.sh-sections button.active {
+  background: var(--mm-accent);
+  color: var(--mm-on-accent);
+}
+
+.sh-sections button[hidden] {
+  display: none;
+}
+
+/* (a click on a section: it scrolls to it - under the row of the sections) */
+.sh-main:not(.view-avatar) .sh-section {
+  scroll-margin-top: 4.25rem;
+}

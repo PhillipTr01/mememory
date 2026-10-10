@@ -425,26 +425,26 @@ test("blackjack: three tables in the lobby, each with its own limits and seats",
   sockets.push(lobby);
   const list = await h.once(lobby, "blackjackTables");
   assert.deepStrictEqual(list.map((t) => t.id), ["casual", "classic", "highroller"]);
-  assert.ok(list.every((t) => t.seats === 5));
+  assert.ok(list.every((t) => t.seats === config.BJ_SEATS));
   const high = list.find((t) => t.id === "highroller");
-  assert.deepStrictEqual([high.minBet, high.maxBet], [500, 2000]);
-  assert.deepStrictEqual(list.map((t) => [t.minBet, t.maxBet]).slice(0, 1), [[100, 500]]);
+  assert.deepStrictEqual([high.minBet, high.maxBet], [config.BJ_HIGH_MIN, config.BJ_HIGH_MAX]);
+  assert.deepStrictEqual(list.map((t) => [t.minBet, t.maxBet]).slice(0, 1), [[config.BJ_CASUAL_MIN, config.BJ_CASUAL_MAX]]);
 
   // A seat at the high roller table: the lobby sees it, the classic table doesn't
-  h.setCoins("carol", 5000);
+  h.setCoins("carol", config.BJ_HIGH_MIN * 10);
   const carol = server.client("/blackjack", tokens.carol, { table: "highroller" });
   sockets.push(carol);
   const state = await h.once(carol, "blackjackState");
   assert.strictEqual(state.table.id, "highroller");
   carol.emit("sit", 2);
-  const seen = await waitFor(lobby, "blackjackTables", (l) => l.find((t) => t.id === "highroller").free === 4);
+  const seen = await waitFor(lobby, "blackjackTables", (l) => l.find((t) => t.id === "highroller").free === config.BJ_SEATS - 1);
   assert.deepStrictEqual(seen.find((t) => t.id === "highroller").players, ["carol"]);
-  assert.strictEqual(seen.find((t) => t.id === "classic").free, 5);
+  assert.strictEqual(seen.find((t) => t.id === "classic").free, config.BJ_SEATS);
   const refused = h.once(carol, "blackjackError");
-  carol.emit("bet", { seat: 2, amount: 100 });
-  assert.match(await refused, /At least 500/);
+  carol.emit("bet", { seat: 2, amount: config.BJ_HIGH_MIN - 1 });
+  assert.match(await refused, new RegExp("At least " + config.BJ_HIGH_MIN.toLocaleString("en-US")));
   carol.close();
-  await waitFor(lobby, "blackjackTables", (l) => l.find((t) => t.id === "highroller").free === 5);
+  await waitFor(lobby, "blackjackTables", (l) => l.find((t) => t.id === "highroller").free === config.BJ_SEATS);
 });
 
 test("blackjack: side bets - Perfect Pairs and 21+3, at most half the table's max bet, paid with the round", async () => {

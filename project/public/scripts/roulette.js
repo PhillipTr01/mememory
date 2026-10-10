@@ -1,0 +1,403 @@
+/* Hidden roulette: the server takes the bets, rolls and pays - this page shows the round. */
+const socket = io((window.CASINO_NS || "") + "/roulette");
+
+var myName = null;
+var myCoins = 0;
+var myCapRule = null; // the max bet by balance ({floor, share} - null: no cap), see casinoCapLeft
+// What more I may bet this round (`already`: my coins in it)
+function capLeft(already) {
+  return casinoCapLeft(myCapRule, myCoins, already);
+}
+var table = null; // the last state of the round
+var rules = null;
+var rolledRound = null; // the round whose roll plays (or played) on this page
+var rolling = false; // the reel rolls here right now
+var reelAt = 0; // the reel's position (px) when it stands
+var AMOUNT_KEY = "rouletteAmount";
+var TILE = 76; // width of a slot with its gap (from the page)
+var COPIES = 9; // the wheel this many times in a row: room to roll
+var COLOR_NAMES = { red: "Red", blue: "Blue", green: "Green" };
+// No numbers on the wheel: an icon per color
+var ICONS = { red: "🔥", blue: "💧", green: "🍀" };
+var shownRolls = null; // the rounds in the row of last rolls (a new one fades in)
+
+// Used by chat.js
+function chatUsername() {
+  return myName;
+}
+
+function formatCoins(value) {
+  return Number(value).toLocaleString("en-US");
+}
+
+function el(tag, className, text) {
+  var element = document.createElement(tag);
+  if (className) element.className = className;
+  if (text != null) element.innerText = text;
+  return element;
+}
+
+/* ---------- Socket ---------- */
+
+socket.on("connect", () => (document.getElementById("connectionBanner").hidden = true));
+socket.on("disconnect", () => (document.getElementById("connectionBanner").hidden = false));
+socket.on("connect_error", (error) => {
+  if (error && error.message == "unauthorized") window.location.href = "/?next=" + encodeURIComponent(location.pathname + location.search);
+});
+// The admin took the access away: the page again - it asks for access now
+socket.on("casinoClosed", () => window.location.reload());
+// The admin turned this game off: on to another one
+socket.on("gameOff", () => (window.location.href = "./"));
+window.addEventListener("pagehide", () => socket.disconnect());
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) socket.connect();
+});
+
+socket.on("joined", (data) => (myName = data.username));
+socket.on("coins", (data) => {
+  myCoins = data.coins;
+  myCapRule = data.betCapRule || null;
+  // While the reel rolls the balance shows the coins before the win
+  if (!rolling) renderCoins();
+  renderControls();
+});
+socket.on("rouletteError", (message) => showHint(message, "error"));
+
+socket.on("rouletteState", (state) => {
+  var first = table == null;
+  table = state;
+  rules = state.rules;
+  if (first) buildReel();
+  if (state.phase == "rolling" && rolledRound != state.round) playRoll(state);
+  else if (first && state.history.length) standOn(state.history[0].slot);
+  renderBoards();
+  renderHistory();
+  renderRounds();
+  renderFair();
+  renderControls();
+  renderStatus();
+});
+
+/* ---------- The reel ---------- */
+
+function buildReel() {
+  var track = document.getElementById("rlTrack");
+  var tiles = [];
+  for (var copy = 0; copy < COPIES; copy++) {
+    rules.wheel.forEach((slot, index) => {
+      var tile = el("div", "rl-tile " + slot.color, ICONS[slot.color]);
+      tile.dataset.slot = index;
+      tiles.push(tile);
+    });
+  }
+  track.replaceChildren(...tiles);
+  var first = tiles[0];
+  var gap = tiles[1].getBoundingClientRect().left - first.getBoundingClientRect().right;
+  TILE = first.getBoundingClientRect().width + gap;
+  // Without a result yet: somewhere in the middle
+  standOn(0);
+  window.addEventListener("resize", () => standOn(lastSlot));
+}
+
+var lastSlot = 0;
+// The x of the middle of tile `index` under the marker
+function offsetFor(index, jitter) {
+  var width = document.querySelector(".rl-reel").clientWidth;
+  return index * TILE + TILE / 2 + (jitter || 0) - width / 2;
+}
+
+// The reel stands still on `slot` (in the middle copy)
+function standOn(slot) {
+  lastSlot = slot;
+  if (rolling) return;
+  var track = document.getElementById("rlTrack");
+  track.getAnimations().forEach((animation) => animation.cancel());
+  reelAt = offsetFor(rules.wheel.length * 2 + slot);
+  track.style.transform = "translateX(" + -reelAt + "px)";
+  markWinner(table && table.phase == "rolling" ? null : slot);
+}
+
+function markWinner(slot) {
+  document.querySelectorAll(".rl-tile.won").forEach((tile) => tile.classList.remove("won"));
+  if (slot == null) return;
+  var middle = document.querySelectorAll(".rl-tile")[rules.wheel.length * 2 + slot];
+  if (middle) middle.classList.add("won");
+}
+
+// The roll: from where the reel stands to the slot the server rolled (a page that comes in late joins in)
+function playRoll(state) {
+  rolledRound = state.round;
+  rolling = true;
+  var track = document.getElementById("rlTrack");
+  markWinner(null);
+  document.querySelectorAll(".rl-board").forEach((board) => board.classList.remove("won", "lost"));
+  var n = rules.wheel.length;
+  // Start in the first copy on the slot it stands on, stop in the second last copy
+  var from = offsetFor(lastSlot + n);
+  // (where in the slot it stops: the same on every page of this round)
+  var jitter = (((state.round * 9301 + 49297) % 233280) / 233280 - 0.5) * TILE * 0.7;
+  var to = offsetFor(n * (COPIES - 2) + state.slot, jitter);
+  var duration = rules.spin - 900;
+  var spin = track.animate(
+    [
+      { transform: "translateX(" + -from + "px)", easing: "cubic-bezier(0.1, 0.55, 0.12, 1)" },
+      { transform: "translateX(" + -to + "px)" },
+    ],
+    { duration: duration, fill: "forwards" },
+  );
+  spin.currentTime = Math.max(0, Math.min(duration, rules.spin - (state.rollLeft || 0)));
+  spin.finished
+    .catch(() => {})
+    .then(() => {
+      // Settled: the reel jumps to the same spot in the middle copy (no visible change)
+      rolling = false;
+      spin.cancel();
+      reelAt = offsetFor(n * 2 + state.slot, jitter);
+      track.style.transform = "translateX(" + -reelAt + "px)";
+      lastSlot = state.slot;
+      markWinner(state.slot);
+      showResult(state);
+      renderHistory();
+      renderRounds();
+      renderFair();
+      renderControls();
+    });
+}
+
+// The reel stopped: the colors that won, what I won
+function showResult(state) {
+  var color = rules.wheel[state.slot].color;
+  document.querySelectorAll(".rl-board").forEach((board) => {
+    board.classList.toggle("won", board.dataset.color == color);
+    board.classList.toggle("lost", board.dataset.color != color);
+  });
+  var mine = table.bets.filter((bet) => bet.name == myName);
+  var won = mine.filter((bet) => bet.color == color).reduce((sum, bet) => sum + bet.amount * rules.payout[color], 0);
+  var status = document.getElementById("rlStatus");
+  status.className = "rl-status-text " + color;
+  status.innerText = won > 0 ? "You won 🪙 " + formatCoins(won) + "!" : ICONS[color] + " " + COLOR_NAMES[color];
+  renderCoins();
+}
+
+/* ---------- The round ---------- */
+
+var statusFrame = null;
+var barAnimation = null;
+var timerRound = null;
+var timerEndsAt = 0;
+function renderStatus() {
+  var status = document.getElementById("rlStatus");
+  var bar = document.getElementById("rlTimer");
+  if (table.phase != "betting") {
+    cancelAnimationFrame(statusFrame);
+    if (barAnimation) barAnimation.cancel();
+    barAnimation = null;
+    timerRound = null;
+    bar.style.width = "0%";
+    status.className = "rl-status-text";
+    if (table.phase == "idle") status.innerText = "Place a bet to start the round";
+    else if (rolling) status.innerText = "Rolling...";
+    return;
+  }
+  // The timer of this round runs already: it goes on as it is (every new bet sends the state again -
+  // starting over from the server's time left would make it jump back and forth by the delay)
+  var endsAt = performance.now() + table.timeLeft;
+  if (timerRound == table.round && barAnimation && Math.abs(endsAt - timerEndsAt) < 400) return;
+  timerRound = table.round;
+  timerEndsAt = endsAt;
+  cancelAnimationFrame(statusFrame);
+  // The bar runs down in one smooth animation (from where it is now)
+  var from = Math.min(1, table.timeLeft / rules.timer);
+  if (barAnimation) barAnimation.cancel();
+  bar.style.width = "100%";
+  barAnimation = bar.animate([{ transform: "scaleX(" + from + ")" }, { transform: "scaleX(0)" }], { duration: table.timeLeft, easing: "linear", fill: "forwards" });
+  // The text: whole seconds, a small pop on each one (tenths flicker and look laggy)
+  var shown = null;
+  var tick = () => {
+    var left = Math.max(0, timerEndsAt - performance.now());
+    var seconds = Math.ceil(left / 1000);
+    if (seconds != shown) {
+      shown = seconds;
+      status.className = "rl-status-text";
+      status.replaceChildren("Rolling in ", el("span", "rl-seconds" + (seconds <= 3 ? " soon" : ""), seconds + "s"));
+    }
+    if (left > 0) statusFrame = requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+// My bets this round: {red, blue, green}
+function myBets() {
+  var sums = { red: 0, blue: 0, green: 0 };
+  if (table) table.bets.forEach((bet) => bet.name == myName && (sums[bet.color] += bet.amount));
+  return sums;
+}
+
+function renderBoards() {
+  ["red", "green", "blue"].forEach((color) => {
+    var bets = table.bets.filter((bet) => bet.color == color);
+    // One row per player (all their bets on the color together), the biggest first
+    var players = new Map();
+    bets.forEach((bet) => players.set(bet.name, (players.get(bet.name) || 0) + bet.amount));
+    var rows = [...players].sort((a, b) => b[1] - a[1]);
+    document.querySelector('[data-count="' + color + '"]').innerText = rows.length + (rows.length == 1 ? " player" : " players");
+    document.querySelector('[data-total="' + color + '"]').innerText = "🪙 " + formatCoins(bets.reduce((sum, bet) => sum + bet.amount, 0));
+    document.querySelector('[data-bets="' + color + '"]').replaceChildren(
+      ...rows.map(([name, amount]) => {
+        var row = el("li", "rl-bet" + (name == myName ? " mine" : ""));
+        var who = el("span", "rl-bet-name");
+        who.append(createAvatar(name, "sm"), el("span", "", name));
+        if (name == myName) who.appendChild(el("span", "you-tag", "You"));
+        row.append(who, el("span", "rl-bet-amount", "🪙 " + formatCoins(amount)));
+        return row;
+      }),
+    );
+  });
+  // A new round: no colors that won
+  if (table.phase != "rolling") document.querySelectorAll(".rl-board").forEach((board) => board.classList.remove("won", "lost"));
+}
+
+function renderHistory() {
+  var list = document.getElementById("rlHistory");
+  // (while the reel rolls the newest is not known on this page yet)
+  var history = table.history.filter((entry) => !(rolling && entry.round == table.round));
+  // (one per round - and only the new one fades in with its color)
+  var seen = new Set();
+  history = history.filter((entry) => !seen.has(entry.round) && seen.add(entry.round));
+  var before = shownRolls;
+  shownRolls = new Set(history.map((entry) => entry.round));
+  list.replaceChildren(...history.slice(0, 14).map((entry) => el("span", "rl-dot " + entry.color + (before && !before.has(entry.round) ? " fresh" : ""), ICONS[entry.color])));
+}
+
+function renderRounds() {
+  var list = document.getElementById("rlRounds");
+  var history = table.history.filter((entry) => !(rolling && entry.round == table.round));
+  document.getElementById("rlRoundsEmpty").hidden = history.length > 0;
+  list.replaceChildren(
+    ...history.slice(0, 10).map((entry) => {
+      var item = el("li", "jp-history-item rl-round");
+      item.appendChild(el("span", "rl-dot " + entry.color, ICONS[entry.color]));
+      var info = el("div", "jp-history-text");
+      // The color it came on as the title - how many of the players won under it (not who)
+      var players = entry.players || 0;
+      var won = entry.won != null ? entry.won : (entry.winners || []).length;
+      info.append(el("b", "rl-round-color " + entry.color, COLOR_NAMES[entry.color]), el("small", "", "Round " + entry.round + " · " + won + " / " + players + (players == 1 ? " player" : " players") + " won"));
+      item.appendChild(info);
+      // What was paid out in the round
+      var paid = entry.paid != null ? entry.paid : (entry.winners || []).reduce((sum, w) => sum + w.win, 0);
+      item.appendChild(el("span", "jp-history-won", paid > 0 ? "🪙 " + formatCoins(paid) : ""));
+      return item;
+    }),
+  );
+}
+
+function renderFair() {
+  var fair = document.getElementById("rlFair");
+  var part = (label, value) => {
+    var box = el("span", "jp-fair-part");
+    box.append(el("span", "jp-fair-label", label), el("code", "", value));
+    return box;
+  };
+  var parts = [el("i", "bi bi-shield-check"), part("Round hash", table.fair.hash)];
+  if (table.fair.seed && !rolling) parts.push(part("Seed", table.fair.seed));
+  fair.title = "Provably fair: the slot comes from the seed (hmac-sha256(seed, \"roulette:\" + round)). sha256(seed) = round hash";
+  fair.replaceChildren(...parts);
+}
+
+/* ---------- Amount and bets ---------- */
+
+function renderCoins() {
+  document.getElementById("rlCoins").innerText = "🪙 " + formatCoins(myCoins);
+}
+
+function amount() {
+  return Math.floor(Number(document.getElementById("rlAmount").value));
+}
+
+function setAmount(value) {
+  var input = document.getElementById("rlAmount");
+  input.value = Math.max(0, Math.floor(value)) || "";
+  try {
+    localStorage.setItem(AMOUNT_KEY, input.value);
+  } catch (error) {
+    // not remembered
+  }
+  renderControls();
+}
+
+// My bets this round, all colors together
+function myTotal() {
+  var mine = myBets();
+  return mine.red + mine.blue + mine.green;
+}
+
+// What is still allowed this round (all colors together)
+function roomLeft() {
+  var mine = myBets();
+  return Math.max(0, rules.maxBet - mine.red - mine.blue - mine.green);
+}
+
+var CHIPS = [
+  ["Clear", () => 0],
+  ["+10", (v) => v + 10],
+  ["+100", (v) => v + 100],
+  ["+1K", (v) => v + 1000],
+  ["½", (v) => v / 2],
+  ["×2", (v) => v * 2],
+  ["Max", () => Math.min(myCoins, roomLeft(), capLeft(myTotal()))],
+];
+
+function buildChips() {
+  var box = document.getElementById("rlChips");
+  box.replaceChildren(
+    ...CHIPS.map(([label, change]) => {
+      var chip = el("button", "rl-chip", label);
+      chip.type = "button";
+      chip.addEventListener("click", () => rules && setAmount(Math.min(change(amount() || 0), rules.maxBet)));
+      return chip;
+    }),
+  );
+}
+
+function renderControls() {
+  if (!table) return;
+  var mine = myBets();
+  var value = amount();
+  var open = table.phase != "rolling";
+  document.querySelectorAll(".rl-place").forEach((button) => {
+    var color = button.dataset.color;
+    var blocked = (color == "red" && mine.blue > 0) || (color == "blue" && mine.red > 0);
+    var overCap = value > capLeft(myTotal());
+    button.disabled = !open || blocked || !(value >= rules.minBet) || value > myCoins || value > roomLeft() || overCap;
+    button.closest(".rl-board").classList.toggle("blocked", blocked);
+    button.title = blocked ? "You bet on " + (color == "red" ? "blue" : "red") + " this round" : !open ? "The reel rolls - the next round soon" : value > roomLeft() ? "At most 🪙 " + formatCoins(rules.maxBet) + " per round" : value > myCoins ? "Not enough coins" : overCap ? "With your balance at most 🪙 " + formatCoins(capLeft(myTotal())) + " more this round" : "Bet 🪙 " + formatCoins(value || 0) + " on " + COLOR_NAMES[color].toLowerCase();
+    // My bet on the color
+    var mineBox = button.querySelector(".rl-place-mine");
+    if (mine[color] > 0) {
+      if (!mineBox) button.appendChild((mineBox = el("span", "rl-place-mine")));
+      mineBox.innerText = "You: 🪙 " + formatCoins(mine[color]);
+    } else if (mineBox) mineBox.remove();
+  });
+}
+
+function place(color) {
+  if (!rules) return;
+  var value = amount();
+  if (!(value >= rules.minBet)) return showHint("At least 🪙 " + formatCoins(rules.minBet) + " per bet.", "error", document.getElementById("rlAmount"));
+  socket.emit("bet", { color: color, amount: value });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  setupChat();
+  buildChips();
+  var input = document.getElementById("rlAmount");
+  var saved = null;
+  try {
+    saved = localStorage.getItem(AMOUNT_KEY);
+  } catch (error) {
+    // nothing saved
+  }
+  input.value = saved || 100;
+  input.addEventListener("input", () => setAmount(amount()));
+  document.querySelectorAll(".rl-place").forEach((button) => button.addEventListener("click", () => place(button.dataset.color)));
+});

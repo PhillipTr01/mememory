@@ -26,10 +26,15 @@ const ROOM = "blackjack";
  * A page picks its table with the handshake query `table` (none: the default
  * table, "lobby": no table - only the overview of all tables).
  */
-module.exports = function (io) {
-  const room = io.of("/blackjack");
+module.exports = function (io, options = {}) {
+  // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
+  const world = options.world || "";
+  const { coins, persist, live, inPlay, casinoLock, casinoChat, limits } = require("../game/worlds").services(world);
+  const room = io.of(world + "/blackjack");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
+  // The biggest wins of blackjack, every table together (the side of the page)
+  const best = require("../game/best_wins").attach(room, "blackjack win", world);
 
   const tables = new Map(config.BJ_TABLES.map((def) => [def.id, createTable(def)]));
   const LOBBY = "lobby";
@@ -51,8 +56,8 @@ module.exports = function (io) {
 
   function createTable(def) {
     // The limits per seat (can be changed in the admin panel)
-    const minBet = () => config[def.minKey];
-    const maxBet = () => config[def.maxKey];
+    const minBet = () => limits[def.minKey];
+    const maxBet = () => limits[def.maxKey];
 
     const table = {
       id: def.id,
@@ -119,7 +124,7 @@ module.exports = function (io) {
         peeking: table.peeking === true,
         history: table.history,
         viewers: pages().length,
-        rules: { sideShare: config.BJ_SIDE_SHARE, minBet: minBet(), maxBet: maxBet(), mySeats: config.BJ_MY_SEATS, turn: config.BJ_TURN, betting: config.BJ_BETTING, sit: config.BJ_SIT, decks: bj.DECKS },
+        rules: { sideShare: config.BJ_SIDE_SHARE, minBet: minBet(), maxBet: maxBet(), mySeats: limits.BJ_MY_SEATS, turn: config.BJ_TURN, betting: config.BJ_BETTING, sit: config.BJ_SIT, decks: bj.DECKS },
         lastBets: table.lastBets.get(viewer) || null,
       };
     }
@@ -230,6 +235,11 @@ module.exports = function (io) {
       }
       // A new shoe for every round: nothing to count
       table.shoe = bj.newShoe();
+      // (debug, the test world only: the first cards the admin picked, on top of the shoe)
+      if (nextDeal) {
+        table.shoe.push(...stacked(nextDeal, seats.length).reverse());
+        nextDeal = null;
+      }
       seats.forEach((i) => (table.seats[i].hands = [{ cards: [], bet: table.seats[i].bet, split: false, doubled: false, done: false }]));
       table.dealer = { cards: [], hidden: true };
       for (let n = 0; n < 2; n++) {
@@ -334,12 +344,18 @@ module.exports = function (io) {
           hand.result = result;
           hand.payout = payout;
           hand.done = true;
-          if (payout > 0) coins.add(seat.name, payout, { reason: "blackjack win", note: result }).catch((error) => console.error("[blackjack] Could not pay:", error));
+          if (payout > 0) {
+            coins.add(seat.name, payout, { reason: "blackjack win", note: result }).catch((error) => console.error("[blackjack] Could not pay:", error));
+            best.changed();
+          }
           results.push({ name: seat.name, result: result, bet: hand.bet, payout: payout });
         }
         // The side bets: paid now, with the round
         for (const side of seat.sideResults || []) {
-          if (side.payout > 0) coins.add(seat.name, side.payout, { reason: "blackjack win", note: side.name }).catch((error) => console.error("[blackjack] Could not pay:", error));
+          if (side.payout > 0) {
+            coins.add(seat.name, side.payout, { reason: "blackjack win", note: side.name }).catch((error) => console.error("[blackjack] Could not pay:", error));
+            best.changed();
+          }
           results.push({ name: seat.name, result: "side", side: side.type, bet: side.bet, payout: side.payout });
         }
       }
@@ -399,7 +415,7 @@ module.exports = function (io) {
       if (busy.has(username)) return null;
       busy.add(username);
       try {
-        if (!(await coins.spend(username, hand.bet, { reason: "blackjack bet", note: type }))) return "You don't have enough coins.";
+        if (!(await coins.spend(username, hand.bet, { reason: "blackjack bet", note: type, nocap: true }))) return coins.refusal(username) || "You don't have enough coins.";
         // Still the same hand after the payment?
         if (table.current == null || table.current.seat !== s || table.current.hand !== h || table.seats[s] !== seat) {
           await coins.add(username, hand.bet, { reason: "blackjack refund" });
@@ -432,6 +448,11 @@ module.exports = function (io) {
 
     /* ---------- Actions of a player ---------- */
 
+    // The coins of a player on this table this round (every seat, the side bets too) - the max bet by balance
+    // counts for them together
+    const inRound = (username) =>
+      table.seats.reduce((sum, seat) => (seat && seat.name === username ? sum + (seat.bet || 0) + (seat.side ? (seat.side.pairs || 0) + (seat.side.plus3 || 0) : 0) : sum), 0);
+
     const handlers = {
       // Sit down on a free seat - a second one only when the others have a bet
       sit(username, error, s) {
@@ -439,7 +460,7 @@ module.exports = function (io) {
         if (table.seats[s]) return table.seats[s].name === username ? undefined : error("This seat is taken.");
         const mine = table.seats.filter((seat) => seat && seat.name === username);
         if (mine.some((seat) => seat.bet === 0)) return error("Bet on your seat first, then take another one.");
-        if (mine.length >= config.BJ_MY_SEATS) return error(`At most ${config.BJ_MY_SEATS} seats at a time.`);
+        if (mine.length >= limits.BJ_MY_SEATS) return error(`At most ${limits.BJ_MY_SEATS} seats at a time.`);
         table.seats[s] = newSeat(username);
         // During a round: the stand-up time starts with the next betting time
         if (table.phase === "betting") startStandTimer(s);
@@ -461,7 +482,7 @@ module.exports = function (io) {
         if (busy.has(username)) return;
         busy.add(username);
         try {
-          if (!(await coins.spend(username, amount, { reason: "blackjack bet" }))) return error("You don't have enough coins.");
+          if (!(await coins.spend(username, amount, { reason: "blackjack bet", round: inRound(username) }))) return error(coins.refusal(username) || "You don't have enough coins.");
           // The round started, or the player stood up meanwhile
           if (table.phase !== "betting" || table.seats[s] !== seat) {
             await coins.add(username, amount, { reason: "blackjack refund" });
@@ -490,7 +511,7 @@ module.exports = function (io) {
         if (busy.has(username)) return;
         busy.add(username);
         try {
-          if (!(await coins.spend(username, amount, { reason: "blackjack bet", note: type }))) return error("You don't have enough coins.");
+          if (!(await coins.spend(username, amount, { reason: "blackjack bet", note: type, round: inRound(username) }))) return error(coins.refusal(username) || "You don't have enough coins.");
           if (table.phase !== "betting" || table.seats[s] !== seat) {
             await coins.add(username, amount, { reason: "blackjack refund" });
             return error("Too late for this seat.");
@@ -527,7 +548,7 @@ module.exports = function (io) {
         try {
           const sides = (bet) => (bet.side ? (bet.side.pairs || 0) + (bet.side.plus3 || 0) : 0);
           const total = last.reduce((sum, bet) => sum + bet.amount + sides(bet), 0);
-          if (!(await coins.spend(username, total, { reason: "blackjack bet", note: "same bet" }))) return error("You don't have enough coins.");
+          if (!(await coins.spend(username, total, { reason: "blackjack bet", note: "same bet" }))) return error(coins.refusal(username) || "You don't have enough coins.");
           // The seats now (the round may have started, others may have sat down meanwhile)
           let refund = 0;
           let placed = 0;
@@ -540,7 +561,7 @@ module.exports = function (io) {
               ...(Number.isInteger(bet.seat) && bet.seat >= 0 && bet.seat < table.seats.length ? [bet.seat] : []),
               ...indexes.slice().sort((x, y) => Math.abs(x - bet.seat) - Math.abs(y - bet.seat) || x - y),
             ];
-            const s = table.phase === "betting" ? order.find((i) => own(i) || (table.seats[i] == null && held < config.BJ_MY_SEATS)) : undefined;
+            const s = table.phase === "betting" ? order.find((i) => own(i) || (table.seats[i] == null && held < limits.BJ_MY_SEATS)) : undefined;
             if (s === undefined) {
               refund += bet.amount + sides(bet);
               continue;
@@ -763,14 +784,6 @@ module.exports = function (io) {
       );
     }
 
-    socket.on(
-      "claimBonus",
-      safe("claimBonus", async () => {
-        const paid = await coins.claim(username);
-        if (paid) socket.emit("bonusClaimed", paid);
-        await sendCoins(username);
-      }),
-    );
 
     socket.on(
       "sendChatMessage",
@@ -809,6 +822,36 @@ module.exports = function (io) {
     },
   );
 
+  /* ---------- Debug (the admin's test world): the cards of the next deal ---------- */
+
+  let nextDeal = null;
+  const DEALS = {
+    // every seat: [first, second] - the dealer: [up, hole] - then what is drawn next
+    blackjack: { seat: ["As", "Kh"], dealer: ["9c", "7d"], then: ["5s", "Td"] },
+    pair: { seat: ["8s", "8s"], dealer: ["Tc", "7d"], then: ["3h", "9c", "Kd"] },
+    split: { seat: ["8h", "8d"], dealer: ["6c", "Td"], then: ["3s", "2c", "Th", "9s", "Kc"] },
+    double: { seat: ["6h", "5d"], dealer: ["6c", "Td"], then: ["Ks", "Tc", "9h"] },
+    "dealer-bust": { seat: ["Th", "8d"], dealer: ["6c", "Td"], then: ["Ks", "Qc", "Jh"] },
+    "dealer-blackjack": { seat: ["Th", "9d"], dealer: ["Ac", "Kd"], then: ["5s", "4c"] },
+    "21+3": { seat: ["7h", "7d"], dealer: ["7s", "Td"], then: ["9c", "4h"] },
+  };
+
+  // The cards in the order they are drawn: a card for every seat and the dealer, twice - then the rest
+  function stacked(kind, seats) {
+    const deal = DEALS[kind];
+    const cards = [];
+    for (let n = 0; n < 2; n++) {
+      for (let i = 0; i < seats; i++) cards.push(deal.seat[n]);
+      cards.push(deal.dealer[n]);
+    }
+    return cards.concat(deal.then);
+  }
+
+  function stackDeal(kind) {
+    nextDeal = DEALS[kind] ? kind : null;
+    return nextDeal != null || kind == null;
+  }
+
   const main = tables.get(config.BJ_DEFAULT_TABLE);
-  return { table: main.table, tables, refundAll };
+  return { table: main.table, tables, refundAll, stackDeal, DEALS: Object.keys(DEALS) };
 };

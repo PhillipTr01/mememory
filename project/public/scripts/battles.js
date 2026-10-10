@@ -1,8 +1,13 @@
 /* Hidden case battles: the server decides every item, this page only shows them. */
-const socket = io("/battles");
+const socket = io((window.CASINO_NS || "") + "/battles");
 
 var myName = null;
 var myCoins = 0;
+var myCapRule = null; // the max bet by balance ({floor, share} - null: no cap), see casinoCapLeft
+// What more I may bet this round (`already`: my coins in it)
+function capLeft(already) {
+  return casinoCapLeft(myCapRule, myCoins, already);
+}
 var CASES = []; // catalog from the server
 var battles = []; // every battle the server knows
 var lastBattles = []; // finished battles, newest first
@@ -99,6 +104,7 @@ socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
   myCoins = data.coins;
+  myCapRule = data.betCapRule || null;
   renderCreate();
   renderList();
   if (!spinning) renderBattle();
@@ -117,7 +123,11 @@ socket.on("cases", (data) => {
   renderCreate();
 });
 
-socket.on("battleError", (message) => showToast(message, "error"));
+socket.on("battleError", (message) => showHint(message, "error"));
+socket.on("battleLeft", (id) => {
+  var battle = battles.find((b) => b.id == id);
+  casinoNotice({ icon: "🚪", title: "You left the battle", text: (battle ? "🪙 " + formatCoins(battle.price) : "Your coins") + " are back in your balance", key: "battle" });
+});
 
 // The new battle of this page: open it
 socket.on("battleCreated", (id) => {
@@ -130,8 +140,15 @@ socket.on("battleCreated", (id) => {
   openBattle(id);
 });
 
+var listTimer = null;
+
 socket.on("battles", (data) => {
   battles = data.list;
+  // The end still plays in the battle (the mode reveal, the jackpot roulette): until then no winner in the list
+  battles.forEach((battle) => (battle.endAt = battle.endLeft > 0 ? Date.now() + battle.endLeft : 0));
+  var ending = battles.filter((battle) => battle.endAt > 0).map((battle) => battle.endLeft);
+  clearTimeout(listTimer);
+  if (ending.length) listTimer = setTimeout(renderList, Math.min(...ending) + 50);
   battlesLoaded = true;
   lastBattles = data.history;
   roundTime = data.round;
@@ -151,6 +168,7 @@ function track(battle) {
   seen[battle.id] = { phase: battle.phase, revealed: battle.revealed };
   if (!(battle.id in shown)) {
     shown[battle.id] = battle.revealed;
+    if (battle.id == viewId) catchUp(battle);
     return;
   }
   if (battle.id != viewId) {
@@ -164,6 +182,29 @@ function track(battle) {
     shown[battle.id] = battle.revealed;
   }
   if (battle.phase == "done" && before && before.phase == "running") celebrate(battle);
+}
+
+/*
+ * A battle opened in the middle (a reload, a link): what still rolls for the
+ * others rolls here too - the case of this round (the rest of its spin), the
+ * mode reveal and the roulette at the end. Nothing shows a result before it.
+ * true: it plays (and renders) by itself.
+ */
+function catchUp(battle) {
+  if (battle.phase == "running" && battle.revealed > 0 && battle.roundAgo != null && battle.roundAgo < roundTime - 900 && !spinning) {
+    shown[battle.id] = battle.revealed - 1;
+    seenRunning[battle.id] = true;
+    playRound(battle, battle.revealed - 1, battle.roundAgo);
+    return true;
+  }
+  if (battle.phase == "done" && battle.endLeft > 0) {
+    // The end still plays: from where it is now (the last case was seen this long ago)
+    seenRunning[battle.id] = true;
+    // (the last case stopped about half a second before the server's end)
+    lastCaseAt[battle.id] = Date.now() - (battle.doneAgo || 0) - 480;
+    joinedLate[battle.id] = true;
+  }
+  return false;
 }
 
 // Once: may the browser tell when a battle starts while another tab is open?
@@ -188,10 +229,14 @@ function pushView(id) {
 
 function showView() {
   viewId = location.hash.length > 1 ? location.hash.slice(1) : null;
-  if (viewId) shown[viewId] = (battles.find((b) => b.id == viewId) || { revealed: 0 }).revealed;
+  // (not known yet - a reload: the first list decides, see track)
+  if (viewId && battles.some((b) => b.id == viewId)) shown[viewId] = battles.find((b) => b.id == viewId).revealed;
   spinning = false;
+  // (first the right view - a battle caught up in the middle plays in it right away)
   document.getElementById("btListView").hidden = viewId != null;
   document.getElementById("btBattleView").hidden = viewId == null;
+  var open = viewId && battles.find((b) => b.id == viewId);
+  if (open && catchUp(open)) return;
   // Main page: no status of a battle
   if (viewId == null) {
     clearInterval(statusTimer);
@@ -252,14 +297,14 @@ function setCount(id, count) {
   var diff = count - countOf(id);
   if (diff > 0 && picked.length + diff > MAX_CASES) {
     diff = MAX_CASES - picked.length;
-    showToast("At most " + MAX_CASES + " cases per battle.", "error");
+    showHint("At most " + MAX_CASES + " cases per battle.", "error");
   }
   // (and at most MAX_COST for all of them)
   var price = caseById(id) ? caseById(id).price : 0;
   var cost = picked.reduce((sum, other) => sum + (caseById(other) ? caseById(other).price : 0), 0);
   if (diff > 0 && price > 0 && cost + diff * price > MAX_COST) {
     diff = Math.max(0, Math.floor((MAX_COST - cost) / price));
-    showToast("A battle costs at most 🪙 " + formatCoins(MAX_COST) + " per player.", "error");
+    showHint("A battle costs at most 🪙 " + formatCoins(MAX_COST) + " per player.", "error");
   }
   for (; diff > 0; diff--) picked.push(id);
   for (var i = picked.length - 1; i >= 0 && diff < 0; i--) {
@@ -428,8 +473,9 @@ function renderCreate() {
   document.getElementById("btShuffle").hidden = picked.length < 2;
   var button = document.getElementById("btCreate");
   document.getElementById("btCreateLabel").innerText = ids.length ? "Create for 🪙 " + formatCoins(cost) : "Create";
-  button.disabled = ids.length == 0 || cost > myCoins;
-  button.title = cost > myCoins ? "Not enough coins" : "";
+  var overCap = cost > capLeft(inBattles());
+  button.disabled = ids.length == 0 || cost > myCoins || overCap;
+  button.title = cost > myCoins ? "Not enough coins" : overCap ? "With your balance at most 🪙 " + formatCoins(capLeft(inBattles())) + " more in battles now" : "";
 }
 
 function showContents(box) {
@@ -474,6 +520,11 @@ function chanceText(chance) {
 
 function isIn(battle) {
   return battle.seats.some((seat) => seat && seat.name == myName);
+}
+
+// My coins in battles that wait or run - the max bet by balance counts for them together
+function inBattles() {
+  return battles.filter((battle) => (battle.phase == "waiting" || battle.phase == "running") && isIn(battle)).reduce((sum, battle) => sum + battle.price, 0);
 }
 
 // The cases of a battle; many cases: only a window (around the current round)
@@ -548,6 +599,7 @@ function shareOf(battle, seat) {
 function phaseText(battle) {
   if (battle.phase == "waiting") return battle.seats.filter((s) => s == null).length + " seat(s) free";
   if (battle.phase == "running") return battle.revealed == 0 ? "Starting..." : "Round " + battle.revealed + " / " + battle.cases.length;
+  if (battle.endAt > Date.now()) return (battle.mode || "classic") == "random" ? "Revealing the mode..." : "Drawing the winner...";
   var winners = winnersOf(battle).map((seat) => battle.seats[seat].name);
   if (winners.length > 1) return "Split: " + winners.join(" & ") + " · 🪙 " + formatCoins(shareOf(battle, winnersOf(battle)[0])) + " each";
   return (winners[0] == myName ? "You won" : winners[0] + " won") + " 🪙 " + formatCoins(battle.payout);
@@ -612,7 +664,7 @@ function renderList() {
       if (battle.phase == "waiting" && !isIn(battle)) {
         var join = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Join");
         join.type = "button";
-        join.disabled = battle.price > myCoins;
+        join.disabled = battle.price > myCoins || battle.price > capLeft(inBattles());
         join.addEventListener("click", (event) => {
           event.stopPropagation();
           askForNotifications();
@@ -621,9 +673,14 @@ function renderList() {
         });
         actions.appendChild(join);
       }
-      var view = el("button", "mm-btn mm-btn-sm", "View");
-      view.type = "button";
-      view.addEventListener("click", () => openBattle(battle.id));
+      // A link: a middle click (or ctrl / cmd) opens the battle in a new tab
+      var view = el("a", "mm-btn mm-btn-sm", "View");
+      view.href = "#" + battle.id;
+      view.addEventListener("click", (event) => {
+        if (event.button != 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+        event.preventDefault();
+        openBattle(battle.id);
+      });
       actions.appendChild(view);
       row.append(seatAvatars(battle), info, actions);
       return row;
@@ -634,6 +691,8 @@ function renderList() {
 function renderHistory() {
   var list = document.getElementById("btHistory");
   document.getElementById("btHistoryEmpty").hidden = lastBattles.length > 0;
+  // (phones: no empty card over the chat)
+  document.getElementById("btHistoryCard").classList.toggle("empty", lastBattles.length == 0);
   list.replaceChildren(
     ...lastBattles.map((entry) => {
       var multiple = entry.price > 0 ? entry.total / entry.price : 0;
@@ -686,10 +745,12 @@ function itemTile(item, extraClass) {
 function renderBattle() {
   var view = document.getElementById("btBattleView");
   var headBar = document.getElementById("btHeadBar");
-  headBar.replaceChildren();
-  if (viewId == null) return;
+  if (viewId == null) {
+    renderedKey = null;
+    headBar.replaceChildren();
+    return;
+  }
   var battle = currentBattle();
-  clearInterval(statusTimer);
   // Leave the battle (back to all battles): an icon on the far right
   var back = el("button", "bt-leave");
   back.type = "button";
@@ -700,6 +761,7 @@ function renderBattle() {
     pushView(null);
     showView();
   });
+  if (battle == null) renderedKey = null;
   if (battle == null && (!battlesLoaded || viewId == justCreated)) {
     view.replaceChildren();
     headBar.replaceChildren(back);
@@ -722,6 +784,12 @@ function renderBattle() {
   var drawing = over && ruleOf(battle) == "jackpot" && seenRunning[battle.id] && !drawShown[battle.id];
   if (drawing) over = false;
 
+  // Nothing of what the page shows changed (an update of the coins, of another battle, of the list): it stays as it is -
+  // a new drawing restarted what moves (the reel of the mode, the jackpot roulette) and flickered
+  var key = JSON.stringify([viewId, battle.phase, battle.revealed, battle.seats, battle.rounds.length, battle.nextIn != null, battle.fair.seed, rounds, over, reveal, drawing, reveal && Date.now() >= (revealing[battle.id] || Infinity), drawing && Date.now() >= (drawStarts[battle.id] || Infinity), over || battle.phase == "waiting" ? myCoins : null, spinning]);
+  if (key == renderedKey && view.firstChild) return;
+  renderedKey = key;
+  clearInterval(statusTimer);
   // One quiet line: price, cases, crazy - then the pot (gold) and leaving
   var top = el("div", "bt-battle-top");
   var facts = el("div", "bt-top-facts");
@@ -766,7 +834,7 @@ function renderBattle() {
       if (battle.phase == "waiting" && !isIn(battle)) {
         var join = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Join 🪙 " + formatCoins(battle.price));
         join.type = "button";
-        join.disabled = battle.price > myCoins;
+        join.disabled = battle.price > myCoins || battle.price > capLeft(inBattles());
         join.addEventListener("click", () => {
           askForNotifications();
           socket.emit("joinBattle", battle.id);
@@ -809,7 +877,7 @@ function renderBattle() {
       var reel = el("div", "bt-reel");
       var last = rounds > 0 ? itemOf(battle, rounds - 1, index) : null;
       var window_ = el("div", "bt-reel-window");
-      if (last && !spinning) window_.appendChild(itemTile(last, "big"));
+      if (last && !spinning) window_.appendChild(stillReel(battle, rounds - 1, index, last));
       else window_.appendChild(el("span", "bt-reel-idle", battle.phase == "waiting" ? "?" : ""));
       reel.appendChild(window_);
       for (var r = rounds - 1; r >= 0; r--) items.appendChild(itemTile(itemOf(battle, r, index)));
@@ -834,6 +902,17 @@ function renderBattle() {
       createAgain(battle);
     });
     parts.push(cancel);
+  }
+  // Everybody else who sits in it: out again, the coins back (only before it starts)
+  if (battle.phase == "waiting" && battle.creator != myName && battle.seats.some((seat) => seat && !seat.bot && seat.name == myName)) {
+    var leave = el("button", "bt-cancel bt-leave-battle");
+    leave.type = "button";
+    leave.append(document.createTextNode("🚪 Leave battle · 🪙 " + formatCoins(battle.price) + " back"));
+    leave.addEventListener("click", () => {
+      leave.disabled = true;
+      socket.emit("leaveBattle", battle.id);
+    });
+    parts.push(leave);
   }
   parts.push(fairLine(battle));
   view.replaceChildren(...parts);
@@ -922,7 +1001,8 @@ var DRAW_SLOTS = 40; // slots of one round of the roulette
 var DRAW_LAPS = 5;
 var SLOT_WIDTH = 66;
 var SEAT_COLORS = ["#d4a64a", "#3b82f6", "#e0675a", "#3fae6b"];
-var drawing = {}; // battle id -> when the roulette started
+var renderedKey = null; // what the battle view shows now (the same again: not drawn again)
+var drawStarts = {}; // battle id -> when the roulette started
 var drawBoxes = {}; // battle id -> its roulette (the same one through every render)
 
 // The slots of one round: every seat by its share (at least one), mixed - the same on every page
@@ -946,17 +1026,20 @@ function drawSlots(battle) {
 function playJackpotDraw(battle, grid) {
   // The first render after the last case: the roulette after the same pause as the random reveal
   // (after a random reveal it comes right away), the end after it
-  if (!drawing[battle.id]) {
-    var wait = battle.mode == "random" ? 0 : Math.max(0, (lastCaseAt[battle.id] || Date.now()) + REVEAL_WAIT - Date.now());
-    drawing[battle.id] = Date.now() + wait;
-    if (wait) setTimeout(renderBattle, wait);
+  if (!drawStarts[battle.id]) {
+    var wait = battle.mode == "random" ? 0 : (lastCaseAt[battle.id] || Date.now()) + REVEAL_WAIT - Date.now();
+    // (opened while it rolled: it goes on where it is - wait is below 0 then)
+    if (joinedLate[battle.id] && battle.mode == "random") wait = (revealing[battle.id] || Date.now()) + REVEAL_SPIN + REVEAL_HOLD - Date.now();
+    else if (!joinedLate[battle.id]) wait = Math.max(0, wait);
+    drawStarts[battle.id] = Date.now() + wait;
+    if (wait > 0) setTimeout(renderBattle, wait);
     setTimeout(() => {
       drawShown[battle.id] = true;
       renderBattle();
       celebrate(battle);
-    }, wait + DRAW_SPIN + DRAW_HOLD);
+    }, Math.max(0, wait + DRAW_SPIN + DRAW_HOLD));
   }
-  var started = drawing[battle.id];
+  var started = drawStarts[battle.id];
   if (Date.now() < started) return;
   // Already rolling on this page: the same roulette goes on (a new one would start a frame at the
   // first picture)
@@ -966,7 +1049,8 @@ function playJackpotDraw(battle, grid) {
   var box = el("div", "bt-mode-reveal bt-draw");
   var windowBox = el("div", "bt-draw-window");
   var track = el("div", "bt-draw-track");
-  for (var l = 0; l < DRAW_LAPS; l++) {
+  // (one lap more after the one it stops in: the window is never empty on the right)
+  for (var l = 0; l <= DRAW_LAPS; l++) {
     lap.forEach((seat) => {
       var slot = el("div", "bt-draw-slot");
       slot.style.setProperty("--seat", SEAT_COLORS[seat % SEAT_COLORS.length]);
@@ -1009,22 +1093,28 @@ var REVEAL_WAIT = 1500; // the last case is seen this long before the reel comes
 var REVEAL_SPIN = 7000; // the reel rolls this long
 var REVEAL_HOLD = 1600; // the mode is shown this long before the winner
 var revealing = {}; // battle id -> when the reel starts
+var joinedLate = {}; // battle id -> opened while its end played: the reel / roulette go on where they are (not from the start)
+var revealBoxes = {}; // battle id -> its reel (the same one through every render)
 function playModeReveal(battle, grid) {
   // The first render after the last case: the reel in REVEAL_WAIT, the winner after it
   if (!revealing[battle.id]) {
     // (3 s after the animation of the last case - or right away, if that was longer ago)
-    var start = Math.max(Date.now(), (lastCaseAt[battle.id] || Date.now()) + REVEAL_WAIT);
+    var start = (lastCaseAt[battle.id] || Date.now()) + REVEAL_WAIT;
+    if (!joinedLate[battle.id]) start = Math.max(Date.now(), start);
     revealing[battle.id] = start;
-    setTimeout(renderBattle, start - Date.now());
+    setTimeout(renderBattle, Math.max(0, start - Date.now()));
     setTimeout(() => {
       modeShown[battle.id] = true;
       renderBattle();
       celebrate(battle);
-    }, start - Date.now() + REVEAL_SPIN + REVEAL_HOLD);
+    }, Math.max(0, start - Date.now() + REVEAL_SPIN + REVEAL_HOLD));
   }
   var started = revealing[battle.id];
   if (Date.now() < started) return;
+  // Already rolling on this page: the same reel goes on (a new one flickered at every update)
+  if (revealBoxes[battle.id]) return grid.appendChild(revealBoxes[battle.id]);
   var box = el("div", "bt-mode-reveal");
+  revealBoxes[battle.id] = box;
   var face = el("span", "bt-mode-face");
   var track = el("span", "bt-mode-track");
   // Many icons in turn, the last one is the mode (even: crown, odd: clown)
@@ -1032,7 +1122,8 @@ function playModeReveal(battle, grid) {
   var options = ["classic", "crazy", "jackpot", "bestof", "worstof"];
   var at = Math.max(0, options.indexOf(ruleOf(battle)));
   var count = 28 + ((at - (28 % options.length) + options.length) % options.length);
-  for (var n = 0; n <= count; n++) track.appendChild(el("span", "bt-mode-icon", MODES[options[n % options.length]].icon));
+  // (a few more after the one it stops on: when it rolls a bit too far and back, there are icons - never an empty spot)
+  for (var n = 0; n <= count + 3; n++) track.appendChild(el("span", "bt-mode-icon", MODES[options[n % options.length]].icon));
   face.appendChild(track);
   var name = el("span", "bt-mode-name", "Which mode?");
   box.append(el("span", "bt-mode-title", "THE MODE IS..."), face, name);
@@ -1130,6 +1221,32 @@ function fairPart(label, value) {
   return part;
 }
 
+/*
+ * Between the rounds: the reel as it stopped - the item won in the middle, items of the case above and below
+ * (picked from the battle, the seat and the round: the same at every render, nothing flickers)
+ */
+function stillReel(battle, round, seat, won) {
+  var box = caseById(battle.cases[round]);
+  var strip = el("div", "bt-reel-strip");
+  var stop = 2;
+  var seed = 0;
+  for (var c of battle.id + ":" + round + ":" + seat) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
+  for (var i = 0; i < 5; i++) {
+    var item = won;
+    if (i != stop && box) {
+      seed = (seed * 1103515245 + 12345) >>> 0;
+      var roll = seed / 4294967296;
+      var counted = 0;
+      item = box.items.find((it) => (counted += it.chance) > roll) || box.items[0];
+    }
+    strip.appendChild(itemTile(item, i == stop ? "big winner-tile" : "big"));
+  }
+  // (centered like a stopped spin)
+  strip.style.top = "50%";
+  strip.style.transform = "translateY(" + -(stop * TILE + TILE / 2) + "px)";
+  return strip;
+}
+
 /* ---------- The spin of a round ---------- */
 
 // A random item of the case (rare ones are rare here too)
@@ -1139,12 +1256,16 @@ function randomItem(box) {
   return box.items.find((item) => (counted += item.chance) > roll) || box.items[0];
 }
 
-async function playRound(battle, round) {
+// elapsed: the round started this long ago (a page opened in the middle of it) - the rest of the spin
+async function playRound(battle, round, elapsed) {
   spinning = true;
   renderBattle();
   document.getElementById("btStatus").innerText = "Round " + (round + 1) + " of " + battle.cases.length;
   var box = caseById(battle.cases[round]);
+  // Opened in the middle of a round: the same spin as for everybody else, from where it is now
+  // (not the whole reel in the rest of the time - that raced past like a flicker)
   var duration = Math.max(1200, roundTime - 1100);
+  var skip = Math.min(elapsed || 0, duration - 500);
   var columns = document.querySelectorAll("#btBattleView .bt-seat");
   var stops = [];
   columns.forEach((column, seat) => {
@@ -1162,8 +1283,10 @@ async function playRound(battle, round) {
     window_.replaceChildren(reel);
     var height = window_.clientHeight;
     var offset = stop * TILE - (height - TILE) / 2 + (Math.random() - 0.5) * TILE * 0.6;
+    var roll = reel.animate([{ transform: "translateY(0)" }, { transform: `translateY(${-offset}px)` }], { duration: duration + seat * 120, easing: SLOW_END, fill: "forwards" });
+    roll.currentTime = skip;
     stops.push(
-      animate(reel, [{ transform: "translateY(0)" }, { transform: `translateY(${-offset}px)` }], { duration: duration + seat * 120, easing: SLOW_END }).then(() =>
+      roll.finished.catch(() => {}).then(() =>
         animate(reel, [{ transform: `translateY(${-offset}px)` }, { transform: `translateY(${-(stop * TILE - (height - TILE) / 2)}px)` }], { duration: 220, easing: "ease-out" }),
       ),
     );

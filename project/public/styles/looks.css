@@ -1,0 +1,1748 @@
+/*
+ * The casino's avatar looks (the accessory shop, game/shop.js): a frame around
+ * the avatar (.look-frame-*) and an animation of it (.look-fx-*). Only the
+ * casino pages load this file. Everything scales with the avatar (--size).
+ *
+ * Layers - so every frame works with every animation:
+ *   frames:     the avatar's ::after (the ring) and ::before (a crown, horns, a gem ...)
+ *   animations: the avatar itself (float, bounce, aura, lightning), its face
+ *               (.mm-avatar-svg: shake, wobble, glitch) or the .look-fx span
+ *               and its ::before / ::after (hearts, notes, a ripple ...)
+ */
+
+.mm-avatar[class*="look-"] {
+  --ring: max(2px, calc(var(--size) * 0.075));
+  isolation: isolate;
+  /* What sticks out (hearts, flames, a crown) is drawn, but never makes a list scroll */
+  contain: layout;
+}
+
+/* ---------- Frames: the ring ---------- */
+
+.mm-avatar[class*="look-frame-"]::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--ring) * -1);
+  z-index: -1;
+  border-radius: 50%;
+  /* only the ring outside the avatar */
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring) - 0.5px), #000 calc(100% - var(--ring)));
+  mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring) - 0.5px), #000 calc(100% - var(--ring)));
+}
+
+/* The pieces on top of a frame (crown, horns, gem, blossom, snowflake, star) */
+.mm-avatar[class*="look-frame-"]::before {
+  position: absolute;
+  z-index: 2;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Metals: a sheen that wanders around the ring */
+.look-frame-bronze::after,
+.look-frame-silver::after,
+.look-frame-gold::after {
+  animation: look-turn 6s linear infinite;
+}
+
+.look-frame-bronze::after {
+  background: conic-gradient(#6b3f1d, #d9955b, #8a5a2b, #f0b98a, #6b3f1d, #b87333, #6b3f1d);
+}
+
+.look-frame-silver::after {
+  background: conic-gradient(#7d838c, #f4f6f8, #9aa0a8, #ffffff, #7d838c, #c9ced6, #7d838c);
+}
+
+.look-frame-gold::after {
+  background: conic-gradient(#9a6b12, #fff1c4, #d4a64a, #ffe58a, #9a6b12, #e8c050, #9a6b12);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.2) rgba(212, 166, 74, 0.55));
+}
+
+/* Gems: facets that catch the light */
+.look-frame-ruby::after,
+.look-frame-emerald::after {
+  animation: look-turn 12s linear infinite;
+}
+
+.look-frame-ruby::after {
+  background: repeating-conic-gradient(#7f1d1d 0 15deg, #e0675a 15deg 30deg, #b91c1c 30deg 45deg, #fca5a5 45deg 52deg);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.5) rgba(224, 103, 90, 0.6));
+}
+
+.look-frame-emerald::after {
+  background: repeating-conic-gradient(#14532d 0 15deg, #6fa784 15deg 30deg, #15803d 30deg 45deg, #bbf7d0 45deg 52deg);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.5) rgba(111, 167, 132, 0.6));
+}
+
+/* Sakura: soft pink, a blossom that sways */
+.look-frame-sakura::after {
+  background: conic-gradient(#f9c6dc, #e8a3c4, #fde2ee, #e8a3c4, #f9c6dc);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.5) rgba(232, 163, 196, 0.5));
+}
+
+.look-frame-sakura::before {
+  content: "🌸";
+  bottom: calc(var(--size) * -0.1);
+  left: calc(var(--size) * -0.12);
+  font-size: calc(var(--size) * 0.36);
+  animation: look-sway 3s ease-in-out infinite;
+}
+
+/* Neon: a glowing tube that flickers like a sign */
+.look-frame-neon::after {
+  background: #5fd4e0;
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.5) #5fd4e0) drop-shadow(0 0 calc(var(--ring) * 3) #d77fb0);
+  animation: look-neon 4s steps(1) infinite;
+}
+
+/* Shadow: dark smoke that breathes */
+.look-frame-shadow::after {
+  background: conic-gradient(#0b0b10, #3b2a52, #0b0b10, #1e1b2e, #0b0b10);
+  animation: look-turn 10s linear infinite, look-smoke 3s ease-in-out infinite;
+}
+
+/* Retro: arcade segments that tick around */
+.look-frame-retro::after {
+  background: repeating-conic-gradient(#e0675a 0 45deg, #f5c542 45deg 90deg, #6fa784 90deg 135deg, #5b8fd6 135deg 180deg);
+  animation: look-turn 4s steps(8) infinite;
+}
+
+/* Frost: glittering ice, a snowflake */
+.look-frame-ice::after {
+  background: conic-gradient(#a9d8f0, #ffffff, #7fb8e0, #e6f6ff, #a9d8f0);
+  filter: drop-shadow(0 0 calc(var(--ring) * 2) rgba(169, 216, 240, 0.7));
+  animation: look-turn 8s linear infinite;
+}
+
+.look-frame-ice::before {
+  content: "❄";
+  top: calc(var(--size) * -0.14);
+  right: calc(var(--size) * -0.1);
+  font-size: calc(var(--size) * 0.34);
+  color: #e6f6ff;
+  text-shadow: 0 0 5px rgba(169, 216, 240, 0.9);
+  animation: look-spin-slow 6s linear infinite;
+}
+
+/* Electric: a blue ring with flashes */
+.look-frame-electric::after {
+  background: conic-gradient(#1e3a8a, #5fb4f0, #e6f6ff, #5fb4f0, #1e3a8a, #8fd0ff, #1e3a8a);
+  animation: look-turn 1.2s linear infinite, look-zap 1.6s steps(1) infinite;
+}
+
+/* Turning rings: Inferno, Ocean, Toxic, Candy, Rainbow, Galaxy, Devil, Royal, Diamond */
+.look-frame-fire::after {
+  background: conic-gradient(#e0675a, #e8913a, #f5c542, #e8913a, #e0675a);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.5) rgba(232, 145, 58, 0.75));
+  animation: look-turn 2s linear infinite, look-flare 1.1s ease-in-out infinite alternate;
+}
+
+.look-frame-ocean::after {
+  background: conic-gradient(#0e3a5c, #4fb3a9, #5b8fd6, #a7f3eb, #0e3a5c);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.5) rgba(79, 179, 169, 0.6));
+  animation: look-turn 5s linear infinite;
+}
+
+.look-frame-toxic::after {
+  background: conic-gradient(#3f6212, #a3e635, #4d7c0f, #d9f99d, #3f6212);
+  animation: look-turn 3s linear infinite, look-toxic 1.8s ease-in-out infinite;
+}
+
+.look-frame-candy::after {
+  background: repeating-conic-gradient(#f4f4f4 0 30deg, #e0675a 30deg 60deg);
+  animation: look-turn 4s linear infinite;
+}
+
+.look-frame-rainbow::after {
+  background: conic-gradient(#e0675a, #e8913a, #f5c542, #6fa784, #4fb3a9, #5b8fd6, #9d84c2, #d77fb0, #e0675a);
+  animation: look-turn 3s linear infinite, look-hue 6s linear infinite;
+}
+
+.look-frame-galaxy::after {
+  background: conic-gradient(#1e1b4b, #6d28d9, #5b8fd6, #d77fb0, #1e1b4b);
+  filter: drop-shadow(0 0 calc(var(--ring) * 2) rgba(157, 132, 194, 0.7));
+  animation: look-turn 6s linear infinite;
+}
+
+.look-frame-galaxy::before {
+  content: "✦";
+  top: calc(var(--size) * -0.12);
+  right: calc(var(--size) * -0.04);
+  font-size: calc(var(--size) * 0.28);
+  color: #e9e3ff;
+  text-shadow: 0 0 5px #9d84c2;
+  animation: look-twinkle 2.2s ease-in-out infinite;
+}
+
+/* Devil: a red ring and two horns */
+.look-frame-devil::after {
+  background: conic-gradient(#450a0a, #dc2626, #7f1d1d, #f87171, #450a0a);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.5) rgba(220, 38, 38, 0.6));
+  animation: look-turn 4s linear infinite;
+}
+
+.look-frame-devil::before {
+  content: "";
+  top: calc(var(--size) * -0.15);
+  left: 12%;
+  width: 76%;
+  height: calc(var(--size) * 0.26);
+  background: linear-gradient(180deg, #f87171, #991b1b);
+  clip-path: polygon(0% 100%, 8% 0%, 26% 100%, 74% 100%, 92% 0%, 100% 100%);
+}
+
+/* Royal: gold and a crown on top */
+.look-frame-royal::after {
+  background: conic-gradient(#d4a64a, #fff1c4, #d4a64a, #9a6b12, #d4a64a);
+  animation: look-turn 5s linear infinite;
+}
+
+.look-frame-royal::before {
+  content: "👑";
+  top: calc(var(--size) * -0.24);
+  left: 50%;
+  transform: translateX(-50%) rotate(-8deg);
+  font-size: calc(var(--size) * 0.36);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+/* Diamond: a glittering ring and the stone at the bottom */
+.look-frame-diamond::after {
+  background: conic-gradient(#cffafe, #ffffff, #67e8f9, #f0abfc, #ffffff, #a5f3fc, #cffafe);
+  filter: drop-shadow(0 0 calc(var(--ring) * 2.5) rgba(165, 243, 252, 0.8));
+  animation: look-turn 2.5s linear infinite;
+}
+
+.look-frame-diamond::before {
+  content: "💎";
+  bottom: calc(var(--size) * -0.15);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: calc(var(--size) * 0.3);
+  filter: drop-shadow(0 0 4px rgba(165, 243, 252, 0.9));
+}
+
+/* Aurora: northern lights - colors that flow around the ring, a soft glow that changes with them */
+.look-frame-aurora::after {
+  background: conic-gradient(#22d3ee, #a78bfa, #34d399, #f0abfc, #60a5fa, #34d399, #22d3ee);
+  animation: look-turn 5s linear infinite, look-aurora 6s ease-in-out infinite;
+}
+
+.mm-avatar.look-frame-aurora::before {
+  content: "";
+  inset: calc(var(--size) * -0.16);
+  z-index: -2;
+  border-radius: 50%;
+  background: conic-gradient(from 90deg, rgba(34, 211, 238, 0.55), rgba(167, 139, 250, 0), rgba(52, 211, 153, 0.55), rgba(240, 171, 252, 0), rgba(34, 211, 238, 0.55));
+  filter: blur(calc(var(--size) * 0.06));
+  animation: look-spin-slow 9s linear infinite reverse;
+}
+
+/* Phoenix: a ring of fire and gold, burning wings behind the avatar that beat slowly */
+.look-frame-phoenix::after {
+  background: conic-gradient(#7c2d12, #fbbf24, #ef4444, #fde68a, #f97316, #b91c1c, #7c2d12);
+  filter: drop-shadow(0 0 calc(var(--ring) * 2) rgba(251, 146, 60, 0.8));
+  animation: look-turn 3s linear infinite;
+}
+
+.mm-avatar.look-frame-phoenix::before {
+  content: "";
+  top: 4%;
+  left: -22%;
+  width: 144%;
+  height: 62%;
+  z-index: -2;
+  background: linear-gradient(180deg, #fde68a, #f97316 45%, #b91c1c);
+  clip-path: polygon(50% 70%, 36% 30%, 22% 0%, 18% 22%, 6% 8%, 9% 34%, 0% 30%, 10% 56%, 4% 62%, 22% 78%, 34% 92%, 50% 100%, 66% 92%, 78% 78%, 96% 62%, 90% 56%, 100% 30%, 91% 34%, 94% 8%, 82% 22%, 78% 0%, 64% 30%);
+  filter: drop-shadow(0 0 calc(var(--size) * 0.05) rgba(251, 146, 60, 0.7));
+  transform-origin: 50% 80%;
+  animation: look-wings 2.4s ease-in-out infinite;
+}
+
+/* ---------- Animations: the avatar ---------- */
+
+.mm-avatar.look-fx-float {
+  animation: look-float 2.6s ease-in-out infinite;
+}
+
+.mm-avatar.look-fx-bounce {
+  animation: look-bounce 1.6s cubic-bezier(0.3, 0, 0.3, 1) infinite;
+}
+
+/* Aura: a glow that goes through every color */
+.mm-avatar.look-fx-aura {
+  animation: look-aura 4s linear infinite;
+}
+
+/* Lightning: now and then the avatar lights up (and a ⚡ strikes) */
+.mm-avatar.look-fx-lightning {
+  animation: look-flash 2.6s steps(1) infinite;
+}
+
+/* ---------- Animations: the face ---------- */
+
+.look-fx-shake > .mm-avatar-svg {
+  animation: look-shake 2.2s ease-in-out infinite;
+}
+
+.look-fx-wobble > .mm-avatar-svg {
+  animation: look-wobble 2.4s ease-in-out infinite;
+}
+
+.look-fx-glitch > .mm-avatar-svg {
+  animation: look-glitch 3s steps(1) infinite;
+}
+
+/* ---------- Animations: things around the avatar (the .look-fx span) ---------- */
+
+.look-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  font-size: calc(var(--size) * 0.3);
+  line-height: 1;
+}
+
+.look-fx::before,
+.look-fx::after {
+  position: absolute;
+  line-height: 1;
+}
+
+/* Pulse: two rings that ripple out */
+.look-fx-pulse .look-fx::before,
+.look-fx-pulse .look-fx::after {
+  content: "";
+  inset: 0;
+  border: max(1.5px, calc(var(--size) * 0.04)) solid rgba(var(--mm-accent-rgb, 212, 166, 74), 0.9);
+  border-radius: 50%;
+  animation: look-ripple 2s ease-out infinite;
+}
+
+.look-fx-pulse .look-fx::after {
+  animation-delay: 1s;
+}
+
+/* Float: its shadow below */
+.look-fx-float .look-fx::after {
+  content: "";
+  left: 20%;
+  right: 20%;
+  bottom: calc(var(--size) * -0.12);
+  height: calc(var(--size) * 0.08);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  filter: blur(2px);
+  animation: look-float-shadow 2.6s ease-in-out infinite;
+}
+
+/* Sparkles: stars that twinkle around */
+.look-fx-sparkles .look-fx::before,
+.look-fx-sparkles .look-fx::after {
+  content: "✦";
+  color: #fff1c4;
+  text-shadow: 0 0 5px #f5c542;
+  animation: look-twinkle 1.8s ease-in-out infinite;
+}
+
+.look-fx-sparkles .look-fx::before {
+  top: -14%;
+  left: -10%;
+}
+
+.look-fx-sparkles .look-fx::after {
+  right: -12%;
+  bottom: -6%;
+  animation-delay: 0.9s;
+  font-size: 0.8em;
+}
+
+/* Orbit: two moons around the avatar */
+.look-fx-orbit .look-fx {
+  animation: look-turn 2.4s linear infinite;
+}
+
+.look-fx-orbit .look-fx::before,
+.look-fx-orbit .look-fx::after {
+  content: "";
+  left: 50%;
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+
+.look-fx-orbit .look-fx::before {
+  top: calc(var(--size) * -0.08);
+  width: calc(var(--size) * 0.16);
+  height: calc(var(--size) * 0.16);
+  background: #f5c542;
+  box-shadow: 0 0 6px #f5c542;
+}
+
+.look-fx-orbit .look-fx::after {
+  bottom: calc(var(--size) * -0.06);
+  width: calc(var(--size) * 0.1);
+  height: calc(var(--size) * 0.1);
+  background: #a5f3fc;
+  box-shadow: 0 0 5px #a5f3fc;
+}
+
+/* Flames: one on each side, flickering */
+.look-fx-flames .look-fx::before,
+.look-fx-flames .look-fx::after {
+  content: "🔥";
+  bottom: calc(var(--size) * -0.1);
+  font-size: calc(var(--size) * 0.32);
+  animation: look-flicker 0.9s ease-in-out infinite alternate;
+}
+
+.look-fx-flames .look-fx::before {
+  right: calc(var(--size) * -0.14);
+}
+
+.look-fx-flames .look-fx::after {
+  left: calc(var(--size) * -0.14);
+  font-size: calc(var(--size) * 0.28);
+  animation-delay: 0.45s;
+}
+
+/* Halo: a ring of light over the head */
+.look-fx-halo .look-fx::before {
+  content: "";
+  top: calc(var(--size) * -0.16);
+  left: 50%;
+  width: calc(var(--size) * 0.62);
+  height: calc(var(--size) * 0.18);
+  transform: translateX(-50%);
+  border: max(2px, calc(var(--size) * 0.05)) solid #fff1c4;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 241, 196, 0.9);
+  animation: look-halo 2.4s ease-in-out infinite;
+}
+
+/* (a crown or horns take the top: no halo with them) */
+.look-frame-royal.look-fx-halo .look-fx::before,
+.look-frame-devil.look-fx-halo .look-fx::before {
+  display: none;
+}
+
+/* Rising: hearts, notes, bubbles - falling: money, snow, confetti */
+.look-fx-hearts .look-fx::before,
+.look-fx-hearts .look-fx::after,
+.look-fx-music .look-fx::before,
+.look-fx-music .look-fx::after,
+.look-fx-bubbles .look-fx::before,
+.look-fx-bubbles .look-fx::after {
+  bottom: 10%;
+  opacity: 0;
+  font-size: calc(var(--size) * 0.28);
+  animation: look-rise 2.4s ease-out infinite;
+}
+
+.look-fx-money .look-fx::before,
+.look-fx-money .look-fx::after,
+.look-fx-snow .look-fx::before,
+.look-fx-snow .look-fx::after {
+  top: 0;
+  opacity: 0;
+  font-size: calc(var(--size) * 0.28);
+  animation: look-fall 2.4s ease-in infinite;
+}
+
+.look-fx-hearts .look-fx::before,
+.look-fx-music .look-fx::before,
+.look-fx-bubbles .look-fx::before,
+.look-fx-money .look-fx::before,
+.look-fx-snow .look-fx::before {
+  left: -14%;
+}
+
+.look-fx-hearts .look-fx::after,
+.look-fx-music .look-fx::after,
+.look-fx-bubbles .look-fx::after,
+.look-fx-money .look-fx::after,
+.look-fx-snow .look-fx::after {
+  right: -14%;
+  animation-delay: 1.2s;
+}
+
+.look-fx-hearts .look-fx::before {
+  content: "💖";
+}
+
+.look-fx-hearts .look-fx::after {
+  content: "💕";
+}
+
+.look-fx-music .look-fx::before {
+  content: "🎵";
+}
+
+.look-fx-music .look-fx::after {
+  content: "🎶";
+}
+
+.look-fx-bubbles .look-fx::before,
+.look-fx-bubbles .look-fx::after {
+  content: "🫧";
+  animation-duration: 3s;
+}
+
+.look-fx-money .look-fx::before,
+.look-fx-money .look-fx::after {
+  content: "💸";
+}
+
+.look-fx-snow .look-fx::before,
+.look-fx-snow .look-fx::after {
+  content: "❄";
+  color: #e6f6ff;
+  text-shadow: 0 0 4px rgba(169, 216, 240, 0.9);
+  animation-duration: 2.8s;
+  animation-timing-function: linear;
+}
+
+/* Confetti: colorful paper pieces that rain down around the avatar, tumbling */
+.look-fx-confetti .look-fx::before,
+.look-fx-confetti .look-fx::after {
+  content: "";
+  left: -22%;
+  right: -22%;
+  top: -18%;
+  height: 70%;
+  background:
+    linear-gradient(#f43f5e, #f43f5e) 4% 10% / 5% 9% no-repeat,
+    linear-gradient(#facc15, #facc15) 18% 40% / 8% 4% no-repeat,
+    linear-gradient(#22d3ee, #22d3ee) 30% 5% / 4% 8% no-repeat,
+    linear-gradient(#a855f7, #a855f7) 44% 30% / 7% 4% no-repeat,
+    linear-gradient(#4ade80, #4ade80) 58% 12% / 4% 9% no-repeat,
+    linear-gradient(#fb923c, #fb923c) 70% 45% / 8% 4% no-repeat,
+    linear-gradient(#ec4899, #ec4899) 84% 8% / 5% 8% no-repeat,
+    linear-gradient(#60a5fa, #60a5fa) 96% 34% / 7% 4% no-repeat;
+  opacity: 0;
+  animation: look-confetti 2.6s cubic-bezier(0.35, 0, 0.6, 1) infinite;
+}
+
+.look-fx-confetti .look-fx::after {
+  transform: scaleX(-1);
+  filter: hue-rotate(140deg);
+  animation-name: look-confetti-b;
+  animation-delay: 1.3s;
+}
+
+/* Fireworks: rockets burst into sparks around the avatar */
+.look-fx-fireworks .look-fx::before,
+.look-fx-fireworks .look-fx::after {
+  content: "";
+  width: calc(var(--size) * 0.075);
+  height: calc(var(--size) * 0.075);
+  border-radius: 50%;
+  --d: calc(var(--size) * 0.3);
+  --e: calc(var(--size) * 0.21);
+  box-shadow:
+    0 calc(var(--d) * -1) 0 #facc15, var(--e) calc(var(--e) * -1) 0 #f43f5e, var(--d) 0 0 #22d3ee,
+    var(--e) var(--e) 0 #a855f7, 0 var(--d) 0 #facc15, calc(var(--e) * -1) var(--e) 0 #4ade80,
+    calc(var(--d) * -1) 0 0 #fb923c, calc(var(--e) * -1) calc(var(--e) * -1) 0 #ec4899;
+  opacity: 0;
+  animation: look-burst 2.2s ease-out infinite;
+}
+
+.look-fx-fireworks .look-fx::before {
+  top: 2%;
+  left: 2%;
+}
+
+.look-fx-fireworks .look-fx::after {
+  top: 14%;
+  right: 4%;
+  animation-delay: 1.1s;
+  filter: hue-rotate(160deg);
+}
+
+/* Vortex: a swirling portal around the avatar, a spark that is pulled in */
+.look-fx-vortex .look-fx::before {
+  content: "";
+  inset: -24%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(167, 139, 250, 0.9) 0 18deg, rgba(34, 211, 238, 0.15) 30deg 42deg, rgba(236, 72, 153, 0.85) 54deg 72deg, rgba(34, 211, 238, 0.15) 84deg 90deg);
+  -webkit-mask: radial-gradient(closest-side, transparent 78%, #000 80%, rgba(0, 0, 0, 0.6) 92%, transparent 100%);
+  mask: radial-gradient(closest-side, transparent 78%, #000 80%, rgba(0, 0, 0, 0.6) 92%, transparent 100%);
+  filter: drop-shadow(0 0 calc(var(--size) * 0.04) rgba(167, 139, 250, 0.9));
+  animation: look-turn 1.6s linear infinite;
+}
+
+.look-fx-vortex .look-fx::after {
+  content: "✦";
+  top: 50%;
+  left: 50%;
+  color: #f5f3ff;
+  font-size: calc(var(--size) * 0.18);
+  text-shadow: 0 0 6px #a78bfa;
+  animation: look-pulled 2s ease-in infinite;
+}
+
+/* Sleepy: Zzz drifting up on the right */
+.look-fx-zzz .look-fx::before,
+.look-fx-zzz .look-fx::after {
+  content: "💤";
+  bottom: 30%;
+  right: -18%;
+  opacity: 0;
+  font-size: calc(var(--size) * 0.28);
+  animation: look-zzz 3s ease-out infinite;
+}
+
+.look-fx-zzz .look-fx::after {
+  font-size: calc(var(--size) * 0.2);
+  animation-delay: 1.5s;
+}
+
+/* Dizzy: stars that circle over the head */
+.look-fx-dizzy .look-fx::before,
+.look-fx-dizzy .look-fx::after {
+  top: calc(var(--size) * -0.2);
+  left: 50%;
+  font-size: calc(var(--size) * 0.24);
+  animation: look-dizzy 1.4s linear infinite;
+}
+
+.look-fx-dizzy .look-fx::before {
+  content: "💫";
+}
+
+.look-fx-dizzy .look-fx::after {
+  content: "⭐";
+  font-size: calc(var(--size) * 0.2);
+  animation-delay: -0.7s;
+}
+
+/* (a crown or horns take the top: the stars a bit higher) */
+.look-frame-royal.look-fx-dizzy .look-fx::before,
+.look-frame-royal.look-fx-dizzy .look-fx::after,
+.look-frame-devil.look-fx-dizzy .look-fx::before,
+.look-frame-devil.look-fx-dizzy .look-fx::after {
+  top: calc(var(--size) * -0.4);
+}
+
+/* Lightning: a bolt on each side, one after the other */
+.look-fx-lightning .look-fx::before,
+.look-fx-lightning .look-fx::after {
+  content: "⚡";
+  top: 10%;
+  font-size: calc(var(--size) * 0.34);
+  opacity: 0;
+  animation: look-bolt 2.6s steps(1) infinite;
+}
+
+.look-fx-lightning .look-fx::before {
+  left: calc(var(--size) * -0.22);
+}
+
+.look-fx-lightning .look-fx::after {
+  right: calc(var(--size) * -0.22);
+  animation-delay: 1.3s;
+}
+
+/* ---------- Keyframes ---------- */
+
+@keyframes look-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes look-spin-slow {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes look-sway {
+  0%,
+  100% {
+    rotate: -12deg;
+  }
+  50% {
+    rotate: 12deg;
+  }
+}
+
+@keyframes look-neon {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.35;
+  }
+  72% {
+    opacity: 1;
+  }
+  74% {
+    opacity: 0.5;
+  }
+  76% {
+    opacity: 1;
+  }
+}
+
+@keyframes look-smoke {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 calc(var(--ring) * 1) rgba(124, 58, 237, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 calc(var(--ring) * 3.5) rgba(124, 58, 237, 0.8));
+  }
+}
+
+@keyframes look-zap {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 calc(var(--ring) * 1.5) rgba(95, 180, 240, 0.7));
+  }
+  12% {
+    filter: drop-shadow(0 0 calc(var(--ring) * 4) rgba(230, 246, 255, 1));
+  }
+  18% {
+    filter: drop-shadow(0 0 calc(var(--ring) * 1) rgba(95, 180, 240, 0.5));
+  }
+  55% {
+    filter: drop-shadow(0 0 calc(var(--ring) * 3) rgba(143, 208, 255, 0.9));
+  }
+}
+
+@keyframes look-flare {
+  from {
+    opacity: 0.8;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes look-toxic {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 calc(var(--ring) * 1) rgba(163, 230, 53, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 calc(var(--ring) * 3.5) rgba(163, 230, 53, 0.9));
+  }
+}
+
+@keyframes look-hue {
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
+@keyframes look-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+
+@keyframes look-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 calc(var(--size) * -0.1);
+  }
+}
+
+@keyframes look-float-shadow {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(calc(var(--size) * 0.1)) scaleX(0.7);
+    opacity: 0.3;
+  }
+}
+
+@keyframes look-bounce {
+  0%,
+  60%,
+  100% {
+    translate: 0 0;
+  }
+  30% {
+    translate: 0 calc(var(--size) * -0.16);
+  }
+  45% {
+    translate: 0 0;
+  }
+  52% {
+    translate: 0 calc(var(--size) * -0.05);
+  }
+}
+
+@keyframes look-aura {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 calc(var(--size) * 0.12) #e0675a);
+  }
+  25% {
+    filter: drop-shadow(0 0 calc(var(--size) * 0.16) #f5c542);
+  }
+  50% {
+    filter: drop-shadow(0 0 calc(var(--size) * 0.12) #6fa784);
+  }
+  75% {
+    filter: drop-shadow(0 0 calc(var(--size) * 0.16) #5b8fd6);
+  }
+}
+
+@keyframes look-flash {
+  0%,
+  100% {
+    filter: none;
+  }
+  4%,
+  54% {
+    filter: brightness(1.6) drop-shadow(0 0 calc(var(--size) * 0.15) #e6f6ff);
+  }
+  8%,
+  58% {
+    filter: none;
+  }
+}
+
+@keyframes look-bolt {
+  0%,
+  10%,
+  100% {
+    opacity: 0;
+  }
+  2%,
+  7% {
+    opacity: 1;
+  }
+}
+
+@keyframes look-shake {
+  0%,
+  70%,
+  100% {
+    translate: 0 0;
+  }
+  74%,
+  82%,
+  90% {
+    translate: calc(var(--size) * -0.04) 0;
+  }
+  78%,
+  86%,
+  94% {
+    translate: calc(var(--size) * 0.04) 0;
+  }
+}
+
+@keyframes look-wobble {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  25% {
+    rotate: -10deg;
+  }
+  75% {
+    rotate: 10deg;
+  }
+}
+
+@keyframes look-glitch {
+  0%,
+  86%,
+  100% {
+    translate: 0 0;
+    filter: none;
+  }
+  88% {
+    translate: calc(var(--size) * -0.05) 0;
+    filter: drop-shadow(2px 0 0 #e0675a) drop-shadow(-2px 0 0 #5fd4e0);
+  }
+  91% {
+    translate: calc(var(--size) * 0.05) 0;
+    filter: drop-shadow(-2px 0 0 #e0675a) drop-shadow(2px 0 0 #5fd4e0) hue-rotate(60deg);
+  }
+  94% {
+    translate: 0 0;
+    filter: none;
+  }
+}
+
+@keyframes look-ripple {
+  from {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes look-flicker {
+  from {
+    transform: scale(0.9) rotate(-6deg);
+  }
+  to {
+    transform: scale(1.1) rotate(6deg);
+  }
+}
+
+@keyframes look-halo {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 calc(var(--size) * -0.05);
+  }
+}
+
+@keyframes look-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(calc(var(--size) * -0.9)) scale(1);
+  }
+}
+
+@keyframes look-zzz {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.5);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--size) * 0.2), calc(var(--size) * -0.8)) scale(1.1);
+  }
+}
+
+@keyframes look-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(calc(var(--size) * -0.3)) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(calc(var(--size) * 0.9)) rotate(40deg);
+  }
+}
+
+@keyframes look-dizzy {
+  0%,
+  100% {
+    transform: translateX(calc(var(--size) * -0.35)) scale(1);
+    opacity: 1;
+  }
+  25% {
+    transform: translateX(-50%) scale(0.7);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateX(calc(var(--size) * 0.2)) scale(1);
+    opacity: 1;
+  }
+  75% {
+    transform: translateX(-50%) scale(1.25);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-avatar[class*="look-"],
+  .mm-avatar[class*="look-"]::after,
+  .mm-avatar[class*="look-"]::before,
+  .mm-avatar[class*="look-"] > .mm-avatar-svg,
+  .look-fx,
+  .look-fx::before,
+  .look-fx::after {
+    animation: none !important;
+  }
+}
+
+@keyframes look-confetti {
+  0% {
+    opacity: 0;
+    transform: translateY(-20%) rotate(-6deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(55%) rotate(6deg);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(130%) rotate(-4deg);
+  }
+}
+
+@keyframes look-confetti-b {
+  0% {
+    opacity: 0;
+    transform: scaleX(-1) translateY(-20%) rotate(6deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  50% {
+    transform: scaleX(-1) translateY(55%) rotate(-6deg);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(-1) translateY(130%) rotate(4deg);
+  }
+}
+
+@keyframes look-aurora {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 calc(var(--ring) * 2) rgba(34, 211, 238, 0.8));
+  }
+  50% {
+    filter: drop-shadow(0 0 calc(var(--ring) * 2.5) rgba(167, 139, 250, 0.85));
+  }
+}
+
+@keyframes look-wings {
+  0%,
+  100% {
+    transform: scaleY(1) scaleX(1);
+  }
+  50% {
+    transform: scaleY(0.82) scaleX(1.05);
+  }
+}
+
+@keyframes look-burst {
+  0% {
+    opacity: 1;
+    transform: scale(0.1);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes look-pulled {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg) translateX(calc(var(--size) * 0.7)) scale(1);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(540deg) translateX(calc(var(--size) * 0.55)) scale(0.3);
+  }
+}
+
+/* ---------- Exclusive: never sold - only given as rewards (game/shop.js) ---------- */
+
+/* Laurels: a metal ring that shines, a wreath around it (1st gold, 2nd silver, 3rd bronze) */
+.look-frame-champion::after,
+.look-frame-runnerup::after,
+.look-frame-podium::after {
+  animation: look-turn 4s linear infinite;
+}
+
+.look-frame-champion::after {
+  background: conic-gradient(#9a6b12, #fff8dc, #f2c45a, #fff1c4, #b8860b, #ffe58a, #9a6b12);
+  filter: drop-shadow(0 0 calc(var(--ring) * 2) rgba(242, 196, 90, 0.75));
+}
+
+.look-frame-runnerup::after {
+  background: conic-gradient(#6b7280, #ffffff, #c9ced6, #f4f6f8, #8b929b, #e5e7eb, #6b7280);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.6) rgba(226, 232, 240, 0.6));
+}
+
+.look-frame-podium::after {
+  background: conic-gradient(#6b3f1d, #f0b98a, #b87333, #ffd6b0, #8a5a2b, #d9955b, #6b3f1d);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.4) rgba(217, 149, 91, 0.55));
+}
+
+.mm-avatar.look-frame-champion::before,
+.mm-avatar.look-frame-runnerup::before,
+.mm-avatar.look-frame-podium::before {
+  content: "";
+  inset: -19%;
+  z-index: -2;
+  background: center / 100% 100% no-repeat;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+}
+
+.mm-avatar.look-frame-champion::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-2 -2 104 106'%3E%3Cpath d='M43.9 93.6 L41.3 93.1 L38.8 92.6 L36.4 91.8 L33.9 91.0 L31.6 90.0 L29.3 88.8 L27.0 87.5 L24.9 86.1 L22.8 84.6 L20.8 83.0 L19.0 81.2 L17.2 79.3 L15.5 77.4 L14.0 75.3 L12.6 73.2 L11.3 70.9 L10.1 68.6 L9.1 66.3 L8.2 63.9 L7.5 61.4 L6.9 58.9 L6.5 56.4 L6.2 53.8 L6.0 51.2 L6.0 48.7 L6.2 46.1 L6.5 43.5 L6.9 41.0 L7.5 38.5 L8.3 36.0 L9.2 33.6 L10.2 31.3 L11.4 29.0 L12.6 26.7 L14.1 24.6 L15.6 22.5 L17.3 20.6 L19.1 18.7 L20.9 17.0 L22.9 15.3' fill='none' stroke='%237a5310' stroke-width='1.6' stroke-linecap='round'/%3E%3Cellipse cx='43.4' cy='96.7' rx='6.2' ry='2.5' transform='rotate(150 43.4 96.7)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='44.3' cy='90.4' rx='6.2' ry='2.5' transform='rotate(226 44.3 90.4)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='32.8' cy='93.8' rx='6.0' ry='2.4' transform='rotate(163 32.8 93.8)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='35.1' cy='88.1' rx='6.0' ry='2.4' transform='rotate(239 35.1 88.1)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='23.2' cy='88.6' rx='5.8' ry='2.3' transform='rotate(177 23.2 88.6)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='26.6' cy='83.7' rx='5.8' ry='2.3' transform='rotate(253 26.6 83.7)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='15.1' cy='81.2' rx='5.5' ry='2.2' transform='rotate(190 15.1 81.2)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='19.3' cy='77.4' rx='5.5' ry='2.2' transform='rotate(266 19.3 77.4)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Ccircle cx='21.2' cy='75.7' r='1.6' fill='%23e0675a'/%3E%3Cellipse cx='8.9' cy='72.2' rx='5.3' ry='2.1' transform='rotate(204 8.9 72.2)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='13.7' cy='69.6' rx='5.3' ry='2.1' transform='rotate(280 13.7 69.6)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='4.9' cy='62.1' rx='5.1' ry='2.1' transform='rotate(217 4.9 62.1)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='10.0' cy='60.7' rx='5.1' ry='2.1' transform='rotate(293 10.0 60.7)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='3.5' cy='51.3' rx='4.9' ry='2.0' transform='rotate(230 3.5 51.3)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='8.5' cy='51.2' rx='4.9' ry='2.0' transform='rotate(306 8.5 51.2)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='4.6' cy='40.5' rx='4.7' ry='1.9' transform='rotate(244 4.6 40.5)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='9.3' cy='41.5' rx='4.7' ry='1.9' transform='rotate(320 9.3 41.5)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Ccircle cx='11.4' cy='41.9' r='1.6' fill='%23e0675a'/%3E%3Cellipse cx='8.1' cy='30.3' rx='4.5' ry='1.8' transform='rotate(257 8.1 30.3)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='12.3' cy='32.2' rx='4.5' ry='1.8' transform='rotate(333 12.3 32.2)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='13.9' cy='21.2' rx='4.2' ry='1.7' transform='rotate(271 13.9 21.2)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='17.3' cy='23.9' rx='4.2' ry='1.7' transform='rotate(347 17.3 23.9)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='21.6' cy='13.7' rx='4.0' ry='1.6' transform='rotate(284 21.6 13.7)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='24.2' cy='17.0' rx='4.0' ry='1.6' transform='rotate(360 24.2 17.0)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='26.7' cy='12.7' rx='4' ry='1.8' transform='rotate(328 26.7 12.7)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cpath d='M56.1 93.6 L58.7 93.1 L61.2 92.6 L63.6 91.8 L66.1 91.0 L68.4 90.0 L70.7 88.8 L73.0 87.5 L75.1 86.1 L77.2 84.6 L79.2 83.0 L81.0 81.2 L82.8 79.3 L84.5 77.4 L86.0 75.3 L87.4 73.2 L88.7 70.9 L89.9 68.6 L90.9 66.3 L91.8 63.9 L92.5 61.4 L93.1 58.9 L93.5 56.4 L93.8 53.8 L94.0 51.2 L94.0 48.7 L93.8 46.1 L93.5 43.5 L93.1 41.0 L92.5 38.5 L91.7 36.0 L90.8 33.6 L89.8 31.3 L88.6 29.0 L87.4 26.7 L85.9 24.6 L84.4 22.5 L82.7 20.6 L80.9 18.7 L79.1 17.0 L77.1 15.3' fill='none' stroke='%237a5310' stroke-width='1.6' stroke-linecap='round'/%3E%3Cellipse cx='56.6' cy='96.7' rx='6.2' ry='2.5' transform='rotate(30 56.6 96.7)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='55.7' cy='90.4' rx='6.2' ry='2.5' transform='rotate(-46 55.7 90.4)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='67.2' cy='93.8' rx='6.0' ry='2.4' transform='rotate(17 67.2 93.8)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='64.9' cy='88.1' rx='6.0' ry='2.4' transform='rotate(-59 64.9 88.1)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='76.8' cy='88.6' rx='5.8' ry='2.3' transform='rotate(3 76.8 88.6)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='73.4' cy='83.7' rx='5.8' ry='2.3' transform='rotate(-73 73.4 83.7)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='84.9' cy='81.2' rx='5.5' ry='2.2' transform='rotate(-10 84.9 81.2)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='80.7' cy='77.4' rx='5.5' ry='2.2' transform='rotate(-86 80.7 77.4)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Ccircle cx='78.8' cy='75.7' r='1.6' fill='%23e0675a'/%3E%3Cellipse cx='91.1' cy='72.2' rx='5.3' ry='2.1' transform='rotate(-24 91.1 72.2)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='86.3' cy='69.6' rx='5.3' ry='2.1' transform='rotate(-100 86.3 69.6)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='95.1' cy='62.1' rx='5.1' ry='2.1' transform='rotate(-37 95.1 62.1)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='90.0' cy='60.7' rx='5.1' ry='2.1' transform='rotate(-113 90.0 60.7)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='96.5' cy='51.3' rx='4.9' ry='2.0' transform='rotate(-50 96.5 51.3)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='91.5' cy='51.2' rx='4.9' ry='2.0' transform='rotate(-126 91.5 51.2)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='95.4' cy='40.5' rx='4.7' ry='1.9' transform='rotate(-64 95.4 40.5)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='90.7' cy='41.5' rx='4.7' ry='1.9' transform='rotate(-140 90.7 41.5)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Ccircle cx='88.6' cy='41.9' r='1.6' fill='%23e0675a'/%3E%3Cellipse cx='91.9' cy='30.3' rx='4.5' ry='1.8' transform='rotate(-77 91.9 30.3)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='87.7' cy='32.2' rx='4.5' ry='1.8' transform='rotate(-153 87.7 32.2)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='86.1' cy='21.2' rx='4.2' ry='1.7' transform='rotate(-91 86.1 21.2)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='82.7' cy='23.9' rx='4.2' ry='1.7' transform='rotate(-167 82.7 23.9)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='78.4' cy='13.7' rx='4.0' ry='1.6' transform='rotate(-104 78.4 13.7)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='75.8' cy='17.0' rx='4.0' ry='1.6' transform='rotate(-180 75.8 17.0)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='73.3' cy='12.7' rx='4' ry='1.8' transform='rotate(-148 73.3 12.7)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cpath d='M44 92 L40 99 L46 97 L50 100 L54 97 L60 99 L56 92 Z' fill='%23e0675a' stroke='%237a5310' stroke-width='0.6'/%3E%3Ccircle cx='50' cy='93' r='3.2' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.6'/%3E%3C/svg%3E");
+  animation: look-laurel 3s ease-in-out infinite;
+}
+
+.mm-avatar.look-frame-runnerup::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-2 -2 104 106'%3E%3Cpath d='M43.9 93.6 L41.3 93.1 L38.8 92.6 L36.4 91.8 L33.9 91.0 L31.6 90.0 L29.3 88.8 L27.0 87.5 L24.9 86.1 L22.8 84.6 L20.8 83.0 L19.0 81.2 L17.2 79.3 L15.5 77.4 L14.0 75.3 L12.6 73.2 L11.3 70.9 L10.1 68.6 L9.1 66.3 L8.2 63.9 L7.5 61.4 L6.9 58.9 L6.5 56.4 L6.2 53.8 L6.0 51.2 L6.0 48.7 L6.2 46.1 L6.5 43.5 L6.9 41.0 L7.5 38.5 L8.3 36.0 L9.2 33.6 L10.2 31.3 L11.4 29.0 L12.6 26.7 L14.1 24.6 L15.6 22.5 L17.3 20.6 L19.1 18.7 L20.9 17.0 L22.9 15.3' fill='none' stroke='%235d636c' stroke-width='1.6' stroke-linecap='round'/%3E%3Cellipse cx='43.4' cy='96.7' rx='6.2' ry='2.5' transform='rotate(150 43.4 96.7)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='44.3' cy='90.4' rx='6.2' ry='2.5' transform='rotate(226 44.3 90.4)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='32.8' cy='93.8' rx='6.0' ry='2.4' transform='rotate(163 32.8 93.8)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='35.1' cy='88.1' rx='6.0' ry='2.4' transform='rotate(239 35.1 88.1)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='23.2' cy='88.6' rx='5.8' ry='2.3' transform='rotate(177 23.2 88.6)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='26.6' cy='83.7' rx='5.8' ry='2.3' transform='rotate(253 26.6 83.7)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='15.1' cy='81.2' rx='5.5' ry='2.2' transform='rotate(190 15.1 81.2)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='19.3' cy='77.4' rx='5.5' ry='2.2' transform='rotate(266 19.3 77.4)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Ccircle cx='21.2' cy='75.7' r='1.6' fill='%236b97d2'/%3E%3Cellipse cx='8.9' cy='72.2' rx='5.3' ry='2.1' transform='rotate(204 8.9 72.2)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='13.7' cy='69.6' rx='5.3' ry='2.1' transform='rotate(280 13.7 69.6)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='4.9' cy='62.1' rx='5.1' ry='2.1' transform='rotate(217 4.9 62.1)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='10.0' cy='60.7' rx='5.1' ry='2.1' transform='rotate(293 10.0 60.7)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='3.5' cy='51.3' rx='4.9' ry='2.0' transform='rotate(230 3.5 51.3)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='8.5' cy='51.2' rx='4.9' ry='2.0' transform='rotate(306 8.5 51.2)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='4.6' cy='40.5' rx='4.7' ry='1.9' transform='rotate(244 4.6 40.5)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='9.3' cy='41.5' rx='4.7' ry='1.9' transform='rotate(320 9.3 41.5)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Ccircle cx='11.4' cy='41.9' r='1.6' fill='%236b97d2'/%3E%3Cellipse cx='8.1' cy='30.3' rx='4.5' ry='1.8' transform='rotate(257 8.1 30.3)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='12.3' cy='32.2' rx='4.5' ry='1.8' transform='rotate(333 12.3 32.2)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='13.9' cy='21.2' rx='4.2' ry='1.7' transform='rotate(271 13.9 21.2)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='17.3' cy='23.9' rx='4.2' ry='1.7' transform='rotate(347 17.3 23.9)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='21.6' cy='13.7' rx='4.0' ry='1.6' transform='rotate(284 21.6 13.7)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='24.2' cy='17.0' rx='4.0' ry='1.6' transform='rotate(360 24.2 17.0)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='26.7' cy='12.7' rx='4' ry='1.8' transform='rotate(328 26.7 12.7)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cpath d='M56.1 93.6 L58.7 93.1 L61.2 92.6 L63.6 91.8 L66.1 91.0 L68.4 90.0 L70.7 88.8 L73.0 87.5 L75.1 86.1 L77.2 84.6 L79.2 83.0 L81.0 81.2 L82.8 79.3 L84.5 77.4 L86.0 75.3 L87.4 73.2 L88.7 70.9 L89.9 68.6 L90.9 66.3 L91.8 63.9 L92.5 61.4 L93.1 58.9 L93.5 56.4 L93.8 53.8 L94.0 51.2 L94.0 48.7 L93.8 46.1 L93.5 43.5 L93.1 41.0 L92.5 38.5 L91.7 36.0 L90.8 33.6 L89.8 31.3 L88.6 29.0 L87.4 26.7 L85.9 24.6 L84.4 22.5 L82.7 20.6 L80.9 18.7 L79.1 17.0 L77.1 15.3' fill='none' stroke='%235d636c' stroke-width='1.6' stroke-linecap='round'/%3E%3Cellipse cx='56.6' cy='96.7' rx='6.2' ry='2.5' transform='rotate(30 56.6 96.7)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='55.7' cy='90.4' rx='6.2' ry='2.5' transform='rotate(-46 55.7 90.4)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='67.2' cy='93.8' rx='6.0' ry='2.4' transform='rotate(17 67.2 93.8)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='64.9' cy='88.1' rx='6.0' ry='2.4' transform='rotate(-59 64.9 88.1)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='76.8' cy='88.6' rx='5.8' ry='2.3' transform='rotate(3 76.8 88.6)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='73.4' cy='83.7' rx='5.8' ry='2.3' transform='rotate(-73 73.4 83.7)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='84.9' cy='81.2' rx='5.5' ry='2.2' transform='rotate(-10 84.9 81.2)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='80.7' cy='77.4' rx='5.5' ry='2.2' transform='rotate(-86 80.7 77.4)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Ccircle cx='78.8' cy='75.7' r='1.6' fill='%236b97d2'/%3E%3Cellipse cx='91.1' cy='72.2' rx='5.3' ry='2.1' transform='rotate(-24 91.1 72.2)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='86.3' cy='69.6' rx='5.3' ry='2.1' transform='rotate(-100 86.3 69.6)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='95.1' cy='62.1' rx='5.1' ry='2.1' transform='rotate(-37 95.1 62.1)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='90.0' cy='60.7' rx='5.1' ry='2.1' transform='rotate(-113 90.0 60.7)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='96.5' cy='51.3' rx='4.9' ry='2.0' transform='rotate(-50 96.5 51.3)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='91.5' cy='51.2' rx='4.9' ry='2.0' transform='rotate(-126 91.5 51.2)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='95.4' cy='40.5' rx='4.7' ry='1.9' transform='rotate(-64 95.4 40.5)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='90.7' cy='41.5' rx='4.7' ry='1.9' transform='rotate(-140 90.7 41.5)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Ccircle cx='88.6' cy='41.9' r='1.6' fill='%236b97d2'/%3E%3Cellipse cx='91.9' cy='30.3' rx='4.5' ry='1.8' transform='rotate(-77 91.9 30.3)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='87.7' cy='32.2' rx='4.5' ry='1.8' transform='rotate(-153 87.7 32.2)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='86.1' cy='21.2' rx='4.2' ry='1.7' transform='rotate(-91 86.1 21.2)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='82.7' cy='23.9' rx='4.2' ry='1.7' transform='rotate(-167 82.7 23.9)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='78.4' cy='13.7' rx='4.0' ry='1.6' transform='rotate(-104 78.4 13.7)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='75.8' cy='17.0' rx='4.0' ry='1.6' transform='rotate(-180 75.8 17.0)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='73.3' cy='12.7' rx='4' ry='1.8' transform='rotate(-148 73.3 12.7)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cpath d='M44 92 L40 99 L46 97 L50 100 L54 97 L60 99 L56 92 Z' fill='%236b97d2' stroke='%235d636c' stroke-width='0.6'/%3E%3Ccircle cx='50' cy='93' r='3.2' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.6'/%3E%3C/svg%3E");
+}
+
+.mm-avatar.look-frame-podium::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-2 -2 104 106'%3E%3Cpath d='M43.9 93.6 L41.3 93.1 L38.8 92.6 L36.4 91.8 L33.9 91.0 L31.6 90.0 L29.3 88.8 L27.0 87.5 L24.9 86.1 L22.8 84.6 L20.8 83.0 L19.0 81.2 L17.2 79.3 L15.5 77.4 L14.0 75.3 L12.6 73.2 L11.3 70.9 L10.1 68.6 L9.1 66.3 L8.2 63.9 L7.5 61.4 L6.9 58.9 L6.5 56.4 L6.2 53.8 L6.0 51.2 L6.0 48.7 L6.2 46.1 L6.5 43.5 L6.9 41.0 L7.5 38.5 L8.3 36.0 L9.2 33.6 L10.2 31.3 L11.4 29.0 L12.6 26.7 L14.1 24.6 L15.6 22.5 L17.3 20.6 L19.1 18.7 L20.9 17.0 L22.9 15.3' fill='none' stroke='%235a3414' stroke-width='1.6' stroke-linecap='round'/%3E%3Cellipse cx='43.4' cy='96.7' rx='6.2' ry='2.5' transform='rotate(150 43.4 96.7)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='44.3' cy='90.4' rx='6.2' ry='2.5' transform='rotate(226 44.3 90.4)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='32.8' cy='93.8' rx='6.0' ry='2.4' transform='rotate(163 32.8 93.8)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='35.1' cy='88.1' rx='6.0' ry='2.4' transform='rotate(239 35.1 88.1)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='23.2' cy='88.6' rx='5.8' ry='2.3' transform='rotate(177 23.2 88.6)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='26.6' cy='83.7' rx='5.8' ry='2.3' transform='rotate(253 26.6 83.7)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='15.1' cy='81.2' rx='5.5' ry='2.2' transform='rotate(190 15.1 81.2)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='19.3' cy='77.4' rx='5.5' ry='2.2' transform='rotate(266 19.3 77.4)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Ccircle cx='21.2' cy='75.7' r='1.6' fill='%237fae7c'/%3E%3Cellipse cx='8.9' cy='72.2' rx='5.3' ry='2.1' transform='rotate(204 8.9 72.2)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='13.7' cy='69.6' rx='5.3' ry='2.1' transform='rotate(280 13.7 69.6)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='4.9' cy='62.1' rx='5.1' ry='2.1' transform='rotate(217 4.9 62.1)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='10.0' cy='60.7' rx='5.1' ry='2.1' transform='rotate(293 10.0 60.7)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='3.5' cy='51.3' rx='4.9' ry='2.0' transform='rotate(230 3.5 51.3)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='8.5' cy='51.2' rx='4.9' ry='2.0' transform='rotate(306 8.5 51.2)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='4.6' cy='40.5' rx='4.7' ry='1.9' transform='rotate(244 4.6 40.5)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='9.3' cy='41.5' rx='4.7' ry='1.9' transform='rotate(320 9.3 41.5)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Ccircle cx='11.4' cy='41.9' r='1.6' fill='%237fae7c'/%3E%3Cellipse cx='8.1' cy='30.3' rx='4.5' ry='1.8' transform='rotate(257 8.1 30.3)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='12.3' cy='32.2' rx='4.5' ry='1.8' transform='rotate(333 12.3 32.2)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='13.9' cy='21.2' rx='4.2' ry='1.7' transform='rotate(271 13.9 21.2)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='17.3' cy='23.9' rx='4.2' ry='1.7' transform='rotate(347 17.3 23.9)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='21.6' cy='13.7' rx='4.0' ry='1.6' transform='rotate(284 21.6 13.7)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='24.2' cy='17.0' rx='4.0' ry='1.6' transform='rotate(360 24.2 17.0)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='26.7' cy='12.7' rx='4' ry='1.8' transform='rotate(328 26.7 12.7)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cpath d='M56.1 93.6 L58.7 93.1 L61.2 92.6 L63.6 91.8 L66.1 91.0 L68.4 90.0 L70.7 88.8 L73.0 87.5 L75.1 86.1 L77.2 84.6 L79.2 83.0 L81.0 81.2 L82.8 79.3 L84.5 77.4 L86.0 75.3 L87.4 73.2 L88.7 70.9 L89.9 68.6 L90.9 66.3 L91.8 63.9 L92.5 61.4 L93.1 58.9 L93.5 56.4 L93.8 53.8 L94.0 51.2 L94.0 48.7 L93.8 46.1 L93.5 43.5 L93.1 41.0 L92.5 38.5 L91.7 36.0 L90.8 33.6 L89.8 31.3 L88.6 29.0 L87.4 26.7 L85.9 24.6 L84.4 22.5 L82.7 20.6 L80.9 18.7 L79.1 17.0 L77.1 15.3' fill='none' stroke='%235a3414' stroke-width='1.6' stroke-linecap='round'/%3E%3Cellipse cx='56.6' cy='96.7' rx='6.2' ry='2.5' transform='rotate(30 56.6 96.7)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='55.7' cy='90.4' rx='6.2' ry='2.5' transform='rotate(-46 55.7 90.4)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='67.2' cy='93.8' rx='6.0' ry='2.4' transform='rotate(17 67.2 93.8)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='64.9' cy='88.1' rx='6.0' ry='2.4' transform='rotate(-59 64.9 88.1)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='76.8' cy='88.6' rx='5.8' ry='2.3' transform='rotate(3 76.8 88.6)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='73.4' cy='83.7' rx='5.8' ry='2.3' transform='rotate(-73 73.4 83.7)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='84.9' cy='81.2' rx='5.5' ry='2.2' transform='rotate(-10 84.9 81.2)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='80.7' cy='77.4' rx='5.5' ry='2.2' transform='rotate(-86 80.7 77.4)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Ccircle cx='78.8' cy='75.7' r='1.6' fill='%237fae7c'/%3E%3Cellipse cx='91.1' cy='72.2' rx='5.3' ry='2.1' transform='rotate(-24 91.1 72.2)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='86.3' cy='69.6' rx='5.3' ry='2.1' transform='rotate(-100 86.3 69.6)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='95.1' cy='62.1' rx='5.1' ry='2.1' transform='rotate(-37 95.1 62.1)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='90.0' cy='60.7' rx='5.1' ry='2.1' transform='rotate(-113 90.0 60.7)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='96.5' cy='51.3' rx='4.9' ry='2.0' transform='rotate(-50 96.5 51.3)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='91.5' cy='51.2' rx='4.9' ry='2.0' transform='rotate(-126 91.5 51.2)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='95.4' cy='40.5' rx='4.7' ry='1.9' transform='rotate(-64 95.4 40.5)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='90.7' cy='41.5' rx='4.7' ry='1.9' transform='rotate(-140 90.7 41.5)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Ccircle cx='88.6' cy='41.9' r='1.6' fill='%237fae7c'/%3E%3Cellipse cx='91.9' cy='30.3' rx='4.5' ry='1.8' transform='rotate(-77 91.9 30.3)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='87.7' cy='32.2' rx='4.5' ry='1.8' transform='rotate(-153 87.7 32.2)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='86.1' cy='21.2' rx='4.2' ry='1.7' transform='rotate(-91 86.1 21.2)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='82.7' cy='23.9' rx='4.2' ry='1.7' transform='rotate(-167 82.7 23.9)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='78.4' cy='13.7' rx='4.0' ry='1.6' transform='rotate(-104 78.4 13.7)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='75.8' cy='17.0' rx='4.0' ry='1.6' transform='rotate(-180 75.8 17.0)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='73.3' cy='12.7' rx='4' ry='1.8' transform='rotate(-148 73.3 12.7)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cpath d='M44 92 L40 99 L46 97 L50 100 L54 97 L60 99 L56 92 Z' fill='%237fae7c' stroke='%235a3414' stroke-width='0.6'/%3E%3Ccircle cx='50' cy='93' r='3.2' fill='%23b87333' stroke='%235a3414' stroke-width='0.6'/%3E%3C/svg%3E");
+}
+
+/* Contender (the top of a season): a ring in the season's colors, a star at the bottom that twinkles */
+.look-frame-contender::after {
+  background: conic-gradient(#d4a64a, #7c5cd6, #d4a64a, #3b2a6e, #f2c45a, #7c5cd6, #d4a64a);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.6) rgba(124, 92, 214, 0.6));
+  animation: look-turn 5s linear infinite;
+}
+
+.mm-avatar.look-frame-contender::before {
+  content: "★";
+  bottom: calc(var(--size) * -0.17);
+  left: 50%;
+  color: #ffe58a;
+  font-size: calc(var(--size) * 0.32);
+  text-shadow: 0 0 calc(var(--size) * 0.06) rgba(242, 196, 90, 0.9), 0 1px 2px rgba(0, 0, 0, 0.6);
+  transform: translateX(-50%);
+  animation: look-star-pulse 2.2s ease-in-out infinite;
+}
+
+/* Victory Crown: a golden crown that floats over the head, a spark next to it */
+.look-fx-crowned .look-fx::before {
+  content: "";
+  top: calc(var(--size) * -0.25);
+  left: 50%;
+  width: calc(var(--size) * 0.46);
+  height: calc(var(--size) * 0.34);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 48'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fff1c4'/%3E%3Cstop offset='0.45' stop-color='%23f2c45a'/%3E%3Cstop offset='1' stop-color='%23a8741a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M6 40 L3 12 L18 24 L32 4 L46 24 L61 12 L58 40 Z' fill='url(%23g)' stroke='%237a5310' stroke-width='2' stroke-linejoin='round'/%3E%3Crect x='6' y='38' width='52' height='7' rx='2' fill='url(%23g)' stroke='%237a5310' stroke-width='2'/%3E%3Ccircle cx='32' cy='4' r='3.4' fill='%23fff1c4' stroke='%237a5310' stroke-width='1.5'/%3E%3Ccircle cx='3' cy='12' r='3' fill='%23fff1c4' stroke='%237a5310' stroke-width='1.5'/%3E%3Ccircle cx='61' cy='12' r='3' fill='%23fff1c4' stroke='%237a5310' stroke-width='1.5'/%3E%3Ccircle cx='32' cy='29' r='4.2' fill='%23e0675a' stroke='%237a5310' stroke-width='1.5'/%3E%3Ccircle cx='18' cy='31' r='3' fill='%236b97d2' stroke='%237a5310' stroke-width='1.3'/%3E%3Ccircle cx='46' cy='31' r='3' fill='%237fae7c' stroke='%237a5310' stroke-width='1.3'/%3E%3C/svg%3E") center / contain no-repeat;
+  filter: drop-shadow(0 calc(var(--size) * 0.03) calc(var(--size) * 0.04) rgba(0, 0, 0, 0.45)) drop-shadow(0 0 calc(var(--size) * 0.05) rgba(255, 229, 138, 0.6));
+  transform: translateX(-50%) rotate(-6deg);
+  animation: look-crown 2.6s ease-in-out infinite;
+}
+
+.look-fx-crowned .look-fx::after {
+  content: "✦";
+  top: calc(var(--size) * -0.26);
+  right: calc(var(--size) * 0.06);
+  color: #fff1c4;
+  font-size: calc(var(--size) * 0.18);
+  text-shadow: 0 0 6px #f2c45a;
+  animation: look-twinkle 1.8s ease-in-out infinite;
+}
+
+/* (a crown, horns, a halo take the top: one at a time) */
+.look-frame-royal.look-fx-crowned::before,
+.look-frame-devil.look-fx-crowned::before {
+  display: none;
+}
+
+/* Spotlight: soft rays of light that turn slowly around the avatar */
+.look-fx-spotlight .look-fx::before {
+  content: "";
+  inset: -30%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 229, 138, 0.55) 0 7deg, rgba(255, 229, 138, 0) 13deg 30deg);
+  -webkit-mask: radial-gradient(closest-side, transparent 66%, #000 70%, rgba(0, 0, 0, 0.5) 84%, transparent 100%);
+  mask: radial-gradient(closest-side, transparent 66%, #000 70%, rgba(0, 0, 0, 0.5) 84%, transparent 100%);
+  animation: look-turn 12s linear infinite, look-spot 3s ease-in-out infinite;
+}
+
+.look-fx-spotlight .look-fx::after {
+  content: "";
+  inset: -10%;
+  border-radius: 50%;
+  box-shadow: 0 0 calc(var(--size) * 0.22) calc(var(--size) * 0.02) rgba(255, 229, 138, 0.35);
+  animation: look-spot 3s ease-in-out infinite reverse;
+}
+
+/* Starfall: golden stars that drift down and twinkle */
+.look-fx-starfall .look-fx::before,
+.look-fx-starfall .look-fx::after {
+  content: "★";
+  top: 0;
+  opacity: 0;
+  color: #ffe58a;
+  font-size: calc(var(--size) * 0.22);
+  text-shadow: 0 0 calc(var(--size) * 0.06) rgba(242, 196, 90, 0.95);
+  animation: look-fall 2.8s ease-in infinite;
+}
+
+.look-fx-starfall .look-fx::before {
+  left: -12%;
+}
+
+.look-fx-starfall .look-fx::after {
+  right: -12%;
+  font-size: calc(var(--size) * 0.16);
+  animation-delay: 1.4s;
+}
+
+.look-fx-starfall.mm-avatar {
+  filter: drop-shadow(0 0 calc(var(--size) * 0.06) rgba(242, 196, 90, 0.35));
+}
+
+@keyframes look-laurel {
+  50% {
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 calc(var(--size) * 0.06) rgba(255, 229, 138, 0.75)) brightness(1.15);
+  }
+}
+
+@keyframes look-star-pulse {
+  50% {
+    transform: translateX(-50%) scale(1.18) rotate(18deg);
+  }
+}
+
+@keyframes look-crown {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0) rotate(-6deg);
+  }
+  50% {
+    transform: translateX(-50%) translateY(calc(var(--size) * -0.06)) rotate(4deg);
+  }
+}
+
+@keyframes look-spot {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-avatar.look-frame-champion::before,
+  .mm-avatar.look-frame-contender::before,
+  .look-fx-crowned .look-fx::before,
+  .look-fx-crowned .look-fx::after,
+  .look-fx-spotlight .look-fx::before,
+  .look-fx-spotlight .look-fx::after,
+  .look-fx-starfall .look-fx::before,
+  .look-fx-starfall .look-fx::after {
+    animation: none;
+  }
+}
+
+/* ---------- Themed exclusives: Halloween, Christmas, Lunar New Year, arcade, vaporwave - and spring ---------- */
+
+/* Pumpkin Patch: orange and night purple, a jack-o'-lantern at the bottom */
+.look-frame-pumpkin::after {
+  background: conic-gradient(#f97316, #4c1d95, #fb923c, #1e1b4b, #f97316, #7c3aed, #f97316);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.4) rgba(249, 115, 22, 0.6));
+  animation: look-turn 6s linear infinite;
+}
+
+.mm-avatar.look-frame-pumpkin::before {
+  content: "🎃";
+  bottom: calc(var(--size) * -0.16);
+  left: calc(50% - var(--size) * 0.16);
+  font-size: calc(var(--size) * 0.32);
+  filter: drop-shadow(0 0 calc(var(--size) * 0.05) rgba(249, 115, 22, 0.8));
+  animation: look-flicker 1.4s ease-in-out infinite alternate;
+}
+
+/* Candy Cane: red and white stripes that turn, a present at the bottom */
+.look-frame-candycane::after {
+  background: repeating-conic-gradient(#ef4444 0 15deg, #fff7f7 15deg 30deg);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.2) rgba(239, 68, 68, 0.45));
+  animation: look-turn 8s linear infinite;
+}
+
+.mm-avatar.look-frame-candycane::before {
+  content: "🎁";
+  bottom: calc(var(--size) * -0.15);
+  left: 50%;
+  font-size: calc(var(--size) * 0.3);
+  transform: translateX(-50%) rotate(-8deg);
+}
+
+/* Lunar Dragon: red and gold, the dragon curled at the side */
+.look-frame-lunar::after {
+  background: conic-gradient(#b91c1c, #fde68a, #dc2626, #f59e0b, #7f1d1d, #fde68a, #b91c1c);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.8) rgba(245, 158, 11, 0.65));
+  animation: look-turn 4.5s linear infinite;
+}
+
+.mm-avatar.look-frame-lunar::before {
+  content: "🐉";
+  bottom: calc(var(--size) * -0.12);
+  left: calc(var(--size) * -0.2);
+  font-size: calc(var(--size) * 0.38);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  transform-origin: 70% 70%;
+  animation: look-sway 3.2s ease-in-out infinite;
+}
+
+/* Pixel Hero: hard arcade colors that jump (no blending), a space invader on top */
+.look-frame-pixel::after {
+  background: conic-gradient(#22c55e 0 45deg, #3b82f6 45deg 90deg, #eab308 90deg 135deg, #ef4444 135deg 180deg, #a855f7 180deg 225deg, #06b6d4 225deg 270deg, #f97316 270deg 315deg, #ec4899 315deg);
+  animation: look-turn 4s steps(8) infinite;
+}
+
+.mm-avatar.look-frame-pixel::before {
+  content: "👾";
+  top: calc(var(--size) * -0.16);
+  right: calc(var(--size) * -0.12);
+  font-size: calc(var(--size) * 0.3);
+  animation: look-bounce 1.2s steps(3) infinite;
+}
+
+/* Vaporwave: a sunset of pink, purple and cyan that drifts, a palm at the side */
+.look-frame-vapor::after {
+  background: conic-gradient(#f472b6, #a78bfa, #22d3ee, #f0abfc, #f472b6);
+  filter: drop-shadow(0 0 calc(var(--ring) * 2) rgba(244, 114, 182, 0.7));
+  animation: look-turn 7s linear infinite;
+}
+
+.mm-avatar.look-frame-vapor::before {
+  content: "🌴";
+  bottom: calc(var(--size) * -0.08);
+  right: calc(var(--size) * -0.2);
+  font-size: calc(var(--size) * 0.34);
+  transform-origin: 50% 100%;
+  animation: look-sway 4s ease-in-out infinite;
+}
+
+/* Bat Swarm: two bats that circle the avatar */
+.look-fx-bats .look-fx {
+  animation: look-turn 3.2s linear infinite;
+}
+
+.look-fx-bats .look-fx::before,
+.look-fx-bats .look-fx::after {
+  content: "🦇";
+  left: 50%;
+  font-size: calc(var(--size) * 0.24);
+  filter: drop-shadow(0 0 calc(var(--size) * 0.04) rgba(124, 58, 237, 0.8));
+}
+
+.look-fx-bats .look-fx::before {
+  top: calc(var(--size) * -0.2);
+  transform: translateX(-50%);
+}
+
+.look-fx-bats .look-fx::after {
+  bottom: calc(var(--size) * -0.16);
+  font-size: calc(var(--size) * 0.18);
+  transform: translateX(-50%) rotate(180deg);
+}
+
+/* Jingle Bells: two bells that swing at the top */
+.look-fx-jingle .look-fx::before,
+.look-fx-jingle .look-fx::after {
+  content: "🔔";
+  top: calc(var(--size) * -0.14);
+  font-size: calc(var(--size) * 0.26);
+  transform-origin: 50% 0;
+  animation: look-sway 0.9s ease-in-out infinite;
+}
+
+.look-fx-jingle .look-fx::before {
+  left: calc(var(--size) * -0.08);
+}
+
+.look-fx-jingle .look-fx::after {
+  right: calc(var(--size) * -0.08);
+  font-size: calc(var(--size) * 0.2);
+  animation-delay: 0.45s;
+}
+
+/* Sky Lanterns: red lanterns that drift up, glowing */
+.look-fx-lanterns .look-fx::before,
+.look-fx-lanterns .look-fx::after {
+  content: "🏮";
+  bottom: 10%;
+  opacity: 0;
+  font-size: calc(var(--size) * 0.26);
+  filter: drop-shadow(0 0 calc(var(--size) * 0.06) rgba(251, 146, 60, 0.9));
+  animation: look-rise 3.2s ease-out infinite;
+}
+
+.look-fx-lanterns .look-fx::before {
+  left: -16%;
+}
+
+.look-fx-lanterns .look-fx::after {
+  right: -16%;
+  font-size: calc(var(--size) * 0.2);
+  animation-delay: 1.6s;
+}
+
+/* Disco Lights: colored beams that turn around the avatar, a mirror ball on top */
+.look-fx-disco .look-fx::before {
+  content: "";
+  inset: -22%;
+  border-radius: 50%;
+  background: conic-gradient(rgba(236, 72, 153, 0.75), transparent 12%, rgba(59, 130, 246, 0.75) 25%, transparent 37%, rgba(34, 197, 94, 0.75) 50%, transparent 62%, rgba(234, 179, 8, 0.75) 75%, transparent 87%, rgba(236, 72, 153, 0.75));
+  -webkit-mask: radial-gradient(closest-side, transparent 72%, #000 76%, transparent 100%);
+  mask: radial-gradient(closest-side, transparent 72%, #000 76%, transparent 100%);
+  animation: look-turn 2.4s linear infinite, look-hue 4s linear infinite;
+}
+
+.look-fx-disco .look-fx::after {
+  content: "🪩";
+  top: calc(var(--size) * -0.2);
+  left: 50%;
+  font-size: calc(var(--size) * 0.26);
+  transform: translateX(-50%);
+  transform-origin: 50% 0;
+  animation: look-sway 2s ease-in-out infinite;
+}
+
+/* Butterflies: two butterflies that flutter up */
+.look-fx-butterflies .look-fx::before,
+.look-fx-butterflies .look-fx::after {
+  content: "🦋";
+  bottom: 20%;
+  opacity: 0;
+  font-size: calc(var(--size) * 0.24);
+  animation: look-rise 2.8s ease-out infinite, look-sway 0.5s ease-in-out infinite;
+}
+
+.look-fx-butterflies .look-fx::before {
+  left: -14%;
+}
+
+.look-fx-butterflies .look-fx::after {
+  right: -14%;
+  font-size: calc(var(--size) * 0.2);
+  animation-delay: 1.4s, 0.25s;
+}
+
+/* (a crown, horns, a halo, a bell or a mirror ball take the top: one at a time) */
+.look-frame-royal.look-fx-jingle::before,
+.look-frame-royal.look-fx-disco::before,
+.look-frame-devil.look-fx-disco::before,
+.look-frame-pixel.look-fx-crowned::before,
+.look-frame-pixel.look-fx-disco::before {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-avatar.look-frame-pumpkin::before,
+  .mm-avatar.look-frame-lunar::before,
+  .mm-avatar.look-frame-pixel::before,
+  .mm-avatar.look-frame-vapor::before,
+  .look-fx-bats .look-fx,
+  .look-fx-jingle .look-fx::before,
+  .look-fx-jingle .look-fx::after,
+  .look-fx-lanterns .look-fx::before,
+  .look-fx-lanterns .look-fx::after,
+  .look-fx-disco .look-fx::before,
+  .look-fx-disco .look-fx::after,
+  .look-fx-butterflies .look-fx::before,
+  .look-fx-butterflies .look-fx::after {
+    animation: none;
+  }
+}
+
+/*
+ * One thing per spot: where an animation needs the space, the frame's own piece (a crown, horns, a snowflake,
+ * an invader, a dragon, a palm) steps back - the ring stays.
+ */
+/* (top: dizzy stars, bells, the sleepy Zzz, the crown's spark) */
+.mm-avatar.look-frame-royal.look-fx-dizzy::before,
+.mm-avatar.look-frame-devil.look-fx-dizzy::before,
+.mm-avatar.look-frame-devil.look-fx-jingle::before,
+.mm-avatar.look-frame-ice.look-fx-dizzy::before,
+.mm-avatar.look-frame-ice.look-fx-jingle::before,
+.mm-avatar.look-frame-ice.look-fx-zzz::before,
+.mm-avatar.look-frame-ice.look-fx-crowned::before,
+.mm-avatar.look-frame-ice.look-fx-halo::before,
+.mm-avatar.look-frame-pixel.look-fx-dizzy::before,
+.mm-avatar.look-frame-pixel.look-fx-jingle::before,
+.mm-avatar.look-frame-pixel.look-fx-zzz::before,
+.mm-avatar.look-frame-pixel.look-fx-halo::before,
+.mm-avatar.look-frame-galaxy.look-fx-dizzy::before,
+.mm-avatar.look-frame-galaxy.look-fx-crowned::before,
+/* (the bottom corners: flames) */
+.mm-avatar.look-frame-lunar.look-fx-flames::before,
+.mm-avatar.look-frame-vapor.look-fx-flames::before,
+.mm-avatar.look-frame-sakura.look-fx-flames::before {
+  display: none;
+}
+
+/*
+ * ---------- Backgrounds: behind the face, instead of the avatar's own color ----------
+ * A layer of its own (.look-bg, under the face - the animations of the avatar stay its own); the face's
+ * color square goes see-through. Taken off, the MemeMory color is back.
+ */
+.mm-avatar[class*="look-bg-"] > .mm-avatar-svg > rect:first-child {
+  fill: transparent;
+}
+
+.mm-avatar > .look-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.look-bg-sunset > .look-bg {
+  background: linear-gradient(160deg, #ffb36b, #ff5e7e 55%, #7b3fa0);
+}
+
+.look-bg-lagoon > .look-bg {
+  background: linear-gradient(160deg, #5ff0dc, #1d8fe0 60%, #154a9a);
+}
+
+.look-bg-mint > .look-bg {
+  background: linear-gradient(150deg, #d6ffe8, #5fd6a4 55%, #2a9d8f);
+}
+
+.look-bg-peach > .look-bg {
+  background: radial-gradient(circle at 30% 25%, #fff4e6, #ffc29e 45%, #ff8e8e);
+}
+
+.look-bg-dusk > .look-bg {
+  background: linear-gradient(180deg, #23265e, #7a4d9a 55%, #f39a7a);
+}
+
+.look-bg-stripes > .look-bg {
+  background: repeating-linear-gradient(45deg, #ff7eb6 0 9%, #fff0f6 9% 18%);
+}
+
+.look-bg-polka > .look-bg {
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.75) 0 22%, transparent 25%) 0 0 / 34% 34%,
+    radial-gradient(circle, rgba(255, 255, 255, 0.45) 0 22%, transparent 25%) 17% 17% / 34% 34%,
+    #4f7fe8;
+}
+
+.look-bg-checkers > .look-bg {
+  background: conic-gradient(#ffd166 25%, #2a2a35 0 50%, #ffd166 0 75%, #2a2a35 0) 0 0 / 40% 40%;
+}
+
+.look-bg-grid > .look-bg {
+  background:
+    linear-gradient(transparent 88%, rgba(255, 61, 245, 0.9) 88%) 0 0 / 25% 25%,
+    linear-gradient(90deg, transparent 88%, rgba(54, 230, 255, 0.85) 88%) 0 0 / 25% 25%,
+    linear-gradient(180deg, #120428, #3a0b5e);
+  animation: look-bg-grid 3s linear infinite;
+}
+
+.look-bg-bubblegum > .look-bg {
+  background:
+    radial-gradient(circle at 25% 30%, #ffd9f3 0 11%, transparent 12%),
+    radial-gradient(circle at 72% 66%, #ffe8f8 0 8%, transparent 9%),
+    radial-gradient(circle at 62% 22%, rgba(255, 255, 255, 0.7) 0 5%, transparent 6%),
+    radial-gradient(circle at 30% 78%, rgba(255, 255, 255, 0.5) 0 6%, transparent 7%),
+    linear-gradient(160deg, #ff8ad8, #c86bff);
+}
+
+.look-bg-matrix > .look-bg {
+  background:
+    repeating-linear-gradient(180deg, rgba(0, 255, 120, 0.55) 0 4%, transparent 4% 13%) 0 0 / 100% 200%,
+    repeating-linear-gradient(90deg, transparent 0 8%, rgba(0, 20, 8, 0.9) 8% 14%),
+    linear-gradient(#001a0a, #003b18);
+  animation: look-bg-matrix 2.4s linear infinite;
+}
+
+.look-bg-northern > .look-bg {
+  background: linear-gradient(120deg, #0b1d3a, #13406b, #1fd1a5, #7b5cff, #13406b, #0b1d3a) 0 0 / 300% 300%;
+  animation: look-bg-drift 9s ease-in-out infinite alternate;
+}
+
+.look-bg-lava > .look-bg {
+  background:
+    radial-gradient(circle at 30% 70%, #ffb347 0 16%, transparent 32%) 0 0 / 180% 180%,
+    radial-gradient(circle at 70% 30%, #ff5f6d 0 18%, transparent 36%) 0 0 / 160% 160%,
+    linear-gradient(#5a0a2a, #c2185b);
+  animation: look-bg-lava 7s ease-in-out infinite alternate;
+}
+
+.look-bg-space > .look-bg {
+  background:
+    radial-gradient(circle at 18% 28%, #fff 0 1.4%, transparent 2%),
+    radial-gradient(circle at 76% 18%, #fff 0 1%, transparent 1.6%),
+    radial-gradient(circle at 64% 72%, #cfe3ff 0 1.2%, transparent 1.8%),
+    radial-gradient(circle at 30% 84%, #fff 0 0.9%, transparent 1.4%),
+    radial-gradient(circle at 88% 56%, #ffe9b0 0 1.1%, transparent 1.7%),
+    radial-gradient(circle at 46% 12%, #fff 0 0.8%, transparent 1.3%),
+    radial-gradient(circle at 70% 82%, #2b1b5a, #05060f 70%);
+}
+
+.look-bg-holo > .look-bg {
+  background: linear-gradient(115deg, #ffd6f5, #c3f0ff, #d5ffd0, #fff3b0, #ffd6f5, #c3f0ff) 0 0 / 400% 400%;
+  animation: look-bg-drift 5s linear infinite alternate;
+}
+
+.look-bg-discofloor > .look-bg {
+  background: conic-gradient(#ff3d7f 25%, #3dd6ff 0 50%, #ffe14d 0 75%, #8a5cff 0) 0 0 / 50% 50%;
+  animation: look-bg-disco 1.6s steps(1) infinite;
+}
+
+.look-bg-goldenhour > .look-bg {
+  background: linear-gradient(135deg, #7a4b00, #ffd46b 35%, #fff4cc 50%, #ffcc4d 65%, #8a5600) 0 0 / 260% 260%;
+  animation: look-bg-drift 4s ease-in-out infinite alternate;
+}
+
+.look-bg-nebula > .look-bg {
+  background:
+    radial-gradient(circle at 30% 35%, rgba(255, 110, 199, 0.75), transparent 45%) 0 0 / 160% 160%,
+    radial-gradient(circle at 70% 65%, rgba(110, 195, 255, 0.75), transparent 45%) 0 0 / 160% 160%,
+    radial-gradient(circle at 22% 70%, #fff 0 1%, transparent 1.6%),
+    radial-gradient(circle at 80% 24%, #fff 0 1.2%, transparent 1.8%),
+    radial-gradient(circle at 50% 50%, #3a1060, #090418 75%);
+  animation: look-bg-lava 8s ease-in-out infinite alternate;
+}
+
+.look-bg-diamonddust > .look-bg {
+  background:
+    radial-gradient(circle, #fff 0 4%, transparent 7%) 0 0 / 22% 22%,
+    radial-gradient(circle, rgba(255, 255, 255, 0.7) 0 3%, transparent 6%) 11% 11% / 22% 22%,
+    linear-gradient(160deg, #e3f2ff, #8fb8e8 50%, #eaf5ff);
+  animation: look-bg-sparkle 6s linear infinite;
+}
+
+@property --look-bg-a {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.look-bg-prism > .look-bg {
+  background: conic-gradient(from var(--look-bg-a), #ff4d4d, #ffb84d, #fff04d, #4dff88, #4dd2ff, #9a4dff, #ff4dd2, #ff4d4d);
+  animation: look-bg-turn 6s linear infinite;
+}
+
+/* Exclusive (only given) */
+.look-bg-velvet > .look-bg {
+  background:
+    repeating-linear-gradient(45deg, rgba(240, 200, 110, 0.28) 0 1.5%, transparent 1.5% 12%),
+    radial-gradient(circle at 50% 30%, #c0163f, #4a0418 75%);
+}
+
+.look-bg-laurels > .look-bg {
+  background:
+    radial-gradient(circle, rgba(255, 244, 200, 0.9) 0 14%, transparent 60%),
+    repeating-conic-gradient(from var(--look-bg-a), #ffe58a 0 10deg, #c8901e 10deg 20deg);
+  animation: look-bg-turn 14s linear infinite;
+}
+
+.look-bg-skyfire > .look-bg {
+  background:
+    radial-gradient(circle at 25% 30%, #ff5fa2 0 3%, rgba(255, 95, 162, 0.35) 4% 14%, transparent 15%),
+    radial-gradient(circle at 72% 24%, #ffd54a 0 3%, rgba(255, 213, 74, 0.35) 4% 12%, transparent 13%),
+    radial-gradient(circle at 62% 70%, #5fd0ff 0 3%, rgba(95, 208, 255, 0.35) 4% 13%, transparent 14%),
+    radial-gradient(circle at 50% 120%, #2a1650, #090a1c 70%);
+  background-size: 100% 100%;
+  animation: look-bg-burst 2.4s ease-in-out infinite alternate;
+}
+
+.look-bg-vault > .look-bg {
+  background:
+    radial-gradient(circle, #fff1b0 0 14%, #e3ac2b 16% 30%, #8a5a08 32% 36%, transparent 38%) 0 0 / 34% 34%,
+    radial-gradient(circle, #fff1b0 0 14%, #e3ac2b 16% 30%, #8a5a08 32% 36%, transparent 38%) 17% 17% / 34% 34%,
+    linear-gradient(#3a2706, #1c1203);
+  animation: look-bg-coins 4s linear infinite;
+}
+
+.look-bg-legends > .look-bg {
+  background:
+    radial-gradient(circle at 20% 25%, #fff 0 1.2%, transparent 1.8%),
+    radial-gradient(circle at 78% 30%, #fff 0 1%, transparent 1.6%),
+    radial-gradient(circle at 60% 80%, #ffe58a 0 1.3%, transparent 2%),
+    linear-gradient(135deg, #2b0a4a, #6a1bb0, #d4a64a, #6a1bb0, #2b0a4a) 0 0 / 300% 300%;
+  animation: look-bg-legends 6s ease-in-out infinite alternate;
+}
+
+@keyframes look-bg-burst {
+  to {
+    background-size: 112% 112%, 92% 92%, 108% 108%, 100% 100%;
+    background-position: 48% 50%, 52% 46%, 50% 54%, 0 0;
+  }
+}
+
+@keyframes look-bg-coins {
+  to {
+    background-position: 0 102%, 17% 119%, 0 0;
+  }
+}
+
+@keyframes look-bg-legends {
+  to {
+    background-position: 0 0, 0 0, 0 0, 100% 100%;
+  }
+}
+
+@keyframes look-bg-grid {
+  to {
+    background-position: 0 100%, 0 0, 0 0;
+  }
+}
+
+@keyframes look-bg-matrix {
+  to {
+    background-position: 0 100%, 0 0, 0 0;
+  }
+}
+
+@keyframes look-bg-drift {
+  to {
+    background-position: 100% 100%;
+  }
+}
+
+@keyframes look-bg-lava {
+  to {
+    background-position: 100% 100%, 100% 0, 0 0;
+  }
+}
+
+@keyframes look-bg-disco {
+  50% {
+    background-position: 50% 0;
+  }
+}
+
+@keyframes look-bg-sparkle {
+  to {
+    background-position: 22% 44%, 33% -11%, 0 0;
+  }
+}
+
+@keyframes look-bg-turn {
+  to {
+    --look-bg-a: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-avatar > .look-bg {
+    animation: none;
+  }
+}

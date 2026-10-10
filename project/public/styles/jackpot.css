@@ -1442,7 +1442,7 @@ body.jackpot-theme {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.55rem;
 }
 
 .jp-bets .player-item {
@@ -1571,7 +1571,7 @@ body.jackpot-theme {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.55rem;
   scrollbar-width: thin;
   scrollbar-color: var(--mm-surface-3) transparent;
 }
@@ -1625,6 +1625,12 @@ body.jackpot-theme {
 .jp-history-text small {
   font-size: 0.72rem;
   color: var(--mm-muted);
+}
+
+/* On hover: the whole line, not cut off */
+.jp-history-item:hover .jp-history-text small {
+  overflow: visible;
+  white-space: normal;
 }
 
 .jp-history-won {
@@ -1858,13 +1864,25 @@ body.jackpot-theme {
   .cs-tab {
     flex: 1 1 0;
     min-width: 0;
-    padding: 0.35rem 0.2rem;
-    font-size: 0.66rem;
+    padding: 0.35rem 0.1rem;
+    font-size: 0.6rem;
+  }
+
+  /* (eight games: a long name is cut, never runs into the next one) */
+  .cs-dock-name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .cs-dock-icon {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .cs-dock-bar {
+    gap: 0.1rem;
+    padding: 0.3rem;
   }
 }
 
@@ -1882,9 +1900,17 @@ body.jackpot-theme {
   white-space: nowrap;
 }
 
-.nav-bonus:disabled {
+/* Only to look at: the time to the next free coins and the streak - they are claimed in the popup */
+.nav-bonus {
   cursor: default;
-  opacity: 0.75;
+}
+
+.nav-bonus:not(.ready) {
+  opacity: 0.85;
+}
+
+.nav-bonus.ready {
+  cursor: pointer;
 }
 
 .nav-bonus.ready {
@@ -2112,12 +2138,20 @@ body.jackpot-theme {
 }
 
 /* ---------- A case battle of mine starts (every casino page) ---------- */
-.bt-notice {
+/* (they stack under each other) */
+.bt-notice-stack {
   position: fixed;
   top: 84px;
   right: 16px;
   z-index: 1080;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
   width: min(380px, calc(100vw - 32px));
+}
+
+.bt-notice {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 0.7rem;
@@ -2634,6 +2668,24 @@ body.jackpot-theme {
   color: rgba(255, 255, 255, 0.7);
 }
 
+/* Still under the foil: nothing of the face shows - not its frame, its animation or its background (they stick out
+   or shine through) - they come with the face when it is scratched free */
+.jp-scratch-foil {
+  z-index: 3;
+}
+
+.jp-scratch-field:has(> .jp-scratch-foil) .mm-avatar,
+.jp-scratch-field:has(> .jp-scratch-foil) .mm-avatar-svg {
+  animation: none !important;
+}
+
+.jp-scratch-field:has(> .jp-scratch-foil) .mm-avatar::before,
+.jp-scratch-field:has(> .jp-scratch-foil) .mm-avatar::after,
+.jp-scratch-field:has(> .jp-scratch-foil) .mm-avatar > .look-fx,
+.jp-scratch-field:has(> .jp-scratch-foil) .mm-avatar > .look-bg {
+  display: none;
+}
+
 .jp-scratch-coin {
   position: absolute;
   left: 0;
@@ -2988,10 +3040,11 @@ body.jackpot-theme {
   background: var(--mm-bg, #141414) !important;
 }
 
-/* Poker and blackjack: zoomed as a whole (casino_fullscreen.js, data-fullscreen-zoom), in the middle */
+/* Poker, blackjack, slots, roulette and Bầu cua: zoomed as a whole (casino_fullscreen.js, data-fullscreen-zoom), in the middle */
 .pk-main.cs-fullscreen,
 .bj-main.cs-fullscreen,
-.sl-main.cs-fullscreen {
+.sl-main.cs-fullscreen,
+.rl-main.cs-fullscreen {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -3083,7 +3136,7 @@ body.jackpot-theme {
 
 /* Big screens: in the middle of the bar */
 @media (min-width: 992px) {
-  .navbar:has(.nav-board) {
+  .navbar:has(.nav-board:not([hidden])) {
     position: relative;
   }
   .nav-board {
@@ -3097,7 +3150,7 @@ body.jackpot-theme {
 
 /* Smaller screens: no room next to the logo - the pill gets its own row under the bar, centered */
 @media (max-width: 991px) {
-  .navbar:has(.nav-board) {
+  .navbar:has(.nav-board:not([hidden])) {
     position: relative;
     padding-bottom: 3.4rem;
   }
@@ -3606,4 +3659,1036 @@ body.jackpot-theme {
     padding: 0.25rem 0.55rem;
     font-size: 0.82rem;
   }
+}
+
+/* ---------- A round of the past: everybody who was in it (a click on a winner) ---------- */
+.jp-record.clickable,
+.jp-history-item.clickable {
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.jp-record.clickable:hover {
+  border-color: rgba(var(--mm-accent-rgb), 0.55);
+  transform: translateY(-1px);
+}
+
+.jp-history-item.clickable:hover {
+  background: rgba(var(--mm-accent-rgb), 0.07);
+}
+
+.jp-round {
+  position: relative;
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem 1.25rem 1.25rem;
+  overflow: hidden;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.4);
+  background: radial-gradient(ellipse at 50% 0%, rgba(var(--mm-accent-rgb), 0.16), transparent 60%), var(--mm-surface);
+  animation: jp-round-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes jp-round-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+}
+
+.jp-round-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--mm-surface-3);
+  color: var(--mm-muted);
+  cursor: pointer;
+}
+
+.jp-round-close:hover {
+  color: var(--mm-text);
+}
+
+.jp-round-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  text-align: center;
+}
+
+.jp-round-label {
+  color: var(--mm-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.jp-round-crown {
+  position: relative;
+  margin-top: 0.6rem;
+}
+
+.jp-round-crown .avatar {
+  box-shadow: 0 0 0 3px rgba(var(--mm-accent-rgb), 0.7), 0 8px 24px rgba(var(--mm-accent-rgb), 0.3);
+  border-radius: 50%;
+}
+
+.jp-round-crown-icon {
+  position: absolute;
+  top: -0.95rem;
+  left: 50%;
+  transform: translateX(-50%) rotate(-8deg);
+  font-size: 1.3rem;
+}
+
+.jp-round-winner {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.jp-round-won {
+  color: var(--mm-accent);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.jp-round-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.jp-round-fact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.55rem 0.4rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  text-align: center;
+}
+
+.jp-round-fact b {
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.jp-round-fact span {
+  color: var(--mm-muted);
+  font-size: 0.7rem;
+}
+
+.jp-round-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 0.15rem;
+}
+
+.jp-round-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 4.2rem;
+  align-items: center;
+  gap: 0.3rem 0.75rem;
+  padding: 0.55rem 0.7rem 0.6rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.jp-round-row.winner {
+  border-color: rgba(var(--mm-accent-rgb), 0.55);
+  background: rgba(var(--mm-accent-rgb), 0.08);
+}
+
+.jp-round-row.me:not(.winner) {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.jp-round-who {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.jp-round-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.jp-round-ghost {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--mm-surface-3);
+}
+
+.jp-round-tag {
+  flex: 0 0 auto;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  color: var(--mm-accent);
+  font-size: 0.66rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.jp-round-coins,
+.jp-round-chance {
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.jp-round-chance {
+  color: var(--mm-muted);
+  text-align: right;
+}
+
+.jp-round-bar {
+  grid-column: 1 / -1;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.jp-round-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--mm-muted);
+}
+
+.jp-round-old {
+  margin: 0.25rem 0 0;
+  color: var(--mm-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+@media (max-width: 420px) {
+  .jp-round-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .jp-round-chance {
+    display: none;
+  }
+}
+
+/* ---------- Gifts: a click on a name in the chat ---------- */
+.msg-clickable {
+  cursor: pointer;
+}
+
+.avatar-slot.msg-clickable:hover .avatar {
+  box-shadow: 0 0 0 2px rgba(var(--mm-accent-rgb), 0.7);
+  border-radius: 50%;
+}
+
+.cs-gift {
+  position: relative;
+  width: min(380px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.6rem 1.25rem 1.25rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.45);
+  background: radial-gradient(ellipse at 50% 0%, rgba(var(--mm-accent-rgb), 0.18), transparent 60%), var(--mm-surface);
+  animation: cs-gift-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes cs-gift-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+}
+
+.cs-gift-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--mm-surface-3);
+  color: var(--mm-muted);
+  cursor: pointer;
+}
+
+.cs-gift-close:hover {
+  color: var(--mm-text);
+}
+
+.cs-gift-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  text-align: center;
+}
+
+.cs-gift-pic {
+  position: relative;
+  margin-bottom: 0.35rem;
+}
+
+.cs-gift-pic .avatar {
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(var(--mm-accent-rgb), 0.6), 0 8px 24px rgba(var(--mm-accent-rgb), 0.25);
+}
+
+.cs-gift-bow {
+  position: absolute;
+  right: -0.45rem;
+  bottom: -0.3rem;
+  font-size: 1.35rem;
+  animation: cs-gift-wiggle 2.4s ease-in-out infinite;
+}
+
+@keyframes cs-gift-wiggle {
+  45%,
+  55% {
+    transform: rotate(-12deg) scale(1.1);
+  }
+}
+
+.cs-gift-label {
+  color: var(--mm-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cs-gift-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.cs-gift-amount {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.cs-gift-quick {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.cs-gift-quick button {
+  padding: 0.4rem 0.2rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 8px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cs-gift-quick button:hover:not(:disabled) {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+}
+
+.cs-gift-quick button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cs-gift-info {
+  margin: 0;
+  color: var(--mm-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.cs-gift-info b {
+  color: var(--mm-accent);
+  white-space: nowrap;
+}
+
+.cs-gift-have {
+  display: block;
+  margin-top: 0.15rem;
+  white-space: nowrap;
+}
+
+.cs-gift-info.used b {
+  color: var(--mm-danger);
+}
+
+.cs-gift-error {
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  background: rgba(224, 103, 90, 0.1);
+  color: var(--mm-danger);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.cs-gift-error[hidden] {
+  display: none;
+}
+
+.cs-gift-send {
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-radius: 12px;
+  background: var(--mm-accent);
+  color: var(--mm-on-accent, #1b1405);
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cs-gift-send:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.cs-gift-send:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* A gift came: the amount big in the middle */
+.cs-got-amount {
+  color: var(--mm-accent);
+  font-size: 2rem;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  animation: cs-got-pop 0.6s 0.15s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+
+@keyframes cs-got-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+/* Online in the casino: a click on somebody else - coins for them */
+.chat-online-row.clickable {
+  cursor: pointer;
+}
+
+.chat-online-row.clickable:hover {
+  background: rgba(var(--mm-accent-rgb), 0.12);
+}
+
+.chat-online-row.clickable::after {
+  content: "🎁";
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.chat-online-row.clickable:hover::after {
+  opacity: 1;
+}
+
+/* The admin's test mode: the coins are test coins */
+.nav-coins.test {
+  border-style: dashed;
+}
+
+.nav-coins.test::after {
+  content: "🧪 TEST";
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.2);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+/* ---------- The season pill: join, switch, what is coming (only when there is a season) ---------- */
+.nav-board[hidden] {
+  display: none !important;
+}
+
+.nav-board {
+  cursor: pointer;
+}
+
+.nav-board-state {
+  margin-left: 0.15rem;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--mm-accent);
+  color: #1a1206;
+}
+
+.nav-board-state.info,
+.nav-board-state.switch {
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  color: var(--mm-accent);
+}
+
+.nav-board-state.join {
+  animation: nav-state-pulse 1.8s ease-in-out infinite;
+}
+
+/* Playing in the season world: a live dot and a glow */
+.nav-board-state.playing {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(74, 222, 128, 0.16);
+  color: #4ade80;
+}
+
+.nav-board-state.playing::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 6px #4ade80;
+  animation: nav-live 1.4s ease-in-out infinite;
+}
+
+.nav-board.in-season {
+  border-color: rgba(var(--mm-accent-rgb), 0.85);
+  box-shadow: 0 0 0 3px rgba(var(--mm-accent-rgb), 0.15), 0 0 22px rgba(var(--mm-accent-rgb), 0.35);
+}
+
+.nav-board.upcoming {
+  border-style: dashed;
+}
+
+@keyframes nav-state-pulse {
+  50% {
+    box-shadow: 0 0 0 5px rgba(var(--mm-accent-rgb), 0.18);
+  }
+}
+
+@keyframes nav-live {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* A line in the accent color over every casino page (gold - in the season world the season's color) */
+body.jackpot-theme::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3000;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, var(--mm-accent) 20%, var(--mm-accent) 80%, transparent);
+  box-shadow: 0 0 14px rgba(var(--mm-accent-rgb), 0.7);
+  pointer-events: none;
+}
+
+/* The season card: join / later, switch / close */
+.cs-join-kicker {
+  margin-bottom: -0.4rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mm-accent);
+}
+
+.cs-join-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.cs-join-later {
+  padding: 0.55rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mm-muted);
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+}
+
+.cs-join-later:hover {
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+}
+
+.profile-icon.purple {
+  --tone: 167, 139, 250;
+}
+
+/* The dock: a line between the games and the leaderboard at the end */
+.cs-dock-sep {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 1px;
+  margin: 0.45rem 0.3rem;
+  background: linear-gradient(180deg, transparent, var(--mm-border) 20%, var(--mm-border) 80%, transparent);
+}
+
+@media (max-width: 575px) {
+  .cs-dock-sep {
+    margin: 0.4rem 0.1rem;
+  }
+}
+
+/* A money rain: coins fall over the page */
+.cs-rain {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cs-rain-drop {
+  position: absolute;
+  top: -50px;
+  opacity: 0;
+  animation: cs-rain-fall 2s cubic-bezier(0.4, 0, 0.8, 1) forwards;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
+}
+
+@keyframes cs-rain-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(-20deg);
+  }
+  10% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(110vh) rotate(25deg);
+  }
+}
+
+.nav-board-state[hidden] {
+  display: none;
+}
+
+/* Plays in the season world right now: the season's icon next to the name (chat, online list) */
+.msg-name.in-season::after,
+.chat-online-row .in-season::after {
+  content: var(--season-icon, "🏆");
+  display: inline-block;
+  margin-left: 0.3rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  font-size: 0.72em;
+  line-height: 1.5;
+  vertical-align: 1px;
+}
+
+/* A money rain in the popup (while away): the money where the avatar of a giver is */
+.cs-got-rain {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--mm-accent-rgb), 0.25), rgba(var(--mm-accent-rgb), 0.06));
+  font-size: 2.4rem;
+}
+
+/* ---------- Best wins (the side of a game, casino_best.js): today / all time ---------- */
+/* (the list it replaces stays in the page for its script - never shown) */
+[data-replaced] {
+  display: none !important;
+}
+
+.cs-best-card .side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cs-best-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+}
+
+.cs-best-tabs button {
+  padding: 0.2rem 0.65rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mm-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cs-best-tabs button.active {
+  background: var(--mm-surface);
+  color: var(--mm-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.cs-best-row {
+  grid-template-columns: 1.9rem minmax(0, 1fr) auto;
+}
+
+.cs-best-rank {
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--mm-muted);
+}
+
+.cs-best-row.top .cs-best-rank {
+  font-size: 1.15rem;
+}
+
+.cs-best-row.top-1 {
+  border-color: rgba(var(--mm-accent-rgb), 0.35);
+  background: linear-gradient(90deg, rgba(var(--mm-accent-rgb), 0.12), var(--mm-surface-2) 70%);
+}
+
+/* (the first row is not "the newest" here) */
+.cs-best-row:first-child:not(.top-1) {
+  border-color: transparent;
+  background: var(--mm-surface-2);
+}
+
+.cs-best-row.mine {
+  box-shadow: inset 0 0 0 1px rgba(var(--mm-accent-rgb), 0.45);
+}
+
+.cs-best-name {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  /* (the frame and effect of an avatar go past its circle: not cut off - only the name is shortened) */
+  overflow: visible !important;
+  padding: 4px 0 4px 5px;
+}
+
+.cs-best-name > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-best-name .mm-avatar {
+  --size: 22px;
+  flex-shrink: 0;
+}
+
+.cs-best-note {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-best-dice {
+  display: inline-flex;
+  gap: 2px;
+  vertical-align: middle;
+}
+
+.cs-best-dice .bc-art {
+  width: 18px;
+  height: 18px;
+}
+
+.cs-best-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+}
+
+.cs-best-when {
+  font-size: 0.68rem;
+  color: var(--mm-muted);
+}
+
+/* ---------- Daily streak: the flame on the gift, the popup after a claim ---------- */
+.nav-bonus-streak {
+  margin-left: 0.35rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  color: var(--mm-accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+@media (max-width: 575px) {
+  .nav-bonus-streak {
+    margin-left: 0.2rem;
+    padding: 0 0.25rem;
+    font-size: 0.7rem;
+  }
+}
+
+.nav-streak {
+  max-width: 420px;
+  text-align: center;
+}
+
+.nav-streak-flame {
+  font-size: 2.6rem;
+  line-height: 1;
+  margin-bottom: 0.35rem;
+  animation: nav-streak-flame 1.6s ease-in-out infinite;
+}
+
+@keyframes nav-streak-flame {
+  50% {
+    transform: scale(1.08) rotate(-3deg);
+  }
+}
+
+.nav-streak .mm-dialog-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.nav-streak-amount {
+  margin-bottom: 1rem;
+  color: var(--mm-accent);
+  font-size: 1.9rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  animation: nav-streak-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.nav-streak-days {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  grid-auto-flow: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.nav-streak-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.45rem 0.15rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+  animation: nav-streak-pop 0.4s calc(var(--i) * 60ms) cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+}
+
+.nav-streak-day-name {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+  white-space: nowrap;
+}
+
+.nav-streak-day-icon {
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.nav-streak-day-coins {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+}
+
+.nav-streak-day.done {
+  opacity: 0.55;
+}
+
+.nav-streak-day.done .nav-streak-day-icon {
+  color: var(--mm-success);
+  font-weight: 900;
+}
+
+.nav-streak-day.today {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  box-shadow: 0 0 14px rgba(var(--mm-accent-rgb), 0.35);
+}
+
+.nav-streak-day.today .nav-streak-day-name,
+.nav-streak-day.today .nav-streak-day-coins {
+  color: var(--mm-accent);
+}
+
+.nav-streak-text {
+  margin-bottom: 1rem;
+}
+
+.nav-streak .mm-dialog-actions {
+  grid-template-columns: 1fr;
+}
+
+@keyframes nav-streak-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-streak-flame,
+  .nav-streak-amount,
+  .nav-streak-day {
+    animation: none;
+  }
+}
+
+/* ---------- A season reward: the medal, the items won ---------- */
+.nav-reward {
+  max-width: 440px;
+}
+
+.nav-reward-text {
+  margin-bottom: 0.9rem;
+}
+
+/* (many things at once: they wrap - three a row, every card wide enough for its name) */
+.nav-reward-items {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.2rem;
+}
+
+.nav-reward-item {
+  display: flex;
+  /* (three a row, all as wide - fewer: as wide as well) */
+  box-sizing: border-box;
+  flex: 0 0 calc((100% - 1.5rem) / 3);
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.8rem 0.5rem 0.7rem;
+  border: 1px solid rgba(242, 196, 90, 0.45);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(242, 196, 90, 0.12), transparent 60%), var(--mm-surface-2);
+  animation: nav-streak-pop 0.5s calc(0.25s + var(--i) * 0.15s) cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+}
+
+.nav-reward-stage {
+  display: grid;
+  place-items: center;
+  height: 96px;
+}
+
+.nav-reward-stage .mm-avatar {
+  --size: 58px;
+}
+
+.nav-reward-kind {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f2c45a;
+}
+
+.nav-reward-name {
+  font-size: 0.9rem;
+  text-align: center;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.nav-reward .mm-dialog-actions {
+  grid-template-columns: 1fr 1fr;
+}
+
+.nav-reward .mm-dialog-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+
+.nav-reward-coin {
+  font-size: 2.8rem;
+  line-height: 1;
+}
+
+.nav-reward-item.coins .nav-reward-name {
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.nav-reward .mm-dialog-actions.single {
+  grid-template-columns: 1fr;
+}
+
+.nav-reward-item.prize .nav-reward-name {
+  overflow-wrap: anywhere;
+}
+
+/* A player flying to another spot (the seat swaps of the draws): above the others */
+.jp-seat-moving {
+  z-index: 6;
+}
+
+/* The daily free coins in a season: the days missed since the last claim (paid on top) */
+.nav-streak-missed {
+  margin-top: -0.35rem;
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
 }

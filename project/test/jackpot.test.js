@@ -136,7 +136,9 @@ test("coins: the free coins come back at midnight (German time), not after 24 ho
   assert.strictEqual(await coins.claimBonus("dave", lateEvening), true);
   assert.strictEqual(await coins.claimBonus("dave", lateEvening + 9 * 60 * 1000), false, "still the same day");
   assert.strictEqual(await coins.claimBonus("dave", lateEvening + 11 * 60 * 1000), true, "a new day");
-  assert.strictEqual(h.coinsOf("dave"), 1000 + 2 * config.DAILY_BONUS);
+  // (two days in a row: the second is day 2 of the streak)
+  const day2 = Math.round((config.DAILY_BONUS * require("../game/streak").percentFor(2)) / 100);
+  assert.strictEqual(h.coinsOf("dave"), 1000 + config.DAILY_BONUS + day2);
 });
 
 /* ---------- The pot ---------- */
@@ -183,7 +185,9 @@ test("jackpot: two players start the countdown, the winner gets the pot minus th
 
   // The house keeps 5% of the 45 (2) - the winner gets 43
   assert.strictEqual(drawing.draw.payout, 43);
-  await waitFor(alice, "jackpotState", (s) => s.history.length > 0);
+  const after = await waitFor(alice, "jackpotState", (s) => s.history.length > 0);
+  // The round keeps everybody who was in it (the popup of a round)
+  assert.deepStrictEqual(after.history[0].players, [{ name: "alice", coins: 30, ghost: false }, { name: "bob", coins: 15, ghost: false }]);
   assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob"), 198);
   const winner = drawing.draw.winner;
   assert.strictEqual(h.coinsOf(winner), (winner === "alice" ? 70 : 85) + 43);
@@ -195,7 +199,7 @@ test("jackpot: two players start the countdown, the winner gets the pot minus th
   assert.strictEqual(next.round, drawing.round + 1);
 });
 
-test("jackpot: alone in the pot - a ghost of 50-75% (capped) joins once, a real player makes it disappear", async () => {
+test("jackpot: alone in the pot - a ghost of 60-80% (capped) joins once, a real player makes it disappear", async () => {
   h.setCoins("alice", 5000);
   h.setCoins("bob", 5000);
   const alice = client("alice");
@@ -203,7 +207,7 @@ test("jackpot: alone in the pot - a ghost of 50-75% (capped) joins once, a real 
   await waitFor(alice, "coins", (data) => data.coins === 5000);
   await waitFor(bob, "coins", (data) => data.coins === 5000);
   assert.strictEqual(server.jackpot.pot.phase, "open");
-  Object.assign(config, { JACKPOT_GHOST_AFTER: 150, JACKPOT_COUNTDOWN: 1500, JACKPOT_GHOST_MAX: 600 });
+  Object.assign(config, { JACKPOT_GHOST_AFTER: 150, JACKPOT_COUNTDOWN: 1500, JACKPOT_GHOST_MAX: 700 });
 
   // Alice alone: the page knows when the ghost comes, then it is in the pot
   const alone = waitFor(alice, "jackpotState", (s) => s.total === 1000);
@@ -213,7 +217,7 @@ test("jackpot: alone in the pot - a ghost of 50-75% (capped) joins once, a real 
   const withGhost = await ghosted;
   const ghost = withGhost.entries.find((e) => e.ghost);
   assert.strictEqual(ghost.name, "Ghost");
-  assert.ok(ghost.coins >= 500 && ghost.coins <= 600, `ghost: ${ghost.coins} (50-75% of 1,000, at most 600)`);
+  assert.ok(ghost.coins >= 600 && ghost.coins <= 700, `ghost: ${ghost.coins} (60-80% of 1,000, at most 700)`);
   assert.strictEqual(withGhost.phase, "countdown", "the ghost starts the countdown");
   assert.deepStrictEqual(withGhost.bets.map((b) => [b.name, b.from, b.to]), [["alice", 1, 1000], ["Ghost", 1001, 1000 + ghost.coins]]);
 
@@ -283,7 +287,7 @@ test("jackpot: invalid bets are rejected", async () => {
   }
   const overLimit = h.once(carol, "betError");
   carol.emit("bet", { amount: 1 });
-  assert.match(await overLimit, /At most 3 bets/);
+  assert.match(await overLimit, new RegExp(`At most ${config.JACKPOT_MAX_BETS} bets`));
   assert.strictEqual(h.coinsOf("carol"), 5000 - 2000 - (config.JACKPOT_MAX_BETS - 1));
 });
 
@@ -415,17 +419,17 @@ test("jackpot: the Konami code gets the secret address from the server", async (
   assert.strictEqual(url, encodeURI("/🤫🎰💸") + "/");
 });
 
-test("coins: new accounts start with 25k - a reset gives every account the start coins once", async () => {
-  assert.strictEqual(config.START_COINS, 25000);
+test("coins: new accounts start with START_COINS - a reset gives every account the start coins once", async () => {
+  const start = config.START_COINS;
   // A new account
   h.addUser("erin");
-  assert.strictEqual((await coins.get("erin")).coins, 25000);
+  assert.strictEqual((await coins.get("erin")).coins, start);
   // An account from before a reset (30 coins left): the start coins, only once
   h.addUser("frank");
   const User = require("../models/User");
   await User.updateOne({ username: "frank" }, { $set: { coins: 30, coinReset: "an-old-reset" } });
-  assert.strictEqual((await coins.get("frank")).coins, 25000);
-  assert.strictEqual(await coins.spend("frank", 24000), true);
+  assert.strictEqual((await coins.get("frank")).coins, start);
+  assert.strictEqual(await coins.spend("frank", start - 1000), true);
   assert.strictEqual((await coins.get("frank")).coins, 1000, "no second reset");
 });
 

@@ -210,7 +210,7 @@
 .pk-seat {
   position: absolute;
   z-index: 2;
-  width: 120px;
+  width: 140px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -233,8 +233,8 @@
 
 /* A free chair: round, dashed, glows when you can sit down */
 .pk-sit {
-  width: 68px;
-  height: 68px;
+  width: 92px;
+  height: 92px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -244,8 +244,8 @@
   border: 2px dashed rgba(255, 255, 255, 0.35);
   border-radius: 50%;
   background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.35));
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.66rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
@@ -253,7 +253,7 @@
 }
 
 .pk-sit-chair {
-  font-size: 1.35rem;
+  font-size: 1.9rem;
   line-height: 1;
   transition: transform 0.15s ease;
 }
@@ -279,13 +279,13 @@
 .pk-hole {
   display: flex;
   gap: 3px;
-  height: 46px;
+  height: 56px;
   margin-bottom: -14px;
 }
 
 .pk-hole .pk-card {
-  width: 34px;
-  height: 46px;
+  width: 41px;
+  height: 56px;
 }
 
 .pk-hole .pk-rank {
@@ -301,13 +301,13 @@
 
 /* The own cards are bigger */
 .pk-seat.me .pk-hole {
-  height: 64px;
+  height: 76px;
   margin-bottom: -10px;
 }
 
 .pk-seat.me .pk-hole .pk-card {
-  width: 46px;
-  height: 64px;
+  width: 55px;
+  height: 76px;
 }
 
 .pk-seat.me .pk-hole .pk-rank {
@@ -325,7 +325,7 @@
 }
 
 .pk-avatar .mm-avatar {
-  --size: 46px;
+  --size: 62px;
   box-shadow: 0 0 0 3px var(--mm-surface-3);
 }
 
@@ -345,8 +345,8 @@
   border-radius: 50%;
   /* The used part grows clockwise from the top: what is left goes round like a clock hand */
   background: conic-gradient(transparent calc((1 - var(--left)) * 360deg), var(--mm-accent) 0);
-  -webkit-mask: radial-gradient(circle, transparent 27px, #000 28px);
-  mask: radial-gradient(circle, transparent 27px, #000 28px);
+  -webkit-mask: radial-gradient(circle, transparent 35px, #000 36px);
+  mask: radial-gradient(circle, transparent 35px, #000 36px);
   pointer-events: none;
 }
 
@@ -391,16 +391,16 @@
 }
 
 .pk-name {
-  max-width: 100px;
+  max-width: 124px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   font-weight: 700;
 }
 
 .pk-stack {
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--mm-accent);
   font-variant-numeric: tabular-nums;

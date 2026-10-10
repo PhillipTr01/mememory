@@ -17,7 +17,8 @@
 
   // The whole game zoomed: every part at the width it has outside of full screen (`width`), zoomed to
   // fill the screen's width - but never higher than the screen
-  function zoomer(target) {
+  // fill (data-fullscreen-fill): the game may get wider - it fills the screen's width at the zoom it gets
+  function zoomer(target, fill) {
     var width = null;
     var timer = null;
     var zoom = 1;
@@ -34,21 +35,34 @@
         x: target.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
         y: target.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom),
       };
-      // How high the parts are on the screen (from the top of the first to the bottom of the last) - at zoom 1
+      // How high the parts are (from the top of the first to the bottom of the last) - measured at zoom 1, put
+      // back before the screen is drawn: the same in every browser (they tell zoomed sizes differently)
       var shown = parts().filter(function (part) {
         return part.offsetParent != null;
       });
       if (!shown.length) return;
-      var natural = (shown[shown.length - 1].getBoundingClientRect().bottom - shown[0].getBoundingClientRect().top) / zoom;
-      tallest = Math.max(tallest, natural);
+      shown.forEach(function (part) {
+        part.style.zoom = 1;
+      });
+      var natural = shown[shown.length - 1].getBoundingClientRect().bottom - shown[0].getBoundingClientRect().top;
+      shown.forEach(function (part) {
+        part.style.zoom = zoom;
+      });
+      // (only a real growth counts - a line of text that comes and goes after a spin doesn't shrink the game)
+      if (natural > tallest * 1.04 || tallest == 0) tallest = natural;
       natural = tallest;
       var next = Math.max(0.5, Math.min(room.x / width, room.y / natural));
       // Phones: never bigger than on the page (what sticks out of a part grows with it)
       if (window.innerWidth < 700) next = Math.min(1, next);
-      if (Math.abs(next - zoom) < 0.01) return;
+      // (the zoom only gets smaller in a full screen - and the game only wider: nothing goes back and forth)
+      if (zoom != 1 && next > zoom) next = zoom;
+      if (Math.abs(next - zoom) < 0.01 && zoom != 1) return;
       zoom = next;
+      // Fill: as wide as the screen at this zoom (the game lays itself out on the width)
+      var wide = fill ? Math.max(width, Math.floor(room.x / zoom)) : width;
       parts().forEach(function (part) {
         part.style.zoom = zoom;
+        part.style.maxWidth = wide + "px";
       });
     }
     return {
@@ -56,9 +70,12 @@
       measure: function () {
         var style = getComputedStyle(target);
         width = target.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-        // (what sticks out of its part - like the line numbers next to the slot machine - counts too)
+        // (what sticks out of its part - like the line numbers next to the slot machine - counts too; what a
+        // part cuts off - the long strip of the roulette's reel - doesn't)
         Array.prototype.forEach.call(target.children, function (part) {
-          if (!part.classList.contains("cs-fs-coins") && part.offsetParent != null) width = Math.max(width, part.scrollWidth);
+          if (part.classList.contains("cs-fs-coins") || part.offsetParent == null) return;
+          var clips = getComputedStyle(part).overflowX != "visible";
+          width = Math.max(width, clips ? part.offsetWidth : part.scrollWidth);
         });
       },
       start: function () {
@@ -202,7 +219,7 @@
     document.querySelectorAll("[data-fullscreen]").forEach(function (button) {
       var target = document.querySelector(button.dataset.fullscreen);
       if (!target) return;
-      var zoom = button.hasAttribute("data-fullscreen-zoom") ? zoomer(target) : null;
+      var zoom = button.hasAttribute("data-fullscreen-zoom") ? zoomer(target, button.hasAttribute("data-fullscreen-fill")) : null;
       var corner = coinsCorner(target);
       if (!button.innerHTML.trim()) button.innerHTML = ICON;
       button.title = "Full screen";
@@ -229,3 +246,55 @@
     });
   });
 })();
+
+/*
+ * A game that is too high for the screen: its main part (`part`) a bit smaller as a whole - nothing
+ * moves on it, nothing overlaps, the page doesn't scroll and the menu at the bottom stays free.
+ * Only on big screens and not in full screen (that zooms the whole game by itself). watch: elements
+ * whose showing / hiding changes the room (refit then).
+ */
+window.casinoFitGame = function (part, watch) {
+  if (!part || !("zoom" in document.body.style)) return;
+  var fit = () => {
+    if (document.fullscreenElement) return;
+    part.style.zoom = "";
+    part.style.width = "";
+    part.style.margin = "";
+    if (window.innerWidth < 992) return;
+    var dock = document.getElementById("csDock");
+    // (the same room above the menu as the chat column keeps - casino_wallet.js - and a few pixels more)
+    var room = dock ? window.innerHeight - (parseFloat(getComputedStyle(dock).bottom) || 0) - dock.offsetHeight - 28 : window.innerHeight - 28;
+    var card = part.closest(".mm-card") || part.parentNode;
+    var over = card.getBoundingClientRect().bottom + window.scrollY - room;
+    if (over <= 0) return;
+    var height = part.offsetHeight;
+    // (a fixed width: a zoomed part of 100% width would fill the same room again)
+    part.style.width = part.offsetWidth + "px";
+    part.style.margin = "0 auto";
+    part.style.zoom = Math.max(0.6, (height - over) / height).toFixed(3);
+    window.dispatchEvent(new Event("casinofit"));
+  };
+  window.addEventListener("resize", fit);
+  document.addEventListener("fullscreenchange", () => requestAnimationFrame(fit));
+  fit();
+  setTimeout(fit, 600);
+  var observer = new MutationObserver(() => requestAnimationFrame(fit));
+  (watch || []).forEach((node) => node && observer.observe(node, { attributes: true, attributeFilter: ["hidden"] }));
+  // The card grew or shrank clearly (the game's state came, a list got longer): fit again - small changes
+  // (a line of text after a spin) don't count, so the game never shrinks and grows with every round
+  if (window.ResizeObserver) {
+    var card = part.closest(".mm-card") || part.parentNode;
+    var fitted = null;
+    var pending = false;
+    new ResizeObserver(() => {
+      if (pending || (fitted != null && Math.abs(card.offsetHeight - fitted) < 24)) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        fit();
+        fitted = card.offsetHeight;
+      });
+    }).observe(card);
+  }
+  return fit;
+};

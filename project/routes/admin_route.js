@@ -10,10 +10,16 @@ const access = require("../game/access");
 const casinoChat = require("../game/casino_chat");
 const live = require("../game/live");
 const settings = require("../game/settings");
-const { hardReset } = require("../game/hard_reset");
+const { hardReset, PARTS: RESET_PARTS } = require("../game/hard_reset");
 const seasons = require("../game/seasons");
 const cases = require("../game/cases");
 const maintenance = require("../game/maintenance");
+const shop = require("../game/shop");
+const testMode = require("../game/test_mode");
+const worlds = require("../game/worlds");
+const rtpMonitor = require("../game/rtp_monitor");
+const streak = require("../game/streak");
+const userController = require("../controllers/user_controller");
 const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
 
@@ -107,11 +113,9 @@ module.exports = function () {
     return coins.balanceOf(user);
   }
 
-  // The normal coins of a player (during a season: the balance from before it - back after it;
-  // the season itself is only in the seasons tab)
+  // The normal coins of a player (the season's are in a world of their own - in the seasons tab)
   function normalCoins(user) {
-    const normal = seasons.normalOf(user.username);
-    return normal != null ? normal : balance(user);
+    return balance(user);
   }
 
   // The players in the casino (approved): the richest first
@@ -171,7 +175,8 @@ module.exports = function () {
     admin,
     asyncHandler(async (req, res) => {
       const q = String(req.query.q || "").toLowerCase();
-      res.json((await players()).filter((p) => p.username.toLowerCase().includes(q)).slice(0, 50));
+      const limit = Math.min(1000, Math.max(1, Number(req.query.limit) || 50));
+      res.json((await players()).filter((p) => p.username.toLowerCase().includes(q)).slice(0, limit));
     }),
   );
 
@@ -188,12 +193,6 @@ module.exports = function () {
       if (!access.approved(user)) return res.status(400).json({ error: "The player isn't approved for the casino." });
       if (mode !== "set" && mode !== "add") return res.status(400).json({ error: "Unknown mode." });
       if (mode === "set" && amount < 0) return res.status(400).json({ error: "A balance can't be negative." });
-      // During a season: the normal balance (it comes back after the season)
-      if (seasons.running()) {
-        const changed = await seasons.changeNormal(username, mode, amount, text);
-        if (changed.error) return res.status(400).json(changed);
-        return res.json({ username: username, coins: changed.coins });
-      }
       if (mode === "set") {
         if (amount < 0) return res.status(400).json({ error: "A balance can't be negative." });
         await coins.set(username, amount, text);
@@ -204,6 +203,56 @@ module.exports = function () {
         return res.status(400).json({ error: "Unknown mode." });
       }
       res.json({ username: username, coins: (await coins.get(username)).coins });
+    }),
+  );
+
+  /*
+   * One player in detail: access, coins (normal, the running season's), the streak, what every kind of coin change
+   * added up to (the normal history - the page sorts it into games), the items (bought - with the day - and given)
+   */
+  router.get(
+    "/api/players/:name",
+    admin,
+    asyncHandler(async (req, res) => {
+      const user = await User.findOne({ username: String(req.params.name) }).lean();
+      if (user == null) return res.status(404).json({ error: "No such player." });
+      const name = user.username;
+      const approved = access.approved(user);
+      const [reasons, last, purchases] = await Promise.all([
+        CoinLog.aggregate([{ $match: { username: name, ...NORMAL } }, { $group: { _id: "$reason", amount: { $sum: "$amount" }, count: { $sum: 1 } } }]),
+        CoinLog.find({ username: name }).sort({ at: -1 }).limit(1).lean(),
+        CoinLog.find({ username: name, reason: "shop" }).sort({ at: -1 }).lean(),
+      ]);
+      // When an item was bought: the newest purchase of that name
+      const boughtAt = new Map();
+      for (const row of purchases) if (row.note && !boughtAt.has(row.note)) boughtAt.set(row.note, row.at);
+      const season = seasons.running();
+      const inSeason = season && approved && !coins.season.watching(name);
+      res.json({
+        username: name,
+        approved: approved,
+        approvedAt: user.casinoApprovedAt || null,
+        requestedAt: user.casinoRequestedAt || null,
+        payout: user.payoutAllowed === true,
+        online: casinoChat.online().names.includes(name),
+        coins: approved ? normalCoins(user) : null,
+        season: inSeason ? { name: season.name, icon: season.icon, coinIcon: seasons.publicSeason(season).coinIcon, coins: coins.season.balanceOf(user) } : null,
+        streak: approved ? coins.streakInfo(user) : null,
+        lastActive: last.length ? last[0].at : null,
+        reasons: reasons.map((row) => ({ reason: row._id, amount: row.amount, count: row.count })),
+        items: shop.itemsOf(user).map((item) => (item.given ? item : { ...item, at: boughtAt.get(item.name) || null })),
+      });
+    }),
+  );
+
+  // Take an item away from a player: {id}
+  router.post(
+    "/api/players/:name/items/remove",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await shop.removeItem(String(req.params.name), String((req.body || {}).id || ""));
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
     }),
   );
 
@@ -218,7 +267,7 @@ module.exports = function () {
       const start = access.startCoins(first);
       const all = await accessList(String(req.query.q || "").toLowerCase());
       // A running season that players start themselves: what "Start" gives now
-      const join = coins.base().join ? seasons.joinCoins() : null;
+      const join = seasons.running() ? seasons.joinCoins() : null;
       res.json({ firstApproval: first, startCoins: start.coins, baseCoins: coins.base().start, missed: start.missed, since: start.since, join: join, players: all.slice(0, 200) });
     }),
   );
@@ -280,6 +329,29 @@ module.exports = function () {
       if (result.error) return res.status(400).json({ error: result.error });
       res.json({ ok: true });
     }),
+  );
+
+  // The daily streak: the reward of every day (percent of the daily bonus), what comes after the last day, the grace
+  // world: "normal" (the casino) or "season" (every season - its own daily bonus is the base)
+  const streakWorld = (value) => (value === "season" ? "season" : "normal");
+  const streakView = (world) => ({ world: world, streak: streak.current(world), defaults: streak.DEFAULTS, maxDays: streak.MAX_DAYS, dailyBonus: world === "season" ? config.SEASON_DAILY_BONUS : config.DAILY_BONUS });
+  router.get("/api/streak", admin, (req, res) => res.json(streakView(streakWorld(req.query.world))));
+  router.post(
+    "/api/streak",
+    admin,
+    asyncHandler(async (req, res) => {
+      const { world, ...input } = req.body || {};
+      const result = await streak.update(input, streakWorld(world));
+      if (result.error) return res.status(400).json({ error: result.error });
+      res.json(streakView(streakWorld(world)));
+    }),
+  );
+
+  // RTP monitor: what every game really paid back (range: today / week / month / all, world: normal / season)
+  router.get(
+    "/api/rtp",
+    admin,
+    asyncHandler(async (req, res) => res.json(await rtpMonitor.report(String(req.query.range || "week"), String(req.query.world || "normal")))),
   );
 
   // History of all coin changes, newest first (filter by player / reason)
@@ -362,16 +434,28 @@ module.exports = function () {
 
   router.get("/api/settings", admin, (req, res) => res.json({ settings: settings.list() }));
 
-  // {values: {KEY: number}} or {defaults: true}
+  // {values: {KEY: number}}, {season: {KEY: number | null}} (the season world's own limits) or {defaults: true[, season: true]}
   router.post(
     "/api/settings",
     admin,
     asyncHandler(async (req, res) => {
       const body = req.body || {};
-      const result = body.defaults === true ? await settings.resetToDefaults() : await settings.update(body.values);
+      const result =
+        body.defaults === true
+          ? await settings.resetToDefaults({ season: body.season === true })
+          : body.season != null
+            ? await settings.updateSeason(body.season)
+            : await settings.update(body.values);
       if (result.error) return res.status(400).json(result);
       res.json(result);
     }),
+  );
+
+  // The avatars of players (for the lists of the admin panel): ?names=alice,bob
+  router.get(
+    "/api/avatars",
+    admin,
+    asyncHandler(async (req, res) => res.json(await userController.getAvatars(req.query.names))),
   );
 
   /* ---------- Maintenance ---------- */
@@ -391,6 +475,150 @@ module.exports = function () {
     admin,
     asyncHandler(async (req, res) => {
       const result = await maintenance.update(req.body || {});
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
+  /* ---------- Test mode: a player plays with a sandbox balance (nothing is saved) ---------- */
+
+  router.get(
+    "/api/test",
+    admin,
+    asyncHandler(async (req, res) => {
+      res.json({
+        testers: testMode.list(),
+        players: (await players()).map((p) => p.username),
+        defaultCoins: testMode.DEFAULT_COINS,
+        // What the debug tools can pick from
+        options: { draws: config.JACKPOT_DRAWS, deals: (worlds.servers.get("blackjack") || {}).DEALS || [], modes: ["classic", "crazy", "jackpot", "bestof", "worstof"] },
+      });
+    }),
+  );
+  // {username, coins}: start (again: the balance back to the start)
+  router.post("/api/test", admin, (req, res) => {
+    const body = req.body || {};
+    const result = testMode.start(String(body.username || ""), body.coins == null ? testMode.DEFAULT_COINS : Number(body.coins));
+    if (result.error) return res.status(400).json(result);
+    res.json({ ...result, testers: testMode.list() });
+  });
+  router.post("/api/test/stop", admin, (req, res) => {
+    const result = testMode.stop(String((req.body && req.body.username) || ""));
+    if (result.error) return res.status(400).json(result);
+    res.json({ ...result, testers: testMode.list() });
+  });
+
+  // Debug in the test world: bots that bet (nobody's coins), the draw now
+  const BOT_NAMES = ["Botty", "RoboRita", "ChipBot", "LuckyBot", "BeepBoop", "Clanky", "Sprocket", "Gizmo", "Widget", "Bolt"];
+  const botName = () => "🤖" + BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + (Math.floor(Math.random() * 90) + 10);
+  router.post("/api/test/bots", admin, (req, res) => {
+    const body = req.body || {};
+    const count = Math.max(1, Math.min(10, Math.floor(Number(body.count) || 1)));
+    const amount = Math.floor(Number(body.amount));
+    if (!Number.isInteger(amount) || amount < 1 || amount > 100000000) return res.status(400).json({ error: "An amount from 1 to 100,000,000." });
+    const server = worlds.servers.get(body.game);
+    if (body.game === "jackpot" && server) {
+      for (let i = 0; i < count; i++) server.botBet(botName(), amount);
+      return res.json({ ok: true, added: count });
+    }
+    if (body.game === "roulette" && server) {
+      const colors = ["red", "blue", "green"];
+      let added = 0;
+      for (let i = 0; i < count; i++) if (server.botBet(botName(), colors.includes(body.color) ? body.color : colors[Math.floor(Math.random() * 2)], amount)) added++;
+      if (!added) return res.status(400).json({ error: "The reel rolls - in a moment." });
+      return res.json({ ok: true, added: added });
+    }
+    if (body.game === "baucua" && server) {
+      const animals = require("../game/baucua").IDS;
+      let added = 0;
+      for (let i = 0; i < count; i++) if (server.botBet(botName(), animals.includes(body.animal) ? body.animal : animals[Math.floor(Math.random() * animals.length)], amount)) added++;
+      if (!added) return res.status(400).json({ error: "The dice are rolling - in a moment." });
+      return res.json({ ok: true, added: added });
+    }
+    res.status(400).json({ error: "Bots only for the jackpot, the roulette and Bầu Cua (case battles have their own)." });
+  });
+  // One lever of the debug tools: {game, action, value} - only the test world
+  router.post("/api/test/debug", admin, async (req, res) => {
+    const { game, action, value } = req.body || {};
+    // A popup with sample data on the open pages of a tester (only to look at - nothing is paid or kept)
+    if (game === "popups") {
+      const username = typeof value === "string" ? value : "";
+      if (!username || !testMode.active(username)) return res.status(400).json({ error: "Start test mode for a player first - the popup goes to their pages." });
+      const sample = previewPopup(action);
+      if (!sample) return res.status(400).json({ error: "Unknown popup." });
+      require("../game/notices").send(username, sample.event, sample.data);
+      return res.json({ ok: true });
+    }
+    const server = worlds.servers.get(game);
+    if (!server) return res.status(400).json({ error: "Unknown game." });
+    const levers = {
+      jackpot: {
+        mode: () => server.setMode(value) || "Not during a draw.",
+        winner: () => server.forceWinner(value) || "Nobody of that name in the pot (bots: add one first).",
+        ghost: () => server.ghostNow() || "The ghost comes only to a player alone in the pot.",
+        clear: () => server.clearPot() || "Not during a draw.",
+      },
+      roulette: { color: () => server.forceColor(value) },
+      baucua: { dice: () => server.forceDice(value) },
+      slots: { bonus: () => server.forceBonus(value) },
+      blackjack: { deal: () => server.stackDeal(value) || "Unknown deal." },
+      battles: {
+        mode: () => server.forceMode(value),
+        fill: async () => (await server.fillWithBots(String(value || ""))) || "That player has no waiting battle.",
+      },
+    };
+    const lever = levers[game] && levers[game][action];
+    if (!lever) return res.status(400).json({ error: "Unknown lever." });
+    const done = await lever();
+    if (done !== true) return res.status(400).json({ error: typeof done === "string" ? done : "That didn't work." });
+    res.json({ ok: true });
+  });
+
+  // The popups a player can get - with sample data (Casino → Test mode → Popups)
+  function previewPopup(kind) {
+    const pick = (k) => shop.items().find((item) => item.kind === k && item.on);
+    const sampleItems = ["frame", "effect", "background"].map(pick).filter(Boolean).map((item) => ({ id: item.id, kind: item.kind, name: item.name }));
+    const now = streak.current();
+    const day = Math.min(3, now.rewards.length);
+    const info = { on: true, day: day, next: day + 1, rewards: now.rewards, after: now.after, grace: now.grace, base: config.DAILY_BONUS };
+    const index = day < now.rewards.length ? day : now.after === "restart" ? day % now.rewards.length : now.rewards.length - 1;
+    const samples = {
+      streak: { event: "streakPreview", data: { info: info, paid: Math.round((config.DAILY_BONUS * now.rewards[index]) / 100) } },
+      reward: { event: "reward", data: { source: "Test reward", icon: "🎁", rank: null, note: null, coins: 25000, prizes: ["€20 voucher"], items: sampleItems, preview: true } },
+      season: { event: "reward", data: { source: "Test season", icon: "🏆", rank: 1, note: null, coins: 100000, prizes: [], items: sampleItems.slice(0, 1), preview: true } },
+      cashback: { event: "cashback", data: { amount: 1250, loss: 12500, percent: 10, world: "normal", coinIcon: null } },
+      gift: { event: "giftReceived", data: { from: "Santa", amount: 5000, world: "normal" } },
+      rain: { event: "moneyRain", data: { amount: 2500, note: "Test rain", world: "normal" } },
+    };
+    return samples[kind] || null;
+  }
+
+  router.post("/api/test/now", admin, (req, res) => {
+    const game = req.body && req.body.game;
+    const server = worlds.servers.get(game);
+    const done = game === "jackpot" && server ? server.drawNow() : (game === "roulette" || game === "baucua") && server ? server.rollNow() : false;
+    if (!done) return res.status(400).json({ error: game === "jackpot" ? "No countdown runs (two players needed)." : "No round runs (a bet starts it)." });
+    res.json({ ok: true });
+  });
+
+  /* ---------- The accessory shop: items on / off, prices, free for all ---------- */
+
+  router.get("/api/shop", admin, (req, res) => res.json(shop.config()));
+  // A reward for a player: items (any - the exclusive ones too) and / or coins, with a note
+  router.post(
+    "/api/shop/give",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await shop.give(req.body || {});
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+  router.post(
+    "/api/shop",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await shop.update(req.body || {});
       if (result.error) return res.status(400).json(result);
       res.json(result);
     }),
@@ -476,14 +704,15 @@ module.exports = function () {
       const text = typeof note === "string" ? note.slice(0, 300) : undefined;
       if (typeof username !== "string" || !Number.isInteger(amount)) return res.status(400).json({ error: "Username and a whole number." });
       if (seasons.joined(username) !== true) return res.status(400).json({ error: "The player isn't in the season." });
+      const wallet = coins.season;
       if (mode === "set") {
         if (amount < 0) return res.status(400).json({ error: "A balance can't be negative." });
-        await coins.set(username, amount, text);
+        await wallet.set(username, amount, text);
       } else if (mode === "add") {
-        const ok = amount >= 0 ? await coins.add(username, amount, { reason: "admin", note: text }) : await coins.spend(username, -amount, { reason: "admin", note: text });
+        const ok = amount >= 0 ? await wallet.add(username, amount, { reason: "admin", note: text }) : await wallet.spend(username, -amount, { reason: "admin", note: text });
         if (amount !== 0 && !ok) return res.status(400).json({ error: "The player doesn't have that many coins." });
       } else return res.status(400).json({ error: "Unknown mode." });
-      res.json({ username: username, coins: (await coins.get(username)).coins });
+      res.json({ username: username, coins: (await wallet.get(username)).coins });
     }),
   );
 
@@ -505,15 +734,65 @@ module.exports = function () {
     }),
   );
 
-  // Everything anew - only with the word typed in
+  /* ---------- Money rains (game/money_rain.js) ---------- */
+
+  const rain = require("../game/money_rain");
+  router.get("/api/rains", admin, (req, res) => res.json({ ...rain.list(), now: Date.now(), season: seasons.running() ? { name: seasons.running().name, icon: seasons.running().icon, coinIcon: seasons.publicSeason(seasons.running()).coinIcon } : null }));
+
+  // How many it would reach right now: {players, total, names}
+  router.post(
+    "/api/rains/preview",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await rain.preview(req.body);
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
+  router.post(
+    "/api/rains",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await rain.create(req.body);
+      if (result.error) return res.status(400).json(result);
+      res.json({ ...result, ...rain.list() });
+    }),
+  );
+
+  router.post(
+    "/api/rains/:id/now",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await rain.now(req.params.id);
+      if (result.error) return res.status(400).json(result);
+      res.json({ ...result, ...rain.list() });
+    }),
+  );
+
+  router.post(
+    "/api/rains/:id/cancel",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await rain.cancel(req.params.id);
+      if (result.error) return res.status(400).json(result);
+      res.json(rain.list());
+    }),
+  );
+
+  // What the hard reset can reset (the checkboxes of the danger zone)
+  router.get("/api/reset", admin, (req, res) => res.json({ parts: RESET_PARTS }));
+
+  // The picked parts anew - only with the word typed in
   router.post(
     "/api/reset",
     admin,
     asyncHandler(async (req, res) => {
-      if ((req.body || {}).confirm !== "RESET") return res.status(400).json({ error: 'Type "RESET" to confirm.' });
-      const result = await hardReset();
-      // The seasons too: the casino as on its very first day
-      await seasons.clear();
+      const body = req.body || {};
+      if (body.confirm !== "RESET") return res.status(400).json({ error: 'Type "RESET" to confirm.' });
+      // parts: what to reset (game/hard_reset.js) - none given: the records, access, purchases and seasons
+      const result = await hardReset(body.parts);
+      if (result.error) return res.status(400).json(result);
       res.json({ ok: true, ...result });
     }),
   );

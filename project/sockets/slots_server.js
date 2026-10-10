@@ -18,10 +18,15 @@ const ROOM = "slots";
  * game/slots.js) and pays the win right away. The page only shows it.
  * Every win lands in a list for everybody ("last wins").
  */
-module.exports = function (io) {
-  const room = io.of("/slots");
+module.exports = function (io, options = {}) {
+  // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
+  const world = options.world || "";
+  const { coins, persist, live, inPlay, casinoLock, casinoChat, limits } = require("../game/worlds").services(world);
+  const room = io.of(world + "/slots");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
+  // The biggest wins of the slots (the side of the page)
+  const best = require("../game/best_wins").attach(room, "slots win", world);
 
   const machine = {
     feed: [], // [{name, bet, win, symbol, count, bonus, at}] newest first
@@ -32,6 +37,7 @@ module.exports = function (io) {
   let pendingId = 0;
   const busy = new Set(); // a spin in progress (two tabs, fast clicks)
   const lastSpin = new Map(); // username -> time of the last spin
+  const spinTab = new Map(); // username -> the page (socket) that spun last: one machine per player at a time
 
   /*
    * How long the page shows a spin before the win is counted up: the reels,
@@ -113,7 +119,24 @@ module.exports = function (io) {
     }
   }
 
+  /*
+   * A 🧰 of the coin game opened: the box the player picked (0 - 2) - what is behind it was shuffled at the
+   * spin and stays on the server until then. Pays its prize; the answer shows every box.
+   */
+  function openChest(entry, chest, pick) {
+    chest.pick = pick;
+    const prize = chest.boxes[pick];
+    const more = slots.openChest(entry.result, entry.result.bet, chest.reel, chest.row, prize);
+    entry.win += more;
+    if (entry.feed) entry.feed.win = entry.win;
+    entry.note += ` · chest ${prize.toUpperCase()}`;
+    persist.changed("slots");
+    return { id: entry.id, reel: chest.reel, row: chest.row, boxes: chest.boxes, pick: pick, prize: prize, x: entry.result.coinGame.x, gameWin: entry.result.coinGame.win, win: entry.win };
+  }
+
   async function payPending(entry) {
+    // (a chest nobody picked: a box at random - every box is worth the same on average)
+    (entry.chests || []).filter((chest) => chest.pick == null).forEach((chest) => openChest(entry, chest, Math.floor(Math.random() * chest.boxes.length)));
     clearTimeout(timers.get(entry.id));
     timers.delete(entry.id);
     const index = machine.pending.indexOf(entry);
@@ -121,7 +144,10 @@ module.exports = function (io) {
     machine.pending.splice(index, 1);
     persist.changed("slots");
     try {
-      if (entry.win > 0) await coins.add(entry.name, entry.win, { reason: "slots win", note: entry.note });
+      if (entry.win > 0) {
+        await coins.add(entry.name, entry.win, { reason: "slots win", note: entry.note });
+        best.changed();
+      }
     } catch (error) {
       console.error("[slots] Could not pay a win:", error);
     }
@@ -141,7 +167,7 @@ module.exports = function (io) {
   }
 
   function rules() {
-    return { minBet: config.SLOTS_MIN_BET, maxBet: config.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, bonusTime: config.SLOTS_BONUS_TIME, freeSpinTime: config.SLOTS_FREE_SPIN, respinTime: config.SLOTS_RESPIN, coinIntroTime: config.SLOTS_COIN_INTRO, ultraTime: config.SLOTS_ULTRA_TIME, bonusEndTime: config.SLOTS_BONUS_END, resumeTime: config.SLOTS_RESUME_TIME, sweatTime: config.SLOTS_SWEAT, retriggerTime: config.SLOTS_RETRIGGER_TIME, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
+    return { minBet: limits.SLOTS_MIN_BET, maxBet: limits.SLOTS_MAX_BET, lines: slots.LINE_COUNT, spinTime: config.SLOTS_SPIN, pauseTime: config.SLOTS_PAUSE, minGap: config.SLOTS_MIN_GAP, bonusTime: config.SLOTS_BONUS_TIME, freeSpinTime: config.SLOTS_FREE_SPIN, respinTime: config.SLOTS_RESPIN, coinIntroTime: config.SLOTS_COIN_INTRO, ultraTime: config.SLOTS_ULTRA_TIME, bonusEndTime: config.SLOTS_BONUS_END, resumeTime: config.SLOTS_RESUME_TIME, sweatTime: config.SLOTS_SWEAT, retriggerTime: config.SLOTS_RETRIGGER_TIME, bigWin: config.SLOTS_BIG_WIN, bigTime: config.SLOTS_BIG_TIME, countTime: config.SLOTS_COUNT_TIME };
   }
 
   async function sendCoins(username) {
@@ -173,6 +199,30 @@ module.exports = function (io) {
         const entry = machine.pending.find((e) => e.id === (data && data.id) && e.name === username);
         // (the wheels come first, then the free spins)
         if (entry && entry.result && entry.state === "waiting") play(entry, introTime(entry.result));
+      }),
+    );
+
+    // A 🧰 is on the screen: the coin game waits for the pick (paid anyway after SLOTS_HOLD, a box at random)
+    socket.on(
+      "chestShow",
+      safe("chestShow", (data) => {
+        const entry = machine.pending.find((e) => e.id === (data && data.id) && e.name === username);
+        if (!entry || !entry.result || !(entry.chests || []).some((chest) => chest.pick == null)) return;
+        if (entry.state === "playing") hold(entry, "paused");
+      }),
+    );
+
+    // The player picked a box of a 🧰: what is behind every box, the prize paid
+    socket.on(
+      "chestPick",
+      safe("chestPick", (data) => {
+        if (data == null || !Number.isInteger(data.pick)) return;
+        const entry = machine.pending.find((e) => e.id === data.id && e.name === username);
+        const chest = entry && (entry.chests || []).find((c) => c.reel === data.reel && c.row === data.row);
+        if (!chest || chest.pick != null || data.pick < 0 || data.pick >= chest.boxes.length) return;
+        socket.emit("chestOpened", openChest(entry, chest, data.pick));
+        // On with the coin game (from where the page is)
+        if (entry.state === "paused") play(entry, 0);
       }),
     );
 
@@ -211,19 +261,33 @@ module.exports = function (io) {
       safe("spin", async (data) => {
         const bet = data != null ? data.bet : null;
         if (!Number.isInteger(bet)) return;
-        if (bet < config.SLOTS_MIN_BET || bet > config.SLOTS_MAX_BET) {
-          return error(`A spin is ${config.SLOTS_MIN_BET.toLocaleString("en-US")} to ${config.SLOTS_MAX_BET.toLocaleString("en-US")} coins.`);
+        if (bet < limits.SLOTS_MIN_BET || bet > limits.SLOTS_MAX_BET) {
+          return error(`A spin is ${limits.SLOTS_MIN_BET.toLocaleString("en-US")} to ${limits.SLOTS_MAX_BET.toLocaleString("en-US")} coins.`);
         }
         // Closing time before a season: no new spins
         if (casinoLock.locked()) return error(casinoLock.message());
-        // One spin at a time - and not faster than the reels turn
-        if (busy.has(username) || Date.now() - (lastSpin.get(username) || 0) < config.SLOTS_MIN_GAP) return;
+        // One spin at a time - and not faster than the reels turn. A spin a moment too early
+        // (the clocks of page and server) waits for the gap; one far too early is refused - the page
+        // always hears back (it never waits for nothing)
+        // One machine at a time: another tab that spun just now (autoplay in two tabs) - this one is refused
+        const other = spinTab.get(username);
+        // (a page that was closed or reloaded doesn't count - only one that is still open)
+        if (other && other !== socket.id && socket.nsp.sockets.has(other) && Date.now() - (lastSpin.get(username) || 0) < config.SLOTS_TAB_LOCK) {
+          return error("You're already spinning in another tab - one machine at a time.");
+        }
+        if (busy.has(username)) return socket.emit("slotsSkip");
+        const early = config.SLOTS_MIN_GAP - (Date.now() - (lastSpin.get(username) || 0));
+        if (early > 1000) return socket.emit("slotsSkip");
         busy.add(username);
         try {
-          if (!(await coins.spend(username, bet, { reason: "slots bet" }))) return error("You don't have enough coins.");
+          if (early > 0) await new Promise((resolve) => setTimeout(resolve, early));
+          if (!(await coins.spend(username, bet, { reason: "slots bet" }))) return error(coins.refusal(username) || "You don't have enough coins.");
           lastSpin.set(username, Date.now());
-          const test = config.SLOTS_TEST_BONUS;
-          const result = slots.spin(bet, undefined, { forceBonus: test === "free" || test === "coins" ? test : test === true ? "free" : null });
+          spinTab.set(username, socket.id);
+          // (debug, the test world only: the next spin starts the bonus the admin picked)
+          const test = nextBonus || config.SLOTS_TEST_BONUS;
+          nextBonus = null;
+          const result = slots.spin(bet, undefined, { forceBonus: ["free", "coins", "chest"].includes(test) ? test : test === true ? "free" : null });
           machine.spins++;
           const payIn = showTime(bet, result);
           let id = null;
@@ -246,6 +310,11 @@ module.exports = function (io) {
               state: null,
               feed: { name: username, bet: bet, win: result.win, symbol: best ? best.symbol : game ? "coin" : "bonus", count: best ? best.count : 3, bonus: result.bonus ? result.bonus.spins : null, coins: game ? game.coins.length : null, ultra: game ? game.ultra : false, at: Date.now() },
             };
+            // The 🧰 of the coin game: their boxes, shuffled now - nobody sees them before the pick
+            if (game) {
+              entry.chests = game.coins.filter((coin) => coin.chest).map((coin) => ({ reel: coin.reel, row: coin.row, boxes: slots.chestBoxes(), pick: null }));
+              if (!entry.chests.length) delete entry.chests;
+            }
             machine.pending.push(entry);
             persist.changed("slots");
             // A bonus game waits for the player's click
@@ -259,14 +328,6 @@ module.exports = function (io) {
       }),
     );
 
-    socket.on(
-      "claimBonus",
-      safe("claimBonus", async () => {
-        const paid = await coins.claim(username);
-        if (paid) socket.emit("bonusClaimed", paid);
-        await sendCoins(username);
-      }),
-    );
 
     socket.on(
       "sendChatMessage",
@@ -305,5 +366,12 @@ module.exports = function (io) {
   // (a spin without a win too, while its reels still turn on the page)
   inPlay.register("slots", (name) => machine.pending.some((entry) => entry.name === name) || Date.now() - (lastSpin.get(name) || 0) < config.SLOTS_SPIN + 500);
 
-  return { machine, payAll };
+  // Debug (the admin's test world): the next spin starts the free spins ("free"), the coin game ("coins") or the coin game with a 🧰 ("chest")
+  let nextBonus = null;
+  function forceBonus(kind) {
+    nextBonus = ["free", "coins", "chest"].includes(kind) ? kind : null;
+    return true;
+  }
+
+  return { machine, payAll, forceBonus };
 };

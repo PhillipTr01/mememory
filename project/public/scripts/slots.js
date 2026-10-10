@@ -1,13 +1,23 @@
 /* Hidden slots: the server rolls the reels and pays, this page only shows the spin. */
-const socket = io("/slots");
+const socket = io((window.CASINO_NS || "") + "/slots");
 
 var myName = null;
 var myCoins = 0;
+var myCapRule = null; // the max bet by balance ({floor, share} - null: no cap), see casinoCapLeft
+// What more I may bet this round (`already`: my coins in it)
+function capLeft(already) {
+  return casinoCapLeft(myCapRule, myCoins, already);
+}
 var setup = null; // {symbols, lines, strips, rules}
 var spinning = false;
+var pausedUntil = 0; // after a spin: the next one only from then on (a short pause)
+var spunAt = 0; // when the last spin started (the server wants a gap between two spins too)
 var lineTimer = null;
 var BET_KEY = "slotsBet";
-var PRESETS = [10, 25, 50, 100, 200, 250];
+// Max picked: every spin bets the most it can right then (it follows the balance) - until another amount is picked
+var maxMode = false;
+// The bets to pick: from the lowest (left) to the highest (right) - made from the limits (presets())
+var PRESET_COUNT = 6;
 var TILE = 0; // height of one symbol (from the page)
 
 // Used by chat.js
@@ -67,13 +77,19 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
+  // (slots: their own share of the max bet by balance)
+  myCapRule = data.slotsCapRule !== undefined ? data.slotsCapRule : data.betCapRule || null;
   // While the reels turn, the balance shows the coins before the win
   // (during a spin the old balance stays - but a page that comes back into a bonus game needs one)
   if (!spinning || document.getElementById("slCoins").innerText == "-") renderCoins(myCoins);
+  followMax();
   renderControls();
 });
 socket.on("slotsError", (message) => {
-  showToast(message, "error");
+  clearTimeout(spinWatch);
+  holding = false;
+  if (autoOn()) stopAuto();
+  showHint(message, "error", document.getElementById("slSpin"));
   spinning = false;
   renderControls();
 });
@@ -82,10 +98,17 @@ socket.on("slotsSetup", (data) => {
   setup = data;
   buildMachine();
   renderPresets();
-  setBet(Number(readBet()) || 100);
+  // (Max picked last time: Max again)
+  if (readBet() == "max") pickMax();
+  else setBet(Number(readBet()) || 100);
 });
 
-socket.on("slotsResult", (result) => playSpin(result));
+var reelsTurning = false; // the result came: the spin plays (no skip any more)
+socket.on("slotsResult", (result) => {
+  clearTimeout(spinWatch);
+  reelsTurning = true;
+  playSpin(result).finally(() => (reelsTurning = false));
+});
 
 // Back on the page: a bonus game that waited goes on where it was
 var activeBonus = null; // id of the bonus game playing on this page
@@ -98,6 +121,7 @@ socket.on("slotsResume", (result) => {
 
 async function resumeBonus(result) {
   spinning = true;
+  spunAt = Date.now();
   clearTimeout(lineTimer);
   clearLines();
   renderControls();
@@ -167,14 +191,18 @@ function buildNumbers() {
 }
 
 // Lines over the reels (SVG): through the middle of the cells
+// (full screen zooms the machine: the screen positions back to its own size - the size of the SVG)
 function linePoints(line) {
   var reels = [...document.querySelectorAll(".sl-reel")];
-  var window_ = document.querySelector(".sl-window").getBoundingClientRect();
+  var windowBox = document.querySelector(".sl-window");
+  var window_ = windowBox.getBoundingClientRect();
+  var zoom = windowBox.clientWidth ? window_.width / windowBox.clientWidth || 1 : 1;
+  var tile = document.querySelector(".sl-cell") ? document.querySelector(".sl-cell").offsetHeight || TILE : TILE;
   return setup.lines[line]
     .map((row, reel) => {
       var box = reels[reel].getBoundingClientRect();
-      var x = box.left - window_.left + box.width / 2;
-      var y = box.top - window_.top + TILE * row + TILE / 2;
+      var x = (box.left - window_.left + box.width / 2) / zoom;
+      var y = (box.top - window_.top) / zoom + tile * row + tile / 2;
       return x + "," + y;
     })
     .join(" ");
@@ -203,14 +231,78 @@ function clearLines() {
 
 /* ---------- A spin ---------- */
 
+var queuedSpin = null; // a click in the short pause: the spin starts right after it
+
+/*
+ * Hold and auto: the spin button (or space) held down spins again and again until it is let go;
+ * auto spins play a number of spins (or until stopped) - a bit slower, with a pause between them.
+ * Holding stops at a bonus game; auto spins wait for it (its start and "continue" are clicks) and go on
+ * afterwards. Both stop when the coins run out.
+ */
+var holding = false; // the button / space is held down
+var autoLeft = 0; // auto spins still to play (0: off)
+var AUTO_MAX = 100; // never more auto spins at once
+var autoTimer = null;
+var AUTO_GAP = 1100; // the extra pause between two auto spins
+
+function autoOn() {
+  return autoLeft > 0;
+}
+
+function startAuto(count) {
+  if (!(count > 0)) return;
+  autoLeft = Math.min(AUTO_MAX, Math.floor(count));
+  document.getElementById("slAutoMenu").hidden = true;
+  document.getElementById("slAuto").setAttribute("aria-expanded", "false");
+  renderControls();
+  if (!spinning) spin();
+}
+
+function stopAuto() {
+  autoLeft = 0;
+  clearTimeout(autoTimer);
+  autoTimer = null;
+  renderControls();
+}
+
+// A spin is over (shown): the next one when the button is held or auto spins run
+function nextSpin(result) {
+  // (a bonus game waited for the player - holding stops there; auto spins go on after its "continue", if any are left)
+  if (result && (result.bonus || result.coinGame)) holding = false;
+  if (holding) return spin();
+  if (!autoOn()) return;
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(() => {
+    autoTimer = null;
+    if (autoOn() && !spinning) spin();
+  }, AUTO_GAP);
+}
+
 function spin() {
   if (spinning || setup == null) return;
+  if (Date.now() < pausedUntil) {
+    if (!queuedSpin) queuedSpin = setTimeout(() => ((queuedSpin = null), spin()), pausedUntil - Date.now() + 10);
+    return;
+  }
+  // (max mode: the most it can be with the balance now)
+  if (maxMode) setBet(Math.min(maxBetNow(), myCoins), true);
   var bet = currentBet();
   if (!Number.isInteger(bet) || bet < setup.rules.minBet || bet > setup.rules.maxBet) {
-    return showToast("A spin is " + formatCoins(setup.rules.minBet) + " to " + formatCoins(setup.rules.maxBet) + " coins.", "error");
+    return showHint("A spin is " + formatCoins(setup.rules.minBet) + " to " + formatCoins(setup.rules.maxBet) + " coins.", "error");
   }
-  if (bet > myCoins) return showToast("You don't have enough coins.", "error");
+  if (bet > myCoins) {
+    holding = false;
+    if (autoOn()) stopAuto();
+    return showHint("You don't have enough coins.", "error");
+  }
+  if (bet > capLeft(0)) {
+    holding = false;
+    if (autoOn()) stopAuto();
+    return showHint("Your max bet is " + formatCoins(maxNow()) + ".", "error", document.getElementById("slBet"));
+  }
   spinning = true;
+  // (an auto spin: one less to go)
+  if (autoOn()) autoLeft--;
   clearTimeout(lineTimer);
   clearLines();
   document.getElementById("slWinBar").className = "sl-winbar";
@@ -220,8 +312,25 @@ function spin() {
   renderCoins(myCoins - bet);
   renderControls();
   document.querySelectorAll(".sl-reel").forEach((reel) => reel.classList.add("spinning"));
+  spunAt = Date.now();
   socket.emit("spin", { bet: bet });
+  // No answer (the connection): the button works again after a while
+  clearTimeout(spinWatch);
+  spinWatch = setTimeout(skipSpin, 8000);
 }
+
+// The server didn't take the spin (too fast, another tab): as if nothing happened
+var spinWatch = null;
+function skipSpin() {
+  clearTimeout(spinWatch);
+  if (!spinning || reelsTurning) return;
+  spinning = false;
+  document.querySelectorAll(".sl-reel").forEach((reel) => reel.classList.remove("spinning"));
+  document.getElementById("slWinText").innerText = "";
+  renderCoins(myCoins);
+  renderControls();
+}
+socket.on("slotsSkip", skipSpin);
 
 // The reels turn and stop on `grid` (one after the other); `time`: how long the first reel turns
 function animateReels(grid, time, sweatTime, stopped, strips, stops) {
@@ -329,9 +438,14 @@ async function playSpin(result) {
   if (result.coinGame) await playCoinGame(result);
   await showResult(result);
   spinning = false;
+  // A short pause before the next spin (at least the gap the server wants from the start of this one)
+  var pause = Math.max(setup.rules.pauseTime || 0, spunAt + (setup.rules.minGap || 0) + 100 - Date.now());
+  pausedUntil = Date.now() + pause;
   // The win comes with the next "coins" from the server (after the count)
   renderCoins(myCoins);
+  followMax();
   renderControls();
+  nextSpin(result);
 }
 
 /* ---------- Bonus game: two wheels (free spins, multiplier), then the free spins ---------- */
@@ -584,9 +698,47 @@ async function playFreeSpins(result, from, progress) {
 
 /* ---------- Coin game: the coins stay, the empty spots spin again ---------- */
 
+// A treasure chest, drawn (closed - or open, full of gold). No gradients: many of them can be on the page
+var CHEST_BODY =
+  '<path d="M7 31h50v21a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4z" fill="#8a4b1f"/>' +
+  '<path d="M7 39h50M7 47h50" stroke="#5b2e10" stroke-width="1.6"/>' +
+  '<path d="M7 31h50v4H7z" fill="#5b2e10" opacity=".55"/>' +
+  '<path d="M13 31h6v25h-6zM45 31h6v25h-6z" fill="#e9b949"/>' +
+  '<path d="M13 31h2v25h-2zM45 31h2v25h-2z" fill="#fff3c4" opacity=".55"/>' +
+  '<path d="M7 31h50v21a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4z" fill="none" stroke="#3a1a07" stroke-width="2.2" stroke-linejoin="round"/>';
+var CHEST_CLOSED =
+  '<svg viewBox="0 0 64 64" aria-hidden="true">' +
+  '<path d="M7 31V21C7 11 18 7 32 7s25 4 25 14v10z" fill="#a85a26"/>' +
+  '<path d="M11 18c3-6 11-8 21-8s16 2 19 6" stroke="#d98a4a" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7"/>' +
+  '<path d="M13 31V13.5c1.8-1.3 4-2.3 6-2.9V31zM45 31V10.6c2.2.6 4.2 1.6 6 2.9V31z" fill="#e9b949"/>' +
+  '<path d="M7 31V21C7 11 18 7 32 7s25 4 25 14v10z" fill="none" stroke="#3a1a07" stroke-width="2.2" stroke-linejoin="round"/>' +
+  CHEST_BODY +
+  '<path d="M5 28h54v6H5z" fill="#e9b949" stroke="#3a1a07" stroke-width="2" stroke-linejoin="round"/>' +
+  '<rect x="26" y="26" width="12" height="14" rx="2.5" fill="#f4cd5c" stroke="#3a1a07" stroke-width="2"/>' +
+  '<circle cx="32" cy="31.5" r="2.2" fill="#3a1a07"/><path d="M31 32.5h2l.6 4h-3.2z" fill="#3a1a07"/>' +
+  "</svg>";
+var CHEST_OPEN =
+  '<svg viewBox="0 0 64 64" aria-hidden="true">' +
+  '<path d="M9 27 13 5h38l4 22z" fill="#6e3814" stroke="#3a1a07" stroke-width="2.2" stroke-linejoin="round"/>' +
+  '<path d="M13 9h38" stroke="#e9b949" stroke-width="3"/>' +
+  '<ellipse cx="32" cy="30" rx="24" ry="7" fill="#ffd75e"/>' +
+  '<circle cx="20" cy="26" r="4.5" fill="#ffe28a" stroke="#c98f1d" stroke-width="1.4"/><circle cx="31" cy="23" r="5" fill="#ffe28a" stroke="#c98f1d" stroke-width="1.4"/>' +
+  '<circle cx="43" cy="26" r="4.5" fill="#ffe28a" stroke="#c98f1d" stroke-width="1.4"/><circle cx="37" cy="28" r="3.6" fill="#ffd040" stroke="#c98f1d" stroke-width="1.2"/>' +
+  '<path d="M48 17l1.2 2.8 2.8 1.2-2.8 1.2L48 25l-1.2-2.8-2.8-1.2 2.8-1.2zM15 15l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z" fill="#fff8d6"/>' +
+  CHEST_BODY +
+  '<rect x="26" y="31" width="12" height="9" rx="2" fill="#f4cd5c" stroke="#3a1a07" stroke-width="2"/>' +
+  "</svg>";
+
+function chestIcon(open) {
+  var icon = el("span", "sl-chest-svg");
+  icon.innerHTML = open ? CHEST_OPEN : CHEST_CLOSED;
+  return icon;
+}
+
 // A coin's value for this bet: coins (short) or the prize
 function coinLabel(coin, bet) {
   if (coin.prize) return coin.prize.toUpperCase();
+  if (coin.chest) return "CHEST";
   var value = Math.floor(coin.x * bet);
   return value >= 10000 ? (value / 1000).toFixed(value >= 100000 ? 0 : 1).replace(/\.0$/, "") + "K" : formatCoins(value);
 }
@@ -595,6 +747,11 @@ function coinLabel(coin, bet) {
 function coinCell(coin, bet) {
   var box = cell("coin");
   box.classList.add("valued");
+  // A treasure chest (closed: 🧰 - opened: the prize it gave)
+  if (coin.chest) {
+    box.classList.add("chest");
+    box.querySelector(".sl-symbol").replaceChildren(chestIcon(!!coin.prize));
+  }
   if (coin.prize) box.classList.add("prize", "prize-" + coin.prize);
   box.appendChild(el("span", "sl-coin-value", coinLabel(coin, bet)));
   return box;
@@ -617,6 +774,17 @@ function showPrizes(bet) {
   var bar = document.getElementById("slPrizes");
   bar.hidden = false;
   var c = setup.coins;
+  var list = c.prizes.concat([{ prize: "ultra", x: c.ultra }]);
+  // (the pills are there already: only their amounts change - building them again made them blink)
+  var pills = bar.querySelectorAll(".sl-prize");
+  if (pills.length == list.length && [...pills].every((pill, i) => pill.dataset.prize == list[i].prize)) {
+    pills.forEach((pill, i) => {
+      var value = pill.querySelector(".sl-prize-value");
+      var text = "🪙 " + formatCoins(Math.floor(bet * list[i].x));
+      if (value.innerText != text) value.innerText = text;
+    });
+    return;
+  }
   bar.replaceChildren(
     ...c.prizes.concat([{ prize: "ultra", x: c.ultra }]).map((p) => {
       var pill = el("div", "sl-prize prize-" + p.prize);
@@ -701,6 +869,22 @@ async function playCoinGame(result, from, started) {
     locks.forEach((box, n) => box.animate([{ transform: "scale(1)" }, { transform: "scale(1.18)", filter: "brightness(1.6)" }, { transform: "scale(1)" }], { duration: 600, delay: n * gap, easing: "ease-out" }));
     await wait(Math.min(setup.rules.coinIntroTime * 0.9, 700 + locks.length * gap));
   }
+  // A 🧰 among the coins: the player picks a box
+  var openAll = async (coins) => {
+    for (var coin of coins) {
+      if (!coin.chest || coin.prize) continue;
+      await pickChest(result, coin);
+      // The coin shows its prize now
+      var old = cellsOf(coin.reel)[coin.row];
+      var box = coinCell(coin, bet);
+      box.classList.add("held");
+      if (old) old.replaceWith(box);
+      box.animate([{ transform: "scale(0.6)", filter: "brightness(2)" }, { transform: "scale(1.2)" }, { transform: "scale(1)" }], { duration: 700, easing: "ease-out" });
+      flashPrize(coin.prize);
+      text.innerText = "🪙 " + formatCoins(sum());
+    }
+  };
+  await openAll([...held.values()]);
 
   var time = setup.rules.respinTime;
   for (var n = from; n < game.respins.length; n++) {
@@ -727,6 +911,7 @@ async function playCoinGame(result, from, started) {
     showRespins(respin.left, landed.size > 0);
     progress(n + 1);
     await wait(time * 0.25);
+    await openAll([...landed.values()]);
   }
   counter.hidden = true;
   counter.querySelector(".sl-label").innerText = "Free spins";
@@ -763,6 +948,93 @@ async function playCoinGame(result, from, started) {
   showCoins(result.coins, bet);
   bonusDone(result);
   activeBonus = null;
+}
+
+/*
+ * A 🧰 landed: three closed chests - MINI, MAJOR and MEGA are behind them,
+ * shuffled on the server. The player picks one, the server opens it (and
+ * shows what the others had). Every copy of the coin gets the prize.
+ */
+var chestAnswers = new Map(); // "reel|row" -> the answer of the server
+socket.on("chestOpened", (data) => {
+  var waiting = chestAnswers.get(data.reel + "|" + data.row);
+  if (typeof waiting == "function") waiting(data);
+  else chestAnswers.set(data.reel + "|" + data.row, data);
+});
+
+function applyChest(result, data) {
+  var game = result.coinGame;
+  [result.coins || [], game.start, game.coins, ...game.respins.map((r) => r.coins)].forEach((list) =>
+    list.forEach((coin) => {
+      if (coin.reel == data.reel && coin.row == data.row && coin.chest) Object.assign(coin, { x: setup.coins.prizes.find((p) => p.prize == data.prize).x, prize: data.prize });
+    }),
+  );
+  game.x = data.x;
+  game.win = data.gameWin;
+  result.win = data.win;
+}
+
+function pickChest(result, coin) {
+  var stage = document.getElementById("slStage");
+  if (result.id) socket.emit("chestShow", { id: result.id });
+  return new Promise((resolve) => {
+    stage.hidden = false;
+    stage.className = "sl-stage bonus chest-stage";
+    var row = el("div", "sl-chests");
+    var boxes = [0, 1, 2].map((i) => {
+      var box = el("button", "sl-chest");
+      box.type = "button";
+      box.setAttribute("aria-label", "Chest " + (i + 1));
+      var icon = el("span", "sl-chest-icon");
+      icon.appendChild(chestIcon(false));
+      box.append(icon, el("span", "sl-chest-prize", "?"));
+      box.addEventListener("click", () => choose(i));
+      return box;
+    });
+    row.append(...boxes);
+    // (empty until the pick: then the prize)
+    var sub = el("div", "sl-stage-sub", "");
+    stage.replaceChildren(el("div", "sl-bonus-glow"), el("div", "sl-stage-title", "TREASURE CHEST"), el("div", "sl-big-title", "PICK A CHEST"), row, sub);
+    boxes[0].focus();
+    var chosen = false;
+    var key = coin.reel + "|" + coin.row;
+    async function choose(pick) {
+      if (chosen) return;
+      chosen = true;
+      boxes.forEach((box, i) => {
+        box.disabled = true;
+        box.classList.toggle("picked", i == pick);
+      });
+      boxes[pick].animate([{ transform: "rotate(0)" }, { transform: "rotate(-8deg)" }, { transform: "rotate(8deg)" }, { transform: "rotate(-5deg)" }, { transform: "rotate(0)" }], { duration: 650, iterations: 2 });
+      socket.emit("chestPick", { id: result.id, reel: coin.reel, row: coin.row, pick: pick });
+      // The answer (it may have come already) - or, without one, go on (the server picks at the payout)
+      var data = chestAnswers.get(key);
+      if (!data) data = await Promise.race([new Promise((done) => chestAnswers.set(key, done)), wait(8000).then(() => null)]);
+      chestAnswers.delete(key);
+      await wait(700);
+      if (data) {
+        applyChest(result, data);
+        // The picked chest first, then what the others had
+        var show = (i) => {
+          var box = boxes[i];
+          box.classList.add("open", "prize-" + data.boxes[i]);
+          box.querySelector(".sl-chest-prize").innerText = data.boxes[i].toUpperCase();
+          box.querySelector(".sl-chest-icon").replaceChildren(chestIcon(true));
+        };
+        show(pick);
+        var prize = setup.coins.prizes.find((p) => p.prize == data.prize);
+        sub.className = "sl-stage-sub won";
+        sub.innerText = data.prize.toUpperCase() + " · 🪙 " + formatCoins(Math.floor(result.bet * prize.x));
+        coinShower(stage, data.prize == "mega" ? 60 : data.prize == "major" ? 35 : 20);
+        await wait(1100);
+        boxes.forEach((_, i) => i != pick && show(i));
+        await wait(1500);
+      }
+      stage.hidden = true;
+      stage.replaceChildren();
+      resolve(data);
+    }
+  });
 }
 
 // An empty spot spins: blanks and coins roll by, it stops on `result` (a coin cell) or stays empty
@@ -984,31 +1256,103 @@ function currentBet() {
   return Number(document.getElementById("slBet").value);
 }
 
-function setBet(value) {
+// keepMax: the bet of max mode (another amount picked: max mode is over) - typed: as typed (only within the
+// machine's min and max - over the max bet by balance it stays, the spin says what the max bet is)
+function setBet(value, keepMax, typed) {
   if (setup == null) return;
-  var bet = Math.max(setup.rules.minBet, Math.min(setup.rules.maxBet, Math.round(value)));
+  if (!keepMax) maxMode = false;
+  // (never more than the max bet by balance - unless typed)
+  var bet = Math.max(setup.rules.minBet, Math.min(typed ? setup.rules.maxBet : maxNow(), Math.round(value)));
   document.getElementById("slBet").value = bet;
   // The prizes of the coin game for this bet (over the machine, always)
   if (!activeBonus) showPrizes(bet);
   try {
-    localStorage.setItem(BET_KEY, bet);
+    localStorage.setItem(BET_KEY, maxMode ? "max" : bet);
   } catch (error) {
     // not remembered
   }
   renderControls();
 }
 
+// Max: the most a spin can be now - and from now on, with every new balance
+function pickMax() {
+  maxMode = true;
+  setBet(maxBetNow(), true);
+}
+
+// Max mode: the bet follows the balance (not while the reels turn - that spin keeps its bet)
+function followMax() {
+  if (!maxMode || setup == null || spinning) return;
+  var bet = maxBetNow();
+  if (bet != currentBet()) setBet(bet, true);
+}
+
+// The highest bet now: the max bet per spin - or less, the max bet by balance
+function maxNow() {
+  return Math.max(setup.rules.minBet, Math.min(setup.rules.maxBet, capLeft(0)));
+}
+
+// A round number near `value`, divisible by 5 (1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5 times a power of ten)
+function niceBet(value) {
+  var power = Math.pow(10, Math.floor(Math.log10(Math.max(1, value))));
+  var best = null;
+  [1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5, 10].forEach((m) => {
+    var candidate = Math.round(m * power);
+    if (candidate % 5 != 0) return;
+    if (best == null || Math.abs(candidate - value) < Math.abs(best - value)) best = candidate;
+  });
+  return best != null ? best : Math.round(value / 5) * 5;
+}
+
+// The presets: the lowest and the highest bet (divisible by 5) and round steps in between, growing evenly
+function presets() {
+  var lo = Math.ceil(setup.rules.minBet / 5) * 5;
+  var hi = Math.floor(maxNow() / 5) * 5;
+  if (hi <= lo) return [Math.max(setup.rules.minBet, Math.min(lo, maxNow()))];
+  var list = [lo];
+  for (var i = 1; i < PRESET_COUNT - 1; i++) {
+    var value = niceBet(lo * Math.pow(hi / lo, i / (PRESET_COUNT - 1)));
+    if (value > list[list.length - 1] && value < hi) list.push(value);
+  }
+  list.push(hi);
+  return list;
+}
+
+var shownPresets = "";
 function renderPresets() {
   var box = document.getElementById("slPresets");
+  var list = presets();
+  shownPresets = list.join(",");
+  // (as many as before: only their amounts change - building them again made them blink)
+  var old = box.querySelectorAll(".sl-preset[data-value]");
+  if (old.length == list.length && box.querySelector(".sl-preset-max")) {
+    old.forEach((button, i) => {
+      var label = list[i] >= 1000 ? list[i] / 1000 + "K" : String(list[i]);
+      button.dataset.value = list[i];
+      if (button.innerText != label) button.innerText = label;
+    });
+    return;
+  }
+  // Max: the most this spin can be now (the max bet, the max bet by balance - and the own coins)
+  var max = el("button", "sl-preset sl-preset-max", "Max");
+  max.type = "button";
+  max.title = "The most you can bet per spin right now";
+  max.addEventListener("click", pickMax);
   box.replaceChildren(
-    ...PRESETS.filter((value) => value >= setup.rules.minBet && value <= setup.rules.maxBet).map((value) => {
+    ...list.map((value) => {
       var button = el("button", "sl-preset", value >= 1000 ? value / 1000 + "K" : String(value));
       button.type = "button";
       button.dataset.value = value;
-      button.addEventListener("click", () => setBet(value));
+      button.addEventListener("click", () => setBet(Number(button.dataset.value)));
       return button;
     }),
+    max,
   );
+}
+
+function maxBetNow() {
+  var coins = typeof myCoins == "number" ? myCoins : Infinity;
+  return Math.max(setup.rules.minBet, Math.min(maxNow(), coins));
 }
 
 // The balance: a win counts up (like the win in the middle), a bet is taken off right away
@@ -1039,20 +1383,38 @@ function renderControls() {
   if (setup == null) return;
   var bet = currentBet();
   var button = document.getElementById("slSpin");
-  button.disabled = spinning || bet > myCoins;
-  button.classList.toggle("busy", spinning);
-  button.title = bet > myCoins ? "Not enough coins" : "Spin (space)";
-  document.querySelectorAll(".sl-preset").forEach((preset) => preset.classList.toggle("active", Number(preset.dataset.value) == bet));
-  document.getElementById("slLess").disabled = spinning || bet <= setup.rules.minBet;
-  document.getElementById("slMore").disabled = spinning || bet >= setup.rules.maxBet;
+  // Auto spins running: the button stops them (with how many are left)
+  var auto = autoOn();
+  button.disabled = !auto && (spinning || bet > myCoins);
+  button.classList.toggle("busy", spinning && !auto);
+  button.classList.toggle("auto", auto);
+  button.querySelector(".sl-spin-label").innerText = auto ? "Stop" : "Spin";
+  var left = document.getElementById("slAutoLeft");
+  left.hidden = !auto;
+  left.innerText = String(autoLeft);
+  button.title = auto ? "Stop the auto spins" : bet > myCoins ? "Not enough coins" : bet > capLeft(0) ? "Your max bet is " + formatCoins(maxNow()) : "Spin (space) - hold to keep spinning";
+  document.getElementById("slAuto").disabled = auto || bet > myCoins || bet > capLeft(0);
+  // (max mode: only Max is lit, not the amount it happens to be - set once, never on and off again)
+  document.querySelectorAll(".sl-preset[data-value]").forEach((preset) => preset.classList.toggle("active", !maxMode && Number(preset.dataset.value) == bet));
+  var maxButton = document.querySelector(".sl-preset-max");
+  if (maxButton) maxButton.classList.toggle("active", maxMode);
+  // Auto spins running: the bet stays as it is (the field, − / + and the presets locked until they stop)
+  document.getElementById("slLess").disabled = auto || spinning || bet <= setup.rules.minBet;
+  document.getElementById("slMore").disabled = auto || spinning || bet >= maxNow();
+  // (the balance changed the highest bet: other presets)
+  if (presets().join(",") != shownPresets) renderPresets();
+  var betInput = document.getElementById("slBet");
+  betInput.disabled = auto;
+  betInput.title = auto ? "Stop the auto spins to change the bet" : "";
+  document.querySelectorAll(".sl-preset").forEach((preset) => (preset.disabled = auto));
 }
 
-// − / +: to the next bet of the presets (10, 25, 50, 100, 200, 250)
+// − / +: to the next bet of the presets
 function stepBet(direction) {
   var bet = currentBet();
-  var steps = PRESETS.filter((value) => value >= setup.rules.minBet && value <= setup.rules.maxBet);
+  var steps = presets();
   var next = direction > 0 ? steps.find((value) => value > bet) : steps.slice().reverse().find((value) => value < bet);
-  setBet(next != null ? next : direction > 0 ? setup.rules.maxBet : setup.rules.minBet);
+  setBet(next != null ? next : direction > 0 ? maxNow() : setup.rules.minBet);
 }
 
 /* ---------- Last wins (everybody) ---------- */
@@ -1118,9 +1480,8 @@ function showPaytable() {
       setup.bonus.step +
       " after every free spin. Three 🎁 in a free spin: " +
       setup.bonus.retrigger +
-      " free spins more. A spin with its bonus pays at most " +
-      setup.maxWin +
-      "× the bet.",
+      " free spins more." +
+      (setup.maxWin ? " A spin with its bonus pays at most " + setup.maxWin + "× the bet." : " No max win - the free spins always play to the end."),
   );
   // The coin game: how it works, then every prize as a colored badge with what it pays for this bet
   var c = setup.coins;
@@ -1135,6 +1496,9 @@ function showPaytable() {
   row(el("span", "sl-prize-badge plain", "🪙 coin"), "🪙 " + formatCoins(Math.floor(bet * values[0])) + " - " + formatCoins(Math.floor(bet * values[values.length - 1])));
   c.prizes.forEach((p) => row(el("span", "sl-prize-badge prize-" + p.prize, p.prize.toUpperCase()), "🪙 " + formatCoins(Math.floor(bet * p.x))));
   row(el("span", "sl-prize-badge prize-ultra", "ULTRA"), "🪙 " + formatCoins(bet * c.ultra));
+  var chestBadge = el("span", "sl-prize-badge plain sl-chest-badge", " chest");
+  chestBadge.prepend(chestIcon(false));
+  row(chestBadge, "Pick 1 of 3 chests: MINI, MAJOR or MEGA");
   dialog.append(table, el("h3", "sl-pays-title", "Bonus"), bonus, el("h3", "sl-pays-title", "Coin game"), coinText, prizeTable, el("h3", "sl-pays-title", "The 9 lines"), lines, close);
   backdrop.appendChild(dialog);
   // (in full screen only the machine is seen: the paytable goes in there)
@@ -1154,18 +1518,57 @@ function showPaytable() {
 
 document.addEventListener("DOMContentLoaded", () => {
   setupChat();
-  document.getElementById("slSpin").addEventListener("click", spin);
+  // Spin: a press spins - held down, it spins again and again (until let go); during auto spins it stops them
+  var spinButton = document.getElementById("slSpin");
+  var pressedByPointer = false;
+  spinButton.addEventListener("pointerdown", (event) => {
+    if (event.button != 0) return;
+    pressedByPointer = true;
+    if (autoOn()) return stopAuto();
+    holding = true;
+    spin();
+  });
+  // (let go anywhere - the button is disabled while it spins and hears nothing then)
+  var letGo = () => (holding = false);
+  ["pointerup", "pointercancel"].forEach((type) => window.addEventListener(type, letGo, true));
+  window.addEventListener("blur", letGo);
+  // (the keyboard: Enter on the button - a click without a pointer)
+  spinButton.addEventListener("click", () => {
+    if (pressedByPointer) return (pressedByPointer = false);
+    if (autoOn()) return stopAuto();
+    spin();
+  });
+  // Auto spins: the menu with the numbers
+  var autoButton = document.getElementById("slAuto");
+  var autoMenu = document.getElementById("slAutoMenu");
+  autoButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    autoMenu.hidden = !autoMenu.hidden;
+    autoButton.setAttribute("aria-expanded", autoMenu.hidden ? "false" : "true");
+  });
+  autoMenu.querySelectorAll("[data-auto]").forEach((option) => option.addEventListener("click", () => startAuto(Number(option.dataset.auto))));
+  document.addEventListener("click", (event) => {
+    if (!autoMenu.hidden && !event.target.closest(".sl-auto")) {
+      autoMenu.hidden = true;
+      autoButton.setAttribute("aria-expanded", "false");
+    }
+  });
   document.getElementById("slLess").addEventListener("click", () => stepBet(-1));
   document.getElementById("slMore").addEventListener("click", () => stepBet(1));
-  document.getElementById("slBet").addEventListener("change", (event) => setBet(Number(event.target.value) || 0));
+  document.getElementById("slBet").addEventListener("change", (event) => setBet(Number(event.target.value) || 0, false, true));
   document.getElementById("slPaytable").addEventListener("click", () => setup && showPaytable());
-  // Space spins (not while typing)
+  // Space spins (not while typing) - held down, again and again; during auto spins it stops them
   document.addEventListener("keydown", (event) => {
     if (event.code != "Space" || event.repeat) return;
     var tag = document.activeElement && document.activeElement.tagName;
     if (tag == "INPUT" || tag == "TEXTAREA" || tag == "BUTTON" || document.querySelector(".mm-dialog-backdrop")) return;
     event.preventDefault();
+    if (autoOn()) return stopAuto();
+    holding = true;
     spin();
+  });
+  document.addEventListener("keyup", (event) => {
+    if (event.code == "Space") holding = false;
   });
   // Full screen (casino_fullscreen.js): the symbols change their size
   document.addEventListener("fullscreenchange", () => {
@@ -1174,4 +1577,9 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("resize", () => {
     if (setup && !spinning) TILE = document.querySelector(".sl-cell").offsetHeight;
   });
+  // The machine a bit smaller when the screen isn't high enough (casino_fullscreen.js) - the lines follow
+  window.addEventListener("casinofit", () => {
+    if (setup && !spinning) TILE = document.querySelector(".sl-cell").offsetHeight;
+  });
+  window.casinoFitGame(document.querySelector(".sl-machine"));
 });

@@ -49,6 +49,19 @@ require("./sockets/battles_server")(io);
 require("./sockets/poker_server")(io);
 require("./sockets/blackjack_server")(io);
 require("./sockets/slots_server")(io);
+require("./sockets/roulette_server")(io);
+require("./sockets/baucua_server")(io);
+// The admin's test world: every game once more (/test/...), only for players in test mode
+{
+  const worlds = require("./game/worlds");
+  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua"]) {
+    worlds.servers.set(game, require(`./sockets/${game}_server`)(io, { world: worlds.TEST }));
+  }
+  // The season world: every game once more (/season/...), only for players in the running season
+  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua"]) {
+    worlds.seasonServers.set(game, require(`./sockets/${game}_server`)(io, { world: worlds.SEASON }));
+  }
+}
 require("./sockets/casino_server")(io);
 
 /* Page routes */
@@ -128,9 +141,15 @@ async function connectDatabase(attempt = 1) {
     await require("./game/settings")
       .load()
       .catch((error) => console.error("Could not load the settings:", error));
+    await require("./game/streak")
+      .load()
+      .catch((error) => console.error("Could not load the daily streak:", error));
     await require("./game/maintenance")
       .load()
       .catch((error) => console.error("Could not load the maintenance:", error));
+    await require("./game/shop")
+      .load()
+      .catch((error) => console.error("Could not load the shop:", error));
     // The seasons first (and the coins of the season that started last) - a restored game may pay coins
     const seasons = require("./game/seasons");
     await seasons.load().catch((error) => console.error("Could not load the seasons:", error));
@@ -139,6 +158,15 @@ async function connectDatabase(attempt = 1) {
     await persist.restoreAll();
     // ... and the seasons start / end on time
     seasons.start();
+    // The daily cashback (the day before - once, after midnight)
+    const cashback = require("./game/cashback");
+    await cashback.load().catch((error) => console.error("Could not load the cashback:", error));
+    cashback.start();
+    // The money rains of the admin (planned ones come on time)
+    const rain = require("./game/money_rain");
+    await rain.load().catch((error) => console.error("Could not load the money rains:", error));
+    rain.setOnline(() => require("./game/casino_chat").online().names);
+    rain.start();
     startScraper();
   } catch (error) {
     if (shuttingDown) return;

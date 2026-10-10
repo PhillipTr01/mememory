@@ -1,4 +1,5 @@
 const config = require("../game/config");
+const { jackpotRake } = require("../game/rake");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
 const casinoLock = require("../game/casino_lock");
@@ -25,8 +26,11 @@ const PHASE = {
  * players are in, a countdown starts. Then a random ticket decides who wins
  * the whole pot - the more coins somebody put in, the higher the chance.
  */
-module.exports = function (io) {
-  const jackpot = io.of("/jackpot");
+module.exports = function (io, options = {}) {
+  // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
+  const world = options.world || "";
+  const { coins, persist, live, inPlay, casinoLock, casinoChat, limits } = require("../game/worlds").services(world);
+  const jackpot = io.of(world + "/jackpot");
   jackpot.use(socketAuth.casino);
   casinoChat.attach(jackpot, ROOM);
 
@@ -81,6 +85,8 @@ module.exports = function (io) {
       // Time left (ms) instead of a timestamp: the clocks of the clients may differ
       endsIn: pot.endsAt != null ? Math.max(0, pot.endsAt - now) : null,
       draw: pot.draw,
+      // How long the draw still runs (a page opened in the middle of it plays the rest)
+      spinLeft: pot.phase === PHASE.DRAWING && pot.drawAt != null ? Math.max(0, pot.drawAt + config.JACKPOT_SPIN - now) : null,
       bets: pot.bets,
       // Own bets that are not in the pot yet: on their way, or waiting for the next round
       pending: pot.incoming
@@ -91,8 +97,8 @@ module.exports = function (io) {
       fair: pot.phase === PHASE.DRAWING ? pot.fair : { hash: pot.fair.hash },
       records: pot.records,
       spin: config.JACKPOT_SPIN,
-      maxBets: config.JACKPOT_MAX_BETS,
-      maxCoins: config.JACKPOT_MAX_COINS,
+      maxBets: limits.JACKPOT_MAX_BETS,
+      maxCoins: limits.JACKPOT_MAX_COINS,
       rake: config.JACKPOT_RAKE,
       history: pot.history,
       viewers: jackpot.sockets.size,
@@ -153,7 +159,7 @@ module.exports = function (io) {
     pot.ghostAt = null;
   }
 
-  // 50-75% of the coins of the player who bet first, at most JACKPOT_GHOST_MAX (the house plays against them)
+  // JACKPOT_GHOST_MIN-TOP% of the coins of the player who bet first, at most JACKPOT_GHOST_MAX (the house plays against them)
   function addGhost() {
     pot.ghostTimer = null;
     pot.ghostAt = null;
@@ -163,7 +169,7 @@ module.exports = function (io) {
   }
 
   function ghostAmount(coins) {
-    const [low, high] = config.JACKPOT_GHOST_SHARE;
+    const [low, high] = [config.JACKPOT_GHOST_MIN / 100, config.JACKPOT_GHOST_TOP / 100];
     return Math.max(1, Math.min(config.JACKPOT_GHOST_MAX, Math.round(coins * (low + Math.random() * (high - low)))));
   }
 
@@ -219,8 +225,15 @@ module.exports = function (io) {
     // the pot. Which ticket was fixed at the start of the round (provably fair).
     // The tickets go through the bets in their order (not per player).
     pot.draw = fairWinner(pot.bets.map((bet) => ({ name: bet.name, coins: bet.amount })), pot.fair.number);
-    // The house keeps its cut: the winner gets the rest
-    pot.draw.payout = pot.draw.total - Math.floor((pot.draw.total * config.JACKPOT_RAKE) / 100);
+    // (debug, the test world only: a winner picked by the admin - a ticket of theirs)
+    if (forcedWinner) {
+      const bet = pot.bets.find((b) => b.name === forcedWinner);
+      if (bet) pot.draw = { ...pot.draw, winner: bet.name, ticket: bet.from - 1 };
+      forcedWinner = null;
+    }
+    // The house keeps its cut (never more than half of the others' coins): the winner gets the rest
+    const own = pot.bets.filter((bet) => bet.name === pot.draw.winner).reduce((sum, bet) => sum + bet.amount, 0);
+    pot.draw.payout = pot.draw.total - jackpotRake(pot.draw.total, own, config.JACKPOT_RAKE);
     emitState();
 
     // Announced after the roulette, so the chat doesn't spoil it
@@ -248,7 +261,16 @@ module.exports = function (io) {
     const winner = pot.entries.find((entry) => entry.name === pot.draw.winner);
     const ghostWon = winner.name === GHOST;
     pot.announced = true;
-    const result = { round: pot.round, winner: winner.name, total: sum, payout: pot.draw.payout != null ? pot.draw.payout : sum, coins: winner.coins };
+    const result = {
+      round: pot.round,
+      winner: winner.name,
+      total: sum,
+      payout: pot.draw.payout != null ? pot.draw.payout : sum,
+      coins: winner.coins,
+      // Everybody who was in the pot (the popup of a round)
+      players: pot.entries.map((entry) => ({ name: entry.name, coins: entry.coins, ghost: entry.name === GHOST })),
+      at: Date.now(),
+    };
     pot.history.unshift(result);
     if (pot.records.day !== today()) pot.records = { day: today(), biggest: null, luckiest: null };
     // Records only for players
@@ -307,25 +329,26 @@ module.exports = function (io) {
         // Any amount, but at most a few separate bets per round (during a draw: for the next one)
         const round = pot.phase === PHASE.DRAWING ? [] : pot.bets;
         const mine = round.concat(pot.incoming, pot.waiting).filter((bet) => bet.name === username);
-        if (mine.length >= config.JACKPOT_MAX_BETS) {
-          socket.emit("betError", `At most ${config.JACKPOT_MAX_BETS} bets per round.`);
+        if (mine.length >= limits.JACKPOT_MAX_BETS) {
+          socket.emit("betError", `At most ${limits.JACKPOT_MAX_BETS} bets per round.`);
           return;
         }
         // All bets of a round together: at most JACKPOT_MAX_COINS
-        const left = config.JACKPOT_MAX_COINS - mine.reduce((sum, bet) => sum + bet.amount, 0);
+        const left = limits.JACKPOT_MAX_COINS - mine.reduce((sum, bet) => sum + bet.amount, 0);
         if (amount > left) {
           socket.emit(
             "betError",
             left > 0
-              ? `At most 🪙 ${config.JACKPOT_MAX_COINS.toLocaleString("en-US")} per round - you can put in 🪙 ${left.toLocaleString("en-US")} more.`
-              : `At most 🪙 ${config.JACKPOT_MAX_COINS.toLocaleString("en-US")} per round.`,
+              ? `At most 🪙 ${limits.JACKPOT_MAX_COINS.toLocaleString("en-US")} per round - you can put in 🪙 ${left.toLocaleString("en-US")} more.`
+              : `At most 🪙 ${limits.JACKPOT_MAX_COINS.toLocaleString("en-US")} per round.`,
           );
           return;
         }
         betting.add(username);
         try {
-          if (!(await coins.spend(username, amount, { reason: "jackpot bet" }))) {
-            socket.emit("betError", "You don't have enough coins.");
+          // (the max bet by balance: for all bets of the round together)
+          if (!(await coins.spend(username, amount, { reason: "jackpot bet", round: limits.JACKPOT_MAX_COINS - left }))) {
+            socket.emit("betError", coins.refusal(username) || "You don't have enough coins.");
             return;
           }
           // On its way: in the pot only after a few seconds (nobody can answer a bet in the last second)
@@ -342,15 +365,6 @@ module.exports = function (io) {
       }),
     );
 
-    // Free coins once a day (the button next to the balance at the top)
-    socket.on(
-      "claimBonus",
-      safe("claimBonus", async () => {
-        const paid = await coins.claim(username);
-        if (paid) socket.emit("bonusClaimed", paid);
-        await sendCoins(username);
-      }),
-    );
 
     socket.on(
       "sendChatMessage",
@@ -432,5 +446,60 @@ module.exports = function (io) {
   casinoLock.registerRunning("jackpot", () => pot.entries.length > 0 || pot.incoming.length > 0 || pot.waiting.length > 0 || pot.phase === PHASE.DRAWING);
   inPlay.register("jackpot", (name) => pot.entries.some((e) => e.name === name) || pot.incoming.some((b) => b.name === name) || pot.waiting.some((b) => b.name === name));
 
-  return { pot };
+  /* ---------- Debug (the admin's test world) ---------- */
+
+  let forcedWinner = null;
+
+  // The animation of this round (one of JACKPOT_DRAWS)
+  function setMode(mode) {
+    if (!config.JACKPOT_DRAWS.includes(mode) || pot.phase === PHASE.DRAWING) return false;
+    pot.mode = mode;
+    emitState();
+    return true;
+  }
+
+  // Who wins the next draw (someone in the pot: a name, "bot" - any bot, null: the fair number)
+  function forceWinner(name) {
+    forcedWinner = name === "bot" ? (pot.entries.find((e) => e.name.startsWith("🤖")) || {}).name || null : name || null;
+    return forcedWinner != null || !name;
+  }
+
+  // The ghost now (a player alone in the pot)
+  function ghostNow() {
+    if (pot.phase !== PHASE.OPEN || pot.entries.length !== 1) return false;
+    stopGhostTimer();
+    addGhost();
+    return true;
+  }
+
+  // A new round right away - the testers get their coins back (the bots' are nobody's)
+  function clearPot() {
+    if (pot.phase === PHASE.DRAWING) return false;
+    const back = new Map();
+    for (const bet of [...pot.bets, ...pot.incoming, ...pot.waiting]) if (!bet.name.startsWith("🤖") && bet.name !== GHOST) back.set(bet.name, (back.get(bet.name) || 0) + bet.amount);
+    pot.incoming.forEach((bet) => clearTimeout(bet.timer));
+    pot.incoming = [];
+    pot.waiting = [];
+    clearTimeout(pot.timer);
+    back.forEach((amount, name) => coins.add(name, amount, { reason: "jackpot refund" }).catch(() => {}));
+    newRound();
+    return true;
+  }
+
+  // A bot puts coins in (nobody's coins - its win is gone with it)
+  function botBet(name, amount) {
+    if (pot.phase === PHASE.DRAWING) pot.waiting.push({ name: name, amount: amount });
+    else addToPot({ name: name, amount: amount });
+    emitState();
+  }
+
+  // The countdown is over now (false: no countdown runs)
+  function drawNow() {
+    if (pot.phase !== PHASE.COUNTDOWN) return false;
+    clearTimeout(pot.timer);
+    runDraw().catch((error) => console.error("[jackpot] Draw failed:", error));
+    return true;
+  }
+
+  return { pot, botBet, drawNow, setMode, forceWinner, ghostNow, clearPot };
 };

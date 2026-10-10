@@ -100,7 +100,10 @@
   flex-direction: column;
   align-items: center;
   gap: 0.3rem;
-  min-height: 150px;
+  /* Every seat as high as the own one with its bet fields (the highest it gets): sitting down, betting,
+     playing - the seats and the bars under them never move; the seat's content sits at the bottom */
+  min-height: 224px;
+  justify-content: flex-end;
   padding: 0.4rem 0.2rem;
   border: 2px solid transparent;
   border-radius: 14px;
@@ -433,7 +436,7 @@
   }
 
   .bj-seat {
-    min-height: 130px;
+    min-height: 224px;
     transform: translateY(calc(var(--lift, 0) * 0.5));
   }
 
@@ -469,7 +472,11 @@
     gap: 0.1rem;
   }
 
+  /* Every seat as high as the own seat while betting (the bet, PP and 21+3 under each other):
+     betting, playing, an empty table - the table and the bars never change their height */
   .bj-seat {
+    min-height: 232px;
+    justify-content: flex-end;
     padding: 0.3rem 0;
   }
 
@@ -929,9 +936,27 @@
   display: none;
 }
 
-/* With a bump: more room to the table (the seats reach down to its edge) */
-.bj-bar:has(.bj-bump:not([hidden])) {
+/* The bet bar and the action bar in one place: the hidden one keeps its room (only invisible) - always room for a bump
+   on top (the seats reach down to the table's edge), so nothing moves when a bar or a bump comes or goes */
+.bj-bars {
+  display: grid;
   margin-top: 4.2rem;
+}
+
+.bj-bars > .bj-bar {
+  grid-area: 1 / 1;
+  margin-top: 0;
+}
+
+/* (!important: over the general [hidden] rule of theme.css) */
+.bj-bars > .bj-bar[hidden] {
+  display: flex !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.bj-bars > .bj-betbar[hidden] {
+  display: grid !important;
 }
 
 /* Both bumps (same bet, the hand) as wide as each other */
@@ -989,6 +1014,15 @@
   gap: 0.25rem;
   height: 44px;
   color: var(--mm-accent);
+}
+
+/* The round paid out: what it brought */
+#bjActionLabel.plus {
+  color: var(--mm-success);
+}
+
+#bjActionLabel.minus {
+  color: var(--mm-danger);
 }
 
 /* The time for the move: a thin line in the bump */
@@ -1291,8 +1325,9 @@
   /* The own seat: the bet on top, PP and 21+3 under it (side by side they are wider than a seat) */
   .bj-fields {
     flex-wrap: wrap;
-    gap: 0.15rem 0.3rem;
-    max-width: 66px;
+    justify-content: center;
+    gap: 0.15rem 0.2rem;
+    max-width: 100%;
     margin: 0 auto;
   }
 
@@ -1302,8 +1337,8 @@
   }
 
   .bj-field {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     margin-top: 0;
   }
 
@@ -1336,5 +1371,31 @@
   .bj-betbar .bj-chips {
     flex-wrap: nowrap;
     gap: 0.3rem;
+  }
+}
+
+/* The chips of a table go from its min to its max bet: the colour by place, the smallest grey ... the biggest copper */
+.bj-chip[data-rank="0"],
+.bj-chipface[data-rank="0"] { --chip: #4f5868; }
+.bj-chip[data-rank="1"],
+.bj-chipface[data-rank="1"] { --chip: #a65f59; }
+.bj-chip[data-rank="2"],
+.bj-chipface[data-rank="2"] { --chip: #5a77a3; }
+.bj-chip[data-rank="3"],
+.bj-chipface[data-rank="3"] { --chip: #4f9a8a; }
+.bj-chip[data-rank="4"],
+.bj-chipface[data-rank="4"] { --chip: #7c6a9c; }
+.bj-chip[data-rank="5"],
+.bj-chipface[data-rank="5"] { --chip: #b07c4c; }
+
+/* Phones: both bars as high as the bet bar, the dealer as high with the betting clock as without it */
+@media (max-width: 575px) {
+  .bj-betbar,
+  .bj-actionbar {
+    min-height: 126px;
+  }
+
+  .bj-dealer {
+    min-height: 108px;
   }
 }

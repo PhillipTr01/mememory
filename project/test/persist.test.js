@@ -91,8 +91,8 @@ test("restart: every game, its running round, its history and the chat are back 
   const table = client(first, "/blackjack", "carol");
   await h.once(table, "connect");
   table.emit("sit", 2);
-  table.emit("bet", { seat: 2, amount: 600 });
-  await waitFor(table, "blackjackState", (s) => s.seats[2] && s.seats[2].bet === 600);
+  table.emit("bet", { seat: 2, amount: config.BJ_CLASSIC_MIN });
+  await waitFor(table, "blackjackState", (s) => s.seats[2] && s.seats[2].bet === config.BJ_CLASSIC_MIN);
 
   // Poker: a hand is running
   const p1 = client(first, "/poker", "dave");
@@ -133,7 +133,7 @@ test("restart: every game, its running round, its history and the chat are back 
   assert.ok(state.endsIn >= config.RESTORE_GRACE - 1000, "time to come back");
 
   const bjState = await h.once(client(second, "/blackjack", "carol"), "blackjackState");
-  assert.deepStrictEqual([bjState.phase, bjState.seats[2].name, bjState.seats[2].bet], ["betting", "carol", 600]);
+  assert.deepStrictEqual([bjState.phase, bjState.seats[2].name, bjState.seats[2].bet], ["betting", "carol", config.BJ_CLASSIC_MIN]);
 
   const pk = await h.once(client(second, "/poker", "dave"), "pokerState");
   assert.strictEqual(pk.phase, "preflop");
@@ -208,14 +208,13 @@ test("persist: a season saves every game and puts it back afterwards", async () 
   assert.strictEqual(game.rounds, 7);
 });
 
-test("persist: the chat stays through a season (start and end)", async () => {
-  const chat = { messages: ["before"] };
-  persist.register("chatTest", () => chat, (saved) => Object.assign(chat, saved));
-  const before = persist.snapshotAll();
-  await persist.resetAll(["chatTest"]);
-  chat.messages.push("during");
-  await persist.restoreSnapshots(before, ["chatTest"]);
-  assert.deepStrictEqual(chat.messages, ["before", "during"]);
-  // (the season really keeps "chat")
-  assert.match(require("fs").readFileSync(require.resolve("../game/hard_reset"), "utf8"), /SEASON_KEEP = \["chat"\]/);
+test("persist: the season world has its games under keys of their own - a new season starts only them anew (the chat is shared)", async () => {
+  const normal = { round: 5 };
+  const season = { round: 7 };
+  persist.register("worldTest", () => normal, (saved) => Object.assign(normal, saved));
+  persist.scoped("season/").register("worldTest", () => season, (saved) => Object.assign(season, saved), (fresh) => Object.assign(season, fresh, { round: 0 }));
+  await persist.resetPrefix("season/");
+  assert.deepStrictEqual([normal.round, season.round], [5, 0]);
+  // (the season world uses the chat of the normal casino)
+  assert.strictEqual(require("../game/worlds").services("/season").casinoChat, require("../game/casino_chat"));
 });

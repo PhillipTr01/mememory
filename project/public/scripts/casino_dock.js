@@ -8,7 +8,7 @@
   function setOpen(dock, toggle, open) {
     dock.classList.toggle("closed", !open);
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
-    toggle.title = open ? "Hide the games" : "Show the games";
+    toggle.title = open ? "Hide the menu" : "Show the menu";
   }
 
   document.addEventListener("DOMContentLoaded", () => {

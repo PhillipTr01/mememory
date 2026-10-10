@@ -3,7 +3,7 @@
  * often as the season says (the server decides). After a season: its winner page.
  */
 // The connection of the jackpot: the chat, the coins at the top and the daily bonus
-const socket = io("/jackpot");
+const socket = io((window.CASINO_NS || "") + "/jackpot");
 
 var myName = null;
 
@@ -92,11 +92,11 @@ function decidedOf(row) {
   }
   if (wagered != null) {
     parts.push("🫴🏽 " + shortCoins(wagered));
-    words.push("🫴🏽 " + formatCoins(wagered) + " coins wagered in the season");
+    words.push("🫴🏽 " + formatCoins(wagered) + " wagered in the season");
   }
   // Only the icons and numbers - the words on hover
   tag.textContent = parts.join(" · ");
-  tag.title = words.join(" · ") + (row.decided ? "\nThe same coins as others - this decided the place: fewer second chances first, then more coins wagered" : "");
+  tag.title = words.join(" · ");
   return tag;
 }
 
@@ -118,24 +118,60 @@ function listRow(row) {
   return item;
 }
 
+// Only when it is different (an equal text is not written again)
+function setText(element, text) {
+  if (element.textContent != text) element.textContent = text;
+}
+
+// How much of the wager for a place is done: a bar and the numbers
+function wagerBar(wager) {
+  var box = el("span", "lb-wager");
+  var bar = el("span", "lb-wager-bar");
+  var fill = el("span", "lb-wager-fill");
+  fill.style.width = Math.min(100, (wager.done / Math.max(1, wager.need)) * 100).toFixed(1) + "%";
+  bar.appendChild(fill);
+  box.append(bar, el("span", "lb-wager-text", shortCoins(wager.done) + " / " + shortCoins(wager.need)));
+  box.title = formatCoins(wager.done) + " of " + formatCoins(wager.need) + " coins wagered - then the place counts";
+  return box;
+}
+
+function pendingRow(row) {
+  var item = el("li", "lb-row pending" + (row.username == myName ? " mine" : ""));
+  var who = el("span", "lb-who");
+  who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name"));
+  item.append(el("span", "lb-rank", "–"), who, wagerBar(row.wager), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
+  return item;
+}
+
 function render() {
-  var rows = board.rows;
-  document.getElementById("lbEmpty").hidden = rows.length > 0;
+  // (a season: who hasn't wagered enough yet has no place - in a list of its own below)
+  var pending = board.rows.filter((row) => row.pending);
+  var rows = board.rows.filter((row) => !row.pending);
+  document.getElementById("lbEmpty").hidden = rows.length + pending.length > 0;
   // The podium: 2nd, 1st, 3rd
   var top = rows.slice(0, 3);
   var order = [top[1], top[0], top[2]].filter(Boolean);
-  document.getElementById("lbPodium").replaceChildren(...order.map(podiumSpot));
-  document.getElementById("lbList").replaceChildren(...rows.slice(3).map(listRow));
+  morphChildren(document.getElementById("lbPodium"), order.map(podiumSpot));
+  morphChildren(document.getElementById("lbList"), rows.slice(3).map(listRow));
+  document.getElementById("lbPending").hidden = pending.length == 0;
+  if (pending.length) {
+    var x = board.season && board.season.wagerX;
+    var note = document.getElementById("lbPendingNote");
+    if (x) morphChildren(note, [document.createTextNode("Wager needed: "), el("b", "lb-pending-x", x + "×")]);
+    else note.replaceChildren();
+    morphChildren(document.getElementById("lbPendingList"), pending.map(pendingRow));
+  }
 
   // The own place, also when it is not in the list
   var me = document.getElementById("lbMe");
   me.hidden = board.me == null;
   if (board.me) {
-    me.replaceChildren(el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", "#" + board.me.rank + " of " + board.players), change(board.me), el("span", "lb-coins", "🪙 " + formatCoins(board.me.coins)));
+    if (board.me.pending) morphChildren(me, [el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", "No place yet"), wagerBar(board.me.wager), el("span", "lb-coins", "🪙 " + formatCoins(board.me.coins))]);
+    else morphChildren(me, [el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", "#" + board.me.rank + " of " + (board.counted != null ? board.counted : board.players)), change(board.me), el("span", "lb-coins", "🪙 " + formatCoins(board.me.coins))]);
   }
   var when = new Date(board.updatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
   var season = board.season;
-  document.getElementById("lbStatus").innerText = board.live ? "Live - always up to date" : "As of " + when + " - updated " + (EVERY_TEXT[season && season.every] || "regularly");
+  setText(document.getElementById("lbStatus"), board.live ? "Live - always up to date" : "As of " + when + " - updated " + (EVERY_TEXT[season && season.every] || "regularly"));
 
   // The season: its name, how long it runs, the prizes
   var box = document.getElementById("lbSeason");
@@ -152,7 +188,7 @@ function render() {
     info.title = "About the season";
     info.setAttribute("aria-label", "About the season");
     parts.push(info);
-    box.replaceChildren(...parts);
+    morphChildren(box, parts);
     box.onclick = () => window.showSeasonInfo && window.showSeasonInfo();
     box.title = "Ends " + new Date(season.end).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
   }
@@ -160,15 +196,18 @@ function render() {
   var last = document.getElementById("lbLastSeason");
   last.hidden = !board.lastSeason || !!season;
   if (board.lastSeason) {
-    last.replaceChildren(el("span", "lb-last-icon", board.lastSeason.icon), el("span", "", board.lastSeason.name + " is over - see the winners"), el("span", "lb-last-arrow", "→"));
+    morphChildren(last, [el("span", "lb-last-icon", board.lastSeason.icon), el("span", "", board.lastSeason.name + " is over - see the winners"), el("span", "lb-last-arrow", "→")]);
     last.onclick = () => showWinners(board.lastSeason.id);
   }
 
   // The box on the right: when the next update comes
   document.getElementById("lbNextTitle").lastChild.textContent = board.live ? "Updates" : "Next update";
-  document.getElementById("lbNextNote").innerText = board.live
-    ? "The places are counted all the time - the arrows show the change since midnight."
-    : "The places of the season are counted " + (EVERY_TEXT[season && season.every] || "regularly") + " - the arrows show the change since the update before.";
+  setText(
+    document.getElementById("lbNextNote"),
+    board.live
+      ? "The places are counted all the time - the arrows show the change since midnight."
+      : "The places of the season are counted " + (EVERY_TEXT[season && season.every] || "regularly") + " - the arrows show the change since the update before.",
+  );
 }
 
 
@@ -184,12 +223,13 @@ function spanText(ms) {
 function tick() {
   var next = document.getElementById("lbNext");
   if (board && board.live) {
-    next.replaceChildren(el("span", "lb-live-dot"), document.createTextNode("Live"));
+    morphChildren(next, [el("span", "lb-live-dot"), document.createTextNode("Live")]);
     return;
   }
   if (nextAt == null) return;
   var left = Math.max(0, nextAt - Date.now());
-  next.innerText = left == 0 ? "Any moment now" : "in " + spanText(left + 59000);
+  var label = left == 0 ? "Any moment now" : "in " + spanText(left + 59000);
+  if (next.textContent != label) next.textContent = label;
 }
 
 // Live: every few seconds; otherwise at the next update
@@ -203,7 +243,7 @@ async function load(quiet) {
     render();
     tick();
   } catch (error) {
-    if (!quiet) showToast("The leaderboard couldn't be loaded.", "error");
+    if (!quiet) showHint("The leaderboard couldn't be loaded - trying again soon.", "error", document.querySelector("main"));
   }
   var wait = board && board.live ? 10000 : nextAt ? Math.max(3000, nextAt - Date.now() + 2000) : 30000;
   refreshTimer = setTimeout(() => load(true), Math.min(wait, 10 * 60 * 1000));
@@ -246,7 +286,7 @@ async function showWinners(id) {
     if (!res.ok) throw new Error();
     var data = await res.json();
   } catch (error) {
-    return showToast("The winners couldn't be loaded.", "error");
+    return showHint("The winners couldn't be loaded.", "error");
   }
   var season = data.season;
   var page = document.getElementById("lbWinners");
@@ -259,25 +299,28 @@ async function showWinners(id) {
   head.append(el("span", "lb-win-icon", season.icon), title, back);
 
   var parts = [head];
-  if (data.rows.length) {
-    var champ = data.rows[0];
+  // (who didn't wager enough got no place: below, without a place)
+  var placed = data.rows.filter((row) => !row.pending);
+  var unplaced = data.rows.filter((row) => row.pending);
+  if (placed.length) {
+    var champ = placed[0];
     var hero = el("div", "lb-champion");
     hero.append(el("span", "lb-win-label", "The winner"), el("div", "lb-champion-name", champ.username + (champ.username == myName ? " (you!)" : "")), el("div", "lb-champion-coins", "🪙 " + formatCoins(champ.coins)));
     if (champ.prize) hero.appendChild(el("div", "lb-champion-prize", "🎁 " + champ.prize));
     parts.push(hero);
-    var top = data.rows.slice(0, 3);
+    var top = placed.slice(0, 3);
     var podium = el("div", "lb-podium lb-win-podium");
     podium.append(...[top[1], top[0], top[2]].filter(Boolean).map(winnerSpot));
     parts.push(podium);
   }
   if (data.me) {
     var me = el("div", "lb-me");
-    me.append(el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", "#" + data.me.rank + " of " + data.players), el("span", "lb-coins", "🪙 " + formatCoins(data.me.coins)));
+    me.append(el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", data.me.pending ? "No place - not wagered enough" : "#" + data.me.rank + " of " + placed.length), el("span", "lb-coins", "🪙 " + formatCoins(data.me.coins)));
     if (data.me.prize) me.appendChild(el("span", "lb-prize", "🎁 " + data.me.prize));
     parts.push(me);
   }
   var list = el("ol", "lb-list");
-  data.rows.slice(3).forEach((row) => {
+  placed.slice(3).forEach((row) => {
     var item = el("li", "lb-row" + (row.username == myName ? " mine" : ""));
     var who = el("span", "lb-who");
     who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name"));
@@ -286,6 +329,15 @@ async function showWinners(id) {
     list.appendChild(item);
   });
   parts.push(list);
+  if (unplaced.length) {
+    var rest = el("div", "lb-pending");
+    var pendingHead = el("div", "lb-pending-head");
+    pendingHead.append(el("span", "lb-pending-title", "🫴🏽 No place - not wagered enough"));
+    var pendingList = el("ol", "lb-list");
+    pendingList.append(...unplaced.map((row) => (row.wager ? pendingRow(row) : el("li", "lb-row pending", row.username))));
+    rest.append(pendingHead, pendingList);
+    parts.push(rest);
+  }
   if (!data.rows.length) parts.push(el("p", "jp-empty mm-muted", "Nobody played this season."));
   page.replaceChildren(...parts);
   page.hidden = false;

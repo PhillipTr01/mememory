@@ -56,15 +56,29 @@ module.exports = {
   GAME_POKER: true,
   GAME_BLACKJACK: true,
   GAME_SLOTS: true,
+  GAME_ROULETTE: true,
+  GAME_BAUCUA: true,
 
   // Coins (hidden jackpot): start amount, free coins for everybody once a day
-  START_COINS: 25000,
+  START_COINS: 100000,
   // Every account gets START_COINS once for this id: a new id resets everybody's coins
   COIN_RESET: "reset-100k",
-  DAILY_BONUS: 2500,
+  DAILY_BONUS: 20000,
+  GIFT_LIMIT: 25000, // coins a player can give other players a day
+  SEASON_GIFT_LIMIT: 5000, // ... in the season world a day (its coins - an own limit)
+  // Max bet by balance: up to BET_CAP_FLOOR a player can bet everything, above it at most BET_CAP_SHARE % of the balance per bet
+  BET_CAP_FLOOR: 10000,
+  BET_CAP_SHARE: 25, // 100: no cap
+  // Daily cashback (game/cashback.js): after midnight this share of the net loss of the day before comes back
+  CASHBACK_PERCENT: 10,
+  CASHBACK_MAX: 0, // at most this much a day (0: no cap)
+  // The limits of the season world that differ from the normal casino ({KEY: value}, game/settings.js - the admin sets them)
+  SEASON_LIMITS: {},
   SEASON_CLOSE_WAIT: 60 * 1000, // before a season starts: when every game is quiet, this long until the start
   SEASON_CLOSE_MAX: 5 * 60 * 1000, // ... and at most this long waiting for the games to get quiet
   SEASON_DAILY_BONUS: 1000, // the daily bonus of a new season (each season can have its own)
+  // To get a place on the leaderboard of a season: wager this many times the start budget (again for every second chance)
+  SEASON_WAGER_X: 3,
   // The daily bonus comes back at midnight in this time zone
   BONUS_TZ: process.env.BONUS_TZ || "Europe/Berlin",
   // Coins for a win (only real wins: no surrender / left opponent)
@@ -74,9 +88,11 @@ module.exports = {
   JACKPOT_COUNTDOWN: 30 * 1000,
   JACKPOT_SPIN: 12000, // the draw animation (wheel, roulette, bowling, ...): about 11 s
   JACKPOT_PAUSE: 5000, // result is shown, then a new round starts
-  JACKPOT_MAX_BETS: 3, // separate bets per player and round
-  JACKPOT_MAX_COINS: 15000, // all bets of a player in one round together
-  JACKPOT_RAKE: 5, // percent of the pot the house keeps (the winner gets the rest)
+  JACKPOT_MAX_BETS: 5, // separate bets per player and round
+  JACKPOT_MAX_COINS: 250000, // all bets of a player in one round together
+  JACKPOT_RAKE: 3, // percent of the pot the house keeps (the winner gets the rest)
+  // RTP monitor (admin): fewer bets than this in the time picked - too few to tell how far off the payback is
+  RTP_MIN_BETS: 200,
   // A new bet gets into the pot only after a random 3-5 s (no sniping:
   // nobody can answer a bet in the last second). Too late for the draw: the next pot.
   JACKPOT_BET_DELAY: [3000, 5000],
@@ -85,10 +101,11 @@ module.exports = {
   JACKPOT_HISTORY: 10,
   // After a restart: at least this long until a countdown or a turn ends (time to come back)
   RESTORE_GRACE: 10 * 1000,
-  // Alone in the pot this long after the first bet: a ghost (the house) of 50-75% of the first player's coins joins (at most JACKPOT_GHOST_MAX), once
-  JACKPOT_GHOST_AFTER: 10 * 1000,
-  JACKPOT_GHOST_SHARE: [0.5, 0.75], // the ghost bets this share of the coins of the player alone in the pot
-  JACKPOT_GHOST_MAX: 10000, // ... and never more than this
+  // Alone in the pot this long after the first bet: a ghost (the house) of JACKPOT_GHOST_MIN-TOP% of the first player's coins joins (at most JACKPOT_GHOST_MAX), once
+  JACKPOT_GHOST_AFTER: 60 * 1000,
+  JACKPOT_GHOST_MIN: 60, // the ghost bets this many percent of the coins of the player alone in the pot ...
+  JACKPOT_GHOST_TOP: 80, // ... up to this many (random in between)
+  JACKPOT_GHOST_MAX: 150000, // ... and never more than this
 
   // The secret address of the jackpot (and its case battles and poker):
   // not linked anywhere. Can be changed with JACKPOT_PATH.
@@ -118,10 +135,10 @@ module.exports = {
   // Case battles (hidden, opened from the jackpot page)
   BATTLE_START: 3000, // countdown when the battle is full
   BATTLE_ROUND: 4500, // one case for everybody: spin + a short look at the items
-  BATTLE_MAX_OPEN: 3, // waiting battles per creator
+  BATTLE_MAX_OPEN: 3, // waiting or running battles per creator
   BATTLE_CASES_OFF: [], // ids of cases the admin turned off (not in the shop, no new battles with them)
-  BATTLE_MAX_CASES: 25, // cases (rounds) per battle
-  BATTLE_MAX_COST: 20000, // what one seat of a battle may cost (all its cases together)
+  BATTLE_MAX_CASES: 50, // cases (rounds) per battle
+  BATTLE_MAX_COST: 100000, // what one seat of a battle may cost (all its cases together)
   BATTLE_JACKPOT_DRAW: 15000, // jackpot mode: 3 s, the roulette of the players (10 s), 2 s - then the winner is paid
   BATTLE_MODE_REVEAL: 11500, // random mode: the last case a moment, then which mode it was - then the winner is paid
   BATTLE_KEEP: 60 * 1000, // a finished battle stays in the list this long
@@ -138,8 +155,8 @@ module.exports = {
   // Nobody at the table this long: back to the first level (while people play the blinds stay up)
   POKER_LEVEL_RESET: 10 * 60 * 1000,
   POKER_MIN_BUYIN: 1000, // (10 big blinds of the first level)
-  POKER_MAX_BUYIN: 25000,
-  POKER_RAKE: 5, // percent of every pot the house keeps (only pots that saw the flop)
+  POKER_MAX_BUYIN: 1000000,
+  POKER_RAKE: 3, // percent of every pot the house keeps (only pots that saw the flop)
   POKER_DEFAULT_BUYIN: 10000, // what the buy-in starts with when sitting down (100 big blinds)
   POKER_TURN: 20 * 1000, // time to act, then check (or fold)
   POKER_START: 3000, // pause before a hand starts
@@ -157,16 +174,17 @@ module.exports = {
   BJ_SEATS: 5, // seats per table
   BJ_MY_SEATS: 3, // seats one player can have at a time (per table)
   // Bets per seat (a double or a split adds the same again), per table
-  BJ_CASUAL_MIN: 100,
-  BJ_CASUAL_MAX: 500,
-  BJ_CLASSIC_MIN: 250,
-  BJ_CLASSIC_MAX: 1000,
-  BJ_HIGH_MIN: 500,
-  BJ_HIGH_MAX: 2000,
+  BJ_CASUAL_MIN: 250,
+  BJ_CASUAL_MAX: 1500,
+  BJ_CLASSIC_MIN: 2000,
+  BJ_CLASSIC_MAX: 5000,
+  BJ_HIGH_MIN: 7500,
+  BJ_HIGH_MAX: 15000,
   BJ_SIDE_SHARE: 0.5, // a side bet (Perfect Pairs, 21+3) is at most this share of the table's max bet (each)
   // Slots (hidden, see game/slots.js): the bet is for a whole spin (all 9 lines)
   SLOTS_MIN_BET: 10,
-  SLOTS_MAX_BET: 250,
+  SLOTS_MAX_BET: 10000,
+  SLOTS_CAP_DIV: 15, // slots get 1/x of the max bet by balance (its floor and its share) - a spin is far faster than a round at a table
   SLOTS_SPIN: 2000, // the reels turn this long on the page
   SLOTS_SWEAT: 1800, // two 🎁 in sight: the last reel turns this much longer (the sweat)
   SLOTS_BONUS_TIME: 6000, // the bonus wheels (free spins, multiplier) on the page
@@ -181,9 +199,26 @@ module.exports = {
   SLOTS_BIG_WIN: 15, // a win of this many times the bet gets the big show
   SLOTS_COUNT_TIME: 800, // after the reels (and the big-win show) the win is paid this soon - while it is counted up
   SLOTS_BIG_TIME: 3000, // the big-win show on top
-  SLOTS_MIN_GAP: 600, // at least this long between two spins of a player
+  SLOTS_PAUSE: 250, // after a spin is shown, the next one can start only this much later (the page)
+  SLOTS_MIN_GAP: 2250, // at least this long from one spin to the next of a player (the reels + the pause)
+  SLOTS_TAB_LOCK: 8000, // a spin from another tab of the player within this long of the last spin is refused (no autoplay in two tabs)
   SLOTS_FEED: 12, // last wins in the list
-  SLOTS_TEST_BONUS: "off", // admin panel, for testing: every spin starts a bonus game ("free" spins or the "coins" game)
+  SLOTS_TEST_BONUS: "off", // tests only: every spin starts a bonus game ("free" spins or the "coins" game) - not in the admin panel
+  // Roulette (hidden, see game/roulette.js): 7 red, 7 blue, 1 green - red / blue 2x, green 14x
+  ROULETTE_MIN_BET: 10,
+  ROULETTE_MAX_BET: 100000, // all bets of a player in one round together
+  ROULETTE_TIMER: 20000, // the first bet of a round starts it - then the reel rolls
+  ROULETTE_SPIN: 6000, // the reel rolls this long on the pages
+  ROULETTE_PAUSE: 3000, // the result is shown, then the next round waits for a bet
+  ROULETTE_HISTORY: 20, // last results in the row
+  // Bầu cua (see game/baucua.js): three dice with six animals - 1 / 2 / 3 dice of the animal: 2x / 3x / 10x
+  BAUCUA_MIN_BET: 10,
+  BAUCUA_MAX_BET: 100000, // all bets of a player in one round together
+  BAUCUA_MAX_BETS: 3, // separate bets of a player in one round
+  BAUCUA_TIMER: 20000, // the first bet of a round starts it - then the bowl shakes
+  BAUCUA_SPIN: 6500, // the bowl shakes and is lifted on the pages
+  BAUCUA_PAUSE: 3500, // the dice are shown, then the next round waits for a bet
+  BAUCUA_HISTORY: 20, // last results in the row
 
   // The tables of the lobby (in this order, limits from the keys above); a page without a table opens "classic"
   BJ_TABLES: [

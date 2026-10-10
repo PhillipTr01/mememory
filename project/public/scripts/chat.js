@@ -182,7 +182,17 @@ function addChatMessage(message, live) {
     name.className = "msg-name";
     name.style.color = own ? "var(--mm-accent)" : avatarColor(message.name);
     name.innerText = own ? "You" : message.name;
+    // Plays in the season world right now: the season's icon next to the name (casino_wallet.js keeps it up to date)
+    name.dataset.name = message.name;
+    if (window.casinoSeasonNames && window.casinoSeasonNames.has(message.name)) name.classList.add("in-season");
     if (message.spectator) name.appendChild(createIcon("bi-eye ms-1", "Spectator"));
+    // Casino pages: a click on somebody else's picture - coins for them
+    if (!own && typeof window.chatNameClick == "function") {
+      var who = message.name;
+      avatarSlot.classList.add("msg-clickable");
+      avatarSlot.title = "Send " + who + " coins";
+      avatarSlot.addEventListener("click", () => window.chatNameClick(who));
+    }
     var time = document.createElement("span");
     time.className = "msg-time";
     time.innerText = new Date(message.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });

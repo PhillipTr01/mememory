@@ -10,13 +10,13 @@ Object.assign(config, { BATTLE_START: 50, BATTLE_ROUND: 50, BATTLE_KEEP: 5000, B
 
 /* ---------- Cases ---------- */
 
-test("cases: the chances add up, every case gives back less than it costs - high risk the least", () => {
+test("cases: the chances add up, every case gives back less than it costs - high risk ~87%, balanced ~92.5%, low risk ~96%", () => {
   for (const box of cases.CASES) {
     const weights = box.items.reduce((sum, item) => sum + item.weight, 0);
     assert.strictEqual(weights, cases.WEIGHT_TOTAL, `${box.id}: chances add up to 100%`);
     const back = cases.expectedValue(box) / box.price;
     // High risk gives back less on average (the price of the big jackpots)
-    const [low, high] = box.risk === "high" ? [0.89, 0.915] : [0.915, 0.955];
+    const [low, high] = { high: [0.86, 0.89], balanced: [0.915, 0.94], low: [0.95, 0.97] }[box.risk];
     assert.ok(back > low && back < high, `${box.id}: ${Math.round(back * 100)}% back on average`);
     assert.ok(["low", "balanced", "high"].includes(box.risk));
   }
@@ -116,7 +116,7 @@ const battleIn = (data, id) => data.list.find((battle) => battle.id === id);
 
 before(async () => {
   server = await h.startServer();
-  for (const name of ["alice", "bob", "carol"]) tokens[name] = h.addUser(name);
+  for (const name of ["alice", "bob", "carol", "erin"]) tokens[name] = h.addUser(name);
 });
 
 after(async () => {
@@ -173,10 +173,18 @@ test("battles: two players pay the cases, the best total wins every item", async
   assert.strictEqual(done.payout, a + b);
   assert.ok(done.totals[done.winner] === Math.max(a, b));
 
+  await h.wait(30);
+  if (a === b) {
+    // A tie (the cheap cases make it possible): both win, the pot is split
+    assert.deepStrictEqual(done.winners, [0, 1]);
+    const first = Math.ceil(done.payout / 2);
+    assert.strictEqual(h.coinsOf(done.seats[0].name), 455 + first, "split when the battle is over");
+    assert.strictEqual(h.coinsOf(done.seats[1].name), 455 + done.payout - first);
+    return;
+  }
   // The winner gets every item's worth, the other one nothing
   const winner = done.seats[done.winner].name;
   const loser = winner === "alice" ? "bob" : "alice";
-  await h.wait(30);
   assert.strictEqual(h.coinsOf(winner), 455 + done.payout, "paid when the battle is over");
   assert.strictEqual(h.coinsOf(loser), 455);
 });
@@ -265,26 +273,62 @@ test("battles: the same coins as the jackpot - every change reaches the page rig
   carol.off("coins", listener);
 });
 
-test("battles: up to 25 cases and 20,000 coins per battle", async () => {
+test("battles: up to BATTLE_MAX_CASES cases and BATTLE_MAX_COST coins per battle", async () => {
+  const config = require("../game/config");
+  const M = config.BATTLE_MAX_CASES;
+  const C = config.BATTLE_MAX_COST;
   h.setCoins("bob", 100000);
   const bob = client("bob");
   await waitFor(bob, "coins", (d) => d.coins === 100000);
   const created = h.once(bob, "battleCreated");
-  const listed = waitFor(bob, "battles", (data) => data.list.some((b) => b.cases.length === 25));
-  bob.emit("createBattle", { cases: new Array(25).fill("piggy"), size: 2 });
+  const listed = waitFor(bob, "battles", (data) => data.list.some((b) => b.cases.length === M));
+  bob.emit("createBattle", { cases: new Array(M).fill("piggy"), size: 2 });
   const id = await created;
   const battle = battleIn(await listed, id);
-  assert.strictEqual(battle.cases.length, 25);
-  assert.strictEqual(battle.price, 250);
+  assert.strictEqual(battle.cases.length, M);
+  assert.strictEqual(battle.price, M * cases.caseById("piggy").price);
   bob.emit("cancelBattle", id);
   await waitFor(bob, "battles", (data) => !battleIn(data, id));
-  // More cases - or more coins - than allowed
+  // More cases - or more coins - than allowed (the dearest case: just over the cost, within the cases)
   const tooMany = h.once(bob, "battleError");
-  bob.emit("createBattle", { cases: new Array(26).fill("piggy"), size: 2 });
-  assert.match(await tooMany, /At most 25 cases/);
+  bob.emit("createBattle", { cases: new Array(M + 1).fill("piggy"), size: 2 });
+  assert.match(await tooMany, new RegExp(`At most ${M} cases`));
+  const dearest = cases.CASES.slice().sort((a, b) => b.price - a.price)[0];
+  const count = Math.floor(C / dearest.price) + 1;
+  assert.ok(count <= M, "the cost limit can be passed within the case limit");
   const tooMuch = h.once(bob, "battleError");
-  bob.emit("createBattle", { cases: new Array(21).fill("vault"), size: 2 });
-  assert.match(await tooMuch, /at most 🪙 20,000/);
+  bob.emit("createBattle", { cases: new Array(count).fill(dearest.id), size: 2 });
+  assert.match(await tooMuch, new RegExp(`at most 🪙 ${C.toLocaleString("en-US")}`));
+});
+
+test("battles: a player who joined can leave before it starts - the coins come back, the host can't", async () => {
+  h.setCoins("alice", 1000);
+  h.setCoins("bob", 1000);
+  const alice = client("alice");
+  const bob = client("bob");
+  await Promise.all([waitFor(alice, "coins", (d) => d.coins === 1000), waitFor(bob, "coins", (d) => d.coins === 1000)]);
+  alice.emit("createBattle", { cases: ["piggy"], size: 3 });
+  const id = await h.once(alice, "battleCreated");
+  const joined = waitFor(alice, "battles", (data) => battleIn(data, id) && battleIn(data, id).seats.filter(Boolean).length === 2);
+  bob.emit("joinBattle", id);
+  await joined;
+  assert.strictEqual(h.coinsOf("bob"), 990);
+  // The host can't leave (only cancel)
+  alice.emit("leaveBattle", id);
+  // Bob leaves: his seat is free, his coins are back
+  const left = h.once(bob, "battleLeft");
+  const freed = waitFor(alice, "battles", (data) => battleIn(data, id) && battleIn(data, id).seats.filter(Boolean).length === 1);
+  bob.emit("leaveBattle", id);
+  assert.strictEqual(await left, id);
+  const after = battleIn(await freed, id);
+  assert.deepStrictEqual(after.seats.map((seat) => seat && seat.name), ["alice", null, null]);
+  assert.strictEqual(h.coinsOf("bob"), 1000);
+  assert.strictEqual(h.coinsOf("alice"), 990, "the host is still in");
+  // Not in it (anymore): nothing happens
+  bob.emit("leaveBattle", id);
+  alice.emit("cancelBattle", id);
+  await waitFor(alice, "battles", (data) => !battleIn(data, id));
+  assert.strictEqual(h.coinsOf("bob"), 1000);
 });
 
 test("battles: invalid battles, not enough coins, cancel gives the coins back", async () => {
@@ -445,4 +489,50 @@ test("battles: jackpot mode - one winner, drawn from the seed by the worth; best
     }
   }
   carol.close();
+});
+
+test("battles: a player has at most BATTLE_MAX_OPEN battles at a time - one filled with bots counts while it runs", async () => {
+  const old = { BATTLE_MAX_OPEN: config.BATTLE_MAX_OPEN, BATTLE_START: config.BATTLE_START };
+  Object.assign(config, { BATTLE_MAX_OPEN: 2, BATTLE_START: 5000 });
+  try {
+    h.setCoins("erin", 1000);
+    const erin = client("erin");
+    await waitFor(erin, "coins", (data) => data.coins === 1000);
+    const first = h.once(erin, "battleCreated");
+    erin.emit("createBattle", { cases: ["piggy"], size: 2 });
+    const id = await first;
+    // Filled with a bot: it runs (the countdown is long here) - still one of hers
+    erin.emit("addBot", id);
+    await waitFor(erin, "battles", (data) => battleIn(data, id) && battleIn(data, id).phase === "running");
+    const second = h.once(erin, "battleCreated");
+    erin.emit("createBattle", { cases: ["piggy"], size: 2 });
+    await second;
+    const refused = h.once(erin, "battleError");
+    erin.emit("createBattle", { cases: ["piggy"], size: 2 });
+    assert.match(await refused, /At most 2 battles/);
+  } finally {
+    Object.assign(config, old);
+  }
+});
+
+test("battles: while the end plays (the mode reveal) nobody in the battle has lost yet - no second chance before it", async () => {
+  const inPlay = require("../game/in_play");
+  const old = config.BATTLE_MODE_REVEAL;
+  config.BATTLE_MODE_REVEAL = 600;
+  try {
+    h.setCoins("carol", 1000);
+    const carol = client("carol");
+    await waitFor(carol, "coins", (data) => data.coins === 1000);
+    const created = h.once(carol, "battleCreated");
+    carol.emit("createBattle", { cases: ["starter"], size: 2, mode: "random" });
+    const id = await created;
+    carol.emit("addBot", id);
+    const done = battleIn(await waitFor(carol, "battles", (data) => battleIn(data, id) && battleIn(data, id).phase === "done"), id);
+    assert.ok(inPlay.where("carol").includes("battles"), "the reveal still plays");
+    await h.wait(750);
+    // Over: nothing in play any more (a winner is paid by now)
+    assert.ok(!inPlay.where("carol").includes("battles"), done.winners.includes(0) ? "won and paid" : "lost");
+  } finally {
+    config.BATTLE_MODE_REVEAL = old;
+  }
 });

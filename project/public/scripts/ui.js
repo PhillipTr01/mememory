@@ -96,7 +96,8 @@ function loadAvatars() {
   avatarQueue.clear();
   names.forEach((name) => avatarChecked.add(name));
   if (names.length == 0) return;
-  fetch("/requests/user/avatars?names=" + encodeURIComponent(names.join(",")), { credentials: "same-origin" })
+  // (the admin panel asks its own address - it has no player login)
+  fetch((window.AVATAR_URL || "/requests/user/avatars") + "?names=" + encodeURIComponent(names.join(",")), { credentials: "same-origin" })
     .then((response) => (response.ok ? response.json() : null))
     .then((avatars) => {
       if (avatars == null) return;
@@ -147,7 +148,68 @@ function createIcon(classes, title) {
   return icon;
 }
 
-// Small message at the bottom of the screen instead of alert()
+/*
+ * No toasts: a short message sits as a small bubble on the control it is
+ * about (the button just clicked, the field just used) and goes by itself.
+ * showHint(message, type, anchor) - without an anchor: what was clicked last.
+ */
+var lastControl = null;
+document.addEventListener(
+  "pointerdown",
+  (event) => {
+    var control = event.target.closest && event.target.closest("button, input, select, a, [role=button], [data-hint-anchor]");
+    if (control) lastControl = control;
+  },
+  true,
+);
+document.addEventListener(
+  "keydown",
+  (event) => {
+    if (event.target && event.target.closest && event.target.closest("button, input, select, a, [role=button]")) lastControl = event.target;
+  },
+  true,
+);
+
+function showHint(message, type, anchor) {
+  anchor = anchor || lastControl;
+  // The control is gone (or hidden): the main panel of the page
+  if (!anchor || !anchor.isConnected || anchor.getClientRects().length == 0) anchor = document.querySelector("[data-hint-home]") || document.querySelector("main") || document.body;
+  document.querySelectorAll(".mm-hint").forEach((old) => old.remove());
+  var hint = document.createElement("div");
+  hint.className = "mm-hint" + (type ? " " + type : "");
+  hint.setAttribute("role", type == "error" ? "alert" : "status");
+  hint.innerText = message;
+  document.body.appendChild(hint);
+  var box = anchor.getBoundingClientRect();
+  var width = hint.offsetWidth;
+  var left = Math.max(8, Math.min(window.innerWidth - width - 8, box.left + box.width / 2 - width / 2));
+  // Over the control - under it when there is no room above
+  var above = box.top - hint.offsetHeight - 10 > 8;
+  var top = above ? box.top - hint.offsetHeight - 10 : Math.min(box.bottom + 10, window.innerHeight - hint.offsetHeight - 8);
+  if (anchor == document.body || box.height > window.innerHeight * 0.6) top = Math.max(8, box.top + 12);
+  // A side bar (data-hint-right): next to the item, not over the one above it
+  if (anchor.closest("[data-hint-right]") && window.innerWidth > 991) {
+    hint.style.left = box.right + 10 + "px";
+    hint.style.top = Math.max(8, box.top + box.height / 2 - hint.offsetHeight / 2) + "px";
+    hint.classList.add("right");
+  } else {
+    hint.style.left = left + "px";
+    hint.style.top = top + "px";
+    hint.style.setProperty("--arrow", Math.max(12, Math.min(width - 12, box.left + box.width / 2 - left)) + "px");
+    hint.classList.add(above ? "above" : "below");
+  }
+  var remove = () => {
+    window.removeEventListener("scroll", remove, true);
+    hint.classList.add("out");
+    setTimeout(() => hint.remove(), 150);
+  };
+  window.addEventListener("scroll", remove, true);
+  // Short: read it, then it fades (a click anywhere takes it away right away)
+  setTimeout(remove, type == "error" ? 1800 : 1200);
+  setTimeout(() => document.addEventListener("pointerdown", remove, { once: true, capture: true }), 0);
+}
+
+// Small message at the bottom of the screen instead of alert() (the MemeMory pages - the casino uses showHint)
 function showToast(message, type) {
   // The game pages show everything on the board / in the chat instead
   if (document.body.classList.contains("no-toasts")) return;
@@ -164,6 +226,114 @@ function showToast(message, type) {
   toast.innerText = message;
   container.appendChild(toast);
   setTimeout(() => toast.remove(), 3500);
+}
+
+/*
+ * A notification of the casino (top right, like "Your case battle starts!"):
+ * casinoNotice({icon, title, text, action: {label, run}, ms, key})
+ * - several stack under each other; the same key replaces the one before.
+ */
+function noticeStack() {
+  var stack = document.getElementById("mm-notices");
+  if (stack == null) {
+    stack = document.createElement("div");
+    stack.id = "mm-notices";
+    stack.className = "bt-notice-stack";
+    document.body.appendChild(stack);
+  }
+  return stack;
+}
+
+function casinoNotice(options) {
+  var stack = noticeStack();
+  if (options.key) stack.querySelectorAll(".bt-notice").forEach((old) => old.dataset.key == options.key && old.remove());
+  var notice = document.createElement("div");
+  notice.className = "bt-notice";
+  notice.setAttribute("role", "status");
+  if (options.key) notice.dataset.key = options.key;
+  var icon = document.createElement("span");
+  icon.className = "bt-notice-icon";
+  icon.innerText = options.icon || "🔔";
+  var text = document.createElement("div");
+  text.className = "bt-notice-text";
+  var title = document.createElement("b");
+  title.innerText = options.title;
+  text.appendChild(title);
+  if (options.text) {
+    var line = document.createElement("span");
+    line.innerText = options.text;
+    text.appendChild(line);
+  }
+  var hide = () => {
+    if (notice.classList.contains("out")) return;
+    notice.classList.add("out");
+    setTimeout(() => notice.remove(), 250);
+  };
+  notice.append(icon, text);
+  if (options.action) {
+    var go = document.createElement("button");
+    go.type = "button";
+    go.className = "mm-btn mm-btn-primary mm-btn-sm";
+    go.innerText = options.action.label;
+    go.addEventListener("click", () => {
+      hide();
+      options.action.run();
+    });
+    notice.appendChild(go);
+  }
+  var close = document.createElement("button");
+  close.type = "button";
+  close.className = "bt-notice-close";
+  close.innerText = "×";
+  close.setAttribute("aria-label", "Close");
+  close.addEventListener("click", hide);
+  notice.appendChild(close);
+  stack.appendChild(notice);
+  setTimeout(hide, options.ms || 6000);
+  return { hide: hide };
+}
+
+/*
+ * Updates `parent` to look like `nodes` - but only where something differs:
+ * equal parts stay as they are (no flicker, avatars are not drawn again),
+ * a changed number is just a changed text. (Listeners of the new nodes are not
+ * moved over to kept ones - for lists that are only shown.)
+ */
+function morphChildren(parent, nodes) {
+  nodes = nodes.filter((node) => node != null);
+  nodes.forEach((node, i) => {
+    var old = parent.childNodes[i];
+    if (old == null) parent.appendChild(node);
+    else morphNode(old, node);
+  });
+  while (parent.childNodes.length > nodes.length) parent.lastChild.remove();
+}
+
+function morphNode(old, fresh) {
+  if (old.nodeType != fresh.nodeType || old.nodeName != fresh.nodeName) return old.replaceWith(fresh);
+  if (old.nodeType != 1) {
+    if (old.nodeValue != fresh.nodeValue) old.nodeValue = fresh.nodeValue;
+    return;
+  }
+  // The same player's avatar: kept as it is (its picture may still be loading in the new one)
+  if (old.classList.contains("mm-avatar")) {
+    if (old.dataset.name != fresh.dataset.name || old.className != fresh.className) old.replaceWith(fresh);
+    return;
+  }
+  // (the tooltips move a title to data-tip - not a change)
+  var tip = old.dataset.tip;
+  for (var attr of [...old.attributes]) {
+    if (attr.name == "data-tip" || attr.name == "aria-label") continue;
+    if (!fresh.hasAttribute(attr.name)) old.removeAttribute(attr.name);
+  }
+  for (var attr2 of [...fresh.attributes]) {
+    if (attr2.name == "title" && tip != null) {
+      if (tip != attr2.value) old.dataset.tip = attr2.value;
+      continue;
+    }
+    if (old.getAttribute(attr2.name) != attr2.value) old.setAttribute(attr2.name, attr2.value);
+  }
+  morphChildren(old, [...fresh.childNodes]);
 }
 
 function copyText(text, button) {

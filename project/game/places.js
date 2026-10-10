@@ -13,8 +13,36 @@
  * rows: [{username, coins}] - stats(username): {chances, wagered} - prizes: Map
  * place -> prize (or none). Returns the rows sorted, with rank (and prize,
  * decided).
+ *
+ * need(username) (a season): the coins a player has to wager to get a place
+ * (counted with stats().chanceWagered: the wager since the current chance began).
+ * Who hasn't wagered that much yet stays on the board - after everybody with a
+ * place, without a place or a prize (rank null, pending: true) - every row with
+ * wager: {done, need}.
  */
 function place(rows, options = {}) {
+  if (options.need) {
+    const { need, ...rest } = options;
+    // (the wager of the current chance - or of the whole season, when not given per chance)
+    const done = (row) => {
+      const s = options.stats ? options.stats(row.username) : {};
+      return (s.chanceWagered != null ? s.chanceWagered : s.wagered) || 0;
+    };
+    const counted = [];
+    const pending = [];
+    for (const row of rows) {
+      row.wager = { done: done(row), need: need(row.username) };
+      (row.wager.done >= row.wager.need ? counted : pending).push(row);
+    }
+    const placed = place(counted, rest);
+    pending.sort((a, b) => b.coins - a.coins || b.wager.done - a.wager.done || a.username.localeCompare(b.username));
+    pending.forEach((row) => {
+      row.rank = null;
+      row.pending = true;
+      delete row.prize;
+    });
+    return [...placed, ...pending];
+  }
   const prizes = options.prizes && options.prizes.size ? options.prizes : null;
   const keys = new Map(rows.map((row) => [row, { chances: 0, wagered: 0, ...(options.stats ? options.stats(row.username) : {}) }]));
   const key = (row) => keys.get(row);

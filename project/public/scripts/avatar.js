@@ -5,9 +5,9 @@
  */
 var AVATAR_PARTS = {
   bg: [
-    "#3b4a6b", "#1f2a44", "#1f5f8b", "#0c4a6e", "#0f766e", "#3b6b5a", "#2e6b3a", "#365314",
-    "#6b5a3b", "#7a5230", "#7c2d12", "#6b3b45", "#8b3a62", "#831843", "#5b3b6b", "#4c1d95",
-    "#2f3e46", "#4a4a4a",
+    "#7c5cff", "#5b8def", "#38bdf8", "#3dc1d3", "#22c3a6", "#4cc96b", "#a3d45a", "#ffc93c",
+    "#ff9f43", "#ff7a59", "#ff6b6b", "#ff7eb6", "#e056fd", "#c56cf0", "#8e7cc3", "#f6c6a8",
+    "#2f3e66", "#4a4a5a",
   ],
   skin: ["#ffe8d6", "#fbe3cc", "#f3d2b3", "#e8b98f", "#d9a577", "#c48a5a", "#a86f43", "#8a5a36", "#5e3b22", "#3d2414"],
   hair: [
@@ -36,7 +36,8 @@ var AVATAR_PARTS = {
   ],
   accessory: [
     "none", "glasses", "roundglasses", "sunglasses", "dealwithit", "monocle", "eyepatch",
-    "scumbag", "cap", "beanie", "partyhat", "crown", "halo", "headphones", "flower",
+    "scumbag", "cap", "beanie", "bowler", "sombrero", "bandana", "partyhat", "headphones",
+    "flower", "mask", "ninja",
   ],
 };
 
@@ -55,7 +56,7 @@ var AVATAR_LABELS = {
 };
 
 var AVATAR_DEFAULT = {
-  bg: "#3b4a6b",
+  bg: "#7c5cff",
   skin: "#e8b98f",
   hair: "short",
   hairColor: "#4a2f1d",
@@ -286,7 +287,8 @@ var HAIR_TOP = {
 function drawHairFront(svg, c, hat, crown) {
   var hair = HAIR[c.hair];
   if (hair == null) return;
-  var dark = shade(c.hairColor, 28);
+  // Lighter strands: a shine on the hair (flat, no dark lines)
+  var shine = shade(c.hairColor, -38);
 
   // Cut to the head (a bit bigger than the face, so it covers the edge)
   var id = "mm-hair-" + ++avatarClipId;
@@ -299,13 +301,17 @@ function drawHairFront(svg, c, hat, crown) {
   var group = svgElement("g", { "clip-path": "url(#" + id + ")" });
   group.appendChild(svgElement("path", { d: hair.cap, fill: c.hairColor, opacity: hair.capOpacity || 1 }));
   if (hair.strands && !hat) {
-    group.appendChild(svgElement("path", withLine({ d: hair.strands }, dark, 1.2)));
+    group.appendChild(svgElement("path", Object.assign(withLine({ d: hair.strands }, shine, 1.6), { opacity: 0.55 })));
   }
   svg.appendChild(group);
 
   if (hair.top && !hat && !(crown && c.hair == "mohawk")) {
     svgAdd(svg, "path", { d: hair.top, fill: c.hairColor });
-    if (hair.strands) svgAdd(svg, "path", withLine({ d: hair.strands }, dark, 1.2));
+    if (hair.strands) svgAdd(svg, "path", Object.assign(withLine({ d: hair.strands }, shine, 1.6), { opacity: 0.55 }));
+  }
+  if (hair.wrap) {
+    svgAdd(svg, "path", { d: hair.wrap, fill: c.hairColor });
+    svgAdd(svg, "path", { d: "M30 70 Q50 82 70 70", fill: "none", stroke: shade(c.hairColor, 22), "stroke-width": 1.4, "stroke-linecap": "round", opacity: 0.6 });
   }
   if (hair.bands) {
     svgAdd(svg, "circle", { cx: 26, cy: 39, r: 2.5, fill: "#e0675a" });
@@ -389,8 +395,10 @@ function drawEyes(svg, c) {
   var left = 41;
   var right = 59;
   var y = 46;
+  // Ovals with a little shine
   var dot = function (x) {
-    svgAdd(svg, "circle", { cx: x, cy: y, r: 2.8, fill: INK });
+    svgAdd(svg, "ellipse", { cx: x, cy: y, rx: 2.7, ry: 3.3, fill: INK });
+    svgAdd(svg, "circle", { cx: x + 0.9, cy: y - 1.2, r: 0.95, fill: "#fff" });
   };
   switch (c.eyes) {
     case "happy":
@@ -504,6 +512,32 @@ function drawEyes(svg, c) {
   }
 }
 
+/*
+ * Eyebrows in the color of the hair (no hair: a bit darker than the skin).
+ * Some eyes bring their own (angry); surprised ones are raised, sad ones sink.
+ */
+var BROWS = {
+  angry: null,
+  surprised: "M36 38 Q41 35 46 37.5 M54 37.5 Q59 35 64 38",
+  stars: "M36 38.5 Q41 35.5 46 38 M54 38 Q59 35.5 64 38.5",
+  crying: "M36 40.5 Q41 38.5 46 39 M54 39 Q59 38.5 64 40.5",
+  tired: "M36 41 Q41 40 46 41 M54 41 Q59 40 64 41",
+  suspicious: "M36 41.5 Q41 40.5 46 41.5 M54 39.5 Q59 37.5 64 39",
+  side: "M36 40 Q41 38 46 40 M54 40 Q59 38 64 40",
+};
+
+function drawBrows(svg, c) {
+  var path = c.eyes in BROWS ? BROWS[c.eyes] : "M36 40.5 Q41 37.5 46 40 M54 40 Q59 37.5 64 40.5";
+  if (path == null) return;
+  var color = c.hair == "none" ? shade(c.skin, 70) : shade(c.hairColor, 20);
+  svgAdd(svg, "path", withLine({ d: path }, color, 2.2));
+}
+
+// A small soft nose, a bit darker than the skin
+function drawNose(svg, c) {
+  svgAdd(svg, "path", { d: "M47.6 51.4 Q50 47.6 52.4 51.4 Q50 53.2 47.6 51.4 Z", fill: shade(c.skin, 28) });
+}
+
 function drawMouth(svg, c) {
   var dark = "#3a1d1d";
   switch (c.mouth) {
@@ -570,14 +604,17 @@ function drawMouth(svg, c) {
       heart(svg, 60, 58, 2.6, "#e0475a");
       break;
     default:
-      svgAdd(svg, "path", withLine({ d: "M43 55 Q50 62 57 55" }, dark));
+      // An open smile: the teeth on top, the tongue below
+      svgAdd(svg, "path", { d: "M42.5 55.5 Q50 57 57.5 55.5 Q56.5 63.5 50 63.5 Q43.5 63.5 42.5 55.5 Z", fill: dark });
+      svgAdd(svg, "path", { d: "M45.5 60.8 Q50 58.6 54.5 60.8 Q52.5 63.5 50 63.5 Q47.5 63.5 45.5 60.8 Z", fill: "#e0675a" });
+      svgAdd(svg, "path", { d: "M43 55.6 Q50 57 57 55.6 L56.6 57.6 Q50 58.8 43.4 57.6 Z", fill: "#fff" });
   }
 }
 
 /* ----- Extras ----- */
 
 // Hats cover the hair on top of the head
-var HATS = ["scumbag", "cap", "beanie"];
+var HATS = ["scumbag", "cap", "beanie", "bowler", "sombrero", "bandana", "ninja"];
 
 function drawAccessory(svg, c) {
   switch (c.accessory) {
@@ -634,14 +671,48 @@ function drawAccessory(svg, c) {
       svgAdd(party, "circle", { cx: 50, cy: 3, r: 3, fill: "#f5d76e" });
       break;
     }
-    case "crown": {
-      var crown = onTop(svg, c, 20, 0.85);
-      svgAdd(crown, "path", { d: "M34 24 L36 10 L43 18 L50 6 L57 18 L64 10 L66 24 Z", fill: "#e8c050", stroke: "#b8902a", "stroke-width": 1.2 });
+    case "bowler":
+      svgAdd(svg, "path", { d: "M31 34 Q30 12 50 12 Q70 12 69 34 Z", fill: "#2b2b33" });
+      svgAdd(svg, "rect", { x: 31, y: 28, width: 38, height: 5, fill: "#7a3b3b" });
+      svgAdd(svg, "ellipse", { cx: 50, cy: 34.5, rx: 26, ry: 4, fill: "#1f1f26" });
+      break;
+    case "sombrero":
+      svgAdd(svg, "ellipse", { cx: 50, cy: 31, rx: 40, ry: 7.5, fill: "#e8b04a" });
+      svgAdd(svg, "path", { d: "M36 31 Q36 8 50 8 Q64 8 64 31 Z", fill: "#f0c35c" });
+      svgAdd(svg, "path", { d: "M36.5 25 Q50 28 63.5 25 L64 30 Q50 33 36 30 Z", fill: "#e0475a" });
+      svgAdd(svg, "path", { d: "M14 31 Q50 42 86 31", fill: "none", stroke: "#c98a2a", "stroke-width": 1.6 });
+      break;
+    case "bandana":
+      svgAdd(svg, "path", { d: "M26 38 Q26 17 50 16 Q74 17 74 38 Q62 32 50 32 Q38 32 26 38 Z", fill: c.shirt });
+      svgAdd(svg, "path", { d: "M73 33 L84 28 L82 37 Z M73 35 L83 42 L76 44 Z", fill: shade(c.shirt, 30) });
+      [[38, 23], [50, 21], [62, 23], [44, 28], [56, 28]].forEach(function (p) {
+        svgAdd(svg, "circle", { cx: p[0], cy: p[1], r: 1.3, fill: "#fff", opacity: 0.8 });
+      });
+      break;
+    case "mask":
+      // A medical mask over the nose and the mouth
+      svgAdd(svg, "path", { d: "M29 47 L38 50 M71 47 L62 50 M29 60 L38 62 M71 60 L62 62", stroke: "#e8f1f8", "stroke-width": 1.4 });
+      svgAdd(svg, "path", { d: "M37 49 Q50 45 63 49 L63 62 Q50 71 37 62 Z", fill: "#a8d8f0" });
+      svgAdd(svg, "path", { d: "M39 53.5 L61 53.5 M39 58 L61 58", stroke: "#86c2e2", "stroke-width": 1.2 });
+      break;
+    case "ninja": {
+      // Wrapped in cloth, only the eyes free
+      var id = "mm-ninja-" + ++avatarClipId;
+      var defs = svgElement("defs");
+      var clip = svgElement("clipPath", { id: id });
+      clip.appendChild(svgElement("ellipse", { cx: 50, cy: 46, rx: 24, ry: 26 }));
+      defs.appendChild(clip);
+      svg.appendChild(defs);
+      var cloth = "#2b2b38";
+      svgAdd(svg, "circle", { cx: 27, cy: 48, r: 5.5, fill: cloth });
+      svgAdd(svg, "circle", { cx: 73, cy: 48, r: 5.5, fill: cloth });
+      var wrap = svgElement("g", { "clip-path": "url(#" + id + ")" });
+      wrap.appendChild(svgElement("path", { d: "M0 0 H100 V40 Q50 37 0 40 Z M0 52 Q50 55 100 52 V100 H0 Z", fill: cloth }));
+      svg.appendChild(wrap);
+      svgAdd(svg, "path", { d: "M72 38 L86 32 L83 41 Z M72 40 L84 48 L77 49 Z", fill: "#e0475a" });
+      svgAdd(svg, "rect", { x: 26, y: 36.5, width: 48, height: 3.5, rx: 1.5, fill: "#e0475a" });
       break;
     }
-    case "halo":
-      svgAdd(svg, "ellipse", { cx: 50, cy: Math.max(9, HAIR_TOP[c.hair] - 9), rx: 15, ry: 4, fill: "none", stroke: "#f5d76e", "stroke-width": 2.5 });
-      break;
     case "headphones":
       svgAdd(svg, "path", { d: "M25 46 Q25 16 50 16 Q75 16 75 46", fill: "none", stroke: INK, "stroke-width": 4 });
       svgAdd(svg, "rect", { x: 20, y: 40, width: 9, height: 15, rx: 3, fill: "#e0675a" });
@@ -676,26 +747,32 @@ function onTop(svg, c, lowest, smaller) {
 // The whole avatar as an <svg> (square, the round shape comes from the CSS)
 function drawAvatar(config) {
   var c = cleanAvatar(config) || AVATAR_DEFAULT;
-  // Zoomed in a bit, so the face is easy to see in small avatars
-  var svg = svgElement("svg", { viewBox: "8 4 84 84", "aria-hidden": "true", class: "mm-avatar-svg" });
+  // Zoomed in: a big head with the shoulders, easy to see in small avatars
+  var svg = svgElement("svg", { viewBox: "10 6 80 80", "aria-hidden": "true", class: "mm-avatar-svg" });
   svgAdd(svg, "rect", { x: 0, y: 0, width: 100, height: 100, fill: c.bg });
   var hat = HATS.indexOf(c.accessory) >= 0;
-  var crown = c.accessory == "crown" || c.accessory == "partyhat";
-  drawHairBack(svg, c, hat ? "hat" : crown ? "crown" : null);
+  var crown = c.accessory == "partyhat";
+  if (c.accessory != "ninja") drawHairBack(svg, c, hat ? "hat" : crown ? "crown" : null);
   drawTop(svg, c);
   svgAdd(svg, "rect", { x: 44, y: 62, width: 12, height: 14, fill: shade(c.skin, 25) }); // neck
   // Hoodie: the hood lies around the neck
   if (c.top == "hoodie") svgAdd(svg, "path", { d: "M33 73 Q50 88 67 73 Q50 80 33 73 Z", fill: shade(c.shirt, 35) });
-  // Head and ears
-  svgAdd(svg, "circle", { cx: 27, cy: 48, r: 5, fill: c.skin });
-  svgAdd(svg, "circle", { cx: 73, cy: 48, r: 5, fill: c.skin });
+  // Head and ears (a head scarf covers the ears)
+  if (!(HAIR[c.hair] && HAIR[c.hair].noEars)) {
+    [27, 73].forEach(function (x) {
+      svgAdd(svg, "circle", { cx: x, cy: 48, r: 5, fill: c.skin });
+      svgAdd(svg, "circle", { cx: x + (x < 50 ? 0.6 : -0.6), cy: 48, r: 2.4, fill: shade(c.skin, 22) });
+    });
+  }
   svgAdd(svg, "ellipse", { cx: 50, cy: 46, rx: 23, ry: 25, fill: c.skin });
-  // Cheeks
-  svgAdd(svg, "circle", { cx: 36, cy: 54, r: 3.5, fill: "rgba(224,103,90,0.22)" });
-  svgAdd(svg, "circle", { cx: 64, cy: 54, r: 3.5, fill: "rgba(224,103,90,0.22)" });
+  // Soft cheeks
+  svgAdd(svg, "ellipse", { cx: 35.5, cy: 54, rx: 4.6, ry: 3.2, fill: "rgba(240,96,96,0.2)" });
+  svgAdd(svg, "ellipse", { cx: 64.5, cy: 54, rx: 4.6, ry: 3.2, fill: "rgba(240,96,96,0.2)" });
   drawBeard(svg, c);
   drawHairFront(svg, c, hat, crown);
+  drawBrows(svg, c);
   drawEyes(svg, c);
+  drawNose(svg, c);
   drawMouth(svg, c);
   drawMustache(svg, c);
   drawAccessory(svg, c);

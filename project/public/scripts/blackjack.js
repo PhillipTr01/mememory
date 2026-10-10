@@ -1,10 +1,15 @@
 /* Hidden blackjack: the server deals and decides, this page only shows the table (or the lobby). */
 // ?table=<id>: that table, without: the lobby with every table
 var TABLE_ID = new URLSearchParams(location.search).get("table");
-const socket = io("/blackjack", { query: { table: TABLE_ID || "lobby" } });
+const socket = io((window.CASINO_NS || "") + "/blackjack", { query: { table: TABLE_ID || "lobby" } });
 
 var myName = null;
 var myCoins = 0;
+var myCapRule = null; // the max bet by balance ({floor, share} - null: no cap), see casinoCapLeft
+// What more I may bet this round (`already`: my coins in it)
+function capLeft(already) {
+  return casinoCapLeft(myCapRule, myCoins, already);
+}
 var state = null;
 var previous = null;
 var selected = null; // the seat to bet on
@@ -49,9 +54,10 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
+  myCapRule = data.betCapRule || null;
   if (state) renderBars();
 });
-socket.on("blackjackError", (message) => showToast(message, "error"));
+socket.on("blackjackError", (message) => showHint(message, "error"));
 
 socket.on("blackjackState", (data) => {
   previous = state;
@@ -147,10 +153,62 @@ var CHIP_KEY = "bjChip";
 var chipValue = 100;
 try {
   chipValue = Number(localStorage.getItem(CHIP_KEY)) || 100;
-  // (a chip that is gone - the 5K: the biggest there is)
-  if (![10, 50, 100, 250, 500, 1000].includes(chipValue)) chipValue = 1000;
 } catch (error) {
   // only for now
+}
+
+/*
+ * The chips of a table: from its min bet (left) to its max bet (right), round steps in between that grow evenly -
+ * so they fit the limits the admin set. The colours go by place (the smallest grey ... the biggest copper).
+ */
+var CHIP_COUNT = 6;
+var CHIPS = [1000, 500, 250, 100, 50, 10]; // the chips of the table now, the biggest first (for the stacks on the fields)
+
+// A round number near `value` (1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5 times a power of ten)
+function roundChip(value) {
+  var power = Math.pow(10, Math.floor(Math.log10(Math.max(1, value))));
+  var best = null;
+  [1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5, 10].forEach((m) => {
+    var candidate = m * power;
+    if (candidate != Math.round(candidate)) return;
+    if (best == null || Math.abs(candidate - value) < Math.abs(best - value)) best = candidate;
+  });
+  return best != null ? best : Math.round(value);
+}
+
+function tableChips(min, max) {
+  if (!(max > min)) return [min];
+  var list = [min];
+  for (var i = 1; i < CHIP_COUNT - 1; i++) {
+    var value = roundChip(min * Math.pow(max / min, i / (CHIP_COUNT - 1)));
+    if (value > list[list.length - 1] && value < max) list.push(value);
+  }
+  list.push(max);
+  return list;
+}
+
+// The chip buttons for the limits of the table (built again only when they change)
+var shownChips = "";
+function renderChips() {
+  var list = tableChips(state.rules.minBet, state.rules.maxBet);
+  CHIPS = list.slice().reverse();
+  // The chip in the hand: one of these (the nearest)
+  if (!list.includes(chipValue)) chipValue = list.reduce((best, value) => (Math.abs(value - chipValue) < Math.abs(best - chipValue) ? value : best), list[0]);
+  var key = list.join(",");
+  if (key == shownChips) return;
+  shownChips = key;
+  document.querySelector(".bj-chips").replaceChildren(
+    ...list.map((value, i) => {
+      var chip = el("button", "bj-chip", shortCoins(value));
+      chip.type = "button";
+      chip.setAttribute("role", "radio");
+      chip.dataset.chip = value;
+      // (the colour by place - the biggest always copper)
+      chip.dataset.rank = String(CHIP_COUNT - list.length + i);
+      chip.title = "🪙 " + formatCoins(value);
+      return chip;
+    }),
+  );
 }
 var SIDE_NAMES = { pairs: "Perfect Pairs", plus3: "21+3" };
 
@@ -162,28 +220,30 @@ function placeChip(seatIndex, field) {
   if (field == "main") {
     // The first chip at least the table minimum
     var amount = seat.bet == 0 ? Math.max(chipValue, state.rules.minBet) : chipValue;
-    amount = Math.min(amount, state.rules.maxBet - seat.bet);
-    if (amount <= 0) return showToast("The most for this seat: 🪙 " + formatCoins(state.rules.maxBet) + ".", "error");
+    // (all my coins on the table this round count for the max bet by balance)
+    var onTable = state.seats.reduce((sum, s) => (s && s.name == myName ? sum + (s.bet || 0) + (s.side ? (s.side.pairs || 0) + (s.side.plus3 || 0) : 0) : sum), 0);
+    amount = Math.min(amount, state.rules.maxBet - seat.bet, capLeft(onTable));
+    if (amount <= 0 && capLeft(onTable) <= 0) return showHint("With your balance you can't bet more this round.", "error");
+    if (amount <= 0) return showHint("The most for this seat: 🪙 " + formatCoins(state.rules.maxBet) + ".", "error");
     socket.emit("bet", { seat: seatIndex, amount: amount });
   } else {
-    if (seat.bet == 0) return showToast("Place the main bet first.", "error");
+    if (seat.bet == 0) return showHint("Place the main bet first.", "error");
     // At most half the table's max bet per side bet
     var room = Math.floor(state.rules.maxBet * state.rules.sideShare) - seat.side[field];
-    if (room <= 0) return showToast(SIDE_NAMES[field] + ": at most 🪙 " + formatCoins(Math.floor(state.rules.maxBet * state.rules.sideShare)) + " (half the max bet).", "error");
+    if (room <= 0) return showHint(SIDE_NAMES[field] + ": at most 🪙 " + formatCoins(Math.floor(state.rules.maxBet * state.rules.sideShare)) + " (half the max bet).", "error");
     socket.emit("sideBet", { seat: seatIndex, type: field, amount: Math.min(chipValue, room) });
   }
 }
 
 // The three bet fields of an own seat while betting: Perfect Pairs, the bet, 21+3
-// The coins on a field as one chip (the colour of the biggest chip in it, the edge thicker for more chips)
-var CHIPS = [1000, 500, 250, 100, 50, 10];
+// The coins on a field as one chip (the colour of the biggest chip of the table in it, the edge thicker for more chips)
 function shortCoins(value) {
   if (value >= 1000) return (value / 1000).toFixed(value % 1000 ? 1 : 0).replace(".0", "") + "K";
   return String(value);
 }
 
 function chipFace(amount) {
-  var top = CHIPS.find((chip) => chip <= amount) || 10;
+  var top = CHIPS.find((chip) => chip <= amount) || CHIPS[CHIPS.length - 1];
   var count = 0;
   var rest = amount;
   CHIPS.forEach((chip) => {
@@ -192,6 +252,7 @@ function chipFace(amount) {
   });
   var face = el("span", "bj-chipface" + (count > 3 ? " tall" : count > 1 ? " stacked" : ""), shortCoins(amount));
   face.dataset.chip = top;
+  face.dataset.rank = String(CHIP_COUNT - CHIPS.length + (CHIPS.length - 1 - CHIPS.indexOf(top)));
   face.title = "🪙 " + formatCoins(amount);
   return face;
 }
@@ -549,6 +610,25 @@ function bumpShape(bump) {
   svg.firstChild.setAttribute("d", line + ` V${h + 3} H0 Z`);
 }
 
+// What the round brought me (the result phase): {total} - every hand and side bet of my seats together, null: not played
+function roundNet() {
+  var total = 0;
+  var sides = 0;
+  var played = false;
+  state.seats.forEach((seat) => {
+    if (!seat || seat.name != myName) return;
+    seat.hands.forEach((hand) => {
+      played = true;
+      total += (hand.payout || 0) - hand.bet;
+    });
+    (seat.sideResults || []).forEach((result) => {
+      played = true;
+      sides += (result.payout || 0) - result.bet;
+    });
+  });
+  return played ? { total: total + sides } : null;
+}
+
 // The own seats one can leave now (not while their cards are played)
 function standable() {
   return mySeats().filter((i) => state.phase == "betting" || state.seats[i].hands.length == 0);
@@ -565,6 +645,7 @@ function renderBars() {
   betBar.hidden = !canBet;
   // Clear all bets: when there are own bets on the table
   document.getElementById("bjClearBets").hidden = !(state.phase == "betting" && mySeats().some((i) => state.seats[i].bet > 0));
+  if (state.rules) renderChips();
   if (canBet) {
     var seat = state.seats[selected];
     document.querySelectorAll(".bj-chip").forEach((chip) => {
@@ -580,8 +661,15 @@ function renderBars() {
   var turn = state.phase == "playing" ? myTurn() : null;
   actions.hidden = canBet;
   actions.classList.toggle("idle", !turn);
-  if (!turn) {
-    document.getElementById("bjActionLabel").innerText = mySeats().length == 0 ? "Take a seat to play" : state.phase == "betting" ? "Pick your seat to bet" : "Waiting for your turn";
+  var label = document.getElementById("bjActionLabel");
+  label.classList.remove("plus", "minus");
+  var net = state.phase == "result" ? roundNet() : null;
+  if (!turn && net) {
+    // The round is paid: what it really brought - every own hand and every side bet together
+    label.innerText = (net.total > 0 ? "Win: " : net.total < 0 ? "Lose: " : "Push: ") + "🪙 " + formatCoins(Math.abs(net.total));
+    label.classList.add(net.total > 0 ? "plus" : net.total < 0 ? "minus" : "even");
+  } else if (!turn) {
+    label.innerText = mySeats().length == 0 ? "Take a seat to play" : state.phase == "betting" ? "Pick your seat to bet" : "Waiting for your turn";
     document.querySelectorAll("#bjActions [data-action]").forEach((button) => (button.disabled = true));
     var idleFill = document.getElementById("bjTurnFill");
     idleFill.style.transition = "none";
@@ -616,7 +704,7 @@ function renderHistory() {
       var hands = round.results.filter((r) => r.result != "side");
       var won = hands.filter((r) => r.payout > r.bet).length;
       var title = round.dealer > 21 ? "Dealer bust" : "Dealer " + round.dealer;
-      var sub = "Round " + round.round + " · " + won + " of " + hands.length + (hands.length == 1 ? " hand" : " hands") + " won";
+      var sub = "Round " + round.round + " · " + won + " / " + hands.length + (hands.length == 1 ? " hand" : " hands") + " won";
       // Own result: plus or minus; not played: nothing
       var value = mine.length ? (gain > 0 ? "+" : gain < 0 ? "−" : "±") + formatCoins(Math.abs(gain)) : "–";
       return historyItem(round.dealer > 21 ? "💥" : "🃏", title, sub, value, mine.length ? (gain > 0 ? "plus" : gain < 0 ? "minus" : "") : "muted");
@@ -646,7 +734,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (state) renderBars();
   };
-  document.querySelectorAll(".bj-chip").forEach((chip) => chip.addEventListener("click", () => pickChip(Number(chip.dataset.chip))));
+  // (the chips are made for every table: one listener for all of them)
+  document.querySelector(".bj-chips").addEventListener("click", (event) => {
+    var chip = event.target.closest(".bj-chip");
+    if (chip && !chip.disabled) pickChip(Number(chip.dataset.chip));
+  });
   document.querySelectorAll(".bj-chip-arrow").forEach((arrow) =>
     arrow.addEventListener("click", () => {
       var values = [...document.querySelectorAll(".bj-chip:not(:disabled)")].map((chip) => Number(chip.dataset.chip));
@@ -672,3 +764,7 @@ document.addEventListener("DOMContentLoaded", () => {
     socket.emit("rebet");
   });
 });
+
+// The whole table with its bars (seats, cards, chips, the buttons) a bit smaller when the screen isn't high enough (casino_fullscreen.js) -
+// again when the bet bar / the action bar comes or goes, and from the lobby to a table
+window.casinoFitGame(document.getElementById("bjTableView"), [document.getElementById("bjBetBar"), document.getElementById("bjActions"), document.getElementById("bjTableView")]);

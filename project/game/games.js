@@ -7,6 +7,8 @@ const config = require("./config");
  */
 const GAMES = [
   { id: "jackpot", key: "GAME_JACKPOT", name: "Jackpot", page: "/jackpot", tab: "./", namespace: "/jackpot" },
+  { id: "roulette", key: "GAME_ROULETTE", name: "Roulette", page: "/roulette", tab: "roulette", namespace: "/roulette" },
+  { id: "baucua", key: "GAME_BAUCUA", name: "Bầu Cua", page: "/baucua", tab: "baucua", namespace: "/baucua" },
   { id: "battles", key: "GAME_BATTLES", name: "Case battles", page: "/battles", tab: "battles", namespace: "/battles" },
   { id: "poker", key: "GAME_POKER", name: "Poker", page: "/poker", tab: "poker", namespace: "/poker" },
   { id: "blackjack", key: "GAME_BLACKJACK", name: "Blackjack", page: "/blackjack", tab: "blackjack", namespace: "/blackjack" },

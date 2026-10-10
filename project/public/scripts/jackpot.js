@@ -1,9 +1,14 @@
 /* Hidden jackpot: the server decides everything, this page only shows the pot. */
-const socket = io("/jackpot");
+const socket = io((window.CASINO_NS || "") + "/jackpot");
 
 var state = null;
 var myName = null;
 var myCoins = 0;
+var myCapRule = null; // the max bet by balance ({floor, share} - null: no cap), see casinoCapLeft
+// What more I may bet this round (`already`: my coins in it)
+function capLeft(already) {
+  return casinoCapLeft(myCapRule, myCoins, already);
+}
 var spunRound = null; // the draw animation runs once per round
 var spinning = false;
 var countdownTimer = null;
@@ -60,6 +65,7 @@ socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
   myCoins = data.coins;
+  myCapRule = data.betCapRule || null;
   document.getElementById("jpCoins").innerText = "🪙 " + formatCoins(data.coins);
   renderBet();
 });
@@ -72,9 +78,10 @@ socket.on("jackpotState", (data) => {
   state = data;
   if (state.phase == "drawing" && state.draw && spunRound !== state.round) {
     spunRound = state.round;
-    // Opened in the middle of the draw: no long spin
-    var short = previous == null || previous.round !== state.round || previous.phase != "countdown";
-    playDraw(short);
+    // Opened in the middle of the draw: the rest of it (the winner only when the draw is over) - only at its very end a short one
+    var late = previous == null || previous.round !== state.round || previous.phase != "countdown";
+    var left = state.spinLeft != null ? state.spinLeft : state.spin;
+    playDraw(late && left < 2500, late ? Math.max(900, left - 900) : null);
     return;
   }
   if (state.phase == "open" && previous && previous.round !== state.round) {
@@ -167,9 +174,9 @@ function drawBets() {
   return (state.bets || []).map((bet) => ({ name: bet.name, coins: bet.amount, from: bet.from, to: bet.to }));
 }
 
-function playDraw(short) {
+function playDraw(short, length) {
   var draw = state.draw;
-  var duration = short ? 900 : state.spin - 900;
+  var duration = short ? 900 : length || state.spin - 900;
   var stage = document.getElementById("jpStage");
   spinning = true;
   // (after the draw the waiting scene is built again)
@@ -282,6 +289,69 @@ function recordCard(id, label, round, icon) {
   var parts = [picture, title, name];
   if (round) parts.push(el("span", "jp-record-amount", formatCoins(round.total)), el("span", "jp-record-chance", chanceOf(round.coins, round.total) + "% chance"));
   card.replaceChildren(...parts);
+  // A click: everybody who was in that round
+  card.classList.toggle("clickable", round != null);
+  card.onclick = round ? () => showRound(round, label) : null;
+  card.title = round ? "Who was in this round?" : "";
+}
+
+// A round of the past: the winner on top, then everybody who was in the pot (biggest first) with their chance
+function showRound(round, label) {
+  var backdrop = el("div", "mm-dialog-backdrop jp-round-backdrop");
+  var dialog = el("div", "mm-dialog jp-round");
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  var close = () => backdrop.remove();
+  var x = el("button", "jp-round-close", "✕");
+  x.type = "button";
+  x.setAttribute("aria-label", "Close");
+  x.addEventListener("click", close);
+
+  var head = el("div", "jp-round-head");
+  var crown = el("div", "jp-round-crown");
+  crown.append(createAvatar(round.winner, "lg"), el("span", "jp-round-crown-icon", "👑"));
+  head.append(el("span", "jp-round-label", (label ? label + " · " : "") + "Round " + round.round), crown, el("b", "jp-round-winner", round.winner == "Ghost" ? "👻 Ghost" : round.winner), el("span", "jp-round-won", "won 🪙 " + formatCoins(round.payout != null ? round.payout : round.total)));
+  var facts = el("div", "jp-round-facts");
+  var fact = (value, text) => {
+    var box = el("div", "jp-round-fact");
+    box.append(el("b", "", value), el("span", "", text));
+    return box;
+  };
+  var joined = round.players || [{ name: round.winner, coins: round.coins }];
+  // (the colors of that round: in the order the players joined it)
+  var colorOf = (name) => SHARE_COLORS[Math.max(0, joined.findIndex((p) => p.name == name)) % SHARE_COLORS.length];
+  // (the biggest first - equal: the winner first)
+  var players = joined.slice().sort((a, b) => b.coins - a.coins || (b.name == round.winner) - (a.name == round.winner));
+  facts.append(fact("🪙 " + formatCoins(round.total), "in the pot"), fact(chanceOf(round.coins, round.total) + "%", "winner's chance"), fact(String(players.length), players.length == 1 ? "player" : "players"));
+
+  var list = el("div", "jp-round-list");
+  players.forEach((player) => {
+    var row = el("div", "jp-round-row" + (player.name == round.winner ? " winner" : "") + (player.name == myName ? " me" : ""));
+    var share = round.total > 0 ? player.coins / round.total : 0;
+    var who = el("span", "jp-round-who");
+    who.append(player.ghost ? el("span", "jp-round-ghost", "👻") : createAvatar(player.name, "sm"), el("span", "jp-round-name", player.ghost ? "Ghost" : player.name));
+    if (player.name == myName) who.appendChild(el("span", "player-tag", "You"));
+    if (player.name == round.winner) who.appendChild(el("span", "jp-round-tag", "👑 Winner"));
+    var bar = el("span", "jp-round-bar");
+    var fill = el("span", "jp-round-fill");
+    fill.style.width = Math.max(2, share * 100) + "%";
+    fill.style.background = player.ghost ? "" : colorOf(player.name);
+    bar.appendChild(fill);
+    row.append(who, el("span", "jp-round-coins", "🪙 " + formatCoins(player.coins)), el("span", "jp-round-chance", chanceOf(player.coins, round.total) + "%"), bar);
+    list.appendChild(row);
+  });
+  if (!round.players) list.appendChild(el("p", "jp-round-old", "This round is from before - only the winner is known."));
+
+  dialog.append(x, head, facts, list);
+  backdrop.appendChild(dialog);
+  backdrop.addEventListener("click", (event) => event.target == backdrop && close());
+  document.addEventListener("keydown", function onKey(event) {
+    if (event.key != "Escape") return;
+    close();
+    document.removeEventListener("keydown", onKey);
+  });
+  document.body.appendChild(backdrop);
+  x.focus();
 }
 
 function renderRecords() {
@@ -297,9 +367,13 @@ function renderHistory() {
   document.getElementById("jpHistoryEmpty").hidden = state.history.length > 0;
   // Only the last three winners
   list.replaceChildren(
-    ...state.history.slice(0, 3).map((round) =>
-      historyItem(createAvatar(round.winner, "sm"), round.winner, "Round " + round.round + " · " + chanceOf(round.coins, round.total) + "% chance", "🪙 " + formatCoins(round.payout != null ? round.payout : round.total)),
-    ),
+    ...state.history.slice(0, 3).map((round) => {
+      var item = historyItem(createAvatar(round.winner, "sm"), round.winner, "Round " + round.round + " · " + chanceOf(round.coins, round.total) + "% chance", "🪙 " + formatCoins(round.payout != null ? round.payout : round.total));
+      // A click: everybody who was in it
+      item.classList.add("clickable");
+      item.addEventListener("click", () => showRound(round));
+      return item;
+    }),
   );
 }
 
@@ -342,7 +416,8 @@ function renderBet() {
   // All bets of a round together: at most maxCoins
   var myAmount = counted.filter((bet) => bet.name == myName).reduce((sum, bet) => sum + bet.amount, 0);
   var coinsLeft = state.maxCoins != null ? Math.max(0, state.maxCoins - myAmount) : Infinity;
-  var room = betsLeft > 0 ? Math.min(myCoins, coinsLeft) : 0;
+  // (and never more than the max bet by balance)
+  var room = betsLeft > 0 ? Math.min(myCoins, coinsLeft, capLeft(myAmount)) : 0;
   var open = true;
   var button = document.getElementById("jpBetButton");
   button.lastChild.textContent = drawing ? " Next pot" : " Put in";

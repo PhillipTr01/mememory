@@ -123,6 +123,26 @@ function memoryModel(Model) {
 }
 
 const coinLogs = memoryModel(CoinLog);
+// aggregate(): [{$match}, {$group: {_id: "$field", <name>: {$sum: 1 | "$field" | {$multiply: ["$a", "$b"]}}}}] - enough for the RTP monitor
+CoinLog.aggregate = async (pipeline) => {
+  let rows = coinLogs.slice();
+  for (const stage of pipeline) {
+    if (stage.$match) rows = rows.filter((row) => matches(row, stage.$match));
+    if (stage.$group) {
+      const { _id, ...fields } = stage.$group;
+      const value = (row, spec) => (spec === 1 ? 1 : typeof spec === "string" ? row[spec.slice(1)] : spec.$multiply.reduce((product, part) => product * value(row, part), 1));
+      const groups = new Map();
+      for (const row of rows) {
+        const key = row[_id.slice(1)];
+        const group = groups.get(key) || { _id: key, ...Object.fromEntries(Object.keys(fields).map((name) => [name, 0])) };
+        for (const [name, spec] of Object.entries(fields)) group[name] += value(row, spec.$sum);
+        groups.set(key, group);
+      }
+      rows = [...groups.values()];
+    }
+  }
+  return rows;
+};
 const withdrawals = memoryModel(Withdrawal);
 const settings = memoryModel(Setting);
 
@@ -158,6 +178,21 @@ async function startServer() {
   const poker = require("../sockets/poker_server")(io);
   const blackjack = require("../sockets/blackjack_server")(io);
   const slots = require("../sockets/slots_server")(io);
+  const roulette = require("../sockets/roulette_server")(io);
+  const baucua = require("../sockets/baucua_server")(io);
+  // The admin's test world (game/worlds.js)
+  const worlds = require("../game/worlds");
+  const test = {};
+  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua"]) {
+    test[game] = require(`../sockets/${game}_server`)(io, { world: worlds.TEST });
+    worlds.servers.set(game, test[game]);
+  }
+  // The season world (game/seasons.js)
+  const season = {};
+  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua"]) {
+    season[game] = require(`../sockets/${game}_server`)(io, { world: worlds.SEASON });
+    worlds.seasonServers.set(game, season[game]);
+  }
   require("../sockets/casino_server")(io);
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
@@ -170,6 +205,10 @@ async function startServer() {
     poker,
     blackjack,
     slots,
+    roulette,
+    baucua,
+    test,
+    season,
     client(namespace, token, query) {
       return connect(`http://localhost:${port}${namespace}`, {
         query: query || {},

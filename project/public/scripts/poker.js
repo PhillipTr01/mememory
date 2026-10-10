@@ -1,8 +1,13 @@
 /* Hidden poker: the server deals and decides, this page only shows the table. */
-const socket = io("/poker");
+const socket = io((window.CASINO_NS || "") + "/poker");
 
 var myName = null;
 var myCoins = 0;
+var myCapRule = null; // the max bet by balance ({floor, share} - null: no cap), see casinoCapLeft
+// What more I may bet this round (`already`: my coins in it)
+function capLeft(already) {
+  return casinoCapLeft(myCapRule, myCoins, already);
+}
 var state = null;
 var previous = null;
 var timerFrame = null;
@@ -113,9 +118,10 @@ socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
   myCoins = data.coins;
+  myCapRule = data.betCapRule || null;
 });
 
-socket.on("pokerError", (message) => showToast(message, "error"));
+socket.on("pokerError", (message) => showHint(message, "error"));
 
 socket.on("pokerState", (data) => {
   previous = state;
@@ -626,9 +632,10 @@ function buyIn(seat) {
     title: "Take a seat",
     text: "Your coins become chips. When you stand up, the chips are coins again.",
     min: state.rules.minBuyIn,
-    max: state.rules.maxBuyIn,
+    // (never more than the max bet by balance)
+    max: Math.max(state.rules.minBuyIn, Math.min(state.rules.maxBuyIn, capLeft(0))),
     // (10,000 to start with - or less, with fewer coins)
-    value: Math.max(state.rules.minBuyIn, Math.min(state.rules.defaultBuyIn || 10000, state.rules.maxBuyIn, myCoins)),
+    value: Math.max(state.rules.minBuyIn, Math.min(state.rules.defaultBuyIn || 10000, state.rules.maxBuyIn, myCoins, capLeft(0))),
     button: "Sit down",
     done: (amount) => socket.emit("sit", { seat: seat, buyIn: amount }),
   });
@@ -636,7 +643,8 @@ function buyIn(seat) {
 
 function addChips() {
   var seat = state.seats[mySeat()];
-  var room = state.rules.maxBuyIn - seat.stack;
+  // (the chips at the table count for the max bet by balance)
+  var room = Math.min(state.rules.maxBuyIn - seat.stack, capLeft(seat.stack));
   chipsDialog({
     title: "Add chips",
     text: "Up to " + formatCoins(state.rules.maxBuyIn) + " chips at the table.",
@@ -724,3 +732,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("pkStand").addEventListener("click", () => socket.emit("stand"));
   document.getElementById("pkAddChips").addEventListener("click", addChips);
 });
+
+// The whole table (seats, cards, chips) a bit smaller when the screen isn't high enough (casino_fullscreen.js)
+window.casinoFitGame(document.querySelector(".pk-table-wrap"), [document.getElementById("pkSeatBar"), document.getElementById("pkDecide")]);

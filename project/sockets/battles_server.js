@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const testMode = require("../game/test_mode");
 const config = require("../game/config");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
@@ -36,10 +37,15 @@ const BOT_NAMES = ["Bot Pepe", "Bot Doge", "Bot Wojak"];
  * or random: one of all the others, decided by the seed (provably fair) and
  * shown only at the end.
  */
-module.exports = function (io) {
-  const battles = io.of("/battles");
+module.exports = function (io, options = {}) {
+  // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
+  const world = options.world || "";
+  const { coins, persist, live, inPlay, casinoLock, casinoChat, limits } = require("../game/worlds").services(world);
+  const battles = io.of(world + "/battles");
   battles.use(socketAuth.casino);
   casinoChat.attach(battles, ROOM);
+  // The biggest wins of the case battles (the side of the page)
+  const best = require("../game/best_wins").attach(battles, "battle win", world);
 
   const lobby = {
     list: new Map(), // id -> battle
@@ -121,6 +127,10 @@ module.exports = function (io) {
       // Jackpot: the drawn ticket (in coins of the pot) - after the end
       ticket: done && ruleOf(battle) === "jackpot" ? battle.ticket : null,
       nextIn: battle.nextAt != null ? Math.max(0, battle.nextAt - Date.now()) : null,
+      // A page opened in the middle: how long ago the last case started rolling, how long the end still plays
+      roundAgo: battle.phase === PHASE.RUNNING && battle.revealed > 0 ? Math.max(0, Date.now() - (battle.begin + (battle.revealed - 1) * config.BATTLE_ROUND)) : null,
+      endLeft: done && battle.doneAt ? Math.max(0, battle.doneAt + endWait(battle) - Date.now()) : null,
+      doneAgo: done && battle.doneAt ? Math.max(0, Date.now() - battle.doneAt) : null,
       winner: done ? battle.winner : null, // seat (the first one of a tie)
       winners: done ? winnersOf(battle) : null, // seats - a tie: all of them, they split the pot
       shares: done ? sharesOf(battle) : null, // what each of them gets
@@ -187,6 +197,11 @@ module.exports = function (io) {
     if (modeOf(battle) === "random") {
       const options = randomOptions(battle);
       battle.picked = options[Math.floor(cases.roll(battle.fair.seed, `${battle.id}:mode`) * options.length)];
+      // (debug, the test world only: the mode the admin picked)
+      if (forcedMode) {
+        battle.picked = forcedMode;
+        forcedMode = null;
+      }
       battle.crazy = battle.picked === "crazy";
     }
     const all = totals(battle, battle.results);
@@ -268,12 +283,20 @@ module.exports = function (io) {
         // (a bot's share stays in the house)
         if (winner.bot || shares[i] <= 0) return;
         try {
-          await coins.add(winner.name, shares[i], { reason: "battle win", note: shares.length > 1 ? "split pot" : undefined });
+          // (the note: the mode and how many played - for the best wins)
+          await coins.add(winner.name, shares[i], { reason: "battle win", note: [battle.mode, battle.seats.length + " players", shares.length > 1 ? "split pot" : null].filter(Boolean).join(" · ") });
+          best.changed();
         } catch (error) {
           console.error("[battles] Could not pay a winner:", error);
         }
       }),
     );
+  }
+
+  // How long the pages play the end (random: the mode reveal, jackpot: the roulette) before the winner is paid
+  function endWait(battle) {
+    const random = modeOf(battle) === "random";
+    return (random ? config.BATTLE_MODE_REVEAL : 0) + (ruleOf(battle) === "jackpot" ? Math.max(0, config.BATTLE_JACKPOT_DRAW - (random ? 3000 : 0)) : 0);
   }
 
   function finish(battle) {
@@ -283,8 +306,7 @@ module.exports = function (io) {
     // Random: the pages show which mode it was first - then the coins come
     // (jackpot: the roulette rolls on the pages first)
     // (random -> jackpot: the roulette right after the reveal - without its own pause of 3 s)
-    const random = modeOf(battle) === "random";
-    const wait = (random ? config.BATTLE_MODE_REVEAL : 0) + (ruleOf(battle) === "jackpot" ? Math.max(0, config.BATTLE_JACKPOT_DRAW - (random ? 3000 : 0)) : 0);
+    const wait = endWait(battle);
     // The last battles (with the winner) only when the pages showed it - not during a reveal
     const done = () => {
       payWinner(battle);
@@ -300,13 +322,24 @@ module.exports = function (io) {
     remove(battle, config.BATTLE_KEEP);
   }
 
+  // The coins of a player in battles that wait or run - the max bet by balance counts for them together
+  function inBattles(username) {
+    return [...lobby.list.values()].filter((b) => (b.phase === PHASE.WAITING || b.phase === PHASE.RUNNING) && b.seats.some((seat) => seat && !seat.bot && seat.name === username)).reduce((sum, b) => sum + b.price, 0);
+  }
+
   // Takes the coins and puts the user (or a bot) into a free seat
   async function sit(socket, battle, username) {
     if (busy.has(username)) return false;
+    // Test coins never play against real coins: a tester only with bots (and only alone among people)
+    const others = battle.seats.filter((seat) => seat && !seat.bot && seat.name !== username);
+    if (others.some((seat) => testMode.active(seat.name) !== testMode.active(username))) {
+      socket.emit("battleError", testMode.active(username) ? testMode.MESSAGE : "🧪 This battle is a test of the admin - only bots can join it.");
+      return false;
+    }
     busy.add(username);
     try {
-      if (!(await coins.spend(username, battle.price, { reason: "battle" }))) {
-        socket.emit("battleError", "You don't have enough coins.");
+      if (!(await coins.spend(username, battle.price, { reason: "battle", round: inBattles(username) }))) {
+        socket.emit("battleError", coins.refusal(username) || "You don't have enough coins.");
         return false;
       }
       const seat = battle.seats.indexOf(null);
@@ -348,7 +381,7 @@ module.exports = function (io) {
     socket.join(ROOM);
     socket.emit("joined", { username: username });
     socket.emit("cases", cases.catalog());
-    socket.emit("battleRules", { maxCases: config.BATTLE_MAX_CASES, maxCost: config.BATTLE_MAX_COST });
+    socket.emit("battleRules", { maxCases: limits.BATTLE_MAX_CASES, maxCost: limits.BATTLE_MAX_COST });
     casinoChat.join(socket);
     emitList();
     sendCoins(username).catch((error) => console.error("[battles] Could not load coins:", error));
@@ -362,20 +395,21 @@ module.exports = function (io) {
         // Up to BATTLE_MAX_CASES cases (one round each)
         if (ids.length < 1 || !ids.every((id) => cases.caseById(id))) return;
         if (!ids.every((id) => cases.enabled(id))) return socket.emit("battleError", "One of these cases is not available anymore.");
-        if (ids.length > config.BATTLE_MAX_CASES) {
-          socket.emit("battleError", `At most ${config.BATTLE_MAX_CASES} cases per battle.`);
+        if (ids.length > limits.BATTLE_MAX_CASES) {
+          socket.emit("battleError", `At most ${limits.BATTLE_MAX_CASES} cases per battle.`);
           return;
         }
         // What one seat costs: all its cases together - at most BATTLE_MAX_COST
         const cost = ids.reduce((sum, id) => sum + cases.caseById(id).price, 0);
-        if (cost > config.BATTLE_MAX_COST) {
-          socket.emit("battleError", `A battle costs at most 🪙 ${config.BATTLE_MAX_COST.toLocaleString("en-US")} per player.`);
+        if (cost > limits.BATTLE_MAX_COST) {
+          socket.emit("battleError", `A battle costs at most 🪙 ${limits.BATTLE_MAX_COST.toLocaleString("en-US")} per player.`);
           return;
         }
         if (!SIZES.includes(data.size)) return;
-        const open = [...lobby.list.values()].filter((b) => b.creator === username && b.phase === PHASE.WAITING);
-        if (open.length >= config.BATTLE_MAX_OPEN) {
-          socket.emit("battleError", `At most ${config.BATTLE_MAX_OPEN} open battles at a time.`);
+        // Waiting and running battles of the creator count (a battle filled with bots is still one of theirs)
+        const open = [...lobby.list.values()].filter((b) => b.creator === username && (b.phase === PHASE.WAITING || b.phase === PHASE.RUNNING));
+        if (open.length >= limits.BATTLE_MAX_OPEN) {
+          socket.emit("battleError", `At most ${limits.BATTLE_MAX_OPEN} battles of yours at a time - wait until one is over.`);
           return;
         }
         const battle = {
@@ -430,6 +464,27 @@ module.exports = function (io) {
       }),
     );
 
+    // Everybody but the creator, only while waiting: the seat is free again, the coins come back
+    socket.on(
+      "leaveBattle",
+      safe("leaveBattle", async (id) => {
+        const battle = lobby.list.get(id);
+        if (battle == null || battle.phase !== PHASE.WAITING || battle.creator === username || busy.has(username)) return;
+        const seat = battle.seats.findIndex((s) => s && !s.bot && s.name === username);
+        if (seat < 0) return;
+        busy.add(username);
+        try {
+          battle.seats[seat] = null;
+          emitList();
+          await coins.add(username, battle.price, { reason: "battle refund", note: "left" });
+        } finally {
+          busy.delete(username);
+          sendCoins(username).catch(() => {});
+        }
+        socket.emit("battleLeft", battle.id);
+      }),
+    );
+
     // Only the creator, only while waiting: everybody gets the coins back
     socket.on(
       "cancelBattle",
@@ -440,15 +495,6 @@ module.exports = function (io) {
       }),
     );
 
-    // Free coins once a day when (almost) broke - the same as on the jackpot page
-    socket.on(
-      "claimBonus",
-      safe("claimBonus", async () => {
-        const paid = await coins.claim(username);
-        if (paid) socket.emit("bonusClaimed", paid);
-        await sendCoins(username);
-      }),
-    );
 
     socket.on(
       "sendChatMessage",
@@ -509,9 +555,28 @@ module.exports = function (io) {
     [...lobby.list.values()].some((battle) => {
       if (!battle.seats.some((seat) => seat && seat.name === name)) return false;
       if (battle.phase === PHASE.WAITING || battle.phase === PHASE.RUNNING) return true;
+      // The end still plays on the pages (the mode reveal, the jackpot roulette): nobody lost yet
+      if (battle.phase === PHASE.DONE && battle.doneAt && Date.now() < battle.doneAt + endWait(battle)) return true;
       return battle.phase === PHASE.DONE && battle.payAtEnd && !battle.paid && winnersOf(battle).some((seat) => battle.seats[seat].name === name);
     }),
   );
 
-  return { lobby };
+  // Debug (the admin's test world): the mode the next random battle picks; a waiting battle filled with bots
+  let forcedMode = null;
+  function forceMode(mode) {
+    forcedMode = randomOptions().includes(mode) ? mode : null;
+    return true;
+  }
+  async function fillWithBots(username) {
+    const battle = [...lobby.list.values()].find((b) => b.phase === PHASE.WAITING && b.seats.some((s) => s && s.name === username));
+    if (!battle) return false;
+    while (battle.phase === PHASE.WAITING && battle.seats.includes(null)) {
+      const name = BOT_NAMES.find((bot) => !battle.seats.some((s) => s && s.name === bot));
+      battle.seats[battle.seats.indexOf(null)] = { name: name, bot: true };
+    }
+    startIfFull(battle);
+    return true;
+  }
+
+  return { lobby, forceMode, fillWithBots };
 };

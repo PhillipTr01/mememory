@@ -21,30 +21,36 @@
 <body class="jackpot-theme ad-body">
     <div class="ad-shell">
         <!--- Navigation --->
-        <aside class="ad-side">
+        <aside class="ad-side" data-hint-right>
             <div class="ad-brand">
                 <span class="ad-brand-icon">🛠️</span>
                 <div class="ad-brand-text"><b>MemeMory</b><span>Casino admin</span></div>
             </div>
             <nav class="ad-nav" aria-label="Admin">
                 <a href="#overview" class="ad-nav-item" data-tab="overview"><span class="ad-nav-icon">📊</span><span class="ad-nav-label">Overview</span><span id="adOverviewBadge" class="ad-count" hidden></span></a>
-                <a href="#access" class="ad-nav-item" data-tab="access"><span class="ad-nav-icon">🔑</span><span class="ad-nav-label">Access</span><span id="adWaitingBadge" class="ad-count" hidden></span></a>
-                <a href="#players" class="ad-nav-item" data-tab="players"><span class="ad-nav-icon">🏆</span><span class="ad-nav-label">Players</span></a>
+                <a href="#players" class="ad-nav-item" data-tab="players"><span class="ad-nav-icon">👥</span><span class="ad-nav-label">Players</span><span id="adWaitingBadge" class="ad-count" hidden></span></a>
                 <a href="#payouts" class="ad-nav-item" data-tab="payouts"><span class="ad-nav-icon">💸</span><span class="ad-nav-label">Payouts</span></a>
                 <a href="#history" class="ad-nav-item" data-tab="history"><span class="ad-nav-icon">📜</span><span class="ad-nav-label">History</span></a>
-                <a href="#cases" class="ad-nav-item" data-tab="cases"><span class="ad-nav-icon">🎁</span><span class="ad-nav-label">Cases</span></a>
+                <a href="#rtp" class="ad-nav-item" data-tab="rtp"><span class="ad-nav-icon">📈</span><span class="ad-nav-label">RTP monitor</span><span id="adRtpDot" class="ad-state off" hidden></span></a>
                 <a href="#seasons" class="ad-nav-item" data-tab="seasons"><span class="ad-nav-icon">🗓️</span><span class="ad-nav-label">Seasons</span><span id="adSeasonBadge" class="ad-state on" hidden></span></a>
                 <a href="#chat" class="ad-nav-item" data-tab="chat"><span class="ad-nav-icon">💬</span><span class="ad-nav-label">Chat</span></a>
-                <a href="#settings" class="ad-nav-item" data-tab="settings"><span class="ad-nav-icon">⚙️</span><span class="ad-nav-label">Settings</span></a>
-                <!--- The pages of the settings: general and one per game --->
-                <div class="ad-subnav" id="adSettingsNav">
-                    <a href="#settings/general" class="ad-nav-item ad-sub" data-group="general"><span class="ad-nav-label">General</span></a>
-                    <a href="#settings/jackpot" class="ad-nav-item ad-sub" data-group="jackpot"><span class="ad-nav-label">Jackpot</span><span class="ad-state" data-game="GAME_JACKPOT"></span></a>
-                    <a href="#settings/battles" class="ad-nav-item ad-sub" data-group="battles"><span class="ad-nav-label">Case battles</span><span class="ad-state" data-game="GAME_BATTLES"></span></a>
-                    <a href="#settings/poker" class="ad-nav-item ad-sub" data-group="poker"><span class="ad-nav-label">Poker</span><span class="ad-state" data-game="GAME_POKER"></span></a>
-                    <a href="#settings/blackjack" class="ad-nav-item ad-sub" data-group="blackjack"><span class="ad-nav-label">Blackjack</span><span class="ad-state" data-game="GAME_BLACKJACK"></span></a>
-                    <a href="#settings/slots" class="ad-nav-item ad-sub" data-group="slots"><span class="ad-nav-label">Slots</span><span class="ad-state" data-game="GAME_SLOTS"></span></a>
-                </div>
+                <!--- The games: a page each with its settings (case battles: with the cases) --->
+                <span class="ad-nav-head">Games</span>
+                <a href="#games/jackpot" class="ad-nav-item" data-group="jackpot"><span class="ad-nav-icon">💰</span><span class="ad-nav-label">Jackpot</span><span class="ad-state" data-game="GAME_JACKPOT"></span></a>
+                <a href="#games/roulette" class="ad-nav-item" data-group="roulette"><span class="ad-nav-icon">🎡</span><span class="ad-nav-label">Roulette</span><span class="ad-state" data-game="GAME_ROULETTE"></span></a>
+                <a href="#games/baucua" class="ad-nav-item" data-group="baucua"><span class="ad-nav-icon">🦀</span><span class="ad-nav-label">Bầu Cua</span><span class="ad-state" data-game="GAME_BAUCUA"></span></a>
+                <a href="#games/battles" class="ad-nav-item" data-group="battles"><span class="ad-nav-icon">🎁</span><span class="ad-nav-label">Case battles</span><span class="ad-state" data-game="GAME_BATTLES"></span></a>
+                <a href="#games/poker" class="ad-nav-item" data-group="poker"><span class="ad-nav-icon">♠️</span><span class="ad-nav-label">Poker</span><span class="ad-state" data-game="GAME_POKER"></span></a>
+                <a href="#games/blackjack" class="ad-nav-item" data-group="blackjack"><span class="ad-nav-icon">🃏</span><span class="ad-nav-label">Blackjack</span><span class="ad-state" data-game="GAME_BLACKJACK"></span></a>
+                <a href="#games/slots" class="ad-nav-item" data-group="slots"><span class="ad-nav-icon">🎰</span><span class="ad-nav-label">Slots</span><span class="ad-state" data-game="GAME_SLOTS"></span></a>
+                <!--- The whole casino --->
+                <span class="ad-nav-head">Casino</span>
+                <a href="#casino/general" class="ad-nav-item" data-group="general"><span class="ad-nav-icon">⚙️</span><span class="ad-nav-label">General</span></a>
+                <a href="#casino/test" class="ad-nav-item" data-group="test"><span class="ad-nav-icon">🧪</span><span class="ad-nav-label">Test mode</span><span id="adTestDot" class="ad-state" hidden></span></a>
+                <a href="#casino/streak" class="ad-nav-item" data-group="streak"><span class="ad-nav-icon">🔥</span><span class="ad-nav-label">Daily streak</span></a>
+                <a href="#casino/rain" class="ad-nav-item" data-group="rain"><span class="ad-nav-icon">💸</span><span class="ad-nav-label">Money rain</span><span id="adRainDot" class="ad-state on" hidden></span></a>
+                <a href="#casino/shop" class="ad-nav-item" data-group="shop"><span class="ad-nav-icon">🛍️</span><span class="ad-nav-label">Shop</span><span id="adShopDot" class="ad-state" hidden></span></a>
+                <a href="#casino/maintenance" class="ad-nav-item" data-group="maintenance"><span class="ad-nav-icon">🔧</span><span class="ad-nav-label">Maintenance</span><span id="adMaintDot" class="ad-state" hidden></span></a>
             </nav>
             <button type="button" id="adLogout" class="ad-nav-item ad-logout"><span class="ad-nav-icon">↩</span><span class="ad-nav-label">Log out</span></button>
         </aside>
@@ -56,7 +62,7 @@
                     <p id="adPageSub" class="ad-page-sub"></p>
                 </div>
                 <span class="ad-head-pills">
-                    <a id="adMaintBadge" href="#settings/general" class="ad-pill ad-maint-pill" hidden>🔧 Maintenance on</a>
+                    <a id="adMaintBadge" href="#casino/maintenance" class="ad-pill ad-maint-pill" hidden>🔧 Maintenance on</a>
                     <span id="adOpenBadge" class="ad-pill danger" hidden></span>
                 </span>
             </header>
@@ -94,47 +100,26 @@
                 </div>
             </section>
 
-            <!--- Access: who may play in the casino --->
-            <section id="tab-access" class="ad-tab" hidden>
-                <div class="ad-card">
+            <!--- Players: every account - access, coins, payout, history - in one list --->
+            <section id="tab-players" class="ad-tab" hidden>
+                <div id="adPlayerList" class="ad-card">
                     <div class="ad-card-head">
-                        <h2 class="ad-title">Every account</h2>
-                        <input id="adAccessSearch" class="mm-input ad-search" placeholder="Search a player">
+                        <div id="adPlayerFilter" class="ad-filter" role="tablist" aria-label="Show">
+                            <button type="button" role="tab" data-filter="" class="active">All <span class="ad-chip-count" id="adCountAll"></span></button>
+                            <button type="button" role="tab" data-filter="in">In the casino <span class="ad-chip-count" id="adCountIn"></span></button>
+                            <button type="button" role="tab" data-filter="waiting">Wants in <span class="ad-chip-count accent" id="adCountWaiting"></span></button>
+                            <button type="button" role="tab" data-filter="none">No access <span class="ad-chip-count" id="adCountNone"></span></button>
+                        </div>
+                        <input id="adSearch" class="mm-input ad-search" type="search" placeholder="🔍 Search a player">
                     </div>
                     <p id="adAccessInfo" class="ad-note"></p>
-                    <table class="ad-table">
-                        <thead><tr><th>Player</th><th>Status</th><th>Payout</th><th></th></tr></thead>
-                        <tbody id="adAccessList"></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!--- Players: leaderboard, change a balance --->
-            <section id="tab-players" class="ad-tab" hidden>
-                <div class="ad-card">
-                    <div class="ad-card-head"><h2 class="ad-title">Change a balance</h2></div>
-                    <form id="adBalance" class="ad-form" autocomplete="off" novalidate>
-                        <input id="adBalUser" class="mm-input" placeholder="Username" list="adUserList" required>
-                        <datalist id="adUserList"></datalist>
-                        <select id="adBalMode" class="mm-input">
-                            <option value="add">Add (+/-)</option>
-                            <option value="set">Set to</option>
-                        </select>
-                        <input id="adBalAmount" class="mm-input" type="number" step="1000" placeholder="Coins" required>
-                        <input id="adBalNote" class="mm-input" maxlength="300" placeholder="Note (optional)">
-                        <button type="submit" class="mm-btn mm-btn-primary">Save</button>
-                    </form>
-                </div>
-                <div class="ad-card">
-                    <div class="ad-card-head">
-                        <h2 class="ad-title">Leaderboard</h2>
-                        <input id="adSearch" class="mm-input ad-search" placeholder="Search a player">
-                    </div>
-                    <table class="ad-table">
-                        <thead><tr><th>#</th><th>Player</th><th class="num">Coins</th><th></th></tr></thead>
+                    <table class="ad-table ad-players">
+                        <thead><tr><th>Player</th><th>Access</th><th class="num">Coins</th><th>Payout</th><th></th></tr></thead>
                         <tbody id="adBoard"></tbody>
                     </table>
                 </div>
+                <!--- One player (#players/<name>): coins, games, items --->
+                <div id="adPlayerDetail" class="ad-player-detail" hidden></div>
             </section>
 
             <!--- All payouts --->
@@ -167,7 +152,7 @@
                             </div>
                             <select id="adHistReason" class="mm-input" aria-label="Kind"></select>
                             <select id="adHistScope" class="mm-input" aria-label="Coins" hidden>
-                                <option value="">Normal coins</option>
+                                <option value="">Off Season</option>
                                 <option value="season">Season</option>
                             </select>
                         </form>
@@ -185,25 +170,38 @@
                 </div>
             </section>
 
-            <!--- Seasons: planned ahead, every account starts with the budget, the winners at the end --->
-            <!--- The cases of the case battles: every case, a page per case with its items and the RTP balancer --->
-            <section id="tab-cases" class="ad-tab" hidden>
-                <div id="adCasesMain" class="ad-stack">
-                    <div class="ad-card">
-                        <div class="ad-card-head">
-                            <h2 class="ad-title">All cases</h2>
-                            <a href="#cases/new" class="mm-btn mm-btn-sm mm-btn-primary">+ New case</a>
+            <!--- RTP monitor: what every game really paid back, next to the maths --->
+            <section id="tab-rtp" class="ad-tab" hidden>
+                <div class="ad-card">
+                    <div class="ad-card-head">
+                        <div id="adRtpRange" class="ad-filter" role="tablist" aria-label="Time">
+                            <button type="button" role="tab" data-range="today">Today</button>
+                            <button type="button" role="tab" data-range="week" class="active">7 days</button>
+                            <button type="button" role="tab" data-range="month">30 days</button>
+                            <button type="button" role="tab" data-range="all">All time</button>
                         </div>
-                        <p class="ad-note">RTP (return to player): what a case pays back on average - 92% means of every 100 coins spent on it, 92 come back as items and 8 stay with the house. Click a case to change it.</p>
-                        <div id="adCaseList" class="ad-case-list"></div>
+                        <select id="adRtpWorld" class="mm-input ad-search" aria-label="Coins" hidden>
+                            <option value="normal">Off Season</option>
+                            <option value="season">Season</option>
+                        </select>
                     </div>
-                </div>
-                <div id="adCasePage" class="ad-stack" hidden>
-                    <a href="#cases" class="ad-back">‹ All cases</a>
-                    <div id="adCaseEditor" class="ad-stack"></div>
+                    <div class="ad-stats ad-rtp-stats">
+                        <div class="ad-stat"><span class="ad-label">Wagered</span><span id="adRtpWagered" class="ad-stat-value">-</span><span class="ad-stat-sub">bets, refunds taken off</span></div>
+                        <div class="ad-stat"><span class="ad-label">Paid back</span><span id="adRtpPaid" class="ad-stat-value">-</span><span class="ad-stat-sub">all wins</span></div>
+                        <div class="ad-stat"><span class="ad-label">House</span><span id="adRtpProfit" class="ad-stat-value">-</span><span class="ad-stat-sub">coins the games kept</span></div>
+                        <div class="ad-stat"><span class="ad-label">Payback</span><span id="adRtpTotal" class="ad-stat-value">-</span><span class="ad-stat-sub">of every coin bet</span></div>
+                    </div>
+                    <div class="ad-table-scroll">
+                        <table class="ad-table ad-rtp">
+                            <thead><tr><th>Game</th><th class="num">Bets</th><th class="num">Wagered</th><th class="num">Paid back</th><th class="num">House</th><th>Real payback</th><th class="num">Expected</th><th>Status</th></tr></thead>
+                            <tbody id="adRtpBody"></tbody>
+                        </table>
+                    </div>
+                    <p id="adRtpNote" class="ad-note"></p>
                 </div>
             </section>
 
+            <!--- Seasons: planned ahead, every account starts with the budget, the winners at the end --->
             <section id="tab-seasons" class="ad-tab" hidden>
                 <!--- #seasons: what runs now and every season --->
                 <div id="adSeasonsMain" class="ad-stack">
@@ -218,7 +216,7 @@
                 </div>
                 <!--- #seasons/new and #seasons/<id>: the details of one season, the form to plan / edit it --->
                 <div id="adSeasonPage" class="ad-stack ad-season-page" hidden>
-                    <a href="#seasons" class="ad-back">‹ All seasons</a>
+                    <a href="#seasons" id="adSeasonBack" class="ad-back">‹ All seasons</a>
                     <div id="adSeasonDetail" class="ad-card ad-season-detail"></div>
                     <!--- A running season or one that is over: its whole leaderboard - when they started,
                           their second chances, what they did --->
@@ -235,8 +233,9 @@
                         <div class="ad-card-head">
                             <h2 class="ad-title" id="adSeasonFormTitle">New season</h2>
                         </div>
-                        <form id="adSeasonForm" class="ad-season-form" autocomplete="off">
-                            <div class="ad-season-identity">
+                        <form id="adSeasonForm" class="ad-season-form" autocomplete="off" novalidate>
+                            <div class="ad-season-main">
+                                <div class="ad-span2 ad-season-identity">
                             <div class="ad-season-name">
                                 <label class="ad-field ad-field-icon">
                                     <span class="ad-label">Icon</span>
@@ -249,7 +248,7 @@
                             </div>
                             <div id="adSeasonIcons" class="ad-icon-picks" aria-label="Icons"></div>
                             </div>
-                            <div class="ad-field">
+                                <div class="ad-field">
                                 <span class="ad-label">Accent color</span>
                                 <div class="ad-color-row">
                                     <input id="adSeasonColor" class="ad-color-input" type="color" value="#d4a64a" aria-label="Accent color">
@@ -258,31 +257,57 @@
                                 </div>
                                 <span class="ad-setting-hint">The accent of the casino during the season (buttons, chat, highlights) - the coins stay gold.</span>
                             </div>
-                            <!--- Start and end: the date picker of the site (admin.js), the value in the hidden input --->
-                            <div class="ad-field">
+                                <div class="ad-field">
+                                <span class="ad-label">Coin icon</span>
+                                <div class="ad-season-name">
+                                    <label class="ad-field ad-field-icon">
+                                        <input id="adSeasonCoin" class="mm-input" maxlength="8" value="💎" aria-label="Coin icon">
+                                    </label>
+                                    <div id="adSeasonCoins" class="ad-icon-picks" aria-label="Coin icons"></div>
+                                </div>
+                                <span class="ad-setting-hint">How the coins of the season look in the casino. Never the 🪙 - that is the money outside seasons (shown next to them during the season).</span>
+                            </div>
+                                <div class="ad-field">
                                 <span class="ad-label">Start</span>
                                 <div class="ad-date"><input id="adSeasonStart" type="hidden"><div class="mm-input ad-date-field"><button type="button" class="ad-date-btn" data-for="adSeasonStart" aria-label="Choose in the calendar">📅</button><input type="text" class="ad-date-text" data-for="adSeasonStart" inputmode="numeric" placeholder="DD.MM.YYYY, HH:MM" autocomplete="off"></div></div>
                             </div>
-                            <div class="ad-field">
+                                <div class="ad-field">
                                 <span class="ad-label">End</span>
                                 <div class="ad-date"><input id="adSeasonEnd" type="hidden"><div class="mm-input ad-date-field"><button type="button" class="ad-date-btn" data-for="adSeasonEnd" aria-label="Choose in the calendar">📅</button><input type="text" class="ad-date-text" data-for="adSeasonEnd" inputmode="numeric" placeholder="DD.MM.YYYY, HH:MM" autocomplete="off"></div></div>
                             </div>
-                            <label class="ad-field">
-                                <span class="ad-label">Start budget</span>
-                                <input id="adSeasonBudget" class="mm-input" type="number" min="0" step="100" value="25000" required>
-                                <span class="ad-setting-hint">Every account in the casino is reset to this when the season starts.</span>
+                                <label class="ad-field">
+                                <span class="ad-label">Countdown before start and end</span>
+                                <span class="ad-inline-input"><input id="adSeasonWait" class="mm-input" type="number" min="0" max="3600" step="5" value="60"><span class="ad-setting-unit">s</span></span>
+                                <span class="ad-setting-hint">The start: this long after the start time the season world opens (the normal casino goes on). The end: the season world closes - no new bets, its running rounds finish - then this long until the final places.</span>
                             </label>
-                            <label class="ad-field">
+                                <div class="ad-field">
+                                <label class="ad-switch">
+                                    <input type="checkbox" id="adSeasonHighlight">
+                                    <span class="ad-switch-track"></span>
+                                    <span class="ad-switch-text">Highlight before the start</span>
+                                </label>
+                            </div>
+                                <label class="ad-field">
+                                <span class="ad-label">Start budget</span>
+                                <input id="adSeasonBudget" class="mm-input" type="number" min="0" step="1000" value="25000" required>
+                                <span class="ad-setting-hint">What a player gets when joining the season (plus the daily bonuses missed since the start).</span>
+                            </label>
+                                <label class="ad-field">
                                 <span class="ad-label">Daily bonus</span>
-                                <input id="adSeasonBonus" class="mm-input" type="number" min="0" step="1" required>
+                                <input id="adSeasonBonus" class="mm-input" type="number" min="0" step="100" required>
                                 <span class="ad-setting-hint">Free coins once a day during the season (can change while it runs).</span>
                             </label>
-                            <label class="ad-field">
+                                <label class="ad-field">
+                                    <span class="ad-label">Wager for a place</span>
+                                    <span class="ad-inline-input ad-wager-input"><input id="adSeasonWagerX" class="mm-input" type="number" min="0" max="1000" step="1" value="3"><span class="ad-setting-unit">× the start budget</span></span>
+                                    <span class="ad-setting-hint">Per chance: who wagered this much since the start (or since the last second chance) gets a place (and a prize) - until then on the leaderboard without a place. 0: no wager needed.</span>
+                                </label>
+                                <label class="ad-field">
                                 <span class="ad-label">Second chances</span>
                                 <input id="adSeasonChances" class="mm-input" type="number" min="0" max="20" step="1" value="0">
                                 <span class="ad-setting-hint">A player who lost everything (0 coins, nothing in play) starts again with the budget - this many times. The first right away, every further one after the wait below.</span>
                             </label>
-                            <label class="ad-field">
+                                <label class="ad-field">
                                 <span class="ad-label">Wait between second chances</span>
                                 <select id="adSeasonChanceDelay" class="mm-input">
                                     <option value="">The next day (from midnight)</option>
@@ -299,12 +324,7 @@
                                 </select>
                                 <span class="ad-setting-hint">After a second chance, how long until the next one can be taken (can change while the season runs).</span>
                             </label>
-                            <label class="ad-field">
-                                <span class="ad-label">Countdown before start and end</span>
-                                <span class="ad-inline-input"><input id="adSeasonWait" class="mm-input" type="number" min="0" max="3600" step="1" value="60"><span class="ad-setting-unit">s</span></span>
-                                <span class="ad-setting-hint">When the start (and the end) comes, the casino closes: no new bets, running rounds finish - then this long until the season starts (ends).</span>
-                            </label>
-                            <label class="ad-field">
+                                <label class="ad-field">
                                 <span class="ad-label">Leaderboard updates</span>
                                 <select id="adSeasonEvery" class="mm-input">
                                     <option value="0">All the time (live)</option>
@@ -315,7 +335,7 @@
                                     <option value="1440">Once a day (midnight)</option>
                                 </select>
                             </label>
-                            <div class="ad-field">
+                                <div class="ad-span2 ad-field">
                                 <label class="ad-switch">
                                     <input type="checkbox" id="adSeasonPrizesOn">
                                     <span class="ad-switch-track"></span>
@@ -324,7 +344,33 @@
                                 <div id="adSeasonPrizes" class="ad-prize-list" hidden></div>
                                 <button type="button" id="adSeasonAddPrize" class="mm-btn mm-btn-sm ad-add-prize" hidden>+ Add a prize</button>
                             </div>
-                            <div class="ad-season-save"><button type="submit" id="adSeasonSave" class="mm-btn mm-btn-primary">Plan the season</button></div>
+                            </div>
+                            <div class="ad-season-aside">
+                                <div class="ad-field">
+                                <span class="ad-label">Who may play</span>
+                                <select id="adSeasonAccess" class="mm-input">
+                                    <option value="all">Everybody</option>
+                                    <option value="whitelist">Only the whitelist (a closed round)</option>
+                                    <option value="banlist">Everybody but the banlist</option>
+                                </select>
+                                <textarea id="adSeasonNames" hidden></textarea>
+                                <div id="adSeasonPicker" class="ad-players-pick" hidden>
+                                    <div class="ad-pick-bar">
+                                        <input id="adSeasonPick" class="mm-input" type="search" placeholder="Search a player ..." autocomplete="off" aria-label="Search a player">
+                                        <span id="adSeasonPickCount" class="ad-pick-count"></span>
+                                        <button type="button" id="adSeasonPickAll" class="mm-btn mm-btn-sm">All</button>
+                                        <button type="button" id="adSeasonPickNone" class="mm-btn mm-btn-sm">None</button>
+                                    </div>
+                                    <div class="ad-pick-scroll">
+                                        <table class="ad-table ad-pick-table">
+                                            <tbody id="adSeasonPickRows"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <span class="ad-setting-hint">Who can't play in the season doesn't see it at all.</span>
+                            </div>
+                            </div>
+                            <div class="ad-season-save"><span id="adSeasonError" class="ad-form-error" role="alert" hidden></span><button type="submit" id="adSeasonSave" class="mm-btn mm-btn-primary">Plan the season</button></div>
                         </form>
                     </div>
                 </div>
@@ -370,9 +416,16 @@
 
             <!--- Settings and the hard reset --->
             <section id="tab-settings" class="ad-tab" hidden>
-                <form id="adSettingsForm" autocomplete="off">
+                <form id="adSettingsForm" autocomplete="off" novalidate>
                     <div id="adSettings" class="ad-grid"></div>
                 </form>
+                <!--- Save right under the settings (it lights up when something changed) --->
+                <div class="ad-settings-bar" id="adSettingsBar">
+                    <span id="adSettingsDirty" class="ad-settings-dirty" hidden>● Unsaved changes</span>
+                    <span id="adSettingsError" class="ad-form-error" role="alert" hidden></span>
+                    <button type="button" id="adSettingsDefaults" class="mm-btn mm-btn-sm" title="The settings of this page as they were at the start">Back to Default</button>
+                    <button type="submit" id="adSettingsSave" form="adSettingsForm" class="mm-btn mm-btn-primary" disabled>Save</button>
+                </div>
 
                 <!--- Maintenance: only the whitelist gets in, the others see when it is most likely over --->
                 <div class="ad-card ad-maint" id="adMaint">
@@ -391,8 +444,7 @@
                         <div class="ad-field">
                             <span class="ad-label">Whitelist</span>
                             <div class="ad-maint-add">
-                                <select id="adMaintPlayer" class="mm-input" aria-label="Player"></select>
-                                <button type="button" id="adMaintAdd" class="mm-btn mm-btn-sm">+ Add</button>
+                                <span id="adMaintPick" class="ad-pick-slot"></span>
                             </div>
                             <div id="adMaintList" class="ad-maint-list"></div>
                             <span class="ad-setting-hint">These players can play during the maintenance (e.g. to test).</span>
@@ -411,7 +463,7 @@
                         </div>
                         <label class="ad-field">
                             <span class="ad-label">Countdown before it starts</span>
-                            <span class="ad-inline-input"><input id="adMaintWait" class="mm-input" type="number" min="0" max="3600" step="1" value="60"><span class="ad-setting-unit">s</span></span>
+                            <span class="ad-inline-input"><input id="adMaintWait" class="mm-input" type="number" min="0" max="3600" step="5" value="60"><span class="ad-setting-unit">s</span></span>
                             <span class="ad-setting-hint">After the running games are over (at most 5 minutes of waiting) - the players see the countdown.</span>
                         </label>
                         <label class="ad-field ad-maint-note">
@@ -425,25 +477,380 @@
                     </div>
                 </div>
 
-                <div class="ad-card ad-danger" id="adDanger">
-                    <div class="ad-card-head"><h2 class="ad-title">Danger zone</h2><span class="ad-pill danger">can't be undone</span></div>
-                    <p><b>Hard reset:</b> the casino starts anew. This deletes the <b>whole coin history</b>, <b>every payout</b>, <b>every access</b> (and request), <b>all coins</b> and <b>every season</b> (planned, running and over), and resets every game (jackpot, battles, poker, blackjack, chat). The accounts stay - players ask for access again and get the start coins.</p>
-                    <form id="adResetForm" class="ad-reset-form" autocomplete="off">
-                        <input id="adResetConfirm" class="mm-input" placeholder="Type RESET" aria-label="Type RESET to confirm">
-                        <button type="submit" id="adResetButton" class="mm-btn mm-btn-danger-solid" disabled>Reset everything</button>
-                    </form>
+                <!--- Daily streak: the free coins grow day after day --->
+                <div class="ad-stack ad-streak" id="adStreak" hidden>
+                    <!--- The normal casino and the seasons: each its own streak --->
+                    <div id="adStreakWorld" class="ad-filter ad-streak-world" role="tablist" aria-label="Streak of">
+                        <button type="button" role="tab" data-streak-world="normal" class="active">🎰 Casino</button>
+                        <button type="button" role="tab" data-streak-world="season">🏆 Seasons</button>
+                    </div>
+                    <div class="ad-card ad-toggle-card ad-toggle-test" id="adStreakToggleCard">
+                        <div class="ad-toggle-info">
+                            <h2 class="ad-title">🔥 Daily streak</h2>
+                            <p class="ad-note">The daily free coins grow every day a player claims them in a row. Off: every day pays the plain daily bonus.</p>
+                        </div>
+                        <label class="ad-switch ad-switch-big">
+                            <input type="checkbox" id="adStreakOn" aria-label="Daily streak">
+                            <span class="ad-switch-track"></span>
+                            <span class="ad-switch-text" id="adStreakOnText">On</span>
+                        </label>
+                    </div>
+                    <div class="ad-card">
+                        <div class="ad-card-head">
+                            <h2 class="ad-title">Rewards per day</h2>
+                            <span class="ad-pill" id="adStreakBase"></span>
+                        </div>
+                        <p class="ad-note" id="adStreakNote">Percent of the daily bonus each day of the streak pays (100% = the plain bonus).</p>
+                        <div class="ad-streak-days" id="adStreakDays"></div>
+                        <div class="ad-streak-tools">
+                            <button type="button" class="mm-btn mm-btn-sm" id="adStreakAdd">+ Day</button>
+                            <button type="button" class="mm-btn mm-btn-sm" id="adStreakRemove">− Day</button>
+                            <button type="button" class="mm-btn mm-btn-sm ad-link-btn" id="adStreakDefaults">Back to default</button>
+                        </div>
+                    </div>
+                    <div class="ad-card">
+                        <div class="ad-card-head"><h2 class="ad-title">Rules</h2></div>
+                        <div class="ad-setting">
+                            <span class="ad-setting-label">After the last day</span>
+                            <div class="ad-choice" id="adStreakAfter" role="radiogroup" aria-label="After the last day">
+                                <button type="button" class="ad-choice-option" role="radio" data-after="stay">Stays at the last day</button>
+                                <button type="button" class="ad-choice-option" role="radio" data-after="restart">Starts at day 1 again</button>
+                            </div>
+                            <span class="ad-setting-hint">Stay: every day after it pays the last day's reward for as long as the streak lasts.</span>
+                        </div>
+                        <label class="ad-setting">
+                            <span class="ad-setting-label">Days that may be missed</span>
+                            <span class="ad-setting-input"><input id="adStreakGrace" class="mm-input" type="number" min="0" max="7" step="1"><span class="ad-setting-unit">days</span></span>
+                            <span class="ad-setting-hint">0: a day without claiming ends the streak. 1: one day off in a row is fine (the streak goes on, the day off doesn't count).</span>
+                        </label>
+                    </div>
+                    <div class="ad-maint-bar">
+                        <span id="adStreakState" class="ad-note"></span>
+                        <button type="button" id="adStreakSave" class="mm-btn mm-btn-primary">Save streak</button>
+                    </div>
                 </div>
 
-                <!--- Save at the very end (the buttons belong to the settings form above) --->
-                <div class="ad-settings-bar">
-                    <button type="button" id="adSettingsDefaults" class="mm-btn mm-btn-sm">Back to the defaults</button>
-                    <button type="submit" form="adSettingsForm" class="mm-btn mm-btn-primary">Save</button>
+                <!--- Test mode: a player (the admin's own) plays with a sandbox balance - nothing is saved --->
+                <div class="ad-stack ad-rain" id="adRain" hidden>
+                    <div class="ad-card ad-rain-card">
+                        <div>
+                            <h2 class="ad-title">💸 Let it rain</h2>
+                            <p class="ad-note">Coins for many players at once - right now or at a time you pick, once or again every day / week. Every player who gets coins sees them fall on their open casino page.</p>
+                        </div>
+                        <div class="ad-rain-form">
+                            <label class="ad-field">
+                                <span class="ad-label">Coins per player</span>
+                                <span class="ad-inline-input"><span class="ad-setting-unit">🪙</span><input id="adRainAmount" class="mm-input" type="number" min="1" step="500" value="5000"></span>
+                            </label>
+                            <label class="ad-field">
+                                <span class="ad-label">Who gets them</span>
+                                <select id="adRainTarget" class="mm-input">
+                                    <option value="all">Every player in the casino</option>
+                                    <option value="online">Who is online right then</option>
+                                    <option value="bottom">The last % of the leaderboard</option>
+                                    <option value="below">Everybody with less than ...</option>
+                                </select>
+                            </label>
+                            <label class="ad-field" id="adRainPercentField" hidden>
+                                <span class="ad-label">The last</span>
+                                <span class="ad-inline-input"><input id="adRainPercent" class="mm-input" type="number" min="1" max="100" step="1" value="10"><span class="ad-setting-unit">%</span></span>
+                            </label>
+                            <label class="ad-field" id="adRainBelowField" hidden>
+                                <span class="ad-label">Less than</span>
+                                <span class="ad-inline-input"><span class="ad-setting-unit">🪙</span><input id="adRainBelow" class="mm-input" type="number" min="1" step="1000" value="5000"></span>
+                            </label>
+                            <label class="ad-field" id="adRainWorldField">
+                                <span class="ad-label">Where</span>
+                                <select id="adRainWorld" class="mm-input">
+                                    <option value="normal">Normal casino (🪙)</option>
+                                    <option value="season">The running season (its coins)</option>
+                                </select>
+                            </label>
+                            <label class="ad-field">
+                                <span class="ad-label">When</span>
+                                <select id="adRainWhen" class="mm-input">
+                                    <option value="now">Right now</option>
+                                    <option value="later">At a time ...</option>
+                                </select>
+                            </label>
+                            <label class="ad-field" id="adRainAtField" hidden>
+                                <span class="ad-label">Date and time</span>
+                                <input id="adRainAt" class="mm-input" type="datetime-local">
+                            </label>
+                            <label class="ad-field">
+                                <span class="ad-label">Again</span>
+                                <select id="adRainRepeat" class="mm-input">
+                                    <option value="none">Once</option>
+                                    <option value="daily">Every day</option>
+                                    <option value="weekly">Every week</option>
+                                </select>
+                            </label>
+                            <label class="ad-field ad-rain-note">
+                                <span class="ad-label">Message (optional)</span>
+                                <input id="adRainNote" class="mm-input" maxlength="80" placeholder="Happy weekend!">
+                            </label>
+                        </div>
+                        <div class="ad-rain-foot">
+                            <span id="adRainPreview" class="ad-rain-preview">…</span>
+                            <span id="adRainError" class="ad-form-error" role="alert" hidden></span>
+                            <button type="button" id="adRainGo" class="mm-btn mm-btn-primary">💸 Let it rain now</button>
+                        </div>
+                    </div>
+                    <div class="ad-card">
+                        <div class="ad-card-head"><h2 class="ad-title">Planned</h2></div>
+                        <div id="adRainPlanned" class="ad-rain-list"></div>
+                    </div>
+                    <div class="ad-card">
+                        <div class="ad-card-head"><h2 class="ad-title">Done</h2></div>
+                        <div id="adRainDone" class="ad-rain-list"></div>
+                    </div>
+                </div>
+                <div class="ad-stack ad-test" id="adTest" hidden>
+                    <!--- The sandbox: a player plays with test coins in a world of its own --->
+                    <div class="ad-card ad-test-card">
+                        <div class="ad-test-top">
+                            <div class="ad-test-intro">
+                                <h2 class="ad-title">🧪 Test mode</h2>
+                                <p class="ad-note">Your account plays in a test world of its own with a sandbox balance - nothing is saved, real players never see it.</p>
+                            </div>
+                            <div class="ad-test-form">
+                                <span id="adTestPick" class="ad-pick-slot"></span>
+                                <span class="ad-inline-input"><span class="ad-setting-unit">🪙</span><input id="adTestCoins" class="mm-input" type="number" min="1" step="100000" aria-label="Test coins"></span>
+                                <button type="button" id="adTestStart" class="mm-btn mm-btn-primary">Start</button>
+                            </div>
+                        </div>
+                        <div id="adTestList" class="ad-test-list"></div>
+                        <p id="adTestEmpty" class="ad-test-empty">Nobody is testing right now.</p>
+                    </div>
+                    <!--- Debug tools: only in the test world, a card per game --->
+                    <div class="ad-card ad-test-tools">
+                        <div class="ad-card-head">
+                            <h2 class="ad-title">🛠️ Debug tools</h2>
+                            <span class="ad-note ad-tool-note">Test world only · every lever works once · bots bet with nobody's coins</span>
+                        </div>
+                        <div class="ad-tool-grid">
+                            <div class="ad-tool-card" data-tool="jackpot">
+                                <h4 class="ad-tool-title"><span class="ad-tool-icon">💰</span>Jackpot</h4>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Bots</span>
+                                    <div class="ad-tool-controls">
+                                        <span class="ad-inline-input ad-tool-amount"><span class="ad-setting-unit">🪙</span><input id="adBotJackpotAmount" class="mm-input" type="number" min="1" step="100" value="1000" aria-label="Jackpot bot bet"></span>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-bots="jackpot" data-count="1">+1</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-bots="jackpot" data-count="3">+3</button>
+                                    </div>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Draw</span>
+                                    <div class="ad-tool-controls">
+                                        <select id="adToolJackpotMode" class="mm-input" aria-label="Draw animation"></select>
+                                        <button type="button" class="mm-btn mm-btn-sm ad-tool-go" data-lever="jackpot:mode:#adToolJackpotMode">Set</button>
+                                    </div>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Winner</span>
+                                    <div class="ad-tool-controls">
+                                        <select id="adToolJackpotWinner" class="mm-input" aria-label="Winner">
+                                            <option value="">Fair (the number)</option>
+                                            <option value="me">Me (the tester)</option>
+                                            <option value="bot">A bot</option>
+                                            <option value="Ghost">The ghost</option>
+                                        </select>
+                                        <button type="button" class="mm-btn mm-btn-sm ad-tool-go" data-lever="jackpot:winner:#adToolJackpotWinner">Set</button>
+                                    </div>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Now</span>
+                                    <div class="ad-tool-controls">
+                                        <button type="button" class="mm-btn mm-btn-sm" data-now="jackpot">⏩ Draw</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="jackpot:ghost">👻 Ghost</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="jackpot:clear">🧹 Clear</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ad-tool-card" data-tool="roulette">
+                                <h4 class="ad-tool-title"><span class="ad-tool-icon">🎡</span>Roulette</h4>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Bots</span>
+                                    <div class="ad-tool-controls">
+                                        <span class="ad-inline-input ad-tool-amount"><span class="ad-setting-unit">🪙</span><input id="adBotRouletteAmount" class="mm-input" type="number" min="1" step="100" value="500" aria-label="Roulette bot bet"></span>
+                                        <select id="adBotRouletteColor" class="mm-input ad-tool-small" aria-label="Color"><option value="">Red / blue</option><option value="red">Red</option><option value="blue">Blue</option><option value="green">Green</option></select>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-bots="roulette" data-count="1">+1</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-bots="roulette" data-count="3">+3</button>
+                                    </div>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Result</span>
+                                    <div class="ad-tool-controls">
+                                        <select id="adToolRouletteColor" class="mm-input" aria-label="Next result"><option value="">Fair (the seed)</option><option value="red">🔥 Red</option><option value="blue">💧 Blue</option><option value="green">🍀 Green</option></select>
+                                        <button type="button" class="mm-btn mm-btn-sm ad-tool-go" data-lever="roulette:color:#adToolRouletteColor">Set</button>
+                                    </div>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Now</span>
+                                    <div class="ad-tool-controls">
+                                        <button type="button" class="mm-btn mm-btn-sm" data-now="roulette">⏩ Roll</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ad-tool-card" data-tool="baucua">
+                                <h4 class="ad-tool-title"><span class="ad-tool-icon">🦀</span>Bầu Cua</h4>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Bots</span>
+                                    <div class="ad-tool-controls">
+                                        <span class="ad-inline-input ad-tool-amount"><span class="ad-setting-unit">🪙</span><input id="adBotBaucuaAmount" class="mm-input" type="number" min="1" step="100" value="500" aria-label="Bầu Cua bot bet"></span>
+                                        <select id="adBotBaucuaAnimal" class="mm-input ad-tool-small" aria-label="Animal"><option value="">Any animal</option><option value="tiger">Tiger</option><option value="gourd">Gourd</option><option value="rooster">Rooster</option><option value="fish">Fish</option><option value="crab">Crab</option><option value="shrimp">Shrimp</option></select>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-bots="baucua" data-count="1">+1</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-bots="baucua" data-count="3">+3</button>
+                                    </div>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Dice</span>
+                                    <div class="ad-tool-controls">
+                                        <select id="adToolBaucuaDice" class="mm-input" aria-label="Next dice"><option value="">Fair (the seed)</option><option value="single">Three different</option><option value="pair">A pair</option><option value="triple">A triple</option></select>
+                                        <button type="button" class="mm-btn mm-btn-sm ad-tool-go" data-lever="baucua:dice:#adToolBaucuaDice">Set</button>
+                                    </div>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Now</span>
+                                    <div class="ad-tool-controls">
+                                        <button type="button" class="mm-btn mm-btn-sm" data-now="baucua">⏩ Roll</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ad-tool-card" data-tool="slots">
+                                <h4 class="ad-tool-title"><span class="ad-tool-icon">🎰</span>Slots</h4>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Next spin</span>
+                                    <div class="ad-tool-controls ad-tool-choices">
+                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="slots:bonus:free">🎁 Free spins</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="slots:bonus:coins">🪙 Coin game</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="slots:bonus:chest">🧰 Chest</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="slots:bonus:">Normal</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ad-tool-card" data-tool="blackjack">
+                                <h4 class="ad-tool-title"><span class="ad-tool-icon">🃏</span>Blackjack</h4>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Next deal</span>
+                                    <div class="ad-tool-controls">
+                                        <select id="adToolDeal" class="mm-input" aria-label="Next deal"></select>
+                                        <button type="button" class="mm-btn mm-btn-sm ad-tool-go" data-lever="blackjack:deal:#adToolDeal">Stack</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ad-tool-card" data-tool="battles">
+                                <h4 class="ad-tool-title"><span class="ad-tool-icon">⚔️</span>Case battles</h4>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Random</span>
+                                    <div class="ad-tool-controls">
+                                        <select id="adToolBattleMode" class="mm-input" aria-label="Random picks"></select>
+                                        <button type="button" class="mm-btn mm-btn-sm ad-tool-go" data-lever="battles:mode:#adToolBattleMode">Set</button>
+                                    </div>
+                                </div>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Bots</span>
+                                    <div class="ad-tool-controls">
+                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="battles:fill:me">🤖 Fill my waiting battle</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--- The popups a player gets - with sample data, on the tester's open pages (nothing is paid) --->
+                            <div class="ad-tool-card" data-tool="popups">
+                                <h4 class="ad-tool-title"><span class="ad-tool-icon">💬</span>Popups</h4>
+                                <div class="ad-tool-row">
+                                    <span class="ad-tool-label">Show</span>
+                                    <div class="ad-tool-controls ad-tool-choices">
+                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="popups:streak:me">🔥 Daily streak</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="popups:reward:me">🎁 Reward</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="popups:season:me">🏆 Season place</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="popups:cashback:me">💸 Cashback</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="popups:gift:me">🎀 Gift</button>
+                                        <button type="button" class="mm-btn mm-btn-sm" data-lever="popups:rain:me">🌧️ Money rain</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!--- The accessory shop: every item on / off, its price - and free for all (testing) --->
+                <div class="ad-card ad-shop" id="adShop" hidden>
+                    <div class="ad-maint-head">
+                        <div>
+                            <h2 class="ad-title">🧪 Free for all</h2>
+                            <p class="ad-note">For testing: every player can wear every item that is on - without buying it. Turned off again, everything nobody bought comes off everybody's avatar (what was bought stays).</p>
+                        </div>
+                        <label class="ad-switch ad-switch-big">
+                            <input type="checkbox" id="adShopFree" aria-label="Free for all">
+                            <span class="ad-switch-track"></span>
+                            <span class="ad-switch-text" id="adShopFreeText">Off</span>
+                        </label>
+                    </div>
+                    <div class="ad-shop-lists">
+                        <div>
+                            <h3 class="ad-label ad-sublabel">Frames</h3>
+                            <div id="adShopFrames" class="ad-shop-list"></div>
+                        </div>
+                        <div>
+                            <h3 class="ad-label ad-sublabel">Animations</h3>
+                            <div id="adShopEffects" class="ad-shop-list"></div>
+                        </div>
+                        <div>
+                            <h3 class="ad-label ad-sublabel">Backgrounds</h3>
+                            <div id="adShopBackgrounds" class="ad-shop-list"></div>
+                        </div>
+                    </div>
+                    <div class="ad-maint-bar">
+                        <span id="adShopState" class="ad-note"></span>
+                        <button type="button" id="adShopSave" class="mm-btn mm-btn-primary" disabled>Save shop</button>
+                    </div>
+                </div>
+
+                <div class="ad-card ad-danger" id="adDanger">
+                    <div class="ad-card-head"><h2 class="ad-title">Danger zone</h2><span class="ad-pill danger">can't be undone</span></div>
+                    <p><b>Hard reset:</b> pick what starts anew. The records go, what you set up stays - unless you tick it too. The accounts always stay.</p>
+                    <div class="ad-reset-presets">
+                        <button type="button" class="mm-btn mm-btn-sm" data-reset-preset="records">Records only</button>
+                        <button type="button" class="mm-btn mm-btn-sm" data-reset-preset="all">Everything</button>
+                        <button type="button" class="mm-btn mm-btn-sm" data-reset-preset="none">Nothing</button>
+                    </div>
+                    <div id="adResetParts" class="ad-reset-parts"></div>
+                    <form id="adResetForm" class="ad-reset-form" autocomplete="off">
+                        <input id="adResetConfirm" class="mm-input" placeholder="Type RESET" aria-label="Type RESET to confirm">
+                        <button type="submit" id="adResetButton" class="mm-btn mm-btn-danger-solid" disabled>Reset</button>
+                    </form>
+                    <p id="adResetDone" class="ad-note" role="status" hidden></p>
+                </div>
+
+
+            </section>
+
+            <!--- The cases of the case battles: every case, a page per case with its items and the RTP balancer --->
+            <section id="tab-cases" class="ad-tab" hidden>
+                <div id="adCasesMain" class="ad-stack">
+                    <div class="ad-card">
+                        <div class="ad-card-head">
+                            <h2 class="ad-title">Cases</h2>
+                            <a href="#games/battles/case/new" class="mm-btn mm-btn-sm mm-btn-primary">+ New case</a>
+                        </div>
+                        <p class="ad-note">RTP (return to player): what a case pays back on average - 92% means of every 100 coins spent on it, 92 come back as items and 8 stay with the house. Click a case to change it, the switch turns it on or off for new battles.</p>
+                        <div id="adCaseList" class="ad-case-list"></div>
+                    </div>
+                </div>
+                <div id="adCasePage" class="ad-stack" hidden>
+                    <a href="#games/battles" class="ad-back">‹ Case battles</a>
+                    <div id="adCaseEditor" class="ad-stack"></div>
                 </div>
             </section>
+
         </main>
     </div>
 
+    <!--- The player avatars (the admin panel asks its own address for them) --->
+    <script>window.AVATAR_URL = "api/avatars";</script>
     <script src="/static/scripts/ui.js"></script>
+    <script src="/static/scripts/avatar.js"></script>
     <script src="/static/scripts/admin.js"></script>
 </body>
 

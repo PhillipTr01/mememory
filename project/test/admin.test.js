@@ -24,7 +24,7 @@ before(async () => {
   app.use(config.addresses(config.ADMIN_PATH), adminRoute());
   server = app.listen(0);
   base = `http://localhost:${server.address().port}`;
-  for (const name of ["paula", "quinn", "rosa"]) tokens[name] = h.addUser(name);
+  for (const name of ["paula", "quinn", "rosa", "capper"]) tokens[name] = h.addUser(name);
 });
 
 after(() => {
@@ -51,7 +51,7 @@ test("admin: a secret address and a password - nothing works without the login",
   assert.strictEqual(page.status, 200);
   const html = await page.text();
   assert.match(html, /type="password"/, "the login");
-  assert.doesNotMatch(html, /adBalance/, "not the panel");
+  assert.doesNotMatch(html, /adPlayerFilter/, "not the panel");
   assert.strictEqual((await call(ADMIN + "/api/overview")).status, 401);
 
   const wrong = await call(ADMIN + "/login", { json: { password: "guess" } });
@@ -66,7 +66,7 @@ test("admin: a secret address and a password - nothing works without the login",
   assert.doesNotMatch(cookie, /Secure/i, "plain http: no secure cookie (the browser would throw it away)");
   adminCookie = cookie.split(";")[0];
 
-  assert.match(await (await call(ADMIN + "/", { cookie: adminCookie })).text(), /adBalance/, "the panel");
+  assert.match(await (await call(ADMIN + "/", { cookie: adminCookie })).text(), /adPlayerFilter/, "the panel");
   // A made-up token is no login
   assert.strictEqual((await call(ADMIN + "/api/overview", { cookie: "admin_token=forged" })).status, 401);
 });
@@ -141,7 +141,7 @@ test("admin: an address the address bar shows as it is - with or without invisib
   // A self chosen address with such a character works both ways
   assert.deepStrictEqual(config.addresses("/🛠️🦆"), [encodeURI("/🛠️🦆"), encodeURI("/🛠🦆")]);
   const res = await call(ADMIN + "/", { cookie: adminCookie });
-  assert.match(await res.text(), /adBalance/);
+  assert.match(await res.text(), /adPlayerFilter/);
   // Without the slash: to the address with the slash
   const redirect = await call(ADMIN);
   assert.strictEqual(redirect.status, 302);
@@ -239,6 +239,83 @@ test("admin: settings - start coins, daily bonus ... are changed, checked and st
   assert.deepStrictEqual([config.START_COINS, config.DAILY_BONUS, config.JACKPOT_GHOST_AFTER], [before.start, before.bonus, before.ghost]);
 });
 
+test("admin: settings - the season world's own limits (Season switch): stricter values, empty = the normal one", async () => {
+  let res = await adminApi("settings");
+  const slots = res.body.settings.find((f) => f.key === "SLOTS_MAX_BET");
+  assert.deepStrictEqual([slots.season, slots.seasonValue], [true, null]);
+  assert.strictEqual(res.body.settings.find((f) => f.key === "JACKPOT_RAKE").season, false, "the rake is the same everywhere");
+
+  res = await adminApi("settings", { season: { SLOTS_MAX_BET: 900, BET_CAP_FLOOR: 20000 } });
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.body.settings.find((f) => f.key === "SLOTS_MAX_BET").seasonValue, 900);
+  const limits = require("../game/limits");
+  assert.strictEqual(limits.forWorld("/season").SLOTS_MAX_BET, 900);
+  assert.strictEqual(limits.forWorld("").SLOTS_MAX_BET, config.SLOTS_MAX_BET, "the normal casino keeps its own");
+  assert.strictEqual(limits.forWorld("/season").SLOTS_MIN_BET, config.SLOTS_MIN_BET, "no own value: the normal one");
+  let stored = await require("../models/Setting").findOne({ key: "admin:settings" }).lean();
+  assert.deepStrictEqual(stored.value.SEASON_LIMITS, { SLOTS_MAX_BET: 900, BET_CAP_FLOOR: 20000 });
+
+  // Wrong: not a limit, min over the normal max, out of range - nothing changes
+  for (const season of [{ JACKPOT_RAKE: 1 }, { SLOTS_MIN_BET: 909 }, { SLOTS_MAX_BET: 0 }, { BJ_HIGH_MIN: 9000, BJ_HIGH_MAX: 100 }]) {
+    res = await adminApi("settings", { season });
+    assert.strictEqual(res.status, 400, JSON.stringify(season));
+  }
+  // A normal value that clashes with a season one (min over the season's max) is refused too
+  const slotsBefore = { min: config.SLOTS_MIN_BET, max: config.SLOTS_MAX_BET };
+  assert.strictEqual((await adminApi("settings", { values: { SLOTS_MAX_BET: 2007, SLOTS_MIN_BET: 999 } })).status, 400);
+  assert.deepStrictEqual({ min: config.SLOTS_MIN_BET, max: config.SLOTS_MAX_BET }, slotsBefore);
+
+  // Empty: the normal value again; Back to Default of the season: none left
+  res = await adminApi("settings", { season: { SLOTS_MAX_BET: null } });
+  assert.strictEqual(res.body.settings.find((f) => f.key === "SLOTS_MAX_BET").seasonValue, null);
+  assert.deepStrictEqual(config.SEASON_LIMITS, { BET_CAP_FLOOR: 20000 });
+  await adminApi("settings", { defaults: true, season: true });
+  assert.deepStrictEqual(config.SEASON_LIMITS, {});
+  stored = await require("../models/Setting").findOne({ key: "admin:settings" }).lean();
+  assert.strictEqual(stored.value.SEASON_LIMITS, undefined);
+});
+
+test("coins: the max bet by balance - all in up to the floor, above it a share of the balance (a double is never capped)", async () => {
+  const before = { floor: config.BET_CAP_FLOOR, share: config.BET_CAP_SHARE };
+  Object.assign(config, { BET_CAP_FLOOR: 100000, BET_CAP_SHARE: 25 });
+  try {
+    h.setCoins("capper", 80000);
+    assert.strictEqual(await coins.spend("capper", 80000, { reason: "baucua bet" }), true, "all in below the floor");
+    h.setCoins("capper", 1000000);
+    assert.strictEqual(await coins.spend("capper", 250001, { reason: "roulette bet" }), false);
+    assert.match(coins.refusal("capper"), /Your max bet is 250,000\./);
+    assert.strictEqual(coins.refusal("capper"), null, "told once");
+    assert.strictEqual(await coins.spend("capper", 250000, { reason: "roulette bet" }), true);
+    // 750,000 left: 187,500 a bet - but at least the floor
+    assert.strictEqual(await coins.spend("capper", 200000, { reason: "jackpot bet" }), false);
+    assert.strictEqual(await coins.spend("capper", 200000, { reason: "blackjack bet", note: "double", nocap: true }), true);
+    assert.strictEqual(await coins.spend("capper", 100000, { reason: "jackpot bet" }), true, "the floor always");
+    assert.strictEqual(await coins.spend("capper", 400000, { reason: "shop" }), true, "not a bet: no cap");
+    // Too few coins: no cap message
+    assert.strictEqual(await coins.spend("capper", 60000, { reason: "baucua bet" }), false);
+    assert.strictEqual(coins.refusal("capper"), null);
+    // Several bets in one round count together - from the balance before the round (1,000,000: 250,000 in all)
+    h.setCoins("capper", 1000000);
+    assert.strictEqual(await coins.spend("capper", 200000, { reason: "jackpot bet", round: 0 }), true);
+    assert.strictEqual(await coins.spend("capper", 100000, { reason: "jackpot bet", round: 200000 }), false, "300,000 in one round");
+    assert.match(coins.refusal("capper"), /this round is 250,000 - 200,000 are in already, 50,000 more/);
+    assert.strictEqual(await coins.spend("capper", 50000, { reason: "jackpot bet", round: 200000 }), true, "250,000 in all");
+    // The pages get the cap with the balance (for their "Max")
+    h.setCoins("capper", 1000000);
+    assert.strictEqual((await coins.get("capper")).betCap, 250000);
+    assert.deepStrictEqual((await coins.get("capper")).betCapRule, { floor: 100000, share: 25 });
+    h.setCoins("capper", 40000);
+    assert.strictEqual((await coins.get("capper")).betCap, 100000, "the floor");
+    // 100%: no cap
+    config.BET_CAP_SHARE = 100;
+    assert.strictEqual((await coins.get("capper")).betCap, null);
+    h.setCoins("capper", 1000000);
+    assert.strictEqual(await coins.spend("capper", 1000000, { reason: "slots bet" }), true);
+  } finally {
+    Object.assign(config, { BET_CAP_FLOOR: before.floor, BET_CAP_SHARE: before.share });
+  }
+});
+
 test("admin: a game turned off - no tab, its page leads to the next game, its open pages go", async () => {
   const settings = require("../game/settings");
   const turnedOff = [];
@@ -262,11 +339,11 @@ test("admin: a game turned off - no tab, its page leads to the next game, its op
   const battles = await (await call(CASINO + "/battles", as("paula"))).text();
   assert.match(battles, /\.cs-tab\[href="poker"\] \{ display: none !important; \}/);
 
-  // The jackpot off too: the casino starts with the next game that is on
+  // The jackpot off too: the casino starts with the next game that is on (the roulette)
   await adminApi("settings", { values: { GAME_JACKPOT: false } });
   page = await call(CASINO + "/", as("paula"));
   assert.strictEqual(page.status, 302);
-  assert.match(page.headers.get("location"), /\/battles$/);
+  assert.match(page.headers.get("location"), /\/roulette$/);
 
   await adminApi("settings", { defaults: true });
   assert.strictEqual((await call(CASINO + "/poker", as("paula"))).status, 200, "on again");
@@ -279,19 +356,18 @@ test("admin: in a season the players show their normal coins, changes go there; 
   const now = Date.now();
   const made = await seasons.create({ name: "Board", icon: "📋", start: now - 1000, end: now + 3600 * 1000, budget: 1000, every: 0, secondChances: 2 });
   await seasons.tick(now);
-  const normal = seasons.normalOf("rosa");
-  assert.ok(normal != null);
+  const normal = (await coins.get("rosa")).coins;
   await seasons.join("rosa", now);
-  await coins.spend("rosa", 300, { reason: "slots bet" });
-  await coins.add("rosa", 900, { reason: "slots win" });
+  await coins.season.spend("rosa", 300, { reason: "slots bet" });
+  await coins.season.add("rosa", 900, { reason: "slots win" });
   // The players: the normal coins, nothing of the season
   const rosa = (await adminApi("users")).body.find((p) => p.username === "rosa");
   assert.deepStrictEqual(rosa, { username: "rosa", coins: normal });
   // A change goes to the normal coins - the season coins stay
   const res = await adminApi("balance", { username: "rosa", mode: "add", amount: 250, note: "gift" });
   assert.strictEqual(res.body.coins, normal + 250);
-  assert.strictEqual(seasons.normalOf("rosa"), normal + 250);
-  assert.strictEqual((await coins.get("rosa")).coins, 1600);
+  assert.strictEqual((await coins.get("rosa")).coins, normal + 250);
+  assert.strictEqual((await coins.season.get("rosa")).coins, 1600);
   assert.strictEqual((await adminApi("balance", { username: "rosa", mode: "add", amount: -(normal + 999) })).status, 400);
   // The history: the normal one (a part of the name is enough) - or the season's, by kinds
   const normalHistory = (await adminApi("history?username=OS")).body;
@@ -318,9 +394,73 @@ test("admin: in a season the players show their normal coins, changes go there; 
   assert.strictEqual(set.body.coins, 5000);
   set = await adminApi("seasons/" + made.season.id + "/balance", { username: "rosa", mode: "add", amount: -1000, note: "fix" });
   assert.strictEqual(set.body.coins, 4000);
-  assert.strictEqual(seasons.normalOf("rosa"), normal + 250, "the normal coins stay");
+  assert.strictEqual((await coins.get("rosa")).coins, normal + 250, "the normal coins stay");
   assert.strictEqual((await adminApi("seasons/" + made.season.id + "/balance", { username: "quinn", mode: "set", amount: 1 })).status, 400, "not in the season");
   assert.strictEqual((await adminApi("seasons/999/balance", { username: "rosa", mode: "set", amount: 1 })).status, 400);
+  seasons.reset();
+});
+
+test("admin: a player in detail - coins, what the games added up to, the items bought and given; an item taken away comes off", async () => {
+  const shop = require("../game/shop");
+  h.setCoins("quinn", 500000);
+  assert.ok(!(await shop.buy("quinn", "gold")).error);
+  await shop.give({ username: "quinn", items: ["neon"], note: "Poker night" });
+  await coins.spend("quinn", 1000, { reason: "slots bet" });
+  await coins.add("quinn", 400, { reason: "slots win" });
+
+  const detail = (await adminApi("players/quinn")).body;
+  assert.strictEqual(detail.username, "quinn");
+  assert.strictEqual(detail.approved, true);
+  assert.strictEqual(detail.coins, h.coinsOf("quinn"));
+  const sum = (reason) => (detail.reasons.find((row) => row.reason == reason) || {}).amount;
+  assert.deepStrictEqual([sum("slots bet"), sum("slots win")], [-1000, 400]);
+  const gold = detail.items.find((item) => item.id == "gold");
+  const neon = detail.items.find((item) => item.id == "neon");
+  assert.deepStrictEqual([gold.given, gold.worn, !!gold.at], [false, true, true], "bought: worn, with the day");
+  assert.deepStrictEqual([neon.given, neon.source], [true, "Poker night"]);
+  assert.strictEqual((await adminApi("players/nobody")).status, 404);
+
+  const removed = await adminApi("players/quinn/items/remove", { id: "gold" });
+  assert.strictEqual(removed.status, 200);
+  assert.deepStrictEqual(removed.body.items.map((item) => item.id), ["neon"]);
+  const view = await shop.view("quinn");
+  assert.deepStrictEqual([view.owned, view.frame], [["neon"], null], "gone - and not worn any more");
+  assert.strictEqual((await adminApi("players/quinn/items/remove", { id: "gold" })).status, 400);
+  assert.strictEqual((await adminApi("players/quinn/items/remove", { id: "neon" })).status, 200);
+  assert.deepStrictEqual((await shop.view("quinn")).owned, []);
+});
+
+test("admin: the hard reset part by part - the records go, access, purchases, seasons and settings stay", async () => {
+  const CoinLog = require("../models/CoinLog");
+  const User = require("../models/User");
+  const seasons = require("../game/seasons");
+  seasons.reset();
+  const now = Date.now();
+  await seasons.create({ name: "Kept", icon: "🌱", start: now + 7200 * 1000, end: now + 9000 * 1000, budget: 1, every: 0 });
+  await adminApi("settings", { values: { DAILY_BONUS: 1234 } });
+  h.addUser("keeper");
+  await User.updateOne({ username: "keeper" }, { $set: { casinoApproved: true, looks: { frame: "gold" } } });
+  await coins.add("keeper", 700, { reason: "admin" });
+  assert.ok((await CoinLog.countDocuments({})) > 0);
+
+  const parts = (await adminApi("reset")).body.parts;
+  assert.deepStrictEqual(parts.filter((p) => p.group === "records").map((p) => p.id), ["history", "payouts", "coins", "games", "chat"]);
+  assert.strictEqual((await adminApi("reset", { confirm: "RESET", parts: [] })).status, 400, "something has to be picked");
+  assert.strictEqual((await adminApi("reset", { confirm: "RESET", parts: ["nope"] })).status, 400);
+
+  const res = await adminApi("reset", { confirm: "RESET", parts: ["history", "payouts", "coins", "games", "chat"] });
+  assert.strictEqual(res.status, 200);
+  assert.deepStrictEqual(res.body.done, ["history", "payouts", "coins", "games", "chat"]);
+  assert.strictEqual(await CoinLog.countDocuments({}), 0, "the history is gone");
+  const keeper = await User.findOne({ username: "keeper" }).lean();
+  assert.strictEqual(keeper.coins, 0, "the coins are gone");
+  assert.strictEqual(keeper.casinoApproved, true, "the access stays");
+  assert.deepStrictEqual(keeper.looks, { frame: "gold" }, "the purchases stay");
+  assert.deepStrictEqual(seasons.list().map((season) => season.name), ["Kept"], "the seasons stay");
+  assert.strictEqual(config.DAILY_BONUS, 1234, "the settings stay");
+  // The settings alone: back to their defaults
+  await adminApi("reset", { confirm: "RESET", parts: ["settings"] });
+  assert.notStrictEqual(config.DAILY_BONUS, 1234);
   seasons.reset();
 });
 
@@ -356,4 +496,15 @@ test("admin: the hard reset - history, payouts, accesses, coins and seasons are 
   // A new approval: the start coins again
   const again = await access.approve("rosa");
   assert.strictEqual(again.coins, config.START_COINS);
+});
+
+test("coins: the max bet rounded up to the next 100 - and a spend up to it goes through (the check in the database the same)", async () => {
+  const limits = require("../game/limits");
+  h.addUser("rounder");
+  h.setCoins("rounder", 123456);
+  const cap = limits.betCap(123456, "");
+  assert.strictEqual(cap % 100, 0);
+  assert.strictEqual(await coins.spend("rounder", cap + 1, { reason: "roulette bet" }), false);
+  assert.match(coins.refusal("rounder"), new RegExp("Your max bet is " + cap.toLocaleString("en-US")));
+  assert.strictEqual(await coins.spend("rounder", cap, { reason: "roulette bet" }), true);
 });

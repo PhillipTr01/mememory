@@ -1765,3 +1765,18 @@ button.bt-strip-case:hover {
     white-space: nowrap;
   }
 }
+
+/* Phones: the tabs on one line each, no empty "Last battles" card */
+@media (max-width: 575px) {
+  .bt-subtabs button .bt-long {
+    display: none;
+  }
+
+  .bt-subtabs button {
+    white-space: nowrap;
+  }
+
+  #btHistoryCard.empty {
+    display: none;
+  }
+}

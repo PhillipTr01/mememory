@@ -18,10 +18,15 @@ const BETTING = ["preflop", "flop", "turn", "river"];
  * with coins (the same coins as in the jackpot) and get their chips back as
  * coins when they stand up. The server deals, only the own cards are sent.
  */
-module.exports = function (io) {
-  const room = io.of("/poker");
+module.exports = function (io, options = {}) {
+  // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
+  const world = options.world || "";
+  const { coins, persist, inPlay, casinoLock, casinoChat, limits } = require("../game/worlds").services(world);
+  const room = io.of(world + "/poker");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
+  // The biggest pots won (the side of the page) - a pot becomes chips, not coins: written down here
+  const best = require("../game/best_wins").attachRecorded(room, "poker-best", persist);
 
   const table = {
     seats: new Array(config.POKER_SEATS).fill(null),
@@ -192,8 +197,8 @@ module.exports = function (io) {
       rules: {
         smallBlind: blinds().small,
         bigBlind: blinds().big,
-        minBuyIn: config.POKER_MIN_BUYIN,
-        maxBuyIn: config.POKER_MAX_BUYIN,
+        minBuyIn: limits.POKER_MIN_BUYIN,
+        maxBuyIn: limits.POKER_MAX_BUYIN,
         defaultBuyIn: config.POKER_DEFAULT_BUYIN,
         turn: config.POKER_TURN,
       },
@@ -512,6 +517,7 @@ module.exports = function (io) {
     table.current = -1;
     table.turnAt = null;
     const winners = table.result.winners;
+    winners.forEach((w) => best.record(w.name, w.amount, w.hand || (table.result.showdown ? null : "everybody folded")));
     table.history.unshift({
       hand: table.hand,
       winners: winners.map((w) => ({ name: w.name, amount: w.amount, hand: w.hand || null })),
@@ -647,15 +653,15 @@ module.exports = function (io) {
         if (data == null) return;
         const { seat, buyIn } = data;
         if (!Number.isInteger(seat) || seat < 0 || seat >= table.seats.length) return;
-        if (!Number.isInteger(buyIn) || buyIn < config.POKER_MIN_BUYIN || buyIn > config.POKER_MAX_BUYIN) {
-          error(`Buy in with ${config.POKER_MIN_BUYIN} - ${config.POKER_MAX_BUYIN} coins.`);
+        if (!Number.isInteger(buyIn) || buyIn < limits.POKER_MIN_BUYIN || buyIn > limits.POKER_MAX_BUYIN) {
+          error(`Buy in with ${limits.POKER_MIN_BUYIN} - ${limits.POKER_MAX_BUYIN} coins.`);
           return;
         }
         if (table.seats[seat] != null || seatOf(username) >= 0 || busy.has(username)) return;
         busy.add(username);
         try {
           if (!(await coins.spend(username, buyIn, { reason: "poker buy-in" }))) {
-            error("You don't have enough coins.");
+            error(coins.refusal(username) || "You don't have enough coins.");
             return;
           }
           // Somebody was faster
@@ -698,14 +704,14 @@ module.exports = function (io) {
           error("Add chips between hands.");
           return;
         }
-        if (seat.stack + amount > config.POKER_MAX_BUYIN) {
-          error(`At most ${config.POKER_MAX_BUYIN} chips at the table.`);
+        if (seat.stack + amount > limits.POKER_MAX_BUYIN) {
+          error(`At most ${limits.POKER_MAX_BUYIN} chips at the table.`);
           return;
         }
         busy.add(username);
         try {
-          if (!(await coins.spend(username, amount, { reason: "poker chips" }))) {
-            error("You don't have enough coins.");
+          if (!(await coins.spend(username, amount, { reason: "poker chips", round: seat.stack }))) {
+            error(coins.refusal(username) || "You don't have enough coins.");
             return;
           }
           if (table.seats[i] !== seat) {
@@ -751,14 +757,6 @@ module.exports = function (io) {
       }),
     );
 
-    socket.on(
-      "claimBonus",
-      safe("claimBonus", async () => {
-        const paid = await coins.claim(username);
-        if (paid) socket.emit("bonusClaimed", paid);
-        await sendCoins(username);
-      }),
-    );
 
     socket.on(
       "sendChatMessage",
