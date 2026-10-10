@@ -102,10 +102,8 @@
     // From the admin: what it is for ("A reward": nothing given - no reason line)
     var reason = !reward.rank && reward.source && reward.source != "A reward" ? reward.source : null;
     var text = el("p", "mm-dialog-text nav-reward-text");
-    if (reason) {
-      text.append(el("b", "nav-reward-reason", "Reason: "), document.createTextNode(reason));
-      if ((reward.prizes || []).length) text.append(document.createElement("br"), document.createTextNode("The admin gets in touch about the prize."));
-    } else text.innerText = (reward.rank ? "Your reward for the season" : "Your reward") + ((reward.prizes || []).length ? " - the admin gets in touch about the prize:" : ":");
+    if (reason) text.append(el("b", "nav-reward-reason", "Reason: "), document.createTextNode(reason));
+    else text.innerText = reward.rank ? "Your reward for the season:" : "Your reward:";
     dialog.appendChild(text);
     var row = el("div", "nav-reward-items");
     if (reward.coins > 0) {
