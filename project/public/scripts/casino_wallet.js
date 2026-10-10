@@ -98,8 +98,15 @@
     dialog.setAttribute("aria-modal", "true");
     dialog.setAttribute("aria-label", "Season reward");
     dialog.appendChild(el("div", "nav-streak-flame nav-reward-medal", place));
-    dialog.appendChild(el("h2", "mm-dialog-title", reward.rank ? "Place " + reward.rank + " in " + (reward.icon ? reward.icon + " " : "") + reward.source + "!" : reward.source || "A reward for you!"));
-    dialog.appendChild(el("p", "mm-dialog-text nav-reward-text", (reward.rank ? "Your reward for the season" : "You got a reward") + ((reward.prizes || []).length ? " - the admin gets in touch about the prize:" : ":")));
+    dialog.appendChild(el("h2", "mm-dialog-title", reward.rank ? "Place " + reward.rank + " in " + (reward.icon ? reward.icon + " " : "") + reward.source + "!" : "You got a reward!"));
+    // From the admin: what it is for ("A reward": nothing given - no reason line)
+    var reason = !reward.rank && reward.source && reward.source != "A reward" ? reward.source : null;
+    var text = el("p", "mm-dialog-text nav-reward-text");
+    if (reason) {
+      text.append(el("b", "nav-reward-reason", "Reason: "), document.createTextNode(reason));
+      if ((reward.prizes || []).length) text.append(document.createElement("br"), document.createTextNode("The admin gets in touch about the prize."));
+    } else text.innerText = (reward.rank ? "Your reward for the season" : "Your reward") + ((reward.prizes || []).length ? " - the admin gets in touch about the prize:" : ":");
+    dialog.appendChild(text);
     var row = el("div", "nav-reward-items");
     if (reward.coins > 0) {
       var cash = el("div", "nav-reward-item coins");
@@ -134,9 +141,10 @@
     later.type = "button";
     buttons.appendChild(later);
     // (items: to the shop to wear them)
+    var wear = null;
     if (items.length) {
-      var wear = el("a", "mm-btn mm-btn-primary", "Wear it");
-      wear.href = "shop";
+      wear = el("a", "mm-btn mm-btn-primary", "Wear it");
+      wear.href = "shop#avatar";
       buttons.appendChild(wear);
     } else buttons.classList.add("single");
     dialog.appendChild(buttons);
@@ -149,6 +157,8 @@
     var onKey = (event) => event.key == "Escape" && close();
     document.addEventListener("keydown", onKey);
     later.addEventListener("click", close);
+    // (to the avatar maker - on the shop page already: the popup goes, the page switches to it)
+    if (wear) wear.addEventListener("click", close);
     backdrop.addEventListener("click", (event) => event.target == backdrop && close());
   });
 

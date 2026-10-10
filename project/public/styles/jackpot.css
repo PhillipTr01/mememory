@@ -4612,6 +4612,7 @@ body.jackpot-theme::before {
 .nav-reward-item {
   display: flex;
   /* (three a row, all as wide - fewer: as wide as well) */
+  box-sizing: border-box;
   flex: 0 0 calc((100% - 1.5rem) / 3);
   flex-direction: column;
   align-items: center;
