@@ -929,9 +929,27 @@
   display: none;
 }
 
-/* With a bump: more room to the table (the seats reach down to its edge) */
-.bj-bar:has(.bj-bump:not([hidden])) {
+/* The bet bar and the action bar in one place: the hidden one keeps its room (only invisible) - always room for a bump
+   on top (the seats reach down to the table's edge), so nothing moves when a bar or a bump comes or goes */
+.bj-bars {
+  display: grid;
   margin-top: 4.2rem;
+}
+
+.bj-bars > .bj-bar {
+  grid-area: 1 / 1;
+  margin-top: 0;
+}
+
+/* (!important: over the general [hidden] rule of theme.css) */
+.bj-bars > .bj-bar[hidden] {
+  display: flex !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.bj-bars > .bj-betbar[hidden] {
+  display: grid !important;
 }
 
 /* Both bumps (same bet, the hand) as wide as each other */
