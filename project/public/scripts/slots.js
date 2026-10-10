@@ -14,6 +14,8 @@ var pausedUntil = 0; // after a spin: the next one only from then on (a short pa
 var spunAt = 0; // when the last spin started (the server wants a gap between two spins too)
 var lineTimer = null;
 var BET_KEY = "slotsBet";
+// Max picked: every spin bets the most it can right then (it follows the balance) - until another amount is picked
+var maxMode = false;
 // The bets to pick: from the lowest (left) to the highest (right) - made from the limits (presets())
 var PRESET_COUNT = 6;
 var TILE = 0; // height of one symbol (from the page)
@@ -85,6 +87,7 @@ socket.on("coins", (data) => {
   // While the reels turn, the balance shows the coins before the win
   // (during a spin the old balance stays - but a page that comes back into a bonus game needs one)
   if (!spinning || document.getElementById("slCoins").innerText == "-") renderCoins(myCoins);
+  followMax();
   renderControls();
 });
 socket.on("slotsError", (message) => {
@@ -101,7 +104,9 @@ socket.on("slotsSetup", (data) => {
   setup = data;
   buildMachine();
   renderPresets();
-  setBet(Number(readBet()) || 100);
+  // (Max picked last time: Max again)
+  if (readBet() == "max") pickMax();
+  else setBet(Number(readBet()) || 100);
 });
 
 var reelsTurning = false; // the result came: the spin plays (no skip any more)
@@ -285,6 +290,8 @@ function spin() {
     if (!queuedSpin) queuedSpin = setTimeout(() => ((queuedSpin = null), spin()), pausedUntil - Date.now() + 10);
     return;
   }
+  // (max mode: the most it can be with the balance now)
+  if (maxMode) setBet(Math.min(maxBetNow(), myCoins), true);
   var bet = currentBet();
   if (!Number.isInteger(bet) || bet < setup.rules.minBet || bet > setup.rules.maxBet) {
     return showHint("A spin is " + formatCoins(setup.rules.minBet) + " to " + formatCoins(setup.rules.maxBet) + " coins.", "error");
@@ -441,6 +448,7 @@ async function playSpin(result) {
   pausedUntil = Date.now() + pause;
   // The win comes with the next "coins" from the server (after the count)
   renderCoins(myCoins);
+  followMax();
   renderControls();
   nextSpin(result);
 }
@@ -1255,19 +1263,34 @@ function currentBet() {
   return Number(document.getElementById("slBet").value);
 }
 
-function setBet(value) {
+// keepMax: the bet of max mode (another amount picked: max mode is over)
+function setBet(value, keepMax) {
   if (setup == null) return;
+  if (!keepMax) maxMode = false;
   // (never more than the max bet by balance)
   var bet = Math.max(setup.rules.minBet, Math.min(maxNow(), Math.round(value)));
   document.getElementById("slBet").value = bet;
   // The prizes of the coin game for this bet (over the machine, always)
   if (!activeBonus) showPrizes(bet);
   try {
-    localStorage.setItem(BET_KEY, bet);
+    localStorage.setItem(BET_KEY, maxMode ? "max" : bet);
   } catch (error) {
     // not remembered
   }
   renderControls();
+}
+
+// Max: the most a spin can be now - and from now on, with every new balance
+function pickMax() {
+  maxMode = true;
+  setBet(maxBetNow(), true);
+}
+
+// Max mode: the bet follows the balance (not while the reels turn - that spin keeps its bet)
+function followMax() {
+  if (!maxMode || setup == null || spinning) return;
+  var bet = maxBetNow();
+  if (bet != currentBet()) setBet(bet, true);
 }
 
 // The highest bet now: the max bet per spin - or less, the max bet by balance
@@ -1310,7 +1333,7 @@ function renderPresets() {
   var max = el("button", "sl-preset sl-preset-max", "Max");
   max.type = "button";
   max.title = "The most you can bet per spin right now";
-  max.addEventListener("click", () => setBet(maxBetNow()));
+  max.addEventListener("click", pickMax);
   box.replaceChildren(
     ...list.map((value) => {
       var button = el("button", "sl-preset", value >= 1000 ? value / 1000 + "K" : String(value));
@@ -1369,7 +1392,9 @@ function renderControls() {
   document.getElementById("slAuto").disabled = auto || bet > myCoins;
   document.querySelectorAll(".sl-preset[data-value]").forEach((preset) => preset.classList.toggle("active", Number(preset.dataset.value) == bet));
   var maxButton = document.querySelector(".sl-preset-max");
-  if (maxButton) maxButton.classList.toggle("active", bet == maxBetNow());
+  if (maxButton) maxButton.classList.toggle("active", maxMode);
+  // (max mode: only Max is lit, not the amount it happens to be)
+  if (maxMode) document.querySelectorAll(".sl-preset[data-value]").forEach((preset) => preset.classList.remove("active"));
   document.getElementById("slLess").disabled = spinning || bet <= setup.rules.minBet;
   document.getElementById("slMore").disabled = spinning || bet >= maxNow();
   // (the balance changed the highest bet: other presets)
