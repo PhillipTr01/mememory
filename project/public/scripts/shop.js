@@ -83,7 +83,11 @@ function render() {
   renderGrid("shFrames", "frame");
   renderGrid("shEffects", "effect");
   renderGrid("shBackgrounds", "background");
-  if (typeof renderAvatarEditor == "function" && !document.getElementById("avatarEditor").hidden && editTab in LOOK_TABS) renderAvatarEditor();
+  // The avatar maker open: its looks again (the whole tab only where the looks are - a color picker stays open)
+  if (typeof renderAvatarEditor == "function" && !document.getElementById("avatarEditor").hidden) {
+    if (editTab in LOOK_TABS || editTab == "bg") renderAvatarEditor();
+    else document.getElementById("avatarPreview").replaceWith(previewAvatar(editing));
+  }
   renderSeason();
 }
 
@@ -204,9 +208,46 @@ function wear(kind, id, button) {
 // Tabs of their own (avatar_editor.js): frames and animations - the backgrounds in the Background tab
 var LOOK_TABS = { frame: { label: "Frames" }, effect: { label: "Animations" } };
 
-// The preview of the editor wears what I wear
+// What is picked in the avatar maker - only shown until "Save avatar" ({kind: id | null}; a kind not in it: as worn)
+var pickedLooks = {};
+
+function editorLooks() {
+  return Object.assign(wornWith(null), pickedLooks);
+}
+
+function pickLook(kind, id) {
+  if ((shopData[kind] || null) == id) delete pickedLooks[kind];
+  else pickedLooks[kind] = id;
+}
+
+function lookChanges() {
+  return Object.keys(pickedLooks).length > 0;
+}
+
+function resetLooks() {
+  pickedLooks = {};
+}
+
+// A color of the background picked: the casino background comes off (else the color wouldn't show)
+function pickedColor(part) {
+  if (part == "bg" && shopData) pickLook("background", null);
+}
+
+// Saved: what was picked is worn (one after the other - the last answer is the shop as it is now)
+async function saveLooks() {
+  for (var [kind, id] of Object.entries(pickedLooks)) {
+    var res = await fetch("shop/wear", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: kind, id: id }) });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || "That didn't work.");
+    shopData = data;
+  }
+  pickedLooks = {};
+  render();
+}
+
+// The preview of the editor wears what I wear - with what is picked
 function decorateAvatarPreview(avatar) {
-  if (shopData && typeof wearLooks == "function") wearLooks(avatar, wornWith(null));
+  if (shopData && typeof wearLooks == "function") wearLooks(avatar, editorLooks());
 }
 
 // Background: the casino backgrounds I have first (my color under them)
@@ -229,17 +270,21 @@ function renderLookOptions(kind, options) {
     return;
   }
   var option = (id, label) => {
-    var worn = (shopData[kind] || null) == id;
-    var button = el("button", "avatar-option tile look" + (worn ? " selected" : ""));
+    var on = (editorLooks()[kind] || null) == id;
+    var button = el("button", "avatar-option tile look" + (on ? " selected" : ""));
     button.type = "button";
-    button.setAttribute("aria-pressed", worn);
+    button.setAttribute("aria-pressed", on);
     button.title = label;
     var face = createAvatarPreview(editing);
-    var look = wornWith(null);
+    var look = editorLooks();
     look[kind] = id;
     wearLooks(face, look);
     button.append(face, el("span", "avatar-option-label", label));
-    button.addEventListener("click", () => worn || wear(kind, id, button));
+    // Only the preview - "Save avatar" puts it on
+    button.addEventListener("click", () => {
+      pickLook(kind, id);
+      renderAvatarEditor();
+    });
     return button;
   };
   options.append(option(null, kind == "background" ? "My color" : "None"), ...mine.map((item) => option(item.id, item.name)));
@@ -261,6 +306,8 @@ function setView(view) {
   document.getElementById("shTitleIcon").innerText = VIEWS[view].icon;
   document.getElementById("shTitle").innerText = VIEWS[view].title;
   document.getElementById("shSubtitle").innerText = VIEWS[view].text;
+  // (what was picked and not saved is forgotten)
+  pickedLooks = {};
   if (!avatar && !document.getElementById("avatarEditor").hidden) closeEditor();
   // (the avatar view: always the saved avatar first)
   else if (avatar) openEditor();

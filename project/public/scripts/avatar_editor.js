@@ -25,6 +25,11 @@ function savedAvatar() {
 }
 
 function avatarChanged() {
+    return faceChanged() || (typeof lookChanges == 'function' && lookChanges());
+}
+
+// Only the face (the avatar maker's parts)
+function faceChanged() {
     var clean = (config) => JSON.stringify(config == null ? null : cleanAvatar(config));
     return clean(editing) != clean(savedAvatar());
 }
@@ -47,7 +52,8 @@ function closeAvatarEditor() {
 var TAB_COLORS = { hair: 'hairColor', top: 'shirt' };
 var COLOR_TITLES = { hairColor: 'Hair color', shirt: 'Color' };
 // Tabs of the page on top of the parts (the casino shop: frames, animations), see shop.js:
-// LOOK_TABS = {key: {label}}, renderLookOptions(key, options), decorateAvatarPreview(avatar), renderPartExtras(part, options)
+// LOOK_TABS = {key: {label}}, renderLookOptions(key, options), decorateAvatarPreview(avatar), renderPartExtras(part, options),
+// and what it picked (only shown until saved): lookChanges() -> true / false, saveLooks() -> Promise, resetLooks(), pickedColor(part)
 var LOOK_TABS = window.LOOK_TABS || {};
 
 function editorTabs() {
@@ -145,6 +151,7 @@ function colorOptions(part, options) {
         option.addEventListener('click', () => {
             editing = Object.assign({}, base);
             editing[part] = value;
+            if (typeof pickedColor == 'function') pickedColor(part);
             renderAvatarEditor();
         });
         return option;
@@ -161,6 +168,7 @@ function colorOptions(part, options) {
     picker.addEventListener('input', () => {
         editing = Object.assign({}, editing || AVATAR_DEFAULT);
         editing[part] = picker.value;
+        if (typeof pickedColor == 'function') pickedColor(part);
         // Only the preview: the picker stays open while dragging
         document.getElementById('avatarPreview').replaceWith(previewAvatar(editing));
         custom.style.background = picker.value;
@@ -192,19 +200,24 @@ function createAvatarPreview(config, size) {
     return avatar;
 }
 
+// Saves what changed: the face - and what the page picked to wear (the casino: frame, animation, background)
 function saveAvatar() {
     var button = document.getElementById('avatarSave');
     button.disabled = true;
-    fetch('/requests/user/avatar', {
-        method: 'PUT',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatar: editing == null ? AVATAR_LETTER : editing }),
-    })
-        .then((response) => (response.ok ? response.json() : Promise.reject(response.status)))
-        .then((data) => {
-            // Everywhere on this page (header, profile) and in the cache for the games
-            setAvatarConfig(myName, data.avatar);
+    var face = !faceChanged()
+        ? Promise.resolve()
+        : fetch('/requests/user/avatar', {
+              method: 'PUT',
+              credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ avatar: editing == null ? AVATAR_LETTER : editing }),
+          })
+              .then((response) => (response.ok ? response.json() : Promise.reject(response.status)))
+              // Everywhere on this page (header, profile) and in the cache for the games
+              .then((data) => setAvatarConfig(myName, data.avatar));
+    face
+        .then(() => (typeof lookChanges == 'function' && lookChanges() ? saveLooks() : null))
+        .then(() => {
             closeAvatarEditor();
             avatarMessage('Avatar saved.', 'success');
         })
@@ -251,6 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (reset) reset.addEventListener('click', () => {
         var saved = savedAvatar();
         editing = saved == null ? null : Object.assign({}, saved);
+        if (typeof resetLooks == 'function') resetLooks();
         renderAvatarEditor();
     });
     document.getElementById('avatarSave').addEventListener('click', saveAvatar);
