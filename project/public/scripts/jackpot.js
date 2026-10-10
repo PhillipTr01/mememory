@@ -15,11 +15,6 @@ var countdownTimer = null;
 var countdownEnd = null;
 
 // Used by chat.js
-// The sounds of the page (casino_sound.js)
-function sound(name, options) {
-  if (window.casinoSound) window.casinoSound.play(name, options);
-}
-
 function chatUsername() {
   return myName;
 }
@@ -75,17 +70,12 @@ socket.on("coins", (data) => {
   renderBet();
 });
 
-socket.on("betError", (message) => {
-  showError(message);
-  sound("error");
-});
+socket.on("betError", (message) => showError(message));
 socket.on("betInfo", (message) => showError(message, true));
 
 socket.on("jackpotState", (data) => {
   var previous = state;
   state = data;
-  // A new bet in the pot: a chip
-  if (previous && previous.round === state.round && (state.bets || []).length > (previous.bets || []).length) sound("chip");
   if (state.phase == "drawing" && state.draw && spunRound !== state.round) {
     spunRound = state.round;
     // Opened in the middle of the draw: the rest of it (the winner only when the draw is over) - only at its very end a short one
@@ -150,11 +140,6 @@ function renderStatus() {
     center.className = "jp-center-status";
   } else if (state.phase == "countdown") {
     var seconds = Math.ceil(timeLeft() / 1000);
-    // (the last seconds tick - once each)
-    if (seconds <= 5 && seconds > 0 && heardSecond != state.round + ":" + seconds) {
-      heardSecond = state.round + ":" + seconds;
-      sound(seconds == 1 ? "tickHigh" : "countdown");
-    }
     center.innerText = "0:" + String(seconds).padStart(2, "0");
     center.className = "jp-center-status timer" + (seconds <= 5 ? " urgent" : "");
   } else if (spinning) {
@@ -189,15 +174,9 @@ function drawBets() {
   return (state.bets || []).map((bet) => ({ name: bet.name, coins: bet.amount, from: bet.from, to: bet.to }));
 }
 
-var heardSecond = null;
 function playDraw(short, length) {
   var draw = state.draw;
   var duration = short ? 900 : length || state.spin - 900;
-  if (!short) {
-    sound("whoosh");
-    sound("wheel", { duration: duration / 1000 });
-  }
-  var inPot = (state.bets || []).some((bet) => bet.name == myName);
   var stage = document.getElementById("jpStage");
   spinning = true;
   // (after the draw the waiting scene is built again)
@@ -209,10 +188,6 @@ function playDraw(short, length) {
     .catch((error) => console.error("Draw animation failed:", error))
     .finally(() => {
       spinning = false;
-      // The winner: me - a jackpot; in the pot and not me - a soft lose; watching - a small fanfare
-      if (draw && draw.winner == myName) sound("jackpot");
-      else if (inPot) sound("lose");
-      else sound("coin");
       // (no "X wins N coins" line under the draw - the draw shows the winner)
       render();
     });

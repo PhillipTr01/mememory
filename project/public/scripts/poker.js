@@ -58,11 +58,6 @@ function betPlaces() {
 var SUITS = { s: "♠", h: "♥", d: "♦", c: "♣" };
 
 // Used by chat.js
-// The sounds of the page (casino_sound.js)
-function sound(name, options) {
-  if (window.casinoSound) window.casinoSound.play(name, options);
-}
-
 function chatUsername() {
   return myName;
 }
@@ -126,50 +121,13 @@ socket.on("coins", (data) => {
   myCapRule = data.betCapRule || null;
 });
 
-socket.on("pokerError", (message) => {
-  showHint(message, "error");
-  sound("error");
-});
+socket.on("pokerError", (message) => showHint(message, "error"));
 
 socket.on("pokerState", (data) => {
   previous = state;
   state = data;
   render();
-  hear();
 });
-
-// What changed since the last state: the cards, what the players did, my turn, the result
-function hear() {
-  if (!previous || !state) return;
-  var me = mySeat();
-  var sameHand = previous.hand == state.hand;
-  // A new hand: my two cards
-  if (!sameHand && me >= 0 && state.seats[me] && state.seats[me].inHand) {
-    sound("deal");
-    sound("deal", { delay: 0.16 });
-  }
-  // The board: card after card
-  var before = sameHand ? previous.board.length : 0;
-  for (var n = before; n < state.board.length; n++) sound("flip", { delay: (n - before) * 0.38 });
-  // What a player just did
-  if (sameHand) {
-    state.seats.forEach((seat, i) => {
-      var old = previous.seats[i];
-      if (!seat || !old || !seat.lastAction || seat.lastAction == old.lastAction) return;
-      var action = seat.lastAction.toLowerCase();
-      if (action.startsWith("fold")) sound("fold");
-      else if (action.startsWith("check")) sound("knock");
-      else sound("chips");
-    });
-  }
-  if (myTurn() && !(sameHand && previous.current == state.current && previous.phase == state.phase)) sound("notice");
-  // The result of the hand (only for who played it)
-  if (state.result && !(sameHand && previous.result)) {
-    var won = state.result.winners.filter((w) => w.name == myName).reduce((sum, w) => sum + (w.amount || 0), 0);
-    if (won > 0) sound(state.result.showdown ? "bigWin" : "win");
-    else if (me >= 0 && previous.seats[me] && previous.seats[me].inHand) sound("lose");
-  }
-}
 
 /* ---------- Helpers ---------- */
 

@@ -40,7 +40,8 @@
       });
       if (!shown.length) return;
       var natural = (shown[shown.length - 1].getBoundingClientRect().bottom - shown[0].getBoundingClientRect().top) / zoom;
-      tallest = Math.max(tallest, natural);
+      // (only a real growth counts - a line of text that comes and goes after a spin doesn't shrink the game)
+      if (natural > tallest * 1.04 || tallest == 0) tallest = natural;
       natural = tallest;
       var next = Math.max(0.5, Math.min(room.x / width, room.y / natural));
       // Phones: never bigger than on the page (what sticks out of a part grows with it)
@@ -266,14 +267,14 @@ window.casinoFitGame = function (part, watch) {
   setTimeout(fit, 600);
   var observer = new MutationObserver(() => requestAnimationFrame(fit));
   (watch || []).forEach((node) => node && observer.observe(node, { attributes: true, attributeFilter: ["hidden"] }));
-  // The card grew or shrank (the game's state came, a list got longer): fit again - once per change of its
-  // height (the fit itself changes it too: that one doesn't count)
+  // The card grew or shrank clearly (the game's state came, a list got longer): fit again - small changes
+  // (a line of text after a spin) don't count, so the game never shrinks and grows with every round
   if (window.ResizeObserver) {
     var card = part.closest(".mm-card") || part.parentNode;
     var fitted = null;
     var pending = false;
     new ResizeObserver(() => {
-      if (pending || card.offsetHeight == fitted) return;
+      if (pending || (fitted != null && Math.abs(card.offsetHeight - fitted) < 24)) return;
       pending = true;
       requestAnimationFrame(() => {
         pending = false;

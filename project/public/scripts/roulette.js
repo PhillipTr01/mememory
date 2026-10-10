@@ -22,11 +22,6 @@ var ICONS = { red: "🔥", blue: "💧", green: "🍀" };
 var shownRolls = null; // the rounds in the row of last rolls (a new one fades in)
 
 // Used by chat.js
-// The sounds of the page (casino_sound.js)
-function sound(name, options) {
-  if (window.casinoSound) window.casinoSound.play(name, options);
-}
-
 function chatUsername() {
   return myName;
 }
@@ -66,17 +61,10 @@ socket.on("coins", (data) => {
   if (!rolling) renderCoins();
   renderControls();
 });
-socket.on("rouletteError", (message) => {
-  showHint(message, "error");
-  sound("error");
-});
+socket.on("rouletteError", (message) => showHint(message, "error"));
 
-var heardBets = null; // how many bets of the round were heard (a chip for every new one)
 socket.on("rouletteState", (state) => {
   var first = table == null;
-  var count = state.bets ? state.bets.length : 0;
-  if (heardBets != null && state.round == heardBets.round && count > heardBets.count) sound("chip");
-  heardBets = { round: state.round, count: count };
   table = state;
   rules = state.rules;
   if (first) buildReel();
@@ -150,12 +138,6 @@ function playRoll(state) {
   var jitter = (((state.round * 9301 + 49297) % 233280) / 233280 - 0.5) * TILE * 0.7;
   var to = offsetFor(n * (COPIES - 2) + state.slot, jitter);
   var duration = rules.spin - 900;
-  // (joined while it rolls: only what is left of the ticks)
-  var left = Math.max(0, duration - Math.max(0, rules.spin - (state.rollLeft || 0)));
-  if (left > 600) {
-    sound("whoosh");
-    sound("wheel", { duration: left / 1000 });
-  }
   var spin = track.animate(
     [
       { transform: "translateX(" + -from + "px)", easing: "cubic-bezier(0.1, 0.55, 0.12, 1)" },
@@ -194,9 +176,6 @@ function showResult(state) {
   var status = document.getElementById("rlStatus");
   status.className = "rl-status-text " + color;
   status.innerText = won > 0 ? "You won 🪙 " + formatCoins(won) + "!" : ICONS[color] + " " + COLOR_NAMES[color];
-  // (a sound only for who played this round)
-  if (won > 0) sound(color == "green" ? "bigWin" : "win");
-  else if (mine.length) sound("lose");
   renderCoins();
 }
 
@@ -241,7 +220,6 @@ function renderStatus() {
       shown = seconds;
       status.className = "rl-status-text";
       status.replaceChildren("Rolling in ", el("span", "rl-seconds" + (seconds <= 3 ? " soon" : ""), seconds + "s"));
-      if (seconds <= 3 && seconds > 0) sound("countdown");
     }
     if (left > 0) statusFrame = requestAnimationFrame(tick);
   };

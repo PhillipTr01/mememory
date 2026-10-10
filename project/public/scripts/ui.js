@@ -246,7 +246,6 @@ function noticeStack() {
 
 function casinoNotice(options) {
   var stack = noticeStack();
-  if (window.casinoSound && options.sound !== false) window.casinoSound.play(options.key == "rain" ? "rain" : "notice");
   if (options.key) stack.querySelectorAll(".bt-notice").forEach((old) => old.dataset.key == options.key && old.remove());
   var notice = document.createElement("div");
   notice.className = "bt-notice";

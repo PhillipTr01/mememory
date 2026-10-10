@@ -58,7 +58,6 @@
     void bonusButton.offsetWidth; // restart the animation
     bonusButton.classList.add("claimed");
     if (claiming && claiming.on && typeof paid == "number") streakDialog(claiming, paid);
-    else if (window.casinoSound) window.casinoSound.play("coins");
     claiming = null;
   });
 
@@ -121,7 +120,6 @@
     dialog.appendChild(buttons);
     backdrop.appendChild(dialog);
     document.body.appendChild(backdrop);
-    if (window.casinoSound) window.casinoSound.play(reward.coins > 0 && !items.length ? "streak" : "fanfare");
     var close = () => {
       backdrop.remove();
       document.removeEventListener("keydown", onKey);
@@ -178,7 +176,6 @@
     dialog.append(flame, title, amount, row, text, buttons);
     backdrop.appendChild(dialog);
     document.body.appendChild(backdrop);
-    if (window.casinoSound) window.casinoSound.play("streak");
     var close = () => {
       backdrop.remove();
       document.removeEventListener("keydown", onKey);
@@ -949,7 +946,6 @@
   socket.on("moneyRain", (rain) => {
     // (while away: a popup now - like a gift)
     if (rain.missed) return window.casinoShowMissed({ ...rain, type: "rain" });
-    if (window.casinoSound) window.casinoSound.play("rain");
     var coin = rain.world == "season" ? rain.coinIcon || "💎" : "🪙";
     casinoNotice({ icon: "💸", title: "Money rain! +" + coin + " " + format(rain.amount), text: (rain.note || "Coins for you - have fun!") + (rain.elsewhere ? (rain.world == "season" ? " (in the season)" : " (your 🪙 outside the season)") : ""), key: "rain" });
     var sky = el("div", "cs-rain");
@@ -1223,7 +1219,6 @@
   var giftsWaiting = [];
   socket.on("giftReceived", (gift) => {
     giftsWaiting.push({ ...gift, type: "gift" });
-    if (window.casinoSound) window.casinoSound.play("gift");
     if (!document.querySelector(".cs-got-backdrop")) showReceived();
   });
 
