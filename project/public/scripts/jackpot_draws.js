@@ -125,7 +125,7 @@ function seatsIn(root) {
   return Array.from(root.querySelectorAll("[data-seat]"));
 }
 
-function chanceOf(name) {
+function seatChance(name) {
   var entry = state.entries.find((e) => e.name == name);
   return Math.round(((entry ? entry.coins : 0) / (state.total || 1)) * 100) + "%";
 }
@@ -139,7 +139,7 @@ function setSeat(seat, name) {
   var avatar = seat.querySelector(".mm-avatar");
   if (avatar) avatar.replaceWith(createAvatar(name, ["sm", "lg"].find((size) => avatar.classList.contains(size))));
   seat.querySelectorAll('[data-seat-text="name"]').forEach((node) => (node.innerText = name));
-  seat.querySelectorAll('[data-seat-text="chance"]').forEach((node) => (node.innerText = chanceOf(name)));
+  seat.querySelectorAll('[data-seat-text="chance"]').forEach((node) => (node.innerText = seatChance(name)));
 }
 
 // Two players fly to each other's spot (in an arc)
@@ -682,7 +682,7 @@ var raceDraw = {
       var runner = el("div", "jp-runner");
       runner.dataset.name = player.name;
       runner.append(createAvatar(player.name, "sm"), el("span", "jp-runner-horse", "🏇"));
-      var chance = el("span", "jp-race-chance", chanceOf(player.name));
+      var chance = el("span", "jp-race-chance", seatChance(player.name));
       chance.dataset.seatText = "chance";
       lane.append(chance, runner);
       track.appendChild(lane);
@@ -1802,7 +1802,7 @@ var launchDraw = {
       rocket.style.setProperty("--share", shareColor(player.name));
       var ship = el("span", "jp-rocket-ship", "🚀");
       rocket.append(el("span", "jp-rocket-flame"), ship, createAvatar(player.name, "sm"));
-      var pad = el("span", "jp-launch-pad", chanceOf(player.name));
+      var pad = el("span", "jp-launch-pad", seatChance(player.name));
       pad.dataset.seatText = "chance";
       lane.append(rocket, pad);
       sky.appendChild(lane);

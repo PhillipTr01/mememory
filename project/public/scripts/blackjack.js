@@ -63,6 +63,8 @@ socket.on("blackjackState", (data) => {
   previous = state;
   state = data;
   render();
+  // Coins changed hands (bets placed, a round paid out): the own result again
+  if (previous && previous.phase != state.phase && typeof refreshGameNet == "function") refreshGameNet();
 });
 
 socket.on("blackjackTables", renderLobby);

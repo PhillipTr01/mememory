@@ -328,6 +328,19 @@ module.exports = function (auth) {
     }),
   );
 
+  // What the player won or lost in a game: {today, total, rounds} (test mode: {test: true} - the sandbox counts nothing)
+  router.get(
+    "/stats/net",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      if (testMode.active(req.username)) return res.json({ test: true });
+      const net = await require("../game/game_net").netOf(req.username, String(req.query.game || ""), seasons.inSeasonWorld(req.username) ? "season" : "normal");
+      if (!net) return res.status(404).json({ error: "Unknown game." });
+      res.json(net);
+    }),
+  );
+
   // Any other address of the casino: without access the page to ask for it (with access: not found)
   router.get(/.*/, auth, approved, (req, res, next) => next());
 

@@ -2983,6 +2983,42 @@ body.jackpot-theme {
   flex-shrink: 0;
 }
 
+/* The own result in a game: today, in total (casino_net.js) */
+.cs-net {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.cs-net-part {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.cs-net-label {
+  color: var(--mm-muted);
+  font-weight: 700;
+}
+
+.cs-net-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-net-value.plus {
+  color: var(--mm-success);
+}
+
+.cs-net-value.minus {
+  color: var(--mm-danger);
+}
+
 .cs-fs-btn {
   display: inline-grid;
   place-items: center;
