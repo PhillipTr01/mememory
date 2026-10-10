@@ -33,7 +33,8 @@ function capRule(world, game) {
   const limits = forWorld(world);
   if (!(limits.BET_CAP_SHARE < 100)) return null;
   const x = dividerOf(world, game);
-  return { floor: Math.floor(limits.BET_CAP_FLOOR / x), share: limits.BET_CAP_SHARE / x };
+  // (a divided all-in amount up to the next 100 too - 10,000 / 15: 700, not 666)
+  return { floor: x > 1 ? roundUp(limits.BET_CAP_FLOOR / x) : limits.BET_CAP_FLOOR, share: limits.BET_CAP_SHARE / x };
 }
 
 // Up to the next 100 (a whole 100 stays)
