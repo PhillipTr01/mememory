@@ -222,10 +222,17 @@ function personRow(name, extraClass) {
   return { item: item, sub: sub, points: points };
 }
 
+// What the lists show now: the same again - nothing is built again (the avatars don't flicker)
+var shownPlayers = null;
+var shownBets = null;
+
 function renderPlayers() {
   var list = document.getElementById("jpPlayers");
   document.getElementById("jpEmpty").hidden = state.entries.length > 0;
   var entries = state.entries.slice().sort((a, b) => b.coins - a.coins);
+  var key = JSON.stringify([myName, entries.map((entry) => [entry.name, entry.coins, chance(entry), state.draw && !spinning && state.draw.winner == entry.name])]);
+  if (key == shownPlayers && list.childElementCount == entries.length) return;
+  shownPlayers = key;
   list.replaceChildren(
     ...entries.map((entry) => {
       var winner = state.draw && !spinning && state.draw.winner == entry.name;
@@ -250,6 +257,10 @@ function renderBets() {
   var count = bets.length + pending.length;
   document.getElementById("jpBetsEmpty").hidden = count > 0;
   document.getElementById("jpBetCount").innerText = count == 1 ? "1 bet" : count + " bets";
+  var won = (bet) => state.draw && !spinning && state.draw.ticket + 1 >= bet.from && state.draw.ticket + 1 <= bet.to;
+  var key = JSON.stringify([myName, pending.map((bet) => [bet.name, bet.amount, !!bet.next]), bets.map((bet) => [bet.name, bet.amount, bet.from, bet.to, won(bet)])]);
+  if (key == shownBets && list.childElementCount == count) return;
+  shownBets = key;
   // Own bets on their way to the pot (in it after a few seconds): on top, without tickets
   var hidden = pending.map((bet) => {
     var row = personRow(bet.name, "pending");
@@ -281,6 +292,10 @@ function renderBets() {
 // One record: the picture left, what and who in the middle, the pot and the chance right
 function recordCard(id, label, round, icon) {
   var card = document.getElementById(id);
+  // (the same as shown: nothing built again)
+  var key = JSON.stringify([label, round ? [round.winner, round.total, round.coins, round.id || round.at || null] : null]);
+  if (card.dataset.shown == key) return;
+  card.dataset.shown = key;
   card.classList.toggle("empty", round == null);
   var picture = round ? createAvatar(round.winner, "lg") : el("span", "jp-record-placeholder", icon);
   picture.classList.add("jp-record-picture");

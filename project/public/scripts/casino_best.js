@@ -9,6 +9,7 @@
   var game = card.dataset.game;
   var data = { today: [], all: [] };
   var span = "today";
+  var shown = null; // what the list shows now
   try {
     span = localStorage.getItem("casinoBestSpan") == "all" ? "all" : "today";
   } catch (error) {
@@ -68,6 +69,11 @@
     });
     var list = data[span] || [];
     var me = typeof chatUsername == "function" ? chatUsername() : null;
+    // (the same list as shown: nothing built again - the avatars' animations don't start over)
+    var ready = typeof setup != "undefined" && !!setup;
+    var key = JSON.stringify([span, me, ready, list]);
+    if (key == shown) return;
+    shown = key;
     card.querySelector(".cs-best-list").replaceChildren(
       ...list.map((entry, i) => {
         var row = make("li", "jp-history-item cs-best-row" + (i < 3 ? " top top-" + (i + 1) : "") + (entry.name == me ? " mine" : ""));

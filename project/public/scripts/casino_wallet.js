@@ -410,6 +410,7 @@
   var onlineButton = document.getElementById("chatOnline");
   var onlineList = document.getElementById("chatOnlineList");
   if (onlineButton) {
+    var onlineKey = null; // what the pill and the list show now: unchanged - nothing is built again (no flicker)
     socket.on("casinoOnline", (data) => {
       var names = data.names || [];
       // Who plays in the season world: the season's icon next to their names in the chat
@@ -421,6 +422,9 @@
         node.title = inSeason.has(node.dataset.name) ? "Plays in " + (data.seasonName || "the season") : "";
       });
       onlineButton.hidden = names.length == 0;
+      var key = JSON.stringify([names, data.season || [], data.seasonName || "", myName]);
+      if (key == onlineKey) return;
+      onlineKey = key;
       var faces = el("span", "chat-online-faces");
       // (no tooltips here: the list says it all)
       var quiet = (avatar) => {
