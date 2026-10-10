@@ -146,6 +146,8 @@ socket.on("battles", (data) => {
   battles = data.list;
   // The end still plays in the battle (the mode reveal, the jackpot roulette): until then no winner in the list
   battles.forEach((battle) => (battle.endAt = battle.endLeft > 0 ? Date.now() + battle.endLeft : 0));
+  // (when the current round started - roundAgo is from the moment the list came, the page may open the battle later)
+  battles.forEach((battle) => (battle.roundAt = battle.roundAgo != null ? Date.now() - battle.roundAgo : null));
   var ending = battles.filter((battle) => battle.endAt > 0).map((battle) => battle.endLeft);
   clearTimeout(listTimer);
   if (ending.length) listTimer = setTimeout(renderList, Math.min(...ending) + 50);
@@ -190,11 +192,17 @@ function track(battle) {
  * mode reveal and the roulette at the end. Nothing shows a result before it.
  * true: it plays (and renders) by itself.
  */
+// How long ago the current round of a battle started (now - not when the list came) - null: none runs
+function roundElapsed(battle) {
+  return battle.roundAt != null ? Date.now() - battle.roundAt : null;
+}
+
 function catchUp(battle) {
-  if (battle.phase == "running" && battle.revealed > 0 && battle.roundAgo != null && battle.roundAgo < roundTime - 900 && !spinning) {
+  var elapsed = roundElapsed(battle);
+  if (battle.phase == "running" && battle.revealed > 0 && elapsed != null && elapsed < roundTime - 900 && !spinning) {
     shown[battle.id] = battle.revealed - 1;
     seenRunning[battle.id] = true;
-    playRound(battle, battle.revealed - 1, battle.roundAgo);
+    playRound(battle, battle.revealed - 1, elapsed);
     return true;
   }
   if (battle.phase == "done" && battle.endLeft > 0) {
@@ -1317,7 +1325,17 @@ async function playRound(battle, round, elapsed) {
   // The page may have moved on (another battle opened)
   if (viewId == battle.id) renderBattle();
   var latest = currentBattle();
-  if (latest && latest.id == battle.id && latest.revealed > shown[battle.id]) shown[battle.id] = latest.revealed;
+  if (latest && latest.id == battle.id && latest.revealed > shown[battle.id]) {
+    // The next round started meanwhile: it rolls too - from where it is now (only one too far gone is just shown)
+    var elapsed = roundElapsed(latest);
+    if (viewId == battle.id && latest.phase == "running" && elapsed != null && elapsed < roundTime - 900) {
+      shown[battle.id] = latest.revealed - 1;
+      playRound(latest, latest.revealed - 1, elapsed);
+      return;
+    }
+    shown[battle.id] = latest.revealed;
+    if (viewId == battle.id) renderBattle();
+  }
   if (latest && latest.phase == "done") celebrate(latest);
 }
 
