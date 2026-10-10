@@ -57,3 +57,23 @@ test("rtp monitor: enough bets - a payback far from the maths is flagged, one cl
     config.RTP_MIN_BETS = old;
   }
 });
+
+test("rtp monitor: slots - a thousand spins without a big win is no alarm (the spread comes from the maths)", async () => {
+  const now = Date.now();
+  const old = config.RTP_MIN_BETS;
+  config.RTP_MIN_BETS = 50;
+  try {
+    // ~1,000 spins of 2,000, small wins only: two thirds paid back (the maths: ~97%)
+    for (let i = 0; i < 1000; i++) {
+      await CoinLog.create({ username: "rt_s", amount: -2000, reason: "slots bet", at: new Date(now) });
+      if (i % 3 === 0) await CoinLog.create({ username: "rt_s", amount: 4000, reason: "slots win", at: new Date(now) });
+    }
+    const game = (await rtp.report("today", "normal", now)).games.find((g) => g.id === "slots");
+    assert.ok(game.rtp > 0.6 && game.rtp < 0.7);
+    // 7.3 bets of spread per spin over sqrt(1,000) spins: about 23 points
+    assert.ok(game.spread > 0.2 && game.spread < 0.26, "spread " + game.spread);
+    assert.notStrictEqual(game.status, "check");
+  } finally {
+    config.RTP_MIN_BETS = old;
+  }
+});

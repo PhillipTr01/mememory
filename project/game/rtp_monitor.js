@@ -11,10 +11,11 @@ const cases = require("./cases");
  * The RTP monitor (admin panel): how much of the bets every game really paid back - from the coin
  * history - next to what the maths says it should. Wagered: the bets minus what was given back
  * (a refund is no bet), paid: the wins. The spread tells how far off the real payback may be by
- * pure chance (about one standard error, from the wins themselves): far more than that - check it.
+ * pure chance (about one standard error, from the wins themselves - or, for a game with rare huge wins, from the
+ * maths: `perBet`, the spread of one game's win in bets): far more than that - check it.
  */
 const GAMES = [
-  { id: "slots", name: "Slots", icon: "🎰", bet: ["slots bet"], win: ["slots win"], refund: [], theory: () => slots.rtp().rtp },
+  { id: "slots", name: "Slots", icon: "🎰", bet: ["slots bet"], win: ["slots win"], refund: [], theory: () => slots.rtp().rtp, perBet: () => slots.SPIN_SPREAD },
   { id: "roulette", name: "Roulette", icon: "🎡", bet: ["roulette bet"], win: ["roulette win"], refund: ["roulette refund"], theory: () => roulette.rtp("red") },
   { id: "baucua", name: "Bầu Cua", icon: "🦀", bet: ["baucua bet"], win: ["baucua win"], refund: ["baucua refund"], theory: () => baucua.rtp() },
   { id: "blackjack", name: "Blackjack", icon: "🃏", bet: ["blackjack bet"], win: ["blackjack win"], refund: ["blackjack refund"], theory: () => null, about: "Depends on how the players play - about 99.5% with perfect basic strategy." },
@@ -83,7 +84,9 @@ async function report(range = "week", world = "normal", now = Date.now()) {
     // (the spread of the payback by chance: the spread of the wins over the bets)
     const squares = total(game.win, "squares");
     const variance = wins > 0 ? Math.max(0, squares - (paid * paid) / Math.max(bets, wins)) : 0;
-    const spread = wagered > 0 ? Math.sqrt(variance) / wagered : null;
+    // (a game with rare huge wins: what the maths says the spread is with these bets, if it is more)
+    const known = game.perBet ? game.perBet() * Math.sqrt(total(game.bet, "squares")) : 0;
+    const spread = wagered > 0 ? Math.max(Math.sqrt(variance), known) / wagered : null;
     let status = "ok";
     if (bets === 0) status = "empty";
     else if (bets < config.RTP_MIN_BETS) status = "few";

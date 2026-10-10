@@ -105,6 +105,13 @@ const prizeX = (prize) => COIN_VALUES.find((field) => field.prize === prize).x;
 // What a chest is worth on average (one of the three prizes, each as likely)
 const CHEST_X = CHEST_PRIZES.reduce((sum, prize) => sum + prizeX(prize), 0) / CHEST_PRIZES.length;
 const ULTRA = 500; // all 15 spots full: this many times the bet on top
+/*
+ * How far one spin's win strays from its average, in bets (the standard deviation - measured: millions of
+ * simulated spins with the strips, the bonus game and the coin game, about 7.1 to 7.3). The RTP monitor needs
+ * it: the few huge wins (bonus, ULTRA) make the spread of a few thousand real spins far too small - before the
+ * first big win there is nothing in the history that shows how far the wins can go.
+ */
+const SPIN_SPREAD = 7.3;
 const COIN_MAX_WIN = 1000; // the coin game never pays more than this many times the bet
 const total = (list) => list.reduce((sum, field) => sum + field.weight, 0);
 
@@ -544,4 +551,4 @@ function catalog() {
   };
 }
 
-module.exports = { SYMBOLS, LINES, STRIPS, FREE_STRIPS, FREE_DROP, FREE_BONUS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, CHEST_PRIZES, lineWin, spin, coinGame, chestBoxes, openChest, coinSweat, coinSweatReels, sweatShare, rtp, catalog };
+module.exports = { SYMBOLS, LINES, STRIPS, FREE_STRIPS, FREE_DROP, FREE_BONUS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, SPIN_SPREAD, CHEST_PRIZES, lineWin, spin, coinGame, chestBoxes, openChest, coinSweat, coinSweatReels, sweatShare, rtp, catalog };
