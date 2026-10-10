@@ -1392,10 +1392,15 @@ function renderControls() {
   document.querySelectorAll(".sl-preset[data-value]").forEach((preset) => preset.classList.toggle("active", !maxMode && Number(preset.dataset.value) == bet));
   var maxButton = document.querySelector(".sl-preset-max");
   if (maxButton) maxButton.classList.toggle("active", maxMode);
-  document.getElementById("slLess").disabled = spinning || bet <= setup.rules.minBet;
-  document.getElementById("slMore").disabled = spinning || bet >= maxNow();
+  // Auto spins running: the bet stays as it is (the field, − / + and the presets locked until they stop)
+  document.getElementById("slLess").disabled = auto || spinning || bet <= setup.rules.minBet;
+  document.getElementById("slMore").disabled = auto || spinning || bet >= maxNow();
   // (the balance changed the highest bet: other presets)
   if (presets().join(",") != shownPresets) renderPresets();
+  var betInput = document.getElementById("slBet");
+  betInput.disabled = auto;
+  betInput.title = auto ? "Stop the auto spins to change the bet" : "";
+  document.querySelectorAll(".sl-preset").forEach((preset) => (preset.disabled = auto));
 }
 
 // − / +: to the next bet of the presets
