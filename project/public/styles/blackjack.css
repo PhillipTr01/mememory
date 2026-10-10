@@ -469,7 +469,11 @@
     gap: 0.1rem;
   }
 
+  /* Every seat as high as the own seat while betting (the bet, PP and 21+3 under each other):
+     betting, playing, an empty table - the table and the bars never change their height */
   .bj-seat {
+    min-height: 230px;
+    justify-content: flex-end;
     padding: 0.3rem 0;
   }
 
@@ -1309,8 +1313,9 @@
   /* The own seat: the bet on top, PP and 21+3 under it (side by side they are wider than a seat) */
   .bj-fields {
     flex-wrap: wrap;
-    gap: 0.15rem 0.3rem;
-    max-width: 66px;
+    justify-content: center;
+    gap: 0.15rem 0.2rem;
+    max-width: 100%;
     margin: 0 auto;
   }
 
@@ -1320,8 +1325,8 @@
   }
 
   .bj-field {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     margin-top: 0;
   }
 
@@ -1370,3 +1375,15 @@
 .bj-chipface[data-rank="4"] { --chip: #7c6a9c; }
 .bj-chip[data-rank="5"],
 .bj-chipface[data-rank="5"] { --chip: #b07c4c; }
+
+/* Phones: both bars as high as the bet bar, the dealer as high with the betting clock as without it */
+@media (max-width: 575px) {
+  .bj-betbar,
+  .bj-actionbar {
+    min-height: 126px;
+  }
+
+  .bj-dealer {
+    min-height: 108px;
+  }
+}
