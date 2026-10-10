@@ -783,6 +783,17 @@ function showPrizes(bet) {
   var bar = document.getElementById("slPrizes");
   bar.hidden = false;
   var c = setup.coins;
+  var list = c.prizes.concat([{ prize: "ultra", x: c.ultra }]);
+  // (the pills are there already: only their amounts change - building them again made them blink)
+  var pills = bar.querySelectorAll(".sl-prize");
+  if (pills.length == list.length && [...pills].every((pill, i) => pill.dataset.prize == list[i].prize)) {
+    pills.forEach((pill, i) => {
+      var value = pill.querySelector(".sl-prize-value");
+      var text = "🪙 " + formatCoins(Math.floor(bet * list[i].x));
+      if (value.innerText != text) value.innerText = text;
+    });
+    return;
+  }
   bar.replaceChildren(
     ...c.prizes.concat([{ prize: "ultra", x: c.ultra }]).map((p) => {
       var pill = el("div", "sl-prize prize-" + p.prize);
@@ -1329,6 +1340,16 @@ function renderPresets() {
   var box = document.getElementById("slPresets");
   var list = presets();
   shownPresets = list.join(",");
+  // (as many as before: only their amounts change - building them again made them blink)
+  var old = box.querySelectorAll(".sl-preset[data-value]");
+  if (old.length == list.length && box.querySelector(".sl-preset-max")) {
+    old.forEach((button, i) => {
+      var label = list[i] >= 1000 ? list[i] / 1000 + "K" : String(list[i]);
+      button.dataset.value = list[i];
+      if (button.innerText != label) button.innerText = label;
+    });
+    return;
+  }
   // Max: the most this spin can be now (the max bet, the max bet by balance - and the own coins)
   var max = el("button", "sl-preset sl-preset-max", "Max");
   max.type = "button";
@@ -1339,7 +1360,7 @@ function renderPresets() {
       var button = el("button", "sl-preset", value >= 1000 ? value / 1000 + "K" : String(value));
       button.type = "button";
       button.dataset.value = value;
-      button.addEventListener("click", () => setBet(value));
+      button.addEventListener("click", () => setBet(Number(button.dataset.value)));
       return button;
     }),
     max,
@@ -1390,11 +1411,10 @@ function renderControls() {
   left.innerText = String(autoLeft);
   button.title = auto ? "Stop the auto spins" : bet > myCoins ? "Not enough coins" : "Spin (space) - hold to keep spinning";
   document.getElementById("slAuto").disabled = auto || bet > myCoins;
-  document.querySelectorAll(".sl-preset[data-value]").forEach((preset) => preset.classList.toggle("active", Number(preset.dataset.value) == bet));
+  // (max mode: only Max is lit, not the amount it happens to be - set once, never on and off again)
+  document.querySelectorAll(".sl-preset[data-value]").forEach((preset) => preset.classList.toggle("active", !maxMode && Number(preset.dataset.value) == bet));
   var maxButton = document.querySelector(".sl-preset-max");
   if (maxButton) maxButton.classList.toggle("active", maxMode);
-  // (max mode: only Max is lit, not the amount it happens to be)
-  if (maxMode) document.querySelectorAll(".sl-preset[data-value]").forEach((preset) => preset.classList.remove("active"));
   document.getElementById("slLess").disabled = spinning || bet <= setup.rules.minBet;
   document.getElementById("slMore").disabled = spinning || bet >= maxNow();
   // (the balance changed the highest bet: other presets)
