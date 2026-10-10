@@ -60,8 +60,7 @@ function avatarWith(look, size) {
     avatar.classList.add("look-fx-" + look.effect);
     avatar.appendChild(el("span", "look-fx"));
   }
-  // The preview keeps its looks (not the ones of the player)
-  avatar.removeAttribute("data-name");
+  // (data-preview: it keeps these looks - the name stays, so the own avatar still comes when it is loaded)
   return avatar;
 }
 

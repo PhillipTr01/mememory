@@ -98,7 +98,7 @@
         var avatar = createAvatar(name, "lg");
         [...avatar.classList].filter((c) => c.startsWith("look-")).forEach((c) => avatar.classList.remove(c));
         avatar.querySelectorAll(".look-fx").forEach((fx) => fx.remove());
-        avatar.removeAttribute("data-name");
+        avatar.dataset.preview = "1";
         avatar.classList.add(item.kind == "frame" ? "look-frame-" + item.id : "look-fx-" + item.id);
         if (item.kind == "effect") avatar.appendChild(el("span", "look-fx"));
         stage.appendChild(avatar);

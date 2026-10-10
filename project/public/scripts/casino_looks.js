@@ -12,6 +12,8 @@
   var timer = null;
 
   function apply(avatar) {
+    // (a preview - the shop, a reward - keeps the looks it shows)
+    if (avatar.dataset.preview) return;
     var name = avatar.dataset.name;
     [...avatar.classList].filter((c) => c.startsWith("look-")).forEach((c) => avatar.classList.remove(c));
     var old = avatar.querySelector(":scope > .look-fx");
