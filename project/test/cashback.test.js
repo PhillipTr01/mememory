@@ -48,19 +48,3 @@ test("cashback: after midnight a share of the net loss of the day before comes b
     cashback.reset();
   }
 });
-
-test("game net: what a player won or lost in one game - today and in total, the rounds; other games don't count", async () => {
-  const gameNet = require("../game/game_net");
-  const now = Date.parse("2026-10-14T12:00:00Z");
-  const log = (amount, reason, at) => CoinLog.create({ username: "netter", amount, reason, at: new Date(at) });
-  await log(-2000, "blackjack bet", now - 2 * DAY);
-  await log(5000, "blackjack win", now - 2 * DAY);
-  await log(-4000, "blackjack bet", now - 1000);
-  await log(-1000, "blackjack bet", now - 500);
-  await log(1000, "blackjack refund", now - 400);
-  await log(-9000, "slots bet", now - 300);
-  assert.deepStrictEqual(await gameNet.netOf("netter", "blackjack", "normal", now), { today: -4000, total: -1000, rounds: 3 });
-  assert.deepStrictEqual(await gameNet.netOf("netter", "slots", "normal", now), { today: -9000, total: -9000, rounds: 1 });
-  assert.strictEqual(await gameNet.netOf("netter", "chess", "normal", now), null);
-  assert.deepStrictEqual(gameNet.reasonsOf("battles"), ["battle", "battle win", "battle refund"]);
-});

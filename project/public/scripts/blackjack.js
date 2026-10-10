@@ -63,8 +63,6 @@ socket.on("blackjackState", (data) => {
   previous = state;
   state = data;
   render();
-  // Coins changed hands (bets placed, a round paid out): the own result again
-  if (previous && previous.phase != state.phase && typeof refreshGameNet == "function") refreshGameNet();
 });
 
 socket.on("blackjackTables", renderLobby);
@@ -612,6 +610,29 @@ function bumpShape(bump) {
   svg.firstChild.setAttribute("d", line + ` V${h + 3} H0 Z`);
 }
 
+// What the round brought me (the result phase): {total, sides} - every hand and side bet of my seats, null: not played
+function roundNet() {
+  var total = 0;
+  var sides = 0;
+  var played = false;
+  state.seats.forEach((seat) => {
+    if (!seat || seat.name != myName) return;
+    seat.hands.forEach((hand) => {
+      played = true;
+      total += (hand.payout || 0) - hand.bet;
+    });
+    (seat.sideResults || []).forEach((result) => {
+      played = true;
+      sides += (result.payout || 0) - result.bet;
+    });
+  });
+  return played ? { total: total + sides, sides: sides } : null;
+}
+
+function signedCoins(value) {
+  return (value > 0 ? "+" : value < 0 ? "−" : "±") + "🪙 " + formatCoins(Math.abs(value));
+}
+
 // The own seats one can leave now (not while their cards are played)
 function standable() {
   return mySeats().filter((i) => state.phase == "betting" || state.seats[i].hands.length == 0);
@@ -644,8 +665,15 @@ function renderBars() {
   var turn = state.phase == "playing" ? myTurn() : null;
   actions.hidden = canBet;
   actions.classList.toggle("idle", !turn);
-  if (!turn) {
-    document.getElementById("bjActionLabel").innerText = mySeats().length == 0 ? "Take a seat to play" : state.phase == "betting" ? "Pick your seat to bet" : "Waiting for your turn";
+  var label = document.getElementById("bjActionLabel");
+  label.classList.remove("plus", "minus");
+  var net = state.phase == "result" ? roundNet() : null;
+  if (!turn && net) {
+    // The round is paid: what it really brought - every own hand and every side bet together
+    label.innerText = "This round: " + signedCoins(net.total) + (net.sides ? " (side bets " + signedCoins(net.sides) + ")" : "");
+    label.classList.add(net.total > 0 ? "plus" : net.total < 0 ? "minus" : "even");
+  } else if (!turn) {
+    label.innerText = mySeats().length == 0 ? "Take a seat to play" : state.phase == "betting" ? "Pick your seat to bet" : "Waiting for your turn";
     document.querySelectorAll("#bjActions [data-action]").forEach((button) => (button.disabled = true));
     var idleFill = document.getElementById("bjTurnFill");
     idleFill.style.transition = "none";

@@ -100,7 +100,10 @@
   flex-direction: column;
   align-items: center;
   gap: 0.3rem;
-  min-height: 150px;
+  /* Every seat as high as the own one with its bet fields (the highest it gets): sitting down, betting,
+     playing - the seats and the bars under them never move; the seat's content sits at the bottom */
+  min-height: 224px;
+  justify-content: flex-end;
   padding: 0.4rem 0.2rem;
   border: 2px solid transparent;
   border-radius: 14px;
@@ -433,7 +436,7 @@
   }
 
   .bj-seat {
-    min-height: 130px;
+    min-height: 224px;
     transform: translateY(calc(var(--lift, 0) * 0.5));
   }
 
@@ -472,7 +475,7 @@
   /* Every seat as high as the own seat while betting (the bet, PP and 21+3 under each other):
      betting, playing, an empty table - the table and the bars never change their height */
   .bj-seat {
-    min-height: 230px;
+    min-height: 232px;
     justify-content: flex-end;
     padding: 0.3rem 0;
   }
@@ -1011,6 +1014,15 @@
   gap: 0.25rem;
   height: 44px;
   color: var(--mm-accent);
+}
+
+/* The round paid out: what it brought */
+#bjActionLabel.plus {
+  color: var(--mm-success);
+}
+
+#bjActionLabel.minus {
+  color: var(--mm-danger);
 }
 
 /* The time for the move: a thin line in the bump */
