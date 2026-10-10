@@ -174,19 +174,29 @@
   flex-direction: column;
   align-items: center;
   gap: 0.15rem;
-  min-height: 3.6rem;
+  /* Always as high: "Good luck!" (no detail), "No win", a win, a big win - the reels never move */
+  height: 4rem;
   justify-content: center;
 }
 
 .sl-win-text {
+  height: 2.6rem;
+  line-height: 2.6rem;
   font-size: 1.5rem;
   font-weight: 800;
   color: var(--mm-muted);
   font-variant-numeric: tabular-nums;
 }
 
+/* (one line, also when empty) */
 .sl-win-detail {
+  max-width: 100%;
+  min-height: 1.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.85rem;
+  line-height: 1.25rem;
   color: var(--mm-muted);
 }
 
