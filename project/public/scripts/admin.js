@@ -253,8 +253,9 @@ async function loadOverview() {
       ...(data.leaderboard.length
         ? data.leaderboard.slice(0, 5).map((p, i) => {
             var row = el("div", "ad-row");
-            var name = playerTag(p.username);
-            name.classList.add("ad-row-main", "fw-semibold");
+            // (avatar and name in one row, on the left - the column of .ad-row-main around it)
+            var name = el("div", "ad-row-main fw-semibold");
+            name.appendChild(playerTag(p.username));
             var value = el("span", "ad-row-value", "🪙 " + formatCoins(p.coins));
             row.append(el("span", "ad-rank", i + 1), name, value);
             return row;
