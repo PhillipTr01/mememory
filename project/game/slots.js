@@ -15,8 +15,9 @@ const crypto = require("crypto");
  * how many free spins (outer ring) and the multiplier to start with (inner
  * ring). The free spins play by themselves on the same reels; the multiplier
  * climbs by one after every free spin, so the last spins are worth the most.
- * A spin (with its whole bonus) never pays more than MAX_WIN times the bet -
- * when the bonus reaches it, it ends right there.
+ * No max win: the bonus always plays all its free spins (at most
+ * MAX_FREE_SPINS). The wheels are set so that the machine pays back about
+ * 96.8% - what it paid with the old cap of 250x.
  */
 // count: on every reel - or per reel: 🍌 and 🐸 are rare on reels 4 and 5 (long lines of them are rare - and
 // pay more), the higher symbols take their places there
@@ -37,21 +38,22 @@ const BONUS = "bonus";
 const BONUS_REELS = [0, 2, 4];
 // How many 🎁 on each reel (two in sight on reels 1 and 3: the sweat)
 const BONUS_COUNT = [2, 0, 2, 0, 4];
-const MAX_WIN = 250; // times the bet, for a whole spin
+const MAX_WIN = Infinity; // no cap for a spin (and its bonus) - the free spins always play to the end
 
 // The bonus wheels: free spins (outer ring) and the start multiplier (inner ring), with weights
+// (a bit fewer long bonus games and high start multipliers than with the old cap of 250x: the payback stays)
 const BONUS_SPINS = [
-  { spins: 5, weight: 25 },
-  { spins: 6, weight: 30 },
+  { spins: 5, weight: 27 },
+  { spins: 6, weight: 31 },
   { spins: 8, weight: 25 },
-  { spins: 10, weight: 13 },
-  { spins: 12, weight: 7 },
+  { spins: 10, weight: 11 },
+  { spins: 12, weight: 6 },
 ];
 const BONUS_MULTIPLIERS = [
-  { multiplier: 1, weight: 35 },
+  { multiplier: 1, weight: 38 },
   { multiplier: 2, weight: 35 },
-  { multiplier: 3, weight: 22 },
-  { multiplier: 5, weight: 8 },
+  { multiplier: 3, weight: 20 },
+  { multiplier: 5, weight: 7 },
 ];
 const BONUS_STEP = 1; // the multiplier grows by this after every free spin
 const RETRIGGER = 5; // three 🎁 in a free spin: this many free spins more
@@ -356,7 +358,8 @@ function spin(bet, randomInt = crypto.randomInt, options = {}) {
       return at[randomInt(at.length)];
     });
   const base = reels(bet, randomInt, fixed);
-  const cap = bet * MAX_WIN;
+  // (options.maxWin: only for working out the payback - see the tests)
+  const cap = bet * (options.maxWin != null ? options.maxWin : MAX_WIN);
   let win = Math.min(base.lineWin, cap);
   let capped = base.lineWin > cap;
   let bonus = null;
@@ -432,7 +435,7 @@ function rtp() {
       totals = next;
     }
   });
-  // (without the max win of 250x - it takes about 1%: the true payback is about 96.9%, see the tests)
+  // (exact - there is no max win anymore)
   const bonusAverage = free.paid * (played * start + BONUS_STEP * playedK);
   const coin = coinRtp();
   return { rtp: paid + bonusChance * bonusAverage + coin.rtp, lines: paid, freeLines: free.paid, lineHit: base.hits, bonusChance: bonusChance, bonusRtp: bonusChance * bonusAverage, bonusAverage: bonusAverage, coinChance: coin.chance, coinRtp: coin.rtp, coinAverage: coin.average, ultraChance: coin.ultra };
@@ -537,7 +540,7 @@ function catalog() {
     freeStrips: FREE_STRIPS,
     bonus: { spins: BONUS_SPINS.map((f) => f.spins), multipliers: BONUS_MULTIPLIERS.map((f) => f.multiplier), step: BONUS_STEP, retrigger: RETRIGGER, maxSpins: MAX_FREE_SPINS },
     coins: { trigger: COIN_TRIGGER, respins: COIN_RESPINS, values: COIN_VALUES.filter((f) => !f.prize && !f.chest).map((f) => f.x), prizes: COIN_VALUES.filter((f) => f.prize).map((f) => ({ prize: f.prize, x: f.x })), chest: CHEST_PRIZES.length, ultra: ULTRA, maxWin: COIN_MAX_WIN },
-    maxWin: MAX_WIN,
+    maxWin: Number.isFinite(MAX_WIN) ? MAX_WIN : null,
   };
 }
 

@@ -4379,8 +4379,11 @@ body.jackpot-theme::before {
 .cs-best-name {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.6rem;
   min-width: 0;
+  /* (the frame and effect of an avatar go past its circle: not cut off - only the name is shortened) */
+  overflow: visible !important;
+  padding: 4px 0 4px 5px;
 }
 
 .cs-best-name > span:last-child {

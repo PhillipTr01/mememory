@@ -6,15 +6,14 @@ const slots = require("../game/slots");
 
 /* ---------- The machine ---------- */
 
-test("slots: 5 reels, 3 rows, 9 lines; pays back about 96.8% (exactly computed)", () => {
+test("slots: 5 reels, 3 rows, 9 lines; pays back about 96.8% (exactly computed, no max win)", () => {
   assert.strictEqual(slots.STRIPS.length, 5);
   assert.strictEqual(slots.LINES.length, 9);
   assert.ok(slots.LINES.every((rows) => rows.length === 5 && rows.every((row) => row >= 0 && row <= 2)));
   // Nine different lines
   assert.strictEqual(new Set(slots.LINES.map((rows) => rows.join())).size, 9);
-  // (exact, without the max win of 250x - it takes about 1%: the real payback is about 96.9%)
   const { rtp, lineHit } = slots.rtp();
-  assert.ok(rtp > 0.975 && rtp < 0.985, `payback ${(rtp * 100).toFixed(2)}%`);
+  assert.ok(rtp > 0.965 && rtp < 0.971, `payback ${(rtp * 100).toFixed(2)}%`);
   assert.ok(lineHit > 0.05, "a line wins often enough");
 });
 
@@ -40,7 +39,7 @@ test("slots: a spin pays a ninth of the bet per line times the multiplier", () =
   assert.strictEqual(result.win, Math.floor((900 * result.lines.reduce((sum, line) => sum + line.multiplier, 0)) / 9));
 });
 
-test("slots: three 🎁 start the bonus game - free spins with a growing multiplier, at most 250x the bet", () => {
+test("slots: three 🎁 start the bonus game - free spins with a growing multiplier, no max win (every free spin plays)", () => {
   // The 🎁 only on reels 1, 3, 5, never two in one window
   slots.STRIPS.forEach((strip, reel) => {
     const at = strip.map((s, i) => (s === "bonus" ? i : -1)).filter((i) => i >= 0);
@@ -63,10 +62,10 @@ test("slots: three 🎁 start the bonus game - free spins with a growing multipl
   let i = 0;
   const big = slots.spin(100, () => rolls[i++]);
   assert.deepStrictEqual([big.bonus.spins, big.bonus.multiplier], [8, 3]);
-  // Diamonds every time: the max win is reached in the first free spins and the bonus ends there
-  assert.strictEqual(big.win, 100 * slots.MAX_WIN);
-  assert.ok(big.capped);
-  assert.ok(big.bonus.freeSpins.length < 8);
+  // Diamonds every time: far over the old cap of 250x - and still all 8 free spins play
+  assert.ok(big.win > 100 * 250);
+  assert.ok(!big.capped);
+  assert.strictEqual(big.bonus.freeSpins.length, 8);
   assert.strictEqual(big.bonus.win + big.lineWin, big.win);
 
   // 5 free spins from x1 (stops without a 🎁 in sight: no retrigger) - every win is the line win times
@@ -137,7 +136,7 @@ test("slots: five 🪙 start the coin game - respins until three in a row bring 
   const { coinChance, coinRtp, rtp } = slots.rtp();
   assert.ok(coinChance > 1 / 230 && coinChance < 1 / 175, `coin game 1 of ${Math.round(1 / coinChance)}`);
   assert.ok(coinRtp > 0.08 && coinRtp < 0.25);
-  assert.ok(rtp > 0.975 && rtp < 0.985, `payback ${(rtp * 100).toFixed(2)}%`);
+  assert.ok(rtp > 0.965 && rtp < 0.971, `payback ${(rtp * 100).toFixed(2)}%`);
   for (let i = 0; i < 200; i++) {
     const result = slots.spin(100, undefined, { forceBonus: "coins" });
     const game = result.coinGame;

@@ -1410,9 +1410,8 @@ function showPaytable() {
       setup.bonus.step +
       " after every free spin. Three 🎁 in a free spin: " +
       setup.bonus.retrigger +
-      " free spins more. A spin with its bonus pays at most " +
-      setup.maxWin +
-      "× the bet.",
+      " free spins more." +
+      (setup.maxWin ? " A spin with its bonus pays at most " + setup.maxWin + "× the bet." : " No max win - the free spins always play to the end."),
   );
   // The coin game: how it works, then every prize as a colored badge with what it pays for this bet
   var c = setup.coins;
