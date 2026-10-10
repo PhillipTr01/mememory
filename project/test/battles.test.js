@@ -536,3 +536,20 @@ test("battles: while the end plays (the mode reveal) nobody in the battle has lo
     config.BATTLE_MODE_REVEAL = old;
   }
 });
+
+test("battles: the admin changes the max bet by balance - an open page gets the new rule and limits right away", async () => {
+  const settings = require("../game/settings");
+  const old = { BET_CAP_FLOOR: config.BET_CAP_FLOOR, BET_CAP_SHARE: config.BET_CAP_SHARE, BATTLE_MAX_COST: config.BATTLE_MAX_COST };
+  h.setCoins("erin", 64000);
+  const erin = client("erin");
+  await waitFor(erin, "coins", (data) => data.coins === 64000);
+  try {
+    const coins = waitFor(erin, "coins", (data) => data.betCapRule && data.betCapRule.floor === 25000);
+    const rules = waitFor(erin, "battleRules", (data) => data.maxCost === 30000);
+    assert.ok((await settings.update({ BET_CAP_FLOOR: 25000, BET_CAP_SHARE: 25, BATTLE_MAX_COST: 30000 })).settings);
+    assert.strictEqual((await coins).betCap, 25000, "64k coins: 25% are 16k - the 25k floor is more");
+    await rules;
+  } finally {
+    await settings.update(old);
+  }
+});

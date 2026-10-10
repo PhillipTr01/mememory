@@ -370,6 +370,8 @@ module.exports = function (io, options = {}) {
   // The admin turned cases on or off: every open page gets the new list
   require("../game/settings").changes.on("change", (values) => {
     if ("BATTLE_CASES_OFF" in values) battles.emit("cases", cases.catalog());
+    // (the limits may have changed too - this world's)
+    battles.emit("battleRules", { maxCases: limits.BATTLE_MAX_CASES, maxCost: limits.BATTLE_MAX_COST });
   });
   // ... or changed, added, deleted one in the case editor
   cases.changes.on("change", () => battles.emit("cases", cases.catalog()));

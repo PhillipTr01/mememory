@@ -89,6 +89,14 @@ module.exports = function (io) {
     );
   }
 
+  // A setting changed (admin panel): every open page gets the balance again - with the max bet by balance as it
+  // is now (the pages work out what is left from the rule they got last)
+  settings.changes.on("change", () => {
+    const names = (list) => new Set(list.flatMap((name) => [...io.of(name).sockets.values()].map((socket) => socket.data.username)).filter(Boolean));
+    names([...REAL, ...REAL.map((name) => worlds.TEST + name)]).forEach((username) => worlds.services("").coins.notify(username));
+    names(SEASON).forEach((username) => worlds.services(worlds.SEASON).coins.notify(username));
+  });
+
   // A game turned off (admin panel): its open pages go to another game
   settings.changes.on("change", (values) => {
     for (const game of games.GAMES) {
