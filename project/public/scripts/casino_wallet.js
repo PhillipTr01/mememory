@@ -1194,7 +1194,11 @@
     dialog.setAttribute("role", "dialog");
     dialog.setAttribute("aria-modal", "true");
     dialog.noValidate = true;
-    var close = () => backdrop.remove();
+    var waitTimer = null;
+    var close = () => {
+      clearInterval(waitTimer);
+      backdrop.remove();
+    };
     var x = el("button", "cs-gift-close", "✕");
     x.type = "button";
     x.setAttribute("aria-label", "Close");
@@ -1220,10 +1224,31 @@
     sendButton.type = "submit";
 
     var left = 0;
+    var waitUntil = 0; // the wait between gifts: the next one from then on
+    var waitLine = el("span", "cs-gift-wait");
+    waitLine.hidden = true;
     var most = () => Math.max(0, Math.min(left, coins));
+    var waitText = (ms) => {
+      var s = Math.ceil(ms / 1000);
+      return s < 60 ? s + " s" : Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") + " min";
+    };
+    // The wait: a line that counts down - then the gift can go
+    var startWait = (ms) => {
+      waitUntil = Date.now() + ms;
+      clearInterval(waitTimer);
+      var tick = () => {
+        var rest = waitUntil - Date.now();
+        waitLine.hidden = rest <= 0;
+        waitLine.innerText = "⏳ Next gift in " + waitText(rest);
+        if (rest <= 0) clearInterval(waitTimer);
+        render();
+      };
+      waitTimer = setInterval(tick, 500);
+      tick();
+    };
     var render = () => {
       var amount = Math.floor(Number(input.value) || 0);
-      sendButton.disabled = amount < 1 || amount > most();
+      sendButton.disabled = amount < 1 || amount > most() || Date.now() < waitUntil;
       sendButton.innerText = amount > 0 ? "🎁 Send 🪙 " + format(amount) : "Send";
       quick.querySelectorAll("button").forEach((b) => (b.disabled = Number(b.dataset.value || most()) > most() || most() < 1));
     };
@@ -1246,7 +1271,7 @@
     quick.appendChild(max);
     input.addEventListener("input", render);
 
-    dialog.append(x, head, input, quick, info, error, sendButton);
+    dialog.append(x, head, input, quick, info, waitLine, error, sendButton);
     dialog.addEventListener("submit", async (event) => {
       event.preventDefault();
       var amount = Math.floor(Number(input.value) || 0);
@@ -1256,6 +1281,7 @@
       try {
         var res = await fetch("gift", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: name, amount: amount }) });
         var data = await res.json();
+        if (!res.ok && data.wait > 0) startWait(data.wait);
         if (!res.ok) throw new Error(data.error || "That didn't work.");
         close();
       } catch (e) {
@@ -1286,6 +1312,7 @@
         el("span", "cs-gift-have", "You have 🪙 " + format(coins)),
       );
       if (left < 1) info.classList.add("used");
+      if (status.wait > 0) startWait(status.wait);
     } catch (e) {
       info.innerText = "";
     }

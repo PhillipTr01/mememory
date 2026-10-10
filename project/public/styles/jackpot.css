@@ -4030,6 +4030,21 @@ body.jackpot-theme {
   text-align: center;
 }
 
+.cs-gift-wait {
+  align-self: center;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.14);
+  color: var(--mm-accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-gift-wait[hidden] {
+  display: none;
+}
+
 .cs-gift-info b {
   color: var(--mm-accent);
   white-space: nowrap;

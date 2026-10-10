@@ -65,6 +65,7 @@ module.exports = {
   COIN_RESET: "reset-100k",
   DAILY_BONUS: 20000,
   GIFT_LIMIT: 25000, // coins a player can give other players a day
+  GIFT_COOLDOWN: 60 * 1000, // after a gift a player waits this long before the next one (both worlds; 0: no wait)
   SEASON_GIFT_LIMIT: 5000, // ... in the season world a day (its coins - an own limit)
   // Max bet by balance: up to BET_CAP_FLOOR a player can bet everything, above it at most BET_CAP_SHARE % of the balance per bet
   BET_CAP_FLOOR: 10000,
