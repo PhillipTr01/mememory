@@ -173,21 +173,31 @@
 }
 
 .sh-rarity {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   color: rgb(var(--tone));
   text-transform: uppercase;
 }
 
+/* Every card the same build: a long name takes two lines at most, the button always at the bottom */
 .sh-item-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   font-size: 0.92rem;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .sh-btn {
   width: 100%;
-  margin-top: 0.25rem;
+  margin-top: auto;
 }
 
 .sh-worn-tag {
@@ -301,6 +311,10 @@
 }
 
 .sh-season-origin {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.74rem;
   font-weight: 700;
   color: rgb(var(--tone));

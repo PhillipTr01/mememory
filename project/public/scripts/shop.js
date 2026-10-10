@@ -104,13 +104,17 @@ function renderSeason() {
         var card = el("div", "sh-item exclusive" + (worn ? " worn" : "") + (owned ? " owned" : " locked"));
         var stage = el("div", "sh-stage");
         stage.appendChild(avatarWith(wornWith(item), "lg"));
-        card.append(stage, el("span", "sh-rarity", "Exclusive " + KIND_NAMES[item.kind].toLowerCase()), el("span", "sh-item-name", item.name));
+        var kindLabel = el("span", "sh-rarity", "✨ " + KIND_NAMES[item.kind]);
+        kindLabel.title = kindLabel.innerText;
+        var nameLabel = el("span", "sh-item-name", item.name);
+        nameLabel.title = item.name;
+        card.append(stage, kindLabel, nameLabel);
         // Where it came from (given) - or how to get it
         var mine = won.filter((entry) => entry.id == item.id);
         if (mine.length) {
           var last = mine[mine.length - 1];
           card.appendChild(el("span", "sh-season-origin", (last.icon ? last.icon + " " : "") + (last.source || last.season || "A reward") + (last.rank ? " · #" + last.rank : "") + (mine.length > 1 ? " (" + mine.length + "×)" : "")));
-        }
+        } else card.appendChild(el("span", "sh-season-origin how", owned ? "Free for all" : "Only as a reward"));
         var button;
         if (worn) {
           button = el("button", "mm-btn mm-btn-sm sh-btn", "Take off");
