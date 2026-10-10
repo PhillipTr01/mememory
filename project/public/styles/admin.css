@@ -1420,6 +1420,30 @@ a.ad-link:focus-visible {
   gap: 0.35rem;
 }
 
+/* A prize like a reward: coins and the items under the own prize */
+.ad-prize-row + .ad-prize-row {
+  margin-top: 0.5rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.ad-prize-extras {
+  grid-column: 2 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.ad-prize-coins-box .mm-input {
+  min-width: 0;
+}
+
+@media (max-width: 700px) {
+  .ad-prize-extras {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* Remove a prize: a white ✕ (red on hover) */
 .ad-prize-row .ad-icon-btn {
   color: #fff;

@@ -17,12 +17,35 @@ async function lists(reason, world) {
   if (world === "/season" && !era) return { today: [], all: [] };
   // (a push in blackjack only gives the bet back - not a win)
   const base = { reason: reason, note: { $ne: "push" }, ...(era ? { era: era } : coins.eraFilter()) };
-  const pick = (rows) => rows.map((row) => ({ name: row.username, win: row.amount, bet: row.bet || null, note: row.note || null, at: row.at }));
+  const pick = (rows) => rows.map((row) => ({ name: row.username, win: row.amount, bet: row.bet || betOf(row), note: row.note || null, at: row.at }));
   const [today, all] = await Promise.all([
     CoinLog.find({ ...base, at: { $gte: new Date(days.dayStart()) } }).sort({ amount: -1 }).limit(COUNT).lean(),
     CoinLog.find(base).sort({ amount: -1 }).limit(COUNT).lean(),
   ]);
+  await findBets([...today, ...all], base);
   return { today: pick(today), all: pick(all) };
+}
+
+/*
+ * Wins from before the bet was written down with them: the bet from the history - the player's last bet of the
+ * game before the win (a spin, a battle: one bet, one win). Other games (a round of many bets) stay without.
+ * Found once per win (by its id).
+ */
+const BET_OF = { "slots win": "slots bet", "battle win": "battle" };
+const found = new Map(); // id of a win -> its bet (null: none found)
+const betOf = (row) => found.get(String(row._id)) || null;
+
+async function findBets(rows, base) {
+  const missing = rows.filter((row) => !row.bet && BET_OF[row.reason] && row._id != null && !found.has(String(row._id)));
+  await Promise.all(
+    missing.map(async (row) => {
+      const [bet] = await CoinLog.find({ username: row.username, reason: BET_OF[row.reason], amount: { $lt: 0 }, at: { $lte: row.at }, era: base.era })
+        .sort({ at: -1 })
+        .limit(1)
+        .lean();
+      found.set(String(row._id), bet ? -bet.amount : null);
+    }),
+  );
 }
 
 function attach(room, reason, world = "") {

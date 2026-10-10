@@ -553,3 +553,22 @@ test("battles: the admin changes the max bet by balance - an open page gets the 
     await settings.update(old);
   }
 });
+
+test("battles: the max bet by balance counts per battle - an open battle doesn't lower it for the next one", async () => {
+  const old = { BET_CAP_FLOOR: config.BET_CAP_FLOOR, BET_CAP_SHARE: config.BET_CAP_SHARE };
+  Object.assign(config, { BET_CAP_FLOOR: 25000, BET_CAP_SHARE: 25 });
+  tokens.fay = h.addUser("fay");
+  h.setCoins("fay", 64000);
+  const erin = client("fay");
+  await waitFor(erin, "coins", (data) => data.coins === 64000);
+  try {
+    for (let i = 0; i < 2; i++) {
+      const created = Promise.race([h.once(erin, "battleCreated"), h.once(erin, "battleError").then((e) => assert.fail(e))]);
+      erin.emit("createBattle", { cases: Array(10).fill("dragon"), size: 4 });
+      await created;
+    }
+    assert.strictEqual(h.coinsOf("fay"), 64000 - 2 * 25000, "two battles of 25k - each one at the max bet");
+  } finally {
+    Object.assign(config, old);
+  }
+});

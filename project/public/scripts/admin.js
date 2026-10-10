@@ -1682,6 +1682,8 @@ function localInput(value) {
 async function loadSeasons(quiet) {
   try {
     var data = await api("seasons");
+    // (the items of the shop: the prizes can be frames, animations, backgrounds)
+    if (!shopSaved) shopSaved = await api("shop");
     seasonList = data.seasons;
     dailyBonusSetting = data.dailyBonus;
     renderSeasons();
@@ -2099,7 +2101,7 @@ function seasonDetail(season) {
       .sort((a, b) => a.place - b.place)
       .forEach((p) => {
         var row = el("div", "ad-season-prize");
-        row.append(el("span", "ad-season-prize-place", ["🥇", "🥈", "🥉"][p.place - 1] || "#" + p.place), el("span", "ad-season-prize-text", p.prize));
+        row.append(el("span", "ad-season-prize-place", ["🥇", "🥈", "🥉"][p.place - 1] || "#" + p.place), el("span", "ad-season-prize-text", p.label || p.prize));
         list.appendChild(row);
       });
     prizes.appendChild(list);
@@ -2126,7 +2128,7 @@ function seasonRow(season, detail) {
   row.appendChild(facts);
   if (season.prizesOn && season.prizes.length) {
     var prizes = el("div", "ad-season-prizes");
-    season.prizes.forEach((p) => prizes.appendChild(el("span", "ad-pill", "#" + p.place + " " + p.prize)));
+    season.prizes.forEach((p) => prizes.appendChild(el("span", "ad-pill", "#" + p.place + " " + (p.label || p.prize))));
     row.appendChild(prizes);
   }
   var actions = el("div", "ad-actions");
@@ -2377,6 +2379,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key == "Escape") closePicker();
 });
 
+// A prize of a place - like a reward (Players): a prize of your own, coins, a frame, an animation, a background
 function prizeRow(prize) {
   var row = el("div", "ad-prize-row");
   var place = el("input", "mm-input ad-prize-place");
@@ -2384,10 +2387,30 @@ function prizeRow(prize) {
   place.min = 1;
   place.value = prize.place;
   place.setAttribute("aria-label", "Place");
-  var text = el("input", "mm-input");
+  var text = el("input", "mm-input ad-prize-text");
   text.maxLength = 80;
-  text.placeholder = "The prize";
-  text.value = prize.prize;
+  text.placeholder = "Own prize, e.g. €25 voucher";
+  text.value = prize.prize || "";
+  var coinsInput = Object.assign(el("input", "mm-input ad-prize-coins"), { type: "number", min: 0, step: 1000, placeholder: "0" });
+  coinsInput.value = prize.coins > 0 ? prize.coins : "";
+  coinsInput.setAttribute("aria-label", "Coins");
+  var coinsBox = el("span", "ad-inline-input ad-prize-coins-box");
+  coinsBox.append(el("span", "ad-setting-unit", "🪙"), coinsInput);
+  var items = prize.items || [];
+  var kindOf = (id) => (shopSaved && shopSaved.items.find((item) => item.id == id) || {}).kind;
+  var selects = shopSaved
+    ? [
+        ["frame", "Frame"],
+        ["effect", "Animation"],
+        ["background", "Background"],
+      ].map(([kind, label]) => {
+        var select = itemSelect(kind, label, items.find((id) => kindOf(id) == kind) || "");
+        select.classList.add("ad-prize-item");
+        return select;
+      })
+    : [];
+  var extras = el("div", "ad-prize-extras");
+  extras.append(coinsBox, ...selects);
   var remove = el("button", "ad-icon-btn", "✕");
   remove.type = "button";
   remove.title = "Remove";
@@ -2396,7 +2419,7 @@ function prizeRow(prize) {
     if (!document.querySelector("#adSeasonPrizes .ad-prize-row")) document.getElementById("adSeasonPrizesOn").checked = false;
     showPrizes();
   });
-  row.append(el("span", "ad-prize-hash", "#"), place, text, remove);
+  row.append(el("span", "ad-prize-hash", "#"), place, text, remove, extras);
   return row;
 }
 
@@ -2431,8 +2454,13 @@ function markIcon() {
 async function saveSeason(event) {
   event.preventDefault();
   var prizes = [...document.querySelectorAll("#adSeasonPrizes .ad-prize-row")]
-    .map((row) => ({ place: Number(row.querySelector(".ad-prize-place").value), prize: row.querySelector("input:not(.ad-prize-place)").value.trim() }))
-    .filter((p) => p.prize);
+    .map((row) => ({
+      place: Number(row.querySelector(".ad-prize-place").value),
+      prize: row.querySelector(".ad-prize-text").value.trim(),
+      coins: Math.floor(Number(row.querySelector(".ad-prize-coins").value) || 0),
+      items: [...row.querySelectorAll(".ad-prize-item")].map((select) => select.value).filter(Boolean),
+    }))
+    .filter((p) => p.prize || p.coins > 0 || p.items.length);
   var body = {
     name: document.getElementById("adSeasonName").value.trim(),
     icon: document.getElementById("adSeasonIcon").value.trim(),
@@ -2630,6 +2658,12 @@ function renderSettings() {
         else {
           if (field.scope == "outside") label.appendChild(el("span", "ad-scope", "outside seasons"));
           if (field.value != field.default) label.appendChild(el("span", "changed", "default " + formatCoins(field.default)));
+          // (the season has its own value: this one doesn't count there - easy to miss otherwise)
+          if (field.seasonValue != null) {
+            var other = el("span", "changed ad-season-own", "season " + formatCoins(field.seasonValue));
+            other.title = "In the season world " + formatCoins(field.seasonValue) + " counts - change it under 🏆 Season above";
+            label.appendChild(other);
+          }
         }
         var input = el("input", "mm-input");
         input.type = "number";
@@ -3059,7 +3093,7 @@ document.addEventListener("DOMContentLoaded", () => {
     var last = rows.length ? Number(rows[rows.length - 1].querySelector(".ad-prize-place").value) || rows.length : 0;
     var row = prizeRow({ place: last + 1, prize: "" });
     document.getElementById("adSeasonPrizes").appendChild(row);
-    row.querySelector("input:not(.ad-prize-place)").focus();
+    row.querySelector(".ad-prize-text").focus();
   });
   document.getElementById("adSeasonIcons").replaceChildren(
     ...SEASON_ICONS.map((icon) => {

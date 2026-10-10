@@ -384,4 +384,4 @@ function reset() {
   setup = { items: {}, free: false };
 }
 
-module.exports = { ITEMS, KINDS, RARITIES, byId, items, looksOf, itemsOf, removeItem, view, buy, wear, worn, balanceOf, reward, give, config, update, load, reset };
+module.exports = { ITEMS, KINDS, RARITIES, byId, checkGift, items, looksOf, itemsOf, removeItem, view, buy, wear, worn, balanceOf, reward, give, config, update, load, reset };

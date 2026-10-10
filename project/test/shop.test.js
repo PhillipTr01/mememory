@@ -156,3 +156,47 @@ test("shop: backgrounds - bought and worn like the rest, one of each kind (a rew
   assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity != "exclusive").length, 20);
   assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity == "exclusive").length, 5);
 });
+
+test("season prizes are like rewards: a prize of your own, coins and items - given to the places at the end", async () => {
+  shop.reset();
+  seasons.reset();
+  h.addUser("vic");
+  h.addUser("wes");
+  h.setCoins("vic", 1000);
+  h.setCoins("wes", 1000);
+  const now = Date.now();
+  const bad = await seasons.create({ name: "P", icon: "🏆", start: now - 1000, end: now + 3600 * 1000, budget: 100, every: 0, closeWait: 0, prizesOn: true, prizes: [{ place: 1, items: ["neon", "gold"] }] });
+  assert.match(bad.error, /place 1: one frame/);
+  const made = await seasons.create({
+    name: "Prizes",
+    icon: "🏆",
+    start: now - 1000,
+    end: now + 3600 * 1000,
+    budget: 100,
+    every: 0,
+    closeWait: 0,
+    wagerX: 0,
+    prizesOn: true,
+    prizes: [
+      { place: 1, prize: "€25 voucher", coins: 10000, items: ["spotlight"] },
+      { place: 2, coins: 500 },
+    ],
+  });
+  assert.ok(!made.error, made.error);
+  assert.strictEqual(made.season.prizes[0].label, "€25 voucher · 🪙 10,000 · " + shop.byId("spotlight").name);
+  await seasons.tick(now);
+  await seasons.join("vic", now);
+  await seasons.join("wes", now);
+  h.userOf("vic").seasonCoins = 900;
+  await seasons.endNow(made.season.id);
+  await h.wait(30);
+  // vic first (900 + 1000 back + 10,000), wes second (100 + 1000 + 500)
+  assert.deepStrictEqual([h.coinsOf("vic"), h.coinsOf("wes")], [11900, 1600]);
+  assert.ok((await shop.view("vic")).owned.includes("spotlight"));
+  assert.deepStrictEqual(
+    (await shop.view("vic")).won.map((w) => [w.source, w.rank]),
+    [["Prizes", 1]],
+  );
+  assert.ok(h.coinLogs.some((row) => row.username === "vic" && row.reason === "prize" && /€25 voucher/.test(row.note)));
+  seasons.reset();
+});

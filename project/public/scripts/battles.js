@@ -473,16 +473,24 @@ function renderCreate() {
   document.getElementById("btShuffle").hidden = picked.length < 2;
   var button = document.getElementById("btCreate");
   document.getElementById("btCreateLabel").innerText = ids.length ? "Create for 🪙 " + formatCoins(cost) : "Create";
-  var overCap = cost > capLeft(inBattles());
-  // The max bet: what one battle may cost me now (the limit per player, the max bet by balance with my open battles)
-  var most = Math.max(0, Math.min(MAX_COST, capLeft(inBattles())));
+  var overCap = cost > capLeft(0);
+  // The max bet: what one battle may cost me now (the limit per player, the max bet by balance - per battle)
+  var most = Math.max(0, Math.min(MAX_COST, capLeft(0)));
   var maxBet = document.getElementById("btMaxBet");
   maxBet.hidden = myCapRule == null && !MAX_COST;
   maxBet.innerText = "Max bet 🪙 " + formatCoins(most);
   maxBet.classList.toggle("over", ids.length > 0 && cost > most);
-  maxBet.title = most < MAX_COST ? "With your balance" + (inBattles() > 0 ? " and your open battles" : "") + " - the limit is 🪙 " + formatCoins(MAX_COST) + " per player" : "The most a battle may cost per player";
+  maxBet.title = most < MAX_COST ? capWhy() : "The most a battle may cost per player";
   button.disabled = ids.length == 0 || cost > myCoins || overCap;
-  button.title = cost > myCoins ? "Not enough coins" : overCap ? "With your balance at most 🪙 " + formatCoins(capLeft(inBattles())) + " more in battles now" : "";
+  button.title = cost > myCoins ? "Not enough coins" : overCap ? capWhy() : "";
+}
+
+// How the max bet comes about: all in up to the floor, above it a share of the coins - per battle
+function capWhy() {
+  var cap = capLeft(0);
+  if (!myCapRule) return "At most 🪙 " + formatCoins(MAX_COST) + " per player";
+  var why = cap > myCapRule.floor ? myCapRule.share + "% of your 🪙 " + formatCoins(myCoins) + " = 🪙 " + formatCoins(cap) : "🪙 " + formatCoins(cap);
+  return "All in up to 🪙 " + formatCoins(myCapRule.floor) + ", above it " + myCapRule.share + "% of your coins - per battle. Your max bet: " + why + ".";
 }
 
 function showContents(box) {
@@ -527,11 +535,6 @@ function chanceText(chance) {
 
 function isIn(battle) {
   return battle.seats.some((seat) => seat && seat.name == myName);
-}
-
-// My coins in battles that wait or run - the max bet by balance counts for them together
-function inBattles() {
-  return battles.filter((battle) => (battle.phase == "waiting" || battle.phase == "running") && isIn(battle)).reduce((sum, battle) => sum + battle.price, 0);
 }
 
 // The cases of a battle; many cases: only a window (around the current round)
@@ -671,7 +674,7 @@ function renderList() {
       if (battle.phase == "waiting" && !isIn(battle)) {
         var join = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Join");
         join.type = "button";
-        join.disabled = battle.price > myCoins || battle.price > capLeft(inBattles());
+        join.disabled = battle.price > myCoins || battle.price > capLeft(0);
         join.addEventListener("click", (event) => {
           event.stopPropagation();
           askForNotifications();
@@ -841,7 +844,7 @@ function renderBattle() {
       if (battle.phase == "waiting" && !isIn(battle)) {
         var join = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Join 🪙 " + formatCoins(battle.price));
         join.type = "button";
-        join.disabled = battle.price > myCoins || battle.price > capLeft(inBattles());
+        join.disabled = battle.price > myCoins || battle.price > capLeft(0);
         join.addEventListener("click", () => {
           askForNotifications();
           socket.emit("joinBattle", battle.id);

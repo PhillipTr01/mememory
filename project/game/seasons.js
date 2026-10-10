@@ -91,7 +91,8 @@ function publicSeason(season) {
     every: season.every,
     color: season.color || null,
     prizesOn: season.prizesOn,
-    prizes: season.prizes,
+    // (with what each one is as one line - label)
+    prizes: (season.prizes || []).map((p) => ({ place: p.place, prize: p.prize || "", coins: p.coins || 0, items: p.items || [], label: prizeText(p) })),
     wagerX: wagerXOf(season),
     highlight: season.highlight === true,
     access: accessOf(season),
@@ -320,13 +321,14 @@ function check(input, current) {
   const prizes = Array.isArray(input.prizes) ? input.prizes : [];
   if (prizes.length > MAX_PRIZES) return { error: `At most ${MAX_PRIZES} prizes.` };
   const clean = [];
+  // A prize like a reward (admin panel): a prize of your own (text), coins and / or items - see shop.checkGift
   for (const prize of prizes) {
     const place = Number(prize && prize.place);
-    const text = prize && typeof prize.prize === "string" ? prize.prize.trim() : "";
     if (!Number.isInteger(place) || place < 1 || place > 1000) return { error: "A prize needs a place (1 or more)." };
-    if (text.length < 1 || text.length > 80) return { error: `The prize for place ${place}: up to 80 characters.` };
     if (clean.some((p) => p.place === place)) return { error: `Place ${place} has two prizes.` };
-    clean.push({ place: place, prize: text });
+    const gift = require("./shop").checkGift(prize, `The prize for place ${place}`);
+    if (gift.error) return gift;
+    clean.push({ place: place, prize: gift.prize, coins: gift.coins, items: gift.items });
   }
   clean.sort((a, b) => a.place - b.place);
   if (prizesOn && clean.length === 0) return { error: "Prizes are on - add at least one." };
@@ -527,6 +529,7 @@ async function endSeason(season, now) {
   for (const row of rows) {
     if (row.coins > 0) await coins.add(row.username, row.coins, { reason: "season payout", note: season.name });
   }
+  await givePrizes(season, season.final.rows);
   await User.updateMany({ seasonReset: seasonEra }, { $set: { seasonCoins: 0 } });
   // The season world: empty again (its games, its history)
   await persist.resetPrefix("season/");
@@ -589,9 +592,33 @@ async function seasonStats(season) {
   return stats;
 }
 
-// The prizes of a season (place -> prize) - null without
+// What a prize is, as one line: "€25 voucher · 🪙 10,000 · Golden frame" (older seasons: the text only)
+function prizeText(prize) {
+  const shop = require("./shop");
+  const items = (prize.items || []).map((id) => shop.byId(id)).filter(Boolean).map((item) => item.name);
+  return [prize.prize || null, prize.coins > 0 ? "🪙 " + prize.coins.toLocaleString("en-US") : null, ...items].filter(Boolean).join(" · ");
+}
+
+// The prizes of a season (place -> what it is, as text) - null without
 function prizesOf(season) {
-  return season && season.prizesOn && season.prizes && season.prizes.length ? new Map(season.prizes.map((p) => [p.place, p.prize])) : null;
+  return season && season.prizesOn && season.prizes && season.prizes.length ? new Map(season.prizes.map((p) => [p.place, prizeText(p)])) : null;
+}
+
+// The prizes at the end: every placed player with a prize gets it like a reward (items, coins, a prize of their own)
+async function givePrizes(season, rows) {
+  if (!prizesOf(season)) return;
+  const shop = require("./shop");
+  for (const row of rows) {
+    const prize = row.prize && season.prizes.find((p) => p.place === row.rank);
+    if (!prize) continue;
+    const gift = { items: (prize.items || []).filter((id) => shop.byId(id)), coins: prize.coins || 0, prize: prize.prize || "" };
+    if (!gift.items.length && !gift.coins && !gift.prize) continue;
+    try {
+      await shop.reward(row.username, gift, { source: season.name, icon: season.icon || "🏆", rank: row.rank, note: null });
+    } catch (error) {
+      console.error("[seasons] Could not give a prize:", error);
+    }
+  }
 }
 
 // The second chances and coins wagered of the players of the running season (on the leaderboard -
@@ -764,4 +791,4 @@ function accentStyle(username) {
   return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
 }
 
-module.exports = { wagerNeed, wagerXOf, prizesOf, tieStats, board, joinedAt, join, joined, joinCoins, allowed, accessOf, inSeasonWorld, switchWorld, upcoming, closingInfo, closingKind, chanceStatus, useChance, clear, accentStyle, coinScript, INTERVALS, ACCESS, BOARD_KEY, SEASON_WORLD, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+module.exports = { wagerNeed, wagerXOf, prizesOf, prizeText, tieStats, board, joinedAt, join, joined, joinCoins, allowed, accessOf, inSeasonWorld, switchWorld, upcoming, closingInfo, closingKind, chanceStatus, useChance, clear, accentStyle, coinScript, INTERVALS, ACCESS, BOARD_KEY, SEASON_WORLD, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };

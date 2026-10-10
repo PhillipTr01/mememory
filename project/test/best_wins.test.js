@@ -42,3 +42,13 @@ test("best wins: a win paid with its bet keeps it - the list shows the bet (olde
   assert.deepStrictEqual([won.win, won.bet], [27600, 200]);
   assert.strictEqual(lists.all.find((w) => w.name === "bw_old").bet, null);
 });
+
+test("best wins: an older slots win (no bet written down) gets the spin's bet from the history", async () => {
+  const now = Date.now();
+  await CoinLog.create({ username: "bw_old_s", amount: -500, reason: "slots bet", at: new Date(now - 60000) });
+  await CoinLog.create({ username: "bw_old_s", amount: -2000, reason: "slots bet", at: new Date(now - 30000) });
+  await CoinLog.create({ username: "bw_old_s", amount: 276000, reason: "slots win", note: "bonus", at: new Date(now - 20000) });
+  await CoinLog.create({ username: "bw_old_s", amount: -900, reason: "slots bet", at: new Date(now - 10000) });
+  const lists = await best.lists("slots win", "");
+  assert.strictEqual(lists.all.find((w) => w.name === "bw_old_s").bet, 2000);
+});
