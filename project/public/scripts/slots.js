@@ -284,8 +284,10 @@ function spin() {
     if (!queuedSpin) queuedSpin = setTimeout(() => ((queuedSpin = null), spin()), pausedUntil - Date.now() + 10);
     return;
   }
-  // (max mode: the most it can be with the balance now)
-  if (maxMode) setBet(Math.min(maxBetNow(), myCoins), true);
+  // (max mode: the most it can be with the balance now - a bet still being typed: that one)
+  var field = document.getElementById("slBet");
+  if (document.activeElement == field) setBet(Number(field.value) || 0, false, true);
+  else if (maxMode) setBet(Math.min(maxBetNow(), myCoins), true);
   var bet = currentBet();
   if (!Number.isInteger(bet) || bet < setup.rules.minBet || bet > setup.rules.maxBet) {
     return showHint("A spin is " + formatCoins(setup.rules.minBet) + " to " + formatCoins(setup.rules.maxBet) + " coins.", "error");
@@ -1556,6 +1558,17 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("slLess").addEventListener("click", () => stepBet(-1));
   document.getElementById("slMore").addEventListener("click", () => stepBet(1));
   document.getElementById("slBet").addEventListener("change", (event) => setBet(Number(event.target.value) || 0, false, true));
+  // Typing a bet: Max is off right away (it doesn't take the field back with the next balance or spin)
+  document.getElementById("slBet").addEventListener("input", () => {
+    if (!maxMode) return;
+    maxMode = false;
+    try {
+      localStorage.setItem(BET_KEY, currentBet() || "");
+    } catch (error) {
+      // not remembered
+    }
+    renderControls();
+  });
   document.getElementById("slPaytable").addEventListener("click", () => setup && showPaytable());
   // Space spins (not while typing) - held down, again and again; during auto spins it stops them
   document.addEventListener("keydown", (event) => {
