@@ -21,6 +21,28 @@ const n = (value) => Number(value).toLocaleString("en-US");
 const seconds = (ms) => `${Math.round(ms / 1000)} s`;
 const minutes = (ms) => `${Math.round(ms / 60000)} min`;
 
+// The cases as they are now (the admin can change them): the biggest item, what they pay back - by risk
+function caseFacts() {
+  const off = config.BATTLE_CASES_OFF || [];
+  const list = require("./cases").list().filter((box) => !box.off && !off.includes(box.id));
+  const of = (risk) => list.filter((box) => box.risk === risk);
+  const range = (boxes) => {
+    const low = Math.round(Math.min(...boxes.map((box) => box.rtp)) * 100);
+    const high = Math.round(Math.max(...boxes.map((box) => box.rtp)) * 100);
+    return low === high ? `about ${low}%` : `about ${low}-${high}%`;
+  };
+  const top = (boxes) => {
+    const most = Math.max(...boxes.map((box) => box.top));
+    return most < 10 ? String(Math.round(most * 10) / 10) : String(Math.round(most));
+  };
+  const risks = [["low", "low risk"], ["balanced", "balanced"], ["high", "high risk"]].filter(([risk]) => of(risk).length);
+  if (!risks.length) return [];
+  return [
+    `Low risk: items close to the price (up to ${of("low").length ? top(of("low")) : 2}x). High risk: mostly cheap items, but a small chance of up to ${of("high").length ? top(of("high")) : 50}x.`,
+    `Every case pays back a little less than it costs on average: ${risks.map(([risk, name]) => name + " " + range(of(risk))).join(", ")} (the price of the big jackpots).`,
+  ];
+}
+
 const GAMES = {
   jackpot: (L) => ({
     title: "Jackpot",
@@ -34,6 +56,7 @@ const GAMES = {
           `Alone in the pot for ${seconds(config.JACKPOT_GHOST_AFTER)}: the 👻 ghost (the house) joins with ${config.JACKPOT_GHOST_MIN}-${config.JACKPOT_GHOST_TOP}% of your coins (at most 🪙 ${n(config.JACKPOT_GHOST_MAX)}) - once: more coins of yours later make your chance bigger. If it wins, the house keeps the pot.`,
           `A bet lands in the pot after ${seconds(config.JACKPOT_BET_DELAY[0])}-${seconds(config.JACKPOT_BET_DELAY[1])} (nobody can answer a bet in the last second). Too late for the draw: it goes into the next pot.`,
           "The winner is drawn with a random animation (wheel, roulette, race, ...). The pot is paid when the draw is over.",
+          "Where you stand in a draw says nothing: the spots are shuffled at the start (and swapped now and then while waiting). More players than spots: the spots roll and stop on who is in - the winner always among them, the bigger bets more often.",
         ],
       },
       {
@@ -68,8 +91,7 @@ const GAMES = {
         heading: "Cases",
         items: [
           "Click a case to see every item and its chance.",
-          "Low risk: items close to the price. High risk: mostly cheap items, but a small chance of up to 50x.",
-          "Every case pays back a little less than it costs on average: low risk about 96%, balanced about 92-93%, high risk about 87-88% (the price of the big jackpots).",
+          ...caseFacts(),
           "Provably fair: the seed is fixed (and its hash shown) before the battle and revealed after it.",
         ],
       },
@@ -124,6 +146,7 @@ const GAMES = {
           "Win: 2x your bet back. Blackjack (ace + 10 with the first two cards): 3:2. Same total: you get your bet back.",
           "Every round is dealt from a new shoe of 6 decks - counting cards doesn't help.",
           `You can take up to ${L.BJ_MY_SEATS} seats at a table. ${seconds(config.BJ_TURN)} per decision, then the hand stands.`,
+          "After the round the bar under the table shows what it brought you: Win / Lose - all your seats and side bets together.",
         ],
       },
       {
@@ -161,6 +184,8 @@ const GAMES = {
             `No max win: the free spins always play to the end. On average the machine pays back about ${slotsRtp()}% of the bets.`,
             "The line wins of a spin that starts a bonus count as well - first the lines, then the bonus.",
             "Your coins come when the spin is over on the screen.",
+            "Auto spins: the bet stays as it is while they run. Max follows your balance - every spin bets the most you may.",
+            "One machine at a time: while a tab of yours spins, another tab can't.",
           ],
         },
         {
@@ -212,7 +237,7 @@ const GAMES = {
     ],
   }),
 
-  leaderboard: (L) => ({
+  leaderboard: (L, world) => ({
     title: "Leaderboard",
     sections: [
       {
@@ -220,9 +245,9 @@ const GAMES = {
         items: [
           "All players by their coins.",
           "Without a season it is live - always up to date. The arrows show who went up or down since midnight.",
-          `🪙 ${n(coins.dailyBonus())} free coins every day for everybody (🎁 in the top bar).`,
+          `${world === "/season" ? "" : "🪙 "}${n(coins.wallet(world).dailyBonus())} free coins every day for everybody (🎁 in the top bar).`,
           ...(L.CASHBACK_PERCENT > 0 ? [`💸 Daily cashback: after midnight ${L.CASHBACK_PERCENT}% of what you lost in the games the day before comes back${L.CASHBACK_MAX > 0 ? ` (up to ${n(L.CASHBACK_MAX)})` : ""}.`] : []),
-          ...(require("./streak").current().on ? [`🔥 Daily streak: claim them day after day and they grow - up to ${n(Math.round((coins.dailyBonus() * Math.max(...require("./streak").current().rewards)) / 100))} a day. Miss a day and it starts over.`] : []),
+          ...(require("./streak").current().on ? [`🔥 Daily streak: claim them day after day and they grow - up to ${n(Math.round((coins.wallet(world).dailyBonus() * Math.max(...require("./streak").current().rewards)) / 100))} a day. Miss a day and it starts over.`] : []),
         ],
       },
       {
@@ -256,14 +281,16 @@ function capText(L, world, game) {
   if (rule == null) return null;
   const x = limits.dividerOf(world, game);
   const share = Math.round(rule.share * 100) / 100;
-  return `Up to 🪙 ${n(rule.floor)} you can bet all your coins - with more, one bet is at most ${share}% of your coins.` + (x > 1 ? ` (Slots spin fast: 1/${x} of the max bet of the other games.)` : "");
+  // (what counts: everything bet in the round - a spin, the open battles, the chips at the table)
+  const what = { slots: "one spin", battles: "your open battles together", poker: "your chips at the table" }[game] || "all your bets of one round together";
+  return `Up to 🪙 ${n(rule.floor)} you can bet all your coins - with more, ${what} ${game === "slots" ? "is" : "are"} at most ${share}% of your coins.` + (x > 1 ? ` (Slots spin fast: 1/${x} of the max bet of the other games.)` : "");
 }
 
 // world: the limits of that world ("/season": the season's own ones)
 function get(game, world = "") {
   if (!Object.hasOwn(GAMES, game)) return null;
   const L = limits.forWorld(world);
-  const about = GAMES[game](L);
+  const about = GAMES[game](L, world);
   const cap = capText(L, world, game);
   if (cap && game !== "leaderboard") about.sections.push({ heading: "Max bet", items: [cap] });
   return about;
