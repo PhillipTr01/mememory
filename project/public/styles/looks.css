@@ -1074,3 +1074,183 @@
     transform: translate(-50%, -50%) rotate(540deg) translateX(calc(var(--size) * 0.55)) scale(0.3);
   }
 }
+
+/* ---------- Season rewards: never sold - the best of a season win them (game/shop.js) ---------- */
+
+/* Laurels: a metal ring that shines, a wreath around it (1st gold, 2nd silver, 3rd bronze) */
+.look-frame-champion::after,
+.look-frame-runnerup::after,
+.look-frame-podium::after {
+  animation: look-turn 4s linear infinite;
+}
+
+.look-frame-champion::after {
+  background: conic-gradient(#9a6b12, #fff8dc, #f2c45a, #fff1c4, #b8860b, #ffe58a, #9a6b12);
+  filter: drop-shadow(0 0 calc(var(--ring) * 2) rgba(242, 196, 90, 0.75));
+}
+
+.look-frame-runnerup::after {
+  background: conic-gradient(#6b7280, #ffffff, #c9ced6, #f4f6f8, #8b929b, #e5e7eb, #6b7280);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.6) rgba(226, 232, 240, 0.6));
+}
+
+.look-frame-podium::after {
+  background: conic-gradient(#6b3f1d, #f0b98a, #b87333, #ffd6b0, #8a5a2b, #d9955b, #6b3f1d);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.4) rgba(217, 149, 91, 0.55));
+}
+
+.mm-avatar.look-frame-champion::before,
+.mm-avatar.look-frame-runnerup::before,
+.mm-avatar.look-frame-podium::before {
+  content: "";
+  inset: -19%;
+  z-index: -2;
+  background: center / 100% 100% no-repeat;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+}
+
+.mm-avatar.look-frame-champion::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-2 -2 104 106'%3E%3Cpath d='M43.9 93.6 L41.3 93.1 L38.8 92.6 L36.4 91.8 L33.9 91.0 L31.6 90.0 L29.3 88.8 L27.0 87.5 L24.9 86.1 L22.8 84.6 L20.8 83.0 L19.0 81.2 L17.2 79.3 L15.5 77.4 L14.0 75.3 L12.6 73.2 L11.3 70.9 L10.1 68.6 L9.1 66.3 L8.2 63.9 L7.5 61.4 L6.9 58.9 L6.5 56.4 L6.2 53.8 L6.0 51.2 L6.0 48.7 L6.2 46.1 L6.5 43.5 L6.9 41.0 L7.5 38.5 L8.3 36.0 L9.2 33.6 L10.2 31.3 L11.4 29.0 L12.6 26.7 L14.1 24.6 L15.6 22.5 L17.3 20.6 L19.1 18.7 L20.9 17.0 L22.9 15.3' fill='none' stroke='%237a5310' stroke-width='1.6' stroke-linecap='round'/%3E%3Cellipse cx='43.4' cy='96.7' rx='6.2' ry='2.5' transform='rotate(150 43.4 96.7)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='44.3' cy='90.4' rx='6.2' ry='2.5' transform='rotate(226 44.3 90.4)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='32.8' cy='93.8' rx='6.0' ry='2.4' transform='rotate(163 32.8 93.8)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='35.1' cy='88.1' rx='6.0' ry='2.4' transform='rotate(239 35.1 88.1)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='23.2' cy='88.6' rx='5.8' ry='2.3' transform='rotate(177 23.2 88.6)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='26.6' cy='83.7' rx='5.8' ry='2.3' transform='rotate(253 26.6 83.7)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='15.1' cy='81.2' rx='5.5' ry='2.2' transform='rotate(190 15.1 81.2)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='19.3' cy='77.4' rx='5.5' ry='2.2' transform='rotate(266 19.3 77.4)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Ccircle cx='21.2' cy='75.7' r='1.6' fill='%23e0675a'/%3E%3Cellipse cx='8.9' cy='72.2' rx='5.3' ry='2.1' transform='rotate(204 8.9 72.2)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='13.7' cy='69.6' rx='5.3' ry='2.1' transform='rotate(280 13.7 69.6)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='4.9' cy='62.1' rx='5.1' ry='2.1' transform='rotate(217 4.9 62.1)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='10.0' cy='60.7' rx='5.1' ry='2.1' transform='rotate(293 10.0 60.7)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='3.5' cy='51.3' rx='4.9' ry='2.0' transform='rotate(230 3.5 51.3)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='8.5' cy='51.2' rx='4.9' ry='2.0' transform='rotate(306 8.5 51.2)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='4.6' cy='40.5' rx='4.7' ry='1.9' transform='rotate(244 4.6 40.5)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='9.3' cy='41.5' rx='4.7' ry='1.9' transform='rotate(320 9.3 41.5)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Ccircle cx='11.4' cy='41.9' r='1.6' fill='%23e0675a'/%3E%3Cellipse cx='8.1' cy='30.3' rx='4.5' ry='1.8' transform='rotate(257 8.1 30.3)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='12.3' cy='32.2' rx='4.5' ry='1.8' transform='rotate(333 12.3 32.2)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='13.9' cy='21.2' rx='4.2' ry='1.7' transform='rotate(271 13.9 21.2)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='17.3' cy='23.9' rx='4.2' ry='1.7' transform='rotate(347 17.3 23.9)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='21.6' cy='13.7' rx='4.0' ry='1.6' transform='rotate(284 21.6 13.7)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='24.2' cy='17.0' rx='4.0' ry='1.6' transform='rotate(360 24.2 17.0)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='26.7' cy='12.7' rx='4' ry='1.8' transform='rotate(328 26.7 12.7)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cpath d='M56.1 93.6 L58.7 93.1 L61.2 92.6 L63.6 91.8 L66.1 91.0 L68.4 90.0 L70.7 88.8 L73.0 87.5 L75.1 86.1 L77.2 84.6 L79.2 83.0 L81.0 81.2 L82.8 79.3 L84.5 77.4 L86.0 75.3 L87.4 73.2 L88.7 70.9 L89.9 68.6 L90.9 66.3 L91.8 63.9 L92.5 61.4 L93.1 58.9 L93.5 56.4 L93.8 53.8 L94.0 51.2 L94.0 48.7 L93.8 46.1 L93.5 43.5 L93.1 41.0 L92.5 38.5 L91.7 36.0 L90.8 33.6 L89.8 31.3 L88.6 29.0 L87.4 26.7 L85.9 24.6 L84.4 22.5 L82.7 20.6 L80.9 18.7 L79.1 17.0 L77.1 15.3' fill='none' stroke='%237a5310' stroke-width='1.6' stroke-linecap='round'/%3E%3Cellipse cx='56.6' cy='96.7' rx='6.2' ry='2.5' transform='rotate(30 56.6 96.7)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='55.7' cy='90.4' rx='6.2' ry='2.5' transform='rotate(-46 55.7 90.4)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='67.2' cy='93.8' rx='6.0' ry='2.4' transform='rotate(17 67.2 93.8)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='64.9' cy='88.1' rx='6.0' ry='2.4' transform='rotate(-59 64.9 88.1)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='76.8' cy='88.6' rx='5.8' ry='2.3' transform='rotate(3 76.8 88.6)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='73.4' cy='83.7' rx='5.8' ry='2.3' transform='rotate(-73 73.4 83.7)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='84.9' cy='81.2' rx='5.5' ry='2.2' transform='rotate(-10 84.9 81.2)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='80.7' cy='77.4' rx='5.5' ry='2.2' transform='rotate(-86 80.7 77.4)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Ccircle cx='78.8' cy='75.7' r='1.6' fill='%23e0675a'/%3E%3Cellipse cx='91.1' cy='72.2' rx='5.3' ry='2.1' transform='rotate(-24 91.1 72.2)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='86.3' cy='69.6' rx='5.3' ry='2.1' transform='rotate(-100 86.3 69.6)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='95.1' cy='62.1' rx='5.1' ry='2.1' transform='rotate(-37 95.1 62.1)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='90.0' cy='60.7' rx='5.1' ry='2.1' transform='rotate(-113 90.0 60.7)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='96.5' cy='51.3' rx='4.9' ry='2.0' transform='rotate(-50 96.5 51.3)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='91.5' cy='51.2' rx='4.9' ry='2.0' transform='rotate(-126 91.5 51.2)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='95.4' cy='40.5' rx='4.7' ry='1.9' transform='rotate(-64 95.4 40.5)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='90.7' cy='41.5' rx='4.7' ry='1.9' transform='rotate(-140 90.7 41.5)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Ccircle cx='88.6' cy='41.9' r='1.6' fill='%23e0675a'/%3E%3Cellipse cx='91.9' cy='30.3' rx='4.5' ry='1.8' transform='rotate(-77 91.9 30.3)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='87.7' cy='32.2' rx='4.5' ry='1.8' transform='rotate(-153 87.7 32.2)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='86.1' cy='21.2' rx='4.2' ry='1.7' transform='rotate(-91 86.1 21.2)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='82.7' cy='23.9' rx='4.2' ry='1.7' transform='rotate(-167 82.7 23.9)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='78.4' cy='13.7' rx='4.0' ry='1.6' transform='rotate(-104 78.4 13.7)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='75.8' cy='17.0' rx='4.0' ry='1.6' transform='rotate(-180 75.8 17.0)' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cellipse cx='73.3' cy='12.7' rx='4' ry='1.8' transform='rotate(-148 73.3 12.7)' fill='%23ffe58a' stroke='%237a5310' stroke-width='0.5'/%3E%3Cpath d='M44 92 L40 99 L46 97 L50 100 L54 97 L60 99 L56 92 Z' fill='%23e0675a' stroke='%237a5310' stroke-width='0.6'/%3E%3Ccircle cx='50' cy='93' r='3.2' fill='%23d4a64a' stroke='%237a5310' stroke-width='0.6'/%3E%3C/svg%3E");
+  animation: look-laurel 3s ease-in-out infinite;
+}
+
+.mm-avatar.look-frame-runnerup::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-2 -2 104 106'%3E%3Cpath d='M43.9 93.6 L41.3 93.1 L38.8 92.6 L36.4 91.8 L33.9 91.0 L31.6 90.0 L29.3 88.8 L27.0 87.5 L24.9 86.1 L22.8 84.6 L20.8 83.0 L19.0 81.2 L17.2 79.3 L15.5 77.4 L14.0 75.3 L12.6 73.2 L11.3 70.9 L10.1 68.6 L9.1 66.3 L8.2 63.9 L7.5 61.4 L6.9 58.9 L6.5 56.4 L6.2 53.8 L6.0 51.2 L6.0 48.7 L6.2 46.1 L6.5 43.5 L6.9 41.0 L7.5 38.5 L8.3 36.0 L9.2 33.6 L10.2 31.3 L11.4 29.0 L12.6 26.7 L14.1 24.6 L15.6 22.5 L17.3 20.6 L19.1 18.7 L20.9 17.0 L22.9 15.3' fill='none' stroke='%235d636c' stroke-width='1.6' stroke-linecap='round'/%3E%3Cellipse cx='43.4' cy='96.7' rx='6.2' ry='2.5' transform='rotate(150 43.4 96.7)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='44.3' cy='90.4' rx='6.2' ry='2.5' transform='rotate(226 44.3 90.4)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='32.8' cy='93.8' rx='6.0' ry='2.4' transform='rotate(163 32.8 93.8)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='35.1' cy='88.1' rx='6.0' ry='2.4' transform='rotate(239 35.1 88.1)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='23.2' cy='88.6' rx='5.8' ry='2.3' transform='rotate(177 23.2 88.6)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='26.6' cy='83.7' rx='5.8' ry='2.3' transform='rotate(253 26.6 83.7)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='15.1' cy='81.2' rx='5.5' ry='2.2' transform='rotate(190 15.1 81.2)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='19.3' cy='77.4' rx='5.5' ry='2.2' transform='rotate(266 19.3 77.4)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Ccircle cx='21.2' cy='75.7' r='1.6' fill='%236b97d2'/%3E%3Cellipse cx='8.9' cy='72.2' rx='5.3' ry='2.1' transform='rotate(204 8.9 72.2)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='13.7' cy='69.6' rx='5.3' ry='2.1' transform='rotate(280 13.7 69.6)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='4.9' cy='62.1' rx='5.1' ry='2.1' transform='rotate(217 4.9 62.1)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='10.0' cy='60.7' rx='5.1' ry='2.1' transform='rotate(293 10.0 60.7)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='3.5' cy='51.3' rx='4.9' ry='2.0' transform='rotate(230 3.5 51.3)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='8.5' cy='51.2' rx='4.9' ry='2.0' transform='rotate(306 8.5 51.2)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='4.6' cy='40.5' rx='4.7' ry='1.9' transform='rotate(244 4.6 40.5)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='9.3' cy='41.5' rx='4.7' ry='1.9' transform='rotate(320 9.3 41.5)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Ccircle cx='11.4' cy='41.9' r='1.6' fill='%236b97d2'/%3E%3Cellipse cx='8.1' cy='30.3' rx='4.5' ry='1.8' transform='rotate(257 8.1 30.3)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='12.3' cy='32.2' rx='4.5' ry='1.8' transform='rotate(333 12.3 32.2)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='13.9' cy='21.2' rx='4.2' ry='1.7' transform='rotate(271 13.9 21.2)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='17.3' cy='23.9' rx='4.2' ry='1.7' transform='rotate(347 17.3 23.9)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='21.6' cy='13.7' rx='4.0' ry='1.6' transform='rotate(284 21.6 13.7)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='24.2' cy='17.0' rx='4.0' ry='1.6' transform='rotate(360 24.2 17.0)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='26.7' cy='12.7' rx='4' ry='1.8' transform='rotate(328 26.7 12.7)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cpath d='M56.1 93.6 L58.7 93.1 L61.2 92.6 L63.6 91.8 L66.1 91.0 L68.4 90.0 L70.7 88.8 L73.0 87.5 L75.1 86.1 L77.2 84.6 L79.2 83.0 L81.0 81.2 L82.8 79.3 L84.5 77.4 L86.0 75.3 L87.4 73.2 L88.7 70.9 L89.9 68.6 L90.9 66.3 L91.8 63.9 L92.5 61.4 L93.1 58.9 L93.5 56.4 L93.8 53.8 L94.0 51.2 L94.0 48.7 L93.8 46.1 L93.5 43.5 L93.1 41.0 L92.5 38.5 L91.7 36.0 L90.8 33.6 L89.8 31.3 L88.6 29.0 L87.4 26.7 L85.9 24.6 L84.4 22.5 L82.7 20.6 L80.9 18.7 L79.1 17.0 L77.1 15.3' fill='none' stroke='%235d636c' stroke-width='1.6' stroke-linecap='round'/%3E%3Cellipse cx='56.6' cy='96.7' rx='6.2' ry='2.5' transform='rotate(30 56.6 96.7)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='55.7' cy='90.4' rx='6.2' ry='2.5' transform='rotate(-46 55.7 90.4)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='67.2' cy='93.8' rx='6.0' ry='2.4' transform='rotate(17 67.2 93.8)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='64.9' cy='88.1' rx='6.0' ry='2.4' transform='rotate(-59 64.9 88.1)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='76.8' cy='88.6' rx='5.8' ry='2.3' transform='rotate(3 76.8 88.6)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='73.4' cy='83.7' rx='5.8' ry='2.3' transform='rotate(-73 73.4 83.7)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='84.9' cy='81.2' rx='5.5' ry='2.2' transform='rotate(-10 84.9 81.2)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='80.7' cy='77.4' rx='5.5' ry='2.2' transform='rotate(-86 80.7 77.4)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Ccircle cx='78.8' cy='75.7' r='1.6' fill='%236b97d2'/%3E%3Cellipse cx='91.1' cy='72.2' rx='5.3' ry='2.1' transform='rotate(-24 91.1 72.2)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='86.3' cy='69.6' rx='5.3' ry='2.1' transform='rotate(-100 86.3 69.6)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='95.1' cy='62.1' rx='5.1' ry='2.1' transform='rotate(-37 95.1 62.1)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='90.0' cy='60.7' rx='5.1' ry='2.1' transform='rotate(-113 90.0 60.7)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='96.5' cy='51.3' rx='4.9' ry='2.0' transform='rotate(-50 96.5 51.3)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='91.5' cy='51.2' rx='4.9' ry='2.0' transform='rotate(-126 91.5 51.2)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='95.4' cy='40.5' rx='4.7' ry='1.9' transform='rotate(-64 95.4 40.5)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='90.7' cy='41.5' rx='4.7' ry='1.9' transform='rotate(-140 90.7 41.5)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Ccircle cx='88.6' cy='41.9' r='1.6' fill='%236b97d2'/%3E%3Cellipse cx='91.9' cy='30.3' rx='4.5' ry='1.8' transform='rotate(-77 91.9 30.3)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='87.7' cy='32.2' rx='4.5' ry='1.8' transform='rotate(-153 87.7 32.2)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='86.1' cy='21.2' rx='4.2' ry='1.7' transform='rotate(-91 86.1 21.2)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='82.7' cy='23.9' rx='4.2' ry='1.7' transform='rotate(-167 82.7 23.9)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='78.4' cy='13.7' rx='4.0' ry='1.6' transform='rotate(-104 78.4 13.7)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='75.8' cy='17.0' rx='4.0' ry='1.6' transform='rotate(-180 75.8 17.0)' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.5'/%3E%3Cellipse cx='73.3' cy='12.7' rx='4' ry='1.8' transform='rotate(-148 73.3 12.7)' fill='%23ffffff' stroke='%235d636c' stroke-width='0.5'/%3E%3Cpath d='M44 92 L40 99 L46 97 L50 100 L54 97 L60 99 L56 92 Z' fill='%236b97d2' stroke='%235d636c' stroke-width='0.6'/%3E%3Ccircle cx='50' cy='93' r='3.2' fill='%23c9ced6' stroke='%235d636c' stroke-width='0.6'/%3E%3C/svg%3E");
+}
+
+.mm-avatar.look-frame-podium::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-2 -2 104 106'%3E%3Cpath d='M43.9 93.6 L41.3 93.1 L38.8 92.6 L36.4 91.8 L33.9 91.0 L31.6 90.0 L29.3 88.8 L27.0 87.5 L24.9 86.1 L22.8 84.6 L20.8 83.0 L19.0 81.2 L17.2 79.3 L15.5 77.4 L14.0 75.3 L12.6 73.2 L11.3 70.9 L10.1 68.6 L9.1 66.3 L8.2 63.9 L7.5 61.4 L6.9 58.9 L6.5 56.4 L6.2 53.8 L6.0 51.2 L6.0 48.7 L6.2 46.1 L6.5 43.5 L6.9 41.0 L7.5 38.5 L8.3 36.0 L9.2 33.6 L10.2 31.3 L11.4 29.0 L12.6 26.7 L14.1 24.6 L15.6 22.5 L17.3 20.6 L19.1 18.7 L20.9 17.0 L22.9 15.3' fill='none' stroke='%235a3414' stroke-width='1.6' stroke-linecap='round'/%3E%3Cellipse cx='43.4' cy='96.7' rx='6.2' ry='2.5' transform='rotate(150 43.4 96.7)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='44.3' cy='90.4' rx='6.2' ry='2.5' transform='rotate(226 44.3 90.4)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='32.8' cy='93.8' rx='6.0' ry='2.4' transform='rotate(163 32.8 93.8)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='35.1' cy='88.1' rx='6.0' ry='2.4' transform='rotate(239 35.1 88.1)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='23.2' cy='88.6' rx='5.8' ry='2.3' transform='rotate(177 23.2 88.6)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='26.6' cy='83.7' rx='5.8' ry='2.3' transform='rotate(253 26.6 83.7)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='15.1' cy='81.2' rx='5.5' ry='2.2' transform='rotate(190 15.1 81.2)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='19.3' cy='77.4' rx='5.5' ry='2.2' transform='rotate(266 19.3 77.4)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Ccircle cx='21.2' cy='75.7' r='1.6' fill='%237fae7c'/%3E%3Cellipse cx='8.9' cy='72.2' rx='5.3' ry='2.1' transform='rotate(204 8.9 72.2)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='13.7' cy='69.6' rx='5.3' ry='2.1' transform='rotate(280 13.7 69.6)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='4.9' cy='62.1' rx='5.1' ry='2.1' transform='rotate(217 4.9 62.1)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='10.0' cy='60.7' rx='5.1' ry='2.1' transform='rotate(293 10.0 60.7)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='3.5' cy='51.3' rx='4.9' ry='2.0' transform='rotate(230 3.5 51.3)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='8.5' cy='51.2' rx='4.9' ry='2.0' transform='rotate(306 8.5 51.2)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='4.6' cy='40.5' rx='4.7' ry='1.9' transform='rotate(244 4.6 40.5)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='9.3' cy='41.5' rx='4.7' ry='1.9' transform='rotate(320 9.3 41.5)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Ccircle cx='11.4' cy='41.9' r='1.6' fill='%237fae7c'/%3E%3Cellipse cx='8.1' cy='30.3' rx='4.5' ry='1.8' transform='rotate(257 8.1 30.3)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='12.3' cy='32.2' rx='4.5' ry='1.8' transform='rotate(333 12.3 32.2)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='13.9' cy='21.2' rx='4.2' ry='1.7' transform='rotate(271 13.9 21.2)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='17.3' cy='23.9' rx='4.2' ry='1.7' transform='rotate(347 17.3 23.9)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='21.6' cy='13.7' rx='4.0' ry='1.6' transform='rotate(284 21.6 13.7)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='24.2' cy='17.0' rx='4.0' ry='1.6' transform='rotate(360 24.2 17.0)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='26.7' cy='12.7' rx='4' ry='1.8' transform='rotate(328 26.7 12.7)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cpath d='M56.1 93.6 L58.7 93.1 L61.2 92.6 L63.6 91.8 L66.1 91.0 L68.4 90.0 L70.7 88.8 L73.0 87.5 L75.1 86.1 L77.2 84.6 L79.2 83.0 L81.0 81.2 L82.8 79.3 L84.5 77.4 L86.0 75.3 L87.4 73.2 L88.7 70.9 L89.9 68.6 L90.9 66.3 L91.8 63.9 L92.5 61.4 L93.1 58.9 L93.5 56.4 L93.8 53.8 L94.0 51.2 L94.0 48.7 L93.8 46.1 L93.5 43.5 L93.1 41.0 L92.5 38.5 L91.7 36.0 L90.8 33.6 L89.8 31.3 L88.6 29.0 L87.4 26.7 L85.9 24.6 L84.4 22.5 L82.7 20.6 L80.9 18.7 L79.1 17.0 L77.1 15.3' fill='none' stroke='%235a3414' stroke-width='1.6' stroke-linecap='round'/%3E%3Cellipse cx='56.6' cy='96.7' rx='6.2' ry='2.5' transform='rotate(30 56.6 96.7)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='55.7' cy='90.4' rx='6.2' ry='2.5' transform='rotate(-46 55.7 90.4)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='67.2' cy='93.8' rx='6.0' ry='2.4' transform='rotate(17 67.2 93.8)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='64.9' cy='88.1' rx='6.0' ry='2.4' transform='rotate(-59 64.9 88.1)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='76.8' cy='88.6' rx='5.8' ry='2.3' transform='rotate(3 76.8 88.6)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='73.4' cy='83.7' rx='5.8' ry='2.3' transform='rotate(-73 73.4 83.7)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='84.9' cy='81.2' rx='5.5' ry='2.2' transform='rotate(-10 84.9 81.2)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='80.7' cy='77.4' rx='5.5' ry='2.2' transform='rotate(-86 80.7 77.4)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Ccircle cx='78.8' cy='75.7' r='1.6' fill='%237fae7c'/%3E%3Cellipse cx='91.1' cy='72.2' rx='5.3' ry='2.1' transform='rotate(-24 91.1 72.2)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='86.3' cy='69.6' rx='5.3' ry='2.1' transform='rotate(-100 86.3 69.6)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='95.1' cy='62.1' rx='5.1' ry='2.1' transform='rotate(-37 95.1 62.1)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='90.0' cy='60.7' rx='5.1' ry='2.1' transform='rotate(-113 90.0 60.7)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='96.5' cy='51.3' rx='4.9' ry='2.0' transform='rotate(-50 96.5 51.3)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='91.5' cy='51.2' rx='4.9' ry='2.0' transform='rotate(-126 91.5 51.2)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='95.4' cy='40.5' rx='4.7' ry='1.9' transform='rotate(-64 95.4 40.5)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='90.7' cy='41.5' rx='4.7' ry='1.9' transform='rotate(-140 90.7 41.5)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Ccircle cx='88.6' cy='41.9' r='1.6' fill='%237fae7c'/%3E%3Cellipse cx='91.9' cy='30.3' rx='4.5' ry='1.8' transform='rotate(-77 91.9 30.3)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='87.7' cy='32.2' rx='4.5' ry='1.8' transform='rotate(-153 87.7 32.2)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='86.1' cy='21.2' rx='4.2' ry='1.7' transform='rotate(-91 86.1 21.2)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='82.7' cy='23.9' rx='4.2' ry='1.7' transform='rotate(-167 82.7 23.9)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='78.4' cy='13.7' rx='4.0' ry='1.6' transform='rotate(-104 78.4 13.7)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='75.8' cy='17.0' rx='4.0' ry='1.6' transform='rotate(-180 75.8 17.0)' fill='%23b87333' stroke='%235a3414' stroke-width='0.5'/%3E%3Cellipse cx='73.3' cy='12.7' rx='4' ry='1.8' transform='rotate(-148 73.3 12.7)' fill='%23f0b98a' stroke='%235a3414' stroke-width='0.5'/%3E%3Cpath d='M44 92 L40 99 L46 97 L50 100 L54 97 L60 99 L56 92 Z' fill='%237fae7c' stroke='%235a3414' stroke-width='0.6'/%3E%3Ccircle cx='50' cy='93' r='3.2' fill='%23b87333' stroke='%235a3414' stroke-width='0.6'/%3E%3C/svg%3E");
+}
+
+/* Contender (the top of a season): a ring in the season's colors, a star at the bottom that twinkles */
+.look-frame-contender::after {
+  background: conic-gradient(#d4a64a, #7c5cd6, #d4a64a, #3b2a6e, #f2c45a, #7c5cd6, #d4a64a);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.6) rgba(124, 92, 214, 0.6));
+  animation: look-turn 5s linear infinite;
+}
+
+.mm-avatar.look-frame-contender::before {
+  content: "★";
+  bottom: calc(var(--size) * -0.17);
+  left: 50%;
+  color: #ffe58a;
+  font-size: calc(var(--size) * 0.32);
+  text-shadow: 0 0 calc(var(--size) * 0.06) rgba(242, 196, 90, 0.9), 0 1px 2px rgba(0, 0, 0, 0.6);
+  transform: translateX(-50%);
+  animation: look-star-pulse 2.2s ease-in-out infinite;
+}
+
+/* Victory Crown: a golden crown that floats over the head, a spark next to it */
+.look-fx-crowned .look-fx::before {
+  content: "";
+  top: calc(var(--size) * -0.42);
+  left: 50%;
+  width: calc(var(--size) * 0.56);
+  height: calc(var(--size) * 0.42);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 48'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fff1c4'/%3E%3Cstop offset='0.45' stop-color='%23f2c45a'/%3E%3Cstop offset='1' stop-color='%23a8741a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M6 40 L3 12 L18 24 L32 4 L46 24 L61 12 L58 40 Z' fill='url(%23g)' stroke='%237a5310' stroke-width='2' stroke-linejoin='round'/%3E%3Crect x='6' y='38' width='52' height='7' rx='2' fill='url(%23g)' stroke='%237a5310' stroke-width='2'/%3E%3Ccircle cx='32' cy='4' r='3.4' fill='%23fff1c4' stroke='%237a5310' stroke-width='1.5'/%3E%3Ccircle cx='3' cy='12' r='3' fill='%23fff1c4' stroke='%237a5310' stroke-width='1.5'/%3E%3Ccircle cx='61' cy='12' r='3' fill='%23fff1c4' stroke='%237a5310' stroke-width='1.5'/%3E%3Ccircle cx='32' cy='29' r='4.2' fill='%23e0675a' stroke='%237a5310' stroke-width='1.5'/%3E%3Ccircle cx='18' cy='31' r='3' fill='%236b97d2' stroke='%237a5310' stroke-width='1.3'/%3E%3Ccircle cx='46' cy='31' r='3' fill='%237fae7c' stroke='%237a5310' stroke-width='1.3'/%3E%3C/svg%3E") center / contain no-repeat;
+  filter: drop-shadow(0 calc(var(--size) * 0.03) calc(var(--size) * 0.04) rgba(0, 0, 0, 0.45)) drop-shadow(0 0 calc(var(--size) * 0.05) rgba(255, 229, 138, 0.6));
+  transform: translateX(-50%) rotate(-6deg);
+  animation: look-crown 2.6s ease-in-out infinite;
+}
+
+.look-fx-crowned .look-fx::after {
+  content: "✦";
+  top: calc(var(--size) * -0.36);
+  right: calc(var(--size) * 0.02);
+  color: #fff1c4;
+  font-size: calc(var(--size) * 0.18);
+  text-shadow: 0 0 6px #f2c45a;
+  animation: look-twinkle 1.8s ease-in-out infinite;
+}
+
+/* (a crown, horns, a halo take the top: one at a time) */
+.look-frame-royal.look-fx-crowned::before,
+.look-frame-devil.look-fx-crowned::before {
+  display: none;
+}
+
+/* Spotlight: soft rays of light that turn slowly around the avatar */
+.look-fx-spotlight .look-fx::before {
+  content: "";
+  inset: -46%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 229, 138, 0.55) 0 7deg, rgba(255, 229, 138, 0) 13deg 30deg);
+  -webkit-mask: radial-gradient(closest-side, transparent 52%, #000 56%, rgba(0, 0, 0, 0.5) 74%, transparent 100%);
+  mask: radial-gradient(closest-side, transparent 52%, #000 56%, rgba(0, 0, 0, 0.5) 74%, transparent 100%);
+  animation: look-turn 12s linear infinite, look-spot 3s ease-in-out infinite;
+}
+
+.look-fx-spotlight .look-fx::after {
+  content: "";
+  inset: -10%;
+  border-radius: 50%;
+  box-shadow: 0 0 calc(var(--size) * 0.22) calc(var(--size) * 0.02) rgba(255, 229, 138, 0.35);
+  animation: look-spot 3s ease-in-out infinite reverse;
+}
+
+/* Starfall: golden stars that drift down and twinkle */
+.look-fx-starfall .look-fx::before,
+.look-fx-starfall .look-fx::after {
+  content: "★";
+  top: 0;
+  opacity: 0;
+  color: #ffe58a;
+  font-size: calc(var(--size) * 0.22);
+  text-shadow: 0 0 calc(var(--size) * 0.06) rgba(242, 196, 90, 0.95);
+  animation: look-fall 2.8s ease-in infinite;
+}
+
+.look-fx-starfall .look-fx::before {
+  left: -12%;
+}
+
+.look-fx-starfall .look-fx::after {
+  right: -12%;
+  font-size: calc(var(--size) * 0.16);
+  animation-delay: 1.4s;
+}
+
+.look-fx-starfall.mm-avatar {
+  filter: drop-shadow(0 0 calc(var(--size) * 0.06) rgba(242, 196, 90, 0.35));
+}
+
+@keyframes look-laurel {
+  50% {
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 calc(var(--size) * 0.06) rgba(255, 229, 138, 0.75)) brightness(1.15);
+  }
+}
+
+@keyframes look-star-pulse {
+  50% {
+    transform: translateX(-50%) scale(1.18) rotate(18deg);
+  }
+}
+
+@keyframes look-crown {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0) rotate(-6deg);
+  }
+  50% {
+    transform: translateX(-50%) translateY(calc(var(--size) * -0.06)) rotate(4deg);
+  }
+}
+
+@keyframes look-spot {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-avatar.look-frame-champion::before,
+  .mm-avatar.look-frame-contender::before,
+  .look-fx-crowned .look-fx::before,
+  .look-fx-crowned .look-fx::after,
+  .look-fx-spotlight .look-fx::before,
+  .look-fx-spotlight .look-fx::after,
+  .look-fx-starfall .look-fx::before,
+  .look-fx-starfall .look-fx::after {
+    animation: none;
+  }
+}

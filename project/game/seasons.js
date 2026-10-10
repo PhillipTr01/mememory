@@ -532,6 +532,10 @@ async function endSeason(season, now) {
   await persist.resetPrefix("season/");
   if (seasonEra) await CoinLog.deleteMany({ era: seasonEra });
   await Setting.deleteMany({ key: { $in: [BOARD_KEY] } });
+  // The best of the season win their frames and animations (the shop's season items)
+  await require("./shop")
+    .awardSeason(season, season.final.rows)
+    .catch((error) => console.error("[seasons] Could not give the season rewards:", error));
   changes.emit("ended", publicSeason(season));
   for (const username of players) changes.emit("world", username, "");
   for (const row of rows) coins.notify(row.username);

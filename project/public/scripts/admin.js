@@ -932,7 +932,7 @@ async function loadShop() {
   } catch (error) {
     return fail(error);
   }
-  shopDraft = { items: {}, free: shopSaved.free };
+  shopDraft = { items: {}, free: shopSaved.free, seasonRewards: JSON.parse(JSON.stringify(shopSaved.seasonRewards)) };
   renderShop();
 }
 
@@ -942,6 +942,7 @@ function shopValue(item, key) {
 }
 
 function shopDirty() {
+  if (JSON.stringify(shopDraft.seasonRewards) != JSON.stringify(shopSaved.seasonRewards)) return true;
   return shopDraft.free != shopSaved.free || Object.keys(shopDraft.items).some((id) => {
     var item = shopSaved.items.find((i) => i.id == id);
     return Object.keys(shopDraft.items[id]).some((key) => shopDraft.items[id][key] !== item[key]);
@@ -966,6 +967,21 @@ function renderShop() {
           var row = el("div", "ad-shop-row" + (shopValue(item, "on") ? "" : " off"));
           var name = el("div", "ad-shop-name");
           name.append(el("b", "", item.name), el("small", "ad-shop-rarity " + item.rarity, item.rarity));
+          // (a season item: won, never sold - no price)
+          if (item.season) {
+            var toggleOnly = el("label", "ad-switch");
+            var seasonBox = el("input");
+            seasonBox.type = "checkbox";
+            seasonBox.checked = shopValue(item, "on");
+            seasonBox.setAttribute("aria-label", item.name + " on");
+            seasonBox.addEventListener("change", () => {
+              setShop(item.id, "on", seasonBox.checked);
+              row.classList.toggle("off", !seasonBox.checked);
+            });
+            toggleOnly.append(seasonBox, el("span", "ad-switch-track"));
+            row.append(toggleOnly, name, el("span", "ad-shop-won", "🏆 won in seasons"));
+            return row;
+          }
           var price = el("span", "ad-inline-input");
           var input = el("input", "mm-input ad-shop-price");
           input.type = "number";
@@ -991,7 +1007,67 @@ function renderShop() {
         }),
     );
   });
+  renderRewardRules();
   document.getElementById("adShopSave").disabled = !shopDirty();
+}
+
+// The rules of the season rewards: places from - to, a frame and / or an animation
+function renderRewardRules() {
+  var seasonItems = shopSaved.items.filter((item) => item.season);
+  var rules = shopDraft.seasonRewards;
+  var changed = () => (document.getElementById("adShopSave").disabled = !shopDirty());
+  var list = document.getElementById("adSeasonRewards");
+  if (!rules.length) {
+    list.replaceChildren(el("p", "ad-note", "No rules - nobody wins anything at the end of a season."));
+  } else {
+    list.replaceChildren(
+      ...rules.map((rule, index) => {
+        var row = el("div", "ad-reward-rule");
+        var places = el("div", "ad-reward-places");
+        var number = (key, label) => {
+          var input = el("input", "mm-input");
+          input.type = "number";
+          input.min = 1;
+          input.max = 1000;
+          input.value = rule[key];
+          input.setAttribute("aria-label", label);
+          input.addEventListener("input", () => {
+            rule[key] = Math.floor(Number(input.value)) || 0;
+            changed();
+          });
+          return input;
+        };
+        places.append(el("span", "ad-label", "Places"), number("from", "From place"), el("span", "mm-muted", "to"), number("to", "To place"));
+        var pick = (kind, label) => {
+          var select = el("select", "mm-input");
+          select.setAttribute("aria-label", label);
+          select.appendChild(Object.assign(el("option", null, "No " + label.toLowerCase()), { value: "" }));
+          seasonItems
+            .filter((item) => item.kind == kind)
+            .forEach((item) => select.appendChild(Object.assign(el("option", null, item.name), { value: item.id })));
+          var current = rule.items.find((id) => (seasonItems.find((item) => item.id == id) || {}).kind == kind);
+          select.value = current || "";
+          select.addEventListener("change", () => {
+            rule.items = rule.items.filter((id) => (seasonItems.find((item) => item.id == id) || {}).kind != kind);
+            if (select.value) rule.items.push(select.value);
+            changed();
+          });
+          return select;
+        };
+        var remove = el("button", "mm-btn mm-btn-sm ad-reward-remove", "✕");
+        remove.type = "button";
+        remove.title = "Remove this rule";
+        remove.addEventListener("click", () => {
+          rules.splice(index, 1);
+          renderRewardRules();
+          changed();
+        });
+        row.append(places, pick("frame", "Frame"), pick("effect", "Animation"), remove);
+        return row;
+      }),
+    );
+  }
+  document.getElementById("adRewardDefaults").disabled = JSON.stringify(rules) == JSON.stringify(shopSaved.seasonDefaults);
 }
 
 async function saveShop() {
@@ -1000,7 +1076,7 @@ async function saveShop() {
   var endsFree = shopSaved.free && !shopDraft.free;
   try {
     shopSaved = await api("shop", shopDraft);
-    shopDraft = { items: {}, free: shopSaved.free };
+    shopDraft = { items: {}, free: shopSaved.free, seasonRewards: JSON.parse(JSON.stringify(shopSaved.seasonRewards)) };
     renderShop();
     showHint(endsFree ? "Saved - everything nobody bought came off." : "Saved.", "success", button);
   } catch (error) {
@@ -1016,6 +1092,18 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("adShopSave").disabled = !shopDirty();
   });
   document.getElementById("adShopSave").addEventListener("click", saveShop);
+  document.getElementById("adRewardAdd").addEventListener("click", () => {
+    var rules = shopDraft.seasonRewards;
+    var after = rules.reduce((top, rule) => Math.max(top, rule.to), 0) + 1;
+    rules.push({ from: after, to: after, items: [] });
+    renderRewardRules();
+    document.getElementById("adShopSave").disabled = !shopDirty();
+  });
+  document.getElementById("adRewardDefaults").addEventListener("click", () => {
+    shopDraft.seasonRewards = JSON.parse(JSON.stringify(shopSaved.seasonDefaults));
+    renderRewardRules();
+    document.getElementById("adShopSave").disabled = !shopDirty();
+  });
 });
 
 async function loadMaintenance() {

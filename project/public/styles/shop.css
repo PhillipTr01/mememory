@@ -273,3 +273,42 @@
     flex-wrap: wrap;
   }
 }
+
+/* ---------- Season rewards: won, never bought ---------- */
+.sh-section-note {
+  margin: -0.4rem 0 0;
+  font-size: 0.82rem;
+  color: var(--mm-muted);
+}
+
+.sh-item.season {
+  --tone: 242, 196, 90;
+  background: linear-gradient(180deg, rgba(var(--tone), 0.07), transparent 55%), var(--mm-surface-2);
+}
+
+.sh-item.season.owned {
+  border-color: rgba(var(--tone), 0.45);
+}
+
+/* Locked: the preview a bit dark - you see what you could win */
+.sh-item.season.locked .sh-stage {
+  filter: saturate(0.55) brightness(0.8);
+}
+
+.sh-item.season.locked:hover .sh-stage {
+  filter: none;
+}
+
+.sh-season-origin {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: rgb(var(--tone));
+}
+
+.sh-season-origin.how {
+  color: var(--mm-muted);
+}
+
+.sh-item.season .sh-stage {
+  height: 104px;
+}

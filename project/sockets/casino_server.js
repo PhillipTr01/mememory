@@ -29,6 +29,19 @@ module.exports = function (io) {
   // (a gift while the player has no casino page open: kept for the next visit - game/inbox.js)
   notices.on("notice", (username, event, data) => {
     const sockets = socketsOf(io, username);
+    // A season reward: kept first, then shown on one open page (the season's end may move the pages - then the next one shows it)
+    if (event === "seasonReward") {
+      inbox
+        .add(username, { type: "seasonReward", ...data })
+        .then(() =>
+          setTimeout(() => {
+            const open = socketsOf(io, username);
+            if (open.length) deliverInbox(open[0]);
+          }, 1500),
+        )
+        .catch((error) => console.error("[inbox] Could not keep a season reward:", error));
+      return;
+    }
     for (const socket of sockets) socket.emit(event, data);
     if (event === "giftReceived" && sockets.length === 0) inbox.add(username, { type: "gift", ...data }).catch((error) => console.error("[inbox] Could not keep a gift:", error));
   });
@@ -44,6 +57,7 @@ module.exports = function (io) {
       for (const item of items) {
         if (item.type === "gift") socket.emit("giftReceived", { ...item, missed: true });
         if (item.type === "rain") socket.emit("moneyRain", { ...item, missed: true });
+        if (item.type === "seasonReward") socket.emit("seasonReward", { ...item, missed: true });
       }
     } catch (error) {
       console.error("[inbox] Could not deliver:", error);

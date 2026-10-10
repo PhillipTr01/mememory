@@ -61,6 +61,57 @@
     claiming = null;
   });
 
+  /* ---------- A season is over: what the player won (frames, animations) ---------- */
+
+  socket.on("seasonReward", async (reward) => {
+    var name = typeof userPromise != "undefined" ? await userPromise.catch(() => null) : null;
+    var place = reward.rank == 1 ? "🥇" : reward.rank == 2 ? "🥈" : reward.rank == 3 ? "🥉" : "🏆";
+    var backdrop = el("div", "mm-dialog-backdrop");
+    var dialog = el("div", "mm-dialog nav-streak nav-reward");
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    dialog.setAttribute("aria-label", "Season reward");
+    dialog.appendChild(el("div", "nav-streak-flame nav-reward-medal", place));
+    dialog.appendChild(el("h2", "mm-dialog-title", "Place " + reward.rank + " in " + (reward.icon ? reward.icon + " " : "") + reward.season + "!"));
+    dialog.appendChild(el("p", "mm-dialog-text nav-reward-text", "You won " + (reward.items.length == 1 ? "a season reward" : "season rewards") + " - nobody can buy " + (reward.items.length == 1 ? "it" : "them") + ", yours for good:"));
+    var row = el("div", "nav-reward-items");
+    reward.items.forEach((item, i) => {
+      var card = el("div", "nav-reward-item");
+      card.style.setProperty("--i", i);
+      var stage = el("div", "nav-reward-stage");
+      if (name && typeof createAvatar == "function") {
+        var avatar = createAvatar(name, "lg");
+        [...avatar.classList].filter((c) => c.startsWith("look-")).forEach((c) => avatar.classList.remove(c));
+        avatar.querySelectorAll(".look-fx").forEach((fx) => fx.remove());
+        avatar.removeAttribute("data-name");
+        avatar.classList.add(item.kind == "frame" ? "look-frame-" + item.id : "look-fx-" + item.id);
+        if (item.kind == "effect") avatar.appendChild(el("span", "look-fx"));
+        stage.appendChild(avatar);
+      }
+      card.append(stage, el("span", "nav-reward-kind", item.kind == "frame" ? "Frame" : "Animation"), el("b", "nav-reward-name", item.name));
+      row.appendChild(card);
+    });
+    dialog.appendChild(row);
+    var buttons = el("div", "mm-dialog-actions");
+    var later = el("button", "mm-btn", "Later");
+    later.type = "button";
+    var wear = el("a", "mm-btn mm-btn-primary", "Wear it");
+    wear.href = "shop";
+    buttons.append(later, wear);
+    dialog.appendChild(buttons);
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+    if (window.casinoSound) window.casinoSound.play("fanfare");
+    var close = () => {
+      backdrop.remove();
+      document.removeEventListener("keydown", onKey);
+    };
+    var onKey = (event) => event.key == "Escape" && close();
+    document.addEventListener("keydown", onKey);
+    later.addEventListener("click", close);
+    backdrop.addEventListener("click", (event) => event.target == backdrop && close());
+  });
+
   /* ---------- The daily streak: what today paid, what the next days pay ---------- */
 
   function rewardOf(info, day) {

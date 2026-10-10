@@ -89,3 +89,80 @@ test("shop admin: prices and items off - free for all lets everybody wear everyt
     shop.reset();
   }
 });
+
+test("shop: season items can't be bought - the places of a season win them at its end and keep them", async () => {
+  shop.reset();
+  h.addUser("win1");
+  h.addUser("win2");
+  h.addUser("win5");
+  h.addUser("win20");
+  h.setCoins("win1", 9000000);
+  assert.match((await shop.buy("win1", "champion")).error, /can't be bought/);
+  assert.match((await shop.wear("win1", "frame", "champion")).error, /don't have/);
+  // How to win them: from the rules
+  const view = await shop.view("win1");
+  assert.strictEqual(view.items.find((item) => item.id === "champion").howToWin, "1st place");
+  assert.strictEqual(view.items.find((item) => item.id === "starfall").howToWin, "Places 4-10");
+
+  // A season ends: 1st, 2nd, 5th, 20th, one not placed
+  const given = await shop.awardSeason({ name: "Spring", icon: "🌸" }, [
+    { rank: 1, username: "win1" },
+    { rank: 2, username: "win2" },
+    { rank: 5, username: "win5" },
+    { rank: 20, username: "win20" },
+    { rank: null, username: "tess" },
+  ]);
+  assert.deepStrictEqual(
+    given.map((g) => [g.username, g.items]),
+    [
+      ["win1", ["champion", "crowned"]],
+      ["win2", ["runnerup", "spotlight"]],
+      ["win5", ["contender", "starfall"]],
+    ],
+  );
+  const won = await shop.view("win1");
+  assert.ok(won.owned.includes("champion") && won.owned.includes("crowned"));
+  assert.deepStrictEqual([won.won[0].season, won.won[0].rank], ["Spring", 1]);
+  assert.strictEqual((await shop.wear("win1", "frame", "champion")).frame, "champion");
+  assert.strictEqual((await shop.wear("win1", "effect", "crowned")).effect, "crowned");
+  assert.deepStrictEqual(await shop.worn(["win1"]), { win1: { frame: "champion", effect: "crowned" } });
+  // Buying something else keeps what was won
+  const bought = await shop.buy("win1", "gold");
+  assert.ok(!bought.error, bought.error);
+  assert.ok(bought.owned.includes("champion"));
+  assert.deepStrictEqual(h.userOf("win1").looks.owned, ["gold"], "the stored list: only what was bought");
+  assert.strictEqual((await shop.view("win20")).owned.length, 0);
+});
+
+test("shop: the admin sets which places win what - one frame and one animation per rule", async () => {
+  shop.reset();
+  assert.ok((await shop.update({ seasonRewards: [{ from: 1, to: 3, items: ["champion", "runnerup"] }] })).error, "two frames");
+  assert.ok((await shop.update({ seasonRewards: [{ from: 2, to: 1, items: ["champion"] }] })).error, "from after to");
+  assert.ok((await shop.update({ seasonRewards: [{ from: 1, to: 1, items: ["gold"] }] })).error, "not a season item");
+  const saved = await shop.update({ seasonRewards: [{ from: 1, to: 5, items: ["crowned"] }, { from: 1, to: 1, items: ["champion"] }] });
+  assert.ok(!saved.error, saved.error);
+  assert.deepStrictEqual(shop.rewardsFor(1).sort(), ["champion", "crowned"], "every rule that covers the place");
+  assert.deepStrictEqual(shop.rewardsFor(4), ["crowned"]);
+  assert.deepStrictEqual(shop.rewardsFor(6), []);
+  await shop.update({ seasonRewards: [] });
+  assert.deepStrictEqual(shop.rewardsFor(1), [], "no rules: nothing");
+  await shop.update({ seasonRewards: null });
+  assert.deepStrictEqual(shop.rewardsFor(1), ["champion", "crowned"], "back to the default");
+  shop.reset();
+});
+
+test("shop: a season that ends gives its places their season items", async () => {
+  shop.reset();
+  seasons.reset();
+  h.addUser("vic");
+  h.setCoins("vic", 1000);
+  const now = Date.now();
+  const made = await seasons.create({ name: "Summer", icon: "☀️", start: now - 1000, end: now + 3600 * 1000, budget: 5000, every: 0, closeWait: 0, wagerX: 0 });
+  assert.ok(!made.error, made.error);
+  await seasons.tick(now);
+  await seasons.join("vic", now);
+  await seasons.endNow(made.season.id);
+  seasons.reset();
+  const won = (h.userOf("vic").looks || {}).won || [];
+  assert.deepStrictEqual(won.map((entry) => [entry.id, entry.season, entry.rank]), [["champion", "Summer", 1], ["crowned", "Summer", 1]]);
+});

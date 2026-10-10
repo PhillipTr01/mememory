@@ -4564,3 +4564,66 @@ body.jackpot-theme::before {
     animation: none;
   }
 }
+
+/* ---------- A season reward: the medal, the items won ---------- */
+.nav-reward {
+  max-width: 440px;
+}
+
+.nav-reward-text {
+  margin-bottom: 0.9rem;
+}
+
+.nav-reward-items {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.2rem;
+}
+
+.nav-reward-item {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 170px;
+  padding: 0.8rem 0.5rem 0.7rem;
+  border: 1px solid rgba(242, 196, 90, 0.45);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(242, 196, 90, 0.12), transparent 60%), var(--mm-surface-2);
+  animation: nav-streak-pop 0.5s calc(0.25s + var(--i) * 0.15s) cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+}
+
+.nav-reward-stage {
+  display: grid;
+  place-items: center;
+  height: 96px;
+}
+
+.nav-reward-stage .mm-avatar {
+  --size: 58px;
+}
+
+.nav-reward-kind {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f2c45a;
+}
+
+.nav-reward-name {
+  font-size: 0.9rem;
+}
+
+.nav-reward .mm-dialog-actions {
+  grid-template-columns: 1fr 1fr;
+}
+
+.nav-reward .mm-dialog-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}

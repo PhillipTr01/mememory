@@ -22,7 +22,7 @@ const PARTS = [
   { id: "chat", group: "records", label: "Casino chat", about: "Every message and every chat ban." },
   // What was set up
   { id: "access", group: "setup", label: "Access", about: "Who may play and get payouts - everybody asks for access again." },
-  { id: "purchases", group: "setup", label: "Shop purchases", about: "Every bought frame and effect comes off the avatars." },
+  { id: "purchases", group: "setup", label: "Shop purchases", about: "Every bought frame and effect comes off the avatars (the ones won in seasons too)." },
   { id: "seasons", group: "setup", label: "Seasons", about: "Every season - planned, running and over - and its leaderboard." },
   { id: "settings", group: "setup", label: "Settings", about: "Every value of the settings pages back to its default (the season's own limits and the daily streak too)." },
   { id: "rains", group: "setup", label: "Money rains", about: "Every planned money rain." },

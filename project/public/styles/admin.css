@@ -4131,3 +4131,77 @@ a.ad-case-row:hover {
 .ad-streak .ad-choice {
   flex-wrap: wrap;
 }
+
+/* ---------- Shop: season rewards ---------- */
+.ad-shop-rarity.season {
+  color: #f2c45a;
+}
+
+.ad-shop-won {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+  white-space: nowrap;
+}
+
+.ad-season-rewards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.ad-season-rewards .ad-title {
+  font-size: 1rem;
+}
+
+.ad-reward-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ad-reward-rule {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+}
+
+.ad-reward-places {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ad-reward-places .mm-input {
+  width: 72px;
+}
+
+.ad-reward-remove {
+  padding: 0.2rem 0.55rem;
+}
+
+@media (max-width: 700px) {
+  .ad-reward-rule {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ad-reward-places {
+    grid-column: 1 / -1;
+  }
+
+  .ad-reward-rule select {
+    grid-column: 1 / -1;
+  }
+
+  .ad-reward-remove {
+    grid-row: 1;
+    grid-column: 2;
+  }
+}
