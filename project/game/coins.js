@@ -36,9 +36,10 @@ const FIELDS = {
 
 // History of every change (for the admin panel); never blocks or breaks a game
 // era: the season's coins are tagged with it - the normal history has none
-function writeLog(username, amount, reason, note, era) {
+// bet: a win's bet (for the best wins)
+function writeLog(username, amount, reason, note, era, bet) {
   Promise.resolve()
-    .then(() => CoinLog.create({ username: username, amount: amount, reason: reason || "other", note: note, at: new Date(), ...(era ? { era: era } : {}) }))
+    .then(() => CoinLog.create({ username: username, amount: amount, reason: reason || "other", note: note, at: new Date(), ...(era ? { era: era } : {}), ...(bet > 0 ? { bet: bet } : {}) }))
     .catch((error) => console.error("[coins] Could not write the history:", error));
 }
 
@@ -130,7 +131,7 @@ function makeWallet(kind) {
   // The start of this wallet: normal - the start coins; season - 0 (the budget comes with joining)
   const walletBase = () => (season ? seasonBase || { reset: "no-season", start: 0, since: null } : base());
   const walletEra = () => (season ? era() : null);
-  const log = (username, amount, reason, note) => writeLog(username, amount, reason, note, walletEra());
+  const log = (username, amount, reason, note, bet) => writeLog(username, amount, reason, note, walletEra(), bet);
 
   // Not joined the running season: watching only (no coins, no daily bonus)
   function watching(username) {
@@ -262,7 +263,7 @@ function makeWallet(kind) {
     if (watching(username)) return false;
     await ensure(username);
     const done = changed(await User.updateOne({ username: username }, { $inc: { [f.coins]: amount } }));
-    if (done) log(username, amount, options.reason, options.note);
+    if (done) log(username, amount, options.reason, options.note, options.bet);
     if (done && !options.quiet) notify(username);
     return done;
   }

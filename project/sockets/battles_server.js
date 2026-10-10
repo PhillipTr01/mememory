@@ -284,7 +284,7 @@ module.exports = function (io, options = {}) {
         if (winner.bot || shares[i] <= 0) return;
         try {
           // (the note: the mode and how many played - for the best wins)
-          await coins.add(winner.name, shares[i], { reason: "battle win", note: [battle.mode, battle.seats.length + " players", shares.length > 1 ? "split pot" : null].filter(Boolean).join(" · ") });
+          await coins.add(winner.name, shares[i], { reason: "battle win", bet: battle.price, note: [battle.mode, battle.seats.length + " players", shares.length > 1 ? "split pot" : null].filter(Boolean).join(" · ") });
           best.changed();
         } catch (error) {
           console.error("[battles] Could not pay a winner:", error);

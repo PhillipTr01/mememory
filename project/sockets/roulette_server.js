@@ -135,6 +135,8 @@ module.exports = function (io, options = {}) {
     table.paid = true;
     persist.changed("roulette");
     const wins = new Map();
+    // (all of a player's bets this round: what the win came from - for the best wins)
+    const staked = (name) => table.bets.filter((bet) => bet.name === name).reduce((sum, bet) => sum + bet.amount, 0);
     for (const bet of table.bets) {
       const win = roulette.payout(bet.color, bet.amount, table.slot);
       if (win > 0) wins.set(bet.name, (wins.get(bet.name) || 0) + win);
@@ -150,7 +152,7 @@ module.exports = function (io, options = {}) {
     };
     await Promise.all(
       [...wins].map(([name, win]) =>
-        coins.add(name, win, { reason: "roulette win", note: slot.color }).catch((error) => console.error("[roulette] Could not pay a win:", error)),
+        coins.add(name, win, { reason: "roulette win", note: slot.color, bet: staked(name) }).catch((error) => console.error("[roulette] Could not pay a win:", error)),
       ),
     );
     if (wins.size) best.changed();

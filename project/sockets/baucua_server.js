@@ -119,6 +119,8 @@ module.exports = function (io, options = {}) {
     table.paid = true;
     persist.changed("baucua");
     const wins = new Map();
+    // (all of a player's bets this round: what the win came from - for the best wins)
+    const staked = (name) => table.bets.filter((bet) => bet.name === name).reduce((sum, bet) => sum + bet.amount, 0);
     for (const bet of table.bets) {
       const win = baucua.payout(bet.animal, bet.amount, table.dice);
       if (win > 0) wins.set(bet.name, (wins.get(bet.name) || 0) + win);
@@ -130,7 +132,7 @@ module.exports = function (io, options = {}) {
       winners: [...wins].map(([name, win]) => ({ name, win })).sort((a, b) => b.win - a.win),
     };
     await Promise.all(
-      [...wins].map(([name, win]) => coins.add(name, win, { reason: "baucua win", note: table.dice.join(" ") }).catch((error) => console.error("[baucua] Could not pay a win:", error))),
+      [...wins].map(([name, win]) => coins.add(name, win, { reason: "baucua win", note: table.dice.join(" "), bet: staked(name) }).catch((error) => console.error("[baucua] Could not pay a win:", error))),
     );
     if (wins.size) best.changed();
   }

@@ -145,7 +145,7 @@ module.exports = function (io, options = {}) {
     persist.changed("slots");
     try {
       if (entry.win > 0) {
-        await coins.add(entry.name, entry.win, { reason: "slots win", note: entry.note });
+        await coins.add(entry.name, entry.win, { reason: "slots win", note: entry.note, bet: entry.bet || (entry.feed && entry.feed.bet) });
         best.changed();
       }
     } catch (error) {
@@ -301,6 +301,7 @@ module.exports = function (io, options = {}) {
             const entry = {
               id: id,
               name: username,
+              bet: bet,
               win: result.win,
               note: note,
               at: Date.now() + payIn,

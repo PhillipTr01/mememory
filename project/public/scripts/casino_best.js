@@ -47,6 +47,12 @@
     return text;
   }
 
+  // 138.25 -> "138×", 2.5 -> "2.5×", 1.954 -> "1.95×"
+  function times(x) {
+    var digits = x >= 100 ? 0 : x >= 10 ? 1 : 2;
+    return Number(x.toFixed(digits)).toLocaleString("en-US") + "×";
+  }
+
   function when(at) {
     var date = new Date(at);
     if (isNaN(date)) return "";
@@ -75,6 +81,12 @@
         if (detail instanceof Node) small.appendChild(detail);
         else small.innerText = detail || "";
         who.append(name, small);
+        // The bet it came from and how many times it was won (older wins don't know their bet)
+        if (entry.bet > 0) {
+          var stake = make("small", "cs-best-bet");
+          stake.append(make("span", "", "Bet 🪙 " + formatCoins(entry.bet)), make("b", "cs-best-x", times(entry.win / entry.bet)));
+          who.appendChild(stake);
+        }
         var amount = make("span", "cs-best-amount");
         amount.append(make("span", "jp-history-won", "🪙 " + formatCoins(entry.win)), make("small", "cs-best-when", when(entry.at)));
         row.append(who, amount);

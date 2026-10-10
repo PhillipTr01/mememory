@@ -30,3 +30,15 @@ test("best wins: a game that writes its wins down itself (poker pots) - the 10 b
   assert.strictEqual(lists.today[0].note, "Flush");
   assert.strictEqual(saved().all.length, 10, "saved with the game");
 });
+
+test("best wins: a win paid with its bet keeps it - the list shows the bet (older wins: none)", async () => {
+  const coins = require("../game/coins");
+  require("./helpers").addUser("bw_bet");
+  assert.ok(await coins.add("bw_bet", 27600, { reason: "roulette win", note: "red", bet: 200 }));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  await CoinLog.create({ username: "bw_old", amount: 100, reason: "roulette win", note: "red", at: new Date() });
+  const lists = await best.lists("roulette win", "");
+  const won = lists.all.find((w) => w.name === "bw_bet");
+  assert.deepStrictEqual([won.win, won.bet], [27600, 200]);
+  assert.strictEqual(lists.all.find((w) => w.name === "bw_old").bet, null);
+});

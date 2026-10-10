@@ -4430,6 +4430,23 @@ body.jackpot-theme::before {
   white-space: nowrap;
 }
 
+.cs-best-bet {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  color: var(--mm-muted);
+  white-space: nowrap;
+}
+
+.cs-best-x {
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  color: var(--mm-accent);
+  font-weight: 800;
+}
+
 .cs-best-dice {
   display: inline-flex;
   gap: 2px;

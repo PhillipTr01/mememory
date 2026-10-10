@@ -345,7 +345,7 @@ module.exports = function (io, options = {}) {
           hand.payout = payout;
           hand.done = true;
           if (payout > 0) {
-            coins.add(seat.name, payout, { reason: "blackjack win", note: result }).catch((error) => console.error("[blackjack] Could not pay:", error));
+            coins.add(seat.name, payout, { reason: "blackjack win", note: result, bet: hand.bet }).catch((error) => console.error("[blackjack] Could not pay:", error));
             best.changed();
           }
           results.push({ name: seat.name, result: result, bet: hand.bet, payout: payout });
@@ -353,7 +353,7 @@ module.exports = function (io, options = {}) {
         // The side bets: paid now, with the round
         for (const side of seat.sideResults || []) {
           if (side.payout > 0) {
-            coins.add(seat.name, side.payout, { reason: "blackjack win", note: side.name }).catch((error) => console.error("[blackjack] Could not pay:", error));
+            coins.add(seat.name, side.payout, { reason: "blackjack win", note: side.name, bet: side.bet }).catch((error) => console.error("[blackjack] Could not pay:", error));
             best.changed();
           }
           results.push({ name: seat.name, result: "side", side: side.type, bet: side.bet, payout: side.payout });

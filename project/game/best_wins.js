@@ -17,7 +17,7 @@ async function lists(reason, world) {
   if (world === "/season" && !era) return { today: [], all: [] };
   // (a push in blackjack only gives the bet back - not a win)
   const base = { reason: reason, note: { $ne: "push" }, ...(era ? { era: era } : coins.eraFilter()) };
-  const pick = (rows) => rows.map((row) => ({ name: row.username, win: row.amount, note: row.note || null, at: row.at }));
+  const pick = (rows) => rows.map((row) => ({ name: row.username, win: row.amount, bet: row.bet || null, note: row.note || null, at: row.at }));
   const [today, all] = await Promise.all([
     CoinLog.find({ ...base, at: { $gte: new Date(days.dayStart()) } }).sort({ amount: -1 }).limit(COUNT).lean(),
     CoinLog.find(base).sort({ amount: -1 }).limit(COUNT).lean(),
@@ -68,9 +68,9 @@ function attachRecorded(room, key, persist) {
     },
   );
   return {
-    record(name, win, note) {
+    record(name, win, note, bet) {
       if (!(win > 0)) return;
-      const entry = { name: name, win: win, note: note || null, at: new Date().toISOString() };
+      const entry = { name: name, win: win, bet: bet > 0 ? bet : null, note: note || null, at: new Date().toISOString() };
       current();
       state = { ...state, all: top(state.all, entry), today: top(state.today, entry) };
       persist.changed(key);
