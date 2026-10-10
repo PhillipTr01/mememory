@@ -666,32 +666,38 @@ function showPane(name) {
 }
 
 // How many players (2 to 4)
-// The players of a new battle: 2, 3, 4 - and 2v2 (4 players in two teams)
-var SIZE_STEPS = [
-  { size: 2, teams: false },
-  { size: 3, teams: false },
-  { size: 4, teams: false },
-  { size: 4, teams: true },
-];
-var sizeStep = 0;
-function setSize(step) {
-  sizeStep = Math.max(0, Math.min(SIZE_STEPS.length - 1, step));
-  size = SIZE_STEPS[sizeStep].size;
-  teams = SIZE_STEPS[sizeStep].teams;
+// The players of a new battle: 2 to 4 - 2v2 (the format): always 4, the stepper rests
+var MIN_SIZE = 2;
+var MAX_SIZE = 4;
+var soloSize = 2; // what the stepper had before 2v2 (back to it with Solo)
+function setSize(value) {
+  if (!teams) soloSize = size = Math.max(MIN_SIZE, Math.min(MAX_SIZE, value));
+  else size = 4;
   var box = document.getElementById("btSizeValue");
-  box.replaceChildren(el("b", "", teams ? "2v2" : size));
-  box.title = teams ? "Two teams of two - the team with more wins, the two split the pot" : size + " players, everybody for themselves";
-  document.getElementById("btSizeMinus").disabled = sizeStep <= 0;
-  document.getElementById("btSizePlus").disabled = sizeStep >= SIZE_STEPS.length - 1;
+  box.replaceChildren(el("b", "", size));
+  box.title = teams ? "2v2: always 4 players" : size + " players";
+  document.getElementById("btSizeMinus").disabled = teams || size <= MIN_SIZE;
+  document.getElementById("btSizePlus").disabled = teams || size >= MAX_SIZE;
+  document.querySelector(".bt-size-stepper").classList.toggle("locked", teams);
 }
-var stepOf = (battle) => Math.max(0, SIZE_STEPS.findIndex((s) => s.size == battle.size && s.teams == (battle.teams === true)));
+
+// Solo or 2v2 (two teams of two)
+function setTeams(on) {
+  teams = on;
+  document.querySelectorAll("#btFormat button").forEach((b) => {
+    b.classList.toggle("active", (b.dataset.teams == "1") == on);
+    b.setAttribute("aria-checked", (b.dataset.teams == "1") == on);
+  });
+  setSize(on ? 4 : soloSize);
+}
 
 // Back on the main page to create a battle - with these cases already chosen
 function createAgain(battle) {
   // (without cases that are turned off now)
   picked = battle.cases.map(currentId).filter((id) => caseById(id) && !caseById(id).off);
   mode = battle.mode || (battle.crazy ? "crazy" : "classic");
-  setSize(stepOf(battle));
+  if (!battle.teams) soloSize = battle.size;
+  setTeams(battle.teams === true);
   document.querySelectorAll("#btModes button").forEach((b) => b.classList.toggle("active", b.dataset.mode == mode));
   renderCreate();
   pushView(null);
@@ -1479,9 +1485,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }),
   );
 
-  document.getElementById("btSizeMinus").addEventListener("click", () => setSize(sizeStep - 1));
-  document.getElementById("btSizePlus").addEventListener("click", () => setSize(sizeStep + 1));
-  setSize(sizeStep);
+  document.getElementById("btSizeMinus").addEventListener("click", () => setSize(size - 1));
+  document.getElementById("btSizePlus").addEventListener("click", () => setSize(size + 1));
+  document.querySelectorAll("#btFormat button").forEach((button) => button.addEventListener("click", () => setTeams(button.dataset.teams == "1")));
+  setTeams(false);
 
 
   document.getElementById("btCreate").addEventListener("click", () => {

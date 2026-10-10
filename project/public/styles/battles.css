@@ -359,6 +359,17 @@
   font-size: 1.15rem;
 }
 
+/* 2v2: always 4 - the stepper rests */
+.bt-size-stepper.locked {
+  opacity: 0.55;
+}
+
+/* 2v2 picked: the team colours on its button */
+.bt-format button[data-teams="1"].active {
+  border-color: rgba(59, 130, 246, 0.6);
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.18), rgba(224, 103, 90, 0.18));
+}
+
 /* ---------- Case selection ---------- */
 .bt-tools {
   display: flex;
