@@ -31,6 +31,7 @@
                 <a href="#players" class="ad-nav-item" data-tab="players"><span class="ad-nav-icon">👥</span><span class="ad-nav-label">Players</span><span id="adWaitingBadge" class="ad-count" hidden></span></a>
                 <a href="#payouts" class="ad-nav-item" data-tab="payouts"><span class="ad-nav-icon">💸</span><span class="ad-nav-label">Payouts</span></a>
                 <a href="#history" class="ad-nav-item" data-tab="history"><span class="ad-nav-icon">📜</span><span class="ad-nav-label">History</span></a>
+                <a href="#rtp" class="ad-nav-item" data-tab="rtp"><span class="ad-nav-icon">📈</span><span class="ad-nav-label">RTP monitor</span><span id="adRtpDot" class="ad-state off" hidden></span></a>
                 <a href="#seasons" class="ad-nav-item" data-tab="seasons"><span class="ad-nav-icon">🗓️</span><span class="ad-nav-label">Seasons</span><span id="adSeasonBadge" class="ad-state on" hidden></span></a>
                 <a href="#chat" class="ad-nav-item" data-tab="chat"><span class="ad-nav-icon">💬</span><span class="ad-nav-label">Chat</span></a>
                 <!--- The games: a page each with its settings (case battles: with the cases) --->
@@ -163,6 +164,37 @@
                         <span id="adHistPage" class="ad-pager-info"></span>
                         <button id="adHistNext" class="mm-btn mm-btn-sm" type="button">Older ›</button>
                     </nav>
+                </div>
+            </section>
+
+            <!--- RTP monitor: what every game really paid back, next to the maths --->
+            <section id="tab-rtp" class="ad-tab" hidden>
+                <div class="ad-card">
+                    <div class="ad-card-head">
+                        <div id="adRtpRange" class="ad-filter" role="tablist" aria-label="Time">
+                            <button type="button" role="tab" data-range="today">Today</button>
+                            <button type="button" role="tab" data-range="week" class="active">7 days</button>
+                            <button type="button" role="tab" data-range="month">30 days</button>
+                            <button type="button" role="tab" data-range="all">All time</button>
+                        </div>
+                        <select id="adRtpWorld" class="mm-input ad-search" aria-label="Coins" hidden>
+                            <option value="normal">Off Season</option>
+                            <option value="season">Season</option>
+                        </select>
+                    </div>
+                    <div class="ad-stats ad-rtp-stats">
+                        <div class="ad-stat"><span class="ad-label">Wagered</span><span id="adRtpWagered" class="ad-stat-value">-</span><span class="ad-stat-sub">bets, refunds taken off</span></div>
+                        <div class="ad-stat"><span class="ad-label">Paid back</span><span id="adRtpPaid" class="ad-stat-value">-</span><span class="ad-stat-sub">all wins</span></div>
+                        <div class="ad-stat"><span class="ad-label">House</span><span id="adRtpProfit" class="ad-stat-value">-</span><span class="ad-stat-sub">coins the games kept</span></div>
+                        <div class="ad-stat"><span class="ad-label">Payback</span><span id="adRtpTotal" class="ad-stat-value">-</span><span class="ad-stat-sub">of every coin bet</span></div>
+                    </div>
+                    <div class="ad-table-scroll">
+                        <table class="ad-table ad-rtp">
+                            <thead><tr><th>Game</th><th class="num">Bets</th><th class="num">Wagered</th><th class="num">Paid back</th><th class="num">House</th><th>Real payback</th><th class="num">Expected</th><th>Status</th></tr></thead>
+                            <tbody id="adRtpBody"></tbody>
+                        </table>
+                    </div>
+                    <p id="adRtpNote" class="ad-note"></p>
                 </div>
             </section>
 

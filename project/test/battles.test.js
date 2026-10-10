@@ -173,10 +173,18 @@ test("battles: two players pay the cases, the best total wins every item", async
   assert.strictEqual(done.payout, a + b);
   assert.ok(done.totals[done.winner] === Math.max(a, b));
 
+  await h.wait(30);
+  if (a === b) {
+    // A tie (the cheap cases make it possible): both win, the pot is split
+    assert.deepStrictEqual(done.winners, [0, 1]);
+    const first = Math.ceil(done.payout / 2);
+    assert.strictEqual(h.coinsOf(done.seats[0].name), 455 + first, "split when the battle is over");
+    assert.strictEqual(h.coinsOf(done.seats[1].name), 455 + done.payout - first);
+    return;
+  }
   // The winner gets every item's worth, the other one nothing
   const winner = done.seats[done.winner].name;
   const loser = winner === "alice" ? "bob" : "alice";
-  await h.wait(30);
   assert.strictEqual(h.coinsOf(winner), 455 + done.payout, "paid when the battle is over");
   assert.strictEqual(h.coinsOf(loser), 455);
 });

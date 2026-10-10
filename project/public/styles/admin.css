@@ -3921,3 +3921,138 @@ a.ad-case-row:hover {
   background: rgba(245, 158, 11, 0.16);
   color: #f5b544;
 }
+
+/* ---------- RTP monitor ---------- */
+.ad-state.danger {
+  background: var(--mm-danger);
+  box-shadow: 0 0 6px rgba(224, 103, 90, 0.7);
+}
+
+.ad-rtp-stats {
+  margin: 0.25rem 0 1rem;
+}
+
+.ad-rtp-stats .ad-stat {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface-2);
+}
+
+.ad-stat-value.plus {
+  color: var(--mm-success);
+}
+
+.ad-stat-value.minus {
+  color: var(--mm-danger);
+}
+
+.ad-rtp {
+  min-width: 760px;
+}
+
+.ad-rtp-icon {
+  display: inline-block;
+  width: 1.4rem;
+  text-align: center;
+}
+
+.ad-rtp-row.empty td {
+  color: var(--mm-muted);
+}
+
+.ad-rtp-real {
+  min-width: 150px;
+}
+
+.ad-rtp-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ad-rtp-value small {
+  font-size: 0.72rem;
+}
+
+/* 80% .. 110%: the spread (a band), the real payback (a dot), the maths (a line) */
+.ad-rtp-bar {
+  position: relative;
+  height: 6px;
+  margin-top: 0.35rem;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+}
+
+.ad-rtp-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.3);
+}
+
+.ad-rtp-dot {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--mm-surface);
+  border-radius: 50%;
+  background: var(--mm-accent);
+  transform: translate(-50%, -50%);
+}
+
+.ad-rtp-row.check .ad-rtp-dot {
+  background: var(--mm-danger);
+}
+
+.ad-rtp-row.ok .ad-rtp-dot {
+  background: var(--mm-success);
+}
+
+.ad-rtp-mark {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--mm-text);
+  transform: translateX(-50%);
+}
+
+/* (a phone: the payback and the status - the coins are in the cards above) */
+@media (max-width: 600px) {
+  .ad-rtp {
+    min-width: 0;
+  }
+
+  .ad-rtp th:nth-child(n + 2):nth-child(-n + 5),
+  .ad-rtp td:nth-child(n + 2):nth-child(-n + 5) {
+    display: none;
+  }
+
+  .ad-rtp th,
+  .ad-rtp td {
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
+    font-size: 0.8rem;
+  }
+
+  .ad-rtp-real {
+    min-width: 88px;
+  }
+
+  .ad-rtp-value {
+    flex-wrap: wrap;
+    column-gap: 0.25rem;
+  }
+
+  .ad-rtp .ad-pill {
+    padding: 0.1rem 0.4rem;
+    font-size: 0.66rem;
+    white-space: normal;
+    text-align: center;
+  }
+}

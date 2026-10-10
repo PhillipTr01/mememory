@@ -88,6 +88,8 @@ module.exports = {
   JACKPOT_MAX_BETS: 3, // separate bets per player and round
   JACKPOT_MAX_COINS: 15000, // all bets of a player in one round together
   JACKPOT_RAKE: 5, // percent of the pot the house keeps (the winner gets the rest)
+  // RTP monitor (admin): fewer bets than this in the time picked - too few to tell how far off the payback is
+  RTP_MIN_BETS: 200,
   // A new bet gets into the pot only after a random 3-5 s (no sniping:
   // nobody can answer a bet in the last second). Too late for the draw: the next pot.
   JACKPOT_BET_DELAY: [3000, 5000],

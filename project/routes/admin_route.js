@@ -17,6 +17,7 @@ const maintenance = require("../game/maintenance");
 const shop = require("../game/shop");
 const testMode = require("../game/test_mode");
 const worlds = require("../game/worlds");
+const rtpMonitor = require("../game/rtp_monitor");
 const userController = require("../controllers/user_controller");
 const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
@@ -277,6 +278,13 @@ module.exports = function () {
       if (result.error) return res.status(400).json({ error: result.error });
       res.json({ ok: true });
     }),
+  );
+
+  // RTP monitor: what every game really paid back (range: today / week / month / all, world: normal / season)
+  router.get(
+    "/api/rtp",
+    admin,
+    asyncHandler(async (req, res) => res.json(await rtpMonitor.report(String(req.query.range || "week"), String(req.query.world || "normal")))),
   );
 
   // History of all coin changes, newest first (filter by player / reason)

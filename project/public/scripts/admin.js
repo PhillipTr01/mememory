@@ -72,6 +72,7 @@ var PAGES = {
   history: ["History", "Every coin change, newest first."],
   chat: ["Chat", "The chat of the casino - delete messages, ban players."],
   seasons: ["Seasons", "Plan seasons: everybody starts with the same budget, the best win."],
+  rtp: ["RTP monitor", "How much of the bets every game really paid back - next to what the maths says."],
 };
 
 // The pages of the settings: general and one per game
@@ -141,6 +142,7 @@ function showTab() {
   if (tab == "payouts") loadPayouts();
   if (tab == "history") loadHistory();
   if (tab == "chat") loadChat();
+  if (tab == "rtp") loadRtp();
   if (tab == "seasons") {
     seasonView = parts[1] == "new" ? "new" : parts[1] ? Number(parts[1]) : null;
     // #seasons/<id>/edit: the form of the season (its page is only to look at)
@@ -167,7 +169,7 @@ function showTab() {
 window.addEventListener("hashchange", showTab);
 
 // Keeps the open page up to date (the chat has its own timer, the settings stay as they are while editing)
-var REFRESH = { players: () => loadPlayers(), payouts: () => loadPayouts(), history: () => loadHistory(), seasons: () => loadSeasons(true) };
+var REFRESH = { players: () => loadPlayers(), payouts: () => loadPayouts(), history: () => loadHistory(), seasons: () => loadSeasons(true), rtp: () => loadRtp() };
 
 function refresh() {
   if (document.visibilityState != "visible") return;
@@ -3162,3 +3164,109 @@ function versionsCard(box) {
     .catch(fail);
   return card;
 }
+
+/* ---------- RTP monitor ---------- */
+
+var rtpRange = "week";
+var RTP_STATUS = {
+  ok: ["On track", "success", "As close to the maths as chance allows."],
+  watch: ["Watch", "accent", "2-3 times the spread off the maths - can still be chance, keep an eye on it."],
+  check: ["Check", "danger", "More than 3 times the spread off the maths - hardly chance any more."],
+  few: ["Too few bets", "", "Too few bets to tell yet."],
+  empty: ["No bets", "", "Nobody played it in this time."],
+};
+
+function percent(value, digits) {
+  return value == null ? "-" : (value * 100).toFixed(digits == null ? 1 : digits) + "%";
+}
+
+async function loadRtp() {
+  var world = document.getElementById("adRtpWorld");
+  try {
+    var data = await api("rtp?range=" + rtpRange + "&world=" + (world.hidden ? "normal" : world.value));
+    world.hidden = !data.seasonRunning;
+    if (!data.seasonRunning) world.value = "normal";
+    document.querySelectorAll("#adRtpRange button").forEach((button) => button.classList.toggle("active", button.dataset.range == data.range));
+    document.getElementById("adRtpWagered").innerText = formatCoins(data.total.wagered);
+    document.getElementById("adRtpPaid").innerText = formatCoins(data.total.paid);
+    var profit = document.getElementById("adRtpProfit");
+    profit.innerText = (data.total.profit > 0 ? "+" : "") + formatCoins(data.total.profit);
+    profit.classList.toggle("plus", data.total.profit > 0);
+    profit.classList.toggle("minus", data.total.profit < 0);
+    document.getElementById("adRtpTotal").innerText = percent(data.total.rtp);
+    var body = document.getElementById("adRtpBody");
+    body.innerHTML = "";
+    var flagged = 0;
+    data.games.forEach((game) => {
+      var row = el("tr", "ad-rtp-row " + game.status);
+      var name = el("td", "fw-semibold");
+      name.appendChild(el("span", "ad-rtp-icon", game.icon));
+      name.appendChild(document.createTextNode(" " + game.name));
+      if (game.about) name.title = game.about;
+      row.appendChild(name);
+      row.appendChild(el("td", "num", formatCoins(game.bets)));
+      row.appendChild(el("td", "num", formatCoins(game.wagered)));
+      row.appendChild(el("td", "num", formatCoins(game.paid)));
+      row.appendChild(el("td", "num " + (game.profit > 0 ? "plus" : game.profit < 0 ? "minus" : ""), (game.profit > 0 ? "+" : "") + formatCoins(game.profit)));
+      // The real payback - with its spread, and a bar: where it is, where the maths says
+      var real = el("td", "ad-rtp-real");
+      var line = el("div", "ad-rtp-value");
+      line.appendChild(el("b", null, percent(game.rtp)));
+      if (game.spread != null && game.bets > 0) line.appendChild(el("small", "mm-muted", "± " + (game.spread * 100).toFixed(1)));
+      real.appendChild(line);
+      if (game.rtp != null) real.appendChild(rtpBar(game));
+      row.appendChild(real);
+      var expected = el("td", "num", game.theory == null ? "-" : percent(game.theory, 2));
+      if (game.theory == null && game.about) expected.title = game.about;
+      row.appendChild(expected);
+      var status = RTP_STATUS[game.status] || RTP_STATUS.ok;
+      var cell = el("td");
+      var pill = el("span", "ad-pill " + status[1], status[0]);
+      pill.title = status[2];
+      cell.appendChild(pill);
+      row.appendChild(cell);
+      if (game.status == "check") flagged++;
+      body.appendChild(row);
+    });
+    var dot = document.getElementById("adRtpDot");
+    dot.hidden = flagged == 0;
+    dot.className = "ad-state" + (flagged ? " danger" : "");
+    document.getElementById("adRtpNote").innerText =
+      "Real payback: the wins over the bets (refunds are no bets). ± is the spread chance alone gives with these bets - the real payback lands within it about 2 times in 3. " +
+      "Status from " + formatCoins(data.minBets) + " bets on: within 2 spreads of the maths it is on track. Games without a fixed payback (players against players, or the players' skill) show no status by the maths - hover them for why.";
+  } catch (error) {
+    fail(error);
+  }
+}
+
+// From 80% to 110%: the real payback (a bar) and the maths (a mark)
+function rtpBar(game) {
+  var low = 0.8;
+  var high = 1.1;
+  var at = (value) => Math.max(0, Math.min(100, ((value - low) / (high - low)) * 100));
+  var bar = el("div", "ad-rtp-bar");
+  if (game.spread != null) {
+    var band = el("span", "ad-rtp-band");
+    band.style.left = at(game.rtp - game.spread) + "%";
+    band.style.width = Math.max(1, at(game.rtp + game.spread) - at(game.rtp - game.spread)) + "%";
+    bar.appendChild(band);
+  }
+  var dot = el("span", "ad-rtp-dot");
+  dot.style.left = at(game.rtp) + "%";
+  bar.appendChild(dot);
+  if (game.theory != null) {
+    var mark = el("span", "ad-rtp-mark");
+    mark.style.left = at(game.theory) + "%";
+    mark.title = "The maths: " + percent(game.theory, 2);
+    bar.appendChild(mark);
+  }
+  return bar;
+}
+
+document.getElementById("adRtpRange").addEventListener("click", (event) => {
+  var button = event.target.closest("button[data-range]");
+  if (!button) return;
+  rtpRange = button.dataset.range;
+  loadRtp();
+});
+document.getElementById("adRtpWorld").addEventListener("change", loadRtp);

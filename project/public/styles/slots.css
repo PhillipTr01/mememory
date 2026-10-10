@@ -1490,3 +1490,79 @@
     transform: translateX(-50%);
   }
 }
+
+/* ---------- Phones: the reels grow with the screen - never wider than the card ---------- */
+@media (max-width: 480px) {
+  .sl-main {
+    padding: 0.85rem;
+  }
+
+  /* (the screen minus the gutters, the card, the machine, the line numbers and the gaps) */
+  .sl-machine {
+    --reel: min(56px, calc((100vw - 138px) / 5));
+    --tile: calc(var(--reel) * 1.25);
+    gap: 3px;
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+
+  .sl-reels {
+    gap: 3px;
+  }
+
+  .sl-reel {
+    border-radius: 10px;
+  }
+
+  .sl-line-numbers {
+    width: 15px;
+  }
+
+  .sl-number-row {
+    gap: 1px;
+  }
+
+  .sl-number {
+    width: 15px;
+    height: 14px;
+    font-size: 0.55rem;
+  }
+
+  .sl-controls {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+  }
+
+  .sl-wallet {
+    min-width: 0;
+  }
+
+  .sl-coins {
+    font-size: 1.15rem;
+    overflow-wrap: anywhere;
+  }
+
+  .sl-spin-group {
+    gap: 0.4rem;
+  }
+
+  .sl-auto-btn {
+    width: 50px;
+    height: 50px;
+  }
+
+  .sl-spin-group .sl-spin {
+    height: 50px;
+    padding: 0 0.9rem;
+    gap: 0.4rem;
+  }
+
+  .sl-presets {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .sl-preset {
+    min-width: 2.3rem;
+  }
+}
