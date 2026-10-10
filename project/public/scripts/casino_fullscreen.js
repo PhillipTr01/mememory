@@ -251,9 +251,10 @@
  * A game that is too high for the screen: its main part (`part`) a bit smaller as a whole - nothing
  * moves on it, nothing overlaps, the page doesn't scroll and the menu at the bottom stays free.
  * Only on big screens and not in full screen (that zooms the whole game by itself). watch: elements
- * whose showing / hiding changes the room (refit then).
+ * whose showing / hiding changes the room (refit then). fill: the part keeps the card's whole width
+ * (laid out wider at the smaller zoom) - only for games whose height doesn't grow with their width.
  */
-window.casinoFitGame = function (part, watch) {
+window.casinoFitGame = function (part, watch, fill) {
   if (!part || !("zoom" in document.body.style)) return;
   var fit = () => {
     if (document.fullscreenElement) return;
@@ -268,10 +269,12 @@ window.casinoFitGame = function (part, watch) {
     var over = card.getBoundingClientRect().bottom + window.scrollY - room;
     if (over <= 0) return;
     var height = part.offsetHeight;
-    // (a fixed width: a zoomed part of 100% width would fill the same room again)
-    part.style.width = part.offsetWidth + "px";
+    var zoom = Math.max(0.6, (height - over) / height).toFixed(3);
+    // (a fixed width: a zoomed part of 100% width would fill the same room again - with fill one that is
+    // as wide as the card once zoomed)
+    part.style.width = (fill ? Math.floor(part.offsetWidth / zoom) : part.offsetWidth) + "px";
     part.style.margin = "0 auto";
-    part.style.zoom = Math.max(0.6, (height - over) / height).toFixed(3);
+    part.style.zoom = zoom;
     window.dispatchEvent(new Event("casinofit"));
   };
   window.addEventListener("resize", fit);

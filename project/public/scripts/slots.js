@@ -1594,5 +1594,5 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("casinofit", () => {
     if (setup && !spinning) TILE = document.querySelector(".sl-cell").offsetHeight;
   });
-  window.casinoFitGame(document.querySelector(".sl-machine"));
+  window.casinoFitGame(document.querySelector(".sl-machine"), null, true);
 });

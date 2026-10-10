@@ -12,6 +12,8 @@
   /* The symbols grow with the screen */
   --tile: clamp(72px, 8vw, 128px);
   --reel: calc(var(--tile) * 1.15);
+  /* (its padding inside the width: zoomed to a width - fit, full screen - it doesn't stick out) */
+  box-sizing: border-box;
   display: flex;
   align-items: stretch;
   justify-content: center;

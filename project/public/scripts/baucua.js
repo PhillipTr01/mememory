@@ -439,4 +439,4 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // The whole game a bit smaller when the screen isn't high enough (casino_fullscreen.js)
-window.casinoFitGame(document.querySelector(".bc-game"));
+window.casinoFitGame(document.querySelector(".bc-game"), null, true);
