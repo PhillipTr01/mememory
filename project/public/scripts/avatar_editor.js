@@ -43,24 +43,56 @@ function closeAvatarEditor() {
     editing = null;
 }
 
+// The colors are in the tab of their part (the hair color under the hair, ...)
+var TAB_COLORS = { hair: 'hairColor', top: 'shirt' };
+var COLOR_TITLES = { hairColor: 'Hair color', shirt: 'Color' };
+// Tabs of the page on top of the parts (the casino shop: frames, animations), see shop.js:
+// LOOK_TABS = {key: {label}}, renderLookOptions(key, options), decorateAvatarPreview(avatar), renderPartExtras(part, options)
+var LOOK_TABS = window.LOOK_TABS || {};
+
+function editorTabs() {
+    var colors = Object.values(TAB_COLORS);
+    return [...Object.keys(AVATAR_PARTS).filter((key) => !colors.includes(key)).map((key) => [key, AVATAR_LABELS[key]]), ...Object.entries(LOOK_TABS).map(([key, tab]) => [key, tab.label])];
+}
+
+function previewAvatar(config) {
+    var fresh = createAvatarPreview(config, 'avatar-xl');
+    fresh.id = 'avatarPreview';
+    if (typeof decorateAvatarPreview == 'function') decorateAvatarPreview(fresh);
+    return fresh;
+}
+
+// A group of options (its own grid) in the options - with a title when there is more than one
+function optionGroup(options, title) {
+    if (title) {
+        var heading = document.createElement('span');
+        heading.className = 'avatar-options-title';
+        heading.innerText = title;
+        options.appendChild(heading);
+    }
+    var grid = document.createElement('div');
+    grid.className = 'avatar-option-grid';
+    options.appendChild(grid);
+    return grid;
+}
+
 function renderAvatarEditor() {
     // Preview
-    var preview = document.getElementById('avatarPreview');
-    var fresh = createAvatarPreview(editing, 'avatar-xl');
-    fresh.id = 'avatarPreview';
-    preview.replaceWith(fresh);
+    document.getElementById('avatarPreview').replaceWith(previewAvatar(editing));
     document.getElementById('avatarLetter').disabled = editing == null;
     updateAvatarButtons();
 
-    // Tabs: one per part
+    // Tabs: one per part (its color in it) - and the page's own
+    var list = editorTabs();
+    if (!list.some(([key]) => key == editTab)) editTab = list[0][0];
     var tabs = document.getElementById('avatarTabs');
-    tabs.replaceChildren(...Object.keys(AVATAR_PARTS).map((key) => {
+    tabs.replaceChildren(...list.map(([key, label]) => {
         var tab = document.createElement('button');
         tab.type = 'button';
-        tab.className = 'avatar-tab' + (key == editTab ? ' active' : '');
+        tab.className = 'avatar-tab' + (key == editTab ? ' active' : '') + (key in LOOK_TABS ? ' look' : '');
         tab.setAttribute('role', 'tab');
         tab.setAttribute('aria-selected', key == editTab);
-        tab.innerText = AVATAR_LABELS[key];
+        tab.innerText = label;
         tab.addEventListener('click', () => {
             editTab = key;
             renderAvatarEditor();
@@ -68,29 +100,27 @@ function renderAvatarEditor() {
         return tab;
     }));
 
-    // Options of the selected part: colors as swatches, shapes as small avatars
-    var base = editing || AVATAR_DEFAULT;
     var options = document.getElementById('avatarOptions');
-    options.replaceChildren(...AVATAR_PARTS[editTab].map((value) => {
+    options.replaceChildren();
+    if (editTab in LOOK_TABS) return renderLookOptions(editTab, optionGroup(options));
+    if (typeof renderPartExtras == 'function') renderPartExtras(editTab, options);
+    if (COLOR_PARTS.includes(editTab)) return colorOptions(editTab, optionGroup(options, options.childElementCount ? AVATAR_LABELS[editTab] + ' color' : null));
+
+    // Shapes as small avatars - then the color of the part
+    var base = editing || AVATAR_DEFAULT;
+    optionGroup(options, TAB_COLORS[editTab] ? AVATAR_LABELS[editTab] : null).append(...AVATAR_PARTS[editTab].map((value) => {
         var option = document.createElement('button');
         option.type = 'button';
         var selected = editing != null && editing[editTab] == value;
-        option.className = 'avatar-option' + (selected ? ' selected' : '');
+        option.className = 'avatar-option tile' + (selected ? ' selected' : '');
         option.setAttribute('aria-pressed', selected);
-        if (COLOR_PARTS.includes(editTab)) {
-            option.classList.add('swatch');
-            option.style.background = value;
-            option.title = value;
-        } else {
-            var config = Object.assign({}, base);
-            config[editTab] = value;
-            option.classList.add('tile');
-            var label = document.createElement('span');
-            label.className = 'avatar-option-label';
-            label.innerText = optionLabel(value);
-            option.append(createAvatarPreview(config), label);
-            option.title = label.innerText;
-        }
+        var config = Object.assign({}, base);
+        config[editTab] = value;
+        var label = document.createElement('span');
+        label.className = 'avatar-option-label';
+        label.innerText = optionLabel(value);
+        option.append(createAvatarPreview(config), label);
+        option.title = label.innerText;
         option.addEventListener('click', () => {
             editing = Object.assign({}, base);
             editing[editTab] = value;
@@ -98,32 +128,47 @@ function renderAvatarEditor() {
         });
         return option;
     }));
+    if (TAB_COLORS[editTab]) colorOptions(TAB_COLORS[editTab], optionGroup(options, COLOR_TITLES[TAB_COLORS[editTab]]));
+}
 
-    // Colors: any other color with the color picker
-    if (COLOR_PARTS.includes(editTab)) {
-        var custom = document.createElement('label');
-        var own = !AVATAR_PARTS[editTab].includes(base[editTab]);
-        custom.className = 'avatar-option swatch custom' + (editing != null && own ? ' selected' : '');
-        custom.title = 'Pick any color';
-        if (own) custom.style.background = base[editTab];
-        var picker = document.createElement('input');
-        picker.type = 'color';
-        picker.value = base[editTab];
-        picker.setAttribute('aria-label', 'Pick any color');
-        picker.addEventListener('input', () => {
-            editing = Object.assign({}, editing || AVATAR_DEFAULT);
-            editing[editTab] = picker.value;
-            // Only the preview: the picker stays open while dragging
-            var fresh = createAvatarPreview(editing, 'avatar-xl');
-            fresh.id = 'avatarPreview';
-            document.getElementById('avatarPreview').replaceWith(fresh);
-            custom.style.background = picker.value;
-            updateAvatarButtons();
+// The colors of a part as swatches - and any other color with the color picker
+function colorOptions(part, options) {
+    var base = editing || AVATAR_DEFAULT;
+    options.append(...AVATAR_PARTS[part].map((value) => {
+        var option = document.createElement('button');
+        option.type = 'button';
+        var selected = editing != null && editing[part] == value;
+        option.className = 'avatar-option swatch' + (selected ? ' selected' : '');
+        option.setAttribute('aria-pressed', selected);
+        option.style.background = value;
+        option.title = value;
+        option.addEventListener('click', () => {
+            editing = Object.assign({}, base);
+            editing[part] = value;
+            renderAvatarEditor();
         });
-        picker.addEventListener('change', renderAvatarEditor);
-        custom.append(createIcon('bi-eyedropper'), picker);
-        options.appendChild(custom);
-    }
+        return option;
+    }));
+    var custom = document.createElement('label');
+    var own = !AVATAR_PARTS[part].includes(base[part]);
+    custom.className = 'avatar-option swatch custom' + (editing != null && own ? ' selected' : '');
+    custom.title = 'Pick any color';
+    if (own) custom.style.background = base[part];
+    var picker = document.createElement('input');
+    picker.type = 'color';
+    picker.value = base[part];
+    picker.setAttribute('aria-label', 'Pick any color');
+    picker.addEventListener('input', () => {
+        editing = Object.assign({}, editing || AVATAR_DEFAULT);
+        editing[part] = picker.value;
+        // Only the preview: the picker stays open while dragging
+        document.getElementById('avatarPreview').replaceWith(previewAvatar(editing));
+        custom.style.background = picker.value;
+        updateAvatarButtons();
+    });
+    picker.addEventListener('change', renderAvatarEditor);
+    custom.append(createIcon('bi-eyedropper'), picker);
+    options.appendChild(custom);
 }
 
 // "roundglasses" -> "Round glasses", "dealwithit" -> "Deal with it"

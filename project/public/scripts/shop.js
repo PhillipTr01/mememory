@@ -1,5 +1,5 @@
 /*
- * The accessory shop of the casino: frames and animations for the avatar
+ * The accessory shop of the casino: frames, animations and backgrounds for the avatar
  * (game/shop.js). Paid with the coins outside a season - in a season with the
  * balance from before it. The avatar maker is on this page too (avatar_editor.js).
  */
@@ -7,8 +7,10 @@
 const socket = io((window.CASINO_NS || "") + "/jackpot");
 
 var myName = null;
-var shopData = null; // {items, owned, frame, effect, balance, season}
+var shopData = null; // {items, owned, won, frame, effect, background, balance, season}
 var RARITY = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", exclusive: "Exclusive" };
+var KIND_ORDER = ["frame", "effect", "background"];
+var KIND_NAMES = { frame: "Frame", effect: "Animation", background: "Background" };
 
 // Used by chat.js
 function chatUsername() {
@@ -51,23 +53,22 @@ async function load() {
 // An avatar of me wearing `look` (not from the looks of the page: the preview of an item)
 function avatarWith(look, size) {
   var avatar = createAvatar(myName, size);
-  // (casino_looks.js puts my worn looks on it - here exactly the ones asked for)
-  [...avatar.classList].filter((c) => c.startsWith("look-")).forEach((c) => avatar.classList.remove(c));
-  avatar.querySelectorAll(".look-fx").forEach((fx) => fx.remove());
-  avatar.dataset.preview = "1";
-  if (look.frame) avatar.classList.add("look-frame-" + look.frame);
-  if (look.effect) {
-    avatar.classList.add("look-fx-" + look.effect);
-    avatar.appendChild(el("span", "look-fx"));
-  }
   // (data-preview: it keeps these looks - the name stays, so the own avatar still comes when it is loaded)
-  return avatar;
+  avatar.dataset.preview = "1";
+  return wearLooks(avatar, look);
+}
+
+// What I wear now - with one item in its place (the preview of an item)
+function wornWith(item) {
+  var look = { frame: shopData.frame, effect: shopData.effect, background: shopData.background };
+  if (item) look[item.kind] = item.id;
+  return look;
 }
 
 function render() {
   if (!myName || !shopData) return;
   document.getElementById("shName").innerText = myName;
-  var hero = avatarWith({ frame: shopData.frame, effect: shopData.effect }, "lg");
+  var hero = avatarWith(wornWith(null), "lg");
   hero.id = "shHeroAvatar";
   document.getElementById("shHeroAvatar").replaceWith(hero);
   // The shop takes the 🪙 (the money outside seasons) - also in a season: the 🪙 stays a 🪙 here
@@ -78,9 +79,11 @@ function render() {
   var note = document.getElementById("shBalanceNote");
   note.hidden = !shopData.free;
   note.innerText = "🧪 Everything is free right now - wear what you like.";
-  if (typeof refreshLooks == "function") refreshLooks(myName, { frame: shopData.frame, effect: shopData.effect });
+  if (typeof refreshLooks == "function") refreshLooks(myName, wornWith(null));
   renderGrid("shFrames", "frame");
   renderGrid("shEffects", "effect");
+  renderGrid("shBackgrounds", "background");
+  if (typeof renderAvatarEditor == "function" && !document.getElementById("avatarEditor").hidden && editTab in LOOK_TABS) renderAvatarEditor();
   renderSeason();
 }
 
@@ -93,14 +96,14 @@ function renderSeason() {
     // (frames, then animations - each by price, as the server sends them)
     ...list
       .slice()
-      .sort((a, b) => (a.kind == b.kind ? 0 : a.kind == "frame" ? -1 : 1))
+      .sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind))
       .map((item) => {
         var owned = isOwned(item);
         var worn = shopData[item.kind] == item.id;
         var card = el("div", "sh-item exclusive" + (worn ? " worn" : "") + (owned ? " owned" : " locked"));
         var stage = el("div", "sh-stage");
-        stage.appendChild(avatarWith(item.kind == "frame" ? { frame: item.id, effect: shopData.effect } : { frame: shopData.frame, effect: item.id }, "lg"));
-        card.append(stage, el("span", "sh-rarity", item.kind == "frame" ? "Exclusive frame" : "Exclusive animation"), el("span", "sh-item-name", item.name));
+        stage.appendChild(avatarWith(wornWith(item), "lg"));
+        card.append(stage, el("span", "sh-rarity", "Exclusive " + KIND_NAMES[item.kind].toLowerCase()), el("span", "sh-item-name", item.name));
         // Where it came from (given) - or how to get it
         var mine = won.filter((entry) => entry.id == item.id);
         if (mine.length) {
@@ -143,7 +146,7 @@ function renderGrid(id, kind) {
         var card = el("div", "sh-item " + item.rarity + (worn ? " worn" : "") + (owned ? " owned" : ""));
         var stage = el("div", "sh-stage");
         // The preview: the item alone (with the other kind I wear)
-        stage.appendChild(avatarWith(kind == "frame" ? { frame: item.id, effect: shopData.effect } : { frame: shopData.frame, effect: item.id }, "lg"));
+        stage.appendChild(avatarWith(wornWith(item), "lg"));
         card.append(stage, el("span", "sh-rarity", RARITY[item.rarity] || item.rarity), el("span", "sh-item-name", item.name));
         var button;
         if (worn) {
@@ -191,13 +194,59 @@ function wear(kind, id, button) {
   post("shop/wear", { kind: kind, id: id }, button);
 }
 
+/* ---------- The avatar maker: what I have from the shop, to wear (casino only) ---------- */
+
+// Tabs of their own (avatar_editor.js): frames and animations - the backgrounds in the Background tab
+var LOOK_TABS = { frame: { label: "Frames" }, effect: { label: "Animations" } };
+
+// The preview of the editor wears what I wear
+function decorateAvatarPreview(avatar) {
+  if (shopData && typeof wearLooks == "function") wearLooks(avatar, wornWith(null));
+}
+
+// Background: the casino backgrounds I have first (my color under them)
+function renderPartExtras(part, options) {
+  if (part != "bg" || !shopData) return;
+  renderLookOptions("background", optionGroup(options, "Casino backgrounds"));
+}
+
+// What I have of a kind (free for all: everything that is on) - "None" first; a click wears it right away
+function renderLookOptions(kind, options) {
+  if (!shopData) return;
+  var mine = shopData.items.filter((item) => item.kind == kind && isOwned(item));
+  if (mine.length == 0) {
+    var empty = el("div", "avatar-options-empty");
+    var go = el("button", "mm-btn mm-btn-sm", "🛍️ To the shop");
+    go.type = "button";
+    go.addEventListener("click", () => setView("shop"));
+    empty.append(el("span", "", "No " + KIND_NAMES[kind].toLowerCase() + "s yet - get them in the shop (or as a reward)."), go);
+    options.appendChild(empty);
+    return;
+  }
+  var option = (id, label) => {
+    var worn = (shopData[kind] || null) == id;
+    var button = el("button", "avatar-option tile look" + (worn ? " selected" : ""));
+    button.type = "button";
+    button.setAttribute("aria-pressed", worn);
+    button.title = label;
+    var face = createAvatarPreview(editing);
+    var look = wornWith(null);
+    look[kind] = id;
+    wearLooks(face, look);
+    button.append(face, el("span", "avatar-option-label", label));
+    button.addEventListener("click", () => worn || wear(kind, id, button));
+    return button;
+  };
+  options.append(option(null, kind == "background" ? "My color" : "None"), ...mine.map((item) => option(item.id, item.name)));
+}
+
 /* ---------- Two views: the shop and the avatar maker (shop#avatar) ---------- */
 
 var openEditor = null;
 var closeEditor = null;
 var VIEWS = {
-  shop: { icon: "🛍️", title: "Shop", text: "Frames and animations for your avatar - everybody in the casino sees them." },
-  avatar: { icon: "🎨", title: "Avatar", text: "Your face in the casino - the frame and the animation from the shop come on top." },
+  shop: { icon: "🛍️", title: "Shop", text: "Frames, animations and backgrounds for your avatar - everybody in the casino sees them." },
+  avatar: { icon: "🎨", title: "Avatar", text: "Your face in the casino." },
 };
 
 function setView(view) {

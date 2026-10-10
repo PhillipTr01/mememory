@@ -615,12 +615,12 @@ function renderPlayerDetail(p) {
   itemsHead.append(el("h2", "ad-title", "Items"), el("span", "ad-pill", p.items.length + (p.items.length == 1 ? " item" : " items")));
   itemsCard.appendChild(itemsHead);
   var list = el("div", "ad-list");
-  if (!p.items.length) list.appendChild(el("p", "ad-empty", "No frames or animations yet."));
+  if (!p.items.length) list.appendChild(el("p", "ad-empty", "No items yet."));
   p.items.forEach((item) => {
     var line = el("div", "ad-row ad-pd-item");
     var main = el("div", "ad-row-main");
     var title = el("b", "", item.name);
-    var meta = el("span", "ad-row-meta", (item.kind == "frame" ? "Frame" : "Animation") + " · " + (item.given ? "given" + (item.source ? ": " + (item.icon ? item.icon + " " : "") + item.source + (item.rank ? " #" + item.rank : "") : "") : "bought") + (item.at ? " · " + day(item.at) : ""));
+    var meta = el("span", "ad-row-meta", ITEM_KINDS[item.kind][1] + " · " + (item.given ? "given" + (item.source ? ": " + (item.icon ? item.icon + " " : "") + item.source + (item.rank ? " #" + item.rank : "") : "") : "bought") + (item.at ? " · " + day(item.at) : ""));
     main.append(title, meta);
     var tags = el("div", "ad-pd-tags");
     tags.appendChild(el("span", "ad-shop-rarity " + item.rarity, item.rarity));
@@ -628,7 +628,7 @@ function renderPlayerDetail(p) {
     var remove = el("button", "mm-btn mm-btn-sm ad-btn-quiet-danger", "Remove");
     remove.type = "button";
     remove.addEventListener("click", () => removePlayerItem(p, item, remove));
-    line.append(el("span", "ad-row-icon", item.kind == "frame" ? "🖼️" : "✨"), main, tags, remove);
+    line.append(el("span", "ad-row-icon", ITEM_KINDS[item.kind][0]), main, tags, remove);
     list.appendChild(line);
   });
   itemsCard.appendChild(list);
@@ -796,13 +796,16 @@ async function rewardDialog(p) {
   };
   var frame = itemSelect("frame", "Frame", "");
   var effect = itemSelect("effect", "Animation", "");
+  var background = itemSelect("background", "Background", "");
   var coinsInput = Object.assign(el("input", "mm-input"), { type: "number", min: 0, step: 1000, placeholder: "0" });
   var coinsBox = el("span", "ad-inline-input");
   coinsBox.append(el("span", "ad-setting-unit", "🪙"), coinsInput);
   var prize = Object.assign(el("input", "mm-input"), { type: "text", maxLength: 80, placeholder: "e.g. €20 voucher" });
   var note = Object.assign(el("input", "mm-input"), { type: "text", maxLength: 80, placeholder: "e.g. Winner of the poker night" });
   var grid = el("div", "ad-reward-grid");
-  grid.append(field("Frame", frame), field("Animation", effect), field("Coins", coinsBox), field("Own prize", prize));
+  var own = field("Own prize", prize);
+  own.classList.add("wide");
+  grid.append(field("Frame", frame), field("Animation", effect), field("Background", background), field("Coins", coinsBox), own);
   var what = field("What for", note);
   what.classList.add("wide");
   grid.appendChild(what);
@@ -836,7 +839,7 @@ async function rewardDialog(p) {
     error.hidden = true;
     give.disabled = true;
     try {
-      var body = { username: p.username, items: [frame.value, effect.value].filter(Boolean), coins: Math.floor(Number(coinsInput.value) || 0), prize: prize.value.trim(), note: note.value.trim() };
+      var body = { username: p.username, items: [frame.value, effect.value, background.value].filter(Boolean), coins: Math.floor(Number(coinsInput.value) || 0), prize: prize.value.trim(), note: note.value.trim() };
       await api("shop/give", body);
       close();
       // What went out: a notification (like a new payout) - with the way to the player's history
@@ -1228,6 +1231,9 @@ function setShop(id, key, value) {
   document.getElementById("adShopSave").disabled = !shopDirty();
 }
 
+// The kinds of items: icon, name
+var ITEM_KINDS = { frame: ["🖼️", "Frame"], effect: ["✨", "Animation"], background: ["🌄", "Background"] };
+
 var SHOP_CATEGORIES = [
   ["common", "Common"],
   ["rare", "Rare"],
@@ -1242,8 +1248,8 @@ function renderShop() {
   free.checked = shopDraft.free;
   document.getElementById("adShopFreeText").innerText = shopDraft.free ? "On" : "Off";
   document.getElementById("adShopDot").hidden = !shopSaved.free;
-  ["frame", "effect"].forEach((kind) => {
-    document.getElementById(kind == "frame" ? "adShopFrames" : "adShopEffects").replaceChildren(
+  [["frame", "adShopFrames"], ["effect", "adShopEffects"], ["background", "adShopBackgrounds"]].forEach(([kind, id]) => {
+    document.getElementById(id).replaceChildren(
       ...shopSaved.items
         .filter((item) => item.kind == kind)
         // (by category, then by price - as the shop shows them)

@@ -96,14 +96,11 @@
       var stage = el("div", "nav-reward-stage");
       if (name && typeof createAvatar == "function") {
         var avatar = createAvatar(name, "lg");
-        [...avatar.classList].filter((c) => c.startsWith("look-")).forEach((c) => avatar.classList.remove(c));
-        avatar.querySelectorAll(".look-fx").forEach((fx) => fx.remove());
         avatar.dataset.preview = "1";
-        avatar.classList.add(item.kind == "frame" ? "look-frame-" + item.id : "look-fx-" + item.id);
-        if (item.kind == "effect") avatar.appendChild(el("span", "look-fx"));
+        if (typeof wearLooks == "function") wearLooks(avatar, { [item.kind]: item.id });
         stage.appendChild(avatar);
       }
-      card.append(stage, el("span", "nav-reward-kind", item.kind == "frame" ? "Frame" : "Animation"), el("b", "nav-reward-name", item.name));
+      card.append(stage, el("span", "nav-reward-kind", { frame: "Frame", effect: "Animation", background: "Background" }[item.kind] || "Item"), el("b", "nav-reward-name", item.name));
       row.appendChild(card);
     });
     dialog.appendChild(row);

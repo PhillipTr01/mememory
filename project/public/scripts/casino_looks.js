@@ -1,30 +1,38 @@
 /*
- * The casino's avatar looks (frames and animations from the shop, see
+ * The casino's avatar looks (frames, animations and backgrounds from the shop, see
  * game/shop.js): every avatar of a casino page gets what its player wears.
  * Only the casino pages load this - the MemeMory pages stay as they are.
  * Wraps createAvatar (ui.js): the looks of a name are asked for once per page.
  */
 (function () {
   if (typeof createAvatar != "function") return;
-  var looks = {}; // name -> {frame, effect} (only who wears something)
+  var looks = {}; // name -> {frame, effect, background} (only who wears something)
   var asked = new Set();
   var queue = new Set();
   var timer = null;
 
-  function apply(avatar) {
-    // (a preview - the shop, a reward - keeps the looks it shows)
-    if (avatar.dataset.preview) return;
-    var name = avatar.dataset.name;
+  // Puts looks ({frame, effect, background} - null: none) on an avatar (the ones it had come off)
+  function wear(avatar, look) {
     [...avatar.classList].filter((c) => c.startsWith("look-")).forEach((c) => avatar.classList.remove(c));
-    var old = avatar.querySelector(":scope > .look-fx");
-    if (old) old.remove();
-    var look = looks[name];
-    if (!look) return;
+    avatar.querySelectorAll(":scope > .look-fx, :scope > .look-bg").forEach((layer) => layer.remove());
+    if (!look) return avatar;
     if (look.frame) avatar.classList.add("look-frame-" + look.frame);
+    if (look.background) {
+      avatar.classList.add("look-bg-" + look.background);
+      avatar.appendChild(Object.assign(document.createElement("span"), { className: "look-bg" }));
+    }
     if (look.effect) {
       avatar.classList.add("look-fx-" + look.effect);
       avatar.appendChild(Object.assign(document.createElement("span"), { className: "look-fx" }));
     }
+    return avatar;
+  }
+  window.wearLooks = wear;
+
+  function apply(avatar) {
+    // (a preview - the shop, a reward - keeps the looks it shows)
+    if (avatar.dataset.preview) return;
+    wear(avatar, looks[avatar.dataset.name]);
   }
 
   function load() {
@@ -58,7 +66,7 @@
 
   // The own looks changed (the shop): every avatar of the player again
   window.refreshLooks = function (name, look) {
-    looks[name] = look && (look.frame || look.effect) ? look : null;
+    looks[name] = look && (look.frame || look.effect || look.background) ? look : null;
     document.querySelectorAll('.mm-avatar[data-name="' + CSS.escape(name) + '"]').forEach(apply);
   };
 })();

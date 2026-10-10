@@ -52,7 +52,7 @@ test("test mode: a sandbox balance - the real coins, the history and the shop st
   const view = await shop.view("admin1");
   assert.ok(view.free && view.test);
   assert.ok(!(await shop.wear("admin1", "frame", "royal")).error);
-  assert.deepStrictEqual(await shop.worn(["admin1"]), { admin1: { frame: "royal", effect: null } });
+  assert.deepStrictEqual(await shop.worn(["admin1"]), { admin1: { frame: "royal", effect: null, background: null } });
   assert.ok(!(h.userOf("admin1").looks && h.userOf("admin1").looks.frame));
 
   // Stopped: the real account again

@@ -17,7 +17,7 @@ const DEFAULT_COINS = 10000000;
 const BLOCKED_REASONS = ["gift sent", "withdrawal"];
 const MESSAGE = "🧪 Test mode: not with test coins - they never go to real players.";
 
-const testers = new Map(); // username -> {coins, start, since, looks: {frame, effect}}
+const testers = new Map(); // username -> {coins, start, since, looks: {frame, effect, background}}
 const changes = new EventEmitter();
 changes.setMaxListeners(0);
 
@@ -29,7 +29,7 @@ function start(username, coins = DEFAULT_COINS) {
   if (!username) return { error: "Pick a player." };
   if (!Number.isInteger(coins) || coins < 1 || coins > 1000000000000) return { error: "Coins from 1 to 1,000,000,000,000." };
   const before = testers.get(username);
-  testers.set(username, { coins: coins, start: coins, since: before ? before.since : Date.now(), looks: before ? before.looks : { frame: null, effect: null } });
+  testers.set(username, { coins: coins, start: coins, since: before ? before.since : Date.now(), looks: before ? before.looks : { frame: null, effect: null, background: null } });
   // (again: only the balance - the pages stay where they are)
   changes.emit(before ? "coins" : "change", username);
   return { tester: view(username) };

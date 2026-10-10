@@ -1493,3 +1493,196 @@
 .mm-avatar.look-frame-sakura.look-fx-flames::before {
   display: none;
 }
+
+/*
+ * ---------- Backgrounds: behind the face, instead of the avatar's own color ----------
+ * A layer of its own (.look-bg, under the face - the animations of the avatar stay its own); the face's
+ * color square goes see-through. Taken off, the MemeMory color is back.
+ */
+.mm-avatar[class*="look-bg-"] > .mm-avatar-svg > rect:first-child {
+  fill: transparent;
+}
+
+.mm-avatar > .look-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.look-bg-sunset > .look-bg {
+  background: linear-gradient(160deg, #ffb36b, #ff5e7e 55%, #7b3fa0);
+}
+
+.look-bg-lagoon > .look-bg {
+  background: linear-gradient(160deg, #5ff0dc, #1d8fe0 60%, #154a9a);
+}
+
+.look-bg-mint > .look-bg {
+  background: linear-gradient(150deg, #d6ffe8, #5fd6a4 55%, #2a9d8f);
+}
+
+.look-bg-peach > .look-bg {
+  background: radial-gradient(circle at 30% 25%, #fff4e6, #ffc29e 45%, #ff8e8e);
+}
+
+.look-bg-dusk > .look-bg {
+  background: linear-gradient(180deg, #23265e, #7a4d9a 55%, #f39a7a);
+}
+
+.look-bg-stripes > .look-bg {
+  background: repeating-linear-gradient(45deg, #ff7eb6 0 9%, #fff0f6 9% 18%);
+}
+
+.look-bg-polka > .look-bg {
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.75) 0 22%, transparent 25%) 0 0 / 34% 34%,
+    radial-gradient(circle, rgba(255, 255, 255, 0.45) 0 22%, transparent 25%) 17% 17% / 34% 34%,
+    #4f7fe8;
+}
+
+.look-bg-checkers > .look-bg {
+  background: conic-gradient(#ffd166 25%, #2a2a35 0 50%, #ffd166 0 75%, #2a2a35 0) 0 0 / 40% 40%;
+}
+
+.look-bg-grid > .look-bg {
+  background:
+    linear-gradient(transparent 88%, rgba(255, 61, 245, 0.9) 88%) 0 0 / 25% 25%,
+    linear-gradient(90deg, transparent 88%, rgba(54, 230, 255, 0.85) 88%) 0 0 / 25% 25%,
+    linear-gradient(180deg, #120428, #3a0b5e);
+  animation: look-bg-grid 3s linear infinite;
+}
+
+.look-bg-bubblegum > .look-bg {
+  background:
+    radial-gradient(circle at 25% 30%, #ffd9f3 0 11%, transparent 12%),
+    radial-gradient(circle at 72% 66%, #ffe8f8 0 8%, transparent 9%),
+    radial-gradient(circle at 62% 22%, rgba(255, 255, 255, 0.7) 0 5%, transparent 6%),
+    radial-gradient(circle at 30% 78%, rgba(255, 255, 255, 0.5) 0 6%, transparent 7%),
+    linear-gradient(160deg, #ff8ad8, #c86bff);
+}
+
+.look-bg-matrix > .look-bg {
+  background:
+    repeating-linear-gradient(180deg, rgba(0, 255, 120, 0.55) 0 4%, transparent 4% 13%) 0 0 / 100% 200%,
+    repeating-linear-gradient(90deg, transparent 0 8%, rgba(0, 20, 8, 0.9) 8% 14%),
+    linear-gradient(#001a0a, #003b18);
+  animation: look-bg-matrix 2.4s linear infinite;
+}
+
+.look-bg-northern > .look-bg {
+  background: linear-gradient(120deg, #0b1d3a, #13406b, #1fd1a5, #7b5cff, #13406b, #0b1d3a) 0 0 / 300% 300%;
+  animation: look-bg-drift 9s ease-in-out infinite alternate;
+}
+
+.look-bg-lava > .look-bg {
+  background:
+    radial-gradient(circle at 30% 70%, #ffb347 0 16%, transparent 32%) 0 0 / 180% 180%,
+    radial-gradient(circle at 70% 30%, #ff5f6d 0 18%, transparent 36%) 0 0 / 160% 160%,
+    linear-gradient(#5a0a2a, #c2185b);
+  animation: look-bg-lava 7s ease-in-out infinite alternate;
+}
+
+.look-bg-space > .look-bg {
+  background:
+    radial-gradient(circle at 18% 28%, #fff 0 1.4%, transparent 2%),
+    radial-gradient(circle at 76% 18%, #fff 0 1%, transparent 1.6%),
+    radial-gradient(circle at 64% 72%, #cfe3ff 0 1.2%, transparent 1.8%),
+    radial-gradient(circle at 30% 84%, #fff 0 0.9%, transparent 1.4%),
+    radial-gradient(circle at 88% 56%, #ffe9b0 0 1.1%, transparent 1.7%),
+    radial-gradient(circle at 46% 12%, #fff 0 0.8%, transparent 1.3%),
+    radial-gradient(circle at 70% 82%, #2b1b5a, #05060f 70%);
+}
+
+.look-bg-holo > .look-bg {
+  background: linear-gradient(115deg, #ffd6f5, #c3f0ff, #d5ffd0, #fff3b0, #ffd6f5, #c3f0ff) 0 0 / 400% 400%;
+  animation: look-bg-drift 5s linear infinite alternate;
+}
+
+.look-bg-discofloor > .look-bg {
+  background: conic-gradient(#ff3d7f 25%, #3dd6ff 0 50%, #ffe14d 0 75%, #8a5cff 0) 0 0 / 50% 50%;
+  animation: look-bg-disco 1.6s steps(1) infinite;
+}
+
+.look-bg-goldenhour > .look-bg {
+  background: linear-gradient(135deg, #7a4b00, #ffd46b 35%, #fff4cc 50%, #ffcc4d 65%, #8a5600) 0 0 / 260% 260%;
+  animation: look-bg-drift 4s ease-in-out infinite alternate;
+}
+
+.look-bg-nebula > .look-bg {
+  background:
+    radial-gradient(circle at 30% 35%, rgba(255, 110, 199, 0.75), transparent 45%) 0 0 / 160% 160%,
+    radial-gradient(circle at 70% 65%, rgba(110, 195, 255, 0.75), transparent 45%) 0 0 / 160% 160%,
+    radial-gradient(circle at 22% 70%, #fff 0 1%, transparent 1.6%),
+    radial-gradient(circle at 80% 24%, #fff 0 1.2%, transparent 1.8%),
+    radial-gradient(circle at 50% 50%, #3a1060, #090418 75%);
+  animation: look-bg-lava 8s ease-in-out infinite alternate;
+}
+
+.look-bg-diamonddust > .look-bg {
+  background:
+    radial-gradient(circle, #fff 0 4%, transparent 7%) 0 0 / 22% 22%,
+    radial-gradient(circle, rgba(255, 255, 255, 0.7) 0 3%, transparent 6%) 11% 11% / 22% 22%,
+    linear-gradient(160deg, #e3f2ff, #8fb8e8 50%, #eaf5ff);
+  animation: look-bg-sparkle 6s linear infinite;
+}
+
+@property --look-bg-a {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.look-bg-prism > .look-bg {
+  background: conic-gradient(from var(--look-bg-a), #ff4d4d, #ffb84d, #fff04d, #4dff88, #4dd2ff, #9a4dff, #ff4dd2, #ff4d4d);
+  animation: look-bg-turn 6s linear infinite;
+}
+
+@keyframes look-bg-grid {
+  to {
+    background-position: 0 100%, 0 0, 0 0;
+  }
+}
+
+@keyframes look-bg-matrix {
+  to {
+    background-position: 0 100%, 0 0, 0 0;
+  }
+}
+
+@keyframes look-bg-drift {
+  to {
+    background-position: 100% 100%;
+  }
+}
+
+@keyframes look-bg-lava {
+  to {
+    background-position: 100% 100%, 100% 0, 0 0;
+  }
+}
+
+@keyframes look-bg-disco {
+  50% {
+    background-position: 50% 0;
+  }
+}
+
+@keyframes look-bg-sparkle {
+  to {
+    background-position: 22% 44%, 33% -11%, 0 0;
+  }
+}
+
+@keyframes look-bg-turn {
+  to {
+    --look-bg-a: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-avatar > .look-bg {
+    animation: none;
+  }
+}

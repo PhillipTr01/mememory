@@ -96,13 +96,6 @@
   color: var(--mm-text);
 }
 
-.avatar-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  min-height: 72px;
-}
-
 .avatar-option {
   /* Exactly round: a square box, the avatar in the middle (no text line around it) */
   display: inline-flex;
@@ -227,14 +220,43 @@
   box-shadow: 0 4px 12px rgba(var(--mm-accent-rgb), 0.35);
 }
 
-/* Shapes: cards with the avatar and the name, in a tidy grid */
+/* The options: groups (shapes, then their color) - every group a tidy grid of cards with the avatar and the name */
 .avatar-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 72px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 0.2rem 0.3rem 0.4rem 0.1rem;
+}
+
+.avatar-option-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
   gap: 0.6rem;
-  max-height: 340px;
-  overflow-y: auto;
-  padding: 0.2rem 0.3rem 0.4rem 0.1rem;
+}
+
+.avatar-options-title {
+  margin-top: 0.35rem;
+  color: var(--mm-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.avatar-options-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px dashed var(--mm-border);
+  border-radius: 14px;
+  color: var(--mm-muted);
+  font-size: 0.9rem;
 }
 
 .avatar-option.tile {
@@ -285,7 +307,7 @@
   box-shadow: inset 0 0 0 3px var(--mm-surface), 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
-.avatar-options:has(.swatch) {
+.avatar-option-grid:has(.swatch) {
   grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
 }
 
@@ -295,7 +317,7 @@
 }
 
 @media (max-width: 575px) {
-  .avatar-options {
+  .avatar-option-grid {
     grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
   }
 

@@ -22,7 +22,7 @@ test("shop: buy with the coins, wear it right away, take it off, wear it again -
   assert.strictEqual(h.coinsOf("sam"), 50000);
   assert.match((await shop.buy("sam", "nothing")).error, /exist/);
 
-  assert.deepStrictEqual(await shop.worn(["sam", "tess"]), { sam: { frame: "neon", effect: null } });
+  assert.deepStrictEqual(await shop.worn(["sam", "tess"]), { sam: { frame: "neon", effect: null, background: null } });
   assert.strictEqual((await shop.wear("sam", "frame", null)).frame, null);
   assert.deepStrictEqual(await shop.worn(["sam"]), {});
   assert.strictEqual((await shop.wear("sam", "frame", "neon")).frame, "neon");
@@ -72,7 +72,7 @@ test("shop admin: prices and items off - free for all lets everybody wear everyt
     assert.ok(!(await shop.wear("uma", "frame", "galaxy")).error);
     assert.match((await shop.wear("uma", "frame", "neon")).error, /don't have/, "off stays off");
     assert.match((await shop.buy("uma", "royal")).error, /free/);
-    assert.deepStrictEqual(await shop.worn(["uma"]), { uma: { frame: "galaxy", effect: "halo" } });
+    assert.deepStrictEqual(await shop.worn(["uma"]), { uma: { frame: "galaxy", effect: "halo", background: null } });
 
     // Off again: what was not bought comes off - in the database too
     await shop.update({ free: false });
@@ -84,7 +84,7 @@ test("shop admin: prices and items off - free for all lets everybody wear everyt
     await shop.update({ items: { gold: { on: false } } });
     assert.deepStrictEqual(await shop.worn(["uma"]), {});
     await shop.update({ items: { gold: { on: true } } });
-    assert.deepStrictEqual(await shop.worn(["uma"]), { uma: { frame: "gold", effect: null } });
+    assert.deepStrictEqual(await shop.worn(["uma"]), { uma: { frame: "gold", effect: null, background: null } });
   } finally {
     shop.reset();
   }
@@ -139,4 +139,19 @@ test("shop: exclusive items can't be bought - the admin moves any item between t
     assert.ok(order.indexOf(a.rarity) < order.indexOf(b.rarity) || (a.rarity === b.rarity && a.price <= b.price), `${a.id} before ${b.id}`);
   }
   shop.reset();
+});
+
+test("shop: backgrounds - bought and worn like the rest, one of each kind (a reward too)", async () => {
+  h.addUser("vic");
+  h.setCoins("vic", 1000000);
+  const bought = await shop.buy("vic", "sunset");
+  assert.ok(!bought.error, bought.error);
+  assert.strictEqual(bought.background, "sunset");
+  assert.deepStrictEqual(await shop.worn(["vic"]), { vic: { frame: null, effect: null, background: "sunset" } });
+  assert.strictEqual((await shop.wear("vic", "background", null)).background, null);
+  assert.match((await shop.wear("vic", "background", "nebula")).error, /don't have/);
+  assert.match((await shop.give({ username: "vic", items: ["sunset", "nebula"] })).error, /one background at most/);
+  assert.ok(!(await shop.give({ username: "vic", items: ["nebula", "gold"] })).error);
+  assert.strictEqual((await shop.wear("vic", "background", "nebula")).background, "nebula");
+  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background").length, 20);
 });

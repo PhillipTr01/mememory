@@ -4,11 +4,12 @@ const coins = require("./coins");
 const testMode = require("./test_mode");
 
 /*
- * The accessory shop of the casino: frames around the avatar and animations
- * of it (like the profile decorations of Discord). Only the casino shows them.
+ * The accessory shop of the casino: frames around the avatar, animations of it (like the profile
+ * decorations of Discord) and backgrounds behind it (instead of the avatar's own color - taken off,
+ * the color of the MemeMory avatar is back). Only the casino shows them.
  * Paid with the normal 🪙 - never with the coins of a season.
  *
- * A player: user.looks = {owned: [id], frame: id|null, effect: id|null}
+ * A player: user.looks = {owned: [id], frame: id|null, effect: id|null, background: id|null}
  *
  * The admin (Casino, Shop): every item on or off and its price - and "free
  * for all" (for testing): everybody can wear every item that is on without
@@ -84,10 +85,32 @@ const ITEMS = [
   { id: "lanterns", kind: "effect", name: "Sky Lanterns", price: 1800000, rarity: "exclusive" },
   { id: "disco", kind: "effect", name: "Disco Lights", price: 1500000, rarity: "exclusive" },
   { id: "butterflies", kind: "effect", name: "Butterflies", price: 1000000, rarity: "exclusive" },
+  // Backgrounds: behind the face, instead of the avatar's color
+  { id: "sunset", kind: "background", name: "Sunset", price: 60000, rarity: "common" },
+  { id: "lagoon", kind: "background", name: "Lagoon", price: 70000, rarity: "common" },
+  { id: "mint", kind: "background", name: "Mint Fresh", price: 80000, rarity: "common" },
+  { id: "peach", kind: "background", name: "Peach Fizz", price: 90000, rarity: "common" },
+  { id: "dusk", kind: "background", name: "Dusk", price: 100000, rarity: "common" },
+  { id: "stripes", kind: "background", name: "Candy Stripes", price: 200000, rarity: "rare" },
+  { id: "polka", kind: "background", name: "Polka Dots", price: 250000, rarity: "rare" },
+  { id: "checkers", kind: "background", name: "Checkers", price: 300000, rarity: "rare" },
+  { id: "grid", kind: "background", name: "Neon Grid", price: 350000, rarity: "rare" },
+  { id: "bubblegum", kind: "background", name: "Bubblegum", price: 400000, rarity: "rare" },
+  { id: "matrix", kind: "background", name: "Matrix", price: 450000, rarity: "rare" },
+  { id: "northern", kind: "background", name: "Northern Lights", price: 600000, rarity: "epic" },
+  { id: "lava", kind: "background", name: "Lava Lamp", price: 750000, rarity: "epic" },
+  { id: "space", kind: "background", name: "Deep Space", price: 900000, rarity: "epic" },
+  { id: "holo", kind: "background", name: "Holo Foil", price: 1100000, rarity: "epic" },
+  { id: "discofloor", kind: "background", name: "Disco Floor", price: 1300000, rarity: "epic" },
+  { id: "goldenhour", kind: "background", name: "Golden Hour", price: 1600000, rarity: "legendary" },
+  { id: "nebula", kind: "background", name: "Nebula", price: 2000000, rarity: "legendary" },
+  { id: "diamonddust", kind: "background", name: "Diamond Dust", price: 2500000, rarity: "legendary" },
+  { id: "prism", kind: "background", name: "Prism Vortex", price: 3500000, rarity: "legendary" },
 ];
 const MAX_REWARD_COINS = 100000000;
 const MAX_REWARD_RULES = 20;
-const KINDS = ["frame", "effect"];
+const KINDS = ["frame", "effect", "background"];
+const KIND_NAMES = { frame: "frame", effect: "animation", background: "background" };
 // The categories: the shop's rarities (sold) - and exclusive (never sold, only given). The admin can move any item.
 const RARITIES = ["common", "rare", "epic", "legendary", "exclusive"];
 const KEY = "shop";
@@ -113,12 +136,13 @@ function items() {
   return sorted(ITEMS.map(itemNow));
 }
 
-// What is given at once: items (any - one frame and one animation at most), coins and / or a prize of your own
+// What is given at once: items (any - one of each kind at most), coins and / or a prize of your own
 // (a text: a voucher, a dinner - the admin hands it over) -> {items, coins, prize} or {error}
 function checkGift(input, what) {
   const ids = Array.isArray(input && input.items) ? [...new Set(input.items.filter(Boolean))] : [];
   if (!ids.every((id) => byId(id))) return { error: `${what}: unknown item.` };
-  if (KINDS.some((kind) => ids.filter((id) => byId(id).kind === kind).length > 1)) return { error: `${what}: one frame and one animation at most.` };
+  const twice = KINDS.find((kind) => ids.filter((id) => byId(id).kind === kind).length > 1);
+  if (twice) return { error: `${what}: one ${KIND_NAMES[twice]} at most.` };
   const coins = input && input.coins != null && input.coins !== "" ? Number(input.coins) : 0;
   if (!Number.isInteger(coins) || coins < 0 || coins > MAX_REWARD_COINS) return { error: `${what}: coins from 0 to ${MAX_REWARD_COINS.toLocaleString("en-US")}.` };
   const prize = typeof (input && input.prize) === "string" ? input.prize.trim() : "";
@@ -136,7 +160,7 @@ function looksOf(user) {
   // What can be worn: what is bought - or (free for all) everything - as long as it is on
   const wearable = (id) => isOn(id) && (setup.free || owned.includes(id));
   const worn = (kind) => (looks[kind] && byId(looks[kind]) && byId(looks[kind]).kind === kind && wearable(looks[kind]) ? looks[kind] : null);
-  return { owned: owned, won: won, frame: worn("frame"), effect: worn("effect") };
+  return { owned: owned, won: won, frame: worn("frame"), effect: worn("effect"), background: worn("background") };
 }
 
 // The coins the shop takes: outside a season the balance, in a season the one from before it
@@ -156,7 +180,7 @@ async function view(username) {
   if (testMode.active(username)) {
     const worn = testMode.looks(username);
     const wearable = (id) => (id && isOn(id) ? id : null);
-    return { items: shopItems(), owned: [], won: [], frame: wearable(worn.frame), effect: wearable(worn.effect), free: true, test: true, balance: testMode.balance(username), season: false };
+    return { items: shopItems(), owned: [], won: [], frame: wearable(worn.frame), effect: wearable(worn.effect), background: wearable(worn.background), free: true, test: true, balance: testMode.balance(username), season: false };
   }
   const user = await User.findOne({ username: username }).lean();
   return { items: shopItems(), ...looksOf(user), free: setup.free, balance: await balanceOf(username), season: false };
@@ -175,7 +199,7 @@ async function buy(username, id) {
   if (!paid) return { error: "You don't have enough coins." };
   // Bought: worn right away (instead of the one of its kind) - (the stored list: only what was bought)
   const stored = (user && user.looks) || {};
-  const next = { ...stored, owned: [...(Array.isArray(stored.owned) ? stored.owned : []), id], frame: looks.frame, effect: looks.effect, [item.kind]: id };
+  const next = { ...stored, owned: [...(Array.isArray(stored.owned) ? stored.owned : []), id], ...wornOf(looks), [item.kind]: id };
   await User.updateOne({ username: username }, { $set: { looks: next } });
   coins.notify(username);
   return { ...(await view(username)), bought: id };
@@ -195,19 +219,24 @@ async function wear(username, kind, id) {
     const item = byId(id);
     if (item == null || item.kind !== kind || !isOn(id) || !(setup.free || looks.owned.includes(id))) return { error: "You don't have this item." };
   }
-  await User.updateOne({ username: username }, { $set: { looks: { ...((user && user.looks) || {}), frame: looks.frame, effect: looks.effect, [kind]: id } } });
+  await User.updateOne({ username: username }, { $set: { looks: { ...((user && user.looks) || {}), ...wornOf(looks), [kind]: id } } });
   return view(username);
 }
 
-// What some players wear (for the avatars of a page): {name: {frame, effect}} - only who wears something
+// {frame, effect, background} of looks
+function wornOf(looks) {
+  return Object.fromEntries(KINDS.map((kind) => [kind, (looks && looks[kind]) || null]));
+}
+
+// What some players wear (for the avatars of a page): {name: {frame, effect, background}} - only who wears something
 async function worn(names) {
   const users = await User.find({ username: { $in: names } }).select("username looks").lean();
   const result = {};
   for (const user of users) {
     // (a tester: what they wear in the sandbox)
     const test = testMode.active(user.username) ? testMode.looks(user.username) : null;
-    const looks = test ? { frame: test.frame && isOn(test.frame) ? test.frame : null, effect: test.effect && isOn(test.effect) ? test.effect : null } : looksOf(user);
-    if (looks.frame || looks.effect) result[user.username] = { frame: looks.frame, effect: looks.effect };
+    const looks = test ? Object.fromEntries(KINDS.map((kind) => [kind, test[kind] && isOn(test[kind]) ? test[kind] : null])) : looksOf(user);
+    if (KINDS.some((kind) => looks[kind])) result[user.username] = wornOf(looks);
   }
   return result;
 }
@@ -328,8 +357,8 @@ async function takeOffUnbought() {
     users.map((user) => {
       const looks = looksOf(user);
       const stored = user.looks || {};
-      if (stored.frame === looks.frame && stored.effect === looks.effect) return null;
-      return User.updateOne({ username: user.username }, { $set: { looks: { ...stored, frame: looks.frame, effect: looks.effect } } });
+      if (KINDS.every((kind) => (stored[kind] || null) === looks[kind])) return null;
+      return User.updateOne({ username: user.username }, { $set: { looks: { ...stored, ...wornOf(looks) } } });
     }),
   );
 }
