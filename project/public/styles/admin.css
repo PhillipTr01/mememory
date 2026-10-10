@@ -551,19 +551,6 @@ a.ad-link:focus-visible {
   color: var(--mm-danger, #d9534f);
 }
 
-/* The coins of a player (a dialog): set to / add, the amount, the note, an error */
-.ad-coins-dialog {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.ad-coins-fields {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.5rem;
-}
-
 .ad-form-error {
   margin: 0;
   color: var(--mm-danger, #e06c6c);
@@ -1006,11 +993,6 @@ a.ad-link:focus-visible {
   opacity: 0.5;
 }
 
-.ad-case-icon {
-  font-size: 1.5rem;
-  line-height: 1;
-}
-
 .ad-case-info {
   flex: 1;
   min-width: 0;
@@ -1291,13 +1273,6 @@ a.ad-link:focus-visible {
   font-weight: 700;
 }
 
-.ad-season-progress {
-  height: 8px;
-  border-radius: 999px;
-  background: var(--mm-surface-3);
-  overflow: hidden;
-}
-
 .ad-season-progress span {
   display: block;
   height: 100%;
@@ -1468,13 +1443,6 @@ a.ad-link:focus-visible {
   display: none;
 }
 
-/* The accent color of a season */
-.ad-color-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
 .ad-color-input {
   flex-shrink: 0;
   width: 44px;
@@ -1513,6 +1481,9 @@ a.ad-link:focus-visible {
 }
 
 .ad-color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   flex-wrap: wrap;
 }
 
@@ -1812,12 +1783,6 @@ a.ad-link:focus-visible {
   }
 }
 
-
-/* The leaderboard of a season: every row in the same white */
-.ad-season-board td {
-  color: var(--mm-text);
-}
-
 .ad-season-board td.minus {
   color: var(--mm-danger);
 }
@@ -2046,13 +2011,6 @@ a.ad-link:focus-visible {
   font-weight: 800;
 }
 
-.ad-pick-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 600;
-}
-
 .ad-pick-name b {
   color: var(--mm-accent);
 }
@@ -2147,10 +2105,6 @@ a.ad-link:focus-visible {
   scrollbar-width: thin;
 }
 
-.ad-season-board td {
-  white-space: nowrap;
-}
-
 /* The titles may take two lines (the numbers under them are short) */
 .ad-season-board th {
   white-space: normal;
@@ -2158,7 +2112,6 @@ a.ad-link:focus-visible {
   line-height: 1.25;
 }
 
-/* The season coins of a player: set to / add, the amount, a note */
 .ad-coins-dialog {
   display: flex;
   flex-direction: column;
@@ -2191,6 +2144,8 @@ a.ad-link:focus-visible {
 }
 
 .ad-season-board td {
+  color: var(--mm-text);
+  white-space: nowrap;
   padding-top: 0.85rem;
   padding-bottom: 0.85rem;
 }
@@ -2249,6 +2204,7 @@ a.ad-case-row:hover {
 }
 
 .ad-case-icon {
+  line-height: 1;
   display: grid;
   place-items: center;
   width: 2.6rem;
@@ -2321,14 +2277,6 @@ a.ad-case-row:hover {
 .ad-rtp-label {
   margin-bottom: 0.4rem;
   font-weight: 700;
-}
-
-/* The RTP on a bar from 0 to 120 %: the target as a line, 100 % dashed */
-.ad-rtp-bar {
-  position: relative;
-  height: 12px;
-  border-radius: 999px;
-  background: var(--mm-surface-3);
 }
 
 .ad-rtp-fill {
@@ -2692,10 +2640,6 @@ a.ad-case-row:hover {
   grid-column: 1 / -1;
 }
 
-.ad-maint-note textarea {
-  resize: vertical;
-}
-
 .ad-maint-add {
   display: flex;
   gap: 0.5rem;
@@ -2793,6 +2737,7 @@ a.ad-case-row:hover {
 }
 
 .ad-maint-note textarea {
+  resize: vertical;
   font-family: inherit;
 }
 
@@ -2919,23 +2864,6 @@ a.ad-case-row:hover {
   border-radius: 999px;
 }
 
-.ad-season-prize-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.ad-season-prize {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.55rem 0.8rem;
-  border: 1px solid var(--mm-border);
-  border-radius: 10px;
-  background: var(--mm-surface-2);
-  font-weight: 600;
-}
-
 .ad-season-prize-place {
   min-width: 2rem;
   font-size: 1.15rem;
@@ -2973,7 +2901,7 @@ a.ad-case-row:hover {
 
 .ad-shop-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) 128px 150px;
   align-items: center;
   gap: 0.75rem;
   padding: 0.45rem 0.6rem;
@@ -3354,32 +3282,8 @@ a.ad-case-row:hover {
   margin: 0;
 }
 
-/* ---------- A season's page: the facts compact, side by side ---------- */
-.ad-kv-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 0.6rem 1.6rem;
-  margin: 0.4rem 0 0.2rem;
-}
-
-.ad-kv-group {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
 .ad-kv-group .ad-sublabel {
   margin: 0 0 0.25rem;
-}
-
-.ad-kv {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.32rem 0;
-  border-bottom: 1px dashed var(--mm-border);
-  font-size: 0.88rem;
 }
 
 .ad-kv:last-child {
@@ -3423,69 +3327,9 @@ a.ad-case-row:hover {
   display: none;
 }
 
-.ad-pick-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-}
-
 .ad-pick-bar .mm-input {
   flex: 1 1 100%;
   min-width: 0;
-}
-
-.ad-pick-count {
-  margin-right: auto;
-}
-
-.ad-pick-count {
-  color: var(--mm-muted);
-  font-size: 0.8rem;
-  white-space: nowrap;
-}
-
-.ad-pick-scroll {
-  max-height: 260px;
-  overflow-y: auto;
-  border: 1px solid var(--mm-border);
-  border-radius: 10px;
-}
-
-.ad-pick-table {
-  width: 100%;
-  margin: 0;
-}
-
-.ad-pick-table td {
-  padding: 0.4rem 0.6rem;
-  cursor: pointer;
-}
-
-.ad-pick-table tr:hover td {
-  background: var(--mm-surface-2);
-}
-
-.ad-pick-table tr.picked td {
-  background: rgba(var(--mm-accent-rgb), 0.08);
-}
-
-.ad-pick-check {
-  width: 2rem;
-}
-
-.ad-pick-check input {
-  width: 1rem;
-  height: 1rem;
-  accent-color: var(--mm-accent);
-  cursor: pointer;
-}
-
-.ad-pick-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
 }
 
 .ad-pick-name .mm-avatar.sm {
@@ -3551,28 +3395,6 @@ a.ad-case-row:hover {
   }
 }
 
-/* ---------- Who may play: the player list, tidy (rows as small cards, a round check) ---------- */
-.ad-pick-scroll {
-  max-height: 300px;
-  padding: 0.3rem;
-  border-radius: 12px;
-  background: var(--mm-surface);
-}
-
-.ad-pick-table {
-  border-collapse: separate;
-  border-spacing: 0 0.3rem;
-}
-
-.ad-pick-table td {
-  padding: 0.5rem 0.65rem;
-  border: 1px solid transparent;
-  border-width: 1px 0;
-  background: var(--mm-surface-2);
-  vertical-align: middle;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
 .ad-pick-table td:first-child {
   border-left-width: 1px;
   border-radius: 10px 0 0 10px;
@@ -3596,20 +3418,6 @@ a.ad-case-row:hover {
   width: 2.2rem;
 }
 
-.ad-pick-check input {
-  appearance: none;
-  -webkit-appearance: none;
-  display: grid;
-  place-items: center;
-  width: 1.25rem;
-  height: 1.25rem;
-  margin: 0;
-  border: 2px solid var(--mm-border);
-  border-radius: 50%;
-  background: var(--mm-surface);
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
 .ad-pick-check input:checked {
   border-color: var(--mm-accent);
   background: var(--mm-accent);
@@ -3625,18 +3433,6 @@ a.ad-case-row:hover {
   transform: rotate(45deg);
 }
 
-.ad-pick-name {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  line-height: 1.2;
-}
-
-.ad-pick-name .mm-avatar,
-.ad-pick-name .mm-avatar.sm {
-  --size: 30px;
-}
-
 .ad-pick-table td.num {
   text-align: right;
   white-space: nowrap;
@@ -3644,10 +3440,17 @@ a.ad-case-row:hover {
 }
 
 .ad-pick-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
   padding-bottom: 0.15rem;
 }
 
 .ad-pick-count {
+  margin-right: auto;
+  font-size: 0.8rem;
+  white-space: nowrap;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
   background: rgba(var(--mm-accent-rgb), 0.12);
@@ -3733,12 +3536,17 @@ a.ad-case-row:hover {
 }
 
 .ad-kv-grid {
+  display: grid;
+  margin: 0.4rem 0 0.2rem;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.6rem;
   margin-top: 0.9rem;
 }
 
 .ad-kv-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   padding: 0.7rem 0.9rem 0.4rem;
   border: 1px solid var(--mm-border);
   border-radius: 14px;
@@ -3762,16 +3570,28 @@ a.ad-case-row:hover {
 }
 
 .ad-kv {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.32rem 0;
+  font-size: 0.88rem;
   border-bottom: 1px solid var(--mm-border);
 }
 
-/* The prizes: medal chips in a row */
 .ad-season-prize-list {
+  display: flex;
+  gap: 0.4rem;
   flex-direction: row;
   flex-wrap: wrap;
 }
 
 .ad-season-prize {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid var(--mm-border);
+  font-weight: 600;
   padding: 0.45rem 0.9rem 0.45rem 0.6rem;
   border-color: rgba(var(--mm-accent-rgb), 0.35);
   border-radius: 999px;
@@ -3814,17 +3634,29 @@ a.ad-case-row:hover {
   color: var(--mm-muted);
 }
 
-/* Who may play: compact rows - about five in sight, then it scrolls */
 .ad-pick-scroll {
+  border: 1px solid var(--mm-border);
+  padding: 0.3rem;
+  border-radius: 12px;
+  background: var(--mm-surface);
   max-height: 228px;
   overflow-y: auto;
 }
 
 .ad-pick-table {
+  width: 100%;
+  margin: 0;
+  border-collapse: separate;
   border-spacing: 0 0.22rem;
 }
 
 .ad-pick-table td {
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-width: 1px 0;
+  background: var(--mm-surface-2);
+  vertical-align: middle;
+  transition: background 0.15s ease, border-color 0.15s ease;
   padding: 0.3rem 0.55rem;
 }
 
@@ -3834,11 +3666,29 @@ a.ad-case-row:hover {
 }
 
 .ad-pick-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  line-height: 1.2;
   gap: 0.5rem;
   font-size: 0.9rem;
 }
 
 .ad-pick-check input {
+  accent-color: var(--mm-accent);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  border: 2px solid var(--mm-border);
+  border-radius: 50%;
+  background: var(--mm-surface);
+  transition: background 0.15s ease, border-color 0.15s ease;
   width: 1.1rem;
   height: 1.1rem;
 }
@@ -3976,7 +3826,6 @@ a.ad-case-row:hover {
   font-size: 0.72rem;
 }
 
-/* 80% .. 110%: the spread (a band), the real payback (a dot), the maths (a line) */
 .ad-rtp-bar {
   position: relative;
   height: 6px;
@@ -4144,125 +3993,88 @@ a.ad-case-row:hover {
   white-space: nowrap;
 }
 
-.ad-season-rewards {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--mm-border);
+/* ---------- A reward for a player (the players list) ---------- */
+.ad-reward-dialog {
+  max-width: 520px;
 }
 
-.ad-season-rewards .ad-title {
-  font-size: 1rem;
-}
-
-.ad-reward-rules {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.ad-reward-rule {
+.ad-reward-grid {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
-  align-items: center;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.6rem;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--mm-border);
-  border-radius: 10px;
-  background: var(--mm-surface-2);
 }
 
-.ad-reward-places {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.ad-reward-places .mm-input {
-  width: 72px;
-}
-
-.ad-reward-remove {
-  padding: 0.2rem 0.55rem;
-}
-
-@media (max-width: 700px) {
-  .ad-reward-rule {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .ad-reward-places {
-    grid-column: 1 / -1;
-  }
-
-  .ad-reward-rule select {
-    grid-column: 1 / -1;
-  }
-
-  .ad-reward-remove {
-    grid-row: 1;
-    grid-column: 2;
-  }
-}
-
-.ad-reward-rule {
-  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) 130px auto;
-}
-
-.ad-reward-coins .mm-input {
-  width: 100%;
-  min-width: 0;
-}
-
-.ad-give-form {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.6rem;
-  align-items: end;
-}
-
-.ad-give-form .ad-field {
+.ad-reward-grid .ad-field {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
   min-width: 0;
 }
 
-.ad-give-form .ad-field select,
-.ad-give-form .ad-field .mm-input {
-  width: 100%;
-}
-
-.ad-give-note {
-  grid-column: span 3;
-}
-
-@media (max-width: 700px) {
-  .ad-reward-rule {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .ad-reward-coins {
-    grid-column: 1 / -1;
-  }
-
-  .ad-give-form {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .ad-give-note {
-    grid-column: auto;
-  }
-}
-
-/* The own prize of a rule: a line of its own under the picks */
-.ad-reward-prize {
+.ad-reward-grid .ad-field.wide {
   grid-column: 1 / -1;
 }
 
-@media (min-width: 701px) {
-  .ad-give-note {
-    grid-column: span 2;
+.ad-reward-grid .mm-input {
+  width: 100%;
+}
+
+.ad-reward-correct {
+  align-self: center;
+  border: 0;
+  background: none;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 480px) {
+  .ad-reward-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The category of an item (a rarity of the shop - or exclusive): in its color */
+.ad-shop-category {
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.ad-shop-category.common {
+  color: #a0a0a0;
+}
+
+.ad-shop-category.rare {
+  color: #5b8fd6;
+}
+
+.ad-shop-category.epic {
+  color: #9d84c2;
+}
+
+.ad-shop-category.legendary {
+  color: #d4a64a;
+}
+
+.ad-shop-category.exclusive {
+  color: #f2c45a;
+}
+
+.ad-shop-price-box {
+  justify-content: flex-end;
+}
+
+@media (max-width: 575px) {
+  .ad-shop-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .ad-shop-category {
+    grid-column: 2;
+  }
+
+  .ad-shop-price-box {
+    grid-column: 3;
+    grid-row: 1 / span 2;
   }
 }

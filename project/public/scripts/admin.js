@@ -449,7 +449,7 @@ function playerRow(p) {
     button("Approve", "mm-btn-primary", (b) => setAccess(p, true, b));
     button("Decline", "", (b) => declineRequest(p.username, b));
   } else if (p.kind == "in") {
-    button("Coins", "", () => editPlayerCoins(p));
+    button("Reward", "", () => rewardDialog(p));
     button("History", "", () => showHistoryOf(p.username));
     button("Revoke", "ad-btn-quiet-danger", (b) => setAccess(p, false, b));
   } else {
@@ -582,6 +582,83 @@ function editPlayerCoins(p) {
   });
 }
 
+// A reward for a player: a frame, an animation (any - the exclusive ones too), coins, a prize of your own -
+// with what it is for. The player gets a popup. (Correcting the balance: the link at the bottom.)
+async function rewardDialog(p) {
+  if (!shopSaved) {
+    try {
+      shopSaved = await api("shop");
+    } catch (error) {
+      return fail(error);
+    }
+  }
+  var backdrop = el("div", "mm-dialog-backdrop");
+  var dialog = el("form", "mm-dialog ad-coins-dialog ad-reward-dialog");
+  dialog.noValidate = true;
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  var field = (label, control) => {
+    var box = el("label", "ad-field");
+    box.append(el("span", "ad-label", label), control);
+    return box;
+  };
+  var frame = itemSelect("frame", "Frame", "");
+  var effect = itemSelect("effect", "Animation", "");
+  var coinsInput = Object.assign(el("input", "mm-input"), { type: "number", min: 0, step: 1000, placeholder: "0" });
+  var coinsBox = el("span", "ad-inline-input");
+  coinsBox.append(el("span", "ad-setting-unit", "🪙"), coinsInput);
+  var prize = Object.assign(el("input", "mm-input"), { type: "text", maxLength: 80, placeholder: "e.g. €20 voucher" });
+  var note = Object.assign(el("input", "mm-input"), { type: "text", maxLength: 80, placeholder: "e.g. Winner of the poker night" });
+  var grid = el("div", "ad-reward-grid");
+  grid.append(field("Frame", frame), field("Animation", effect), field("Coins", coinsBox), field("Own prize", prize));
+  var what = field("What for", note);
+  what.classList.add("wide");
+  grid.appendChild(what);
+  var error = el("p", "ad-form-error");
+  error.hidden = true;
+  var cancel = el("button", "mm-btn", "Cancel");
+  cancel.type = "button";
+  var give = el("button", "mm-btn mm-btn-primary", "Give");
+  give.type = "submit";
+  var actions = el("div", "mm-dialog-actions");
+  actions.append(cancel, give);
+  var correct = el("button", "ad-link ad-reward-correct", "Correct the balance instead (🪙 " + formatCoins(p.coins || 0) + ")");
+  correct.type = "button";
+  dialog.append(el("h2", "mm-dialog-title", "🎁 Reward for " + p.username), el("p", "mm-dialog-text", "Items are kept for good, coins go to the 🪙 balance. " + p.username + " gets a popup (or on the next visit)."), grid, error, actions, correct);
+  backdrop.appendChild(dialog);
+  document.body.appendChild(backdrop);
+  var close = () => {
+    document.removeEventListener("keydown", onKey);
+    backdrop.remove();
+  };
+  var onKey = (event) => event.key == "Escape" && close();
+  document.addEventListener("keydown", onKey);
+  cancel.addEventListener("click", close);
+  backdrop.addEventListener("click", (event) => event.target == backdrop && close());
+  correct.addEventListener("click", () => {
+    close();
+    editPlayerCoins(p);
+  });
+  dialog.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    error.hidden = true;
+    give.disabled = true;
+    try {
+      var body = { username: p.username, items: [frame.value, effect.value].filter(Boolean), coins: Math.floor(Number(coinsInput.value) || 0), prize: prize.value.trim(), note: note.value.trim() };
+      await api("shop/give", body);
+      close();
+      showHint("🎁 Reward sent to " + p.username + ".", "success");
+      loadPlayers();
+      loadOverview();
+    } catch (problem) {
+      give.disabled = false;
+      error.innerText = problem.message;
+      error.hidden = false;
+    }
+  });
+  frame.focus();
+}
+
 /* ---------- Payouts ---------- */
 
 async function loadPayouts() {
@@ -622,7 +699,7 @@ async function loadHistory(event) {
     document.getElementById("adHistNext").disabled = data.page >= data.pages;
     // The names to pick from - and in a season its own history
     historyNames = data.names;
-    if (!document.getElementById("adHistNames").hidden) showPlayerPick();
+    if (historyPick) historyPick.refresh();
     scope.hidden = !data.season;
     if (data.season) scope.options[1].text = data.season.icon + " " + data.season.name;
     else scope.value = "";
@@ -807,10 +884,12 @@ async function loadTest() {
   } catch (error) {
     return fail(error);
   }
-  var select = document.getElementById("adTestPlayer");
-  var picked = select.value;
-  select.replaceChildren(...data.players.map((name) => new Option(name, name)));
-  if (picked && data.players.includes(picked)) select.value = picked;
+  testPlayers = data.players;
+  if (!testPick) {
+    testPick = playerPick({ placeholder: "Your account", names: () => testPlayers });
+    document.getElementById("adTestPick").replaceWith(testPick.root);
+  }
+  if (!testPick.value() && testPlayers.length == 1) testPick.set(testPlayers[0]);
   var coins = document.getElementById("adTestCoins");
   if (!coins.value) coins.value = data.defaultCoins;
   renderTesters(data.testers);
@@ -918,7 +997,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }),
   );
   document.getElementById("adTestStart").addEventListener("click", (event) => {
-    startTest(document.getElementById("adTestPlayer").value, Math.floor(Number(document.getElementById("adTestCoins").value)), event.currentTarget);
+    startTest(testPick ? testPick.value() : "", Math.floor(Number(document.getElementById("adTestCoins").value)), event.currentTarget);
   });
 });
 
@@ -933,7 +1012,7 @@ async function loadShop() {
   } catch (error) {
     return fail(error);
   }
-  shopDraft = { items: {}, free: shopSaved.free, seasonRewards: JSON.parse(JSON.stringify(shopSaved.seasonRewards)) };
+  shopDraft = { items: {}, free: shopSaved.free };
   renderShop();
 }
 
@@ -943,7 +1022,6 @@ function shopValue(item, key) {
 }
 
 function shopDirty() {
-  if (JSON.stringify(shopDraft.seasonRewards) != JSON.stringify(shopSaved.seasonRewards)) return true;
   return shopDraft.free != shopSaved.free || Object.keys(shopDraft.items).some((id) => {
     var item = shopSaved.items.find((i) => i.id == id);
     return Object.keys(shopDraft.items[id]).some((key) => shopDraft.items[id][key] !== item[key]);
@@ -955,6 +1033,15 @@ function setShop(id, key, value) {
   document.getElementById("adShopSave").disabled = !shopDirty();
 }
 
+var SHOP_CATEGORIES = [
+  ["common", "Common"],
+  ["rare", "Rare"],
+  ["epic", "Epic"],
+  ["legendary", "Legendary"],
+  ["exclusive", "✨ Exclusive"],
+];
+var SHOP_ORDER = SHOP_CATEGORIES.map((c) => c[0]);
+
 function renderShop() {
   var free = document.getElementById("adShopFree");
   free.checked = shopDraft.free;
@@ -964,35 +1051,37 @@ function renderShop() {
     document.getElementById(kind == "frame" ? "adShopFrames" : "adShopEffects").replaceChildren(
       ...shopSaved.items
         .filter((item) => item.kind == kind)
+        // (by category, then by price - as the shop shows them)
+        .sort((a, b) => SHOP_ORDER.indexOf(shopValue(a, "rarity")) - SHOP_ORDER.indexOf(shopValue(b, "rarity")) || shopValue(a, "price") - shopValue(b, "price"))
         .map((item) => {
           var row = el("div", "ad-shop-row" + (shopValue(item, "on") ? "" : " off"));
+          var rarity = shopValue(item, "rarity");
           var name = el("div", "ad-shop-name");
-          name.append(el("b", "", item.name), el("small", "ad-shop-rarity " + item.rarity, item.rarity));
-          // (an exclusive item: given, never sold - no price)
-          if (item.exclusive) {
-            var toggleOnly = el("label", "ad-switch");
-            var seasonBox = el("input");
-            seasonBox.type = "checkbox";
-            seasonBox.checked = shopValue(item, "on");
-            seasonBox.setAttribute("aria-label", item.name + " on");
-            seasonBox.addEventListener("change", () => {
-              setShop(item.id, "on", seasonBox.checked);
-              row.classList.toggle("off", !seasonBox.checked);
-            });
-            toggleOnly.append(seasonBox, el("span", "ad-switch-track"));
-            row.append(toggleOnly, name, el("span", "ad-shop-won", "✨ only given"));
-            return row;
+          name.append(el("b", "", item.name));
+          // The category: a rarity of the shop - or exclusive (never sold, only given as a reward)
+          var category = el("select", "mm-input ad-shop-category " + rarity);
+          category.setAttribute("aria-label", item.name + " category");
+          SHOP_CATEGORIES.forEach(([value, text]) => category.appendChild(new Option(text, value)));
+          category.value = rarity;
+          if (rarity != item.defaultRarity) category.title = "Normally " + item.defaultRarity;
+          category.addEventListener("change", () => {
+            setShop(item.id, "rarity", category.value);
+            renderShop();
+          });
+          // The price: only for what is sold
+          var price = el("span", "ad-inline-input ad-shop-price-box");
+          if (rarity == "exclusive") price.appendChild(el("span", "ad-shop-won", "✨ only given"));
+          else {
+            var input = el("input", "mm-input ad-shop-price");
+            input.type = "number";
+            input.min = 0;
+            input.step = 500;
+            input.value = shopValue(item, "price");
+            input.setAttribute("aria-label", item.name + " price");
+            input.addEventListener("input", () => setShop(item.id, "price", Math.max(0, Math.floor(Number(input.value) || 0))));
+            price.append(el("span", "ad-setting-unit", "🪙"), input);
+            if (shopValue(item, "price") != item.defaultPrice) price.title = "Normally " + formatCoins(item.defaultPrice);
           }
-          var price = el("span", "ad-inline-input");
-          var input = el("input", "mm-input ad-shop-price");
-          input.type = "number";
-          input.min = 0;
-          input.step = 500;
-          input.value = shopValue(item, "price");
-          input.setAttribute("aria-label", item.name + " price");
-          input.addEventListener("input", () => setShop(item.id, "price", Math.max(0, Math.floor(Number(input.value) || 0))));
-          price.append(el("span", "ad-setting-unit", "🪙"), input);
-          if (shopValue(item, "price") != item.defaultPrice) price.title = "Normally " + formatCoins(item.defaultPrice);
           var toggle = el("label", "ad-switch");
           var box = el("input");
           box.type = "checkbox";
@@ -1003,55 +1092,12 @@ function renderShop() {
             row.classList.toggle("off", !box.checked);
           });
           toggle.append(box, el("span", "ad-switch-track"));
-          row.append(toggle, name, price);
+          row.append(toggle, name, category, price);
           return row;
         }),
     );
   });
-  renderRewardRules();
-  renderGive();
   document.getElementById("adShopSave").disabled = !shopDirty();
-}
-
-// Give a reward: the item picks (with what the shop has now), the names to pick from
-function renderGive() {
-  var frame = document.getElementById("adGiveFrame");
-  var effect = document.getElementById("adGiveEffect");
-  var keep = (box) => (box.firstChild ? box.firstChild.value : "");
-  var frameSelect = itemSelect("frame", "Frame", keep(frame));
-  var effectSelect = itemSelect("effect", "Animation", keep(effect));
-  frame.replaceChildren(frameSelect);
-  effect.replaceChildren(effectSelect);
-  api("users?q=")
-    .then((list) => document.getElementById("adGiveNames").replaceChildren(...list.map((p) => Object.assign(el("option"), { value: p.username }))))
-    .catch(() => {});
-}
-
-async function giveReward() {
-  var button = document.getElementById("adGiveButton");
-  var body = {
-    username: document.getElementById("adGivePlayer").value.trim(),
-    items: [document.querySelector("#adGiveFrame select").value, document.querySelector("#adGiveEffect select").value].filter(Boolean),
-    coins: Number(document.getElementById("adGiveCoins").value) || 0,
-    prize: document.getElementById("adGivePrize").value.trim(),
-    note: document.getElementById("adGiveNote").value.trim(),
-  };
-  var what = [...body.items.map((id) => (shopSaved.items.find((item) => item.id == id) || {}).name), body.coins ? "🪙 " + formatCoins(body.coins) : null, body.prize ? "🎁 " + body.prize : null].filter(Boolean).join(" + ");
-  if (body.username && what && !(await confirmDialog({ title: "Give " + body.username + " a reward?", text: what + (body.note ? " - " + body.note : "") + ". Items are kept for good, coins go to the 🪙 balance.", confirmLabel: "Give" }))) return;
-  button.disabled = true;
-  try {
-    var result = await api("shop/give", body);
-    showHint("🎁 " + result.given.username + " got " + what + ".", "success", button);
-    document.getElementById("adGivePlayer").value = "";
-    document.getElementById("adGiveCoins").value = "";
-    document.getElementById("adGivePrize").value = "";
-    document.getElementById("adGiveNote").value = "";
-    document.querySelectorAll("#adGiveFrame select, #adGiveEffect select").forEach((select) => (select.value = ""));
-  } catch (error) {
-    showHint(error.message, "error", button);
-  } finally {
-    button.disabled = false;
-  }
 }
 
 // A select of every item of a kind (the exclusive ones first) - "" for none
@@ -1072,89 +1118,13 @@ function itemSelect(kind, label, value) {
   return select;
 }
 
-// The rules of the season rewards: places from - to, a frame and / or an animation, coins
-function renderRewardRules() {
-  var seasonItems = shopSaved.items;
-  var rules = shopDraft.seasonRewards;
-  var changed = () => (document.getElementById("adShopSave").disabled = !shopDirty());
-  var list = document.getElementById("adSeasonRewards");
-  if (!rules.length) {
-    list.replaceChildren(el("p", "ad-note", "No rules - nobody wins anything at the end of a season."));
-  } else {
-    list.replaceChildren(
-      ...rules.map((rule, index) => {
-        var row = el("div", "ad-reward-rule");
-        var places = el("div", "ad-reward-places");
-        var number = (key, label) => {
-          var input = el("input", "mm-input");
-          input.type = "number";
-          input.min = 1;
-          input.max = 1000;
-          input.value = rule[key];
-          input.setAttribute("aria-label", label);
-          input.addEventListener("input", () => {
-            rule[key] = Math.floor(Number(input.value)) || 0;
-            changed();
-          });
-          return input;
-        };
-        places.append(el("span", "ad-label", "Places"), number("from", "From place"), el("span", "mm-muted", "to"), number("to", "To place"));
-        var pick = (kind, label) => {
-          var current = rule.items.find((id) => (seasonItems.find((item) => item.id == id) || {}).kind == kind);
-          var select = itemSelect(kind, label, current);
-          select.addEventListener("change", () => {
-            rule.items = rule.items.filter((id) => (seasonItems.find((item) => item.id == id) || {}).kind != kind);
-            if (select.value) rule.items.push(select.value);
-            changed();
-          });
-          return select;
-        };
-        var remove = el("button", "mm-btn mm-btn-sm ad-reward-remove", "✕");
-        remove.type = "button";
-        remove.title = "Remove this rule";
-        remove.addEventListener("click", () => {
-          rules.splice(index, 1);
-          renderRewardRules();
-          changed();
-        });
-        var cash = el("span", "ad-inline-input ad-reward-coins");
-        var coinsInput = el("input", "mm-input");
-        coinsInput.type = "number";
-        coinsInput.min = 0;
-        coinsInput.step = 1000;
-        coinsInput.placeholder = "0";
-        coinsInput.value = rule.coins || "";
-        coinsInput.setAttribute("aria-label", "Coins");
-        coinsInput.addEventListener("input", () => {
-          rule.coins = Math.max(0, Math.floor(Number(coinsInput.value) || 0));
-          changed();
-        });
-        cash.append(el("span", "ad-setting-unit", "🪙"), coinsInput);
-        var prize = el("input", "mm-input ad-reward-prize");
-        prize.type = "text";
-        prize.maxLength = 80;
-        prize.placeholder = "Own prize (optional) - e.g. €20 voucher";
-        prize.value = rule.prize || "";
-        prize.setAttribute("aria-label", "Own prize");
-        prize.addEventListener("input", () => {
-          rule.prize = prize.value;
-          changed();
-        });
-        row.append(places, pick("frame", "Frame"), pick("effect", "Animation"), cash, remove, prize);
-        return row;
-      }),
-    );
-  }
-  document.getElementById("adRewardDefaults").disabled = JSON.stringify(rules) == JSON.stringify(shopSaved.seasonDefaults);
-}
-
 async function saveShop() {
   var button = document.getElementById("adShopSave");
   button.disabled = true;
   var endsFree = shopSaved.free && !shopDraft.free;
   try {
     shopSaved = await api("shop", shopDraft);
-    shopDraft = { items: {}, free: shopSaved.free, seasonRewards: JSON.parse(JSON.stringify(shopSaved.seasonRewards)) };
+    shopDraft = { items: {}, free: shopSaved.free };
     renderShop();
     showHint(endsFree ? "Saved - everything nobody bought came off." : "Saved.", "success", button);
   } catch (error) {
@@ -1170,19 +1140,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("adShopSave").disabled = !shopDirty();
   });
   document.getElementById("adShopSave").addEventListener("click", saveShop);
-  document.getElementById("adGiveButton").addEventListener("click", giveReward);
-  document.getElementById("adRewardAdd").addEventListener("click", () => {
-    var rules = shopDraft.seasonRewards;
-    var after = rules.reduce((top, rule) => Math.max(top, rule.to), 0) + 1;
-    rules.push({ from: after, to: after, items: [], coins: 0, prize: "" });
-    renderRewardRules();
-    document.getElementById("adShopSave").disabled = !shopDirty();
-  });
-  document.getElementById("adRewardDefaults").addEventListener("click", () => {
-    shopDraft.seasonRewards = JSON.parse(JSON.stringify(shopSaved.seasonDefaults));
-    renderRewardRules();
-    document.getElementById("adShopSave").disabled = !shopDirty();
-  });
 });
 
 async function loadMaintenance() {
@@ -1219,10 +1176,22 @@ function renderMaintenance(fill) {
     document.getElementById("adMaintWait").value = maint.wait != null ? maint.wait : 60;
   }
   // The players to add: everybody with access who is not on the list yet
-  var select = document.getElementById("adMaintPlayer");
-  var free = maintPlayers.filter((name) => !maintForm.whitelist.includes(name));
-  select.replaceChildren(new Option(free.length ? "Choose a player..." : "Everybody is on it", ""), ...free.map((name) => new Option(name, name)));
-  document.getElementById("adMaintAdd").disabled = !free.length;
+  // The picker: who isn't on the whitelist yet - picked: on it
+  if (!maintPick) {
+    maintPick = playerPick({
+      placeholder: "+ Add a player",
+      icon: "➕",
+      clearable: false,
+      names: () => maintPlayers.filter((name) => !maintForm.whitelist.includes(name)),
+      onPick: (name) => {
+        if (!name || maintForm.whitelist.includes(name)) return;
+        maintForm.whitelist.push(name);
+        maintPick.set("");
+        renderMaintenance(false);
+      },
+    });
+    document.getElementById("adMaintPick").replaceWith(maintPick.root);
+  }
   var list = document.getElementById("adMaintList");
   list.replaceChildren(
     ...(maintForm.whitelist.length
@@ -1301,12 +1270,6 @@ function setupMaintenance() {
     var was = maint && maint.closing;
     await saveMaintenance(box.checked, box.checked ? (maint.on ? "Maintenance is on" : "Maintenance starts - the games are finishing") : was ? "Maintenance called off" : "Maintenance is over - the casino is open");
   });
-  document.getElementById("adMaintAdd").addEventListener("click", () => {
-    var name = document.getElementById("adMaintPlayer").value;
-    if (!name) return;
-    maintForm.whitelist.push(name);
-    renderMaintenance(false);
-  });
   document.getElementById("adMaintSave").addEventListener("click", () => saveMaintenance(maint.on, "Saved"));
   // +30 min, +1 h, ...: from the time given (or from now)
   document.querySelectorAll(".ad-maint-quick button").forEach((button) =>
@@ -1321,96 +1284,149 @@ function setupMaintenance() {
 
 // The player of the history: a list of the players under the field - typing narrows it (a part of the name is enough)
 var historyNames = [];
-var pickActive = -1;
-var pickTyped = false; // typed since the field got focus: the list narrowed to it (else: everybody)
+var maintPick = null; // the maintenance whitelist's picker
+var testPick = null; // test mode's picker
+var testPlayers = [];
 
-function pickMatches() {
-  var q = pickTyped ? document.getElementById("adHistUser").value.trim().toLowerCase() : "";
-  return historyNames.filter((name) => name.toLowerCase().includes(q)).slice(0, 50);
-}
-
-function showPlayerPick() {
-  var input = document.getElementById("adHistUser");
-  var list = document.getElementById("adHistNames");
-  var q = pickTyped ? input.value.trim().toLowerCase() : "";
-  var current = input.value.trim().toLowerCase();
-  var names = pickMatches();
-  pickActive = Math.min(pickActive, names.length - 1);
-  var item = (name, index) => {
-    var li = el("li", "ad-pick-item" + (index == pickActive ? " active" : "") + (name.toLowerCase() == current ? " picked" : ""));
-    li.setAttribute("role", "option");
-    li.append(createAvatar(name, "sm"));
-    var label = el("span", "ad-pick-name");
-    var at = q ? name.toLowerCase().indexOf(q) : -1;
-    // The typed part in bold
-    if (at >= 0) label.append(name.slice(0, at), el("b", "", name.slice(at, at + q.length)), name.slice(at + q.length));
-    else label.textContent = name;
-    li.append(label);
-    li.addEventListener("mousedown", (event) => {
-      event.preventDefault();
-      pickPlayer(name);
-    });
-    return li;
+/*
+ * The player picker - one for every place a player is picked (the history, the maintenance whitelist,
+ * test mode, a reward): a field with a list of names (avatars, the typed part in bold), arrows and Enter.
+ * playerPick({names: () => [...], placeholder, icon, onPick(name), onType(text), clearable}) ->
+ * {root, input, value(), set(name)}. attach: existing markup ({root, input, list, clear}) instead of new.
+ */
+function playerPick(options, attach) {
+  var parts = attach || {};
+  var root = parts.root || el("div", "ad-pick");
+  var input = parts.input;
+  var list = parts.list;
+  var clear = parts.clear;
+  if (!attach) {
+    root.appendChild(el("span", "ad-pick-icon", options.icon || "👤")).setAttribute("aria-hidden", "true");
+    input = el("input", "mm-input");
+    input.type = "text";
+    input.autocomplete = "off";
+    input.placeholder = options.placeholder || "Pick a player";
+    input.setAttribute("aria-label", "Player");
+    input.setAttribute("role", "combobox");
+    input.setAttribute("aria-autocomplete", "list");
+    input.setAttribute("aria-expanded", "false");
+    clear = el("button", "ad-pick-clear", "✕");
+    clear.type = "button";
+    clear.setAttribute("aria-label", "Clear");
+    clear.hidden = true;
+    list = el("ul", "ad-pick-list");
+    list.setAttribute("role", "listbox");
+    list.hidden = true;
+    root.append(input, clear, list);
+  }
+  var active = -1;
+  var typed = false; // typed since the field got focus: the list narrowed to it (else: everybody)
+  var matches = () => {
+    var q = typed ? input.value.trim().toLowerCase() : "";
+    return options.names().filter((name) => name.toLowerCase().includes(q)).slice(0, 50);
   };
-  list.replaceChildren(...(names.length ? names.map(item) : [el("li", "ad-pick-empty", "No player like that")]));
-  list.hidden = false;
-  input.setAttribute("aria-expanded", "true");
-  var active = list.querySelector(".active");
-  if (active) active.scrollIntoView({ block: "nearest" });
-}
-
-function hidePlayerPick() {
-  document.getElementById("adHistNames").hidden = true;
-  document.getElementById("adHistUser").setAttribute("aria-expanded", "false");
-  pickActive = -1;
-}
-
-function pickPlayer(name) {
-  document.getElementById("adHistUser").value = name;
-  document.getElementById("adHistClear").hidden = !name;
-  hidePlayerPick();
-  loadHistory();
-}
-
-function setupPlayerPick() {
-  var input = document.getElementById("adHistUser");
-  var typing = null;
+  var show = () => {
+    var q = typed ? input.value.trim().toLowerCase() : "";
+    var current = input.value.trim().toLowerCase();
+    var names = matches();
+    active = Math.min(active, names.length - 1);
+    var item = (name, index) => {
+      var li = el("li", "ad-pick-item" + (index == active ? " active" : "") + (name.toLowerCase() == current ? " picked" : ""));
+      li.setAttribute("role", "option");
+      li.append(createAvatar(name, "sm"));
+      var label = el("span", "ad-pick-name");
+      var at = q ? name.toLowerCase().indexOf(q) : -1;
+      // The typed part in bold
+      if (at >= 0) label.append(name.slice(0, at), el("b", "", name.slice(at, at + q.length)), name.slice(at + q.length));
+      else label.textContent = name;
+      li.append(label);
+      li.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        pick(name);
+      });
+      return li;
+    };
+    list.replaceChildren(...(names.length ? names.map(item) : [el("li", "ad-pick-empty", "No player like that")]));
+    list.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+    var shown = list.querySelector(".active");
+    if (shown) shown.scrollIntoView({ block: "nearest" });
+  };
+  var hide = () => {
+    list.hidden = true;
+    input.setAttribute("aria-expanded", "false");
+    active = -1;
+  };
+  var pick = (name) => {
+    input.value = name;
+    if (clear) clear.hidden = !name || options.clearable === false;
+    hide();
+    if (options.onPick) options.onPick(name);
+  };
   input.addEventListener("focus", () => {
-    pickTyped = false;
-    showPlayerPick();
+    typed = false;
+    show();
   });
-  input.addEventListener("blur", () => hidePlayerPick());
+  input.addEventListener("blur", hide);
   input.addEventListener("input", () => {
-    document.getElementById("adHistClear").hidden = !input.value;
-    pickTyped = true;
-    pickActive = -1;
-    showPlayerPick();
-    clearTimeout(typing);
-    typing = setTimeout(loadHistory, 300);
+    if (clear) clear.hidden = !input.value || options.clearable === false;
+    typed = true;
+    active = -1;
+    show();
+    if (options.onType) options.onType(input.value);
   });
   input.addEventListener("keydown", (event) => {
-    var names = pickMatches();
+    var names = matches();
     if (event.key == "ArrowDown" || event.key == "ArrowUp") {
       event.preventDefault();
       if (!names.length) return;
-      pickActive = (pickActive + (event.key == "ArrowDown" ? 1 : -1) + names.length) % names.length;
-      showPlayerPick();
+      active = (active + (event.key == "ArrowDown" ? 1 : -1) + names.length) % names.length;
+      show();
     } else if (event.key == "Enter") {
       event.preventDefault();
-      if (pickActive >= 0 && names[pickActive]) pickPlayer(names[pickActive]);
-      else if (names.length == 1) pickPlayer(names[0]);
+      if (active >= 0 && names[active]) pick(names[active]);
+      else if (names.length == 1) pick(names[0]);
       else {
-        hidePlayerPick();
-        loadHistory();
+        hide();
+        if (options.onEnter) options.onEnter(input.value.trim());
       }
     } else if (event.key == "Escape") {
-      hidePlayerPick();
+      hide();
     }
   });
-  document.getElementById("adHistClear").addEventListener("click", () => {
-    pickPlayer("");
-    input.focus();
-  });
+  if (clear)
+    clear.addEventListener("click", () => {
+      pick("");
+      input.focus();
+    });
+  return {
+    root: root,
+    input: input,
+    value: () => input.value.trim(),
+    set: (name) => {
+      input.value = name || "";
+      if (clear) clear.hidden = !name || options.clearable === false;
+    },
+    refresh: () => !list.hidden && show(),
+  };
+}
+
+// The history's player filter: the picker on the markup of the page
+var historyPick = null;
+function setupPlayerPick() {
+  var typing = null;
+  historyPick = playerPick(
+    {
+      names: () => historyNames,
+      onPick: () => loadHistory(),
+      onEnter: () => loadHistory(),
+      onType: () => {
+        clearTimeout(typing);
+        typing = setTimeout(loadHistory, 300);
+      },
+    },
+    { root: document.querySelector("#adHistoryFilter .ad-pick"), input: document.getElementById("adHistUser"), list: document.getElementById("adHistNames"), clear: document.getElementById("adHistClear") },
+  );
 }
 
 // The kinds in the filter: everything, then per game "all of it" and every kind of it

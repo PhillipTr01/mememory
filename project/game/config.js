@@ -67,8 +67,8 @@ module.exports = {
   GIFT_LIMIT: 25000, // coins a player can give other players a day
   SEASON_GIFT_LIMIT: 5000, // ... in the season world a day (its coins - an own limit)
   // Max bet by balance: up to BET_CAP_FLOOR a player can bet everything, above it at most BET_CAP_SHARE % of the balance per bet
-  BET_CAP_FLOOR: 50000,
-  BET_CAP_SHARE: 30, // 100: no cap
+  BET_CAP_FLOOR: 10000,
+  BET_CAP_SHARE: 25, // 100: no cap
   // The limits of the season world that differ from the normal casino ({KEY: value}, game/settings.js - the admin sets them)
   SEASON_LIMITS: {},
   SEASON_CLOSE_WAIT: 60 * 1000, // before a season starts: when every game is quiet, this long until the start
@@ -181,7 +181,7 @@ module.exports = {
   // Slots (hidden, see game/slots.js): the bet is for a whole spin (all 9 lines)
   SLOTS_MIN_BET: 10,
   SLOTS_MAX_BET: 10000,
-  SLOTS_CAP_DIV: 20, // slots get 1/x of the max bet by balance (its floor and its share) - a spin is far faster than a round at a table
+  SLOTS_CAP_DIV: 15, // slots get 1/x of the max bet by balance (its floor and its share) - a spin is far faster than a round at a table
   SLOTS_SPIN: 2000, // the reels turn this long on the page
   SLOTS_SWEAT: 1800, // two 🎁 in sight: the last reel turns this much longer (the sweat)
   SLOTS_BONUS_TIME: 6000, // the bonus wheels (free spins, multiplier) on the page

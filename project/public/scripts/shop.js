@@ -91,9 +91,10 @@ function renderSeason() {
   document.getElementById("shSeasonSection").hidden = list.length == 0;
   var won = shopData.won || [];
   document.getElementById("shSeason").replaceChildren(
+    // (frames, then animations - each by price, as the server sends them)
     ...list
-      // (won first, then frames before animations)
-      .sort((a, b) => Number(!isOwned(a)) - Number(!isOwned(b)) || (a.kind == b.kind ? 0 : a.kind == "frame" ? -1 : 1))
+      .slice()
+      .sort((a, b) => (a.kind == b.kind ? 0 : a.kind == "frame" ? -1 : 1))
       .map((item) => {
         var owned = isOwned(item);
         var worn = shopData[item.kind] == item.id;
@@ -106,7 +107,7 @@ function renderSeason() {
         if (mine.length) {
           var last = mine[mine.length - 1];
           card.appendChild(el("span", "sh-season-origin", (last.icon ? last.icon + " " : "") + (last.source || last.season || "A reward") + (last.rank ? " · #" + last.rank : "") + (mine.length > 1 ? " (" + mine.length + "×)" : "")));
-        } else card.appendChild(el("span", "sh-season-origin how", item.howToWin ? "🏆 " + item.howToWin : "🎁 Only as a reward"));
+        }
         var button;
         if (worn) {
           button = el("button", "mm-btn mm-btn-sm sh-btn", "Take off");
@@ -134,8 +135,8 @@ function renderGrid(id, kind) {
   var grid = document.getElementById(id);
   grid.replaceChildren(
     ...shopData.items
+      // (by rarity, then by price - the order of the server)
       .filter((item) => item.kind == kind && !item.exclusive)
-      .sort((a, b) => a.price - b.price)
       .map((item) => {
         // (free for all: everything can be worn without buying it)
         var owned = shopData.free || shopData.owned.includes(item.id);

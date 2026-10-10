@@ -442,8 +442,7 @@
                         <div class="ad-field">
                             <span class="ad-label">Whitelist</span>
                             <div class="ad-maint-add">
-                                <select id="adMaintPlayer" class="mm-input" aria-label="Player"></select>
-                                <button type="button" id="adMaintAdd" class="mm-btn mm-btn-sm">+ Add</button>
+                                <span id="adMaintPick" class="ad-pick-slot"></span>
                             </div>
                             <div id="adMaintList" class="ad-maint-list"></div>
                             <span class="ad-setting-hint">These players can play during the maintenance (e.g. to test).</span>
@@ -608,7 +607,7 @@
                                 <p class="ad-note">Your account plays in a test world of its own with a sandbox balance - nothing is saved, real players never see it.</p>
                             </div>
                             <div class="ad-test-form">
-                                <select id="adTestPlayer" class="mm-input" aria-label="Player"></select>
+                                <span id="adTestPick" class="ad-pick-slot"></span>
                                 <span class="ad-inline-input"><span class="ad-setting-unit">🪙</span><input id="adTestCoins" class="mm-input" type="number" min="1" step="100000" aria-label="Test coins"></span>
                                 <button type="button" id="adTestStart" class="mm-btn mm-btn-primary">Start</button>
                             </div>
@@ -774,47 +773,6 @@
                         <div>
                             <h3 class="ad-label ad-sublabel">Animations</h3>
                             <div id="adShopEffects" class="ad-shop-list"></div>
-                        </div>
-                    </div>
-                    <div class="ad-season-rewards">
-                        <div class="ad-card-head">
-                            <div>
-                                <h3 class="ad-title">🏆 Season rewards</h3>
-                                <p class="ad-note">When a season ends, its places get what you pick here: any frame and animation (✨ exclusive ones can't be bought anywhere else), coins (🪙, on top of the season's own coins) and / or a prize of your own (a text - you hand it over; it shows up in the history as "Own prize"). Items are kept for good. A place can be in more than one rule - it gets all of them.</p>
-                            </div>
-                        </div>
-                        <div id="adSeasonRewards" class="ad-reward-rules"></div>
-                        <div class="ad-streak-tools">
-                            <button type="button" class="mm-btn mm-btn-sm" id="adRewardAdd">+ Rule</button>
-                            <button type="button" class="mm-btn mm-btn-sm ad-link-btn" id="adRewardDefaults">Back to default</button>
-                        </div>
-                    </div>
-                    <div class="ad-season-rewards ad-give">
-                        <div>
-                            <h3 class="ad-title">🎁 Give a reward</h3>
-                            <p class="ad-note">To one player, right now - a tournament, an event, a thank-you. Any item, coins and / or a prize of your own; the player gets a popup (or on the next visit).</p>
-                        </div>
-                        <div class="ad-give-form">
-                            <label class="ad-field">
-                                <span class="ad-label">Player</span>
-                                <input id="adGivePlayer" class="mm-input" type="text" list="adGiveNames" placeholder="Name" autocomplete="off">
-                                <datalist id="adGiveNames"></datalist>
-                            </label>
-                            <label class="ad-field"><span class="ad-label">Frame</span><span id="adGiveFrame"></span></label>
-                            <label class="ad-field"><span class="ad-label">Animation</span><span id="adGiveEffect"></span></label>
-                            <label class="ad-field">
-                                <span class="ad-label">Coins</span>
-                                <span class="ad-inline-input"><span class="ad-setting-unit">🪙</span><input id="adGiveCoins" class="mm-input" type="number" min="0" step="1000" placeholder="0"></span>
-                            </label>
-                            <label class="ad-field ad-give-prize">
-                                <span class="ad-label">Own prize</span>
-                                <input id="adGivePrize" class="mm-input" type="text" maxlength="80" placeholder="e.g. €20 voucher">
-                            </label>
-                            <label class="ad-field ad-give-note">
-                                <span class="ad-label">What for</span>
-                                <input id="adGiveNote" class="mm-input" type="text" maxlength="80" placeholder="e.g. Winner of the poker night">
-                            </label>
-                            <button type="button" id="adGiveButton" class="mm-btn mm-btn-primary">Give</button>
                         </div>
                     </div>
                     <div class="ad-maint-bar">

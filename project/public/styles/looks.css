@@ -1254,3 +1254,216 @@
     animation: none;
   }
 }
+
+/* ---------- Themed exclusives: Halloween, Christmas, Lunar New Year, arcade, vaporwave - and spring ---------- */
+
+/* Pumpkin Patch: orange and night purple, a jack-o'-lantern at the bottom */
+.look-frame-pumpkin::after {
+  background: conic-gradient(#f97316, #4c1d95, #fb923c, #1e1b4b, #f97316, #7c3aed, #f97316);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.4) rgba(249, 115, 22, 0.6));
+  animation: look-turn 6s linear infinite;
+}
+
+.mm-avatar.look-frame-pumpkin::before {
+  content: "🎃";
+  bottom: calc(var(--size) * -0.16);
+  left: calc(50% - var(--size) * 0.16);
+  font-size: calc(var(--size) * 0.32);
+  filter: drop-shadow(0 0 calc(var(--size) * 0.05) rgba(249, 115, 22, 0.8));
+  animation: look-flicker 1.4s ease-in-out infinite alternate;
+}
+
+/* Candy Cane: red and white stripes that turn, a present at the bottom */
+.look-frame-candycane::after {
+  background: repeating-conic-gradient(#ef4444 0 15deg, #fff7f7 15deg 30deg);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.2) rgba(239, 68, 68, 0.45));
+  animation: look-turn 8s linear infinite;
+}
+
+.mm-avatar.look-frame-candycane::before {
+  content: "🎁";
+  bottom: calc(var(--size) * -0.15);
+  left: 50%;
+  font-size: calc(var(--size) * 0.3);
+  transform: translateX(-50%) rotate(-8deg);
+}
+
+/* Lunar Dragon: red and gold, the dragon curled at the side */
+.look-frame-lunar::after {
+  background: conic-gradient(#b91c1c, #fde68a, #dc2626, #f59e0b, #7f1d1d, #fde68a, #b91c1c);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.8) rgba(245, 158, 11, 0.65));
+  animation: look-turn 4.5s linear infinite;
+}
+
+.mm-avatar.look-frame-lunar::before {
+  content: "🐉";
+  bottom: calc(var(--size) * -0.12);
+  left: calc(var(--size) * -0.2);
+  font-size: calc(var(--size) * 0.38);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  transform-origin: 70% 70%;
+  animation: look-sway 3.2s ease-in-out infinite;
+}
+
+/* Pixel Hero: hard arcade colors that jump (no blending), a space invader on top */
+.look-frame-pixel::after {
+  background: conic-gradient(#22c55e 0 45deg, #3b82f6 45deg 90deg, #eab308 90deg 135deg, #ef4444 135deg 180deg, #a855f7 180deg 225deg, #06b6d4 225deg 270deg, #f97316 270deg 315deg, #ec4899 315deg);
+  animation: look-turn 4s steps(8) infinite;
+}
+
+.mm-avatar.look-frame-pixel::before {
+  content: "👾";
+  top: calc(var(--size) * -0.16);
+  right: calc(var(--size) * -0.12);
+  font-size: calc(var(--size) * 0.3);
+  animation: look-bounce 1.2s steps(3) infinite;
+}
+
+/* Vaporwave: a sunset of pink, purple and cyan that drifts, a palm at the side */
+.look-frame-vapor::after {
+  background: conic-gradient(#f472b6, #a78bfa, #22d3ee, #f0abfc, #f472b6);
+  filter: drop-shadow(0 0 calc(var(--ring) * 2) rgba(244, 114, 182, 0.7));
+  animation: look-turn 7s linear infinite;
+}
+
+.mm-avatar.look-frame-vapor::before {
+  content: "🌴";
+  bottom: calc(var(--size) * -0.08);
+  right: calc(var(--size) * -0.2);
+  font-size: calc(var(--size) * 0.34);
+  transform-origin: 50% 100%;
+  animation: look-sway 4s ease-in-out infinite;
+}
+
+/* Bat Swarm: two bats that circle the avatar */
+.look-fx-bats .look-fx {
+  animation: look-turn 3.2s linear infinite;
+}
+
+.look-fx-bats .look-fx::before,
+.look-fx-bats .look-fx::after {
+  content: "🦇";
+  left: 50%;
+  font-size: calc(var(--size) * 0.24);
+  filter: drop-shadow(0 0 calc(var(--size) * 0.04) rgba(124, 58, 237, 0.8));
+}
+
+.look-fx-bats .look-fx::before {
+  top: calc(var(--size) * -0.2);
+  transform: translateX(-50%);
+}
+
+.look-fx-bats .look-fx::after {
+  bottom: calc(var(--size) * -0.16);
+  font-size: calc(var(--size) * 0.18);
+  transform: translateX(-50%) rotate(180deg);
+}
+
+/* Jingle Bells: two bells that swing at the top */
+.look-fx-jingle .look-fx::before,
+.look-fx-jingle .look-fx::after {
+  content: "🔔";
+  top: calc(var(--size) * -0.14);
+  font-size: calc(var(--size) * 0.26);
+  transform-origin: 50% 0;
+  animation: look-sway 0.9s ease-in-out infinite;
+}
+
+.look-fx-jingle .look-fx::before {
+  left: calc(var(--size) * -0.08);
+}
+
+.look-fx-jingle .look-fx::after {
+  right: calc(var(--size) * -0.08);
+  font-size: calc(var(--size) * 0.2);
+  animation-delay: 0.45s;
+}
+
+/* Sky Lanterns: red lanterns that drift up, glowing */
+.look-fx-lanterns .look-fx::before,
+.look-fx-lanterns .look-fx::after {
+  content: "🏮";
+  bottom: 10%;
+  opacity: 0;
+  font-size: calc(var(--size) * 0.26);
+  filter: drop-shadow(0 0 calc(var(--size) * 0.06) rgba(251, 146, 60, 0.9));
+  animation: look-rise 3.2s ease-out infinite;
+}
+
+.look-fx-lanterns .look-fx::before {
+  left: -16%;
+}
+
+.look-fx-lanterns .look-fx::after {
+  right: -16%;
+  font-size: calc(var(--size) * 0.2);
+  animation-delay: 1.6s;
+}
+
+/* Disco Lights: colored beams that turn around the avatar, a mirror ball on top */
+.look-fx-disco .look-fx::before {
+  content: "";
+  inset: -30%;
+  border-radius: 50%;
+  background: conic-gradient(rgba(236, 72, 153, 0.75), transparent 12%, rgba(59, 130, 246, 0.75) 25%, transparent 37%, rgba(34, 197, 94, 0.75) 50%, transparent 62%, rgba(234, 179, 8, 0.75) 75%, transparent 87%, rgba(236, 72, 153, 0.75));
+  -webkit-mask: radial-gradient(closest-side, transparent 64%, #000 68%, transparent 100%);
+  mask: radial-gradient(closest-side, transparent 64%, #000 68%, transparent 100%);
+  animation: look-turn 2.4s linear infinite, look-hue 4s linear infinite;
+}
+
+.look-fx-disco .look-fx::after {
+  content: "🪩";
+  top: calc(var(--size) * -0.3);
+  left: 50%;
+  font-size: calc(var(--size) * 0.26);
+  transform: translateX(-50%);
+  transform-origin: 50% 0;
+  animation: look-sway 2s ease-in-out infinite;
+}
+
+/* Butterflies: two butterflies that flutter up */
+.look-fx-butterflies .look-fx::before,
+.look-fx-butterflies .look-fx::after {
+  content: "🦋";
+  bottom: 20%;
+  opacity: 0;
+  font-size: calc(var(--size) * 0.24);
+  animation: look-rise 2.8s ease-out infinite, look-sway 0.5s ease-in-out infinite;
+}
+
+.look-fx-butterflies .look-fx::before {
+  left: -14%;
+}
+
+.look-fx-butterflies .look-fx::after {
+  right: -14%;
+  font-size: calc(var(--size) * 0.2);
+  animation-delay: 1.4s, 0.25s;
+}
+
+/* (a crown, horns, a halo, a bell or a mirror ball take the top: one at a time) */
+.look-frame-royal.look-fx-jingle::before,
+.look-frame-royal.look-fx-disco::before,
+.look-frame-devil.look-fx-disco::before,
+.look-frame-pixel.look-fx-crowned::before,
+.look-frame-pixel.look-fx-disco::before {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-avatar.look-frame-pumpkin::before,
+  .mm-avatar.look-frame-lunar::before,
+  .mm-avatar.look-frame-pixel::before,
+  .mm-avatar.look-frame-vapor::before,
+  .look-fx-bats .look-fx,
+  .look-fx-jingle .look-fx::before,
+  .look-fx-jingle .look-fx::after,
+  .look-fx-lanterns .look-fx::before,
+  .look-fx-lanterns .look-fx::after,
+  .look-fx-disco .look-fx::before,
+  .look-fx-disco .look-fx::after,
+  .look-fx-butterflies .look-fx::before,
+  .look-fx-butterflies .look-fx::after {
+    animation: none;
+  }
+}
