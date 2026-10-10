@@ -2,7 +2,7 @@
 
 // The kinds of coin changes for the history filter - by game (a whole game: all of its kinds)
 var HISTORY_KINDS = [
-  ["Casino", [["start coins", "Start coins"], ["daily bonus", "Daily bonus"], ["admin", "Admin"], ["withdrawal", "Payout"], ["withdrawal refund", "Payout refund"]]],
+  ["Casino", [["start coins", "Start coins"], ["daily bonus", "Daily bonus"], ["cashback", "Cashback"], ["admin", "Admin"], ["withdrawal", "Payout"], ["withdrawal refund", "Payout refund"]]],
   ["Seasons", [["season start", "Season start"], ["second chance", "Second chance"]]],
   ["Rewards", [["season reward", "Season reward"], ["reward", "Reward"], ["prize", "Own prize"]]],
   ["Gifts", [["gift sent", "Sent"], ["gift received", "Received"]]],

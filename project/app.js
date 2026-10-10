@@ -158,6 +158,10 @@ async function connectDatabase(attempt = 1) {
     await persist.restoreAll();
     // ... and the seasons start / end on time
     seasons.start();
+    // The daily cashback (the day before - once, after midnight)
+    const cashback = require("./game/cashback");
+    await cashback.load().catch((error) => console.error("Could not load the cashback:", error));
+    cashback.start();
     // The money rains of the admin (planned ones come on time)
     const rain = require("./game/money_rain");
     await rain.load().catch((error) => console.error("Could not load the money rains:", error));

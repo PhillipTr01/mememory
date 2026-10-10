@@ -212,7 +212,7 @@ const GAMES = {
     ],
   }),
 
-  leaderboard: () => ({
+  leaderboard: (L) => ({
     title: "Leaderboard",
     sections: [
       {
@@ -221,6 +221,7 @@ const GAMES = {
           "All players by their coins.",
           "Without a season it is live - always up to date. The arrows show who went up or down since midnight.",
           `🪙 ${n(coins.dailyBonus())} free coins every day for everybody (🎁 in the top bar).`,
+          ...(L.CASHBACK_PERCENT > 0 ? [`💸 Daily cashback: after midnight ${L.CASHBACK_PERCENT}% of what you lost in the games the day before comes back${L.CASHBACK_MAX > 0 ? ` (up to ${n(L.CASHBACK_MAX)})` : ""}.`] : []),
           ...(require("./streak").current().on ? [`🔥 Daily streak: claim them day after day and they grow - up to ${n(Math.round((coins.dailyBonus() * Math.max(...require("./streak").current().rewards)) / 100))} a day. Miss a day and it starts over.`] : []),
         ],
       },

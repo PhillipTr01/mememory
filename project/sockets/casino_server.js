@@ -44,6 +44,7 @@ module.exports = function (io) {
     }
     for (const socket of sockets) socket.emit(event, data);
     if (event === "giftReceived" && sockets.length === 0) inbox.add(username, { type: "gift", ...data }).catch((error) => console.error("[inbox] Could not keep a gift:", error));
+    if (event === "cashback" && sockets.length === 0) inbox.add(username, { type: "cashback", ...data }).catch((error) => console.error("[inbox] Could not keep a cashback:", error));
   });
 
   // A casino page opens: what happened while the player was away (gifts, money rains) - as popups
@@ -59,6 +60,7 @@ module.exports = function (io) {
         if (item.type === "rain") socket.emit("moneyRain", { ...item, missed: true });
         // (seasonReward: kept before rewards were general - a season's name and place)
         if (item.type === "reward") socket.emit("reward", { ...item, missed: true });
+        if (item.type === "cashback") socket.emit("cashback", { ...item, missed: true });
         if (item.type === "seasonReward") socket.emit("reward", { source: item.season, icon: item.icon, rank: item.rank, coins: 0, items: item.items || [], missed: true });
       }
     } catch (error) {

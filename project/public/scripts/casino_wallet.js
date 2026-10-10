@@ -1217,6 +1217,12 @@
   // A gift came: a popup on every open casino page (more gifts at once: one after the other) - also a
   // gift or a money rain from while the player was away (missed: on the next visit)
   var giftsWaiting = [];
+  // The daily cashback came (after midnight - or while away: on the next visit)
+  socket.on("cashback", (data) => {
+    var coin = data.world == "season" ? data.coinIcon || "💎" : "🪙";
+    casinoNotice({ icon: "💸", title: "Cashback +" + coin + " " + format(data.amount), text: data.percent + "% of what you lost yesterday (" + coin + " " + format(data.loss) + ")" + (data.world == "season" ? " - in the season" : ""), ms: 12000, key: "cashback" });
+  });
+
   socket.on("giftReceived", (gift) => {
     giftsWaiting.push({ ...gift, type: "gift" });
     if (!document.querySelector(".cs-got-backdrop")) showReceived();

@@ -69,6 +69,9 @@ module.exports = {
   // Max bet by balance: up to BET_CAP_FLOOR a player can bet everything, above it at most BET_CAP_SHARE % of the balance per bet
   BET_CAP_FLOOR: 10000,
   BET_CAP_SHARE: 25, // 100: no cap
+  // Daily cashback (game/cashback.js): after midnight this share of the net loss of the day before comes back
+  CASHBACK_PERCENT: 10,
+  CASHBACK_MAX: 0, // at most this much a day (0: no cap)
   // The limits of the season world that differ from the normal casino ({KEY: value}, game/settings.js - the admin sets them)
   SEASON_LIMITS: {},
   SEASON_CLOSE_WAIT: 60 * 1000, // before a season starts: when every game is quiet, this long until the start
