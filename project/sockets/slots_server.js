@@ -37,6 +37,7 @@ module.exports = function (io, options = {}) {
   let pendingId = 0;
   const busy = new Set(); // a spin in progress (two tabs, fast clicks)
   const lastSpin = new Map(); // username -> time of the last spin
+  const spinTab = new Map(); // username -> the page (socket) that spun last: one machine per player at a time
 
   /*
    * How long the page shows a spin before the win is counted up: the reels,
@@ -268,6 +269,12 @@ module.exports = function (io, options = {}) {
         // One spin at a time - and not faster than the reels turn. A spin a moment too early
         // (the clocks of page and server) waits for the gap; one far too early is refused - the page
         // always hears back (it never waits for nothing)
+        // One machine at a time: another tab that spun just now (autoplay in two tabs) - this one is refused
+        const other = spinTab.get(username);
+        // (a page that was closed or reloaded doesn't count - only one that is still open)
+        if (other && other !== socket.id && socket.nsp.sockets.has(other) && Date.now() - (lastSpin.get(username) || 0) < config.SLOTS_TAB_LOCK) {
+          return error("You're already spinning in another tab - one machine at a time.");
+        }
         if (busy.has(username)) return socket.emit("slotsSkip");
         const early = config.SLOTS_MIN_GAP - (Date.now() - (lastSpin.get(username) || 0));
         if (early > 1000) return socket.emit("slotsSkip");
@@ -276,6 +283,7 @@ module.exports = function (io, options = {}) {
           if (early > 0) await new Promise((resolve) => setTimeout(resolve, early));
           if (!(await coins.spend(username, bet, { reason: "slots bet" }))) return error(coins.refusal(username) || "You don't have enough coins.");
           lastSpin.set(username, Date.now());
+          spinTab.set(username, socket.id);
           // (debug, the test world only: the next spin starts the bonus the admin picked)
           const test = nextBonus || config.SLOTS_TEST_BONUS;
           nextBonus = null;

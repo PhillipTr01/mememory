@@ -198,6 +198,7 @@ module.exports = {
   SLOTS_BIG_TIME: 3000, // the big-win show on top
   SLOTS_PAUSE: 250, // after a spin is shown, the next one can start only this much later (the page)
   SLOTS_MIN_GAP: 2250, // at least this long from one spin to the next of a player (the reels + the pause)
+  SLOTS_TAB_LOCK: 8000, // a spin from another tab of the player within this long of the last spin is refused (no autoplay in two tabs)
   SLOTS_FEED: 12, // last wins in the list
   SLOTS_TEST_BONUS: "off", // tests only: every spin starts a bonus game ("free" spins or the "coins" game) - not in the admin panel
   // Roulette (hidden, see game/roulette.js): 7 red, 7 blue, 1 green - red / blue 2x, green 14x

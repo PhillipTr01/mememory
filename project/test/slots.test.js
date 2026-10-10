@@ -454,3 +454,22 @@ test("slots: their own share of the max bet by balance (1/x of its all-in amount
     [config.BET_CAP_FLOOR, config.BET_CAP_SHARE, config.SLOTS_CAP_DIV] = saved;
   }
 });
+
+test("slots: one machine at a time - a second tab can't spin while the first one does (no autoplay in two tabs)", async () => {
+  Object.assign(config, { SLOTS_MIN_GAP: 0, SLOTS_SPIN: 10, SLOTS_COUNT_TIME: 0, SLOTS_TAB_LOCK: 3000 });
+  h.setCoins("alice", 100000);
+  const first = client("alice");
+  const second = client("alice");
+  await Promise.all([h.once(first, "slotsSetup"), h.once(second, "slotsSetup")]);
+  const spun = h.once(first, "slotsResult");
+  first.emit("spin", { bet: 10 });
+  await spun;
+  const refused = h.once(second, "slotsError");
+  second.emit("spin", { bet: 10 });
+  assert.match(await refused, /another tab/);
+  // The first tab goes on
+  const again = h.once(first, "slotsResult");
+  first.emit("spin", { bet: 10 });
+  await again;
+  config.SLOTS_TAB_LOCK = 8000;
+});
