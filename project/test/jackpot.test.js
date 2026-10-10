@@ -136,7 +136,9 @@ test("coins: the free coins come back at midnight (German time), not after 24 ho
   assert.strictEqual(await coins.claimBonus("dave", lateEvening), true);
   assert.strictEqual(await coins.claimBonus("dave", lateEvening + 9 * 60 * 1000), false, "still the same day");
   assert.strictEqual(await coins.claimBonus("dave", lateEvening + 11 * 60 * 1000), true, "a new day");
-  assert.strictEqual(h.coinsOf("dave"), 1000 + 2 * config.DAILY_BONUS);
+  // (two days in a row: the second is day 2 of the streak)
+  const day2 = Math.round((config.DAILY_BONUS * require("../game/streak").percentFor(2)) / 100);
+  assert.strictEqual(h.coinsOf("dave"), 1000 + config.DAILY_BONUS + day2);
 });
 
 /* ---------- The pot ---------- */

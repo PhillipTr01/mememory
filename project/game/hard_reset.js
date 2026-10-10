@@ -24,7 +24,7 @@ const PARTS = [
   { id: "access", group: "setup", label: "Access", about: "Who may play and get payouts - everybody asks for access again." },
   { id: "purchases", group: "setup", label: "Shop purchases", about: "Every bought frame and effect comes off the avatars." },
   { id: "seasons", group: "setup", label: "Seasons", about: "Every season - planned, running and over - and its leaderboard." },
-  { id: "settings", group: "setup", label: "Settings", about: "Every value of the settings pages back to its default (the season's own limits too)." },
+  { id: "settings", group: "setup", label: "Settings", about: "Every value of the settings pages back to its default (the season's own limits and the daily streak too)." },
   { id: "rains", group: "setup", label: "Money rains", about: "Every planned money rain." },
 ];
 const IDS = PARTS.map((part) => part.id);
@@ -59,7 +59,7 @@ async function hardReset(parts) {
   const $unset = {};
   if (has("coins")) {
     $set.coins = 0;
-    Object.assign($unset, { coinReset: 1, coinBonusAt: 1, seasonCoins: 1, seasonReset: 1, seasonBonusAt: 1, inbox: 1 });
+    Object.assign($unset, { coinReset: 1, coinBonusAt: 1, coinStreak: 1, seasonCoins: 1, seasonReset: 1, seasonBonusAt: 1, seasonStreak: 1, inbox: 1 });
   }
   if (has("access")) {
     Object.assign($set, { casinoApproved: false, payoutAllowed: false });
@@ -78,6 +78,7 @@ async function hardReset(parts) {
     const settings = require("./settings");
     await settings.resetToDefaults();
     await settings.resetToDefaults({ season: true });
+    await require("./streak").reset();
   }
   if (has("rains")) await require("./money_rain").clearPlanned();
   return result;

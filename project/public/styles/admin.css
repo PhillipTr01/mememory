@@ -4056,3 +4056,78 @@ a.ad-case-row:hover {
     text-align: center;
   }
 }
+
+/* ---------- Daily streak ---------- */
+.ad-streak-days {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.6rem;
+  margin: 0.75rem 0;
+}
+
+.ad-streak-day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface-2);
+}
+
+.ad-streak-day.last {
+  border-color: rgba(var(--mm-accent-rgb), 0.55);
+}
+
+.ad-streak-day-name {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
+
+.ad-streak-day.last .ad-streak-day-name {
+  color: var(--mm-accent);
+}
+
+.ad-streak-day-bar {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+}
+
+.ad-streak-day-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--share);
+  border-radius: inherit;
+  background: var(--mm-accent);
+}
+
+.ad-streak-day .mm-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.ad-streak-day-coins {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ad-streak-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ad-streak-tools .ad-link-btn {
+  margin-left: auto;
+}
+
+.ad-streak .ad-choice {
+  flex-wrap: wrap;
+}

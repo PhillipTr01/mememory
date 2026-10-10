@@ -4426,3 +4426,141 @@ body.jackpot-theme::before {
   font-size: 0.68rem;
   color: var(--mm-muted);
 }
+
+/* ---------- Daily streak: the flame on the gift, the popup after a claim ---------- */
+.nav-bonus-streak {
+  margin-left: 0.35rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  color: var(--mm-accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+@media (max-width: 575px) {
+  .nav-bonus-streak {
+    margin-left: 0.2rem;
+    padding: 0 0.25rem;
+    font-size: 0.7rem;
+  }
+}
+
+.nav-streak {
+  max-width: 420px;
+  text-align: center;
+}
+
+.nav-streak-flame {
+  font-size: 2.6rem;
+  line-height: 1;
+  margin-bottom: 0.35rem;
+  animation: nav-streak-flame 1.6s ease-in-out infinite;
+}
+
+@keyframes nav-streak-flame {
+  50% {
+    transform: scale(1.08) rotate(-3deg);
+  }
+}
+
+.nav-streak .mm-dialog-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.nav-streak-amount {
+  margin-bottom: 1rem;
+  color: var(--mm-accent);
+  font-size: 1.9rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  animation: nav-streak-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.nav-streak-days {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  grid-auto-flow: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.nav-streak-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.45rem 0.15rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+  animation: nav-streak-pop 0.4s calc(var(--i) * 60ms) cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+}
+
+.nav-streak-day-name {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+  white-space: nowrap;
+}
+
+.nav-streak-day-icon {
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.nav-streak-day-coins {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+}
+
+.nav-streak-day.done {
+  opacity: 0.55;
+}
+
+.nav-streak-day.done .nav-streak-day-icon {
+  color: var(--mm-success);
+  font-weight: 900;
+}
+
+.nav-streak-day.today {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  box-shadow: 0 0 14px rgba(var(--mm-accent-rgb), 0.35);
+}
+
+.nav-streak-day.today .nav-streak-day-name,
+.nav-streak-day.today .nav-streak-day-coins {
+  color: var(--mm-accent);
+}
+
+.nav-streak-text {
+  margin-bottom: 1rem;
+}
+
+.nav-streak .mm-dialog-actions {
+  grid-template-columns: 1fr;
+}
+
+@keyframes nav-streak-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-streak-flame,
+  .nav-streak-amount,
+  .nav-streak-day {
+    animation: none;
+  }
+}

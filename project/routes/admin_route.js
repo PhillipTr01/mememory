@@ -18,6 +18,7 @@ const shop = require("../game/shop");
 const testMode = require("../game/test_mode");
 const worlds = require("../game/worlds");
 const rtpMonitor = require("../game/rtp_monitor");
+const streak = require("../game/streak");
 const userController = require("../controllers/user_controller");
 const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
@@ -277,6 +278,18 @@ module.exports = function () {
       const result = await withdrawals.handle(req.params.id, action, typeof note === "string" ? note.slice(0, 300) : undefined);
       if (result.error) return res.status(400).json({ error: result.error });
       res.json({ ok: true });
+    }),
+  );
+
+  // The daily streak: the reward of every day (percent of the daily bonus), what comes after the last day, the grace
+  router.get("/api/streak", admin, (req, res) => res.json({ streak: streak.current(), defaults: streak.DEFAULTS, maxDays: streak.MAX_DAYS, dailyBonus: config.DAILY_BONUS }));
+  router.post(
+    "/api/streak",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await streak.update(req.body || {});
+      if (result.error) return res.status(400).json({ error: result.error });
+      res.json({ streak: result.streak, defaults: streak.DEFAULTS, maxDays: streak.MAX_DAYS, dailyBonus: config.DAILY_BONUS });
     }),
   );
 

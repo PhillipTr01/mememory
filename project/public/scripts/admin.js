@@ -79,6 +79,7 @@ var PAGES = {
 var SETTING_GROUPS = {
   general: ["General settings", "Coins for everybody, gifts - and the hard reset."],
   test: ["Test mode", "Try the casino with a sandbox balance - nothing is saved, nobody else is touched."],
+  streak: ["Daily streak", "The daily free coins grow day after day - the reward of every day, and what ends a streak."],
   rain: ["Money rain", "Coins for many players at once - now or planned, for everybody, who is online, the last of the leaderboard or who has little."],
   shop: ["Shop", "The frames and animations of the casino: on or off, the prices - and free for all to test them."],
   maintenance: ["Maintenance", "Close the casino for everybody but a whitelist - with when it is most likely over."],
@@ -100,7 +101,7 @@ function redirect(parts) {
   if (parts[0] == "settings") return GAME_GROUPS.includes(parts[1]) ? "#games/" + parts[1] : "#casino/" + (parts[1] == "maintenance" ? "maintenance" : "general");
   if (parts[0] == "cases") return "#games/battles" + (parts[1] ? "/case/" + parts[1] : "");
   if (parts[0] == "games" && !GAME_GROUPS.includes(parts[1])) return "#games/jackpot";
-  if (parts[0] == "casino" && !["maintenance", "general", "shop", "test", "rain"].includes(parts[1])) return "#casino/general";
+  if (parts[0] == "casino" && !["maintenance", "general", "shop", "test", "rain", "streak"].includes(parts[1])) return "#casino/general";
   return null;
 }
 
@@ -132,12 +133,14 @@ function showTab() {
   var shopPage = settingsPage && settingsGroup == "shop";
   var testPage = settingsPage && settingsGroup == "test";
   var rainPage = settingsPage && settingsGroup == "rain";
+  var streakPage = settingsPage && settingsGroup == "streak";
   document.getElementById("adRain").hidden = !rainPage;
+  document.getElementById("adStreak").hidden = !streakPage;
   document.getElementById("adMaint").hidden = !maintPage;
   document.getElementById("adShop").hidden = !shopPage;
   document.getElementById("adTest").hidden = !testPage;
-  document.getElementById("adSettingsForm").hidden = maintPage || shopPage || testPage || rainPage;
-  document.getElementById("adSettingsBar").hidden = maintPage || shopPage || testPage || rainPage;
+  document.getElementById("adSettingsForm").hidden = maintPage || shopPage || testPage || rainPage || streakPage;
+  document.getElementById("adSettingsBar").hidden = maintPage || shopPage || testPage || rainPage || streakPage;
   if (tab == "players") loadPlayers();
   if (tab == "payouts") loadPayouts();
   if (tab == "history") loadHistory();
@@ -158,6 +161,7 @@ function showTab() {
     if (shopPage) loadShop();
     if (testPage) loadTest();
     if (rainPage) loadRains();
+    if (streakPage) loadStreak();
   }
   if (settingsPage && settingsGroup == "battles") {
     caseView = casePage ? decodeURIComponent(parts[3]) : null;
@@ -3270,3 +3274,129 @@ document.getElementById("adRtpRange").addEventListener("click", (event) => {
   loadRtp();
 });
 document.getElementById("adRtpWorld").addEventListener("change", loadRtp);
+
+/* ---------- Daily streak ---------- */
+
+var streakData = null; // {streak, defaults, maxDays, dailyBonus}
+var streakDraft = null; // what is on the page (saved with Save)
+
+async function loadStreak() {
+  try {
+    streakData = await api("streak");
+    streakDraft = JSON.parse(JSON.stringify(streakData.streak));
+    renderStreak();
+  } catch (error) {
+    fail(error);
+  }
+}
+
+function streakChanged() {
+  return streakData && JSON.stringify(streakDraft) != JSON.stringify(streakData.streak);
+}
+
+function renderStreak() {
+  if (!streakDraft) return;
+  var on = document.getElementById("adStreakOn");
+  on.checked = streakDraft.on;
+  document.getElementById("adStreakOnText").innerText = streakDraft.on ? "On" : "Off";
+  var card = document.getElementById("adStreakToggleCard");
+  card.classList.toggle("on", streakDraft.on);
+  card.classList.toggle("off", !streakDraft.on);
+  document.getElementById("adStreakBase").innerText = "Daily bonus 🪙 " + formatCoins(streakData.dailyBonus);
+  var list = document.getElementById("adStreakDays");
+  var top = Math.max(...streakDraft.rewards, 1);
+  list.replaceChildren(
+    ...streakDraft.rewards.map((percent, i) => {
+      var day = el("label", "ad-streak-day" + (i == streakDraft.rewards.length - 1 ? " last" : ""));
+      day.appendChild(el("span", "ad-streak-day-name", "Day " + (i + 1)));
+      // (a bar: how big the day is next to the biggest)
+      var bar = el("span", "ad-streak-day-bar");
+      bar.style.setProperty("--share", Math.max(4, Math.round((percent / top) * 100)) + "%");
+      day.appendChild(bar);
+      var box = el("span", "ad-inline-input");
+      var input = el("input", "mm-input");
+      input.type = "number";
+      input.min = 0;
+      input.max = 100000;
+      input.step = 10;
+      input.value = percent;
+      input.setAttribute("aria-label", "Day " + (i + 1) + " in percent");
+      input.addEventListener("input", () => {
+        var value = Number(input.value);
+        streakDraft.rewards[i] = input.value.trim() == "" || !Number.isFinite(value) ? input.value : Math.round(value);
+        coins.innerText = "🪙 " + (Number.isFinite(value) ? formatCoins(Math.round((streakData.dailyBonus * value) / 100)) : "-");
+        streakState();
+      });
+      input.addEventListener("change", renderStreak);
+      box.append(input, el("span", "ad-setting-unit", "%"));
+      day.appendChild(box);
+      var coins = el("span", "ad-streak-day-coins", "🪙 " + formatCoins(Math.round((streakData.dailyBonus * percent) / 100)));
+      day.appendChild(coins);
+      return day;
+    }),
+  );
+  document.querySelectorAll("#adStreakAfter [data-after]").forEach((button) => {
+    var active = button.dataset.after == streakDraft.after;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-checked", active);
+  });
+  document.getElementById("adStreakGrace").value = streakDraft.grace;
+  document.getElementById("adStreakAdd").disabled = streakDraft.rewards.length >= streakData.maxDays;
+  document.getElementById("adStreakRemove").disabled = streakDraft.rewards.length <= 1;
+  document.getElementById("adStreakDefaults").disabled = JSON.stringify(streakDraft) == JSON.stringify(streakData.defaults);
+  streakState();
+}
+
+function streakState(text) {
+  var state = document.getElementById("adStreakState");
+  var dirty = streakChanged();
+  state.innerText = text || (dirty ? "Not saved yet." : "Saved.");
+  state.classList.toggle("ad-setting-error", false);
+  document.getElementById("adStreakSave").disabled = !dirty;
+}
+
+document.getElementById("adStreakOn").addEventListener("change", (event) => {
+  streakDraft.on = event.target.checked;
+  renderStreak();
+});
+document.getElementById("adStreakAdd").addEventListener("click", () => {
+  var list = streakDraft.rewards;
+  // (the next day: as much more as the step between the last two)
+  var last = Number(list[list.length - 1]) || 100;
+  var step = list.length > 1 ? Math.max(0, last - (Number(list[list.length - 2]) || 0)) : 20;
+  list.push(last + step);
+  renderStreak();
+});
+document.getElementById("adStreakRemove").addEventListener("click", () => {
+  streakDraft.rewards.pop();
+  renderStreak();
+});
+document.getElementById("adStreakDefaults").addEventListener("click", () => {
+  streakDraft = JSON.parse(JSON.stringify(streakData.defaults));
+  renderStreak();
+});
+document.getElementById("adStreakAfter").addEventListener("click", (event) => {
+  var button = event.target.closest("[data-after]");
+  if (!button) return;
+  streakDraft.after = button.dataset.after;
+  renderStreak();
+});
+document.getElementById("adStreakGrace").addEventListener("input", (event) => {
+  var value = Number(event.target.value);
+  streakDraft.grace = event.target.value.trim() == "" || !Number.isFinite(value) ? event.target.value : value;
+  streakState();
+});
+document.getElementById("adStreakSave").addEventListener("click", async () => {
+  var save = document.getElementById("adStreakSave");
+  save.disabled = true;
+  try {
+    streakData = await api("streak", { on: streakDraft.on, rewards: streakDraft.rewards.map(Number), after: streakDraft.after, grace: Number(streakDraft.grace) });
+    streakDraft = JSON.parse(JSON.stringify(streakData.streak));
+    renderStreak();
+    showHint("Daily streak saved.");
+  } catch (error) {
+    streakState(error.message);
+    document.getElementById("adStreakState").classList.add("ad-setting-error");
+    save.disabled = false;
+  }
+});

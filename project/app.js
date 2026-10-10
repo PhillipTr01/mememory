@@ -141,6 +141,9 @@ async function connectDatabase(attempt = 1) {
     await require("./game/settings")
       .load()
       .catch((error) => console.error("Could not load the settings:", error));
+    await require("./game/streak")
+      .load()
+      .catch((error) => console.error("Could not load the daily streak:", error));
     await require("./game/maintenance")
       .load()
       .catch((error) => console.error("Could not load the maintenance:", error));

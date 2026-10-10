@@ -4,6 +4,7 @@ const CoinLog = require("../models/CoinLog");
 const config = require("./config");
 const days = require("./days");
 const limits = require("./limits");
+const streak = require("./streak");
 
 // Bets (every game): one may take at most limits.betCap of the balance - more only with options.nocap (a double, a split)
 const BET_REASONS = ["jackpot bet", "battle", "poker buy-in", "poker chips", "blackjack bet", "slots bet", "roulette bet", "baucua bet"];
@@ -29,8 +30,8 @@ function notify(username) {
  * coins.season the season's, coins.wallet(world) the one of a world.
  */
 const FIELDS = {
-  normal: { coins: "coins", reset: "coinReset", bonusAt: "coinBonusAt" },
-  season: { coins: "seasonCoins", reset: "seasonReset", bonusAt: "seasonBonusAt" },
+  normal: { coins: "coins", reset: "coinReset", bonusAt: "coinBonusAt", streak: "coinStreak" },
+  season: { coins: "seasonCoins", reset: "seasonReset", bonusAt: "seasonBonusAt", streak: "seasonStreak" },
 };
 
 // History of every change (for the admin panel); never blocks or breaks a game
@@ -182,8 +183,25 @@ function makeWallet(kind) {
     return user != null && bonusInAt(bonusAtOf(user), now) === 0;
   }
 
+  // (the streak: today's bonus grows with the days claimed in a row - the days missed in a season at the plain bonus)
   function bonusDue(user, now = Date.now()) {
-    return dailyBonus() * bonusDays(user, now);
+    return streakBonus(streakDay(user, now)) + dailyBonus() * (bonusDays(user, now) - 1);
+  }
+
+  function streakBonus(day) {
+    return Math.round((dailyBonus() * streak.percentFor(day)) / 100);
+  }
+
+  // The day of the streak a claim now would be (the season's: only claims of this season count)
+  function streakDay(user, now = Date.now()) {
+    return streak.dayFor(bonusAtOf(user), user ? user[f.streak] : null, now);
+  }
+
+  // The streak for the pages: {on, day, next, rewards, after, grace, base} - base: the daily bonus (rewards are percents of it)
+  function streakInfo(user, now = Date.now()) {
+    const claimedToday = user != null && !bonusAvailable(user, now);
+    const last = user && bonusAtOf(user) ? user[f.streak] : null;
+    return { ...streak.info(bonusAtOf(user), last, claimedToday, now), base: dailyBonus() };
   }
 
   // The most one bet may take with this balance (null: no cap) - the pages use it for their "Max"
@@ -206,7 +224,7 @@ function makeWallet(kind) {
       return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), bonusAmount: dailyBonus(), payout: false, normal: null, world: kind, joined: false };
     }
     await ensure(username);
-    const user = await User.findOne({ username: username }).select(["username", f.coins, f.reset, f.bonusAt, "payoutAllowed", ...(season ? ["coins", "coinReset"] : [])].join(" "));
+    const user = await User.findOne({ username: username }).select(["username", f.coins, f.reset, f.bonusAt, f.streak, "payoutAllowed", ...(season ? ["coins", "coinReset"] : [])].join(" "));
     if (user == null) return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), payout: false, world: kind };
     const available = bonusAvailable(user);
     return {
@@ -216,6 +234,7 @@ function makeWallet(kind) {
       bonus: available,
       bonusIn: bonusInAt(bonusAtOf(user)),
       bonusAmount: available ? bonusDue(user) : dailyBonus(),
+      streak: streakInfo(user),
       // (payouts: only the normal coins)
       payout: !season && user.payoutAllowed === true,
       normal: season ? normalWallet.balanceOf(user) : null,
@@ -327,16 +346,17 @@ function makeWallet(kind) {
     }
     if (watching(username)) return 0;
     await ensure(username);
-    const user = await User.findOne({ username: username }).select(["username", f.reset, f.bonusAt].join(" ")).lean();
+    const user = await User.findOne({ username: username }).select(["username", f.reset, f.bonusAt, f.streak].join(" ")).lean();
     if (user == null || !bonusAvailable(user, now)) return 0;
     const count = bonusDays(user, now);
-    const amount = dailyBonus() * count;
+    const day = streakDay(user, now);
+    const amount = bonusDue(user, now);
     const notToday = [{ [f.bonusAt]: { $exists: false } }, { [f.bonusAt]: null }, { [f.bonusAt]: { $lt: new Date(days.dayStart(now)) } }];
     // (the season's: a claim of another season doesn't count)
     if (season) notToday.push({ [f.reset]: { $ne: walletBase().reset } });
-    const result = await User.updateOne({ username: username, $or: notToday }, { $inc: { [f.coins]: amount }, $set: { [f.bonusAt]: new Date(now) } });
+    const result = await User.updateOne({ username: username, $or: notToday }, { $inc: { [f.coins]: amount }, $set: { [f.bonusAt]: new Date(now), [f.streak]: day } });
     if (!changed(result)) return 0;
-    log(username, amount, "daily bonus", count > 1 ? `${count} days` : undefined);
+    log(username, amount, "daily bonus", [streak.current().on && day > 1 ? `day ${day} of the streak` : null, count > 1 ? `${count} days` : null].filter(Boolean).join(" · ") || undefined);
     notify(username);
     return amount;
   }
@@ -345,7 +365,7 @@ function makeWallet(kind) {
     return (await claim(username, now)) > 0;
   }
 
-  return { kind, fields: f, changes, notify, lastSpent, base: walletBase, era: walletEra, log, watching, dailyBonus, balanceOf, ensure, bonusAvailable, bonusDue, get, add, spend, refusal, set, claim, claimBonus };
+  return { kind, fields: f, changes, notify, lastSpent, base: walletBase, era: walletEra, log, watching, dailyBonus, balanceOf, ensure, bonusAvailable, bonusDue, streakInfo, get, add, spend, refusal, set, claim, claimBonus };
 }
 
 const normalWallet = makeWallet("normal");

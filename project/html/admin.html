@@ -47,6 +47,7 @@
                 <span class="ad-nav-head">Casino</span>
                 <a href="#casino/general" class="ad-nav-item" data-group="general"><span class="ad-nav-icon">⚙️</span><span class="ad-nav-label">General</span></a>
                 <a href="#casino/test" class="ad-nav-item" data-group="test"><span class="ad-nav-icon">🧪</span><span class="ad-nav-label">Test mode</span><span id="adTestDot" class="ad-state" hidden></span></a>
+                <a href="#casino/streak" class="ad-nav-item" data-group="streak"><span class="ad-nav-icon">🔥</span><span class="ad-nav-label">Daily streak</span></a>
                 <a href="#casino/rain" class="ad-nav-item" data-group="rain"><span class="ad-nav-icon">💸</span><span class="ad-nav-label">Money rain</span><span id="adRainDot" class="ad-state on" hidden></span></a>
                 <a href="#casino/shop" class="ad-nav-item" data-group="shop"><span class="ad-nav-icon">🛍️</span><span class="ad-nav-label">Shop</span><span id="adShopDot" class="ad-state" hidden></span></a>
                 <a href="#casino/maintenance" class="ad-nav-item" data-group="maintenance"><span class="ad-nav-icon">🔧</span><span class="ad-nav-label">Maintenance</span><span id="adMaintDot" class="ad-state" hidden></span></a>
@@ -472,6 +473,54 @@
                     <div class="ad-maint-bar">
                         <span id="adMaintState" class="ad-note"></span>
                         <button type="button" id="adMaintSave" class="mm-btn mm-btn-primary">Save maintenance</button>
+                    </div>
+                </div>
+
+                <!--- Daily streak: the free coins grow day after day --->
+                <div class="ad-stack ad-streak" id="adStreak" hidden>
+                    <div class="ad-card ad-toggle-card ad-toggle-test" id="adStreakToggleCard">
+                        <div class="ad-toggle-info">
+                            <h2 class="ad-title">🔥 Daily streak</h2>
+                            <p class="ad-note">The daily free coins grow every day a player claims them in a row. Off: every day pays the plain daily bonus.</p>
+                        </div>
+                        <label class="ad-switch ad-switch-big">
+                            <input type="checkbox" id="adStreakOn" aria-label="Daily streak">
+                            <span class="ad-switch-track"></span>
+                            <span class="ad-switch-text" id="adStreakOnText">On</span>
+                        </label>
+                    </div>
+                    <div class="ad-card">
+                        <div class="ad-card-head">
+                            <h2 class="ad-title">Rewards per day</h2>
+                            <span class="ad-pill" id="adStreakBase"></span>
+                        </div>
+                        <p class="ad-note">Percent of the daily bonus each day of the streak pays (100% = the plain bonus). The coins below: outside of a season - a season pays the same percents of its own bonus.</p>
+                        <div class="ad-streak-days" id="adStreakDays"></div>
+                        <div class="ad-streak-tools">
+                            <button type="button" class="mm-btn mm-btn-sm" id="adStreakAdd">+ Day</button>
+                            <button type="button" class="mm-btn mm-btn-sm" id="adStreakRemove">− Day</button>
+                            <button type="button" class="mm-btn mm-btn-sm ad-link-btn" id="adStreakDefaults">Back to default</button>
+                        </div>
+                    </div>
+                    <div class="ad-card">
+                        <div class="ad-card-head"><h2 class="ad-title">Rules</h2></div>
+                        <div class="ad-setting">
+                            <span class="ad-setting-label">After the last day</span>
+                            <div class="ad-choice" id="adStreakAfter" role="radiogroup" aria-label="After the last day">
+                                <button type="button" class="ad-choice-option" role="radio" data-after="stay">Stays at the last day</button>
+                                <button type="button" class="ad-choice-option" role="radio" data-after="restart">Starts at day 1 again</button>
+                            </div>
+                            <span class="ad-setting-hint">Stay: every day after it pays the last day's reward for as long as the streak lasts.</span>
+                        </div>
+                        <label class="ad-setting">
+                            <span class="ad-setting-label">Days that may be missed</span>
+                            <span class="ad-setting-input"><input id="adStreakGrace" class="mm-input" type="number" min="0" max="7" step="1"><span class="ad-setting-unit">days</span></span>
+                            <span class="ad-setting-hint">0: a day without claiming ends the streak. 1: one day off in a row is fine (the streak goes on, the day off doesn't count).</span>
+                        </label>
+                    </div>
+                    <div class="ad-maint-bar">
+                        <span id="adStreakState" class="ad-note"></span>
+                        <button type="button" id="adStreakSave" class="mm-btn mm-btn-primary">Save streak</button>
                     </div>
                 </div>
 
