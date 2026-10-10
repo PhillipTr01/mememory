@@ -315,6 +315,14 @@
   align-self: flex-end;
 }
 
+/* Players and format on the first line, the mode (and Create) on the second */
+.bt-row-break {
+  flex-basis: 100%;
+  height: 0;
+  /* (the empty line takes no gap of its own) */
+  margin-top: -0.75rem;
+}
+
 /* A setting with its title on top (like the settings of a room) */
 .bt-setting {
   display: flex;
