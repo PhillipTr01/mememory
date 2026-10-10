@@ -3660,12 +3660,13 @@ document.getElementById("adRtpWorld").addEventListener("change", loadRtp);
 
 /* ---------- Daily streak ---------- */
 
-var streakData = null; // {streak, defaults, maxDays, dailyBonus}
+var streakData = null; // {world, streak, defaults, maxDays, dailyBonus}
 var streakDraft = null; // what is on the page (saved with Save)
+var streakWorld = "normal"; // the streak of the casino ("normal") or of the seasons ("season")
 
 async function loadStreak() {
   try {
-    streakData = await api("streak");
+    streakData = await api("streak?world=" + streakWorld);
     streakDraft = JSON.parse(JSON.stringify(streakData.streak));
     renderStreak();
   } catch (error) {
@@ -3685,7 +3686,10 @@ function renderStreak() {
   var card = document.getElementById("adStreakToggleCard");
   card.classList.toggle("on", streakDraft.on);
   card.classList.toggle("off", !streakDraft.on);
-  document.getElementById("adStreakBase").innerText = "Daily bonus 🪙 " + formatCoins(streakData.dailyBonus);
+  document.querySelectorAll("[data-streak-world]").forEach((tab) => tab.classList.toggle("active", tab.dataset.streakWorld == streakWorld));
+  var season = streakWorld == "season";
+  document.getElementById("adStreakBase").innerText = (season ? "Season bonus " : "Daily bonus 🪙 ") + formatCoins(streakData.dailyBonus);
+  document.getElementById("adStreakNote").innerText = "Percent of the daily bonus each day of the streak pays (100% = the plain bonus)." + (season ? " Every season: of its own daily bonus (the coins below: the default bonus of a new season) - its streak starts with the season." : " Outside of seasons.");
   var list = document.getElementById("adStreakDays");
   var top = Math.max(...streakDraft.rewards, 1);
   list.replaceChildren(
@@ -3738,6 +3742,16 @@ function streakState(text) {
   document.getElementById("adStreakSave").disabled = !dirty;
 }
 
+// The casino's streak or the seasons' (unsaved changes: asked first)
+document.querySelectorAll("[data-streak-world]").forEach((tab) =>
+  tab.addEventListener("click", async () => {
+    if (tab.dataset.streakWorld == streakWorld) return;
+    if (streakChanged() && !(await confirmDialog({ title: "Discard the changes?", text: "The changes of this streak aren't saved yet.", confirmLabel: "Discard", danger: true }))) return;
+    streakWorld = tab.dataset.streakWorld;
+    loadStreak();
+  }),
+);
+
 document.getElementById("adStreakOn").addEventListener("change", (event) => {
   streakDraft.on = event.target.checked;
   renderStreak();
@@ -3773,7 +3787,7 @@ document.getElementById("adStreakSave").addEventListener("click", async () => {
   var save = document.getElementById("adStreakSave");
   save.disabled = true;
   try {
-    streakData = await api("streak", { on: streakDraft.on, rewards: streakDraft.rewards.map(Number), after: streakDraft.after, grace: Number(streakDraft.grace) });
+    streakData = await api("streak", { world: streakWorld, on: streakDraft.on, rewards: streakDraft.rewards.map(Number), after: streakDraft.after, grace: Number(streakDraft.grace) });
     streakDraft = JSON.parse(JSON.stringify(streakData.streak));
     renderStreak();
     showHint("Daily streak saved.");

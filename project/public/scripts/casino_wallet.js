@@ -12,7 +12,8 @@
   var bonusAmount = 0;
   var bonusTimer = null;
   var streak = null; // {on, day, next, rewards, after, grace, base} - the daily streak (none in test mode)
-  var claiming = null; // the streak as it was when the coins were claimed (for the popup)
+  var claimPopup = null; // the open popup of today's free coins ({claimed(paid), close})
+  var testCoins = false; // the admin's test mode: no popup by itself
 
   function format(value) {
     return Number(value).toLocaleString("en-US");
@@ -20,12 +21,24 @@
 
   /* ---------- Free coins once a day ---------- */
 
+  /*
+   * The free coins of the day are claimed in a popup that comes by itself - on the first casino page of the
+   * day (and on every page until they are claimed; also when midnight passes on an open page). The 🎁 in
+   * the bar only tells: the time to the next ones, the streak.
+   */
   function renderBonus() {
     var text = document.getElementById("navBonusText");
-    var ready = bonusAt == null || Date.now() >= bonusAt;
+    // Midnight passed on this page: the next day of the streak (what the server will pay)
+    if (bonusAt != null && Date.now() >= bonusAt) {
+      bonusAt = null;
+      if (streak) {
+        streak = { ...streak, next: streak.on ? (streak.day || 0) + 1 : 1 };
+        bonusAmount = streak.on ? rewardOf(streak, streak.next) : streak.base;
+      }
+    }
+    var ready = bonusAt == null;
     bonusButton.hidden = false;
     bonusButton.classList.toggle("ready", ready);
-    bonusButton.disabled = !ready;
     // The streak: a flame with its days next to the gift
     var flame = document.getElementById("navBonusStreak");
     var shown = streak && streak.on ? (ready ? (streak.next > 1 ? streak.next - 1 : 0) : streak.day) : 0;
@@ -39,30 +52,34 @@
     } else if (flame) flame.remove();
     if (ready) {
       text.innerText = "+" + format(bonusAmount);
-      bonusButton.title = streak && streak.on && streak.next > 1 ? "Day " + streak.next + " of your streak - claim it before midnight" : "Your free coins for today";
+      bonusButton.title = "Your free coins for today";
+      if (!claimPopup && !testCoins) openClaim();
     } else {
       var minutes = Math.ceil((bonusAt - Date.now()) / 60000);
       text.innerText = minutes >= 60 ? Math.floor(minutes / 60) + "h " + String(minutes % 60).padStart(2, "0") + "m" : minutes + "m";
-      bonusButton.title = "The next free coins come in " + text.innerText;
+      bonusButton.title = "The next free coins come in " + text.innerText + (streak && streak.on && streak.day > 0 ? " - day " + (streak.day + 1) + " of your streak" : "");
     }
   }
 
+  // (only to look at - the popup claims; test mode: a click opens it)
   bonusButton.addEventListener("click", () => {
-    bonusButton.disabled = true;
-    claiming = streak;
-    socket.emit("claimBonus");
+    if (bonusAt == null && !claimPopup) openClaim();
   });
+
+  function openClaim() {
+    var info = streak || { on: false, next: 1, base: bonusAmount, rewards: [100], after: "stay", grace: 0 };
+    claimPopup = bonusDialog(info, bonusAmount, () => socket.emit("claimBonus"));
+  }
 
   socket.on("bonusClaimed", (paid) => {
     bonusButton.classList.remove("claimed");
     void bonusButton.offsetWidth; // restart the animation
     bonusButton.classList.add("claimed");
-    if (claiming && claiming.on && typeof paid == "number") streakDialog(claiming, paid);
-    claiming = null;
+    if (claimPopup && typeof paid == "number") claimPopup.claimed(paid);
   });
 
   // (test mode: the admin shows the streak popup with sample data)
-  socket.on("streakPreview", (data) => streakDialog(data.info, data.paid));
+  socket.on("streakPreview", (data) => bonusDialog(data.info, data.paid));
 
   /* ---------- A reward: a season's place, or from the admin - items and / or coins ---------- */
 
@@ -138,53 +155,85 @@
     return Math.round((info.base * list[Math.max(0, index)]) / 100);
   }
 
-  function streakDialog(info, paid) {
+  /*
+   * The popup of the daily free coins: the streak's days, today's coins. With `claim`: a Claim button first
+   * (it can't be closed before - the coins can't be forgotten), then "Nice!". Without: already paid (`amount`).
+   */
+  function bonusDialog(info, amount, claim) {
     var today = info.next || 1;
+    var streakOn = info.on;
     var backdrop = el("div", "mm-dialog-backdrop");
     var dialog = el("div", "mm-dialog nav-streak");
     dialog.setAttribute("role", "dialog");
     dialog.setAttribute("aria-modal", "true");
-    dialog.setAttribute("aria-label", "Daily streak");
-    var flame = el("div", "nav-streak-flame", "🔥");
-    var title = el("h2", "mm-dialog-title", today > 1 ? today + "-day streak!" : "Streak started!");
-    var amount = el("div", "nav-streak-amount", "+" + format(paid));
-    // The days around today (a long streak: a window of 7 - today in it)
-    var count = Math.min(7, Math.max(info.rewards.length, 1));
-    var first = Math.max(1, today - Math.max(0, count - 3));
-    if (info.rewards.length <= 7 && info.after == "restart") first = today - ((today - 1) % info.rewards.length);
-    else if (info.rewards.length <= 7 && today <= info.rewards.length) first = 1;
-    var row = el("div", "nav-streak-days");
-    for (var day = first; day < first + count; day++) {
-      var state = day < today ? "done" : day == today ? "today" : "next";
-      var tile = el("div", "nav-streak-day " + state);
-      tile.style.setProperty("--i", day - first);
-      tile.appendChild(el("span", "nav-streak-day-name", "Day " + day));
-      tile.appendChild(el("span", "nav-streak-day-icon", state == "done" ? "✓" : state == "today" ? "🔥" : "🎁"));
-      tile.appendChild(el("span", "nav-streak-day-coins", format(rewardOf(info, day))));
-      row.appendChild(tile);
+    dialog.setAttribute("aria-label", "Daily free coins");
+    var flame = el("div", "nav-streak-flame", streakOn ? "🔥" : "🎁");
+    var title = el("h2", "mm-dialog-title");
+    var coinsLine = el("div", "nav-streak-amount", "+" + format(amount));
+    var parts = [flame, title, coinsLine];
+    if (streakOn) {
+      // The days around today (a long streak: a window of 7 - today in it)
+      var count = Math.min(7, Math.max(info.rewards.length, 1));
+      var first = Math.max(1, today - Math.max(0, count - 3));
+      if (info.rewards.length <= 7 && info.after == "restart") first = today - ((today - 1) % info.rewards.length);
+      else if (info.rewards.length <= 7 && today <= info.rewards.length) first = 1;
+      var row = el("div", "nav-streak-days");
+      for (var day = first; day < first + count; day++) {
+        var state = day < today ? "done" : day == today ? "today" : "next";
+        var tile = el("div", "nav-streak-day " + state);
+        tile.style.setProperty("--i", day - first);
+        tile.appendChild(el("span", "nav-streak-day-name", "Day " + day));
+        tile.appendChild(el("span", "nav-streak-day-icon", state == "done" ? "✓" : state == "today" ? "🔥" : "🎁"));
+        tile.appendChild(el("span", "nav-streak-day-coins", format(rewardOf(info, day))));
+        row.appendChild(tile);
+      }
+      parts.push(row);
     }
-    var tomorrow = rewardOf(info, today + 1);
-    var text = el(
-      "p",
-      "mm-dialog-text nav-streak-text",
-      "Tomorrow: +" + format(tomorrow) + ". " + (info.grace > 0 ? "Miss more than " + info.grace + " day" + (info.grace == 1 ? "" : "s") + " in a row and the streak starts over." : "Miss a day and the streak starts over."),
-    );
+    var text = el("p", "mm-dialog-text nav-streak-text");
     var buttons = el("div", "mm-dialog-actions");
-    var ok = el("button", "mm-btn mm-btn-primary", "Nice!");
+    var ok = el("button", "mm-btn mm-btn-primary");
     ok.type = "button";
     buttons.appendChild(ok);
-    dialog.append(flame, title, amount, row, text, buttons);
+    parts.push(text, buttons);
+    dialog.append(...parts);
     backdrop.appendChild(dialog);
     document.body.appendChild(backdrop);
+    var done = !claim;
+    var busy = false; // this page asked for the coins (the answer comes)
     var close = () => {
       backdrop.remove();
       document.removeEventListener("keydown", onKey);
+      if (claimPopup && claimPopup.backdrop == backdrop) claimPopup = null;
     };
-    var onKey = (event) => (event.key == "Escape" || event.key == "Enter") && close();
+    // (before the coins are claimed: only the button - no Escape, no click beside it)
+    var onKey = (event) => done && (event.key == "Escape" || event.key == "Enter") && close();
     document.addEventListener("keydown", onKey);
-    ok.addEventListener("click", close);
-    backdrop.addEventListener("click", (event) => event.target == backdrop && close());
+    backdrop.addEventListener("click", (event) => done && event.target == backdrop && close());
+    var rules = info.grace > 0 ? "Miss more than " + info.grace + " day" + (info.grace == 1 ? "" : "s") + " in a row and the streak starts over." : "Miss a day and the streak starts over.";
+    // Claimed (paid: what came): the thanks
+    var showDone = (paid) => {
+      done = true;
+      title.innerText = streakOn ? (today > 1 ? today + "-day streak!" : "Streak started!") : "Your free coins!";
+      coinsLine.innerText = "+" + format(paid);
+      text.innerText = streakOn ? "Tomorrow: +" + format(rewardOf(info, today + 1)) + ". " + rules : "Come back tomorrow for more.";
+      ok.disabled = false;
+      ok.innerText = "Nice!";
+      ok.onclick = close;
+      ok.focus();
+    };
+    if (claim) {
+      title.innerText = streakOn && today > 1 ? "Day " + today + " of your streak" : "Your daily free coins";
+      text.innerText = streakOn ? (today > 1 ? "Keep it going - " : "Start a streak - ") + "every day in a row pays more. " + rules : "Free coins - every day.";
+      ok.innerText = "Claim +" + format(amount);
+      ok.onclick = () => {
+        busy = true;
+        ok.disabled = true;
+        ok.innerText = "Claiming...";
+        claim();
+      };
+    } else showDone(amount);
     ok.focus();
+    return { backdrop: backdrop, claimed: showDone, close: close, done: () => done, busy: () => busy };
   }
 
   // Test mode started or stopped meanwhile: the page again (it connects to the right world then)
@@ -193,6 +242,14 @@
   });
 
   socket.on("coins", (data) => {
+    testCoins = data.test === true;
+    // Claimed on another page meanwhile: this popup goes (the thanks stay) - this page claiming: its answer
+    // comes in a moment (no answer: claimed elsewhere first - it goes then)
+    var open = claimPopup;
+    if (!data.bonus && open && !open.done()) {
+      if (!open.busy()) open.close();
+      else setTimeout(() => !open.done() && open.close(), 2000);
+    }
     if (data.bonusIn != null) {
       bonusAt = data.bonus ? null : Date.now() + data.bonusIn;
       bonusAmount = data.bonusAmount || bonusAmount;

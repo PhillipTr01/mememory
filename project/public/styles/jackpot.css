@@ -1900,9 +1900,17 @@ body.jackpot-theme {
   white-space: nowrap;
 }
 
-.nav-bonus:disabled {
+/* Only to look at: the time to the next free coins and the streak - they are claimed in the popup */
+.nav-bonus {
   cursor: default;
-  opacity: 0.75;
+}
+
+.nav-bonus:not(.ready) {
+  opacity: 0.85;
+}
+
+.nav-bonus.ready {
+  cursor: pointer;
 }
 
 .nav-bonus.ready {

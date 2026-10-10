@@ -50,3 +50,20 @@ test("streak: after the last day it can start again; off - every day the plain b
   await streak.reset();
   assert.deepStrictEqual(streak.current().rewards, streak.DEFAULTS.rewards);
 });
+
+test("streak: the normal casino and the seasons have their own settings (an old saved setting counts for both)", async () => {
+  await streak.reset();
+  await streak.update({ on: true, rewards: [100, 500], after: "stay", grace: 0 }, "season");
+  assert.deepStrictEqual([streak.percentFor(2), streak.percentFor(2, "season")], [streak.DEFAULTS.rewards[1], 500]);
+  assert.deepStrictEqual(streak.current("season").rewards, [100, 500]);
+  assert.deepStrictEqual(streak.current().rewards, streak.DEFAULTS.rewards, "the casino's stays");
+  await streak.update({ on: false }, "normal");
+  assert.strictEqual(streak.percentFor(2), 100);
+  assert.strictEqual(streak.percentFor(2, "season"), 500, "off only in the casino");
+  // Saved before the worlds had their own: both get it
+  const Setting = require("../models/Setting");
+  await Setting.updateOne({ key: "admin:streak" }, { $set: { value: { on: true, rewards: [100, 200, 300], after: "stay", grace: 1 } } }, { upsert: true });
+  await streak.load();
+  assert.deepStrictEqual([streak.current().rewards, streak.current("season").rewards], [[100, 200, 300], [100, 200, 300]]);
+  await streak.reset();
+});

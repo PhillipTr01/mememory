@@ -245,9 +245,9 @@ const GAMES = {
         items: [
           "All players by their coins.",
           "Without a season it is live - always up to date. The arrows show who went up or down since midnight.",
-          `${world === "/season" ? "" : "🪙 "}${n(coins.wallet(world).dailyBonus())} free coins every day for everybody (🎁 in the top bar).`,
+          `${world === "/season" ? "" : "🪙 "}${n(coins.wallet(world).dailyBonus())} free coins every day for everybody - they pop up on your first visit of the day, claim them there (🎁 in the top bar: the time to the next ones).`,
           ...(L.CASHBACK_PERCENT > 0 ? [`💸 Daily cashback: after midnight ${L.CASHBACK_PERCENT}% of what you lost in the games the day before comes back${L.CASHBACK_MAX > 0 ? ` (up to ${n(L.CASHBACK_MAX)})` : ""}.`] : []),
-          ...(require("./streak").current().on ? [`🔥 Daily streak: claim them day after day and they grow - up to ${n(Math.round((coins.wallet(world).dailyBonus() * Math.max(...require("./streak").current().rewards)) / 100))} a day. Miss a day and it starts over.`] : []),
+          ...(require("./streak").current(world).on ? [`🔥 Daily streak: claim them day after day and they grow - up to ${n(Math.round((coins.wallet(world).dailyBonus() * Math.max(...require("./streak").current(world).rewards)) / 100))} a day. Miss a day and it starts over.`] : []),
         ],
       },
       {

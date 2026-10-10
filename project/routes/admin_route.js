@@ -332,14 +332,18 @@ module.exports = function () {
   );
 
   // The daily streak: the reward of every day (percent of the daily bonus), what comes after the last day, the grace
-  router.get("/api/streak", admin, (req, res) => res.json({ streak: streak.current(), defaults: streak.DEFAULTS, maxDays: streak.MAX_DAYS, dailyBonus: config.DAILY_BONUS }));
+  // world: "normal" (the casino) or "season" (every season - its own daily bonus is the base)
+  const streakWorld = (value) => (value === "season" ? "season" : "normal");
+  const streakView = (world) => ({ world: world, streak: streak.current(world), defaults: streak.DEFAULTS, maxDays: streak.MAX_DAYS, dailyBonus: world === "season" ? config.SEASON_DAILY_BONUS : config.DAILY_BONUS });
+  router.get("/api/streak", admin, (req, res) => res.json(streakView(streakWorld(req.query.world))));
   router.post(
     "/api/streak",
     admin,
     asyncHandler(async (req, res) => {
-      const result = await streak.update(req.body || {});
+      const { world, ...input } = req.body || {};
+      const result = await streak.update(input, streakWorld(world));
       if (result.error) return res.status(400).json({ error: result.error });
-      res.json({ streak: result.streak, defaults: streak.DEFAULTS, maxDays: streak.MAX_DAYS, dailyBonus: config.DAILY_BONUS });
+      res.json(streakView(streakWorld(world)));
     }),
   );
 

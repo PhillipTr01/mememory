@@ -479,6 +479,11 @@
 
                 <!--- Daily streak: the free coins grow day after day --->
                 <div class="ad-stack ad-streak" id="adStreak" hidden>
+                    <!--- The normal casino and the seasons: each its own streak --->
+                    <div id="adStreakWorld" class="ad-filter ad-streak-world" role="tablist" aria-label="Streak of">
+                        <button type="button" role="tab" data-streak-world="normal" class="active">🎰 Casino</button>
+                        <button type="button" role="tab" data-streak-world="season">🏆 Seasons</button>
+                    </div>
                     <div class="ad-card ad-toggle-card ad-toggle-test" id="adStreakToggleCard">
                         <div class="ad-toggle-info">
                             <h2 class="ad-title">🔥 Daily streak</h2>
@@ -495,7 +500,7 @@
                             <h2 class="ad-title">Rewards per day</h2>
                             <span class="ad-pill" id="adStreakBase"></span>
                         </div>
-                        <p class="ad-note">Percent of the daily bonus each day of the streak pays (100% = the plain bonus). The coins below: outside of a season - a season pays the same percents of its own bonus.</p>
+                        <p class="ad-note" id="adStreakNote">Percent of the daily bonus each day of the streak pays (100% = the plain bonus).</p>
                         <div class="ad-streak-days" id="adStreakDays"></div>
                         <div class="ad-streak-tools">
                             <button type="button" class="mm-btn mm-btn-sm" id="adStreakAdd">+ Day</button>

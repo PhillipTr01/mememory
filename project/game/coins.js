@@ -189,19 +189,19 @@ function makeWallet(kind) {
   }
 
   function streakBonus(day) {
-    return Math.round((dailyBonus() * streak.percentFor(day)) / 100);
+    return Math.round((dailyBonus() * streak.percentFor(day, kind)) / 100);
   }
 
   // The day of the streak a claim now would be (the season's: only claims of this season count)
   function streakDay(user, now = Date.now()) {
-    return streak.dayFor(bonusAtOf(user), user ? user[f.streak] : null, now);
+    return streak.dayFor(bonusAtOf(user), user ? user[f.streak] : null, now, kind);
   }
 
   // The streak for the pages: {on, day, next, rewards, after, grace, base} - base: the daily bonus (rewards are percents of it)
   function streakInfo(user, now = Date.now()) {
     const claimedToday = user != null && !bonusAvailable(user, now);
     const last = user && bonusAtOf(user) ? user[f.streak] : null;
-    return { ...streak.info(bonusAtOf(user), last, claimedToday, now), base: dailyBonus() };
+    return { ...streak.info(bonusAtOf(user), last, claimedToday, now, kind), base: dailyBonus() };
   }
 
   // The most one bet may take with this balance (null: no cap) - the pages use it for their "Max"
@@ -362,7 +362,7 @@ function makeWallet(kind) {
     if (season) notToday.push({ [f.reset]: { $ne: walletBase().reset } });
     const result = await User.updateOne({ username: username, $or: notToday }, { $inc: { [f.coins]: amount }, $set: { [f.bonusAt]: new Date(now), [f.streak]: day } });
     if (!changed(result)) return 0;
-    log(username, amount, "daily bonus", [streak.current().on && day > 1 ? `day ${day} of the streak` : null, count > 1 ? `${count} days` : null].filter(Boolean).join(" · ") || undefined);
+    log(username, amount, "daily bonus", [streak.current(kind).on && day > 1 ? `day ${day} of the streak` : null, count > 1 ? `${count} days` : null].filter(Boolean).join(" · ") || undefined);
     notify(username);
     return amount;
   }
