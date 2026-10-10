@@ -18,6 +18,11 @@ var SUITS = { s: "♠", h: "♥", d: "♦", c: "♣" };
 var RESULTS = { win: "Win", lose: "Lose", push: "Push", bust: "Bust", blackjack: "Blackjack!" };
 
 // Used by chat.js
+// The sounds of the page (casino_sound.js)
+function sound(name, options) {
+  if (window.casinoSound) window.casinoSound.play(name, options);
+}
+
 function chatUsername() {
   return myName;
 }
@@ -57,13 +62,38 @@ socket.on("coins", (data) => {
   myCapRule = data.betCapRule || null;
   if (state) renderBars();
 });
-socket.on("blackjackError", (message) => showHint(message, "error"));
+socket.on("blackjackError", (message) => {
+  showHint(message, "error");
+  sound("error");
+});
 
 socket.on("blackjackState", (data) => {
   previous = state;
   state = data;
   render();
+  hear();
 });
+
+// What changed since the last state: chips, my turn, my results (the cards: cardElement)
+function hear() {
+  if (!previous || previous.round != state.round || !previous.seats) return;
+  var staked = (s) => (s ? (s.bet || 0) + (s.side ? (s.side.pairs || 0) + (s.side.plus3 || 0) : 0) : 0);
+  if (state.seats.some((seat, i) => staked(seat) > staked(previous.seats[i]))) sound("chip");
+  var turn = (s) => s.current && s.seats[s.current.seat] && s.seats[s.current.seat].name == myName;
+  if (turn(state) && !(turn(previous) && previous.current.seat == state.current.seat && previous.current.hand == state.current.hand)) sound("notice");
+  // My hands that got their result just now
+  var results = [];
+  state.seats.forEach((seat, i) => {
+    if (!seat || seat.name != myName) return;
+    var before = previous.seats[i] ? previous.seats[i].hands : [];
+    seat.hands.forEach((hand, h) => hand.result && !(before[h] && before[h].result) && results.push(hand.result));
+  });
+  if (!results.length) return;
+  if (results.includes("blackjack")) sound("bigWin");
+  else if (results.includes("win")) sound("win");
+  else if (results.every((r) => r == "push")) sound("tick");
+  else sound("lose");
+}
 
 socket.on("blackjackTables", renderLobby);
 
@@ -122,6 +152,7 @@ function cardElement(card, fresh, delay) {
     element.append(el("span", "pk-rank", rank), el("span", "pk-suit", SUITS[card[1]]));
   }
   if (fresh && delay > 0) element.style.animationDelay = delay + "ms";
+  if (fresh) sound("deal", { delay: (delay || 0) / 1000 });
   return element;
 }
 
@@ -344,6 +375,8 @@ function renderDealer() {
     ...state.dealer.cards.map((card, i) => {
       // New, or just turned over
       var fresh = i >= before.length || (before[i] == null && card != null);
+      // (the hidden card turned)
+      if (i < before.length && before[i] == null && card != null) sound("flip");
       var delay = dealing && i < 2 ? dealDelay(i, count, count) : (i - before.length) * 90;
       var element = cardElement(card, fresh, delay);
       // The dealer checks the hidden card (an ace or a 10 showing): it lifts at the corner

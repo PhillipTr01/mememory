@@ -16,6 +16,11 @@ var AMOUNT_KEY = "baucuaAmount";
 var shownRolls = null; // the rounds in the row of last rolls (a new one fades in)
 
 // Used by chat.js
+// The sounds of the page (casino_sound.js)
+function sound(name, options) {
+  if (window.casinoSound) window.casinoSound.play(name, options);
+}
+
 function chatUsername() {
   return myName;
 }
@@ -63,10 +68,17 @@ socket.on("coins", (data) => {
   if (!rolling) renderCoins();
   renderControls();
 });
-socket.on("baucuaError", (message) => showHint(message, "error"));
+socket.on("baucuaError", (message) => {
+  showHint(message, "error");
+  sound("error");
+});
 
+var heardBets = null; // how many bets of the round were heard (a chip for every new one)
 socket.on("baucuaState", (state) => {
   var first = table == null;
+  var count = state.bets ? state.bets.length : 0;
+  if (heardBets != null && state.round == heardBets.round && count > heardBets.count) sound("chip");
+  heardBets = { round: state.round, count: count };
   table = state;
   rules = state.rules;
   if (first) {
@@ -123,6 +135,7 @@ async function playRoll(state) {
   // Down
   bowl.classList.add("down");
   if (done < cover) {
+    sound("knock", { delay: (cover - done) / 1000 - 0.1 });
     await bowl.animate([{ transform: "translate(-50%, -60%)", opacity: 0 }, { transform: "translate(-50%, 0)", opacity: 1 }], { duration: cover - done, easing: "cubic-bezier(0.3, 0.7, 0.4, 1)" }).finished.catch(() => {});
     done = cover;
   }
@@ -143,6 +156,7 @@ async function playRoll(state) {
       { duration: 520, iterations: Math.max(1, Math.round((lift - done) / 520)) },
     );
     plate.classList.add("shaking");
+    sound("shake", { duration: (lift - done) / 1000 });
     await Promise.race([shake.finished.catch(() => {}), wait(lift - done)]);
     shake.cancel();
     plate.classList.remove("shaking");
@@ -157,6 +171,7 @@ async function playRoll(state) {
       .finished.catch(() => {});
   }
   bowl.classList.remove("down");
+  sound("dice");
   document.querySelectorAll(".bc-die").forEach((die, i) => die.animate([{ transform: "scale(0.6) rotate(var(--tilt))", opacity: 0.3 }, { transform: "scale(1.15) rotate(var(--tilt))", opacity: 1 }, { transform: "scale(1) rotate(var(--tilt))", opacity: 1 }], { duration: 450, delay: i * 120, easing: "ease-out" }));
   await wait(Math.max(0, Math.min(600, spin - done - up)));
   rolling = false;
@@ -186,7 +201,15 @@ function showResult(state) {
   status.className = "rl-status-text" + (won > 0 ? " bc-won" : "");
   status.innerText = won > 0 ? "You won 🪙 " + formatCoins(won) + "!" : triple ? "Three times " + animalOf(dice[0]).name + "!" : dice.map((id) => animalOf(id).name).join(" · ");
   document.querySelector(".bc-plate").classList.toggle("triple", triple);
+  // (a sound only for who played this round)
+  var played = table.bets.some((bet) => bet.name == myName);
+  if (won > 0) sound(dice.filter((id) => table.bets.some((bet) => bet.name == myName && bet.animal == id)).length == 3 ? "jackpot" : won >= myTotalOf(table) * 3 ? "bigWin" : "win");
+  else if (played) sound("lose");
   renderCoins();
+}
+
+function myTotalOf(state) {
+  return state.bets.filter((bet) => bet.name == myName).reduce((sum, bet) => sum + bet.amount, 0);
 }
 
 function clearResult() {
@@ -340,6 +363,7 @@ function renderStatus() {
       shown = seconds;
       status.className = "rl-status-text";
       status.replaceChildren("Shaking in ", el("span", "rl-seconds" + (seconds <= 3 ? " soon" : ""), seconds + "s"));
+      if (seconds <= 3 && seconds > 0) sound("countdown");
     }
     if (left > 0) statusFrame = requestAnimationFrame(tick);
   };

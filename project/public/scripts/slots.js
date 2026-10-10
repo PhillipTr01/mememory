@@ -34,6 +34,11 @@ function el(tag, className, text) {
   return element;
 }
 
+// The sounds of the page (casino_sound.js) - nothing when it isn't there
+function sound(name, options) {
+  if (window.casinoSound) window.casinoSound.play(name, options);
+}
+
 function symbolOf(id) {
   return setup.symbols.find((symbol) => symbol.id == id);
 }
@@ -86,6 +91,7 @@ socket.on("slotsError", (message) => {
   holding = false;
   if (autoOn()) stopAuto();
   showHint(message, "error", document.getElementById("slSpin"));
+  sound("error");
   spinning = false;
   renderControls();
 });
@@ -334,6 +340,7 @@ function animateReels(grid, time, sweatTime, stopped, strips, stops) {
   var from = kind == "coins" ? 5 - coinReels : 4;
   // (the first sweating reel the sweat, every further one half of it more - the same as the server)
   var extra = (i) => (sweat && i >= from ? sweat * (1 + 0.5 * (i - from)) : 0);
+  sound("spin");
   return Promise.all(
     reels.map((reel, i) => {
       var strip = strips[i];
@@ -365,12 +372,15 @@ function animateReels(grid, time, sweatTime, stopped, strips, stops) {
         reel.classList.remove("sweat");
         // Keep only the 3 symbols that are shown
         showGrid(i, grid[i]);
+        sound("reelStop", { index: i });
+        if (grid[i].includes("bonus")) sound("tickHigh");
         if (stopped) stopped(i);
         // Two 🎁 in sight (after reel 3) - or enough 🪙: they light up, the reels still turning sweat
         var light = kind == "gifts" ? ".sl-cell.scatter" : ".sl-cell.coin";
         if (sweat && i == (kind == "gifts" ? 2 : from - 1)) {
           reels.slice(0, i + 1).forEach((r) => r.querySelectorAll(light).forEach((c) => c.classList.add("hit")));
           reels.slice(from).forEach((r) => r.classList.add("sweat"));
+          sound("whoosh");
         }
         // A coin on a sweating reel lights up too
         if (sweat && kind == "coins" && i >= from && i < 4) reel.querySelectorAll(light).forEach((c) => c.classList.add("hit"));
@@ -542,6 +552,7 @@ function startScreen(result, stage, texts) {
     start.type = "button";
     stage.replaceChildren(el("div", "sl-stage-title", texts.icons), el("div", "sl-big-title", texts.title), el("div", "sl-stage-sub won", texts.sub), start);
     coinShower(stage, 25);
+    sound("bonus");
     var go = () => {
       document.removeEventListener("keydown", onKey, true);
       stage.hidden = true;
@@ -581,6 +592,7 @@ async function playWheels(result, stage, time) {
   var label = el("div", "sl-stage-sub", "Free spins and multiplier...");
   stage.replaceChildren(el("div", "sl-stage-title", "BONUS GAME"), wheel, label);
   var spinTime = time * 0.62;
+  sound("wheel", { duration: spinTime / 1000 });
   await Promise.all([
     spinRing(outer, SPIN_FIELDS, bonus.startSpins, 4, 1, spinTime),
     spinRing(inner, MULTIPLIER_FIELDS, bonus.multiplier, 3, -1, spinTime * 0.86).then(() => {
@@ -589,6 +601,7 @@ async function playWheels(result, stage, time) {
   ]);
   label.innerText = bonus.startSpins + " free spins · start × " + bonus.multiplier;
   label.classList.add("won");
+  sound("fanfare");
   await wait(time * 0.2);
   stage.hidden = true;
   stage.replaceChildren();
@@ -666,6 +679,7 @@ async function playFreeSpins(result, from, progress) {
   var amount = el("div", "sl-big-amount sl-bonus-amount", "🪙 0");
   var sub = el("div", "sl-stage-sub sl-bonus-sub", bonus.freeSpins.length + " free spins");
   stage.replaceChildren(el("div", "sl-bonus-glow"), el("div", "sl-big-title", result.capped ? "MAX WIN" : "BONUS WIN"), amount, sub);
+  sound(times >= 50 ? "jackpot" : "bigWin");
   coinShower(stage, Math.min(80, 15 + Math.round(times)));
   var counting = end * 0.55;
   countUp(amount, bonus.win, counting);
@@ -867,6 +881,7 @@ async function playCoinGame(result, from, started) {
     var landed = new Map(respin.coins.map((coin) => [coin.reel * 3 + coin.row, coin]));
     // Every empty spot spins on its own (a little reel), reel after reel they stop
     var spins = [];
+    sound("spin");
     document.querySelectorAll(".sl-reel").forEach((reel, i) => {
       reel.querySelectorAll(".sl-track > .sl-cell").forEach((box, row) => {
         if (held.has(i * 3 + row)) return;
@@ -877,6 +892,7 @@ async function playCoinGame(result, from, started) {
     await Promise.all(spins);
     landed.forEach((coin, spot) => held.set(spot, coin));
     if (landed.size) {
+      sound("coin");
       floatWin("+" + landed.size + (landed.size == 1 ? " COIN" : " COINS"));
       text.innerText = "🪙 " + formatCoins(sum());
       detail.innerText = held.size + " coins";
@@ -905,6 +921,7 @@ async function playCoinGame(result, from, started) {
   var prizes = game.coins.filter((c) => c.prize).map((c) => c.prize.toUpperCase());
   var sub = el("div", "sl-stage-sub sl-bonus-sub", game.coins.length + " coins" + (prizes.length ? " · " + prizes.join(" · ") : "") + (game.ultra ? " · ULTRA" : ""));
   stage.replaceChildren(el("div", "sl-bonus-glow"), el("div", "sl-big-title", game.ultra ? "ULTRA WIN" : "COIN WIN"), amount, sub);
+  sound(game.ultra || game.win >= bet * 50 ? "jackpot" : "bigWin");
   coinShower(stage, Math.min(80, 15 + Math.round(game.win / bet)));
   var counting = end * 0.55;
   countUp(amount, game.win, counting);
@@ -989,6 +1006,7 @@ function pickChest(result, coin) {
       await wait(700);
       if (data) {
         applyChest(result, data);
+        sound("chest");
         // The picked chest first, then what the others had
         var show = (i) => {
           var box = boxes[i];
@@ -1034,6 +1052,7 @@ function miniSpin(box, result, time) {
 }
 
 function flashPrize(prize) {
+  sound(prize == "ultra" || prize == "mega" ? "fanfare" : "coins");
   var pill = document.querySelector('.sl-prize[data-prize="' + prize + '"]');
   if (pill) pill.animate([{ transform: "scale(1)" }, { transform: "scale(1.25)", filter: "brightness(1.5)" }, { transform: "scale(1)" }], { duration: 700, easing: "ease-out" });
 }
@@ -1083,6 +1102,7 @@ function continueButton(stage) {
 
 // "+ 🪙 120" rises over the reels
 function floatWin(label) {
+  sound("win");
   var tag = el("div", "sl-float", label);
   document.querySelector(".sl-window").appendChild(tag);
   tag.animate(
@@ -1129,6 +1149,7 @@ async function bigWin(result) {
   var amount = el("div", "sl-big-amount", "🪙 0");
   stage.replaceChildren(el("div", "sl-big-title", times >= 100 ? "EPIC WIN" : times >= 50 ? "MEGA WIN" : "BIG WIN"), amount, el("div", "sl-stage-sub", Math.round(times) + "× your bet"));
   coinShower(stage, times >= 50 ? 70 : 40);
+  sound(times >= 50 ? "jackpot" : "bigWin");
   countUp(amount, result.win, setup.rules.bigTime * 0.7);
   await wait(setup.rules.bigTime);
   await continueButton(stage);
@@ -1162,6 +1183,7 @@ async function showResult(result) {
   var detail = document.getElementById("slWinDetail");
   if (result.win == 0) {
     bar.className = "sl-winbar";
+    if (result.bonus || result.coinGame) sound("lose");
     text.innerText = "No win";
     detail.innerText = "Try again!";
     return;
@@ -1171,6 +1193,7 @@ async function showResult(result) {
   text.innerText = "";
   // (after a bonus game its own win screen was shown already)
   if (big && !result.bonus && !result.coinGame) await bigWin(result);
+  else if (!big && !result.bonus && !result.coinGame) sound("win");
   // (the balance comes from the server meanwhile - setup.rules.countTime after the reels)
   var counting = big ? 300 : Math.min(900, setup.rules.countTime);
   countUp(text, result.win, counting);

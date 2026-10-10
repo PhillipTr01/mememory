@@ -74,6 +74,8 @@ socket.on("chatHistory", (messages) => {
 socket.on("chatMessage", (message) => {
   hideChatError();
   addChatMessage(message, true);
+  // (a soft pop for the messages of others - the casino pages only)
+  if (window.casinoSound && message && message.name && message.name != chatUsername()) window.casinoSound.play("message");
 });
 
 socket.on("chatError", (message) => {

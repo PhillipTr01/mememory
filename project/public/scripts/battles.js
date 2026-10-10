@@ -51,6 +51,11 @@ var SLOW_END = "cubic-bezier(0.22, 0.61, 0.36, 1)";
 var TILE = 72; // height of an item in the reel
 
 // Used by chat.js
+// The sounds of the page (casino_sound.js)
+function sound(name, options) {
+  if (window.casinoSound) window.casinoSound.play(name, options);
+}
+
 function chatUsername() {
   return myName;
 }
@@ -123,7 +128,10 @@ socket.on("cases", (data) => {
   renderCreate();
 });
 
-socket.on("battleError", (message) => showHint(message, "error"));
+socket.on("battleError", (message) => {
+  showHint(message, "error");
+  sound("error");
+});
 socket.on("battleLeft", (id) => {
   var battle = battles.find((b) => b.id == id);
   casinoNotice({ icon: "🚪", title: "You left the battle", text: (battle ? "🪙 " + formatCoins(battle.price) : "Your coins") + " are back in your balance", key: "battle" });
@@ -1232,6 +1240,11 @@ async function playRound(battle, round, elapsed) {
   var skip = Math.min(elapsed || 0, duration - 500);
   var columns = document.querySelectorAll("#btBattleView .bt-seat");
   var stops = [];
+  // (the reels tick as they slow down - joined late: only what is left of them)
+  if (duration - skip > 600) {
+    sound("whoosh");
+    sound("wheel", { duration: (duration - skip) / 1000 });
+  }
   columns.forEach((column, seat) => {
     var win = itemOf(battle, round, seat);
     var window_ = column.querySelector(".bt-reel-window");
@@ -1256,7 +1269,10 @@ async function playRound(battle, round, elapsed) {
     );
   });
   await Promise.all(stops);
-  // Rare items get a little show
+  // Rare items get a little show - the sound: the rarest of the round
+  var RARITY_LEVEL = { grey: 0, blue: 1, purple: 1, pink: 2, red: 3, gold: 4 };
+  var top = Math.max(0, ...[...columns].map((column, seat) => RARITY_LEVEL[itemOf(battle, round, seat).rarity] || 0));
+  sound("reveal", { rarity: top });
   columns.forEach((column, seat) => {
     var item = itemOf(battle, round, seat);
     var tile = column.querySelector(".winner-tile");
@@ -1308,6 +1324,11 @@ function celebrate(battle) {
 
 function party(battle) {
   if (battle.id != viewId) return;
+  // (who played: a win or not - who watched: a fanfare)
+  var mySeatAt = battle.seats.findIndex((seat) => seat && seat.name == myName);
+  if (mySeatAt < 0) sound("fanfare");
+  else if (winnersOf(battle).includes(mySeatAt)) sound("bigWin");
+  else sound("lose");
   var column = document.querySelector(`#btBattleView .bt-seat[data-seat="${winnersOf(battle)[0]}"]`);
   if (column == null) return;
   var colors = ["#d4a64a", "#e0675a", "#3b82f6", "#3fae6b", "#ec4899", "#f5d76e"];
