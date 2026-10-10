@@ -745,10 +745,12 @@ function itemTile(item, extraClass) {
 function renderBattle() {
   var view = document.getElementById("btBattleView");
   var headBar = document.getElementById("btHeadBar");
-  headBar.replaceChildren();
-  if (viewId == null) return;
+  if (viewId == null) {
+    renderedKey = null;
+    headBar.replaceChildren();
+    return;
+  }
   var battle = currentBattle();
-  clearInterval(statusTimer);
   // Leave the battle (back to all battles): an icon on the far right
   var back = el("button", "bt-leave");
   back.type = "button";
@@ -759,6 +761,7 @@ function renderBattle() {
     pushView(null);
     showView();
   });
+  if (battle == null) renderedKey = null;
   if (battle == null && (!battlesLoaded || viewId == justCreated)) {
     view.replaceChildren();
     headBar.replaceChildren(back);
@@ -781,6 +784,12 @@ function renderBattle() {
   var drawing = over && ruleOf(battle) == "jackpot" && seenRunning[battle.id] && !drawShown[battle.id];
   if (drawing) over = false;
 
+  // Nothing of what the page shows changed (an update of the coins, of another battle, of the list): it stays as it is -
+  // a new drawing restarted what moves (the reel of the mode, the jackpot roulette) and flickered
+  var key = JSON.stringify([viewId, battle.phase, battle.revealed, battle.seats, battle.rounds.length, battle.nextIn != null, battle.fair.seed, rounds, over, reveal, drawing, reveal && Date.now() >= (revealing[battle.id] || Infinity), drawing && Date.now() >= (drawStarts[battle.id] || Infinity), over || battle.phase == "waiting" ? myCoins : null, spinning]);
+  if (key == renderedKey && view.firstChild) return;
+  renderedKey = key;
+  clearInterval(statusTimer);
   // One quiet line: price, cases, crazy - then the pot (gold) and leaving
   var top = el("div", "bt-battle-top");
   var facts = el("div", "bt-top-facts");
@@ -992,7 +1001,8 @@ var DRAW_SLOTS = 40; // slots of one round of the roulette
 var DRAW_LAPS = 5;
 var SLOT_WIDTH = 66;
 var SEAT_COLORS = ["#d4a64a", "#3b82f6", "#e0675a", "#3fae6b"];
-var drawing = {}; // battle id -> when the roulette started
+var renderedKey = null; // what the battle view shows now (the same again: not drawn again)
+var drawStarts = {}; // battle id -> when the roulette started
 var drawBoxes = {}; // battle id -> its roulette (the same one through every render)
 
 // The slots of one round: every seat by its share (at least one), mixed - the same on every page
@@ -1016,12 +1026,12 @@ function drawSlots(battle) {
 function playJackpotDraw(battle, grid) {
   // The first render after the last case: the roulette after the same pause as the random reveal
   // (after a random reveal it comes right away), the end after it
-  if (!drawing[battle.id]) {
+  if (!drawStarts[battle.id]) {
     var wait = battle.mode == "random" ? 0 : (lastCaseAt[battle.id] || Date.now()) + REVEAL_WAIT - Date.now();
     // (opened while it rolled: it goes on where it is - wait is below 0 then)
     if (joinedLate[battle.id] && battle.mode == "random") wait = (revealing[battle.id] || Date.now()) + REVEAL_SPIN + REVEAL_HOLD - Date.now();
     else if (!joinedLate[battle.id]) wait = Math.max(0, wait);
-    drawing[battle.id] = Date.now() + wait;
+    drawStarts[battle.id] = Date.now() + wait;
     if (wait > 0) setTimeout(renderBattle, wait);
     setTimeout(() => {
       drawShown[battle.id] = true;
@@ -1029,7 +1039,7 @@ function playJackpotDraw(battle, grid) {
       celebrate(battle);
     }, Math.max(0, wait + DRAW_SPIN + DRAW_HOLD));
   }
-  var started = drawing[battle.id];
+  var started = drawStarts[battle.id];
   if (Date.now() < started) return;
   // Already rolling on this page: the same roulette goes on (a new one would start a frame at the
   // first picture)
