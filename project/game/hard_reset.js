@@ -15,7 +15,7 @@ const persist = require("./persist");
  */
 const PARTS = [
   // The records
-  { id: "history", group: "records", label: "Coin history", about: "Every coin change and the daily leaderboard." },
+  { id: "history", group: "records", label: "Coin history", about: "Every coin change, the daily leaderboard and the money rains that fell." },
   { id: "payouts", group: "records", label: "Payouts", about: "Every payout, open and done." },
   { id: "coins", group: "records", label: "Coins", about: "All balances (normal and season) - players start again with the start coins." },
   { id: "games", group: "records", label: "Games", about: "Pots, battles, tables, rounds and last wins - every game as on its first start." },
@@ -52,6 +52,7 @@ async function hardReset(parts) {
   if (has("history")) {
     result.history = (await CoinLog.deleteMany({})).deletedCount || 0;
     await Setting.deleteMany({ key: "leaderboard" });
+    await require("./money_rain").clearDone();
   }
   if (has("payouts")) result.payouts = (await Withdrawal.deleteMany({})).deletedCount || 0;
 

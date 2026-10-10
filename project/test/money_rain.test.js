@@ -78,3 +78,17 @@ test("money rain: in the season world - only who joined, the season's coins", as
   assert.strictEqual(h.userOf("mr_b").seasonCoins || 0, 0, "not in the season");
   seasons.reset();
 });
+
+test("money rain: the hard reset - the coin history takes the rains that fell, the money rains part the planned ones", async () => {
+  rain.reset();
+  setAll();
+  const now = Date.now();
+  await rain.create({ amount: 10, target: "all" }, now);
+  await rain.create({ amount: 20, target: "all", at: now + 3600 * 1000 }, now);
+  assert.deepStrictEqual([rain.list().done.length, rain.list().planned.length], [1, 1]);
+  const { hardReset } = require("../game/hard_reset");
+  await hardReset(["history"]);
+  assert.deepStrictEqual([rain.list().done.length, rain.list().planned.length], [0, 1]);
+  await hardReset(["rains"]);
+  assert.deepStrictEqual([rain.list().done.length, rain.list().planned.length], [0, 0]);
+});

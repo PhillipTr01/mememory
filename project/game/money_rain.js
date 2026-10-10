@@ -186,10 +186,17 @@ async function clearPlanned() {
   changes.emit("change");
 }
 
+// The hard reset of the records: the money rains that fell are gone (the planned ones stay)
+async function clearDone() {
+  state.rains = state.rains.filter((rain) => rain.status === "planned");
+  await save();
+  changes.emit("change");
+}
+
 // Tests: everything forgotten
 function reset() {
   state = { rains: [], next: 1 };
   loaded = true;
 }
 
-module.exports = { TARGETS, REPEATS, changes, setOnline, load, start, tick, list, create, cancel, clearPlanned, now, preview, targets, check, reset };
+module.exports = { TARGETS, REPEATS, changes, setOnline, load, start, tick, list, create, cancel, clearPlanned, clearDone, now, preview, targets, check, reset };
