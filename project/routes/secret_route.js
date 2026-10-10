@@ -228,7 +228,8 @@ module.exports = function (auth) {
     dailyBonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : coins.season.dailyBonus(),
     secondChances: season.secondChances || 0,
     chanceDelay: Number.isInteger(season.chanceDelay) ? season.chanceDelay : null,
-    prizes: season.prizesOn ? season.prizes : [],
+    // (each prize as one line: the own prize, the coins, the items - like on the leaderboard)
+    prizes: season.prizesOn ? season.prizes.map((p) => ({ place: p.place, prize: seasons.prizeText(p) })) : [],
     players: Object.keys(season.joined || {}).length,
     closed: seasons.accessOf(season).mode !== "all",
     wagerX: seasons.wagerXOf(season),
