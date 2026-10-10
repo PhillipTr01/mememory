@@ -1218,10 +1218,8 @@
   // gift or a money rain from while the player was away (missed: on the next visit)
   var giftsWaiting = [];
   // The daily cashback came (after midnight - or while away: on the next visit)
-  socket.on("cashback", (data) => {
-    var coin = data.world == "season" ? data.coinIcon || "💎" : "🪙";
-    casinoNotice({ icon: "💸", title: "Cashback +" + coin + " " + format(data.amount), text: data.percent + "% of what you lost yesterday (" + coin + " " + format(data.loss) + ")" + (data.world == "season" ? " - in the season" : ""), ms: 12000, key: "cashback" });
-  });
+  // (a popup - like a gift; more at once: one after the other)
+  socket.on("cashback", (data) => window.casinoShowMissed({ ...data, type: "cashback" }));
 
   socket.on("giftReceived", (gift) => {
     giftsWaiting.push({ ...gift, type: "gift" });
@@ -1252,7 +1250,12 @@
     var pic = el("div", "cs-gift-pic");
     var where = gift.world == "season" ? " (in the season)" : window.CASINO_WORLD == "season" ? " (your 🪙 outside the season)" : "";
     var text;
-    if (gift.type == "rain") {
+    if (gift.type == "cashback") {
+      var coin = gift.world == "season" ? gift.coinIcon || "💎" : "🪙";
+      pic.append(el("span", "cs-got-rain", "💸"));
+      head.append(pic, el("span", "cs-gift-label", gift.missed ? "While you were away" : "Your daily cashback"), el("b", "cs-gift-name", "Cashback"));
+      text = el("p", "cs-gift-info", gift.percent + "% of what you lost yesterday (" + coin + " " + format(gift.loss) + ") - it is on your balance already" + where + ".");
+    } else if (gift.type == "rain") {
       pic.append(el("span", "cs-got-rain", "💸"));
       head.append(pic, el("span", "cs-gift-label", gift.missed ? "While you were away" : "Money rain!"), el("b", "cs-gift-name", "Money rain"));
       text = el("p", "cs-gift-info", (gift.note ? "“" + gift.note + "” - " : "") + "the coins are on your balance already" + where + ".");
