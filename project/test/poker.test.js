@@ -263,10 +263,10 @@ test("poker: all-in, standing up in a hand and wrong buy-ins", async () => {
   const bob = client("bob");
   await waitFor(bob, "coins", (d) => d.coins === 1000);
 
-  for (const buyIn of [50, 25001, 10.5, "100"]) {
+  for (const buyIn of [50, config.POKER_MAX_BUYIN + 1, 10.5, "100"]) {
     const refused = h.once(alice, "pokerError");
     alice.emit("sit", { seat: 0, buyIn });
-    assert.match(await refused, /Buy in with 100 - 25000/);
+    assert.match(await refused, new RegExp(`Buy in with ${config.POKER_MIN_BUYIN} - ${config.POKER_MAX_BUYIN}`));
   }
   const poor = h.once(alice, "pokerError");
   h.setCoins("alice", 120);

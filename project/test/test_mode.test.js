@@ -31,8 +31,9 @@ test("test mode: a sandbox balance - the real coins, the history and the shop st
   assert.strictEqual((await coins.get("admin1")).coins, 5000);
   assert.ok((await coins.get("admin1")).test);
   // As good as unlimited: more than there is - filled up
-  assert.ok(await coins.spend("admin1", 3000, { reason: "slots bet" }));
-  assert.ok(await coins.spend("admin1", 4000, { reason: "slots bet" }));
+  // (a table game: slots have their own, smaller share of the max bet by balance)
+  assert.ok(await coins.spend("admin1", 3000, { reason: "roulette bet" }));
+  assert.ok(await coins.spend("admin1", 4000, { reason: "roulette bet" }));
   assert.strictEqual((await coins.get("admin1")).coins, 1000);
   assert.ok(await coins.add("admin1", 500, { reason: "slots win" }));
   assert.strictEqual(testMode.balance("admin1"), 1500);

@@ -110,7 +110,7 @@ test("seasons: a world of its own - at the start everybody may join (the budget,
   assert.strictEqual(coins.season.dailyBonus(), 1000, "the season setting when none was given");
   assert.ok((await seasons.update(made.season.id, { ...seasons.publicSeason(seasons.running()), dailyBonus: 777 })).season);
   assert.strictEqual(coins.season.dailyBonus(), 777);
-  assert.strictEqual(coins.dailyBonus(), 2500);
+  assert.strictEqual(coins.dailyBonus(), require("../game/config").DAILY_BONUS, "the normal one stays");
   // A player let in now gets the normal start coins - joining gives the budget; three days later with the 3 daily bonuses missed
   assert.strictEqual(access.startCoins(null, start + 2000).coins, coins.base().start);
   assert.deepStrictEqual(seasons.joinCoins(start + 2000), { coins: 50000, missed: 0 });

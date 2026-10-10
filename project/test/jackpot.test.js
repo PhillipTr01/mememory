@@ -287,7 +287,7 @@ test("jackpot: invalid bets are rejected", async () => {
   }
   const overLimit = h.once(carol, "betError");
   carol.emit("bet", { amount: 1 });
-  assert.match(await overLimit, /At most 3 bets/);
+  assert.match(await overLimit, new RegExp(`At most ${config.JACKPOT_MAX_BETS} bets`));
   assert.strictEqual(h.coinsOf("carol"), 5000 - 2000 - (config.JACKPOT_MAX_BETS - 1));
 });
 
@@ -419,17 +419,17 @@ test("jackpot: the Konami code gets the secret address from the server", async (
   assert.strictEqual(url, encodeURI("/🤫🎰💸") + "/");
 });
 
-test("coins: new accounts start with 25k - a reset gives every account the start coins once", async () => {
-  assert.strictEqual(config.START_COINS, 25000);
+test("coins: new accounts start with START_COINS - a reset gives every account the start coins once", async () => {
+  const start = config.START_COINS;
   // A new account
   h.addUser("erin");
-  assert.strictEqual((await coins.get("erin")).coins, 25000);
+  assert.strictEqual((await coins.get("erin")).coins, start);
   // An account from before a reset (30 coins left): the start coins, only once
   h.addUser("frank");
   const User = require("../models/User");
   await User.updateOne({ username: "frank" }, { $set: { coins: 30, coinReset: "an-old-reset" } });
-  assert.strictEqual((await coins.get("frank")).coins, 25000);
-  assert.strictEqual(await coins.spend("frank", 24000), true);
+  assert.strictEqual((await coins.get("frank")).coins, start);
+  assert.strictEqual(await coins.spend("frank", start - 1000), true);
   assert.strictEqual((await coins.get("frank")).coins, 1000, "no second reset");
 });
 

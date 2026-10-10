@@ -278,16 +278,17 @@ test("slots: a spin costs the bet, the win comes right away, the others see it",
   const alice = client("alice");
   const bob = client("bob");
   const setup = await h.once(alice, "slotsSetup");
-  assert.deepStrictEqual([setup.rules.minBet, setup.rules.maxBet, setup.rules.lines], [10, 250, 9]);
+  assert.deepStrictEqual([setup.rules.minBet, setup.rules.maxBet, setup.rules.lines], [config.SLOTS_MIN_BET, config.SLOTS_MAX_BET, 9]);
   await h.once(bob, "slotsFeed");
   const feeds = [];
   bob.on("slotsFeed", (feed) => feeds.push(feed));
 
   // Out of the limits: nothing happens to the coins
-  for (const bet of [5, 251]) {
+  const n = (value) => value.toLocaleString("en-US");
+  for (const bet of [config.SLOTS_MIN_BET - 1, config.SLOTS_MAX_BET + 1]) {
     const refused = h.once(alice, "slotsError");
     alice.emit("spin", { bet });
-    assert.match(await refused, /10 to 250/);
+    assert.match(await refused, new RegExp(`${n(config.SLOTS_MIN_BET)} to ${n(config.SLOTS_MAX_BET)}`));
   }
   assert.strictEqual(h.coinsOf("alice"), 5000);
 

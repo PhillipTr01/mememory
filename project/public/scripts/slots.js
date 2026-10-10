@@ -1306,6 +1306,11 @@ function renderPresets() {
   var box = document.getElementById("slPresets");
   var list = presets();
   shownPresets = list.join(",");
+  // Max: the most this spin can be now (the max bet, the max bet by balance - and the own coins)
+  var max = el("button", "sl-preset sl-preset-max", "Max");
+  max.type = "button";
+  max.title = "The most you can bet per spin right now";
+  max.addEventListener("click", () => setBet(maxBetNow()));
   box.replaceChildren(
     ...list.map((value) => {
       var button = el("button", "sl-preset", value >= 1000 ? value / 1000 + "K" : String(value));
@@ -1314,7 +1319,13 @@ function renderPresets() {
       button.addEventListener("click", () => setBet(value));
       return button;
     }),
+    max,
   );
+}
+
+function maxBetNow() {
+  var coins = typeof myCoins == "number" ? myCoins : Infinity;
+  return Math.max(setup.rules.minBet, Math.min(maxNow(), coins));
 }
 
 // The balance: a win counts up (like the win in the middle), a bet is taken off right away
@@ -1356,7 +1367,9 @@ function renderControls() {
   left.innerText = String(autoLeft);
   button.title = auto ? "Stop the auto spins" : bet > myCoins ? "Not enough coins" : "Spin (space) - hold to keep spinning";
   document.getElementById("slAuto").disabled = auto || bet > myCoins;
-  document.querySelectorAll(".sl-preset").forEach((preset) => preset.classList.toggle("active", Number(preset.dataset.value) == bet));
+  document.querySelectorAll(".sl-preset[data-value]").forEach((preset) => preset.classList.toggle("active", Number(preset.dataset.value) == bet));
+  var maxButton = document.querySelector(".sl-preset-max");
+  if (maxButton) maxButton.classList.toggle("active", bet == maxBetNow());
   document.getElementById("slLess").disabled = spinning || bet <= setup.rules.minBet;
   document.getElementById("slMore").disabled = spinning || bet >= maxNow();
   // (the balance changed the highest bet: other presets)

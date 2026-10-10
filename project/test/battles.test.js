@@ -273,26 +273,32 @@ test("battles: the same coins as the jackpot - every change reaches the page rig
   carol.off("coins", listener);
 });
 
-test("battles: up to 25 cases and 20,000 coins per battle", async () => {
+test("battles: up to BATTLE_MAX_CASES cases and BATTLE_MAX_COST coins per battle", async () => {
+  const config = require("../game/config");
+  const M = config.BATTLE_MAX_CASES;
+  const C = config.BATTLE_MAX_COST;
   h.setCoins("bob", 100000);
   const bob = client("bob");
   await waitFor(bob, "coins", (d) => d.coins === 100000);
   const created = h.once(bob, "battleCreated");
-  const listed = waitFor(bob, "battles", (data) => data.list.some((b) => b.cases.length === 25));
-  bob.emit("createBattle", { cases: new Array(25).fill("piggy"), size: 2 });
+  const listed = waitFor(bob, "battles", (data) => data.list.some((b) => b.cases.length === M));
+  bob.emit("createBattle", { cases: new Array(M).fill("piggy"), size: 2 });
   const id = await created;
   const battle = battleIn(await listed, id);
-  assert.strictEqual(battle.cases.length, 25);
-  assert.strictEqual(battle.price, 250);
+  assert.strictEqual(battle.cases.length, M);
+  assert.strictEqual(battle.price, M * cases.caseById("piggy").price);
   bob.emit("cancelBattle", id);
   await waitFor(bob, "battles", (data) => !battleIn(data, id));
-  // More cases - or more coins - than allowed
+  // More cases - or more coins - than allowed (the dearest case: just over the cost, within the cases)
   const tooMany = h.once(bob, "battleError");
-  bob.emit("createBattle", { cases: new Array(26).fill("piggy"), size: 2 });
-  assert.match(await tooMany, /At most 25 cases/);
+  bob.emit("createBattle", { cases: new Array(M + 1).fill("piggy"), size: 2 });
+  assert.match(await tooMany, new RegExp(`At most ${M} cases`));
+  const dearest = cases.CASES.slice().sort((a, b) => b.price - a.price)[0];
+  const count = Math.floor(C / dearest.price) + 1;
+  assert.ok(count <= M, "the cost limit can be passed within the case limit");
   const tooMuch = h.once(bob, "battleError");
-  bob.emit("createBattle", { cases: new Array(21).fill("vault"), size: 2 });
-  assert.match(await tooMuch, /at most 🪙 20,000/);
+  bob.emit("createBattle", { cases: new Array(count).fill(dearest.id), size: 2 });
+  assert.match(await tooMuch, new RegExp(`at most 🪙 ${C.toLocaleString("en-US")}`));
 });
 
 test("battles: a player who joined can leave before it starts - the coins come back, the host can't", async () => {
