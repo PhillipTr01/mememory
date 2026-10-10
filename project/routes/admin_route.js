@@ -536,6 +536,15 @@ module.exports = function () {
   // One lever of the debug tools: {game, action, value} - only the test world
   router.post("/api/test/debug", admin, async (req, res) => {
     const { game, action, value } = req.body || {};
+    // A popup with sample data on the open pages of a tester (only to look at - nothing is paid or kept)
+    if (game === "popups") {
+      const username = typeof value === "string" ? value : "";
+      if (!username || !testMode.active(username)) return res.status(400).json({ error: "Start test mode for a player first - the popup goes to their pages." });
+      const sample = previewPopup(action);
+      if (!sample) return res.status(400).json({ error: "Unknown popup." });
+      require("../game/notices").send(username, sample.event, sample.data);
+      return res.json({ ok: true });
+    }
     const server = worlds.servers.get(game);
     if (!server) return res.status(400).json({ error: "Unknown game." });
     const levers = {
@@ -560,6 +569,25 @@ module.exports = function () {
     if (done !== true) return res.status(400).json({ error: typeof done === "string" ? done : "That didn't work." });
     res.json({ ok: true });
   });
+
+  // The popups a player can get - with sample data (Casino → Test mode → Popups)
+  function previewPopup(kind) {
+    const pick = (k) => shop.items().find((item) => item.kind === k && item.on);
+    const sampleItems = ["frame", "effect", "background"].map(pick).filter(Boolean).map((item) => ({ id: item.id, kind: item.kind, name: item.name }));
+    const now = streak.current();
+    const day = Math.min(3, now.rewards.length);
+    const info = { on: true, day: day, next: day + 1, rewards: now.rewards, after: now.after, grace: now.grace, base: config.DAILY_BONUS };
+    const index = day < now.rewards.length ? day : now.after === "restart" ? day % now.rewards.length : now.rewards.length - 1;
+    const samples = {
+      streak: { event: "streakPreview", data: { info: info, paid: Math.round((config.DAILY_BONUS * now.rewards[index]) / 100) } },
+      reward: { event: "reward", data: { source: "Test reward", icon: "🎁", rank: null, note: null, coins: 25000, prizes: ["€20 voucher"], items: sampleItems, preview: true } },
+      season: { event: "reward", data: { source: "Test season", icon: "🏆", rank: 1, note: null, coins: 100000, prizes: [], items: sampleItems.slice(0, 1), preview: true } },
+      cashback: { event: "cashback", data: { amount: 1250, loss: 12500, percent: 10, world: "normal", coinIcon: null } },
+      gift: { event: "giftReceived", data: { from: "Santa", amount: 5000, world: "normal" } },
+      rain: { event: "moneyRain", data: { amount: 2500, note: "Test rain", world: "normal" } },
+    };
+    return samples[kind] || null;
+  }
 
   router.post("/api/test/now", admin, (req, res) => {
     const game = req.body && req.body.game;

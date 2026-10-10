@@ -61,6 +61,9 @@
     claiming = null;
   });
 
+  // (test mode: the admin shows the streak popup with sample data)
+  socket.on("streakPreview", (data) => streakDialog(data.info, data.paid));
+
   /* ---------- A reward: a season's place, or from the admin - items and / or coins ---------- */
 
   socket.on("reward", async (reward) => {

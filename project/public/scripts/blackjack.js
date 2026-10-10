@@ -670,7 +670,7 @@ function renderBars() {
   var net = state.phase == "result" ? roundNet() : null;
   if (!turn && net) {
     // The round is paid: what it really brought - every own hand and every side bet together
-    label.innerText = "This round: " + signedCoins(net.total) + (net.sides ? " (side bets " + signedCoins(net.sides) + ")" : "");
+    label.innerText = signedCoins(net.total) + (net.sides ? " (Side: " + signedCoins(net.sides) + ")" : "");
     label.classList.add(net.total > 0 ? "plus" : net.total < 0 ? "minus" : "even");
   } else if (!turn) {
     label.innerText = mySeats().length == 0 ? "Take a seat to play" : state.phase == "betting" ? "Pick your seat to bet" : "Waiting for your turn";

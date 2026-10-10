@@ -30,7 +30,7 @@ module.exports = function (io) {
   notices.on("notice", (username, event, data) => {
     const sockets = socketsOf(io, username);
     // A reward (a season's place, from the admin): kept first, then shown on one open page (the season's end may move the pages - then the next one shows it)
-    if (event === "reward") {
+    if (event === "reward" && !(data && data.preview)) {
       inbox
         .add(username, { type: "reward", ...data })
         .then(() =>
