@@ -91,6 +91,7 @@ function render() {
 function renderSeason() {
   var list = shopData.items.filter((item) => item.exclusive);
   document.getElementById("shSeasonSection").hidden = list.length == 0;
+  document.querySelector('#shSections [data-section="shSeasonSection"]').hidden = list.length == 0;
   var won = shopData.won || [];
   document.getElementById("shSeason").replaceChildren(
     // (frames, then animations - each by price, as the server sends them)
@@ -275,8 +276,46 @@ function takeOverEditor() {
   window.addEventListener("hashchange", () => location.hash != "#avatar" && setView("shop"));
 }
 
+// The row of the sections: a click flips to one; the one in view is marked
+function setupSections() {
+  var buttons = [...document.querySelectorAll("#shSections [data-section]")];
+  var row = document.getElementById("shSections");
+  var mark = (id) =>
+    buttons.forEach((button) => {
+      var on = button.dataset.section == id;
+      if (on && !button.classList.contains("active")) row.scrollTo({ left: button.offsetLeft - (row.clientWidth - button.offsetWidth) / 2, behavior: "smooth" });
+      button.classList.toggle("active", on);
+    });
+  buttons.forEach((button) =>
+    button.addEventListener("click", () => {
+      document.getElementById(button.dataset.section).scrollIntoView({ behavior: "smooth", block: "start" });
+      mark(button.dataset.section);
+    }),
+  );
+  // (the section whose top passed the upper third of the screen last)
+  var pick = () => {
+    var current = buttons[0].dataset.section;
+    buttons.forEach((button) => {
+      var section = document.getElementById(button.dataset.section);
+      if (!section.hidden && section.getBoundingClientRect().top < window.innerHeight / 3) current = button.dataset.section;
+    });
+    mark(current);
+  };
+  var queued = false;
+  window.addEventListener("scroll", () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      pick();
+    });
+  }, { passive: true });
+  pick();
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   takeOverEditor();
+  setupSections();
   setupChat();
   userPromise.then((username) => {
     if (!username) return;

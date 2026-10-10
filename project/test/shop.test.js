@@ -153,5 +153,6 @@ test("shop: backgrounds - bought and worn like the rest, one of each kind (a rew
   assert.match((await shop.give({ username: "vic", items: ["sunset", "nebula"] })).error, /one background at most/);
   assert.ok(!(await shop.give({ username: "vic", items: ["nebula", "gold"] })).error);
   assert.strictEqual((await shop.wear("vic", "background", "nebula")).background, "nebula");
-  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background").length, 20);
+  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity != "exclusive").length, 20);
+  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity == "exclusive").length, 5);
 });

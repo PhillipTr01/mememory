@@ -106,6 +106,12 @@ const ITEMS = [
   { id: "nebula", kind: "background", name: "Nebula", price: 2000000, rarity: "legendary" },
   { id: "diamonddust", kind: "background", name: "Diamond Dust", price: 2500000, rarity: "legendary" },
   { id: "prism", kind: "background", name: "Prism Vortex", price: 3500000, rarity: "legendary" },
+  // Exclusive backgrounds (only given)
+  { id: "velvet", kind: "background", name: "Royal Velvet", price: 2000000, rarity: "exclusive" },
+  { id: "laurels", kind: "background", name: "Victory Rays", price: 5000000, rarity: "exclusive" },
+  { id: "skyfire", kind: "background", name: "Season Fireworks", price: 3000000, rarity: "exclusive" },
+  { id: "vault", kind: "background", name: "Golden Vault", price: 4000000, rarity: "exclusive" },
+  { id: "legends", kind: "background", name: "Hall of Legends", price: 6000000, rarity: "exclusive" },
 ];
 const MAX_REWARD_COINS = 100000000;
 const MAX_REWARD_RULES = 20;

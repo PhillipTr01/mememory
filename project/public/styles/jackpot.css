@@ -2660,6 +2660,24 @@ body.jackpot-theme {
   color: rgba(255, 255, 255, 0.7);
 }
 
+/* Still under the foil: nothing of the face shows - not its frame, its animation or its background (they stick out
+   or shine through) - they come with the face when it is scratched free */
+.jp-scratch-foil {
+  z-index: 3;
+}
+
+.jp-scratch-field:has(> .jp-scratch-foil) .mm-avatar,
+.jp-scratch-field:has(> .jp-scratch-foil) .mm-avatar-svg {
+  animation: none !important;
+}
+
+.jp-scratch-field:has(> .jp-scratch-foil) .mm-avatar::before,
+.jp-scratch-field:has(> .jp-scratch-foil) .mm-avatar::after,
+.jp-scratch-field:has(> .jp-scratch-foil) .mm-avatar > .look-fx,
+.jp-scratch-field:has(> .jp-scratch-foil) .mm-avatar > .look-bg {
+  display: none;
+}
+
 .jp-scratch-coin {
   position: absolute;
   left: 0;

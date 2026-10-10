@@ -260,6 +260,7 @@
 
 /* The avatar view: only the avatar maker */
 .sh-main.view-avatar .sh-hero,
+.sh-main.view-avatar .sh-sections,
 .sh-main.view-avatar .sh-section {
   display: none;
 }
@@ -311,4 +312,66 @@
 
 .sh-item.exclusive .sh-stage {
   height: 104px;
+}
+
+/* ---------- The sections: a row to flip to one, the page snaps to them ---------- */
+.sh-sections {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 5;
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0.4rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mm-surface) 88%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.sh-sections::-webkit-scrollbar {
+  display: none;
+}
+
+.sh-sections button {
+  flex: 1 0 auto;
+  padding: 0.4rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sh-sections button:hover {
+  color: var(--mm-text);
+}
+
+.sh-sections button.active {
+  background: var(--mm-accent);
+  color: var(--mm-on-accent);
+}
+
+.sh-sections button[hidden] {
+  display: none;
+}
+
+html:has(.sh-main:not(.view-avatar)) {
+  scroll-snap-type: y proximity;
+}
+
+.sh-main:not(.view-avatar) .sh-section {
+  scroll-snap-align: start;
+  /* (under the row of the sections) */
+  scroll-margin-top: 4.25rem;
+}
+
+.sh-main {
+  scroll-snap-align: start;
+  scroll-margin-top: 1rem;
 }

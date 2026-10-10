@@ -131,15 +131,23 @@
                         </div>
                     </section>
 
-                    <div class="sh-section">
+                    <!--- The sections: a click flips to one (the page snaps to them while scrolling too) --->
+                    <nav id="shSections" class="sh-sections" aria-label="Sections">
+                        <button type="button" data-section="shSecFrames">🖼️ Frames</button>
+                        <button type="button" data-section="shSecEffects">✨ Animations</button>
+                        <button type="button" data-section="shSecBackgrounds">🌄 Backgrounds</button>
+                        <button type="button" data-section="shSeasonSection">💎 Exclusive</button>
+                    </nav>
+
+                    <div class="sh-section" id="shSecFrames">
                         <h2 class="sh-heading">Frames</h2>
                         <div id="shFrames" class="sh-grid"></div>
                     </div>
-                    <div class="sh-section">
+                    <div class="sh-section" id="shSecEffects">
                         <h2 class="sh-heading">Animations</h2>
                         <div id="shEffects" class="sh-grid"></div>
                     </div>
-                    <div class="sh-section">
+                    <div class="sh-section" id="shSecBackgrounds">
                         <h2 class="sh-heading">Backgrounds</h2>
                         <p class="sh-section-note">Behind your face in the casino, instead of your avatar's color - take it off and your color is back.</p>
                         <div id="shBackgrounds" class="sh-grid"></div>
