@@ -610,7 +610,7 @@ function bumpShape(bump) {
   svg.firstChild.setAttribute("d", line + ` V${h + 3} H0 Z`);
 }
 
-// What the round brought me (the result phase): {total, sides} - every hand and side bet of my seats, null: not played
+// What the round brought me (the result phase): {total} - every hand and side bet of my seats together, null: not played
 function roundNet() {
   var total = 0;
   var sides = 0;
@@ -626,11 +626,7 @@ function roundNet() {
       sides += (result.payout || 0) - result.bet;
     });
   });
-  return played ? { total: total + sides, sides: sides } : null;
-}
-
-function signedCoins(value) {
-  return (value > 0 ? "+" : value < 0 ? "−" : "±") + "🪙 " + formatCoins(Math.abs(value));
+  return played ? { total: total + sides } : null;
 }
 
 // The own seats one can leave now (not while their cards are played)
@@ -670,7 +666,7 @@ function renderBars() {
   var net = state.phase == "result" ? roundNet() : null;
   if (!turn && net) {
     // The round is paid: what it really brought - every own hand and every side bet together
-    label.innerText = signedCoins(net.total) + (net.sides ? " (Side: " + signedCoins(net.sides) + ")" : "");
+    label.innerText = (net.total > 0 ? "Win: " : net.total < 0 ? "Lose: " : "Push: ") + "🪙 " + formatCoins(Math.abs(net.total));
     label.classList.add(net.total > 0 ? "plus" : net.total < 0 ? "minus" : "even");
   } else if (!turn) {
     label.innerText = mySeats().length == 0 ? "Take a seat to play" : state.phase == "betting" ? "Pick your seat to bet" : "Waiting for your turn";
