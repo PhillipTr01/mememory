@@ -474,6 +474,13 @@ function renderCreate() {
   var button = document.getElementById("btCreate");
   document.getElementById("btCreateLabel").innerText = ids.length ? "Create for 🪙 " + formatCoins(cost) : "Create";
   var overCap = cost > capLeft(inBattles());
+  // The max bet: what one battle may cost me now (the limit per player, the max bet by balance with my open battles)
+  var most = Math.max(0, Math.min(MAX_COST, capLeft(inBattles())));
+  var maxBet = document.getElementById("btMaxBet");
+  maxBet.hidden = myCapRule == null && !MAX_COST;
+  maxBet.innerText = "Max bet 🪙 " + formatCoins(most);
+  maxBet.classList.toggle("over", ids.length > 0 && cost > most);
+  maxBet.title = most < MAX_COST ? "With your balance" + (inBattles() > 0 ? " and your open battles" : "") + " - the limit is 🪙 " + formatCoins(MAX_COST) + " per player" : "The most a battle may cost per player";
   button.disabled = ids.length == 0 || cost > myCoins || overCap;
   button.title = cost > myCoins ? "Not enough coins" : overCap ? "With your balance at most 🪙 " + formatCoins(capLeft(inBattles())) + " more in battles now" : "";
 }

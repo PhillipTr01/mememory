@@ -457,6 +457,26 @@
   color: var(--mm-accent);
 }
 
+/* The max bet: a quiet pill - red when the picked cases cost more */
+.bt-maxbet {
+  flex-shrink: 0;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bt-maxbet.over {
+  border-color: rgba(224, 103, 90, 0.6);
+  background: rgba(224, 103, 90, 0.12);
+  color: var(--mm-danger);
+}
+
 /* ---------- Players and mode: two picks side by side ---------- */
 .bt-pick {
   display: inline-flex;
