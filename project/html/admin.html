@@ -102,7 +102,7 @@
 
             <!--- Players: every account - access, coins, payout, history - in one list --->
             <section id="tab-players" class="ad-tab" hidden>
-                <div class="ad-card">
+                <div id="adPlayerList" class="ad-card">
                     <div class="ad-card-head">
                         <div id="adPlayerFilter" class="ad-filter" role="tablist" aria-label="Show">
                             <button type="button" role="tab" data-filter="" class="active">All <span class="ad-chip-count" id="adCountAll"></span></button>
@@ -118,6 +118,8 @@
                         <tbody id="adBoard"></tbody>
                     </table>
                 </div>
+                <!--- One player (#players/<name>): coins, games, items --->
+                <div id="adPlayerDetail" class="ad-player-detail" hidden></div>
             </section>
 
             <!--- All payouts --->

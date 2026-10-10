@@ -206,6 +206,56 @@ module.exports = function () {
     }),
   );
 
+  /*
+   * One player in detail: access, coins (normal, the running season's), the streak, what every kind of coin change
+   * added up to (the normal history - the page sorts it into games), the items (bought - with the day - and given)
+   */
+  router.get(
+    "/api/players/:name",
+    admin,
+    asyncHandler(async (req, res) => {
+      const user = await User.findOne({ username: String(req.params.name) }).lean();
+      if (user == null) return res.status(404).json({ error: "No such player." });
+      const name = user.username;
+      const approved = access.approved(user);
+      const [reasons, last, purchases] = await Promise.all([
+        CoinLog.aggregate([{ $match: { username: name, ...NORMAL } }, { $group: { _id: "$reason", amount: { $sum: "$amount" }, count: { $sum: 1 } } }]),
+        CoinLog.find({ username: name }).sort({ at: -1 }).limit(1).lean(),
+        CoinLog.find({ username: name, reason: "shop" }).sort({ at: -1 }).lean(),
+      ]);
+      // When an item was bought: the newest purchase of that name
+      const boughtAt = new Map();
+      for (const row of purchases) if (row.note && !boughtAt.has(row.note)) boughtAt.set(row.note, row.at);
+      const season = seasons.running();
+      const inSeason = season && approved && !coins.season.watching(name);
+      res.json({
+        username: name,
+        approved: approved,
+        approvedAt: user.casinoApprovedAt || null,
+        requestedAt: user.casinoRequestedAt || null,
+        payout: user.payoutAllowed === true,
+        online: casinoChat.online().names.includes(name),
+        coins: approved ? normalCoins(user) : null,
+        season: inSeason ? { name: season.name, icon: season.icon, coinIcon: seasons.publicSeason(season).coinIcon, coins: coins.season.balanceOf(user) } : null,
+        streak: approved ? coins.streakInfo(user) : null,
+        lastActive: last.length ? last[0].at : null,
+        reasons: reasons.map((row) => ({ reason: row._id, amount: row.amount, count: row.count })),
+        items: shop.itemsOf(user).map((item) => (item.given ? item : { ...item, at: boughtAt.get(item.name) || null })),
+      });
+    }),
+  );
+
+  // Take an item away from a player: {id}
+  router.post(
+    "/api/players/:name/items/remove",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await shop.removeItem(String(req.params.name), String((req.body || {}).id || ""));
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
   /* ---------- Access to the casino ---------- */
 
   // Who wants in, who is in - and what a player approved now gets

@@ -400,6 +400,36 @@ test("admin: in a season the players show their normal coins, changes go there; 
   seasons.reset();
 });
 
+test("admin: a player in detail - coins, what the games added up to, the items bought and given; an item taken away comes off", async () => {
+  const shop = require("../game/shop");
+  h.setCoins("quinn", 500000);
+  assert.ok(!(await shop.buy("quinn", "gold")).error);
+  await shop.give({ username: "quinn", items: ["neon"], note: "Poker night" });
+  await coins.spend("quinn", 1000, { reason: "slots bet" });
+  await coins.add("quinn", 400, { reason: "slots win" });
+
+  const detail = (await adminApi("players/quinn")).body;
+  assert.strictEqual(detail.username, "quinn");
+  assert.strictEqual(detail.approved, true);
+  assert.strictEqual(detail.coins, h.coinsOf("quinn"));
+  const sum = (reason) => (detail.reasons.find((row) => row.reason == reason) || {}).amount;
+  assert.deepStrictEqual([sum("slots bet"), sum("slots win")], [-1000, 400]);
+  const gold = detail.items.find((item) => item.id == "gold");
+  const neon = detail.items.find((item) => item.id == "neon");
+  assert.deepStrictEqual([gold.given, gold.worn, !!gold.at], [false, true, true], "bought: worn, with the day");
+  assert.deepStrictEqual([neon.given, neon.source], [true, "Poker night"]);
+  assert.strictEqual((await adminApi("players/nobody")).status, 404);
+
+  const removed = await adminApi("players/quinn/items/remove", { id: "gold" });
+  assert.strictEqual(removed.status, 200);
+  assert.deepStrictEqual(removed.body.items.map((item) => item.id), ["neon"]);
+  const view = await shop.view("quinn");
+  assert.deepStrictEqual([view.owned, view.frame], [["neon"], null], "gone - and not worn any more");
+  assert.strictEqual((await adminApi("players/quinn/items/remove", { id: "gold" })).status, 400);
+  assert.strictEqual((await adminApi("players/quinn/items/remove", { id: "neon" })).status, 200);
+  assert.deepStrictEqual((await shop.view("quinn")).owned, []);
+});
+
 test("admin: the hard reset part by part - the records go, access, purchases, seasons and settings stay", async () => {
   const CoinLog = require("../models/CoinLog");
   const User = require("../models/User");

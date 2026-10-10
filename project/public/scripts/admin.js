@@ -142,7 +142,15 @@ function showTab() {
   document.getElementById("adTest").hidden = !testPage;
   document.getElementById("adSettingsForm").hidden = maintPage || shopPage || testPage || rainPage || streakPage;
   document.getElementById("adSettingsBar").hidden = maintPage || shopPage || testPage || rainPage || streakPage;
-  if (tab == "players") loadPlayers();
+  if (tab == "players") {
+    playerView = parts[1] ? decodeURIComponent(parts[1]) : null;
+    document.getElementById("adPlayerList").hidden = playerView != null;
+    var detail = document.getElementById("adPlayerDetail");
+    detail.hidden = playerView == null;
+    if (playerView != null && (!playerDetail || playerDetail.username != playerView)) detail.replaceChildren(playerBack());
+    if (playerView != null) loadPlayerDetail();
+    else loadPlayers();
+  }
   if (tab == "payouts") loadPayouts();
   if (tab == "history") loadHistory();
   if (tab == "chat") loadChat();
@@ -174,7 +182,7 @@ function showTab() {
 window.addEventListener("hashchange", showTab);
 
 // Keeps the open page up to date (the chat has its own timer, the settings stay as they are while editing)
-var REFRESH = { players: () => loadPlayers(), payouts: () => loadPayouts(), history: () => loadHistory(), seasons: () => loadSeasons(true), rtp: () => loadRtp() };
+var REFRESH = { players: () => reloadPlayers(), payouts: () => loadPayouts(), history: () => loadHistory(), seasons: () => loadSeasons(true), rtp: () => loadRtp() };
 
 function refresh() {
   if (document.visibilityState != "visible") return;
@@ -281,7 +289,7 @@ async function loadOverview() {
     // Players who want into the casino
     if (knownWaiting != null && data.waiting > knownWaiting) {
       casinoNotice({ icon: "🔑", title: data.waiting - knownWaiting == 1 ? "A player wants in" : data.waiting - knownWaiting + " players want in", text: "Approve or decline them in Players", action: { label: "Open", run: () => (location.hash = "#players") }, ms: 10000, key: "access" });
-      if (!document.getElementById("tab-players").hidden) loadPlayers();
+      if (!document.getElementById("tab-players").hidden) reloadPlayers();
     }
     knownWaiting = data.waiting;
     var waitingBadge = document.getElementById("adWaitingBadge");
@@ -352,7 +360,7 @@ function requestRow(request) {
     try {
       await api("access/decline", { username: request.username });
       loadOverview();
-      if (!document.getElementById("tab-players").hidden) loadPlayers();
+      if (!document.getElementById("tab-players").hidden) reloadPlayers();
     } catch (error) {
       decline.disabled = false;
       fail(error);
@@ -369,6 +377,11 @@ function day(value) {
 // The players: every account with its access, its coins, its payout - one list
 var playerFilter = "";
 var playerRows = [];
+
+// The list - or the open player's page
+function reloadPlayers() {
+  return playerView != null ? loadPlayerDetail() : loadPlayers();
+}
 
 async function loadPlayers() {
   try {
@@ -450,14 +463,193 @@ function playerRow(p) {
     button("Decline", "", (b) => declineRequest(p.username, b));
   } else if (p.kind == "in") {
     button("Reward", "", () => rewardDialog(p));
-    button("History", "", () => showHistoryOf(p.username));
-    button("Revoke", "ad-btn-quiet-danger", (b) => setAccess(p, false, b));
   } else {
     button("Approve", "", (b) => setAccess(p, true, b));
-    button("History", "", () => showHistoryOf(p.username));
   }
-  row.append(playerCell(p.username), statusCell, coins, payoutCell, actions);
+  // The name: the player's page (everything else is there)
+  var nameCell = el("td", "fw-semibold");
+  var link = el("a", "ad-player-link");
+  link.href = "#players/" + encodeURIComponent(p.username);
+  link.appendChild(playerTag(p.username));
+  nameCell.appendChild(link);
+  row.append(nameCell, statusCell, coins, payoutCell, actions);
   return row;
+}
+
+/* ---------- One player ---------- */
+
+var playerView = null; // the name of the open player page (#players/<name>) - null: the list
+var playerDetail = null;
+
+async function loadPlayerDetail() {
+  var name = playerView;
+  try {
+    var data = await api("players/" + encodeURIComponent(name));
+    if (name != playerView) return;
+    playerDetail = data;
+    renderPlayerDetail(data);
+  } catch (error) {
+    if (name != playerView) return;
+    var box = document.getElementById("adPlayerDetail");
+    box.replaceChildren(playerBack(), el("div", "ad-card ad-empty", error.message));
+  }
+}
+
+function playerBack() {
+  var back = el("a", "ad-link ad-back", "← All players");
+  back.href = "#players";
+  return back;
+}
+
+// What the games added up to (the normal coins): per game the rounds, the bets, what came back
+function playerGames(reasons) {
+  var sum = new Map(reasons.map((row) => [row.reason, row]));
+  return HISTORY_KINDS.slice(4)
+    .map(([game, kinds]) => {
+      var rows = kinds.map(([reason]) => sum.get(reason)).filter(Boolean);
+      var bet = -rows.filter((row) => row.amount < 0).reduce((total, row) => total + row.amount, 0);
+      var back = rows.filter((row) => row.amount > 0).reduce((total, row) => total + row.amount, 0);
+      var first = sum.get(kinds[0][0]);
+      return { game: game, rounds: first ? first.count : 0, bet: bet, back: back, net: back - bet };
+    })
+    .filter((row) => row.rounds > 0 || row.back > 0);
+}
+
+function renderPlayerDetail(p) {
+  var box = document.getElementById("adPlayerDetail");
+  var kind = p.approved ? "in" : p.requestedAt ? "waiting" : "none";
+  var row = { username: p.username, coins: p.coins, payout: p.payout, kind: kind };
+  var reason = (name) => (p.reasons.find((r) => r.reason == name) || { amount: 0, count: 0 });
+
+  // The head: avatar, name, access, the actions
+  var head = el("div", "ad-card ad-pd-head");
+  var who = el("div", "ad-pd-who");
+  var names = el("div", "ad-pd-names");
+  var pills = el("div", "ad-pd-pills");
+  pills.append(
+    kind == "in" ? el("span", "ad-pill success", "in" + (p.approvedAt && new Date(p.approvedAt).getTime() > 0 ? " since " + day(p.approvedAt) : "")) : kind == "waiting" ? el("span", "ad-pill accent", "wants in · " + time(p.requestedAt)) : el("span", "ad-pill", "no access"),
+    p.online ? el("span", "ad-pill success", "● online") : el("span", "ad-pill", p.lastActive ? "last active " + time(p.lastActive) : "never played"),
+  );
+  names.append(el("h2", "ad-pd-name", p.username), pills);
+  who.append(createAvatar(p.username, "lg"), names);
+  var actions = el("div", "ad-pd-actions");
+  var button = (label, cls, handler) => {
+    var b = el("button", "mm-btn mm-btn-sm" + (cls ? " " + cls : ""), label);
+    b.type = "button";
+    b.addEventListener("click", () => handler(b));
+    actions.appendChild(b);
+    return b;
+  };
+  if (kind == "in") {
+    button("🎁 Reward", "mm-btn-primary", () => rewardDialog(row));
+    button("Correct balance", "", () => editPlayerCoins(row));
+    var payout = el("label", "ad-switch");
+    var check = document.createElement("input");
+    check.type = "checkbox";
+    check.checked = p.payout;
+    check.setAttribute("aria-label", "Payout for " + p.username);
+    var text = el("span", "ad-switch-text", p.payout ? "Payout on" : "Payout off");
+    check.addEventListener("change", async () => {
+      await setPayout(row, check, text);
+      text.innerText = check.checked ? "Payout on" : "Payout off";
+    });
+    payout.append(check, el("span", "ad-switch-track"), text);
+    actions.appendChild(payout);
+    button("Revoke", "ad-btn-quiet-danger", (b) => setAccess(row, false, b));
+  } else if (kind == "waiting") {
+    button("Approve", "mm-btn-primary", (b) => setAccess(row, true, b));
+    button("Decline", "", (b) => declineRequest(p.username, b));
+  } else button("Approve", "", (b) => setAccess(row, true, b));
+  head.append(who, actions);
+
+  // The numbers
+  var games = playerGames(p.reasons);
+  var total = (key) => games.reduce((sum, g) => sum + g[key], 0);
+  var stat = (label, value, sub, cls) => {
+    var tile = el("div", "ad-card ad-stat");
+    tile.append(el("span", "ad-label", label), el("span", "ad-stat-value" + (cls ? " " + cls : ""), value), el("span", "ad-stat-sub", sub || ""));
+    return tile;
+  };
+  var signed = (value) => (value > 0 ? "+" : value < 0 ? "−" : "") + "🪙 " + formatCoins(Math.abs(value));
+  var stats = el("div", "ad-stats ad-pd-stats");
+  if (p.approved) {
+    stats.append(
+      stat("Coins", "🪙 " + formatCoins(p.coins), p.season ? (p.season.coinIcon || p.season.icon || "") + " " + formatCoins(p.season.coins) + " in " + p.season.name : "normal balance"),
+      stat("Net in games", signed(total("net")), "🪙 " + formatCoins(total("bet")) + " wagered", total("net") > 0 ? "plus" : total("net") < 0 ? "minus" : ""),
+      stat("Daily streak", p.streak && p.streak.day ? "Day " + p.streak.day : "–", "🪙 " + formatCoins(reason("daily bonus").amount) + " from daily bonuses"),
+      stat("Cashback", "🪙 " + formatCoins(reason("cashback").amount), reason("cashback").count + " day" + (reason("cashback").count == 1 ? "" : "s")),
+      stat("Paid out", "🪙 " + formatCoins(Math.max(0, -(reason("withdrawal").amount + reason("withdrawal refund").amount))), "rewards: 🪙 " + formatCoins(reason("reward").amount + reason("season reward").amount)),
+    );
+  }
+
+  // Per game
+  var gamesCard = el("div", "ad-card");
+  var gamesHead = el("div", "ad-card-head");
+  var history = el("a", "ad-link", "Coin history");
+  history.href = "#history";
+  history.addEventListener("click", (event) => {
+    event.preventDefault();
+    showHistoryOf(p.username);
+  });
+  gamesHead.append(el("h2", "ad-title", "Games"), history);
+  gamesCard.appendChild(gamesHead);
+  if (games.length) {
+    var table = el("table", "ad-table ad-pd-games");
+    var thead = el("thead");
+    var tr = el("tr");
+    ["Game", "Rounds", "Wagered", "Won back", "Net"].forEach((label, i) => tr.appendChild(el("th", i ? "num" : "", label)));
+    thead.appendChild(tr);
+    var tbody = el("tbody");
+    games.forEach((g) => {
+      var line = el("tr");
+      line.append(el("td", "fw-semibold", g.game), el("td", "num", formatCoins(g.rounds)), el("td", "num", formatCoins(g.bet)), el("td", "num", formatCoins(g.back)), el("td", "num " + (g.net > 0 ? "plus" : g.net < 0 ? "minus" : ""), signed(g.net)));
+      tbody.appendChild(line);
+    });
+    table.append(thead, tbody);
+    gamesCard.appendChild(table);
+  } else gamesCard.appendChild(el("p", "ad-empty", "No games played yet."));
+
+  // The items: bought and given - each can be taken away
+  var itemsCard = el("div", "ad-card");
+  var itemsHead = el("div", "ad-card-head");
+  itemsHead.append(el("h2", "ad-title", "Items"), el("span", "ad-pill", p.items.length + (p.items.length == 1 ? " item" : " items")));
+  itemsCard.appendChild(itemsHead);
+  var list = el("div", "ad-list");
+  if (!p.items.length) list.appendChild(el("p", "ad-empty", "No frames or animations yet."));
+  p.items.forEach((item) => {
+    var line = el("div", "ad-row ad-pd-item");
+    var main = el("div", "ad-row-main");
+    var title = el("b", "", item.name);
+    var meta = el("span", "ad-row-meta", (item.kind == "frame" ? "Frame" : "Animation") + " · " + (item.given ? "given" + (item.source ? ": " + (item.icon ? item.icon + " " : "") + item.source + (item.rank ? " #" + item.rank : "") : "") : "bought") + (item.at ? " · " + day(item.at) : ""));
+    main.append(title, meta);
+    var tags = el("div", "ad-pd-tags");
+    tags.appendChild(el("span", "ad-shop-rarity " + item.rarity, item.rarity));
+    if (item.worn) tags.appendChild(el("span", "ad-pill success", "worn"));
+    var remove = el("button", "mm-btn mm-btn-sm ad-btn-quiet-danger", "Remove");
+    remove.type = "button";
+    remove.addEventListener("click", () => removePlayerItem(p, item, remove));
+    line.append(el("span", "ad-row-icon", item.kind == "frame" ? "🖼️" : "✨"), main, tags, remove);
+    list.appendChild(line);
+  });
+  itemsCard.appendChild(list);
+
+  var grid = el("div", "ad-grid ad-pd-grid");
+  grid.append(gamesCard, itemsCard);
+  box.replaceChildren(playerBack(), head, stats, grid);
+}
+
+async function removePlayerItem(p, item, button) {
+  var text = item.given ? "It was given to them" + (item.source ? " (" + item.source + ")" : "") + "." : "They paid for it - no coins go back.";
+  if (!(await confirmDialog({ title: "Take " + item.name + " away from " + p.username + "?", text: text + (item.worn ? " They wear it - it comes off." : ""), confirmLabel: "Remove", danger: true }))) return;
+  button.disabled = true;
+  try {
+    await api("players/" + encodeURIComponent(p.username) + "/items/remove", { id: item.id });
+    casinoNotice({ icon: "🗑️", title: item.name + " removed", text: "from " + p.username, ms: 5000, key: "item-removed" });
+    loadPlayerDetail();
+  } catch (error) {
+    button.disabled = false;
+    fail(error);
+  }
 }
 
 function showHistoryOf(username) {
@@ -471,7 +663,7 @@ async function declineRequest(username, button) {
   try {
     await api("access/decline", { username: username });
     loadOverview();
-    if (!document.getElementById("tab-players").hidden) loadPlayers();
+    if (!document.getElementById("tab-players").hidden) reloadPlayers();
   } catch (error) {
     button.disabled = false;
     fail(error);
@@ -485,7 +677,7 @@ async function setAccess(player, approve, button) {
   try {
     await api("access", { username: player.username, approve: approve });
     loadOverview();
-    if (!document.getElementById("tab-players").hidden) loadPlayers();
+    if (!document.getElementById("tab-players").hidden) reloadPlayers();
   } catch (error) {
     button.disabled = false;
     button.innerText = approve ? "Approve" : "Revoke";
@@ -576,7 +768,7 @@ function editPlayerCoins(p) {
     current: p.coins || 0,
     save: async (mode, amount, note) => {
       await api("balance", { username: p.username, mode: mode, amount: amount, note: note });
-      loadPlayers();
+      reloadPlayers();
       loadOverview();
     },
   });
@@ -651,7 +843,7 @@ async function rewardDialog(p) {
       var itemName = (id) => (shopSaved.items.find((item) => item.id == id) || {}).name || id;
       var sent = [...body.items.map(itemName), body.coins > 0 ? "🪙 " + formatCoins(body.coins) : null, body.prize ? "🎁 " + body.prize : null].filter(Boolean).join(" · ");
       casinoNotice({ icon: "🎁", title: "Reward sent to " + p.username, text: sent + (body.note ? " - " + body.note : ""), action: { label: "History", run: () => showHistoryOf(p.username) }, ms: 8000, key: "reward" });
-      loadPlayers();
+      reloadPlayers();
       loadOverview();
     } catch (problem) {
       give.disabled = false;

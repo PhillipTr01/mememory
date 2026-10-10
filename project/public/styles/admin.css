@@ -1822,10 +1822,10 @@ a.ad-link:focus-visible {
   }
 
   #adBoard tr {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
-    gap: 0.4rem 0.75rem;
+    gap: 0.5rem 0.75rem;
     padding: 0.75rem 0.25rem;
     border-bottom: 1px solid var(--mm-border);
   }
@@ -1836,31 +1836,41 @@ a.ad-link:focus-visible {
 
   #adBoard td {
     display: block;
+    min-width: 0;
     padding: 0;
     border: 0;
   }
 
-  /* The player and the coins on one line, the access and the payout under it, the buttons at the end */
+  /* The player and the coins on one line, the access, the payout and the buttons under it */
   #adBoard td:first-child {
-    flex: 1 1 0;
-    min-width: 0;
+    grid-area: 1 / 1 / 2 / 3;
   }
 
   #adBoard td:nth-child(2) {
-    order: 3;
-    flex: 1 1 auto;
+    grid-area: 2 / 1;
+  }
+
+  #adBoard td:nth-child(3) {
+    grid-area: 1 / 3;
+    text-align: right;
   }
 
   #adBoard td:nth-child(4) {
-    order: 4;
+    grid-area: 2 / 2;
   }
 
   #adBoard td.ad-actions {
-    order: 5;
-    flex-basis: 100%;
+    grid-area: 2 / 3;
+  }
+
+  #adBoard td.ad-actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.4rem;
+  }
+
+  #adBoard td[colspan] {
+    grid-column: 1 / -1;
   }
 
   /* Who wants in: the whole card marked, not every cell on its own */
@@ -4076,5 +4086,123 @@ a.ad-case-row:hover {
   .ad-shop-price-box {
     grid-column: 3;
     grid-row: 1 / span 2;
+  }
+}
+
+/* ---------- One player (#players/<name>) ---------- */
+.ad-player-link {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.ad-player-link:hover .ad-player-name,
+.ad-player-link:focus-visible .ad-player-name {
+  color: var(--mm-accent);
+  text-decoration: underline;
+}
+
+.ad-player-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ad-gap);
+}
+
+.ad-player-detail[hidden] {
+  display: none;
+}
+
+.ad-back {
+  align-self: flex-start;
+}
+
+.ad-pd-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ad-pd-who {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.ad-pd-names {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.ad-pd-name {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.ad-pd-pills,
+.ad-pd-actions,
+.ad-pd-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ad-pd-stats .ad-stat-value.plus,
+.ad-pd-games td.plus {
+  color: var(--mm-success);
+}
+
+.ad-pd-stats .ad-stat-value.minus,
+.ad-pd-games td.minus {
+  color: var(--mm-danger);
+}
+
+.ad-pd-games td.num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 991px) {
+  .ad-pd-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 575px) {
+  /* (two tiles a line - an odd last one: the whole width) */
+  .ad-pd-stats .ad-stat:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .ad-pd-actions {
+    width: 100%;
+  }
+
+  .ad-pd-games th:nth-child(2),
+  .ad-pd-games td:nth-child(2) {
+    display: none;
+  }
+
+  .ad-pd-item {
+    flex-wrap: wrap;
+  }
+
+  .ad-pd-item .ad-row-main {
+    flex-basis: calc(100% - 44px);
+  }
+
+  .ad-pd-item .ad-pd-tags {
+    margin-left: 44px;
+    flex: 1;
   }
 }

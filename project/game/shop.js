@@ -256,6 +256,38 @@ async function give(input) {
   return { given: { username: user.username, ...gift, note: note } };
 }
 
+/*
+ * The items of a player for the admin: [{id, name, kind, rarity, given, source, icon, rank, at, worn}] - bought
+ * (given: false; at: from the coin history, see the admin route) and given (with where from). An item both bought
+ * and given shows once (as given).
+ */
+function itemsOf(user) {
+  const looks = looksOf(user);
+  const stored = (user && user.looks) || {};
+  const given = new Map(looks.won.map((entry) => [entry.id, entry]));
+  const bought = (Array.isArray(stored.owned) ? stored.owned : []).filter((id) => byId(id) && !given.has(id));
+  const row = (id, entry) => {
+    const item = itemNow(byId(id));
+    return { id: id, name: item.name, kind: item.kind, rarity: item.rarity, given: entry != null, source: entry ? entry.source || null : null, icon: entry ? entry.icon || null : null, rank: entry ? entry.rank || null : null, at: entry ? entry.at || null : null, worn: looks[item.kind] === id };
+  };
+  return sorted([...[...new Set(bought)].map((id) => row(id)), ...[...given.values()].map((entry) => row(entry.id, entry))]);
+}
+
+// The admin takes an item away (bought or given - no coins back): worn, it comes off -> {items} or {error}
+async function removeItem(username, id) {
+  if (byId(id) == null) return { error: "Unknown item." };
+  const user = await User.findOne({ username: username }).select("username looks").lean();
+  if (user == null) return { error: "No such player." };
+  const stored = (user && user.looks) || {};
+  const owned = Array.isArray(stored.owned) ? stored.owned : [];
+  const won = Array.isArray(stored.won) ? stored.won : [];
+  if (!owned.includes(id) && !won.some((entry) => entry && entry.id === id)) return { error: "The player doesn't have this item." };
+  const next = { ...stored, owned: owned.filter((own) => own !== id), won: won.filter((entry) => entry && entry.id !== id) };
+  if (next[byId(id).kind] === id) next[byId(id).kind] = null;
+  await User.updateOne({ username: user.username }, { $set: { looks: next } });
+  return { items: itemsOf({ ...user, looks: next }) };
+}
+
 /* ---------- The admin ---------- */
 
 function config() {
@@ -317,4 +349,4 @@ function reset() {
   setup = { items: {}, free: false };
 }
 
-module.exports = { ITEMS, KINDS, RARITIES, byId, items, looksOf, view, buy, wear, worn, balanceOf, reward, give, config, update, load, reset };
+module.exports = { ITEMS, KINDS, RARITIES, byId, items, looksOf, itemsOf, removeItem, view, buy, wear, worn, balanceOf, reward, give, config, update, load, reset };
