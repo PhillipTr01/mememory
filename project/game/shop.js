@@ -105,15 +105,15 @@ function items() {
 
 // The rules of the season rewards now (null: the default ones)
 function seasonRewards() {
-  return (setup.seasonRewards || SEASON_REWARDS).map((rule) => ({ from: rule.from, to: rule.to, items: rule.items.slice(), coins: rule.coins || 0 }));
+  return (setup.seasonRewards || SEASON_REWARDS).map((rule) => ({ from: rule.from, to: rule.to, items: rule.items.slice(), coins: rule.coins || 0, prize: rule.prize || "" }));
 }
 
-// What a place of a season wins: the rules that cover it, together - {items: [id] (every item once), coins}
+// What a place of a season wins: the rules that cover it, together - {items: [id] (every item once), coins, prizes: [text]}
 function rewardsFor(rank) {
-  if (!Number.isInteger(rank) || rank < 1) return { items: [], coins: 0 };
+  if (!Number.isInteger(rank) || rank < 1) return { items: [], coins: 0, prizes: [] };
   const rules = seasonRewards().filter((rule) => rank >= rule.from && rank <= rule.to);
   const ids = [...new Set(rules.flatMap((rule) => rule.items))].filter((id) => byId(id));
-  return { items: ids, coins: rules.reduce((sum, rule) => sum + (rule.coins || 0), 0) };
+  return { items: ids, coins: rules.reduce((sum, rule) => sum + (rule.coins || 0), 0), prizes: rules.map((rule) => rule.prize).filter(Boolean) };
 }
 
 // How to get an exclusive item (for the shop): "1st place of a season", "Places 4-10 of a season" - null: only from the admin
@@ -124,15 +124,18 @@ function howToWin(id) {
   return places.map((rule) => (rule.from === rule.to ? ordinal(rule.from) + " place" : `Places ${rule.from}-${rule.to}`)).join(", ") + " of a season";
 }
 
-// What is given at once: items (any - one frame and one animation at most) and / or coins -> {items, coins} or {error}
+// What is given at once: items (any - one frame and one animation at most), coins and / or a prize of your own
+// (a text: a voucher, a dinner - the admin hands it over) -> {items, coins, prize} or {error}
 function checkGift(input, what) {
   const ids = Array.isArray(input && input.items) ? [...new Set(input.items.filter(Boolean))] : [];
   if (!ids.every((id) => byId(id))) return { error: `${what}: unknown item.` };
   if (KINDS.some((kind) => ids.filter((id) => byId(id).kind === kind).length > 1)) return { error: `${what}: one frame and one animation at most.` };
   const coins = input && input.coins != null && input.coins !== "" ? Number(input.coins) : 0;
   if (!Number.isInteger(coins) || coins < 0 || coins > MAX_REWARD_COINS) return { error: `${what}: coins from 0 to ${MAX_REWARD_COINS.toLocaleString("en-US")}.` };
-  if (!ids.length && coins === 0) return { error: `${what}: pick an item or coins.` };
-  return { items: ids, coins: coins };
+  const prize = typeof (input && input.prize) === "string" ? input.prize.trim() : "";
+  if (prize.length > 80) return { error: `${what}: the prize - up to 80 characters.` };
+  if (!ids.length && coins === 0 && !prize) return { error: `${what}: pick an item, coins or a prize.` };
+  return { items: ids, coins: coins, prize: prize };
 }
 
 // {seasonRewards: [{from, to, items, coins}]} -> the rules or {error}
@@ -145,7 +148,7 @@ function checkRewards(input) {
     if (!Number.isInteger(from) || !Number.isInteger(to) || from < 1 || to < from || to > 1000) return { error: "A rule needs places from 1 to 1,000 (from not after to)." };
     const gift = checkGift(rule, `Places ${from}-${to}`);
     if (gift.error) return gift;
-    rules.push({ from: from, to: to, items: gift.items, coins: gift.coins });
+    rules.push({ from: from, to: to, items: gift.items, coins: gift.coins, prize: gift.prize });
   }
   return { rules: rules.sort((a, b) => a.from - b.from) };
 }
@@ -251,13 +254,18 @@ async function reward(username, gift, from) {
     const won = [...(Array.isArray(stored.won) ? stored.won : []), ...gift.items.map((id) => ({ id: id, source: from.source, icon: from.icon || null, rank: from.rank || null, at: at }))];
     await User.updateOne({ username: username }, { $set: { looks: { ...stored, owned: Array.isArray(stored.owned) ? stored.owned : [], won: won } } });
   }
-  if (gift.coins > 0) await coins.add(username, gift.coins, { reason: from.rank ? "season reward" : "reward", note: [from.source, from.rank ? "#" + from.rank : null, from.note].filter(Boolean).join(" · ") });
+  const where = [from.source, from.rank ? "#" + from.rank : null, from.note].filter(Boolean).join(" · ");
+  if (gift.coins > 0) await coins.add(username, gift.coins, { reason: from.rank ? "season reward" : "reward", note: where });
+  // A prize of your own: in the coin history (0 coins) - so the admin sees whom to hand it to
+  const prizes = gift.prizes || (gift.prize ? [gift.prize] : []);
+  for (const prize of prizes) coins.log(username, 0, "prize", (prize + " · " + where).slice(0, 300));
   require("./notices").send(username, "reward", {
     source: from.source,
     icon: from.icon || null,
     rank: from.rank || null,
     note: from.note || null,
     coins: gift.coins,
+    prizes: prizes,
     items: gift.items.map((id) => ({ id: id, kind: byId(id).kind, name: byId(id).name })),
   });
   return true;
@@ -271,7 +279,7 @@ async function awardSeason(season, rows) {
   const given = [];
   for (const row of rows || []) {
     const gift = rewardsFor(row.rank);
-    if (!gift.items.length && !gift.coins) continue;
+    if (!gift.items.length && !gift.coins && !gift.prizes.length) continue;
     if (await reward(row.username, gift, { source: season.name, icon: season.icon || null, rank: row.rank })) given.push({ username: row.username, rank: row.rank, ...gift });
   }
   return given;

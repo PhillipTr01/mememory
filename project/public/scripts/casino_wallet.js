@@ -75,7 +75,7 @@
     dialog.setAttribute("aria-label", "Season reward");
     dialog.appendChild(el("div", "nav-streak-flame nav-reward-medal", place));
     dialog.appendChild(el("h2", "mm-dialog-title", reward.rank ? "Place " + reward.rank + " in " + (reward.icon ? reward.icon + " " : "") + reward.source + "!" : reward.source || "A reward for you!"));
-    dialog.appendChild(el("p", "mm-dialog-text nav-reward-text", reward.rank ? "Your reward for the season:" : "You got a reward:"));
+    dialog.appendChild(el("p", "mm-dialog-text nav-reward-text", (reward.rank ? "Your reward for the season" : "You got a reward") + ((reward.prizes || []).length ? " - the admin gets in touch about the prize:" : ":")));
     var row = el("div", "nav-reward-items");
     if (reward.coins > 0) {
       var cash = el("div", "nav-reward-item coins");
@@ -83,9 +83,17 @@
       cash.append(el("div", "nav-reward-stage nav-reward-coin", "🪙"), el("span", "nav-reward-kind", "Coins"), el("b", "nav-reward-name", "+" + format(reward.coins)));
       row.appendChild(cash);
     }
+    // A prize of the admin's own (a voucher, a dinner): what it is
+    var prizes = reward.prizes || [];
+    prizes.forEach((prize) => {
+      var card = el("div", "nav-reward-item prize");
+      card.style.setProperty("--i", row.children.length);
+      card.append(el("div", "nav-reward-stage nav-reward-coin", "🎁"), el("span", "nav-reward-kind", "Prize"), el("b", "nav-reward-name", prize));
+      row.appendChild(card);
+    });
     items.forEach((item, i) => {
       var card = el("div", "nav-reward-item");
-      card.style.setProperty("--i", i + (reward.coins > 0 ? 1 : 0));
+      card.style.setProperty("--i", i + (reward.coins > 0 ? 1 : 0) + prizes.length);
       var stage = el("div", "nav-reward-stage");
       if (name && typeof createAvatar == "function") {
         var avatar = createAvatar(name, "lg");

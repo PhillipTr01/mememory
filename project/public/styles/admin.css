@@ -4255,3 +4255,14 @@ a.ad-case-row:hover {
     grid-column: auto;
   }
 }
+
+/* The own prize of a rule: a line of its own under the picks */
+.ad-reward-prize {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 701px) {
+  .ad-give-note {
+    grid-column: span 2;
+  }
+}

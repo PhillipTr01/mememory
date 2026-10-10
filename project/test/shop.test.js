@@ -144,7 +144,7 @@ test("shop: the admin gives a player a reward - any item and / or coins, with a 
   shop.reset();
   h.addUser("gwen");
   h.setCoins("gwen", 100);
-  assert.match((await shop.give({ username: "gwen" })).error, /item or coins/);
+  assert.match((await shop.give({ username: "gwen" })).error, /an item, coins or a prize/);
   assert.match((await shop.give({ username: "nobody", coins: 5 })).error, /No such player/);
   assert.match((await shop.give({ username: "gwen", items: ["neon", "gold"] })).error, /one frame/);
   const result = await shop.give({ username: "gwen", items: ["spotlight"], coins: 2500, note: "Poker night" });
@@ -157,6 +157,22 @@ test("shop: the admin gives a player a reward - any item and / or coins, with a 
   assert.strictEqual((await shop.view("gwen")).items.find((item) => item.id === "podium").howToWin, "3rd place of a season");
 });
 
+test("shop: a prize of your own (a text) - on its own or with the rest, in the history for the admin", async () => {
+  shop.reset();
+  h.addUser("pia");
+  const before = h.coinLogs.length;
+  assert.ok(!(await shop.give({ username: "pia", prize: "€20 voucher", note: "Quiz night" })).error, "a prize alone is enough");
+  assert.match((await shop.give({ username: "pia", prize: "x".repeat(81) })).error, /80 characters/);
+  await shop.update({ seasonRewards: [{ from: 1, to: 1, items: [], coins: 0, prize: "Dinner" }, { from: 1, to: 3, items: ["spotlight"], prize: "Mug" }] });
+  assert.deepStrictEqual(shop.rewardsFor(1).prizes, ["Dinner", "Mug"]);
+  const given = await shop.awardSeason({ name: "Fall", icon: "🍂" }, [{ rank: 1, username: "pia" }]);
+  assert.deepStrictEqual(given[0].prizes, ["Dinner", "Mug"]);
+  await h.wait(20);
+  const rows = h.coinLogs.slice(before).filter((row) => row.reason === "prize");
+  assert.deepStrictEqual(rows.map((row) => [row.amount, row.note]), [[0, "€20 voucher · Quiz night"], [0, "Dinner · Fall · #1"], [0, "Mug · Fall · #1"]]);
+  shop.reset();
+});
+
 test("shop: the admin sets which places win what - one frame and one animation per rule, coins", async () => {
   shop.reset();
   assert.ok((await shop.update({ seasonRewards: [{ from: 1, to: 3, items: ["champion", "runnerup"] }] })).error, "two frames");
@@ -167,9 +183,9 @@ test("shop: the admin sets which places win what - one frame and one animation p
   assert.ok(!saved.error, saved.error);
   assert.deepStrictEqual(shop.rewardsFor(1).items.sort(), ["champion", "crowned"], "every rule that covers the place");
   assert.strictEqual(shop.rewardsFor(1).coins, 10000);
-  assert.deepStrictEqual(shop.rewardsFor(4), { items: ["crowned"], coins: 1000 });
-  assert.deepStrictEqual(shop.rewardsFor(6), { items: [], coins: 50 });
-  assert.deepStrictEqual(shop.rewardsFor(7), { items: [], coins: 0 });
+  assert.deepStrictEqual(shop.rewardsFor(4), { items: ["crowned"], coins: 1000, prizes: [] });
+  assert.deepStrictEqual(shop.rewardsFor(6), { items: [], coins: 50, prizes: [] });
+  assert.deepStrictEqual(shop.rewardsFor(7), { items: [], coins: 0, prizes: [] });
   await shop.update({ seasonRewards: [] });
   assert.deepStrictEqual(shop.rewardsFor(1).items, [], "no rules: nothing");
   await shop.update({ seasonRewards: null });

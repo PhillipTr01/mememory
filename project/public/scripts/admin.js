@@ -4,6 +4,7 @@
 var HISTORY_KINDS = [
   ["Casino", [["start coins", "Start coins"], ["daily bonus", "Daily bonus"], ["admin", "Admin"], ["withdrawal", "Payout"], ["withdrawal refund", "Payout refund"]]],
   ["Seasons", [["season start", "Season start"], ["second chance", "Second chance"]]],
+  ["Rewards", [["season reward", "Season reward"], ["reward", "Reward"], ["prize", "Own prize"]]],
   ["Gifts", [["gift sent", "Sent"], ["gift received", "Received"]]],
   ["Jackpot", [["jackpot bet", "Bet"], ["jackpot win", "Win"]]],
   ["Case battles", [["battle", "Bet"], ["battle win", "Win"], ["battle refund", "Refund"]]],
@@ -1032,9 +1033,10 @@ async function giveReward() {
     username: document.getElementById("adGivePlayer").value.trim(),
     items: [document.querySelector("#adGiveFrame select").value, document.querySelector("#adGiveEffect select").value].filter(Boolean),
     coins: Number(document.getElementById("adGiveCoins").value) || 0,
+    prize: document.getElementById("adGivePrize").value.trim(),
     note: document.getElementById("adGiveNote").value.trim(),
   };
-  var what = [...body.items.map((id) => (shopSaved.items.find((item) => item.id == id) || {}).name), body.coins ? "🪙 " + formatCoins(body.coins) : null].filter(Boolean).join(" + ");
+  var what = [...body.items.map((id) => (shopSaved.items.find((item) => item.id == id) || {}).name), body.coins ? "🪙 " + formatCoins(body.coins) : null, body.prize ? "🎁 " + body.prize : null].filter(Boolean).join(" + ");
   if (body.username && what && !(await confirmDialog({ title: "Give " + body.username + " a reward?", text: what + (body.note ? " - " + body.note : "") + ". Items are kept for good, coins go to the 🪙 balance.", confirmLabel: "Give" }))) return;
   button.disabled = true;
   try {
@@ -1042,6 +1044,7 @@ async function giveReward() {
     showHint("🎁 " + result.given.username + " got " + what + ".", "success", button);
     document.getElementById("adGivePlayer").value = "";
     document.getElementById("adGiveCoins").value = "";
+    document.getElementById("adGivePrize").value = "";
     document.getElementById("adGiveNote").value = "";
     document.querySelectorAll("#adGiveFrame select, #adGiveEffect select").forEach((select) => (select.value = ""));
   } catch (error) {
@@ -1127,7 +1130,17 @@ function renderRewardRules() {
           changed();
         });
         cash.append(el("span", "ad-setting-unit", "🪙"), coinsInput);
-        row.append(places, pick("frame", "Frame"), pick("effect", "Animation"), cash, remove);
+        var prize = el("input", "mm-input ad-reward-prize");
+        prize.type = "text";
+        prize.maxLength = 80;
+        prize.placeholder = "Own prize (optional) - e.g. €20 voucher";
+        prize.value = rule.prize || "";
+        prize.setAttribute("aria-label", "Own prize");
+        prize.addEventListener("input", () => {
+          rule.prize = prize.value;
+          changed();
+        });
+        row.append(places, pick("frame", "Frame"), pick("effect", "Animation"), cash, remove, prize);
         return row;
       }),
     );
@@ -1161,7 +1174,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("adRewardAdd").addEventListener("click", () => {
     var rules = shopDraft.seasonRewards;
     var after = rules.reduce((top, rule) => Math.max(top, rule.to), 0) + 1;
-    rules.push({ from: after, to: after, items: [], coins: 0 });
+    rules.push({ from: after, to: after, items: [], coins: 0, prize: "" });
     renderRewardRules();
     document.getElementById("adShopSave").disabled = !shopDirty();
   });

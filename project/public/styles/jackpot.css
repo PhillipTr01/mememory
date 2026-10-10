@@ -4737,3 +4737,7 @@ body.jackpot-theme::before {
 .nav-reward .mm-dialog-actions.single {
   grid-template-columns: 1fr;
 }
+
+.nav-reward-item.prize .nav-reward-name {
+  overflow-wrap: anywhere;
+}
