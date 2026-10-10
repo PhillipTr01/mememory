@@ -62,23 +62,30 @@
     claiming = null;
   });
 
-  /* ---------- A season is over: what the player won (frames, animations) ---------- */
+  /* ---------- A reward: a season's place, or from the admin - items and / or coins ---------- */
 
-  socket.on("seasonReward", async (reward) => {
+  socket.on("reward", async (reward) => {
     var name = typeof userPromise != "undefined" ? await userPromise.catch(() => null) : null;
-    var place = reward.rank == 1 ? "🥇" : reward.rank == 2 ? "🥈" : reward.rank == 3 ? "🥉" : "🏆";
+    var items = reward.items || [];
+    var place = !reward.rank ? reward.icon || "🎁" : reward.rank == 1 ? "🥇" : reward.rank == 2 ? "🥈" : reward.rank == 3 ? "🥉" : "🏆";
     var backdrop = el("div", "mm-dialog-backdrop");
     var dialog = el("div", "mm-dialog nav-streak nav-reward");
     dialog.setAttribute("role", "dialog");
     dialog.setAttribute("aria-modal", "true");
     dialog.setAttribute("aria-label", "Season reward");
     dialog.appendChild(el("div", "nav-streak-flame nav-reward-medal", place));
-    dialog.appendChild(el("h2", "mm-dialog-title", "Place " + reward.rank + " in " + (reward.icon ? reward.icon + " " : "") + reward.season + "!"));
-    dialog.appendChild(el("p", "mm-dialog-text nav-reward-text", "You won " + (reward.items.length == 1 ? "a season reward" : "season rewards") + " - nobody can buy " + (reward.items.length == 1 ? "it" : "them") + ", yours for good:"));
+    dialog.appendChild(el("h2", "mm-dialog-title", reward.rank ? "Place " + reward.rank + " in " + (reward.icon ? reward.icon + " " : "") + reward.source + "!" : reward.source || "A reward for you!"));
+    dialog.appendChild(el("p", "mm-dialog-text nav-reward-text", reward.rank ? "Your reward for the season:" : "You got a reward:"));
     var row = el("div", "nav-reward-items");
-    reward.items.forEach((item, i) => {
+    if (reward.coins > 0) {
+      var cash = el("div", "nav-reward-item coins");
+      cash.style.setProperty("--i", 0);
+      cash.append(el("div", "nav-reward-stage nav-reward-coin", "🪙"), el("span", "nav-reward-kind", "Coins"), el("b", "nav-reward-name", "+" + format(reward.coins)));
+      row.appendChild(cash);
+    }
+    items.forEach((item, i) => {
       var card = el("div", "nav-reward-item");
-      card.style.setProperty("--i", i);
+      card.style.setProperty("--i", i + (reward.coins > 0 ? 1 : 0));
       var stage = el("div", "nav-reward-stage");
       if (name && typeof createAvatar == "function") {
         var avatar = createAvatar(name, "lg");
@@ -94,15 +101,19 @@
     });
     dialog.appendChild(row);
     var buttons = el("div", "mm-dialog-actions");
-    var later = el("button", "mm-btn", "Later");
+    var later = el("button", "mm-btn" + (items.length ? "" : " mm-btn-primary"), items.length ? "Later" : "Nice!");
     later.type = "button";
-    var wear = el("a", "mm-btn mm-btn-primary", "Wear it");
-    wear.href = "shop";
-    buttons.append(later, wear);
+    buttons.appendChild(later);
+    // (items: to the shop to wear them)
+    if (items.length) {
+      var wear = el("a", "mm-btn mm-btn-primary", "Wear it");
+      wear.href = "shop";
+      buttons.appendChild(wear);
+    } else buttons.classList.add("single");
     dialog.appendChild(buttons);
     backdrop.appendChild(dialog);
     document.body.appendChild(backdrop);
-    if (window.casinoSound) window.casinoSound.play("fanfare");
+    if (window.casinoSound) window.casinoSound.play(reward.coins > 0 && !items.length ? "streak" : "fanfare");
     var close = () => {
       backdrop.remove();
       document.removeEventListener("keydown", onKey);

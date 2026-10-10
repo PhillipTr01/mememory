@@ -522,6 +522,16 @@ module.exports = function () {
   /* ---------- The accessory shop: items on / off, prices, free for all ---------- */
 
   router.get("/api/shop", admin, (req, res) => res.json(shop.config()));
+  // A reward for a player: items (any - the exclusive ones too) and / or coins, with a note
+  router.post(
+    "/api/shop/give",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await shop.give(req.body || {});
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
   router.post(
     "/api/shop",
     admin,

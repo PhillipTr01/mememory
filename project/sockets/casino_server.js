@@ -29,10 +29,10 @@ module.exports = function (io) {
   // (a gift while the player has no casino page open: kept for the next visit - game/inbox.js)
   notices.on("notice", (username, event, data) => {
     const sockets = socketsOf(io, username);
-    // A season reward: kept first, then shown on one open page (the season's end may move the pages - then the next one shows it)
-    if (event === "seasonReward") {
+    // A reward (a season's place, from the admin): kept first, then shown on one open page (the season's end may move the pages - then the next one shows it)
+    if (event === "reward") {
       inbox
-        .add(username, { type: "seasonReward", ...data })
+        .add(username, { type: "reward", ...data })
         .then(() =>
           setTimeout(() => {
             const open = socketsOf(io, username);
@@ -57,7 +57,9 @@ module.exports = function (io) {
       for (const item of items) {
         if (item.type === "gift") socket.emit("giftReceived", { ...item, missed: true });
         if (item.type === "rain") socket.emit("moneyRain", { ...item, missed: true });
-        if (item.type === "seasonReward") socket.emit("seasonReward", { ...item, missed: true });
+        // (seasonReward: kept before rewards were general - a season's name and place)
+        if (item.type === "reward") socket.emit("reward", { ...item, missed: true });
+        if (item.type === "seasonReward") socket.emit("reward", { source: item.season, icon: item.icon, rank: item.rank, coins: 0, items: item.items || [], missed: true });
       }
     } catch (error) {
       console.error("[inbox] Could not deliver:", error);

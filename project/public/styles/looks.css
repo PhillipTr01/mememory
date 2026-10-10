@@ -1075,7 +1075,7 @@
   }
 }
 
-/* ---------- Season rewards: never sold - the best of a season win them (game/shop.js) ---------- */
+/* ---------- Exclusive: never sold - only given as rewards (game/shop.js) ---------- */
 
 /* Laurels: a metal ring that shines, a wreath around it (1st gold, 2nd silver, 3rd bronze) */
 .look-frame-champion::after,

@@ -967,8 +967,8 @@ function renderShop() {
           var row = el("div", "ad-shop-row" + (shopValue(item, "on") ? "" : " off"));
           var name = el("div", "ad-shop-name");
           name.append(el("b", "", item.name), el("small", "ad-shop-rarity " + item.rarity, item.rarity));
-          // (a season item: won, never sold - no price)
-          if (item.season) {
+          // (an exclusive item: given, never sold - no price)
+          if (item.exclusive) {
             var toggleOnly = el("label", "ad-switch");
             var seasonBox = el("input");
             seasonBox.type = "checkbox";
@@ -979,7 +979,7 @@ function renderShop() {
               row.classList.toggle("off", !seasonBox.checked);
             });
             toggleOnly.append(seasonBox, el("span", "ad-switch-track"));
-            row.append(toggleOnly, name, el("span", "ad-shop-won", "🏆 won in seasons"));
+            row.append(toggleOnly, name, el("span", "ad-shop-won", "✨ only given"));
             return row;
           }
           var price = el("span", "ad-inline-input");
@@ -1008,12 +1008,70 @@ function renderShop() {
     );
   });
   renderRewardRules();
+  renderGive();
   document.getElementById("adShopSave").disabled = !shopDirty();
 }
 
-// The rules of the season rewards: places from - to, a frame and / or an animation
+// Give a reward: the item picks (with what the shop has now), the names to pick from
+function renderGive() {
+  var frame = document.getElementById("adGiveFrame");
+  var effect = document.getElementById("adGiveEffect");
+  var keep = (box) => (box.firstChild ? box.firstChild.value : "");
+  var frameSelect = itemSelect("frame", "Frame", keep(frame));
+  var effectSelect = itemSelect("effect", "Animation", keep(effect));
+  frame.replaceChildren(frameSelect);
+  effect.replaceChildren(effectSelect);
+  api("users?q=")
+    .then((list) => document.getElementById("adGiveNames").replaceChildren(...list.map((p) => Object.assign(el("option"), { value: p.username }))))
+    .catch(() => {});
+}
+
+async function giveReward() {
+  var button = document.getElementById("adGiveButton");
+  var body = {
+    username: document.getElementById("adGivePlayer").value.trim(),
+    items: [document.querySelector("#adGiveFrame select").value, document.querySelector("#adGiveEffect select").value].filter(Boolean),
+    coins: Number(document.getElementById("adGiveCoins").value) || 0,
+    note: document.getElementById("adGiveNote").value.trim(),
+  };
+  var what = [...body.items.map((id) => (shopSaved.items.find((item) => item.id == id) || {}).name), body.coins ? "🪙 " + formatCoins(body.coins) : null].filter(Boolean).join(" + ");
+  if (body.username && what && !(await confirmDialog({ title: "Give " + body.username + " a reward?", text: what + (body.note ? " - " + body.note : "") + ". Items are kept for good, coins go to the 🪙 balance.", confirmLabel: "Give" }))) return;
+  button.disabled = true;
+  try {
+    var result = await api("shop/give", body);
+    showHint("🎁 " + result.given.username + " got " + what + ".", "success", button);
+    document.getElementById("adGivePlayer").value = "";
+    document.getElementById("adGiveCoins").value = "";
+    document.getElementById("adGiveNote").value = "";
+    document.querySelectorAll("#adGiveFrame select, #adGiveEffect select").forEach((select) => (select.value = ""));
+  } catch (error) {
+    showHint(error.message, "error", button);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+// A select of every item of a kind (the exclusive ones first) - "" for none
+function itemSelect(kind, label, value) {
+  var select = el("select", "mm-input");
+  select.setAttribute("aria-label", label);
+  select.appendChild(Object.assign(el("option", null, "No " + label.toLowerCase()), { value: "" }));
+  [
+    ["✨ Exclusive", (item) => item.exclusive],
+    ["🛍️ Shop", (item) => !item.exclusive],
+  ].forEach(([title, pick]) => {
+    var group = el("optgroup");
+    group.label = title;
+    shopSaved.items.filter((item) => item.kind == kind && pick(item)).forEach((item) => group.appendChild(Object.assign(el("option", null, item.name), { value: item.id })));
+    select.appendChild(group);
+  });
+  select.value = value || "";
+  return select;
+}
+
+// The rules of the season rewards: places from - to, a frame and / or an animation, coins
 function renderRewardRules() {
-  var seasonItems = shopSaved.items.filter((item) => item.season);
+  var seasonItems = shopSaved.items;
   var rules = shopDraft.seasonRewards;
   var changed = () => (document.getElementById("adShopSave").disabled = !shopDirty());
   var list = document.getElementById("adSeasonRewards");
@@ -1039,14 +1097,8 @@ function renderRewardRules() {
         };
         places.append(el("span", "ad-label", "Places"), number("from", "From place"), el("span", "mm-muted", "to"), number("to", "To place"));
         var pick = (kind, label) => {
-          var select = el("select", "mm-input");
-          select.setAttribute("aria-label", label);
-          select.appendChild(Object.assign(el("option", null, "No " + label.toLowerCase()), { value: "" }));
-          seasonItems
-            .filter((item) => item.kind == kind)
-            .forEach((item) => select.appendChild(Object.assign(el("option", null, item.name), { value: item.id })));
           var current = rule.items.find((id) => (seasonItems.find((item) => item.id == id) || {}).kind == kind);
-          select.value = current || "";
+          var select = itemSelect(kind, label, current);
           select.addEventListener("change", () => {
             rule.items = rule.items.filter((id) => (seasonItems.find((item) => item.id == id) || {}).kind != kind);
             if (select.value) rule.items.push(select.value);
@@ -1062,7 +1114,20 @@ function renderRewardRules() {
           renderRewardRules();
           changed();
         });
-        row.append(places, pick("frame", "Frame"), pick("effect", "Animation"), remove);
+        var cash = el("span", "ad-inline-input ad-reward-coins");
+        var coinsInput = el("input", "mm-input");
+        coinsInput.type = "number";
+        coinsInput.min = 0;
+        coinsInput.step = 1000;
+        coinsInput.placeholder = "0";
+        coinsInput.value = rule.coins || "";
+        coinsInput.setAttribute("aria-label", "Coins");
+        coinsInput.addEventListener("input", () => {
+          rule.coins = Math.max(0, Math.floor(Number(coinsInput.value) || 0));
+          changed();
+        });
+        cash.append(el("span", "ad-setting-unit", "🪙"), coinsInput);
+        row.append(places, pick("frame", "Frame"), pick("effect", "Animation"), cash, remove);
         return row;
       }),
     );
@@ -1092,10 +1157,11 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("adShopSave").disabled = !shopDirty();
   });
   document.getElementById("adShopSave").addEventListener("click", saveShop);
+  document.getElementById("adGiveButton").addEventListener("click", giveReward);
   document.getElementById("adRewardAdd").addEventListener("click", () => {
     var rules = shopDraft.seasonRewards;
     var after = rules.reduce((top, rule) => Math.max(top, rule.to), 0) + 1;
-    rules.push({ from: after, to: after, items: [] });
+    rules.push({ from: after, to: after, items: [], coins: 0 });
     renderRewardRules();
     document.getElementById("adShopSave").disabled = !shopDirty();
   });

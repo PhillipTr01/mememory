@@ -4723,3 +4723,17 @@ body.jackpot-theme::before {
     right: 0.75rem;
   }
 }
+
+.nav-reward-coin {
+  font-size: 2.8rem;
+  line-height: 1;
+}
+
+.nav-reward-item.coins .nav-reward-name {
+  color: var(--mm-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.nav-reward .mm-dialog-actions.single {
+  grid-template-columns: 1fr;
+}

@@ -4133,7 +4133,7 @@ a.ad-case-row:hover {
 }
 
 /* ---------- Shop: season rewards ---------- */
-.ad-shop-rarity.season {
+.ad-shop-rarity.exclusive {
   color: #f2c45a;
 }
 
@@ -4203,5 +4203,55 @@ a.ad-case-row:hover {
   .ad-reward-remove {
     grid-row: 1;
     grid-column: 2;
+  }
+}
+
+.ad-reward-rule {
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) 130px auto;
+}
+
+.ad-reward-coins .mm-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.ad-give-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+  align-items: end;
+}
+
+.ad-give-form .ad-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.ad-give-form .ad-field select,
+.ad-give-form .ad-field .mm-input {
+  width: 100%;
+}
+
+.ad-give-note {
+  grid-column: span 3;
+}
+
+@media (max-width: 700px) {
+  .ad-reward-rule {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ad-reward-coins {
+    grid-column: 1 / -1;
+  }
+
+  .ad-give-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ad-give-note {
+    grid-column: auto;
   }
 }

@@ -8,7 +8,7 @@ const socket = io((window.CASINO_NS || "") + "/jackpot");
 
 var myName = null;
 var shopData = null; // {items, owned, frame, effect, balance, season}
-var RARITY = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", season: "Season" };
+var RARITY = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", exclusive: "Exclusive" };
 
 // Used by chat.js
 function chatUsername() {
@@ -85,9 +85,9 @@ function render() {
   renderSeason();
 }
 
-// The season rewards: worn like the rest when won - otherwise locked, with the place that wins them
+// The exclusive items: worn like the rest when given - otherwise locked, with how to get them
 function renderSeason() {
-  var list = shopData.items.filter((item) => item.season);
+  var list = shopData.items.filter((item) => item.exclusive);
   document.getElementById("shSeasonSection").hidden = list.length == 0;
   var won = shopData.won || [];
   document.getElementById("shSeason").replaceChildren(
@@ -97,16 +97,16 @@ function renderSeason() {
       .map((item) => {
         var owned = isOwned(item);
         var worn = shopData[item.kind] == item.id;
-        var card = el("div", "sh-item season" + (worn ? " worn" : "") + (owned ? " owned" : " locked"));
+        var card = el("div", "sh-item exclusive" + (worn ? " worn" : "") + (owned ? " owned" : " locked"));
         var stage = el("div", "sh-stage");
         stage.appendChild(avatarWith(item.kind == "frame" ? { frame: item.id, effect: shopData.effect } : { frame: shopData.frame, effect: item.id }, "lg"));
-        card.append(stage, el("span", "sh-rarity", item.kind == "frame" ? "Season frame" : "Season animation"), el("span", "sh-item-name", item.name));
-        // Where it came from (won) - or how to win it
+        card.append(stage, el("span", "sh-rarity", item.kind == "frame" ? "Exclusive frame" : "Exclusive animation"), el("span", "sh-item-name", item.name));
+        // Where it came from (given) - or how to get it
         var mine = won.filter((entry) => entry.id == item.id);
         if (mine.length) {
           var last = mine[mine.length - 1];
-          card.appendChild(el("span", "sh-season-origin", (last.icon ? last.icon + " " : "") + last.season + " · #" + last.rank + (mine.length > 1 ? " (" + mine.length + "×)" : "")));
-        } else card.appendChild(el("span", "sh-season-origin how", item.howToWin ? "🏆 " + item.howToWin : "Not given right now"));
+          card.appendChild(el("span", "sh-season-origin", (last.icon ? last.icon + " " : "") + (last.source || last.season || "A reward") + (last.rank ? " · #" + last.rank : "") + (mine.length > 1 ? " (" + mine.length + "×)" : "")));
+        } else card.appendChild(el("span", "sh-season-origin how", item.howToWin ? "🏆 " + item.howToWin : "🎁 Only as a reward"));
         var button;
         if (worn) {
           button = el("button", "mm-btn mm-btn-sm sh-btn", "Take off");
@@ -115,7 +115,7 @@ function renderSeason() {
           button = el("button", "mm-btn mm-btn-sm sh-btn", "Wear");
           button.addEventListener("click", () => wear(item.kind, item.id, button));
         } else {
-          button = el("button", "mm-btn mm-btn-sm sh-btn", "🔒 Win it in a season");
+          button = el("button", "mm-btn mm-btn-sm sh-btn", "🔒 Not for sale");
           button.disabled = true;
         }
         button.type = "button";
@@ -134,7 +134,7 @@ function renderGrid(id, kind) {
   var grid = document.getElementById(id);
   grid.replaceChildren(
     ...shopData.items
-      .filter((item) => item.kind == kind && !item.season)
+      .filter((item) => item.kind == kind && !item.exclusive)
       .sort((a, b) => a.price - b.price)
       .map((item) => {
         // (free for all: everything can be worn without buying it)

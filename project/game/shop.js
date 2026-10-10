@@ -15,9 +15,10 @@ const testMode = require("./test_mode");
  * buying it. Turned off again, everything nobody bought comes off.
  * An item that is off: not in the shop, nobody wears it (who bought it keeps it).
  *
- * Season items (season: true) can't be bought: the best of a season win them when it ends
- * (seasonRewards: which places get which items - the admin sets it, Casino → Shop). Who won one
- * keeps it for good: user.looks.won = [{id, season, rank, at}].
+ * Exclusive items (exclusive: true) can't be bought - they are only given: to the places of a
+ * season when it ends (seasonRewards: which places get which items and coins - any item, the
+ * admin sets it, Casino → Shop) or by the admin to anybody (give). What was given is kept for
+ * good: user.looks.won = [{id, source, icon, rank, at}].
  */
 const ITEMS = [
   // Frames: a ring around the avatar
@@ -66,22 +67,23 @@ const ITEMS = [
   { id: "halo", kind: "effect", name: "Halo", price: 3200000, rarity: "legendary" },
   { id: "aura", kind: "effect", name: "Aura", price: 5000000, rarity: "legendary" },
   { id: "vortex", kind: "effect", name: "Vortex", price: 7000000, rarity: "legendary" },
-  // Season rewards: only won - never sold
-  { id: "champion", kind: "frame", name: "Champion's Laurel", price: 0, rarity: "season", season: true },
-  { id: "runnerup", kind: "frame", name: "Silver Laurel", price: 0, rarity: "season", season: true },
-  { id: "podium", kind: "frame", name: "Bronze Laurel", price: 0, rarity: "season", season: true },
-  { id: "contender", kind: "frame", name: "Contender", price: 0, rarity: "season", season: true },
-  { id: "crowned", kind: "effect", name: "Victory Crown", price: 0, rarity: "season", season: true },
-  { id: "spotlight", kind: "effect", name: "Spotlight", price: 0, rarity: "season", season: true },
-  { id: "starfall", kind: "effect", name: "Starfall", price: 0, rarity: "season", season: true },
+  // Exclusive: only given (a season's places, the admin) - never sold
+  { id: "champion", kind: "frame", name: "Champion's Laurel", price: 0, rarity: "exclusive", exclusive: true },
+  { id: "runnerup", kind: "frame", name: "Silver Laurel", price: 0, rarity: "exclusive", exclusive: true },
+  { id: "podium", kind: "frame", name: "Bronze Laurel", price: 0, rarity: "exclusive", exclusive: true },
+  { id: "contender", kind: "frame", name: "Contender", price: 0, rarity: "exclusive", exclusive: true },
+  { id: "crowned", kind: "effect", name: "Victory Crown", price: 0, rarity: "exclusive", exclusive: true },
+  { id: "spotlight", kind: "effect", name: "Spotlight", price: 0, rarity: "exclusive", exclusive: true },
+  { id: "starfall", kind: "effect", name: "Starfall", price: 0, rarity: "exclusive", exclusive: true },
 ];
-// Who wins what at the end of a season (places from - to): the admin can change it
+// Who wins what at the end of a season (places from - to): any items, coins (the normal 🪙) - the admin can change it
 const SEASON_REWARDS = [
-  { from: 1, to: 1, items: ["champion", "crowned"] },
-  { from: 2, to: 2, items: ["runnerup", "spotlight"] },
-  { from: 3, to: 3, items: ["podium", "spotlight"] },
-  { from: 4, to: 10, items: ["contender", "starfall"] },
+  { from: 1, to: 1, items: ["champion", "crowned"], coins: 0 },
+  { from: 2, to: 2, items: ["runnerup", "spotlight"], coins: 0 },
+  { from: 3, to: 3, items: ["podium", "spotlight"], coins: 0 },
+  { from: 4, to: 10, items: ["contender", "starfall"], coins: 0 },
 ];
+const MAX_REWARD_COINS = 100000000;
 const MAX_REWARD_RULES = 20;
 const KINDS = ["frame", "effect"];
 const KEY = "shop";
@@ -103,27 +105,37 @@ function items() {
 
 // The rules of the season rewards now (null: the default ones)
 function seasonRewards() {
-  return (setup.seasonRewards || SEASON_REWARDS).map((rule) => ({ from: rule.from, to: rule.to, items: rule.items.slice() }));
+  return (setup.seasonRewards || SEASON_REWARDS).map((rule) => ({ from: rule.from, to: rule.to, items: rule.items.slice(), coins: rule.coins || 0 }));
 }
 
-// The items a place of a season wins (the rules that cover it, together - every item once)
+// What a place of a season wins: the rules that cover it, together - {items: [id] (every item once), coins}
 function rewardsFor(rank) {
-  if (!Number.isInteger(rank) || rank < 1) return [];
-  const ids = seasonRewards()
-    .filter((rule) => rank >= rule.from && rank <= rule.to)
-    .flatMap((rule) => rule.items);
-  return [...new Set(ids)].filter((id) => byId(id) && byId(id).season);
+  if (!Number.isInteger(rank) || rank < 1) return { items: [], coins: 0 };
+  const rules = seasonRewards().filter((rule) => rank >= rule.from && rank <= rule.to);
+  const ids = [...new Set(rules.flatMap((rule) => rule.items))].filter((id) => byId(id));
+  return { items: ids, coins: rules.reduce((sum, rule) => sum + (rule.coins || 0), 0) };
 }
 
-// How to win a season item (for the shop): "1st place", "Places 4-10", ... - null: no place wins it now
+// How to get an exclusive item (for the shop): "1st place of a season", "Places 4-10 of a season" - null: only from the admin
 function howToWin(id) {
   const places = seasonRewards().filter((rule) => rule.items.includes(id));
   if (!places.length) return null;
   const ordinal = (n) => n + (n % 10 === 1 && n % 100 !== 11 ? "st" : n % 10 === 2 && n % 100 !== 12 ? "nd" : n % 10 === 3 && n % 100 !== 13 ? "rd" : "th");
-  return places.map((rule) => (rule.from === rule.to ? ordinal(rule.from) + " place" : `Places ${rule.from}-${rule.to}`)).join(", ");
+  return places.map((rule) => (rule.from === rule.to ? ordinal(rule.from) + " place" : `Places ${rule.from}-${rule.to}`)).join(", ") + " of a season";
 }
 
-// {seasonRewards: [{from, to, items}]} -> the rules or {error}
+// What is given at once: items (any - one frame and one animation at most) and / or coins -> {items, coins} or {error}
+function checkGift(input, what) {
+  const ids = Array.isArray(input && input.items) ? [...new Set(input.items.filter(Boolean))] : [];
+  if (!ids.every((id) => byId(id))) return { error: `${what}: unknown item.` };
+  if (KINDS.some((kind) => ids.filter((id) => byId(id).kind === kind).length > 1)) return { error: `${what}: one frame and one animation at most.` };
+  const coins = input && input.coins != null && input.coins !== "" ? Number(input.coins) : 0;
+  if (!Number.isInteger(coins) || coins < 0 || coins > MAX_REWARD_COINS) return { error: `${what}: coins from 0 to ${MAX_REWARD_COINS.toLocaleString("en-US")}.` };
+  if (!ids.length && coins === 0) return { error: `${what}: pick an item or coins.` };
+  return { items: ids, coins: coins };
+}
+
+// {seasonRewards: [{from, to, items, coins}]} -> the rules or {error}
 function checkRewards(input) {
   if (!Array.isArray(input) || input.length > MAX_REWARD_RULES) return { error: `At most ${MAX_REWARD_RULES} rules.` };
   const rules = [];
@@ -131,10 +143,9 @@ function checkRewards(input) {
     const from = Number(rule && rule.from);
     const to = Number(rule && rule.to);
     if (!Number.isInteger(from) || !Number.isInteger(to) || from < 1 || to < from || to > 1000) return { error: "A rule needs places from 1 to 1,000 (from not after to)." };
-    const ids = Array.isArray(rule.items) ? [...new Set(rule.items)] : [];
-    if (!ids.length || !ids.every((id) => byId(id) && byId(id).season)) return { error: `Places ${from}-${to}: pick at least one season item.` };
-    if (KINDS.some((kind) => ids.filter((id) => byId(id).kind === kind).length > 1)) return { error: `Places ${from}-${to}: one frame and one animation at most.` };
-    rules.push({ from: from, to: to, items: ids });
+    const gift = checkGift(rule, `Places ${from}-${to}`);
+    if (gift.error) return gift;
+    rules.push({ from: from, to: to, items: gift.items, coins: gift.coins });
   }
   return { rules: rules.sort((a, b) => a.from - b.from) };
 }
@@ -157,11 +168,11 @@ async function balanceOf(username) {
   return data.coins;
 }
 
-// The items of the shop (on) - a season item with how to win it
+// The items of the shop (on) - an exclusive item with how to get it
 function shopItems() {
   return items()
     .filter((item) => item.on)
-    .map((item) => (item.season ? { ...item, howToWin: howToWin(item.id) } : item));
+    .map((item) => (item.exclusive ? { ...item, howToWin: howToWin(item.id) } : item));
 }
 
 // The shop of a player: the items that are on, what they have and wear, what they can pay with
@@ -179,7 +190,7 @@ async function view(username) {
 async function buy(username, id) {
   const item = byId(id) && itemNow(byId(id));
   if (item == null || !item.on) return { error: "This item doesn't exist." };
-  if (item.season) return { error: "Season items can't be bought - win them in a season." };
+  if (item.exclusive) return { error: "Exclusive items can't be bought - they are only given as rewards." };
   if (setup.free || testMode.active(username)) return { error: "Everything is free right now - just wear it." };
   const user = await User.findOne({ username: username }).lean();
   const looks = looksOf(user);
@@ -227,24 +238,56 @@ async function worn(names) {
 }
 
 /*
- * A season is over: its best win their items (rows: the final places, {rank, username} - rank null:
- * not placed). The items are kept for good; the winners hear of it (game/notices.js, the inbox).
- * -> [{username, rank, items: [id]}]
+ * A reward for a player: items (kept for good, with where they came from) and / or coins (the normal 🪙).
+ * from: {source (e.g. the season's name), icon, rank (a season's place - or null), note}. The player
+ * hears of it (game/notices.js, a popup - kept for later when the casino isn't open). -> false: no such player
+ */
+async function reward(username, gift, from) {
+  const user = await User.findOne({ username: username }).select("username looks").lean();
+  if (user == null) return false;
+  const at = Date.now();
+  if (gift.items.length) {
+    const stored = user.looks || {};
+    const won = [...(Array.isArray(stored.won) ? stored.won : []), ...gift.items.map((id) => ({ id: id, source: from.source, icon: from.icon || null, rank: from.rank || null, at: at }))];
+    await User.updateOne({ username: username }, { $set: { looks: { ...stored, owned: Array.isArray(stored.owned) ? stored.owned : [], won: won } } });
+  }
+  if (gift.coins > 0) await coins.add(username, gift.coins, { reason: from.rank ? "season reward" : "reward", note: [from.source, from.rank ? "#" + from.rank : null, from.note].filter(Boolean).join(" · ") });
+  require("./notices").send(username, "reward", {
+    source: from.source,
+    icon: from.icon || null,
+    rank: from.rank || null,
+    note: from.note || null,
+    coins: gift.coins,
+    items: gift.items.map((id) => ({ id: id, kind: byId(id).kind, name: byId(id).name })),
+  });
+  return true;
+}
+
+/*
+ * A season is over: its places win what the rules give them (rows: the final places, {rank, username} -
+ * rank null: not placed). -> [{username, rank, items: [id], coins}]
  */
 async function awardSeason(season, rows) {
   const given = [];
   for (const row of rows || []) {
-    const ids = rewardsFor(row.rank);
-    if (!ids.length) continue;
-    const user = await User.findOne({ username: row.username }).select("username looks").lean();
-    if (user == null) continue;
-    const stored = user.looks || {};
-    const won = [...(Array.isArray(stored.won) ? stored.won : []), ...ids.map((id) => ({ id: id, season: season.name, icon: season.icon || null, rank: row.rank, at: Date.now() }))];
-    await User.updateOne({ username: row.username }, { $set: { looks: { ...stored, owned: Array.isArray(stored.owned) ? stored.owned : [], won: won } } });
-    given.push({ username: row.username, rank: row.rank, items: ids });
-    require("./notices").send(row.username, "seasonReward", { season: season.name, icon: season.icon || null, rank: row.rank, items: ids.map((id) => ({ id: id, kind: byId(id).kind, name: byId(id).name })) });
+    const gift = rewardsFor(row.rank);
+    if (!gift.items.length && !gift.coins) continue;
+    if (await reward(row.username, gift, { source: season.name, icon: season.icon || null, rank: row.rank })) given.push({ username: row.username, rank: row.rank, ...gift });
   }
   return given;
+}
+
+// The admin gives a player something: {username, items, coins, note} -> {given} or {error}
+async function give(input) {
+  const username = typeof (input && input.username) === "string" ? input.username.trim() : "";
+  if (!username) return { error: "Pick a player." };
+  const gift = checkGift(input, "The reward");
+  if (gift.error) return gift;
+  const note = typeof input.note === "string" ? input.note.trim().slice(0, 80) : "";
+  const user = await User.findOne({ username: username }).select("username casinoApproved").lean();
+  if (user == null) return { error: "No such player." };
+  await reward(user.username, gift, { source: note || "A reward", icon: "🎁", rank: null, note: null });
+  return { given: { username: user.username, ...gift, note: note } };
 }
 
 /* ---------- The admin ---------- */
@@ -313,4 +356,4 @@ function reset() {
   setup = { items: {}, free: false, seasonRewards: null };
 }
 
-module.exports = { ITEMS, KINDS, SEASON_REWARDS, byId, items, looksOf, view, buy, wear, worn, balanceOf, seasonRewards, rewardsFor, howToWin, awardSeason, config, update, load, reset };
+module.exports = { ITEMS, KINDS, SEASON_REWARDS, byId, items, looksOf, view, buy, wear, worn, balanceOf, seasonRewards, rewardsFor, howToWin, reward, awardSeason, give, config, update, load, reset };
