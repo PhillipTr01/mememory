@@ -23,6 +23,10 @@ const PHASE = {
 const SIZES = [2, 3, 4];
 const MODES = ["classic", "crazy", "random", "jackpot", "bestof", "worstof"];
 const BOT_NAMES = ["Bot Pepe", "Bot Doge", "Bot Wojak"];
+const TEAMS = [
+  [0, 1],
+  [2, 3],
+]; // 2v2: the seats of team A and team B
 
 /*
  * Hidden case battles (like on csgofast): 2-4 players pay the same cases, every
@@ -36,6 +40,10 @@ const BOT_NAMES = ["Bot Pepe", "Bot Doge", "Bot Wojak"];
  * The mode: classic (most wins), crazy (least wins), jackpot, best of, worst of -
  * or random: one of all the others, decided by the seed (provably fair) and
  * shown only at the end.
+ * 2v2 (teams, 4 players): seats 1-2 against seats 3-4 - every rule counts the two
+ * of a team together (their totals, their items of a round added up; jackpot: the
+ * team of the seat the ticket hits). The winning team splits the pot (a bot's half
+ * stays in the house); a tie between the teams: all four split it.
  */
 module.exports = function (io, options = {}) {
   // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
@@ -68,15 +76,23 @@ module.exports = function (io, options = {}) {
     );
   }
 
+  // Who plays together: 2v2 - [[0, 1], [2, 3]], otherwise every seat for itself
+  function groupsOf(battle) {
+    return battle.teams === true ? TEAMS : battle.seats.map((_, seat) => [seat]);
+  }
+  const groupSum = (group, values) => group.reduce((sum, seat) => sum + values[seat], 0);
+
   // Best of: the rounds every seat won (the best item of a round - equal: all of them)
-  // (worst of: the least item wins the round)
+  // (worst of: the least item wins the round). 2v2: a team's items of a round added up - both get its points
   function roundPoints(battle, rounds, least = false) {
     const points = battle.seats.map(() => 0);
+    const groups = groupsOf(battle);
     rounds.forEach((round, index) => {
-      const values = round.map((item) => cases.caseById(battle.cases[index]).items[item].value);
+      const items = round.map((item) => cases.caseById(battle.cases[index]).items[item].value);
+      const values = groups.map((group) => groupSum(group, items));
       const best = least ? Math.min(...values) : Math.max(...values);
-      values.forEach((value, seat) => {
-        if (value === best) points[seat]++;
+      values.forEach((value, g) => {
+        if (value === best) groups[g].forEach((seat) => points[seat]++);
       });
     });
     return points;
@@ -110,6 +126,7 @@ module.exports = function (io, options = {}) {
       id: battle.id,
       creator: battle.creator,
       size: battle.size,
+      teams: battle.teams === true,
       mode: modeOf(battle),
       // Random: which mode it is only comes out at the end
       crazy: modeOf(battle) === "random" && !done ? null : battle.crazy,
@@ -126,6 +143,8 @@ module.exports = function (io, options = {}) {
       points: pointsNow(battle, rounds, modeOf(battle) === "random" ? (done ? ruleOf(battle) : null) : modeOf(battle)),
       // Jackpot: the drawn ticket (in coins of the pot) - after the end
       ticket: done && ruleOf(battle) === "jackpot" ? battle.ticket : null,
+      // (2v2 jackpot: the seat the ticket hit - its team won)
+      ticketSeat: done && ruleOf(battle) === "jackpot" && battle.ticketSeat != null ? battle.ticketSeat : null,
       nextIn: battle.nextAt != null ? Math.max(0, battle.nextAt - Date.now()) : null,
       // A page opened in the middle: how long ago the last case started rolling, how long the end still plays
       roundAgo: battle.phase === PHASE.RUNNING && battle.revealed > 0 ? Math.max(0, Date.now() - (battle.begin + (battle.revealed - 1) * config.BATTLE_ROUND)) : null,
@@ -205,29 +224,36 @@ module.exports = function (io, options = {}) {
       battle.crazy = battle.picked === "crazy";
     }
     const all = totals(battle, battle.results);
-    let tied;
+    // (2v2: the two of a team count together - a seat stands for its team, the team wins)
+    const groups = groupsOf(battle);
+    const groupOf = (seat) => groups.findIndex((group) => group.includes(seat));
+    const sums = groups.map((group) => groupSum(group, all));
+    let tiedGroups;
     if (ruleOf(battle) === "jackpot") {
-      // A ticket in the pot: who's worth covers it, wins it all
+      // A ticket in the pot: who's worth covers it, wins it all (2v2: the seat's team)
       battle.crazy = false;
       const pot = all.reduce((sum, total) => sum + total, 0);
       battle.ticket = cases.roll(battle.fair.seed, `${battle.id}:jackpot`) * pot;
       let covered = 0;
       const winner = all.findIndex((total) => (covered += total) > battle.ticket);
-      tied = [winner < 0 ? all.length - 1 : winner];
+      battle.ticketSeat = winner < 0 ? all.length - 1 : winner;
+      tiedGroups = [groupOf(battle.ticketSeat)];
     } else if (ruleOf(battle) === "bestof" || ruleOf(battle) === "worstof") {
       // The most rounds - equal: the bigger total (worst of: the smaller) - still equal: all of them
       const least = ruleOf(battle) === "worstof";
       battle.crazy = false;
       const points = roundPoints(battle, battle.results, least);
-      const most = Math.max(...points);
-      const leaders = points.map((p, seat) => (p === most ? seat : -1)).filter((seat) => seat >= 0);
-      const top = least ? Math.min(...leaders.map((seat) => all[seat])) : Math.max(...leaders.map((seat) => all[seat]));
-      tied = leaders.filter((seat) => all[seat] === top);
+      const groupPoints = groups.map((group) => points[group[0]]);
+      const most = Math.max(...groupPoints);
+      const leaders = groupPoints.map((p, g) => (p === most ? g : -1)).filter((g) => g >= 0);
+      const top = least ? Math.min(...leaders.map((g) => sums[g])) : Math.max(...leaders.map((g) => sums[g]));
+      tiedGroups = leaders.filter((g) => sums[g] === top);
     } else {
-      const best = battle.crazy ? Math.min(...all) : Math.max(...all);
-      tied = all.map((total, seat) => (total === best ? seat : -1)).filter((seat) => seat >= 0);
+      const best = battle.crazy ? Math.min(...sums) : Math.max(...sums);
+      tiedGroups = sums.map((total, g) => (total === best ? g : -1)).filter((g) => g >= 0);
     }
-    // A tie: every one of them wins - the pot is split (a coin left over goes to the first)
+    const tied = tiedGroups.flatMap((g) => groups[g]);
+    // A tie (2v2: the winning team - or both): every one of them wins - the pot is split (a coin left over goes to the first)
     battle.winners = tied;
     battle.winner = tied[0];
     battle.payout = all.reduce((sum, total) => sum + total, 0);
@@ -284,7 +310,7 @@ module.exports = function (io, options = {}) {
         if (winner.bot || shares[i] <= 0) return;
         try {
           // (the note: the mode and how many played - for the best wins)
-          await coins.add(winner.name, shares[i], { reason: "battle win", bet: battle.price, note: [battle.mode, battle.seats.length + " players", shares.length > 1 ? "split pot" : null].filter(Boolean).join(" · ") });
+          await coins.add(winner.name, shares[i], { reason: "battle win", bet: battle.price, note: [battle.mode, battle.teams ? "2v2" : battle.seats.length + " players", shares.length > 1 && !battle.teams ? "split pot" : null].filter(Boolean).join(" · ") });
           best.changed();
         } catch (error) {
           console.error("[battles] Could not pay a winner:", error);
@@ -311,7 +337,7 @@ module.exports = function (io, options = {}) {
     const done = () => {
       payWinner(battle);
       const winners = winnersOf(battle).map((seat) => battle.seats[seat]);
-      lobby.history.unshift({ id: battle.id, winner: winners[0].name, winners: winners.map((w) => w.name), bot: winners.every((w) => w.bot), total: battle.payout, price: battle.price });
+      lobby.history.unshift({ id: battle.id, winner: winners[0].name, winners: winners.map((w) => w.name), bot: winners.every((w) => w.bot), total: battle.payout, price: battle.price, teams: battle.teams === true });
       lobby.history.length = Math.min(lobby.history.length, config.BATTLE_HISTORY);
       if (wait > 0) emitList();
     };
@@ -323,7 +349,8 @@ module.exports = function (io, options = {}) {
   }
 
   // Takes the coins and puts the user (or a bot) into a free seat
-  async function sit(socket, battle, username) {
+  // want: the seat the player picked (2v2: the team) - taken meanwhile or none: the first free one
+  async function sit(socket, battle, username, want) {
     if (busy.has(username)) return false;
     // Test coins never play against real coins: a tester only with bots (and only alone among people)
     const others = battle.seats.filter((seat) => seat && !seat.bot && seat.name !== username);
@@ -338,7 +365,7 @@ module.exports = function (io, options = {}) {
         socket.emit("battleError", coins.refusal(username) || "You don't have enough coins.");
         return false;
       }
-      const seat = battle.seats.indexOf(null);
+      const seat = Number.isInteger(want) && want >= 0 && want < battle.seats.length && battle.seats[want] === null ? want : battle.seats.indexOf(null);
       // Somebody else was faster (or the battle was cancelled): coins back
       if (battle.phase !== PHASE.WAITING || seat < 0 || battle.seats.some((s) => s && s.name === username)) {
         await coins.add(username, battle.price, { reason: "battle refund" });
@@ -414,6 +441,8 @@ module.exports = function (io, options = {}) {
           id: newId(),
           creator: username,
           size: data.size,
+          // 2v2: two teams of two (only with 4 players)
+          teams: data.teams === true && data.size === 4,
           mode: MODES.includes(data.mode) ? data.mode : data.crazy === true ? "crazy" : "classic",
           crazy: data.mode === "crazy" || (data.mode == null && data.crazy === true),
           cases: ids.slice(),
@@ -436,25 +465,31 @@ module.exports = function (io, options = {}) {
       }),
     );
 
+    // id - or {id, seat}: a seat of its own (2v2: the team)
     socket.on(
       "joinBattle",
-      safe("joinBattle", async (id) => {
+      safe("joinBattle", async (data) => {
+        const id = data != null && typeof data === "object" ? data.id : data;
+        const want = data != null && typeof data === "object" ? data.seat : null;
         const battle = lobby.list.get(id);
         if (battle == null || battle.phase !== PHASE.WAITING) return;
         if (casinoLock.locked()) return socket.emit("battleError", casinoLock.message());
         if (battle.seats.some((seat) => seat && seat.name === username)) return;
-        if (await sit(socket, battle, username)) startIfFull(battle);
+        if (await sit(socket, battle, username, want)) startIfFull(battle);
       }),
     );
 
     // Only the creator: fills one free seat with a bot (its items go to the winner)
     socket.on(
       "addBot",
-      safe("addBot", (id) => {
+      safe("addBot", (data) => {
+        // id - or {id, seat}: the seat for the bot (2v2: the team)
+        const id = data != null && typeof data === "object" ? data.id : data;
+        const want = data != null && typeof data === "object" ? data.seat : null;
         const battle = lobby.list.get(id);
         if (battle == null || battle.phase !== PHASE.WAITING || battle.creator !== username) return;
         if (casinoLock.locked()) return socket.emit("battleError", casinoLock.message());
-        const seat = battle.seats.indexOf(null);
+        const seat = Number.isInteger(want) && want >= 0 && want < battle.seats.length && battle.seats[want] === null ? want : battle.seats.indexOf(null);
         if (seat < 0) return;
         const name = BOT_NAMES.find((bot) => !battle.seats.some((s) => s && s.name === bot));
         battle.seats[seat] = { name: name, bot: true };

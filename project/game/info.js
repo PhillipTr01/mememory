@@ -81,6 +81,7 @@ const GAMES = {
           "🏅 Best of mode: the best item of a case wins the round - the most rounds win (equal rounds: the bigger worth).",
           "🥄 Worst of mode: the worst item of a case wins the round - the most rounds win (equal rounds: the smaller worth).",
           "❓ Random mode: one of the other modes, picked at random at the very end - while it runs you see the chance and the rounds won (🏅 best, 🥄 worst).",
+          "👥 2v2 (Players: one step after 4): Team A (seats 1-2) against Team B (seats 3-4) - pick your team with the Join button of its seat. Every mode counts the two of a team together (their worth, their items of a round added up; jackpot: the team of the drawn player). The winning team splits the pot.",
           "A tie: everybody tied for the win splits the pot.",
           "The creator can fill free seats with bots - their items go to the winner, too.",
           "When it's over the creator can start the same battle again with one click.",

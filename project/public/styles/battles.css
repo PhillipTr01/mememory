@@ -1800,3 +1800,108 @@ button.bt-strip-case:hover {
     display: none;
   }
 }
+
+/* ---------- 2v2: two teams of two ---------- */
+.bt-arena.teams {
+  --team-a: #3b82f6;
+  --team-b: #e0675a;
+}
+
+/* (a gap between the teams) */
+.bt-arena.teams .bt-seat[data-seat="2"] {
+  margin-left: 0.9rem;
+}
+
+.bt-arena.teams .bt-seat.team-a {
+  border-top: 3px solid var(--team-a);
+}
+
+.bt-arena.teams .bt-seat.team-b {
+  border-top: 3px solid var(--team-b);
+}
+
+.bt-teams-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.bt-team-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-surface-2);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.bt-team-side.team-a {
+  border-left: 4px solid #3b82f6;
+}
+
+.bt-team-side.team-b {
+  border-right: 4px solid #e0675a;
+}
+
+.bt-team-side.ahead {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 18px rgba(var(--mm-accent-rgb), 0.3);
+}
+
+.bt-team-name {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bt-team-side.team-a .bt-team-name {
+  color: #6ea2f8;
+}
+
+.bt-team-side.team-b .bt-team-name {
+  color: #ec8a7f;
+}
+
+.bt-team-names {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--mm-muted);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bt-team-total {
+  color: var(--mm-accent);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.bt-team-points {
+  color: var(--mm-muted);
+  font-size: 0.75rem;
+}
+
+.bt-team-vs {
+  align-self: center;
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+@media (max-width: 575px) {
+  .bt-arena.teams .bt-seat[data-seat="2"] {
+    margin-left: 0.4rem;
+  }
+
+  .bt-team-side {
+    padding: 0.4rem 0.5rem;
+  }
+}

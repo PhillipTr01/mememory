@@ -572,3 +572,83 @@ test("battles: the max bet by balance counts per battle - an open battle doesn't
     Object.assign(config, old);
   }
 });
+
+test("battles: 2v2 - two teams of two, a seat picked on joining, the team totals decide, the winning team splits the pot", async () => {
+  tokens.tm1 = h.addUser("tm1");
+  tokens.tm2 = h.addUser("tm2");
+  h.setCoins("tm1", 5000);
+  h.setCoins("tm2", 5000);
+  const a = client("tm1");
+  const b = client("tm2");
+  await Promise.all([waitFor(a, "coins", (d) => d.coins === 5000), waitFor(b, "coins", (d) => d.coins === 5000)]);
+  // Only with 4 players: 2v2 with 3 is a normal battle
+  let created = h.once(a, "battleCreated");
+  a.emit("createBattle", { cases: ["starter"], size: 3, teams: true });
+  const three = await created;
+  assert.strictEqual(battleIn(await waitFor(a, "battles", (d) => battleIn(d, three)), three).teams, false);
+  a.emit("cancelBattle", three);
+  await waitFor(a, "coins", (d) => d.coins === 5000);
+
+  created = h.once(a, "battleCreated");
+  a.emit("createBattle", { cases: ["starter", "classic", "starter"], size: 4, teams: true, mode: "classic" });
+  const id = await created;
+  // tm2 picks seat 3 (team B), the bots fill seat 2 (team A) and seat 4
+  b.emit("joinBattle", { id: id, seat: 2 });
+  const joined = battleIn(await waitFor(a, "battles", (d) => battleIn(d, id) && battleIn(d, id).seats[2]), id);
+  assert.strictEqual(joined.teams, true);
+  assert.deepStrictEqual(joined.seats.map((s) => s && s.name), ["tm1", null, "tm2", null]);
+  a.emit("addBot", { id: id, seat: 3 });
+  await waitFor(a, "battles", (d) => battleIn(d, id) && battleIn(d, id).seats[3]);
+  a.emit("addBot", { id: id, seat: 1 });
+  const done = battleIn(await waitFor(a, "battles", (d) => battleIn(d, id) && battleIn(d, id).phase === "done", 8000), id);
+  const sums = [done.totals[0] + done.totals[1], done.totals[2] + done.totals[3]];
+  const winning = sums[0] === sums[1] ? [0, 1, 2, 3] : sums[0] > sums[1] ? [0, 1] : [2, 3];
+  assert.deepStrictEqual(done.winners, winning, "the team with more worth together - " + sums);
+  assert.strictEqual(done.payout, sums[0] + sums[1]);
+  assert.strictEqual(done.shares.reduce((s, x) => s + x, 0), done.payout);
+  assert.ok(Math.max(...done.shares) - Math.min(...done.shares) <= 1, "split evenly");
+  // The humans of the winning team get their share (a bot's stays in the house)
+  await h.wait(100);
+  const share = (seat) => (done.winners.includes(seat) ? done.shares[done.winners.indexOf(seat)] : 0);
+  assert.strictEqual(h.coinsOf("tm1"), 5000 - done.price + share(0));
+  assert.strictEqual(h.coinsOf("tm2"), 5000 - done.price + share(2));
+});
+
+test("battles: 2v2 in best of, worst of and jackpot - the rounds and the draw count per team", async () => {
+  tokens.tm3 = h.addUser("tm3");
+  h.setCoins("tm3", 100000);
+  const a = client("tm3");
+  await waitFor(a, "coins", (d) => d.coins === 100000);
+  const cases = require("../game/cases");
+  for (const mode of ["bestof", "worstof", "jackpot"]) {
+    const created = h.once(a, "battleCreated");
+    a.emit("createBattle", { cases: ["starter", "classic", "doge", "starter", "classic"], size: 4, teams: true, mode: mode });
+    const id = await created;
+    for (const seat of [1, 2, 3]) a.emit("addBot", { id: id, seat: seat });
+    const done = battleIn(await waitFor(a, "battles", (d) => battleIn(d, id) && battleIn(d, id).phase === "done", 10000), id);
+    const value = (round, seat) => cases.caseById(done.cases[round]).items[done.rounds[round][seat]].value;
+    const sums = [done.totals[0] + done.totals[1], done.totals[2] + done.totals[3]];
+    if (mode === "jackpot") {
+      // The seat the ticket hit - its team gets it all
+      let covered = 0;
+      const hit = done.totals.findIndex((t) => (covered += t) > done.ticket);
+      assert.strictEqual(done.ticketSeat, hit);
+      assert.deepStrictEqual(done.winners, hit < 2 ? [0, 1] : [2, 3]);
+      continue;
+    }
+    // A round goes to the team whose two items add up to more (worst of: less) - both get the point
+    const won = [0, 0];
+    done.rounds.forEach((_, r) => {
+      const t = [value(r, 0) + value(r, 1), value(r, 2) + value(r, 3)];
+      const top = mode === "worstof" ? Math.min(...t) : Math.max(...t);
+      t.forEach((v, team) => v === top && won[team]++);
+    });
+    assert.deepStrictEqual(done.points, [won[0], won[0], won[1], won[1]], mode);
+    const least = mode === "worstof";
+    let expected;
+    if (won[0] !== won[1]) expected = won[0] > won[1] ? [0, 1] : [2, 3];
+    else if (sums[0] === sums[1]) expected = [0, 1, 2, 3];
+    else expected = (sums[0] > sums[1]) !== least ? [0, 1] : [2, 3];
+    assert.deepStrictEqual(done.winners, expected, mode + " " + won + " " + sums);
+  }
+});

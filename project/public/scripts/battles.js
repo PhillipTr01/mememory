@@ -15,6 +15,7 @@ var roundTime = 4500;
 
 var picked = []; // the new battle: case ids, one per round, in their order
 var size = 2;
+var teams = false; // 2v2: two teams of two
 var filter = "all";
 var sort = "price-asc";
 var mode = "classic"; // classic | crazy | random | jackpot | bestof | worstof
@@ -593,16 +594,41 @@ function seatAvatars(battle) {
 
 // Best of: the rounds every seat won in the first `rounds` (the best item of a round - equal: all of them)
 // (worst of - least: the least item wins the round)
+// (2v2: a team's two items of a round added up - both of the team get its points)
 function pointsOf(battle, rounds, least) {
   var points = battle.seats.map(() => 0);
+  var groups = groupsOf(battle);
   for (var n = 0; n < rounds; n++) {
-    var values = battle.seats.map((_, seat) => itemOf(battle, n, seat).value);
+    var items = battle.seats.map((_, seat) => itemOf(battle, n, seat).value);
+    var values = groups.map((group) => group.reduce((sum, seat) => sum + items[seat], 0));
     var top = least ? Math.min(...values) : Math.max(...values);
-    values.forEach((value, seat) => {
-      if (value == top) points[seat]++;
+    values.forEach((value, g) => {
+      if (value == top) groups[g].forEach((seat) => points[seat]++);
     });
   }
   return points;
+}
+
+/* ---------- 2v2: two teams of two (seats 1-2 against 3-4) ---------- */
+var TEAM_SEATS = [
+  [0, 1],
+  [2, 3],
+];
+var TEAM_NAMES = ["Team A", "Team B"];
+function groupsOf(battle) {
+  return battle.teams ? TEAM_SEATS : battle.seats.map((_, seat) => [seat]);
+}
+function teamOf(seat) {
+  return seat < 2 ? 0 : 1;
+}
+// Per seat: what counts for it - 2v2 the total of its team, otherwise its own
+function countedTotals(battle, totals) {
+  return battle.teams ? totals.map((_, seat) => TEAM_SEATS[teamOf(seat)].reduce((sum, s) => sum + totals[s], 0)) : totals;
+}
+// "Team A" - with the names of its two ("Team A · alice & bob")
+function teamText(battle, team) {
+  var names = TEAM_SEATS[team].map((seat) => (battle.seats[seat] ? battle.seats[seat].name : "?"));
+  return TEAM_NAMES[team] + " · " + names.join(" & ");
 }
 
 // The winners (a tie: all of them - they split the pot) and what each gets
@@ -619,6 +645,8 @@ function phaseText(battle) {
   if (battle.phase == "running") return battle.revealed == 0 ? "Starting..." : "Round " + battle.revealed + " / " + battle.cases.length;
   if (battle.endAt > Date.now()) return (battle.mode || "classic") == "random" ? "Revealing the mode..." : "Drawing the winner...";
   var winners = winnersOf(battle).map((seat) => battle.seats[seat].name);
+  // 2v2: the team (both teams: a tie)
+  if (battle.teams && winners.length == 2) return TEAM_NAMES[teamOf(winnersOf(battle)[0])] + " won · 🪙 " + formatCoins(shareOf(battle, winnersOf(battle)[0])) + " each";
   if (winners.length > 1) return "Split: " + winners.join(" & ") + " · 🪙 " + formatCoins(shareOf(battle, winnersOf(battle)[0])) + " each";
   return (winners[0] == myName ? "You won" : winners[0] + " won") + " 🪙 " + formatCoins(battle.payout);
 }
@@ -638,23 +666,32 @@ function showPane(name) {
 }
 
 // How many players (2 to 4)
-var MIN_SIZE = 2;
-var MAX_SIZE = 4;
-function setSize(value) {
-  size = Math.max(MIN_SIZE, Math.min(MAX_SIZE, value));
+// The players of a new battle: 2, 3, 4 - and 2v2 (4 players in two teams)
+var SIZE_STEPS = [
+  { size: 2, teams: false },
+  { size: 3, teams: false },
+  { size: 4, teams: false },
+  { size: 4, teams: true },
+];
+var sizeStep = 0;
+function setSize(step) {
+  sizeStep = Math.max(0, Math.min(SIZE_STEPS.length - 1, step));
+  size = SIZE_STEPS[sizeStep].size;
+  teams = SIZE_STEPS[sizeStep].teams;
   var box = document.getElementById("btSizeValue");
-  box.replaceChildren(el("b", "", size));
-  document.getElementById("btSizeMinus").disabled = size <= MIN_SIZE;
-  document.getElementById("btSizePlus").disabled = size >= MAX_SIZE;
+  box.replaceChildren(el("b", "", teams ? "2v2" : size));
+  box.title = teams ? "Two teams of two - the team with more wins, the two split the pot" : size + " players, everybody for themselves";
+  document.getElementById("btSizeMinus").disabled = sizeStep <= 0;
+  document.getElementById("btSizePlus").disabled = sizeStep >= SIZE_STEPS.length - 1;
 }
+var stepOf = (battle) => Math.max(0, SIZE_STEPS.findIndex((s) => s.size == battle.size && s.teams == (battle.teams === true)));
 
 // Back on the main page to create a battle - with these cases already chosen
 function createAgain(battle) {
   // (without cases that are turned off now)
   picked = battle.cases.map(currentId).filter((id) => caseById(id) && !caseById(id).off);
-  size = battle.size;
   mode = battle.mode || (battle.crazy ? "crazy" : "classic");
-  setSize(size);
+  setSize(stepOf(battle));
   document.querySelectorAll("#btModes button").forEach((b) => b.classList.toggle("active", b.dataset.mode == mode));
   renderCreate();
   pushView(null);
@@ -675,6 +712,7 @@ function renderList() {
       var info = el("div", "bt-row-info");
       var tags = el("div", "bt-row-tags");
       tags.append(el("span", "bt-row-price", "🪙 " + formatCoins(battle.price)), el("span", "mm-muted", battle.cases.length + (battle.cases.length == 1 ? " case" : " cases")));
+      if (battle.teams) tags.appendChild(el("span", "bt-crazy-tag bt-teams-tag", "👥 2v2"));
       if ((battle.mode || "classic") != "classic" || battle.crazy) tags.appendChild(el("span", "bt-crazy-tag", modeLabel(battle)));
       info.append(caseStrip(battle), tags);
       var actions = el("div", "bt-row-actions");
@@ -717,7 +755,8 @@ function renderHistory() {
       var sub = "Paid 🪙 " + formatCoins(entry.price) + (multiple >= 1 ? " · " + (multiple >= 10 ? Math.round(multiple) : multiple.toFixed(1)) + "x" : "");
       // A split pot: every winner named
       var names = entry.winners && entry.winners.length > 1 ? entry.winners.join(" & ") : entry.winner;
-      return historyItem(createAvatar(entry.winner, "sm"), names, entry.winners && entry.winners.length > 1 ? "Split pot · " + sub : sub, "🪙 " + formatCoins(entry.total));
+      var team = entry.teams && entry.winners && entry.winners.length == 2;
+      return historyItem(createAvatar(entry.winner, "sm"), names, team ? "2v2 · " + sub : entry.winners && entry.winners.length > 1 ? "Split pot · " + sub : sub, "🪙 " + formatCoins(entry.total));
     }),
   );
 }
@@ -824,10 +863,12 @@ function renderBattle() {
   var strip = caseStrip(battle, battle.phase == "running" ? rounds : null);
   strip.classList.add("big");
 
-  var grid = el("div", "bt-arena" + (over ? " over" : ""));
+  var grid = el("div", "bt-arena" + (over ? " over" : "") + (battle.teams ? " teams" : ""));
   grid.style.setProperty("--seats", battle.size);
   var totals = battle.seats.map((_, seat) => totalOf(battle, seat, rounds));
-  var best = battle.crazy ? Math.min(...totals) : Math.max(...totals);
+  // (2v2: the team totals decide who leads)
+  var counted = countedTotals(battle, totals);
+  var best = battle.crazy ? Math.min(...counted) : Math.max(...counted);
   // (random while it runs: no leader - nobody knows yet what counts)
   if (battle.crazy == null || reveal) best = null;
   // Best of: the rounds won so far lead; jackpot: every one's chance (its share of the pot)
@@ -844,7 +885,8 @@ function renderBattle() {
     var column = el("div", "bt-seat");
     column.dataset.seat = index;
     if (over) column.classList.add(winnersOf(battle).includes(index) ? "winner" : "lost");
-    else if (rounds > 0 && (points ? points[index] == mostPoints && mostPoints > 0 : totals[index] == best)) column.classList.add("leading");
+    else if (rounds > 0 && (points ? points[index] == mostPoints && mostPoints > 0 : counted[index] == best)) column.classList.add("leading");
+    if (battle.teams) column.classList.add("team-" + "ab"[teamOf(index)]);
     var head = el("div", "bt-seat-head");
     if (seat == null) {
       head.classList.add("empty");
@@ -853,16 +895,17 @@ function renderBattle() {
         var join = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Join 🪙 " + formatCoins(battle.price));
         join.type = "button";
         join.disabled = battle.price > myCoins || battle.price > capLeft(0);
+        // (this seat - 2v2: this team)
         join.addEventListener("click", () => {
           askForNotifications();
-          socket.emit("joinBattle", battle.id);
+          socket.emit("joinBattle", { id: battle.id, seat: index });
         });
         head.appendChild(join);
       } else if (battle.creator == myName) {
         var bot = el("button", "bt-add-bot");
         bot.type = "button";
         bot.append(el("span", "bt-add-bot-icon", "🤖"), document.createTextNode("Add bot"));
-        bot.addEventListener("click", () => socket.emit("addBot", battle.id));
+        bot.addEventListener("click", () => socket.emit("addBot", { id: battle.id, seat: index }));
         head.appendChild(bot);
       } else {
         head.appendChild(el("span", "mm-muted small", "Waiting..."));
@@ -875,10 +918,11 @@ function renderBattle() {
       head.append(name, el("span", "bt-seat-total", "🪙 " + formatCoins(totals[index])));
       // Best of: rounds won - jackpot: the chance to get it all
       if (points) head.appendChild(el("span", "bt-seat-extra", (rule == "worstof" ? "🥄 " : "🏅 ") + points[index] + (points[index] == 1 ? " round" : " rounds")));
-      if (rule == "jackpot" && pot > 0) head.appendChild(el("span", "bt-seat-extra", "🎰 " + ((totals[index] / pot) * 100).toFixed(1) + "% chance"));
+      // (2v2: the chance of the team)
+      if (rule == "jackpot" && pot > 0) head.appendChild(el("span", "bt-seat-extra", "🎰 " + ((counted[index] / pot) * 100).toFixed(1) + "% chance" + (battle.teams ? " (team)" : "")));
       if (hidden && pot > 0) {
         var both = el("span", "bt-seat-extra bt-seat-both");
-        both.append(el("span", "", "🎰 " + ((totals[index] / pot) * 100).toFixed(1) + "%"));
+        both.append(el("span", "", "🎰 " + ((counted[index] / pot) * 100).toFixed(1) + "%"));
         // The rounds won as the best (🏅) and as the worst (🥄)
         both.append(el("span", "", "🏅 " + hiddenPoints[index]), el("span", "", "🥄 " + hiddenWorst[index]));
         both.title = "Chance in jackpot mode · rounds won with the best item (best of) · with the worst item (worst of)";
@@ -909,6 +953,8 @@ function renderBattle() {
   var stripRow = el("div", "bt-strip-row");
   stripRow.append(el("span"), strip, potBox);
   var parts = over ? [resultHero(battle), stripRow, grid] : [stripRow, grid];
+  // 2v2: the two teams with their totals (and rounds won) above the seats
+  if (battle.teams) parts.splice(parts.indexOf(grid), 0, teamsBar(battle, totals, points, over, reveal));
   if (reveal) playModeReveal(battle, grid);
   if (drawing) playJackpotDraw(battle, grid);
   if (battle.phase == "waiting" && battle.creator == myName) {
@@ -946,6 +992,27 @@ function renderBattle() {
   }
 }
 
+// 2v2: Team A (its total, rounds won) - vs - Team B; the one ahead (or the winner) lit
+function teamsBar(battle, totals, points, over, hidden) {
+  var bar = el("div", "bt-teams-bar");
+  var sums = TEAM_SEATS.map((group) => group.reduce((sum, seat) => sum + totals[seat], 0));
+  var rule = hidden ? null : ruleOf(battle);
+  var ahead = null;
+  if (over) ahead = winnersOf(battle).length == 2 ? teamOf(winnersOf(battle)[0]) : null;
+  else if (points) ahead = points[0] > points[2] ? 0 : points[2] > points[0] ? 1 : null;
+  else if (rule == "classic" || rule == "crazy") ahead = sums[0] == sums[1] ? null : (sums[0] > sums[1]) != (rule == "crazy") ? 0 : 1;
+  TEAM_SEATS.forEach((group, team) => {
+    var side = el("div", "bt-team-side team-" + "ab"[team] + (ahead == team ? " ahead" : ""));
+    var names = el("span", "bt-team-names", group.map((seat) => (battle.seats[seat] ? battle.seats[seat].name : "free")).join(" & "));
+    var value = el("b", "bt-team-total", "🪙 " + formatCoins(sums[team]));
+    side.append(el("span", "bt-team-name", TEAM_NAMES[team]), names, value);
+    if (points) side.appendChild(el("span", "bt-team-points", (rule == "worstof" ? "🥄 " : "🏅 ") + points[group[0]] + (points[group[0]] == 1 ? " round" : " rounds")));
+    bar.appendChild(side);
+    if (team == 0) bar.appendChild(el("span", "bt-team-vs", "VS"));
+  });
+  return bar;
+}
+
 /* ---------- The end of a battle ---------- */
 
 var MEDALS = ["🥇", "🥈", "🥉", "4"];
@@ -954,6 +1021,8 @@ var PLACE_NAMES = ["1st", "2nd", "3rd", "4th"];
 // Place of every seat: the winners first (a tie: all of them 1st), then by the totals
 function placesOf(battle, totals) {
   var winners = winnersOf(battle);
+  // 2v2: the winning team 1st, the other 2nd
+  if (battle.teams) return battle.seats.map((_, seat) => (winners.includes(seat) ? 0 : 1));
   var order = battle.seats.map((_, seat) => seat);
   var rule = ruleOf(battle);
   var points = rule == "bestof" || rule == "worstof" ? pointsOf(battle, battle.rounds.length, rule == "worstof") : null;
@@ -1062,7 +1131,8 @@ function playJackpotDraw(battle, grid) {
   // Already rolling on this page: the same roulette goes on (a new one would start a frame at the
   // first picture)
   if (drawBoxes[battle.id]) return grid.appendChild(drawBoxes[battle.id]);
-  var winner = winnersOf(battle)[0];
+  // (2v2: the seat the ticket hit - its team wins)
+  var winner = battle.teams && battle.ticketSeat != null ? battle.ticketSeat : winnersOf(battle)[0];
   var lap = drawSlots(battle);
   var box = el("div", "bt-mode-reveal bt-draw");
   var windowBox = el("div", "bt-draw-window");
@@ -1085,7 +1155,8 @@ function playJackpotDraw(battle, grid) {
   var target = (DRAW_LAPS - 1) * lap.length + Math.max(0, lap.indexOf(winner));
   var finish = () => {
     var share = battle.totals.reduce((sum, t) => sum + t, 0);
-    name.innerText = battle.seats[winner].name + " · " + (share > 0 ? ((battle.totals[winner] / share) * 100).toFixed(1) : "0") + "% chance";
+    var worth = countedTotals(battle, battle.totals)[winner];
+    name.innerText = (battle.teams ? battle.seats[winner].name + " - " + TEAM_NAMES[teamOf(winner)] : battle.seats[winner].name) + " · " + (share > 0 ? ((worth / share) * 100).toFixed(1) : "0") + "% chance";
     box.classList.add("done");
   };
   requestAnimationFrame(() => {
@@ -1161,20 +1232,23 @@ function finalTile(battle, seat, place, total) {
   tile.append(el("span", "bt-final-medal", MEDALS[place]), el("span", "bt-final-place", PLACE_NAMES[place]));
   var value = el("span", "bt-final-total", "🪙 " + formatCoins(total));
   tile.appendChild(value);
-  if (winnersOf(battle).includes(seat)) tile.appendChild(el("span", "bt-final-gain", (winnersOf(battle).length > 1 ? "Splits · 🪙 " : "Takes 🪙 ") + formatCoins(shareOf(battle, seat))));
+  if (winnersOf(battle).includes(seat)) tile.appendChild(el("span", "bt-final-gain", (battle.teams && winnersOf(battle).length == 2 ? "Team share · 🪙 " : winnersOf(battle).length > 1 ? "Splits · 🪙 " : "Takes 🪙 ") + formatCoins(shareOf(battle, seat))));
   return tile;
 }
 
 // Jackpot: the winner's chance ("drawn with 23.4%")
+// (2v2: the chance of the team)
 function jackpotChance(battle, seat) {
   var pot = battle.totals.reduce((sum, t) => sum + t, 0);
-  return pot > 0 ? "drawn with " + ((battle.totals[seat] / pot) * 100).toFixed(1) + "%" : "drawn";
+  var worth = countedTotals(battle, battle.totals)[seat == null ? winnersOf(battle)[0] : seat];
+  return pot > 0 ? "drawn with " + ((worth / pot) * 100).toFixed(1) + "%" : "drawn";
 }
 
 // The big result on top: who won, the pot, what it was for me - and the same battle again
 function resultHero(battle) {
   var seats = winnersOf(battle);
-  var split = seats.length > 1;
+  // (2v2: one team winning is no split - both teams: a tie)
+  var split = battle.teams ? seats.length > 2 : seats.length > 1;
   var mySeat = seats.find((seat) => battle.seats[seat].name == myName);
   var mine = isIn(battle);
   var won = mySeat != null;
@@ -1183,8 +1257,8 @@ function resultHero(battle) {
   heroShown[battle.id] = true;
   hero.appendChild(el("span", "bt-hero-trophy", split ? "🤝" : won ? "🏆" : mine ? "💀" : "🏆"));
   var main = el("div", "bt-hero-main");
-  var how = ruleOf(battle) == "jackpot" ? jackpotChance(battle, seats[0]) : ruleOf(battle) == "bestof" ? "most rounds won" : ruleOf(battle) == "worstof" ? "most rounds with the worst item" : battle.crazy ? "lowest total" : null;
-  var label = el("span", "bt-hero-label", split ? (won ? "A tie - you split the pot!" : "A tie - the pot is split") : (won ? "You won the battle!" : "Winner") + (how ? " · " + how : ""));
+  var how = ruleOf(battle) == "jackpot" ? jackpotChance(battle, battle.teams ? battle.ticketSeat : seats[0]) : ruleOf(battle) == "bestof" ? "most rounds won" : ruleOf(battle) == "worstof" ? "most rounds with the worst item" : battle.crazy ? "lowest total" : null;
+  var label = el("span", "bt-hero-label", split ? (won ? "A tie - you split the pot!" : "A tie - the pot is split") : (won ? (battle.teams ? "Your team won the battle!" : "You won the battle!") : battle.teams ? TEAM_NAMES[teamOf(seats[0])] + " wins" : "Winner") + (how ? " · " + how : ""));
   var name = el("div", "bt-hero-name");
   seats.forEach((seat, i) => {
     var winner = battle.seats[seat];
@@ -1209,7 +1283,7 @@ function resultHero(battle) {
   again.append(createIcon("bi-arrow-repeat"), document.createTextNode(" Battle again · 🪙 " + formatCoins(battle.price)));
   again.disabled = battle.price > myCoins;
   again.title = "The same cases again, a new battle";
-  again.addEventListener("click", () => socket.emit("createBattle", { cases: battle.cases.slice(), size: battle.size, mode: battle.mode || (battle.crazy ? "crazy" : "classic") }));
+  again.addEventListener("click", () => socket.emit("createBattle", { cases: battle.cases.slice(), size: battle.size, teams: battle.teams === true, mode: battle.mode || (battle.crazy ? "crazy" : "classic") }));
   hero.appendChild(again);
   return hero;
 }
@@ -1405,15 +1479,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }),
   );
 
-  document.getElementById("btSizeMinus").addEventListener("click", () => setSize(size - 1));
-  document.getElementById("btSizePlus").addEventListener("click", () => setSize(size + 1));
-  setSize(size);
+  document.getElementById("btSizeMinus").addEventListener("click", () => setSize(sizeStep - 1));
+  document.getElementById("btSizePlus").addEventListener("click", () => setSize(sizeStep + 1));
+  setSize(sizeStep);
 
 
   document.getElementById("btCreate").addEventListener("click", () => {
     if (picked.length == 0) return;
     askForNotifications();
-    socket.emit("createBattle", { cases: pickedIds(), size: size, mode: mode });
+    socket.emit("createBattle", { cases: pickedIds(), size: size, teams: teams, mode: mode });
   });
 
   document.getElementById("btSort").addEventListener("change", (event) => {
