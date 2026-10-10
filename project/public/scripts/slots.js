@@ -80,7 +80,8 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  myCapRule = data.betCapRule || null;
+  // (slots: their own share of the max bet by balance)
+  myCapRule = data.slotsCapRule !== undefined ? data.slotsCapRule : data.betCapRule || null;
   // While the reels turn, the balance shows the coins before the win
   // (during a spin the old balance stays - but a page that comes back into a bonus game needs one)
   if (!spinning || document.getElementById("slCoins").innerText == "-") renderCoins(myCoins);

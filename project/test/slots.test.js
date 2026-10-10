@@ -427,3 +427,29 @@ test("slots: the coin game waits for the click too and is paid when it is over",
     Object.assign(config, before);
   }
 });
+
+test("slots: their own share of the max bet by balance (1/x of its all-in amount and of its share)", async () => {
+  const h = require("./helpers");
+  const coins = require("../game/coins");
+  const limits = require("../game/limits");
+  const config = require("../game/config");
+  const saved = [config.BET_CAP_FLOOR, config.BET_CAP_SHARE, config.SLOTS_CAP_DIV];
+  try {
+    Object.assign(config, { BET_CAP_FLOOR: 50000, BET_CAP_SHARE: 25, SLOTS_CAP_DIV: 5 });
+    assert.deepStrictEqual(limits.capRule("", "slots"), { floor: 10000, share: 5 });
+    assert.strictEqual(limits.betCap(40000, "", "slots"), 10000, "all in only up to 50,000 / 5");
+    assert.strictEqual(limits.betCap(1000000, "", "slots"), 50000, "above it 25% / 5 of the coins");
+    assert.strictEqual(limits.betCap(1000000, ""), 250000, "the other games: the whole cap");
+    h.addUser("capper");
+    h.setCoins("capper", 1000000);
+    assert.strictEqual(await coins.spend("capper", 50001, { reason: "slots bet" }), false);
+    assert.match(coins.refusal("capper"), /1\/5/);
+    assert.strictEqual(await coins.spend("capper", 50000, { reason: "slots bet" }), true);
+    assert.strictEqual(await coins.spend("capper", 200000, { reason: "roulette bet" }), true, "another game: the whole cap");
+    assert.deepStrictEqual((await coins.get("capper")).slotsCapRule, { floor: 10000, share: 5 });
+    config.SLOTS_CAP_DIV = 1;
+    assert.strictEqual(limits.betCap(1000000, "", "slots"), 250000, "1: the same as every game");
+  } finally {
+    [config.BET_CAP_FLOOR, config.BET_CAP_SHARE, config.SLOTS_CAP_DIV] = saved;
+  }
+});

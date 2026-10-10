@@ -181,6 +181,7 @@ module.exports = {
   // Slots (hidden, see game/slots.js): the bet is for a whole spin (all 9 lines)
   SLOTS_MIN_BET: 10,
   SLOTS_MAX_BET: 250,
+  SLOTS_CAP_DIV: 5, // slots get 1/x of the max bet by balance (its floor and its share) - a spin is far faster than a round at a table
   SLOTS_SPIN: 2000, // the reels turn this long on the page
   SLOTS_SWEAT: 1800, // two 🎁 in sight: the last reel turns this much longer (the sweat)
   SLOTS_BONUS_TIME: 6000, // the bonus wheels (free spins, multiplier) on the page

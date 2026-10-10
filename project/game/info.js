@@ -250,9 +250,12 @@ const GAMES = {
 };
 
 // The max bet by balance (every game but the overview), null: no cap
-function capText(L) {
-  if (!(L.BET_CAP_SHARE < 100)) return null;
-  return `Up to 🪙 ${n(L.BET_CAP_FLOOR)} you can bet all your coins - with more, one bet is at most ${L.BET_CAP_SHARE}% of your coins.`;
+function capText(L, world, game) {
+  const rule = limits.capRule(world, game);
+  if (rule == null) return null;
+  const x = limits.dividerOf(world, game);
+  const share = Math.round(rule.share * 100) / 100;
+  return `Up to 🪙 ${n(rule.floor)} you can bet all your coins - with more, one bet is at most ${share}% of your coins.` + (x > 1 ? ` (Slots spin fast: 1/${x} of the max bet of the other games.)` : "");
 }
 
 // world: the limits of that world ("/season": the season's own ones)
@@ -260,7 +263,7 @@ function get(game, world = "") {
   if (!Object.hasOwn(GAMES, game)) return null;
   const L = limits.forWorld(world);
   const about = GAMES[game](L);
-  const cap = capText(L);
+  const cap = capText(L, world, game);
   if (cap && game !== "leaderboard") about.sections.push({ heading: "Max bet", items: [cap] });
   return about;
 }

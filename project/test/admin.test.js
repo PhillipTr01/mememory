@@ -280,7 +280,7 @@ test("coins: the max bet by balance - all in up to the floor, above it a share o
   Object.assign(config, { BET_CAP_FLOOR: 100000, BET_CAP_SHARE: 25 });
   try {
     h.setCoins("capper", 80000);
-    assert.strictEqual(await coins.spend("capper", 80000, { reason: "slots bet" }), true, "all in below the floor");
+    assert.strictEqual(await coins.spend("capper", 80000, { reason: "baucua bet" }), true, "all in below the floor");
     h.setCoins("capper", 1000000);
     assert.strictEqual(await coins.spend("capper", 250001, { reason: "roulette bet" }), false);
     assert.match(coins.refusal("capper"), /at most 250,000 coins/);
@@ -292,7 +292,7 @@ test("coins: the max bet by balance - all in up to the floor, above it a share o
     assert.strictEqual(await coins.spend("capper", 100000, { reason: "jackpot bet" }), true, "the floor always");
     assert.strictEqual(await coins.spend("capper", 400000, { reason: "shop" }), true, "not a bet: no cap");
     // Too few coins: no cap message
-    assert.strictEqual(await coins.spend("capper", 60000, { reason: "slots bet" }), false);
+    assert.strictEqual(await coins.spend("capper", 60000, { reason: "baucua bet" }), false);
     assert.strictEqual(coins.refusal("capper"), null);
     // Several bets in one round count together - from the balance before the round (1,000,000: 250,000 in all)
     h.setCoins("capper", 1000000);
