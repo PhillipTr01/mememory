@@ -4646,3 +4646,8 @@ body.jackpot-theme::before {
 .nav-reward-item.prize .nav-reward-name {
   overflow-wrap: anywhere;
 }
+
+/* A player flying to another spot (the seat swaps of the draws): above the others */
+.jp-seat-moving {
+  z-index: 6;
+}

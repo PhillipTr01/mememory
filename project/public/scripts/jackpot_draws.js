@@ -88,19 +88,192 @@ function scene(stage, name) {
   return root;
 }
 
-// The players of the round, at most `limit`, the winner always among them
-function playersFor(limit, winner) {
-  var players = state.entries.slice();
-  if (players.length <= limit) return players;
-  var top = players
-    .slice()
-    .sort((a, b) => b.coins - a.coins)
-    .filter((p) => p.name != winner)
-    .slice(0, limit - (winner ? 1 : 0));
-  var keep = new Set(top.map((p) => p.name));
-  if (winner) keep.add(winner);
-  return players.filter((p) => keep.has(p.name));
+/*
+ * Seats: the draws with a spot per player (pins, lanes, jars, seats ...). The order of the spots is kept for
+ * the round (a new player comes last - nothing jumps while the pot grows) and is no hint at the winner:
+ *   - while waiting, two players swap their spots now and then (with more players than spots: somebody
+ *     from outside takes a spot),
+ *   - at the start of the draw a short shuffle: a few swaps - or, with more players than spots, every spot
+ *     rolls through the faces and stops on who is in (the winner always among them, the others by chance,
+ *     the bigger bets more often).
+ * A spot: the element with data-seat (its avatar, --share, data-name and [data-seat-text] go with the player).
+ */
+var seats = { round: null, order: [] };
+
+function seatOrder() {
+  if (seats.round !== state.round) seats = { round: state.round, order: [] };
+  var names = state.entries.map((entry) => entry.name);
+  seats.order = seats.order.filter((name) => names.includes(name));
+  names.forEach((name) => seats.order.includes(name) || seats.order.push(name));
+  return seats.order;
 }
+
+// The players on the spots (at most `limit`), in the order of the seats
+function playersFor(limit) {
+  var byName = new Map(state.entries.map((entry) => [entry.name, entry]));
+  return seatOrder()
+    .slice(0, limit)
+    .map((name) => byName.get(name));
+}
+
+function markSeat(element, name) {
+  element.dataset.seat = name;
+  return element;
+}
+
+function seatsIn(root) {
+  return Array.from(root.querySelectorAll("[data-seat]"));
+}
+
+function chanceOf(name) {
+  var entry = state.entries.find((e) => e.name == name);
+  return Math.round(((entry ? entry.coins : 0) / (state.total || 1)) * 100) + "%";
+}
+
+// Another player on a spot (only the look - where it is stays)
+function setSeat(seat, name) {
+  seat.dataset.seat = name;
+  seat.querySelectorAll("[data-name]:not(.mm-avatar)").forEach((node) => (node.dataset.name = name));
+  if (seat.dataset.name != null) seat.dataset.name = name;
+  [seat, ...seat.querySelectorAll('[style*="--share"]')].forEach((node) => node.style.getPropertyValue("--share") && node.style.setProperty("--share", shareColor(name)));
+  var avatar = seat.querySelector(".mm-avatar");
+  if (avatar) avatar.replaceWith(createAvatar(name, ["sm", "lg"].find((size) => avatar.classList.contains(size))));
+  seat.querySelectorAll('[data-seat-text="name"]').forEach((node) => (node.innerText = name));
+  seat.querySelectorAll('[data-seat-text="chance"]').forEach((node) => (node.innerText = chanceOf(name)));
+}
+
+// Two players fly to each other's spot (in an arc)
+async function swapSeats(a, b, ms) {
+  var faceA = a.querySelector(".mm-avatar");
+  var faceB = b.querySelector(".mm-avatar");
+  var nameA = a.dataset.seat;
+  var nameB = b.dataset.seat;
+  if (faceA && faceB) {
+    var ra = faceA.getBoundingClientRect();
+    var rb = faceB.getBoundingClientRect();
+    // (in the avatar's own pixels - the page may be zoomed to fit)
+    var scale = faceA.offsetWidth ? ra.width / faceA.offsetWidth || 1 : 1;
+    var dx = (rb.left + rb.width / 2 - ra.left - ra.width / 2) / scale;
+    var dy = (rb.top + rb.height / 2 - ra.top - ra.height / 2) / scale;
+    var lift = Math.max(16, Math.hypot(dx, dy) * 0.18);
+    var fly = (face, x, y, up) =>
+      animate(face, [{ transform: "translate(0, 0) scale(1)" }, { transform: `translate(${x / 2}px, ${y / 2 - up}px) scale(1.18)`, offset: 0.5 }, { transform: `translate(${x}px, ${y}px) scale(1)` }], { duration: ms, easing: "ease-in-out" });
+    a.classList.add("jp-seat-moving");
+    b.classList.add("jp-seat-moving");
+    await Promise.all([fly(faceA, dx, dy, lift), fly(faceB, -dx, -dy, -lift)]);
+    a.classList.remove("jp-seat-moving");
+    b.classList.remove("jp-seat-moving");
+  }
+  setSeat(a, nameB);
+  setSeat(b, nameA);
+}
+
+// Somebody else on a spot: the face shrinks away, the new one pops up
+async function popSeat(seat, name, ms) {
+  var face = seat.querySelector(".mm-avatar");
+  if (face) await animate(face, [{ transform: "scale(1)", opacity: 1 }, { transform: "scale(0.2)", opacity: 0 }], { duration: ms / 2, easing: "ease-in" });
+  setSeat(seat, name);
+  var next = seat.querySelector(".mm-avatar");
+  if (next) await animate(next, [{ transform: "scale(0.2)", opacity: 0 }, { transform: "scale(1.12)", opacity: 1, offset: 0.7 }, { transform: "scale(1)", opacity: 1 }], { duration: ms / 2, easing: "ease-out", fill: "none" });
+}
+
+// Two different spots at random
+function seatPair(list) {
+  var i = Math.floor(Math.random() * list.length);
+  var j = (i + 1 + Math.floor(Math.random() * (list.length - 1))) % list.length;
+  return [list[i], list[j]];
+}
+
+/*
+ * The start of a draw with spots: the shuffle (above) - the spots then hold who plays the draw (the winner always
+ * among them). Returns the time it took (the draw has that much less). short: no show, only the right players.
+ */
+async function shuffleSeats(list, winner, duration, short) {
+  var names = list.map((seat) => seat.dataset.seat);
+  var shown = new Set(names);
+  if (list.length == 0) return 0;
+  var start = performance.now();
+  // More players than spots: who is in - the winner and, by chance, the others (the bigger the bet, the likelier)
+  if (state.entries.length > list.length) {
+    var pool = state.entries.filter((entry) => entry.name != winner);
+    var chosen = [winner];
+    while (chosen.length < list.length && pool.length) {
+      var total = pool.reduce((sum, entry) => sum + Math.max(1, entry.coins), 0);
+      var ticket = Math.random() * total;
+      var index = pool.findIndex((entry) => (ticket -= Math.max(1, entry.coins)) < 0);
+      chosen.push(pool.splice(index < 0 ? pool.length - 1 : index, 1)[0].name);
+    }
+    chosen = shuffled(chosen);
+    seats.order = [...chosen, ...seatOrder().filter((name) => !chosen.includes(name))];
+    if (short) {
+      list.forEach((seat, i) => setSeat(seat, chosen[i]));
+      return 0;
+    }
+    // Every spot rolls through the faces and stops - one after the other
+    var all = state.entries.map((entry) => entry.name);
+    var roll = Math.min(1500, duration * 0.18);
+    await Promise.all(
+      list.map(async (seat, i) => {
+        var stop = roll * (0.55 + (0.45 * (i + 1)) / list.length);
+        var tick = 0;
+        while (performance.now() - start < stop - 140) {
+          setSeat(seat, all[(i + tick++ + Math.floor(Math.random() * all.length)) % all.length]);
+          await wait(85);
+        }
+        await popSeat(seat, chosen[i], 260);
+      }),
+    );
+    return performance.now() - start;
+  }
+  if (short) {
+    // (everybody has a spot already - the winner too)
+    if (!shown.has(winner)) setSeat(list[0], winner);
+    return 0;
+  }
+  // Everybody fits: a few players swap their spots (two at a time, one or two rounds)
+  var rounds = list.length < 3 ? 1 : 1 + Math.round(Math.random());
+  var ms = Math.min(650, (duration * 0.16) / rounds);
+  for (var r = 0; r < rounds && list.length > 1; r++) {
+    var free = shuffled(list);
+    var swaps = [];
+    for (var k = 0; k < (list.length >= 6 ? 2 : 1) && free.length >= 2; k++) swaps.push([free.pop(), free.pop()]);
+    await Promise.all(swaps.map(([a, b]) => swapSeats(a, b, ms)));
+  }
+  seats.order = [...list.map((seat) => seat.dataset.seat), ...seatOrder().filter((name) => !list.some((seat) => seat.dataset.seat == name))];
+  return performance.now() - start;
+}
+
+// While waiting: now and then two players swap spots (not during the last seconds before the draw)
+var nextSwap = 0;
+setInterval(() => {
+  if (typeof state == "undefined" || state == null || spinning || document.hidden) return;
+  if (!(state.phase == "open" || (state.phase == "countdown" && timeLeft() > 3500)) || state.entries.length < 2) return;
+  var now = Date.now();
+  if (now < nextSwap) return;
+  nextSwap = now + randomBetween(6000, 10000);
+  var stage = document.getElementById("jpStage");
+  var list = stage ? seatsIn(stage) : [];
+  if (list.length == 0) return;
+  var outside = state.entries.map((entry) => entry.name).filter((name) => !list.some((seat) => seat.dataset.seat == name));
+  var order = seatOrder();
+  if (outside.length && (list.length < 2 || Math.random() < 0.5)) {
+    // Somebody from outside takes a spot (and the one there goes to the back of the queue)
+    var seat = list[Math.floor(Math.random() * list.length)];
+    var incoming = outside[Math.floor(Math.random() * outside.length)];
+    var leaving = seat.dataset.seat;
+    order[order.indexOf(leaving)] = incoming;
+    order.splice(order.lastIndexOf(incoming), 1);
+    order.push(leaving);
+    popSeat(seat, incoming, 520);
+    return;
+  }
+  if (list.length < 2) return;
+  var [a, b] = seatPair(list);
+  var i = order.indexOf(a.dataset.seat);
+  var j = order.indexOf(b.dataset.seat);
+  if (i >= 0 && j >= 0) [order[i], order[j]] = [order[j], order[i]];
+  swapSeats(a, b, 700);
+}, 1000);
 
 // Big text over the scene ("STRIKE!", "GO!")
 function shout(root, text, extraClass) {
@@ -356,17 +529,17 @@ var bowlingDraw = {
     return spots;
   },
 
-  build(stage, winner) {
+  build(stage) {
     var root = scene(stage, "bowling");
     root.replaceChildren();
     var lane = el("div", "jp-lane");
     lane.append(el("div", "jp-lane-gutter top"), el("div", "jp-lane-gutter bottom"), el("div", "jp-lane-arrows"));
     var ball = el("div", "jp-ball");
     lane.appendChild(ball);
-    var players = playersFor(10, winner);
+    var players = playersFor(10);
     var spots = this.positions(players.length);
     var pins = players.map((player, index) => {
-      var pin = el("div", "jp-pin");
+      var pin = markSeat(el("div", "jp-pin"), player.name);
       pin.dataset.name = player.name;
       pin.style.left = spots[index].x + "%";
       pin.style.top = spots[index].y + "%";
@@ -384,7 +557,8 @@ var bowlingDraw = {
   },
 
   async play(stage, draw, duration, short) {
-    var parts = this.build(stage, draw.winner);
+    var parts = this.build(stage);
+    duration -= await shuffleSeats(parts.pins, draw.winner, duration, short);
     var root = parts.root;
     var lane = parts.lane;
     var ball = parts.ball;
@@ -497,18 +671,20 @@ var bowlingDraw = {
 /* ---------- 5. Race: the winner crosses the line first ---------- */
 
 var raceDraw = {
-  build(stage, winner) {
+  build(stage) {
     var root = scene(stage, "race");
     root.replaceChildren();
     var track = el("div", "jp-race");
-    var players = playersFor(6, winner);
+    var players = playersFor(6);
     var runners = players.map((player) => {
-      var lane = el("div", "jp-race-lane");
+      var lane = markSeat(el("div", "jp-race-lane"), player.name);
       lane.style.setProperty("--share", shareColor(player.name));
       var runner = el("div", "jp-runner");
       runner.dataset.name = player.name;
       runner.append(createAvatar(player.name, "sm"), el("span", "jp-runner-horse", "🏇"));
-      lane.append(el("span", "jp-race-chance", Math.round((player.coins / state.total) * 100) + "%"), runner);
+      var chance = el("span", "jp-race-chance", chanceOf(player.name));
+      chance.dataset.seatText = "chance";
+      lane.append(chance, runner);
       track.appendChild(lane);
       return runner;
     });
@@ -522,7 +698,8 @@ var raceDraw = {
   },
 
   async play(stage, draw, duration, short) {
-    var parts = this.build(stage, draw.winner);
+    var parts = this.build(stage);
+    duration -= await shuffleSeats(seatsIn(parts.track), draw.winner, duration, short);
     var root = parts.root;
     // From the start to the finish line (the runner's nose touches it)
     var runnerWidth = parts.runners.length ? parts.runners[0].offsetWidth : 60;
@@ -586,7 +763,7 @@ var raceDraw = {
 /* ---------- 6. Claw machine: the claw grabs the winner ---------- */
 
 var clawDraw = {
-  build(stage, winner) {
+  build(stage) {
     var root = scene(stage, "claw");
     root.replaceChildren();
     var machine = el("div", "jp-claw-machine");
@@ -598,9 +775,9 @@ var clawDraw = {
     var pile = el("div", "jp-claw-pile");
     // One plush per player, at a random place in the pile (the same place for
     // everybody while the pot doesn't change)
-    var players = playersFor(12, winner);
+    var players = playersFor(12);
     var plushes = players.map((player, index) => {
-      var plush = el("div", "jp-plush");
+      var plush = markSeat(el("div", "jp-plush"), player.name);
       plush.dataset.name = player.name;
       plush.style.setProperty("--share", shareColor(player.name));
       var column = index % 6;
@@ -623,7 +800,8 @@ var clawDraw = {
   },
 
   async play(stage, draw, duration, short) {
-    var parts = this.build(stage, draw.winner);
+    var parts = this.build(stage);
+    duration -= await shuffleSeats(parts.plushes, draw.winner, duration, short);
     var machine = parts.machine;
     var claw = parts.claw;
     var prize = parts.plushes.find((plush) => plush.dataset.name == draw.winner);
@@ -744,19 +922,17 @@ var royaleDraw = {
     return { x: 50 + Math.cos(angle) * radius * 100 * 0.62, y: 54 + Math.sin(angle) * radius * 70 };
   },
 
-  build(stage, winner, shuffle) {
+  build(stage) {
     var root = scene(stage, "royale");
     root.replaceChildren();
     var arena = el("div", "jp-arena-map");
     var zone = el("div", "jp-zone");
     arena.appendChild(zone);
     var feed = el("div", "jp-killfeed");
-    var players = playersFor(12, winner);
-    var spin = shuffle ? randomBetween(0, Math.PI * 2) : null;
-    if (shuffle) players = players.slice().sort(() => Math.random() - 0.5);
+    var players = playersFor(12);
     var fighters = players.map((player, index) => {
-      var spot = this.place(index, players.length, spin);
-      var fighter = el("div", "jp-fighter");
+      var spot = this.place(index, players.length, null);
+      var fighter = markSeat(el("div", "jp-fighter"), player.name);
       fighter.dataset.name = player.name;
       fighter.style.left = spot.x + "%";
       fighter.style.top = spot.y + "%";
@@ -780,7 +956,8 @@ var royaleDraw = {
    * The winner (fixed by the server) reaches the middle.
    */
   async play(stage, draw, duration, short) {
-    var parts = this.build(stage, draw.winner, !short);
+    var parts = this.build(stage);
+    duration -= await shuffleSeats(parts.fighters, draw.winner, duration, short);
     var winner = parts.fighters.find((fighter) => fighter.dataset.name == draw.winner);
     // Who is out when: the smaller the share, the earlier (with a lot of luck), the winner last
     var losers = parts.fighters
@@ -906,18 +1083,20 @@ var royaleDraw = {
 /* ---------- 8. Coin rain: the first jar that overflows wins ---------- */
 
 var coinRainDraw = {
-  build(stage, winner) {
+  build(stage) {
     var root = scene(stage, "coinrain");
     root.replaceChildren();
     var shelf = el("div", "jp-shelf");
-    var jars = playersFor(8, winner).map((player) => {
-      var column = el("div", "jp-jar-col");
+    var jars = playersFor(8).map((player) => {
+      var column = markSeat(el("div", "jp-jar-col"), player.name);
       column.style.setProperty("--share", shareColor(player.name));
       var jar = el("div", "jp-jar");
       var fill = el("div", "jp-jar-fill");
       jar.appendChild(fill);
       var label = el("div", "jp-jar-name");
-      label.append(createAvatar(player.name, "sm"), el("span", "", player.name));
+      var name = el("span", "", player.name);
+      name.dataset.seatText = "name";
+      label.append(createAvatar(player.name, "sm"), name);
       column.append(jar, label);
       shelf.appendChild(column);
       return { name: player.name, column: column, jar: jar, fill: fill, level: 0, debt: 0 };
@@ -986,8 +1165,10 @@ var coinRainDraw = {
   },
 
   async play(stage, draw, duration, short) {
-    var parts = this.build(stage, draw.winner);
+    var parts = this.build(stage);
+    duration -= await shuffleSeats(parts.jars.map((jar) => jar.column), draw.winner, duration, short);
     var jars = parts.jars;
+    jars.forEach((jar) => (jar.name = jar.column.dataset.seat));
     var winner = jars.find((jar) => jar.name == draw.winner);
     if (winner == null) return winnerLabel(parts.root, draw);
 
@@ -1218,22 +1399,24 @@ var coinRainDraw = {
  * player. Nobody pulls twice in a row (except in the duel of the last two).
  */
 var revolverDraw = {
-  build(stage, winner) {
+  build(stage) {
     var root = scene(stage, "revolver");
     root.replaceChildren();
     var table = el("div", "jp-table");
     table.appendChild(el("div", "jp-table-ring"));
-    var players = playersFor(8, winner);
+    var players = playersFor(8);
     var seats = players.map((player, index) => {
       // Around the table, clockwise, the first player at the top
       var angle = (index / players.length) * Math.PI * 2;
-      var seat = el("div", "jp-seat");
+      var seat = markSeat(el("div", "jp-seat"), player.name);
       seat.dataset.name = player.name;
       // A little lower, so the top seat stays free of the winner label
       seat.style.left = 50 + Math.sin(angle) * 40 + "%";
       seat.style.top = 52 - Math.cos(angle) * 30 + "%"; // (the name under the lowest seat stays on the stage)
       seat.style.setProperty("--share", shareColor(player.name));
-      seat.append(createAvatar(player.name), el("span", "jp-seat-name", player.name));
+      var name = el("span", "jp-seat-name", player.name);
+      name.dataset.seatText = "name";
+      seat.append(createAvatar(player.name), name);
       table.appendChild(seat);
       return seat;
     });
@@ -1313,7 +1496,8 @@ var revolverDraw = {
   },
 
   async play(stage, draw, duration, short) {
-    var parts = this.build(stage, draw.winner);
+    var parts = this.build(stage);
+    duration -= await shuffleSeats(parts.seats, draw.winner, duration, short);
     var winner = parts.seats.find((seat) => seat.dataset.name == draw.winner);
     if (winner == null) return winnerLabel(parts.root, draw);
     var shots = this.plan(parts.seats, winner);
@@ -1598,7 +1782,7 @@ var slotsDraw = {
 /* ---------- 11. Space launch: only one rocket reaches orbit ---------- */
 
 var launchDraw = {
-  build(stage, winner) {
+  build(stage) {
     var root = scene(stage, "launch");
     root.replaceChildren();
     var sky = el("div", "jp-launch");
@@ -1610,15 +1794,17 @@ var launchDraw = {
       sky.appendChild(star);
     }
     sky.appendChild(el("div", "jp-orbit", "ORBIT"));
-    var players = playersFor(6, winner);
+    var players = playersFor(6);
     var rockets = players.map((player) => {
-      var lane = el("div", "jp-launch-lane");
+      var lane = markSeat(el("div", "jp-launch-lane"), player.name);
       var rocket = el("div", "jp-rocket");
       rocket.dataset.name = player.name;
       rocket.style.setProperty("--share", shareColor(player.name));
       var ship = el("span", "jp-rocket-ship", "🚀");
       rocket.append(el("span", "jp-rocket-flame"), ship, createAvatar(player.name, "sm"));
-      lane.append(rocket, el("span", "jp-launch-pad", Math.round((player.coins / state.total) * 100) + "%"));
+      var pad = el("span", "jp-launch-pad", chanceOf(player.name));
+      pad.dataset.seatText = "chance";
+      lane.append(rocket, pad);
       sky.appendChild(lane);
       return rocket;
     });
@@ -1638,7 +1824,8 @@ var launchDraw = {
   },
 
   async play(stage, draw, duration, short) {
-    var parts = this.build(stage, draw.winner);
+    var parts = this.build(stage);
+    duration -= await shuffleSeats(seatsIn(parts.sky), draw.winner, duration, short);
     var winner = parts.rockets.find((rocket) => rocket.dataset.name == draw.winner);
     if (winner == null) return winnerLabel(parts.root, draw);
     var losers = parts.rockets.filter((rocket) => rocket != winner);
@@ -1853,14 +2040,14 @@ var scratchDraw = {
 /* ---------- 13. Ghost hunt: lights out, the last one left wins ---------- */
 
 var ghostHuntDraw = {
-  build(stage, winner) {
+  build(stage) {
     var root = scene(stage, "ghosthunt");
     root.replaceChildren();
     var room = el("div", "jp-haunt");
-    var players = playersFor(8, winner);
+    var players = playersFor(8);
     var columns = Math.ceil(players.length / 2) || 1;
     var hiders = players.map((player, index) => {
-      var hider = el("div", "jp-hider");
+      var hider = markSeat(el("div", "jp-hider"), player.name);
       hider.dataset.name = player.name;
       hider.style.setProperty("--share", shareColor(player.name));
       // Two rows, a bit out of line (the same places while the pot doesn't change)
@@ -1869,7 +2056,9 @@ var ghostHuntDraw = {
       var jitter = ((index * 37) % 9) - 4;
       hider.style.left = ((column + 0.5) / columns) * 84 + 8 + jitter * 0.6 + "%";
       hider.style.top = (row ? 70 : 36) + jitter + "%";
-      hider.append(createAvatar(player.name), el("span", "jp-hider-name", player.name));
+      var name = el("span", "jp-hider-name", player.name);
+      name.dataset.seatText = "name";
+      hider.append(createAvatar(player.name), name);
       room.appendChild(hider);
       return hider;
     });
@@ -1951,7 +2140,8 @@ var ghostHuntDraw = {
   },
 
   async play(stage, draw, duration, short) {
-    var parts = this.build(stage, draw.winner);
+    var parts = this.build(stage);
+    duration -= await shuffleSeats(parts.hiders, draw.winner, duration, short);
     var winner = parts.hiders.find((hider) => hider.dataset.name == draw.winner);
     if (winner == null) return winnerLabel(parts.root, draw);
     var losers = shuffled(parts.hiders.filter((hider) => hider != winner));
