@@ -28,10 +28,12 @@ function casinoCapLeft(rule, balance, already) {
   style.textContent = '.jp-total::before, .jp-record-amount::before { content: ' + JSON.stringify(coin) + '; }';
   document.head.appendChild(style);
 
-  // (the money outside the season stays the 🪙: [data-coin="real"])
+  // (the money outside the season stays the 🪙: [data-coin="real"] - and the prizes and rewards, paid in
+  // the casino's 🪙 after the season: on the leaderboard, the season card, the reward popup)
+  var REAL = '[data-coin="real"], .lb-prize, .lb-champion-prize, .cs-join-prizes, .nav-reward';
   function real(node) {
     var element = node.nodeType == Node.ELEMENT_NODE ? node : node.parentElement;
-    return element != null && element.closest('[data-coin="real"]') != null;
+    return element != null && element.closest(REAL) != null;
   }
 
   function swapText(node) {
