@@ -481,7 +481,7 @@ test("slots: one machine at a time - a second tab can't spin while the first one
   config.SLOTS_TAB_LOCK = 8000;
 });
 
-test("slots: a bought bonus pays back about 90% of its price (free games, coin game, coin game with a chest)", () => {
+test("slots: a bought bonus pays back what it says (free games, coin game about 90%, coin game with a chest about 79%)", () => {
   const N = 30000;
   const bet = 100;
   for (const kind of ["free", "coins", "chest"]) {
@@ -494,7 +494,7 @@ test("slots: a bought bonus pays back about 90% of its price (free games, coin g
       paid += r.lineWin + (r.coinGame ? r.coinGame.win : r.bonus.win);
     }
     const back = paid / (N * bet * slots.BUY_PRICES[kind]);
-    assert.ok(back > 0.85 && back < 0.95, `${kind}: ${(back * 100).toFixed(1)}% back`);
+    assert.ok(Math.abs(back - slots.BUY_RTP[kind]) < 0.04, `${kind}: ${(back * 100).toFixed(1)}% back (says ${slots.BUY_RTP[kind] * 100}%)`);
   }
 });
 
@@ -523,7 +523,7 @@ test("slots: a bonus buy costs the bet times its price, starts the bonus game, c
     h.setCoins("alice", 100000);
     await h.wait(30);
     const refused = h.once(page, "slotsError");
-    page.emit("spin", { bet: 250, buy: "chest" }); // 33,000 > 25,000
+    page.emit("spin", { bet: 250, buy: "chest" }); // 37,500 > 25,000
     assert.match(await refused, /max bet/i);
     assert.strictEqual(h.coinsOf("alice"), 100000);
     page.close();

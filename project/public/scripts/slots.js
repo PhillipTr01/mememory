@@ -375,7 +375,7 @@ function showBuy() {
   title.innerText = "Bonus buy";
   var note = document.createElement("p");
   note.className = "mm-dialog-text";
-  note.innerText = "The bonus game right away - with your bet of 🪙 " + formatCoins(currentBet()) + ". About 90% of the price comes back on average.";
+  note.innerText = "The bonus game right away - with your bet of 🪙 " + formatCoins(currentBet()) + ".";
   var cards = document.createElement("div");
   cards.className = "sl-buy-cards";
   BUYS.forEach((item) => {
@@ -399,7 +399,7 @@ function showBuy() {
     price.innerText = "🪙 " + formatCoins(cost);
     var times = document.createElement("span");
     times.className = "sl-buy-times";
-    times.innerText = refusal || setup.buy[item.id] + "× the bet";
+    times.innerText = refusal || setup.buy[item.id] + "× the bet" + (setup.buyRtp ? " · ~" + Math.round(setup.buyRtp[item.id] * 100) + "% back" : "");
     card.append(icon, name, text, price, times);
     card.addEventListener("click", () => {
       close();

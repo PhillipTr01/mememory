@@ -183,7 +183,7 @@ const GAMES = {
             `${slots.COIN_TRIGGER} or more 🪙 anywhere start the coin game: the coins stay, the empty spots get ${slots.COIN_RESPINS} respins - every new coin brings them back to ${slots.COIN_RESPINS}.`,
             `Every 🪙 pays its value or a prize: ${slots.COIN_VALUES.filter((v) => v.prize).map((v) => v.prize.toUpperCase() + " " + v.x + "×").join(", ")} the bet. A 🧰 treasure chest: pick one of three closed chests - MINI, MAJOR and MEGA are behind them, shuffled. All 15 spots full: ULTRA, ${slots.ULTRA}× the bet on top (the coin game pays at most ${slots.COIN_MAX_WIN}×).`,
             `No max win: the free spins always play to the end. On average the machine pays back about ${slotsRtp()}% of the bets.`,
-            `🛒 Bonus buy: the bonus game right away - free games ${slots.BUY_PRICES.free}×, coin game ${slots.BUY_PRICES.coins}×, coin game with a 🧰 ${slots.BUY_PRICES.chest}× the bet. About 90% of the price comes back on average.`,
+            `🛒 Bonus buy: the bonus game right away - free games ${slots.BUY_PRICES.free}×, coin game ${slots.BUY_PRICES.coins}×, coin game with a 🧰 ${slots.BUY_PRICES.chest}× the bet. On average about ${Math.round(slots.BUY_RTP.free * 100)}%, ${Math.round(slots.BUY_RTP.coins * 100)}% and ${Math.round(slots.BUY_RTP.chest * 100)}% of the price comes back.`,
             "The line wins of a spin that starts a bonus count as well - first the lines, then the bonus.",
             "Your coins come when the spin is over on the screen.",
             "Auto spins: 10 to 100 - or ∞, until you stop them (or the coins run out). The bet stays as it is while they run. Max follows your balance - every spin bets the most you may.",
