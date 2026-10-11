@@ -403,7 +403,7 @@ test("admin: in a season the players show their normal coins, changes go there; 
   const normalHistory = (await adminApi("history?username=OS")).body;
   assert.ok(normalHistory.rows.some((row) => row.username === "rosa" && row.reason === "admin" && row.amount === 250));
   assert.ok(!normalHistory.rows.some((row) => row.reason === "slots bet"));
-  assert.deepStrictEqual(normalHistory.season, { name: "Board", icon: "📋" });
+  assert.deepStrictEqual(normalHistory.season, { id: normalHistory.season.id, name: "Board", icon: "📋" });
   const seasonHistory = (await adminApi("history?username=rosa&scope=season&reason=" + encodeURIComponent("slots bet,slots win"))).body;
   assert.deepStrictEqual(seasonHistory.rows.map((row) => row.reason).sort(), ["slots bet", "slots win"]);
   // In pages: the newest first, page by page
