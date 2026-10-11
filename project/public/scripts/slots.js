@@ -397,10 +397,9 @@ function showBuy() {
     var price = document.createElement("span");
     price.className = "sl-buy-price";
     price.innerText = "🪙 " + formatCoins(cost);
-    var times = document.createElement("span");
-    times.className = "sl-buy-times";
-    times.innerText = refusal || setup.buy[item.id] + "× the bet" + (setup.buyRtp ? " · ~" + Math.round(setup.buyRtp[item.id] * 100) + "% back" : "");
-    card.append(icon, name, text, price, times);
+    card.append(icon, name, text, price);
+    // (why it can't be bought - nothing else under the price)
+    if (refusal) card.appendChild(Object.assign(document.createElement("span"), { className: "sl-buy-times", innerText: refusal }));
     card.addEventListener("click", () => {
       close();
       spin(item.id);

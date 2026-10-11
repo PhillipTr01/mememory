@@ -118,12 +118,11 @@ const COIN_MAX_WIN = 1000; // the coin game never pays more than this many times
  * Bonus buy: the bonus game right away, for this many times the bet. What a
  * bought bonus pays on average (with the line win of its spin; 200,000 games
  * each, see the tests): free games 44.4x, coin game 45.0x, coin game with a
- * 🧰 118.4x - so about 90% comes back (less than the 96.8% of spinning) - the
- * chest about 79% (150x: a price on its own).
+ * 🧰 118.4x - priced so about 85% comes back (less than the 96.8% of spinning).
  */
-const BUY_PRICES = { free: 49, coins: 50, chest: 150 };
-// What comes back of a buy's price on average (for the page and the info)
-const BUY_RTP = { free: 0.906, coins: 0.9, chest: 0.789 };
+const BUY_PRICES = { free: 52, coins: 53, chest: 139 };
+// What comes back of a buy's price on average (for the info)
+const BUY_RTP = { free: 0.854, coins: 0.849, chest: 0.852 };
 const total = (list) => list.reduce((sum, field) => sum + field.weight, 0);
 
 // A field of a wheel, as likely as its weight

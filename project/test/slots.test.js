@@ -481,7 +481,7 @@ test("slots: one machine at a time - a second tab can't spin while the first one
   config.SLOTS_TAB_LOCK = 8000;
 });
 
-test("slots: a bought bonus pays back what it says (free games, coin game about 90%, coin game with a chest about 79%)", () => {
+test("slots: a bought bonus pays back what it says (free games, coin game, coin game with a chest - about 85% each)", () => {
   const N = 30000;
   const bet = 100;
   for (const kind of ["free", "coins", "chest"]) {
@@ -508,7 +508,7 @@ test("slots: a bonus buy costs the bet times its price, starts the bonus game, c
     const page = client("alice");
     const setup = await h.once(page, "slotsSetup");
     assert.deepStrictEqual(setup.buy, slots.BUY_PRICES);
-    // Free games for a bet of 100: 100 x 49
+    // Free games for a bet of 100: 100 x its price
     const bought = h.once(page, "slotsResult");
     page.emit("spin", { bet: 100, buy: "free" });
     const result = await bought;
@@ -523,7 +523,7 @@ test("slots: a bonus buy costs the bet times its price, starts the bonus game, c
     h.setCoins("alice", 100000);
     await h.wait(30);
     const refused = h.once(page, "slotsError");
-    page.emit("spin", { bet: 250, buy: "chest" }); // 37,500 > 25,000
+    page.emit("spin", { bet: 250, buy: "chest" }); // 34,750 > 25,000
     assert.match(await refused, /max bet/i);
     assert.strictEqual(h.coinsOf("alice"), 100000);
     page.close();
