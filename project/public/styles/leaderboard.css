@@ -741,3 +741,48 @@
   color: var(--mm-accent);
   font-weight: 800;
 }
+
+/* Two seasons at once: a tab per board (the casino's, each season's) */
+.lb-boards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.25rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+}
+
+.lb-boards[hidden] {
+  display: none;
+}
+
+.lb-board-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mm-muted);
+  font-weight: 800;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.lb-board-tab:hover {
+  color: var(--mm-text);
+}
+
+.lb-board-tab.active {
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  color: var(--mm-accent);
+}
+
+.lb-board-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}

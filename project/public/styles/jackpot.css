@@ -4991,3 +4991,254 @@ body.jackpot-theme::before {
   flex: 0 0 auto;
   width: auto;
 }
+
+/* ---------- Two seasons at once: the pill flips between them, the popup has arrows ---------- */
+
+.nav-board {
+  perspective: 600px;
+}
+
+.nav-board.multi .nav-board-icon,
+.nav-board.multi .nav-board-main,
+.nav-board.multi .nav-board-state {
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+}
+
+/* The season shown flips away (up, turning) - the next one flips in from below */
+.nav-board.nb-flip-out .nav-board-icon,
+.nav-board.nb-flip-out .nav-board-main,
+.nav-board.nb-flip-out .nav-board-state {
+  animation: nb-flip-out 0.23s cubic-bezier(0.55, 0, 0.9, 0.4) forwards;
+}
+
+.nav-board.nb-flip-in .nav-board-icon,
+.nav-board.nb-flip-in .nav-board-main,
+.nav-board.nb-flip-in .nav-board-state {
+  animation: nb-flip-in 0.42s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+
+.nav-board.nb-flip-in .nav-board-icon {
+  animation: nb-icon-in 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.nav-board.nb-flip-in .nav-board-main {
+  animation-delay: 0.04s;
+}
+
+/* A sweep of light over the pill while it changes */
+.nav-board.multi {
+  overflow: hidden;
+}
+
+.nav-board.nb-flip-in::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgba(var(--mm-accent-rgb), 0.35) 50%, transparent 70%);
+  animation: nb-sweep 0.5s ease-out both;
+}
+
+.nav-board.multi:not([hidden]) {
+  transition: border-color 0.4s ease, background 0.4s ease, box-shadow 0.4s ease, color 0.4s ease;
+}
+
+@keyframes nb-flip-out {
+  to {
+    opacity: 0;
+    transform: translateY(-55%) rotateX(80deg);
+  }
+}
+
+@keyframes nb-flip-in {
+  from {
+    opacity: 0;
+    transform: translateY(55%) rotateX(-80deg);
+  }
+}
+
+@keyframes nb-icon-in {
+  from {
+    opacity: 0;
+    transform: translateY(60%) scale(0.4) rotate(-25deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-8%) scale(1.15) rotate(6deg);
+  }
+}
+
+@keyframes nb-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Which season: a dot each (the one shown is long) */
+.nav-board-dots {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-left: 0.2rem;
+}
+
+.nav-board-dots i {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.35);
+  transition: height 0.3s ease, background 0.3s ease;
+}
+
+.nav-board-dots i.on {
+  height: 11px;
+  background: var(--mm-accent);
+}
+
+@media (max-width: 991px) {
+  .nav-board-dots {
+    align-self: center;
+  }
+}
+
+/* The popup: the arrows beside the card */
+.cs-join-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: min(560px, 100%);
+}
+
+.cs-join-row .cs-join-card {
+  flex: 0 1 440px;
+  min-width: 0;
+}
+
+.cs-join-arrow {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(20, 20, 24, 0.75);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.cs-join-arrow:hover {
+  background: rgba(40, 40, 46, 0.95);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.cs-join-arrow.prev:hover {
+  transform: translateX(-3px);
+}
+
+.cs-join-arrow.next:hover {
+  transform: translateX(3px);
+}
+
+.cs-join-arrow:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Small screens: the arrows over the edges of the card */
+@media (max-width: 560px) {
+  .cs-join-row {
+    position: relative;
+  }
+  .cs-join-arrow {
+    position: absolute;
+    top: 50%;
+    z-index: 1;
+    width: 38px;
+    height: 38px;
+    margin-top: -19px;
+  }
+  .cs-join-arrow.prev {
+    left: -8px;
+  }
+  .cs-join-arrow.next {
+    right: -8px;
+  }
+  .cs-join-arrow.prev:hover,
+  .cs-join-arrow.next:hover {
+    transform: none;
+  }
+}
+
+/* Which season: a dot each */
+.cs-join-dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: -0.2rem;
+}
+
+.cs-join-dots i {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  transition: width 0.3s ease;
+}
+
+.cs-join-dots i.on {
+  width: 20px;
+  background: var(--mm-accent);
+}
+
+/* Going to the other season: no fade of the backdrop, the card slides in from the side of its arrow */
+.cs-join.cs-join-still {
+  animation: none;
+}
+
+.cs-join-card.cs-join-from-right {
+  animation: cs-join-from-right 0.38s cubic-bezier(0.2, 1.1, 0.4, 1) both;
+}
+
+.cs-join-card.cs-join-from-left {
+  animation: cs-join-from-left 0.38s cubic-bezier(0.2, 1.1, 0.4, 1) both;
+}
+
+.cs-join-card.cs-join-from-right .cs-join-icon,
+.cs-join-card.cs-join-from-left .cs-join-icon {
+  animation: nb-icon-in 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) 0.05s both;
+}
+
+@keyframes cs-join-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(60px) rotateY(-14deg) scale(0.96);
+  }
+}
+
+@keyframes cs-join-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-60px) rotateY(14deg) scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-board.nb-flip-out *,
+  .nav-board.nb-flip-in *,
+  .nav-board.nb-flip-in::after,
+  .cs-join-card.cs-join-from-right,
+  .cs-join-card.cs-join-from-left {
+    animation-duration: 0.01s !important;
+  }
+}

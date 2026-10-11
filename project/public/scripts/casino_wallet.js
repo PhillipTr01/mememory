@@ -656,6 +656,10 @@
   var seasonData = null; // the last answer of "season"
   var pillTimer = null;
   var inSeasonWorld = window.CASINO_WORLD == "season";
+  // (a world of a rain, a gift, ...: "normal" - or a season's slot, "season" / "season2")
+  function seasonWorldKey(world) {
+    return typeof world == "string" && /^season/.test(world);
+  }
   // (the pill as on the last page: no jump when it turns out there is none)
   try {
     if (board && sessionStorage.getItem("csPill") == "0") board.hidden = true;
@@ -675,14 +679,37 @@
     return { left: left, text: d > 0 ? d + "d " + h + "h " + pad(m) + "m" : h > 0 ? h + "h " + pad(m) + "m " + pad(s % 60) + "s" : m + "m " + pad(s % 60) + "s" };
   }
 
-  // The pill: only when a season runs (or a planned one is highlighted) - who can't play in it doesn't see it
+  // The pill: only when a season runs (or a planned one is highlighted) - who can't play in it doesn't see it.
+  // Two seasons at once: it shows one, then the other (every few seconds, with a flip) - a click opens the one shown
+  var pillList = []; // [{season, upcoming}]
+  var pillIndex = 0;
+  var pillRotate = null;
+  var PILL_EVERY = 6000;
+  var DEFAULT_ACCENT = "#d4a64a";
+
+  // The seasons the pill goes through: the one of the player's world first
+  function pillItems(data) {
+    var list = ((data && data.seasons) || []).slice();
+    if (!list.length && data && data.upcoming) return [{ season: data.upcoming, upcoming: true }];
+    list.sort((a, b) => (b.id == data.current) - (a.id == data.current));
+    return list.map((season) => ({ season: season, upcoming: false }));
+  }
+
+  // A season's own color on an element (none: the gold of the casino)
+  function paintSeason(node, color) {
+    var hex = color && /^#[0-9a-f]{6}$/i.test(color) ? color : DEFAULT_ACCENT;
+    node.style.setProperty("--mm-accent", hex);
+    node.style.setProperty("--mm-accent-rgb", [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", "));
+  }
+
   function showSeason(data) {
     seasonData = data;
     clearInterval(pillTimer);
+    clearInterval(pillRotate);
     if (!board) return;
-    var season = data && data.season;
-    var upcoming = data && data.upcoming;
-    var shown = season || upcoming;
+    var previous = pillList[pillIndex] && pillList[pillIndex].season.id;
+    pillList = pillItems(data);
+    var shown = pillList.length > 0;
     board.classList.add("ready");
     board.hidden = !shown;
     try {
@@ -690,59 +717,127 @@
     } catch (e) {
       // no storage
     }
-    document.body.classList.toggle("cs-has-season-pill", !!shown);
+    document.body.classList.toggle("cs-has-season-pill", shown);
     if (!shown) return;
+    // (the same season stays when the data comes again)
+    pillIndex = Math.max(0, pillList.findIndex((item) => item.season.id == previous));
+    board.classList.add("season");
+    board.classList.toggle("multi", pillList.length > 1);
+    renderPill();
+    pillTimer = setInterval(tickPill, 1000);
+    if (pillList.length > 1) {
+      pillRotate = setInterval(() => {
+        // (not while the mouse is on it - or the page is hidden)
+        if (!board.matches(":hover") && !document.hidden) rotatePill();
+      }, PILL_EVERY);
+    }
+  }
+
+  function renderPill() {
+    var item = pillList[pillIndex];
+    if (!item) return;
+    var season = item.upcoming ? null : item.season;
+    var shown = item.season;
+    var here = !!season && seasonData.current == season.id;
+    var joined = !!season && season.joined === true;
     document.getElementById("navBoardIcon").innerText = shown.icon || "🏆";
     document.getElementById("navBoardText").innerText = shown.name;
-    board.classList.add("season");
+    paintSeason(board, shown.color);
     board.classList.toggle("upcoming", !season);
-    board.classList.toggle("in-season", !!season && inSeasonWorld);
+    board.classList.toggle("in-season", here);
     var state = document.getElementById("navBoardState");
     if (!state) {
       state = el("span", "nav-board-state");
       state.id = "navBoardState";
       board.appendChild(state);
     }
-    state.innerText = !season ? "Info" : data.joined ? "" : "Join";
-    // (joined: no label - a click switches; in the season world the glow and the line at the top show it)
-    state.hidden = !!season && (inSeasonWorld || !!data.joined);
-    state.className = "nav-board-state" + (!season ? " info" : inSeasonWorld ? " playing" : data.joined ? " switch" : " join");
+    state.innerText = !season ? "Info" : joined ? "" : "Join";
+    // (joined: no label - a click switches; in its world the glow and the line at the top show it)
+    state.hidden = !!season && (here || joined);
+    state.className = "nav-board-state" + (!season ? " info" : here ? " playing" : joined ? " switch" : " join");
     board.title = !season
       ? shown.name + " - starts " + new Date(shown.start).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
-      : inSeasonWorld
-        ? "You're playing in " + shown.name + " - click to switch to your 🪙 (come back any time)"
-        : data.joined
+      : here
+        ? "You're playing in " + shown.name + " - click to switch (come back any time)"
+        : joined
           ? "Switch to " + shown.name
           : "Join " + shown.name;
-    var timer = document.getElementById("navBoardTimer");
-    timer.hidden = false;
-    var tick = () => {
-      var c = countdown(season ? season.end : upcoming.start);
-      timer.innerText = season ? (c.left == 0 ? "ending..." : "ends in " + c.text) : c.left == 0 ? "starting..." : "starts in " + c.text;
-      timer.classList.toggle("soon", c.left < 3600 * 1000);
-    };
-    tick();
-    pillTimer = setInterval(tick, 1000);
+    // Which of the seasons it is: a dot each
+    var dots = document.getElementById("navBoardDots");
+    if (pillList.length > 1) {
+      if (!dots) {
+        dots = el("span", "nav-board-dots");
+        dots.id = "navBoardDots";
+        dots.setAttribute("aria-hidden", "true");
+        board.appendChild(dots);
+      }
+      if (dots.children.length != pillList.length) {
+        dots.replaceChildren();
+        pillList.forEach(() => dots.appendChild(el("i", "")));
+      }
+      [...dots.children].forEach((dot, i) => dot.classList.toggle("on", i == pillIndex));
+    } else if (dots) dots.remove();
+    document.getElementById("navBoardTimer").hidden = false;
+    tickPill();
   }
 
-  // The pill opens the season (join - switch - or what is coming)
+  function tickPill() {
+    var item = pillList[pillIndex];
+    if (!item) return;
+    var timer = document.getElementById("navBoardTimer");
+    var c = countdown(item.upcoming ? item.season.start : item.season.end);
+    timer.innerText = !item.upcoming ? (c.left == 0 ? "ending..." : "ends in " + c.text) : c.left == 0 ? "starting..." : "starts in " + c.text;
+    timer.classList.toggle("soon", c.left < 3600 * 1000);
+  }
+
+  // The next season on the pill: the old one flips away, the new one flips in
+  var flipping = false;
+  function rotatePill(step) {
+    if (flipping || pillList.length < 2) return;
+    flipping = true;
+    board.classList.remove("nb-flip-in");
+    board.classList.add("nb-flip-out");
+    setTimeout(() => {
+      pillIndex = (pillIndex + (step || 1) + pillList.length) % pillList.length;
+      renderPill();
+      board.classList.remove("nb-flip-out");
+      void board.offsetWidth;
+      board.classList.add("nb-flip-in");
+      setTimeout(() => {
+        board.classList.remove("nb-flip-in");
+        flipping = false;
+      }, 420);
+    }, 230);
+  }
+
+  // The pill opens the season shown (join - switch - or what is coming)
   if (board) {
     board.addEventListener("click", (event) => {
       event.preventDefault();
       if (!seasonData) return;
-      if (seasonData.season) showJoin(seasonData, seasonData.joined ? "switch" : "join");
-      else if (seasonData.upcoming) showJoin({ season: seasonData.upcoming }, "upcoming");
+      var item = pillList[pillIndex];
+      if (!item) return;
+      if (item.upcoming) showJoin({ season: item.season }, "upcoming");
+      else openSeason(item.season.id);
     });
+  }
+
+  // The popup of a running season: join it - or switch (into it / back to the 🪙)
+  function openSeason(id, mode) {
+    var season = ((seasonData && seasonData.seasons) || []).find((s) => s.id == id);
+    if (!season) return;
+    showJoin({ season: season, joinCoins: season.joinCoins }, mode || (season.joined ? "switch" : "join"));
   }
 
   // Into the other world: the page loads again there (the server sends "worldChanged")
   var WORLD_KEY = "csWorldNotice";
+  // to: "normal" - or a season's id
   async function switchWorld(to) {
     try {
       var res = await fetch("season/world", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: to }) });
       var result = await res.json();
       if (!res.ok) throw new Error(result.error || "Could not switch.");
-      worldChanged({ world: to });
+      worldChanged({ world: result.world });
     } catch (error) {
       showHint(error.message, "error", board || document.getElementById("navCoins"));
     }
@@ -770,26 +865,42 @@
 
   // The popup when a season runs that the player hasn't joined: once per season (Later: the pill or the menu)
   var LATER_KEY = "csSeasonLater";
-  function laterFor(season) {
+  // (the seasons the player said "Later" to - two can run at once)
+  function laters() {
     try {
-      return localStorage.getItem(LATER_KEY) == String(season.id);
+      var value = JSON.parse(localStorage.getItem(LATER_KEY) || "[]");
+      return Array.isArray(value) ? value.map(String) : [String(value)];
     } catch (e) {
-      return false;
+      return [];
+    }
+  }
+  function laterFor(season) {
+    return laters().includes(String(season.id));
+  }
+  function setLater(season) {
+    try {
+      localStorage.setItem(LATER_KEY, JSON.stringify([...laters().slice(-5), String(season.id)]));
+    } catch (e) {
+      // only this time
     }
   }
 
   loadSeason().then((data) => {
     showSeason(data);
+    // (a season not joined yet - the first one the player didn't say "Later" to)
+    var open = ((data && data.seasons) || []).find((s) => s.joined === false && !laterFor(s));
     if (data && data.closing) showClosing(data.closing);
-    else if (data && data.season && data.joined === false && !laterFor(data.season)) showJoin(data, "join");
+    else if (open) openSeason(open.id, "join");
     // Just switched: where the player is now
     try {
       var moved = sessionStorage.getItem(WORLD_KEY);
       if (moved) {
         sessionStorage.removeItem(WORLD_KEY);
-        var season = data && data.season;
-        if (moved == "season" && season) casinoNotice({ icon: season.icon || "🏆", title: "You're playing in " + season.name, text: "Season coins, season games, the season's leaderboard - switch back any time at the top.", key: "world" });
-        else casinoNotice({ icon: "🪙", title: "You play with your 🪙 now", text: season ? "Your " + season.name + " coins wait for you - switch back any time at the top." : "Your season coins wait for you.", key: "world" });
+        var all = (data && data.seasons) || [];
+        var season = all.find((s) => s.id == data.current);
+        var left = all.filter((s) => s.joined);
+        if (moved != "normal" && season) casinoNotice({ icon: season.icon || "🏆", title: "You're playing in " + season.name, text: "Season coins, season games, the season's leaderboard - switch back any time at the top.", key: "world" });
+        else casinoNotice({ icon: "🪙", title: "You play with your 🪙 now", text: left.length ? "Your " + left.map((s) => s.name).join(" and ") + " coins wait for you - switch back any time at the top." : "Your season coins wait for you.", key: "world" });
       }
     } catch (e) {
       // no storage
@@ -797,9 +908,12 @@
   });
 
   // The running season to look at (the season on the leaderboard)
-  window.showSeasonInfo = () =>
+  // (id: that one - nothing: the one of the player's world, else the first)
+  window.showSeasonInfo = (id) =>
     loadSeason().then((data) => {
-      if (data && data.season) showJoin(data, "view");
+      if (!data || !data.season) return;
+      seasonData = data;
+      openSeason(id || data.season.id, "view");
     });
 
   // How long a time is: "12 days 5 hours", "5 hours 20 minutes", "20 minutes"
@@ -814,15 +928,16 @@
   }
 
   // The season card. mode: "join" (join or later), "switch" (into the other world), "upcoming" (what is
-  // coming - planned and highlighted), "view" (only to look at it)
-  function showJoin(data, mode) {
+  // coming - planned and highlighted), "view" (only to look at it). Two seasons: arrows beside the card go to
+  // the other one (slide: -1 / 1 - the card comes in from that side)
+  function showJoin(data, mode, slide) {
     var season = data.season;
     var coin = season.coinIcon || "💎";
     document.querySelectorAll(".cs-join").forEach((n) => n.remove());
-    var box = el("div", "cs-join");
+    var box = el("div", "cs-join" + (slide ? " cs-join-still" : ""));
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-modal", "true");
-    var card = el("div", "cs-join-card");
+    var card = el("div", "cs-join-card" + (slide ? (slide > 0 ? " cs-join-from-right" : " cs-join-from-left") : ""));
     // In the color of the season
     if (season.color && /^#[0-9a-f]{6}$/i.test(season.color)) {
       card.style.setProperty("--mm-accent", season.color);
@@ -863,26 +978,31 @@
       card.appendChild(prizes);
     }
 
+    // The other running seasons: the arrows (and ← →) go through them
+    var all = (!upcoming && seasonData && seasonData.seasons) || [];
+    var at = all.findIndex((s) => s.id == season.id);
+    var goTo = (step) => {
+      var next = all[(at + step + all.length) % all.length];
+      // (Later counts for the one left)
+      if (mode == "join") setLater(season);
+      document.removeEventListener("keydown", onKey);
+      showJoin({ season: next, joinCoins: next.joinCoins }, mode == "view" ? "view" : next.joined ? "switch" : "join", step);
+    };
     var close = () => {
       box.remove();
       document.removeEventListener("keydown", onKey);
     };
     var onKey = (event) => {
       if (event.key == "Escape") later();
+      else if (all.length > 1 && at >= 0 && (event.key == "ArrowLeft" || event.key == "ArrowRight")) goTo(event.key == "ArrowLeft" ? -1 : 1);
     };
     // Later: the popup doesn't come by itself again for this season
     var later = () => {
-      if (mode == "join") {
-        try {
-          localStorage.setItem(LATER_KEY, String(season.id));
-        } catch (e) {
-          // only this time
-        }
-      }
+      if (mode == "join") setLater(season);
       close();
     };
     box.addEventListener("click", (event) => {
-      if (event.target == box) later();
+      if (event.target == box || event.target.classList.contains("cs-join-row")) later();
     });
     document.addEventListener("keydown", onKey);
     var buttons = el("div", "cs-join-actions");
@@ -892,11 +1012,11 @@
       go.addEventListener("click", async () => {
         go.disabled = true;
         try {
-          var res = await fetch("season/join", { method: "POST" });
+          var res = await fetch("season/join", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ season: season.id }) });
           var result = await res.json();
           if (!res.ok) throw new Error(result.error || "Could not join the season.");
           // (into the season world: the page loads again)
-          worldChanged({ world: "season" });
+          worldChanged({ world: season.slot || "season" });
         } catch (error) {
           showHint(error.message, "error", go);
           go.disabled = false;
@@ -904,12 +1024,14 @@
       });
       buttons.appendChild(go);
     } else if (mode == "switch") {
-      var sw = el("button", "cs-join-btn", inSeasonWorld ? "Switch to your 🪙" : "Play in " + season.name);
+      // (playing in this season now: back to the 🪙 - else into it)
+      var here = seasonData && seasonData.current == season.id;
+      var sw = el("button", "cs-join-btn", here ? "Switch to your 🪙" : "Play in " + season.name);
       sw.type = "button";
-      sw.dataset.coin = "real";
+      if (here) sw.dataset.coin = "real";
       sw.addEventListener("click", () => {
         sw.disabled = true;
-        switchWorld(inSeasonWorld ? "normal" : "season");
+        switchWorld(here ? "normal" : season.id);
       });
       buttons.appendChild(sw);
     }
@@ -918,9 +1040,34 @@
     no.addEventListener("click", later);
     buttons.appendChild(no);
     card.appendChild(buttons);
-    box.appendChild(card);
+    if (all.length > 1 && at >= 0) {
+      // Which one of them: a dot each
+      var dots = el("div", "cs-join-dots");
+      all.forEach((s, i) => {
+        var dot = el("i", i == at ? "on" : "");
+        dot.title = s.name;
+        dots.appendChild(dot);
+      });
+      card.insertBefore(dots, card.firstChild);
+      var arrow = (step) => {
+        var button = el("button", "cs-join-arrow " + (step < 0 ? "prev" : "next"));
+        button.type = "button";
+        var other = all[(at + step + all.length) % all.length];
+        button.setAttribute("aria-label", other.name);
+        button.title = other.name;
+        button.innerHTML = step < 0 ? '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          goTo(step);
+        });
+        return button;
+      };
+      var row = el("div", "cs-join-row");
+      row.append(arrow(-1), card, arrow(1));
+      box.appendChild(row);
+    } else box.appendChild(card);
     document.body.appendChild(box);
-    (buttons.querySelector(".cs-join-btn") || no).focus();
+    (buttons.querySelector(".cs-join-btn") || no).focus({ preventScroll: true });
   }
 
   // A season starts soon (the countdown) - or the season world closes before its end (open rounds
@@ -969,11 +1116,13 @@
   socket.on("seasonClosing", showClosing);
 
   // A new season: the popup to join it (or later) - nothing else changes
-  socket.on("seasonStarted", () => {
+  socket.on("seasonStarted", (started) => {
     showClosing(null);
     loadSeason().then((data) => {
       showSeason(data);
-      if (data && data.season && data.joined === false) showJoin(data, "join");
+      if (data && data.closing) showClosing(data.closing);
+      var season = ((data && data.seasons) || []).find((s) => s.id == (started && started.id));
+      if (season && season.joined === false) openSeason(season.id, "join");
     });
   });
 
@@ -981,14 +1130,16 @@
   // in the normal casino - with the season's coins in the wallet)
   var ENDED_KEY = "csSeasonEnded";
   socket.on("seasonEnded", (season) => {
+    // (the world of this season: the page loads again in the normal casino - the notice comes there)
+    var mine = inSeasonWorld && String(window.CASINO_SEASON) == String(season.id);
     showClosing(null);
-    if (inSeasonWorld || !window.showWinners) {
+    if (mine || !window.showWinners) {
       try {
         sessionStorage.setItem(ENDED_KEY, JSON.stringify(season));
       } catch (e) {
         // no storage: the notice right here
       }
-      if (inSeasonWorld) return;
+      if (mine) return;
     }
     try {
       sessionStorage.removeItem(ENDED_KEY);
@@ -1008,7 +1159,11 @@
   }
 
   function seasonOver(season) {
-    showSeason(null);
+    // (another season may still run: the pill as it is now)
+    loadSeason().then((data) => {
+      showSeason(data);
+      if (data && data.closing) showClosing(data.closing);
+    });
     var notice = el("div", "cs-season-notice");
     var text = el("div", "cs-season-notice-text");
     text.append(el("b", "", (season.icon || "🏆") + " " + season.name + " is over!"), el("span", "", season.winner ? "🥇 " + season.winner.username + " wins with " + format(season.winner.coins) + " - your season coins are in your 🪙 now" : "The final places are in - your season coins are in your 🪙 now."));
@@ -1028,8 +1183,8 @@
   socket.on("moneyRain", (rain) => {
     // (while away: a popup now - like a gift)
     if (rain.missed) return window.casinoShowMissed({ ...rain, type: "rain" });
-    var coin = rain.world == "season" ? rain.coinIcon || "💎" : "🪙";
-    casinoNotice({ icon: "💸", title: "Money rain! +" + coin + " " + format(rain.amount), text: (rain.note || "Coins for you - have fun!") + (rain.elsewhere ? (rain.world == "season" ? " (in the season)" : " (your 🪙 outside the season)") : ""), key: "rain" });
+    var coin = seasonWorldKey(rain.world) ? rain.coinIcon || "💎" : "🪙";
+    casinoNotice({ icon: "💸", title: "Money rain! +" + coin + " " + format(rain.amount), text: (rain.note || "Coins for you - have fun!") + (rain.elsewhere ? (seasonWorldKey(rain.world) ? " (in the season)" : " (your 🪙 outside the season)") : ""), key: "rain" });
     var sky = el("div", "cs-rain");
     sky.setAttribute("aria-hidden", "true");
     for (var i = 0; i < 36; i++) {
@@ -1337,8 +1492,8 @@
 
   // The coins of a gift / rain: the 🪙 (normal casino) - or the season's coin
   function coinsText(item, amount) {
-    var span = el("span", "", (item.world == "season" ? (item.coinIcon || "💎") : "🪙") + " " + format(amount));
-    if (item.world != "season") span.dataset.coin = "real";
+    var span = el("span", "", (seasonWorldKey(item.world) ? (item.coinIcon || "💎") : "🪙") + " " + format(amount));
+    if (!seasonWorldKey(item.world)) span.dataset.coin = "real";
     return span;
   }
 
@@ -1357,10 +1512,10 @@
     var onKey = (event) => (event.key == "Escape" || event.key == "Enter") && close();
     var head = el("div", "cs-gift-head");
     var pic = el("div", "cs-gift-pic");
-    var where = gift.world == "season" ? " (in the season)" : window.CASINO_WORLD == "season" ? " (your 🪙 outside the season)" : "";
+    var where = seasonWorldKey(gift.world) ? " (in the season)" : window.CASINO_WORLD == "season" ? " (your 🪙 outside the season)" : "";
     var text;
     if (gift.type == "cashback") {
-      var coin = gift.world == "season" ? gift.coinIcon || "💎" : "🪙";
+      var coin = seasonWorldKey(gift.world) ? gift.coinIcon || "💎" : "🪙";
       pic.append(el("span", "cs-got-rain", "💸"));
       head.append(pic, el("span", "cs-gift-label", gift.missed ? "While you were away" : "Your daily cashback"), el("b", "cs-gift-name", "Cashback"));
       text = el("p", "cs-gift-info", gift.percent + "% of what you lost yesterday (" + coin + " " + format(gift.loss) + ") - it is on your balance already" + where + ".");

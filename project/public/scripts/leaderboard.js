@@ -195,9 +195,10 @@ function render() {
     info.setAttribute("aria-label", "About the season");
     parts.push(info);
     morphChildren(box, parts);
-    box.onclick = () => window.showSeasonInfo && window.showSeasonInfo();
+    box.onclick = () => window.showSeasonInfo && window.showSeasonInfo(season.id);
     box.title = "Ends " + new Date(season.end).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
   }
+  renderBoards();
   // The last season that is over: the way to its winners
   var last = document.getElementById("lbLastSeason");
   last.hidden = !board.lastSeason || !!season;
@@ -238,11 +239,49 @@ function tick() {
   if (next.textContent != label) next.textContent = label;
 }
 
+// Which board: null - the one of the player's world, "normal" or a season's id (a tab above the board)
+var picked = null;
+
+// The tabs: the normal board and every running season the player may see (only with a season)
+function renderBoards() {
+  var list = board.boards || [];
+  var tabs = document.getElementById("lbBoards");
+  if (!tabs) {
+    tabs = el("div", "lb-boards");
+    tabs.id = "lbBoards";
+    tabs.setAttribute("role", "tablist");
+    var anchor = document.getElementById("lbSeason");
+    anchor.parentNode.insertBefore(tabs, anchor);
+  }
+  tabs.hidden = list.length == 0;
+  if (!list.length) return;
+  var current = board.season ? String(board.season.id) : "normal";
+  var tab = (key, icon, name) => {
+    var button = el("button", "lb-board-tab" + (key == current ? " active" : ""));
+    button.type = "button";
+    button.setAttribute("role", "tab");
+    button.setAttribute("aria-selected", key == current ? "true" : "false");
+    button.dataset.board = key;
+    button.append(el("span", "lb-board-icon", icon), el("span", "", name));
+    // (the casino's tab keeps its 🪙 in a season world)
+    if (key == "normal") button.dataset.coin = "real";
+    return button;
+  };
+  // (one listener: the tabs are morphed, their own listeners would not move over)
+  tabs.onclick = (event) => {
+    var button = event.target.closest("[data-board]");
+    if (!button || button.classList.contains("active")) return;
+    picked = button.dataset.board;
+    load();
+  };
+  morphChildren(tabs, [tab("normal", "🪙", "Casino"), ...list.map((s) => tab(String(s.id), s.icon, s.name))]);
+}
+
 // Live: every few seconds; otherwise at the next update
 async function load(quiet) {
   clearTimeout(refreshTimer);
   try {
-    var res = await fetch("leaderboard/data", { cache: "no-store" });
+    var res = await fetch("leaderboard/data" + (picked ? "?board=" + encodeURIComponent(picked) : ""), { cache: "no-store" });
     if (!res.ok) throw new Error();
     board = await res.json();
     nextAt = board.nextIn == null ? null : Date.now() + board.nextIn;
