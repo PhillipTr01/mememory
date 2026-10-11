@@ -6,8 +6,8 @@ const days = require("./days");
 /*
  * Moderators: players the admin trusts with a few things on the casino pages (not the admin panel).
  * The admin turns a player into a moderator and picks what they may do (perms):
- * - rain: a money rain for everybody online - every one of them gets the amount (the moderator too, but
- *   at least one player online who is no moderator - no rain for moderators alone; never in a season), at most `rainMax` per rain and `rainWeekly` a week (Monday to Sunday; 0: no limit)
+ * - rain: a money rain for everybody online - every one of them gets the amount (the moderator too, also
+ *   with only moderators online; never in a season), at most `rainMax` per rain and `rainWeekly` a week (Monday to Sunday; 0: no limit)
  * - chat: delete messages of the casino chat, mute players for a while
  * - announce: a highlighted message in the casino chat (📣)
  * Everything a moderator does is written down (the log - the admin sees it).
@@ -16,7 +16,6 @@ const days = require("./days");
  */
 const PERMS = ["rain", "chat", "announce"];
 const PERM_NAMES = { rain: "Money rain", chat: "Chat moderation", announce: "Announcements" };
-const ALONE = "No player is online but moderators - a money rain needs at least one other player.";
 const SEASON = "No money rains in a season - only in the normal casino.";
 const MUTE_MAX = 24 * 60; // a moderator mutes for at most a day (minutes)
 const LOG_KEY = "modLog";
@@ -183,8 +182,8 @@ async function history(username) {
 
 /* ---------- What a moderator does ---------- */
 
-// A money rain: `amount` coins for every player online (the moderator too - but only
-// with a player online who is no moderator). input: {amount, note} - in the world the moderator plays in
+// A money rain: `amount` coins for every player online (the moderator too - also when only moderators
+// are online). input: {amount, note} - in the world the moderator plays in
 async function rain(username, input, world = "normal") {
   if (input == null || typeof input !== "object") return { error: "No money rain." };
   if (busy.has(username)) return { error: "One money rain at a time." };
@@ -208,9 +207,9 @@ async function rain(username, input, world = "normal") {
     }
     const note = typeof input.note === "string" ? input.note.trim().slice(0, 80) : "";
     const rains = require("./money_rain");
-    // Who gets it: everybody online (the moderator too) - not with only moderators online
+    // Who gets it: everybody online (the moderator too)
     const names = await rains.targets({ target: "online", world: world });
-    if (!names.some((name) => name !== username && !modNames.has(name))) return { error: ALONE };
+    if (!names.length) return { error: "Nobody is online." };
     const each = amount;
     const total = each * names.length;
     const made = await rains.create({ amount: each, target: "online", world: world, note: note || `From moderator ${username}`, by: username, names: names });
@@ -242,9 +241,7 @@ async function rainPreview(username, input, world = "normal") {
   if (world === "season") return { error: SEASON };
   const amount = Number(input && input.amount) || 0;
   const names = await require("./money_rain").targets({ target: "online", world: world });
-  // (the players online who are no moderator - without them no rain)
-  const others = names.filter((name) => name !== username && !modNames.has(name)).length;
-  return { players: names.length, others: others, each: amount, total: amount * names.length };
+  return { players: names.length, each: amount, total: amount * names.length };
 }
 
 async function deleteMessage(username, id) {

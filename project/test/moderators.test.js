@@ -19,7 +19,7 @@ test("moderators: the admin makes a player a moderator - with the rights and lim
   assert.deepStrictEqual((await mods.list()).map((m) => m.username), ["md_mod"]);
 });
 
-test("moderators: a money rain - every player online gets the amount (the moderator too, never alone), the limits count it once", async () => {
+test("moderators: a money rain - every player online gets the amount (the moderator too - also with only moderators online), the limits count it once", async () => {
   rain.reset();
   mods.reset();
   await mods.set("md_mod", { on: true, perms: { rain: true }, rainMax: 50000, rainWeekly: 60000 });
@@ -28,7 +28,7 @@ test("moderators: a money rain - every player online gets the amount (the modera
   try {
     for (const name of [...online, "md_c"]) h.setCoins(name, 1000);
     assert.match((await mods.rain("md_mod", { amount: 50001 })).error, /At most/);
-    assert.deepStrictEqual(await mods.rainPreview("md_mod", { amount: 10000 }), { players: 3, others: 2, each: 10000, total: 30000 });
+    assert.deepStrictEqual(await mods.rainPreview("md_mod", { amount: 10000 }), { players: 3, each: 10000, total: 30000 });
     const sent = await mods.rain("md_mod", { amount: 10000, note: "Party" });
     assert.ok(!sent.error, sent.error);
     assert.deepStrictEqual([sent.players, sent.each, sent.total, sent.left], [3, 10000, 30000, 50000], "the week's limit: 10,000 counted (not 30,000)");
@@ -53,15 +53,15 @@ test("moderators: a money rain - every player online gets the amount (the modera
     assert.match((await mods.rain("md_mod", { amount: 50001 })).error, /At most|more this week/);
     assert.ok(!(await mods.rain("md_mod", { amount: 45000 })).error, "within 50,000 left - 3 x 45,000 paid is fine");
     assert.strictEqual(h.coinsOf("md_a"), 1000 + 10000 + 45000);
-    // Alone online - or only with other moderators: no money rain (their own wait over again)
+    // Only moderators online: the money rain falls too (their own wait over again)
     const again = await User.findOne({ username: "md_mod" }).lean();
     await User.updateOne({ username: "md_mod" }, { $set: { mod: { ...again.mod, lastRain: Date.now() - 13 * 3600 * 1000 } } });
-    rain.setOnline(() => ["md_mod"]);
-    assert.match((await mods.rain("md_mod", { amount: 100 })).error, /but moderators/);
     await mods.set("md_c", { on: true, perms: { chat: true } });
     rain.setOnline(() => ["md_mod", "md_c"]);
-    assert.match((await mods.rain("md_mod", { amount: 100 })).error, /but moderators/);
-    assert.strictEqual((await mods.rainPreview("md_mod", { amount: 100 })).others, 0);
+    assert.strictEqual((await mods.rainPreview("md_mod", { amount: 100 })).players, 2);
+    const modsOnly = await mods.rain("md_mod", { amount: 100 });
+    assert.ok(!modsOnly.error, modsOnly.error);
+    assert.strictEqual(modsOnly.players, 2);
     await mods.set("md_c", { on: false });
     // Written down - and in the admin's list of money rains, with who made it
     assert.ok((await mods.history("md_mod")).some((entry) => entry.action === "rain"));

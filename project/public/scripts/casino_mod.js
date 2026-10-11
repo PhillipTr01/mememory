@@ -166,22 +166,19 @@
     x.addEventListener("click", close);
     var perms = state.mod.perms;
     dialog.append(x, el("h2", "mm-dialog-title", "🛡️ Moderator"));
-    if (!perms.rain && !perms.chat && !perms.announce) dialog.appendChild(el("p", "mm-dialog-text", "The admin hasn't given you any rights yet."));
-    if (perms.rain) dialog.appendChild(rainSection());
+    // (in a season: no money rain - not even shown)
+    var rain = perms.rain && !state.inSeason;
+    if (!rain && !perms.chat && !perms.announce) dialog.appendChild(el("p", "mm-dialog-text", perms.rain ? "No money rains in a season - nothing else to do here." : "The admin hasn't given you any rights yet."));
+    if (rain) dialog.appendChild(rainSection());
     if (perms.announce) dialog.appendChild(announceSection());
     if (perms.chat) dialog.appendChild(chatSection());
     document.body.appendChild(backdrop);
   }
 
-  // 💸 A money rain for everybody online: every one gets the amount (never with only moderators online)
+  // 💸 A money rain for everybody online: every one gets the amount (moderators too)
   function rainSection() {
     var box = section("Money rain", "💸");
     var mod = state.mod;
-    // In a season: none
-    if (state.inSeason) {
-      box.appendChild(el("p", "cs-mod-note", "No money rains in a season - switch to the normal casino for one."));
-      return box;
-    }
     var limits = "Every player online gets it · at most 🪙 " + format(mod.rainMax) + " per player · " + state.rainWait.hours + " h between two money rains (of all moderators)" + (state.rainLeft != null ? " · 🪙 " + format(state.rainLeft) + " left this week (of " + format(mod.rainWeekly) + ")" : "");
     box.appendChild(el("p", "cs-mod-note", limits));
     var amount = Object.assign(el("input", "mm-input"), { type: "number", min: 1, step: 1000, placeholder: "Coins per player" });
@@ -234,8 +231,8 @@
       timer = setTimeout(async () => {
         try {
           last = await call("mod/rain/preview", b);
-          preview.innerText = last.others > 0 ? "→ " + last.players + " players online get 🪙 " + format(last.each) + " each - 🪙 " + format(last.total) + " in total" : "No player is online but moderators - a money rain needs at least one other player.";
-          send.disabled = !(last.others > 0) || last.each < 1;
+          preview.innerText = last.players > 0 ? "→ " + last.players + (last.players == 1 ? " player" : " players") + " online get 🪙 " + format(last.each) + " each - 🪙 " + format(last.total) + " in total" : "Nobody is online.";
+          send.disabled = !(last.players > 0) || last.each < 1;
         } catch (error) {
           preview.innerText = error.message;
         }
