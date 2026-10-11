@@ -185,7 +185,7 @@ const GAMES = {
             `No max win: the free spins always play to the end. On average the machine pays back about ${slotsRtp()}% of the bets.`,
             "The line wins of a spin that starts a bonus count as well - first the lines, then the bonus.",
             "Your coins come when the spin is over on the screen.",
-            "Auto spins: the bet stays as it is while they run. Max follows your balance - every spin bets the most you may.",
+            "Auto spins: 10 to 100 - or ∞, until you stop them (or the coins run out). The bet stays as it is while they run. Max follows your balance - every spin bets the most you may.",
             "One machine at a time: while a tab of yours spins, another tab can't.",
           ],
         },
