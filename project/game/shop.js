@@ -87,7 +87,7 @@ const ITEMS = [
   { id: "butterflies", kind: "effect", name: "Butterflies", price: 1000000, rarity: "exclusive" },
   // The Shadow Dragon set (frame, animation, background - made to be worn together)
   { id: "shadowdragon", kind: "frame", name: "Shadow Dragon", price: 6000000, rarity: "exclusive", set: "dragon" },
-  { id: "dragontail", kind: "effect", name: "Shadow Tail", price: 6000000, rarity: "exclusive", set: "dragon" },
+  { id: "dragonfire", kind: "effect", name: "Dragonfire", price: 6000000, rarity: "exclusive", set: "dragon" },
   // Backgrounds: behind the face, instead of the avatar's color
   { id: "sunset", kind: "background", name: "Sunset", price: 60000, rarity: "common" },
   { id: "lagoon", kind: "background", name: "Lagoon", price: 70000, rarity: "common" },

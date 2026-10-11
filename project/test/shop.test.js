@@ -203,8 +203,8 @@ test("season prizes are like rewards: a prize of your own, coins and items - giv
 
 test("shop: the Shadow Dragon set - a frame, an animation and a background that belong together", () => {
   const set = shop.ITEMS.filter((item) => item.set === "dragon");
-  assert.deepStrictEqual(set.map((item) => [item.id, item.kind]), [["shadowdragon", "frame"], ["dragontail", "effect"], ["dragonscales", "background"]]);
+  assert.deepStrictEqual(set.map((item) => [item.id, item.kind]), [["shadowdragon", "frame"], ["dragonfire", "effect"], ["dragonscales", "background"]]);
   assert.ok(set.every((item) => item.rarity === "exclusive"), "given, not sold");
   const css = require("fs").readFileSync(require("path").join(__dirname, "../public/styles/looks.css"), "utf8");
-  for (const id of ["look-frame-shadowdragon", "look-fx-dragontail", "look-bg-dragonscales"]) assert.ok(css.includes("." + id), id);
+  for (const id of ["look-frame-shadowdragon", "look-fx-dragonfire", "look-bg-dragonscales"]) assert.ok(css.includes("." + id), id);
 });

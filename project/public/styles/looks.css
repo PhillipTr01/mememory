@@ -1752,13 +1752,14 @@
  * Only black and electric blue: obsidian scales, horns and spines with a blue glow, a spiked tail.
  */
 
-/* Frame: a ring of black scales with a blue gleam - dragon wings behind the avatar, beating slowly (like the phoenix) */
+/* Frame: a black ring with glowing blue edges (like the wings' leading edge), a blue light running around it -
+   dragon wings behind the avatar, beating slowly (like the phoenix) */
 .look-frame-shadowdragon::after {
   background:
-    conic-gradient(from 0deg, transparent 0 300deg, rgba(96, 165, 250, 0.9) 335deg, transparent 360deg),
-    repeating-conic-gradient(from 0deg, #0a0a0c 0 5deg, #1f1f23 5deg 9deg, #0a0a0c 9deg 10deg);
-  filter: drop-shadow(0 0 calc(var(--ring) * 1.4) rgba(59, 130, 246, 0.75));
-  animation: look-turn 5s linear infinite;
+    conic-gradient(from 0deg, transparent 0 280deg, rgba(147, 197, 253, 0.85) 330deg, transparent 360deg),
+    radial-gradient(farthest-side, #60a5fa calc(100% - var(--ring)), #050506 calc(100% - var(--ring) + 1.5px), #18181b calc(100% - var(--ring) * 0.5), #050506 calc(100% - 2px), #3b82f6 calc(100% - 1px));
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.2) rgba(59, 130, 246, 0.9));
+  animation: look-turn 4s linear infinite;
 }
 
 .mm-avatar.look-frame-shadowdragon::before {
@@ -1768,10 +1769,24 @@
   width: 176%;
   height: 112%;
   z-index: -2;
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%233f3f46'/><stop offset='0.6' stop-color='%2318181b'/><stop offset='1' stop-color='%23050506'/></linearGradient></defs><g id='w'><path d='M100 72 L76 26 Q52 8 4 0 Q16 12 16 22 Q4 32 0 46 Q14 40 28 44 Q16 56 20 70 Q34 56 48 60 Q40 74 48 86 Q60 70 72 70 Q76 82 84 92 Q90 84 100 80 Z' fill='url(%23g)' stroke='%233b82f6' stroke-width='1.8' stroke-linejoin='round'/><path d='M76 26 L4 0 M76 26 L0 46 M76 26 L20 70 M76 26 L48 86 M76 26 L84 92' stroke='%2352525b' stroke-width='1.6' stroke-linecap='round' fill='none'/><path d='M100 72 L76 26 Q52 8 4 0' stroke='%2360a5fa' stroke-width='2.4' stroke-linecap='round' fill='none'/></g><use href='%23w' transform='translate(200 0) scale(-1 1)'/></svg>") center / 100% 100% no-repeat;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -10 216 112'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%233f3f46'/><stop offset='0.55' stop-color='%2318181b'/><stop offset='1' stop-color='%23050506'/></linearGradient><linearGradient id='s' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='%2360a5fa' stop-opacity='0'/><stop offset='0.5' stop-color='%2360a5fa' stop-opacity='0.55'/><stop offset='1' stop-color='%2360a5fa' stop-opacity='0'/><animateTransform attributeName='gradientTransform' type='translate' values='-1 0;1 0' dur='3.2s' repeatCount='indefinite'/></linearGradient></defs><g id='w'><path d='M100 72 L76 26 Q52 8 4 0 Q16 12 16 22 Q4 32 0 46 Q14 40 28 44 Q16 56 20 70 Q34 56 48 60 Q40 74 48 86 Q60 70 72 70 Q76 82 84 92 Q90 84 100 80 Z' fill='url(%23g)'/><path d='M100 72 L76 26 Q52 8 4 0 Q16 12 16 22 Q4 32 0 46 Q14 40 28 44 Q16 56 20 70 Q34 56 48 60 Q40 74 48 86 Q60 70 72 70 Q76 82 84 92 Q90 84 100 80 Z' fill='url(%23s)'/><path d='M76 26 L4 0 M76 26 L0 46 M76 26 L20 70 M76 26 L48 86 M76 26 L84 92' stroke='%233b82f6' stroke-width='1.3' stroke-linecap='round' fill='none' opacity='0.75'><animate attributeName='opacity' values='0.35;0.9;0.35' dur='2.6s' repeatCount='indefinite'/></path><path d='M100 72 L76 26 Q52 8 4 0 Q16 12 16 22 Q4 32 0 46 Q14 40 28 44 Q16 56 20 70 Q34 56 48 60 Q40 74 48 86 Q60 70 72 70 Q76 82 84 92 Q90 84 100 80 Z' fill='none' stroke='%233b82f6' stroke-width='1.6' stroke-linejoin='round'/><path d='M100 72 L76 26 Q52 8 4 0' stroke='%2393c5fd' stroke-width='2.6' stroke-linecap='round' fill='none'/><path d='M76 26 L70 12 L80 22 Z M4 0 L-4 -6 L6 4 Z' fill='%23e0f2fe' stroke='%233b82f6' stroke-width='0.8' stroke-linejoin='round'/></g><use href='%23w' transform='translate(200 0) scale(-1 1)'/></svg>") center / 100% 100% no-repeat;
   filter: drop-shadow(0 0 calc(var(--size) * 0.035) rgba(59, 130, 246, 0.85));
   transform-origin: 50% 78%;
-  animation: look-wings 2.6s ease-in-out infinite, look-dragon-glow 2.6s ease-in-out infinite alternate;
+  animation: look-dragon-wings 2.6s ease-in-out infinite, look-dragon-glow 2.6s ease-in-out infinite alternate;
+}
+
+/* (a beat: the wings sweep down - and lift the avatar's frame a little - then open up again) */
+@keyframes look-dragon-wings {
+  0%,
+  100% {
+    transform: translateY(0) scaleX(1) scaleY(1);
+  }
+  40% {
+    transform: translateY(-4%) scaleX(1.06) scaleY(0.8);
+  }
+  60% {
+    transform: translateY(-2%) scaleX(1.02) scaleY(0.9);
+  }
 }
 
 @keyframes look-dragon-glow {
@@ -1780,31 +1795,37 @@
   }
 }
 
-/* Animation: the dragon's tail - out of the ring at the lower right, hanging down, the spade tip curling up, swaying slowly */
-/* (behind the face and the ring: the tail comes out from behind the avatar) */
-.look-fx-dragontail .look-fx {
+/* Animation: Dragonfire - blue flames licking up around the avatar from behind, embers rising out of them */
+.look-fx-dragonfire .look-fx {
   z-index: -1;
 }
 
-.look-fx-dragontail .look-fx::before {
+.look-fx-dragonfire .look-fx::before,
+.look-fx-dragonfire .look-fx::after {
   content: "";
-  top: 62%;
-  left: 70%;
-  width: calc(var(--size) * 0.62);
-  height: calc(var(--size) * 0.56);
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 90'><path d='M4.5 16.5 L-3.4 24.9 L5.8 22.8 Z M10.8 34.3 L6.2 44.2 L13.7 40.0 Z M20.8 47.8 L20.2 58.1 L25.4 52.2 Z M33.5 56.5 L36.9 65.5 L39.4 59.0 Z M47.8 59.8 L54.4 66.1 L54.2 59.9 Z M62.3 57.3 L70.5 60.0 L68.3 55.1 Z M75.8 49.0 L83.9 48.2 L80.6 44.9 Z' fill='%230a0a0c' stroke='%2360a5fa' stroke-width='1.4' stroke-linejoin='round'/><path d='M21.1 3.9 L21.0 6.2 L21.0 8.3 L21.0 10.5 L21.1 12.5 L21.3 14.5 L21.5 16.5 L21.8 18.4 L22.1 20.2 L22.5 22.1 L22.9 23.8 L23.4 25.5 L23.9 27.2 L24.5 28.8 L25.2 30.4 L25.8 31.9 L26.6 33.3 L27.3 34.8 L28.1 36.1 L29.0 37.4 L29.9 38.7 L30.8 39.9 L31.7 41.0 L32.7 42.1 L33.7 43.2 L34.8 44.2 L35.9 45.1 L37.0 46.0 L38.2 46.8 L39.3 47.6 L40.5 48.3 L41.8 48.9 L43.1 49.5 L44.3 50.0 L45.7 50.5 L47.0 50.9 L48.4 51.3 L49.8 51.5 L51.2 51.7 L52.6 51.9 L54.1 52.0 L55.6 51.9 L57.1 51.9 L58.6 51.7 L60.1 51.5 L61.7 51.2 L63.2 50.8 L64.8 50.3 L66.4 49.7 L68.0 49.1 L69.6 48.3 L71.2 47.5 L72.8 46.6 L74.4 45.5 L76.0 44.4 L77.6 43.2 L79.2 41.9 L80.8 40.5 L82.4 39.0 L83.9 37.3 L85.5 35.6 L86.5 36.4 L85.2 38.4 L83.9 40.3 L82.5 42.1 L81.1 43.8 L79.7 45.4 L78.2 47.0 L76.7 48.4 L75.2 49.8 L73.6 51.1 L72.0 52.3 L70.3 53.4 L68.7 54.4 L67.0 55.3 L65.3 56.2 L63.6 57.0 L61.8 57.6 L60.0 58.2 L58.3 58.7 L56.5 59.1 L54.6 59.5 L52.8 59.7 L51.0 59.8 L49.2 59.9 L47.3 59.8 L45.5 59.7 L43.7 59.5 L41.8 59.2 L40.0 58.8 L38.2 58.3 L36.5 57.7 L34.7 57.1 L32.9 56.3 L31.2 55.5 L29.5 54.5 L27.9 53.5 L26.2 52.4 L24.6 51.3 L23.1 50.0 L21.5 48.7 L20.1 47.2 L18.6 45.7 L17.3 44.2 L15.9 42.5 L14.6 40.8 L13.4 39.0 L12.2 37.1 L11.1 35.2 L10.1 33.2 L9.1 31.1 L8.2 28.9 L7.3 26.7 L6.5 24.4 L5.8 22.1 L5.1 19.7 L4.6 17.2 L4.1 14.7 L3.7 12.1 L3.3 9.4 L3.1 6.8 L2.9 4.1 Z' fill='%230a0a0c' stroke='%233b82f6' stroke-width='1.5' stroke-linejoin='round'/><path d='M80.0 33.9 L93.3 26.5 L89.6 41.2 L86.9 34.8 Z' fill='%230a0a0c' stroke='%233b82f6' stroke-width='1.5' stroke-linejoin='round'/></svg>") left top / 100% 100% no-repeat;
-  filter: drop-shadow(0 0 calc(var(--size) * 0.035) rgba(59, 130, 246, 0.85));
-  transform-origin: 12% 4%;
-  animation: look-tail 3s ease-in-out infinite;
+  inset: -26%;
+  transform-origin: 50% 60%;
 }
 
-@keyframes look-tail {
-  0%,
-  100% {
-    transform: rotate(4deg);
+.look-fx-dragonfire .look-fx::before {
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><defs><radialGradient id='f' gradientUnits='userSpaceOnUse' cx='100' cy='100' r='118'><stop offset='0.56' stop-color='%2360a5fa'/><stop offset='0.7' stop-color='%232563eb'/><stop offset='0.8' stop-color='%231d4ed8'/><stop offset='0.92' stop-color='%231e3a8a' stop-opacity='0.85'/><stop offset='1' stop-color='%23172554' stop-opacity='0'/></radialGradient></defs><path d='M165.0 111.5 Q176.7 112.4 182.8 121.3 Q181.4 121.5 190.0 119.1 Q171.2 137.2 159.3 128.9 Z M158.3 131.0 Q174.7 138.4 174.0 161.2 Q176.8 154.2 178.8 170.9 Q161.6 162.9 147.5 145.8 Z M145.8 147.5 Q156.7 157.0 157.4 169.3 Q155.9 168.5 165.6 172.8 Q137.2 174.9 131.0 158.3 Z M128.9 159.3 Q139.9 179.0 125.7 200.2 Q132.5 195.6 124.1 213.5 Q113.7 192.5 111.5 165.0 Z M109.2 165.4 Q114.1 191.0 106.9 209.3 Q106.0 206.4 113.0 223.3 Q83.7 196.5 90.8 165.4 Z M88.5 165.0 Q86.1 185.6 63.0 193.4 Q71.0 193.8 54.4 202.3 Q57.7 180.9 71.1 159.3 Z M69.0 158.3 Q59.1 179.5 43.7 188.7 Q44.5 186.1 41.0 202.2 Q32.4 166.2 54.2 147.5 Z M52.5 145.8 Q41.7 157.9 21.5 149.8 Q27.0 154.6 11.7 151.0 Q23.1 138.1 41.7 131.0 Z M40.7 128.9 Q31.4 134.6 21.9 130.9 Q22.8 129.9 17.8 136.6 Q21.6 111.6 35.0 111.5 Z' fill='url(%23f)'/></svg>") center / 100% 100% no-repeat;
+  filter: drop-shadow(0 0 calc(var(--size) * 0.05) rgba(59, 130, 246, 0.9));
+  animation: look-dragonfire 0.9s ease-in-out infinite alternate;
+}
+
+.look-fx-dragonfire .look-fx::after {
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><defs><radialGradient id='f' gradientUnits='userSpaceOnUse' cx='100' cy='100' r='118'><stop offset='0.56' stop-color='%2360a5fa'/><stop offset='0.7' stop-color='%232563eb'/><stop offset='0.8' stop-color='%231d4ed8'/><stop offset='0.92' stop-color='%231e3a8a' stop-opacity='0.85'/><stop offset='1' stop-color='%23172554' stop-opacity='0'/></radialGradient></defs><path d='M161.6 123.7 Q170.3 126.1 174.3 132.2 Q173.2 132.3 180.3 130.8 Q163.7 143.3 155.4 135.9 Z M151.3 141.5 Q163.0 149.9 159.5 167.5 Q163.4 161.6 161.7 176.2 Q151.2 166.1 141.5 151.3 Z M135.9 155.4 Q146.5 170.0 148.9 182.6 Q147.3 181.2 157.7 188.9 Q129.8 182.8 123.7 161.6 Z M117.1 163.8 Q121.9 178.3 108.6 191.1 Q115.3 188.5 105.2 199.9 Q102.7 184.7 103.5 165.9 Z M96.5 165.9 Q96.4 185.7 90.7 198.6 Q90.2 196.3 94.2 209.8 Q74.8 186.6 82.9 163.8 Z M76.3 161.6 Q71.0 177.9 51.9 181.3 Q59.1 183.1 43.4 187.2 Q51.2 171.9 64.1 155.4 Z M58.5 151.3 Q50.6 162.3 41.5 166.4 Q42.0 164.9 39.6 174.6 Q34.8 150.6 48.7 141.5 Z M44.6 135.9 Q38.3 141.0 27.0 131.6 Q30.5 136.7 21.6 130.1 Q28.6 125.7 38.4 123.7 Z' fill='url(%23f)'/><circle cx='78.2' cy='161.6' r='2.0' fill='%23dbeafe'><animate attributeName='cy' from='161.6' to='11.6' dur='2.18s' begin='0.17s' repeatCount='indefinite'/><animate attributeName='cx' values='78.2;76.0;72.9' dur='2.18s' begin='0.17s' repeatCount='indefinite'/><animate attributeName='opacity' values='0;1;0.8;0' dur='2.18s' begin='0.17s' repeatCount='indefinite'/></circle><circle cx='100.9' cy='158.9' r='1.5' fill='%23dbeafe'><animate attributeName='cy' from='158.9' to='8.9' dur='1.92s' begin='0.17s' repeatCount='indefinite'/><animate attributeName='cx' values='100.9;99.7;104.8' dur='1.92s' begin='0.17s' repeatCount='indefinite'/><animate attributeName='opacity' values='0;1;0.8;0' dur='1.92s' begin='0.17s' repeatCount='indefinite'/></circle><circle cx='53.4' cy='163.4' r='2.1' fill='%23dbeafe'><animate attributeName='cy' from='163.4' to='13.4' dur='2.15s' begin='2.27s' repeatCount='indefinite'/><animate attributeName='cx' values='53.4;51.7;59.1' dur='2.15s' begin='2.27s' repeatCount='indefinite'/><animate attributeName='opacity' values='0;1;0.8;0' dur='2.15s' begin='2.27s' repeatCount='indefinite'/></circle><circle cx='43.8' cy='178.6' r='1.5' fill='%23dbeafe'><animate attributeName='cy' from='178.6' to='28.6' dur='1.75s' begin='0.35s' repeatCount='indefinite'/><animate attributeName='cx' values='43.8;40.7;47.6' dur='1.75s' begin='0.35s' repeatCount='indefinite'/><animate attributeName='opacity' values='0;1;0.8;0' dur='1.75s' begin='0.35s' repeatCount='indefinite'/></circle><circle cx='60.4' cy='172.0' r='2.1' fill='%23dbeafe'><animate attributeName='cy' from='172.0' to='22.0' dur='2.17s' begin='0.89s' repeatCount='indefinite'/><animate attributeName='cx' values='60.4;53.4;55.1' dur='2.17s' begin='0.89s' repeatCount='indefinite'/><animate attributeName='opacity' values='0;1;0.8;0' dur='2.17s' begin='0.89s' repeatCount='indefinite'/></circle><circle cx='63.5' cy='174.3' r='2.1' fill='%23dbeafe'><animate attributeName='cy' from='174.3' to='24.3' dur='1.91s' begin='0.75s' repeatCount='indefinite'/><animate attributeName='cx' values='63.5;62.8;61.1' dur='1.91s' begin='0.75s' repeatCount='indefinite'/><animate attributeName='opacity' values='0;1;0.8;0' dur='1.91s' begin='0.75s' repeatCount='indefinite'/></circle><circle cx='136.5' cy='174.8' r='2.0' fill='%23dbeafe'><animate attributeName='cy' from='174.8' to='24.8' dur='1.69s' begin='1.38s' repeatCount='indefinite'/><animate attributeName='cx' values='136.5;142.5;139.3' dur='1.69s' begin='1.38s' repeatCount='indefinite'/><animate attributeName='opacity' values='0;1;0.8;0' dur='1.69s' begin='1.38s' repeatCount='indefinite'/></circle><circle cx='73.7' cy='181.5' r='2.3' fill='%23dbeafe'><animate attributeName='cy' from='181.5' to='31.5' dur='1.54s' begin='1.00s' repeatCount='indefinite'/><animate attributeName='cx' values='73.7;68.1;73.6' dur='1.54s' begin='1.00s' repeatCount='indefinite'/><animate attributeName='opacity' values='0;1;0.8;0' dur='1.54s' begin='1.00s' repeatCount='indefinite'/></circle><circle cx='42.9' cy='174.0' r='2.5' fill='%23dbeafe'><animate attributeName='cy' from='174.0' to='24.0' dur='2.32s' begin='1.38s' repeatCount='indefinite'/><animate attributeName='cx' values='42.9;39.9;45.2' dur='2.32s' begin='1.38s' repeatCount='indefinite'/><animate attributeName='opacity' values='0;1;0.8;0' dur='2.32s' begin='1.38s' repeatCount='indefinite'/></circle><circle cx='111.7' cy='171.9' r='2.5' fill='%23dbeafe'><animate attributeName='cy' from='171.9' to='21.9' dur='1.95s' begin='2.02s' repeatCount='indefinite'/><animate attributeName='cx' values='111.7;111.3;113.7' dur='1.95s' begin='2.02s' repeatCount='indefinite'/><animate attributeName='opacity' values='0;1;0.8;0' dur='1.95s' begin='2.02s' repeatCount='indefinite'/></circle><circle cx='45.5' cy='174.8' r='2.4' fill='%23dbeafe'><animate attributeName='cy' from='174.8' to='24.8' dur='2.18s' begin='2.38s' repeatCount='indefinite'/><animate attributeName='cx' values='45.5;42.1;44.2' dur='2.18s' begin='2.38s' repeatCount='indefinite'/><animate attributeName='opacity' values='0;1;0.8;0' dur='2.18s' begin='2.38s' repeatCount='indefinite'/></circle><circle cx='120.9' cy='158.5' r='1.5' fill='%23dbeafe'><animate attributeName='cy' from='158.5' to='8.5' dur='1.95s' begin='0.40s' repeatCount='indefinite'/><animate attributeName='cx' values='120.9;113.9;124.1' dur='1.95s' begin='0.40s' repeatCount='indefinite'/><animate attributeName='opacity' values='0;1;0.8;0' dur='1.95s' begin='0.40s' repeatCount='indefinite'/></circle><circle cx='54.0' cy='163.9' r='1.5' fill='%23dbeafe'><animate attributeName='cy' from='163.9' to='13.9' dur='1.87s' begin='2.09s' repeatCount='indefinite'/><animate attributeName='cx' values='54.0;53.2;54.6' dur='1.87s' begin='2.09s' repeatCount='indefinite'/><animate attributeName='opacity' values='0;1;0.8;0' dur='1.87s' begin='2.09s' repeatCount='indefinite'/></circle><circle cx='147.5' cy='177.7' r='1.9' fill='%23dbeafe'><animate attributeName='cy' from='177.7' to='27.7' dur='2.44s' begin='0.67s' repeatCount='indefinite'/><animate attributeName='cx' values='147.5;145.3;152.1' dur='2.44s' begin='0.67s' repeatCount='indefinite'/><animate attributeName='opacity' values='0;1;0.8;0' dur='2.44s' begin='0.67s' repeatCount='indefinite'/></circle></svg>") center / 100% 100% no-repeat;
+  animation: look-dragonfire 0.7s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes look-dragonfire {
+  from {
+    transform: scale(0.97) translateY(1%);
+    opacity: 0.85;
   }
-  50% {
-    transform: rotate(-8deg);
+  to {
+    transform: scale(1.04) translateY(-2%);
+    opacity: 1;
   }
 }
 
@@ -1827,7 +1848,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mm-avatar.look-frame-shadowdragon::before,
-  .look-fx-dragontail .look-fx::before {
+  .look-fx-dragonfire .look-fx::before,
+  .look-fx-dragonfire .look-fx::after {
     animation: none;
   }
 }
