@@ -114,7 +114,8 @@ module.exports = function (auth) {
     "/mod",
     auth,
     approved,
-    asyncHandler(async (req, res) => res.json(await moderators.panel(req.username))),
+    // (in the season world: no money rains - the panel says so)
+    asyncHandler(async (req, res) => res.json({ ...(await moderators.panel(req.username)), inSeason: seasons.inSeasonWorld(req.username) })),
   );
 
   const modResult = (res, result) => (result.error ? res.status(400).json(result) : res.json(result));

@@ -4748,7 +4748,8 @@ body.jackpot-theme::before {
 
 .cs-mod-panel {
   position: relative;
-  width: min(560px, calc(100vw - 32px));
+  width: min(720px, calc(100vw - 32px));
+  max-width: none;
   max-height: calc(100vh - 48px);
   overflow-y: auto;
   text-align: left;
@@ -4856,17 +4857,23 @@ body.jackpot-theme::before {
 }
 
 .msg-mod-btn {
-  width: 26px;
-  height: 26px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  border: 1px solid var(--mm-border);
-  border-radius: 7px;
-  background: var(--mm-surface);
-  font-size: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: var(--mm-surface-3, #2e2e2e);
+  color: #fff;
+  font-size: 0.85rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
 .msg-mod-btn:hover {
   border-color: var(--mm-danger);
+  background: var(--mm-danger);
+  color: #fff;
 }
 
 /* Touch screens: always there (no hover) */
@@ -4911,4 +4918,66 @@ body.jackpot-theme::before {
 /* A moderator: 🛡️ before the name in the chat */
 .msg-name.is-mod::before {
   content: "🛡️ ";
+}
+
+.cs-mod-wait {
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  border-radius: 10px;
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  color: var(--mm-accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.cs-mod-wait[hidden] {
+  display: none;
+}
+
+/* The panel: the fields with room (amount, note) */
+.cs-mod-panel .cs-mod-row > .mm-input {
+  flex: 1 1 200px;
+}
+
+.cs-mod-panel .cs-mod-row > .mm-btn {
+  flex: 0 0 auto;
+}
+
+@media (min-width: 640px) {
+  .cs-mod-panel {
+    padding: 1.6rem 1.8rem 1.5rem;
+  }
+}
+
+/* Phones: the moderator button and the second chance as their icon only - everything fits next to the logo */
+@media (max-width: 575px) {
+  .nav-mod {
+    margin-right: 0.3rem;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.82rem;
+  }
+
+  .nav-mod-text,
+  #navChanceText {
+    display: none;
+  }
+
+  /* The panel: the fields and buttons one below the other, the whole width */
+  .cs-mod-panel {
+    padding: 1.2rem 1rem 1rem;
+  }
+
+  .cs-mod-panel .cs-mod-row > *,
+  .cs-mod-panel .cs-mod-row > .mm-btn {
+    flex: 1 1 100%;
+  }
+
+  .cs-mod-choices {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* (no empty line under the fields while nothing is typed) */
+.cs-mod-preview:empty {
+  display: none;
 }

@@ -6,8 +6,8 @@ const days = require("./days");
 /*
  * Moderators: players the admin trusts with a few things on the casino pages (not the admin panel).
  * The admin turns a player into a moderator and picks what they may do (perms):
- * - rain: a money rain for everybody online - a total split evenly between them (the moderator too, but
- *   at least one player online who is no moderator - no rain for moderators alone), at most `rainMax` per rain and `rainWeekly` a week (Monday to Sunday; 0: no limit)
+ * - rain: a money rain for everybody online - every one of them gets the amount (the moderator too, but
+ *   at least one player online who is no moderator - no rain for moderators alone; never in a season), at most `rainMax` per rain and `rainWeekly` a week (Monday to Sunday; 0: no limit)
  * - chat: delete messages of the casino chat, mute players for a while
  * - announce: a highlighted message in the casino chat (📣)
  * Everything a moderator does is written down (the log - the admin sees it).
@@ -17,10 +17,13 @@ const days = require("./days");
 const PERMS = ["rain", "chat", "announce"];
 const PERM_NAMES = { rain: "Money rain", chat: "Chat moderation", announce: "Announcements" };
 const ALONE = "No player is online but moderators - a money rain needs at least one other player.";
+const SEASON = "No money rains in a season - only in the normal casino.";
 const MUTE_MAX = 24 * 60; // a moderator mutes for at most a day (minutes)
 const LOG_KEY = "modLog";
 const LOG_SIZE = 300;
-const DEFAULTS = { rainMax: 50000, rainWeekly: 250000 };
+const DEFAULTS = { rainMax: 50000, rainWeekly: 250000, rainCooldown: 12 };
+const COOLDOWN_MIN = 12; // hours between two money rains of a moderator - at least
+const HOUR = 3600 * 1000;
 
 // Monday 00:00 of this week (the money rain limit counts from it)
 function weekStart(now = Date.now()) {
@@ -76,6 +79,10 @@ function modOf(user) {
     rainMax: Number.isInteger(mod.rainMax) ? mod.rainMax : DEFAULTS.rainMax,
     rainWeekly: Number.isInteger(mod.rainWeekly) ? mod.rainWeekly : DEFAULTS.rainWeekly,
     used: mod.used && mod.used.week === weekStart() ? mod.used.amount || 0 : 0,
+    // Hours between two money rains (at least COOLDOWN_MIN) - and when the next one may come
+    rainCooldown: Number.isInteger(mod.rainCooldown) && mod.rainCooldown >= COOLDOWN_MIN ? mod.rainCooldown : DEFAULTS.rainCooldown,
+    lastRain: mod.lastRain || null,
+    nextRain: mod.lastRain ? mod.lastRain + (Number.isInteger(mod.rainCooldown) && mod.rainCooldown >= COOLDOWN_MIN ? mod.rainCooldown : DEFAULTS.rainCooldown) * HOUR : null,
   };
 }
 
@@ -107,6 +114,8 @@ async function set(username, input) {
   const rainWeekly = input.rainWeekly == null || input.rainWeekly === "" ? DEFAULTS.rainWeekly : Number(input.rainWeekly);
   if (!Number.isInteger(rainMax) || rainMax < 1 || rainMax > 100000000) return { error: "Money rain at most: 1 to 100,000,000 coins." };
   if (!Number.isInteger(rainWeekly) || rainWeekly < 0 || rainWeekly > 1000000000) return { error: "Money rain a week: 0 (no limit) to 1,000,000,000 coins." };
+  const rainCooldown = input.rainCooldown == null || input.rainCooldown === "" ? DEFAULTS.rainCooldown : Number(input.rainCooldown);
+  if (!Number.isInteger(rainCooldown) || rainCooldown < COOLDOWN_MIN || rainCooldown > 24 * 365) return { error: `Wait between money rains: at least ${COOLDOWN_MIN} hours.` };
   if (on && !user.casinoApproved) return { error: "Only a player with access to the casino can be a moderator." };
   const before = user.mod || {};
   const mod = {
@@ -114,7 +123,9 @@ async function set(username, input) {
     perms: Object.fromEntries(PERMS.map((perm) => [perm, !!(input.perms && input.perms[perm])])),
     rainMax: rainMax,
     rainWeekly: rainWeekly,
+    rainCooldown: rainCooldown,
     used: before.used || null,
+    lastRain: before.lastRain || null,
     since: on ? before.since || Date.now() : null,
   };
   await User.updateOne({ username: user.username }, { $set: { mod: mod } });
@@ -132,7 +143,7 @@ async function history(username) {
 
 /* ---------- What a moderator does ---------- */
 
-// A money rain: `amount` coins in total, split evenly between everybody online (the moderator too - but only
+// A money rain: `amount` coins for every player online (the moderator too - but only
 // with a player online who is no moderator). input: {amount, note} - in the world the moderator plays in
 async function rain(username, input, world = "normal") {
   if (input == null || typeof input !== "object") return { error: "No money rain." };
@@ -142,8 +153,11 @@ async function rain(username, input, world = "normal") {
     const user = await User.findOne({ username: username }).select("username mod").lean();
     const mod = modOf(user);
     if (!mod || !mod.perms.rain) return { error: "You may not let it rain." };
+    if (world === "season") return { error: SEASON };
     const amount = Number(input.amount);
-    if (!Number.isInteger(amount) || amount < 1) return { error: "How many coins in total?" };
+    if (!Number.isInteger(amount) || amount < 1) return { error: "How many coins for every player?" };
+    // (the limits count the amount once - however many players are online)
+    if (mod.nextRain && Date.now() < mod.nextRain) return { error: `You can let it rain again ${waitText(mod.nextRain - Date.now())} (${mod.rainCooldown} h between two).`, nextRain: mod.nextRain };
     if (amount > mod.rainMax) return { error: `At most 🪙 ${mod.rainMax.toLocaleString("en-US")} per money rain.` };
     if (mod.rainWeekly > 0 && mod.used + amount > mod.rainWeekly) {
       const left = Math.max(0, mod.rainWeekly - mod.used);
@@ -154,31 +168,37 @@ async function rain(username, input, world = "normal") {
     // Who gets it: everybody online (the moderator too) - not with only moderators online
     const names = await rains.targets({ target: "online", world: world });
     if (!names.some((name) => name !== username && !modNames.has(name))) return { error: ALONE };
-    const each = Math.floor(amount / names.length);
-    if (each < 1) return { error: `Too little for ${names.length} players - at least 🪙 ${names.length.toLocaleString("en-US")}.` };
+    const each = amount;
     const total = each * names.length;
     const made = await rains.create({ amount: each, target: "online", world: world, note: note || `From moderator ${username}`, by: username, names: names });
     if (made.error) return made;
     const done = made.rain;
     const paid = done.paid != null ? done.paid : total;
-    await User.updateOne({ username: username }, { $set: { mod: { ...user.mod, used: { week: weekStart(), amount: mod.used + paid } } } });
+    await User.updateOne({ username: username }, { $set: { mod: { ...user.mod, used: { week: weekStart(), amount: mod.used + amount }, lastRain: Date.now() } } });
     await write(username, "rain", `🪙 ${paid.toLocaleString("en-US")} - ${done.players != null ? done.players : names.length} players × ${each.toLocaleString("en-US")}${world === "season" ? " (season)" : ""}${note ? ` · “${note}”` : ""}`);
-    return { players: done.players != null ? done.players : names.length, each: each, total: paid, left: mod.rainWeekly > 0 ? Math.max(0, mod.rainWeekly - mod.used - paid) : null };
+    return { players: done.players != null ? done.players : names.length, each: each, total: paid, left: mod.rainWeekly > 0 ? Math.max(0, mod.rainWeekly - mod.used - amount) : null };
   } finally {
     busy.delete(username);
   }
+}
+
+// "in 3 h 20 min", "in 45 min"
+function waitText(ms) {
+  const min = Math.max(1, Math.ceil(ms / 60000));
+  const h = Math.floor(min / 60);
+  return "in " + (h ? h + " h" + (min % 60 ? " " + (min % 60) + " min" : "") : min + " min");
 }
 
 // What the rain would do (before it is sent): {players, each, total}
 async function rainPreview(username, input, world = "normal") {
   const mod = await get(username);
   if (!mod || !mod.perms.rain) return { error: "You may not let it rain." };
+  if (world === "season") return { error: SEASON };
   const amount = Number(input && input.amount) || 0;
   const names = await require("./money_rain").targets({ target: "online", world: world });
   // (the players online who are no moderator - without them no rain)
   const others = names.filter((name) => name !== username && !modNames.has(name)).length;
-  const each = names.length ? Math.floor(amount / names.length) : 0;
-  return { players: names.length, others: others, each: each, total: each * names.length };
+  return { players: names.length, others: others, each: amount, total: amount * names.length };
 }
 
 async function deleteMessage(username, id) {
@@ -249,4 +269,4 @@ function reset() {
   busy.clear();
 }
 
-module.exports = { refresh, names, PERMS, PERM_NAMES, MUTE_MAX, DEFAULTS, changes, modOf, get, can, list, set, history, rain, rainPreview, deleteMessage, mute, unmute, mutes, announce, panel, reset };
+module.exports = { COOLDOWN_MIN, refresh, names, PERMS, PERM_NAMES, MUTE_MAX, DEFAULTS, changes, modOf, get, can, list, set, history, rain, rainPreview, deleteMessage, mute, unmute, mutes, announce, panel, reset };

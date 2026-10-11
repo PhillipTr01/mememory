@@ -688,6 +688,7 @@ function fillModCard(card, username, data) {
   var number = (value, placeholder) => Object.assign(el("input", "mm-input"), { type: "number", min: 0, step: 1000, value: value, placeholder: placeholder });
   var rainMax = number(mod.rainMax, data.defaults.rainMax);
   var rainWeekly = number(mod.rainWeekly, data.defaults.rainWeekly);
+  var rainCooldown = Object.assign(el("input", "mm-input"), { type: "number", min: 12, step: 1, value: mod.rainCooldown || data.defaults.rainCooldown, placeholder: data.defaults.rainCooldown });
   var limits = el("div", "ad-mod-limits");
   var field = (text, input, hint) => {
     var box = el("label", "ad-field");
@@ -697,8 +698,16 @@ function fillModCard(card, username, data) {
     return box;
   };
   limits.append(
-    field("Money rain at most", rainMax, "In total per rain - split evenly between everybody online."),
-    field("Money rain a week", rainWeekly, "All their rains of a week together, Monday to Sunday (0: no limit)." + (mod.on ? " This week: 🪙 " + formatCoins(mod.used || 0) + " given." : "")),
+    field("Money rain at most", rainMax, "Per player and rain - every player online gets it."),
+    (function () {
+      var box = el("label", "ad-field");
+      var inline = el("span", "ad-inline-input");
+      inline.append(rainCooldown, el("span", "ad-setting-unit", "h"));
+      var next = mod.on && mod.nextRain && mod.nextRain > Date.now() ? " Next one: " + time(mod.nextRain) + "." : "";
+      box.append(el("span", "ad-label", "Wait between rains"), inline, el("small", "ad-note", "Hours after a money rain before the next one (at least 12)." + next));
+      return box;
+    })(),
+    field("Money rain a week", rainWeekly, "Their rains of a week together, Monday to Sunday - the amount per player counts once, however many are online (0: no limit)." + (mod.on ? " This week: 🪙 " + formatCoins(mod.used || 0) + " given." : "")),
   );
   var save = el("button", "mm-btn mm-btn-primary mm-btn-sm", "Save");
   save.type = "button";
@@ -717,7 +726,7 @@ function fillModCard(card, username, data) {
     error.hidden = true;
     save.disabled = true;
     try {
-      var body = { on: check.checked, perms: Object.fromEntries(Object.entries(boxes).map(([perm, box]) => [perm, box.checked])), rainMax: Math.floor(Number(rainMax.value)), rainWeekly: Math.floor(Number(rainWeekly.value) || 0) };
+      var body = { on: check.checked, perms: Object.fromEntries(Object.entries(boxes).map(([perm, box]) => [perm, box.checked])), rainMax: Math.floor(Number(rainMax.value)), rainWeekly: Math.floor(Number(rainWeekly.value) || 0), rainCooldown: Math.floor(Number(rainCooldown.value) || 0) };
       var result = await api("players/" + encodeURIComponent(username) + "/mod", body);
       casinoNotice({ icon: "🛡️", title: check.checked ? username + " is a moderator" : username + " is no moderator", text: check.checked ? Object.keys(boxes).filter((perm) => boxes[perm].checked).map((perm) => data.perms[perm]).join(" · ") || "no rights picked" : "", ms: 5000, key: "mod" });
       fillModCard(card, username, { ...data, mod: result.mod.on ? result.mod : null, log: result.log });

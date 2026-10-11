@@ -39,7 +39,9 @@
     var on = !!(state && state.mod);
     var button = document.getElementById("navMod");
     if (on && !button) {
-      button = el("button", "nav-mod", "🛡️ Mod");
+      button = el("button", "nav-mod", "🛡️");
+      // (phones: only the shield)
+      button.appendChild(el("span", "nav-mod-text", " Mod"));
       button.id = "navMod";
       button.type = "button";
       button.title = "Moderator";
@@ -64,9 +66,11 @@
     var name = message.dataset.msgName;
     if (!name || name == me() || message.querySelector(".msg-mod")) return;
     var bar = el("div", "msg-mod");
-    var remove = el("button", "msg-mod-btn", "🗑");
+    var remove = el("button", "msg-mod-btn");
+    remove.appendChild(createIcon("bi-trash3"));
     remove.type = "button";
     remove.title = "Delete the message";
+    remove.setAttribute("aria-label", "Delete the message");
     remove.addEventListener("click", async (event) => {
       event.stopPropagation();
       if (!(await confirmDialog({ title: "Delete this message?", text: "From " + name + " - it is gone for everybody.", confirmLabel: "Delete", danger: true }))) return;
@@ -76,9 +80,11 @@
         showHint(error.message, "error", remove);
       }
     });
-    var mute = el("button", "msg-mod-btn", "🔇");
+    var mute = el("button", "msg-mod-btn");
+    mute.appendChild(createIcon("bi-mic-mute-fill"));
     mute.type = "button";
     mute.title = "Mute " + name;
+    mute.setAttribute("aria-label", "Mute " + name);
     mute.addEventListener("click", (event) => {
       event.stopPropagation();
       muteDialog(name);
@@ -158,18 +164,22 @@
     if (perms.rain) dialog.appendChild(rainSection());
     if (perms.announce) dialog.appendChild(announceSection());
     if (perms.chat) dialog.appendChild(chatSection());
-    dialog.appendChild(logSection());
     document.body.appendChild(backdrop);
   }
 
-  // 💸 A money rain for everybody online: the total, split evenly (never with only moderators online)
+  // 💸 A money rain for everybody online: every one gets the amount (never with only moderators online)
   function rainSection() {
     var box = section("Money rain", "💸");
     var mod = state.mod;
-    var limits = "For everybody online · at most 🪙 " + format(mod.rainMax) + " per rain" + (state.rainLeft != null ? " · 🪙 " + format(state.rainLeft) + " left this week (of " + format(mod.rainWeekly) + ")" : "");
+    // In a season: none
+    if (state.inSeason) {
+      box.appendChild(el("p", "cs-mod-note", "No money rains in a season - switch to the normal casino for one."));
+      return box;
+    }
+    var limits = "Every player online gets it · at most 🪙 " + format(mod.rainMax) + " per player · " + mod.rainCooldown + " h between two" + (state.rainLeft != null ? " · 🪙 " + format(state.rainLeft) + " left this week (of " + format(mod.rainWeekly) + ")" : "");
     box.appendChild(el("p", "cs-mod-note", limits));
-    var amount = Object.assign(el("input", "mm-input"), { type: "number", min: 1, step: 1000, placeholder: "Coins in total" });
-    amount.setAttribute("aria-label", "Coins in total");
+    var amount = Object.assign(el("input", "mm-input"), { type: "number", min: 1, step: 1000, placeholder: "Coins per player" });
+    amount.setAttribute("aria-label", "Coins per player");
     var note = Object.assign(el("input", "mm-input"), { type: "text", maxLength: 80, placeholder: "What for (optional)" });
     var preview = el("p", "cs-mod-preview", "");
     var send = el("button", "cs-gift-send", "💸 Let it rain");
@@ -180,13 +190,37 @@
     var timer = null;
     var body = () => ({ amount: Math.floor(Number(amount.value) || 0), note: note.value });
     var last = null; // the last preview
+    // The wait after the last rain: a countdown, nothing can be sent before
+    var waitLine = el("p", "cs-mod-wait", "");
+    box.insertBefore(waitLine, row);
+    var waiting = () => mod.nextRain && Date.now() < mod.nextRain;
+    var showWait = () => {
+      if (!waiting()) return (waitLine.hidden = true);
+      var min = Math.ceil((mod.nextRain - Date.now()) / 60000);
+      waitLine.hidden = false;
+      waitLine.innerText = "⏳ Your next money rain in " + (min >= 60 ? Math.floor(min / 60) + " h " + (min % 60) + " min" : min + " min");
+    };
+    showWait();
+    if (waiting()) {
+      var waitTimer = setInterval(() => {
+        showWait();
+        if (!waiting() || !waitLine.isConnected) {
+          clearInterval(waitTimer);
+          if (waitLine.isConnected) check();
+        }
+      }, 30000);
+    }
     var check = () => {
       clearTimeout(timer);
       var b = body();
+      if (waiting()) {
+        send.disabled = true;
+        return (preview.innerText = "");
+      }
       var over = b.amount > mod.rainMax || (state.rainLeft != null && b.amount > state.rainLeft);
       send.disabled = b.amount < 1 || over;
       if (b.amount < 1) return (preview.innerText = "");
-      if (over) return (preview.innerText = b.amount > mod.rainMax ? "More than 🪙 " + format(mod.rainMax) + " per rain." : "More than you have left this week.");
+      if (over) return (preview.innerText = b.amount > mod.rainMax ? "More than 🪙 " + format(mod.rainMax) + " per player." : "More than you have left this week.");
       timer = setTimeout(async () => {
         try {
           last = await call("mod/rain/preview", b);
@@ -200,7 +234,7 @@
     amount.addEventListener("input", check);
     send.addEventListener("click", async () => {
       var b = body();
-      if (!(await confirmDialog({ title: "Let it rain?", text: "🪙 " + format(b.amount) + " in total, split evenly between everybody online" + (last ? " (" + last.players + " players)" : "") + ".", confirmLabel: "Let it rain" }))) return;
+      if (!(await confirmDialog({ title: "Let it rain?", text: "🪙 " + format(b.amount) + " for every player online" + (last ? " - " + last.players + " players, 🪙 " + format(last.total) + " in total" : "") + ".", confirmLabel: "Let it rain" }))) return;
       send.disabled = true;
       try {
         var result = await call("mod/rain", b);
@@ -243,7 +277,7 @@
   // 💬 The chat: who is muted (unmute) - delete and mute on the messages themselves
   function chatSection() {
     var box = section("Chat", "💬");
-    box.appendChild(el("p", "cs-mod-note", "Hover a message in the chat: 🗑 deletes it, 🔇 mutes its writer."));
+    box.appendChild(el("p", "cs-mod-note", "Hover a message in the chat: the bin deletes it, the crossed-out mic mutes its writer."));
     var list = el("div", "cs-mod-mutes");
     var fill = () => {
       list.replaceChildren(
@@ -270,19 +304,6 @@
     };
     fill();
     box.appendChild(list);
-    return box;
-  }
-
-  var ICONS = { rain: "💸", delete: "🗑️", mute: "🔇", unmute: "🔊", announce: "📣" };
-  function logSection() {
-    var box = section("What you did", "🗒️");
-    box.classList.add("cs-mod-log");
-    if (!state.log.length) box.appendChild(el("p", "cs-mod-note", "Nothing yet."));
-    state.log.slice(0, 8).forEach((entry) => {
-      var row = el("div", "cs-mod-log-row");
-      row.append(el("span", "", ICONS[entry.action] || "•"), el("span", "cs-mod-log-text", entry.detail), el("span", "cs-mod-note", new Date(entry.at).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })));
-      box.appendChild(row);
-    });
     return box;
   }
 
