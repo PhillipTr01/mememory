@@ -1006,7 +1006,7 @@ function rainRow(rain, planned) {
     var cancel = el("button", "mm-btn mm-btn-sm ad-danger-btn", "Cancel");
     cancel.type = "button";
     cancel.addEventListener("click", async () => {
-      if (!confirm("Cancel this money rain?")) return;
+      if (!(await confirmDialog({ title: "Cancel this money rain?", text: "🪙 " + formatCoins(rain.amount) + " for " + rainWho(rain) + " - it won't fall" + (rain.repeat && rain.repeat != "none" ? " (and won't repeat)" : "") + ".", confirmLabel: "Cancel rain", cancelLabel: "Keep it", danger: true }))) return;
       try {
         renderRains(await api("rains/" + rain.id + "/cancel", {}));
       } catch (error) {
@@ -1021,7 +1021,7 @@ function rainRow(rain, planned) {
     remove.title = "Remove from the list (the coins stay paid)";
     remove.setAttribute("aria-label", "Remove from the list");
     remove.addEventListener("click", async () => {
-      if (!confirm("Remove this money rain from the list? The coins it paid stay with the players.")) return;
+      if (!(await confirmDialog({ title: "Remove from the list?", text: "The coins this money rain paid stay with the players - only the entry goes.", confirmLabel: "Remove", danger: true }))) return;
       remove.disabled = true;
       try {
         renderRains(await api("rains/" + rain.id + "/remove", {}));

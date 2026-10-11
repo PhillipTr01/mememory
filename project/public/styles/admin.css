@@ -4230,3 +4230,13 @@ a.ad-case-row:hover {
     flex: 1;
   }
 }
+
+/* Money rain that fell: remove from the list - a white ✕ (red on hover), like the prize rows */
+.ad-rain-remove {
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.ad-rain-remove:hover {
+  color: var(--mm-danger);
+}
