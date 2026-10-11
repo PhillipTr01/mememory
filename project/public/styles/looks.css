@@ -1748,136 +1748,128 @@
 }
 
 /*
- * ---------- The Jade Dragon set: frame, animation and background, made for each other ----------
- * Jade and obsidian scales, molten gold - the wings behind the avatar, a wyrm circling it with jade fire,
- * its hoard glowing behind the face.
+ * ---------- The Shadow Dragon set: frame, animation and background, made for each other ----------
+ * Obsidian scales and electric blue - a horned dragon head over the avatar like a mask, a spiked tail
+ * curling out behind it, its glowing spines.
  */
 
-/* Frame: a ring of scales with a gold sheen running around it - dragon wings behind the avatar, beating slowly */
-.look-frame-jadedragon::after {
+/* Frame: a ring of black scales with a blue gleam running around it - the horned dragon head on top */
+.look-frame-shadowdragon::after {
   background:
-    conic-gradient(from 0deg, transparent 0 300deg, rgba(253, 230, 138, 0.95) 330deg, transparent 360deg),
-    repeating-conic-gradient(from 0deg, #022c22 0 4deg, #059669 4deg 9deg, #34d399 9deg 10.5deg, #064e3b 10.5deg 15deg);
-  filter: drop-shadow(0 0 calc(var(--ring) * 1.6) rgba(16, 185, 129, 0.75)) drop-shadow(0 0 calc(var(--ring) * 0.6) rgba(251, 191, 36, 0.6));
-  animation: look-turn 3.6s linear infinite;
+    conic-gradient(from 0deg, transparent 0 290deg, rgba(96, 165, 250, 0.95) 330deg, transparent 360deg),
+    repeating-conic-gradient(from 0deg, #09090b 0 4deg, #27272a 4deg 8deg, #3f3f46 8deg 9deg, #18181b 9deg 13deg);
+  filter: drop-shadow(0 0 calc(var(--ring) * 1.6) rgba(59, 130, 246, 0.8));
+  animation: look-turn 4s linear infinite;
 }
 
-.mm-avatar.look-frame-jadedragon::before {
+.mm-avatar.look-frame-shadowdragon::before {
   content: "";
-  top: -6%;
-  left: -38%;
-  width: 176%;
+  top: -46%;
+  left: -24%;
+  width: 148%;
   height: 92%;
-  z-index: -2;
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100'><defs><linearGradient id='m' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%2334d399'/><stop offset='0.55' stop-color='%23065f46'/><stop offset='1' stop-color='%23022c22'/></linearGradient></defs><g id='w'><path d='M100 72 C84 44 58 18 6 6 C20 20 18 30 2 36 C22 42 22 52 8 62 C30 60 40 68 34 82 C56 70 80 72 100 80 Z' fill='url(%23m)' stroke='%23fbbf24' stroke-width='1.6' stroke-linejoin='round'/><path d='M100 74 L6 6 M100 76 L4 36 M100 78 L10 62 M100 79 L34 82' stroke='%23fde68a' stroke-width='1.1' opacity='0.75'/></g><use href='%23w' transform='translate(200 0) scale(-1 1)'/></svg>") center / 100% 100% no-repeat;
-  filter: drop-shadow(0 0 calc(var(--size) * 0.04) rgba(16, 185, 129, 0.65));
-  transform-origin: 50% 78%;
-  animation: look-jade-wings 3s ease-in-out infinite;
+  z-index: 2;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 124'><defs><linearGradient id='s' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%233f3f46'/><stop offset='1' stop-color='%2309090b'/></linearGradient></defs><g id='h'><path d='M62 86 L4 52 L40 72 L0 84 L44 88 L10 106 L58 96 Z' fill='%2318181b' stroke='%2360a5fa' stroke-width='2' stroke-linejoin='round'/><path d='M74 80 C62 52 52 26 30 2 C56 16 76 40 90 72 Z' fill='url(%23s)' stroke='%2393c5fd' stroke-width='1.6' stroke-linejoin='round'/><path d='M64 46 C60 40 54 34 46 28 M70 60 C66 54 60 48 52 44' stroke='%2371717a' stroke-width='1.4' fill='none'/></g><use href='%23h' transform='translate(200 0) scale(-1 1)'/><path d='M100 18 L92 54 L100 46 L108 54 Z' fill='%2318181b' stroke='%2360a5fa' stroke-width='1.6' stroke-linejoin='round'/><path d='M44 112 C50 70 80 54 100 54 C120 54 150 70 156 112 C138 98 122 94 100 94 C78 94 62 98 44 112 Z' fill='url(%23s)' stroke='%2360a5fa' stroke-width='2' stroke-linejoin='round'/><path d='M66 92 C76 84 88 80 100 80 C112 80 124 84 134 92 M74 74 C82 68 92 66 100 66 C108 66 118 68 126 74' stroke='%2352525b' stroke-width='1.6' fill='none' stroke-dasharray='5 3'/><path d='M70 100 L88 92 L84 102 Z M130 100 L112 92 L116 102 Z' fill='%23f8fafc'/></svg>") center bottom / 100% 100% no-repeat;
+  filter: drop-shadow(0 calc(var(--size) * 0.02) calc(var(--size) * 0.02) rgba(0, 0, 0, 0.6)) drop-shadow(0 0 calc(var(--size) * 0.035) rgba(59, 130, 246, 0.85));
+  transform-origin: 50% 90%;
+  animation: look-dragon-breathe 3.4s ease-in-out infinite;
 }
 
-@keyframes look-jade-wings {
+@keyframes look-dragon-breathe {
   0%,
   100% {
-    transform: scaleX(1) scaleY(1) translateY(0);
+    transform: translateY(0) scale(1);
   }
-  45% {
-    transform: scaleX(0.86) scaleY(1.08) translateY(-3%);
-  }
-  60% {
-    transform: scaleX(1.04) scaleY(0.94) translateY(1%);
+  50% {
+    transform: translateY(-2%) scale(1.02);
   }
 }
 
-/* Animation: a little wyrm that circles the avatar, puffs of jade fire in front of it */
-.look-fx-jadewyrm .look-fx {
-  animation: look-turn 4.2s linear infinite;
-}
-
-.look-fx-jadewyrm .look-fx::before {
+/* Animation: the spiked tail - black scales, blue glowing spines - curling out behind the avatar and swaying */
+.look-fx-dragontail .look-fx::before {
   content: "";
-  top: calc(var(--size) * -0.2);
-  left: 50%;
-  width: calc(var(--size) * 0.56);
-  height: calc(var(--size) * 0.28);
-  transform: translateX(-50%);
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 32'><path d='M3 21 C11 9 19 29 29 19 S43 11 49 16' fill='none' stroke='%23065f46' stroke-width='7' stroke-linecap='round'/><path d='M3 21 C11 9 19 29 29 19 S43 11 49 16' fill='none' stroke='%2334d399' stroke-width='4' stroke-linecap='round'/><path d='M4 21 C12 10 19 28 29 19 S43 12 49 16' fill='none' stroke='%23fbbf24' stroke-width='1.3' stroke-dasharray='1.6 2.4'/><path d='M27 17 L21 3 L36 13 Z' fill='%23065f46' stroke='%23fbbf24' stroke-width='0.9'/><path d='M46 10 L62 15.5 L48 22 Z' fill='%23059669' stroke='%23022c22' stroke-width='0.9'/><path d='M49 11 L44 2 L53 10 Z' fill='%23fde68a'/><circle cx='54.5' cy='14' r='1.5' fill='%23fde68a'/></svg>") center / contain no-repeat;
-  filter: drop-shadow(0 0 calc(var(--size) * 0.03) rgba(16, 185, 129, 0.9));
-  animation: look-wyrm 0.9s ease-in-out infinite alternate;
+  top: 34%;
+  left: 74%;
+  width: calc(var(--size) * 0.6);
+  height: calc(var(--size) * 0.74);
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 124'><g fill='%2309090b' stroke='%2360a5fa' stroke-width='1.6' stroke-linejoin='round'><path d='M24 12 L34 0 L34 16 Z'/><path d='M40 24 L56 16 L50 32 Z'/><path d='M50 42 L66 40 L56 54 Z'/><path d='M52 62 L68 64 L56 74 Z'/><path d='M56 82 L70 84 L62 94 Z'/><path d='M68 98 L80 94 L78 106 Z'/></g><path d='M6 8 C38 16 58 44 52 72 S68 108 92 112' fill='none' stroke='%2360a5fa' stroke-width='12' stroke-linecap='round' opacity='0.55'/><path d='M6 8 C38 16 58 44 52 72 S68 108 92 112' fill='none' stroke='%2318181b' stroke-width='10' stroke-linecap='round'/><path d='M6 8 C38 16 58 44 52 72 S68 108 92 112' fill='none' stroke='%233f3f46' stroke-width='5' stroke-linecap='round' stroke-dasharray='3 3'/><path d='M90 106 L100 113 L89 118 Z' fill='%2318181b' stroke='%2360a5fa' stroke-width='1.6' stroke-linejoin='round'/></svg>") left top / 100% 100% no-repeat;
+  filter: drop-shadow(0 0 calc(var(--size) * 0.04) rgba(59, 130, 246, 0.9));
+  transform-origin: 6% 6%;
+  animation: look-tail 2.8s ease-in-out infinite, look-tail-glow 1.6s ease-in-out infinite alternate;
 }
 
-.look-fx-jadewyrm .look-fx::after {
+/* (a blue spark that runs down the spines) */
+.look-fx-dragontail .look-fx::after {
   content: "";
-  top: calc(var(--size) * -0.13);
-  left: 76%;
-  width: calc(var(--size) * 0.22);
-  height: calc(var(--size) * 0.14);
-  border-radius: 50% 60% 60% 50%;
-  background: radial-gradient(circle at 25% 50%, #ecfdf5, #6ee7b7 35%, rgba(16, 185, 129, 0.6) 60%, transparent 72%);
-  filter: blur(calc(var(--size) * 0.006)) drop-shadow(0 0 calc(var(--size) * 0.05) #34d399);
-  transform-origin: 0 50%;
-  animation: look-jade-breath 1.8s ease-out infinite;
+  top: 36%;
+  left: 78%;
+  width: calc(var(--size) * 0.1);
+  height: calc(var(--size) * 0.1);
+  border-radius: 50%;
+  background: radial-gradient(circle, #eff6ff, #60a5fa 45%, transparent 70%);
+  filter: drop-shadow(0 0 calc(var(--size) * 0.04) #3b82f6);
+  animation: look-tail-spark 2.8s ease-in infinite;
 }
 
-@keyframes look-wyrm {
-  from {
-    transform: translateX(-50%) translateY(0) rotate(-4deg);
-  }
-  to {
-    transform: translateX(-50%) translateY(-8%) rotate(4deg);
-  }
-}
-
-@keyframes look-jade-breath {
+@keyframes look-tail {
   0%,
-  55% {
-    opacity: 0;
-    transform: scale(0.2);
+  100% {
+    transform: rotate(0deg);
   }
-  70% {
+  50% {
+    transform: rotate(-12deg);
+  }
+}
+
+@keyframes look-tail-glow {
+  to {
+    filter: drop-shadow(0 0 calc(var(--size) * 0.07) rgba(96, 165, 250, 1));
+  }
+}
+
+@keyframes look-tail-spark {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  15% {
     opacity: 1;
-    transform: scale(1.15);
   }
   100% {
     opacity: 0;
-    transform: scale(1.6) translateX(20%);
+    transform: translate(calc(var(--size) * 0.42), calc(var(--size) * 0.6)) scale(1.1);
   }
 }
 
-/* Background: the dragon's lair - its hoard glowing below, embers of jade and gold rising */
-.look-bg-hoard > .look-bg {
+/* Background: dark dragon scales, a blue glow rising from below */
+.look-bg-dragonscales > .look-bg {
   background:
-    radial-gradient(circle, rgba(110, 231, 183, 0.95) 0 1.4%, transparent 2.6%) 0 0 / 46% 52%,
-    radial-gradient(circle, rgba(253, 230, 138, 0.95) 0 1.2%, transparent 2.4%) 23% 26% / 38% 44%,
-    radial-gradient(ellipse at 50% 112%, #fde68a 0 16%, #f59e0b 26%, #92400e 38%, transparent 56%),
-    radial-gradient(ellipse at 18% 104%, #fbbf24 0 10%, #b45309 18%, transparent 30%),
-    radial-gradient(ellipse at 84% 106%, #fbbf24 0 9%, #b45309 17%, transparent 28%),
-    radial-gradient(circle at 50% 28%, #0f513b, #052e22 48%, #020d09 85%);
-  animation: look-bg-embers 5s linear infinite, look-bg-hoard-glow 3.2s ease-in-out infinite alternate;
+    radial-gradient(ellipse at 50% 118%, rgba(96, 165, 250, 0.75), rgba(37, 99, 235, 0.35) 30%, transparent 58%),
+    radial-gradient(circle at 50% 0, transparent 52%, rgba(96, 165, 250, 0.4) 56%, #18181b 60%, transparent 64%) 0 0 / 25% 20%,
+    radial-gradient(circle at 50% 0, transparent 52%, rgba(96, 165, 250, 0.4) 56%, #18181b 60%, transparent 64%) 12.5% 10% / 25% 20%,
+    linear-gradient(180deg, #27272a, #09090b);
+  animation: look-bg-dragon 3s ease-in-out infinite alternate;
 }
 
-@keyframes look-bg-embers {
+@keyframes look-bg-dragon {
   to {
-    background-position: 0 -104%, 23% -62%, 0 0, 0 0, 0 0, 0 0;
+    filter: brightness(1.25);
   }
 }
 
-@keyframes look-bg-hoard-glow {
-  to {
-    filter: brightness(1.18) saturate(1.15);
-  }
-}
-
-/* (the wings take the sides: an animation's pieces there step back - the dragon's own fire stays) */
-.mm-avatar.look-frame-jadedragon.look-fx-flames::before {
+/* (the head takes the top: an animation's pieces there step back - the ring and the head stay) */
+.mm-avatar.look-frame-shadowdragon.look-fx-dizzy .look-fx,
+.mm-avatar.look-frame-shadowdragon.look-fx-halo .look-fx,
+.mm-avatar.look-frame-shadowdragon.look-fx-crowned .look-fx,
+.mm-avatar.look-frame-shadowdragon.look-fx-jingle .look-fx {
   display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mm-avatar.look-frame-jadedragon::before,
-  .look-fx-jadewyrm .look-fx,
-  .look-fx-jadewyrm .look-fx::before,
-  .look-fx-jadewyrm .look-fx::after,
-  .look-bg-hoard > .look-bg {
+  .mm-avatar.look-frame-shadowdragon::before,
+  .look-fx-dragontail .look-fx::before,
+  .look-fx-dragontail .look-fx::after,
+  .look-bg-dragonscales > .look-bg {
     animation: none;
   }
 }
