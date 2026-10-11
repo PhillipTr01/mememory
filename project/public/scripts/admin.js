@@ -609,14 +609,16 @@ function renderPlayerDetail(p) {
   var total = (key) => games.reduce((sum, g) => sum + g[key], 0);
   var stat = (label, value, sub, cls) => {
     var tile = el("div", "ad-card ad-stat");
-    tile.append(el("span", "ad-label", label), el("span", "ad-stat-value" + (cls ? " " + cls : ""), value), el("span", "ad-stat-sub", sub || ""));
+    // (sub: a text - or a list, one line each)
+    var subs = Array.isArray(sub) ? sub : [sub || ""];
+    tile.append(el("span", "ad-label", label), el("span", "ad-stat-value" + (cls ? " " + cls : ""), value), ...subs.map((line) => el("span", "ad-stat-sub", line)));
     return tile;
   };
   var signed = (value) => (value > 0 ? "+" : value < 0 ? "−" : "") + "🪙 " + formatCoins(Math.abs(value));
   var stats = el("div", "ad-stats ad-pd-stats");
   if (p.approved) {
     stats.append(
-      stat("Coins", "🪙 " + formatCoins(p.coins), (p.seasons || (p.season ? [p.season] : [])).length ? (p.seasons || [p.season]).map((s) => (s.coinIcon || s.icon || "") + " " + formatCoins(s.coins) + " in " + s.name).join(" · ") : "normal balance"),
+      stat("Coins", "🪙 " + formatCoins(p.coins), (p.seasons || (p.season ? [p.season] : [])).length ? (p.seasons || [p.season]).map((s) => (s.coinIcon || s.icon || "") + " " + formatCoins(s.coins) + " in " + s.name) : "normal balance"),
       stat("Net in games", signed(total("net")), "🪙 " + formatCoins(total("bet")) + " wagered", total("net") > 0 ? "plus" : total("net") < 0 ? "minus" : ""),
       stat("Daily streak", p.streak && p.streak.day ? "Day " + p.streak.day : "–", "🪙 " + formatCoins(reason("daily bonus").amount) + " from daily bonuses"),
       stat("Cashback", "🪙 " + formatCoins(reason("cashback").amount), reason("cashback").count + " day" + (reason("cashback").count == 1 ? "" : "s")),
