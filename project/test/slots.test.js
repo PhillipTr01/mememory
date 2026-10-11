@@ -480,3 +480,54 @@ test("slots: one machine at a time - a second tab can't spin while the first one
   await again;
   config.SLOTS_TAB_LOCK = 8000;
 });
+
+test("slots: a bought bonus pays back about 90% of its price (free games, coin game, coin game with a chest)", () => {
+  const N = 30000;
+  const bet = 100;
+  for (const kind of ["free", "coins", "chest"]) {
+    let paid = 0;
+    for (let i = 0; i < N; i++) {
+      const r = slots.spin(bet, undefined, { forceBonus: kind });
+      assert.ok(kind === "free" ? r.bonus : r.coinGame, "the bonus game every time");
+      // A chest: opened with one of its boxes (the player picks one, all as likely)
+      if (r.coinGame) r.coinGame.coins.filter((coin) => coin.chest).forEach((coin) => slots.openChest(r, bet, coin.reel, coin.row, slots.chestBoxes()[0]));
+      paid += r.lineWin + (r.coinGame ? r.coinGame.win : r.bonus.win);
+    }
+    const back = paid / (N * bet * slots.BUY_PRICES[kind]);
+    assert.ok(back > 0.85 && back < 0.95, `${kind}: ${(back * 100).toFixed(1)}% back`);
+  }
+});
+
+test("slots: a bonus buy costs the bet times its price, starts the bonus game, counts against the max bet like a table bet", async () => {
+  const saved = { SLOTS_MIN_GAP: config.SLOTS_MIN_GAP, SLOTS_SPIN: config.SLOTS_SPIN, BET_CAP_FLOOR: config.BET_CAP_FLOOR, BET_CAP_SHARE: config.BET_CAP_SHARE, SLOTS_TAB_LOCK: config.SLOTS_TAB_LOCK };
+  Object.assign(config, { SLOTS_MIN_GAP: 0, SLOTS_SPIN: 10, BET_CAP_FLOOR: 10000, BET_CAP_SHARE: 25, SLOTS_TAB_LOCK: 0 });
+  try {
+    sockets.forEach((socket) => socket.close());
+    await h.wait(50);
+    h.setCoins("alice", 100000);
+    const page = client("alice");
+    const setup = await h.once(page, "slotsSetup");
+    assert.deepStrictEqual(setup.buy, slots.BUY_PRICES);
+    // Free games for a bet of 100: 100 x 49
+    const bought = h.once(page, "slotsResult");
+    page.emit("spin", { bet: 100, buy: "free" });
+    const result = await bought;
+    assert.ok(result.bonus && result.id, "the free games right away");
+    assert.strictEqual(result.cost, 100 * slots.BUY_PRICES.free);
+    assert.strictEqual(h.coinsOf("alice"), 100000 - 100 * slots.BUY_PRICES.free);
+    // Unknown buys do nothing
+    page.emit("spin", { bet: 100, buy: "jackpot" });
+    await h.wait(50);
+    assert.strictEqual(h.coinsOf("alice"), 100000 - 100 * slots.BUY_PRICES.free);
+    // Over the max bet by balance (25% of the coins - like a bet at a table, not the share of a spin): refused
+    h.setCoins("alice", 100000);
+    await h.wait(30);
+    const refused = h.once(page, "slotsError");
+    page.emit("spin", { bet: 250, buy: "chest" }); // 33,000 > 25,000
+    assert.match(await refused, /max bet/i);
+    assert.strictEqual(h.coinsOf("alice"), 100000);
+    page.close();
+  } finally {
+    Object.assign(config, saved);
+  }
+});

@@ -304,8 +304,8 @@ function makeWallet(kind) {
     refusals.delete(username);
     const capped = BET_REASONS.includes(options && options.reason) && !(options && options.nocap);
     const round = capped ? Math.max(0, Math.floor(Number(options && options.round) || 0)) : 0;
-    // (slots: their own share of the cap)
-    const game = limits.gameOfReason(options && options.reason);
+    // (slots: their own share of the cap - a bonus buy counts like a bet at a table: capGame null)
+    const game = options && "capGame" in options ? options.capGame : limits.gameOfReason(options && options.reason);
     if (testMode().active(username)) {
       // (never coins of other players for test coins - the games check it too, with a message)
       if (testMode().BLOCKED_REASONS.includes(options && options.reason)) return false;

@@ -1592,3 +1592,96 @@
 .sl-auto-options button[data-auto="infinite"] {
   font-size: 1.15rem;
 }
+
+/* Bonus buy: three cards with their price (for the bet now) */
+.sl-buy {
+  position: relative;
+  width: min(620px, calc(100vw - 32px));
+}
+
+.sl-buy-close {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.8rem;
+  border: 0;
+  background: none;
+  color: var(--mm-muted);
+  font-size: 1.1rem;
+}
+
+.sl-buy-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.sl-buy-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 1rem 0.7rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.sl-buy-card:hover:not(:disabled) {
+  border-color: var(--mm-accent);
+  transform: translateY(-2px);
+}
+
+.sl-buy-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sl-buy-icon {
+  font-size: 2rem;
+}
+
+.sl-buy-text {
+  color: var(--mm-muted);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.sl-buy-price {
+  margin-top: auto;
+  padding-top: 0.4rem;
+  color: var(--mm-accent);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.sl-buy-times {
+  color: var(--mm-muted);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 575px) {
+  .sl-buy-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .sl-buy-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: "icon name price" "icon text times";
+    align-items: center;
+    text-align: left;
+    column-gap: 0.7rem;
+  }
+
+  .sl-buy-icon { grid-area: icon; }
+  .sl-buy-card b { grid-area: name; }
+  .sl-buy-text { grid-area: text; }
+  .sl-buy-price { grid-area: price; margin: 0; padding: 0; text-align: right; }
+  .sl-buy-times { grid-area: times; text-align: right; }
+}

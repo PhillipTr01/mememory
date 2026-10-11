@@ -11,6 +11,7 @@ const persist = require("../game/persist");
 const live = require("../game/live");
 
 const ROOM = "slots";
+const BUY_NAMES = { free: "free games", coins: "coin game", chest: "coin game with a chest" };
 
 /*
  * Hidden slots: everybody plays alone against the machine. A spin costs the
@@ -261,6 +262,10 @@ module.exports = function (io, options = {}) {
       safe("spin", async (data) => {
         const bet = data != null ? data.bet : null;
         if (!Number.isInteger(bet)) return;
+        // A bonus buy: the bonus game right away for bet x its price (not with the test bonus of the admin)
+        const buy = data.buy != null ? (Object.prototype.hasOwnProperty.call(slots.BUY_PRICES, data.buy) ? data.buy : undefined) : null;
+        if (buy === undefined) return;
+        const cost = buy ? bet * slots.BUY_PRICES[buy] : bet;
         if (bet < limits.SLOTS_MIN_BET || bet > limits.SLOTS_MAX_BET) {
           return error(`A spin is ${limits.SLOTS_MIN_BET.toLocaleString("en-US")} to ${limits.SLOTS_MAX_BET.toLocaleString("en-US")} coins.`);
         }
@@ -281,12 +286,14 @@ module.exports = function (io, options = {}) {
         busy.add(username);
         try {
           if (early > 0) await new Promise((resolve) => setTimeout(resolve, early));
-          if (!(await coins.spend(username, bet, { reason: "slots bet" }))) return error(coins.refusal(username) || "You don't have enough coins.");
+          // (a buy: its price counts against the max bet by balance like a bet at a table - not the share of a spin)
+          const spent = buy ? await coins.spend(username, cost, { reason: "slots bet", note: "bonus buy: " + BUY_NAMES[buy], capGame: null }) : await coins.spend(username, bet, { reason: "slots bet" });
+          if (!spent) return error(coins.refusal(username) || "You don't have enough coins.");
           lastSpin.set(username, Date.now());
           spinTab.set(username, socket.id);
           // (debug, the test world only: the next spin starts the bonus the admin picked)
-          const test = nextBonus || config.SLOTS_TEST_BONUS;
-          nextBonus = null;
+          const test = buy || nextBonus || config.SLOTS_TEST_BONUS;
+          if (!buy) nextBonus = null;
           const result = slots.spin(bet, undefined, { forceBonus: ["free", "coins", "chest"].includes(test) ? test : test === true ? "free" : null });
           machine.spins++;
           const payIn = showTime(bet, result);
@@ -309,7 +316,7 @@ module.exports = function (io, options = {}) {
               result: special ? { bet: bet, grid: result.grid, stops: result.stops, lines: result.lines, lineWin: result.lineWin, coins: result.coins, bonus: result.bonus, coinGame: result.coinGame, win: result.win, capped: result.capped } : null,
               shown: 0,
               state: null,
-              feed: { name: username, bet: bet, win: result.win, symbol: best ? best.symbol : game ? "coin" : "bonus", count: best ? best.count : 3, bonus: result.bonus ? result.bonus.spins : null, coins: game ? game.coins.length : null, ultra: game ? game.ultra : false, at: Date.now() },
+              feed: { name: username, bet: bet, buy: buy ? cost : null, win: result.win, symbol: best ? best.symbol : game ? "coin" : "bonus", count: best ? best.count : 3, bonus: result.bonus ? result.bonus.spins : null, coins: game ? game.coins.length : null, ultra: game ? game.ultra : false, at: Date.now() },
             };
             // The 🧰 of the coin game: their boxes, shuffled now - nobody sees them before the pick
             if (game) {
@@ -322,7 +329,7 @@ module.exports = function (io, options = {}) {
             if (entry.result) hold(entry, "waiting");
             else schedulePay(entry, payIn);
           }
-          socket.emit("slotsResult", { id: id, bet: bet, grid: result.grid, stops: result.stops, lines: result.lines, lineWin: result.lineWin, coins: result.coins, bonus: result.bonus, coinGame: result.coinGame, win: result.win, capped: result.capped, payIn: payIn });
+          socket.emit("slotsResult", { id: id, bet: bet, buy: buy, cost: cost, grid: result.grid, stops: result.stops, lines: result.lines, lineWin: result.lineWin, coins: result.coins, bonus: result.bonus, coinGame: result.coinGame, win: result.win, capped: result.capped, payIn: payIn });
         } finally {
           busy.delete(username);
         }

@@ -4,6 +4,7 @@ const socket = io((window.CASINO_NS || "") + "/slots");
 var myName = null;
 var myCoins = 0;
 var myCapRule = null; // the max bet by balance ({floor, share} - null: no cap), see casinoCapLeft
+var myTableCapRule = null; // ... the one of the tables: a bonus buy counts like a bet there (not the share of a spin)
 // What more I may bet this round (`already`: my coins in it)
 function capLeft(already) {
   return casinoCapLeft(myCapRule, myCoins, already);
@@ -79,6 +80,7 @@ socket.on("coins", (data) => {
   myCoins = data.coins;
   // (slots: their own share of the max bet by balance)
   myCapRule = data.slotsCapRule !== undefined ? data.slotsCapRule : data.betCapRule || null;
+  myTableCapRule = data.betCapRule || null;
   // While the reels turn, the balance shows the coins before the win
   // (during a spin the old balance stays - but a page that comes back into a bonus game needs one)
   if (!spinning || document.getElementById("slCoins").innerText == "-") renderCoins(myCoins);
@@ -280,12 +282,15 @@ function nextSpin(result) {
   }, AUTO_GAP);
 }
 
-function spin() {
+// buy: "free", "coins" or "chest" - the bonus game right away for the bet times its price (see showBuy)
+function spin(buy) {
   if (spinning || setup == null) return;
   if (Date.now() < pausedUntil) {
-    if (!queuedSpin) queuedSpin = setTimeout(() => ((queuedSpin = null), spin()), pausedUntil - Date.now() + 10);
+    if (!buy && !queuedSpin) queuedSpin = setTimeout(() => ((queuedSpin = null), spin()), pausedUntil - Date.now() + 10);
+    if (buy) showHint("A moment - the reels are still settling.", "error");
     return;
   }
+  if (buy) return buySpin(buy);
   // (max mode: the most it can be with the balance now - a bet still being typed: that one)
   var field = document.getElementById("slBet");
   if (document.activeElement == field) setBet(Number(field.value) || 0, false, true);
@@ -319,6 +324,111 @@ function spin() {
   spunAt = Date.now();
   socket.emit("spin", { bet: bet });
   // No answer (the connection): the button works again after a while
+  clearTimeout(spinWatch);
+  spinWatch = setTimeout(skipSpin, 8000);
+}
+
+/* ---------- Bonus buy: the bonus game right away (about 90% comes back - less than spinning) ---------- */
+
+var BUYS = [
+  { id: "free", icon: "🎁", name: "Free games", text: "The bonus wheels, then the free spins." },
+  { id: "coins", icon: "🪙", name: "Coin game", text: "Five coins locked in, then the respins." },
+  { id: "chest", icon: "🧰", name: "Coin game + chest", text: "The coin game with a treasure chest: MINI, MAJOR or MEGA." },
+];
+
+// What a buy costs with the bet now - and why not (null: it can be bought)
+function buyCost(id) {
+  return currentBet() * ((setup && setup.buy && setup.buy[id]) || 0);
+}
+function buyRefusal(cost) {
+  if (spinning || autoOn()) return "Not while the reels turn";
+  if (cost > myCoins) return "Not enough coins";
+  var cap = casinoCapLeft(myTableCapRule, myCoins, 0);
+  if (cost > cap) return "At most 🪙 " + formatCoins(cap) + " with your coins - a smaller bet";
+  return null;
+}
+
+function showBuy() {
+  if (!setup || !setup.buy) return;
+  document.querySelectorAll(".sl-buy-backdrop").forEach((n) => n.remove());
+  var backdrop = document.createElement("div");
+  backdrop.className = "mm-dialog-backdrop sl-buy-backdrop";
+  var dialog = document.createElement("div");
+  dialog.className = "mm-dialog sl-buy";
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  var close = () => {
+    backdrop.remove();
+    document.removeEventListener("keydown", onKey);
+  };
+  var onKey = (event) => event.key == "Escape" && close();
+  document.addEventListener("keydown", onKey);
+  backdrop.addEventListener("click", (event) => event.target == backdrop && close());
+  var x = document.createElement("button");
+  x.type = "button";
+  x.className = "sl-buy-close";
+  x.innerText = "✕";
+  x.setAttribute("aria-label", "Close");
+  x.addEventListener("click", close);
+  var title = document.createElement("h2");
+  title.className = "mm-dialog-title";
+  title.innerText = "Bonus buy";
+  var note = document.createElement("p");
+  note.className = "mm-dialog-text";
+  note.innerText = "The bonus game right away - with your bet of 🪙 " + formatCoins(currentBet()) + ". About 90% of the price comes back on average.";
+  var cards = document.createElement("div");
+  cards.className = "sl-buy-cards";
+  BUYS.forEach((item) => {
+    var cost = buyCost(item.id);
+    var refusal = buyRefusal(cost);
+    var card = document.createElement("button");
+    card.type = "button";
+    card.className = "sl-buy-card";
+    card.disabled = refusal != null;
+    card.title = refusal || "";
+    var icon = document.createElement("span");
+    icon.className = "sl-buy-icon";
+    icon.innerText = item.icon;
+    var name = document.createElement("b");
+    name.innerText = item.name;
+    var text = document.createElement("span");
+    text.className = "sl-buy-text";
+    text.innerText = item.text;
+    var price = document.createElement("span");
+    price.className = "sl-buy-price";
+    price.innerText = "🪙 " + formatCoins(cost);
+    var times = document.createElement("span");
+    times.className = "sl-buy-times";
+    times.innerText = refusal || setup.buy[item.id] + "× the bet";
+    card.append(icon, name, text, price, times);
+    card.addEventListener("click", () => {
+      close();
+      spin(item.id);
+    });
+    cards.appendChild(card);
+  });
+  dialog.append(x, title, note, cards);
+  backdrop.appendChild(dialog);
+  document.body.appendChild(backdrop);
+}
+
+function buySpin(buy) {
+  var bet = currentBet();
+  if (!Number.isInteger(bet) || bet < setup.rules.minBet || bet > setup.rules.maxBet) return showHint("A bet of " + formatCoins(setup.rules.minBet) + " to " + formatCoins(setup.rules.maxBet) + " coins.", "error");
+  var cost = buyCost(buy);
+  var refusal = buyRefusal(cost);
+  if (refusal) return showHint(refusal + ".", "error", document.getElementById("slBuy"));
+  spinning = true;
+  clearTimeout(lineTimer);
+  clearLines();
+  document.getElementById("slWinBar").className = "sl-winbar";
+  document.getElementById("slWinText").innerText = "Bonus bought - good luck!";
+  document.getElementById("slWinDetail").innerText = "";
+  renderCoins(myCoins - cost);
+  renderControls();
+  document.querySelectorAll(".sl-reel").forEach((reel) => reel.classList.add("spinning"));
+  spunAt = Date.now();
+  socket.emit("spin", { bet: bet, buy: buy });
   clearTimeout(spinWatch);
   spinWatch = setTimeout(skipSpin, 8000);
 }
@@ -1398,6 +1508,8 @@ function renderControls() {
   left.innerText = autoLeft == Infinity ? "∞" : String(autoLeft);
   button.title = auto ? "Stop the auto spins" : bet > myCoins ? "Not enough coins" : bet > capLeft(0) ? "Your max bet is " + formatCoins(maxNow()) : "Spin (space) - hold to keep spinning";
   document.getElementById("slAuto").disabled = auto || bet > myCoins || bet > capLeft(0);
+  // (a bonus buy: not while the reels turn or auto spins run)
+  document.getElementById("slBuy").disabled = spinning || auto;
   // (max mode: only Max is lit, not the amount it happens to be - set once, never on and off again)
   document.querySelectorAll(".sl-preset[data-value]").forEach((preset) => preset.classList.toggle("active", !maxMode && Number(preset.dataset.value) == bet));
   var maxButton = document.querySelector(".sl-preset-max");
@@ -1430,10 +1542,11 @@ function renderFeed(feed) {
   list.replaceChildren(
     ...feed.map((entry) => {
       var symbol = symbolOf(entry.symbol);
-      var multiple = entry.win / entry.bet;
+      // (a bought bonus: measured against its price, not the bet)
+      var multiple = entry.win / (entry.buy || entry.bet);
       // A win from a bonus game: said so (with its free spins)
       var what = entry.bonus ? "🎁 Bonus · " + entry.bonus + " free spins" : entry.coins ? "🪙 Coin game · " + entry.coins + " coins" + (entry.ultra ? " · ULTRA" : "") : entry.count + "× " + (symbol ? symbol.icon : "");
-      var sub = what + " · bet 🪙 " + formatCoins(entry.bet) + " · " + (multiple >= 10 ? Math.round(multiple) : multiple.toFixed(1)) + "x";
+      var sub = what + (entry.buy ? " · 🛒 bought for 🪙 " + formatCoins(entry.buy) : " · bet 🪙 " + formatCoins(entry.bet)) + " · " + (multiple >= 10 ? Math.round(multiple) : multiple.toFixed(1)) + "x";
       var item = historyItem(createAvatar(entry.name, "sm"), entry.name, sub, "🪙 " + formatCoins(entry.win));
       if (entry.bonus || entry.coins) item.classList.add("sl-feed-bonus");
       return item;
@@ -1572,6 +1685,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderControls();
   });
   document.getElementById("slPaytable").addEventListener("click", () => setup && showPaytable());
+  document.getElementById("slBuy").addEventListener("click", showBuy);
   // Space spins (not while typing) - held down, again and again; during auto spins it stops them
   document.addEventListener("keydown", (event) => {
     if (event.code != "Space" || event.repeat) return;

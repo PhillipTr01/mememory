@@ -113,6 +113,14 @@ const ULTRA = 500; // all 15 spots full: this many times the bet on top
  */
 const SPIN_SPREAD = 7.3;
 const COIN_MAX_WIN = 1000; // the coin game never pays more than this many times the bet
+
+/*
+ * Bonus buy: the bonus game right away, for this many times the bet. What a
+ * bought bonus pays on average (with the line win of its spin; 200,000 games
+ * each, see the tests): free games 44.4x, coin game 45.0x, coin game with a
+ * 🧰 118.4x - so about 90% comes back (less than the 96.8% of spinning).
+ */
+const BUY_PRICES = { free: 49, coins: 50, chest: 132 };
 const total = (list) => list.reduce((sum, field) => sum + field.weight, 0);
 
 // A field of a wheel, as likely as its weight
@@ -548,7 +556,8 @@ function catalog() {
     bonus: { spins: BONUS_SPINS.map((f) => f.spins), multipliers: BONUS_MULTIPLIERS.map((f) => f.multiplier), step: BONUS_STEP, retrigger: RETRIGGER, maxSpins: MAX_FREE_SPINS },
     coins: { trigger: COIN_TRIGGER, respins: COIN_RESPINS, values: COIN_VALUES.filter((f) => !f.prize && !f.chest).map((f) => f.x), prizes: COIN_VALUES.filter((f) => f.prize).map((f) => ({ prize: f.prize, x: f.x })), chest: CHEST_PRIZES.length, ultra: ULTRA, maxWin: COIN_MAX_WIN },
     maxWin: Number.isFinite(MAX_WIN) ? MAX_WIN : null,
+    buy: BUY_PRICES,
   };
 }
 
-module.exports = { SYMBOLS, LINES, STRIPS, FREE_STRIPS, FREE_DROP, FREE_BONUS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, SPIN_SPREAD, CHEST_PRIZES, lineWin, spin, coinGame, chestBoxes, openChest, coinSweat, coinSweatReels, sweatShare, rtp, catalog };
+module.exports = { BUY_PRICES, SYMBOLS, LINES, STRIPS, FREE_STRIPS, FREE_DROP, FREE_BONUS, REELS, ROWS, LINE_COUNT, BONUS_SPINS, BONUS_MULTIPLIERS, BONUS_STEP, RETRIGGER, MAX_FREE_SPINS, MAX_WIN, COIN_TRIGGER, COIN_RESPINS, COIN_VALUES, COIN_LAND, ULTRA, COIN_MAX_WIN, SPIN_SPREAD, CHEST_PRIZES, lineWin, spin, coinGame, chestBoxes, openChest, coinSweat, coinSweatReels, sweatShare, rtp, catalog };
