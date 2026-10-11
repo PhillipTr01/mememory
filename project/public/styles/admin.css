@@ -4321,3 +4321,19 @@ a.ad-case-row:hover {
     grid-template-columns: 1fr;
   }
 }
+
+.ad-mod-wait {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.ad-mod-wait .ad-inline-input .mm-input {
+  width: 110px;
+}
+
+.ad-mod-wait .ad-note {
+  flex-basis: 100%;
+  margin: 0;
+}

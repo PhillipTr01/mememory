@@ -22,8 +22,46 @@ const MUTE_MAX = 24 * 60; // a moderator mutes for at most a day (minutes)
 const LOG_KEY = "modLog";
 const LOG_SIZE = 300;
 const DEFAULTS = { rainMax: 50000, rainWeekly: 250000, rainCooldown: 12 };
-const COOLDOWN_MIN = 12; // hours between two money rains of a moderator - at least
+const COOLDOWN_MIN = 0; // hours between two money rains of the same moderator (0: no own wait)
 const HOUR = 3600 * 1000;
+// The wait between two money rains of moderators - for all of them together (one rains: everybody waits).
+// The admin sets the hours (the money rain page); stored with when the last one fell and by whom.
+const COOLDOWN_KEY = "modRainCooldown";
+let cooldown = { hours: 12, lastAt: null, lastBy: null };
+let cooldownLoaded = false;
+
+async function loadCooldown() {
+  if (cooldownLoaded) return cooldown;
+  const row = await Setting.findOne({ key: COOLDOWN_KEY }).lean();
+  try {
+    if (row && typeof row.value === "string") cooldown = { ...cooldown, ...JSON.parse(row.value) };
+  } catch (error) {
+    // the default
+  }
+  cooldownLoaded = true;
+  return cooldown;
+}
+
+async function saveCooldown() {
+  await Setting.updateOne({ key: COOLDOWN_KEY }, { $set: { value: JSON.stringify(cooldown) } }, { upsert: true });
+}
+
+// {hours, lastAt, lastBy, nextAt} - nextAt: when the next money rain of a moderator may come (null: now)
+async function rainCooldown(now = Date.now()) {
+  await loadCooldown();
+  const nextAt = cooldown.lastAt && cooldown.hours > 0 ? cooldown.lastAt + cooldown.hours * HOUR : null;
+  return { hours: cooldown.hours, lastAt: cooldown.lastAt, lastBy: cooldown.lastBy, nextAt: nextAt && nextAt > now ? nextAt : null };
+}
+
+// The admin: the hours between two money rains of moderators (0: no wait)
+async function setRainCooldown(hours) {
+  const value = Number(hours);
+  if (!Number.isInteger(value) || value < 0 || value > 24 * 30) return { error: "The wait: 0 to 720 hours." };
+  await loadCooldown();
+  cooldown.hours = value;
+  await saveCooldown();
+  return { cooldown: await rainCooldown() };
+}
 
 // Monday 00:00 of this week (the money rain limit counts from it)
 function weekStart(now = Date.now()) {
@@ -69,6 +107,8 @@ async function write(by, action, detail) {
   await Setting.updateOne({ key: LOG_KEY }, { $set: { value: JSON.stringify(log) } }, { upsert: true });
 }
 
+const ownWait = (mod) => (Number.isInteger(mod.rainCooldown) && mod.rainCooldown >= 0 ? mod.rainCooldown : DEFAULTS.rainCooldown);
+
 // What a moderator may do: {on, perms, rainMax, rainWeekly, used (this week)} - null: no moderator
 function modOf(user) {
   const mod = user && user.mod;
@@ -79,10 +119,10 @@ function modOf(user) {
     rainMax: Number.isInteger(mod.rainMax) ? mod.rainMax : DEFAULTS.rainMax,
     rainWeekly: Number.isInteger(mod.rainWeekly) ? mod.rainWeekly : DEFAULTS.rainWeekly,
     used: mod.used && mod.used.week === weekStart() ? mod.used.amount || 0 : 0,
-    // Hours between two money rains (at least COOLDOWN_MIN) - and when the next one may come
-    rainCooldown: Number.isInteger(mod.rainCooldown) && mod.rainCooldown >= COOLDOWN_MIN ? mod.rainCooldown : DEFAULTS.rainCooldown,
+    // Their own wait (hours) after their last money rain - besides the wait for all moderators (rainCooldown())
+    rainCooldown: ownWait(mod),
     lastRain: mod.lastRain || null,
-    nextRain: mod.lastRain ? mod.lastRain + (Number.isInteger(mod.rainCooldown) && mod.rainCooldown >= COOLDOWN_MIN ? mod.rainCooldown : DEFAULTS.rainCooldown) * HOUR : null,
+    nextRain: mod.lastRain && ownWait(mod) > 0 ? mod.lastRain + ownWait(mod) * HOUR : null,
   };
 }
 
@@ -115,7 +155,7 @@ async function set(username, input) {
   if (!Number.isInteger(rainMax) || rainMax < 1 || rainMax > 100000000) return { error: "Money rain at most: 1 to 100,000,000 coins." };
   if (!Number.isInteger(rainWeekly) || rainWeekly < 0 || rainWeekly > 1000000000) return { error: "Money rain a week: 0 (no limit) to 1,000,000,000 coins." };
   const rainCooldown = input.rainCooldown == null || input.rainCooldown === "" ? DEFAULTS.rainCooldown : Number(input.rainCooldown);
-  if (!Number.isInteger(rainCooldown) || rainCooldown < COOLDOWN_MIN || rainCooldown > 24 * 365) return { error: `Wait between money rains: at least ${COOLDOWN_MIN} hours.` };
+  if (!Number.isInteger(rainCooldown) || rainCooldown < COOLDOWN_MIN || rainCooldown > 24 * 365) return { error: "Their wait between money rains: 0 to 8,760 hours." };
   if (on && !user.casinoApproved) return { error: "Only a player with access to the casino can be a moderator." };
   const before = user.mod || {};
   const mod = {
@@ -124,8 +164,8 @@ async function set(username, input) {
     rainMax: rainMax,
     rainWeekly: rainWeekly,
     rainCooldown: rainCooldown,
-    used: before.used || null,
     lastRain: before.lastRain || null,
+    used: before.used || null,
     since: on ? before.since || Date.now() : null,
   };
   await User.updateOne({ username: user.username }, { $set: { mod: mod } });
@@ -157,7 +197,10 @@ async function rain(username, input, world = "normal") {
     const amount = Number(input.amount);
     if (!Number.isInteger(amount) || amount < 1) return { error: "How many coins for every player?" };
     // (the limits count the amount once - however many players are online)
-    if (mod.nextRain && Date.now() < mod.nextRain) return { error: `You can let it rain again ${waitText(mod.nextRain - Date.now())} (${mod.rainCooldown} h between two).`, nextRain: mod.nextRain };
+    // Their own wait - and the one for all moderators together (after anybody's money rain)
+    if (mod.nextRain && Date.now() < mod.nextRain) return { error: `You can let it rain again ${waitText(mod.nextRain - Date.now())} (${mod.rainCooldown} h after your last one).`, nextRain: mod.nextRain };
+    const wait = await rainCooldown();
+    if (wait.nextAt) return { error: `The next money rain of a moderator ${waitText(wait.nextAt - Date.now())} (${wait.hours} h between two${wait.lastBy ? `, the last one by ${wait.lastBy}` : ""}).`, nextRain: wait.nextAt };
     if (amount > mod.rainMax) return { error: `At most 🪙 ${mod.rainMax.toLocaleString("en-US")} per money rain.` };
     if (mod.rainWeekly > 0 && mod.used + amount > mod.rainWeekly) {
       const left = Math.max(0, mod.rainWeekly - mod.used);
@@ -175,6 +218,9 @@ async function rain(username, input, world = "normal") {
     const done = made.rain;
     const paid = done.paid != null ? done.paid : total;
     await User.updateOne({ username: username }, { $set: { mod: { ...user.mod, used: { week: weekStart(), amount: mod.used + amount }, lastRain: Date.now() } } });
+    cooldown.lastAt = Date.now();
+    cooldown.lastBy = username;
+    await saveCooldown();
     await write(username, "rain", `🪙 ${paid.toLocaleString("en-US")} - ${done.players != null ? done.players : names.length} players × ${each.toLocaleString("en-US")}${world === "season" ? " (season)" : ""}${note ? ` · “${note}”` : ""}`);
     return { players: done.players != null ? done.players : names.length, each: each, total: paid, left: mod.rainWeekly > 0 ? Math.max(0, mod.rainWeekly - mod.used - amount) : null };
   } finally {
@@ -239,13 +285,15 @@ function mutes() {
     .filter((ban) => ban.until != null);
 }
 
-// 📣 A highlighted message of a moderator in the casino chat
-async function announce(username, text) {
+// 📣 A highlighted message of a moderator in the casino chat - gone after `minutes` (1 min by default, up to a day)
+const ANNOUNCE_TIMES = [1, 15, 60, 360, 1440];
+async function announce(username, text, minutes = 1) {
   if (!(await can(username, "announce"))) return { error: "You may not make announcements." };
   const message = typeof text === "string" ? text.trim().replace(/\s+/g, " ").slice(0, 200) : "";
   if (message.length < 2) return { error: "What do you want to announce?" };
-  require("./casino_chat").announce(username, message);
-  await write(username, "announce", `“${message.slice(0, 80)}”`);
+  const keep = ANNOUNCE_TIMES.includes(Number(minutes)) ? Number(minutes) : 1;
+  require("./casino_chat").announce(username, message, keep);
+  await write(username, "announce", `“${message.slice(0, 80)}” (${keep >= 60 ? keep / 60 + " h" : keep + " min"})`);
   return { ok: true };
 }
 
@@ -258,6 +306,8 @@ async function panel(username) {
     rainLeft: mod.rainWeekly > 0 ? Math.max(0, mod.rainWeekly - mod.used) : null,
     mutes: mod.perms.chat ? mutes() : [],
     muteMax: MUTE_MAX,
+    // The wait between money rains (all moderators together): {hours, nextAt, lastBy}
+    rainWait: await rainCooldown(),
     log: (await history(username)).slice(0, 20),
   };
 }
@@ -267,6 +317,8 @@ function reset() {
   log = [];
   logLoaded = true;
   busy.clear();
+  cooldown = { hours: 12, lastAt: null, lastBy: null };
+  cooldownLoaded = true;
 }
 
-module.exports = { COOLDOWN_MIN, refresh, names, PERMS, PERM_NAMES, MUTE_MAX, DEFAULTS, changes, modOf, get, can, list, set, history, rain, rainPreview, deleteMessage, mute, unmute, mutes, announce, panel, reset };
+module.exports = { COOLDOWN_MIN, rainCooldown, setRainCooldown, refresh, names, PERMS, PERM_NAMES, MUTE_MAX, DEFAULTS, changes, modOf, get, can, list, set, history, rain, rainPreview, deleteMessage, mute, unmute, mutes, announce, panel, reset };

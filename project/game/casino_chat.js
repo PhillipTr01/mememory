@@ -94,13 +94,34 @@ function create(key, options = {}) {
     persist.changed(key);
   }
 
-  // 📣 A moderator's announcement (game/moderators.js): highlighted for everybody
-  function announce(username, text) {
-    const entry = { id: ++messageId, time: Date.now(), type: "announce", name: username, spectator: false, text: text };
+  // 📣 A moderator's announcement (game/moderators.js): highlighted for everybody - gone after `minutes`
+  function announce(username, text, minutes = 1) {
+    const entry = { id: ++messageId, time: Date.now(), type: "announce", name: username, spectator: false, text: text, until: Date.now() + minutes * 60 * 1000 };
+    sweepSoon();
     history.push(entry);
     if (history.length > config.CASINO_CHAT_HISTORY) history.splice(0, history.length - config.CASINO_CHAT_HISTORY);
     for (const page of pages) page.namespace.to(page.room).emit("chatMessage", entry);
     persist.changed(key);
+  }
+
+  // Announcements whose time is over: out of the chat (for everybody - the pages drop them themselves too)
+  let sweepTimer = null;
+  function sweep() {
+    sweepTimer = null;
+    const now = Date.now();
+    const before = history.length;
+    // (one from before announcements had an end: gone right away)
+    for (let i = history.length - 1; i >= 0; i--) if (history[i].type === "announce" && (!history[i].until || history[i].until <= now)) history.splice(i, 1);
+    if (history.length !== before) resend();
+    sweepSoon();
+  }
+  function sweepSoon() {
+    clearTimeout(sweepTimer);
+    sweepTimer = null;
+    const next = history.filter((entry) => entry.type === "announce" && entry.until).reduce((min, entry) => Math.min(min, entry.until), Infinity);
+    if (next === Infinity) return;
+    sweepTimer = setTimeout(sweep, Math.max(1000, next - Date.now() + 500));
+    sweepTimer.unref();
   }
 
   /* ---------- Admin ---------- */
@@ -153,6 +174,8 @@ function create(key, options = {}) {
       messageId = Math.max(messageId, saved.messageId || 0);
       bans = saved.bans instanceof Map ? saved.bans : new Map();
       resend();
+      // (announcements whose time is over - or from before they had one: gone)
+      sweep();
     },
   );
 

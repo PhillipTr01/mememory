@@ -596,6 +596,19 @@
                             <button type="button" id="adRainGo" class="mm-btn mm-btn-primary">💸 Let it rain now</button>
                         </div>
                     </div>
+                    <!--- Moderators' money rains (🛡️ on the casino pages): the wait between two, for all of them together --->
+                    <div class="ad-card">
+                        <div class="ad-card-head"><h2 class="ad-title">🛡️ Money rains of moderators</h2></div>
+                        <div class="ad-mod-wait">
+                            <label class="ad-field">
+                                <span class="ad-label">Wait between two</span>
+                                <span class="ad-inline-input"><input type="number" id="adModWait" class="mm-input" min="0" max="720" step="1"><span class="ad-setting-unit">h</span></span>
+                            </label>
+                            <button type="button" id="adModWaitSave" class="mm-btn mm-btn-sm mm-btn-primary">Save</button>
+                            <p id="adModWaitInfo" class="ad-note"></p>
+                        </div>
+                        <p class="ad-note">After a money rain of any moderator, all of them wait this long (0: no wait). What each may give: on the player page of the moderator.</p>
+                    </div>
                     <div class="ad-card">
                         <div class="ad-card-head"><h2 class="ad-title">Planned</h2></div>
                         <div id="adRainPlanned" class="ad-rain-list"></div>

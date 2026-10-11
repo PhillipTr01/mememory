@@ -158,7 +158,7 @@ module.exports = function (auth) {
     "/mod/announce",
     auth,
     approved,
-    asyncHandler(async (req, res) => modResult(res, await moderators.announce(req.username, (req.body || {}).text))),
+    asyncHandler(async (req, res) => modResult(res, await moderators.announce(req.username, (req.body || {}).text, (req.body || {}).minutes))),
   );
 
   /* ---------- Gifts: coins for another player (a click on a name in the chat) ---------- */

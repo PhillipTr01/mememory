@@ -4870,6 +4870,11 @@ body.jackpot-theme::before {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
+.msg-mod-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
 .msg-mod-btn:hover {
   border-color: var(--mm-danger);
   background: var(--mm-danger);
@@ -4980,4 +4985,9 @@ body.jackpot-theme::before {
 /* (no empty line under the fields while nothing is typed) */
 .cs-mod-preview:empty {
   display: none;
+}
+
+.cs-mod-panel .cs-mod-row > .cs-mod-keep {
+  flex: 0 0 auto;
+  width: auto;
 }

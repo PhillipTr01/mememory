@@ -805,6 +805,18 @@ module.exports = function () {
     }),
   );
 
+  // Moderators' money rains: the wait between two (all of them together)
+  router.get("/api/rains/mod-wait", admin, asyncHandler(async (req, res) => res.json({ cooldown: await require("../game/moderators").rainCooldown() })));
+  router.post(
+    "/api/rains/mod-wait",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await require("../game/moderators").setRainCooldown((req.body || {}).hours);
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
   // A money rain that fell: off the list (the coins stay paid)
   router.post(
     "/api/rains/:id/remove",

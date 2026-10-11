@@ -62,12 +62,18 @@
 
   /* ---------- In the chat: delete, mute ---------- */
 
+  // (drawn here - fixed markup, no text of a message in it: the same in every browser, white on the button)
+  var ICON_BIN =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>';
+  var ICON_MUTE =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /><path d="M3 3l18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>';
+
   function tools(message) {
     var name = message.dataset.msgName;
     if (!name || name == me() || message.querySelector(".msg-mod")) return;
     var bar = el("div", "msg-mod");
     var remove = el("button", "msg-mod-btn");
-    remove.appendChild(createIcon("bi-trash3"));
+    remove.innerHTML = ICON_BIN;
     remove.type = "button";
     remove.title = "Delete the message";
     remove.setAttribute("aria-label", "Delete the message");
@@ -81,7 +87,7 @@
       }
     });
     var mute = el("button", "msg-mod-btn");
-    mute.appendChild(createIcon("bi-mic-mute-fill"));
+    mute.innerHTML = ICON_MUTE;
     mute.type = "button";
     mute.title = "Mute " + name;
     mute.setAttribute("aria-label", "Mute " + name);
@@ -176,7 +182,7 @@
       box.appendChild(el("p", "cs-mod-note", "No money rains in a season - switch to the normal casino for one."));
       return box;
     }
-    var limits = "Every player online gets it · at most 🪙 " + format(mod.rainMax) + " per player · " + mod.rainCooldown + " h between two" + (state.rainLeft != null ? " · 🪙 " + format(state.rainLeft) + " left this week (of " + format(mod.rainWeekly) + ")" : "");
+    var limits = "Every player online gets it · at most 🪙 " + format(mod.rainMax) + " per player · " + state.rainWait.hours + " h between two money rains (of all moderators)" + (state.rainLeft != null ? " · 🪙 " + format(state.rainLeft) + " left this week (of " + format(mod.rainWeekly) + ")" : "");
     box.appendChild(el("p", "cs-mod-note", limits));
     var amount = Object.assign(el("input", "mm-input"), { type: "number", min: 1, step: 1000, placeholder: "Coins per player" });
     amount.setAttribute("aria-label", "Coins per player");
@@ -193,12 +199,16 @@
     // The wait after the last rain: a countdown, nothing can be sent before
     var waitLine = el("p", "cs-mod-wait", "");
     box.insertBefore(waitLine, row);
-    var waiting = () => mod.nextRain && Date.now() < mod.nextRain;
+    // (the later one: their own wait or the one for all moderators)
+    var own = mod.nextRain && mod.nextRain > Date.now() ? mod.nextRain : null;
+    var nextAt = Math.max(own || 0, state.rainWait.nextAt || 0) || null;
+    var ownLater = own && own >= (state.rainWait.nextAt || 0);
+    var waiting = () => nextAt && Date.now() < nextAt;
     var showWait = () => {
       if (!waiting()) return (waitLine.hidden = true);
-      var min = Math.ceil((mod.nextRain - Date.now()) / 60000);
+      var min = Math.ceil((nextAt - Date.now()) / 60000);
       waitLine.hidden = false;
-      waitLine.innerText = "⏳ Your next money rain in " + (min >= 60 ? Math.floor(min / 60) + " h " + (min % 60) + " min" : min + " min");
+      waitLine.innerText = "⏳ The next money rain in " + (min >= 60 ? Math.floor(min / 60) + " h " + (min % 60) + " min" : min + " min") + (ownLater ? " (" + mod.rainCooldown + " h after your last one)" : state.rainWait.lastBy ? " - the last one was by " + state.rainWait.lastBy : "");
     };
     showWait();
     if (waiting()) {
@@ -256,20 +266,31 @@
     var send = el("button", "mm-btn mm-btn-primary", "📣 Announce");
     send.type = "button";
     send.disabled = true;
+    // How long it stays in the chat
+    var keep = el("select", "mm-input cs-mod-keep");
+    keep.setAttribute("aria-label", "Stays for");
+    [
+      [1, "1 min"],
+      [15, "15 min"],
+      [60, "1 hour"],
+      [360, "6 hours"],
+      [1440, "1 day"],
+    ].forEach(([value, label]) => keep.appendChild(Object.assign(el("option", null, "Stays " + label), { value: value })));
+    keep.value = "1";
     text.addEventListener("input", () => (send.disabled = text.value.trim().length < 2));
     send.addEventListener("click", async () => {
       send.disabled = true;
       try {
-        await call("mod/announce", { text: text.value });
+        await call("mod/announce", { text: text.value, minutes: Number(keep.value) });
         text.value = "";
-        casinoNotice({ icon: "📣", title: "Announced", text: "It's in the chat for everybody", ms: 4000, key: "mod-announce" });
+        casinoNotice({ icon: "📣", title: "Announced", text: "In the chat for everybody - " + keep.options[keep.selectedIndex].text.toLowerCase(), ms: 4000, key: "mod-announce" });
       } catch (error) {
         showHint(error.message, "error", send);
         send.disabled = false;
       }
     });
     var row = el("div", "cs-mod-row");
-    row.append(text, send);
+    row.append(text, keep, send);
     box.appendChild(row);
     return box;
   }
@@ -277,7 +298,7 @@
   // 💬 The chat: who is muted (unmute) - delete and mute on the messages themselves
   function chatSection() {
     var box = section("Chat", "💬");
-    box.appendChild(el("p", "cs-mod-note", "Hover a message in the chat: the bin deletes it, the crossed-out mic mutes its writer."));
+    box.appendChild(el("p", "cs-mod-note", "Hover a message in the chat: the bin deletes it, the crossed-out bubble mutes its writer."));
     var list = el("div", "cs-mod-mutes");
     var fill = () => {
       list.replaceChildren(

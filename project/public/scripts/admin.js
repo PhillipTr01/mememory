@@ -688,7 +688,7 @@ function fillModCard(card, username, data) {
   var number = (value, placeholder) => Object.assign(el("input", "mm-input"), { type: "number", min: 0, step: 1000, value: value, placeholder: placeholder });
   var rainMax = number(mod.rainMax, data.defaults.rainMax);
   var rainWeekly = number(mod.rainWeekly, data.defaults.rainWeekly);
-  var rainCooldown = Object.assign(el("input", "mm-input"), { type: "number", min: 12, step: 1, value: mod.rainCooldown || data.defaults.rainCooldown, placeholder: data.defaults.rainCooldown });
+  var rainCooldown = Object.assign(el("input", "mm-input"), { type: "number", min: 0, step: 1, value: mod.rainCooldown != null ? mod.rainCooldown : data.defaults.rainCooldown, placeholder: data.defaults.rainCooldown });
   var limits = el("div", "ad-mod-limits");
   var field = (text, input, hint) => {
     var box = el("label", "ad-field");
@@ -703,8 +703,8 @@ function fillModCard(card, username, data) {
       var box = el("label", "ad-field");
       var inline = el("span", "ad-inline-input");
       inline.append(rainCooldown, el("span", "ad-setting-unit", "h"));
-      var next = mod.on && mod.nextRain && mod.nextRain > Date.now() ? " Next one: " + time(mod.nextRain) + "." : "";
-      box.append(el("span", "ad-label", "Wait between rains"), inline, el("small", "ad-note", "Hours after a money rain before the next one (at least 12)." + next));
+      var next = mod.on && mod.nextRain && mod.nextRain > Date.now() ? " Their next one: " + time(mod.nextRain) + "." : "";
+      box.append(el("span", "ad-label", "Their wait between rains"), inline, el("small", "ad-note", "Hours after their own money rain before their next one (0: none) - the wait for all moderators is on the money rain page." + next));
       return box;
     })(),
     field("Money rain a week", rainWeekly, "Their rains of a week together, Monday to Sunday - the amount per player counts once, however many are online (0: no limit)." + (mod.on ? " This week: 🪙 " + formatCoins(mod.used || 0) + " given." : "")),
@@ -1157,9 +1157,31 @@ function renderRains(data) {
 }
 
 var rainWired = false;
+// Moderators' money rains: the wait between two (all of them together) - and when the next one may come
+function showModWait(cooldown) {
+  document.getElementById("adModWait").value = cooldown.hours;
+  document.getElementById("adModWaitInfo").innerText = cooldown.nextAt ? "Next one possible " + time(cooldown.nextAt) + (cooldown.lastBy ? " - the last one by " + cooldown.lastBy + "." : ".") : cooldown.lastAt ? "Possible now - the last one by " + (cooldown.lastBy || "?") + ", " + time(cooldown.lastAt) + "." : "No moderator money rain yet.";
+}
+
 async function loadRains() {
+  api("rains/mod-wait")
+    .then((data) => showModWait(data.cooldown))
+    .catch(fail);
   if (!rainWired) {
     rainWired = true;
+    document.getElementById("adModWaitSave").addEventListener("click", async () => {
+      var button = document.getElementById("adModWaitSave");
+      button.disabled = true;
+      try {
+        var data = await api("rains/mod-wait", { hours: Math.floor(Number(document.getElementById("adModWait").value)) });
+        showModWait(data.cooldown);
+        casinoNotice({ icon: "🛡️", title: "Saved", text: data.cooldown.hours + " h between two money rains of moderators", ms: 4000, key: "mod-wait" });
+      } catch (error) {
+        fail(error);
+      } finally {
+        button.disabled = false;
+      }
+    });
     ["adRainAmount", "adRainTarget", "adRainPercent", "adRainBelow", "adRainWorld", "adRainWhen", "adRainAt", "adRainRepeat"].forEach((id) => {
       document.getElementById(id).addEventListener("input", rainFormChanged);
       document.getElementById(id).addEventListener("change", rainFormChanged);

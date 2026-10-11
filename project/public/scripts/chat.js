@@ -162,7 +162,8 @@ function addChatMessage(message, live) {
     element.append(createIcon(SYSTEM_ICONS[message.icon] || SYSTEM_ICONS.info), document.createTextNode(message.text));
     lastMessage = null;
   } else if (message.type == "announce") {
-    // 📣 A moderator's announcement: for everybody, highlighted
+    // 📣 A moderator's announcement: for everybody, highlighted - gone when its time is over
+    if (!message.until || message.until <= Date.now()) return;
     element = document.createElement("div");
     element.className = "msg-announce";
     var head = document.createElement("div");
@@ -172,6 +173,10 @@ function addChatMessage(message, live) {
     text.className = "msg-announce-text";
     text.innerText = message.text;
     element.append(head, text);
+    if (message.until) {
+      var gone = element;
+      setTimeout(() => gone.remove(), Math.min(2147483000, message.until - Date.now()));
+    }
     lastMessage = null;
   } else {
     var own = message.name == chatUsername();
