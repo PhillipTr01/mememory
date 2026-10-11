@@ -1,4 +1,5 @@
 const EventEmitter = require("events");
+const slots = require("./season_slots");
 const User = require("../models/User");
 const Setting = require("../models/Setting");
 const days = require("./days");
@@ -193,7 +194,7 @@ async function rain(username, input, world = "normal") {
     const user = await User.findOne({ username: username }).select("username mod").lean();
     const mod = modOf(user);
     if (!mod || !mod.perms.rain) return { error: "You may not let it rain." };
-    if (world === "season") return { error: SEASON };
+    if (slots.isSeason(world)) return { error: SEASON };
     const amount = Number(input.amount);
     if (!Number.isInteger(amount) || amount < 1) return { error: "How many coins for every player?" };
     // (the limits count the amount once - however many players are online)
@@ -221,7 +222,7 @@ async function rain(username, input, world = "normal") {
     cooldown.lastAt = Date.now();
     cooldown.lastBy = username;
     await saveCooldown();
-    await write(username, "rain", `🪙 ${paid.toLocaleString("en-US")} - ${done.players != null ? done.players : names.length} players × ${each.toLocaleString("en-US")}${world === "season" ? " (season)" : ""}${note ? ` · “${note}”` : ""}`);
+    await write(username, "rain", `🪙 ${paid.toLocaleString("en-US")} - ${done.players != null ? done.players : names.length} players × ${each.toLocaleString("en-US")}${slots.isSeason(world) ? " (season)" : ""}${note ? ` · “${note}”` : ""}`);
     return { players: done.players != null ? done.players : names.length, each: each, total: paid, left: mod.rainWeekly > 0 ? Math.max(0, mod.rainWeekly - mod.used - amount) : null };
   } finally {
     busy.delete(username);
@@ -239,7 +240,7 @@ function waitText(ms) {
 async function rainPreview(username, input, world = "normal") {
   const mod = await get(username);
   if (!mod || !mod.perms.rain) return { error: "You may not let it rain." };
-  if (world === "season") return { error: SEASON };
+  if (slots.isSeason(world)) return { error: SEASON };
   const amount = Number(input && input.amount) || 0;
   const names = await require("./money_rain").targets({ target: "online", world: world });
   // (the players online who are no moderator - without them no rain)

@@ -20,7 +20,7 @@ const KEY = "admin:settings";
 // season: true - the season world can have its own value (the "Season" switch of the page; none: the normal one).
 const FIELDS = [
   { group: "general", section: "Coins", key: "START_COINS", label: "Start coins", scope: "outside", hint: "What a newly approved player gets outside of a season (in a season: the season's budget instead).", step: 1000, min: 0, max: 100000000 },
-  { group: "general", section: "Gifts", key: "GIFT_LIMIT", label: "Gifts per player and day", hint: "🪙 a player can give others a day (a click on a name in the casino chat) - from midnight on the full amount again.", step: 1000, min: 0, max: 100000000 },
+  { group: "general", section: "Gifts", key: "GIFT_LIMIT", season: true, seasonFallback: "SEASON_GIFT_LIMIT", label: "Gifts per player and day", hint: "🪙 a player can give others a day (a click on a name in the casino chat) - from midnight on the full amount again.", step: 1000, min: 0, max: 100000000 },
   { group: "general", section: "Gifts", key: "GIFT_COOLDOWN", label: "Wait between gifts", hint: "After sending a gift a player waits this long before the next one (normal and season coins). 0: no wait.", unit: "s", scale: 1000, step: 10, min: 0, max: 86400 },
   { group: "general", section: "Gifts", key: "SEASON_GIFT_LIMIT", label: "Gifts per player and day in a season", hint: "Season coins a player can give others in the season world a day - apart from the 🪙 above (both can be sent).", step: 1000, min: 0, max: 100000000 },
   { group: "general", section: "Max bet by balance", key: "BET_CAP_FLOOR", season: true, label: "All in up to", hint: "A player with at most this many coins can bet all of them (every game).", step: 10000, min: 0, max: 100000000 },
@@ -104,6 +104,8 @@ function list(seasonId = null) {
     default: shown(field, DEFAULTS[field.key]),
     season: field.season === true,
     seasonValue: field.season && own[field.key] != null ? shown(field, own[field.key]) : null,
+    // (what a season without its own value uses: the normal one - or one for every season, the gift limit)
+    seasonDefault: field.season ? shown(field, field.seasonFallback ? config[field.seasonFallback] : config[field.key]) : null,
   }));
 }
 

@@ -1,4 +1,5 @@
 const config = require("./config");
+const slots = require("./season_slots");
 const { cleanText } = require("./chat");
 const persist = require("./persist");
 
@@ -34,19 +35,24 @@ function create(key, options = {}) {
   // the season world right now (the chat marks them with the season's icon)
   function online() {
     const names = new Set();
-    const season = new Set();
+    const season = new Map();
     for (const page of pages) {
       for (const socket of page.namespace.sockets.values()) {
         names.add(socket.data.username);
-        if (page.namespace.name.startsWith("/season/")) season.add(socket.data.username);
+        const slot = slots.SLOTS.find((s) => page.namespace.name.startsWith(s.world + "/"));
+        if (slot) season.set(socket.data.username, slot.key);
       }
     }
-    const running = season.size ? require("./seasons").running() : null;
+    // (two seasons at once: the icon of each player's season)
+    const seasons = season.size ? require("./seasons") : null;
+    const bySlot = Object.fromEntries(slots.KEYS.map((key) => [key, seasons ? seasons.running(key) : null]));
+    const first = slots.KEYS.map((key) => bySlot[key]).find(Boolean) || null;
     return {
       names: [...names].sort((a, b) => a.localeCompare(b)),
-      season: [...season].sort((a, b) => a.localeCompare(b)),
-      seasonIcon: running ? running.icon : null,
-      seasonName: running ? running.name : null,
+      season: [...season.keys()].sort((a, b) => a.localeCompare(b)),
+      seasonIcon: first ? first.icon : null,
+      seasonName: first ? first.name : null,
+      seasonOf: Object.fromEntries([...season].filter(([, key]) => bySlot[key]).map(([name, key]) => [name, { icon: bySlot[key].icon, name: bySlot[key].name }])),
       // The moderators (🛡️ next to their names)
       mods: require("./moderators").names(),
     };
@@ -87,7 +93,7 @@ function create(key, options = {}) {
     if (text == null) return;
     const entry = { id: ++messageId, time: Date.now(), type: "user", name: socket.data.username, spectator: false, text: text };
     // (sent from the season world: the others see the season badge right away)
-    if (socket.nsp && socket.nsp.name.startsWith("/season/")) sendOnline();
+    if (socket.nsp && slots.WORLDS.some((world) => socket.nsp.name.startsWith(world + "/"))) sendOnline();
     history.push(entry);
     if (history.length > config.CASINO_CHAT_HISTORY) history.splice(0, history.length - config.CASINO_CHAT_HISTORY);
     for (const page of pages) page.namespace.to(page.room).emit("chatMessage", entry);

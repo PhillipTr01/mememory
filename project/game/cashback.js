@@ -4,6 +4,7 @@ const config = require("./config");
 const coins = require("./coins");
 const days = require("./days");
 const limits = require("./limits");
+const slots = require("./season_slots");
 
 /*
  * Daily cashback: after midnight every player gets a share (CASHBACK_PERCENT, at most CASHBACK_MAX - 0: no
@@ -24,12 +25,14 @@ const GAME_REASONS = [
 ];
 const DAY = 24 * 3600 * 1000;
 
-let state = { normal: null, season: null }; // the last day paid (days.dayNumber) per world
+// the last day paid (days.dayNumber) per world ("normal", the season slots)
+const emptyState = () => ({ normal: null, ...Object.fromEntries(slots.KEYS.map((key) => [key, null])) });
+let state = emptyState();
 let timer = null;
 
 async function load() {
   const row = await Setting.findOne({ key: KEY }).lean();
-  if (row && row.value && typeof row.value === "object") state = { normal: row.value.normal ?? null, season: row.value.season ?? null };
+  if (row && row.value && typeof row.value === "object") state = { ...emptyState(), ...Object.fromEntries(Object.keys(emptyState()).map((key) => [key, row.value[key] ?? null])) };
 }
 
 async function save() {
@@ -52,8 +55,8 @@ function amountFor(loss, world) {
 
 // The net results of a day (from - to) in a world: [{username, net}] (net < 0: lost)
 async function results(world, from, to) {
-  const era = world === "season" ? coins.era() : null;
-  if (world === "season" && !era) return [];
+  const era = slots.isSeason(world) ? coins.era(world) : null;
+  if (slots.isSeason(world) && !era) return [];
   const match = { reason: { $in: GAME_REASONS }, at: { $gte: new Date(from), $lt: new Date(to) }, ...(era ? { era: era } : coins.eraFilter()) };
   const rows = await CoinLog.aggregate([{ $match: match }, { $group: { _id: "$username", net: { $sum: "$amount" } } }]);
   return rows.map((row) => ({ username: row._id, net: row.net }));
@@ -71,7 +74,7 @@ async function payDay(world, now = Date.now()) {
   // (marked first - two runs at once never pay twice)
   state[world] = today - 1;
   await save();
-  const wallet = world === "season" ? coins.season : coins;
+  const wallet = coins.wallet(world);
   const paid = [];
   for (const row of await results(world, from, to)) {
     const loss = -row.net;
@@ -80,15 +83,15 @@ async function payDay(world, now = Date.now()) {
     if (!(await wallet.add(row.username, amount, { reason: "cashback", note: `${rule(world).percent}% of ${loss.toLocaleString("en-US")} lost`, quiet: true }))) continue;
     wallet.notify(row.username);
     paid.push({ username: row.username, loss: loss, amount: amount });
-    require("./notices").send(row.username, "cashback", { amount: amount, loss: loss, percent: rule(world).percent, world: world, coinIcon: world === "season" ? seasonCoinIcon() : null });
+    require("./notices").send(row.username, "cashback", { amount: amount, loss: loss, percent: rule(world).percent, world: world, coinIcon: slots.isSeason(world) ? seasonCoinIcon(world) : null });
   }
   return paid;
 }
 
-function seasonCoinIcon() {
+function seasonCoinIcon(world) {
   try {
     const seasons = require("./seasons");
-    const running = seasons.running();
+    const running = seasons.running(world);
     return running ? seasons.publicSeason(running).coinIcon || null : null;
   } catch (error) {
     return null;
@@ -96,7 +99,7 @@ function seasonCoinIcon() {
 }
 
 async function tick(now = Date.now()) {
-  for (const world of ["normal", "season"]) {
+  for (const world of ["normal", ...slots.KEYS]) {
     try {
       await payDay(world, now);
     } catch (error) {
@@ -120,7 +123,7 @@ function stop() {
 
 // (tests, the hard reset)
 function reset() {
-  state = { normal: null, season: null };
+  state = emptyState();
 }
 
 module.exports = { GAME_REASONS, amountFor, results, payDay, tick, start, stop, load, reset, rule };

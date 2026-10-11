@@ -1,5 +1,6 @@
 const CoinLog = require("../models/CoinLog");
 const coins = require("./coins");
+const seasonSlots = require("./season_slots");
 const days = require("./days");
 const config = require("./config");
 const slots = require("./slots");
@@ -51,8 +52,8 @@ function since(range, now = Date.now()) {
 async function sums(range, world, now) {
   const reasons = GAMES.flatMap((game) => [...game.bet, ...game.win, ...game.refund]);
   const from = since(range, now);
-  const era = world === "season" ? coins.era() : null;
-  if (world === "season" && !era) return new Map();
+  const era = seasonSlots.isSeason(world) ? coins.era(world) : null;
+  if (seasonSlots.isSeason(world) && !era) return new Map();
   const match = { reason: { $in: reasons }, ...(era ? { era: era } : coins.eraFilter()), ...(from != null ? { at: { $gte: new Date(from) } } : {}) };
   const rows = await CoinLog.aggregate([{ $match: match }, { $group: { _id: "$reason", sum: { $sum: "$amount" }, count: { $sum: 1 }, squares: { $sum: { $multiply: ["$amount", "$amount"] } } } }]);
   return new Map(rows.map((row) => [row._id, row]));
@@ -66,7 +67,7 @@ const text = (value) => (typeof value === "function" ? value() : value || null);
  */
 async function report(range = "week", world = "normal", now = Date.now()) {
   if (!RANGES[range]) range = "week";
-  if (world !== "season") world = "normal";
+  if (!seasonSlots.isSeason(world)) world = "normal";
   const all = await sums(range, world, now);
   const total = (kinds, key) => kinds.reduce((sum, kind) => sum + ((all.get(kind) || {})[key] || 0), 0);
   const games = GAMES.map((game) => {
@@ -98,7 +99,7 @@ async function report(range = "week", world = "normal", now = Date.now()) {
   });
   const wagered = games.reduce((sum, game) => sum + game.wagered, 0);
   const paid = games.reduce((sum, game) => sum + game.paid, 0);
-  return { range: range, world: world, ranges: RANGES, seasonRunning: coins.era() != null, minBets: config.RTP_MIN_BETS, games: games, total: { wagered: wagered, paid: paid, profit: wagered - paid, rtp: wagered > 0 ? paid / wagered : null } };
+  return { range: range, world: world, ranges: RANGES, seasonRunning: seasonSlots.KEYS.some((key) => coins.era(key) != null), seasons: require("./seasons").runningAll().map((s) => ({ slot: s.slot, id: s.id, name: s.name, icon: s.icon })), minBets: config.RTP_MIN_BETS, games: games, total: { wagered: wagered, paid: paid, profit: wagered - paid, rtp: wagered > 0 ? paid / wagered : null } };
 }
 
 module.exports = { GAMES, RANGES, report };

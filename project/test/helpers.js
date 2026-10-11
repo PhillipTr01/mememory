@@ -187,12 +187,17 @@ async function startServer() {
     test[game] = require(`../sockets/${game}_server`)(io, { world: worlds.TEST });
     worlds.servers.set(game, test[game]);
   }
-  // The season world (game/seasons.js)
-  const season = {};
-  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua"]) {
-    season[game] = require(`../sockets/${game}_server`)(io, { world: worlds.SEASON });
-    worlds.seasonServers.set(game, season[game]);
+  // The season worlds (game/seasons.js): one per season slot - season: the first, season2: the second
+  const bySlot = {};
+  for (const world of worlds.SEASONS) {
+    const servers = (bySlot[world] = {});
+    for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua"]) {
+      servers[game] = require(`../sockets/${game}_server`)(io, { world: world });
+      worlds.seasonServers.get(world).set(game, servers[game]);
+    }
   }
+  const season = bySlot["/season"];
+  const season2 = bySlot["/season2"];
   require("../sockets/casino_server")(io);
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
@@ -209,6 +214,7 @@ async function startServer() {
     baucua,
     test,
     season,
+    season2,
     client(namespace, token, query) {
       return connect(`http://localhost:${port}${namespace}`, {
         query: query || {},

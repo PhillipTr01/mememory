@@ -226,8 +226,9 @@ module.exports = function () {
       // When an item was bought: the newest purchase of that name
       const boughtAt = new Map();
       for (const row of purchases) if (row.note && !boughtAt.has(row.note)) boughtAt.set(row.note, row.at);
-      const season = seasons.running();
-      const inSeason = season && approved && !coins.season.watching(name);
+      // (every running season the player is in - two at once at most)
+      const inSeasons = approved ? seasons.runningAll().filter((s) => !coins.wallet(s.slot).watching(name)) : [];
+      const seasonView = (s) => ({ id: s.id, slot: s.slot, name: s.name, icon: s.icon, coinIcon: seasons.publicSeason(s).coinIcon, coins: coins.wallet(s.slot).balanceOf(user) });
       res.json({
         username: name,
         approved: approved,
@@ -236,7 +237,8 @@ module.exports = function () {
         payout: user.payoutAllowed === true,
         online: casinoChat.online().names.includes(name),
         coins: approved ? normalCoins(user) : null,
-        season: inSeason ? { name: season.name, icon: season.icon, coinIcon: seasons.publicSeason(season).coinIcon, coins: coins.season.balanceOf(user) } : null,
+        season: inSeasons.length ? seasonView(inSeasons[0]) : null,
+        seasons: inSeasons.map(seasonView),
         streak: approved ? coins.streakInfo(user) : null,
         lastActive: last.length ? last[0].at : null,
         reasons: reasons.map((row) => ({ reason: row._id, amount: row.amount, count: row.count })),
@@ -359,8 +361,9 @@ module.exports = function () {
     "/api/history",
     admin,
     asyncHandler(async (req, res) => {
-      // The normal history - or (scope "season") the one of the running season
-      const filter = req.query.scope === "season" && coins.era() ? { era: coins.era() } : { ...NORMAL };
+      // The normal history - or (scope: a running season's id, "season": the first one) the one of a running season
+      const scoped = req.query.scope === "season" ? seasons.running() : req.query.scope && /^\d+$/.test(String(req.query.scope)) ? seasons.running(Number(req.query.scope)) : null;
+      const filter = scoped && coins.era(scoped.slot) ? { era: coins.era(scoped.slot) } : { ...NORMAL };
       // A part of a name: every player whose name has it
       const q = String(req.query.username || "").trim().toLowerCase();
       if (q) {
@@ -378,8 +381,9 @@ module.exports = function () {
       const rows = await CoinLog.find(filter).sort({ at: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).lean();
       const season = seasons.running();
       res.json({
-        // The running season: its history can be picked instead
-        season: season ? { name: season.name, icon: season.icon } : null,
+        // The running seasons: their history can be picked instead
+        season: season ? { id: season.id, name: season.name, icon: season.icon } : null,
+        seasons: seasons.runningAll().map((s) => ({ id: s.id, name: s.name, icon: s.icon })),
         names: (await players()).map((p) => p.username),
         page: page,
         pages: pages,
@@ -732,13 +736,13 @@ module.exports = function () {
     "/api/seasons/:id/balance",
     admin,
     asyncHandler(async (req, res) => {
-      const season = seasons.running();
-      if (season == null || String(season.id) !== String(req.params.id)) return res.status(400).json({ error: "Only the coins of the running season." });
+      const season = seasons.running(Number(req.params.id));
+      if (season == null) return res.status(400).json({ error: "Only the coins of a running season." });
       const { username, mode, amount, note } = req.body || {};
       const text = typeof note === "string" ? note.slice(0, 300) : undefined;
       if (typeof username !== "string" || !Number.isInteger(amount)) return res.status(400).json({ error: "Username and a whole number." });
-      if (seasons.joined(username) !== true) return res.status(400).json({ error: "The player isn't in the season." });
-      const wallet = coins.season;
+      if (seasons.joined(username, season) !== true) return res.status(400).json({ error: "The player isn't in the season." });
+      const wallet = coins.wallet(season.slot);
       if (mode === "set") {
         if (amount < 0) return res.status(400).json({ error: "A balance can't be negative." });
         await wallet.set(username, amount, text);
@@ -771,7 +775,9 @@ module.exports = function () {
   /* ---------- Money rains (game/money_rain.js) ---------- */
 
   const rain = require("../game/money_rain");
-  router.get("/api/rains", admin, (req, res) => res.json({ ...rain.list(), now: Date.now(), season: seasons.running() ? { name: seasons.running().name, icon: seasons.running().icon, coinIcon: seasons.publicSeason(seasons.running()).coinIcon } : null }));
+  // (season: the first running one - seasons: every running one with its slot, the "world" of a rain)
+  const rainSeason = (s) => ({ id: s.id, slot: s.slot, name: s.name, icon: s.icon, coinIcon: seasons.publicSeason(s).coinIcon });
+  router.get("/api/rains", admin, (req, res) => res.json({ ...rain.list(), now: Date.now(), season: seasons.running() ? rainSeason(seasons.running()) : null, seasons: seasons.runningAll().map(rainSeason) }));
 
   // How many it would reach right now: {players, total, names}
   router.post(

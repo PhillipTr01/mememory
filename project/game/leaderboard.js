@@ -4,6 +4,7 @@ const coins = require("./coins");
 const days = require("./days");
 const seasons = require("./seasons");
 const { place } = require("./places");
+const slots = require("./season_slots");
 
 /*
  * The leaderboards of the casino - one per world (game/worlds.js):
@@ -19,13 +20,14 @@ const { place } = require("./places");
  */
 const KEY = "leaderboard";
 const SIZE = 100;
-const keyOf = (season) => (season ? seasons.BOARD_KEY : KEY);
+// (a season: the board of its slot)
+const keyOf = (season) => (season ? seasons.boardKey(season) : KEY);
 
 async function build(now, before, season) {
   const placeBefore = new Map(((before && before.rows) || []).map((row) => [row.username, row.rank]));
   let rows;
   if (season) {
-    rows = await placed(season, (await seasons.standings()).map((row) => ({ username: row.username, coins: row.coins })));
+    rows = await placed(season, (await seasons.standings(season)).map((row) => ({ username: row.username, coins: row.coins })));
   } else {
     const users = await User.find({ casinoApproved: true }).select("username coins coinReset").lean();
     rows = place(users.map((user) => ({ username: user.username, coins: coins.balanceOf(user) })));
@@ -73,25 +75,27 @@ async function snapshot(now, season, every) {
 // A player joins the season: on its board right away (with the start coins) - the
 // others stay as they were at the last update
 let adding = Promise.resolve();
-seasons.changes.on("joined", (username) => {
+seasons.changes.on("joined", (username, joined) => {
   adding = adding
     .then(async () => {
-      const season = seasons.running();
+      const season = joined ? seasons.running(joined.id) : null;
+      if (!season) return;
       const board = await load(season);
-      if (!season || board == null || board.season !== season.id || board.rows.some((row) => row.username === username)) return;
-      const user = await User.findOne({ username: username }).select("username seasonCoins seasonReset").lean();
+      if (board == null || board.season !== season.id || board.rows.some((row) => row.username === username)) return;
+      const wallet = coins.wallet(season.slot);
+      const user = await User.findOne({ username: username }).select(["username", wallet.fields.coins, wallet.fields.reset].join(" ")).lean();
       if (user == null) return;
       const before = new Map(board.rows.map((row) => [row.username, row.before]));
-      const rows = (await placed(season, [...board.rows.map((row) => ({ username: row.username, coins: row.coins })), { username: username, coins: coins.season.balanceOf(user) }])).map((row) => ({ ...row, before: before.has(row.username) ? before.get(row.username) : null }));
+      const rows = (await placed(season, [...board.rows.map((row) => ({ username: row.username, coins: row.coins })), { username: username, coins: wallet.balanceOf(user) }])).map((row) => ({ ...row, before: before.has(row.username) ? before.get(row.username) : null }));
       await Setting.updateOne({ key: keyOf(season) }, { $set: { value: JSON.stringify({ ...board, rows: rows }) } }, { upsert: true });
     })
     .catch((error) => console.error("[leaderboard] Could not add a player:", error));
 });
 
-// The leaderboard of a world: {at, rows, live, next} - season: true for the running season's
+// The leaderboard of a world: {at, rows, live, next} - a season world ("/season", "/season2"): its season's
 async function get(now = Date.now(), world = "") {
   await seasons.tick(now);
-  const season = world === seasons.SEASON_WORLD ? seasons.running() : null;
+  const season = slots.isSeason(world) ? seasons.running(world) : null;
   const every = season ? season.every : 0;
   // Live: the snapshot only for the arrows (once a day)
   const board = await snapshot(now, season, every === 0 ? 1440 : every);
@@ -100,11 +104,17 @@ async function get(now = Date.now(), world = "") {
 }
 
 // What a page shows: the leaderboard of the player's world - the top players, the own place, the
-// season (in the season world), when the next update comes
-async function view(username, now = Date.now()) {
-  const world = seasons.inSeasonWorld(username) ? seasons.SEASON_WORLD : "";
+// season (in a season world), when the next update comes. which: another board - "normal" or a running
+// season the player may see (its id or slot); nothing: the player's world
+async function view(username, now = Date.now(), which = null) {
+  let world = seasons.worldOf(username) || "";
+  if (which === "normal") world = "";
+  else if (which != null && which !== "") {
+    const other = seasons.running(which);
+    if (other && seasons.allowed(other, username)) world = seasons.slotOf(other).world;
+  }
   const board = await get(now, world);
-  const season = world ? seasons.running() : null;
+  const season = world ? seasons.running(world) : null;
   const ended = seasons.lastEnded();
   return {
     updatedAt: board.at,
@@ -116,7 +126,9 @@ async function view(username, now = Date.now()) {
     rows: board.rows.slice(0, SIZE),
     me: board.rows.find((row) => row.username === username) || null,
     season: season ? seasons.publicSeason(season) : null,
-    world: world ? "season" : "normal",
+    world: season ? season.slot : "normal",
+    // (the other boards to switch to: the running seasons the player may see)
+    boards: seasons.runningAll().filter((s) => seasons.allowed(s, username)).map((s) => ({ id: s.id, slot: s.slot, name: s.name, icon: s.icon })),
     // The last season that is over (the winner page)
     lastSeason: ended ? { id: ended.id, name: ended.name, icon: ended.icon, endedAt: ended.endedAt } : null,
   };
