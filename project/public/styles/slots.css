@@ -838,31 +838,132 @@
 }
 
 /* The paytable button next to the title: a quiet pill */
+/* The buttons in the head: Paytable (quiet) and Bonus buy (gold, it shines now and then) */
 .sl-paytable-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  height: 34px;
-  padding: 0 0.9rem;
-  border: 1px solid var(--mm-border);
+  gap: 0.5rem;
+  height: 36px;
+  padding: 0 1rem 0 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 999px;
-  background: var(--mm-surface-2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   color: var(--mm-text);
   font-size: 0.82rem;
   font-weight: 700;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  transition: border-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
 .sl-paytable-btn:hover,
 .sl-paytable-btn:focus-visible {
-  border-color: var(--mm-accent);
+  border-color: rgba(var(--mm-accent-rgb), 0.55);
+  color: var(--mm-text);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.sl-paytable-btn:active {
+  transform: translateY(0);
+}
+
+/* The icon in its own little round badge */
+.sl-head-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
   color: var(--mm-accent);
+  transition: background 0.18s ease;
+}
+
+.sl-paytable-btn:hover .sl-head-icon {
+  background: rgba(var(--mm-accent-rgb), 0.16);
 }
 
 .sl-paytable-btn svg {
   width: 16px;
   height: 16px;
+}
+
+/* Bonus buy: gold, a soft glow - and a shine running over it every few seconds */
+.sl-buy-btn {
+  overflow: hidden;
+  border-color: rgba(255, 214, 120, 0.7);
+  background: linear-gradient(135deg, #f7d77a 0%, #e0a93c 55%, #c9862a 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.15), 0 4px 14px rgba(224, 169, 60, 0.35);
+  color: #2a1a05;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.sl-buy-btn .sl-head-icon {
+  background: rgba(42, 26, 5, 0.16);
+  color: #2a1a05;
+}
+
+.sl-buy-btn:hover,
+.sl-buy-btn:focus-visible {
+  border-color: #ffe7a6;
+  color: #2a1a05;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.15), 0 8px 22px rgba(224, 169, 60, 0.5);
+}
+
+.sl-buy-btn:hover .sl-head-icon {
+  background: rgba(42, 26, 5, 0.22);
+}
+
+.sl-buy-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: skewX(-20deg);
+  animation: sl-buy-shine 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes sl-buy-shine {
+  0%,
+  70% {
+    left: -60%;
+  }
+  100% {
+    left: 130%;
+  }
+}
+
+.sl-buy-btn:disabled {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+  color: var(--mm-muted);
+  text-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.sl-buy-btn:disabled .sl-head-icon {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--mm-muted);
+}
+
+.sl-buy-btn:disabled::after {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-buy-btn::after {
+    animation: none;
+    display: none;
+  }
 }
 
 /* ---------- The end of the bonus game: the win counted up ---------- */
