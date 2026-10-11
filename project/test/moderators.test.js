@@ -104,7 +104,7 @@ test("moderators: the chat - delete a message, mute for a while (not other moder
   assert.ok(!mods.names().includes("md_b"));
 });
 
-test("moderators: give coins to one player - from the casino, its own limits (per gift, a week), never to themselves or another moderator", async () => {
+test("moderators: give coins to one player - from the casino, its own limits (per gift, a week), other moderators too, never themselves", async () => {
   mods.reset();
   const notices = require("../game/notices").notices;
   await mods.set("md_c", { on: false });
@@ -115,7 +115,6 @@ test("moderators: give coins to one player - from the casino, its own limits (pe
   h.setCoins("md_mod", 1000);
   h.setCoins("md_a", 1000);
   assert.match((await mods.give("md_mod", { to: "md_mod", amount: 100 })).error, /yourself/);
-  assert.match((await mods.give("md_mod", { to: "md_b", amount: 100 })).error, /another moderator/);
   assert.match((await mods.give("md_mod", { to: "md_out", amount: 100 })).error, /no such player/);
   assert.match((await mods.give("md_mod", { to: "md_a", amount: 5001 })).error, /At most/);
   const heard = new Promise((resolve) => notices.once("notice", (username, event, data) => resolve([username, event, data])));
@@ -128,6 +127,12 @@ test("moderators: give coins to one player - from the casino, its own limits (pe
   assert.match((await mods.give("md_mod", { to: "md_a", amount: 3001 })).error, /3,000 more this week/);
   assert.strictEqual((await mods.panel("md_mod")).giveLeft, 3000);
   assert.ok((await mods.history("md_mod")).some((entry) => entry.action === "give" && /md_a/.test(entry.detail)), "in the log");
+  // Other moderators too - and the list to pick from (everybody in the casino but themselves)
+  assert.deepStrictEqual(await mods.give("md_mod", { to: "md_b", amount: 1000 }), { to: "md_b", amount: 1000, left: 2000 });
+  const list = (await mods.givePlayers("md_mod")).players;
+  assert.ok(!list.some((p) => p.username === "md_mod" || p.username === "md_out"));
+  assert.deepStrictEqual(list.find((p) => p.username === "md_b"), { username: "md_b", mod: true });
+  assert.match((await mods.givePlayers("md_a")).error, /may not/);
   await mods.set("md_mod", { on: false });
   await mods.set("md_b", { on: false });
 });

@@ -641,7 +641,7 @@ function fillModCard(card, username, data) {
   var body = el("div", "ad-mod-body");
   var perms = el("div", "ad-mod-perms");
   var boxes = {};
-  var PERM_HINTS = { rain: "Money rains for everybody online - only with other players than moderators online", chat: "Delete messages, mute players (up to a day)", announce: "📣 Highlighted messages in the casino chat", give: "🎁 Coins from the casino for one player (🪙 only - not themselves, not other moderators)" };
+  var PERM_HINTS = { rain: "Money rains for everybody online - only with other players than moderators online", chat: "Delete messages, mute players (up to a day)", announce: "📣 Highlighted messages in the casino chat", give: "🎁 Coins from the casino for one player (🪙 only - other moderators too, never themselves)" };
   Object.keys(data.perms).forEach((perm) => {
     var row = el("label", "ad-mod-perm");
     var box = document.createElement("input");

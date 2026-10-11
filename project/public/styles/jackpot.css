@@ -5152,3 +5152,76 @@ body.jackpot-theme::before {
     animation-duration: 0.01s !important;
   }
 }
+
+/* Moderator: give coins - the players to pick from (online first) */
+.cs-mod-search {
+  width: 100%;
+  margin-bottom: 0.4rem;
+}
+
+.cs-mod-players {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 0.6rem;
+  padding: 0.3rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+  overscroll-behavior: contain;
+}
+
+.cs-mod-players > .cs-mod-note {
+  margin: 0.4rem;
+}
+
+.cs-mod-player {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--mm-text);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cs-mod-player:hover {
+  background: var(--mm-surface-3);
+}
+
+.cs-mod-player.picked {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.14);
+}
+
+.cs-mod-player-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-mod-player-tag {
+  font-size: 0.85rem;
+}
+
+.cs-mod-player-online {
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.cs-mod-preview.error {
+  color: var(--mm-danger);
+}

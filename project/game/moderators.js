@@ -11,7 +11,7 @@ const days = require("./days");
  *   at least one player online who is no moderator - no rain for moderators alone; never in a season), at most `rainMax` per rain and `rainWeekly` a week (Monday to Sunday; 0: no limit)
  * - chat: delete messages of the casino chat, mute players for a while
  * - announce: a highlighted message in the casino chat (📣)
- * - give: coins for one player (the normal 🪙, never a season's - not to themselves or another moderator), at most
+ * - give: coins for one player (the normal 🪙, never a season's - not to themselves; other moderators too), at most
  *   `giveMax` per gift and `giveWeekly` a week (0: no limit) - limits of its own, apart from the money rain
  * Everything a moderator does is written down (the log - the admin sees it).
  *
@@ -259,7 +259,6 @@ async function give(username, input) {
     const target = await User.findOne({ username: to }).select("username mod casinoApproved").lean();
     if (target == null || target.casinoApproved !== true) return { error: "There's no such player in the casino." };
     if (target.username === username) return { error: "Not to yourself." };
-    if (modOf(target)) return { error: "Not to another moderator - ask the admin." };
     if (amount > mod.giveMax) return { error: `At most 🪙 ${mod.giveMax.toLocaleString("en-US")} per gift.` };
     if (mod.giveWeekly > 0 && mod.given + amount > mod.giveWeekly) {
       const left = Math.max(0, mod.giveWeekly - mod.given);
@@ -276,6 +275,19 @@ async function give(username, input) {
   } finally {
     giving.delete(username);
   }
+}
+
+// The players a moderator can give coins to: everybody in the casino but themselves - [{username, mod}]
+async function givePlayers(username) {
+  if (!(await can(username, "give"))) return { error: "You may not give coins." };
+  const users = await User.find({ casinoApproved: true }).select("username").lean();
+  return {
+    players: users
+      .map((user) => user.username)
+      .filter((name) => name !== username)
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({ username: name, mod: modNames.has(name) })),
+  };
 }
 
 // "in 3 h 20 min", "in 45 min"
@@ -373,4 +385,4 @@ function reset() {
   cooldownLoaded = true;
 }
 
-module.exports = { COOLDOWN_MIN, rainCooldown, setRainCooldown, refresh, names, PERMS, PERM_NAMES, MUTE_MAX, DEFAULTS, changes, modOf, get, can, list, set, history, rain, rainPreview, give, deleteMessage, mute, unmute, mutes, announce, panel, reset };
+module.exports = { COOLDOWN_MIN, rainCooldown, setRainCooldown, refresh, names, PERMS, PERM_NAMES, MUTE_MAX, DEFAULTS, changes, modOf, get, can, list, set, history, rain, rainPreview, give, givePlayers, deleteMessage, mute, unmute, mutes, announce, panel, reset };

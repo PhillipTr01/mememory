@@ -260,19 +260,18 @@
     return box;
   }
 
-  // 🎁 Coins for one player - from the casino (the normal 🪙), not from the own balance
+  // 🎁 Coins for one player - from the casino (the normal 🪙), not from the own balance. The players: a list to
+  // pick from (online first, a search over it) - other moderators too, never yourself
   function giveSection() {
     var box = section("Give coins", "🎁");
     var mod = state.mod;
-    box.appendChild(el("p", "cs-mod-note", "From the casino, not your own coins (🪙 only) · at most 🪙 " + format(mod.giveMax) + " per gift" + (state.giveLeft != null ? " · 🪙 " + format(state.giveLeft) + " left this week (of " + format(mod.giveWeekly) + ")" : "") + " · not to yourself or other moderators"));
-    // Who: typed - the players online to pick from
-    var to = Object.assign(el("input", "mm-input"), { type: "text", maxLength: 40, placeholder: "Player", autocomplete: "off" });
-    to.setAttribute("aria-label", "Player");
-    var list = el("datalist");
-    list.id = "csModGiveNames";
-    to.setAttribute("list", list.id);
-    var me = typeof myName != "undefined" ? myName : null;
-    (window.casinoOnlineNames || []).filter((name) => name != me && !(window.casinoModNames && window.casinoModNames.has(name))).forEach((name) => list.appendChild(Object.assign(document.createElement("option"), { value: name })));
+    box.appendChild(el("p", "cs-mod-note", "From the casino, not your own coins (🪙 only) · at most 🪙 " + format(mod.giveMax) + " per gift" + (state.giveLeft != null ? " · 🪙 " + format(state.giveLeft) + " left this week (of " + format(mod.giveWeekly) + ")" : "")));
+    var picked = null;
+    var search = Object.assign(el("input", "mm-input cs-mod-search"), { type: "search", maxLength: 40, placeholder: "🔍 Search a player", autocomplete: "off" });
+    search.setAttribute("aria-label", "Search a player");
+    var list = el("div", "cs-mod-players");
+    list.setAttribute("role", "listbox");
+    list.appendChild(el("p", "cs-mod-note", "Loading the players..."));
     var amount = Object.assign(el("input", "mm-input"), { type: "number", min: 1, step: 1000, placeholder: "Coins" });
     amount.setAttribute("aria-label", "Coins");
     var note = Object.assign(el("input", "mm-input"), { type: "text", maxLength: 80, placeholder: "What for (optional)" });
@@ -280,27 +279,63 @@
     var send = el("button", "cs-gift-send", "🎁 Give");
     send.type = "button";
     var row = el("div", "cs-mod-row");
-    row.append(to, amount);
-    box.append(row, list, note, hint, send);
+    row.append(amount, note);
+    box.append(search, list, row, hint, send);
+    var players = [];
+    var online = new Set(window.casinoOnlineNames || []);
+    var render = () => {
+      var q = search.value.trim().toLowerCase();
+      var shown = players.filter((p) => !q || p.username.toLowerCase().includes(q));
+      shown.sort((a, b) => online.has(b.username) - online.has(a.username) || a.username.localeCompare(b.username));
+      list.replaceChildren(
+        ...(shown.length
+          ? shown.map((p) => {
+              var item = el("button", "cs-mod-player" + (picked == p.username ? " picked" : ""));
+              item.type = "button";
+              item.setAttribute("role", "option");
+              item.setAttribute("aria-selected", picked == p.username ? "true" : "false");
+              var avatar = typeof createAvatar == "function" ? createAvatar(p.username, "sm") : el("span");
+              avatar.removeAttribute("title");
+              item.append(avatar, el("span", "cs-mod-player-name", p.username));
+              if (p.mod) item.appendChild(el("span", "cs-mod-player-tag", "🛡️"));
+              if (online.has(p.username)) item.appendChild(el("span", "cs-mod-player-online", "online"));
+              item.addEventListener("click", () => {
+                picked = p.username;
+                render();
+                check();
+                amount.focus();
+              });
+              return item;
+            })
+          : [el("p", "cs-mod-note", q ? "Nobody called like that." : "No players.")]),
+      );
+    };
+    call("mod/players")
+      .then((data) => {
+        players = data.players || [];
+        render();
+      })
+      .catch((error) => list.replaceChildren(el("p", "cs-mod-note", error.message)));
     var check = () => {
       var value = Math.floor(Number(amount.value) || 0);
       var over = value > mod.giveMax ? "More than 🪙 " + format(mod.giveMax) + " per gift." : state.giveLeft != null && value > state.giveLeft ? "More than you have left this week." : "";
-      hint.innerText = over;
-      send.disabled = !to.value.trim() || value < 1 || !!over;
+      hint.innerText = over || (picked ? "→ " + picked + (value > 0 ? " gets 🪙 " + format(value) : "") : "Pick a player.");
+      hint.classList.toggle("error", !!over);
+      send.disabled = !picked || value < 1 || !!over;
     };
-    to.addEventListener("input", check);
+    search.addEventListener("input", render);
     amount.addEventListener("input", check);
     send.addEventListener("click", async () => {
-      var who = to.value.trim();
       var value = Math.floor(Number(amount.value) || 0);
-      if (!(await confirmDialog({ title: "Give coins?", text: "🪙 " + format(value) + " for " + who + " - from the casino." + (note.value.trim() ? " “" + note.value.trim() + "”" : ""), confirmLabel: "Give" }))) return;
+      if (!(await confirmDialog({ title: "Give coins?", text: "🪙 " + format(value) + " for " + picked + " - from the casino." + (note.value.trim() ? " “" + note.value.trim() + "”" : ""), confirmLabel: "Give" }))) return;
       send.disabled = true;
       try {
-        var result = await call("mod/give", { to: who, amount: value, note: note.value });
+        var result = await call("mod/give", { to: picked, amount: value, note: note.value });
         casinoNotice({ icon: "🎁", title: "Coins given", text: result.to + " got 🪙 " + format(result.amount) + (result.left != null ? " · 🪙 " + format(result.left) + " left this week" : ""), ms: 6000, key: "mod-give" });
         openPanel();
       } catch (error) {
         hint.innerText = error.message;
+        hint.classList.add("error");
         send.disabled = false;
       }
     });
