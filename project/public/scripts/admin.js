@@ -636,7 +636,113 @@ function renderPlayerDetail(p) {
 
   var grid = el("div", "ad-grid ad-pd-grid");
   grid.append(gamesCard, itemsCard);
-  box.replaceChildren(playerBack(), head, stats, grid);
+  var parts = [playerBack(), head, stats, grid];
+  // A player in the casino: the moderator rights (game/moderators.js)
+  if (p.approved) parts.push(modCard(p.username));
+  box.replaceChildren(...parts);
+}
+
+/*
+ * A moderator: on / off, what they may (money rain, chat, announcements), how much money rain (per rain in
+ * total - split between the players - and a week), what they did. They do it on the casino pages (🛡️ Mod).
+ */
+var MOD_ACTIONS = { rain: "💸", delete: "🗑️", mute: "🔇", unmute: "🔊", announce: "📣" };
+function modCard(username) {
+  var card = el("div", "ad-card ad-mod-card");
+  var head = el("div", "ad-card-head");
+  head.appendChild(el("h2", "ad-title", "🛡️ Moderator"));
+  card.append(head, el("p", "ad-note", "Loading…"));
+  api("players/" + encodeURIComponent(username) + "/mod")
+    .then((data) => fillModCard(card, username, data))
+    .catch(fail);
+  return card;
+}
+
+function fillModCard(card, username, data) {
+  var mod = data.mod || { on: false, perms: {}, rainMax: data.defaults.rainMax, rainWeekly: data.defaults.rainWeekly, used: 0 };
+  var head = card.querySelector(".ad-card-head");
+  var on = el("label", "ad-switch");
+  var check = document.createElement("input");
+  check.type = "checkbox";
+  check.checked = mod.on === true;
+  check.setAttribute("aria-label", username + " is a moderator");
+  var label = el("span", "ad-switch-text", mod.on ? "Moderator" : "No moderator");
+  on.append(check, el("span", "ad-switch-track"), label);
+  head.replaceChildren(el("h2", "ad-title", "🛡️ Moderator"), on);
+
+  var body = el("div", "ad-mod-body");
+  var perms = el("div", "ad-mod-perms");
+  var boxes = {};
+  var PERM_HINTS = { rain: "Money rains for everybody online - only with other players than moderators online", chat: "Delete messages, mute players (up to a day)", announce: "📣 Highlighted messages in the casino chat" };
+  Object.keys(data.perms).forEach((perm) => {
+    var row = el("label", "ad-mod-perm");
+    var box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = !!(mod.perms && mod.perms[perm]);
+    boxes[perm] = box;
+    var text = el("span", "ad-mod-perm-text");
+    text.append(el("b", "", data.perms[perm]), el("small", "", PERM_HINTS[perm] || ""));
+    row.append(box, text);
+    perms.appendChild(row);
+  });
+  var number = (value, placeholder) => Object.assign(el("input", "mm-input"), { type: "number", min: 0, step: 1000, value: value, placeholder: placeholder });
+  var rainMax = number(mod.rainMax, data.defaults.rainMax);
+  var rainWeekly = number(mod.rainWeekly, data.defaults.rainWeekly);
+  var limits = el("div", "ad-mod-limits");
+  var field = (text, input, hint) => {
+    var box = el("label", "ad-field");
+    var inline = el("span", "ad-inline-input");
+    inline.append(el("span", "ad-setting-unit", "🪙"), input);
+    box.append(el("span", "ad-label", text), inline, el("small", "ad-note", hint));
+    return box;
+  };
+  limits.append(
+    field("Money rain at most", rainMax, "In total per rain - split evenly between everybody online."),
+    field("Money rain a week", rainWeekly, "All their rains of a week together, Monday to Sunday (0: no limit)." + (mod.on ? " This week: 🪙 " + formatCoins(mod.used || 0) + " given." : "")),
+  );
+  var save = el("button", "mm-btn mm-btn-primary mm-btn-sm", "Save");
+  save.type = "button";
+  var error = el("p", "ad-form-error");
+  error.hidden = true;
+  var setDisabled = () => {
+    perms.classList.toggle("off", !check.checked);
+    limits.classList.toggle("off", !check.checked);
+  };
+  check.addEventListener("change", () => {
+    label.innerText = check.checked ? "Moderator" : "No moderator";
+    setDisabled();
+  });
+  setDisabled();
+  save.addEventListener("click", async () => {
+    error.hidden = true;
+    save.disabled = true;
+    try {
+      var body = { on: check.checked, perms: Object.fromEntries(Object.entries(boxes).map(([perm, box]) => [perm, box.checked])), rainMax: Math.floor(Number(rainMax.value)), rainWeekly: Math.floor(Number(rainWeekly.value) || 0) };
+      var result = await api("players/" + encodeURIComponent(username) + "/mod", body);
+      casinoNotice({ icon: "🛡️", title: check.checked ? username + " is a moderator" : username + " is no moderator", text: check.checked ? Object.keys(boxes).filter((perm) => boxes[perm].checked).map((perm) => data.perms[perm]).join(" · ") || "no rights picked" : "", ms: 5000, key: "mod" });
+      fillModCard(card, username, { ...data, mod: result.mod.on ? result.mod : null, log: result.log });
+    } catch (problem) {
+      error.innerText = problem.message;
+      error.hidden = false;
+    } finally {
+      save.disabled = false;
+    }
+  });
+  var foot = el("div", "ad-mod-foot");
+  foot.append(error, save);
+  body.append(perms, limits, foot);
+
+  // What they did
+  var logBox = el("div", "ad-mod-log");
+  logBox.appendChild(el("h3", "ad-label ad-sublabel", "What they did"));
+  if (data.log && data.log.length) {
+    data.log.forEach((entry) => {
+      var line = el("div", "ad-mod-log-row");
+      line.append(el("span", "ad-mod-log-icon", MOD_ACTIONS[entry.action] || "•"), el("span", "ad-mod-log-text", entry.detail), el("span", "ad-row-meta", time(entry.at)));
+      logBox.appendChild(line);
+    });
+  } else logBox.appendChild(el("p", "ad-note", "Nothing yet."));
+  card.replaceChildren(head, el("p", "ad-note", "Moderators do it on the casino pages (the 🛡️ Mod button) - never here in the admin panel."), body, logBox);
 }
 
 async function removePlayerItem(p, item, button) {

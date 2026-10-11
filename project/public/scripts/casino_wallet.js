@@ -416,13 +416,17 @@
       // Who plays in the season world: the season's icon next to their names in the chat
       var inSeason = new Set(data.season || []);
       window.casinoSeasonNames = inSeason;
+      // The moderators: 🛡️ next to their names in the chat
+      var mods = new Set(data.mods || []);
+      window.casinoModNames = mods;
+      document.querySelectorAll(".msg-name[data-name]").forEach((node) => node.classList.toggle("is-mod", mods.has(node.dataset.name)));
       if (data.seasonIcon) document.body.style.setProperty("--season-icon", JSON.stringify(data.seasonIcon));
       document.querySelectorAll(".msg-name[data-name]").forEach((node) => {
         node.classList.toggle("in-season", inSeason.has(node.dataset.name));
         node.title = inSeason.has(node.dataset.name) ? "Plays in " + (data.seasonName || "the season") : "";
       });
       onlineButton.hidden = names.length == 0;
-      var key = JSON.stringify([names, data.season || [], data.seasonName || "", myName]);
+      var key = JSON.stringify([names, data.season || [], data.seasonName || "", myName, data.mods || []]);
       if (key == onlineKey) return;
       onlineKey = key;
       var faces = el("span", "chat-online-faces");

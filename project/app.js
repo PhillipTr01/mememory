@@ -165,6 +165,8 @@ async function connectDatabase(attempt = 1) {
     // The money rains of the admin (planned ones come on time)
     const rain = require("./game/money_rain");
     await rain.load().catch((error) => console.error("Could not load the money rains:", error));
+    // (who is a moderator: the chat marks them)
+    await require("./game/moderators").refresh();
     rain.setOnline(() => require("./game/casino_chat").online().names);
     rain.start();
     startScraper();

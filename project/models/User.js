@@ -31,6 +31,8 @@ const schema = mongoose.Schema({
     payoutAllowed: {type: Boolean, default: false}, // may pay coins out (set by the admin)
     // The casino's accessory shop: {owned: [id], frame: id, effect: id} (see game/shop.js)
     looks: {type: mongoose.Schema.Types.Mixed, default: null},
+    // A moderator of the casino (see game/moderators.js): {on, perms: {rain, chat, announce}, rainMax, rainDaily, used: {day, amount}}
+    mod: {type: mongoose.Schema.Types.Mixed, default: null},
 	// active: {type: String, required: true, default: false}
 });
 

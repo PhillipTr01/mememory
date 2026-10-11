@@ -47,6 +47,8 @@ function create(key, options = {}) {
       season: [...season].sort((a, b) => a.localeCompare(b)),
       seasonIcon: running ? running.icon : null,
       seasonName: running ? running.name : null,
+      // The moderators (🛡️ next to their names)
+      mods: require("./moderators").names(),
     };
   }
 
@@ -86,6 +88,15 @@ function create(key, options = {}) {
     const entry = { id: ++messageId, time: Date.now(), type: "user", name: socket.data.username, spectator: false, text: text };
     // (sent from the season world: the others see the season badge right away)
     if (socket.nsp && socket.nsp.name.startsWith("/season/")) sendOnline();
+    history.push(entry);
+    if (history.length > config.CASINO_CHAT_HISTORY) history.splice(0, history.length - config.CASINO_CHAT_HISTORY);
+    for (const page of pages) page.namespace.to(page.room).emit("chatMessage", entry);
+    persist.changed(key);
+  }
+
+  // 📣 A moderator's announcement (game/moderators.js): highlighted for everybody
+  function announce(username, text) {
+    const entry = { id: ++messageId, time: Date.now(), type: "announce", name: username, spectator: false, text: text };
     history.push(entry);
     if (history.length > config.CASINO_CHAT_HISTORY) history.splice(0, history.length - config.CASINO_CHAT_HISTORY);
     for (const page of pages) page.namespace.to(page.room).emit("chatMessage", entry);
@@ -145,7 +156,7 @@ function create(key, options = {}) {
     },
   );
 
-  return { attach, join, fromUser, online, messages, remove, clear, ban, unban, banList };
+  return { attach, join, fromUser, announce, online, messages, remove, clear, ban, unban, banList };
 }
 
 module.exports = { ...create("chat"), create };

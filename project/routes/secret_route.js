@@ -14,6 +14,7 @@ const gifts = require("../game/gifts");
 const shop = require("../game/shop");
 const testMode = require("../game/test_mode");
 const worlds = require("../game/worlds");
+const moderators = require("../game/moderators");
 
 /*
  * The hidden pages, mounted at the secret address (config.JACKPOT_PATH):
@@ -104,6 +105,59 @@ module.exports = function (auth) {
       if (user == null) return res.status(401).json({ error: "Not logged in." });
       res.json({ approved: access.approved(user), requested: user.casinoRequestedAt != null, startCoins: access.startCoins(await access.firstApproval()).coins });
     }),
+  );
+
+  /* ---------- Moderators (game/moderators.js): their panel on the casino pages ---------- */
+
+  // {mod (null: no moderator), rainLeft, mutes, muteMax, log}
+  router.get(
+    "/mod",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => res.json(await moderators.panel(req.username))),
+  );
+
+  const modResult = (res, result) => (result.error ? res.status(400).json(result) : res.json(result));
+  // (a money rain in the world the moderator plays in right now - test mode: no)
+  const modWorld = (username) => (seasons.inSeasonWorld(username) ? "season" : "normal");
+  router.post(
+    "/mod/rain/preview",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => modResult(res, await moderators.rainPreview(req.username, req.body || {}, modWorld(req.username)))),
+  );
+  router.post(
+    "/mod/rain",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      if (testMode.active(req.username)) return res.status(400).json({ error: testMode.MESSAGE });
+      modResult(res, await moderators.rain(req.username, req.body || {}, modWorld(req.username)));
+    }),
+  );
+  router.post(
+    "/mod/chat/delete",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => modResult(res, await moderators.deleteMessage(req.username, (req.body || {}).id))),
+  );
+  router.post(
+    "/mod/chat/mute",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => modResult(res, await moderators.mute(req.username, (req.body || {}).username, (req.body || {}).minutes))),
+  );
+  router.post(
+    "/mod/chat/unmute",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => modResult(res, await moderators.unmute(req.username, (req.body || {}).username))),
+  );
+  router.post(
+    "/mod/announce",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => modResult(res, await moderators.announce(req.username, (req.body || {}).text))),
   );
 
   /* ---------- Gifts: coins for another player (a click on a name in the chat) ---------- */

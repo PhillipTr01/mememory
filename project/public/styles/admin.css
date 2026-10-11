@@ -4240,3 +4240,84 @@ a.ad-case-row:hover {
 .ad-rain-remove:hover {
   color: var(--mm-danger);
 }
+
+/* ---------- A moderator (player page) ---------- */
+.ad-mod-card .ad-card-head {
+  justify-content: space-between;
+}
+
+.ad-mod-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 0.4rem;
+}
+
+.ad-mod-perms,
+.ad-mod-limits {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: opacity 0.2s ease;
+}
+
+.ad-mod-perms.off,
+.ad-mod-limits.off {
+  opacity: 0.45;
+}
+
+.ad-mod-perm {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+  cursor: pointer;
+}
+
+.ad-mod-perm input {
+  margin-top: 0.2rem;
+  accent-color: var(--mm-accent);
+}
+
+.ad-mod-perm-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.ad-mod-perm-text small {
+  color: var(--mm-muted);
+}
+
+.ad-mod-foot {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.ad-mod-log {
+  margin-top: 1rem;
+}
+
+.ad-mod-log-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.ad-mod-log-text {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 700px) {
+  .ad-mod-body {
+    grid-template-columns: 1fr;
+  }
+}

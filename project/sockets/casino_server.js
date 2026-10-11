@@ -97,6 +97,13 @@ module.exports = function (io) {
     names(SEASON).forEach((username) => worlds.services(worlds.SEASON).coins.notify(username));
   });
 
+  // The admin changed a moderator's rights: their open pages load them again (the 🛡️ button, the chat tools)
+  require("../game/moderators").changes.on("change", (username) => {
+    for (const socket of socketsOf(io, username)) socket.emit("modChanged");
+    // (everybody: the 🛡️ in the chat)
+    for (const name of GAMES) io.of(name).emit("casinoOnline", require("../game/casino_chat").online());
+  });
+
   // A game turned off (admin panel): its open pages go to another game
   settings.changes.on("change", (values) => {
     for (const game of games.GAMES) {

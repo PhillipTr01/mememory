@@ -64,11 +64,20 @@ function check(input, now = Date.now()) {
   if (!Number.isFinite(at)) return { error: "When?" };
   if (at < now - 60 * 1000) return { error: "The time has to be in the future." };
   const note = typeof input.note === "string" ? input.note.trim().slice(0, 80) : "";
-  return { rain: { at: at, amount: amount, target: target, percent: percent, below: below, world: world, repeat: repeat, note: note } };
+  // A moderator's rain (game/moderators.js): who made it, the players it goes to (picked when it was made)
+  const by = typeof input.by === "string" ? input.by : null;
+  const names = Array.isArray(input.names) ? input.names.filter((name) => typeof name === "string") : null;
+  return { rain: { at: at, amount: amount, target: target, percent: percent, below: below, world: world, repeat: repeat, note: note, ...(by ? { by: by } : {}), ...(names ? { names: names } : {}) } };
 }
 
 // The players a rain would go to now: [username]
 async function targets(rain) {
+  // (picked already - a moderator's rain: exactly these, if they are still in)
+  if (Array.isArray(rain.names)) {
+    const users = await User.find({ username: { $in: rain.names }, casinoApproved: true }).select("username").lean();
+    const ok = (name) => rain.world !== "season" || require("./seasons").joined(name) === true;
+    return users.map((user) => user.username).filter(ok).sort((a, b) => a.localeCompare(b));
+  }
   const season = rain.world === "season" ? require("./seasons").running() : null;
   if (rain.world === "season" && !season) return [];
   const wallet = coins.wallet(rain.world === "season" ? "/season" : "");

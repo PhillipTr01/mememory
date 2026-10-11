@@ -161,6 +161,18 @@ function addChatMessage(message, live) {
     element.className = "sys-msg " + (message.icon || "info");
     element.append(createIcon(SYSTEM_ICONS[message.icon] || SYSTEM_ICONS.info), document.createTextNode(message.text));
     lastMessage = null;
+  } else if (message.type == "announce") {
+    // 📣 A moderator's announcement: for everybody, highlighted
+    element = document.createElement("div");
+    element.className = "msg-announce";
+    var head = document.createElement("div");
+    head.className = "msg-announce-head";
+    head.append(document.createTextNode("📣 Announcement"), Object.assign(document.createElement("span"), { className: "msg-announce-by", innerText: "🛡️ " + message.name }));
+    var text = document.createElement("div");
+    text.className = "msg-announce-text";
+    text.innerText = message.text;
+    element.append(head, text);
+    lastMessage = null;
   } else {
     var own = message.name == chatUsername();
     // Messages of the same person within 2 minutes are grouped
@@ -185,6 +197,7 @@ function addChatMessage(message, live) {
     // Plays in the season world right now: the season's icon next to the name (casino_wallet.js keeps it up to date)
     name.dataset.name = message.name;
     if (window.casinoSeasonNames && window.casinoSeasonNames.has(message.name)) name.classList.add("in-season");
+    if (window.casinoModNames && window.casinoModNames.has(message.name)) name.classList.add("is-mod");
     if (message.spectator) name.appendChild(createIcon("bi-eye ms-1", "Spectator"));
     // Casino pages: a click on somebody else's picture - coins for them
     if (!own && typeof window.chatNameClick == "function") {
@@ -232,6 +245,12 @@ function addChatMessage(message, live) {
     lastMessage = message;
   }
 
+  // Casino pages, a moderator: delete / mute on the message (casino_mod.js - also for the ones already there)
+  if (message.id != null && message.type != "system") {
+    element.dataset.msgId = message.id;
+    element.dataset.msgName = message.name;
+    if (typeof window.chatModTools == "function") window.chatModTools(element);
+  }
   chat.appendChild(element);
 
   // Only scroll down if the user didn't scroll up to read older messages

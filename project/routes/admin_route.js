@@ -389,6 +389,31 @@ module.exports = function () {
     }),
   );
 
+  /* ---------- Moderators (game/moderators.js) ---------- */
+
+  const moderators = require("../game/moderators");
+  // Every moderator, what they did (the last actions), the perms there are
+  router.get(
+    "/api/mods",
+    admin,
+    asyncHandler(async (req, res) => res.json({ mods: await moderators.list(), log: (await moderators.history()).slice(0, 100), perms: moderators.PERM_NAMES, defaults: moderators.DEFAULTS })),
+  );
+  // {on, perms: {rain, chat, announce}, rainMax, rainWeekly}
+  router.post(
+    "/api/players/:name/mod",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await moderators.set(req.params.name, req.body || {});
+      if (result.error) return res.status(400).json(result);
+      res.json({ ...result, log: (await moderators.history(req.params.name)).slice(0, 30) });
+    }),
+  );
+  router.get(
+    "/api/players/:name/mod",
+    admin,
+    asyncHandler(async (req, res) => res.json({ mod: await moderators.get(req.params.name), log: (await moderators.history(req.params.name)).slice(0, 30), perms: moderators.PERM_NAMES, defaults: moderators.DEFAULTS })),
+  );
+
   /* ---------- Chat of the casino ---------- */
 
   // The messages (oldest first), the banned players, who is online
