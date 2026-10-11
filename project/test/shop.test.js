@@ -154,7 +154,7 @@ test("shop: backgrounds - bought and worn like the rest, one of each kind (a rew
   assert.ok(!(await shop.give({ username: "vic", items: ["nebula", "gold"] })).error);
   assert.strictEqual((await shop.wear("vic", "background", "nebula")).background, "nebula");
   assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity != "exclusive").length, 20);
-  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity == "exclusive").length, 5);
+  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity == "exclusive").length, 6, "with the Jade Dragon set");
 });
 
 test("season prizes are like rewards: a prize of your own, coins and items - given to the places at the end", async () => {
@@ -199,4 +199,12 @@ test("season prizes are like rewards: a prize of your own, coins and items - giv
   );
   assert.ok(h.coinLogs.some((row) => row.username === "vic" && row.reason === "prize" && /€25 voucher/.test(row.note)));
   seasons.reset();
+});
+
+test("shop: the Jade Dragon set - a frame, an animation and a background that belong together", () => {
+  const set = shop.ITEMS.filter((item) => item.set === "dragon");
+  assert.deepStrictEqual(set.map((item) => [item.id, item.kind]), [["jadedragon", "frame"], ["jadewyrm", "effect"], ["hoard", "background"]]);
+  assert.ok(set.every((item) => item.rarity === "exclusive"), "given, not sold");
+  const css = require("fs").readFileSync(require("path").join(__dirname, "../public/styles/looks.css"), "utf8");
+  for (const id of ["look-frame-jadedragon", "look-fx-jadewyrm", "look-bg-hoard"]) assert.ok(css.includes("." + id), id);
 });
