@@ -49,8 +49,15 @@ test("seasons: a world of its own - at the start everybody may join (the budget,
   assert.strictEqual(made.season.status, "planned");
   assert.deepStrictEqual(made.season.prizes.map((p) => p.place), [1, 2], "sorted by place");
   assert.deepStrictEqual(made.season.access, { mode: "all", names: [] }, "open for everybody");
-  // Never two at the same time
-  assert.match((await seasons.create({ name: "Overlap", icon: "🌊", start: start + 1000, end: end + 1000, budget: 1, every: 0 })).error, /overlaps/);
+  // At most two at the same time
+  const second = await seasons.create({ name: "Overlap", icon: "🌊", start: start + 1000, end: end + 1000, budget: 1, every: 0 });
+  assert.strictEqual(second.season.status, "planned");
+  assert.match((await seasons.create({ name: "Third", icon: "🌙", start: end - 1000, end: end + 5000, budget: 1, every: 0 })).error, /At most 2 seasons .*"Season 1" and "Overlap"/);
+  assert.ok((await seasons.create({ name: "After", icon: "🌙", start: end + 1000, end: end + 5000, budget: 1, every: 0 })).season, "after the first one: two again");
+  const third = seasons.list().find((s) => s.name === "After");
+  assert.match((await seasons.update(third.id, { name: "After", icon: "🌙", start: end - 1000, end: end + 5000, budget: 1, every: 0 })).error, /At most 2/, "moved into the other two");
+  await seasons.remove(second.season.id);
+  await seasons.remove(third.id);
 
   h.setCoins("anna", 1000);
   h.setCoins("ben", 2000);
@@ -96,7 +103,7 @@ test("seasons: a world of its own - at the start everybody may join (the budget,
   // The switch: back to the normal casino and again into the season
   assert.deepStrictEqual(await seasons.switchWorld("anna", "normal"), { world: "normal" });
   assert.ok(!seasons.inSeasonWorld("anna"));
-  assert.deepStrictEqual(await seasons.switchWorld("anna", "season"), { world: "season" });
+  assert.deepStrictEqual(await seasons.switchWorld("anna", "season"), { world: "season", season: made.season.id });
   await h.wait(10);
   assert.deepStrictEqual((await leaderboard.view("anna", start + 1700)).rows.map((r) => [r.username, r.coins]), [["cleo", 50000], ["anna", 50000], ["ben", 50000]], "on the season's board right away (the same coins: more wagered first)");
   // The season's coin history has its era - the normal one stays apart

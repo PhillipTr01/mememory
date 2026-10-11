@@ -457,22 +457,31 @@ module.exports = function () {
 
   /* ---------- Settings ---------- */
 
-  router.get("/api/settings", admin, (req, res) => res.json({ settings: settings.list() }));
+  // ?season=<id>: with that season's own limits (seasonValue) - seasons: the ones that can have own limits (not over)
+  const settingsSeasons = () => {
+    const counts = settings.seasonCounts();
+    return seasons
+      .list()
+      .filter((season) => season.status !== "ended")
+      .map((season) => ({ id: season.id, name: season.name, icon: season.icon, status: season.status, start: season.start, own: counts[season.id] || 0 }));
+  };
+  router.get("/api/settings", admin, (req, res) => res.json({ settings: settings.list(req.query.season != null && req.query.season !== "" ? Number(req.query.season) : null), seasons: settingsSeasons() }));
 
-  // {values: {KEY: number}}, {season: {KEY: number | null}} (the season world's own limits) or {defaults: true[, season: true]}
+  // {values: {KEY: number}}, {seasonId, season: {KEY: number | null}} (a season's own limits) or {defaults: true[, seasonId]}
   router.post(
     "/api/settings",
     admin,
     asyncHandler(async (req, res) => {
       const body = req.body || {};
+      const seasonId = body.seasonId != null ? Number(body.seasonId) : null;
       const result =
         body.defaults === true
-          ? await settings.resetToDefaults({ season: body.season === true })
+          ? await settings.resetToDefaults(seasonId != null ? { season: seasonId } : {})
           : body.season != null
-            ? await settings.updateSeason(body.season)
+            ? await settings.updateSeason(seasonId, body.season)
             : await settings.update(body.values);
       if (result.error) return res.status(400).json(result);
-      res.json(result);
+      res.json({ ...result, seasons: settingsSeasons() });
     }),
   );
 

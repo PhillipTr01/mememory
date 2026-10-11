@@ -5,9 +5,10 @@ const CoinLog = require("../models/CoinLog");
 const coins = require("./coins");
 const config = require("./config");
 const days = require("./days");
-const inPlay = require("./in_play").season;
-const casinoLock = require("./casino_lock").season;
+const inPlays = require("./in_play");
+const casinoLocks = require("./casino_lock");
 const persist = require("./persist");
+const slots = require("./season_slots");
 const { place } = require("./places");
 
 /*
@@ -23,7 +24,10 @@ const { place } = require("./places");
  * bonuses missed since the start) and switches to the season world. A
  * player who joined can switch between the worlds at any time.
  *
- * Only one season at a time. A season can be open for everybody (default),
+ * Two seasons can run at the same time (e.g. one for everybody, one for a
+ * whitelist): a season gets a slot when it starts (game/season_slots.js) - a
+ * world, a wallet, games and a leaderboard of its own. A player can be in
+ * both and switches between the worlds. A season can be open for everybody (default),
  * only for the players on its whitelist - or for everybody but the ones on
  * its banlist: who can't play in it doesn't see it.
  *
@@ -41,8 +45,8 @@ const { place } = require("./places");
  * A planned season can be highlighted: the pill at the top shows when it
  * starts (and everything about it on a click).
  *
- * changes: "closing" (info, again when the countdown starts), "started" (season), "ended" (season),
- * "joined" (username), "world" (username, world: "/season" or "")
+ * changes: "closing" (info - or null with the slot key - again when the countdown starts), "started" (season),
+ * "ended" (season), "joined" (username, season), "world" (username, world: "/season", "/season2" or "")
  */
 const KEY = "seasons";
 // The coin of a season that has none of its own (the 🪙 is the money outside seasons)
@@ -51,8 +55,10 @@ const BACKUP = "seasonGames:"; // + id: the games from before the season (old se
 // Who may play in a season: everybody - only the whitelist - everybody but the banlist
 const ACCESS = ["all", "whitelist", "banlist"];
 const SEASON_WORLD = "/season";
-// The leaderboard of the running season (game/leaderboard.js keeps it there)
+// The leaderboard of the season in the first slot (game/leaderboard.js keeps it there - the second: slot.board)
 const BOARD_KEY = "leaderboard:season";
+// At most this many seasons at the same time (one per slot)
+const MAX_AT_ONCE = slots.SLOTS.length;
 // How often the leaderboard of a season is updated (minutes; 0: all the time, 1440: once a day at midnight)
 const INTERVALS = [0, 5, 15, 60, 360, 1440];
 const MAX_PRIZES = 20;
@@ -61,7 +67,9 @@ const TICK = 10 * 1000;
 const changes = new EventEmitter();
 changes.setMaxListeners(0);
 
-let state = { seasons: [], base: null, next: 1 };
+// slots: per slot key {base (the coins of its season, see coins.setBase), closing (the countdown before its season starts / ends)}
+const emptyState = () => ({ seasons: [], next: 1, slots: {} });
+let state = emptyState();
 let loaded = false;
 let timer = null;
 
@@ -96,7 +104,10 @@ function publicSeason(season) {
     wagerX: wagerXOf(season),
     highlight: season.highlight === true,
     access: accessOf(season),
-    status: state.closing && state.closing.id === season.id && closingKind() === "start" ? "starting" : status(season),
+    status: closingOf(season) && closingOf(season).kind === "start" ? "starting" : status(season),
+    // (the slot it runs in: its world - null: not started / over)
+    slot: season.started && !season.ended && slotOf(season) ? slotOf(season).key : null,
+    world: season.started && !season.ended && slotOf(season) ? slotOf(season).world : null,
     endedAt: season.endedAt || null,
     players: season.final ? season.final.rows.length : Object.keys(season.joined || {}).length,
     winner: season.final && season.final.rows.length && season.final.rows[0].rank === 1 ? winnerOf(season.final.rows[0]) : null,
@@ -146,7 +157,42 @@ function list() {
 }
 
 const byId = (id) => state.seasons.find((season) => season.id === Number(id));
-const running = () => state.seasons.find((season) => season.started && !season.ended) || null;
+const isRunning = (season) => !!(season && season.started && !season.ended);
+
+// The slot of a season (game/season_slots.js) - null: it has none (planned, not closing yet)
+const slotOf = (season) => (season ? slots.of(season.slot) : null);
+// The state of a slot: {base, closing}
+function slotState(key) {
+  state.slots = state.slots || {};
+  return (state.slots[key] = state.slots[key] || { base: null, closing: null });
+}
+const lockOf = (season) => casinoLocks[slotOf(season) ? slotOf(season).key : "season"];
+const inPlayOf = (season) => inPlays[slotOf(season) ? slotOf(season).key : "season"];
+const walletOf = (season) => coins.wallet(slotOf(season) ? slotOf(season).key : "season");
+const fieldsOf = (season) => (slotOf(season) || slots.SLOTS[0]).fields;
+// The leaderboard of a running season (game/leaderboard.js)
+const boardKey = (season) => (slotOf(season) || slots.SLOTS[0]).board;
+
+// Every running season (by slot)
+function runningAll() {
+  return slots.KEYS.map((key) => runningIn(key)).filter(Boolean);
+}
+
+function runningIn(key) {
+  return state.seasons.find((season) => isRunning(season) && season.slot === key) || null;
+}
+
+// The running season of a slot ("season", "season2" - or a world "/season2", or a season id) -
+// nothing given: the first running one
+function running(which) {
+  if (which == null) return runningAll()[0] || null;
+  if (typeof which === "number" || /^\d+$/.test(String(which))) {
+    const season = byId(which);
+    return isRunning(season) ? season : null;
+  }
+  const slot = slots.of(which);
+  return slot ? runningIn(slot.key) : null;
+}
 
 // The last season that is over (for the winner page)
 function lastEnded() {
@@ -161,15 +207,40 @@ async function save() {
 async function load() {
   const row = await Setting.findOne({ key: KEY }).lean();
   try {
-    if (row && typeof row.value === "string") state = { seasons: [], base: null, next: 1, ...JSON.parse(row.value) };
+    if (row && typeof row.value === "string") state = { ...emptyState(), ...JSON.parse(row.value) };
   } catch (error) {
     console.error("[seasons] Could not read the seasons:", error);
   }
+  toSlots();
   await migrate();
-  coins.setBase(state.base);
-  // (the server stopped while the season world was closing for the end: closed again)
-  if (state.closing && closingKind() === "end") casinoLock.lock("end");
+  for (const slot of slots.SLOTS) {
+    const own = slotState(slot.key);
+    coins.setBase(own.base, slot.key);
+    const season = runningIn(slot.key);
+    slots.setCurrent(slot.key, season ? season.id : null);
+    // (the server stopped while the season world was closing for the end: closed again)
+    if (own.closing && own.closing.kind === "end") casinoLocks[slot.key].lock("end");
+  }
+  // (the limits of seasons from before there were two: one set for every season - now every season has its own)
+  await require("./settings").adoptSeasonLimits(state.seasons.filter((season) => !season.ended).map((season) => season.id));
   loaded = true;
+}
+
+// From before there were two seasons at once: the one base / countdown is the first slot's
+function toSlots() {
+  state.slots = state.slots || {};
+  if ("base" in state || "closing" in state) {
+    const first = slotState(slots.SLOTS[0].key);
+    if (state.base) first.base = state.base;
+    if (state.closing) first.closing = { kind: "start", ...state.closing };
+    const closing = state.closing && byId(state.closing.id);
+    if (closing && !closing.slot) closing.slot = slots.SLOTS[0].key;
+    delete state.base;
+    delete state.closing;
+  }
+  for (const season of state.seasons) {
+    if (isRunning(season) && !season.slot) season.slot = slots.SLOTS[0].key;
+  }
 }
 
 /*
@@ -180,9 +251,10 @@ async function load() {
  * season world.
  */
 async function migrate() {
-  const season = running();
+  const season = running("season");
   if (season == null || season.world === true || season.saved == null) return;
-  const era = state.base && state.base.reset;
+  const base = slotState("season").base;
+  const era = base && base.reset;
   const saved = season.saved || {};
   const normalStart = season.baseBefore ? season.baseBefore.start : config.START_COINS;
   const users = await User.find({ casinoApproved: true }).select("username coins coinReset coinBonusAt").lean();
@@ -217,7 +289,7 @@ async function migrate() {
   season.world = true;
   delete season.saved;
   delete season.baseBefore;
-  if (state.base) state.base.active = true;
+  if (base) base.active = true;
   await save();
   console.log(`[seasons] "${season.name}" moved to the season world (${users.length} players).`);
 }
@@ -232,51 +304,87 @@ function closeWaitOf(season) {
   return Number.isInteger(season.closeWait) ? season.closeWait * 1000 : config.SEASON_CLOSE_WAIT;
 }
 
-// What the casino closes for: "start" (a season starts) or "end" (the running one ends)
-function closingKind() {
-  return state.closing ? state.closing.kind || "start" : null;
+// The countdown of a season (before it starts or ends) - null: none
+function closingOf(season) {
+  const slot = slotOf(season);
+  const closing = slot ? slotState(slot.key).closing : null;
+  return closing && closing.id === season.id ? closing : null;
 }
 
-// The casino closes for a season: {id, name, icon, kind, startsIn (ms until it starts / ends, null: the games are still finishing)}
-function closingInfo(now = Date.now()) {
-  const closing = state.closing;
+// What a slot closes for: "start" (its season starts) or "end" (its season ends) - nothing given: the first countdown
+function closingKind(key) {
+  const closing = key ? slotState(slots.of(key) ? slots.of(key).key : key).closing : closings()[0];
+  return closing ? closing.kind || "start" : null;
+}
+
+// Every countdown now (one per slot at most)
+function closings() {
+  return slots.KEYS.map((key) => slotState(key).closing).filter(Boolean);
+}
+
+// The countdown of a season: {id, name, icon, slot, kind, startsIn (ms until it starts / ends, null: the games are
+// still finishing)} - nothing given: the first one (null: none)
+function closingInfo(now = Date.now(), key = null) {
+  const closing = key ? slotState(slots.of(key) ? slots.of(key).key : key).closing : closings()[0];
   const season = closing && byId(closing.id);
   if (!season) return null;
-  return { id: season.id, name: season.name, icon: season.icon, color: season.color || null, kind: closingKind(), startsIn: closing.startsAt == null ? null : Math.max(0, closing.startsAt - now) };
+  return { id: season.id, name: season.name, icon: season.icon, color: season.color || null, slot: season.slot || null, world: slotOf(season) ? slotOf(season).world : null, kind: closing.kind || "start", startsIn: closing.startsAt == null ? null : Math.max(0, closing.startsAt - now) };
 }
 
-// The casino closes for the start or the end of a season: true when it is time (every game was
-// quiet - or waited long enough - and then SEASON_CLOSE_WAIT); the casino opens again after it
+// Every countdown for the pages (closingInfo of each)
+function closingInfos(now = Date.now()) {
+  return slots.KEYS.map((key) => closingInfo(now, key)).filter(Boolean);
+}
+
+// A free slot for a season that starts: none of its seasons runs, no other season counts down in it
+function freeSlot(season) {
+  if (season.slot && !runningIn(season.slot)) {
+    const closing = slotState(season.slot).closing;
+    if (!closing || closing.id === season.id) return season.slot;
+  }
+  const free = slots.KEYS.find((key) => !runningIn(key) && !slotState(key).closing);
+  return free || null;
+}
+
+// The world of a season closes for its start or its end: true when it is time (every game was
+// quiet - or waited long enough - and then SEASON_CLOSE_WAIT); the world opens again after it
 async function closeFor(season, kind, now) {
-  if (!state.closing || state.closing.id !== season.id || closingKind() !== kind) {
-    // The start: only the countdown (the normal casino goes on) - the end: the season world closes first
-    state.closing = { id: season.id, kind: kind, since: now, startsAt: kind === "start" ? now + closeWaitOf(season) : null };
-    if (kind === "end") casinoLock.lock("end");
+  let closing = closingOf(season);
+  if (!closing || closing.kind !== kind) {
+    // The start: the season gets its slot (none free: it waits) - only the countdown, the casino goes on
+    if (kind === "start") {
+      const slot = freeSlot(season);
+      if (!slot) return false;
+      season.slot = slot;
+    }
+    // The end: the season world closes first
+    closing = slotState(season.slot).closing = { id: season.id, kind: kind, since: now, startsAt: kind === "start" ? now + closeWaitOf(season) : null };
+    if (kind === "end") lockOf(season).lock("end");
     await save();
-    changes.emit("closing", closingInfo(now));
+    changes.emit("closing", closingInfo(now, season.slot), season.slot);
     if (kind === "start") soon(closeWaitOf(season) + 100);
   }
   // Every game of the season world quiet (or waited long enough): the countdown
-  if (state.closing.startsAt == null && (casinoLock.busyGames().length === 0 || now - state.closing.since >= config.SEASON_CLOSE_MAX)) {
-    state.closing.startsAt = now + closeWaitOf(season);
+  if (closing.startsAt == null && (lockOf(season).busyGames().length === 0 || now - closing.since >= config.SEASON_CLOSE_MAX)) {
+    closing.startsAt = now + closeWaitOf(season);
     await save();
-    changes.emit("closing", closingInfo(now));
+    changes.emit("closing", closingInfo(now, season.slot), season.slot);
     soon(closeWaitOf(season) + 100);
   }
-  if (state.closing.startsAt != null && now >= state.closing.startsAt) {
-    state.closing = null;
+  if (closing.startsAt != null && now >= closing.startsAt) {
+    slotState(season.slot).closing = null;
     return true;
   }
-  if (state.closing.startsAt == null) soon(2000);
+  if (closing.startsAt == null) soon(2000);
   return false;
 }
 
-// The casino was closing for something that is off now (the end moved later): open again
-async function stopClosing() {
-  state.closing = null;
-  casinoLock.unlock("end");
+// A season's world was closing for something that is off now (the end moved later): open again
+async function stopClosing(season) {
+  slotState(season.slot).closing = null;
+  lockOf(season).unlock("end");
   await save();
-  changes.emit("closing", null);
+  changes.emit("closing", null, season.slot);
 }
 
 // While closing: look again soon (not only every TICK)
@@ -354,10 +462,19 @@ function check(input, current) {
   } else if (end <= Date.now()) {
     return { error: "The end has to be in the future." };
   }
-  // Never two seasons at the same time
-  const other = state.seasons.find((season) => season !== current && !season.ended && season.start < end && start < season.end);
-  if (other) return { error: `It overlaps with "${other.name}".` };
+  // At most two seasons at the same time (one per slot): never a moment with three
+  const others = state.seasons.filter((season) => season !== current && !season.ended && season.start < end && start < season.end);
+  const crowded = atOnce(others, start, end);
+  if (crowded) return { error: `At most ${MAX_AT_ONCE} seasons at the same time - it overlaps with ${crowded.map((season) => `"${season.name}"`).join(" and ")}.` };
   return { season: { name: name, icon: icon, coinIcon: coinIcon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, chanceDelay: chanceDelay, closeWait: closeWait, color: color, every: every, prizesOn: prizesOn, prizes: clean, access: { mode: accessMode, names: accessNames }, highlight: highlight, wagerX: wagerX } };
+}
+
+// Seasons (all overlapping start - end) that run together with a new one somewhere in start - end: MAX_AT_ONCE of
+// them at one moment (with the new one: too many) - null: fine. (Time spans: some of them overlap at one moment
+// when the latest start is before the earliest end)
+function atOnce(others, start, end) {
+  const groups = (list, size) => (size === 0 ? [[]] : list.flatMap((season, i) => groups(list.slice(i + 1), size - 1).map((rest) => [season, ...rest])));
+  return groups(others, MAX_AT_ONCE).find((group) => Math.max(start, ...group.map((s) => s.start)) < Math.min(end, ...group.map((s) => s.end))) || null;
 }
 
 async function create(input) {
@@ -378,9 +495,10 @@ async function update(id, input) {
   if (result.error) return result;
   Object.assign(season, result.season);
   // The running season: its daily bonus counts right away
-  if (status(season) === "running" && state.base) {
-    state.base.bonus = season.dailyBonus;
-    coins.setBase(state.base);
+  const base = status(season) === "running" && slotOf(season) ? slotState(season.slot).base : null;
+  if (base) {
+    base.bonus = season.dailyBonus;
+    coins.setBase(base, season.slot);
   }
   await save();
   await tick();
@@ -392,44 +510,55 @@ async function remove(id) {
   if (season == null) return { error: "No such season." };
   if (status(season) === "running") return { error: "The season runs - end it first." };
   state.seasons.splice(state.seasons.indexOf(season), 1);
-  if (state.closing && state.closing.id === season.id) {
-    state.closing = null;
-    casinoLock.unlock();
-    changes.emit("closing", null);
+  if (closingOf(season)) {
+    slotState(season.slot).closing = null;
+    lockOf(season).unlock("end");
+    changes.emit("closing", null, season.slot);
   }
+  await require("./settings").dropSeasonLimits(season.id);
   await save();
   return { ok: true };
 }
 
 /* ---------- Start and end ---------- */
 
-// The season world opens: its games start anew, everybody may join (the budget comes with joining)
+// The season world of its slot opens: its games start anew, everybody may join (the budget comes with joining)
 async function startSeason(season, now) {
+  const slot = slotOf(season);
   season.started = true;
   season.startedAt = now;
   season.joined = {};
   season.here = {};
   season.world = true;
-  state.base = { reset: "season-" + season.id, start: 0, budget: season.budget, join: true, since: now, active: true, bonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : null };
-  coins.setBase(state.base);
+  const base = { reset: "season-" + season.id, start: 0, budget: season.budget, join: true, since: now, active: true, bonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : null };
+  slotState(slot.key).base = base;
+  coins.setBase(base, slot.key);
+  slots.setCurrent(slot.key, season.id);
   await save();
-  await persist.resetPrefix("season/");
-  await Setting.deleteMany({ key: { $in: [BOARD_KEY] } });
+  await persist.resetPrefix(slot.prefix);
+  await Setting.deleteMany({ key: { $in: [slot.board] } });
   changes.emit("started", publicSeason(season));
 }
 
-// What joining gives now: the budget and a daily bonus for every day since the start - {coins, missed}
-function joinCoins(now = Date.now()) {
-  const season = running();
-  if (season == null) return null;
-  const missed = Math.max(0, days.dayNumber(now) - days.dayNumber(season.startedAt || season.start));
-  return { coins: season.budget + missed * coins.season.dailyBonus(), missed: missed };
+// The season meant: a season, its id, a slot ("season2") / world ("/season2") - nothing: the first running one
+function seasonOf(which) {
+  if (which && typeof which === "object") return which;
+  return running(which);
 }
 
-// The player joins the season: the budget (and a daily bonus for every day missed since the start -
-// today's one they claim themselves) - and the season world. {coins, missed} or {error}
-async function join(username, now = Date.now()) {
-  const season = running();
+// What joining gives now: the budget and a daily bonus for every day since the start - {coins, missed}
+function joinCoins(now = Date.now(), which = null) {
+  const season = seasonOf(which);
+  if (season == null) return null;
+  const missed = Math.max(0, days.dayNumber(now) - days.dayNumber(season.startedAt || season.start));
+  return { coins: season.budget + missed * walletOf(season).dailyBonus(), missed: missed };
+}
+
+// The player joins a running season (which: its id or slot - nothing: the first one): the budget (and a daily
+// bonus for every day missed since the start - today's one they claim themselves) - and its world.
+// {coins, missed} or {error}
+async function join(username, now = Date.now(), which = null) {
+  const season = seasonOf(which);
   if (season == null) return { error: "No season runs." };
   if (!allowed(season, username)) return { error: "This season is closed - you're not on its list." };
   season.joined = season.joined || {};
@@ -438,43 +567,53 @@ async function join(username, now = Date.now()) {
   if (user == null || user.casinoApproved !== true) return { error: "Not in the casino." };
   if (season.joined[username]) return { error: "You are in the season already." };
   season.joined[username] = now;
+  // (in one world at a time: the other season's world is left)
+  for (const other of runningAll()) if (other.here) delete other.here[username];
   season.here = season.here || {};
   season.here[username] = true;
-  const { coins: amount, missed } = joinCoins(now);
+  const { coins: amount, missed } = joinCoins(now, season);
   await save();
-  await User.updateOne({ username: username }, { $set: { seasonCoins: amount, seasonReset: state.base.reset }, $unset: { seasonBonusAt: 1 } });
-  coins.season.log(username, amount, "season start", missed > 0 ? `${season.name}: ${season.budget.toLocaleString("en-US")} + ${missed} missed daily bonus${missed === 1 ? "" : "es"}` : season.name);
+  const f = fieldsOf(season);
+  await User.updateOne({ username: username }, { $set: { [f.coins]: amount, [f.reset]: slotState(season.slot).base.reset }, $unset: { [f.bonusAt]: 1 } });
+  walletOf(season).log(username, amount, "season start", missed > 0 ? `${season.name}: ${season.budget.toLocaleString("en-US")} + ${missed} missed daily bonus${missed === 1 ? "" : "es"}` : season.name);
   coins.notify(username);
-  changes.emit("joined", username);
-  changes.emit("world", username, SEASON_WORLD);
+  changes.emit("joined", username, publicSeason(season));
+  changes.emit("world", username, slotOf(season).world);
   return { coins: amount, missed: missed };
 }
 
-// When the player joined the running season (null: not in it, or no season)
-function joinedAt(username) {
-  const season = running();
+// When the player joined a running season (null: not in it, or no season)
+function joinedAt(username, which = null) {
+  const season = seasonOf(which);
   return season && season.joined && season.joined[username] ? season.joined[username] : null;
 }
 
-// In the running season: did the player join it? (null: no season)
-function joined(username) {
-  const season = running();
+// In a running season (which: id / slot - nothing: the first one): did the player join it? (null: no season)
+function joined(username, which = null) {
+  const season = seasonOf(which);
   if (season == null) return null;
   // (a season from before joining existed: everybody is in)
   if (season.joined == null) return allowed(season, username);
   return !!season.joined[username] && allowed(season, username);
 }
-coins.setJoinedLookup(joined);
+
+// The running seasons the player is in
+function joinedSeasons(username) {
+  return runningAll().filter((season) => joined(username, season) === true);
+}
+
+// (the wallets ask by their slot)
+coins.setJoinedLookup((username, key) => joined(username, runningIn(key || "season")) ?? null);
 // (since when the player is in it: the daily bonuses add up from that day on)
-coins.setJoinedAtLookup((username) => {
-  const season = running();
+coins.setJoinedAtLookup((username, key) => {
+  const season = runningIn(key || "season");
   if (season == null) return null;
   return (season.joined && season.joined[username]) || season.startedAt || season.start;
 });
 
 // The wager for a place of a player right now: {done, need} - read from the season's coin history
-coins.setWagerLookup(async (username) => {
-  const season = running();
+coins.setWagerLookup(async (username, key) => {
+  const season = runningIn(key || "season");
   if (season == null || !wagerXOf(season)) return null;
   const rows = await CoinLog.find({ era: "season-" + season.id, username: username, reason: { $in: [...BETS, "daily bonus"] } }).lean();
   const from = chanceStart(season, username);
@@ -483,27 +622,42 @@ coins.setWagerLookup(async (username) => {
   return { done: now.filter((row) => row.reason !== "daily bonus").reduce((sum, row) => sum - row.amount, 0), need: wagerNeed(season, bonus), bonus: bonus };
 });
 
-// Plays the player in the season world now? (joined it and switched there)
-function inSeasonWorld(username) {
-  const season = running();
-  return !!(season && season.here && season.here[username] && joined(username));
+// The season whose world the player plays in now (joined it and switched there) - null: the normal casino
+function hereIn(username) {
+  return runningAll().find((season) => season.here && season.here[username] && joined(username, season)) || null;
 }
 
-// The player switches the world: "season" (only who joined the running season) or "normal"
+// Plays the player in a season world now?
+function inSeasonWorld(username) {
+  return hereIn(username) != null;
+}
+
+// The season world the player plays in now ("/season", "/season2") - null: the normal casino
+function worldOf(username) {
+  const season = hereIn(username);
+  return season ? slotOf(season).world : null;
+}
+
+// The player switches the world: "normal" - or a running season they joined (its id, its slot "season" / "season2"
+// or its world; "season": the first one they joined)
 async function switchWorld(username, to) {
-  const season = running();
-  if (to === "season") {
+  const all = runningAll();
+  let season = null;
+  if (to !== "normal") {
+    season = to === "season" ? joinedSeasons(username)[0] || running("season") : running(to);
+    if (season == null && to !== "season" && !slots.of(to) && !/^\d+$/.test(String(to))) return { error: "Unknown world." };
     if (season == null) return { error: "No season runs." };
-    if (!joined(username)) return { error: "Join the season first." };
+    if (!joined(username, season)) return { error: "Join the season first." };
+  }
+  for (const other of all) if (other !== season && other.here) delete other.here[username];
+  if (season) {
     season.here = season.here || {};
     season.here[username] = true;
-  } else if (to === "normal") {
-    if (season && season.here) delete season.here[username];
-  } else return { error: "Unknown world." };
+  }
   await save();
-  const world = to === "season" ? SEASON_WORLD : "";
+  const world = season ? slotOf(season).world : "";
   changes.emit("world", username, world);
-  return { world: to };
+  return season ? { world: season.slot, season: season.id } : { world: "normal" };
 }
 
 // The season the pill at the top shows to a player: the running one - or a highlighted planned one
@@ -516,38 +670,44 @@ function upcoming(username, now = Date.now()) {
 
 // The final places (everybody who joined, by coins) - with the prizes; the coins of the season go to the normal wallet
 async function endSeason(season, now) {
+  const slot = slotOf(season);
   // (with the stats: the coin history of the season is gone after it)
-  const rows = await withStats(season, await standings());
+  const rows = await withStats(season, await standings(season));
   // The same coins, the same place - between them: fewer second chances, then more coins wagered
   const byName = new Map(rows.map((row) => [row.username, row]));
   season.final = { at: now, rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, wagered: byName.get(username).wagered, chanceWagered: byName.get(username).chanceWagered }), need: (username) => wagerNeed(season, byName.get(username).chanceBonus) }) };
   season.ended = true;
   season.endedAt = now;
-  const seasonEra = state.base ? state.base.reset : null;
+  const own = slotState(slot.key);
+  const seasonEra = own.base ? own.base.reset : null;
   const players = Object.keys(season.here || {});
   season.here = {};
-  state.base = null;
-  coins.setBase(null);
+  own.base = null;
+  coins.setBase(null, slot.key);
+  slots.setCurrent(slot.key, null);
   await save();
   // The coins of the season: into the normal wallet
   for (const row of rows) {
     if (row.coins > 0) await coins.add(row.username, row.coins, { reason: "season payout", note: season.name });
   }
   await givePrizes(season, season.final.rows);
-  await User.updateMany({ seasonReset: seasonEra }, { $set: { seasonCoins: 0 } });
+  await User.updateMany({ [slot.fields.reset]: seasonEra }, { $set: { [slot.fields.coins]: 0 } });
   // The season world: empty again (its games, its history)
-  await persist.resetPrefix("season/");
+  await persist.resetPrefix(slot.prefix);
   if (seasonEra) await CoinLog.deleteMany({ era: seasonEra });
-  await Setting.deleteMany({ key: { $in: [BOARD_KEY] } });
+  await Setting.deleteMany({ key: { $in: [slot.board] } });
   changes.emit("ended", publicSeason(season));
   for (const username of players) changes.emit("world", username, "");
   for (const row of rows) coins.notify(row.username);
 }
 
-// Everybody in the season (who joined) by the season's coins: [{rank, username, coins}]
-async function standings() {
-  const users = await User.find({ casinoApproved: true }).select("username seasonCoins seasonReset").lean();
-  return place(users.filter((user) => joined(user.username) === true).map((user) => ({ username: user.username, coins: coins.season.balanceOf(user) })));
+// Everybody in a running season (who joined) by the season's coins: [{rank, username, coins}]
+async function standings(which = null) {
+  const season = seasonOf(which);
+  if (season == null) return [];
+  const f = fieldsOf(season);
+  const users = await User.find({ casinoApproved: true }).select(["username", f.coins, f.reset].join(" ")).lean();
+  return place(users.filter((user) => joined(user.username, season) === true).map((user) => ({ username: user.username, coins: walletOf(season).balanceOf(user) })));
 }
 
 /* ---------- The leaderboard of a season for the admin panel ---------- */
@@ -632,10 +792,14 @@ async function givePrizes(season, rows) {
 // The second chances and coins wagered of the players of the running season (on the leaderboard -
 // and the order when players have the same coins): username -> {chances, wagered}. Counted
 // at most every 15 s (the coin history is read for it)
-let statsCache = { id: null, at: 0, stats: null };
+const statsCache = new Map();
 async function tieStats(season, now = Date.now()) {
-  if (statsCache.id !== season.id || now - statsCache.at > 15000) statsCache = { id: season.id, at: now, stats: await seasonStats(season) };
-  const stats = statsCache.stats;
+  let cached = statsCache.get(season.id);
+  if (!cached || now - cached.at > 15000) {
+    cached = { at: now, stats: await seasonStats(season) };
+    statsCache.set(season.id, cached);
+  }
+  const stats = cached.stats;
   const chances = season.chances || {};
   return (username) => ({ chances: (chances[username] && chances[username].used) || 0, wagered: (stats[username] && stats[username].wagered) || 0, chanceWagered: (stats[username] && stats[username].chanceWagered) || 0, chanceBonus: (stats[username] && stats[username].chanceBonus) || 0 });
 }
@@ -658,13 +822,13 @@ async function board(id) {
   const result = { status: status(season), chancesTotal: season.secondChances || 0 };
   if (season.ended) return { ...result, at: season.final ? season.final.at : null, rows: season.final ? season.final.rows : [] };
   if (!season.started) return { ...result, at: null, rows: [] };
-  const rows = await withStats(season, await standings());
+  const rows = await withStats(season, await standings(season));
   const byName = new Map(rows.map((row) => [row.username, row]));
   return { ...result, at: Date.now(), rows: place(rows, { prizes: prizesOf(season), stats: (username) => ({ chances: byName.get(username).chances, wagered: byName.get(username).wagered, chanceWagered: byName.get(username).chanceWagered }), need: (username) => wagerNeed(season, byName.get(username).chanceBonus) }) };
 }
 
 let ticking = null;
-// Starts and ends seasons when it is time (one at a time)
+// Starts and ends seasons when it is time (at most one per slot)
 function tick(now = Date.now()) {
   if (!loaded) return Promise.resolve();
   ticking = (ticking || Promise.resolve())
@@ -679,17 +843,18 @@ function tick(now = Date.now()) {
           await save();
           continue;
         }
-        // The start: first the casino closes - running rounds go to their end, nothing new
-        if (!season.started && season.start <= now && !running() && (await closeFor(season, "start", now))) {
+        // The start (a slot is free): first the countdown
+        if (!season.started && season.start <= now && (await closeFor(season, "start", now))) {
           await startSeason(season, now);
         }
-        // The end: the same
+        // The end: first its world closes - running rounds go to their end, nothing new
         if (season.started && !season.ended && season.end <= now && (await closeFor(season, "end", now))) {
           await endSeason(season, now);
-          casinoLock.unlock("end");
+          lockOf(season).unlock("end");
         }
         // Closing for the end, but the admin moved the end later: open again
-        if (state.closing && state.closing.id === season.id && closingKind() === "end" && !season.ended && season.end > now) await stopClosing();
+        const closing = closingOf(season);
+        if (closing && closing.kind === "end" && !season.ended && season.end > now) await stopClosing(season);
       }
     })
     .catch((error) => console.error("[seasons] Could not start or end a season:", error));
@@ -703,19 +868,20 @@ const SPEND_GRACE = 2000;
 
 // {can, left, total, budget, nextAt, reason}: reason "none" (no season / no second chances), "used",
 // "cooldown" (nextAt), "coins" (still has coins), "inPlay" (coins in a game)
-async function chanceStatus(username, now = Date.now()) {
-  const season = running();
+// which: the season (id / slot - nothing: the first running one)
+async function chanceStatus(username, now = Date.now(), which = null) {
+  const season = seasonOf(which);
   const total = season ? season.secondChances || 0 : 0;
   if (!season || total === 0) return { can: false, reason: "none", left: 0, total: 0 };
   const record = (season.chances && season.chances[username]) || { used: 0, lastAt: null };
   const left = Math.max(0, total - record.used);
   const result = { can: false, left: left, total: total, budget: season.budget, nextAt: null };
-  if (joined(username) === false) return { ...result, reason: "notJoined" };
+  if (joined(username, season) === false) return { ...result, reason: "notJoined" };
   if (left === 0) return { ...result, reason: "used" };
   // Still coins - or coins in a game (a bet that is not over, or one just made that the game gets now): nothing yet
   // (before the wait: no "out of coins" while a bet still runs)
-  if ((await coins.season.get(username)).coins > 0) return { ...result, reason: "coins" };
-  if (inPlay.where(username).length || now - coins.lastSpent(username) < SPEND_GRACE) return { ...result, reason: "inPlay" };
+  if ((await walletOf(season).get(username)).coins > 0) return { ...result, reason: "coins" };
+  if (inPlayOf(season).where(username).length || now - coins.lastSpent(username) < SPEND_GRACE) return { ...result, reason: "inPlay" };
   // The first one right away - after a second chance, the next one after the delay (not set: the next day)
   const delay = chanceDelayOf(season);
   const from = record.used === 0 ? null : delay == null ? days.nextDay(record.lastAt) : record.lastAt + delay * 3600 * 1000;
@@ -724,16 +890,17 @@ async function chanceStatus(username, now = Date.now()) {
 }
 
 // Takes a second chance: the budget again (no missed bonuses) - {coins, left} or {error}
-async function useChance(username, now = Date.now()) {
-  const status = await chanceStatus(username, now);
-  if (!status.can) return { error: status.reason === "cooldown" ? (chanceDelayOf(running()) == null ? "Your next second chance comes tomorrow." : "Your next second chance comes later.") : "No second chance right now.", status: status };
-  const season = running();
+async function useChance(username, now = Date.now(), which = null) {
+  const season = seasonOf(which);
+  const status = await chanceStatus(username, now, season);
+  if (!status.can) return { error: status.reason === "cooldown" ? (chanceDelayOf(season) == null ? "Your next second chance comes tomorrow." : "Your next second chance comes later.") : "No second chance right now.", status: status };
   season.chances = season.chances || {};
   const record = season.chances[username] || { used: 0, lastAt: null };
   season.chances[username] = { used: record.used + 1, lastAt: now };
   await save();
-  await User.updateOne({ username: username }, { $set: { seasonCoins: season.budget, seasonReset: state.base.reset } });
-  coins.season.log(username, season.budget, "second chance", season.name);
+  const f = fieldsOf(season);
+  await User.updateOne({ username: username }, { $set: { [f.coins]: season.budget, [f.reset]: slotState(season.slot).base.reset } });
+  walletOf(season).log(username, season.budget, "second chance", season.name);
   coins.notify(username);
   return { coins: season.budget, left: status.left - 1 };
 }
@@ -764,34 +931,40 @@ function stop() {
 async function clear() {
   const ids = state.seasons.map((season) => season.id);
   const wasRunning = running();
-  state = { seasons: [], base: null, next: 1 };
-  coins.setBase(null);
-  casinoLock.unlock("end");
-  await Setting.deleteMany({ key: { $in: [KEY, BOARD_KEY, ...ids.map((id) => BACKUP + id)] } });
+  forgetAll();
+  await Setting.deleteMany({ key: { $in: [KEY, ...slots.SLOTS.map((slot) => slot.board), ...ids.map((id) => BACKUP + id)] } });
   if (wasRunning) changes.emit("cleared");
 }
 
 // Tests: everything forgotten
 function reset() {
-  state = { seasons: [], base: null, next: 1 };
-  coins.setBase(null);
-  casinoLock.unlock("end");
+  forgetAll();
   loaded = true;
+}
+
+function forgetAll() {
+  state = emptyState();
+  statsCache.clear();
+  for (const key of slots.KEYS) {
+    coins.setBase(null, key);
+    slots.setCurrent(key, null);
+    casinoLocks[key].unlock("end");
+  }
 }
 
 // The running season's accent color for the casino pages: a <style> (or "")
 // The coin icon of the running season for the casino pages (see casino_coin.js) - nothing: the 🪙
 // (only in the season world: the normal casino keeps the 🪙 and its gold)
 function coinScript(username) {
-  const season = running();
-  if (!season || !inSeasonWorld(username)) return "";
+  const season = hereIn(username);
+  if (!season) return "";
   const icon = season.coinIcon || SEASON_COIN;
   return `<script>window.CASINO_COIN = ${JSON.stringify(icon).replace(/</g, "\\u003c")};</script>`;
 }
 
 function accentStyle(username) {
-  const season = running();
-  if (!season || !inSeasonWorld(username)) return "";
+  const season = hereIn(username);
+  if (!season) return "";
   const color = season && season.color;
   if (!color || !/^#[0-9a-f]{6}$/.test(color)) return "";
   const rgb = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
@@ -799,4 +972,4 @@ function accentStyle(username) {
   return `<style>body.jackpot-theme { --mm-accent: ${color}; --mm-accent-rgb: ${rgb.join(", ")}; --mm-accent-hover: ${hover}; }</style>`;
 }
 
-module.exports = { wagerNeed, wagerXOf, prizesOf, prizeText, tieStats, board, joinedAt, join, joined, joinCoins, allowed, accessOf, inSeasonWorld, switchWorld, upcoming, closingInfo, closingKind, chanceStatus, useChance, clear, accentStyle, coinScript, INTERVALS, ACCESS, BOARD_KEY, SEASON_WORLD, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+module.exports = { wagerNeed, wagerXOf, prizesOf, prizeText, tieStats, board, joinedAt, join, joined, joinedSeasons, joinCoins, allowed, accessOf, inSeasonWorld, hereIn, worldOf, switchWorld, upcoming, closingInfo, closingInfos, closingKind, closingOf, runningAll, slotOf, boardKey, MAX_AT_ONCE, chanceStatus, useChance, clear, accentStyle, coinScript, INTERVALS, ACCESS, BOARD_KEY, SEASON_WORLD, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };

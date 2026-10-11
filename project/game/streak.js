@@ -18,7 +18,7 @@ const WORLDS = ["normal", "season"];
 let state = { normal: clone(DEFAULTS), season: clone(DEFAULTS) };
 
 // (anything but "season" - also a number, when the functions are used in a map - is the normal casino)
-const worldOf = (world) => (world === "season" || world === "/season" ? "season" : "normal");
+const worldOf = (world) => (require("./season_slots").isSeason(world) ? "season" : "normal");
 
 function clone(value) {
   return { on: value.on, rewards: value.rewards.slice(), after: value.after, grace: value.grace };

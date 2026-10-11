@@ -239,40 +239,70 @@ test("admin: settings - start coins, daily bonus ... are changed, checked and st
   assert.deepStrictEqual([config.START_COINS, config.DAILY_BONUS, config.JACKPOT_GHOST_AFTER], [before.start, before.bonus, before.ghost]);
 });
 
-test("admin: settings - the season world's own limits (Season switch): stricter values, empty = the normal one", async () => {
+test("admin: settings - every season has its own limits (Season → the season): stricter values, empty = the normal one", async () => {
+  const seasons = require("../game/seasons");
+  const slots = require("../game/season_slots");
+  seasons.reset();
+  const start = Date.now() + 60 * 60 * 1000;
+  const one = (await seasons.create({ name: "Open", icon: "🔥", start, end: start + 86400000, budget: 1000, every: 60 })).season;
+  const two = (await seasons.create({ name: "Closed", icon: "🌊", start, end: start + 86400000, budget: 1000, every: 60, accessMode: "whitelist", accessNames: ["anna"] })).season;
   let res = await adminApi("settings");
-  const slots = res.body.settings.find((f) => f.key === "SLOTS_MAX_BET");
-  assert.deepStrictEqual([slots.season, slots.seasonValue], [true, null]);
+  const slotField = res.body.settings.find((f) => f.key === "SLOTS_MAX_BET");
+  assert.deepStrictEqual([slotField.season, slotField.seasonValue], [true, null]);
+  assert.deepStrictEqual(res.body.seasons.map((s) => s.id).sort(), [one.id, two.id].sort(), "the seasons to pick");
+  assert.strictEqual(res.body.seasons.length, 2);
   assert.strictEqual(res.body.settings.find((f) => f.key === "JACKPOT_RAKE").season, false, "the rake is the same everywhere");
 
-  res = await adminApi("settings", { season: { SLOTS_MAX_BET: 900, BET_CAP_FLOOR: 20000 } });
+  assert.strictEqual((await adminApi("settings", { season: { SLOTS_MAX_BET: 900 } })).status, 400, "which season?");
+  assert.strictEqual((await adminApi("settings", { seasonId: 999, season: { SLOTS_MAX_BET: 900 } })).status, 400, "no such season");
+  res = await adminApi("settings", { seasonId: one.id, season: { SLOTS_MAX_BET: 900, BET_CAP_FLOOR: 20000 } });
   assert.strictEqual(res.status, 200);
   assert.strictEqual(res.body.settings.find((f) => f.key === "SLOTS_MAX_BET").seasonValue, 900);
+  assert.strictEqual(res.body.seasons.find((s) => s.id === one.id).own, 2);
+  res = await adminApi(`settings?season=${two.id}`);
+  assert.strictEqual(res.body.settings.find((f) => f.key === "SLOTS_MAX_BET").seasonValue, null, "the other season: its own (none)");
+  await adminApi("settings", { seasonId: two.id, season: { SLOTS_MAX_BET: 700 } });
+
+  // The world of a slot: the limits of the season running in it
   const limits = require("../game/limits");
-  assert.strictEqual(limits.forWorld("/season").SLOTS_MAX_BET, 900);
-  assert.strictEqual(limits.forWorld("").SLOTS_MAX_BET, config.SLOTS_MAX_BET, "the normal casino keeps its own");
-  assert.strictEqual(limits.forWorld("/season").SLOTS_MIN_BET, config.SLOTS_MIN_BET, "no own value: the normal one");
+  slots.setCurrent("season", one.id);
+  slots.setCurrent("season2", two.id);
+  try {
+    assert.strictEqual(limits.forWorld("/season").SLOTS_MAX_BET, 900);
+    assert.strictEqual(limits.forWorld("/season2").SLOTS_MAX_BET, 700);
+    assert.strictEqual(limits.forWorld("").SLOTS_MAX_BET, config.SLOTS_MAX_BET, "the normal casino keeps its own");
+    assert.strictEqual(limits.forWorld("/season").SLOTS_MIN_BET, config.SLOTS_MIN_BET, "no own value: the normal one");
+    slots.setCurrent("season2", null);
+    assert.strictEqual(limits.forWorld("/season2").SLOTS_MAX_BET, config.SLOTS_MAX_BET, "no season in the slot: the normal ones");
+  } finally {
+    slots.setCurrent("season", null);
+    slots.setCurrent("season2", null);
+  }
   let stored = await require("../models/Setting").findOne({ key: "admin:settings" }).lean();
-  assert.deepStrictEqual(stored.value.SEASON_LIMITS, { SLOTS_MAX_BET: 900, BET_CAP_FLOOR: 20000 });
+  assert.deepStrictEqual(stored.value.SEASON_LIMITS, { [one.id]: { SLOTS_MAX_BET: 900, BET_CAP_FLOOR: 20000 }, [two.id]: { SLOTS_MAX_BET: 700 } });
 
   // Wrong: not a limit, min over the normal max, out of range - nothing changes
   for (const season of [{ JACKPOT_RAKE: 1 }, { SLOTS_MIN_BET: 909 }, { SLOTS_MAX_BET: 0 }, { BJ_HIGH_MIN: 9000, BJ_HIGH_MAX: 100 }]) {
-    res = await adminApi("settings", { season });
+    res = await adminApi("settings", { seasonId: one.id, season });
     assert.strictEqual(res.status, 400, JSON.stringify(season));
   }
   // A normal value that clashes with a season one (min over the season's max) is refused too
   const slotsBefore = { min: config.SLOTS_MIN_BET, max: config.SLOTS_MAX_BET };
-  assert.strictEqual((await adminApi("settings", { values: { SLOTS_MAX_BET: 2007, SLOTS_MIN_BET: 999 } })).status, 400);
+  assert.strictEqual((await adminApi("settings", { values: { SLOTS_MAX_BET: 2007, SLOTS_MIN_BET: 800 } })).status, 400);
   assert.deepStrictEqual({ min: config.SLOTS_MIN_BET, max: config.SLOTS_MAX_BET }, slotsBefore);
 
-  // Empty: the normal value again; Back to Default of the season: none left
-  res = await adminApi("settings", { season: { SLOTS_MAX_BET: null } });
+  // Empty: the normal value again; Back to Default of a season: none left for it
+  res = await adminApi("settings", { seasonId: one.id, season: { SLOTS_MAX_BET: null } });
   assert.strictEqual(res.body.settings.find((f) => f.key === "SLOTS_MAX_BET").seasonValue, null);
-  assert.deepStrictEqual(config.SEASON_LIMITS, { BET_CAP_FLOOR: 20000 });
-  await adminApi("settings", { defaults: true, season: true });
+  assert.deepStrictEqual(config.SEASON_LIMITS[one.id], { BET_CAP_FLOOR: 20000 });
+  await adminApi("settings", { defaults: true, seasonId: one.id });
+  assert.deepStrictEqual(config.SEASON_LIMITS, { [two.id]: { SLOTS_MAX_BET: 700 } });
+  // A season deleted: its limits go with it
+  await seasons.remove(two.id);
   assert.deepStrictEqual(config.SEASON_LIMITS, {});
   stored = await require("../models/Setting").findOne({ key: "admin:settings" }).lean();
   assert.strictEqual(stored.value.SEASON_LIMITS, undefined);
+  seasons.reset();
 });
 
 test("coins: the max bet by balance - all in up to the floor, above it a share of the balance (a double is never capped)", async () => {

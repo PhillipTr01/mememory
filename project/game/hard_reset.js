@@ -74,11 +74,15 @@ async function hardReset(parts) {
   // The day of the first approval (start coins + missed bonuses): with the coins
   if (has("coins")) await Setting.deleteMany({ key: "casinoFirstApproval" });
 
-  if (has("seasons")) await require("./seasons").clear();
+  if (has("seasons")) {
+    await require("./seasons").clear();
+    // (the limits of every season go with them)
+    await require("./settings").clearSeasonLimits();
+  }
   if (has("settings")) {
     const settings = require("./settings");
     await settings.resetToDefaults();
-    await settings.resetToDefaults({ season: true });
+    await settings.clearSeasonLimits();
     await require("./streak").reset();
   }
   if (has("rains")) await require("./money_rain").clearPlanned();
