@@ -1,13 +1,11 @@
 /*
- * Secret casino pages: the own coins in the bar at the top. A click opens the
- * payout: the coins come off the balance, the admin pays them out.
+ * Secret casino pages: the own coins in the bar at the top.
  * Uses the `socket` of the page (it sends "coins").
  */
 (function () {
   var button = document.getElementById("navCoins");
   var bonusButton = document.getElementById("navBonus");
   var coins = 0;
-  var payout = false; // the admin allowed payouts for this player
   var bonusAt = null; // when the next free coins can be claimed (null: now)
   var bonusAmount = 0;
   var bonusMissed = 0; // a season: days missed since the last claim (paid on top)
@@ -277,9 +275,7 @@
     }
     var before = coins;
     coins = data.coins;
-    payout = data.payout === true;
     button.hidden = false;
-    button.classList.toggle("no-payout", !payout);
     button.removeAttribute("title");
     document.getElementById("navCoinsValue").innerText = format(coins);
     // The admin's test mode: test coins (nothing is saved)
@@ -314,96 +310,6 @@
     if (text != null) element.innerText = text;
     return element;
   }
-
-  var STATUS = { open: "Waiting", paid: "Paid", rejected: "Rejected" };
-  var STATUS_HINT = { open: "The admin pays it out soon", paid: "Paid out", rejected: "The coins are back on your balance" };
-
-  async function payoutDialog() {
-    var backdrop = el("div", "mm-dialog-backdrop");
-    var dialog = el("div", "mm-dialog nav-payout");
-    dialog.setAttribute("role", "dialog");
-    dialog.setAttribute("aria-modal", "true");
-    var title = el("h2", "mm-dialog-title", "💸 Pay out coins");
-    var text = el("p", "mm-dialog-text", "At least 5,000 coins, in steps of 1,000. The coins come off your balance right away and are paid out by the admin.");
-    var balance = el("div", "nav-payout-balance", "Your coins: 🪙 " + format(coins));
-    var input = el("input", "mm-input");
-    input.type = "number";
-    input.min = 5000;
-    input.max = Math.floor(coins / 1000) * 1000;
-    input.step = 1000;
-    input.value = coins >= 5000 ? 5000 : "";
-    input.placeholder = "5,000, 6,000, ...";
-    input.setAttribute("aria-label", "Coins to pay out");
-    var error = el("p", "jp-error");
-    error.hidden = true;
-    var list = el("div", "nav-payout-list");
-    var buttons = el("div", "mm-dialog-actions");
-    var cancel = el("button", "mm-btn", "Close");
-    cancel.type = "button";
-    var ok = el("button", "mm-btn mm-btn-primary", "Pay out");
-    ok.type = "button";
-    buttons.append(cancel, ok);
-    dialog.append(title, text, balance, input, error, buttons, list);
-    backdrop.appendChild(dialog);
-    document.body.appendChild(backdrop);
-
-    var close = () => {
-      backdrop.remove();
-      document.removeEventListener("keydown", onKey);
-    };
-    var onKey = (event) => event.key == "Escape" && close();
-    document.addEventListener("keydown", onKey);
-    cancel.addEventListener("click", close);
-    backdrop.addEventListener("click", (event) => event.target == backdrop && close());
-
-    // The own last payouts (relative: next to the page, under the secret address)
-    async function loadList() {
-      try {
-        var rows = await (await fetch("withdrawals")).json();
-        list.replaceChildren(
-          ...(rows.length ? [el("div", "nav-payout-head", "Your last payouts")] : []),
-          ...rows.map((w) => {
-            var row = el("div", "nav-payout-row " + w.status);
-            var amount = el("span", "nav-payout-amount", "🪙 " + format(w.amount));
-            var badge = el("span", "nav-payout-status " + w.status, STATUS[w.status]);
-            badge.title = STATUS_HINT[w.status];
-            var date = el("span", "nav-payout-date", new Date(w.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }));
-            var side = el("div", "nav-payout-side");
-            side.append(badge, date);
-            row.append(amount, side);
-            if (w.note) row.appendChild(el("span", "nav-payout-note", "“" + w.note + "”"));
-            return row;
-          }),
-        );
-      } catch (e) {
-        // the list is only a bonus
-      }
-    }
-
-    ok.addEventListener("click", async () => {
-      var amount = Number(input.value);
-      error.hidden = true;
-      ok.disabled = true;
-      try {
-        var res = await fetch("withdraw", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount: amount }) });
-        var data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || "That didn't work.");
-        showHint("💸 " + format(amount) + " coins are on their way", "success", ok);
-        input.value = "";
-        loadList();
-      } catch (e) {
-        error.innerText = e.message;
-        error.hidden = false;
-      } finally {
-        ok.disabled = false;
-      }
-    });
-    input.focus();
-    loadList();
-  }
-
-  // Only for players with payouts: otherwise the coins are just shown
-  button.addEventListener("click", () => payout && payoutDialog());
 
   /* ---------- Who is online in the casino (in the chat head) ---------- */
 

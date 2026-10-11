@@ -90,44 +90,6 @@ test("admin: change balances, the history knows every change", async () => {
   assert.strictEqual(history[1].note, "test");
 });
 
-test("admin: payouts - a player takes coins off, the admin pays or rejects (coins back)", async () => {
-  h.setCoins("quinn", 20000);
-  const player = { cookie: `token=${tokens.quinn}` };
-  let res = await call(CASINO + "/withdraw", { ...player, json: { amount: 6000 } });
-  assert.strictEqual(res.status, 200);
-  const first = await res.json();
-  assert.strictEqual(first.status, "open");
-  assert.strictEqual(h.coinsOf("quinn"), 14000);
-
-  // Not more than the balance, at least 5k, only whole thousands
-  for (const amount of [30000, 4000, 5500, "x"]) {
-    res = await call(CASINO + "/withdraw", { ...player, json: { amount } });
-    assert.strictEqual(res.status, 400);
-  }
-  assert.strictEqual(h.coinsOf("quinn"), 14000);
-  res = await call(CASINO + "/withdraw", { ...player, json: { amount: 5000 } });
-  const second = await res.json();
-
-  // The admin sees both
-  const overview = (await adminApi("overview")).body;
-  assert.deepStrictEqual(overview.open.map((w) => [w.username, w.amount]).sort(), [["quinn", 5000], ["quinn", 6000]]);
-  assert.strictEqual(overview.openCoins, 11000);
-
-  // Paid: done; rejected: the coins go back
-  assert.strictEqual((await adminApi("withdrawals/" + first.id, { action: "paid" })).status, 200);
-  assert.strictEqual((await adminApi("withdrawals/" + first.id, { action: "reject" })).status, 400, "only once");
-  assert.strictEqual(h.coinsOf("quinn"), 9000, "both payouts are off the balance");
-  assert.strictEqual((await adminApi("withdrawals/" + second.id, { action: "reject", note: "nope" })).status, 200);
-  assert.strictEqual(h.coinsOf("quinn"), 14000, "the rejected 5000 are back");
-
-  // The player sees what happened
-  const own = await (await call(CASINO + "/withdrawals", player)).json();
-  assert.deepStrictEqual(own.map((w) => [w.amount, w.status, w.note]).sort(), [[5000, "rejected", "nope"], [6000, "paid", null]]);
-  assert.deepStrictEqual((await adminApi("withdrawals?status=open")).body, []);
-  const history = (await adminApi("history?username=quinn")).body.rows.map((row) => row.reason);
-  assert.ok(history.includes("withdrawal") && history.includes("withdrawal refund"));
-});
-
 test("admin: leaderboard, the richest first", async () => {
   h.setCoins("rosa", 900000);
   const board = (await adminApi("overview")).body.leaderboard;
@@ -474,13 +436,13 @@ test("admin: the hard reset part by part - the records go, access, purchases, se
   assert.ok((await CoinLog.countDocuments({})) > 0);
 
   const parts = (await adminApi("reset")).body.parts;
-  assert.deepStrictEqual(parts.filter((p) => p.group === "records").map((p) => p.id), ["history", "payouts", "coins", "games", "chat"]);
+  assert.deepStrictEqual(parts.filter((p) => p.group === "records").map((p) => p.id), ["history", "coins", "games", "chat"]);
   assert.strictEqual((await adminApi("reset", { confirm: "RESET", parts: [] })).status, 400, "something has to be picked");
   assert.strictEqual((await adminApi("reset", { confirm: "RESET", parts: ["nope"] })).status, 400);
 
-  const res = await adminApi("reset", { confirm: "RESET", parts: ["history", "payouts", "coins", "games", "chat"] });
+  const res = await adminApi("reset", { confirm: "RESET", parts: ["history", "coins", "games", "chat"] });
   assert.strictEqual(res.status, 200);
-  assert.deepStrictEqual(res.body.done, ["history", "payouts", "coins", "games", "chat"]);
+  assert.deepStrictEqual(res.body.done, ["history", "coins", "games", "chat"]);
   assert.strictEqual(await CoinLog.countDocuments({}), 0, "the history is gone");
   const keeper = await User.findOne({ username: "keeper" }).lean();
   assert.strictEqual(keeper.coins, 0, "the coins are gone");
@@ -495,7 +457,7 @@ test("admin: the hard reset part by part - the records go, access, purchases, se
 });
 
 // The last test: everything is gone afterwards
-test("admin: the hard reset - history, payouts, accesses, coins and seasons are gone", async () => {
+test("admin: the hard reset - history, accesses, coins and seasons are gone", async () => {
   const CoinLog = require("../models/CoinLog");
   const access = require("../game/access");
   const seasons = require("../game/seasons");
@@ -521,7 +483,7 @@ test("admin: the hard reset - history, payouts, accesses, coins and seasons are 
   assert.deepStrictEqual([seasons.list(), seasons.running()], [[], null], "no seasons anymore");
   assert.strictEqual(require("../game/coins").base().start, config.START_COINS);
   const rosa = await require("../models/User").findOne({ username: "rosa" }).lean();
-  assert.deepStrictEqual([rosa.casinoApproved, rosa.casinoApprovedAt, rosa.coins, rosa.payoutAllowed], [false, undefined, 0, false]);
+  assert.deepStrictEqual([rosa.casinoApproved, rosa.casinoApprovedAt, rosa.coins], [false, undefined, 0]);
   assert.strictEqual((await adminApi("overview")).body.players, 0);
   // A new approval: the start coins again
   const again = await access.approve("rosa");

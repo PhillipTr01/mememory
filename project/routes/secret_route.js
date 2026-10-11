@@ -2,7 +2,6 @@ const express = require("express");
 const { page } = require("../utils/pages");
 const { asyncHandler } = require("../utils/errors");
 const User = require("../models/User");
-const withdrawals = require("../game/withdrawals");
 const access = require("../game/access");
 const leaderboard = require("../game/leaderboard");
 const seasons = require("../game/seasons");
@@ -25,11 +24,11 @@ module.exports = function (auth) {
   const router = express.Router({ caseSensitive: false, strict: true });
 
   // The addresses of data (not pages) - without access: an error instead of the page to ask for it
-  const DATA = /^\/(withdraw|leaderboard\/|info\/|season|second-chance|request|maintenance|gift|shop\/|looks)/;
+  const DATA = /^\/(leaderboard\/|info\/|season|second-chance|request|maintenance|gift|shop\/|looks)/;
 
   // Only for players the admin let in - everybody else gets the page to ask for access
   const approved = asyncHandler(async (req, res, next) => {
-    const user = await User.findOne({ _id: req._id }).select("username casinoApproved payoutAllowed").lean();
+    const user = await User.findOne({ _id: req._id }).select("username casinoApproved").lean();
     if (access.approved(user)) {
       // Maintenance: only the players on the whitelist - the others get the maintenance page
       if (!maintenance.allowed(user.username)) {
@@ -37,7 +36,6 @@ module.exports = function (auth) {
         return res.status(503).json({ error: "The casino is closed for maintenance.", maintenance: maintenance.publicInfo() });
       }
       req.username = user.username;
-      req.payoutAllowed = user.payoutAllowed === true;
       return next();
     }
     // A page (any address of the casino): the page to ask for access - right there, it opens the
@@ -344,33 +342,6 @@ module.exports = function (auth) {
         // The countdown to a season (or a season world closing) - or a maintenance
         closing: closing || maintenance.closingInfo(),
       });
-    }),
-  );
-
-  /* ---------- Payouts of the logged in player ---------- */
-
-  // Takes the coins off the balance, the admin sees it in the admin panel
-  router.post(
-    "/withdraw",
-    auth,
-    approved,
-    asyncHandler(async (req, res) => {
-      const name = req.username;
-      if (!req.payoutAllowed) return res.status(403).json({ error: "Payouts aren't enabled for you." });
-      const result = await withdrawals.request(name, Number(req.body && req.body.amount));
-      if (result.error) return res.status(400).json({ error: result.error });
-      res.json(result.withdrawal);
-    }),
-  );
-
-  // The own last payouts
-  router.get(
-    "/withdrawals",
-    auth,
-    approved,
-    asyncHandler(async (req, res) => {
-      const name = req.username;
-      res.json(await withdrawals.list({ username: name }, 10));
     }),
   );
 

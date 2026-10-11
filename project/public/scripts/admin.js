@@ -1,8 +1,8 @@
-/* Admin panel: balances, payouts, leaderboard, the history of every coin change, the casino chat and the settings. */
+/* Admin panel: balances, leaderboard, the history of every coin change, the casino chat and the settings. */
 
 // The kinds of coin changes for the history filter - by game (a whole game: all of its kinds)
 var HISTORY_KINDS = [
-  ["Casino", [["start coins", "Start coins"], ["daily bonus", "Daily bonus"], ["cashback", "Cashback"], ["admin", "Admin"], ["withdrawal", "Payout"], ["withdrawal refund", "Payout refund"]]],
+  ["Casino", [["start coins", "Start coins"], ["daily bonus", "Daily bonus"], ["cashback", "Cashback"], ["admin", "Admin"]]],
   ["Seasons", [["season start", "Season start"], ["second chance", "Second chance"]]],
   ["Rewards", [["season reward", "Season reward"], ["reward", "Reward"], ["prize", "Own prize"]]],
   ["Gifts", [["gift sent", "Sent"], ["gift received", "Received"]]],
@@ -16,7 +16,6 @@ var HISTORY_KINDS = [
 ];
 
 
-var knownOpen = null; // ids of the open payouts already seen (new ones get a note)
 var knownWaiting = null; // players waiting for access at the last look
 var players = [];
 
@@ -53,7 +52,7 @@ function time(value) {
  * The lists the panel draws again with every refresh (every few seconds): only when they look different
  * now - the same again would build every row anew (avatars, animations start over: a flicker).
  */
-var CALM_LISTS = new Set(["adRequestList", "adOpenList", "adLive", "adTopList", "adActivity", "adAccessInfo", "adBoard", "adPayoutList", "adHistory", "adRtpBody", "adSeasonNow", "adSeasonList", "adChatList", "adBanList", "adOnlineList", "adRainPlanned", "adRainDone"]);
+var CALM_LISTS = new Set(["adRequestList", "adLive", "adTopList", "adActivity", "adAccessInfo", "adBoard", "adHistory", "adRtpBody", "adSeasonNow", "adSeasonList", "adChatList", "adBanList", "adOnlineList", "adRainPlanned", "adRainDone"]);
 (function () {
   var replace = Element.prototype.replaceChildren;
   Element.prototype.replaceChildren = function (...nodes) {
@@ -101,8 +100,7 @@ function fail(error) {
 
 var PAGES = {
   overview: ["Overview", "Everything at a glance - what needs you, and what is going on right now."],
-  players: ["Players", "Who may play, who wants in, their coins and payouts."],
-  payouts: ["Payouts", "Coins players took off to be paid out."],
+  players: ["Players", "Who may play, who wants in, their coins."],
   history: ["History", "Every coin change, newest first."],
   chat: ["Chat", "The chat of the casino - delete messages, ban players."],
   seasons: ["Seasons", "Plan seasons: everybody starts with the same budget, the best win."],
@@ -184,7 +182,6 @@ function showTab() {
     if (playerView != null) loadPlayerDetail();
     else loadPlayers();
   }
-  if (tab == "payouts") loadPayouts();
   if (tab == "history") loadHistory();
   if (tab == "chat") loadChat();
   if (tab == "rtp") loadRtp();
@@ -215,7 +212,7 @@ function showTab() {
 window.addEventListener("hashchange", showTab);
 
 // Keeps the open page up to date (the chat has its own timer, the settings stay as they are while editing)
-var REFRESH = { players: () => reloadPlayers(), payouts: () => loadPayouts(), history: () => loadHistory(), seasons: () => loadSeasons(true), rtp: () => loadRtp() };
+var REFRESH = { players: () => reloadPlayers(), history: () => loadHistory(), seasons: () => loadSeasons(true), rtp: () => loadRtp() };
 
 function refresh() {
   if (document.visibilityState != "visible") return;
@@ -233,54 +230,16 @@ document.addEventListener("visibilitychange", () => {
 
 /* ---------- Overview (every few seconds) ---------- */
 
-function payoutRow(w) {
-  var row = el("div", "ad-row ad-payout " + w.status);
-  var info = el("div", "ad-row-main ad-payout-info");
-  info.append(playerTag(w.username, "b"), el("span", "ad-row-meta", time(w.createdAt) + (w.note ? " · " + w.note : "")));
-  var amount = el("span", "ad-row-value", "🪙 " + formatCoins(w.amount));
-  row.append(info, amount);
-  if (w.status == "open") {
-    var paid = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Paid");
-    paid.type = "button";
-    paid.title = "The coins were paid out";
-    paid.addEventListener("click", () => handle(w, "paid"));
-    var reject = el("button", "mm-btn mm-btn-sm", "Reject");
-    reject.type = "button";
-    reject.title = "Reject - the coins go back to the player";
-    reject.addEventListener("click", () => handle(w, "reject"));
-    row.append(paid, reject);
-  } else {
-    row.appendChild(el("span", "ad-pill " + (w.status == "paid" ? "success" : "danger"), w.status));
-  }
-  return row;
-}
-
-async function handle(w, action) {
-  var note = action == "reject" ? prompt("Why? (the player gets the coins back)", "") : "";
-  if (note == null) return;
-  try {
-    await api("withdrawals/" + w.id, { action: action, note: note || undefined });
-    loadOverview();
-    if (!document.getElementById("tab-payouts").hidden) loadPayouts();
-  } catch (error) {
-    fail(error);
-  }
-}
-
 async function loadOverview() {
   try {
     var data = await api("overview");
     document.getElementById("adPlayers").innerText = formatCoins(data.players);
     document.getElementById("adCoins").innerText = "🪙 " + formatCoins(data.coins);
-    document.getElementById("adOpen").innerText = data.open.length;
-    document.getElementById("adOpenCoins").innerText = "🪙 " + formatCoins(data.openCoins);
     document.getElementById("adWaiting").innerText = data.requests.length;
     document.getElementById("adOnline").innerText = data.online.length;
     document.getElementById("adOnlineNames").innerText = data.online.length ? data.online.slice(0, 3).join(", ") + (data.online.length > 3 ? " +" + (data.online.length - 3) : "") : "nobody in the casino";
     var requests = document.getElementById("adRequestList");
     requests.replaceChildren(...(data.requests.length ? data.requests.map(requestRow) : [el("p", "ad-empty", "Nobody is waiting.")]));
-    var list = document.getElementById("adOpenList");
-    list.replaceChildren(...(data.open.length ? data.open.map(payoutRow) : [el("p", "ad-empty", "Nothing to pay out.")]));
     renderLive(data.games || {});
     document.getElementById("adTopList").replaceChildren(
       ...(data.leaderboard.length
@@ -307,19 +266,6 @@ async function loadOverview() {
         : [el("p", "ad-empty", "Nothing yet.")]),
     );
 
-    // New payouts since the last look: a note
-    var ids = data.open.map((w) => w.id);
-    if (knownOpen != null) {
-      var fresh = data.open.filter((w) => !knownOpen.includes(w.id));
-      if (fresh.length) {
-        var sum = fresh.reduce((total, w) => total + w.amount, 0);
-        casinoNotice({ icon: "💸", title: fresh.length == 1 ? "New payout" : fresh.length + " new payouts", text: (fresh.length == 1 ? fresh[0].username + " · " : "") + "🪙 " + formatCoins(sum), action: { label: "Open", run: () => (location.hash = "#payouts") }, ms: 10000, key: "payout" });
-        if (!document.getElementById("tab-payouts").hidden) loadPayouts();
-      }
-    }
-    knownOpen = ids;
-    var badge = document.getElementById("adOpenBadge");
-    badge.hidden = ids.length == 0;
     // Players who want into the casino
     if (knownWaiting != null && data.waiting > knownWaiting) {
       casinoNotice({ icon: "🔑", title: data.waiting - knownWaiting == 1 ? "A player wants in" : data.waiting - knownWaiting + " players want in", text: "Approve or decline them in Players", action: { label: "Open", run: () => (location.hash = "#players") }, ms: 10000, key: "access" });
@@ -329,14 +275,15 @@ async function loadOverview() {
     var waitingBadge = document.getElementById("adWaitingBadge");
     waitingBadge.hidden = data.waiting == 0;
     waitingBadge.innerText = data.waiting;
-    // Something to do on the overview (requests, payouts): a count on its tab
+    // Something to do on the overview (requests): a count on its tab
     var overviewBadge = document.getElementById("adOverviewBadge");
-    overviewBadge.hidden = ids.length + data.waiting == 0;
-    overviewBadge.innerText = ids.length + data.waiting;
-    overviewBadge.title = data.waiting + " request" + (data.waiting == 1 ? "" : "s") + ", " + ids.length + " payout" + (ids.length == 1 ? "" : "s");
-    badge.hidden = ids.length + data.waiting == 0;
-    badge.innerText = [data.waiting ? data.waiting + (data.waiting == 1 ? " request" : " requests") : "", ids.length ? ids.length + " open" : ""].filter(Boolean).join(" · ");
-    var todo = ids.length + data.waiting;
+    overviewBadge.hidden = data.waiting == 0;
+    overviewBadge.innerText = data.waiting;
+    overviewBadge.title = data.waiting + " request" + (data.waiting == 1 ? "" : "s");
+    var badge = document.getElementById("adOpenBadge");
+    badge.hidden = data.waiting == 0;
+    badge.innerText = data.waiting ? data.waiting + (data.waiting == 1 ? " request" : " requests") : "";
+    var todo = data.waiting;
     document.title = (todo ? "(" + todo + ") " : "") + "Admin - MemeMory";
   } catch (error) {
     fail(error);
@@ -408,7 +355,7 @@ function day(value) {
   return new Date(value).toLocaleDateString(undefined, { dateStyle: "medium" });
 }
 
-// The players: every account with its access, its coins, its payout - one list
+// The players: every account with its access, its coins - one list
 var playerFilter = "";
 var playerRows = [];
 
@@ -471,19 +418,6 @@ function playerRow(p) {
   var statusCell = el("td");
   statusCell.appendChild(status);
   var coins = el("td", "num", p.coins != null && p.kind == "in" ? "🪙 " + formatCoins(p.coins) : "–");
-  // May the player pay coins out? (only who is in)
-  var payoutCell = el("td");
-  if (p.kind == "in") {
-    var payout = el("label", "ad-switch");
-    var box = document.createElement("input");
-    box.type = "checkbox";
-    box.checked = p.payout;
-    box.setAttribute("aria-label", "Payout for " + p.username);
-    var text = el("span", "ad-switch-text", p.payout ? "On" : "Off");
-    box.addEventListener("change", () => setPayout(p, box, text));
-    payout.append(box, el("span", "ad-switch-track"), text);
-    payoutCell.appendChild(payout);
-  } else payoutCell.appendChild(el("span", "mm-muted", "–"));
   var actions = el("td", "ad-actions");
   var button = (label, cls, handler) => {
     var b = el("button", "mm-btn mm-btn-sm" + (cls ? " " + cls : ""), label);
@@ -506,7 +440,7 @@ function playerRow(p) {
   link.href = "#players/" + encodeURIComponent(p.username);
   link.appendChild(playerTag(p.username));
   nameCell.appendChild(link);
-  row.append(nameCell, statusCell, coins, payoutCell, actions);
+  row.append(nameCell, statusCell, coins, actions);
   return row;
 }
 
@@ -560,7 +494,7 @@ function renderPlayerDetail(p) {
   if (key == shownPlayer && box.firstChild) return;
   shownPlayer = key;
   var kind = p.approved ? "in" : p.requestedAt ? "waiting" : "none";
-  var row = { username: p.username, coins: p.coins, payout: p.payout, kind: kind };
+  var row = { username: p.username, coins: p.coins, kind: kind };
   var reason = (name) => (p.reasons.find((r) => r.reason == name) || { amount: 0, count: 0 });
 
   // The head: avatar, name, access, the actions
@@ -585,18 +519,6 @@ function renderPlayerDetail(p) {
   if (kind == "in") {
     button("🎁 Reward", "mm-btn-primary", () => rewardDialog(row));
     button("Correct balance", "", () => editPlayerCoins(row));
-    var payout = el("label", "ad-switch");
-    var check = document.createElement("input");
-    check.type = "checkbox";
-    check.checked = p.payout;
-    check.setAttribute("aria-label", "Payout for " + p.username);
-    var text = el("span", "ad-switch-text", p.payout ? "Payout on" : "Payout off");
-    check.addEventListener("change", async () => {
-      await setPayout(row, check, text);
-      text.innerText = check.checked ? "Payout on" : "Payout off";
-    });
-    payout.append(check, el("span", "ad-switch-track"), text);
-    actions.appendChild(payout);
     button("Revoke", "ad-btn-quiet-danger", (b) => setAccess(row, false, b));
   } else if (kind == "waiting") {
     button("Approve", "mm-btn-primary", (b) => setAccess(row, true, b));
@@ -622,7 +544,7 @@ function renderPlayerDetail(p) {
       stat("Net in games", signed(total("net")), "🪙 " + formatCoins(total("bet")) + " wagered", total("net") > 0 ? "plus" : total("net") < 0 ? "minus" : ""),
       stat("Daily streak", p.streak && p.streak.day ? "Day " + p.streak.day : "–", "🪙 " + formatCoins(reason("daily bonus").amount) + " from daily bonuses"),
       stat("Cashback", "🪙 " + formatCoins(reason("cashback").amount), reason("cashback").count + " day" + (reason("cashback").count == 1 ? "" : "s")),
-      stat("Paid out", "🪙 " + formatCoins(Math.max(0, -(reason("withdrawal").amount + reason("withdrawal refund").amount))), "rewards: 🪙 " + formatCoins(reason("reward").amount + reason("season reward").amount)),
+      stat("Rewards", "🪙 " + formatCoins(reason("reward").amount + reason("season reward").amount), reason("reward").count + reason("season reward").count + " reward" + (reason("reward").count + reason("season reward").count == 1 ? "" : "s")),
     );
   }
 
@@ -847,21 +769,6 @@ async function setAccess(player, approve, button) {
   }
 }
 
-async function setPayout(player, box, text) {
-  box.disabled = true;
-  text.innerText = box.checked ? "On" : "Off";
-  try {
-    await api("payout", { username: player.username, allowed: box.checked });
-    player.payout = box.checked;
-  } catch (error) {
-    box.checked = !box.checked;
-    text.innerText = box.checked ? "On" : "Off";
-    fail(error);
-  } finally {
-    box.disabled = false;
-  }
-}
-
 // Coins of a player: set to / add (+/-), a note - in a small dialog; the error in it, not as a toast
 // options: {title, text, current, step, save(mode, amount, note) -> Promise}
 function coinsDialog(options) {
@@ -1004,7 +911,7 @@ async function rewardDialog(p) {
       var body = { username: p.username, items: [frame.value, effect.value, background.value].filter(Boolean), coins: Math.floor(Number(coinsInput.value) || 0), prize: prize.value.trim(), note: note.value.trim() };
       await api("shop/give", body);
       close();
-      // What went out: a notification (like a new payout) - with the way to the player's history
+      // What went out: a notification - with the way to the player's history
       var itemName = (id) => (shopSaved.items.find((item) => item.id == id) || {}).name || id;
       var sent = [...body.items.map(itemName), body.coins > 0 ? "🪙 " + formatCoins(body.coins) : null, body.prize ? "🎁 " + body.prize : null].filter(Boolean).join(" · ");
       casinoNotice({ icon: "🎁", title: "Reward sent to " + p.username, text: sent + (body.note ? " - " + body.note : ""), action: { label: "History", run: () => showHistoryOf(p.username) }, ms: 8000, key: "reward" });
@@ -1017,18 +924,6 @@ async function rewardDialog(p) {
     }
   });
   frame.focus();
-}
-
-/* ---------- Payouts ---------- */
-
-async function loadPayouts() {
-  try {
-    var status = document.getElementById("adPayoutStatus").value;
-    var list = await api("withdrawals" + (status ? "?status=" + status : ""));
-    document.getElementById("adPayoutList").replaceChildren(...(list.length ? list.map(payoutRow) : [el("p", "ad-empty", "No payouts.")]));
-  } catch (error) {
-    fail(error);
-  }
 }
 
 /* ---------- History ---------- */
@@ -3260,7 +3155,6 @@ async function hardReset(event) {
     input.value = "";
     var details = [];
     if (result.done.includes("history")) details.push(formatCoins(result.history) + " history rows");
-    if (result.done.includes("payouts")) details.push(formatCoins(result.payouts) + " payouts");
     document.getElementById("adResetDone").innerText = "✓ Reset: " + parts.map((part) => part.label).join(", ") + (details.length ? " - " + details.join(" and ") + " deleted." : ".");
     document.getElementById("adResetDone").hidden = false;
     players = [];
@@ -3289,7 +3183,6 @@ document.addEventListener("DOMContentLoaded", () => {
     playerFilter = chip.dataset.filter;
     renderPlayers();
   });
-  document.getElementById("adPayoutStatus").addEventListener("change", loadPayouts);
   // The history filters right away (typing: after a short pause)
   document.getElementById("adHistoryFilter").addEventListener("submit", loadHistory);
   setupPlayerPick();
@@ -3405,7 +3298,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   showTab();
   loadOverview();
-  // New payouts, balances and history show up by themselves
+  // Requests, balances and history show up by themselves
   setInterval(refresh, 5000);
 });
 

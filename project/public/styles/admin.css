@@ -653,7 +653,7 @@ a.ad-link:focus-visible {
   width: auto;
 }
 
-/* Payout on / off: a switch */
+/* A switch (on / off) */
 .ad-switch {
   position: relative;
   display: inline-flex;
@@ -1865,7 +1865,7 @@ a.ad-link:focus-visible {
     border: 0;
   }
 
-  /* The player and the coins on one line, the access, the payout and the buttons under it */
+  /* The player and the coins on one line, the access and the buttons under it */
   #adBoard td:first-child {
     grid-area: 1 / 1 / 2 / 3;
   }
@@ -1879,12 +1879,8 @@ a.ad-link:focus-visible {
     text-align: right;
   }
 
-  #adBoard td:nth-child(4) {
-    grid-area: 2 / 2;
-  }
-
   #adBoard td.ad-actions {
-    grid-area: 2 / 3;
+    grid-area: 2 / 2 / 3 / 4;
   }
 
   #adBoard td.ad-actions {
@@ -2742,7 +2738,7 @@ a.ad-case-row:hover {
   margin: 0;
 }
 
-/* The page head: maintenance (on every page while it is on) and the open payouts */
+/* The page head: maintenance (on every page while it is on) and the open requests */
 .ad-head-pills {
   display: inline-flex;
   flex-wrap: wrap;

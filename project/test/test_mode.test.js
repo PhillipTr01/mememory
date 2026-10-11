@@ -6,7 +6,6 @@ const coins = require("../game/coins");
 const testMode = require("../game/test_mode");
 const shop = require("../game/shop");
 const gifts = require("../game/gifts");
-const withdrawals = require("../game/withdrawals");
 
 Object.assign(config, { ROULETTE_TIMER: 100, ROULETTE_SPIN: 50, ROULETTE_PAUSE: 50, JACKPOT_BET_DELAY: [10, 20], JACKPOT_SPIN: 50, JACKPOT_PAUSE: 50, SLOTS_MIN_GAP: 0, SLOTS_SPIN: 10 });
 
@@ -46,7 +45,6 @@ test("test mode: a sandbox balance - the real coins, the history and the shop st
   // Coins of other players: never
   assert.ok(!(await coins.spend("admin1", 100, { reason: "gift sent" })));
   assert.match((await gifts.give("admin1", "real1", 100)).error, /Test mode/);
-  assert.match((await withdrawals.request("admin1", 10000)).error, /Test mode/);
 
   // The shop: everything to wear, nothing saved
   const view = await shop.view("admin1");

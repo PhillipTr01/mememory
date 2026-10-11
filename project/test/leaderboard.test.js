@@ -93,7 +93,7 @@ test("seasons: a world of its own - at the start everybody may join (the budget,
   assert.ok(seasons.inSeasonWorld("anna"));
   assert.strictEqual(require("../game/worlds").worldOf("anna"), "/season");
   const wallet = await coins.season.get("anna");
-  assert.deepStrictEqual([wallet.coins, wallet.normal, wallet.joined, wallet.payout], [50000, 1000, true, false]);
+  assert.deepStrictEqual([wallet.coins, wallet.normal, wallet.joined], [50000, 1000, true]);
   // Season coins and normal coins: apart
   assert.ok(await coins.season.spend("cleo", 100, { reason: "slots bet" }));
   assert.ok(await coins.add("cleo", 5, { reason: "test" }));
@@ -110,9 +110,6 @@ test("seasons: a world of its own - at the start everybody may join (the budget,
   await h.wait(10);
   const seasonLogs = () => h.coinLogs.filter((row) => row.era === coins.era());
   assert.ok(seasonLogs().some((row) => row.reason === "season start"));
-  // Payouts: the normal coins, also during a season
-  assert.ok(!/paused/.test((await require("../game/withdrawals").request("anna", 1000)).error || ""));
-  await h.wait(10);
   // The daily bonus of the season (changed while it runs) - the normal one stays
   assert.strictEqual(coins.season.dailyBonus(), 1000, "the season setting when none was given");
   assert.ok((await seasons.update(made.season.id, { ...seasons.publicSeason(seasons.running()), dailyBonus: 777 })).season);

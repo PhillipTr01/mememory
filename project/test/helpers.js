@@ -13,7 +13,6 @@ const User = require("../models/User");
 const Statistic = require("../models/Statistic");
 const Meme = require("../models/Meme");
 const CoinLog = require("../models/CoinLog");
-const Withdrawal = require("../models/Withdrawal");
 const Setting = require("../models/Setting");
 
 const users = new Map(); // _id -> {_id, username, statistics}
@@ -143,7 +142,6 @@ CoinLog.aggregate = async (pipeline) => {
   }
   return rows;
 };
-const withdrawals = memoryModel(Withdrawal);
 const settings = memoryModel(Setting);
 
 function userByName(username) {
@@ -162,7 +160,7 @@ Meme.aggregate = async () =>
 function addUser(username, options) {
   const _id = `id_${username}`;
   const approved = !(options && options.approved === false);
-  users.set(_id, { _id, username, statistics: `stat_${username}`, casinoApproved: approved, casinoApprovedAt: approved ? new Date(0) : undefined, payoutAllowed: approved });
+  users.set(_id, { _id, username, statistics: `stat_${username}`, casinoApproved: approved, casinoApprovedAt: approved ? new Date(0) : undefined });
   return jwt.sign({ _id }, process.env.SECRET_KEY);
 }
 
@@ -247,7 +245,6 @@ module.exports = {
   wait,
   increments,
   coinLogs,
-  withdrawals,
   settings,
   coinsOf: (username) => userByName(username).coins,
   userOf: userByName,

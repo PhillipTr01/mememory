@@ -216,22 +216,22 @@ function makeWallet(kind) {
     return Number.isFinite(cap) ? cap : null;
   }
 
-  // { coins, bonus, bonusIn, payout, world, betCap } - bonus: the daily free coins can be claimed now, payout: may pay coins out
+  // { coins, bonus, bonusIn, world, betCap } - bonus: the daily free coins can be claimed now
   // (in the season: normal - the normal balance, shown next to the season's)
   async function get(username) {
     // Test mode (the admin): the sandbox - the real balance stays as it is
     if (testMode().active(username)) {
       const balance = testMode().balance(username);
-      return { coins: balance, bonus: true, bonusIn: 0, bonusAmount: dailyBonus(), payout: false, normal: null, world: kind, joined: null, test: true, betCap: limits.betCap(balance, "normal") === Infinity ? null : limits.betCap(balance, "normal"), betCapRule: limits.capRule("normal"), slotsCapRule: limits.capRule("normal", "slots") };
+      return { coins: balance, bonus: true, bonusIn: 0, bonusAmount: dailyBonus(), normal: null, world: kind, joined: null, test: true, betCap: limits.betCap(balance, "normal") === Infinity ? null : limits.betCap(balance, "normal"), betCapRule: limits.capRule("normal"), slotsCapRule: limits.capRule("normal", "slots") };
     }
     // (after a restart: the season is known first)
     await gate;
     if (season && watching(username)) {
-      return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), bonusAmount: dailyBonus(), payout: false, normal: null, world: kind, joined: false };
+      return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), bonusAmount: dailyBonus(), normal: null, world: kind, joined: false };
     }
     await ensure(username);
-    const user = await User.findOne({ username: username }).select(["username", f.coins, f.reset, f.bonusAt, f.streak, "payoutAllowed", ...(season ? ["coins", "coinReset"] : [])].join(" "));
-    if (user == null) return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), payout: false, world: kind };
+    const user = await User.findOne({ username: username }).select(["username", f.coins, f.reset, f.bonusAt, f.streak, ...(season ? ["coins", "coinReset"] : [])].join(" "));
+    if (user == null) return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), world: kind };
     const available = bonusAvailable(user);
     return {
       coins: user[f.coins] || 0,
@@ -244,8 +244,6 @@ function makeWallet(kind) {
       // (a season: the days missed since the last claim - paid on top, the plain bonus each)
       bonusMissed: available ? bonusDays(user) - 1 : 0,
       streak: streakInfo(user),
-      // (payouts: only the normal coins)
-      payout: !season && user.payoutAllowed === true,
       normal: season ? normalWallet.balanceOf(user) : null,
       wager: season ? await wagerLookup(username, kind).catch(() => null) : null,
       world: kind,

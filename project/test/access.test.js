@@ -82,8 +82,6 @@ test("access: without the approval the secret address only shows the page to ask
   // Not logged in: the login - and then back to the page
   assert.strictEqual((await call(CASINO + "/")).headers.get("location"), "/?next=" + encodeURIComponent(CASINO + "/"));
   assert.strictEqual((await call(CASINO + "/battles")).headers.get("location"), "/?next=" + encodeURIComponent(CASINO + "/battles"));
-  assert.strictEqual((await call(CASINO + "/withdraw", { ...as("tom"), json: { amount: 5000 } })).status, 403);
-  assert.strictEqual((await call(CASINO + "/withdrawals", as("tom"))).status, 403);
   assert.strictEqual((await call(CASINO + "/leaderboard/data", as("tom"))).status, 403);
   // Approved: the leaderboard
   assert.strictEqual((await call(CASINO + "/leaderboard", as("old"))).status, 200);
@@ -118,7 +116,6 @@ test("access: asking for access - the admin sees the request, can approve or dec
   const overview = (await adminApi("overview")).body;
   assert.deepStrictEqual(overview.requests.map((r) => r.username), ["tom"]);
   assert.strictEqual(overview.waiting, 1);
-  assert.ok(Array.isArray(overview.open), "the open payouts are there too");
 
   const res = await adminApi("access");
   assert.strictEqual(res.status, 200);
@@ -127,7 +124,7 @@ test("access: asking for access - the admin sees the request, can approve or dec
   // The approved players first, then who asked, then the rest
   assert.deepStrictEqual(res.body.players.map((p) => p.username), ["old", "tom", "uma", "vic"]);
   const tom = res.body.players[1];
-  assert.deepStrictEqual(tom, { username: "tom", approved: false, approvedAt: null, requestedAt: tom.requestedAt, payout: false });
+  assert.deepStrictEqual(tom, { username: "tom", approved: false, approvedAt: null, requestedAt: tom.requestedAt });
   assert.ok(tom.requestedAt);
   // Not in the casino: not on the leaderboard, no balance to change
   assert.ok(!(await adminApi("users")).body.some((p) => p.username === "tom"));
@@ -186,31 +183,6 @@ test("access: taken away - the open pages close, a new approval gives no second 
   assert.deepStrictEqual(again.body, { username: "uma", again: true });
   assert.strictEqual(h.coinsOf("uma"), 1234, "the old coins, no new start money");
   assert.strictEqual((await adminApi("access", { username: "nobody", approve: true })).status, 400);
-});
-
-test("access: payouts only for players the admin ticked", async () => {
-  // tom: approved, payouts not allowed yet
-  const before = h.coinsOf("tom");
-  const refused = await call(CASINO + "/withdraw", { ...as("tom"), json: { amount: 5000 } });
-  assert.strictEqual(refused.status, 403);
-  assert.match((await refused.json()).error, /Payouts aren't enabled/);
-  assert.strictEqual(h.coinsOf("tom"), before);
-  assert.strictEqual((await coins.get("tom")).payout, false);
-  assert.strictEqual((await adminApi("access")).body.players.find((p) => p.username === "tom").payout, false);
-
-  // Ticked: the open page hears it right away, the payout works
-  const { socket } = await connect("/jackpot", "tom");
-  const told = new Promise((resolve) => socket.on("coins", (data) => data.payout && resolve(data)));
-  assert.deepStrictEqual((await adminApi("payout", { username: "tom", allowed: true })).body, { username: "tom", payout: true });
-  assert.strictEqual((await told).payout, true);
-  const ok = await call(CASINO + "/withdraw", { ...as("tom"), json: { amount: 5000 } });
-  assert.strictEqual(ok.status, 200);
-  assert.strictEqual(h.coinsOf("tom"), before - 5000);
-
-  // Unticked again
-  await adminApi("payout", { username: "tom", allowed: false });
-  assert.strictEqual((await call(CASINO + "/withdraw", { ...as("tom"), json: { amount: 5000 } })).status, 403);
-  assert.strictEqual((await adminApi("payout", { username: "nobody", allowed: true })).status, 400);
 });
 
 test("access: maintenance - closes like a season (games finish, countdown), then only the whitelist gets in", async () => {

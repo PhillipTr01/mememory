@@ -5,7 +5,6 @@ const { page } = require("../utils/pages");
 const { asyncHandler } = require("../utils/errors");
 const config = require("../game/config");
 const coins = require("../game/coins");
-const withdrawals = require("../game/withdrawals");
 const access = require("../game/access");
 const casinoChat = require("../game/casino_chat");
 const live = require("../game/live");
@@ -129,7 +128,7 @@ module.exports = function () {
 
   // Everybody with the access state: the approved players first, then who wants in, then the rest
   async function accessList(q) {
-    const users = await User.find({}).select("username casinoApproved casinoApprovedAt casinoRequestedAt payoutAllowed").lean();
+    const users = await User.find({}).select("username casinoApproved casinoApprovedAt casinoRequestedAt").lean();
     const rank = (u) => (u.approved ? 0 : u.requestedAt ? 1 : 2);
     return users
       .map((user) => ({
@@ -137,7 +136,6 @@ module.exports = function () {
         approved: user.casinoApproved === true,
         approvedAt: user.casinoApprovedAt || null,
         requestedAt: user.casinoRequestedAt || null,
-        payout: user.payoutAllowed === true,
       }))
       .filter((user) => user.username.toLowerCase().includes(q))
       .sort((a, b) => rank(a) - rank(b) || new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0) || a.username.localeCompare(b.username));
@@ -148,19 +146,16 @@ module.exports = function () {
     return (await accessList("")).filter((user) => !user.approved && user.requestedAt);
   }
 
-  // Everything at a glance: leaderboard, open payouts, totals
+  // Everything at a glance: leaderboard, totals
   router.get(
     "/api/overview",
     admin,
     asyncHandler(async (req, res) => {
       const all = await players();
-      const open = await withdrawals.list({ status: "open" }, 200);
       res.json({
         leaderboard: all.slice(0, 50),
         players: all.length,
         coins: all.reduce((sum, p) => sum + p.coins, 0),
-        open: open,
-        openCoins: open.reduce((sum, w) => sum + w.amount, 0),
         requests: (await requests()).map((user) => ({ username: user.username, requestedAt: user.requestedAt })),
         waiting: (await requests()).length,
         online: casinoChat.online().names,
@@ -234,7 +229,6 @@ module.exports = function () {
         approved: approved,
         approvedAt: user.casinoApprovedAt || null,
         requestedAt: user.casinoRequestedAt || null,
-        payout: user.payoutAllowed === true,
         online: casinoChat.online().names.includes(name),
         coins: approved ? normalCoins(user) : null,
         season: inSeasons.length ? seasonView(inSeasons[0]) : null,
@@ -297,39 +291,6 @@ module.exports = function () {
       const result = await access.decline(username);
       if (result.error) return res.status(400).json(result);
       res.json(result);
-    }),
-  );
-
-  // Payouts for a player on / off: {username, allowed: true | false}
-  router.post(
-    "/api/payout",
-    admin,
-    asyncHandler(async (req, res) => {
-      const { username, allowed } = req.body || {};
-      if (typeof username !== "string" || typeof allowed !== "boolean") return res.status(400).json({ error: "Username and allowed." });
-      const result = await access.setPayout(username, allowed);
-      if (result.error) return res.status(400).json(result);
-      res.json(result);
-    }),
-  );
-
-  router.get(
-    "/api/withdrawals",
-    admin,
-    asyncHandler(async (req, res) => {
-      const status = ["open", "paid", "rejected"].includes(req.query.status) ? req.query.status : undefined;
-      res.json(await withdrawals.list(status ? { status: status } : {}, 200));
-    }),
-  );
-
-  router.post(
-    "/api/withdrawals/:id",
-    admin,
-    asyncHandler(async (req, res) => {
-      const { action, note } = req.body || {};
-      const result = await withdrawals.handle(req.params.id, action, typeof note === "string" ? note.slice(0, 300) : undefined);
-      if (result.error) return res.status(400).json({ error: result.error });
-      res.json({ ok: true });
     }),
   );
 
