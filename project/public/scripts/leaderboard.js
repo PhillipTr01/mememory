@@ -131,7 +131,7 @@ function wagerBar(wager) {
   fill.style.width = Math.min(100, (wager.done / Math.max(1, wager.need)) * 100).toFixed(1) + "%";
   bar.appendChild(fill);
   box.append(bar, el("span", "lb-wager-text", shortCoins(wager.done) + " / " + shortCoins(wager.need)));
-  box.title = formatCoins(wager.done) + " of " + formatCoins(wager.need) + " coins wagered - then the place counts";
+  box.title = formatCoins(wager.done) + " of " + formatCoins(wager.need) + " coins wagered - then the place counts (the start coins and every daily bonus claimed, times the wager)";
   return box;
 }
 
@@ -139,6 +139,12 @@ function pendingRow(row) {
   var item = el("li", "lb-row pending" + (row.username == myName ? " mine" : ""));
   var who = el("span", "lb-who");
   who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name"));
+  // (no place yet: the second chances used - the bar shows the wager)
+  if (row.chances != null) {
+    var used = el("span", "lb-decided", "💔 " + row.chances);
+    used.title = "💔 " + row.chances + " second chance" + (row.chances == 1 ? "" : "s") + " used";
+    who.appendChild(used);
+  }
   item.append(el("span", "lb-rank", "–"), who, wagerBar(row.wager), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
   return item;
 }

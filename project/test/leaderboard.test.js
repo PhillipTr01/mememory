@@ -466,6 +466,11 @@ test("seasons: a place only after wagering 3x the start (again for every second 
   assert.strictEqual(row("anna").prize, "🏆");
   assert.deepStrictEqual([row("cleo").rank, row("cleo").pending, row("cleo").wager.need], [null, true, 300], "the most coins - but no place yet");
   assert.deepStrictEqual([row("ben").rank, row("ben").wager.done, row("ben").wager.need], [null, 200, 300]);
+  // A daily bonus of the season on top: its amount times the wager factor (ben: 300 + 3 x 50)
+  await coins.season.add("ben", 50, { reason: "daily bonus" });
+  await h.wait(20);
+  const withBonus = (await seasons.board(made.season.id)).rows.find((r) => r.username === "ben");
+  assert.deepStrictEqual([withBonus.wager.need, withBonus.chances], [450, 0], "the bonus adds 3 x 50 - and the second chances show");
   assert.deepStrictEqual(board.rows.map((r) => r.username), ["anna", "cleo", "ben"], "who has a place first, then the others by coins");
   // A second chance: a new chance - 3x again, counted from the second chance on (the season's whole wager still breaks ties)
   setSeasonCoins("anna", 0);

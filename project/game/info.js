@@ -256,6 +256,7 @@ const GAMES = {
         items: [
           "The most coins first.",
           "In a season every player shows 💔 the second chances used and 🫴🏽 the coins wagered (hover over them for the words). The same coins: fewer second chances first - the same second chances: more coins wagered first. Where this made the difference, it is marked.",
+          "A place needs a wager: the start coins times the season's wager factor - and every daily bonus you claim in the season adds its amount times the factor too (per chance: a second chance starts it again). Until then you're on the board without a place, with your 💔 second chances used.",
           "Only players with the same coins, second chances and coins wagered share a place - and its prize (two players 1st - the next one is 3rd).",
           "Without a season: the same coins, the same place.",
         ],

@@ -297,7 +297,7 @@
       var left = Math.max(0, wager.need - wager.done);
       stored.classList.toggle("done", left == 0);
       stored.innerText = left == 0 ? "🫴🏽 Wagered enough - your place counts" : "🫴🏽 " + format(left) + " wager left";
-      stored.title = format(wager.done) + " of " + format(wager.need) + " wagered";
+      stored.title = format(wager.done) + " of " + format(wager.need) + " wagered" + (wager.bonus > 0 ? " (the daily bonuses of 🪙 " + format(wager.bonus) + " count too)" : "");
     } else if (stored) stored.remove();
     // Everything lost: a second chance (if the season has one) - after a moment
     if (window.CASINO_WORLD == "season") watchChance(coins);
@@ -843,7 +843,7 @@
     var start = (mode == "join" && data.joinCoins) || { coins: season.budget, missed: 0 };
     fact(coin, format(start.coins), start.missed > 0 ? "to start (with " + start.missed + " missed daily bonus" + (start.missed == 1 ? "" : "es") + ")" : "to start with");
     fact("🎁", format(season.dailyBonus), "free every day");
-    if (season.wagerX > 0) fact("🎲", season.wagerX + "×", "your start coins to wager for a place on the leaderboard" + (season.secondChances > 0 ? " (per chance)" : ""));
+    if (season.wagerX > 0) fact("🎲", season.wagerX + "×", "your start coins and every daily bonus to wager for a place on the leaderboard" + (season.secondChances > 0 ? " (per chance)" : ""));
     if (season.secondChances > 0) fact("💔", season.secondChances, "second chance" + (season.secondChances == 1 ? "" : "s") + " if you lose it all" + (season.secondChances > 1 ? chanceWait(season.chanceDelay) : ""));
     if (!upcoming) fact("👥", season.players, "player" + (season.players == 1 ? "" : "s") + " in so far");
     card.appendChild(facts);
