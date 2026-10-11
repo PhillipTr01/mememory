@@ -31,14 +31,15 @@ module.exports = function (io) {
   // (a gift while the player has no casino page open: kept for the next visit - game/inbox.js)
   notices.on("notice", (username, event, data) => {
     const sockets = socketsOf(io, username);
-    // A reward (a season's place, from the admin): kept first, then shown on one open page (the season's end may move the pages - then the next one shows it)
+    // A reward (a season's place, from the admin): kept first, then shown on every open page of the player - the
+    // one they look at too, not only the first (the season's end may move the pages - then the next one shows it)
     if (event === "reward" && !(data && data.preview)) {
       inbox
         .add(username, { type: "reward", ...data })
         .then(() =>
           setTimeout(() => {
             const open = socketsOf(io, username);
-            if (open.length) deliverInbox(open[0]);
+            if (open.length) deliverInbox(open);
           }, 1500),
         )
         .catch((error) => console.error("[inbox] Could not keep a season reward:", error));
@@ -49,21 +50,34 @@ module.exports = function (io) {
     if (event === "cashback" && sockets.length === 0) inbox.add(username, { type: "cashback", ...data }).catch((error) => console.error("[inbox] Could not keep a cashback:", error));
   });
 
-  // A casino page opens: what happened while the player was away (gifts, money rains) - as popups
+  // A casino page opens: what happened while the player was away (gifts, money rains, rewards) - as popups.
+  // sockets: one page - or every open page of the player (a reward: always on every open page)
   const delivering = new Set();
-  async function deliverInbox(socket) {
-    const username = socket.data.username;
-    if (!username || delivering.has(username)) return;
+  async function deliverInbox(sockets) {
+    const pages = Array.isArray(sockets) ? sockets : [sockets];
+    const username = pages[0] && pages[0].data.username;
+    if (!username) return;
+    // (another delivery for the player right now - a page opening: once more in a moment, so a reward doesn't wait for the next page)
+    if (delivering.has(username)) {
+      if (Array.isArray(sockets)) setTimeout(() => deliverInbox(sockets.filter((socket) => socket.connected)), 1000);
+      return;
+    }
     delivering.add(username);
     try {
       const items = await inbox.take(username);
+      // (a reward: on every open page of the player - the page opening right now may not be the one they look at)
+      const everyPage = [...new Set([...pages, ...socketsOf(io, username)])];
       for (const item of items) {
-        if (item.type === "gift") socket.emit("giftReceived", { ...item, missed: true });
-        if (item.type === "rain") socket.emit("moneyRain", { ...item, missed: true });
-        // (seasonReward: kept before rewards were general - a season's name and place)
-        if (item.type === "reward") socket.emit("reward", { ...item, missed: true });
-        if (item.type === "cashback") socket.emit("cashback", { ...item, missed: true });
-        if (item.type === "seasonReward") socket.emit("reward", { source: item.season, icon: item.icon, rank: item.rank, coins: 0, items: item.items || [], missed: true });
+        if (item.type === "reward" || item.type === "seasonReward") {
+          const data = item.type === "reward" ? { ...item, missed: true } : { source: item.season, icon: item.icon, rank: item.rank, coins: 0, items: item.items || [], missed: true };
+          for (const socket of everyPage) socket.emit("reward", data);
+          continue;
+        }
+        for (const socket of pages) {
+          if (item.type === "gift") socket.emit("giftReceived", { ...item, missed: true });
+          if (item.type === "rain") socket.emit("moneyRain", { ...item, missed: true });
+          if (item.type === "cashback") socket.emit("cashback", { ...item, missed: true });
+        }
       }
     } catch (error) {
       console.error("[inbox] Could not deliver:", error);

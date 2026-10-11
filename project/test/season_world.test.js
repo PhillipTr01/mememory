@@ -91,3 +91,16 @@ test("two season worlds: a player in both plays in the one picked - its own game
   assert.strictEqual((await h.once(openPage, "coins")).coins, 3000);
   seasons.reset();
 });
+
+test("a reward pops up on every open casino page of the player - not only the first one", async () => {
+  seasons.reset();
+  const shop = require("../game/shop");
+  const first = connect("/jackpot", "sw_out");
+  const second = connect("/slots", "sw_out");
+  await Promise.all([h.once(first, "coins"), h.once(second, "coins")]);
+  const got = Promise.all([h.once(first, "reward"), h.once(second, "reward")]);
+  assert.ok((await shop.give({ username: "sw_out", items: [], coins: 500, note: "Thanks" })).given);
+  const [a, b] = await got;
+  assert.deepStrictEqual([a.coins, b.coins, a.source], [500, 500, "Thanks"]);
+  assert.deepStrictEqual(h.userOf("sw_out").inbox, [], "delivered - nothing left for the next visit");
+});
