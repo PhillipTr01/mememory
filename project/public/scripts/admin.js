@@ -49,6 +49,27 @@ function time(value) {
 }
 
 // The API next to this page; logged out (session over): back to the login
+/*
+ * The lists the panel draws again with every refresh (every few seconds): only when they look different
+ * now - the same again would build every row anew (avatars, animations start over: a flicker).
+ */
+var CALM_LISTS = new Set(["adRequestList", "adOpenList", "adLive", "adTopList", "adActivity", "adAccessInfo", "adBoard", "adPayoutList", "adHistory", "adRtpBody", "adSeasonNow", "adSeasonList", "adChatList", "adBanList", "adOnlineList", "adRainPlanned", "adRainDone"]);
+(function () {
+  var replace = Element.prototype.replaceChildren;
+  Element.prototype.replaceChildren = function (...nodes) {
+    if (this.id && CALM_LISTS.has(this.id)) {
+      // (the avatars' drawings get new running ids every time - not a difference)
+      var shown = nodes
+        .map((node) => (node.nodeType == 1 ? node.outerHTML : String(node.textContent)))
+        .join("\u0001")
+        .replace(/mm-(hair|ninja)-\d+/g, "");
+      if (this.__shown === shown && this.childNodes.length) return;
+      this.__shown = shown;
+    }
+    return replace.apply(this, nodes);
+  };
+})();
+
 async function api(path, body) {
   var res = await fetch("api/" + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
   if (res.status == 401) {
@@ -516,8 +537,16 @@ function playerGames(reasons) {
     .filter((row) => row.rounds > 0 || row.back > 0);
 }
 
+// What the player page shows now: the same again (the refresh every few seconds) - nothing is drawn again
+var shownPlayer = null;
+// The moderator card of the player shown: kept through the redraws (its fields, what is typed in them)
+var modCardOf = null; // {username, card}
+
 function renderPlayerDetail(p) {
   var box = document.getElementById("adPlayerDetail");
+  var key = JSON.stringify(p);
+  if (key == shownPlayer && box.firstChild) return;
+  shownPlayer = key;
   var kind = p.approved ? "in" : p.requestedAt ? "waiting" : "none";
   var row = { username: p.username, coins: p.coins, payout: p.payout, kind: kind };
   var reason = (name) => (p.reasons.find((r) => r.reason == name) || { amount: 0, count: 0 });
@@ -638,7 +667,10 @@ function renderPlayerDetail(p) {
   grid.append(gamesCard, itemsCard);
   var parts = [playerBack(), head, stats, grid];
   // A player in the casino: the moderator rights (game/moderators.js)
-  if (p.approved) parts.push(modCard(p.username));
+  if (p.approved) {
+    if (!modCardOf || modCardOf.username != p.username) modCardOf = { username: p.username, card: modCard(p.username) };
+    parts.push(modCardOf.card);
+  }
   box.replaceChildren(...parts);
 }
 
@@ -3771,7 +3803,8 @@ async function loadRtp() {
     profit.classList.toggle("minus", data.total.profit < 0);
     document.getElementById("adRtpTotal").innerText = percent(data.total.rtp);
     var body = document.getElementById("adRtpBody");
-    body.innerHTML = "";
+    // (built first, swapped in once - only when it looks different, see CALM_LISTS)
+    var rows = [];
     var flagged = 0;
     data.games.forEach((game) => {
       var row = el("tr", "ad-rtp-row " + game.status);
@@ -3802,8 +3835,9 @@ async function loadRtp() {
       cell.appendChild(pill);
       row.appendChild(cell);
       if (game.status == "check") flagged++;
-      body.appendChild(row);
+      rows.push(row);
     });
+    body.replaceChildren(...rows);
     var dot = document.getElementById("adRtpDot");
     dot.hidden = flagged == 0;
     dot.className = "ad-state" + (flagged ? " danger" : "");
