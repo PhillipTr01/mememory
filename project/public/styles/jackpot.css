@@ -1839,9 +1839,10 @@ body.jackpot-theme {
   transition: transform 0.2s ease;
 }
 
-/* Room below the page for the bar */
+/* Room below the page for the bar - only what it needs: the bar may cover the empty bottom padding of a card
+   (a page that fits shows no scrollbar for it), never what is in the card */
 .room-page {
-  padding-bottom: 110px;
+  padding-bottom: var(--cs-dock-room, 84px);
 }
 
 @media (max-width: 575px) {

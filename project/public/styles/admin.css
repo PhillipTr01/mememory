@@ -64,6 +64,10 @@
   padding: 1.5rem 0.75rem;
   border-right: 1px solid var(--mm-border);
   background: var(--mm-surface);
+  /* (a short window: the navigation scrolls in itself - Log out stays reachable) */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .ad-brand {
@@ -187,7 +191,8 @@
 /* ---------- Page ---------- */
 .ad-main {
   width: min(1240px, 100%);
-  padding: 2rem 2rem 3rem;
+  /* (at the bottom only a little room - a page that fits shows no scrollbar) */
+  padding: 2rem 2rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
