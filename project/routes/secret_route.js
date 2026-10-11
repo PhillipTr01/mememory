@@ -155,6 +155,16 @@ module.exports = function (auth) {
     approved,
     asyncHandler(async (req, res) => modResult(res, await moderators.unmute(req.username, (req.body || {}).username))),
   );
+  // A moderator gives one player coins: {to, amount, note}
+  router.post(
+    "/mod/give",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      const body = req.body || {};
+      modResult(res, await moderators.give(req.username, { to: body.to, amount: body.amount, note: body.note }));
+    }),
+  );
   router.post(
     "/mod/announce",
     auth,

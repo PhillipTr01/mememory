@@ -5,7 +5,7 @@ var HISTORY_KINDS = [
   ["Casino", [["start coins", "Start coins"], ["daily bonus", "Daily bonus"], ["cashback", "Cashback"], ["admin", "Admin"]]],
   ["Seasons", [["season start", "Season start"], ["second chance", "Second chance"]]],
   ["Rewards", [["season reward", "Season reward"], ["reward", "Reward"], ["prize", "Own prize"]]],
-  ["Gifts", [["gift sent", "Sent"], ["gift received", "Received"]]],
+  ["Gifts", [["gift sent", "Sent"], ["gift received", "Received"], ["mod gift", "From a moderator"]]],
   ["Jackpot", [["jackpot bet", "Bet"], ["jackpot win", "Win"]]],
   ["Case battles", [["battle", "Bet"], ["battle win", "Win"], ["battle refund", "Refund"]]],
   ["Poker", [["poker buy-in", "Buy-in"], ["poker chips", "More chips"], ["poker cash-out", "Cash-out"], ["poker refund", "Refund"]]],
@@ -641,7 +641,7 @@ function fillModCard(card, username, data) {
   var body = el("div", "ad-mod-body");
   var perms = el("div", "ad-mod-perms");
   var boxes = {};
-  var PERM_HINTS = { rain: "Money rains for everybody online - only with other players than moderators online", chat: "Delete messages, mute players (up to a day)", announce: "📣 Highlighted messages in the casino chat" };
+  var PERM_HINTS = { rain: "Money rains for everybody online - only with other players than moderators online", chat: "Delete messages, mute players (up to a day)", announce: "📣 Highlighted messages in the casino chat", give: "🎁 Coins from the casino for one player (🪙 only - not themselves, not other moderators)" };
   Object.keys(data.perms).forEach((perm) => {
     var row = el("label", "ad-mod-perm");
     var box = document.createElement("input");
@@ -657,6 +657,8 @@ function fillModCard(card, username, data) {
   var rainMax = number(mod.rainMax, data.defaults.rainMax);
   var rainWeekly = number(mod.rainWeekly, data.defaults.rainWeekly);
   var rainCooldown = Object.assign(el("input", "mm-input"), { type: "number", min: 0, step: 1, value: mod.rainCooldown != null ? mod.rainCooldown : data.defaults.rainCooldown, placeholder: data.defaults.rainCooldown });
+  var giveMax = number(mod.giveMax != null ? mod.giveMax : data.defaults.giveMax, data.defaults.giveMax);
+  var giveWeekly = number(mod.giveWeekly != null ? mod.giveWeekly : data.defaults.giveWeekly, data.defaults.giveWeekly);
   var limits = el("div", "ad-mod-limits");
   var field = (text, input, hint) => {
     var box = el("label", "ad-field");
@@ -676,6 +678,8 @@ function fillModCard(card, username, data) {
       return box;
     })(),
     field("Money rain a week", rainWeekly, "Their rains of a week together, Monday to Sunday - the amount per player counts once, however many are online (0: no limit)." + (mod.on ? " This week: 🪙 " + formatCoins(mod.used || 0) + " given." : "")),
+    field("Coins per gift at most", giveMax, "Give coins: the most one gift to a player may be."),
+    field("Coins to give a week", giveWeekly, "Give coins: their gifts of a week together, Monday to Sunday - apart from the money rain (0: no limit)." + (mod.on ? " This week: 🪙 " + formatCoins(mod.given || 0) + " given." : "")),
   );
   var save = el("button", "mm-btn mm-btn-primary mm-btn-sm", "Save");
   save.type = "button";
@@ -694,7 +698,7 @@ function fillModCard(card, username, data) {
     error.hidden = true;
     save.disabled = true;
     try {
-      var body = { on: check.checked, perms: Object.fromEntries(Object.entries(boxes).map(([perm, box]) => [perm, box.checked])), rainMax: Math.floor(Number(rainMax.value)), rainWeekly: Math.floor(Number(rainWeekly.value) || 0), rainCooldown: Math.floor(Number(rainCooldown.value) || 0) };
+      var body = { on: check.checked, perms: Object.fromEntries(Object.entries(boxes).map(([perm, box]) => [perm, box.checked])), rainMax: Math.floor(Number(rainMax.value)), rainWeekly: Math.floor(Number(rainWeekly.value) || 0), rainCooldown: Math.floor(Number(rainCooldown.value) || 0), giveMax: Math.floor(Number(giveMax.value)), giveWeekly: Math.floor(Number(giveWeekly.value) || 0) };
       var result = await api("players/" + encodeURIComponent(username) + "/mod", body);
       casinoNotice({ icon: "🛡️", title: check.checked ? username + " is a moderator" : username + " is no moderator", text: check.checked ? Object.keys(boxes).filter((perm) => boxes[perm].checked).map((perm) => data.perms[perm]).join(" · ") || "no rights picked" : "", ms: 5000, key: "mod" });
       fillModCard(card, username, { ...data, mod: result.mod.on ? result.mod : null, log: result.log });

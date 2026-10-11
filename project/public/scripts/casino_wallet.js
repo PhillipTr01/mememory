@@ -328,6 +328,8 @@
     var onlineKey = null; // what the pill and the list show now: unchanged - nothing is built again (no flicker)
     socket.on("casinoOnline", (data) => {
       var names = data.names || [];
+      // (who is online - the moderator panel offers them to give coins to)
+      window.casinoOnlineNames = names;
       // Who plays in a season world (one the player may see): the icon of their season next to their names in the chat
       var inSeason = new Set(data.season || []);
       var seasonOf = data.seasonOf || {};
@@ -1442,8 +1444,9 @@
       text = el("p", "cs-gift-info", (gift.note ? "“" + gift.note + "” - " : "") + "the coins are on your balance already" + where + ".");
     } else {
       pic.append(createAvatar(gift.from, "lg"), el("span", "cs-gift-bow", "🎁"));
-      head.append(pic, el("span", "cs-gift-label", gift.missed ? "While you were away - a gift!" : "You got a gift!"), el("b", "cs-gift-name", gift.from));
-      text = el("p", "cs-gift-info", gift.from + " sent you coins - they are on your balance already" + where + ".");
+      head.append(pic, el("span", "cs-gift-label", gift.missed ? "While you were away - a gift!" : gift.mod ? "🛡️ A gift from a moderator!" : "You got a gift!"), el("b", "cs-gift-name", gift.from));
+      // (from a moderator: the casino's coins - with what for, if they wrote it)
+      text = el("p", "cs-gift-info", (gift.note ? "“" + gift.note + "” - " : "") + gift.from + (gift.mod ? " gave you coins from the casino" : " sent you coins") + " - they are on your balance already" + where + ".");
     }
     if (where.includes("🪙")) text.dataset.coin = "real";
     var amount = el("div", "cs-got-amount");

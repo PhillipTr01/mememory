@@ -166,8 +166,9 @@
     x.addEventListener("click", close);
     var perms = state.mod.perms;
     dialog.append(x, el("h2", "mm-dialog-title", "🛡️ Moderator"));
-    if (!perms.rain && !perms.chat && !perms.announce) dialog.appendChild(el("p", "mm-dialog-text", "The admin hasn't given you any rights yet."));
+    if (!perms.rain && !perms.chat && !perms.announce && !perms.give) dialog.appendChild(el("p", "mm-dialog-text", "The admin hasn't given you any rights yet."));
     if (perms.rain) dialog.appendChild(rainSection());
+    if (perms.give) dialog.appendChild(giveSection());
     if (perms.announce) dialog.appendChild(announceSection());
     if (perms.chat) dialog.appendChild(chatSection());
     document.body.appendChild(backdrop);
@@ -252,6 +253,54 @@
         openPanel();
       } catch (error) {
         preview.innerText = error.message;
+        send.disabled = false;
+      }
+    });
+    check();
+    return box;
+  }
+
+  // 🎁 Coins for one player - from the casino (the normal 🪙), not from the own balance
+  function giveSection() {
+    var box = section("Give coins", "🎁");
+    var mod = state.mod;
+    box.appendChild(el("p", "cs-mod-note", "From the casino, not your own coins (🪙 only) · at most 🪙 " + format(mod.giveMax) + " per gift" + (state.giveLeft != null ? " · 🪙 " + format(state.giveLeft) + " left this week (of " + format(mod.giveWeekly) + ")" : "") + " · not to yourself or other moderators"));
+    // Who: typed - the players online to pick from
+    var to = Object.assign(el("input", "mm-input"), { type: "text", maxLength: 40, placeholder: "Player", autocomplete: "off" });
+    to.setAttribute("aria-label", "Player");
+    var list = el("datalist");
+    list.id = "csModGiveNames";
+    to.setAttribute("list", list.id);
+    var me = typeof myName != "undefined" ? myName : null;
+    (window.casinoOnlineNames || []).filter((name) => name != me && !(window.casinoModNames && window.casinoModNames.has(name))).forEach((name) => list.appendChild(Object.assign(document.createElement("option"), { value: name })));
+    var amount = Object.assign(el("input", "mm-input"), { type: "number", min: 1, step: 1000, placeholder: "Coins" });
+    amount.setAttribute("aria-label", "Coins");
+    var note = Object.assign(el("input", "mm-input"), { type: "text", maxLength: 80, placeholder: "What for (optional)" });
+    var hint = el("p", "cs-mod-preview", "");
+    var send = el("button", "cs-gift-send", "🎁 Give");
+    send.type = "button";
+    var row = el("div", "cs-mod-row");
+    row.append(to, amount);
+    box.append(row, list, note, hint, send);
+    var check = () => {
+      var value = Math.floor(Number(amount.value) || 0);
+      var over = value > mod.giveMax ? "More than 🪙 " + format(mod.giveMax) + " per gift." : state.giveLeft != null && value > state.giveLeft ? "More than you have left this week." : "";
+      hint.innerText = over;
+      send.disabled = !to.value.trim() || value < 1 || !!over;
+    };
+    to.addEventListener("input", check);
+    amount.addEventListener("input", check);
+    send.addEventListener("click", async () => {
+      var who = to.value.trim();
+      var value = Math.floor(Number(amount.value) || 0);
+      if (!(await confirmDialog({ title: "Give coins?", text: "🪙 " + format(value) + " for " + who + " - from the casino." + (note.value.trim() ? " “" + note.value.trim() + "”" : ""), confirmLabel: "Give" }))) return;
+      send.disabled = true;
+      try {
+        var result = await call("mod/give", { to: who, amount: value, note: note.value });
+        casinoNotice({ icon: "🎁", title: "Coins given", text: result.to + " got 🪙 " + format(result.amount) + (result.left != null ? " · 🪙 " + format(result.left) + " left this week" : ""), ms: 6000, key: "mod-give" });
+        openPanel();
+      } catch (error) {
+        hint.innerText = error.message;
         send.disabled = false;
       }
     });

@@ -14,7 +14,7 @@ test("moderators: the admin makes a player a moderator - with the rights and lim
   assert.match((await mods.set("md_out", { on: true })).error, /access to the casino/);
   assert.match((await mods.set("md_mod", { on: true, rainMax: 0 })).error, /1 to/);
   const made = await mods.set("md_mod", { on: true, perms: { rain: true, chat: true, announce: false }, rainMax: 50000, rainWeekly: 60000 });
-  assert.deepStrictEqual(made.mod.perms, { rain: true, chat: true, announce: false });
+  assert.deepStrictEqual(made.mod.perms, { rain: true, chat: true, announce: false, give: false });
   assert.ok(mods.names().includes("md_mod"), "the chat knows it");
   assert.deepStrictEqual((await mods.list()).map((m) => m.username), ["md_mod"]);
 });
@@ -102,4 +102,32 @@ test("moderators: the chat - delete a message, mute for a while (not other moder
   assert.deepStrictEqual((await mods.history("md_mod")).map((e) => e.action), ["announce", "announce", "unmute", "mute", "delete"]);
   await mods.set("md_b", { on: false });
   assert.ok(!mods.names().includes("md_b"));
+});
+
+test("moderators: give coins to one player - from the casino, its own limits (per gift, a week), never to themselves or another moderator", async () => {
+  mods.reset();
+  const notices = require("../game/notices").notices;
+  await mods.set("md_c", { on: false });
+  assert.match((await mods.give("md_mod", { to: "md_a", amount: 100 })).error, /may not give/);
+  await mods.set("md_mod", { on: true, perms: { give: true }, giveMax: 5000, giveWeekly: 8000 });
+  assert.match((await mods.set("md_mod", { on: true, perms: { give: true }, giveMax: 0 })).error, /per gift/);
+  await mods.set("md_b", { on: true, perms: { chat: true } });
+  h.setCoins("md_mod", 1000);
+  h.setCoins("md_a", 1000);
+  assert.match((await mods.give("md_mod", { to: "md_mod", amount: 100 })).error, /yourself/);
+  assert.match((await mods.give("md_mod", { to: "md_b", amount: 100 })).error, /another moderator/);
+  assert.match((await mods.give("md_mod", { to: "md_out", amount: 100 })).error, /no such player/);
+  assert.match((await mods.give("md_mod", { to: "md_a", amount: 5001 })).error, /At most/);
+  const heard = new Promise((resolve) => notices.once("notice", (username, event, data) => resolve([username, event, data])));
+  const given = await mods.give("md_mod", { to: "md_a", amount: 5000, note: "Bug report" });
+  assert.deepStrictEqual(given, { to: "md_a", amount: 5000, left: 3000 });
+  assert.deepStrictEqual([h.coinsOf("md_a"), h.coinsOf("md_mod")], [6000, 1000], "from the casino - not the moderator's own coins");
+  const [who, event, data] = await heard;
+  assert.deepStrictEqual([who, event, data.from, data.amount, data.mod], ["md_a", "giftReceived", "md_mod", 5000, true]);
+  // The week's limit (apart from the money rain)
+  assert.match((await mods.give("md_mod", { to: "md_a", amount: 3001 })).error, /3,000 more this week/);
+  assert.strictEqual((await mods.panel("md_mod")).giveLeft, 3000);
+  assert.ok((await mods.history("md_mod")).some((entry) => entry.action === "give" && /md_a/.test(entry.detail)), "in the log");
+  await mods.set("md_mod", { on: false });
+  await mods.set("md_b", { on: false });
 });
