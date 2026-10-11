@@ -93,3 +93,36 @@ test("two seasons at once: a third waits for a free slot; every season has its o
     seasons.reset();
   }
 });
+
+test("leaderboard: the menu of boards only in the normal casino - past seasons for who could play in them, PAST_SEASON_DAYS long", async () => {
+  const leaderboard = require("../game/leaderboard");
+  seasons.reset();
+  const now = Date.now();
+  const vip = (await seasons.create({ name: "VIP", icon: "👑", start: now - 3000, end: now + HOUR, budget: 100, every: 0, accessMode: "whitelist", accessNames: ["ts_vip"] })).season;
+  await seasons.tick(now);
+  await seasons.join("ts_vip", now, vip.id);
+  await seasons.endNow(vip.id, now + 10);
+  await seasons.tick(now + 20);
+  await seasons.tick(now + 30);
+  const open = (await seasons.create({ name: "Open", icon: "🌍", start: now + 40, end: now + 48 * HOUR, budget: 100, every: 0 })).season;
+  await seasons.tick(now + 50);
+  await seasons.tick(now + 60);
+  assert.ok(seasons.running(open.id));
+  const before = config.PAST_SEASON_DAYS;
+  try {
+    config.PAST_SEASON_DAYS = 7;
+    let view = await leaderboard.view("ts_vip", now + 100);
+    assert.deepStrictEqual([view.boards.map((b) => b.name), view.pastSeasons.map((s) => s.name)], [["Open"], ["VIP"]]);
+    assert.deepStrictEqual((await leaderboard.view("ts_late", now + 100)).pastSeasons, [], "not on its whitelist: not shown");
+    // In a season world: only its own board
+    const joinedOpen = await seasons.join("ts_vip", now + 100, open.id);
+    assert.ok(joinedOpen.coins, JSON.stringify(joinedOpen));
+    view = await leaderboard.view("ts_vip", now + 200, "normal");
+    assert.deepStrictEqual([view.season && view.season.name, view.boards, view.pastSeasons], ["Open", [], []]);
+    await seasons.switchWorld("ts_vip", "normal");
+    assert.deepStrictEqual((await leaderboard.view("ts_vip", now + 8 * 24 * HOUR)).pastSeasons.map((s) => s.name), ["Open"], "VIP: more than 7 days ago (Open: just over)");
+  } finally {
+    config.PAST_SEASON_DAYS = before;
+    seasons.reset();
+  }
+});

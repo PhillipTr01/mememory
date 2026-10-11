@@ -5,6 +5,7 @@ const days = require("./days");
 const seasons = require("./seasons");
 const { place } = require("./places");
 const slots = require("./season_slots");
+const config = require("./config");
 
 /*
  * The leaderboards of the casino - one per world (game/worlds.js):
@@ -108,6 +109,9 @@ async function get(now = Date.now(), world = "") {
 // season the player may see (its id or slot); nothing: the player's world
 async function view(username, now = Date.now(), which = null) {
   let world = seasons.worldOf(username) || "";
+  // (in a season world: only its own board - the other boards only from the normal casino)
+  const inSeason = world !== "";
+  if (inSeason) which = null;
   if (which === "normal") world = "";
   else if (which != null && which !== "") {
     const other = seasons.running(which);
@@ -128,13 +132,13 @@ async function view(username, now = Date.now(), which = null) {
     season: season ? seasons.publicSeason(season) : null,
     world: season ? season.slot : "normal",
     // (the other boards to switch to: the running seasons the player may see)
-    boards: seasons.runningAll().filter((s) => seasons.allowed(s, username)).map((s) => ({ id: s.id, slot: s.slot, name: s.name, icon: s.icon })),
+    boards: inSeason ? [] : seasons.runningAll().filter((s) => seasons.allowed(s, username)).map((s) => ({ id: s.id, slot: s.slot, name: s.name, icon: s.icon })),
     // The last season that is over (the winner page)
     lastSeason: ended ? { id: ended.id, name: ended.name, icon: ended.icon, endedAt: ended.endedAt } : null,
     // Every season that is over (the newest first, the ones the player could see): their winner pages
-    pastSeasons: seasons
-      .list()
-      .filter((s) => s.status === "ended" && s.players > 0 && seasons.allowed(seasons.byId(s.id), username))
+    // (only in the normal casino, PAST_SEASON_DAYS after the end)
+    pastSeasons: (inSeason ? [] : seasons.list())
+      .filter((s) => s.status === "ended" && s.players > 0 && now - (s.endedAt || s.end) <= config.PAST_SEASON_DAYS * 86400 * 1000 && seasons.allowed(seasons.byId(s.id), username))
       .sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0))
       .slice(0, 20)
       .map((s) => ({ id: s.id, name: s.name, icon: s.icon, endedAt: s.endedAt, players: s.players, winner: s.winner ? { username: s.winner.username, coins: s.winner.coins } : null })),

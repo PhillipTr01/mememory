@@ -202,7 +202,8 @@ function render() {
   // The last season that is over: the way to its winners
   var last = document.getElementById("lbLastSeason");
   // (with the button next to the title: the seasons that ended are in its menu)
-  last.hidden = !board.lastSeason || !!season || (board.pastSeasons || []).length > 0;
+  // (the seasons that ended: in the menu of the button next to the title)
+  last.hidden = true;
   if (board.lastSeason) {
     morphChildren(last, [el("span", "lb-last-icon", board.lastSeason.icon), el("span", "", board.lastSeason.name + " is over - see the winners"), el("span", "lb-last-arrow", "→")]);
     last.onclick = () => showWinners(board.lastSeason.id);
