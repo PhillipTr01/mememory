@@ -4337,3 +4337,68 @@ a.ad-case-row:hover {
   flex-basis: 100%;
   margin: 0;
 }
+
+/* Settings → Season: the season whose own limits are shown (a chip each) */
+.ad-season-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.ad-season-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.75rem 0.4rem 0.55rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ad-season-pick:hover {
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+}
+
+.ad-season-pick.active {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.14);
+}
+
+.ad-season-pick-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.ad-season-pick-state {
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--mm-surface-3);
+  color: var(--mm-muted);
+}
+
+.ad-season-pick-state.running {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+}
+
+.ad-season-pick-own {
+  min-width: 1.3rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--mm-accent);
+  color: #1a1206;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-align: center;
+}

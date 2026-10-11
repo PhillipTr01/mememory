@@ -131,6 +131,13 @@ async function view(username, now = Date.now(), which = null) {
     boards: seasons.runningAll().filter((s) => seasons.allowed(s, username)).map((s) => ({ id: s.id, slot: s.slot, name: s.name, icon: s.icon })),
     // The last season that is over (the winner page)
     lastSeason: ended ? { id: ended.id, name: ended.name, icon: ended.icon, endedAt: ended.endedAt } : null,
+    // Every season that is over (the newest first, the ones the player could see): their winner pages
+    pastSeasons: seasons
+      .list()
+      .filter((s) => s.status === "ended" && s.players > 0 && seasons.allowed(seasons.byId(s.id), username))
+      .sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0))
+      .slice(0, 20)
+      .map((s) => ({ id: s.id, name: s.name, icon: s.icon, endedAt: s.endedAt, players: s.players, winner: s.winner ? { username: s.winner.username, coins: s.winner.coins } : null })),
   };
 }
 

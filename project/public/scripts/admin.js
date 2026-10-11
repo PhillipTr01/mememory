@@ -2789,16 +2789,21 @@ async function chatAction(path, body, done) {
 /* ---------- Settings ---------- */
 
 var settingsList = [];
-// The values shown: the normal casino's - or the season world's own limits ("season": empty = the normal value)
+// The values shown: the normal casino's - or a season's own limits ("season": empty = the normal value)
 var settingsWorld = "normal";
-var seasonMode = () => settingsWorld == "season" && settingsList.some((field) => field.group == settingsGroup && field.season);
+// Every season has its own limits: the one picked (its id) - and the seasons to pick (not over)
+var settingsSeason = null;
+var settingsSeasons = [];
+var seasonMode = () => settingsWorld == "season" && settingsSeason != null && settingsList.some((field) => field.group == settingsGroup && field.season);
+// (the season picked on the page - sent with every save)
+var withSeason = (body) => (settingsSeason != null ? { ...body, seasonId: settingsSeason } : body);
 // What an input of the page holds now: the normal value - or the season's own one ("" for none)
 var shownValue = (field) => (seasonMode() ? (field.seasonValue == null ? "" : field.seasonValue) : field.value);
 
 async function loadSettings() {
   try {
-    var [data, seasons] = await Promise.all([api("settings"), settingsGroup == "general" ? api("seasons") : null]);
-    settingsList = data.settings;
+    var [data, seasons] = await Promise.all([api("settings" + (settingsSeason != null ? "?season=" + settingsSeason : "")), settingsGroup == "general" ? api("seasons") : null]);
+    takeSettings(data);
     if (seasons) {
       seasonList = seasons.seasons;
       dailyBonusSetting = seasons.dailyBonus;
@@ -2807,6 +2812,19 @@ async function loadSettings() {
   } catch (error) {
     fail(error);
   }
+}
+
+// An answer of api/settings: the fields - and the seasons to pick (the one picked gone: the first running, else the first)
+function takeSettings(data) {
+  settingsList = data.settings;
+  settingsSeasons = data.seasons || settingsSeasons;
+  if (settingsSeason != null && !settingsSeasons.some((season) => season.id == settingsSeason)) settingsSeason = null;
+  if (settingsSeason == null && settingsSeasons.length) {
+    settingsSeason = (settingsSeasons.find((season) => season.status == "running") || settingsSeasons[0]).id;
+    // (its own values: loaded once more)
+    if (settingsWorld == "season") loadSettings();
+  }
+  return data;
 }
 
 function renderSettings() {
@@ -2819,7 +2837,8 @@ function renderSettings() {
   var sections = [];
   settingsList
     // (the cases: switched on / off in the case list under the settings)
-    .filter((field) => field.group == settingsGroup && field.type != "cases" && (!seasonMode() || field.season))
+    // (Season without a season to pick: nothing to set)
+    .filter((field) => field.group == settingsGroup && field.type != "cases" && (!seasonMode() || field.season) && (settingsWorld != "season" || seasonMode() || !field.season))
     .forEach((field) => {
       var section = sections.find((s) => s.name == field.section);
       if (!section) sections.push((section = { name: field.section, fields: [] }));
@@ -2841,14 +2860,15 @@ function renderSettings() {
         var row = el("label", "ad-setting");
         var label = el("span", "ad-setting-label", field.label);
         // Only outside of a season (in one: the season's own value)
-        if (seasonMode()) label.appendChild(field.seasonValue == null ? el("span", "ad-scope ad-scope-same", "same as normal") : el("span", "changed ad-season-own", "normal " + formatCoins(field.value)));
+        if (seasonMode()) label.appendChild(field.seasonValue == null ? el("span", "ad-scope ad-scope-same", field.seasonDefault != null && field.seasonDefault != field.value ? "for every season" : "same as normal") : el("span", "changed ad-season-own", (field.seasonDefault != null && field.seasonDefault != field.value ? "every season " + formatCoins(field.seasonDefault) : "normal " + formatCoins(field.value))));
         else {
           if (field.scope == "outside") label.appendChild(el("span", "ad-scope", "outside seasons"));
           if (field.value != field.default) label.appendChild(el("span", "changed", "default " + formatCoins(field.default)));
           // (the season has its own value: this one doesn't count there - easy to miss otherwise)
           if (field.seasonValue != null) {
-            var other = el("span", "changed ad-season-own", "season " + formatCoins(field.seasonValue));
-            other.title = "In the season world " + formatCoins(field.seasonValue) + " counts - change it under 🏆 Season above";
+            var picked = settingsSeasons.find((season) => season.id == settingsSeason);
+            var other = el("span", "changed ad-season-own", (picked ? picked.icon + " " : "season ") + formatCoins(field.seasonValue));
+            other.title = "In " + (picked ? picked.name : "the season") + " " + formatCoins(field.seasonValue) + " counts - change it under 🏆 Season above";
             label.appendChild(other);
           }
         }
@@ -2859,7 +2879,7 @@ function renderSettings() {
         input.max = field.max;
         input.value = shownValue(field);
         // (season: empty - the normal value counts, shown as the placeholder)
-        if (seasonMode()) input.placeholder = formatCoins(field.value);
+        if (seasonMode()) input.placeholder = formatCoins(field.seasonDefault != null ? field.seasonDefault : field.value);
         input.dataset.key = field.key;
         var box = el("span", "ad-setting-input");
         box.appendChild(input);
@@ -2884,49 +2904,77 @@ function renderSettings() {
   settingsDirty();
 }
 
-// Normal | Season: which values the page shows - the season world can have its own (stricter) limits
+// Normal | Season: which values the page shows - every season can have its own (stricter) limits: in Season
+// the season is picked (a chip each, with how many own values it has)
 function worldSwitch() {
   var fields = settingsList.filter((field) => field.group == settingsGroup && field.season);
   if (!fields.length) return null;
-  var card = el("div", "ad-card ad-scope-card ad-world-card" + (seasonMode() ? " season" : ""));
+  var season = settingsWorld == "season";
+  var card = el("div", "ad-card ad-scope-card ad-world-card" + (season ? " season" : ""));
   var row = el("div", "ad-world-row");
   var options = el("div", "ad-choice");
   options.setAttribute("role", "radiogroup");
   options.setAttribute("aria-label", "Values for");
-  var own = fields.filter((field) => field.seasonValue != null).length;
+  var leave = async () => document.getElementById("adSettingsDirty").hidden || (await confirmDialog({ title: "Leave without saving?", text: "What you typed here is not saved yet.", confirmLabel: "Leave" }));
+  var withOwn = settingsSeasons.filter((s) => s.own > 0).length;
   [
     ["normal", "🪙 Normal"],
-    ["season", "🏆 Season" + (own ? " · " + own : "")],
+    ["season", "🏆 Season" + (withOwn ? " · " + withOwn : "")],
   ].forEach(([world, text]) => {
     var button = el("button", "ad-choice-option" + (settingsWorld == world ? " active" : ""), text);
     button.type = "button";
     button.setAttribute("role", "radio");
     button.setAttribute("aria-checked", settingsWorld == world);
     button.addEventListener("click", async () => {
-      if (settingsWorld == world) return;
-      if (!document.getElementById("adSettingsDirty").hidden && !(await confirmDialog({ title: "Leave without saving?", text: "What you typed here is not saved yet.", confirmLabel: "Leave" }))) return;
+      if (settingsWorld == world || !(await leave())) return;
       settingsWorld = world;
       settingsError(null, "");
       renderSettings();
     });
     options.appendChild(button);
   });
+  var picked = settingsSeasons.find((s) => s.id == settingsSeason);
   var text = el(
     "p",
     "ad-note",
-    seasonMode()
-      ? "The season world's own limits. Empty: the normal value counts there too (shown in grey). Make them stricter than normal - seasons are a competition."
-      : "The limits of the normal casino. Switch to Season to give the season world its own (stricter) ones" + (own ? " - " + own + " set." : "."),
+    !season
+      ? "The limits of the normal casino. Switch to Season to give a season its own (stricter) ones" + (withOwn ? " - " + withOwn + " season" + (withOwn == 1 ? " has" : "s have") + " some." : ".")
+      : !settingsSeasons.length
+        ? "No season yet - plan one under Seasons, then give it its own limits here."
+        : (picked ? picked.icon + " " + picked.name : "The season") + ": its own limits. Empty: the normal value counts there too (shown in grey). Make them stricter than normal - seasons are a competition.",
   );
   row.append(options, text);
   card.appendChild(row);
+  // The season: a chip each (running, starting or planned - with how many own values)
+  if (season && settingsSeasons.length) {
+    var chips = el("div", "ad-season-picks");
+    chips.setAttribute("role", "radiogroup");
+    chips.setAttribute("aria-label", "Season");
+    settingsSeasons.forEach((s) => {
+      var chip = el("button", "ad-season-pick" + (s.id == settingsSeason ? " active" : ""));
+      chip.type = "button";
+      chip.setAttribute("role", "radio");
+      chip.setAttribute("aria-checked", s.id == settingsSeason);
+      chip.append(el("span", "ad-season-pick-icon", s.icon), el("span", "ad-season-pick-name", s.name), el("span", "ad-season-pick-state " + s.status, s.status == "running" ? "running" : s.status == "starting" ? "starting" : "planned"));
+      if (s.own > 0) chip.appendChild(el("span", "ad-season-pick-own", String(s.own)));
+      chip.title = s.own ? s.own + " own value" + (s.own == 1 ? "" : "s") : "No own values - the normal ones count";
+      chip.addEventListener("click", async () => {
+        if (s.id == settingsSeason || !(await leave())) return;
+        settingsSeason = s.id;
+        settingsError(null, "");
+        await loadSettings();
+      });
+      chips.appendChild(chip);
+    });
+    card.appendChild(chips);
+  }
   return card;
 }
 
 // What counts where: the games always, the coins of the general page only outside of a season
 function scopeNote() {
   var world = worldSwitch();
-  if (seasonMode()) return [world];
+  if (settingsWorld == "season" && world) return [world];
   var notes = scopeNotes();
   return world ? [world, ...notes] : notes;
 }
@@ -2967,7 +3015,7 @@ function choiceCard(field) {
       if (option.value == field.value) return;
       options.querySelectorAll("button").forEach((b) => (b.disabled = true));
       try {
-        settingsList = (await api("settings", { values: { [field.key]: option.value } })).settings;
+        takeSettings(await api("settings", withSeason({ values: { [field.key]: option.value } })));
       } catch (error) {
         fail(error);
       }
@@ -3000,7 +3048,7 @@ function toggleCard(field) {
     }
     box.disabled = true;
     try {
-      settingsList = (await api("settings", { values: { [field.key]: box.checked } })).settings;
+      takeSettings(await api("settings", withSeason({ values: { [field.key]: box.checked } })));
     } catch (error) {
       fail(error);
     }
@@ -3061,7 +3109,7 @@ async function saveSettings(event) {
   button.disabled = true;
   button.innerText = "Saving...";
   try {
-    settingsList = (await api("settings", seasonMode() ? { season: values } : { values: values })).settings;
+    takeSettings(await api("settings", withSeason(seasonMode() ? { season: values } : { values: values })));
     renderSettings();
     flashSaved(button, "Save");
   } catch (error) {
@@ -3101,7 +3149,7 @@ async function settingsDefaults() {
   if (seasonMode()) {
     if (!(await confirmDialog({ title: "Season: back to normal?", text: changed.map((f) => f.label + ": " + formatCoins(f.seasonValue) + " → " + formatCoins(f.value) + " (normal)").join("\n"), confirmLabel: "Back to normal" }))) return;
     try {
-      settingsList = (await api("settings", { season: Object.fromEntries(changed.map((f) => [f.key, null])) })).settings;
+      takeSettings(await api("settings", withSeason({ season: Object.fromEntries(changed.map((f) => [f.key, null])) })));
       renderSettings();
       flashSaved(document.getElementById("adSettingsDefaults"), "Back to Default", "Back to Default ✓");
     } catch (error) {
@@ -3111,7 +3159,7 @@ async function settingsDefaults() {
   }
   if (!(await confirmDialog({ title: "Back to the defaults?", text: changed.map((f) => f.label + ": " + formatCoins(f.value) + " → " + formatCoins(f.default)).join("\n"), confirmLabel: "Back to Default" }))) return;
   try {
-    settingsList = (await api("settings", { values: Object.fromEntries(changed.map((f) => [f.key, f.default])) })).settings;
+    takeSettings(await api("settings", withSeason({ values: Object.fromEntries(changed.map((f) => [f.key, f.default])) })));
     renderSettings();
     flashSaved(document.getElementById("adSettingsDefaults"), "Back to Default", "Back to Default ✓");
   } catch (error) {

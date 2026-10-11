@@ -201,7 +201,8 @@ function render() {
   renderBoards();
   // The last season that is over: the way to its winners
   var last = document.getElementById("lbLastSeason");
-  last.hidden = !board.lastSeason || !!season;
+  // (only the first days after its end - later: under Past seasons)
+  last.hidden = !board.lastSeason || !!season || Date.now() - board.lastSeason.endedAt > 3 * 86400 * 1000;
   if (board.lastSeason) {
     morphChildren(last, [el("span", "lb-last-icon", board.lastSeason.icon), el("span", "", board.lastSeason.name + " is over - see the winners"), el("span", "lb-last-arrow", "→")]);
     last.onclick = () => showWinners(board.lastSeason.id);
@@ -253,8 +254,9 @@ function renderBoards() {
     var anchor = document.getElementById("lbSeason");
     anchor.parentNode.insertBefore(tabs, anchor);
   }
-  tabs.hidden = list.length == 0;
-  if (!list.length) return;
+  var past = board.pastSeasons || [];
+  tabs.hidden = list.length == 0 && past.length == 0;
+  if (tabs.hidden) return;
   var current = board.season ? String(board.season.id) : "normal";
   var tab = (key, icon, name) => {
     var button = el("button", "lb-board-tab" + (key == current ? " active" : ""));
@@ -269,12 +271,69 @@ function renderBoards() {
   };
   // (one listener: the tabs are morphed, their own listeners would not move over)
   tabs.onclick = (event) => {
+    if (event.target.closest("[data-past]")) return togglePast(event.target.closest("[data-past]"));
     var button = event.target.closest("[data-board]");
     if (!button || button.classList.contains("active")) return;
     picked = button.dataset.board;
     load();
   };
-  morphChildren(tabs, [tab("normal", "🪙", "Casino"), ...list.map((s) => tab(String(s.id), s.icon, s.name))]);
+  // The seasons that are over: one tab - a list of their winner pages
+  var pastTab = null;
+  if (past.length) {
+    pastTab = el("button", "lb-board-tab lb-board-past");
+    pastTab.type = "button";
+    pastTab.dataset.past = "1";
+    pastTab.setAttribute("aria-haspopup", "menu");
+    pastTab.append(el("span", "lb-board-icon", "🏁"), el("span", "", "Past seasons"), el("span", "lb-board-count", String(past.length)));
+  }
+  morphChildren(tabs, [tab("normal", "🪙", "Casino"), ...list.map((s) => tab(String(s.id), s.icon, s.name)), pastTab]);
+}
+
+// The seasons that are over: a menu under the tab - a click opens the winner page
+function togglePast(anchor) {
+  var open = document.getElementById("lbPastMenu");
+  if (open) return closePast();
+  var menu = el("div", "lb-past-menu");
+  menu.id = "lbPastMenu";
+  menu.setAttribute("role", "menu");
+  (board.pastSeasons || []).forEach((season) => {
+    var item = el("button", "lb-past-item");
+    item.type = "button";
+    item.setAttribute("role", "menuitem");
+    var text = el("span", "lb-past-text");
+    text.append(el("b", "", season.name), el("span", "", "Ended " + new Date(season.endedAt).toLocaleDateString(undefined, { dateStyle: "medium" }) + " · " + season.players + " player" + (season.players == 1 ? "" : "s")));
+    item.append(el("span", "lb-past-icon", season.icon), text, el("span", "lb-past-winner", season.winner ? "🥇 " + season.winner.username : ""));
+    item.addEventListener("click", () => {
+      closePast();
+      showWinners(season.id);
+    });
+    menu.appendChild(item);
+  });
+  document.body.appendChild(menu);
+  var box = anchor.getBoundingClientRect();
+  var width = Math.min(340, window.innerWidth - 32);
+  menu.style.width = width + "px";
+  menu.style.left = Math.max(16, Math.min(box.right - width, window.innerWidth - width - 16)) + window.scrollX + "px";
+  menu.style.top = box.bottom + 8 + window.scrollY + "px";
+  anchor.classList.add("open");
+  setTimeout(() => document.addEventListener("click", outsidePast), 0);
+  document.addEventListener("keydown", escPast);
+}
+
+function closePast() {
+  var menu = document.getElementById("lbPastMenu");
+  if (menu) menu.remove();
+  document.querySelectorAll(".lb-board-past.open").forEach((tab) => tab.classList.remove("open"));
+  document.removeEventListener("click", outsidePast);
+  document.removeEventListener("keydown", escPast);
+}
+
+function outsidePast(event) {
+  if (!event.target.closest("#lbPastMenu, [data-past]")) closePast();
+}
+
+function escPast(event) {
+  if (event.key == "Escape") closePast();
 }
 
 // Live: every few seconds; otherwise at the next update

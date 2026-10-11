@@ -467,6 +467,8 @@ module.exports = function () {
     return seasons
       .list()
       .filter((season) => season.status !== "ended")
+      // (running first, then the ones starting, then the planned ones - the next first)
+      .sort((a, b) => ["running", "starting", "planned"].indexOf(a.status) - ["running", "starting", "planned"].indexOf(b.status) || a.start - b.start)
       .map((season) => ({ id: season.id, name: season.name, icon: season.icon, status: season.status, start: season.start, own: counts[season.id] || 0 }));
   };
   router.get("/api/settings", admin, (req, res) => res.json({ settings: settings.list(req.query.season != null && req.query.season !== "" ? Number(req.query.season) : null), seasons: settingsSeasons() }));
@@ -485,7 +487,8 @@ module.exports = function () {
             ? await settings.updateSeason(seasonId, body.season)
             : await settings.update(body.values);
       if (result.error) return res.status(400).json(result);
-      res.json({ ...result, seasons: settingsSeasons() });
+      // (the list with the own values of the season picked on the page)
+      res.json({ ...result, settings: settings.list(seasonId), seasons: settingsSeasons() });
     }),
   );
 
