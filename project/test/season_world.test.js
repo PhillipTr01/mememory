@@ -61,3 +61,46 @@ test("season world: only who joined and switched there plays in it - with the se
   assert.strictEqual((await h.once(normal, "coins")).coins, 10000);
   seasons.reset();
 });
+
+test("two season worlds: a player in both plays in the one picked - its own games and coins, the switch moves the pages", async () => {
+  seasons.reset();
+  h.setCoins("sw_in", 10000);
+  const now = Date.now();
+  const open = (await seasons.create({ name: "Open", icon: "🌍", start: now - 2000, end: now + 3600 * 1000, budget: 3000, every: 0 })).season;
+  const vip = (await seasons.create({ name: "VIP", icon: "👑", start: now - 1000, end: now + 3600 * 1000, budget: 7000, every: 0, accessMode: "whitelist", accessNames: ["sw_in"] })).season;
+  await seasons.tick(now);
+  await seasons.join("sw_in", now, open.id);
+  await seasons.join("sw_in", now, vip.id);
+  // The VIP season (joined last): its world - the first season world sends the page there
+  assert.strictEqual(await refused("/season/jackpot", "sw_in"), "world");
+  assert.strictEqual(await refused("/season2/jackpot", "sw_out"), "world", "not in it");
+  const vipPage = connect("/season2/jackpot", "sw_in");
+  const wallet = await h.once(vipPage, "coins");
+  assert.deepStrictEqual([wallet.coins, wallet.normal, wallet.world], [7000, 10000, "season2"]);
+  const landed = new Promise((resolve) => vipPage.on("jackpotState", (s) => s.entries && s.entries.some((e) => e.name === "sw_in") && resolve()));
+  vipPage.emit("bet", { amount: 1000 });
+  await landed;
+  assert.deepStrictEqual([h.userOf("sw_in").seasonCoins, h.userOf("sw_in").season2Coins, h.coinsOf("sw_in")], [3000, 6000, 10000]);
+  assert.strictEqual(server.season.jackpot.pot.entries.some((e) => e.name === "sw_in"), false, "the other season's jackpot saw nothing");
+
+  // The switch to the open season: the page goes there
+  const changed = h.once(vipPage, "worldChanged");
+  await seasons.switchWorld("sw_in", open.id);
+  assert.deepStrictEqual(await changed, { world: "season" });
+  const openPage = connect("/season/jackpot", "sw_in");
+  assert.strictEqual((await h.once(openPage, "coins")).coins, 3000);
+  seasons.reset();
+});
+
+test("a reward pops up on every open casino page of the player - not only the first one", async () => {
+  seasons.reset();
+  const shop = require("../game/shop");
+  const first = connect("/jackpot", "sw_out");
+  const second = connect("/slots", "sw_out");
+  await Promise.all([h.once(first, "coins"), h.once(second, "coins")]);
+  const got = Promise.all([h.once(first, "reward"), h.once(second, "reward")]);
+  assert.ok((await shop.give({ username: "sw_out", items: [], coins: 500, note: "Thanks" })).given);
+  const [a, b] = await got;
+  assert.deepStrictEqual([a.coins, b.coins, a.source], [500, 500, "Thanks"]);
+  assert.deepStrictEqual(h.userOf("sw_out").inbox, [], "delivered - nothing left for the next visit");
+});

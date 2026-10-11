@@ -5,6 +5,7 @@ const config = require("./config");
 const days = require("./days");
 const limits = require("./limits");
 const streak = require("./streak");
+const slots = require("./season_slots");
 
 // Bets (every game): one may take at most limits.betCap of the balance - more only with options.nocap (a double, a split)
 const BET_REASONS = ["jackpot bet", "battle", "poker buy-in", "poker chips", "blackjack bet", "slots bet", "roulette bet", "baucua bet"];
@@ -31,7 +32,8 @@ function notify(username) {
  */
 const FIELDS = {
   normal: { coins: "coins", reset: "coinReset", bonusAt: "coinBonusAt", streak: "coinStreak" },
-  season: { coins: "seasonCoins", reset: "seasonReset", bonusAt: "seasonBonusAt", streak: "seasonStreak" },
+  // (one per season slot: "season", "season2" - two seasons can run at once)
+  ...Object.fromEntries(slots.SLOTS.map((slot) => [slot.key, slot.fields])),
 };
 
 // History of every change (for the admin panel); never blocks or breaks a game
@@ -48,13 +50,14 @@ function changed(result) {
 }
 
 /*
- * The running season (game/seasons.js): {reset: "season-<id>", start, budget,
- * bonus, since, active} - its coins only count with this reset.
+ * The running season of a slot (game/seasons.js): {reset: "season-<id>", start,
+ * budget, bonus, since, active} - its coins only count with this reset.
  */
-let seasonBase = null;
+const seasonBases = {};
 
-function setBase(value) {
-  seasonBase = value && typeof value.reset === "string" ? value : null;
+// key: the slot ("season", "season2")
+function setBase(value, key = "season") {
+  seasonBases[key] = value && typeof value.reset === "string" ? value : null;
 }
 
 // The normal start coins: config.COIN_RESET / START_COINS
@@ -62,8 +65,10 @@ function base() {
   return { reset: config.COIN_RESET, start: config.START_COINS, since: null };
 }
 
-// The running season (its reset id) - null without one
-function era() {
+// The running season of a slot (its reset id) - null without one
+function era(key = "season") {
+  const slot = slots.of(key);
+  const seasonBase = slot ? seasonBases[slot.key] : null;
   return seasonBase && seasonBase.active ? seasonBase.reset : null;
 }
 
@@ -126,22 +131,22 @@ function lastSpent(username) {
 
 function makeWallet(kind) {
   const f = FIELDS[kind];
-  const season = kind === "season";
+  const season = kind !== "normal";
 
   // The start of this wallet: normal - the start coins; season - 0 (the budget comes with joining)
-  const walletBase = () => (season ? seasonBase || { reset: "no-season", start: 0, since: null } : base());
-  const walletEra = () => (season ? era() : null);
+  const walletBase = () => (season ? seasonBases[kind] || { reset: "no-season", start: 0, since: null } : base());
+  const walletEra = () => (season ? era(kind) : null);
   const log = (username, amount, reason, note, bet) => writeLog(username, amount, reason, note, walletEra(), bet);
 
   // Not joined the running season: watching only (no coins, no daily bonus)
   function watching(username) {
     if (!season) return false;
-    return (era() == null || joinedLookup(username) !== true) && !testMode().active(username);
+    return (era(kind) == null || joinedLookup(username, kind) !== true) && !testMode().active(username);
   }
 
   // The free coins of the day: the season's - or the setting
   function dailyBonus() {
-    if (season && seasonBase && Number.isInteger(seasonBase.bonus)) return seasonBase.bonus;
+    if (season && seasonBases[kind] && Number.isInteger(seasonBases[kind].bonus)) return seasonBases[kind].bonus;
     return config.DAILY_BONUS;
   }
 
@@ -166,9 +171,9 @@ function makeWallet(kind) {
   // In a season the daily bonuses add up - nobody misses one: every day since the last claim
   // (or since joining the season), today's included. Normal: today's.
   function bonusDays(user, now = Date.now()) {
-    if (!season || era() == null || user == null) return 1;
+    if (!season || era(kind) == null || user == null) return 1;
     const last = user[f.bonusAt] ? new Date(user[f.bonusAt]).getTime() : null;
-    const joined = joinedAtLookup(user.username);
+    const joined = joinedAtLookup(user.username, kind);
     const from = last != null ? days.dayNumber(last) + 1 : joined != null ? days.dayNumber(joined) : days.dayNumber(now);
     return Math.max(1, days.dayNumber(now) - from + 1);
   }
@@ -211,22 +216,22 @@ function makeWallet(kind) {
     return Number.isFinite(cap) ? cap : null;
   }
 
-  // { coins, bonus, bonusIn, payout, world, betCap } - bonus: the daily free coins can be claimed now, payout: may pay coins out
+  // { coins, bonus, bonusIn, world, betCap } - bonus: the daily free coins can be claimed now
   // (in the season: normal - the normal balance, shown next to the season's)
   async function get(username) {
     // Test mode (the admin): the sandbox - the real balance stays as it is
     if (testMode().active(username)) {
       const balance = testMode().balance(username);
-      return { coins: balance, bonus: true, bonusIn: 0, bonusAmount: dailyBonus(), payout: false, normal: null, world: kind, joined: null, test: true, betCap: limits.betCap(balance, "normal") === Infinity ? null : limits.betCap(balance, "normal"), betCapRule: limits.capRule("normal"), slotsCapRule: limits.capRule("normal", "slots") };
+      return { coins: balance, bonus: true, bonusIn: 0, bonusAmount: dailyBonus(), normal: null, world: kind, joined: null, test: true, betCap: limits.betCap(balance, "normal") === Infinity ? null : limits.betCap(balance, "normal"), betCapRule: limits.capRule("normal"), slotsCapRule: limits.capRule("normal", "slots") };
     }
     // (after a restart: the season is known first)
     await gate;
     if (season && watching(username)) {
-      return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), bonusAmount: dailyBonus(), payout: false, normal: null, world: kind, joined: false };
+      return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), bonusAmount: dailyBonus(), normal: null, world: kind, joined: false };
     }
     await ensure(username);
-    const user = await User.findOne({ username: username }).select(["username", f.coins, f.reset, f.bonusAt, f.streak, "payoutAllowed", ...(season ? ["coins", "coinReset"] : [])].join(" "));
-    if (user == null) return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), payout: false, world: kind };
+    const user = await User.findOne({ username: username }).select(["username", f.coins, f.reset, f.bonusAt, f.streak, ...(season ? ["coins", "coinReset"] : [])].join(" "));
+    if (user == null) return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), world: kind };
     const available = bonusAvailable(user);
     return {
       coins: user[f.coins] || 0,
@@ -239,10 +244,8 @@ function makeWallet(kind) {
       // (a season: the days missed since the last claim - paid on top, the plain bonus each)
       bonusMissed: available ? bonusDays(user) - 1 : 0,
       streak: streakInfo(user),
-      // (payouts: only the normal coins)
-      payout: !season && user.payoutAllowed === true,
       normal: season ? normalWallet.balanceOf(user) : null,
-      wager: season ? await wagerLookup(username).catch(() => null) : null,
+      wager: season ? await wagerLookup(username, kind).catch(() => null) : null,
       world: kind,
       joined: season ? true : null,
     };
@@ -383,11 +386,13 @@ function makeWallet(kind) {
 }
 
 const normalWallet = makeWallet("normal");
-const seasonWallet = makeWallet("season");
+const seasonWallets = Object.fromEntries(slots.KEYS.map((key) => [key, makeWallet(key)]));
+const seasonWallet = seasonWallets.season;
 
-// The wallet of a world (game/worlds.js): "/season" - the season's, everything else the normal one
+// The wallet of a world (game/worlds.js): a season slot ("/season", "season2") - its season's, everything else the normal one
 function wallet(world) {
-  return world === "/season" || world === "season" ? seasonWallet : normalWallet;
+  const slot = slots.of(world);
+  return slot ? seasonWallets[slot.key] : normalWallet;
 }
 
 // Coins for a win in a game (never blocks or breaks the game)
@@ -404,6 +409,7 @@ testMode().changes.on("coins", (username) => notify(username));
 module.exports = {
   ...normalWallet,
   season: seasonWallet,
+  season2: seasonWallets.season2,
   wallet,
   lastSpent,
   hold,
@@ -413,7 +419,7 @@ module.exports = {
   setStoredLookup,
   setWagerLookup,
   setBase,
-  seasonBase: () => seasonBase,
+  seasonBase: (key = "season") => seasonBases[key] || null,
   base,
   era,
   eraFilter,

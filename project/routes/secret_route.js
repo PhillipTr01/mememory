@@ -2,7 +2,6 @@ const express = require("express");
 const { page } = require("../utils/pages");
 const { asyncHandler } = require("../utils/errors");
 const User = require("../models/User");
-const withdrawals = require("../game/withdrawals");
 const access = require("../game/access");
 const leaderboard = require("../game/leaderboard");
 const seasons = require("../game/seasons");
@@ -25,11 +24,11 @@ module.exports = function (auth) {
   const router = express.Router({ caseSensitive: false, strict: true });
 
   // The addresses of data (not pages) - without access: an error instead of the page to ask for it
-  const DATA = /^\/(withdraw|leaderboard\/|info\/|season|second-chance|request|maintenance|gift|shop\/|looks)/;
+  const DATA = /^\/(leaderboard\/|info\/|season|second-chance|request|maintenance|gift|shop\/|looks)/;
 
   // Only for players the admin let in - everybody else gets the page to ask for access
   const approved = asyncHandler(async (req, res, next) => {
-    const user = await User.findOne({ _id: req._id }).select("username casinoApproved payoutAllowed").lean();
+    const user = await User.findOne({ _id: req._id }).select("username casinoApproved").lean();
     if (access.approved(user)) {
       // Maintenance: only the players on the whitelist - the others get the maintenance page
       if (!maintenance.allowed(user.username)) {
@@ -37,7 +36,6 @@ module.exports = function (auth) {
         return res.status(503).json({ error: "The casino is closed for maintenance.", maintenance: maintenance.publicInfo() });
       }
       req.username = user.username;
-      req.payoutAllowed = user.payoutAllowed === true;
       return next();
     }
     // A page (any address of the casino): the page to ask for access - right there, it opens the
@@ -54,11 +52,14 @@ module.exports = function (auth) {
   };
 
   // The world of the player (game/worlds.js): the pages connect to it - the test world (test
-  // mode), the season world (CASINO_WORLD "season": the pages show it) or the normal casino
+  // mode), a season world (CASINO_WORLD "season": the pages show it - CASINO_SLOT: which one, "season" /
+  // "season2", CASINO_SEASON: its id) or the normal casino
   const worldScript = (req) => {
     const world = req && req.username ? worlds.worldOf(req.username) : "";
     if (!world) return "";
-    return `<script>window.CASINO_NS = ${JSON.stringify(world)};${world === worlds.SEASON ? 'window.CASINO_WORLD = "season";' : ""}</script>`;
+    const season = worlds.isSeason(world) ? seasons.running(world) : null;
+    const seasonVars = season ? `window.CASINO_WORLD = "season";window.CASINO_SLOT = ${JSON.stringify(season.slot)};window.CASINO_SEASON = ${season.id};` : "";
+    return `<script>window.CASINO_NS = ${JSON.stringify(world)};${seasonVars}</script>`;
   };
 
   // A game page - or, when the game is off, the next game that is on
@@ -120,7 +121,7 @@ module.exports = function (auth) {
 
   const modResult = (res, result) => (result.error ? res.status(400).json(result) : res.json(result));
   // (a money rain in the world the moderator plays in right now - test mode: no)
-  const modWorld = (username) => (seasons.inSeasonWorld(username) ? "season" : "normal");
+  const modWorld = (username) => (seasons.hereIn(username) ? seasons.hereIn(username).slot : "normal");
   router.post(
     "/mod/rain/preview",
     auth,
@@ -153,6 +154,24 @@ module.exports = function (auth) {
     auth,
     approved,
     asyncHandler(async (req, res) => modResult(res, await moderators.unmute(req.username, (req.body || {}).username))),
+  );
+  // The players a moderator can give coins to
+  router.get(
+    "/mod/players",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => modResult(res, await moderators.givePlayers(req.username))),
+  );
+
+  // A moderator gives one player coins: {to, amount, note}
+  router.post(
+    "/mod/give",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      const body = req.body || {};
+      modResult(res, await moderators.give(req.username, { to: body.to, amount: body.amount, note: body.note }));
+    }),
   );
   router.post(
     "/mod/announce",
@@ -210,7 +229,8 @@ module.exports = function (auth) {
     "/leaderboard/data",
     auth,
     approved,
-    asyncHandler(async (req, res) => res.json(await leaderboard.view(req.username))),
+    // (?board=normal or a season's id: another board than the one of the player's world)
+    asyncHandler(async (req, res) => res.json(await leaderboard.view(req.username, Date.now(), req.query.board ? String(req.query.board) : null))),
   );
 
   // The winner page of a season that is over
@@ -225,12 +245,22 @@ module.exports = function (auth) {
     }),
   );
 
+  // The season a request means: ?season= / {season} (an id) - nothing: the one of the player's world, else the first they joined
+  const seasonOfReq = (req) => {
+    const id = (req.body && req.body.season) || req.query.season;
+    if (id != null && id !== "") return seasons.running(Number(id));
+    return seasons.hereIn(req.username) || seasons.joinedSeasons(req.username)[0] || seasons.running();
+  };
+
   // A second chance in the season: can the player take one now? (see game/seasons.js)
   router.get(
     "/second-chance",
     auth,
     approved,
-    asyncHandler(async (req, res) => res.json(await seasons.chanceStatus(req.username))),
+    asyncHandler(async (req, res) => {
+      const season = seasonOfReq(req);
+      res.json({ ...(await seasons.chanceStatus(req.username, Date.now(), season || -1)), season: season ? season.id : null });
+    }),
   );
 
   router.post(
@@ -238,13 +268,15 @@ module.exports = function (auth) {
     auth,
     approved,
     asyncHandler(async (req, res) => {
-      const result = await seasons.useChance(req.username);
+      const season = seasonOfReq(req);
+      if (!season) return res.status(400).json({ error: "No season runs." });
+      const result = await seasons.useChance(req.username, Date.now(), season);
       if (result.error) return res.status(400).json(result);
       res.json(result);
     }),
   );
 
-  // The switch between the worlds: {to: "season" | "normal"} -> {world} or {error}
+  // The switch between the worlds: {to: "normal" | a season's id | its slot ("season", "season2")} -> {world, season} or {error}
   router.post(
     "/season/world",
     auth,
@@ -263,7 +295,11 @@ module.exports = function (auth) {
     auth,
     approved,
     asyncHandler(async (req, res) => {
-      const result = await seasons.join(req.username);
+      // ({season}: its id - nothing: the first running one the player may join)
+      const id = req.body && req.body.season;
+      const season = id != null && id !== "" ? seasons.running(Number(id)) : seasons.runningAll().find((s) => seasons.allowed(s, req.username) && !seasons.joined(req.username, s));
+      if (!season) return res.status(400).json({ error: "No season runs." });
+      const result = await seasons.join(req.username, Date.now(), season);
       if (result.error) return res.status(400).json(result);
       res.json(result);
     }),
@@ -280,7 +316,7 @@ module.exports = function (auth) {
     end: season.end,
     color: season.color || null,
     budget: season.budget,
-    dailyBonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : coins.season.dailyBonus(),
+    dailyBonus: Number.isInteger(season.dailyBonus) ? season.dailyBonus : coins.wallet(season.slot || "season").dailyBonus(),
     secondChances: season.secondChances || 0,
     chanceDelay: Number.isInteger(season.chanceDelay) ? season.chanceDelay : null,
     // (each prize as one line: the own prize, the coins, the items - like on the leaderboard)
@@ -288,57 +324,42 @@ module.exports = function (auth) {
     players: Object.keys(season.joined || {}).length,
     closed: seasons.accessOf(season).mode !== "all",
     wagerX: seasons.wagerXOf(season),
+    slot: season.started && !season.ended ? season.slot : null,
+  });
+  // A running season for one player: with joined and what joining gives
+  const runningInfo = (season, username) => ({
+    ...seasonInfo(season),
+    joined: seasons.joined(username, season),
+    joinCoins: seasons.joined(username, season) ? null : seasons.joinCoins(Date.now(), season),
   });
   router.get(
     "/season",
     auth,
     approved,
     asyncHandler(async (req, res) => {
-      const running = seasons.running();
-      const season = running && seasons.allowed(running, req.username) ? running : null;
-      const upcoming = season ? null : seasons.upcoming(req.username);
+      // Every running season the player may play in (two at once at most) - season: the one of the player's
+      // world, else the first of them (the pill, the popups)
+      const all = seasons.runningAll().filter((s) => seasons.allowed(s, req.username));
+      const here = seasons.hereIn(req.username);
+      const season = here || all[0] || null;
+      const upcoming = all.length ? null : seasons.upcoming(req.username);
       const ended = seasons.lastEnded();
-      const closing = seasons.closingInfo();
+      const closing = seasons.closingInfos().find((info) => seasons.allowed(seasons.byId(info.id), req.username)) || null;
       res.json({
         season: season ? seasonInfo(season) : null,
+        seasons: all.map((s) => runningInfo(s, req.username)),
         upcoming: upcoming ? seasonInfo(upcoming) : null,
         // In the season (joined)? null: no season
-        joined: season ? seasons.joined(req.username) : null,
-        // The world the player plays in now
-        world: seasons.inSeasonWorld(req.username) ? "season" : "normal",
+        joined: season ? seasons.joined(req.username, season) : null,
+        // The world the player plays in now: "normal" - or the slot of a season ("season", "season2")
+        world: here ? here.slot : "normal",
+        current: here ? here.id : null,
         // What joining gives now (the budget and the daily bonuses missed since the start)
-        joinCoins: season && !seasons.joined(req.username) ? seasons.joinCoins() : null,
+        joinCoins: season && !seasons.joined(req.username, season) ? seasons.joinCoins(Date.now(), season) : null,
         lastSeason: ended ? { id: ended.id, name: ended.name, icon: ended.icon, endedAt: ended.endedAt } : null,
-        // The countdown to a season (or the season world closing) - or a maintenance
-        closing: (closing && seasons.allowed(seasons.byId(closing.id), req.username) ? closing : null) || maintenance.closingInfo(),
+        // The countdown to a season (or a season world closing) - or a maintenance
+        closing: closing || maintenance.closingInfo(),
       });
-    }),
-  );
-
-  /* ---------- Payouts of the logged in player ---------- */
-
-  // Takes the coins off the balance, the admin sees it in the admin panel
-  router.post(
-    "/withdraw",
-    auth,
-    approved,
-    asyncHandler(async (req, res) => {
-      const name = req.username;
-      if (!req.payoutAllowed) return res.status(403).json({ error: "Payouts aren't enabled for you." });
-      const result = await withdrawals.request(name, Number(req.body && req.body.amount));
-      if (result.error) return res.status(400).json({ error: result.error });
-      res.json(result.withdrawal);
-    }),
-  );
-
-  // The own last payouts
-  router.get(
-    "/withdrawals",
-    auth,
-    approved,
-    asyncHandler(async (req, res) => {
-      const name = req.username;
-      res.json(await withdrawals.list({ username: name }, 10));
     }),
   );
 

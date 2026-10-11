@@ -4,7 +4,7 @@
  * registers a check. A second chance (game/seasons.js) only comes when
  * nothing is in play anywhere.
  */
-// One per world (game/worlds.js): the normal casino - and the season world (inPlay.season)
+// One per world (game/worlds.js): the normal casino - and the world of each season slot (inPlay.season, inPlay.season2)
 function create() {
   const checks = new Map(); // name -> (username) => boolean
 
@@ -28,4 +28,4 @@ function create() {
   return { register, where };
 }
 
-module.exports = { ...create(), season: create(), create };
+module.exports = { ...create(), season: create(), season2: create(), create };

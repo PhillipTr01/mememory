@@ -82,15 +82,6 @@ async function revoke(username) {
   return { username: username };
 }
 
-// Payouts on / off for a player (the open pages update right away)
-async function setPayout(username, allowed) {
-  const user = await User.findOne({ username: username }).select("username").lean();
-  if (user == null) return { error: "No such player." };
-  await User.updateOne({ username: username }, { $set: { payoutAllowed: allowed === true } });
-  coins.notify(username);
-  return { username: username, payout: allowed === true };
-}
-
 // A player without access asks for it (on the secret page): shown to the admin as a request
 async function request(userId) {
   await User.updateOne(
@@ -106,4 +97,4 @@ async function decline(username) {
   return { username: username };
 }
 
-module.exports = { approved, approve, revoke, setPayout, request, decline, firstApproval, startCoins, changes };
+module.exports = { approved, approve, revoke, request, decline, firstApproval, startCoins, changes };

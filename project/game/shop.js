@@ -85,6 +85,9 @@ const ITEMS = [
   { id: "lanterns", kind: "effect", name: "Sky Lanterns", price: 1800000, rarity: "exclusive" },
   { id: "disco", kind: "effect", name: "Disco Lights", price: 1500000, rarity: "exclusive" },
   { id: "butterflies", kind: "effect", name: "Butterflies", price: 1000000, rarity: "exclusive" },
+  // The Shadow Dragon set (frame, animation, background - made to be worn together)
+  { id: "shadowdragon", kind: "frame", name: "Shadow Dragon", price: 6000000, rarity: "exclusive", set: "dragon" },
+  { id: "dragonfire", kind: "effect", name: "Dragonfire", price: 6000000, rarity: "exclusive", set: "dragon" },
   // Backgrounds: behind the face, instead of the avatar's color
   { id: "sunset", kind: "background", name: "Sunset", price: 60000, rarity: "common" },
   { id: "lagoon", kind: "background", name: "Lagoon", price: 70000, rarity: "common" },
@@ -112,6 +115,7 @@ const ITEMS = [
   { id: "skyfire", kind: "background", name: "Season Fireworks", price: 3000000, rarity: "exclusive" },
   { id: "vault", kind: "background", name: "Golden Vault", price: 4000000, rarity: "exclusive" },
   { id: "legends", kind: "background", name: "Hall of Legends", price: 6000000, rarity: "exclusive" },
+  { id: "dragonscales", kind: "background", name: "Shadow Scales", price: 6000000, rarity: "exclusive", set: "dragon" },
 ];
 const MAX_REWARD_COINS = 100000000;
 const MAX_REWARD_RULES = 20;

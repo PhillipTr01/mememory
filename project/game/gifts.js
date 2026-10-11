@@ -15,19 +15,24 @@ const CoinLog = require("../models/CoinLog");
  * full amount again; both can be sent.
  */
 const seasons = () => require("./seasons");
+const slots = require("./season_slots");
 
-// The world the player gives in: "season" or "normal"
+// The world the player gives in: a season slot ("season", "season2") or "normal"
 function worldOf(username) {
-  return seasons().inSeasonWorld(username) ? "season" : "normal";
+  const season = seasons().hereIn(username);
+  return season ? season.slot : "normal";
 }
 
+// (a season: its own gift limit if it has one - else the one for seasons)
 function limitOf(world) {
-  return world === "season" ? config.SEASON_GIFT_LIMIT : config.GIFT_LIMIT;
+  if (!slots.isSeason(world)) return config.GIFT_LIMIT;
+  const own = config.SEASON_LIMITS[String(slots.seasonIdOf(world))];
+  return own && own.GIFT_LIMIT != null ? own.GIFT_LIMIT : config.SEASON_GIFT_LIMIT;
 }
 
 // What the player gave today in a world (the season's gifts have its era)
 async function given(username, world, now = Date.now()) {
-  const era = world === "season" ? coins.era() : null;
+  const era = slots.isSeason(world) ? coins.era(world) : null;
   const rows = await CoinLog.find({ username: username, reason: "gift sent", at: { $gte: new Date(days.dayStart(now)) }, ...(era ? { era: era } : { era: { $exists: false } }) }).lean();
   return rows.reduce((sum, row) => sum + Math.abs(row.amount), 0);
 }
@@ -78,9 +83,9 @@ async function give(from, to, amount) {
   if (user == null || !access.approved(user)) return { error: "There's no such player in the casino." };
   const world = worldOf(from);
   // Season coins only to who plays in the season
-  if (world === "season" && seasons().joined(to) !== true) return { error: `${to} isn't in the season - season coins only go to players in it.` };
-  const wallet = world === "season" ? coins.season : coins;
-  const coin = world === "season" ? "" : "🪙 ";
+  if (slots.isSeason(world) && seasons().joined(to, world) !== true) return { error: `${to} isn't in the season - season coins only go to players in it.` };
+  const wallet = coins.wallet(world);
+  const coin = slots.isSeason(world) ? "" : "🪙 ";
   const before = await status(from, world);
   if (before.wait > 0) return { error: `You can send the next gift in ${waitText(before.wait)}.`, wait: before.wait };
   if (amount > before.left) return { error: before.left > 0 ? `You can give ${coin}${before.left.toLocaleString("en-US")} more today (of ${before.limit.toLocaleString("en-US")} a day).` : `You gave the most you can today (${coin}${before.limit.toLocaleString("en-US")} a day) - more tomorrow.` };
@@ -93,7 +98,7 @@ async function give(from, to, amount) {
     return { error: "You don't have that many coins." };
   }
   await wallet.add(to, amount, { reason: "gift received", note: "from " + from });
-  notify(to, "giftReceived", { from: from, amount: amount, world: world, coinIcon: world === "season" ? seasons().publicSeason(seasons().running()).coinIcon : null });
+  notify(to, "giftReceived", { from: from, amount: amount, world: world, coinIcon: slots.isSeason(world) && seasons().running(world) ? seasons().publicSeason(seasons().running(world)).coinIcon : null });
   return { coins: (await wallet.get(from)).coins, left: before.left - amount, world: world };
 }
 

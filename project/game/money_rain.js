@@ -2,6 +2,7 @@ const EventEmitter = require("events");
 const User = require("../models/User");
 const Setting = require("../models/Setting");
 const coins = require("./coins");
+const slots = require("./season_slots");
 
 /*
  * Money rains (admin panel, Casino): coins for many players at once - right
@@ -58,7 +59,8 @@ function check(input, now = Date.now()) {
   if (target === "bottom" && (!Number.isInteger(percent) || percent < 1 || percent > 100)) return { error: "The last 1 to 100% of the leaderboard." };
   const below = target === "below" ? Number(input.below) : null;
   if (target === "below" && (!Number.isInteger(below) || below < 1 || below > 1000000000)) return { error: "Less than how many coins? 1 to 1,000,000,000." };
-  const world = input.world === "season" ? "season" : "normal";
+  // (a season: its slot - "season", "season2", game/season_slots.js)
+  const world = slots.KEYS.includes(input.world) ? input.world : "normal";
   const repeat = Object.prototype.hasOwnProperty.call(REPEATS, input.repeat) ? input.repeat : "none";
   const at = input.at == null || input.at === "" ? now : Number(input.at);
   if (!Number.isFinite(at)) return { error: "When?" };
@@ -75,15 +77,15 @@ async function targets(rain) {
   // (picked already - a moderator's rain: exactly these, if they are still in)
   if (Array.isArray(rain.names)) {
     const users = await User.find({ username: { $in: rain.names }, casinoApproved: true }).select("username").lean();
-    const ok = (name) => rain.world !== "season" || require("./seasons").joined(name) === true;
+    const ok = (name) => !slots.isSeason(rain.world) || require("./seasons").joined(name, rain.world) === true;
     return users.map((user) => user.username).filter(ok).sort((a, b) => a.localeCompare(b));
   }
-  const season = rain.world === "season" ? require("./seasons").running() : null;
-  if (rain.world === "season" && !season) return [];
-  const wallet = coins.wallet(rain.world === "season" ? "/season" : "");
+  const season = slots.isSeason(rain.world) ? require("./seasons").running(rain.world) : null;
+  if (slots.isSeason(rain.world) && !season) return [];
+  const wallet = coins.wallet(slots.isSeason(rain.world) ? rain.world : "");
   const fields = wallet.fields;
   let users = (await User.find({ casinoApproved: true }).select(["username", fields.coins, fields.reset].join(" ")).lean()).map((user) => ({ username: user.username, coins: wallet.balanceOf(user) }));
-  if (season) users = users.filter((user) => require("./seasons").joined(user.username) === true);
+  if (season) users = users.filter((user) => require("./seasons").joined(user.username, season) === true);
   if (rain.target === "online") {
     const online = new Set(onlineLookup());
     users = users.filter((user) => online.has(user.username));
@@ -156,7 +158,7 @@ async function now(id) {
 
 async function pay(rain, at) {
   const names = await targets(rain);
-  const wallet = coins.wallet(rain.world === "season" ? "/season" : "");
+  const wallet = coins.wallet(slots.isSeason(rain.world) ? rain.world : "");
   const paid = [];
   for (const name of names) {
     if (await wallet.add(name, rain.amount, { reason: "money rain", note: rain.note || undefined })) paid.push(name);

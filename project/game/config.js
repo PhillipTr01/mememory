@@ -65,6 +65,7 @@ module.exports = {
   COIN_RESET: "reset-100k",
   DAILY_BONUS: 20000,
   GIFT_LIMIT: 25000, // coins a player can give other players a day
+  PAST_SEASON_DAYS: 7, // the leaderboard's menu shows a season that ended this many days after its end (its winners)
   GIFT_COOLDOWN: 60 * 1000, // after a gift a player waits this long before the next one (both worlds; 0: no wait)
   SEASON_GIFT_LIMIT: 5000, // ... in the season world a day (its coins - an own limit)
   // Max bet by balance: up to BET_CAP_FLOOR a player can bet everything, above it at most BET_CAP_SHARE % of the balance per bet
@@ -111,11 +112,6 @@ module.exports = {
   // The secret address of the jackpot (and its case battles and poker):
   // not linked anywhere. Can be changed with JACKPOT_PATH.
   JACKPOT_PATH: "/" + (process.env.JACKPOT_PATH || "🤫🎰💸"),
-
-  // Payouts: a player takes coins off the balance, the admin pays them out
-  WITHDRAW_MIN: 5000,
-  WITHDRAW_STEP: 1000, // only whole thousands
-  WITHDRAW_MAX_OPEN: 5, // open payouts per player
 
   // Admin panel: a secret address and a password (ADMIN_PASSWORD or the
   // hash below; without both there is no admin panel)

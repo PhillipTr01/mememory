@@ -57,9 +57,11 @@ require("./sockets/baucua_server")(io);
   for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua"]) {
     worlds.servers.set(game, require(`./sockets/${game}_server`)(io, { world: worlds.TEST }));
   }
-  // The season world: every game once more (/season/...), only for players in the running season
-  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua"]) {
-    worlds.seasonServers.set(game, require(`./sockets/${game}_server`)(io, { world: worlds.SEASON }));
+  // The season worlds: every game once more per season slot (/season/..., /season2/...), only for players in its season
+  for (const world of worlds.SEASONS) {
+    for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua"]) {
+      worlds.seasonServers.get(world).set(game, require(`./sockets/${game}_server`)(io, { world: world }));
+    }
   }
 }
 require("./sockets/casino_server")(io);

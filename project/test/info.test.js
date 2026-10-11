@@ -25,7 +25,9 @@ test("every game explains itself, with the limits of now", () => {
 
 test("info: the season world shows its own limits - and the max bet by balance", () => {
   const before = { ...config.SEASON_LIMITS };
-  config.SEASON_LIMITS = { SLOTS_MAX_BET: 1170, BET_CAP_SHARE: 10 };
+  const slots = require("../game/season_slots");
+  config.SEASON_LIMITS = { 7: { SLOTS_MAX_BET: 1170, BET_CAP_SHARE: 10 } };
+  slots.setCurrent("season", 7);
   try {
     const season = JSON.stringify(info.get("slots", "/season"));
     assert.match(season, /1,170/);
@@ -36,5 +38,6 @@ test("info: the season world shows its own limits - and the max bet by balance",
     assert.match(JSON.stringify(info.get("roulette", "")), new RegExp(`at most ${config.BET_CAP_SHARE}% of your coins`));
   } finally {
     config.SEASON_LIMITS = before;
+    slots.setCurrent("season", null);
   }
 });

@@ -1,20 +1,46 @@
 const config = require("./config");
 
+const slots = require("./season_slots");
+
 /*
- * The limits of a world (bets, buy-ins, seats, the max bet by balance): the
- * season world has its own ones where the admin set some
- * (config.SEASON_LIMITS, game/settings.js) - everything else is config.
- * forWorld(world).KEY reads like config.KEY.
+ * The limits of a world (bets, buy-ins, seats, the max bet by balance): every
+ * season has its own ones where the admin set some (config.SEASON_LIMITS[id],
+ * game/settings.js) - the world of a season slot uses the ones of the season
+ * running in it, everything else is config. forWorld(world).KEY reads like config.KEY.
  */
-const season = new Proxy(config, {
-  get(target, key) {
-    const own = target.SEASON_LIMITS;
-    return own && typeof key === "string" && own[key] != null ? own[key] : target[key];
-  },
-});
+const proxies = new Map();
+function forSeason(id) {
+  if (id == null) return config;
+  const key = String(id);
+  if (!proxies.has(key)) {
+    proxies.set(
+      key,
+      new Proxy(config, {
+        get(target, name) {
+          const own = target.SEASON_LIMITS && target.SEASON_LIMITS[key];
+          return own && typeof name === "string" && own[name] != null ? own[name] : target[name];
+        },
+      }),
+    );
+  }
+  return proxies.get(key);
+}
+
+// (the world of a slot: the season in it is looked up on every read - the game servers keep it)
+const slotProxies = Object.fromEntries(
+  slots.KEYS.map((slotKey) => [
+    slotKey,
+    new Proxy(config, {
+      get(target, name) {
+        return forSeason(slots.seasonIdOf(slotKey))[name];
+      },
+    }),
+  ]),
+);
 
 function forWorld(world) {
-  return world === "/season" || world === "season" ? season : config;
+  const slot = slots.of(world);
+  return slot ? slotProxies[slot.key] : config;
 }
 
 // A game with its own share of the cap: slots spin far faster than the tables (1/x of the floor and of the share)
@@ -55,4 +81,4 @@ function gameOfReason(reason) {
   return reason === "slots bet" ? "slots" : null;
 }
 
-module.exports = { forWorld, betCap, capRule, dividerOf, gameOfReason };
+module.exports = { forWorld, forSeason, betCap, capRule, dividerOf, gameOfReason };

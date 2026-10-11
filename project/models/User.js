@@ -22,13 +22,17 @@ const schema = mongoose.Schema({
     seasonReset: {type: String}, // the season these coins are of ("season-<id>")
     seasonBonusAt: {type: Date},
     seasonStreak: {type: Number},
+    // The second season slot (two seasons at once, see game/season_slots.js): the same
+    season2Coins: {type: Number, min: 0},
+    season2Reset: {type: String},
+    season2BonusAt: {type: Date},
+    season2Streak: {type: Number},
     // Gifts and money rains while the player was away: shown on the next casino page (see game/inbox.js)
     inbox: {type: mongoose.Schema.Types.Mixed, default: undefined},
     // The secret casino: only for players the admin let in (see game/access.js)
     casinoApproved: {type: Boolean, default: false},
     casinoApprovedAt: {type: Date}, // the first time - the start coins come only once
     casinoRequestedAt: {type: Date}, // tried to open the casino without access
-    payoutAllowed: {type: Boolean, default: false}, // may pay coins out (set by the admin)
     // The casino's accessory shop: {owned: [id], frame: id, effect: id} (see game/shop.js)
     looks: {type: mongoose.Schema.Types.Mixed, default: null},
     // A moderator of the casino (see game/moderators.js): {on, perms: {rain, chat, announce}, rainMax, rainDaily, used: {day, amount}}

@@ -1,4 +1,5 @@
 const config = require("./config");
+const slots = require("./season_slots");
 const { cleanText } = require("./chat");
 const persist = require("./persist");
 
@@ -25,28 +26,32 @@ function create(key, options = {}) {
 
   function join(socket) {
     socket.emit("chatHistory", history);
-    socket.emit("casinoOnline", online());
+    socket.emit("casinoOnline", online(socket.data.username));
     sendOnline();
     socket.on("disconnect", sendOnline);
   }
 
   // Everybody with a casino page open (once per player, however many tabs) - season: who plays in
-  // the season world right now (the chat marks them with the season's icon)
-  function online() {
+  // a season world right now (the chat marks them with the icon of their season). viewer: only the
+  // seasons this player may play in (who can't, doesn't see them) - nothing given: no season marks
+  function online(viewer = null) {
     const names = new Set();
-    const season = new Set();
+    const season = new Map();
     for (const page of pages) {
       for (const socket of page.namespace.sockets.values()) {
         names.add(socket.data.username);
-        if (page.namespace.name.startsWith("/season/")) season.add(socket.data.username);
+        const slot = slots.SLOTS.find((s) => page.namespace.name.startsWith(s.world + "/"));
+        if (slot) season.set(socket.data.username, slot.key);
       }
     }
-    const running = season.size ? require("./seasons").running() : null;
+    // (two seasons at once: the icon and name of each player's own season - only seasons the viewer may see)
+    const seasons = season.size && viewer ? require("./seasons") : null;
+    const bySlot = Object.fromEntries(slots.KEYS.map((key) => [key, seasons ? seasons.running(key) : null]));
+    const seen = [...season].filter(([, key]) => bySlot[key] && seasons.allowed(bySlot[key], viewer));
     return {
       names: [...names].sort((a, b) => a.localeCompare(b)),
-      season: [...season].sort((a, b) => a.localeCompare(b)),
-      seasonIcon: running ? running.icon : null,
-      seasonName: running ? running.name : null,
+      season: seen.map(([name]) => name).sort((a, b) => a.localeCompare(b)),
+      seasonOf: Object.fromEntries(seen.map(([name, key]) => [name, { id: bySlot[key].id, icon: bySlot[key].icon, name: bySlot[key].name }])),
       // The moderators (🛡️ next to their names)
       mods: require("./moderators").names(),
     };
@@ -58,10 +63,22 @@ function create(key, options = {}) {
     if (onlineTimer) return;
     onlineTimer = setTimeout(() => {
       onlineTimer = null;
-      const data = online();
-      for (const page of pages) page.namespace.to(page.room).emit("casinoOnline", data);
+      sendEach();
     }, 150);
     onlineTimer.unref();
+  }
+
+  // To every page with the chat: the list for its player (the seasons they may see)
+  function sendEach() {
+    const byViewer = new Map();
+    for (const page of pages) {
+      for (const socket of page.namespace.sockets.values()) {
+        if (!socket.rooms.has(page.room)) continue;
+        const viewer = socket.data.username;
+        if (!byViewer.has(viewer)) byViewer.set(viewer, online(viewer));
+        socket.emit("casinoOnline", byViewer.get(viewer));
+      }
+    }
   }
 
   // The ban of a player right now (null: none; an old one is gone by itself)
@@ -87,7 +104,7 @@ function create(key, options = {}) {
     if (text == null) return;
     const entry = { id: ++messageId, time: Date.now(), type: "user", name: socket.data.username, spectator: false, text: text };
     // (sent from the season world: the others see the season badge right away)
-    if (socket.nsp && socket.nsp.name.startsWith("/season/")) sendOnline();
+    if (socket.nsp && slots.WORLDS.some((world) => socket.nsp.name.startsWith(world + "/"))) sendOnline();
     history.push(entry);
     if (history.length > config.CASINO_CHAT_HISTORY) history.splice(0, history.length - config.CASINO_CHAT_HISTORY);
     for (const page of pages) page.namespace.to(page.room).emit("chatMessage", entry);
@@ -179,7 +196,7 @@ function create(key, options = {}) {
     },
   );
 
-  return { attach, join, fromUser, announce, online, messages, remove, clear, ban, unban, banList };
+  return { attach, join, fromUser, announce, online, refreshOnline: sendEach, messages, remove, clear, ban, unban, banList };
 }
 
 module.exports = { ...create("chat"), create };

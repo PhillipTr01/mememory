@@ -4,12 +4,18 @@ const config = require("./config");
 const coins = require("./coins");
 const days = require("./days");
 const limits = require("./limits");
+const slots = require("./season_slots");
 
 /*
  * Daily cashback: after midnight every player gets a share (CASHBACK_PERCENT, at most CASHBACK_MAX - 0: no
  * cap) of what they lost in the games the day before - the net loss: every bet, minus what came back (wins,
  * refunds, cash-outs). Per world: the normal casino in 🪙, the running season in its coins (its own values).
  * Each day is paid once (kept in the settings - a restart doesn't pay it twice).
+ *
+ * A season's second chances: their coins never count for the cashback - a loss counts only once the coins
+ * of the player's second chances are gone (they are lost first). So who used second chances doesn't get
+ * more cashback for the same bad day than who didn't. Kept per season: how much of each player's second
+ * chances was lost already (state.chanceLost[era][username]).
  */
 const KEY = "cashback";
 // What counts: the bets of the games and everything they give back
@@ -24,12 +30,17 @@ const GAME_REASONS = [
 ];
 const DAY = 24 * 3600 * 1000;
 
-let state = { normal: null, season: null }; // the last day paid (days.dayNumber) per world
+// the last day paid (days.dayNumber) per world ("normal", the season slots)
+const emptyState = () => ({ normal: null, ...Object.fromEntries(slots.KEYS.map((key) => [key, null])), chanceLost: {} });
+let state = emptyState();
 let timer = null;
 
 async function load() {
   const row = await Setting.findOne({ key: KEY }).lean();
-  if (row && row.value && typeof row.value === "object") state = { normal: row.value.normal ?? null, season: row.value.season ?? null };
+  if (row && row.value && typeof row.value === "object") {
+    state = { ...emptyState(), ...Object.fromEntries(Object.keys(emptyState()).map((key) => [key, row.value[key] ?? null])) };
+    if (!state.chanceLost || typeof state.chanceLost !== "object") state.chanceLost = {};
+  }
 }
 
 async function save() {
@@ -52,11 +63,17 @@ function amountFor(loss, world) {
 
 // The net results of a day (from - to) in a world: [{username, net}] (net < 0: lost)
 async function results(world, from, to) {
-  const era = world === "season" ? coins.era() : null;
-  if (world === "season" && !era) return [];
+  const era = slots.isSeason(world) ? coins.era(world) : null;
+  if (slots.isSeason(world) && !era) return [];
   const match = { reason: { $in: GAME_REASONS }, at: { $gte: new Date(from), $lt: new Date(to) }, ...(era ? { era: era } : coins.eraFilter()) };
   const rows = await CoinLog.aggregate([{ $match: match }, { $group: { _id: "$username", net: { $sum: "$amount" } } }]);
   return rows.map((row) => ({ username: row._id, net: row.net }));
+}
+
+// The coins of a season's second chances a player got until `to`: {username: coins}
+async function chanceCoins(era, to) {
+  const rows = await CoinLog.aggregate([{ $match: { reason: "second chance", era: era, at: { $lt: new Date(to) } } }, { $group: { _id: "$username", coins: { $sum: "$amount" } } }]);
+  return new Map(rows.map((row) => [row._id, row.coins]));
 }
 
 /*
@@ -71,24 +88,45 @@ async function payDay(world, now = Date.now()) {
   // (marked first - two runs at once never pay twice)
   state[world] = today - 1;
   await save();
-  const wallet = world === "season" ? coins.season : coins;
+  const wallet = coins.wallet(world);
   const paid = [];
+  // (a season: the coins of its second chances are lost first - they never count)
+  const era = slots.isSeason(world) ? coins.era(world) : null;
+  const chances = era ? await chanceCoins(era, to) : null;
+  if (era) {
+    // (only the running season of each slot is kept - the ones over are gone)
+    const eras = new Set(slots.KEYS.map((key) => coins.era(key)).filter(Boolean));
+    for (const old of Object.keys(state.chanceLost)) if (!eras.has(old)) delete state.chanceLost[old];
+    state.chanceLost[era] = state.chanceLost[era] || {};
+  }
+  let changedChances = false;
   for (const row of await results(world, from, to)) {
-    const loss = -row.net;
+    let loss = -row.net;
+    if (era && loss > 0) {
+      const lostBefore = state.chanceLost[era][row.username] || 0;
+      const left = Math.max(0, (chances.get(row.username) || 0) - lostBefore);
+      const fromChances = Math.min(loss, left);
+      if (fromChances > 0) {
+        state.chanceLost[era][row.username] = lostBefore + fromChances;
+        changedChances = true;
+        loss -= fromChances;
+      }
+    }
     const amount = amountFor(loss, world);
     if (amount <= 0) continue;
     if (!(await wallet.add(row.username, amount, { reason: "cashback", note: `${rule(world).percent}% of ${loss.toLocaleString("en-US")} lost`, quiet: true }))) continue;
     wallet.notify(row.username);
     paid.push({ username: row.username, loss: loss, amount: amount });
-    require("./notices").send(row.username, "cashback", { amount: amount, loss: loss, percent: rule(world).percent, world: world, coinIcon: world === "season" ? seasonCoinIcon() : null });
+    require("./notices").send(row.username, "cashback", { amount: amount, loss: loss, percent: rule(world).percent, world: world, coinIcon: slots.isSeason(world) ? seasonCoinIcon(world) : null });
   }
+  if (changedChances) await save();
   return paid;
 }
 
-function seasonCoinIcon() {
+function seasonCoinIcon(world) {
   try {
     const seasons = require("./seasons");
-    const running = seasons.running();
+    const running = seasons.running(world);
     return running ? seasons.publicSeason(running).coinIcon || null : null;
   } catch (error) {
     return null;
@@ -96,7 +134,7 @@ function seasonCoinIcon() {
 }
 
 async function tick(now = Date.now()) {
-  for (const world of ["normal", "season"]) {
+  for (const world of ["normal", ...slots.KEYS]) {
     try {
       await payDay(world, now);
     } catch (error) {
@@ -120,7 +158,7 @@ function stop() {
 
 // (tests, the hard reset)
 function reset() {
-  state = { normal: null, season: null };
+  state = emptyState();
 }
 
 module.exports = { GAME_REASONS, amountFor, results, payDay, tick, start, stop, load, reset, rule };

@@ -240,7 +240,7 @@ var queuedSpin = null; // a click in the short pause: the spin starts right afte
  * afterwards. Both stop when the coins run out.
  */
 var holding = false; // the button / space is held down
-var autoLeft = 0; // auto spins still to play (0: off)
+var autoLeft = 0; // auto spins still to play (0: off, Infinity: until stopped)
 var AUTO_MAX = 100; // never more auto spins at once
 var autoTimer = null;
 var AUTO_GAP = 1100; // the extra pause between two auto spins
@@ -249,9 +249,11 @@ function autoOn() {
   return autoLeft > 0;
 }
 
+// count: how many - "infinite": until stopped (or the coins run out)
 function startAuto(count) {
+  if (count == "infinite") count = Infinity;
   if (!(count > 0)) return;
-  autoLeft = Math.min(AUTO_MAX, Math.floor(count));
+  autoLeft = count == Infinity ? Infinity : Math.min(AUTO_MAX, Math.floor(count));
   document.getElementById("slAutoMenu").hidden = true;
   document.getElementById("slAuto").setAttribute("aria-expanded", "false");
   renderControls();
@@ -1393,7 +1395,7 @@ function renderControls() {
   button.querySelector(".sl-spin-label").innerText = auto ? "Stop" : "Spin";
   var left = document.getElementById("slAutoLeft");
   left.hidden = !auto;
-  left.innerText = String(autoLeft);
+  left.innerText = autoLeft == Infinity ? "∞" : String(autoLeft);
   button.title = auto ? "Stop the auto spins" : bet > myCoins ? "Not enough coins" : bet > capLeft(0) ? "Your max bet is " + formatCoins(maxNow()) : "Spin (space) - hold to keep spinning";
   document.getElementById("slAuto").disabled = auto || bet > myCoins || bet > capLeft(0);
   // (max mode: only Max is lit, not the amount it happens to be - set once, never on and off again)
@@ -1548,7 +1550,7 @@ document.addEventListener("DOMContentLoaded", () => {
     autoMenu.hidden = !autoMenu.hidden;
     autoButton.setAttribute("aria-expanded", autoMenu.hidden ? "false" : "true");
   });
-  autoMenu.querySelectorAll("[data-auto]").forEach((option) => option.addEventListener("click", () => startAuto(Number(option.dataset.auto))));
+  autoMenu.querySelectorAll("[data-auto]").forEach((option) => option.addEventListener("click", () => startAuto(option.dataset.auto == "infinite" ? "infinite" : Number(option.dataset.auto))));
   document.addEventListener("click", (event) => {
     if (!autoMenu.hidden && !event.target.closest(".sl-auto")) {
       autoMenu.hidden = true;

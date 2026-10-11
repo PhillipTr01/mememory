@@ -5,7 +5,7 @@
  * refilled by itself - and every item of the shop to wear. Nothing of it is
  * saved: no coin history, no change to the real balance, the leaderboard or
  * the season. Stopped (or a restart of the server): it is gone, the account
- * is as it was. Test coins never go to real players (no gifts, no payouts).
+ * is as it was. Test coins never go to real players (no gifts).
  *
  * changes: "change" (username) - started or stopped (the pages load again, in
  * the other world); "coins" (username) - refilled
@@ -14,7 +14,7 @@ const EventEmitter = require("events");
 
 const DEFAULT_COINS = 10000000;
 // (testers play in a world of their own - game/worlds.js; coins to or from real players: never)
-const BLOCKED_REASONS = ["gift sent", "withdrawal"];
+const BLOCKED_REASONS = ["gift sent"];
 const MESSAGE = "🧪 Test mode: not with test coins - they never go to real players.";
 
 const testers = new Map(); // username -> {coins, start, since, looks: {frame, effect, background}}

@@ -5,7 +5,6 @@ const { page } = require("../utils/pages");
 const { asyncHandler } = require("../utils/errors");
 const config = require("../game/config");
 const coins = require("../game/coins");
-const withdrawals = require("../game/withdrawals");
 const access = require("../game/access");
 const casinoChat = require("../game/casino_chat");
 const live = require("../game/live");
@@ -129,7 +128,7 @@ module.exports = function () {
 
   // Everybody with the access state: the approved players first, then who wants in, then the rest
   async function accessList(q) {
-    const users = await User.find({}).select("username casinoApproved casinoApprovedAt casinoRequestedAt payoutAllowed").lean();
+    const users = await User.find({}).select("username casinoApproved casinoApprovedAt casinoRequestedAt").lean();
     const rank = (u) => (u.approved ? 0 : u.requestedAt ? 1 : 2);
     return users
       .map((user) => ({
@@ -137,7 +136,6 @@ module.exports = function () {
         approved: user.casinoApproved === true,
         approvedAt: user.casinoApprovedAt || null,
         requestedAt: user.casinoRequestedAt || null,
-        payout: user.payoutAllowed === true,
       }))
       .filter((user) => user.username.toLowerCase().includes(q))
       .sort((a, b) => rank(a) - rank(b) || new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0) || a.username.localeCompare(b.username));
@@ -148,19 +146,16 @@ module.exports = function () {
     return (await accessList("")).filter((user) => !user.approved && user.requestedAt);
   }
 
-  // Everything at a glance: leaderboard, open payouts, totals
+  // Everything at a glance: leaderboard, totals
   router.get(
     "/api/overview",
     admin,
     asyncHandler(async (req, res) => {
       const all = await players();
-      const open = await withdrawals.list({ status: "open" }, 200);
       res.json({
         leaderboard: all.slice(0, 50),
         players: all.length,
         coins: all.reduce((sum, p) => sum + p.coins, 0),
-        open: open,
-        openCoins: open.reduce((sum, w) => sum + w.amount, 0),
         requests: (await requests()).map((user) => ({ username: user.username, requestedAt: user.requestedAt })),
         waiting: (await requests()).length,
         online: casinoChat.online().names,
@@ -226,17 +221,18 @@ module.exports = function () {
       // When an item was bought: the newest purchase of that name
       const boughtAt = new Map();
       for (const row of purchases) if (row.note && !boughtAt.has(row.note)) boughtAt.set(row.note, row.at);
-      const season = seasons.running();
-      const inSeason = season && approved && !coins.season.watching(name);
+      // (every running season the player is in - two at once at most)
+      const inSeasons = approved ? seasons.runningAll().filter((s) => !coins.wallet(s.slot).watching(name)) : [];
+      const seasonView = (s) => ({ id: s.id, slot: s.slot, name: s.name, icon: s.icon, coinIcon: seasons.publicSeason(s).coinIcon, coins: coins.wallet(s.slot).balanceOf(user) });
       res.json({
         username: name,
         approved: approved,
         approvedAt: user.casinoApprovedAt || null,
         requestedAt: user.casinoRequestedAt || null,
-        payout: user.payoutAllowed === true,
         online: casinoChat.online().names.includes(name),
         coins: approved ? normalCoins(user) : null,
-        season: inSeason ? { name: season.name, icon: season.icon, coinIcon: seasons.publicSeason(season).coinIcon, coins: coins.season.balanceOf(user) } : null,
+        season: inSeasons.length ? seasonView(inSeasons[0]) : null,
+        seasons: inSeasons.map(seasonView),
         streak: approved ? coins.streakInfo(user) : null,
         lastActive: last.length ? last[0].at : null,
         reasons: reasons.map((row) => ({ reason: row._id, amount: row.amount, count: row.count })),
@@ -298,39 +294,6 @@ module.exports = function () {
     }),
   );
 
-  // Payouts for a player on / off: {username, allowed: true | false}
-  router.post(
-    "/api/payout",
-    admin,
-    asyncHandler(async (req, res) => {
-      const { username, allowed } = req.body || {};
-      if (typeof username !== "string" || typeof allowed !== "boolean") return res.status(400).json({ error: "Username and allowed." });
-      const result = await access.setPayout(username, allowed);
-      if (result.error) return res.status(400).json(result);
-      res.json(result);
-    }),
-  );
-
-  router.get(
-    "/api/withdrawals",
-    admin,
-    asyncHandler(async (req, res) => {
-      const status = ["open", "paid", "rejected"].includes(req.query.status) ? req.query.status : undefined;
-      res.json(await withdrawals.list(status ? { status: status } : {}, 200));
-    }),
-  );
-
-  router.post(
-    "/api/withdrawals/:id",
-    admin,
-    asyncHandler(async (req, res) => {
-      const { action, note } = req.body || {};
-      const result = await withdrawals.handle(req.params.id, action, typeof note === "string" ? note.slice(0, 300) : undefined);
-      if (result.error) return res.status(400).json({ error: result.error });
-      res.json({ ok: true });
-    }),
-  );
-
   // The daily streak: the reward of every day (percent of the daily bonus), what comes after the last day, the grace
   // world: "normal" (the casino) or "season" (every season - its own daily bonus is the base)
   const streakWorld = (value) => (value === "season" ? "season" : "normal");
@@ -359,8 +322,9 @@ module.exports = function () {
     "/api/history",
     admin,
     asyncHandler(async (req, res) => {
-      // The normal history - or (scope "season") the one of the running season
-      const filter = req.query.scope === "season" && coins.era() ? { era: coins.era() } : { ...NORMAL };
+      // The normal history - or (scope: a running season's id, "season": the first one) the one of a running season
+      const scoped = req.query.scope === "season" ? seasons.running() : req.query.scope && /^\d+$/.test(String(req.query.scope)) ? seasons.running(Number(req.query.scope)) : null;
+      const filter = scoped && coins.era(scoped.slot) ? { era: coins.era(scoped.slot) } : { ...NORMAL };
       // A part of a name: every player whose name has it
       const q = String(req.query.username || "").trim().toLowerCase();
       if (q) {
@@ -378,8 +342,9 @@ module.exports = function () {
       const rows = await CoinLog.find(filter).sort({ at: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).lean();
       const season = seasons.running();
       res.json({
-        // The running season: its history can be picked instead
-        season: season ? { name: season.name, icon: season.icon } : null,
+        // The running seasons: their history can be picked instead
+        season: season ? { id: season.id, name: season.name, icon: season.icon } : null,
+        seasons: seasons.runningAll().map((s) => ({ id: s.id, name: s.name, icon: s.icon })),
         names: (await players()).map((p) => p.username),
         page: page,
         pages: pages,
@@ -457,22 +422,34 @@ module.exports = function () {
 
   /* ---------- Settings ---------- */
 
-  router.get("/api/settings", admin, (req, res) => res.json({ settings: settings.list() }));
+  // ?season=<id>: with that season's own limits (seasonValue) - seasons: the ones that can have own limits (not over)
+  const settingsSeasons = () => {
+    const counts = settings.seasonCounts();
+    return seasons
+      .list()
+      .filter((season) => season.status !== "ended")
+      // (running first, then the ones starting, then the planned ones - the next first)
+      .sort((a, b) => ["running", "starting", "planned"].indexOf(a.status) - ["running", "starting", "planned"].indexOf(b.status) || a.start - b.start)
+      .map((season) => ({ id: season.id, name: season.name, icon: season.icon, status: season.status, start: season.start, own: counts[season.id] || 0 }));
+  };
+  router.get("/api/settings", admin, (req, res) => res.json({ settings: settings.list(req.query.season != null && req.query.season !== "" ? Number(req.query.season) : null), seasons: settingsSeasons() }));
 
-  // {values: {KEY: number}}, {season: {KEY: number | null}} (the season world's own limits) or {defaults: true[, season: true]}
+  // {values: {KEY: number}}, {seasonId, season: {KEY: number | null}} (a season's own limits) or {defaults: true[, seasonId]}
   router.post(
     "/api/settings",
     admin,
     asyncHandler(async (req, res) => {
       const body = req.body || {};
+      const seasonId = body.seasonId != null ? Number(body.seasonId) : null;
       const result =
         body.defaults === true
-          ? await settings.resetToDefaults({ season: body.season === true })
+          ? await settings.resetToDefaults(seasonId != null ? { season: seasonId } : {})
           : body.season != null
-            ? await settings.updateSeason(body.season)
+            ? await settings.updateSeason(seasonId, body.season)
             : await settings.update(body.values);
       if (result.error) return res.status(400).json(result);
-      res.json(result);
+      // (the list with the own values of the season picked on the page)
+      res.json({ ...result, settings: settings.list(seasonId), seasons: settingsSeasons() });
     }),
   );
 
@@ -723,13 +700,13 @@ module.exports = function () {
     "/api/seasons/:id/balance",
     admin,
     asyncHandler(async (req, res) => {
-      const season = seasons.running();
-      if (season == null || String(season.id) !== String(req.params.id)) return res.status(400).json({ error: "Only the coins of the running season." });
+      const season = seasons.running(Number(req.params.id));
+      if (season == null) return res.status(400).json({ error: "Only the coins of a running season." });
       const { username, mode, amount, note } = req.body || {};
       const text = typeof note === "string" ? note.slice(0, 300) : undefined;
       if (typeof username !== "string" || !Number.isInteger(amount)) return res.status(400).json({ error: "Username and a whole number." });
-      if (seasons.joined(username) !== true) return res.status(400).json({ error: "The player isn't in the season." });
-      const wallet = coins.season;
+      if (seasons.joined(username, season) !== true) return res.status(400).json({ error: "The player isn't in the season." });
+      const wallet = coins.wallet(season.slot);
       if (mode === "set") {
         if (amount < 0) return res.status(400).json({ error: "A balance can't be negative." });
         await wallet.set(username, amount, text);
@@ -762,7 +739,9 @@ module.exports = function () {
   /* ---------- Money rains (game/money_rain.js) ---------- */
 
   const rain = require("../game/money_rain");
-  router.get("/api/rains", admin, (req, res) => res.json({ ...rain.list(), now: Date.now(), season: seasons.running() ? { name: seasons.running().name, icon: seasons.running().icon, coinIcon: seasons.publicSeason(seasons.running()).coinIcon } : null }));
+  // (season: the first running one - seasons: every running one with its slot, the "world" of a rain)
+  const rainSeason = (s) => ({ id: s.id, slot: s.slot, name: s.name, icon: s.icon, coinIcon: seasons.publicSeason(s).coinIcon });
+  router.get("/api/rains", admin, (req, res) => res.json({ ...rain.list(), now: Date.now(), season: seasons.running() ? rainSeason(seasons.running()) : null, seasons: seasons.runningAll().map(rainSeason) }));
 
   // How many it would reach right now: {players, total, names}
   router.post(

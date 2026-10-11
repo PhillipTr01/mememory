@@ -741,3 +741,152 @@
   color: var(--mm-accent);
   font-weight: 800;
 }
+
+/* Which board: one button next to the title (a menu with the boards and the seasons that ended) */
+.lb-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: auto;
+  margin-left: 0.25rem;
+  padding: 0.45rem 0.8rem 0.45rem 0.65rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.lb-pick[hidden] {
+  display: none;
+}
+
+.lb-pick:hover,
+.lb-pick.open {
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+  background: var(--mm-surface-3);
+}
+
+.lb-pick-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.lb-pick-name {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lb-pick-caret {
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-left: 0.15rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.2s ease;
+  opacity: 0.7;
+}
+
+.lb-pick.open .lb-pick-caret {
+  transform: translateY(1px) rotate(-135deg);
+}
+
+.lb-past-item.active {
+  background: rgba(var(--mm-accent-rgb), 0.12);
+}
+
+.lb-past-check {
+  margin-left: auto;
+  color: var(--mm-accent);
+  font-weight: 900;
+}
+
+.lb-past-label {
+  margin: 0.35rem 0.6rem 0.15rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--mm-border);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
+
+/* The menu of the button */
+.lb-past-menu {
+  position: absolute;
+  z-index: 1080;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  padding: 0.4rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: var(--mm-surface);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  animation: lb-past-in 0.18s ease-out;
+}
+
+@keyframes lb-past-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.lb-past-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--mm-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.lb-past-item:hover,
+.lb-past-item:focus-visible {
+  background: var(--mm-surface-2);
+}
+
+.lb-past-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--mm-surface-3);
+  font-size: 1.2rem;
+}
+
+.lb-past-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  line-height: 1.25;
+}
+
+.lb-past-text b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-past-text span {
+  font-size: 0.78rem;
+  color: var(--mm-muted);
+}
+
+

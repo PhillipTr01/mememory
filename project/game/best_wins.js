@@ -1,5 +1,6 @@
 const CoinLog = require("../models/CoinLog");
 const coins = require("./coins");
+const slots = require("./season_slots");
 const days = require("./days");
 
 /*
@@ -13,8 +14,8 @@ const DELAY = 1500; // a win is written down a moment after it is paid
 
 async function lists(reason, world) {
   if (world === "/test") return { today: [], all: [] };
-  const era = world === "/season" ? coins.era() : null;
-  if (world === "/season" && !era) return { today: [], all: [] };
+  const era = slots.isSeason(world) ? coins.era(world) : null;
+  if (slots.isSeason(world) && !era) return { today: [], all: [] };
   // (a push in blackjack only gives the bet back - not a win)
   const base = { reason: reason, note: { $ne: "push" }, ...(era ? { era: era } : coins.eraFilter()) };
   const pick = (rows) => rows.map((row) => ({ name: row.username, win: row.amount, bet: row.bet || betOf(row), note: row.note || null, at: row.at }));

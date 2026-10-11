@@ -20,7 +20,8 @@ const KEY = "admin:settings";
 // season: true - the season world can have its own value (the "Season" switch of the page; none: the normal one).
 const FIELDS = [
   { group: "general", section: "Coins", key: "START_COINS", label: "Start coins", scope: "outside", hint: "What a newly approved player gets outside of a season (in a season: the season's budget instead).", step: 1000, min: 0, max: 100000000 },
-  { group: "general", section: "Gifts", key: "GIFT_LIMIT", label: "Gifts per player and day", hint: "🪙 a player can give others a day (a click on a name in the casino chat) - from midnight on the full amount again.", step: 1000, min: 0, max: 100000000 },
+  { group: "general", section: "Gifts", key: "GIFT_LIMIT", season: true, seasonFallback: "SEASON_GIFT_LIMIT", label: "Gifts per player and day", hint: "🪙 a player can give others a day (a click on a name in the casino chat) - from midnight on the full amount again.", step: 1000, min: 0, max: 100000000 },
+  { group: "general", section: "Leaderboard", key: "PAST_SEASON_DAYS", label: "Past seasons shown", hint: "How long a season that ended stays in the menu of the leaderboard (its winners) - days after its end, only for players who could play in it. 0: not at all.", unit: "days", step: 1, min: 0, max: 365 },
   { group: "general", section: "Gifts", key: "GIFT_COOLDOWN", label: "Wait between gifts", hint: "After sending a gift a player waits this long before the next one (normal and season coins). 0: no wait.", unit: "s", scale: 1000, step: 10, min: 0, max: 86400 },
   { group: "general", section: "Gifts", key: "SEASON_GIFT_LIMIT", label: "Gifts per player and day in a season", hint: "Season coins a player can give others in the season world a day - apart from the 🪙 above (both can be sent).", step: 1000, min: 0, max: 100000000 },
   { group: "general", section: "Max bet by balance", key: "BET_CAP_FLOOR", season: true, label: "All in up to", hint: "A player with at most this many coins can bet all of them (every game).", step: 10000, min: 0, max: 100000000 },
@@ -77,8 +78,16 @@ function shown(field, value) {
   return field.scale ? value / field.scale : value;
 }
 
+/*
+ * Every season has its own limits (config.SEASON_LIMITS: {season id: {KEY: value}} - only the keys it
+ * changed; a season without: the normal ones). The world a season runs in uses them (game/limits.js).
+ */
+const ownOf = (seasonId) => (seasonId != null && config.SEASON_LIMITS[String(seasonId)]) || {};
+
 // Every field with its value now and its default, as the admin panel shows them
-function list() {
+// (seasonValue: the season's own one - seasonId: which season, nothing: none)
+function list(seasonId = null) {
+  const own = ownOf(seasonId);
   return FIELDS.map((field) => ({
     group: field.group,
     type: field.type || "number",
@@ -95,14 +104,20 @@ function list() {
     value: shown(field, config[field.key]),
     default: shown(field, DEFAULTS[field.key]),
     season: field.season === true,
-    seasonValue: field.season && config.SEASON_LIMITS[field.key] != null ? shown(field, config.SEASON_LIMITS[field.key]) : null,
+    seasonValue: field.season && own[field.key] != null ? shown(field, own[field.key]) : null,
+    // (what a season without its own value uses: the normal one - or one for every season, the gift limit)
+    seasonDefault: field.season ? shown(field, field.seasonFallback ? config[field.seasonFallback] : config[field.key]) : null,
   }));
 }
 
-// The value of a key in a world ("/season": its own one if it has one)
+// The value of a key in a world (a season world: its season's own one if it has one)
 function valueIn(world, key) {
-  if (world === "/season" && config.SEASON_LIMITS && config.SEASON_LIMITS[key] != null) return config.SEASON_LIMITS[key];
-  return config[key];
+  return require("./limits").forWorld(world)[key];
+}
+
+// How many keys every season changed: {season id: count}
+function seasonCounts() {
+  return Object.fromEntries(Object.entries(config.SEASON_LIMITS).map(([id, values]) => [id, Object.keys(values).length]));
 }
 
 // What does not fit together (min over max, ...) in values (the normal ones or the season's), null: fine
@@ -147,15 +162,16 @@ function check(input) {
     values[key] = field.scale ? value * field.scale : value;
   }
   const next = { ...config, ...values };
-  const wrong = mismatch(next) || mismatch({ ...next, ...config.SEASON_LIMITS }, "Season - ");
+  let wrong = mismatch(next);
+  for (const own of Object.values(config.SEASON_LIMITS)) wrong = wrong || mismatch({ ...next, ...own }, "Season - ");
   if (wrong) return { error: wrong };
   return { values: values };
 }
 
-// The season's own values: {KEY: shown value | null (the normal one again)} -> {values} (all of the season's) or {error}
-function checkSeason(input) {
+// A season's own values: {KEY: shown value | null (the normal one again)} -> {values} (all of the season's) or {error}
+function checkSeason(seasonId, input) {
   if (input == null || typeof input !== "object") return { error: "No values." };
-  const values = { ...config.SEASON_LIMITS };
+  const values = { ...ownOf(seasonId) };
   for (const [key, value] of Object.entries(input)) {
     const field = BY_KEY.get(key);
     if (field == null || field.season !== true) return { error: `${field ? field.label : key}: the season has no own value for it.` };
@@ -190,27 +206,64 @@ async function update(input) {
   return { settings: list() };
 }
 
-async function updateSeason(input) {
-  const result = checkSeason(input);
+// seasonId: the season (admin panel: Settings → Season → the season)
+async function updateSeason(seasonId, input) {
+  if (!validSeason(seasonId)) return { error: "No such season." };
+  const result = checkSeason(seasonId, input);
   if (result.error) return result;
-  config.SEASON_LIMITS = result.values;
+  setOwn(seasonId, result.values);
   await save();
-  changes.emit("change", { SEASON_LIMITS: result.values });
-  return { settings: list() };
+  changes.emit("change", { SEASON_LIMITS: config.SEASON_LIMITS });
+  return { settings: list(seasonId) };
 }
 
-// season: true - only the season's own values go (the normal ones count there again)
+const validSeason = (seasonId) => Number.isInteger(Number(seasonId)) && require("./seasons").byId(seasonId) != null;
+
+function setOwn(seasonId, values) {
+  const next = { ...config.SEASON_LIMITS };
+  if (Object.keys(values).length) next[String(seasonId)] = values;
+  else delete next[String(seasonId)];
+  config.SEASON_LIMITS = next;
+}
+
+// season: a season id - only its own values go (the normal ones count there again)
 async function resetToDefaults(options = {}) {
-  if (options.season) {
-    config.SEASON_LIMITS = {};
+  if (options.season != null && options.season !== false) {
+    if (!validSeason(options.season)) return { error: "No such season." };
+    setOwn(options.season, {});
     await save();
-    changes.emit("change", { SEASON_LIMITS: {} });
-    return { settings: list() };
+    changes.emit("change", { SEASON_LIMITS: config.SEASON_LIMITS });
+    return { settings: list(options.season) };
   }
   Object.assign(config, DEFAULTS);
   await save();
   changes.emit("change", { ...DEFAULTS });
   return { settings: list() };
+}
+
+// The limits from before every season had its own (one set for all) - the seasons not over yet get them
+let legacyLimits = null;
+async function adoptSeasonLimits(ids) {
+  if (legacyLimits == null) return;
+  const values = legacyLimits;
+  legacyLimits = null;
+  if (Object.keys(values).length) for (const id of ids) if (!config.SEASON_LIMITS[String(id)]) config.SEASON_LIMITS = { ...config.SEASON_LIMITS, [String(id)]: { ...values } };
+  await save();
+}
+
+// Every season's own limits gone (hard reset)
+async function clearSeasonLimits() {
+  config.SEASON_LIMITS = {};
+  legacyLimits = null;
+  await save();
+  changes.emit("change", { SEASON_LIMITS: {} });
+}
+
+// A season is deleted: its limits go with it
+async function dropSeasonLimits(id) {
+  if (!config.SEASON_LIMITS[String(id)]) return;
+  setOwn(id, {});
+  await save();
 }
 
 // The server starts: the stored values again
@@ -220,7 +273,11 @@ async function load() {
   for (const [key, value] of Object.entries(row.value)) {
     if (key === "SEASON_LIMITS") {
       if (value && typeof value === "object") {
-        config.SEASON_LIMITS = Object.fromEntries(Object.entries(value).filter(([k, v]) => BY_KEY.has(k) && BY_KEY.get(k).season === true && Number.isInteger(v)));
+        const clean = (values) => Object.fromEntries(Object.entries(values || {}).filter(([k, v]) => BY_KEY.has(k) && BY_KEY.get(k).season === true && Number.isInteger(v)));
+        // (from before every season had its own: one set for every season - the seasons give it to theirs, adoptSeasonLimits)
+        const legacy = Object.keys(value).some((k) => BY_KEY.has(k));
+        if (legacy) legacyLimits = clean(value);
+        else config.SEASON_LIMITS = Object.fromEntries(Object.entries(value).filter(([id, values]) => /^\d+$/.test(id) && values && typeof values === "object").map(([id, values]) => [id, clean(values)]));
       }
       continue;
     }
@@ -234,4 +291,4 @@ async function load() {
   }
 }
 
-module.exports = { list, update, updateSeason, resetToDefaults, load, valueIn, FIELDS, changes };
+module.exports = { list, update, updateSeason, resetToDefaults, load, valueIn, seasonCounts, adoptSeasonLimits, clearSeasonLimits, dropSeasonLimits, FIELDS, changes };

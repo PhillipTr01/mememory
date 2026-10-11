@@ -79,23 +79,28 @@ function create() {
 }
 
 const normal = create();
-// The season world: closes before the season ends (and for a maintenance)
+// The world of each season slot: closes before its season ends (and for a maintenance)
 const season = create();
+const season2 = create();
+const seasonLocks = [
+  ["season", season],
+  ["season2", season2],
+];
 
-// A maintenance closes both worlds
+// A maintenance closes every world
 function lock(why = "start") {
   normal.lock(why);
-  if (why === "maintenance") season.lock(why);
+  if (why === "maintenance") seasonLocks.forEach(([, lock]) => lock.lock(why));
 }
 
 function unlock(why) {
   normal.unlock(why);
-  if (why === "maintenance") season.unlock(why);
+  if (why === "maintenance") seasonLocks.forEach(([, lock]) => lock.unlock(why));
 }
 
-// Every game of both worlds where something still runs (a maintenance waits for all of them)
+// Every game of every world where something still runs (a maintenance waits for all of them)
 function allBusy() {
-  return [...normal.busyGames(), ...season.busyGames().map((name) => "season " + name)];
+  return [...normal.busyGames(), ...seasonLocks.flatMap(([key, lock]) => lock.busyGames().map((name) => key + " " + name))];
 }
 
-module.exports = { ...normal, lock, unlock, allBusy, season, create };
+module.exports = { ...normal, lock, unlock, allBusy, season, season2, create };

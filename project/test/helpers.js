@@ -13,7 +13,6 @@ const User = require("../models/User");
 const Statistic = require("../models/Statistic");
 const Meme = require("../models/Meme");
 const CoinLog = require("../models/CoinLog");
-const Withdrawal = require("../models/Withdrawal");
 const Setting = require("../models/Setting");
 
 const users = new Map(); // _id -> {_id, username, statistics}
@@ -143,7 +142,6 @@ CoinLog.aggregate = async (pipeline) => {
   }
   return rows;
 };
-const withdrawals = memoryModel(Withdrawal);
 const settings = memoryModel(Setting);
 
 function userByName(username) {
@@ -162,7 +160,7 @@ Meme.aggregate = async () =>
 function addUser(username, options) {
   const _id = `id_${username}`;
   const approved = !(options && options.approved === false);
-  users.set(_id, { _id, username, statistics: `stat_${username}`, casinoApproved: approved, casinoApprovedAt: approved ? new Date(0) : undefined, payoutAllowed: approved });
+  users.set(_id, { _id, username, statistics: `stat_${username}`, casinoApproved: approved, casinoApprovedAt: approved ? new Date(0) : undefined });
   return jwt.sign({ _id }, process.env.SECRET_KEY);
 }
 
@@ -187,12 +185,17 @@ async function startServer() {
     test[game] = require(`../sockets/${game}_server`)(io, { world: worlds.TEST });
     worlds.servers.set(game, test[game]);
   }
-  // The season world (game/seasons.js)
-  const season = {};
-  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua"]) {
-    season[game] = require(`../sockets/${game}_server`)(io, { world: worlds.SEASON });
-    worlds.seasonServers.set(game, season[game]);
+  // The season worlds (game/seasons.js): one per season slot - season: the first, season2: the second
+  const bySlot = {};
+  for (const world of worlds.SEASONS) {
+    const servers = (bySlot[world] = {});
+    for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua"]) {
+      servers[game] = require(`../sockets/${game}_server`)(io, { world: world });
+      worlds.seasonServers.get(world).set(game, servers[game]);
+    }
   }
+  const season = bySlot["/season"];
+  const season2 = bySlot["/season2"];
   require("../sockets/casino_server")(io);
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
@@ -209,6 +212,7 @@ async function startServer() {
     baucua,
     test,
     season,
+    season2,
     client(namespace, token, query) {
       return connect(`http://localhost:${port}${namespace}`, {
         query: query || {},
@@ -241,7 +245,6 @@ module.exports = {
   wait,
   increments,
   coinLogs,
-  withdrawals,
   settings,
   coinsOf: (username) => userByName(username).coins,
   userOf: userByName,

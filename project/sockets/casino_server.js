@@ -12,7 +12,8 @@ const safe = require("./safe_handler");
 
 // The games - in the normal casino, the season world and the admin's test world (game/worlds.js)
 const REAL = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/roulette", "/baucua"];
-const SEASON = REAL.map((name) => worlds.SEASON + name);
+// (every season world: one per season slot)
+const SEASON = worlds.SEASONS.flatMap((world) => REAL.map((name) => world + name));
 const GAMES = [...REAL, ...SEASON, ...REAL.map((name) => worlds.TEST + name)];
 
 function socketsOf(io, username) {
@@ -30,14 +31,15 @@ module.exports = function (io) {
   // (a gift while the player has no casino page open: kept for the next visit - game/inbox.js)
   notices.on("notice", (username, event, data) => {
     const sockets = socketsOf(io, username);
-    // A reward (a season's place, from the admin): kept first, then shown on one open page (the season's end may move the pages - then the next one shows it)
+    // A reward (a season's place, from the admin): kept first, then shown on every open page of the player - the
+    // one they look at too, not only the first (the season's end may move the pages - then the next one shows it)
     if (event === "reward" && !(data && data.preview)) {
       inbox
         .add(username, { type: "reward", ...data })
         .then(() =>
           setTimeout(() => {
             const open = socketsOf(io, username);
-            if (open.length) deliverInbox(open[0]);
+            if (open.length) deliverInbox(open);
           }, 1500),
         )
         .catch((error) => console.error("[inbox] Could not keep a season reward:", error));
@@ -48,21 +50,34 @@ module.exports = function (io) {
     if (event === "cashback" && sockets.length === 0) inbox.add(username, { type: "cashback", ...data }).catch((error) => console.error("[inbox] Could not keep a cashback:", error));
   });
 
-  // A casino page opens: what happened while the player was away (gifts, money rains) - as popups
+  // A casino page opens: what happened while the player was away (gifts, money rains, rewards) - as popups.
+  // sockets: one page - or every open page of the player (a reward: always on every open page)
   const delivering = new Set();
-  async function deliverInbox(socket) {
-    const username = socket.data.username;
-    if (!username || delivering.has(username)) return;
+  async function deliverInbox(sockets) {
+    const pages = Array.isArray(sockets) ? sockets : [sockets];
+    const username = pages[0] && pages[0].data.username;
+    if (!username) return;
+    // (another delivery for the player right now - a page opening: once more in a moment, so a reward doesn't wait for the next page)
+    if (delivering.has(username)) {
+      if (Array.isArray(sockets)) setTimeout(() => deliverInbox(sockets.filter((socket) => socket.connected)), 1000);
+      return;
+    }
     delivering.add(username);
     try {
       const items = await inbox.take(username);
+      // (a reward: on every open page of the player - the page opening right now may not be the one they look at)
+      const everyPage = [...new Set([...pages, ...socketsOf(io, username)])];
       for (const item of items) {
-        if (item.type === "gift") socket.emit("giftReceived", { ...item, missed: true });
-        if (item.type === "rain") socket.emit("moneyRain", { ...item, missed: true });
-        // (seasonReward: kept before rewards were general - a season's name and place)
-        if (item.type === "reward") socket.emit("reward", { ...item, missed: true });
-        if (item.type === "cashback") socket.emit("cashback", { ...item, missed: true });
-        if (item.type === "seasonReward") socket.emit("reward", { source: item.season, icon: item.icon, rank: item.rank, coins: 0, items: item.items || [], missed: true });
+        if (item.type === "reward" || item.type === "seasonReward") {
+          const data = item.type === "reward" ? { ...item, missed: true } : { source: item.season, icon: item.icon, rank: item.rank, coins: 0, items: item.items || [], missed: true };
+          for (const socket of everyPage) socket.emit("reward", data);
+          continue;
+        }
+        for (const socket of pages) {
+          if (item.type === "gift") socket.emit("giftReceived", { ...item, missed: true });
+          if (item.type === "rain") socket.emit("moneyRain", { ...item, missed: true });
+          if (item.type === "cashback") socket.emit("cashback", { ...item, missed: true });
+        }
       }
     } catch (error) {
       console.error("[inbox] Could not deliver:", error);
@@ -94,21 +109,22 @@ module.exports = function (io) {
   settings.changes.on("change", () => {
     const names = (list) => new Set(list.flatMap((name) => [...io.of(name).sockets.values()].map((socket) => socket.data.username)).filter(Boolean));
     names([...REAL, ...REAL.map((name) => worlds.TEST + name)]).forEach((username) => worlds.services("").coins.notify(username));
-    names(SEASON).forEach((username) => worlds.services(worlds.SEASON).coins.notify(username));
+    for (const world of worlds.SEASONS) names(REAL.map((name) => world + name)).forEach((username) => worlds.services(world).coins.notify(username));
   });
 
   // The admin changed a moderator's rights: their open pages load them again (the 🛡️ button, the chat tools)
   require("../game/moderators").changes.on("change", (username) => {
     for (const socket of socketsOf(io, username)) socket.emit("modChanged");
     // (everybody: the 🛡️ in the chat)
-    for (const name of GAMES) io.of(name).emit("casinoOnline", require("../game/casino_chat").online());
+    require("../game/casino_chat").refreshOnline();
+    require("../game/worlds").testChat.refreshOnline();
   });
 
   // A game turned off (admin panel): its open pages go to another game
   settings.changes.on("change", (values) => {
     for (const game of games.GAMES) {
       if (values[game.key] !== false) continue;
-      for (const socket of [...io.of(game.namespace).sockets.values(), ...io.of(worlds.SEASON + game.namespace).sockets.values(), ...io.of(worlds.TEST + game.namespace).sockets.values()]) {
+      for (const socket of [game.namespace, ...worlds.SEASONS.map((world) => world + game.namespace), worlds.TEST + game.namespace].flatMap((name) => [...io.of(name).sockets.values()])) {
         socket.emit("gameOff");
         socket.disconnect(true);
       }
@@ -136,14 +152,11 @@ module.exports = function (io) {
     for (const socket of seasonSockets(full)) socket.emit("seasonStarted", season);
   });
 
-  // The countdown to the start of a season - and the season world closing before its end: the pages show it
-  seasons.changes.on("closing", (info) => {
-    const season = info && seasons.byId(info.id);
-    if (info == null) {
-      for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonClosing", null);
-      return;
-    }
-    for (const socket of seasonSockets(season)) socket.emit("seasonClosing", info);
+  // The countdown to the start of a season - and a season world closing before its end: the pages show it
+  // (two seasons: every page the first countdown of a season the player may play in - none: null)
+  const closingFor = (username) => seasons.closingInfos().find((info) => seasons.allowed(seasons.byId(info.id), username)) || null;
+  seasons.changes.on("closing", () => {
+    for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonClosing", closingFor(socket.data.username));
   });
 
   // A season is over: every open casino page shows it (with a link to the winners) - the pages of
@@ -158,15 +171,16 @@ module.exports = function (io) {
   seasons.changes.on("world", (username, world) => {
     for (const socket of socketsOf(io, username)) {
       if (worlds.worldOfNamespace(socket.nsp.name) === world) continue;
-      socket.emit("worldChanged", { world: world ? "season" : "normal" });
+      // (the world: a season slot "season" / "season2" - or "normal")
+      const slot = require("../game/season_slots").of(world);
+      socket.emit("worldChanged", { world: slot ? slot.key : "normal" });
       socket.disconnect(true);
     }
   });
 
   // A maintenance comes: every open casino page shows it (like before a season) - over: the season's again, if any
   maintenance.changes.on("closing", (info) => {
-    const shown = info || seasons.closingInfo();
-    for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonClosing", shown);
+    for (const name of GAMES) for (const socket of io.of(name).sockets.values()) socket.emit("seasonClosing", info || closingFor(socket.data.username));
   });
 
   // Maintenance: every open casino page of a player not on the whitelist is closed (it shows the maintenance page)
@@ -184,8 +198,9 @@ module.exports = function (io) {
   // (who has no casino page open: a popup on the next visit)
   require("../game/money_rain").changes.on("rain", (rain) => {
     const names = new Set(rain.names);
-    const world = rain.world === "season" ? worlds.SEASON : "";
-    const seasonCoin = rain.world === "season" && seasons.running() ? seasons.publicSeason(seasons.running()).coinIcon : null;
+    const slot = require("../game/season_slots").of(rain.world);
+    const world = slot ? slot.world : "";
+    const seasonCoin = slot && seasons.running(slot.key) ? seasons.publicSeason(seasons.running(slot.key)).coinIcon : null;
     const online = new Set();
     for (const name of GAMES) {
       for (const socket of io.of(name).sockets.values()) {

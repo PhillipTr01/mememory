@@ -1,11 +1,11 @@
-/* Admin panel: balances, payouts, leaderboard, the history of every coin change, the casino chat and the settings. */
+/* Admin panel: balances, leaderboard, the history of every coin change, the casino chat and the settings. */
 
 // The kinds of coin changes for the history filter - by game (a whole game: all of its kinds)
 var HISTORY_KINDS = [
-  ["Casino", [["start coins", "Start coins"], ["daily bonus", "Daily bonus"], ["cashback", "Cashback"], ["admin", "Admin"], ["withdrawal", "Payout"], ["withdrawal refund", "Payout refund"]]],
+  ["Casino", [["start coins", "Start coins"], ["daily bonus", "Daily bonus"], ["cashback", "Cashback"], ["admin", "Admin"]]],
   ["Seasons", [["season start", "Season start"], ["second chance", "Second chance"]]],
   ["Rewards", [["season reward", "Season reward"], ["reward", "Reward"], ["prize", "Own prize"]]],
-  ["Gifts", [["gift sent", "Sent"], ["gift received", "Received"]]],
+  ["Gifts", [["gift sent", "Sent"], ["gift received", "Received"], ["mod gift", "From a moderator"]]],
   ["Jackpot", [["jackpot bet", "Bet"], ["jackpot win", "Win"]]],
   ["Case battles", [["battle", "Bet"], ["battle win", "Win"], ["battle refund", "Refund"]]],
   ["Poker", [["poker buy-in", "Buy-in"], ["poker chips", "More chips"], ["poker cash-out", "Cash-out"], ["poker refund", "Refund"]]],
@@ -16,7 +16,6 @@ var HISTORY_KINDS = [
 ];
 
 
-var knownOpen = null; // ids of the open payouts already seen (new ones get a note)
 var knownWaiting = null; // players waiting for access at the last look
 var players = [];
 
@@ -53,7 +52,7 @@ function time(value) {
  * The lists the panel draws again with every refresh (every few seconds): only when they look different
  * now - the same again would build every row anew (avatars, animations start over: a flicker).
  */
-var CALM_LISTS = new Set(["adRequestList", "adOpenList", "adLive", "adTopList", "adActivity", "adAccessInfo", "adBoard", "adPayoutList", "adHistory", "adRtpBody", "adSeasonNow", "adSeasonList", "adChatList", "adBanList", "adOnlineList", "adRainPlanned", "adRainDone"]);
+var CALM_LISTS = new Set(["adRequestList", "adLive", "adTopList", "adActivity", "adAccessInfo", "adBoard", "adHistory", "adRtpBody", "adSeasonNow", "adSeasonList", "adChatList", "adBanList", "adOnlineList", "adRainPlanned", "adRainDone"]);
 (function () {
   var replace = Element.prototype.replaceChildren;
   Element.prototype.replaceChildren = function (...nodes) {
@@ -69,6 +68,18 @@ var CALM_LISTS = new Set(["adRequestList", "adOpenList", "adLive", "adTopList", 
     return replace.apply(this, nodes);
   };
 })();
+
+// A select with the normal casino first and then an option per running season (two can run at once):
+// list [{value, label}] - the value picked stays if it is still there (else the first)
+function seasonOptions(select, list) {
+  var picked = select.value;
+  var first = select.options[0];
+  var wanted = [first, ...list.map((item) => Object.assign(document.createElement("option"), { value: item.value, textContent: item.label }))];
+  // (only when something changed - no flicker of an open select)
+  var same = select.options.length == wanted.length && [...select.options].every((option, i) => option.value == wanted[i].value && option.textContent == wanted[i].textContent);
+  if (!same) select.replaceChildren(...wanted);
+  select.value = [...select.options].some((option) => option.value == picked) ? picked : first.value;
+}
 
 async function api(path, body) {
   var res = await fetch("api/" + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
@@ -89,8 +100,7 @@ function fail(error) {
 
 var PAGES = {
   overview: ["Overview", "Everything at a glance - what needs you, and what is going on right now."],
-  players: ["Players", "Who may play, who wants in, their coins and payouts."],
-  payouts: ["Payouts", "Coins players took off to be paid out."],
+  players: ["Players", "Who may play, who wants in, their coins."],
   history: ["History", "Every coin change, newest first."],
   chat: ["Chat", "The chat of the casino - delete messages, ban players."],
   seasons: ["Seasons", "Plan seasons: everybody starts with the same budget, the best win."],
@@ -172,7 +182,6 @@ function showTab() {
     if (playerView != null) loadPlayerDetail();
     else loadPlayers();
   }
-  if (tab == "payouts") loadPayouts();
   if (tab == "history") loadHistory();
   if (tab == "chat") loadChat();
   if (tab == "rtp") loadRtp();
@@ -203,7 +212,7 @@ function showTab() {
 window.addEventListener("hashchange", showTab);
 
 // Keeps the open page up to date (the chat has its own timer, the settings stay as they are while editing)
-var REFRESH = { players: () => reloadPlayers(), payouts: () => loadPayouts(), history: () => loadHistory(), seasons: () => loadSeasons(true), rtp: () => loadRtp() };
+var REFRESH = { players: () => reloadPlayers(), history: () => loadHistory(), seasons: () => loadSeasons(true), rtp: () => loadRtp() };
 
 function refresh() {
   if (document.visibilityState != "visible") return;
@@ -221,54 +230,16 @@ document.addEventListener("visibilitychange", () => {
 
 /* ---------- Overview (every few seconds) ---------- */
 
-function payoutRow(w) {
-  var row = el("div", "ad-row ad-payout " + w.status);
-  var info = el("div", "ad-row-main ad-payout-info");
-  info.append(playerTag(w.username, "b"), el("span", "ad-row-meta", time(w.createdAt) + (w.note ? " · " + w.note : "")));
-  var amount = el("span", "ad-row-value", "🪙 " + formatCoins(w.amount));
-  row.append(info, amount);
-  if (w.status == "open") {
-    var paid = el("button", "mm-btn mm-btn-sm mm-btn-primary", "Paid");
-    paid.type = "button";
-    paid.title = "The coins were paid out";
-    paid.addEventListener("click", () => handle(w, "paid"));
-    var reject = el("button", "mm-btn mm-btn-sm", "Reject");
-    reject.type = "button";
-    reject.title = "Reject - the coins go back to the player";
-    reject.addEventListener("click", () => handle(w, "reject"));
-    row.append(paid, reject);
-  } else {
-    row.appendChild(el("span", "ad-pill " + (w.status == "paid" ? "success" : "danger"), w.status));
-  }
-  return row;
-}
-
-async function handle(w, action) {
-  var note = action == "reject" ? prompt("Why? (the player gets the coins back)", "") : "";
-  if (note == null) return;
-  try {
-    await api("withdrawals/" + w.id, { action: action, note: note || undefined });
-    loadOverview();
-    if (!document.getElementById("tab-payouts").hidden) loadPayouts();
-  } catch (error) {
-    fail(error);
-  }
-}
-
 async function loadOverview() {
   try {
     var data = await api("overview");
     document.getElementById("adPlayers").innerText = formatCoins(data.players);
     document.getElementById("adCoins").innerText = "🪙 " + formatCoins(data.coins);
-    document.getElementById("adOpen").innerText = data.open.length;
-    document.getElementById("adOpenCoins").innerText = "🪙 " + formatCoins(data.openCoins);
     document.getElementById("adWaiting").innerText = data.requests.length;
     document.getElementById("adOnline").innerText = data.online.length;
     document.getElementById("adOnlineNames").innerText = data.online.length ? data.online.slice(0, 3).join(", ") + (data.online.length > 3 ? " +" + (data.online.length - 3) : "") : "nobody in the casino";
     var requests = document.getElementById("adRequestList");
     requests.replaceChildren(...(data.requests.length ? data.requests.map(requestRow) : [el("p", "ad-empty", "Nobody is waiting.")]));
-    var list = document.getElementById("adOpenList");
-    list.replaceChildren(...(data.open.length ? data.open.map(payoutRow) : [el("p", "ad-empty", "Nothing to pay out.")]));
     renderLive(data.games || {});
     document.getElementById("adTopList").replaceChildren(
       ...(data.leaderboard.length
@@ -295,19 +266,6 @@ async function loadOverview() {
         : [el("p", "ad-empty", "Nothing yet.")]),
     );
 
-    // New payouts since the last look: a note
-    var ids = data.open.map((w) => w.id);
-    if (knownOpen != null) {
-      var fresh = data.open.filter((w) => !knownOpen.includes(w.id));
-      if (fresh.length) {
-        var sum = fresh.reduce((total, w) => total + w.amount, 0);
-        casinoNotice({ icon: "💸", title: fresh.length == 1 ? "New payout" : fresh.length + " new payouts", text: (fresh.length == 1 ? fresh[0].username + " · " : "") + "🪙 " + formatCoins(sum), action: { label: "Open", run: () => (location.hash = "#payouts") }, ms: 10000, key: "payout" });
-        if (!document.getElementById("tab-payouts").hidden) loadPayouts();
-      }
-    }
-    knownOpen = ids;
-    var badge = document.getElementById("adOpenBadge");
-    badge.hidden = ids.length == 0;
     // Players who want into the casino
     if (knownWaiting != null && data.waiting > knownWaiting) {
       casinoNotice({ icon: "🔑", title: data.waiting - knownWaiting == 1 ? "A player wants in" : data.waiting - knownWaiting + " players want in", text: "Approve or decline them in Players", action: { label: "Open", run: () => (location.hash = "#players") }, ms: 10000, key: "access" });
@@ -317,14 +275,15 @@ async function loadOverview() {
     var waitingBadge = document.getElementById("adWaitingBadge");
     waitingBadge.hidden = data.waiting == 0;
     waitingBadge.innerText = data.waiting;
-    // Something to do on the overview (requests, payouts): a count on its tab
+    // Something to do on the overview (requests): a count on its tab
     var overviewBadge = document.getElementById("adOverviewBadge");
-    overviewBadge.hidden = ids.length + data.waiting == 0;
-    overviewBadge.innerText = ids.length + data.waiting;
-    overviewBadge.title = data.waiting + " request" + (data.waiting == 1 ? "" : "s") + ", " + ids.length + " payout" + (ids.length == 1 ? "" : "s");
-    badge.hidden = ids.length + data.waiting == 0;
-    badge.innerText = [data.waiting ? data.waiting + (data.waiting == 1 ? " request" : " requests") : "", ids.length ? ids.length + " open" : ""].filter(Boolean).join(" · ");
-    var todo = ids.length + data.waiting;
+    overviewBadge.hidden = data.waiting == 0;
+    overviewBadge.innerText = data.waiting;
+    overviewBadge.title = data.waiting + " request" + (data.waiting == 1 ? "" : "s");
+    var badge = document.getElementById("adOpenBadge");
+    badge.hidden = data.waiting == 0;
+    badge.innerText = data.waiting ? data.waiting + (data.waiting == 1 ? " request" : " requests") : "";
+    var todo = data.waiting;
     document.title = (todo ? "(" + todo + ") " : "") + "Admin - MemeMory";
   } catch (error) {
     fail(error);
@@ -396,7 +355,7 @@ function day(value) {
   return new Date(value).toLocaleDateString(undefined, { dateStyle: "medium" });
 }
 
-// The players: every account with its access, its coins, its payout - one list
+// The players: every account with its access, its coins - one list
 var playerFilter = "";
 var playerRows = [];
 
@@ -459,19 +418,6 @@ function playerRow(p) {
   var statusCell = el("td");
   statusCell.appendChild(status);
   var coins = el("td", "num", p.coins != null && p.kind == "in" ? "🪙 " + formatCoins(p.coins) : "–");
-  // May the player pay coins out? (only who is in)
-  var payoutCell = el("td");
-  if (p.kind == "in") {
-    var payout = el("label", "ad-switch");
-    var box = document.createElement("input");
-    box.type = "checkbox";
-    box.checked = p.payout;
-    box.setAttribute("aria-label", "Payout for " + p.username);
-    var text = el("span", "ad-switch-text", p.payout ? "On" : "Off");
-    box.addEventListener("change", () => setPayout(p, box, text));
-    payout.append(box, el("span", "ad-switch-track"), text);
-    payoutCell.appendChild(payout);
-  } else payoutCell.appendChild(el("span", "mm-muted", "–"));
   var actions = el("td", "ad-actions");
   var button = (label, cls, handler) => {
     var b = el("button", "mm-btn mm-btn-sm" + (cls ? " " + cls : ""), label);
@@ -494,7 +440,7 @@ function playerRow(p) {
   link.href = "#players/" + encodeURIComponent(p.username);
   link.appendChild(playerTag(p.username));
   nameCell.appendChild(link);
-  row.append(nameCell, statusCell, coins, payoutCell, actions);
+  row.append(nameCell, statusCell, coins, actions);
   return row;
 }
 
@@ -548,7 +494,7 @@ function renderPlayerDetail(p) {
   if (key == shownPlayer && box.firstChild) return;
   shownPlayer = key;
   var kind = p.approved ? "in" : p.requestedAt ? "waiting" : "none";
-  var row = { username: p.username, coins: p.coins, payout: p.payout, kind: kind };
+  var row = { username: p.username, coins: p.coins, kind: kind };
   var reason = (name) => (p.reasons.find((r) => r.reason == name) || { amount: 0, count: 0 });
 
   // The head: avatar, name, access, the actions
@@ -573,18 +519,6 @@ function renderPlayerDetail(p) {
   if (kind == "in") {
     button("🎁 Reward", "mm-btn-primary", () => rewardDialog(row));
     button("Correct balance", "", () => editPlayerCoins(row));
-    var payout = el("label", "ad-switch");
-    var check = document.createElement("input");
-    check.type = "checkbox";
-    check.checked = p.payout;
-    check.setAttribute("aria-label", "Payout for " + p.username);
-    var text = el("span", "ad-switch-text", p.payout ? "Payout on" : "Payout off");
-    check.addEventListener("change", async () => {
-      await setPayout(row, check, text);
-      text.innerText = check.checked ? "Payout on" : "Payout off";
-    });
-    payout.append(check, el("span", "ad-switch-track"), text);
-    actions.appendChild(payout);
     button("Revoke", "ad-btn-quiet-danger", (b) => setAccess(row, false, b));
   } else if (kind == "waiting") {
     button("Approve", "mm-btn-primary", (b) => setAccess(row, true, b));
@@ -597,18 +531,20 @@ function renderPlayerDetail(p) {
   var total = (key) => games.reduce((sum, g) => sum + g[key], 0);
   var stat = (label, value, sub, cls) => {
     var tile = el("div", "ad-card ad-stat");
-    tile.append(el("span", "ad-label", label), el("span", "ad-stat-value" + (cls ? " " + cls : ""), value), el("span", "ad-stat-sub", sub || ""));
+    // (sub: a text - or a list, one line each)
+    var subs = Array.isArray(sub) ? sub : [sub || ""];
+    tile.append(el("span", "ad-label", label), el("span", "ad-stat-value" + (cls ? " " + cls : ""), value), ...subs.map((line) => el("span", "ad-stat-sub", line)));
     return tile;
   };
   var signed = (value) => (value > 0 ? "+" : value < 0 ? "−" : "") + "🪙 " + formatCoins(Math.abs(value));
   var stats = el("div", "ad-stats ad-pd-stats");
   if (p.approved) {
     stats.append(
-      stat("Coins", "🪙 " + formatCoins(p.coins), p.season ? (p.season.coinIcon || p.season.icon || "") + " " + formatCoins(p.season.coins) + " in " + p.season.name : "normal balance"),
+      stat("Coins", "🪙 " + formatCoins(p.coins), (p.seasons || (p.season ? [p.season] : [])).length ? (p.seasons || [p.season]).map((s) => (s.coinIcon || s.icon || "") + " " + formatCoins(s.coins) + " in " + s.name) : "normal balance"),
       stat("Net in games", signed(total("net")), "🪙 " + formatCoins(total("bet")) + " wagered", total("net") > 0 ? "plus" : total("net") < 0 ? "minus" : ""),
       stat("Daily streak", p.streak && p.streak.day ? "Day " + p.streak.day : "–", "🪙 " + formatCoins(reason("daily bonus").amount) + " from daily bonuses"),
       stat("Cashback", "🪙 " + formatCoins(reason("cashback").amount), reason("cashback").count + " day" + (reason("cashback").count == 1 ? "" : "s")),
-      stat("Paid out", "🪙 " + formatCoins(Math.max(0, -(reason("withdrawal").amount + reason("withdrawal refund").amount))), "rewards: 🪙 " + formatCoins(reason("reward").amount + reason("season reward").amount)),
+      stat("Rewards", "🪙 " + formatCoins(reason("reward").amount + reason("season reward").amount), reason("reward").count + reason("season reward").count + " reward" + (reason("reward").count + reason("season reward").count == 1 ? "" : "s")),
     );
   }
 
@@ -705,7 +641,7 @@ function fillModCard(card, username, data) {
   var body = el("div", "ad-mod-body");
   var perms = el("div", "ad-mod-perms");
   var boxes = {};
-  var PERM_HINTS = { rain: "Money rains for everybody online - only with other players than moderators online", chat: "Delete messages, mute players (up to a day)", announce: "📣 Highlighted messages in the casino chat" };
+  var PERM_HINTS = { rain: "Money rains for everybody online - only with other players than moderators online", chat: "Delete messages, mute players (up to a day)", announce: "📣 Highlighted messages in the casino chat", give: "🎁 Coins from the casino for one player (🪙 only - other moderators too, never themselves)" };
   Object.keys(data.perms).forEach((perm) => {
     var row = el("label", "ad-mod-perm");
     var box = document.createElement("input");
@@ -721,6 +657,8 @@ function fillModCard(card, username, data) {
   var rainMax = number(mod.rainMax, data.defaults.rainMax);
   var rainWeekly = number(mod.rainWeekly, data.defaults.rainWeekly);
   var rainCooldown = Object.assign(el("input", "mm-input"), { type: "number", min: 0, step: 1, value: mod.rainCooldown != null ? mod.rainCooldown : data.defaults.rainCooldown, placeholder: data.defaults.rainCooldown });
+  var giveMax = number(mod.giveMax != null ? mod.giveMax : data.defaults.giveMax, data.defaults.giveMax);
+  var giveWeekly = number(mod.giveWeekly != null ? mod.giveWeekly : data.defaults.giveWeekly, data.defaults.giveWeekly);
   var limits = el("div", "ad-mod-limits");
   var field = (text, input, hint) => {
     var box = el("label", "ad-field");
@@ -740,6 +678,8 @@ function fillModCard(card, username, data) {
       return box;
     })(),
     field("Money rain a week", rainWeekly, "Their rains of a week together, Monday to Sunday - the amount per player counts once, however many are online (0: no limit)." + (mod.on ? " This week: 🪙 " + formatCoins(mod.used || 0) + " given." : "")),
+    field("Coins per gift at most", giveMax, "Give coins: the most one gift to a player may be."),
+    field("Coins to give a week", giveWeekly, "Give coins: their gifts of a week together, Monday to Sunday - apart from the money rain (0: no limit)." + (mod.on ? " This week: 🪙 " + formatCoins(mod.given || 0) + " given." : "")),
   );
   var save = el("button", "mm-btn mm-btn-primary mm-btn-sm", "Save");
   save.type = "button";
@@ -758,7 +698,7 @@ function fillModCard(card, username, data) {
     error.hidden = true;
     save.disabled = true;
     try {
-      var body = { on: check.checked, perms: Object.fromEntries(Object.entries(boxes).map(([perm, box]) => [perm, box.checked])), rainMax: Math.floor(Number(rainMax.value)), rainWeekly: Math.floor(Number(rainWeekly.value) || 0), rainCooldown: Math.floor(Number(rainCooldown.value) || 0) };
+      var body = { on: check.checked, perms: Object.fromEntries(Object.entries(boxes).map(([perm, box]) => [perm, box.checked])), rainMax: Math.floor(Number(rainMax.value)), rainWeekly: Math.floor(Number(rainWeekly.value) || 0), rainCooldown: Math.floor(Number(rainCooldown.value) || 0), giveMax: Math.floor(Number(giveMax.value)), giveWeekly: Math.floor(Number(giveWeekly.value) || 0) };
       var result = await api("players/" + encodeURIComponent(username) + "/mod", body);
       casinoNotice({ icon: "🛡️", title: check.checked ? username + " is a moderator" : username + " is no moderator", text: check.checked ? Object.keys(boxes).filter((perm) => boxes[perm].checked).map((perm) => data.perms[perm]).join(" · ") || "no rights picked" : "", ms: 5000, key: "mod" });
       fillModCard(card, username, { ...data, mod: result.mod.on ? result.mod : null, log: result.log });
@@ -830,21 +770,6 @@ async function setAccess(player, approve, button) {
     button.disabled = false;
     button.innerText = approve ? "Approve" : "Revoke";
     fail(error);
-  }
-}
-
-async function setPayout(player, box, text) {
-  box.disabled = true;
-  text.innerText = box.checked ? "On" : "Off";
-  try {
-    await api("payout", { username: player.username, allowed: box.checked });
-    player.payout = box.checked;
-  } catch (error) {
-    box.checked = !box.checked;
-    text.innerText = box.checked ? "On" : "Off";
-    fail(error);
-  } finally {
-    box.disabled = false;
   }
 }
 
@@ -990,7 +915,7 @@ async function rewardDialog(p) {
       var body = { username: p.username, items: [frame.value, effect.value, background.value].filter(Boolean), coins: Math.floor(Number(coinsInput.value) || 0), prize: prize.value.trim(), note: note.value.trim() };
       await api("shop/give", body);
       close();
-      // What went out: a notification (like a new payout) - with the way to the player's history
+      // What went out: a notification - with the way to the player's history
       var itemName = (id) => (shopSaved.items.find((item) => item.id == id) || {}).name || id;
       var sent = [...body.items.map(itemName), body.coins > 0 ? "🪙 " + formatCoins(body.coins) : null, body.prize ? "🎁 " + body.prize : null].filter(Boolean).join(" · ");
       casinoNotice({ icon: "🎁", title: "Reward sent to " + p.username, text: sent + (body.note ? " - " + body.note : ""), action: { label: "History", run: () => showHistoryOf(p.username) }, ms: 8000, key: "reward" });
@@ -1003,18 +928,6 @@ async function rewardDialog(p) {
     }
   });
   frame.focus();
-}
-
-/* ---------- Payouts ---------- */
-
-async function loadPayouts() {
-  try {
-    var status = document.getElementById("adPayoutStatus").value;
-    var list = await api("withdrawals" + (status ? "?status=" + status : ""));
-    document.getElementById("adPayoutList").replaceChildren(...(list.length ? list.map(payoutRow) : [el("p", "ad-empty", "No payouts.")]));
-  } catch (error) {
-    fail(error);
-  }
 }
 
 /* ---------- History ---------- */
@@ -1046,9 +959,9 @@ async function loadHistory(event) {
     // The names to pick from - and in a season its own history
     historyNames = data.names;
     if (historyPick) historyPick.refresh();
-    scope.hidden = !data.season;
-    if (data.season) scope.options[1].text = data.season.icon + " " + data.season.name;
-    else scope.value = "";
+    var running = data.seasons || (data.season ? [data.season] : []);
+    scope.hidden = running.length == 0;
+    seasonOptions(scope, running.map((s) => ({ value: String(s.id), label: s.icon + " " + s.name })));
     var rows = data.rows;
     var body = document.getElementById("adHistory");
     if (rows.length == 0) {
@@ -1103,9 +1016,11 @@ function rainInput() {
   };
 }
 
+var rainSeasons = [];
 function rainWho(rain) {
   var who = rain.target == "bottom" ? "the last " + rain.percent + "% of the leaderboard" : rain.target == "below" ? "everybody with less than 🪙 " + formatCoins(rain.below) : RAIN_TARGETS[rain.target];
-  return who + (rain.world == "season" ? " (season)" : "");
+  var season = rain.world && rain.world != "normal" ? (rainSeasons || []).find((s) => s.slot == rain.world) : null;
+  return who + (rain.world && rain.world != "normal" ? " (" + (season ? season.icon + " " + season.name : "season") + ")" : "");
 }
 
 var rainPreviewTimer = null;
@@ -1247,10 +1162,10 @@ async function loadRains() {
   } catch (error) {
     return fail(error);
   }
-  document.getElementById("adRainWorldField").hidden = !data.season;
-  // The season: with its icon, name and coin
-  if (data.season) document.querySelector('#adRainWorld option[value="season"]').textContent = data.season.icon + " " + data.season.name + " (" + data.season.coinIcon + ")";
-  if (!data.season) document.getElementById("adRainWorld").value = "normal";
+  // Every running season: with its icon, name and coin (the value: its slot)
+  rainSeasons = data.seasons || [];
+  document.getElementById("adRainWorldField").hidden = rainSeasons.length == 0;
+  seasonOptions(document.getElementById("adRainWorld"), rainSeasons.map((s) => ({ value: s.slot, label: s.icon + " " + s.name + " (" + s.coinIcon + ")" })));
   // The time field: in an hour (rounded)
   var at = document.getElementById("adRainAt");
   if (!at.value) {
@@ -2046,18 +1961,26 @@ function renderSeasons() {
         el("p", "ad-note", "At the start the casino closes: no new bets, running rounds finish, then the countdown - and the season starts. Every player hits Start to join with the budget; only they are on the leaderboard. At the end the same closing, then the final places (with the prizes) - and everybody gets the coins from before back, with what they won on top."),
       );
   }
-  var running = seasonList.find((s) => s.status == "running");
+  // (two can run at once: one block each)
+  var runningAll = seasonList.filter((s) => s.status == "running");
   var next = seasonList.filter((s) => s.status == "planned").sort((a, b) => a.start - b.start)[0];
-  document.getElementById("adSeasonBadge").hidden = !running;
-  // Now: the running season (with how far it is), the next one - or the normal leaderboard
+  document.getElementById("adSeasonBadge").hidden = runningAll.length == 0;
+  // Now: the running seasons (with how far they are), the next one - or the normal leaderboard
   var now = document.getElementById("adSeasonNow");
-  if (running) {
-    var done = Math.min(1, (Date.now() - running.start) / (running.end - running.start));
-    var bar = el("div", "ad-season-progress");
-    var fill = el("span");
-    fill.style.width = (done * 100).toFixed(1) + "%";
-    bar.appendChild(fill);
-    now.replaceChildren(el("span", "ad-label", "Running now"), seasonHead(running), bar, el("p", "ad-note", "Ends in " + span(running.end - Date.now()) + " · " + dateText(running.end) + " · leaderboard " + EVERY_NAMES[running.every]));
+  if (runningAll.length) {
+    now.replaceChildren(
+      el("span", "ad-label", runningAll.length > 1 ? "Running now · " + runningAll.length + " seasons" : "Running now"),
+      ...runningAll.map((running) => {
+        var block = el("div", "ad-season-now-one");
+        var done = Math.min(1, (Date.now() - running.start) / (running.end - running.start));
+        var bar = el("div", "ad-season-progress");
+        var fill = el("span");
+        fill.style.width = (done * 100).toFixed(1) + "%";
+        bar.appendChild(fill);
+        block.append(seasonHead(running), bar, el("p", "ad-note", "Ends in " + span(running.end - Date.now()) + " · " + dateText(running.end) + " · leaderboard " + EVERY_NAMES[running.every] + (running.access && running.access.mode == "whitelist" ? " · whitelist (" + running.access.names.length + ")" : "")));
+        return block;
+      }),
+    );
   } else {
     now.replaceChildren(
       el("span", "ad-label", "No season running"),
@@ -2789,16 +2712,21 @@ async function chatAction(path, body, done) {
 /* ---------- Settings ---------- */
 
 var settingsList = [];
-// The values shown: the normal casino's - or the season world's own limits ("season": empty = the normal value)
+// The values shown: the normal casino's - or a season's own limits ("season": empty = the normal value)
 var settingsWorld = "normal";
-var seasonMode = () => settingsWorld == "season" && settingsList.some((field) => field.group == settingsGroup && field.season);
+// Every season has its own limits: the one picked (its id) - and the seasons to pick (not over)
+var settingsSeason = null;
+var settingsSeasons = [];
+var seasonMode = () => settingsWorld == "season" && settingsSeason != null && settingsList.some((field) => field.group == settingsGroup && field.season);
+// (the season picked on the page - sent with every save)
+var withSeason = (body) => (settingsSeason != null ? { ...body, seasonId: settingsSeason } : body);
 // What an input of the page holds now: the normal value - or the season's own one ("" for none)
 var shownValue = (field) => (seasonMode() ? (field.seasonValue == null ? "" : field.seasonValue) : field.value);
 
 async function loadSettings() {
   try {
-    var [data, seasons] = await Promise.all([api("settings"), settingsGroup == "general" ? api("seasons") : null]);
-    settingsList = data.settings;
+    var [data, seasons] = await Promise.all([api("settings" + (settingsSeason != null ? "?season=" + settingsSeason : "")), settingsGroup == "general" ? api("seasons") : null]);
+    takeSettings(data);
     if (seasons) {
       seasonList = seasons.seasons;
       dailyBonusSetting = seasons.dailyBonus;
@@ -2807,6 +2735,19 @@ async function loadSettings() {
   } catch (error) {
     fail(error);
   }
+}
+
+// An answer of api/settings: the fields - and the seasons to pick (the one picked gone: the first running, else the first)
+function takeSettings(data) {
+  settingsList = data.settings;
+  settingsSeasons = data.seasons || settingsSeasons;
+  if (settingsSeason != null && !settingsSeasons.some((season) => season.id == settingsSeason)) settingsSeason = null;
+  if (settingsSeason == null && settingsSeasons.length) {
+    settingsSeason = (settingsSeasons.find((season) => season.status == "running") || settingsSeasons[0]).id;
+    // (its own values: loaded once more)
+    if (settingsWorld == "season") loadSettings();
+  }
+  return data;
 }
 
 function renderSettings() {
@@ -2819,7 +2760,8 @@ function renderSettings() {
   var sections = [];
   settingsList
     // (the cases: switched on / off in the case list under the settings)
-    .filter((field) => field.group == settingsGroup && field.type != "cases" && (!seasonMode() || field.season))
+    // (Season without a season to pick: nothing to set)
+    .filter((field) => field.group == settingsGroup && field.type != "cases" && (!seasonMode() || field.season) && (settingsWorld != "season" || seasonMode() || !field.season))
     .forEach((field) => {
       var section = sections.find((s) => s.name == field.section);
       if (!section) sections.push((section = { name: field.section, fields: [] }));
@@ -2841,14 +2783,15 @@ function renderSettings() {
         var row = el("label", "ad-setting");
         var label = el("span", "ad-setting-label", field.label);
         // Only outside of a season (in one: the season's own value)
-        if (seasonMode()) label.appendChild(field.seasonValue == null ? el("span", "ad-scope ad-scope-same", "same as normal") : el("span", "changed ad-season-own", "normal " + formatCoins(field.value)));
+        if (seasonMode()) label.appendChild(field.seasonValue == null ? el("span", "ad-scope ad-scope-same", field.seasonDefault != null && field.seasonDefault != field.value ? "for every season" : "same as normal") : el("span", "changed ad-season-own", (field.seasonDefault != null && field.seasonDefault != field.value ? "every season " + formatCoins(field.seasonDefault) : "normal " + formatCoins(field.value))));
         else {
           if (field.scope == "outside") label.appendChild(el("span", "ad-scope", "outside seasons"));
           if (field.value != field.default) label.appendChild(el("span", "changed", "default " + formatCoins(field.default)));
           // (the season has its own value: this one doesn't count there - easy to miss otherwise)
           if (field.seasonValue != null) {
-            var other = el("span", "changed ad-season-own", "season " + formatCoins(field.seasonValue));
-            other.title = "In the season world " + formatCoins(field.seasonValue) + " counts - change it under 🏆 Season above";
+            var picked = settingsSeasons.find((season) => season.id == settingsSeason);
+            var other = el("span", "changed ad-season-own", (picked ? picked.icon + " " : "season ") + formatCoins(field.seasonValue));
+            other.title = "In " + (picked ? picked.name : "the season") + " " + formatCoins(field.seasonValue) + " counts - change it under 🏆 Season above";
             label.appendChild(other);
           }
         }
@@ -2859,7 +2802,7 @@ function renderSettings() {
         input.max = field.max;
         input.value = shownValue(field);
         // (season: empty - the normal value counts, shown as the placeholder)
-        if (seasonMode()) input.placeholder = formatCoins(field.value);
+        if (seasonMode()) input.placeholder = formatCoins(field.seasonDefault != null ? field.seasonDefault : field.value);
         input.dataset.key = field.key;
         var box = el("span", "ad-setting-input");
         box.appendChild(input);
@@ -2884,49 +2827,77 @@ function renderSettings() {
   settingsDirty();
 }
 
-// Normal | Season: which values the page shows - the season world can have its own (stricter) limits
+// Normal | Season: which values the page shows - every season can have its own (stricter) limits: in Season
+// the season is picked (a chip each, with how many own values it has)
 function worldSwitch() {
   var fields = settingsList.filter((field) => field.group == settingsGroup && field.season);
   if (!fields.length) return null;
-  var card = el("div", "ad-card ad-scope-card ad-world-card" + (seasonMode() ? " season" : ""));
+  var season = settingsWorld == "season";
+  var card = el("div", "ad-card ad-scope-card ad-world-card" + (season ? " season" : ""));
   var row = el("div", "ad-world-row");
   var options = el("div", "ad-choice");
   options.setAttribute("role", "radiogroup");
   options.setAttribute("aria-label", "Values for");
-  var own = fields.filter((field) => field.seasonValue != null).length;
+  var leave = async () => document.getElementById("adSettingsDirty").hidden || (await confirmDialog({ title: "Leave without saving?", text: "What you typed here is not saved yet.", confirmLabel: "Leave" }));
+  var withOwn = settingsSeasons.filter((s) => s.own > 0).length;
   [
     ["normal", "🪙 Normal"],
-    ["season", "🏆 Season" + (own ? " · " + own : "")],
+    ["season", "🏆 Season" + (withOwn ? " · " + withOwn : "")],
   ].forEach(([world, text]) => {
     var button = el("button", "ad-choice-option" + (settingsWorld == world ? " active" : ""), text);
     button.type = "button";
     button.setAttribute("role", "radio");
     button.setAttribute("aria-checked", settingsWorld == world);
     button.addEventListener("click", async () => {
-      if (settingsWorld == world) return;
-      if (!document.getElementById("adSettingsDirty").hidden && !(await confirmDialog({ title: "Leave without saving?", text: "What you typed here is not saved yet.", confirmLabel: "Leave" }))) return;
+      if (settingsWorld == world || !(await leave())) return;
       settingsWorld = world;
       settingsError(null, "");
       renderSettings();
     });
     options.appendChild(button);
   });
+  var picked = settingsSeasons.find((s) => s.id == settingsSeason);
   var text = el(
     "p",
     "ad-note",
-    seasonMode()
-      ? "The season world's own limits. Empty: the normal value counts there too (shown in grey). Make them stricter than normal - seasons are a competition."
-      : "The limits of the normal casino. Switch to Season to give the season world its own (stricter) ones" + (own ? " - " + own + " set." : "."),
+    !season
+      ? "The limits of the normal casino. Switch to Season to give a season its own (stricter) ones" + (withOwn ? " - " + withOwn + " season" + (withOwn == 1 ? " has" : "s have") + " some." : ".")
+      : !settingsSeasons.length
+        ? "No season yet - plan one under Seasons, then give it its own limits here."
+        : (picked ? picked.icon + " " + picked.name : "The season") + ": its own limits. Empty: the normal value counts there too (shown in grey). Make them stricter than normal - seasons are a competition.",
   );
   row.append(options, text);
   card.appendChild(row);
+  // The season: a chip each (running, starting or planned - with how many own values)
+  if (season && settingsSeasons.length) {
+    var chips = el("div", "ad-season-picks");
+    chips.setAttribute("role", "radiogroup");
+    chips.setAttribute("aria-label", "Season");
+    settingsSeasons.forEach((s) => {
+      var chip = el("button", "ad-season-pick" + (s.id == settingsSeason ? " active" : ""));
+      chip.type = "button";
+      chip.setAttribute("role", "radio");
+      chip.setAttribute("aria-checked", s.id == settingsSeason);
+      chip.append(el("span", "ad-season-pick-icon", s.icon), el("span", "ad-season-pick-name", s.name), el("span", "ad-season-pick-state " + s.status, s.status == "running" ? "running" : s.status == "starting" ? "starting" : "planned"));
+      if (s.own > 0) chip.appendChild(el("span", "ad-season-pick-own", String(s.own)));
+      chip.title = s.own ? s.own + " own value" + (s.own == 1 ? "" : "s") : "No own values - the normal ones count";
+      chip.addEventListener("click", async () => {
+        if (s.id == settingsSeason || !(await leave())) return;
+        settingsSeason = s.id;
+        settingsError(null, "");
+        await loadSettings();
+      });
+      chips.appendChild(chip);
+    });
+    card.appendChild(chips);
+  }
   return card;
 }
 
 // What counts where: the games always, the coins of the general page only outside of a season
 function scopeNote() {
   var world = worldSwitch();
-  if (seasonMode()) return [world];
+  if (settingsWorld == "season" && world) return [world];
   var notes = scopeNotes();
   return world ? [world, ...notes] : notes;
 }
@@ -2967,7 +2938,7 @@ function choiceCard(field) {
       if (option.value == field.value) return;
       options.querySelectorAll("button").forEach((b) => (b.disabled = true));
       try {
-        settingsList = (await api("settings", { values: { [field.key]: option.value } })).settings;
+        takeSettings(await api("settings", withSeason({ values: { [field.key]: option.value } })));
       } catch (error) {
         fail(error);
       }
@@ -3000,7 +2971,7 @@ function toggleCard(field) {
     }
     box.disabled = true;
     try {
-      settingsList = (await api("settings", { values: { [field.key]: box.checked } })).settings;
+      takeSettings(await api("settings", withSeason({ values: { [field.key]: box.checked } })));
     } catch (error) {
       fail(error);
     }
@@ -3061,7 +3032,7 @@ async function saveSettings(event) {
   button.disabled = true;
   button.innerText = "Saving...";
   try {
-    settingsList = (await api("settings", seasonMode() ? { season: values } : { values: values })).settings;
+    takeSettings(await api("settings", withSeason(seasonMode() ? { season: values } : { values: values })));
     renderSettings();
     flashSaved(button, "Save");
   } catch (error) {
@@ -3101,7 +3072,7 @@ async function settingsDefaults() {
   if (seasonMode()) {
     if (!(await confirmDialog({ title: "Season: back to normal?", text: changed.map((f) => f.label + ": " + formatCoins(f.seasonValue) + " → " + formatCoins(f.value) + " (normal)").join("\n"), confirmLabel: "Back to normal" }))) return;
     try {
-      settingsList = (await api("settings", { season: Object.fromEntries(changed.map((f) => [f.key, null])) })).settings;
+      takeSettings(await api("settings", withSeason({ season: Object.fromEntries(changed.map((f) => [f.key, null])) })));
       renderSettings();
       flashSaved(document.getElementById("adSettingsDefaults"), "Back to Default", "Back to Default ✓");
     } catch (error) {
@@ -3111,7 +3082,7 @@ async function settingsDefaults() {
   }
   if (!(await confirmDialog({ title: "Back to the defaults?", text: changed.map((f) => f.label + ": " + formatCoins(f.value) + " → " + formatCoins(f.default)).join("\n"), confirmLabel: "Back to Default" }))) return;
   try {
-    settingsList = (await api("settings", { values: Object.fromEntries(changed.map((f) => [f.key, f.default])) })).settings;
+    takeSettings(await api("settings", withSeason({ values: Object.fromEntries(changed.map((f) => [f.key, f.default])) })));
     renderSettings();
     flashSaved(document.getElementById("adSettingsDefaults"), "Back to Default", "Back to Default ✓");
   } catch (error) {
@@ -3188,7 +3159,6 @@ async function hardReset(event) {
     input.value = "";
     var details = [];
     if (result.done.includes("history")) details.push(formatCoins(result.history) + " history rows");
-    if (result.done.includes("payouts")) details.push(formatCoins(result.payouts) + " payouts");
     document.getElementById("adResetDone").innerText = "✓ Reset: " + parts.map((part) => part.label).join(", ") + (details.length ? " - " + details.join(" and ") + " deleted." : ".");
     document.getElementById("adResetDone").hidden = false;
     players = [];
@@ -3217,7 +3187,6 @@ document.addEventListener("DOMContentLoaded", () => {
     playerFilter = chip.dataset.filter;
     renderPlayers();
   });
-  document.getElementById("adPayoutStatus").addEventListener("change", loadPayouts);
   // The history filters right away (typing: after a short pause)
   document.getElementById("adHistoryFilter").addEventListener("submit", loadHistory);
   setupPlayerPick();
@@ -3333,7 +3302,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   showTab();
   loadOverview();
-  // New payouts, balances and history show up by themselves
+  // Requests, balances and history show up by themselves
   setInterval(refresh, 5000);
 });
 
@@ -3793,7 +3762,7 @@ async function loadRtp() {
   try {
     var data = await api("rtp?range=" + rtpRange + "&world=" + (world.hidden ? "normal" : world.value));
     world.hidden = !data.seasonRunning;
-    if (!data.seasonRunning) world.value = "normal";
+    seasonOptions(world, (data.seasons || []).map((s) => ({ value: s.slot, label: s.icon + " " + s.name })));
     document.querySelectorAll("#adRtpRange button").forEach((button) => button.classList.toggle("active", button.dataset.range == data.range));
     document.getElementById("adRtpWagered").innerText = formatCoins(data.total.wagered);
     document.getElementById("adRtpPaid").innerText = formatCoins(data.total.paid);
