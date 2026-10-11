@@ -127,6 +127,16 @@ async function cancel(id) {
   return { ok: true };
 }
 
+// A money rain that fell: off the list (the coins it paid stay with the players)
+async function remove(id) {
+  const rain = state.rains.find((r) => r.id === Number(id) && r.status !== "planned");
+  if (!rain) return { error: "No money rain that fell with this id." };
+  state.rains.splice(state.rains.indexOf(rain), 1);
+  await save();
+  changes.emit("change");
+  return { ok: true };
+}
+
 // The admin lets it rain right now (a planned one - its repeat goes on from its own time)
 async function now(id) {
   const rain = state.rains.find((r) => r.id === Number(id) && r.status === "planned");
@@ -199,4 +209,4 @@ function reset() {
   loaded = true;
 }
 
-module.exports = { TARGETS, REPEATS, changes, setOnline, load, start, tick, list, create, cancel, clearPlanned, clearDone, now, preview, targets, check, reset };
+module.exports = { TARGETS, REPEATS, changes, setOnline, load, start, tick, list, create, cancel, remove, clearPlanned, clearDone, now, preview, targets, check, reset };

@@ -1014,6 +1014,23 @@ function rainRow(rain, planned) {
       }
     });
     row.append(now, cancel);
+  } else {
+    // (off the list - what it paid stays with the players)
+    var remove = el("button", "ad-icon-btn ad-rain-remove", "✕");
+    remove.type = "button";
+    remove.title = "Remove from the list (the coins stay paid)";
+    remove.setAttribute("aria-label", "Remove from the list");
+    remove.addEventListener("click", async () => {
+      if (!confirm("Remove this money rain from the list? The coins it paid stay with the players.")) return;
+      remove.disabled = true;
+      try {
+        renderRains(await api("rains/" + rain.id + "/remove", {}));
+      } catch (error) {
+        fail(error);
+        remove.disabled = false;
+      }
+    });
+    row.appendChild(remove);
   }
   return row;
 }

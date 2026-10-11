@@ -780,6 +780,17 @@ module.exports = function () {
     }),
   );
 
+  // A money rain that fell: off the list (the coins stay paid)
+  router.post(
+    "/api/rains/:id/remove",
+    admin,
+    asyncHandler(async (req, res) => {
+      const result = await rain.remove(req.params.id);
+      if (result.error) return res.status(400).json(result);
+      res.json(rain.list());
+    }),
+  );
+
   // What the hard reset can reset (the checkboxes of the danger zone)
   router.get("/api/reset", admin, (req, res) => res.json({ parts: RESET_PARTS }));
 

@@ -92,3 +92,17 @@ test("money rain: the hard reset - the coin history takes the rains that fell, t
   await hardReset(["rains"]);
   assert.deepStrictEqual([rain.list().done.length, rain.list().planned.length], [0, 0]);
 });
+
+test("money rain: one that fell can be removed from the list - the coins stay, a planned one can't be removed that way", async () => {
+  rain.reset();
+  h.addUser("rm1");
+  h.setCoins("rm1", 100);
+  await rain.create({ amount: 300, target: "all" });
+  await rain.create({ amount: 50, target: "all", at: Date.now() + 3600 * 1000 });
+  const before = rain.list();
+  assert.strictEqual(before.done.length, 1);
+  assert.match((await rain.remove(before.planned[0].id)).error, /No money rain that fell/);
+  assert.ok((await rain.remove(before.done[0].id)).ok);
+  assert.deepStrictEqual([rain.list().done.length, rain.list().planned.length], [0, 1]);
+  assert.strictEqual(h.coinsOf("rm1"), 400, "the coins stay");
+});
