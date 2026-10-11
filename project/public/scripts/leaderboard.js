@@ -201,8 +201,8 @@ function render() {
   renderBoards();
   // The last season that is over: the way to its winners
   var last = document.getElementById("lbLastSeason");
-  // (only the first days after its end - later: under Past seasons)
-  last.hidden = !board.lastSeason || !!season || Date.now() - board.lastSeason.endedAt > 3 * 86400 * 1000;
+  // (with the button next to the title: the seasons that ended are in its menu)
+  last.hidden = !board.lastSeason || !!season || (board.pastSeasons || []).length > 0;
   if (board.lastSeason) {
     morphChildren(last, [el("span", "lb-last-icon", board.lastSeason.icon), el("span", "", board.lastSeason.name + " is over - see the winners"), el("span", "lb-last-arrow", "→")]);
     last.onclick = () => showWinners(board.lastSeason.id);
@@ -240,80 +240,72 @@ function tick() {
   if (next.textContent != label) next.textContent = label;
 }
 
-// Which board: null - the one of the player's world, "normal" or a season's id (a tab above the board)
+// Which board: null - the one of the player's world, "normal" or a season's id (the button next to the title)
 var picked = null;
 
-// The tabs: the normal board and every running season the player may see (only with a season)
+// Which board: one button next to the title - a menu with the casino's board, every running season the player
+// may see and, under "Over", the seasons that ended (they open their winners). Nothing to pick: no button
 function renderBoards() {
   var list = board.boards || [];
-  var tabs = document.getElementById("lbBoards");
-  if (!tabs) {
-    tabs = el("div", "lb-boards");
-    tabs.id = "lbBoards";
-    tabs.setAttribute("role", "tablist");
-    var anchor = document.getElementById("lbSeason");
-    anchor.parentNode.insertBefore(tabs, anchor);
-  }
   var past = board.pastSeasons || [];
-  tabs.hidden = list.length == 0 && past.length == 0;
-  if (tabs.hidden) return;
-  var current = board.season ? String(board.season.id) : "normal";
-  var tab = (key, icon, name) => {
-    var button = el("button", "lb-board-tab" + (key == current ? " active" : ""));
-    button.type = "button";
-    button.setAttribute("role", "tab");
-    button.setAttribute("aria-selected", key == current ? "true" : "false");
-    button.dataset.board = key;
-    button.append(el("span", "lb-board-icon", icon), el("span", "", name));
-    // (the casino's tab keeps its 🪙 in a season world)
-    if (key == "normal") button.dataset.coin = "real";
-    return button;
-  };
-  // (one listener: the tabs are morphed, their own listeners would not move over)
-  tabs.onclick = (event) => {
-    if (event.target.closest("[data-past]")) return togglePast(event.target.closest("[data-past]"));
-    var button = event.target.closest("[data-board]");
-    if (!button || button.classList.contains("active")) return;
-    picked = button.dataset.board;
-    load();
-  };
-  // The seasons that are over: one tab - a list of their winner pages
-  var pastTab = null;
-  if (past.length) {
-    pastTab = el("button", "lb-board-tab lb-board-past");
-    pastTab.type = "button";
-    pastTab.dataset.past = "1";
-    pastTab.setAttribute("aria-haspopup", "menu");
-    pastTab.append(el("span", "lb-board-icon", "🏁"), el("span", "", "Past seasons"), el("span", "lb-board-count", String(past.length)));
+  var pick = document.getElementById("lbBoards");
+  if (!pick) {
+    pick = el("button", "lb-pick");
+    pick.id = "lbBoards";
+    pick.type = "button";
+    pick.setAttribute("aria-haspopup", "menu");
+    pick.onclick = () => toggleBoards(pick);
+    var anchor = document.getElementById("lbSeason");
+    anchor.parentNode.insertBefore(pick, anchor);
   }
-  morphChildren(tabs, [tab("normal", "🪙", "Casino"), ...list.map((s) => tab(String(s.id), s.icon, s.name)), pastTab]);
+  pick.hidden = list.length == 0 && past.length == 0;
+  if (pick.hidden) return;
+  var season = board.season;
+  morphChildren(pick, [el("span", "lb-pick-icon", season ? season.icon : "🪙"), el("span", "lb-pick-name", season ? season.name : "Casino"), el("span", "lb-pick-caret")]);
+  // (the casino's 🪙 stays a 🪙 in a season world)
+  if (!season) pick.dataset.coin = "real";
+  else delete pick.dataset.coin;
 }
 
-// The seasons that are over: a menu under the tab - a click opens the winner page
-function togglePast(anchor) {
-  var open = document.getElementById("lbPastMenu");
-  if (open) return closePast();
+function toggleBoards(anchor) {
+  if (document.getElementById("lbPastMenu")) return closePast();
   var menu = el("div", "lb-past-menu");
   menu.id = "lbPastMenu";
   menu.setAttribute("role", "menu");
-  (board.pastSeasons || []).forEach((season) => {
-    var item = el("button", "lb-past-item");
-    item.type = "button";
-    item.setAttribute("role", "menuitem");
+  var current = board.season ? String(board.season.id) : "normal";
+  var item = (icon, name, sub, active, onPick, real) => {
+    var button = el("button", "lb-past-item" + (active ? " active" : ""));
+    button.type = "button";
+    button.setAttribute("role", "menuitem");
+    if (real) button.dataset.coin = "real";
     var text = el("span", "lb-past-text");
-    text.append(el("b", "", season.name), el("span", "", "Ended " + new Date(season.endedAt).toLocaleDateString(undefined, { dateStyle: "medium" }) + " · " + season.players + " player" + (season.players == 1 ? "" : "s")));
-    item.append(el("span", "lb-past-icon", season.icon), text, el("span", "lb-past-winner", season.winner ? "🥇 " + season.winner.username : ""));
-    item.addEventListener("click", () => {
+    text.append(el("b", "", name));
+    if (sub) text.appendChild(el("span", "", sub));
+    button.append(el("span", "lb-past-icon", icon), text);
+    if (active) button.appendChild(el("span", "lb-past-check", "✓"));
+    button.addEventListener("click", () => {
       closePast();
-      showWinners(season.id);
+      onPick();
     });
-    menu.appendChild(item);
-  });
+    menu.appendChild(button);
+  };
+  var show = (key) => () => {
+    if (key == current) return;
+    picked = key;
+    load();
+  };
+  item("🪙", "Casino", "Live", current == "normal", show("normal"), true);
+  (board.boards || []).forEach((s) => item(s.icon, s.name, "Running", current == String(s.id), show(String(s.id))));
+  var past = board.pastSeasons || [];
+  if (past.length) {
+    menu.appendChild(el("div", "lb-past-label", "Over - see the winners"));
+    past.forEach((s) => item(s.icon, s.name, "Ended " + new Date(s.endedAt).toLocaleDateString(undefined, { dateStyle: "medium" }), false, () => showWinners(s.id)));
+  }
   document.body.appendChild(menu);
   var box = anchor.getBoundingClientRect();
-  var width = Math.min(340, window.innerWidth - 32);
+  var width = Math.min(300, window.innerWidth - 32);
   menu.style.width = width + "px";
-  menu.style.left = Math.max(16, Math.min(box.right - width, window.innerWidth - width - 16)) + window.scrollX + "px";
+  menu.style.left = Math.max(16, Math.min(box.left, window.innerWidth - width - 16)) + window.scrollX + "px";
   menu.style.top = box.bottom + 8 + window.scrollY + "px";
   anchor.classList.add("open");
   setTimeout(() => document.addEventListener("click", outsidePast), 0);
@@ -323,13 +315,13 @@ function togglePast(anchor) {
 function closePast() {
   var menu = document.getElementById("lbPastMenu");
   if (menu) menu.remove();
-  document.querySelectorAll(".lb-board-past.open").forEach((tab) => tab.classList.remove("open"));
+  document.querySelectorAll(".lb-pick.open").forEach((pick) => pick.classList.remove("open"));
   document.removeEventListener("click", outsidePast);
   document.removeEventListener("keydown", escPast);
 }
 
 function outsidePast(event) {
-  if (!event.target.closest("#lbPastMenu, [data-past]")) closePast();
+  if (!event.target.closest("#lbPastMenu, #lbBoards")) closePast();
 }
 
 function escPast(event) {

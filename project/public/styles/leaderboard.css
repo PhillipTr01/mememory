@@ -742,82 +742,82 @@
   font-weight: 800;
 }
 
-/* Two seasons at once: a tab per board (the casino's, each season's) */
-.lb-boards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  padding: 0.25rem;
+/* Which board: one button next to the title (a menu with the boards and the seasons that ended) */
+.lb-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: auto;
+  margin-left: 0.25rem;
+  padding: 0.45rem 0.8rem 0.45rem 0.65rem;
   border: 1px solid var(--mm-border);
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-.lb-boards[hidden] {
+.lb-pick[hidden] {
   display: none;
 }
 
-.lb-board-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.85rem;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--mm-muted);
-  font-weight: 800;
-  font-size: 0.9rem;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+.lb-pick:hover,
+.lb-pick.open {
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+  background: var(--mm-surface-3);
 }
 
-.lb-board-tab:hover {
-  color: var(--mm-text);
-}
-
-.lb-board-tab.active {
-  background: rgba(var(--mm-accent-rgb), 0.18);
-  color: var(--mm-accent);
-}
-
-.lb-board-icon {
-  font-size: 1.05rem;
+.lb-pick-icon {
+  font-size: 1.15rem;
   line-height: 1;
 }
 
-.lb-board-count {
-  min-width: 1.2rem;
-  padding: 0 0.3rem;
-  border-radius: 999px;
-  background: var(--mm-surface-3);
-  color: var(--mm-muted);
-  font-size: 0.72rem;
-  text-align: center;
+.lb-pick-name {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.lb-board-past::after {
-  content: "";
-  width: 0.4rem;
-  height: 0.4rem;
-  margin-left: 0.1rem;
+.lb-pick-caret {
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-left: 0.15rem;
   border-right: 2px solid currentColor;
   border-bottom: 2px solid currentColor;
   transform: translateY(-2px) rotate(45deg);
   transition: transform 0.2s ease;
+  opacity: 0.7;
 }
 
-.lb-board-past.open::after {
+.lb-pick.open .lb-pick-caret {
   transform: translateY(1px) rotate(-135deg);
 }
 
-.lb-board-past.open {
-  color: var(--mm-text);
-  background: var(--mm-surface-3);
+.lb-past-item.active {
+  background: rgba(var(--mm-accent-rgb), 0.12);
 }
 
-/* The seasons that are over: the menu under the tab */
+.lb-past-check {
+  margin-left: auto;
+  color: var(--mm-accent);
+  font-weight: 900;
+}
+
+.lb-past-label {
+  margin: 0.35rem 0.6rem 0.15rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--mm-border);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
+
+/* The menu of the button */
 .lb-past-menu {
   position: absolute;
   z-index: 1080;
@@ -889,29 +889,4 @@
   color: var(--mm-muted);
 }
 
-.lb-past-winner {
-  flex: 0 0 auto;
-  max-width: 40%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--mm-accent);
-}
 
-/* Small screens: the tabs in one row - swipe for more */
-@media (max-width: 600px) {
-  .lb-boards {
-    flex-wrap: nowrap;
-    max-width: 100%;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .lb-boards::-webkit-scrollbar {
-    display: none;
-  }
-  .lb-board-tab {
-    flex: 0 0 auto;
-  }
-}

@@ -4402,3 +4402,10 @@ a.ad-case-row:hover {
   font-weight: 900;
   text-align: center;
 }
+
+/* Two seasons at once: one block each under "Running now" */
+.ad-season-now-one + .ad-season-now-one {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--mm-border);
+}

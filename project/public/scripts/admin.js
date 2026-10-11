@@ -70,6 +70,18 @@ var CALM_LISTS = new Set(["adRequestList", "adOpenList", "adLive", "adTopList", 
   };
 })();
 
+// A select with the normal casino first and then an option per running season (two can run at once):
+// list [{value, label}] - the value picked stays if it is still there (else the first)
+function seasonOptions(select, list) {
+  var picked = select.value;
+  var first = select.options[0];
+  var wanted = [first, ...list.map((item) => Object.assign(document.createElement("option"), { value: item.value, textContent: item.label }))];
+  // (only when something changed - no flicker of an open select)
+  var same = select.options.length == wanted.length && [...select.options].every((option, i) => option.value == wanted[i].value && option.textContent == wanted[i].textContent);
+  if (!same) select.replaceChildren(...wanted);
+  select.value = [...select.options].some((option) => option.value == picked) ? picked : first.value;
+}
+
 async function api(path, body) {
   var res = await fetch("api/" + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
   if (res.status == 401) {
@@ -604,7 +616,7 @@ function renderPlayerDetail(p) {
   var stats = el("div", "ad-stats ad-pd-stats");
   if (p.approved) {
     stats.append(
-      stat("Coins", "🪙 " + formatCoins(p.coins), p.season ? (p.season.coinIcon || p.season.icon || "") + " " + formatCoins(p.season.coins) + " in " + p.season.name : "normal balance"),
+      stat("Coins", "🪙 " + formatCoins(p.coins), (p.seasons || (p.season ? [p.season] : [])).length ? (p.seasons || [p.season]).map((s) => (s.coinIcon || s.icon || "") + " " + formatCoins(s.coins) + " in " + s.name).join(" · ") : "normal balance"),
       stat("Net in games", signed(total("net")), "🪙 " + formatCoins(total("bet")) + " wagered", total("net") > 0 ? "plus" : total("net") < 0 ? "minus" : ""),
       stat("Daily streak", p.streak && p.streak.day ? "Day " + p.streak.day : "–", "🪙 " + formatCoins(reason("daily bonus").amount) + " from daily bonuses"),
       stat("Cashback", "🪙 " + formatCoins(reason("cashback").amount), reason("cashback").count + " day" + (reason("cashback").count == 1 ? "" : "s")),
@@ -1046,9 +1058,9 @@ async function loadHistory(event) {
     // The names to pick from - and in a season its own history
     historyNames = data.names;
     if (historyPick) historyPick.refresh();
-    scope.hidden = !data.season;
-    if (data.season) scope.options[1].text = data.season.icon + " " + data.season.name;
-    else scope.value = "";
+    var running = data.seasons || (data.season ? [data.season] : []);
+    scope.hidden = running.length == 0;
+    seasonOptions(scope, running.map((s) => ({ value: String(s.id), label: s.icon + " " + s.name })));
     var rows = data.rows;
     var body = document.getElementById("adHistory");
     if (rows.length == 0) {
@@ -1103,9 +1115,11 @@ function rainInput() {
   };
 }
 
+var rainSeasons = [];
 function rainWho(rain) {
   var who = rain.target == "bottom" ? "the last " + rain.percent + "% of the leaderboard" : rain.target == "below" ? "everybody with less than 🪙 " + formatCoins(rain.below) : RAIN_TARGETS[rain.target];
-  return who + (rain.world == "season" ? " (season)" : "");
+  var season = rain.world && rain.world != "normal" ? (rainSeasons || []).find((s) => s.slot == rain.world) : null;
+  return who + (rain.world && rain.world != "normal" ? " (" + (season ? season.icon + " " + season.name : "season") + ")" : "");
 }
 
 var rainPreviewTimer = null;
@@ -1247,10 +1261,10 @@ async function loadRains() {
   } catch (error) {
     return fail(error);
   }
-  document.getElementById("adRainWorldField").hidden = !data.season;
-  // The season: with its icon, name and coin
-  if (data.season) document.querySelector('#adRainWorld option[value="season"]').textContent = data.season.icon + " " + data.season.name + " (" + data.season.coinIcon + ")";
-  if (!data.season) document.getElementById("adRainWorld").value = "normal";
+  // Every running season: with its icon, name and coin (the value: its slot)
+  rainSeasons = data.seasons || [];
+  document.getElementById("adRainWorldField").hidden = rainSeasons.length == 0;
+  seasonOptions(document.getElementById("adRainWorld"), rainSeasons.map((s) => ({ value: s.slot, label: s.icon + " " + s.name + " (" + s.coinIcon + ")" })));
   // The time field: in an hour (rounded)
   var at = document.getElementById("adRainAt");
   if (!at.value) {
@@ -2046,18 +2060,26 @@ function renderSeasons() {
         el("p", "ad-note", "At the start the casino closes: no new bets, running rounds finish, then the countdown - and the season starts. Every player hits Start to join with the budget; only they are on the leaderboard. At the end the same closing, then the final places (with the prizes) - and everybody gets the coins from before back, with what they won on top."),
       );
   }
-  var running = seasonList.find((s) => s.status == "running");
+  // (two can run at once: one block each)
+  var runningAll = seasonList.filter((s) => s.status == "running");
   var next = seasonList.filter((s) => s.status == "planned").sort((a, b) => a.start - b.start)[0];
-  document.getElementById("adSeasonBadge").hidden = !running;
-  // Now: the running season (with how far it is), the next one - or the normal leaderboard
+  document.getElementById("adSeasonBadge").hidden = runningAll.length == 0;
+  // Now: the running seasons (with how far they are), the next one - or the normal leaderboard
   var now = document.getElementById("adSeasonNow");
-  if (running) {
-    var done = Math.min(1, (Date.now() - running.start) / (running.end - running.start));
-    var bar = el("div", "ad-season-progress");
-    var fill = el("span");
-    fill.style.width = (done * 100).toFixed(1) + "%";
-    bar.appendChild(fill);
-    now.replaceChildren(el("span", "ad-label", "Running now"), seasonHead(running), bar, el("p", "ad-note", "Ends in " + span(running.end - Date.now()) + " · " + dateText(running.end) + " · leaderboard " + EVERY_NAMES[running.every]));
+  if (runningAll.length) {
+    now.replaceChildren(
+      el("span", "ad-label", runningAll.length > 1 ? "Running now · " + runningAll.length + " seasons" : "Running now"),
+      ...runningAll.map((running) => {
+        var block = el("div", "ad-season-now-one");
+        var done = Math.min(1, (Date.now() - running.start) / (running.end - running.start));
+        var bar = el("div", "ad-season-progress");
+        var fill = el("span");
+        fill.style.width = (done * 100).toFixed(1) + "%";
+        bar.appendChild(fill);
+        block.append(seasonHead(running), bar, el("p", "ad-note", "Ends in " + span(running.end - Date.now()) + " · " + dateText(running.end) + " · leaderboard " + EVERY_NAMES[running.every] + (running.access && running.access.mode == "whitelist" ? " · whitelist (" + running.access.names.length + ")" : "")));
+        return block;
+      }),
+    );
   } else {
     now.replaceChildren(
       el("span", "ad-label", "No season running"),
@@ -3841,7 +3863,7 @@ async function loadRtp() {
   try {
     var data = await api("rtp?range=" + rtpRange + "&world=" + (world.hidden ? "normal" : world.value));
     world.hidden = !data.seasonRunning;
-    if (!data.seasonRunning) world.value = "normal";
+    seasonOptions(world, (data.seasons || []).map((s) => ({ value: s.slot, label: s.icon + " " + s.name })));
     document.querySelectorAll("#adRtpRange button").forEach((button) => button.classList.toggle("active", button.dataset.range == data.range));
     document.getElementById("adRtpWagered").innerText = formatCoins(data.total.wagered);
     document.getElementById("adRtpPaid").innerText = formatCoins(data.total.paid);
