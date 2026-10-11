@@ -4227,7 +4227,7 @@ body.jackpot-theme::before {
 /* Plays in the season world right now: the season's icon next to the name (chat, online list) */
 .msg-name.in-season::after,
 .chat-online-row .in-season::after {
-  content: var(--season-icon, "🏆");
+  content: attr(data-season-icon);
   display: inline-block;
   margin-left: 0.3rem;
   padding: 0 0.3rem;

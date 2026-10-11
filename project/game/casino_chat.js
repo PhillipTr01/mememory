@@ -26,14 +26,15 @@ function create(key, options = {}) {
 
   function join(socket) {
     socket.emit("chatHistory", history);
-    socket.emit("casinoOnline", online());
+    socket.emit("casinoOnline", online(socket.data.username));
     sendOnline();
     socket.on("disconnect", sendOnline);
   }
 
   // Everybody with a casino page open (once per player, however many tabs) - season: who plays in
-  // the season world right now (the chat marks them with the season's icon)
-  function online() {
+  // a season world right now (the chat marks them with the icon of their season). viewer: only the
+  // seasons this player may play in (who can't, doesn't see them) - nothing given: no season marks
+  function online(viewer = null) {
     const names = new Set();
     const season = new Map();
     for (const page of pages) {
@@ -43,16 +44,14 @@ function create(key, options = {}) {
         if (slot) season.set(socket.data.username, slot.key);
       }
     }
-    // (two seasons at once: the icon of each player's season)
-    const seasons = season.size ? require("./seasons") : null;
+    // (two seasons at once: the icon and name of each player's own season - only seasons the viewer may see)
+    const seasons = season.size && viewer ? require("./seasons") : null;
     const bySlot = Object.fromEntries(slots.KEYS.map((key) => [key, seasons ? seasons.running(key) : null]));
-    const first = slots.KEYS.map((key) => bySlot[key]).find(Boolean) || null;
+    const seen = [...season].filter(([, key]) => bySlot[key] && seasons.allowed(bySlot[key], viewer));
     return {
       names: [...names].sort((a, b) => a.localeCompare(b)),
-      season: [...season.keys()].sort((a, b) => a.localeCompare(b)),
-      seasonIcon: first ? first.icon : null,
-      seasonName: first ? first.name : null,
-      seasonOf: Object.fromEntries([...season].filter(([, key]) => bySlot[key]).map(([name, key]) => [name, { icon: bySlot[key].icon, name: bySlot[key].name }])),
+      season: seen.map(([name]) => name).sort((a, b) => a.localeCompare(b)),
+      seasonOf: Object.fromEntries(seen.map(([name, key]) => [name, { id: bySlot[key].id, icon: bySlot[key].icon, name: bySlot[key].name }])),
       // The moderators (🛡️ next to their names)
       mods: require("./moderators").names(),
     };
@@ -64,10 +63,22 @@ function create(key, options = {}) {
     if (onlineTimer) return;
     onlineTimer = setTimeout(() => {
       onlineTimer = null;
-      const data = online();
-      for (const page of pages) page.namespace.to(page.room).emit("casinoOnline", data);
+      sendEach();
     }, 150);
     onlineTimer.unref();
+  }
+
+  // To every page with the chat: the list for its player (the seasons they may see)
+  function sendEach() {
+    const byViewer = new Map();
+    for (const page of pages) {
+      for (const socket of page.namespace.sockets.values()) {
+        if (!socket.rooms.has(page.room)) continue;
+        const viewer = socket.data.username;
+        if (!byViewer.has(viewer)) byViewer.set(viewer, online(viewer));
+        socket.emit("casinoOnline", byViewer.get(viewer));
+      }
+    }
   }
 
   // The ban of a player right now (null: none; an old one is gone by itself)
@@ -185,7 +196,7 @@ function create(key, options = {}) {
     },
   );
 
-  return { attach, join, fromUser, announce, online, messages, remove, clear, ban, unban, banList };
+  return { attach, join, fromUser, announce, online, refreshOnline: sendEach, messages, remove, clear, ban, unban, banList };
 }
 
 module.exports = { ...create("chat"), create };

@@ -313,26 +313,35 @@
 
   /* ---------- Who is online in the casino (in the chat head) ---------- */
 
+  // A name plays in a season world: the icon of its season next to it (chat.js uses it too)
+  function markSeason(node, name) {
+    var season = (window.casinoSeasonOf || {})[name];
+    node.classList.toggle("in-season", !!season);
+    if (season) node.dataset.seasonIcon = season.icon || "🏆";
+    else delete node.dataset.seasonIcon;
+  }
+  window.markSeason = markSeason;
+
   var onlineButton = document.getElementById("chatOnline");
   var onlineList = document.getElementById("chatOnlineList");
   if (onlineButton) {
     var onlineKey = null; // what the pill and the list show now: unchanged - nothing is built again (no flicker)
     socket.on("casinoOnline", (data) => {
       var names = data.names || [];
-      // Who plays in the season world: the season's icon next to their names in the chat
+      // Who plays in a season world (one the player may see): the icon of their season next to their names in the chat
       var inSeason = new Set(data.season || []);
+      var seasonOf = data.seasonOf || {};
       window.casinoSeasonNames = inSeason;
+      window.casinoSeasonOf = seasonOf;
       // The moderators: 🛡️ next to their names in the chat
       var mods = new Set(data.mods || []);
       window.casinoModNames = mods;
       document.querySelectorAll(".msg-name[data-name]").forEach((node) => node.classList.toggle("is-mod", mods.has(node.dataset.name)));
-      if (data.seasonIcon) document.body.style.setProperty("--season-icon", JSON.stringify(data.seasonIcon));
-      document.querySelectorAll(".msg-name[data-name]").forEach((node) => {
-        node.classList.toggle("in-season", inSeason.has(node.dataset.name));
-        node.title = inSeason.has(node.dataset.name) ? "Plays in " + (data.seasonName || "the season") : "";
-      });
+      var seasonText = (name) => "Plays in " + ((seasonOf[name] && seasonOf[name].name) || "a season");
+      document.querySelectorAll(".msg-name[data-name]").forEach((node) => markSeason(node, node.dataset.name));
+      document.querySelectorAll(".msg-name[data-name]").forEach((node) => (node.title = inSeason.has(node.dataset.name) ? seasonText(node.dataset.name) : ""));
       onlineButton.hidden = names.length == 0;
-      var key = JSON.stringify([names, data.season || [], data.seasonName || "", myName, data.mods || []]);
+      var key = JSON.stringify([names, seasonOf, myName, data.mods || []]);
       if (key == onlineKey) return;
       onlineKey = key;
       var faces = el("span", "chat-online-faces");
@@ -350,8 +359,10 @@
         el("div", "chat-online-title", "Online in the casino"),
         ...names.map((name) => {
           var row = el("div", "chat-online-row");
-          row.append(quiet(createAvatar(name, "sm")), el("span", inSeason.has(name) ? "in-season" : "", name));
-          if (inSeason.has(name)) row.title = "Plays in " + (data.seasonName || "the season");
+          var label = el("span", "", name);
+          markSeason(label, name);
+          row.append(quiet(createAvatar(name, "sm")), label);
+          if (inSeason.has(name)) row.title = seasonText(name);
           if (name == myName) row.appendChild(el("span", "you-tag", "You"));
           // Somebody else: a click - coins for them
           else {

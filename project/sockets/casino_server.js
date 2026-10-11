@@ -102,7 +102,8 @@ module.exports = function (io) {
   require("../game/moderators").changes.on("change", (username) => {
     for (const socket of socketsOf(io, username)) socket.emit("modChanged");
     // (everybody: the 🛡️ in the chat)
-    for (const name of GAMES) io.of(name).emit("casinoOnline", require("../game/casino_chat").online());
+    require("../game/casino_chat").refreshOnline();
+    require("../game/worlds").testChat.refreshOnline();
   });
 
   // A game turned off (admin panel): its open pages go to another game
