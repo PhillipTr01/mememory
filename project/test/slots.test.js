@@ -376,6 +376,52 @@ test("slots: a bonus game waits while the player is away and goes on when they c
   }
 });
 
+test("slots: a restart doesn't pay a bonus game unseen - one playing goes on where it was, one waiting still waits", async () => {
+  const persist = require("../game/persist");
+  const timing = { SLOTS_HOLD: 60000, SLOTS_MIN_GAP: 0, SLOTS_SPIN: 50, SLOTS_COUNT_TIME: 50, SLOTS_BONUS_TIME: 100, SLOTS_FREE_SPIN: 100, SLOTS_RETRIGGER_TIME: 10, SLOTS_BONUS_END: 50, SLOTS_RESUME_TIME: 50, SLOTS_BIG_TIME: 50, SLOTS_COIN_INTRO: 100, SLOTS_RESPIN: 100, SLOTS_TEST_BONUS: "free" };
+  const before = Object.fromEntries(Object.keys(timing).map((key) => [key, config[key]]));
+  Object.assign(config, timing);
+  try {
+    sockets.forEach((socket) => socket.close());
+    await h.wait(50);
+    h.setCoins("alice", 5000);
+    const page = client("alice");
+    await h.once(page, "slotsSetup");
+    // Free spins started (one seen) - and the coin game still waiting for its click
+    let result = h.once(page, "slotsResult");
+    page.emit("spin", { bet: 100 });
+    const free = await result;
+    page.emit("bonusStart", { id: free.id });
+    page.emit("bonusProgress", { id: free.id, shown: 1 });
+    await h.wait(60);
+    config.SLOTS_TEST_BONUS = "coins";
+    result = h.once(page, "slotsResult");
+    page.emit("spin", { bet: 100 });
+    const coinGame = await result;
+    assert.ok(free.bonus && coinGame.coinGame);
+    await h.wait(30);
+    // The server stops (saved while the free spins play) and starts again
+    const saved = persist.snapshotAll();
+    page.close();
+    await h.wait(100);
+    await persist.restoreSnapshots(saved);
+    // Long after the show would have been over: nothing paid
+    await h.wait(free.payIn + 300);
+    assert.strictEqual(h.coinsOf("alice"), 4800, "nothing paid unseen");
+    // Back on the page: both again - the free spins after the one seen, the coin game from its start
+    const again = client("alice");
+    const resumed = [];
+    again.on("slotsResume", (data) => resumed.push(data));
+    await h.wait(300);
+    const back = resumed.find((r) => r.id === free.id);
+    assert.deepStrictEqual([back.shown, back.started], [1, true]);
+    assert.strictEqual(resumed.find((r) => r.id === coinGame.id).started, false);
+    again.close();
+  } finally {
+    Object.assign(config, before);
+  }
+});
+
 test("slots: the page played the bonus game to its end - paid right away (the count time), not after the reckoned show", async () => {
   const timing = { SLOTS_HOLD: 60000, SLOTS_MIN_GAP: 0, SLOTS_SPIN: 20, SLOTS_COUNT_TIME: 30, SLOTS_BONUS_TIME: 2000, SLOTS_FREE_SPIN: 2000, SLOTS_RETRIGGER_TIME: 10, SLOTS_BONUS_END: 2000, SLOTS_BIG_TIME: 2000, SLOTS_TEST_BONUS: "free" };
   const before = Object.fromEntries(Object.keys(timing).map((key) => [key, config[key]]));

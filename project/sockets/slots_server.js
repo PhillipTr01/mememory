@@ -354,8 +354,14 @@ module.exports = function (io, options = {}) {
       machine.spins = saved.spins || 0;
       // Wins that were not paid before the stop: paid now (or when their show is over)
       machine.pending = Array.isArray(saved.pending) ? saved.pending : [];
-      // (a held bonus game keeps waiting - until the player comes back, or SLOTS_HOLD is over)
-      machine.pending.forEach((entry) => schedulePay(entry, (entry.at || 0) - Date.now()));
+      // A bonus game is never paid unseen because of the restart: one still playing is held where it was (the page
+      // goes on from there - "the bonus goes on"), a held one waits SLOTS_HOLD from now (the time off doesn't count)
+      machine.pending.forEach((entry) => {
+        if (!entry.result) return schedulePay(entry, (entry.at || 0) - Date.now());
+        entry.state = entry.state === "waiting" ? "waiting" : "paused";
+        entry.at = Date.now() + config.SLOTS_HOLD;
+        schedulePay(entry, config.SLOTS_HOLD);
+      });
       room.to(ROOM).emit("slotsFeed", machine.feed);
     },
   );
