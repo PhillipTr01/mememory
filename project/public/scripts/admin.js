@@ -2826,11 +2826,11 @@ function renderSettings() {
     ...scopeNote(),
     ...sections.map((section) => {
       // A game on / off: a card of its own, over the whole width
-      var toggle = section.fields.find((field) => field.type == "toggle");
-      if (toggle) return toggleCard(toggle);
-      // A choice with the numbers of its section (only the ones of the option picked - like Outside seasons)
       var choice = section.fields.find((field) => field.type == "choice");
-      if (choice) return choiceCard(choice, section.fields.filter((field) => field != choice && applies(field)).map(settingRow));
+      var toggle = section.fields.find((field) => field.type == "toggle");
+      if (toggle && !choice) return toggleCard(toggle);
+      // A choice with the settings of its section (only the ones of the option picked - like Outside seasons)
+      if (choice) return choiceCard(choice, section.fields.filter((field) => field != choice && applies(field)).map((field) => (field.type == "toggle" ? switchRow(field) : settingRow(field))));
       var card = el("div", "ad-card");
       var head = el("div", "ad-card-head");
       head.appendChild(el("h2", "ad-title", section.name));
@@ -2840,6 +2840,10 @@ function renderSettings() {
       if (off.length && off.length == section.fields.length) {
         card.classList.add("ad-card-off");
         head.appendChild(el("span", "ad-pill", whenText(off[0])));
+      } else if (section.fields.some((field) => field.key == "BET_CAP_SHARE") && noCapOutside()) {
+        // (the second chance without a max bet: only the seasons' caps count)
+        card.classList.add("ad-card-off");
+        head.appendChild(el("span", "ad-pill", "Off outside seasons - 💔 no max bet"));
       }
       section.fields.forEach((field) => card.appendChild(settingRow(field)));
       return card;
@@ -2981,6 +2985,36 @@ function choiceCard(field, rows) {
     card.appendChild(below);
   }
   return card;
+}
+
+// Outside of seasons with the second chance and "No max bet by balance" on
+function noCapOutside() {
+  var value = (key) => (settingsList.find((f) => f.key == key) || {}).value;
+  return !seasonMode() && value("OFFSEASON_MODE") == "chance" && value("OFFSEASON_NO_CAP") === true;
+}
+
+// A switch inside a card (No max bet by balance): saved right away
+function switchRow(field) {
+  var row = el("div", "ad-setting ad-switch-row");
+  var text = el("div", "ad-switch-info");
+  text.append(el("span", "ad-setting-label", field.label), el("span", "ad-setting-hint", field.hint || ""));
+  var label = el("label", "ad-switch");
+  var box = document.createElement("input");
+  box.type = "checkbox";
+  box.checked = field.value === true;
+  box.setAttribute("aria-label", field.label);
+  label.append(box, el("span", "ad-switch-track"), el("span", "ad-switch-text", box.checked ? "On" : "Off"));
+  box.addEventListener("change", async () => {
+    box.disabled = true;
+    try {
+      takeSettings(await api("settings", withSeason({ values: { [field.key]: box.checked } })));
+    } catch (error) {
+      fail(error);
+    }
+    renderSettings();
+  });
+  row.append(text, label);
+  return row;
 }
 
 // A game on / off (or another switch, like a test mode): saved right away

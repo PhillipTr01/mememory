@@ -53,11 +53,16 @@ function dividerOf(world, game) {
   return Number.isFinite(x) && x >= 1 ? x : 1;
 }
 
+// Outside of seasons with the second chance: the admin can turn the cap off (a season keeps its own)
+function noCap(world) {
+  return !slots.of(world) && config.OFFSEASON_MODE === "chance" && config.OFFSEASON_NO_CAP === true;
+}
+
 // The rule ({floor, share} - null: no cap): everything up to the floor, above it share% of the balance
 // (a game with its own share: both divided by its x). The pages work out what is left of a round themselves.
 function capRule(world, game) {
   const limits = forWorld(world);
-  if (!(limits.BET_CAP_SHARE < 100)) return null;
+  if (!(limits.BET_CAP_SHARE < 100) || noCap(world)) return null;
   const x = dividerOf(world, game);
   // (a divided all-in amount up to the next 100 too - 10,000 / 15: 700, not 666)
   return { floor: x > 1 ? roundUp(limits.BET_CAP_FLOOR / x) : limits.BET_CAP_FLOOR, share: limits.BET_CAP_SHARE / x };

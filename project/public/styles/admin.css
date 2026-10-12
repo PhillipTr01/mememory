@@ -4436,3 +4436,16 @@ a.ad-case-row:hover {
 .ad-card.ad-card-off .ad-card-head .ad-pill {
   margin-left: auto;
 }
+
+/* A switch inside a card (No max bet by balance): the text left, the switch right */
+.ad-switch-row .ad-switch-info {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ad-switch-row .ad-switch {
+  grid-column: 2;
+  align-self: center;
+}
