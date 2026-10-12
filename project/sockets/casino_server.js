@@ -8,6 +8,7 @@ const maintenance = require("../game/maintenance");
 const testMode = require("../game/test_mode");
 const worlds = require("../game/worlds");
 const inbox = require("../game/inbox");
+const offseason = require("../game/offseason");
 const safe = require("./safe_handler");
 
 // The games - in the normal casino, the season world and the admin's test world (game/worlds.js)
@@ -86,6 +87,8 @@ module.exports = function (io) {
     }
   }
   for (const name of GAMES) io.of(name).on("connection", (socket) => setTimeout(() => deliverInbox(socket), 800));
+  // Outside of seasons with the second chance: a balance already at 0 is filled up when a page opens
+  for (const name of REAL) io.of(name).on("connection", (socket) => offseason.check(socket.data.username).catch((error) => console.error("[offseason] Could not check a balance:", error)));
 
   // The free coins of the day (the popup of every casino page) - in the world of the page: one handler for every game
   for (const name of GAMES) {

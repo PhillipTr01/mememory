@@ -88,6 +88,8 @@ async function payDay(world, now = Date.now()) {
   // (marked first - two runs at once never pay twice)
   state[world] = today - 1;
   await save();
+  // Outside of seasons with "second chance" (game/offseason.js): no cashback (the day counts as done)
+  if (world === "normal" && config.OFFSEASON_MODE === "chance") return [];
   const wallet = coins.wallet(world);
   const paid = [];
   // (a season: the coins of its second chances are lost first - they never count)

@@ -25,7 +25,12 @@
    * day (and on every page until they are claimed; also when midnight passes on an open page). The 🎁 in
    * the bar only tells: the time to the next ones, the streak.
    */
+  var bonusOff = false; // outside of seasons with the second chance: no daily bonus (no 🎁, no popup)
   function renderBonus() {
+    if (bonusOff) {
+      bonusButton.hidden = true;
+      return;
+    }
     var text = document.getElementById("navBonusText");
     // Midnight passed on this page: the next day of the streak (what the server will pay)
     if (bonusAt != null && Date.now() >= bonusAt) {
@@ -264,6 +269,9 @@
       if (!open.busy()) open.close();
       else setTimeout(() => !open.done() && open.close(), 2000);
     }
+    // (the second chance instead of the daily bonus: the 🎁 and its popup go)
+    bonusOff = data.bonusOff === true;
+    if (bonusOff && claimPopup && !claimPopup.done() && !claimPopup.busy()) claimPopup.close();
     if (data.bonusIn != null) {
       bonusAt = data.bonus ? null : Date.now() + data.bonusIn;
       bonusAmount = data.bonusAmount || bonusAmount;
@@ -1403,6 +1411,8 @@
   // The daily cashback came (after midnight - or while away: on the next visit)
   // (a popup - like a gift; more at once: one after the other)
   socket.on("cashback", (data) => window.casinoShowMissed({ ...data, type: "cashback" }));
+  // Outside of seasons with the second chance: the balance hit 0 - filled up again
+  socket.on("refilled", (data) => casinoNotice({ icon: "💔", title: "Second chance!", text: "Your coins are filled up to 🪙 " + format(data.coins) + " - good luck!", key: "refill", ms: 7000 }));
 
   socket.on("giftReceived", (gift) => {
     giftsWaiting.push({ ...gift, type: "gift" });

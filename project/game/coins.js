@@ -185,7 +185,11 @@ function makeWallet(kind) {
     return user[f.bonusAt] || null;
   }
 
+  // Outside of seasons with "second chance" (game/offseason.js): no daily bonus
+  const bonusOff = () => kind === "normal" && config.OFFSEASON_MODE === "chance";
+
   function bonusAvailable(user, now = Date.now()) {
+    if (bonusOff()) return false;
     return user != null && bonusInAt(bonusAtOf(user), now) === 0;
   }
 
@@ -244,6 +248,8 @@ function makeWallet(kind) {
       // (a season: the days missed since the last claim - paid on top, the plain bonus each)
       bonusMissed: available ? bonusDays(user) - 1 : 0,
       streak: streakInfo(user),
+      // (no daily bonus outside of seasons: the second chance instead)
+      bonusOff: bonusOff() || undefined,
       normal: season ? normalWallet.balanceOf(user) : null,
       wager: season ? await wagerLookup(username, kind).catch(() => null) : null,
       world: kind,
@@ -362,6 +368,7 @@ function makeWallet(kind) {
       return dailyBonus();
     }
     if (watching(username)) return 0;
+    if (bonusOff()) return 0;
     await ensure(username);
     const user = await User.findOne({ username: username }).select(["username", f.reset, f.bonusAt, f.streak].join(" ")).lean();
     if (user == null || !bonusAvailable(user, now)) return 0;
