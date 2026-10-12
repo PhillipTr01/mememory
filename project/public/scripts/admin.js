@@ -2750,6 +2750,61 @@ function takeSettings(data) {
   return data;
 }
 
+// Does a field count now? (when: another setting must have a value - in the season view always)
+function applies(field) {
+  if (!field.when || seasonMode()) return true;
+  return Object.entries(field.when).every(([key, value]) => {
+    var other = settingsList.find((f) => f.key == key);
+    return !other || other.value == value;
+  });
+}
+
+// "Off - 💔 Second chance is on": why a field doesn't count now
+function whenText(field) {
+  var [key] = Object.keys(field.when);
+  var other = settingsList.find((f) => f.key == key);
+  var option = other && other.options ? other.options.find((o) => o.value == other.value) : null;
+  return "Off - " + (option ? option.label : "another option") + " is on";
+}
+
+// One number setting: label (scope, default, the season's own value), the field, the hint, an error
+function settingRow(field) {
+  var row = el("label", "ad-setting");
+  var label = el("span", "ad-setting-label", field.label);
+  // Only outside of a season (in one: the season's own value)
+  if (seasonMode()) label.appendChild(field.seasonValue == null ? el("span", "ad-scope ad-scope-same", field.seasonDefault != null && field.seasonDefault != field.value ? "for every season" : "same as normal") : el("span", "changed ad-season-own", field.seasonDefault != null && field.seasonDefault != field.value ? "every season " + formatCoins(field.seasonDefault) : "normal " + formatCoins(field.value)));
+  else {
+    if (field.scope == "outside") label.appendChild(el("span", "ad-scope", "outside seasons"));
+    if (field.value != field.default) label.appendChild(el("span", "changed", "default " + formatCoins(field.default)));
+    // (the season has its own value: this one doesn't count there - easy to miss otherwise)
+    if (field.seasonValue != null) {
+      var picked = settingsSeasons.find((season) => season.id == settingsSeason);
+      var other = el("span", "changed ad-season-own", (picked ? picked.icon + " " : "season ") + formatCoins(field.seasonValue));
+      other.title = "In " + (picked ? picked.name : "the season") + " " + formatCoins(field.seasonValue) + " counts - change it under 🏆 Season above";
+      label.appendChild(other);
+    }
+  }
+  var input = el("input", "mm-input");
+  input.type = "number";
+  input.step = field.step || 1;
+  input.min = field.min;
+  input.max = field.max;
+  input.value = shownValue(field);
+  // (season: empty - the normal value counts, shown as the placeholder)
+  if (seasonMode()) input.placeholder = formatCoins(field.seasonDefault != null ? field.seasonDefault : field.value);
+  input.dataset.key = field.key;
+  var box = el("span", "ad-setting-input");
+  box.appendChild(input);
+  if (field.unit) box.appendChild(el("span", "ad-setting-unit", field.unit));
+  row.append(label, box);
+  if (field.hint) row.appendChild(el("span", "ad-setting-hint", field.hint));
+  var error = el("span", "ad-setting-error");
+  error.dataset.errorFor = field.key;
+  error.hidden = true;
+  row.appendChild(error);
+  return row;
+}
+
 function renderSettings() {
   // On / off of every game in the navigation
   document.querySelectorAll(".ad-state[data-game]").forEach((dot) => {
@@ -2773,48 +2828,20 @@ function renderSettings() {
       // A game on / off: a card of its own, over the whole width
       var toggle = section.fields.find((field) => field.type == "toggle");
       if (toggle) return toggleCard(toggle);
+      // A choice with the numbers of its section (only the ones of the option picked - like Outside seasons)
       var choice = section.fields.find((field) => field.type == "choice");
-      if (choice) return choiceCard(choice);
+      if (choice) return choiceCard(choice, section.fields.filter((field) => field != choice && applies(field)).map(settingRow));
       var card = el("div", "ad-card");
       var head = el("div", "ad-card-head");
       head.appendChild(el("h2", "ad-title", section.name));
       card.appendChild(head);
-      section.fields.forEach((field) => {
-        var row = el("label", "ad-setting");
-        var label = el("span", "ad-setting-label", field.label);
-        // Only outside of a season (in one: the season's own value)
-        if (seasonMode()) label.appendChild(field.seasonValue == null ? el("span", "ad-scope ad-scope-same", field.seasonDefault != null && field.seasonDefault != field.value ? "for every season" : "same as normal") : el("span", "changed ad-season-own", (field.seasonDefault != null && field.seasonDefault != field.value ? "every season " + formatCoins(field.seasonDefault) : "normal " + formatCoins(field.value))));
-        else {
-          if (field.scope == "outside") label.appendChild(el("span", "ad-scope", "outside seasons"));
-          if (field.value != field.default) label.appendChild(el("span", "changed", "default " + formatCoins(field.default)));
-          // (the season has its own value: this one doesn't count there - easy to miss otherwise)
-          if (field.seasonValue != null) {
-            var picked = settingsSeasons.find((season) => season.id == settingsSeason);
-            var other = el("span", "changed ad-season-own", (picked ? picked.icon + " " : "season ") + formatCoins(field.seasonValue));
-            other.title = "In " + (picked ? picked.name : "the season") + " " + formatCoins(field.seasonValue) + " counts - change it under 🏆 Season above";
-            label.appendChild(other);
-          }
-        }
-        var input = el("input", "mm-input");
-        input.type = "number";
-        input.step = field.step || 1;
-        input.min = field.min;
-        input.max = field.max;
-        input.value = shownValue(field);
-        // (season: empty - the normal value counts, shown as the placeholder)
-        if (seasonMode()) input.placeholder = formatCoins(field.seasonDefault != null ? field.seasonDefault : field.value);
-        input.dataset.key = field.key;
-        var box = el("span", "ad-setting-input");
-        box.appendChild(input);
-        if (field.unit) box.appendChild(el("span", "ad-setting-unit", field.unit));
-        row.append(label, box);
-        if (field.hint) row.appendChild(el("span", "ad-setting-hint", field.hint));
-        var error = el("span", "ad-setting-error");
-        error.dataset.errorFor = field.key;
-        error.hidden = true;
-        row.appendChild(error);
-        card.appendChild(row);
-      });
+      // (a card that only counts with another option - Cashback with the daily bonus: greyed out, still editable)
+      var off = section.fields.filter((field) => !applies(field));
+      if (off.length && off.length == section.fields.length) {
+        card.classList.add("ad-card-off");
+        head.appendChild(el("span", "ad-pill", whenText(off[0])));
+      }
+      section.fields.forEach((field) => card.appendChild(settingRow(field)));
       return card;
     }),
   );
@@ -2921,9 +2948,10 @@ function scopeNotes() {
 }
 
 // One of a few options (like the test bonus of the slots): saved right away
-function choiceCard(field) {
+// rows: number settings that belong to it (under the choice)
+function choiceCard(field, rows) {
   var on = field.value != field.default;
-  var card = el("div", "ad-card ad-toggle-card ad-toggle-test" + (on ? " on" : " off"));
+  var card = el("div", "ad-card ad-toggle-card ad-toggle-test" + (on ? " on" : " off") + (rows && rows.length ? " ad-choice-card" : ""));
   var info = el("div", "ad-toggle-info");
   info.append(el("h2", "ad-title", field.label), el("p", "ad-note", field.hint || ""));
   var options = el("div", "ad-choice");
@@ -2947,6 +2975,11 @@ function choiceCard(field) {
     options.appendChild(button);
   });
   card.append(info, options);
+  if (rows && rows.length) {
+    var below = el("div", "ad-choice-rows");
+    below.append(...rows);
+    card.appendChild(below);
+  }
   return card;
 }
 

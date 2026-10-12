@@ -4410,3 +4410,29 @@ a.ad-case-row:hover {
   padding-top: 0.9rem;
   border-top: 1px solid var(--mm-border);
 }
+
+/* A choice with its numbers under it (Outside seasons: the amount of the option picked) */
+.ad-toggle-card.ad-choice-card {
+  flex-wrap: wrap;
+}
+
+.ad-choice-rows {
+  flex-basis: 100%;
+  margin-top: 0.4rem;
+  padding-top: 0.2rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.ad-choice-rows .ad-setting:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+/* A card that doesn't count with the option picked (Cashback with the second chance): greyed out */
+.ad-card.ad-card-off .ad-setting {
+  opacity: 0.5;
+}
+
+.ad-card.ad-card-off .ad-card-head .ad-pill {
+  margin-left: auto;
+}
