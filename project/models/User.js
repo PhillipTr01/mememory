@@ -6,6 +6,9 @@ const schema = mongoose.Schema({
     // Usernames are shown in the game UI, so only allow harmless characters.
     username: {type: String, required: true, minLength: 3, maxLength: 16, match: /^[a-zA-Z0-9_.-]+$/},
 	password: {type: String, required: true},
+	// A reset link from the admin (see controllers/password_reset.js): the hash of its token, valid until then
+	resetTokenHash: {type: String},
+	resetTokenUntil: {type: Date},
     // Unique indexes prevent duplicate accounts even if two sign-ups race each other.
     emailLowerCase: {type: String, unique: true, sparse: true},
     usernameLowerCase: {type: String, unique: true, sparse: true},

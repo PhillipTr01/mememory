@@ -26,7 +26,8 @@ function query(value) {
 User.findOne = (filter) => {
   let user = null;
   if (filter._id) user = users.get(String(filter._id)) || null;
-  if (filter.username) user = [...users.values()].find((u) => u.username === filter.username) || null;
+  else if (filter.username) user = [...users.values()].find((u) => u.username === filter.username) || null;
+  else user = [...users.values()].find((u) => matches(u, filter)) || null;
   return query(user);
 };
 
@@ -53,6 +54,7 @@ User.updateOne = async (filter, update) => {
   if (user == null) return { n: 0, nModified: 0 };
   Object.assign(user, update.$set || {});
   for (const [key, amount] of Object.entries(update.$inc || {})) user[key] = (user[key] || 0) + amount;
+  for (const key of Object.keys(update.$unset || {})) delete user[key];
   return { n: 1, nModified: 1 };
 };
 

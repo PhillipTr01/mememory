@@ -19,6 +19,7 @@ const worlds = require("../game/worlds");
 const rtpMonitor = require("../game/rtp_monitor");
 const streak = require("../game/streak");
 const userController = require("../controllers/user_controller");
+const passwordReset = require("../controllers/password_reset");
 const User = require("../models/User");
 const CoinLog = require("../models/CoinLog");
 
@@ -238,6 +239,17 @@ module.exports = function () {
         reasons: reasons.map((row) => ({ reason: row._id, amount: row.amount, count: row.count })),
         items: shop.itemsOf(user).map((item) => (item.given ? item : { ...item, at: boughtAt.get(item.name) || null })),
       });
+    }),
+  );
+
+  // A password reset link for a player (to give them - valid for a day, once)
+  router.post(
+    "/api/players/:name/reset-link",
+    admin,
+    asyncHandler(async (req, res) => {
+      const link = await passwordReset.createLink(String(req.params.name));
+      if (!link) return res.status(404).json({ error: "No such player." });
+      res.json({ ...link, hours: passwordReset.LINK_HOURS });
     }),
   );
 

@@ -4449,3 +4449,17 @@ a.ad-case-row:hover {
   grid-column: 2;
   align-self: center;
 }
+
+/* The password reset link of a player: the link and its copy button */
+.ad-reset-row {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.25rem 0 1rem;
+}
+
+.ad-reset-url {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+}

@@ -103,6 +103,8 @@ app.get("/home", Auth, page("home.html"));
 app.get("/user", Auth, page("user_profile.html"));
 app.get("/lobby", Auth, page("lobby.html"));
 app.get("/settings", Auth, page("settings.html"));
+// A password reset link from the admin (no login - the player lost the password)
+app.get("/reset-password", page("reset_password.html"));
 app.get("/play", Auth, page("multiplayer.html"));
 app.get("/singleplayer", Auth, page("singleplayer.html"));
 app.get("/tictactoe", Auth, page("tictactoe.html"));

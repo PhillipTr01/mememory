@@ -524,6 +524,8 @@ function renderPlayerDetail(p) {
     button("Approve", "mm-btn-primary", (b) => setAccess(row, true, b));
     button("Decline", "", (b) => declineRequest(p.username, b));
   } else button("Approve", "", (b) => setAccess(row, true, b));
+  // (every account - also one without the casino: the password is for the whole site)
+  button("🔑 Reset link", "", (b) => resetLinkDialog(p.username, b));
   head.append(who, actions);
 
   // The numbers
@@ -832,6 +834,60 @@ function coinsDialog(options) {
   });
   amount.focus();
   amount.select();
+}
+
+// A password reset link for a player who lost theirs: made on the server, shown to copy and give them
+async function resetLinkDialog(username, trigger) {
+  var sure = await confirmDialog({ title: "Reset link for " + username + "?", text: "A link to set a new password - valid for a day and only once. Give it only to " + username + " (whoever has it can change the password). An older link of " + username + " stops working.", confirmLabel: "Make link" });
+  if (!sure) return;
+  if (trigger) trigger.disabled = true;
+  var link;
+  try {
+    link = await api("players/" + encodeURIComponent(username) + "/reset-link", {});
+  } catch (error) {
+    if (trigger) trigger.disabled = false;
+    return fail(error);
+  }
+  if (trigger) trigger.disabled = false;
+  var url = window.location.origin + link.path;
+  var backdrop = el("div", "mm-dialog-backdrop");
+  var dialog = el("div", "mm-dialog ad-reset-dialog");
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  var field = Object.assign(el("input", "mm-input ad-reset-url"), { value: url, readOnly: true });
+  field.setAttribute("aria-label", "Reset link");
+  field.addEventListener("focus", () => field.select());
+  var copy = el("button", "mm-btn mm-btn-primary", "Copy");
+  copy.type = "button";
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch (error) {
+      field.select();
+      document.execCommand("copy");
+    }
+    copy.innerText = "Copied ✓";
+    setTimeout(() => (copy.innerText = "Copy"), 1800);
+  });
+  var row = el("div", "ad-reset-row");
+  row.append(field, copy);
+  var until = new Date(link.until);
+  var done = el("button", "mm-btn", "Done");
+  done.type = "button";
+  var actions = el("div", "mm-dialog-actions");
+  actions.appendChild(done);
+  dialog.append(el("h2", "mm-dialog-title", "🔑 Reset link for " + link.username), el("p", "mm-dialog-text", "Give this link to " + link.username + ". It works once, until " + until.toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" }) + " - it is not shown again."), row, actions);
+  backdrop.appendChild(dialog);
+  document.body.appendChild(backdrop);
+  var close = () => {
+    document.removeEventListener("keydown", onKey);
+    backdrop.remove();
+  };
+  var onKey = (event) => event.key == "Escape" && close();
+  document.addEventListener("keydown", onKey);
+  done.addEventListener("click", close);
+  backdrop.addEventListener("click", (event) => event.target == backdrop && close());
+  field.focus();
 }
 
 function editPlayerCoins(p) {

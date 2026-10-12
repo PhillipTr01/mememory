@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const auth = require('../controllers/authentication_controller');
+const passwordReset = require('../controllers/password_reset');
 const { asyncHandler } = require('../utils/errors');
 
 router.post('/register', asyncHandler(async (req, res) => {
@@ -14,6 +15,15 @@ router.post('/login', asyncHandler(async (req, res) => {
 
     // Save token in cookies to authenticate the user session
     res.cookie('token', token, auth.cookieOptions(auth.TOKEN_MAX_AGE)).redirect('/home');
+}));
+
+// A reset link from the admin: does it still work - and the new password
+router.post('/reset-password/check', asyncHandler(async (req, res) => {
+    res.json(await passwordReset.check((req.body || {}).token));
+}));
+
+router.post('/reset-password', asyncHandler(async (req, res) => {
+    res.json(await passwordReset.reset(req.body));
 }));
 
 router.get('/logout', (req, res) => {
