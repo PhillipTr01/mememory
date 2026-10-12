@@ -1435,7 +1435,7 @@
   // (a popup - like a gift; more at once: one after the other)
   socket.on("cashback", (data) => window.casinoShowMissed({ ...data, type: "cashback" }));
   // Outside of seasons with the second chance: the balance hit 0 - filled up again
-  socket.on("refilled", (data) => casinoNotice({ icon: "💔", title: "Second chance!", text: "Your coins are filled up to 🪙 " + format(data.coins) + " - good luck!", key: "refill", ms: 7000 }));
+  socket.on("refilled", (data) => window.casinoShowMissed({ type: "refill", amount: data.coins, world: null }));
 
   socket.on("giftReceived", (gift) => {
     giftsWaiting.push({ ...gift, type: "gift" });
@@ -1466,7 +1466,11 @@
     var pic = el("div", "cs-gift-pic");
     var where = seasonWorldKey(gift.world) ? " (in the season)" : window.CASINO_WORLD == "season" ? " (your 🪙 outside the season)" : "";
     var text;
-    if (gift.type == "cashback") {
+    if (gift.type == "refill") {
+      pic.append(el("span", "cs-got-rain", "💔"));
+      head.append(pic, el("span", "cs-gift-label", "Your coins ran out"), el("b", "cs-gift-name", "Second chance!"));
+      text = el("p", "cs-gift-info", "Your coins are filled up again - good luck!");
+    } else if (gift.type == "cashback") {
       var coin = seasonWorldKey(gift.world) ? gift.coinIcon || "💎" : "🪙";
       pic.append(el("span", "cs-got-rain", "💸"));
       head.append(pic, el("span", "cs-gift-label", gift.missed ? "While you were away" : "Your daily cashback"), el("b", "cs-gift-name", "Cashback"));
@@ -1484,7 +1488,7 @@
     if (where.includes("🪙")) text.dataset.coin = "real";
     var amount = el("div", "cs-got-amount");
     amount.appendChild(coinsText(gift, gift.amount));
-    var ok = el("button", "cs-gift-send", "Nice, thanks! 🎉");
+    var ok = el("button", "cs-gift-send", gift.type == "refill" ? "Let's go! 🍀" : "Nice, thanks! 🎉");
     ok.type = "button";
     ok.addEventListener("click", close);
     dialog.append(head, amount, text, ok);
