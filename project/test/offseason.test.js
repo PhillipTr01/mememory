@@ -73,3 +73,28 @@ test("outside seasons, second chance: no daily bonus and no cashback", () =>
     assert.ok((await coins.claim("nobonus")) > 0);
     cashback.reset();
   }));
+
+test("outside seasons, second chance: the daily streaks are safe - the days of the pause don't count as missed", async () => {
+  const User = require("../models/User");
+  const streak = require("../game/streak");
+  h.addUser("streaky");
+  h.addUser("lapsed");
+  const day = (n) => days.dayStart(Date.parse("2026-11-10T12:00:00Z")) + n * DAY + 12 * 3600 * 1000;
+  // streaky claimed on the day the pause began (day 0), lapsed two days before it
+  await User.updateOne({ username: "streaky" }, { $set: { coinBonusAt: new Date(day(0)), coinStreak: 4 } });
+  await User.updateOne({ username: "lapsed" }, { $set: { coinBonusAt: new Date(day(-2)), coinStreak: 2 } });
+  // The pause from day 0 to day 9 (the daily bonus is back on day 9)
+  assert.ok((await offseason.keepStreaks(day(0), day(9))) >= 2);
+  const after = await User.findOne({ username: "streaky" }).lean();
+  assert.strictEqual(days.dayNumber(after.coinBonusAt.getTime()), days.dayNumber(day(8)), "as if claimed yesterday");
+  assert.strictEqual(streak.dayFor(after.coinBonusAt, 4, day(9)), 5, "the streak goes on with day 5");
+  // (a day missed before the pause stays missed)
+  const lapsed = await User.findOne({ username: "lapsed" }).lean();
+  assert.strictEqual(days.dayNumber(lapsed.coinBonusAt.getTime()), days.dayNumber(day(7)));
+  // The switch itself: on - the pause starts; off - it ends (same day: nothing to move)
+  await withMode("chance", 20000, async () => {
+    await offseason.sync(day(20));
+    config.OFFSEASON_MODE = "bonus";
+    assert.strictEqual(await offseason.sync(day(20)), 0);
+  });
+});

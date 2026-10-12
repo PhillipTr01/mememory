@@ -5225,3 +5225,8 @@ body.jackpot-theme::before {
 .cs-mod-preview.error {
   color: var(--mm-danger);
 }
+
+/* The second chance (outside seasons): its line in full */
+.bt-notice[data-key="refill"] .bt-notice-text span {
+  white-space: normal;
+}

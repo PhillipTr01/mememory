@@ -3,6 +3,9 @@ const coins = require("./coins");
 const inPlay = require("./in_play");
 const notices = require("./notices");
 const testMode = () => require("./test_mode");
+const days = require("./days");
+const Setting = require("../models/Setting");
+const User = require("../models/User");
 
 /*
  * Outside of seasons the admin picks one of two (Settings, General: "Outside seasons"):
@@ -58,6 +61,58 @@ coins.changes.on("change", (username) => {
   if (on()) check(username).catch((error) => console.error("[offseason] Could not check a balance:", error));
 });
 
+/*
+ * The daily streaks are safe while the second chance is on: nobody can claim then, so the days don't
+ * count as missed. When the daily bonus comes back, every last claim moves forward by the days of the
+ * pause (at most to yesterday) - the streak goes on with the next day. When it started: a setting.
+ */
+const PAUSE_KEY = "offseasonPause";
+const DAY = 24 * 3600 * 1000;
+
+async function pauseOf() {
+  const row = await Setting.findOne({ key: PAUSE_KEY }).lean();
+  return row && row.value && Number.isFinite(row.value.since) ? row.value.since : null;
+}
+
+// The mode now (a change in the admin panel, or the start of the server): the pause starts - or ends
+async function sync(now = Date.now()) {
+  const since = await pauseOf();
+  if (on() && since == null) {
+    await Setting.updateOne({ key: PAUSE_KEY }, { $set: { value: { since: now } } }, { upsert: true });
+  } else if (!on() && since != null) {
+    await Setting.updateOne({ key: PAUSE_KEY }, { $set: { value: null } }, { upsert: true });
+    return keepStreaks(since, now);
+  }
+  return 0;
+}
+
+// The days from `since` to `now` didn't count: every streak's last claim forward -> how many moved
+async function keepStreaks(since, now = Date.now()) {
+  const paused = days.dayNumber(now) - days.dayNumber(since);
+  if (paused <= 0) return 0;
+  const today = days.dayNumber(now);
+  const users = await User.find({ coinBonusAt: { $ne: null }, coinStreak: { $gt: 0 } }).select("username coinBonusAt").lean();
+  let moved = 0;
+  for (const user of users) {
+    const time = new Date(user.coinBonusAt).getTime();
+    if (!Number.isFinite(time)) continue;
+    const last = days.dayNumber(time);
+    // (claimed on the day it started - or before: as if just before the pause; never later than yesterday)
+    const day = Math.min(last + paused, today - 1);
+    if (day <= last) continue;
+    // (noon of that day)
+    const at = new Date(days.dayStart(now) - (today - day) * DAY + 12 * 3600 * 1000);
+    await User.updateOne({ username: user.username }, { $set: { coinBonusAt: at } });
+    moved++;
+  }
+  return moved;
+}
+
+// The admin switches: the pause starts or ends right away
+require("./settings").changes.on("change", (values) => {
+  if (values && "OFFSEASON_MODE" in values) sync().catch((error) => console.error("[offseason] Could not keep the streaks:", error));
+});
+
 // (tests)
 function reset() {
   waiting.forEach((timer) => clearTimeout(timer));
@@ -65,4 +120,4 @@ function reset() {
   busy.clear();
 }
 
-module.exports = { on, check, reset };
+module.exports = { on, check, sync, keepStreaks, reset };

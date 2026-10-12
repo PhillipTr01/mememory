@@ -250,6 +250,7 @@ function makeWallet(kind) {
       streak: streakInfo(user),
       // (no daily bonus outside of seasons: the second chance instead)
       bonusOff: bonusOff() || undefined,
+      refill: bonusOff() ? config.OFFSEASON_REFILL : undefined,
       normal: season ? normalWallet.balanceOf(user) : null,
       wager: season ? await wagerLookup(username, kind).catch(() => null) : null,
       world: kind,

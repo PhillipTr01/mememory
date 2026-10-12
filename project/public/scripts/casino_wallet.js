@@ -25,13 +25,34 @@
    * day (and on every page until they are claimed; also when midnight passes on an open page). The 🎁 in
    * the bar only tells: the time to the next ones, the streak.
    */
-  var bonusOff = false; // outside of seasons with the second chance: no daily bonus (no 🎁, no popup)
+  var bonusOff = false; // outside of seasons with the second chance: no daily bonus - the 💔 instead of the 🎁
+  var refillAmount = 0;
+  // The icon of the pill (its first text): 🎁 - or 💔 for the second chance
+  function bonusIcon(icon) {
+    var node = bonusButton.firstChild;
+    if (node && node.nodeType == Node.TEXT_NODE) node.nodeValue = icon + " ";
+  }
   function renderBonus() {
+    var text = document.getElementById("navBonusText");
+    bonusButton.classList.toggle("chance", bonusOff);
     if (bonusOff) {
-      bonusButton.hidden = true;
+      // Only the 💔 - what it means on hover
+      bonusIcon("💔");
+      text.hidden = true;
+      bonusButton.hidden = false;
+      bonusButton.classList.remove("ready");
+      var flame = document.getElementById("navBonusStreak");
+      if (flame) flame.remove();
+      var tip = "Second chance: when your coins drop to 0 and no bet is running, they are filled up to 🪙 " + format(refillAmount) + " right away - every time.";
+      bonusButton.removeAttribute("title");
+      bonusButton.dataset.tip = tip;
+      bonusButton.setAttribute("aria-label", tip);
       return;
     }
-    var text = document.getElementById("navBonusText");
+    bonusIcon("🎁");
+    text.hidden = false;
+    delete bonusButton.dataset.tip;
+    bonusButton.removeAttribute("aria-label");
     // Midnight passed on this page: the next day of the streak (what the server will pay)
     if (bonusAt != null && Date.now() >= bonusAt) {
       bonusAt = null;
@@ -68,7 +89,7 @@
 
   // (it tells the time to the next ones - ready: a click just takes them, like the popup)
   bonusButton.addEventListener("click", () => {
-    if (bonusAt != null) return;
+    if (bonusOff || bonusAt != null) return;
     if (claimPopup && !claimPopup.busy()) return claimPopup.claim();
     if (!claimPopup) socket.emit("claimBonus");
   });
@@ -271,6 +292,8 @@
     }
     // (the second chance instead of the daily bonus: the 🎁 and its popup go)
     bonusOff = data.bonusOff === true;
+    refillAmount = data.refill || refillAmount;
+    if (bonusOff) renderBonus();
     if (bonusOff && claimPopup && !claimPopup.done() && !claimPopup.busy()) claimPopup.close();
     if (data.bonusIn != null) {
       bonusAt = data.bonus ? null : Date.now() + data.bonusIn;

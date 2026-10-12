@@ -160,6 +160,10 @@ async function connectDatabase(attempt = 1) {
     await persist.restoreAll();
     // ... and the seasons start / end on time
     seasons.start();
+    // Outside of seasons: the second chance - a switch made while the server was off keeps the streaks too
+    await require("./game/offseason")
+      .sync()
+      .catch((error) => console.error("Could not sync the second chance:", error));
     // The daily cashback (the day before - once, after midnight)
     const cashback = require("./game/cashback");
     await cashback.load().catch((error) => console.error("Could not load the cashback:", error));
