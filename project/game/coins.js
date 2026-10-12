@@ -234,7 +234,7 @@ function makeWallet(kind) {
       return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), bonusAmount: dailyBonus(), normal: null, world: kind, joined: false };
     }
     await ensure(username);
-    const user = await User.findOne({ username: username }).select(["username", f.coins, f.reset, f.bonusAt, f.streak, ...(season ? ["coins", "coinReset"] : [])].join(" "));
+    const user = await User.findOne({ username: username }).select(["username", f.coins, f.reset, f.bonusAt, f.streak, ...(season ? ["coins", "coinReset"] : ["refillAt"])].join(" "));
     if (user == null) return { coins: 0, bonus: false, bonusIn: days.nextDay() - Date.now(), world: kind };
     const available = bonusAvailable(user);
     return {
@@ -251,6 +251,9 @@ function makeWallet(kind) {
       // (no daily bonus outside of seasons: the second chance instead)
       bonusOff: bonusOff() || undefined,
       refill: bonusOff() ? config.OFFSEASON_REFILL : undefined,
+      // (the wait to the next second chance: ms left - 0 none; and the wait itself in minutes)
+      refillIn: bonusOff() ? require("./offseason").leftOf(user.refillAt) : undefined,
+      refillWait: bonusOff() ? Number(config.OFFSEASON_REFILL_WAIT) || 0 : undefined,
       normal: season ? normalWallet.balanceOf(user) : null,
       wager: season ? await wagerLookup(username, kind).catch(() => null) : null,
       world: kind,

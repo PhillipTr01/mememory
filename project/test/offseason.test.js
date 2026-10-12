@@ -11,11 +11,11 @@ const offseason = require("../game/offseason");
 
 const DAY = 24 * 3600 * 1000;
 
-function withMode(mode, refill, fn) {
-  const before = { mode: config.OFFSEASON_MODE, refill: config.OFFSEASON_REFILL };
-  Object.assign(config, { OFFSEASON_MODE: mode, OFFSEASON_REFILL: refill });
+function withMode(mode, refill, fn, wait = 0) {
+  const before = { mode: config.OFFSEASON_MODE, refill: config.OFFSEASON_REFILL, wait: config.OFFSEASON_REFILL_WAIT };
+  Object.assign(config, { OFFSEASON_MODE: mode, OFFSEASON_REFILL: refill, OFFSEASON_REFILL_WAIT: wait });
   return Promise.resolve(fn()).finally(() => {
-    Object.assign(config, { OFFSEASON_MODE: before.mode, OFFSEASON_REFILL: before.refill });
+    Object.assign(config, { OFFSEASON_MODE: before.mode, OFFSEASON_REFILL: before.refill, OFFSEASON_REFILL_WAIT: before.wait });
     offseason.reset();
   });
 }
@@ -52,6 +52,32 @@ test("outside seasons, second chance: a balance at 0 is filled up right away - e
     await h.wait(100);
     assert.strictEqual(h.coinsOf("broke"), 20000, "again");
   }));
+
+test("outside seasons, second chance: at most once every OFFSEASON_REFILL_WAIT minutes - after it, filled up", () =>
+  withMode(
+    "chance",
+    20000,
+    async () => {
+      const User = require("../models/User");
+      h.addUser("waiter");
+      h.setCoins("waiter", 0);
+      assert.strictEqual(await offseason.check("waiter"), 20000);
+      // At 0 again right away: waits - the page knows how long
+      h.setCoins("waiter", 0);
+      assert.strictEqual(await offseason.check("waiter"), 0);
+      const info = await coins.get("waiter");
+      assert.ok(info.refillIn > 29 * 60000 && info.refillIn <= 30 * 60000, "about 30 min left");
+      assert.strictEqual(info.refillWait, 30);
+      // The wait is over (the last one 31 min ago): filled up
+      await User.updateOne({ username: "waiter" }, { $set: { refillAt: new Date(Date.now() - 31 * 60000) } });
+      assert.strictEqual(await offseason.check("waiter"), 20000);
+      // The admin sets no wait: right away again
+      config.OFFSEASON_REFILL_WAIT = 0;
+      h.setCoins("waiter", 0);
+      assert.strictEqual(await offseason.check("waiter"), 20000);
+    },
+    30,
+  ));
 
 test("outside seasons, second chance: no daily bonus and no cashback", () =>
   withMode("chance", 20000, async () => {

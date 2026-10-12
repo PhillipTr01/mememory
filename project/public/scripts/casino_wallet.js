@@ -27,6 +27,13 @@
    */
   var bonusOff = false; // outside of seasons with the second chance: no daily bonus - the 💔 instead of the 🎁
   var refillAmount = 0;
+  var refillAt = null; // the next second chance can come then (null: any time)
+  var refillWait = 0; // minutes between two
+  // "1h 05m" / "12m"
+  function waitText(ms) {
+    var minutes = Math.max(1, Math.ceil(ms / 60000));
+    return minutes >= 60 ? Math.floor(minutes / 60) + "h " + String(minutes % 60).padStart(2, "0") + "m" : minutes + "m";
+  }
   // The icon of the pill (its first text): 🎁 - or 💔 for the second chance
   function bonusIcon(icon) {
     var node = bonusButton.firstChild;
@@ -36,14 +43,18 @@
     var text = document.getElementById("navBonusText");
     bonusButton.classList.toggle("chance", bonusOff);
     if (bonusOff) {
-      // Only the 💔 - what it means on hover
+      // Only the 💔 - what it means on hover (at 0 while the wait runs: the time left next to it)
       bonusIcon("💔");
-      text.hidden = true;
+      var left = refillAt != null ? refillAt - Date.now() : 0;
+      var waiting = left > 0 && coins != null && coins <= 0;
+      text.hidden = !waiting;
+      if (waiting) text.innerText = waitText(left);
       bonusButton.hidden = false;
       bonusButton.classList.remove("ready");
       var flame = document.getElementById("navBonusStreak");
       if (flame) flame.remove();
-      var tip = "Second chance: when your coins drop to 0 and no bet is running, they are filled up to 🪙 " + format(refillAmount) + " right away - every time.";
+      var tip = "Second chance: when your coins drop to 0 and no bet is running, they are filled up to 🪙 " + format(refillAmount) + (refillWait > 0 ? " - at most once every " + waitText(refillWait * 60000).replace(/m$/, " min") + "." : " right away - every time.");
+      if (left > 0) tip += waiting ? " Your next one comes in " + waitText(left) + "." : " The next one is possible in " + waitText(left) + ".";
       bonusButton.removeAttribute("title");
       bonusButton.dataset.tip = tip;
       bonusButton.setAttribute("aria-label", tip);
@@ -293,6 +304,8 @@
     // (the second chance instead of the daily bonus: the 🎁 and its popup go)
     bonusOff = data.bonusOff === true;
     refillAmount = data.refill || refillAmount;
+    refillAt = data.refillIn > 0 ? Date.now() + data.refillIn : null;
+    refillWait = data.refillWait || 0;
     if (bonusOff) renderBonus();
     if (bonusOff && claimPopup && !claimPopup.done() && !claimPopup.busy()) claimPopup.close();
     if (data.bonusIn != null) {
@@ -306,6 +319,7 @@
     }
     var before = coins;
     coins = data.coins;
+    if (bonusOff) renderBonus();
     button.hidden = false;
     button.removeAttribute("title");
     document.getElementById("navCoinsValue").innerText = format(coins);

@@ -68,6 +68,7 @@ module.exports = {
   // balance at 0 (nothing in play) is filled up to OFFSEASON_REFILL right away (game/offseason.js)
   OFFSEASON_MODE: "bonus",
   OFFSEASON_REFILL: 20000,
+  OFFSEASON_REFILL_WAIT: 30, // minutes from one second chance to the next (0: no wait)
   // With the second chance: no max bet by balance outside of seasons (BET_CAP_*, the slots share too - game/limits.js)
   OFFSEASON_NO_CAP: false,
   GIFT_LIMIT: 25000, // coins a player can give other players a day

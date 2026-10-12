@@ -12,7 +12,8 @@ const User = require("../models/User");
  * - "bonus": the daily bonus and the daily cashback, as always
  * - "chance": no daily bonus and no cashback (game/coins.js, game/cashback.js) - instead the second chance:
  *   a balance (the casino's 🪙) at 0, with no bet still running anywhere, is filled up to OFFSEASON_REFILL
- *   right away - every time it happens. A season's coins are never touched.
+ *   right away - every time it happens, but at most once every OFFSEASON_REFILL_WAIT minutes (at 0 before
+ *   that: filled up when the wait is over). A season's coins are never touched.
  */
 const GRACE = 2000; // a bet just made: the game gets it in a moment - not "nothing in play" yet
 const RETRY = 1500; // a bet still running: looked at again this soon
@@ -24,14 +25,31 @@ function on() {
   return config.OFFSEASON_MODE === "chance";
 }
 
-function later(username) {
-  if (waiting.has(username)) return;
+// Looked at again in a moment (a bet still running) - or when the wait is over (the newest call counts)
+function later(username, delay = RETRY) {
+  clearTimeout(waiting.get(username));
   const timer = setTimeout(() => {
     waiting.delete(username);
     check(username).catch((error) => console.error("[offseason] Could not check a balance:", error));
-  }, RETRY);
+  }, Math.max(0, delay));
   timer.unref();
   waiting.set(username, timer);
+}
+
+// The wait between two refills (ms)
+function waitMs() {
+  return Math.max(0, Number(config.OFFSEASON_REFILL_WAIT) || 0) * 60 * 1000;
+}
+
+// How long until the next refill may come after the last one at `refillAt` (ms, 0: now)
+function leftOf(refillAt, now = Date.now()) {
+  const last = refillAt ? new Date(refillAt).getTime() : NaN;
+  return Number.isFinite(last) ? Math.max(0, last + waitMs() - now) : 0;
+}
+
+async function refillIn(username, now = Date.now()) {
+  const user = await User.findOne({ username }).select("refillAt").lean();
+  return leftOf(user && user.refillAt, now);
 }
 
 // A balance changed (or a page opened): at 0 and nothing in play - filled up. -> the coins given (0: nothing)
@@ -46,8 +64,15 @@ async function check(username) {
       later(username);
       return 0;
     }
+    // (the last one too recent: when the wait is over)
+    const left = await refillIn(username);
+    if (left > 0) {
+      later(username, left + 500);
+      return 0;
+    }
     const amount = Math.max(0, Math.floor(Number(config.OFFSEASON_REFILL) || 0));
     if (amount <= 0) return 0;
+    await User.updateOne({ username }, { $set: { refillAt: new Date() } });
     if (!(await coins.add(username, amount, { reason: "second chance", note: "outside seasons" }))) return 0;
     notices.send(username, "refilled", { coins: amount });
     return amount;
@@ -111,6 +136,8 @@ async function keepStreaks(since, now = Date.now()) {
 // The admin switches: the pause starts or ends right away
 require("./settings").changes.on("change", (values) => {
   if (values && "OFFSEASON_MODE" in values) sync().catch((error) => console.error("[offseason] Could not keep the streaks:", error));
+  // (another wait: who waits is looked at again now)
+  if (values && "OFFSEASON_REFILL_WAIT" in values) for (const username of [...waiting.keys()]) later(username, 0);
 });
 
 // (tests)
@@ -120,4 +147,4 @@ function reset() {
   busy.clear();
 }
 
-module.exports = { on, check, sync, keepStreaks, reset };
+module.exports = { on, check, refillIn, leftOf, sync, keepStreaks, reset };

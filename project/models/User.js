@@ -17,6 +17,7 @@ const schema = mongoose.Schema({
     coinReset: {type: String},
     coinBonusAt: {type: Date},
     coinStreak: {type: Number}, // the day of the daily streak the last claim was (see game/streak.js)
+    refillAt: {type: Date}, // the last second chance outside of seasons (see game/offseason.js)
     // The season world (see game/seasons.js): the coins of the running season, apart from the normal ones
     seasonCoins: {type: Number, min: 0},
     seasonReset: {type: String}, // the season these coins are of ("season-<id>")
