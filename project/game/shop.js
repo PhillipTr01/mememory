@@ -107,10 +107,10 @@ const ITEMS = [
   { id: "crowned", kind: "effect", name: "Victory Crown", price: 7000000, rarity: "exclusive", set: "victory" },
   { id: "legends", kind: "background", name: "Victory Hall", price: 7000000, rarity: "exclusive", set: "victory" },
   // Unique: one player only - each set a frame, an animation and a background made to be worn together
-  // FlaveDrake: the server owner's own - obsidian and gold, topaz light, the FD monogram
-  { id: "fdcrest", kind: "frame", name: "FlaveDrake Crest", price: 10000000, rarity: "unique", set: "fd" },
-  { id: "fdorbit", kind: "effect", name: "FlaveDrake Orbit", price: 10000000, rarity: "unique", set: "fd" },
-  { id: "fdthrone", kind: "background", name: "FlaveDrake Throne", price: 10000000, rarity: "unique", set: "fd" },
+  // Eclipse: the server owner's own - shadow and violet light, mystical
+  { id: "eclipsering", kind: "frame", name: "Eclipse Corona", price: 10000000, rarity: "unique", set: "eclipse" },
+  { id: "eclipseshards", kind: "effect", name: "Eclipse Shards", price: 10000000, rarity: "unique", set: "eclipse" },
+  { id: "eclipseveil", kind: "background", name: "Eclipse Veil", price: 10000000, rarity: "unique", set: "eclipse" },
   { id: "flavedrake", kind: "frame", name: "Thunder Crest", price: 6000000, rarity: "unique", set: "flavedrake" },
   { id: "goldenblaze", kind: "effect", name: "Golden Blaze", price: 6000000, rarity: "unique", set: "flavedrake" },
   { id: "moltencore", kind: "background", name: "Golden Storm", price: 6000000, rarity: "unique", set: "flavedrake" },
@@ -132,7 +132,7 @@ const KIND_NAMES = { frame: "frame", effect: "animation", background: "backgroun
 // one player only). The admin can move any item.
 const RARITIES = ["common", "rare", "epic", "legendary", "mystic", "exclusive", "unique"];
 // The sets: their name (shown on every item of a set - they belong together)
-const SETS = { grove: "Enchanted Grove", phantom: "Phantom", phoenix: "Phoenix", celestial: "Celestial", prism: "Prism", cosmic: "Cosmic", victory: "Victory", fd: "FlaveDrake", flavedrake: "Golden Blaze", mage: "Archmage", panda: "Panda Master", ink: "Ink Blot" };
+const SETS = { grove: "Enchanted Grove", phantom: "Phantom", phoenix: "Phoenix", celestial: "Celestial", prism: "Prism", cosmic: "Cosmic", victory: "Victory", eclipse: "Eclipse", flavedrake: "FlaveDrake", mage: "Archmage", panda: "Panda Master", ink: "Ink Blot" };
 const KEY = "shop";
 
 // What the admin set: {items: {id: {on, price}}, free}
