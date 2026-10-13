@@ -24,7 +24,7 @@ const testMode = require("./test_mode");
  */
 const ITEMS = [
   /*
-   * At most 4 per kind and category. The shop: common, rare, epic, legendary (sold). Exclusive: only given as
+   * At most 4 per kind and category (one exception: 5 exclusive frames). The shop: common, rare, epic, legendary (sold). Exclusive: only given as
    * rewards (seen in the shop, locked). Unique: hidden from the shop - one player only, given once (the sets).
    */
   // Frames: a ring around the avatar
@@ -83,6 +83,7 @@ const ITEMS = [
   { id: "runnerup", kind: "frame", name: "Silver Laurel", price: 3500000, rarity: "exclusive" },
   { id: "podium", kind: "frame", name: "Bronze Laurel", price: 2500000, rarity: "exclusive" },
   { id: "phoenix", kind: "frame", name: "Phoenix", price: 4000000, rarity: "exclusive" },
+  { id: "starchart", kind: "frame", name: "Star Chart", price: 5000000, rarity: "exclusive" },
   { id: "crowned", kind: "effect", name: "Victory Crown", price: 5000000, rarity: "exclusive" },
   { id: "blackhole", kind: "effect", name: "Black Hole", price: 8000000, rarity: "exclusive" },
   { id: "shards", kind: "effect", name: "Prism Shards", price: 6000000, rarity: "exclusive" },

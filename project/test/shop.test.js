@@ -219,7 +219,8 @@ for (const [set, name, ids] of [
 test("shop: at most 4 items per kind and category", () => {
   for (const kind of shop.KINDS) for (const rarity of shop.RARITIES) {
     const n = shop.ITEMS.filter((item) => item.kind === kind && item.rarity === rarity).length;
-    assert.ok(n <= 4, `${kind} / ${rarity}: ${n}`);
+    // one exception: 5 exclusive frames (the three laurels, the phoenix, the star chart)
+    assert.ok(n <= (kind === "frame" && rarity === "exclusive" ? 5 : 4), `${kind} / ${rarity}: ${n}`);
   }
 });
 
