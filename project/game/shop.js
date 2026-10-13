@@ -24,7 +24,8 @@ const testMode = require("./test_mode");
  */
 const ITEMS = [
   /*
-   * At most 4 per kind and category (one exception: 5 exclusive frames). The shop: common, rare, epic, legendary (sold). Exclusive: only given as
+   * About 4 per kind and category (a guide, not a rule) - the exclusive and unique sets a frame, an animation and
+   * a background each. The shop: common, rare, epic, legendary (sold). Exclusive: only given as
    * rewards (seen in the shop, locked). Unique: hidden from the shop - one player only, given once (the sets).
    */
   // Frames: a ring around the avatar
@@ -78,20 +79,26 @@ const ITEMS = [
   { id: "abyss", kind: "background", name: "Abyss", price: 2800000, rarity: "legendary" },
   { id: "diamonddust", kind: "background", name: "Diamond Dust", price: 2500000, rarity: "legendary" },
   { id: "prism", kind: "background", name: "Prism Vortex", price: 3500000, rarity: "legendary" },
-  // Exclusive: only given as rewards - never sold (the price counts when the admin moves one into the shop)
+  // Exclusive: only given as rewards - never sold (the price counts when the admin moves one into the shop).
+  // The laurels (the season places) on their own - the rest in sets: a frame, an animation and a background each
   { id: "champion", kind: "frame", name: "Champion's Laurel", price: 5000000, rarity: "exclusive" },
   { id: "runnerup", kind: "frame", name: "Silver Laurel", price: 3500000, rarity: "exclusive" },
   { id: "podium", kind: "frame", name: "Bronze Laurel", price: 2500000, rarity: "exclusive" },
-  { id: "phoenix", kind: "frame", name: "Phoenix", price: 4000000, rarity: "exclusive" },
-  { id: "starchart", kind: "frame", name: "Star Chart", price: 5000000, rarity: "exclusive" },
-  { id: "crowned", kind: "effect", name: "Victory Crown", price: 5000000, rarity: "exclusive" },
-  { id: "blackhole", kind: "effect", name: "Black Hole", price: 8000000, rarity: "exclusive" },
-  { id: "shards", kind: "effect", name: "Prism Shards", price: 6000000, rarity: "exclusive" },
-  { id: "constellation", kind: "effect", name: "Constellation", price: 5000000, rarity: "exclusive" },
-  { id: "chrome", kind: "background", name: "Liquid Chrome", price: 5000000, rarity: "exclusive" },
-  { id: "astrolabe", kind: "background", name: "Celestial Map", price: 5000000, rarity: "exclusive" },
-  { id: "rift", kind: "background", name: "Cosmic Rift", price: 6000000, rarity: "exclusive" },
-  { id: "legends", kind: "background", name: "Hall of Legends", price: 6000000, rarity: "exclusive" },
+  { id: "phoenix", kind: "frame", name: "Phoenix Wings", price: 5000000, rarity: "exclusive", set: "phoenix" },
+  { id: "rebirth", kind: "effect", name: "Phoenix Flight", price: 5000000, rarity: "exclusive", set: "phoenix" },
+  { id: "phoenixsky", kind: "background", name: "Phoenix Sky", price: 5000000, rarity: "exclusive", set: "phoenix" },
+  { id: "starchart", kind: "frame", name: "Celestial Star Chart", price: 5000000, rarity: "exclusive", set: "celestial" },
+  { id: "constellation", kind: "effect", name: "Celestial Constellation", price: 5000000, rarity: "exclusive", set: "celestial" },
+  { id: "astrolabe", kind: "background", name: "Celestial Map", price: 5000000, rarity: "exclusive", set: "celestial" },
+  { id: "prismframe", kind: "frame", name: "Prism Facets", price: 6000000, rarity: "exclusive", set: "prism" },
+  { id: "shards", kind: "effect", name: "Prism Shards", price: 6000000, rarity: "exclusive", set: "prism" },
+  { id: "chrome", kind: "background", name: "Prism Chrome", price: 6000000, rarity: "exclusive", set: "prism" },
+  { id: "horizon", kind: "frame", name: "Cosmic Horizon", price: 7000000, rarity: "exclusive", set: "cosmic" },
+  { id: "blackhole", kind: "effect", name: "Cosmic Black Hole", price: 7000000, rarity: "exclusive", set: "cosmic" },
+  { id: "rift", kind: "background", name: "Cosmic Rift", price: 7000000, rarity: "exclusive", set: "cosmic" },
+  { id: "victorycrest", kind: "frame", name: "Victory Crest", price: 7000000, rarity: "exclusive", set: "victory" },
+  { id: "crowned", kind: "effect", name: "Victory Crown", price: 7000000, rarity: "exclusive", set: "victory" },
+  { id: "legends", kind: "background", name: "Victory Hall", price: 7000000, rarity: "exclusive", set: "victory" },
   // Unique: one player only - each set a frame, an animation and a background made to be worn together
   { id: "flavedrake", kind: "frame", name: "FlaveDrake", price: 6000000, rarity: "unique", set: "flavedrake" },
   { id: "goldenblaze", kind: "effect", name: "Golden Blaze", price: 6000000, rarity: "unique", set: "flavedrake" },
@@ -113,6 +120,8 @@ const KIND_NAMES = { frame: "frame", effect: "animation", background: "backgroun
 // The categories: the shop's rarities (sold) - exclusive (never sold, only given) and unique (hidden from the shop,
 // one player only). The admin can move any item.
 const RARITIES = ["common", "rare", "epic", "legendary", "exclusive", "unique"];
+// The sets: their name (shown on every item of a set - they belong together)
+const SETS = { phoenix: "Phoenix", celestial: "Celestial", prism: "Prism", cosmic: "Cosmic", victory: "Victory", flavedrake: "FlaveDrake", mage: "Archmage", panda: "Panda Master", ink: "Ink Blot" };
 const KEY = "shop";
 
 // What the admin set: {items: {id: {on, price}}, free}
@@ -124,12 +133,13 @@ const byId = (id) => ITEMS.find((item) => item.id === id) || null;
 function itemNow(item) {
   const own = setup.items[item.id] || {};
   const rarity = RARITIES.includes(own.rarity) ? own.rarity : item.rarity;
-  return { ...item, defaultPrice: item.price, defaultRarity: item.rarity, price: Number.isInteger(own.price) ? own.price : item.price, rarity: rarity, exclusive: rarity === "exclusive" || rarity === "unique", unique: rarity === "unique", on: own.on !== false };
+  return { ...item, setName: item.set ? SETS[item.set] : null, defaultPrice: item.price, defaultRarity: item.rarity, price: Number.isInteger(own.price) ? own.price : item.price, rarity: rarity, exclusive: rarity === "exclusive" || rarity === "unique", unique: rarity === "unique", on: own.on !== false };
 }
 
-// The order everywhere (the shop, the admin): by rarity, then by price, then by name
+// The order everywhere (the shop, the admin): by rarity, the sets together (frame, animation, background), then by price, then by name
 function sorted(list) {
-  return list.slice().sort((a, b) => RARITIES.indexOf(a.rarity) - RARITIES.indexOf(b.rarity) || a.price - b.price || a.name.localeCompare(b.name));
+  const setOrder = (item) => (item.set ? Object.keys(SETS).indexOf(item.set) : -1);
+  return list.slice().sort((a, b) => RARITIES.indexOf(a.rarity) - RARITIES.indexOf(b.rarity) || setOrder(a) - setOrder(b) || (a.set ? KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind) : 0) || a.price - b.price || a.name.localeCompare(b.name));
 }
 
 function items() {
@@ -193,11 +203,11 @@ async function owners() {
 
 // The shop of a player: the items that are on, what they have and wear, what they can pay with
 async function view(username) {
-  // Test mode: every item that is on, worn only in the sandbox (nothing saved)
+  // Test mode: every item that is on (the unique ones too), worn only in the sandbox (nothing saved)
   if (testMode.active(username)) {
     const worn = testMode.looks(username);
     const wearable = (id) => (id && isOn(id) ? id : null);
-    return { items: shopItems(), owned: [], won: [], frame: wearable(worn.frame), effect: wearable(worn.effect), background: wearable(worn.background), free: true, test: true, balance: testMode.balance(username), season: false };
+    return { items: items().filter((item) => item.on), owned: [], won: [], frame: wearable(worn.frame), effect: wearable(worn.effect), background: wearable(worn.background), free: true, test: true, balance: testMode.balance(username), season: false };
   }
   const user = await User.findOne({ username: username }).lean();
   const looks = looksOf(user);
@@ -406,4 +416,4 @@ function reset() {
   setup = { items: {}, free: false };
 }
 
-module.exports = { ITEMS, KINDS, RARITIES, byId, checkGift, items, looksOf, itemsOf, removeItem, view, buy, wear, worn, balanceOf, reward, give, config, owners, update, load, reset };
+module.exports = { ITEMS, KINDS, RARITIES, SETS, byId, checkGift, items, looksOf, itemsOf, removeItem, view, buy, wear, worn, balanceOf, reward, give, config, owners, update, load, reset };

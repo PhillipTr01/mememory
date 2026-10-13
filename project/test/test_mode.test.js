@@ -50,6 +50,10 @@ test("test mode: a sandbox balance - the real coins, the history and the shop st
   const view = await shop.view("admin1");
   assert.ok(view.free && view.test);
   assert.ok(!(await shop.wear("admin1", "frame", "royal")).error);
+  // (the unique items too - hidden from everybody else's shop)
+  assert.ok(view.items.some((item) => item.id === "flavedrake"), "unique items in test mode");
+  assert.ok(!(await shop.wear("admin1", "frame", "flavedrake")).error);
+  assert.ok(!(await shop.wear("admin1", "frame", "royal")).error);
   assert.deepStrictEqual(await shop.worn(["admin1"]), { admin1: { frame: "royal", effect: null, background: null } });
   assert.ok(!(h.userOf("admin1").looks && h.userOf("admin1").looks.frame));
 

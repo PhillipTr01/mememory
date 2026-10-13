@@ -154,7 +154,6 @@ test("shop: backgrounds - bought and worn like the rest, one of each kind (a rew
   assert.ok(!(await shop.give({ username: "vic", items: ["nebula", "gold"] })).error);
   assert.strictEqual((await shop.wear("vic", "background", "nebula")).background, "nebula");
   assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity != "exclusive").length, 20);
-  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity == "exclusive").length, 4, "at most 4 per kind and category");
 });
 
 test("season prizes are like rewards: a prize of your own, coins and items - given to the places at the end", async () => {
@@ -216,12 +215,20 @@ for (const [set, name, ids] of [
   });
 }
 
-test("shop: at most 4 items per kind and category", () => {
-  for (const kind of shop.KINDS) for (const rarity of shop.RARITIES) {
-    const n = shop.ITEMS.filter((item) => item.kind === kind && item.rarity === rarity).length;
-    // one exception: 5 exclusive frames (the three laurels, the phoenix, the star chart)
-    assert.ok(n <= (kind === "frame" && rarity === "exclusive" ? 5 : 4), `${kind} / ${rarity}: ${n}`);
+test("shop: every set complete - a frame, an animation and a background, all in one category, with the set's name", () => {
+  const sets = [...new Set(shop.ITEMS.filter((item) => item.set).map((item) => item.set))];
+  assert.deepStrictEqual(sets.sort(), Object.keys(shop.SETS).sort());
+  for (const set of sets) {
+    const items = shop.ITEMS.filter((item) => item.set === set);
+    assert.deepStrictEqual(items.map((item) => item.kind).sort(), ["background", "effect", "frame"], set);
+    assert.strictEqual(new Set(items.map((item) => item.rarity)).size, 1, set);
+    for (const item of shop.items().filter((i) => i.set === set)) assert.strictEqual(item.setName, shop.SETS[set]);
   }
+  // in the shop's order: a set together - frame, animation, background
+  const order = shop.items().filter((item) => item.set === "phoenix").map((item) => item.id);
+  const all = shop.items().map((item) => item.id);
+  assert.deepStrictEqual(order, ["phoenix", "rebirth", "phoenixsky"]);
+  assert.strictEqual(all.indexOf("phoenixsky") - all.indexOf("phoenix"), 2);
 });
 
 test("shop: unique items - hidden from the shop (only their owner sees them), never sold, one player only", async () => {

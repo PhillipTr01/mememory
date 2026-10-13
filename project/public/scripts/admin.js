@@ -1411,13 +1411,14 @@ function renderShop() {
     document.getElementById(id).replaceChildren(
       ...shopSaved.items
         .filter((item) => item.kind == kind)
-        // (by category, then by price - as the shop shows them)
-        .sort((a, b) => SHOP_ORDER.indexOf(shopValue(a, "rarity")) - SHOP_ORDER.indexOf(shopValue(b, "rarity")) || shopValue(a, "price") - shopValue(b, "price"))
+        // (by category, the sets together, then by price)
+        .sort((a, b) => SHOP_ORDER.indexOf(shopValue(a, "rarity")) - SHOP_ORDER.indexOf(shopValue(b, "rarity")) || (a.set || "").localeCompare(b.set || "") || shopValue(a, "price") - shopValue(b, "price"))
         .map((item) => {
           var row = el("div", "ad-shop-row" + (shopValue(item, "on") ? "" : " off"));
           var rarity = shopValue(item, "rarity");
           var name = el("div", "ad-shop-name");
           name.append(el("b", "", item.name));
+          if (item.setName) name.append(el("small", "ad-shop-set", "✨ " + item.setName + " set"));
           // The category: a rarity of the shop - or exclusive (never sold, only given as a reward)
           var category = el("select", "mm-input ad-shop-category " + rarity);
           category.setAttribute("aria-label", item.name + " category");

@@ -11,6 +11,8 @@ var shopData = null; // {items, owned, won, frame, effect, background, balance, 
 var RARITY = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", exclusive: "Exclusive", unique: "Unique" };
 var KIND_ORDER = ["frame", "effect", "background"];
 var KIND_NAMES = { frame: "Frame", effect: "Animation", background: "Background" };
+// Try on: items put on only for a look (nothing bought, nothing saved, nobody else sees it) - {kind: id}
+var tryOn = {};
 
 // Used by chat.js
 function chatUsername() {
@@ -65,10 +67,84 @@ function wornWith(item) {
   return look;
 }
 
+// What I would look like: what I wear - with what I try on
+function lookNow() {
+  return Object.assign(wornWith(null), tryOn);
+}
+
+// The preview of an item: on me as I would look now (with what I try on)
+function previewWith(item) {
+  var look = lookNow();
+  look[item.kind] = item.id;
+  return look;
+}
+
+// Try an item on (again: off) - or a whole set
+function toggleTry(item) {
+  if (tryOn[item.kind] == item.id) delete tryOn[item.kind];
+  else tryOn[item.kind] = item.id;
+  render();
+}
+
+function tryButton(item) {
+  var on = tryOn[item.kind] == item.id;
+  var button = el("button", "sh-try" + (on ? " on" : ""), on ? "✓ Trying" : "👁 Try on");
+  button.type = "button";
+  button.title = on ? "Take it off again" : "See it on you - with what else you try on";
+  button.setAttribute("aria-pressed", on ? "true" : "false");
+  button.addEventListener("click", () => toggleTry(item));
+  return button;
+}
+
+// The fitting room: always in sight while trying on - me with all of it, what it is, what the rest would cost
+function renderFitting() {
+  var box = document.getElementById("shFitting");
+  var tried = Object.values(tryOn)
+    .map((id) => shopData.items.find((item) => item.id == id))
+    .filter(Boolean);
+  if (!tried.length) {
+    if (box) box.remove();
+    return;
+  }
+  if (!box) {
+    box = el("aside", "sh-fitting");
+    box.id = "shFitting";
+    box.setAttribute("aria-label", "Trying on");
+    document.body.appendChild(box);
+  }
+  var list = el("div", "sh-fitting-list");
+  tried
+    .sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind))
+    .forEach((item) => {
+      var row = el("button", "sh-fitting-item");
+      row.type = "button";
+      row.title = "Take " + item.name + " off";
+      row.append(el("span", "sh-fitting-kind", KIND_NAMES[item.kind]), el("span", "sh-fitting-name", item.name), el("span", "sh-fitting-x", "✕"));
+      row.addEventListener("click", () => toggleTry(item));
+      list.appendChild(row);
+    });
+  // (what is not mine yet: its price - or that it is a reward only)
+  var missing = tried.filter((item) => !isOwned(item));
+  var cost = missing.filter((item) => !item.exclusive).reduce((sum, item) => sum + item.price, 0);
+  var note = missing.length == 0 ? "All of it is yours" : (cost ? "🪙 " + formatCoins(cost) + " to buy" : "") + (missing.some((item) => item.exclusive) ? (cost ? " · " : "") + "rewards only" : "");
+  var stop = el("button", "mm-btn mm-btn-sm sh-fitting-stop", "Stop trying");
+  stop.type = "button";
+  stop.addEventListener("click", () => {
+    tryOn = {};
+    render();
+  });
+  var head = el("div", "sh-fitting-head");
+  head.append(el("span", "sh-fitting-title", "👁 Trying on"), el("span", "sh-fitting-note", note));
+  box.replaceChildren(avatarWith(lookNow(), "lg"), el("div", "sh-fitting-body"));
+  box.lastChild.append(head, list, stop);
+}
+
 function render() {
   if (!myName || !shopData) return;
+  // (what is gone from the shop: not tried on any more)
+  for (var kind in tryOn) if (!shopData.items.some((item) => item.id == tryOn[kind])) delete tryOn[kind];
   document.getElementById("shName").innerText = myName;
-  var hero = avatarWith(wornWith(null), "lg");
+  var hero = avatarWith(lookNow(), "lg");
   hero.id = "shHeroAvatar";
   document.getElementById("shHeroAvatar").replaceWith(hero);
   // The shop takes the 🪙 (the money outside seasons) - also in a season: the 🪙 stays a 🪙 here
@@ -89,6 +165,7 @@ function render() {
     else document.getElementById("avatarPreview").replaceWith(previewAvatar(editing));
   }
   renderSeason();
+  renderFitting();
 }
 
 // The exclusive items: worn like the rest when given - otherwise locked, with how to get them
@@ -97,45 +174,76 @@ function renderSeason() {
   document.getElementById("shSeasonSection").hidden = list.length == 0;
   document.querySelector('#shSections [data-section="shSeasonSection"]').hidden = list.length == 0;
   var won = shopData.won || [];
-  document.getElementById("shSeason").replaceChildren(
-    // (frames, then animations - each by price, as the server sends them)
-    ...list
-      .slice()
-      .sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind))
-      .map((item) => {
-        var owned = isOwned(item);
-        var worn = shopData[item.kind] == item.id;
-        var card = el("div", "sh-item exclusive" + (item.unique ? " unique" : "") + (worn ? " worn" : "") + (owned ? " owned" : " locked"));
-        var stage = el("div", "sh-stage");
-        stage.appendChild(avatarWith(wornWith(item), "lg"));
-        var kindLabel = el("span", "sh-rarity", (item.unique ? "💎 Unique " : "✨ ") + KIND_NAMES[item.kind]);
-        kindLabel.title = kindLabel.innerText;
-        var nameLabel = el("span", "sh-item-name", item.name);
-        nameLabel.title = item.name;
-        card.append(stage, kindLabel, nameLabel);
-        // Where it came from (given) - or how to get it
-        var mine = won.filter((entry) => entry.id == item.id);
-        if (mine.length) {
-          var last = mine[mine.length - 1];
-          card.appendChild(el("span", "sh-season-origin", (last.icon ? last.icon + " " : "") + (last.source || last.season || "A reward") + (last.rank ? " · #" + last.rank : "") + (mine.length > 1 ? " (" + mine.length + "×)" : "")));
-        } else card.appendChild(el("span", "sh-season-origin how", owned ? "Free for all" : "Only as a reward"));
-        var button;
-        if (worn) {
-          button = el("button", "mm-btn mm-btn-sm sh-btn", "Take off");
-          button.addEventListener("click", () => wear(item.kind, null, button));
-        } else if (owned) {
-          button = el("button", "mm-btn mm-btn-sm sh-btn", "Wear");
-          button.addEventListener("click", () => wear(item.kind, item.id, button));
-        } else {
-          button = el("button", "mm-btn mm-btn-sm sh-btn", "🔒 Not for sale");
-          button.disabled = true;
-        }
-        button.type = "button";
-        if (worn) card.appendChild(el("span", "sh-worn-tag", "Wearing"));
-        card.appendChild(button);
-        return card;
-      }),
-  );
+  // The singles first (the laurels - frames, then animations), then every set together (as the server sends them:
+  // frame, animation, background) under a heading of its own
+  var singles = list.filter((item) => !item.set).sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind));
+  var sets = [];
+  list.filter((item) => item.set).forEach((item) => {
+    var group = sets.find((entry) => entry.id == item.set);
+    if (!group) sets.push((group = { id: item.set, name: item.setName || item.set, unique: item.unique, items: [] }));
+    group.items.push(item);
+  });
+  document.getElementById("shSeason").replaceChildren(...singles.map(card), ...sets.flatMap((group) => [setHead(group), ...group.items.map(card)]));
+
+  function card(item) {
+    var owned = isOwned(item);
+    var worn = shopData[item.kind] == item.id;
+    var card = el("div", "sh-item exclusive" + (item.set ? " in-set" : "") + (item.unique ? " unique" : "") + (worn ? " worn" : "") + (owned ? " owned" : " locked"));
+    var stage = el("div", "sh-stage");
+    stage.append(avatarWith(previewWith(item), "lg"), tryButton(item));
+    var kindLabel = el("span", "sh-rarity", (item.unique ? "💎 Unique " : "✨ ") + KIND_NAMES[item.kind]);
+    kindLabel.title = kindLabel.innerText;
+    var nameLabel = el("span", "sh-item-name", item.name);
+    nameLabel.title = item.name;
+    card.append(stage, kindLabel, nameLabel);
+    // Where it came from (given) - or how to get it
+    var mine = won.filter((entry) => entry.id == item.id);
+    if (mine.length) {
+      var last = mine[mine.length - 1];
+      card.appendChild(el("span", "sh-season-origin", (last.icon ? last.icon + " " : "") + (last.source || last.season || "A reward") + (last.rank ? " · #" + last.rank : "") + (mine.length > 1 ? " (" + mine.length + "×)" : "")));
+    } else card.appendChild(el("span", "sh-season-origin how", owned ? "Free for all" : "Only as a reward"));
+    var button;
+    if (worn) {
+      button = el("button", "mm-btn mm-btn-sm sh-btn", "Take off");
+      button.addEventListener("click", () => wear(item.kind, null, button));
+    } else if (owned) {
+      button = el("button", "mm-btn mm-btn-sm sh-btn", "Wear");
+      button.addEventListener("click", () => wear(item.kind, item.id, button));
+    } else {
+      button = el("button", "mm-btn mm-btn-sm sh-btn", "🔒 Not for sale");
+      button.disabled = true;
+    }
+    button.type = "button";
+    if (worn) card.appendChild(el("span", "sh-worn-tag", "Wearing"));
+    card.appendChild(button);
+    return card;
+  }
+}
+
+// The heading of a set: its name, what it is - and (all of it mine) wear all of it at once
+function setHead(group) {
+  var head = el("div", "sh-set-head" + (group.unique ? " unique" : ""));
+  head.append(el("span", "sh-set-name", (group.unique ? "💎 " : "✨ ") + group.name + " set"), el("span", "sh-set-note", "Frame, animation and background - made to be worn together"));
+  var wearing = group.items.every((item) => shopData[item.kind] == item.id);
+  if (group.items.every(isOwned) && !wearing) {
+    var button = el("button", "mm-btn mm-btn-sm sh-set-wear", "Wear the set");
+    button.type = "button";
+    button.addEventListener("click", async () => {
+      for (var item of group.items) if (shopData[item.kind] != item.id && !(await post("shop/wear", { kind: item.kind, id: item.id }, button))) return;
+    });
+    head.appendChild(button);
+  } else if (wearing) head.appendChild(el("span", "sh-set-worn", "Wearing the set"));
+  // Try the whole set on (again: off)
+  var trying = group.items.every((item) => tryOn[item.kind] == item.id);
+  var tryAll = el("button", "sh-try sh-set-try" + (trying ? " on" : ""), trying ? "✓ Trying the set" : "👁 Try the set");
+  tryAll.type = "button";
+  tryAll.setAttribute("aria-pressed", trying ? "true" : "false");
+  tryAll.addEventListener("click", () => {
+    group.items.forEach((item) => (trying ? tryOn[item.kind] == item.id && delete tryOn[item.kind] : (tryOn[item.kind] = item.id)));
+    render();
+  });
+  head.appendChild(tryAll);
+  return head;
 }
 
 function isOwned(item) {
@@ -154,8 +262,8 @@ function renderGrid(id, kind) {
         var worn = shopData[kind] == item.id;
         var card = el("div", "sh-item " + item.rarity + (worn ? " worn" : "") + (owned ? " owned" : ""));
         var stage = el("div", "sh-stage");
-        // The preview: the item alone (with the other kind I wear)
-        stage.appendChild(avatarWith(wornWith(item), "lg"));
+        // The preview: the item on me (with what I wear and what I try on)
+        stage.append(avatarWith(previewWith(item), "lg"), tryButton(item));
         card.append(stage, el("span", "sh-rarity", RARITY[item.rarity] || item.rarity), el("span", "sh-item-name", item.name));
         var button;
         if (worn) {
