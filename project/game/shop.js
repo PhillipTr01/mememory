@@ -83,9 +83,9 @@ const ITEMS = [
   { id: "grovevines", kind: "frame", name: "Grove Vines", price: 8000000, rarity: "mystic", set: "grove" },
   { id: "fireflies", kind: "effect", name: "Grove Fireflies", price: 9000000, rarity: "mystic", set: "grove" },
   { id: "moonlitgrove", kind: "background", name: "Moonlit Grove", price: 8000000, rarity: "mystic", set: "grove" },
-  { id: "clockframe", kind: "frame", name: "Clockwork Gears", price: 9000000, rarity: "mystic", set: "clockwork" },
-  { id: "clockcogs", kind: "effect", name: "Clockwork Cogs", price: 10000000, rarity: "mystic", set: "clockwork" },
-  { id: "clockshop", kind: "background", name: "Clockwork Workshop", price: 9000000, rarity: "mystic", set: "clockwork" },
+  { id: "phantomwisps", kind: "frame", name: "Phantom Wisps", price: 9000000, rarity: "mystic", set: "phantom" },
+  { id: "phantomghosts", kind: "effect", name: "Phantom Ghosts", price: 10000000, rarity: "mystic", set: "phantom" },
+  { id: "phantomnight", kind: "background", name: "Phantom Night", price: 9000000, rarity: "mystic", set: "phantom" },
   // Exclusive: only given as rewards - never sold (the price counts when the admin moves one into the shop).
   // The laurels (the season places) on their own - the rest in sets: a frame, an animation and a background each
   { id: "champion", kind: "frame", name: "Champion's Laurel", price: 5000000, rarity: "exclusive" },
@@ -107,9 +107,9 @@ const ITEMS = [
   { id: "crowned", kind: "effect", name: "Victory Crown", price: 7000000, rarity: "exclusive", set: "victory" },
   { id: "legends", kind: "background", name: "Victory Hall", price: 7000000, rarity: "exclusive", set: "victory" },
   // Unique: one player only - each set a frame, an animation and a background made to be worn together
-  { id: "flavedrake", kind: "frame", name: "FlaveDrake", price: 6000000, rarity: "unique", set: "flavedrake" },
+  { id: "flavedrake", kind: "frame", name: "Thunder Crest", price: 6000000, rarity: "unique", set: "flavedrake" },
   { id: "goldenblaze", kind: "effect", name: "Golden Blaze", price: 6000000, rarity: "unique", set: "flavedrake" },
-  { id: "moltencore", kind: "background", name: "Molten Core", price: 6000000, rarity: "unique", set: "flavedrake" },
+  { id: "moltencore", kind: "background", name: "Golden Storm", price: 6000000, rarity: "unique", set: "flavedrake" },
   { id: "archmage", kind: "frame", name: "Archmage", price: 6000000, rarity: "unique", set: "mage" },
   { id: "arcane", kind: "effect", name: "Spell Circle", price: 6000000, rarity: "unique", set: "mage" },
   { id: "astral", kind: "background", name: "Astral Sky", price: 6000000, rarity: "unique", set: "mage" },
@@ -128,7 +128,7 @@ const KIND_NAMES = { frame: "frame", effect: "animation", background: "backgroun
 // one player only). The admin can move any item.
 const RARITIES = ["common", "rare", "epic", "legendary", "mystic", "exclusive", "unique"];
 // The sets: their name (shown on every item of a set - they belong together)
-const SETS = { grove: "Enchanted Grove", clockwork: "Clockwork", phoenix: "Phoenix", celestial: "Celestial", prism: "Prism", cosmic: "Cosmic", victory: "Victory", flavedrake: "FlaveDrake", mage: "Archmage", panda: "Panda Master", ink: "Ink Blot" };
+const SETS = { grove: "Enchanted Grove", phantom: "Phantom", phoenix: "Phoenix", celestial: "Celestial", prism: "Prism", cosmic: "Cosmic", victory: "Victory", flavedrake: "FlaveDrake", mage: "Archmage", panda: "Panda Master", ink: "Ink Blot" };
 const KEY = "shop";
 
 // What the admin set: {items: {id: {on, price}}, free}
