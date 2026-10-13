@@ -107,6 +107,10 @@ const ITEMS = [
   { id: "crowned", kind: "effect", name: "Victory Crown", price: 7000000, rarity: "exclusive", set: "victory" },
   { id: "legends", kind: "background", name: "Victory Hall", price: 7000000, rarity: "exclusive", set: "victory" },
   // Unique: one player only - each set a frame, an animation and a background made to be worn together
+  // Void Mirror: the server owner's own - black glass, cracked, violet light leaking
+  { id: "voidmirror", kind: "frame", name: "Shattered Mirror", price: 10000000, rarity: "unique", set: "voidmirror" },
+  { id: "voidecho", kind: "effect", name: "Void Echo", price: 10000000, rarity: "unique", set: "voidmirror" },
+  { id: "voidglass", kind: "background", name: "Void Glass", price: 10000000, rarity: "unique", set: "voidmirror" },
   // Eclipse: the server owner's own - shadow and violet light, mystical
   { id: "eclipsering", kind: "frame", name: "Eclipse Corona", price: 10000000, rarity: "unique", set: "eclipse" },
   { id: "eclipseshards", kind: "effect", name: "Eclipse Shards", price: 10000000, rarity: "unique", set: "eclipse" },
@@ -132,7 +136,7 @@ const KIND_NAMES = { frame: "frame", effect: "animation", background: "backgroun
 // one player only). The admin can move any item.
 const RARITIES = ["common", "rare", "epic", "legendary", "mystic", "exclusive", "unique"];
 // The sets: their name (shown on every item of a set - they belong together)
-const SETS = { grove: "Enchanted Grove", phantom: "Phantom", phoenix: "Phoenix", celestial: "Celestial", prism: "Prism", cosmic: "Cosmic", victory: "Victory", eclipse: "Eclipse", flavedrake: "FlaveDrake", mage: "Archmage", panda: "Panda Master", ink: "Ink Blot" };
+const SETS = { grove: "Enchanted Grove", phantom: "Phantom", phoenix: "Phoenix", celestial: "Celestial", prism: "Prism", cosmic: "Cosmic", victory: "Victory", voidmirror: "Void Mirror", eclipse: "Eclipse", flavedrake: "FlaveDrake", mage: "Archmage", panda: "Panda Master", ink: "Ink Blot" };
 const KEY = "shop";
 
 // What the admin set: {items: {id: {on, price}}, free}

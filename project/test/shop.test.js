@@ -201,6 +201,7 @@ test("season prizes are like rewards: a prize of your own, coins and items - giv
 });
 
 for (const [set, name, ids] of [
+  ["voidmirror", "Void Mirror", ["voidmirror", "voidecho", "voidglass"]],
   ["eclipse", "Eclipse", ["eclipsering", "eclipseshards", "eclipseveil"]],
   ["flavedrake", "FlaveDrake", ["flavedrake", "goldenblaze", "moltencore"]],
   ["mage", "Archmage", ["archmage", "arcane", "astral"]],
