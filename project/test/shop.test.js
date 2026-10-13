@@ -97,12 +97,12 @@ test("shop: the admin gives a player a reward - any item and / or coins, with a 
   assert.match((await shop.give({ username: "gwen" })).error, /an item, coins or a prize/);
   assert.match((await shop.give({ username: "nobody", coins: 5 })).error, /No such player/);
   assert.match((await shop.give({ username: "gwen", items: ["neon", "gold"] })).error, /one frame/);
-  const result = await shop.give({ username: "gwen", items: ["spotlight"], coins: 2500, note: "Poker night" });
+  const result = await shop.give({ username: "gwen", items: ["constellation"], coins: 2500, note: "Poker night" });
   assert.ok(!result.error, result.error);
   await h.wait(20);
   assert.strictEqual(h.coinsOf("gwen"), 2600);
   const view = await shop.view("gwen");
-  assert.ok(view.owned.includes("spotlight"));
+  assert.ok(view.owned.includes("constellation"));
   assert.deepStrictEqual([view.won[0].source, view.won[0].rank], ["Poker night", null]);
 });
 
@@ -178,12 +178,12 @@ test("season prizes are like rewards: a prize of your own, coins and items - giv
     wagerX: 0,
     prizesOn: true,
     prizes: [
-      { place: 1, prize: "€25 voucher", coins: 10000, items: ["spotlight"] },
+      { place: 1, prize: "€25 voucher", coins: 10000, items: ["constellation"] },
       { place: 2, coins: 500 },
     ],
   });
   assert.ok(!made.error, made.error);
-  assert.strictEqual(made.season.prizes[0].label, "€25 voucher · 🪙 10,000 · " + shop.byId("spotlight").name);
+  assert.strictEqual(made.season.prizes[0].label, "€25 voucher · 🪙 10,000 · " + shop.byId("constellation").name);
   await seasons.tick(now);
   await seasons.join("vic", now);
   await seasons.join("wes", now);
@@ -192,7 +192,7 @@ test("season prizes are like rewards: a prize of your own, coins and items - giv
   await h.wait(30);
   // vic first (900 + 1000 back + 10,000), wes second (100 + 1000 + 500)
   assert.deepStrictEqual([h.coinsOf("vic"), h.coinsOf("wes")], [11900, 1600]);
-  assert.ok((await shop.view("vic")).owned.includes("spotlight"));
+  assert.ok((await shop.view("vic")).owned.includes("constellation"));
   assert.deepStrictEqual(
     (await shop.view("vic")).won.map((w) => [w.source, w.rank]),
     [["Prizes", 1]],
