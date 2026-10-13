@@ -126,7 +126,7 @@ const ITEMS = [
   { id: "legends", kind: "background", name: "Hall of Legends", price: 6000000, rarity: "exclusive" },
   { id: "dragonscales", kind: "background", name: "Shadow Scales", price: 6000000, rarity: "exclusive", set: "dragon" },
   { id: "astral", kind: "background", name: "Astral Sky", price: 6000000, rarity: "exclusive", set: "mage" },
-  { id: "bambooforest", kind: "background", name: "Bamboo Sunset", price: 6000000, rarity: "exclusive", set: "panda" },
+  { id: "bambooforest", kind: "background", name: "Bamboo Moon", price: 6000000, rarity: "exclusive", set: "panda" },
   { id: "rorschach", kind: "background", name: "Rorschach", price: 6000000, rarity: "exclusive", set: "ink" },
 ];
 const MAX_REWARD_COINS = 100000000;
