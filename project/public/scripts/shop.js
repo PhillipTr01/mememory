@@ -96,12 +96,16 @@ function tryButton(item) {
   return button;
 }
 
-// The fitting room: always in sight while trying on - me with all of it, what it is, what the rest would cost
+// The fitting room: always in sight while trying on - me with all of it on a stage, what it is (a chip each, a click
+// takes it off), what the rest would cost
+var KIND_ICONS = { frame: "🖼️", effect: "✨", background: "🌄" };
+
 function renderFitting() {
   var box = document.getElementById("shFitting");
   var tried = Object.values(tryOn)
     .map((id) => shopData.items.find((item) => item.id == id))
-    .filter(Boolean);
+    .filter(Boolean)
+    .sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind));
   if (!tried.length) {
     if (box) box.remove();
     return;
@@ -112,31 +116,41 @@ function renderFitting() {
     box.setAttribute("aria-label", "Trying on");
     document.body.appendChild(box);
   }
-  var list = el("div", "sh-fitting-list");
-  tried
-    .sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind))
-    .forEach((item) => {
-      var row = el("button", "sh-fitting-item");
-      row.type = "button";
-      row.title = "Take " + item.name + " off";
-      row.append(el("span", "sh-fitting-kind", KIND_NAMES[item.kind]), el("span", "sh-fitting-name", item.name), el("span", "sh-fitting-x", "✕"));
-      row.addEventListener("click", () => toggleTry(item));
-      list.appendChild(row);
-    });
-  // (what is not mine yet: its price - or that it is a reward only)
-  var missing = tried.filter((item) => !isOwned(item));
-  var cost = missing.filter((item) => !item.exclusive).reduce((sum, item) => sum + item.price, 0);
-  var note = missing.length == 0 ? "All of it is yours" : (cost ? "🪙 " + formatCoins(cost) + " to buy" : "") + (missing.some((item) => item.exclusive) ? (cost ? " · " : "") + "rewards only" : "");
-  var stop = el("button", "mm-btn mm-btn-sm sh-fitting-stop", "Stop trying");
-  stop.type = "button";
-  stop.addEventListener("click", () => {
+  var stop = () => {
     tryOn = {};
     render();
-  });
+  };
+  // The head: what this is - and close (stop trying)
+  var close = el("button", "sh-fitting-close", "✕");
+  close.type = "button";
+  close.title = "Stop trying";
+  close.setAttribute("aria-label", "Stop trying");
+  close.addEventListener("click", stop);
   var head = el("div", "sh-fitting-head");
-  head.append(el("span", "sh-fitting-title", "👁 Trying on"), el("span", "sh-fitting-note", note));
-  box.replaceChildren(avatarWith(lookNow(), "lg"), el("div", "sh-fitting-body"));
-  box.lastChild.append(head, list, stop);
+  head.append(el("span", "sh-fitting-title", "Fitting room"), close);
+  // The stage: me with all of it
+  var stage = el("div", "sh-fitting-stage");
+  stage.appendChild(avatarWith(lookNow(), "lg"));
+  // The chips
+  var chips = el("div", "sh-fitting-chips");
+  tried.forEach((item) => {
+    var chip = el("button", "sh-fitting-chip");
+    chip.type = "button";
+    chip.title = "Take " + item.name + " off";
+    chip.append(el("span", "sh-fitting-icon", KIND_ICONS[item.kind]), el("span", "sh-fitting-name", item.name), el("span", "sh-fitting-x", "✕"));
+    chip.addEventListener("click", () => toggleTry(item));
+    chips.appendChild(chip);
+  });
+  // What the rest would cost (or: a reward only)
+  var missing = tried.filter((item) => !isOwned(item));
+  var cost = missing.filter((item) => !item.exclusive).reduce((sum, item) => sum + item.price, 0);
+  var parts = [];
+  if (!missing.length) parts.push("✓ All of it is yours");
+  if (cost) parts.push("🪙 " + formatCoins(cost) + " to buy");
+  if (missing.some((item) => item.exclusive)) parts.push("🔒 Rewards only");
+  var foot = el("div", "sh-fitting-foot", parts.join(" · "));
+  foot.dataset.coin = "real";
+  box.replaceChildren(head, stage, chips, foot);
 }
 
 function render() {

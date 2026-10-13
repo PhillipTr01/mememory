@@ -480,17 +480,17 @@
   position: fixed;
   left: 1rem;
   bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
-  color: var(--mm-text);
   z-index: 60;
   display: flex;
-  align-items: center;
-  gap: 1.1rem;
-  max-width: min(24rem, calc(100vw - 2rem));
-  padding: 1.4rem 1rem 0.8rem 1.6rem;
-  border: 1px solid rgba(var(--mm-accent-rgb), 0.4);
-  border-radius: 14px;
-  background: var(--mm-surface-2, #1c1c24);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 15.5rem;
+  padding: 0.7rem 0.75rem 0.75rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.35);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(var(--mm-accent-rgb), 0.1), transparent 45%), var(--mm-surface-2);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+  color: var(--mm-text);
   animation: sh-fitting-in 0.2s ease-out;
 }
 
@@ -501,85 +501,145 @@
   }
 }
 
-.sh-fitting > .mm-avatar.lg {
-  --size: 64px;
-  flex: 0 0 auto;
-}
-
-.sh-fitting-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
 .sh-fitting-head {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 0.5rem;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .sh-fitting-title {
+  font-size: 0.72rem;
   font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mm-accent);
 }
 
-.sh-fitting-note {
-  font-size: 0.74rem;
-  color: var(--mm-muted);
-}
-
-.sh-fitting-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.sh-fitting-item {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  min-width: 0;
-  padding: 0.1rem 0.3rem;
+.sh-fitting-close {
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
   border: 0;
-  border-radius: 6px;
-  background: none;
-  color: inherit;
-  font-size: 0.8rem;
-  text-align: left;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--mm-muted);
+  font-size: 0.75rem;
   cursor: pointer;
 }
 
-.sh-fitting-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+.sh-fitting-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--mm-text);
 }
 
-.sh-fitting-kind {
-  flex: 0 0 4.6rem;
-  font-size: 0.68rem;
-  color: var(--mm-muted);
+/* The stage: room all round for wings, rays and what flies round the avatar */
+.sh-fitting-stage {
+  display: grid;
+  place-items: center;
+  height: 8.5rem;
+  border-radius: 12px;
+  background: radial-gradient(circle at 50% 58%, rgba(var(--mm-accent-rgb), 0.18), transparent 65%), rgba(0, 0, 0, 0.22);
+}
+
+.sh-fitting-stage .mm-avatar.lg {
+  --size: 72px;
+  margin-top: 0.8rem;
+}
+
+.sh-fitting-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.sh-fitting-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--mm-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.sh-fitting-chip:hover {
+  border-color: rgba(var(--mm-accent-rgb), 0.4);
+  background: rgba(var(--mm-accent-rgb), 0.1);
+}
+
+.sh-fitting-icon {
+  flex: 0 0 auto;
+  font-size: 0.85rem;
 }
 
 .sh-fitting-name {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 700;
 }
 
 .sh-fitting-x {
-  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  color: var(--mm-muted);
+  opacity: 0.6;
+}
+
+.sh-fitting-chip:hover .sh-fitting-x {
+  opacity: 1;
+  color: var(--mm-text);
+}
+
+.sh-fitting-foot {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
   color: var(--mm-muted);
 }
 
-.sh-fitting-stop {
-  align-self: flex-start;
-}
-
+/* Small screens: smaller, the stage beside the chips */
 @media (max-width: 560px) {
   .sh-fitting {
-    right: 0.75rem;
     left: 0.75rem;
-    max-width: none;
+    right: 0.75rem;
+    width: auto;
+    display: grid;
+    grid-template-columns: 6.5rem 1fr;
+    grid-template-areas: "head head" "stage chips" "foot foot";
+    gap: 0.5rem 0.6rem;
+  }
+
+  .sh-fitting-head {
+    grid-area: head;
+  }
+
+  .sh-fitting-stage {
+    grid-area: stage;
+    height: auto;
+    min-height: 6.5rem;
+  }
+
+  .sh-fitting-stage .mm-avatar.lg {
+    --size: 54px;
+    margin-top: 0.6rem;
+  }
+
+  .sh-fitting-chips {
+    grid-area: chips;
+    justify-content: center;
+  }
+
+  .sh-fitting-foot {
+    grid-area: foot;
   }
 }
