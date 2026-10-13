@@ -85,9 +85,9 @@ const ITEMS = [
   { id: "lanterns", kind: "effect", name: "Sky Lanterns", price: 1800000, rarity: "exclusive" },
   { id: "disco", kind: "effect", name: "Disco Lights", price: 1500000, rarity: "exclusive" },
   { id: "butterflies", kind: "effect", name: "Butterflies", price: 1000000, rarity: "exclusive" },
-  // The Shadow Dragon set (frame, animation, background - made to be worn together)
-  { id: "shadowdragon", kind: "frame", name: "Shadow Dragon", price: 6000000, rarity: "exclusive", set: "dragon" },
-  { id: "dragonfire", kind: "effect", name: "Dragonfire", price: 6000000, rarity: "exclusive", set: "dragon" },
+  // The Azure Dragon set (frame, animation, background - made to be worn together; the ids of the earlier Shadow Dragon)
+  { id: "shadowdragon", kind: "frame", name: "Azure Dragon", price: 6000000, rarity: "exclusive", set: "dragon" },
+  { id: "dragonfire", kind: "effect", name: "Celestial Clouds", price: 6000000, rarity: "exclusive", set: "dragon" },
   // The Archmage set (frame, animation, background - made to be worn together)
   { id: "archmage", kind: "frame", name: "Archmage", price: 6000000, rarity: "exclusive", set: "mage" },
   { id: "arcane", kind: "effect", name: "Spell Circle", price: 6000000, rarity: "exclusive", set: "mage" },
@@ -124,7 +124,7 @@ const ITEMS = [
   { id: "skyfire", kind: "background", name: "Season Fireworks", price: 3000000, rarity: "exclusive" },
   { id: "vault", kind: "background", name: "Golden Vault", price: 4000000, rarity: "exclusive" },
   { id: "legends", kind: "background", name: "Hall of Legends", price: 6000000, rarity: "exclusive" },
-  { id: "dragonscales", kind: "background", name: "Shadow Scales", price: 6000000, rarity: "exclusive", set: "dragon" },
+  { id: "dragonscales", kind: "background", name: "Imperial Silk", price: 6000000, rarity: "exclusive", set: "dragon" },
   { id: "astral", kind: "background", name: "Astral Sky", price: 6000000, rarity: "exclusive", set: "mage" },
   { id: "bambooforest", kind: "background", name: "Bamboo Moon", price: 6000000, rarity: "exclusive", set: "panda" },
   { id: "rorschach", kind: "background", name: "Rorschach", price: 6000000, rarity: "exclusive", set: "ink" },

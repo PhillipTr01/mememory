@@ -154,7 +154,7 @@ test("shop: backgrounds - bought and worn like the rest, one of each kind (a rew
   assert.ok(!(await shop.give({ username: "vic", items: ["nebula", "gold"] })).error);
   assert.strictEqual((await shop.wear("vic", "background", "nebula")).background, "nebula");
   assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity != "exclusive").length, 20);
-  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity == "exclusive").length, 9, "with the Shadow Dragon, Archmage, Panda Master and Ink Blot sets");
+  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity == "exclusive").length, 9, "with the Azure Dragon, Archmage, Panda Master and Ink Blot sets");
 });
 
 test("season prizes are like rewards: a prize of your own, coins and items - given to the places at the end", async () => {
@@ -201,7 +201,7 @@ test("season prizes are like rewards: a prize of your own, coins and items - giv
   seasons.reset();
 });
 
-test("shop: the Shadow Dragon set - a frame, an animation and a background that belong together", () => {
+test("shop: the Azure Dragon set - a frame, an animation and a background that belong together", () => {
   const set = shop.ITEMS.filter((item) => item.set === "dragon");
   assert.deepStrictEqual(set.map((item) => [item.id, item.kind]), [["shadowdragon", "frame"], ["dragonfire", "effect"], ["dragonscales", "background"]]);
   assert.ok(set.every((item) => item.rarity === "exclusive"), "given, not sold");
