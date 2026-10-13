@@ -154,7 +154,7 @@ test("shop: backgrounds - bought and worn like the rest, one of each kind (a rew
   assert.ok(!(await shop.give({ username: "vic", items: ["nebula", "gold"] })).error);
   assert.strictEqual((await shop.wear("vic", "background", "nebula")).background, "nebula");
   assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity != "exclusive").length, 20);
-  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity == "exclusive").length, 6, "with the Shadow Dragon set");
+  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity == "exclusive").length, 9, "with the Shadow Dragon, Archmage, Panda Master and Ink Blot sets");
 });
 
 test("season prizes are like rewards: a prize of your own, coins and items - given to the places at the end", async () => {
@@ -208,3 +208,17 @@ test("shop: the Shadow Dragon set - a frame, an animation and a background that 
   const css = require("fs").readFileSync(require("path").join(__dirname, "../public/styles/looks.css"), "utf8");
   for (const id of ["look-frame-shadowdragon", "look-fx-dragonfire", "look-bg-dragonscales"]) assert.ok(css.includes("." + id), id);
 });
+
+for (const [set, name, ids] of [
+  ["mage", "Archmage", ["archmage", "arcane", "astral"]],
+  ["panda", "Panda Master", ["pandamaster", "bamboostorm", "bambooforest"]],
+  ["ink", "Ink Blot", ["inkblot", "inktendrils", "rorschach"]],
+]) {
+  test(`shop: the ${name} set - a frame, an animation and a background that belong together`, () => {
+    const items = shop.ITEMS.filter((item) => item.set === set);
+    assert.deepStrictEqual(items.map((item) => [item.id, item.kind]), [[ids[0], "frame"], [ids[1], "effect"], [ids[2], "background"]]);
+    assert.ok(items.every((item) => item.rarity === "exclusive"), "given, not sold");
+    const css = require("fs").readFileSync(require("path").join(__dirname, "../public/styles/looks.css"), "utf8");
+    for (const id of ["look-frame-" + ids[0], "look-fx-" + ids[1], "look-bg-" + ids[2]]) assert.ok(css.includes("." + id), id);
+  });
+}

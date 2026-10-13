@@ -88,6 +88,15 @@ const ITEMS = [
   // The Shadow Dragon set (frame, animation, background - made to be worn together)
   { id: "shadowdragon", kind: "frame", name: "Shadow Dragon", price: 6000000, rarity: "exclusive", set: "dragon" },
   { id: "dragonfire", kind: "effect", name: "Dragonfire", price: 6000000, rarity: "exclusive", set: "dragon" },
+  // The Archmage set (frame, animation, background - made to be worn together)
+  { id: "archmage", kind: "frame", name: "Archmage", price: 6000000, rarity: "exclusive", set: "mage" },
+  { id: "arcane", kind: "effect", name: "Spell Circle", price: 6000000, rarity: "exclusive", set: "mage" },
+  // The Panda Master set
+  { id: "pandamaster", kind: "frame", name: "Panda Master", price: 6000000, rarity: "exclusive", set: "panda" },
+  { id: "bamboostorm", kind: "effect", name: "Bamboo Storm", price: 6000000, rarity: "exclusive", set: "panda" },
+  // The Ink Blot set
+  { id: "inkblot", kind: "frame", name: "Ink Blot", price: 6000000, rarity: "exclusive", set: "ink" },
+  { id: "inktendrils", kind: "effect", name: "Ink Tendrils", price: 6000000, rarity: "exclusive", set: "ink" },
   // Backgrounds: behind the face, instead of the avatar's color
   { id: "sunset", kind: "background", name: "Sunset", price: 60000, rarity: "common" },
   { id: "lagoon", kind: "background", name: "Lagoon", price: 70000, rarity: "common" },
@@ -116,6 +125,9 @@ const ITEMS = [
   { id: "vault", kind: "background", name: "Golden Vault", price: 4000000, rarity: "exclusive" },
   { id: "legends", kind: "background", name: "Hall of Legends", price: 6000000, rarity: "exclusive" },
   { id: "dragonscales", kind: "background", name: "Shadow Scales", price: 6000000, rarity: "exclusive", set: "dragon" },
+  { id: "astral", kind: "background", name: "Astral Sky", price: 6000000, rarity: "exclusive", set: "mage" },
+  { id: "bambooforest", kind: "background", name: "Bamboo Sunset", price: 6000000, rarity: "exclusive", set: "panda" },
+  { id: "rorschach", kind: "background", name: "Rorschach", price: 6000000, rarity: "exclusive", set: "ink" },
 ];
 const MAX_REWARD_COINS = 100000000;
 const MAX_REWARD_RULES = 20;
