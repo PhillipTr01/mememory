@@ -25,7 +25,7 @@ const testMode = require("./test_mode");
 const ITEMS = [
   /*
    * About 4 per kind and category (a guide, not a rule) - the exclusive and unique sets a frame, an animation and
-   * a background each. The shop: common, rare, epic, legendary (sold). Exclusive: only given as
+   * a background each. The shop: common, rare, epic, legendary (sold), mystic (sold, only sets). Exclusive: only given as
    * rewards (seen in the shop, locked). Unique: hidden from the shop - one player only, given once (the sets).
    */
   // Frames: a ring around the avatar
@@ -79,6 +79,13 @@ const ITEMS = [
   { id: "abyss", kind: "background", name: "Abyss", price: 2800000, rarity: "legendary" },
   { id: "diamonddust", kind: "background", name: "Diamond Dust", price: 2500000, rarity: "legendary" },
   { id: "prism", kind: "background", name: "Prism Vortex", price: 3500000, rarity: "legendary" },
+  // Mystic: sold in the shop - only as sets (a frame, an animation and a background, made to be worn together)
+  { id: "grovevines", kind: "frame", name: "Grove Vines", price: 8000000, rarity: "mystic", set: "grove" },
+  { id: "fireflies", kind: "effect", name: "Grove Fireflies", price: 9000000, rarity: "mystic", set: "grove" },
+  { id: "moonlitgrove", kind: "background", name: "Moonlit Grove", price: 8000000, rarity: "mystic", set: "grove" },
+  { id: "clockframe", kind: "frame", name: "Clockwork Gears", price: 9000000, rarity: "mystic", set: "clockwork" },
+  { id: "clockcogs", kind: "effect", name: "Clockwork Cogs", price: 10000000, rarity: "mystic", set: "clockwork" },
+  { id: "clockshop", kind: "background", name: "Clockwork Workshop", price: 9000000, rarity: "mystic", set: "clockwork" },
   // Exclusive: only given as rewards - never sold (the price counts when the admin moves one into the shop).
   // The laurels (the season places) on their own - the rest in sets: a frame, an animation and a background each
   { id: "champion", kind: "frame", name: "Champion's Laurel", price: 5000000, rarity: "exclusive" },
@@ -119,9 +126,9 @@ const KINDS = ["frame", "effect", "background"];
 const KIND_NAMES = { frame: "frame", effect: "animation", background: "background" };
 // The categories: the shop's rarities (sold) - exclusive (never sold, only given) and unique (hidden from the shop,
 // one player only). The admin can move any item.
-const RARITIES = ["common", "rare", "epic", "legendary", "exclusive", "unique"];
+const RARITIES = ["common", "rare", "epic", "legendary", "mystic", "exclusive", "unique"];
 // The sets: their name (shown on every item of a set - they belong together)
-const SETS = { phoenix: "Phoenix", celestial: "Celestial", prism: "Prism", cosmic: "Cosmic", victory: "Victory", flavedrake: "FlaveDrake", mage: "Archmage", panda: "Panda Master", ink: "Ink Blot" };
+const SETS = { grove: "Enchanted Grove", clockwork: "Clockwork", phoenix: "Phoenix", celestial: "Celestial", prism: "Prism", cosmic: "Cosmic", victory: "Victory", flavedrake: "FlaveDrake", mage: "Archmage", panda: "Panda Master", ink: "Ink Blot" };
 const KEY = "shop";
 
 // What the admin set: {items: {id: {on, price}}, free}
@@ -231,6 +238,26 @@ async function buy(username, id) {
   await User.updateOne({ username: username }, { $set: { looks: next } });
   coins.notify(username);
   return { ...(await view(username)), bought: id };
+}
+
+// Buy a whole set at once (what of it I don't have yet - paid together) - then all of it worn
+async function buySet(username, set) {
+  const items = ITEMS.filter((item) => item.set === set).map(itemNow);
+  if (!items.length || items.some((item) => !item.on)) return { error: "This set doesn't exist." };
+  if (items.some((item) => item.exclusive)) return { error: "Exclusive items can't be bought - they are only given as rewards." };
+  if (setup.free || testMode.active(username)) return { error: "Everything is free right now - just wear it." };
+  const user = await User.findOne({ username: username }).lean();
+  const looks = looksOf(user);
+  const missing = items.filter((item) => !looks.owned.includes(item.id));
+  if (!missing.length) return { error: "You have the whole set already." };
+  const price = missing.reduce((sum, item) => sum + item.price, 0);
+  const paid = await coins.spend(username, price, { reason: "shop", note: SETS[set] + " set" });
+  if (!paid) return { error: "You don't have enough coins." };
+  const stored = (user && user.looks) || {};
+  const next = { ...stored, owned: [...(Array.isArray(stored.owned) ? stored.owned : []), ...missing.map((item) => item.id)], ...wornOf(looks), ...Object.fromEntries(items.map((item) => [item.kind, item.id])) };
+  await User.updateOne({ username: username }, { $set: { looks: next } });
+  coins.notify(username);
+  return { ...(await view(username)), bought: missing.map((item) => item.id) };
 }
 
 // Wear an item (or nothing of its kind: id null)
@@ -416,4 +443,4 @@ function reset() {
   setup = { items: {}, free: false };
 }
 
-module.exports = { ITEMS, KINDS, RARITIES, SETS, byId, checkGift, items, looksOf, itemsOf, removeItem, view, buy, wear, worn, balanceOf, reward, give, config, owners, update, load, reset };
+module.exports = { ITEMS, KINDS, RARITIES, SETS, byId, checkGift, items, looksOf, itemsOf, removeItem, view, buy, buySet, wear, worn, balanceOf, reward, give, config, owners, update, load, reset };

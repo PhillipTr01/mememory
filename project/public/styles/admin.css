@@ -2989,6 +2989,10 @@ a.ad-case-row:hover {
   color: #d4a64a;
 }
 
+.ad-shop-rarity.mystic {
+  color: #2dd4bf;
+}
+
 .ad-shop-price {
   width: 110px;
   text-align: right;
@@ -4096,6 +4100,10 @@ a.ad-case-row:hover {
 
 .ad-shop-category.legendary {
   color: #d4a64a;
+}
+
+.ad-shop-category.mystic {
+  color: #2dd4bf;
 }
 
 .ad-shop-category.exclusive {

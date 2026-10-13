@@ -8,7 +8,7 @@ const socket = io((window.CASINO_NS || "") + "/jackpot");
 
 var myName = null;
 var shopData = null; // {items, owned, won, frame, effect, background, balance, season}
-var RARITY = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", exclusive: "Exclusive", unique: "Unique" };
+var RARITY = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", mystic: "Mystic", exclusive: "Exclusive", unique: "Unique" };
 var KIND_ORDER = ["frame", "effect", "background"];
 var KIND_NAMES = { frame: "Frame", effect: "Animation", background: "Background" };
 // Try on: items put on only for a look (nothing bought, nothing saved, nobody else sees it) - {kind: id}
@@ -178,6 +178,7 @@ function render() {
     if (editTab in LOOK_TABS || editTab == "bg") renderAvatarEditor();
     else document.getElementById("avatarPreview").replaceWith(previewAvatar(editing));
   }
+  renderMystic();
   renderSeason();
   renderFitting();
 }
@@ -191,12 +192,7 @@ function renderSeason() {
   // The singles first (the laurels - frames, then animations), then every set together (as the server sends them:
   // frame, animation, background) under a heading of its own
   var singles = list.filter((item) => !item.set).sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind));
-  var sets = [];
-  list.filter((item) => item.set).forEach((item) => {
-    var group = sets.find((entry) => entry.id == item.set);
-    if (!group) sets.push((group = { id: item.set, name: item.setName || item.set, unique: item.unique, items: [] }));
-    group.items.push(item);
-  });
+  var sets = groupSets(list.filter((item) => item.set));
   document.getElementById("shSeason").replaceChildren(...singles.map(card), ...sets.flatMap((group) => [setHead(group), ...group.items.map(card)]));
 
   function card(item) {
@@ -236,10 +232,23 @@ function renderSeason() {
 
 // The heading of a set: its name, what it is - and (all of it mine) wear all of it at once
 function setHead(group) {
-  var head = el("div", "sh-set-head" + (group.unique ? " unique" : ""));
-  head.append(el("span", "sh-set-name", (group.unique ? "💎 " : "✨ ") + group.name + " set"), el("span", "sh-set-note", "Frame, animation and background - made to be worn together"));
+  var head = el("div", "sh-set-head " + group.rarity);
+  head.append(el("span", "sh-set-name", (group.unique ? "💎 " : group.exclusive ? "✨ " : "🔮 ") + group.name + " set"), el("span", "sh-set-note", "Frame, animation and background - made to be worn together"));
   var wearing = group.items.every((item) => shopData[item.kind] == item.id);
-  if (group.items.every(isOwned) && !wearing) {
+  // For sale (mystic): all of it at once - only what is still missing
+  var missing = group.items.filter((item) => !isOwned(item));
+  if (!group.exclusive && missing.length) {
+    var price = missing.reduce((sum, item) => sum + item.price, 0);
+    var buyAll = el("button", "mm-btn mm-btn-sm mm-btn-primary sh-set-buy", (missing.length < group.items.length ? "Buy the rest" : "Buy the set") + " · 🪙 " + formatCoins(price));
+    buyAll.type = "button";
+    buyAll.dataset.coin = "real";
+    buyAll.disabled = shopData.balance < price;
+    buyAll.title = buyAll.disabled ? (shopData.season ? "Not enough coins from before the season" : "Not enough coins") : "Buy " + group.name + " - and wear all of it";
+    buyAll.addEventListener("click", async () => {
+      if (await post("shop/buy-set", { set: group.id }, buyAll)) showHint("The " + group.name + " set is yours - you wear it now.", "success", document.getElementById("shHeroAvatar"));
+    });
+    head.appendChild(buyAll);
+  } else if (group.items.every(isOwned) && !wearing) {
     var button = el("button", "mm-btn mm-btn-sm sh-set-wear", "Wear the set");
     button.type = "button";
     button.addEventListener("click", async () => {
@@ -266,39 +275,60 @@ function isOwned(item) {
 
 function renderGrid(id, kind) {
   var grid = document.getElementById(id);
-  grid.replaceChildren(
-    ...shopData.items
-      // (by rarity, then by price - the order of the server)
-      .filter((item) => item.kind == kind && !item.exclusive)
-      .map((item) => {
-        // (free for all: everything can be worn without buying it)
-        var owned = shopData.free || shopData.owned.includes(item.id);
-        var worn = shopData[kind] == item.id;
-        var card = el("div", "sh-item " + item.rarity + (worn ? " worn" : "") + (owned ? " owned" : ""));
-        var stage = el("div", "sh-stage");
-        // The preview: the item on me (with what I wear and what I try on)
-        stage.append(avatarWith(previewWith(item), "lg"), tryButton(item));
-        card.append(stage, el("span", "sh-rarity", RARITY[item.rarity] || item.rarity), el("span", "sh-item-name", item.name));
-        var button;
-        if (worn) {
-          button = el("button", "mm-btn mm-btn-sm sh-btn", "Take off");
-          button.addEventListener("click", () => wear(kind, null, button));
-        } else if (owned) {
-          button = el("button", "mm-btn mm-btn-sm sh-btn", "Wear");
-          button.addEventListener("click", () => wear(kind, item.id, button));
-        } else {
-          button = el("button", "mm-btn mm-btn-sm mm-btn-primary sh-btn", "🪙 " + formatCoins(item.price));
-          button.dataset.coin = "real";
-          button.disabled = shopData.balance < item.price;
-          button.title = button.disabled ? (shopData.season ? "Not enough coins from before the season" : "Not enough coins") : "Buy " + item.name;
-          button.addEventListener("click", () => buy(item, button));
-        }
-        button.type = "button";
-        if (worn) card.appendChild(el("span", "sh-worn-tag", "Wearing"));
-        card.appendChild(button);
-        return card;
-      }),
-  );
+  // (by rarity, then by price - the order of the server; the mystic sets in a section of their own)
+  grid.replaceChildren(...shopData.items.filter((item) => item.kind == kind && !item.exclusive && item.rarity != "mystic").map(shopCard));
+}
+
+// A card of the shop: the item on me, its rarity and name - buy it, wear it or take it off
+function shopCard(item) {
+  // (free for all: everything can be worn without buying it)
+  var owned = shopData.free || shopData.owned.includes(item.id);
+  var kind = item.kind;
+  var worn = shopData[kind] == item.id;
+  var card = el("div", "sh-item " + item.rarity + (worn ? " worn" : "") + (owned ? " owned" : ""));
+  var stage = el("div", "sh-stage");
+  // The preview: the item on me (with what I wear and what I try on)
+  stage.append(avatarWith(previewWith(item), "lg"), tryButton(item));
+  card.append(stage, el("span", "sh-rarity", RARITY[item.rarity] || item.rarity), el("span", "sh-item-name", item.name));
+  var button;
+  if (worn) {
+    button = el("button", "mm-btn mm-btn-sm sh-btn", "Take off");
+    button.addEventListener("click", () => wear(kind, null, button));
+  } else if (owned) {
+    button = el("button", "mm-btn mm-btn-sm sh-btn", "Wear");
+    button.addEventListener("click", () => wear(kind, item.id, button));
+  } else {
+    button = el("button", "mm-btn mm-btn-sm mm-btn-primary sh-btn", "🪙 " + formatCoins(item.price));
+    button.dataset.coin = "real";
+    button.disabled = shopData.balance < item.price;
+    button.title = button.disabled ? (shopData.season ? "Not enough coins from before the season" : "Not enough coins") : "Buy " + item.name;
+    button.addEventListener("click", () => buy(item, button));
+  }
+  button.type = "button";
+  if (worn) card.appendChild(el("span", "sh-worn-tag", "Wearing"));
+  card.appendChild(button);
+  return card;
+}
+
+// Mystic: sold only as sets - each under its heading (buy all of it at once: only what is still missing)
+function renderMystic() {
+  var list = shopData.items.filter((item) => item.rarity == "mystic" && !item.exclusive);
+  document.getElementById("shSecMystic").hidden = list.length == 0;
+  document.querySelector('#shSections [data-section="shSecMystic"]').hidden = list.length == 0;
+  var singles = list.filter((item) => !item.set);
+  var sets = groupSets(list.filter((item) => item.set));
+  document.getElementById("shMystic").replaceChildren(...singles.map(shopCard), ...sets.flatMap((group) => [setHead(group), ...group.items.map(shopCard)]));
+}
+
+// Items of sets -> [{id, name, rarity, unique, items}] (in the order of the server: frame, animation, background)
+function groupSets(list) {
+  var sets = [];
+  list.forEach((item) => {
+    var group = sets.find((entry) => entry.id == item.set);
+    if (!group) sets.push((group = { id: item.set, name: item.setName || item.set, rarity: item.rarity, unique: item.unique, exclusive: item.exclusive, items: [] }));
+    group.items.push(item);
+  });
+  return sets;
 }
 
 async function post(path, body, button) {

@@ -130,13 +130,13 @@ test("shop: exclusive items can't be bought - the admin moves any item between t
   assert.ok(!(await shop.buy("cat", "champion")).error, "now for sale");
   assert.match((await shop.buy("cat", "gold")).error, /can't be bought/);
   assert.ok((await shop.update({ items: { gold: { rarity: "mythic" } } })).error, "an unknown category");
-  // Sorted: by rarity, then by price
-  const order = ["common", "rare", "epic", "legendary", "exclusive", "unique"];
+  // Sorted: by rarity, then (the sets together) by price
+  const order = shop.RARITIES;
   const list = shop.items();
   for (let i = 1; i < list.length; i++) {
     const a = list[i - 1];
     const b = list[i];
-    assert.ok(order.indexOf(a.rarity) < order.indexOf(b.rarity) || (a.rarity === b.rarity && a.price <= b.price), `${a.id} before ${b.id}`);
+    assert.ok(order.indexOf(a.rarity) < order.indexOf(b.rarity) || (a.rarity === b.rarity && (a.set || b.set || a.price <= b.price)), `${a.id} before ${b.id}`);
   }
   shop.reset();
 });
@@ -153,7 +153,7 @@ test("shop: backgrounds - bought and worn like the rest, one of each kind (a rew
   assert.match((await shop.give({ username: "vic", items: ["sunset", "nebula"] })).error, /one background at most/);
   assert.ok(!(await shop.give({ username: "vic", items: ["nebula", "gold"] })).error);
   assert.strictEqual((await shop.wear("vic", "background", "nebula")).background, "nebula");
-  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity != "exclusive").length, 20);
+  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && !["exclusive", "unique"].includes(item.rarity)).length, 18);
 });
 
 test("season prizes are like rewards: a prize of your own, coins and items - given to the places at the end", async () => {
@@ -214,6 +214,32 @@ for (const [set, name, ids] of [
     for (const id of ["look-frame-" + ids[0], "look-fx-" + ids[1], "look-bg-" + ids[2]]) assert.ok(css.includes("." + id), id);
   });
 }
+
+test("shop: mystic - sold, only as sets, after legendary; a whole set at once (only what is missing), then worn", async () => {
+  shop.reset();
+  assert.deepStrictEqual(shop.RARITIES.slice(3, 5), ["legendary", "mystic"]);
+  const mystic = shop.ITEMS.filter((item) => item.rarity === "mystic");
+  assert.ok(mystic.length >= 6 && mystic.every((item) => item.set), "mystic: only sets");
+  // dearer than every legendary item
+  const legendary = Math.max(...shop.ITEMS.filter((item) => item.rarity === "legendary").map((item) => item.price));
+  assert.ok(mystic.every((item) => item.price > legendary));
+  h.addUser("myra");
+  const price = (set) => mystic.filter((item) => item.set === set).reduce((sum, item) => sum + item.price, 0);
+  h.setCoins("myra", price("grove") - 1);
+  assert.match((await shop.buySet("myra", "grove")).error, /enough coins/);
+  // one piece first - then the rest of the set, only what is missing
+  h.setCoins("myra", price("grove"));
+  assert.ok(!(await shop.buy("myra", "fireflies")).error);
+  const view = await shop.buySet("myra", "grove");
+  assert.ok(!view.error, view.error);
+  assert.deepStrictEqual(view.bought.sort(), ["grovevines", "moonlitgrove"]);
+  assert.strictEqual(h.coinsOf("myra"), 0);
+  assert.deepStrictEqual([view.frame, view.effect, view.background], ["grovevines", "fireflies", "moonlitgrove"]);
+  assert.match((await shop.buySet("myra", "grove")).error, /already/);
+  // exclusive sets: never sold
+  assert.match((await shop.buySet("myra", "phoenix")).error, /can't be bought/);
+  assert.match((await shop.buySet("myra", "nothing")).error, /doesn't exist/);
+});
 
 test("shop: every set complete - a frame, an animation and a background, all in one category, with the set's name", () => {
   const sets = [...new Set(shop.ITEMS.filter((item) => item.set).map((item) => item.set))];

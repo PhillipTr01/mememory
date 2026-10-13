@@ -382,6 +382,18 @@ module.exports = function (auth) {
     }),
   );
 
+  // A whole set at once (what of it is still missing)
+  router.post(
+    "/shop/buy-set",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      const result = await shop.buySet(req.username, String((req.body && req.body.set) || ""));
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    }),
+  );
+
   router.post(
     "/shop/wear",
     auth,

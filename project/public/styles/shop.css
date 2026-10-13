@@ -153,6 +153,12 @@
   --tone: 212, 166, 74;
 }
 
+/* Mystic: sold only as sets - a teal glow */
+.sh-item.mystic,
+.sh-set-head.mystic {
+  --tone: 45, 212, 191;
+}
+
 .sh-item.worn {
   border-color: rgba(var(--mm-accent-rgb), 0.7);
   box-shadow: 0 0 0 1px rgba(var(--mm-accent-rgb), 0.35);
