@@ -379,3 +379,8 @@
 .sh-main:not(.view-avatar) .sh-section {
   scroll-margin-top: 4.25rem;
 }
+
+/* Unique (one player only - only its owner sees it here): a cool diamond tone */
+.sh-item.exclusive.unique {
+  --tone: 125, 211, 252;
+}

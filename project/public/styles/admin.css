@@ -4095,6 +4095,10 @@ a.ad-case-row:hover {
   color: #f2c45a;
 }
 
+.ad-shop-category.unique {
+  color: #7dd3fc;
+}
+
 .ad-shop-price-box {
   justify-content: flex-end;
 }

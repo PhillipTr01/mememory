@@ -1398,6 +1398,7 @@ var SHOP_CATEGORIES = [
   ["epic", "Epic"],
   ["legendary", "Legendary"],
   ["exclusive", "✨ Exclusive"],
+  ["unique", "💎 Unique"],
 ];
 var SHOP_ORDER = SHOP_CATEGORIES.map((c) => c[0]);
 
@@ -1430,6 +1431,12 @@ function renderShop() {
           // The price: only for what is sold
           var price = el("span", "ad-inline-input ad-shop-price-box");
           if (rarity == "exclusive") price.appendChild(el("span", "ad-shop-won", "✨ only given"));
+          // (unique: hidden from the shop, one player only - who has it)
+          else if (rarity == "unique") {
+            var owner = (shopSaved.owners || {})[item.id];
+            price.appendChild(el("span", "ad-shop-won", owner ? "💎 " + owner : "💎 nobody yet"));
+            price.title = owner ? "Only " + owner + " has it - take it away from them (Players) to give it to someone else" : "Hidden from the shop - one player only";
+          }
           else {
             var input = el("input", "mm-input ad-shop-price");
             input.type = "number";
@@ -1465,12 +1472,14 @@ function itemSelect(kind, label, value) {
   select.setAttribute("aria-label", label);
   select.appendChild(Object.assign(el("option", null, "No " + label.toLowerCase()), { value: "" }));
   [
-    ["✨ Exclusive", (item) => item.exclusive],
+    ["💎 Unique - one player only", (item) => item.unique],
+    ["✨ Exclusive", (item) => item.exclusive && !item.unique],
     ["🛍️ Shop", (item) => !item.exclusive],
   ].forEach(([title, pick]) => {
     var group = el("optgroup");
     group.label = title;
-    shopSaved.items.filter((item) => item.kind == kind && pick(item)).forEach((item) => group.appendChild(Object.assign(el("option", null, item.name), { value: item.id })));
+    var owners = shopSaved.owners || {};
+    shopSaved.items.filter((item) => item.kind == kind && pick(item)).forEach((item) => group.appendChild(Object.assign(el("option", null, item.name + (item.unique && owners[item.id] ? " (" + owners[item.id] + ")" : "")), { value: item.id })));
     select.appendChild(group);
   });
   select.value = value || "";

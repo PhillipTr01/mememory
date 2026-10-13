@@ -617,7 +617,8 @@ module.exports = function () {
 
   /* ---------- The accessory shop: items on / off, prices, free for all ---------- */
 
-  router.get("/api/shop", admin, (req, res) => res.json(shop.config()));
+  // (with who has each unique item - one player only)
+  router.get("/api/shop", admin, asyncHandler(async (req, res) => res.json({ ...shop.config(), owners: await shop.owners() })));
   // A reward for a player: items (any - the exclusive ones too) and / or coins, with a note
   router.post(
     "/api/shop/give",
@@ -634,7 +635,7 @@ module.exports = function () {
     asyncHandler(async (req, res) => {
       const result = await shop.update(req.body || {});
       if (result.error) return res.status(400).json(result);
-      res.json(result);
+      res.json({ ...result, owners: await shop.owners() });
     }),
   );
 

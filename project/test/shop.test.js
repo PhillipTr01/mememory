@@ -131,7 +131,7 @@ test("shop: exclusive items can't be bought - the admin moves any item between t
   assert.match((await shop.buy("cat", "gold")).error, /can't be bought/);
   assert.ok((await shop.update({ items: { gold: { rarity: "mythic" } } })).error, "an unknown category");
   // Sorted: by rarity, then by price
-  const order = ["common", "rare", "epic", "legendary", "exclusive"];
+  const order = ["common", "rare", "epic", "legendary", "exclusive", "unique"];
   const list = shop.items();
   for (let i = 1; i < list.length; i++) {
     const a = list[i - 1];
@@ -154,7 +154,7 @@ test("shop: backgrounds - bought and worn like the rest, one of each kind (a rew
   assert.ok(!(await shop.give({ username: "vic", items: ["nebula", "gold"] })).error);
   assert.strictEqual((await shop.wear("vic", "background", "nebula")).background, "nebula");
   assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity != "exclusive").length, 20);
-  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity == "exclusive").length, 9, "with the FlaveDrake, Archmage, Panda Master and Ink Blot sets");
+  assert.strictEqual(shop.ITEMS.filter((item) => item.kind == "background" && item.rarity == "exclusive").length, 4, "at most 4 per kind and category");
 });
 
 test("season prizes are like rewards: a prize of your own, coins and items - given to the places at the end", async () => {
@@ -210,8 +210,46 @@ for (const [set, name, ids] of [
   test(`shop: the ${name} set - a frame, an animation and a background that belong together`, () => {
     const items = shop.ITEMS.filter((item) => item.set === set);
     assert.deepStrictEqual(items.map((item) => [item.id, item.kind]), [[ids[0], "frame"], [ids[1], "effect"], [ids[2], "background"]]);
-    assert.ok(items.every((item) => item.rarity === "exclusive"), "given, not sold");
+    assert.ok(items.every((item) => item.rarity === "unique"), "unique - one player only");
     const css = require("fs").readFileSync(require("path").join(__dirname, "../public/styles/looks.css"), "utf8");
     for (const id of ["look-frame-" + ids[0], "look-fx-" + ids[1], "look-bg-" + ids[2]]) assert.ok(css.includes("." + id), id);
   });
 }
+
+test("shop: at most 4 items per kind and category", () => {
+  for (const kind of shop.KINDS) for (const rarity of shop.RARITIES) {
+    const n = shop.ITEMS.filter((item) => item.kind === kind && item.rarity === rarity).length;
+    assert.ok(n <= 4, `${kind} / ${rarity}: ${n}`);
+  }
+});
+
+test("shop: unique items - hidden from the shop (only their owner sees them), never sold, one player only", async () => {
+  shop.reset();
+  h.addUser("uno");
+  h.addUser("duo");
+  h.setCoins("uno", 9000000);
+  // Hidden: not in anybody's shop - not bought, not worn
+  assert.ok(!(await shop.view("uno")).items.some((item) => item.id === "flavedrake"));
+  assert.match((await shop.buy("uno", "flavedrake")).error, /can't be bought/);
+  assert.match((await shop.wear("uno", "frame", "flavedrake")).error, /don't have/);
+  // (free for all: still not for everybody)
+  await shop.update({ free: true });
+  assert.match((await shop.wear("uno", "frame", "flavedrake")).error, /don't have/);
+  await shop.update({ free: false });
+  // Given to one player: in their shop, worn - nobody else can get it
+  assert.ok(!(await shop.give({ username: "uno", items: ["flavedrake"] })).error);
+  assert.ok((await shop.view("uno")).items.some((item) => item.id === "flavedrake"));
+  assert.ok(!(await shop.wear("uno", "frame", "flavedrake")).error);
+  assert.ok(!(await shop.view("duo")).items.some((item) => item.id === "flavedrake"));
+  assert.match((await shop.give({ username: "duo", items: ["flavedrake"] })).error, /belongs to uno/);
+  assert.deepStrictEqual(await shop.owners(), { flavedrake: "uno" });
+  // (a season prize can't hand it out twice either)
+  await shop.reward("duo", { items: ["flavedrake"], coins: 0, prize: "" }, { source: "Test" });
+  assert.ok(!shop.looksOf(await require("../models/User").findOne({ username: "duo" })).owned.includes("flavedrake"));
+  // Taken away: free for someone else again
+  await shop.removeItem("uno", "flavedrake");
+  assert.ok(!(await shop.give({ username: "duo", items: ["flavedrake"] })).error);
+  assert.deepStrictEqual(await shop.owners(), { flavedrake: "duo" });
+  shop.reset();
+});
+

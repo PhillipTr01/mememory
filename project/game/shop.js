@@ -19,122 +19,99 @@ const testMode = require("./test_mode");
  * Exclusive items (exclusive: true) can't be bought - the admin gives them as rewards (give:
  * Players → Reward), together with coins or a prize of their own. What was given is kept for
  * good: user.looks.won = [{id, source, icon, rank, at}].
+ * Unique items (unique: true, exclusive too): hidden from the shop - only their owner sees them there.
+ * One player only: given once, nobody else can get it (unless the admin takes it away first).
  */
 const ITEMS = [
+  /*
+   * At most 4 per kind and category. The shop: common, rare, epic, legendary (sold). Exclusive: only given as
+   * rewards (seen in the shop, locked). Unique: hidden from the shop - one player only, given once (the sets).
+   */
   // Frames: a ring around the avatar
   { id: "bronze", kind: "frame", name: "Bronze Ring", price: 50000, rarity: "common" },
   { id: "silver", kind: "frame", name: "Silver Ring", price: 75000, rarity: "common" },
   { id: "gold", kind: "frame", name: "Gold Ring", price: 100000, rarity: "common" },
   { id: "ruby", kind: "frame", name: "Ruby", price: 125000, rarity: "common" },
-  { id: "emerald", kind: "frame", name: "Emerald", price: 150000, rarity: "common" },
   { id: "sakura", kind: "frame", name: "Sakura", price: 200000, rarity: "rare" },
   { id: "neon", kind: "frame", name: "Neon", price: 250000, rarity: "rare" },
-  { id: "shadow", kind: "frame", name: "Shadow", price: 300000, rarity: "rare" },
-  { id: "retro", kind: "frame", name: "Retro", price: 350000, rarity: "rare" },
+  { id: "pixel", kind: "frame", name: "Pixel Hero", price: 350000, rarity: "rare" },
   { id: "ice", kind: "frame", name: "Frost", price: 400000, rarity: "rare" },
-  { id: "candy", kind: "frame", name: "Candy Swirl", price: 450000, rarity: "rare" },
   { id: "electric", kind: "frame", name: "Electric", price: 550000, rarity: "epic" },
   { id: "fire", kind: "frame", name: "Inferno", price: 750000, rarity: "epic" },
-  { id: "ocean", kind: "frame", name: "Ocean", price: 750000, rarity: "epic" },
   { id: "toxic", kind: "frame", name: "Toxic", price: 750000, rarity: "epic" },
-  { id: "rainbow", kind: "frame", name: "Rainbow", price: 1000000, rarity: "epic" },
   { id: "devil", kind: "frame", name: "Devil", price: 1300000, rarity: "epic" },
   { id: "galaxy", kind: "frame", name: "Galaxy", price: 1500000, rarity: "legendary" },
   { id: "royal", kind: "frame", name: "Royal", price: 2000000, rarity: "legendary" },
   { id: "diamond", kind: "frame", name: "Diamond", price: 2500000, rarity: "legendary" },
   { id: "aurora", kind: "frame", name: "Aurora", price: 3000000, rarity: "legendary" },
-  { id: "phoenix", kind: "frame", name: "Phoenix", price: 4000000, rarity: "legendary" },
   // Animations
   { id: "shake", kind: "effect", name: "Shake", price: 150000, rarity: "common" },
   { id: "zzz", kind: "effect", name: "Sleepy", price: 250000, rarity: "common" },
   { id: "float", kind: "effect", name: "Float", price: 300000, rarity: "common" },
   { id: "bounce", kind: "effect", name: "Bounce", price: 300000, rarity: "common" },
-  { id: "wobble", kind: "effect", name: "Wobble", price: 350000, rarity: "common" },
   { id: "music", kind: "effect", name: "Music", price: 500000, rarity: "rare" },
   { id: "bubbles", kind: "effect", name: "Bubbles", price: 600000, rarity: "rare" },
-  { id: "sparkles", kind: "effect", name: "Sparkles", price: 700000, rarity: "rare" },
-  { id: "pulse", kind: "effect", name: "Pulse", price: 750000, rarity: "rare" },
   { id: "hearts", kind: "effect", name: "Hearts", price: 800000, rarity: "rare" },
   { id: "snow", kind: "effect", name: "Snowfall", price: 900000, rarity: "rare" },
-  { id: "dizzy", kind: "effect", name: "Dizzy", price: 900000, rarity: "rare" },
-  { id: "flames", kind: "effect", name: "Flames", price: 960000, rarity: "rare" },
   { id: "lightning", kind: "effect", name: "Lightning", price: 1100000, rarity: "epic" },
   { id: "confetti", kind: "effect", name: "Confetti", price: 1200000, rarity: "epic" },
   { id: "money", kind: "effect", name: "Money Rain", price: 1300000, rarity: "epic" },
   { id: "fireworks", kind: "effect", name: "Fireworks", price: 1800000, rarity: "epic" },
-  { id: "orbit", kind: "effect", name: "Orbit", price: 2000000, rarity: "epic" },
-  { id: "glitch", kind: "effect", name: "Glitch", price: 2400000, rarity: "epic" },
+  { id: "glitch", kind: "effect", name: "Glitch", price: 2400000, rarity: "legendary" },
   { id: "halo", kind: "effect", name: "Halo", price: 3200000, rarity: "legendary" },
   { id: "aura", kind: "effect", name: "Aura", price: 5000000, rarity: "legendary" },
   { id: "vortex", kind: "effect", name: "Vortex", price: 7000000, rarity: "legendary" },
-  // Exclusive (by default): only given as rewards - never sold. The price counts when the admin moves one into the shop.
-  { id: "champion", kind: "frame", name: "Champion's Laurel", price: 5000000, rarity: "exclusive" },
-  { id: "runnerup", kind: "frame", name: "Silver Laurel", price: 3500000, rarity: "exclusive" },
-  { id: "podium", kind: "frame", name: "Bronze Laurel", price: 2500000, rarity: "exclusive" },
-  { id: "contender", kind: "frame", name: "Contender", price: 1500000, rarity: "exclusive" },
-  { id: "pumpkin", kind: "frame", name: "Pumpkin Patch", price: 1200000, rarity: "exclusive" },
-  { id: "candycane", kind: "frame", name: "Candy Cane", price: 1200000, rarity: "exclusive" },
-  { id: "lunar", kind: "frame", name: "Lunar Dragon", price: 2000000, rarity: "exclusive" },
-  { id: "pixel", kind: "frame", name: "Pixel Hero", price: 900000, rarity: "exclusive" },
-  { id: "vapor", kind: "frame", name: "Vaporwave", price: 1000000, rarity: "exclusive" },
-  { id: "crowned", kind: "effect", name: "Victory Crown", price: 5000000, rarity: "exclusive" },
-  { id: "spotlight", kind: "effect", name: "Spotlight", price: 3000000, rarity: "exclusive" },
-  { id: "starfall", kind: "effect", name: "Starfall", price: 2000000, rarity: "exclusive" },
-  { id: "bats", kind: "effect", name: "Bat Swarm", price: 1200000, rarity: "exclusive" },
-  { id: "jingle", kind: "effect", name: "Jingle Bells", price: 1200000, rarity: "exclusive" },
-  { id: "lanterns", kind: "effect", name: "Sky Lanterns", price: 1800000, rarity: "exclusive" },
-  { id: "disco", kind: "effect", name: "Disco Lights", price: 1500000, rarity: "exclusive" },
-  { id: "butterflies", kind: "effect", name: "Butterflies", price: 1000000, rarity: "exclusive" },
-  // The FlaveDrake set (frame, animation, background - made to be worn together)
-  { id: "flavedrake", kind: "frame", name: "FlaveDrake", price: 6000000, rarity: "exclusive", set: "flavedrake" },
-  { id: "goldenblaze", kind: "effect", name: "Golden Blaze", price: 6000000, rarity: "exclusive", set: "flavedrake" },
-  // The Archmage set (frame, animation, background - made to be worn together)
-  { id: "archmage", kind: "frame", name: "Archmage", price: 6000000, rarity: "exclusive", set: "mage" },
-  { id: "arcane", kind: "effect", name: "Spell Circle", price: 6000000, rarity: "exclusive", set: "mage" },
-  // The Panda Master set
-  { id: "pandamaster", kind: "frame", name: "Panda Master", price: 6000000, rarity: "exclusive", set: "panda" },
-  { id: "bamboostorm", kind: "effect", name: "Bamboo Storm", price: 6000000, rarity: "exclusive", set: "panda" },
-  // The Ink Blot set
-  { id: "inkblot", kind: "frame", name: "Ink Blot", price: 6000000, rarity: "exclusive", set: "ink" },
-  { id: "inktendrils", kind: "effect", name: "Ink Tendrils", price: 6000000, rarity: "exclusive", set: "ink" },
   // Backgrounds: behind the face, instead of the avatar's color
   { id: "sunset", kind: "background", name: "Sunset", price: 60000, rarity: "common" },
   { id: "lagoon", kind: "background", name: "Lagoon", price: 70000, rarity: "common" },
   { id: "mint", kind: "background", name: "Mint Fresh", price: 80000, rarity: "common" },
   { id: "peach", kind: "background", name: "Peach Fizz", price: 90000, rarity: "common" },
-  { id: "dusk", kind: "background", name: "Dusk", price: 100000, rarity: "common" },
   { id: "stripes", kind: "background", name: "Candy Stripes", price: 200000, rarity: "rare" },
-  { id: "polka", kind: "background", name: "Polka Dots", price: 250000, rarity: "rare" },
   { id: "checkers", kind: "background", name: "Checkers", price: 300000, rarity: "rare" },
   { id: "grid", kind: "background", name: "Neon Grid", price: 350000, rarity: "rare" },
-  { id: "bubblegum", kind: "background", name: "Bubblegum", price: 400000, rarity: "rare" },
   { id: "matrix", kind: "background", name: "Matrix", price: 450000, rarity: "rare" },
   { id: "northern", kind: "background", name: "Northern Lights", price: 600000, rarity: "epic" },
   { id: "lava", kind: "background", name: "Lava Lamp", price: 750000, rarity: "epic" },
   { id: "space", kind: "background", name: "Deep Space", price: 900000, rarity: "epic" },
-  { id: "holo", kind: "background", name: "Holo Foil", price: 1100000, rarity: "epic" },
   { id: "discofloor", kind: "background", name: "Disco Floor", price: 1300000, rarity: "epic" },
-  { id: "goldenhour", kind: "background", name: "Golden Hour", price: 1600000, rarity: "legendary" },
   { id: "nebula", kind: "background", name: "Nebula", price: 2000000, rarity: "legendary" },
+  { id: "velvet", kind: "background", name: "Royal Velvet", price: 2200000, rarity: "legendary" },
   { id: "diamonddust", kind: "background", name: "Diamond Dust", price: 2500000, rarity: "legendary" },
   { id: "prism", kind: "background", name: "Prism Vortex", price: 3500000, rarity: "legendary" },
-  // Exclusive backgrounds (only given)
-  { id: "velvet", kind: "background", name: "Royal Velvet", price: 2000000, rarity: "exclusive" },
+  // Exclusive: only given as rewards - never sold (the price counts when the admin moves one into the shop)
+  { id: "champion", kind: "frame", name: "Champion's Laurel", price: 5000000, rarity: "exclusive" },
+  { id: "runnerup", kind: "frame", name: "Silver Laurel", price: 3500000, rarity: "exclusive" },
+  { id: "podium", kind: "frame", name: "Bronze Laurel", price: 2500000, rarity: "exclusive" },
+  { id: "phoenix", kind: "frame", name: "Phoenix", price: 4000000, rarity: "exclusive" },
+  { id: "crowned", kind: "effect", name: "Victory Crown", price: 5000000, rarity: "exclusive" },
+  { id: "spotlight", kind: "effect", name: "Spotlight", price: 3000000, rarity: "exclusive" },
+  { id: "lanterns", kind: "effect", name: "Sky Lanterns", price: 1800000, rarity: "exclusive" },
+  { id: "disco", kind: "effect", name: "Disco Lights", price: 1500000, rarity: "exclusive" },
   { id: "laurels", kind: "background", name: "Victory Rays", price: 5000000, rarity: "exclusive" },
   { id: "skyfire", kind: "background", name: "Season Fireworks", price: 3000000, rarity: "exclusive" },
   { id: "vault", kind: "background", name: "Golden Vault", price: 4000000, rarity: "exclusive" },
   { id: "legends", kind: "background", name: "Hall of Legends", price: 6000000, rarity: "exclusive" },
-  { id: "moltencore", kind: "background", name: "Molten Core", price: 6000000, rarity: "exclusive", set: "flavedrake" },
-  { id: "astral", kind: "background", name: "Astral Sky", price: 6000000, rarity: "exclusive", set: "mage" },
-  { id: "bambooforest", kind: "background", name: "Bamboo Moon", price: 6000000, rarity: "exclusive", set: "panda" },
-  { id: "rorschach", kind: "background", name: "Rorschach", price: 6000000, rarity: "exclusive", set: "ink" },
+  // Unique: one player only - each set a frame, an animation and a background made to be worn together
+  { id: "flavedrake", kind: "frame", name: "FlaveDrake", price: 6000000, rarity: "unique", set: "flavedrake" },
+  { id: "goldenblaze", kind: "effect", name: "Golden Blaze", price: 6000000, rarity: "unique", set: "flavedrake" },
+  { id: "moltencore", kind: "background", name: "Molten Core", price: 6000000, rarity: "unique", set: "flavedrake" },
+  { id: "archmage", kind: "frame", name: "Archmage", price: 6000000, rarity: "unique", set: "mage" },
+  { id: "arcane", kind: "effect", name: "Spell Circle", price: 6000000, rarity: "unique", set: "mage" },
+  { id: "astral", kind: "background", name: "Astral Sky", price: 6000000, rarity: "unique", set: "mage" },
+  { id: "pandamaster", kind: "frame", name: "Panda Master", price: 6000000, rarity: "unique", set: "panda" },
+  { id: "bamboostorm", kind: "effect", name: "Bamboo Storm", price: 6000000, rarity: "unique", set: "panda" },
+  { id: "bambooforest", kind: "background", name: "Bamboo Moon", price: 6000000, rarity: "unique", set: "panda" },
+  { id: "inkblot", kind: "frame", name: "Ink Blot", price: 6000000, rarity: "unique", set: "ink" },
+  { id: "inktendrils", kind: "effect", name: "Ink Tendrils", price: 6000000, rarity: "unique", set: "ink" },
+  { id: "rorschach", kind: "background", name: "Rorschach", price: 6000000, rarity: "unique", set: "ink" },
 ];
 const MAX_REWARD_COINS = 100000000;
 const MAX_REWARD_RULES = 20;
 const KINDS = ["frame", "effect", "background"];
 const KIND_NAMES = { frame: "frame", effect: "animation", background: "background" };
-// The categories: the shop's rarities (sold) - and exclusive (never sold, only given). The admin can move any item.
-const RARITIES = ["common", "rare", "epic", "legendary", "exclusive"];
+// The categories: the shop's rarities (sold) - exclusive (never sold, only given) and unique (hidden from the shop,
+// one player only). The admin can move any item.
+const RARITIES = ["common", "rare", "epic", "legendary", "exclusive", "unique"];
 const KEY = "shop";
 
 // What the admin set: {items: {id: {on, price}}, free}
@@ -146,7 +123,7 @@ const byId = (id) => ITEMS.find((item) => item.id === id) || null;
 function itemNow(item) {
   const own = setup.items[item.id] || {};
   const rarity = RARITIES.includes(own.rarity) ? own.rarity : item.rarity;
-  return { ...item, defaultPrice: item.price, defaultRarity: item.rarity, price: Number.isInteger(own.price) ? own.price : item.price, rarity: rarity, exclusive: rarity === "exclusive", on: own.on !== false };
+  return { ...item, defaultPrice: item.price, defaultRarity: item.rarity, price: Number.isInteger(own.price) ? own.price : item.price, rarity: rarity, exclusive: rarity === "exclusive" || rarity === "unique", unique: rarity === "unique", on: own.on !== false };
 }
 
 // The order everywhere (the shop, the admin): by rarity, then by price, then by name
@@ -179,8 +156,8 @@ function looksOf(user) {
   const looks = (user && user.looks) || {};
   const won = Array.isArray(looks.won) ? looks.won.filter((entry) => entry && byId(entry.id)) : [];
   const owned = [...new Set([...(Array.isArray(looks.owned) ? looks.owned.filter((id) => byId(id)) : []), ...won.map((entry) => entry.id)])];
-  // What can be worn: what is bought - or (free for all) everything - as long as it is on
-  const wearable = (id) => isOn(id) && (setup.free || owned.includes(id));
+  // What can be worn: what is bought - or (free for all) everything but the unique items - as long as it is on
+  const wearable = (id) => isOn(id) && (owned.includes(id) || (setup.free && !itemNow(byId(id)).unique));
   const worn = (kind) => (looks[kind] && byId(looks[kind]) && byId(looks[kind]).kind === kind && wearable(looks[kind]) ? looks[kind] : null);
   return { owned: owned, won: won, frame: worn("frame"), effect: worn("effect"), background: worn("background") };
 }
@@ -191,9 +168,26 @@ async function balanceOf(username) {
   return data.coins;
 }
 
-// The items of the shop (on)
-function shopItems() {
-  return items().filter((item) => item.on);
+// The items of the shop (on) - a unique item only for its owner
+function shopItems(owned = []) {
+  return items().filter((item) => item.on && (!item.unique || owned.includes(item.id)));
+}
+
+// Who has a unique item (given or bought) - null: nobody
+async function ownerOf(id) {
+  const users = await User.find({ looks: { $ne: null } }).select("username looks").lean();
+  const user = users.find((u) => looksOf({ looks: u.looks }).owned.includes(id) || ((u.looks && u.looks.won) || []).some((entry) => entry && entry.id === id));
+  return user ? user.username : null;
+}
+
+// The owners of every unique item: {id: username}
+async function owners() {
+  const result = {};
+  for (const item of items().filter((i) => i.unique)) {
+    const owner = await ownerOf(item.id);
+    if (owner) result[item.id] = owner;
+  }
+  return result;
 }
 
 // The shop of a player: the items that are on, what they have and wear, what they can pay with
@@ -205,7 +199,8 @@ async function view(username) {
     return { items: shopItems(), owned: [], won: [], frame: wearable(worn.frame), effect: wearable(worn.effect), background: wearable(worn.background), free: true, test: true, balance: testMode.balance(username), season: false };
   }
   const user = await User.findOne({ username: username }).lean();
-  return { items: shopItems(), ...looksOf(user), free: setup.free, balance: await balanceOf(username), season: false };
+  const looks = looksOf(user);
+  return { items: shopItems(looks.owned), ...looks, free: setup.free, balance: await balanceOf(username), season: false };
 }
 
 async function buy(username, id) {
@@ -239,7 +234,7 @@ async function wear(username, kind, id) {
   const looks = looksOf(user);
   if (id != null) {
     const item = byId(id);
-    if (item == null || item.kind !== kind || !isOn(id) || !(setup.free || looks.owned.includes(id))) return { error: "You don't have this item." };
+    if (item == null || item.kind !== kind || !isOn(id) || !(looks.owned.includes(id) || (setup.free && !itemNow(item).unique))) return { error: "You don't have this item." };
   }
   await User.updateOne({ username: username }, { $set: { looks: { ...((user && user.looks) || {}), ...wornOf(looks), [kind]: id } } });
   return view(username);
@@ -272,6 +267,10 @@ async function reward(username, gift, from) {
   const user = await User.findOne({ username: username }).select("username looks").lean();
   if (user == null) return false;
   const at = Date.now();
+  // (a unique item someone else has already: not given again - one player only)
+  const taken = [];
+  for (const id of gift.items) if (itemNow(byId(id)).unique && ![null, username].includes(await ownerOf(id))) taken.push(id);
+  if (taken.length) gift = { ...gift, items: gift.items.filter((id) => !taken.includes(id)) };
   if (gift.items.length) {
     const stored = user.looks || {};
     const won = [...(Array.isArray(stored.won) ? stored.won : []), ...gift.items.map((id) => ({ id: id, source: from.source, icon: from.icon || null, rank: from.rank || null, at: at }))];
@@ -303,6 +302,12 @@ async function give(input) {
   const note = typeof input.note === "string" ? input.note.trim().slice(0, 80) : "";
   const user = await User.findOne({ username: username }).select("username casinoApproved").lean();
   if (user == null) return { error: "No such player." };
+  // A unique item: one player only
+  for (const id of gift.items) {
+    const item = itemNow(byId(id));
+    const owner = item.unique ? await ownerOf(id) : null;
+    if (owner && owner !== user.username) return { error: `${item.name} is unique - it belongs to ${owner}. Take it away from them first.` };
+  }
   await reward(user.username, gift, { source: note || "A reward", icon: "🎁", rank: null, note: null });
   return { given: { username: user.username, ...gift, note: note } };
 }
@@ -400,4 +405,4 @@ function reset() {
   setup = { items: {}, free: false };
 }
 
-module.exports = { ITEMS, KINDS, RARITIES, byId, checkGift, items, looksOf, itemsOf, removeItem, view, buy, wear, worn, balanceOf, reward, give, config, update, load, reset };
+module.exports = { ITEMS, KINDS, RARITIES, byId, checkGift, items, looksOf, itemsOf, removeItem, view, buy, wear, worn, balanceOf, reward, give, config, owners, update, load, reset };

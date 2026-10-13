@@ -8,7 +8,7 @@ const socket = io((window.CASINO_NS || "") + "/jackpot");
 
 var myName = null;
 var shopData = null; // {items, owned, won, frame, effect, background, balance, season}
-var RARITY = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", exclusive: "Exclusive" };
+var RARITY = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", exclusive: "Exclusive", unique: "Unique" };
 var KIND_ORDER = ["frame", "effect", "background"];
 var KIND_NAMES = { frame: "Frame", effect: "Animation", background: "Background" };
 
@@ -105,10 +105,10 @@ function renderSeason() {
       .map((item) => {
         var owned = isOwned(item);
         var worn = shopData[item.kind] == item.id;
-        var card = el("div", "sh-item exclusive" + (worn ? " worn" : "") + (owned ? " owned" : " locked"));
+        var card = el("div", "sh-item exclusive" + (item.unique ? " unique" : "") + (worn ? " worn" : "") + (owned ? " owned" : " locked"));
         var stage = el("div", "sh-stage");
         stage.appendChild(avatarWith(wornWith(item), "lg"));
-        var kindLabel = el("span", "sh-rarity", "✨ " + KIND_NAMES[item.kind]);
+        var kindLabel = el("span", "sh-rarity", (item.unique ? "💎 Unique " : "✨ ") + KIND_NAMES[item.kind]);
         kindLabel.title = kindLabel.innerText;
         var nameLabel = el("span", "sh-item-name", item.name);
         nameLabel.title = item.name;
