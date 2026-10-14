@@ -496,6 +496,8 @@ module.exports = function (io, options = {}) {
       const hero = heroOf(username);
       const index = hero.bag.findIndex((item) => item.id === data.id);
       if (index < 0) return;
+      const wrong = rpg.canWear(hero.bag[index], hero.cls);
+      if (wrong) return error(wrong);
       const gear = rpg.charOf(hero).gear;
       const [item] = hero.bag.splice(index, 1);
       if (gear[item.slot]) hero.bag.push(gear[item.slot]);

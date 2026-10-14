@@ -48,6 +48,7 @@ const STAT_IDS = Object.keys(STATS);
 const LEVEL_MAX = 50;
 const UPGRADE_BASE = 10000;
 const UPGRADE_GROWTH = 1.22;
+const UPGRADE_MAX = 10000000; // a stat level costs at most this much
 // The main stat of a class: its levels count this much more
 const MAIN_BONUS = 1.5;
 const DODGE_MAX = 40;
@@ -243,8 +244,8 @@ function deckMax() {
 // ones more often (x their weight)
 const PACKS = {
   standard: { name: "Base Set Pack", icon: "🎴", about: "The classic: 5 cards, the last one rare or better.", price: 10000, size: 5, better: 1, least: "rare", boost: {} },
-  premium: { name: "Hero Pack", icon: "💎", about: "5 cards - the last two rare or better, epics and legendaries twice as often.", price: 25000, size: 5, better: 2, least: "rare", boost: { epic: 2, legendary: 2, mystic: 2 } },
-  mythic: { name: "Mythic Pack", icon: "🌟", about: "3 cards - one epic or better for sure, legendaries four, mystics five times as often.", price: 50000, size: 3, better: 1, least: "epic", boost: { epic: 3, legendary: 4, mystic: 5 } },
+  premium: { name: "Hero Pack", icon: "💎", about: "5 cards - all rare or better, epics, legendaries and mystics 4x as often.", price: 25000, size: 5, better: 5, least: "rare", boost: { epic: 4, legendary: 4, mystic: 4 } },
+  mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards - all epic or better, legendaries 4x, mystics 6x as often.", price: 50000, size: 4, better: 4, least: "epic", boost: { legendary: 4, mystic: 6 } },
 };
 const PACK_IDS = Object.keys(PACKS);
 const PACK_BUNDLE = 3; // three packs at once ...
@@ -327,28 +328,29 @@ const SLOTS = {
   weapon: {
     name: "Weapon",
     kinds: [
-      ["🗡️", "Dagger", { atk: 0.7, agi: 1.1 }],
-      ["🤺", "Rapier", { atk: 0.85, agi: 1 }],
-      ["⚔️", "Sword", { atk: 1, agi: 0.6 }],
-      ["🔱", "Trident", { atk: 1.1, agi: 0.5 }],
-      ["🏹", "Bow", { atk: 0.9, agi: 0.8, luck: 0.3 }],
-      ["🪄", "Wand", { atk: 0.8, agi: 0.4, luck: 0.6 }],
-      ["🪓", "Axe", { atk: 1.3, agi: 0.3 }],
-      ["🏏", "Mace", { atk: 1.2, agi: 0.25, def: 0.3 }],
-      ["🔨", "Warhammer", { atk: 1.5, agi: 0.15 }],
+      ["🗡️", "Dagger", { atk: 0.7, agi: 1.1 }, ["rogue"]],
+      ["🤺", "Rapier", { atk: 0.85, agi: 1 }, ["rogue", "warrior"]],
+      ["⚔️", "Sword", { atk: 1, agi: 0.6 }, ["warrior", "paladin"]],
+      ["🔱", "Trident", { atk: 1.1, agi: 0.5 }, ["warrior"]],
+      ["🏹", "Bow", { atk: 0.9, agi: 0.8, luck: 0.3 }, ["rogue"]],
+      ["🪄", "Wand", { atk: 0.8, agi: 0.4, luck: 0.6 }, ["mage"]],
+      ["🦯", "Staff", { atk: 0.9, agi: 0.3, luck: 0.4, hp: 0.4 }, ["mage", "cleric"]],
+      ["🪓", "Axe", { atk: 1.3, agi: 0.3 }, ["warrior"]],
+      ["🏏", "Mace", { atk: 1.2, agi: 0.25, def: 0.3 }, ["paladin", "cleric"]],
+      ["🔨", "Warhammer", { atk: 1.5, agi: 0.15 }, ["warrior", "paladin"]],
     ],
   },
   armor: {
     name: "Armor",
     kinds: [
-      ["🥋", "Robe", { def: 0.5, hp: 1, agi: 0.5 }],
-      ["🧣", "Cloak", { def: 0.4, hp: 0.7, agi: 0.8, luck: 0.3 }],
+      ["🥋", "Robe", { def: 0.5, hp: 1, agi: 0.5 }, ["mage", "cleric"]],
+      ["🧣", "Cloak", { def: 0.4, hp: 0.7, agi: 0.8, luck: 0.3 }, ["rogue", "mage"]],
       ["👢", "Boots", { def: 0.5, hp: 0.5, agi: 1 }],
-      ["🦺", "Vest", { def: 0.8, hp: 0.9, agi: 0.3 }],
-      ["🧤", "Gauntlets", { def: 0.7, hp: 0.5, atk: 0.3 }],
-      ["🪖", "Helm", { def: 0.9, hp: 0.8 }],
-      ["🧥", "Mail", { def: 1.1, hp: 1.1 }],
-      ["🛡️", "Shield", { def: 1.4, hp: 0.6 }],
+      ["🦺", "Vest", { def: 0.8, hp: 0.9, agi: 0.3 }, ["rogue", "cleric"]],
+      ["🧤", "Gauntlets", { def: 0.7, hp: 0.5, atk: 0.3 }, ["warrior", "paladin"]],
+      ["🪖", "Helm", { def: 0.9, hp: 0.8 }, ["warrior", "paladin", "cleric"]],
+      ["🧥", "Mail", { def: 1.1, hp: 1.1 }, ["warrior", "paladin"]],
+      ["🛡️", "Shield", { def: 1.4, hp: 0.6 }, ["paladin", "warrior"]],
     ],
   },
   charm: {
@@ -423,6 +425,9 @@ const MONSTER_HP = 52;
 const MONSTER_HP_GROWTH = 1.14;
 const MONSTER_ATK = 11;
 const MONSTER_ATK_GROWTH = 1.115;
+const MONSTER_CURVE = 0.0003; // (the growth steeper the deeper: x(1 + this x (floor - 1)²))
+const MONSTER_DEPTH = 0.035; // a row of the map deeper into a floor: this much stronger
+const MONSTER_SPREAD = 0.25; // every monster up to this much stronger or weaker
 // A bigger party: every monster has this much more HP and attack per hero after the first - and there are more of
 // them (a party is no easier than going alone)
 const PARTY_HP = 1.0;
@@ -593,12 +598,17 @@ function poolOf(cls) {
   return ["strike", "defend", ...c.cards, c.mystic, ...NEUTRAL_CARDS];
 }
 
-// A card into the collection -> true, or false: it holds all the copies of it already
+// A card into the collection -> true: a copy for the deck, false: one more than a deck may hold (kept all the
+// same - for a trade or dust later)
 function collect(char, id) {
-  const max = CARD_RARITIES[CARDS[id].rarity].copies;
-  if ((char.collection[id] || 0) >= max) return false;
-  char.collection[id] = (char.collection[id] || 0) + 1;
-  return true;
+  const owned = char.collection[id] || 0;
+  char.collection[id] = owned + 1;
+  return owned < CARD_RARITIES[CARDS[id].rarity].copies;
+}
+
+// The copies of a card a deck may hold: the ones owned - at most the rarity's copies
+function usable(char, id) {
+  return Math.min(char.collection[id] || 0, CARD_RARITIES[CARDS[id].rarity].copies);
 }
 
 // A card of the collection into the deck -> an error or null
@@ -606,7 +616,7 @@ function deckAdd(hero, id) {
   const char = charOf(hero);
   if (!CARDS[id] || !poolOf(hero.cls).includes(id)) return "Not a card of your class.";
   const inDeck = char.deck.filter((one) => one == id).length;
-  if (inDeck >= (char.collection[id] || 0)) return "You don't own more of it - booster packs bring more cards.";
+  if (inDeck >= usable(char, id)) return (char.collection[id] || 0) > inDeck ? `At most ${CARD_RARITIES[CARDS[id].rarity].copies} of a ${CARD_RARITIES[CARDS[id].rarity].name.toLowerCase()} card.` : "You don't own more of it - booster packs bring more cards.";
   const { max } = deckLimits(hero);
   if (char.deck.length >= max) return `At most ${max} cards (a charm may make room for more).`;
   char.deck.push(id);
@@ -633,7 +643,7 @@ function deckSet(hero, ids) {
   for (const id of ids) {
     if (!CARDS[id] || !pool.includes(id)) return "Not a card of your class.";
     counts[id] = (counts[id] || 0) + 1;
-    if (counts[id] > (char.collection[id] || 0)) return `You don't own that many of ${CARDS[id].name}.`;
+    if (counts[id] > usable(char, id)) return `You don't own that many of ${CARDS[id].name}.`;
   }
   char.deck = [...ids];
   return null;
@@ -649,7 +659,7 @@ function deckReady(hero) {
 }
 
 // A booster pack opened: its cards of the class (the last ones of a rarity at least) -> [{id, fresh, coins}] -
-// a card the collection holds all copies of already is sold (its coins: the server pays them)
+// a card the collection holds all copies of already stays in it too (fresh: false)
 function openPack(hero, rng = Math.random, packId = "standard") {
   const char = charOf(hero);
   const pack = PACKS[packId] || PACKS.standard;
@@ -661,7 +671,7 @@ function openPack(hero, rng = Math.random, packId = "standard") {
     const choices = pool.filter((id) => !better || RARITY_RANK.indexOf(CARDS[id].rarity) >= least).map((id) => [id, CARD_RARITIES[CARDS[id].rarity].weight * (pack.boost[CARDS[id].rarity] || 1)]);
     const id = weighted(rng, choices);
     const fresh = collect(char, id);
-    cards.push({ id, fresh, coins: fresh ? 0 : CARD_RARITIES[CARDS[id].rarity].value });
+    cards.push({ id, fresh, coins: 0 });
   }
   return cards;
 }
@@ -737,7 +747,7 @@ function statsOf(hero, clsId = hero.cls) {
 
 // The price of the next level of a stat (null: the last level reached)
 function upgradeCost(level) {
-  return level >= LEVEL_MAX ? null : round100(UPGRADE_BASE * Math.pow(UPGRADE_GROWTH, level));
+  return level >= LEVEL_MAX ? null : Math.min(UPGRADE_MAX, round100(UPGRADE_BASE * Math.pow(UPGRADE_GROWTH, level)));
 }
 
 // The highest floor the character played now may enter
@@ -825,9 +835,18 @@ function heroView(hero) {
 /* ---------- Gear ---------- */
 
 let gearCount = 0;
+const GEAR_OWN_CLASS = 0.5;
+
+// Who can wear a piece -> an error or null
+function canWear(item, cls) {
+  if (item.classes && !item.classes.includes(cls)) return `Only for: ${item.classes.map((id) => CLASSES[id].name).join(", ")}.`;
+  return null;
+}
 
 // A piece of gear from a chest of `floor` (luck: a bit more often a better one)
-function makeGear(floor, rng = Math.random, luck = 0) {
+// (cls: who found it - half the time a piece its class can wear; weapons and armor fit some classes only, boots
+// and charms every one)
+function makeGear(floor, rng = Math.random, luck = 0, cls = null) {
   const shift = Math.min(0.5, luck / 100);
   const weights = RARITIES.map((rarity, i) => rarity.weight * (i == 0 ? 1 - shift : 1 + shift * i));
   let roll = rng() * weights.reduce((a, b) => a + b, 0);
@@ -835,10 +854,12 @@ function makeGear(floor, rng = Math.random, luck = 0) {
   while (roll >= weights[index] && index < RARITIES.length - 1) roll -= weights[index++];
   const rarity = RARITIES[index];
   const slot = pick(rng, Object.keys(SLOTS));
-  const [icon, kind, mix] = pick(rng, SLOTS[slot].kinds);
+  const fitting = SLOTS[slot].kinds.filter((k) => !k[3] || k[3].includes(cls));
+  const [icon, kind, mix, classes] = pick(rng, cls && fitting.length && rng() < GEAR_OWN_CLASS ? fitting : SLOTS[slot].kinds);
   const material = MATERIALS[Math.min(MATERIALS.length - 1, Math.floor((floor - 1) / 5))];
   const base = 2 + floor * 1.2;
   const item = { id: "g" + Date.now().toString(36) + (++gearCount).toString(36), slot, rarity: rarity.id, name: material + " " + kind, icon, floor };
+  if (classes) item.classes = classes;
   // The stats: the slot's base for each - x the kind's mix, x the rarity
   const stat = {
     atk: (m) => Math.max(1, Math.round(base * m * rarity.power)),
@@ -989,9 +1010,17 @@ const RANKS = {
   boss: { id: "boss", prefix: "Boss ", hp: 5, atk: 1.6 },
 };
 
-function monster(floor, size, kind, rank) {
-  const hp = MONSTER_HP * Math.pow(MONSTER_HP_GROWTH, floor - 1) * kind.hp * (1 + PARTY_HP * (size - 1)) * rank.hp;
-  const atk = MONSTER_ATK * Math.pow(MONSTER_ATK_GROWTH, floor - 1) * kind.atk * rank.atk * (1 + PARTY_ATK * (size - 1));
+// How much harder a floor is than the first: exponential - and steeper the deeper it goes
+function floorCurve(growth, floor) {
+  return Math.pow(growth, floor - 1) * (1 + MONSTER_CURVE * Math.pow(floor - 1, 2));
+}
+
+// A monster of a floor (depth: the row of the map - the deeper into the floor, the stronger; every one a bit
+// stronger or weaker than the next: a fight is never quite sure)
+function monster(floor, size, kind, rank, depth = 0, rng = Math.random) {
+  const deeper = 1 + MONSTER_DEPTH * depth;
+  const hp = MONSTER_HP * floorCurve(MONSTER_HP_GROWTH, floor) * deeper * between(rng, 1 - MONSTER_SPREAD, 1 + MONSTER_SPREAD) * kind.hp * (1 + PARTY_HP * (size - 1)) * rank.hp;
+  const atk = MONSTER_ATK * floorCurve(MONSTER_ATK_GROWTH, floor) * deeper * between(rng, 1 - MONSTER_SPREAD, 1 + MONSTER_SPREAD) * kind.atk * rank.atk * (1 + PARTY_ATK * (size - 1));
   const max = Math.max(1, Math.round(hp));
   // (an elite also smashes)
   const moves = rank.id != "normal" && !kind.moves.includes("smash") ? [...kind.moves, "smash"] : kind.moves;
@@ -1013,16 +1042,16 @@ function armorOf(floor, kind, rank) {
 }
 
 // The monsters of a fight: 1 to 3 (more with a bigger party, a hard fight one more) - an elite with a few others
-function monstersFor(floor, size, room, rng = Math.random) {
+function monstersFor(floor, size, room, rng = Math.random, depth = 0) {
   const group = MONSTERS[Math.min(MONSTERS.length - 1, Math.floor((floor - 1) / 5))];
   if (room == "elite" || room == "boss") {
-    const list = [monster(floor, size, pick(rng, group), RANKS[room])];
-    for (let i = 0; i < Math.ceil(size / 2); i++) list.push(monster(floor, size, pick(rng, group), RANKS.normal));
+    const list = [monster(floor, size, pick(rng, group), RANKS[room], depth, rng)];
+    for (let i = 0; i < Math.ceil(size / 2); i++) list.push(monster(floor, size, pick(rng, group), RANKS.normal, depth, rng));
     return list;
   }
   const extra = room == "hard" ? 1 : 0;
   const count = Math.min(5, 1 + Math.floor(rng() * 2) + Math.floor(size / 2) + extra);
-  return Array.from({ length: count }, () => monster(floor, size, pick(rng, group), room == "hard" ? RANKS.hard : RANKS.normal));
+  return Array.from({ length: count }, () => monster(floor, size, pick(rng, group), room == "hard" ? RANKS.hard : RANKS.normal, depth, rng));
 }
 
 /* ---------- A run ---------- */
@@ -1275,7 +1304,7 @@ function enterRoom(run, door = 0, rng = Math.random) {
   const n = roomNumber(run);
   if (!chosen.open && !chosen.sensed) say(run, `Room ${n}: the door opens - ${ROOM_KINDS[kind].icon} ${ROOM_KINDS[kind].name}!`);
   if (kind == "fight" || kind == "hard" || kind == "elite" || kind == "boss") {
-    run.monsters = monstersFor(run.floor, run.heroes.length, kind, rng);
+    run.monsters = monstersFor(run.floor, run.heroes.length, kind, rng, chosen.row || 0);
     run.phase = "fight";
     run.turn = 0;
     for (const hero of run.heroes) {
@@ -1410,7 +1439,7 @@ function choose(run, name, input = {}, rng = Math.random) {
     return damage;
   };
   const gear = () => {
-    const item = makeGear(run.floor, rng, hero.luck);
+    const item = makeGear(run.floor, rng, hero.luck, hero.cls);
     run.loot[hero.name].push(item);
     return item;
   };
@@ -2417,6 +2446,7 @@ module.exports = {
   STATS,
   STAT_IDS,
   LEVEL_MAX,
+  UPGRADE_MAX,
   SLOTS,
   RARITIES,
   REWARD,
@@ -2492,6 +2522,7 @@ module.exports = {
   entryCost,
   heroView,
   makeGear,
+  canWear,
   starterDeck,
   doorsFor,
   monstersFor,

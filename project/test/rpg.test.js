@@ -8,6 +8,7 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   assert.strictEqual(rpg.upgradeCost(0), 10000);
   assert.ok(rpg.upgradeCost(5) > rpg.upgradeCost(4));
   assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX), null);
+  assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX - 1), rpg.UPGRADE_MAX);
   assert.strictEqual(rpg.entryCost(1), 10000);
   assert.strictEqual(rpg.potionPrice(1), 5000);
   assert.ok(rpg.potionPrice(10) > rpg.potionPrice(9));
@@ -414,7 +415,7 @@ test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/
   assert.ok(rpg.monstersFor(1, 1, "elite").every((m) => !m.affix));
 });
 
-test("rpg: collection and deck - the starter deck owned, packs bring cards (spare copies sold), the deck from 10 to deckMax, mystic cards once a run", () => {
+test("rpg: collection and deck - the starter deck owned, packs bring cards (duplicates kept), the deck from 10 to deckMax, mystic cards once a run", () => {
   const hero = rpg.newHero("rogue");
   const char = rpg.charOf(hero);
   assert.strictEqual(char.deck.length, 10);
@@ -435,11 +436,11 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (spar
     assert.strictEqual(pack.length, rpg.PACK_SIZE);
     for (const card of pack) {
       assert.ok(rpg.poolOf("rogue").includes(card.id) && rpg.CARDS[card.id].rarity != "basic", card.id);
-      assert.ok(card.fresh ? card.coins == 0 : card.coins > 0);
+      assert.strictEqual(card.coins, 0);
     }
     assert.notStrictEqual(rpg.CARDS[pack[4].id].rarity, "common");
   }
-  // The shop: the base set has 50 cards and more; a hero pack: the last two rare or better, a mythic pack: one epic
+  // The shop: the base set has 50 cards and more; a hero pack: all rare or better, a mythic pack: all epic
   // or better; three at once: 10% off
   assert.ok(Object.keys(rpg.CARDS).length >= 50);
   const rank = (id) => ["basic", "common", "rare", "epic", "legendary", "mystic"].indexOf(rpg.CARDS[id].rarity);
@@ -447,15 +448,21 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (spar
     const hero2 = rpg.newHero("mage");
     const premium = rpg.openPack(hero2, Math.random, "premium");
     assert.strictEqual(premium.length, 5);
-    assert.ok(rank(premium[3].id) >= 2 && rank(premium[4].id) >= 2);
+    assert.ok(premium.every((c) => rank(c.id) >= 2));
     const mythic = rpg.openPack(hero2, Math.random, "mythic");
-    assert.strictEqual(mythic.length, 3);
-    assert.ok(rank(mythic[2].id) >= 3, mythic[2].id);
+    assert.strictEqual(mythic.length, 4);
+    assert.ok(mythic.every((c) => rank(c.id) >= 3));
   }
   assert.strictEqual(rpg.packPrice("standard", 3), Math.round((rpg.PACKS.standard.price * 3 * 0.9) / 100) * 100);
   assert.strictEqual(rpg.packPrice("nope"), null);
-  // (the collection never holds more than the copies of a rarity)
-  for (const [id, n] of Object.entries(char.collection)) assert.ok(n <= rpg.CARD_RARITIES[rpg.CARDS[id].rarity].copies, id);
+  // (duplicates stay in the collection - a deck holds only the copies of a rarity)
+  assert.ok(Object.entries(char.collection).some(([id, n]) => n > rpg.CARD_RARITIES[rpg.CARDS[id].rarity].copies));
+  const many = Object.keys(char.collection).find((id) => rpg.CARDS[id].rarity == "legendary" && char.collection[id] > 1);
+  if (many) {
+    rpg.deckAdd(hero, many);
+    assert.match(rpg.deckAdd(hero, many), /At most 1/);
+    rpg.deckRemove(hero, many);
+  }
   // (a pack's cards are random: owned for sure)
   rpg.collect(char, "smoke");
   assert.strictEqual(rpg.deckAdd(hero, "smoke"), null);
@@ -489,7 +496,7 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (spar
   rpg.addPacks(hero, [["standard", 2], ["mythic", 1]]);
   const all = rpg.openAll(hero);
   assert.strictEqual(all.count, 3);
-  assert.strictEqual(all.cards.length, 2 * 5 + 3);
+  assert.strictEqual(all.cards.length, 2 * 5 + 4);
   assert.deepStrictEqual([hero.packs.standard, hero.packs.mythic], [0, 0]);
   assert.match(rpg.openAll(hero), /No packs/);
   // An mystic card: played once - gone from the run's deck

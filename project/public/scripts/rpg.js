@@ -852,7 +852,7 @@ function renderOpening() {
       front.appendChild(card);
       inner.append(back, front);
       slot.appendChild(inner);
-      if (opening.flipped[i]) slot.appendChild(el("span", "rpg-flip-note" + (c.fresh ? " fresh" : ""), c.fresh ? "New!" : "Spare · +🪙 " + formatCoins(c.coins)));
+      if (opening.flipped[i]) slot.appendChild(el("span", "rpg-flip-note" + (c.fresh ? " fresh" : ""), c.fresh ? "New!" : "Duplicate"));
       row.appendChild(slot);
     });
     var turned = opening.cards.every((c, i) => opening.flipped[i]);
@@ -860,8 +860,6 @@ function renderOpening() {
     var foot = el("div", "rpg-opening-foot");
     if (!turned) foot.append(el("div", "rpg-opening-hint", "Click the cards to turn them over"), button("Turn all", "flipAll", { className: "small" }));
     else {
-      var spare = opening.cards.reduce((sum, c) => sum + c.coins, 0);
-      if (spare) foot.appendChild(el("div", "mm-muted small", "Spare copies sold: +🪙 " + formatCoins(spare)));
       if (left) foot.appendChild(button("Open the next " + pack.name + " (" + left + " left)", "openNext", { className: "primary" }));
       var rest = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);
       if (rest > 1) foot.appendChild(button("🎴 Open all the rest (" + rest + ")", "openAllNext", {}));
@@ -891,7 +889,7 @@ function onOpeningClick(event) {
     var slot = target;
     slot.classList.add("flipped");
     var c = opening.cards[Number(target.dataset.flip)];
-    if (!slot.querySelector(".rpg-flip-note")) slot.appendChild(el("span", "rpg-flip-note" + (c.fresh ? " fresh" : ""), c.fresh ? "New!" : "Spare · +🪙 " + formatCoins(c.coins)));
+    if (!slot.querySelector(".rpg-flip-note")) slot.appendChild(el("span", "rpg-flip-note" + (c.fresh ? " fresh" : ""), c.fresh ? "New!" : "Duplicate"));
     // (all turned: the buttons after a moment)
     if (opening.cards.every((one, i) => opening.flipped[i])) setTimeout(renderOpening, 650);
     return;
@@ -1014,7 +1012,8 @@ function renderBuilder() {
     document.getElementById("rpgBuilderGrid"),
     shown.length
       ? shown.map((id) => {
-          var owned = hero.collection[id] || 0;
+          var all = hero.collection[id] || 0;
+          var owned = Math.min(all, rules.cardRarities[cardOf(id).rarity].copies);
           var spare = owned - (counts[id] || 0);
           var full = deck.length >= hero.deckMax;
           var node = cardEl(id, { act: spare > 0 && !full ? "deckAdd" : "", className: (owned ? "" : "unowned") + (spare > 0 && !full ? " pickable" : " spent") });
@@ -1023,7 +1022,7 @@ function renderBuilder() {
           var pips = el("span", "rpg-copies");
           for (var i = 0; i < Math.max(owned, 1); i++) pips.appendChild(el("i", i < (counts[id] || 0) ? "used" : i < owned ? "" : "none"));
           node.appendChild(pips);
-          node.appendChild(el("span", "rpg-cardx-count", owned ? (counts[id] || 0) + " / " + owned : "🔒"));
+          node.appendChild(el("span", "rpg-cardx-count", owned ? (counts[id] || 0) + " / " + owned + (all > owned ? " · +" + (all - owned) : "") : "🔒"));
           node.title = !owned ? "Not owned yet - booster packs, rewards in the dungeon, the merchant" : spare <= 0 ? "All your copies are in the deck" : full ? "Your deck is full" : "Click or drag: into the deck";
           return node;
         })
