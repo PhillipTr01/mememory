@@ -299,6 +299,7 @@ function recordCard(id, label, round, icon) {
   card.classList.toggle("empty", round == null);
   var picture = round ? createAvatar(round.winner, "lg") : el("span", "jp-record-placeholder", icon);
   picture.classList.add("jp-record-picture");
+  picture.dataset.looksLive = ""; // (its looks drawn live, smooth - casino_looks.js)
   var title = el("span", "jp-record-label", icon + " " + label);
   var name = el("span", "jp-record-name", round ? round.winner : "Nobody yet");
   var parts = [picture, title, name];

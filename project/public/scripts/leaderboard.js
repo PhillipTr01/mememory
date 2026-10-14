@@ -2,6 +2,13 @@
  * The leaderboard of the casino: live without a season, during a season as
  * often as the season says (the server decides). After a season: its winner page.
  */
+// An avatar of the podium: its looks drawn live, smooth (casino_looks.js)
+function liveAvatar(name) {
+  var avatar = createAvatar(name, "lg");
+  avatar.dataset.looksLive = "";
+  return avatar;
+}
+
 // The connection of the jackpot: the chat, the coins at the top and the daily bonus
 const socket = io((window.CASINO_NS || "") + "/jackpot");
 
@@ -70,7 +77,7 @@ function change(row) {
 function podiumSpot(row) {
   var spot = el("div", "lb-spot place-" + row.rank + (row.username == myName ? " mine" : ""));
   spot.dataset.rank = row.rank;
-  spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), createAvatar(row.username, "lg"), nameOf(row.username, "lb-name"), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)), change(row));
+  spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), liveAvatar(row.username), nameOf(row.username, "lb-name"), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)), change(row));
   if (row.prize) spot.appendChild(el("span", "lb-prize", "🎁 " + row.prize));
   if (decidedOf(row)) spot.appendChild(decidedOf(row));
   spot.appendChild(el("div", "lb-step", String(row.rank)));
@@ -370,7 +377,7 @@ function confetti(root) {
 function winnerSpot(row) {
   var spot = el("div", "lb-spot place-" + row.rank + (row.username == myName ? " mine" : ""));
   if (row.rank == 1) spot.appendChild(el("span", "lb-crown", "👑"));
-  spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), createAvatar(row.username, "lg"), nameOf(row.username, "lb-name"), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
+  spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), liveAvatar(row.username), nameOf(row.username, "lb-name"), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
   if (row.prize) spot.appendChild(el("span", "lb-prize", "🎁 " + row.prize));
   if (decidedOf(row)) spot.appendChild(decidedOf(row));
   spot.appendChild(el("div", "lb-step", String(row.rank)));

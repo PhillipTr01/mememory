@@ -15,9 +15,10 @@
   // (looks.css: look-lite - many of them cost the page next to nothing); the bigger ones draw them live (smooth)
   var LITE = 60;
 
-  // Live or pre-rendered: in a place marked data-looks-hover (the shop's cards, the own avatar there) only while the
-  // mouse is over it - elsewhere when it is bigger than LITE
+  // Live or pre-rendered: marked data-looks-live (a few that stand out - the podium, the last winner) always; in a place
+  // marked data-looks-hover (the shop's cards) only while the mouse is over it - elsewhere when it is bigger than LITE
   function liveHere(avatar, width) {
+    if (avatar.closest("[data-looks-live]")) return true;
     var hover = avatar.closest("[data-looks-hover]");
     if (hover) return hover.matches(":hover");
     return width > LITE;

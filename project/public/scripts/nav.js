@@ -27,8 +27,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!username) return;
     document.getElementById("username").innerText = username;
     document.getElementById("profileName").innerText = username;
-    document.getElementById("profileAvatar").replaceWith(createAvatar(username, "sm"));
-    document.getElementById("profileAvatarLarge").replaceWith(createAvatar(username));
+    // (the own avatar: its looks drawn live, smooth - casino_looks.js)
+    [[document.getElementById("profileAvatar"), "sm"], [document.getElementById("profileAvatarLarge")]].forEach(([spot, size]) => {
+      var avatar = createAvatar(username, size);
+      avatar.dataset.looksLive = "";
+      spot.replaceWith(avatar);
+    });
   });
 
   buildMenu(dropdown);
