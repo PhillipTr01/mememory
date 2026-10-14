@@ -378,7 +378,8 @@ test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/
   assert.match(rpg.pickTalent(hero, 0, "nonsense"), /Unknown/);
   assert.strictEqual(rpg.pickTalent(hero, 0, "ironskin"), null);
   assert.match(rpg.pickTalent(hero, 0, "rhythm"), /already/);
-  assert.deepStrictEqual(rpg.talentPerks(hero), { startBlock: 8 });
+  // (the class strength - the warrior breaks armor - and the talent)
+  assert.deepStrictEqual(rpg.talentPerks(hero), { pierce: 0.5, startBlock: 8 });
   // In a fight: the talent's block at the start, a relic's damage, an upgraded strike
   const run = rpg.newRun(1, [{ name: "a", hero }]);
   rpg.enterRoom(run, 0);
@@ -699,4 +700,36 @@ test("rpg: co-op - one opens a party, another joins, the leader starts (both pay
   assert.strictEqual(won.summary.rpg_bob.firstClear, Math.round((rpg.entryCost(1) * rpg.FIRST_CLEAR * rpg.partyBonus(2)) / 100) * 100);
   assert.ok(won.summary.rpg_bob.xp > 0);
   assert.strictEqual(testMode.balance("rpg_bob"), bobBefore - rpg.entryCost(1) + won.run.pot + won.summary.rpg_bob.firstClear);
+});
+
+test("rpg: the fight rules - the hand stays (filled up to 5), poison stacks and burns don't, class strengths, cards with the character's numbers", () => {
+  const foe = { effects: {} };
+  rpg.afflict(foe, "poison", 3, 10);
+  rpg.afflict(foe, "poison", 2, 5);
+  assert.deepStrictEqual(foe.effects.poison, { turns: 3, dmg: 15 });
+  rpg.afflict(foe, "burn", 2, 8);
+  rpg.afflict(foe, "burn", 1, 6);
+  assert.deepStrictEqual(foe.effects.burn, { turns: 2, dmg: 8 });
+  // (the strengths: the paladin's thorns grow with the armor)
+  assert.strictEqual(rpg.thornsOf({ def: 20, perks: rpg.CLASSES.paladin.strength.perks }), 20);
+  assert.ok(rpg.CLASSES.warrior.strength.perks.pierce > 0 && rpg.CLASSES.mage.strength.perks.aoe > 0);
+  // (the texts: numbers, no shares)
+  const texts = rpg.liveTexts({ atk: 50, def: 10, agi: 0, maxHp: 200, perks: {} }, ["strike", "defend", "heavyslash", "mend", "strike+"]);
+  assert.strictEqual(texts.strike, "Deal 50 damage.");
+  assert.strictEqual(texts["strike+"], "Deal 70 damage.");
+  assert.match(texts.defend, /block 16\./);
+  assert.match(texts.mend, /heals 30 HP/);
+  // The hand stays from turn to turn - drawn up to 5
+  const hero = rpg.newHero("warrior");
+  const run = rpg.newRun(1, [{ name: "a", hero }]);
+  rpg.enterRoom(run, 0, () => 0.5);
+  const me = run.heroes[0];
+  assert.strictEqual(me.hand.length, 5);
+  me.energy = 99;
+  rpg.play(run, "a", { uid: me.hand.find((c) => rpg.cardInfo(c.id).target != "foe").uid, ally: "a" }, () => 0.5);
+  const kept = me.hand.map((c) => c.uid);
+  run.monsters.forEach((m) => (m.atk = 0));
+  rpg.monsterTurn(run, () => 0.5);
+  assert.strictEqual(me.hand.length, 5);
+  assert.deepStrictEqual(me.hand.slice(0, 4).map((c) => c.uid), kept);
 });

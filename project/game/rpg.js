@@ -62,11 +62,11 @@ const REWARD = { fight: 0.21, hard: 0.4, elite: 0.4, boss: 1, chest: 0.17, trap:
 // main: the stat its levels count 1.5x for; hp, atk: times the stats; def, luck, agi: added;
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
-  warrior: { name: "Warrior", icon: "⚔️", main: "atk", about: "Strength - heavy blows, cleaves the pack, a war cry for the party", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mystic: "titanswrath" },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", about: "Armor - draws the attacks, shields the party, judges with his armor", hp: 1.15, atk: 0.9, def: 4, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mystic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", about: "Vitality - heals, smites the undead, brings the fallen back", hp: 1.2, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mystic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", about: "Agility - dodges, poisons, then strikes where it hurts", hp: 0.95, atk: 1.05, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mystic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", about: "Luck - spells that crit, fire on all foes, frost that weakens", hp: 0.85, atk: 1.15, def: 0, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mystic: "timewarp" },
+  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore half of a foe's armor.", perks: { pierce: 0.5 } }, about: "Strength - heavy blows, cleaves the pack, a war cry for the party", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mystic: "titanswrath" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Who hits you takes your armor as damage back. 20% more block.", perks: { thornsDef: 1, block: 0.2 } }, about: "Armor - draws the attacks, shields the party, judges with his armor", hp: 1.15, atk: 0.9, def: 4, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mystic: "divine" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Heals are 20% stronger, attacks heal you for 15% of the damage.", perks: { heal: 0.2, lifesteal: 0.15 } }, about: "Vitality - heals, smites the undead, brings the fallen back", hp: 1.2, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mystic: "resurrection" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison 30% stronger, +5% critical hits.", perks: { poison: 0.3, crit: 5 } }, about: "Agility - dodges, poisons, then strikes where it hurts", hp: 0.95, atk: 1.05, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mystic: "deathmark" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe deal 30% more.", perks: { aoe: 0.3 } }, about: "Luck - spells that crit, fire on all foes, frost that weakens", hp: 0.85, atk: 1.15, def: 0, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mystic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -74,7 +74,7 @@ const CLASS_IDS = Object.keys(CLASSES);
 // down), "none"; exhaust: gone for the rest of the fight once played
 const CARDS = {
   strike: { name: "Strike", icon: "⚔️", cost: 1, type: "attack", target: "foe", text: "Deal 100% damage." },
-  defend: { name: "Defend", icon: "🛡️", cost: 1, type: "skill", target: "none", text: "Block 6 + armor." },
+  defend: { name: "Defend", icon: "🛡️", cost: 1, type: "skill", target: "ally", text: "You or an ally block 6 + armor." },
   focus: { name: "Focus", icon: "🧠", cost: 0, type: "skill", target: "none", exhaust: true, text: "Draw 2 cards. Exhaust." },
   secondwind: { name: "Second Wind", icon: "🌬️", cost: 1, type: "skill", target: "none", text: "Block 5 + armor, heal 6% HP." },
   adrenaline: { name: "Adrenaline", icon: "💉", cost: 0, type: "skill", target: "none", exhaust: true, text: "+1 mana, draw 1. Exhaust." },
@@ -439,8 +439,9 @@ function partyBonus(size) {
 // (mana on the first turn), draw (cards a turn), attack (more damage, share), firstStrike (the first attack of a
 // turn, share), lowHp (damage below half HP, share), crit (critical chance, %), lifesteal (of attack damage),
 // thorns (damage back when hit), block (more block, share), heal (more healing, share), afterFight (healed after a
-// fight won, share of max HP), poison (stronger poison, share), maxHp (share), agi (dodge, %)
-const PERK_KEYS = ["startBlock", "firstMana", "draw", "attack", "firstStrike", "lowHp", "crit", "lifesteal", "thorns", "block", "heal", "afterFight", "poison", "maxHp", "agi"];
+// fight won, share of max HP), poison (stronger poison, share), maxHp (share), agi (dodge, %), pierce (share of
+// a foe's armor ignored), thornsDef (thorns: share of the armor), aoe (more damage on hits to every foe)
+const PERK_KEYS = ["pierce", "thornsDef", "aoe", "startBlock", "firstMana", "draw", "attack", "firstStrike", "lowHp", "crit", "lifesteal", "thorns", "block", "heal", "afterFight", "poison", "maxHp", "agi"];
 
 // Talents: every class at hero level 3, 6 and 10 - one of two
 const TALENT_LEVELS = [3, 6, 10, 15, 20, 25, 30, 40, 50];
@@ -449,19 +450,19 @@ const TALENTS = {
     [{ id: "ironskin", name: "Iron Skin", icon: "🪨", text: "Start every fight with 8 block.", perks: { startBlock: 8 } }, { id: "rhythm", name: "Battle Rhythm", icon: "🥁", text: "Your first attack each turn deals 50% more.", perks: { firstStrike: 0.5 } }],
     [{ id: "berserk", name: "Berserker", icon: "😤", text: "35% more damage below half HP.", perks: { lowHp: 0.35 } }, { id: "recovery", name: "Recovery", icon: "🩹", text: "Heal 12% after every fight won.", perks: { afterFight: 0.12 } }],
     [{ id: "warlord", name: "Warlord", icon: "👑", text: "+1 mana on the first turn of every fight.", perks: { firstMana: 1 } }, { id: "bloodthirst", name: "Bloodthirst", icon: "🩸", text: "Heal 15% of the damage of your attacks.", perks: { lifesteal: 0.15 } }],
-    [{ id: "juggernaut", name: "Juggernaut", icon: "🚂", text: "+10% max HP.", perks: {maxHp: 0.1} }, { id: "cleaver", name: "Cleaver", icon: "🪓", text: "10% more damage.", perks: {attack: 0.1} }],
+    [{ id: "juggernaut", name: "Juggernaut", icon: "🚂", text: "+10% max HP.", perks: {maxHp: 0.1} }, { id: "sunder", name: "Sunder", icon: "🪓", text: "Ignore 25% more armor.", perks: {pierce: 0.25} }],
     [{ id: "thickhide", name: "Thick Hide", icon: "🦏", text: "Start every fight with 6 block.", perks: {startBlock: 6} }, { id: "fury", name: "Fury", icon: "😡", text: "25% more damage below half HP.", perks: {lowHp: 0.25} }],
     [{ id: "secondwind", name: "Second Wind", icon: "🌬️", text: "Heal 8% after every fight won.", perks: {afterFight: 0.08} }, { id: "sharpedge", name: "Sharp Edge", icon: "🔪", text: "+8% critical hits.", perks: {crit: 8} }],
-    [{ id: "spikedplates", name: "Spiked Plates", icon: "🌵", text: "Who hits you takes 5 damage.", perks: {thorns: 5} }, { id: "momentum", name: "Momentum", icon: "🥁", text: "Your first attack each turn deals 30% more.", perks: {firstStrike: 0.3} }],
+    [{ id: "armorbreaker", name: "Shatter", icon: "🔨", text: "Ignore 25% more armor.", perks: {pierce: 0.25} }, { id: "momentum", name: "Momentum", icon: "🥁", text: "Your first attack each turn deals 30% more.", perks: {firstStrike: 0.3} }],
     [{ id: "colossus", name: "Colossus", icon: "🗿", text: "+15% max HP.", perks: {maxHp: 0.15} }, { id: "veteran", name: "Veteran", icon: "🎖️", text: "Draw 1 more card every turn.", perks: {draw: 1} }],
     [{ id: "titan", name: "Titan", icon: "🌋", text: "20% more damage.", perks: {attack: 0.2} }, { id: "undying", name: "Undying", icon: "❤️‍🔥", text: "Heal 12% of the damage of your attacks.", perks: {lifesteal: 0.12} }],
   ],
   paladin: [
     [{ id: "bastion", name: "Bastion", icon: "🏰", text: "30% more block from your cards.", perks: { block: 0.3 } }, { id: "aegis", name: "Aegis", icon: "🛡️", text: "Start every fight with 10 block.", perks: { startBlock: 10 } }],
-    [{ id: "spikes", name: "Spiked Armor", icon: "🌵", text: "Who hits you takes 6 damage.", perks: { thorns: 6 } }, { id: "faith", name: "Faith", icon: "🙏", text: "Heal 15% after every fight won.", perks: { afterFight: 0.15 } }],
-    [{ id: "crusader", name: "Crusader", icon: "⚔️", text: "25% more damage.", perks: { attack: 0.25 } }, { id: "vigil", name: "Vigil", icon: "❤️", text: "+20% max HP.", perks: { maxHp: 0.2 } }],
+    [{ id: "spikes", name: "Spiked Armor", icon: "🌵", text: "Thorns +10 damage.", perks: { thorns: 10 } }, { id: "faith", name: "Faith", icon: "🙏", text: "Heal 15% after every fight won.", perks: { afterFight: 0.15 } }],
+    [{ id: "crusader", name: "Crusader", icon: "⚔️", text: "Thorns +50% of your armor.", perks: { thornsDef: 0.5 } }, { id: "vigil", name: "Vigil", icon: "❤️", text: "+20% max HP.", perks: { maxHp: 0.2 } }],
     [{ id: "shieldwall", name: "Shield Wall", icon: "🧱", text: "15% more block from your cards.", perks: {block: 0.15} }, { id: "devout", name: "Devout", icon: "📿", text: "20% more healing.", perks: {heal: 0.2} }],
-    [{ id: "rampart", name: "Rampart", icon: "🏯", text: "Start every fight with 8 block.", perks: {startBlock: 8} }, { id: "retribution", name: "Retribution", icon: "⚡", text: "Who hits you takes 5 damage.", perks: {thorns: 5} }],
+    [{ id: "rampart", name: "Rampart", icon: "🏯", text: "Start every fight with 8 block.", perks: {startBlock: 8} }, { id: "retribution", name: "Retribution", icon: "⚡", text: "Thorns +50% of your armor.", perks: {thornsDef: 0.5} }],
     [{ id: "holystrength", name: "Holy Strength", icon: "💪", text: "10% more damage.", perks: {attack: 0.1} }, { id: "steadfast", name: "Steadfast", icon: "⚓", text: "+10% max HP.", perks: {maxHp: 0.1} }],
     [{ id: "blessed", name: "Blessed", icon: "🌟", text: "Heal 10% after every fight won.", perks: {afterFight: 0.1} }, { id: "zealot", name: "Zealot", icon: "🔥", text: "Your first attack each turn deals 30% more.", perks: {firstStrike: 0.3} }],
     [{ id: "guardian", name: "Guardian", icon: "🛡️", text: "20% more block from your cards.", perks: {block: 0.2} }, { id: "templar", name: "Templar", icon: "✝️", text: "+8% critical hits.", perks: {crit: 8} }],
@@ -493,11 +494,11 @@ const TALENTS = {
     [{ id: "insight", name: "Insight", icon: "📖", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "arcane", name: "Arcane Power", icon: "🔮", text: "20% more damage.", perks: { attack: 0.2 } }],
     [{ id: "fortune", name: "Fortune", icon: "🍀", text: "+15% critical hits.", perks: { crit: 15 } }, { id: "wellspring", name: "Wellspring", icon: "💧", text: "+1 mana on the first turn of every fight.", perks: { firstMana: 1 } }],
     [{ id: "archmage", name: "Archmage", icon: "🧙", text: "30% more damage.", perks: { attack: 0.3 } }, { id: "ward", name: "Ward", icon: "🔰", text: "Start every fight with 10 block.", perks: { startBlock: 10 } }],
-    [{ id: "spellpower", name: "Spellpower", icon: "🔮", text: "10% more damage.", perks: {attack: 0.1} }, { id: "manashield", name: "Mana Shield", icon: "🔷", text: "Start every fight with 6 block.", perks: {startBlock: 6} }],
+    [{ id: "spellpower", name: "Spellstorm", icon: "🌪️", text: "Hits on every foe deal 20% more.", perks: {aoe: 0.2} }, { id: "manashield", name: "Mana Shield", icon: "🔷", text: "Start every fight with 6 block.", perks: {startBlock: 6} }],
     [{ id: "clarity", name: "Clarity", icon: "💎", text: "+1 mana on the first turn of every fight.", perks: {firstMana: 1} }, { id: "precision", name: "Precision", icon: "🎯", text: "+8% critical hits.", perks: {crit: 8} }],
     [{ id: "arcaneskin", name: "Arcane Skin", icon: "🧿", text: "+10% max HP.", perks: {maxHp: 0.1} }, { id: "overload", name: "Overload", icon: "⚡", text: "Your first attack each turn deals 30% more.", perks: {firstStrike: 0.3} }],
     [{ id: "battlemage", name: "Battlemage", icon: "🛡️", text: "15% more block from your cards.", perks: {block: 0.15} }, { id: "spellweaver", name: "Spellweaver", icon: "🕸️", text: "Draw 1 more card every turn.", perks: {draw: 1} }],
-    [{ id: "archon", name: "Archon", icon: "🌌", text: "15% more damage.", perks: {attack: 0.15} }, { id: "timeweaver", name: "Timeweaver", icon: "⏳", text: "+1 mana on the first turn of every fight.", perks: {firstMana: 1} }],
+    [{ id: "archon", name: "Cataclysm", icon: "☄️", text: "Hits on every foe deal 30% more.", perks: {aoe: 0.3} }, { id: "timeweaver", name: "Timeweaver", icon: "⏳", text: "+1 mana on the first turn of every fight.", perks: {firstMana: 1} }],
     [{ id: "grandmagus", name: "Grand Magus", icon: "🧙", text: "+12% critical hits.", perks: {crit: 12} }, { id: "infinity", name: "Infinity", icon: "♾️", text: "20% more damage.", perks: {attack: 0.2} }],
   ],
 };
@@ -523,7 +524,7 @@ const RELIC_IDS = Object.keys(RELICS);
 
 // The traits of an elite: one of them
 const AFFIXES = {
-  armored: { name: "Armored", icon: "🛡️", text: "Takes 30% less damage." },
+  armored: { name: "Armored", icon: "🛡️", text: "+30% armor." },
   enraged: { name: "Enraged", icon: "😡", text: "Hits 30% harder." },
   regen: { name: "Regenerating", icon: "💚", text: "Heals 8% every turn." },
 };
@@ -702,10 +703,10 @@ function pickTalent(hero, tier, id) {
   return null;
 }
 
-// The perks of a character's talents
+// The perks of a character: its class's strength, its talents
 function talentPerks(hero, cls = hero.cls) {
   const char = charOf(hero, cls);
-  const perks = {};
+  const perks = addPerks({}, CLASSES[cls] ? CLASSES[cls].strength.perks : {});
   (TALENTS[cls] || []).forEach((options, tier) => {
     const talent = options.find((t) => t.id == char.talents[tier]);
     if (talent) addPerks(perks, talent.perks);
@@ -773,6 +774,8 @@ function heroView(hero) {
     deckMax: deckLimits(hero).max,
     deckMin: deckLimits(hero).min,
     pool: hero.cls ? poolOf(hero.cls) : [],
+    texts: hero.cls ? liveTexts({ ...statsOf(hero), perks: talentPerks(hero) }, poolOf(hero.cls)) : {},
+    strength: hero.cls ? CLASSES[hero.cls].strength : null,
     level: char.level,
     xp: char.xp,
     xpNeed: xpNeed(char.level),
@@ -936,6 +939,10 @@ function affixRoll() {
   return ids[affixCount++ % ids.length];
 }
 
+// Monster armor: per floor deeper, at most
+const ARMOR_FLOOR = 0.008;
+const ARMOR_MAX = 0.6;
+
 const RANKS = {
   normal: { id: "normal", prefix: "", hp: 1, atk: 1 },
   hard: { id: "normal", prefix: "", hp: 1.35, atk: 1.15 },
@@ -950,14 +957,21 @@ function monster(floor, size, kind, rank) {
   const max = Math.max(1, Math.round(hp));
   // (an elite also smashes)
   const moves = rank.id != "normal" && !kind.moves.includes("smash") ? [...kind.moves, "smash"] : kind.moves;
-  const foe = { id: "m" + ++monsterCount, name: rank.prefix + kind.name, icon: kind.icon, hp: max, maxHp: max, atk: Math.max(1, Math.round(atk)), dodge: kind.dodge || 0, undead: !!kind.undead, moves, rank: rank.id, effects: {}, intent: null, affix: null };
+  const foe = { id: "m" + ++monsterCount, name: rank.prefix + kind.name, icon: kind.icon, hp: max, maxHp: max, atk: Math.max(1, Math.round(atk)), armor: armorOf(floor, kind, rank), dodge: kind.dodge || 0, undead: !!kind.undead, moves, rank: rank.id, effects: {}, intent: null, affix: null };
   // (an elite has a trait from floor 3 on: armored, enraged or regenerating)
   if ((rank.id == "elite" && floor >= 3) || rank.id == "boss") {
     foe.affix = affixRoll();
     foe.name = AFFIXES[foe.affix].name + " " + foe.name;
     if (foe.affix == "enraged") foe.atk = Math.round(foe.atk * 1.3);
+    if (foe.affix == "armored") foe.armor = Math.min(ARMOR_MAX, foe.armor + 0.3);
   }
   return foe;
+}
+
+// A monster's armor: the share of a hit it takes off - more deeper down, on elites and bosses, on the armored kinds
+function armorOf(floor, kind, rank) {
+  const extra = rank.id == "boss" ? 0.15 : rank.id == "elite" ? 0.1 : 0;
+  return Math.min(ARMOR_MAX, Math.round((ARMOR_FLOOR * (floor - 1) + extra + (kind.armor || 0)) * 100) / 100);
 }
 
 // The monsters of a fight: 1 to 3 (more with a bigger party, a hard fight one more) - an elite with a few others
@@ -1487,6 +1501,14 @@ function rewardFor(hero, rng, count = 3) {
   return cards;
 }
 
+// Poison stacks (the damage adds up, the longer time counts); a burn doesn't - a new one only replaces a weaker one
+function afflict(one, kind, turns, dmg) {
+  const old = one.effects[kind];
+  if (kind == "poison" && old) one.effects.poison = { turns: Math.max(old.turns, turns), dmg: old.dmg + dmg };
+  else if (old) one.effects[kind] = { turns: Math.max(old.turns, turns), dmg: Math.max(old.dmg, dmg) };
+  else one.effects[kind] = { turns, dmg };
+}
+
 /* ---------- A fight ---------- */
 
 let cardCount = 0;
@@ -1502,7 +1524,7 @@ function drawCards(hero, count, rng) {
   }
 }
 
-// A new turn of the heroes: block gone, full energy, 5 new cards; the monsters show what they do next
+// A new turn of the heroes: block gone, full energy, the hand filled up to 5; the monsters show what they do next
 function startRound(run, rng) {
   run.turn++;
   const first = run.turn == 1;
@@ -1513,7 +1535,7 @@ function startRound(run, rng) {
     hero.bonusEnergy = 0;
     hero.ended = false;
     hero.attacked = false;
-    drawCards(hero, HAND + perk(hero, "draw"), rng);
+    drawCards(hero, Math.max(0, HAND + perk(hero, "draw") - hero.hand.length), rng);
   }
   planIntents(run, rng);
 }
@@ -1566,7 +1588,9 @@ function strike(run, hero, foe, power, rng, options = {}) {
   const bonus = 1 + perk(hero, "attack") + (hero.firstAttack ? perk(hero, "firstStrike") : 0) + (hero.hp < hero.maxHp / 2 ? perk(hero, "lowHp") : 0);
   let damage = hero.atk * between(rng, 0.9, 1.1) * power * bonus * (crit ? CRIT : 1) * (hero.blessed ? SHRINE_POWER : 1) * (hero.effects.might ? MIGHT : 1);
   if (foe.defending) damage *= 0.5;
-  if (foe.affix == "armored") damage *= 0.7;
+  // (armor - the warrior's hits break through a part of it; a hit on every foe: the mage's strength)
+  damage *= 1 - (foe.armor || 0) * Math.max(0, 1 - perk(hero, "pierce"));
+  if (options.aoe) damage *= 1 + perk(hero, "aoe");
   damage = Math.max(1, Math.round(damage));
   foe.hp = Math.max(0, foe.hp - damage);
   say(run, `${hero.name}${options.verb ? " " + options.verb : " hits"} ${foe.icon} ${foe.name} for ${damage}${crit ? " (critical!)" : ""}${foe.defending ? " (blocked half)" : ""}.`);
@@ -1602,10 +1626,11 @@ function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
   say(run, `${source} hits ${hero.name} for ${damage}${blocked ? ` (${blocked} blocked)` : ""}.`);
   fx(run, { k: "hit", to: hero.name, n: damage, b: blocked });
   // (thorns: who hits pays)
-  if (foe && perk(hero, "thorns") && !foe.down) {
-    foe.hp = Math.max(0, foe.hp - perk(hero, "thorns"));
-    say(run, `${foe.icon} ${foe.name} takes ${perk(hero, "thorns")} from ${hero.name}'s thorns 🌵.`);
-    fx(run, { k: "hit", to: foe.id, n: perk(hero, "thorns") });
+  const thorns = thornsOf(hero);
+  if (foe && thorns && !foe.down) {
+    foe.hp = Math.max(0, foe.hp - thorns);
+    say(run, `${foe.icon} ${foe.name} takes ${thorns} from ${hero.name}'s thorns 🌵.`);
+    fx(run, { k: "hit", to: foe.id, n: thorns, thorns: true });
     if (foe.hp == 0) {
       foe.down = true;
       say(run, `${foe.icon} ${foe.name} is defeated.`);
@@ -1620,6 +1645,11 @@ function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
     say(run, `${hero.name} is down!`);
   }
   return damage;
+}
+
+// Thorns: the damage back to who hits - a flat part, a share of the armor (the paladin)
+function thornsOf(hero) {
+  return Math.round(perk(hero, "thorns") + perk(hero, "thornsDef") * hero.def);
 }
 
 function healHero(run, hero, amount) {
@@ -1684,7 +1714,7 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
     case "strike":
       return strike(run, hero, foe, (1) * up, rng);
     case "defend":
-      return say(run, `${hero.name} blocks ${block(hero, 6 + hero.def)}.`);
+      return say(run, `${friend == hero ? hero.name : hero.name + " shields " + friend.name}: blocks ${block(friend, 6 + hero.def)}.`);
     case "focus":
       return drawCards(hero, 2, rng);
     case "secondwind":
@@ -1702,7 +1732,7 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
       }
       return;
     case "cleave":
-      for (const one of foes) strike(run, hero, one, (0.7) * up, rng, { sure: true, verb: "cleaves" });
+      for (const one of foes) strike(run, hero, one, (0.7) * up, rng, { sure: true, aoe: true, verb: "cleaves" });
       return;
     case "battlecry":
       for (const one of alive(run.heroes)) one.effects.might = 2;
@@ -1724,14 +1754,14 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
       for (const one of alive(run.heroes)) block(one, 5 + hero.def);
       return say(run, `${hero.name} raises a holy shield over the party 🛡️.`);
     case "consecrate":
-      for (const one of foes) strike(run, hero, one, (0.5) * up, rng, { sure: true, verb: "burns" });
-      for (const one of alive(run.heroes)) heal(one, one.maxHp * 0.05);
+      for (const one of foes) strike(run, hero, one, (0.5) * up, rng, { sure: true, aoe: true, verb: "burns" });
+      for (const one of alive(run.heroes)) heal(one, hero.maxHp * 0.05);
       return;
     case "bulwark":
       block(hero, 10 + 2 * hero.def);
       return say(run, `${hero.name} braces behind the shield 🏰.`);
     case "heal":
-      return say(run, `${hero.name} heals ${friend.name} for ${heal(friend, friend.maxHp * 0.25)} 💚.`);
+      return say(run, `${hero.name} heals ${friend.name} for ${heal(friend, hero.maxHp * 0.25)} 💚.`);
     case "smite":
       return strike(run, hero, foe, (foe.undead ? 2.5 : 1.2) * up, rng, { sure: true, verb: "smites" });
     case "revive":
@@ -1740,7 +1770,7 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
       fallen.ended = true;
       return say(run, `${hero.name} brings ${fallen.name} back 🕊️!`);
     case "prayer":
-      for (const one of alive(run.heroes)) heal(one, one.maxHp * 0.12);
+      for (const one of alive(run.heroes)) heal(one, hero.maxHp * 0.12);
       return say(run, `${hero.name} prays - the party heals 🙏.`);
     case "blessing":
       friend.effects.might = 2;
@@ -1748,7 +1778,7 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
       return say(run, `${hero.name} blesses ${friend.name} 🌞.`);
     case "poisonblade":
       if (strike(run, hero, foe, (0.6) * up, rng, { sure: true, verb: "cuts" }) && !foe.down) {
-        foe.effects.poison = { turns: 3, dmg: Math.max(1, Math.round(hero.atk * 0.45 * venom)) };
+        afflict(foe, "poison", 3, Math.max(1, Math.round(hero.atk * 0.45 * venom)));
         say(run, `${foe.icon} ${foe.name} is poisoned ☠️.`);
       }
       return;
@@ -1758,7 +1788,7 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
       hero.evading = true;
       return say(run, `${hero.name} vanishes in smoke 💨.`);
     case "envenom":
-      for (const one of foes) one.effects.poison = { turns: 2, dmg: Math.max(1, Math.round(hero.atk * 0.4 * venom)) };
+      for (const one of foes) afflict(one, "poison", 2, Math.max(1, Math.round(hero.atk * 0.4 * venom)));
       return say(run, `${hero.name} poisons every foe 🧪.`);
     case "flurry":
       for (let i = 0; i < 3; i++) {
@@ -1774,7 +1804,7 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
       return;
     case "fireball":
       for (const one of foes) {
-        if (strike(run, hero, one, (0.7) * up, rng, { sure: true, verb: "burns" }) && !one.down) one.effects.burn = { turns: 2, dmg: Math.max(1, Math.round(hero.atk * 0.3)) };
+        if (strike(run, hero, one, (0.7) * up, rng, { sure: true, aoe: true, verb: "burns" }) && !one.down) afflict(one, "burn", 2, Math.max(1, Math.round(hero.atk * 0.3)));
       }
       return;
     case "barrier":
@@ -1783,12 +1813,12 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
     case "arcanebolt":
       return strike(run, hero, foe, (1.5) * up, rng, { sure: true, verb: "blasts" });
     case "titanswrath":
-      for (const one of foes) strike(run, hero, one, 3.5 * up, rng, { sure: true, verb: "erupts on" });
+      for (const one of foes) strike(run, hero, one, 3.5 * up, rng, { sure: true, aoe: true, verb: "erupts on" });
       return;
     case "divine":
       for (const one of alive(run.heroes)) {
         block(one, 30 + hero.def);
-        heal(one, one.maxHp * 0.3);
+        heal(one, hero.maxHp * 0.3);
       }
       return say(run, `${hero.name} calls down a divine intervention 👼!`);
     case "resurrection":
@@ -1797,7 +1827,7 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
         one.hp = Math.round(one.maxHp * 0.6);
         one.ended = true;
       }
-      for (const one of alive(run.heroes)) heal(one, one.maxHp * 0.25);
+      for (const one of alive(run.heroes)) heal(one, hero.maxHp * 0.25);
       return say(run, `${hero.name}: a resurrection 🌅!`);
     case "deathmark":
       if (foe.hp < foe.maxHp / 2 && foe.rank != "boss") {
@@ -1811,7 +1841,7 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
       drawCards(hero, 4, rng);
       return say(run, `${hero.name} warps time ⏳.`);
     case "meteor":
-      for (const one of foes) strike(run, hero, one, (1.6) * up, rng, { sure: true, verb: "crushes" });
+      for (const one of foes) strike(run, hero, one, (1.6) * up, rng, { sure: true, aoe: true, verb: "crushes" });
       return;
     // The neutral cards of the base set
     case "shrug":
@@ -1849,7 +1879,7 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
       }
       return;
     case "whirlwind":
-      for (const one of foes) strike(run, hero, one, 1.1 * up, rng, { sure: true, verb: "whirls into" });
+      for (const one of foes) strike(run, hero, one, 1.1 * up, rng, { sure: true, aoe: true, verb: "whirls into" });
       return;
     case "impervious":
       return say(run, `${hero.name} is impervious: blocks ${block(hero, 25 + 2 * hero.def)} 🗿.`);
@@ -1860,15 +1890,15 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
     case "aegis":
       return say(run, `${hero.name} shields ${friend.name}: blocks ${block(friend, 12 + hero.def)} 🪬.`);
     case "retribution":
-      for (const one of foes) strike(run, hero, one, 0.7 * up, rng, { sure: true, verb: "punishes" });
+      for (const one of foes) strike(run, hero, one, 0.7 * up, rng, { sure: true, aoe: true, verb: "punishes" });
       return block(hero, 4 + hero.def);
     case "layhands":
-      return say(run, `${hero.name} lays hands on ${friend.name}: +${heal(friend, friend.maxHp * 0.45)} HP 🤲.`);
+      return say(run, `${hero.name} lays hands on ${friend.name}: +${heal(friend, hero.maxHp * 0.45)} HP 🤲.`);
     // The cleric
     case "holylight": {
       strike(run, hero, foe, 0.9 * up, rng, { sure: true, verb: "lights up" });
       const weakest = alive(run.heroes).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-      if (weakest) heal(weakest, weakest.maxHp * 0.08);
+      if (weakest) heal(weakest, hero.maxHp * 0.08);
       return;
     }
     case "ward":
@@ -1877,9 +1907,9 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
     case "purify":
       delete friend.effects.poison;
       delete friend.effects.burn;
-      return say(run, `${hero.name} purifies ${friend.name}: +${heal(friend, friend.maxHp * 0.12)} HP 💧.`);
+      return say(run, `${hero.name} purifies ${friend.name}: +${heal(friend, hero.maxHp * 0.12)} HP 💧.`);
     case "wrath":
-      for (const one of foes) strike(run, hero, one, (one.undead ? 2.5 : 1.1) * up, rng, { sure: true, verb: "smites" });
+      for (const one of foes) strike(run, hero, one, (one.undead ? 2.5 : 1.1) * up, rng, { sure: true, aoe: true, verb: "smites" });
       return;
     // The rogue
     case "daggers":
@@ -1909,7 +1939,7 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
       return say(run, `${hero.name} wears ice 🧊${chilled ? ` - ${chilled.icon} ${chilled.name} is chilled` : ""}.`);
     }
     case "chainlightning": {
-      for (const one of foes) strike(run, hero, one, 0.9 * up, rng, { sure: true, verb: "shocks" });
+      for (const one of foes) strike(run, hero, one, 0.9 * up, rng, { sure: true, aoe: true, verb: "shocks" });
       const standing = alive(run.monsters);
       if (standing.length) {
         const stunned = pick(rng, standing);
@@ -1920,10 +1950,47 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
     }
     case "blizzard":
       for (const one of foes) {
-        if (strike(run, hero, one, 0.8 * up, rng, { sure: true, verb: "freezes" }) && !one.down) one.effects.chill = 2;
+        if (strike(run, hero, one, 0.8 * up, rng, { sure: true, aoe: true, verb: "freezes" }) && !one.down) one.effects.chill = 2;
       }
       return;
   }
+}
+
+// The texts of cards with a character's numbers (its damage, block, healing) instead of the shares: {id: text}
+// - stats: {atk, def, agi, maxHp, perks}; ids: the cards (an upgraded one "id+")
+function liveTexts(stats, ids) {
+  const texts = {};
+  for (const id of new Set(ids)) {
+    const card = CARDS[baseCard(id)];
+    if (!card) continue;
+    const up = isUpgraded(id) ? UPGRADE : 1;
+    const p = (key) => (stats.perks && stats.perks[key]) || 0;
+    const dmg = (power, fx = {}) => Math.max(1, Math.round((stats.atk * power + (fx.def || 0) * stats.def) * (1 + p("attack")) * (fx.to == "all" ? 1 + p("aoe") : 1) * up));
+    const n = {
+      dmg,
+      block: (fx) => Math.round((fx.block + (fx.def || 0) * stats.def + (fx.atk || 0) * stats.atk + (fx.agi || 0) * stats.agi) * (1 + p("block")) * up),
+      heal: (share) => Math.round(stats.maxHp * share * (1 + p("heal")) * up),
+      lose: (share) => Math.round(stats.maxHp * share),
+    };
+    if (card.fx) {
+      texts[id] = MORE_CARDS.textOf(card.fx, card.mystic ? "mystic" : card.exhaust, n);
+      continue;
+    }
+    const aoe = / to every foe/.test(card.text);
+    const hit = (pct) => dmg(pct / 100, { to: aoe ? "all" : "foe" });
+    const blockOf = (base, extra) => {
+      const more = !extra ? 0 : /twice/.test(extra) ? 2 * stats.def : /half/.test(extra) ? stats.def / 2 : /dodge/.test(extra) ? stats.agi / 2 : /(\d+)% of your attack/.test(extra) ? (stats.atk * Number(/(\d+)%/.exec(extra)[1])) / 100 : stats.def;
+      return Math.round((Number(base) + more) * (1 + p("block")) * up);
+    };
+    texts[id] = card.text
+      .replace(/Deal attack \+ armor as damage/, () => "Deal " + Math.round((stats.atk + stats.def) * (1 + p("attack")) * up) + " damage")
+      .replace(/(\d+)% damage/g, (_, v) => hit(Number(v)) + " damage")
+      .replace(/(- |poisoned: |at least )(\d+)%/g, (_, pre, v) => pre + hit(Number(v)))
+      .replace(/(blocks?|Block) (\d+)( \+ (?:armor|your armor|half the armor|twice the armor|\d+% of your attack|your dodge \/ 2))?/g, (_, verb, base, extra) => verb + " " + blockOf(base, extra))
+      .replace(/(heals?|Heal an ally|Heal) (\d+)%(?: HP| of its max HP)?/g, (_, verb, v) => verb + " " + Math.round(stats.maxHp * (Number(v) / 100) * (1 + p("heal")) * up) + " HP")
+      .replace(/Lose (\d+)% HP/, (_, v) => "Lose " + Math.round((stats.maxHp * Number(v)) / 100) + " HP");
+  }
+  return texts;
 }
 
 // A step of a card made of effects (game/rpg_cards.js)
@@ -1945,18 +2012,18 @@ function playFx(run, hero, fx, { foe, friend, up, venom, block, heal }, rng) {
     for (let i = 0; i < (fx.times || 1); i++) {
       for (const m of foesOf(fx.to)) {
         const power = (fx.bonusIf && state(m, fx.bonusIf) ? fx.bonus : fx.hit) + ((fx.def || 0) * hero.def) / Math.max(1, hero.atk);
-        strike(run, hero, m, power * up, rng, { sure: true });
+        strike(run, hero, m, power * up, rng, { sure: true, aoe: fx.to == "all" });
       }
     }
   } else if (fx.block != null) {
     const value = fx.block + (fx.def || 0) * hero.def + (fx.atk || 0) * hero.atk + (fx.agi || 0) * hero.agi;
     for (const one of heroesOf(fx.to)) block(one, value);
   } else if (fx.heal != null) {
-    for (const one of heroesOf(fx.to)) heal(one, one.maxHp * fx.heal);
+    for (const one of heroesOf(fx.to)) heal(one, hero.maxHp * fx.heal);
   } else if (fx.status) {
     for (const m of foesOf(fx.to)) {
-      if (fx.status == "poison") m.effects.poison = { turns: fx.turns || 3, dmg: Math.max(1, Math.round(hero.atk * 0.45 * venom)) };
-      else if (fx.status == "burn") m.effects.burn = { turns: fx.turns || 2, dmg: Math.max(1, Math.round(hero.atk * 0.3 * up)) };
+      if (fx.status == "poison") afflict(m, "poison", fx.turns || 3, Math.max(1, Math.round(hero.atk * 0.45 * venom)));
+      else if (fx.status == "burn") afflict(m, "burn", fx.turns || 2, Math.max(1, Math.round(hero.atk * 0.3 * up)));
       else if (fx.status == "stun") m.effects.stun = 1;
       else m.effects[fx.status] = fx.turns || 1;
     }
@@ -1993,7 +2060,7 @@ function monsterMove(run, foe, rng) {
       break;
     case "poison":
       if (hurt(run, target, damage, source, rng, foe) > 0 && !target.down) {
-        target.effects.poison = { turns: 3, dmg: Math.max(1, Math.round(foe.atk * 0.35)) };
+        afflict(target, "poison", 3, Math.max(1, Math.round(foe.atk * 0.35)));
         say(run, `${target.name} is poisoned ☠️.`);
       }
       break;
@@ -2011,7 +2078,7 @@ function monsterMove(run, foe, rng) {
     case "burn":
       say(run, `${source} sends a fire wave 🔥!`);
       for (const hero of heroes) {
-        if (hurt(run, hero, damage, source, rng, foe) > 0 && !hero.down) hero.effects.burn = { turns: 2, dmg: Math.max(1, Math.round(foe.atk * 0.25)) };
+        if (hurt(run, hero, damage, source, rng, foe) > 0 && !hero.down) afflict(hero, "burn", 2, Math.max(1, Math.round(foe.atk * 0.25)));
       }
       break;
     case "regen": {
@@ -2045,8 +2112,7 @@ function monsterMove(run, foe, rng) {
   }
 }
 
-// The monsters' turn: they do what they showed (stunned: nothing), poison and burns tick, the hands go to the
-// discard pile - then the heroes' next turn
+// The monsters' turn: they do what they showed (stunned: nothing), poison and burns tick - then the heroes' next turn
 function monsterTurn(run, rng = Math.random) {
   if (run.phase != "fight") return;
   fx(run, { k: "turn", side: "foes" });
@@ -2087,9 +2153,12 @@ function monsterTurn(run, rng = Math.random) {
   }
   for (const hero of run.heroes) {
     hero.taunting = hero.evading = false;
-    hero.discard.push(...hero.hand.map((c) => c.id));
-    hero.hand = [];
-    if (hero.down) hero.block = 0;
+    // (the hand stays - only the ones down lose theirs)
+    if (hero.down) {
+      hero.discard.push(...hero.hand.map((c) => c.id));
+      hero.hand = [];
+      hero.block = 0;
+    }
   }
   if (!alive(run.heroes).length) {
     run.phase = "lost";
@@ -2182,6 +2251,7 @@ function runView(run) {
       // (the piles to look at - the draw pile in no order: what comes next stays a secret)
       piles: { draw: [...h.draw].sort(), discard: h.discard, exhausted: h.exhausted },
       deck: h.deck,
+      texts: liveTexts(h, [...h.deck, ...h.hand.map((c) => c.id), ...h.draw, ...h.discard, ...h.exhausted]),
       reward: h.reward,
       relics: h.relics,
       relicChoice: h.relicChoice,
@@ -2195,6 +2265,7 @@ function runView(run) {
       hp: m.hp,
       maxHp: m.maxHp,
       atk: m.atk,
+      armor: m.armor || 0,
       rank: m.rank,
       undead: m.undead,
       affix: m.affix,
@@ -2368,4 +2439,7 @@ module.exports = {
   monsterTurn,
   runView,
   simulate,
+  afflict,
+  liveTexts,
+  thornsOf,
 };

@@ -77,7 +77,16 @@ function bar(value, max, className, extra) {
 function cardOf(id) {
   var plus = /\+$/.test(id);
   var card = rules.cards[id.replace(/\+$/, "")];
-  return plus ? Object.assign({}, card, { name: card.name + "+", text: card.text + " (+40%)", upgraded: true }) : card;
+  var live = liveText(id);
+  if (plus) return Object.assign({}, card, { name: card.name + "+", text: live || card.text + " (+40%)", upgraded: true });
+  return live ? Object.assign({}, card, { text: live }) : card;
+}
+
+// The text of a card with my numbers (the server writes them: my damage, block, healing)
+function liveText(id) {
+  var me = party && party.run && party.run.heroes.find((h) => h.name == myName);
+  if (me && me.texts && me.texts[id]) return me.texts[id];
+  return hero && hero.texts && hero.texts[id];
 }
 
 // A card (of the hand, a reward, the deck): the cost, the picture, the name, what it does
@@ -1756,6 +1765,7 @@ document.addEventListener("pointerup", (event) => {
     var t = cardOf(entry.id).target;
     if (t == "foe" && over.kind == "foe") socket.emit("play", { uid: current.uid, target: over.id });
     else if ((t == "ally" || t == "fallen") && over.kind == "hero") socket.emit("play", { uid: current.uid, ally: over.id });
+    else if (t == "ally" && over.kind != "foe") socket.emit("play", { uid: current.uid, ally: myName });
     else if (t == "none") socket.emit("play", { uid: current.uid });
   }
   aiming = null;

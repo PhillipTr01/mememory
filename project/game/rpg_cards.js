@@ -167,26 +167,28 @@ function amount(fx) {
   return parts.join(" + ");
 }
 
-function phrase(fx) {
+function phrase(fx, n) {
   if (fx.hit != null) {
-    let text = "deal " + pct(fx.hit) + " damage";
-    if (fx.def) text += " + " + (fx.def == 1 ? "your armor" : pct(fx.def) + " of your armor");
+    let text = "deal " + (n ? n.dmg(fx.hit, fx) : pct(fx.hit)) + " damage";
+    if (fx.def && !n) text += " + " + (fx.def == 1 ? "your armor" : pct(fx.def) + " of your armor");
     if (fx.to == "all") text += " to every foe";
     if (fx.to == "random") text += " to a random foe";
     if (fx.times) text += fx.times == 2 ? " twice" : " " + fx.times + " times";
-    if (fx.bonusIf) text += " - " + pct(fx.bonus) + " " + IF[fx.bonusIf];
+    if (fx.bonusIf) text += " - " + (n ? n.dmg(fx.bonus, fx) : pct(fx.bonus)) + " " + IF[fx.bonusIf];
     return text;
   }
   if (fx.block != null) {
-    if (fx.to == "ally") return "an ally blocks " + amount(fx);
-    if (fx.to == "party") return "every hero blocks " + amount(fx);
-    return "block " + amount(fx);
+    const value = n ? n.block(fx) : amount(fx);
+    if (fx.to == "ally") return "an ally blocks " + value;
+    if (fx.to == "party") return "the party blocks " + value;
+    return "block " + value;
   }
   if (fx.heal != null) {
-    if (fx.to == "ally") return "an ally heals " + pct(fx.heal) + " HP";
-    if (fx.to == "party") return "the party heals " + pct(fx.heal) + " HP";
-    if (fx.to == "weakest") return "the weakest hero heals " + pct(fx.heal) + " HP";
-    return "heal " + pct(fx.heal) + " HP";
+    const value = n ? n.heal(fx.heal) + " HP" : pct(fx.heal) + " of your max HP";
+    if (fx.to == "ally") return "an ally heals " + value;
+    if (fx.to == "party") return "the party heals " + value;
+    if (fx.to == "weakest") return "the weakest ally heals " + value;
+    return "heal " + value;
   }
   if (fx.status) {
     const [verb] = STATUS[fx.status];
@@ -200,14 +202,15 @@ function phrase(fx) {
   }
   if (fx.draw != null) return "draw " + fx.draw + " card" + (fx.draw == 1 ? "" : "s");
   if (fx.mana != null) return "+" + fx.mana + " mana";
-  if (fx.lose != null) return "lose " + pct(fx.lose) + " HP";
+  if (fx.lose != null) return "lose " + (n ? n.lose(fx.lose) : pct(fx.lose)) + " HP";
   if (fx.evade) return "nothing hits you this turn";
   return "";
 }
 
 // (exhaust: true - gone for the fight; "mystic" - gone for the run)
-function textOf(fx, exhaust) {
-  const text = fx.map(phrase).filter(Boolean).join(", ");
+// (n: the numbers of a character - its damage, block, healing - instead of the shares)
+function textOf(fx, exhaust, n) {
+  const text = fx.map((one) => phrase(one, n)).filter(Boolean).join(", ");
   return text.charAt(0).toUpperCase() + text.slice(1) + "." + (exhaust == "mystic" ? " Mystic." : exhaust ? " Exhaust." : "");
 }
 
@@ -231,6 +234,7 @@ const neutral = build(NEUTRAL);
 const byClass = Object.fromEntries(Object.entries(CLASS).map(([cls, list]) => [cls, build(list)]));
 
 module.exports = {
+  textOf,
   cards: Object.assign({}, neutral, ...Object.values(byClass)),
   neutral: Object.keys(neutral),
   classCards: Object.fromEntries(Object.entries(byClass).map(([cls, cards]) => [cls, Object.keys(cards)])),
