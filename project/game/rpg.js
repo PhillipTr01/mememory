@@ -423,7 +423,10 @@ const MONSTER_HP = 52;
 const MONSTER_HP_GROWTH = 1.17;
 const MONSTER_ATK = 11;
 const MONSTER_ATK_GROWTH = 1.14;
-const PARTY_HP = 0.7; // a monster has this much more HP per hero after the first
+// A bigger party: every monster has this much more HP and attack per hero after the first - and there are more of
+// them (a party is no easier than going alone)
+const PARTY_HP = 1.0;
+const PARTY_ATK = 0.15;
 
 /* ---------- Progression: hero levels, talents, relics, card upgrades ---------- */
 
@@ -503,7 +506,9 @@ function cardInfo(id) {
 function xpNeed(level) {
   return Math.round(40 * Math.pow(level, 1.5));
 }
-const XP = { fight: 10, hard: 16, elite: 30, boss: 60, floor: 25 };
+// XP: a fight won (by its kind), a floor cleared - x1.35 every floor deeper; at most HERO_LEVEL_MAX
+const XP = { fight: 3, hard: 5, elite: 10, boss: 20, floor: 8 };
+const HERO_LEVEL_MAX = 50;
 function xpFor(kind, floor) {
   return Math.round((XP[kind] || 0) * (1 + (floor - 1) * 0.35));
 }
@@ -640,7 +645,7 @@ function classPrice(hero) {
 function gainXp(char, xp) {
   char.xp += Math.max(0, Math.round(xp));
   let ups = 0;
-  while (char.xp >= xpNeed(char.level)) {
+  while (char.level < HERO_LEVEL_MAX && char.xp >= xpNeed(char.level)) {
     char.xp -= xpNeed(char.level);
     char.level++;
     char.points++;
@@ -905,7 +910,7 @@ const RANKS = {
 
 function monster(floor, size, kind, rank) {
   const hp = MONSTER_HP * Math.pow(MONSTER_HP_GROWTH, floor - 1) * kind.hp * (1 + PARTY_HP * (size - 1)) * rank.hp;
-  const atk = MONSTER_ATK * Math.pow(MONSTER_ATK_GROWTH, floor - 1) * kind.atk * rank.atk;
+  const atk = MONSTER_ATK * Math.pow(MONSTER_ATK_GROWTH, floor - 1) * kind.atk * rank.atk * (1 + PARTY_ATK * (size - 1));
   const max = Math.max(1, Math.round(hp));
   // (an elite also smashes)
   const moves = rank.id != "normal" && !kind.moves.includes("smash") ? [...kind.moves, "smash"] : kind.moves;
@@ -928,7 +933,7 @@ function monstersFor(floor, size, room, rng = Math.random) {
     return list;
   }
   const extra = room == "hard" ? 1 : 0;
-  const count = Math.min(4, 1 + Math.floor(rng() * 2) + Math.floor(size / 3) + extra);
+  const count = Math.min(5, 1 + Math.floor(rng() * 2) + Math.floor(size / 2) + extra);
   return Array.from({ length: count }, () => monster(floor, size, pick(rng, group), room == "hard" ? RANKS.hard : RANKS.normal));
 }
 
@@ -2282,6 +2287,7 @@ module.exports = {
   cardInfo,
   xpNeed,
   xpFor,
+  HERO_LEVEL_MAX,
   gainXp,
   pickTalent,
   talentPerks,

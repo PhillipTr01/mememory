@@ -99,6 +99,7 @@ module.exports = function (io, options = {}) {
       classes: rpg.CLASSES,
       classPrice: rpg.CLASS_PRICE,
       cardRarities: rpg.CARD_RARITIES,
+      heroLevelMax: rpg.HERO_LEVEL_MAX,
       deckMin: rpg.DECK_MIN,
       deckMax: rpg.DECK_MAX,
       deckLeast: rpg.DECK_LEAST,

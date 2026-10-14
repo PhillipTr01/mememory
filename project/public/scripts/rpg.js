@@ -440,7 +440,9 @@ function renderTop() {
   // The hero's level: XP from the fights - every level a stat point, talents at levels 3, 6, 10
   var xpBox = document.getElementById("rpgXp");
   xpBox.hidden = !picked;
-  if (picked) morphChildren(xpBox, [el("span", "rpg-level", "Lv " + hero.level), bar(hero.xp, hero.xpNeed, "xp", " XP"), hero.points ? el("span", "rpg-points", "+" + hero.points + " point" + (hero.points == 1 ? "" : "s")) : null]);
+  xpBox.title = "XP: every fight won (hard fights and the guarded gate more, deeper floors more) and every floor cleared (the first time: twice) - a run lost: half. Every level: a stat point; talents at levels 3, 6 and 10. At most level " + rules.heroLevelMax + ".";
+  var top = hero.level >= rules.heroLevelMax;
+  if (picked) morphChildren(xpBox, [el("span", "rpg-level", "Lv " + hero.level), top ? el("span", "rpg-max mm-muted small", "Max level") : bar(hero.xp, hero.xpNeed, "xp", " XP"), hero.points ? el("span", "rpg-points", "+" + hero.points + " point" + (hero.points == 1 ? "" : "s")) : null]);
   document.getElementById("rpgPotions").innerText = "🧪 " + hero.potions + " / " + rules.potionsMax;
   var buy = document.getElementById("rpgBuyPotion");
   buy.innerText = "+ 🪙 " + formatCoins(hero.potionPrice);
@@ -772,8 +774,10 @@ function openingNode() {
     node = el("div", "rpg-opening");
     node.id = "rpgOpening";
     node.addEventListener("click", onOpeningClick);
-    document.body.appendChild(node);
   }
+  // (full screen: inside it - else nothing of it would show)
+  var host = document.fullscreenElement || document.body;
+  if (node.parentNode != host) host.appendChild(node);
   return node;
 }
 
@@ -1060,9 +1064,13 @@ function renderDoor() {
         var row = el("div", "rpg-party");
         var faces = el("div", "rpg-party-faces");
         p.members.forEach((name) => faces.appendChild(createAvatar(name, "sm")));
+        // (the floor the party goes down to: a badge in front - out of reach: dimmed)
+        var badge = el("div", "rpg-party-floor" + (p.floor > hero.maxFloor ? " locked" : ""));
+        badge.append(el("span", "rpg-party-floor-label", "Floor"), el("b", "", String(p.floor)));
+        badge.title = "Entry 🪙 " + formatCoins(rules.entries[p.floor - 1]) + " each";
         var text = el("div", "rpg-party-text");
-        text.append(el("div", "rpg-party-name", p.leader + "'s party"), el("div", "mm-muted small", "Floor " + p.floor + " · " + p.members.length + " / " + p.size + " heroes"));
-        row.append(faces, text);
+        text.append(el("div", "rpg-party-name", p.leader + "'s party"), el("div", "mm-muted small", p.members.length + " / " + p.size + " heroes · entry 🪙 " + formatCoins(rules.entries[p.floor - 1])));
+        row.append(badge, faces, text);
         if (p.started) row.appendChild(el("span", "mm-muted small", "in the dungeon"));
         else if (p.floor > hero.maxFloor) row.appendChild(el("span", "mm-muted small", "floor not open"));
         else row.appendChild(button("Join", "join", { id: p.id, className: "small", disabled: p.members.length >= p.size }));

@@ -4202,3 +4202,38 @@ button.rpg-cardx.off {
     grid-template-columns: 1fr;
   }
 }
+
+/* An open party: the floor it goes down to */
+.rpg-party-floor {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 197, 66, 0.45);
+  background: rgba(245, 197, 66, 0.1);
+  color: var(--rpg-gold);
+  line-height: 1;
+}
+
+.rpg-party-floor b {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.rpg-party-floor-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.rpg-party-floor.locked {
+  border-color: var(--mm-border);
+  background: var(--rpg-surface);
+  color: var(--mm-muted);
+}
