@@ -4073,3 +4073,132 @@ button.rpg-cardx.off {
   content: "• ";
   color: var(--rpg-gold);
 }
+
+/* ======================= 18. Two ways down: alone or with a party ======================= */
+
+.rpg-modes {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 0.6rem;
+}
+
+.rpg-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--mm-border);
+  background: var(--rpg-surface);
+  color: var(--mm-text);
+  font: inherit;
+  text-align: left;
+}
+
+.rpg-mode-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.rpg-mode-name {
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.rpg-mode-note {
+  font-size: 0.78rem;
+  color: var(--mm-muted);
+}
+
+/* Alone: the big gold button */
+.rpg-mode.solo {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  border-color: rgba(245, 197, 66, 0.55);
+  background: linear-gradient(160deg, rgba(245, 197, 66, 0.28), rgba(245, 197, 66, 0.08));
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.rpg-mode.solo .rpg-mode-icon {
+  font-size: 2rem;
+}
+
+.rpg-mode.solo .rpg-mode-note {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.rpg-mode.solo:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: var(--rpg-gold);
+  box-shadow: 0 8px 22px rgba(245, 197, 66, 0.18);
+}
+
+.rpg-mode.solo:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rpg-mode-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* The party size: one bar of segments */
+.rpg-seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.rpg-btn.rpg-seg-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  padding: 0.35rem 0.2rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--mm-muted);
+}
+
+.rpg-seg-btn b {
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.rpg-seg-figs {
+  font-size: 0.55rem;
+  letter-spacing: -0.12em;
+  opacity: 0.7;
+  filter: grayscale(1);
+}
+
+.rpg-btn.rpg-seg-btn:hover {
+  color: var(--mm-text);
+  background: var(--rpg-surface-hi);
+}
+
+.rpg-btn.rpg-seg-btn.active {
+  color: var(--rpg-gold);
+  background: rgba(245, 197, 66, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(245, 197, 66, 0.5);
+}
+
+.rpg-seg-btn.active .rpg-seg-figs {
+  opacity: 1;
+  filter: none;
+}
+
+@media (max-width: 575px) {
+  .rpg-modes {
+    grid-template-columns: 1fr;
+  }
+}

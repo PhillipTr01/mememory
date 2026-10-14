@@ -760,12 +760,6 @@ function renderShop() {
   }
   morphChildren(document.getElementById("rpgCart"), nodes);
 
-  // The cards not found yet
-  var missing = hero.pool.filter((id) => !hero.collection[id]).sort(byCost);
-  morphChildren(
-    document.getElementById("rpgShopMissing"),
-    missing.length ? missing.map((id) => cardEl(id, { className: "small unowned" })) : [el("div", "rpg-empty mm-muted", "🎉 You found every card of your class - packs now bring spare copies (sold for coins).")],
-  );
 }
 
 /* ---------- Opening a pack (like Hearthstone): the pack bursts, the cards lie face down - one flip after the other */
@@ -1053,7 +1047,12 @@ function renderDoor() {
   document.getElementById("rpgSolo").disabled = myCoins < entry || !hero.cls;
   document.getElementById("rpgOpen").disabled = !hero.cls;
   var sizes = [];
-  for (var n = 2; n <= rules.partyMax; n++) sizes.push(button(n + " heroes", "size", { id: n, className: "chip" + (n == size ? " active" : "") }));
+  // (the party size: a segment each - its number, a figure for every hero)
+  for (var n = 2; n <= rules.partyMax; n++) {
+    var seg = button("", "size", { id: n, className: "rpg-seg-btn" + (n == size ? " active" : ""), title: n + " heroes" });
+    seg.append(el("b", "", String(n)), el("span", "rpg-seg-figs", "👤".repeat(n)));
+    sizes.push(seg);
+  }
   morphChildren(document.getElementById("rpgSize"), sizes);
 
   var list = parties.length

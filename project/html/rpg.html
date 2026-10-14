@@ -140,12 +140,23 @@
                                 </div>
                                 <button type="button" id="rpgFloorUp" class="rpg-round" aria-label="A floor higher">›</button>
                             </div>
-                            <div class="rpg-go">
-                                <button type="button" id="rpgSolo" class="rpg-btn primary">⚔️ Go alone</button>
-                                <span class="rpg-or mm-muted">or</span>
-                                <div class="rpg-coop">
-                                    <div id="rpgSize" class="rpg-size" role="group" aria-label="Party size"></div>
-                                    <button type="button" id="rpgOpen" class="rpg-btn">👥 Open a party</button>
+                            <!--- Two ways down: alone (right away) - or a party (others join, the leader starts) --->
+                            <div class="rpg-modes">
+                                <button type="button" id="rpgSolo" class="rpg-mode solo">
+                                    <span class="rpg-mode-icon">⚔️</span>
+                                    <span class="rpg-mode-name">Go alone</span>
+                                    <span class="rpg-mode-note">Right into the dungeon</span>
+                                </button>
+                                <div class="rpg-mode party">
+                                    <div class="rpg-mode-head">
+                                        <span class="rpg-mode-icon">👥</span>
+                                        <div>
+                                            <div class="rpg-mode-name">With a party</div>
+                                            <div class="rpg-mode-note">Friends join - you start</div>
+                                        </div>
+                                    </div>
+                                    <div id="rpgSize" class="rpg-seg" role="group" aria-label="Party size"></div>
+                                    <button type="button" id="rpgOpen" class="rpg-btn">Open a party</button>
                                 </div>
                             </div>
                             <div class="rpg-label">Open parties</div>
@@ -208,8 +219,6 @@
                             <div id="rpgShopPacks" class="rpg-shop-packs"></div>
                             <aside id="rpgCart" class="rpg-cart"></aside>
                         </div>
-                        <div class="rpg-label">Still to find</div>
-                        <div id="rpgShopMissing" class="rpg-builder-grid small"></div>
                     </div>
                     <!--- A party waiting for its leader --->
                     <div id="rpgLobby" class="rpg-lobby" hidden>
