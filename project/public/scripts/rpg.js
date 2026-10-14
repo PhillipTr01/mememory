@@ -620,10 +620,7 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "join") socket.emit("join", { id: id });
   else if (act == "leave") socket.emit("leave");
   else if (act == "class") socket.emit("class", { id: id });
-  else if (act == "unlock") {
-    var price = hero.classPrice;
-    if (!price || confirm("Unlock the " + rules.classes[id].name + " for 🪙 " + formatCoins(price) + "? A new character - its own levels, gear and floors.")) socket.emit("unlock", { id: id });
-  } else if (act == "buy") socket.emit("buy", { item: id });
+  else if (act == "unlock") unlockClass(id); else if (act == "buy") socket.emit("buy", { item: id });
   else if (act == "size") {
     size = Number(id);
     remember(SIZE_KEY, size);
@@ -655,6 +652,21 @@ document.addEventListener("keydown", (event) => {
     render();
   }
 });
+
+// A class unlocked: the first one free - every other one after asking (the casino's dialog)
+async function unlockClass(id) {
+  var cls = rules.classes[id];
+  var price = hero.classPrice;
+  if (price) {
+    var sure = await confirmDialog({
+      title: "Unlock the " + cls.icon + " " + cls.name + "?",
+      text: "🪙 " + formatCoins(price) + " - a new character with its own levels, gear and floors. " + cls.about + ".",
+      confirmLabel: "Unlock for 🪙 " + formatCoins(price),
+    });
+    if (!sure) return;
+  }
+  socket.emit("unlock", { id: id });
+}
 
 function remember(key, value) {
   try {
