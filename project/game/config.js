@@ -238,8 +238,8 @@ module.exports = {
   RPG_MONSTER_ATK: 100, // % of the monsters' attack
   RPG_LOOT: 100, // % of the coins a room puts in the pot
   RPG_PACK_STANDARD: 10000,
-  RPG_PACK_PREMIUM: 25000,
-  RPG_PACK_MYTHIC: 50000,
+  RPG_PACK_PREMIUM: 24000, // (the packs: the same value per coin as the Base Set)
+  RPG_PACK_MYTHIC: 45000,
   RPG_TURN_TIME: 45000, // a turn of a fight
 
   // The tables of the lobby (in this order, limits from the keys above); a page without a table opens "classic"
