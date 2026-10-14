@@ -695,7 +695,8 @@ test("rpg: co-op - one opens a party, another joins, the leader starts (both pay
   const hero = await waitFor(bob, "rpgHero", (view) => view.deepest == 1);
   assert.strictEqual(hero.maxFloor, 2);
   // (the first clear of a floor: a bonus - and XP for the character)
-  assert.strictEqual(won.summary.rpg_bob.firstClear, rpg.entryCost(1));
+  // (a party of 2: 20% more loot and first clear bonus)
+  assert.strictEqual(won.summary.rpg_bob.firstClear, Math.round((rpg.entryCost(1) * rpg.partyBonus(2)) / 100) * 100);
   assert.ok(won.summary.rpg_bob.xp > 0);
-  assert.strictEqual(testMode.balance("rpg_bob"), bobBefore - rpg.entryCost(1) + won.run.pot + rpg.entryCost(1));
+  assert.strictEqual(testMode.balance("rpg_bob"), bobBefore - rpg.entryCost(1) + won.run.pot + won.summary.rpg_bob.firstClear);
 });

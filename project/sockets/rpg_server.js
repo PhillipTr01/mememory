@@ -100,6 +100,7 @@ module.exports = function (io, options = {}) {
       classPrice: rpg.CLASS_PRICE,
       cardRarities: rpg.CARD_RARITIES,
       heroLevelMax: rpg.HERO_LEVEL_MAX,
+      partyLoot: rpg.PARTY_LOOT,
       deckMin: rpg.DECK_MIN,
       deckMax: rpg.DECK_MAX,
       deckLeast: rpg.DECK_LEAST,
@@ -242,7 +243,7 @@ module.exports = function (io, options = {}) {
       const char = rpg.charOf(hero, one.cls);
       // XP for the character (lost: half of it) - a floor cleared the first time: a bonus (coins, XP)
       const firstClear = result === "won" && run.floor > char.deepest;
-      const bonus = firstClear ? rpg.entryCost(run.floor) : 0;
+      const bonus = firstClear ? Math.round((rpg.entryCost(run.floor) * rpg.partyBonus(run.heroes.length)) / 100) * 100 : 0;
       const xp = Math.round((result === "lost" ? one.xp / 2 : one.xp) + (firstClear ? rpg.xpFor("floor", run.floor) * 2 : 0));
       const ups = rpg.gainXp(char, xp);
       party.summary[one.name] = { xp, ups, level: char.level, firstClear: bonus };

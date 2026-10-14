@@ -1055,6 +1055,7 @@ function renderDoor() {
   for (var n = 2; n <= rules.partyMax; n++) {
     var seg = button("", "size", { id: n, className: "rpg-seg-btn" + (n == size ? " active" : ""), title: n + " heroes" });
     seg.append(el("b", "", String(n)), el("span", "rpg-seg-figs", "👤".repeat(n)));
+    seg.title = n + " heroes - harder monsters, " + Math.round(rules.partyLoot * 100 * (n - 1)) + "% more loot";
     sizes.push(seg);
   }
   morphChildren(document.getElementById("rpgSize"), sizes);
@@ -1069,7 +1070,7 @@ function renderDoor() {
         badge.append(el("span", "rpg-party-floor-label", "Floor"), el("b", "", String(p.floor)));
         badge.title = "Entry 🪙 " + formatCoins(rules.entries[p.floor - 1]) + " each";
         var text = el("div", "rpg-party-text");
-        text.append(el("div", "rpg-party-name", p.leader + "'s party"), el("div", "mm-muted small", p.members.length + " / " + p.size + " heroes · entry 🪙 " + formatCoins(rules.entries[p.floor - 1])));
+        text.append(el("div", "rpg-party-name", p.leader + "'s party"), el("div", "mm-muted small", p.members.length + " / " + p.size + " heroes · entry 🪙 " + formatCoins(rules.entries[p.floor - 1]) + " · loot +" + Math.round(rules.partyLoot * 100 * (p.size - 1)) + "%"));
         row.append(badge, faces, text);
         if (p.started) row.appendChild(el("span", "mm-muted small", "in the dungeon"));
         else if (p.floor > hero.maxFloor) row.appendChild(el("span", "mm-muted small", "floor not open"));

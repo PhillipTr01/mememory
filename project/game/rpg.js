@@ -427,6 +427,11 @@ const MONSTER_ATK_GROWTH = 1.14;
 // them (a party is no easier than going alone)
 const PARTY_HP = 1.0;
 const PARTY_ATK = 0.15;
+// ... and pays more: the loot (each) and the first clear's bonus this much more per hero after the first
+const PARTY_LOOT = 0.2;
+function partyBonus(size) {
+  return 1 + PARTY_LOOT * Math.max(0, size - 1);
+}
 
 /* ---------- Progression: hero levels, talents, relics, card upgrades ---------- */
 
@@ -1198,7 +1203,7 @@ function enterRoom(run, door = 0, rng = Math.random) {
     if (id == "library") run.event.offers = Object.fromEntries(heroes.map((h) => [h.name, rewardFor(h, rng, 5)]));
     say(run, `${ENCOUNTERS[id].icon} ${ENCOUNTERS[id].name}.`);
   } else if (kind == "chest") {
-    const coins = Math.round(entryCost(run.floor) * REWARD.chest);
+    const coins = Math.round(entryCost(run.floor) * REWARD.chest * partyBonus(run.heroes.length));
     run.pot += coins;
     note(`🪙 ${coins} each for the loot pot.`);
   } else if (kind == "merchant") {
@@ -2068,7 +2073,7 @@ function monsterTurn(run, rng = Math.random) {
 
 function winFight(run, rng) {
   const room = run.rooms[run.rooms.length - 1];
-  const coins = Math.round(entryCost(run.floor) * REWARD[room.kind]);
+  const coins = Math.round(entryCost(run.floor) * REWARD[room.kind] * partyBonus(run.heroes.length));
   run.pot += coins;
   say(run, `Victory! 🪙 ${coins} each for the pot.`);
   fx(run, { k: "victory", coins });
@@ -2288,6 +2293,8 @@ module.exports = {
   xpNeed,
   xpFor,
   HERO_LEVEL_MAX,
+  partyBonus,
+  PARTY_LOOT,
   gainXp,
   pickTalent,
   talentPerks,
