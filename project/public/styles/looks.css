@@ -1959,6 +1959,17 @@
   animation-play-state: paused !important;
 }
 
+/* The shop: its looks stand still until the mouse is over one (casino_looks.js - look-still; the pre-rendered layers
+   as still images - the STILL rules at the end) */
+.mm-avatar.look-still,
+.mm-avatar.look-still::before,
+.mm-avatar.look-still::after,
+.mm-avatar.look-still *,
+.mm-avatar.look-still *::before,
+.mm-avatar.look-still *::after {
+  animation-play-state: paused !important;
+}
+
 /* The sliding layers of the backgrounds (the same paths as before - moved, not painted anew) */
 @keyframes look-bg-slide-grid {
   to {
@@ -2243,3 +2254,209 @@
     box-shadow: 0 0 calc(var(--size) * 0.16) #5b8fd6;
   }
 }
+
+/* STILL - written by tools/looks/still.py */
+.mm-avatar.look-lite.look-still.look-frame-archmage::after {
+  background: url("../looks/08658138d2.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-archmage::before {
+  background: url("../looks/1685ad0527.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-arcane .look-fx::before {
+  background: url("../looks/394f614418.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-arcane .look-fx::after {
+  background: url("../looks/6306d3cc1e.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-bg-astral > .look-bg::after {
+  background: url("../looks/e06d4f97d0.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-pandamaster::before {
+  background: url("../looks/291089d5dc.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-bamboostorm .look-fx::before {
+  background: url("../looks/3c4768c88f.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-bamboostorm .look-fx::after {
+  background: url("../looks/5ed516f465.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-bg-bambooforest > .look-bg {
+  background: url("../looks/b414dae0f7.still.webp") center / cover no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-inkblot::before {
+  background: url("../looks/33b66ad71e.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-inktendrils .look-fx::before {
+  background: url("../looks/9f9713078b.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-inktendrils .look-fx::after {
+  background: url("../looks/e259f3e1bf.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-bg-rorschach > .look-bg {
+  background: url("../looks/2bd73f2b2d.still.webp") center / cover no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-flavedrake::after {
+  background: url("../looks/8081194a69.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-flavedrake::before {
+  background: url("../looks/6c675e3275.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-goldenblaze .look-fx::before {
+  background: url("../looks/2842edb644.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-bg-moltencore > .look-bg {
+  background: url("../looks/898e4d95f4.still.webp") center / cover no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-eclipsering::after {
+  background: url("../looks/d5d93c3144.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-eclipsering::before {
+  background: url("../looks/1e2d7201c2.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-eclipseshards .look-fx::before {
+  background: url("../looks/00988da721.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-eclipseshards .look-fx::after {
+  background: url("../looks/0d35c37cb3.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-bg-eclipseveil > .look-bg {
+  background: url("../looks/147f3c2fe1.still.webp") center / cover no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-voidmirror::after {
+  background: url("../looks/e8e0cfcb0a.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-voidmirror::before {
+  background: url("../looks/21d98043e7.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-voidecho .look-fx::after {
+  background: url("../looks/134c41942e.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-bg-voidglass > .look-bg {
+  background: url("../looks/b5e6e75fa7.still.webp") center / cover no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-champion::before {
+  background: url("../looks/7bceeb79f7.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-runnerup::before {
+  background: url("../looks/9644e2f092.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-podium::before {
+  background: url("../looks/1eb7aac462.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-phoenix::before {
+  background: url("../looks/52fa23c99c.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-starchart::before {
+  background: url("../looks/a8164f7cd7.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-blackhole .look-fx::before {
+  background: url("../looks/c27237c05c.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-blackhole .look-fx::after {
+  background: url("../looks/ab8786a747.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-shards .look-fx::before {
+  background: url("../looks/e70916ef7c.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-shards .look-fx::after {
+  background: url("../looks/d31b612bdd.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-constellation .look-fx::after {
+  background: url("../looks/23e3c2f783.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-bg-chrome > .look-bg {
+  background: url("../looks/fe375d8fdb.still.webp") center / cover no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-bg-astrolabe > .look-bg {
+  background: url("../looks/c53912df3b.still.webp") center / cover no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-bg-rift > .look-bg {
+  background: url("../looks/0281ee63c6.still.webp") center / cover no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-grovevines::before {
+  background: url("../looks/dd3face7f4.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-fireflies .look-fx::after {
+  background: url("../looks/d57e15cb07.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-bg-moonlitgrove > .look-bg {
+  background: url("../looks/4d5fbff547.still.webp") center / cover no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-phantomwisps::before {
+  background: url("../looks/3fe39bbf33.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-phantomghosts .look-fx::after {
+  background: url("../looks/675bf01b36.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-bg-phantomnight > .look-bg {
+  background: url("../looks/047a8c6a00.still.webp") center / cover no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-prismframe::before {
+  background: url("../looks/6bc5ee9136.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-frame-horizon::before {
+  background: url("../looks/73b768ef2f.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-fx-rebirth .look-fx::after {
+  background: url("../looks/bfb0c75612.still.webp") center / 100% 100% no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-bg-phoenixsky > .look-bg {
+  background: url("../looks/333be4a42d.still.webp") center / cover no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-bg-abyss > .look-bg {
+  background: url("../looks/de1cc21b8c.still.webp") center / cover no-repeat;
+}
+
+.mm-avatar.look-lite.look-still.look-bg-legends > .look-bg {
+  background: url("../looks/2c795b5172.still.webp") center / cover no-repeat;
+}
+/* STILL end */

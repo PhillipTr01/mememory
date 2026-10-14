@@ -23,9 +23,29 @@
     return width > LITE;
   }
 
+  // The shop: its looks stand still until the mouse is over one (look-still - a still image of each pre-rendered
+  // layer, looks.css; every other animation held at STILL ms in)
+  var STILL = 1200;
+  function still(avatar, on) {
+    if (avatar.classList.contains("look-still") == on) return;
+    avatar.classList.toggle("look-still", on);
+    avatar.getAnimations({ subtree: true }).forEach((animation) => {
+      if (on) {
+        animation.pause();
+        animation.currentTime = STILL;
+      } else animation.play();
+    });
+  }
+
+  // Shows an avatar live or pre-rendered (in the shop: still)
+  function show(avatar, live) {
+    avatar.classList.toggle("look-lite", !live);
+    still(avatar, !live && !!avatar.closest("[data-looks-hover]"));
+  }
+
   function hoverLive(container, live) {
     container.querySelectorAll(".mm-avatar[class*='look-']").forEach((avatar) => {
-      if (avatar.closest("[data-looks-hover]") == container) avatar.classList.toggle("look-lite", !live);
+      if (avatar.closest("[data-looks-hover]") == container) show(avatar, live);
     });
   }
   document.addEventListener("mouseover", (event) => {
@@ -48,7 +68,7 @@
               if (!entry.target.isConnected) return watcher.unobserve(entry.target);
               entry.target.classList.toggle("look-idle", !entry.isIntersecting);
               // (on the screen: its size known - small ones show the pre-rendered animations, bigger ones live)
-              if (entry.isIntersecting) entry.target.classList.toggle("look-lite", !liveHere(entry.target, entry.boundingClientRect.width));
+              if (entry.isIntersecting) show(entry.target, liveHere(entry.target, entry.boundingClientRect.width));
             }),
           { rootMargin: "120px" },
         )

@@ -22,4 +22,8 @@ to, its loop).
 4. In looks.css: change the live SVG in its rule, and in the `look-lite` rule put the new static part (in `/tmp/plan.json`, `static` - `#` as `%23`, `%` as `%25`, `"` as `'`)
    in place of the old one under `url("../looks/<name>.webp")`.
 
+5. `NODE_PATH=<playwright's node_modules> python3 tools/looks/still.py` - the still images for the shop
+   (`public/looks/<name>.still.webp`: there the looks stand still until the mouse is over an item - `look-still`) and
+   their rules at the end of looks.css.
+
 A new look: give it a new name (any - the files are named by it) and an entry in `index.json`.
