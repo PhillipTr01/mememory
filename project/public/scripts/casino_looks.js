@@ -11,6 +11,10 @@
   var queue = new Set();
   var timer = null;
 
+  // Performance: avatars this small (px) or smaller - the chat, the lists, the shop items - show the animated looks pre-rendered
+  // (looks.css: look-lite - many of them cost the page next to nothing); the bigger ones draw them live (smooth)
+  var LITE = 60;
+
   // Performance: the animations of an avatar run only while it is on the screen (look-idle: paused) - a page full of
   // avatars (the shop, a long chat, the leaderboard) animates only the ones you see
   var watcher =
@@ -21,6 +25,8 @@
               // (gone from the page: not watched any more)
               if (!entry.target.isConnected) return watcher.unobserve(entry.target);
               entry.target.classList.toggle("look-idle", !entry.isIntersecting);
+              // (on the screen: its size known - small ones show the pre-rendered animations, bigger ones live)
+              if (entry.isIntersecting) entry.target.classList.toggle("look-lite", entry.boundingClientRect.width <= LITE);
             }),
           { rootMargin: "120px" },
         )
@@ -33,8 +39,8 @@
     if (watcher) watcher.unobserve(avatar);
     if (!look || !(look.frame || look.effect || look.background)) return avatar;
     if (watcher) {
-      // (paused until the watcher sees it on the screen - right away for the ones there)
-      avatar.classList.add("look-idle");
+      // (paused until the watcher sees it on the screen - right away for the ones there; small until it knows)
+      avatar.classList.add("look-idle", "look-lite");
       watcher.observe(avatar);
     }
     if (look.frame) avatar.classList.add("look-frame-" + look.frame);
