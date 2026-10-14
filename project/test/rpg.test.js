@@ -66,10 +66,11 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   const view = rpg.runView(run);
   view.map[1].forEach((node, i) => assert.strictEqual(node.kind, run.map[1][i].sensed ? run.map[1][i].kind : null));
   assert.strictEqual(view.map[0][0].kind, "fight");
-  // The classes: a main stat, two signature cards in the starter deck, nine cards of their own
+  // The classes: a main stat, two signature cards in the starter deck, 27 cards of their own - 50 to collect
   for (const id of rpg.CLASS_IDS) {
     assert.ok(rpg.STATS[rpg.CLASSES[id].main], id);
-    assert.strictEqual(rpg.CLASSES[id].cards.length, 9);
+    assert.strictEqual(rpg.CLASSES[id].cards.length, 27);
+    assert.ok(rpg.poolOf(id).length >= 50, id);
     rpg.CLASSES[id].cards.forEach((card) => assert.ok(rpg.CARDS[card], card));
     assert.deepStrictEqual(rpg.starterDeck(id).slice(8), rpg.CLASSES[id].signature);
   }
@@ -440,9 +441,31 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (spar
   // (the collection never holds more than the copies of a rarity)
   for (const [id, n] of Object.entries(char.collection)) assert.ok(n <= rpg.CARD_RARITIES[rpg.CARDS[id].rarity].copies, id);
   assert.strictEqual(rpg.deckAdd(hero, "smoke"), null);
-  while (char.deck.length < rpg.deckMax(char.level)) char.deck.push("defend");
-  assert.match(rpg.deckAdd(hero, "flurry"), /At most/);
-  assert.ok(rpg.deckMax(9) > rpg.deckMax(1));
+  // 10 to 15 cards - a charm makes room for more, or lets the deck go down with fewer
+  assert.deepStrictEqual(rpg.deckLimits(hero), { min: 10, max: 15 });
+  while (char.deck.length < 15) char.deck.push("defend");
+  assert.match(rpg.deckAdd(hero, "flurry"), /At most 15/);
+  char.gear.charm = { slot: "charm", luck: 1, deckMax: 3 };
+  assert.deepStrictEqual(rpg.deckLimits(hero), { min: 10, max: 18 });
+  assert.strictEqual(rpg.deckAdd(hero, "flurry"), null);
+  char.gear.charm = { slot: "charm", luck: 1, deckMin: 3 };
+  assert.deepStrictEqual(rpg.deckLimits(hero), { min: 7, max: 15 });
+  assert.match(rpg.deckReady(hero), /at most 15/);
+  char.deck.splice(9);
+  assert.strictEqual(rpg.deckReady(hero), null, "9 cards: fine with the charm");
+  char.gear.charm = null;
+  assert.match(rpg.deckReady(hero), /at least 10/);
+  while (char.deck.length < 10) char.deck.push("defend");
+  // The shop's cart: 3 or more of a kind 10% off - the packs wait unopened, opened one after the other
+  assert.strictEqual(rpg.cartPrice({ standard: 2, mythic: 3 }).total, 2 * rpg.PACKS.standard.price + rpg.packPrice("mythic", 3));
+  assert.match(rpg.cartPrice({}).error, /empty/);
+  assert.match(rpg.cartPrice({ nope: 1 }).error, /Unknown/);
+  assert.match(rpg.cartPrice({ standard: 1.5 }).error, /1 to/);
+  rpg.addPacks(hero, [["premium", 2]]);
+  assert.strictEqual(rpg.openStored(hero, "premium").length, 5);
+  assert.strictEqual(hero.packs.premium, 1);
+  rpg.openStored(hero, "premium");
+  assert.match(rpg.openStored(hero, "premium"), /No such pack/);
   // An eternal card: played once - gone from the run's deck
   const run = rpg.newRun(1, [{ name: "a", hero }]);
   rpg.enterRoom(run, 0);

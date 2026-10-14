@@ -90,7 +90,9 @@ function cardEl(id, options) {
   var cost = el("span", "rpg-cardx-cost");
   cost.dataset.cost = String(card.cost);
   cost.title = card.cost + " mana";
-  node.append(cost, el("span", "rpg-cardx-art", card.icon), el("span", "rpg-cardx-name", card.name), el("span", "rpg-cardx-type", (card.type == "attack" ? "Attack" : "Skill") + " · " + ((rules.cardRarities[card.rarity] || {}).name || "")), el("span", "rpg-cardx-text", card.text));
+  var art = el("span", "rpg-cardx-art", card.icon);
+  if (card.rarity && card.rarity != "basic") art.appendChild(el("i", "rpg-cardx-gem"));
+  node.append(cost, art, el("span", "rpg-cardx-name", card.name), el("span", "rpg-cardx-type", (card.type == "attack" ? "Attack" : "Skill") + " · " + ((rules.cardRarities[card.rarity] || {}).name || "")), el("span", "rpg-cardx-text", card.text));
   return node;
 }
 
@@ -190,6 +192,8 @@ function bonusOf(item) {
   if (item.def) parts.push("+" + item.def + " defense");
   if (item.hp) parts.push("+" + item.hp + " HP");
   if (item.luck) parts.push("+" + item.luck + "% luck");
+  if (item.deckMax) parts.push("🃏 +" + item.deckMax + " deck size");
+  if (item.deckMin) parts.push("🃏 -" + item.deckMin + " fewest cards");
   return parts.join(" · ");
 }
 
@@ -319,7 +323,7 @@ function renderHero() {
   // The deck builder: the deck (click: out), the collection (click: in), booster packs
   morphChildren(document.getElementById("rpgDeckHelp"), deckHelp());
   document.getElementById("rpgDeckCount").innerText = picked ? String(hero.deck.length) : "";
-  document.getElementById("rpgDeckSize").innerText = picked ? hero.deck.length + " cards · " + rules.deckMin + " to " + hero.deckMax + " (more room with hero levels)" : "";
+  document.getElementById("rpgDeckSize").innerText = picked ? hero.deck.length + " cards · " + hero.deckMin + " to " + hero.deckMax + (hero.deckMin != rules.deckMin || hero.deckMax != rules.deckMax ? " (your charm)" : " (a charm can change it)") : "";
   var pack = document.getElementById("rpgBuyPack");
   pack.innerText = "🎴 Packs";
   pack.title = "The card shop: booster packs of the base set";
@@ -331,7 +335,8 @@ function renderHero() {
 function deckSummary(deck) {
   var attacks = deck.filter((id) => cardOf(id).type == "attack").length;
   var nodes = [curve(deck), el("div", "mm-muted small", attacks + " attacks · " + (deck.length - attacks) + " skills")];
-  if (deck.length < rules.deckMin) nodes.push(el("div", "rpg-warn", "⚠️ At least " + rules.deckMin + " cards to go down - " + (rules.deckMin - deck.length) + " more"));
+  if (deck.length < hero.deckMin) nodes.push(el("div", "rpg-warn", "⚠️ At least " + hero.deckMin + " cards to go down - " + (hero.deckMin - deck.length) + " more"));
+  if (deck.length > hero.deckMax) nodes.push(el("div", "rpg-warn", "⚠️ At most " + hero.deckMax + " cards - take " + (deck.length - hero.deckMax) + " out"));
   return nodes;
 }
 
@@ -418,6 +423,22 @@ function packOdds(pack) {
   return RARITY_ORDER.filter((r) => weights[r]).map((r) => [r, (weights[r] / total) * 100]);
 }
 
+var cart = {}; // the shop's cart: {pack id: count}
+
+// The price of packs of a kind (as the server counts it): 3 or more - 10% off
+function packCost(id, n) {
+  var price = rules.packs[id].price * n;
+  return n >= rules.packBundle ? Math.round((price * (1 - rules.bundleOff)) / 100) * 100 : price;
+}
+
+// A sealed pack (the art): the shop, the packs waiting, the opening
+function packArt(id, className) {
+  var pack = rules.packs[id];
+  var art = el("div", "rpg-pack-art tier-" + id + (className ? " " + className : ""));
+  art.append(el("span", "rpg-pack-set", "BASE SET"), el("span", "rpg-pack-icon", pack.icon), el("span", "rpg-pack-count", pack.size + " cards"));
+  return art;
+}
+
 function renderShop() {
   var cls = rules.classes[hero.cls];
   document.getElementById("rpgShopTitle").innerText = "🛒 Card shop · " + cls.icon + " " + cls.name;
@@ -429,36 +450,185 @@ function renderShop() {
   var progress = el("div", "rpg-shop-bar");
   progress.append(el("span", "", "📚 Collection"), bar(found, cards.length, "xp", " cards"), el("span", "mm-muted small", copies + " / " + most + " copies"));
   morphChildren(document.getElementById("rpgShopProgress"), [progress]);
-  // The packs
+
+  // The packs bought, waiting to be opened
+  var owned = Object.keys(rules.packs).filter((id) => hero.packs[id] > 0);
+  morphChildren(
+    document.getElementById("rpgShopOwned"),
+    owned.length
+      ? owned.map((id) => {
+          var stack = el("button", "rpg-owned tier-" + id);
+          stack.type = "button";
+          stack.dataset.act = "openPack";
+          stack.dataset.id = id;
+          stack.title = "Open a " + rules.packs[id].name;
+          var art = packArt(id, "small");
+          art.appendChild(el("span", "rpg-owned-n", "×" + hero.packs[id]));
+          stack.append(art, el("span", "rpg-owned-open", "Open"));
+          return stack;
+        })
+      : [el("div", "rpg-empty mm-muted", "No packs waiting - put some into your cart and buy them.")],
+  );
+
+  // The packs to buy: into the cart
   morphChildren(
     document.getElementById("rpgShopPacks"),
     Object.keys(rules.packs).map((id) => {
       var pack = rules.packs[id];
       var tile = el("div", "rpg-pack-tile tier-" + id);
-      var art = el("div", "rpg-pack-art");
-      art.append(el("span", "rpg-pack-set", "BASE SET"), el("span", "rpg-pack-icon", pack.icon), el("span", "rpg-pack-count", pack.size + " cards"));
       var odds = el("div", "rpg-pack-odds");
       packOdds(pack).forEach(([rarity, pct]) => {
         var row = el("div", "rpg-odd rarity-" + rarity);
         row.append(el("span", "", rules.cardRarities[rarity].name), el("b", "", (pct < 1 ? pct.toFixed(1) : Math.round(pct)) + "%"));
         odds.appendChild(row);
       });
-      var buy = el("div", "rpg-pack-buy");
-      var bundle = rules.bundlePrices[id];
-      buy.append(
-        button("Buy · 🪙 " + formatCoins(pack.price), "buyPack", { id: id + ":1", className: "primary", disabled: myCoins < pack.price }),
-        button(rules.packBundle + " for 🪙 " + formatCoins(bundle) + " · -10%", "buyPack", { id: id + ":" + rules.packBundle, className: "small", disabled: myCoins < bundle }),
+      var inCart = cart[id] || 0;
+      tile.append(
+        packArt(id),
+        el("div", "rpg-pack-name", pack.name),
+        el("div", "rpg-pack-price", "🪙 " + formatCoins(pack.price)),
+        el("div", "mm-muted small", pack.about),
+        el("div", "rpg-label", "Every other card"),
+        odds,
+        button(inCart ? "+ One more (" + inCart + " in the cart)" : "🛒 Add to cart", "cartAdd", { id: id, className: "primary" }),
       );
-      tile.append(art, el("div", "rpg-pack-name", pack.name), el("div", "mm-muted small", pack.about), el("div", "rpg-label", "Every other card"), odds, buy);
       return tile;
     }),
   );
+
+  // The cart: the lines, the total - buy
+  var lines = Object.keys(cart).filter((id) => cart[id] > 0);
+  var total = lines.reduce((sum, id) => sum + packCost(id, cart[id]), 0);
+  var nodes = [el("div", "rpg-cart-title", "🛒 Your cart")];
+  if (!lines.length) nodes.push(el("div", "rpg-empty mm-muted", "Empty - add packs. 3 or more of a kind: 10% off."));
+  lines.forEach((id) => {
+    var pack = rules.packs[id];
+    var row = el("div", "rpg-cart-line");
+    var step = el("div", "rpg-stepper");
+    step.append(button("−", "cartLess", { id: id, className: "small" }), el("b", "", String(cart[id])), button("+", "cartAdd", { id: id, className: "small", disabled: cart[id] >= rules.cartMax }));
+    var price = el("div", "rpg-cart-price");
+    price.appendChild(el("b", "", "🪙 " + formatCoins(packCost(id, cart[id]))));
+    if (cart[id] >= rules.packBundle) price.appendChild(el("span", "rpg-cart-off", "-10%"));
+    row.append(el("span", "rpg-cart-icon", pack.icon), el("span", "rpg-cart-name", pack.name), step, price);
+    nodes.push(row);
+  });
+  if (lines.length) {
+    var sum = el("div", "rpg-cart-total");
+    sum.append(el("span", "", "Total"), el("b", "", "🪙 " + formatCoins(total)));
+    nodes.push(sum, button("Buy · 🪙 " + formatCoins(total), "cartBuy", { className: "primary", disabled: total > myCoins }), button("Empty the cart", "cartClear", { className: "small" }));
+    if (total > myCoins) nodes.push(el("div", "rpg-warn", "Not enough coins."));
+  }
+  morphChildren(document.getElementById("rpgCart"), nodes);
+
   // The cards not found yet
   var missing = hero.pool.filter((id) => !hero.collection[id]).sort(byCost);
   morphChildren(
     document.getElementById("rpgShopMissing"),
     missing.length ? missing.map((id) => cardEl(id, { className: "small unowned" })) : [el("div", "rpg-empty mm-muted", "🎉 You found every card of your class - packs now bring spare copies (sold for coins).")],
   );
+}
+
+/* ---------- Opening a pack (like Hearthstone): the pack bursts, the cards lie face down - one flip after the other */
+
+var opening = null; // {pack, cards (null: the pack still sealed), flipped: {index: true}}
+
+function openingNode() {
+  var node = document.getElementById("rpgOpening");
+  if (!node) {
+    node = el("div", "rpg-opening");
+    node.id = "rpgOpening";
+    node.addEventListener("click", onOpeningClick);
+    document.body.appendChild(node);
+  }
+  return node;
+}
+
+// The pack waits sealed: a click opens it (the server deals its cards)
+function startOpening(id) {
+  if (!(hero.packs[id] > 0)) return;
+  opening = { pack: id, cards: null, flipped: {}, asked: false };
+  renderOpening();
+}
+
+function renderOpening() {
+  var node = openingNode();
+  if (!opening) {
+    node.remove();
+    return;
+  }
+  node.innerHTML = "";
+  var pack = rules.packs[opening.pack];
+  var stage = el("div", "rpg-opening-stage");
+  if (!opening.cards) {
+    var art = packArt(opening.pack, "big" + (opening.asked ? " bursting" : " waiting"));
+    art.dataset.open = "pack";
+    stage.append(el("div", "rpg-opening-title", pack.icon + " " + pack.name), art, el("div", "rpg-opening-hint", opening.asked ? "" : "Click the pack to open it"));
+  } else {
+    var row = el("div", "rpg-opening-cards n" + opening.cards.length);
+    opening.cards.forEach((c, i) => {
+      var rarity = cardOf(c.id).rarity;
+      var slot = el("div", "rpg-flip rarity-" + rarity + (opening.flipped[i] ? " flipped" : ""));
+      slot.style.animationDelay = i * 0.08 + "s";
+      slot.dataset.flip = String(i);
+      var inner = el("div", "rpg-flip-inner");
+      var back = el("div", "rpg-flip-back");
+      back.appendChild(el("span", "rpg-flip-emblem", "⚔️"));
+      var front = el("div", "rpg-flip-front");
+      var card = cardEl(c.id, {});
+      front.appendChild(card);
+      inner.append(back, front);
+      slot.appendChild(inner);
+      if (opening.flipped[i]) slot.appendChild(el("span", "rpg-flip-note" + (c.fresh ? " fresh" : ""), c.fresh ? "New!" : "Spare · +🪙 " + formatCoins(c.coins)));
+      row.appendChild(slot);
+    });
+    var all = opening.cards.every((c, i) => opening.flipped[i]);
+    var left = hero.packs[opening.pack] || 0;
+    var foot = el("div", "rpg-opening-foot");
+    if (!all) foot.append(el("div", "rpg-opening-hint", "Click the cards to turn them over"), button("Turn all", "flipAll", { className: "small" }));
+    else {
+      var spare = opening.cards.reduce((sum, c) => sum + c.coins, 0);
+      if (spare) foot.appendChild(el("div", "mm-muted small", "Spare copies sold: +🪙 " + formatCoins(spare)));
+      if (left) foot.appendChild(button("Open the next " + pack.name + " (" + left + " left)", "openNext", { className: "primary" }));
+      Object.keys(rules.packs)
+        .filter((id) => id != opening.pack && hero.packs[id] > 0)
+        .forEach((id) => foot.appendChild(button("Open a " + rules.packs[id].name + " (" + hero.packs[id] + ")", "openOther", { id: id })));
+      foot.appendChild(button("Done", "openDone", {}));
+    }
+    stage.append(el("div", "rpg-opening-title", pack.icon + " " + pack.name), row, foot);
+  }
+  node.appendChild(stage);
+}
+
+function onOpeningClick(event) {
+  if (!opening) return;
+  var target = event.target.closest("[data-open], [data-flip], [data-act]");
+  if (!target) return;
+  if (target.dataset.open == "pack" && !opening.asked) {
+    opening.asked = true;
+    renderOpening();
+    socket.emit("openPack", { pack: opening.pack });
+    return;
+  }
+  if (target.dataset.flip != null) {
+    opening.flipped[target.dataset.flip] = true;
+    var slot = target;
+    slot.classList.add("flipped");
+    var c = opening.cards[Number(target.dataset.flip)];
+    if (!slot.querySelector(".rpg-flip-note")) slot.appendChild(el("span", "rpg-flip-note" + (c.fresh ? " fresh" : ""), c.fresh ? "New!" : "Spare · +🪙 " + formatCoins(c.coins)));
+    // (all turned: the buttons after a moment)
+    if (opening.cards.every((one, i) => opening.flipped[i])) setTimeout(renderOpening, 650);
+    return;
+  }
+  var act = target.dataset.act;
+  if (act == "flipAll") {
+    opening.cards.forEach((one, i) => (opening.flipped[i] = true));
+    renderOpening();
+  } else if (act == "openNext") startOpening(opening.pack);
+  else if (act == "openOther") startOpening(target.dataset.id);
+  else if (act == "openDone") {
+    opening = null;
+    renderOpening();
+  }
 }
 
 /* ---------- The deck builder ---------- */
@@ -520,11 +690,11 @@ function renderBuilder() {
   var deck = hero.deck;
   var counts = {};
   deck.forEach((id) => (counts[id] = (counts[id] || 0) + 1));
-  var short = deck.length < rules.deckMin;
+  var short = deck.length < hero.deckMin || deck.length > hero.deckMax;
   var count = document.getElementById("rpgBuilderCount");
   count.innerText = deck.length + " / " + hero.deckMax;
   count.className = "rpg-builder-count" + (short ? " bad" : deck.length >= hero.deckMax ? " full" : " ok");
-  count.title = "At least " + rules.deckMin + ", at most " + hero.deckMax + " cards (more room with hero levels)";
+  count.title = "At least " + hero.deckMin + ", at most " + hero.deckMax + " cards - a charm can make room for more, or let you go down with fewer";
 
   // The filters
   var chips = [];
@@ -603,7 +773,11 @@ function renderBuilder() {
   var attacks = deck.filter((id) => cardOf(id).type == "attack").length;
   morphChildren(document.getElementById("rpgBuilderNote"), [
     el("div", "mm-muted small", attacks + " attacks · " + (deck.length - attacks) + " skills"),
-    short ? el("div", "rpg-warn", "⚠️ At least " + rules.deckMin + " cards to go down - " + (rules.deckMin - deck.length) + " more") : el("div", "rpg-ok", "✓ Ready for the dungeon"),
+    deck.length < hero.deckMin
+      ? el("div", "rpg-warn", "⚠️ At least " + hero.deckMin + " cards to go down - " + (hero.deckMin - deck.length) + " more")
+      : deck.length > hero.deckMax
+        ? el("div", "rpg-warn", "⚠️ At most " + hero.deckMax + " cards - take " + (deck.length - hero.deckMax) + " out")
+        : el("div", "rpg-ok", "✓ Ready for the dungeon"),
   ]);
 }
 
@@ -1332,7 +1506,17 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   } else if (act == "shopClose") {
     shopping = false;
     render();
-  } else if (act == "buyPack") socket.emit("pack", { pack: id.split(":")[0], count: Number(id.split(":")[1]) });
+  } else if (act == "cartAdd") {
+    cart[id] = Math.min(rules.cartMax, (cart[id] || 0) + 1);
+    render();
+  } else if (act == "cartLess") {
+    cart[id] = Math.max(0, (cart[id] || 0) - 1);
+    render();
+  } else if (act == "cartClear") {
+    cart = {};
+    render();
+  } else if (act == "cartBuy") socket.emit("buyPacks", { cart: cart });
+  else if (act == "openPack") startOpening(id);
   else if (act == "filter") {
     var [key, value] = id.split(":");
     if (key == "owned") filters.owned = !filters.owned;
@@ -1429,26 +1613,23 @@ document.getElementById("rpgBuyPack").addEventListener("click", () => {
   render();
 });
 
-// A booster pack opened: its cards, one after the other
+// A pack opened (the server dealt its cards): they lie face down - the pack's burst first
 socket.on("rpgPack", (data) => {
-  var old = document.getElementById("rpgPackModal");
-  if (old) old.remove();
-  var modal = el("div", "rpg-modal");
-  modal.id = "rpgPackModal";
-  var box = el("div", "rpg-modal-box");
-  var cards = el("div", "rpg-reward-cards rpg-pack");
-  var many = data.cards.length > 6;
-  data.cards.forEach((c, i) => {
-    var rarity = cardOf(c.id).rarity;
-    var node = cardEl(c.id, { className: "revealing" + (many ? " small" : "") + (rarity == "epic" || rarity == "eternal" ? " big-pull" : "") });
-    node.style.animationDelay = i * (many ? 0.12 : 0.25) + "s";
-    node.appendChild(el("span", "rpg-price", c.fresh ? "New!" : "Spare · +🪙 " + formatCoins(c.coins)));
-    cards.appendChild(node);
-  });
-  var pack = rules.packs[data.pack] || rules.packs.standard;
-  box.append(el("div", "rpg-reward-title", pack.icon + " " + pack.name + (data.count > 1 ? " ×" + data.count : "")), cards, el("div", "mm-muted small", data.spare ? "Spare copies sold: +🪙 " + formatCoins(data.spare) : "Every card new for your collection - put them into your deck."), button("Nice", "closePack", { className: "primary" }));
-  modal.appendChild(box);
-  document.querySelector(".rpg-main").appendChild(modal);
+  if (!opening || opening.pack != data.pack) opening = { pack: data.pack, cards: null, flipped: {}, asked: true };
+  var cards = data.cards;
+  setTimeout(() => {
+    if (!opening || opening.cards) return;
+    opening.cards = cards;
+    renderOpening();
+  }, 650);
+});
+
+// Packs bought: into "your packs"
+socket.on("rpgBought", (data) => {
+  cart = {};
+  var n = data.items.reduce((sum, [, count]) => sum + count, 0);
+  showToast(n + " pack" + (n == 1 ? "" : "s") + " bought - open them above!");
+  render();
 });
 document.getElementById("rpgStart").addEventListener("click", () => socket.emit("start"));
 document.getElementById("rpgLeave").addEventListener("click", () => socket.emit("leave"));

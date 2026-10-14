@@ -217,10 +217,22 @@ const CARD_RARITIES = {
   eternal: { name: "Eternal", weight: 2, copies: 1, value: 4000 },
 };
 for (const [id, rarity] of Object.entries(CARD_RARITY)) CARDS[id].rarity = rarity;
-// The deck: at least DECK_MIN cards, at most deckMax(level) - more room with every few hero levels
+// The larger part of the base set: cards made of effects (game/rpg_cards.js)
+const MORE_CARDS = require("./rpg_cards");
+Object.assign(CARDS, MORE_CARDS.cards);
+for (const [cls, ids] of Object.entries(MORE_CARDS.classCards)) CLASSES[cls].cards.push(...ids);
+// The deck: DECK_MIN to DECK_MAX cards - a charm may make room for more, or let it go down with fewer
 const DECK_MIN = 10;
-function deckMax(level) {
-  return Math.min(30, 15 + Math.floor((level - 1) / 2));
+const DECK_MAX = 15;
+const DECK_FLOOR = 5; // (never fewer, whatever the charm)
+function deckLimits(hero) {
+  const gear = Object.values(charOf(hero).gear).filter(Boolean);
+  const sum = (key) => gear.reduce((total, item) => total + (item[key] || 0), 0);
+  return { min: Math.max(DECK_FLOOR, DECK_MIN - sum("deckMin")), max: DECK_MAX + sum("deckMax") };
+}
+// (kept for the old callers: the most cards without a charm)
+function deckMax() {
+  return DECK_MAX;
 }
 // The booster packs of the base set (the shop): how many cards, the last ones at least of a rarity, the rarer
 // ones more often (x their weight)
@@ -236,13 +248,41 @@ const PACK_SIZE = PACKS.standard.size;
 const PACK_PRICE = PACKS.standard.price;
 const RARITY_RANK = ["basic", "common", "rare", "epic", "eternal"];
 
-// The price of packs: count 1 or a bundle (10% off)
+const CART_MAX = 50; // packs of a kind in one cart
+
+// The price of packs of a kind: PACK_BUNDLE or more at once - 10% off
 function packPrice(id, count = 1) {
   const pack = PACKS[id];
   if (!pack) return null;
-  return count == PACK_BUNDLE ? Math.round((pack.price * count * (1 - BUNDLE_OFF)) / 100) * 100 : pack.price * count;
+  return count >= PACK_BUNDLE ? Math.round((pack.price * count * (1 - BUNDLE_OFF)) / 100) * 100 : pack.price * count;
 }
-const NEUTRAL_CARDS = ["focus", "secondwind", "adrenaline", "quickslash", "shrug", "pommel", "bandage", "twinstrike", "overpower", "trance", "laststand", "rally"];
+
+// A cart ({pack id: count}) -> {total, items: [[id, count]]} or {error}
+function cartPrice(cart) {
+  if (!cart || typeof cart != "object") return { error: "Your cart is empty." };
+  const items = Object.entries(cart).filter(([, n]) => n);
+  if (!items.length) return { error: "Your cart is empty." };
+  for (const [id, n] of items) {
+    if (!PACKS[id]) return { error: "Unknown pack." };
+    if (!Number.isInteger(n) || n < 1 || n > CART_MAX) return { error: `1 to ${CART_MAX} packs of a kind.` };
+  }
+  return { total: items.reduce((sum, [id, n]) => sum + packPrice(id, n), 0), items };
+}
+
+// Packs bought: waiting, unopened (opened one after the other - for the class played then)
+function addPacks(hero, items) {
+  if (!hero.packs) hero.packs = {};
+  for (const [id, n] of items) hero.packs[id] = (hero.packs[id] || 0) + n;
+}
+
+// An unopened pack opened -> its cards (openPack) or an error (a string)
+function openStored(hero, id, rng = Math.random) {
+  if (!hero.cls) return "Pick a class first.";
+  if (!hero.packs || !(hero.packs[id] > 0)) return "No such pack left.";
+  hero.packs[id]--;
+  return openPack(hero, rng, id);
+}
+const NEUTRAL_CARDS = ["focus", "secondwind", "adrenaline", "quickslash", "shrug", "pommel", "bandage", "twinstrike", "overpower", "trance", "laststand", "rally", ...MORE_CARDS.neutral];
 
 const ENERGY = 3; // a turn
 const HAND = 5; // cards drawn a turn
@@ -414,7 +454,7 @@ const CLASS_PRICE = 50000;
 // A player's hero: one character per class unlocked (its own levels, gear worn, floors) - the bag, the potions
 // are shared. cls: the character played now (null: none picked yet - the first is free)
 function newHero(cls = null) {
-  const hero = { cls: null, unlocked: [], chars: {}, bag: [], potions: 2 };
+  const hero = { cls: null, unlocked: [], chars: {}, bag: [], potions: 2, packs: {} };
   if (cls) unlock(hero, cls);
   return hero;
 }
@@ -459,7 +499,8 @@ function deckAdd(hero, id) {
   if (!CARDS[id] || !poolOf(hero.cls).includes(id)) return "Not a card of your class.";
   const inDeck = char.deck.filter((one) => one == id).length;
   if (inDeck >= (char.collection[id] || 0)) return "You don't own more of it - booster packs bring more cards.";
-  if (char.deck.length >= deckMax(char.level)) return `At most ${deckMax(char.level)} cards (more room with hero levels).`;
+  const { max } = deckLimits(hero);
+  if (char.deck.length >= max) return `At most ${max} cards (a charm may make room for more).`;
   char.deck.push(id);
   return null;
 }
@@ -477,7 +518,8 @@ function deckRemove(hero, id) {
 function deckSet(hero, ids) {
   const char = charOf(hero);
   if (!Array.isArray(ids) || ids.some((id) => typeof id != "string")) return "Not a deck.";
-  if (ids.length > deckMax(char.level)) return `At most ${deckMax(char.level)} cards (more room with hero levels).`;
+  const { max } = deckLimits(hero);
+  if (ids.length > max) return `At most ${max} cards (a charm may make room for more).`;
   const pool = poolOf(hero.cls);
   const counts = {};
   for (const id of ids) {
@@ -489,10 +531,13 @@ function deckSet(hero, ids) {
   return null;
 }
 
-// The deck may go down: at least DECK_MIN cards -> an error or null
+// The deck may go down: as many cards as the limits allow (DECK_MIN to DECK_MAX - the charm's) -> an error or null
 function deckReady(hero) {
   const n = charOf(hero).deck.length;
-  return n < DECK_MIN ? `Your deck needs at least ${DECK_MIN} cards (it has ${n}) - build it in the Deck tab.` : null;
+  const { min, max } = deckLimits(hero);
+  if (n < min) return `Your deck needs at least ${min} cards (it has ${n}) - build it in the Deck tab.`;
+  if (n > max) return `Your deck holds at most ${max} cards (it has ${n}) - take some out in the Deck tab.`;
+  return null;
 }
 
 // A booster pack opened: its cards of the class (the last ones of a rarity at least) -> [{id, fresh, coins}] -
@@ -616,7 +661,9 @@ function heroView(hero) {
     cleared: char.cleared,
     deck: char.deck,
     collection: char.collection,
-    deckMax: deckMax(char.level),
+    packs: hero.packs || {},
+    deckMax: deckLimits(hero).max,
+    deckMin: deckLimits(hero).min,
     pool: hero.cls ? poolOf(hero.cls) : [],
     level: char.level,
     xp: char.xp,
@@ -648,7 +695,13 @@ function makeGear(floor, rng = Math.random, luck = 0) {
     item.def = Math.max(1, Math.round(base * 0.6 * rarity.power));
     item.hp = Math.round(base * 4 * rarity.power);
   }
-  if (slot == "charm") item.luck = Math.max(1, Math.round((1 + floor * 0.25) * rarity.power));
+  if (slot == "charm") {
+    item.luck = Math.max(1, Math.round((1 + floor * 0.25) * rarity.power));
+    // (a charm may change the deck: room for more cards - or fewer needed)
+    const roll = rng();
+    if (roll < 0.35) item.deckMax = [1, 2, 3, 5][index];
+    else if (roll < 0.6) item.deckMin = [1, 1, 2, 3][index];
+  }
   item.value = round100(entryCost(floor) * 0.15 * rarity.power);
   return item;
 }
@@ -1478,6 +1531,12 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
   };
   const heal = (who, amount) => healHero(run, who, amount * up * (1 + perk(hero, "heal")));
   const venom = up * (1 + perk(hero, "poison"));
+  const info = CARDS[baseCard(id)];
+  if (info.fx) {
+    if (info.type != "attack") say(run, `${hero.name} plays ${info.icon} ${info.name}.`);
+    for (const fx of info.fx) playFx(run, hero, fx, { foe, friend, up, venom, block, heal }, rng);
+    return;
+  }
   switch (baseCard(id)) {
     case "strike":
       return strike(run, hero, foe, (1) * up, rng);
@@ -1722,6 +1781,48 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
       }
       return;
   }
+}
+
+// A step of a card made of effects (game/rpg_cards.js)
+function playFx(run, hero, fx, { foe, friend, up, venom, block, heal }, rng) {
+  const foesOf = (to) => {
+    const standing = alive(run.monsters);
+    if (to == "all") return standing;
+    if (to == "random") return standing.length ? [pick(rng, standing)] : [];
+    return foe && !foe.down ? [foe] : [];
+  };
+  const heroesOf = (to) => {
+    if (to == "party") return alive(run.heroes);
+    if (to == "ally") return [friend];
+    if (to == "weakest") return alive(run.heroes).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, 1);
+    return [hero];
+  };
+  const state = (m, cond) => (cond == "low" ? hero.hp < hero.maxHp / 2 : cond == "undead" ? m.undead : !!m.effects[cond]);
+  if (fx.hit != null) {
+    for (let i = 0; i < (fx.times || 1); i++) {
+      for (const m of foesOf(fx.to)) {
+        const power = (fx.bonusIf && state(m, fx.bonusIf) ? fx.bonus : fx.hit) + ((fx.def || 0) * hero.def) / Math.max(1, hero.atk);
+        strike(run, hero, m, power * up, rng, { sure: true });
+      }
+    }
+  } else if (fx.block != null) {
+    const value = fx.block + (fx.def || 0) * hero.def + (fx.atk || 0) * hero.atk + (fx.agi || 0) * hero.agi;
+    for (const one of heroesOf(fx.to)) block(one, value);
+  } else if (fx.heal != null) {
+    for (const one of heroesOf(fx.to)) heal(one, one.maxHp * fx.heal);
+  } else if (fx.status) {
+    for (const m of foesOf(fx.to)) {
+      if (fx.status == "poison") m.effects.poison = { turns: fx.turns || 3, dmg: Math.max(1, Math.round(hero.atk * 0.45 * venom)) };
+      else if (fx.status == "burn") m.effects.burn = { turns: fx.turns || 2, dmg: Math.max(1, Math.round(hero.atk * 0.3 * up)) };
+      else if (fx.status == "stun") m.effects.stun = 1;
+      else m.effects[fx.status] = fx.turns || 1;
+    }
+  } else if (fx.might != null) {
+    for (const one of heroesOf(fx.to)) one.effects.might = fx.might;
+  } else if (fx.draw != null) drawCards(hero, fx.draw, rng);
+  else if (fx.mana != null) hero.energy += fx.mana;
+  else if (fx.lose != null) hero.hp = Math.max(1, hero.hp - Math.round(hero.maxHp * fx.lose));
+  else if (fx.evade) hero.evading = true;
 }
 
 // A hero ends the turn -> true: every hero has - the monsters' turn
@@ -2037,6 +2138,9 @@ module.exports = {
   ROOM_KINDS,
   CARD_RARITIES,
   DECK_MIN,
+  DECK_MAX,
+  DECK_FLOOR,
+  deckLimits,
   PACK_SIZE,
   PACK_PRICE,
   PACKS,
@@ -2044,6 +2148,10 @@ module.exports = {
   PACK_BUNDLE,
   BUNDLE_OFF,
   packPrice,
+  cartPrice,
+  addPacks,
+  openStored,
+  CART_MAX,
   deckMax,
   poolOf,
   collect,
