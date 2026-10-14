@@ -710,7 +710,8 @@ function renderShop() {
       : [el("div", "rpg-empty mm-muted", "No packs waiting - put some into your cart and buy them.")],
   );
   var waiting = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);
-  if (waiting > 1) document.getElementById("rpgShopOwned").appendChild(button("🎴 Open all (" + waiting + ")", "openAll", { className: "primary rpg-open-all" }));
+  // (open all: in the heading of the packs waiting)
+  morphChildren(document.getElementById("rpgOpenAllSlot"), waiting > 1 ? [button("🎴 Open all (" + waiting + ")", "openAll", { className: "small primary" })] : []);
 
   // The packs to buy: into the cart
   morphChildren(

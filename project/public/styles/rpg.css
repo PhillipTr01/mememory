@@ -4237,3 +4237,10 @@ button.rpg-cardx.off {
   background: var(--rpg-surface);
   color: var(--mm-muted);
 }
+
+.rpg-owned-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
