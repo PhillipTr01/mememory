@@ -2629,7 +2629,7 @@ button.rpg-cardx.off {
 
 /* The cost on a card, the mana of the turn, a row of the deck: one picture - the number in its belly */
 .rpg-main {
-  --rpg-drop: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 124'><defs><radialGradient id='g' cx='42%' cy='62%' r='72%'><stop offset='0' stop-color='%23eefaff'/><stop offset='0.35' stop-color='%23a6dcf7'/><stop offset='0.8' stop-color='%235aa9da'/><stop offset='1' stop-color='%234a8fc4'/></radialGradient><radialGradient id='h' cx='50%' cy='50%' r='50%'><stop offset='0' stop-color='white' stop-opacity='0.85'/><stop offset='1' stop-color='white' stop-opacity='0'/></radialGradient></defs><path d='M50 6 C58 26 92 50 92 80 A42 42 0 0 1 8 80 C8 50 42 26 50 6Z' fill='url(%23g)' stroke='%23e9f8ff' stroke-opacity='0.55' stroke-width='2.5' stroke-linejoin='round'/><ellipse cx='33' cy='66' rx='11' ry='17' fill='url(%23h)' transform='rotate(22 33 66)'/><ellipse cx='66' cy='100' rx='9' ry='5' fill='white' fill-opacity='0.18' transform='rotate(-25 66 100)'/></svg>");
+  --rpg-drop: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 124'><defs><radialGradient id='g' cx='42%' cy='62%' r='72%'><stop offset='0' stop-color='%23cdeeff'/><stop offset='0.35' stop-color='%2378c2ee'/><stop offset='0.8' stop-color='%233584c4'/><stop offset='1' stop-color='%232a6ba6'/></radialGradient><radialGradient id='h' cx='50%' cy='50%' r='50%'><stop offset='0' stop-color='white' stop-opacity='0.85'/><stop offset='1' stop-color='white' stop-opacity='0'/></radialGradient></defs><path d='M50 6 C58 26 92 50 92 80 A42 42 0 0 1 8 80 C8 50 42 26 50 6Z' fill='url(%23g)' stroke='%23e9f8ff' stroke-opacity='0.55' stroke-width='2.5' stroke-linejoin='round'/><ellipse cx='33' cy='66' rx='11' ry='17' fill='url(%23h)' transform='rotate(22 33 66)'/><ellipse cx='66' cy='100' rx='9' ry='5' fill='white' fill-opacity='0.18' transform='rotate(-25 66 100)'/></svg>");
 }
 
 .rpg-cardx-cost,
@@ -2656,7 +2656,7 @@ button.rpg-cardx.off {
   padding-top: 32%;
   font-weight: 800;
   color: #fff;
-  text-shadow: 0 1px 3px rgba(20, 70, 120, 0.55);
+  text-shadow: 0 1px 3px rgba(10, 45, 85, 0.75);
 }
 
 .rpg-cardx-cost {
