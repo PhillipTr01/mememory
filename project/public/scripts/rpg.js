@@ -21,8 +21,8 @@ try {
   // no storage: the defaults
 }
 
-var EFFECT_ICONS = { poison: "☠️", burn: "🔥", stun: "💫", chill: "❄️", shield: "🔰", rage: "😡" };
-var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned - loses its next move", chill: "Chilled - half damage", shield: "Shield", rage: "Raging - more damage" };
+var EFFECT_ICONS = { poison: "☠️", burn: "🔥", stun: "💫", chill: "❄️", shield: "🔰", rage: "😡", might: "📯" };
+var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned - loses its next move", chill: "Chilled - half damage", shield: "Shield", rage: "Raging - more damage", might: "War cry - 30% more damage" };
 var RARITY_NAMES = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary" };
 var SLOT_NAMES = { weapon: "Weapon", armor: "Armor", charm: "Charm" };
 
@@ -127,7 +127,7 @@ function render() {
 
 function statValue(id) {
   if (id == "hp") return hero.stats.maxHp + " HP";
-  if (id == "luck") return hero.stats.luck + "%";
+  if (id == "luck" || id == "agi") return hero.stats[id] + "%";
   return String(hero.stats[id]);
 }
 
@@ -181,9 +181,16 @@ function renderHero() {
   var stats = Object.keys(rules.stats).map((id) => {
     var stat = rules.stats[id];
     var cost = hero.upgrades[id];
-    var row = el("div", "rpg-stat");
+    // (the main stat of the class: its levels count more)
+    var main = rules.classes[hero.cls].main == id;
+    var row = el("div", "rpg-stat" + (main ? " main" : ""));
     var name = el("div", "rpg-stat-name");
     name.append(el("span", "rpg-stat-icon", stat.icon), el("span", "", stat.name), el("span", "rpg-stat-level", "Lv " + hero.levels[id]));
+    if (main) {
+      var star = el("span", "rpg-stat-main", "★ " + rules.classes[hero.cls].name);
+      star.title = "The main stat of your class: its levels count " + rules.mainBonus + "x";
+      name.appendChild(star);
+    }
     row.append(name, el("div", "rpg-stat-value", statValue(id)));
     row.appendChild(
       cost == null

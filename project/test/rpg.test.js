@@ -33,11 +33,18 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   // The classes: their own stats and three skills each
   for (const id of rpg.CLASS_IDS) {
     assert.strictEqual(rpg.CLASSES[id].skills.length, 3);
+    assert.ok(rpg.STATS[rpg.CLASSES[id].main], id);
     rpg.CLASSES[id].skills.forEach((skill) => assert.ok(rpg.SKILLS[skill], skill));
   }
   const tank = rpg.statsOf({ ...rpg.newHero(), cls: "warrior" });
   const mage = rpg.statsOf({ ...rpg.newHero(), cls: "mage" });
-  assert.ok(tank.maxHp > mage.maxHp && mage.atk > tank.atk);
+  assert.ok(tank.maxHp > mage.maxHp && mage.luck > tank.luck);
+  // A level in the main stat of the class counts 1.5x: Strength for the warrior, Luck for the mage
+  const strong = { ...rpg.newHero(), cls: "warrior", levels: { hp: 0, atk: 4, def: 0, luck: 4, agi: 0 } };
+  const lucky = { ...strong, cls: "mage" };
+  assert.strictEqual(rpg.statsOf(strong).atk, Math.round((10 + 3 * 4 * rpg.MAIN_BONUS) * rpg.CLASSES.warrior.atk));
+  assert.strictEqual(rpg.statsOf(lucky).luck, Math.round(5 + 2 * 4 * rpg.MAIN_BONUS + rpg.CLASSES.mage.luck));
+  assert.strictEqual(rpg.statsOf(strong).luck, Math.round(5 + 2 * 4 + rpg.CLASSES.warrior.luck));
   // Gear makes a hero stronger
   const before = rpg.statsOf(hero);
   hero.gear.weapon = { slot: "weapon", atk: 7 };
@@ -192,7 +199,7 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; the time
   assert.strictEqual(hero.levels.atk, 0);
   alice.emit("upgrade", { stat: "atk" });
   const up = await waitFor(alice, "rpgHero", (view) => view.levels.atk == 1);
-  assert.strictEqual(up.stats.atk, rpg.STATS.atk.base + rpg.STATS.atk.per);
+  assert.strictEqual(up.stats.atk, Math.round((rpg.STATS.atk.base + rpg.STATS.atk.per * rpg.MAIN_BONUS) * rpg.CLASSES.warrior.atk));
   assert.strictEqual(testMode.balance("rpg_alice"), 1000000 - rpg.upgradeCost(0));
   alice.emit("potion");
   await waitFor(alice, "rpgHero", (view) => view.potions == 3);

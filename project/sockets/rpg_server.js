@@ -94,6 +94,7 @@ module.exports = function (io, options = {}) {
       stats: rpg.STATS,
       levelMax: rpg.LEVEL_MAX,
       classes: rpg.CLASSES,
+      mainBonus: rpg.MAIN_BONUS,
       skills: rpg.SKILLS,
       moves: rpg.MOVES,
       roomKinds: rpg.ROOM_KINDS,
@@ -270,10 +271,11 @@ module.exports = function (io, options = {}) {
       if (!rpg.STAT_IDS.includes(data.stat)) return;
       if (inRun()) return error("Not during a run.");
       const hero = heroOf(username);
-      const cost = rpg.upgradeCost(hero.levels[data.stat]);
+      const level = hero.levels[data.stat] || 0;
+      const cost = rpg.upgradeCost(level);
       if (cost == null) return error("That one is at its highest level.");
       if (!(await coins.spend(username, cost, { reason: "rpg upgrade", note: data.stat }))) return error(coins.refusal(username) || "You don't have enough coins.");
-      hero.levels[data.stat]++;
+      hero.levels[data.stat] = level + 1;
       sendHero(username);
     });
 

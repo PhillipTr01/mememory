@@ -35,11 +35,15 @@ const STATS = {
   atk: { name: "Strength", icon: "⚔️", base: 10, per: 3, about: "+3 attack" },
   def: { name: "Armor", icon: "🛡️", base: 0, per: 2, about: "+2 defense" },
   luck: { name: "Luck", icon: "🍀", base: 5, per: 2, about: "+2% critical hits, dodging traps, better loot" },
+  agi: { name: "Agility", icon: "🪶", base: 0, per: 1.5, about: "+1.5% to dodge an attack" },
 };
 const STAT_IDS = Object.keys(STATS);
 const LEVEL_MAX = 50;
 const UPGRADE_BASE = 2000;
 const UPGRADE_GROWTH = 1.35;
+// The main stat of a class: its levels count this much more
+const MAIN_BONUS = 1.5;
+const DODGE_MAX = 40;
 
 const ENTRY_BASE = 1000;
 const ENTRY_GROWTH = 1.35;
@@ -48,20 +52,24 @@ const REWARD = { fight: 0.25, hard: 0.45, elite: 0.4, boss: 1, chest: 0.15, trap
 
 /* ---------- Classes and their skills ---------- */
 
-// hp, atk: times the stats; def, luck: added
+// main: the stat its levels count 1.5x for; hp, atk: times the stats; def, luck, agi: added
 const CLASSES = {
-  warrior: { name: "Warrior", icon: "🛡️", about: "Tough - stuns, draws the attacks on himself, hits all", hp: 1.25, atk: 1, def: 3, luck: 0, skills: ["bash", "taunt", "cleave"] },
-  rogue: { name: "Rogue", icon: "🗡️", about: "Poisons, then strikes where it hurts - and vanishes in smoke", hp: 0.95, atk: 1.1, def: 0, luck: 10, skills: ["poisonblade", "backstab", "smoke"] },
-  mage: { name: "Mage", icon: "🔮", about: "Fire on all foes, frost that weakens - shields for the party", hp: 0.85, atk: 1.2, def: 0, luck: 0, skills: ["frost", "fireball", "barrier"] },
-  cleric: { name: "Cleric", icon: "✨", about: "Heals, smites the undead, brings the fallen back", hp: 1.05, atk: 0.9, def: 1, luck: 0, skills: ["heal", "smite", "revive"] },
+  warrior: { name: "Warrior", icon: "⚔️", main: "atk", about: "Strength - heavy blows, cleaves the pack, a war cry for the party", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, skills: ["bash", "cleave", "battlecry"] },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", about: "Armor - draws the attacks, shields the party, judges with his armor", hp: 1.15, atk: 0.9, def: 4, luck: 0, agi: 0, skills: ["taunt", "holyshield", "judgement"] },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", about: "Vitality - heals, smites the undead, brings the fallen back", hp: 1.2, atk: 0.9, def: 1, luck: 0, agi: 0, skills: ["heal", "smite", "revive"] },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", about: "Agility - dodges, poisons, then strikes where it hurts", hp: 0.95, atk: 1.05, def: 0, luck: 5, agi: 8, skills: ["poisonblade", "backstab", "smoke"] },
+  mage: { name: "Mage", icon: "🔮", main: "luck", about: "Luck - spells that crit, fire on all foes, frost that weakens", hp: 0.85, atk: 1.15, def: 0, luck: 8, agi: 0, skills: ["frost", "fireball", "barrier"] },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
 // target: "foe" (a monster), "ally" (a hero standing), "fallen" (a hero down), "none" (no target)
 const SKILLS = {
-  bash: { name: "Shield Bash", icon: "💫", cost: 1, target: "foe", about: "Hits and stuns: the foe loses its next move" },
-  taunt: { name: "Taunt", icon: "📣", cost: 1, target: "none", about: "Every foe attacks you this turn - you take 30% less" },
+  bash: { name: "Heavy Blow", icon: "💫", cost: 1, target: "foe", about: "Hits and stuns: the foe loses its next move" },
   cleave: { name: "Cleave", icon: "🪓", cost: 2, target: "none", about: "Hits every foe for 80%" },
+  battlecry: { name: "War Cry", icon: "📯", cost: 2, target: "none", about: "The whole party deals 30% more damage for 2 turns" },
+  taunt: { name: "Taunt", icon: "📣", cost: 1, target: "none", about: "Every foe attacks you this turn - you take 30% less" },
+  holyshield: { name: "Holy Shield", icon: "🛡️", cost: 2, target: "none", about: "A shield on every hero: 20% of its max HP" },
+  judgement: { name: "Judgement", icon: "⚖️", cost: 1, target: "foe", about: "Hits with attack + twice your armor - never misses" },
   poisonblade: { name: "Poison Blade", icon: "☠️", cost: 1, target: "foe", about: "Hits and poisons it for 3 turns" },
   backstab: { name: "Backstab", icon: "🔪", cost: 2, target: "foe", about: "1.6x damage - 3x on a poisoned or stunned foe" },
   smoke: { name: "Smoke Bomb", icon: "💨", cost: 1, target: "none", about: "Nothing hits you this turn" },
@@ -156,20 +164,21 @@ const pick = (rng, list) => list[Math.floor(rng() * list.length)];
 /* ---------- The hero ---------- */
 
 function newHero() {
-  return { cls: "warrior", levels: { hp: 0, atk: 0, def: 0, luck: 0 }, gear: { weapon: null, armor: null, charm: null }, bag: [], potions: 2, deepest: 0, runs: 0, cleared: 0 };
+  return { cls: "warrior", levels: { hp: 0, atk: 0, def: 0, luck: 0, agi: 0 }, gear: { weapon: null, armor: null, charm: null }, bag: [], potions: 2, deepest: 0, runs: 0, cleared: 0 };
 }
 
-// What the hero has with class, levels and gear: {maxHp, atk, def, luck}
+// What the hero has with class, levels and gear: {maxHp, atk, def, luck, agi} (agi: the dodge chance, %)
 function statsOf(hero) {
   const cls = CLASSES[hero.cls] || CLASSES.warrior;
-  const value = (id) => STATS[id].base + STATS[id].per * hero.levels[id];
+  const value = (id) => STATS[id].base + STATS[id].per * (hero.levels[id] || 0) * (cls.main == id ? MAIN_BONUS : 1);
   const gear = Object.values(hero.gear).filter(Boolean);
   const plus = (key) => gear.reduce((sum, item) => sum + (item[key] || 0), 0);
   return {
     maxHp: Math.round((value("hp") + plus("hp")) * cls.hp),
     atk: Math.round((value("atk") + plus("atk")) * cls.atk),
-    def: value("def") + plus("def") + cls.def,
-    luck: Math.min(60, value("luck") + plus("luck") + cls.luck),
+    def: Math.round(value("def") + plus("def") + cls.def),
+    luck: Math.min(60, Math.round(value("luck") + plus("luck") + cls.luck)),
+    agi: Math.min(DODGE_MAX, Math.round(value("agi") + plus("agi") + cls.agi)),
   };
 }
 
@@ -191,9 +200,9 @@ function entryCost(floor) {
 function heroView(hero) {
   return {
     cls: hero.cls,
-    levels: hero.levels,
+    levels: { ...newHero().levels, ...hero.levels },
     stats: statsOf(hero),
-    upgrades: Object.fromEntries(STAT_IDS.map((id) => [id, upgradeCost(hero.levels[id])])),
+    upgrades: Object.fromEntries(STAT_IDS.map((id) => [id, upgradeCost(hero.levels[id] || 0)])),
     gear: hero.gear,
     bag: hero.bag,
     potions: hero.potions,
@@ -493,7 +502,7 @@ function strike(run, hero, foe, power, rng, options = {}) {
     return 0;
   }
   const crit = rng() * 100 < hero.luck;
-  let damage = hero.atk * between(rng, 0.9, 1.1) * power * (crit ? CRIT : 1) * (hero.blessed ? SHRINE_POWER : 1);
+  let damage = hero.atk * between(rng, 0.9, 1.1) * power * (crit ? CRIT : 1) * (hero.blessed ? SHRINE_POWER : 1) * (hero.effects.might ? 1.3 : 1);
   if (foe.defending) damage *= 0.5;
   damage = Math.max(1, Math.round(damage));
   foe.hp = Math.max(0, foe.hp - damage);
@@ -506,12 +515,17 @@ function strike(run, hero, foe, power, rng, options = {}) {
 }
 
 // Damage to a hero: guard, taunt, smoke and a shield take their part
-function hurt(run, hero, raw, source) {
+function hurt(run, hero, raw, source, rng = Math.random) {
   if (hero.evading) {
     say(run, `${source} misses ${hero.name} in the smoke.`);
     return 0;
   }
-  let damage = raw - hero.def;
+  if (rng() * 100 < hero.agi) {
+    say(run, `${hero.name} dodges ${source} 🪶.`);
+    return 0;
+  }
+  // (armor takes at most 75% of a hit)
+  let damage = Math.max(raw * 0.25, raw - hero.def);
   if (hero.guarding) damage *= GUARD;
   if (hero.taunting) damage *= TAUNT;
   damage = Math.max(1, Math.round(damage));
@@ -550,6 +564,18 @@ function useSkill(run, hero, choice, rng) {
     case "taunt":
       hero.taunting = true;
       say(run, `${hero.name} taunts the foes 📣.`);
+      return;
+    case "battlecry":
+      for (const friend of alive(run.heroes)) friend.effects.might = 2;
+      say(run, `${hero.name} lets out a war cry 📯 - the party hits harder!`);
+      return;
+    case "holyshield":
+      for (const friend of alive(run.heroes)) friend.effects.shield = { hp: Math.max(friend.effects.shield ? friend.effects.shield.hp : 0, Math.round(friend.maxHp * 0.2)) };
+      say(run, `${hero.name} raises a holy shield over the party 🛡️.`);
+      return;
+    case "judgement":
+      if (!foe) return;
+      strike(run, hero, foe, (hero.atk + 2 * hero.def) / hero.atk, rng, { sure: true, verb: "judges" });
       return;
     case "cleave":
       say(run, `${hero.name} cleaves 🪓!`);
@@ -628,30 +654,29 @@ function monsterMove(run, foe, rng) {
   switch (intent.move) {
     case "attack":
     case "smash":
-      hurt(run, target, damage * between(rng, 0.9, 1.1), intent.move == "smash" ? source + " 💥 smashes and" : source);
+      hurt(run, target, damage * between(rng, 0.9, 1.1), intent.move == "smash" ? source + " 💥 smashes and" : source, rng);
       break;
     case "poison":
-      if (hurt(run, target, damage, source) > 0 && !target.down) {
+      if (hurt(run, target, damage, source, rng) > 0 && !target.down) {
         target.effects.poison = { turns: 3, dmg: Math.max(1, Math.round(foe.atk * 0.35)) };
         say(run, `${target.name} is poisoned ☠️.`);
       }
       break;
     case "steal":
-      hurt(run, target, damage, source);
-      if (target.potions > 0 && !target.evading) {
+      if (hurt(run, target, damage, source, rng) > 0 && target.potions > 0) {
         target.potions--;
         say(run, `${source} steals a potion from ${target.name} 🫳!`);
       }
       break;
     case "drain": {
-      const done = hurt(run, target, damage, source);
+      const done = hurt(run, target, damage, source, rng);
       foe.hp = Math.min(foe.maxHp, foe.hp + done);
       break;
     }
     case "burn":
       say(run, `${source} sends a fire wave 🔥!`);
       for (const hero of heroes) {
-        if (hurt(run, hero, damage, source) > 0 && !hero.down) hero.effects.burn = { turns: 2, dmg: Math.max(1, Math.round(foe.atk * 0.25)) };
+        if (hurt(run, hero, damage, source, rng) > 0 && !hero.down) hero.effects.burn = { turns: 2, dmg: Math.max(1, Math.round(foe.atk * 0.25)) };
       }
       break;
     case "regen": {
@@ -696,6 +721,7 @@ function endTurn(run) {
       }
     }
     if (one.effects.rage && --one.effects.rage <= 0) delete one.effects.rage;
+    if (one.effects.might && --one.effects.might <= 0) delete one.effects.might;
   }
   for (const hero of run.heroes) {
     hero.guarding = hero.taunting = hero.evading = false;
@@ -788,7 +814,7 @@ function runView(run) {
     room: run.rooms.length - 1,
     rooms: run.rooms.map((room) => ({ kind: room.kind, done: room.done })),
     doors: run.doors,
-    heroes: run.heroes.map((h) => ({ name: h.name, cls: h.cls, hp: h.hp, maxHp: h.maxHp, atk: h.atk, def: h.def, luck: h.luck, down: h.down, potions: h.potions, energy: h.energy, blessed: h.blessed, effects: effectsOf(h.effects), chose: !!h.action })),
+    heroes: run.heroes.map((h) => ({ name: h.name, cls: h.cls, hp: h.hp, maxHp: h.maxHp, atk: h.atk, def: h.def, luck: h.luck, agi: h.agi, down: h.down, potions: h.potions, energy: h.energy, blessed: h.blessed, effects: effectsOf(h.effects), chose: !!h.action })),
     monsters: run.monsters.map((m) => ({
       id: m.id,
       name: m.name,
@@ -823,6 +849,7 @@ function simulatedChoice(run, me) {
     if (me.energy < skill.cost || skill.target == "fallen") continue;
     if (id == "heal" && me.hp > me.maxHp * 0.6) continue;
     if ((id == "taunt" || id == "smoke" || id == "barrier") && !smashing) continue;
+    if (id == "battlecry" && alive(run.heroes).length == 1) continue;
     return { action: "skill", skill: id, target: foes[0] && foes[0].id, ally: me.name };
   }
   return { action: "attack", target: foes[0] && foes[0].id };
@@ -866,6 +893,7 @@ module.exports = {
   REWARD,
   CLASSES,
   CLASS_IDS,
+  MAIN_BONUS,
   SKILLS,
   MOVES,
   ROOM_KINDS,

@@ -1207,3 +1207,28 @@
 .rpg-fighter {
   width: 13.5rem;
 }
+
+/* Five classes in a row - the main stat of the class marked */
+.rpg-classes {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 575px) {
+  .rpg-classes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.rpg-stat.main {
+  box-shadow: inset 3px 0 0 var(--mm-accent), inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.rpg-stat-main {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--mm-accent);
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  white-space: nowrap;
+}
