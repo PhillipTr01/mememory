@@ -683,3 +683,283 @@
     min-width: 0;
   }
 }
+
+/* ---------- The dungeon look: stone walls, torch light, carved letters ---------- */
+
+.rpg-main {
+  --rpg-stone: #241f1b;
+  --rpg-stone-hi: #2e2722;
+  --rpg-stone-edge: #3d342c;
+  --rpg-parchment: #e9d8b4;
+  --rpg-fire: 255, 150, 60;
+  /* The wall: rough bricks in the dark */
+  --rpg-bricks: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='96' height='48'><rect width='96' height='48' fill='%23161210'/><g stroke='%230d0b09' stroke-width='2'><rect x='1' y='1' width='46' height='22' rx='3' fill='%23221d19'/><rect x='49' y='1' width='46' height='22' rx='3' fill='%231e1a17'/><rect x='-23' y='25' width='46' height='22' rx='3' fill='%231f1a16'/><rect x='25' y='25' width='46' height='22' rx='3' fill='%2324201b'/><rect x='73' y='25' width='46' height='22' rx='3' fill='%231f1a16'/></g><g fill='%23ffffff' opacity='0.025'><rect x='4' y='3' width='40' height='3' rx='1.5'/><rect x='52' y='3' width='40' height='3' rx='1.5'/><rect x='28' y='27' width='40' height='3' rx='1.5'/></g></svg>");
+  background: radial-gradient(ellipse at 50% 0%, rgba(var(--rpg-fire), 0.07), transparent 60%), linear-gradient(180deg, rgba(12, 10, 8, 0.55), rgba(12, 10, 8, 0.85)), var(--rpg-bricks) 0 0 / 96px 48px;
+  border-color: var(--rpg-stone-edge);
+}
+
+/* Carved letters, lit by the torches */
+.rpg-heading,
+.rpg-card-title,
+.rpg-floor-num,
+.rpg-run-floor,
+.rpg-result-title,
+.rpg-quiet {
+  font-family: "Cinzel", Georgia, serif;
+  color: var(--rpg-parchment);
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6), 0 0 14px rgba(var(--rpg-fire), 0.18);
+}
+
+.rpg-heading {
+  font-weight: 800;
+}
+
+.rpg-label {
+  color: #a8957a;
+}
+
+/* Stone slabs */
+.rpg-card,
+.rpg-stat,
+.rpg-party,
+.rpg-seat,
+.rpg-monster,
+.rpg-fighter,
+.rpg-item {
+  background: linear-gradient(180deg, var(--rpg-stone-hi), var(--rpg-stone));
+  border-color: var(--rpg-stone-edge);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -2px 0 rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.rpg-item {
+  border-left-color: var(--rarity, var(--rpg-stone-edge));
+}
+
+.rpg-item.empty,
+.rpg-seat.empty {
+  background: rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.rpg-btn:not(.primary) {
+  background: linear-gradient(180deg, #332b25, #26201c);
+  border-color: #4a3f35;
+}
+
+.rpg-btn:not(.primary):hover:not(:disabled) {
+  background: linear-gradient(180deg, #3d342c, #2c2520);
+}
+
+.rpg-round {
+  background: linear-gradient(180deg, #332b25, #26201c);
+  border-color: #4a3f35;
+}
+
+/* The gate down: a dark arch in the wall, warm light from below */
+.rpg-floor {
+  position: relative;
+  margin: 0.4rem 1.6rem 0;
+  padding: 1.6rem 0.75rem 0.9rem;
+  border-radius: 999px 999px 10px 10px / 90px 90px 10px 10px;
+  background: radial-gradient(ellipse at 50% 115%, rgba(var(--rpg-fire), 0.28), transparent 65%), radial-gradient(ellipse at 50% 40%, #0b0908, #060504 70%);
+  box-shadow: 0 0 0 7px #3a3029, 0 0 0 9px #15110e, inset 0 10px 24px rgba(0, 0, 0, 0.9);
+}
+
+.rpg-floor-num {
+  font-size: 1.8rem;
+}
+
+.rpg-floor .rpg-torch {
+  top: 0.4rem;
+}
+
+.rpg-floor .rpg-torch.left {
+  left: -2.2rem;
+}
+
+.rpg-floor .rpg-torch.right {
+  right: -2.2rem;
+}
+
+/* A torch: the stick, the flame (flickers - only moved and faded, cheap), its light on the wall */
+.rpg-torch {
+  position: absolute;
+  width: 8px;
+  height: 24px;
+  border-radius: 2px 2px 3px 3px;
+  background: linear-gradient(90deg, #4a2f1a, #7a5232, #4a2f1a);
+  box-shadow: 0 -2px 0 #2a2a2a;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.rpg-torch::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  width: 16px;
+  height: 24px;
+  margin-left: -8px;
+  border-radius: 50% 50% 45% 45% / 65% 65% 35% 35%;
+  background: radial-gradient(ellipse at 50% 75%, #fff6c8 0%, #ffd25a 30%, #ff8a2a 60%, rgba(255, 90, 20, 0) 75%);
+  transform-origin: 50% 100%;
+  animation: rpg-flame 1.3s ease-in-out infinite;
+}
+
+.rpg-torch::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -18px;
+  width: 140px;
+  height: 140px;
+  margin: -70px 0 0 -70px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--rpg-fire), 0.22), rgba(var(--rpg-fire), 0) 65%);
+  animation: rpg-glow 2.1s ease-in-out infinite;
+}
+
+.rpg-torch.right::before {
+  animation-delay: -0.6s;
+}
+
+.rpg-torch.right::after {
+  animation-delay: -1s;
+}
+
+@keyframes rpg-flame {
+  0%,
+  100% {
+    transform: scale(1, 1) rotate(-2deg);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(0.92, 1.08) rotate(3deg);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.06, 0.94) rotate(-3deg);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(0.96, 1.05) rotate(2deg);
+    opacity: 0.85;
+  }
+}
+
+@keyframes rpg-glow {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* The fight: a wall at the back, flagstones in front, a torch on each side */
+.rpg-arena {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--rpg-stone-edge);
+  background: radial-gradient(ellipse at 50% 100%, rgba(var(--rpg-fire), 0.12), transparent 60%), linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.45) 58%, #120e0c 58%, #0c0a08 100%), var(--rpg-bricks) 0 0 / 96px 48px;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.85);
+}
+
+.rpg-arena > .rpg-torch {
+  top: 2.2rem;
+}
+
+.rpg-arena > .rpg-torch.left {
+  left: 1.2rem;
+}
+
+.rpg-arena > .rpg-torch.right {
+  right: 1.2rem;
+}
+
+.rpg-arena > .rpg-monsters,
+.rpg-arena > .rpg-heroes {
+  position: relative;
+  z-index: 2;
+}
+
+/* Monsters: lit red from below - the elite in gold, a boss in red */
+.rpg-monster {
+  box-shadow: inset 0 -22px 30px -22px rgba(224, 103, 90, 0.45), 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+.rpg-monster.rank-elite {
+  box-shadow: inset 0 -22px 30px -20px rgba(245, 197, 66, 0.45), 0 0 18px rgba(245, 197, 66, 0.15), 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+.rpg-monster-name {
+  font-family: "Cinzel", Georgia, serif;
+  color: var(--rpg-parchment);
+}
+
+.rpg-bar {
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* The rooms of the floor: stone tiles on a chain */
+.rpg-track {
+  gap: 0.5rem;
+  background: linear-gradient(180deg, transparent calc(50% - 1px), #4a3f35 calc(50% - 1px), #4a3f35 calc(50% + 1px), transparent calc(50% + 1px));
+}
+
+.rpg-room {
+  border-radius: 8px;
+  background: linear-gradient(180deg, #2e2722, #1d1815);
+  border-color: var(--rpg-stone-edge);
+}
+
+.rpg-room.done {
+  background: linear-gradient(180deg, #3a3122, #2a2318);
+  border-color: rgba(245, 197, 66, 0.45);
+}
+
+.rpg-room.now {
+  border-color: rgba(var(--rpg-fire), 0.9);
+  box-shadow: 0 0 12px rgba(var(--rpg-fire), 0.45);
+}
+
+/* The log: an old scroll */
+.rpg-log {
+  background: linear-gradient(180deg, #2b2219, #1f1812);
+  border: 1px solid #5a4630;
+  color: #e7d6b5;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.rpg-timer-bar {
+  background: linear-gradient(90deg, #ff8a2a, #ffd25a);
+}
+
+@media (max-width: 575px) {
+  .rpg-floor {
+    margin: 0.4rem 1.4rem 0;
+  }
+
+  .rpg-floor .rpg-torch.left {
+    left: -1.6rem;
+  }
+
+  .rpg-floor .rpg-torch.right {
+    right: -1.6rem;
+  }
+
+  .rpg-arena > .rpg-torch {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rpg-torch::before,
+  .rpg-torch::after {
+    animation: none;
+  }
+}

@@ -28,6 +28,8 @@
     <!--- Font --->
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;400;600;800&display=swap" rel="stylesheet">
+    <!--- The dungeon's carved letters --->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&display=swap" rel="stylesheet">
 </head>
 
 <body class="d-flex flex-column min-h-100 jackpot-theme">
@@ -91,7 +93,7 @@
                 <section class="mm-card rpg-main">
                     <div class="jp-head">
                         <div>
-                            <h1 class="jp-title"><span class="cs-title-icon rpg-title-icon" aria-hidden="true">⚔️</span> Dungeon <span class="rpg-test" title="Only in test mode for now">🧪 Test</span></h1>
+                            <h1 class="jp-title rpg-heading"><span class="cs-title-icon rpg-title-icon" aria-hidden="true">⚔️</span> Dungeon <span class="rpg-test" title="Only in test mode for now">🧪 Test</span></h1>
                         </div>
                     </div>
 
@@ -117,7 +119,10 @@
                         </div>
                         <div class="rpg-card rpg-door">
                             <div class="rpg-card-title">Enter the dungeon</div>
+                            <!--- The gate down: a stone arch, a torch on each side --->
                             <div class="rpg-floor">
+                                <span class="rpg-torch left" aria-hidden="true"></span>
+                                <span class="rpg-torch right" aria-hidden="true"></span>
                                 <button type="button" id="rpgFloorDown" class="rpg-round" aria-label="A floor lower">‹</button>
                                 <div class="rpg-floor-mid">
                                     <div id="rpgFloor" class="rpg-floor-num"></div>
@@ -156,6 +161,8 @@
                             <div id="rpgPot" class="rpg-pot"></div>
                         </div>
                         <div class="rpg-arena">
+                            <span class="rpg-torch left" aria-hidden="true"></span>
+                            <span class="rpg-torch right" aria-hidden="true"></span>
                             <div id="rpgMonsters" class="rpg-monsters"></div>
                             <div id="rpgHeroes" class="rpg-heroes"></div>
                         </div>
