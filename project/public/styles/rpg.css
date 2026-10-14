@@ -2629,7 +2629,7 @@ button.rpg-cardx.off {
 
 /* The cost on a card, the mana of the turn, a row of the deck: one picture - the number in its belly */
 .rpg-main {
-  --rpg-drop: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 124'><defs><radialGradient id='g' cx='40%' cy='66%' r='70%'><stop offset='0' stop-color='%23c4f0ff'/><stop offset='0.4' stop-color='%2346b0ee'/><stop offset='0.85' stop-color='%23135a9c'/><stop offset='1' stop-color='%230b3566'/></radialGradient><linearGradient id='r' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23f2fdff'/><stop offset='1' stop-color='%230e4a85'/></linearGradient></defs><path d='M50 5 C62 30 91 52 91 80 A41 41 0 0 1 9 80 C9 52 38 30 50 5Z' fill='url(%23g)' stroke='url(%23r)' stroke-width='5' stroke-linejoin='round'/><path d='M44 24 C38 38 22 54 21 74' fill='none' stroke='white' stroke-opacity='0.55' stroke-width='6' stroke-linecap='round'/><ellipse cx='68' cy='98' rx='6' ry='4' fill='white' fill-opacity='0.3' transform='rotate(-30 68 98)'/></svg>");
+  --rpg-drop: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 124'><defs><radialGradient id='g' cx='42%' cy='62%' r='72%'><stop offset='0' stop-color='%23eefaff'/><stop offset='0.35' stop-color='%23a6dcf7'/><stop offset='0.8' stop-color='%235aa9da'/><stop offset='1' stop-color='%234a8fc4'/></radialGradient><radialGradient id='h' cx='50%' cy='50%' r='50%'><stop offset='0' stop-color='white' stop-opacity='0.85'/><stop offset='1' stop-color='white' stop-opacity='0'/></radialGradient></defs><path d='M50 6 C58 26 92 50 92 80 A42 42 0 0 1 8 80 C8 50 42 26 50 6Z' fill='url(%23g)' stroke='%23e9f8ff' stroke-opacity='0.55' stroke-width='2.5' stroke-linejoin='round'/><ellipse cx='33' cy='66' rx='11' ry='17' fill='url(%23h)' transform='rotate(22 33 66)'/><ellipse cx='66' cy='100' rx='9' ry='5' fill='white' fill-opacity='0.18' transform='rotate(-25 66 100)'/></svg>");
 }
 
 .rpg-cardx-cost,
@@ -2642,7 +2642,7 @@ button.rpg-cardx.off {
   font-size: 0;
   background: var(--rpg-drop) center / contain no-repeat;
   box-shadow: none;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
   display: grid;
   place-items: center;
 }
@@ -2656,7 +2656,7 @@ button.rpg-cardx.off {
   padding-top: 32%;
   font-weight: 800;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(6, 30, 60, 0.9), 0 0 6px rgba(6, 30, 60, 0.6);
+  text-shadow: 0 1px 3px rgba(20, 70, 120, 0.55);
 }
 
 .rpg-cardx-cost {
@@ -2682,7 +2682,7 @@ button.rpg-cardx.off {
 .rpg-energy {
   width: 3.6rem;
   height: 4.45rem;
-  filter: drop-shadow(0 0 10px rgba(91, 188, 240, 0.45)) drop-shadow(0 3px 4px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 0 14px rgba(150, 215, 250, 0.35)) drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
 }
 
 .rpg-energy::after {
@@ -2692,5 +2692,5 @@ button.rpg-cardx.off {
 
 /* No mana left: the drop runs dry */
 .rpg-energy.empty {
-  filter: grayscale(0.85) brightness(0.7) drop-shadow(0 3px 4px rgba(0, 0, 0, 0.5));
+  filter: grayscale(0.8) brightness(0.75) drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
 }
