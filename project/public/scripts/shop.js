@@ -112,6 +112,7 @@ function renderFitting() {
   }
   if (!box) {
     box = el("aside", "sh-fitting");
+    box.dataset.looksHover = "";
     box.id = "shFitting";
     box.setAttribute("aria-label", "Trying on");
     document.body.appendChild(box);
@@ -199,6 +200,7 @@ function renderSeason() {
     var owned = isOwned(item);
     var worn = shopData[item.kind] == item.id;
     var card = el("div", "sh-item exclusive" + (item.set ? " in-set" : "") + (item.unique ? " unique" : "") + (worn ? " worn" : "") + (owned ? " owned" : " locked"));
+    card.dataset.looksHover = ""; // (its avatar live only while the mouse is over it - casino_looks.js)
     var stage = el("div", "sh-stage");
     stage.append(avatarWith(previewWith(item), "lg"), tryButton(item));
     var kindLabel = el("span", "sh-rarity", (item.unique ? "💎 Unique " : "✨ ") + KIND_NAMES[item.kind]);
@@ -286,6 +288,7 @@ function shopCard(item) {
   var kind = item.kind;
   var worn = shopData[kind] == item.id;
   var card = el("div", "sh-item " + item.rarity + (worn ? " worn" : "") + (owned ? " owned" : ""));
+  card.dataset.looksHover = ""; // (its avatar live only while the mouse is over it - casino_looks.js)
   var stage = el("div", "sh-stage");
   // The preview: the item on me (with what I wear and what I try on)
   stage.append(avatarWith(previewWith(item), "lg"), tryButton(item));

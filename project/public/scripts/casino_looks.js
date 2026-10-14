@@ -15,6 +15,28 @@
   // (looks.css: look-lite - many of them cost the page next to nothing); the bigger ones draw them live (smooth)
   var LITE = 60;
 
+  // Live or pre-rendered: in a place marked data-looks-hover (the shop's cards, the own avatar there) only while the
+  // mouse is over it - elsewhere when it is bigger than LITE
+  function liveHere(avatar, width) {
+    var hover = avatar.closest("[data-looks-hover]");
+    if (hover) return hover.matches(":hover");
+    return width > LITE;
+  }
+
+  function hoverLive(container, live) {
+    container.querySelectorAll(".mm-avatar[class*='look-']").forEach((avatar) => {
+      if (avatar.closest("[data-looks-hover]") == container) avatar.classList.toggle("look-lite", !live);
+    });
+  }
+  document.addEventListener("mouseover", (event) => {
+    var container = event.target.closest && event.target.closest("[data-looks-hover]");
+    if (container && !(event.relatedTarget && container.contains(event.relatedTarget))) hoverLive(container, true);
+  });
+  document.addEventListener("mouseout", (event) => {
+    var container = event.target.closest && event.target.closest("[data-looks-hover]");
+    if (container && !(event.relatedTarget && container.contains(event.relatedTarget))) hoverLive(container, false);
+  });
+
   // Performance: the animations of an avatar run only while it is on the screen (look-idle: paused) - a page full of
   // avatars (the shop, a long chat, the leaderboard) animates only the ones you see
   var watcher =
@@ -26,7 +48,7 @@
               if (!entry.target.isConnected) return watcher.unobserve(entry.target);
               entry.target.classList.toggle("look-idle", !entry.isIntersecting);
               // (on the screen: its size known - small ones show the pre-rendered animations, bigger ones live)
-              if (entry.isIntersecting) entry.target.classList.toggle("look-lite", entry.boundingClientRect.width <= LITE);
+              if (entry.isIntersecting) entry.target.classList.toggle("look-lite", !liveHere(entry.target, entry.boundingClientRect.width));
             }),
           { rootMargin: "120px" },
         )
@@ -43,7 +65,9 @@
       avatar.classList.add("look-idle", "look-lite");
       watcher.observe(avatar);
     }
-    if (look.frame) avatar.classList.add("look-frame-" + look.frame);
+    if (look.frame) {
+      avatar.classList.add("look-frame-" + look.frame);
+    }
     if (look.background) {
       avatar.classList.add("look-bg-" + look.background);
       avatar.appendChild(Object.assign(document.createElement("span"), { className: "look-bg" }));
