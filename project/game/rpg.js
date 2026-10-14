@@ -316,11 +316,57 @@ const RARITIES = [
   { id: "epic", name: "Epic", weight: 10, power: 2.2 },
   { id: "legendary", name: "Legendary", weight: 2, power: 3.2 },
 ];
+// The gear: three slots, every kind with its own mix of stats (x the slot's base for them) - every weapon also
+// gives agility (dodge); a charm's "deck": how often it changes the deck's size
 const SLOTS = {
-  weapon: { name: "Weapon", kinds: [["🗡️", "Dagger"], ["⚔️", "Sword"], ["🪓", "Axe"], ["🏹", "Bow"], ["🔱", "Trident"]] },
-  armor: { name: "Armor", kinds: [["🥋", "Robe"], ["🦺", "Vest"], ["🛡️", "Shield"], ["🧥", "Mail"]] },
-  charm: { name: "Charm", kinds: [["💍", "Ring"], ["📿", "Amulet"], ["🧿", "Talisman"]] },
+  weapon: {
+    name: "Weapon",
+    kinds: [
+      ["🗡️", "Dagger", { atk: 0.7, agi: 1.1 }],
+      ["🤺", "Rapier", { atk: 0.85, agi: 1 }],
+      ["⚔️", "Sword", { atk: 1, agi: 0.6 }],
+      ["🔱", "Trident", { atk: 1.1, agi: 0.5 }],
+      ["🏹", "Bow", { atk: 0.9, agi: 0.8, luck: 0.3 }],
+      ["🪄", "Wand", { atk: 0.8, agi: 0.4, luck: 0.6 }],
+      ["🪓", "Axe", { atk: 1.3, agi: 0.3 }],
+      ["🏏", "Mace", { atk: 1.2, agi: 0.25, def: 0.3 }],
+      ["🔨", "Warhammer", { atk: 1.5, agi: 0.15 }],
+    ],
+  },
+  armor: {
+    name: "Armor",
+    kinds: [
+      ["🥋", "Robe", { def: 0.5, hp: 1, agi: 0.5 }],
+      ["🧣", "Cloak", { def: 0.4, hp: 0.7, agi: 0.8, luck: 0.3 }],
+      ["👢", "Boots", { def: 0.5, hp: 0.5, agi: 1 }],
+      ["🦺", "Vest", { def: 0.8, hp: 0.9, agi: 0.3 }],
+      ["🧤", "Gauntlets", { def: 0.7, hp: 0.5, atk: 0.3 }],
+      ["🪖", "Helm", { def: 0.9, hp: 0.8 }],
+      ["🧥", "Mail", { def: 1.1, hp: 1.1 }],
+      ["🛡️", "Shield", { def: 1.4, hp: 0.6 }],
+    ],
+  },
+  charm: {
+    name: "Charm",
+    kinds: [
+      ["💍", "Ring", { luck: 1, deck: 1 }],
+      ["🧿", "Talisman", { luck: 1.2, deck: 0.6 }],
+      ["📿", "Amulet", { luck: 0.8, hp: 0.5, deck: 0.6 }],
+      ["🔮", "Orb", { luck: 0.7, atk: 0.3, deck: 0.6 }],
+      ["🪬", "Hamsa", { luck: 0.6, def: 0.4, deck: 0.6 }],
+      ["🪶", "Feather", { luck: 0.6, agi: 0.6, deck: 0.6 }],
+      ["🗝️", "Rune Key", { luck: 0.5, deck: 1.6 }],
+    ],
+  },
 };
+// An epic or legendary piece: a name with a bonus (half a stat more - or the stat, if it had none)
+const GEAR_AFFIXES = [
+  ["of Swiftness", "agi"],
+  ["of Might", "atk"],
+  ["of the Bear", "hp"],
+  ["of the Fortress", "def"],
+  ["of Fortune", "luck"],
+];
 const MATERIALS = ["Rusty", "Iron", "Steel", "Mythril", "Obsidian", "Celestial"];
 
 /* ---------- Monsters and what they do ---------- */
@@ -701,21 +747,31 @@ function makeGear(floor, rng = Math.random, luck = 0) {
   while (roll >= weights[index] && index < RARITIES.length - 1) roll -= weights[index++];
   const rarity = RARITIES[index];
   const slot = pick(rng, Object.keys(SLOTS));
-  const [icon, kind] = pick(rng, SLOTS[slot].kinds);
+  const [icon, kind, mix] = pick(rng, SLOTS[slot].kinds);
   const material = MATERIALS[Math.min(MATERIALS.length - 1, Math.floor((floor - 1) / 5))];
   const base = 2 + floor * 1.2;
   const item = { id: "g" + Date.now().toString(36) + (++gearCount).toString(36), slot, rarity: rarity.id, name: material + " " + kind, icon, floor };
-  if (slot == "weapon") item.atk = Math.round(base * rarity.power);
-  if (slot == "armor") {
-    item.def = Math.max(1, Math.round(base * 0.6 * rarity.power));
-    item.hp = Math.round(base * 4 * rarity.power);
+  // The stats: the slot's base for each - x the kind's mix, x the rarity
+  const stat = {
+    atk: (m) => Math.max(1, Math.round(base * m * rarity.power)),
+    def: (m) => Math.max(1, Math.round(base * 0.6 * m * rarity.power)),
+    hp: (m) => Math.max(1, Math.round(base * 4 * m * rarity.power)),
+    agi: (m) => Math.max(1, Math.round((1 + floor * 0.15) * m * rarity.power)),
+    luck: (m) => Math.max(1, Math.round((1 + floor * 0.25) * m * rarity.power)),
+  };
+  for (const key of Object.keys(stat)) if (mix[key]) item[key] = stat[key](mix[key]);
+  // (epic, legendary: a bonus with a name)
+  if (index >= 2) {
+    const [suffix, key] = pick(rng, GEAR_AFFIXES);
+    item.name += " " + suffix;
+    item[key] = (item[key] || 0) + stat[key](0.5);
   }
   if (slot == "charm") {
-    item.luck = Math.max(1, Math.round((1 + floor * 0.25) * rarity.power));
     // (a charm may change the deck: room for more cards - or fewer needed)
     const roll = rng();
-    if (roll < 0.35) item.deckMax = [1, 2, 3, 5][index];
-    else if (roll < 0.6) item.deckMin = [1, 1, 2, 3][index];
+    const deck = mix.deck || 1;
+    if (roll < 0.35 * deck) item.deckMax = [1, 2, 3, 5][index];
+    else if (roll < 0.6 * deck) item.deckMin = [1, 1, 2, 3][index];
   }
   item.value = round100(entryCost(floor) * 0.15 * rarity.power);
   return item;

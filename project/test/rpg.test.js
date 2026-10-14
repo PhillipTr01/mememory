@@ -95,6 +95,18 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   assert.ok(now.maxHp >= before.maxHp + 20);
   const item = rpg.makeGear(6, Math.random, 20);
   assert.ok(Object.keys(rpg.SLOTS).includes(item.slot) && rpg.RARITIES.some((r) => r.id == item.rarity) && item.value > 0);
+  // Every weapon gives attack and agility, armor armor and HP, a charm luck; epic and legendary: a named bonus
+  for (let i = 0; i < 300; i++) {
+    const gear = rpg.makeGear(1 + (i % 30));
+    if (gear.slot == "weapon") assert.ok(gear.atk > 0 && gear.agi > 0, JSON.stringify(gear));
+    if (gear.slot == "armor") assert.ok(gear.def > 0 && gear.hp > 0, JSON.stringify(gear));
+    if (gear.slot == "charm") assert.ok(gear.luck > 0, JSON.stringify(gear));
+    if (gear.rarity == "epic" || gear.rarity == "legendary") assert.match(gear.name, / of /);
+  }
+  const quick = rpg.newHero("rogue");
+  const dodge = rpg.statsOf(quick).agi;
+  rpg.charOf(quick).gear.weapon = { slot: "weapon", atk: 3, agi: 4 };
+  assert.strictEqual(rpg.statsOf(quick).agi, dodge + 4);
 });
 
 test("rpg: a new hero clears floor 1 but not floor 8 - upgrades take it deeper; a full clear pays less than 1.5x the entry", () => {

@@ -370,6 +370,7 @@ function bonusOf(item) {
   if (item.atk) parts.push("+" + item.atk + " attack");
   if (item.def) parts.push("+" + item.def + " defense");
   if (item.hp) parts.push("+" + item.hp + " HP");
+  if (item.agi) parts.push("+" + item.agi + "% dodge");
   if (item.luck) parts.push("+" + item.luck + "% luck");
   if (item.deckMax) parts.push("🃏 +" + item.deckMax + " deck size");
   if (item.deckMin) parts.push("🃏 -" + item.deckMin + " fewest cards");
