@@ -28,7 +28,7 @@ const PARTY_MAX = 4;
 const BAG_MAX = 12;
 const POTIONS_MAX = 5;
 const POTION_HEAL = 0.4; // of the max HP
-const POTION_PRICE = 1000;
+const POTION_PRICE = 750;
 // Bosses: the last room of every n-th floor (0: none yet - they come later)
 const BOSS_EVERY = 0;
 
@@ -42,14 +42,14 @@ const STATS = {
 };
 const STAT_IDS = Object.keys(STATS);
 const LEVEL_MAX = 50;
-const UPGRADE_BASE = 2000;
-const UPGRADE_GROWTH = 1.35;
+const UPGRADE_BASE = 1500;
+const UPGRADE_GROWTH = 1.2;
 // The main stat of a class: its levels count this much more
 const MAIN_BONUS = 1.5;
 const DODGE_MAX = 40;
 
 const ENTRY_BASE = 1000;
-const ENTRY_GROWTH = 1.35;
+const ENTRY_GROWTH = 1.25;
 // What a room puts in the pot (per hero, a share of the entry)
 const REWARD = { fight: 0.2, hard: 0.38, elite: 0.35, boss: 1, chest: 0.15, trap: 0, rest: 0, shrine: 0, merchant: 0 };
 
@@ -211,10 +211,10 @@ const CARD_RARITY = {
 // A card's rarity: its weight in packs and rewards, how many of it a collection holds, what a spare one sells for
 const CARD_RARITIES = {
   basic: { name: "Basic", weight: 0, copies: 4, value: 0 },
-  common: { name: "Common", weight: 64, copies: 3, value: 200 },
-  rare: { name: "Rare", weight: 26, copies: 2, value: 500 },
-  epic: { name: "Epic", weight: 8, copies: 2, value: 1500 },
-  eternal: { name: "Eternal", weight: 2, copies: 1, value: 4000 },
+  common: { name: "Common", weight: 64, copies: 3, value: 100 },
+  rare: { name: "Rare", weight: 26, copies: 2, value: 250 },
+  epic: { name: "Epic", weight: 8, copies: 2, value: 750 },
+  eternal: { name: "Eternal", weight: 2, copies: 1, value: 2000 },
 };
 for (const [id, rarity] of Object.entries(CARD_RARITY)) CARDS[id].rarity = rarity;
 // The larger part of the base set: cards made of effects (game/rpg_cards.js)
@@ -237,9 +237,9 @@ function deckMax() {
 // The booster packs of the base set (the shop): how many cards, the last ones at least of a rarity, the rarer
 // ones more often (x their weight)
 const PACKS = {
-  standard: { name: "Base Set Pack", icon: "🎴", about: "The classic: 5 cards, the last one rare or better.", price: 5000, size: 5, better: 1, least: "rare", boost: {} },
-  premium: { name: "Hero Pack", icon: "💎", about: "5 cards - the last two rare or better, epics twice as often.", price: 15000, size: 5, better: 2, least: "rare", boost: { epic: 2, eternal: 2 } },
-  mythic: { name: "Mythic Pack", icon: "🌟", about: "3 cards - one epic or better for sure, eternals five times as often.", price: 40000, size: 3, better: 1, least: "epic", boost: { epic: 3, eternal: 5 } },
+  standard: { name: "Base Set Pack", icon: "🎴", about: "The classic: 5 cards, the last one rare or better.", price: 2500, size: 5, better: 1, least: "rare", boost: {} },
+  premium: { name: "Hero Pack", icon: "💎", about: "5 cards - the last two rare or better, epics twice as often.", price: 7500, size: 5, better: 2, least: "rare", boost: { epic: 2, eternal: 2 } },
+  mythic: { name: "Mythic Pack", icon: "🌟", about: "3 cards - one epic or better for sure, eternals five times as often.", price: 20000, size: 3, better: 1, least: "epic", boost: { epic: 3, eternal: 5 } },
 };
 const PACK_IDS = Object.keys(PACKS);
 const PACK_BUNDLE = 3; // three packs at once ...
@@ -273,6 +273,21 @@ function cartPrice(cart) {
 function addPacks(hero, items) {
   if (!hero.packs) hero.packs = {};
   for (const [id, n] of items) hero.packs[id] = (hero.packs[id] || 0) + n;
+}
+
+// Every pack waiting opened (at most OPEN_ALL_MAX) -> {cards: [{id, fresh, coins, pack}], count} or an error (a string)
+const OPEN_ALL_MAX = 50;
+function openAll(hero, rng = Math.random) {
+  if (!hero.cls) return "Pick a class first.";
+  const cards = [];
+  let count = 0;
+  for (const id of PACK_IDS) {
+    while (hero.packs && hero.packs[id] > 0 && count < OPEN_ALL_MAX) {
+      cards.push(...openStored(hero, id, rng).map((card) => ({ ...card, pack: id })));
+      count++;
+    }
+  }
+  return count ? { cards, count } : "No packs to open.";
 }
 
 // An unopened pack opened -> its cards (openPack) or an error (a string)
@@ -449,7 +464,7 @@ const pick = (rng, list) => list[Math.floor(rng() * list.length)];
 /* ---------- The hero ---------- */
 
 // A class (a character) bought after the first one (the first is free)
-const CLASS_PRICE = 50000;
+const CLASS_PRICE = 25000;
 
 // A player's hero: one character per class unlocked (its own levels, gear worn, floors) - the bag, the potions
 // are shared. cls: the character played now (null: none picked yet - the first is free)
@@ -1307,7 +1322,7 @@ function choose(run, name, input = {}, rng = Math.random) {
 // The merchant's prices (coins): a potion, a (common) card, a relic, a card taken out of the deck
 const CARD_PRICE = { common: 1, rare: 1.5, epic: 2.5, basic: 1, eternal: 4 };
 function merchantPrices(floor) {
-  const card = round100(Math.max(1500, entryCost(floor) * 1.2));
+  const card = round100(Math.max(800, entryCost(floor) * 0.8));
   return { potion: POTION_PRICE, card, relic: card * 3, remove: card };
 }
 
@@ -2186,6 +2201,7 @@ module.exports = {
   cartPrice,
   addPacks,
   openStored,
+  openAll,
   CART_MAX,
   deckMax,
   poolOf,

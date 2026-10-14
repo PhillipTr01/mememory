@@ -5,7 +5,7 @@ const rpg = require("../game/rpg");
 const testMode = require("../game/test_mode");
 
 test("rpg: upgrades and floors get dearer, a floor opens after the one before; the map: rows of rooms (mostly fights) and paths, a fight first, the guarded gate last", () => {
-  assert.strictEqual(rpg.upgradeCost(0), 2000);
+  assert.strictEqual(rpg.upgradeCost(0), 1500);
   assert.ok(rpg.upgradeCost(5) > rpg.upgradeCost(4));
   assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX), null);
   assert.strictEqual(rpg.entryCost(1), 1000);
@@ -436,7 +436,7 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (spar
     assert.strictEqual(mythic.length, 3);
     assert.ok(rank(mythic[2].id) >= 3, mythic[2].id);
   }
-  assert.strictEqual(rpg.packPrice("standard", 3), Math.round(rpg.PACKS.standard.price * 3 * 0.9));
+  assert.strictEqual(rpg.packPrice("standard", 3), Math.round((rpg.PACKS.standard.price * 3 * 0.9) / 100) * 100);
   assert.strictEqual(rpg.packPrice("nope"), null);
   // (the collection never holds more than the copies of a rarity)
   for (const [id, n] of Object.entries(char.collection)) assert.ok(n <= rpg.CARD_RARITIES[rpg.CARDS[id].rarity].copies, id);
@@ -469,6 +469,13 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (spar
   assert.strictEqual(hero.packs.premium, 1);
   rpg.openStored(hero, "premium");
   assert.match(rpg.openStored(hero, "premium"), /No such pack/);
+  // Open all: every pack waiting
+  rpg.addPacks(hero, [["standard", 2], ["mythic", 1]]);
+  const all = rpg.openAll(hero);
+  assert.strictEqual(all.count, 3);
+  assert.strictEqual(all.cards.length, 2 * 5 + 3);
+  assert.deepStrictEqual([hero.packs.standard, hero.packs.mythic], [0, 0]);
+  assert.match(rpg.openAll(hero), /No packs/);
   // An eternal card: played once - gone from the run's deck
   const run = rpg.newRun(1, [{ name: "a", hero }]);
   rpg.enterRoom(run, 0);

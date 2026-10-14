@@ -803,10 +803,12 @@
   box-shadow: 0 0 0 3px rgba(var(--rpg-red-rgb), 0.2);
 }
 
+/* Defeated: sunk, grey, faint - the end of the death animation (no jump between them) */
 .rpg-monster.down {
-  opacity: 0.3;
+  opacity: 0.22;
   cursor: default;
   filter: grayscale(1);
+  transform: translateY(10px) scale(0.88);
 }
 
 .rpg-monster.rank-elite {
@@ -920,6 +922,8 @@
 
 .rpg-fighter.down {
   opacity: 0.5;
+  filter: grayscale(0.8);
+  transform: translateY(6px);
 }
 
 .rpg-fighter-head {
@@ -3731,16 +3735,58 @@ button.rpg-cardx.off {
   filter: grayscale(0.6);
 }
 
-/* Down: it sinks and fades */
-.rpg-dying {
-  animation: rpg-die 0.9s ease-in forwards;
+/* Down: a white flash, a last shudder - then it sinks and fades into its defeated look (and stays there) */
+.rpg-monster.rpg-dying,
+.rpg-monster.rpg-dying.rpg-hit {
+  animation: rpg-die 0.95s ease-in forwards;
+  pointer-events: none;
+}
+
+.rpg-fighter.rpg-dying,
+.rpg-fighter.rpg-dying.rpg-hit {
+  animation: rpg-fall 0.95s ease-in forwards;
 }
 
 @keyframes rpg-die {
-  to {
-    transform: translateY(14px) scale(0.85);
-    opacity: 0.25;
+  0% {
+    opacity: 1;
+    filter: brightness(2.2) grayscale(0);
+    transform: none;
+  }
+  12% {
+    filter: brightness(1.6) sepia(1) hue-rotate(-40deg) saturate(4);
+    transform: translateX(-5px) scale(1.04);
+  }
+  24% {
+    transform: translateX(4px) scale(1.03);
+  }
+  36% {
+    opacity: 0.9;
+    filter: grayscale(0.5);
+    transform: translateX(0) scale(1);
+  }
+  100% {
+    opacity: 0.22;
     filter: grayscale(1);
+    transform: translateY(10px) scale(0.88);
+  }
+}
+
+@keyframes rpg-fall {
+  0% {
+    filter: brightness(1.8);
+    transform: none;
+  }
+  20% {
+    transform: translateX(-4px);
+  }
+  35% {
+    transform: translateX(3px);
+  }
+  100% {
+    opacity: 0.5;
+    filter: grayscale(0.8);
+    transform: translateY(6px);
   }
 }
 
@@ -3926,4 +3972,39 @@ button.rpg-cardx.off {
 /* (a fight played back: the hand waits) */
 .rpg-run.fx-busy .rpg-handbar {
   pointer-events: none;
+}
+
+/* Open all: many cards - smaller, closer */
+.rpg-open-all {
+  align-self: center;
+}
+
+.rpg-opening-cards.many {
+  gap: 1.6rem 0.6rem;
+}
+
+.rpg-opening-cards.many .rpg-flip {
+  width: 6.4rem;
+  height: 9.4rem;
+}
+
+.rpg-opening-cards.many .rpg-flip-emblem {
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.3rem;
+}
+
+.rpg-opening-cards.many .rpg-cardx-text {
+  font-size: 0.58rem;
+}
+
+.rpg-owned-n.big {
+  font-size: 1.2rem;
+  right: 0.6rem;
+  bottom: 0.6rem;
+}
+
+.rpg-flip-front .rpg-cardx {
+  box-sizing: border-box;
+  min-height: 0;
 }

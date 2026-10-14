@@ -222,13 +222,14 @@ function floatOver(id, text, kind) {
   setTimeout(() => f.remove(), 1100);
 }
 
+// A class for a moment (ms: 0 - it stays, the next state of the page takes it away)
 function flash(id, className, ms) {
   var node = unitNode(id);
   if (!node) return;
   node.classList.remove(className);
   void node.offsetWidth;
   node.classList.add(className);
-  setTimeout(() => node.classList.remove(className), ms || 450);
+  if (ms !== 0) setTimeout(() => node.classList.remove(className), ms || 450);
 }
 
 // The HP bar of a unit, as the playback goes (the state shown is the old one until the end)
@@ -277,7 +278,7 @@ function showFx(e, live) {
     floatOver(e.to, "+" + e.n, "heal");
     if (!live) barBy(e.to, e.n);
   } else if (e.k == "block") floatOver(e.to, "🛡️ +" + e.n, "block");
-  else if (e.k == "down") flash(e.to, "rpg-dying", 900);
+  else if (e.k == "down") flash(e.to, "rpg-dying", 0);
   else if (e.k == "move") {
     flash(e.by, e.move == "stunned" ? "rpg-stunned-act" : "rpg-acting", 520);
     if (e.move == "stunned") floatOver(e.by, "💫 Stunned", "miss");
@@ -705,6 +706,8 @@ function renderShop() {
         })
       : [el("div", "rpg-empty mm-muted", "No packs waiting - put some into your cart and buy them.")],
   );
+  var waiting = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);
+  if (waiting > 1) document.getElementById("rpgShopOwned").appendChild(button("🎴 Open all (" + waiting + ")", "openAll", { className: "primary rpg-open-all" }));
 
   // The packs to buy: into the cart
   morphChildren(
@@ -779,11 +782,26 @@ function openingNode() {
   return node;
 }
 
+// Every pack waiting at once: one big stack - a click opens them all
+function startOpeningAll() {
+  var count = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);
+  if (!count) return;
+  opening = { pack: "all", art: bestWaiting(), count: count, cards: null, flipped: {}, asked: false };
+  renderOpening();
+}
+
 // The pack waits sealed: a click opens it (the server deals its cards)
 function startOpening(id) {
   if (!(hero.packs[id] > 0)) return;
   opening = { pack: id, cards: null, flipped: {}, asked: false };
   renderOpening();
+}
+
+// The best kind of the packs waiting (the art of "open all")
+function bestWaiting() {
+  return Object.keys(rules.packs)
+    .reverse()
+    .find((id) => hero.packs[id] > 0) || "standard";
 }
 
 function renderOpening() {
@@ -793,18 +811,20 @@ function renderOpening() {
     return;
   }
   node.innerHTML = "";
-  var pack = rules.packs[opening.pack];
+  var all = opening.pack == "all";
+  var pack = all ? { name: "All your packs" + (opening.count ? " (" + opening.count + ")" : ""), icon: "🎴" } : rules.packs[opening.pack];
   var stage = el("div", "rpg-opening-stage");
   if (!opening.cards) {
-    var art = packArt(opening.pack, "big" + (opening.asked ? " bursting" : " waiting"));
+    var art = packArt(all ? opening.art : opening.pack, "big" + (opening.asked ? " bursting" : " waiting"));
+    if (all) art.appendChild(el("span", "rpg-owned-n big", "×" + opening.count));
     art.dataset.open = "pack";
-    stage.append(el("div", "rpg-opening-title", pack.icon + " " + pack.name), art, el("div", "rpg-opening-hint", opening.asked ? "" : "Click the pack to open it"));
+    stage.append(el("div", "rpg-opening-title", pack.icon + " " + pack.name), art, el("div", "rpg-opening-hint", opening.asked ? "" : all ? "Click to open them all" : "Click the pack to open it"));
   } else {
-    var row = el("div", "rpg-opening-cards n" + opening.cards.length);
+    var row = el("div", "rpg-opening-cards n" + opening.cards.length + (opening.cards.length > 10 ? " many" : ""));
     opening.cards.forEach((c, i) => {
       var rarity = cardOf(c.id).rarity;
       var slot = el("div", "rpg-flip rarity-" + rarity + (opening.flipped[i] ? " flipped" : ""));
-      slot.style.animationDelay = i * 0.08 + "s";
+      slot.style.animationDelay = Math.min(i * (opening.cards.length > 10 ? 0.025 : 0.08), 1.5) + "s";
       slot.dataset.flip = String(i);
       var inner = el("div", "rpg-flip-inner");
       var back = el("div", "rpg-flip-back");
@@ -817,14 +837,16 @@ function renderOpening() {
       if (opening.flipped[i]) slot.appendChild(el("span", "rpg-flip-note" + (c.fresh ? " fresh" : ""), c.fresh ? "New!" : "Spare · +🪙 " + formatCoins(c.coins)));
       row.appendChild(slot);
     });
-    var all = opening.cards.every((c, i) => opening.flipped[i]);
-    var left = hero.packs[opening.pack] || 0;
+    var turned = opening.cards.every((c, i) => opening.flipped[i]);
+    var left = all ? 0 : hero.packs[opening.pack] || 0;
     var foot = el("div", "rpg-opening-foot");
-    if (!all) foot.append(el("div", "rpg-opening-hint", "Click the cards to turn them over"), button("Turn all", "flipAll", { className: "small" }));
+    if (!turned) foot.append(el("div", "rpg-opening-hint", "Click the cards to turn them over"), button("Turn all", "flipAll", { className: "small" }));
     else {
       var spare = opening.cards.reduce((sum, c) => sum + c.coins, 0);
       if (spare) foot.appendChild(el("div", "mm-muted small", "Spare copies sold: +🪙 " + formatCoins(spare)));
       if (left) foot.appendChild(button("Open the next " + pack.name + " (" + left + " left)", "openNext", { className: "primary" }));
+      var rest = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);
+      if (rest > 1) foot.appendChild(button("🎴 Open all the rest (" + rest + ")", "openAllNext", {}));
       Object.keys(rules.packs)
         .filter((id) => id != opening.pack && hero.packs[id] > 0)
         .forEach((id) => foot.appendChild(button("Open a " + rules.packs[id].name + " (" + hero.packs[id] + ")", "openOther", { id: id })));
@@ -842,7 +864,8 @@ function onOpeningClick(event) {
   if (target.dataset.open == "pack" && !opening.asked) {
     opening.asked = true;
     renderOpening();
-    socket.emit("openPack", { pack: opening.pack });
+    if (opening.pack == "all") socket.emit("openAll");
+    else socket.emit("openPack", { pack: opening.pack });
     return;
   }
   if (target.dataset.flip != null) {
@@ -860,6 +883,7 @@ function onOpeningClick(event) {
     opening.cards.forEach((one, i) => (opening.flipped[i] = true));
     renderOpening();
   } else if (act == "openNext") startOpening(opening.pack);
+  else if (act == "openAllNext") startOpeningAll();
   else if (act == "openOther") startOpening(target.dataset.id);
   else if (act == "openDone") {
     opening = null;
@@ -1788,6 +1812,7 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     render();
   } else if (act == "cartBuy") socket.emit("buyPacks", { cart: cart });
   else if (act == "openPack") startOpening(id);
+  else if (act == "openAll") startOpeningAll();
   else if (act == "filter") {
     var [key, value] = id.split(":");
     if (key == "owned") filters.owned = !filters.owned;

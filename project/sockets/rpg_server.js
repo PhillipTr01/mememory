@@ -374,6 +374,17 @@ module.exports = function (io, options = {}) {
       sendHero(username);
     });
 
+    // Every pack waiting at once
+    on("openAll", async () => {
+      const hero = heroOf(username);
+      const opened = rpg.openAll(hero);
+      if (typeof opened === "string") return error(opened);
+      const spare = opened.cards.reduce((sum, card) => sum + card.coins, 0);
+      if (spare > 0) await coins.add(username, spare, { reason: "rpg spare cards" });
+      socket.emit("rpgPack", { cards: opened.cards, spare, pack: "all", count: opened.count, left: 0 });
+      sendHero(username);
+    });
+
     // An unopened pack: its cards of the class played into the collection (spare copies sold)
     on("openPack", async (data) => {
       const hero = heroOf(username);
