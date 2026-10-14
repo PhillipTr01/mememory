@@ -187,6 +187,7 @@ async function startServer() {
     test[game] = require(`../sockets/${game}_server`)(io, { world: worlds.TEST });
     worlds.servers.set(game, test[game]);
   }
+  test.rpg = require("../sockets/rpg_server")(io, { world: worlds.TEST });
   // The season worlds (game/seasons.js): one per season slot - season: the first, season2: the second
   const bySlot = {};
   for (const world of worlds.SEASONS) {

@@ -11,6 +11,29 @@
     toggle.title = open ? "Hide the menu" : "Show the menu";
   }
 
+  // The dungeon (an RPG): for now only in the test world - its tab only there
+  function addDungeon(dock) {
+    if (window.CASINO_NS != "/test" || dock.querySelector('.cs-tab[href="rpg"]')) return;
+    var tab = document.createElement("a");
+    tab.href = "rpg";
+    tab.className = "cs-tab";
+    tab.innerHTML =
+      '<svg class="cs-dock-icon" viewBox="0 0 48 48" aria-hidden="true">' +
+      // (a shield, a sword across it)
+      '<path d="M24 6 L39 11 V23 C39 33 32 39 24 43 C16 39 9 33 9 23 V11 Z" fill="#7c3aed" />' +
+      '<path d="M24 10 L35 14 V23 C35 31 30 35.5 24 38.5 Z" fill="#a78bfa" />' +
+      '<path d="M12 38 L36 8" stroke="#e5e7eb" stroke-width="3.4" stroke-linecap="round" />' +
+      '<path d="M15 29 L21 35" stroke="#d4a017" stroke-width="3.4" stroke-linecap="round" />' +
+      '<circle cx="12" cy="38" r="2.6" fill="#d4a017" /></svg><span class="cs-dock-name">Dungeon</span>';
+    if (/\/rpg$/.test(location.pathname)) {
+      tab.classList.add("active");
+      tab.setAttribute("aria-current", "page");
+    }
+    var sep = dock.querySelector(".cs-dock-sep");
+    if (sep) sep.before(tab);
+    else dock.querySelector(".cs-dock-bar").appendChild(tab);
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     var dock = document.getElementById("csDock");
     var toggle = document.getElementById("csDockToggle");
@@ -22,6 +45,7 @@
       // no storage: open
     }
     setOpen(dock, toggle, !closed);
+    addDungeon(dock);
     // No animation when the page opens
     requestAnimationFrame(() => dock.classList.add("ready"));
     toggle.addEventListener("click", () => {

@@ -85,6 +85,8 @@ module.exports = function (auth) {
   router.get("/baucua", auth, approved, gamePage("baucua", "baucua.html"));
   router.get("/leaderboard", auth, approved, page("leaderboard.html", hideOff));
   router.get("/shop", auth, approved, page("shop.html", hideOff));
+  // The dungeon (an RPG): for now only in the test world - everybody else to the jackpot
+  router.get("/rpg", auth, approved, (req, res, next) => (testMode.active(req.username) ? page("rpg.html", hideOff)(req, res, next) : res.redirect(req.baseUrl + "/")));
 
   // How a game works (the "i" next to the title)
   router.get("/info/:game", auth, approved, (req, res) => {
