@@ -11,11 +11,32 @@
   var queue = new Set();
   var timer = null;
 
+  // Performance: the animations of an avatar run only while it is on the screen (look-idle: paused) - a page full of
+  // avatars (the shop, a long chat, the leaderboard) animates only the ones you see
+  var watcher =
+    "IntersectionObserver" in window
+      ? new IntersectionObserver(
+          (entries) =>
+            entries.forEach((entry) => {
+              // (gone from the page: not watched any more)
+              if (!entry.target.isConnected) return watcher.unobserve(entry.target);
+              entry.target.classList.toggle("look-idle", !entry.isIntersecting);
+            }),
+          { rootMargin: "120px" },
+        )
+      : null;
+
   // Puts looks ({frame, effect, background} - null: none) on an avatar (the ones it had come off)
   function wear(avatar, look) {
     [...avatar.classList].filter((c) => c.startsWith("look-")).forEach((c) => avatar.classList.remove(c));
     avatar.querySelectorAll(":scope > .look-fx, :scope > .look-bg").forEach((layer) => layer.remove());
-    if (!look) return avatar;
+    if (watcher) watcher.unobserve(avatar);
+    if (!look || !(look.frame || look.effect || look.background)) return avatar;
+    if (watcher) {
+      // (paused until the watcher sees it on the screen - right away for the ones there)
+      avatar.classList.add("look-idle");
+      watcher.observe(avatar);
+    }
     if (look.frame) avatar.classList.add("look-frame-" + look.frame);
     if (look.background) {
       avatar.classList.add("look-bg-" + look.background);
