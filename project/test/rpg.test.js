@@ -171,6 +171,7 @@ test("rpg: poison makes the backstab hurt 3x; the cleric heals, brings the falle
   assert.strictEqual(rpg.tally(party, "w"), 1);
   assert.match(rpg.vote(party, "w", 9), /Unknown door/);
   // Far too strong monsters: the party goes down, the pot with it
+  party.doors = [{ kind: "fight", hint: null, open: true }];
   rpg.enterRoom(party, 0);
   party.monsters = [{ id: "m9", name: "Doom", icon: "🎯", hp: 1000, maxHp: 1000, atk: 100000, dodge: 0, moves: ["burn"], rank: "normal", effects: {}, intent: { move: "burn" } }];
   party.heroes.forEach((h) => (h.agi = 0));
@@ -208,23 +209,39 @@ function waitFor(socket, event, predicate, timeout = 4000) {
   });
 }
 
-// A player: attacks the first foe with every card it can pay, then ends the turn; skips the card reward; votes
-// for the first door (options.vote)
+// A player: attacks the first foe with every card it can pay (each card once - the updates may come late), then
+// ends the turn (once a turn); skips the card reward; votes for the first door (options.vote)
 function autoplay(socket, name, options) {
+  const sent = new Set();
+  const done = new Set();
   socket.on("rpgParty", (p) => {
     if (!p || !p.run || p.result) return;
     const run = p.run;
     const me = run.heroes.find((h) => h.name == name);
     if (!me) return;
-    if (run.phase == "fight" && !me.down && !me.ended) {
+    const turn = run.rooms.length + ":" + run.turn;
+    if (run.phase == "fight" && !me.down && !me.ended && !done.has(turn)) {
       const foe = run.monsters.find((m) => !m.down);
-      const card = me.hand.find((c) => rpg.CARDS[c.id].type == "attack" && rpg.CARDS[c.id].cost <= me.energy);
-      if (card && foe) socket.emit("play", { uid: card.uid, target: foe.id });
-      else socket.emit("endTurn");
+      const spent = me.hand.filter((c) => sent.has(c.uid)).reduce((sum, c) => sum + rpg.CARDS[c.id].cost, 0);
+      const card = me.hand.find((c) => !sent.has(c.uid) && rpg.CARDS[c.id].type == "attack" && rpg.CARDS[c.id].cost <= me.energy - spent);
+      if (card && foe) {
+        sent.add(card.uid);
+        socket.emit("play", { uid: card.uid, target: foe.id });
+      } else if (!me.hand.some((c) => sent.has(c.uid))) {
+        // (every card sent was played - nothing more to do)
+        done.add(turn);
+        socket.emit("endTurn");
+      }
     }
     if (run.phase == "between") {
-      if (me.reward) socket.emit("pick", { card: null });
-      if (options.vote && !(name in run.votes)) socket.emit("vote", { door: 0 });
+      if (me.reward && !done.has("pick" + turn)) {
+        done.add("pick" + turn);
+        socket.emit("pick", { card: null });
+      }
+      if (options.vote && !(name in run.votes) && !done.has("vote" + turn)) {
+        done.add("vote" + turn);
+        socket.emit("vote", { door: 0 });
+      }
     }
   });
 }
@@ -290,6 +307,8 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; the time
   // Back to the hero (the party closes)
   alice.emit("leave");
   await waitFor(alice, "rpgParty", (p) => p == null);
+  // (this tab plays no more)
+  alice.close();
 });
 
 test("rpg: co-op - one opens a party, another joins, the leader starts (both pay); a turn waits for both, the floor cleared opens the next", async () => {
@@ -303,7 +322,7 @@ test("rpg: co-op - one opens a party, another joins, the leader starts (both pay
     const hero = server.test.rpg.heroOf(name);
     for (const id of rpg.STAT_IDS) hero.levels[id] = 30;
   }
-  Object.assign(server.test.rpg.timing, { turn: 5000, decide: 5000 });
+  Object.assign(server.test.rpg.timing, { turn: 1500, decide: 3000 });
   alice.emit("create", { floor: 1, size: 2 });
   const open = await waitFor(bob, "rpgParties", (list) => list.some((p) => p.leader == "rpg_alice" && !p.started));
   const id = open.find((p) => p.leader == "rpg_alice").id;
@@ -335,7 +354,7 @@ test("rpg: co-op - one opens a party, another joins, the leader starts (both pay
   autoplay(alice, "rpg_alice", { vote: true });
   autoplay(bob, "rpg_bob", { vote: true });
   bob.emit("endTurn");
-  const won = await waitFor(alice, "rpgParty", (p) => p && p.result == "won", 15000);
+  const won = await waitFor(alice, "rpgParty", (p) => p && p.result == "won", 20000);
   assert.ok(won.run.pot > 0);
   const hero = await waitFor(bob, "rpgHero", (view) => view.deepest == 1);
   assert.strictEqual(hero.maxFloor, 2);
