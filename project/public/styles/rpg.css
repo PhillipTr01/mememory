@@ -1232,3 +1232,497 @@
   background: rgba(var(--mm-accent-rgb), 0.12);
   white-space: nowrap;
 }
+
+/* ======================= Cards, doors and votes ======================= */
+
+/* ---------- The hero card: a head, tabs ---------- */
+
+.rpg-card-head {
+  flex-wrap: wrap;
+}
+
+.rpg-hero-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.rpg-card-head .rpg-potions {
+  font-size: 0.9rem;
+  gap: 0.5rem;
+}
+
+.rpg-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--rpg-stone-edge);
+}
+
+.rpg-tab {
+  flex: 1;
+  border: 0;
+  border-radius: 9px;
+  padding: 0.45rem 0.5rem;
+  background: transparent;
+  color: #a8957a;
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.rpg-tab.active {
+  background: linear-gradient(180deg, #3a3029, #2a231e);
+  color: var(--rpg-parchment);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.rpg-tab-count {
+  font-family: Poppins, sans-serif;
+  font-size: 0.7rem;
+  color: var(--mm-muted);
+}
+
+.rpg-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.rpg-pane[hidden] {
+  display: none;
+}
+
+.rpg-or {
+  font-size: 0.8rem;
+}
+
+/* ---------- A card ---------- */
+
+.rpg-cardx {
+  --card-edge: #6b5a44;
+  --card-glow: rgba(245, 197, 66, 0);
+  position: relative;
+  width: 8.2rem;
+  min-height: 11.2rem;
+  padding: 0.55rem 0.55rem 0.6rem;
+  border-radius: 12px;
+  border: 2px solid var(--card-edge);
+  background: radial-gradient(ellipse at 50% 28%, rgba(255, 255, 255, 0.07), transparent 60%), linear-gradient(180deg, #2f2721, #1c1713);
+  box-shadow: inset 0 0 0 3px #15110e, 0 8px 18px rgba(0, 0, 0, 0.55), 0 0 18px var(--card-glow);
+  color: var(--mm-text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  text-align: center;
+  font: inherit;
+  flex: none;
+}
+
+.rpg-cardx.type-attack {
+  --card-edge: #8a3a30;
+}
+
+.rpg-cardx.type-skill {
+  --card-edge: #3a5a7a;
+}
+
+.rpg-cardx-cost {
+  position: absolute;
+  top: -0.55rem;
+  left: -0.55rem;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: #10202a;
+  background: radial-gradient(circle at 35% 30%, #d8f3ff, #5bbcf0 60%, #2a7fb0);
+  border: 2px solid #15110e;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.rpg-cardx-art {
+  font-size: 2rem;
+  line-height: 1.2;
+  margin-top: 0.2rem;
+  width: 100%;
+  padding: 0.35rem 0;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.rpg-cardx-name {
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: var(--rpg-parchment);
+  line-height: 1.15;
+}
+
+.rpg-cardx-type {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #a8957a;
+}
+
+.rpg-cardx-text {
+  font-size: 0.68rem;
+  line-height: 1.3;
+  color: #d8cbb0;
+}
+
+.rpg-cardx-count {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--rpg-parchment);
+}
+
+.rpg-cardx.small {
+  width: 6.6rem;
+  min-height: 9.4rem;
+}
+
+.rpg-cardx.small .rpg-cardx-art {
+  font-size: 1.5rem;
+}
+
+.rpg-cardx.small .rpg-cardx-text {
+  font-size: 0.62rem;
+}
+
+.rpg-deck-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem 0.6rem;
+  padding: 0.6rem 0 0 0.6rem;
+}
+
+/* Cards that can be clicked: they rise, they glow */
+button.rpg-cardx {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
+}
+
+button.rpg-cardx:hover:not(.off),
+button.rpg-cardx.aimed {
+  --card-glow: rgba(245, 197, 66, 0.35);
+  transform: translateY(-14px) rotate(0deg) scale(1.04);
+  z-index: 2;
+}
+
+button.rpg-cardx.aimed {
+  border-color: var(--rpg-gold);
+}
+
+button.rpg-cardx.off {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ---------- The hand ---------- */
+
+.rpg-handbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.9rem 0.9rem 0.7rem;
+  border-radius: 14px;
+  border: 1px solid var(--rpg-stone-edge);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.45));
+  min-height: 4rem;
+}
+
+.rpg-hand {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0;
+  min-width: 0;
+  padding-top: 1rem;
+}
+
+.rpg-hand .rpg-cardx {
+  margin: 0 -0.35rem;
+  transform: rotate(var(--tilt, 0deg)) translateY(var(--lift, 0px));
+}
+
+.rpg-hand.ended .rpg-cardx {
+  filter: saturate(0.4);
+}
+
+.rpg-hand-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rpg-energy {
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #10202a;
+  background: radial-gradient(circle at 35% 30%, #e6f8ff, #5bbcf0 55%, #1f6a96);
+  border: 3px solid #15110e;
+  box-shadow: 0 0 0 2px #3a5a7a, 0 0 18px rgba(91, 188, 240, 0.4);
+}
+
+.rpg-pile {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #a8957a;
+}
+
+.rpg-end {
+  min-width: 7rem;
+}
+
+.rpg-potion-btn {
+  min-width: 4rem;
+}
+
+.rpg-aim-hint {
+  width: 100%;
+  text-align: center;
+  font-weight: 700;
+  color: var(--rpg-gold);
+}
+
+.rpg-arena.aiming-foe .rpg-monster:not(.down) {
+  cursor: crosshair;
+  border-color: rgba(224, 103, 90, 0.8);
+  animation: rpg-aim 1s ease-in-out infinite alternate;
+}
+
+.rpg-arena.aiming-ally .rpg-fighter {
+  cursor: pointer;
+  border-color: rgba(127, 211, 255, 0.8);
+}
+
+@keyframes rpg-aim {
+  to {
+    transform: translateY(-3px);
+  }
+}
+
+/* Block on a hero's HP */
+.rpg-bar {
+  overflow: visible;
+}
+
+.rpg-bar-fill {
+  overflow: hidden;
+}
+
+.rpg-block {
+  position: absolute;
+  right: -0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: #23405a;
+  border: 1px solid #7fd3ff;
+  color: #d8f3ff;
+}
+
+.rpg-fighter-info {
+  justify-content: space-between;
+}
+
+/* ---------- The reward ---------- */
+
+.rpg-reward {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border-radius: 14px;
+  background: rgba(10, 8, 6, 0.75);
+  border: 1px solid #5a4630;
+}
+
+.rpg-reward[hidden] {
+  display: none;
+}
+
+.rpg-reward-title {
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 800;
+  color: var(--rpg-gold);
+}
+
+.rpg-reward-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+
+/* ---------- Hidden doors ---------- */
+
+.rpg-door-card {
+  width: 11rem;
+  padding: 0.6rem 0.6rem 0.8rem;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.45));
+  border: 1px solid var(--rpg-stone-edge);
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.rpg-door-card:hover {
+  transform: translateY(-3px);
+  border-color: #8a7350;
+}
+
+.rpg-door-card.voted {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 0 2px rgba(var(--mm-accent-rgb), 0.25), 0 0 22px rgba(var(--rpg-fire), 0.18);
+}
+
+/* A wooden door in a stone arch, iron bands, a ring */
+.rpg-door-art {
+  position: relative;
+  width: 6.2rem;
+  height: 8.4rem;
+  border-radius: 3.1rem 3.1rem 4px 4px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.25) 0 2px, transparent 2px 25%, rgba(0, 0, 0, 0.25) 25% calc(25% + 2px), transparent calc(25% + 2px) 50%, rgba(0, 0, 0, 0.25) 50% calc(50% + 2px), transparent calc(50% + 2px) 75%, rgba(0, 0, 0, 0.25) 75% calc(75% + 2px), transparent calc(75% + 2px)),
+    linear-gradient(180deg, transparent 22%, #2a2a2a 22% 26%, transparent 26% 70%, #2a2a2a 70% 74%, transparent 74%), linear-gradient(180deg, #6b4a2c, #4a321d);
+  box-shadow: 0 0 0 6px #3a3029, 0 0 0 8px #15110e, inset 0 0 18px rgba(0, 0, 0, 0.6);
+  display: grid;
+  place-items: center;
+}
+
+.rpg-door-art::after {
+  content: "";
+  position: absolute;
+  right: 0.9rem;
+  top: 52%;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  border: 2px solid #c9a24a;
+}
+
+.rpg-door-mark {
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 800;
+  font-size: 1.3rem;
+  color: #e9d8b4;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.7);
+}
+
+.rpg-door-card.open .rpg-door-art {
+  background: radial-gradient(ellipse at 50% 100%, rgba(var(--rpg-fire), 0.35), transparent 70%), #0b0908;
+}
+
+.rpg-door-card.open .rpg-door-mark {
+  font-size: 2rem;
+}
+
+.rpg-door-name {
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 800;
+  color: var(--rpg-parchment);
+  margin-top: 0.4rem;
+}
+
+.rpg-door-hint {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: #b9e3a0;
+  text-align: center;
+  min-height: 2.2em;
+}
+
+.rpg-door-hint.none {
+  color: var(--mm-muted);
+}
+
+.rpg-voters {
+  display: flex;
+  gap: 0.2rem;
+  min-height: 28px;
+}
+
+.rpg-btn.voted {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+}
+
+/* ---------- The log: folded away ---------- */
+
+.rpg-log-box summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #a8957a;
+  margin-bottom: 0.4rem;
+}
+
+@media (max-width: 575px) {
+  .rpg-cardx {
+    width: 6.4rem;
+    min-height: 9.6rem;
+  }
+
+  .rpg-cardx-text {
+    font-size: 0.6rem;
+  }
+
+  .rpg-hand {
+    order: -1;
+    width: 100%;
+    flex-wrap: wrap;
+    row-gap: 0.8rem;
+  }
+
+  .rpg-hand .rpg-cardx {
+    margin: 0 -0.2rem;
+  }
+
+  .rpg-hand-side {
+    flex-direction: row;
+  }
+
+  .rpg-door-card {
+    width: calc(33% - 0.5rem);
+    padding: 0.4rem;
+  }
+
+  .rpg-door-art {
+    width: 4.4rem;
+    height: 6rem;
+  }
+}

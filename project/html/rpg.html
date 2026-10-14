@@ -97,27 +97,41 @@
                         </div>
                     </div>
 
-                    <!--- No party: the hero and the dungeon's door --->
+                    <!--- No party: the hero (tabs: the hero, gear, the deck) and the gate down --->
                     <div id="rpgHome" class="rpg-home">
                         <div class="rpg-card rpg-hero">
                             <div class="rpg-card-head">
                                 <span id="rpgHeroAvatar" class="mm-avatar"></span>
-                                <div>
-                                    <div class="rpg-card-title">Your hero</div>
+                                <div class="rpg-hero-title">
+                                    <div id="rpgHeroName" class="rpg-card-title">Your hero</div>
                                     <div id="rpgHeroSub" class="mm-muted small"></div>
                                 </div>
+                                <div class="rpg-potions">
+                                    <span id="rpgPotions"></span>
+                                    <button type="button" id="rpgBuyPotion" class="rpg-btn small"></button>
+                                </div>
                             </div>
-                            <div class="rpg-label">Class</div>
-                            <div id="rpgClasses" class="rpg-classes"></div>
-                            <div id="rpgClassInfo" class="rpg-class-info"></div>
-                            <div id="rpgStats" class="rpg-stats"></div>
-                            <div class="rpg-label">Gear</div>
-                            <div id="rpgGear" class="rpg-gear"></div>
-                            <div class="rpg-label">Bag <span id="rpgBagCount" class="mm-muted"></span></div>
-                            <div id="rpgBag" class="rpg-bag"></div>
-                            <div class="rpg-potions">
-                                <span id="rpgPotions"></span>
-                                <button type="button" id="rpgBuyPotion" class="rpg-btn small"></button>
+                            <div class="rpg-tabs" role="tablist">
+                                <button type="button" class="rpg-tab active" data-tab="hero">Hero</button>
+                                <button type="button" class="rpg-tab" data-tab="gear">Gear <span id="rpgBagCount" class="rpg-tab-count"></span></button>
+                                <button type="button" class="rpg-tab" data-tab="deck">Deck <span id="rpgDeckCount" class="rpg-tab-count"></span></button>
+                            </div>
+                            <div class="rpg-pane" data-pane="hero">
+                                <div id="rpgClasses" class="rpg-classes"></div>
+                                <div id="rpgClassInfo" class="rpg-class-info"></div>
+                                <div id="rpgStats" class="rpg-stats"></div>
+                            </div>
+                            <div class="rpg-pane" data-pane="gear" hidden>
+                                <div class="rpg-label">Worn</div>
+                                <div id="rpgGear" class="rpg-gear"></div>
+                                <div class="rpg-label">Bag</div>
+                                <div id="rpgBag" class="rpg-bag"></div>
+                            </div>
+                            <div class="rpg-pane" data-pane="deck" hidden>
+                                <div class="mm-muted small">Every run starts with this deck - every fight won: one card more (picked of three) for the run.</div>
+                                <div id="rpgDeck" class="rpg-deck-grid"></div>
+                                <div class="rpg-label">Cards to win</div>
+                                <div id="rpgPool" class="rpg-deck-grid"></div>
                             </div>
                         </div>
                         <div class="rpg-card rpg-door">
@@ -135,6 +149,7 @@
                             </div>
                             <div class="rpg-go">
                                 <button type="button" id="rpgSolo" class="rpg-btn primary">⚔️ Go alone</button>
+                                <span class="rpg-or mm-muted">or</span>
                                 <div class="rpg-coop">
                                     <div id="rpgSize" class="rpg-size" role="group" aria-label="Party size"></div>
                                     <button type="button" id="rpgOpen" class="rpg-btn">👥 Open a party</button>
@@ -156,22 +171,26 @@
                         <div id="rpgLobbyNote" class="mm-muted small"></div>
                     </div>
 
-                    <!--- A run --->
+                    <!--- A run: the bar on top, the scene (monsters over the party - or the doors), the hand --->
                     <div id="rpgRun" class="rpg-run" hidden>
                         <div class="rpg-run-top">
                             <div id="rpgRunFloor" class="rpg-run-floor"></div>
                             <div id="rpgTrack" class="rpg-track"></div>
                             <div id="rpgPot" class="rpg-pot"></div>
                         </div>
+                        <div class="rpg-timer"><div id="rpgTimer" class="rpg-timer-bar"></div></div>
                         <div class="rpg-arena">
                             <span class="rpg-torch left" aria-hidden="true"></span>
                             <span class="rpg-torch right" aria-hidden="true"></span>
+                            <div id="rpgReward" class="rpg-reward" hidden></div>
                             <div id="rpgMonsters" class="rpg-monsters"></div>
                             <div id="rpgHeroes" class="rpg-heroes"></div>
                         </div>
-                        <div class="rpg-timer"><div id="rpgTimer" class="rpg-timer-bar"></div></div>
-                        <div id="rpgActions" class="rpg-actions"></div>
-                        <ol id="rpgLog" class="rpg-log"></ol>
+                        <div id="rpgHandBar" class="rpg-handbar"></div>
+                        <details class="rpg-log-box">
+                            <summary>Battle log</summary>
+                            <ol id="rpgLog" class="rpg-log"></ol>
+                        </details>
                     </div>
                 </section>
             </div>

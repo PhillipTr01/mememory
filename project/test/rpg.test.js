@@ -4,7 +4,7 @@ const h = require("./helpers");
 const rpg = require("../game/rpg");
 const testMode = require("../game/test_mode");
 
-test("rpg: upgrades and floors get dearer, a floor opens after the one before; the first room a fight, then two doors, the last an elite", () => {
+test("rpg: upgrades and floors get dearer, a floor opens after the one before; the first room a fight, then three hidden doors (mostly fights), the guarded gate last", () => {
   assert.strictEqual(rpg.upgradeCost(0), 2000);
   assert.ok(rpg.upgradeCost(5) > rpg.upgradeCost(4));
   assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX), null);
@@ -18,23 +18,31 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   hero.deepest = rpg.FLOORS;
   assert.strictEqual(rpg.maxFloor(hero), rpg.FLOORS);
   assert.strictEqual(rpg.BOSS_EVERY, 0);
-  // The rooms: a fight first, then a choice of two different doors, the elite last
+  // The rooms: a fight first, then three hidden doors (mostly fights), the guarded gate last
   const run = rpg.newRun(3, [{ name: "a", hero: rpg.newHero() }]);
-  assert.deepStrictEqual(run.doors, ["fight"]);
+  assert.deepStrictEqual(run.doors.map((d) => d.kind), ["fight"]);
   run.rooms = [{ kind: "fight", done: true }];
-  for (let i = 0; i < 50; i++) {
+  const kinds = new Map();
+  for (let i = 0; i < 400; i++) {
     const doors = rpg.doorsFor(run);
-    assert.strictEqual(doors.length, 2);
-    assert.notStrictEqual(doors[0], doors[1]);
-    assert.ok(doors.every((kind) => rpg.ROOM_KINDS[kind] && kind != "elite"));
+    assert.strictEqual(doors.length, rpg.DOORS);
+    doors.forEach((door) => kinds.set(door.kind, (kinds.get(door.kind) || 0) + 1));
+    assert.ok(doors.every((door) => rpg.ROOM_KINDS[door.kind] && door.kind != "elite" && !door.open));
   }
+  const fights = (kinds.get("fight") || 0) + (kinds.get("hard") || 0);
+  assert.ok(fights > 1200 * 0.55, `fights ${fights}`);
+  assert.ok((kinds.get("rest") || 0) < 1200 * 0.1 && (kinds.get("merchant") || 0) < 1200 * 0.06);
+  // What is behind a hidden door: not on the page
+  run.doors = rpg.doorsFor(run);
+  assert.ok(rpg.runView(run).doors.every((door) => door.kind == null));
   run.rooms = Array.from({ length: rpg.ROOMS - 1 }, () => ({ kind: "chest", done: true }));
-  assert.deepStrictEqual(rpg.doorsFor(run), ["elite"]);
-  // The classes: their own stats and three skills each
+  assert.deepStrictEqual(rpg.doorsFor(run).map((d) => [d.kind, d.open]), [["elite", true]]);
+  // The classes: a main stat, two signature cards in the starter deck, five cards of their own
   for (const id of rpg.CLASS_IDS) {
-    assert.strictEqual(rpg.CLASSES[id].skills.length, 3);
     assert.ok(rpg.STATS[rpg.CLASSES[id].main], id);
-    rpg.CLASSES[id].skills.forEach((skill) => assert.ok(rpg.SKILLS[skill], skill));
+    assert.strictEqual(rpg.CLASSES[id].cards.length, 5);
+    rpg.CLASSES[id].cards.forEach((card) => assert.ok(rpg.CARDS[card], card));
+    assert.deepStrictEqual(rpg.starterDeck(id).slice(8), rpg.CLASSES[id].signature);
   }
   const tank = rpg.statsOf({ ...rpg.newHero(), cls: "warrior" });
   const mage = rpg.statsOf({ ...rpg.newHero(), cls: "mage" });
@@ -68,82 +76,108 @@ test("rpg: a new hero clears floor 1 but not floor 8 - upgrades take it deeper; 
   assert.ok(deep.payback < 1.5, JSON.stringify(deep));
 });
 
-// A fight with one monster of fixed numbers (the tests decide what it does)
-function duel(cls, move) {
+// A fight with one monster of fixed numbers (the tests decide what it does) and the hand the tests give
+function duel(cls, move, hand) {
   const hero = { ...rpg.newHero(), cls };
   const run = rpg.newRun(1, [{ name: "a", hero }]);
   rpg.enterRoom(run, 0);
   run.monsters = [{ id: "m1", name: "Dummy", icon: "🎯", hp: 1000, maxHp: 1000, atk: 20, dodge: 0, undead: false, moves: [move], rank: "normal", effects: {}, intent: { move, target: "a" } }];
+  const me = run.heroes[0];
+  me.discard.push(...me.hand.map((c) => c.id));
+  me.hand = hand.map((id, i) => ({ uid: "t" + i, id }));
   return run;
 }
 
-test("rpg: monsters show their move first - guard takes the most of a smash, a stun skips it; skills cost energy, one more every turn", () => {
-  const run = duel("warrior", "smash");
-  assert.match(rpg.choose(run, "a", { action: "dance" }), /Unknown/);
-  assert.match(rpg.choose(run, "a", { action: "potion" }), /full/);
-  assert.match(rpg.choose(run, "a", { action: "skill", skill: "fireball" }), /Unknown skill/);
-  assert.match(rpg.choose(run, "a", { action: "skill", skill: "cleave" }), /needs 2 energy/);
+test("rpg: cards - energy, targets, block takes a smash, a stun skips it; the turn: the monsters act when every hero ended it", () => {
+  const run = duel("warrior", "smash", ["strike", "defend", "defend", "bash", "cleave"]);
+  const me = run.heroes[0];
+  assert.strictEqual(me.energy, rpg.ENERGY);
+  assert.match(rpg.play(run, "a", { uid: "nope" }), /isn't in your hand/);
+  assert.match(rpg.play(run, "a", { uid: "t0" }), /Pick a foe/);
   const view = rpg.runView(run);
   assert.deepStrictEqual([view.monsters[0].intent.move, view.monsters[0].intent.target], ["smash", "a"]);
   const smash = view.monsters[0].intent.damage;
-  assert.ok(smash >= 40, String(smash));
-  const me = run.heroes[0];
+  // Two defends: the smash mostly blocked
+  assert.strictEqual(rpg.play(run, "a", { uid: "t1" }), null);
+  assert.strictEqual(rpg.play(run, "a", { uid: "t2" }), null);
+  assert.strictEqual(me.block, 2 * (6 + me.def));
+  assert.strictEqual(me.energy, 1);
+  assert.match(rpg.play(run, "a", { uid: "t3", target: "m1" }), /needs 2 energy/);
   const fresh = me.hp;
-  // Guarded: much less than the smash (and one more energy)
-  assert.strictEqual(rpg.choose(run, "a", { action: "guard" }), null);
-  rpg.resolveTurn(run, () => 0.5);
-  assert.ok(fresh - me.hp < smash * 0.5, `${fresh - me.hp} of ${smash}`);
-  assert.strictEqual(me.energy, 3);
-  // Stunned by the bash: no smash at all
+  assert.strictEqual(rpg.endTurn(run, "a"), true);
+  rpg.monsterTurn(run, () => 0.5);
+  // (armor first, then the block)
+  assert.strictEqual(fresh - me.hp, Math.round(smash - me.def) - 2 * (6 + me.def));
+  // The next turn: block gone, full energy, five new cards (the old hand to the discard pile)
+  assert.strictEqual(me.block, 0);
+  assert.strictEqual(me.energy, rpg.ENERGY);
+  assert.strictEqual(me.hand.length, 5);
+  assert.strictEqual(run.turn, 2);
+  // A stun: no smash at all
   run.monsters[0].intent = { move: "smash", target: "a" };
+  me.hand = [{ uid: "s1", id: "bash" }];
   const hp = me.hp;
-  assert.strictEqual(rpg.choose(run, "a", { action: "skill", skill: "bash", target: "m1" }), null);
-  rpg.resolveTurn(run, () => 0.5);
+  assert.strictEqual(rpg.play(run, "a", { uid: "s1", target: "m1" }), null);
+  assert.ok(run.monsters[0].hp < 1000 && run.monsters[0].effects.stun);
+  rpg.endTurn(run, "a");
+  rpg.monsterTurn(run, () => 0.5);
   assert.strictEqual(me.hp, hp);
-  assert.ok(run.monsters[0].hp < 1000);
-  assert.strictEqual(me.energy, 3);
 });
 
-test("rpg: poison ticks and makes the backstab hurt 3x; the cleric heals and brings the fallen back; all down: the pot is lost", () => {
-  const run = duel("rogue", "defend");
-  rpg.choose(run, "a", { action: "skill", skill: "poisonblade", target: "m1" });
-  run.monsters[0].intent = { move: "attack", target: "a" };
-  rpg.resolveTurn(run, () => 0.5);
+test("rpg: poison makes the backstab hurt 3x; the cleric heals, brings the fallen back; a fight won: a card to pick; all down: the pot is lost", () => {
+  const run = duel("rogue", "defend", ["poisonblade", "backstab"]);
+  rpg.play(run, "a", { uid: "t0", target: "m1" });
   const foe = run.monsters[0];
-  assert.ok(foe.effects.poison && foe.effects.poison.turns == 2, JSON.stringify(foe.effects));
-  run.heroes[0].energy = 2;
+  assert.ok(foe.effects.poison && foe.effects.poison.turns == 3, JSON.stringify(foe.effects));
   const before = foe.hp;
-  rpg.choose(run, "a", { action: "skill", skill: "backstab", target: "m1" });
-  foe.intent = { move: "defend" };
-  rpg.resolveTurn(run, () => 0.5);
-  // (defended: half - still far more than a plain hit)
+  rpg.play(run, "a", { uid: "t1", target: "m1" });
+  // (defending: half - still far more than a strike)
   assert.ok(before - foe.hp > run.heroes[0].atk * 1.2, `${before - foe.hp}`);
 
-  // The cleric: heal, revive
-  const hero = { ...rpg.newHero(), cls: "cleric" };
-  const party = rpg.newRun(1, [{ name: "c", hero }, { name: "w", hero: rpg.newHero() }]);
+  // The cleric
+  const party = rpg.newRun(1, [{ name: "c", hero: { ...rpg.newHero(), cls: "cleric" } }, { name: "w", hero: rpg.newHero() }]);
   rpg.enterRoom(party, 0);
   party.monsters = [{ id: "m1", name: "Dummy", icon: "🎯", hp: 1000, maxHp: 1000, atk: 1, dodge: 0, moves: ["defend"], rank: "normal", effects: {}, intent: { move: "defend" } }];
   const [cleric, warrior] = party.heroes;
+  cleric.hand = [{ uid: "h", id: "heal" }, { uid: "r", id: "revive" }];
   warrior.hp = 10;
-  rpg.choose(party, "c", { action: "skill", skill: "heal", ally: "w" });
-  rpg.choose(party, "w", { action: "guard" });
-  rpg.resolveTurn(party, () => 0.5);
+  assert.strictEqual(rpg.play(party, "c", { uid: "h", ally: "w" }), null);
   assert.ok(warrior.hp > 10);
+  // (the turn waits for both)
+  assert.strictEqual(rpg.endTurn(party, "c"), false);
   warrior.down = true;
   warrior.hp = 0;
+  cleric.ended = false;
   cleric.energy = 3;
-  assert.strictEqual(rpg.choose(party, "c", { action: "skill", skill: "revive", ally: "w" }), null);
-  party.monsters[0].intent = { move: "defend" };
-  rpg.resolveTurn(party, () => 0.5);
+  assert.strictEqual(rpg.play(party, "c", { uid: "r", ally: "w" }), null);
   assert.ok(!warrior.down && warrior.hp > 0);
+  // Won: a card to pick (one of three) for the deck
+  party.monsters[0].hp = 1;
+  cleric.hand = [{ uid: "x", id: "strike" }];
+  cleric.energy = 1;
+  rpg.play(party, "c", { uid: "x", target: "m1" });
+  assert.strictEqual(party.phase, "between");
+  assert.strictEqual(cleric.reward.length, 3);
+  assert.match(rpg.pickReward(party, "c", "nonsense"), /Not one of your cards/);
+  const card = cleric.reward[0];
+  assert.strictEqual(rpg.pickReward(party, "c", card), null);
+  assert.strictEqual(cleric.deck[cleric.deck.length - 1], card);
+  // Votes: the most win, a tie goes with the leader, nobody: leave
+  assert.strictEqual(rpg.tally(party, "c"), "leave");
+  rpg.vote(party, "c", 1);
+  rpg.vote(party, "w", 2);
+  assert.strictEqual(rpg.tally(party, "c"), 1);
+  rpg.vote(party, "w", 1);
+  assert.strictEqual(rpg.tally(party, "w"), 1);
+  assert.match(rpg.vote(party, "w", 9), /Unknown door/);
   // Far too strong monsters: the party goes down, the pot with it
+  rpg.enterRoom(party, 0);
+  party.monsters = [{ id: "m9", name: "Doom", icon: "🎯", hp: 1000, maxHp: 1000, atk: 100000, dodge: 0, moves: ["burn"], rank: "normal", effects: {}, intent: { move: "burn" } }];
+  party.heroes.forEach((h) => (h.agi = 0));
   party.pot = 500;
-  party.monsters[0].atk = 100000;
-  party.monsters[0].intent = { move: "burn" };
-  rpg.choose(party, "c", { action: "attack" });
-  rpg.choose(party, "w", { action: "attack" });
-  rpg.resolveTurn(party, () => 0.5);
+  rpg.endTurn(party, "c");
+  rpg.endTurn(party, "w");
+  rpg.monsterTurn(party, () => 0.5);
   assert.strictEqual(party.phase, "lost");
   assert.strictEqual(party.pot, 0);
 });
@@ -171,6 +205,27 @@ function waitFor(socket, event, predicate, timeout = 4000) {
       resolve(data);
     }
     socket.on(event, handler);
+  });
+}
+
+// A player: attacks the first foe with every card it can pay, then ends the turn; skips the card reward; votes
+// for the first door (options.vote)
+function autoplay(socket, name, options) {
+  socket.on("rpgParty", (p) => {
+    if (!p || !p.run || p.result) return;
+    const run = p.run;
+    const me = run.heroes.find((h) => h.name == name);
+    if (!me) return;
+    if (run.phase == "fight" && !me.down && !me.ended) {
+      const foe = run.monsters.find((m) => !m.down);
+      const card = me.hand.find((c) => rpg.CARDS[c.id].type == "attack" && rpg.CARDS[c.id].cost <= me.energy);
+      if (card && foe) socket.emit("play", { uid: card.uid, target: foe.id });
+      else socket.emit("endTurn");
+    }
+    if (run.phase == "between") {
+      if (me.reward) socket.emit("pick", { card: null });
+      if (options.vote && !(name in run.votes)) socket.emit("vote", { door: 0 });
+    }
   });
 }
 
@@ -226,7 +281,7 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; the time
   const busy = h.once(alice, "rpgError");
   alice.emit("upgrade", { stat: "hp" });
   assert.match(await busy, /Not during a run/);
-  alice.emit("act", { action: "attack", target: fight.run.monsters[0].id });
+  autoplay(alice, "rpg_alice", { vote: false });
   const between = await waitFor(alice, "rpgParty", (p) => p && p.run && p.run.phase == "between");
   assert.ok(between.run.pot > 0);
   // Nobody decides: out with the loot
@@ -267,24 +322,19 @@ test("rpg: co-op - one opens a party, another joins, the leader starts (both pay
   assert.strictEqual(fight.run.heroes.length, 2);
 
   // The turn waits for both heroes
-  alice.emit("act", { action: "guard" });
-  const waiting = await waitFor(bob, "rpgParty", (p) => p && p.run.heroes.find((h) => h.name == "rpg_alice").chose);
+  alice.emit("endTurn");
+  const waiting = await waitFor(bob, "rpgParty", (p) => p && p.run.heroes.find((h) => h.name == "rpg_alice").ended);
   assert.strictEqual(waiting.run.turn, 1);
-  assert.ok(!waiting.run.heroes.find((h) => h.name == "rpg_bob").chose);
+  assert.ok(!waiting.run.heroes.find((h) => h.name == "rpg_bob").ended);
+  // (the cards of a hero who ended the turn wait)
+  const ended = h.once(alice, "rpgError");
+  alice.emit("play", { uid: waiting.run.heroes.find((h) => h.name == "rpg_alice").hand[0].uid, target: waiting.run.monsters[0].id });
+  assert.match(await ended, /ended your turn/);
 
-  // Fight on (both act each turn) - the leader goes on through every room
-  const play = (socket) =>
-    socket.on("rpgParty", (p) => {
-      if (!p || !p.run || p.result) return;
-      if (p.run.phase == "fight") {
-        const me = p.run.heroes.find((h) => h.name == (socket === alice ? "rpg_alice" : "rpg_bob"));
-        if (me && !me.down && !me.chose) socket.emit("act", { action: "attack" });
-      }
-      if (p.run.phase == "between" && socket === alice) socket.emit("next");
-    });
-  play(alice);
-  play(bob);
-  bob.emit("act", { action: "attack" });
+  // Fight on - both vote for the doors (a tie: the leader), both play their cards
+  autoplay(alice, "rpg_alice", { vote: true });
+  autoplay(bob, "rpg_bob", { vote: true });
+  bob.emit("endTurn");
   const won = await waitFor(alice, "rpgParty", (p) => p && p.result == "won", 15000);
   assert.ok(won.run.pot > 0);
   const hero = await waitFor(bob, "rpgHero", (view) => view.deepest == 1);

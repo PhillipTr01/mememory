@@ -13,10 +13,11 @@ const ROOM = "rpg";
  *
  * Parties: a player opens one (a floor, 1 to 4 heroes - alone it starts right away) or joins an open
  * one (its floor open for the own hero too); the leader starts it. Every hero pays the entry of the
- * floor. In a fight everybody picks an action - when all have (or the turn's time is up: who didn't,
- * attacks) the turn is played. Between two rooms the leader picks one of the doors or leaves with the loot (the time up:
- * leaves). The end (cleared, left or all down): the pot is paid, the gear goes to the bags, the potions
- * left go back - lost: nothing but the potions drunk.
+ * floor. A fight is played with cards: every hero plays from the hand, then ends the turn - when all
+ * have (or the turn's time is up) the monsters act. Between two rooms everybody votes for one of the
+ * hidden doors or to leave with the loot (all voted - or the time up: the votes so far, none: leave),
+ * and picks the card won in the fight. The end (cleared, left or all down): the pot is paid, the gear
+ * goes to the bags, the potions left go back - lost: nothing but the potions drunk.
  */
 module.exports = function (io, options = {}) {
   const world = options.world || worlds.TEST;
@@ -26,7 +27,7 @@ module.exports = function (io, options = {}) {
   casinoChat.attach(room, ROOM);
 
   // How long a turn / a decision between two rooms may take (ms) - the tests make them short
-  const timing = { turn: 25000, decide: 60000, close: 60000 };
+  const timing = { turn: 45000, decide: 45000, close: 60000 };
 
   const heroes = new Map(); // username -> hero (rpg.newHero)
   const parties = new Map(); // id -> {id, leader, floor, size, members, run, endsAt, timer, result}
@@ -95,12 +96,13 @@ module.exports = function (io, options = {}) {
       levelMax: rpg.LEVEL_MAX,
       classes: rpg.CLASSES,
       mainBonus: rpg.MAIN_BONUS,
-      skills: rpg.SKILLS,
       moves: rpg.MOVES,
       roomKinds: rpg.ROOM_KINDS,
-      energyMax: rpg.ENERGY_MAX,
+      energy: rpg.ENERGY,
       turn: timing.turn,
       decide: timing.decide,
+      cards: rpg.CARDS,
+      doors: rpg.DOORS,
     };
   }
 
@@ -134,24 +136,37 @@ module.exports = function (io, options = {}) {
     }
   }
 
-  // The clock of a run: a turn of a fight, the leader's decision between two rooms
+  // The clock of a run - started anew only when the turn or the room changes (a card played doesn't): the heroes'
+  // turn of a fight (the time up: the monsters' turn), the vote between two rooms (the time up: the votes so far)
   function schedule(party) {
+    const run = party.run;
+    const key = run ? run.phase + ":" + run.rooms.length + ":" + run.turn : null;
+    if (key === party.clock) return;
+    party.clock = key;
     clearTimeout(party.timer);
     party.endsAt = null;
-    const run = party.run;
     if (!run) return;
     if (run.phase === "fight") {
       party.endsAt = Date.now() + timing.turn;
-      party.timer = setTimeout(() => playTurn(party), timing.turn);
+      party.timer = setTimeout(() => monstersAct(party), timing.turn);
     } else if (run.phase === "between") {
       party.endsAt = Date.now() + timing.decide;
-      party.timer = setTimeout(() => finish(party, "left").catch((error) => console.error("[rpg] Could not end a run:", error)), timing.decide);
+      party.timer = setTimeout(() => decide(party).catch((error) => console.error("[rpg] Could not go on:", error)), timing.decide);
     }
   }
 
-  function playTurn(party) {
-    if (!party.run || party.run.phase !== "fight") return;
-    rpg.resolveTurn(party.run);
+  function monstersAct(party) {
+    if (!party.run || party.run.phase !== "fight" || party.result) return;
+    rpg.monsterTurn(party.run);
+    afterChange(party);
+  }
+
+  // The votes counted: through the door with the most - or out with the loot
+  async function decide(party) {
+    if (!party.run || party.run.phase !== "between" || party.result) return;
+    const choice = rpg.tally(party.run, party.leader);
+    if (choice === "leave") return finish(party, "left");
+    rpg.enterRoom(party.run, choice);
     afterChange(party);
   }
 
@@ -380,30 +395,54 @@ module.exports = function (io, options = {}) {
 
     /* ---------- The run ---------- */
 
-    on("act", (data) => {
+    const myRun = () => {
       const party = myParty();
-      if (!party || !party.run || party.result) return;
-      const problem = rpg.choose(party.run, username, data);
-      if (problem) return error(problem);
-      if (rpg.allChosen(party.run)) return playTurn(party);
-      emitParty(party);
-    });
+      return party && party.run && !party.result ? party : null;
+    };
 
-    on("next", (data) => {
-      const party = myParty();
-      if (!party || !party.run || party.result || party.run.phase !== "between") return;
-      if (party.leader !== username) return error("The leader decides.");
-      const door = Number(data.door) || 0;
-      if (!Number.isInteger(door) || door < 0 || door >= party.run.doors.length) return;
-      rpg.enterRoom(party.run, door);
+    // A card of the hand: {uid, target, ally}
+    on("play", (data) => {
+      const party = myRun();
+      if (!party) return;
+      const problem = rpg.play(party.run, username, { uid: String(data.uid), target: data.target != null ? String(data.target) : null, ally: data.ally != null ? String(data.ally) : null });
+      if (problem) return error(problem);
       afterChange(party);
     });
 
-    on("exit", async () => {
-      const party = myParty();
-      if (!party || !party.run || party.result || party.run.phase !== "between") return;
-      if (party.leader !== username) return error("The leader decides.");
-      await finish(party, "left");
+    // The turn ended - every hero has: the monsters' turn
+    on("endTurn", () => {
+      const party = myRun();
+      if (!party) return;
+      if (rpg.endTurn(party.run, username)) return monstersAct(party);
+      emitParty(party);
+    });
+
+    on("drink", () => {
+      const party = myRun();
+      if (!party) return;
+      const problem = rpg.drink(party.run, username);
+      if (problem) return error(problem);
+      emitParty(party);
+    });
+
+    // The card reward after a fight ({card: null} - none)
+    on("pick", (data) => {
+      const party = myRun();
+      if (!party) return;
+      const problem = rpg.pickReward(party.run, username, data.card != null ? String(data.card) : null);
+      if (problem) return error(problem);
+      emitParty(party);
+    });
+
+    // A vote between two rooms: {door: its index} or {door: "leave"} - everybody voted: counted
+    on("vote", async (data) => {
+      const party = myRun();
+      if (!party) return;
+      const choice = data.door === "leave" ? "leave" : Number(data.door);
+      const problem = rpg.vote(party.run, username, choice);
+      if (problem) return error(problem);
+      if (rpg.allVoted(party.run)) return decide(party);
+      emitParty(party);
     });
 
     socket.on(
