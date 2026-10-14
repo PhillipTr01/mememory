@@ -1362,10 +1362,13 @@ function roomScene(run, me) {
   var body = el("div", "rpg-scene-body");
   if (ev.kind == "merchant") body.append(...shopNodes(run, me));
   else if (me && ev.choices && myName in ev.choices) body.append(...choiceNodes(run, me));
-  if (ev.lines.length) {
+  // What happened in the room (not at the merchant: "Sold ✓" shows it - the battle log keeps every buy)
+  if (ev.lines.length && ev.kind != "merchant") {
+    var box = el("div", "rpg-event-box");
     var lines = el("ul", "rpg-event-lines");
     ev.lines.forEach((line) => lines.appendChild(el("li", "", line)));
-    body.appendChild(lines);
+    box.append(el("div", "rpg-label", "What happened"), lines);
+    body.appendChild(box);
   }
   // Who has chosen
   if (ev.choices && run.heroes.length > 1) {

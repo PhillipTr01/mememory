@@ -4052,3 +4052,24 @@ button.rpg-cardx.off {
   box-sizing: border-box;
   min-height: 0;
 }
+
+/* What happened in a room: a box under the choices */
+.rpg-event-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid var(--mm-border);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.rpg-event-box .rpg-event-lines {
+  text-align: left;
+  color: var(--mm-muted);
+}
+
+.rpg-event-box .rpg-event-lines li::before {
+  content: "• ";
+  color: var(--rpg-gold);
+}
