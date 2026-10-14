@@ -1054,33 +1054,91 @@
   background: conic-gradient(#ffd166 25%, #2a2a35 0 50%, #ffd166 0 75%, #2a2a35 0) 0 0 / 40% 40%;
 }
 
+/* (the moving part of a background on a layer of its own that slides - the browser moves it without painting anew;
+   the parts that stay on the background itself) */
+.look-bg-grid > .look-bg,
+.look-bg-matrix > .look-bg,
+.look-bg-northern > .look-bg,
+.look-bg-lava > .look-bg,
+.look-bg-nebula > .look-bg,
+.look-bg-prism > .look-bg {
+  overflow: hidden;
+}
+
+.look-bg-grid > .look-bg::before,
+.look-bg-matrix > .look-bg::before,
+.look-bg-northern > .look-bg::before,
+.look-bg-lava > .look-bg::before,
+.look-bg-lava > .look-bg::after,
+.look-bg-nebula > .look-bg::before,
+.look-bg-nebula > .look-bg::after,
+.look-bg-prism > .look-bg::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+}
+
 .look-bg-grid > .look-bg {
   background:
-    linear-gradient(transparent 88%, rgba(255, 61, 245, 0.9) 88%) 0 0 / 25% 25%,
     linear-gradient(90deg, transparent 88%, rgba(54, 230, 255, 0.85) 88%) 0 0 / 25% 25%,
     linear-gradient(180deg, #120428, #3a0b5e);
-  animation: look-bg-grid 3s linear infinite;
 }
 
+/* (the lines going down: three of them in 3 s) */
+.look-bg-grid > .look-bg::before {
+  top: -100%;
+  height: 200%;
+  background: linear-gradient(transparent 88%, rgba(255, 61, 245, 0.9) 88%) 0 0 / 25% 12.5%;
+  animation: look-bg-slide-grid 3s linear infinite;
+}
+
+/* (the falling code over the dark columns: the code layer is on top - the columns under it on its own layer) */
 .look-bg-matrix > .look-bg {
-  background:
-    repeating-linear-gradient(180deg, rgba(0, 255, 120, 0.55) 0 4%, transparent 4% 13%) 0 0 / 100% 200%,
-    repeating-linear-gradient(90deg, transparent 0 8%, rgba(0, 20, 8, 0.9) 8% 14%),
-    linear-gradient(#001a0a, #003b18);
-  animation: look-bg-matrix 2.4s linear infinite;
+  background: linear-gradient(#001a0a, #003b18);
 }
 
-.look-bg-northern > .look-bg {
-  background: linear-gradient(120deg, #0b1d3a, #13406b, #1fd1a5, #7b5cff, #13406b, #0b1d3a) 0 0 / 300% 300%;
-  animation: look-bg-drift 9s ease-in-out infinite alternate;
+.look-bg-matrix > .look-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 8%, rgba(0, 20, 8, 0.9) 8% 14%);
+}
+
+.look-bg-matrix > .look-bg::before {
+  z-index: 1;
+  height: 200%;
+  background: repeating-linear-gradient(180deg, rgba(0, 255, 120, 0.55) 0 4%, transparent 4% 13%);
+  animation: look-bg-slide-matrix 2.4s linear infinite;
+}
+
+.look-bg-northern > .look-bg::before {
+  width: 300%;
+  height: 300%;
+  background: linear-gradient(120deg, #0b1d3a, #13406b, #1fd1a5, #7b5cff, #13406b, #0b1d3a);
+  animation: look-bg-slide-drift 9s ease-in-out infinite alternate;
 }
 
 .look-bg-lava > .look-bg {
-  background:
-    radial-gradient(circle at 30% 70%, #ffb347 0 16%, transparent 32%) 0 0 / 180% 180%,
-    radial-gradient(circle at 70% 30%, #ff5f6d 0 18%, transparent 36%) 0 0 / 160% 160%,
-    linear-gradient(#5a0a2a, #c2185b);
-  animation: look-bg-lava 7s ease-in-out infinite alternate;
+  background: linear-gradient(#5a0a2a, #c2185b);
+}
+
+/* (two blobs, each its own way: the orange one on top) */
+.look-bg-lava > .look-bg::after {
+  width: 180%;
+  height: 180%;
+  background: radial-gradient(circle at 30% 70%, #ffb347 0 16%, transparent 32%);
+  animation: look-bg-slide-lava-a 7s ease-in-out infinite alternate;
+}
+
+.look-bg-lava > .look-bg::before {
+  width: 160%;
+  height: 160%;
+  background: radial-gradient(circle at 70% 30%, #ff5f6d 0 18%, transparent 36%);
+  animation: look-bg-slide-lava-b 7s ease-in-out infinite alternate;
 }
 
 .look-bg-space > .look-bg {
@@ -1099,14 +1157,26 @@
   animation: look-bg-disco 1.6s steps(1) infinite;
 }
 
+/* (the two clouds drift over the stars and the night - the stars under them) */
 .look-bg-nebula > .look-bg {
   background:
-    radial-gradient(circle at 30% 35%, rgba(255, 110, 199, 0.75), transparent 45%) 0 0 / 160% 160%,
-    radial-gradient(circle at 70% 65%, rgba(110, 195, 255, 0.75), transparent 45%) 0 0 / 160% 160%,
     radial-gradient(circle at 22% 70%, #fff 0 1%, transparent 1.6%),
     radial-gradient(circle at 80% 24%, #fff 0 1.2%, transparent 1.8%),
     radial-gradient(circle at 50% 50%, #3a1060, #090418 75%);
-  animation: look-bg-lava 8s ease-in-out infinite alternate;
+}
+
+.look-bg-nebula > .look-bg::after {
+  width: 160%;
+  height: 160%;
+  background: radial-gradient(circle at 30% 35%, rgba(255, 110, 199, 0.75), transparent 45%);
+  animation: look-bg-slide-nebula-a 8s ease-in-out infinite alternate;
+}
+
+.look-bg-nebula > .look-bg::before {
+  width: 160%;
+  height: 160%;
+  background: radial-gradient(circle at 70% 65%, rgba(110, 195, 255, 0.75), transparent 45%);
+  animation: look-bg-slide-nebula-b 8s ease-in-out infinite alternate;
 }
 
 .look-bg-diamonddust > .look-bg {
@@ -1117,15 +1187,11 @@
   animation: look-bg-sparkle 6s linear infinite;
 }
 
-@property --look-bg-a {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
-}
-
-.look-bg-prism > .look-bg {
-  background: conic-gradient(from var(--look-bg-a), #ff4d4d, #ffb84d, #fff04d, #4dff88, #4dd2ff, #9a4dff, #ff4dd2, #ff4d4d);
-  animation: look-bg-turn 6s linear infinite;
+/* (the colors turning: the layer turns - round, so nothing shows at its corners) */
+.look-bg-prism > .look-bg::before {
+  border-radius: 50%;
+  background: conic-gradient(#ff4d4d, #ffb84d, #fff04d, #4dff88, #4dd2ff, #9a4dff, #ff4dd2, #ff4d4d);
+  animation: look-turn 6s linear infinite;
 }
 
 @keyframes look-bg-burst {
@@ -1147,29 +1213,9 @@
   }
 }
 
-@keyframes look-bg-grid {
-  to {
-    background-position: 0 100%, 0 0, 0 0;
-  }
-}
 
-@keyframes look-bg-matrix {
-  to {
-    background-position: 0 100%, 0 0, 0 0;
-  }
-}
 
-@keyframes look-bg-drift {
-  to {
-    background-position: 100% 100%;
-  }
-}
 
-@keyframes look-bg-lava {
-  to {
-    background-position: 100% 100%, 100% 0, 0 0;
-  }
-}
 
 @keyframes look-bg-disco {
   50% {
@@ -1183,11 +1229,6 @@
   }
 }
 
-@keyframes look-bg-turn {
-  to {
-    --look-bg-a: 360deg;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .mm-avatar > .look-bg {
@@ -1949,4 +1990,58 @@
 .mm-avatar.look-idle *::before,
 .mm-avatar.look-idle *::after {
   animation-play-state: paused !important;
+}
+
+/* Performance: a layer drawn by look_canvas.js (a canvas copies its animated picture) - the original shows no image */
+.mm-avatar.lkc-b::before,
+.mm-avatar.lkc-a::after,
+.mm-avatar.lkc-fb > .look-fx::before,
+.mm-avatar.lkc-fa > .look-fx::after,
+.mm-avatar.lkc-g > .look-bg,
+.mm-avatar.lkc-gb > .look-bg::before,
+.mm-avatar.lkc-ga > .look-bg::after {
+  background-image: none !important;
+}
+
+/* The sliding layers of the backgrounds (the same paths as before - moved, not painted anew) */
+@keyframes look-bg-slide-grid {
+  to {
+    transform: translateY(37.5%);
+  }
+}
+
+@keyframes look-bg-slide-matrix {
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes look-bg-slide-drift {
+  to {
+    transform: translate(-66.667%, -66.667%);
+  }
+}
+
+@keyframes look-bg-slide-lava-a {
+  to {
+    transform: translate(-44.444%, -44.444%);
+  }
+}
+
+@keyframes look-bg-slide-lava-b {
+  to {
+    transform: translateX(-37.5%);
+  }
+}
+
+@keyframes look-bg-slide-nebula-a {
+  to {
+    transform: translate(-37.5%, -37.5%);
+  }
+}
+
+@keyframes look-bg-slide-nebula-b {
+  to {
+    transform: translateX(-37.5%);
+  }
 }
