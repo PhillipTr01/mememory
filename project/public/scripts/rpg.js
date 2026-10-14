@@ -10,10 +10,14 @@ var party = null; // my party (with its run) - null: none
 var partyAt = 0; // when it came (its timeLeft counts from then)
 var target = null; // the monster I aim at
 var aiming = null; // a card of my hand waiting for its target: {uid, target: "foe" | "ally" | "fallen"}
-var tab = "hero"; // the tab of the hero card
+var VIEW_KEY = "rpgView";
+var view = "play"; // the section of the home: play, hero, talents, gear, deck, shop
+try {
+  view = localStorage.getItem(VIEW_KEY) || "play";
+} catch (error) {
+  // no storage: play
+}
 var picking = null; // in a room: the choice waiting for a card of the deck ("smith", "purge", "remove")
-var building = false; // the deck builder open (instead of the home)
-var shopping = false; // the card shop open (instead of the home)
 var filters = { type: "all", cost: "all", rarity: "all", owned: false }; // the deck builder's
 var search = "";
 var lastRoom = 0;
@@ -157,8 +161,13 @@ function render() {
   if (!rules || !hero) return;
   var home = party == null;
   var lobby = party != null && !party.started;
-  if (!home || !hero.cls) building = shopping = false;
-  document.getElementById("rpgHome").hidden = !home || building || shopping;
+  if (!VIEWS.some(([id]) => id == view) || !hero.cls) view = "play";
+  var building = home && view == "deck";
+  var shopping = home && view == "shop";
+  document.getElementById("rpgTop").hidden = !home;
+  var homeNode = document.getElementById("rpgHome");
+  homeNode.hidden = !home || building || shopping;
+  homeNode.dataset.view = view;
   document.getElementById("rpgBuilder").hidden = !building;
   document.getElementById("rpgShop").hidden = !shopping;
   document.getElementById("rpgLobby").hidden = !lobby;
@@ -168,8 +177,9 @@ function render() {
   var first = home && !hero.cls;
   document.getElementById("rpgFirst").hidden = !first;
   if (first) renderFirst();
-  if (home && building) renderBuilder();
-  else if (home && shopping) renderShop();
+  if (home) renderTop();
+  if (building) renderBuilder();
+  else if (shopping) renderShop();
   else if (home) {
     renderHero();
     renderDoor();
@@ -211,9 +221,50 @@ function itemCard(item, actions) {
   return card;
 }
 
-function renderHero() {
+// The sections of the home: [id, the button]
+var VIEWS = [
+  ["play", "⚔️ Play"],
+  ["hero", "🦸 Hero"],
+  ["talents", "⭐ Talents"],
+  ["gear", "🎒 Gear"],
+  ["deck", "🃏 Deck"],
+  ["shop", "🛒 Shop"],
+];
+
+// What waits for the player in a section (a badge on its button): [text, "warn" | "new"] or null
+function viewBadge(id) {
+  if (!hero.cls) return null;
+  if (id == "hero" && hero.points) return ["+" + hero.points, "new"];
+  if (id == "talents" && rules.talentLevels.some((lv, tier) => hero.level >= lv && !hero.talents[tier])) return ["!", "new"];
+  if (id == "gear" && hero.bag.length) return [String(hero.bag.length), ""];
+  if (id == "deck") return [String(hero.deck.length), hero.deck.length < hero.deckMin || hero.deck.length > hero.deckMax ? "warn" : ""];
+  if (id == "shop") {
+    var packs = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);
+    return packs ? [packs + " 🎴", "new"] : null;
+  }
+  return null;
+}
+
+function setView(id) {
+  view = id;
+  remember(VIEW_KEY, id);
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// On top of every section: the hero (class, level, potions) and the sections
+function renderTop() {
   var picked = !!hero.cls;
   var mine = rules.classes[hero.cls || "warrior"];
+  morphChildren(
+    document.getElementById("rpgNav"),
+    VIEWS.map(([id, label]) => {
+      var b = button(label, "view", { id: id, className: "rpg-nav-btn" + (view == id ? " active" : "") });
+      var badge = viewBadge(id);
+      if (badge) b.appendChild(el("span", "rpg-nav-badge " + badge[1], badge[0]));
+      return b;
+    }),
+  );
   document.getElementById("rpgHeroName").innerText = picked ? mine.icon + " " + mine.name : "Pick your hero";
   document.getElementById("rpgHeroSub").innerText = picked ? "Deepest floor " + hero.deepest + " · " + hero.cleared + " / " + hero.runs + " runs cleared" : "";
   // The hero's level: XP from the fights - every level a stat point, talents at levels 3, 6, 10
@@ -225,10 +276,12 @@ function renderHero() {
   buy.innerText = "+ 🪙 " + formatCoins(rules.potionPrice);
   buy.title = "A potion: heals 40% HP - in a fight or between the rooms";
   buy.disabled = hero.potions >= rules.potionsMax || myCoins < rules.potionPrice;
+}
 
-  document.querySelectorAll(".rpg-tab").forEach((b) => b.classList.toggle("active", b.dataset.tab == tab));
-  document.querySelectorAll(".rpg-pane").forEach((p) => (p.hidden = p.dataset.pane != tab));
-  document.getElementById("rpgBagCount").innerText = hero.bag.length ? String(hero.bag.length) : "";
+function renderHero() {
+  var picked = !!hero.cls;
+  var mine = rules.classes[hero.cls || "warrior"];
+  document.querySelectorAll(".rpg-pane").forEach((p) => (p.hidden = p.dataset.pane != view));
 
   // The hero: the class, the stats
   // The classes: every one a character of its own - the first free, the others to unlock
@@ -276,7 +329,6 @@ function renderHero() {
   morphChildren(document.getElementById("rpgStats"), stats);
 
   // Talents: one of two per tier - open at hero levels 3, 6, 10
-  document.getElementById("rpgTalentCount").innerText = picked && rules.talentLevels.some((lv, tier) => hero.level >= lv && !hero.talents[tier]) ? "!" : "";
   morphChildren(
     document.getElementById("rpgTalents"),
     picked
@@ -320,15 +372,31 @@ function renderHero() {
     : [el("div", "rpg-empty mm-muted", "Empty - chests in the dungeon drop gear (" + rules.bagMax + " fit).")];
   morphChildren(document.getElementById("rpgBag"), bag);
 
-  // The deck builder: the deck (click: out), the collection (click: in), booster packs
-  morphChildren(document.getElementById("rpgDeckHelp"), deckHelp());
-  document.getElementById("rpgDeckCount").innerText = picked ? String(hero.deck.length) : "";
-  document.getElementById("rpgDeckSize").innerText = picked ? hero.deck.length + " cards · " + hero.deckMin + " to " + hero.deckMax + (hero.deckMin != rules.deckMin || hero.deckMax != rules.deckMax ? " (your charm)" : " (a charm can change it)") : "";
-  var pack = document.getElementById("rpgBuyPack");
-  pack.innerText = "🎴 Packs";
-  pack.title = "The card shop: booster packs of the base set";
-  pack.disabled = !picked;
-  morphChildren(document.getElementById("rpgDeckSummary"), picked ? deckSummary(hero.deck) : []);
+  if (view == "play" && picked) renderReady();
+}
+
+// Ready to go down? Every thing that still waits - with a button to it
+function renderReady() {
+  var items = [];
+  var item = (icon, text, state, act, id, label) => {
+    var row = el("div", "rpg-ready-item " + state);
+    row.append(el("span", "rpg-ready-icon", icon), el("span", "rpg-ready-text", text));
+    if (act) row.appendChild(button(label, act, { id: id, className: "small" + (state == "warn" ? " primary" : "") }));
+    items.push(row);
+  };
+  var n = hero.deck.length;
+  if (n < hero.deckMin) item("🃏", "Your deck has " + n + " cards - it needs " + hero.deckMin + " to go down", "warn", "view", "deck", "Build it");
+  else if (n > hero.deckMax) item("🃏", "Your deck has " + n + " cards - " + hero.deckMax + " at most", "warn", "view", "deck", "Build it");
+  else item("🃏", "Deck ready: " + n + " cards (" + hero.deckMin + " to " + hero.deckMax + ")", "ok", "view", "deck", "Edit");
+  item("🧪", hero.potions + " / " + rules.potionsMax + " potions - they heal 40% in a run", hero.potions ? "ok" : "warn", hero.potions < rules.potionsMax ? "potion" : null, null, "+1 · 🪙 " + formatCoins(rules.potionPrice));
+  if (hero.points) item("⬆️", hero.points + " stat point" + (hero.points == 1 ? "" : "s") + " to spend", "new", "view", "hero", "Spend");
+  if (rules.talentLevels.some((lv, tier) => hero.level >= lv && !hero.talents[tier])) item("⭐", "A talent to pick", "new", "view", "talents", "Pick");
+  var packs = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);
+  if (packs) item("🎴", packs + " pack" + (packs == 1 ? "" : "s") + " to open", "new", "view", "shop", "Open");
+  if (hero.bag.length) item("🎒", hero.bag.length + " item" + (hero.bag.length == 1 ? "" : "s") + " in the bag", "", "view", "gear", "Look");
+  var found = hero.pool.filter((id) => hero.collection[id]).length;
+  item("📚", "Collection: " + found + " / " + hero.pool.length + " cards", "", "view", "shop", "Packs");
+  morphChildren(document.getElementById("rpgReady"), items);
 }
 
 // The deck in short: the mana curve, attacks and skills - too few cards: a warning
@@ -685,6 +753,7 @@ var RARITY_ORDER = ["basic", "common", "rare", "epic", "eternal"];
 var byCost = (a, b) => cardOf(a).cost - cardOf(b).cost || RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.indexOf(cardOf(b).rarity) || cardOf(a).name.localeCompare(cardOf(b).name);
 
 function renderBuilder() {
+  morphChildren(document.getElementById("rpgDeckHelp"), deckHelp());
   var cls = rules.classes[hero.cls];
   document.getElementById("rpgBuilderTitle").innerText = "🃏 Deck builder · " + cls.icon + " " + cls.name;
   var deck = hero.deck;
@@ -1469,12 +1538,8 @@ function dropTarget(event) {
 
 document.querySelector(".rpg-main").addEventListener("click", (event) => {
   if (dragged) return;
-  var node = event.target.closest("[data-act], [data-tab]");
+  var node = event.target.closest("[data-act]");
   if (!node || node.disabled) return;
-  if (node.dataset.tab) {
-    tab = node.dataset.tab;
-    return render();
-  }
   var act = node.dataset.act;
   var id = node.dataset.id;
   if (!act) return;
@@ -1492,21 +1557,10 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     if (node.id == "rpgPackModal" && event.target != node) return;
     document.getElementById("rpgPackModal").remove();
   } else if (act == "pile") showPile(id);
-  else if (act == "builder") {
-    building = true;
-    shopping = false;
-    render();
-  } else if (act == "builderClose") {
-    building = false;
-    render();
-  } else if (act == "shop") {
-    shopping = true;
-    building = false;
-    render();
-  } else if (act == "shopClose") {
-    shopping = false;
-    render();
-  } else if (act == "cartAdd") {
+  else if (act == "view") setView(id);
+  else if (act == "builder") setView("deck");
+  else if (act == "shop") setView("shop");
+  else if (act == "potion") socket.emit("potion"); else if (act == "cartAdd") {
     cart[id] = Math.min(rules.cartMax, (cart[id] || 0) + 1);
     render();
   } else if (act == "cartLess") {
@@ -1608,10 +1662,6 @@ document.getElementById("rpgFloorUp").addEventListener("click", () => {
 document.getElementById("rpgSolo").addEventListener("click", () => socket.emit("create", { floor: floor, size: 1 }));
 document.getElementById("rpgOpen").addEventListener("click", () => socket.emit("create", { floor: floor, size: size }));
 document.getElementById("rpgBuyPotion").addEventListener("click", () => socket.emit("potion"));
-document.getElementById("rpgBuyPack").addEventListener("click", () => {
-  shopping = true;
-  render();
-});
 
 // A pack opened (the server dealt its cards): they lie face down - the pack's burst first
 socket.on("rpgPack", (data) => {

@@ -3419,3 +3419,184 @@ button.rpg-cardx.off {
     animation: none;
   }
 }
+
+/* ======================= 16. The home: the hero on top, the sections, ready? ======================= */
+
+.rpg-top {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rpg-top[hidden] {
+  display: none;
+}
+
+.rpg-heroline {
+  display: grid;
+  grid-template-columns: auto minmax(9rem, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--mm-radius);
+  border: 1px solid var(--mm-border);
+  background: linear-gradient(90deg, rgba(245, 197, 66, 0.06), var(--rpg-surface) 40%);
+}
+
+.rpg-heroline .rpg-xp {
+  min-width: 0;
+}
+
+.rpg-heroline .rpg-xp .rpg-bar {
+  flex: 1;
+}
+
+/* The sections: one bar of buttons - what waits there: a badge */
+.rpg-nav {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  border-radius: 14px;
+  border: 1px solid var(--mm-border);
+  background: rgba(0, 0, 0, 0.25);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.rpg-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.rpg-btn.rpg-nav-btn {
+  flex: 1;
+  position: relative;
+  white-space: nowrap;
+  border: 0;
+  background: transparent;
+  color: var(--mm-muted);
+  font-weight: 700;
+  padding: 0.55rem 0.8rem;
+  border-radius: 10px;
+}
+
+.rpg-btn.rpg-nav-btn:hover {
+  color: var(--mm-text);
+  background: var(--rpg-surface-hi);
+}
+
+.rpg-btn.rpg-nav-btn.active {
+  color: #1a1408;
+  background: var(--mm-accent);
+}
+
+.rpg-nav-badge {
+  margin-left: 0.35rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--mm-text);
+}
+
+.rpg-nav-badge.new {
+  background: var(--rpg-green);
+  color: #0d1f14;
+}
+
+.rpg-nav-badge.warn {
+  background: var(--rpg-red);
+  color: #fff;
+}
+
+.rpg-nav-btn.active .rpg-nav-badge {
+  background: rgba(0, 0, 0, 0.25);
+  color: #1a1408;
+}
+
+/* The sections of the home: play - the gate and "ready?"; the hero, talents, gear - the hero's card wide */
+.rpg-home[data-view="play"] {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+
+.rpg-home[data-view="play"] .rpg-hero,
+.rpg-home:not([data-view="play"]) .rpg-door,
+.rpg-home:not([data-view="play"]) .rpg-ready {
+  display: none;
+}
+
+.rpg-home:not([data-view="play"]) {
+  grid-template-columns: 1fr;
+}
+
+.rpg-home[data-view="hero"] .rpg-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: 0.5rem;
+}
+
+.rpg-ready-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.rpg-ready-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--mm-border);
+  border-left: 3px solid var(--mm-border);
+  background: var(--rpg-surface);
+  font-size: 0.86rem;
+}
+
+.rpg-ready-item.ok {
+  border-left-color: var(--rpg-green);
+}
+
+.rpg-ready-item.warn {
+  border-left-color: var(--rpg-red);
+  background: rgba(var(--rpg-red-rgb), 0.07);
+}
+
+.rpg-ready-item.new {
+  border-left-color: var(--rpg-gold);
+}
+
+.rpg-ready-icon {
+  font-size: 1.1rem;
+}
+
+.rpg-ready-text {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 991px) {
+  .rpg-home[data-view="play"] {
+    grid-template-columns: 1fr;
+  }
+
+  .rpg-heroline {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .rpg-heroline .rpg-xp {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 575px) {
+  .rpg-btn.rpg-nav-btn {
+    flex: none;
+    padding: 0.5rem 0.65rem;
+  }
+
+  .rpg-heroline .rpg-potions {
+    grid-column: 1 / -1;
+  }
+}

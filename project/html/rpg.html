@@ -95,27 +95,24 @@
                         </div>
                     </div>
 
-                    <!--- No party: the hero (tabs: the hero, gear, the deck) and the gate down --->
-                    <div id="rpgHome" class="rpg-home">
-                        <div class="rpg-card rpg-hero">
-                            <div class="rpg-card-head">
-                                <span id="rpgHeroAvatar" class="mm-avatar"></span>
-                                <div class="rpg-hero-title">
-                                    <div id="rpgHeroName" class="rpg-card-title">Your hero</div>
-                                    <div id="rpgHeroSub" class="mm-muted small"></div>
-                                </div>
-                                <div class="rpg-potions">
-                                    <span id="rpgPotions"></span>
-                                    <button type="button" id="rpgBuyPotion" class="rpg-btn small"></button>
-                                </div>
+                    <!--- No party: the hero on top (always), the sections - play, the hero, talents, gear, the deck, the shop --->
+                    <div id="rpgTop" class="rpg-top">
+                        <div class="rpg-heroline">
+                            <span id="rpgHeroAvatar" class="mm-avatar"></span>
+                            <div class="rpg-hero-title">
+                                <div id="rpgHeroName" class="rpg-card-title">Your hero</div>
+                                <div id="rpgHeroSub" class="mm-muted small"></div>
                             </div>
                             <div id="rpgXp" class="rpg-xp" hidden></div>
-                            <div class="rpg-tabs" role="tablist">
-                                <button type="button" class="rpg-tab active" data-tab="hero">Hero</button>
-                                <button type="button" class="rpg-tab" data-tab="talents">Talents <span id="rpgTalentCount" class="rpg-tab-count"></span></button>
-                                <button type="button" class="rpg-tab" data-tab="gear">Gear <span id="rpgBagCount" class="rpg-tab-count"></span></button>
-                                <button type="button" class="rpg-tab" data-tab="deck">Deck <span id="rpgDeckCount" class="rpg-tab-count"></span></button>
+                            <div class="rpg-potions">
+                                <span id="rpgPotions"></span>
+                                <button type="button" id="rpgBuyPotion" class="rpg-btn small"></button>
                             </div>
+                        </div>
+                        <nav id="rpgNav" class="rpg-nav" aria-label="Dungeon"></nav>
+                    </div>
+                    <div id="rpgHome" class="rpg-home">
+                        <div class="rpg-card rpg-hero">
                             <div class="rpg-pane" data-pane="hero">
                                 <div id="rpgClasses" class="rpg-classes"></div>
                                 <div id="rpgClassInfo" class="rpg-class-info"></div>
@@ -130,21 +127,6 @@
                                 <div id="rpgGear" class="rpg-gear"></div>
                                 <div class="rpg-label">Bag</div>
                                 <div id="rpgBag" class="rpg-bag"></div>
-                            </div>
-                            <div class="rpg-pane" data-pane="deck" hidden>
-                                <div class="rpg-deck-head">
-                                    <div><b>Your deck</b> <span id="rpgDeckSize" class="mm-muted small"></span></div>
-                                    <button type="button" id="rpgBuyPack" class="rpg-btn small"></button>
-                                </div>
-                                <div id="rpgDeckSummary" class="rpg-deck-summary"></div>
-                                <div class="rpg-deck-buttons">
-                                    <button type="button" class="rpg-btn primary" data-act="builder">🃏 Deck builder</button>
-                                    <button type="button" class="rpg-btn" data-act="shop">🛒 Card shop</button>
-                                </div>
-                                <details class="rpg-help-box">
-                                    <summary>How cards work</summary>
-                                    <div id="rpgDeckHelp" class="rpg-help"></div>
-                                </details>
                             </div>
                         </div>
                         <div class="rpg-card rpg-door">
@@ -169,17 +151,20 @@
                             <div class="rpg-label">Open parties</div>
                             <div id="rpgParties" class="rpg-parties"></div>
                         </div>
+                        <!--- Ready to go down? What still waits (a deck too small, points, packs ...) --->
+                        <div class="rpg-card rpg-ready">
+                            <div class="rpg-card-title">Ready?</div>
+                            <div id="rpgReady" class="rpg-ready-list"></div>
+                        </div>
                     </div>
 
                     <!--- The deck builder (instead of the home): the collection - filtered - and the deck --->
                     <div id="rpgBuilder" class="rpg-builder" hidden>
                         <div class="rpg-builder-head">
-                            <button type="button" class="rpg-btn small" data-act="builderClose">‹ Back</button>
                             <div class="rpg-builder-title">
                                 <div id="rpgBuilderTitle" class="rpg-card-title"></div>
                                 <div class="mm-muted small">Click or drag a card into your deck - click or drag it out again. Every run starts with this deck.</div>
                             </div>
-                            <button type="button" class="rpg-btn small primary" data-act="shop">🛒 Card shop</button>
                         </div>
                         <div class="rpg-builder-body">
                             <div class="rpg-builder-left">
@@ -201,18 +186,20 @@
                                     <button type="button" class="rpg-btn small" data-act="deckStarter">↺ Starter deck</button>
                                     <button type="button" class="rpg-btn small" data-act="deckClear">🗑️ Clear</button>
                                 </div>
+                                <details class="rpg-help-box">
+                                    <summary>How cards work</summary>
+                                    <div id="rpgDeckHelp" class="rpg-help"></div>
+                                </details>
                             </div>
                         </div>
                     </div>
                     <!--- The card shop (instead of the home): booster packs of the base set --->
                     <div id="rpgShop" class="rpg-shop" hidden>
                         <div class="rpg-builder-head">
-                            <button type="button" class="rpg-btn small" data-act="shopClose">‹ Back</button>
                             <div class="rpg-builder-title">
                                 <div id="rpgShopTitle" class="rpg-card-title"></div>
                                 <div class="mm-muted small">Fill your cart with booster packs of the base set, buy them - then open them one after the other. Cards of the class you play and neutral ones; a copy you can't hold any more is sold right away.</div>
                             </div>
-                            <button type="button" class="rpg-btn small" data-act="builder">🃏 Deck builder</button>
                         </div>
                         <div id="rpgShopProgress" class="rpg-shop-progress"></div>
                         <div class="rpg-label">Your packs - unopened</div>
