@@ -2629,7 +2629,7 @@ button.rpg-cardx.off {
 
 /* The cost on a card, the mana of the turn, a row of the deck: one picture - the number in its belly */
 .rpg-main {
-  --rpg-drop: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 124'><defs><radialGradient id='g' cx='42%' cy='62%' r='72%'><stop offset='0' stop-color='%23cdeeff'/><stop offset='0.35' stop-color='%2378c2ee'/><stop offset='0.8' stop-color='%233584c4'/><stop offset='1' stop-color='%232a6ba6'/></radialGradient><radialGradient id='h' cx='50%' cy='50%' r='50%'><stop offset='0' stop-color='white' stop-opacity='0.85'/><stop offset='1' stop-color='white' stop-opacity='0'/></radialGradient></defs><path d='M50 6 C58 26 92 50 92 80 A42 42 0 0 1 8 80 C8 50 42 26 50 6Z' fill='url(%23g)' stroke='%23e9f8ff' stroke-opacity='0.55' stroke-width='2.5' stroke-linejoin='round'/><ellipse cx='33' cy='66' rx='11' ry='17' fill='url(%23h)' transform='rotate(22 33 66)'/><ellipse cx='66' cy='100' rx='9' ry='5' fill='white' fill-opacity='0.18' transform='rotate(-25 66 100)'/></svg>");
+  --rpg-drop: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 124'><defs><radialGradient id='g' cx='42%' cy='62%' r='72%'><stop offset='0' stop-color='%2363b0e3'/><stop offset='0.35' stop-color='%232f72ad'/><stop offset='0.8' stop-color='%23184778'/><stop offset='1' stop-color='%230e2a4c'/></radialGradient><radialGradient id='h' cx='50%' cy='50%' r='50%'><stop offset='0' stop-color='white' stop-opacity='0.5'/><stop offset='1' stop-color='white' stop-opacity='0'/></radialGradient></defs><path d='M50 6 C58 26 92 50 92 80 A42 42 0 0 1 8 80 C8 50 42 26 50 6Z' fill='url(%23g)' stroke='%238cc8ee' stroke-opacity='0.5' stroke-width='3' stroke-linejoin='round'/><ellipse cx='33' cy='66' rx='11' ry='17' fill='url(%23h)' transform='rotate(22 33 66)'/><ellipse cx='66' cy='100' rx='9' ry='5' fill='white' fill-opacity='0.18' transform='rotate(-25 66 100)'/></svg>");
 }
 
 .rpg-cardx-cost,
@@ -2642,7 +2642,7 @@ button.rpg-cardx.off {
   font-size: 0;
   background: var(--rpg-drop) center / contain no-repeat;
   box-shadow: none;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
   display: grid;
   place-items: center;
 }
@@ -2656,7 +2656,7 @@ button.rpg-cardx.off {
   padding-top: 32%;
   font-weight: 800;
   color: #fff;
-  text-shadow: 0 1px 3px rgba(10, 45, 85, 0.75);
+  text-shadow: 0 1px 2px rgba(0, 10, 25, 0.8);
 }
 
 .rpg-cardx-cost {
@@ -2682,7 +2682,7 @@ button.rpg-cardx.off {
 .rpg-energy {
   width: 3.6rem;
   height: 4.45rem;
-  filter: drop-shadow(0 0 14px rgba(150, 215, 250, 0.35)) drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 0 12px rgba(70, 150, 220, 0.3)) drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
 }
 
 .rpg-energy::after {
@@ -2693,4 +2693,164 @@ button.rpg-cardx.off {
 /* No mana left: the drop runs dry */
 .rpg-energy.empty {
   filter: grayscale(0.8) brightness(0.75) drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+}
+
+/* ======================= 13. The card shop ======================= */
+
+.rpg-deck-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.rpg-shop {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rpg-shop-bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 700;
+}
+
+.rpg-shop-packs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.rpg-pack-tile {
+  --tier: 160, 160, 175;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(var(--tier), 0.35);
+  background: linear-gradient(180deg, rgba(var(--tier), 0.08), var(--rpg-surface) 45%);
+}
+
+.rpg-pack-tile.tier-premium {
+  --tier: 91, 143, 214;
+}
+
+.rpg-pack-tile.tier-mythic {
+  --tier: 245, 197, 66;
+}
+
+/* The pack: a sealed foil */
+.rpg-pack-art {
+  position: relative;
+  align-self: center;
+  width: 8.5rem;
+  height: 11.5rem;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.5rem;
+  overflow: hidden;
+  background: linear-gradient(160deg, rgba(var(--tier), 0.55), rgba(var(--tier), 0.12) 45%, rgba(0, 0, 0, 0.5)), #1b1b21;
+  border: 2px solid rgba(var(--tier), 0.7);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), inset 0 0 24px rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s;
+}
+
+/* (the crimped edges of a foil pack) */
+.rpg-pack-art::before,
+.rpg-pack-art::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.25) 0 4px, transparent 4px 8px);
+}
+
+.rpg-pack-art::before {
+  top: 0;
+}
+
+.rpg-pack-art::after {
+  bottom: 0;
+}
+
+.rpg-pack-tile:hover .rpg-pack-art {
+  transform: translateY(-4px) rotate(-2deg);
+}
+
+.rpg-pack-set {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.rpg-pack-icon {
+  font-size: 3.4rem;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+}
+
+.rpg-pack-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.rpg-pack-name {
+  font-weight: 800;
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+.rpg-pack-tile > .mm-muted {
+  text-align: center;
+  min-height: 2.5em;
+}
+
+.rpg-pack-odds {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.8rem;
+}
+
+.rpg-odd {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  border-left: 3px solid var(--rarity-color, var(--mm-border));
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.rpg-pack-buy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: auto;
+}
+
+.rpg-builder-grid.small {
+  grid-template-columns: repeat(auto-fill, minmax(6.8rem, 1fr));
+  min-height: 0;
+}
+
+/* An epic or eternal card out of a pack: it shines */
+.rpg-pack .rpg-cardx.big-pull {
+  --card-glow: rgba(245, 197, 66, 0.45);
+  border-color: var(--rpg-gold);
+}
+
+@media (max-width: 575px) {
+  .rpg-shop-bar {
+    grid-template-columns: 1fr;
+  }
 }

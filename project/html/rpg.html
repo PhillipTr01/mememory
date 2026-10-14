@@ -137,7 +137,10 @@
                                     <button type="button" id="rpgBuyPack" class="rpg-btn small"></button>
                                 </div>
                                 <div id="rpgDeckSummary" class="rpg-deck-summary"></div>
-                                <button type="button" class="rpg-btn primary rpg-builder-open" data-act="builder">🃏 Open the deck builder</button>
+                                <div class="rpg-deck-buttons">
+                                    <button type="button" class="rpg-btn primary" data-act="builder">🃏 Deck builder</button>
+                                    <button type="button" class="rpg-btn" data-act="shop">🛒 Card shop</button>
+                                </div>
                                 <details class="rpg-help-box">
                                     <summary>How cards work</summary>
                                     <div id="rpgDeckHelp" class="rpg-help"></div>
@@ -176,7 +179,7 @@
                                 <div id="rpgBuilderTitle" class="rpg-card-title"></div>
                                 <div class="mm-muted small">Click or drag a card into your deck - click or drag it out again. Every run starts with this deck.</div>
                             </div>
-                            <button type="button" id="rpgBuilderPack" class="rpg-btn small primary" data-act="pack"></button>
+                            <button type="button" class="rpg-btn small primary" data-act="shop">🛒 Card shop</button>
                         </div>
                         <div class="rpg-builder-body">
                             <div class="rpg-builder-left">
@@ -200,6 +203,21 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                    <!--- The card shop (instead of the home): booster packs of the base set --->
+                    <div id="rpgShop" class="rpg-shop" hidden>
+                        <div class="rpg-builder-head">
+                            <button type="button" class="rpg-btn small" data-act="shopClose">‹ Back</button>
+                            <div class="rpg-builder-title">
+                                <div id="rpgShopTitle" class="rpg-card-title"></div>
+                                <div class="mm-muted small">Booster packs of the base set - cards of your class and neutral ones. A copy you can't hold any more is sold right away.</div>
+                            </div>
+                            <button type="button" class="rpg-btn small" data-act="builder">🃏 Deck builder</button>
+                        </div>
+                        <div id="rpgShopProgress" class="rpg-shop-progress"></div>
+                        <div id="rpgShopPacks" class="rpg-shop-packs"></div>
+                        <div class="rpg-label">Still to find</div>
+                        <div id="rpgShopMissing" class="rpg-builder-grid small"></div>
                     </div>
                     <!--- A party waiting for its leader --->
                     <div id="rpgLobby" class="rpg-lobby" hidden>

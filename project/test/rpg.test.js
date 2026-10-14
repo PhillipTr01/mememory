@@ -66,10 +66,10 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   const view = rpg.runView(run);
   view.map[1].forEach((node, i) => assert.strictEqual(node.kind, run.map[1][i].sensed ? run.map[1][i].kind : null));
   assert.strictEqual(view.map[0][0].kind, "fight");
-  // The classes: a main stat, two signature cards in the starter deck, five cards of their own
+  // The classes: a main stat, two signature cards in the starter deck, nine cards of their own
   for (const id of rpg.CLASS_IDS) {
     assert.ok(rpg.STATS[rpg.CLASSES[id].main], id);
-    assert.strictEqual(rpg.CLASSES[id].cards.length, 5);
+    assert.strictEqual(rpg.CLASSES[id].cards.length, 9);
     rpg.CLASSES[id].cards.forEach((card) => assert.ok(rpg.CARDS[card], card));
     assert.deepStrictEqual(rpg.starterDeck(id).slice(8), rpg.CLASSES[id].signature);
   }
@@ -328,6 +328,29 @@ test("rpg: the map - luck senses what a room is; rooms to choose in (camp fire, 
   assert.strictEqual(run.event, null);
 });
 
+test("rpg: every card of the base set plays - on a foe, an ally, a fallen one", () => {
+  for (const cls of rpg.CLASS_IDS) {
+    for (const id of rpg.poolOf(cls)) {
+      for (const upgraded of ["", "+"]) {
+        const run = rpg.newRun(1, [{ name: "a", hero: rpg.newHero(cls) }, { name: "b", hero: rpg.newHero("warrior") }]);
+        rpg.enterRoom(run, 0);
+        run.monsters = [0, 1].map((i) => ({ id: "m" + i, name: "Dummy", icon: "🎯", hp: 100000, maxHp: 100000, atk: 5, dodge: 0, undead: i == 1, moves: ["attack"], rank: "normal", effects: { poison: { turns: 2, dmg: 3 } }, intent: { move: "attack", target: "a" } }));
+        const me = run.heroes[0];
+        if (rpg.CARDS[id].target == "fallen") {
+          run.heroes[1].down = true;
+          run.heroes[1].hp = 0;
+        }
+        me.hand = [{ uid: "x", id: id + upgraded }];
+        me.energy = 9;
+        me.deck.push(id + upgraded);
+        const before = run.monsters.reduce((sum, m) => sum + m.hp, 0);
+        assert.strictEqual(rpg.play(run, "a", { uid: "x", target: "m0", ally: "b" }), null, id + upgraded);
+        if (rpg.CARDS[id].type == "attack") assert.ok(run.monsters.reduce((sum, m) => sum + m.hp, 0) < before, id + " hurts");
+      }
+    }
+  }
+});
+
 test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/10, relics and an upgraded card make a hero stronger", () => {
   const hero = rpg.newHero("warrior");
   const char = rpg.charOf(hero);
@@ -399,6 +422,21 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (spar
     }
     assert.notStrictEqual(rpg.CARDS[pack[4].id].rarity, "common");
   }
+  // The shop: the base set has 50 cards and more; a hero pack: the last two rare or better, a mythic pack: one epic
+  // or better; three at once: 10% off
+  assert.ok(Object.keys(rpg.CARDS).length >= 50);
+  const rank = (id) => ["basic", "common", "rare", "epic", "eternal"].indexOf(rpg.CARDS[id].rarity);
+  for (let i = 0; i < 40; i++) {
+    const hero2 = rpg.newHero("mage");
+    const premium = rpg.openPack(hero2, Math.random, "premium");
+    assert.strictEqual(premium.length, 5);
+    assert.ok(rank(premium[3].id) >= 2 && rank(premium[4].id) >= 2);
+    const mythic = rpg.openPack(hero2, Math.random, "mythic");
+    assert.strictEqual(mythic.length, 3);
+    assert.ok(rank(mythic[2].id) >= 3, mythic[2].id);
+  }
+  assert.strictEqual(rpg.packPrice("standard", 3), Math.round(rpg.PACKS.standard.price * 3 * 0.9));
+  assert.strictEqual(rpg.packPrice("nope"), null);
   // (the collection never holds more than the copies of a rarity)
   for (const [id, n] of Object.entries(char.collection)) assert.ok(n <= rpg.CARD_RARITIES[rpg.CARDS[id].rarity].copies, id);
   assert.strictEqual(rpg.deckAdd(hero, "smoke"), null);

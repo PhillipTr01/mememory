@@ -104,6 +104,9 @@ module.exports = function (io, options = {}) {
       lanes: rpg.LANES,
       packPrice: rpg.PACK_PRICE,
       packSize: rpg.PACK_SIZE,
+      packs: rpg.PACKS,
+      packBundle: rpg.PACK_BUNDLE,
+      bundlePrices: Object.fromEntries(rpg.PACK_IDS.map((id) => [id, rpg.packPrice(id, rpg.PACK_BUNDLE)])),
       mainBonus: rpg.MAIN_BONUS,
       moves: rpg.MOVES,
       roomKinds: rpg.ROOM_KINDS,
@@ -363,15 +366,20 @@ module.exports = function (io, options = {}) {
       sendHero(username);
     });
 
-    // A booster pack: PACK_SIZE cards of the class into the collection (spare copies sold)
-    on("pack", async () => {
+    // Booster packs (the shop): {pack: its id, count: 1 or a bundle} - the cards of the class into the collection
+    // (spare copies sold)
+    on("pack", async (data) => {
       const hero = heroOf(username);
       if (!hero.cls) return error("Pick a class first.");
-      if (!(await coins.spend(username, rpg.PACK_PRICE, { reason: "rpg pack", note: hero.cls }))) return error(coins.refusal(username) || "You don't have enough coins.");
-      const cards = rpg.openPack(hero);
+      const id = rpg.PACKS[data.pack] ? data.pack : "standard";
+      const count = Number(data.count) === rpg.PACK_BUNDLE ? rpg.PACK_BUNDLE : 1;
+      const price = rpg.packPrice(id, count);
+      if (!(await coins.spend(username, price, { reason: "rpg pack", note: hero.cls + " " + id + " x" + count }))) return error(coins.refusal(username) || "You don't have enough coins.");
+      const cards = [];
+      for (let i = 0; i < count; i++) cards.push(...rpg.openPack(hero, Math.random, id).map((card) => ({ ...card, pack: i })));
       const spare = cards.reduce((sum, card) => sum + card.coins, 0);
       if (spare > 0) await coins.add(username, spare, { reason: "rpg spare cards" });
-      socket.emit("rpgPack", { cards, spare });
+      socket.emit("rpgPack", { cards, spare, pack: id, count });
       sendHero(username);
     });
 

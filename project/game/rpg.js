@@ -58,11 +58,11 @@ const REWARD = { fight: 0.2, hard: 0.38, elite: 0.35, boss: 1, chest: 0.15, trap
 // main: the stat its levels count 1.5x for; hp, atk: times the stats; def, luck, agi: added;
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
-  warrior: { name: "Warrior", icon: "⚔️", main: "atk", about: "Strength - heavy blows, cleaves the pack, a war cry for the party", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust"], eternal: "titanswrath" },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", about: "Armor - draws the attacks, shields the party, judges with his armor", hp: 1.15, atk: 0.9, def: 4, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark"], eternal: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", about: "Vitality - heals, smites the undead, brings the fallen back", hp: 1.2, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing"], eternal: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", about: "Agility - dodges, poisons, then strikes where it hurts", hp: 0.95, atk: 1.05, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry"], eternal: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", about: "Luck - spells that crit, fire on all foes, frost that weakens", hp: 0.85, atk: 1.15, def: 0, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor"], eternal: "timewarp" },
+  warrior: { name: "Warrior", icon: "⚔️", main: "atk", about: "Strength - heavy blows, cleaves the pack, a war cry for the party", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], eternal: "titanswrath" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", about: "Armor - draws the attacks, shields the party, judges with his armor", hp: 1.15, atk: 0.9, def: 4, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], eternal: "divine" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", about: "Vitality - heals, smites the undead, brings the fallen back", hp: 1.2, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], eternal: "resurrection" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", about: "Agility - dodges, poisons, then strikes where it hurts", hp: 0.95, atk: 1.05, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], eternal: "deathmark" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", about: "Luck - spells that crit, fire on all foes, frost that weakens", hp: 0.85, atk: 1.15, def: 0, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], eternal: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -75,35 +75,63 @@ const CARDS = {
   secondwind: { name: "Second Wind", icon: "🌬️", cost: 1, type: "skill", target: "none", text: "Block 5 + armor, heal 6% HP." },
   adrenaline: { name: "Adrenaline", icon: "💉", cost: 0, type: "skill", target: "none", exhaust: true, text: "+1 mana, draw 1. Exhaust." },
   quickslash: { name: "Quick Slash", icon: "🌀", cost: 0, type: "attack", target: "foe", text: "Deal 50% damage, draw 1." },
+  shrug: { name: "Shrug It Off", icon: "🤷", cost: 1, type: "skill", target: "none", text: "Block 8 + armor, draw 1." },
+  pommel: { name: "Pommel Strike", icon: "🔨", cost: 1, type: "attack", target: "foe", text: "Deal 90% damage, draw 1." },
+  bandage: { name: "Bandage", icon: "🩹", cost: 0, type: "skill", target: "none", exhaust: true, text: "Heal 8% HP. Exhaust." },
+  twinstrike: { name: "Twin Strike", icon: "🤺", cost: 1, type: "attack", target: "foe", text: "Deal 60% damage twice." },
+  overpower: { name: "Overpower", icon: "🦾", cost: 2, type: "attack", target: "foe", text: "Deal 210% damage." },
+  trance: { name: "Battle Trance", icon: "🧘", cost: 0, type: "skill", target: "none", exhaust: true, text: "Draw 3 cards. Exhaust." },
+  laststand: { name: "Last Stand", icon: "🧱", cost: 1, type: "skill", target: "none", text: "Block 6 + armor - below half HP: three times as much." },
+  rally: { name: "Rally", icon: "🚩", cost: 1, type: "skill", target: "none", text: "Every hero blocks 5 and draws 1 card." },
   // Warrior
   bash: { name: "Heavy Blow", icon: "💫", cost: 2, type: "attack", target: "foe", text: "Deal 110% damage and stun: it loses its next move." },
   cleave: { name: "Cleave", icon: "🪓", cost: 1, type: "attack", target: "none", text: "Deal 70% damage to every foe." },
   battlecry: { name: "War Cry", icon: "📯", cost: 1, type: "skill", target: "none", exhaust: true, text: "The party deals 30% more damage for 2 turns. Exhaust." },
   ironwave: { name: "Iron Wave", icon: "🌊", cost: 1, type: "attack", target: "foe", text: "Deal 70% damage, block 4 + half the armor." },
+  bodyslam: { name: "Body Slam", icon: "🤼", cost: 1, type: "attack", target: "foe", text: "Deal damage equal to your block (at least 50%)." },
+  uppercut: { name: "Uppercut", icon: "👊", cost: 2, type: "attack", target: "foe", text: "Deal 100% damage, stun and chill it." },
+  whirlwind: { name: "Whirlwind", icon: "🌪️", cost: 2, type: "attack", target: "none", text: "Deal 110% damage to every foe." },
+  impervious: { name: "Impervious", icon: "🗿", cost: 2, type: "skill", target: "none", exhaust: true, text: "Block 25 + twice the armor. Exhaust." },
   bloodlust: { name: "Bloodlust", icon: "🩸", cost: 0, type: "skill", target: "none", exhaust: true, text: "Lose 8% HP, +2 mana. Exhaust." },
   // Paladin
   taunt: { name: "Taunt", icon: "📣", cost: 1, type: "skill", target: "none", text: "Every foe attacks you this turn - you take 30% less. Block 4 + armor." },
   judgement: { name: "Judgement", icon: "⚖️", cost: 1, type: "attack", target: "foe", text: "Deal attack + armor as damage. Never misses." },
   holyshield: { name: "Holy Shield", icon: "🛡️", cost: 2, type: "skill", target: "none", text: "Every hero blocks 5 + your armor." },
   consecrate: { name: "Consecrate", icon: "🕯️", cost: 2, type: "attack", target: "none", text: "Deal 50% damage to every foe, the party heals 5% HP." },
+  righteous: { name: "Righteous Blow", icon: "🔆", cost: 2, type: "attack", target: "foe", text: "Deal 160% damage, heal 5% HP." },
+  aegis: { name: "Aegis", icon: "🪬", cost: 1, type: "skill", target: "ally", text: "An ally blocks 12 + your armor." },
+  retribution: { name: "Retribution", icon: "⚜️", cost: 1, type: "attack", target: "none", text: "Deal 70% damage to every foe, block 4 + armor." },
+  layhands: { name: "Lay on Hands", icon: "🤲", cost: 2, type: "skill", target: "ally", exhaust: true, text: "Heal an ally 45% of its max HP. Exhaust." },
   bulwark: { name: "Bulwark", icon: "🏰", cost: 1, type: "skill", target: "none", text: "Block 10 + twice the armor." },
   // Cleric
   heal: { name: "Heal", icon: "💚", cost: 1, type: "skill", target: "ally", text: "Heal an ally 25% of its max HP." },
   smite: { name: "Smite", icon: "🌟", cost: 1, type: "attack", target: "foe", text: "Deal 120% damage - 250% against the undead." },
   revive: { name: "Revive", icon: "🕊️", cost: 2, type: "skill", target: "fallen", exhaust: true, text: "A fallen ally stands up with 40% HP. Exhaust." },
   prayer: { name: "Prayer", icon: "🙏", cost: 2, type: "skill", target: "none", text: "The whole party heals 12% HP." },
+  holylight: { name: "Holy Light", icon: "🕯️", cost: 1, type: "attack", target: "foe", text: "Deal 90% damage, the weakest hero heals 8%." },
+  ward: { name: "Ward", icon: "🔰", cost: 1, type: "skill", target: "none", text: "Every hero blocks 4 + your armor." },
+  purify: { name: "Purify", icon: "💧", cost: 1, type: "skill", target: "ally", text: "An ally loses poison and burns, heals 12% HP." },
+  wrath: { name: "Divine Wrath", icon: "🌩️", cost: 2, type: "attack", target: "none", text: "Deal 110% damage to every foe - 250% against the undead." },
   blessing: { name: "Blessing", icon: "🌞", cost: 1, type: "skill", target: "ally", text: "An ally deals 30% more damage for 2 turns and blocks 5." },
   // Rogue
   poisonblade: { name: "Poison Blade", icon: "☠️", cost: 1, type: "attack", target: "foe", text: "Deal 60% damage, poison it for 3 turns." },
   backstab: { name: "Backstab", icon: "🔪", cost: 1, type: "attack", target: "foe", text: "Deal 120% damage - 300% on a poisoned or stunned foe." },
   smoke: { name: "Smoke Bomb", icon: "💨", cost: 1, type: "skill", target: "none", text: "Nothing hits you this turn." },
   envenom: { name: "Envenom", icon: "🧪", cost: 1, type: "skill", target: "none", text: "Poison every foe for 2 turns." },
+  daggers: { name: "Throwing Daggers", icon: "🗡️", cost: 1, type: "attack", target: "foe", text: "Deal 50% damage twice - poisoned: 80%." },
+  shadowstep: { name: "Shadow Step", icon: "👤", cost: 1, type: "skill", target: "none", text: "Block 5 + your dodge / 2, draw 1." },
+  eviscerate: { name: "Eviscerate", icon: "💢", cost: 2, type: "attack", target: "foe", text: "Deal 180% damage - a poisoned foe stays poisoned 2 turns longer." },
+  lethaldose: { name: "Lethal Dose", icon: "⚗️", cost: 1, type: "skill", target: "none", exhaust: true, text: "The poison on every foe: twice as strong, 3 turns longer. Exhaust." },
   flurry: { name: "Flurry", icon: "✴️", cost: 1, type: "attack", target: "none", text: "Deal 40% damage three times to random foes." },
   // Mage
   frost: { name: "Frost Bolt", icon: "❄️", cost: 1, type: "attack", target: "foe", text: "Deal 80% damage and chill: its next 2 moves do half damage." },
   fireball: { name: "Fireball", icon: "🔥", cost: 2, type: "attack", target: "none", text: "Deal 70% damage to every foe and burn them for 2 turns." },
   barrier: { name: "Barrier", icon: "🔮", cost: 1, type: "skill", target: "ally", text: "An ally blocks 8 + 60% of your attack." },
   arcanebolt: { name: "Arcane Bolt", icon: "✨", cost: 1, type: "attack", target: "foe", text: "Deal 150% damage." },
+  spark: { name: "Spark", icon: "✴️", cost: 0, type: "attack", target: "foe", text: "Deal 60% damage." },
+  icearmor: { name: "Ice Armor", icon: "🧊", cost: 1, type: "skill", target: "none", text: "Block 7 + 40% of your attack, chill a random foe." },
+  chainlightning: { name: "Chain Lightning", icon: "⚡", cost: 2, type: "attack", target: "none", text: "Deal 90% damage to every foe, stun one of them." },
+  blizzard: { name: "Blizzard", icon: "🌨️", cost: 2, type: "attack", target: "none", text: "Deal 80% damage to every foe and chill them all." },
   meteor: { name: "Meteor", icon: "☄️", cost: 3, type: "attack", target: "none", text: "Deal 160% damage to every foe." },
   // Eternal: once per run - gone from the deck for the rest of the run once played (only in booster packs)
   titanswrath: { name: "Titan's Wrath", icon: "🌋", cost: 2, type: "attack", target: "none", eternal: true, text: "Deal 350% damage to every foe. Eternal." },
@@ -120,6 +148,34 @@ const CARD_RARITY = {
   focus: "common",
   secondwind: "common",
   quickslash: "common",
+  shrug: "common",
+  pommel: "common",
+  bandage: "common",
+  twinstrike: "common",
+  overpower: "epic",
+  trance: "rare",
+  laststand: "rare",
+  rally: "rare",
+  bodyslam: "common",
+  uppercut: "common",
+  whirlwind: "rare",
+  impervious: "epic",
+  righteous: "common",
+  aegis: "common",
+  retribution: "rare",
+  layhands: "epic",
+  holylight: "common",
+  ward: "common",
+  purify: "rare",
+  wrath: "epic",
+  daggers: "common",
+  shadowstep: "common",
+  eviscerate: "rare",
+  lethaldose: "epic",
+  spark: "common",
+  icearmor: "common",
+  chainlightning: "rare",
+  blizzard: "epic",
   adrenaline: "rare",
   bash: "common",
   cleave: "common",
@@ -166,9 +222,27 @@ const DECK_MIN = 10;
 function deckMax(level) {
   return Math.min(30, 15 + Math.floor((level - 1) / 2));
 }
-const PACK_SIZE = 5;
-const PACK_PRICE = 5000;
-const NEUTRAL_CARDS = ["focus", "secondwind", "adrenaline", "quickslash"];
+// The booster packs of the base set (the shop): how many cards, the last ones at least of a rarity, the rarer
+// ones more often (x their weight)
+const PACKS = {
+  standard: { name: "Base Set Pack", icon: "🎴", about: "The classic: 5 cards, the last one rare or better.", price: 5000, size: 5, better: 1, least: "rare", boost: {} },
+  premium: { name: "Hero Pack", icon: "💎", about: "5 cards - the last two rare or better, epics twice as often.", price: 15000, size: 5, better: 2, least: "rare", boost: { epic: 2, eternal: 2 } },
+  mythic: { name: "Mythic Pack", icon: "🌟", about: "3 cards - one epic or better for sure, eternals five times as often.", price: 40000, size: 3, better: 1, least: "epic", boost: { epic: 3, eternal: 5 } },
+};
+const PACK_IDS = Object.keys(PACKS);
+const PACK_BUNDLE = 3; // three packs at once ...
+const BUNDLE_OFF = 0.1; // ... 10% off
+const PACK_SIZE = PACKS.standard.size;
+const PACK_PRICE = PACKS.standard.price;
+const RARITY_RANK = ["basic", "common", "rare", "epic", "eternal"];
+
+// The price of packs: count 1 or a bundle (10% off)
+function packPrice(id, count = 1) {
+  const pack = PACKS[id];
+  if (!pack) return null;
+  return count == PACK_BUNDLE ? Math.round((pack.price * count * (1 - BUNDLE_OFF)) / 100) * 100 : pack.price * count;
+}
+const NEUTRAL_CARDS = ["focus", "secondwind", "adrenaline", "quickslash", "shrug", "pommel", "bandage", "twinstrike", "overpower", "trance", "laststand", "rally"];
 
 const ENERGY = 3; // a turn
 const HAND = 5; // cards drawn a turn
@@ -421,15 +495,17 @@ function deckReady(hero) {
   return n < DECK_MIN ? `Your deck needs at least ${DECK_MIN} cards (it has ${n}) - build it in the Deck tab.` : null;
 }
 
-// A booster pack opened: PACK_SIZE cards of the class (the last one rare or better) -> [{id, fresh, coins}] -
+// A booster pack opened: its cards of the class (the last ones of a rarity at least) -> [{id, fresh, coins}] -
 // a card the collection holds all copies of already is sold (its coins: the server pays them)
-function openPack(hero, rng = Math.random) {
+function openPack(hero, rng = Math.random, packId = "standard") {
   const char = charOf(hero);
+  const pack = PACKS[packId] || PACKS.standard;
   const pool = poolOf(hero.cls).filter((id) => CARDS[id].rarity != "basic");
   const cards = [];
-  for (let i = 0; i < PACK_SIZE; i++) {
-    const better = i == PACK_SIZE - 1;
-    const choices = pool.filter((id) => !better || CARDS[id].rarity != "common").map((id) => [id, CARD_RARITIES[CARDS[id].rarity].weight]);
+  for (let i = 0; i < pack.size; i++) {
+    const better = i >= pack.size - pack.better;
+    const least = RARITY_RANK.indexOf(pack.least);
+    const choices = pool.filter((id) => !better || RARITY_RANK.indexOf(CARDS[id].rarity) >= least).map((id) => [id, CARD_RARITIES[CARDS[id].rarity].weight * (pack.boost[CARDS[id].rarity] || 1)]);
     const id = weighted(rng, choices);
     const fresh = collect(char, id);
     cards.push({ id, fresh, coins: fresh ? 0 : CARD_RARITIES[CARDS[id].rarity].value });
@@ -1535,6 +1611,116 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
     case "meteor":
       for (const one of foes) strike(run, hero, one, (1.6) * up, rng, { sure: true, verb: "crushes" });
       return;
+    // The neutral cards of the base set
+    case "shrug":
+      say(run, `${hero.name} shrugs it off: blocks ${block(hero, 8 + hero.def)}.`);
+      return drawCards(hero, 1, rng);
+    case "pommel":
+      strike(run, hero, foe, 0.9 * up, rng);
+      return drawCards(hero, 1, rng);
+    case "bandage":
+      return say(run, `${hero.name} bandages up: +${heal(hero, hero.maxHp * 0.08)} HP 🩹.`);
+    case "twinstrike":
+      strike(run, hero, foe, 0.6 * up, rng);
+      if (!foe.down) strike(run, hero, foe, 0.6 * up, rng);
+      return;
+    case "overpower":
+      return strike(run, hero, foe, 2.1 * up, rng, { verb: "overpowers" });
+    case "trance":
+      return drawCards(hero, 3, rng);
+    case "laststand":
+      return say(run, `${hero.name} stands fast: blocks ${block(hero, (6 + hero.def) * (hero.hp < hero.maxHp / 2 ? 3 : 1))} 🧱.`);
+    case "rally":
+      for (const one of alive(run.heroes)) {
+        block(one, 5);
+        drawCards(one, 1, rng);
+      }
+      return say(run, `${hero.name} rallies the party 🚩.`);
+    // The warrior
+    case "bodyslam":
+      return strike(run, hero, foe, Math.max(0.5, hero.block / Math.max(1, hero.atk)) * up, rng, { sure: true, verb: "slams" });
+    case "uppercut":
+      if (strike(run, hero, foe, 1 * up, rng, { sure: true, verb: "uppercuts" }) && !foe.down) {
+        foe.effects.stun = 1;
+        foe.effects.chill = 2;
+        say(run, `${foe.icon} ${foe.name} is stunned and chilled.`);
+      }
+      return;
+    case "whirlwind":
+      for (const one of foes) strike(run, hero, one, 1.1 * up, rng, { sure: true, verb: "whirls into" });
+      return;
+    case "impervious":
+      return say(run, `${hero.name} is impervious: blocks ${block(hero, 25 + 2 * hero.def)} 🗿.`);
+    // The paladin
+    case "righteous":
+      strike(run, hero, foe, 1.6 * up, rng, { sure: true, verb: "strikes down" });
+      return heal(hero, hero.maxHp * 0.05);
+    case "aegis":
+      return say(run, `${hero.name} shields ${friend.name}: blocks ${block(friend, 12 + hero.def)} 🪬.`);
+    case "retribution":
+      for (const one of foes) strike(run, hero, one, 0.7 * up, rng, { sure: true, verb: "punishes" });
+      return block(hero, 4 + hero.def);
+    case "layhands":
+      return say(run, `${hero.name} lays hands on ${friend.name}: +${heal(friend, friend.maxHp * 0.45)} HP 🤲.`);
+    // The cleric
+    case "holylight": {
+      strike(run, hero, foe, 0.9 * up, rng, { sure: true, verb: "lights up" });
+      const weakest = alive(run.heroes).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+      if (weakest) heal(weakest, weakest.maxHp * 0.08);
+      return;
+    }
+    case "ward":
+      for (const one of alive(run.heroes)) block(one, 4 + hero.def);
+      return say(run, `${hero.name} wards the party 🔰.`);
+    case "purify":
+      delete friend.effects.poison;
+      delete friend.effects.burn;
+      return say(run, `${hero.name} purifies ${friend.name}: +${heal(friend, friend.maxHp * 0.12)} HP 💧.`);
+    case "wrath":
+      for (const one of foes) strike(run, hero, one, (one.undead ? 2.5 : 1.1) * up, rng, { sure: true, verb: "smites" });
+      return;
+    // The rogue
+    case "daggers":
+      for (let i = 0; i < 2 && !foe.down; i++) strike(run, hero, foe, (foe.effects.poison ? 0.8 : 0.5) * up, rng, { sure: true, verb: "throws at" });
+      return;
+    case "shadowstep":
+      say(run, `${hero.name} steps into the shadows: blocks ${block(hero, 5 + hero.agi / 2)} 👤.`);
+      return drawCards(hero, 1, rng);
+    case "eviscerate":
+      strike(run, hero, foe, 1.8 * up, rng, { sure: true, verb: "eviscerates" });
+      if (!foe.down && foe.effects.poison) foe.effects.poison.turns += 2;
+      return;
+    case "lethaldose":
+      for (const one of foes) {
+        if (!one.effects.poison) continue;
+        one.effects.poison.dmg *= 2;
+        one.effects.poison.turns += 3;
+      }
+      return say(run, `${hero.name} doubles the dose ⚗️.`);
+    // The mage
+    case "spark":
+      return strike(run, hero, foe, 0.6 * up, rng, { sure: true, verb: "zaps" });
+    case "icearmor": {
+      block(hero, 7 + hero.atk * 0.4);
+      const chilled = foes.length ? pick(rng, foes) : null;
+      if (chilled) chilled.effects.chill = 2;
+      return say(run, `${hero.name} wears ice 🧊${chilled ? ` - ${chilled.icon} ${chilled.name} is chilled` : ""}.`);
+    }
+    case "chainlightning": {
+      for (const one of foes) strike(run, hero, one, 0.9 * up, rng, { sure: true, verb: "shocks" });
+      const standing = alive(run.monsters);
+      if (standing.length) {
+        const stunned = pick(rng, standing);
+        stunned.effects.stun = 1;
+        say(run, `${stunned.icon} ${stunned.name} is stunned 💫.`);
+      }
+      return;
+    }
+    case "blizzard":
+      for (const one of foes) {
+        if (strike(run, hero, one, 0.8 * up, rng, { sure: true, verb: "freezes" }) && !one.down) one.effects.chill = 2;
+      }
+      return;
   }
 }
 
@@ -1853,6 +2039,11 @@ module.exports = {
   DECK_MIN,
   PACK_SIZE,
   PACK_PRICE,
+  PACKS,
+  PACK_IDS,
+  PACK_BUNDLE,
+  BUNDLE_OFF,
+  packPrice,
   deckMax,
   poolOf,
   collect,
