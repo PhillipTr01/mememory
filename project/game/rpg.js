@@ -749,6 +749,41 @@ function entryCost(floor) {
   return round100(ENTRY_BASE * Math.pow(ENTRY_GROWTH, floor - 1));
 }
 
+/* ---------- Death: a character down with its party rests 6 hours - or is brought back for coins ---------- */
+
+const DEATH_COOLDOWN = 6 * 3600 * 1000;
+// The price of bringing it back: entries of its deepest floor open - twice as much with every revive of the day
+const REVIVE_ENTRIES = 3;
+const REVIVE_GROWTH = 2;
+
+const dayOf = (now) => new Date(now).toDateString();
+
+// How long a character is still dead (ms, 0: alive)
+function deadFor(hero, now = Date.now(), cls = hero.cls) {
+  return Math.max(0, (charOf(hero, cls).deadUntil || 0) - now);
+}
+
+function die(hero, cls, now = Date.now()) {
+  charOf(hero, cls).deadUntil = now + DEATH_COOLDOWN;
+}
+
+// The revives of today (back to 0 at midnight)
+function revivesToday(hero, now = Date.now()) {
+  return hero.revives && hero.revives.day == dayOf(now) ? hero.revives.count : 0;
+}
+
+function revivePrice(hero, now = Date.now()) {
+  return round100(REVIVE_ENTRIES * entryCost(maxFloor(hero)) * Math.pow(REVIVE_GROWTH, revivesToday(hero, now)));
+}
+
+// Brought back (paid already) -> an error or null
+function revive(hero, now = Date.now()) {
+  if (!deadFor(hero, now)) return "Your character isn't dead.";
+  charOf(hero).deadUntil = 0;
+  hero.revives = { day: dayOf(now), count: revivesToday(hero, now) + 1 };
+  return null;
+}
+
 // For the page: the hero - the character played now, the others in short
 function heroView(hero) {
   const char = charOf(hero);
@@ -756,7 +791,7 @@ function heroView(hero) {
     cls: hero.cls,
     unlocked: hero.unlocked,
     classPrice: classPrice(hero),
-    chars: Object.fromEntries(hero.unlocked.map((id) => [id, { level: Object.values(charOf(hero, id).levels).reduce((a, b) => a + b, 0), deepest: charOf(hero, id).deepest }])),
+    chars: Object.fromEntries(hero.unlocked.map((id) => [id, { level: Object.values(charOf(hero, id).levels).reduce((a, b) => a + b, 0), deepest: charOf(hero, id).deepest, deadFor: deadFor(hero, Date.now(), id) }])),
     levels: { ...newChar().levels, ...char.levels },
     stats: statsOf(hero),
     upgrades: Object.fromEntries(STAT_IDS.map((id) => [id, upgradeCost(char.levels[id] || 0)])),
@@ -781,6 +816,9 @@ function heroView(hero) {
     xpNeed: xpNeed(char.level),
     points: char.points,
     talents: char.talents,
+    deadFor: deadFor(hero),
+    revivePrice: revivePrice(hero),
+    revives: revivesToday(hero),
   };
 }
 
@@ -1106,21 +1144,39 @@ function vote(run, name, choice) {
   return null;
 }
 
-// Every hero has voted
+// Every hero there has voted (one gone from the page doesn't hold the party up)
 function allVoted(run) {
-  return run.heroes.every((h) => h.name in run.votes);
+  const here = run.heroes.filter((h) => !h.away);
+  return here.length > 0 && here.every((h) => h.name in run.votes);
 }
 
-// What the party chose: the most votes - a tie: the leader's vote if it is one of them, else one of them at random;
-// nobody voted: "leave"
-function tally(run, leader, rng = Math.random) {
+// A hero gone from the page (away: true) or back - the fight and the votes don't wait for one away
+function setAway(run, name, away) {
+  const hero = run.heroes.find((h) => h.name == name);
+  if (hero) hero.away = away;
+}
+
+// A hero out of a run before its end (left, or away too long): no share of the pot, no loot - half the XP;
+// the others go on (nobody left: the run is over)
+function abandon(run, name) {
+  const hero = run.heroes.find((h) => h.name == name);
+  if (!hero) return null;
+  run.heroes = run.heroes.filter((h) => h != hero);
+  delete run.votes[name];
+  (run.gone = run.gone || []).push({ name, cls: hero.cls, xp: hero.xp, potions: hero.potions });
+  say(run, `${name} leaves the party.`);
+  if (!run.heroes.length) run.phase = "left";
+  return hero;
+}
+
+// What the party chose: the most votes - a tie: one of them at random; nobody voted: "leave"
+function tally(run, rng = Math.random) {
   const counts = new Map();
   for (const choice of Object.values(run.votes)) counts.set(choice, (counts.get(choice) || 0) + 1);
   if (!counts.size) return "leave";
   const most = Math.max(...counts.values());
   const top = [...counts].filter(([, n]) => n == most).map(([choice]) => choice);
-  if (top.length == 1) return top[0];
-  return leader in run.votes && top.includes(run.votes[leader]) ? run.votes[leader] : pick(rng, top);
+  return top.length == 1 ? top[0] : pick(rng, top);
 }
 
 /* ---------- The rooms ---------- */
@@ -1284,14 +1340,21 @@ function afterRoom(run) {
 }
 
 // A potion (in a fight or between the rooms - it costs no energy)
+const POTION_MANA = 1;
+
 function drink(run, name) {
   const hero = run.heroes.find((h) => h.name == name);
   if (!hero || hero.down) return "Your hero is down.";
   if (run.phase != "fight" && run.phase != "between") return "Not now.";
   if (hero.potions <= 0) return "No potions left.";
   if (hero.hp >= hero.maxHp) return "Your HP is full.";
+  // (in a fight: 1 mana, like a card)
+  if (run.phase == "fight" && hero.ended) return "You ended your turn.";
+  if (run.phase == "fight" && hero.energy < POTION_MANA) return `A potion needs ${POTION_MANA} mana.`;
+  if (run.phase == "fight") hero.energy -= POTION_MANA;
   const heal = Math.min(hero.maxHp - hero.hp, Math.round(hero.maxHp * POTION_HEAL));
   hero.hp += heal;
+  if (run.phase == "fight") fx(run, { k: "heal", to: hero.name, n: heal });
   hero.potions--;
   say(run, `${hero.name} drinks a potion: +${heal} HP.`);
   return null;
@@ -2040,7 +2103,12 @@ function endTurn(run, name) {
   const hero = run.heroes.find((h) => h.name == name);
   if (run.phase != "fight" || !hero || hero.down) return false;
   hero.ended = true;
-  return alive(run.heroes).every((h) => h.ended);
+  return turnDone(run);
+}
+
+// Every hero standing has ended the turn (or is away)
+function turnDone(run) {
+  return run.phase == "fight" && alive(run.heroes).every((h) => h.ended || h.away);
 }
 
 // What a monster does: its intent
@@ -2243,6 +2311,7 @@ function runView(run) {
       energy: h.energy,
       block: h.block,
       ended: h.ended,
+      away: !!h.away,
       blessed: h.blessed,
       effects: effectsOf(h.effects),
       hand: h.hand,
@@ -2430,6 +2499,15 @@ module.exports = {
   vote,
   allVoted,
   tally,
+  setAway,
+  POTION_MANA,
+  DEATH_COOLDOWN,
+  deadFor,
+  die,
+  revivePrice,
+  revive,
+  abandon,
+  turnDone,
   enterRoom,
   drink,
   pickReward,

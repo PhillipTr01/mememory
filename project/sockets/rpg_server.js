@@ -26,9 +26,9 @@ module.exports = function (io, options = {}) {
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
 
-  // How long a turn / a decision between two rooms may take (ms) - the tests make them short
-  // (a room to choose in or a merchant: longer)
-  const timing = { turn: 45000, decide: 45000, room: 90000, close: 60000 };
+  // How long a turn may take, how long one away from the page keeps the place in a party (ms) - the tests make
+  // them short (between the rooms: no clock)
+  const timing = { turn: 45000, away: 120000, close: 60000 };
 
   const heroes = new Map(); // username -> hero (rpg.newHero)
   const parties = new Map(); // id -> {id, leader, floor, size, members, run, endsAt, timer, result}
@@ -93,6 +93,7 @@ module.exports = function (io, options = {}) {
       partyMax: rpg.PARTY_MAX,
       bagMax: rpg.BAG_MAX,
       potionsMax: rpg.POTIONS_MAX,
+      potionMana: rpg.POTION_MANA,
       potionPrice: rpg.POTION_PRICE,
       stats: rpg.STATS,
       levelMax: rpg.LEVEL_MAX,
@@ -116,7 +117,8 @@ module.exports = function (io, options = {}) {
       roomKinds: rpg.ROOM_KINDS,
       energy: rpg.ENERGY,
       turn: timing.turn,
-      decide: timing.decide,
+      away: timing.away,
+      deathCooldown: rpg.DEATH_COOLDOWN,
       cards: rpg.CARDS,
       talents: rpg.TALENTS,
       talentLevels: rpg.TALENT_LEVELS,
@@ -156,23 +158,20 @@ module.exports = function (io, options = {}) {
     }
   }
 
-  // The clock of a run - started anew only when the turn or the room changes (a card played doesn't): the heroes'
-  // turn of a fight (the time up: the monsters' turn), the vote between two rooms (the time up: the votes so far)
+  // The clock of a fight - started anew only when the turn changes (a card played doesn't): the time up, the
+  // monsters' turn. Between the rooms: no clock. A run alone stands still while its hero is away from the page.
   function schedule(party) {
     const run = party.run;
-    const key = run ? run.phase + ":" + run.rooms.length + ":" + run.turn : null;
+    const paused = run && run.heroes.every((h) => h.away);
+    const key = run && !paused ? run.phase + ":" + run.rooms.length + ":" + run.turn : null;
     if (key === party.clock) return;
     party.clock = key;
     clearTimeout(party.timer);
     party.endsAt = null;
-    if (!run) return;
+    if (!key) return;
     if (run.phase === "fight") {
       party.endsAt = Date.now() + timing.turn;
       party.timer = setTimeout(() => monstersAct(party), timing.turn);
-    } else if (run.phase === "between") {
-      const time = run.event ? timing.room : timing.decide;
-      party.endsAt = Date.now() + time;
-      party.timer = setTimeout(() => decide(party).catch((error) => console.error("[rpg] Could not go on:", error)), time);
     }
   }
 
@@ -185,18 +184,57 @@ module.exports = function (io, options = {}) {
   // The votes counted: through the door with the most - or out with the loot
   async function decide(party) {
     if (!party.run || party.run.phase !== "between" || party.result) return;
-    const choice = rpg.tally(party.run, party.leader);
+    const choice = rpg.tally(party.run);
     if (choice === "leave") return finish(party, "left");
     rpg.enterRoom(party.run, choice);
     afterChange(party);
   }
 
-  // After every change of a run: over - paid; otherwise the clock again
+  // After every change of a run: over - paid; nobody left to wait for - on; otherwise the clock again
   function afterChange(party) {
-    const phase = party.run.phase;
-    if (phase === "won" || phase === "lost") return finish(party, phase).catch((error) => console.error("[rpg] Could not end a run:", error));
+    const run = party.run;
+    const phase = run.phase;
+    if (phase === "won" || phase === "lost" || phase === "left") return finish(party, phase).catch((error) => console.error("[rpg] Could not end a run:", error));
+    if (rpg.turnDone(run) && run.heroes.some((h) => !h.away)) return monstersAct(party);
+    if (phase === "between" && rpg.allVoted(run)) return decide(party).catch((error) => console.error("[rpg] Could not go on:", error));
     schedule(party);
     emitParty(party);
+  }
+
+  // Out of a run before its end (left, or away too long): no share of the pot, no loot - half the XP; the others
+  // go on
+  function abandonRun(party, name) {
+    const run = party.run;
+    clearTimeout((party.away || {})[name]);
+    const gone = rpg.abandon(run, name);
+    if (!gone) return;
+    if (heroes.has(name)) {
+      const hero = heroOf(name);
+      hero.potions = Math.min(rpg.POTIONS_MAX, hero.potions + gone.potions);
+      rpg.gainXp(rpg.charOf(hero, gone.cls), Math.round(gone.xp / 2));
+      sendHero(name);
+    }
+    party.members = party.members.filter((member) => member !== name);
+    partyOf.delete(name);
+    socketsOf(name).forEach((socket) => {
+      socket.leave("party:" + party.id);
+      socket.emit("rpgParty", null);
+    });
+    if (party.leader === name && party.members.length) party.leader = party.members[0];
+    afterChange(party);
+    emitParties();
+  }
+
+  // Away from the page in a run (no tab left) - back
+  function away(party, name, gone) {
+    party.away = party.away || {};
+    clearTimeout(party.away[name]);
+    delete party.away[name];
+    rpg.setAway(party.run, name, gone);
+    // (in a party: the place kept a while - alone: the run waits)
+    if (gone && party.run.heroes.length > 1) party.away[name] = setTimeout(() => abandonRun(party, name), timing.away);
+    if (!gone) party.clock = null;
+    afterChange(party);
   }
 
   async function start(party) {
@@ -235,6 +273,7 @@ module.exports = function (io, options = {}) {
     party.result = result;
     party.summary = {};
     if (result === "left") run.phase = "left";
+    for (const timer of Object.values(party.away || {})) clearTimeout(timer);
     for (const one of run.heroes) {
       if (!heroes.has(one.name)) continue;
       const hero = heroOf(one.name);
@@ -253,6 +292,8 @@ module.exports = function (io, options = {}) {
         char.deepest = Math.max(char.deepest, run.floor);
         char.cleared++;
       }
+      // (the party down: the character is dead for a while)
+      if (result === "lost") rpg.die(hero, one.cls);
       if (result !== "lost") {
         for (const item of run.loot[one.name] || []) {
           if (hero.bag.length < rpg.BAG_MAX) hero.bag.push(item);
@@ -290,6 +331,7 @@ module.exports = function (io, options = {}) {
     if (mine) {
       socket.join("party:" + mine.id);
       socket.emit("rpgParty", partyView(mine));
+      if (mine.run && !mine.result && mine.run.heroes.some((h) => h.name === username && h.away)) away(mine, username, false);
     }
     emitParties();
     sendCoins(username).catch((error) => console.error("[rpg] Could not load coins:", error));
@@ -430,6 +472,16 @@ module.exports = function (io, options = {}) {
       sendHero(username);
     });
 
+    // Dead (the party went down): back right away for coins - dearer with every revive of the day
+    on("revive", async () => {
+      if (inRun()) return error("Not during a run.");
+      const hero = heroOf(username);
+      if (!rpg.deadFor(hero)) return error("Your character isn't dead.");
+      if (!(await coins.spend(username, rpg.revivePrice(hero), { reason: "rpg revive" }))) return error(coins.refusal(username) || "You don't have enough coins.");
+      rpg.revive(hero);
+      sendHero(username);
+    });
+
     on("potion", async () => {
       if (inRun()) return error("Not during a run.");
       const hero = heroOf(username);
@@ -481,6 +533,7 @@ module.exports = function (io, options = {}) {
       if (myParty()) return error("You are in a party already.");
       if (!heroOf(username).cls) return error("Pick a class first.");
       if (rpg.deckReady(heroOf(username))) return error(rpg.deckReady(heroOf(username)));
+      if (rpg.deadFor(heroOf(username))) return error("Your character is dead - revive it or wait.");
       if (!Number.isInteger(floor) || floor < 1 || floor > rpg.maxFloor(heroOf(username))) return error("That floor isn't open for you yet.");
       if (!Number.isInteger(size) || size < 1 || size > rpg.PARTY_MAX) return;
       const party = { id: "p" + ++partyCount, leader: username, floor, size, members: [], run: null, endsAt: null, timer: null, result: null };
@@ -506,16 +559,18 @@ module.exports = function (io, options = {}) {
       if (!heroOf(username).cls) return error("Pick a class first.");
       if (party.members.length >= party.size) return error("That party is full.");
       if (rpg.deckReady(heroOf(username))) return error(rpg.deckReady(heroOf(username)));
+      if (rpg.deadFor(heroOf(username))) return error("Your character is dead - revive it or wait.");
       if (party.floor > rpg.maxFloor(heroOf(username))) return error(`Floor ${party.floor} isn't open for you yet.`);
       join(party, username);
       emitParty(party);
       emitParties();
     });
 
+    // Out of the party - in the middle of a run: out of the run (nothing of the pot, no loot)
     on("leave", () => {
       const party = myParty();
       if (!party) return;
-      if (party.run && !party.result) return error("Not in the middle of a run.");
+      if (party.run && !party.result) return abandonRun(party, username);
       leave(party, username);
       emitParties();
     });
@@ -524,6 +579,8 @@ module.exports = function (io, options = {}) {
       const party = myParty();
       if (!party || party.run) return;
       if (party.leader !== username) return error("Only the leader starts.");
+      const dead = party.members.find((name) => rpg.deadFor(heroOf(name)));
+      if (dead) return error(dead === username ? "Your character is dead - revive it or wait." : `${dead}'s character is dead.`);
       const unready = party.members.find((name) => rpg.deckReady(heroOf(name)));
       if (unready) return error(`${unready}'s deck isn't ready: ${rpg.deckReady(heroOf(unready))}`);
       const broke = await start(party);
@@ -626,14 +683,14 @@ module.exports = function (io, options = {}) {
       safe("sendChatMessage", (data) => casinoChat.fromUser(socket, data)),
     );
 
-    // Gone (no tab left) from a party that hasn't started: out of it
+    // Gone (no tab left): out of a party that hasn't started - in a run: away (see away())
     socket.on("disconnect", () => {
       if (socketsOf(username).length) return;
       const party = myParty();
       if (party && !party.run) {
         leave(party, username);
         emitParties();
-      }
+      } else if (party && !party.result) away(party, username, true);
     });
   });
 

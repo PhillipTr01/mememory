@@ -5,6 +5,7 @@ var myName = null;
 var myCoins = 0;
 var rules = null;
 var hero = null; // my hero (heroView of game/rpg.js)
+var heroAt = 0; // (when it came - the death's time counts down from it)
 var parties = []; // the open parties
 var party = null; // my party (with its run) - null: none
 var partyAt = 0; // when it came (its timeLeft counts from then)
@@ -109,6 +110,12 @@ function cardEl(id, options) {
   return node;
 }
 
+// A time left in short: "5h 12m", "3m"
+function duration(ms) {
+  var minutes = Math.max(1, Math.ceil(ms / 60000));
+  return minutes >= 60 ? Math.floor(minutes / 60) + "h " + (minutes % 60) + "m" : minutes + "m";
+}
+
 /* ---------- Socket ---------- */
 
 socket.on("connect", () => (document.getElementById("connectionBanner").hidden = true));
@@ -143,6 +150,7 @@ socket.on("rpgRules", (data) => {
 });
 socket.on("rpgHero", (data) => {
   hero = data;
+  heroAt = Date.now();
   render();
 });
 socket.on("rpgParties", (list) => {
@@ -569,6 +577,7 @@ function renderReady() {
   if (n < hero.deckMin) item("🃏", "Your deck has " + n + " cards - it needs " + hero.deckMin + " to go down", "warn", "view", "deck", "Build it");
   else if (n > hero.deckMax) item("🃏", "Your deck has " + n + " cards - " + hero.deckMax + " at most", "warn", "view", "deck", "Build it");
   else item("🃏", "Deck ready: " + n + " cards (" + hero.deckMin + " to " + hero.deckMax + ")", "ok", "view", "deck", "Edit");
+  if (hero.deadFor > 0) item("💀", "Dead - back in " + duration(hero.deadFor - (Date.now() - heroAt)), "warn", "revive", null, "Revive · 🪙 " + formatCoins(hero.revivePrice));
   item("🧪", hero.potions + " / " + rules.potionsMax + " potions - they heal 40% in a run", hero.potions ? "ok" : "warn", hero.potions < rules.potionsMax ? "potion" : null, null, "+1 · 🪙 " + formatCoins(hero.potionPrice));
   if (hero.points) item("⬆️", hero.points + " stat point" + (hero.points == 1 ? "" : "s") + " to spend", "new", "view", "hero", "Spend");
   if (rules.talentLevels.some((lv, tier) => hero.level >= lv && !hero.talents[tier])) item("⭐", "A talent to pick", "new", "view", "talents", "Pick");
@@ -1142,6 +1151,8 @@ function renderRun() {
   var me = run.heroes.find((h) => h.name == myName);
   document.getElementById("rpgRunFloor").innerText = "Floor " + run.floor;
   document.getElementById("rpgPot").innerText = "🪙 " + formatCoins(run.pot) + " each";
+  var quit = document.getElementById("rpgQuit");
+  quit.hidden = !!party.result;
 
   var current = run.rooms[run.rooms.length - 1];
   document.getElementById("rpgRunRoom").innerText = current ? "Room " + run.rooms.length + " / " + rules.rooms + " · " + rules.roomKinds[current.kind].icon + " " + rules.roomKinds[current.kind].name : "";
@@ -1489,12 +1500,16 @@ function shopNodes(run, me) {
 // The map of the floor (like Slay the Spire): rows from the bottom up - the rooms gone through, the ones to pick
 // next (a vote), what is hidden ("?" - unless the party sensed it)
 var MAP_ROW = 62;
+var MAP_ROW_BIG = 84; // (choosing the next room: the map bigger)
 function renderMap(run) {
   var rows = run.map;
   var lanes = rules.lanes;
-  var height = rows.length * MAP_ROW;
+  var choosing = run.phase == "between" && !party.result;
+  document.querySelector(".rpg-run-body").classList.toggle("choosing", choosing);
+  var rowH = choosing ? MAP_ROW_BIG : MAP_ROW;
+  var height = rows.length * rowH;
   var x = (col) => ((col + 0.5) / lanes) * 100;
-  var y = (r) => height - (r + 0.5) * MAP_ROW;
+  var y = (r) => height - (r + 0.5) * rowH;
   var between = run.phase == "between" && !party.result;
   var doorOf = (r, i) => run.doors.findIndex((d) => d.row == r && d.index == i);
   var svgNs = "http://www.w3.org/2000/svg";
@@ -1540,6 +1555,7 @@ function renderMap(run) {
         var faces = el("span", "rpg-node-votes");
         voters.forEach((name) => faces.appendChild(createAvatar(name, "sm")));
         b.appendChild(faces);
+        if (run.heroes.length > 1) b.appendChild(el("span", "rpg-node-count", String(voters.length)));
       }
       nodes.push(b);
     });
@@ -1551,7 +1567,7 @@ function renderMap(run) {
   sense.innerText = "🍀 " + run.sense + "% sensed";
   sense.title = "How often your party senses what a hidden room is: 20% + 1.5x the best luck";
   var count = Object.keys(run.votes).length;
-  document.getElementById("rpgMapNote").innerText = party.result ? "" : between ? (run.heroes.length > 1 ? "Vote for the next room · " + count + " / " + run.heroes.length + " voted" : "Click one of the lit rooms") : run.phase == "fight" ? "Win the fight to go on." : "";
+  document.getElementById("rpgMapNote").innerText = party.result ? "" : between ? (run.heroes.length > 1 ? count + " / " + run.heroes.length + " voted · a tie: random" : "Pick a lit room") : "";
 }
 
 // A pile of my cards to look at: the draw pile (in no order), the discard pile, the exhausted cards
@@ -1621,21 +1637,31 @@ function handBar(run, me) {
     box.appendChild(button("Back", "leave", { className: "primary" }));
     return [box];
   }
-  var potion = button("🧪 " + (me ? me.potions : 0), "drink", { className: "rpg-potion-btn", disabled: !me || me.down || me.potions <= 0 || me.hp >= me.maxHp, title: "Drink a potion: 40% HP (no energy)" });
+  var potion = potionButton(me, run);
   if (run.phase == "between") {
     var voted = run.votes[myName];
     var count = Object.keys(run.votes).length;
     var leave = button("🚪 Leave with 🪙 " + formatCoins(run.pot), "vote", { id: "leave", className: voted === "leave" ? "voted" : "" });
     var leavers = Object.keys(run.votes).filter((name) => run.votes[name] === "leave");
     if (leavers.length) leave.innerText += " (" + leavers.length + ")";
-    var text = run.heroes.length > 1 ? "🗺️ Vote for the next room on the map - " + count + " / " + run.heroes.length + " voted" + (party.leader == myName ? "" : " (a tie: " + party.leader + " decides)") : "🗺️ Pick the next room on the map";
-    return [potion, el("div", "rpg-wait mm-muted", text), leave];
+    if (run.heroes.length < 2) return [potion, el("div", "rpg-wait mm-muted", "🗺️ Pick the next room on the map"), leave];
+    // (who voted for what - a tie: random)
+    var votes = el("div", "rpg-votes");
+    run.heroes.forEach((h) => {
+      var v = run.votes[h.name];
+      var chip = el("span", "rpg-vote-chip" + (v != null ? " done" : "") + (h.away ? " away" : ""));
+      var what = v == null ? (h.away ? "away" : "choosing…") : v === "leave" ? "🚪 leave" : (rules.roomKinds[run.doors[v].kind] || { icon: "?" }).icon + " " + ((rules.roomKinds[run.doors[v].kind] || {}).name || "Hidden");
+      chip.append(createAvatar(h.name, "sm"), el("b", "", h.name), el("span", "", what));
+      votes.appendChild(chip);
+    });
+    votes.appendChild(el("span", "rpg-votes-note mm-muted small", count + " / " + run.heroes.length + " · a tie: random"));
+    return [potion, votes, leave];
   }
   if (!me || me.down) return [el("div", "rpg-wait mm-muted", "💤 You're down - back up after the fight (or a Cleric's revive).")];
   var energy = el("div", "rpg-energy" + (me.energy <= 0 ? " empty" : ""));
   energy.dataset.mana = me.energy + "/" + rules.energy;
   energy.title = "Mana - cards cost it, full again every turn";
-  var draw = button("🂠 Draw " + me.drawCount, "pile", { id: "draw", className: "rpg-pile", title: "Draw pile: the cards still to come this fight - click to look" });
+  var draw = pileButton("draw", "🂠", me.drawCount, "Draw pile");
   var left = el("div", "rpg-hand-side");
   left.append(energy, draw);
   var hand = el("div", "rpg-hand" + (me.ended ? " ended" : ""));
@@ -1651,14 +1677,39 @@ function handBar(run, me) {
   if (!me.hand.length) hand.appendChild(el("div", "rpg-wait mm-muted", "No cards left"));
   var waiting = run.heroes.filter((h) => !h.down && !h.ended).length;
   var end = button(me.ended ? "Waiting… (" + waiting + ")" : "End turn", "endTurn", { className: "primary rpg-end", disabled: me.ended });
-  var discard = button("♻️ Discard " + me.discardCount, "pile", { id: "discard", className: "rpg-pile", title: "Discard pile: played and unplayed cards of the turns before - shuffled back in when the draw pile is empty. Click to look" });
-  var exhausted = me.piles && me.piles.exhausted.length ? button("🔥 " + me.piles.exhausted.length, "pile", { id: "exhausted", className: "rpg-pile", title: "Exhausted: gone for this fight (mystic ones: for the run)" }) : null;
+  var discard = pileButton("discard", "♻️", me.discardCount, "Discard pile");
+  var exhausted = me.piles && me.piles.exhausted.length ? pileButton("exhausted", "🔥", me.piles.exhausted.length, "Exhausted - gone for this fight") : null;
+  var tools = el("div", "rpg-hand-tools");
+  tools.append(potion, discard);
+  if (exhausted) tools.appendChild(exhausted);
   var right = el("div", "rpg-hand-side");
-  right.append(end, potion, discard);
-  if (exhausted) right.appendChild(exhausted);
+  right.append(end, tools);
   var nodes = [left, hand, right];
   if (aiming) nodes.unshift(el("div", "rpg-aim-hint", aiming.target == "foe" ? "🎯 Click a foe - or the card again to cancel" : "🎯 Click a hero - or the card again to cancel"));
   return nodes;
+}
+
+// A health potion: a red flask - its count, its mana in a fight
+var POTION_SVG =
+  '<svg viewBox="0 0 32 40" aria-hidden="true"><rect x="12" y="2" width="8" height="5" rx="1.5" fill="#a0703c"/><path d="M13 7h6v6.5a11 11 0 1 1-6 0z" fill="rgba(255,255,255,.18)" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/><path d="M6.2 24a9.8 9.8 0 0 0 19.6 0z" fill="#e0344a"/><path d="M6.6 22.2c3-1.6 6.3 1.1 9.4 0s6.4-1.6 9.4 0A9.8 9.8 0 0 1 25.8 24H6.2c0-.6.1-1.2.4-1.8z" fill="#ff5a6e"/><path d="M14.2 27.6h3.6M16 25.8v3.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><ellipse cx="11" cy="19" rx="1.6" ry="3" fill="rgba(255,255,255,.55)" transform="rotate(25 11 19)"/></svg>';
+function potionButton(me, run) {
+  var fight = run.phase == "fight";
+  var b = el("button", "rpg-potion-btn");
+  b.type = "button";
+  b.dataset.act = "drink";
+  b.disabled = !me || me.down || me.potions <= 0 || me.hp >= me.maxHp || (fight && (me.ended || me.energy < rules.potionMana));
+  b.title = "Health potion: +40% HP" + (fight ? " · " + rules.potionMana + " mana" : "");
+  b.innerHTML = POTION_SVG;
+  b.appendChild(el("span", "rpg-potion-count", String(me ? me.potions : 0)));
+  if (fight) b.appendChild(el("span", "rpg-potion-mana", String(rules.potionMana)));
+  return b;
+}
+
+// A pile to look into: its icon, its count
+function pileButton(id, icon, count, title) {
+  var b = button("", "pile", { id: id, className: "rpg-pile", title: title + " - click to look" });
+  b.append(el("span", "rpg-pile-icon", icon), el("b", "", String(count)));
+  return b;
 }
 
 // The hand fanned into the room it has: the cards overlap more the less room there is
@@ -1682,7 +1733,7 @@ function tick() {
     var left = Math.max(0, Math.ceil((party.timeLeft - (Date.now() - partyAt)) / 1000));
     text = "⏱ " + left + "s";
     clock.classList.toggle("low", left <= 10);
-    clock.title = party.run.phase == "fight" ? "Time left for this turn" : "Time left for the vote";
+    clock.title = "Time left for this turn";
   }
   if (clock.innerText != text) clock.innerText = text;
   setTimeout(tick, 250);
@@ -1826,7 +1877,11 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   }
   else if (act == "builder") setView("deck");
   else if (act == "shop") setView("shop");
-  else if (act == "potion") socket.emit("potion"); else if (act == "cartAdd") {
+  else if (act == "potion") socket.emit("potion");
+  else if (act == "revive") socket.emit("revive");
+  else if (act == "quitRun") {
+    if (confirm("Leave the run? You lose your share of the pot and the loot.")) socket.emit("leave");
+  } else if (act == "cartAdd") {
     cart[id] = Math.min(rules.cartMax, (cart[id] || 0) + 1);
     render();
   } else if (act == "cartLess") {

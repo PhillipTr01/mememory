@@ -208,13 +208,14 @@ test("rpg: poison makes the backstab hurt 3x; the cleric heals, brings the falle
   const card = cleric.reward[0];
   assert.strictEqual(rpg.pickReward(party, "c", card), null);
   assert.strictEqual(cleric.deck[cleric.deck.length - 1], card);
-  // Votes: the most win, a tie goes with the leader, nobody: leave
-  assert.strictEqual(rpg.tally(party, "c"), "leave");
+  // Votes: the most win, a tie at random, nobody: leave
+  assert.strictEqual(rpg.tally(party), "leave");
   rpg.vote(party, "c", 1);
-  rpg.vote(party, "w", 2);
-  assert.strictEqual(rpg.tally(party, "c"), 1);
+  rpg.vote(party, "w", 0);
+  assert.strictEqual(rpg.tally(party, () => 0), 1);
+  assert.strictEqual(rpg.tally(party, () => 0.99), 0);
   rpg.vote(party, "w", 1);
-  assert.strictEqual(rpg.tally(party, "w"), 1);
+  assert.strictEqual(rpg.tally(party), 1);
   assert.match(rpg.vote(party, "w", 9), /Unknown door/);
   // Far too strong monsters: the party goes down, the pot with it
   party.doors = [{ kind: "fight", hint: null, open: true }];
@@ -570,7 +571,7 @@ function autoplay(socket, name, options) {
 before(async () => {
   server = await h.startServer();
   for (const name of ["rpg_alice", "rpg_bob", "rpg_real"]) tokens[name] = h.addUser(name);
-  Object.assign(server.test.rpg.timing, { turn: 300, decide: 300, room: 300, close: 300 });
+  Object.assign(server.test.rpg.timing, { turn: 300, away: 300, close: 300 });
 });
 
 after(async () => {
@@ -585,7 +586,7 @@ test("rpg: only in the test world - a real player can't get in", async () => {
   assert.strictEqual((await h.once(real, "connect_error")).message, "testMode");
 });
 
-test("rpg: alone - upgrades and potions cost test coins, the entry too; the time up between rooms: out with the loot", async () => {
+test("rpg: alone - upgrades and potions cost test coins, the entry too; between rooms no clock - out with the loot; dead: revived for coins", async () => {
   testMode.start("rpg_alice", 5000000);
   const alice = client("rpg_alice");
   const hero = await h.once(alice, "rpgHero");
@@ -637,12 +638,26 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; the time
   autoplay(alice, "rpg_alice", { vote: false });
   const between = await waitFor(alice, "rpgParty", (p) => p && p.run && p.run.phase == "between");
   assert.ok(between.run.pot > 0);
-  // Nobody decides: out with the loot
+  // No clock between the rooms: out with the loot when the hero says so
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  assert.ok(!server.test.rpg.parties.get(between.id).result);
+  alice.emit("vote", { door: "leave" });
   const done = await waitFor(alice, "rpgParty", (p) => p && p.result == "left");
   assert.strictEqual(testMode.balance("rpg_alice"), before - rpg.entryCost(1) + done.run.pot);
   // Back to the hero (the party closes)
   alice.emit("leave");
   await waitFor(alice, "rpgParty", (p) => p == null);
+  // Dead (the party went down): no run for 6 hours - or a revive for coins, dearer the next time today
+  rpg.die(mine, "warrior");
+  const dead = h.once(alice, "rpgError");
+  alice.emit("create", { floor: 1, size: 1 });
+  assert.match(await dead, /dead/);
+  const price = rpg.revivePrice(mine);
+  const coinsDead = testMode.balance("rpg_alice");
+  alice.emit("revive");
+  await waitFor(alice, "rpgHero", (view) => view.deadFor == 0);
+  assert.strictEqual(testMode.balance("rpg_alice"), coinsDead - price);
+  assert.strictEqual(rpg.revivePrice(mine), price * 2);
   // (this tab plays no more)
   alice.close();
 });
@@ -659,7 +674,7 @@ test("rpg: co-op - one opens a party, another joins, the leader starts (both pay
     if (!hero.cls) rpg.unlock(hero, "warrior");
     for (const id of rpg.STAT_IDS) rpg.charOf(hero).levels[id] = 30;
   }
-  Object.assign(server.test.rpg.timing, { turn: 1500, decide: 3000, room: 3000 });
+  Object.assign(server.test.rpg.timing, { turn: 1500 });
   alice.emit("create", { floor: 1, size: 2 });
   const open = await waitFor(bob, "rpgParties", (list) => list.some((p) => p.leader == "rpg_alice" && !p.started));
   const id = open.find((p) => p.leader == "rpg_alice").id;
@@ -732,4 +747,33 @@ test("rpg: the fight rules - the hand stays (filled up to 5), poison stacks and 
   rpg.monsterTurn(run, () => 0.5);
   assert.strictEqual(me.hand.length, 5);
   assert.deepStrictEqual(me.hand.slice(0, 4).map((c) => c.uid), kept);
+});
+
+test("rpg: leaving - one away doesn't hold the party up, one out of the run loses the share; dead: 6 hours or a revive, dearer the same day", () => {
+  const run = rpg.newRun(1, [{ name: "a", hero: rpg.newHero("warrior") }, { name: "b", hero: rpg.newHero("mage") }]);
+  rpg.enterRoom(run, 0, () => 0.5);
+  rpg.endTurn(run, "a");
+  assert.ok(!rpg.turnDone(run));
+  rpg.setAway(run, "b", true);
+  assert.ok(rpg.turnDone(run));
+  run.phase = "between";
+  run.votes = { a: 0 };
+  assert.ok(rpg.allVoted(run));
+  rpg.abandon(run, "b");
+  assert.deepStrictEqual(run.heroes.map((h) => h.name), ["a"]);
+  assert.strictEqual(run.gone[0].name, "b");
+  rpg.abandon(run, "a");
+  assert.strictEqual(run.phase, "left");
+  // Death
+  const hero = rpg.newHero("warrior");
+  const now = new Date(2026, 5, 1, 12).getTime();
+  rpg.die(hero, "warrior", now);
+  assert.strictEqual(rpg.deadFor(hero, now + 1000), rpg.DEATH_COOLDOWN - 1000);
+  const price = rpg.revivePrice(hero, now);
+  assert.strictEqual(rpg.revive(hero, now), null);
+  assert.strictEqual(rpg.deadFor(hero, now), 0);
+  assert.strictEqual(rpg.revivePrice(hero, now), price * 2);
+  // (midnight: the price back to the start)
+  assert.strictEqual(rpg.revivePrice(hero, now + 24 * 3600 * 1000), price);
+  assert.match(rpg.revive(hero, now), /isn't dead/);
 });

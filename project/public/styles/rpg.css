@@ -4244,3 +4244,195 @@ button.rpg-cardx.off {
   justify-content: space-between;
   gap: 0.75rem;
 }
+
+/* 19. The tools beside the hand: the health potion (a flask, its count, its mana), the piles */
+.rpg-hand-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.rpg-potion-btn {
+  position: relative;
+  width: 3rem;
+  height: 3.2rem;
+  min-width: 0;
+  padding: 0.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(224, 52, 74, 0.45);
+  background: radial-gradient(circle at 50% 70%, rgba(224, 52, 74, 0.28), transparent 70%), var(--mm-surface-2, rgba(255, 255, 255, 0.04));
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.rpg-potion-btn svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 4px rgba(224, 52, 74, 0.45));
+}
+
+.rpg-potion-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 14px rgba(224, 52, 74, 0.45);
+}
+
+.rpg-potion-btn:disabled {
+  cursor: default;
+  opacity: 0.45;
+  filter: saturate(0.4);
+}
+
+.rpg-potion-count {
+  position: absolute;
+  right: -0.35rem;
+  bottom: -0.35rem;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fff;
+  background: #b4233a;
+  border: 2px solid var(--rpg-surface);
+}
+
+.rpg-potion-mana {
+  position: absolute;
+  left: -0.35rem;
+  top: -0.35rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, #5a7fd6, #1d3a8a 70%);
+  border: 2px solid var(--rpg-surface);
+}
+
+.rpg-btn.rpg-pile {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  min-width: 2.6rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 10px;
+  line-height: 1.1;
+}
+
+.rpg-pile .rpg-pile-icon {
+  font-size: 1rem;
+}
+
+.rpg-pile b {
+  font-size: 0.78rem;
+  color: var(--mm-text, inherit);
+}
+
+/* 20. Choosing the next room: the map bigger, the votes plain to see */
+.rpg-run-body {
+  transition: grid-template-columns 0.3s ease;
+}
+
+@media (min-width: 992px) {
+  .rpg-run-body.choosing {
+    grid-template-columns: minmax(0, 1fr) 22rem;
+  }
+}
+
+.rpg-run-body.choosing .rpg-map-box {
+  border-color: rgba(245, 197, 66, 0.45);
+  box-shadow: 0 0 0 3px rgba(245, 197, 66, 0.08), 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.rpg-run-body.choosing .rpg-node {
+  width: 2.9rem;
+  height: 2.9rem;
+}
+
+.rpg-run-body.choosing .rpg-node-icon {
+  font-size: 1.3rem;
+}
+
+.rpg-run-body.choosing .rpg-node.kind-elite,
+.rpg-run-body.choosing .rpg-node.kind-boss {
+  width: 3.5rem;
+  height: 3.5rem;
+}
+
+.rpg-run-body.choosing .rpg-map-note {
+  color: var(--rpg-gold);
+  font-weight: 700;
+}
+
+.rpg-node-votes .mm-avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid var(--rpg-gold);
+}
+
+.rpg-node-count {
+  position: absolute;
+  top: -0.45rem;
+  right: -0.45rem;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #1a1408;
+  background: var(--rpg-gold);
+}
+
+.rpg-votes {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.rpg-vote-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem 0.25rem 0.3rem;
+  border-radius: 999px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  font-size: 0.82rem;
+  color: var(--mm-muted);
+}
+
+.rpg-vote-chip.done {
+  border: 1px solid rgba(245, 197, 66, 0.6);
+  background: rgba(245, 197, 66, 0.1);
+  color: var(--mm-text);
+}
+
+.rpg-vote-chip.away {
+  opacity: 0.5;
+}
+
+.rpg-votes-note {
+  width: 100%;
+  text-align: center;
+}
+
+.rpg-quit {
+  margin-left: auto;
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+
+.rpg-quit:hover {
+  opacity: 1;
+}
