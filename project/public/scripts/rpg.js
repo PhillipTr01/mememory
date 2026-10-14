@@ -1302,7 +1302,7 @@ function rewardPanel(me) {
   me.reward.forEach((id) => cards.appendChild(cardEl(id, { tag: "button", act: "pick", className: "pickable" })));
   return [
     el("div", "rpg-reward-title", "🃏 Add a card to your deck"),
-    el("div", "rpg-reward-note mm-muted small", "Three of your class's cards, not of your deck: the one you pick joins your deck for this run - and your collection keeps it."),
+    el("div", "rpg-reward-note mm-muted small", "Three of your class's cards, not of your deck: the one you pick joins your deck for the rest of this run."),
     cards,
     button("Skip this card", "pick", { id: "", className: "small" }),
     button("‹ Back", "rewardView", { id: "list", className: "small" }),
@@ -1532,7 +1532,7 @@ function deckHelp() {
     ["✋", "A turn", "You draw 5 cards and get 3 💧 mana. A card costs the mana in its drop (top left)."],
     ["⚔️", "Play", "Attacks hit a foe (click the card, then the foe), skills block, heal or help. Block only lasts through the monsters' turn."],
     ["⏭️", "End turn", "The cards you didn't play go to the discard pile; the monsters do what their badges showed. An empty draw pile: the discard pile is shuffled in."],
-    ["🎁", "Grow it", "Every fight won: pick one of three new cards - or study, buy them in the rooms. For the rest of that run - and your collection keeps them."],
+    ["🎁", "Grow it", "Every fight won: pick one of three new cards - or study, buy them in the rooms. They stay for the rest of that run; your collection grows with booster packs."],
     ["🗺️", "The map", "Pick your way room by room. What a room is stays hidden (?) - luck lets your party sense it."],
   ];
   return steps.map(([icon, title, text]) => {

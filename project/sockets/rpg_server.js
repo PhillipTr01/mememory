@@ -197,13 +197,6 @@ module.exports = function (io, options = {}) {
     emitParty(party);
   }
 
-  // A card won or bought in a run: into the collection of the character that plays it
-  function collectFor(party, name, card) {
-    const one = party.run.heroes.find((h) => h.name === name);
-    if (!one || !heroes.has(name)) return;
-    rpg.collect(rpg.charOf(heroOf(name), one.cls), card);
-  }
-
   async function start(party) {
     const entry = rpg.entryCost(party.floor);
     const paid = [];
@@ -573,8 +566,6 @@ module.exports = function (io, options = {}) {
       const card = typeof data.card === "number" ? data.card : data.card != null ? String(data.card) : null;
       const problem = rpg.choose(party.run, username, { option, card });
       if (problem) return error(problem);
-      // (a card studied: the collection keeps it too)
-      if (option === "read" && rpg.CARDS[card]) collectFor(party, username, card);
       emitParty(party);
     });
 
@@ -585,8 +576,6 @@ module.exports = function (io, options = {}) {
       const card = data.card != null ? String(data.card) : null;
       const problem = rpg.pickReward(party.run, username, card);
       if (problem) return error(problem);
-      // (a card won: the collection keeps it too)
-      if (card) collectFor(party, username, card);
       emitParty(party);
     });
 
@@ -604,7 +593,6 @@ module.exports = function (io, options = {}) {
         return error("Too late - the party went on.");
       }
       rpg.bought(party.run, username, item);
-      if (item !== "potion" && rpg.CARDS[item]) collectFor(party, username, item);
       emitParty(party);
     });
 
