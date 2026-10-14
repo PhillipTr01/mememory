@@ -497,7 +497,7 @@ function renderTop() {
   xpBox.title = "XP: every fight won (hard fights and the guarded gate more, deeper floors more) and every floor cleared (the first time: twice) - a run lost: half. Every level: a stat point; talents at levels " + rules.talentLevels.join(", ") + ". At most level " + rules.heroLevelMax + ".";
   var top = hero.level >= rules.heroLevelMax;
   if (picked) morphChildren(xpBox, [el("span", "rpg-level", "Lv " + hero.level), top ? el("span", "rpg-max mm-muted small", "Max level") : bar(hero.xp, hero.xpNeed, "xp", " XP"), hero.points ? el("span", "rpg-points", "+" + hero.points + " point" + (hero.points == 1 ? "" : "s")) : null]);
-  document.getElementById("rpgPotions").innerText = "🧪 " + hero.potions + " / " + rules.potionsMax;
+  morphChildren(document.getElementById("rpgPotions"), [flask(), el("span", "", hero.potions + " / " + rules.potionsMax)]);
   var buy = document.getElementById("rpgBuyPotion");
   buy.innerText = "+ 🪙 " + formatCoins(hero.potionPrice);
   buy.title = "A potion: heals 40% HP - in a fight or between the rooms";
@@ -624,25 +624,38 @@ function renderHero() {
 // Ready to go down? Every thing that still waits - with a button to it
 function renderReady() {
   var items = [];
-  var item = (icon, text, state, act, id, label) => {
+  // (a row: a picture, what it is, a line under it, a button - state: ok / warn / new)
+  var item = (icon, title, sub, state, act, id, label, extra) => {
     var row = el("div", "rpg-ready-item " + state);
-    row.append(el("span", "rpg-ready-icon", icon), el("span", "rpg-ready-text", text));
+    var text = el("div", "rpg-ready-text");
+    text.append(el("b", "", title));
+    if (sub) text.appendChild(el("span", "rpg-ready-sub", sub));
+    if (extra) text.appendChild(extra);
+    var bubble = el("span", "rpg-ready-icon");
+    if (typeof icon == "string") bubble.innerText = icon;
+    else bubble.appendChild(icon);
+    row.append(bubble, text);
     if (act) row.appendChild(button(label, act, { id: id, className: "small" + (state == "warn" ? " primary" : "") }));
     items.push(row);
   };
   var n = hero.deck.length;
-  if (n < hero.deckMin) item("🃏", "Your deck has " + n + " cards - it needs " + hero.deckMin + " to go down", "warn", "view", "deck", "Build it");
-  else if (n > hero.deckMax) item("🃏", "Your deck has " + n + " cards - " + hero.deckMax + " at most", "warn", "view", "deck", "Build it");
-  else item("🃏", "Deck ready: " + n + " cards (" + hero.deckMin + " to " + hero.deckMax + ")", "ok", "view", "deck", "Edit");
-  if (hero.deadFor > 0) item("💀", "Dead - back in " + duration(hero.deadFor - (Date.now() - heroAt)), "warn", "revive", null, "Revive · 🪙 " + formatCoins(hero.revivePrice));
-  item("🧪", hero.potions + " / " + rules.potionsMax + " potions - they heal 40% in a run", hero.potions ? "ok" : "warn", hero.potions < rules.potionsMax ? "potion" : null, null, "+1 · 🪙 " + formatCoins(hero.potionPrice));
-  if (hero.points) item("⬆️", hero.points + " stat point" + (hero.points == 1 ? "" : "s") + " to spend", "new", "view", "hero", "Spend");
-  if (rules.talentLevels.some((lv, tier) => hero.level >= lv && !hero.talents[tier])) item("⭐", "A talent to pick", "new", "view", "talents", "Pick");
+  var deckOk = n >= hero.deckMin && n <= hero.deckMax;
+  item("🃏", deckOk ? "Deck ready" : "Deck not ready", n + " cards · " + hero.deckMin + " to " + hero.deckMax, deckOk ? "ok" : "warn", "view", "deck", deckOk ? "Edit" : "Build it");
+  if (hero.deadFor > 0) item("💀", "Dead", "Back in " + duration(hero.deadFor - (Date.now() - heroAt)), "warn", "revive", null, "Revive · 🪙 " + formatCoins(hero.revivePrice));
+  var pips = el("div", "rpg-ready-pips");
+  for (var i = 0; i < rules.potionsMax; i++) pips.appendChild(flask(i < hero.potions ? "" : "off"));
+  item(flask(), "Potions", null, hero.potions ? "ok" : "warn", hero.potions < rules.potionsMax ? "potion" : null, null, "+1 · 🪙 " + formatCoins(hero.potionPrice), pips);
+  if (hero.points) item("⬆️", hero.points + " stat point" + (hero.points == 1 ? "" : "s"), "To spend", "new", "view", "hero", "Spend");
+  if (rules.talentLevels.some((lv, tier) => hero.level >= lv && !hero.talents[tier])) item("⭐", "A talent", "To pick", "new", "view", "talents", "Pick");
   var packs = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);
-  if (packs) item("🎴", packs + " pack" + (packs == 1 ? "" : "s") + " to open", "new", "view", "shop", "Open");
-  if (hero.bag.length) item("🎒", hero.bag.length + " item" + (hero.bag.length == 1 ? "" : "s") + " in the bag", "", "view", "gear", "Look");
+  if (packs) item("🎴", packs + " pack" + (packs == 1 ? "" : "s"), "To open", "new", "view", "shop", "Open");
+  if (hero.bag.length) item("🎒", "Bag", hero.bag.length + " / " + hero.bagSize + " items", "", "view", "gear", "Look");
   var found = hero.pool.filter((id) => hero.collection[id]).length;
-  item("📚", "Collection: " + found + " / " + hero.pool.length + " cards", "", "view", "shop", "Packs");
+  var progress = el("div", "rpg-ready-bar");
+  var fill = el("i");
+  fill.style.width = (found / hero.pool.length) * 100 + "%";
+  progress.appendChild(fill);
+  item("📚", "Collection", found + " / " + hero.pool.length + " cards", "", "view", "shop", "Packs", progress);
   morphChildren(document.getElementById("rpgReady"), items);
 }
 
@@ -790,7 +803,7 @@ function renderShop() {
           stack.append(art, el("span", "rpg-owned-open", "Open"));
           return stack;
         })
-      : [el("div", "rpg-empty mm-muted", "No packs waiting - put some into your cart and buy them.")],
+      : [el("div", "rpg-empty mm-muted", "No packs waiting.")],
   );
   var waiting = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);
   // (open all: in the heading of the packs waiting)
@@ -826,7 +839,7 @@ function renderShop() {
   var lines = Object.keys(cart).filter((id) => cart[id] > 0);
   var total = lines.reduce((sum, id) => sum + packCost(id, cart[id]), 0);
   var nodes = [el("div", "rpg-cart-title", "🛒 Your cart")];
-  if (!lines.length) nodes.push(el("div", "rpg-empty mm-muted", "Empty - add packs. 3 or more of a kind: 10% off."));
+  if (!lines.length) nodes.push(el("div", "rpg-empty mm-muted", "Empty · 3+ of a kind: 10% off"));
   lines.forEach((id) => {
     var pack = rules.packs[id];
     var row = el("div", "rpg-cart-line");
@@ -848,7 +861,7 @@ function renderShop() {
 
 }
 
-/* ---------- Opening a pack (like Hearthstone): the pack bursts, the cards lie face down - one flip after the other */
+/* ---------- Opening a pack: the pack bursts, the cards lie face down - one flip after the other */
 
 var opening = null; // {pack, cards (null: the pack still sealed), flipped: {index: true}}
 
@@ -1128,7 +1141,7 @@ function renderBuilder() {
       : [el("div", "rpg-empty mm-muted", "No card fits the filters.")],
   );
 
-  // The deck: Hearthstone rows (cheapest first) - a click takes one out
+  // The deck: rows (cheapest first) - a click takes one out
   morphChildren(document.getElementById("rpgBuilderCurve"), [curve(deck)]);
   var order = Object.keys(counts).sort(byCost);
   morphChildren(
@@ -1136,7 +1149,7 @@ function renderBuilder() {
     order.length
       ? order.map((id) => {
           var card = cardOf(id);
-          var row = el("div", "rpg-deck-row rarity-" + card.rarity + (card.mystic ? " mystic" : ""));
+          var row = el("div", "rpg-deck-row type-" + card.type + " rarity-" + card.rarity + (card.mystic ? " mystic" : ""));
           row.dataset.act = "deckRemove";
           row.dataset.id = id;
           row.dataset.drag = "out:" + id;
@@ -1147,11 +1160,13 @@ function renderBuilder() {
           row.append(cost, el("span", "rpg-row-icon", card.icon), el("span", "rpg-row-name", card.name), el("span", "rpg-row-count", counts[id] > 1 ? "×" + counts[id] : card.mystic ? "★" : ""));
           return row;
         })
-      : [el("div", "rpg-empty mm-muted", "Empty - click or drag cards in.")],
+      : [el("div", "rpg-empty mm-muted", "Empty")],
   );
   var attacks = deck.filter((id) => cardOf(id).type == "attack").length;
+  var split = el("div", "rpg-deck-split");
+  split.append(el("span", "rpg-split-attack", "⚔ " + attacks + " attacks"), el("span", "rpg-split-skill", "✦ " + (deck.length - attacks) + " skills"));
   morphChildren(document.getElementById("rpgBuilderNote"), [
-    el("div", "mm-muted small", attacks + " attacks · " + (deck.length - attacks) + " skills"),
+    split,
     deck.length < hero.deckMin
       ? el("div", "rpg-warn", "⚠️ At least " + hero.deckMin + " cards to go down - " + (hero.deckMin - deck.length) + " more")
       : deck.length > hero.deckMax
@@ -1164,7 +1179,8 @@ function renderDoor() {
   floor = Math.max(1, Math.min(hero.maxFloor, floor));
   var entry = rules.entries[floor - 1];
   document.getElementById("rpgFloor").innerText = "Floor " + floor;
-  document.getElementById("rpgFloorInfo").innerText = "Entry 🪙 " + formatCoins(entry) + " each · " + (floor <= hero.deepest ? "cleared ✓" : "new");
+  var cleared = floor <= hero.deepest;
+  morphChildren(document.getElementById("rpgFloorInfo"), [el("span", "", "Entry 🪙 " + formatCoins(entry) + " each"), el("span", "rpg-floor-tag " + (cleared ? "cleared" : "new"), cleared ? "✓ Cleared" : "✦ New")]);
   document.getElementById("rpgFloorDown").disabled = floor <= 1;
   document.getElementById("rpgFloorUp").disabled = floor >= hero.maxFloor;
   document.getElementById("rpgSolo").disabled = myCoins < entry || !hero.cls;
@@ -1196,26 +1212,31 @@ function renderDoor() {
         else row.appendChild(button("Join", "join", { id: p.id, className: "small", disabled: p.members.length >= p.size }));
         return row;
       })
-    : [el("div", "rpg-empty mm-muted", "No party open - open one, or go alone.")];
+    : [el("div", "rpg-empty mm-muted", "No open parties.")];
   morphChildren(document.getElementById("rpgParties"), list);
 }
 
 function renderLobby() {
-  document.getElementById("rpgLobbyTitle").innerText = party.leader + "'s party · Floor " + party.floor + " · entry 🪙 " + formatCoins(party.entry) + " each";
+  var title = document.getElementById("rpgLobbyTitle");
+  morphChildren(title, [el("span", "rpg-lobby-floor", "Floor " + party.floor), el("span", "rpg-lobby-sub", party.leader + "'s party · 🪙 " + formatCoins(party.entry) + " each · " + party.members.length + " / " + party.size)]);
   var seats = [];
   for (var i = 0; i < party.size; i++) {
     var name = party.members[i];
-    var seat = el("div", "rpg-seat" + (name ? "" : " empty"));
-    if (name) seat.append(createAvatar(name, "lg"), el("div", "rpg-seat-name", (name == party.leader ? "👑 " : "") + name));
-    else seat.append(el("div", "rpg-seat-free", "?"), el("div", "rpg-seat-name mm-muted", "free"));
+    var seat = el("div", "rpg-seat" + (name ? "" : " empty") + (name == myName ? " me" : ""));
+    if (name) {
+      var who = (party.who || {})[name] || {};
+      var cls = rules.classes[who.cls] || { icon: "❔", name: "" };
+      if (name == party.leader) seat.appendChild(el("span", "rpg-seat-crown", "👑"));
+      seat.append(createAvatar(name, "lg"), el("div", "rpg-seat-name", name), el("div", "rpg-seat-class", cls.icon + " " + cls.name + (who.level ? " · Lv " + who.level : "")));
+    } else seat.append(el("div", "rpg-seat-free", "…"), el("div", "rpg-seat-name mm-muted", "Waiting"));
     seats.push(seat);
   }
   morphChildren(document.getElementById("rpgLobbySeats"), seats);
   var leader = party.leader == myName;
   var start = document.getElementById("rpgStart");
   start.hidden = !leader;
-  start.innerText = party.members.length < party.size ? "Start with " + party.members.length : "Start";
-  document.getElementById("rpgLobbyNote").innerText = leader ? "Start when you like - every hero pays the entry then." : "Waiting for " + party.leader + " to start.";
+  start.innerText = party.members.length < party.size ? "⚔️ Start with " + party.members.length : "⚔️ Start";
+  document.getElementById("rpgLobbyNote").innerText = leader ? "" : "Waiting for " + party.leader + " to start.";
 }
 
 /* ---------- A run ---------- */
@@ -1272,7 +1293,15 @@ function renderRun() {
       if (m.intent) card.appendChild(intentBadge(m));
       var name = el("div", "rpg-monster-name", m.name + (m.undead ? " 🦴" : ""));
       if (m.affix) name.title = rules.affixes[m.affix].text;
-      card.append(el("div", "rpg-monster-icon", m.icon), name, bar(m.hp, m.maxHp, "foe"), effectsRow(m.effects));
+      var art = el("div", "rpg-monster-art");
+      art.append(el("div", "rpg-monster-icon", m.icon), el("i", "rpg-monster-ground"));
+      // (its armor: the share of every hit it takes off)
+      if (m.armor) {
+        var armor = el("span", "rpg-monster-armor", "🛡 " + Math.round(m.armor * 100) + "%");
+        armor.title = "Armor: takes " + Math.round(m.armor * 100) + "% off every hit";
+        art.appendChild(armor);
+      }
+      card.append(art, name, bar(m.hp, m.maxHp, "foe"), effectsRow(m.effects));
       if (m.affix) card.appendChild(el("div", "rpg-affix", rules.affixes[m.affix].icon + " " + rules.affixes[m.affix].text));
       return card;
     });
@@ -1296,7 +1325,7 @@ function renderRun() {
     var head = el("div", "rpg-fighter-head");
     head.append(createAvatar(h.name, "sm"), el("span", "rpg-fighter-name", (h.name == party.leader ? "👑 " : "") + h.name), el("span", "rpg-fighter-state", state));
     var info = el("div", "rpg-fighter-info mm-muted small");
-    info.append(el("span", "", cls.icon + " " + (rules.classes[h.cls] || {}).name), el("span", "", "🧪 " + h.potions + (h.blessed ? " · ⛩️" : "")));
+    info.append(el("span", "", cls.icon + " " + (rules.classes[h.cls] || {}).name), withFlask(el("span", "", " " + h.potions + (h.blessed ? " · ⛩️" : ""))));
     var hp = bar(h.hp, h.maxHp, "hero");
     if (h.block > 0) hp.appendChild(el("span", "rpg-block", "🛡️ " + h.block));
     var relics = el("div", "rpg-relics");
@@ -1358,7 +1387,7 @@ function renderModal(run, me) {
   if (nodes) morphChildren(document.getElementById("rpgModalBox"), nodes);
 }
 
-// The rewards of a fight (like Slay the Spire): a list - the coins (in the pot already), a card to add, a relic
+// The rewards of a fight: a list - the coins (in the pot already), a card to add, a relic
 function spoilsPanel(run, me, spoils) {
   var list = el("div", "rpg-spoils");
   var row = (icon, text, act, id, done) => {
@@ -1412,9 +1441,10 @@ function renderPartyStats(run) {
         ["🛡️", h.def, "Armor: taken off every hit (at most 75%), more block"],
         ["🍀", h.luck + (h.perks.crit || 0) + "%", "Critical hits (x1.8) - and sensing the doors"],
         ["🪶", h.agi + "%", "Dodge an attack"],
-        ["🧪", h.potions, "Potions"],
+        [null, h.potions, "Potions"],
       ].forEach(([icon, value, tip]) => {
-        var chip = el("span", "rpg-pstat-chip", icon + " " + value);
+        var chip = el("span", "rpg-pstat-chip", icon ? icon + " " + value : "");
+        if (!icon) chip.append(flask(), " " + value);
         chip.title = tip;
         stats.appendChild(chip);
       });
@@ -1514,6 +1544,9 @@ function roomScene(run, me) {
   return [scene];
 }
 
+// A picture for every choice of a room
+var OPTION_ICONS = { rest: "💤", smith: "🔨", open: "🗝️", disarm: "🛠️", sneak: "👣", pray: "🙏", leave: "🚶", bottle: "⚗️", drink: "🍶", nap: "😴", purge: "🎁", read: "📖", roll: "🎲", take: "✋", temper: "🔥" };
+
 // The choices of a room: big buttons - one of them (a card to pick: of the deck, or of the cards offered)
 function choiceNodes(run, me) {
   var ev = run.event;
@@ -1530,7 +1563,7 @@ function choiceNodes(run, me) {
       b.dataset.act = o.card ? "pickMode" : "choose";
       b.dataset.id = o.id;
     }
-    b.append(el("b", "", o.label + (o.card == "offer" && !chosen ? " ↓" : "")), el("span", "", text));
+    b.append(el("span", "rpg-option-icon", OPTION_ICONS[o.id] || "✦"), el("b", "", o.label + (o.card == "offer" && !chosen ? " ↓" : "")), el("span", "", text));
     row.appendChild(b);
   });
   nodes.push(row);
@@ -1587,7 +1620,7 @@ function shopNodes(run, me) {
   });
   var services = el("div", "rpg-shop-services");
   services.append(
-    button("🧪 Potion · 🪙 " + formatCoins(price("potion")) + " (" + me.potions + "/" + rules.potionsMax + ")", "buy", { id: "potion", disabled: me.potions >= rules.potionsMax || myCoins < price("potion") }),
+    withFlask(button(" Potion · 🪙 " + formatCoins(price("potion")) + " (" + me.potions + "/" + rules.potionsMax + ")", "buy", { id: "potion", disabled: me.potions >= rules.potionsMax || myCoins < price("potion") })),
     button(offer.removed ? "🗑️ Card removed ✓" : "🗑️ Remove a card · 🪙 " + formatCoins(price("remove")), "pickMode", { id: "remove", className: picking == "remove" ? "voted" : "", disabled: offer.removed || myCoins < price("remove") || me.deck.length <= rules.deckLeast, title: "The merchant takes a card out of your deck for this run" }),
   );
   var nodes = [el("div", "rpg-shop-coins", "Your coins: 🪙 " + formatCoins(myCoins)), el("div", "rpg-label", "Cards · for this run only"), cards, el("div", "rpg-label", "Relics · for this run only"), relics, el("div", "rpg-label", "Services"), services];
@@ -1595,7 +1628,7 @@ function shopNodes(run, me) {
   return nodes;
 }
 
-// The map of the floor (like Slay the Spire): rows from the bottom up - the rooms gone through, the ones to pick
+// The map of the floor: rows from the bottom up - the rooms gone through, the ones to pick
 // next (a vote), what is hidden ("?" - unless the party sensed it)
 var MAP_ROW = 62;
 var MAP_ROW_BIG = 84; // (choosing the next room: the map bigger)
@@ -1647,7 +1680,7 @@ function renderMap(run) {
         b.dataset.act = "vote";
         b.dataset.id = door;
       } else b.disabled = true;
-      b.title = (kind ? kind.name + " - " + kind.about : "Hidden - nobody senses what is in there") + (node.sensed && !node.visited ? " (sensed 🍀)" : "") + (door >= 0 ? " · click: go there" : "");
+      b.title = kind ? kind.name + " - " + kind.about : "Hidden";
       var voters = door >= 0 ? Object.keys(run.votes).filter((name) => run.votes[name] === door) : [];
       if (voters.length) {
         var faces = el("span", "rpg-node-votes");
@@ -1662,8 +1695,8 @@ function renderMap(run) {
   box.style.height = height + "px";
   morphChildren(box, nodes);
   var sense = document.getElementById("rpgMapSense");
-  sense.innerText = "🍀 " + run.sense + "% sensed";
-  sense.title = "How often your party senses what a hidden room is: 20% + 1.5x the best luck";
+  sense.innerText = "🍀 " + run.sense + "%";
+  sense.title = "Chance to see a hidden room";
   var count = Object.keys(run.votes).length;
   document.getElementById("rpgMapNote").innerText = party.result ? "" : between ? (run.heroes.length > 1 ? count + " / " + run.heroes.length + " voted · a tie: random" : "Pick a lit room") : "";
 }
@@ -1755,7 +1788,7 @@ function handBar(run, me) {
     votes.appendChild(el("span", "rpg-votes-note mm-muted small", count + " / " + run.heroes.length + " · a tie: random"));
     return [potion, votes, leave];
   }
-  if (!me || me.down) return [el("div", "rpg-wait mm-muted", "💤 You're down - back up after the fight (or a Cleric's revive).")];
+  if (!me || me.down) return [el("div", "rpg-wait mm-muted", "💤 You're down until the fight ends.")];
   var energy = el("div", "rpg-energy" + (me.energy <= 0 ? " empty" : ""));
   energy.dataset.mana = me.energy + "/" + rules.energy;
   energy.title = "Mana - cards cost it, full again every turn";
@@ -1790,6 +1823,18 @@ function handBar(run, me) {
 // A health potion: a red flask - its count, its mana in a fight
 var POTION_SVG =
   '<svg viewBox="0 0 32 40" aria-hidden="true"><rect x="12" y="2" width="8" height="5" rx="1.5" fill="#a0703c"/><path d="M13 7h6v6.5a11 11 0 1 1-6 0z" fill="rgba(255,255,255,.18)" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/><path d="M6.2 24a9.8 9.8 0 0 0 19.6 0z" fill="#e0344a"/><path d="M6.6 22.2c3-1.6 6.3 1.1 9.4 0s6.4-1.6 9.4 0A9.8 9.8 0 0 1 25.8 24H6.2c0-.6.1-1.2.4-1.8z" fill="#ff5a6e"/><path d="M14.2 27.6h3.6M16 25.8v3.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><ellipse cx="11" cy="19" rx="1.6" ry="3" fill="rgba(255,255,255,.55)" transform="rotate(25 11 19)"/></svg>';
+// A small health flask (instead of an emoji): {className} - "off": an empty one
+function flask(className) {
+  var span = el("span", "rpg-flask" + (className ? " " + className : ""));
+  span.innerHTML = POTION_SVG;
+  return span;
+}
+
+function withFlask(node) {
+  node.prepend(flask());
+  return node;
+}
+
 function potionButton(me, run) {
   var fight = run.phase == "fight";
   var b = el("button", "rpg-potion-btn");

@@ -10,7 +10,7 @@
  * The first room is a fight, the last the guarded gate (an elite fight); a floor cleared opens the next
  * one. All heroes down: the pot is lost.
  *
- * Fights are played with cards (like Slay the Spire): every hero has a deck (a starter deck of the class -
+ * Fights are played with cards: every hero has a deck (a starter deck of the class -
  * every fight won: one card more, picked of three), draws 5 cards a turn and has 3 energy to play them
  * (attacks, block, the class's skills). Every monster shows what it does next and to whom (its intent);
  * when every hero has ended the turn, the monsters do what they showed, poison and burns tick. Status
@@ -599,7 +599,7 @@ function charOf(hero, cls = hero.cls) {
   return char;
 }
 
-/* ---------- The collection and the deck (built between the runs, like Hearthstone) ---------- */
+/* ---------- The collection and the deck (built between the runs) ---------- */
 
 // The cards a class can own: its own (and its mystic one), the neutral ones, the basic ones
 function poolOf(cls) {
@@ -895,7 +895,7 @@ function makeGear(floor, rng = Math.random, luck = 0, cls = null) {
   return item;
 }
 
-/* ---------- The map of a floor (like Slay the Spire): rows of rooms, paths between them ---------- */
+/* ---------- The map of a floor: rows of rooms, paths between them ---------- */
 
 const ROOM_KINDS = {
   fight: { name: "Fight", icon: "⚔️", about: "Monsters - loot for the pot" },
@@ -906,7 +906,7 @@ const ROOM_KINDS = {
   trap: { name: "Trap", icon: "🪤", about: "Disarm it (luck) or sneak past" },
   rest: { name: "Camp fire", icon: "🔥", about: "Rest (heal) or smith (upgrade a card)" },
   shrine: { name: "Shrine", icon: "⛩️", about: "Blood for power - or walk on" },
-  merchant: { name: "Merchant", icon: "🧳", about: "Cards, relics, potions - and he takes a card out of your deck" },
+  merchant: { name: "Merchant", icon: "⚖️", about: "Cards, relics, potions - and he takes a card out of your deck" },
   event: { name: "Encounter", icon: "📜", about: "Something strange - a choice to make" },
 };
 // What waits in a room of the map (weights) - mostly fights

@@ -31,7 +31,7 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   rpg.charOf(hero).deepest = rpg.FLOORS;
   assert.strictEqual(rpg.maxFloor(hero), rpg.FLOORS);
   assert.strictEqual(rpg.BOSS_EVERY, 0);
-  // The map (like Slay the Spire): ROOMS rows - a fight first, the guarded gate last, 2 to 4 rooms a row between;
+  // The map: ROOMS rows - a fight first, the guarded gate last, 2 to 4 rooms a row between;
   // every room leads on, every room is reached, the paths never cross
   const kinds = new Map();
   for (let i = 0; i < 300; i++) {

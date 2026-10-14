@@ -72,6 +72,8 @@ module.exports = function (io, options = {}) {
       size: party.size,
       entry: rpg.entryCost(party.floor),
       members: party.members,
+      // (who they are: the class, the level - for the lobby)
+      who: Object.fromEntries(party.members.map((name) => [name, { cls: heroOf(name).cls, level: rpg.charOf(heroOf(name)).level }])),
       started: party.run != null,
       result: party.result || null,
       summary: party.summary || null,

@@ -3051,7 +3051,7 @@ button.rpg-cardx.off {
   }
 }
 
-/* ======================= 15. The cart, the packs waiting, opening one (like Hearthstone) ======================= */
+/* ======================= 15. The cart, the packs waiting, opening one ======================= */
 
 .rpg-shop-body {
   display: grid;
@@ -3404,7 +3404,7 @@ button.rpg-cardx.off {
   margin-top: 1.4rem;
 }
 
-/* The rarity gem under a card's picture (like Hearthstone) */
+/* The rarity gem under a card's picture */
 .rpg-cardx-art {
   position: relative;
 }
@@ -3927,7 +3927,7 @@ button.rpg-cardx.off {
   }
 }
 
-/* The rewards of a fight: a list, like Slay the Spire */
+/* The rewards of a fight: a list */
 .rpg-reward-title.big {
   font-size: 1.6rem;
 }
@@ -4946,4 +4946,536 @@ button.rpg-cardx.off {
   flex-direction: column;
   flex: 1;
   line-height: 1.25;
+}
+
+/* 24. The floor's tag; the Ready card: a picture in a bubble, a title, a line under it */
+.rpg-floor-tag {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  vertical-align: 1px;
+}
+
+.rpg-floor-tag.cleared {
+  color: #7fdc9b;
+  background: rgba(111, 207, 143, 0.14);
+  border: 1px solid rgba(111, 207, 143, 0.4);
+}
+
+.rpg-floor-tag.new {
+  color: var(--rpg-gold);
+  background: rgba(245, 197, 66, 0.12);
+  border: 1px solid rgba(245, 197, 66, 0.4);
+}
+
+.rpg-ready-list {
+  gap: 0.5rem;
+}
+
+.rpg-ready-item {
+  --tone: 255, 255, 255;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(var(--tone), 0.12);
+  border-left: 1px solid rgba(var(--tone), 0.12);
+  background: linear-gradient(90deg, rgba(var(--tone), 0.06), transparent 60%), var(--rpg-surface);
+}
+
+.rpg-ready-item.ok {
+  --tone: 111, 207, 143;
+  border-left-color: rgba(var(--tone), 0.12);
+}
+
+.rpg-ready-item.warn {
+  --tone: var(--rpg-red-rgb);
+  border-left-color: rgba(var(--tone), 0.3);
+  background: linear-gradient(90deg, rgba(var(--tone), 0.12), transparent 60%), var(--rpg-surface);
+}
+
+.rpg-ready-item.new {
+  --tone: 245, 197, 66;
+  border-left-color: rgba(var(--tone), 0.12);
+}
+
+.rpg-ready-icon {
+  flex: none;
+  width: 2.3rem;
+  height: 2.3rem;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 1.15rem;
+  background: rgba(var(--tone), 0.12);
+  border: 1px solid rgba(var(--tone), 0.25);
+}
+
+.rpg-ready-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  line-height: 1.2;
+}
+
+.rpg-ready-text b {
+  font-size: 0.88rem;
+}
+
+.rpg-ready-sub {
+  font-size: 0.74rem;
+  color: var(--mm-muted);
+}
+
+.rpg-ready-pips {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.15rem;
+}
+
+.rpg-ready-pips i {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.rpg-ready-pips i.on {
+  background: radial-gradient(circle at 35% 30%, #ff8a99, #e0344a 70%);
+  box-shadow: 0 0 6px rgba(224, 52, 74, 0.5);
+}
+
+.rpg-ready-bar {
+  height: 5px;
+  margin-top: 0.25rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  max-width: 14rem;
+}
+
+.rpg-ready-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--rpg-gold), #ffe08a);
+}
+
+/* 25. The deck builder's right side: a framed panel, rows as strips (attack red, skill blue, rarity glow) */
+.rpg-builder-right {
+  border: 1px solid rgba(245, 197, 66, 0.25);
+  background: linear-gradient(180deg, rgba(245, 197, 66, 0.07), transparent 30%), var(--rpg-surface);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+.rpg-deck-list.col .rpg-deck-row {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid var(--strip, #6b7280);
+  background: linear-gradient(90deg, #202026 55%, color-mix(in srgb, var(--strip, #6b7280) 30%, #202026));
+}
+
+.rpg-deck-row.type-attack {
+  --strip: rgb(var(--rpg-red-rgb));
+}
+
+.rpg-deck-row.type-skill {
+  --strip: #5b8fd6;
+}
+
+.rpg-deck-list.col .rpg-deck-row .rpg-row-icon {
+  font-size: 1.05rem;
+}
+
+.rpg-deck-row.rarity-epic .rpg-row-name {
+  color: #c7b4e6;
+}
+
+.rpg-deck-row.rarity-legendary .rpg-row-name {
+  color: #f0c56b;
+}
+
+.rpg-deck-row.rarity-mystic .rpg-row-name {
+  color: #5eead4;
+}
+
+.rpg-deck-row .rpg-row-count {
+  min-width: 1.6rem;
+  text-align: center;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.rpg-deck-split {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.rpg-deck-split span {
+  flex: 1;
+  text-align: center;
+  padding: 0.2rem 0.4rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.rpg-split-attack {
+  color: #ffb4b4;
+  background: rgba(var(--rpg-red-rgb), 0.16);
+}
+
+.rpg-split-skill {
+  color: #b9d3ff;
+  background: rgba(91, 143, 214, 0.16);
+}
+
+.rpg-builder-grid {
+  align-items: start;
+}
+
+/* 26. The lobby: the floor big, a seat per place (the class, the level), the free ones waiting */
+.rpg-lobby {
+  padding: 1.25rem 0 0.5rem;
+}
+
+#rpgLobbyTitle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.rpg-lobby-floor {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  background: linear-gradient(180deg, #ffe7a3, var(--rpg-gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.rpg-lobby-sub {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--mm-muted);
+}
+
+.rpg-seat {
+  position: relative;
+  width: 9.5rem;
+  padding: 1.1rem 0.6rem 0.9rem;
+  border-radius: 14px;
+  background: radial-gradient(circle at 50% 0%, rgba(245, 197, 66, 0.1), transparent 60%), var(--rpg-surface);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
+  gap: 0.35rem;
+}
+
+.rpg-seat.me {
+  border-color: rgba(245, 197, 66, 0.55);
+}
+
+.rpg-seat-crown {
+  position: absolute;
+  top: -0.7rem;
+  font-size: 1.2rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+}
+
+.rpg-seat-class {
+  font-size: 0.75rem;
+  color: var(--mm-muted);
+}
+
+.rpg-seat.empty {
+  box-shadow: none;
+  background: transparent;
+}
+
+.rpg-seat.empty .rpg-seat-free {
+  animation: rpg-seat-wait 1.6s ease-in-out infinite;
+}
+
+@keyframes rpg-seat-wait {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.rpg-lobby .rpg-go .rpg-btn.primary {
+  min-width: 10rem;
+  font-size: 1rem;
+}
+
+/* The health flask: everywhere a potion shows */
+.rpg-flask {
+  display: inline-block;
+  width: 1.05em;
+  height: 1.3em;
+  vertical-align: -0.25em;
+}
+
+.rpg-flask svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 1px 3px rgba(224, 52, 74, 0.45));
+}
+
+.rpg-flask.off {
+  opacity: 0.25;
+  filter: grayscale(1);
+}
+
+.rpg-ready-icon .rpg-flask {
+  width: 1.3rem;
+  height: 1.6rem;
+}
+
+.rpg-ready-pips {
+  gap: 0.1rem;
+}
+
+.rpg-ready-pips .rpg-flask {
+  width: 0.95rem;
+  height: 1.2rem;
+}
+
+#rpgPotions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* 27. The monsters: framed by their rank, floating over a shadow, their armor on a badge */
+.rpg-monster {
+  background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.06), transparent 60%), linear-gradient(180deg, rgba(34, 30, 38, 0.92), rgba(16, 16, 20, 0.95));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.rpg-monster.rank-elite {
+  background: radial-gradient(circle at 50% 35%, rgba(245, 197, 66, 0.14), transparent 60%), linear-gradient(180deg, rgba(40, 33, 22, 0.95), rgba(16, 16, 20, 0.95));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), 0 0 18px rgba(245, 197, 66, 0.15);
+}
+
+.rpg-monster.rank-boss {
+  background: radial-gradient(circle at 50% 35%, rgba(var(--rpg-red-rgb), 0.2), transparent 60%), linear-gradient(180deg, rgba(44, 20, 22, 0.95), rgba(16, 16, 20, 0.95));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), 0 0 24px rgba(var(--rpg-red-rgb), 0.25);
+}
+
+.rpg-monster-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  padding-bottom: 0.35rem;
+}
+
+.rpg-monster-art .rpg-monster-icon {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.55));
+  animation: rpg-monster-idle 2.8s ease-in-out infinite;
+}
+
+.rpg-monster:nth-child(2) .rpg-monster-icon {
+  animation-delay: -0.9s;
+}
+
+.rpg-monster:nth-child(3) .rpg-monster-icon {
+  animation-delay: -1.8s;
+}
+
+.rpg-monster.down .rpg-monster-icon {
+  animation: none;
+}
+
+@keyframes rpg-monster-idle {
+  50% {
+    transform: translateY(-4px) scale(1.03);
+  }
+}
+
+.rpg-monster-ground {
+  position: absolute;
+  bottom: 0.15rem;
+  width: 55%;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.6), transparent 70%);
+}
+
+.rpg-monster-armor {
+  position: absolute;
+  right: -0.2rem;
+  bottom: 0;
+  z-index: 2;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #cfd8e3;
+  background: rgba(70, 80, 95, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rpg-monster-art .rpg-monster-icon {
+    animation: none;
+  }
+}
+
+/* 28. The rooms: the scene tinted by its kind, the choices as tiles with a picture */
+.rpg-scene {
+  --art: 245, 197, 66;
+  background: radial-gradient(circle at 12% 30%, rgba(var(--art), 0.14), transparent 55%), rgba(10, 10, 12, 0.78);
+  border-color: rgba(var(--art), 0.25);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+.rpg-scene.kind-rest {
+  --art: 255, 140, 60;
+}
+
+.rpg-scene.kind-trap {
+  --art: var(--rpg-red-rgb);
+}
+
+.rpg-scene.kind-shrine {
+  --art: 170, 120, 230;
+}
+
+.rpg-scene.kind-event {
+  --art: 91, 143, 214;
+}
+
+.rpg-scene.kind-merchant {
+  --art: 245, 197, 66;
+}
+
+.rpg-scene .rpg-scene-art {
+  --art: inherit;
+}
+
+.rpg-scene-title {
+  font-size: 1.25rem;
+}
+
+.rpg-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.5rem;
+}
+
+.rpg-option {
+  display: grid;
+  grid-template-columns: 2.4rem minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 0.6rem;
+  align-items: center;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(var(--art, 245, 197, 66), 0.3);
+  background: linear-gradient(135deg, rgba(var(--art, 245, 197, 66), 0.12), rgba(255, 255, 255, 0.02));
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.rpg-option-icon {
+  grid-row: 1 / span 2;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 1.35rem;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.rpg-option b {
+  font-size: 0.92rem;
+}
+
+.rpg-option span:not(.rpg-option-icon) {
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+.rpg-option:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(var(--art, 245, 197, 66), 0.5);
+}
+
+/* The merchant: the goods on cloth, the price a tag */
+.rpg-scene.kind-merchant .rpg-shop-row {
+  padding: 0.75rem;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(120, 40, 40, 0.18), rgba(60, 20, 20, 0.12));
+  border: 1px solid rgba(245, 197, 66, 0.15);
+}
+
+.rpg-scene.kind-merchant .rpg-price {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(245, 197, 66, 0.35);
+}
+
+/* 29. Full screen: the run fills the screen - the arena grows, the hand at the bottom, the map as tall as it */
+.rpg-main.cs-fullscreen {
+  padding: 1rem 1.5rem !important;
+}
+
+.rpg-main.cs-fullscreen .rpg-run:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 2rem);
+}
+
+.rpg-main.cs-fullscreen .rpg-run-body {
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) 17rem;
+  align-items: stretch;
+}
+
+.rpg-main.cs-fullscreen .rpg-run-body.choosing {
+  grid-template-columns: minmax(0, 1fr) 26rem;
+}
+
+.rpg-main.cs-fullscreen .rpg-stage {
+  min-height: calc(100vh - 6rem);
+}
+
+.rpg-main.cs-fullscreen .rpg-arena {
+  flex: 1;
+  justify-content: space-around;
+}
+
+.rpg-main.cs-fullscreen .rpg-monster {
+  width: 11.5rem;
+}
+
+.rpg-main.cs-fullscreen .rpg-monster-icon {
+  font-size: 3.2rem;
+}
+
+.rpg-main.cs-fullscreen .rank-elite .rpg-monster-icon,
+.rpg-main.cs-fullscreen .rank-boss .rpg-monster-icon {
+  font-size: 4rem;
+}
+
+.rpg-main.cs-fullscreen .rpg-map-box {
+  position: static;
+  justify-content: center;
+}
+
+.rpg-main.cs-fullscreen .rpg-home,
+.rpg-main.cs-fullscreen .rpg-builder,
+.rpg-main.cs-fullscreen .rpg-shop,
+.rpg-main.cs-fullscreen #rpgTop {
+  max-width: 1500px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
 }
