@@ -5491,3 +5491,31 @@ button.rpg-cardx.off {
   align-items: center;
   gap: 0.45rem;
 }
+
+/* The deck builder's filters: a row each - the label, the chips */
+.rpg-filter-chips {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.4rem 0.75rem;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--mm-border);
+  background: var(--rpg-surface);
+}
+
+.rpg-filter-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--mm-muted);
+}
+
+.rpg-filter-chips .rpg-chip-group {
+  flex-wrap: wrap;
+}
+
+.rpg-btn.chip.owned {
+  margin-left: auto;
+}

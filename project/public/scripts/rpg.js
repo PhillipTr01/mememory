@@ -1065,10 +1065,11 @@ document.addEventListener("dragend", () => {
   });
 });
 
+// [key, label of the row, the options]
 var FILTERS = [
-  ["type", [["all", "All"], ["attack", "Attacks"], ["skill", "Skills"]]],
-  ["cost", [["all", "Any cost"], ["0", "0"], ["1", "1"], ["2", "2"], ["3", "3+"]]],
-  ["rarity", [["all", "Any rarity"], ["basic", "Basic"], ["common", "Common"], ["rare", "Rare"], ["epic", "Epic"], ["legendary", "Legendary"], ["mystic", "Mystic"]]],
+  ["type", "Type", [["all", "All"], ["attack", "Attacks"], ["skill", "Skills"]]],
+  ["cost", "Cost", [["all", "Any"], ["0", "0"], ["1", "1"], ["2", "2"], ["3", "3+"]]],
+  ["rarity", "Rarity", [["all", "Any"], ["basic", "Basic"], ["common", "Common"], ["rare", "Rare"], ["epic", "Epic"], ["legendary", "Legendary"], ["mystic", "Mystic"]]],
 ];
 var RARITY_ORDER = ["basic", "common", "rare", "epic", "legendary", "mystic"];
 // By rarity (common first, mystic last) - then the cost, the name
@@ -1093,7 +1094,9 @@ function renderBuilder() {
 
   // The filters
   var chips = [];
-  FILTERS.forEach(([key, options]) => {
+  // (a row per filter: its label, its chips - "Owned only" at the end of the first)
+  FILTERS.forEach(([key, name, options]) => {
+    chips.push(el("span", "rpg-filter-label", name));
     var group = el("div", "rpg-chip-group");
     options.forEach(([value, label]) => {
       var chip = button(label, "filter", { id: key + ":" + value, className: "chip" + (filters[key] == value ? " active" : "") });
@@ -1107,9 +1110,9 @@ function renderBuilder() {
       }
       group.appendChild(chip);
     });
+    if (key == "type") group.appendChild(button((filters.owned ? "✓ " : "") + "Owned only", "filter", { id: "owned:toggle", className: "chip owned" + (filters.owned ? " active" : "") }));
     chips.push(group);
   });
-  chips.push(button("Owned only", "filter", { id: "owned:toggle", className: "chip" + (filters.owned ? " active" : "") }));
   morphChildren(document.getElementById("rpgFilterChips"), chips);
 
   // The collection: every card of the class - owned (spare copies: into the deck) or locked
