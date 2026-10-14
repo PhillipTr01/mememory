@@ -9,6 +9,11 @@
  *   5. Cards and the hand
  *   6. Between the rooms: the reward, hidden doors, votes
  *   7. Phones
+ *   8. Characters, rooms, mana
+ *   9. Progression
+ *  10. Deck, packs, popups, party stats, drag & drop
+ *  11. The map, the rooms (scenes), the deck builder
+ *  12. Mana: a drop of water
  */
 
 /* ======================= 1. The page, cards, buttons ======================= */
@@ -1135,7 +1140,7 @@ button.rpg-cardx.off {
 }
 
 .rpg-hand .rpg-cardx {
-  margin: 0 -0.35rem;
+  margin: 0 calc(-1 * var(--squeeze, 0.35rem));
   transform: rotate(var(--tilt, 0deg)) translateY(var(--lift, 0px));
 }
 
@@ -1351,6 +1356,8 @@ button.rpg-cardx.off {
 
   .rpg-monster,
   .rpg-fighter {
+    box-sizing: border-box;
+    min-width: 0;
     width: calc(50% - 0.375rem);
   }
 
@@ -1369,13 +1376,16 @@ button.rpg-cardx.off {
 
   .rpg-hand {
     order: -1;
+    flex: 1 1 100%;
     width: 100%;
     flex-wrap: wrap;
     row-gap: 0.8rem;
   }
 
   .rpg-hand .rpg-cardx {
-    margin: 0 -0.2rem;
+    width: 5.9rem;
+    min-height: 9rem;
+    margin: 0 -0.15rem !important;
   }
 
   .rpg-hand-side {
@@ -1492,36 +1502,6 @@ button.rpg-cardx.off {
 .rpg-door-hint.open {
   color: var(--mm-muted);
   font-weight: 400;
-}
-
-/* Mana: a drop (the cost on a card, the mana of the turn) */
-.rpg-cardx-cost {
-  border-radius: 50% 0 50% 50%;
-  transform: rotate(-45deg);
-  top: -0.6rem;
-  left: -0.5rem;
-  font-size: 0;
-  background: radial-gradient(circle at 40% 40%, #e6f8ff, #5bbcf0 55%, #1f6a96);
-}
-
-.rpg-cardx-cost::after {
-  content: attr(data-cost);
-  font-size: 0.9rem;
-  transform: rotate(45deg);
-  display: block;
-}
-
-.rpg-energy {
-  border-radius: 50% 0 50% 50%;
-  transform: rotate(-45deg);
-  font-size: 0;
-}
-
-.rpg-energy::after {
-  content: attr(data-mana);
-  font-size: 1.05rem;
-  transform: rotate(45deg);
-  display: block;
 }
 
 /* ======================= 9. Progression: levels, talents, relics, upgrades ======================= */
@@ -1739,26 +1719,6 @@ button.rpg-cardx.off {
   border-color: rgba(var(--rpg-red-rgb), 0.6);
 }
 
-.rpg-row-cost {
-  width: 1.2rem;
-  height: 1.2rem;
-  flex: none;
-  border-radius: 50% 0 50% 50%;
-  transform: rotate(-45deg);
-  background: radial-gradient(circle at 40% 40%, #e6f8ff, #5bbcf0 55%, #1f6a96);
-  display: grid;
-  place-items: center;
-  font-size: 0;
-}
-
-.rpg-row-cost::after {
-  content: attr(data-cost);
-  transform: rotate(45deg);
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: #10202a;
-}
-
 .rpg-row-name {
   flex: 1;
   min-width: 0;
@@ -1957,4 +1917,780 @@ button.rpg-cardx.off {
 
 .drop-hover.rpg-arena {
   outline-color: var(--mm-accent);
+}
+
+/* ======================= 11. The map, the rooms (scenes), the deck builder ======================= */
+
+/* The run: the stage (scene + hand) - the map beside it */
+.rpg-run-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 13.5rem;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.rpg-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.rpg-map-box {
+  position: sticky;
+  top: 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 0.6rem;
+  border-radius: 14px;
+  border: 1px solid var(--mm-border);
+  background: linear-gradient(180deg, rgba(245, 197, 66, 0.04), rgba(0, 0, 0, 0.25));
+}
+
+.rpg-map-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.rpg-map {
+  position: relative;
+  margin: 0 0.2rem;
+}
+
+.rpg-map-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.rpg-map-lines line {
+  stroke: rgba(255, 255, 255, 0.13);
+  stroke-width: 2;
+  stroke-dasharray: 4 5;
+}
+
+.rpg-map-lines line.walked {
+  stroke: var(--rpg-gold);
+  stroke-opacity: 0.75;
+  stroke-dasharray: none;
+  stroke-width: 3;
+}
+
+.rpg-map-lines line.open {
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-dasharray: 5 4;
+}
+
+.rpg-node {
+  position: absolute;
+  width: 2.3rem;
+  height: 2.3rem;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  background: #1d1d22;
+  color: var(--mm-text);
+  font: inherit;
+  padding: 0;
+  z-index: 1;
+}
+
+.rpg-node:disabled {
+  cursor: default;
+}
+
+.rpg-node-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.rpg-node.hidden .rpg-node-icon {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--mm-muted);
+}
+
+.rpg-node.sensed {
+  border-color: rgba(111, 167, 132, 0.55);
+}
+
+.rpg-node.kind-elite,
+.rpg-node.kind-boss {
+  width: 2.9rem;
+  height: 2.9rem;
+  border-color: rgba(var(--rpg-red-rgb), 0.6);
+  background: #2a1a1a;
+}
+
+.rpg-node.kind-elite .rpg-node-icon {
+  font-size: 1.35rem;
+}
+
+.rpg-node.visited {
+  background: #2b2614;
+  border-color: rgba(245, 197, 66, 0.55);
+  opacity: 0.8;
+}
+
+.rpg-node.here {
+  opacity: 1;
+  border-color: var(--rpg-gold);
+  box-shadow: 0 0 0 4px rgba(245, 197, 66, 0.2);
+}
+
+.rpg-node.choice {
+  cursor: pointer;
+  border-color: rgba(255, 255, 255, 0.75);
+  background: #2a2a31;
+  animation: rpg-node-pulse 1.6s ease-in-out infinite;
+}
+
+.rpg-node.choice:hover {
+  transform: translate(-50%, -50%) scale(1.15);
+  border-color: var(--rpg-gold);
+}
+
+.rpg-node.voted {
+  border-color: var(--rpg-gold);
+  background: #3a3018;
+  animation: none;
+  box-shadow: 0 0 0 4px rgba(245, 197, 66, 0.3);
+}
+
+@keyframes rpg-node-pulse {
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.08);
+  }
+}
+
+.rpg-node-votes {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translate(0.2rem, -50%);
+  display: flex;
+}
+
+.rpg-node-votes .mm-avatar {
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-left: -0.3rem;
+}
+
+.rpg-map-note {
+  text-align: center;
+  min-height: 1rem;
+}
+
+/* The room: a scene instead of the monsters - a picture, the story, the choices */
+.rpg-arena.in-room .rpg-monsters {
+  display: none;
+}
+
+.rpg-room-scene {
+  position: relative;
+  z-index: 2;
+}
+
+.rpg-scene {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 0.9rem 1.1rem;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 12px;
+  background: rgba(10, 10, 12, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.rpg-scene.kind-cleared {
+  grid-template-columns: 1fr;
+}
+
+.rpg-scene-art {
+  --art: 245, 197, 66;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 65%, rgba(var(--art), 0.35), rgba(var(--art), 0.05) 60%, transparent 75%), #121215;
+  border: 1px solid rgba(var(--art), 0.35);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+.rpg-scene-icon {
+  font-size: 3.4rem;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.6));
+}
+
+.kind-rest .rpg-scene-art {
+  --art: var(--rpg-fire);
+}
+
+.kind-shrine .rpg-scene-art,
+.kind-trap .rpg-scene-art {
+  --art: var(--rpg-red-rgb);
+}
+
+.kind-merchant .rpg-scene-art,
+.kind-chest .rpg-scene-art {
+  --art: 245, 197, 66;
+}
+
+.kind-event .rpg-scene-art {
+  --art: 167, 139, 250;
+}
+
+.enc-fountain .rpg-scene-art {
+  --art: var(--rpg-ice-rgb);
+}
+
+.rpg-scene-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.rpg-scene-body {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.rpg-scene-body.center {
+  align-items: center;
+  text-align: center;
+  padding: 1.25rem 0;
+}
+
+.rpg-scene-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.rpg-scene-story {
+  color: var(--mm-muted);
+  font-style: italic;
+}
+
+.rpg-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.rpg-option {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--mm-border);
+  background: var(--rpg-surface-hi);
+  color: var(--mm-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+.rpg-option b {
+  flex: none;
+  min-width: 6.5rem;
+  color: var(--rpg-gold);
+}
+
+.rpg-option span {
+  color: var(--mm-muted);
+  font-size: 0.85rem;
+}
+
+.rpg-option:hover:not(:disabled) {
+  border-color: var(--rpg-gold);
+  background: rgba(245, 197, 66, 0.08);
+  transform: translateX(3px);
+}
+
+.rpg-option:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.rpg-option.offer:disabled {
+  opacity: 1;
+}
+
+.rpg-option.chosen,
+.rpg-option.picking {
+  opacity: 1;
+  border-color: var(--rpg-gold);
+  background: rgba(245, 197, 66, 0.1);
+}
+
+.rpg-scene-done {
+  font-weight: 700;
+  color: var(--rpg-green);
+}
+
+.rpg-scene-party {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.rpg-chose {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem 0.15rem 0.15rem;
+  border-radius: 999px;
+  background: var(--rpg-surface-hi);
+  font-size: 0.8rem;
+  color: var(--mm-muted);
+}
+
+.rpg-chose.done {
+  color: var(--rpg-green);
+}
+
+.rpg-deck-pick {
+  justify-content: flex-start;
+  max-height: 22rem;
+  overflow-y: auto;
+  padding: 0.9rem 0.2rem 0.3rem;
+}
+
+/* The merchant */
+.rpg-shop-coins {
+  align-self: flex-start;
+  font-weight: 700;
+  color: var(--rpg-gold);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(245, 197, 66, 0.1);
+  font-size: 0.85rem;
+}
+
+.rpg-shop-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding-top: 0.6rem;
+}
+
+.rpg-shop-services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.rpg-price.dear {
+  color: var(--rpg-red);
+}
+
+/* The piles: buttons to look into them */
+.rpg-btn.rpg-pile {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.75rem;
+}
+
+.rpg-modal[data-act] {
+  cursor: pointer;
+}
+
+.rpg-modal[data-act] .rpg-modal-box {
+  cursor: default;
+}
+
+/* The deck tab: in short - the builder opens big */
+.rpg-deck-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.rpg-builder-open {
+  align-self: stretch;
+}
+
+.rpg-warn {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--rpg-red);
+}
+
+.rpg-ok {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--rpg-green);
+}
+
+/* The mana curve */
+.rpg-curve {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  height: 5.2rem;
+}
+
+.rpg-curve-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.rpg-curve-n {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+}
+
+.rpg-curve-bar {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.rpg-curve-fill {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #7fd3ff, #2f7fb0);
+  transition: height 0.25s;
+}
+
+/* The deck builder: the collection (filters, a grid) - the deck */
+.rpg-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rpg-builder-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.rpg-builder-title {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.rpg-builder-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 17rem;
+  gap: 1rem;
+  align-items: start;
+}
+
+.rpg-builder-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.rpg-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rpg-search {
+  width: 100%;
+  padding: 0.5rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid var(--mm-border);
+  background: var(--rpg-surface);
+  color: var(--mm-text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.rpg-search:focus {
+  outline: none;
+  border-color: var(--mm-accent);
+}
+
+.rpg-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  align-items: center;
+}
+
+.rpg-chip-group {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.rpg-btn.chip.cost-chip {
+  padding: 0.25rem 0.45rem;
+}
+
+.rpg-builder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.4rem, 1fr));
+  justify-items: center;
+  gap: 0.9rem 0.5rem;
+  padding: 0.9rem 0.6rem;
+  min-height: 12rem;
+  border-radius: 12px;
+  border: 1px dashed transparent;
+  background: rgba(0, 0, 0, 0.18);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.rpg-builder-grid .rpg-cardx {
+  user-select: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
+}
+
+.rpg-builder-grid .rpg-cardx.pickable {
+  cursor: grab;
+}
+
+.rpg-builder-grid .rpg-cardx.pickable:hover {
+  --card-glow: rgba(245, 197, 66, 0.3);
+  transform: translateY(-6px) scale(1.03);
+}
+
+.rpg-builder-grid .rpg-cardx.spent:not(.unowned) {
+  opacity: 0.55;
+}
+
+.rpg-copies {
+  position: absolute;
+  bottom: -0.45rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.2rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 999px;
+  background: #111114;
+  border: 1px solid var(--mm-border);
+}
+
+.rpg-copies i {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--mm-accent);
+}
+
+.rpg-copies i.used {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.rpg-copies i.none {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.rpg-builder-right {
+  position: sticky;
+  top: 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border-radius: 14px;
+  border: 1px solid var(--mm-border);
+  background: var(--rpg-surface);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.rpg-builder.dragging-in .rpg-builder-right,
+.rpg-builder.dragging-out .rpg-builder-grid {
+  border: 1px dashed rgba(245, 197, 66, 0.5);
+}
+
+.rpg-builder-right.drop-hover,
+.rpg-builder-grid.drop-hover {
+  background: rgba(245, 197, 66, 0.08);
+}
+
+.rpg-builder-deckhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rpg-builder-count {
+  font-weight: 800;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: var(--rpg-surface-hi);
+}
+
+.rpg-builder-count.ok {
+  color: var(--rpg-green);
+}
+
+.rpg-builder-count.full {
+  color: var(--rpg-gold);
+}
+
+.rpg-builder-count.bad {
+  color: var(--rpg-red);
+}
+
+.rpg-deck-list.col {
+  grid-template-columns: 1fr;
+  max-height: 26rem;
+  overflow-y: auto;
+}
+
+.rpg-deck-list.col .rpg-deck-row {
+  cursor: grab;
+}
+
+.rpg-deck-row.eternal {
+  background: linear-gradient(90deg, rgba(245, 197, 66, 0.12), var(--rpg-surface));
+}
+
+.rpg-builder-note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.rpg-builder-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 991px) {
+  .rpg-run-body,
+  .rpg-builder-body {
+    grid-template-columns: 1fr;
+  }
+
+  .rpg-map-box,
+  .rpg-builder-right {
+    position: static;
+  }
+
+  .rpg-map {
+    max-width: 18rem;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+
+@media (max-width: 575px) {
+  .rpg-scene {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+  }
+
+  .rpg-scene-icon {
+    font-size: 2.2rem;
+  }
+
+  .rpg-option {
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .rpg-builder-grid {
+    grid-template-columns: repeat(auto-fill, minmax(6.6rem, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rpg-node.choice {
+    animation: none;
+  }
+}
+
+/* ======================= 12. Mana: a drop of water ======================= */
+
+/* The cost on a card, the mana of the turn, a row of the deck: one picture - the number in its belly */
+.rpg-main {
+  --rpg-drop: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 124'><defs><radialGradient id='g' cx='40%' cy='66%' r='70%'><stop offset='0' stop-color='%23c4f0ff'/><stop offset='0.4' stop-color='%2346b0ee'/><stop offset='0.85' stop-color='%23135a9c'/><stop offset='1' stop-color='%230b3566'/></radialGradient><linearGradient id='r' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23f2fdff'/><stop offset='1' stop-color='%230e4a85'/></linearGradient></defs><path d='M50 5 C62 30 91 52 91 80 A41 41 0 0 1 9 80 C9 52 38 30 50 5Z' fill='url(%23g)' stroke='url(%23r)' stroke-width='5' stroke-linejoin='round'/><path d='M44 24 C38 38 22 54 21 74' fill='none' stroke='white' stroke-opacity='0.55' stroke-width='6' stroke-linecap='round'/><ellipse cx='68' cy='98' rx='6' ry='4' fill='white' fill-opacity='0.3' transform='rotate(-30 68 98)'/></svg>");
+}
+
+.rpg-cardx-cost,
+.rpg-energy,
+.rpg-row-cost {
+  flex: none;
+  border: 0;
+  border-radius: 0;
+  transform: none;
+  font-size: 0;
+  background: var(--rpg-drop) center / contain no-repeat;
+  box-shadow: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
+  display: grid;
+  place-items: center;
+}
+
+.rpg-cardx-cost::after,
+.rpg-energy::after,
+.rpg-row-cost::after {
+  content: attr(data-cost);
+  transform: none;
+  display: block;
+  padding-top: 32%;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(6, 30, 60, 0.9), 0 0 6px rgba(6, 30, 60, 0.6);
+}
+
+.rpg-cardx-cost {
+  top: -0.85rem;
+  left: -0.5rem;
+  width: 1.75rem;
+  height: 2.15rem;
+}
+
+.rpg-cardx-cost::after {
+  font-size: 0.9rem;
+}
+
+.rpg-row-cost {
+  width: 1.2rem;
+  height: 1.5rem;
+}
+
+.rpg-row-cost::after {
+  font-size: 0.68rem;
+}
+
+.rpg-energy {
+  width: 3.6rem;
+  height: 4.45rem;
+  filter: drop-shadow(0 0 10px rgba(91, 188, 240, 0.45)) drop-shadow(0 3px 4px rgba(0, 0, 0, 0.5));
+}
+
+.rpg-energy::after {
+  content: attr(data-mana);
+  font-size: 1.1rem;
+}
+
+/* No mana left: the drop runs dry */
+.rpg-energy.empty {
+  filter: grayscale(0.85) brightness(0.7) drop-shadow(0 3px 4px rgba(0, 0, 0, 0.5));
 }

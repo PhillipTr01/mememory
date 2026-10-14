@@ -11,7 +11,11 @@ var partyAt = 0; // when it came (its timeLeft counts from then)
 var target = null; // the monster I aim at
 var aiming = null; // a card of my hand waiting for its target: {uid, target: "foe" | "ally" | "fallen"}
 var tab = "hero"; // the tab of the hero card
-var smithing = false; // at a camp fire: picking the card to upgrade
+var picking = null; // in a room: the choice waiting for a card of the deck ("smith", "purge", "remove")
+var building = false; // the deck builder open (instead of the home)
+var filters = { type: "all", cost: "all", rarity: "all", owned: false }; // the deck builder's
+var search = "";
+var lastRoom = 0;
 var FLOOR_KEY = "rpgFloor";
 var SIZE_KEY = "rpgSize";
 var floor = 1;
@@ -27,7 +31,6 @@ var EFFECT_ICONS = { poison: "☠️", burn: "🔥", stun: "💫", chill: "❄�
 var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned - loses its next move", chill: "Chilled - half damage", rage: "Raging - more damage", might: "Might - 30% more damage" };
 var RARITY_NAMES = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary" };
 var SLOT_NAMES = { weapon: "Weapon", armor: "Armor", charm: "Charm" };
-var ROMAN = ["I", "II", "III", "IV"];
 
 // Used by chat.js
 function chatUsername() {
@@ -138,6 +141,10 @@ socket.on("rpgParty", (data) => {
   // (the card aimed with is gone - played, the turn over)
   var me = run && run.heroes.find((h) => h.name == myName);
   if (aiming && !(me && run.phase == "fight" && me.hand.some((c) => c.uid == aiming.uid))) aiming = null;
+  // (another room: nothing to pick there)
+  var room = run ? run.rooms.length : 0;
+  if (room != lastRoom) picking = null;
+  lastRoom = room;
   render();
 });
 
@@ -147,11 +154,14 @@ function render() {
   if (!rules || !hero) return;
   var home = party == null;
   var lobby = party != null && !party.started;
-  document.getElementById("rpgHome").hidden = !home;
+  if (!home || !hero.cls) building = false;
+  document.getElementById("rpgHome").hidden = !home || building;
+  document.getElementById("rpgBuilder").hidden = !building;
   document.getElementById("rpgLobby").hidden = !lobby;
   document.getElementById("rpgRun").hidden = home || lobby;
   if (home || lobby) document.getElementById("rpgModal").hidden = true;
-  if (home) {
+  if (home && building) renderBuilder();
+  else if (home) {
     renderHero();
     renderDoor();
   } else if (lobby) renderLobby();
@@ -307,39 +317,186 @@ function renderHero() {
   pack.innerText = "🎴 Booster pack · 🪙 " + formatCoins(rules.packPrice);
   pack.title = rules.packSize + " cards of your class - the last one rare or better; a card you own all copies of is sold";
   pack.disabled = !picked || myCoins < rules.packPrice;
+  morphChildren(document.getElementById("rpgDeckSummary"), picked ? deckSummary(hero.deck) : []);
+}
+
+// The deck in short: the mana curve, attacks and skills - too few cards: a warning
+function deckSummary(deck) {
+  var attacks = deck.filter((id) => cardOf(id).type == "attack").length;
+  var nodes = [curve(deck), el("div", "mm-muted small", attacks + " attacks · " + (deck.length - attacks) + " skills")];
+  if (deck.length < rules.deckMin) nodes.push(el("div", "rpg-warn", "⚠️ At least " + rules.deckMin + " cards to go down - " + (rules.deckMin - deck.length) + " more"));
+  return nodes;
+}
+
+// The mana curve of a deck: how many cards cost 0, 1, 2, 3+
+function curve(deck) {
+  var counts = [0, 0, 0, 0];
+  deck.forEach((id) => counts[Math.min(3, cardOf(id).cost)]++);
+  var most = Math.max(1, ...counts);
+  var box = el("div", "rpg-curve");
+  counts.forEach((n, cost) => {
+    var col = el("div", "rpg-curve-col");
+    col.title = n + " card" + (n == 1 ? "" : "s") + " costing " + (cost == 3 ? "3 or more" : cost);
+    var barBox = el("div", "rpg-curve-bar");
+    var fill = el("div", "rpg-curve-fill");
+    fill.style.height = (n / most) * 100 + "%";
+    barBox.appendChild(fill);
+    var drop = el("span", "rpg-row-cost");
+    drop.dataset.cost = cost == 3 ? "3+" : String(cost);
+    col.append(el("span", "rpg-curve-n", String(n)), barBox, drop);
+    box.appendChild(col);
+  });
+  return box;
+}
+
+/* ---------- The deck builder ---------- */
+
+// The starter deck of my class: 4 strikes, 4 defends, the two signature cards
+function starterDeck() {
+  return ["strike", "strike", "strike", "strike", "defend", "defend", "defend", "defend"].concat(rules.classes[hero.cls].signature);
+}
+
+document.getElementById("rpgSearch").addEventListener("input", (event) => {
+  search = event.target.value;
+  render();
+});
+
+// Drag & drop in the builder: a card of the collection onto the deck - a row of the deck onto the collection
+document.addEventListener("dragstart", (event) => {
+  var node = event.target.closest && event.target.closest("[data-drag]");
+  if (!node) return;
+  event.dataTransfer.setData("text/plain", node.dataset.drag);
+  event.dataTransfer.effectAllowed = "move";
+  document.getElementById("rpgBuilder").classList.add(node.dataset.drag.startsWith("in:") ? "dragging-in" : "dragging-out");
+});
+document.addEventListener("dragend", () => {
+  document.getElementById("rpgBuilder").classList.remove("dragging-in", "dragging-out");
+  document.querySelectorAll(".drop-hover").forEach((n) => n.classList.remove("drop-hover"));
+});
+[
+  ["rpgBuilderDrop", "in:", "deckAdd"],
+  ["rpgBuilderGrid", "out:", "deckRemove"],
+].forEach(([zoneId, prefix, act]) => {
+  var zone = document.getElementById(zoneId);
+  zone.addEventListener("dragover", (event) => {
+    if (!document.getElementById("rpgBuilder").classList.contains(prefix == "in:" ? "dragging-in" : "dragging-out")) return;
+    event.preventDefault();
+    zone.classList.add("drop-hover");
+  });
+  zone.addEventListener("dragleave", (event) => {
+    if (!zone.contains(event.relatedTarget)) zone.classList.remove("drop-hover");
+  });
+  zone.addEventListener("drop", (event) => {
+    event.preventDefault();
+    zone.classList.remove("drop-hover");
+    var data = event.dataTransfer.getData("text/plain");
+    if (data.startsWith(prefix)) socket.emit(act, { id: data.slice(prefix.length) });
+  });
+});
+
+var FILTERS = [
+  ["type", [["all", "All"], ["attack", "Attacks"], ["skill", "Skills"]]],
+  ["cost", [["all", "Any cost"], ["0", "0"], ["1", "1"], ["2", "2"], ["3", "3+"]]],
+  ["rarity", [["all", "Any rarity"], ["basic", "Basic"], ["common", "Common"], ["rare", "Rare"], ["epic", "Epic"], ["eternal", "Eternal"]]],
+];
+var RARITY_ORDER = ["basic", "common", "rare", "epic", "eternal"];
+var byCost = (a, b) => cardOf(a).cost - cardOf(b).cost || RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.indexOf(cardOf(b).rarity) || cardOf(a).name.localeCompare(cardOf(b).name);
+
+function renderBuilder() {
+  var cls = rules.classes[hero.cls];
+  document.getElementById("rpgBuilderTitle").innerText = "🃏 Deck builder · " + cls.icon + " " + cls.name;
+  var pack = document.getElementById("rpgBuilderPack");
+  pack.innerText = "🎴 Booster pack · 🪙 " + formatCoins(rules.packPrice);
+  pack.title = rules.packSize + " cards of your class - the last one rare or better; a card you own all copies of is sold";
+  pack.disabled = myCoins < rules.packPrice;
+  var deck = hero.deck;
   var counts = {};
-  (hero.deck || []).forEach((id) => (counts[id] = (counts[id] || 0) + 1));
-  var order = (hero.pool || []).filter((id) => counts[id]);
+  deck.forEach((id) => (counts[id] = (counts[id] || 0) + 1));
+  var short = deck.length < rules.deckMin;
+  var count = document.getElementById("rpgBuilderCount");
+  count.innerText = deck.length + " / " + hero.deckMax;
+  count.className = "rpg-builder-count" + (short ? " bad" : deck.length >= hero.deckMax ? " full" : " ok");
+  count.title = "At least " + rules.deckMin + ", at most " + hero.deckMax + " cards (more room with hero levels)";
+
+  // The filters
+  var chips = [];
+  FILTERS.forEach(([key, options]) => {
+    var group = el("div", "rpg-chip-group");
+    options.forEach(([value, label]) => {
+      var chip = button(label, "filter", { id: key + ":" + value, className: "chip" + (filters[key] == value ? " active" : "") });
+      if (key == "cost" && value != "all") {
+        chip.innerText = "";
+        chip.classList.add("cost-chip");
+        var drop = el("span", "rpg-row-cost");
+        drop.dataset.cost = label;
+        chip.appendChild(drop);
+        chip.title = "Costs " + label;
+      }
+      group.appendChild(chip);
+    });
+    chips.push(group);
+  });
+  chips.push(button((filters.owned ? "☑" : "☐") + " Owned only", "filter", { id: "owned:toggle", className: "chip" + (filters.owned ? " active" : "") }));
+  morphChildren(document.getElementById("rpgFilterChips"), chips);
+
+  // The collection: every card of the class - owned (spare copies: into the deck) or locked
+  var text = search.trim().toLowerCase();
+  var shown = hero.pool
+    .filter((id) => {
+      var card = cardOf(id);
+      if (filters.type != "all" && card.type != filters.type) return false;
+      if (filters.cost != "all" && Math.min(3, card.cost) != Number(filters.cost)) return false;
+      if (filters.rarity != "all" && card.rarity != filters.rarity) return false;
+      if (filters.owned && !hero.collection[id]) return false;
+      return !text || (card.name + " " + card.text).toLowerCase().includes(text);
+    })
+    .sort(byCost);
   morphChildren(
-    document.getElementById("rpgDeckList"),
-    picked
-      ? order.map((id) => {
-          var card = cardOf(id);
-          var row = el("button", "rpg-deck-row rarity-" + card.rarity);
-          row.type = "button";
-          row.dataset.act = "deckRemove";
-          row.dataset.id = id;
-          row.title = card.text + " - click: out of the deck";
-          var cost = el("span", "rpg-row-cost");
-          cost.dataset.cost = String(card.cost);
-          row.append(cost, el("span", "rpg-row-icon", card.icon), el("span", "rpg-row-name", card.name), el("span", "rpg-row-count", "×" + counts[id]));
-          return row;
-        })
-      : [],
-  );
-  morphChildren(
-    document.getElementById("rpgCollection"),
-    picked
-      ? hero.pool.map((id) => {
+    document.getElementById("rpgBuilderGrid"),
+    shown.length
+      ? shown.map((id) => {
           var owned = hero.collection[id] || 0;
           var spare = owned - (counts[id] || 0);
-          var node = cardEl(id, { tag: "button", act: spare > 0 ? "deckAdd" : "", className: "small" + (owned ? "" : " unowned") + (spare > 0 ? " pickable" : " off") });
-          node.appendChild(el("span", "rpg-cardx-count", owned ? spare + " / " + owned : "🔒"));
-          node.title = owned ? (spare > 0 ? "Click: into the deck" : "All your copies are in the deck") : "Not owned yet - booster packs, rewards, the merchant";
+          var full = deck.length >= hero.deckMax;
+          var node = cardEl(id, { act: spare > 0 && !full ? "deckAdd" : "", className: (owned ? "" : "unowned") + (spare > 0 && !full ? " pickable" : " spent") });
+          if (spare > 0) node.dataset.drag = "in:" + id;
+          node.draggable = spare > 0;
+          var pips = el("span", "rpg-copies");
+          for (var i = 0; i < Math.max(owned, 1); i++) pips.appendChild(el("i", i < (counts[id] || 0) ? "used" : i < owned ? "" : "none"));
+          node.appendChild(pips);
+          node.appendChild(el("span", "rpg-cardx-count", owned ? (counts[id] || 0) + " / " + owned : "🔒"));
+          node.title = !owned ? "Not owned yet - booster packs, rewards in the dungeon, the merchant" : spare <= 0 ? "All your copies are in the deck" : full ? "Your deck is full" : "Click or drag: into the deck";
           return node;
         })
-      : [],
+      : [el("div", "rpg-empty mm-muted", "No card fits the filters.")],
   );
+
+  // The deck: Hearthstone rows (cheapest first) - a click takes one out
+  morphChildren(document.getElementById("rpgBuilderCurve"), [curve(deck)]);
+  var order = Object.keys(counts).sort(byCost);
+  morphChildren(
+    document.getElementById("rpgBuilderList"),
+    order.length
+      ? order.map((id) => {
+          var card = cardOf(id);
+          var row = el("div", "rpg-deck-row rarity-" + card.rarity + (card.eternal ? " eternal" : ""));
+          row.dataset.act = "deckRemove";
+          row.dataset.id = id;
+          row.dataset.drag = "out:" + id;
+          row.draggable = true;
+          row.title = card.text + " - click or drag: out of the deck";
+          var cost = el("span", "rpg-row-cost");
+          cost.dataset.cost = String(card.cost);
+          row.append(cost, el("span", "rpg-row-icon", card.icon), el("span", "rpg-row-name", card.name), el("span", "rpg-row-count", counts[id] > 1 ? "×" + counts[id] : card.eternal ? "★" : ""));
+          return row;
+        })
+      : [el("div", "rpg-empty mm-muted", "Empty - click or drag cards in.")],
+  );
+  var attacks = deck.filter((id) => cardOf(id).type == "attack").length;
+  morphChildren(document.getElementById("rpgBuilderNote"), [
+    el("div", "mm-muted small", attacks + " attacks · " + (deck.length - attacks) + " skills"),
+    short ? el("div", "rpg-warn", "⚠️ At least " + rules.deckMin + " cards to go down - " + (rules.deckMin - deck.length) + " more") : el("div", "rpg-ok", "✓ Ready for the dungeon"),
+  ]);
 }
 
 function renderDoor() {
@@ -422,18 +579,9 @@ function renderRun() {
   document.getElementById("rpgRunFloor").innerText = "Floor " + run.floor;
   document.getElementById("rpgPot").innerText = "🪙 " + formatCoins(run.pot) + " each";
 
-  // The rooms of the floor: the ones gone through, the rest dark - the last the guarded gate
-  var track = [];
-  for (var i = 0; i < rules.rooms; i++) {
-    var room = run.rooms[i];
-    var last = i == rules.rooms - 1;
-    var kind = room ? room.kind : last ? "elite" : null;
-    var dot = el("span", "rpg-room" + (room && room.done ? " done" : "") + (room && !room.done ? " now" : "") + (!room ? " dark" : ""), kind ? rules.roomKinds[kind].icon : "");
-    dot.title = "Room " + (i + 1) + ": " + (kind ? rules.roomKinds[kind].name : "behind a door");
-    track.push(dot);
-  }
-  morphChildren(document.getElementById("rpgTrack"), track);
-
+  var current = run.rooms[run.rooms.length - 1];
+  document.getElementById("rpgRunRoom").innerText = current ? "Room " + run.rooms.length + " / " + rules.rooms + " · " + rules.roomKinds[current.kind].icon + " " + rules.roomKinds[current.kind].name : "";
+  renderMap(run);
   var fighting = run.phase == "fight";
   var arena = document.querySelector(".rpg-arena");
   arena.classList.toggle("aiming-foe", !!aiming && aiming.target == "foe");
@@ -455,9 +603,16 @@ function renderRun() {
       if (m.affix) card.appendChild(el("div", "rpg-affix", rules.affixes[m.affix].icon + " " + rules.affixes[m.affix].text));
       return card;
     });
-  } else if (run.phase == "between") scene = doorCards(run);
+  } else if (run.phase == "between") scene = [];
   else scene = [el("div", "rpg-quiet", sceneText(run))];
   morphChildren(document.getElementById("rpgMonsters"), scene);
+  // Between the rooms: the room the party is in (a camp fire, a merchant, an encounter ...) - its choices
+  var roomBox = document.getElementById("rpgRoom");
+  var inRoom = run.phase == "between" && !party.result;
+  roomBox.hidden = !inRoom;
+  arena.classList.toggle("in-room", inRoom);
+  arena.dataset.room = inRoom && run.event ? run.event.kind : "";
+  morphChildren(roomBox, inRoom ? roomScene(run, me) : []);
 
   var heroes = run.heroes.map((h) => {
     var cls = rules.classes[h.cls] || { icon: "" };
@@ -483,6 +638,7 @@ function renderRun() {
   morphChildren(document.getElementById("rpgHeroes"), heroes);
 
   morphChildren(document.getElementById("rpgHandBar"), handBar(run, me));
+  fitHand();
 
   if (me) {
     document.getElementById("rpgRunDeckCount").innerText = me.deck.length + " cards";
@@ -506,17 +662,14 @@ function renderRun() {
   log.scrollTop = log.scrollHeight;
 }
 
-// Between the rooms one popup at a time: the relic of a hard fight, the card won, what happened in the room -
-// each skipped or closed: the next one
-var closed = {}; // the popups closed on this page (the info of a room)
+// After a fight one popup at a time: the relic of a hard fight, then the card won - each skipped: the next one
+// (the other rooms are rooms of their own: the scene)
 function renderModal(run, me) {
   var modal = document.getElementById("rpgModal");
   var nodes = null;
   if (run.phase == "between" && me && !party.result) {
-    var key = run.rooms.length;
     if (me.relicChoice) nodes = relicPanel(me);
     else if (me.reward) nodes = rewardPanel(me);
-    else if (run.event && !closed["event:" + key]) nodes = eventPanel(run, me).concat([button(run.event.camp && run.event.camp[myName] === null ? "Decide later" : "Continue", "closeModal", { id: "event:" + key, className: "small" })]);
   }
   modal.hidden = !nodes;
   if (nodes) morphChildren(document.getElementById("rpgModalBox"), nodes);
@@ -600,53 +753,220 @@ function rewardPanel(me) {
   return [el("div", "rpg-reward-title", "Victory - pick a card for your deck"), el("div", "rpg-reward-note mm-muted small", "It goes into your deck for the rest of this run - you may draw it in the next fights."), cards, button("Skip", "pick", { id: "", className: "small" })];
 }
 
-// What happened in the last room (a chest, a camp fire, a shrine, a trap) - the merchant: what he sells
-function eventPanel(run, me) {
-  var kind = rules.roomKinds[run.event.kind];
-  var nodes = [el("div", "rpg-reward-title", kind.icon + " " + kind.name)];
-  var lines = el("ul", "rpg-event-lines");
-  run.event.lines.forEach((line) => lines.appendChild(el("li", "", line)));
-  nodes.push(lines);
-  // The camp fire: rest or smith (a card of the deck upgraded)
-  var camp = run.event.camp && me && myName in run.event.camp ? run.event.camp[myName] : undefined;
-  if (camp === null) {
-    var choice = el("div", "rpg-camp");
-    choice.append(button("🔥 Rest · +35% HP, +1 mana", "camp", { id: "rest", className: "primary" }), button(smithing ? "Cancel" : "⚒️ Smith a card", "smithMode", { className: smithing ? "voted" : "" }));
-    nodes.push(choice);
-    if (smithing) {
-      var deck = el("div", "rpg-reward-cards");
-      me.deck.forEach((id, i) => {
-        if (/\+$/.test(id)) return;
-        deck.appendChild(cardEl(id, { tag: "button", act: "smith", id: String(i), className: "small pickable" }));
-      });
-      nodes.push(el("div", "rpg-reward-note mm-muted small", "Pick the card to upgrade (40% stronger, for this run)"), deck);
-    }
+// The rooms that aren't fights: a picture, a story, the choices - what happened
+var ROOM_STORY = {
+  chest: "A heavy chest in the middle of the room, its lock rusted through. Every hero may open it.",
+  trap: "Thin wires across the floor, small holes in the walls. A trap - and the only way on is through it.",
+  rest: "A quiet corner and a crackling fire. Time to catch your breath - or to work on your cards.",
+  shrine: "An old shrine, dark with dried blood. It whispers of power - for a price.",
+  merchant: 'A hooded merchant opens a heavy pack. "Coins first, friend. Your own - not the pot."',
+};
+
+function roomScene(run, me) {
+  var ev = run.event;
+  if (!ev) {
+    var done = el("div", "rpg-scene kind-cleared");
+    var plain = el("div", "rpg-scene-body center");
+    plain.append(el("div", "rpg-scene-title", "⚔️ The room is cleared"), el("div", "rpg-scene-story", "The way on lies open. Pick the next room on the map 🗺️" + (run.heroes.length > 1 ? " - the party votes." : ".")));
+    done.appendChild(plain);
+    return [done];
   }
-  var offer = run.event.offers && me && run.event.offers[myName];
-  if (offer) {
-    var prices = run.event.prices;
-    var wares = el("div", "rpg-reward-cards");
-    offer.cards.forEach((id) => {
-      var sold = offer.bought.includes(id);
-      var card = cardEl(id, { tag: "button", act: sold ? "" : "buy", className: "pickable" + (sold ? " off" : "") });
-      card.appendChild(el("span", "rpg-price", sold ? "Sold ✓" : "🪙 " + formatCoins(prices.card)));
-      wares.appendChild(card);
+  var kind = rules.roomKinds[ev.kind];
+  var enc = ev.encounter;
+  var scene = el("div", "rpg-scene kind-" + ev.kind + (enc ? " enc-" + ev.id : ""));
+  var art = el("div", "rpg-scene-art");
+  art.appendChild(el("span", "rpg-scene-icon", enc ? enc.icon : kind.icon));
+  var head = el("div", "rpg-scene-head");
+  head.append(el("div", "rpg-scene-title", enc ? enc.name : kind.name), el("div", "rpg-scene-story", enc ? enc.story : ROOM_STORY[ev.kind] || kind.about));
+  var body = el("div", "rpg-scene-body");
+  if (ev.kind == "merchant") body.append(...shopNodes(run, me));
+  else if (me && ev.choices && myName in ev.choices) body.append(...choiceNodes(run, me));
+  if (ev.lines.length) {
+    var lines = el("ul", "rpg-event-lines");
+    ev.lines.forEach((line) => lines.appendChild(el("li", "", line)));
+    body.appendChild(lines);
+  }
+  // Who has chosen
+  if (ev.choices && run.heroes.length > 1) {
+    var who = el("div", "rpg-scene-party");
+    Object.keys(ev.choices).forEach((name) => {
+      var chip = el("span", "rpg-chose" + (ev.choices[name] ? " done" : ""));
+      chip.append(createAvatar(name, "sm"), el("span", "", ev.choices[name] ? "✓" : "…"));
+      chip.title = name + (ev.choices[name] ? " has chosen" : " is choosing");
+      who.appendChild(chip);
     });
-    if (offer.relic) {
-      var relic = rules.relics[offer.relic];
-      var sold = offer.bought.includes(offer.relic);
-      var tile = el("button", "rpg-relic-tile" + (sold ? " off" : ""));
-      tile.type = "button";
-      if (!sold) {
-        tile.dataset.act = "buy";
-        tile.dataset.id = offer.relic;
-      }
-      tile.append(el("span", "rpg-relic-icon", relic.icon), el("b", "", relic.name), el("span", "mm-muted small", relic.text), el("span", "rpg-price", sold ? "Sold ✓" : "🪙 " + formatCoins(prices.relic)));
-      wares.appendChild(tile);
-    }
-    nodes.push(wares, button("🧪 A potion · 🪙 " + formatCoins(prices.potion) + " (" + me.potions + "/" + rules.potionsMax + ")", "buy", { id: "potion", className: "small", disabled: me.potions >= rules.potionsMax || myCoins < prices.potion }));
+    body.appendChild(who);
   }
+  scene.append(art, head, body);
+  return [scene];
+}
+
+// The choices of a room: big buttons - one of them (a card to pick: of the deck, or of the cards offered)
+function choiceNodes(run, me) {
+  var ev = run.event;
+  var chosen = ev.choices[myName];
+  var nodes = [];
+  var row = el("div", "rpg-options");
+  ev.options.forEach((o) => {
+    var text = o.text;
+    if (o.id == "disarm" && ev.disarm) text += " (🍀 " + ev.disarm[myName] + "%)";
+    var b = el("button", "rpg-option" + (chosen == o.id ? " chosen" : "") + (picking == o.id ? " picking" : "") + (o.card == "offer" ? " offer" : ""));
+    b.type = "button";
+    if (chosen || o.card == "offer") b.disabled = true;
+    else {
+      b.dataset.act = o.card ? "pickMode" : "choose";
+      b.dataset.id = o.id;
+    }
+    b.append(el("b", "", o.label + (o.card == "offer" && !chosen ? " ↓" : "")), el("span", "", text));
+    row.appendChild(b);
+  });
+  nodes.push(row);
+  if (chosen) {
+    nodes.push(el("div", "rpg-scene-done", "✓ Done here - pick the next room on the map 🗺️"));
+    return nodes;
+  }
+  // The library: the cards to study, right there
+  var offer = ev.options.find((o) => o.card == "offer");
+  if (offer && ev.offers && ev.offers[myName]) {
+    var cards = el("div", "rpg-reward-cards");
+    ev.offers[myName].forEach((id) => cards.appendChild(cardEl(id, { tag: "button", act: "chooseCard", id: offer.id + ":" + id, className: "pickable" })));
+    nodes.push(el("div", "rpg-label", offer.label + " - pick one"), cards);
+  }
+  if (picking && ev.options.some((o) => o.id == picking)) nodes.push(...deckPicker(me, picking == "smith" ? "Pick the card to upgrade (40% stronger, for this run)" : "Pick the card to give away", picking));
   return nodes;
+}
+
+// The deck of this run to pick a card from (smith, give away, remove)
+function deckPicker(me, text, option) {
+  var deck = el("div", "rpg-reward-cards rpg-deck-pick");
+  me.deck.forEach((id, i) => {
+    var off = option == "smith" && /\+$/.test(id);
+    deck.appendChild(cardEl(id, { tag: "button", act: off ? "" : "chooseCard", id: option + ":" + i, className: "small" + (off ? " off" : " pickable") }));
+  });
+  return [el("div", "rpg-label", text), deck];
+}
+
+// The merchant: cards, relics, a potion, a card taken out of the deck - with the own coins
+function shopNodes(run, me) {
+  var offer = me && run.event.offers && run.event.offers[myName];
+  if (!offer) return [];
+  var price = (id) => offer.prices[id];
+  var tag = (id, sold) => el("span", "rpg-price" + (!sold && price(id) > myCoins ? " dear" : ""), sold ? "Sold ✓" : "🪙 " + formatCoins(price(id)));
+  var cards = el("div", "rpg-shop-row");
+  offer.cards.forEach((id) => {
+    var sold = offer.bought.includes(id);
+    var card = cardEl(id, { tag: "button", act: sold ? "" : "buy", className: "pickable" + (sold ? " off" : "") });
+    card.appendChild(tag(id, sold));
+    cards.appendChild(card);
+  });
+  var relics = el("div", "rpg-shop-row");
+  offer.relics.forEach((id) => {
+    var relic = rules.relics[id];
+    var sold = offer.bought.includes(id);
+    var tile = el("button", "rpg-relic-tile" + (sold ? " off" : ""));
+    tile.type = "button";
+    if (!sold) {
+      tile.dataset.act = "buy";
+      tile.dataset.id = id;
+    }
+    tile.append(el("span", "rpg-relic-icon", relic.icon), el("b", "", relic.name), el("span", "mm-muted small", relic.text), tag(id, sold));
+    relics.appendChild(tile);
+  });
+  var services = el("div", "rpg-shop-services");
+  services.append(
+    button("🧪 Potion · 🪙 " + formatCoins(price("potion")) + " (" + me.potions + "/" + rules.potionsMax + ")", "buy", { id: "potion", disabled: me.potions >= rules.potionsMax || myCoins < price("potion") }),
+    button(offer.removed ? "🗑️ Card removed ✓" : "🗑️ Remove a card · 🪙 " + formatCoins(price("remove")), "pickMode", { id: "remove", className: picking == "remove" ? "voted" : "", disabled: offer.removed || myCoins < price("remove") || me.deck.length <= rules.deckLeast, title: "The merchant takes a card out of your deck for this run" }),
+  );
+  var nodes = [el("div", "rpg-shop-coins", "Your coins: 🪙 " + formatCoins(myCoins)), el("div", "rpg-label", "Cards"), cards, el("div", "rpg-label", "Relics"), relics, el("div", "rpg-label", "Services"), services];
+  if (picking == "remove" && !offer.removed) nodes.push(...deckPicker(me, "Pick the card he takes out of your deck", "remove"));
+  return nodes;
+}
+
+// The map of the floor (like Slay the Spire): rows from the bottom up - the rooms gone through, the ones to pick
+// next (a vote), what is hidden ("?" - unless the party sensed it)
+var MAP_ROW = 62;
+function renderMap(run) {
+  var rows = run.map;
+  var lanes = rules.lanes;
+  var height = rows.length * MAP_ROW;
+  var x = (col) => ((col + 0.5) / lanes) * 100;
+  var y = (r) => height - (r + 0.5) * MAP_ROW;
+  var between = run.phase == "between" && !party.result;
+  var doorOf = (r, i) => run.doors.findIndex((d) => d.row == r && d.index == i);
+  var svgNs = "http://www.w3.org/2000/svg";
+  var svg = document.createElementNS(svgNs, "svg");
+  svg.setAttribute("class", "rpg-map-lines");
+  svg.setAttribute("viewBox", "0 0 100 " + height);
+  svg.setAttribute("preserveAspectRatio", "none");
+  var nodes = [svg];
+  rows.forEach((row, r) => {
+    row.forEach((node, i) => {
+      node.next.forEach((n) => {
+        var to = rows[r + 1][n];
+        var line = document.createElementNS(svgNs, "line");
+        var here = run.at && run.at.row == r && run.at.index == i;
+        line.setAttribute("class", node.visited && to.visited ? "walked" : here && between ? "open" : "");
+        line.setAttribute("x1", x(node.col));
+        line.setAttribute("y1", y(r));
+        line.setAttribute("x2", x(to.col));
+        line.setAttribute("y2", y(r + 1));
+        line.setAttribute("vector-effect", "non-scaling-stroke");
+        svg.appendChild(line);
+      });
+    });
+  });
+  rows.forEach((row, r) => {
+    row.forEach((node, i) => {
+      var door = between ? doorOf(r, i) : -1;
+      var here = run.at && run.at.row == r && run.at.index == i;
+      var kind = node.kind ? rules.roomKinds[node.kind] : null;
+      var mine = door >= 0 && run.votes[myName] === door;
+      var b = el("button", "rpg-node" + (kind ? " kind-" + node.kind : " hidden") + (node.visited ? " visited" : "") + (here ? " here" : "") + (door >= 0 ? " choice" : "") + (mine ? " voted" : "") + (node.sensed && !node.visited ? " sensed" : ""));
+      b.type = "button";
+      b.style.left = x(node.col) + "%";
+      b.style.top = y(r) + "px";
+      b.appendChild(el("span", "rpg-node-icon", kind ? kind.icon : "?"));
+      if (door >= 0) {
+        b.dataset.act = "vote";
+        b.dataset.id = door;
+      } else b.disabled = true;
+      b.title = (kind ? kind.name + " - " + kind.about : "Hidden - nobody senses what is in there") + (node.sensed && !node.visited ? " (sensed 🍀)" : "") + (door >= 0 ? " · click: go there" : "");
+      var voters = door >= 0 ? Object.keys(run.votes).filter((name) => run.votes[name] === door) : [];
+      if (voters.length) {
+        var faces = el("span", "rpg-node-votes");
+        voters.forEach((name) => faces.appendChild(createAvatar(name, "sm")));
+        b.appendChild(faces);
+      }
+      nodes.push(b);
+    });
+  });
+  var box = document.getElementById("rpgMap");
+  box.style.height = height + "px";
+  morphChildren(box, nodes);
+  var sense = document.getElementById("rpgMapSense");
+  sense.innerText = "🍀 " + run.sense + "% sensed";
+  sense.title = "How often your party senses what a hidden room is: 20% + 1.5x the best luck";
+  var count = Object.keys(run.votes).length;
+  document.getElementById("rpgMapNote").innerText = party.result ? "" : between ? (run.heroes.length > 1 ? "Vote for the next room · " + count + " / " + run.heroes.length + " voted" : "Click one of the lit rooms") : run.phase == "fight" ? "Win the fight to go on." : "";
+}
+
+// A pile of my cards to look at: the draw pile (in no order), the discard pile, the exhausted cards
+function showPile(kind) {
+  var me = party && party.run && party.run.heroes.find((h) => h.name == myName);
+  if (!me || !me.piles) return;
+  var names = { draw: "🂠 Draw pile - in no order", discard: "♻️ Discard pile", exhausted: "🔥 Exhausted - gone for this fight" };
+  var old = document.getElementById("rpgPackModal");
+  if (old) old.remove();
+  var modal = el("div", "rpg-modal");
+  modal.id = "rpgPackModal";
+  modal.dataset.act = "closePack";
+  var box = el("div", "rpg-modal-box");
+  var cards = el("div", "rpg-reward-cards");
+  me.piles[kind].forEach((id) => cards.appendChild(cardEl(id, { className: "small" })));
+  if (!me.piles[kind].length) cards.appendChild(el("div", "rpg-empty mm-muted", "Empty"));
+  box.append(el("div", "rpg-reward-title", names[kind] + " · " + me.piles[kind].length), cards, button("Close", "closePack", { className: "small" }));
+  modal.appendChild(box);
+  document.querySelector(".rpg-main").appendChild(modal);
 }
 
 // How the cards work (the Deck tab)
@@ -656,7 +976,8 @@ function deckHelp() {
     ["✋", "A turn", "You draw 5 cards and get 3 💧 mana. A card costs the mana in its drop (top left)."],
     ["⚔️", "Play", "Attacks hit a foe (click the card, then the foe), skills block, heal or help. Block only lasts through the monsters' turn."],
     ["⏭️", "End turn", "The cards you didn't play go to the discard pile; the monsters do what their badges showed. An empty draw pile: the discard pile is shuffled in."],
-    ["🎁", "Grow it", "Every fight won: pick one of three new cards (or buy one at a merchant) - for the rest of that run."],
+    ["🎁", "Grow it", "Every fight won: pick one of three new cards - or study, buy them in the rooms. For the rest of that run - and your collection keeps them."],
+    ["🗺️", "The map", "Pick your way room by room. What a room is stays hidden (?) - luck lets your party sense it."],
   ];
   return steps.map(([icon, title, text]) => {
     var row = el("div", "rpg-help-step");
@@ -664,27 +985,6 @@ function deckHelp() {
     body.append(el("b", "", title), el("div", "mm-muted small", text));
     row.append(el("span", "rpg-help-icon", icon), body);
     return row;
-  });
-}
-
-// The doors to the next room: closed - only a lucky hero senses danger or calm behind one; everybody votes
-function doorCards(run) {
-  var mine = run.votes[myName];
-  return run.doors.map((door, i) => {
-    var node = el("div", "rpg-door-card" + (door.open ? " open kind-" + door.kind : "") + (mine === i ? " voted" : ""));
-    node.dataset.act = "vote";
-    node.dataset.id = i;
-    var art = el("div", "rpg-door-art");
-    art.appendChild(el("span", "rpg-door-mark", door.open ? rules.roomKinds[door.kind].icon : ROMAN[i] || String(i + 1)));
-    node.append(art, el("div", "rpg-door-name", door.open ? rules.roomKinds[door.kind].name : "Door " + (ROMAN[i] || i + 1)));
-    var feeling = door.open ? rules.roomKinds[door.kind].about : door.sense == "danger" ? "⚠️ You sense danger" : door.sense == "calm" ? "🕊️ It feels calm" : "❔ You sense nothing";
-    node.appendChild(el("div", "rpg-door-hint " + (door.open ? "open" : door.sense || "none"), feeling));
-    var voters = el("div", "rpg-voters");
-    Object.keys(run.votes)
-      .filter((name) => run.votes[name] === i)
-      .forEach((name) => voters.appendChild(createAvatar(name, "sm")));
-    node.appendChild(voters);
-    return node;
   });
 }
 
@@ -724,15 +1024,14 @@ function handBar(run, me) {
     var leave = button("🚪 Leave with 🪙 " + formatCoins(run.pot), "vote", { id: "leave", className: voted === "leave" ? "voted" : "" });
     var leavers = Object.keys(run.votes).filter((name) => run.votes[name] === "leave");
     if (leavers.length) leave.innerText += " (" + leavers.length + ")";
-    var text = (run.heroes.length > 1 ? "Vote for a door - " + count + " / " + run.heroes.length + " voted" + (party.leader == myName ? "" : " (a tie: " + party.leader + " decides)") : "Pick a door") + (run.doors.length > 1 ? " · 🍀 your party senses a door " + run.sense + "% of the time" : "");
+    var text = run.heroes.length > 1 ? "🗺️ Vote for the next room on the map - " + count + " / " + run.heroes.length + " voted" + (party.leader == myName ? "" : " (a tie: " + party.leader + " decides)") : "🗺️ Pick the next room on the map";
     return [potion, el("div", "rpg-wait mm-muted", text), leave];
   }
   if (!me || me.down) return [el("div", "rpg-wait mm-muted", "💤 You're down - back up after the fight (or a Cleric's revive).")];
-  var energy = el("div", "rpg-energy");
+  var energy = el("div", "rpg-energy" + (me.energy <= 0 ? " empty" : ""));
   energy.dataset.mana = me.energy + "/" + rules.energy;
   energy.title = "Mana - cards cost it, full again every turn";
-  var draw = el("div", "rpg-pile", "Draw " + me.drawCount);
-  draw.title = "Draw pile: the cards still to come this fight";
+  var draw = button("🂠 Draw " + me.drawCount, "pile", { id: "draw", className: "rpg-pile", title: "Draw pile: the cards still to come this fight - click to look" });
   var left = el("div", "rpg-hand-side");
   left.append(energy, draw);
   var hand = el("div", "rpg-hand" + (me.ended ? " ended" : ""));
@@ -748,14 +1047,26 @@ function handBar(run, me) {
   if (!me.hand.length) hand.appendChild(el("div", "rpg-wait mm-muted", "No cards left"));
   var waiting = run.heroes.filter((h) => !h.down && !h.ended).length;
   var end = button(me.ended ? "Waiting… (" + waiting + ")" : "End turn", "endTurn", { className: "primary rpg-end", disabled: me.ended });
-  var discard = el("div", "rpg-pile", "Discard " + me.discardCount);
-  discard.title = "Discard pile: played and unplayed cards of the turns before - shuffled back in when the draw pile is empty";
+  var discard = button("♻️ Discard " + me.discardCount, "pile", { id: "discard", className: "rpg-pile", title: "Discard pile: played and unplayed cards of the turns before - shuffled back in when the draw pile is empty. Click to look" });
+  var exhausted = me.piles && me.piles.exhausted.length ? button("🔥 " + me.piles.exhausted.length, "pile", { id: "exhausted", className: "rpg-pile", title: "Exhausted: gone for this fight (eternal ones: for the run)" }) : null;
   var right = el("div", "rpg-hand-side");
   right.append(end, potion, discard);
+  if (exhausted) right.appendChild(exhausted);
   var nodes = [left, hand, right];
   if (aiming) nodes.unshift(el("div", "rpg-aim-hint", aiming.target == "foe" ? "🎯 Click a foe - or the card again to cancel" : "🎯 Click a hero - or the card again to cancel"));
   return nodes;
 }
+
+// The hand fanned into the room it has: the cards overlap more the less room there is
+function fitHand() {
+  var hand = document.querySelector("#rpgHandBar .rpg-hand");
+  var first = hand && hand.querySelector(".rpg-cardx");
+  if (!first) return;
+  var n = hand.querySelectorAll(".rpg-cardx").length;
+  var squeeze = Math.max(5.6, (n * first.offsetWidth - hand.clientWidth) / (2 * n) + 2);
+  hand.style.setProperty("--squeeze", squeeze + "px");
+}
+window.addEventListener("resize", fitHand);
 
 // The time of the turn / the vote, running down
 // The time of the turn / the vote: seconds, counting down
@@ -894,19 +1205,39 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "buy") socket.emit("buy", { item: id });
   else if (act == "point") socket.emit("point", { stat: id });
   else if (act == "deckAdd" || act == "deckRemove") socket.emit(act, { id: id });
-  else if (act == "closeModal") {
-    closed[id] = true;
+  else if (act == "closePack") {
+    if (node.id == "rpgPackModal" && event.target != node) return;
+    document.getElementById("rpgPackModal").remove();
+  } else if (act == "pile") showPile(id);
+  else if (act == "builder") {
+    building = true;
     render();
-  } else if (act == "closePack") document.getElementById("rpgPackModal").remove();
+  } else if (act == "builderClose") {
+    building = false;
+    render();
+  } else if (act == "pack") socket.emit("pack");
+  else if (act == "filter") {
+    var [key, value] = id.split(":");
+    if (key == "owned") filters.owned = !filters.owned;
+    else filters[key] = value;
+    render();
+  } else if (act == "deckClear") socket.emit("deckSet", { ids: [] });
+  else if (act == "deckStarter") socket.emit("deckSet", { ids: starterDeck() });
   else if (act == "talent") socket.emit("talent", { tier: Number(id.split(":")[0]), id: id.split(":")[1] });
   else if (act == "relic") socket.emit("relic", { id: id || null });
-  else if (act == "camp") socket.emit("camp", { choice: id });
-  else if (act == "smithMode") {
-    smithing = !smithing;
+  else if (act == "choose") {
+    picking = null;
+    socket.emit("choose", { option: id });
+  } else if (act == "pickMode") {
+    picking = picking == id ? null : id;
     render();
-  } else if (act == "smith") {
-    smithing = false;
-    socket.emit("camp", { choice: "smith", card: Number(id) });
+  } else if (act == "chooseCard") {
+    // ("smith:3" - an index of the deck; "read:fireball" - a card offered; "remove:3" - the merchant's)
+    var option = id.slice(0, id.indexOf(":"));
+    var card = id.slice(id.indexOf(":") + 1);
+    picking = null;
+    if (option == "remove") socket.emit("buy", { item: "remove:" + card });
+    else socket.emit("choose", { option: option, card: option == "read" ? card : Number(card) });
   }
   else if (act == "size") {
     size = Number(id);

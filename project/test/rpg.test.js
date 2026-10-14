@@ -4,7 +4,7 @@ const h = require("./helpers");
 const rpg = require("../game/rpg");
 const testMode = require("../game/test_mode");
 
-test("rpg: upgrades and floors get dearer, a floor opens after the one before; the first room a fight, then three hidden doors (mostly fights), the guarded gate last", () => {
+test("rpg: upgrades and floors get dearer, a floor opens after the one before; the map: rows of rooms (mostly fights) and paths, a fight first, the guarded gate last", () => {
   assert.strictEqual(rpg.upgradeCost(0), 2000);
   assert.ok(rpg.upgradeCost(5) > rpg.upgradeCost(4));
   assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX), null);
@@ -28,25 +28,44 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   rpg.charOf(hero).deepest = rpg.FLOORS;
   assert.strictEqual(rpg.maxFloor(hero), rpg.FLOORS);
   assert.strictEqual(rpg.BOSS_EVERY, 0);
-  // The rooms: a fight first, then three hidden doors (mostly fights), the guarded gate last
-  const run = rpg.newRun(3, [{ name: "a", hero: rpg.newHero("warrior") }]);
-  assert.deepStrictEqual(run.doors.map((d) => d.kind), ["fight"]);
-  run.rooms = [{ kind: "fight", done: true }];
+  // The map (like Slay the Spire): ROOMS rows - a fight first, the guarded gate last, 2 to 4 rooms a row between;
+  // every room leads on, every room is reached, the paths never cross
   const kinds = new Map();
-  for (let i = 0; i < 400; i++) {
-    const doors = rpg.doorsFor(run);
-    assert.strictEqual(doors.length, rpg.DOORS);
-    doors.forEach((door) => kinds.set(door.kind, (kinds.get(door.kind) || 0) + 1));
-    assert.ok(doors.every((door) => rpg.ROOM_KINDS[door.kind] && door.kind != "elite" && !door.open));
+  for (let i = 0; i < 300; i++) {
+    const run = rpg.newRun(3, [{ name: "a", hero: rpg.newHero("warrior") }]);
+    const map = run.map;
+    assert.strictEqual(map.length, rpg.ROOMS);
+    assert.deepStrictEqual([map[0].length, map[0][0].kind, map[rpg.ROOMS - 1].length, map[rpg.ROOMS - 1][0].kind], [1, "fight", 1, "elite"]);
+    assert.deepStrictEqual(run.doors, map[0]);
+    for (let r = 1; r < rpg.ROOMS - 1; r++) {
+      assert.ok(map[r].length >= 2 && map[r].length <= rpg.LANES);
+      map[r].forEach((node) => kinds.set(node.kind, (kinds.get(node.kind) || 0) + 1));
+      assert.ok(map[r].every((node) => rpg.ROOM_KINDS[node.kind] && node.kind != "elite" && !node.open));
+      assert.ok(map[r].every((node) => map[r - 1].some((from) => from.next.includes(node.index))), "every room reached");
+    }
+    for (let r = 0; r < rpg.ROOMS - 1; r++) {
+      assert.ok(map[r].every((node) => node.next.length > 0), "every room leads on");
+      const edges = map[r].flatMap((node) => node.next.map((n) => [node.col, map[r + 1][n].col]));
+      for (const [a, b] of edges) for (const [c, d] of edges) assert.ok(!((a < c && b > d) || (a > c && b < d)), "no crossing");
+    }
+    // (no camp fire or merchant right after the first fight)
+    assert.ok(map[1].every((node) => node.kind != "rest" && node.kind != "merchant"));
   }
+  const all = [...kinds.values()].reduce((a, b) => a + b, 0);
   const fights = (kinds.get("fight") || 0) + (kinds.get("hard") || 0);
-  assert.ok(fights > 1200 * 0.55, `fights ${fights}`);
-  assert.ok((kinds.get("rest") || 0) < 1200 * 0.1 && (kinds.get("merchant") || 0) < 1200 * 0.06);
-  // What is behind a hidden door: not on the page
+  assert.ok(fights > all * 0.5, `fights ${fights} of ${all}`);
+  assert.ok((kinds.get("rest") || 0) < all * 0.1 && (kinds.get("merchant") || 0) < all * 0.06);
+  // Going through: the next rooms are the ones the room leads to
+  const run = rpg.newRun(3, [{ name: "a", hero: rpg.newHero("warrior") }]);
+  rpg.enterRoom(run, 0);
+  run.monsters = [];
+  run.phase = "between";
   run.doors = rpg.doorsFor(run);
-  assert.ok(rpg.runView(run).doors.every((door) => door.kind == null));
-  run.rooms = Array.from({ length: rpg.ROOMS - 1 }, () => ({ kind: "chest", done: true }));
-  assert.deepStrictEqual(rpg.doorsFor(run).map((d) => [d.kind, d.open]), [["elite", true]]);
+  assert.deepStrictEqual(run.doors, run.map[0][0].next.map((i) => run.map[1][i]));
+  // What a room is: not on the page - unless sensed or gone through
+  const view = rpg.runView(run);
+  view.map[1].forEach((node, i) => assert.strictEqual(node.kind, run.map[1][i].sensed ? run.map[1][i].kind : null));
+  assert.strictEqual(view.map[0][0].kind, "fight");
   // The classes: a main stat, two signature cards in the starter deck, five cards of their own
   for (const id of rpg.CLASS_IDS) {
     assert.ok(rpg.STATS[rpg.CLASSES[id].main], id);
@@ -195,58 +214,118 @@ test("rpg: poison makes the backstab hurt 3x; the cleric heals, brings the falle
   assert.strictEqual(party.pot, 0);
 });
 
-test("rpg: doors - only luck senses danger or calm; rooms say what happened; the merchant sells a potion and cards", () => {
+// Into a room of the kind (a door of it)
+function into(run, kind) {
+  run.phase = "between";
+  // (never the last room of the floor)
+  run.rooms = [];
+  run.doors = [{ kind, sensed: false, open: false, visited: false }];
+  rpg.enterRoom(run, 0);
+}
+
+test("rpg: the map - luck senses what a room is; rooms to choose in (camp fire, shrine, trap, chest, encounters), the merchant sells cards, relics, potions and takes a card", () => {
   const run = rpg.newRun(1, [{ name: "a", hero: rpg.newHero("warrior") }]);
-  rpg.enterRoom(run, 0);
-  run.rooms = [{ kind: "fight", done: true }];
-  // No luck: nothing sensed - lucky: sensed, and right
-  run.heroes[0].luck = 0;
-  assert.ok(rpg.doorsFor(run).every((door) => door.sense == null));
-  run.heroes[0].luck = 60;
-  let sensed = 0;
-  for (let i = 0; i < 300; i++) {
-    for (const door of rpg.doorsFor(run)) {
-      if (!door.sense) continue;
-      sensed++;
-      assert.strictEqual(door.sense, ["fight", "hard", "trap"].includes(door.kind) ? "danger" : "calm");
+  // Sensed: SENSE_BASE % with no luck - far more with luck
+  const sensed = (luck) => {
+    run.heroes[0].luck = luck;
+    let n = 0;
+    let all = 0;
+    for (let i = 0; i < 200; i++) {
+      for (const row of rpg.makeMap(run).slice(1, -1)) {
+        all += row.length;
+        n += row.filter((node) => node.sensed).length;
+      }
     }
-  }
-  assert.ok(sensed > 900 * 0.8 && sensed < 900 * 0.97, String(sensed));
-  // A camp fire: rest (heal) or smith (a card of the deck upgraded) - what happened is shown
-  run.phase = "between";
-  run.doors = [{ kind: "rest", sense: null, open: false }];
-  run.heroes[0].hp = 10;
+    return n / all;
+  };
+  const none = sensed(0);
+  const lucky = sensed(40);
+  assert.ok(none > 0.15 && none < 0.25, String(none));
+  assert.ok(lucky > 0.75 && lucky < 0.85, String(lucky));
+  run.heroes[0].luck = 5;
   rpg.enterRoom(run, 0);
+  const me = run.heroes[0];
+  // A camp fire: rest (heal) or smith (a card of the deck upgraded) - one choice, what happened is shown
+  into(run, "rest");
   assert.strictEqual(run.event.kind, "rest");
-  assert.match(rpg.campfire(run, "a", { choice: "smith", card: 99 }), /Pick a card/);
-  assert.strictEqual(rpg.campfire(run, "a", { choice: "rest" }), null);
-  assert.ok(run.heroes[0].hp > 10);
+  assert.strictEqual(run.phase, "between");
+  me.hp = 10;
+  assert.match(rpg.choose(run, "a", { option: "smith", card: 99 }), /Pick a card/);
+  assert.match(rpg.choose(run, "a", { option: "pray" }), /Not one of the choices/);
+  assert.strictEqual(rpg.choose(run, "a", { option: "rest" }), null);
+  assert.ok(me.hp > 10);
   assert.match(run.event.lines[run.event.lines.length - 1], /rests/);
-  assert.match(rpg.campfire(run, "a", { choice: "rest" }), /chose already/);
-  run.phase = "between";
-  run.doors = [{ kind: "rest", sense: null, open: false }];
-  rpg.enterRoom(run, 0);
-  assert.strictEqual(rpg.campfire(run, "a", { choice: "smith", card: 0 }), null);
-  assert.strictEqual(run.heroes[0].deck[0], "strike+");
+  assert.match(rpg.choose(run, "a", { option: "rest" }), /chose already/);
+  into(run, "rest");
+  assert.strictEqual(rpg.choose(run, "a", { option: "smith", card: 0 }), null);
+  assert.strictEqual(me.deck[0], "strike+");
   assert.strictEqual(rpg.cardInfo("strike+").name, "Strike+");
-  // The merchant: three cards and a potion, for coins (the server takes them)
-  run.doors = [{ kind: "merchant", sense: null, open: false }];
-  rpg.enterRoom(run, 0);
+  // A shrine: pray (HP for damage) or walk on
+  into(run, "shrine");
+  me.hp = me.maxHp;
+  assert.strictEqual(rpg.choose(run, "a", { option: "leave" }), null);
+  assert.ok(!me.blessed && me.hp == me.maxHp);
+  into(run, "shrine");
+  assert.strictEqual(rpg.choose(run, "a", { option: "pray" }), null);
+  assert.ok(me.blessed && me.hp < me.maxHp);
+  // A trap: disarmed (luck) - gear; sneaked past - 10% damage
+  into(run, "trap");
+  assert.strictEqual(rpg.choose(run, "a", { option: "disarm" }, () => 0), null);
+  assert.strictEqual(run.loot.a.length, 1);
+  into(run, "trap");
+  me.hp = me.maxHp;
+  rpg.choose(run, "a", { option: "sneak" });
+  assert.strictEqual(me.hp, me.maxHp - Math.round(me.maxHp * 0.1));
+  // A chest: coins for the pot when the party comes in, gear when opened
+  const pot = run.pot;
+  into(run, "chest");
+  assert.ok(run.pot > pot);
+  rpg.choose(run, "a", { option: "open" }, () => 0);
+  assert.strictEqual(run.loot.a.length, 2);
+  // Encounters: one at random, never twice a run - the hermit takes a card, the library gives one
+  const ids = new Set();
+  for (let i = 0; i < Object.keys(rpg.ENCOUNTERS).length; i++) {
+    into(run, "event");
+    assert.ok(!ids.has(run.event.id), run.event.id);
+    ids.add(run.event.id);
+    const view = rpg.runView(run).event;
+    assert.deepStrictEqual(view.options, rpg.ENCOUNTERS[run.event.id].options);
+    const size = me.deck.length;
+    if (run.event.id == "hermit") {
+      assert.strictEqual(rpg.choose(run, "a", { option: "purge", card: 1 }), null);
+      assert.strictEqual(me.deck.length, size - 1);
+    } else if (run.event.id == "library") {
+      const offer = run.event.offers.a;
+      assert.strictEqual(offer.length, 5);
+      assert.match(rpg.choose(run, "a", { option: "read", card: "meteor" }), /Pick one of the cards/);
+      assert.strictEqual(rpg.choose(run, "a", { option: "read", card: offer[2] }), null);
+      assert.strictEqual(me.deck[me.deck.length - 1], offer[2]);
+    } else assert.strictEqual(rpg.choose(run, "a", { option: rpg.ENCOUNTERS[run.event.id].options[0].id }), null);
+  }
+  // The merchant: cards (rarer: dearer), relics, a potion, a card out of the deck - for coins (the server takes them)
+  into(run, "merchant");
   const offer = run.event.offers.a;
-  assert.strictEqual(offer.cards.length, 3);
+  assert.strictEqual(offer.cards.length, 5);
+  assert.strictEqual(offer.relics.length, 2);
+  assert.match(rpg.choose(run, "a", { option: "rest" }), /Nothing to choose/);
   assert.strictEqual(rpg.canBuy(run, "a", "potion").price, rpg.merchantPrices(1).potion);
   // (a mage's card: never in the warrior's offer)
   assert.match(rpg.canBuy(run, "a", "meteor").error, /doesn't sell/);
   const card = offer.cards[0];
-  assert.strictEqual(rpg.canBuy(run, "a", card).price, rpg.merchantPrices(1).card);
-  const deck = run.heroes[0].deck.length;
+  assert.ok(rpg.canBuy(run, "a", card).price >= rpg.merchantPrices(1).card);
+  const deck = me.deck.length;
   rpg.bought(run, "a", card);
-  assert.strictEqual(run.heroes[0].deck.length, deck + 1);
+  assert.strictEqual(me.deck.length, deck + 1);
   assert.match(rpg.canBuy(run, "a", card).error, /Sold/);
-  // Through the next door: the room's panel is gone
-  run.doors = [{ kind: "fight", sense: null, open: false }];
-  rpg.enterRoom(run, 0);
-  assert.notStrictEqual(run.event && run.event.kind, "merchant");
+  rpg.bought(run, "a", offer.relics[0]);
+  assert.ok(me.relics.includes(offer.relics[0]));
+  assert.strictEqual(rpg.canBuy(run, "a", "remove:0").price, rpg.merchantPrices(1).remove);
+  rpg.bought(run, "a", "remove:1");
+  assert.strictEqual(me.deck.length, deck);
+  assert.match(rpg.canBuy(run, "a", "remove:0").error, /one card a visit/);
+  // Into the next room: the merchant is gone
+  into(run, "fight");
+  assert.strictEqual(run.event, null);
 });
 
 test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/10, relics and an upgraded card make a hero stronger", () => {
@@ -300,8 +379,14 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (spar
   const char = rpg.charOf(hero);
   assert.strictEqual(char.deck.length, 10);
   assert.deepStrictEqual([char.collection.strike, char.collection.defend, char.collection.poisonblade], [4, 4, 1]);
-  // The deck: not below DECK_MIN, only owned cards, only the class's
-  assert.match(rpg.deckRemove(hero, "strike"), /At least 10/);
+  // The deck: only owned cards, only the class's - built freely, but a run needs DECK_MIN cards
+  assert.strictEqual(rpg.deckReady(hero), null);
+  assert.strictEqual(rpg.deckRemove(hero, "strike"), null);
+  assert.match(rpg.deckReady(hero), /at least 10/);
+  assert.match(rpg.deckSet(hero, ["strike", "strike", "strike", "strike", "strike"]), /don't own that many/);
+  assert.match(rpg.deckSet(hero, ["meteor"]), /Not a card of your class/);
+  assert.strictEqual(rpg.deckSet(hero, []), null);
+  assert.strictEqual(rpg.deckSet(hero, rpg.starterDeck("rogue")), null);
   assert.match(rpg.deckAdd(hero, "smoke"), /don't own/);
   assert.match(rpg.deckAdd(hero, "meteor"), /Not a card of your class/);
   // A pack: 5 cards of the class (never a basic one), the last rare or better
@@ -317,7 +402,6 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (spar
   // (the collection never holds more than the copies of a rarity)
   for (const [id, n] of Object.entries(char.collection)) assert.ok(n <= rpg.CARD_RARITIES[rpg.CARDS[id].rarity].copies, id);
   assert.strictEqual(rpg.deckAdd(hero, "smoke"), null);
-  assert.strictEqual(rpg.deckRemove(hero, "strike"), null);
   while (char.deck.length < rpg.deckMax(char.level)) char.deck.push("defend");
   assert.match(rpg.deckAdd(hero, "flurry"), /At most/);
   assert.ok(rpg.deckMax(9) > rpg.deckMax(1));
@@ -400,7 +484,7 @@ function autoplay(socket, name, options) {
 before(async () => {
   server = await h.startServer();
   for (const name of ["rpg_alice", "rpg_bob", "rpg_real"]) tokens[name] = h.addUser(name);
-  Object.assign(server.test.rpg.timing, { turn: 300, decide: 300, close: 300 });
+  Object.assign(server.test.rpg.timing, { turn: 300, decide: 300, room: 300, close: 300 });
 });
 
 after(async () => {
@@ -489,7 +573,7 @@ test("rpg: co-op - one opens a party, another joins, the leader starts (both pay
     if (!hero.cls) rpg.unlock(hero, "warrior");
     for (const id of rpg.STAT_IDS) rpg.charOf(hero).levels[id] = 30;
   }
-  Object.assign(server.test.rpg.timing, { turn: 1500, decide: 3000 });
+  Object.assign(server.test.rpg.timing, { turn: 1500, decide: 3000, room: 3000 });
   alice.emit("create", { floor: 1, size: 2 });
   const open = await waitFor(bob, "rpgParties", (list) => list.some((p) => p.leader == "rpg_alice" && !p.started));
   const id = open.find((p) => p.leader == "rpg_alice").id;

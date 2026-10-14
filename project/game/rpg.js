@@ -24,7 +24,6 @@
 
 const FLOORS = 30;
 const ROOMS = 6;
-const DOORS = 3;
 const PARTY_MAX = 4;
 const BAG_MAX = 12;
 const POTIONS_MAX = 5;
@@ -178,7 +177,6 @@ const TAUNT = 0.7;
 const CRIT = 1.8;
 const MIGHT = 1.3;
 const REVIVE = 0.2; // a hero down: back up after the fight with this much HP
-const TRAP_DAMAGE = 0.2;
 const REST_HEAL = 0.35;
 const SHRINE_COST = 0.2; // of the max HP
 const SHRINE_POWER = 1.25; // the blessing: more damage for the rest of the run
@@ -397,9 +395,30 @@ function deckRemove(hero, id) {
   const char = charOf(hero);
   const index = char.deck.lastIndexOf(id);
   if (index < 0) return "Not in your deck.";
-  if (char.deck.length <= DECK_MIN) return `At least ${DECK_MIN} cards.`;
   char.deck.splice(index, 1);
   return null;
+}
+
+// A whole deck at once (the deck builder: cleared, back to the starter deck) -> an error or null
+function deckSet(hero, ids) {
+  const char = charOf(hero);
+  if (!Array.isArray(ids) || ids.some((id) => typeof id != "string")) return "Not a deck.";
+  if (ids.length > deckMax(char.level)) return `At most ${deckMax(char.level)} cards (more room with hero levels).`;
+  const pool = poolOf(hero.cls);
+  const counts = {};
+  for (const id of ids) {
+    if (!CARDS[id] || !pool.includes(id)) return "Not a card of your class.";
+    counts[id] = (counts[id] || 0) + 1;
+    if (counts[id] > (char.collection[id] || 0)) return `You don't own that many of ${CARDS[id].name}.`;
+  }
+  char.deck = [...ids];
+  return null;
+}
+
+// The deck may go down: at least DECK_MIN cards -> an error or null
+function deckReady(hero) {
+  const n = charOf(hero).deck.length;
+  return n < DECK_MIN ? `Your deck needs at least ${DECK_MIN} cards (it has ${n}) - build it in the Deck tab.` : null;
 }
 
 // A booster pack opened: PACK_SIZE cards of the class (the last one rare or better) -> [{id, fresh, coins}] -
@@ -558,25 +577,29 @@ function makeGear(floor, rng = Math.random, luck = 0) {
   return item;
 }
 
-/* ---------- The rooms: hidden doors ---------- */
+/* ---------- The map of a floor (like Slay the Spire): rows of rooms, paths between them ---------- */
 
 const ROOM_KINDS = {
   fight: { name: "Fight", icon: "⚔️", about: "Monsters - loot for the pot" },
   hard: { name: "Hard fight", icon: "☠️", about: "More and stronger monsters - almost double the loot and a relic" },
   elite: { name: "The guarded gate", icon: "👑", about: "The guard of the floor - beat it to clear the floor" },
   boss: { name: "Boss", icon: "💀", about: "The master of the floor" },
-  chest: { name: "Chest", icon: "🎁", about: "Coins for the pot - maybe gear for each hero" },
-  trap: { name: "Trap", icon: "🪤", about: "Luck dodges it" },
-  rest: { name: "Camp fire", icon: "🔥", about: "Everybody heals 35% - and 1 more mana in the next fight" },
-  shrine: { name: "Shrine", icon: "⛩️", about: "Blood for power: 20% HP each, 25% more damage for the rest of the run" },
-  merchant: { name: "Merchant", icon: "🧳", about: "Potions for coins from the pot" },
+  chest: { name: "Treasure", icon: "🎁", about: "Coins for the pot - gear, maybe a relic" },
+  trap: { name: "Trap", icon: "🪤", about: "Disarm it (luck) or sneak past" },
+  rest: { name: "Camp fire", icon: "🔥", about: "Rest (heal) or smith (upgrade a card)" },
+  shrine: { name: "Shrine", icon: "⛩️", about: "Blood for power - or walk on" },
+  merchant: { name: "Merchant", icon: "🧳", about: "Cards, relics, potions - and he takes a card out of your deck" },
+  event: { name: "Encounter", icon: "📜", about: "Something strange - a choice to make" },
 };
-// What waits behind a door (weights) - mostly fights
-const DOOR_POOL = { fight: 6, hard: 2.5, trap: 1.2, chest: 1.5, rest: 0.7, shrine: 0.4, merchant: 0.4 };
-// Behind a door: danger (monsters, a trap) or calm (the rest) - a lucky hero may sense which (SENSE x luck %)
-const DANGER = ["fight", "hard", "trap"];
+// What waits in a room of the map (weights) - mostly fights
+const DOOR_POOL = { fight: 6, hard: 2.2, trap: 0.9, chest: 1.2, rest: 0.8, shrine: 0.4, merchant: 0.5, event: 1.6 };
+const LANES = 4; // the columns of the map
+// What a room of the map is - hidden; the party senses it (sees its kind) that often: SENSE_BASE + SENSE x luck %
+const SENSE_BASE = 20;
 const SENSE = 1.5;
 const SENSE_MAX = 90;
+// (kept for the page: one of the doors to pick)
+const DOORS = LANES;
 
 function weighted(rng, entries) {
   let roll = rng() * entries.reduce((sum, [, weight]) => sum + weight, 0);
@@ -587,23 +610,75 @@ function weighted(rng, entries) {
   return entries[entries.length - 1][0];
 }
 
-// The doors of the next room: the first a fight, the last the guarded gate - between them three hidden ones.
-// What is behind a door nobody sees; the luckiest hero of the party may sense it (danger or calm) - that often:
-// SENSE x luck %
-function doorsFor(run, rng = Math.random) {
-  const index = run.rooms.length;
-  if (index == 0) return [{ kind: "fight", sense: null, open: true }];
-  if (index == ROOMS - 1) return [{ kind: BOSS_EVERY && run.floor % BOSS_EVERY == 0 ? "boss" : "elite", sense: null, open: true }];
+// The map of a floor: ROOMS rows - the first a fight, the last the guarded gate, between them 2 to 4 rooms a row;
+// every room leads to one or more of the next row (the paths never cross). A room's kind is hidden - sensed
+// (shown) at SENSE_BASE + SENSE x luck %
+function makeMap(run, rng = Math.random) {
   const chance = senseChance(run);
-  return Array.from({ length: DOORS }, () => {
-    const kind = weighted(rng, Object.entries(DOOR_POOL));
-    return { kind, sense: rng() * 100 < chance ? (DANGER.includes(kind) ? "danger" : "calm") : null, open: false };
-  });
+  const middle = (LANES - 1) / 2;
+  const rows = [];
+  for (let r = 0; r < ROOMS; r++) {
+    const last = r == ROOMS - 1;
+    let cols = [middle];
+    if (r > 0 && !last) {
+      const count = 2 + Math.floor(rng() * (LANES - 1));
+      cols = shuffle(Array.from({ length: LANES }, (_, i) => i), rng)
+        .slice(0, count)
+        .sort((a, b) => a - b);
+    }
+    rows.push(
+      cols.map((col, index) => {
+        let kind = r == 0 ? "fight" : last ? (BOSS_EVERY && run.floor % BOSS_EVERY == 0 ? "boss" : "elite") : weighted(rng, Object.entries(DOOR_POOL));
+        // (no camp fire or merchant right after the first fight - and no two treasures side by side)
+        if (r == 1 && (kind == "rest" || kind == "merchant")) kind = "fight";
+        const open = r == 0 || last;
+        return { row: r, index, col, kind, open, sensed: !open && rng() * 100 < chance, visited: false, next: [] };
+      }),
+    );
+  }
+  // The paths: every room to the nearest of the next row, every room of the next row from the nearest - then some
+  // more, as long as they cross no other
+  for (let r = 0; r < ROOMS - 1; r++) {
+    const here = rows[r];
+    const there = rows[r + 1];
+    const edges = [];
+    const add = (a, b) => {
+      if (edges.some(([x, y]) => x == a && y == b)) return true;
+      if (edges.some(([x, y]) => (here[x].col < here[a].col && there[y].col > there[b].col) || (here[x].col > here[a].col && there[y].col < there[b].col))) return false;
+      edges.push([a, b]);
+      return true;
+    };
+    const nearest = (col, list) => list.reduce((best, node) => (Math.abs(node.col - col) < Math.abs(list[best].col - col) ? node.index : best), 0);
+    here.forEach((node) => add(node.index, nearest(node.col, there)));
+    there.forEach((node) => {
+      if (!edges.some(([, b]) => b == node.index)) add(nearest(node.col, here), node.index);
+    });
+    // (a single room at either end: paths to all)
+    if (here.length == 1 || there.length == 1) here.forEach((a) => there.forEach((b) => add(a.index, b.index)));
+    for (const a of here) for (const b of there) if (Math.abs(a.col - b.col) <= 1 && rng() < 0.45) add(a.index, b.index);
+    for (const [a, b] of edges) here[a].next.push(b);
+    here.forEach((node) => node.next.sort((x, y) => x - y));
+  }
+  return rows;
 }
 
-// How often the party senses what is behind a door (%)
+// The rooms the party may go to next: the first row - or the ones the room it is in leads to
+function doorsFor(run) {
+  if (!run.map) return [];
+  if (!run.at) return run.map[0];
+  const row = run.map[run.at.row + 1];
+  if (!row) return [];
+  return run.map[run.at.row][run.at.index].next.map((i) => row[i]);
+}
+
+// How often the party senses what a room is (%)
 function senseChance(run) {
-  return Math.min(SENSE_MAX, Math.round(SENSE * Math.max(0, ...alive(run.heroes).map((h) => h.luck))));
+  return Math.min(SENSE_MAX, Math.round(SENSE_BASE + SENSE * Math.max(0, ...alive(run.heroes).map((h) => h.luck))));
+}
+
+// A room's kind as the party knows it (null: hidden)
+function shownKind(node) {
+  return node.open || node.sensed || node.visited ? node.kind : null;
 }
 
 let monsterCount = 0;
@@ -662,8 +737,11 @@ function newRun(floor, party, rng = Math.random) {
   const run = {
     floor,
     rooms: [], // [{kind, done}] the rooms entered
-    event: null, // what happened in the last room (not a fight): {kind, lines, offers - the merchant's}
-    doors: [],
+    event: null, // the room the party is in (not a fight): {kind, id, lines, choices, offers - the merchant's, ...}
+    map: null, // the rows of the floor (makeMap)
+    at: null, // the room of the map the party is in: {row, index}
+    seen: [], // the encounters met already
+    doors: [], // the rooms of the map it may go to next
     votes: {}, // name -> a door's index or "leave"
     phase: "between",
     heroes: party.map(({ name, hero }) => {
@@ -703,7 +781,8 @@ function newRun(floor, party, rng = Math.random) {
     loot: Object.fromEntries(party.map(({ name }) => [name, []])),
     log: [],
   };
-  run.doors = doorsFor(run, rng);
+  run.map = makeMap(run, rng);
+  run.doors = doorsFor(run);
   return run;
 }
 
@@ -773,18 +852,99 @@ function tally(run, leader, rng = Math.random) {
 
 /* ---------- The rooms ---------- */
 
-// Through a door (its index): a fight starts, the other rooms happen right away
+// The rooms that aren't fights: what every hero may choose there (card: the choice needs a card - "smith", "deck":
+// one of the deck, "offer": one of the cards offered)
+const ROOM_OPTIONS = {
+  chest: [{ id: "open", label: "Open it", text: "Gear for the bag (luck: better) - now and then a relic" }],
+  trap: [
+    { id: "disarm", label: "Disarm it", text: "Luck: a piece of gear - failed: 25% damage" },
+    { id: "sneak", label: "Sneak past", text: "Take 10% damage" },
+  ],
+  rest: [
+    { id: "rest", label: "Rest", text: "Heal 35% HP, +1 mana in the next fight" },
+    { id: "smith", label: "Smith", text: "Upgrade a card of your deck: 40% stronger", card: "smith" },
+  ],
+  shrine: [
+    { id: "pray", label: "Pray", text: "Give 20% HP - deal 25% more damage for the rest of the run" },
+    { id: "leave", label: "Walk on", text: "Nothing happens" },
+  ],
+};
+const LEAVE = { id: "leave", label: "Leave", text: "Nothing happens" };
+// The encounters (rooms of the kind "event") - one at random, none twice a run
+const ENCOUNTERS = {
+  fountain: {
+    name: "The Fountain",
+    icon: "⛲",
+    story: "Clear water bubbles up in an old stone basin. It glows faintly.",
+    options: [
+      { id: "drink", label: "Drink", text: "Heal 30% HP" },
+      { id: "bottle", label: "Fill a flask", text: "+1 potion" },
+    ],
+  },
+  library: {
+    name: "The Forgotten Library",
+    icon: "📚",
+    story: "Dusty shelves full of old battle manuals - there is time to study one of them.",
+    options: [
+      { id: "read", label: "Study", text: "Pick 1 of 5 cards for your deck", card: "offer" },
+      { id: "nap", label: "Take a nap", text: "Heal 20% HP" },
+    ],
+  },
+  forge: {
+    name: "The Abandoned Forge",
+    icon: "⚒️",
+    story: "The anvil is still warm, the hammer lies ready. The heat of the coals burns your skin.",
+    options: [{ id: "temper", label: "Temper", text: "Upgrade 2 random cards - lose 8% HP" }, LEAVE],
+  },
+  idol: {
+    name: "The Golden Idol",
+    icon: "🗿",
+    story: "A golden idol on a stone pedestal. It is surely cursed.",
+    options: [{ id: "take", label: "Take it", text: "A random relic - 10% less max HP for this run" }, LEAVE],
+  },
+  hermit: {
+    name: "The Hermit",
+    icon: "🧙",
+    story: 'An old hermit by a small fire: "You carry too much. Give me one of your cards."',
+    options: [{ id: "purge", label: "Give a card", text: "Remove a card from your deck (this run)", card: "deck" }, LEAVE],
+  },
+  gambler: {
+    name: "The Gambler",
+    icon: "🎲",
+    story: 'A grinning imp shakes a cup of dice: "Your blood against my treasure?"',
+    options: [{ id: "roll", label: "Roll the dice", text: "50%: a relic - else lose 15% HP" }, LEAVE],
+  },
+};
+const DISARM_BASE = 30; // + 2 x luck %
+const MERCHANT_CARDS = 5;
+const MERCHANT_RELICS = 2;
+const DECK_LEAST = 5; // a run's deck: never fewer cards (the hermit, the merchant take some)
+
+// What a room offers to choose
+function optionsOf(event) {
+  if (!event) return [];
+  if (event.kind == "event") return ENCOUNTERS[event.id].options;
+  return ROOM_OPTIONS[event.kind] || [];
+}
+
+function disarmChance(hero) {
+  return Math.min(90, DISARM_BASE + 2 * hero.luck);
+}
+
+// Into a room of the map (its index of run.doors): a fight starts - in the other rooms every hero chooses
 function enterRoom(run, door = 0, rng = Math.random) {
   const chosen = run.doors[door] || run.doors[0];
   run.event = null;
   const kind = chosen.kind;
   const room = { kind, done: false };
+  chosen.visited = true;
+  run.at = { row: chosen.row, index: chosen.index };
   run.rooms.push(room);
   run.doors = [];
   run.votes = {};
   const heroes = alive(run.heroes);
   const n = roomNumber(run);
-  if (!chosen.open) say(run, `Room ${n}: the door opens - ${ROOM_KINDS[kind].icon} ${ROOM_KINDS[kind].name}!`);
+  if (!chosen.open && !chosen.sensed) say(run, `Room ${n}: the door opens - ${ROOM_KINDS[kind].icon} ${ROOM_KINDS[kind].name}!`);
   if (kind == "fight" || kind == "hard" || kind == "elite" || kind == "boss") {
     run.monsters = monstersFor(run.floor, run.heroes.length, kind, rng);
     run.phase = "fight";
@@ -801,65 +961,44 @@ function enterRoom(run, door = 0, rng = Math.random) {
     startRound(run, rng);
     return;
   }
-  // (what happened in the room - shown until the party goes on: the room isn't just skipped)
-  run.event = { kind, lines: [], offers: null };
+  // The room stays until the party goes on: every hero chooses (the merchant: buys) - what happened is shown
+  run.event = { kind, id: null, lines: [], choices: Object.fromEntries(heroes.map((h) => [h.name, null])), offers: null };
   const note = (text) => {
     run.event.lines.push(text);
     say(run, text);
   };
-  if (kind == "chest") {
+  if (kind == "event") {
+    const fresh = Object.keys(ENCOUNTERS).filter((id) => !run.seen.includes(id));
+    const id = pick(rng, fresh.length ? fresh : Object.keys(ENCOUNTERS));
+    run.event.id = id;
+    run.seen.push(id);
+    if (id == "library") run.event.offers = Object.fromEntries(heroes.map((h) => [h.name, rewardFor(h, rng, 5)]));
+    say(run, `${ENCOUNTERS[id].icon} ${ENCOUNTERS[id].name}.`);
+  } else if (kind == "chest") {
     const coins = Math.round(entryCost(run.floor) * REWARD.chest);
     run.pot += coins;
     note(`🪙 ${coins} each for the loot pot.`);
-    for (const hero of heroes) {
-      // (every hero rolls for gear on its own - luck helps)
-      if (rng() * 100 < 40 + hero.luck / 2) {
-        const item = makeGear(run.floor, rng, hero.luck);
-        run.loot[hero.name].push(item);
-        note(`${hero.name} finds ${item.icon} ${item.name} (${item.rarity}) - it goes to the bag at the end of the run.`);
-      } else note(`${hero.name} finds no gear.`);
-      // (now and then a relic - for this run)
-      if (rng() < 0.2) {
-        const [id] = relicOffer(hero, rng, 1);
-        if (id) {
-          giveRelic(run, hero, id);
-          note(`${hero.name} finds a relic: ${RELICS[id].icon} ${RELICS[id].name} - ${RELICS[id].text}`);
-        }
-      }
-    }
-  } else if (kind == "trap") {
-    for (const hero of heroes) {
-      if (rng() * 100 < hero.luck * 2) note(`${hero.name} dodges the trap 🍀.`);
-      else {
-        const damage = Math.round(hero.maxHp * TRAP_DAMAGE);
-        hero.hp = Math.max(1, hero.hp - damage);
-        note(`${hero.name} takes ${damage} damage.`);
-      }
-    }
-  } else if (kind == "rest") {
-    // (every hero chooses: rest - heal - or smith - upgrade a card of the deck)
-    run.event.camp = {};
-    for (const hero of heroes) run.event.camp[hero.name] = null;
-    note("A camp fire - rest (heal 35%, +1 mana in the next fight) or smith (upgrade a card: 40% stronger).");
-  } else if (kind == "shrine") {
-    for (const hero of heroes) {
-      const cost = Math.round(hero.maxHp * SHRINE_COST);
-      hero.hp = Math.max(1, hero.hp - cost);
-      hero.blessed = true;
-      note(`${hero.name} gives ${cost} HP - and deals 25% more damage for the rest of the run.`);
-    }
   } else if (kind == "merchant") {
-    // (every hero shops on its own, with its own coins: a potion, one of three cards for the deck)
+    // (every hero shops on its own, with its own coins - no choice to make)
+    run.event.choices = null;
     run.event.offers = {};
-    for (const hero of heroes) run.event.offers[hero.name] = { cards: rewardFor(hero, rng), relic: relicOffer(hero, rng, 1)[0] || null, bought: [] };
-    note("A merchant opens his pack - buy what you like with your coins, then vote for a door.");
+    const prices = merchantPrices(run.floor);
+    for (const hero of heroes) {
+      const cards = rewardFor(hero, rng, MERCHANT_CARDS);
+      const relics = relicOffer(hero, rng, MERCHANT_RELICS);
+      const price = { potion: prices.potion, remove: prices.remove };
+      for (const id of cards) price[id] = Math.round((prices.card * CARD_PRICE[CARDS[id].rarity]) / 100) * 100;
+      for (const id of relics) price[id] = prices.relic;
+      run.event.offers[hero.name] = { cards, relics, bought: [], removed: false, prices: price };
+    }
+    say(run, "A merchant opens his pack.");
   }
   room.done = true;
   afterRoom(run, rng);
 }
 
-// A room done: the doors to the next one - or the floor is cleared
-function afterRoom(run, rng = Math.random) {
+// A room done: the next rooms of the map to pick - or the floor is cleared
+function afterRoom(run) {
   run.monsters = [];
   if (run.rooms.length >= ROOMS) {
     run.phase = "won";
@@ -868,7 +1007,7 @@ function afterRoom(run, rng = Math.random) {
   }
   run.phase = "between";
   run.votes = {};
-  run.doors = doorsFor(run, rng);
+  run.doors = doorsFor(run);
 }
 
 // A potion (in a fight or between the rooms - it costs no energy)
@@ -908,76 +1047,184 @@ function pickRelic(run, name, id) {
   return null;
 }
 
-// At the camp fire: {choice: "rest"} or {choice: "smith", card: an index of the deck} -> an error or null
-function campfire(run, name, input) {
+// A hero's choice in a room: {option, card} (card: an index of the deck - or a card offered) -> an error or null
+function choose(run, name, input = {}, rng = Math.random) {
   const hero = run.heroes.find((h) => h.name == name);
-  const camp = run.event && run.event.camp;
-  if (run.phase != "between" || !camp || !hero || !(name in camp)) return "No camp fire here.";
-  if (camp[name]) return "You chose already.";
-  if (input.choice == "rest") {
-    const heal = healHero(run, hero, hero.maxHp * REST_HEAL);
-    hero.bonusEnergy = 1;
-    camp[name] = "rest";
-    run.event.lines.push(`${name} rests: +${heal} HP, +1 mana in the next fight.`);
-    say(run, `${name} rests at the fire 🔥 (+${heal} HP).`);
-    return null;
+  const event = run.event;
+  if (run.phase != "between" || !event || !event.choices || !hero || !(name in event.choices)) return "Nothing to choose here.";
+  if (event.choices[name]) return "You chose already.";
+  const option = optionsOf(event).find((o) => o.id == input.option);
+  if (!option) return "Not one of the choices.";
+  let index = null;
+  if (option.card == "smith" || option.card == "deck") {
+    index = Number(input.card);
+    if (!Number.isInteger(index) || !hero.deck[index]) return "Pick a card of your deck.";
+    if (option.card == "smith" && isUpgraded(hero.deck[index])) return "That card is upgraded already.";
+    if (option.card == "deck" && hero.deck.length <= DECK_LEAST) return `Your deck keeps at least ${DECK_LEAST} cards.`;
   }
-  if (input.choice == "smith") {
-    const index = Number(input.card);
-    const id = hero.deck[index];
-    if (!id) return "Pick a card of your deck.";
-    if (isUpgraded(id)) return "That card is upgraded already.";
-    hero.deck[index] = id + "+";
-    camp[name] = "smith";
-    run.event.lines.push(`${name} upgrades ${CARDS[id].icon} ${CARDS[id].name} to ${CARDS[id].name}+.`);
-    say(run, `${name} smiths ${CARDS[id].name}+ ⚒️.`);
-    return null;
+  if (option.card == "offer" && !(event.offers[name] || []).includes(input.card)) return "Pick one of the cards.";
+  if (option.id == "bottle" && hero.potions >= POTIONS_MAX) return `At most ${POTIONS_MAX} potions.`;
+  const note = (text) => {
+    event.lines.push(text);
+    say(run, text);
+  };
+  const lose = (share) => {
+    const damage = Math.round(hero.maxHp * share);
+    hero.hp = Math.max(1, hero.hp - damage);
+    return damage;
+  };
+  const gear = () => {
+    const item = makeGear(run.floor, rng, hero.luck);
+    run.loot[hero.name].push(item);
+    return item;
+  };
+  const relic = () => {
+    const [id] = relicOffer(hero, rng, 1);
+    if (id) giveRelic(run, hero, id);
+    return id;
+  };
+  event.choices[name] = option.id;
+  switch (option.id) {
+    case "open": {
+      // (every hero rolls on its own - luck helps)
+      if (rng() * 100 < 40 + hero.luck / 2) {
+        const item = gear();
+        note(`${name} finds ${item.icon} ${item.name} (${item.rarity}) - into the bag at the end of the run.`);
+      } else note(`${name} finds nothing but dust.`);
+      if (rng() < 0.2) {
+        const id = relic();
+        if (id) note(`${name} finds a relic: ${RELICS[id].icon} ${RELICS[id].name}.`);
+      }
+      break;
+    }
+    case "disarm":
+      if (rng() * 100 < disarmChance(hero)) {
+        const item = gear();
+        note(`${name} disarms the trap 🍀 - and finds ${item.icon} ${item.name} in it.`);
+      } else note(`${name} sets it off: ${lose(0.25)} damage.`);
+      break;
+    case "sneak":
+      note(`${name} sneaks past: ${lose(0.1)} damage.`);
+      break;
+    case "rest":
+      hero.bonusEnergy = 1;
+      note(`${name} rests: +${healHero(run, hero, hero.maxHp * REST_HEAL)} HP, +1 mana in the next fight.`);
+      break;
+    case "smith": {
+      const id = hero.deck[index];
+      hero.deck[index] = id + "+";
+      note(`${name} smiths ${CARDS[id].icon} ${CARDS[id].name}+ ⚒️.`);
+      break;
+    }
+    case "pray":
+      hero.blessed = true;
+      note(`${name} gives ${lose(SHRINE_COST)} HP - and deals 25% more damage for the rest of the run.`);
+      break;
+    case "drink":
+      note(`${name} drinks: +${healHero(run, hero, hero.maxHp * 0.3)} HP.`);
+      break;
+    case "bottle":
+      hero.potions++;
+      note(`${name} fills a flask: +1 potion 🧪.`);
+      break;
+    case "read":
+      hero.deck.push(input.card);
+      note(`${name} studies ${CARDS[input.card].icon} ${CARDS[input.card].name} - into the deck.`);
+      break;
+    case "nap":
+      note(`${name} naps: +${healHero(run, hero, hero.maxHp * 0.2)} HP.`);
+      break;
+    case "temper": {
+      const free = hero.deck.map((id, i) => i).filter((i) => !isUpgraded(hero.deck[i]));
+      const picked = shuffle(free, rng).slice(0, 2);
+      picked.forEach((i) => (hero.deck[i] += "+"));
+      note(`${name} tempers ${picked.map((i) => cardInfo(hero.deck[i]).name).join(" and ") || "nothing"} - ${lose(0.08)} damage from the heat.`);
+      break;
+    }
+    case "take": {
+      const id = relic();
+      hero.maxHp = Math.max(1, Math.round(hero.maxHp * 0.9));
+      hero.hp = Math.min(hero.hp, hero.maxHp);
+      note(id ? `${name} takes the idol: ${RELICS[id].icon} ${RELICS[id].name} - but 10% less max HP.` : `${name} takes the idol - it crumbles to dust.`);
+      break;
+    }
+    case "purge": {
+      const [id] = hero.deck.splice(index, 1);
+      note(`${name} gives ${cardInfo(id).icon} ${cardInfo(id).name} to the hermit.`);
+      break;
+    }
+    case "roll":
+      if (rng() < 0.5) {
+        const id = relic();
+        note(id ? `${name} wins 🎲: ${RELICS[id].icon} ${RELICS[id].name}!` : `${name} wins - but the imp has nothing left.`);
+      } else note(`${name} loses 🎲: ${lose(0.15)} damage.`);
+      break;
+    default:
+      note(`${name} walks on.`);
   }
-  return "Rest or smith.";
+  return null;
 }
 
-// The merchant's prices (coins): a potion, a card
+// The merchant's prices (coins): a potion, a (common) card, a relic, a card taken out of the deck
+const CARD_PRICE = { common: 1, rare: 1.5, epic: 2.5, basic: 1, eternal: 4 };
 function merchantPrices(floor) {
   const card = round100(Math.max(1500, entryCost(floor) * 1.2));
-  return { potion: POTION_PRICE, card, relic: card * 3 };
+  return { potion: POTION_PRICE, card, relic: card * 3, remove: card };
 }
 
-// What a hero may buy of the merchant: {price} or {error} (item: "potion" or a card of its offer)
+// What a hero may buy of the merchant: {price} or {error} (item: "potion", "remove:<index of the deck>", a card or a
+// relic of its offer)
 function canBuy(run, name, item) {
   const hero = run.heroes.find((h) => h.name == name);
-  const offer = run.event && run.event.offers && run.event.offers[name];
+  const offer = run.event && run.event.offers && run.event.kind == "merchant" && run.event.offers[name];
   if (run.phase != "between" || !offer || !hero) return { error: "No merchant here." };
-  const prices = merchantPrices(run.floor);
   if (item == "potion") {
     if (hero.potions >= POTIONS_MAX) return { error: `At most ${POTIONS_MAX} potions.` };
-    return { price: prices.potion };
+    return { price: offer.prices.potion };
+  }
+  if (/^remove:\d+$/.test(item)) {
+    if (offer.removed) return { error: "He takes one card a visit." };
+    if (!hero.deck[Number(item.slice(7))]) return { error: "Pick a card of your deck." };
+    if (hero.deck.length <= DECK_LEAST) return { error: `Your deck keeps at least ${DECK_LEAST} cards.` };
+    return { price: offer.prices.remove };
   }
   if (offer.bought.includes(item)) return { error: "Sold already." };
-  if (item == offer.relic) return { price: prices.relic };
-  if (!offer.cards.includes(item)) return { error: "He doesn't sell that." };
-  return { price: prices.card };
+  if (!offer.cards.includes(item) && !offer.relics.includes(item)) return { error: "He doesn't sell that." };
+  return { price: offer.prices[item] };
 }
 
 // Bought (the coins are taken already)
 function bought(run, name, item) {
   const hero = run.heroes.find((h) => h.name == name);
   const offer = run.event.offers[name];
+  const note = (text) => {
+    run.event.lines.push(text);
+    say(run, text);
+  };
   if (item == "potion") {
     hero.potions++;
-    return say(run, `${name} buys a potion 🧪.`);
+    return note(`${name} buys a potion 🧪.`);
+  }
+  if (item.startsWith("remove:")) {
+    offer.removed = true;
+    const [id] = hero.deck.splice(Number(item.slice(7)), 1);
+    return note(`${name} has the merchant take ${cardInfo(id).icon} ${cardInfo(id).name} out of the deck.`);
   }
   offer.bought.push(item);
-  if (item == offer.relic) return giveRelic(run, hero, item);
+  if (offer.relics.includes(item)) {
+    giveRelic(run, hero, item);
+    return note(`${name} buys ${RELICS[item].icon} ${RELICS[item].name}.`);
+  }
   hero.deck.push(item);
-  say(run, `${name} buys ${CARDS[item].icon} ${CARDS[item].name}.`);
+  note(`${name} buys ${CARDS[item].icon} ${CARDS[item].name}.`);
 }
 
 // Three different cards: mostly the class's, sometimes a neutral one
-function rewardFor(hero, rng) {
+function rewardFor(hero, rng, count = 3) {
   // (the class's cards and the neutral ones - weighted by their rarity; no basic, no eternal one)
   const pool = poolOf(hero.cls).filter((id) => !["basic", "eternal"].includes(CARDS[id].rarity)).map((id) => [id, CARD_RARITIES[CARDS[id].rarity].weight]);
   const cards = [];
-  while (cards.length < 3) cards.push(weighted(rng, pool.filter(([id]) => !cards.includes(id))));
+  while (cards.length < Math.min(count, pool.length)) cards.push(weighted(rng, pool.filter(([id]) => !cards.includes(id))));
   return cards;
 }
 
@@ -1457,10 +1704,21 @@ function runView(run) {
     phase: run.phase,
     room: run.rooms.length - 1,
     rooms: run.rooms.map((room) => ({ kind: room.kind, done: room.done })),
-    // (what is behind a hidden door stays hidden - only what a lucky hero sensed: danger or calm)
-    doors: run.doors.map((door) => ({ open: door.open, kind: door.open ? door.kind : null, sense: door.sense })),
+    // The map: what a room is stays hidden - unless sensed, open (the first, the last) or gone through
+    map: (run.map || []).map((row) => row.map((node) => ({ col: node.col, kind: shownKind(node), sensed: node.sensed, visited: node.visited, next: node.next }))),
+    at: run.at,
+    doors: run.doors.map((door) => ({ row: door.row, index: door.index, kind: shownKind(door) })),
     sense: senseChance(run),
-    event: run.event && { ...run.event, prices: merchantPrices(run.floor) },
+    event: run.event && {
+      kind: run.event.kind,
+      id: run.event.id,
+      encounter: run.event.id ? ENCOUNTERS[run.event.id] : null,
+      options: optionsOf(run.event),
+      lines: run.event.lines,
+      choices: run.event.choices,
+      offers: run.event.offers,
+      disarm: run.event.kind == "trap" ? Object.fromEntries(run.heroes.map((h) => [h.name, disarmChance(h)])) : null,
+    },
     votes: run.votes,
     heroes: run.heroes.map((h) => ({
       name: h.name,
@@ -1481,6 +1739,8 @@ function runView(run) {
       hand: h.hand,
       drawCount: h.draw.length,
       discardCount: h.discard.length,
+      // (the piles to look at - the draw pile in no order: what comes next stays a secret)
+      piles: { draw: [...h.draw].sort(), discard: h.discard, exhausted: h.exhausted },
       deck: h.deck,
       reward: h.reward,
       relics: h.relics,
@@ -1548,7 +1808,7 @@ function simulate(hero, floor, runs = 500, rng = Math.random) {
       const me = run.heroes[0];
       if (me.reward) pickReward(run, "sim", me.reward[0]);
       if (me.relicChoice) pickRelic(run, "sim", me.relicChoice[0]);
-      if (run.event && run.event.camp) campfire(run, "sim", me.hp < me.maxHp * 0.7 ? { choice: "rest" } : { choice: "smith", card: me.deck.findIndex((id) => !isUpgraded(id)) });
+      if (run.event && run.event.kind == "rest") choose(run, "sim", me.hp < me.maxHp * 0.7 ? { option: "rest" } : { option: "smith", card: me.deck.findIndex((id) => !isUpgraded(id)) }, rng);
       enterRoom(run, Math.floor(rng() * run.doors.length), rng);
       let turns = 0;
       while (run.phase == "fight" && turns++ < 100) {
@@ -1611,7 +1871,16 @@ module.exports = {
   pickTalent,
   talentPerks,
   pickRelic,
-  campfire,
+  choose,
+  optionsOf,
+  disarmChance,
+  ROOM_OPTIONS,
+  ENCOUNTERS,
+  DECK_LEAST,
+  LANES,
+  makeMap,
+  deckSet,
+  deckReady,
   giveRelic,
   merchantPrices,
   canBuy,

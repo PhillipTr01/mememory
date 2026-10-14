@@ -27,7 +27,8 @@ module.exports = function (io, options = {}) {
   casinoChat.attach(room, ROOM);
 
   // How long a turn / a decision between two rooms may take (ms) - the tests make them short
-  const timing = { turn: 45000, decide: 45000, close: 60000 };
+  // (a room to choose in or a merchant: longer)
+  const timing = { turn: 45000, decide: 45000, room: 90000, close: 60000 };
 
   const heroes = new Map(); // username -> hero (rpg.newHero)
   const parties = new Map(); // id -> {id, leader, floor, size, members, run, endsAt, timer, result}
@@ -99,6 +100,8 @@ module.exports = function (io, options = {}) {
       classPrice: rpg.CLASS_PRICE,
       cardRarities: rpg.CARD_RARITIES,
       deckMin: rpg.DECK_MIN,
+      deckLeast: rpg.DECK_LEAST,
+      lanes: rpg.LANES,
       packPrice: rpg.PACK_PRICE,
       packSize: rpg.PACK_SIZE,
       mainBonus: rpg.MAIN_BONUS,
@@ -160,8 +163,9 @@ module.exports = function (io, options = {}) {
       party.endsAt = Date.now() + timing.turn;
       party.timer = setTimeout(() => monstersAct(party), timing.turn);
     } else if (run.phase === "between") {
-      party.endsAt = Date.now() + timing.decide;
-      party.timer = setTimeout(() => decide(party).catch((error) => console.error("[rpg] Could not go on:", error)), timing.decide);
+      const time = run.event ? timing.room : timing.decide;
+      party.endsAt = Date.now() + time;
+      party.timer = setTimeout(() => decide(party).catch((error) => console.error("[rpg] Could not go on:", error)), time);
     }
   }
 
@@ -351,6 +355,14 @@ module.exports = function (io, options = {}) {
       sendHero(username);
     });
 
+    // The whole deck (the deck builder: cleared, the starter deck again): {ids}
+    on("deckSet", (data) => {
+      if (inRun()) return error("Not during a run.");
+      const problem = rpg.deckSet(heroOf(username), data.ids);
+      if (problem) return error(problem);
+      sendHero(username);
+    });
+
     // A booster pack: PACK_SIZE cards of the class into the collection (spare copies sold)
     on("pack", async () => {
       const hero = heroOf(username);
@@ -443,6 +455,7 @@ module.exports = function (io, options = {}) {
       const size = Number(data.size);
       if (myParty()) return error("You are in a party already.");
       if (!heroOf(username).cls) return error("Pick a class first.");
+      if (rpg.deckReady(heroOf(username))) return error(rpg.deckReady(heroOf(username)));
       if (!Number.isInteger(floor) || floor < 1 || floor > rpg.maxFloor(heroOf(username))) return error("That floor isn't open for you yet.");
       if (!Number.isInteger(size) || size < 1 || size > rpg.PARTY_MAX) return;
       const party = { id: "p" + ++partyCount, leader: username, floor, size, members: [], run: null, endsAt: null, timer: null, result: null };
@@ -467,6 +480,7 @@ module.exports = function (io, options = {}) {
       if (!party || party.run || party.result) return error("That party is gone.");
       if (!heroOf(username).cls) return error("Pick a class first.");
       if (party.members.length >= party.size) return error("That party is full.");
+      if (rpg.deckReady(heroOf(username))) return error(rpg.deckReady(heroOf(username)));
       if (party.floor > rpg.maxFloor(heroOf(username))) return error(`Floor ${party.floor} isn't open for you yet.`);
       join(party, username);
       emitParty(party);
@@ -485,6 +499,8 @@ module.exports = function (io, options = {}) {
       const party = myParty();
       if (!party || party.run) return;
       if (party.leader !== username) return error("Only the leader starts.");
+      const unready = party.members.find((name) => rpg.deckReady(heroOf(name)));
+      if (unready) return error(`${unready}'s deck has fewer than ${rpg.DECK_MIN} cards.`);
       const broke = await start(party);
       if (broke) return error(`${broke} doesn't have enough coins for the entry.`);
     });
@@ -530,12 +546,17 @@ module.exports = function (io, options = {}) {
       emitParty(party);
     });
 
-    // The camp fire: {choice: "rest"} or {choice: "smith", card: an index of the deck}
-    on("camp", (data) => {
+    // A choice in a room (the camp fire, the shrine, an encounter ...): {option, card} - card: an index of the deck
+    // or a card offered
+    on("choose", (data) => {
       const party = myRun();
       if (!party) return;
-      const problem = rpg.campfire(party.run, username, { choice: String(data.choice), card: data.card });
+      const option = String(data.option);
+      const card = typeof data.card === "number" ? data.card : data.card != null ? String(data.card) : null;
+      const problem = rpg.choose(party.run, username, { option, card });
       if (problem) return error(problem);
+      // (a card studied: the collection keeps it too)
+      if (option === "read" && rpg.CARDS[card]) collectFor(party, username, card);
       emitParty(party);
     });
 
@@ -551,7 +572,7 @@ module.exports = function (io, options = {}) {
       emitParty(party);
     });
 
-    // The merchant: {item: "potion" or a card} - paid with the own coins
+    // The merchant: {item: "potion", "remove:<index of the deck>", a card or a relic} - paid with the own coins
     on("buy", async (data) => {
       const party = myRun();
       if (!party) return;
