@@ -391,11 +391,11 @@
 }
 
 .rpg-item.rarity-epic {
-  --rarity: var(--rpg-purple);
+  --rarity: #9d84c2;
 }
 
 .rpg-item.rarity-legendary {
-  --rarity: var(--rpg-gold);
+  --rarity: #d4a64a;
 }
 
 .rpg-item-icon {
@@ -1765,25 +1765,25 @@ button.rpg-cardx.off {
   margin-bottom: 0.4rem;
 }
 
-/* Rarities: the edge of a row, a dot on a card */
+/* Rarities: the edge of a row, a dot on a card - the colors of the casino's frame shop */
 .rarity-common {
-  --rarity-color: #9ca3af;
+  --rarity-color: #a0a0a0;
 }
 
 .rarity-rare {
-  --rarity-color: var(--rpg-blue);
+  --rarity-color: #5b8fd6;
 }
 
 .rarity-epic {
-  --rarity-color: var(--rpg-purple);
+  --rarity-color: #9d84c2;
 }
 
 .rarity-legendary {
-  --rarity-color: #ff9a3c;
+  --rarity-color: #d4a64a;
 }
 
 .rarity-mystic {
-  --rarity-color: var(--rpg-gold);
+  --rarity-color: #2dd4bf;
 }
 
 .rpg-cardx.rarity-rare .rpg-cardx-type,
@@ -1793,9 +1793,38 @@ button.rpg-cardx.off {
   color: var(--rarity-color);
 }
 
+/* Legendary and mystic cards: a frame of their color, a glow - the mystic one brighter */
+.rpg-cardx.rarity-legendary {
+  --card-edge: rgba(212, 166, 74, 0.9);
+  --card-glow: rgba(212, 166, 74, 0.22);
+}
+
+.rpg-cardx.rarity-legendary::before {
+  content: "👑";
+  position: absolute;
+  top: -0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.9rem;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6));
+}
+
+.rpg-cardx.rarity-mystic,
 .rpg-cardx.mystic {
-  --card-edge: var(--rpg-gold);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5), 0 0 16px rgba(245, 197, 66, 0.3);
+  --card-edge: rgba(45, 212, 191, 0.95);
+  --card-glow: rgba(45, 212, 191, 0.3);
+  background: radial-gradient(ellipse at 50% 0%, rgba(45, 212, 191, 0.12), transparent 60%), linear-gradient(180deg, #26262c, #18181c);
+}
+
+.rpg-cardx.rarity-mystic::before {
+  content: "✦";
+  position: absolute;
+  top: -0.8rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1rem;
+  color: #2dd4bf;
+  text-shadow: 0 0 8px rgba(45, 212, 191, 0.9);
 }
 
 /* Popups */
@@ -2591,7 +2620,7 @@ button.rpg-cardx.off {
 }
 
 .rpg-deck-row.mystic {
-  background: linear-gradient(90deg, rgba(245, 197, 66, 0.12), var(--rpg-surface));
+  background: linear-gradient(90deg, rgba(45, 212, 191, 0.12), var(--rpg-surface));
 }
 
 .rpg-builder-note {
@@ -3272,15 +3301,15 @@ button.rpg-cardx.off {
 }
 
 .rpg-flip.rarity-epic {
-  --glow: rgba(167, 139, 250, 0.9);
+  --glow: rgba(157, 132, 194, 0.95);
 }
 
 .rpg-flip.rarity-legendary {
-  --glow: rgba(255, 154, 60, 0.95);
+  --glow: rgba(212, 166, 74, 1);
 }
 
 .rpg-flip.rarity-mystic {
-  --glow: rgba(255, 224, 120, 1);
+  --glow: rgba(45, 212, 191, 1);
 }
 
 @keyframes rpg-deal {
@@ -3398,18 +3427,18 @@ button.rpg-cardx.off {
 }
 
 .rarity-epic .rpg-cardx-gem {
-  background: #a78bfa;
-  box-shadow: 0 0 6px rgba(167, 139, 250, 0.8);
+  background: #9d84c2;
+  box-shadow: 0 0 6px rgba(157, 132, 194, 0.8);
 }
 
 .rarity-legendary .rpg-cardx-gem {
-  background: #ff9a3c;
-  box-shadow: 0 0 8px rgba(255, 154, 60, 0.9);
+  background: #d4a64a;
+  box-shadow: 0 0 8px rgba(212, 166, 74, 0.9);
 }
 
 .rarity-mystic .rpg-cardx-gem {
-  background: #ffe07a;
-  box-shadow: 0 0 10px rgba(255, 224, 120, 1);
+  background: #2dd4bf;
+  box-shadow: 0 0 10px rgba(45, 212, 191, 1);
 }
 
 @media (max-width: 991px) {
