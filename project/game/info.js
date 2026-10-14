@@ -165,6 +165,53 @@ const GAMES = {
     ],
   }),
 
+  // The dungeon (game/rpg.js): no bets - entries, packs, a hero; its numbers from the module
+  rpg: () => {
+    const rpg = require("./rpg");
+    const rarities = Object.values(rpg.CARD_RARITIES).filter((r) => r.value);
+    const packs = Object.values(rpg.PACKS);
+    return {
+      title: "⚔️ Dungeon",
+      sections: [
+        {
+          heading: "Your hero",
+          items: [
+            `5 classes - Warrior, Paladin, Cleric, Rogue, Mage - each a character of its own: its own levels, gear, deck and floors. The first is free, every other 🪙 ${n(rpg.CLASS_PRICE)}.`,
+            `Stats (Vitality, Strength, Armor, Luck, Agility) get better with coins (from 🪙 ${n(rpg.upgradeCost(0))}, dearer every level) or with the stat point of every hero level. The main stat of the class counts ${rpg.MAIN_BONUS}x.`,
+            "Hero levels come with XP from the fights (a run lost: half of it) - talents to pick at levels 3, 6 and 10.",
+            "Gear (a weapon, armor, a charm) drops in the dungeon - a charm may make room for more cards in the deck or let it go down with fewer.",
+          ],
+        },
+        {
+          heading: "A run",
+          items: [
+            `Pick a floor (${rpg.FLOORS} of them, each opens when the one before is cleared) - go alone or in a party of up to ${rpg.PARTY_MAX}. Every hero pays the entry: 🪙 ${n(rpg.entryCost(1))} on floor 1, more on every floor.`,
+            `A floor is a map of ${rpg.ROOMS} rows: pick the next room among the ones the path leads to (a party votes). What a room is stays hidden (?) - luck lets the party sense it. The last room: the guarded gate.`,
+            "Fights, hard fights (a relic), treasure, traps, camp fires (rest or upgrade a card), shrines, merchants and strange encounters.",
+            "Every fight won pays coins into the loot pot and offers a card for this run's deck. Leave between two rooms with the pot - or clear the floor (the first clear: a bonus of its entry). All heroes down: the pot is lost.",
+            `Potions heal 40% (at most ${rpg.POTIONS_MAX}): 🪙 ${n(rpg.potionPrice(1))}, dearer with every floor your hero reached.`,
+          ],
+        },
+        {
+          heading: "Fights",
+          items: [
+            `Like Slay the Spire: every turn ${rpg.ENERGY} mana and 5 cards - play cards (drag them onto a foe or a hero), then end the turn. The monsters show what they do next.`,
+            "Block takes the hits of this turn. Played cards go to the discard pile - shuffled back in when the draw pile is empty. Exhaust: gone for the fight. Mystic: gone for the run.",
+          ],
+        },
+        {
+          heading: "Cards and packs",
+          items: [
+            `Your deck: ${rpg.DECK_MIN} to ${rpg.DECK_MAX} cards of your collection, built in the deck builder. Over 50 cards a class to collect.`,
+            ...packs.map((pack) => `${pack.icon} ${pack.name}: 🪙 ${n(pack.price)} - ${pack.about}`),
+            `${rpg.PACK_BUNDLE} or more packs of a kind: ${Math.round(rpg.BUNDLE_OFF * 100)}% off. Bought packs wait - open them one after the other, or all at once.`,
+            `A copy you already own all of is sold right away: ${rarities.map((r) => r.name + " 🪙 " + n(r.value)).join(", ")}.`,
+          ],
+        },
+      ],
+    };
+  },
+
   slots: (L) => {
     const spins = slots.BONUS_SPINS.map((f) => f.spins).join(", ");
     const starts = slots.BONUS_MULTIPLIERS.map((f) => "×" + f.multiplier).join(", ");
@@ -295,7 +342,7 @@ function get(game, world = "") {
   const L = limits.forWorld(world);
   const about = GAMES[game](L, world);
   const cap = capText(L, world, game);
-  if (cap && game !== "leaderboard") about.sections.push({ heading: "Max bet", items: [cap] });
+  if (cap && game !== "leaderboard" && game !== "rpg") about.sections.push({ heading: "Max bet", items: [cap] });
   return about;
 }
 
