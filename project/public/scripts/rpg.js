@@ -162,6 +162,10 @@ function render() {
   document.getElementById("rpgLobby").hidden = !lobby;
   document.getElementById("rpgRun").hidden = home || lobby;
   if (home || lobby) document.getElementById("rpgModal").hidden = true;
+  // (no class yet: the first one is picked in a popup)
+  var first = home && !hero.cls;
+  document.getElementById("rpgFirst").hidden = !first;
+  if (first) renderFirst();
   if (home && building) renderBuilder();
   else if (home && shopping) renderShop();
   else if (home) {
@@ -350,6 +354,52 @@ function curve(deck) {
     box.appendChild(col);
   });
   return box;
+}
+
+/* ---------- The first class: a popup ---------- */
+
+function renderFirst() {
+  var stat = (id) => rules.stats[id];
+  var tiles = Object.keys(rules.classes).map((id) => {
+    var cls = rules.classes[id];
+    var tile = el("button", "rpg-first-class");
+    tile.type = "button";
+    tile.dataset.act = "unlock";
+    tile.dataset.id = id;
+    var main = stat(cls.main);
+    // What the class is good at: its main stat, how it differs
+    var chips = el("div", "rpg-first-chips");
+    var chip = (text, good, tip) => {
+      var c = el("span", "rpg-first-chip" + (good ? " good" : good === false ? " bad" : ""), text);
+      c.title = tip;
+      chips.appendChild(c);
+    };
+    chip("❤️ " + Math.round(cls.hp * 100) + "% HP", cls.hp > 1 ? true : cls.hp < 1 ? false : null, "Max HP of the class");
+    chip("⚔️ " + Math.round(cls.atk * 100) + "% attack", cls.atk > 1 ? true : cls.atk < 1 ? false : null, "Attack of the class");
+    if (cls.def) chip("🛡️ +" + cls.def + " armor", true, "Armor from the start");
+    if (cls.luck) chip("🍀 +" + cls.luck + "% luck", true, "Crits, sensing rooms, loot");
+    if (cls.agi) chip("🪶 +" + cls.agi + "% dodge", true, "Dodge attacks");
+    var cards = el("div", "rpg-first-cards");
+    cls.signature.forEach((card) => cards.appendChild(cardEl(card, { className: "small" })));
+    tile.append(
+      el("span", "rpg-first-icon", cls.icon),
+      el("span", "rpg-first-name", cls.name),
+      el("span", "rpg-first-main", "★ " + main.icon + " " + main.name),
+      el("span", "rpg-first-about", cls.about),
+      chips,
+      el("span", "rpg-label", "Signature cards"),
+      cards,
+      el("span", "rpg-first-pick", "Choose " + cls.name),
+    );
+    return tile;
+  });
+  var grid = el("div", "rpg-first-grid");
+  tiles.forEach((t) => grid.appendChild(t));
+  morphChildren(document.getElementById("rpgFirstBox"), [
+    el("div", "rpg-first-title", "⚔️ Choose your hero"),
+    el("div", "rpg-first-sub mm-muted", "Your first class is free. Every class is a character of its own - its own levels, gear, deck and floors. The others can be unlocked later for 🪙 " + formatCoins(rules.classPrice) + "."),
+    grid,
+  ]);
 }
 
 /* ---------- The card shop: booster packs of the base set ---------- */
