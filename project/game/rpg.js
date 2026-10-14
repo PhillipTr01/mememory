@@ -59,11 +59,11 @@ const REWARD = { fight: 0.2, hard: 0.38, elite: 0.35, boss: 1, chest: 0.15, trap
 // main: the stat its levels count 1.5x for; hp, atk: times the stats; def, luck, agi: added;
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
-  warrior: { name: "Warrior", icon: "⚔️", main: "atk", about: "Strength - heavy blows, cleaves the pack, a war cry for the party", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust"] },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", about: "Armor - draws the attacks, shields the party, judges with his armor", hp: 1.15, atk: 0.9, def: 4, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark"] },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", about: "Vitality - heals, smites the undead, brings the fallen back", hp: 1.2, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing"] },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", about: "Agility - dodges, poisons, then strikes where it hurts", hp: 0.95, atk: 1.05, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry"] },
-  mage: { name: "Mage", icon: "🔮", main: "luck", about: "Luck - spells that crit, fire on all foes, frost that weakens", hp: 0.85, atk: 1.15, def: 0, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor"] },
+  warrior: { name: "Warrior", icon: "⚔️", main: "atk", about: "Strength - heavy blows, cleaves the pack, a war cry for the party", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust"], eternal: "titanswrath" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", about: "Armor - draws the attacks, shields the party, judges with his armor", hp: 1.15, atk: 0.9, def: 4, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark"], eternal: "divine" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", about: "Vitality - heals, smites the undead, brings the fallen back", hp: 1.2, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing"], eternal: "resurrection" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", about: "Agility - dodges, poisons, then strikes where it hurts", hp: 0.95, atk: 1.05, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry"], eternal: "deathmark" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", about: "Luck - spells that crit, fire on all foes, frost that weakens", hp: 0.85, atk: 1.15, def: 0, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor"], eternal: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -106,7 +106,69 @@ const CARDS = {
   barrier: { name: "Barrier", icon: "🔮", cost: 1, type: "skill", target: "ally", text: "An ally blocks 8 + 60% of your attack." },
   arcanebolt: { name: "Arcane Bolt", icon: "✨", cost: 1, type: "attack", target: "foe", text: "Deal 150% damage." },
   meteor: { name: "Meteor", icon: "☄️", cost: 3, type: "attack", target: "none", text: "Deal 160% damage to every foe." },
+  // Eternal: once per run - gone from the deck for the rest of the run once played (only in booster packs)
+  titanswrath: { name: "Titan's Wrath", icon: "🌋", cost: 2, type: "attack", target: "none", eternal: true, text: "Deal 350% damage to every foe. Eternal." },
+  divine: { name: "Divine Intervention", icon: "👼", cost: 1, type: "skill", target: "none", eternal: true, text: "Every hero blocks 30 + armor and heals 30% HP. Eternal." },
+  resurrection: { name: "Resurrection", icon: "🌅", cost: 2, type: "skill", target: "none", eternal: true, text: "Every fallen hero stands up with 60% HP, the party heals 25%. Eternal." },
+  deathmark: { name: "Death Mark", icon: "💀", cost: 1, type: "attack", target: "foe", eternal: true, text: "A foe below half HP dies (not a boss) - else 400% damage. Eternal." },
+  timewarp: { name: "Time Warp", icon: "⏳", cost: 0, type: "skill", target: "none", eternal: true, text: "+4 mana, draw 4 cards. Eternal." },
 };
+
+// How rare a card is (booster packs, rewards): basic (the starter deck), common, rare, epic, eternal
+const CARD_RARITY = {
+  strike: "basic",
+  defend: "basic",
+  focus: "common",
+  secondwind: "common",
+  quickslash: "common",
+  adrenaline: "rare",
+  bash: "common",
+  cleave: "common",
+  ironwave: "common",
+  battlecry: "rare",
+  bloodlust: "epic",
+  taunt: "common",
+  judgement: "common",
+  bulwark: "common",
+  holyshield: "rare",
+  consecrate: "rare",
+  heal: "common",
+  smite: "common",
+  prayer: "rare",
+  blessing: "rare",
+  revive: "epic",
+  poisonblade: "common",
+  backstab: "common",
+  flurry: "common",
+  smoke: "rare",
+  envenom: "rare",
+  frost: "common",
+  barrier: "common",
+  arcanebolt: "common",
+  fireball: "rare",
+  meteor: "epic",
+  titanswrath: "eternal",
+  divine: "eternal",
+  resurrection: "eternal",
+  deathmark: "eternal",
+  timewarp: "eternal",
+};
+// A card's rarity: its weight in packs and rewards, how many of it a collection holds, what a spare one sells for
+const CARD_RARITIES = {
+  basic: { name: "Basic", weight: 0, copies: 4, value: 0 },
+  common: { name: "Common", weight: 64, copies: 3, value: 200 },
+  rare: { name: "Rare", weight: 26, copies: 2, value: 500 },
+  epic: { name: "Epic", weight: 8, copies: 2, value: 1500 },
+  eternal: { name: "Eternal", weight: 2, copies: 1, value: 4000 },
+};
+for (const [id, rarity] of Object.entries(CARD_RARITY)) CARDS[id].rarity = rarity;
+// The deck: at least DECK_MIN cards, at most deckMax(level) - more room with every few hero levels
+const DECK_MIN = 10;
+function deckMax(level) {
+  return Math.min(30, 15 + Math.floor((level - 1) / 2));
+}
+const PACK_SIZE = 5;
+const PACK_PRICE = 5000;
 const NEUTRAL_CARDS = ["focus", "secondwind", "adrenaline", "quickslash"];
 
 const ENERGY = 3; // a turn
@@ -293,7 +355,67 @@ function newChar() {
 function charOf(hero, cls = hero.cls) {
   if (!cls) return newChar();
   if (!hero.chars[cls]) hero.chars[cls] = newChar();
-  return hero.chars[cls];
+  const char = hero.chars[cls];
+  // (the cards: the starter deck - its cards the first of the collection)
+  if (!char.deck) {
+    char.deck = starterDeck(cls);
+    char.collection = {};
+    for (const id of char.deck) char.collection[id] = (char.collection[id] || 0) + 1;
+  }
+  return char;
+}
+
+/* ---------- The collection and the deck (built between the runs, like Hearthstone) ---------- */
+
+// The cards a class can own: its own (and its eternal one), the neutral ones, the basic ones
+function poolOf(cls) {
+  const c = CLASSES[cls] || CLASSES.warrior;
+  return ["strike", "defend", ...c.cards, c.eternal, ...NEUTRAL_CARDS];
+}
+
+// A card into the collection -> true, or false: it holds all the copies of it already
+function collect(char, id) {
+  const max = CARD_RARITIES[CARDS[id].rarity].copies;
+  if ((char.collection[id] || 0) >= max) return false;
+  char.collection[id] = (char.collection[id] || 0) + 1;
+  return true;
+}
+
+// A card of the collection into the deck -> an error or null
+function deckAdd(hero, id) {
+  const char = charOf(hero);
+  if (!CARDS[id] || !poolOf(hero.cls).includes(id)) return "Not a card of your class.";
+  const inDeck = char.deck.filter((one) => one == id).length;
+  if (inDeck >= (char.collection[id] || 0)) return "You don't own more of it - booster packs bring more cards.";
+  if (char.deck.length >= deckMax(char.level)) return `At most ${deckMax(char.level)} cards (more room with hero levels).`;
+  char.deck.push(id);
+  return null;
+}
+
+// A card out of the deck -> an error or null
+function deckRemove(hero, id) {
+  const char = charOf(hero);
+  const index = char.deck.lastIndexOf(id);
+  if (index < 0) return "Not in your deck.";
+  if (char.deck.length <= DECK_MIN) return `At least ${DECK_MIN} cards.`;
+  char.deck.splice(index, 1);
+  return null;
+}
+
+// A booster pack opened: PACK_SIZE cards of the class (the last one rare or better) -> [{id, fresh, coins}] -
+// a card the collection holds all copies of already is sold (its coins: the server pays them)
+function openPack(hero, rng = Math.random) {
+  const char = charOf(hero);
+  const pool = poolOf(hero.cls).filter((id) => CARDS[id].rarity != "basic");
+  const cards = [];
+  for (let i = 0; i < PACK_SIZE; i++) {
+    const better = i == PACK_SIZE - 1;
+    const choices = pool.filter((id) => !better || CARDS[id].rarity != "common").map((id) => [id, CARD_RARITIES[CARDS[id].rarity].weight]);
+    const id = weighted(rng, choices);
+    const fresh = collect(char, id);
+    cards.push({ id, fresh, coins: fresh ? 0 : CARD_RARITIES[CARDS[id].rarity].value });
+  }
+  return cards;
 }
 
 // A class unlocked (and played) - the price is the server's business
@@ -397,6 +519,10 @@ function heroView(hero) {
     maxFloor: maxFloor(hero),
     runs: char.runs,
     cleared: char.cleared,
+    deck: char.deck,
+    collection: char.collection,
+    deckMax: deckMax(char.level),
+    pool: hero.cls ? poolOf(hero.cls) : [],
     level: char.level,
     xp: char.xp,
     xpNeed: xpNeed(char.level),
@@ -557,7 +683,7 @@ function newRun(floor, party, rng = Math.random) {
         xp: 0,
         down: false,
         potions: hero.potions,
-        deck: starterDeck(hero.cls),
+        deck: [...charOf(hero).deck],
         draw: [],
         hand: [],
         discard: [],
@@ -848,13 +974,10 @@ function bought(run, name, item) {
 
 // Three different cards: mostly the class's, sometimes a neutral one
 function rewardFor(hero, rng) {
-  const cls = CLASSES[hero.cls] || CLASSES.warrior;
-  const pool = [...cls.cards.map((id) => [id, 2]), ...NEUTRAL_CARDS.map((id) => [id, 1])];
+  // (the class's cards and the neutral ones - weighted by their rarity; no basic, no eternal one)
+  const pool = poolOf(hero.cls).filter((id) => !["basic", "eternal"].includes(CARDS[id].rarity)).map((id) => [id, CARD_RARITIES[CARDS[id].rarity].weight]);
   const cards = [];
-  while (cards.length < 3) {
-    const card = weighted(rng, pool.filter(([id]) => !cards.includes(id)));
-    cards.push(card);
-  }
+  while (cards.length < 3) cards.push(weighted(rng, pool.filter(([id]) => !cards.includes(id))));
   return cards;
 }
 
@@ -1007,7 +1130,12 @@ function play(run, name, input, rng = Math.random) {
   if (card.target == "fallen" && !fallen) return "Nobody to bring back.";
   hero.energy -= card.cost;
   const [{ id }] = hero.hand.splice(index, 1);
-  (card.exhaust ? hero.exhausted : hero.discard).push(id);
+  (card.exhaust || card.eternal ? hero.exhausted : hero.discard).push(id);
+  // (eternal: once per run - out of the run's deck)
+  if (card.eternal) {
+    const at = hero.deck.indexOf(id);
+    if (at >= 0) hero.deck.splice(at, 1);
+  }
   // (the first attack of the turn: the perks for it)
   hero.firstAttack = card.type == "attack" && !hero.attacked;
   if (card.type == "attack") hero.attacked = true;
@@ -1129,6 +1257,34 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
       return say(run, `${hero.name} shields ${friend.name} 🔮.`);
     case "arcanebolt":
       return strike(run, hero, foe, (1.5) * up, rng, { sure: true, verb: "blasts" });
+    case "titanswrath":
+      for (const one of foes) strike(run, hero, one, 3.5 * up, rng, { sure: true, verb: "erupts on" });
+      return;
+    case "divine":
+      for (const one of alive(run.heroes)) {
+        block(one, 30 + hero.def);
+        heal(one, one.maxHp * 0.3);
+      }
+      return say(run, `${hero.name} calls down a divine intervention 👼!`);
+    case "resurrection":
+      for (const one of run.heroes.filter((h) => h.down)) {
+        one.down = false;
+        one.hp = Math.round(one.maxHp * 0.6);
+        one.ended = true;
+      }
+      for (const one of alive(run.heroes)) heal(one, one.maxHp * 0.25);
+      return say(run, `${hero.name}: a resurrection 🌅!`);
+    case "deathmark":
+      if (foe.hp < foe.maxHp / 2 && foe.rank != "boss") {
+        foe.hp = 0;
+        foe.down = true;
+        return say(run, `${hero.name} marks ${foe.icon} ${foe.name} for death 💀 - it falls.`);
+      }
+      return strike(run, hero, foe, 4 * up, rng, { sure: true, verb: "marks" });
+    case "timewarp":
+      hero.energy += 4;
+      drawCards(hero, 4, rng);
+      return say(run, `${hero.name} warps time ⏳.`);
     case "meteor":
       for (const one of foes) strike(run, hero, one, (1.6) * up, rng, { sure: true, verb: "crushes" });
       return;
@@ -1329,6 +1485,7 @@ function runView(run) {
       reward: h.reward,
       relics: h.relics,
       relicChoice: h.relicChoice,
+      perks: h.perks,
       xp: h.xp,
     })),
     monsters: run.monsters.map((m) => ({
@@ -1432,6 +1589,16 @@ module.exports = {
   ENERGY,
   MOVES,
   ROOM_KINDS,
+  CARD_RARITIES,
+  DECK_MIN,
+  PACK_SIZE,
+  PACK_PRICE,
+  deckMax,
+  poolOf,
+  collect,
+  deckAdd,
+  deckRemove,
+  openPack,
   TALENTS,
   TALENT_LEVELS,
   RELICS,

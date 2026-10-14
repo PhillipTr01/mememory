@@ -97,6 +97,10 @@ module.exports = function (io, options = {}) {
       levelMax: rpg.LEVEL_MAX,
       classes: rpg.CLASSES,
       classPrice: rpg.CLASS_PRICE,
+      cardRarities: rpg.CARD_RARITIES,
+      deckMin: rpg.DECK_MIN,
+      packPrice: rpg.PACK_PRICE,
+      packSize: rpg.PACK_SIZE,
       mainBonus: rpg.MAIN_BONUS,
       moves: rpg.MOVES,
       roomKinds: rpg.ROOM_KINDS,
@@ -182,6 +186,13 @@ module.exports = function (io, options = {}) {
     if (phase === "won" || phase === "lost") return finish(party, phase).catch((error) => console.error("[rpg] Could not end a run:", error));
     schedule(party);
     emitParty(party);
+  }
+
+  // A card won or bought in a run: into the collection of the character that plays it
+  function collectFor(party, name, card) {
+    const one = party.run.heroes.find((h) => h.name === name);
+    if (!one || !heroes.has(name)) return;
+    rpg.collect(rpg.charOf(heroOf(name), one.cls), card);
   }
 
   async function start(party) {
@@ -322,6 +333,33 @@ module.exports = function (io, options = {}) {
       if (rpg.upgradeCost(char.levels[data.stat] || 0) == null) return error("That one is at its highest level.");
       char.points--;
       char.levels[data.stat] = (char.levels[data.stat] || 0) + 1;
+      sendHero(username);
+    });
+
+    // The deck (built between the runs): a card of the collection in, a card out
+    on("deckAdd", (data) => {
+      if (inRun()) return error("Not during a run.");
+      const problem = rpg.deckAdd(heroOf(username), String(data.id));
+      if (problem) return error(problem);
+      sendHero(username);
+    });
+
+    on("deckRemove", (data) => {
+      if (inRun()) return error("Not during a run.");
+      const problem = rpg.deckRemove(heroOf(username), String(data.id));
+      if (problem) return error(problem);
+      sendHero(username);
+    });
+
+    // A booster pack: PACK_SIZE cards of the class into the collection (spare copies sold)
+    on("pack", async () => {
+      const hero = heroOf(username);
+      if (!hero.cls) return error("Pick a class first.");
+      if (!(await coins.spend(username, rpg.PACK_PRICE, { reason: "rpg pack", note: hero.cls }))) return error(coins.refusal(username) || "You don't have enough coins.");
+      const cards = rpg.openPack(hero);
+      const spare = cards.reduce((sum, card) => sum + card.coins, 0);
+      if (spare > 0) await coins.add(username, spare, { reason: "rpg spare cards" });
+      socket.emit("rpgPack", { cards, spare });
       sendHero(username);
     });
 
@@ -505,8 +543,11 @@ module.exports = function (io, options = {}) {
     on("pick", (data) => {
       const party = myRun();
       if (!party) return;
-      const problem = rpg.pickReward(party.run, username, data.card != null ? String(data.card) : null);
+      const card = data.card != null ? String(data.card) : null;
+      const problem = rpg.pickReward(party.run, username, card);
       if (problem) return error(problem);
+      // (a card won: the collection keeps it too)
+      if (card) collectFor(party, username, card);
       emitParty(party);
     });
 
@@ -524,6 +565,7 @@ module.exports = function (io, options = {}) {
         return error("Too late - the party went on.");
       }
       rpg.bought(party.run, username, item);
+      if (item !== "potion" && rpg.CARDS[item]) collectFor(party, username, item);
       emitParty(party);
     });
 

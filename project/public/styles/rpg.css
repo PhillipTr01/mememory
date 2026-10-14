@@ -1701,3 +1701,260 @@ button.rpg-cardx.off {
   background: rgba(111, 167, 132, 0.18);
   color: #9fd6b2;
 }
+
+/* ======================= 10. Deck builder, packs, popups, the party, drag & drop ======================= */
+
+/* The deck builder */
+.rpg-deck-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.rpg-deck-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.35rem;
+}
+
+.rpg-deck-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--mm-border);
+  border-left: 3px solid var(--rarity-color, var(--mm-border));
+  background: var(--rpg-surface);
+  color: var(--mm-text);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.rpg-deck-row:hover {
+  border-color: rgba(var(--rpg-red-rgb), 0.6);
+}
+
+.rpg-row-cost {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex: none;
+  border-radius: 50% 0 50% 50%;
+  transform: rotate(-45deg);
+  background: radial-gradient(circle at 40% 40%, #e6f8ff, #5bbcf0 55%, #1f6a96);
+  display: grid;
+  place-items: center;
+  font-size: 0;
+}
+
+.rpg-row-cost::after {
+  content: attr(data-cost);
+  transform: rotate(45deg);
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #10202a;
+}
+
+.rpg-row-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rpg-row-count {
+  font-weight: 800;
+  color: var(--mm-accent);
+}
+
+.rpg-cardx.unowned {
+  filter: grayscale(1);
+  opacity: 0.35;
+}
+
+.rpg-help-box summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mm-muted);
+  margin-bottom: 0.4rem;
+}
+
+/* Rarities: the edge of a row, a dot on a card */
+.rarity-common {
+  --rarity-color: #9ca3af;
+}
+
+.rarity-rare {
+  --rarity-color: var(--rpg-blue);
+}
+
+.rarity-epic {
+  --rarity-color: var(--rpg-purple);
+}
+
+.rarity-eternal {
+  --rarity-color: var(--rpg-gold);
+}
+
+.rpg-cardx.rarity-rare .rpg-cardx-type,
+.rpg-cardx.rarity-epic .rpg-cardx-type,
+.rpg-cardx.rarity-eternal .rpg-cardx-type {
+  color: var(--rarity-color);
+}
+
+.rpg-cardx.eternal {
+  --card-edge: var(--rpg-gold);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5), 0 0 16px rgba(245, 197, 66, 0.3);
+}
+
+/* Popups */
+.rpg-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(5, 5, 7, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.rpg-modal[hidden] {
+  display: none;
+}
+
+.rpg-modal-box {
+  width: min(100%, 44rem);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1.25rem;
+  border-radius: 16px;
+  background: #16161a;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.35);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.rpg-pack .rpg-cardx.revealing {
+  animation: rpg-reveal 0.45s ease both;
+}
+
+@keyframes rpg-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(16px) rotateY(80deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The countdown */
+.rpg-clock {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--rpg-surface-hi);
+}
+
+.rpg-clock:empty {
+  display: none;
+}
+
+.rpg-clock.low {
+  color: #ffb4a8;
+  background: rgba(var(--rpg-red-rgb), 0.18);
+}
+
+/* The party: stats and relics */
+.rpg-party-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 0.6rem;
+}
+
+.rpg-pstat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  border-radius: 10px;
+  border: 1px solid var(--mm-border);
+  background: var(--rpg-surface);
+}
+
+.rpg-pstat.me {
+  border-color: rgba(var(--mm-accent-rgb), 0.5);
+}
+
+.rpg-pstat-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.rpg-pstat-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.rpg-pstat-chip {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  cursor: help;
+}
+
+.rpg-relic-chip.big {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+}
+
+/* Drag & drop */
+.rpg-ghost {
+  position: fixed;
+  z-index: 2000;
+  pointer-events: none;
+  transform: translate(-50%, -60%) rotate(-4deg) scale(1.05);
+  opacity: 0.92;
+  margin: 0 !important;
+}
+
+.rpg-hand .rpg-cardx.dragging {
+  opacity: 0.3;
+}
+
+.rpg-hand button.rpg-cardx {
+  touch-action: none;
+}
+
+.rpg-arena.aiming-any {
+  outline: 2px dashed rgba(var(--mm-accent-rgb), 0.5);
+  outline-offset: -6px;
+}
+
+.drop-hover.rpg-monster,
+.drop-hover.rpg-fighter {
+  transform: scale(1.05);
+  border-color: var(--mm-accent) !important;
+}
+
+.drop-hover.rpg-arena {
+  outline-color: var(--mm-accent);
+}

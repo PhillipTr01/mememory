@@ -295,6 +295,45 @@ test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/
   assert.ok(rpg.monstersFor(1, 1, "elite").every((m) => !m.affix));
 });
 
+test("rpg: collection and deck - the starter deck owned, packs bring cards (spare copies sold), the deck from 10 to deckMax, eternal cards once a run", () => {
+  const hero = rpg.newHero("rogue");
+  const char = rpg.charOf(hero);
+  assert.strictEqual(char.deck.length, 10);
+  assert.deepStrictEqual([char.collection.strike, char.collection.defend, char.collection.poisonblade], [4, 4, 1]);
+  // The deck: not below DECK_MIN, only owned cards, only the class's
+  assert.match(rpg.deckRemove(hero, "strike"), /At least 10/);
+  assert.match(rpg.deckAdd(hero, "smoke"), /don't own/);
+  assert.match(rpg.deckAdd(hero, "meteor"), /Not a card of your class/);
+  // A pack: 5 cards of the class (never a basic one), the last rare or better
+  for (let i = 0; i < 40; i++) {
+    const pack = rpg.openPack(hero);
+    assert.strictEqual(pack.length, rpg.PACK_SIZE);
+    for (const card of pack) {
+      assert.ok(rpg.poolOf("rogue").includes(card.id) && rpg.CARDS[card.id].rarity != "basic", card.id);
+      assert.ok(card.fresh ? card.coins == 0 : card.coins > 0);
+    }
+    assert.notStrictEqual(rpg.CARDS[pack[4].id].rarity, "common");
+  }
+  // (the collection never holds more than the copies of a rarity)
+  for (const [id, n] of Object.entries(char.collection)) assert.ok(n <= rpg.CARD_RARITIES[rpg.CARDS[id].rarity].copies, id);
+  assert.strictEqual(rpg.deckAdd(hero, "smoke"), null);
+  assert.strictEqual(rpg.deckRemove(hero, "strike"), null);
+  while (char.deck.length < rpg.deckMax(char.level)) char.deck.push("defend");
+  assert.match(rpg.deckAdd(hero, "flurry"), /At most/);
+  assert.ok(rpg.deckMax(9) > rpg.deckMax(1));
+  // An eternal card: played once - gone from the run's deck
+  const run = rpg.newRun(1, [{ name: "a", hero }]);
+  rpg.enterRoom(run, 0);
+  const me = run.heroes[0];
+  me.deck.push("timewarp");
+  me.hand = [{ uid: "e", id: "timewarp" }];
+  const mana = me.energy;
+  assert.strictEqual(rpg.play(run, "a", { uid: "e" }), null);
+  assert.strictEqual(me.energy, mana + 4);
+  assert.ok(!me.deck.includes("timewarp") && me.exhausted.includes("timewarp"));
+  assert.ok(!char.deck.includes("timewarp"), "the character's deck stays as it was");
+});
+
 let server;
 const sockets = [];
 const tokens = {};

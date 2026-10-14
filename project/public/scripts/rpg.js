@@ -76,7 +76,7 @@ function cardOf(id) {
 function cardEl(id, options) {
   options = options || {};
   var card = cardOf(id);
-  var node = el(options.tag || "div", "rpg-cardx type-" + card.type + (card.upgraded ? " upgraded" : "") + (options.className ? " " + options.className : ""));
+  var node = el(options.tag || "div", "rpg-cardx type-" + card.type + " rarity-" + (card.rarity || "basic") + (card.upgraded ? " upgraded" : "") + (card.eternal ? " eternal" : "") + (options.className ? " " + options.className : ""));
   if (options.act) {
     node.dataset.act = options.act;
     node.dataset.id = options.id != null ? options.id : id;
@@ -86,7 +86,7 @@ function cardEl(id, options) {
   var cost = el("span", "rpg-cardx-cost");
   cost.dataset.cost = String(card.cost);
   cost.title = card.cost + " mana";
-  node.append(cost, el("span", "rpg-cardx-art", card.icon), el("span", "rpg-cardx-name", card.name), el("span", "rpg-cardx-type", card.type == "attack" ? "Attack" : "Skill"), el("span", "rpg-cardx-text", card.text));
+  node.append(cost, el("span", "rpg-cardx-art", card.icon), el("span", "rpg-cardx-name", card.name), el("span", "rpg-cardx-type", (card.type == "attack" ? "Attack" : "Skill") + " · " + ((rules.cardRarities[card.rarity] || {}).name || "")), el("span", "rpg-cardx-text", card.text));
   return node;
 }
 
@@ -150,6 +150,7 @@ function render() {
   document.getElementById("rpgHome").hidden = !home;
   document.getElementById("rpgLobby").hidden = !lobby;
   document.getElementById("rpgRun").hidden = home || lobby;
+  if (home || lobby) document.getElementById("rpgModal").hidden = true;
   if (home) {
     renderHero();
     renderDoor();
@@ -298,23 +299,46 @@ function renderHero() {
     : [el("div", "rpg-empty mm-muted", "Empty - chests in the dungeon drop gear (" + rules.bagMax + " fit).")];
   morphChildren(document.getElementById("rpgBag"), bag);
 
-  // The deck: the class's starter deck, the cards to win
-  var deck = ["strike", "defend"].concat(mine.signature);
+  // The deck builder: the deck (click: out), the collection (click: in), booster packs
   morphChildren(document.getElementById("rpgDeckHelp"), deckHelp());
-  var counts = { strike: 4, defend: 4 };
-  document.getElementById("rpgDeckCount").innerText = String(8 + mine.signature.length);
+  document.getElementById("rpgDeckCount").innerText = picked ? String(hero.deck.length) : "";
+  document.getElementById("rpgDeckSize").innerText = picked ? hero.deck.length + " cards · " + rules.deckMin + " to " + hero.deckMax + " (more room with hero levels)" : "";
+  var pack = document.getElementById("rpgBuyPack");
+  pack.innerText = "🎴 Booster pack · 🪙 " + formatCoins(rules.packPrice);
+  pack.title = rules.packSize + " cards of your class - the last one rare or better; a card you own all copies of is sold";
+  pack.disabled = !picked || myCoins < rules.packPrice;
+  var counts = {};
+  (hero.deck || []).forEach((id) => (counts[id] = (counts[id] || 0) + 1));
+  var order = (hero.pool || []).filter((id) => counts[id]);
   morphChildren(
-    document.getElementById("rpgDeck"),
-    deck.map((id) => {
-      var card = cardEl(id, { className: "small" });
-      if (counts[id]) card.appendChild(el("span", "rpg-cardx-count", "×" + counts[id]));
-      return card;
-    }),
+    document.getElementById("rpgDeckList"),
+    picked
+      ? order.map((id) => {
+          var card = cardOf(id);
+          var row = el("button", "rpg-deck-row rarity-" + card.rarity);
+          row.type = "button";
+          row.dataset.act = "deckRemove";
+          row.dataset.id = id;
+          row.title = card.text + " - click: out of the deck";
+          var cost = el("span", "rpg-row-cost");
+          cost.dataset.cost = String(card.cost);
+          row.append(cost, el("span", "rpg-row-icon", card.icon), el("span", "rpg-row-name", card.name), el("span", "rpg-row-count", "×" + counts[id]));
+          return row;
+        })
+      : [],
   );
-  var pool = mine.cards.filter((id) => !mine.signature.includes(id)).concat(["focus", "secondwind", "adrenaline", "quickslash"]);
   morphChildren(
-    document.getElementById("rpgPool"),
-    pool.map((id) => cardEl(id, { className: "small" })),
+    document.getElementById("rpgCollection"),
+    picked
+      ? hero.pool.map((id) => {
+          var owned = hero.collection[id] || 0;
+          var spare = owned - (counts[id] || 0);
+          var node = cardEl(id, { tag: "button", act: spare > 0 ? "deckAdd" : "", className: "small" + (owned ? "" : " unowned") + (spare > 0 ? " pickable" : " off") });
+          node.appendChild(el("span", "rpg-cardx-count", owned ? spare + " / " + owned : "🔒"));
+          node.title = owned ? (spare > 0 ? "Click: into the deck" : "All your copies are in the deck") : "Not owned yet - booster packs, rewards, the merchant";
+          return node;
+        })
+      : [],
   );
 }
 
@@ -415,18 +439,8 @@ function renderRun() {
   arena.classList.toggle("aiming-foe", !!aiming && aiming.target == "foe");
   arena.classList.toggle("aiming-ally", !!aiming && (aiming.target == "ally" || aiming.target == "fallen"));
 
-  // Between the rooms: the card won in the last fight - or what happened in the last room (the merchant: his pack)
-  var reward = document.getElementById("rpgReward");
-  var panel = null;
-  if (run.phase == "between") {
-    panel = [];
-    if (me && me.relicChoice) panel = panel.concat(relicPanel(me));
-    if (me && me.reward) panel = panel.concat(rewardPanel(me));
-    if (run.event) panel = panel.concat(eventPanel(run, me));
-    if (!panel.length) panel = null;
-  }
-  reward.hidden = !panel;
-  if (panel) morphChildren(reward, panel);
+  renderModal(run, me);
+  renderPartyStats(run);
 
   var scene;
   if (fighting) {
@@ -490,6 +504,78 @@ function renderRun() {
     run.log.slice(-20).map((line) => el("li", "", line)),
   );
   log.scrollTop = log.scrollHeight;
+}
+
+// Between the rooms one popup at a time: the relic of a hard fight, the card won, what happened in the room -
+// each skipped or closed: the next one
+var closed = {}; // the popups closed on this page (the info of a room)
+function renderModal(run, me) {
+  var modal = document.getElementById("rpgModal");
+  var nodes = null;
+  if (run.phase == "between" && me && !party.result) {
+    var key = run.rooms.length;
+    if (me.relicChoice) nodes = relicPanel(me);
+    else if (me.reward) nodes = rewardPanel(me);
+    else if (run.event && !closed["event:" + key]) nodes = eventPanel(run, me).concat([button(run.event.camp && run.event.camp[myName] === null ? "Decide later" : "Continue", "closeModal", { id: "event:" + key, className: "small" })]);
+  }
+  modal.hidden = !nodes;
+  if (nodes) morphChildren(document.getElementById("rpgModalBox"), nodes);
+}
+
+// The party: every hero's stats, perks (talents, relics) and relics
+var PERK_TEXT = {
+  startBlock: (v) => "+" + v + " block at the start",
+  firstMana: (v) => "+" + v + " mana on turn one",
+  draw: (v) => "+" + v + " card a turn",
+  attack: (v) => "+" + Math.round(v * 100) + "% damage",
+  firstStrike: (v) => "+" + Math.round(v * 100) + "% first attack",
+  lowHp: (v) => "+" + Math.round(v * 100) + "% damage below half HP",
+  crit: (v) => "+" + v + "% crit",
+  lifesteal: (v) => Math.round(v * 100) + "% lifesteal",
+  thorns: (v) => v + " thorns",
+  block: (v) => "+" + Math.round(v * 100) + "% block",
+  heal: (v) => "+" + Math.round(v * 100) + "% healing",
+  afterFight: (v) => "heal " + Math.round(v * 100) + "% after a fight",
+  poison: (v) => "+" + Math.round(v * 100) + "% poison",
+  maxHp: (v) => "+" + Math.round(v * 100) + "% max HP",
+  agi: (v) => "+" + v + "% dodge",
+};
+function renderPartyStats(run) {
+  morphChildren(
+    document.getElementById("rpgPartyStats"),
+    run.heroes.map((h) => {
+      var cls = rules.classes[h.cls] || { icon: "", name: "" };
+      var row = el("div", "rpg-pstat" + (h.name == myName ? " me" : ""));
+      var head = el("div", "rpg-pstat-head");
+      head.append(createAvatar(h.name, "sm"), el("b", "", h.name), el("span", "mm-muted small", cls.icon + " " + cls.name));
+      var stats = el("div", "rpg-pstat-stats");
+      [
+        ["❤️", h.hp + " / " + h.maxHp, "HP"],
+        ["⚔️", h.atk, "Attack: 100% damage of a Strike"],
+        ["🛡️", h.def, "Armor: taken off every hit (at most 75%), more block"],
+        ["🍀", h.luck + (h.perks.crit || 0) + "%", "Critical hits (x1.8) - and sensing the doors"],
+        ["🪶", h.agi + "%", "Dodge an attack"],
+        ["🧪", h.potions, "Potions"],
+      ].forEach(([icon, value, tip]) => {
+        var chip = el("span", "rpg-pstat-chip", icon + " " + value);
+        chip.title = tip;
+        stats.appendChild(chip);
+      });
+      var perks = Object.keys(h.perks || {})
+        .filter((k) => h.perks[k] && PERK_TEXT[k])
+        .map((k) => PERK_TEXT[k](h.perks[k]));
+      var relics = el("div", "rpg-relics");
+      (h.relics || []).forEach((id) => {
+        var relic = rules.relics[id];
+        var chip = el("span", "rpg-relic-chip big", relic.icon + " " + relic.name);
+        chip.title = relic.text;
+        relics.appendChild(chip);
+      });
+      if (!(h.relics || []).length) relics.appendChild(el("span", "mm-muted small", "No relics yet - hard fights, chests, the merchant"));
+      row.append(head, stats, relics, el("div", "mm-muted small", perks.length ? "Perks: " + perks.join(" · ") : "No perks yet - talents (hero levels 3, 6, 10) and relics"));
+      return row;
+    }),
+  );
 }
 
 // A relic of a hard fight: one of three (for this run)
@@ -645,8 +731,8 @@ function handBar(run, me) {
   var energy = el("div", "rpg-energy");
   energy.dataset.mana = me.energy + "/" + rules.energy;
   energy.title = "Mana - cards cost it, full again every turn";
-  var draw = el("div", "rpg-pile", "🂠 " + me.drawCount);
-  draw.title = "Draw pile";
+  var draw = el("div", "rpg-pile", "Draw " + me.drawCount);
+  draw.title = "Draw pile: the cards still to come this fight";
   var left = el("div", "rpg-hand-side");
   left.append(energy, draw);
   var hand = el("div", "rpg-hand" + (me.ended ? " ended" : ""));
@@ -662,8 +748,8 @@ function handBar(run, me) {
   if (!me.hand.length) hand.appendChild(el("div", "rpg-wait mm-muted", "No cards left"));
   var waiting = run.heroes.filter((h) => !h.down && !h.ended).length;
   var end = button(me.ended ? "Waiting… (" + waiting + ")" : "End turn", "endTurn", { className: "primary rpg-end", disabled: me.ended });
-  var discard = el("div", "rpg-pile", "♻ " + me.discardCount);
-  discard.title = "Discard pile - shuffled back when the draw pile is empty";
+  var discard = el("div", "rpg-pile", "Discard " + me.discardCount);
+  discard.title = "Discard pile: played and unplayed cards of the turns before - shuffled back in when the draw pile is empty";
   var right = el("div", "rpg-hand-side");
   right.append(end, potion, discard);
   var nodes = [left, hand, right];
@@ -672,16 +758,20 @@ function handBar(run, me) {
 }
 
 // The time of the turn / the vote, running down
+// The time of the turn / the vote: seconds, counting down
 function tick() {
-  var timer = document.getElementById("rpgTimer");
+  var clock = document.getElementById("rpgClock");
+  var text = "";
   if (party && party.run && !party.result && party.timeLeft != null) {
-    var total = party.run.phase == "fight" ? rules.turn : rules.decide;
-    var left = Math.max(0, party.timeLeft - (Date.now() - partyAt));
-    timer.style.width = (left / total) * 100 + "%";
-  } else timer.style.width = "0%";
-  requestAnimationFrame(tick);
+    var left = Math.max(0, Math.ceil((party.timeLeft - (Date.now() - partyAt)) / 1000));
+    text = "⏱ " + left + "s";
+    clock.classList.toggle("low", left <= 10);
+    clock.title = party.run.phase == "fight" ? "Time left for this turn" : "Time left for the vote";
+  }
+  if (clock.innerText != text) clock.innerText = text;
+  setTimeout(tick, 250);
 }
-requestAnimationFrame(tick);
+tick();
 
 /* ---------- Clicks ---------- */
 
@@ -714,7 +804,77 @@ function clickCard(uid) {
   render();
 }
 
+// Drag & drop: a card of the hand dragged onto a foe (attacks), a hero (heals, shields) or the scene (the rest)
+var drag = null;
+var dragged = false; // (a drag just ended: the click after it is not a click)
+document.addEventListener("pointerdown", (event) => {
+  var card = event.target.closest(".rpg-hand button.rpg-cardx");
+  if (!card || card.classList.contains("off") || event.button > 0) return;
+  drag = { uid: card.dataset.id, x: event.clientX, y: event.clientY, ghost: null, source: card };
+});
+document.addEventListener("pointermove", (event) => {
+  if (!drag) return;
+  if (!drag.ghost) {
+    if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 10) return;
+    drag.ghost = drag.source.cloneNode(true);
+    drag.ghost.classList.add("rpg-ghost");
+    document.body.appendChild(drag.ghost);
+    drag.source.classList.add("dragging");
+    var entry = findInHand(drag.uid);
+    var t = entry ? cardOf(entry.id).target : "none";
+    var arena = document.querySelector(".rpg-arena");
+    arena.classList.toggle("aiming-foe", t == "foe");
+    arena.classList.toggle("aiming-ally", t == "ally" || t == "fallen");
+    arena.classList.toggle("aiming-any", t == "none");
+  }
+  drag.ghost.style.left = event.clientX + "px";
+  drag.ghost.style.top = event.clientY + "px";
+  document.querySelectorAll(".drop-hover").forEach((n) => n.classList.remove("drop-hover"));
+  var over = dropTarget(event);
+  if (over) over.node.classList.add("drop-hover");
+});
+document.addEventListener("pointerup", (event) => {
+  if (!drag) return;
+  var current = drag;
+  drag = null;
+  if (!current.ghost) return;
+  dragged = true;
+  setTimeout(() => (dragged = false), 0);
+  current.ghost.remove();
+  current.source.classList.remove("dragging");
+  document.querySelectorAll(".drop-hover").forEach((n) => n.classList.remove("drop-hover"));
+  var over = dropTarget(event);
+  var entry = findInHand(current.uid);
+  if (over && entry) {
+    var t = cardOf(entry.id).target;
+    if (t == "foe" && over.kind == "foe") socket.emit("play", { uid: current.uid, target: over.id });
+    else if ((t == "ally" || t == "fallen") && over.kind == "hero") socket.emit("play", { uid: current.uid, ally: over.id });
+    else if (t == "none") socket.emit("play", { uid: current.uid });
+  }
+  aiming = null;
+  render();
+});
+
+function findInHand(uid) {
+  var me = party && party.run && party.run.heroes.find((h) => h.name == myName);
+  return me ? me.hand.find((c) => c.uid == uid) : null;
+}
+
+// What is under the pointer: a foe, a hero - or the scene
+function dropTarget(event) {
+  var under = document.elementFromPoint(event.clientX, event.clientY);
+  if (!under) return null;
+  var foe = under.closest(".rpg-monster:not(.down)");
+  if (foe) return { kind: "foe", id: foe.dataset.id, node: foe };
+  var ally = under.closest(".rpg-fighter");
+  if (ally) return { kind: "hero", id: ally.dataset.id, node: ally };
+  var arena = under.closest(".rpg-arena");
+  if (arena) return { kind: "scene", node: arena };
+  return null;
+}
+
 document.querySelector(".rpg-main").addEventListener("click", (event) => {
+  if (dragged) return;
   var node = event.target.closest("[data-act], [data-tab]");
   if (!node || node.disabled) return;
   if (node.dataset.tab) {
@@ -733,6 +893,11 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "unlock") unlockClass(id);
   else if (act == "buy") socket.emit("buy", { item: id });
   else if (act == "point") socket.emit("point", { stat: id });
+  else if (act == "deckAdd" || act == "deckRemove") socket.emit(act, { id: id });
+  else if (act == "closeModal") {
+    closed[id] = true;
+    render();
+  } else if (act == "closePack") document.getElementById("rpgPackModal").remove();
   else if (act == "talent") socket.emit("talent", { tier: Number(id.split(":")[0]), id: id.split(":")[1] });
   else if (act == "relic") socket.emit("relic", { id: id || null });
   else if (act == "camp") socket.emit("camp", { choice: id });
@@ -811,5 +976,25 @@ document.getElementById("rpgFloorUp").addEventListener("click", () => {
 document.getElementById("rpgSolo").addEventListener("click", () => socket.emit("create", { floor: floor, size: 1 }));
 document.getElementById("rpgOpen").addEventListener("click", () => socket.emit("create", { floor: floor, size: size }));
 document.getElementById("rpgBuyPotion").addEventListener("click", () => socket.emit("potion"));
+document.getElementById("rpgBuyPack").addEventListener("click", () => socket.emit("pack"));
+
+// A booster pack opened: its cards, one after the other
+socket.on("rpgPack", (data) => {
+  var old = document.getElementById("rpgPackModal");
+  if (old) old.remove();
+  var modal = el("div", "rpg-modal");
+  modal.id = "rpgPackModal";
+  var box = el("div", "rpg-modal-box");
+  var cards = el("div", "rpg-reward-cards rpg-pack");
+  data.cards.forEach((c, i) => {
+    var node = cardEl(c.id, { className: "revealing" });
+    node.style.animationDelay = i * 0.25 + "s";
+    node.appendChild(el("span", "rpg-price", c.fresh ? "New!" : "Spare · +🪙 " + formatCoins(c.coins)));
+    cards.appendChild(node);
+  });
+  box.append(el("div", "rpg-reward-title", "🎴 Booster pack"), cards, el("div", "mm-muted small", data.spare ? "Spare copies sold: +🪙 " + formatCoins(data.spare) : "Every card new for your collection - put them into your deck."), button("Nice", "closePack", { className: "primary" }));
+  modal.appendChild(box);
+  document.querySelector(".rpg-main").appendChild(modal);
+});
 document.getElementById("rpgStart").addEventListener("click", () => socket.emit("start"));
 document.getElementById("rpgLeave").addEventListener("click", () => socket.emit("leave"));

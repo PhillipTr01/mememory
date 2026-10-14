@@ -132,12 +132,18 @@
                                 <div id="rpgBag" class="rpg-bag"></div>
                             </div>
                             <div class="rpg-pane" data-pane="deck" hidden>
-                                <div class="rpg-label">How cards work</div>
-                                <div id="rpgDeckHelp" class="rpg-help"></div>
-                                <div class="rpg-label">Your starter deck</div>
-                                <div id="rpgDeck" class="rpg-deck-grid"></div>
-                                <div class="rpg-label">Cards to win</div>
-                                <div id="rpgPool" class="rpg-deck-grid"></div>
+                                <div class="rpg-deck-head">
+                                    <div><b>Your deck</b> <span id="rpgDeckSize" class="mm-muted small"></span></div>
+                                    <button type="button" id="rpgBuyPack" class="rpg-btn small primary"></button>
+                                </div>
+                                <div class="mm-muted small">Click a card of the deck to take it out - a card of the collection to put it in. Every run starts with this deck.</div>
+                                <div id="rpgDeckList" class="rpg-deck-list"></div>
+                                <div class="rpg-label">Collection</div>
+                                <div id="rpgCollection" class="rpg-deck-grid"></div>
+                                <details class="rpg-help-box">
+                                    <summary>How cards work</summary>
+                                    <div id="rpgDeckHelp" class="rpg-help"></div>
+                                </details>
                             </div>
                         </div>
                         <div class="rpg-card rpg-door">
@@ -176,21 +182,28 @@
                     </div>
 
                     <!--- A run: the bar on top, the scene (monsters over the party - or the doors), the hand --->
+                    <!--- One popup at a time: a relic, a card, a room (closed or skipped - the next) --->
+                    <div id="rpgModal" class="rpg-modal" hidden>
+                        <div id="rpgModalBox" class="rpg-modal-box"></div>
+                    </div>
                     <div id="rpgRun" class="rpg-run" hidden>
                         <div class="rpg-run-top">
                             <div id="rpgRunFloor" class="rpg-run-floor"></div>
                             <div id="rpgTrack" class="rpg-track"></div>
+                            <div id="rpgClock" class="rpg-clock"></div>
                             <div id="rpgPot" class="rpg-pot"></div>
                         </div>
-                        <div class="rpg-timer"><div id="rpgTimer" class="rpg-timer-bar"></div></div>
                         <div class="rpg-arena">
                             <span class="rpg-torch left" aria-hidden="true"></span>
                             <span class="rpg-torch right" aria-hidden="true"></span>
-                            <div id="rpgReward" class="rpg-reward" hidden></div>
                             <div id="rpgMonsters" class="rpg-monsters"></div>
                             <div id="rpgHeroes" class="rpg-heroes"></div>
                         </div>
                         <div id="rpgHandBar" class="rpg-handbar"></div>
+                        <details class="rpg-log-box" open>
+                            <summary>📊 The party - stats &amp; relics</summary>
+                            <div id="rpgPartyStats" class="rpg-party-stats"></div>
+                        </details>
                         <details class="rpg-log-box">
                             <summary>Your deck this run · <span id="rpgRunDeckCount"></span></summary>
                             <div id="rpgRunDeck" class="rpg-deck-grid"></div>
