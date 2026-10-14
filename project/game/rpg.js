@@ -798,7 +798,7 @@ const ROOM_KINDS = {
   event: { name: "Encounter", icon: "📜", about: "Something strange - a choice to make" },
 };
 // What waits in a room of the map (weights) - mostly fights
-const DOOR_POOL = { fight: 6, hard: 2.2, trap: 0.9, chest: 1.2, rest: 0.8, shrine: 0.4, merchant: 0.5, event: 1.6 };
+const DOOR_POOL = { fight: 10, hard: 3.5, trap: 0.4, chest: 0.6, rest: 0.5, shrine: 0.2, merchant: 0.3, event: 0.6 };
 const LANES = 4; // the columns of the map
 // What a room of the map is - hidden; the party senses it (sees its kind) that often: SENSE_BASE + SENSE x luck %
 const SENSE_BASE = 20;
