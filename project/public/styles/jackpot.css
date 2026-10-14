@@ -2833,9 +2833,12 @@ body.jackpot-theme {
 }
 
 .cs-info {
+  box-sizing: border-box;
   max-width: 520px;
   max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .cs-info-heading {

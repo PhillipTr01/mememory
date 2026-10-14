@@ -41,7 +41,9 @@
     backdrop.addEventListener("click", function (event) {
       if (event.target == backdrop) done();
     });
-    close.focus();
+    // (the focus on the button - the text stays at its top)
+    close.focus({ preventScroll: true });
+    dialog.scrollTop = 0;
   }
 
   document.addEventListener("DOMContentLoaded", function () {
