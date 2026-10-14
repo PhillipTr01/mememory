@@ -5,10 +5,10 @@ const rpg = require("../game/rpg");
 const testMode = require("../game/test_mode");
 
 test("rpg: upgrades and floors get dearer, a floor opens after the one before; the map: rows of rooms (mostly fights) and paths, a fight first, the guarded gate last", () => {
-  assert.strictEqual(rpg.upgradeCost(0), 5000);
+  assert.strictEqual(rpg.upgradeCost(0), 10000);
   assert.ok(rpg.upgradeCost(5) > rpg.upgradeCost(4));
   assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX), null);
-  assert.strictEqual(rpg.entryCost(1), 5000);
+  assert.strictEqual(rpg.entryCost(1), 10000);
   assert.strictEqual(rpg.potionPrice(1), 5000);
   assert.ok(rpg.potionPrice(10) > rpg.potionPrice(9));
   assert.ok(rpg.entryCost(10) > rpg.entryCost(9));
@@ -111,7 +111,7 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   assert.strictEqual(rpg.statsOf(quick).agi, dodge + 4);
 });
 
-test("rpg: a new hero clears floor 1 but not floor 8 - upgrades take it deeper; a full clear pays about 2x the entry (at most 2.2x)", () => {
+test("rpg: a new hero clears floor 1 but not floor 8 - upgrades take it deeper; a full clear pays about 1.5x the entry", () => {
   const weak = rpg.newHero("warrior");
   assert.ok(rpg.simulate(weak, 1, 200).cleared > 0.85);
   assert.ok(rpg.simulate(weak, 8, 200).cleared < 0.05);
@@ -119,7 +119,7 @@ test("rpg: a new hero clears floor 1 but not floor 8 - upgrades take it deeper; 
   for (const id of rpg.STAT_IDS) rpg.charOf(strong).levels[id] = 8;
   const deep = rpg.simulate(strong, 8, 200);
   assert.ok(deep.cleared > 0.9, JSON.stringify(deep));
-  assert.ok(deep.payback > 1.5 && deep.payback < 2.2, JSON.stringify(deep));
+  assert.ok(deep.payback > 1.2 && deep.payback < 1.8, JSON.stringify(deep));
 });
 
 // A fight with one monster of fixed numbers (the tests decide what it does) and the hand the tests give
@@ -696,7 +696,7 @@ test("rpg: co-op - one opens a party, another joins, the leader starts (both pay
   assert.strictEqual(hero.maxFloor, 2);
   // (the first clear of a floor: a bonus - and XP for the character)
   // (a party of 2: 20% more loot and first clear bonus)
-  assert.strictEqual(won.summary.rpg_bob.firstClear, Math.round((rpg.entryCost(1) * rpg.partyBonus(2)) / 100) * 100);
+  assert.strictEqual(won.summary.rpg_bob.firstClear, Math.round((rpg.entryCost(1) * rpg.FIRST_CLEAR * rpg.partyBonus(2)) / 100) * 100);
   assert.ok(won.summary.rpg_bob.xp > 0);
   assert.strictEqual(testMode.balance("rpg_bob"), bobBefore - rpg.entryCost(1) + won.run.pot + won.summary.rpg_bob.firstClear);
 });

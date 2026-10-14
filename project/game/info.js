@@ -178,7 +178,7 @@ const GAMES = {
           items: [
             `5 classes - Warrior, Paladin, Cleric, Rogue, Mage - each a character of its own: its own levels, gear, deck and floors. The first is free, every other 🪙 ${n(rpg.CLASS_PRICE)}.`,
             `Stats (Vitality, Strength, Armor, Luck, Agility) get better with coins (from 🪙 ${n(rpg.upgradeCost(0))}, dearer every level) or with the stat point of every hero level. The main stat of the class counts ${rpg.MAIN_BONUS}x.`,
-            "Hero levels come with XP from the fights (a run lost: half of it) - talents to pick at levels 3, 6 and 10.",
+            `Hero levels come with XP from the fights (a run lost: half of it) - talents to pick at levels ${rpg.TALENT_LEVELS.join(", ")}. XP comes slowly: level ${rpg.HERO_LEVEL_MAX} is a long way.`,
             "Gear (a weapon, armor, a charm) drops in the dungeon - a charm may make room for more cards in the deck or let it go down with fewer.",
           ],
         },
@@ -188,7 +188,7 @@ const GAMES = {
             `Pick a floor (${rpg.FLOORS} of them, each opens when the one before is cleared) - go alone or in a party of up to ${rpg.PARTY_MAX}. Every hero pays the entry: 🪙 ${n(rpg.entryCost(1))} on floor 1, more on every floor.`,
             `A floor is a map of ${rpg.ROOMS} rows: pick the next room among the ones the path leads to (a party votes). What a room is stays hidden (?) - luck lets the party sense it. The last room: the guarded gate.`,
             "Fights, hard fights (a relic), treasure, traps, camp fires (rest or upgrade a card), shrines, merchants and strange encounters.",
-            "Every fight won pays coins into the loot pot and offers a card for this run's deck. Leave between two rooms with the pot - or clear the floor (the first clear: a bonus of its entry). All heroes down: the pot is lost.",
+            "Every fight won pays coins into the loot pot and offers a card for this run's deck. Leave between two rooms with the pot - or clear the floor (the first clear: half its entry more). All heroes down: the pot is lost. Deeper floors are hard: most runs there fail.",
             `Potions heal 40% (at most ${rpg.POTIONS_MAX}): 🪙 ${n(rpg.potionPrice(1))}, dearer with every floor your hero reached.`,
           ],
         },

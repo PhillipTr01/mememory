@@ -437,10 +437,10 @@ function renderTop() {
   );
   document.getElementById("rpgHeroName").innerText = picked ? mine.icon + " " + mine.name : "Pick your hero";
   document.getElementById("rpgHeroSub").innerText = picked ? "Deepest floor " + hero.deepest + " · " + hero.cleared + " / " + hero.runs + " runs cleared" : "";
-  // The hero's level: XP from the fights - every level a stat point, talents at levels 3, 6, 10
+  // The hero's level: XP from the fights - every level a stat point, talents at levels 3 to 50
   var xpBox = document.getElementById("rpgXp");
   xpBox.hidden = !picked;
-  xpBox.title = "XP: every fight won (hard fights and the guarded gate more, deeper floors more) and every floor cleared (the first time: twice) - a run lost: half. Every level: a stat point; talents at levels 3, 6 and 10. At most level " + rules.heroLevelMax + ".";
+  xpBox.title = "XP: every fight won (hard fights and the guarded gate more, deeper floors more) and every floor cleared (the first time: twice) - a run lost: half. Every level: a stat point; talents at levels " + rules.talentLevels.join(", ") + ". At most level " + rules.heroLevelMax + ".";
   var top = hero.level >= rules.heroLevelMax;
   if (picked) morphChildren(xpBox, [el("span", "rpg-level", "Lv " + hero.level), top ? el("span", "rpg-max mm-muted small", "Max level") : bar(hero.xp, hero.xpNeed, "xp", " XP"), hero.points ? el("span", "rpg-points", "+" + hero.points + " point" + (hero.points == 1 ? "" : "s")) : null]);
   document.getElementById("rpgPotions").innerText = "🧪 " + hero.potions + " / " + rules.potionsMax;
@@ -500,7 +500,7 @@ function renderHero() {
   });
   morphChildren(document.getElementById("rpgStats"), stats);
 
-  // Talents: one of two per tier - open at hero levels 3, 6, 10
+  // Talents: one of two per tier - open at the talent levels (3 to 50)
   morphChildren(
     document.getElementById("rpgTalents"),
     picked
@@ -1308,7 +1308,7 @@ function renderPartyStats(run) {
         relics.appendChild(chip);
       });
       if (!(h.relics || []).length) relics.appendChild(el("span", "mm-muted small", "No relics yet - hard fights, chests, the merchant"));
-      row.append(head, stats, relics, el("div", "mm-muted small", perks.length ? "Perks: " + perks.join(" · ") : "No perks yet - talents (hero levels 3, 6, 10) and relics"));
+      row.append(head, stats, relics, el("div", "mm-muted small", perks.length ? "Perks: " + perks.join(" · ") : "No perks yet - talents (hero levels " + rules.talentLevels.join(", ") + ") and relics"));
       return row;
     }),
   );

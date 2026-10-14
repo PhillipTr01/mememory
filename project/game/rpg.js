@@ -46,16 +46,16 @@ const STATS = {
 };
 const STAT_IDS = Object.keys(STATS);
 const LEVEL_MAX = 50;
-const UPGRADE_BASE = 5000;
-const UPGRADE_GROWTH = 1.2;
+const UPGRADE_BASE = 10000;
+const UPGRADE_GROWTH = 1.22;
 // The main stat of a class: its levels count this much more
 const MAIN_BONUS = 1.5;
 const DODGE_MAX = 40;
 
-const ENTRY_BASE = 5000;
-const ENTRY_GROWTH = 1.25;
+const ENTRY_BASE = 10000;
+const ENTRY_GROWTH = 1.27; // floor 30: about 10 million
 // What a room puts in the pot (per hero, a share of the entry)
-const REWARD = { fight: 0.27, hard: 0.5, elite: 0.5, boss: 1.2, chest: 0.22, trap: 0, rest: 0, shrine: 0, merchant: 0 };
+const REWARD = { fight: 0.21, hard: 0.4, elite: 0.4, boss: 1, chest: 0.17, trap: 0, rest: 0, shrine: 0, merchant: 0 };
 
 /* ---------- Classes and their cards ---------- */
 
@@ -420,9 +420,9 @@ const MONSTERS = [
   ],
 ];
 const MONSTER_HP = 52;
-const MONSTER_HP_GROWTH = 1.13;
+const MONSTER_HP_GROWTH = 1.14;
 const MONSTER_ATK = 11;
-const MONSTER_ATK_GROWTH = 1.11;
+const MONSTER_ATK_GROWTH = 1.115;
 // A bigger party: every monster has this much more HP and attack per hero after the first - and there are more of
 // them (a party is no easier than going alone)
 const PARTY_HP = 1.0;
@@ -443,32 +443,62 @@ function partyBonus(size) {
 const PERK_KEYS = ["startBlock", "firstMana", "draw", "attack", "firstStrike", "lowHp", "crit", "lifesteal", "thorns", "block", "heal", "afterFight", "poison", "maxHp", "agi"];
 
 // Talents: every class at hero level 3, 6 and 10 - one of two
-const TALENT_LEVELS = [3, 6, 10];
+const TALENT_LEVELS = [3, 6, 10, 15, 20, 25, 30, 40, 50];
 const TALENTS = {
   warrior: [
     [{ id: "ironskin", name: "Iron Skin", icon: "🪨", text: "Start every fight with 8 block.", perks: { startBlock: 8 } }, { id: "rhythm", name: "Battle Rhythm", icon: "🥁", text: "Your first attack each turn deals 50% more.", perks: { firstStrike: 0.5 } }],
     [{ id: "berserk", name: "Berserker", icon: "😤", text: "35% more damage below half HP.", perks: { lowHp: 0.35 } }, { id: "recovery", name: "Recovery", icon: "🩹", text: "Heal 12% after every fight won.", perks: { afterFight: 0.12 } }],
     [{ id: "warlord", name: "Warlord", icon: "👑", text: "+1 mana on the first turn of every fight.", perks: { firstMana: 1 } }, { id: "bloodthirst", name: "Bloodthirst", icon: "🩸", text: "Heal 15% of the damage of your attacks.", perks: { lifesteal: 0.15 } }],
+    [{ id: "juggernaut", name: "Juggernaut", icon: "🚂", text: "+10% max HP.", perks: {maxHp: 0.1} }, { id: "cleaver", name: "Cleaver", icon: "🪓", text: "10% more damage.", perks: {attack: 0.1} }],
+    [{ id: "thickhide", name: "Thick Hide", icon: "🦏", text: "Start every fight with 6 block.", perks: {startBlock: 6} }, { id: "fury", name: "Fury", icon: "😡", text: "25% more damage below half HP.", perks: {lowHp: 0.25} }],
+    [{ id: "secondwind", name: "Second Wind", icon: "🌬️", text: "Heal 8% after every fight won.", perks: {afterFight: 0.08} }, { id: "sharpedge", name: "Sharp Edge", icon: "🔪", text: "+8% critical hits.", perks: {crit: 8} }],
+    [{ id: "spikedplates", name: "Spiked Plates", icon: "🌵", text: "Who hits you takes 5 damage.", perks: {thorns: 5} }, { id: "momentum", name: "Momentum", icon: "🥁", text: "Your first attack each turn deals 30% more.", perks: {firstStrike: 0.3} }],
+    [{ id: "colossus", name: "Colossus", icon: "🗿", text: "+15% max HP.", perks: {maxHp: 0.15} }, { id: "veteran", name: "Veteran", icon: "🎖️", text: "Draw 1 more card every turn.", perks: {draw: 1} }],
+    [{ id: "titan", name: "Titan", icon: "🌋", text: "20% more damage.", perks: {attack: 0.2} }, { id: "undying", name: "Undying", icon: "❤️‍🔥", text: "Heal 12% of the damage of your attacks.", perks: {lifesteal: 0.12} }],
   ],
   paladin: [
     [{ id: "bastion", name: "Bastion", icon: "🏰", text: "30% more block from your cards.", perks: { block: 0.3 } }, { id: "aegis", name: "Aegis", icon: "🛡️", text: "Start every fight with 10 block.", perks: { startBlock: 10 } }],
     [{ id: "spikes", name: "Spiked Armor", icon: "🌵", text: "Who hits you takes 6 damage.", perks: { thorns: 6 } }, { id: "faith", name: "Faith", icon: "🙏", text: "Heal 15% after every fight won.", perks: { afterFight: 0.15 } }],
     [{ id: "crusader", name: "Crusader", icon: "⚔️", text: "25% more damage.", perks: { attack: 0.25 } }, { id: "vigil", name: "Vigil", icon: "❤️", text: "+20% max HP.", perks: { maxHp: 0.2 } }],
+    [{ id: "shieldwall", name: "Shield Wall", icon: "🧱", text: "15% more block from your cards.", perks: {block: 0.15} }, { id: "devout", name: "Devout", icon: "📿", text: "20% more healing.", perks: {heal: 0.2} }],
+    [{ id: "rampart", name: "Rampart", icon: "🏯", text: "Start every fight with 8 block.", perks: {startBlock: 8} }, { id: "retribution", name: "Retribution", icon: "⚡", text: "Who hits you takes 5 damage.", perks: {thorns: 5} }],
+    [{ id: "holystrength", name: "Holy Strength", icon: "💪", text: "10% more damage.", perks: {attack: 0.1} }, { id: "steadfast", name: "Steadfast", icon: "⚓", text: "+10% max HP.", perks: {maxHp: 0.1} }],
+    [{ id: "blessed", name: "Blessed", icon: "🌟", text: "Heal 10% after every fight won.", perks: {afterFight: 0.1} }, { id: "zealot", name: "Zealot", icon: "🔥", text: "Your first attack each turn deals 30% more.", perks: {firstStrike: 0.3} }],
+    [{ id: "guardian", name: "Guardian", icon: "🛡️", text: "20% more block from your cards.", perks: {block: 0.2} }, { id: "templar", name: "Templar", icon: "✝️", text: "+8% critical hits.", perks: {crit: 8} }],
+    [{ id: "avatar", name: "Avatar", icon: "☀️", text: "15% more damage.", perks: {attack: 0.15} }, { id: "divineaegis", name: "Divine Aegis", icon: "👼", text: "Start every fight with 15 block.", perks: {startBlock: 15} }],
   ],
   cleric: [
     [{ id: "mercy", name: "Mercy", icon: "💚", text: "40% more healing.", perks: { heal: 0.4 } }, { id: "vital", name: "Vitality", icon: "❤️", text: "+15% max HP.", perks: { maxHp: 0.15 } }],
     [{ id: "zeal", name: "Zeal", icon: "🔥", text: "Your first attack each turn deals 50% more.", perks: { firstStrike: 0.5 } }, { id: "sanctuary", name: "Sanctuary", icon: "⛪", text: "Start every fight with 8 block.", perks: { startBlock: 8 } }],
     [{ id: "miracle", name: "Miracle", icon: "✨", text: "+1 mana on the first turn of every fight.", perks: { firstMana: 1 } }, { id: "halo", name: "Halo", icon: "😇", text: "Heal 20% after every fight won.", perks: { afterFight: 0.2 } }],
+    [{ id: "renewal", name: "Renewal", icon: "🌱", text: "Heal 8% after every fight won.", perks: {afterFight: 0.08} }, { id: "smiter", name: "Smiter", icon: "🔨", text: "10% more damage.", perks: {attack: 0.1} }],
+    [{ id: "grace", name: "Grace", icon: "🕊️", text: "25% more healing.", perks: {heal: 0.25} }, { id: "lightarmor", name: "Light Armor", icon: "🔰", text: "Start every fight with 6 block.", perks: {startBlock: 6} }],
+    [{ id: "devotion", name: "Devotion", icon: "🙏", text: "+10% max HP.", perks: {maxHp: 0.1} }, { id: "fervor", name: "Fervor", icon: "🔥", text: "Your first attack each turn deals 30% more.", perks: {firstStrike: 0.3} }],
+    [{ id: "sanctity", name: "Sanctity", icon: "⛪", text: "15% more block from your cards.", perks: {block: 0.15} }, { id: "prophet", name: "Prophet", icon: "📜", text: "Draw 1 more card every turn.", perks: {draw: 1} }],
+    [{ id: "saint", name: "Saint", icon: "😇", text: "30% more healing.", perks: {heal: 0.3} }, { id: "inquisitor", name: "Inquisitor", icon: "⚖️", text: "+8% critical hits.", perks: {crit: 8} }],
+    [{ id: "archangel", name: "Archangel", icon: "🪽", text: "+15% max HP.", perks: {maxHp: 0.15} }, { id: "radiance", name: "Radiance", icon: "🌞", text: "15% more damage.", perks: {attack: 0.15} }],
   ],
   rogue: [
     [{ id: "venom", name: "Venom", icon: "🐍", text: "Your poison is 60% stronger.", perks: { poison: 0.6 } }, { id: "quick", name: "Quick Hands", icon: "🤹", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
     [{ id: "assassin", name: "Assassin", icon: "🗡️", text: "Your first attack each turn deals 60% more.", perks: { firstStrike: 0.6 } }, { id: "evasion", name: "Evasion", icon: "🪶", text: "+10% to dodge an attack.", perks: { agi: 10 } }],
     [{ id: "lethal", name: "Lethal", icon: "🎯", text: "+15% critical hits.", perks: { crit: 15 } }, { id: "leech", name: "Leech", icon: "🦇", text: "Heal 12% of the damage of your attacks.", perks: { lifesteal: 0.12 } }],
+    [{ id: "toxicologist", name: "Toxicologist", icon: "🧪", text: "Your poison is 30% stronger.", perks: {poison: 0.3} }, { id: "nimble", name: "Nimble", icon: "🤸", text: "+5% to dodge an attack.", perks: {agi: 5} }],
+    [{ id: "opportunist", name: "Opportunist", icon: "🎭", text: "Your first attack each turn deals 30% more.", perks: {firstStrike: 0.3} }, { id: "cutthroat", name: "Cutthroat", icon: "🔪", text: "+8% critical hits.", perks: {crit: 8} }],
+    [{ id: "shadow", name: "Shadow", icon: "🌑", text: "+5% to dodge an attack.", perks: {agi: 5} }, { id: "vampiric", name: "Vampiric", icon: "🦇", text: "Heal 8% of the damage of your attacks.", perks: {lifesteal: 0.08} }],
+    [{ id: "venomancer", name: "Venomancer", icon: "🐍", text: "Your poison is 40% stronger.", perks: {poison: 0.4} }, { id: "ruthless", name: "Ruthless", icon: "🗡️", text: "10% more damage.", perks: {attack: 0.1} }],
+    [{ id: "phantom", name: "Phantom", icon: "👻", text: "+6% to dodge an attack.", perks: {agi: 6} }, { id: "deadeye", name: "Deadeye", icon: "🎯", text: "+10% critical hits.", perks: {crit: 10} }],
+    [{ id: "deathshand", name: "Death's Hand", icon: "💀", text: "15% more damage.", perks: {attack: 0.15} }, { id: "plague", name: "Plague", icon: "☣️", text: "Your poison is 60% stronger.", perks: {poison: 0.6} }],
   ],
   mage: [
     [{ id: "insight", name: "Insight", icon: "📖", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "arcane", name: "Arcane Power", icon: "🔮", text: "20% more damage.", perks: { attack: 0.2 } }],
     [{ id: "fortune", name: "Fortune", icon: "🍀", text: "+15% critical hits.", perks: { crit: 15 } }, { id: "wellspring", name: "Wellspring", icon: "💧", text: "+1 mana on the first turn of every fight.", perks: { firstMana: 1 } }],
     [{ id: "archmage", name: "Archmage", icon: "🧙", text: "30% more damage.", perks: { attack: 0.3 } }, { id: "ward", name: "Ward", icon: "🔰", text: "Start every fight with 10 block.", perks: { startBlock: 10 } }],
+    [{ id: "spellpower", name: "Spellpower", icon: "🔮", text: "10% more damage.", perks: {attack: 0.1} }, { id: "manashield", name: "Mana Shield", icon: "🔷", text: "Start every fight with 6 block.", perks: {startBlock: 6} }],
+    [{ id: "clarity", name: "Clarity", icon: "💎", text: "+1 mana on the first turn of every fight.", perks: {firstMana: 1} }, { id: "precision", name: "Precision", icon: "🎯", text: "+8% critical hits.", perks: {crit: 8} }],
+    [{ id: "arcaneskin", name: "Arcane Skin", icon: "🧿", text: "+10% max HP.", perks: {maxHp: 0.1} }, { id: "overload", name: "Overload", icon: "⚡", text: "Your first attack each turn deals 30% more.", perks: {firstStrike: 0.3} }],
+    [{ id: "battlemage", name: "Battlemage", icon: "🛡️", text: "15% more block from your cards.", perks: {block: 0.15} }, { id: "spellweaver", name: "Spellweaver", icon: "🕸️", text: "Draw 1 more card every turn.", perks: {draw: 1} }],
+    [{ id: "archon", name: "Archon", icon: "🌌", text: "15% more damage.", perks: {attack: 0.15} }, { id: "timeweaver", name: "Timeweaver", icon: "⏳", text: "+1 mana on the first turn of every fight.", perks: {firstMana: 1} }],
+    [{ id: "grandmagus", name: "Grand Magus", icon: "🧙", text: "+12% critical hits.", perks: {crit: 12} }, { id: "infinity", name: "Infinity", icon: "♾️", text: "20% more damage.", perks: {attack: 0.2} }],
   ],
 };
 
@@ -514,6 +544,7 @@ function xpNeed(level) {
 // XP: a fight won (by its kind), a floor cleared - x1.35 every floor deeper; at most HERO_LEVEL_MAX
 const XP = { fight: 3, hard: 5, elite: 10, boss: 20, floor: 8 };
 const HERO_LEVEL_MAX = 50;
+const FIRST_CLEAR = 0.5; // a floor cleared the first time: this share of its entry more
 function xpFor(kind, floor) {
   return Math.round((XP[kind] || 0) * (1 + (floor - 1) * 0.35));
 }
@@ -2293,6 +2324,7 @@ module.exports = {
   xpNeed,
   xpFor,
   HERO_LEVEL_MAX,
+  FIRST_CLEAR,
   partyBonus,
   PARTY_LOOT,
   gainXp,
