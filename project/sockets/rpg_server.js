@@ -4,6 +4,7 @@ const safe = require("./safe_handler");
 const version = require("../game/version");
 const testMode = require("../game/test_mode");
 const worlds = require("../game/worlds");
+const config = require("../game/config");
 
 const ROOM = "rpg";
 
@@ -28,7 +29,18 @@ module.exports = function (io, options = {}) {
 
   // How long a turn may take, how long one away from the page keeps the place in a party (ms) - the tests make
   // them short (between the rooms: no clock)
-  const timing = { turn: 45000, away: 120000, close: 60000 };
+  // (the turn: the admin panel's - unless a test set its own)
+  const timing = {
+    own: null,
+    get turn() {
+      return this.own != null ? this.own : config.RPG_TURN_TIME;
+    },
+    set turn(value) {
+      this.own = value;
+    },
+    away: 120000,
+    close: 60000,
+  };
 
   const heroes = new Map(); // username -> hero (rpg.newHero)
   const parties = new Map(); // id -> {id, leader, floor, size, members, run, endsAt, timer, result}

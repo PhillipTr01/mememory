@@ -122,10 +122,11 @@ var SETTING_GROUPS = {
   slots: ["Slots", "Turn slots on or off, the bet per spin."],
   roulette: ["Roulette", "Turn the roulette on or off, the bets, the time to bet."],
   baucua: ["Bầu Cua", "Turn Bầu Cua on or off, the bets, the time to bet."],
+  rpg: ["Dungeon", "The dungeon of the test world: prices, packs, difficulty, death."],
 };
 var settingsGroup = "general";
 
-var GAME_GROUPS = ["jackpot", "roulette", "baucua", "battles", "poker", "blackjack", "slots"];
+var GAME_GROUPS = ["jackpot", "roulette", "baucua", "battles", "poker", "blackjack", "slots", "rpg"];
 
 // Old addresses (bookmarks): to where it is now
 function redirect(parts) {

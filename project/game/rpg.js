@@ -22,16 +22,17 @@
  * Everything random comes from `rng` (Math.random - the tests give their own).
  */
 
+const config = require("./config");
+
 const FLOORS = 30;
 const ROOMS = 6;
 const PARTY_MAX = 4;
 const BAG_MAX = 12;
 const POTIONS_MAX = 5;
 const POTION_HEAL = 0.4; // of the max HP
-const POTION_PRICE = 5000; // with floor 1 open - dearer with every floor the character reached (potionPrice)
 const POTION_GROWTH = 1.12;
 function potionPrice(floor = 1) {
-  return round100(POTION_PRICE * Math.pow(POTION_GROWTH, Math.max(0, floor - 1)));
+  return round100(config.RPG_POTION_PRICE * Math.pow(POTION_GROWTH, Math.max(0, floor - 1)));
 }
 // Bosses: the last room of every n-th floor (0: none yet - they come later)
 const BOSS_EVERY = 0;
@@ -46,15 +47,11 @@ const STATS = {
 };
 const STAT_IDS = Object.keys(STATS);
 const LEVEL_MAX = 50;
-const UPGRADE_BASE = 10000;
 const UPGRADE_GROWTH = 1.22;
-const UPGRADE_MAX = 10000000; // a stat level costs at most this much
 // The main stat of a class: its levels count this much more
 const MAIN_BONUS = 1.5;
 const DODGE_MAX = 40;
 
-const ENTRY_BASE = 10000;
-const ENTRY_GROWTH = 1.27; // floor 30: about 10 million
 // What a room puts in the pot (per hero, a share of the entry)
 const REWARD = { fight: 0.21, hard: 0.4, elite: 0.4, boss: 1, chest: 0.17, trap: 0, rest: 0, shrine: 0, merchant: 0 };
 
@@ -243,15 +240,14 @@ function deckMax() {
 // The booster packs of the base set (the shop): how many cards, the last ones at least of a rarity, the rarer
 // ones more often (x their weight)
 const PACKS = {
-  standard: { name: "Base Set Pack", icon: "🎴", about: "The classic: 5 cards, the last one rare or better.", price: 10000, size: 5, better: 1, least: "rare", boost: {} },
-  premium: { name: "Hero Pack", icon: "💎", about: "5 cards - all rare or better, epics, legendaries and mystics 4x as often.", price: 25000, size: 5, better: 5, least: "rare", boost: { epic: 4, legendary: 4, mystic: 4 } },
-  mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards - all epic or better, legendaries 4x, mystics 6x as often.", price: 50000, size: 4, better: 4, least: "epic", boost: { legendary: 4, mystic: 6 } },
+  standard: { name: "Base Set Pack", icon: "🎴", about: "The classic: 5 cards, the last one rare or better.", get price() { return config.RPG_PACK_STANDARD; }, size: 5, better: 1, least: "rare", boost: {} },
+  premium: { name: "Hero Pack", icon: "💎", about: "5 cards - all rare or better, epics, legendaries and mystics 4x as often.", get price() { return config.RPG_PACK_PREMIUM; }, size: 5, better: 5, least: "rare", boost: { epic: 4, legendary: 4, mystic: 4 } },
+  mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards - all epic or better, legendaries 4x, mystics 6x as often.", get price() { return config.RPG_PACK_MYTHIC; }, size: 4, better: 4, least: "epic", boost: { legendary: 4, mystic: 6 } },
 };
 const PACK_IDS = Object.keys(PACKS);
 const PACK_BUNDLE = 3; // three packs at once ...
 const BUNDLE_OFF = 0.1; // ... 10% off
 const PACK_SIZE = PACKS.standard.size;
-const PACK_PRICE = PACKS.standard.price;
 const RARITY_RANK = ["basic", "common", "rare", "epic", "legendary", "mystic"];
 
 const CART_MAX = 50; // packs of a kind in one cart
@@ -562,7 +558,6 @@ const pick = (rng, list) => list[Math.floor(rng() * list.length)];
 /* ---------- The hero ---------- */
 
 // A class (a character) bought after the first one (the first is free)
-const CLASS_PRICE = 1000000;
 
 // A player's hero: one character per class unlocked (its own levels, gear worn, floors) - the bag, the potions
 // are shared. cls: the character played now (null: none picked yet - the first is free)
@@ -685,7 +680,7 @@ function unlock(hero, cls) {
 
 // The price of the next class (0: the first one)
 function classPrice(hero) {
-  return hero.unlocked.length ? CLASS_PRICE : 0;
+  return hero.unlocked.length ? config.RPG_CLASS_PRICE : 0;
 }
 
 // XP for a character: level ups (a stat point each) -> the levels gained
@@ -747,7 +742,7 @@ function statsOf(hero, clsId = hero.cls) {
 
 // The price of the next level of a stat (null: the last level reached)
 function upgradeCost(level) {
-  return level >= LEVEL_MAX ? null : Math.min(UPGRADE_MAX, round100(UPGRADE_BASE * Math.pow(UPGRADE_GROWTH, level)));
+  return level >= LEVEL_MAX ? null : Math.min(config.RPG_UPGRADE_MAX, round100(config.RPG_UPGRADE_BASE * Math.pow(UPGRADE_GROWTH, level)));
 }
 
 // The highest floor the character played now may enter
@@ -756,14 +751,12 @@ function maxFloor(hero) {
 }
 
 function entryCost(floor) {
-  return round100(ENTRY_BASE * Math.pow(ENTRY_GROWTH, floor - 1));
+  return round100(config.RPG_ENTRY_BASE * Math.pow(1 + config.RPG_ENTRY_GROWTH / 100, floor - 1));
 }
 
 /* ---------- Death: a character down with its party rests 6 hours - or is brought back for coins ---------- */
 
-const DEATH_COOLDOWN = 6 * 3600 * 1000;
-// The price of bringing it back: entries of its deepest floor open - twice as much with every revive of the day
-const REVIVE_ENTRIES = 3;
+// The price of bringing it back: entries of its deepest floor open (config) - twice as much with every revive of the day
 const REVIVE_GROWTH = 2;
 
 const dayOf = (now) => new Date(now).toDateString();
@@ -774,7 +767,7 @@ function deadFor(hero, now = Date.now(), cls = hero.cls) {
 }
 
 function die(hero, cls, now = Date.now()) {
-  charOf(hero, cls).deadUntil = now + DEATH_COOLDOWN;
+  charOf(hero, cls).deadUntil = now + config.RPG_DEATH_TIME;
 }
 
 // The revives of today (back to 0 at midnight)
@@ -783,7 +776,7 @@ function revivesToday(hero, now = Date.now()) {
 }
 
 function revivePrice(hero, now = Date.now()) {
-  return round100(REVIVE_ENTRIES * entryCost(maxFloor(hero)) * Math.pow(REVIVE_GROWTH, revivesToday(hero, now)));
+  return round100(config.RPG_REVIVE_ENTRIES * entryCost(maxFloor(hero)) * Math.pow(REVIVE_GROWTH, revivesToday(hero, now)));
 }
 
 // Brought back (paid already) -> an error or null
@@ -1019,8 +1012,8 @@ function floorCurve(growth, floor) {
 // stronger or weaker than the next: a fight is never quite sure)
 function monster(floor, size, kind, rank, depth = 0, rng = Math.random) {
   const deeper = 1 + MONSTER_DEPTH * depth;
-  const hp = MONSTER_HP * floorCurve(MONSTER_HP_GROWTH, floor) * deeper * between(rng, 1 - MONSTER_SPREAD, 1 + MONSTER_SPREAD) * kind.hp * (1 + PARTY_HP * (size - 1)) * rank.hp;
-  const atk = MONSTER_ATK * floorCurve(MONSTER_ATK_GROWTH, floor) * deeper * between(rng, 1 - MONSTER_SPREAD, 1 + MONSTER_SPREAD) * kind.atk * rank.atk * (1 + PARTY_ATK * (size - 1));
+  const hp = MONSTER_HP * (config.RPG_MONSTER_HP / 100) * floorCurve(MONSTER_HP_GROWTH, floor) * deeper * between(rng, 1 - MONSTER_SPREAD, 1 + MONSTER_SPREAD) * kind.hp * (1 + PARTY_HP * (size - 1)) * rank.hp;
+  const atk = MONSTER_ATK * (config.RPG_MONSTER_ATK / 100) * floorCurve(MONSTER_ATK_GROWTH, floor) * deeper * between(rng, 1 - MONSTER_SPREAD, 1 + MONSTER_SPREAD) * kind.atk * rank.atk * (1 + PARTY_ATK * (size - 1));
   const max = Math.max(1, Math.round(hp));
   // (an elite also smashes)
   const moves = rank.id != "normal" && !kind.moves.includes("smash") ? [...kind.moves, "smash"] : kind.moves;
@@ -1333,7 +1326,7 @@ function enterRoom(run, door = 0, rng = Math.random) {
     if (id == "library") run.event.offers = Object.fromEntries(heroes.map((h) => [h.name, rewardFor(h, rng, 5)]));
     say(run, `${ENCOUNTERS[id].icon} ${ENCOUNTERS[id].name}.`);
   } else if (kind == "chest") {
-    const coins = Math.round(entryCost(run.floor) * REWARD.chest * partyBonus(run.heroes.length));
+    const coins = Math.round(entryCost(run.floor) * REWARD.chest * (config.RPG_LOOT / 100) * partyBonus(run.heroes.length));
     run.pot += coins;
     note(`🪙 ${coins} each for the loot pot.`);
   } else if (kind == "merchant") {
@@ -2270,7 +2263,7 @@ function monsterTurn(run, rng = Math.random) {
 
 function winFight(run, rng) {
   const room = run.rooms[run.rooms.length - 1];
-  const coins = Math.round(entryCost(run.floor) * REWARD[room.kind] * partyBonus(run.heroes.length));
+  const coins = Math.round(entryCost(run.floor) * REWARD[room.kind] * (config.RPG_LOOT / 100) * partyBonus(run.heroes.length));
   run.pot += coins;
   say(run, `Victory! 🪙 ${coins} each for the pot.`);
   fx(run, { k: "victory", coins });
@@ -2440,20 +2433,26 @@ module.exports = {
   PARTY_MAX,
   BAG_MAX,
   POTIONS_MAX,
-  POTION_PRICE,
+  get POTION_PRICE() {
+    return config.RPG_POTION_PRICE;
+  },
   potionPrice,
   BOSS_EVERY,
   STATS,
   STAT_IDS,
   LEVEL_MAX,
-  UPGRADE_MAX,
+  get UPGRADE_MAX() {
+    return config.RPG_UPGRADE_MAX;
+  },
   SLOTS,
   RARITIES,
   REWARD,
   CLASSES,
   CLASS_IDS,
   MAIN_BONUS,
-  CLASS_PRICE,
+  get CLASS_PRICE() {
+    return config.RPG_CLASS_PRICE;
+  },
   charOf,
   unlock,
   classPrice,
@@ -2468,7 +2467,9 @@ module.exports = {
   DECK_FLOOR,
   deckLimits,
   PACK_SIZE,
-  PACK_PRICE,
+  get PACK_PRICE() {
+    return config.RPG_PACK_STANDARD;
+  },
   PACKS,
   PACK_IDS,
   PACK_BUNDLE,
@@ -2532,7 +2533,9 @@ module.exports = {
   tally,
   setAway,
   POTION_MANA,
-  DEATH_COOLDOWN,
+  get DEATH_COOLDOWN() {
+    return config.RPG_DEATH_TIME;
+  },
   deadFor,
   die,
   revivePrice,

@@ -73,6 +73,21 @@ const FIELDS = [
   { group: "blackjack", section: "Classic Table", key: "BJ_CLASSIC_MAX", season: true, label: "Max bet", hint: "Per seat.", step: 100, min: 1, max: 100000000 },
   { group: "blackjack", section: "High Roller", key: "BJ_HIGH_MIN", season: true, label: "Min bet", hint: "Per seat.", step: 100, min: 1, max: 100000000 },
   { group: "blackjack", section: "High Roller", key: "BJ_HIGH_MAX", season: true, label: "Max bet", hint: "Per seat.", step: 500, min: 1, max: 100000000 },
+  { group: "rpg", section: "Prices", key: "RPG_ENTRY_BASE", label: "Entry of floor 1", hint: "What a hero pays to go down to floor 1.", step: 1000, min: 1, max: 100000000 },
+  { group: "rpg", section: "Prices", key: "RPG_ENTRY_GROWTH", label: "Entry dearer per floor", hint: "Every floor deeper costs this much more than the one before (27%: floor 30 about 10 million).", unit: "%", step: 1, min: 0, max: 100 },
+  { group: "rpg", section: "Prices", key: "RPG_UPGRADE_BASE", label: "First stat level", hint: "The first level of a stat - every next one 22% dearer.", step: 1000, min: 1, max: 100000000 },
+  { group: "rpg", section: "Prices", key: "RPG_UPGRADE_MAX", label: "Stat level at most", hint: "No stat level costs more than this.", step: 100000, min: 1, max: 1000000000 },
+  { group: "rpg", section: "Prices", key: "RPG_CLASS_PRICE", label: "Another class", step: 10000, min: 0, max: 1000000000 },
+  { group: "rpg", section: "Prices", key: "RPG_POTION_PRICE", label: "Potion", hint: "With floor 1 open - 12% dearer with every floor a character reached.", step: 500, min: 0, max: 100000000 },
+  { group: "rpg", section: "Packs", key: "RPG_PACK_STANDARD", label: "Base Set Pack", step: 1000, min: 1, max: 100000000 },
+  { group: "rpg", section: "Packs", key: "RPG_PACK_PREMIUM", label: "Hero Pack", step: 1000, min: 1, max: 100000000 },
+  { group: "rpg", section: "Packs", key: "RPG_PACK_MYTHIC", label: "Mythic Pack", step: 1000, min: 1, max: 100000000 },
+  { group: "rpg", section: "Difficulty", key: "RPG_MONSTER_HP", label: "Monster HP", hint: "100%: as designed.", unit: "%", step: 5, min: 10, max: 1000 },
+  { group: "rpg", section: "Difficulty", key: "RPG_MONSTER_ATK", label: "Monster attack", hint: "100%: as designed.", unit: "%", step: 5, min: 10, max: 1000 },
+  { group: "rpg", section: "Difficulty", key: "RPG_LOOT", label: "Loot", hint: "Of the coins every room puts in the pot. 100%: as designed.", unit: "%", step: 5, min: 0, max: 1000 },
+  { group: "rpg", section: "Death", key: "RPG_DEATH_TIME", label: "Dead for", hint: "The whole party down: the character can't go down again this long.", unit: "min", scale: 60000, step: 30, min: 0, max: 10080 },
+  { group: "rpg", section: "Death", key: "RPG_REVIVE_ENTRIES", label: "Revive price", hint: "Entries of the deepest floor open - twice as much with every revive of a day.", unit: "entries", step: 1, min: 0, max: 100 },
+  { group: "rpg", section: "Fights", key: "RPG_TURN_TIME", label: "Time per turn", hint: "Then the monsters move.", unit: "s", scale: 1000, step: 5, min: 10, max: 600 },
 ];
 
 const BY_KEY = new Map(FIELDS.map((field) => [field.key, field]));

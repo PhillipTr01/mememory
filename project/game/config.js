@@ -225,6 +225,23 @@ module.exports = {
   BAUCUA_PAUSE: 3500, // the dice are shown, then the next round waits for a bet
   BAUCUA_HISTORY: 20, // last results in the row
 
+  // The dungeon (test world only, see game/rpg.js) - the admin panel changes these
+  RPG_ENTRY_BASE: 10000, // the entry of floor 1
+  RPG_ENTRY_GROWTH: 27, // % dearer every floor deeper
+  RPG_UPGRADE_BASE: 10000, // the first level of a stat
+  RPG_UPGRADE_MAX: 10000000, // a stat level costs at most this much
+  RPG_CLASS_PRICE: 1000000, // another class
+  RPG_POTION_PRICE: 5000, // a potion with floor 1 open (12% dearer every floor reached)
+  RPG_DEATH_TIME: 6 * 3600 * 1000, // the party down: the character dead this long
+  RPG_REVIVE_ENTRIES: 3, // a revive: this many entries of the deepest floor open (twice as much each one of a day)
+  RPG_MONSTER_HP: 100, // % of the monsters' HP
+  RPG_MONSTER_ATK: 100, // % of the monsters' attack
+  RPG_LOOT: 100, // % of the coins a room puts in the pot
+  RPG_PACK_STANDARD: 10000,
+  RPG_PACK_PREMIUM: 25000,
+  RPG_PACK_MYTHIC: 50000,
+  RPG_TURN_TIME: 45000, // a turn of a fight
+
   // The tables of the lobby (in this order, limits from the keys above); a page without a table opens "classic"
   BJ_TABLES: [
     { id: "casual", name: "Casual Corner", icon: "🍀", minKey: "BJ_CASUAL_MIN", maxKey: "BJ_CASUAL_MAX", about: "Small stakes, no stress - learn the ropes." },
