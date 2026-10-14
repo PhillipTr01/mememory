@@ -942,6 +942,8 @@ var FILTERS = [
   ["rarity", [["all", "Any rarity"], ["basic", "Basic"], ["common", "Common"], ["rare", "Rare"], ["epic", "Epic"], ["legendary", "Legendary"], ["mystic", "Mystic"]]],
 ];
 var RARITY_ORDER = ["basic", "common", "rare", "epic", "legendary", "mystic"];
+// By rarity (common first, mystic last) - then the cost, the name
+var byRarity = (a, b) => RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.indexOf(cardOf(b).rarity) || cardOf(a).cost - cardOf(b).cost || cardOf(a).name.localeCompare(cardOf(b).name);
 var byCost = (a, b) => cardOf(a).cost - cardOf(b).cost || RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.indexOf(cardOf(b).rarity) || cardOf(a).name.localeCompare(cardOf(b).name);
 
 function renderBuilder() {
@@ -989,7 +991,7 @@ function renderBuilder() {
       if (filters.owned && !hero.collection[id]) return false;
       return !text || (card.name + " " + card.text).toLowerCase().includes(text);
     })
-    .sort(byCost);
+    .sort(byRarity);
   morphChildren(
     document.getElementById("rpgBuilderGrid"),
     shown.length
@@ -1930,7 +1932,8 @@ socket.on("rpgPack", (data) => {
   var cards = data.cards;
   setTimeout(() => {
     if (!opening || opening.cards) return;
-    opening.cards = cards;
+    // (open all: the cards by rarity - the best come last)
+    opening.cards = data.pack == "all" ? cards.slice().sort((a, b) => byRarity(a.id, b.id)) : cards;
     renderOpening();
   }, 650);
 });
