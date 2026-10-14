@@ -976,7 +976,7 @@ function renderBuilder() {
     });
     chips.push(group);
   });
-  chips.push(button((filters.owned ? "☑" : "☐") + " Owned only", "filter", { id: "owned:toggle", className: "chip" + (filters.owned ? " active" : "") }));
+  chips.push(button("Owned only", "filter", { id: "owned:toggle", className: "chip" + (filters.owned ? " active" : "") }));
   morphChildren(document.getElementById("rpgFilterChips"), chips);
 
   // The collection: every card of the class - owned (spare copies: into the deck) or locked
