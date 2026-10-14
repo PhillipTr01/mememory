@@ -4436,3 +4436,514 @@ button.rpg-cardx.off {
 .rpg-quit:hover {
   opacity: 1;
 }
+
+/* 21. Opened cards: always inside their frame - the "New!" / "Duplicate" a pill on the lower edge */
+.rpg-flip-front .rpg-cardx {
+  overflow: hidden;
+}
+
+.rpg-flip-front .rpg-cardx-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  overflow: hidden;
+}
+
+.rpg-flip-note {
+  bottom: -0.7rem;
+  z-index: 2;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: #1c1c22;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 0.68rem;
+}
+
+.rpg-flip-note.fresh {
+  border-color: rgba(245, 197, 66, 0.6);
+}
+
+.rpg-opening-cards.many {
+  gap: 1.3rem 0.6rem;
+}
+
+.rpg-opening-cards.many .rpg-flip {
+  width: 6.8rem;
+  height: 10.2rem;
+}
+
+.rpg-opening-cards.many .rpg-cardx {
+  padding: 0.45rem 0.4rem 0.5rem;
+  gap: 0.15rem;
+}
+
+.rpg-opening-cards.many .rpg-cardx-art {
+  font-size: 1.35rem;
+  padding: 0.2rem 0;
+}
+
+.rpg-opening-cards.many .rpg-cardx-name {
+  font-size: 0.7rem;
+}
+
+.rpg-opening-cards.many .rpg-cardx-type {
+  font-size: 0.5rem;
+}
+
+.rpg-opening-cards.many .rpg-cardx-text {
+  font-size: 0.56rem;
+  -webkit-line-clamp: 5;
+}
+
+/* Attack or skill: plain to see - the art tinted, the type a colored tag */
+.rpg-cardx.type-attack .rpg-cardx-art {
+  background: radial-gradient(circle at 50% 60%, rgba(var(--rpg-red-rgb), 0.28), rgba(var(--rpg-red-rgb), 0.06) 70%);
+}
+
+.rpg-cardx.type-skill .rpg-cardx-art {
+  background: radial-gradient(circle at 50% 60%, rgba(91, 143, 214, 0.3), rgba(91, 143, 214, 0.06) 70%);
+}
+
+.rpg-cardx-kind {
+  font-weight: 800;
+  padding: 0 0.3rem;
+  border-radius: 4px;
+}
+
+.rpg-cardx.type-attack .rpg-cardx-kind {
+  color: #ffb4b4;
+  background: rgba(var(--rpg-red-rgb), 0.25);
+}
+
+.rpg-cardx.type-skill .rpg-cardx-kind {
+  color: #b9d3ff;
+  background: rgba(91, 143, 214, 0.25);
+}
+
+.rpg-stack-n {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.35rem;
+  min-width: 1.5rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #1a1408;
+  background: var(--rpg-gold);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+
+/* 22. The character: the class as a dropdown, its strength; stats with what they do; compact talents; gear tiles */
+.rpg-classes {
+  position: relative;
+  display: block;
+}
+
+.rpg-class-pick {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 22rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.45);
+  background: rgba(var(--mm-accent-rgb), 0.07);
+  color: var(--mm-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.rpg-class-pick .rpg-class-name {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.rpg-class-pick .rpg-class-note,
+.rpg-class-option .rpg-class-note {
+  font-size: 0.75rem;
+  color: var(--mm-muted);
+}
+
+.rpg-class-caret {
+  margin-left: auto;
+  color: var(--mm-muted);
+  transition: transform 0.15s;
+}
+
+.rpg-class-pick.open .rpg-class-caret {
+  transform: rotate(180deg);
+}
+
+.rpg-class-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  width: 100%;
+  max-width: 22rem;
+  display: flex;
+  flex-direction: column;
+  padding: 0.3rem;
+  border-radius: 12px;
+  border: 1px solid var(--mm-border);
+  background: #1c1c21;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+}
+
+.rpg-class-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--mm-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rpg-class-option:hover {
+  background: var(--rpg-surface-hi);
+}
+
+.rpg-class-option.active {
+  background: rgba(var(--mm-accent-rgb), 0.12);
+}
+
+.rpg-class-option.locked {
+  opacity: 0.7;
+}
+
+.rpg-class-option .rpg-class-note {
+  margin-left: auto;
+}
+
+.rpg-class-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.rpg-class-strength {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.3);
+  background: linear-gradient(90deg, rgba(var(--mm-accent-rgb), 0.12), transparent);
+  font-size: 0.85rem;
+}
+
+.rpg-class-strength b {
+  color: var(--mm-accent);
+}
+
+.rpg-strength-icon {
+  font-size: 1.2rem;
+}
+
+.rpg-stat-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.rpg-stat-desc {
+  font-size: 0.72rem;
+  color: var(--mm-muted);
+  line-height: 1.3;
+}
+
+/* Talents: a row per level - the level on the left, the two choices beside it */
+.rpg-talents {
+  gap: 0.4rem;
+}
+
+.rpg-talent-tier {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.rpg-talent-level {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--rpg-surface);
+  border: 1px solid var(--mm-border);
+  line-height: 1.1;
+}
+
+.rpg-talent-level b {
+  font-size: 1rem;
+}
+
+.rpg-talent-level span {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mm-muted);
+}
+
+.rpg-talent-tier.ready .rpg-talent-level {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.12);
+}
+
+.rpg-talent-tier.ready .rpg-talent-level span {
+  color: var(--mm-accent);
+}
+
+.rpg-talent-pair {
+  margin-top: 0;
+  gap: 0.4rem;
+}
+
+.rpg-talent {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+.rpg-talent .rpg-talent-icon {
+  font-size: 1.25rem;
+  flex: none;
+}
+
+.rpg-talent-words {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.rpg-talent-words b {
+  font-size: 0.82rem;
+}
+
+.rpg-talent-words span {
+  font-size: 0.72rem;
+  color: var(--mm-muted);
+}
+
+.rpg-talent.chosen .rpg-talent-words b::after {
+  content: " ✓";
+  color: var(--mm-accent);
+}
+
+@media (max-width: 575px) {
+  .rpg-talent-pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Gear: tiles - the slot, a big picture, the stats as chips (▲▼: against the piece worn) */
+.rpg-gear,
+.rpg-bag {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+  gap: 0.6rem;
+}
+
+.rpg-gear-tile {
+  --rarity: #6b7280;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.7rem 0.6rem 0.6rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--rarity) 55%, transparent);
+  background: radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--rarity) 18%, transparent), transparent 65%), var(--rpg-surface);
+  text-align: center;
+}
+
+.rpg-gear-tile.rarity-rare {
+  --rarity: var(--rpg-blue);
+}
+
+.rpg-gear-tile.rarity-epic {
+  --rarity: #9d84c2;
+}
+
+.rpg-gear-tile.rarity-legendary {
+  --rarity: #d4a64a;
+  box-shadow: 0 0 18px rgba(212, 166, 74, 0.18);
+}
+
+.rpg-gear-tile.empty {
+  border-style: dashed;
+  border-color: var(--mm-border);
+  background: transparent;
+  justify-content: center;
+  min-height: 9rem;
+  opacity: 0.7;
+}
+
+.rpg-gear-tile.wrong {
+  opacity: 0.55;
+}
+
+.rpg-gear-slot {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--rarity) 70%, white);
+}
+
+.rpg-gear-tile.empty .rpg-gear-slot {
+  color: var(--mm-muted);
+}
+
+.rpg-gear-icon {
+  font-size: 2rem;
+  line-height: 1.1;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+}
+
+.rpg-gear-name {
+  font-weight: 700;
+  font-size: 0.86rem;
+  line-height: 1.2;
+}
+
+.rpg-gear-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.rpg-gear-chip {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.rpg-gear-chip.none {
+  opacity: 0.5;
+}
+
+.rpg-gear-chip i {
+  font-style: normal;
+  margin-left: 0.2rem;
+  font-size: 0.62rem;
+}
+
+.rpg-gear-chip i.up {
+  color: #6fcf8f;
+}
+
+.rpg-gear-chip i.down {
+  color: #ef6b6b;
+}
+
+.rpg-gear-classes {
+  font-size: 0.66rem;
+  color: var(--mm-muted);
+}
+
+.rpg-gear-tile.wrong .rpg-gear-classes {
+  color: #ef6b6b;
+  font-weight: 700;
+}
+
+.rpg-gear-actions {
+  display: flex;
+  gap: 0.3rem;
+  margin-top: auto;
+  padding-top: 0.2rem;
+}
+
+/* 23. The first class: every part of a tile on the same line as in the others (a subgrid of 10 rows) */
+@supports (grid-template-rows: subgrid) {
+  .rpg-first-grid {
+    row-gap: 0;
+  }
+
+  .rpg-first-class {
+    display: grid;
+    grid-row: span 10;
+    grid-template-rows: subgrid;
+    justify-items: center;
+    align-items: start;
+    row-gap: 0.45rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .rpg-first-pick {
+    align-self: end;
+  }
+}
+
+.rpg-first-strength {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--mm-accent);
+}
+
+@supports (grid-template-rows: subgrid) {
+  .rpg-first-class {
+    justify-items: stretch;
+  }
+
+  .rpg-first-icon,
+  .rpg-first-name,
+  .rpg-first-main {
+    justify-self: center;
+  }
+
+  .rpg-first-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .rpg-first-cards .rpg-cardx.small {
+    width: auto;
+  }
+}
+
+/* The shop's upgrades */
+.rpg-shop-upgrades {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 0.5rem;
+}
+
+.rpg-upgrade {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--mm-border);
+  background: var(--rpg-surface);
+}
+
+.rpg-upgrade-icon {
+  font-size: 1.6rem;
+}
+
+.rpg-upgrade-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  line-height: 1.25;
+}

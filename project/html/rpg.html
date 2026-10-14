@@ -120,13 +120,13 @@
                                 <div id="rpgStats" class="rpg-stats"></div>
                             </div>
                             <div class="rpg-pane" data-pane="talents" hidden>
-                                <div class="mm-muted small">Every class its own talents - one of two at hero levels 3, 6, 10, 15, 20, 25, 30, 40 and 50. Hero levels come with XP from fights (lost runs: half).</div>
+                                <div class="mm-muted small">One of two at every level below.</div>
                                 <div id="rpgTalents" class="rpg-talents"></div>
                             </div>
                             <div class="rpg-pane" data-pane="gear" hidden>
                                 <div class="rpg-label">Worn</div>
                                 <div id="rpgGear" class="rpg-gear"></div>
-                                <div class="rpg-label">Bag</div>
+                                <div id="rpgBagLabel" class="rpg-label">Bag</div>
                                 <div id="rpgBag" class="rpg-bag"></div>
                             </div>
                         </div>
@@ -210,7 +210,7 @@
                         <div class="rpg-builder-head">
                             <div class="rpg-builder-title">
                                 <div id="rpgShopTitle" class="rpg-card-title"></div>
-                                <div class="mm-muted small">Fill your cart with booster packs of the base set, buy them - then open them one after the other. Cards of the class you play and neutral ones; a copy you can't hold any more is sold right away.</div>
+                                <div class="mm-muted small">Booster packs: cards of your class and neutral ones.</div>
                             </div>
                         </div>
                         <div id="rpgShopProgress" class="rpg-shop-progress"></div>
@@ -223,6 +223,8 @@
                             <div id="rpgShopPacks" class="rpg-shop-packs"></div>
                             <aside id="rpgCart" class="rpg-cart"></aside>
                         </div>
+                        <div class="rpg-label">Upgrades</div>
+                        <div id="rpgShopUpgrades" class="rpg-shop-upgrades"></div>
                     </div>
                     <!--- A party waiting for its leader --->
                     <div id="rpgLobby" class="rpg-lobby" hidden>

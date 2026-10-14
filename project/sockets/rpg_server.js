@@ -104,6 +104,7 @@ module.exports = function (io, options = {}) {
       entries: Array.from({ length: rpg.FLOORS }, (_, i) => rpg.entryCost(i + 1)),
       partyMax: rpg.PARTY_MAX,
       bagMax: rpg.BAG_MAX,
+      bagTop: rpg.BAG_TOP,
       potionsMax: rpg.POTIONS_MAX,
       potionMana: rpg.POTION_MANA,
       potionPrice: rpg.POTION_PRICE,
@@ -308,7 +309,7 @@ module.exports = function (io, options = {}) {
       if (result === "lost") rpg.die(hero, one.cls);
       if (result !== "lost") {
         for (const item of run.loot[one.name] || []) {
-          if (hero.bag.length < rpg.BAG_MAX) hero.bag.push(item);
+          if (hero.bag.length < rpg.bagSize(hero)) hero.bag.push(item);
           // (the bag full: sold right away)
           else if (ours(one.name)) await coins.add(one.name, item.value, { reason: "rpg sell", note: item.name });
         }
@@ -494,6 +495,17 @@ module.exports = function (io, options = {}) {
       sendHero(username);
     });
 
+    // One more slot in the bag (up to BAG_TOP) - dearer every time
+    on("bagSlot", async () => {
+      if (inRun()) return error("Not during a run.");
+      const hero = heroOf(username);
+      const price = rpg.bagSlotPrice(hero);
+      if (price == null) return error("Your bag is as big as it gets.");
+      if (!(await coins.spend(username, price, { reason: "rpg bag slot" }))) return error(coins.refusal(username) || "You don't have enough coins.");
+      hero.bagSlots = (hero.bagSlots || 0) + 1;
+      sendHero(username);
+    });
+
     on("potion", async () => {
       if (inRun()) return error("Not during a run.");
       const hero = heroOf(username);
@@ -523,7 +535,7 @@ module.exports = function (io, options = {}) {
       const gear = rpg.charOf(hero).gear;
       const item = gear[data.slot];
       if (!item) return;
-      if (hero.bag.length >= rpg.BAG_MAX) return error("Your bag is full.");
+      if (hero.bag.length >= rpg.bagSize(hero)) return error("Your bag is full.");
       gear[data.slot] = null;
       hero.bag.push(item);
       sendHero(username);

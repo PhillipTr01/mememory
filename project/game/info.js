@@ -174,7 +174,7 @@ const GAMES = {
       title: "⚔️ Dungeon",
       sections: [
         {
-          heading: "Your hero",
+          heading: "Your character",
           items: [
             `5 classes - Warrior, Paladin, Cleric, Rogue, Mage - each a character of its own: its own levels, gear, deck and floors. The first is free, every other 🪙 ${n(rpg.CLASS_PRICE)}.`,
             `Stats (Vitality, Strength, Armor, Luck, Agility) get better with coins (from 🪙 ${n(rpg.upgradeCost(0))}, dearer every level) or with the stat point of every hero level. The main stat of the class counts ${rpg.MAIN_BONUS}x.`,

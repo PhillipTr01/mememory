@@ -784,3 +784,14 @@ test("rpg: leaving - one away doesn't hold the party up, one out of the run lose
   assert.strictEqual(rpg.revivePrice(hero, now + 24 * 3600 * 1000), price);
   assert.match(rpg.revive(hero, now), /isn't dead/);
 });
+
+test("rpg: the bag - 5 slots, more bought up to 15, every one dearer", () => {
+  const hero = rpg.newHero("warrior");
+  assert.strictEqual(rpg.bagSize(hero), 5);
+  const first = rpg.bagSlotPrice(hero);
+  hero.bagSlots = 1;
+  assert.ok(rpg.bagSlotPrice(hero) > first);
+  hero.bagSlots = 10;
+  assert.strictEqual(rpg.bagSize(hero), 15);
+  assert.strictEqual(rpg.bagSlotPrice(hero), null);
+});

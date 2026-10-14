@@ -27,7 +27,21 @@ const config = require("./config");
 const FLOORS = 30;
 const ROOMS = 6;
 const PARTY_MAX = 4;
-const BAG_MAX = 12;
+const BAG_MAX = 5; // the bag at first - room for more in the shop
+const BAG_TOP = 15; // at most
+const BAG_SLOT_PRICE = 50000; // the first slot more - every next one 50% dearer
+const BAG_SLOT_GROWTH = 1.5;
+
+// The room in a hero's bag
+function bagSize(hero) {
+  return BAG_MAX + (hero.bagSlots || 0);
+}
+
+// The price of the next bag slot (null: the bag is as big as it gets)
+function bagSlotPrice(hero) {
+  const n = hero.bagSlots || 0;
+  return BAG_MAX + n >= BAG_TOP ? null : round100(BAG_SLOT_PRICE * Math.pow(BAG_SLOT_GROWTH, n));
+}
 const POTIONS_MAX = 5;
 const POTION_HEAL = 0.4; // of the max HP
 const POTION_GROWTH = 1.12;
@@ -39,11 +53,11 @@ const BOSS_EVERY = 0;
 
 // The stats: what a level gives
 const STATS = {
-  hp: { name: "Vitality", icon: "❤️", base: 100, per: 15, about: "+15 max HP" },
-  atk: { name: "Strength", icon: "⚔️", base: 10, per: 3, about: "+3 attack" },
-  def: { name: "Armor", icon: "🛡️", base: 0, per: 2, about: "+2 defense (and more block)" },
-  luck: { name: "Luck", icon: "🍀", base: 5, per: 2, about: "+2% critical hits - sense danger behind the doors, dodge traps, better loot" },
-  agi: { name: "Agility", icon: "🪶", base: 0, per: 1.5, about: "+1.5% to dodge an attack" },
+  hp: { name: "Vitality", icon: "❤️", base: 100, per: 15, about: "+15 max HP", desc: "Your max HP - heals and potions grow with it." },
+  atk: { name: "Strength", icon: "⚔️", base: 10, per: 3, about: "+3 attack", desc: "The damage of your attacks." },
+  def: { name: "Armor", icon: "🛡️", base: 0, per: 2, about: "+2 armor", desc: "Taken off every hit, added to your block." },
+  luck: { name: "Luck", icon: "🍀", base: 5, per: 2, about: "+2% luck", desc: "Critical hits (double damage), hidden rooms seen, traps disarmed, better loot." },
+  agi: { name: "Agility", icon: "🪶", base: 0, per: 1.5, about: "+1.5% dodge", desc: "The chance to dodge a hit." },
 };
 const STAT_IDS = Object.keys(STATS);
 const LEVEL_MAX = 50;
@@ -701,7 +715,7 @@ function pickTalent(hero, tier, id) {
   const char = charOf(hero);
   const options = (TALENTS[hero.cls] || [])[tier];
   if (!options) return "Unknown talent.";
-  if (char.level < TALENT_LEVELS[tier]) return `Opens at hero level ${TALENT_LEVELS[tier]}.`;
+  if (char.level < TALENT_LEVELS[tier]) return `Opens at level ${TALENT_LEVELS[tier]}.`;
   if (char.talents[tier]) return "Picked already.";
   if (!options.some((t) => t.id == id)) return "Unknown talent.";
   char.talents[tier] = id;
@@ -794,7 +808,7 @@ function heroView(hero) {
     cls: hero.cls,
     unlocked: hero.unlocked,
     classPrice: classPrice(hero),
-    chars: Object.fromEntries(hero.unlocked.map((id) => [id, { level: Object.values(charOf(hero, id).levels).reduce((a, b) => a + b, 0), deepest: charOf(hero, id).deepest, deadFor: deadFor(hero, Date.now(), id) }])),
+    chars: Object.fromEntries(hero.unlocked.map((id) => [id, { level: charOf(hero, id).level, deepest: charOf(hero, id).deepest, deadFor: deadFor(hero, Date.now(), id) }])),
     levels: { ...newChar().levels, ...char.levels },
     stats: statsOf(hero),
     upgrades: Object.fromEntries(STAT_IDS.map((id) => [id, upgradeCost(char.levels[id] || 0)])),
@@ -819,6 +833,8 @@ function heroView(hero) {
     xpNeed: xpNeed(char.level),
     points: char.points,
     talents: char.talents,
+    bagSize: bagSize(hero),
+    bagSlotPrice: bagSlotPrice(hero),
     deadFor: deadFor(hero),
     revivePrice: revivePrice(hero),
     revives: revivesToday(hero),
@@ -1366,7 +1382,7 @@ const POTION_MANA = 1;
 
 function drink(run, name) {
   const hero = run.heroes.find((h) => h.name == name);
-  if (!hero || hero.down) return "Your hero is down.";
+  if (!hero || hero.down) return "You are down.";
   if (run.phase != "fight" && run.phase != "between") return "Not now.";
   if (hero.potions <= 0) return "No potions left.";
   if (hero.hp >= hero.maxHp) return "Your HP is full.";
@@ -1748,7 +1764,7 @@ function healHero(run, hero, amount) {
 function play(run, name, input, rng = Math.random) {
   if (run.phase != "fight") return "No fight now.";
   const hero = run.heroes.find((h) => h.name == name);
-  if (!hero || hero.down) return "Your hero is down.";
+  if (!hero || hero.down) return "You are down.";
   if (hero.ended) return "You ended your turn.";
   const index = hero.hand.findIndex((c) => c.uid == (input && input.uid));
   if (index < 0) return "That card isn't in your hand.";
@@ -2432,6 +2448,9 @@ module.exports = {
   DOORS,
   PARTY_MAX,
   BAG_MAX,
+  BAG_TOP,
+  bagSize,
+  bagSlotPrice,
   POTIONS_MAX,
   get POTION_PRICE() {
     return config.RPG_POTION_PRICE;
