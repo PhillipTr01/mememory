@@ -1,0 +1,262 @@
+[
+ {
+  "name": "08658138d2",
+  "rule": ".look-frame-archmage::after",
+  "loop": 8
+ },
+ {
+  "name": "1685ad0527",
+  "rule": ".mm-avatar.look-frame-archmage::before",
+  "loop": 8
+ },
+ {
+  "name": "394f614418",
+  "rule": ".look-fx-arcane .look-fx::before",
+  "loop": 6
+ },
+ {
+  "name": "6306d3cc1e",
+  "rule": ".look-fx-arcane .look-fx::after",
+  "loop": 6
+ },
+ {
+  "name": "e06d4f97d0",
+  "rule": ".look-bg-astral > .look-bg::after",
+  "loop": 6
+ },
+ {
+  "name": "291089d5dc",
+  "rule": ".mm-avatar.look-frame-pandamaster::before",
+  "loop": 6
+ },
+ {
+  "name": "3c4768c88f",
+  "rule": ".look-fx-bamboostorm .look-fx::before",
+  "loop": 8
+ },
+ {
+  "name": "5ed516f465",
+  "rule": ".look-fx-bamboostorm .look-fx::after",
+  "loop": 8
+ },
+ {
+  "name": "b414dae0f7",
+  "rule": ".look-bg-bambooforest > .look-bg",
+  "loop": 8
+ },
+ {
+  "name": "33b66ad71e",
+  "rule": ".mm-avatar.look-frame-inkblot::before",
+  "loop": 8
+ },
+ {
+  "name": "9f9713078b",
+  "rule": ".look-fx-inktendrils .look-fx::before",
+  "loop": 8
+ },
+ {
+  "name": "e259f3e1bf",
+  "rule": ".look-fx-inktendrils .look-fx::after",
+  "loop": 8
+ },
+ {
+  "name": "2bd73f2b2d",
+  "rule": ".look-bg-rorschach > .look-bg",
+  "loop": 6
+ },
+ {
+  "name": "8081194a69",
+  "rule": ".look-frame-flavedrake::after",
+  "loop": 6
+ },
+ {
+  "name": "6c675e3275",
+  "rule": ".mm-avatar.look-frame-flavedrake::before",
+  "loop": 6
+ },
+ {
+  "name": "2842edb644",
+  "rule": ".look-fx-goldenblaze .look-fx::before",
+  "loop": 6
+ },
+ {
+  "name": "898e4d95f4",
+  "rule": ".look-bg-moltencore > .look-bg",
+  "loop": 8
+ },
+ {
+  "name": "d5d93c3144",
+  "rule": ".look-frame-eclipsering::after",
+  "loop": 6
+ },
+ {
+  "name": "1e2d7201c2",
+  "rule": ".mm-avatar.look-frame-eclipsering::before",
+  "loop": 8
+ },
+ {
+  "name": "1c4246eadc",
+  "rule": ".mm-avatar.look-frame-eclipsering::before",
+  "loop": 8
+ },
+ {
+  "name": "00988da721",
+  "rule": ".look-fx-eclipseshards .look-fx::before",
+  "loop": 6
+ },
+ {
+  "name": "0d35c37cb3",
+  "rule": ".look-fx-eclipseshards .look-fx::after",
+  "loop": 6
+ },
+ {
+  "name": "147f3c2fe1",
+  "rule": ".look-bg-eclipseveil > .look-bg",
+  "loop": 8
+ },
+ {
+  "name": "e8e0cfcb0a",
+  "rule": ".look-frame-voidmirror::after",
+  "loop": 8
+ },
+ {
+  "name": "21d98043e7",
+  "rule": ".mm-avatar.look-frame-voidmirror::before",
+  "loop": 6
+ },
+ {
+  "name": "134c41942e",
+  "rule": ".look-fx-voidecho .look-fx::after",
+  "loop": 8
+ },
+ {
+  "name": "b5e6e75fa7",
+  "rule": ".look-bg-voidglass > .look-bg",
+  "loop": 6
+ },
+ {
+  "name": "7bceeb79f7",
+  "rule": ".mm-avatar.look-frame-champion::before",
+  "loop": 6
+ },
+ {
+  "name": "9644e2f092",
+  "rule": ".mm-avatar.look-frame-runnerup::before",
+  "loop": 6
+ },
+ {
+  "name": "1eb7aac462",
+  "rule": ".mm-avatar.look-frame-podium::before",
+  "loop": 6
+ },
+ {
+  "name": "52fa23c99c",
+  "rule": ".mm-avatar.look-frame-phoenix::before",
+  "loop": 8
+ },
+ {
+  "name": "a8164f7cd7",
+  "rule": ".mm-avatar.look-frame-starchart::before",
+  "loop": 6
+ },
+ {
+  "name": "c27237c05c",
+  "rule": ".look-fx-blackhole .look-fx::before",
+  "loop": 6
+ },
+ {
+  "name": "ab8786a747",
+  "rule": ".look-fx-blackhole .look-fx::after",
+  "loop": 6
+ },
+ {
+  "name": "e70916ef7c",
+  "rule": ".look-fx-shards .look-fx::before",
+  "loop": 8
+ },
+ {
+  "name": "d31b612bdd",
+  "rule": ".look-fx-shards .look-fx::after",
+  "loop": 8
+ },
+ {
+  "name": "23e3c2f783",
+  "rule": ".look-fx-constellation .look-fx::after",
+  "loop": 6
+ },
+ {
+  "name": "fe375d8fdb",
+  "rule": ".look-bg-chrome > .look-bg",
+  "loop": 6
+ },
+ {
+  "name": "c53912df3b",
+  "rule": ".look-bg-astrolabe > .look-bg",
+  "loop": 8
+ },
+ {
+  "name": "0281ee63c6",
+  "rule": ".look-bg-rift > .look-bg",
+  "loop": 8
+ },
+ {
+  "name": "dd3face7f4",
+  "rule": ".mm-avatar.look-frame-grovevines::before",
+  "loop": 8
+ },
+ {
+  "name": "d57e15cb07",
+  "rule": ".look-fx-fireflies .look-fx::after",
+  "loop": 6
+ },
+ {
+  "name": "4d5fbff547",
+  "rule": ".look-bg-moonlitgrove > .look-bg",
+  "loop": 6
+ },
+ {
+  "name": "3fe39bbf33",
+  "rule": ".mm-avatar.look-frame-phantomwisps::before",
+  "loop": 8
+ },
+ {
+  "name": "675bf01b36",
+  "rule": ".look-fx-phantomghosts .look-fx::after",
+  "loop": 8
+ },
+ {
+  "name": "047a8c6a00",
+  "rule": ".look-bg-phantomnight > .look-bg",
+  "loop": 6
+ },
+ {
+  "name": "6bc5ee9136",
+  "rule": ".mm-avatar.look-frame-prismframe::before",
+  "loop": 8
+ },
+ {
+  "name": "73b768ef2f",
+  "rule": ".mm-avatar.look-frame-horizon::before",
+  "loop": 8
+ },
+ {
+  "name": "bfb0c75612",
+  "rule": ".look-fx-rebirth .look-fx::after",
+  "loop": 8
+ },
+ {
+  "name": "333be4a42d",
+  "rule": ".look-bg-phoenixsky > .look-bg",
+  "loop": 6
+ },
+ {
+  "name": "de1cc21b8c",
+  "rule": ".look-bg-abyss > .look-bg",
+  "loop": 6
+ },
+ {
+  "name": "2c795b5172",
+  "rule": ".look-bg-legends > .look-bg",
+  "loop": 8
+ }
+]

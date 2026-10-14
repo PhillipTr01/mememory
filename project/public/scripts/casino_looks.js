@@ -21,8 +21,6 @@
               // (gone from the page: not watched any more)
               if (!entry.target.isConnected) return watcher.unobserve(entry.target);
               entry.target.classList.toggle("look-idle", !entry.isIntersecting);
-              // (seen for the first time: an animated picture more avatars show is drawn once for all - look_canvas.js)
-              if (entry.isIntersecting && !entry.target._lkcSeen && window.LookCanvas) LookCanvas.track(entry.target);
             }),
           { rootMargin: "120px" },
         )
@@ -33,7 +31,6 @@
     [...avatar.classList].filter((c) => c.startsWith("look-")).forEach((c) => avatar.classList.remove(c));
     avatar.querySelectorAll(":scope > .look-fx, :scope > .look-bg").forEach((layer) => layer.remove());
     if (watcher) watcher.unobserve(avatar);
-    if (window.LookCanvas) LookCanvas.untrack(avatar);
     if (!look || !(look.frame || look.effect || look.background)) return avatar;
     if (watcher) {
       // (paused until the watcher sees it on the screen - right away for the ones there)
