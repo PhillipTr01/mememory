@@ -202,7 +202,6 @@ test("season prizes are like rewards: a prize of your own, coins and items - giv
 
 for (const [set, name, ids] of [
   ["voidmirror", "Void Mirror", ["voidmirror", "voidecho", "voidglass"]],
-  ["flavedrake", "FlaveDrake", ["flavedrake", "goldenblaze", "moltencore"]],
   ["mage", "Archmage", ["archmage", "arcane", "astral"]],
   ["panda", "Panda Master", ["pandamaster", "bamboostorm", "bambooforest"]],
   ["ink", "Ink Blot", ["inkblot", "inktendrils", "rorschach"]],
@@ -264,27 +263,27 @@ test("shop: unique items - hidden from the shop (only their owner sees them), ne
   h.addUser("duo");
   h.setCoins("uno", 9000000);
   // Hidden: not in anybody's shop - not bought, not worn
-  assert.ok(!(await shop.view("uno")).items.some((item) => item.id === "flavedrake"));
-  assert.match((await shop.buy("uno", "flavedrake")).error, /can't be bought/);
-  assert.match((await shop.wear("uno", "frame", "flavedrake")).error, /don't have/);
+  assert.ok(!(await shop.view("uno")).items.some((item) => item.id === "voidmirror"));
+  assert.match((await shop.buy("uno", "voidmirror")).error, /can't be bought/);
+  assert.match((await shop.wear("uno", "frame", "voidmirror")).error, /don't have/);
   // (free for all: still not for everybody)
   await shop.update({ free: true });
-  assert.match((await shop.wear("uno", "frame", "flavedrake")).error, /don't have/);
+  assert.match((await shop.wear("uno", "frame", "voidmirror")).error, /don't have/);
   await shop.update({ free: false });
   // Given to one player: in their shop, worn - nobody else can get it
-  assert.ok(!(await shop.give({ username: "uno", items: ["flavedrake"] })).error);
-  assert.ok((await shop.view("uno")).items.some((item) => item.id === "flavedrake"));
-  assert.ok(!(await shop.wear("uno", "frame", "flavedrake")).error);
-  assert.ok(!(await shop.view("duo")).items.some((item) => item.id === "flavedrake"));
-  assert.match((await shop.give({ username: "duo", items: ["flavedrake"] })).error, /belongs to uno/);
-  assert.deepStrictEqual(await shop.owners(), { flavedrake: "uno" });
+  assert.ok(!(await shop.give({ username: "uno", items: ["voidmirror"] })).error);
+  assert.ok((await shop.view("uno")).items.some((item) => item.id === "voidmirror"));
+  assert.ok(!(await shop.wear("uno", "frame", "voidmirror")).error);
+  assert.ok(!(await shop.view("duo")).items.some((item) => item.id === "voidmirror"));
+  assert.match((await shop.give({ username: "duo", items: ["voidmirror"] })).error, /belongs to uno/);
+  assert.deepStrictEqual(await shop.owners(), { voidmirror: "uno" });
   // (a season prize can't hand it out twice either)
-  await shop.reward("duo", { items: ["flavedrake"], coins: 0, prize: "" }, { source: "Test" });
-  assert.ok(!shop.looksOf(await require("../models/User").findOne({ username: "duo" })).owned.includes("flavedrake"));
+  await shop.reward("duo", { items: ["voidmirror"], coins: 0, prize: "" }, { source: "Test" });
+  assert.ok(!shop.looksOf(await require("../models/User").findOne({ username: "duo" })).owned.includes("voidmirror"));
   // Taken away: free for someone else again
-  await shop.removeItem("uno", "flavedrake");
-  assert.ok(!(await shop.give({ username: "duo", items: ["flavedrake"] })).error);
-  assert.deepStrictEqual(await shop.owners(), { flavedrake: "duo" });
+  await shop.removeItem("uno", "voidmirror");
+  assert.ok(!(await shop.give({ username: "duo", items: ["voidmirror"] })).error);
+  assert.deepStrictEqual(await shop.owners(), { voidmirror: "duo" });
   shop.reset();
 });
 

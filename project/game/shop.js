@@ -106,6 +106,9 @@ const ITEMS = [
   { id: "victorycrest", kind: "frame", name: "Victory Crest", price: 7000000, rarity: "exclusive", set: "victory" },
   { id: "crowned", kind: "effect", name: "Victory Crown", price: 7000000, rarity: "exclusive", set: "victory" },
   { id: "legends", kind: "background", name: "Victory Hall", price: 7000000, rarity: "exclusive", set: "victory" },
+  { id: "flavedrake", kind: "frame", name: "Thunder Crest", price: 6000000, rarity: "exclusive", set: "flavedrake" },
+  { id: "goldenblaze", kind: "effect", name: "Golden Blaze", price: 6000000, rarity: "exclusive", set: "flavedrake" },
+  { id: "moltencore", kind: "background", name: "Golden Storm", price: 6000000, rarity: "exclusive", set: "flavedrake" },
   { id: "eclipsering", kind: "frame", name: "Eclipse Corona", price: 7000000, rarity: "exclusive", set: "eclipse" },
   { id: "eclipseshards", kind: "effect", name: "Eclipse Shards", price: 7000000, rarity: "exclusive", set: "eclipse" },
   { id: "eclipseveil", kind: "background", name: "Eclipse Veil", price: 7000000, rarity: "exclusive", set: "eclipse" },
@@ -114,9 +117,6 @@ const ITEMS = [
   { id: "voidmirror", kind: "frame", name: "Shattered Mirror", price: 10000000, rarity: "unique", set: "voidmirror" },
   { id: "voidecho", kind: "effect", name: "Void Echo", price: 10000000, rarity: "unique", set: "voidmirror" },
   { id: "voidglass", kind: "background", name: "Void Glass", price: 10000000, rarity: "unique", set: "voidmirror" },
-  { id: "flavedrake", kind: "frame", name: "Thunder Crest", price: 6000000, rarity: "unique", set: "flavedrake" },
-  { id: "goldenblaze", kind: "effect", name: "Golden Blaze", price: 6000000, rarity: "unique", set: "flavedrake" },
-  { id: "moltencore", kind: "background", name: "Golden Storm", price: 6000000, rarity: "unique", set: "flavedrake" },
   { id: "archmage", kind: "frame", name: "Archmage", price: 6000000, rarity: "unique", set: "mage" },
   { id: "arcane", kind: "effect", name: "Spell Circle", price: 6000000, rarity: "unique", set: "mage" },
   { id: "astral", kind: "background", name: "Astral Sky", price: 6000000, rarity: "unique", set: "mage" },
@@ -135,7 +135,7 @@ const KIND_NAMES = { frame: "frame", effect: "animation", background: "backgroun
 // one player only). The admin can move any item.
 const RARITIES = ["common", "rare", "epic", "legendary", "mystic", "exclusive", "unique"];
 // The sets: their name (shown on every item of a set - they belong together)
-const SETS = { grove: "Enchanted Grove", phantom: "Phantom", phoenix: "Phoenix", celestial: "Celestial", prism: "Prism", cosmic: "Cosmic", victory: "Victory", eclipse: "Eclipse", voidmirror: "Void Mirror", flavedrake: "FlaveDrake", mage: "Archmage", panda: "Panda Master", ink: "Ink Blot" };
+const SETS = { grove: "Enchanted Grove", phantom: "Phantom", phoenix: "Phoenix", celestial: "Celestial", prism: "Prism", cosmic: "Cosmic", victory: "Victory", eclipse: "Eclipse", voidmirror: "Void Mirror", flavedrake: "Thunder", mage: "Archmage", panda: "Panda Master", ink: "Ink Blot" };
 const KEY = "shop";
 
 // What the admin set: {items: {id: {on, price}}, free}
