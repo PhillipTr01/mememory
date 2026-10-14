@@ -440,6 +440,8 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (spar
   assert.strictEqual(rpg.packPrice("nope"), null);
   // (the collection never holds more than the copies of a rarity)
   for (const [id, n] of Object.entries(char.collection)) assert.ok(n <= rpg.CARD_RARITIES[rpg.CARDS[id].rarity].copies, id);
+  // (a pack's cards are random: owned for sure)
+  rpg.collect(char, "smoke");
   assert.strictEqual(rpg.deckAdd(hero, "smoke"), null);
   // 10 to 15 cards - a charm makes room for more, or lets the deck go down with fewer
   assert.deepStrictEqual(rpg.deckLimits(hero), { min: 10, max: 15 });
@@ -447,6 +449,7 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (spar
   assert.match(rpg.deckAdd(hero, "flurry"), /At most 15/);
   char.gear.charm = { slot: "charm", luck: 1, deckMax: 3 };
   assert.deepStrictEqual(rpg.deckLimits(hero), { min: 10, max: 18 });
+  rpg.collect(char, "flurry");
   assert.strictEqual(rpg.deckAdd(hero, "flurry"), null);
   char.gear.charm = { slot: "charm", luck: 1, deckMin: 3 };
   assert.deepStrictEqual(rpg.deckLimits(hero), { min: 7, max: 15 });
