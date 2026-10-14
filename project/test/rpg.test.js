@@ -381,7 +381,7 @@ test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/
   assert.strictEqual(rpg.pickTalent(hero, 0, "ironskin"), null);
   assert.match(rpg.pickTalent(hero, 0, "rhythm"), /already/);
   // (the class strength - the warrior breaks armor - and the talent)
-  assert.deepStrictEqual(rpg.talentPerks(hero), { pierce: 0.5, startBlock: 8 });
+  assert.deepStrictEqual(rpg.talentPerks(hero), { pierce: rpg.strengthOf("warrior", rpg.charOf(hero).level).perks.pierce, startBlock: 8 });
   // In a fight: the talent's block at the start, a relic's damage, an upgraded strike
   const run = rpg.newRun(1, [{ name: "a", hero }]);
   rpg.enterRoom(run, 0);
@@ -794,4 +794,11 @@ test("rpg: the bag - 5 slots, more bought up to 15, every one dearer", () => {
   hero.bagSlots = 10;
   assert.strictEqual(rpg.bagSize(hero), 15);
   assert.strictEqual(rpg.bagSlotPrice(hero), null);
+});
+
+test("rpg: class strengths grow with the level - the base at 1, twice it at the top", () => {
+  assert.strictEqual(rpg.strengthOf("warrior", 1).perks.pierce, 0.5);
+  assert.strictEqual(rpg.strengthOf("warrior", rpg.HERO_LEVEL_MAX).perks.pierce, 1);
+  assert.match(rpg.strengthOf("paladin", 1).text, /100% of your armor back, 20% more block/);
+  assert.match(rpg.strengthOf("rogue", rpg.HERO_LEVEL_MAX).text, /\+10% critical/);
 });

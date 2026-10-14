@@ -5479,3 +5479,15 @@ button.rpg-cardx.off {
   margin-right: auto;
   width: 100%;
 }
+
+.rpg-strength-grow {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--mm-muted);
+}
+
+#rpgBuilderTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}

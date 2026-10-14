@@ -534,7 +534,8 @@ function renderHero() {
   var info = [];
   if (picked) {
     var strength = el("div", "rpg-class-strength");
-    strength.append(el("span", "rpg-strength-icon", mine.strength.icon), el("b", "", mine.strength.name), el("span", "", mine.strength.text));
+    var mineStrength = hero.strength || mine.strength;
+    strength.append(el("span", "rpg-strength-icon", mineStrength.icon), el("b", "", mineStrength.name), el("span", "", mineStrength.text), el("span", "rpg-strength-grow", "grows with your level"));
     info.push(el("div", "rpg-class-about", mine.about), strength);
   } else info.push(el("div", "rpg-class-about first", "Your first class is free."));
   morphChildren(document.getElementById("rpgClassInfo"), info);
@@ -719,7 +720,7 @@ function renderFirst() {
       el("span", "rpg-first-name", cls.name),
       el("span", "rpg-first-main", "★ " + main.icon + " " + main.name),
       el("span", "rpg-first-about", cls.about),
-      el("span", "rpg-first-strength", cls.strength.icon + " " + cls.strength.name + ": " + cls.strength.text),
+      el("span", "rpg-first-strength", cls.strength.icon + " " + cls.strength.name + ": " + cls.strength.text.replace(/\{(\w+)\}/g, (_, key) => (key == "crit" ? cls.strength.perks[key] : Math.round(cls.strength.perks[key] * 100)))),
       chips,
       el("span", "rpg-label", "Signature cards"),
       cards,
@@ -1075,9 +1076,12 @@ var byRarity = (a, b) => RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.i
 var byCost = (a, b) => cardOf(a).cost - cardOf(b).cost || RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.indexOf(cardOf(b).rarity) || cardOf(a).name.localeCompare(cardOf(b).name);
 
 function renderBuilder() {
-  morphChildren(document.getElementById("rpgDeckHelp"), deckHelp());
   var cls = rules.classes[hero.cls];
-  document.getElementById("rpgBuilderTitle").innerText = "🃏 Deck builder · " + cls.icon + " " + cls.name;
+  var info = el("button", "cs-info-btn", "i");
+  info.type = "button";
+  info.title = "How cards work";
+  info.dataset.act = "deckHelp";
+  morphChildren(document.getElementById("rpgBuilderTitle"), [el("span", "", "🃏 Deck builder · " + cls.icon + " " + cls.name), info]);
   var deck = hero.deck;
   var counts = {};
   deck.forEach((id) => (counts[id] = (counts[id] || 0) + 1));
@@ -1721,22 +1725,25 @@ function showPile(kind) {
 }
 
 // How the cards work (the Deck tab)
-function deckHelp() {
-  var steps = [
-    ["🃏", "Your deck", "Every run starts with this deck of 10 cards. Shuffled at the start of every fight."],
-    ["✋", "A turn", "You draw 5 cards and get 3 💧 mana. A card costs the mana in its drop (top left)."],
-    ["⚔️", "Play", "Attacks hit a foe (click the card, then the foe), skills block, heal or help. Block only lasts through the monsters' turn."],
-    ["⏭️", "End turn", "The cards you didn't play go to the discard pile; the monsters do what their badges showed. An empty draw pile: the discard pile is shuffled in."],
-    ["🎁", "Grow it", "Every fight won: pick one of three new cards - or study, buy them in the rooms. They stay for the rest of that run; your collection grows with booster packs."],
-    ["🗺️", "The map", "Pick your way room by room. What a room is stays hidden (?) - luck lets your party sense it."],
-  ];
-  return steps.map(([icon, title, text]) => {
-    var row = el("div", "rpg-help-step");
-    var body = el("div", "");
-    body.append(el("b", "", title), el("div", "mm-muted small", text));
-    row.append(el("span", "rpg-help-icon", icon), body);
-    return row;
-  });
+// How cards work: the (i) of the deck builder
+var DECK_HELP = [
+  ["🃏 Your deck", "Every run starts with it - shuffled at the start of every fight."],
+  ["✋ A turn", "Your hand is filled up to 5 cards, your mana to 3. A card costs the mana in its drop."],
+  ["⚔️ Play", "Attacks hit a foe, skills block, heal or help. Block lasts through the monsters' turn."],
+  ["⏭️ End turn", "The cards you didn't play stay in your hand. The monsters do what their badges show."],
+  ["🎁 Grow it", "A fight won: one of three new cards for this run. Packs grow your collection."],
+];
+
+function showDeckHelp() {
+  window.casinoInfo({ title: "How cards work", sections: DECK_HELP.map(([heading, text]) => ({ heading: heading, items: [text] })) });
+  intoFullscreen();
+}
+
+// A dialog just opened (on the body): into the full screen, if the page is in it - else it would stay hidden
+function intoFullscreen() {
+  var screen = document.fullscreenElement;
+  var dialogs = document.querySelectorAll("body > .mm-dialog-backdrop");
+  if (screen && dialogs.length) screen.appendChild(dialogs[dialogs.length - 1]);
 }
 
 function sceneText(run) {
@@ -2040,8 +2047,11 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "potion") socket.emit("potion");
   else if (act == "revive") socket.emit("revive");
   else if (act == "bagSlot") socket.emit("bagSlot");
+  else if (act == "deckHelp") showDeckHelp();
   else if (act == "quitRun") {
-    if (confirm("Leave the run? You lose your share of the pot and the loot.")) socket.emit("leave");
+    var asked = confirmDialog({ title: "Leave the run?", text: "You lose your share of the pot and the loot.", confirmLabel: "Leave", danger: true });
+    intoFullscreen();
+    asked.then((sure) => sure && socket.emit("leave"));
   } else if (act == "cartAdd") {
     cart[id] = Math.min(rules.cartMax, (cart[id] || 0) + 1);
     render();

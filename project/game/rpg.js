@@ -74,11 +74,11 @@ const REWARD = { fight: 0.21, hard: 0.4, elite: 0.4, boss: 1, chest: 0.17, trap:
 // main: the stat its levels count 1.5x for; hp, atk: times the stats; def, luck, agi: added;
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
-  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore half of a foe's armor.", perks: { pierce: 0.5 } }, about: "Strength - heavy blows, cleaves the pack, a war cry for the party", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mystic: "titanswrath" },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Who hits you takes your armor as damage back. 20% more block.", perks: { thornsDef: 1, block: 0.2 } }, about: "Armor - draws the attacks, shields the party, judges with his armor", hp: 1.15, atk: 0.9, def: 4, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mystic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Heals are 20% stronger, attacks heal you for 15% of the damage.", perks: { heal: 0.2, lifesteal: 0.15 } }, about: "Vitality - heals, smites the undead, brings the fallen back", hp: 1.2, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mystic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison 30% stronger, +5% critical hits.", perks: { poison: 0.3, crit: 5 } }, about: "Agility - dodges, poisons, then strikes where it hurts", hp: 0.95, atk: 1.05, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mystic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe deal 30% more.", perks: { aoe: 0.3 } }, about: "Luck - spells that crit, fire on all foes, frost that weakens", hp: 0.85, atk: 1.15, def: 0, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mystic: "timewarp" },
+  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.5 } }, about: "Strength - heavy blows, cleaves the pack, a war cry for the party", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mystic: "titanswrath" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Who hits you takes {thornsDef}% of your armor back, {block}% more block.", perks: { thornsDef: 1, block: 0.2 } }, about: "Armor - draws the attacks, shields the party, judges with his armor", hp: 1.15, atk: 0.9, def: 4, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mystic: "divine" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Heals {heal}% stronger, attacks heal you for {lifesteal}% of the damage.", perks: { heal: 0.2, lifesteal: 0.15 } }, about: "Vitality - heals, smites the undead, brings the fallen back", hp: 1.2, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mystic: "resurrection" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison {poison}% stronger, +{crit}% critical hits.", perks: { poison: 0.3, crit: 5 } }, about: "Agility - dodges, poisons, then strikes where it hurts", hp: 0.95, atk: 1.05, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mystic: "deathmark" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe deal {aoe}% more.", perks: { aoe: 0.3 } }, about: "Luck - spells that crit, fire on all foes, frost that weakens", hp: 0.85, atk: 1.15, def: 0, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mystic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -722,10 +722,22 @@ function pickTalent(hero, tier, id) {
   return null;
 }
 
+// A class's strength at a character level: its perks grow from the base at level 1 to STRENGTH_TOP times it at the
+// highest level -> {name, icon, perks, text} (the text with the numbers of that level)
+const STRENGTH_TOP = 2;
+function strengthOf(cls, level = 1) {
+  const base = CLASSES[cls].strength;
+  const grow = 1 + ((STRENGTH_TOP - 1) * (Math.max(1, level) - 1)) / (HERO_LEVEL_MAX - 1);
+  const perks = Object.fromEntries(Object.entries(base.perks).map(([key, value]) => [key, Math.round(value * grow * 1000) / 1000]));
+  // (shares as %, crit already in %)
+  const text = base.text.replace(/\{(\w+)\}/g, (_, key) => String(key == "crit" ? Math.round(perks[key]) : Math.round(perks[key] * 100)));
+  return { name: base.name, icon: base.icon, perks, text };
+}
+
 // The perks of a character: its class's strength, its talents
 function talentPerks(hero, cls = hero.cls) {
   const char = charOf(hero, cls);
-  const perks = addPerks({}, CLASSES[cls] ? CLASSES[cls].strength.perks : {});
+  const perks = addPerks({}, CLASSES[cls] ? strengthOf(cls, char.level).perks : {});
   (TALENTS[cls] || []).forEach((options, tier) => {
     const talent = options.find((t) => t.id == char.talents[tier]);
     if (talent) addPerks(perks, talent.perks);
@@ -827,7 +839,7 @@ function heroView(hero) {
     deckMin: deckLimits(hero).min,
     pool: hero.cls ? poolOf(hero.cls) : [],
     texts: hero.cls ? liveTexts({ ...statsOf(hero), perks: talentPerks(hero) }, poolOf(hero.cls)) : {},
-    strength: hero.cls ? CLASSES[hero.cls].strength : null,
+    strength: hero.cls ? strengthOf(hero.cls, char.level) : null,
     level: char.level,
     xp: char.xp,
     xpNeed: xpNeed(char.level),
@@ -2520,6 +2532,7 @@ module.exports = {
   gainXp,
   pickTalent,
   talentPerks,
+  strengthOf,
   pickRelic,
   choose,
   optionsOf,

@@ -46,6 +46,9 @@
     dialog.scrollTop = 0;
   }
 
+  // (a page with its own text: casinoInfo({title, sections: [{heading, items}]}))
+  window.casinoInfo = show;
+
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("[data-info]").forEach(function (title) {
       var button = make("button", "cs-info-btn", "i");
