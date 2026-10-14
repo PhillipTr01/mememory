@@ -450,7 +450,7 @@ function renderLookOptions(kind, options) {
 var openEditor = null;
 var closeEditor = null;
 var VIEWS = {
-  shop: { icon: "🛍️", title: "Shop", text: "Frames, animations and backgrounds for your avatar - everybody in the casino sees them." },
+  shop: { icon: "🛍️", title: "Shop", text: "Frames, animations and backgrounds for your avatar." },
   avatar: { icon: "🎨", title: "Avatar", text: "Your face in the casino." },
 };
 

@@ -618,7 +618,7 @@ function leaveGame() {
 function surrender() {
   confirmDialog({
     title: "Surrender?",
-    text: "You leave the game and it counts as a loss. You can keep watching the others.",
+    text: "Leaving counts as a loss.",
     cancelLabel: "Keep playing",
     confirmLabel: "Surrender",
     confirmIcon: "bi-flag-fill",

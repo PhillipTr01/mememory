@@ -278,7 +278,7 @@ module.exports = function (io, options = {}) {
         const other = spinTab.get(username);
         // (a page that was closed or reloaded doesn't count - only one that is still open)
         if (other && other !== socket.id && socket.nsp.sockets.has(other) && Date.now() - (lastSpin.get(username) || 0) < config.SLOTS_TAB_LOCK) {
-          return error("You're already spinning in another tab - one machine at a time.");
+          return error("Already spinning in another tab.");
         }
         if (busy.has(username)) return socket.emit("slotsSkip");
         const early = config.SLOTS_MIN_GAP - (Date.now() - (lastSpin.get(username) || 0));

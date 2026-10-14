@@ -138,7 +138,7 @@ function wagerBar(wager) {
   fill.style.width = Math.min(100, (wager.done / Math.max(1, wager.need)) * 100).toFixed(1) + "%";
   bar.appendChild(fill);
   box.append(bar, el("span", "lb-wager-text", shortCoins(wager.done) + " / " + shortCoins(wager.need)));
-  box.title = formatCoins(wager.done) + " of " + formatCoins(wager.need) + " coins wagered - then the place counts (the start coins and every daily bonus claimed, times the wager)";
+  box.title = formatCoins(wager.done) + " of " + formatCoins(wager.need) + " coins wagered to count";
   return box;
 }
 
@@ -221,7 +221,7 @@ function render() {
   setText(
     document.getElementById("lbNextNote"),
     board.live
-      ? "The places are counted all the time - the arrows show the change since midnight."
+      ? "Arrows: change since midnight."
       : "The places of the season are counted " + (EVERY_TEXT[season && season.every] || "regularly") + " - the arrows show the change since the update before.",
   );
 }

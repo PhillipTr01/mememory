@@ -863,7 +863,7 @@
         var all = (data && data.seasons) || [];
         var season = all.find((s) => s.id == data.current);
         var left = all.filter((s) => s.joined);
-        if (moved != "normal" && season) casinoNotice({ icon: season.icon || "🏆", title: "You're playing in " + season.name, text: "Season coins, season games, the season's leaderboard - switch back any time at the top.", key: "world" });
+        if (moved != "normal" && season) casinoNotice({ icon: season.icon || "🏆", title: "You're playing in " + season.name, text: "Switch back any time at the top.", key: "world" });
         else casinoNotice({ icon: "🪙", title: "You play with your 🪙 now", text: left.length ? "Your " + left.map((s) => s.name).join(" and ") + " coins wait for you - switch back any time at the top." : "Your season coins wait for you.", key: "world" });
       }
     } catch (e) {
@@ -926,7 +926,7 @@
     var start = (mode == "join" && data.joinCoins) || { coins: season.budget, missed: 0 };
     fact(coin, format(start.coins), start.missed > 0 ? "to start (with " + start.missed + " missed daily bonus" + (start.missed == 1 ? "" : "es") + ")" : "to start with");
     fact("🎁", format(season.dailyBonus), "free every day");
-    if (season.wagerX > 0) fact("🎲", season.wagerX + "×", "your start coins and every daily bonus to wager for a place on the leaderboard" + (season.secondChances > 0 ? " (per chance)" : ""));
+    if (season.wagerX > 0) fact("🎲", season.wagerX + "×", "wager to get on the leaderboard" + (season.secondChances > 0 ? " (per chance)" : ""));
     if (season.secondChances > 0) fact("💔", season.secondChances, "second chance" + (season.secondChances == 1 ? "" : "s") + " if you lose it all" + (season.secondChances > 1 ? chanceWait(season.chanceDelay) : ""));
     if (!upcoming) fact("👥", season.players, "player" + (season.players == 1 ? "" : "s") + " in so far");
     card.appendChild(facts);

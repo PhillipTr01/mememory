@@ -362,7 +362,7 @@ function renderBlinds() {
   // Up after a few more hands
   if (level && level.next && level.handsLeft != null) text += " · " + formatCoins(level.next.small) + " / " + formatCoins(level.next.big) + (level.handsLeft <= 0 ? " next hand" : " in " + level.handsLeft + (level.handsLeft == 1 ? " hand" : " hands"));
   badge.innerText = text;
-  badge.title = "The blinds go up every few hands - and start low again when nobody played for a while";
+  badge.title = "Blinds rise every few hands";
 }
 
 /* ---------- Actions ---------- */
@@ -630,7 +630,7 @@ function chipsDialog(options) {
 function buyIn(seat) {
   chipsDialog({
     title: "Take a seat",
-    text: "Your coins become chips. When you stand up, the chips are coins again.",
+    text: "Chips turn back into coins when you stand up.",
     min: state.rules.minBuyIn,
     // (never more than the max bet by balance)
     max: Math.max(state.rules.minBuyIn, Math.min(state.rules.maxBuyIn, capLeft(0))),
