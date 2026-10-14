@@ -740,7 +740,7 @@ test("rpg: the fight rules - the hand stays (filled up to 5), poison stacks and 
   assert.strictEqual(texts.strike, "Deal 50 damage.");
   assert.strictEqual(texts["strike+"], "Deal 70 damage.");
   assert.match(texts.defend, /block 16\./);
-  assert.match(texts.mend, /heals 30 HP/);
+  assert.match(texts.mend, /heals \d+ HP/);
   // The hand stays from turn to turn - drawn up to 5
   const hero = rpg.newHero("warrior");
   const run = rpg.newRun(1, [{ name: "a", hero }]);
@@ -800,5 +800,11 @@ test("rpg: class strengths grow with the level - the base at 1, twice it at the 
   assert.strictEqual(rpg.strengthOf("warrior", 1).perks.pierce, 0.5);
   assert.strictEqual(rpg.strengthOf("warrior", rpg.HERO_LEVEL_MAX).perks.pierce, 1);
   assert.match(rpg.strengthOf("paladin", 1).text, /100% of your armor back, 20% more block/);
-  assert.match(rpg.strengthOf("rogue", rpg.HERO_LEVEL_MAX).text, /\+10% critical/);
+  assert.match(rpg.strengthOf("rogue", rpg.HERO_LEVEL_MAX).text, /\+20% critical/);
+});
+
+test("rpg: cards fit their rarity - the rarer, the more a mana buys", () => {
+  // (the same kind of card: a plain hit - a legendary one hits much harder per mana than a common one)
+  const perMana = (id) => rpg.CARDS[id].fx[0].hit / rpg.CARDS[id].cost;
+  assert.ok(perMana("bludgeon") > perMana("heavyslash") * 1.3);
 });

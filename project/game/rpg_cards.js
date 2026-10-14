@@ -35,7 +35,7 @@ const CLASS = {
     fortify: ["Fortify", "🏯", 1, "common", [{ block: 6, def: 1.5 }]],
     clothesline: ["Clothesline", "💪", 2, "common", [{ hit: 1.2 }, { status: "chill", turns: 2 }]],
     boomerang: ["Sword Boomerang", "🪃", 1, "common", [{ hit: 0.45, to: "random", times: 3 }]],
-    bloodrage: ["Blood Rage", "😤", 1, "rare", [{ lose: 0.06 }, { might: 2 }, { draw: 1 }]],
+    bloodrage: ["Blood Rage", "😤", 1, "rare", [{ lose: 0.06 }, { might: 3 }, { draw: 1 }]],
     shockwave: ["Shockwave", "💥", 2, "rare", [{ status: "chill", turns: 2, to: "all" }, { status: "stun", to: "random" }], true],
     seeingred: ["Seeing Red", "👁️", 1, "rare", [{ mana: 2 }], true],
     flamebarrier: ["Flame Barrier", "🔥", 2, "rare", [{ block: 12, def: 1 }, { status: "burn", turns: 2, to: "all" }]],
@@ -43,7 +43,7 @@ const CLASS = {
     ironwill: ["Iron Will", "🪨", 1, "rare", [{ block: 5, def: 1 }, { heal: 0.06 }]],
     reaper: ["Reaper", "⚰️", 2, "epic", [{ hit: 0.9, to: "all" }, { heal: 0.12 }], true],
     juggernaut: ["Juggernaut", "🚂", 2, "epic", [{ hit: 2.4 }, { block: 8, def: 1 }]],
-    demonform: ["Demon Form", "👹", 3, "legendary", [{ might: 4 }, { mana: 1 }], true],
+    demonform: ["Demon Form", "👹", 1, "legendary", [{ might: 4 }, { mana: 1 }], true],
     bludgeon: ["Bludgeon", "🏏", 3, "legendary", [{ hit: 3.2 }]],
     earthshaker: ["Earthshaker", "🌍", 3, "legendary", [{ hit: 1.6, to: "all" }, { status: "stun", to: "all" }], true],
     lastbastion: ["Last Bastion", "🛡️", 2, "legendary", [{ block: 20, def: 2 }, { might: 2 }]],
@@ -61,7 +61,7 @@ const CLASS = {
     rebuke: ["Rebuke", "🙅", 1, "common", [{ hit: 0.8 }, { status: "chill", turns: 1 }]],
     sanctuary: ["Sanctuary", "⛪", 2, "rare", [{ block: 6, def: 1, to: "party" }, { heal: 0.05, to: "party" }]],
     avenger: ["Avenger's Shield", "🥏", 2, "rare", [{ hit: 0.5, def: 0.4, to: "random", times: 3 }]],
-    devotion: ["Devotion", "💒", 1, "rare", [{ might: 2, to: "party" }], true],
+    devotion: ["Devotion", "💒", 1, "rare", [{ might: 3, to: "party" }], true],
     shieldwall: ["Shield Wall", "🧱", 2, "rare", [{ block: 10, def: 2.5 }]],
     blessedhammer: ["Blessed Hammer", "🔨", 1, "rare", [{ hit: 0.9, def: 0.5 }, { draw: 1 }]],
     martyr: ["Martyr", "🥀", 0, "rare", [{ lose: 0.08 }, { heal: 0.15, to: "weakest" }]],
@@ -113,7 +113,7 @@ const CLASS = {
     vanish: ["Vanish", "🫥", 1, "rare", [{ evade: true }, { draw: 2 }], true],
     crippling: ["Crippling Cloud", "☁️", 2, "rare", [{ status: "poison", turns: 3, to: "all" }, { status: "chill", turns: 2, to: "all" }]],
     footwork: ["Footwork", "👟", 1, "rare", [{ block: 5, agi: 1 }, { might: 1 }]],
-    rush: ["Adrenaline Rush", "⚡", 0, "epic", [{ mana: 2 }, { draw: 2 }], true],
+    rush: ["Adrenaline Rush", "⚡", 0, "epic", [{ mana: 1 }, { draw: 2 }], true],
     corpseexplosion: ["Corpse Explosion", "💣", 2, "epic", [{ hit: 1, to: "all", bonusIf: "poison", bonus: 2 }]],
     shadowclone: ["Shadow Clone", "👥", 2, "legendary", [{ hit: 0.5, to: "random", times: 6 }], true],
     assassinate: ["Assassinate", "🎯", 2, "legendary", [{ hit: 2.6, bonusIf: "poison", bonus: 4 }]],
@@ -221,10 +221,62 @@ function targetOf(fx) {
   return "none";
 }
 
+/* ---------- Balance: every card's numbers fit its cost and rarity ---------- */
+
+// What a step is worth in "units" (1 unit: what 1 mana buys in a Strike - 100% damage to one foe); fixed: the
+// part that isn't scaled (mana, cards, states)
+const FOES = 2.2; // foes in a fight, on average (a hit to every foe)
+function worth(fx) {
+  if (fx.hit != null) {
+    const base = fx.bonusIf ? fx.hit * 0.6 + fx.bonus * 0.4 : fx.hit;
+    return { scaled: (base + (fx.def || 0) * 0.5) * (fx.times || 1) * (fx.to == "all" ? FOES * 0.75 : 1), fixed: 0 };
+  }
+  if (fx.block != null) return { scaled: (fx.block / 7 + (fx.def || 0) * 0.3 + (fx.atk || 0) + (fx.agi || 0) * 0.05) * (fx.to == "party" ? 1.6 : 1), fixed: 0 };
+  if (fx.heal != null) return { scaled: (fx.heal / 0.12) * (fx.to == "party" ? 1.6 : 1), fixed: 0 };
+  let fixed = 0;
+  if (fx.status) fixed = { poison: 0.45, burn: 0.3, chill: 0.45, stun: 1 }[fx.status] * (fx.status == "stun" ? 1 : fx.turns || 1) * (fx.to == "all" ? FOES * 0.75 : 1);
+  else if (fx.might != null) fixed = 0.35 * fx.might * (fx.to == "party" ? 1.6 : 1);
+  else if (fx.draw != null) fixed = 0.5 * fx.draw;
+  else if (fx.mana != null) fixed = fx.mana;
+  else if (fx.lose != null) fixed = (-fx.lose / 0.12) * 0.7;
+  else if (fx.evade) fixed = 1.6;
+  return { scaled: 0, fixed };
+}
+
+// What a card may be worth: its cost (a 0 cost card a bit), more the rarer, more when it is gone after one play
+const RARITY_POWER = { common: 1, rare: 1.15, epic: 1.3, legendary: 1.5, mythic: 2 };
+function budget(cost, rarity, exhaust) {
+  return (Math.max(cost, 0.6) + 0.15) * RARITY_POWER[rarity] * (exhaust === true ? 1.3 : 1) * (exhaust == "mythic" ? 1.5 : 1);
+}
+
+// The damage, block and healing of a card scaled to its budget (at most 0.6x to 1.8x what was written) - cards
+// that are mostly mana, cards or states stay as they are
+function balanced(fx, cost, rarity, exhaust) {
+  const parts = fx.map(worth);
+  const scaled = parts.reduce((sum, p) => sum + p.scaled, 0);
+  const fixed = parts.reduce((sum, p) => sum + p.fixed, 0);
+  if (scaled < 0.5) return fx;
+  const k = Math.max(0.6, Math.min(1.8, (budget(cost, rarity, exhaust) - fixed) / scaled));
+  const round = (value, step) => Math.round(value / step) * step;
+  return fx.map((one) => {
+    const out = { ...one };
+    if (one.hit != null) {
+      out.hit = round(one.hit * k, 0.05);
+      if (one.bonus != null) out.bonus = round(one.bonus * k, 0.05);
+      if (one.def) out.def = round(one.def * k, 0.05);
+    } else if (one.block != null) {
+      out.block = Math.max(1, Math.round(one.block * k));
+      for (const key of ["def", "atk", "agi"]) if (one[key]) out[key] = round(one[key] * k, 0.05);
+    } else if (one.heal != null) out.heal = round(one.heal * k, 0.01);
+    return out;
+  });
+}
+
 // The cards: {id: card} - with their rarity, the class ones per class, the neutral ones
 function build(list) {
   const cards = {};
-  for (const [id, [name, icon, cost, rarity, fx, exhaust]] of Object.entries(list)) {
+  for (const [id, [name, icon, cost, rarity, written, exhaust]] of Object.entries(list)) {
+    const fx = balanced(written, cost, rarity, exhaust);
     cards[id] = { name, icon, cost, type: fx.some((one) => one.hit != null) ? "attack" : "skill", target: targetOf(fx), exhaust: exhaust === true, mythic: exhaust == "mythic", rarity, fx, text: textOf(fx, exhaust) };
   }
   return cards;
