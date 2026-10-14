@@ -75,7 +75,10 @@ function cardEl(id, options) {
   }
   if (options.tag == "button") node.type = "button";
   if (options.disabled) node.classList.add("off");
-  node.append(el("span", "rpg-cardx-cost", String(card.cost)), el("span", "rpg-cardx-art", card.icon), el("span", "rpg-cardx-name", card.name), el("span", "rpg-cardx-type", card.type == "attack" ? "Attack" : "Skill"), el("span", "rpg-cardx-text", card.text));
+  var cost = el("span", "rpg-cardx-cost");
+  cost.dataset.cost = String(card.cost);
+  cost.title = card.cost + " mana";
+  node.append(cost, el("span", "rpg-cardx-art", card.icon), el("span", "rpg-cardx-name", card.name), el("span", "rpg-cardx-type", card.type == "attack" ? "Attack" : "Skill"), el("span", "rpg-cardx-text", card.text));
   return node;
 }
 
@@ -179,8 +182,9 @@ function itemCard(item, actions) {
 }
 
 function renderHero() {
-  var mine = rules.classes[hero.cls];
-  document.getElementById("rpgHeroName").innerText = mine.icon + " " + mine.name;
+  var picked = !!hero.cls;
+  var mine = rules.classes[hero.cls || "warrior"];
+  document.getElementById("rpgHeroName").innerText = picked ? mine.icon + " " + mine.name : "Pick your hero";
   document.getElementById("rpgHeroSub").innerText = "Deepest floor " + hero.deepest + " · " + hero.cleared + " cleared of " + hero.runs + " runs";
   document.getElementById("rpgPotions").innerText = "🧪 " + hero.potions + " / " + rules.potionsMax;
   var buy = document.getElementById("rpgBuyPotion");
@@ -193,18 +197,28 @@ function renderHero() {
   document.getElementById("rpgBagCount").innerText = hero.bag.length ? String(hero.bag.length) : "";
 
   // The hero: the class, the stats
+  // The classes: every one a character of its own - the first free, the others to unlock
   var classes = Object.keys(rules.classes).map((id) => {
     var cls = rules.classes[id];
-    var tile = el("button", "rpg-class" + (hero.cls == id ? " active" : ""));
+    var open = hero.unlocked.includes(id);
+    var tile = el("button", "rpg-class" + (hero.cls == id ? " active" : "") + (open ? "" : " locked"));
     tile.type = "button";
-    tile.dataset.act = "class";
+    tile.dataset.act = open ? "class" : "unlock";
     tile.dataset.id = id;
     tile.title = cls.about;
-    tile.append(el("span", "rpg-class-icon", cls.icon), el("span", "rpg-class-name", cls.name));
+    var char = hero.chars[id];
+    tile.append(el("span", "rpg-class-icon", cls.icon), el("span", "rpg-class-name", cls.name), el("span", "rpg-class-note", open ? "Lv " + char.level + " · floor " + char.deepest : hero.classPrice ? "🔒 🪙 " + formatCoins(hero.classPrice) : "Free"));
     return tile;
   });
   morphChildren(document.getElementById("rpgClasses"), classes);
-  morphChildren(document.getElementById("rpgClassInfo"), [el("div", "rpg-class-about", mine.about)]);
+  morphChildren(document.getElementById("rpgClassInfo"), [
+    el(
+      "div",
+      "rpg-class-about" + (picked ? "" : " first"),
+      picked ? mine.about + " - every class is a character of its own: its own levels, gear and floors." : "Pick your first class - it's free. Every class is a character of its own (its own levels, gear and floors); the others can be unlocked later for 🪙 " + formatCoins(rules.classPrice) + ".",
+    ),
+  ]);
+  document.getElementById("rpgStats").hidden = !picked;
   var stats = Object.keys(rules.stats).map((id) => {
     var stat = rules.stats[id];
     var cost = hero.upgrades[id];
@@ -242,6 +256,7 @@ function renderHero() {
 
   // The deck: the class's starter deck, the cards to win
   var deck = ["strike", "defend"].concat(mine.signature);
+  morphChildren(document.getElementById("rpgDeckHelp"), deckHelp());
   var counts = { strike: 4, defend: 4 };
   document.getElementById("rpgDeckCount").innerText = String(8 + mine.signature.length);
   morphChildren(
@@ -266,7 +281,8 @@ function renderDoor() {
   document.getElementById("rpgFloorInfo").innerText = "Entry 🪙 " + formatCoins(entry) + " each · " + (floor <= hero.deepest ? "cleared ✓" : "new");
   document.getElementById("rpgFloorDown").disabled = floor <= 1;
   document.getElementById("rpgFloorUp").disabled = floor >= hero.maxFloor;
-  document.getElementById("rpgSolo").disabled = myCoins < entry;
+  document.getElementById("rpgSolo").disabled = myCoins < entry || !hero.cls;
+  document.getElementById("rpgOpen").disabled = !hero.cls;
   var sizes = [];
   for (var n = 2; n <= rules.partyMax; n++) sizes.push(button(n + " heroes", "size", { id: n, className: "chip" + (n == size ? " active" : "") }));
   morphChildren(document.getElementById("rpgSize"), sizes);
@@ -355,14 +371,11 @@ function renderRun() {
   arena.classList.toggle("aiming-foe", !!aiming && aiming.target == "foe");
   arena.classList.toggle("aiming-ally", !!aiming && (aiming.target == "ally" || aiming.target == "fallen"));
 
-  // The card won in the last fight
+  // Between the rooms: the card won in the last fight - or what happened in the last room (the merchant: his pack)
   var reward = document.getElementById("rpgReward");
-  reward.hidden = !(run.phase == "between" && me && me.reward);
-  if (!reward.hidden) {
-    var cards = el("div", "rpg-reward-cards");
-    me.reward.forEach((id) => cards.appendChild(cardEl(id, { tag: "button", act: "pick", className: "pickable" })));
-    morphChildren(reward, [el("div", "rpg-reward-title", "Victory - pick a card for your deck"), cards, button("Skip", "pick", { id: "", className: "small" })]);
-  }
+  var panel = run.phase == "between" ? (me && me.reward ? rewardPanel(me) : run.event ? eventPanel(run, me) : null) : null;
+  reward.hidden = !panel;
+  if (panel) morphChildren(reward, panel);
 
   var scene;
   if (fighting) {
@@ -397,6 +410,20 @@ function renderRun() {
 
   morphChildren(document.getElementById("rpgHandBar"), handBar(run, me));
 
+  if (me) {
+    document.getElementById("rpgRunDeckCount").innerText = me.deck.length + " cards";
+    var counts = {};
+    me.deck.forEach((id) => (counts[id] = (counts[id] || 0) + 1));
+    morphChildren(
+      document.getElementById("rpgRunDeck"),
+      Object.keys(counts).map((id) => {
+        var card = cardEl(id, { className: "small" });
+        if (counts[id] > 1) card.appendChild(el("span", "rpg-cardx-count", "×" + counts[id]));
+        return card;
+      }),
+    );
+  }
+
   var log = document.getElementById("rpgLog");
   morphChildren(
     log,
@@ -405,7 +432,54 @@ function renderRun() {
   log.scrollTop = log.scrollHeight;
 }
 
-// The doors to the next room: closed (a hint, if a lucky hero heard one) - everybody votes for one
+// The card won in a fight: one of three for the deck
+function rewardPanel(me) {
+  var cards = el("div", "rpg-reward-cards");
+  me.reward.forEach((id) => cards.appendChild(cardEl(id, { tag: "button", act: "pick", className: "pickable" })));
+  return [el("div", "rpg-reward-title", "Victory - pick a card for your deck"), el("div", "rpg-reward-note mm-muted small", "It goes into your deck for the rest of this run - you may draw it in the next fights."), cards, button("Skip", "pick", { id: "", className: "small" })];
+}
+
+// What happened in the last room (a chest, a camp fire, a shrine, a trap) - the merchant: what he sells
+function eventPanel(run, me) {
+  var kind = rules.roomKinds[run.event.kind];
+  var nodes = [el("div", "rpg-reward-title", kind.icon + " " + kind.name)];
+  var lines = el("ul", "rpg-event-lines");
+  run.event.lines.forEach((line) => lines.appendChild(el("li", "", line)));
+  nodes.push(lines);
+  var offer = run.event.offers && me && run.event.offers[myName];
+  if (offer) {
+    var prices = run.event.prices;
+    var wares = el("div", "rpg-reward-cards");
+    offer.cards.forEach((id) => {
+      var sold = offer.bought.includes(id);
+      var card = cardEl(id, { tag: "button", act: sold ? "" : "buy", className: "pickable" + (sold ? " off" : "") });
+      card.appendChild(el("span", "rpg-price", sold ? "Sold ✓" : "🪙 " + formatCoins(prices.card)));
+      wares.appendChild(card);
+    });
+    nodes.push(wares, button("🧪 A potion · 🪙 " + formatCoins(prices.potion) + " (" + me.potions + "/" + rules.potionsMax + ")", "buy", { id: "potion", className: "small", disabled: me.potions >= rules.potionsMax || myCoins < prices.potion }));
+  }
+  return nodes;
+}
+
+// How the cards work (the Deck tab)
+function deckHelp() {
+  var steps = [
+    ["🃏", "Your deck", "Every run starts with this deck of 10 cards. Shuffled at the start of every fight."],
+    ["✋", "A turn", "You draw 5 cards and get 3 💧 mana. A card costs the mana in its drop (top left)."],
+    ["⚔️", "Play", "Attacks hit a foe (click the card, then the foe), skills block, heal or help. Block only lasts through the monsters' turn."],
+    ["⏭️", "End turn", "The cards you didn't play go to the discard pile; the monsters do what their badges showed. An empty draw pile: the discard pile is shuffled in."],
+    ["🎁", "Grow it", "Every fight won: pick one of three new cards (or buy one at a merchant) - for the rest of that run."],
+  ];
+  return steps.map(([icon, title, text]) => {
+    var row = el("div", "rpg-help-step");
+    var body = el("div", "");
+    body.append(el("b", "", title), el("div", "mm-muted small", text));
+    row.append(el("span", "rpg-help-icon", icon), body);
+    return row;
+  });
+}
+
+// The doors to the next room: closed - only a lucky hero senses danger or calm behind one; everybody votes
 function doorCards(run) {
   var mine = run.votes[myName];
   return run.doors.map((door, i) => {
@@ -415,7 +489,8 @@ function doorCards(run) {
     var art = el("div", "rpg-door-art");
     art.appendChild(el("span", "rpg-door-mark", door.open ? rules.roomKinds[door.kind].icon : ROMAN[i] || String(i + 1)));
     node.append(art, el("div", "rpg-door-name", door.open ? rules.roomKinds[door.kind].name : "Door " + (ROMAN[i] || i + 1)));
-    node.appendChild(el("div", "rpg-door-hint" + (door.hint ? "" : " none"), door.hint ? "🍀 " + door.hint : door.open ? rules.roomKinds[door.kind].about : "Silence."));
+    var feeling = door.open ? rules.roomKinds[door.kind].about : door.sense == "danger" ? "⚠️ You sense danger" : door.sense == "calm" ? "🕊️ It feels calm" : "❔ You sense nothing";
+    node.appendChild(el("div", "rpg-door-hint " + (door.open ? "open" : door.sense || "none"), feeling));
     var voters = el("div", "rpg-voters");
     Object.keys(run.votes)
       .filter((name) => run.votes[name] === i)
@@ -453,12 +528,13 @@ function handBar(run, me) {
     var leave = button("🚪 Leave with 🪙 " + formatCoins(run.pot), "vote", { id: "leave", className: voted === "leave" ? "voted" : "" });
     var leavers = Object.keys(run.votes).filter((name) => run.votes[name] === "leave");
     if (leavers.length) leave.innerText += " (" + leavers.length + ")";
-    var text = run.heroes.length > 1 ? "Vote for a door - " + count + " / " + run.heroes.length + " voted" + (party.leader == myName ? "" : " (a tie: " + party.leader + " decides)") : "Pick a door";
+    var text = (run.heroes.length > 1 ? "Vote for a door - " + count + " / " + run.heroes.length + " voted" + (party.leader == myName ? "" : " (a tie: " + party.leader + " decides)") : "Pick a door") + (run.doors.length > 1 ? " · 🍀 your party senses a door " + run.sense + "% of the time" : "");
     return [potion, el("div", "rpg-wait mm-muted", text), leave];
   }
   if (!me || me.down) return [el("div", "rpg-wait mm-muted", "💤 You're down - back up after the fight (or a Cleric's revive).")];
-  var energy = el("div", "rpg-energy", me.energy + "/" + rules.energy);
-  energy.title = "Energy - cards cost it, full again every turn";
+  var energy = el("div", "rpg-energy");
+  energy.dataset.mana = me.energy + "/" + rules.energy;
+  energy.title = "Mana - cards cost it, full again every turn";
   var draw = el("div", "rpg-pile", "🂠 " + me.drawCount);
   draw.title = "Draw pile";
   var left = el("div", "rpg-hand-side");
@@ -544,6 +620,10 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "join") socket.emit("join", { id: id });
   else if (act == "leave") socket.emit("leave");
   else if (act == "class") socket.emit("class", { id: id });
+  else if (act == "unlock") {
+    var price = hero.classPrice;
+    if (!price || confirm("Unlock the " + rules.classes[id].name + " for 🪙 " + formatCoins(price) + "? A new character - its own levels, gear and floors.")) socket.emit("unlock", { id: id });
+  } else if (act == "buy") socket.emit("buy", { item: id });
   else if (act == "size") {
     size = Number(id);
     remember(SIZE_KEY, size);

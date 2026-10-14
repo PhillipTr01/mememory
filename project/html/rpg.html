@@ -126,7 +126,9 @@
                                 <div id="rpgBag" class="rpg-bag"></div>
                             </div>
                             <div class="rpg-pane" data-pane="deck" hidden>
-                                <div class="mm-muted small">Every run starts with this deck - every fight won: one card more (picked of three) for the run.</div>
+                                <div class="rpg-label">How cards work</div>
+                                <div id="rpgDeckHelp" class="rpg-help"></div>
+                                <div class="rpg-label">Your starter deck</div>
                                 <div id="rpgDeck" class="rpg-deck-grid"></div>
                                 <div class="rpg-label">Cards to win</div>
                                 <div id="rpgPool" class="rpg-deck-grid"></div>
@@ -183,6 +185,10 @@
                             <div id="rpgHeroes" class="rpg-heroes"></div>
                         </div>
                         <div id="rpgHandBar" class="rpg-handbar"></div>
+                        <details class="rpg-log-box">
+                            <summary>Your deck this run · <span id="rpgRunDeckCount"></span></summary>
+                            <div id="rpgRunDeck" class="rpg-deck-grid"></div>
+                        </details>
                         <details class="rpg-log-box">
                             <summary>Battle log</summary>
                             <ol id="rpgLog" class="rpg-log"></ol>

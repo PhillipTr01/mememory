@@ -1400,3 +1400,126 @@ button.rpg-cardx.off {
     animation: none;
   }
 }
+
+/* ======================= 8. Characters, rooms, mana ======================= */
+
+/* A class tile: unlocked (its level, its floor) or locked (its price) */
+.rpg-class-note {
+  font-size: 0.66rem;
+  color: var(--mm-muted);
+  white-space: nowrap;
+}
+
+.rpg-class.locked {
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+.rpg-class.locked:hover {
+  opacity: 1;
+}
+
+.rpg-class-about.first {
+  color: var(--mm-accent);
+  font-weight: 600;
+}
+
+.rpg-stats[hidden] {
+  display: none;
+}
+
+/* How cards work */
+.rpg-help {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rpg-help-step {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.5rem 0.6rem;
+  border-radius: 10px;
+  background: var(--rpg-surface);
+}
+
+.rpg-help-icon {
+  font-size: 1.2rem;
+  width: 1.6rem;
+  text-align: center;
+  flex: none;
+}
+
+/* What happened in a room */
+.rpg-event-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: center;
+  font-size: 0.88rem;
+}
+
+.rpg-reward-note {
+  text-align: center;
+}
+
+.rpg-price {
+  margin-top: auto;
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: var(--mm-accent);
+}
+
+/* What a hero senses behind a door */
+.rpg-door-hint {
+  font-style: normal;
+  font-weight: 600;
+}
+
+.rpg-door-hint.danger {
+  color: #ff9b8f;
+}
+
+.rpg-door-hint.calm {
+  color: #b9e3a0;
+}
+
+.rpg-door-hint.none,
+.rpg-door-hint.open {
+  color: var(--mm-muted);
+  font-weight: 400;
+}
+
+/* Mana: a drop (the cost on a card, the mana of the turn) */
+.rpg-cardx-cost {
+  border-radius: 50% 0 50% 50%;
+  transform: rotate(-45deg);
+  top: -0.6rem;
+  left: -0.5rem;
+  font-size: 0;
+  background: radial-gradient(circle at 40% 40%, #e6f8ff, #5bbcf0 55%, #1f6a96);
+}
+
+.rpg-cardx-cost::after {
+  content: attr(data-cost);
+  font-size: 0.9rem;
+  transform: rotate(45deg);
+  display: block;
+}
+
+.rpg-energy {
+  border-radius: 50% 0 50% 50%;
+  transform: rotate(-45deg);
+  font-size: 0;
+}
+
+.rpg-energy::after {
+  content: attr(data-mana);
+  font-size: 1.05rem;
+  transform: rotate(45deg);
+  display: block;
+}

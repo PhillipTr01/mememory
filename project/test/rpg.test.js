@@ -10,16 +10,26 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX), null);
   assert.strictEqual(rpg.entryCost(1), 1000);
   assert.ok(rpg.entryCost(10) > rpg.entryCost(9));
-  const hero = rpg.newHero();
-  assert.strictEqual(hero.cls, "warrior");
+  // A new hero: no class yet - the first one free, every other one a character of its own for CLASS_PRICE
+  const fresh = rpg.newHero();
+  assert.strictEqual(fresh.cls, null);
+  assert.strictEqual(rpg.classPrice(fresh), 0);
+  const hero = rpg.newHero("warrior");
+  assert.deepStrictEqual([hero.cls, hero.unlocked, rpg.classPrice(hero)], ["warrior", ["warrior"], rpg.CLASS_PRICE]);
   assert.strictEqual(rpg.maxFloor(hero), 1);
-  hero.deepest = 4;
+  rpg.charOf(hero).deepest = 4;
   assert.strictEqual(rpg.maxFloor(hero), 5);
-  hero.deepest = rpg.FLOORS;
+  rpg.unlock(hero, "rogue");
+  assert.strictEqual(rpg.maxFloor(hero), 1, "the rogue: a character of its own");
+  rpg.charOf(hero).levels.agi = 3;
+  rpg.unlock(hero, "warrior");
+  assert.strictEqual(rpg.maxFloor(hero), 5);
+  assert.strictEqual(rpg.charOf(hero).levels.agi, 0);
+  rpg.charOf(hero).deepest = rpg.FLOORS;
   assert.strictEqual(rpg.maxFloor(hero), rpg.FLOORS);
   assert.strictEqual(rpg.BOSS_EVERY, 0);
   // The rooms: a fight first, then three hidden doors (mostly fights), the guarded gate last
-  const run = rpg.newRun(3, [{ name: "a", hero: rpg.newHero() }]);
+  const run = rpg.newRun(3, [{ name: "a", hero: rpg.newHero("warrior") }]);
   assert.deepStrictEqual(run.doors.map((d) => d.kind), ["fight"]);
   run.rooms = [{ kind: "fight", done: true }];
   const kinds = new Map();
@@ -44,19 +54,21 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
     rpg.CLASSES[id].cards.forEach((card) => assert.ok(rpg.CARDS[card], card));
     assert.deepStrictEqual(rpg.starterDeck(id).slice(8), rpg.CLASSES[id].signature);
   }
-  const tank = rpg.statsOf({ ...rpg.newHero(), cls: "warrior" });
-  const mage = rpg.statsOf({ ...rpg.newHero(), cls: "mage" });
+  const tank = rpg.statsOf(rpg.newHero("warrior"));
+  const mage = rpg.statsOf(rpg.newHero("mage"));
   assert.ok(tank.maxHp > mage.maxHp && mage.luck > tank.luck);
   // A level in the main stat of the class counts 1.5x: Strength for the warrior, Luck for the mage
-  const strong = { ...rpg.newHero(), cls: "warrior", levels: { hp: 0, atk: 4, def: 0, luck: 4, agi: 0 } };
-  const lucky = { ...strong, cls: "mage" };
+  const strong = rpg.newHero("warrior");
+  rpg.charOf(strong).levels = { hp: 0, atk: 4, def: 0, luck: 4, agi: 0 };
+  const lucky = rpg.newHero("mage");
+  rpg.charOf(lucky).levels = { hp: 0, atk: 4, def: 0, luck: 4, agi: 0 };
   assert.strictEqual(rpg.statsOf(strong).atk, Math.round((10 + 3 * 4 * rpg.MAIN_BONUS) * rpg.CLASSES.warrior.atk));
   assert.strictEqual(rpg.statsOf(lucky).luck, Math.round(5 + 2 * 4 * rpg.MAIN_BONUS + rpg.CLASSES.mage.luck));
   assert.strictEqual(rpg.statsOf(strong).luck, Math.round(5 + 2 * 4 + rpg.CLASSES.warrior.luck));
   // Gear makes a hero stronger
   const before = rpg.statsOf(hero);
-  hero.gear.weapon = { slot: "weapon", atk: 7 };
-  hero.gear.armor = { slot: "armor", def: 3, hp: 20 };
+  rpg.charOf(hero).gear.weapon = { slot: "weapon", atk: 7 };
+  rpg.charOf(hero).gear.armor = { slot: "armor", def: 3, hp: 20 };
   const now = rpg.statsOf(hero);
   assert.ok(now.atk >= before.atk + 7);
   assert.strictEqual(now.def, before.def + 3);
@@ -66,11 +78,11 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
 });
 
 test("rpg: a new hero clears floor 1 but not floor 8 - upgrades take it deeper; a full clear pays less than 1.5x the entry", () => {
-  const weak = rpg.newHero();
+  const weak = rpg.newHero("warrior");
   assert.ok(rpg.simulate(weak, 1, 200).cleared > 0.85);
   assert.ok(rpg.simulate(weak, 8, 200).cleared < 0.05);
-  const strong = rpg.newHero();
-  for (const id of rpg.STAT_IDS) strong.levels[id] = 8;
+  const strong = rpg.newHero("warrior");
+  for (const id of rpg.STAT_IDS) rpg.charOf(strong).levels[id] = 8;
   const deep = rpg.simulate(strong, 8, 200);
   assert.ok(deep.cleared > 0.9, JSON.stringify(deep));
   assert.ok(deep.payback < 1.5, JSON.stringify(deep));
@@ -78,7 +90,7 @@ test("rpg: a new hero clears floor 1 but not floor 8 - upgrades take it deeper; 
 
 // A fight with one monster of fixed numbers (the tests decide what it does) and the hand the tests give
 function duel(cls, move, hand) {
-  const hero = { ...rpg.newHero(), cls };
+  const hero = rpg.newHero(cls);
   const run = rpg.newRun(1, [{ name: "a", hero }]);
   rpg.enterRoom(run, 0);
   run.monsters = [{ id: "m1", name: "Dummy", icon: "🎯", hp: 1000, maxHp: 1000, atk: 20, dodge: 0, undead: false, moves: [move], rank: "normal", effects: {}, intent: { move, target: "a" } }];
@@ -135,7 +147,7 @@ test("rpg: poison makes the backstab hurt 3x; the cleric heals, brings the falle
   assert.ok(before - foe.hp > run.heroes[0].atk * 1.2, `${before - foe.hp}`);
 
   // The cleric
-  const party = rpg.newRun(1, [{ name: "c", hero: { ...rpg.newHero(), cls: "cleric" } }, { name: "w", hero: rpg.newHero() }]);
+  const party = rpg.newRun(1, [{ name: "c", hero: rpg.newHero("cleric") }, { name: "w", hero: rpg.newHero("warrior") }]);
   rpg.enterRoom(party, 0);
   party.monsters = [{ id: "m1", name: "Dummy", icon: "🎯", hp: 1000, maxHp: 1000, atk: 1, dodge: 0, moves: ["defend"], rank: "normal", effects: {}, intent: { move: "defend" } }];
   const [cleric, warrior] = party.heroes;
@@ -181,6 +193,50 @@ test("rpg: poison makes the backstab hurt 3x; the cleric heals, brings the falle
   rpg.monsterTurn(party, () => 0.5);
   assert.strictEqual(party.phase, "lost");
   assert.strictEqual(party.pot, 0);
+});
+
+test("rpg: doors - only luck senses danger or calm; rooms say what happened; the merchant sells a potion and cards", () => {
+  const run = rpg.newRun(1, [{ name: "a", hero: rpg.newHero("warrior") }]);
+  rpg.enterRoom(run, 0);
+  run.rooms = [{ kind: "fight", done: true }];
+  // No luck: nothing sensed - lucky: sensed, and right
+  run.heroes[0].luck = 0;
+  assert.ok(rpg.doorsFor(run).every((door) => door.sense == null));
+  run.heroes[0].luck = 60;
+  let sensed = 0;
+  for (let i = 0; i < 300; i++) {
+    for (const door of rpg.doorsFor(run)) {
+      if (!door.sense) continue;
+      sensed++;
+      assert.strictEqual(door.sense, ["fight", "hard", "trap"].includes(door.kind) ? "danger" : "calm");
+    }
+  }
+  assert.ok(sensed > 900 * 0.8 && sensed < 900 * 0.97, String(sensed));
+  // A camp fire: what happened is shown
+  run.phase = "between";
+  run.doors = [{ kind: "rest", sense: null, open: false }];
+  run.heroes[0].hp = 10;
+  rpg.enterRoom(run, 0);
+  assert.strictEqual(run.event.kind, "rest");
+  assert.match(run.event.lines[0], /heals/);
+  assert.ok(run.heroes[0].hp > 10);
+  // The merchant: three cards and a potion, for coins (the server takes them)
+  run.doors = [{ kind: "merchant", sense: null, open: false }];
+  rpg.enterRoom(run, 0);
+  const offer = run.event.offers.a;
+  assert.strictEqual(offer.cards.length, 3);
+  assert.strictEqual(rpg.canBuy(run, "a", "potion").price, rpg.merchantPrices(1).potion);
+  // (a mage's card: never in the warrior's offer)
+  assert.match(rpg.canBuy(run, "a", "meteor").error, /doesn't sell/);
+  const card = offer.cards[0];
+  assert.strictEqual(rpg.canBuy(run, "a", card).price, rpg.merchantPrices(1).card);
+  const deck = run.heroes[0].deck.length;
+  rpg.bought(run, "a", card);
+  assert.strictEqual(run.heroes[0].deck.length, deck + 1);
+  assert.match(rpg.canBuy(run, "a", card).error, /Sold/);
+  // Through the next door: the room's panel is gone
+  rpg.enterRoom(run, 0);
+  assert.notStrictEqual(run.event && run.event.kind, "merchant");
 });
 
 let server;
@@ -268,19 +324,34 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; the time
   testMode.start("rpg_alice", 1000000);
   const alice = client("rpg_alice");
   const hero = await h.once(alice, "rpgHero");
-  assert.strictEqual(hero.levels.atk, 0);
+  assert.strictEqual(hero.cls, null);
+  const noClass = h.once(alice, "rpgError");
+  alice.emit("create", { floor: 1, size: 1 });
+  assert.match(await noClass, /Pick a class first/);
+  // The first class: free
+  alice.emit("unlock", { id: "warrior" });
+  const warrior = await waitFor(alice, "rpgHero", (view) => view.cls == "warrior");
+  assert.strictEqual(testMode.balance("rpg_alice"), 1000000);
+  assert.strictEqual(warrior.levels.atk, 0);
   alice.emit("upgrade", { stat: "atk" });
   const up = await waitFor(alice, "rpgHero", (view) => view.levels.atk == 1);
   assert.strictEqual(up.stats.atk, Math.round((rpg.STATS.atk.base + rpg.STATS.atk.per * rpg.MAIN_BONUS) * rpg.CLASSES.warrior.atk));
   assert.strictEqual(testMode.balance("rpg_alice"), 1000000 - rpg.upgradeCost(0));
   alice.emit("potion");
   await waitFor(alice, "rpgHero", (view) => view.potions == 3);
-  // A class: picked any time outside a run
+  // Another class: locked - bought, a character of its own (its own levels)
+  const locked = h.once(alice, "rpgError");
   alice.emit("class", { id: "mage" });
+  assert.match(await locked, /Unlock/);
+  const coinsBefore = testMode.balance("rpg_alice");
+  alice.emit("unlock", { id: "mage" });
   const mage = await waitFor(alice, "rpgHero", (view) => view.cls == "mage");
-  assert.strictEqual(mage.stats.maxHp, Math.round(up.stats.maxHp / rpg.CLASSES.warrior.hp * rpg.CLASSES.mage.hp));
+  assert.strictEqual(testMode.balance("rpg_alice"), coinsBefore - rpg.CLASS_PRICE);
+  assert.strictEqual(mage.levels.atk, 0);
+  assert.deepStrictEqual(mage.unlocked, ["warrior", "mage"]);
   alice.emit("class", { id: "warrior" });
-  await waitFor(alice, "rpgHero", (view) => view.cls == "warrior");
+  const back = await waitFor(alice, "rpgHero", (view) => view.cls == "warrior");
+  assert.strictEqual(back.levels.atk, 1);
   // A floor not open yet
   const refused = h.once(alice, "rpgError");
   alice.emit("create", { floor: 2, size: 1 });
@@ -288,7 +359,7 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; the time
 
   // (strong enough to clear floor 1 for sure)
   const mine = server.test.rpg.heroOf("rpg_alice");
-  for (const id of rpg.STAT_IDS) mine.levels[id] = 30;
+  for (const id of rpg.STAT_IDS) rpg.charOf(mine).levels[id] = 30;
   const before = testMode.balance("rpg_alice");
   alice.emit("create", { floor: 1, size: 1 });
   const fight = await waitFor(alice, "rpgParty", (p) => p && p.run && p.run.phase == "fight");
@@ -320,7 +391,8 @@ test("rpg: co-op - one opens a party, another joins, the leader starts (both pay
   await h.once(bob, "rpgHero");
   for (const name of ["rpg_alice", "rpg_bob"]) {
     const hero = server.test.rpg.heroOf(name);
-    for (const id of rpg.STAT_IDS) hero.levels[id] = 30;
+    if (!hero.cls) rpg.unlock(hero, "warrior");
+    for (const id of rpg.STAT_IDS) rpg.charOf(hero).levels[id] = 30;
   }
   Object.assign(server.test.rpg.timing, { turn: 1500, decide: 3000 });
   alice.emit("create", { floor: 1, size: 2 });

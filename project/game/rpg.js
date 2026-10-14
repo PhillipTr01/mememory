@@ -5,7 +5,7 @@
  * five stats bought with coins (upgrades, every level dearer - the class's main stat counts 1.5x), gear
  * from chests (a weapon, an armor, a charm - from common to legendary) and potions. A run: a party of 1
  * to 4 heroes pays the entry of a floor (each the same) and goes through its rooms. Between two rooms
- * there are three hidden doors - nobody knows what is behind them (a lucky hero sometimes hears a hint):
+ * there are three hidden doors - nobody knows what is behind them (a lucky hero may sense danger or calm):
  * the party votes for one (or to leave with the loot) - the most votes win, a tie goes with the leader.
  * The first room is a fight, the last the guarded gate (an elite fight); a floor cleared opens the next
  * one. All heroes down: the pot is lost.
@@ -38,7 +38,7 @@ const STATS = {
   hp: { name: "Vitality", icon: "❤️", base: 100, per: 15, about: "+15 max HP" },
   atk: { name: "Strength", icon: "⚔️", base: 10, per: 3, about: "+3 attack" },
   def: { name: "Armor", icon: "🛡️", base: 0, per: 2, about: "+2 defense (and more block)" },
-  luck: { name: "Luck", icon: "🍀", base: 5, per: 2, about: "+2% critical hits, hints behind the doors, dodging traps, better loot" },
+  luck: { name: "Luck", icon: "🍀", base: 5, per: 2, about: "+2% critical hits - sense danger behind the doors, dodge traps, better loot" },
   agi: { name: "Agility", icon: "🪶", base: 0, per: 1.5, about: "+1.5% to dodge an attack" },
 };
 const STAT_IDS = Object.keys(STATS);
@@ -74,14 +74,14 @@ const CARDS = {
   defend: { name: "Defend", icon: "🛡️", cost: 1, type: "skill", target: "none", text: "Block 6 + armor." },
   focus: { name: "Focus", icon: "🧠", cost: 0, type: "skill", target: "none", exhaust: true, text: "Draw 2 cards. Exhaust." },
   secondwind: { name: "Second Wind", icon: "🌬️", cost: 1, type: "skill", target: "none", text: "Block 5 + armor, heal 6% HP." },
-  adrenaline: { name: "Adrenaline", icon: "💉", cost: 0, type: "skill", target: "none", exhaust: true, text: "+1 energy, draw 1. Exhaust." },
+  adrenaline: { name: "Adrenaline", icon: "💉", cost: 0, type: "skill", target: "none", exhaust: true, text: "+1 mana, draw 1. Exhaust." },
   quickslash: { name: "Quick Slash", icon: "🌀", cost: 0, type: "attack", target: "foe", text: "Deal 50% damage, draw 1." },
   // Warrior
   bash: { name: "Heavy Blow", icon: "💫", cost: 2, type: "attack", target: "foe", text: "Deal 110% damage and stun: it loses its next move." },
   cleave: { name: "Cleave", icon: "🪓", cost: 1, type: "attack", target: "none", text: "Deal 70% damage to every foe." },
   battlecry: { name: "War Cry", icon: "📯", cost: 1, type: "skill", target: "none", exhaust: true, text: "The party deals 30% more damage for 2 turns. Exhaust." },
   ironwave: { name: "Iron Wave", icon: "🌊", cost: 1, type: "attack", target: "foe", text: "Deal 70% damage, block 4 + half the armor." },
-  bloodlust: { name: "Bloodlust", icon: "🩸", cost: 0, type: "skill", target: "none", exhaust: true, text: "Lose 8% HP, +2 energy. Exhaust." },
+  bloodlust: { name: "Bloodlust", icon: "🩸", cost: 0, type: "skill", target: "none", exhaust: true, text: "Lose 8% HP, +2 mana. Exhaust." },
   // Paladin
   taunt: { name: "Taunt", icon: "📣", cost: 1, type: "skill", target: "none", text: "Every foe attacks you this turn - you take 30% less. Block 4 + armor." },
   judgement: { name: "Judgement", icon: "⚖️", cost: 1, type: "attack", target: "foe", text: "Deal attack + armor as damage. Never misses." },
@@ -120,7 +120,6 @@ const TRAP_DAMAGE = 0.2;
 const REST_HEAL = 0.35;
 const SHRINE_COST = 0.2; // of the max HP
 const SHRINE_POWER = 1.25; // the blessing: more damage for the rest of the run
-const MERCHANT_PRICE = 0.1; // a potion: this share of the entry, from the pot
 
 const RARITIES = [
   { id: "common", name: "Common", weight: 60, power: 1 },
@@ -192,15 +191,46 @@ const pick = (rng, list) => list[Math.floor(rng() * list.length)];
 
 /* ---------- The hero ---------- */
 
-function newHero() {
-  return { cls: "warrior", levels: { hp: 0, atk: 0, def: 0, luck: 0, agi: 0 }, gear: { weapon: null, armor: null, charm: null }, bag: [], potions: 2, deepest: 0, runs: 0, cleared: 0 };
+// A class (a character) bought after the first one (the first is free)
+const CLASS_PRICE = 50000;
+
+// A player's hero: one character per class unlocked (its own levels, gear worn, floors) - the bag, the potions
+// are shared. cls: the character played now (null: none picked yet - the first is free)
+function newHero(cls = null) {
+  const hero = { cls: null, unlocked: [], chars: {}, bag: [], potions: 2 };
+  if (cls) unlock(hero, cls);
+  return hero;
 }
 
-// What the hero has with class, levels and gear: {maxHp, atk, def, luck, agi} (agi: the dodge chance, %)
-function statsOf(hero) {
-  const cls = CLASSES[hero.cls] || CLASSES.warrior;
-  const value = (id) => STATS[id].base + STATS[id].per * (hero.levels[id] || 0) * (cls.main == id ? MAIN_BONUS : 1);
-  const gear = Object.values(hero.gear).filter(Boolean);
+function newChar() {
+  return { levels: { hp: 0, atk: 0, def: 0, luck: 0, agi: 0 }, gear: { weapon: null, armor: null, charm: null }, deepest: 0, runs: 0, cleared: 0 };
+}
+
+// A character of the hero (the one played now, or of a class)
+function charOf(hero, cls = hero.cls) {
+  if (!cls) return newChar();
+  if (!hero.chars[cls]) hero.chars[cls] = newChar();
+  return hero.chars[cls];
+}
+
+// A class unlocked (and played) - the price is the server's business
+function unlock(hero, cls) {
+  if (!hero.unlocked.includes(cls)) hero.unlocked.push(cls);
+  charOf(hero, cls);
+  hero.cls = cls;
+}
+
+// The price of the next class (0: the first one)
+function classPrice(hero) {
+  return hero.unlocked.length ? CLASS_PRICE : 0;
+}
+
+// What a character has with its class, levels and gear: {maxHp, atk, def, luck, agi} (agi: the dodge chance, %)
+function statsOf(hero, clsId = hero.cls) {
+  const cls = CLASSES[clsId] || CLASSES.warrior;
+  const char = charOf(hero, clsId || "warrior");
+  const value = (id) => STATS[id].base + STATS[id].per * (char.levels[id] || 0) * (cls.main == id ? MAIN_BONUS : 1);
+  const gear = Object.values(char.gear).filter(Boolean);
   const plus = (key) => gear.reduce((sum, item) => sum + (item[key] || 0), 0);
   return {
     maxHp: Math.round((value("hp") + plus("hp")) * cls.hp),
@@ -216,29 +246,33 @@ function upgradeCost(level) {
   return level >= LEVEL_MAX ? null : round100(UPGRADE_BASE * Math.pow(UPGRADE_GROWTH, level));
 }
 
-// The highest floor a hero may enter
+// The highest floor the character played now may enter
 function maxFloor(hero) {
-  return Math.min(FLOORS, hero.deepest + 1);
+  return Math.min(FLOORS, charOf(hero).deepest + 1);
 }
 
 function entryCost(floor) {
   return round100(ENTRY_BASE * Math.pow(ENTRY_GROWTH, floor - 1));
 }
 
-// For the page: the hero with what it can do
+// For the page: the hero - the character played now, the others in short
 function heroView(hero) {
+  const char = charOf(hero);
   return {
     cls: hero.cls,
-    levels: { ...newHero().levels, ...hero.levels },
+    unlocked: hero.unlocked,
+    classPrice: classPrice(hero),
+    chars: Object.fromEntries(hero.unlocked.map((id) => [id, { level: Object.values(charOf(hero, id).levels).reduce((a, b) => a + b, 0), deepest: charOf(hero, id).deepest }])),
+    levels: { ...newChar().levels, ...char.levels },
     stats: statsOf(hero),
-    upgrades: Object.fromEntries(STAT_IDS.map((id) => [id, upgradeCost(hero.levels[id] || 0)])),
-    gear: hero.gear,
+    upgrades: Object.fromEntries(STAT_IDS.map((id) => [id, upgradeCost(char.levels[id] || 0)])),
+    gear: char.gear,
     bag: hero.bag,
     potions: hero.potions,
-    deepest: hero.deepest,
+    deepest: char.deepest,
     maxFloor: maxFloor(hero),
-    runs: hero.runs,
-    cleared: hero.cleared,
+    runs: char.runs,
+    cleared: char.cleared,
   };
 }
 
@@ -278,22 +312,16 @@ const ROOM_KINDS = {
   boss: { name: "Boss", icon: "💀", about: "The master of the floor" },
   chest: { name: "Chest", icon: "🎁", about: "Coins for the pot - maybe gear for each hero" },
   trap: { name: "Trap", icon: "🪤", about: "Luck dodges it" },
-  rest: { name: "Camp fire", icon: "🔥", about: "Everybody heals 35% - and 1 more energy in the next fight" },
+  rest: { name: "Camp fire", icon: "🔥", about: "Everybody heals 35% - and 1 more mana in the next fight" },
   shrine: { name: "Shrine", icon: "⛩️", about: "Blood for power: 20% HP each, 25% more damage for the rest of the run" },
   merchant: { name: "Merchant", icon: "🧳", about: "Potions for coins from the pot" },
 };
 // What waits behind a door (weights) - mostly fights
 const DOOR_POOL = { fight: 6, hard: 2.5, trap: 1.2, chest: 1.5, rest: 0.7, shrine: 0.4, merchant: 0.4 };
-// What a lucky hero hears behind a door
-const HINTS = {
-  fight: ["You hear growling.", "Something scratches at the door."],
-  hard: ["Heavy footsteps - many of them.", "A deep roar shakes the door."],
-  chest: ["Something glitters under the door.", "It smells of old gold."],
-  trap: ["A faint click.", "The floor in front of it is scratched."],
-  rest: ["Warm air comes through the cracks.", "It smells of smoke and bread."],
-  shrine: ["A faint chant.", "Candle light flickers behind it."],
-  merchant: ["Coins clink.", "Someone hums a tune."],
-};
+// Behind a door: danger (monsters, a trap) or calm (the rest) - a lucky hero may sense which (SENSE x luck %)
+const DANGER = ["fight", "hard", "trap"];
+const SENSE = 1.5;
+const SENSE_MAX = 90;
 
 function weighted(rng, entries) {
   let roll = rng() * entries.reduce((sum, [, weight]) => sum + weight, 0);
@@ -304,17 +332,23 @@ function weighted(rng, entries) {
   return entries[entries.length - 1][0];
 }
 
-// The doors of the next room: the first a fight, the last the guarded gate - between them three hidden ones
-// (the luckiest hero of the party: that often a hint behind each)
+// The doors of the next room: the first a fight, the last the guarded gate - between them three hidden ones.
+// What is behind a door nobody sees; the luckiest hero of the party may sense it (danger or calm) - that often:
+// SENSE x luck %
 function doorsFor(run, rng = Math.random) {
   const index = run.rooms.length;
-  if (index == 0) return [{ kind: "fight", hint: null, open: true }];
-  if (index == ROOMS - 1) return [{ kind: BOSS_EVERY && run.floor % BOSS_EVERY == 0 ? "boss" : "elite", hint: null, open: true }];
-  const luck = Math.max(0, ...run.heroes.map((h) => h.luck));
+  if (index == 0) return [{ kind: "fight", sense: null, open: true }];
+  if (index == ROOMS - 1) return [{ kind: BOSS_EVERY && run.floor % BOSS_EVERY == 0 ? "boss" : "elite", sense: null, open: true }];
+  const chance = senseChance(run);
   return Array.from({ length: DOORS }, () => {
     const kind = weighted(rng, Object.entries(DOOR_POOL));
-    return { kind, hint: rng() * 100 < luck ? pick(rng, HINTS[kind]) : null, open: false };
+    return { kind, sense: rng() * 100 < chance ? (DANGER.includes(kind) ? "danger" : "calm") : null, open: false };
   });
+}
+
+// How often the party senses what is behind a door (%)
+function senseChance(run) {
+  return Math.min(SENSE_MAX, Math.round(SENSE * Math.max(0, ...alive(run.heroes).map((h) => h.luck))));
 }
 
 let monsterCount = 0;
@@ -360,6 +394,7 @@ function newRun(floor, party, rng = Math.random) {
   const run = {
     floor,
     rooms: [], // [{kind, done}] the rooms entered
+    event: null, // what happened in the last room (not a fight): {kind, lines, offers - the merchant's}
     doors: [],
     votes: {}, // name -> a door's index or "leave"
     phase: "between",
@@ -445,6 +480,7 @@ function tally(run, leader, rng = Math.random) {
 // Through a door (its index): a fight starts, the other rooms happen right away
 function enterRoom(run, door = 0, rng = Math.random) {
   const chosen = run.doors[door] || run.doors[0];
+  run.event = null;
   const kind = chosen.kind;
   const room = { kind, done: false };
   run.rooms.push(room);
@@ -469,51 +505,52 @@ function enterRoom(run, door = 0, rng = Math.random) {
     startRound(run, rng);
     return;
   }
+  // (what happened in the room - shown until the party goes on: the room isn't just skipped)
+  run.event = { kind, lines: [], offers: null };
+  const note = (text) => {
+    run.event.lines.push(text);
+    say(run, text);
+  };
   if (kind == "chest") {
     const coins = Math.round(entryCost(run.floor) * REWARD.chest);
     run.pot += coins;
-    say(run, `A chest - 🪙 ${coins} each for the pot.`);
+    note(`🪙 ${coins} each for the loot pot.`);
     for (const hero of heroes) {
       // (every hero rolls for gear on its own - luck helps)
       if (rng() * 100 < 40 + hero.luck / 2) {
         const item = makeGear(run.floor, rng, hero.luck);
         run.loot[hero.name].push(item);
-        say(run, `${hero.name} finds ${item.icon} ${item.name} (${item.rarity}).`);
-      }
+        note(`${hero.name} finds ${item.icon} ${item.name} (${item.rarity}) - it goes to the bag at the end of the run.`);
+      } else note(`${hero.name} finds no gear.`);
     }
   } else if (kind == "trap") {
     for (const hero of heroes) {
-      if (rng() * 100 < hero.luck * 2) say(run, `${hero.name} dodges the trap.`);
+      if (rng() * 100 < hero.luck * 2) note(`${hero.name} dodges the trap 🍀.`);
       else {
         const damage = Math.round(hero.maxHp * TRAP_DAMAGE);
         hero.hp = Math.max(1, hero.hp - damage);
-        say(run, `${hero.name} takes ${damage} damage from the trap.`);
+        note(`${hero.name} takes ${damage} damage.`);
       }
     }
   } else if (kind == "rest") {
-    say(run, "A camp fire - everybody heals and rests.");
     for (const hero of heroes) {
-      hero.hp = Math.min(hero.maxHp, hero.hp + Math.round(hero.maxHp * REST_HEAL));
+      const heal = Math.min(hero.maxHp - hero.hp, Math.round(hero.maxHp * REST_HEAL));
+      hero.hp += heal;
       hero.bonusEnergy = 1;
+      note(`${hero.name} heals ${heal} HP and starts the next fight with 1 more mana.`);
     }
   } else if (kind == "shrine") {
-    say(run, "A shrine - blood for power. Everybody deals 25% more damage now.");
     for (const hero of heroes) {
-      hero.hp = Math.max(1, hero.hp - Math.round(hero.maxHp * SHRINE_COST));
+      const cost = Math.round(hero.maxHp * SHRINE_COST);
+      hero.hp = Math.max(1, hero.hp - cost);
       hero.blessed = true;
+      note(`${hero.name} gives ${cost} HP - and deals 25% more damage for the rest of the run.`);
     }
   } else if (kind == "merchant") {
-    // (a potion for every hero who has room for one - paid from the pot, as long as it lasts)
-    const price = Math.round(entryCost(run.floor) * MERCHANT_PRICE);
-    let sold = 0;
-    for (const hero of heroes) {
-      if (hero.potions < POTIONS_MAX && run.pot >= price) {
-        run.pot -= price;
-        hero.potions++;
-        sold++;
-      }
-    }
-    say(run, sold ? `A merchant - ${sold} potion${sold == 1 ? "" : "s"} for 🪙 ${price} each from the pot.` : "A merchant - but nothing to buy (the pot is too small or the bags are full).");
+    // (every hero shops on its own, with its own coins: a potion, one of three cards for the deck)
+    run.event.offers = {};
+    for (const hero of heroes) run.event.offers[hero.name] = { cards: rewardFor(hero, rng), bought: [] };
+    note("A merchant opens his pack - buy what you like with your coins, then vote for a door.");
   }
   room.done = true;
   afterRoom(run, rng);
@@ -557,6 +594,38 @@ function pickReward(run, name, card) {
   }
   hero.reward = null;
   return null;
+}
+
+// The merchant's prices (coins): a potion, a card
+function merchantPrices(floor) {
+  return { potion: POTION_PRICE, card: round100(Math.max(1500, entryCost(floor) * 1.2)) };
+}
+
+// What a hero may buy of the merchant: {price} or {error} (item: "potion" or a card of its offer)
+function canBuy(run, name, item) {
+  const hero = run.heroes.find((h) => h.name == name);
+  const offer = run.event && run.event.offers && run.event.offers[name];
+  if (run.phase != "between" || !offer || !hero) return { error: "No merchant here." };
+  const prices = merchantPrices(run.floor);
+  if (item == "potion") {
+    if (hero.potions >= POTIONS_MAX) return { error: `At most ${POTIONS_MAX} potions.` };
+    return { price: prices.potion };
+  }
+  if (!offer.cards.includes(item)) return { error: "He doesn't sell that." };
+  if (offer.bought.includes(item)) return { error: "Sold already." };
+  return { price: prices.card };
+}
+
+// Bought (the coins are taken already)
+function bought(run, name, item) {
+  const hero = run.heroes.find((h) => h.name == name);
+  const offer = run.event.offers[name];
+  if (item == "potion") hero.potions++;
+  else {
+    hero.deck.push(item);
+    offer.bought.push(item);
+  }
+  say(run, `${name} buys ${item == "potion" ? "a potion 🧪" : CARDS[item].icon + " " + CARDS[item].name}.`);
 }
 
 // Three different cards: mostly the class's, sometimes a neutral one
@@ -979,8 +1048,10 @@ function runView(run) {
     phase: run.phase,
     room: run.rooms.length - 1,
     rooms: run.rooms.map((room) => ({ kind: room.kind, done: room.done })),
-    // (what is behind a hidden door stays hidden - only a hint, if a lucky hero heard one)
-    doors: run.doors.map((door) => ({ open: door.open, kind: door.open ? door.kind : null, hint: door.hint })),
+    // (what is behind a hidden door stays hidden - only what a lucky hero sensed: danger or calm)
+    doors: run.doors.map((door) => ({ open: door.open, kind: door.open ? door.kind : null, sense: door.sense })),
+    sense: senseChance(run),
+    event: run.event && { ...run.event, prices: merchantPrices(run.floor) },
     votes: run.votes,
     heroes: run.heroes.map((h) => ({
       name: h.name,
@@ -1093,11 +1164,18 @@ module.exports = {
   CLASSES,
   CLASS_IDS,
   MAIN_BONUS,
+  CLASS_PRICE,
+  charOf,
+  unlock,
+  classPrice,
   CARDS,
   NEUTRAL_CARDS,
   ENERGY,
   MOVES,
   ROOM_KINDS,
+  merchantPrices,
+  canBuy,
+  bought,
   newHero,
   statsOf,
   upgradeCost,

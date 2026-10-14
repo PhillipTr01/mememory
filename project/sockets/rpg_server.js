@@ -95,6 +95,7 @@ module.exports = function (io, options = {}) {
       stats: rpg.STATS,
       levelMax: rpg.LEVEL_MAX,
       classes: rpg.CLASSES,
+      classPrice: rpg.CLASS_PRICE,
       mainBonus: rpg.MAIN_BONUS,
       moves: rpg.MOVES,
       roomKinds: rpg.ROOM_KINDS,
@@ -195,7 +196,7 @@ module.exports = function (io, options = {}) {
     );
     for (const name of party.members) {
       const hero = heroOf(name);
-      hero.runs++;
+      rpg.charOf(hero).runs++;
       // (the potions go along - what is left comes back)
       hero.potions = 0;
     }
@@ -217,9 +218,11 @@ module.exports = function (io, options = {}) {
       if (!heroes.has(one.name)) continue;
       const hero = heroOf(one.name);
       hero.potions = Math.min(rpg.POTIONS_MAX, hero.potions + one.potions);
+      // (the floor counts for the character that went down - its class)
+      const char = rpg.charOf(hero, one.cls);
       if (result === "won") {
-        hero.deepest = Math.max(hero.deepest, run.floor);
-        hero.cleared++;
+        char.deepest = Math.max(char.deepest, run.floor);
+        char.cleared++;
       }
       if (result !== "lost") {
         for (const item of run.loot[one.name] || []) {
@@ -286,18 +289,35 @@ module.exports = function (io, options = {}) {
       if (!rpg.STAT_IDS.includes(data.stat)) return;
       if (inRun()) return error("Not during a run.");
       const hero = heroOf(username);
-      const level = hero.levels[data.stat] || 0;
+      const char = rpg.charOf(hero);
+      if (!hero.cls) return error("Pick a class first.");
+      const level = char.levels[data.stat] || 0;
       const cost = rpg.upgradeCost(level);
       if (cost == null) return error("That one is at its highest level.");
       if (!(await coins.spend(username, cost, { reason: "rpg upgrade", note: data.stat }))) return error(coins.refusal(username) || "You don't have enough coins.");
-      hero.levels[data.stat] = level + 1;
+      char.levels[data.stat] = level + 1;
       sendHero(username);
     });
 
+    // Another character: a class unlocked already
     on("class", (data) => {
       if (!rpg.CLASS_IDS.includes(data.id)) return;
-      if (inRun()) return error("Not during a run.");
-      heroOf(username).cls = data.id;
+      if (inRun() || myParty()) return error("Not in a party.");
+      const hero = heroOf(username);
+      if (!hero.unlocked.includes(data.id)) return error("Unlock that class first.");
+      hero.cls = data.id;
+      sendHero(username);
+    });
+
+    // A class unlocked: the first one free, every other for CLASS_PRICE
+    on("unlock", async (data) => {
+      if (!rpg.CLASS_IDS.includes(data.id)) return;
+      if (inRun() || myParty()) return error("Not in a party.");
+      const hero = heroOf(username);
+      if (hero.unlocked.includes(data.id)) return;
+      const price = rpg.classPrice(hero);
+      if (price > 0 && !(await coins.spend(username, price, { reason: "rpg class", note: data.id }))) return error(coins.refusal(username) || "You don't have enough coins.");
+      rpg.unlock(hero, data.id);
       sendHero(username);
     });
 
@@ -315,19 +335,21 @@ module.exports = function (io, options = {}) {
       const hero = heroOf(username);
       const index = hero.bag.findIndex((item) => item.id === data.id);
       if (index < 0) return;
+      const gear = rpg.charOf(hero).gear;
       const [item] = hero.bag.splice(index, 1);
-      if (hero.gear[item.slot]) hero.bag.push(hero.gear[item.slot]);
-      hero.gear[item.slot] = item;
+      if (gear[item.slot]) hero.bag.push(gear[item.slot]);
+      gear[item.slot] = item;
       sendHero(username);
     });
 
     on("unequip", (data) => {
       if (inRun()) return error("Not during a run.");
       const hero = heroOf(username);
-      const item = hero.gear[data.slot];
+      const gear = rpg.charOf(hero).gear;
+      const item = gear[data.slot];
       if (!item) return;
       if (hero.bag.length >= rpg.BAG_MAX) return error("Your bag is full.");
-      hero.gear[data.slot] = null;
+      gear[data.slot] = null;
       hero.bag.push(item);
       sendHero(username);
     });
@@ -348,6 +370,7 @@ module.exports = function (io, options = {}) {
       const floor = Number(data.floor);
       const size = Number(data.size);
       if (myParty()) return error("You are in a party already.");
+      if (!heroOf(username).cls) return error("Pick a class first.");
       if (!Number.isInteger(floor) || floor < 1 || floor > rpg.maxFloor(heroOf(username))) return error("That floor isn't open for you yet.");
       if (!Number.isInteger(size) || size < 1 || size > rpg.PARTY_MAX) return;
       const party = { id: "p" + ++partyCount, leader: username, floor, size, members: [], run: null, endsAt: null, timer: null, result: null };
@@ -370,6 +393,7 @@ module.exports = function (io, options = {}) {
       const party = parties.get(data.id);
       if (myParty()) return error("You are in a party already.");
       if (!party || party.run || party.result) return error("That party is gone.");
+      if (!heroOf(username).cls) return error("Pick a class first.");
       if (party.members.length >= party.size) return error("That party is full.");
       if (party.floor > rpg.maxFloor(heroOf(username))) return error(`Floor ${party.floor} isn't open for you yet.`);
       join(party, username);
@@ -431,6 +455,23 @@ module.exports = function (io, options = {}) {
       if (!party) return;
       const problem = rpg.pickReward(party.run, username, data.card != null ? String(data.card) : null);
       if (problem) return error(problem);
+      emitParty(party);
+    });
+
+    // The merchant: {item: "potion" or a card} - paid with the own coins
+    on("buy", async (data) => {
+      const party = myRun();
+      if (!party) return;
+      const item = String(data.item);
+      const check = rpg.canBuy(party.run, username, item);
+      if (check.error) return error(check.error);
+      if (!(await coins.spend(username, check.price, { reason: "rpg merchant", note: item }))) return error(coins.refusal(username) || "You don't have enough coins.");
+      // (the run may have gone on meanwhile)
+      if (rpg.canBuy(party.run, username, item).error) {
+        await coins.add(username, check.price, { reason: "rpg refund" });
+        return error("Too late - the party went on.");
+      }
+      rpg.bought(party.run, username, item);
       emitParty(party);
     });
 
