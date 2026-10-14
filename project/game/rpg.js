@@ -232,7 +232,7 @@ const CARD_RARITIES = {
   rare: { name: "Rare", weight: 26, copies: 2, value: 1500 },
   epic: { name: "Epic", weight: 8, copies: 2, value: 10000 },
   legendary: { name: "Legendary", weight: 3, copies: 1, value: 40000 },
-  mystic: { name: "Mystic", weight: 0.2, copies: 1, value: 400000 },
+  mystic: { name: "Mystic", weight: 0.08, copies: 1, value: 1000000 },
 };
 for (const [id, rarity] of Object.entries(CARD_RARITY)) CARDS[id].rarity = rarity;
 // The larger part of the base set: cards made of effects (game/rpg_cards.js)
