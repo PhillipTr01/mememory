@@ -1488,7 +1488,7 @@
 }
 
 /*
- * ---------- The Eclipse set (exclusive): shadow and violet light, mystical ----------
+ * ---------- The Eclipse set (exclusive): shadow and violet light, mythical ----------
  */
 
 /* Frame: Eclipse Corona - a black ring edged in violet-silver light, a light sweeping round it - the corona of an
@@ -1769,7 +1769,7 @@
   background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><radialGradient id='s' cx='0.4' cy='0.5'><stop offset='0' stop-color='%231e1b4b'/><stop offset='1' stop-color='%23020617'/></radialGradient><filter id='gl'><feGaussianBlur stdDeviation='4'/></filter></defs><rect width='100' height='100' fill='url(%23s)'/><circle cx='57' cy='60.8' r='0.7' fill='%23e0e7ff'/><circle cx='39.3' cy='39.3' r='0.7' fill='%23e0e7ff'/><circle cx='79.7' cy='23.1' r='0.4' fill='%23e0e7ff'/><circle cx='19.8' cy='54' r='0.4' fill='%23e0e7ff'/><circle cx='1.4' cy='73.5' r='0.3' fill='%23e0e7ff'/><circle cx='66.2' cy='23.3' r='0.5' fill='%23e0e7ff'/><circle cx='55.6' cy='45.1' r='0.7' fill='%23e0e7ff'/><circle cx='11.5' cy='80.5' r='0.4' fill='%23e0e7ff'/><circle cx='75.6' cy='71.3' r='0.5' fill='%23e0e7ff'/><circle cx='89.3' cy='59.1' r='0.7' fill='%23e0e7ff'/><circle cx='94.6' cy='85.5' r='0.6' fill='%23e0e7ff'/><circle cx='32.9' cy='92.3' r='0.5' fill='%23e0e7ff'/><circle cx='46' cy='21.1' r='0.6' fill='%23e0e7ff'/><circle cx='75.5' cy='13.5' r='0.6' fill='%23e0e7ff'/><circle cx='63.1' cy='11.2' r='0.6' fill='%23e0e7ff'/><circle cx='50.5' cy='55.9' r='0.5' fill='%23e0e7ff'/><circle cx='79.3' cy='89.3' r='0.4' fill='%23e0e7ff'/><circle cx='91.3' cy='53' r='0.5' fill='%23e0e7ff'/><path d='M8 92 L22 74 L18 66 L34 54 L30 46 L48 38 L46 30 L62 22 L60 14 L76 6' fill='none' stroke='%23c026d3' stroke-width='14' filter='url(%23gl)' opacity='0.7'><animate attributeName='opacity' values='0.45;0.85;0.45' dur='2.6s' repeatCount='indefinite'/></path><path d='M8 92 L22 74 L18 66 L34 54 L30 46 L48 38 L46 30 L62 22 L60 14 L76 6' fill='none' stroke='%2322d3ee' stroke-width='6' filter='url(%23gl)' opacity='0.8'/><path d='M8 92 L22 74 L18 66 L34 54 L30 46 L48 38 L46 30 L62 22 L60 14 L76 6' fill='none' stroke='%23f0fdff' stroke-width='1.6' stroke-linejoin='round'><animate attributeName='stroke-width' values='1.2;2.4;1.2' dur='2.6s' repeatCount='indefinite'/></path></svg>") center / cover no-repeat, #020617;
 }
 
-/* ---------- Mystic (sold only as sets): Enchanted Grove, Phantom ---------- */
+/* ---------- Mythic (sold only as sets): Enchanted Grove, Phantom ---------- */
 
 /* Grove Vines: a ring of moss and moonlit green - a vine winding round it, leaves, glowing blossoms breathing, swaying */
 .look-frame-grovevines::after {

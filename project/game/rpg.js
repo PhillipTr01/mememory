@@ -74,11 +74,11 @@ const REWARD = { fight: 0.21, hard: 0.4, elite: 0.4, boss: 1, chest: 0.17, trap:
 // main: the stat its levels count 1.5x for; hp, atk: times the stats; def, luck, agi: added;
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
-  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.5 } }, about: "Strength - heavy blows, cleaves the pack, a war cry for the party", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mystic: "titanswrath" },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Who hits you takes {thornsDef}% of your armor back, {block}% more block.", perks: { thornsDef: 1, block: 0.2 } }, about: "Armor - draws the attacks, shields the party, judges with his armor", hp: 1.15, atk: 0.9, def: 4, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mystic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Heals {heal}% stronger, attacks heal you for {lifesteal}% of the damage.", perks: { heal: 0.2, lifesteal: 0.15 } }, about: "Vitality - heals, smites the undead, brings the fallen back", hp: 1.2, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mystic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison {poison}% stronger, +{crit}% critical hits.", perks: { poison: 0.3, crit: 5 } }, about: "Agility - dodges, poisons, then strikes where it hurts", hp: 0.95, atk: 1.05, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mystic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe deal {aoe}% more.", perks: { aoe: 0.3 } }, about: "Luck - spells that crit, fire on all foes, frost that weakens", hp: 0.85, atk: 1.15, def: 0, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mystic: "timewarp" },
+  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.5 } }, about: "Strength - heavy blows, cleaves the pack, a war cry for the party", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Who hits you takes {thornsDef}% of your armor back, {block}% more block.", perks: { thornsDef: 1, block: 0.2 } }, about: "Armor - draws the attacks, shields the party, judges with his armor", hp: 1.15, atk: 0.9, def: 4, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Heals {heal}% stronger, attacks heal you for {lifesteal}% of the damage.", perks: { heal: 0.2, lifesteal: 0.15 } }, about: "Vitality - heals, smites the undead, brings the fallen back", hp: 1.2, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison {poison}% stronger, +{crit}% critical hits.", perks: { poison: 0.3, crit: 5 } }, about: "Agility - dodges, poisons, then strikes where it hurts", hp: 0.95, atk: 1.05, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe deal {aoe}% more.", perks: { aoe: 0.3 } }, about: "Luck - spells that crit, fire on all foes, frost that weakens", hp: 0.85, atk: 1.15, def: 0, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -149,15 +149,15 @@ const CARDS = {
   chainlightning: { name: "Chain Lightning", icon: "⚡", cost: 2, type: "attack", target: "none", text: "Deal 90% damage to every foe, stun one of them." },
   blizzard: { name: "Blizzard", icon: "🌨️", cost: 2, type: "attack", target: "none", text: "Deal 80% damage to every foe and chill them all." },
   meteor: { name: "Meteor", icon: "☄️", cost: 3, type: "attack", target: "none", text: "Deal 160% damage to every foe." },
-  // Mystic: once per run - gone from the deck for the rest of the run once played (only in booster packs)
-  titanswrath: { name: "Titan's Wrath", icon: "🌋", cost: 2, type: "attack", target: "none", mystic: true, text: "Deal 350% damage to every foe. Mystic." },
-  divine: { name: "Divine Intervention", icon: "👼", cost: 1, type: "skill", target: "none", mystic: true, text: "Every hero blocks 30 + armor and heals 30% HP. Mystic." },
-  resurrection: { name: "Resurrection", icon: "🌅", cost: 2, type: "skill", target: "none", mystic: true, text: "Every fallen hero stands up with 60% HP, the party heals 25%. Mystic." },
-  deathmark: { name: "Death Mark", icon: "💀", cost: 1, type: "attack", target: "foe", mystic: true, text: "A foe below half HP dies (not a boss) - else 400% damage. Mystic." },
-  timewarp: { name: "Time Warp", icon: "⏳", cost: 0, type: "skill", target: "none", mystic: true, text: "+4 mana, draw 4 cards. Mystic." },
+  // Mythic: once per run - gone from the deck for the rest of the run once played (only in booster packs)
+  titanswrath: { name: "Titan's Wrath", icon: "🌋", cost: 2, type: "attack", target: "none", mythic: true, text: "Deal 350% damage to every foe. Mythic." },
+  divine: { name: "Divine Intervention", icon: "👼", cost: 1, type: "skill", target: "none", mythic: true, text: "Every hero blocks 30 + armor and heals 30% HP. Mythic." },
+  resurrection: { name: "Resurrection", icon: "🌅", cost: 2, type: "skill", target: "none", mythic: true, text: "Every fallen hero stands up with 60% HP, the party heals 25%. Mythic." },
+  deathmark: { name: "Death Mark", icon: "💀", cost: 1, type: "attack", target: "foe", mythic: true, text: "A foe below half HP dies (not a boss) - else 400% damage. Mythic." },
+  timewarp: { name: "Time Warp", icon: "⏳", cost: 0, type: "skill", target: "none", mythic: true, text: "+4 mana, draw 4 cards. Mythic." },
 };
 
-// How rare a card is (booster packs, rewards): basic (the starter deck), common, rare, epic, mystic
+// How rare a card is (booster packs, rewards): basic (the starter deck), common, rare, epic, mythic
 const CARD_RARITY = {
   strike: "basic",
   defend: "basic",
@@ -218,11 +218,11 @@ const CARD_RARITY = {
   arcanebolt: "common",
   fireball: "rare",
   meteor: "epic",
-  titanswrath: "mystic",
-  divine: "mystic",
-  resurrection: "mystic",
-  deathmark: "mystic",
-  timewarp: "mystic",
+  titanswrath: "mythic",
+  divine: "mythic",
+  resurrection: "mythic",
+  deathmark: "mythic",
+  timewarp: "mythic",
 };
 // A card's rarity: its weight in packs and rewards, how many of it a deck holds, what it is worth (by how rare it is
 // in a Base Set pack - the packs are priced by it)
@@ -232,7 +232,7 @@ const CARD_RARITIES = {
   rare: { name: "Rare", weight: 26, copies: 2, value: 1500 },
   epic: { name: "Epic", weight: 8, copies: 2, value: 10000 },
   legendary: { name: "Legendary", weight: 3, copies: 1, value: 40000 },
-  mystic: { name: "Mystic", weight: 0.08, copies: 1, value: 1000000 },
+  mythic: { name: "Mythic", weight: 0.08, copies: 1, value: 1000000 },
 };
 for (const [id, rarity] of Object.entries(CARD_RARITY)) CARDS[id].rarity = rarity;
 // The larger part of the base set: cards made of effects (game/rpg_cards.js)
@@ -256,14 +256,14 @@ function deckMax() {
 // ones more often (x their weight)
 const PACKS = {
   standard: { name: "Base Set Pack", icon: "🎴", about: "The classic: 5 cards, the last one rare or better.", get price() { return config.RPG_PACK_STANDARD; }, size: 5, better: 1, least: "rare", boost: {} },
-  premium: { name: "Hero Pack", icon: "💎", about: "5 cards - all rare or better, epics and legendaries twice as often.", get price() { return config.RPG_PACK_PREMIUM; }, size: 5, better: 5, least: "rare", boost: { epic: 2, legendary: 2, mystic: 1 } },
+  premium: { name: "Hero Pack", icon: "💎", about: "5 cards - all rare or better, epics and legendaries twice as often.", get price() { return config.RPG_PACK_PREMIUM; }, size: 5, better: 5, least: "rare", boost: { epic: 2, legendary: 2, mythic: 1 } },
   mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards - all epic or better.", get price() { return config.RPG_PACK_MYTHIC; }, size: 4, better: 4, least: "epic", boost: { legendary: 1.5 } },
 };
 const PACK_IDS = Object.keys(PACKS);
 const PACK_BUNDLE = 3; // three packs at once ...
 const BUNDLE_OFF = 0.1; // ... 10% off
 const PACK_SIZE = PACKS.standard.size;
-const RARITY_RANK = ["basic", "common", "rare", "epic", "legendary", "mystic"];
+const RARITY_RANK = ["basic", "common", "rare", "epic", "legendary", "mythic"];
 
 const CART_MAX = 50; // packs of a kind in one cart
 
@@ -602,10 +602,10 @@ function charOf(hero, cls = hero.cls) {
 
 /* ---------- The collection and the deck (built between the runs) ---------- */
 
-// The cards a class can own: its own (and its mystic one), the neutral ones, the basic ones
+// The cards a class can own: its own (and its mythic one), the neutral ones, the basic ones
 function poolOf(cls) {
   const c = CLASSES[cls] || CLASSES.warrior;
-  return ["strike", "defend", ...c.cards, c.mystic, ...NEUTRAL_CARDS];
+  return ["strike", "defend", ...c.cards, c.mythic, ...NEUTRAL_CARDS];
 }
 
 // A card into the collection -> true: a copy for the deck, false: one more than a deck may hold (kept all the
@@ -1553,7 +1553,7 @@ function choose(run, name, input = {}, rng = Math.random) {
 }
 
 // The merchant's prices (coins): a potion, a (common) card, a relic, a card taken out of the deck
-const CARD_PRICE = { common: 1, rare: 1.5, epic: 2.5, legendary: 3.5, basic: 1, mystic: 5 };
+const CARD_PRICE = { common: 1, rare: 1.5, epic: 2.5, legendary: 3.5, basic: 1, mythic: 5 };
 function merchantPrices(floor) {
   const card = round100(Math.max(4000, entryCost(floor) * 0.8));
   return { card, relic: card * 3, remove: card };
@@ -1608,8 +1608,8 @@ function bought(run, name, item) {
 
 // Three different cards: mostly the class's, sometimes a neutral one
 function rewardFor(hero, rng, count = 3) {
-  // (the class's cards and the neutral ones - weighted by their rarity; no basic, no mystic one)
-  const pool = poolOf(hero.cls).filter((id) => !["basic", "mystic"].includes(CARDS[id].rarity)).map((id) => [id, CARD_RARITIES[CARDS[id].rarity].weight]);
+  // (the class's cards and the neutral ones - weighted by their rarity; no basic, no mythic one)
+  const pool = poolOf(hero.cls).filter((id) => !["basic", "mythic"].includes(CARDS[id].rarity)).map((id) => [id, CARD_RARITIES[CARDS[id].rarity].weight]);
   const cards = [];
   while (cards.length < Math.min(count, pool.length)) cards.push(weighted(rng, pool.filter(([id]) => !cards.includes(id))));
   return cards;
@@ -1791,9 +1791,9 @@ function play(run, name, input, rng = Math.random) {
   if (card.target == "fallen" && !fallen) return "Nobody to bring back.";
   hero.energy -= card.cost;
   const [{ id }] = hero.hand.splice(index, 1);
-  (card.exhaust || card.mystic ? hero.exhausted : hero.discard).push(id);
-  // (mystic: once per run - out of the run's deck)
-  if (card.mystic) {
+  (card.exhaust || card.mythic ? hero.exhausted : hero.discard).push(id);
+  // (mythic: once per run - out of the run's deck)
+  if (card.mythic) {
     const at = hero.deck.indexOf(id);
     if (at >= 0) hero.deck.splice(at, 1);
   }
@@ -2087,7 +2087,7 @@ function liveTexts(stats, ids) {
       lose: (share) => Math.round(stats.maxHp * share),
     };
     if (card.fx) {
-      texts[id] = MORE_CARDS.textOf(card.fx, card.mystic ? "mystic" : card.exhaust, n);
+      texts[id] = MORE_CARDS.textOf(card.fx, card.mythic ? "mythic" : card.exhaust, n);
       continue;
     }
     const aoe = / to every foe/.test(card.text);

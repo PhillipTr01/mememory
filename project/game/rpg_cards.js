@@ -11,7 +11,7 @@
  * States for bonusIf: poison, burn, chill, stun, undead (the foe) - low (the hero below half HP)
  */
 
-// id: [name, icon, cost, rarity, fx, exhaust (true - or "mystic": once a run)]
+// id: [name, icon, cost, rarity, fx, exhaust (true - or "mythic": once a run)]
 const NEUTRAL = {
   jab: ["Jab", "🥊", 0, "common", [{ hit: 0.5 }]],
   brace: ["Brace", "🪵", 1, "common", [{ block: 10 }]],
@@ -22,7 +22,7 @@ const NEUTRAL = {
   panacea: ["Panacea", "🧴", 1, "rare", [{ heal: 0.1, to: "party" }]],
   berserkerbrew: ["Berserker Brew", "🍷", 0, "legendary", [{ mana: 2 }, { might: 2 }], true],
   goldenstrike: ["Golden Strike", "🏆", 2, "legendary", [{ hit: 2.5 }, { draw: 1 }]],
-  wish: ["Wish", "🌟", 0, "mystic", [{ heal: 0.3 }, { mana: 2 }, { draw: 3 }], "mystic"],
+  wish: ["Wish", "🌟", 0, "mythic", [{ heal: 0.3 }, { mana: 2 }, { draw: 3 }], "mythic"],
 };
 
 const CLASS = {
@@ -47,8 +47,8 @@ const CLASS = {
     bludgeon: ["Bludgeon", "🏏", 3, "legendary", [{ hit: 3.2 }]],
     earthshaker: ["Earthshaker", "🌍", 3, "legendary", [{ hit: 1.6, to: "all" }, { status: "stun", to: "all" }], true],
     lastbastion: ["Last Bastion", "🛡️", 2, "legendary", [{ block: 20, def: 2 }, { might: 2 }]],
-    ragnarok: ["Ragnarok", "⚡", 3, "mystic", [{ hit: 2, to: "all", times: 2 }], "mystic"],
-    undyingrage: ["Undying Rage", "😡", 1, "mystic", [{ heal: 0.4 }, { might: 3 }, { mana: 2 }], "mystic"],
+    ragnarok: ["Ragnarok", "⚡", 3, "mythic", [{ hit: 2, to: "all", times: 2 }], "mythic"],
+    undyingrage: ["Undying Rage", "😡", 1, "mythic", [{ heal: 0.4 }, { might: 3 }, { mana: 2 }], "mythic"],
   },
   paladin: {
     shieldslam: ["Shield Slam", "🔘", 1, "common", [{ hit: 0.6, def: 1 }]],
@@ -71,8 +71,8 @@ const CLASS = {
     verdict: ["Final Verdict", "🏛️", 2, "legendary", [{ hit: 2, def: 1, bonusIf: "stun", bonus: 3 }]],
     oath: ["Crusader's Oath", "📯", 2, "legendary", [{ block: 12, def: 1, to: "party" }, { might: 2, to: "party" }], true],
     justice: ["Hammer of Justice", "🛕", 2, "legendary", [{ hit: 2.2, def: 1 }, { status: "stun" }]],
-    aegisgods: ["Aegis of the Gods", "🌐", 2, "mystic", [{ block: 40, def: 1, to: "party" }], "mystic"],
-    holyavenger: ["Holy Avenger", "🗡️", 2, "mystic", [{ hit: 3, def: 2 }, { heal: 0.15, to: "party" }], "mystic"],
+    aegisgods: ["Aegis of the Gods", "🌐", 2, "mythic", [{ block: 40, def: 1, to: "party" }], "mythic"],
+    holyavenger: ["Holy Avenger", "🗡️", 2, "mythic", [{ hit: 3, def: 2 }, { heal: 0.15, to: "party" }], "mythic"],
   },
   cleric: {
     mend: ["Mend", "🌿", 1, "common", [{ heal: 0.15, to: "ally" }]],
@@ -95,8 +95,8 @@ const CLASS = {
     ascension: ["Ascension", "👑", 2, "legendary", [{ mana: 2 }, { draw: 2 }, { heal: 0.1, to: "party" }], true],
     beacon: ["Beacon of Light", "🗼", 2, "legendary", [{ heal: 0.2, to: "party" }, { block: 8, to: "party" }]],
     dawnbreak: ["Dawnbreak", "🌄", 2, "legendary", [{ hit: 1.2, to: "all", bonusIf: "undead", bonus: 3 }, { heal: 0.08, to: "party" }]],
-    saintsgrace: ["Saint's Grace", "💖", 2, "mystic", [{ heal: 0.5, to: "party" }, { might: 2, to: "party" }], "mystic"],
-    rapture: ["Rapture", "🪐", 2, "mystic", [{ hit: 2, to: "all" }, { heal: 0.2, to: "party" }], "mystic"],
+    saintsgrace: ["Saint's Grace", "💖", 2, "mythic", [{ heal: 0.5, to: "party" }, { might: 2, to: "party" }], "mythic"],
+    rapture: ["Rapture", "🪐", 2, "mythic", [{ hit: 2, to: "all" }, { heal: 0.2, to: "party" }], "mythic"],
   },
   rogue: {
     shiv: ["Shiv", "🪡", 0, "common", [{ hit: 0.5 }]],
@@ -119,8 +119,8 @@ const CLASS = {
     assassinate: ["Assassinate", "🎯", 2, "legendary", [{ hit: 2.6, bonusIf: "poison", bonus: 4 }]],
     fanofknives: ["Fan of Knives", "🪭", 2, "legendary", [{ hit: 0.6, to: "all", times: 2 }, { status: "poison", turns: 3, to: "all" }]],
     shadowdance: ["Shadow Dance", "🌘", 1, "legendary", [{ evade: true }, { draw: 3 }, { mana: 1 }], true],
-    scorpionkiss: ["Scorpion's Kiss", "🦂", 2, "mystic", [{ status: "poison", turns: 6, to: "all" }, { hit: 1, to: "all", bonusIf: "poison", bonus: 2.5 }], "mystic"],
-    masquerade: ["Masquerade", "🎭", 2, "mystic", [{ hit: 0.8, to: "random", times: 8 }], "mystic"],
+    scorpionkiss: ["Scorpion's Kiss", "🦂", 2, "mythic", [{ status: "poison", turns: 6, to: "all" }, { hit: 1, to: "all", bonusIf: "poison", bonus: 2.5 }], "mythic"],
+    masquerade: ["Masquerade", "🎭", 2, "mythic", [{ hit: 0.8, to: "random", times: 8 }], "mythic"],
   },
   mage: {
     firebolt: ["Fire Bolt", "🌶️", 1, "common", [{ hit: 0.8 }, { status: "burn", turns: 2 }]],
@@ -143,8 +143,8 @@ const CLASS = {
     firestorm: ["Firestorm", "🏮", 3, "legendary", [{ hit: 1.2, to: "all" }, { status: "burn", turns: 3, to: "all" }]],
     supernova: ["Supernova", "🌞", 3, "legendary", [{ hit: 2.2, to: "all" }]],
     absolutezero: ["Absolute Zero", "🥶", 2, "legendary", [{ status: "chill", turns: 3, to: "all" }, { block: 15, atk: 0.5 }]],
-    armageddon: ["Armageddon", "☢️", 3, "mystic", [{ hit: 3, to: "all" }, { status: "burn", turns: 3, to: "all" }], "mystic"],
-    ascendance: ["Arcane Ascendance", "🔯", 0, "mystic", [{ mana: 3 }, { draw: 3 }, { might: 3 }], "mystic"],
+    armageddon: ["Armageddon", "☢️", 3, "mythic", [{ hit: 3, to: "all" }, { status: "burn", turns: 3, to: "all" }], "mythic"],
+    ascendance: ["Arcane Ascendance", "🔯", 0, "mythic", [{ mana: 3 }, { draw: 3 }, { might: 3 }], "mythic"],
   },
 };
 
@@ -207,11 +207,11 @@ function phrase(fx, n) {
   return "";
 }
 
-// (exhaust: true - gone for the fight; "mystic" - gone for the run)
+// (exhaust: true - gone for the fight; "mythic" - gone for the run)
 // (n: the numbers of a character - its damage, block, healing - instead of the shares)
 function textOf(fx, exhaust, n) {
   const text = fx.map((one) => phrase(one, n)).filter(Boolean).join(", ");
-  return text.charAt(0).toUpperCase() + text.slice(1) + "." + (exhaust == "mystic" ? " Mystic." : exhaust ? " Exhaust." : "");
+  return text.charAt(0).toUpperCase() + text.slice(1) + "." + (exhaust == "mythic" ? " Mythic." : exhaust ? " Exhaust." : "");
 }
 
 // What a card aims at: a foe (a hit or a state on one), an ally - or nothing to pick
@@ -225,7 +225,7 @@ function targetOf(fx) {
 function build(list) {
   const cards = {};
   for (const [id, [name, icon, cost, rarity, fx, exhaust]] of Object.entries(list)) {
-    cards[id] = { name, icon, cost, type: fx.some((one) => one.hit != null) ? "attack" : "skill", target: targetOf(fx), exhaust: exhaust === true, mystic: exhaust == "mystic", rarity, fx, text: textOf(fx, exhaust) };
+    cards[id] = { name, icon, cost, type: fx.some((one) => one.hit != null) ? "attack" : "skill", target: targetOf(fx), exhaust: exhaust === true, mythic: exhaust == "mythic", rarity, fx, text: textOf(fx, exhaust) };
   }
   return cards;
 }

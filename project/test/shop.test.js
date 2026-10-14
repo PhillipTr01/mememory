@@ -129,7 +129,7 @@ test("shop: exclusive items can't be bought - the admin moves any item between t
   assert.deepStrictEqual([champion.rarity, champion.exclusive, champion.defaultRarity], ["legendary", false, "exclusive"]);
   assert.ok(!(await shop.buy("cat", "champion")).error, "now for sale");
   assert.match((await shop.buy("cat", "gold")).error, /can't be bought/);
-  assert.ok((await shop.update({ items: { gold: { rarity: "mythic" } } })).error, "an unknown category");
+  assert.ok((await shop.update({ items: { gold: { rarity: "nonsense" } } })).error, "an unknown category");
   // Sorted: by rarity, then (the sets together) by price
   const order = shop.RARITIES;
   const list = shop.items();
@@ -215,16 +215,16 @@ for (const [set, name, ids] of [
   });
 }
 
-test("shop: mystic - sold, only as sets, after legendary; a whole set at once (only what is missing), then worn", async () => {
+test("shop: mythic - sold, only as sets, after legendary; a whole set at once (only what is missing), then worn", async () => {
   shop.reset();
-  assert.deepStrictEqual(shop.RARITIES.slice(3, 5), ["legendary", "mystic"]);
-  const mystic = shop.ITEMS.filter((item) => item.rarity === "mystic");
-  assert.ok(mystic.length >= 6 && mystic.every((item) => item.set), "mystic: only sets");
+  assert.deepStrictEqual(shop.RARITIES.slice(3, 5), ["legendary", "mythic"]);
+  const mythic = shop.ITEMS.filter((item) => item.rarity === "mythic");
+  assert.ok(mythic.length >= 6 && mythic.every((item) => item.set), "mythic: only sets");
   // dearer than every legendary item
   const legendary = Math.max(...shop.ITEMS.filter((item) => item.rarity === "legendary").map((item) => item.price));
-  assert.ok(mystic.every((item) => item.price > legendary));
+  assert.ok(mythic.every((item) => item.price > legendary));
   h.addUser("myra");
-  const price = (set) => mystic.filter((item) => item.set === set).reduce((sum, item) => sum + item.price, 0);
+  const price = (set) => mythic.filter((item) => item.set === set).reduce((sum, item) => sum + item.price, 0);
   h.setCoins("myra", price("grove") - 1);
   assert.match((await shop.buySet("myra", "grove")).error, /enough coins/);
   // one piece first - then the rest of the set, only what is missing

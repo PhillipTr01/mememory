@@ -1398,7 +1398,7 @@ var SHOP_CATEGORIES = [
   ["rare", "Rare"],
   ["epic", "Epic"],
   ["legendary", "Legendary"],
-  ["mystic", "🔮 Mystic"],
+  ["mythic", "🔮 Mythic"],
   ["exclusive", "✨ Exclusive"],
   ["unique", "💎 Unique"],
 ];

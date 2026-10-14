@@ -196,7 +196,7 @@ const GAMES = {
           heading: "Fights",
           items: [
             `Every turn ${rpg.ENERGY} mana and 5 cards - play cards (drag them onto a foe or a hero), then end the turn. The monsters show what they do next.`,
-            "Block takes the hits of this turn. Played cards go to the discard pile - shuffled back in when the draw pile is empty. Exhaust: gone for the fight. Mystic: gone for the run.",
+            "Block takes the hits of this turn. Played cards go to the discard pile - shuffled back in when the draw pile is empty. Exhaust: gone for the fight. Mythic: gone for the run.",
           ],
         },
         {

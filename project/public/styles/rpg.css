@@ -1782,18 +1782,18 @@ button.rpg-cardx.off {
   --rarity-color: #d4a64a;
 }
 
-.rarity-mystic {
+.rarity-mythic {
   --rarity-color: #2dd4bf;
 }
 
 .rpg-cardx.rarity-rare .rpg-cardx-type,
 .rpg-cardx.rarity-epic .rpg-cardx-type,
 .rpg-cardx.rarity-legendary .rpg-cardx-type,
-.rpg-cardx.rarity-mystic .rpg-cardx-type {
+.rpg-cardx.rarity-mythic .rpg-cardx-type {
   color: var(--rarity-color);
 }
 
-/* Legendary and mystic cards: a frame of their color, a glow - the mystic one brighter */
+/* Legendary and mythic cards: a frame of their color, a glow - the mythic one brighter */
 .rpg-cardx.rarity-legendary {
   --card-edge: rgba(212, 166, 74, 0.9);
   --card-glow: rgba(212, 166, 74, 0.22);
@@ -1809,14 +1809,14 @@ button.rpg-cardx.off {
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6));
 }
 
-.rpg-cardx.rarity-mystic,
-.rpg-cardx.mystic {
+.rpg-cardx.rarity-mythic,
+.rpg-cardx.mythic {
   --card-edge: rgba(45, 212, 191, 0.95);
   --card-glow: rgba(45, 212, 191, 0.3);
   background: radial-gradient(ellipse at 50% 0%, rgba(45, 212, 191, 0.12), transparent 60%), linear-gradient(180deg, #26262c, #18181c);
 }
 
-.rpg-cardx.rarity-mystic::before {
+.rpg-cardx.rarity-mythic::before {
   content: "✦";
   position: absolute;
   top: -0.8rem;
@@ -2619,7 +2619,7 @@ button.rpg-cardx.off {
   cursor: grab;
 }
 
-.rpg-deck-row.mystic {
+.rpg-deck-row.mythic {
   background: linear-gradient(90deg, rgba(45, 212, 191, 0.12), var(--rpg-surface));
 }
 
@@ -2902,7 +2902,7 @@ button.rpg-cardx.off {
   min-height: 0;
 }
 
-/* An epic or mystic card out of a pack: it shines */
+/* An epic or mythic card out of a pack: it shines */
 .rpg-pack .rpg-cardx.big-pull {
   --card-glow: rgba(245, 197, 66, 0.45);
   border-color: var(--rpg-gold);
@@ -3308,7 +3308,7 @@ button.rpg-cardx.off {
   --glow: rgba(212, 166, 74, 1);
 }
 
-.rpg-flip.rarity-mystic {
+.rpg-flip.rarity-mythic {
   --glow: rgba(45, 212, 191, 1);
 }
 
@@ -3376,7 +3376,7 @@ button.rpg-cardx.off {
 
 .rpg-flip.flipped.rarity-epic .rpg-flip-front .rpg-cardx,
 .rpg-flip.flipped.rarity-legendary .rpg-flip-front .rpg-cardx,
-.rpg-flip.flipped.rarity-mystic .rpg-flip-front .rpg-cardx {
+.rpg-flip.flipped.rarity-mythic .rpg-flip-front .rpg-cardx {
   box-shadow: 0 0 30px var(--glow), 0 8px 18px rgba(0, 0, 0, 0.5);
 }
 
@@ -3436,7 +3436,7 @@ button.rpg-cardx.off {
   box-shadow: 0 0 8px rgba(212, 166, 74, 0.9);
 }
 
-.rarity-mystic .rpg-cardx-gem {
+.rarity-mythic .rpg-cardx-gem {
   background: #2dd4bf;
   box-shadow: 0 0 10px rgba(45, 212, 191, 1);
 }
@@ -5096,7 +5096,7 @@ button.rpg-cardx.off {
   color: #f0c56b;
 }
 
-.rpg-deck-row.rarity-mystic .rpg-row-name {
+.rpg-deck-row.rarity-mythic .rpg-row-name {
   color: #5eead4;
 }
 

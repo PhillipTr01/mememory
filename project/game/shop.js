@@ -25,7 +25,7 @@ const testMode = require("./test_mode");
 const ITEMS = [
   /*
    * About 4 per kind and category (a guide, not a rule) - the exclusive and unique sets a frame, an animation and
-   * a background each. The shop: common, rare, epic, legendary (sold), mystic (sold, only sets). Exclusive: only given as
+   * a background each. The shop: common, rare, epic, legendary (sold), mythic (sold, only sets). Exclusive: only given as
    * rewards (seen in the shop, locked). Unique: hidden from the shop - one player only, given once (the sets).
    */
   // Frames: a ring around the avatar
@@ -79,13 +79,13 @@ const ITEMS = [
   { id: "abyss", kind: "background", name: "Abyss", price: 2800000, rarity: "legendary" },
   { id: "diamonddust", kind: "background", name: "Diamond Dust", price: 2500000, rarity: "legendary" },
   { id: "prism", kind: "background", name: "Prism Vortex", price: 3500000, rarity: "legendary" },
-  // Mystic: sold in the shop - only as sets (a frame, an animation and a background, made to be worn together)
-  { id: "grovevines", kind: "frame", name: "Grove Vines", price: 8000000, rarity: "mystic", set: "grove" },
-  { id: "fireflies", kind: "effect", name: "Grove Fireflies", price: 9000000, rarity: "mystic", set: "grove" },
-  { id: "moonlitgrove", kind: "background", name: "Moonlit Grove", price: 8000000, rarity: "mystic", set: "grove" },
-  { id: "phantomwisps", kind: "frame", name: "Phantom Wisps", price: 9000000, rarity: "mystic", set: "phantom" },
-  { id: "phantomghosts", kind: "effect", name: "Phantom Ghosts", price: 10000000, rarity: "mystic", set: "phantom" },
-  { id: "phantomnight", kind: "background", name: "Phantom Night", price: 9000000, rarity: "mystic", set: "phantom" },
+  // Mythic: sold in the shop - only as sets (a frame, an animation and a background, made to be worn together)
+  { id: "grovevines", kind: "frame", name: "Grove Vines", price: 8000000, rarity: "mythic", set: "grove" },
+  { id: "fireflies", kind: "effect", name: "Grove Fireflies", price: 9000000, rarity: "mythic", set: "grove" },
+  { id: "moonlitgrove", kind: "background", name: "Moonlit Grove", price: 8000000, rarity: "mythic", set: "grove" },
+  { id: "phantomwisps", kind: "frame", name: "Phantom Wisps", price: 9000000, rarity: "mythic", set: "phantom" },
+  { id: "phantomghosts", kind: "effect", name: "Phantom Ghosts", price: 10000000, rarity: "mythic", set: "phantom" },
+  { id: "phantomnight", kind: "background", name: "Phantom Night", price: 9000000, rarity: "mythic", set: "phantom" },
   // Exclusive: only given as rewards - never sold (the price counts when the admin moves one into the shop).
   // The laurels (the season places) on their own - the rest in sets: a frame, an animation and a background each
   { id: "champion", kind: "frame", name: "Champion's Laurel", price: 5000000, rarity: "exclusive" },
@@ -133,7 +133,7 @@ const KINDS = ["frame", "effect", "background"];
 const KIND_NAMES = { frame: "frame", effect: "animation", background: "background" };
 // The categories: the shop's rarities (sold) - exclusive (never sold, only given) and unique (hidden from the shop,
 // one player only). The admin can move any item.
-const RARITIES = ["common", "rare", "epic", "legendary", "mystic", "exclusive", "unique"];
+const RARITIES = ["common", "rare", "epic", "legendary", "mythic", "exclusive", "unique"];
 // The sets: their name (shown on every item of a set - they belong together)
 const SETS = { grove: "Enchanted Grove", phantom: "Phantom", phoenix: "Phoenix", celestial: "Celestial", prism: "Prism", cosmic: "Cosmic", victory: "Victory", eclipse: "Eclipse", voidmirror: "Void Mirror", flavedrake: "Thunder", mage: "Archmage", panda: "Panda Master", ink: "Ink Blot" };
 const KEY = "shop";

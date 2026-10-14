@@ -8,7 +8,7 @@ const socket = io((window.CASINO_NS || "") + "/jackpot");
 
 var myName = null;
 var shopData = null; // {items, owned, won, frame, effect, background, balance, season}
-var RARITY = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", mystic: "Mystic", exclusive: "Exclusive", unique: "Unique" };
+var RARITY = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", mythic: "Mythic", exclusive: "Exclusive", unique: "Unique" };
 var KIND_ORDER = ["frame", "effect", "background"];
 var KIND_NAMES = { frame: "Frame", effect: "Animation", background: "Background" };
 // Try on: items put on only for a look (nothing bought, nothing saved, nobody else sees it) - {kind: id}
@@ -179,7 +179,7 @@ function render() {
     if (editTab in LOOK_TABS || editTab == "bg") renderAvatarEditor();
     else document.getElementById("avatarPreview").replaceWith(previewAvatar(editing));
   }
-  renderMystic();
+  renderMythic();
   renderSeason();
   renderFitting();
 }
@@ -237,7 +237,7 @@ function setHead(group) {
   var head = el("div", "sh-set-head " + group.rarity);
   head.append(el("span", "sh-set-name", (group.unique ? "💎 " : group.exclusive ? "✨ " : "🔮 ") + group.name + " set"), el("span", "sh-set-note", "Frame, animation and background - made to be worn together"));
   var wearing = group.items.every((item) => shopData[item.kind] == item.id);
-  // For sale (mystic): all of it at once - only what is still missing
+  // For sale (mythic): all of it at once - only what is still missing
   var missing = group.items.filter((item) => !isOwned(item));
   if (!group.exclusive && missing.length) {
     var price = missing.reduce((sum, item) => sum + item.price, 0);
@@ -277,8 +277,8 @@ function isOwned(item) {
 
 function renderGrid(id, kind) {
   var grid = document.getElementById(id);
-  // (by rarity, then by price - the order of the server; the mystic sets in a section of their own)
-  grid.replaceChildren(...shopData.items.filter((item) => item.kind == kind && !item.exclusive && item.rarity != "mystic").map(shopCard));
+  // (by rarity, then by price - the order of the server; the mythic sets in a section of their own)
+  grid.replaceChildren(...shopData.items.filter((item) => item.kind == kind && !item.exclusive && item.rarity != "mythic").map(shopCard));
 }
 
 // A card of the shop: the item on me, its rarity and name - buy it, wear it or take it off
@@ -313,14 +313,14 @@ function shopCard(item) {
   return card;
 }
 
-// Mystic: sold only as sets - each under its heading (buy all of it at once: only what is still missing)
-function renderMystic() {
-  var list = shopData.items.filter((item) => item.rarity == "mystic" && !item.exclusive);
-  document.getElementById("shSecMystic").hidden = list.length == 0;
-  document.querySelector('#shSections [data-section="shSecMystic"]').hidden = list.length == 0;
+// Mythic: sold only as sets - each under its heading (buy all of it at once: only what is still missing)
+function renderMythic() {
+  var list = shopData.items.filter((item) => item.rarity == "mythic" && !item.exclusive);
+  document.getElementById("shSecMythic").hidden = list.length == 0;
+  document.querySelector('#shSections [data-section="shSecMythic"]').hidden = list.length == 0;
   var singles = list.filter((item) => !item.set);
   var sets = groupSets(list.filter((item) => item.set));
-  document.getElementById("shMystic").replaceChildren(...singles.map(shopCard), ...sets.flatMap((group) => [setHead(group), ...group.items.map(shopCard)]));
+  document.getElementById("shMythic").replaceChildren(...singles.map(shopCard), ...sets.flatMap((group) => [setHead(group), ...group.items.map(shopCard)]));
 }
 
 // Items of sets -> [{id, name, rarity, unique, items}] (in the order of the server: frame, animation, background)

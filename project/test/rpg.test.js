@@ -415,7 +415,7 @@ test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/
   assert.ok(rpg.monstersFor(1, 1, "elite").every((m) => !m.affix));
 });
 
-test("rpg: collection and deck - the starter deck owned, packs bring cards (duplicates kept), the deck from 10 to deckMax, mystic cards once a run", () => {
+test("rpg: collection and deck - the starter deck owned, packs bring cards (duplicates kept), the deck from 10 to deckMax, mythic cards once a run", () => {
   const hero = rpg.newHero("rogue");
   const char = rpg.charOf(hero);
   assert.strictEqual(char.deck.length, 10);
@@ -443,7 +443,7 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (dupl
   // The shop: the base set has 50 cards and more; a hero pack: all rare or better, a mythic pack: all epic
   // or better; three at once: 10% off
   assert.ok(Object.keys(rpg.CARDS).length >= 50);
-  const rank = (id) => ["basic", "common", "rare", "epic", "legendary", "mystic"].indexOf(rpg.CARDS[id].rarity);
+  const rank = (id) => ["basic", "common", "rare", "epic", "legendary", "mythic"].indexOf(rpg.CARDS[id].rarity);
   for (let i = 0; i < 40; i++) {
     const hero2 = rpg.newHero("mage");
     const premium = rpg.openPack(hero2, Math.random, "premium");
@@ -499,7 +499,7 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (dupl
   assert.strictEqual(all.cards.length, 2 * 5 + 4);
   assert.deepStrictEqual([hero.packs.standard, hero.packs.mythic], [0, 0]);
   assert.match(rpg.openAll(hero), /No packs/);
-  // An mystic card: played once - gone from the run's deck
+  // A mythic card: played once - gone from the run's deck
   const run = rpg.newRun(1, [{ name: "a", hero }]);
   rpg.enterRoom(run, 0);
   const me = run.heroes[0];

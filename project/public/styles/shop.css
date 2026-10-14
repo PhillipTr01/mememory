@@ -153,9 +153,9 @@
   --tone: 212, 166, 74;
 }
 
-/* Mystic: sold only as sets - a teal glow */
-.sh-item.mystic,
-.sh-set-head.mystic {
+/* Mythic: sold only as sets - a teal glow */
+.sh-item.mythic,
+.sh-set-head.mythic {
   --tone: 45, 212, 191;
 }
 

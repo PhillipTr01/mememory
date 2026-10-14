@@ -104,7 +104,7 @@ function cardType(card) {
 function cardEl(id, options) {
   options = options || {};
   var card = cardOf(id);
-  var node = el(options.tag || "div", "rpg-cardx type-" + card.type + " rarity-" + (card.rarity || "basic") + (card.upgraded ? " upgraded" : "") + (card.mystic ? " mystic" : "") + (options.className ? " " + options.className : ""));
+  var node = el(options.tag || "div", "rpg-cardx type-" + card.type + " rarity-" + (card.rarity || "basic") + (card.upgraded ? " upgraded" : "") + (card.mythic ? " mythic" : "") + (options.className ? " " + options.className : ""));
   if (options.act) {
     node.dataset.act = options.act;
     node.dataset.id = options.id != null ? options.id : id;
@@ -1084,10 +1084,10 @@ document.addEventListener("dragend", () => {
 var FILTERS = [
   ["type", "Type", [["all", "All"], ["attack", "Attacks"], ["skill", "Skills"]]],
   ["cost", "Cost", [["all", "Any"], ["0", "0"], ["1", "1"], ["2", "2"], ["3", "3+"]]],
-  ["rarity", "Rarity", [["all", "Any"], ["basic", "Basic"], ["common", "Common"], ["rare", "Rare"], ["epic", "Epic"], ["legendary", "Legendary"], ["mystic", "Mystic"]]],
+  ["rarity", "Rarity", [["all", "Any"], ["basic", "Basic"], ["common", "Common"], ["rare", "Rare"], ["epic", "Epic"], ["legendary", "Legendary"], ["mythic", "Mythic"]]],
 ];
-var RARITY_ORDER = ["basic", "common", "rare", "epic", "legendary", "mystic"];
-// By rarity (common first, mystic last) - then the cost, the name
+var RARITY_ORDER = ["basic", "common", "rare", "epic", "legendary", "mythic"];
+// By rarity (common first, mythic last) - then the cost, the name
 var byRarity = (a, b) => RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.indexOf(cardOf(b).rarity) || cardOf(a).cost - cardOf(b).cost || cardOf(a).name.localeCompare(cardOf(b).name);
 var byCost = (a, b) => cardOf(a).cost - cardOf(b).cost || RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.indexOf(cardOf(b).rarity) || cardOf(a).name.localeCompare(cardOf(b).name);
 
@@ -1172,7 +1172,7 @@ function renderBuilder() {
     order.length
       ? order.map((id) => {
           var card = cardOf(id);
-          var row = el("div", "rpg-deck-row type-" + card.type + " rarity-" + card.rarity + (card.mystic ? " mystic" : ""));
+          var row = el("div", "rpg-deck-row type-" + card.type + " rarity-" + card.rarity + (card.mythic ? " mythic" : ""));
           row.dataset.act = "deckRemove";
           row.dataset.id = id;
           row.dataset.drag = "out:" + id;
@@ -1180,7 +1180,7 @@ function renderBuilder() {
           row.title = card.text + " - click or drag: out of the deck";
           var cost = el("span", "rpg-row-cost");
           cost.dataset.cost = String(card.cost);
-          row.append(cost, el("span", "rpg-row-icon", card.icon), el("span", "rpg-row-name", card.name), el("span", "rpg-row-count", counts[id] > 1 ? "×" + counts[id] : card.mystic ? "★" : ""));
+          row.append(cost, el("span", "rpg-row-icon", card.icon), el("span", "rpg-row-name", card.name), el("span", "rpg-row-count", counts[id] > 1 ? "×" + counts[id] : card.mythic ? "★" : ""));
           return row;
         })
       : [el("div", "rpg-empty mm-muted", "Empty")],
