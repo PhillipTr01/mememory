@@ -5,10 +5,12 @@ const rpg = require("../game/rpg");
 const testMode = require("../game/test_mode");
 
 test("rpg: upgrades and floors get dearer, a floor opens after the one before; the map: rows of rooms (mostly fights) and paths, a fight first, the guarded gate last", () => {
-  assert.strictEqual(rpg.upgradeCost(0), 1500);
+  assert.strictEqual(rpg.upgradeCost(0), 5000);
   assert.ok(rpg.upgradeCost(5) > rpg.upgradeCost(4));
   assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX), null);
-  assert.strictEqual(rpg.entryCost(1), 1000);
+  assert.strictEqual(rpg.entryCost(1), 5000);
+  assert.strictEqual(rpg.potionPrice(1), 5000);
+  assert.ok(rpg.potionPrice(10) > rpg.potionPrice(9));
   assert.ok(rpg.entryCost(10) > rpg.entryCost(9));
   // A new hero: no class yet - the first one free, every other one a character of its own for CLASS_PRICE
   const fresh = rpg.newHero();
@@ -321,7 +323,7 @@ test("rpg: the map - luck senses what a room is; rooms to choose in (camp fire, 
   assert.strictEqual(offer.cards.length, 5);
   assert.strictEqual(offer.relics.length, 2);
   assert.match(rpg.choose(run, "a", { option: "rest" }), /Nothing to choose/);
-  assert.strictEqual(rpg.canBuy(run, "a", "potion").price, rpg.merchantPrices(1).potion);
+  assert.strictEqual(rpg.canBuy(run, "a", "potion").price, rpg.potionPrice(1));
   // (a mage's card: never in the warrior's offer)
   assert.match(rpg.canBuy(run, "a", "meteor").error, /doesn't sell/);
   const card = offer.cards[0];
@@ -410,7 +412,7 @@ test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/
   assert.ok(rpg.monstersFor(1, 1, "elite").every((m) => !m.affix));
 });
 
-test("rpg: collection and deck - the starter deck owned, packs bring cards (spare copies sold), the deck from 10 to deckMax, eternal cards once a run", () => {
+test("rpg: collection and deck - the starter deck owned, packs bring cards (spare copies sold), the deck from 10 to deckMax, mystic cards once a run", () => {
   const hero = rpg.newHero("rogue");
   const char = rpg.charOf(hero);
   assert.strictEqual(char.deck.length, 10);
@@ -438,7 +440,7 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (spar
   // The shop: the base set has 50 cards and more; a hero pack: the last two rare or better, a mythic pack: one epic
   // or better; three at once: 10% off
   assert.ok(Object.keys(rpg.CARDS).length >= 50);
-  const rank = (id) => ["basic", "common", "rare", "epic", "eternal"].indexOf(rpg.CARDS[id].rarity);
+  const rank = (id) => ["basic", "common", "rare", "epic", "legendary", "mystic"].indexOf(rpg.CARDS[id].rarity);
   for (let i = 0; i < 40; i++) {
     const hero2 = rpg.newHero("mage");
     const premium = rpg.openPack(hero2, Math.random, "premium");
@@ -488,7 +490,7 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (spar
   assert.strictEqual(all.cards.length, 2 * 5 + 3);
   assert.deepStrictEqual([hero.packs.standard, hero.packs.mythic], [0, 0]);
   assert.match(rpg.openAll(hero), /No packs/);
-  // An eternal card: played once - gone from the run's deck
+  // An mystic card: played once - gone from the run's deck
   const run = rpg.newRun(1, [{ name: "a", hero }]);
   rpg.enterRoom(run, 0);
   const me = run.heroes[0];
@@ -583,7 +585,7 @@ test("rpg: only in the test world - a real player can't get in", async () => {
 });
 
 test("rpg: alone - upgrades and potions cost test coins, the entry too; the time up between rooms: out with the loot", async () => {
-  testMode.start("rpg_alice", 1000000);
+  testMode.start("rpg_alice", 5000000);
   const alice = client("rpg_alice");
   const hero = await h.once(alice, "rpgHero");
   assert.strictEqual(hero.cls, null);
@@ -593,12 +595,12 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; the time
   // The first class: free
   alice.emit("unlock", { id: "warrior" });
   const warrior = await waitFor(alice, "rpgHero", (view) => view.cls == "warrior");
-  assert.strictEqual(testMode.balance("rpg_alice"), 1000000);
+  assert.strictEqual(testMode.balance("rpg_alice"), 5000000);
   assert.strictEqual(warrior.levels.atk, 0);
   alice.emit("upgrade", { stat: "atk" });
   const up = await waitFor(alice, "rpgHero", (view) => view.levels.atk == 1);
   assert.strictEqual(up.stats.atk, Math.round((rpg.STATS.atk.base + rpg.STATS.atk.per * rpg.MAIN_BONUS) * rpg.CLASSES.warrior.atk));
-  assert.strictEqual(testMode.balance("rpg_alice"), 1000000 - rpg.upgradeCost(0));
+  assert.strictEqual(testMode.balance("rpg_alice"), 5000000 - rpg.upgradeCost(0));
   alice.emit("potion");
   await waitFor(alice, "rpgHero", (view) => view.potions == 3);
   // Another class: locked - bought, a character of its own (its own levels)
@@ -645,8 +647,8 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; the time
 });
 
 test("rpg: co-op - one opens a party, another joins, the leader starts (both pay); a turn waits for both, the floor cleared opens the next", async () => {
-  testMode.start("rpg_alice", 1000000);
-  testMode.start("rpg_bob", 1000000);
+  testMode.start("rpg_alice", 5000000);
+  testMode.start("rpg_bob", 5000000);
   const alice = client("rpg_alice");
   const bob = client("rpg_bob");
   await h.once(alice, "rpgHero");

@@ -20,7 +20,7 @@ const NEUTRAL = {
   inspire: ["Inspire", "🎺", 1, "rare", [{ might: 2, to: "ally" }, { draw: 1 }]],
   gamble: ["Desperate Gamble", "🎲", 0, "rare", [{ mana: 1 }, { draw: 2 }, { lose: 0.06 }], true],
   panacea: ["Panacea", "🧴", 1, "rare", [{ heal: 0.1, to: "party" }]],
-  berserkerbrew: ["Berserker Brew", "🍷", 0, "epic", [{ mana: 2 }, { might: 2 }], true],
+  berserkerbrew: ["Berserker Brew", "🍷", 0, "legendary", [{ mana: 2 }, { might: 2 }], true],
 };
 
 const CLASS = {
@@ -41,8 +41,8 @@ const CLASS = {
     ironwill: ["Iron Will", "🪨", 1, "rare", [{ block: 5, def: 1 }, { heal: 0.06 }]],
     reaper: ["Reaper", "⚰️", 2, "epic", [{ hit: 0.9, to: "all" }, { heal: 0.12 }], true],
     juggernaut: ["Juggernaut", "🚂", 2, "epic", [{ hit: 2.4 }, { block: 8, def: 1 }]],
-    demonform: ["Demon Form", "👹", 3, "epic", [{ might: 4 }, { mana: 1 }], true],
-    bludgeon: ["Bludgeon", "🏏", 3, "epic", [{ hit: 3.2 }]],
+    demonform: ["Demon Form", "👹", 3, "legendary", [{ might: 4 }, { mana: 1 }], true],
+    bludgeon: ["Bludgeon", "🏏", 3, "legendary", [{ hit: 3.2 }]],
   },
   paladin: {
     shieldslam: ["Shield Slam", "🔘", 1, "common", [{ hit: 0.6, def: 1 }]],
@@ -60,9 +60,9 @@ const CLASS = {
     blessedhammer: ["Blessed Hammer", "🔨", 1, "rare", [{ hit: 0.9, def: 0.5 }, { draw: 1 }]],
     martyr: ["Martyr", "🥀", 0, "rare", [{ lose: 0.08 }, { heal: 0.15, to: "weakest" }]],
     guardianangel: ["Guardian Angel", "😇", 2, "epic", [{ block: 15, def: 1, to: "party" }], true],
-    divinestorm: ["Divine Storm", "⛈️", 3, "epic", [{ hit: 1.3, def: 0.5, to: "all" }]],
+    divinestorm: ["Divine Storm", "⛈️", 3, "legendary", [{ hit: 1.3, def: 0.5, to: "all" }]],
     avatar: ["Avatar of Light", "☀️", 2, "epic", [{ might: 3 }, { block: 10, def: 1 }], true],
-    verdict: ["Final Verdict", "🏛️", 2, "epic", [{ hit: 2, def: 1, bonusIf: "stun", bonus: 3 }]],
+    verdict: ["Final Verdict", "🏛️", 2, "legendary", [{ hit: 2, def: 1, bonusIf: "stun", bonus: 3 }]],
   },
   cleric: {
     mend: ["Mend", "🌿", 1, "common", [{ heal: 0.15, to: "ally" }]],
@@ -79,10 +79,10 @@ const CLASS = {
     exorcism: ["Exorcism", "🧿", 1, "rare", [{ hit: 0.9, bonusIf: "undead", bonus: 3.5 }]],
     sanctify: ["Sanctify", "🫶", 1, "rare", [{ block: 6, def: 1, to: "party" }]],
     innerfire: ["Inner Fire", "♨️", 1, "rare", [{ might: 2 }, { heal: 0.08 }]],
-    miracle: ["Miracle", "🌈", 2, "epic", [{ heal: 0.35, to: "party" }], true],
+    miracle: ["Miracle", "🌈", 2, "legendary", [{ heal: 0.35, to: "party" }], true],
     guardianspirit: ["Guardian Spirit", "👻", 1, "epic", [{ block: 20, to: "ally" }, { heal: 0.15, to: "ally" }], true],
     holyfire: ["Holy Fire", "🎇", 2, "epic", [{ hit: 1.4 }, { status: "burn", turns: 3 }]],
-    ascension: ["Ascension", "👑", 2, "epic", [{ mana: 2 }, { draw: 2 }, { heal: 0.1, to: "party" }], true],
+    ascension: ["Ascension", "👑", 2, "legendary", [{ mana: 2 }, { draw: 2 }, { heal: 0.1, to: "party" }], true],
   },
   rogue: {
     shiv: ["Shiv", "🪡", 0, "common", [{ hit: 0.5 }]],
@@ -101,8 +101,8 @@ const CLASS = {
     footwork: ["Footwork", "👟", 1, "rare", [{ block: 5, agi: 1 }, { might: 1 }]],
     rush: ["Adrenaline Rush", "⚡", 0, "epic", [{ mana: 2 }, { draw: 2 }], true],
     corpseexplosion: ["Corpse Explosion", "💣", 2, "epic", [{ hit: 1, to: "all", bonusIf: "poison", bonus: 2 }]],
-    shadowclone: ["Shadow Clone", "👥", 2, "epic", [{ hit: 0.5, to: "random", times: 6 }], true],
-    assassinate: ["Assassinate", "🎯", 2, "epic", [{ hit: 2.6, bonusIf: "poison", bonus: 4 }]],
+    shadowclone: ["Shadow Clone", "👥", 2, "legendary", [{ hit: 0.5, to: "random", times: 6 }], true],
+    assassinate: ["Assassinate", "🎯", 2, "legendary", [{ hit: 2.6, bonusIf: "poison", bonus: 4 }]],
   },
   mage: {
     firebolt: ["Fire Bolt", "🌶️", 1, "common", [{ hit: 0.8 }, { status: "burn", turns: 2 }]],
@@ -119,10 +119,10 @@ const CLASS = {
     polymorph: ["Polymorph", "🐑", 1, "rare", [{ status: "stun", turns: 1 }, { status: "chill", turns: 3 }], true],
     mirrorimage: ["Mirror Image", "🪞", 1, "rare", [{ block: 9, atk: 0.5 }, { draw: 1 }]],
     evocation: ["Evocation", "🌌", 1, "rare", [{ mana: 2 }], true],
-    pyroblast: ["Pyroblast", "☄️", 3, "epic", [{ hit: 3.5 }]],
+    pyroblast: ["Pyroblast", "☄️", 3, "legendary", [{ hit: 3.5 }]],
     glacialspike: ["Glacial Spike", "🏔️", 2, "epic", [{ hit: 1.6, bonusIf: "chill", bonus: 3 }]],
     arcanepower: ["Arcane Power", "✳️", 1, "epic", [{ might: 3 }, { draw: 1 }], true],
-    firestorm: ["Firestorm", "🏮", 3, "epic", [{ hit: 1.2, to: "all" }, { status: "burn", turns: 3, to: "all" }]],
+    firestorm: ["Firestorm", "🏮", 3, "legendary", [{ hit: 1.2, to: "all" }, { status: "burn", turns: 3, to: "all" }]],
   },
 };
 

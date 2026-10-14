@@ -431,7 +431,7 @@ module.exports = function (io, options = {}) {
       if (inRun()) return error("Not during a run.");
       const hero = heroOf(username);
       if (hero.potions >= rpg.POTIONS_MAX) return error(`At most ${rpg.POTIONS_MAX} potions.`);
-      if (!(await coins.spend(username, rpg.POTION_PRICE, { reason: "rpg potion" }))) return error(coins.refusal(username) || "You don't have enough coins.");
+      if (!(await coins.spend(username, rpg.potionPrice(rpg.maxFloor(hero)), { reason: "rpg potion" }))) return error(coins.refusal(username) || "You don't have enough coins.");
       hero.potions++;
       sendHero(username);
     });

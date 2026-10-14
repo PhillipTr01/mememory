@@ -84,7 +84,7 @@ function cardOf(id) {
 function cardEl(id, options) {
   options = options || {};
   var card = cardOf(id);
-  var node = el(options.tag || "div", "rpg-cardx type-" + card.type + " rarity-" + (card.rarity || "basic") + (card.upgraded ? " upgraded" : "") + (card.eternal ? " eternal" : "") + (options.className ? " " + options.className : ""));
+  var node = el(options.tag || "div", "rpg-cardx type-" + card.type + " rarity-" + (card.rarity || "basic") + (card.upgraded ? " upgraded" : "") + (card.mystic ? " mystic" : "") + (options.className ? " " + options.className : ""));
   if (options.act) {
     node.dataset.act = options.act;
     node.dataset.id = options.id != null ? options.id : id;
@@ -443,9 +443,9 @@ function renderTop() {
   if (picked) morphChildren(xpBox, [el("span", "rpg-level", "Lv " + hero.level), bar(hero.xp, hero.xpNeed, "xp", " XP"), hero.points ? el("span", "rpg-points", "+" + hero.points + " point" + (hero.points == 1 ? "" : "s")) : null]);
   document.getElementById("rpgPotions").innerText = "🧪 " + hero.potions + " / " + rules.potionsMax;
   var buy = document.getElementById("rpgBuyPotion");
-  buy.innerText = "+ 🪙 " + formatCoins(rules.potionPrice);
+  buy.innerText = "+ 🪙 " + formatCoins(hero.potionPrice);
   buy.title = "A potion: heals 40% HP - in a fight or between the rooms";
-  buy.disabled = hero.potions >= rules.potionsMax || myCoins < rules.potionPrice;
+  buy.disabled = hero.potions >= rules.potionsMax || myCoins < hero.potionPrice;
 }
 
 function renderHero() {
@@ -558,7 +558,7 @@ function renderReady() {
   if (n < hero.deckMin) item("🃏", "Your deck has " + n + " cards - it needs " + hero.deckMin + " to go down", "warn", "view", "deck", "Build it");
   else if (n > hero.deckMax) item("🃏", "Your deck has " + n + " cards - " + hero.deckMax + " at most", "warn", "view", "deck", "Build it");
   else item("🃏", "Deck ready: " + n + " cards (" + hero.deckMin + " to " + hero.deckMax + ")", "ok", "view", "deck", "Edit");
-  item("🧪", hero.potions + " / " + rules.potionsMax + " potions - they heal 40% in a run", hero.potions ? "ok" : "warn", hero.potions < rules.potionsMax ? "potion" : null, null, "+1 · 🪙 " + formatCoins(rules.potionPrice));
+  item("🧪", hero.potions + " / " + rules.potionsMax + " potions - they heal 40% in a run", hero.potions ? "ok" : "warn", hero.potions < rules.potionsMax ? "potion" : null, null, "+1 · 🪙 " + formatCoins(hero.potionPrice));
   if (hero.points) item("⬆️", hero.points + " stat point" + (hero.points == 1 ? "" : "s") + " to spend", "new", "view", "hero", "Spend");
   if (rules.talentLevels.some((lv, tier) => hero.level >= lv && !hero.talents[tier])) item("⭐", "A talent to pick", "new", "view", "talents", "Pick");
   var packs = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);
@@ -940,9 +940,9 @@ document.addEventListener("dragend", () => {
 var FILTERS = [
   ["type", [["all", "All"], ["attack", "Attacks"], ["skill", "Skills"]]],
   ["cost", [["all", "Any cost"], ["0", "0"], ["1", "1"], ["2", "2"], ["3", "3+"]]],
-  ["rarity", [["all", "Any rarity"], ["basic", "Basic"], ["common", "Common"], ["rare", "Rare"], ["epic", "Epic"], ["eternal", "Eternal"]]],
+  ["rarity", [["all", "Any rarity"], ["basic", "Basic"], ["common", "Common"], ["rare", "Rare"], ["epic", "Epic"], ["legendary", "Legendary"], ["mystic", "Mystic"]]],
 ];
-var RARITY_ORDER = ["basic", "common", "rare", "epic", "eternal"];
+var RARITY_ORDER = ["basic", "common", "rare", "epic", "legendary", "mystic"];
 var byCost = (a, b) => cardOf(a).cost - cardOf(b).cost || RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.indexOf(cardOf(b).rarity) || cardOf(a).name.localeCompare(cardOf(b).name);
 
 function renderBuilder() {
@@ -1019,7 +1019,7 @@ function renderBuilder() {
     order.length
       ? order.map((id) => {
           var card = cardOf(id);
-          var row = el("div", "rpg-deck-row rarity-" + card.rarity + (card.eternal ? " eternal" : ""));
+          var row = el("div", "rpg-deck-row rarity-" + card.rarity + (card.mystic ? " mystic" : ""));
           row.dataset.act = "deckRemove";
           row.dataset.id = id;
           row.dataset.drag = "out:" + id;
@@ -1027,7 +1027,7 @@ function renderBuilder() {
           row.title = card.text + " - click or drag: out of the deck";
           var cost = el("span", "rpg-row-cost");
           cost.dataset.cost = String(card.cost);
-          row.append(cost, el("span", "rpg-row-icon", card.icon), el("span", "rpg-row-name", card.name), el("span", "rpg-row-count", counts[id] > 1 ? "×" + counts[id] : card.eternal ? "★" : ""));
+          row.append(cost, el("span", "rpg-row-icon", card.icon), el("span", "rpg-row-name", card.name), el("span", "rpg-row-count", counts[id] > 1 ? "×" + counts[id] : card.mystic ? "★" : ""));
           return row;
         })
       : [el("div", "rpg-empty mm-muted", "Empty - click or drag cards in.")],
@@ -1629,7 +1629,7 @@ function handBar(run, me) {
   var waiting = run.heroes.filter((h) => !h.down && !h.ended).length;
   var end = button(me.ended ? "Waiting… (" + waiting + ")" : "End turn", "endTurn", { className: "primary rpg-end", disabled: me.ended });
   var discard = button("♻️ Discard " + me.discardCount, "pile", { id: "discard", className: "rpg-pile", title: "Discard pile: played and unplayed cards of the turns before - shuffled back in when the draw pile is empty. Click to look" });
-  var exhausted = me.piles && me.piles.exhausted.length ? button("🔥 " + me.piles.exhausted.length, "pile", { id: "exhausted", className: "rpg-pile", title: "Exhausted: gone for this fight (eternal ones: for the run)" }) : null;
+  var exhausted = me.piles && me.piles.exhausted.length ? button("🔥 " + me.piles.exhausted.length, "pile", { id: "exhausted", className: "rpg-pile", title: "Exhausted: gone for this fight (mystic ones: for the run)" }) : null;
   var right = el("div", "rpg-hand-side");
   right.append(end, potion, discard);
   if (exhausted) right.appendChild(exhausted);

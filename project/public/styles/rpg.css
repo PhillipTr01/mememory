@@ -1778,17 +1778,22 @@ button.rpg-cardx.off {
   --rarity-color: var(--rpg-purple);
 }
 
-.rarity-eternal {
+.rarity-legendary {
+  --rarity-color: #ff9a3c;
+}
+
+.rarity-mystic {
   --rarity-color: var(--rpg-gold);
 }
 
 .rpg-cardx.rarity-rare .rpg-cardx-type,
 .rpg-cardx.rarity-epic .rpg-cardx-type,
-.rpg-cardx.rarity-eternal .rpg-cardx-type {
+.rpg-cardx.rarity-legendary .rpg-cardx-type,
+.rpg-cardx.rarity-mystic .rpg-cardx-type {
   color: var(--rarity-color);
 }
 
-.rpg-cardx.eternal {
+.rpg-cardx.mystic {
   --card-edge: var(--rpg-gold);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5), 0 0 16px rgba(245, 197, 66, 0.3);
 }
@@ -2585,7 +2590,7 @@ button.rpg-cardx.off {
   cursor: grab;
 }
 
-.rpg-deck-row.eternal {
+.rpg-deck-row.mystic {
   background: linear-gradient(90deg, rgba(245, 197, 66, 0.12), var(--rpg-surface));
 }
 
@@ -2868,7 +2873,7 @@ button.rpg-cardx.off {
   min-height: 0;
 }
 
-/* An epic or eternal card out of a pack: it shines */
+/* An epic or mystic card out of a pack: it shines */
 .rpg-pack .rpg-cardx.big-pull {
   --card-glow: rgba(245, 197, 66, 0.45);
   border-color: var(--rpg-gold);
@@ -3270,8 +3275,12 @@ button.rpg-cardx.off {
   --glow: rgba(167, 139, 250, 0.9);
 }
 
-.rpg-flip.rarity-eternal {
-  --glow: rgba(255, 170, 60, 0.95);
+.rpg-flip.rarity-legendary {
+  --glow: rgba(255, 154, 60, 0.95);
+}
+
+.rpg-flip.rarity-mystic {
+  --glow: rgba(255, 224, 120, 1);
 }
 
 @keyframes rpg-deal {
@@ -3337,7 +3346,8 @@ button.rpg-cardx.off {
 }
 
 .rpg-flip.flipped.rarity-epic .rpg-flip-front .rpg-cardx,
-.rpg-flip.flipped.rarity-eternal .rpg-flip-front .rpg-cardx {
+.rpg-flip.flipped.rarity-legendary .rpg-flip-front .rpg-cardx,
+.rpg-flip.flipped.rarity-mystic .rpg-flip-front .rpg-cardx {
   box-shadow: 0 0 30px var(--glow), 0 8px 18px rgba(0, 0, 0, 0.5);
 }
 
@@ -3392,9 +3402,14 @@ button.rpg-cardx.off {
   box-shadow: 0 0 6px rgba(167, 139, 250, 0.8);
 }
 
-.rarity-eternal .rpg-cardx-gem {
-  background: #ffaa3c;
-  box-shadow: 0 0 8px rgba(255, 170, 60, 0.9);
+.rarity-legendary .rpg-cardx-gem {
+  background: #ff9a3c;
+  box-shadow: 0 0 8px rgba(255, 154, 60, 0.9);
+}
+
+.rarity-mystic .rpg-cardx-gem {
+  background: #ffe07a;
+  box-shadow: 0 0 10px rgba(255, 224, 120, 1);
 }
 
 @media (max-width: 991px) {
