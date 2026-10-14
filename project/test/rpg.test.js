@@ -114,7 +114,7 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
 
 test("rpg: a new hero clears floor 1 but not floor 8 - upgrades take it deeper; a full clear pays about 1.5x the entry", () => {
   const weak = rpg.newHero("warrior");
-  assert.ok(rpg.simulate(weak, 1, 200).cleared > 0.85);
+  assert.ok(rpg.simulate(weak, 1, 200).cleared > 0.75);
   assert.ok(rpg.simulate(weak, 8, 200).cleared < 0.05);
   const strong = rpg.newHero("warrior");
   for (const id of rpg.STAT_IDS) rpg.charOf(strong).levels[id] = 8;

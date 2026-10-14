@@ -231,7 +231,7 @@ const CARD_RARITIES = {
   rare: { name: "Rare", weight: 26, copies: 2, value: 1000 },
   epic: { name: "Epic", weight: 8, copies: 2, value: 2500 },
   legendary: { name: "Legendary", weight: 3, copies: 1, value: 5000 },
-  mystic: { name: "Mystic", weight: 1, copies: 1, value: 10000 },
+  mystic: { name: "Mystic", weight: 0.2, copies: 1, value: 10000 },
 };
 for (const [id, rarity] of Object.entries(CARD_RARITY)) CARDS[id].rarity = rarity;
 // The larger part of the base set: cards made of effects (game/rpg_cards.js)
@@ -255,8 +255,8 @@ function deckMax() {
 // ones more often (x their weight)
 const PACKS = {
   standard: { name: "Base Set Pack", icon: "🎴", about: "The classic: 5 cards, the last one rare or better.", get price() { return config.RPG_PACK_STANDARD; }, size: 5, better: 1, least: "rare", boost: {} },
-  premium: { name: "Hero Pack", icon: "💎", about: "5 cards - all rare or better, epics, legendaries and mystics 4x as often.", get price() { return config.RPG_PACK_PREMIUM; }, size: 5, better: 5, least: "rare", boost: { epic: 4, legendary: 4, mystic: 4 } },
-  mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards - all epic or better, legendaries 4x, mystics 6x as often.", get price() { return config.RPG_PACK_MYTHIC; }, size: 4, better: 4, least: "epic", boost: { legendary: 4, mystic: 6 } },
+  premium: { name: "Hero Pack", icon: "💎", about: "5 cards - all rare or better, epics 4x, legendaries 5x as often.", get price() { return config.RPG_PACK_PREMIUM; }, size: 5, better: 5, least: "rare", boost: { epic: 4, legendary: 5, mystic: 2 } },
+  mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards - all epic or better, legendaries 8x as often.", get price() { return config.RPG_PACK_MYTHIC; }, size: 4, better: 4, least: "epic", boost: { legendary: 8, mystic: 2 } },
 };
 const PACK_IDS = Object.keys(PACKS);
 const PACK_BUNDLE = 3; // three packs at once ...

@@ -741,16 +741,20 @@ function renderFirst() {
 
 // The chance of every rarity on a card of a pack (not the guaranteed ones) - by the weights of my class's cards
 function packOdds(pack) {
-  var weights = {};
-  var total = 0;
-  hero.pool.forEach((id) => {
-    var rarity = cardOf(id).rarity;
-    if (rarity == "basic") return;
-    var w = rules.cardRarities[rarity].weight * (pack.boost[rarity] || 1);
-    weights[rarity] = (weights[rarity] || 0) + w;
-    total += w;
-  });
-  return RARITY_ORDER.filter((r) => weights[r]).map((r) => [r, (weights[r] / total) * 100]);
+  var shares = {};
+  var cards = hero.pool.filter((id) => cardOf(id).rarity != "basic");
+  // (every card of the pack: the last ones only of their rarity or better)
+  for (var i = 0; i < pack.size; i++) {
+    var better = i >= pack.size - pack.better;
+    var choices = cards.filter((id) => !better || RARITY_ORDER.indexOf(cardOf(id).rarity) >= RARITY_ORDER.indexOf(pack.least));
+    var weights = choices.map((id) => rules.cardRarities[cardOf(id).rarity].weight * (pack.boost[cardOf(id).rarity] || 1));
+    var total = weights.reduce((a, b) => a + b, 0);
+    choices.forEach((id, j) => {
+      var rarity = cardOf(id).rarity;
+      shares[rarity] = (shares[rarity] || 0) + (weights[j] / total / pack.size) * 100;
+    });
+  }
+  return RARITY_ORDER.filter((r) => shares[r]).map((r) => [r, shares[r]]);
 }
 
 var cart = {}; // the shop's cart: {pack id: count}
@@ -771,12 +775,15 @@ function packArt(id, className) {
 
 function renderShop() {
   var cls = rules.classes[hero.cls];
-  // Upgrades: more room in the bag
+  // Upgrades: more room in the bag - a slot per cell (the ones bought gold)
   var slot = el("div", "rpg-upgrade");
   var price = hero.bagSlotPrice;
-  slot.append(el("span", "rpg-upgrade-icon", "🎒"), el("div", "rpg-upgrade-text"));
-  slot.lastChild.append(el("b", "", "Bag slot"), el("span", "mm-muted small", hero.bagSize + " / " + rules.bagTop + " slots"));
-  slot.appendChild(price == null ? el("span", "rpg-upgrade-max mm-muted", "Max") : button("+1 · 🪙 " + formatCoins(price), "bagSlot", { className: "small primary", disabled: price > myCoins }));
+  var cells = el("div", "rpg-upgrade-cells");
+  for (var c = 0; c < rules.bagTop; c++) cells.appendChild(el("i", c < rules.bagMax ? "base" : c < hero.bagSize ? "on" : ""));
+  var words = el("div", "rpg-upgrade-text");
+  words.append(el("b", "", "Bag slot"), el("span", "mm-muted small", hero.bagSize + " / " + rules.bagTop + " slots"), cells);
+  slot.append(el("span", "rpg-upgrade-icon", "🎒"), words);
+  slot.appendChild(price == null ? el("span", "rpg-upgrade-max", "✓ Max") : button("+1 slot · 🪙 " + formatCoins(price), "bagSlot", { className: "primary", disabled: price > myCoins }));
   morphChildren(document.getElementById("rpgShopUpgrades"), [slot]);
   document.getElementById("rpgShopTitle").innerText = "🛒 Card shop · " + cls.icon + " " + cls.name;
   // The collection: the cards found, the copies
@@ -819,7 +826,7 @@ function renderShop() {
       var odds = el("div", "rpg-pack-odds");
       packOdds(pack).forEach(([rarity, pct]) => {
         var row = el("div", "rpg-odd rarity-" + rarity);
-        row.append(el("span", "", rules.cardRarities[rarity].name), el("b", "", (pct < 1 ? pct.toFixed(1) : Math.round(pct)) + "%"));
+        row.append(el("span", "", rules.cardRarities[rarity].name), el("b", "", (pct < 0.1 ? pct.toFixed(2) : pct < 1 ? pct.toFixed(1) : Math.round(pct)) + "%"));
         odds.appendChild(row);
       });
       var inCart = cart[id] || 0;
