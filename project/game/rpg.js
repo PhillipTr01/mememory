@@ -55,7 +55,7 @@ const DODGE_MAX = 40;
 const ENTRY_BASE = 5000;
 const ENTRY_GROWTH = 1.25;
 // What a room puts in the pot (per hero, a share of the entry)
-const REWARD = { fight: 0.2, hard: 0.38, elite: 0.35, boss: 1, chest: 0.15, trap: 0, rest: 0, shrine: 0, merchant: 0 };
+const REWARD = { fight: 0.27, hard: 0.5, elite: 0.5, boss: 1.2, chest: 0.22, trap: 0, rest: 0, shrine: 0, merchant: 0 };
 
 /* ---------- Classes and their cards ---------- */
 
@@ -420,9 +420,9 @@ const MONSTERS = [
   ],
 ];
 const MONSTER_HP = 52;
-const MONSTER_HP_GROWTH = 1.17;
+const MONSTER_HP_GROWTH = 1.13;
 const MONSTER_ATK = 11;
-const MONSTER_ATK_GROWTH = 1.14;
+const MONSTER_ATK_GROWTH = 1.11;
 // A bigger party: every monster has this much more HP and attack per hero after the first - and there are more of
 // them (a party is no easier than going alone)
 const PARTY_HP = 1.0;
