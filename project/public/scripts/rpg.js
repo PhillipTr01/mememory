@@ -11,6 +11,7 @@ var partyAt = 0; // when it came (its timeLeft counts from then)
 var target = null; // the monster I aim at
 var aiming = null; // a card of my hand waiting for its target: {uid, target: "foe" | "ally" | "fallen"}
 var tab = "hero"; // the tab of the hero card
+var smithing = false; // at a camp fire: picking the card to upgrade
 var FLOOR_KEY = "rpgFloor";
 var SIZE_KEY = "rpgSize";
 var floor = 1;
@@ -64,11 +65,18 @@ function bar(value, max, className, extra) {
   return outer;
 }
 
+// A card by its id - "strike+": upgraded at a camp fire (40% stronger)
+function cardOf(id) {
+  var plus = /\+$/.test(id);
+  var card = rules.cards[id.replace(/\+$/, "")];
+  return plus ? Object.assign({}, card, { name: card.name + "+", text: card.text + " (+40%)", upgraded: true }) : card;
+}
+
 // A card (of the hand, a reward, the deck): the cost, the picture, the name, what it does
 function cardEl(id, options) {
   options = options || {};
-  var card = rules.cards[id];
-  var node = el(options.tag || "div", "rpg-cardx type-" + card.type + (options.className ? " " + options.className : ""));
+  var card = cardOf(id);
+  var node = el(options.tag || "div", "rpg-cardx type-" + card.type + (card.upgraded ? " upgraded" : "") + (options.className ? " " + options.className : ""));
   if (options.act) {
     node.dataset.act = options.act;
     node.dataset.id = options.id != null ? options.id : id;
@@ -185,7 +193,11 @@ function renderHero() {
   var picked = !!hero.cls;
   var mine = rules.classes[hero.cls || "warrior"];
   document.getElementById("rpgHeroName").innerText = picked ? mine.icon + " " + mine.name : "Pick your hero";
-  document.getElementById("rpgHeroSub").innerText = "Deepest floor " + hero.deepest + " · " + hero.cleared + " cleared of " + hero.runs + " runs";
+  document.getElementById("rpgHeroSub").innerText = picked ? "Deepest floor " + hero.deepest + " · " + hero.cleared + " / " + hero.runs + " runs cleared" : "";
+  // The hero's level: XP from the fights - every level a stat point, talents at levels 3, 6, 10
+  var xpBox = document.getElementById("rpgXp");
+  xpBox.hidden = !picked;
+  if (picked) morphChildren(xpBox, [el("span", "rpg-level", "Lv " + hero.level), bar(hero.xp, hero.xpNeed, "xp", " XP"), hero.points ? el("span", "rpg-points", "+" + hero.points + " point" + (hero.points == 1 ? "" : "s")) : null]);
   document.getElementById("rpgPotions").innerText = "🧪 " + hero.potions + " / " + rules.potionsMax;
   var buy = document.getElementById("rpgBuyPotion");
   buy.innerText = "+ 🪙 " + formatCoins(rules.potionPrice);
@@ -233,10 +245,42 @@ function renderHero() {
       name.appendChild(star);
     }
     row.append(name, el("div", "rpg-stat-value", statValue(id)));
-    row.appendChild(cost == null ? el("span", "rpg-stat-max mm-muted", "Max") : button("+ 🪙 " + formatCoins(cost), "upgrade", { id: id, className: "small", disabled: cost > myCoins, title: stat.about }));
+    // (a stat point: a free level - else coins)
+    if (cost == null) row.appendChild(el("span", "rpg-stat-max mm-muted", "Max"));
+    else if (hero.points > 0) row.appendChild(button("+1 free", "point", { id: id, className: "small point", title: stat.about }));
+    else row.appendChild(button("+ 🪙 " + formatCoins(cost), "upgrade", { id: id, className: "small", disabled: cost > myCoins, title: stat.about }));
     return row;
   });
   morphChildren(document.getElementById("rpgStats"), stats);
+
+  // Talents: one of two per tier - open at hero levels 3, 6, 10
+  document.getElementById("rpgTalentCount").innerText = picked && rules.talentLevels.some((lv, tier) => hero.level >= lv && !hero.talents[tier]) ? "!" : "";
+  morphChildren(
+    document.getElementById("rpgTalents"),
+    picked
+      ? (rules.talents[hero.cls] || []).map((options, tier) => {
+          var lv = rules.talentLevels[tier];
+          var open = hero.level >= lv;
+          var row = el("div", "rpg-talent-tier" + (open ? "" : " closed"));
+          row.appendChild(el("div", "rpg-label", "Level " + lv + (open ? (hero.talents[tier] ? "" : " - pick one") : " - " + (lv - hero.level) + " levels to go")));
+          var pair = el("div", "rpg-talent-pair");
+          options.forEach((t) => {
+            var chosen = hero.talents[tier] == t.id;
+            var other = hero.talents[tier] && !chosen;
+            var tile = el("button", "rpg-talent" + (chosen ? " chosen" : "") + (other ? " other" : ""));
+            tile.type = "button";
+            if (open && !hero.talents[tier]) {
+              tile.dataset.act = "talent";
+              tile.dataset.id = tier + ":" + t.id;
+            } else tile.disabled = true;
+            tile.append(el("span", "rpg-talent-icon", t.icon), el("b", "", t.name), el("span", "mm-muted small", t.text));
+            pair.appendChild(tile);
+          });
+          row.appendChild(pair);
+          return row;
+        })
+      : [el("div", "rpg-empty mm-muted", "Pick a class first.")],
+  );
 
   // Gear
   var gear = Object.keys(SLOT_NAMES).map((slot) => {
@@ -373,7 +417,14 @@ function renderRun() {
 
   // Between the rooms: the card won in the last fight - or what happened in the last room (the merchant: his pack)
   var reward = document.getElementById("rpgReward");
-  var panel = run.phase == "between" ? (me && me.reward ? rewardPanel(me) : run.event ? eventPanel(run, me) : null) : null;
+  var panel = null;
+  if (run.phase == "between") {
+    panel = [];
+    if (me && me.relicChoice) panel = panel.concat(relicPanel(me));
+    if (me && me.reward) panel = panel.concat(rewardPanel(me));
+    if (run.event) panel = panel.concat(eventPanel(run, me));
+    if (!panel.length) panel = null;
+  }
   reward.hidden = !panel;
   if (panel) morphChildren(reward, panel);
 
@@ -384,7 +435,10 @@ function renderRun() {
       card.dataset.act = m.down ? "" : "target";
       card.dataset.id = m.id;
       if (m.intent) card.appendChild(intentBadge(m));
-      card.append(el("div", "rpg-monster-icon", m.icon), el("div", "rpg-monster-name", m.name + (m.undead ? " 🦴" : "")), bar(m.hp, m.maxHp, "foe"), effectsRow(m.effects));
+      var name = el("div", "rpg-monster-name", m.name + (m.undead ? " 🦴" : ""));
+      if (m.affix) name.title = rules.affixes[m.affix].text;
+      card.append(el("div", "rpg-monster-icon", m.icon), name, bar(m.hp, m.maxHp, "foe"), effectsRow(m.effects));
+      if (m.affix) card.appendChild(el("div", "rpg-affix", rules.affixes[m.affix].icon + " " + rules.affixes[m.affix].text));
       return card;
     });
   } else if (run.phase == "between") scene = doorCards(run);
@@ -403,7 +457,13 @@ function renderRun() {
     info.append(el("span", "", cls.icon + " " + (rules.classes[h.cls] || {}).name), el("span", "", "🧪 " + h.potions + (h.blessed ? " · ⛩️" : "")));
     var hp = bar(h.hp, h.maxHp, "hero");
     if (h.block > 0) hp.appendChild(el("span", "rpg-block", "🛡️ " + h.block));
-    card.append(head, hp, effectsRow(h.effects), info);
+    var relics = el("div", "rpg-relics");
+    (h.relics || []).forEach((id) => {
+      var chip = el("span", "rpg-relic-chip", rules.relics[id].icon);
+      chip.title = rules.relics[id].name + ": " + rules.relics[id].text;
+      relics.appendChild(chip);
+    });
+    card.append(head, hp, effectsRow(h.effects), relics, info);
     return card;
   });
   morphChildren(document.getElementById("rpgHeroes"), heroes);
@@ -432,6 +492,21 @@ function renderRun() {
   log.scrollTop = log.scrollHeight;
 }
 
+// A relic of a hard fight: one of three (for this run)
+function relicPanel(me) {
+  var row = el("div", "rpg-relic-pick");
+  me.relicChoice.forEach((id) => {
+    var relic = rules.relics[id];
+    var tile = el("button", "rpg-relic-tile");
+    tile.type = "button";
+    tile.dataset.act = "relic";
+    tile.dataset.id = id;
+    tile.append(el("span", "rpg-relic-icon", relic.icon), el("b", "", relic.name), el("span", "mm-muted small", relic.text));
+    row.appendChild(tile);
+  });
+  return [el("div", "rpg-reward-title", "☠️ A relic - pick one for this run"), row, button("Skip", "relic", { id: "", className: "small" })];
+}
+
 // The card won in a fight: one of three for the deck
 function rewardPanel(me) {
   var cards = el("div", "rpg-reward-cards");
@@ -446,6 +521,21 @@ function eventPanel(run, me) {
   var lines = el("ul", "rpg-event-lines");
   run.event.lines.forEach((line) => lines.appendChild(el("li", "", line)));
   nodes.push(lines);
+  // The camp fire: rest or smith (a card of the deck upgraded)
+  var camp = run.event.camp && me && myName in run.event.camp ? run.event.camp[myName] : undefined;
+  if (camp === null) {
+    var choice = el("div", "rpg-camp");
+    choice.append(button("🔥 Rest · +35% HP, +1 mana", "camp", { id: "rest", className: "primary" }), button(smithing ? "Cancel" : "⚒️ Smith a card", "smithMode", { className: smithing ? "voted" : "" }));
+    nodes.push(choice);
+    if (smithing) {
+      var deck = el("div", "rpg-reward-cards");
+      me.deck.forEach((id, i) => {
+        if (/\+$/.test(id)) return;
+        deck.appendChild(cardEl(id, { tag: "button", act: "smith", id: String(i), className: "small pickable" }));
+      });
+      nodes.push(el("div", "rpg-reward-note mm-muted small", "Pick the card to upgrade (40% stronger, for this run)"), deck);
+    }
+  }
   var offer = run.event.offers && me && run.event.offers[myName];
   if (offer) {
     var prices = run.event.prices;
@@ -456,6 +546,18 @@ function eventPanel(run, me) {
       card.appendChild(el("span", "rpg-price", sold ? "Sold ✓" : "🪙 " + formatCoins(prices.card)));
       wares.appendChild(card);
     });
+    if (offer.relic) {
+      var relic = rules.relics[offer.relic];
+      var sold = offer.bought.includes(offer.relic);
+      var tile = el("button", "rpg-relic-tile" + (sold ? " off" : ""));
+      tile.type = "button";
+      if (!sold) {
+        tile.dataset.act = "buy";
+        tile.dataset.id = offer.relic;
+      }
+      tile.append(el("span", "rpg-relic-icon", relic.icon), el("b", "", relic.name), el("span", "mm-muted small", relic.text), el("span", "rpg-price", sold ? "Sold ✓" : "🪙 " + formatCoins(prices.relic)));
+      wares.appendChild(tile);
+    }
     nodes.push(wares, button("🧪 A potion · 🪙 " + formatCoins(prices.potion) + " (" + me.potions + "/" + rules.potionsMax + ")", "buy", { id: "potion", className: "small", disabled: me.potions >= rules.potionsMax || myCoins < prices.potion }));
   }
   return nodes;
@@ -513,6 +615,14 @@ function handBar(run, me) {
     var box = el("div", "rpg-result");
     var loot = party.result == "lost" ? [] : run.loot[myName] || [];
     box.append(el("div", "rpg-result-title", party.result == "lost" ? "💀 Lost" : party.result == "won" ? "🎉 Cleared - 🪙 " + formatCoins(run.pot) + " for you" : "🚪 Left - 🪙 " + formatCoins(run.pot) + " for you"));
+    var sum = party.summary && party.summary[myName];
+    if (sum) {
+      var gains = el("div", "rpg-summary");
+      gains.appendChild(el("span", "rpg-gain", "+" + sum.xp + " XP" + (party.result == "lost" ? " (half - lost)" : "")));
+      if (sum.ups) gains.appendChild(el("span", "rpg-gain up", "⬆️ Level " + sum.level + "! +" + sum.ups + " stat point" + (sum.ups == 1 ? "" : "s")));
+      if (sum.firstClear) gains.appendChild(el("span", "rpg-gain first", "🏆 First clear: +🪙 " + formatCoins(sum.firstClear)));
+      box.appendChild(gains);
+    }
     if (loot.length) {
       var list = el("div", "rpg-result-loot");
       loot.forEach((item) => list.appendChild(itemCard(item)));
@@ -541,7 +651,7 @@ function handBar(run, me) {
   left.append(energy, draw);
   var hand = el("div", "rpg-hand" + (me.ended ? " ended" : ""));
   me.hand.forEach((c, i) => {
-    var card = rules.cards[c.id];
+    var card = cardOf(c.id);
     var node = cardEl(c.id, { tag: "button", act: "card", id: c.uid, disabled: me.ended || card.cost > me.energy, className: aiming && aiming.uid == c.uid ? "aimed" : "" });
     // (fanned a little)
     var mid = (me.hand.length - 1) / 2;
@@ -586,7 +696,7 @@ function clickCard(uid) {
   }
   var entry = me.hand.find((c) => c.uid == uid);
   if (!entry) return;
-  var card = rules.cards[entry.id];
+  var card = cardOf(entry.id);
   if (card.cost > me.energy || me.ended) return;
   var foes = run.monsters.filter((m) => !m.down);
   var standing = run.heroes.filter((h) => !h.down);
@@ -620,7 +730,19 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "join") socket.emit("join", { id: id });
   else if (act == "leave") socket.emit("leave");
   else if (act == "class") socket.emit("class", { id: id });
-  else if (act == "unlock") unlockClass(id); else if (act == "buy") socket.emit("buy", { item: id });
+  else if (act == "unlock") unlockClass(id);
+  else if (act == "buy") socket.emit("buy", { item: id });
+  else if (act == "point") socket.emit("point", { stat: id });
+  else if (act == "talent") socket.emit("talent", { tier: Number(id.split(":")[0]), id: id.split(":")[1] });
+  else if (act == "relic") socket.emit("relic", { id: id || null });
+  else if (act == "camp") socket.emit("camp", { choice: id });
+  else if (act == "smithMode") {
+    smithing = !smithing;
+    render();
+  } else if (act == "smith") {
+    smithing = false;
+    socket.emit("camp", { choice: "smith", card: Number(id) });
+  }
   else if (act == "size") {
     size = Number(id);
     remember(SIZE_KEY, size);

@@ -185,6 +185,89 @@ const MONSTER_ATK = 11;
 const MONSTER_ATK_GROWTH = 1.14;
 const PARTY_HP = 0.7; // a monster has this much more HP per hero after the first
 
+/* ---------- Progression: hero levels, talents, relics, card upgrades ---------- */
+
+// Perks: what talents and relics give (added up per hero): startBlock (block at the start of a fight), firstMana
+// (mana on the first turn), draw (cards a turn), attack (more damage, share), firstStrike (the first attack of a
+// turn, share), lowHp (damage below half HP, share), crit (critical chance, %), lifesteal (of attack damage),
+// thorns (damage back when hit), block (more block, share), heal (more healing, share), afterFight (healed after a
+// fight won, share of max HP), poison (stronger poison, share), maxHp (share), agi (dodge, %)
+const PERK_KEYS = ["startBlock", "firstMana", "draw", "attack", "firstStrike", "lowHp", "crit", "lifesteal", "thorns", "block", "heal", "afterFight", "poison", "maxHp", "agi"];
+
+// Talents: every class at hero level 3, 6 and 10 - one of two
+const TALENT_LEVELS = [3, 6, 10];
+const TALENTS = {
+  warrior: [
+    [{ id: "ironskin", name: "Iron Skin", icon: "🪨", text: "Start every fight with 8 block.", perks: { startBlock: 8 } }, { id: "rhythm", name: "Battle Rhythm", icon: "🥁", text: "Your first attack each turn deals 50% more.", perks: { firstStrike: 0.5 } }],
+    [{ id: "berserk", name: "Berserker", icon: "😤", text: "35% more damage below half HP.", perks: { lowHp: 0.35 } }, { id: "recovery", name: "Recovery", icon: "🩹", text: "Heal 12% after every fight won.", perks: { afterFight: 0.12 } }],
+    [{ id: "warlord", name: "Warlord", icon: "👑", text: "+1 mana on the first turn of every fight.", perks: { firstMana: 1 } }, { id: "bloodthirst", name: "Bloodthirst", icon: "🩸", text: "Heal 15% of the damage of your attacks.", perks: { lifesteal: 0.15 } }],
+  ],
+  paladin: [
+    [{ id: "bastion", name: "Bastion", icon: "🏰", text: "30% more block from your cards.", perks: { block: 0.3 } }, { id: "aegis", name: "Aegis", icon: "🛡️", text: "Start every fight with 10 block.", perks: { startBlock: 10 } }],
+    [{ id: "spikes", name: "Spiked Armor", icon: "🌵", text: "Who hits you takes 6 damage.", perks: { thorns: 6 } }, { id: "faith", name: "Faith", icon: "🙏", text: "Heal 15% after every fight won.", perks: { afterFight: 0.15 } }],
+    [{ id: "crusader", name: "Crusader", icon: "⚔️", text: "25% more damage.", perks: { attack: 0.25 } }, { id: "vigil", name: "Vigil", icon: "❤️", text: "+20% max HP.", perks: { maxHp: 0.2 } }],
+  ],
+  cleric: [
+    [{ id: "mercy", name: "Mercy", icon: "💚", text: "40% more healing.", perks: { heal: 0.4 } }, { id: "vital", name: "Vitality", icon: "❤️", text: "+15% max HP.", perks: { maxHp: 0.15 } }],
+    [{ id: "zeal", name: "Zeal", icon: "🔥", text: "Your first attack each turn deals 50% more.", perks: { firstStrike: 0.5 } }, { id: "sanctuary", name: "Sanctuary", icon: "⛪", text: "Start every fight with 8 block.", perks: { startBlock: 8 } }],
+    [{ id: "miracle", name: "Miracle", icon: "✨", text: "+1 mana on the first turn of every fight.", perks: { firstMana: 1 } }, { id: "halo", name: "Halo", icon: "😇", text: "Heal 20% after every fight won.", perks: { afterFight: 0.2 } }],
+  ],
+  rogue: [
+    [{ id: "venom", name: "Venom", icon: "🐍", text: "Your poison is 60% stronger.", perks: { poison: 0.6 } }, { id: "quick", name: "Quick Hands", icon: "🤹", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
+    [{ id: "assassin", name: "Assassin", icon: "🗡️", text: "Your first attack each turn deals 60% more.", perks: { firstStrike: 0.6 } }, { id: "evasion", name: "Evasion", icon: "🪶", text: "+10% to dodge an attack.", perks: { agi: 10 } }],
+    [{ id: "lethal", name: "Lethal", icon: "🎯", text: "+15% critical hits.", perks: { crit: 15 } }, { id: "leech", name: "Leech", icon: "🦇", text: "Heal 12% of the damage of your attacks.", perks: { lifesteal: 0.12 } }],
+  ],
+  mage: [
+    [{ id: "insight", name: "Insight", icon: "📖", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "arcane", name: "Arcane Power", icon: "🔮", text: "20% more damage.", perks: { attack: 0.2 } }],
+    [{ id: "fortune", name: "Fortune", icon: "🍀", text: "+15% critical hits.", perks: { crit: 15 } }, { id: "wellspring", name: "Wellspring", icon: "💧", text: "+1 mana on the first turn of every fight.", perks: { firstMana: 1 } }],
+    [{ id: "archmage", name: "Archmage", icon: "🧙", text: "30% more damage.", perks: { attack: 0.3 } }, { id: "ward", name: "Ward", icon: "🔰", text: "Start every fight with 10 block.", perks: { startBlock: 10 } }],
+  ],
+};
+
+// Relics: for one run - a hard fight won gives a choice of three, chests sometimes one, the merchant sells one
+const RELICS = {
+  vampfang: { name: "Vampire Fang", icon: "🦷", text: "Heal 10% of the damage of your attacks.", perks: { lifesteal: 0.1 } },
+  whetstone: { name: "Whetstone", icon: "🪨", text: "15% more damage.", perks: { attack: 0.15 } },
+  buckle: { name: "Iron Buckle", icon: "🔩", text: "Start every fight with 6 block.", perks: { startBlock: 6 } },
+  crystal: { name: "Mana Crystal", icon: "💎", text: "+1 mana on the first turn of every fight.", perks: { firstMana: 1 } },
+  tome: { name: "Ancient Tome", icon: "📜", text: "Draw 1 more card every turn.", perks: { draw: 1 } },
+  thornmail: { name: "Thorn Mail", icon: "🌵", text: "Who hits you takes 4 damage.", perks: { thorns: 4 } },
+  heartstone: { name: "Heart Stone", icon: "❤️‍🔥", text: "+15% max HP (and healed by it).", perks: { maxHp: 0.15 } },
+  clover: { name: "Four-Leaf Clover", icon: "🍀", text: "+10% critical hits.", perks: { crit: 10 } },
+  salve: { name: "Mending Salve", icon: "🧴", text: "Heal 10% after every fight won.", perks: { afterFight: 0.1 } },
+  helm: { name: "Berserker Helm", icon: "🪖", text: "30% more damage below half HP.", perks: { lowHp: 0.3 } },
+  vial: { name: "Venom Vial", icon: "🧪", text: "Your poison is 50% stronger.", perks: { poison: 0.5 } },
+  symbol: { name: "Holy Symbol", icon: "✝️", text: "30% more healing.", perks: { heal: 0.3 } },
+  sigil: { name: "Shield Sigil", icon: "🔰", text: "25% more block from your cards.", perks: { block: 0.25 } },
+  banner: { name: "War Banner", icon: "🚩", text: "Your first attack each turn deals 40% more.", perks: { firstStrike: 0.4 } },
+};
+const RELIC_IDS = Object.keys(RELICS);
+
+// The traits of an elite: one of them
+const AFFIXES = {
+  armored: { name: "Armored", icon: "🛡️", text: "Takes 30% less damage." },
+  enraged: { name: "Enraged", icon: "😡", text: "Hits 30% harder." },
+  regen: { name: "Regenerating", icon: "💚", text: "Heals 8% every turn." },
+};
+
+// A card upgraded at a camp fire ("strike+"): 40% stronger
+const UPGRADE = 1.4;
+const baseCard = (id) => id.replace(/\+$/, "");
+const isUpgraded = (id) => id.endsWith("+");
+function cardInfo(id) {
+  const card = CARDS[baseCard(id)];
+  return isUpgraded(id) ? { ...card, name: card.name + "+", upgraded: true } : card;
+}
+
+// Hero levels: the XP for the next one; what a fight gives
+function xpNeed(level) {
+  return Math.round(40 * Math.pow(level, 1.5));
+}
+const XP = { fight: 10, hard: 16, elite: 30, boss: 60, floor: 25 };
+function xpFor(kind, floor) {
+  return Math.round((XP[kind] || 0) * (1 + (floor - 1) * 0.35));
+}
+
 const round100 = (value) => Math.max(100, Math.round(value / 100) * 100);
 const between = (rng, low, high) => low + rng() * (high - low);
 const pick = (rng, list) => list[Math.floor(rng() * list.length)];
@@ -203,7 +286,7 @@ function newHero(cls = null) {
 }
 
 function newChar() {
-  return { levels: { hp: 0, atk: 0, def: 0, luck: 0, agi: 0 }, gear: { weapon: null, armor: null, charm: null }, deepest: 0, runs: 0, cleared: 0 };
+  return { levels: { hp: 0, atk: 0, def: 0, luck: 0, agi: 0 }, gear: { weapon: null, armor: null, charm: null }, deepest: 0, runs: 0, cleared: 0, level: 1, xp: 0, points: 0, talents: [] };
 }
 
 // A character of the hero (the one played now, or of a class)
@@ -223,6 +306,47 @@ function unlock(hero, cls) {
 // The price of the next class (0: the first one)
 function classPrice(hero) {
   return hero.unlocked.length ? CLASS_PRICE : 0;
+}
+
+// XP for a character: level ups (a stat point each) -> the levels gained
+function gainXp(char, xp) {
+  char.xp += Math.max(0, Math.round(xp));
+  let ups = 0;
+  while (char.xp >= xpNeed(char.level)) {
+    char.xp -= xpNeed(char.level);
+    char.level++;
+    char.points++;
+    ups++;
+  }
+  return ups;
+}
+
+// A talent picked (tier: 0, 1, 2 - open at TALENT_LEVELS) -> an error or null
+function pickTalent(hero, tier, id) {
+  const char = charOf(hero);
+  const options = (TALENTS[hero.cls] || [])[tier];
+  if (!options) return "Unknown talent.";
+  if (char.level < TALENT_LEVELS[tier]) return `Opens at hero level ${TALENT_LEVELS[tier]}.`;
+  if (char.talents[tier]) return "Picked already.";
+  if (!options.some((t) => t.id == id)) return "Unknown talent.";
+  char.talents[tier] = id;
+  return null;
+}
+
+// The perks of a character's talents
+function talentPerks(hero, cls = hero.cls) {
+  const char = charOf(hero, cls);
+  const perks = {};
+  (TALENTS[cls] || []).forEach((options, tier) => {
+    const talent = options.find((t) => t.id == char.talents[tier]);
+    if (talent) addPerks(perks, talent.perks);
+  });
+  return perks;
+}
+
+function addPerks(into, perks) {
+  for (const [key, value] of Object.entries(perks)) into[key] = (into[key] || 0) + value;
+  return into;
 }
 
 // What a character has with its class, levels and gear: {maxHp, atk, def, luck, agi} (agi: the dodge chance, %)
@@ -273,6 +397,11 @@ function heroView(hero) {
     maxFloor: maxFloor(hero),
     runs: char.runs,
     cleared: char.cleared,
+    level: char.level,
+    xp: char.xp,
+    xpNeed: xpNeed(char.level),
+    points: char.points,
+    talents: char.talents,
   };
 }
 
@@ -307,7 +436,7 @@ function makeGear(floor, rng = Math.random, luck = 0) {
 
 const ROOM_KINDS = {
   fight: { name: "Fight", icon: "⚔️", about: "Monsters - loot for the pot" },
-  hard: { name: "Hard fight", icon: "☠️", about: "More and stronger monsters - almost double the loot" },
+  hard: { name: "Hard fight", icon: "☠️", about: "More and stronger monsters - almost double the loot and a relic" },
   elite: { name: "The guarded gate", icon: "👑", about: "The guard of the floor - beat it to clear the floor" },
   boss: { name: "Boss", icon: "💀", about: "The master of the floor" },
   chest: { name: "Chest", icon: "🎁", about: "Coins for the pot - maybe gear for each hero" },
@@ -352,6 +481,12 @@ function senseChance(run) {
 }
 
 let monsterCount = 0;
+let affixCount = 0;
+// (the traits take turns - every one comes up)
+function affixRoll() {
+  const ids = Object.keys(AFFIXES);
+  return ids[affixCount++ % ids.length];
+}
 
 const RANKS = {
   normal: { id: "normal", prefix: "", hp: 1, atk: 1 },
@@ -367,7 +502,14 @@ function monster(floor, size, kind, rank) {
   const max = Math.max(1, Math.round(hp));
   // (an elite also smashes)
   const moves = rank.id != "normal" && !kind.moves.includes("smash") ? [...kind.moves, "smash"] : kind.moves;
-  return { id: "m" + ++monsterCount, name: rank.prefix + kind.name, icon: kind.icon, hp: max, maxHp: max, atk: Math.max(1, Math.round(atk)), dodge: kind.dodge || 0, undead: !!kind.undead, moves, rank: rank.id, effects: {}, intent: null };
+  const foe = { id: "m" + ++monsterCount, name: rank.prefix + kind.name, icon: kind.icon, hp: max, maxHp: max, atk: Math.max(1, Math.round(atk)), dodge: kind.dodge || 0, undead: !!kind.undead, moves, rank: rank.id, effects: {}, intent: null, affix: null };
+  // (an elite has a trait from floor 3 on: armored, enraged or regenerating)
+  if ((rank.id == "elite" && floor >= 3) || rank.id == "boss") {
+    foe.affix = affixRoll();
+    foe.name = AFFIXES[foe.affix].name + " " + foe.name;
+    if (foe.affix == "enraged") foe.atk = Math.round(foe.atk * 1.3);
+  }
+  return foe;
 }
 
 // The monsters of a fight: 1 to 3 (more with a bigger party, a hard fight one more) - an elite with a few others
@@ -400,11 +542,19 @@ function newRun(floor, party, rng = Math.random) {
     phase: "between",
     heroes: party.map(({ name, hero }) => {
       const stats = statsOf(hero);
+      // (the talents of the character: perks for the whole run - relics add theirs)
+      const perks = talentPerks(hero);
+      stats.maxHp = Math.round(stats.maxHp * (1 + (perks.maxHp || 0)));
+      stats.agi = Math.min(DODGE_MAX + 10, stats.agi + (perks.agi || 0));
       return {
         name,
         cls: hero.cls,
         ...stats,
         hp: stats.maxHp,
+        perks,
+        relics: [],
+        relicChoice: null,
+        xp: 0,
         down: false,
         potions: hero.potions,
         deck: starterDeck(hero.cls),
@@ -437,6 +587,26 @@ function say(run, text) {
 }
 
 const alive = (list) => list.filter((one) => !one.down && one.hp > 0);
+const perk = (hero, key) => (hero.perks && hero.perks[key]) || 0;
+
+// A relic for a hero (its perks for the rest of the run)
+function giveRelic(run, hero, id) {
+  const relic = RELICS[id];
+  hero.relics.push(id);
+  addPerks(hero.perks, relic.perks);
+  if (relic.perks.maxHp) {
+    const more = Math.round(hero.maxHp * relic.perks.maxHp);
+    hero.maxHp += more;
+    hero.hp += more;
+  }
+  say(run, `${hero.name} takes ${relic.icon} ${relic.name}: ${relic.text}`);
+}
+
+// Three relics a hero hasn't got yet
+function relicOffer(hero, rng, count = 3) {
+  const free = RELIC_IDS.filter((id) => !hero.relics.includes(id));
+  return shuffle(free, rng).slice(0, count);
+}
 const roomNumber = (run) => run.rooms.length;
 
 function shuffle(list, rng) {
@@ -522,6 +692,14 @@ function enterRoom(run, door = 0, rng = Math.random) {
         run.loot[hero.name].push(item);
         note(`${hero.name} finds ${item.icon} ${item.name} (${item.rarity}) - it goes to the bag at the end of the run.`);
       } else note(`${hero.name} finds no gear.`);
+      // (now and then a relic - for this run)
+      if (rng() < 0.2) {
+        const [id] = relicOffer(hero, rng, 1);
+        if (id) {
+          giveRelic(run, hero, id);
+          note(`${hero.name} finds a relic: ${RELICS[id].icon} ${RELICS[id].name} - ${RELICS[id].text}`);
+        }
+      }
     }
   } else if (kind == "trap") {
     for (const hero of heroes) {
@@ -533,12 +711,10 @@ function enterRoom(run, door = 0, rng = Math.random) {
       }
     }
   } else if (kind == "rest") {
-    for (const hero of heroes) {
-      const heal = Math.min(hero.maxHp - hero.hp, Math.round(hero.maxHp * REST_HEAL));
-      hero.hp += heal;
-      hero.bonusEnergy = 1;
-      note(`${hero.name} heals ${heal} HP and starts the next fight with 1 more mana.`);
-    }
+    // (every hero chooses: rest - heal - or smith - upgrade a card of the deck)
+    run.event.camp = {};
+    for (const hero of heroes) run.event.camp[hero.name] = null;
+    note("A camp fire - rest (heal 35%, +1 mana in the next fight) or smith (upgrade a card: 40% stronger).");
   } else if (kind == "shrine") {
     for (const hero of heroes) {
       const cost = Math.round(hero.maxHp * SHRINE_COST);
@@ -549,7 +725,7 @@ function enterRoom(run, door = 0, rng = Math.random) {
   } else if (kind == "merchant") {
     // (every hero shops on its own, with its own coins: a potion, one of three cards for the deck)
     run.event.offers = {};
-    for (const hero of heroes) run.event.offers[hero.name] = { cards: rewardFor(hero, rng), bought: [] };
+    for (const hero of heroes) run.event.offers[hero.name] = { cards: rewardFor(hero, rng), relic: relicOffer(hero, rng, 1)[0] || null, bought: [] };
     note("A merchant opens his pack - buy what you like with your coins, then vote for a door.");
   }
   room.done = true;
@@ -596,9 +772,48 @@ function pickReward(run, name, card) {
   return null;
 }
 
+// The relic of the elite: one of three (null: none)
+function pickRelic(run, name, id) {
+  const hero = run.heroes.find((h) => h.name == name);
+  if (!hero || !hero.relicChoice) return "No relic to pick.";
+  if (id != null && !hero.relicChoice.includes(id)) return "Not one of your relics.";
+  if (id != null) giveRelic(run, hero, id);
+  hero.relicChoice = null;
+  return null;
+}
+
+// At the camp fire: {choice: "rest"} or {choice: "smith", card: an index of the deck} -> an error or null
+function campfire(run, name, input) {
+  const hero = run.heroes.find((h) => h.name == name);
+  const camp = run.event && run.event.camp;
+  if (run.phase != "between" || !camp || !hero || !(name in camp)) return "No camp fire here.";
+  if (camp[name]) return "You chose already.";
+  if (input.choice == "rest") {
+    const heal = healHero(run, hero, hero.maxHp * REST_HEAL);
+    hero.bonusEnergy = 1;
+    camp[name] = "rest";
+    run.event.lines.push(`${name} rests: +${heal} HP, +1 mana in the next fight.`);
+    say(run, `${name} rests at the fire 🔥 (+${heal} HP).`);
+    return null;
+  }
+  if (input.choice == "smith") {
+    const index = Number(input.card);
+    const id = hero.deck[index];
+    if (!id) return "Pick a card of your deck.";
+    if (isUpgraded(id)) return "That card is upgraded already.";
+    hero.deck[index] = id + "+";
+    camp[name] = "smith";
+    run.event.lines.push(`${name} upgrades ${CARDS[id].icon} ${CARDS[id].name} to ${CARDS[id].name}+.`);
+    say(run, `${name} smiths ${CARDS[id].name}+ ⚒️.`);
+    return null;
+  }
+  return "Rest or smith.";
+}
+
 // The merchant's prices (coins): a potion, a card
 function merchantPrices(floor) {
-  return { potion: POTION_PRICE, card: round100(Math.max(1500, entryCost(floor) * 1.2)) };
+  const card = round100(Math.max(1500, entryCost(floor) * 1.2));
+  return { potion: POTION_PRICE, card, relic: card * 3 };
 }
 
 // What a hero may buy of the merchant: {price} or {error} (item: "potion" or a card of its offer)
@@ -611,8 +826,9 @@ function canBuy(run, name, item) {
     if (hero.potions >= POTIONS_MAX) return { error: `At most ${POTIONS_MAX} potions.` };
     return { price: prices.potion };
   }
-  if (!offer.cards.includes(item)) return { error: "He doesn't sell that." };
   if (offer.bought.includes(item)) return { error: "Sold already." };
+  if (item == offer.relic) return { price: prices.relic };
+  if (!offer.cards.includes(item)) return { error: "He doesn't sell that." };
   return { price: prices.card };
 }
 
@@ -620,12 +836,14 @@ function canBuy(run, name, item) {
 function bought(run, name, item) {
   const hero = run.heroes.find((h) => h.name == name);
   const offer = run.event.offers[name];
-  if (item == "potion") hero.potions++;
-  else {
-    hero.deck.push(item);
-    offer.bought.push(item);
+  if (item == "potion") {
+    hero.potions++;
+    return say(run, `${name} buys a potion 🧪.`);
   }
-  say(run, `${name} buys ${item == "potion" ? "a potion 🧪" : CARDS[item].icon + " " + CARDS[item].name}.`);
+  offer.bought.push(item);
+  if (item == offer.relic) return giveRelic(run, hero, item);
+  hero.deck.push(item);
+  say(run, `${name} buys ${CARDS[item].icon} ${CARDS[item].name}.`);
 }
 
 // Three different cards: mostly the class's, sometimes a neutral one
@@ -658,12 +876,14 @@ function drawCards(hero, count, rng) {
 // A new turn of the heroes: block gone, full energy, 5 new cards; the monsters show what they do next
 function startRound(run, rng) {
   run.turn++;
+  const first = run.turn == 1;
   for (const hero of alive(run.heroes)) {
-    hero.block = 0;
-    hero.energy = ENERGY + hero.bonusEnergy;
+    hero.block = first ? perk(hero, "startBlock") : 0;
+    hero.energy = ENERGY + hero.bonusEnergy + (first ? perk(hero, "firstMana") : 0);
     hero.bonusEnergy = 0;
     hero.ended = false;
-    drawCards(hero, HAND, rng);
+    hero.attacked = false;
+    drawCards(hero, HAND + perk(hero, "draw"), rng);
   }
   planIntents(run, rng);
 }
@@ -710,12 +930,16 @@ function strike(run, hero, foe, power, rng, options = {}) {
     say(run, `${foe.icon} ${foe.name} dodges ${hero.name}.`);
     return 0;
   }
-  const crit = rng() * 100 < hero.luck;
-  let damage = hero.atk * between(rng, 0.9, 1.1) * power * (crit ? CRIT : 1) * (hero.blessed ? SHRINE_POWER : 1) * (hero.effects.might ? MIGHT : 1);
+  const crit = rng() * 100 < hero.luck + perk(hero, "crit");
+  // (the perks of talents and relics: more damage, the first attack of a turn, low HP)
+  const bonus = 1 + perk(hero, "attack") + (hero.firstAttack ? perk(hero, "firstStrike") : 0) + (hero.hp < hero.maxHp / 2 ? perk(hero, "lowHp") : 0);
+  let damage = hero.atk * between(rng, 0.9, 1.1) * power * bonus * (crit ? CRIT : 1) * (hero.blessed ? SHRINE_POWER : 1) * (hero.effects.might ? MIGHT : 1);
   if (foe.defending) damage *= 0.5;
+  if (foe.affix == "armored") damage *= 0.7;
   damage = Math.max(1, Math.round(damage));
   foe.hp = Math.max(0, foe.hp - damage);
   say(run, `${hero.name}${options.verb ? " " + options.verb : " hits"} ${foe.icon} ${foe.name} for ${damage}${crit ? " (critical!)" : ""}${foe.defending ? " (blocked half)" : ""}.`);
+  if (perk(hero, "lifesteal") && !hero.down) healHero(run, hero, damage * perk(hero, "lifesteal"));
   if (foe.hp == 0) {
     foe.down = true;
     say(run, `${foe.icon} ${foe.name} is defeated.`);
@@ -724,7 +948,7 @@ function strike(run, hero, foe, power, rng, options = {}) {
 }
 
 // Damage to a hero: smoke, a dodge, armor (at most 75% of a hit), taunt - then the block takes it
-function hurt(run, hero, raw, source, rng = Math.random) {
+function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
   if (hero.evading) {
     say(run, `${source} misses ${hero.name} in the smoke.`);
     return 0;
@@ -741,6 +965,15 @@ function hurt(run, hero, raw, source, rng = Math.random) {
   damage -= blocked;
   hero.hp = Math.max(0, hero.hp - damage);
   say(run, `${source} hits ${hero.name} for ${damage}${blocked ? ` (${blocked} blocked)` : ""}.`);
+  // (thorns: who hits pays)
+  if (foe && perk(hero, "thorns") && !foe.down) {
+    foe.hp = Math.max(0, foe.hp - perk(hero, "thorns"));
+    say(run, `${foe.icon} ${foe.name} takes ${perk(hero, "thorns")} from ${hero.name}'s thorns 🌵.`);
+    if (foe.hp == 0) {
+      foe.down = true;
+      say(run, `${foe.icon} ${foe.name} is defeated.`);
+    }
+  }
   if (hero.hp == 0) {
     hero.down = true;
     hero.effects = {};
@@ -764,8 +997,8 @@ function play(run, name, input, rng = Math.random) {
   if (hero.ended) return "You ended your turn.";
   const index = hero.hand.findIndex((c) => c.uid == (input && input.uid));
   if (index < 0) return "That card isn't in your hand.";
-  const card = CARDS[hero.hand[index].id];
-  if (hero.energy < card.cost) return `${card.name} needs ${card.cost} energy.`;
+  const card = cardInfo(hero.hand[index].id);
+  if (hero.energy < card.cost) return `${card.name} needs ${card.cost} mana.`;
   const foes = alive(run.monsters);
   const foe = foes.find((m) => m.id == input.target) || null;
   if (card.target == "foe" && !foe) return "Pick a foe for it.";
@@ -775,46 +1008,54 @@ function play(run, name, input, rng = Math.random) {
   hero.energy -= card.cost;
   const [{ id }] = hero.hand.splice(index, 1);
   (card.exhaust ? hero.exhausted : hero.discard).push(id);
+  // (the first attack of the turn: the perks for it)
+  hero.firstAttack = card.type == "attack" && !hero.attacked;
+  if (card.type == "attack") hero.attacked = true;
   cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng);
+  hero.firstAttack = false;
   if (!alive(run.monsters).length) winFight(run, rng);
   return null;
 }
 
 function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
+  // (an upgraded card: 40% stronger - the perks: more block, more healing, stronger poison)
+  const up = isUpgraded(id) ? UPGRADE : 1;
   const block = (who, amount) => {
-    who.block += Math.round(amount);
+    const value = Math.round(amount * up * (1 + perk(hero, "block")));
+    who.block += value;
+    return value;
   };
-  switch (id) {
+  const heal = (who, amount) => healHero(run, who, amount * up * (1 + perk(hero, "heal")));
+  const venom = up * (1 + perk(hero, "poison"));
+  switch (baseCard(id)) {
     case "strike":
-      return strike(run, hero, foe, 1, rng);
+      return strike(run, hero, foe, (1) * up, rng);
     case "defend":
-      block(hero, 6 + hero.def);
-      return say(run, `${hero.name} blocks ${6 + hero.def}.`);
+      return say(run, `${hero.name} blocks ${block(hero, 6 + hero.def)}.`);
     case "focus":
       return drawCards(hero, 2, rng);
     case "secondwind":
-      block(hero, 5 + hero.def);
-      return say(run, `${hero.name} catches breath: +${healHero(run, hero, hero.maxHp * 0.06)} HP, blocks ${5 + hero.def}.`);
+      return say(run, `${hero.name} catches breath: blocks ${block(hero, 5 + hero.def)}, +${heal(hero, hero.maxHp * 0.06)} HP.`);
     case "adrenaline":
       hero.energy++;
       return drawCards(hero, 1, rng);
     case "quickslash":
-      strike(run, hero, foe, 0.5, rng);
+      strike(run, hero, foe, (0.5) * up, rng);
       return drawCards(hero, 1, rng);
     case "bash":
-      if (strike(run, hero, foe, 1.1, rng, { sure: true, verb: "smashes" }) && !foe.down) {
+      if (strike(run, hero, foe, (1.1) * up, rng, { sure: true, verb: "smashes" }) && !foe.down) {
         foe.effects.stun = 1;
         say(run, `${foe.icon} ${foe.name} is stunned 💫.`);
       }
       return;
     case "cleave":
-      for (const one of foes) strike(run, hero, one, 0.7, rng, { sure: true, verb: "cleaves" });
+      for (const one of foes) strike(run, hero, one, (0.7) * up, rng, { sure: true, verb: "cleaves" });
       return;
     case "battlecry":
       for (const one of alive(run.heroes)) one.effects.might = 2;
       return say(run, `${hero.name} lets out a war cry 📯 - the party hits harder!`);
     case "ironwave":
-      strike(run, hero, foe, 0.7, rng);
+      strike(run, hero, foe, (0.7) * up, rng);
       return block(hero, 4 + hero.def / 2);
     case "bloodlust":
       hero.hp = Math.max(1, hero.hp - Math.round(hero.maxHp * 0.08));
@@ -825,71 +1066,71 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
       block(hero, 4 + hero.def);
       return say(run, `${hero.name} taunts the foes 📣.`);
     case "judgement":
-      return strike(run, hero, foe, (hero.atk + hero.def) / hero.atk, rng, { sure: true, verb: "judges" });
+      return strike(run, hero, foe, ((hero.atk + hero.def) / hero.atk) * up, rng, { sure: true, verb: "judges" });
     case "holyshield":
       for (const one of alive(run.heroes)) block(one, 5 + hero.def);
       return say(run, `${hero.name} raises a holy shield over the party 🛡️.`);
     case "consecrate":
-      for (const one of foes) strike(run, hero, one, 0.5, rng, { sure: true, verb: "burns" });
-      for (const one of alive(run.heroes)) healHero(run, one, one.maxHp * 0.05);
+      for (const one of foes) strike(run, hero, one, (0.5) * up, rng, { sure: true, verb: "burns" });
+      for (const one of alive(run.heroes)) heal(one, one.maxHp * 0.05);
       return;
     case "bulwark":
       block(hero, 10 + 2 * hero.def);
       return say(run, `${hero.name} braces behind the shield 🏰.`);
     case "heal":
-      return say(run, `${hero.name} heals ${friend.name} for ${healHero(run, friend, friend.maxHp * 0.25)} 💚.`);
+      return say(run, `${hero.name} heals ${friend.name} for ${heal(friend, friend.maxHp * 0.25)} 💚.`);
     case "smite":
-      return strike(run, hero, foe, foe.undead ? 2.5 : 1.2, rng, { sure: true, verb: "smites" });
+      return strike(run, hero, foe, (foe.undead ? 2.5 : 1.2) * up, rng, { sure: true, verb: "smites" });
     case "revive":
       fallen.down = false;
       fallen.hp = Math.round(fallen.maxHp * 0.4);
       fallen.ended = true;
       return say(run, `${hero.name} brings ${fallen.name} back 🕊️!`);
     case "prayer":
-      for (const one of alive(run.heroes)) healHero(run, one, one.maxHp * 0.12);
+      for (const one of alive(run.heroes)) heal(one, one.maxHp * 0.12);
       return say(run, `${hero.name} prays - the party heals 🙏.`);
     case "blessing":
       friend.effects.might = 2;
       block(friend, 5);
       return say(run, `${hero.name} blesses ${friend.name} 🌞.`);
     case "poisonblade":
-      if (strike(run, hero, foe, 0.6, rng, { sure: true, verb: "cuts" }) && !foe.down) {
-        foe.effects.poison = { turns: 3, dmg: Math.max(1, Math.round(hero.atk * 0.45)) };
+      if (strike(run, hero, foe, (0.6) * up, rng, { sure: true, verb: "cuts" }) && !foe.down) {
+        foe.effects.poison = { turns: 3, dmg: Math.max(1, Math.round(hero.atk * 0.45 * venom)) };
         say(run, `${foe.icon} ${foe.name} is poisoned ☠️.`);
       }
       return;
     case "backstab":
-      return strike(run, hero, foe, foe.effects.poison || foe.effects.stun ? 3 : 1.2, rng, { sure: true, verb: "backstabs" });
+      return strike(run, hero, foe, (foe.effects.poison || foe.effects.stun ? 3 : 1.2) * up, rng, { sure: true, verb: "backstabs" });
     case "smoke":
       hero.evading = true;
       return say(run, `${hero.name} vanishes in smoke 💨.`);
     case "envenom":
-      for (const one of foes) one.effects.poison = { turns: 2, dmg: Math.max(1, Math.round(hero.atk * 0.4)) };
+      for (const one of foes) one.effects.poison = { turns: 2, dmg: Math.max(1, Math.round(hero.atk * 0.4 * venom)) };
       return say(run, `${hero.name} poisons every foe 🧪.`);
     case "flurry":
       for (let i = 0; i < 3; i++) {
         const standing = alive(run.monsters);
-        if (standing.length) strike(run, hero, pick(rng, standing), 0.4, rng, { sure: true, verb: "slashes" });
+        if (standing.length) strike(run, hero, pick(rng, standing), (0.4) * up, rng, { sure: true, verb: "slashes" });
       }
       return;
     case "frost":
-      if (strike(run, hero, foe, 0.8, rng, { sure: true, verb: "freezes" }) && !foe.down) {
+      if (strike(run, hero, foe, (0.8) * up, rng, { sure: true, verb: "freezes" }) && !foe.down) {
         foe.effects.chill = 2;
         say(run, `${foe.icon} ${foe.name} is chilled ❄️.`);
       }
       return;
     case "fireball":
       for (const one of foes) {
-        if (strike(run, hero, one, 0.7, rng, { sure: true, verb: "burns" }) && !one.down) one.effects.burn = { turns: 2, dmg: Math.max(1, Math.round(hero.atk * 0.3)) };
+        if (strike(run, hero, one, (0.7) * up, rng, { sure: true, verb: "burns" }) && !one.down) one.effects.burn = { turns: 2, dmg: Math.max(1, Math.round(hero.atk * 0.3)) };
       }
       return;
     case "barrier":
       block(friend, 8 + hero.atk * 0.6);
       return say(run, `${hero.name} shields ${friend.name} 🔮.`);
     case "arcanebolt":
-      return strike(run, hero, foe, 1.5, rng, { sure: true, verb: "blasts" });
+      return strike(run, hero, foe, (1.5) * up, rng, { sure: true, verb: "blasts" });
     case "meteor":
-      for (const one of foes) strike(run, hero, one, 1.6, rng, { sure: true, verb: "crushes" });
+      for (const one of foes) strike(run, hero, one, (1.6) * up, rng, { sure: true, verb: "crushes" });
       return;
   }
 }
@@ -915,29 +1156,29 @@ function monsterMove(run, foe, rng) {
   switch (intent.move) {
     case "attack":
     case "smash":
-      hurt(run, target, damage * between(rng, 0.9, 1.1), intent.move == "smash" ? source + " 💥" : source, rng);
+      hurt(run, target, damage * between(rng, 0.9, 1.1), intent.move == "smash" ? source + " 💥" : source, rng, foe);
       break;
     case "poison":
-      if (hurt(run, target, damage, source, rng) > 0 && !target.down) {
+      if (hurt(run, target, damage, source, rng, foe) > 0 && !target.down) {
         target.effects.poison = { turns: 3, dmg: Math.max(1, Math.round(foe.atk * 0.35)) };
         say(run, `${target.name} is poisoned ☠️.`);
       }
       break;
     case "steal":
-      if (hurt(run, target, damage, source, rng) > 0 && target.potions > 0) {
+      if (hurt(run, target, damage, source, rng, foe) > 0 && target.potions > 0) {
         target.potions--;
         say(run, `${source} steals a potion from ${target.name} 🫳!`);
       }
       break;
     case "drain": {
-      const done = hurt(run, target, damage, source, rng);
+      const done = hurt(run, target, damage, source, rng, foe);
       foe.hp = Math.min(foe.maxHp, foe.hp + done);
       break;
     }
     case "burn":
       say(run, `${source} sends a fire wave 🔥!`);
       for (const hero of heroes) {
-        if (hurt(run, hero, damage, source, rng) > 0 && !hero.down) hero.effects.burn = { turns: 2, dmg: Math.max(1, Math.round(foe.atk * 0.25)) };
+        if (hurt(run, hero, damage, source, rng, foe) > 0 && !hero.down) hero.effects.burn = { turns: 2, dmg: Math.max(1, Math.round(foe.atk * 0.25)) };
       }
       break;
     case "regen": {
@@ -983,6 +1224,12 @@ function monsterTurn(run, rng = Math.random) {
     }
     monsterMove(run, foe, rng);
     if (!alive(run.heroes).length) break;
+  }
+  for (const foe of alive(run.monsters)) {
+    if (foe.affix != "regen" || foe.hp >= foe.maxHp) continue;
+    const heal = Math.min(foe.maxHp - foe.hp, Math.round(foe.maxHp * 0.08));
+    foe.hp += heal;
+    say(run, `${foe.icon} ${foe.name} regenerates ${heal} 💚.`);
   }
   for (const one of [...alive(run.heroes), ...alive(run.monsters)]) {
     const label = one.icon ? `${one.icon} ${one.name}` : one.name;
@@ -1035,9 +1282,15 @@ function winFight(run, rng) {
       say(run, `${hero.name} gets back up.`);
     }
     hero.reward = rewardFor(hero, rng);
+    hero.xp += xpFor(room.kind, run.floor);
+    // (a perk: healed after a fight won)
+    if (perk(hero, "afterFight")) healHero(run, hero, hero.maxHp * perk(hero, "afterFight"));
+    // (a hard fight won: one of three relics)
+    if (room.kind == "hard") hero.relicChoice = relicOffer(hero, rng);
   }
   room.done = true;
   afterRoom(run, rng);
+  if (run.phase == "won") for (const hero of run.heroes) hero.xp += xpFor("floor", run.floor);
 }
 
 // For the pages
@@ -1074,6 +1327,9 @@ function runView(run) {
       discardCount: h.discard.length,
       deck: h.deck,
       reward: h.reward,
+      relics: h.relics,
+      relicChoice: h.relicChoice,
+      xp: h.xp,
     })),
     monsters: run.monsters.map((m) => ({
       id: m.id,
@@ -1084,6 +1340,7 @@ function runView(run) {
       atk: m.atk,
       rank: m.rank,
       undead: m.undead,
+      affix: m.affix,
       down: !!m.down,
       effects: effectsOf(m.effects),
       intent: m.down || !m.intent ? null : { move: m.intent.move, target: m.intent.target || null, damage: intentDamage(m, m.intent.move), stunned: !!m.effects.stun },
@@ -1111,12 +1368,12 @@ function incoming(run, hero) {
 function simulatedTurn(run, me, rng) {
   if (me.hp < me.maxHp * 0.3 && me.potions > 0) drink(run, me.name);
   for (let guard = 0; guard < 20 && run.phase == "fight" && !me.ended; guard++) {
-    const playable = me.hand.filter((c) => CARDS[c.id].cost <= me.energy && CARDS[c.id].target != "fallen");
+    const playable = me.hand.filter((c) => cardInfo(c.id).cost <= me.energy && cardInfo(c.id).target != "fallen");
     if (!playable.length) break;
     const need = incoming(run, me) - me.block;
-    const blockCard = playable.find((c) => ["defend", "bulwark", "secondwind", "taunt", "smoke", "holyshield", "barrier"].includes(c.id));
-    const healCard = playable.find((c) => ["heal", "prayer"].includes(c.id));
-    const attack = playable.find((c) => CARDS[c.id].type == "attack") || playable.find((c) => !["defend", "bulwark", "secondwind", "taunt", "smoke", "holyshield", "barrier", "heal", "prayer"].includes(c.id));
+    const blockCard = playable.find((c) => ["defend", "bulwark", "secondwind", "taunt", "smoke", "holyshield", "barrier"].includes(baseCard(c.id)));
+    const healCard = playable.find((c) => ["heal", "prayer"].includes(baseCard(c.id)));
+    const attack = playable.find((c) => cardInfo(c.id).type == "attack") || playable.find((c) => !["defend", "bulwark", "secondwind", "taunt", "smoke", "holyshield", "barrier", "heal", "prayer"].includes(baseCard(c.id)));
     const card = me.hp < me.maxHp * 0.5 && healCard ? healCard : need > 2 && blockCard ? blockCard : attack || blockCard || healCard;
     if (!card) break;
     const foe = alive(run.monsters).sort((a, b) => a.hp - b.hp)[0];
@@ -1133,6 +1390,8 @@ function simulate(hero, floor, runs = 500, rng = Math.random) {
     while (run.phase == "between") {
       const me = run.heroes[0];
       if (me.reward) pickReward(run, "sim", me.reward[0]);
+      if (me.relicChoice) pickRelic(run, "sim", me.relicChoice[0]);
+      if (run.event && run.event.camp) campfire(run, "sim", me.hp < me.maxHp * 0.7 ? { choice: "rest" } : { choice: "smith", card: me.deck.findIndex((id) => !isUpgraded(id)) });
       enterRoom(run, Math.floor(rng() * run.doors.length), rng);
       let turns = 0;
       while (run.phase == "fight" && turns++ < 100) {
@@ -1173,6 +1432,20 @@ module.exports = {
   ENERGY,
   MOVES,
   ROOM_KINDS,
+  TALENTS,
+  TALENT_LEVELS,
+  RELICS,
+  AFFIXES,
+  UPGRADE,
+  cardInfo,
+  xpNeed,
+  xpFor,
+  gainXp,
+  pickTalent,
+  talentPerks,
+  pickRelic,
+  campfire,
+  giveRelic,
   merchantPrices,
   canBuy,
   bought,

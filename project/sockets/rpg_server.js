@@ -61,6 +61,7 @@ module.exports = function (io, options = {}) {
       members: party.members,
       started: party.run != null,
       result: party.result || null,
+      summary: party.summary || null,
       timeLeft: party.endsAt ? Math.max(0, party.endsAt - Date.now()) : null,
       run: party.run ? rpg.runView(party.run) : null,
     };
@@ -103,6 +104,10 @@ module.exports = function (io, options = {}) {
       turn: timing.turn,
       decide: timing.decide,
       cards: rpg.CARDS,
+      talents: rpg.TALENTS,
+      talentLevels: rpg.TALENT_LEVELS,
+      relics: rpg.RELICS,
+      affixes: rpg.AFFIXES,
       doors: rpg.DOORS,
     };
   }
@@ -213,6 +218,7 @@ module.exports = function (io, options = {}) {
     party.endsAt = null;
     const run = party.run;
     party.result = result;
+    party.summary = {};
     if (result === "left") run.phase = "left";
     for (const one of run.heroes) {
       if (!heroes.has(one.name)) continue;
@@ -220,6 +226,13 @@ module.exports = function (io, options = {}) {
       hero.potions = Math.min(rpg.POTIONS_MAX, hero.potions + one.potions);
       // (the floor counts for the character that went down - its class)
       const char = rpg.charOf(hero, one.cls);
+      // XP for the character (lost: half of it) - a floor cleared the first time: a bonus (coins, XP)
+      const firstClear = result === "won" && run.floor > char.deepest;
+      const bonus = firstClear ? rpg.entryCost(run.floor) : 0;
+      const xp = Math.round((result === "lost" ? one.xp / 2 : one.xp) + (firstClear ? rpg.xpFor("floor", run.floor) * 2 : 0));
+      const ups = rpg.gainXp(char, xp);
+      party.summary[one.name] = { xp, ups, level: char.level, firstClear: bonus };
+      if (bonus && ours(one.name)) await coins.add(one.name, bonus, { reason: "rpg first clear", note: "floor " + run.floor });
       if (result === "won") {
         char.deepest = Math.max(char.deepest, run.floor);
         char.cleared++;
@@ -296,6 +309,27 @@ module.exports = function (io, options = {}) {
       if (cost == null) return error("That one is at its highest level.");
       if (!(await coins.spend(username, cost, { reason: "rpg upgrade", note: data.stat }))) return error(coins.refusal(username) || "You don't have enough coins.");
       char.levels[data.stat] = level + 1;
+      sendHero(username);
+    });
+
+    // A stat point (one per hero level): a free level of a stat
+    on("point", (data) => {
+      if (!rpg.STAT_IDS.includes(data.stat)) return;
+      if (inRun()) return error("Not during a run.");
+      const hero = heroOf(username);
+      const char = rpg.charOf(hero);
+      if (!hero.cls || char.points <= 0) return error("No stat points.");
+      if (rpg.upgradeCost(char.levels[data.stat] || 0) == null) return error("That one is at its highest level.");
+      char.points--;
+      char.levels[data.stat] = (char.levels[data.stat] || 0) + 1;
+      sendHero(username);
+    });
+
+    // A talent of the class (one of two, per tier)
+    on("talent", (data) => {
+      if (inRun()) return error("Not during a run.");
+      const problem = rpg.pickTalent(heroOf(username), Number(data.tier), String(data.id));
+      if (problem) return error(problem);
       sendHero(username);
     });
 
@@ -445,6 +479,24 @@ module.exports = function (io, options = {}) {
       const party = myRun();
       if (!party) return;
       const problem = rpg.drink(party.run, username);
+      if (problem) return error(problem);
+      emitParty(party);
+    });
+
+    // The relic of the elite's guard ({id: null} - none)
+    on("relic", (data) => {
+      const party = myRun();
+      if (!party) return;
+      const problem = rpg.pickRelic(party.run, username, data.id != null ? String(data.id) : null);
+      if (problem) return error(problem);
+      emitParty(party);
+    });
+
+    // The camp fire: {choice: "rest"} or {choice: "smith", card: an index of the deck}
+    on("camp", (data) => {
+      const party = myRun();
+      if (!party) return;
+      const problem = rpg.campfire(party.run, username, { choice: String(data.choice), card: data.card });
       if (problem) return error(problem);
       emitParty(party);
     });

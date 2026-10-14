@@ -109,8 +109,10 @@
                                     <button type="button" id="rpgBuyPotion" class="rpg-btn small"></button>
                                 </div>
                             </div>
+                            <div id="rpgXp" class="rpg-xp" hidden></div>
                             <div class="rpg-tabs" role="tablist">
                                 <button type="button" class="rpg-tab active" data-tab="hero">Hero</button>
+                                <button type="button" class="rpg-tab" data-tab="talents">Talents <span id="rpgTalentCount" class="rpg-tab-count"></span></button>
                                 <button type="button" class="rpg-tab" data-tab="gear">Gear <span id="rpgBagCount" class="rpg-tab-count"></span></button>
                                 <button type="button" class="rpg-tab" data-tab="deck">Deck <span id="rpgDeckCount" class="rpg-tab-count"></span></button>
                             </div>
@@ -118,6 +120,10 @@
                                 <div id="rpgClasses" class="rpg-classes"></div>
                                 <div id="rpgClassInfo" class="rpg-class-info"></div>
                                 <div id="rpgStats" class="rpg-stats"></div>
+                            </div>
+                            <div class="rpg-pane" data-pane="talents" hidden>
+                                <div class="mm-muted small">Every class its own talents - one of two at hero levels 3, 6 and 10. Hero levels come with XP from fights (lost runs: half).</div>
+                                <div id="rpgTalents" class="rpg-talents"></div>
                             </div>
                             <div class="rpg-pane" data-pane="gear" hidden>
                                 <div class="rpg-label">Worn</div>

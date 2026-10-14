@@ -1523,3 +1523,181 @@ button.rpg-cardx.off {
   transform: rotate(45deg);
   display: block;
 }
+
+/* ======================= 9. Progression: levels, talents, relics, upgrades ======================= */
+
+.rpg-xp {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.rpg-xp[hidden] {
+  display: none;
+}
+
+.rpg-level {
+  font-weight: 800;
+  color: var(--mm-accent);
+  white-space: nowrap;
+}
+
+.rpg-bar.xp .rpg-bar-fill {
+  background: linear-gradient(90deg, #8a6d1f, var(--mm-accent));
+}
+
+.rpg-points {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.15);
+  color: var(--mm-accent);
+  white-space: nowrap;
+}
+
+.rpg-btn.point {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+}
+
+/* Talents */
+.rpg-talents {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rpg-talent-tier.closed {
+  opacity: 0.55;
+}
+
+.rpg-talent-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.rpg-talent,
+.rpg-relic-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.6rem 0.5rem;
+  border-radius: 10px;
+  border: 1px solid var(--mm-border);
+  background: var(--rpg-surface);
+  color: var(--mm-text);
+  text-align: center;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+.rpg-talent:disabled {
+  cursor: default;
+}
+
+.rpg-talent:not(:disabled):hover,
+.rpg-relic-tile:hover:not(.off) {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+  transform: translateY(-2px);
+}
+
+.rpg-talent.chosen {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.1);
+}
+
+.rpg-talent.other {
+  opacity: 0.4;
+}
+
+.rpg-talent-icon,
+.rpg-relic-icon {
+  font-size: 1.5rem;
+}
+
+/* Relics */
+.rpg-relic-pick {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.rpg-relic-tile {
+  width: 10rem;
+}
+
+.rpg-relic-tile.off {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rpg-relics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  min-height: 0;
+}
+
+.rpg-relic-chip {
+  font-size: 0.85rem;
+  padding: 0 0.2rem;
+  border-radius: 6px;
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  cursor: help;
+}
+
+/* Elites: their trait */
+.rpg-affix {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #f0c08a;
+  text-align: center;
+}
+
+/* Upgraded cards */
+.rpg-cardx.upgraded {
+  --card-edge: var(--mm-accent);
+}
+
+.rpg-cardx.upgraded .rpg-cardx-name {
+  color: var(--mm-accent);
+}
+
+/* The camp fire */
+.rpg-camp {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+/* The end of a run: XP, levels, the first clear */
+.rpg-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.rpg-gain {
+  font-weight: 700;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: var(--rpg-surface-hi);
+}
+
+.rpg-gain.up {
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  color: var(--mm-accent);
+}
+
+.rpg-gain.first {
+  background: rgba(111, 167, 132, 0.18);
+  color: #9fd6b2;
+}

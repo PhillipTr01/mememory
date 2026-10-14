@@ -114,7 +114,7 @@ test("rpg: cards - energy, targets, block takes a smash, a stun skips it; the tu
   assert.strictEqual(rpg.play(run, "a", { uid: "t2" }), null);
   assert.strictEqual(me.block, 2 * (6 + me.def));
   assert.strictEqual(me.energy, 1);
-  assert.match(rpg.play(run, "a", { uid: "t3", target: "m1" }), /needs 2 energy/);
+  assert.match(rpg.play(run, "a", { uid: "t3", target: "m1" }), /needs 2 mana/);
   const fresh = me.hp;
   assert.strictEqual(rpg.endTurn(run, "a"), true);
   rpg.monsterTurn(run, () => 0.5);
@@ -212,14 +212,23 @@ test("rpg: doors - only luck senses danger or calm; rooms say what happened; the
     }
   }
   assert.ok(sensed > 900 * 0.8 && sensed < 900 * 0.97, String(sensed));
-  // A camp fire: what happened is shown
+  // A camp fire: rest (heal) or smith (a card of the deck upgraded) - what happened is shown
   run.phase = "between";
   run.doors = [{ kind: "rest", sense: null, open: false }];
   run.heroes[0].hp = 10;
   rpg.enterRoom(run, 0);
   assert.strictEqual(run.event.kind, "rest");
-  assert.match(run.event.lines[0], /heals/);
+  assert.match(rpg.campfire(run, "a", { choice: "smith", card: 99 }), /Pick a card/);
+  assert.strictEqual(rpg.campfire(run, "a", { choice: "rest" }), null);
   assert.ok(run.heroes[0].hp > 10);
+  assert.match(run.event.lines[run.event.lines.length - 1], /rests/);
+  assert.match(rpg.campfire(run, "a", { choice: "rest" }), /chose already/);
+  run.phase = "between";
+  run.doors = [{ kind: "rest", sense: null, open: false }];
+  rpg.enterRoom(run, 0);
+  assert.strictEqual(rpg.campfire(run, "a", { choice: "smith", card: 0 }), null);
+  assert.strictEqual(run.heroes[0].deck[0], "strike+");
+  assert.strictEqual(rpg.cardInfo("strike+").name, "Strike+");
   // The merchant: three cards and a potion, for coins (the server takes them)
   run.doors = [{ kind: "merchant", sense: null, open: false }];
   rpg.enterRoom(run, 0);
@@ -235,8 +244,55 @@ test("rpg: doors - only luck senses danger or calm; rooms say what happened; the
   assert.strictEqual(run.heroes[0].deck.length, deck + 1);
   assert.match(rpg.canBuy(run, "a", card).error, /Sold/);
   // Through the next door: the room's panel is gone
+  run.doors = [{ kind: "fight", sense: null, open: false }];
   rpg.enterRoom(run, 0);
   assert.notStrictEqual(run.event && run.event.kind, "merchant");
+});
+
+test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/10, relics and an upgraded card make a hero stronger", () => {
+  const hero = rpg.newHero("warrior");
+  const char = rpg.charOf(hero);
+  assert.deepStrictEqual([char.level, char.xp, char.points], [1, 0, 0]);
+  assert.strictEqual(rpg.gainXp(char, rpg.xpNeed(1) + rpg.xpNeed(2)), 2);
+  assert.deepStrictEqual([char.level, char.points], [3, 2]);
+  assert.ok(rpg.xpFor("elite", 5) > rpg.xpFor("fight", 5) && rpg.xpFor("fight", 5) > rpg.xpFor("fight", 1));
+  // Talents: open at level 3 - one of two, for good
+  assert.match(rpg.pickTalent(hero, 1, "berserk"), /level 6/);
+  assert.match(rpg.pickTalent(hero, 0, "nonsense"), /Unknown/);
+  assert.strictEqual(rpg.pickTalent(hero, 0, "ironskin"), null);
+  assert.match(rpg.pickTalent(hero, 0, "rhythm"), /already/);
+  assert.deepStrictEqual(rpg.talentPerks(hero), { startBlock: 8 });
+  // In a fight: the talent's block at the start, a relic's damage, an upgraded strike
+  const run = rpg.newRun(1, [{ name: "a", hero }]);
+  rpg.enterRoom(run, 0);
+  const me = run.heroes[0];
+  assert.strictEqual(me.block, 8);
+  run.monsters = [{ id: "m1", name: "Dummy", icon: "🎯", hp: 10000, maxHp: 10000, atk: 1, dodge: 0, moves: ["defend"], rank: "normal", effects: {}, intent: { move: "attack", target: "a" } }];
+  const hit = (id) => {
+    me.hand = [{ uid: "x", id }];
+    me.energy = 3;
+    const before = run.monsters[0].hp;
+    rpg.play(run, "a", { uid: "x", target: "m1" }, () => 0.5);
+    return before - run.monsters[0].hp;
+  };
+  me.luck = 0;
+  me.attacked = true;
+  const plain = hit("strike");
+  assert.strictEqual(hit("strike+"), Math.round(me.atk * rpg.UPGRADE));
+  rpg.giveRelic(run, me, "whetstone");
+  assert.strictEqual(hit("strike"), Math.round(me.atk * 1.15));
+  assert.ok(plain < hit("strike"));
+  // Thorns: who hits pays
+  rpg.giveRelic(run, me, "thornmail");
+  run.monsters[0].intent = { move: "attack", target: "a" };
+  const foeHp = run.monsters[0].hp;
+  rpg.endTurn(run, "a");
+  rpg.monsterTurn(run, () => 0.5);
+  assert.strictEqual(run.monsters[0].hp, foeHp - 4);
+  // Elites from floor 3 on: a trait
+  const elites = rpg.monstersFor(3, 1, "elite").filter((m) => m.rank == "elite");
+  assert.ok(elites.every((m) => rpg.AFFIXES[m.affix]));
+  assert.ok(rpg.monstersFor(1, 1, "elite").every((m) => !m.affix));
 });
 
 let server;
@@ -430,5 +486,8 @@ test("rpg: co-op - one opens a party, another joins, the leader starts (both pay
   assert.ok(won.run.pot > 0);
   const hero = await waitFor(bob, "rpgHero", (view) => view.deepest == 1);
   assert.strictEqual(hero.maxFloor, 2);
-  assert.strictEqual(testMode.balance("rpg_bob"), bobBefore - rpg.entryCost(1) + won.run.pot);
+  // (the first clear of a floor: a bonus - and XP for the character)
+  assert.strictEqual(won.summary.rpg_bob.firstClear, rpg.entryCost(1));
+  assert.ok(won.summary.rpg_bob.xp > 0);
+  assert.strictEqual(testMode.balance("rpg_bob"), bobBefore - rpg.entryCost(1) + won.run.pot + rpg.entryCost(1));
 });
