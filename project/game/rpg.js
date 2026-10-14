@@ -920,6 +920,16 @@ function say(run, text) {
   if (run.log.length > 40) run.log.splice(0, run.log.length - 40);
 }
 
+// What happened in a fight, step by step - the pages play it back (a card, a hit, a block, a heal, a monster's move ...):
+// {id, k: kind, to / by: a hero's name or a monster's id, n: an amount ...}
+function fx(run, event) {
+  run.fxSeq = (run.fxSeq || 0) + 1;
+  event.id = run.fxSeq;
+  if (!run.fx) run.fx = [];
+  run.fx.push(event);
+  if (run.fx.length > 80) run.fx.splice(0, run.fx.length - 80);
+}
+
 const alive = (list) => list.filter((one) => !one.down && one.hp > 0);
 const perk = (hero, key) => (hero.perks && hero.perks[key]) || 0;
 
@@ -1376,6 +1386,7 @@ function drawCards(hero, count, rng) {
 function startRound(run, rng) {
   run.turn++;
   const first = run.turn == 1;
+  fx(run, { k: "turn", side: "heroes", first });
   for (const hero of alive(run.heroes)) {
     hero.block = first ? perk(hero, "startBlock") : 0;
     hero.energy = ENERGY + hero.bonusEnergy + (first ? perk(hero, "firstMana") : 0);
@@ -1427,6 +1438,7 @@ function strike(run, hero, foe, power, rng, options = {}) {
   if (foe.down) return 0;
   if (!options.sure && (foe.fading || rng() < foe.dodge)) {
     say(run, `${foe.icon} ${foe.name} dodges ${hero.name}.`);
+    fx(run, { k: "miss", to: foe.id });
     return 0;
   }
   const crit = rng() * 100 < hero.luck + perk(hero, "crit");
@@ -1438,10 +1450,12 @@ function strike(run, hero, foe, power, rng, options = {}) {
   damage = Math.max(1, Math.round(damage));
   foe.hp = Math.max(0, foe.hp - damage);
   say(run, `${hero.name}${options.verb ? " " + options.verb : " hits"} ${foe.icon} ${foe.name} for ${damage}${crit ? " (critical!)" : ""}${foe.defending ? " (blocked half)" : ""}.`);
+  fx(run, { k: "hit", to: foe.id, n: damage, crit });
   if (perk(hero, "lifesteal") && !hero.down) healHero(run, hero, damage * perk(hero, "lifesteal"));
   if (foe.hp == 0) {
     foe.down = true;
     say(run, `${foe.icon} ${foe.name} is defeated.`);
+    fx(run, { k: "down", to: foe.id });
   }
   return damage;
 }
@@ -1450,10 +1464,12 @@ function strike(run, hero, foe, power, rng, options = {}) {
 function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
   if (hero.evading) {
     say(run, `${source} misses ${hero.name} in the smoke.`);
+    fx(run, { k: "miss", to: hero.name });
     return 0;
   }
   if (rng() * 100 < hero.agi) {
     say(run, `${hero.name} dodges ${source} 🪶.`);
+    fx(run, { k: "miss", to: hero.name, dodge: true });
     return 0;
   }
   let damage = Math.max(raw * 0.25, raw - hero.def);
@@ -1464,17 +1480,21 @@ function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
   damage -= blocked;
   hero.hp = Math.max(0, hero.hp - damage);
   say(run, `${source} hits ${hero.name} for ${damage}${blocked ? ` (${blocked} blocked)` : ""}.`);
+  fx(run, { k: "hit", to: hero.name, n: damage, b: blocked });
   // (thorns: who hits pays)
   if (foe && perk(hero, "thorns") && !foe.down) {
     foe.hp = Math.max(0, foe.hp - perk(hero, "thorns"));
     say(run, `${foe.icon} ${foe.name} takes ${perk(hero, "thorns")} from ${hero.name}'s thorns 🌵.`);
+    fx(run, { k: "hit", to: foe.id, n: perk(hero, "thorns") });
     if (foe.hp == 0) {
       foe.down = true;
       say(run, `${foe.icon} ${foe.name} is defeated.`);
+      fx(run, { k: "down", to: foe.id });
     }
   }
   if (hero.hp == 0) {
     hero.down = true;
+    fx(run, { k: "down", to: hero.name });
     hero.effects = {};
     hero.block = 0;
     say(run, `${hero.name} is down!`);
@@ -1485,6 +1505,7 @@ function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
 function healHero(run, hero, amount) {
   const heal = Math.min(hero.maxHp - hero.hp, Math.round(amount));
   hero.hp += heal;
+  if (heal > 0 && run.phase == "fight") fx(run, { k: "heal", to: hero.name, n: heal });
   return heal;
 }
 
@@ -1515,6 +1536,7 @@ function play(run, name, input, rng = Math.random) {
   // (the first attack of the turn: the perks for it)
   hero.firstAttack = card.type == "attack" && !hero.attacked;
   if (card.type == "attack") hero.attacked = true;
+  fx(run, { k: "card", by: hero.name, card: id, to: card.target == "foe" ? foe.id : card.target == "ally" ? friend.name : card.target == "fallen" ? fallen.name : null });
   cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng);
   hero.firstAttack = false;
   if (!alive(run.monsters).length) winFight(run, rng);
@@ -1527,6 +1549,7 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
   const block = (who, amount) => {
     const value = Math.round(amount * up * (1 + perk(hero, "block")));
     who.block += value;
+    fx(run, { k: "block", to: who.name, n: value });
     return value;
   };
   const heal = (who, amount) => healHero(run, who, amount * up * (1 + perk(hero, "heal")));
@@ -1906,12 +1929,15 @@ function monsterMove(run, foe, rng) {
 // discard pile - then the heroes' next turn
 function monsterTurn(run, rng = Math.random) {
   if (run.phase != "fight") return;
+  fx(run, { k: "turn", side: "foes" });
   for (const foe of alive(run.monsters)) {
     if (foe.effects.stun) {
       delete foe.effects.stun;
       say(run, `${foe.icon} ${foe.name} is stunned and does nothing.`);
+      fx(run, { k: "move", by: foe.id, move: "stunned" });
       continue;
     }
+    fx(run, { k: "move", by: foe.id, move: (foe.intent || { move: "attack" }).move });
     monsterMove(run, foe, rng);
     if (!alive(run.heroes).length) break;
   }
@@ -1920,6 +1946,7 @@ function monsterTurn(run, rng = Math.random) {
     const heal = Math.min(foe.maxHp - foe.hp, Math.round(foe.maxHp * 0.08));
     foe.hp += heal;
     say(run, `${foe.icon} ${foe.name} regenerates ${heal} 💚.`);
+    fx(run, { k: "heal", to: foe.id, n: heal });
   }
   for (const one of [...alive(run.heroes), ...alive(run.monsters)]) {
     const label = one.icon ? `${one.icon} ${one.name}` : one.name;
@@ -1928,9 +1955,11 @@ function monsterTurn(run, rng = Math.random) {
       if (!effect || one.down) continue;
       one.hp = Math.max(0, one.hp - effect.dmg);
       say(run, `${label} takes ${effect.dmg} from ${kind == "poison" ? "poison ☠️" : "the burn 🔥"}.`);
+      fx(run, { k: "hit", to: one.icon ? one.id : one.name, n: effect.dmg, dot: kind });
       if (--effect.turns <= 0) delete one.effects[kind];
       if (one.hp == 0) {
         one.down = true;
+        fx(run, { k: "down", to: one.icon ? one.id : one.name });
         say(run, `${label} ${one.icon ? "is defeated" : "is down"}!`);
       }
     }
@@ -1946,6 +1975,7 @@ function monsterTurn(run, rng = Math.random) {
     run.phase = "lost";
     run.pot = 0;
     say(run, "The whole party is down - the loot is lost. 💀");
+    fx(run, { k: "defeat" });
     return;
   }
   if (!alive(run.monsters).length) return winFight(run, rng);
@@ -1957,6 +1987,9 @@ function winFight(run, rng) {
   const coins = Math.round(entryCost(run.floor) * REWARD[room.kind]);
   run.pot += coins;
   say(run, `Victory! 🪙 ${coins} each for the pot.`);
+  fx(run, { k: "victory", coins });
+  // (the spoils of the fight - the page lists them: the coins, the card, the relic)
+  run.spoils = { room: run.rooms.length, coins, xp: xpFor(room.kind, run.floor) };
   // (the ones down get back up, every state goes, the cards back into the deck - and a new card to pick)
   for (const hero of run.heroes) {
     hero.effects = {};
@@ -2051,6 +2084,8 @@ function runView(run) {
     })),
     turn: run.turn,
     pot: run.pot,
+    fx: run.fx || [],
+    spoils: run.spoils || null,
     loot: run.loot,
     log: run.log,
   };

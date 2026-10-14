@@ -141,6 +141,34 @@ socket.on("rpgParties", (list) => {
   render();
 });
 socket.on("rpgParty", (data) => {
+  // (a fight played back right now: the newest state waits for it)
+  if (fxBusy) {
+    fxQueued = { data: data };
+    return;
+  }
+  receiveParty(data);
+});
+
+function receiveParty(data) {
+  var events = freshFx(data);
+  // The monsters' turn, a fight won or lost: played back over the scene as it was - then the new state
+  if (events.some((e) => e.k == "turn" && e.side == "foes") || events.some((e) => e.k == "victory" || e.k == "defeat")) {
+    fxBusy = true;
+    playFx(events, () => {
+      fxBusy = false;
+      applyParty(data);
+      var next = fxQueued;
+      fxQueued = null;
+      if (next) receiveParty(next.data);
+    });
+    return;
+  }
+  // A card played: the new state at once - the numbers fly over it
+  applyParty(data);
+  if (events.length) playFx(events, null);
+}
+
+function applyParty(data) {
   party = data;
   partyAt = Date.now();
   var run = party && party.run;
@@ -153,7 +181,147 @@ socket.on("rpgParty", (data) => {
   if (room != lastRoom) picking = null;
   lastRoom = room;
   render();
-});
+}
+
+/* ---------- A fight played back: cards, hits, blocks, heals, the monsters one after the other ---------- */
+
+var fxBusy = false; // playing back (the state waits)
+var fxQueued = null; // {data}: the newest state, waiting
+var fxSeen = null; // the last event shown - {party, id}
+var holdModal = 0; // (the rewards wait for the victory banner: until then)
+
+// The events new since the last update (a new party, a new page: none - nothing to play back)
+function freshFx(data) {
+  var list = (data && data.run && data.run.fx) || [];
+  var last = list.length ? list[list.length - 1].id : 0;
+  var same = fxSeen && data && fxSeen.party == data.id;
+  var fresh = same ? list.filter((e) => e.id > fxSeen.id) : [];
+  // (a run just begun: its first fight's banner)
+  if (!same && data && data.run && data.run.phase == "fight" && data.run.turn == 1 && data.run.rooms.length == 1) fresh = list.filter((e) => e.k == "turn" && e.first);
+  fxSeen = data ? { party: data.id, id: last } : null;
+  return fresh;
+}
+
+function unitNode(id) {
+  if (id == null) return null;
+  var esc = window.CSS && CSS.escape ? CSS.escape(String(id)) : String(id);
+  return document.querySelector('.rpg-monster[data-id="' + esc + '"]') || document.querySelector('.rpg-fighter[data-id="' + esc + '"]');
+}
+
+// A number (or a word) flying up from a hero or a monster
+function floatOver(id, text, kind) {
+  var node = unitNode(id);
+  var arena = document.querySelector(".rpg-arena");
+  if (!node || !arena) return;
+  var a = arena.getBoundingClientRect();
+  var r = node.getBoundingClientRect();
+  var f = el("div", "rpg-float " + kind, text);
+  f.style.left = r.left - a.left + r.width / 2 + (Math.random() * 30 - 15) + "px";
+  f.style.top = r.top - a.top + r.height * 0.35 + "px";
+  arena.appendChild(f);
+  setTimeout(() => f.remove(), 1100);
+}
+
+function flash(id, className, ms) {
+  var node = unitNode(id);
+  if (!node) return;
+  node.classList.remove(className);
+  void node.offsetWidth;
+  node.classList.add(className);
+  setTimeout(() => node.classList.remove(className), ms || 450);
+}
+
+// The HP bar of a unit, as the playback goes (the state shown is the old one until the end)
+function barBy(id, delta) {
+  var node = unitNode(id);
+  var unit = party && party.run && (party.run.monsters.find((m) => m.id == id) || party.run.heroes.find((h) => h.name == id));
+  if (!node || !unit) return;
+  unit.hp = Math.max(0, Math.min(unit.maxHp, unit.hp + delta));
+  var fill = node.querySelector(".rpg-bar-fill");
+  var text = node.querySelector(".rpg-bar-text");
+  if (fill) fill.style.width = (unit.hp / unit.maxHp) * 100 + "%";
+  if (text) text.innerText = formatCoins(unit.hp) + " / " + formatCoins(unit.maxHp);
+}
+
+// A big word over the scene: "Monsters' turn", "Your turn", "Victory!"
+function banner(text, kind, ms) {
+  var arena = document.querySelector(".rpg-arena");
+  if (!arena) return;
+  arena.querySelectorAll(".rpg-banner").forEach((b) => b.remove());
+  var b = el("div", "rpg-banner " + kind, text);
+  b.style.animationDuration = (ms || 1000) + "ms";
+  arena.appendChild(b);
+  setTimeout(() => b.remove(), ms || 1000);
+}
+
+// A card played: it shows over the scene for a moment
+function showPlayed(e) {
+  var arena = document.querySelector(".rpg-arena");
+  if (!arena || !rules.cards[e.card.replace(/\+$/, "")]) return;
+  var node = cardEl(e.card, { className: "small rpg-played" + (e.by == myName ? " mine" : "") });
+  if (e.by != myName) node.appendChild(el("span", "rpg-played-by", e.by));
+  arena.appendChild(node);
+  setTimeout(() => node.remove(), 900);
+}
+
+// One event shown
+function showFx(e, live) {
+  if (e.k == "card") showPlayed(e);
+  else if (e.k == "hit") {
+    floatOver(e.to, "-" + e.n + (e.crit ? "!" : ""), e.dot ? "dot " + e.dot : e.crit ? "crit" : "hit");
+    if (e.b) floatOver(e.to, "🛡️ " + e.b, "blocked");
+    flash(e.to, "rpg-hit", 420);
+    if (!live) barBy(e.to, -e.n);
+  } else if (e.k == "miss") floatOver(e.to, e.dodge ? "Dodge" : "Miss", "miss");
+  else if (e.k == "heal") {
+    floatOver(e.to, "+" + e.n, "heal");
+    if (!live) barBy(e.to, e.n);
+  } else if (e.k == "block") floatOver(e.to, "🛡️ +" + e.n, "block");
+  else if (e.k == "down") flash(e.to, "rpg-dying", 900);
+  else if (e.k == "move") {
+    flash(e.by, e.move == "stunned" ? "rpg-stunned-act" : "rpg-acting", 520);
+    if (e.move == "stunned") floatOver(e.by, "💫 Stunned", "miss");
+    else if (rules.moves[e.move] && rules.moves[e.move].self) floatOver(e.by, rules.moves[e.move].icon + " " + rules.moves[e.move].name, "move");
+  } else if (e.k == "turn") {
+    if (e.side == "foes") banner("Monsters' turn", "foes", 900);
+    else banner(e.first ? "⚔️ Fight!" : "Your turn", "heroes", 900);
+  } else if (e.k == "victory") {
+    banner("Victory!", "victory", 1500);
+    holdModal = Date.now() + 1500;
+  } else if (e.k == "defeat") banner("Defeat", "defeat", 1800);
+}
+
+// The events in beats: the hero's cards at once - every monster's move a beat of its own
+function playFx(events, done) {
+  var live = !done;
+  if (live) {
+    events.forEach((e) => showFx(e, true));
+    return;
+  }
+  // (the hand waits meanwhile)
+  var runNode = document.getElementById("rpgRun");
+  runNode.classList.add("fx-busy");
+  var finish = done;
+  done = () => {
+    runNode.classList.remove("fx-busy");
+    finish();
+  };
+  var beats = [[]];
+  events.forEach((e) => {
+    if (e.k == "move" || e.k == "victory" || e.k == "defeat" || (e.k == "turn" && e.side == "heroes")) beats.push([]);
+    beats[beats.length - 1].push(e);
+  });
+  beats = beats.filter((b) => b.length);
+  var at = 0;
+  beats.forEach((beat) => {
+    setTimeout(() => {
+      beat.forEach((e, i) => setTimeout(() => showFx(e, false), e.k == "move" ? 0 : i * 90 + (beat[0].k == "move" ? 240 : 0)));
+    }, at);
+    var first = beat[0];
+    at += first.k == "move" ? 650 : first.k == "turn" ? (first.side == "foes" ? 750 : 0) : first.k == "victory" ? 1500 : first.k == "defeat" ? 1800 : 450;
+  });
+  setTimeout(done, at + 150);
+}
 
 /* ---------- The page ---------- */
 
@@ -1015,15 +1183,46 @@ function renderRun() {
 
 // After a fight one popup at a time: the relic of a hard fight, then the card won - each skipped: the next one
 // (the other rooms are rooms of their own: the scene)
+var rewardView = "list"; // the rewards of a fight: the list - or the card / relic to pick
+var spoilsDone = {}; // the rewards closed (by the room)
 function renderModal(run, me) {
   var modal = document.getElementById("rpgModal");
   var nodes = null;
-  if (run.phase == "between" && me && !party.result) {
-    if (me.relicChoice) nodes = relicPanel(me);
-    else if (me.reward) nodes = rewardPanel(me);
+  var spoils = run.spoils;
+  var open = run.phase == "between" && me && !party.result && spoils && spoils.room == run.rooms.length && !spoilsDone[spoils.room];
+  // (the victory banner first)
+  if (open && Date.now() < holdModal) {
+    setTimeout(render, holdModal - Date.now() + 20);
+    open = false;
+  }
+  if (open) {
+    if (rewardView == "card" && me.reward) nodes = rewardPanel(me);
+    else if (rewardView == "relic" && me.relicChoice) nodes = relicPanel(me);
+    else nodes = spoilsPanel(run, me, spoils);
   }
   modal.hidden = !nodes;
   if (nodes) morphChildren(document.getElementById("rpgModalBox"), nodes);
+}
+
+// The rewards of a fight (like Slay the Spire): a list - the coins (in the pot already), a card to add, a relic
+function spoilsPanel(run, me, spoils) {
+  var list = el("div", "rpg-spoils");
+  var row = (icon, text, act, id, done) => {
+    var b = el(act ? "button" : "div", "rpg-spoil" + (done ? " done" : "") + (act ? " open" : ""));
+    if (act) {
+      b.type = "button";
+      b.dataset.act = act;
+      b.dataset.id = id;
+    }
+    b.append(el("span", "rpg-spoil-icon", icon), el("span", "rpg-spoil-text", text), el("span", "rpg-spoil-mark", done ? "✓" : act ? "›" : ""));
+    list.appendChild(b);
+  };
+  row("🪙", formatCoins(spoils.coins) + " coins each - into the loot pot", null, null, true);
+  row("⭐", "+" + spoils.xp + " XP for your hero", null, null, true);
+  if (me.relicChoice) row("🏺", "Choose a relic", "rewardView", "relic");
+  if (me.reward) row("🃏", "Add a card to your deck", "rewardView", "card");
+  var left = !!(me.reward || me.relicChoice);
+  return [el("div", "rpg-reward-title big", "⚔️ Victory!"), el("div", "rpg-reward-note mm-muted small", "Your rewards"), list, button(left ? "Skip the rest · Proceed" : "Proceed →", "spoilsDone", { id: String(spoils.room), className: left ? "small" : "primary" })];
 }
 
 // The party: every hero's stats, perks (talents, relics) and relics
@@ -1094,14 +1293,20 @@ function relicPanel(me) {
     tile.append(el("span", "rpg-relic-icon", relic.icon), el("b", "", relic.name), el("span", "mm-muted small", relic.text));
     row.appendChild(tile);
   });
-  return [el("div", "rpg-reward-title", "☠️ A relic - pick one for this run"), row, button("Skip", "relic", { id: "", className: "small" })];
+  return [el("div", "rpg-reward-title", "🏺 A relic - pick one for this run"), row, button("‹ Back", "rewardView", { id: "list", className: "small" })];
 }
 
 // The card won in a fight: one of three for the deck
 function rewardPanel(me) {
   var cards = el("div", "rpg-reward-cards");
   me.reward.forEach((id) => cards.appendChild(cardEl(id, { tag: "button", act: "pick", className: "pickable" })));
-  return [el("div", "rpg-reward-title", "Victory - pick a card for your deck"), el("div", "rpg-reward-note mm-muted small", "It goes into your deck for the rest of this run - you may draw it in the next fights."), cards, button("Skip", "pick", { id: "", className: "small" })];
+  return [
+    el("div", "rpg-reward-title", "🃏 Add a card to your deck"),
+    el("div", "rpg-reward-note mm-muted small", "Three of your class's cards, not of your deck: the one you pick joins your deck for this run - and your collection keeps it."),
+    cards,
+    button("Skip this card", "pick", { id: "", className: "small" }),
+    button("‹ Back", "rewardView", { id: "list", className: "small" }),
+  ];
 }
 
 // The rooms that aren't fights: a picture, a story, the choices - what happened
@@ -1558,6 +1763,18 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     document.getElementById("rpgPackModal").remove();
   } else if (act == "pile") showPile(id);
   else if (act == "view") setView(id);
+  else if (act == "rewardView") {
+    rewardView = id;
+    render();
+  } else if (act == "spoilsDone") {
+    // (what is left: skipped)
+    var me = party && party.run && party.run.heroes.find((h) => h.name == myName);
+    if (me && me.reward) socket.emit("pick", { card: null });
+    if (me && me.relicChoice) socket.emit("relic", { id: null });
+    spoilsDone[id] = true;
+    rewardView = "list";
+    render();
+  }
   else if (act == "builder") setView("deck");
   else if (act == "shop") setView("shop");
   else if (act == "potion") socket.emit("potion"); else if (act == "cartAdd") {
@@ -1579,7 +1796,10 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   } else if (act == "deckClear") socket.emit("deckSet", { ids: [] });
   else if (act == "deckStarter") socket.emit("deckSet", { ids: starterDeck() });
   else if (act == "talent") socket.emit("talent", { tier: Number(id.split(":")[0]), id: id.split(":")[1] });
-  else if (act == "relic") socket.emit("relic", { id: id || null });
+  else if (act == "relic") {
+    socket.emit("relic", { id: id || null });
+    rewardView = "list";
+  }
   else if (act == "choose") {
     picking = null;
     socket.emit("choose", { option: id });
@@ -1615,7 +1835,10 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     aiming = null;
     socket.emit("endTurn");
   } else if (act == "drink") socket.emit("drink");
-  else if (act == "pick") socket.emit("pick", { card: id || null });
+  else if (act == "pick") {
+    socket.emit("pick", { card: id || null });
+    rewardView = "list";
+  }
   else if (act == "vote") socket.emit("vote", { door: id == "leave" ? "leave" : Number(id) });
 });
 
