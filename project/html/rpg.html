@@ -124,6 +124,12 @@
                                 <div id="rpgTalents" class="rpg-talents"></div>
                             </div>
                             <div class="rpg-pane" data-pane="gear" hidden>
+                                <!--- The packs bought: opened here --->
+                                <div class="rpg-owned-head">
+                                    <div class="rpg-label">Packs</div>
+                                    <div id="rpgOpenAllSlot"></div>
+                                </div>
+                                <div id="rpgShopOwned" class="rpg-owned-packs"></div>
                                 <div class="rpg-label">Worn</div>
                                 <div id="rpgGear" class="rpg-gear"></div>
                                 <div id="rpgBagLabel" class="rpg-label">Bag</div>
@@ -178,6 +184,7 @@
                                 <div class="mm-muted small">Click or drag cards in and out.</div>
                             </div>
                         </div>
+                        <div id="rpgShopProgress" class="rpg-shop-progress"></div>
                         <div class="rpg-builder-body">
                             <div class="rpg-builder-left">
                                 <div class="rpg-filters">
@@ -206,21 +213,25 @@
                         <div class="rpg-builder-head">
                             <div class="rpg-builder-title">
                                 <div id="rpgShopTitle" class="rpg-card-title"></div>
-                                <div class="mm-muted small">Booster packs: cards of your class and neutral ones.</div>
+                                <div class="mm-muted small">Cards of your class and neutral ones - opened in your inventory.</div>
                             </div>
                         </div>
-                        <div id="rpgShopProgress" class="rpg-shop-progress"></div>
-                        <div class="rpg-owned-head">
-                            <div class="rpg-label">Your packs - unopened</div>
-                            <div id="rpgOpenAllSlot"></div>
+                        <!--- The sections: a click flips to one (the page snaps to them while scrolling too) --->
+                        <nav id="rpgShopSections" class="rpg-sections" aria-label="Sections">
+                            <button type="button" data-section="rpgSecUpgrades">⬆️ Upgrades</button>
+                            <button type="button" data-section="rpgSecPacks">🎴 Packs</button>
+                        </nav>
+                        <div class="rpg-shop-section" id="rpgSecUpgrades">
+                            <h2 class="rpg-shop-heading">Upgrades</h2>
+                            <div id="rpgShopUpgrades" class="rpg-shop-upgrades"></div>
                         </div>
-                        <div id="rpgShopOwned" class="rpg-owned-packs"></div>
-                        <div class="rpg-shop-body">
-                            <div id="rpgShopPacks" class="rpg-shop-packs"></div>
-                            <aside id="rpgCart" class="rpg-cart"></aside>
+                        <div class="rpg-shop-section" id="rpgSecPacks">
+                            <h2 class="rpg-shop-heading">Booster packs</h2>
+                            <div class="rpg-shop-body">
+                                <div id="rpgShopPacks" class="rpg-shop-packs"></div>
+                                <aside id="rpgCart" class="rpg-cart"></aside>
+                            </div>
                         </div>
-                        <div class="rpg-label">Upgrades</div>
-                        <div id="rpgShopUpgrades" class="rpg-shop-upgrades"></div>
                     </div>
                     <!--- A party waiting for its leader --->
                     <div id="rpgLobby" class="rpg-lobby" hidden>

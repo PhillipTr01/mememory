@@ -450,7 +450,7 @@ var VIEWS = [
   ["play", "⚔️ Play"],
   ["hero", "🦸 Character"],
   ["talents", "⭐ Talents"],
-  ["gear", "🎒 Gear"],
+  ["gear", "🎒 Inventory"],
   ["deck", "🃏 Deck"],
   ["shop", "🛒 Shop"],
 ];
@@ -460,12 +460,13 @@ function viewBadge(id) {
   if (!hero.cls) return null;
   if (id == "hero" && hero.points) return ["+" + hero.points, "new"];
   if (id == "talents" && rules.talentLevels.some((lv, tier) => hero.level >= lv && !hero.talents[tier])) return ["!", "new"];
-  if (id == "gear" && hero.bag.length) return [String(hero.bag.length), ""];
-  if (id == "deck") return [String(hero.deck.length), hero.deck.length < hero.deckMin || hero.deck.length > hero.deckMax ? "warn" : ""];
-  if (id == "shop") {
+  if (id == "gear") {
+    // (packs to open first - they wait here)
     var packs = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);
-    return packs ? [packs + " 🎴", "new"] : null;
+    if (packs) return [packs + " 🎴", "new"];
+    return hero.bag.length ? [String(hero.bag.length), ""] : null;
   }
+  if (id == "deck") return [String(hero.deck.length), hero.deck.length < hero.deckMin || hero.deck.length > hero.deckMax ? "warn" : ""];
   return null;
 }
 
@@ -618,6 +619,7 @@ function renderHero() {
     : [el("div", "rpg-empty mm-muted", "Empty - chests drop gear.")];
   document.getElementById("rpgBagLabel").innerText = "Bag · " + hero.bag.length + " / " + hero.bagSize;
   morphChildren(document.getElementById("rpgBag"), bag);
+  if (view == "gear" && picked) renderOwnedPacks();
 
   if (view == "play" && picked) renderReady();
 }
@@ -649,7 +651,7 @@ function renderReady() {
   if (hero.points) item("⬆️", hero.points + " stat point" + (hero.points == 1 ? "" : "s"), "To spend", "new", "view", "hero", "Spend");
   if (rules.talentLevels.some((lv, tier) => hero.level >= lv && !hero.talents[tier])) item("⭐", "A talent", "To pick", "new", "view", "talents", "Pick");
   var packs = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);
-  if (packs) item("🎴", packs + " pack" + (packs == 1 ? "" : "s"), "To open", "new", "view", "shop", "Open");
+  if (packs) item("🎴", packs + " pack" + (packs == 1 ? "" : "s"), "To open", "new", "view", "gear", "Open");
   if (hero.bag.length) item("🎒", "Bag", hero.bag.length + " / " + hero.bagSize + " items", "", "view", "gear", "Look");
   var found = hero.pool.filter((id) => hero.collection[id]).length;
   var progress = el("div", "rpg-ready-bar");
@@ -773,20 +775,8 @@ function packArt(id, className) {
   return art;
 }
 
-function renderShop() {
-  var cls = rules.classes[hero.cls];
-  // Upgrades: more room in the bag - a slot per cell (the ones bought gold)
-  var slot = el("div", "rpg-upgrade");
-  var price = hero.bagSlotPrice;
-  var cells = el("div", "rpg-upgrade-cells");
-  for (var c = 0; c < rules.bagTop; c++) cells.appendChild(el("i", c < rules.bagMax ? "base" : c < hero.bagSize ? "on" : ""));
-  var words = el("div", "rpg-upgrade-text");
-  words.append(el("b", "", "Bag slot"), el("span", "mm-muted small", hero.bagSize + " / " + rules.bagTop + " slots"), cells);
-  slot.append(el("span", "rpg-upgrade-icon", "🎒"), words);
-  slot.appendChild(price == null ? el("span", "rpg-upgrade-max", "✓ Max") : button("+1 slot · 🪙 " + formatCoins(price), "bagSlot", { className: "primary", disabled: price > myCoins }));
-  morphChildren(document.getElementById("rpgShopUpgrades"), [slot]);
-  document.getElementById("rpgShopTitle").innerText = "🛒 Card shop · " + cls.icon + " " + cls.name;
-  // The collection: the cards found, the copies
+// The collection: the cards found, the copies (the deck builder)
+function renderCollectionBar() {
   var cards = hero.pool.filter((id) => cardOf(id).rarity != "basic");
   var found = cards.filter((id) => hero.collection[id]).length;
   var copies = cards.reduce((sum, id) => sum + (hero.collection[id] || 0), 0);
@@ -795,7 +785,10 @@ function renderShop() {
   progress.append(el("span", "", "📚 Collection"), bar(found, cards.length, "xp", " cards"), el("span", "mm-muted small", copies + " / " + most + " copies"));
   morphChildren(document.getElementById("rpgShopProgress"), [progress]);
 
-  // The packs bought, waiting to be opened
+}
+
+// The packs bought, waiting to be opened (the inventory)
+function renderOwnedPacks() {
   var owned = Object.keys(rules.packs).filter((id) => hero.packs[id] > 0);
   morphChildren(
     document.getElementById("rpgShopOwned"),
@@ -817,6 +810,21 @@ function renderShop() {
   // (open all: in the heading of the packs waiting)
   morphChildren(document.getElementById("rpgOpenAllSlot"), waiting > 1 ? [button("🎴 Open all (" + waiting + ")", "openAll", { className: "small primary" })] : []);
 
+}
+
+function renderShop() {
+  var cls = rules.classes[hero.cls];
+  // Upgrades: more room in the bag - a slot per cell (the ones bought gold)
+  var slot = el("div", "rpg-upgrade");
+  var price = hero.bagSlotPrice;
+  var cells = el("div", "rpg-upgrade-cells");
+  for (var c = 0; c < rules.bagTop; c++) cells.appendChild(el("i", c < rules.bagMax ? "base" : c < hero.bagSize ? "on" : ""));
+  var words = el("div", "rpg-upgrade-text");
+  words.append(el("b", "", "Bag slot"), el("span", "mm-muted small", hero.bagSize + " / " + rules.bagTop + " slots"), cells);
+  slot.append(el("span", "rpg-upgrade-icon", "🎒"), words);
+  slot.appendChild(price == null ? el("span", "rpg-upgrade-max", "✓ Max") : button("+1 slot · 🪙 " + formatCoins(price), "bagSlot", { className: "primary", disabled: price > myCoins }));
+  morphChildren(document.getElementById("rpgShopUpgrades"), [slot]);
+  document.getElementById("rpgShopTitle").innerText = "🛒 Card shop · " + cls.icon + " " + cls.name;
   // The packs to buy: into the cart
   morphChildren(
     document.getElementById("rpgShopPacks"),
@@ -835,7 +843,7 @@ function renderShop() {
         el("div", "rpg-pack-name", pack.name),
         el("div", "rpg-pack-price", "🪙 " + formatCoins(pack.price)),
         el("div", "mm-muted small", pack.about),
-        el("div", "rpg-label", "Every other card"),
+        el("div", "rpg-label", "Odds per card"),
         odds,
         button(inCart ? "+ One more (" + inCart + " in the cart)" : "🛒 Add to cart", "cartAdd", { id: id, className: "primary" }),
       );
@@ -1084,6 +1092,7 @@ var byRarity = (a, b) => RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.i
 var byCost = (a, b) => cardOf(a).cost - cardOf(b).cost || RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.indexOf(cardOf(b).rarity) || cardOf(a).name.localeCompare(cardOf(b).name);
 
 function renderBuilder() {
+  renderCollectionBar();
   var cls = rules.classes[hero.cls];
   var info = el("button", "cs-info-btn", "i");
   info.type = "button";
@@ -2188,8 +2197,52 @@ socket.on("rpgPack", (data) => {
 socket.on("rpgBought", (data) => {
   cart = {};
   var n = data.items.reduce((sum, [, count]) => sum + count, 0);
-  showToast(n + " pack" + (n == 1 ? "" : "s") + " bought - open them above!");
   render();
+  // (the hint on the Inventory tab - it glows a moment: the packs wait there)
+  var tab = document.querySelector('#rpgNav [data-id="gear"]');
+  showHint("🎴 " + n + " pack" + (n == 1 ? "" : "s") + " in your Inventory", "", tab);
+  if (tab) {
+    tab.classList.remove("rpg-glow");
+    void tab.offsetWidth;
+    tab.classList.add("rpg-glow");
+  }
 });
 document.getElementById("rpgStart").addEventListener("click", () => socket.emit("start"));
 document.getElementById("rpgLeave").addEventListener("click", () => socket.emit("leave"));
+
+// The shop's sections: a click flips to one; the one in view is marked (the window or the full screen scrolls)
+(function setupShopSections() {
+  var buttons = [...document.querySelectorAll("#rpgShopSections [data-section]")];
+  var mark = (id) => buttons.forEach((b) => b.classList.toggle("active", b.dataset.section == id));
+  buttons.forEach((b) =>
+    b.addEventListener("click", () => {
+      document.getElementById(b.dataset.section).scrollIntoView({ behavior: "smooth", block: "start" });
+      mark(b.dataset.section);
+    }),
+  );
+  // (the section whose top passed the upper third of the screen last)
+  var pick = () => {
+    var current = buttons[0].dataset.section;
+    // (at the very top: the first one)
+    var scroller = document.fullscreenElement || document.scrollingElement;
+    if (scroller.scrollTop < 40) return mark(current);
+    buttons.forEach((b) => {
+      if (document.getElementById(b.dataset.section).getBoundingClientRect().top < window.innerHeight / 3) current = b.dataset.section;
+    });
+    mark(current);
+  };
+  var queued = false;
+  document.addEventListener(
+    "scroll",
+    () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        pick();
+      });
+    },
+    { passive: true, capture: true },
+  );
+  pick();
+})();

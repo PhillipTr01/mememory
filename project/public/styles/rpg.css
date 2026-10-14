@@ -5581,3 +5581,66 @@ button.rpg-cardx.off {
   font-weight: 800;
   color: #7fdc9b;
 }
+
+/* A tab that just got something (the packs bought: the Inventory) */
+.rpg-nav-btn.rpg-glow {
+  animation: rpg-tab-glow 1s ease-in-out 3;
+}
+
+@keyframes rpg-tab-glow {
+  50% {
+    box-shadow: 0 0 0 3px rgba(245, 197, 66, 0.55), 0 0 18px rgba(245, 197, 66, 0.45);
+  }
+}
+
+/* The shop's sections: a row of pills on top (sticky) - a click flips to one */
+.rpg-sections {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 5;
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--mm-border);
+  background: rgba(24, 24, 28, 0.92);
+  backdrop-filter: blur(6px);
+}
+
+.rpg-sections button {
+  flex: 1 0 auto;
+  padding: 0.4rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--mm-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rpg-sections button:hover {
+  color: var(--mm-text);
+}
+
+.rpg-sections button.active {
+  background: var(--mm-accent);
+  color: #1a1408;
+}
+
+.rpg-shop-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  scroll-margin-top: 4.25rem;
+}
+
+.rpg-shop-heading {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mm-muted);
+}
