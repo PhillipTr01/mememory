@@ -14,7 +14,7 @@ const ROOM = "rpg";
  * Parties: a player opens one (a floor, 1 to 4 heroes - alone it starts right away) or joins an open
  * one (its floor open for the own hero too); the leader starts it. Every hero pays the entry of the
  * floor. In a fight everybody picks an action - when all have (or the turn's time is up: who didn't,
- * attacks) the turn is played. Between two rooms the leader goes on or leaves with the loot (the time up:
+ * attacks) the turn is played. Between two rooms the leader picks one of the doors or leaves with the loot (the time up:
  * leaves). The end (cleared, left or all down): the pot is paid, the gear goes to the bags, the potions
  * left go back - lost: nothing but the potions drunk.
  */
@@ -93,7 +93,11 @@ module.exports = function (io, options = {}) {
       potionPrice: rpg.POTION_PRICE,
       stats: rpg.STATS,
       levelMax: rpg.LEVEL_MAX,
-      skillCooldown: rpg.SKILL_COOLDOWN,
+      classes: rpg.CLASSES,
+      skills: rpg.SKILLS,
+      moves: rpg.MOVES,
+      roomKinds: rpg.ROOM_KINDS,
+      energyMax: rpg.ENERGY_MAX,
       turn: timing.turn,
       decide: timing.decide,
     };
@@ -179,7 +183,7 @@ module.exports = function (io, options = {}) {
       // (the potions go along - what is left comes back)
       hero.potions = 0;
     }
-    rpg.enterRoom(party.run);
+    rpg.enterRoom(party.run, 0);
     afterChange(party);
     emitParties();
     return null;
@@ -270,6 +274,13 @@ module.exports = function (io, options = {}) {
       if (cost == null) return error("That one is at its highest level.");
       if (!(await coins.spend(username, cost, { reason: "rpg upgrade", note: data.stat }))) return error(coins.refusal(username) || "You don't have enough coins.");
       hero.levels[data.stat]++;
+      sendHero(username);
+    });
+
+    on("class", (data) => {
+      if (!rpg.CLASS_IDS.includes(data.id)) return;
+      if (inRun()) return error("Not during a run.");
+      heroOf(username).cls = data.id;
       sendHero(username);
     });
 
@@ -376,11 +387,13 @@ module.exports = function (io, options = {}) {
       emitParty(party);
     });
 
-    on("next", () => {
+    on("next", (data) => {
       const party = myParty();
       if (!party || !party.run || party.result || party.run.phase !== "between") return;
       if (party.leader !== username) return error("The leader decides.");
-      rpg.enterRoom(party.run);
+      const door = Number(data.door) || 0;
+      if (!Number.isInteger(door) || door < 0 || door >= party.run.doors.length) return;
+      rpg.enterRoom(party.run, door);
       afterChange(party);
     });
 

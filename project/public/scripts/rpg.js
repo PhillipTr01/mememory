@@ -9,6 +9,7 @@ var parties = []; // the open parties
 var party = null; // my party (with its run) - null: none
 var partyAt = 0; // when it came (its timeLeft counts from then)
 var target = null; // the monster I aim at
+var ally = null; // the hero my heals and shields go to (null: myself)
 var FLOOR_KEY = "rpgFloor";
 var SIZE_KEY = "rpgSize";
 var floor = 1;
@@ -20,8 +21,8 @@ try {
   // no storage: the defaults
 }
 
-var ROOM_ICONS = { fight: "⚔️", chest: "🎁", trap: "🪤", rest: "🔥", elite: "👑", boss: "💀" };
-var ROOM_NAMES = { fight: "Fight", chest: "Chest", trap: "Trap", rest: "Camp fire", elite: "Elite fight", boss: "Boss" };
+var EFFECT_ICONS = { poison: "☠️", burn: "🔥", stun: "💫", chill: "❄️", shield: "🔰", rage: "😡" };
+var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned - loses its next move", chill: "Chilled - half damage", shield: "Shield", rage: "Raging - more damage" };
 var RARITY_NAMES = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary" };
 var SLOT_NAMES = { weapon: "Weapon", armor: "Armor", charm: "Charm" };
 
@@ -155,6 +156,27 @@ function itemCard(item, actions) {
 }
 
 function renderHero() {
+  var classes = Object.keys(rules.classes).map((id) => {
+    var cls = rules.classes[id];
+    var tile = el("button", "rpg-class" + (hero.cls == id ? " active" : ""));
+    tile.type = "button";
+    tile.dataset.act = "class";
+    tile.dataset.id = id;
+    tile.title = cls.about + "\n" + cls.skills.map((s) => rules.skills[s].icon + " " + rules.skills[s].name + " (" + rules.skills[s].cost + "⚡): " + rules.skills[s].about).join("\n");
+    tile.append(el("span", "rpg-class-icon", cls.icon), el("span", "rpg-class-name", cls.name));
+    return tile;
+  });
+  morphChildren(document.getElementById("rpgClasses"), classes);
+  var mine = rules.classes[hero.cls];
+  morphChildren(
+    document.getElementById("rpgClassInfo"),
+    [el("div", "rpg-class-about", mine.about)].concat(mine.skills.map((id) => {
+      var skill = rules.skills[id];
+      var row = el("div", "rpg-skill-row");
+      row.append(el("span", "rpg-skill-icon", skill.icon), el("b", "", skill.name), el("span", "rpg-energy-cost", skill.cost + "⚡"), el("span", "mm-muted", skill.about));
+      return row;
+    })),
+  );
   document.getElementById("rpgHeroSub").innerText = "Deepest floor " + hero.deepest + " · " + hero.cleared + " cleared of " + hero.runs + " runs";
   var stats = Object.keys(rules.stats).map((id) => {
     var stat = rules.stats[id];
@@ -246,39 +268,82 @@ function renderLobby() {
   document.getElementById("rpgLobbyNote").innerText = leader ? "Start when you like - every hero pays the entry then." : "Waiting for " + party.leader + " to start.";
 }
 
+function effectsRow(effects) {
+  var row = el("div", "rpg-effects");
+  Object.keys(effects).forEach((kind) => {
+    var chip = el("span", "rpg-effect " + kind, EFFECT_ICONS[kind] + (effects[kind] > 1 || kind == "shield" ? " " + effects[kind] : ""));
+    chip.title = EFFECT_NAMES[kind];
+    row.appendChild(chip);
+  });
+  return row;
+}
+
+function energyPips(energy) {
+  var pips = el("span", "rpg-pips");
+  for (var i = 0; i < rules.energyMax; i++) pips.appendChild(el("span", "rpg-pip" + (i < energy ? " on" : "")));
+  pips.title = energy + " energy";
+  return pips;
+}
+
+// What a monster does next: a badge over it
+function intentBadge(m) {
+  var move = rules.moves[m.intent.move];
+  var badge = el("div", "rpg-intent move-" + m.intent.move + (m.intent.stunned ? " stunned" : ""));
+  var text = move.icon + " ";
+  if (m.intent.stunned) text = "💫 stunned";
+  else if (m.intent.damage) text += m.intent.damage + (move.all ? " to all" : m.intent.target ? " → " + m.intent.target : "");
+  else text += move.name;
+  badge.innerText = text;
+  badge.title = m.intent.stunned ? "Stunned - it loses this move" : move.name + (m.intent.target ? " on " + m.intent.target : "");
+  if (m.intent.target == myName && m.intent.damage && !m.intent.stunned) badge.classList.add("at-me");
+  return badge;
+}
+
 function renderRun() {
   var run = party.run;
   var me = run.heroes.find((h) => h.name == myName);
+  if (ally && !run.heroes.some((h) => h.name == ally)) ally = null;
   document.getElementById("rpgRunFloor").innerText = "Floor " + run.floor;
   document.getElementById("rpgPot").innerText = "Loot 🪙 " + formatCoins(run.pot) + " each";
 
-  var track = run.rooms.map((room, i) => {
-    var dot = el("span", "rpg-room" + (room.done ? " done" : "") + (i == run.room && !room.done ? " now" : ""), ROOM_ICONS[room.kind]);
-    // (the rooms ahead: only what they are, not what is in them)
-    dot.title = "Room " + (i + 1) + ": " + (i <= run.room || room.kind == "elite" || room.kind == "boss" ? ROOM_NAMES[room.kind] : "?");
-    if (i > run.room && room.kind != "elite" && room.kind != "boss") dot.innerText = "❔";
-    return dot;
-  });
+  var track = [];
+  for (var i = 0; i < rules.rooms; i++) {
+    var room = run.rooms[i];
+    var last = i == rules.rooms - 1;
+    var kind = room ? room.kind : last ? "elite" : null;
+    var dot = el("span", "rpg-room" + (room && room.done ? " done" : "") + (room && !room.done ? " now" : ""), kind ? rules.roomKinds[kind].icon : "·");
+    dot.title = "Room " + (i + 1) + ": " + (kind ? rules.roomKinds[kind].name : "?");
+    track.push(dot);
+  }
   morphChildren(document.getElementById("rpgTrack"), track);
 
   var fighting = run.phase == "fight";
-  var monsters = fighting
-    ? run.monsters.map((m) => {
-        var card = el("div", "rpg-monster rank-" + m.rank + (m.down ? " down" : "") + (m.id == target ? " target" : ""));
-        card.dataset.act = m.down ? "" : "target";
-        card.dataset.id = m.id;
-        card.append(el("div", "rpg-monster-icon", m.icon), el("div", "rpg-monster-name", m.name), bar(m.hp, m.maxHp, "foe"), el("div", "rpg-monster-atk mm-muted small", "⚔️ " + m.atk));
-        return card;
-      })
-    : [el("div", "rpg-quiet", sceneText(run))];
-  morphChildren(document.getElementById("rpgMonsters"), monsters);
+  var scene;
+  if (fighting) {
+    scene = run.monsters.map((m) => {
+      var card = el("div", "rpg-monster rank-" + m.rank + (m.down ? " down" : "") + (m.id == target ? " target" : ""));
+      card.dataset.act = m.down ? "" : "target";
+      card.dataset.id = m.id;
+      if (m.intent) card.appendChild(intentBadge(m));
+      card.append(el("div", "rpg-monster-icon", m.icon), el("div", "rpg-monster-name", m.name + (m.undead ? " 🦴" : "")), bar(m.hp, m.maxHp, "foe"), effectsRow(m.effects), el("div", "rpg-monster-atk mm-muted small", "⚔️ " + m.atk));
+      return card;
+    });
+  } else if (run.phase == "between") scene = doorCards(run);
+  else scene = [el("div", "rpg-quiet", sceneText(run))];
+  morphChildren(document.getElementById("rpgMonsters"), scene);
 
   var heroes = run.heroes.map((h) => {
-    var card = el("div", "rpg-fighter" + (h.down ? " down" : "") + (h.name == myName ? " me" : ""));
+    var cls = rules.classes[h.cls] || { icon: "" };
+    var picked = h.name == (ally || myName) && fighting;
+    var card = el("div", "rpg-fighter" + (h.down ? " down" : "") + (h.name == myName ? " me" : "") + (picked ? " ally" : ""));
+    card.dataset.act = "ally";
+    card.dataset.id = h.name;
     var state = h.down ? "💤" : fighting ? (h.chose ? "✓" : "…") : "";
     var head = el("div", "rpg-fighter-head");
-    head.append(createAvatar(h.name, "sm"), el("span", "rpg-fighter-name", (h.name == party.leader ? "👑 " : "") + h.name), el("span", "rpg-fighter-state", state + (h.guard ? " 🛡️" : "")));
-    card.append(head, bar(h.hp, h.maxHp, "hero"), el("div", "rpg-fighter-info mm-muted small", "⚔️ " + h.atk + " · 🛡️ " + h.def + " · 🧪 " + h.potions));
+    head.append(createAvatar(h.name, "sm"), el("span", "rpg-fighter-name", (h.name == party.leader ? "👑 " : "") + h.name), el("span", "rpg-fighter-state", state));
+    var info = el("div", "rpg-fighter-info mm-muted small");
+    info.append(el("span", "", cls.icon + " · ⚔️ " + h.atk + " · 🛡️ " + h.def + " · 🧪 " + h.potions + (h.blessed ? " · ⛩️" : "")), energyPips(h.energy));
+    card.append(head, bar(h.hp, h.maxHp, "hero"), effectsRow(h.effects), info);
     return card;
   });
   morphChildren(document.getElementById("rpgHeroes"), heroes);
@@ -293,12 +358,24 @@ function renderRun() {
   log.scrollTop = log.scrollHeight;
 }
 
+// The doors to the next room (the leader picks one)
+function doorCards(run) {
+  var leader = party.leader == myName;
+  return run.doors.map((kind, i) => {
+    var info = rules.roomKinds[kind];
+    var door = el("div", "rpg-door-card kind-" + kind + (leader ? "" : " locked"));
+    door.dataset.act = leader ? "door" : "";
+    door.dataset.id = i;
+    door.append(el("div", "rpg-door-icon", info.icon), el("div", "rpg-door-name", info.name), el("div", "rpg-door-about mm-muted small", info.about));
+    return door;
+  });
+}
+
 function sceneText(run) {
   if (run.phase == "won") return "🎉 Floor " + run.floor + " cleared!";
   if (run.phase == "lost") return "💀 The party fell - the loot is lost.";
   if (run.phase == "left") return "🚪 You left the dungeon with the loot.";
-  var room = run.rooms[run.room];
-  return room ? ROOM_ICONS[room.kind] + " " + ROOM_NAMES[room.kind] + " done - " + (run.room + 1 < run.rooms.length ? "the next room waits." : "") : "";
+  return "";
 }
 
 function actionsOf(run, me) {
@@ -316,21 +393,21 @@ function actionsOf(run, me) {
     return [box];
   }
   if (run.phase == "between") {
-    if (!leader) return [el("div", "rpg-wait mm-muted", "⏳ " + party.leader + " decides: on or out with the loot.")];
-    var next = run.rooms[run.room + 1];
-    return [
-      button("Next room " + (next && (next.kind == "elite" || next.kind == "boss") ? ROOM_ICONS[next.kind] : "→"), "next", { className: "primary" }),
-      button("Leave with 🪙 " + formatCoins(run.pot), "exit"),
-    ];
+    if (!leader) return [el("div", "rpg-wait mm-muted", "⏳ " + party.leader + " picks a door - or leaves with the loot.")];
+    return [el("div", "rpg-wait mm-muted", "Pick a door above"), button("Leave with 🪙 " + formatCoins(run.pot), "exit")];
   }
-  if (!me || me.down) return [el("div", "rpg-wait mm-muted", "💤 You're down - back up after the fight.")];
+  if (!me || me.down) return [el("div", "rpg-wait mm-muted", "💤 You're down - back up after the fight (or a Cleric's revive).")];
   if (me.chose) return [el("div", "rpg-wait mm-muted", "✓ Waiting for the others…")];
-  return [
-    button("⚔️ Attack", "attack", { className: "primary" }),
-    button(me.cooldown > 0 ? "💥 Power strike (" + me.cooldown + ")" : "💥 Power strike", "skill", { disabled: me.cooldown > 0, title: "Hits harder and never misses - then " + rules.skillCooldown + " turns to get it back" }),
-    button("🛡️ Guard", "guard", { title: "Takes much less damage this turn" }),
-    button("🧪 Potion (" + me.potions + ")", "potion", { disabled: me.potions <= 0 || me.hp >= me.maxHp }),
-  ];
+  var cls = rules.classes[me.cls];
+  var buttons = [button("⚔️ Attack", "attack", { className: "primary", title: "A plain hit on the foe you aim at" }), button("🛡️ Guard +1⚡", "guard", { title: "Takes much less damage this turn - and 1 more energy" })];
+  cls.skills.forEach((id) => {
+    var skill = rules.skills[id];
+    var needs = skill.target == "ally" ? " (on " + (ally || "you") + ")" : skill.target == "foe" ? "" : "";
+    var noneDown = skill.target == "fallen" && !run.heroes.some((h) => h.down);
+    buttons.push(button(skill.icon + " " + skill.name + " " + skill.cost + "⚡" + needs, "skill", { id: id, className: "skill", disabled: me.energy < skill.cost || noneDown, title: skill.about }));
+  });
+  buttons.push(button("🧪 Potion (" + me.potions + ")", "potion", { disabled: me.potions <= 0 || me.hp >= me.maxHp }));
+  return buttons;
 }
 
 // The time of the turn / the decision, running down
@@ -357,7 +434,7 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "unequip") socket.emit("unequip", { slot: id });
   else if (act == "join") socket.emit("join", { id: id });
   else if (act == "leave") socket.emit("leave");
-  else if (act == "next" || act == "exit") socket.emit(act);
+  else if (act == "exit") socket.emit("exit");
   else if (act == "size") {
     size = Number(id);
     remember(SIZE_KEY, size);
@@ -365,7 +442,19 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   } else if (act == "target") {
     target = id;
     render();
-  } else if (act == "attack" || act == "skill") socket.emit("act", { action: act, target: target });
+  } else if (act == "ally") {
+    ally = id == myName ? null : id;
+    render();
+  } else if (act == "class") socket.emit("class", { id: id });
+  else if (act == "door") socket.emit("next", { door: Number(id) });
+  else if (act == "attack") socket.emit("act", { action: "attack", target: target });
+  else if (act == "skill") {
+    // (a revive: the ally picked if down - else the first one down)
+    var run = party && party.run;
+    var fallen = run ? run.heroes.filter((h) => h.down) : [];
+    var friend = rules.skills[id].target == "fallen" ? (fallen.find((h) => h.name == ally) || fallen[0] || {}).name : ally || myName;
+    socket.emit("act", { action: "skill", skill: id, target: target, ally: friend });
+  }
   else if (act == "guard" || act == "potion") socket.emit("act", { action: act });
 });
 
