@@ -1461,7 +1461,7 @@ function shopNodes(run, me) {
     button("🧪 Potion · 🪙 " + formatCoins(price("potion")) + " (" + me.potions + "/" + rules.potionsMax + ")", "buy", { id: "potion", disabled: me.potions >= rules.potionsMax || myCoins < price("potion") }),
     button(offer.removed ? "🗑️ Card removed ✓" : "🗑️ Remove a card · 🪙 " + formatCoins(price("remove")), "pickMode", { id: "remove", className: picking == "remove" ? "voted" : "", disabled: offer.removed || myCoins < price("remove") || me.deck.length <= rules.deckLeast, title: "The merchant takes a card out of your deck for this run" }),
   );
-  var nodes = [el("div", "rpg-shop-coins", "Your coins: 🪙 " + formatCoins(myCoins)), el("div", "rpg-label", "Cards"), cards, el("div", "rpg-label", "Relics"), relics, el("div", "rpg-label", "Services"), services];
+  var nodes = [el("div", "rpg-shop-coins", "Your coins: 🪙 " + formatCoins(myCoins)), el("div", "rpg-label", "Cards · for this run only"), cards, el("div", "rpg-label", "Relics · for this run only"), relics, el("div", "rpg-label", "Services"), services];
   if (picking == "remove" && !offer.removed) nodes.push(...deckPicker(me, "Pick the card he takes out of your deck", "remove"));
   return nodes;
 }
