@@ -47,7 +47,7 @@ module.exports = function (auth) {
   // The tabs of the games that are off are hidden (admin panel, Settings)
   // (and the accent color of the running season)
   const hideOff = (req) => {
-    const off = games.GAMES.filter((game) => !games.enabled(game.id));
+    const off = games.GAMES.filter((game) => !games.enabled(game.id, req && req.username));
     return (off.length ? `<style>${off.map((game) => `.cs-tab[href="${game.tab}"]`).join(", ")} { display: none !important; }</style>` : "") + seasons.accentStyle(req && req.username) + seasons.coinScript(req && req.username) + worldScript(req);
   };
 
@@ -66,8 +66,8 @@ module.exports = function (auth) {
   function gamePage(id, file) {
     const send = page(file, hideOff);
     return (req, res, next) => {
-      if (games.enabled(id)) return send(req, res, next);
-      const other = games.firstEnabled();
+      if (games.enabled(id, req.username)) return send(req, res, next);
+      const other = games.firstEnabled(req.username);
       res.redirect(req.baseUrl + (other ? other.page : "/leaderboard"));
     };
   }

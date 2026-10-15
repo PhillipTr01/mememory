@@ -127,7 +127,8 @@ module.exports = function (io) {
   settings.changes.on("change", (values) => {
     for (const game of games.GAMES) {
       if (values[game.key] !== false) continue;
-      for (const socket of [game.namespace, ...worlds.SEASONS.map((world) => world + game.namespace), worlds.TEST + game.namespace].flatMap((name) => [...io.of(name).sockets.values()])) {
+      // (the test world keeps it - a game is tried out there before it opens)
+      for (const socket of [game.namespace, ...worlds.SEASONS.map((world) => world + game.namespace)].flatMap((name) => [...io.of(name).sockets.values()])) {
         socket.emit("gameOff");
         socket.disconnect(true);
       }

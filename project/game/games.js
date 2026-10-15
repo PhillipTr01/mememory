@@ -1,4 +1,5 @@
 const config = require("./config");
+const testMode = require("./test_mode");
 
 /*
  * The games of the casino and whether they are on (admin panel, Settings).
@@ -15,14 +16,15 @@ const GAMES = [
   { id: "slots", key: "GAME_SLOTS", name: "Slots", page: "/slots", tab: "slots", namespace: "/slots" },
 ];
 
-function enabled(id) {
+// (a player in test mode: every game is on - try a game out before it opens for everybody)
+function enabled(id, username) {
   const game = GAMES.find((g) => g.id === id);
-  return game != null && config[game.key] !== false;
+  return game != null && (config[game.key] !== false || (username != null && testMode.active(username)));
 }
 
 // Where a player goes instead (null: no game is on - the leaderboard)
-function firstEnabled() {
-  return GAMES.find((game) => config[game.key] !== false) || null;
+function firstEnabled(username) {
+  return GAMES.find((game) => enabled(game.id, username)) || null;
 }
 
 module.exports = { GAMES, enabled, firstEnabled };
