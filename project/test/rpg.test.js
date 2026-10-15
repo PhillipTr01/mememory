@@ -808,6 +808,17 @@ test("rpg: leaving - one away doesn't hold the party up, one out of the run lose
   assert.strictEqual(rpg.lootShare(10, 8), 1);
   assert.ok(Math.abs(rpg.lootShare(10, 7) - 0.85) < 1e-9);
   assert.strictEqual(rpg.lootShare(30, 1), 0.1);
+  // Out-of-fight abilities: the class in the party, its main-stat level
+  const team = [rpg.newHero("warrior"), rpg.newHero("mage")];
+  rpg.charOf(team[0]).levels.atk = 40;
+  rpg.charOf(team[1]).levels.luck = 50;
+  const abRun = rpg.newRun(1, team.map((hero, i) => ({ name: "h" + i, hero })));
+  assert.strictEqual(rpg.abilityLevel(abRun, "warrior"), 40);
+  assert.strictEqual(rpg.abilityLevel(abRun, "cleric"), null);
+  assert.match(rpg.abilityOf("warrior", 40).text, /\+40% coins/);
+  abRun.heroes[0].reward = ["jab", "brace", "dash"];
+  for (let i = 0; i < 3; i++) assert.strictEqual(rpg.rerollReward(abRun, "h0"), null);
+  assert.match(rpg.rerollReward(abRun, "h0"), /No rerolls left/);
   // Longer maps deeper down and on boss floors
   for (let i = 0; i < 20; i++) {
     assert.strictEqual(rpg.rowsFor(1), rpg.ROOMS);

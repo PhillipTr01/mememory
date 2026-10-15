@@ -553,6 +553,12 @@ function renderHero() {
     var mineStrength = hero.strength || mine.strength;
     strength.append(el("span", "rpg-strength-icon", mineStrength.icon), el("b", "", mineStrength.name), el("span", "", mineStrength.text), el("span", "rpg-strength-grow", "grows with your level"));
     info.push(el("div", "rpg-class-about", mine.about), strength);
+    // (out of the fights: the class's help for the party - grows with the main stat)
+    if (hero.ability) {
+      var ability = el("div", "rpg-class-strength ability");
+      ability.append(el("span", "rpg-strength-icon", hero.ability.icon), el("b", "", hero.ability.name), el("span", "", hero.ability.text), el("span", "rpg-strength-grow", "grows with " + rules.stats[mine.main].name));
+      info.push(ability);
+    }
     // (a later character of the player: dearer stats, stronger monsters)
     if (hero.charIndex > 0) {
       var later = el("div", "rpg-class-later", "Character #" + (hero.charIndex + 1) + ": stats +" + rules.charPrice * hero.charIndex + "% · monsters +" + rules.charHarder * hero.charIndex + "%");
@@ -1635,6 +1641,8 @@ function rewardPanel(me) {
     el("div", "rpg-reward-title", "🃏 Add a card to your deck"),
     el("div", "rpg-reward-note mm-muted small", "For this run only."),
     cards,
+    // (a mage in the party: other cards - a few times a run)
+    party.run.rerolls != null ? button("🔮 Reroll (" + party.run.rerolls + " left)", "reroll", { className: "small", disabled: party.run.rerolls <= 0 }) : null,
     button("Skip this card", "pick", { id: "", className: "small" }),
     button("‹ Back", "rewardView", { id: "list", className: "small" }),
   ];
@@ -2256,6 +2264,7 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     aiming = null;
     socket.emit("endTurn");
   } else if (act == "drink") socket.emit("drink");
+  else if (act == "reroll") socket.emit("reroll");
   else if (act == "pick") {
     socket.emit("pick", { card: id || null });
     rewardView = "list";

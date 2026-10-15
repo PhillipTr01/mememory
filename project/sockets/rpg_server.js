@@ -725,6 +725,15 @@ module.exports = function (io, options = {}) {
       emitParty(party);
     });
 
+    // A mage in the party: the card reward drawn again
+    on("reroll", () => {
+      const party = myRun();
+      if (!party) return;
+      const problem = rpg.rerollReward(party.run, username);
+      if (problem) return error(problem);
+      emitParty(party);
+    });
+
     // The merchant: {item: "potion", "remove:<index of the deck>", a card or a relic} - paid with the own coins
     on("buy", async (data) => {
       const party = myRun();

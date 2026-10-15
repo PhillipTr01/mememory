@@ -652,6 +652,38 @@ function pickTalent(hero, tier, id) {
   return null;
 }
 
+/* ---------- Out of the fights: every class helps the whole party, more with the levels of its main stat ---------- */
+
+// (per level of the class's main stat, 0 to LEVEL_MAX)
+const ABILITIES = {
+  warrior: { name: "Smash Open", icon: "🔨", coins: 0.01, gear: 0.003 },
+  paladin: { name: "Shield the Party", icon: "🛡️", trap: 0.006, shrine: 0.005 },
+  cleric: { name: "Sanctuary", icon: "🕊️", rest: 0.01, rise: 0.003 },
+  mage: { name: "Arcane Insight", icon: "🔮", discount: 0.003, rerollEvery: 25 },
+  rogue: { name: "Scout", icon: "🦊" },
+};
+
+// The level of a class's ability in a run: the highest main-stat level of its heroes standing (null: none of them)
+function abilityLevel(run, cls) {
+  const main = CLASSES[cls].main;
+  const ones = run.heroes.filter((h) => h.cls == cls && !h.down && h.levels);
+  return ones.length ? Math.max(...ones.map((h) => h.levels[main] || 0)) : null;
+}
+
+// What an ability does at a level -> {name, icon, text}
+function abilityOf(cls, level = 0) {
+  const a = ABILITIES[cls];
+  const p = (share) => Math.round(share * level * 100);
+  const text = {
+    warrior: () => `Treasure +${p(a.coins)}% coins, ${p(a.gear)}% extra gear.`,
+    paladin: () => `Traps -${p(a.trap)}% damage, shrines -${p(a.shrine)}% HP.`,
+    cleric: () => `Camp fires heal +${p(a.rest)}%, the fallen rise with ${Math.round((REVIVE + a.rise * level) * 100)}% HP.`,
+    mage: () => `Merchant -${p(a.discount)}%, ${1 + Math.floor(level / a.rerollEvery)} card reroll${Math.floor(level / a.rerollEvery) ? "s" : ""} a run.`,
+    rogue: () => `Senses rooms (with instinct).`,
+  }[cls]();
+  return { name: a.name, icon: a.icon, text };
+}
+
 // A class's strength at a character level: its perks grow from the base at level 1 to STRENGTH_TOP times it (or its
 // own top) at the highest level -> {name, icon, perks, text} (the text with the numbers of that level)
 const STRENGTH_TOP = 2;
@@ -823,6 +855,7 @@ function heroView(hero) {
     pool: hero.cls ? poolOf(hero.cls) : [],
     texts: hero.cls ? liveTexts({ ...statsOf(hero), perks: talentPerks(hero) }, poolOf(hero.cls)) : {},
     strength: hero.cls ? strengthOf(hero.cls, char.level) : null,
+    ability: hero.cls ? abilityOf(hero.cls, char.levels[CLASSES[hero.cls].main] || 0) : null,
     level: char.level,
     xp: char.xp,
     xpNeed: xpNeed(char.level),
@@ -1119,6 +1152,7 @@ function newRun(floor, party, rng = Math.random, options = {}) {
         cls: hero.cls,
         level: charOf(hero).level,
         maxFloor: maxFloor(hero),
+        levels: { ...charOf(hero).levels },
         share: lootShare(charOf(hero).deepest, floor),
         ...stats,
         hp: stats.maxHp,
@@ -1150,6 +1184,7 @@ function newRun(floor, party, rng = Math.random, options = {}) {
   };
   if (options.tutorial) run.tutorial = true;
   // (later characters of their players: stronger monsters - a party: the average)
+  run.rerolls = null;
   run.harder = 1 + (config.RPG_CHAR_HARDER / 100) * (party.reduce((sum, { hero }) => sum + charIndex(hero), 0) / Math.max(1, party.length));
   run.map = run.tutorial ? tutorialMap() : makeMap(run, rng);
   run.doors = doorsFor(run);
@@ -1389,18 +1424,30 @@ function enterRoom(run, door = 0, rng = Math.random) {
     if (id == "library") run.event.offers = Object.fromEntries(heroes.map((h) => [h.name, rewardFor(h, rng, 5)]));
     say(run, `${ENCOUNTERS[id].icon} ${ENCOUNTERS[id].name}.`);
   } else if (kind == "chest") {
-    const coins = Math.round(entryCost(run.floor) * REWARD.chest * (config.RPG_LOOT / 100) * partyBonus(run.heroes.length));
+    // (a warrior smashes it open: more coins, maybe gear for everyone)
+    const smash = abilityLevel(run, "warrior");
+    const coins = Math.round(entryCost(run.floor) * REWARD.chest * (config.RPG_LOOT / 100) * partyBonus(run.heroes.length) * (1 + ABILITIES.warrior.coins * (smash || 0)));
     run.pot += coins;
     note(`🪙 ${coins} each to the pot.`);
+    if (smash != null)
+      for (const hero of heroes)
+        if (rng() < ABILITIES.warrior.gear * smash) {
+          const item = makeGear(run.floor, rng, hero.luck, hero.cls);
+          run.loot[hero.name].push(item);
+          note(`🔨 Smashed open: ${hero.name} finds ${item.icon} ${item.name}.`);
+        }
   } else if (kind == "merchant") {
     // (every hero shops on its own, with its own coins - no choice to make)
     run.event.choices = null;
     run.event.offers = {};
     const prices = merchantPrices(run.floor);
+    // (a mage haggles: cheaper for everyone)
+    const off = 1 - ABILITIES.mage.discount * (abilityLevel(run, "mage") || 0);
+    for (const key of Object.keys(prices)) prices[key] = round100(prices[key] * off);
     for (const hero of heroes) {
       const cards = rewardFor(hero, rng, MERCHANT_CARDS);
       const relics = relicOffer(hero, rng, MERCHANT_RELICS);
-      const price = { potion: potionPrice(hero.maxFloor), remove: prices.remove };
+      const price = { potion: round100(potionPrice(hero.maxFloor) * off), remove: prices.remove };
       for (const id of cards) price[id] = Math.round((prices.card * CARD_PRICE[CARDS[id].rarity]) / 100) * 100;
       for (const id of relics) price[id] = prices.relic;
       run.event.offers[hero.name] = { cards, relics, bought: [], removed: false, prices: price };
@@ -1458,6 +1505,20 @@ function pickReward(run, name, card) {
   return null;
 }
 
+// A mage's insight: the card reward drawn again - 1 + one more every rerollEvery levels a run, for the party
+function rerollReward(run, name, rng = Math.random) {
+  const hero = run.heroes.find((h) => h.name == name);
+  if (!hero || !hero.reward) return "No card to pick.";
+  const level = abilityLevel(run, "mage");
+  if (level == null) return "No mage in the party.";
+  if (run.rerolls == null) run.rerolls = 1 + Math.floor(level / ABILITIES.mage.rerollEvery);
+  if (run.rerolls <= 0) return "No rerolls left.";
+  run.rerolls--;
+  hero.reward = rewardFor(hero, rng);
+  say(run, `🔮 ${hero.name} sees other cards.`);
+  return null;
+}
+
 // The relic of the elite: one of three (null: none)
 function pickRelic(run, name, id) {
   const hero = run.heroes.find((h) => h.name == name);
@@ -1489,8 +1550,10 @@ function choose(run, name, input = {}, rng = Math.random) {
     event.lines.push(text);
     say(run, text);
   };
-  const lose = (share) => {
-    const damage = Math.round(hero.maxHp * share);
+  // (a paladin shields the party: traps and shrines hurt less)
+  const shield = abilityLevel(run, "paladin") || 0;
+  const lose = (share, cut = 0) => {
+    const damage = Math.round(hero.maxHp * share * Math.max(0, 1 - cut * shield));
     hero.hp = Math.max(1, hero.hp - damage);
     return damage;
   };
@@ -1522,14 +1585,14 @@ function choose(run, name, input = {}, rng = Math.random) {
       if (rng() * 100 < disarmChance(hero)) {
         const item = gear();
         note(`${name} disarms the trap 🍀: ${item.icon} ${item.name}.`);
-      } else note(`${name} sets it off: ${lose(0.25)} damage.`);
+      } else note(`${name} sets it off: ${lose(0.25, ABILITIES.paladin.trap)} damage.`);
       break;
     case "sneak":
-      note(`${name} sneaks past: ${lose(0.1)} damage.`);
+      note(`${name} sneaks past: ${lose(0.1, ABILITIES.paladin.trap)} damage.`);
       break;
     case "rest":
       hero.bonusEnergy = 1;
-      note(`${name} rests: +${healHero(run, hero, hero.maxHp * REST_HEAL)} HP, +1 mana in the next fight.`);
+      note(`${name} rests: +${healHero(run, hero, hero.maxHp * REST_HEAL * (1 + ABILITIES.cleric.rest * (abilityLevel(run, "cleric") || 0)))} HP, +1 mana in the next fight.`);
       break;
     case "smith": {
       const id = hero.deck[index];
@@ -1539,7 +1602,7 @@ function choose(run, name, input = {}, rng = Math.random) {
     }
     case "pray":
       hero.blessed = true;
-      note(`${name} gives ${lose(SHRINE_COST)} HP: +25% damage this run.`);
+      note(`${name} gives ${lose(SHRINE_COST, ABILITIES.paladin.shrine)} HP: +25% damage this run.`);
       break;
     case "drink":
       note(`${name} drinks: +${healHero(run, hero, hero.maxHp * 0.3)} HP.`);
@@ -2168,6 +2231,8 @@ function winFight(run, rng) {
   // (the spoils of the fight - the page lists them: the coins, the card, the relic)
   run.spoils = { room: run.rooms.length, coins, xp: xpFor(room.kind, run.floor) };
   // (the ones down get back up, every state goes, the cards back into the deck - and a new card to pick)
+  // (a cleric standing: the fallen rise with more HP)
+  const rise = REVIVE + ABILITIES.cleric.rise * (abilityLevel(run, "cleric") || 0);
   for (const hero of run.heroes) {
     hero.effects = {};
     hero.block = 0;
@@ -2178,7 +2243,7 @@ function winFight(run, rng) {
     hero.exhausted = [];
     if (hero.down) {
       hero.down = false;
-      hero.hp = Math.max(1, Math.round(hero.maxHp * REVIVE));
+      hero.hp = Math.max(1, Math.round(hero.maxHp * rise));
       say(run, `${hero.name} gets back up.`);
     }
     hero.reward = rewardFor(hero, rng);
@@ -2214,6 +2279,7 @@ function runView(run) {
     doors: run.doors.map((door) => ({ row: door.row, index: door.index, kind: shownKind(door) })),
     tutorial: !!run.tutorial,
     sense: senseChance(run),
+    rerolls: abilityLevel(run, "mage") == null ? null : run.rerolls == null ? 1 + Math.floor(abilityLevel(run, "mage") / ABILITIES.mage.rerollEvery) : run.rerolls,
     event: run.event && {
       kind: run.event.kind,
       id: run.event.id,
@@ -2482,6 +2548,10 @@ module.exports = {
   statsOf,
   upgradeCost,
   statPrice,
+  ABILITIES,
+  abilityLevel,
+  abilityOf,
+  rerollReward,
   charIndex,
   statFull,
   maxFloor,
