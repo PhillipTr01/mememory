@@ -5854,3 +5854,24 @@ button.rpg-cardx.off {
     transform: translateY(-4px);
   }
 }
+
+/* 33. A pack card of another class: dimmed, its class on a badge */
+.rpg-flip.other-class .rpg-flip-front {
+  filter: grayscale(0.7) brightness(0.75);
+}
+
+.rpg-other-class {
+  position: absolute;
+  bottom: -0.75rem;
+  left: 0.35rem;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  background: #2a2a30;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  font-size: 0.9rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}

@@ -439,7 +439,8 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (dupl
     const pack = rpg.openPack(hero);
     assert.strictEqual(pack.length, rpg.PACK_SIZE);
     for (const card of pack) {
-      assert.ok(rpg.poolOf("rogue").includes(card.id) && rpg.CARDS[card.id].rarity != "basic", card.id);
+      // (another class's card: marked with its class)
+      assert.ok((card.cls ? rpg.cardClass(card.id) == card.cls : rpg.poolOf("rogue").includes(card.id)) && rpg.CARDS[card.id].rarity != "basic", card.id);
       assert.strictEqual(card.coins, 0);
     }
     assert.notStrictEqual(rpg.CARDS[pack[4].id].rarity, "common");

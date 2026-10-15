@@ -962,7 +962,7 @@ function stackCards(cards) {
     if (same) {
       same.n++;
       same.fresh = same.fresh || c.fresh;
-    } else stacks.push({ id: c.id, n: 1, fresh: c.fresh });
+    } else stacks.push({ id: c.id, n: 1, fresh: c.fresh, cls: c.cls });
   });
   return stacks;
 }
@@ -987,6 +987,22 @@ function openingFoot() {
   return foot;
 }
 
+// The note under a turned card: new or a duplicate - another class's card: its class
+function flipNote(c) {
+  var text = c.fresh ? "New!" : "Duplicate";
+  return el("span", "rpg-flip-note" + (c.fresh ? " fresh" : ""), text);
+}
+
+// Another class's card: a badge on it - not for this character's deck
+function otherClassBadge(slot, c) {
+  if (!c.cls || !rules.classes[c.cls] || slot.querySelector(".rpg-other-class")) return;
+  var cls = rules.classes[c.cls];
+  var badge = el("span", "rpg-other-class", cls.icon);
+  badge.title = cls.name + " card - not usable by this character";
+  slot.classList.add("other-class");
+  slot.appendChild(badge);
+}
+
 // A card turned over - in place (the others stay as they are)
 function flipSlot(slot) {
   var i = Number(slot.dataset.flip);
@@ -994,7 +1010,8 @@ function flipSlot(slot) {
   opening.flipped[i] = true;
   slot.classList.add("flipped");
   var c = opening.cards[i];
-  if (!slot.querySelector(".rpg-flip-note")) slot.appendChild(el("span", "rpg-flip-note" + (c.fresh ? " fresh" : ""), c.fresh ? "New!" : "Duplicate"));
+  if (!slot.querySelector(".rpg-flip-note")) slot.appendChild(flipNote(c));
+  otherClassBadge(slot, c);
 }
 
 function refreshOpeningFoot() {
@@ -1033,7 +1050,10 @@ function renderOpening() {
       front.appendChild(card);
       inner.append(back, front);
       slot.appendChild(inner);
-      if (opening.flipped[i]) slot.appendChild(el("span", "rpg-flip-note" + (c.fresh ? " fresh" : ""), c.fresh ? "New!" : "Duplicate"));
+      if (opening.flipped[i]) {
+        slot.appendChild(flipNote(c));
+        otherClassBadge(slot, c);
+      }
       row.appendChild(slot);
     });
     var foot = openingFoot();

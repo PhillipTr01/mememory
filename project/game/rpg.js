@@ -575,20 +575,35 @@ function deckReady(hero) {
   return null;
 }
 
+// The class a card belongs to (null: neutral or basic - every class's)
+let cardClasses = null;
+function cardClass(id) {
+  if (!cardClasses) {
+    cardClasses = {};
+    for (const cls of Object.keys(CLASSES)) for (const card of [...CLASSES[cls].cards, CLASSES[cls].mythic]) cardClasses[card] = cls;
+  }
+  return cardClasses[id] || null;
+}
+// A pack: the cards of the own class and the neutral ones this much more often than another class's
+const OWN_PACK_WEIGHT = 3;
+
 // A booster pack opened: its cards of the class (the last ones of a rarity at least) -> [{id, fresh, coins}] -
 // a card the collection holds all copies of already stays in it too (fresh: false)
 function openPack(hero, rng = Math.random, packId = "standard") {
   const char = charOf(hero);
   const pack = PACKS[packId] || PACKS.standard;
-  const pool = poolOf(hero.cls).filter((id) => CARDS[id].rarity != "basic");
+  // (the whole set - another class's card goes to that class's collection, for a later character or a trade)
+  const pool = Object.keys(CARDS).filter((id) => CARDS[id].rarity != "basic");
+  const own = new Set(poolOf(hero.cls));
   const cards = [];
   for (let i = 0; i < pack.size; i++) {
     const better = i >= pack.size - pack.better;
     const least = RARITY_RANK.indexOf(pack.least);
-    const choices = pool.filter((id) => !better || RARITY_RANK.indexOf(CARDS[id].rarity) >= least).map((id) => [id, CARD_RARITIES[CARDS[id].rarity].weight * (pack.boost[CARDS[id].rarity] || 1)]);
+    const choices = pool.filter((id) => !better || RARITY_RANK.indexOf(CARDS[id].rarity) >= least).map((id) => [id, CARD_RARITIES[CARDS[id].rarity].weight * (pack.boost[CARDS[id].rarity] || 1) * (own.has(id) ? OWN_PACK_WEIGHT : 1)]);
     const id = weighted(rng, choices);
-    const fresh = collect(char, id);
-    cards.push({ id, fresh, coins: 0 });
+    const other = own.has(id) ? null : cardClass(id);
+    const fresh = collect(other ? charOf(hero, other) : char, id);
+    cards.push(other ? { id, fresh, coins: 0, cls: other } : { id, fresh, coins: 0 });
   }
   return cards;
 }
@@ -2379,6 +2394,7 @@ module.exports = {
   CART_MAX,
   deckMax,
   poolOf,
+  cardClass,
   collect,
   deckAdd,
   deckRemove,
