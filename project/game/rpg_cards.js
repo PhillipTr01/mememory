@@ -225,7 +225,7 @@ const IF = { poison: "on a poisoned foe", burn: "on a burning foe", chill: "on a
 const STATUS = {
   poison: ["poison", "poisoned"],
   burn: ["burn", "burning"],
-  chill: ["chill", "chilled (half damage)"],
+  chill: ["chill", "chilled"],
   stun: ["stun", "stunned"],
 };
 
@@ -245,8 +245,8 @@ function phrase(fx, n) {
     if (fx.to == "random") text += " to a random foe";
     if (fx.times) text += fx.times == 2 ? " twice" : " " + fx.times + " times";
     if (fx.bonusIf) text += " - " + (n ? n.dmg(fx.bonus, fx) : pct(fx.bonus)) + " " + ifText(fx.bonusIf);
-    if (fx.fromBlock) text = "deal damage equal to your block (at least " + (n ? n.dmg(fx.hit, fx) : pct(fx.hit)) + ")";
-    if (fx.execute) text = "a foe below " + pct(fx.execute) + " HP dies (not a boss) - else " + text.replace(/^deal /, "");
+    if (fx.fromBlock) text = "deal your block as damage, min " + (n ? n.dmg(fx.hit, fx) : pct(fx.hit));
+    if (fx.execute) text = "a foe below " + pct(fx.execute) + " HP dies (no boss), else " + text.replace(/^deal /, "");
     return text;
   }
   if (fx.block != null) {
@@ -277,7 +277,7 @@ function phrase(fx, n) {
   if (fx.mana != null) return "+" + fx.mana + " mana";
   if (fx.lose != null) return "lose " + (n ? n.lose(fx.lose) : pct(fx.lose)) + " HP";
   if (fx.evade) return "nothing hits you this turn";
-  if (fx.taunt) return "every foe attacks you this turn - you take 30% less";
+  if (fx.taunt) return "taunt all foes this turn, take 30% less";
   if (fx.revive != null) return (fx.to == "all" ? "every fallen ally stands up" : "a fallen ally stands up") + " with " + pct(fx.revive) + " HP";
   if (fx.cleanse) return (fx.to == "ally" ? "you or an ally lose" : "lose") + " poison and burns";
   if (fx.extend != null) return "its poison lasts " + fx.extend + " turns longer";

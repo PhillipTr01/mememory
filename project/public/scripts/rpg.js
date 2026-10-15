@@ -35,7 +35,7 @@ try {
 }
 
 var EFFECT_ICONS = { poison: "☠️", burn: "🔥", stun: "💫", chill: "❄️", rage: "😡", might: "📯", weak: "🕯️" };
-var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned - loses its next move", chill: "Chilled - half damage", rage: "Raging - more damage", might: "Might - 30% more damage", weak: "Cursed - 30% less damage" };
+var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned: skips a move", chill: "Chilled: half damage", rage: "Raging: more damage", might: "Might: +30% damage", weak: "Cursed: -30% damage" };
 var RARITY_NAMES = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary" };
 var SLOT_NAMES = { weapon: "Weapon", armor: "Armor", charm: "Charm" };
 
@@ -500,13 +500,13 @@ function renderTop() {
   // The hero's level: XP from the fights - every level a stat point, talents at levels 3 to 50
   var xpBox = document.getElementById("rpgXp");
   xpBox.hidden = !picked;
-  xpBox.title = "XP: every fight won (hard fights and the guarded gate more, deeper floors more) and every floor cleared (the first time: twice) - a run lost: half. Every level: a stat point; talents at levels " + rules.talentLevels.join(", ") + ". At most level " + rules.heroLevelMax + ".";
+  xpBox.title = "XP from fights and floors. Each level: a stat point. Talents at levels " + rules.talentLevels.join(", ") + ". Max level " + rules.heroLevelMax + ".";
   var top = hero.level >= rules.heroLevelMax;
   if (picked) morphChildren(xpBox, [el("span", "rpg-level", "Lv " + hero.level), top ? el("span", "rpg-max mm-muted small", "Max level") : bar(hero.xp, hero.xpNeed, "xp", " XP"), hero.points ? el("span", "rpg-points", "+" + hero.points + " point" + (hero.points == 1 ? "" : "s")) : null]);
   morphChildren(document.getElementById("rpgPotions"), [flask(), el("span", "", hero.potions + " / " + rules.potionsMax)]);
   var buy = document.getElementById("rpgBuyPotion");
   buy.innerText = "+ 🪙 " + formatCoins(hero.potionPrice);
-  buy.title = "A potion: heals 40% HP - in a fight or between the rooms";
+  buy.title = "Potion: heals 40% HP";
   buy.disabled = hero.potions >= rules.potionsMax || myCoins < hero.potionPrice;
 }
 
@@ -554,10 +554,9 @@ function renderHero() {
     var row = el("div", "rpg-stat" + (main ? " main" : ""));
     var name = el("div", "rpg-stat-name");
     name.append(el("span", "rpg-stat-icon", stat.icon), el("span", "", stat.name), el("span", "rpg-stat-level", "Lv " + hero.levels[id] + " / " + rules.levelMax));
-    name.title = stat.desc;
     if (main) {
       var star = el("span", "rpg-stat-main", "★ " + mine.name);
-      star.title = "The main stat of your class: its levels count " + rules.mainBonus + "x";
+      star.title = "Main stat: counts " + rules.mainBonus + "x";
       name.appendChild(star);
     }
     var head = el("div", "rpg-stat-head");
@@ -566,7 +565,7 @@ function renderHero() {
     // (a stat point: a free level - else coins)
     if (cost == null) {
       var max = el("span", "rpg-stat-max mm-muted", "Max");
-      max.title = hero.full && hero.full[id] ? "At its cap (" + stat.cap + "%) - more levels would do nothing" : "The last level";
+      max.title = hero.full && hero.full[id] ? "Capped at " + stat.cap + "%" : "The last level";
       row.appendChild(max);
     }
     else if (hero.points > 0) row.appendChild(button("+1 free", "point", { id: id, className: "small point", title: stat.about }));
@@ -625,7 +624,7 @@ function renderHero() {
         if (wrong) tile.classList.add("wrong");
         return tile;
       })
-    : [el("div", "rpg-empty mm-muted", "Empty - chests drop gear.")];
+    : [el("div", "rpg-empty mm-muted", "Empty.")];
   document.getElementById("rpgBagLabel").innerText = "Bag · " + hero.bag.length + " / " + hero.bagSize;
   morphChildren(document.getElementById("rpgBag"), bag);
   if (view == "gear" && picked) renderOwnedPacks();
@@ -640,16 +639,16 @@ function renderCoach(run, me) {
   if (!run.tutorial) return;
   var text;
   var event = run.event;
-  if (party.result || run.phase == "won") text = "🎉 Done! The real floors cost an entry and pay coins - harder the deeper you go. Good luck!";
-  else if (run.phase == "lost") text = "💀 Down - no harm done, it's practice. Defend when the badges over the monsters show big hits.";
+  if (party.result || run.phase == "won") text = "🎉 Done! Real floors cost an entry and pay coins. Good luck!";
+  else if (run.phase == "lost") text = "💀 Down - it's only practice. Defend against big hits.";
   else if (run.phase == "fight" && me) {
-    if (me.ended) text = "⏳ The monsters move now - then your next turn.";
-    else if (run.turn == 1 && me.energy == rules.energy) text = "🃏 Drag a card onto the monster - or click the card, then the monster. A card costs the 💧 mana in its drop; you have " + rules.energy + " a turn.";
-    else if (me.energy > 0 && me.hand.some((c) => cardOf(c.id).cost <= me.energy)) text = "🛡️ The badge over a monster shows its next move. Defend blocks that hit. The cards you keep stay in your hand.";
-    else text = "⏭️ Out of mana - press End turn. Your hand fills up to 5 cards again.";
-  } else if (me && me.reward) text = "🎁 Won! Pick one card - it joins your deck for this run (packs grow your collection for good).";
-  else if (event && event.kind == "rest" && event.choices && !event.choices[myName]) text = "🔥 A camp fire: Rest heals you, Smith makes a card 40% stronger.";
-  else text = "🗺️ Pick the next room on the map - the lit circle. In real floors some rooms stay hidden.";
+    if (me.ended) text = "⏳ Monsters' turn.";
+    else if (run.turn == 1 && me.energy == rules.energy) text = "🃏 Drag a card onto the monster. Cards cost 💧 mana; you have " + rules.energy + " a turn.";
+    else if (me.energy > 0 && me.hand.some((c) => cardOf(c.id).cost <= me.energy)) text = "🛡️ The badge shows the monster's next move. Defend blocks it.";
+    else text = "⏭️ Out of mana - press End turn.";
+  } else if (me && me.reward) text = "🎁 Won! Pick a card for this run.";
+  else if (event && event.kind == "rest" && event.choices && !event.choices[myName]) text = "🔥 Camp fire: Rest heals, Smith upgrades a card.";
+  else text = "🗺️ Pick the next room - the lit circle.";
   if (box.innerText != text) box.innerText = text;
 }
 
@@ -659,7 +658,7 @@ function renderReady() {
   if (!hero.tutorialDone) {
     var practice = el("div", "rpg-ready-item new rpg-practice");
     var words = el("div", "rpg-ready-text");
-    words.append(el("b", "", "First time here?"), el("span", "rpg-ready-sub", "A free practice run - three rooms, every step explained"));
+    words.append(el("b", "", "First time here?"), el("span", "rpg-ready-sub", "Free practice run, three rooms"));
     var go = el("div", "rpg-practice-go");
     go.append(button("Start", "tutorial", { className: "small primary" }), button("Skip", "skipTutorial", { className: "small" }));
     var bubble = el("span", "rpg-ready-icon", "🎓");
@@ -705,8 +704,8 @@ function renderReady() {
 function deckSummary(deck) {
   var attacks = deck.filter((id) => cardOf(id).type == "attack").length;
   var nodes = [curve(deck), el("div", "mm-muted small", attacks + " attacks · " + (deck.length - attacks) + " skills")];
-  if (deck.length < hero.deckMin) nodes.push(el("div", "rpg-warn", "⚠️ At least " + hero.deckMin + " cards to go down - " + (hero.deckMin - deck.length) + " more"));
-  if (deck.length > hero.deckMax) nodes.push(el("div", "rpg-warn", "⚠️ At most " + hero.deckMax + " cards - take " + (deck.length - hero.deckMax) + " out"));
+  if (deck.length < hero.deckMin) nodes.push(el("div", "rpg-warn", "⚠️ Need " + (hero.deckMin - deck.length) + " more cards (min " + hero.deckMin + ")"));
+  if (deck.length > hero.deckMax) nodes.push(el("div", "rpg-warn", "⚠️ Remove " + (deck.length - hero.deckMax) + " cards (max " + hero.deckMax + ")"));
   return nodes;
 }
 
@@ -752,7 +751,7 @@ function renderFirst() {
     chip("❤️ " + Math.round(cls.hp * 100) + "% HP", cls.hp > 1 ? true : cls.hp < 1 ? false : null, "Max HP of the class");
     chip("⚔️ " + Math.round(cls.atk * 100) + "% attack", cls.atk > 1 ? true : cls.atk < 1 ? false : null, "Attack of the class");
     if (cls.def) chip("🛡️ +" + cls.def + " armor", true, "Armor from the start");
-    if (cls.luck) chip("🍀 +" + cls.luck + "% luck", true, "Crits, sensing rooms, loot");
+    if (cls.luck) chip("🍀 +" + cls.luck + "% luck", true, "Crits, loot");
     if (cls.agi) chip("🪶 +" + cls.agi + "% dodge", true, "Dodge attacks");
     var cards = el("div", "rpg-first-cards");
     cls.signature.forEach((card) => cards.appendChild(cardEl(card, { className: "small" })));
@@ -773,7 +772,7 @@ function renderFirst() {
   tiles.forEach((t) => grid.appendChild(t));
   morphChildren(document.getElementById("rpgFirstBox"), [
     el("div", "rpg-first-title", "⚔️ Choose your class"),
-    el("div", "rpg-first-sub mm-muted", "The first one is free - every other 🪙 " + formatCoins(rules.classPrice) + "."),
+    el("div", "rpg-first-sub mm-muted", "First one free, then 🪙 " + formatCoins(rules.classPrice) + "."),
     grid,
   ]);
 }
@@ -1147,7 +1146,7 @@ function renderBuilder() {
   var count = document.getElementById("rpgBuilderCount");
   count.innerText = deck.length + " / " + hero.deckMax;
   count.className = "rpg-builder-count" + (short ? " bad" : deck.length >= hero.deckMax ? " full" : " ok");
-  count.title = "At least " + hero.deckMin + ", at most " + hero.deckMax + " cards - a charm can make room for more, or let you go down with fewer";
+  count.title = hero.deckMin + " to " + hero.deckMax + " cards";
 
   // The filters
   var chips = [];
@@ -1199,7 +1198,7 @@ function renderBuilder() {
           for (var i = 0; i < Math.max(owned, 1); i++) pips.appendChild(el("i", i < (counts[id] || 0) ? "used" : i < owned ? "" : "none"));
           node.appendChild(pips);
           node.appendChild(el("span", "rpg-cardx-count", owned ? (counts[id] || 0) + " / " + owned + (all > owned ? " · +" + (all - owned) : "") : "🔒"));
-          node.title = !owned ? "Not owned yet - booster packs, rewards in the dungeon, the merchant" : spare <= 0 ? "All your copies are in the deck" : full ? "Your deck is full" : "Click or drag: into the deck";
+          node.title = !owned ? "Not owned yet" : spare <= 0 ? "All your copies are in the deck" : full ? "Your deck is full" : "Click or drag to add";
           return node;
         })
       : [el("div", "rpg-empty mm-muted", "No card fits the filters.")],
@@ -1218,7 +1217,7 @@ function renderBuilder() {
           row.dataset.id = id;
           row.dataset.drag = "out:" + id;
           row.draggable = true;
-          row.title = card.text + " - click or drag: out of the deck";
+          row.title = card.text + " - click to remove";
           var cost = el("span", "rpg-row-cost");
           cost.dataset.cost = String(card.cost);
           row.append(cost, el("span", "rpg-row-icon", card.icon), el("span", "rpg-row-name", card.name), el("span", "rpg-row-count", counts[id] > 1 ? "×" + counts[id] : card.mythic ? "★" : ""));
@@ -1232,10 +1231,10 @@ function renderBuilder() {
   morphChildren(document.getElementById("rpgBuilderNote"), [
     split,
     deck.length < hero.deckMin
-      ? el("div", "rpg-warn", "⚠️ At least " + hero.deckMin + " cards to go down - " + (hero.deckMin - deck.length) + " more")
+      ? el("div", "rpg-warn", "⚠️ Need " + (hero.deckMin - deck.length) + " more cards (min " + hero.deckMin + ")")
       : deck.length > hero.deckMax
-        ? el("div", "rpg-warn", "⚠️ At most " + hero.deckMax + " cards - take " + (deck.length - hero.deckMax) + " out")
-        : el("div", "rpg-ok", "✓ Ready for the dungeon"),
+        ? el("div", "rpg-warn", "⚠️ Remove " + (deck.length - hero.deckMax) + " cards (max " + hero.deckMax + ")")
+        : el("div", "rpg-ok", "✓ Ready"),
   ]);
 }
 
@@ -1275,7 +1274,7 @@ function renderDoor() {
   var tag = cool
     ? el("span", "rpg-floor-tag cool", "⏳ Cooldown " + duration(cool))
     : el("span", "rpg-floor-tag " + (cleared ? "cleared" : "new"), cleared ? "✓ Cleared" : "✦ New");
-  if (cool) tag.title = "You ran this floor lately - back in " + duration(cool);
+  if (cool) tag.title = "Back in " + duration(cool);
   // (the time on the tag counts down - the buttons back when it's over)
   clearTimeout(coolTimer);
   if (cool) coolTimer = setTimeout(renderDoor, Math.min(cool + 50, 30000));
@@ -1284,7 +1283,7 @@ function renderDoor() {
   var share = shareOf(floor);
   if (share < 1) {
     var low = el("span", "rpg-floor-tag low", "🪙 " + Math.round(share * 100) + "% loot");
-    low.title = "Far under your deepest floor - you get only " + Math.round(share * 100) + "% of the loot pot";
+    low.title = "Low floor: " + Math.round(share * 100) + "% of the pot";
     info.push(low);
   }
   morphChildren(document.getElementById("rpgFloorInfo"), info);
@@ -1297,7 +1296,7 @@ function renderDoor() {
   for (var n = 2; n <= rules.partyMax; n++) {
     var seg = button("", "size", { id: n, className: "rpg-seg-btn" + (n == size ? " active" : ""), title: n + " heroes" });
     seg.append(el("b", "", String(n)), el("span", "rpg-seg-figs", "👤".repeat(n)));
-    seg.title = n + " heroes - harder monsters, " + Math.round(rules.partyLoot * 100 * (n - 1)) + "% more loot";
+    seg.title = n + " heroes: +" + Math.round(rules.partyLoot * 100 * (n - 1)) + "% loot";
     sizes.push(seg);
   }
   morphChildren(document.getElementById("rpgSize"), sizes);
@@ -1371,7 +1370,7 @@ function intentBadge(m) {
   else if (m.intent.damage) text += m.intent.damage + (move.all ? " to all" : m.intent.target ? " → " + m.intent.target : "");
   else text += move.name;
   badge.innerText = text;
-  badge.title = m.intent.stunned ? "Stunned - it loses this move" : move.name + (m.intent.target ? " on " + m.intent.target : "");
+  badge.title = m.intent.stunned ? "Stunned" : move.name + (m.intent.target ? " on " + m.intent.target : "");
   if (m.intent.target == myName && m.intent.damage && !m.intent.stunned) badge.classList.add("at-me");
   return badge;
 }
@@ -1383,7 +1382,7 @@ function renderRun() {
   renderCoach(run, me);
   var pot = document.getElementById("rpgPot");
   pot.innerText = me && me.share < 1 ? "🪙 " + formatCoins(myPot(run)) + " for you (" + Math.round(me.share * 100) + "%)" : "🪙 " + formatCoins(run.pot) + " each";
-  pot.title = me && me.share < 1 ? "Far under your deepest floor: " + Math.round(me.share * 100) + "% of the pot" : "";
+  pot.title = me && me.share < 1 ? "Low floor: " + Math.round(me.share * 100) + "% of the pot" : "";
   var quit = document.getElementById("rpgQuit");
   quit.hidden = !!party.result;
 
@@ -1412,7 +1411,7 @@ function renderRun() {
       // (its armor: the share of every hit it takes off)
       if (m.armor) {
         var armor = el("span", "rpg-monster-armor", "🛡 " + Math.round(m.armor * 100) + "%");
-        armor.title = "Armor: takes " + Math.round(m.armor * 100) + "% off every hit";
+        armor.title = "Armor: -" + Math.round(m.armor * 100) + "% damage";
         art.appendChild(armor);
       }
       card.append(art, name, bar(m.hp, m.maxHp, "foe"), effectsRow(m.effects));
@@ -1525,7 +1524,7 @@ function spoilsPanel(run, me, spoils) {
     b.append(el("span", "rpg-spoil-icon", icon), el("span", "rpg-spoil-text", text), el("span", "rpg-spoil-mark", done ? "✓" : act ? "›" : ""));
     list.appendChild(b);
   };
-  row("🪙", formatCoins(spoils.coins) + " coins each - into the loot pot", null, null, true);
+  row("🪙", formatCoins(spoils.coins) + " coins each to the pot", null, null, true);
   row("⭐", "+" + spoils.xp + " XP", null, null, true);
   if (me.relicChoice) row("🏺", "Choose a relic", "rewardView", "relic");
   if (me.reward) row("🃏", "Add a card to your deck", "rewardView", "card");
@@ -1562,9 +1561,9 @@ function renderPartyStats(run) {
       var stats = el("div", "rpg-pstat-stats");
       [
         ["❤️", h.hp + " / " + h.maxHp, "HP"],
-        ["⚔️", h.atk, "Attack: 100% damage of a Strike"],
-        ["🛡️", h.def, "Armor: less of every hit (as much armor as a hit halves it), more block"],
-        ["🍀", h.luck + (h.perks.crit || 0) + "%", "Critical hits (x1.8) - and sensing the doors"],
+        ["⚔️", h.atk, "Attack"],
+        ["🛡️", h.def, "Armor: less damage, more block"],
+        ["🍀", h.luck + (h.perks.crit || 0) + "%", "Crits, sensing rooms"],
         ["🪶", h.agi + "%", "Dodge an attack"],
         [null, h.potions, "Potions"],
       ].forEach(([icon, value, tip]) => {
@@ -1583,7 +1582,7 @@ function renderPartyStats(run) {
         chip.title = relic.text;
         relics.appendChild(chip);
       });
-      if (!(h.relics || []).length) relics.appendChild(el("span", "mm-muted small", "No relics yet - hard fights, chests, the merchant"));
+      if (!(h.relics || []).length) relics.appendChild(el("span", "mm-muted small", "No relics yet"));
       row.append(head, stats, relics, el("div", "mm-muted small", perks.length ? "Perks: " + perks.join(" · ") : "No perks yet"));
       return row;
     }),
@@ -1602,7 +1601,7 @@ function relicPanel(me) {
     tile.append(el("span", "rpg-relic-icon", relic.icon), el("b", "", relic.name), el("span", "mm-muted small", relic.text));
     row.appendChild(tile);
   });
-  return [el("div", "rpg-reward-title", "🏺 A relic - pick one for this run"), row, button("‹ Back", "rewardView", { id: "list", className: "small" })];
+  return [el("div", "rpg-reward-title", "🏺 Pick a relic"), row, button("‹ Back", "rewardView", { id: "list", className: "small" })];
 }
 
 // The card won in a fight: one of three for the deck
@@ -1611,7 +1610,7 @@ function rewardPanel(me) {
   me.reward.forEach((id) => cards.appendChild(cardEl(id, { tag: "button", act: "pick", className: "pickable" })));
   return [
     el("div", "rpg-reward-title", "🃏 Add a card to your deck"),
-    el("div", "rpg-reward-note mm-muted small", "Three of your class's cards, not of your deck: the one you pick joins your deck for the rest of this run."),
+    el("div", "rpg-reward-note mm-muted small", "For this run only."),
     cards,
     button("Skip this card", "pick", { id: "", className: "small" }),
     button("‹ Back", "rewardView", { id: "list", className: "small" }),
@@ -1620,11 +1619,11 @@ function rewardPanel(me) {
 
 // The rooms that aren't fights: a picture, a story, the choices - what happened
 var ROOM_STORY = {
-  chest: "A heavy chest in the middle of the room, its lock rusted through. Everyone may open it.",
-  trap: "Thin wires across the floor, small holes in the walls. A trap - and the only way on is through it.",
-  rest: "A quiet corner and a crackling fire. Time to catch your breath - or to work on your cards.",
+  chest: "A heavy chest, its lock rusted through.",
+  trap: "Thin wires across the floor. A trap.",
+  rest: "A quiet corner and a crackling fire.",
   shrine: "An old shrine, dark with dried blood. It whispers of power - for a price.",
-  merchant: 'A hooded merchant opens a heavy pack. "Coins first, friend. Your own - not the pot."',
+  merchant: 'A hooded merchant opens his pack. "Coins first, friend."',
 };
 
 function roomScene(run, me) {
@@ -1632,7 +1631,7 @@ function roomScene(run, me) {
   if (!ev) {
     var done = el("div", "rpg-scene kind-cleared");
     var plain = el("div", "rpg-scene-body center");
-    plain.append(el("div", "rpg-scene-title", "⚔️ The room is cleared"), el("div", "rpg-scene-story", "The way on lies open. Pick the next room on the map 🗺️" + (run.heroes.length > 1 ? " - the party votes." : ".")));
+    plain.append(el("div", "rpg-scene-title", "⚔️ The room is cleared"), el("div", "rpg-scene-story", "Pick the next room on the map 🗺️" + (run.heroes.length > 1 ? " - the party votes." : ".")));
     done.appendChild(plain);
     return [done];
   }
@@ -1693,7 +1692,7 @@ function choiceNodes(run, me) {
   });
   nodes.push(row);
   if (chosen) {
-    nodes.push(el("div", "rpg-scene-done", "✓ Done here - pick the next room on the map 🗺️"));
+    nodes.push(el("div", "rpg-scene-done", "✓ Done - pick the next room 🗺️"));
     return nodes;
   }
   // The library: the cards to study, right there
@@ -1703,7 +1702,7 @@ function choiceNodes(run, me) {
     ev.offers[myName].forEach((id) => cards.appendChild(cardEl(id, { tag: "button", act: "chooseCard", id: offer.id + ":" + id, className: "pickable" })));
     nodes.push(el("div", "rpg-label", offer.label + " - pick one"), cards);
   }
-  if (picking && ev.options.some((o) => o.id == picking)) nodes.push(...deckPicker(me, picking == "smith" ? "Pick the card to upgrade (40% stronger, for this run)" : "Pick the card to give away", picking));
+  if (picking && ev.options.some((o) => o.id == picking)) nodes.push(...deckPicker(me, picking == "smith" ? "Pick a card to upgrade (+40%)" : "Pick a card to give", picking));
   return nodes;
 }
 
@@ -1746,10 +1745,10 @@ function shopNodes(run, me) {
   var services = el("div", "rpg-shop-services");
   services.append(
     withFlask(button(" Potion · 🪙 " + formatCoins(price("potion")) + " (" + me.potions + "/" + rules.potionsMax + ")", "buy", { id: "potion", disabled: me.potions >= rules.potionsMax || myCoins < price("potion") })),
-    button(offer.removed ? "🗑️ Card removed ✓" : "🗑️ Remove a card · 🪙 " + formatCoins(price("remove")), "pickMode", { id: "remove", className: picking == "remove" ? "voted" : "", disabled: offer.removed || myCoins < price("remove") || me.deck.length <= rules.deckLeast, title: "The merchant takes a card out of your deck for this run" }),
+    button(offer.removed ? "🗑️ Card removed ✓" : "🗑️ Remove a card · 🪙 " + formatCoins(price("remove")), "pickMode", { id: "remove", className: picking == "remove" ? "voted" : "", disabled: offer.removed || myCoins < price("remove") || me.deck.length <= rules.deckLeast, title: "Remove a card for this run" }),
   );
-  var nodes = [el("div", "rpg-shop-coins", "Your coins: 🪙 " + formatCoins(myCoins)), el("div", "rpg-label", "Cards · for this run only"), cards, el("div", "rpg-label", "Relics · for this run only"), relics, el("div", "rpg-label", "Services"), services];
-  if (picking == "remove" && !offer.removed) nodes.push(...deckPicker(me, "Pick the card he takes out of your deck", "remove"));
+  var nodes = [el("div", "rpg-shop-coins", "Your coins: 🪙 " + formatCoins(myCoins)), el("div", "rpg-label", "Cards · this run"), cards, el("div", "rpg-label", "Relics · this run"), relics, el("div", "rpg-label", "Services"), services];
+  if (picking == "remove" && !offer.removed) nodes.push(...deckPicker(me, "Pick a card to remove", "remove"));
   return nodes;
 }
 
@@ -1821,7 +1820,7 @@ function renderMap(run) {
   morphChildren(box, nodes);
   var sense = document.getElementById("rpgMapSense");
   sense.innerText = "🍀 " + run.sense + "%";
-  sense.title = "Chance to see a hidden room";
+  sense.title = "Chance to sense a room";
   var count = Object.keys(run.votes).length;
   document.getElementById("rpgMapNote").innerText = party.result ? "" : between ? (run.heroes.length > 1 ? count + " / " + run.heroes.length + " voted · a tie: random" : "Pick a lit room") : "";
 }
@@ -1830,7 +1829,7 @@ function renderMap(run) {
 function showPile(kind) {
   var me = party && party.run && party.run.heroes.find((h) => h.name == myName);
   if (!me || !me.piles) return;
-  var names = { draw: "🂠 Draw pile - in no order", discard: "♻️ Discard pile", exhausted: "🔥 Exhausted - gone for this fight" };
+  var names = { draw: "🂠 Draw pile", discard: "♻️ Discard pile", exhausted: "🔥 Exhausted" };
   var old = document.getElementById("rpgPackModal");
   if (old) old.remove();
   var modal = el("div", "rpg-modal");
@@ -1848,11 +1847,11 @@ function showPile(kind) {
 // How the cards work (the Deck tab)
 // How cards work: the (i) of the deck builder
 var DECK_HELP = [
-  ["🃏 Your deck", "Every run starts with it - shuffled at the start of every fight."],
-  ["✋ A turn", "Your hand is filled up to 5 cards, your mana to 3. A card costs the mana in its drop."],
-  ["⚔️ Play", "Attacks hit a foe, skills block, heal or help. Block lasts through the monsters' turn."],
-  ["⏭️ End turn", "The cards you didn't play stay in your hand. The monsters do what their badges show."],
-  ["🎁 Grow it", "A fight won: one of three new cards for this run. Packs grow your collection."],
+  ["🃏 Your deck", "Shuffled at the start of every fight."],
+  ["✋ A turn", "5 cards and 3 mana. Cards cost mana."],
+  ["⚔️ Play", "Attacks hit, skills block, heal or help."],
+  ["⏭️ End turn", "Unplayed cards stay. Monsters do what their badges show."],
+  ["🎁 Grow it", "Win a fight: pick a card for the run. Packs grow your collection."],
 ];
 
 function showDeckHelp() {
@@ -1869,7 +1868,7 @@ function intoFullscreen() {
 
 function sceneText(run) {
   if (run.phase == "won") return "🎉 Floor " + run.floor + " cleared!";
-  if (run.phase == "lost") return "💀 The party fell - the loot is lost.";
+  if (run.phase == "lost") return "💀 The party fell. Loot lost.";
   if (run.phase == "left") return "🚪 You left the dungeon with the loot.";
   return "";
 }
@@ -1919,7 +1918,7 @@ function handBar(run, me) {
   if (!me || me.down) return [el("div", "rpg-wait mm-muted", "💤 You're down until the fight ends.")];
   var energy = el("div", "rpg-energy" + (me.energy <= 0 ? " empty" : ""));
   energy.dataset.mana = me.energy + "/" + rules.energy;
-  energy.title = "Mana - cards cost it, full again every turn";
+  energy.title = "Mana, refills every turn";
   var draw = pileButton("draw", "🂠", me.drawCount, "Draw pile");
   var left = el("div", "rpg-hand-side");
   left.append(energy, draw);
@@ -1937,7 +1936,7 @@ function handBar(run, me) {
   var waiting = run.heroes.filter((h) => !h.down && !h.ended).length;
   var end = button(me.ended ? "Waiting… (" + waiting + ")" : "End turn", "endTurn", { className: "primary rpg-end", disabled: me.ended });
   var discard = pileButton("discard", "♻️", me.discardCount, "Discard pile");
-  var exhausted = me.piles && me.piles.exhausted.length ? pileButton("exhausted", "🔥", me.piles.exhausted.length, "Exhausted - gone for this fight") : null;
+  var exhausted = me.piles && me.piles.exhausted.length ? pileButton("exhausted", "🔥", me.piles.exhausted.length, "Exhausted") : null;
   var tools = el("div", "rpg-hand-tools");
   tools.append(potion, discard);
   if (exhausted) tools.appendChild(exhausted);
@@ -2255,7 +2254,7 @@ async function unlockClass(id) {
   if (price) {
     var sure = await confirmDialog({
       title: "Unlock the " + cls.icon + " " + cls.name + "?",
-      text: "🪙 " + formatCoins(price) + " - a new character with its own levels, gear and floors. " + cls.about + ".",
+      text: "🪙 " + formatCoins(price) + " - a new character. " + cls.about + ".",
       confirmLabel: "Unlock for 🪙 " + formatCoins(price),
     });
     if (!sure) return;

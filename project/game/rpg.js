@@ -54,11 +54,11 @@ const BOSS_EVERY = 5; // the last room of every 5th floor: its boss
 
 // The stats: what a level gives
 const STATS = {
-  hp: { name: "Vitality", icon: "❤️", base: 100, per: 7.5, about: "+7.5 max HP", desc: "Your max HP - heals and potions grow with it." },
+  hp: { name: "Vitality", icon: "❤️", base: 100, per: 7.5, about: "+7.5 max HP", desc: "Your max HP." },
   atk: { name: "Strength", icon: "⚔️", base: 10, per: 1.5, about: "+1.5 attack", desc: "The damage of your attacks." },
-  def: { name: "Armor", icon: "🛡️", base: 0, per: 1, about: "+1 armor", desc: "Taken off every hit, added to your block." },
-  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, cap: 60, about: "+0.6% luck", desc: "Critical hits (double damage), hidden rooms seen, traps disarmed, better loot. At most 60%." },
-  agi: { name: "Agility", icon: "🪶", base: 0, per: 0.4, cap: 40, about: "+0.4% dodge", desc: "The chance to dodge a hit. At most 40%." },
+  def: { name: "Armor", icon: "🛡️", base: 0, per: 1, about: "+1 armor", desc: "Less damage taken, more block." },
+  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, cap: 60, about: "+0.6% luck", desc: "Crits, traps, sensing rooms, loot. Max 60%." },
+  agi: { name: "Agility", icon: "🪶", base: 0, per: 0.4, cap: 40, about: "+0.4% dodge", desc: "Dodge chance. Max 40%." },
 };
 const STAT_IDS = Object.keys(STATS);
 const LEVEL_MAX = 100;
@@ -75,11 +75,11 @@ const REWARD = { fight: 0.25, hard: 0.47, elite: 0.4, boss: 0.65, chest: 0.25, t
 // main: the stat its levels count 1.5x for; hp, atk: times the stats; def, luck, agi: added;
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
-  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.5 } }, about: "Strength - heavy blows, cleaves the pack, a war cry for the party", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Who hits you takes {thornsDef}% of your armor back, {block}% more block.", perks: { thornsDef: 1, block: 0.2 }, top: 2.4 }, about: "Armor - draws the attacks, shields the party, judges with his armor", hp: 1.3, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Heals {heal}% stronger, attacks heal you for {lifesteal}% of the damage.", perks: { heal: 0.2, lifesteal: 0.15 } }, about: "Vitality - heals, smites the undead, brings the fallen back", hp: 1.1, atk: 0.98, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison {poison}% stronger, +{crit}% critical hits.", perks: { poison: 0.5, crit: 10 } }, about: "Agility - dodges, poisons, then strikes where it hurts", hp: 1.45, atk: 1.64, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe deal {aoe}% more, +{crit}% critical hits.", perks: { aoe: 0.4, crit: 8 }, top: 2.2 }, about: "Luck - spells that crit, fire on all foes, frost that weakens", hp: 1.1, atk: 2, def: 1, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
+  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.5 } }, about: "Strength - heavy blows, cleave, war cry", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take {thornsDef}% of your armor back, {block}% more block.", perks: { thornsDef: 1, block: 0.2 }, top: 2.4 }, about: "Armor - taunts, shields the party", hp: 1.3, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Heals {heal}% stronger, attacks heal {lifesteal}% of damage.", perks: { heal: 0.2, lifesteal: 0.15 } }, about: "Vitality - heals, smites undead, revives", hp: 1.1, atk: 0.98, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison {poison}% stronger, +{crit}% critical hits.", perks: { poison: 0.5, crit: 10 } }, about: "Agility - dodge, poison, backstab", hp: 1.45, atk: 1.64, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Area hits {aoe}% stronger, +{crit}% critical hits.", perks: { aoe: 0.4, crit: 8 }, top: 2.2 }, about: "Luck - crits, fire, frost", hp: 1.1, atk: 2, def: 1, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -121,8 +121,8 @@ function deckMax() {
 // ones more often (x their weight)
 const PACKS = {
   standard: { name: "Base Set Pack", icon: "🎴", about: "The classic: 5 cards, the last one rare or better.", get price() { return config.RPG_PACK_STANDARD; }, size: 5, better: 1, least: "rare", boost: { epic: 0.7, legendary: 0.5, mythic: 0.5 } },
-  premium: { name: "Hero Pack", icon: "💎", about: "5 cards - all rare or better, epics and legendaries twice as often.", get price() { return config.RPG_PACK_PREMIUM; }, size: 5, better: 5, least: "rare", boost: { epic: 2, legendary: 2.1 } },
-  mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards - all epic or better.", get price() { return config.RPG_PACK_MYTHIC; }, size: 4, better: 4, least: "epic", boost: { legendary: 1.5 } },
+  premium: { name: "Hero Pack", icon: "💎", about: "5 cards, all rare or better, more epics.", get price() { return config.RPG_PACK_PREMIUM; }, size: 5, better: 5, least: "rare", boost: { epic: 2, legendary: 2.1 } },
+  mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards, all epic or better.", get price() { return config.RPG_PACK_MYTHIC; }, size: 4, better: 4, least: "epic", boost: { legendary: 1.5 } },
 };
 const PACK_IDS = Object.keys(PACKS);
 const PACK_BUNDLE = 3; // three packs at once ...
@@ -310,8 +310,8 @@ const MONSTERS = [
 const MONSTER_TRAITS = {
   venomproof: { name: "Venomproof", icon: "🧪", text: "Poison does nothing." },
   fireproof: { name: "Fireproof", icon: "🔥", text: "Burns do nothing." },
-  bulky: { name: "Bulky", icon: "🪨", text: "Half damage from hits on every foe." },
-  spiked: { name: "Spiked", icon: "🦔", text: "Who hits it takes 20% of the damage back." },
+  bulky: { name: "Bulky", icon: "🪨", text: "Half damage from area hits." },
+  spiked: { name: "Spiked", icon: "🦔", text: "Reflects 20% of damage." },
 };
 
 // The bosses: the last room of every BOSS_EVERY-th floor - one per group of floors, a second phase at half HP
@@ -384,11 +384,11 @@ const TALENTS = {
     [{ id: "avatar", name: "Avatar of Thorns", icon: "☀️", text: "Thorns +80% of your armor.", perks: { thornsDef: 0.8 } }, { id: "divineaegis", name: "Divine Aegis", icon: "👼", text: "50% more block from your cards.", perks: { block: 0.5 } }],
   ],
   cleric: [
-    [{ id: "mercy", name: "Mercy", icon: "💚", text: "30% more healing.", perks: { heal: 0.3 } }, { id: "vital", name: "Vitality", icon: "❤️", text: "+15% max HP (bigger heals).", perks: { maxHp: 0.15 } }],
+    [{ id: "mercy", name: "Mercy", icon: "💚", text: "30% more healing.", perks: { heal: 0.3 } }, { id: "vital", name: "Vitality", icon: "❤️", text: "+15% max HP.", perks: { maxHp: 0.15 } }],
     [{ id: "halo", name: "Halo", icon: "😇", text: "Heal 15% after every fight won.", perks: { afterFight: 0.15 } }, { id: "zeal", name: "Zeal", icon: "🔥", text: "Your first attack each turn deals 40% more.", perks: { firstStrike: 0.4 } }],
     [{ id: "miracle", name: "Miracle", icon: "✨", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }, { id: "leechlight", name: "Siphon Light", icon: "🕯️", text: "Heal 10% more of your attack damage.", perks: { lifesteal: 0.1 } }],
     [{ id: "grace", name: "Grace", icon: "🕊️", text: "35% more healing.", perks: { heal: 0.35 } }, { id: "sanctuary", name: "Sanctuary", icon: "⛪", text: "Start every fight with 10 block.", perks: { startBlock: 10 } }],
-    [{ id: "devotion", name: "Devotion", icon: "🙏", text: "+20% max HP (bigger heals).", perks: { maxHp: 0.2 } }, { id: "prophet", name: "Prophet", icon: "📜", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
+    [{ id: "devotion", name: "Devotion", icon: "🙏", text: "+20% max HP.", perks: { maxHp: 0.2 } }, { id: "prophet", name: "Prophet", icon: "📜", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
     [{ id: "renewal", name: "Renewal", icon: "🌱", text: "Heal 20% after every fight won.", perks: { afterFight: 0.2 } }, { id: "smiter", name: "Smiter", icon: "🔨", text: "15% more damage.", perks: { attack: 0.15 } }],
     [{ id: "saint", name: "Saint", icon: "😇", text: "40% more healing.", perks: { heal: 0.4 } }, { id: "sanctity", name: "Sanctity", icon: "⛪", text: "25% more block from your cards.", perks: { block: 0.25 } }],
     [{ id: "lightwell", name: "Lightwell", icon: "⛲", text: "Heal 15% more of your attack damage.", perks: { lifesteal: 0.15 } }, { id: "inquisitor", name: "Inquisitor", icon: "⚖️", text: "+10% critical hits.", perks: { crit: 10 } }],
@@ -420,13 +420,13 @@ const TALENTS = {
 
 // Relics: for one run - a hard fight won gives a choice of three, chests sometimes one, the merchant sells one
 const RELICS = {
-  vampfang: { name: "Vampire Fang", icon: "🦷", text: "Heal 10% of the damage of your attacks.", perks: { lifesteal: 0.1 } },
+  vampfang: { name: "Vampire Fang", icon: "🦷", text: "Heal 10% of your attack damage.", perks: { lifesteal: 0.1 } },
   whetstone: { name: "Whetstone", icon: "🪨", text: "15% more damage.", perks: { attack: 0.15 } },
   buckle: { name: "Iron Buckle", icon: "🔩", text: "Start every fight with 6 block.", perks: { startBlock: 6 } },
   crystal: { name: "Mana Crystal", icon: "💎", text: "+1 mana on the first turn of every fight.", perks: { firstMana: 1 } },
   tome: { name: "Ancient Tome", icon: "📜", text: "Draw 1 more card every turn.", perks: { draw: 1 } },
   thornmail: { name: "Thorn Mail", icon: "🌵", text: "Who hits you takes 4 damage.", perks: { thorns: 4 } },
-  heartstone: { name: "Heart Stone", icon: "❤️‍🔥", text: "+15% max HP (and healed by it).", perks: { maxHp: 0.15 } },
+  heartstone: { name: "Heart Stone", icon: "❤️‍🔥", text: "+15% max HP.", perks: { maxHp: 0.15 } },
   clover: { name: "Four-Leaf Clover", icon: "🍀", text: "+10% critical hits.", perks: { crit: 10 } },
   salve: { name: "Mending Salve", icon: "🧴", text: "Heal 10% after every fight won.", perks: { afterFight: 0.1 } },
   helm: { name: "Berserker Helm", icon: "🪖", text: "30% more damage below half HP.", perks: { lowHp: 0.3 } },
@@ -533,9 +533,9 @@ function deckAdd(hero, id) {
   const char = charOf(hero);
   if (!CARDS[id] || !poolOf(hero.cls).includes(id)) return "Not a card of your class.";
   const inDeck = char.deck.filter((one) => one == id).length;
-  if (inDeck >= usable(char, id)) return (char.collection[id] || 0) > inDeck ? `At most ${CARD_RARITIES[CARDS[id].rarity].copies} of a ${CARD_RARITIES[CARDS[id].rarity].name.toLowerCase()} card.` : "You don't own more of it - booster packs bring more cards.";
+  if (inDeck >= usable(char, id)) return (char.collection[id] || 0) > inDeck ? `At most ${CARD_RARITIES[CARDS[id].rarity].copies} of a ${CARD_RARITIES[CARDS[id].rarity].name.toLowerCase()} card.` : "You don't own more copies.";
   const { max } = deckLimits(hero);
-  if (char.deck.length >= max) return `At most ${max} cards (a charm may make room for more).`;
+  if (char.deck.length >= max) return `At most ${max} cards.`;
   char.deck.push(id);
   return null;
 }
@@ -554,7 +554,7 @@ function deckSet(hero, ids) {
   const char = charOf(hero);
   if (!Array.isArray(ids) || ids.some((id) => typeof id != "string")) return "Not a deck.";
   const { max } = deckLimits(hero);
-  if (ids.length > max) return `At most ${max} cards (a charm may make room for more).`;
+  if (ids.length > max) return `At most ${max} cards.`;
   const pool = poolOf(hero.cls);
   const counts = {};
   for (const id of ids) {
@@ -570,8 +570,8 @@ function deckSet(hero, ids) {
 function deckReady(hero) {
   const n = charOf(hero).deck.length;
   const { min, max } = deckLimits(hero);
-  if (n < min) return `Your deck needs at least ${min} cards (it has ${n}) - build it in the Deck tab.`;
-  if (n > max) return `Your deck holds at most ${max} cards (it has ${n}) - take some out in the Deck tab.`;
+  if (n < min) return `Deck needs at least ${min} cards (has ${n}).`;
+  if (n > max) return `Deck holds at most ${max} cards (has ${n}).`;
   return null;
 }
 
@@ -861,16 +861,16 @@ function makeGear(floor, rng = Math.random, luck = 0, cls = null) {
 /* ---------- The map of a floor: rows of rooms, paths between them ---------- */
 
 const ROOM_KINDS = {
-  fight: { name: "Fight", icon: "⚔️", about: "Monsters - loot for the pot" },
-  hard: { name: "Hard fight", icon: "☠️", about: "More and stronger monsters - almost double the loot and a relic" },
-  elite: { name: "The guarded gate", icon: "👑", about: "The guard of the floor - beat it to clear the floor" },
+  fight: { name: "Fight", icon: "⚔️", about: "Monsters, loot" },
+  hard: { name: "Hard fight", icon: "☠️", about: "Tougher monsters, more loot, a relic" },
+  elite: { name: "The guarded gate", icon: "👑", about: "Beat it to clear the floor" },
   boss: { name: "Boss", icon: "💀", about: "The master of the floor" },
-  chest: { name: "Treasure", icon: "🎁", about: "Coins for the pot - gear, maybe a relic" },
-  trap: { name: "Trap", icon: "🪤", about: "Disarm it (luck) or sneak past" },
-  rest: { name: "Camp fire", icon: "🔥", about: "Rest (heal) or smith (upgrade a card)" },
-  shrine: { name: "Shrine", icon: "⛩️", about: "Blood for power - or walk on" },
-  merchant: { name: "Merchant", icon: "⚖️", about: "Cards, relics, potions - and he takes a card out of your deck" },
-  event: { name: "Encounter", icon: "📜", about: "Something strange - a choice to make" },
+  chest: { name: "Treasure", icon: "🎁", about: "Coins, gear, maybe a relic" },
+  trap: { name: "Trap", icon: "🪤", about: "Disarm or sneak past" },
+  rest: { name: "Camp fire", icon: "🔥", about: "Rest or upgrade a card" },
+  shrine: { name: "Shrine", icon: "⛩️", about: "Blood for power" },
+  merchant: { name: "Merchant", icon: "⚖️", about: "Cards, relics, potions, card removal" },
+  event: { name: "Encounter", icon: "📜", about: "A strange choice" },
 };
 // What waits in a room of the map (weights) - mostly fights
 const DOOR_POOL = { fight: 7, hard: 2.5, trap: 0.6, chest: 1, rest: 1, shrine: 0.5, merchant: 0.6, event: 1.4 };
@@ -1201,17 +1201,17 @@ function tally(run, rng = Math.random) {
 // The rooms that aren't fights: what every hero may choose there (card: the choice needs a card - "smith", "deck":
 // one of the deck, "offer": one of the cards offered)
 const ROOM_OPTIONS = {
-  chest: [{ id: "open", label: "Open it", text: "Gear for the bag (luck: better) - now and then a relic" }],
+  chest: [{ id: "open", label: "Open it", text: "Gear, maybe a relic" }],
   trap: [
-    { id: "disarm", label: "Disarm it", text: "Luck: a piece of gear - failed: 25% damage" },
+    { id: "disarm", label: "Disarm it", text: "Luck: gear. Fail: 25% damage" },
     { id: "sneak", label: "Sneak past", text: "Take 10% damage" },
   ],
   rest: [
     { id: "rest", label: "Rest", text: "Heal 35% HP, +1 mana in the next fight" },
-    { id: "smith", label: "Smith", text: "Upgrade a card of your deck: 40% stronger", card: "smith" },
+    { id: "smith", label: "Smith", text: "Upgrade a card: +40%", card: "smith" },
   ],
   shrine: [
-    { id: "pray", label: "Pray", text: "Give 20% HP - deal 25% more damage for the rest of the run" },
+    { id: "pray", label: "Pray", text: "-20% HP, +25% damage this run" },
     { id: "leave", label: "Walk on", text: "Nothing happens" },
   ],
 };
@@ -1230,7 +1230,7 @@ const ENCOUNTERS = {
   library: {
     name: "The Forgotten Library",
     icon: "📚",
-    story: "Dusty shelves full of old battle manuals - there is time to study one of them.",
+    story: "Dusty shelves full of old battle manuals.",
     options: [
       { id: "read", label: "Study", text: "Pick 1 of 5 cards for your deck", card: "offer" },
       { id: "nap", label: "Take a nap", text: "Heal 20% HP" },
@@ -1239,26 +1239,26 @@ const ENCOUNTERS = {
   forge: {
     name: "The Abandoned Forge",
     icon: "⚒️",
-    story: "The anvil is still warm, the hammer lies ready. The heat of the coals burns your skin.",
+    story: "The anvil is still warm, the coals hot.",
     options: [{ id: "temper", label: "Temper", text: "Upgrade 2 random cards - lose 8% HP" }, LEAVE],
   },
   idol: {
     name: "The Golden Idol",
     icon: "🗿",
     story: "A golden idol on a stone pedestal. It is surely cursed.",
-    options: [{ id: "take", label: "Take it", text: "A random relic - 10% less max HP for this run" }, LEAVE],
+    options: [{ id: "take", label: "Take it", text: "A random relic, -10% max HP this run" }, LEAVE],
   },
   hermit: {
     name: "The Hermit",
     icon: "🧙",
     story: 'An old hermit by a small fire: "You carry too much. Give me one of your cards."',
-    options: [{ id: "purge", label: "Give a card", text: "Remove a card from your deck (this run)", card: "deck" }, LEAVE],
+    options: [{ id: "purge", label: "Give a card", text: "Remove a card this run", card: "deck" }, LEAVE],
   },
   gambler: {
     name: "The Gambler",
     icon: "🎲",
     story: 'A grinning imp shakes a cup of dice: "Your blood against my treasure?"',
-    options: [{ id: "roll", label: "Roll the dice", text: "50%: a relic - else lose 15% HP" }, LEAVE],
+    options: [{ id: "roll", label: "Roll the dice", text: "50%: a relic, else -15% HP" }, LEAVE],
   },
 };
 const DISARM_BASE = 30; // + 2 x luck %
@@ -1290,7 +1290,7 @@ function enterRoom(run, door = 0, rng = Math.random) {
   run.votes = {};
   const heroes = alive(run.heroes);
   const n = roomNumber(run);
-  if (!chosen.open && !chosen.sensed) say(run, `Room ${n}: the door opens - ${ROOM_KINDS[kind].icon} ${ROOM_KINDS[kind].name}!`);
+  if (!chosen.open && !chosen.sensed) say(run, `Room ${n}: ${ROOM_KINDS[kind].icon} ${ROOM_KINDS[kind].name}!`);
   if (kind == "fight" || kind == "hard" || kind == "elite" || kind == "boss") {
     run.monsters = monstersFor(run.floor, run.heroes.length, kind, rng, chosen.row || 0);
     // (the practice run: one slime first, then two easy foes - half as strong)
@@ -1332,7 +1332,7 @@ function enterRoom(run, door = 0, rng = Math.random) {
   } else if (kind == "chest") {
     const coins = Math.round(entryCost(run.floor) * REWARD.chest * (config.RPG_LOOT / 100) * partyBonus(run.heroes.length));
     run.pot += coins;
-    note(`🪙 ${coins} each for the loot pot.`);
+    note(`🪙 ${coins} each to the pot.`);
   } else if (kind == "merchant") {
     // (every hero shops on its own, with its own coins - no choice to make)
     run.event.choices = null;
@@ -1451,7 +1451,7 @@ function choose(run, name, input = {}, rng = Math.random) {
       // (every hero rolls on its own - luck helps)
       if (rng() * 100 < 40 + hero.luck / 2) {
         const item = gear();
-        note(`${name} finds ${item.icon} ${item.name} (${item.rarity}) - into the bag at the end of the run.`);
+        note(`${name} finds ${item.icon} ${item.name} (${item.rarity}).`);
       } else note(`${name} finds nothing but dust.`);
       if (rng() < 0.2) {
         const id = relic();
@@ -1462,7 +1462,7 @@ function choose(run, name, input = {}, rng = Math.random) {
     case "disarm":
       if (rng() * 100 < disarmChance(hero)) {
         const item = gear();
-        note(`${name} disarms the trap 🍀 - and finds ${item.icon} ${item.name} in it.`);
+        note(`${name} disarms the trap 🍀: ${item.icon} ${item.name}.`);
       } else note(`${name} sets it off: ${lose(0.25)} damage.`);
       break;
     case "sneak":
@@ -1480,7 +1480,7 @@ function choose(run, name, input = {}, rng = Math.random) {
     }
     case "pray":
       hero.blessed = true;
-      note(`${name} gives ${lose(SHRINE_COST)} HP - and deals 25% more damage for the rest of the run.`);
+      note(`${name} gives ${lose(SHRINE_COST)} HP: +25% damage this run.`);
       break;
     case "drink":
       note(`${name} drinks: +${healHero(run, hero, hero.maxHp * 0.3)} HP.`);
@@ -1491,7 +1491,7 @@ function choose(run, name, input = {}, rng = Math.random) {
       break;
     case "read":
       hero.deck.push(input.card);
-      note(`${name} studies ${CARDS[input.card].icon} ${CARDS[input.card].name} - into the deck.`);
+      note(`${name} studies ${CARDS[input.card].icon} ${CARDS[input.card].name}.`);
       break;
     case "nap":
       note(`${name} naps: +${healHero(run, hero, hero.maxHp * 0.2)} HP.`);
@@ -1500,14 +1500,14 @@ function choose(run, name, input = {}, rng = Math.random) {
       const free = hero.deck.map((id, i) => i).filter((i) => !isUpgraded(hero.deck[i]));
       const picked = shuffle(free, rng).slice(0, 2);
       picked.forEach((i) => (hero.deck[i] += "+"));
-      note(`${name} tempers ${picked.map((i) => cardInfo(hero.deck[i]).name).join(" and ") || "nothing"} - ${lose(0.08)} damage from the heat.`);
+      note(`${name} tempers ${picked.map((i) => cardInfo(hero.deck[i]).name).join(" and ") || "nothing"}: ${lose(0.08)} damage.`);
       break;
     }
     case "take": {
       const id = relic();
       hero.maxHp = Math.max(1, Math.round(hero.maxHp * 0.9));
       hero.hp = Math.min(hero.hp, hero.maxHp);
-      note(id ? `${name} takes the idol: ${RELICS[id].icon} ${RELICS[id].name} - but 10% less max HP.` : `${name} takes the idol - it crumbles to dust.`);
+      note(id ? `${name} takes the idol: ${RELICS[id].icon} ${RELICS[id].name}, -10% max HP.` : `${name} takes the idol - it crumbles to dust.`);
       break;
     }
     case "purge": {
@@ -1545,7 +1545,7 @@ function canBuy(run, name, item) {
     return { price: offer.prices.potion };
   }
   if (/^remove:\d+$/.test(item)) {
-    if (offer.removed) return { error: "He takes one card a visit." };
+    if (offer.removed) return { error: "Only one card a visit." };
     if (!hero.deck[Number(item.slice(7))]) return { error: "Pick a card of your deck." };
     if (hero.deck.length <= DECK_LEAST) return { error: `Your deck keeps at least ${DECK_LEAST} cards.` };
     return { price: offer.prices.remove };
@@ -1570,7 +1570,7 @@ function bought(run, name, item) {
   if (item.startsWith("remove:")) {
     offer.removed = true;
     const [id] = hero.deck.splice(Number(item.slice(7)), 1);
-    return note(`${name} has the merchant take ${cardInfo(id).icon} ${cardInfo(id).name} out of the deck.`);
+    return note(`${name} removes ${cardInfo(id).icon} ${cardInfo(id).name}.`);
   }
   offer.bought.push(item);
   if (offer.relics.includes(item)) {
@@ -1702,7 +1702,7 @@ function strike(run, hero, foe, power, rng, options = {}) {
   if (hero.effects.weak) damage *= WEAK;
   damage = Math.max(1, Math.round(damage));
   foe.hp = Math.max(0, foe.hp - damage);
-  say(run, `${hero.name}${options.verb ? " " + options.verb : " hits"} ${foe.icon} ${foe.name} for ${damage}${crit ? " (critical!)" : ""}${foe.defending ? " (blocked half)" : ""}.`);
+  say(run, `${hero.name}${options.verb ? " " + options.verb : " hits"} ${foe.icon} ${foe.name} for ${damage}${crit ? " (crit!)" : ""}${foe.defending ? " (half)" : ""}.`);
   fx(run, { k: "hit", to: foe.id, n: damage, crit });
   if (perk(hero, "lifesteal") && !hero.down) healHero(run, hero, damage * perk(hero, "lifesteal"));
   // (spiked: a part of the hit comes back)
@@ -1879,7 +1879,7 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal }, 
         if (fx.execute && m.hp < m.maxHp * fx.execute && m.rank != "boss") {
           m.hp = 0;
           m.down = true;
-          say(run, `${hero.name} marks ${m.icon} ${m.name} for death 💀 - it falls.`);
+          say(run, `${hero.name} kills ${m.icon} ${m.name} 💀.`);
           fxEvent(run, { k: "down", to: m.id });
           continue;
         }
@@ -2018,7 +2018,7 @@ function monsterMove(run, foe, rng) {
     case "curse":
       if (hurt(run, target, damage, source, rng, foe) > 0 && !target.down) {
         target.effects.weak = 2;
-        say(run, `${target.name} is cursed 🕯️ - hits softer for 2 turns.`);
+        say(run, `${target.name} is cursed 🕯️: weaker for 2 turns.`);
       }
       break;
     case "summon": {
@@ -2092,7 +2092,7 @@ function monsterTurn(run, rng = Math.random) {
   if (!alive(run.heroes).length) {
     run.phase = "lost";
     run.pot = 0;
-    say(run, "The whole party is down - the loot is lost. 💀");
+    say(run, "The party is down. Loot lost. 💀");
     fx(run, { k: "defeat" });
     return;
   }

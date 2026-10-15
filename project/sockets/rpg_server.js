@@ -396,8 +396,8 @@ module.exports = function (io, options = {}) {
       if (!hero.cls) return error("Pick a class first.");
       const level = char.levels[data.stat] || 0;
       const cost = rpg.upgradeCost(level);
-      if (cost == null) return error("That one is at its highest level.");
-      if (rpg.statFull(hero, data.stat)) return error("That one is at its cap already.");
+      if (cost == null) return error("Already max level.");
+      if (rpg.statFull(hero, data.stat)) return error("Already capped.");
       if (!(await coins.spend(username, cost, { reason: "rpg upgrade", note: data.stat }))) return error(coins.refusal(username) || "You don't have enough coins.");
       char.levels[data.stat] = level + 1;
       sendHero(username);
@@ -410,8 +410,8 @@ module.exports = function (io, options = {}) {
       const hero = heroOf(username);
       const char = rpg.charOf(hero);
       if (!hero.cls || char.points <= 0) return error("No stat points.");
-      if (rpg.upgradeCost(char.levels[data.stat] || 0) == null) return error("That one is at its highest level.");
-      if (rpg.statFull(hero, data.stat)) return error("That one is at its cap already.");
+      if (rpg.upgradeCost(char.levels[data.stat] || 0) == null) return error("Already max level.");
+      if (rpg.statFull(hero, data.stat)) return error("Already capped.");
       char.points--;
       char.levels[data.stat] = (char.levels[data.stat] || 0) + 1;
       sendHero(username);
@@ -540,7 +540,7 @@ module.exports = function (io, options = {}) {
       if (inRun()) return error("Not during a run.");
       const hero = heroOf(username);
       const price = rpg.bagSlotPrice(hero);
-      if (price == null) return error("Your bag is as big as it gets.");
+      if (price == null) return error("Bag is at max size.");
       if (!(await coins.spend(username, price, { reason: "rpg bag slot" }))) return error(coins.refusal(username) || "You don't have enough coins.");
       hero.bagSlots = (hero.bagSlots || 0) + 1;
       sendHero(username);
@@ -593,7 +593,7 @@ module.exports = function (io, options = {}) {
 
     /* ---------- Parties ---------- */
 
-    const cooling = (floor) => `Floor ${floor} is on cooldown for you (${Math.ceil(rpg.floorCooldown(heroOf(username), floor) / 60000)} min) - back then.`;
+    const cooling = (floor) => `Floor ${floor} on cooldown: ${Math.ceil(rpg.floorCooldown(heroOf(username), floor) / 60000)} min.`;
 
     on("create", async (data) => {
       const floor = Number(data.floor);
@@ -601,7 +601,7 @@ module.exports = function (io, options = {}) {
       if (myParty()) return error("You are in a party already.");
       if (!heroOf(username).cls) return error("Pick a class first.");
       if (rpg.deckReady(heroOf(username))) return error(rpg.deckReady(heroOf(username)));
-      if (rpg.deadFor(heroOf(username))) return error("Your character is dead - revive it or wait.");
+      if (rpg.deadFor(heroOf(username))) return error("Your character is dead.");
       if (!Number.isInteger(floor) || floor < 1 || floor > rpg.maxFloor(heroOf(username))) return error("That floor isn't open for you yet.");
       if (rpg.floorCooldown(heroOf(username), floor)) return error(cooling(floor));
       if (!Number.isInteger(size) || size < 1 || size > rpg.PARTY_MAX) return;
@@ -628,10 +628,10 @@ module.exports = function (io, options = {}) {
       if (!heroOf(username).cls) return error("Pick a class first.");
       if (party.members.length >= party.size) return error("That party is full.");
       if (rpg.deckReady(heroOf(username))) return error(rpg.deckReady(heroOf(username)));
-      if (rpg.deadFor(heroOf(username))) return error("Your character is dead - revive it or wait.");
+      if (rpg.deadFor(heroOf(username))) return error("Your character is dead.");
       if (party.floor > rpg.maxFloor(heroOf(username))) return error(`Floor ${party.floor} isn't open for you yet.`);
       if (rpg.floorCooldown(heroOf(username), party.floor)) return error(cooling(party.floor));
-      if (rpg.levelGap(party.members.map((name) => rpg.charOf(heroOf(name)).level), rpg.charOf(heroOf(username)).level)) return error(`The levels in a party can be at most ${config.RPG_PARTY_GAP} apart.`);
+      if (rpg.levelGap(party.members.map((name) => rpg.charOf(heroOf(name)).level), rpg.charOf(heroOf(username)).level)) return error(`Party levels can be at most ${config.RPG_PARTY_GAP} apart.`);
       join(party, username);
       emitParty(party);
       emitParties();
@@ -653,7 +653,7 @@ module.exports = function (io, options = {}) {
       // (the leader's own floor cooling down - a leader after the first one left)
       if (rpg.floorCooldown(heroOf(username), party.floor)) return error(cooling(party.floor));
       const dead = party.members.find((name) => rpg.deadFor(heroOf(name)));
-      if (dead) return error(dead === username ? "Your character is dead - revive it or wait." : `${dead}'s character is dead.`);
+      if (dead) return error(dead === username ? "Your character is dead." : `${dead}'s character is dead.`);
       const unready = party.members.find((name) => rpg.deckReady(heroOf(name)));
       if (unready) return error(`${unready}'s deck isn't ready: ${rpg.deckReady(heroOf(unready))}`);
       const broke = await start(party);
@@ -734,7 +734,7 @@ module.exports = function (io, options = {}) {
       // (the run may have gone on meanwhile)
       if (rpg.canBuy(party.run, username, item).error) {
         await coins.add(username, check.price, { reason: "rpg refund" });
-        return error("Too late - the party went on.");
+        return error("Too late.");
       }
       rpg.bought(party.run, username, item);
       emitParty(party);
