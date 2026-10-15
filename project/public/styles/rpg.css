@@ -5884,6 +5884,118 @@ button.rpg-cardx.off {
 }
 
 /* 35. "Owned only" and "Class only" side by side */
-.rpg-chip-group .chip.owned + .chip.owned {
-  margin-left: 0.35rem;
+/* (gone - the filters are segmented controls now) */
+
+/* 36. The deck builder's filters: segmented controls in one row, rarity dots, switch toggles */
+.rpg-filters .rpg-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.rpg-seg-filter {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: #141418;
+  border: 1px solid var(--mm-border);
+}
+
+.rpg-seg-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.55rem;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--mm-muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.rpg-seg-opt:hover {
+  color: var(--mm-text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.rpg-seg-opt.active {
+  background: var(--mm-accent);
+  color: #1a1408;
+}
+
+.rpg-seg-filter.cost .rpg-seg-opt {
+  padding: 0.18rem 0.35rem;
+}
+
+.rpg-seg-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--rarity-color, #888);
+}
+
+.rpg-filter-toggles {
+  display: inline-flex;
+  gap: 0.6rem;
+  margin-left: auto;
+}
+
+.rpg-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--mm-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rpg-toggle-knob {
+  position: relative;
+  width: 1.9rem;
+  height: 1.05rem;
+  border-radius: 999px;
+  background: #2a2a30;
+  border: 1px solid var(--mm-border);
+  transition: background 0.15s;
+}
+
+.rpg-toggle-knob::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  background: #9a9aa4;
+  transition: transform 0.15s, background 0.15s;
+}
+
+.rpg-toggle.on {
+  color: var(--mm-text);
+}
+
+.rpg-toggle.on .rpg-toggle-knob {
+  background: rgba(245, 197, 66, 0.35);
+  border-color: var(--mm-accent);
+}
+
+.rpg-toggle.on .rpg-toggle-knob::after {
+  transform: translateX(0.85rem);
+  background: var(--mm-accent);
 }

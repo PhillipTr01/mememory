@@ -1195,30 +1195,36 @@ function renderBuilder() {
   count.className = "rpg-builder-count" + (short ? " bad" : deck.length >= hero.deckMax ? " full" : " ok");
   count.title = hero.deckMin + " to " + hero.deckMax + " cards";
 
-  // The filters
+  // The filters: a segmented control each (type, cost, rarity) - and two toggles
   var chips = [];
-  // (a row per filter: its label, its chips - "Owned only" at the end of the first)
   FILTERS.forEach(([key, name, options]) => {
-    chips.push(el("span", "rpg-filter-label", name));
-    var group = el("div", "rpg-chip-group");
+    var group = el("div", "rpg-seg-filter " + key);
+    group.title = name;
     options.forEach(([value, label]) => {
-      var chip = button(label, "filter", { id: key + ":" + value, className: "chip" + (filters[key] == value ? " active" : "") });
+      var chip = button(value == "all" ? (key == "type" ? "All" : "Any " + name.toLowerCase()) : label, "filter", { id: key + ":" + value, className: "rpg-seg-opt" + (filters[key] == value ? " active" : "") });
       if (key == "cost" && value != "all") {
         chip.innerText = "";
-        chip.classList.add("cost-chip");
         var drop = el("span", "rpg-row-cost");
         drop.dataset.cost = label;
         chip.appendChild(drop);
         chip.title = "Costs " + label;
       }
+      // (a rarity: its colored dot)
+      if (key == "rarity" && value != "all") {
+        chip.classList.add("rarity-" + value);
+        chip.prepend(el("i", "rpg-seg-dot"));
+      }
       group.appendChild(chip);
     });
-    if (key == "type") {
-      group.appendChild(button((filters.owned ? "✓ " : "") + "Owned only", "filter", { id: "owned:toggle", className: "chip owned" + (filters.owned ? " active" : "") }));
-      group.appendChild(button((filters.mine ? "✓ " : "") + "Class only", "filter", { id: "mine:toggle", className: "chip owned" + (filters.mine ? " active" : "") }));
-    }
     chips.push(group);
   });
+  var toggles = el("div", "rpg-filter-toggles");
+  [["owned", "Owned"], ["mine", "Class only"]].forEach(([key, label]) => {
+    var toggle = button("", "filter", { id: key + ":toggle", className: "rpg-toggle" + (filters[key] ? " on" : "") });
+    toggle.append(el("i", "rpg-toggle-knob"), el("span", "", label));
+    toggles.appendChild(toggle);
+  });
+  chips.push(toggles);
   morphChildren(document.getElementById("rpgFilterChips"), chips);
 
   // The collection: every card of the class - owned (spare copies: into the deck) or locked
