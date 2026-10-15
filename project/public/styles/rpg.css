@@ -1806,17 +1806,6 @@ button.rpg-cardx.off {
   background: radial-gradient(ellipse at 50% 0%, rgba(45, 212, 191, 0.12), transparent 60%), linear-gradient(180deg, #26262c, #18181c);
 }
 
-.rpg-cardx.rarity-mythic::before {
-  content: "✦";
-  position: absolute;
-  top: -0.8rem;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 1rem;
-  color: #2dd4bf;
-  text-shadow: 0 0 8px rgba(45, 212, 191, 0.9);
-}
-
 /* Popups */
 .rpg-modal {
   position: fixed;
@@ -5845,36 +5834,31 @@ button.rpg-cardx.off {
   }
 }
 
-/* 33. Another class's card: dimmed, its class icon at the bottom; in an opening "New!" up in the corner */
-.rpg-cardx.other-class > :not(.rpg-other-class) {
+/* 33. A class card: its class icon on top - another class's card dimmed; in an opening "New!" up in the corner */
+.rpg-cardx.other-class > :not(.rpg-card-class) {
   filter: grayscale(0.7) brightness(0.75);
 }
 
-.rpg-other-class {
+.rpg-card-class {
   position: absolute;
-  top: -0.85rem;
+  top: -0.95rem;
   left: 50%;
   transform: translateX(-50%);
   z-index: 3;
   display: grid;
   place-items: center;
-  width: 1.7rem;
-  height: 1.7rem;
+  width: 1.35rem;
+  height: 1.35rem;
   border-radius: 50%;
   background: #2a2a30;
   border: 1px solid rgba(255, 255, 255, 0.35);
-  font-size: 0.9rem;
+  font-size: 0.72rem;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
 /* (in an opening the card clips its inside - not the class icon above it) */
-.rpg-flip-front .rpg-cardx.other-class {
+.rpg-flip-front .rpg-cardx.has-class {
   overflow: visible;
-}
-
-/* (a mythic one of another class: the class icon instead of the mythic star) */
-.rpg-cardx.other-class::before {
-  display: none;
 }
 
 .rpg-flip .rpg-flip-note {

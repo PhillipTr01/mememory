@@ -117,12 +117,14 @@ function cardEl(id, options) {
   var art = el("span", "rpg-cardx-art", card.icon);
   if (card.rarity && card.rarity != "basic") art.appendChild(el("i", "rpg-cardx-gem"));
   node.append(cost, art, el("span", "rpg-cardx-name", card.name), cardType(card), el("span", "rpg-cardx-text", card.text));
-  // (another class's card: its class icon at the bottom - this character can't use it)
-  if (card.cls && hero && card.cls != hero.cls && rules.classes[card.cls]) {
-    var other = rules.classes[card.cls];
-    var mark = el("span", "rpg-other-class", other.icon);
-    mark.title = other.name + " card - not usable by this character";
-    node.classList.add("other-class");
+  // (a class card: its class icon on top - another class's one dimmed, this character can't use it)
+  if (card.cls && rules.classes[card.cls]) {
+    var owner = rules.classes[card.cls];
+    var other = hero && card.cls != hero.cls;
+    var mark = el("span", "rpg-card-class", owner.icon);
+    mark.title = owner.name + " card" + (other ? " - not usable by this character" : "");
+    node.classList.add("has-class");
+    if (other) node.classList.add("other-class");
     node.appendChild(mark);
   }
   return node;
