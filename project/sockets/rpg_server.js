@@ -397,6 +397,7 @@ module.exports = function (io, options = {}) {
       const level = char.levels[data.stat] || 0;
       const cost = rpg.upgradeCost(level);
       if (cost == null) return error("That one is at its highest level.");
+      if (rpg.statFull(hero, data.stat)) return error("That one is at its cap already.");
       if (!(await coins.spend(username, cost, { reason: "rpg upgrade", note: data.stat }))) return error(coins.refusal(username) || "You don't have enough coins.");
       char.levels[data.stat] = level + 1;
       sendHero(username);
@@ -410,6 +411,7 @@ module.exports = function (io, options = {}) {
       const char = rpg.charOf(hero);
       if (!hero.cls || char.points <= 0) return error("No stat points.");
       if (rpg.upgradeCost(char.levels[data.stat] || 0) == null) return error("That one is at its highest level.");
+      if (rpg.statFull(hero, data.stat)) return error("That one is at its cap already.");
       char.points--;
       char.levels[data.stat] = (char.levels[data.stat] || 0) + 1;
       sendHero(username);

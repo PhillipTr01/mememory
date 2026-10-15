@@ -54,18 +54,18 @@ const BOSS_EVERY = 5; // the last room of every 5th floor: its boss
 
 // The stats: what a level gives
 const STATS = {
-  hp: { name: "Vitality", icon: "❤️", base: 100, per: 15, about: "+15 max HP", desc: "Your max HP - heals and potions grow with it." },
-  atk: { name: "Strength", icon: "⚔️", base: 10, per: 3, about: "+3 attack", desc: "The damage of your attacks." },
-  def: { name: "Armor", icon: "🛡️", base: 0, per: 2, about: "+2 armor", desc: "Taken off every hit, added to your block." },
-  luck: { name: "Luck", icon: "🍀", base: 5, per: 2, about: "+2% luck", desc: "Critical hits (double damage), hidden rooms seen, traps disarmed, better loot." },
-  agi: { name: "Agility", icon: "🪶", base: 0, per: 1.5, about: "+1.5% dodge", desc: "The chance to dodge a hit." },
+  hp: { name: "Vitality", icon: "❤️", base: 100, per: 7.5, about: "+7.5 max HP", desc: "Your max HP - heals and potions grow with it." },
+  atk: { name: "Strength", icon: "⚔️", base: 10, per: 1.5, about: "+1.5 attack", desc: "The damage of your attacks." },
+  def: { name: "Armor", icon: "🛡️", base: 0, per: 1, about: "+1 armor", desc: "Taken off every hit, added to your block." },
+  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, cap: 60, about: "+0.6% luck", desc: "Critical hits (double damage), hidden rooms seen, traps disarmed, better loot. At most 60%." },
+  agi: { name: "Agility", icon: "🪶", base: 0, per: 0.4, cap: 40, about: "+0.4% dodge", desc: "The chance to dodge a hit. At most 40%." },
 };
 const STAT_IDS = Object.keys(STATS);
-const LEVEL_MAX = 50;
-const UPGRADE_GROWTH = 1.22;
+const LEVEL_MAX = 100;
+// (the stat levels: from RPG_UPGRADE_BASE for the first one to RPG_UPGRADE_MAX for the last, every one dearer)
 // The main stat of a class: its levels count this much more
 const MAIN_BONUS = 1.5;
-const DODGE_MAX = 40;
+const DODGE_MAX = STATS.agi.cap;
 
 // What a room puts in the pot (per hero, a share of the entry)
 const REWARD = { fight: 0.21, hard: 0.4, elite: 0.4, boss: 0.65, chest: 0.17, trap: 0, rest: 0, shrine: 0, merchant: 0 };
@@ -482,7 +482,7 @@ function newHero(cls = null) {
 }
 
 function newChar() {
-  return { levels: { hp: 0, atk: 0, def: 0, luck: 0, agi: 0 }, gear: { weapon: null, armor: null, charm: null }, deepest: 0, runs: 0, cleared: 0, level: 1, xp: 0, points: 0, talents: [] };
+  return { levels: { hp: 0, atk: 0, def: 0, luck: 0, agi: 0 }, statsV2: true, gear: { weapon: null, armor: null, charm: null }, deepest: 0, runs: 0, cleared: 0, level: 1, xp: 0, points: 0, talents: [] };
 }
 
 // A character of the hero (the one played now, or of a class)
@@ -490,6 +490,11 @@ function charOf(hero, cls = hero.cls) {
   if (!cls) return newChar();
   if (!hero.chars[cls]) hero.chars[cls] = newChar();
   const char = hero.chars[cls];
+  // (the levels from before the stats went to 100: every one worth half now - twice as many, the power kept)
+  if (!char.statsV2) {
+    for (const id of Object.keys(char.levels)) char.levels[id] = Math.min(LEVEL_MAX, (char.levels[id] || 0) * 2);
+    char.statsV2 = true;
+  }
   // (the cards: the starter deck - its cards the first of the collection)
   if (!char.deck) {
     char.deck = starterDeck(cls);
@@ -661,14 +666,22 @@ function statsOf(hero, clsId = hero.cls) {
     maxHp: Math.round((value("hp") + plus("hp")) * cls.hp),
     atk: Math.round((value("atk") + plus("atk")) * cls.atk),
     def: Math.round(value("def") + plus("def") + cls.def),
-    luck: Math.min(60, Math.round(value("luck") + plus("luck") + cls.luck)),
-    agi: Math.min(DODGE_MAX, Math.round(value("agi") + plus("agi") + cls.agi)),
+    luck: Math.min(STATS.luck.cap, Math.round(value("luck") + plus("luck") + cls.luck)),
+    agi: Math.min(STATS.agi.cap, Math.round(value("agi") + plus("agi") + cls.agi)),
   };
+}
+
+// A stat at its cap already (luck, agility - gear counted): a level more would do nothing
+function statFull(hero, id) {
+  const cap = STATS[id].cap;
+  return cap != null && statsOf(hero)[id] >= cap;
 }
 
 // The price of the next level of a stat (null: the last level reached)
 function upgradeCost(level) {
-  return level >= LEVEL_MAX ? null : Math.min(config.RPG_UPGRADE_MAX, round100(config.RPG_UPGRADE_BASE * Math.pow(UPGRADE_GROWTH, level)));
+  if (level >= LEVEL_MAX) return null;
+  const growth = Math.pow(config.RPG_UPGRADE_MAX / config.RPG_UPGRADE_BASE, 1 / (LEVEL_MAX - 1));
+  return round100(config.RPG_UPGRADE_BASE * Math.pow(growth, level));
 }
 
 // The highest floor the character played now may enter
@@ -755,7 +768,8 @@ function heroView(hero) {
     chars: Object.fromEntries(hero.unlocked.map((id) => [id, { level: charOf(hero, id).level, deepest: charOf(hero, id).deepest, deadFor: deadFor(hero, Date.now(), id) }])),
     levels: { ...newChar().levels, ...char.levels },
     stats: statsOf(hero),
-    upgrades: Object.fromEntries(STAT_IDS.map((id) => [id, upgradeCost(char.levels[id] || 0)])),
+    upgrades: Object.fromEntries(STAT_IDS.map((id) => [id, statFull(hero, id) ? null : upgradeCost(char.levels[id] || 0)])),
+    full: Object.fromEntries(STAT_IDS.map((id) => [id, statFull(hero, id)])),
     gear: char.gear,
     bag: hero.bag,
     potions: hero.potions,
@@ -2402,6 +2416,7 @@ module.exports = {
   newHero,
   statsOf,
   upgradeCost,
+  statFull,
   maxFloor,
   entryCost,
   heroView,

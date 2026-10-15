@@ -553,7 +553,7 @@ function renderHero() {
     var main = mine.main == id;
     var row = el("div", "rpg-stat" + (main ? " main" : ""));
     var name = el("div", "rpg-stat-name");
-    name.append(el("span", "rpg-stat-icon", stat.icon), el("span", "", stat.name), el("span", "rpg-stat-level", "Lv " + hero.levels[id]));
+    name.append(el("span", "rpg-stat-icon", stat.icon), el("span", "", stat.name), el("span", "rpg-stat-level", "Lv " + hero.levels[id] + " / " + rules.levelMax));
     name.title = stat.desc;
     if (main) {
       var star = el("span", "rpg-stat-main", "★ " + mine.name);
@@ -564,7 +564,11 @@ function renderHero() {
     head.append(name, el("div", "rpg-stat-desc", stat.desc));
     row.append(head, el("div", "rpg-stat-value", statValue(id)));
     // (a stat point: a free level - else coins)
-    if (cost == null) row.appendChild(el("span", "rpg-stat-max mm-muted", "Max"));
+    if (cost == null) {
+      var max = el("span", "rpg-stat-max mm-muted", "Max");
+      max.title = hero.full && hero.full[id] ? "At its cap (" + stat.cap + "%) - more levels would do nothing" : "The last level";
+      row.appendChild(max);
+    }
     else if (hero.points > 0) row.appendChild(button("+1 free", "point", { id: id, className: "small point", title: stat.about }));
     else row.appendChild(button("+ 🪙 " + formatCoins(cost), "upgrade", { id: id, className: "small", disabled: cost > myCoins, title: stat.about }));
     return row;

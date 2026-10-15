@@ -5,7 +5,8 @@ const rpg = require("../game/rpg");
 const testMode = require("../game/test_mode");
 
 test("rpg: upgrades and floors get dearer, a floor opens after the one before; the map: rows of rooms (mostly fights) and paths, a fight first, the guarded gate last", () => {
-  assert.strictEqual(rpg.upgradeCost(0), 10000);
+  assert.strictEqual(rpg.upgradeCost(0), 5000);
+  assert.strictEqual(rpg.LEVEL_MAX, 100);
   assert.ok(rpg.upgradeCost(5) > rpg.upgradeCost(4));
   assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX), null);
   assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX - 1), rpg.UPGRADE_MAX);
@@ -88,9 +89,9 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   rpg.charOf(strong).levels = { hp: 0, atk: 4, def: 0, luck: 4, agi: 0 };
   const lucky = rpg.newHero("mage");
   rpg.charOf(lucky).levels = { hp: 0, atk: 4, def: 0, luck: 4, agi: 0 };
-  assert.strictEqual(rpg.statsOf(strong).atk, Math.round((10 + 3 * 4 * rpg.MAIN_BONUS) * rpg.CLASSES.warrior.atk));
-  assert.strictEqual(rpg.statsOf(lucky).luck, Math.round(5 + 2 * 4 * rpg.MAIN_BONUS + rpg.CLASSES.mage.luck));
-  assert.strictEqual(rpg.statsOf(strong).luck, Math.round(5 + 2 * 4 + rpg.CLASSES.warrior.luck));
+  assert.strictEqual(rpg.statsOf(strong).atk, Math.round((10 + rpg.STATS.atk.per * 4 * rpg.MAIN_BONUS) * rpg.CLASSES.warrior.atk));
+  assert.strictEqual(rpg.statsOf(lucky).luck, Math.round(5 + rpg.STATS.luck.per * 4 * rpg.MAIN_BONUS + rpg.CLASSES.mage.luck));
+  assert.strictEqual(rpg.statsOf(strong).luck, Math.round(5 + rpg.STATS.luck.per * 4 + rpg.CLASSES.warrior.luck));
   // Gear makes a hero stronger
   const before = rpg.statsOf(hero);
   rpg.charOf(hero).gear.weapon = { slot: "weapon", atk: 7 };
@@ -120,7 +121,7 @@ test("rpg: a new hero clears floor 1 but not floor 8 - upgrades take it deeper; 
   assert.ok(rpg.simulate(weak, 1, 200).cleared > 0.75);
   assert.ok(rpg.simulate(weak, 8, 200).cleared < 0.05);
   const strong = rpg.newHero("warrior");
-  for (const id of rpg.STAT_IDS) rpg.charOf(strong).levels[id] = 8;
+  for (const id of rpg.STAT_IDS) rpg.charOf(strong).levels[id] = 16;
   const deep = rpg.simulate(strong, 8, 200);
   assert.ok(deep.cleared > 0.9, JSON.stringify(deep));
   assert.ok(deep.payback > 1.2 && deep.payback < 1.8, JSON.stringify(deep));
@@ -786,6 +787,11 @@ test("rpg: leaving - one away doesn't hold the party up, one out of the run lose
   // (midnight: the price back to the start)
   assert.strictEqual(rpg.revivePrice(hero, now + 24 * 3600 * 1000), price);
   assert.match(rpg.revive(hero, now), /isn't dead/);
+  // A stat at its cap: nothing more to buy
+  rpg.charOf(hero).levels.agi = 100;
+  assert.ok(rpg.statFull(hero, "agi"));
+  assert.strictEqual(rpg.heroView(hero).upgrades.agi, null);
+  assert.ok(!rpg.statFull(hero, "hp"));
   // The floor cooldown: a cleared floor only - the next one always open
   rpg.charOf(hero).deepest = 3;
   rpg.coolFloor(hero, 2, "warrior", now);
