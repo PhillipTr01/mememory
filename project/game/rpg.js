@@ -1011,6 +1011,19 @@ function makeMap(run, rng = Math.random) {
       }),
     );
   }
+  // (not all random: a camp fire before the gate - a boss: every room of that row; one treasure on the way; the
+  // row before the camp fires no camp fire)
+  const boss = rows[ROOMS - 1][0].kind == "boss";
+  const before = rows[ROOMS - 2];
+  if (ROOMS > 3) {
+    if (boss) before.forEach((node) => (node.kind = "rest"));
+    else if (!before.some((node) => node.kind == "rest")) before[Math.floor(rng() * before.length)].kind = "rest";
+    rows[ROOMS - 3].forEach((node) => {
+      if (node.kind == "rest") node.kind = "fight";
+    });
+    const middle = rows.slice(2, ROOMS - 2).flat();
+    if (middle.length && !rows.flat().some((node) => node.kind == "chest")) middle[Math.floor(rng() * middle.length)].kind = "chest";
+  }
   // The paths: every room to the nearest of the next row, every room of the next row from the nearest - then some
   // more, as long as they cross no other
   for (let r = 0; r < ROOMS - 1; r++) {
