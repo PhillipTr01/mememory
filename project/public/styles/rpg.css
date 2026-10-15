@@ -5841,33 +5841,39 @@ button.rpg-cardx.off {
 
 .rpg-card-class {
   position: absolute;
-  top: -0.95rem;
+  bottom: -0.95rem;
   left: 50%;
   transform: translateX(-50%);
   z-index: 3;
   display: grid;
   place-items: center;
-  width: 1.35rem;
-  height: 1.35rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border-radius: 50%;
   background: #2a2a30;
   border: 1px solid rgba(255, 255, 255, 0.35);
-  font-size: 0.72rem;
+  font-size: 0.95rem;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
+/* (the deck builder: only the own class - the copies under the card instead) */
+#rpgBuilderGrid .rpg-card-class {
+  display: none;
+}
+
+/* (an opening: "New!" on top, in the middle) */
+.rpg-flip .rpg-flip-note {
+  top: -0.7rem;
+  bottom: auto;
+}
+
 /* (in an opening the card clips its inside - not the class icon above it) */
-.rpg-flip-front .rpg-cardx.has-class {
+.rpg-flip-front .rpg-cardx.has-class,
+.rpg-flip-front .rpg-cardx.rarity-legendary,
+.rpg-flip-front .rpg-cardx.rarity-mythic {
   overflow: visible;
 }
 
-.rpg-flip .rpg-flip-note {
-  top: -0.6rem;
-  right: -0.5rem;
-  bottom: auto;
-  left: auto;
-  transform: none;
-}
 
 /* 34. A later character: what it costs more */
 .rpg-class-later {
