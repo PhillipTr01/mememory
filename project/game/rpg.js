@@ -84,146 +84,11 @@ const CLASS_IDS = Object.keys(CLASSES);
 
 // The cards. type: attack / skill; target: "foe" (a monster), "ally" (a hero standing), "fallen" (a hero
 // down), "none"; exhaust: gone for the rest of the fight once played
-const CARDS = {
-  strike: { name: "Strike", icon: "⚔️", cost: 1, type: "attack", target: "foe", text: "Deal 100% damage." },
-  defend: { name: "Defend", icon: "🛡️", cost: 1, type: "skill", target: "ally", text: "You or an ally block 6 + armor." },
-  focus: { name: "Focus", icon: "🧠", cost: 0, type: "skill", target: "none", exhaust: true, text: "Draw 2 cards. Exhaust." },
-  secondwind: { name: "Second Wind", icon: "🌬️", cost: 1, type: "skill", target: "none", text: "Block 5 + armor, heal 6% HP." },
-  adrenaline: { name: "Adrenaline", icon: "💉", cost: 0, type: "skill", target: "none", exhaust: true, text: "+1 mana, draw 1. Exhaust." },
-  quickslash: { name: "Quick Slash", icon: "🌀", cost: 0, type: "attack", target: "foe", text: "Deal 50% damage, draw 1." },
-  shrug: { name: "Shrug It Off", icon: "🤷", cost: 1, type: "skill", target: "none", text: "Block 8 + armor, draw 1." },
-  pommel: { name: "Pommel Strike", icon: "🔨", cost: 1, type: "attack", target: "foe", text: "Deal 90% damage, draw 1." },
-  bandage: { name: "Bandage", icon: "🩹", cost: 0, type: "skill", target: "none", exhaust: true, text: "Heal 8% HP. Exhaust." },
-  twinstrike: { name: "Twin Strike", icon: "🤺", cost: 1, type: "attack", target: "foe", text: "Deal 60% damage twice." },
-  overpower: { name: "Overpower", icon: "🦾", cost: 2, type: "attack", target: "foe", text: "Deal 210% damage." },
-  trance: { name: "Battle Trance", icon: "🧘", cost: 0, type: "skill", target: "none", exhaust: true, text: "Draw 3 cards. Exhaust." },
-  laststand: { name: "Last Stand", icon: "🧱", cost: 1, type: "skill", target: "none", text: "Block 6 + armor - below half HP: three times as much." },
-  rally: { name: "Rally", icon: "🚩", cost: 1, type: "skill", target: "none", text: "Every hero blocks 5 and draws 1 card." },
-  // Warrior
-  bash: { name: "Heavy Blow", icon: "💫", cost: 2, type: "attack", target: "foe", text: "Deal 110% damage and stun: it loses its next move." },
-  cleave: { name: "Cleave", icon: "🪓", cost: 1, type: "attack", target: "none", text: "Deal 70% damage to every foe." },
-  battlecry: { name: "War Cry", icon: "📯", cost: 1, type: "skill", target: "none", exhaust: true, text: "The party deals 30% more damage for 2 turns. Exhaust." },
-  ironwave: { name: "Iron Wave", icon: "🌊", cost: 1, type: "attack", target: "foe", text: "Deal 70% damage, block 4 + half the armor." },
-  bodyslam: { name: "Body Slam", icon: "🤼", cost: 1, type: "attack", target: "foe", text: "Deal damage equal to your block (at least 50%)." },
-  uppercut: { name: "Uppercut", icon: "👊", cost: 2, type: "attack", target: "foe", text: "Deal 100% damage, stun and chill it." },
-  whirlwind: { name: "Whirlwind", icon: "🌪️", cost: 2, type: "attack", target: "none", text: "Deal 110% damage to every foe." },
-  impervious: { name: "Impervious", icon: "🗿", cost: 2, type: "skill", target: "none", exhaust: true, text: "Block 25 + twice the armor. Exhaust." },
-  bloodlust: { name: "Bloodlust", icon: "🩸", cost: 0, type: "skill", target: "none", exhaust: true, text: "Lose 8% HP, +2 mana. Exhaust." },
-  // Paladin
-  taunt: { name: "Taunt", icon: "📣", cost: 1, type: "skill", target: "none", text: "Every foe attacks you this turn - you take 30% less. Block 4 + armor." },
-  judgement: { name: "Judgement", icon: "⚖️", cost: 1, type: "attack", target: "foe", text: "Deal attack + armor as damage. Never misses." },
-  holyshield: { name: "Holy Shield", icon: "🛡️", cost: 2, type: "skill", target: "none", text: "Every hero blocks 5 + your armor." },
-  consecrate: { name: "Consecrate", icon: "🕯️", cost: 2, type: "attack", target: "none", text: "Deal 50% damage to every foe, the party heals 5% HP." },
-  righteous: { name: "Righteous Blow", icon: "🔆", cost: 2, type: "attack", target: "foe", text: "Deal 160% damage, heal 5% HP." },
-  aegis: { name: "Aegis", icon: "🪬", cost: 1, type: "skill", target: "ally", text: "An ally blocks 12 + your armor." },
-  retribution: { name: "Retribution", icon: "⚜️", cost: 1, type: "attack", target: "none", text: "Deal 70% damage to every foe, block 4 + armor." },
-  layhands: { name: "Lay on Hands", icon: "🤲", cost: 2, type: "skill", target: "ally", exhaust: true, text: "Heal an ally 45% of its max HP. Exhaust." },
-  bulwark: { name: "Bulwark", icon: "🏰", cost: 1, type: "skill", target: "none", text: "Block 10 + twice the armor." },
-  // Cleric
-  heal: { name: "Heal", icon: "💚", cost: 1, type: "skill", target: "ally", text: "Heal an ally 25% of its max HP." },
-  smite: { name: "Smite", icon: "🌟", cost: 1, type: "attack", target: "foe", text: "Deal 120% damage - 250% against the undead." },
-  revive: { name: "Revive", icon: "🕊️", cost: 2, type: "skill", target: "fallen", exhaust: true, text: "A fallen ally stands up with 40% HP. Exhaust." },
-  prayer: { name: "Prayer", icon: "🙏", cost: 2, type: "skill", target: "none", text: "The whole party heals 12% HP." },
-  holylight: { name: "Holy Light", icon: "🕯️", cost: 1, type: "attack", target: "foe", text: "Deal 90% damage, the weakest hero heals 8%." },
-  ward: { name: "Ward", icon: "🔰", cost: 1, type: "skill", target: "none", text: "Every hero blocks 4 + your armor." },
-  purify: { name: "Purify", icon: "💧", cost: 1, type: "skill", target: "ally", text: "An ally loses poison and burns, heals 12% HP." },
-  wrath: { name: "Divine Wrath", icon: "🌩️", cost: 2, type: "attack", target: "none", text: "Deal 110% damage to every foe - 250% against the undead." },
-  blessing: { name: "Blessing", icon: "🌞", cost: 1, type: "skill", target: "ally", text: "An ally deals 30% more damage for 2 turns and blocks 5." },
-  // Rogue
-  poisonblade: { name: "Poison Blade", icon: "☠️", cost: 1, type: "attack", target: "foe", text: "Deal 60% damage, poison it for 3 turns." },
-  backstab: { name: "Backstab", icon: "🔪", cost: 1, type: "attack", target: "foe", text: "Deal 120% damage - 300% on a poisoned or stunned foe." },
-  smoke: { name: "Smoke Bomb", icon: "💨", cost: 1, type: "skill", target: "none", text: "Nothing hits you this turn." },
-  envenom: { name: "Envenom", icon: "🧪", cost: 1, type: "skill", target: "none", text: "Poison every foe for 2 turns." },
-  daggers: { name: "Throwing Daggers", icon: "🗡️", cost: 1, type: "attack", target: "foe", text: "Deal 50% damage twice - poisoned: 80%." },
-  shadowstep: { name: "Shadow Step", icon: "👤", cost: 1, type: "skill", target: "none", text: "Block 5 + your dodge / 2, draw 1." },
-  eviscerate: { name: "Eviscerate", icon: "💢", cost: 2, type: "attack", target: "foe", text: "Deal 180% damage - a poisoned foe stays poisoned 2 turns longer." },
-  lethaldose: { name: "Lethal Dose", icon: "⚗️", cost: 1, type: "skill", target: "none", exhaust: true, text: "The poison on every foe: twice as strong, 3 turns longer. Exhaust." },
-  flurry: { name: "Flurry", icon: "✴️", cost: 1, type: "attack", target: "none", text: "Deal 40% damage three times to random foes." },
-  // Mage
-  frost: { name: "Frost Bolt", icon: "❄️", cost: 1, type: "attack", target: "foe", text: "Deal 80% damage and chill: its next 2 moves do half damage." },
-  fireball: { name: "Fireball", icon: "🔥", cost: 2, type: "attack", target: "none", text: "Deal 70% damage to every foe and burn them for 2 turns." },
-  barrier: { name: "Barrier", icon: "🔮", cost: 1, type: "skill", target: "ally", text: "An ally blocks 8 + 60% of your attack." },
-  arcanebolt: { name: "Arcane Bolt", icon: "✨", cost: 1, type: "attack", target: "foe", text: "Deal 150% damage." },
-  spark: { name: "Spark", icon: "✴️", cost: 0, type: "attack", target: "foe", text: "Deal 60% damage." },
-  icearmor: { name: "Ice Armor", icon: "🧊", cost: 1, type: "skill", target: "none", text: "Block 7 + 40% of your attack, chill a random foe." },
-  chainlightning: { name: "Chain Lightning", icon: "⚡", cost: 2, type: "attack", target: "none", text: "Deal 90% damage to every foe, stun one of them." },
-  blizzard: { name: "Blizzard", icon: "🌨️", cost: 2, type: "attack", target: "none", text: "Deal 80% damage to every foe and chill them all." },
-  meteor: { name: "Meteor", icon: "☄️", cost: 3, type: "attack", target: "none", text: "Deal 160% damage to every foe." },
-  // Mythic: once per run - gone from the deck for the rest of the run once played (only in booster packs)
-  titanswrath: { name: "Titan's Wrath", icon: "🌋", cost: 2, type: "attack", target: "none", mythic: true, text: "Deal 350% damage to every foe. Mythic." },
-  divine: { name: "Divine Intervention", icon: "👼", cost: 1, type: "skill", target: "none", mythic: true, text: "Every hero blocks 30 + armor and heals 30% HP. Mythic." },
-  resurrection: { name: "Resurrection", icon: "🌅", cost: 2, type: "skill", target: "none", mythic: true, text: "Every fallen hero stands up with 60% HP, the party heals 25%. Mythic." },
-  deathmark: { name: "Death Mark", icon: "💀", cost: 1, type: "attack", target: "foe", mythic: true, text: "A foe below half HP dies (not a boss) - else 400% damage. Mythic." },
-  timewarp: { name: "Time Warp", icon: "⏳", cost: 0, type: "skill", target: "none", mythic: true, text: "+4 mana, draw 4 cards. Mythic." },
-};
+// The cards: game/rpg_cards.js (made of effects - the text written from them)
+const CARDS = {};
 
 // How rare a card is (booster packs, rewards): basic (the starter deck), common, rare, epic, mythic
-const CARD_RARITY = {
-  strike: "basic",
-  defend: "basic",
-  focus: "common",
-  secondwind: "common",
-  quickslash: "common",
-  shrug: "common",
-  pommel: "common",
-  bandage: "common",
-  twinstrike: "common",
-  overpower: "epic",
-  trance: "rare",
-  laststand: "rare",
-  rally: "rare",
-  bodyslam: "common",
-  uppercut: "common",
-  whirlwind: "rare",
-  impervious: "epic",
-  righteous: "common",
-  aegis: "common",
-  retribution: "rare",
-  layhands: "epic",
-  holylight: "common",
-  ward: "common",
-  purify: "rare",
-  wrath: "epic",
-  daggers: "common",
-  shadowstep: "common",
-  eviscerate: "rare",
-  lethaldose: "epic",
-  spark: "common",
-  icearmor: "common",
-  chainlightning: "rare",
-  blizzard: "epic",
-  adrenaline: "rare",
-  bash: "common",
-  cleave: "common",
-  ironwave: "common",
-  battlecry: "rare",
-  bloodlust: "epic",
-  taunt: "common",
-  judgement: "common",
-  bulwark: "common",
-  holyshield: "rare",
-  consecrate: "rare",
-  heal: "common",
-  smite: "common",
-  prayer: "rare",
-  blessing: "rare",
-  revive: "epic",
-  poisonblade: "common",
-  backstab: "common",
-  flurry: "common",
-  smoke: "rare",
-  envenom: "rare",
-  frost: "common",
-  barrier: "common",
-  arcanebolt: "common",
-  fireball: "rare",
-  meteor: "epic",
-  titanswrath: "mythic",
-  divine: "mythic",
-  resurrection: "mythic",
-  deathmark: "mythic",
-  timewarp: "mythic",
-};
+
 // A card's rarity: its weight in packs and rewards, how many of it a deck holds, what it is worth (by how rare it is
 // in a Base Set pack - the packs are priced by it)
 const CARD_RARITIES = {
@@ -234,7 +99,6 @@ const CARD_RARITIES = {
   legendary: { name: "Legendary", weight: 3, copies: 1, value: 50000 },
   mythic: { name: "Mythic", weight: 0.08, copies: 1, value: 500000 },
 };
-for (const [id, rarity] of Object.entries(CARD_RARITY)) CARDS[id].rarity = rarity;
 // The larger part of the base set: cards made of effects (game/rpg_cards.js)
 const MORE_CARDS = require("./rpg_cards");
 Object.assign(CARDS, MORE_CARDS.cards);
@@ -1819,255 +1683,8 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
   const heal = (who, amount) => healHero(run, who, amount * up * (1 + perk(hero, "heal")));
   const venom = up * (1 + perk(hero, "poison"));
   const info = CARDS[baseCard(id)];
-  if (info.fx) {
-    if (info.type != "attack") say(run, `${hero.name} plays ${info.icon} ${info.name}.`);
-    for (const fx of info.fx) playFx(run, hero, fx, { foe, friend, up, venom, block, heal }, rng);
-    return;
-  }
-  switch (baseCard(id)) {
-    case "strike":
-      return strike(run, hero, foe, (1) * up, rng);
-    case "defend":
-      return say(run, `${friend == hero ? hero.name : hero.name + " shields " + friend.name}: blocks ${block(friend, 6 + hero.def)}.`);
-    case "focus":
-      return drawCards(hero, 2, rng);
-    case "secondwind":
-      return say(run, `${hero.name} catches breath: blocks ${block(hero, 5 + hero.def)}, +${heal(hero, hero.maxHp * 0.06)} HP.`);
-    case "adrenaline":
-      hero.energy++;
-      return drawCards(hero, 1, rng);
-    case "quickslash":
-      strike(run, hero, foe, (0.5) * up, rng);
-      return drawCards(hero, 1, rng);
-    case "bash":
-      if (strike(run, hero, foe, (1.1) * up, rng, { sure: true, verb: "smashes" }) && !foe.down) {
-        foe.effects.stun = 1;
-        say(run, `${foe.icon} ${foe.name} is stunned 💫.`);
-      }
-      return;
-    case "cleave":
-      for (const one of foes) strike(run, hero, one, (0.7) * up, rng, { sure: true, aoe: true, verb: "cleaves" });
-      return;
-    case "battlecry":
-      for (const one of alive(run.heroes)) one.effects.might = 2;
-      return say(run, `${hero.name} lets out a war cry 📯 - the party hits harder!`);
-    case "ironwave":
-      strike(run, hero, foe, (0.7) * up, rng);
-      return block(hero, 4 + hero.def / 2);
-    case "bloodlust":
-      hero.hp = Math.max(1, hero.hp - Math.round(hero.maxHp * 0.08));
-      hero.energy += 2;
-      return say(run, `${hero.name} bleeds for power 🩸.`);
-    case "taunt":
-      hero.taunting = true;
-      block(hero, 4 + hero.def);
-      return say(run, `${hero.name} taunts the foes 📣.`);
-    case "judgement":
-      return strike(run, hero, foe, ((hero.atk + hero.def) / hero.atk) * up, rng, { sure: true, verb: "judges" });
-    case "holyshield":
-      for (const one of alive(run.heroes)) block(one, 5 + hero.def);
-      return say(run, `${hero.name} raises a holy shield over the party 🛡️.`);
-    case "consecrate":
-      for (const one of foes) strike(run, hero, one, (0.5) * up, rng, { sure: true, aoe: true, verb: "burns" });
-      for (const one of alive(run.heroes)) heal(one, hero.maxHp * 0.05);
-      return;
-    case "bulwark":
-      block(hero, 10 + 2 * hero.def);
-      return say(run, `${hero.name} braces behind the shield 🏰.`);
-    case "heal":
-      return say(run, `${hero.name} heals ${friend.name} for ${heal(friend, hero.maxHp * 0.25)} 💚.`);
-    case "smite":
-      return strike(run, hero, foe, (foe.undead ? 2.5 : 1.2) * up, rng, { sure: true, verb: "smites" });
-    case "revive":
-      fallen.down = false;
-      fallen.hp = Math.round(fallen.maxHp * 0.4);
-      fallen.ended = true;
-      return say(run, `${hero.name} brings ${fallen.name} back 🕊️!`);
-    case "prayer":
-      for (const one of alive(run.heroes)) heal(one, hero.maxHp * 0.12);
-      return say(run, `${hero.name} prays - the party heals 🙏.`);
-    case "blessing":
-      friend.effects.might = 2;
-      block(friend, 5);
-      return say(run, `${hero.name} blesses ${friend.name} 🌞.`);
-    case "poisonblade":
-      if (strike(run, hero, foe, (0.6) * up, rng, { sure: true, verb: "cuts" }) && !foe.down) {
-        afflict(foe, "poison", 3, Math.max(1, Math.round(hero.atk * 0.45 * venom)));
-        say(run, `${foe.icon} ${foe.name} is poisoned ☠️.`);
-      }
-      return;
-    case "backstab":
-      return strike(run, hero, foe, (foe.effects.poison || foe.effects.stun ? 3 : 1.2) * up, rng, { sure: true, verb: "backstabs" });
-    case "smoke":
-      hero.evading = true;
-      return say(run, `${hero.name} vanishes in smoke 💨.`);
-    case "envenom":
-      for (const one of foes) afflict(one, "poison", 2, Math.max(1, Math.round(hero.atk * 0.4 * venom)));
-      return say(run, `${hero.name} poisons every foe 🧪.`);
-    case "flurry":
-      for (let i = 0; i < 3; i++) {
-        const standing = alive(run.monsters);
-        if (standing.length) strike(run, hero, pick(rng, standing), (0.4) * up, rng, { sure: true, verb: "slashes" });
-      }
-      return;
-    case "frost":
-      if (strike(run, hero, foe, (0.8) * up, rng, { sure: true, verb: "freezes" }) && !foe.down) {
-        foe.effects.chill = 2;
-        say(run, `${foe.icon} ${foe.name} is chilled ❄️.`);
-      }
-      return;
-    case "fireball":
-      for (const one of foes) {
-        if (strike(run, hero, one, (0.7) * up, rng, { sure: true, aoe: true, verb: "burns" }) && !one.down) afflict(one, "burn", 2, Math.max(1, Math.round(hero.atk * 0.3)));
-      }
-      return;
-    case "barrier":
-      block(friend, 8 + hero.atk * 0.6);
-      return say(run, `${hero.name} shields ${friend.name} 🔮.`);
-    case "arcanebolt":
-      return strike(run, hero, foe, (1.5) * up, rng, { sure: true, verb: "blasts" });
-    case "titanswrath":
-      for (const one of foes) strike(run, hero, one, 3.5 * up, rng, { sure: true, aoe: true, verb: "erupts on" });
-      return;
-    case "divine":
-      for (const one of alive(run.heroes)) {
-        block(one, 30 + hero.def);
-        heal(one, hero.maxHp * 0.3);
-      }
-      return say(run, `${hero.name} calls down a divine intervention 👼!`);
-    case "resurrection":
-      for (const one of run.heroes.filter((h) => h.down)) {
-        one.down = false;
-        one.hp = Math.round(one.maxHp * 0.6);
-        one.ended = true;
-      }
-      for (const one of alive(run.heroes)) heal(one, hero.maxHp * 0.25);
-      return say(run, `${hero.name}: a resurrection 🌅!`);
-    case "deathmark":
-      if (foe.hp < foe.maxHp / 2 && foe.rank != "boss") {
-        foe.hp = 0;
-        foe.down = true;
-        return say(run, `${hero.name} marks ${foe.icon} ${foe.name} for death 💀 - it falls.`);
-      }
-      return strike(run, hero, foe, 4 * up, rng, { sure: true, verb: "marks" });
-    case "timewarp":
-      hero.energy += 4;
-      drawCards(hero, 4, rng);
-      return say(run, `${hero.name} warps time ⏳.`);
-    case "meteor":
-      for (const one of foes) strike(run, hero, one, (1.6) * up, rng, { sure: true, aoe: true, verb: "crushes" });
-      return;
-    // The neutral cards of the base set
-    case "shrug":
-      say(run, `${hero.name} shrugs it off: blocks ${block(hero, 8 + hero.def)}.`);
-      return drawCards(hero, 1, rng);
-    case "pommel":
-      strike(run, hero, foe, 0.9 * up, rng);
-      return drawCards(hero, 1, rng);
-    case "bandage":
-      return say(run, `${hero.name} bandages up: +${heal(hero, hero.maxHp * 0.08)} HP 🩹.`);
-    case "twinstrike":
-      strike(run, hero, foe, 0.6 * up, rng);
-      if (!foe.down) strike(run, hero, foe, 0.6 * up, rng);
-      return;
-    case "overpower":
-      return strike(run, hero, foe, 2.1 * up, rng, { verb: "overpowers" });
-    case "trance":
-      return drawCards(hero, 3, rng);
-    case "laststand":
-      return say(run, `${hero.name} stands fast: blocks ${block(hero, (6 + hero.def) * (hero.hp < hero.maxHp / 2 ? 3 : 1))} 🧱.`);
-    case "rally":
-      for (const one of alive(run.heroes)) {
-        block(one, 5);
-        drawCards(one, 1, rng);
-      }
-      return say(run, `${hero.name} rallies the party 🚩.`);
-    // The warrior
-    case "bodyslam":
-      return strike(run, hero, foe, Math.max(0.5, hero.block / Math.max(1, hero.atk)) * up, rng, { sure: true, verb: "slams" });
-    case "uppercut":
-      if (strike(run, hero, foe, 1 * up, rng, { sure: true, verb: "uppercuts" }) && !foe.down) {
-        foe.effects.stun = 1;
-        foe.effects.chill = 2;
-        say(run, `${foe.icon} ${foe.name} is stunned and chilled.`);
-      }
-      return;
-    case "whirlwind":
-      for (const one of foes) strike(run, hero, one, 1.1 * up, rng, { sure: true, aoe: true, verb: "whirls into" });
-      return;
-    case "impervious":
-      return say(run, `${hero.name} is impervious: blocks ${block(hero, 25 + 2 * hero.def)} 🗿.`);
-    // The paladin
-    case "righteous":
-      strike(run, hero, foe, 1.6 * up, rng, { sure: true, verb: "strikes down" });
-      return heal(hero, hero.maxHp * 0.05);
-    case "aegis":
-      return say(run, `${hero.name} shields ${friend.name}: blocks ${block(friend, 12 + hero.def)} 🪬.`);
-    case "retribution":
-      for (const one of foes) strike(run, hero, one, 0.7 * up, rng, { sure: true, aoe: true, verb: "punishes" });
-      return block(hero, 4 + hero.def);
-    case "layhands":
-      return say(run, `${hero.name} lays hands on ${friend.name}: +${heal(friend, hero.maxHp * 0.45)} HP 🤲.`);
-    // The cleric
-    case "holylight": {
-      strike(run, hero, foe, 0.9 * up, rng, { sure: true, verb: "lights up" });
-      const weakest = alive(run.heroes).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-      if (weakest) heal(weakest, hero.maxHp * 0.08);
-      return;
-    }
-    case "ward":
-      for (const one of alive(run.heroes)) block(one, 4 + hero.def);
-      return say(run, `${hero.name} wards the party 🔰.`);
-    case "purify":
-      delete friend.effects.poison;
-      delete friend.effects.burn;
-      return say(run, `${hero.name} purifies ${friend.name}: +${heal(friend, hero.maxHp * 0.12)} HP 💧.`);
-    case "wrath":
-      for (const one of foes) strike(run, hero, one, (one.undead ? 2.5 : 1.1) * up, rng, { sure: true, aoe: true, verb: "smites" });
-      return;
-    // The rogue
-    case "daggers":
-      for (let i = 0; i < 2 && !foe.down; i++) strike(run, hero, foe, (foe.effects.poison ? 0.8 : 0.5) * up, rng, { sure: true, verb: "throws at" });
-      return;
-    case "shadowstep":
-      say(run, `${hero.name} steps into the shadows: blocks ${block(hero, 5 + hero.agi / 2)} 👤.`);
-      return drawCards(hero, 1, rng);
-    case "eviscerate":
-      strike(run, hero, foe, 1.8 * up, rng, { sure: true, verb: "eviscerates" });
-      if (!foe.down && foe.effects.poison) foe.effects.poison.turns += 2;
-      return;
-    case "lethaldose":
-      for (const one of foes) {
-        if (!one.effects.poison) continue;
-        one.effects.poison.dmg *= 2;
-        one.effects.poison.turns += 3;
-      }
-      return say(run, `${hero.name} doubles the dose ⚗️.`);
-    // The mage
-    case "spark":
-      return strike(run, hero, foe, 0.6 * up, rng, { sure: true, verb: "zaps" });
-    case "icearmor": {
-      block(hero, 7 + hero.atk * 0.4);
-      const chilled = foes.length ? pick(rng, foes) : null;
-      if (chilled) chilled.effects.chill = 2;
-      return say(run, `${hero.name} wears ice 🧊${chilled ? ` - ${chilled.icon} ${chilled.name} is chilled` : ""}.`);
-    }
-    case "chainlightning": {
-      for (const one of foes) strike(run, hero, one, 0.9 * up, rng, { sure: true, aoe: true, verb: "shocks" });
-      const standing = alive(run.monsters);
-      if (standing.length) {
-        const stunned = pick(rng, standing);
-        stunned.effects.stun = 1;
-        say(run, `${stunned.icon} ${stunned.name} is stunned 💫.`);
-      }
-      return;
-    }
-    case "blizzard":
-      for (const one of foes) {
-        if (strike(run, hero, one, 0.8 * up, rng, { sure: true, aoe: true, verb: "freezes" }) && !one.down) one.effects.chill = 2;
-      }
-      return;
-  }
+  if (info.type != "attack") say(run, `${hero.name} plays ${info.icon} ${info.name}.`);
+  for (const fx of info.fx) playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal }, rng);
 }
 
 // The texts of cards with a character's numbers (its damage, block, healing) instead of the shares: {id: text}
@@ -2086,29 +1703,16 @@ function liveTexts(stats, ids) {
       heal: (share) => Math.round(stats.maxHp * share * (1 + p("heal")) * up),
       lose: (share) => Math.round(stats.maxHp * share),
     };
-    if (card.fx) {
-      texts[id] = MORE_CARDS.textOf(card.fx, card.mythic ? "mythic" : card.exhaust, n);
-      continue;
-    }
-    const aoe = / to every foe/.test(card.text);
-    const hit = (pct) => dmg(pct / 100, { to: aoe ? "all" : "foe" });
-    const blockOf = (base, extra) => {
-      const more = !extra ? 0 : /twice/.test(extra) ? 2 * stats.def : /half/.test(extra) ? stats.def / 2 : /dodge/.test(extra) ? stats.agi / 2 : /(\d+)% of your attack/.test(extra) ? (stats.atk * Number(/(\d+)%/.exec(extra)[1])) / 100 : stats.def;
-      return Math.round((Number(base) + more) * (1 + p("block")) * up);
-    };
-    texts[id] = card.text
-      .replace(/Deal attack \+ armor as damage/, () => "Deal " + Math.round((stats.atk + stats.def) * (1 + p("attack")) * up) + " damage")
-      .replace(/(\d+)% damage/g, (_, v) => hit(Number(v)) + " damage")
-      .replace(/(- |poisoned: |at least )(\d+)%/g, (_, pre, v) => pre + hit(Number(v)))
-      .replace(/(blocks?|Block) (\d+)( \+ (?:armor|your armor|half the armor|twice the armor|\d+% of your attack|your dodge \/ 2))?/g, (_, verb, base, extra) => verb + " " + blockOf(base, extra))
-      .replace(/(heals?|Heal an ally|Heal) (\d+)%(?: HP| of its max HP)?/g, (_, verb, v) => verb + " " + Math.round(stats.maxHp * (Number(v) / 100) * (1 + p("heal")) * up) + " HP")
-      .replace(/Lose (\d+)% HP/, (_, v) => "Lose " + Math.round((stats.maxHp * Number(v)) / 100) + " HP");
+    texts[id] = MORE_CARDS.textOf(card.fx, card.mythic ? "mythic" : card.exhaust, n);
   }
   return texts;
 }
 
 // A step of a card made of effects (game/rpg_cards.js)
-function playFx(run, hero, fx, { foe, friend, up, venom, block, heal }, rng) {
+// (the event of the playback - the step below is called fx)
+const fxEvent = (run, event) => fx(run, event);
+
+function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal }, rng) {
   const foesOf = (to) => {
     const standing = alive(run.monsters);
     if (to == "all") return standing;
@@ -2121,16 +1725,27 @@ function playFx(run, hero, fx, { foe, friend, up, venom, block, heal }, rng) {
     if (to == "weakest") return alive(run.heroes).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, 1);
     return [hero];
   };
-  const state = (m, cond) => (cond == "low" ? hero.hp < hero.maxHp / 2 : cond == "undead" ? m.undead : !!m.effects[cond]);
+  // (a condition - "poison|stun": any of them)
+  const state = (m, cond) => cond.split("|").some((one) => (one == "low" ? hero.hp < hero.maxHp / 2 : one == "undead" ? m.undead : !!m.effects[one]));
   if (fx.hit != null) {
     for (let i = 0; i < (fx.times || 1); i++) {
       for (const m of foesOf(fx.to)) {
-        const power = (fx.bonusIf && state(m, fx.bonusIf) ? fx.bonus : fx.hit) + ((fx.def || 0) * hero.def) / Math.max(1, hero.atk);
+        // (a mark of death: below the share - gone, not a boss)
+        if (fx.execute && m.hp < m.maxHp * fx.execute && m.rank != "boss") {
+          m.hp = 0;
+          m.down = true;
+          say(run, `${hero.name} marks ${m.icon} ${m.name} for death 💀 - it falls.`);
+          fxEvent(run, { k: "down", to: m.id });
+          continue;
+        }
+        let power = (fx.bonusIf && state(m, fx.bonusIf) ? fx.bonus : fx.hit) + ((fx.def || 0) * hero.def) / Math.max(1, hero.atk);
+        // (damage of the block - at least the card's)
+        if (fx.fromBlock) power = Math.max(power, hero.block / Math.max(1, hero.atk));
         strike(run, hero, m, power * up, rng, { sure: true, aoe: fx.to == "all" });
       }
     }
   } else if (fx.block != null) {
-    const value = fx.block + (fx.def || 0) * hero.def + (fx.atk || 0) * hero.atk + (fx.agi || 0) * hero.agi;
+    const value = (fx.block + (fx.def || 0) * hero.def + (fx.atk || 0) * hero.atk + (fx.agi || 0) * hero.agi) * (fx.low && hero.hp < hero.maxHp / 2 ? fx.low : 1);
     for (const one of heroesOf(fx.to)) block(one, value);
   } else if (fx.heal != null) {
     for (const one of heroesOf(fx.to)) heal(one, hero.maxHp * fx.heal);
@@ -2143,10 +1758,35 @@ function playFx(run, hero, fx, { foe, friend, up, venom, block, heal }, rng) {
     }
   } else if (fx.might != null) {
     for (const one of heroesOf(fx.to)) one.effects.might = fx.might;
-  } else if (fx.draw != null) drawCards(hero, fx.draw, rng);
+  } else if (fx.draw != null) for (const one of fx.to == "party" ? alive(run.heroes) : [hero]) drawCards(one, fx.draw, rng);
   else if (fx.mana != null) hero.energy += fx.mana;
   else if (fx.lose != null) hero.hp = Math.max(1, hero.hp - Math.round(hero.maxHp * fx.lose));
   else if (fx.evade) hero.evading = true;
+  else if (fx.taunt) {
+    hero.taunting = true;
+    say(run, `${hero.name} taunts the foes 📣.`);
+  } else if (fx.revive != null) {
+    for (const one of fx.to == "all" ? run.heroes.filter((h) => h.down) : fallen ? [fallen] : []) {
+      one.down = false;
+      one.hp = Math.max(1, Math.round(one.maxHp * fx.revive));
+      one.ended = true;
+      say(run, `${hero.name} brings ${one.name} back 🕊️!`);
+      fxEvent(run, { k: "heal", to: one.name, n: one.hp });
+    }
+  } else if (fx.cleanse) {
+    for (const one of heroesOf(fx.to)) {
+      delete one.effects.poison;
+      delete one.effects.burn;
+    }
+  } else if (fx.extend != null) {
+    for (const m of foesOf(fx.to)) if (m.effects.poison) m.effects.poison.turns += fx.extend;
+  } else if (fx.amplify) {
+    for (const m of foesOf(fx.to)) {
+      if (!m.effects.poison) continue;
+      m.effects.poison.dmg *= 2;
+      m.effects.poison.turns += 3;
+    }
+  }
 }
 
 // A hero ends the turn -> true: every hero has - the monsters' turn

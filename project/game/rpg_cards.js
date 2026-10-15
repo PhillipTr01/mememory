@@ -11,6 +11,74 @@
  * States for bonusIf: poison, burn, chill, stun, undead (the foe) - low (the hero below half HP)
  */
 
+// The first cards of the game (the starter decks, the classes' own) - class membership: CLASSES in game/rpg.js
+const BASE = {
+  strike: ["Strike", "⚔️", 1, "basic", [{ hit: 1 }]],
+  defend: ["Defend", "🛡️", 1, "basic", [{ block: 6, def: 1, to: "ally" }]],
+  focus: ["Focus", "🧠", 0, "common", [{ draw: 2 }], true],
+  secondwind: ["Second Wind", "🌬️", 1, "common", [{ block: 5, def: 1 }, { heal: 0.06 }]],
+  adrenaline: ["Adrenaline", "💉", 0, "rare", [{ mana: 1 }, { draw: 1 }], true],
+  quickslash: ["Quick Slash", "🌀", 0, "common", [{ hit: 0.5 }, { draw: 1 }]],
+  shrug: ["Shrug It Off", "🤷", 1, "common", [{ block: 8, def: 1 }, { draw: 1 }]],
+  pommel: ["Pommel Strike", "🔨", 1, "common", [{ hit: 0.9 }, { draw: 1 }]],
+  bandage: ["Bandage", "🩹", 0, "common", [{ heal: 0.08 }], true],
+  twinstrike: ["Twin Strike", "🤺", 1, "common", [{ hit: 0.6, times: 2 }]],
+  overpower: ["Overpower", "🦾", 2, "epic", [{ hit: 2.1 }]],
+  trance: ["Battle Trance", "🧘", 0, "rare", [{ draw: 3 }], true],
+  laststand: ["Last Stand", "🧱", 1, "rare", [{ block: 6, def: 1, low: 3 }]],
+  rally: ["Rally", "🚩", 1, "rare", [{ block: 5, to: "party" }, { draw: 1, to: "party" }]],
+  bash: ["Heavy Blow", "💫", 2, "common", [{ hit: 1.1 }, { status: "stun" }]],
+  cleave: ["Cleave", "🪓", 1, "common", [{ hit: 0.7, to: "all" }]],
+  battlecry: ["War Cry", "📯", 1, "rare", [{ might: 2, to: "party" }], true],
+  ironwave: ["Iron Wave", "🌊", 1, "common", [{ hit: 0.7 }, { block: 4, def: 0.5 }]],
+  bodyslam: ["Body Slam", "🤼", 1, "common", [{ hit: 0.5, fromBlock: true }]],
+  uppercut: ["Uppercut", "👊", 2, "common", [{ hit: 1 }, { status: "stun" }, { status: "chill", turns: 1 }]],
+  whirlwind: ["Whirlwind", "🌪️", 2, "rare", [{ hit: 1.1, to: "all" }]],
+  impervious: ["Impervious", "🗿", 2, "epic", [{ block: 25, def: 2 }], true],
+  bloodlust: ["Bloodlust", "🩸", 0, "epic", [{ lose: 0.08 }, { mana: 2 }], true],
+  taunt: ["Taunt", "📣", 1, "common", [{ taunt: true }, { block: 4, def: 1 }]],
+  judgement: ["Judgement", "⚖️", 1, "common", [{ hit: 1, def: 1 }]],
+  holyshield: ["Holy Shield", "🛡️", 2, "rare", [{ block: 5, def: 1, to: "party" }]],
+  consecrate: ["Consecrate", "🕯️", 2, "rare", [{ hit: 0.5, to: "all" }, { heal: 0.05, to: "party" }]],
+  righteous: ["Righteous Blow", "🔆", 2, "common", [{ hit: 1.6 }, { heal: 0.05 }]],
+  aegis: ["Aegis", "🪬", 1, "common", [{ block: 12, def: 1, to: "ally" }]],
+  retribution: ["Retribution", "⚜️", 1, "rare", [{ hit: 0.7, to: "all" }, { block: 4, def: 1 }]],
+  layhands: ["Lay on Hands", "🤲", 2, "epic", [{ heal: 0.45, to: "ally" }], true],
+  bulwark: ["Bulwark", "🏰", 1, "common", [{ block: 10, def: 2 }]],
+  heal: ["Heal", "💚", 1, "common", [{ heal: 0.25, to: "ally" }]],
+  smite: ["Smite", "🌟", 1, "common", [{ hit: 1.2, bonusIf: "undead", bonus: 2.5 }]],
+  revive: ["Revive", "🕊️", 2, "epic", [{ revive: 0.4 }], true],
+  prayer: ["Prayer", "🙏", 2, "rare", [{ heal: 0.12, to: "party" }]],
+  holylight: ["Holy Light", "🕯️", 1, "common", [{ hit: 0.9 }, { heal: 0.08, to: "weakest" }]],
+  ward: ["Ward", "🔰", 1, "common", [{ block: 4, def: 1, to: "party" }]],
+  purify: ["Purify", "💧", 1, "rare", [{ cleanse: true, to: "ally" }, { heal: 0.12, to: "ally" }]],
+  wrath: ["Divine Wrath", "🌩️", 2, "epic", [{ hit: 1.1, to: "all", bonusIf: "undead", bonus: 2.5 }]],
+  blessing: ["Blessing", "🌞", 1, "rare", [{ might: 2, to: "ally" }, { block: 5, to: "ally" }]],
+  poisonblade: ["Poison Blade", "☠️", 1, "common", [{ hit: 0.6 }, { status: "poison", turns: 3 }]],
+  backstab: ["Backstab", "🔪", 1, "common", [{ hit: 1.2, bonusIf: "poison|stun", bonus: 3 }]],
+  smoke: ["Smoke Bomb", "💨", 1, "rare", [{ evade: true }]],
+  envenom: ["Envenom", "🧪", 1, "rare", [{ status: "poison", turns: 2, to: "all" }]],
+  daggers: ["Throwing Daggers", "🗡️", 1, "common", [{ hit: 0.5, times: 2, bonusIf: "poison", bonus: 0.8 }]],
+  shadowstep: ["Shadow Step", "👤", 1, "common", [{ block: 5, agi: 0.5 }, { draw: 1 }]],
+  eviscerate: ["Eviscerate", "💢", 2, "rare", [{ hit: 1.8 }, { extend: 2 }]],
+  lethaldose: ["Lethal Dose", "⚗️", 1, "epic", [{ amplify: true, to: "all" }], true],
+  flurry: ["Flurry", "✴️", 1, "common", [{ hit: 0.4, to: "random", times: 3 }]],
+  frost: ["Frost Bolt", "❄️", 1, "common", [{ hit: 0.8 }, { status: "chill", turns: 2 }]],
+  fireball: ["Fireball", "🔥", 2, "rare", [{ hit: 0.7, to: "all" }, { status: "burn", turns: 2, to: "all" }]],
+  barrier: ["Barrier", "🔮", 1, "common", [{ block: 8, atk: 0.6, to: "ally" }]],
+  arcanebolt: ["Arcane Bolt", "✨", 1, "common", [{ hit: 1.5 }]],
+  spark: ["Spark", "✴️", 0, "common", [{ hit: 0.6 }]],
+  icearmor: ["Ice Armor", "🧊", 1, "common", [{ block: 7, atk: 0.4 }, { status: "chill", turns: 1, to: "random" }]],
+  chainlightning: ["Chain Lightning", "⚡", 2, "rare", [{ hit: 0.9, to: "all" }, { status: "stun", to: "random" }]],
+  blizzard: ["Blizzard", "🌨️", 2, "epic", [{ hit: 0.8, to: "all" }, { status: "chill", turns: 2, to: "all" }]],
+  meteor: ["Meteor", "☄️", 3, "epic", [{ hit: 1.6, to: "all" }]],
+  titanswrath: ["Titan's Wrath", "🌋", 2, "mythic", [{ hit: 3.5, to: "all" }], "mythic"],
+  divine: ["Divine Intervention", "👼", 1, "mythic", [{ block: 30, def: 1, to: "party" }, { heal: 0.3, to: "party" }], "mythic"],
+  resurrection: ["Resurrection", "🌅", 2, "mythic", [{ revive: 0.6, to: "all" }, { heal: 0.25, to: "party" }], "mythic"],
+  deathmark: ["Death Mark", "💀", 1, "mythic", [{ hit: 4, execute: 0.5 }], "mythic"],
+  timewarp: ["Time Warp", "⏳", 0, "mythic", [{ mana: 4 }, { draw: 4 }], "mythic"],
+};
+
 // id: [name, icon, cost, rarity, fx, exhaust (true - or "mythic": once a run)]
 const NEUTRAL = {
   jab: ["Jab", "🥊", 0, "common", [{ hit: 0.5 }]],
@@ -151,6 +219,8 @@ const CLASS = {
 /* ---------- The text of a card, written from its effects ---------- */
 
 const pct = (value) => Math.round(value * 100) + "%";
+// (a condition - or more of them, "poison|stun": any of them)
+const ifText = (cond) => (cond.includes("|") ? "on a " + cond.split("|").map((one) => IF[one].replace(/^on a | foe$/g, "")).join(" or ") + " foe" : IF[cond]);
 const IF = { poison: "on a poisoned foe", burn: "on a burning foe", chill: "on a chilled foe", stun: "on a stunned foe", undead: "against the undead", low: "while you are below half HP" };
 const STATUS = {
   poison: ["poison", "poisoned"],
@@ -174,18 +244,21 @@ function phrase(fx, n) {
     if (fx.to == "all") text += " to every foe";
     if (fx.to == "random") text += " to a random foe";
     if (fx.times) text += fx.times == 2 ? " twice" : " " + fx.times + " times";
-    if (fx.bonusIf) text += " - " + (n ? n.dmg(fx.bonus, fx) : pct(fx.bonus)) + " " + IF[fx.bonusIf];
+    if (fx.bonusIf) text += " - " + (n ? n.dmg(fx.bonus, fx) : pct(fx.bonus)) + " " + ifText(fx.bonusIf);
+    if (fx.fromBlock) text = "deal damage equal to your block (at least " + (n ? n.dmg(fx.hit, fx) : pct(fx.hit)) + ")";
+    if (fx.execute) text = "a foe below " + pct(fx.execute) + " HP dies (not a boss) - else " + text.replace(/^deal /, "");
     return text;
   }
   if (fx.block != null) {
     const value = n ? n.block(fx) : amount(fx);
-    if (fx.to == "ally") return "an ally blocks " + value;
-    if (fx.to == "party") return "the party blocks " + value;
-    return "block " + value;
+    const low = fx.low ? " - below half HP: " + fx.low + "x" : "";
+    if (fx.to == "ally") return "you or an ally block " + value + low;
+    if (fx.to == "party") return "the party blocks " + value + low;
+    return "block " + value + low;
   }
   if (fx.heal != null) {
     const value = n ? n.heal(fx.heal) + " HP" : pct(fx.heal) + " of your max HP";
-    if (fx.to == "ally") return "an ally heals " + value;
+    if (fx.to == "ally") return "you or an ally heal " + value;
     if (fx.to == "party") return "the party heals " + value;
     if (fx.to == "weakest") return "the weakest ally heals " + value;
     return "heal " + value;
@@ -200,10 +273,15 @@ function phrase(fx, n) {
     const who = fx.to == "ally" ? "an ally deals" : fx.to == "party" ? "the party deals" : "deal";
     return who + " 30% more damage for " + fx.might + " turn" + (fx.might == 1 ? "" : "s");
   }
-  if (fx.draw != null) return "draw " + fx.draw + " card" + (fx.draw == 1 ? "" : "s");
+  if (fx.draw != null) return (fx.to == "party" ? "everyone draws " : "draw ") + fx.draw + " card" + (fx.draw == 1 ? "" : "s");
   if (fx.mana != null) return "+" + fx.mana + " mana";
   if (fx.lose != null) return "lose " + (n ? n.lose(fx.lose) : pct(fx.lose)) + " HP";
   if (fx.evade) return "nothing hits you this turn";
+  if (fx.taunt) return "every foe attacks you this turn - you take 30% less";
+  if (fx.revive != null) return (fx.to == "all" ? "every fallen ally stands up" : "a fallen ally stands up") + " with " + pct(fx.revive) + " HP";
+  if (fx.cleanse) return (fx.to == "ally" ? "you or an ally lose" : "lose") + " poison and burns";
+  if (fx.extend != null) return "its poison lasts " + fx.extend + " turns longer";
+  if (fx.amplify) return "the poison on every foe: twice as strong, 3 turns longer";
   return "";
 }
 
@@ -216,7 +294,8 @@ function textOf(fx, exhaust, n) {
 
 // What a card aims at: a foe (a hit or a state on one), an ally - or nothing to pick
 function targetOf(fx) {
-  if (fx.some((one) => (one.hit != null || one.status) && (!one.to || one.to == "foe"))) return "foe";
+  if (fx.some((one) => one.revive != null && one.to != "all")) return "fallen";
+  if (fx.some((one) => (one.hit != null || one.status || one.extend != null) && (!one.to || one.to == "foe"))) return "foe";
   if (fx.some((one) => one.to == "ally")) return "ally";
   return "none";
 }
@@ -228,10 +307,10 @@ function targetOf(fx) {
 const FOES = 2.2; // foes in a fight, on average (a hit to every foe)
 function worth(fx) {
   if (fx.hit != null) {
-    const base = fx.bonusIf ? fx.hit * 0.6 + fx.bonus * 0.4 : fx.hit;
+    const base = (fx.bonusIf ? fx.hit * 0.75 + fx.bonus * 0.25 : fx.hit) * (fx.fromBlock ? 2 : 1) * (fx.execute ? 1.3 : 1);
     return { scaled: (base + (fx.def || 0) * 0.5) * (fx.times || 1) * (fx.to == "all" ? FOES * 0.75 : 1), fixed: 0 };
   }
-  if (fx.block != null) return { scaled: (fx.block / 7 + (fx.def || 0) * 0.3 + (fx.atk || 0) + (fx.agi || 0) * 0.05) * (fx.to == "party" ? 1.6 : 1), fixed: 0 };
+  if (fx.block != null) return { scaled: (fx.block / 7 + (fx.def || 0) * 0.3 + (fx.atk || 0) + (fx.agi || 0) * 0.05) * (fx.to == "party" ? 1.6 : 1) * (fx.low ? 1.4 : 1), fixed: 0 };
   if (fx.heal != null) return { scaled: (fx.heal / 0.12) * (fx.to == "party" ? 1.6 : 1), fixed: 0 };
   let fixed = 0;
   if (fx.status) fixed = { poison: 0.45, burn: 0.3, chill: 0.45, stun: 1 }[fx.status] * (fx.status == "stun" ? 1 : fx.turns || 1) * (fx.to == "all" ? FOES * 0.75 : 1);
@@ -240,11 +319,16 @@ function worth(fx) {
   else if (fx.mana != null) fixed = fx.mana;
   else if (fx.lose != null) fixed = (-fx.lose / 0.12) * 0.7;
   else if (fx.evade) fixed = 1.6;
+  else if (fx.taunt) fixed = 0.6;
+  else if (fx.revive != null) fixed = fx.revive * 5 * (fx.to == "all" ? 1.5 : 1);
+  else if (fx.cleanse) fixed = 0.5;
+  else if (fx.extend != null) fixed = 0.3 * fx.extend;
+  else if (fx.amplify) fixed = 2.5;
   return { scaled: 0, fixed };
 }
 
 // What a card may be worth: its cost (a 0 cost card a bit), more the rarer, more when it is gone after one play
-const RARITY_POWER = { common: 1, rare: 1.15, epic: 1.3, legendary: 1.5, mythic: 2 };
+const RARITY_POWER = { basic: 1, common: 1, rare: 1.15, epic: 1.3, legendary: 1.5, mythic: 2 };
 function budget(cost, rarity, exhaust) {
   return (Math.max(cost, 0.6) + 0.15) * RARITY_POWER[rarity] * (exhaust === true ? 1.3 : 1) * (exhaust == "mythic" ? 1.5 : 1);
 }
@@ -255,7 +339,7 @@ function balanced(fx, cost, rarity, exhaust) {
   const parts = fx.map(worth);
   const scaled = parts.reduce((sum, p) => sum + p.scaled, 0);
   const fixed = parts.reduce((sum, p) => sum + p.fixed, 0);
-  if (scaled < 0.5) return fx;
+  if (scaled < 0.5 || rarity == "basic") return fx;
   const k = Math.max(0.6, Math.min(1.8, (budget(cost, rarity, exhaust) - fixed) / scaled));
   const round = (value, step) => Math.round(value / step) * step;
   return fx.map((one) => {
@@ -282,12 +366,13 @@ function build(list) {
   return cards;
 }
 
+const base = build(BASE);
 const neutral = build(NEUTRAL);
 const byClass = Object.fromEntries(Object.entries(CLASS).map(([cls, list]) => [cls, build(list)]));
 
 module.exports = {
   textOf,
-  cards: Object.assign({}, neutral, ...Object.values(byClass)),
+  cards: Object.assign({}, base, neutral, ...Object.values(byClass)),
   neutral: Object.keys(neutral),
   classCards: Object.fromEntries(Object.entries(byClass).map(([cls, cards]) => [cls, Object.keys(cards)])),
 };

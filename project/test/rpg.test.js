@@ -740,7 +740,7 @@ test("rpg: the fight rules - the hand stays (filled up to 5), poison stacks and 
   assert.strictEqual(texts.strike, "Deal 50 damage.");
   assert.strictEqual(texts["strike+"], "Deal 70 damage.");
   assert.match(texts.defend, /block 16\./);
-  assert.match(texts.mend, /heals \d+ HP/);
+  assert.match(texts.mend, /heals? \d+ HP/);
   // The hand stays from turn to turn - drawn up to 5
   const hero = rpg.newHero("warrior");
   const run = rpg.newRun(1, [{ name: "a", hero }]);
