@@ -9,8 +9,8 @@ const config = require("../game/config");
 const ROOM = "rpg";
 
 /*
- * The dungeon (game/rpg.js) - for now only in the admin's test world (/test/rpg): like everything there,
- * nothing of it is saved (the heroes live as long as the test mode).
+ * The dungeon (game/rpg.js) - in the admin's test world (/test/rpg: like everything there, nothing of it is
+ * saved) and, once the admin turns it on (GAME_RPG), in the normal casino (/rpg: the characters are saved).
  *
  * Parties: a player opens one (a floor, 1 to 4 heroes - alone it starts right away) or joins an open
  * one (its floor open for the own hero too); the leader starts it. Every hero pays the entry of the
@@ -22,7 +22,7 @@ const ROOM = "rpg";
  */
 module.exports = function (io, options = {}) {
   const world = options.world || worlds.TEST;
-  const { coins, casinoChat } = worlds.services(world);
+  const { coins, casinoChat, persist } = worlds.services(world);
   const room = io.of(world + "/rpg");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
@@ -60,6 +60,7 @@ module.exports = function (io, options = {}) {
   }
 
   function sendHero(name) {
+    persist.changed("rpg");
     const view = rpg.heroView(heroOf(name));
     socketsOf(name).forEach((socket) => socket.emit("rpgHero", view));
   }
@@ -790,6 +791,27 @@ module.exports = function (io, options = {}) {
       } else if (party && !party.result) away(party, username, true);
     });
   });
+
+  // Saved (the normal casino): the characters - a run cut by a restart can't go on: its entry and potions come back
+  persist.register(
+    "rpg",
+    () => ({
+      heroes,
+      cut: [...parties.values()]
+        .filter((party) => party.run && !party.result)
+        .map((party) => ({ entry: party.tutorial ? 0 : rpg.entryCost(party.floor), heroes: party.run.heroes.map((one) => ({ name: one.name, potions: one.potions })) })),
+    }),
+    (saved) => {
+      heroes.clear();
+      for (const [name, hero] of saved.heroes || []) heroes.set(name, hero);
+      for (const run of saved.cut || []) {
+        for (const one of run.heroes) {
+          if (heroes.has(one.name)) heroOf(one.name).potions = Math.min(rpg.potionsMax(heroOf(one.name)), heroOf(one.name).potions + one.potions);
+          if (run.entry > 0) coins.add(one.name, run.entry, { reason: "rpg refund", note: "server restart" }).catch(() => {});
+        }
+      }
+    },
+  );
 
   return {
     heroes,

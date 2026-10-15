@@ -145,6 +145,8 @@ socket.on("connect_error", (error) => {
   // (out of test mode: the dungeon isn't there - the page sends on)
   if (error && (error.message == "testMode" || error.message == "world")) window.location.reload();
 });
+// (turned off in the admin panel)
+socket.on("gameOff", () => (window.location.href = "./"));
 socket.on("casinoClosed", () => window.location.reload());
 window.addEventListener("pagehide", () => socket.disconnect());
 window.addEventListener("pageshow", (event) => {
@@ -681,19 +683,25 @@ function renderCoach(run, me) {
   if (box.innerText != text) box.innerText = text;
 }
 
+// The practice run: a popup - skipping it is asked once more (it isn't offered again)
+var tutorialAsked = null;
+function offerTutorial() {
+  tutorialAsked = hero.cls;
+  var asked = confirmDialog({ title: "🎓 First time here?", text: "A free practice run: three rooms, every step explained.", confirmLabel: "Start", cancelLabel: "Skip" });
+  intoFullscreen();
+  asked.then((start) => {
+    if (start) return socket.emit("tutorial");
+    var sure = confirmDialog({ title: "Skip the practice run?", text: "It won't be offered again for this character.", confirmLabel: "Skip it", cancelLabel: "Back", danger: true });
+    intoFullscreen();
+    sure.then((skip) => (skip ? socket.emit("skipTutorial") : offerTutorial()));
+  });
+}
+
 // Ready to go down? Every thing that still waits - with a button to it
 function renderReady() {
   var items = [];
-  if (!hero.tutorialDone) {
-    var practice = el("div", "rpg-ready-item new rpg-practice");
-    var words = el("div", "rpg-ready-text");
-    words.append(el("b", "", "First time here?"), el("span", "rpg-ready-sub", "Free practice run, three rooms"));
-    var go = el("div", "rpg-practice-go");
-    go.append(button("Start", "tutorial", { className: "small primary" }), button("Skip", "skipTutorial", { className: "small" }));
-    var bubble = el("span", "rpg-ready-icon", "🎓");
-    practice.append(bubble, words, go);
-    items.push(practice);
-  }
+  // (a new character: the practice run offered in a popup - once a page)
+  if (!hero.tutorialDone && hero.cls && !party && tutorialAsked != hero.cls) offerTutorial();
   // (a row: a picture, what it is, a line under it, a button - state: ok / warn / new)
   var item = (icon, title, sub, state, act, id, label, extra) => {
     var row = el("div", "rpg-ready-item " + state);
@@ -761,49 +769,76 @@ function curve(deck) {
 
 /* ---------- The first class: a popup ---------- */
 
-function renderFirst() {
-  var stat = (id) => rules.stats[id];
-  var tiles = Object.keys(rules.classes).map((id) => {
-    var cls = rules.classes[id];
-    var tile = el("button", "rpg-first-class");
+// A class at a glance (the first pick, the class overview): main stat, strength, out-of-fight ability, HP and
+// attack against the average class, the starting bonuses, the signature cards
+function classTile(id, pick) {
+  var cls = rules.classes[id];
+  var main = rules.stats[cls.main];
+  var tile = el(pick ? "button" : "div", "rpg-first-class" + (pick ? "" : " info"));
+  if (pick) {
     tile.type = "button";
     tile.dataset.act = "unlock";
     tile.dataset.id = id;
-    var main = stat(cls.main);
-    // What the class is good at: its main stat, how it differs
-    var chips = el("div", "rpg-first-chips");
-    var chip = (text, good, tip) => {
-      var c = el("span", "rpg-first-chip" + (good ? " good" : good === false ? " bad" : ""), text);
-      c.title = tip;
-      chips.appendChild(c);
-    };
-    chip("❤️ " + Math.round(cls.hp * 100) + "% HP", cls.hp > 1 ? true : cls.hp < 1 ? false : null, "Max HP of the class");
-    chip("⚔️ " + Math.round(cls.atk * 100) + "% attack", cls.atk > 1 ? true : cls.atk < 1 ? false : null, "Attack of the class");
-    if (cls.def) chip("🛡️ +" + cls.def + " armor", true, "Armor from the start");
-    if (cls.luck) chip("🍀 +" + cls.luck + "% luck", true, "Crits, loot");
-    if (cls.agi) chip("🦊 +" + cls.agi + "% instinct", true, "Dodge attacks");
-    var cards = el("div", "rpg-first-cards");
-    cls.signature.forEach((card) => cards.appendChild(cardEl(card, { className: "small" })));
-    tile.append(
-      el("span", "rpg-first-icon", cls.icon),
-      el("span", "rpg-first-name", cls.name),
-      el("span", "rpg-first-main", "★ " + main.icon + " " + main.name),
-      el("span", "rpg-first-about", cls.about),
-      el("span", "rpg-first-strength", cls.strength.icon + " " + cls.strength.name + ": " + cls.strength.text.replace(/\{(\w+)\}/g, (_, key) => (key == "crit" ? cls.strength.perks[key] : Math.round(cls.strength.perks[key] * 100)))),
-      chips,
-      el("span", "rpg-label", "Signature cards"),
-      cards,
-      el("span", "rpg-first-pick", "Choose " + cls.name),
-    );
-    return tile;
+  }
+  // (HP and attack against the average class - the baseline: above it green, below it red)
+  var all = Object.values(rules.classes);
+  var chips = el("div", "rpg-first-chips");
+  var chip = (text, good, tip) => {
+    var c = el("span", "rpg-first-chip" + (good ? " good" : good === false ? " bad" : ""), text);
+    c.title = tip;
+    chips.appendChild(c);
+  };
+  [["❤️", "HP", "hp"], ["⚔️", "attack", "atk"]].forEach(([icon, name, key]) => {
+    var average = all.reduce((sum, c) => sum + c[key], 0) / all.length;
+    var diff = Math.round((cls[key] / average - 1) * 100);
+    chip(icon + " " + (diff > 0 ? "+" : diff < 0 ? "−" : "±") + Math.abs(diff) + "% " + name, diff > 0 ? true : diff < 0 ? false : null, "Against the average class");
   });
+  if (cls.def) chip("🛡️ +" + cls.def + " armor", true, "Armor from the start");
+  if (cls.luck) chip("🍀 +" + cls.luck + "% luck", true, "Crits, loot");
+  if (cls.agi) chip("🦊 +" + cls.agi + "% instinct", true, "Dodge attacks");
+  var ability = rules.abilities[id];
+  var strength = cls.strength.text.replace(/\{(\w+)\}/g, (_, key) => (key == "crit" || key == "thorns" ? cls.strength.perks[key] : Math.round(cls.strength.perks[key] * 100)));
+  var cards = el("div", "rpg-first-cards");
+  cls.signature.forEach((card) => cards.appendChild(cardEl(card, { className: "small" })));
+  tile.append(
+    el("span", "rpg-first-icon", cls.icon),
+    el("span", "rpg-first-name", cls.name),
+    el("span", "rpg-first-main", "★ " + main.icon + " " + main.name),
+    el("span", "rpg-first-about", cls.about),
+    el("span", "rpg-first-strength", cls.strength.icon + " " + cls.strength.name + ": " + strength),
+    el("span", "rpg-first-strength ability", ability.icon + " " + ability.name + ": " + ability.about),
+    chips,
+    el("span", "rpg-label", "Signature cards"),
+    cards,
+  );
+  if (pick) tile.appendChild(el("span", "rpg-first-pick", "Choose " + cls.name));
+  return tile;
+}
+
+function renderFirst() {
   var grid = el("div", "rpg-first-grid");
-  tiles.forEach((t) => grid.appendChild(t));
+  Object.keys(rules.classes).forEach((id) => grid.appendChild(classTile(id, true)));
   morphChildren(document.getElementById("rpgFirstBox"), [
     el("div", "rpg-first-title", "⚔️ Choose your class"),
     el("div", "rpg-first-sub mm-muted", "First one free, then 🪙 " + formatCoins(rules.classPrice) + "."),
     grid,
   ]);
+}
+
+// A popup of tiles like the class picker (the classes, how cards work) - closed by its button or a click outside
+function showBoard(title, sub, nodes) {
+  var modal = el("div", "rpg-modal rpg-board");
+  var box = el("div", "rpg-modal-box rpg-first-box");
+  var close = button("Got it", "", { className: "primary rpg-board-close" });
+  box.append(el("div", "rpg-first-title", title), el("div", "rpg-first-sub mm-muted", sub));
+  nodes.forEach((node) => box.appendChild(node));
+  box.appendChild(close);
+  modal.appendChild(box);
+  modal.addEventListener("click", (event) => {
+    if (event.target == modal || event.target == close) modal.remove();
+  });
+  // (next to the class picker - the page's colors, and inside the full screen if the page is in it)
+  document.getElementById("rpgFirst").parentNode.appendChild(modal);
 }
 
 /* ---------- The card shop: booster packs of the base set ---------- */
@@ -1928,22 +1963,9 @@ var DECK_HELP = [
 
 // Every class side by side: its main stat, its strength in fights, its help out of them
 function showClassHelp() {
-  var sections = Object.keys(rules.classes).map((id) => {
-    var cls = rules.classes[id];
-    var ability = rules.abilities[id];
-    var strength = cls.strength.text.replace(/\{(\w+)\}/g, (_, key) => (key == "crit" || key == "thorns" ? cls.strength.perks[key] : Math.round(cls.strength.perks[key] * 100)));
-    return {
-      heading: cls.icon + " " + cls.name + " · " + rules.stats[cls.main].icon + " " + rules.stats[cls.main].name,
-      items: [
-        cls.about + ".",
-        cls.strength.icon + " " + cls.strength.name + ": " + strength + " Grows with the level.",
-        ability.icon + " " + ability.name + ": " + ability.about + " (" + rules.stats[cls.main].name + ")",
-        "HP ×" + cls.hp + " · attack ×" + cls.atk,
-      ],
-    };
-  });
-  window.casinoInfo({ title: "Classes", sections: sections });
-  intoFullscreen();
+  var grid = el("div", "rpg-first-grid");
+  Object.keys(rules.classes).forEach((id) => grid.appendChild(classTile(id, false)));
+  showBoard("Classes", "Strength in fights, an ability out of them - both grow.", [grid]);
 }
 
 function showDeckHelp() {

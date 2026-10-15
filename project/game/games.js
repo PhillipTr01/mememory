@@ -14,17 +14,22 @@ const GAMES = [
   { id: "poker", key: "GAME_POKER", name: "Poker", page: "/poker", tab: "poker", namespace: "/poker" },
   { id: "blackjack", key: "GAME_BLACKJACK", name: "Blackjack", page: "/blackjack", tab: "blackjack", namespace: "/blackjack" },
   { id: "slots", key: "GAME_SLOTS", name: "Slots", page: "/slots", tab: "slots", namespace: "/slots" },
+  // (the dungeon: the normal casino's coins only - not in a season world)
+  { id: "rpg", key: "GAME_RPG", name: "Dungeon", page: "/rpg", tab: "rpg", namespace: "/rpg", noSeason: true },
 ];
 
 // (a player in test mode: every game is on - try a game out before it opens for everybody)
 function enabled(id, username) {
   const game = GAMES.find((g) => g.id === id);
-  return game != null && (config[game.key] !== false || (username != null && testMode.active(username)));
+  if (game == null) return false;
+  if (username != null && testMode.active(username)) return true;
+  if (game.noSeason && username != null && require("./worlds").isSeason(require("./worlds").worldOf(username))) return false;
+  return config[game.key] !== false;
 }
 
 // Where a player goes instead (null: no game is on - the leaderboard)
 function firstEnabled(username) {
-  return GAMES.find((game) => enabled(game.id, username)) || null;
+  return GAMES.find((game) => !game.noSeason && enabled(game.id, username)) || null;
 }
 
 module.exports = { GAMES, enabled, firstEnabled };

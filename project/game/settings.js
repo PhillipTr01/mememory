@@ -73,6 +73,7 @@ const FIELDS = [
   { group: "blackjack", section: "Classic Table", key: "BJ_CLASSIC_MAX", season: true, label: "Max bet", hint: "Per seat.", step: 100, min: 1, max: 100000000 },
   { group: "blackjack", section: "High Roller", key: "BJ_HIGH_MIN", season: true, label: "Min bet", hint: "Per seat.", step: 100, min: 1, max: 100000000 },
   { group: "blackjack", section: "High Roller", key: "BJ_HIGH_MAX", season: true, label: "Max bet", hint: "Per seat.", step: 500, min: 1, max: 100000000 },
+  { group: "rpg", section: "Dungeon", key: "GAME_RPG", type: "toggle", label: "The Dungeon is on", hint: "Off: hidden for players - test mode still has it, to try it out first." },
   { group: "rpg", section: "Prices", key: "RPG_ENTRY_BASE", label: "Entry of floor 1", hint: "What a hero pays to go down to floor 1.", step: 1000, min: 1, max: 100000000 },
   { group: "rpg", section: "Prices", key: "RPG_ENTRY_GROWTH", label: "Entry dearer per floor", hint: "Each floor deeper costs this much more (27%: floor 30 ≈ 10 million).", unit: "%", step: 1, min: 0, max: 100 },
   { group: "rpg", section: "Prices", key: "RPG_UPGRADE_BASE", label: "First stat level", hint: "Level 1 of a stat; later levels cost more.", step: 1000, min: 1, max: 100000000 },

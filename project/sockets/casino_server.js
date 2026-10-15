@@ -15,7 +15,8 @@ const safe = require("./safe_handler");
 const REAL = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/roulette", "/baucua"];
 // (every season world: one per season slot)
 const SEASON = worlds.SEASONS.flatMap((world) => REAL.map((name) => world + name));
-const GAMES = [...REAL, ...SEASON, ...REAL.map((name) => worlds.TEST + name)];
+// (the dungeon: the normal casino and the test world only)
+const GAMES = [...REAL, ...SEASON, ...REAL.map((name) => worlds.TEST + name), "/rpg"];
 
 function socketsOf(io, username) {
   const list = [];
@@ -128,7 +129,7 @@ module.exports = function (io) {
     for (const game of games.GAMES) {
       if (values[game.key] !== false) continue;
       // (the test world keeps it - a game is tried out there before it opens)
-      for (const socket of [game.namespace, ...worlds.SEASONS.map((world) => world + game.namespace)].flatMap((name) => [...io.of(name).sockets.values()])) {
+      for (const socket of [game.namespace, ...(game.noSeason ? [] : worlds.SEASONS.map((world) => world + game.namespace))].flatMap((name) => [...io.of(name).sockets.values()])) {
         socket.emit("gameOff");
         socket.disconnect(true);
       }

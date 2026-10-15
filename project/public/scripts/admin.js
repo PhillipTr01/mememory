@@ -122,7 +122,7 @@ var SETTING_GROUPS = {
   slots: ["Slots", "Turn slots on or off, the bet per spin."],
   roulette: ["Roulette", "Turn the roulette on or off, the bets, the time to bet."],
   baucua: ["Bầu Cua", "Turn Bầu Cua on or off, the bets, the time to bet."],
-  rpg: ["Dungeon", "The dungeon of the test world: prices, packs, difficulty, death."],
+  rpg: ["Dungeon", "On or only in test mode, prices, packs, difficulty, death."],
 };
 var settingsGroup = "general";
 
@@ -3091,7 +3091,7 @@ function toggleCard(field) {
   var game = field.key.startsWith("GAME_");
   var card = el("div", "ad-card ad-toggle-card" + (on ? " on" : " off") + (game ? "" : " ad-toggle-test"));
   var info = el("div", "ad-toggle-info");
-  if (game) info.append(el("h2", "ad-title", on ? field.label : field.label.replace(/ (is|are) on$/, " $1 off")), el("p", "ad-note", on ? "Players can find and play it." : "Hidden: no tab, the page leads to another game."));
+  if (game) info.append(el("h2", "ad-title", on ? field.label : field.label.replace(/ (is|are) on$/, " $1 off")), el("p", "ad-note", on ? "Players can find and play it." : "Hidden for players - test mode still has it."));
   else info.append(el("h2", "ad-title", field.label), el("p", "ad-note", field.hint || ""));
   var label = el("label", "ad-switch ad-switch-big");
   var box = document.createElement("input");

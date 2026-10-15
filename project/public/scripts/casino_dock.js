@@ -11,9 +11,9 @@
     toggle.title = open ? "Hide the menu" : "Show the menu";
   }
 
-  // The dungeon (an RPG): for now only in the test world - its tab only there
+  // The dungeon (an RPG): its tab (off - or a season world: hidden by the page, see secret_route.js hideOff)
   function addDungeon(dock) {
-    if (window.CASINO_NS != "/test" || dock.querySelector('.cs-tab[href="rpg"]')) return;
+    if (dock.querySelector('.cs-tab[href="rpg"]')) return;
     var tab = document.createElement("a");
     tab.href = "rpg";
     tab.className = "cs-tab";

@@ -314,10 +314,10 @@ test("admin: a game turned off - no tab, its page leads to the next game, its op
   const listener = (values) => turnedOff.push(values);
   settings.changes.on("change", listener);
   const as = (name) => ({ cookie: `token=${tokens[name]}` });
-  // All on: every tab, every page
+  // All on (the Dungeon off until the admin turns it on): every tab of the games, every page
   let page = await call(CASINO + "/poker", as("paula"));
   assert.strictEqual(page.status, 200);
-  assert.doesNotMatch(await page.text(), /display: none !important/);
+  assert.doesNotMatch(await page.text(), /\.cs-tab\[href="poker"\]/);
 
   assert.strictEqual((await adminApi("settings", { values: { GAME_POKER: "no" } })).status, 400, "on or off only");
   let res = await adminApi("settings", { values: { GAME_POKER: false } });
@@ -329,7 +329,7 @@ test("admin: a game turned off - no tab, its page leads to the next game, its op
   assert.strictEqual(page.status, 302);
   assert.match(page.headers.get("location"), /\/jackpot$/);
   const battles = await (await call(CASINO + "/battles", as("paula"))).text();
-  assert.match(battles, /\.cs-tab\[href="poker"\] \{ display: none !important; \}/);
+  assert.match(battles, /\.cs-tab\[href="poker"\][^{]*\{ display: none !important; \}/);
 
   // The jackpot off too: the casino starts with the next game that is on (the roulette)
   await adminApi("settings", { values: { GAME_JACKPOT: false } });

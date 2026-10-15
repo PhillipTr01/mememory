@@ -58,6 +58,8 @@ module.exports = {
   GAME_SLOTS: true,
   GAME_ROULETTE: true,
   GAME_BAUCUA: true,
+  // (the dungeon: off - only test mode has it until the admin turns it on)
+  GAME_RPG: false,
 
   // Coins (hidden jackpot): start amount, free coins for everybody once a day
   START_COINS: 100000,

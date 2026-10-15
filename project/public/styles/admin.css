@@ -4482,3 +4482,10 @@ a.ad-case-row:hover {
   font-family: ui-monospace, monospace;
   font-size: 0.8rem;
 }
+
+/* (the dungeon: the casino menu's icon) */
+.ad-nav-svg {
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.2em;
+}

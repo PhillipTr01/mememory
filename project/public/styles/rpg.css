@@ -4862,7 +4862,8 @@ button.rpg-cardx.off {
   padding-top: 0.2rem;
 }
 
-/* 23. The first class: every part of a tile on the same line as in the others (a subgrid of 10 rows) */
+/* 23. The first class: every part of a tile on the same line as in the others (a subgrid of 11 rows - 10 without
+   the pick button) */
 @supports (grid-template-rows: subgrid) {
   .rpg-first-grid {
     row-gap: 0;
@@ -4880,6 +4881,10 @@ button.rpg-cardx.off {
 
   .rpg-first-pick {
     align-self: end;
+  }
+
+  .rpg-first-class.info {
+    grid-row: span 9;
   }
 }
 
@@ -5999,4 +6004,28 @@ button.rpg-cardx.off {
 .rpg-toggle.on .rpg-toggle-knob::after {
   transform: translateX(0.85rem);
   background: var(--mm-accent);
+}
+
+/* 37. A class tile: the ability under the strength; the overview popup */
+.rpg-first-strength.ability {
+  color: #9cc4ff;
+}
+
+.rpg-first-class.info {
+  cursor: default;
+}
+
+.rpg-board-close {
+  align-self: center;
+  min-width: 10rem;
+  margin-top: 0.4rem;
+}
+
+/* (the class overview: every class's cards as they are - no dimming, no class icon) */
+.rpg-first-class .rpg-cardx.other-class > * {
+  filter: none;
+}
+
+.rpg-first-class .rpg-card-class {
+  display: none;
 }
