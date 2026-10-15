@@ -429,7 +429,7 @@ function gearTile(item, slot, actions) {
   tile.append(el("span", "rpg-gear-icon", item.icon), el("span", "rpg-gear-name", item.name));
   var chips = el("div", "rpg-gear-stats");
   var worn = !slot && hero.gear[item.slot];
-  [["atk", "⚔️", ""], ["def", "🛡️", ""], ["hp", "❤️", ""], ["agi", "🪶", "%"], ["luck", "🍀", "%"]].forEach(([key, icon, unit]) => {
+  [["atk", "⚔️", ""], ["def", "🛡️", ""], ["hp", "❤️", ""], ["agi", "🦊", "%"], ["luck", "🍀", "%"]].forEach(([key, icon, unit]) => {
     if (!item[key] && !(worn && worn[key])) return;
     var diff = worn ? (item[key] || 0) - (worn[key] || 0) : 0;
     var chip = el("span", "rpg-gear-chip" + (!item[key] ? " none" : ""), icon + " " + (item[key] || 0) + unit);
@@ -768,7 +768,7 @@ function renderFirst() {
     chip("⚔️ " + Math.round(cls.atk * 100) + "% attack", cls.atk > 1 ? true : cls.atk < 1 ? false : null, "Attack of the class");
     if (cls.def) chip("🛡️ +" + cls.def + " armor", true, "Armor from the start");
     if (cls.luck) chip("🍀 +" + cls.luck + "% luck", true, "Crits, loot");
-    if (cls.agi) chip("🪶 +" + cls.agi + "% dodge", true, "Dodge attacks");
+    if (cls.agi) chip("🦊 +" + cls.agi + "% instinct", true, "Dodge attacks");
     var cards = el("div", "rpg-first-cards");
     cls.signature.forEach((card) => cards.appendChild(cardEl(card, { className: "small" })));
     tile.append(
@@ -1586,8 +1586,8 @@ function renderPartyStats(run) {
         ["❤️", h.hp + " / " + h.maxHp, "HP"],
         ["⚔️", h.atk, "Attack"],
         ["🛡️", h.def, "Armor: less damage, more block"],
-        ["🍀", h.luck + (h.perks.crit || 0) + "%", "Crits, sensing rooms"],
-        ["🪶", h.agi + "%", "Dodge an attack"],
+        ["🍀", h.luck + (h.perks.crit || 0) + "%", "Crits"],
+        ["🦊", h.agi + "%", h.cls == "rogue" ? "Dodge, sense rooms" : "Dodge"],
         [null, h.potions, "Potions"],
       ].forEach(([icon, value, tip]) => {
         var chip = el("span", "rpg-pstat-chip", icon ? icon + " " + value : "");
@@ -1842,8 +1842,8 @@ function renderMap(run) {
   box.style.height = height + "px";
   morphChildren(box, nodes);
   var sense = document.getElementById("rpgMapSense");
-  sense.innerText = "🍀 " + run.sense + "%";
-  sense.title = "Chance to sense a room";
+  sense.innerText = "🦊 " + run.sense + "%";
+  sense.title = "Chance to sense a room - a Rogue's instinct raises it";
   var count = Object.keys(run.votes).length;
   document.getElementById("rpgMapNote").innerText = party.result ? "" : between ? (run.heroes.length > 1 ? count + " / " + run.heroes.length + " voted · a tie: random" : "Pick a lit room") : "";
 }

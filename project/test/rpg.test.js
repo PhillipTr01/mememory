@@ -244,11 +244,12 @@ function into(run, kind) {
   rpg.enterRoom(run, 0);
 }
 
-test("rpg: the map - luck senses what a room is; rooms to choose in (camp fire, shrine, trap, chest, encounters), the merchant sells cards, relics, potions and takes a card", () => {
+test("rpg: the map - a Rogue's instinct senses what a room is; rooms to choose in (camp fire, shrine, trap, chest, encounters), the merchant sells cards, relics, potions and takes a card", () => {
   const run = rpg.newRun(1, [{ name: "a", hero: rpg.newHero("warrior") }]);
-  // Sensed: SENSE_BASE % with no luck - far more with luck
-  const sensed = (luck) => {
-    run.heroes[0].luck = luck;
+  // Sensed: SENSE_BASE % - far more with a Rogue of high instinct, a warrior's instinct does nothing
+  const sensed = (cls, agi) => {
+    run.heroes[0].cls = cls;
+    run.heroes[0].agi = agi;
     let n = 0;
     let all = 0;
     for (let i = 0; i < 200; i++) {
@@ -259,11 +260,12 @@ test("rpg: the map - luck senses what a room is; rooms to choose in (camp fire, 
     }
     return n / all;
   };
-  const none = sensed(0);
-  const lucky = sensed(40);
-  assert.ok(none > 0.15 && none < 0.25, String(none));
-  assert.ok(lucky > 0.75 && lucky < 0.85, String(lucky));
-  run.heroes[0].luck = 5;
+  const none = sensed("warrior", 40);
+  const scout = sensed("rogue", 40);
+  assert.ok(none > 0.1 && none < 0.2, String(none));
+  assert.ok(scout > 0.8 && scout < 0.95, String(scout));
+  run.heroes[0].cls = "warrior";
+  run.heroes[0].agi = 0;
   rpg.enterRoom(run, 0);
   const me = run.heroes[0];
   // A camp fire: rest (heal) or smith (a card of the deck upgraded) - one choice, what happened is shown

@@ -186,7 +186,7 @@ const GAMES = {
           heading: "A run",
           items: [
             `${rpg.FLOORS} floors, each opens when the last is cleared. Go alone or in a party of up to ${rpg.PARTY_MAX}. Entry: 🪙 ${n(rpg.entryCost(1))} on floor 1, more deeper.`,
-            `A floor is a map of ${rpg.ROOMS} rows. Pick the next room; a party votes. Rooms are hidden - luck senses them. The last room is the gate.`,
+            `A floor is a map of ${rpg.ROOMS} rows. Pick the next room; a party votes. Rooms are hidden - a Rogue senses them. The last room is the gate.`,
             "Fights, hard fights, treasure, traps, camp fires, shrines, merchants and encounters.",
             "Fights fill the loot pot and give a card for the run. Leave between rooms with the pot, or clear the floor. All heroes down: the pot is lost.",
             `Potions heal 40%, max ${rpg.POTIONS_MAX}: from 🪙 ${n(rpg.potionPrice(1))}.`,

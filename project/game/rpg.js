@@ -57,8 +57,8 @@ const STATS = {
   hp: { name: "Vitality", icon: "❤️", base: 100, per: 7.5, about: "+7.5 max HP", desc: "Your max HP." },
   atk: { name: "Strength", icon: "⚔️", base: 10, per: 1.5, about: "+1.5 attack", desc: "The damage of your attacks." },
   def: { name: "Armor", icon: "🛡️", base: 0, per: 1, about: "+1 armor", desc: "Less damage taken, more block." },
-  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, cap: 60, about: "+0.6% luck", desc: "Crits, traps, sensing rooms, loot. Max 60%." },
-  agi: { name: "Agility", icon: "🪶", base: 0, per: 0.4, cap: 40, about: "+0.4% dodge", desc: "Dodge chance. Max 40%." },
+  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, cap: 60, about: "+0.6% luck", desc: "Crits, traps, loot. Max 60%." },
+  agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, cap: 40, about: "+0.4% dodge", desc: "Dodge chance. A Rogue also senses rooms. Max 40%." },
 };
 const STAT_IDS = Object.keys(STATS);
 const LEVEL_MAX = 100;
@@ -78,7 +78,7 @@ const CLASSES = {
   warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.5 } }, about: "Strength - heavy blows, cleave, war cry", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
   paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take {thornsDef}% of your armor back, {block}% more block.", perks: { thornsDef: 1, block: 0.2 }, top: 2.4 }, about: "Armor - taunts, shields the party", hp: 1.3, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
   cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Heals {heal}% stronger, attacks heal {lifesteal}% of damage.", perks: { heal: 0.2, lifesteal: 0.15 } }, about: "Vitality - heals, smites undead, revives", hp: 1.1, atk: 0.98, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison {poison}% stronger, +{crit}% critical hits.", perks: { poison: 0.5, crit: 10 } }, about: "Agility - dodge, poison, backstab", hp: 1.45, atk: 1.64, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison {poison}% stronger, +{crit}% critical hits.", perks: { poison: 0.5, crit: 10 } }, about: "Instinct - dodge, scout rooms, poison", hp: 1.45, atk: 1.64, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
   mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Area hits {aoe}% stronger, +{crit}% critical hits.", perks: { aoe: 0.4, crit: 8 }, top: 2.2 }, about: "Luck - crits, fire, frost", hp: 1.1, atk: 2, def: 1, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
@@ -909,9 +909,10 @@ const ROOM_KINDS = {
 // What waits in a room of the map (weights) - mostly fights
 const DOOR_POOL = { fight: 15, hard: 5.4, trap: 0.6, chest: 1, rest: 1, shrine: 0.5, merchant: 0.6, event: 1.4 };
 const LANES = 4; // the columns of the map
-// What a room of the map is - hidden; the party senses it (sees its kind) that often: SENSE_BASE + SENSE x luck %
-const SENSE_BASE = 20;
-const SENSE = 1.5;
+// What a room of the map is - hidden; the party senses it (sees its kind) that often: SENSE_BASE % - with a Rogue
+// SENSE_ROGUE x its instinct (agility) more
+const SENSE_BASE = 15;
+const SENSE_ROGUE = 1.9;
 const SENSE_MAX = 90;
 // (kept for the page: one of the doors to pick)
 const DOORS = LANES;
@@ -937,7 +938,7 @@ function rowsFor(floor, rng = Math.random) {
 
 // The map of a floor: ROOMS rows - the first a fight, the last the guarded gate, between them 2 to 4 rooms a row;
 // every room leads to one or more of the next row (the paths never cross). A room's kind is hidden - sensed
-// (shown) at SENSE_BASE + SENSE x luck %
+// (shown) at senseChance
 function makeMap(run, rng = Math.random) {
   const chance = senseChance(run);
   const ROOMS = rowsFor(run.floor, rng);
@@ -999,7 +1000,8 @@ function doorsFor(run) {
 
 // How often the party senses what a room is (%)
 function senseChance(run) {
-  return Math.min(SENSE_MAX, Math.round(SENSE_BASE + SENSE * Math.max(0, ...alive(run.heroes).map((h) => h.luck))));
+  const rogues = alive(run.heroes).filter((h) => h.cls == "rogue");
+  return Math.min(SENSE_MAX, Math.round(SENSE_BASE + SENSE_ROGUE * Math.max(0, ...rogues.map((h) => h.agi))));
 }
 
 // A room's kind as the party knows it (null: hidden)
