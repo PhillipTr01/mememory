@@ -100,6 +100,12 @@ const NEUTRAL = {
   command: ["Warlord's Command", "📯", 1, "legendary", [{ might: 3, to: "party" }, { draw: 2, to: "party" }], true],
   titangrip: ["Titan Grip", "🗿", 3, "legendary", [{ hit: 1.8 }, { block: 12, def: 1 }]],
   phoenix: ["Phoenix Feather", "🪶", 1, "mythic", [{ heal: 0.35, to: "party" }, { revive: 0.3, to: "all" }], "mythic"],
+  // (4 mana: finishers for any class - a mana card, a mana relic or a camp fire first)
+  colossus: ["Colossal Strike", "🗡️", 4, "legendary", [{ hit: 4 }]],
+  cataclysm: ["Cataclysm", "🌋", 4, "epic", [{ hit: 1.6, to: "all" }, { status: "burn", turns: 2, to: "all" }]],
+  bladestorm: ["Storm of Blades", "🌩️", 4, "epic", [{ hit: 0.7, to: "random", times: 6 }]],
+  fortress: ["Fortress", "🏰", 4, "epic", [{ block: 30, def: 2 }], true],
+  dawnofhope: ["Dawn of Hope", "🌅", 4, "legendary", [{ heal: 0.25, to: "party" }, { block: 10, to: "party" }], true],
 };
 
 const CLASS = {
@@ -138,6 +144,9 @@ const CLASS = {
     ironcharge: ["Iron Charge", "🐎", 2, "epic", [{ hit: 1.6 }, { status: "chill", turns: 2 }]],
     warlord: ["Warlord", "🪖", 2, "legendary", [{ hit: 1.4, to: "all" }, { might: 2, to: "party" }]],
     skullsplitter: ["Skullsplitter", "⛏️", 3, "legendary", [{ hit: 3 }, { status: "stun" }]],
+    // (4 mana)
+    titansfall: ["Titan's Fall", "🏔️", 4, "legendary", [{ hit: 2, to: "all" }, { status: "stun", to: "all" }], true],
+    warpath: ["Warpath", "🐗", 4, "epic", [{ hit: 1.1, times: 3 }]],
   },
   paladin: {
     shieldslam: ["Shield Slam", "🔘", 1, "common", [{ hit: 0.6, def: 1 }]],
@@ -150,7 +159,7 @@ const CLASS = {
     rebuke: ["Rebuke", "🙅", 1, "common", [{ hit: 0.8 }, { status: "chill", turns: 1 }]],
     sanctuary: ["Sanctuary", "⛪", 2, "rare", [{ block: 6, def: 1, to: "party" }, { heal: 0.05, to: "party" }]],
     avenger: ["Avenger's Shield", "🥏", 2, "rare", [{ hit: 0.5, def: 0.4, to: "random", times: 3 }]],
-    devotion: ["Devotion", "💒", 1, "rare", [{ might: 3, to: "party" }], true],
+    devotion: ["Devotion", "💒", 1, "rare", [{ might: 3, to: "party" }, { mana: 1 }], true],
     shieldwall: ["Shield Wall", "🧱", 2, "rare", [{ block: 10, def: 2.5 }]],
     blessedhammer: ["Blessed Hammer", "🔨", 1, "rare", [{ hit: 0.9, def: 0.5 }, { draw: 1 }]],
     martyr: ["Martyr", "🥀", 0, "rare", [{ lose: 0.08 }, { heal: 0.15, to: "weakest" }]],
@@ -174,6 +183,9 @@ const CLASS = {
     sacredvow: ["Sacred Vow", "📿", 0, "epic", [{ block: 6, def: 1 }, { draw: 1 }], true],
     hammeroflight: ["Hammer of Light", "☀️", 3, "legendary", [{ hit: 2, def: 1 }, { heal: 0.1, to: "party" }]],
     holybulwark: ["Holy Bulwark", "🏰", 2, "legendary", [{ block: 14, def: 1.5, to: "party" }], true],
+    // (4 mana)
+    judgementday: ["Judgement Day", "🔔", 4, "legendary", [{ hit: 1.5, def: 1, to: "all" }, { heal: 0.1, to: "party" }]],
+    bastion: ["Bastion", "🏯", 4, "epic", [{ block: 18, def: 2, to: "party" }], true],
   },
   cleric: {
     mend: ["Mend", "🌿", 1, "common", [{ heal: 0.15, to: "ally" }]],
@@ -210,6 +222,9 @@ const CLASS = {
     blessedwater: ["Blessed Water", "💧", 0, "epic", [{ heal: 0.1, to: "ally" }, { mana: 1 }], true],
     divinehymn: ["Divine Hymn", "🎶", 3, "legendary", [{ heal: 0.2, to: "party" }, { block: 6, to: "party" }]],
     heavenswrath: ["Wrath of Heaven", "🌤️", 3, "legendary", [{ hit: 1.3, to: "all", bonusIf: "undead", bonus: 2.6 }, { heal: 0.08 }]],
+    // (4 mana)
+    sacredflame: ["Sacred Flame", "🕯️", 4, "epic", [{ hit: 2.2, bonusIf: "undead", bonus: 4.4 }, { status: "burn", turns: 3 }]],
+    salvation: ["Salvation", "🕊️", 4, "legendary", [{ heal: 0.35, to: "party" }, { cleanse: true, to: "party" }, { block: 8, to: "party" }], true],
   },
   rogue: {
     shiv: ["Shiv", "🪡", 0, "common", [{ hit: 0.5 }]],
@@ -246,6 +261,9 @@ const CLASS = {
     lacerate: ["Lacerate", "🩸", 1, "epic", [{ hit: 0.9 }, { extend: 2 }]],
     shadowdeath: ["Death From Shadows", "🌑", 3, "legendary", [{ hit: 2.4, bonusIf: "poison|stun", bonus: 3.6 }]],
     venomstorm: ["Venom Storm", "☠️", 2, "legendary", [{ status: "poison", turns: 4, to: "all" }, { amplify: true }], true],
+    // (4 mana)
+    massacre: ["Massacre", "🩸", 4, "legendary", [{ hit: 0.9, to: "all", times: 2 }, { status: "poison", turns: 4, to: "all" }]],
+    kingslayer: ["Kingslayer", "👑", 4, "epic", [{ hit: 3.2, bonusIf: "poison|stun", bonus: 4.6 }]],
   },
   mage: {
     firebolt: ["Fire Bolt", "🌶️", 1, "common", [{ hit: 0.8 }, { status: "burn", turns: 2 }]],
@@ -282,6 +300,9 @@ const CLASS = {
     frostward: ["Frost Ward", "🛡️", 1, "epic", [{ block: 8, def: 1 }, { status: "chill", turns: 1, to: "all" }]],
     meteorshower: ["Meteor Shower", "☄️", 3, "legendary", [{ hit: 0.9, to: "random", times: 5 }, { status: "burn", turns: 2, to: "all" }]],
     frozentomb: ["Frozen Tomb", "🧊", 2, "legendary", [{ status: "stun", to: "all" }, { status: "chill", turns: 2, to: "all" }], true],
+    // (4 mana: a finisher - it needs a mana card, a mana relic or a camp fire first)
+    inferno: ["Inferno", "🔥", 4, "epic", [{ hit: 1.8, to: "all" }, { status: "burn", turns: 3, to: "all" }]],
+    deepfreeze: ["Deep Freeze", "🧊", 4, "legendary", [{ hit: 1.5, to: "all" }, { status: "chill", turns: 3, to: "all" }, { status: "stun", to: "all" }], true],
   },
 };
 
