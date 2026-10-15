@@ -81,16 +81,17 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
     rpg.CLASSES[id].cards.forEach((card) => assert.ok(rpg.CARDS[card], card));
     assert.deepStrictEqual(rpg.starterDeck(id).slice(8), rpg.CLASSES[id].signature);
   }
-  const tank = rpg.statsOf(rpg.newHero("warrior"));
+  const tank = rpg.statsOf(rpg.newHero("paladin"));
   const mage = rpg.statsOf(rpg.newHero("mage"));
-  assert.ok(tank.maxHp > mage.maxHp && mage.luck > tank.luck);
-  // A level in the main stat of the class counts 1.5x: Strength for the warrior, Luck for the mage
+  assert.ok(tank.def > mage.def && mage.luck > tank.luck);
+  // A level in the main stat of the class counts more (its own bonus): Strength for the warrior, Luck for the mage
   const strong = rpg.newHero("warrior");
   rpg.charOf(strong).levels = { hp: 0, atk: 4, def: 0, luck: 4, agi: 0 };
   const lucky = rpg.newHero("mage");
   rpg.charOf(lucky).levels = { hp: 0, atk: 4, def: 0, luck: 4, agi: 0 };
-  assert.strictEqual(rpg.statsOf(strong).atk, Math.round((10 + rpg.STATS.atk.per * 4 * rpg.MAIN_BONUS) * rpg.CLASSES.warrior.atk));
-  assert.strictEqual(rpg.statsOf(lucky).luck, Math.round(5 + rpg.STATS.luck.per * 4 * rpg.MAIN_BONUS + rpg.CLASSES.mage.luck));
+  const W = rpg.CLASSES.warrior, M = rpg.CLASSES.mage;
+  assert.strictEqual(rpg.statsOf(strong).atk, Math.round((10 + rpg.STATS.atk.per * 4 * W.mainBonus) * W.atk + (W.atkPlus || 0)));
+  assert.strictEqual(rpg.statsOf(lucky).luck, Math.round(5 + rpg.STATS.luck.per * 4 * M.mainBonus + M.luck));
   assert.strictEqual(rpg.statsOf(strong).luck, Math.round(5 + rpg.STATS.luck.per * 4 + rpg.CLASSES.warrior.luck));
   // Gear makes a hero stronger
   const before = rpg.statsOf(hero);
@@ -742,7 +743,7 @@ test("rpg: the fight rules - the hand stays (filled up to 5), poison stacks and 
   rpg.afflict(foe, "burn", 1, 6);
   assert.deepStrictEqual(foe.effects.burn, { turns: 2, dmg: 8 });
   // (the strengths: the paladin's thorns grow with the armor)
-  assert.strictEqual(rpg.thornsOf({ def: 20, perks: rpg.CLASSES.paladin.strength.perks }), 20);
+  assert.strictEqual(rpg.thornsOf({ def: 20, perks: rpg.CLASSES.paladin.strength.perks }), 17);
   assert.ok(rpg.CLASSES.warrior.strength.perks.pierce > 0 && rpg.CLASSES.mage.strength.perks.aoe > 0);
   // (the texts: numbers, no shares)
   const texts = rpg.liveTexts({ atk: 50, def: 10, agi: 0, maxHp: 200, perks: {} }, ["strike", "defend", "heavyslash", "mend", "strike+"]);
@@ -792,11 +793,13 @@ test("rpg: leaving - one away doesn't hold the party up, one out of the run lose
   // (midnight: the price back to the start)
   assert.strictEqual(rpg.revivePrice(hero, now + 24 * 3600 * 1000), price);
   assert.match(rpg.revive(hero, now), /isn't dead/);
-  // A stat at its cap: nothing more to buy
+  // Instinct past the knee: still grows, slower - never the max
+  rpg.charOf(hero).levels.agi = 99;
+  const before = rpg.statsOf(hero).agi;
   rpg.charOf(hero).levels.agi = 100;
-  assert.ok(rpg.statFull(hero, "agi"));
-  assert.strictEqual(rpg.heroView(hero).upgrades.agi, null);
-  assert.ok(!rpg.statFull(hero, "hp"));
+  assert.ok(!rpg.statFull(hero, "agi"));
+  assert.ok(rpg.statsOf(hero).agi > 30 && rpg.statsOf(hero).agi < 60);
+  assert.ok(rpg.statsOf(hero).agi >= before);
   // The floor cooldown: a cleared floor only - the next one always open
   rpg.charOf(hero).deepest = 3;
   rpg.coolFloor(hero, 2, "warrior", now);
@@ -854,11 +857,11 @@ test("rpg: the bag - 5 slots, more bought up to 15, every one dearer", () => {
   assert.strictEqual(rpg.bagSlotPrice(hero), null);
 });
 
-test("rpg: class strengths grow with the level - the base at 1, twice it at the top", () => {
-  assert.strictEqual(rpg.strengthOf("warrior", 1).perks.pierce, 0.5);
-  assert.strictEqual(rpg.strengthOf("warrior", rpg.HERO_LEVEL_MAX).perks.pierce, 1);
-  assert.match(rpg.strengthOf("paladin", 1).text, /100% of your armor back, 20% more block/);
-  assert.match(rpg.strengthOf("rogue", rpg.HERO_LEVEL_MAX).text, /\+20% critical/);
+test("rpg: class strengths grow with the level - the base at 1, its top times it at the highest level", () => {
+  assert.strictEqual(rpg.strengthOf("warrior", 1).perks.pierce, 0.4);
+  assert.strictEqual(rpg.strengthOf("warrior", rpg.HERO_LEVEL_MAX).perks.pierce, 0.6);
+  assert.match(rpg.strengthOf("paladin", 1).text, /85% of your armor back, 17% more block/);
+  assert.match(rpg.strengthOf("rogue", rpg.HERO_LEVEL_MAX).text, /\+30% critical/);
 });
 
 test("rpg: cards fit their rarity - the rarer, the more a mana buys", () => {

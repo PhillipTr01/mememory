@@ -111,6 +111,7 @@ module.exports = function (io, options = {}) {
       potionsMax: rpg.POTIONS_MAX,
       potionsTop: rpg.POTIONS_TOP,
       potionMana: rpg.POTION_MANA,
+      potionHeal: rpg.POTION_HEAL,
       potionPrice: rpg.POTION_PRICE,
       stats: rpg.STATS,
       levelMax: rpg.LEVEL_MAX,
@@ -768,7 +769,8 @@ module.exports = function (io, options = {}) {
     // A vote between two rooms: {door: its index} or {door: "leave"} - everybody voted: counted
     on("vote", async (data) => {
       const party = myRun();
-      if (!party) return;
+      // (a click that came late - the room went on already: nothing to say)
+      if (!party || party.run.phase !== "between") return;
       const choice = data.door === "leave" ? "leave" : Number(data.door);
       const problem = rpg.vote(party.run, username, choice);
       if (problem) return error(problem);

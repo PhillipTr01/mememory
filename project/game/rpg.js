@@ -56,7 +56,7 @@ function potionSlotPrice(hero) {
   const n = hero.potionSlots || 0;
   return POTIONS_MAX + n >= POTIONS_TOP ? null : round100(POTION_SLOT_PRICE * Math.pow(BAG_SLOT_GROWTH, n));
 }
-const POTION_HEAL = 0.4; // of the max HP
+const POTION_HEAL = 0.25; // of the max HP (little - healing is the cleric's)
 const POTION_GROWTH = 1.12;
 function potionPrice(floor = 1) {
   return round100(config.RPG_POTION_PRICE * Math.pow(POTION_GROWTH, Math.max(0, floor - 1)));
@@ -70,15 +70,19 @@ const STATS = {
   hp: { name: "Vitality", icon: "❤️", base: 100, per: 7.5, about: "+7.5 max HP", desc: "Your max HP." },
   atk: { name: "Strength", icon: "⚔️", base: 10, per: 1.5, about: "+1.5 attack", desc: "The damage of your attacks." },
   def: { name: "Armor", icon: "🛡️", base: 0, per: 1, about: "+1 armor", desc: "Less damage taken, more block." },
-  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, cap: 60, about: "+0.6% luck", desc: "Crits, traps, loot. Max 60%." },
-  agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, cap: 40, about: "+0.4% dodge", desc: "Dodge chance. A Rogue also senses rooms. Max 40%." },
+  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, soft: [50, 80], about: "+0.6% luck", desc: "Crits, traps, loot. Grows slower past 50%." },
+  agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, soft: [30, 60], about: "+0.4% dodge", desc: "Dodge chance. A Rogue also senses rooms. Grows slower past 30%." },
 };
 const STAT_IDS = Object.keys(STATS);
 const LEVEL_MAX = 100;
 // (the stat levels: from RPG_UPGRADE_BASE for the first one to RPG_UPGRADE_MAX for the last, every one dearer)
-// The main stat of a class: its levels count this much more
+// The main stat of a class: its levels count this much more (a class may have its own: mainBonus)
 const MAIN_BONUS = 1.5;
-const DODGE_MAX = STATS.agi.cap;
+// Luck and instinct: full up to the knee, past it every point counts less - never the max ([knee, max])
+function softStat(id, raw) {
+  const [knee, max] = STATS[id].soft;
+  return Math.round(raw <= knee ? raw : knee + (max - knee) * (1 - Math.exp(-(raw - knee) / (max - knee))));
+}
 
 // What a room puts in the pot (per hero, a share of the entry)
 const REWARD = { fight: 0.21, hard: 0.4, elite: 0.4, boss: 0.65, chest: 0.17, trap: 0, rest: 0, shrine: 0, merchant: 0 };
@@ -88,11 +92,11 @@ const REWARD = { fight: 0.21, hard: 0.4, elite: 0.4, boss: 0.65, chest: 0.17, tr
 // main: the stat its levels count 1.5x for; hp, atk: times the stats; def, luck, agi: added;
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
-  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.5 } }, about: "Strength - heavy blows, cleave, war cry", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take {thornsDef}% of your armor back, {block}% more block.", perks: { thornsDef: 1, block: 0.2 }, top: 2.4 }, about: "Armor - taunts, shields the party", hp: 1.3, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Heals {heal}% stronger, attacks heal {lifesteal}% of damage.", perks: { heal: 0.2, lifesteal: 0.15 } }, about: "Vitality - heals, smites undead, revives", hp: 1.1, atk: 0.98, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison {poison}% stronger, +{crit}% critical hits.", perks: { poison: 0.5, crit: 10 } }, about: "Instinct - dodge, scout rooms, poison", hp: 1.45, atk: 1.64, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Area hits {aoe}% stronger, +{crit}% critical hits.", perks: { aoe: 0.4, crit: 8 }, top: 2.2 }, about: "Luck - crits, fire, frost", hp: 1.1, atk: 2, def: 1, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
+  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.4 }, top: 1.5 }, about: "Strength - heavy blows, cleave, war cry", hp: 1.25, atk: 1.4, def: 2, luck: 0, agi: 0, mainBonus: 1.3, hpPlus: 8, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take {thornsDef}% of your armor back, {block}% more block.", perks: { thornsDef: 0.85, block: 0.17 }, top: 1.5 }, about: "Armor - taunts, shields the party", hp: 1.25, atk: 1.25, def: 3, luck: 0, agi: 0, mainBonus: 1.25, atkPlus: 3, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Heals {heal}% stronger.", perks: { heal: 0.2 }, top: 1.5 }, about: "Vitality - heals, smites undead, revives", hp: 1.05, atk: 1.15, def: 4, luck: 0, agi: 0, mainBonus: 1.25, hpPlus: 30, atkPlus: 6, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison {poison}% stronger, +{crit}% critical hits.", perks: { poison: 0.6, crit: 12 }, top: 2.5 }, about: "Instinct - dodge, scout rooms, poison", hp: 1.35, atk: 1.55, def: 0, luck: 6, agi: 13, mainBonus: 1.7, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Area hits {aoe}% stronger, +{crit}% critical hits.", perks: { aoe: 0.5, crit: 10 }, top: 2.6 }, about: "Luck - crits, fire, frost", hp: 1.35, atk: 1.5, def: 1, luck: 8, agi: 0, mainBonus: 1.8, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -726,25 +730,25 @@ function addPerks(into, perks) {
 }
 
 // What a character has with its class, levels and gear: {maxHp, atk, def, luck, agi} (agi: the dodge chance, %)
-function statsOf(hero, clsId = hero.cls) {
+function statsOf(hero, clsId = hero.cls, extra = {}) {
   const cls = CLASSES[clsId] || CLASSES.warrior;
   const char = charOf(hero, clsId || "warrior");
-  const value = (id) => STATS[id].base + STATS[id].per * (char.levels[id] || 0) * (cls.main == id ? MAIN_BONUS : 1);
+  const value = (id) => STATS[id].base + STATS[id].per * (char.levels[id] || 0) * (cls.main == id ? cls.mainBonus || MAIN_BONUS : 1);
   const gear = Object.values(char.gear).filter(Boolean);
   const plus = (key) => gear.reduce((sum, item) => sum + (item[key] || 0), 0);
   return {
-    maxHp: Math.round((value("hp") + plus("hp")) * cls.hp),
-    atk: Math.round((value("atk") + plus("atk")) * cls.atk),
+    // (the class: a share more - and a flat start bonus, big at first, small later)
+    maxHp: Math.round((value("hp") + plus("hp")) * cls.hp + (cls.hpPlus || 0)),
+    atk: Math.round((value("atk") + plus("atk")) * cls.atk + (cls.atkPlus || 0)),
     def: Math.round(value("def") + plus("def") + cls.def),
-    luck: Math.min(STATS.luck.cap, Math.round(value("luck") + plus("luck") + cls.luck)),
-    agi: Math.min(STATS.agi.cap, Math.round(value("agi") + plus("agi") + cls.agi)),
+    luck: softStat("luck", value("luck") + plus("luck") + cls.luck + (extra.luck || 0)),
+    agi: softStat("agi", value("agi") + plus("agi") + cls.agi + (extra.agi || 0)),
   };
 }
 
-// A stat at its cap already (luck, agility - gear counted): a level more would do nothing
+// A stat at its cap already: a level more would do nothing (none has one now - luck, instinct only grow slower)
 function statFull(hero, id) {
-  const cap = STATS[id].cap;
-  return cap != null && statsOf(hero)[id] >= cap;
+  return false;
 }
 
 // The place of a character among its player's (0: the first class unlocked) - later ones pay more, fight harder
@@ -1175,11 +1179,10 @@ function newRun(floor, party, rng = Math.random, options = {}) {
     votes: {}, // name -> a door's index or "leave"
     phase: "between",
     heroes: party.map(({ name, hero }) => {
-      const stats = statsOf(hero);
-      // (the talents of the character: perks for the whole run - relics add theirs)
+      // (the talents of the character: perks for the whole run - relics add theirs; dodge from them: past the knee, slower too)
       const perks = talentPerks(hero);
+      const stats = statsOf(hero, hero.cls, { agi: perks.agi || 0 });
       stats.maxHp = Math.round(stats.maxHp * (1 + (perks.maxHp || 0)));
-      stats.agi = Math.min(DODGE_MAX + 10, stats.agi + (perks.agi || 0));
       return {
         name,
         cls: hero.cls,
@@ -2605,6 +2608,7 @@ module.exports = {
   tally,
   setAway,
   POTION_MANA,
+  POTION_HEAL,
   get DEATH_COOLDOWN() {
     return config.RPG_DEATH_TIME;
   },

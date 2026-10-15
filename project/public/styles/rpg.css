@@ -6029,3 +6029,39 @@ button.rpg-cardx.off {
 .rpg-first-class .rpg-card-class {
   display: none;
 }
+
+/* (the class picker: not now) */
+.rpg-first-later {
+  display: block;
+  width: fit-content;
+  margin: 0.5rem auto 0;
+  padding: 0.45rem 1.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--mm-muted);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.rpg-first-later:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* (a stat: name, value, price on one line - the description under them, the whole width) */
+.rpg-stat {
+  row-gap: 0.15rem;
+}
+
+.rpg-stat .rpg-stat-desc {
+  grid-column: 1 / -1;
+}
+
+.rpg-stat-value {
+  min-width: 2.6rem;
+  text-align: right;
+}
+
+.rpg-stat .small {
+  white-space: nowrap;
+}

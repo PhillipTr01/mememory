@@ -188,7 +188,17 @@ socket.on("rpgParty", (data) => {
   receiveParty(data);
 });
 
+// The room the party is in (rooms done, the phase) and since when
+var roomKey = "";
+var roomSince = 0;
+var DOOR_DELAY = 800; // ms
 function receiveParty(data) {
+  // (a new room: when - a door clicked right after doesn't count, see the votes)
+  var where = data && data.run ? data.run.rooms.length + ":" + data.run.phase : "";
+  if (where != roomKey) {
+    roomKey = where;
+    roomSince = Date.now();
+  }
   var events = freshFx(data);
   // The monsters' turn, a fight won or lost: played back over the scene as it was - then the new state
   if (events.some((e) => e.k == "turn" && e.side == "foes") || events.some((e) => e.k == "victory" || e.k == "defeat")) {
@@ -518,7 +528,7 @@ function renderTop() {
   morphChildren(document.getElementById("rpgPotions"), [flask(), el("span", "", hero.potions + " / " + hero.potionsMax)]);
   var buy = document.getElementById("rpgBuyPotion");
   buy.innerText = "+ 🪙 " + formatCoins(hero.potionPrice);
-  buy.title = "Potion: heals 40% HP";
+  buy.title = "Potion: heals " + Math.round(rules.potionHeal * 100) + "% HP";
   buy.disabled = hero.potions >= hero.potionsMax || myCoins < hero.potionPrice;
 }
 
@@ -587,20 +597,22 @@ function renderHero() {
     name.append(el("span", "rpg-stat-icon", stat.icon), el("span", "", stat.name), el("span", "rpg-stat-level", "Lv " + hero.levels[id] + " / " + rules.levelMax));
     if (main) {
       var star = el("span", "rpg-stat-main", "★ " + mine.name);
-      star.title = "Main stat: counts " + rules.mainBonus + "x";
+      star.title = "Main stat: counts " + (mine.mainBonus || rules.mainBonus) + "x";
       name.appendChild(star);
     }
     var head = el("div", "rpg-stat-head");
-    head.append(name, el("div", "rpg-stat-desc", stat.desc));
+    head.append(name);
     row.append(head, el("div", "rpg-stat-value", statValue(id)));
     // (a stat point: a free level - else coins)
     if (cost == null) {
       var max = el("span", "rpg-stat-max mm-muted", "Max");
-      max.title = hero.full && hero.full[id] ? "Capped at " + stat.cap + "%" : "The last level";
+      max.title = "The last level";
       row.appendChild(max);
     }
     else if (hero.points > 0) row.appendChild(button("+1 free", "point", { id: id, className: "small point", title: stat.about }));
     else row.appendChild(button("+ 🪙 " + formatCoins(cost), "upgrade", { id: id, className: "small", disabled: cost > myCoins, title: stat.about }));
+    // (the description: a line of its own under the row - a long price doesn't squeeze it)
+    row.appendChild(el("div", "rpg-stat-desc", stat.desc));
     return row;
   });
   morphChildren(document.getElementById("rpgStats"), stats);
@@ -793,6 +805,8 @@ function classTile(id, pick) {
     var diff = Math.round((cls[key] / average - 1) * 100);
     chip(icon + " " + (diff > 0 ? "+" : diff < 0 ? "−" : "±") + Math.abs(diff) + "% " + name, diff > 0 ? true : diff < 0 ? false : null, "Against the average class");
   });
+  if (cls.hpPlus) chip("❤️ +" + cls.hpPlus + " HP", true, "Extra HP from the start");
+  if (cls.atkPlus) chip("⚔️ +" + cls.atkPlus + " attack", true, "Extra attack from the start");
   if (cls.def) chip("🛡️ +" + cls.def + " armor", true, "Armor from the start");
   if (cls.luck) chip("🍀 +" + cls.luck + "% luck", true, "Crits, loot");
   if (cls.agi) chip("🦊 +" + cls.agi + "% instinct", true, "Dodge attacks");
@@ -818,10 +832,14 @@ function classTile(id, pick) {
 function renderFirst() {
   var grid = el("div", "rpg-first-grid");
   Object.keys(rules.classes).forEach((id) => grid.appendChild(classTile(id, true)));
+  // (not now: back to the casino - the jackpot)
+  var later = el("a", "rpg-first-later", "Later");
+  later.href = "./";
   morphChildren(document.getElementById("rpgFirstBox"), [
     el("div", "rpg-first-title", "⚔️ Choose your class"),
     el("div", "rpg-first-sub mm-muted", "First one free, then 🪙 " + formatCoins(rules.classPrice) + "."),
     grid,
+    later,
   ]);
 }
 
@@ -2082,7 +2100,7 @@ function potionButton(me, run) {
   b.type = "button";
   b.dataset.act = "drink";
   b.disabled = !me || me.down || me.potions <= 0 || me.hp >= me.maxHp || (fight && (me.ended || me.energy < rules.potionMana));
-  b.title = "Health potion: +40% HP" + (fight ? " · " + rules.potionMana + " mana" : "");
+  b.title = "Health potion: +" + Math.round(rules.potionHeal * 100) + "% HP" + (fight ? " · " + rules.potionMana + " mana" : "");
   b.innerHTML = POTION_SVG;
   b.appendChild(el("span", "rpg-potion-count", String(me ? me.potions : 0)));
   if (fight) b.appendChild(el("span", "rpg-potion-mana", String(rules.potionMana)));
@@ -2355,7 +2373,11 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     socket.emit("pick", { card: id || null });
     rewardView = "list";
   }
-  else if (act == "vote") socket.emit("vote", { door: id == "leave" ? "leave" : Number(id) });
+  else if (act == "vote") {
+    // (only between two rooms - and not the second click of a double click that just opened this room)
+    if (!party || !party.run || party.run.phase != "between" || Date.now() - roomSince < DOOR_DELAY) return;
+    socket.emit("vote", { door: id == "leave" ? "leave" : Number(id) });
+  }
 });
 
 document.addEventListener("keydown", (event) => {

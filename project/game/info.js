@@ -189,7 +189,7 @@ const GAMES = {
             `A floor is a map of ${rpg.ROOMS} rows. Pick the next room; a party votes. Rooms are hidden - a Rogue senses them. The last room is the gate.`,
             "Fights, hard fights, treasure, traps, camp fires, shrines, merchants and encounters.",
             "Fights fill the loot pot and give a card for the run. Leave between rooms with the pot, or clear the floor. All heroes down: the pot is lost.",
-            `Potions heal 40%, max ${rpg.POTIONS_MAX}: from 🪙 ${n(rpg.potionPrice(1))}.`,
+            `Potions heal ${Math.round(rpg.POTION_HEAL * 100)}%, max ${rpg.POTIONS_MAX}: from 🪙 ${n(rpg.potionPrice(1))}.`,
           ],
         },
         {
