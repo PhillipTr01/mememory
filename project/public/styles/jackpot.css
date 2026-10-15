@@ -2869,6 +2869,281 @@ body.jackpot-theme {
   margin-top: 0.75rem;
 }
 
+/* The info board: tiles with a picture and a line (public/scripts/casino_info.js) */
+.cs-info.ci-board {
+  width: min(1080px, calc(100vw - 2rem));
+  max-width: none;
+  padding: 1.4rem 1.4rem 1.2rem;
+}
+
+.ci-title {
+  margin: 0;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.ci-sub {
+  margin: 0.35rem 0 0.4rem;
+  text-align: center;
+  color: var(--mm-muted);
+}
+
+.ci-heading {
+  margin: 1.1rem 0 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--mm-accent);
+  text-transform: uppercase;
+}
+
+.ci-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 0.7rem;
+}
+
+.ci-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.85rem 0.75rem;
+  border-radius: 14px;
+  border: 1px solid var(--mm-border);
+  background: rgba(255, 255, 255, 0.035);
+  text-align: center;
+  min-width: 0;
+}
+
+.ci-tile-title {
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.ci-text {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--mm-muted);
+}
+
+/* (the pictures) */
+.ci-pic {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 3.6rem;
+}
+
+.ci-pic.emoji span {
+  font-size: 1.9rem;
+  line-height: 1;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+}
+
+.ci-pic.emoji.one span {
+  font-size: 2.6rem;
+}
+
+.ci-pcard {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 2.3rem;
+  height: 3.2rem;
+  border-radius: 6px;
+  background: #f4f1ea;
+  color: #1c1c21;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.ci-pcard b {
+  font-size: 0.95rem;
+}
+
+.ci-pcard i {
+  font-style: normal;
+  font-size: 1rem;
+}
+
+.ci-pcard.red {
+  color: #d23b3b;
+}
+
+.ci-pcard.back {
+  background: repeating-linear-gradient(45deg, #7c3aed 0 5px, #6d28d9 5px 10px);
+  border: 2px solid #f4f1ea;
+}
+
+.ci-coin,
+.ci-step,
+.ci-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.ci-coin {
+  color: #f5c542;
+  background: rgba(245, 197, 66, 0.12);
+  border: 1px solid rgba(245, 197, 66, 0.35);
+}
+
+.ci-step {
+  font-size: 0.95rem;
+  padding: 0.2rem 0.45rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mm-border);
+}
+
+.ci-arrow {
+  color: var(--mm-muted);
+  font-weight: 800;
+}
+
+.ci-tag {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.ci-tag.gold {
+  color: #f5c542;
+  border-color: rgba(245, 197, 66, 0.45);
+  background: rgba(245, 197, 66, 0.12);
+}
+
+.ci-tag.green {
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.4);
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.ci-tag.blue {
+  color: #7cb4ff;
+  border-color: rgba(124, 180, 255, 0.4);
+  background: rgba(124, 180, 255, 0.1);
+}
+
+.ci-tag.red {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.ci-tag.muted {
+  color: var(--mm-muted);
+}
+
+.ci-pic.split {
+  width: 100%;
+}
+
+.ci-split {
+  display: flex;
+  width: 100%;
+  height: 1.6rem;
+  border-radius: 999px;
+  overflow: hidden;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.ci-part {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.ci-part.gold {
+  color: #1c1c21;
+  background: #f5c542;
+}
+
+.ci-die,
+.ci-animal {
+  display: inline-grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 10px;
+  background: #f4f1ea;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+  font-size: 1.6rem;
+}
+
+.ci-animal {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+.ci-die svg,
+.ci-animal svg {
+  width: 80%;
+  height: 80%;
+}
+
+.ci-pic.grid {
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ci-row {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.ci-cell {
+  display: grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 1.1rem;
+}
+
+.ci-cell.empty {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ci-big {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--mm-accent);
+}
+
+.ci-close {
+  display: block;
+  margin: 1.2rem auto 0;
+  min-width: 10rem;
+}
+
+@media (max-width: 520px) {
+  .cs-info.ci-board {
+    padding: 1rem 0.8rem;
+  }
+
+  .ci-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* In the middle of the wheel: the 👻 countdown small under the status */
 /* (under the status, out of the flow: the pot and the countdown don't move when it comes) */
 .jp-wheel-center .jp-mirror-ghost {

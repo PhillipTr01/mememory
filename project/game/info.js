@@ -15,91 +15,84 @@ const baucua = require("./baucua");
 /*
  * How every game works, for the little "i" next to the title. Made from the
  * config every time, so the limits are the ones the admin set.
- * {title, sections: [{heading, items: [text]}]}
+ * {title, sub, sections: [{heading, tiles: [{icon, title, text, v}]}]}
  */
 const n = (value) => Number(value).toLocaleString("en-US");
 const seconds = (ms) => `${Math.round(ms / 1000)} s`;
 const minutes = (ms) => `${Math.round(ms / 60000)} min`;
 
+// A tile of a board: an icon and a title, one short line - and a picture (v): {cards}, {coins}, {emoji}, {tags},
+// {split}, {steps}, {dice} / {animals} (Bầu Cua's), {grid}, {big} (public/scripts/casino_info.js draws them)
+const tile = (icon, title, text, v) => ({ icon, title, text, ...(v ? { v } : {}) });
+const section = (heading, tiles) => ({ heading, tiles });
+
 // The cases as they are now (the admin can change them): the biggest item, what they pay back - by risk
-function caseFacts() {
+function caseTiles() {
   const off = config.BATTLE_CASES_OFF || [];
   const list = require("./cases").list().filter((box) => !box.off && !off.includes(box.id));
   const of = (risk) => list.filter((box) => box.risk === risk);
   const range = (boxes) => {
     const low = Math.round(Math.min(...boxes.map((box) => box.rtp)) * 100);
     const high = Math.round(Math.max(...boxes.map((box) => box.rtp)) * 100);
-    return low === high ? `about ${low}%` : `about ${low}-${high}%`;
+    return low === high ? `${low}%` : `${low}-${high}%`;
   };
   const top = (boxes) => {
     const most = Math.max(...boxes.map((box) => box.top));
     return most < 10 ? String(Math.round(most * 10) / 10) : String(Math.round(most));
   };
-  const risks = [["low", "low risk"], ["balanced", "balanced"], ["high", "high risk"]].filter(([risk]) => of(risk).length);
-  if (!risks.length) return [];
-  return [
-    `Low risk: items close to the price (up to ${of("low").length ? top(of("low")) : 2}x). High risk: mostly cheap items, but a small chance of up to ${of("high").length ? top(of("high")) : 50}x.`,
-    `Every case pays back a little less than it costs on average: ${risks.map(([risk, name]) => name + " " + range(of(risk))).join(", ")} (the price of the big jackpots).`,
-  ];
+  const looks = { low: ["🛡️", "Low risk", "Items close to the price"], balanced: ["⚖️", "Balanced", "A bit of both"], high: ["🔥", "High risk", "Mostly cheap - a small chance of a lot"] };
+  return ["low", "balanced", "high"]
+    .filter((risk) => of(risk).length)
+    .map((risk) => tile(looks[risk][0], looks[risk][1], `${looks[risk][2]}. Pays back ${range(of(risk))} on average.`, { tags: [[`up to ${top(of(risk))}×`, risk === "high" ? "gold" : risk === "low" ? "green" : "blue"]] }));
 }
 
 const GAMES = {
   jackpot: (L) => ({
     title: "Jackpot",
+    sub: "One pot, one winner - your chance is your share.",
     sections: [
-      {
-        heading: "How it works",
-        items: [
-          `Everybody puts coins into one pot. One player wins the pot - the house keeps ${config.JACKPOT_RAKE}% of it, but never more than half of the other players' coins: you never win back less than you put in.`,
-          "Your chance is your share of the pot: 1,000 of 4,000 coins = 25%.",
-          `The countdown (${seconds(config.JACKPOT_COUNTDOWN)}) starts with the second player. Bets during the countdown still count.`,
-          `Alone in the pot for ${seconds(config.JACKPOT_GHOST_AFTER)}: the 👻 ghost (the house) joins with ${config.JACKPOT_GHOST_MIN}-${config.JACKPOT_GHOST_TOP}% of your coins (at most 🪙 ${n(config.JACKPOT_GHOST_MAX)}) - once: more coins of yours later make your chance bigger. If it wins, the house keeps the pot.`,
-          `A bet lands in the pot after ${seconds(config.JACKPOT_BET_DELAY[0])}-${seconds(config.JACKPOT_BET_DELAY[1])} (nobody can answer a bet in the last second). Too late for the draw: it goes into the next pot.`,
-          "The winner is drawn with a random animation (wheel, roulette, race, ...). The pot is paid when the draw is over.",
-          "Where you stand in a draw says nothing: the spots are shuffled at the start (and swapped now and then while waiting). More players than spots: the spots roll and stop on who is in - the winner always among them, the bigger bets more often.",
-        ],
-      },
-      {
-        heading: "Limits",
-        items: [`Up to ${n(L.JACKPOT_MAX_BETS)} bets per round.`, `At most 🪙 ${n(L.JACKPOT_MAX_COINS)} per player and round.`],
-      },
+      section("How it works", [
+        tile("💰", "One pot", "Everybody bets into one pot. One player wins all of it.", { coins: ["1,000", "3,000"] }),
+        tile("🎯", "Your chance", "Your share of the pot: 1,000 of 4,000 = 25%.", { split: [["You", 25, "gold"], ["Others", 75, "muted"]] }),
+        tile("⏱️", "Countdown", `${seconds(config.JACKPOT_COUNTDOWN)} from the second player on - bets during it still count.`, { steps: ["👤", "👥", "⏱️", "🎉"] }),
+        tile("👻", "The ghost", `Alone for ${seconds(config.JACKPOT_GHOST_AFTER)}: the house joins once with ${config.JACKPOT_GHOST_MIN}-${config.JACKPOT_GHOST_TOP}% of your coins (max 🪙 ${n(config.JACKPOT_GHOST_MAX)}). If it wins, it keeps the pot.`, { emoji: ["👻"] }),
+        tile("🏦", "The house", `Keeps ${config.JACKPOT_RAKE}% of the pot - never more than half of the others' coins: you never win less than you bet.`, { tags: [[`${config.JACKPOT_RAKE}%`, "gold"]] }),
+        tile("🛬", "Bets land", `After ${seconds(config.JACKPOT_BET_DELAY[0])}-${seconds(config.JACKPOT_BET_DELAY[1])}. Too late for the draw: into the next pot.`, { steps: ["🪙", "⏳", "🍯"] }),
+        tile("🎡", "The draw", "A random animation picks the winner - your spot means nothing. Paid when it's over.", { emoji: ["🎡", "🏇", "🎰"] }),
+      ]),
+      section("Limits", [
+        tile("🔢", "Bets", `Up to ${n(L.JACKPOT_MAX_BETS)} bets per round.`, { big: n(L.JACKPOT_MAX_BETS) }),
+        tile("🪙", "Coins", `At most 🪙 ${n(L.JACKPOT_MAX_COINS)} per player and round.`, { coins: [n(L.JACKPOT_MAX_COINS)] }),
+      ]),
     ],
   }),
 
   battles: (L) => ({
     title: "Case Battles",
+    sub: "Everybody opens the same cases - the mode decides who takes it all.",
     sections: [
-      {
-        heading: "How it works",
-        items: [
-          "Pick cases (the same one more than once, too), the players (2 to 4) and a mode. Everybody pays the same price: the cost of all the cases.",
-          "Every round all players open the same case. The items are worth coins.",
-          "The winner gets all the items of everybody, paid in coins when the battle is over.",
-          "👑 Classic mode: the most worth wins.",
-          "🤡 Crazy mode: the lowest worth wins.",
-          "🎰 Jackpot mode: one player gets everything - a roulette draws the winner, your chance is the share of the pot your items are worth.",
-          "🏅 Best of mode: the best item of a case wins the round - the most rounds win (equal rounds: the bigger worth).",
-          "🥄 Worst of mode: the worst item of a case wins the round - the most rounds win (equal rounds: the smaller worth).",
-          "❓ Random mode: one of the other modes, picked at random at the very end - while it runs you see the chance and the rounds won (🏅 best, 🥄 worst).",
-          "👥 2v2 (Format: 2v2 - always 4 players): Team A (seats 1-2) against Team B (seats 3-4) - pick your team with the Join button of its seat. Every mode counts the two of a team together (their worth, their items of a round added up; jackpot: the team of the drawn player). The winning team splits the pot.",
-          "A tie: everybody tied for the win splits the pot.",
-          "The creator can fill free seats with bots - their items go to the winner, too.",
-          "When it's over the creator can start the same battle again with one click.",
-          `Nobody joins within ${minutes(config.BATTLE_EXPIRE)}: the battle is cancelled and you get your coins back.`,
-        ],
-      },
-      {
-        heading: "Cases",
-        items: [
-          "Click a case to see every item and its chance.",
-          ...caseFacts(),
-          "Provably fair: the seed is fixed (and its hash shown) before the battle and revealed after it.",
-        ],
-      },
-      {
-        heading: "Limits",
-        items: [`Up to ${n(L.BATTLE_MAX_CASES)} cases per battle, 🪙 ${n(L.BATTLE_MAX_COST)} at most per player.`, `Up to ${n(L.BATTLE_MAX_OPEN)} battles of your own at a time.`],
-      },
+      section("How it works", [
+        tile("📦", "Pick cases", "Cases, 2 to 4 players and a mode. Everybody pays the cost of all the cases.", { emoji: ["📦", "📦", "🎁"] }),
+        tile("🔄", "Rounds", "Every round everybody opens the same case. Its items are worth coins.", { steps: ["📦", "💎", "🪙"] }),
+        tile("🏆", "The winner", "Takes the items of everybody, paid in coins at the end. A tie splits the pot.", { emoji: ["🏆"] }),
+        tile("👥", "2v2", "Seats 1-2 against 3-4. A team counts together and splits the pot.", { steps: ["🅰️🅰️", "⚔️", "🅱️🅱️"] }),
+        tile("🤖", "Bots", "The creator can fill free seats with bots - their items go to the winner too.", { emoji: ["🤖", "🤖"] }),
+        tile("⌛", "Nobody joins", `Within ${minutes(config.BATTLE_EXPIRE)}: cancelled, your coins come back. Done: start it again with one click.`, { emoji: ["⌛", "🔁"] }),
+      ]),
+      section("Modes", [
+        tile("👑", "Classic", "The most worth wins."),
+        tile("🤡", "Crazy", "The lowest worth wins."),
+        tile("🎰", "Jackpot", "A roulette draws one winner - your chance is your share of the worth."),
+        tile("🏅", "Best of", "The best item of a case wins the round - the most rounds win."),
+        tile("🥄", "Worst of", "The worst item wins the round - the most rounds win."),
+        tile("❓", "Random", "One of the others, picked at the very end."),
+      ]),
+      section("Cases", [tile("🔍", "Look inside", "Click a case: every item and its chance.", { emoji: ["🔍", "📦"] }), ...caseTiles(), tile("🔒", "Provably fair", "The seed's hash shows before the battle, the seed after it.", { emoji: ["🔒", "🔑"] })]),
+      section("Limits", [
+        tile("📦", "Cases", `Up to ${n(L.BATTLE_MAX_CASES)} per battle.`, { big: n(L.BATTLE_MAX_CASES) }),
+        tile("🪙", "Cost", `At most 🪙 ${n(L.BATTLE_MAX_COST)} per player.`, { coins: [n(L.BATTLE_MAX_COST)] }),
+        tile("📋", "Open", `Up to ${n(L.BATTLE_MAX_OPEN)} battles of your own at a time.`, { big: n(L.BATTLE_MAX_OPEN) }),
+      ]),
     ],
   }),
 
@@ -107,61 +100,47 @@ const GAMES = {
     const level = (step) => `${n(config.POKER_SMALL_BLIND * step)}/${n(config.POKER_BIG_BLIND * step)}`;
     return {
       title: "Poker",
+      sub: "Texas Hold'em with chips - the best five cards take the pot.",
       sections: [
-        {
-          heading: "How it works",
-          items: [
-            `Texas Hold'em, up to ${config.POKER_SEATS} players at the table, played with chips.`,
-            "Everybody gets 2 cards, then 5 cards come on the board (flop, turn, river). The best 5 of your 7 cards win the pot.",
-            `The house keeps ${config.POKER_RAKE}% of every pot that sees the flop (rake) - a hand that ends before the flop has none.`,
-            "Bet with the slider or the mouse wheel (in big blinds), or with your own preset buttons.",
-            `${seconds(config.POKER_TURN)} per decision - then you check, or fold if you can't check.`,
-            `After every hand you decide within ${seconds(config.POKER_DECIDE)}: show your cards or muck them (hide them) - no decision means muck. The winner of a showdown always shows.`,
-          ],
-        },
-        {
-          heading: "Blinds",
-          items: [
-            `They go up every ${n(config.POKER_LEVEL_HANDS)} hands: ${config.POKER_BLIND_STEPS.map(level).join(" → ")}.`,
-            `When the table is empty for ${minutes(config.POKER_LEVEL_RESET)}, the blinds start again at ${level(1)}.`,
-          ],
-        },
-        {
-          heading: "Buy-in",
-          items: [`🪙 ${n(L.POKER_MIN_BUYIN)} to ${n(L.POKER_MAX_BUYIN)} coins become chips.`, "Your chips become coins again when you stand up."],
-        },
+        section("How it works", [
+          tile("♠️", "Your hand", `Up to ${config.POKER_SEATS} players. Everybody gets 2 cards.`, { cards: ["A♠", "K♠"] }),
+          tile("🃏", "The board", "Flop, turn, river: 5 cards. The best 5 of your 7 win.", { cards: ["Q♠", "J♠", "10♠", "4♥", "2♦"] }),
+          tile("🏦", "Rake", `The house keeps ${config.POKER_RAKE}% of a pot that sees the flop.`, { tags: [[`${config.POKER_RAKE}%`, "gold"]] }),
+          tile("🎚️", "Betting", "The slider, the mouse wheel or your own presets - in big blinds.", { tags: [["½ pot"], ["Pot"], ["All in", "gold"]] }),
+          tile("⏱️", "Your turn", `${seconds(config.POKER_TURN)} per decision - then check, or fold.`, { big: seconds(config.POKER_TURN) }),
+          tile("🙈", "Show or muck", `After a hand, ${seconds(config.POKER_DECIDE)} to show or hide your cards. A showdown's winner always shows.`, { cards: ["?", "?"] }),
+        ]),
+        section("Blinds", [
+          tile("📈", "They grow", `Every ${n(config.POKER_LEVEL_HANDS)} hands.`, { steps: config.POKER_BLIND_STEPS.slice(0, 4).map(level) }),
+          tile("🔄", "Back to start", `An empty table for ${minutes(config.POKER_LEVEL_RESET)}: back to ${level(1)}.`, { tags: [[level(1)]] }),
+        ]),
+        section("Buy-in", [tile("🪙", "Coins to chips", `🪙 ${n(L.POKER_MIN_BUYIN)} to ${n(L.POKER_MAX_BUYIN)}. Stand up: chips become coins again.`, { coins: [n(L.POKER_MIN_BUYIN), n(L.POKER_MAX_BUYIN)] })]),
       ],
     };
   },
 
   blackjack: (L) => ({
     title: "Blackjack",
+    sub: "Closer to 21 than the dealer - without going over.",
     sections: [
-      {
-        heading: "How it works",
-        items: [
-          "Beat the dealer: get closer to 21 than the dealer without going over.",
-          "Cards 2-10 count their number, J, Q and K count 10, an ace 1 or 11.",
-          "Hit (one more card), stand, double (on the first two cards: double bet, one card) or split (two cards of the same value, up to 4 hands).",
-          "The dealer draws up to 16 and stands on every 17.",
-          "Win: 2x your bet back. Blackjack (ace + 10 with the first two cards): 3:2. Same total: you get your bet back.",
-          "Every round is dealt from a new shoe of 6 decks - counting cards doesn't help.",
-          `You can take up to ${L.BJ_MY_SEATS} seats at a table. ${seconds(config.BJ_TURN)} per decision, then the hand stands.`,
-          "After the round the bar under the table shows what it brought you: Win / Lose - all your seats and side bets together.",
-        ],
-      },
-      {
-        heading: "Side bets",
-        items: [
-          `From a fifth of the table's min bet up to half its max bet on each (a main bet first), before the cards are dealt. They are decided by the first cards and paid at the end of the round.`,
-          "Perfect Pairs - your first two cards are a pair: mixed (red and black) 6:1, coloured (same colour) 12:1, perfect (same suit) 25:1.",
-          "21+3 - your two cards and the dealer's up card as a poker hand: flush 5:1, straight 10:1, three of a kind 30:1, straight flush 40:1, suited trips 100:1.",
-        ],
-      },
-      {
-        heading: "The 3 rooms",
-        items: config.BJ_TABLES.map((table) => `${table.icon} ${table.name}: 🪙 ${n(L[table.minKey])} to ${n(L[table.maxKey])} per seat, side bets 🪙 ${n(Math.max(1, Math.min(Math.ceil(L[table.minKey] * config.BJ_SIDE_MIN_SHARE), Math.floor(L[table.maxKey] * config.BJ_SIDE_SHARE))))} to ${n(Math.floor(L[table.maxKey] * config.BJ_SIDE_SHARE))}. ${table.about}`),
-      },
+      section("How it works", [
+        tile("🎯", "Beat the dealer", "Get closer to 21 than the dealer without going over.", { cards: ["K♠", "A♥"] }),
+        tile("🔢", "Card values", "2-10 their number, J Q K 10, an ace 1 or 11.", { cards: ["7♣", "K♦", "A♠"] }),
+        tile("🕹️", "Your moves", "Hit, stand, double (one card, double bet) or split a pair - up to 4 hands.", { tags: [["Hit"], ["Stand"], ["Double", "blue"], ["Split", "blue"]] }),
+        tile("🤵", "The dealer", "Draws to 16, stands on every 17.", { big: "17" }),
+        tile("💰", "Pays", "A win 2× your bet, blackjack 3:2, the same total: your bet back.", { tags: [["Win 2×", "green"], ["Blackjack 3:2", "gold"], ["Push", "muted"]] }),
+        tile("🔀", "The shoe", "A new 6-deck shoe every round - counting doesn't help.", { cards: ["?", "?", "?"] }),
+        tile("🪑", "Seats", `Up to ${L.BJ_MY_SEATS} seats at a table, ${seconds(config.BJ_TURN)} per decision.`, { big: String(L.BJ_MY_SEATS) }),
+      ]),
+      section("Side bets", [
+        tile("👯", "Perfect Pairs", "Your first two cards a pair: mixed 6:1, coloured 12:1, perfect 25:1.", { cards: ["8♥", "8♥"] }),
+        tile("🎲", "21+3", "Your cards + the dealer's: flush 5:1, straight 10:1, trips 30:1, straight flush 40:1, suited trips 100:1.", { cards: ["5♥", "6♥", "7♥"] }),
+        tile("📏", "How much", "From a fifth of the min bet to half the max bet, before the deal.", { tags: [["⅕ min"], ["½ max", "gold"]] }),
+      ]),
+      section(
+        "The 3 rooms",
+        config.BJ_TABLES.map((table) => tile(table.icon, table.name, `${table.about} Side bets up to 🪙 ${n(Math.floor(L[table.maxKey] * config.BJ_SIDE_SHARE))}.`, { coins: [n(L[table.minKey]), n(L[table.maxKey])] })),
+      ),
     ],
   }),
 
@@ -172,157 +151,139 @@ const GAMES = {
     const packs = Object.values(rpg.PACKS);
     return {
       title: "⚔️ Dungeon",
+      sub: "A character, a deck of cards - and floors that pay.",
       sections: [
-        {
-          heading: "Your character",
-          items: [
-            `5 classes, each its own character. The first is free, others 🪙 ${n(rpg.CLASS_PRICE)}.`,
-            `Raise stats with coins (from 🪙 ${n(rpg.upgradeCost(0))}) or level-up points. Your class's main stat counts ${rpg.MAIN_BONUS}x.`,
-            `XP from fights and floors. Talents at levels ${rpg.TALENT_LEVELS.join(", ")}. Max level ${rpg.HERO_LEVEL_MAX}.`,
-            "Weapons, armor and charms drop in the dungeon.",
-          ],
-        },
-        {
-          heading: "A run",
-          items: [
-            `${rpg.FLOORS} floors, each opens when the last is cleared. Go alone or in a party of up to ${rpg.PARTY_MAX}. Entry: 🪙 ${n(rpg.entryCost(1))} on floor 1, more deeper.`,
-            `A floor is a map of ${rpg.ROOMS} rows. Pick the next room; a party votes. Rooms are hidden - a Rogue senses them. The last room is the gate.`,
-            "Fights, hard fights, treasure, traps, camp fires, shrines, merchants and encounters.",
-            "Fights fill the loot pot and give a card for the run. Leave between rooms with the pot, or clear the floor. All heroes down: the pot is lost.",
-            `Potions heal ${Math.round(rpg.POTION_HEAL * 100)}%, max ${rpg.POTIONS_MAX}: from 🪙 ${n(rpg.potionPrice(1))}.`,
-          ],
-        },
-        {
-          heading: "Fights",
-          items: [
-            `Each turn: ${rpg.ENERGY} mana, 5 cards. Drag cards onto a target, then end the turn. Badges show the monsters' next move.`,
-            "Block absorbs hits this turn. Exhaust: gone for the fight. Mythic: gone for the run.",
-          ],
-        },
-        {
-          heading: "Cards and packs",
-          items: [
-            `Deck: ${rpg.DECK_MIN} to ${rpg.DECK_MAX} cards from your collection.`,
-            ...packs.map((pack) => `${pack.icon} ${pack.name}: 🪙 ${n(pack.price)} - ${pack.about}`),
-            `${rpg.PACK_BUNDLE}+ packs of a kind: ${Math.round(rpg.BUNDLE_OFF * 100)}% off.`,
-            `Extra copies sell automatically: ${rarities.map((r) => r.name + " 🪙 " + n(r.value)).join(", ")}.`,
-          ],
-        },
+        section("Your character", [
+          tile("🧙", "5 classes", `Each its own character. The first is free, others 🪙 ${n(rpg.CLASS_PRICE)}.`, { emoji: ["⚔️", "🔰", "✨", "🗡️", "🔮"] }),
+          tile("📈", "Stats", `Coins (from 🪙 ${n(rpg.upgradeCost(0))}) or level-up points. Your main stat counts more.`, { tags: [["❤️ HP"], ["⚔️ Attack"], ["🛡️ Armor"], ["🍀 Luck"], ["🦊 Instinct"]] }),
+          tile("⭐", "Levels", `XP from fights and floors. Talents at ${rpg.TALENT_LEVELS.join(", ")}.`, { big: "Lv " + rpg.HERO_LEVEL_MAX }),
+          tile("🗡️", "Gear", "Weapons, armor and charms drop in the dungeon.", { emoji: ["🗡️", "🛡️", "📿"] }),
+        ]),
+        section("A run", [
+          tile("🏰", "Floors", `${rpg.FLOORS} floors, each opens the next. Alone or a party of up to ${rpg.PARTY_MAX}. Floor 1: 🪙 ${n(rpg.entryCost(1))}.`, { steps: ["1", "2", "3", "…", String(rpg.FLOORS)] }),
+          tile("🗺️", "The map", "Pick the next room; a party votes. Rooms are hidden - instinct senses them.", { emoji: ["⚔️", "❓", "🔥", "⚖️"] }),
+          tile("💰", "The pot", "Fights fill it. Leave between rooms with it - all down: it's lost.", { steps: ["⚔️", "💰", "🚪"] }),
+          tile("🧪", "Potions", `Heal ${Math.round(rpg.POTION_HEAL * 100)}%. From 🪙 ${n(rpg.potionPrice(1))}.`, { emoji: ["🧪", "🧪", "🧪"] }),
+        ]),
+        section("Fights", [
+          tile("✋", "A turn", `${rpg.ENERGY} mana, 5 cards. Drag a card onto its target, then end the turn.`, { emoji: ["🃏", "🃏", "🃏", "🃏", "🃏"] }),
+          tile("🛡️", "Block", "Takes the hits of this turn. Exhaust: gone for the fight.", { tags: [["🛡️ 12", "blue"]] }),
+          tile("🏷️", "Badges", "Every monster shows what it does next.", { tags: [["⚔️ 9", "red"], ["🛡️ Defend", "blue"]] }),
+        ]),
+        section("Cards and packs", [
+          tile("🃏", "Your deck", `${rpg.DECK_MIN} to ${rpg.DECK_MAX} cards from your collection.`, { big: `${rpg.DECK_MIN}-${rpg.DECK_MAX}` }),
+          ...packs.map((pack) => tile(pack.icon, pack.name, pack.about, { coins: [n(pack.price)] })),
+          tile("💸", "Spares", `${rpg.PACK_BUNDLE}+ packs: ${Math.round(rpg.BUNDLE_OFF * 100)}% off. Extra copies sell: ${rarities.map((r) => r.name + " " + n(r.value)).join(", ")}.`, { tags: [[`-${Math.round(rpg.BUNDLE_OFF * 100)}%`, "green"]] }),
+        ]),
       ],
     };
   },
 
   slots: (L) => {
+    // (what the buys pay back: one number when they are the same)
+    const buyBack = () => {
+      const all = [slots.BUY_RTP.free, slots.BUY_RTP.coins, slots.BUY_RTP.chest].map((x) => Math.round(x * 100));
+      const low = Math.min(...all), high = Math.max(...all);
+      return low === high ? `${low}%` : `${low}-${high}%`;
+    };
     const spins = slots.BONUS_SPINS.map((f) => f.spins).join(", ");
     const starts = slots.BONUS_MULTIPLIERS.map((f) => "×" + f.multiplier).join(", ");
+    const prizes = slots.COIN_VALUES.filter((v) => v.prize);
     return {
       title: "Slots",
+      sub: `5 reels, ${slots.LINE_COUNT} lines - free spins and a coin game on top.`,
       sections: [
-        {
-          heading: "How it works",
-          items: [
-            `5 reels, 3 rows, ${slots.LINE_COUNT} lines - all lines play every spin. The bet is for the whole spin.`,
-            "3, 4 or 5 of the same symbol on a line, from the left reel, win. The paytable shows what each pays.",
-            "👑 is wild: it stands for every symbol.",
-            `🎁 on reels 1, 3 and 5 at the same time start the bonus game: two wheels decide your free spins (${spins}) and the start multiplier (${starts}).`,
-            `The free spins play by themselves. Every win is paid times the multiplier - and it grows by ${slots.BONUS_STEP} after every free spin.`,
-            `The free spins turn their own reels: fewer 🍌, more 🎁 - three 🎁 again: ${slots.RETRIGGER} free spins more (up to ${slots.MAX_FREE_SPINS} in one bonus).`,
-            `${slots.COIN_TRIGGER} or more 🪙 anywhere start the coin game: the coins stay, the empty spots get ${slots.COIN_RESPINS} respins - every new coin brings them back to ${slots.COIN_RESPINS}.`,
-            `Every 🪙 pays its value or a prize: ${slots.COIN_VALUES.filter((v) => v.prize).map((v) => v.prize.toUpperCase() + " " + v.x + "×").join(", ")} the bet. A 🧰 treasure chest: pick one of three closed chests - MINI, MAJOR and MEGA are behind them, shuffled. All 15 spots full: ULTRA, ${slots.ULTRA}× the bet on top (the coin game pays at most ${slots.COIN_MAX_WIN}×).`,
-            `No max win: the free spins always play to the end. On average the machine pays back about ${slotsRtp()}% of the bets.`,
-            `🛒 Bonus buy: the bonus game right away - free games ${slots.BUY_PRICES.free}×, coin game ${slots.BUY_PRICES.coins}×, coin game with a 🧰 ${slots.BUY_PRICES.chest}× the bet. On average about ${Math.round(slots.BUY_RTP.free * 100)}%, ${Math.round(slots.BUY_RTP.coins * 100)}% and ${Math.round(slots.BUY_RTP.chest * 100)}% of the price comes back.`,
-            "The line wins of a spin that starts a bonus count as well - first the lines, then the bonus.",
-            "Your coins come when the spin is over on the screen.",
-            "Auto spins: 10 to 100 - or ∞, until you stop them (or the coins run out). The bet stays as it is while they run. Max follows your balance - every spin bets the most you may.",
-            "One machine at a time: while a tab of yours spins, another tab can't.",
-          ],
-        },
-        {
-          heading: "Limits",
-          items: [`🪙 ${n(L.SLOTS_MIN_BET)} to ${n(L.SLOTS_MAX_BET)} per spin.`],
-        },
+        section("How it works", [
+          tile("🎰", "The reels", `5 reels, 3 rows, ${slots.LINE_COUNT} lines - all play. The bet is for the whole spin.`, { grid: [["🍌", "🐸", "💎", "🐕", "🚀"], ["🐸", "🐸", "🐸", "💰", "🍌"], ["🚀", "🐕", "🍌", "👑", "🐸"]] }),
+          tile("➡️", "Line wins", "3, 4 or 5 of a symbol on a line, from the left reel. The paytable shows what each pays.", { emoji: ["🐸", "🐸", "🐸"] }),
+          tile("👑", "Wild", "Stands for every symbol.", { emoji: ["👑"] }),
+          tile("📊", "Payback", `About ${slotsRtp()}% of the bets on average. Coins come when the spin is over.`, { big: slotsRtp() + "%" }),
+        ]),
+        section("Free spins", [
+          tile("🎁", "Start them", "🎁 on reels 1, 3 and 5 at once.", { grid: [["🎁", "·", "🎁", "·", "🎁"]] }),
+          tile("🎡", "Two wheels", `Your spins (${spins}) and the start multiplier (${starts}).`, { tags: [["Spins", "blue"], ["×", "gold"]] }),
+          tile("📈", "Multiplier", `Every win × it - it grows by ${slots.BONUS_STEP} after every free spin.`, { steps: ["×1", "×" + (1 + slots.BONUS_STEP), "×" + (1 + 2 * slots.BONUS_STEP)] }),
+          tile("🔁", "More", `Three 🎁 again: ${slots.RETRIGGER} spins more (up to ${slots.MAX_FREE_SPINS}).`, { tags: [[`+${slots.RETRIGGER}`, "green"]] }),
+        ]),
+        section("Coin game", [
+          tile("🪙", "Start it", `${slots.COIN_TRIGGER}+ 🪙 anywhere. The coins stay, the rest get ${slots.COIN_RESPINS} respins - every new coin resets them.`, { emoji: Array(slots.COIN_TRIGGER).fill("🪙") }),
+          tile("💎", "Prizes", "Every coin pays its value or a prize (× the bet).", { tags: prizes.map((v) => [v.prize.toUpperCase() + " " + v.x + "×", v.prize === "mini" ? "green" : v.prize === "major" ? "blue" : "gold"]) }),
+          tile("🧰", "Treasure chest", "Pick one of three: MINI, MAJOR and MEGA are behind them.", { emoji: ["🧰", "🧰", "🧰"] }),
+          tile("🌟", "ULTRA", `All 15 spots full: ${slots.ULTRA}× the bet on top (at most ${slots.COIN_MAX_WIN}×).`, { big: slots.ULTRA + "×" }),
+        ]),
+        section("More", [
+          tile("🛒", "Bonus buy", `Right into a bonus: free games ${slots.BUY_PRICES.free}×, coin game ${slots.BUY_PRICES.coins}×, with a 🧰 ${slots.BUY_PRICES.chest}× - about ${buyBack()} back.`, { tags: [[slots.BUY_PRICES.free + "×"], [slots.BUY_PRICES.coins + "×"], [slots.BUY_PRICES.chest + "×", "gold"]] }),
+          tile("🔁", "Auto spins", "10 to 100 or ∞ - the bet stays. One machine at a time.", { tags: [["10"], ["50"], ["100"], ["∞", "gold"]] }),
+          tile("🪙", "Your bet", `🪙 ${n(L.SLOTS_MIN_BET)} to ${n(L.SLOTS_MAX_BET)} per spin.`, { coins: [n(L.SLOTS_MIN_BET), n(L.SLOTS_MAX_BET)] }),
+        ]),
       ],
     };
   },
 
   roulette: (L) => ({
     title: "Roulette",
+    sub: "Red, blue or the green one - everybody bets on the same roll.",
     sections: [
-      {
-        heading: "How it works",
-        items: [
-          "A reel of 15 slots: 7 🟥 red, 7 🟦 blue and 1 🟩 green. Everybody bets on the same roll.",
-          `🟥 Red and 🟦 blue pay 2× the bet, 🟩 green pays 14×. On average the wheel pays back about ${(roulette.rtp("red") * 100).toFixed(1)}%.`,
-          "Red or blue - never both in one round. Green goes with either of them.",
-          `The first bet of a round starts the timer (${seconds(config.ROULETTE_TIMER)}) - more bets until it runs out, then the reel rolls. Nobody bets: no round.`,
-          "Provably fair: the hash of the round's seed is shown before the bets, the seed after the roll.",
-        ],
-      },
-      {
-        heading: "Limits",
-        items: [`At least 🪙 ${n(L.ROULETTE_MIN_BET)} per bet, at most 🪙 ${n(L.ROULETTE_MAX_BET)} per round (all colors together).`],
-      },
+      section("How it works", [
+        tile("🎡", "The reel", "15 slots: 7 red, 7 blue and 1 green.", { emoji: ["🟥", "🟦", "🟥", "🟦", "🟩", "🟥", "🟦"] }),
+        tile("💰", "Pays", `Red and blue 2×, green 14×. About ${(roulette.rtp("red") * 100).toFixed(1)}% back on average.`, { tags: [["🟥 2×", "red"], ["🟦 2×", "blue"], ["🟩 14×", "green"]] }),
+        tile("⚖️", "Red or blue", "Never both in a round - green goes with either.", { tags: [["🟥 + 🟩"], ["🟦 + 🟩"]] }),
+        tile("⏱️", "The timer", `The first bet starts it (${seconds(config.ROULETTE_TIMER)}) - then the reel rolls.`, { steps: ["🪙", "⏱️", "🎡"] }),
+        tile("🔒", "Provably fair", "The seed's hash before the bets, the seed after the roll.", { emoji: ["🔒", "🔑"] }),
+      ]),
+      section("Limits", [tile("🪙", "Bets", `At least 🪙 ${n(L.ROULETTE_MIN_BET)} per bet, at most 🪙 ${n(L.ROULETTE_MAX_BET)} per round.`, { coins: [n(L.ROULETTE_MIN_BET), n(L.ROULETTE_MAX_BET)] })]),
     ],
   }),
 
   baucua: (L) => ({
     title: "Bầu Cua",
+    sub: "Three dice, six animals - bet on the ones that come up.",
     sections: [
-      {
-        heading: "How it works",
-        items: [
-          "Three dice, every die shows one of six animals: Tiger, Gourd, Rooster, Fish, Crab and Shrimp. Everybody bets on the same roll.",
-          "Bet on one animal or on several. The bowl is lifted - every bet pays by how many dice show its animal:",
-          `1 die: ${baucua.PAYOUT[1]}× the bet · 2 dice: ${baucua.PAYOUT[2]}× · all 3 dice: ${baucua.PAYOUT[3]}× (your bet included). No die: the bet is lost.`,
-          `On average a bet pays back about ${(baucua.rtp() * 100).toFixed(1)}% - the same for every animal.`,
-          `The first bet of a round starts the timer (${seconds(config.BAUCUA_TIMER)}) - more bets until it runs out, then the bowl shakes. Nobody bets: no round.`,
-          "Provably fair: the hash of the round's seed is shown before the bets, the seed after the roll.",
-        ],
-      },
-      {
-        heading: "Limits",
-        items: [`At least 🪙 ${n(L.BAUCUA_MIN_BET)} per bet, at most 🪙 ${n(L.BAUCUA_MAX_BET)} per round (all animals together).`, `Up to ${n(L.BAUCUA_MAX_BETS)} bets per round.`],
-      },
+      section("How it works", [
+        tile("🎲", "Three dice", "Every die shows one of six animals: tiger, gourd, rooster, fish, crab, shrimp.", { dice: ["tiger", "crab", "fish"] }),
+        tile("🎯", "Your bet", "On one animal or several - everybody bets on the same roll.", { animals: ["tiger", "gourd", "rooster", "fish", "crab", "shrimp"] }),
+        tile("💰", "Pays", `Per die with your animal: 1 ${baucua.PAYOUT[1]}×, 2 ${baucua.PAYOUT[2]}×, 3 ${baucua.PAYOUT[3]}× (your bet included).`, { tags: [[`1 · ${baucua.PAYOUT[1]}×`], [`2 · ${baucua.PAYOUT[2]}×`, "blue"], [`3 · ${baucua.PAYOUT[3]}×`, "gold"]] }),
+        tile("📊", "Payback", `About ${(baucua.rtp() * 100).toFixed(1)}% - the same for every animal.`, { big: (baucua.rtp() * 100).toFixed(1) + "%" }),
+        tile("⏱️", "The timer", `The first bet starts it (${seconds(config.BAUCUA_TIMER)}) - then the bowl shakes.`, { steps: ["🪙", "⏱️", "🥣"] }),
+        tile("🔒", "Provably fair", "The seed's hash before the bets, the seed after the roll.", { emoji: ["🔒", "🔑"] }),
+      ]),
+      section("Limits", [
+        tile("🪙", "Bets", `At least 🪙 ${n(L.BAUCUA_MIN_BET)} per bet, at most 🪙 ${n(L.BAUCUA_MAX_BET)} per round.`, { coins: [n(L.BAUCUA_MIN_BET), n(L.BAUCUA_MAX_BET)] }),
+        tile("🔢", "Count", `Up to ${n(L.BAUCUA_MAX_BETS)} bets per round.`, { big: n(L.BAUCUA_MAX_BETS) }),
+      ]),
     ],
   }),
 
-  leaderboard: (L, world) => ({
-    title: "Leaderboard",
-    sections: [
-      {
-        heading: "How it works",
-        items: [
-          "All players by their coins.",
-          "Without a season it is live - always up to date. The arrows show who went up or down since midnight.",
-          `${require("./season_slots").isSeason(world) ? "" : "🪙 "}${n(coins.wallet(world).dailyBonus())} free coins every day for everybody - they pop up on your first visit of the day, claim them there (🎁 in the top bar: the time to the next ones).`,
-          ...(L.CASHBACK_PERCENT > 0 ? [`💸 Daily cashback: after midnight ${L.CASHBACK_PERCENT}% of what you lost in the games the day before comes back${L.CASHBACK_MAX > 0 ? ` (up to ${n(L.CASHBACK_MAX)})` : ""}.${require("./season_slots").isSeason(world) ? " The coins of second chances don't count: they are lost first - only what you lose beyond them gets cashback." : ""}`] : []),
-          ...(require("./streak").current(world).on ? [`🔥 Daily streak: claim them day after day and they grow - up to ${n(Math.round((coins.wallet(world).dailyBonus() * Math.max(...require("./streak").current(world).rewards)) / 100))} a day. Miss a day and it starts over.`] : []),
-        ],
-      },
-      {
-        heading: "Ranking",
-        items: [
-          "The most coins first.",
-          "In a season every player shows 💔 the second chances used and 🫴🏽 the coins wagered (hover over them for the words). The same coins: fewer second chances first - the same second chances: more coins wagered first. Where this made the difference, it is marked.",
-          "A place needs a wager: the start coins times the season's wager factor - and every daily bonus you claim in the season adds its amount times the factor too (per chance: a second chance starts it again). Until then you're on the board without a place, with your 💔 second chances used.",
-          "Only players with the same coins, second chances and coins wagered share a place - and its prize (two players 1st - the next one is 3rd).",
-          "Without a season: the same coins, the same place.",
-        ],
-      },
-      {
-        heading: "Seasons",
-        items: [
-          "A season runs from a start to an end. Hit Start to play in it - you get the start budget (and the daily coins you missed since it began). Only players who started are on the leaderboard.",
-          "Everybody starts with the same coins - the most coins at the end wins (the prizes, if the season has any). The winners stay on the winner page.",
-          "In a season the leaderboard is updated as often as the season says - the arrows show the change since the update before.",
-          "Your balance from before the season is kept (🪙 next to the coins of the season) - when the season is over you get it back, with your season coins on top.",
-          "Lost everything? A season can have second chances: start again with the budget - the first right away, every further one after the wait the season sets (usually the next day).",
-          "Before a season starts and before it ends, the casino closes for a moment: running games finish, no new bets, then a short countdown.",
-          "Click the season next to the title to see it: how long it runs, the coins, the prizes.",
-        ],
-      },
-    ],
-  }),
+  leaderboard: (L, world) => {
+    const season = require("./season_slots").isSeason(world);
+    const streak = require("./streak").current(world);
+    const daily = coins.wallet(world).dailyBonus();
+    return {
+      title: "Leaderboard",
+      sub: "Everybody by their coins - and the seasons to win.",
+      sections: [
+        section("How it works", [
+          tile("🏆", "By coins", "All players, the most coins first.", { emoji: ["🥇", "🥈", "🥉"] }),
+          tile("📶", "Live", "Without a season always up to date. The arrows: up or down since midnight.", { tags: [["▲ 2", "green"], ["▼ 1", "red"]] }),
+          tile("🎁", "Daily coins", `${season ? "" : "🪙 "}${n(daily)} free every day - claim them on your first visit.`, { coins: [n(daily)] }),
+          ...(L.CASHBACK_PERCENT > 0 ? [tile("💸", "Cashback", `After midnight ${L.CASHBACK_PERCENT}% of yesterday's losses come back${L.CASHBACK_MAX > 0 ? ` (up to ${n(L.CASHBACK_MAX)})` : ""}.${season ? " Second chances' coins don't count." : ""}`, { tags: [[`${L.CASHBACK_PERCENT}%`, "green"]] })] : []),
+          ...(streak.on ? [tile("🔥", "Daily streak", `Claim day after day and it grows - up to ${n(Math.round((daily * Math.max(...streak.rewards)) / 100))} a day. Miss one: it starts over.`, { steps: ["🔥", "🔥🔥", "🔥🔥🔥"] })] : []),
+        ]),
+        section("Ranking", [
+          tile("💔", "In a season", "The same coins: fewer second chances first - then more coins wagered.", { tags: [["💔 1"], ["🫴🏽 50k"]] }),
+          tile("🎟️", "A place", "Needs a wager: the start coins × the season's factor (daily bonuses add to it).", { steps: ["🪙", "🫴🏽", "🏅"] }),
+          tile("🤝", "Shared places", "Only the same coins, chances and wagers share a place - and its prize.", { tags: [["1st"], ["1st"], ["3rd", "muted"]] }),
+        ]),
+        section("Seasons", [
+          tile("🗓️", "Start", "Hit Start to play: the start budget (and the daily coins you missed).", { steps: ["▶️", "🪙", "🏁"] }),
+          tile("🏁", "Win", "The same coins for everybody - the most at the end wins the prizes.", { emoji: ["🏆"] }),
+          tile("💼", "Your coins", "Kept aside meanwhile - back after the season, with your season coins on top.", { coins: ["kept"] }),
+          tile("💔", "Second chances", "Lost everything? Start again with the budget - the next one after a wait.", { emoji: ["💔", "🔁"] }),
+          tile("⏸️", "Closing", "Before a season starts and ends the casino closes for a moment.", { steps: ["🎲", "⏸️", "▶️"] }),
+        ]),
+      ],
+    };
+  },
 };
 
 // The max bet by balance (every game but the overview), null: no cap
@@ -342,7 +303,7 @@ function get(game, world = "") {
   const L = limits.forWorld(world);
   const about = GAMES[game](L, world);
   const cap = capText(L, world, game);
-  if (cap && game !== "leaderboard" && game !== "rpg") about.sections.push({ heading: "Max bet", items: [cap] });
+  if (cap && game !== "leaderboard" && game !== "rpg") about.sections.push(section("Max bet", [tile("📏", "By your balance", cap, { tags: [[`${Math.round(limits.capRule(world, game).share * 100) / 100}%`, "gold"]] })]));
   return about;
 }
 
