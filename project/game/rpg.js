@@ -1942,13 +1942,14 @@ function healHero(run, hero, amount) {
 }
 
 // Plays a card of a hero's hand: {uid, target (a monster's id), ally (a hero's name)} -> an error or null
+const NOT_IN_HAND = "That card isn't in your hand.";
 function play(run, name, input, rng = Math.random) {
   if (run.phase != "fight") return "No fight now.";
   const hero = run.heroes.find((h) => h.name == name);
   if (!hero || hero.down) return "You are down.";
   if (hero.ended) return "You ended your turn.";
   const index = hero.hand.findIndex((c) => c.uid == (input && input.uid));
-  if (index < 0) return "That card isn't in your hand.";
+  if (index < 0) return NOT_IN_HAND;
   const card = cardInfo(hero.hand[index].id);
   if (hero.energy < card.cost) return `${card.name} needs ${card.cost} mana.`;
   const foes = alive(run.monsters);
@@ -2609,6 +2610,7 @@ module.exports = {
   setAway,
   POTION_MANA,
   POTION_HEAL,
+  NOT_IN_HAND,
   get DEATH_COOLDOWN() {
     return config.RPG_DEATH_TIME;
   },

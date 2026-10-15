@@ -689,7 +689,9 @@ module.exports = function (io, options = {}) {
       const party = myRun();
       if (!party) return;
       const problem = rpg.play(party.run, username, { uid: String(data.uid), target: data.target != null ? String(data.target) : null, ally: data.ally != null ? String(data.ally) : null });
-      if (problem) return error(problem);
+      // (a card gone already: a click sent twice - nothing to say)
+      if (problem && problem !== rpg.NOT_IN_HAND) return error(problem);
+      if (problem) return;
       afterChange(party);
     });
 

@@ -165,7 +165,10 @@ socket.on("coins", (data) => {
   myCoins = data.coins;
   render();
 });
-socket.on("rpgError", (message) => showToast(message, "error"));
+socket.on("rpgError", (message) => {
+  sentPlays.clear();
+  showToast(message, "error");
+});
 socket.on("rpgRules", (data) => {
   rules = data;
   render();
@@ -188,11 +191,20 @@ socket.on("rpgParty", (data) => {
   receiveParty(data);
 });
 
+// Cards sent to be played, not yet gone from the hand (a double click, a click during the monsters' turn: sent once)
+var sentPlays = new Set();
+function playCard(data) {
+  if (sentPlays.has(data.uid)) return;
+  sentPlays.add(data.uid);
+  socket.emit("play", data);
+}
+
 // The room the party is in (rooms done, the phase) and since when
 var roomKey = "";
 var roomSince = 0;
 var DOOR_DELAY = 800; // ms
 function receiveParty(data) {
+  sentPlays.clear();
   // (a new room: when - a door clicked right after doesn't count, see the votes)
   var where = data && data.run ? data.run.rooms.length + ":" + data.run.phase : "";
   if (where != roomKey) {
@@ -2162,13 +2174,13 @@ function clickCard(uid) {
   var fallen = run.heroes.filter((h) => h.down);
   if (card.target == "foe") {
     var aimed = foes.find((m) => m.id == target) || (foes.length == 1 ? foes[0] : null);
-    if (aimed) return socket.emit("play", { uid: uid, target: aimed.id });
+    if (aimed) return playCard({ uid: uid, target: aimed.id });
   } else if (card.target == "ally") {
-    if (standing.length == 1) return socket.emit("play", { uid: uid, ally: myName });
+    if (standing.length == 1) return playCard({ uid: uid, ally: myName });
   } else if (card.target == "fallen") {
-    if (fallen.length == 1) return socket.emit("play", { uid: uid, ally: fallen[0].name });
+    if (fallen.length == 1) return playCard({ uid: uid, ally: fallen[0].name });
     if (!fallen.length) return showToast("Nobody to bring back.", "error");
-  } else return socket.emit("play", { uid: uid });
+  } else return playCard({ uid: uid });
   aiming = { uid: uid, target: card.target };
   render();
 }
@@ -2216,10 +2228,10 @@ document.addEventListener("pointerup", (event) => {
   var entry = findInHand(current.uid);
   if (over && entry) {
     var t = cardOf(entry.id).target;
-    if (t == "foe" && over.kind == "foe") socket.emit("play", { uid: current.uid, target: over.id });
-    else if ((t == "ally" || t == "fallen") && over.kind == "hero") socket.emit("play", { uid: current.uid, ally: over.id });
-    else if (t == "ally" && over.kind != "foe") socket.emit("play", { uid: current.uid, ally: myName });
-    else if (t == "none") socket.emit("play", { uid: current.uid });
+    if (t == "foe" && over.kind == "foe") playCard({ uid: current.uid, target: over.id });
+    else if ((t == "ally" || t == "fallen") && over.kind == "hero") playCard({ uid: current.uid, ally: over.id });
+    else if (t == "ally" && over.kind != "foe") playCard({ uid: current.uid, ally: myName });
+    else if (t == "none") playCard({ uid: current.uid });
   }
   aiming = null;
   render();
@@ -2354,13 +2366,13 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   } else if (act == "card") clickCard(id);
   else if (act == "target") {
     if (aiming && aiming.target == "foe") {
-      socket.emit("play", { uid: aiming.uid, target: id });
+      playCard({ uid: aiming.uid, target: id });
       aiming = null;
     } else target = id;
     render();
   } else if (act == "ally") {
     if (aiming && aiming.target != "foe") {
-      socket.emit("play", { uid: aiming.uid, ally: id });
+      playCard({ uid: aiming.uid, ally: id });
       aiming = null;
       render();
     }
