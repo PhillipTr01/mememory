@@ -1539,10 +1539,17 @@ function renderRun() {
       card.dataset.act = m.down ? "" : "target";
       card.dataset.id = m.id;
       if (m.intent) card.appendChild(intentBadge(m));
-      var name = el("div", "rpg-monster-name", m.name + (m.undead ? " 🦴" : ""));
+      var name = el("div", "rpg-monster-name", m.name);
       if (m.affix) name.title = rules.affixes[m.affix].text;
       var art = el("div", "rpg-monster-art");
       art.append(el("div", "rpg-monster-icon", m.icon), el("i", "rpg-monster-ground"));
+      // (what it is: a beast, the undead ... - a badge on the bottom edge, like a card's class)
+      var type = m.type && rules.monsterTypes && rules.monsterTypes[m.type];
+      var badge = null;
+      if (type) {
+        badge = el("span", "rpg-monster-type", type.icon);
+        badge.title = type.name;
+      }
       // (its armor: the share of every hit it takes off)
       if (m.armor) {
         var armor = el("span", "rpg-monster-armor", "🛡 " + Math.round(m.armor * 100) + "%");
@@ -1562,6 +1569,7 @@ function renderRun() {
         card.appendChild(traits);
       }
       if (m.affix) card.appendChild(el("div", "rpg-affix", rules.affixes[m.affix].icon + " " + rules.affixes[m.affix].text));
+      if (badge) card.appendChild(badge);
       return card;
     });
   } else if (run.phase == "between") scene = [];
@@ -1699,7 +1707,7 @@ function renderPartyStats(run) {
         ["⚔️", h.atk, "Attack"],
         ["🛡️", h.def, "Armor: less damage, more block"],
         ["🍀", h.luck + (h.perks.crit || 0) + "%", "Crits"],
-        ["🦊", h.agi + "%", h.cls == "rogue" ? "Dodge, sense rooms" : "Dodge"],
+        ["🦊", h.agi + "%", h.cls == "rogue" ? "Dodge, sense rooms (far better)" : "Dodge, sense rooms"],
         [null, h.potions, "Potions"],
       ].forEach(([icon, value, tip]) => {
         var chip = el("span", "rpg-pstat-chip", icon ? icon + " " + value : "");
@@ -1859,10 +1867,15 @@ function shopNodes(run, me) {
   if (!offer) return [];
   var price = (id) => offer.prices[id];
   var tag = (id, sold) => el("span", "rpg-price" + (!sold && price(id) > myCoins ? " dear" : ""), sold ? "Sold ✓" : "🪙 " + formatCoins(price(id)));
+  // (a visit: a few cards, one relic - the rest stays on the table)
+  var limit = rules.merchantBuy || { cards: 2, relics: 1 };
+  var cardsLeft = limit.cards - offer.bought.filter((id) => offer.cards.includes(id)).length;
+  var relicsLeft = limit.relics - offer.bought.filter((id) => offer.relics.includes(id)).length;
   var cards = el("div", "rpg-shop-row");
   offer.cards.forEach((id) => {
     var sold = offer.bought.includes(id);
-    var card = cardEl(id, { tag: "button", act: sold ? "" : "buy", className: "pickable" + (sold ? " off" : "") });
+    var shut = !sold && cardsLeft <= 0;
+    var card = cardEl(id, { tag: "button", act: sold || shut ? "" : "buy", className: "pickable" + (sold || shut ? " off" : "") });
     card.appendChild(tag(id, sold));
     cards.appendChild(card);
   });
@@ -1870,9 +1883,10 @@ function shopNodes(run, me) {
   offer.relics.forEach((id) => {
     var relic = rules.relics[id];
     var sold = offer.bought.includes(id);
-    var tile = el("button", "rpg-relic-tile" + (sold ? " off" : ""));
+    var shut = !sold && relicsLeft <= 0;
+    var tile = el("button", "rpg-relic-tile" + (sold || shut ? " off" : ""));
     tile.type = "button";
-    if (!sold) {
+    if (!sold && !shut) {
       tile.dataset.act = "buy";
       tile.dataset.id = id;
     }
@@ -1884,7 +1898,7 @@ function shopNodes(run, me) {
     withFlask(button(" Potion · 🪙 " + formatCoins(price("potion")) + " (" + me.potions + "/" + (me.potionsMax || rules.potionsMax) + ")", "buy", { id: "potion", disabled: me.potions >= (me.potionsMax || rules.potionsMax) || myCoins < price("potion") })),
     button(offer.removed ? "🗑️ Card removed ✓" : "🗑️ Remove a card · 🪙 " + formatCoins(price("remove")), "pickMode", { id: "remove", className: picking == "remove" ? "voted" : "", disabled: offer.removed || myCoins < price("remove") || me.deck.length <= rules.deckLeast, title: "Remove a card for this run" }),
   );
-  var nodes = [el("div", "rpg-shop-coins", "Your coins: 🪙 " + formatCoins(myCoins)), el("div", "rpg-label", "Cards · this run"), cards, el("div", "rpg-label", "Relics · this run"), relics, el("div", "rpg-label", "Services"), services];
+  var nodes = [el("div", "rpg-shop-coins", "Your coins: 🪙 " + formatCoins(myCoins)), el("div", "rpg-label", "Cards · this run · " + Math.max(0, cardsLeft) + " of " + limit.cards + " left"), cards, el("div", "rpg-label", "Relics · this run · " + Math.max(0, relicsLeft) + " of " + limit.relics + " left"), relics, el("div", "rpg-label", "Services"), services];
   if (picking == "remove" && !offer.removed) nodes.push(...deckPicker(me, "Pick a card to remove", "remove"));
   return nodes;
 }
@@ -1955,9 +1969,10 @@ function renderMap(run) {
   var box = document.getElementById("rpgMap");
   box.style.height = height + "px";
   morphChildren(box, nodes);
+  // (the chance to sense a room: instinct raises it - a Rogue far more)
   var sense = document.getElementById("rpgMapSense");
   sense.innerText = "🦊 " + run.sense + "%";
-  sense.title = "Chance to sense a room - a Rogue's instinct raises it";
+  sense.title = "Chance to sense a room - instinct raises it, a Rogue far more";
   var count = Object.keys(run.votes).length;
   document.getElementById("rpgMapNote").innerText = party.result ? "" : between ? (run.heroes.length > 1 ? count + " / " + run.heroes.length + " voted · a tie: random" : "Pick a lit room") : "";
 }

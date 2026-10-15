@@ -247,7 +247,7 @@ function into(run, kind) {
 
 test("rpg: the map - a Rogue's instinct senses what a room is; rooms to choose in (camp fire, shrine, trap, chest, encounters), the merchant sells cards, relics, potions and takes a card", () => {
   const run = rpg.newRun(1, [{ name: "a", hero: rpg.newHero("warrior") }]);
-  // Sensed: SENSE_BASE % - far more with a Rogue of high instinct, a warrior's instinct does nothing
+  // Sensed: everybody a little (more with instinct) - a Rogue far more
   const sensed = (cls, agi) => {
     run.heroes[0].cls = cls;
     run.heroes[0].agi = agi;
@@ -262,9 +262,11 @@ test("rpg: the map - a Rogue's instinct senses what a room is; rooms to choose i
     return n / all;
   };
   const none = sensed("warrior", 40);
+  const young = sensed("rogue", 10);
   const scout = sensed("rogue", 40);
-  assert.ok(none > 0.1 && none < 0.2, String(none));
-  assert.ok(scout > 0.8 && scout < 0.95, String(scout));
+  assert.ok(none > 0.2 && none < 0.4 && none < young, String(none));
+  assert.ok(young > 0.3 && young < 0.5, String(young));
+  assert.ok(scout > 0.75 && scout < 0.95, String(scout));
   run.heroes[0].cls = "warrior";
   run.heroes[0].agi = 0;
   rpg.enterRoom(run, 0);
@@ -343,6 +345,11 @@ test("rpg: the map - a Rogue's instinct senses what a room is; rooms to choose i
   assert.match(rpg.canBuy(run, "a", card).error, /Sold/);
   rpg.bought(run, "a", offer.relics[0]);
   assert.ok(me.relics.includes(offer.relics[0]));
+  // (a visit: one relic, two cards - potions up to the max)
+  assert.match(rpg.canBuy(run, "a", offer.relics[1]).error, /One relic/);
+  rpg.bought(run, "a", offer.cards[1]);
+  assert.match(rpg.canBuy(run, "a", offer.cards[2]).error, /2 cards/);
+  me.deck.pop();
   assert.strictEqual(rpg.canBuy(run, "a", "remove:0").price, rpg.merchantPrices(1).remove);
   rpg.bought(run, "a", "remove:1");
   assert.strictEqual(me.deck.length, deck);

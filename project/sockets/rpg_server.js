@@ -125,6 +125,7 @@ module.exports = function (io, options = {}) {
       potionsTop: rpg.POTIONS_TOP,
       potionMana: rpg.POTION_MANA,
       potionHeal: rpg.POTION_HEAL,
+      merchantBuy: rpg.MERCHANT_BUY,
       potionPrice: rpg.POTION_PRICE,
       stats: rpg.STATS,
       levelMax: rpg.LEVEL_MAX,
@@ -161,6 +162,7 @@ module.exports = function (io, options = {}) {
       relics: rpg.RELICS,
       affixes: rpg.AFFIXES,
       monsterTraits: rpg.MONSTER_TRAITS,
+      monsterTypes: rpg.MONSTER_TYPES,
       doors: rpg.DOORS,
     };
   }

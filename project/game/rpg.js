@@ -71,7 +71,7 @@ const STATS = {
   atk: { name: "Strength", icon: "⚔️", base: 10, per: 1.5, about: "+1.5 attack", desc: "The damage of your attacks." },
   def: { name: "Armor", icon: "🛡️", base: 0, per: 1, about: "+1 armor", desc: "Less damage taken, more block." },
   luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, soft: [50, 80], about: "+0.6% luck", desc: "Crits, traps, loot. Grows slower past 50%." },
-  agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, soft: [30, 60], about: "+0.4% dodge", desc: "Dodge chance. A Rogue also senses rooms. Grows slower past 30%." },
+  agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, soft: [30, 60], about: "+0.4% dodge", desc: "Dodge, sense rooms - a Rogue far better. Grows slower past 30%." },
 };
 const STAT_IDS = Object.keys(STATS);
 const LEVEL_MAX = 100;
@@ -294,38 +294,47 @@ const MOVES = {
 // The monsters: a group per 5 floors (hp, atk: times the floor's; dodge: misses a hit that often; moves: what it does)
 const MONSTERS = [
   [
-    { name: "Slime", icon: "🟢", hp: 1, atk: 0.8, moves: ["attack", "attack", "defend"] },
-    { name: "Rat", icon: "🐀", hp: 0.7, atk: 1, moves: ["attack", "poison"] },
-    { name: "Bat", icon: "🦇", hp: 0.6, atk: 0.9, dodge: 0.2, moves: ["attack", "drain"] },
+    { name: "Slime", icon: "🟢", type: "ooze", hp: 1, atk: 0.8, moves: ["attack", "attack", "defend"] },
+    { name: "Rat", icon: "🐀", type: "beast", hp: 0.7, atk: 1, moves: ["attack", "poison"] },
+    { name: "Bat", icon: "🦇", type: "beast", hp: 0.6, atk: 0.9, dodge: 0.2, moves: ["attack", "drain"] },
   ],
   [
-    { name: "Goblin", icon: "👺", hp: 1, atk: 1, moves: ["attack", "attack", "steal"] },
-    { name: "Spider", icon: "🕷️", hp: 0.8, atk: 1.1, traits: ["venomproof"], moves: ["poison", "attack"] },
-    { name: "Wolf", icon: "🐺", hp: 0.9, atk: 1.05, dodge: 0.1, moves: ["attack", "attack", "howl"] },
+    { name: "Goblin", icon: "👺", type: "humanoid", hp: 1, atk: 1, moves: ["attack", "attack", "steal"] },
+    { name: "Spider", icon: "🕷️", type: "beast", hp: 0.8, atk: 1.1, traits: ["venomproof"], moves: ["poison", "attack"] },
+    { name: "Wolf", icon: "🐺", type: "beast", hp: 0.9, atk: 1.05, dodge: 0.1, moves: ["attack", "attack", "howl"] },
   ],
   [
-    { name: "Skeleton", icon: "💀", hp: 1, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "attack", "defend"] },
-    { name: "Ghost", icon: "👻", hp: 0.7, atk: 1, undead: true, moves: ["attack", "fade", "drain"] },
-    { name: "Zombie", icon: "🧟", hp: 1.4, atk: 0.8, undead: true, traits: ["bulky"], moves: ["attack", "smash", "poison"] },
+    { name: "Skeleton", icon: "💀", type: "undead", hp: 1, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "attack", "defend"] },
+    { name: "Ghost", icon: "👻", type: "undead", hp: 0.7, atk: 1, undead: true, moves: ["attack", "fade", "drain"] },
+    { name: "Zombie", icon: "🧟", type: "undead", hp: 1.4, atk: 0.8, undead: true, traits: ["bulky"], moves: ["attack", "smash", "poison"] },
   ],
   [
-    { name: "Orc", icon: "👹", hp: 1.2, atk: 1, traits: ["spiked"], moves: ["attack", "smash", "howl"] },
-    { name: "Troll", icon: "🧌", hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"] },
-    { name: "Shaman", icon: "🧙", hp: 0.8, atk: 0.9, moves: ["attack", "heal", "burn", "purge"] },
+    { name: "Orc", icon: "👹", type: "humanoid", hp: 1.2, atk: 1, traits: ["spiked"], moves: ["attack", "smash", "howl"] },
+    { name: "Troll", icon: "🧌", type: "humanoid", hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"] },
+    { name: "Shaman", icon: "🧙", type: "humanoid", hp: 0.8, atk: 0.9, moves: ["attack", "heal", "burn", "purge"] },
   ],
   [
-    { name: "Demon", icon: "😈", hp: 1.1, atk: 1.1, traits: ["fireproof"], moves: ["attack", "burn", "smash"] },
-    { name: "Golem", icon: "🗿", hp: 1.4, atk: 0.85, armor: 0.1, traits: ["venomproof", "bulky"], moves: ["smash", "defend", "attack"] },
-    { name: "Wraith", icon: "🌫️", hp: 0.9, atk: 1.1, undead: true, dodge: 0.15, moves: ["drain", "fade", "attack", "curse"] },
+    { name: "Demon", icon: "😈", type: "demon", hp: 1.1, atk: 1.1, traits: ["fireproof"], moves: ["attack", "burn", "smash"] },
+    { name: "Golem", icon: "🗿", type: "construct", hp: 1.4, atk: 0.85, armor: 0.1, traits: ["venomproof", "bulky"], moves: ["smash", "defend", "attack"] },
+    { name: "Wraith", icon: "🌫️", type: "undead", hp: 0.9, atk: 1.1, undead: true, dodge: 0.15, moves: ["drain", "fade", "attack", "curse"] },
   ],
   [
-    { name: "Hellhound", icon: "🐕", hp: 1, atk: 1.15, traits: ["fireproof", "spiked"], moves: ["attack", "burn", "howl"] },
-    { name: "Gargoyle", icon: "🗽", hp: 1.25, atk: 0.95, armor: 0.15, traits: ["venomproof", "bulky"], moves: ["smash", "defend", "attack"] },
-    { name: "Cultist", icon: "🧛", hp: 0.9, atk: 1, moves: ["attack", "curse", "purge", "drain"] },
+    { name: "Hellhound", icon: "🐕", type: "demon", hp: 1, atk: 1.15, traits: ["fireproof", "spiked"], moves: ["attack", "burn", "howl"] },
+    { name: "Gargoyle", icon: "🗽", type: "construct", hp: 1.25, atk: 0.95, armor: 0.15, traits: ["venomproof", "bulky"], moves: ["smash", "defend", "attack"] },
+    { name: "Cultist", icon: "🧛", type: "humanoid", hp: 0.9, atk: 1, moves: ["attack", "curse", "purge", "drain"] },
   ],
 ];
 
 // What makes a monster hard for some heroes - shown on it
+// What a monster is (a badge on its card) - the undead: what holy cards smite
+const MONSTER_TYPES = {
+  beast: { name: "Beast", icon: "🐾" },
+  ooze: { name: "Ooze", icon: "💧" },
+  humanoid: { name: "Humanoid", icon: "👤" },
+  undead: { name: "Undead", icon: "🦴" },
+  demon: { name: "Demon", icon: "♨️" },
+  construct: { name: "Construct", icon: "⚙️" },
+};
 const MONSTER_TRAITS = {
   venomproof: { name: "Venomproof", icon: "🧪", text: "Poison does nothing." },
   fireproof: { name: "Fireproof", icon: "🔥", text: "Burns do nothing." },
@@ -336,12 +345,12 @@ const MONSTER_TRAITS = {
 // The bosses: the last room of every BOSS_EVERY-th floor - one per group of floors, a second phase at half HP
 // (phase: what changes then - more attack, other moves, a summon of its kind)
 const BOSSES = [
-  { name: "Slime King", icon: "🫧", hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "summon"], summon: 0, phase: { atk: 1.3, moves: ["smash", "summon", "attack"], text: "splits and swells with rage" } },
-  { name: "Goblin Warlord", icon: "👺", hp: 1.2, atk: 1, moves: ["attack", "smash", "steal", "summon"], summon: 1, phase: { atk: 1.35, moves: ["smash", "howl", "attack"], text: "calls the whole tribe" } },
-  { name: "Bone Lord", icon: "☠️", hp: 1.2, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "drain", "summon"], summon: 2, phase: { atk: 1.3, moves: ["drain", "smash", "summon", "curse"], text: "raises the dead around it" } },
-  { name: "Troll Chieftain", icon: "🧌", hp: 1.15, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"], summon: 3, phase: { atk: 1.35, moves: ["smash", "attack", "regen", "howl"], text: "goes berserk" } },
-  { name: "Demon Prince", icon: "👿", hp: 1, atk: 1, traits: ["fireproof"], moves: ["attack", "burn", "smash", "summon"], summon: 4, phase: { atk: 1.35, moves: ["burn", "smash", "curse"], text: "bursts into flames" } },
-  { name: "The Lich", icon: "🧟", hp: 0.9, atk: 0.85, undead: true, traits: ["venomproof"], moves: ["curse", "drain", "summon", "attack"], summon: 5, phase: { atk: 1.25, moves: ["curse", "drain", "burn", "smash"], text: "tears open its phylactery" } },
+  { name: "Slime King", icon: "🫧", type: "ooze", hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "summon"], summon: 0, phase: { atk: 1.3, moves: ["smash", "summon", "attack"], text: "splits and swells with rage" } },
+  { name: "Goblin Warlord", icon: "👺", type: "humanoid", hp: 1.2, atk: 1, moves: ["attack", "smash", "steal", "summon"], summon: 1, phase: { atk: 1.35, moves: ["smash", "howl", "attack"], text: "calls the whole tribe" } },
+  { name: "Bone Lord", icon: "☠️", type: "undead", hp: 1.2, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "drain", "summon"], summon: 2, phase: { atk: 1.3, moves: ["drain", "smash", "summon", "curse"], text: "raises the dead around it" } },
+  { name: "Troll Chieftain", icon: "🧌", type: "humanoid", hp: 1.15, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"], summon: 3, phase: { atk: 1.35, moves: ["smash", "attack", "regen", "howl"], text: "goes berserk" } },
+  { name: "Demon Prince", icon: "👿", type: "demon", hp: 1, atk: 1, traits: ["fireproof"], moves: ["attack", "burn", "smash", "summon"], summon: 4, phase: { atk: 1.35, moves: ["burn", "smash", "curse"], text: "bursts into flames" } },
+  { name: "The Lich", icon: "🧟", type: "undead", hp: 0.9, atk: 0.85, undead: true, traits: ["venomproof"], moves: ["curse", "drain", "summon", "attack"], summon: 5, phase: { atk: 1.25, moves: ["curse", "drain", "burn", "smash"], text: "tears open its phylactery" } },
 ];
 const MONSTER_HP = 52;
 const MONSTER_HP_GROWTH = 1.125;
@@ -677,7 +686,7 @@ const ABILITIES = {
   paladin: { name: "Shield the Party", icon: "🛡️", trap: 0.006, shrine: 0.005, about: "Traps -0.6% and shrines -0.5% damage per level." },
   cleric: { name: "Sanctuary", icon: "🕊️", rest: 0.01, rise: 0.003, about: "Camp fires +1% healing, the fallen rise with +0.3% HP per level." },
   mage: { name: "Arcane Insight", icon: "🔮", discount: 0.003, rerollEvery: 25, about: "Merchant -0.3% per level, a card reroll a run (+1 every 25 levels)." },
-  rogue: { name: "Scout", icon: "🦊", about: "Senses hidden rooms - more with every level." },
+  rogue: { name: "Scout", icon: "🦊", about: "Senses hidden rooms far better - more with every level." },
 };
 
 // The level of a class's ability in a run: the highest main-stat level of its heroes standing (null: none of them)
@@ -966,10 +975,10 @@ const ROOM_KINDS = {
 // What waits in a room of the map (weights) - mostly fights
 const DOOR_POOL = { fight: 15, hard: 5.4, trap: 0.6, chest: 1, rest: 1, shrine: 0.5, merchant: 0.6, event: 1.4 };
 const LANES = 4; // the columns of the map
-// What a room of the map is - hidden; the party senses it (sees its kind) that often: SENSE_BASE % - with a Rogue
-// SENSE_ROGUE x its instinct (agility) more
-const SENSE_BASE = 15;
-const SENSE_ROGUE = 1.9;
+// What a room of the map is - hidden; the party senses it (sees its kind): its best hero's base + per point of
+// instinct (agility) - a Rogue far better at it
+const SENSE = { base: 10, per: 0.5 };
+const SENSE_ROGUE = { base: 25, per: 1.5 };
 const SENSE_MAX = 90;
 // (kept for the page: one of the doors to pick)
 const DOORS = LANES;
@@ -1070,8 +1079,11 @@ function doorsFor(run) {
 
 // How often the party senses what a room is (%)
 function senseChance(run) {
-  const rogues = alive(run.heroes).filter((h) => h.cls == "rogue");
-  return Math.min(SENSE_MAX, Math.round(SENSE_BASE + SENSE_ROGUE * Math.max(0, ...rogues.map((h) => h.agi))));
+  const of = (h) => {
+    const s = h.cls == "rogue" ? SENSE_ROGUE : SENSE;
+    return s.base + s.per * (h.agi || 0);
+  };
+  return Math.min(SENSE_MAX, Math.round(Math.max(0, ...alive(run.heroes).map(of))));
 }
 
 // A room's kind as the party knows it (null: hidden)
@@ -1113,7 +1125,7 @@ function monster(floor, size, kind, rank, depth = 0, rng = Math.random) {
   const max = Math.max(1, Math.round(hp));
   // (an elite also smashes)
   const moves = rank.id != "normal" && !kind.moves.includes("smash") ? [...kind.moves, "smash"] : kind.moves;
-  const foe = { id: "m" + ++monsterCount, name: rank.prefix + kind.name, icon: kind.icon, hp: max, maxHp: max, atk: Math.max(1, Math.round(atk)), armor: armorOf(floor, kind, rank), dodge: kind.dodge || 0, undead: !!kind.undead, traits: kind.traits || [], moves, rank: rank.id, effects: {}, intent: null, affix: null };
+  const foe = { id: "m" + ++monsterCount, name: rank.prefix + kind.name, icon: kind.icon, hp: max, maxHp: max, atk: Math.max(1, Math.round(atk)), armor: armorOf(floor, kind, rank), dodge: kind.dodge || 0, undead: !!kind.undead, type: kind.type || null, traits: kind.traits || [], moves, rank: rank.id, effects: {}, intent: null, affix: null };
   // (a boss: its own name, its second phase, its summons)
   if (kind.phase) {
     foe.name = kind.name;
@@ -1484,7 +1496,8 @@ function enterRoom(run, door = 0, rng = Math.random) {
     for (const hero of heroes) {
       const cards = rewardFor(hero, rng, MERCHANT_CARDS);
       const relics = relicOffer(hero, rng, MERCHANT_RELICS);
-      const price = { potion: round100(potionPrice(hero.maxFloor) * off), remove: prices.remove };
+      // (the floor's prices - the deeper, the dearer)
+      const price = { potion: round100(potionPrice(run.floor) * off), remove: prices.remove };
       for (const id of cards) price[id] = Math.round((prices.card * CARD_PRICE[CARDS[id].rarity]) / 100) * 100;
       for (const id of relics) price[id] = prices.relic;
       run.event.offers[hero.name] = { cards, relics, bought: [], removed: false, prices: price };
@@ -1686,6 +1699,8 @@ function choose(run, name, input = {}, rng = Math.random) {
   return null;
 }
 
+// What a hero may buy at one merchant
+const MERCHANT_BUY = { cards: 2, relics: 1 };
 // The merchant's prices (coins): a potion, a (common) card, a relic, a card taken out of the deck
 const CARD_PRICE = { common: 1, rare: 1.5, epic: 2.5, legendary: 3.5, basic: 1, mythic: 5 };
 function merchantPrices(floor) {
@@ -1711,6 +1726,11 @@ function canBuy(run, name, item) {
   }
   if (offer.bought.includes(item)) return { error: "Sold already." };
   if (!offer.cards.includes(item) && !offer.relics.includes(item)) return { error: "He doesn't sell that." };
+  // (a visit: at most MERCHANT_BUY.cards cards and MERCHANT_BUY.relics relics - potions up to the max, a card removed)
+  const relic = offer.relics.includes(item);
+  const had = offer.bought.filter((id) => offer.relics.includes(id) == relic).length;
+  if (relic && had >= MERCHANT_BUY.relics) return { error: `One relic a visit.` };
+  if (!relic && had >= MERCHANT_BUY.cards) return { error: `${MERCHANT_BUY.cards} cards a visit.` };
   return { price: offer.prices[item] };
 }
 
@@ -2364,6 +2384,7 @@ function runView(run) {
       id: m.id,
       name: m.name,
       icon: m.icon,
+      type: m.type,
       hp: m.hp,
       maxHp: m.maxHp,
       atk: m.atk,
@@ -2557,6 +2578,7 @@ module.exports = {
   relicOffer,
   AFFIXES,
   MONSTER_TRAITS,
+  MONSTER_TYPES,
   BOSSES,
   UPGRADE,
   cardInfo,
@@ -2583,6 +2605,7 @@ module.exports = {
   deckReady,
   giveRelic,
   merchantPrices,
+  MERCHANT_BUY,
   canBuy,
   bought,
   newHero,
