@@ -1184,6 +1184,8 @@ function starterDeck(cls) {
 // (options.tutorial: the practice run - a short map, weak monsters, no coins)
 function newRun(floor, party, rng = Math.random, options = {}) {
   const run = {
+    // (unique - the pages know which run an update is of)
+    uid: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
     floor,
     rooms: [], // [{kind, done}] the rooms entered
     event: null, // the room the party is in (not a fight): {kind, id, lines, choices, offers - the merchant's, ...}
@@ -2330,6 +2332,7 @@ function winFight(run, rng) {
 function runView(run) {
   const effectsOf = (effects) => Object.fromEntries(Object.entries(effects).map(([kind, value]) => [kind, typeof value == "object" ? value.turns : value]));
   return {
+    uid: run.uid,
     floor: run.floor,
     phase: run.phase,
     room: run.rooms.length - 1,

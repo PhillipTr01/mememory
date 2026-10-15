@@ -204,6 +204,16 @@ var roomKey = "";
 var roomSince = 0;
 var DOOR_DELAY = 800; // ms
 function receiveParty(data) {
+  // (an update of another run than the one shown, while that one goes on: not this page's - dropped, and told)
+  var shown = party && party.run;
+  if (shown && !party.result && data && data.run && data.run.uid != shown.uid && data.id == party.id) {
+    socket.emit("stray", { party: party.id, run: shown.uid, got: data.run.uid, phase: data.run.phase });
+    return;
+  }
+  if (shown && !party.result && data && data.run && data.id != party.id && shown.phase == "fight") {
+    socket.emit("stray", { party: party.id, run: shown.uid, gotParty: data.id, got: data.run.uid, phase: data.run.phase });
+    return;
+  }
   sentPlays.clear();
   // (a new room: when - a door clicked right after doesn't count, see the votes)
   var where = data && data.run ? data.run.rooms.length + ":" + data.run.phase : "";
@@ -248,18 +258,18 @@ function applyParty(data) {
 
 var fxBusy = false; // playing back (the state waits)
 var fxQueued = null; // {data}: the newest state, waiting
-var fxSeen = null; // the last event shown - {party, id}
+var fxSeen = null; // the last event shown - {run (its uid), id}
 var holdModal = 0; // (the rewards wait for the victory banner: until then)
 
 // The events new since the last update (a new party, a new page: none - nothing to play back)
 function freshFx(data) {
   var list = (data && data.run && data.run.fx) || [];
   var last = list.length ? list[list.length - 1].id : 0;
-  var same = fxSeen && data && fxSeen.party == data.id;
+  var same = fxSeen && data && data.run && fxSeen.run == data.run.uid;
   var fresh = same ? list.filter((e) => e.id > fxSeen.id) : [];
   // (a run just begun: its first fight's banner)
   if (!same && data && data.run && data.run.phase == "fight" && data.run.turn == 1 && data.run.rooms.length == 1) fresh = list.filter((e) => e.k == "turn" && e.first);
-  fxSeen = data ? { party: data.id, id: last } : null;
+  fxSeen = data && data.run ? { run: data.run.uid, id: last } : null;
   return fresh;
 }
 

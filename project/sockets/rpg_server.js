@@ -771,6 +771,12 @@ module.exports = function (io, options = {}) {
       emitParty(party);
     });
 
+    // A page got an update of another run than its own (dropped it): logged - what sent it
+    on("stray", (data) => {
+      const mine = myParty();
+      console.warn(`[rpg] stray update for ${username}: showing ${JSON.stringify(data)} - the server has party ${mine ? mine.id : "none"} run ${mine && mine.run ? mine.run.uid : "none"}; parties with ${username}: ${[...parties.values()].filter((p) => p.members.includes(username)).map((p) => p.id + "/" + (p.run ? p.run.uid + ":" + p.run.phase : "lobby") + (p.result ? "/" + p.result : "")).join(", ")}`);
+    });
+
     // A vote between two rooms: {door: its index} or {door: "leave"} - everybody voted: counted
     on("vote", async (data) => {
       const party = myRun();

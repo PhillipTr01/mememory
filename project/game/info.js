@@ -147,7 +147,6 @@ const GAMES = {
   // The dungeon (game/rpg.js): no bets - entries, packs, a hero; its numbers from the module
   rpg: () => {
     const rpg = require("./rpg");
-    const rarities = Object.values(rpg.CARD_RARITIES).filter((r) => r.value);
     const packs = Object.values(rpg.PACKS);
     return {
       title: "⚔️ Dungeon",
@@ -172,8 +171,7 @@ const GAMES = {
         ]),
         section("Cards and packs", [
           tile("🃏", "Your deck", `${rpg.DECK_MIN} to ${rpg.DECK_MAX} cards from your collection.`, { big: `${rpg.DECK_MIN}-${rpg.DECK_MAX}` }),
-          ...packs.map((pack) => tile(pack.icon, pack.name, pack.about, { coins: [n(pack.price)] })),
-          tile("💸", "Spares", `${rpg.PACK_BUNDLE}+ packs: ${Math.round(rpg.BUNDLE_OFF * 100)}% off. Extra copies sell: ${rarities.map((r) => r.name + " " + n(r.value)).join(", ")}.`, { tags: [[`-${Math.round(rpg.BUNDLE_OFF * 100)}%`, "green"]] }),
+          tile("🛒", "The shop", "Card packs and upgrades to buy - extra copies of a card sell by themselves.", { emoji: packs.map((pack) => pack.icon) }),
         ]),
       ],
     };
