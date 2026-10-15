@@ -120,6 +120,7 @@ module.exports = function (io, options = {}) {
       partyLoot: rpg.PARTY_LOOT,
       partyGap: config.RPG_PARTY_GAP,
       charPrice: config.RPG_CHAR_PRICE,
+      abilities: rpg.ABILITIES,
       charHarder: config.RPG_CHAR_HARDER,
       low: { free: config.RPG_LOW_FREE, cut: config.RPG_LOW_CUT, min: config.RPG_LOW_MIN },
       deckMin: rpg.DECK_MIN,

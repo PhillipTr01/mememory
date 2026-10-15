@@ -552,7 +552,14 @@ function renderHero() {
     var strength = el("div", "rpg-class-strength");
     var mineStrength = hero.strength || mine.strength;
     strength.append(el("span", "rpg-strength-icon", mineStrength.icon), el("b", "", mineStrength.name), el("span", "", mineStrength.text), el("span", "rpg-strength-grow", "grows with your level"));
-    info.push(el("div", "rpg-class-about", mine.about), strength);
+    // (an i: every class side by side)
+    var about = el("div", "rpg-class-about", mine.about + " ");
+    var classInfo = el("button", "cs-info-btn", "i");
+    classInfo.type = "button";
+    classInfo.title = "All classes";
+    classInfo.dataset.act = "classHelp";
+    about.appendChild(classInfo);
+    info.push(about, strength);
     // (out of the fights: the class's help for the party - grows with the main stat)
     if (hero.ability) {
       var ability = el("div", "rpg-class-strength ability");
@@ -1894,6 +1901,26 @@ var DECK_HELP = [
   ["🎁 Grow it", "Win a fight: pick a card for the run. Packs grow your collection."],
 ];
 
+// Every class side by side: its main stat, its strength in fights, its help out of them
+function showClassHelp() {
+  var sections = Object.keys(rules.classes).map((id) => {
+    var cls = rules.classes[id];
+    var ability = rules.abilities[id];
+    var strength = cls.strength.text.replace(/\{(\w+)\}/g, (_, key) => (key == "crit" || key == "thorns" ? cls.strength.perks[key] : Math.round(cls.strength.perks[key] * 100)));
+    return {
+      heading: cls.icon + " " + cls.name + " · " + rules.stats[cls.main].icon + " " + rules.stats[cls.main].name,
+      items: [
+        cls.about + ".",
+        cls.strength.icon + " " + cls.strength.name + ": " + strength + " Grows with the level.",
+        ability.icon + " " + ability.name + ": " + ability.about + " (" + rules.stats[cls.main].name + ")",
+        "HP ×" + cls.hp + " · attack ×" + cls.atk,
+      ],
+    };
+  });
+  window.casinoInfo({ title: "Classes", sections: sections });
+  intoFullscreen();
+}
+
 function showDeckHelp() {
   window.casinoInfo({ title: "How cards work", sections: DECK_HELP.map(([heading, text]) => ({ heading: heading, items: [text] })) });
   intoFullscreen();
@@ -2211,6 +2238,7 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "tutorial") socket.emit("tutorial");
   else if (act == "skipTutorial") socket.emit("skipTutorial");
   else if (act == "deckHelp") showDeckHelp();
+  else if (act == "classHelp") showClassHelp();
   else if (act == "quitRun") {
     var asked = confirmDialog({ title: "Leave the run?", text: "You lose your share of the pot and the loot.", confirmLabel: "Leave", danger: true });
     intoFullscreen();

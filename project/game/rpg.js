@@ -669,11 +669,11 @@ function pickTalent(hero, tier, id) {
 
 // (per level of the class's main stat, 0 to LEVEL_MAX)
 const ABILITIES = {
-  warrior: { name: "Smash Open", icon: "🔨", coins: 0.01, gear: 0.003 },
-  paladin: { name: "Shield the Party", icon: "🛡️", trap: 0.006, shrine: 0.005 },
-  cleric: { name: "Sanctuary", icon: "🕊️", rest: 0.01, rise: 0.003 },
-  mage: { name: "Arcane Insight", icon: "🔮", discount: 0.003, rerollEvery: 25 },
-  rogue: { name: "Scout", icon: "🦊" },
+  warrior: { name: "Smash Open", icon: "🔨", coins: 0.01, gear: 0.003, about: "Treasure: +1% coins and +0.3% extra gear per level." },
+  paladin: { name: "Shield the Party", icon: "🛡️", trap: 0.006, shrine: 0.005, about: "Traps -0.6% and shrines -0.5% damage per level." },
+  cleric: { name: "Sanctuary", icon: "🕊️", rest: 0.01, rise: 0.003, about: "Camp fires +1% healing, the fallen rise with +0.3% HP per level." },
+  mage: { name: "Arcane Insight", icon: "🔮", discount: 0.003, rerollEvery: 25, about: "Merchant -0.3% per level, a card reroll a run (+1 every 25 levels)." },
+  rogue: { name: "Scout", icon: "🦊", about: "Senses hidden rooms - more with every level." },
 };
 
 // The level of a class's ability in a run: the highest main-stat level of its heroes standing (null: none of them)
