@@ -2,16 +2,17 @@ const { test, before, after } = require("node:test");
 const assert = require("node:assert");
 const h = require("./helpers");
 const rpg = require("../game/rpg");
+const config = require("../game/config");
 const testMode = require("../game/test_mode");
 
 test("rpg: upgrades and floors get dearer, a floor opens after the one before; the map: rows of rooms (mostly fights) and paths, a fight first, the guarded gate last", () => {
-  assert.strictEqual(rpg.upgradeCost(0), 5000);
+  assert.strictEqual(rpg.upgradeCost(0), Math.round((config.RPG_STAT_SHARE / 100) * rpg.entryCost(1) / 100) * 100);
   assert.strictEqual(rpg.LEVEL_MAX, 100);
   assert.ok(rpg.upgradeCost(5) > rpg.upgradeCost(4));
   assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX), null);
-  assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX - 1), rpg.UPGRADE_MAX);
+  assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX - 1), Math.round((config.RPG_STAT_SHARE / 100) * rpg.entryCost(rpg.FLOORS) / 100) * 100);
   assert.strictEqual(rpg.entryCost(1), 10000);
-  assert.strictEqual(rpg.potionPrice(1), 5000);
+  assert.strictEqual(rpg.potionPrice(1), Math.round((config.RPG_POTION_SHARE / 100) * rpg.entryCost(1) / 100) * 100);
   assert.ok(rpg.potionPrice(10) > rpg.potionPrice(9));
   assert.ok(rpg.entryCost(10) > rpg.entryCost(9));
   // A new hero: no class yet - the first one free, every other one a character of its own for CLASS_PRICE
@@ -122,7 +123,7 @@ test("rpg: a new hero clears floor 1 but not floor 8 - upgrades take it deeper; 
   assert.ok(rpg.simulate(weak, 1, 200).cleared > 0.75);
   assert.ok(rpg.simulate(weak, 8, 200).cleared < 0.05);
   const strong = rpg.newHero("warrior");
-  for (const id of rpg.STAT_IDS) rpg.charOf(strong).levels[id] = 16;
+  for (const id of rpg.STAT_IDS) rpg.charOf(strong).levels[id] = 30;
   const deep = rpg.simulate(strong, 8, 200);
   assert.ok(deep.cleared > 0.9, JSON.stringify(deep));
   assert.ok(deep.payback > 1.2 && deep.payback < 1.8, JSON.stringify(deep));

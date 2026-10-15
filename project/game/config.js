@@ -230,10 +230,9 @@ module.exports = {
   // The dungeon (test world only, see game/rpg.js) - the admin panel changes these
   RPG_ENTRY_BASE: 10000, // the entry of floor 1
   RPG_ENTRY_GROWTH: 27, // % dearer every floor deeper
-  RPG_UPGRADE_BASE: 5000, // the first level of a stat
-  RPG_UPGRADE_MAX: 10000000, // the last level of a stat (100) - the ones between: every one a bit dearer
+  RPG_STAT_SHARE: 20, // % of a floor's entry: a stat level (level 1 - floor 1, the last - floor 30)
   RPG_CLASS_PRICE: 1000000, // another class
-  RPG_POTION_PRICE: 5000, // a potion with floor 1 open (12% dearer every floor reached)
+  RPG_POTION_SHARE: 10, // % of a floor's entry: a potion (the deepest open floor's - at the merchant: the floor's)
   RPG_LOW_FREE: 2, // floors this far under the deepest cleared: the full loot
   RPG_LOW_CUT: 15, // % of the loot less for every floor lower than that (a high character farming low floors)
   RPG_LOW_MIN: 10, // % of the loot at least

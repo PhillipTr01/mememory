@@ -57,9 +57,9 @@ function potionSlotPrice(hero) {
   return POTIONS_MAX + n >= POTIONS_TOP ? null : round100(POTION_SLOT_PRICE * Math.pow(BAG_SLOT_GROWTH, n));
 }
 const POTION_HEAL = 0.25; // of the max HP (little - healing is the cleric's)
-const POTION_GROWTH = 1.12;
+// (a potion: RPG_POTION_SHARE % of the floor's entry - the same share of a run on every floor)
 function potionPrice(floor = 1) {
-  return round100(config.RPG_POTION_PRICE * Math.pow(POTION_GROWTH, Math.max(0, floor - 1)));
+  return round100((config.RPG_POTION_SHARE / 100) * entryCost(Math.max(1, floor)));
 }
 // Bosses: the last room of every n-th floor (0: none yet - they come later)
 const TUTORIAL_POWER = 0.5; // the practice run's monsters: this strong
@@ -75,7 +75,7 @@ const STATS = {
 };
 const STAT_IDS = Object.keys(STATS);
 const LEVEL_MAX = 100;
-// (the stat levels: from RPG_UPGRADE_BASE for the first one to RPG_UPGRADE_MAX for the last, every one dearer)
+// (a stat level: RPG_STAT_SHARE % of the entry of the floor it belongs to - level 1 floor 1, the last one floor 30)
 // The main stat of a class: its levels count this much more (a class may have its own: mainBonus)
 const MAIN_BONUS = 1.5;
 // Luck and instinct: full up to the knee, past it every point counts less - never the max ([knee, max])
@@ -85,7 +85,7 @@ function softStat(id, raw) {
 }
 
 // What a room puts in the pot (per hero, a share of the entry)
-const REWARD = { fight: 0.21, hard: 0.4, elite: 0.4, boss: 0.65, chest: 0.17, trap: 0, rest: 0, shrine: 0, merchant: 0 };
+const REWARD = { fight: 0.27, hard: 0.52, elite: 0.52, boss: 0.85, chest: 0.22, trap: 0, rest: 0, shrine: 0, merchant: 0 };
 
 /* ---------- Classes and their cards ---------- */
 
@@ -345,18 +345,19 @@ const MONSTER_TRAITS = {
 // The bosses: the last room of every BOSS_EVERY-th floor - one per group of floors, a second phase at half HP
 // (phase: what changes then - more attack, other moves, a summon of its kind)
 const BOSSES = [
-  { name: "Slime King", icon: "🫧", type: "ooze", hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "summon"], summon: 0, phase: { atk: 1.3, moves: ["smash", "summon", "attack"], text: "splits and swells with rage" } },
-  { name: "Goblin Warlord", icon: "👺", type: "humanoid", hp: 1.2, atk: 1, moves: ["attack", "smash", "steal", "summon"], summon: 1, phase: { atk: 1.35, moves: ["smash", "howl", "attack"], text: "calls the whole tribe" } },
-  { name: "Bone Lord", icon: "☠️", type: "undead", hp: 1.2, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "drain", "summon"], summon: 2, phase: { atk: 1.3, moves: ["drain", "smash", "summon", "curse"], text: "raises the dead around it" } },
-  { name: "Troll Chieftain", icon: "🧌", type: "humanoid", hp: 1.15, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"], summon: 3, phase: { atk: 1.35, moves: ["smash", "attack", "regen", "howl"], text: "goes berserk" } },
-  { name: "Demon Prince", icon: "👿", type: "demon", hp: 1, atk: 1, traits: ["fireproof"], moves: ["attack", "burn", "smash", "summon"], summon: 4, phase: { atk: 1.35, moves: ["burn", "smash", "curse"], text: "bursts into flames" } },
-  { name: "The Lich", icon: "🧟", type: "undead", hp: 0.9, atk: 0.85, undead: true, traits: ["venomproof"], moves: ["curse", "drain", "summon", "attack"], summon: 5, phase: { atk: 1.25, moves: ["curse", "drain", "burn", "smash"], text: "tears open its phylactery" } },
+  { name: "Slime King", icon: "🫧", type: "ooze", power: 0.38, hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "summon"], summon: 0, phase: { atk: 1.3, moves: ["smash", "summon", "attack"], text: "splits and swells with rage" } },
+  { name: "Goblin Warlord", icon: "👺", type: "humanoid", power: 0.68, hp: 1.2, atk: 1, moves: ["attack", "smash", "steal", "summon"], summon: 1, phase: { atk: 1.35, moves: ["smash", "howl", "attack"], text: "calls the whole tribe" } },
+  { name: "Bone Lord", icon: "☠️", type: "undead", power: 0.54, hp: 1.2, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "drain", "summon"], summon: 2, phase: { atk: 1.3, moves: ["drain", "smash", "summon", "curse"], text: "raises the dead around it" } },
+  { name: "Troll Chieftain", icon: "🧌", type: "humanoid", power: 1.45, hp: 1.15, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"], summon: 3, phase: { atk: 1.35, moves: ["smash", "attack", "regen", "howl"], text: "goes berserk" } },
+  { name: "Demon Prince", icon: "👿", type: "demon", power: 1.35, hp: 1, atk: 1, traits: ["fireproof"], moves: ["attack", "burn", "smash", "summon"], summon: 4, phase: { atk: 1.35, moves: ["burn", "smash", "curse"], text: "bursts into flames" } },
+  { name: "The Lich", icon: "🧟", type: "undead", power: 1.25, hp: 0.9, atk: 0.85, undead: true, traits: ["venomproof"], moves: ["curse", "drain", "summon", "attack"], summon: 5, phase: { atk: 1.25, moves: ["curse", "drain", "burn", "smash"], text: "tears open its phylactery" } },
 ];
 const MONSTER_HP = 52;
-const MONSTER_HP_GROWTH = 1.125;
+const MONSTER_HP_GROWTH = 0.7; // (every floor deeper: this share of floor 1 more - as even as a character grows)
 const MONSTER_ATK = 11;
-const MONSTER_ATK_GROWTH = 1.105;
-const MONSTER_CURVE = 0; // (the growth steeper the deeper: x(1 + this x (floor - 1)²))
+const MONSTER_ATK_GROWTH = 0.35;
+// (a group of 5 floors: its monsters this much stronger - some kinds fight longer than their numbers say)
+const GROUP_POWER = [1, 1.03, 1.2, 0.88, 1.15, 1.15];
 const MONSTER_DEPTH = 0.035; // a row of the map deeper into a floor: this much stronger
 const MONSTER_SPREAD = 0.25; // every monster up to this much stronger or weaker
 // A bigger party: every monster has this much more HP and attack per hero after the first - and there are more of
@@ -772,10 +773,10 @@ function statPrice(hero, level, cls = hero.cls) {
 }
 
 // The price of the next level of a stat (null: the last level reached)
+// (as dear as the loot of the floor a character with that level plays: the same share of a run all the way)
 function upgradeCost(level) {
   if (level >= LEVEL_MAX) return null;
-  const growth = Math.pow(config.RPG_UPGRADE_MAX / config.RPG_UPGRADE_BASE, 1 / (LEVEL_MAX - 1));
-  return round100(config.RPG_UPGRADE_BASE * Math.pow(growth, level));
+  return round100((config.RPG_STAT_SHARE / 100) * entryCost(1 + (level * (FLOORS - 1)) / (LEVEL_MAX - 1)));
 }
 
 // The highest floor the character played now may enter
@@ -1111,17 +1112,19 @@ const RANKS = {
   boss: { id: "boss", prefix: "", hp: 3, atk: 1.3 },
 };
 
-// How much harder a floor is than the first: exponential - and steeper the deeper it goes
+// How much harder a floor is than the first: evenly, like a character's stats grow (its group a bit more or less)
 function floorCurve(growth, floor) {
-  return Math.pow(growth, floor - 1) * (1 + MONSTER_CURVE * Math.pow(floor - 1, 2));
+  return (1 + growth * (floor - 1)) * GROUP_POWER[Math.min(GROUP_POWER.length - 1, Math.floor((floor - 1) / 5))];
 }
 
 // A monster of a floor (depth: the row of the map - the deeper into the floor, the stronger; every one a bit
 // stronger or weaker than the next: a fight is never quite sure)
 function monster(floor, size, kind, rank, depth = 0, rng = Math.random) {
   const deeper = 1 + MONSTER_DEPTH * depth;
-  const hp = MONSTER_HP * (config.RPG_MONSTER_HP / 100) * floorCurve(MONSTER_HP_GROWTH, floor) * deeper * between(rng, 1 - MONSTER_SPREAD, 1 + MONSTER_SPREAD) * kind.hp * (1 + PARTY_HP * (size - 1)) * rank.hp;
-  const atk = MONSTER_ATK * (config.RPG_MONSTER_ATK / 100) * floorCurve(MONSTER_ATK_GROWTH, floor) * deeper * between(rng, 1 - MONSTER_SPREAD, 1 + MONSTER_SPREAD) * kind.atk * rank.atk * (1 + PARTY_ATK * (size - 1));
+  // (a boss: its own power - every one as hard to beat, compared with its floors)
+  const power = kind.power || 1;
+  const hp = power * MONSTER_HP * (config.RPG_MONSTER_HP / 100) * floorCurve(MONSTER_HP_GROWTH, floor) * deeper * between(rng, 1 - MONSTER_SPREAD, 1 + MONSTER_SPREAD) * kind.hp * (1 + PARTY_HP * (size - 1)) * rank.hp;
+  const atk = power * MONSTER_ATK * (config.RPG_MONSTER_ATK / 100) * floorCurve(MONSTER_ATK_GROWTH, floor) * deeper * between(rng, 1 - MONSTER_SPREAD, 1 + MONSTER_SPREAD) * kind.atk * rank.atk * (1 + PARTY_ATK * (size - 1));
   const max = Math.max(1, Math.round(hp));
   // (an elite also smashes)
   const moves = rank.id != "normal" && !kind.moves.includes("smash") ? [...kind.moves, "smash"] : kind.moves;
@@ -2519,7 +2522,7 @@ module.exports = {
   potionsMax,
   potionSlotPrice,
   get POTION_PRICE() {
-    return config.RPG_POTION_PRICE;
+    return potionPrice(1);
   },
   potionPrice,
   BOSS_EVERY,
@@ -2527,7 +2530,7 @@ module.exports = {
   STAT_IDS,
   LEVEL_MAX,
   get UPGRADE_MAX() {
-    return config.RPG_UPGRADE_MAX;
+    return upgradeCost(LEVEL_MAX - 1);
   },
   SLOTS,
   RARITIES,
