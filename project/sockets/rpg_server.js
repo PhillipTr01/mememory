@@ -88,8 +88,21 @@ module.exports = function (io, options = {}) {
     room.to(ROOM).emit("rpgParties", list);
   }
 
+  // (only to the members whose party it is now - never to a page of another run)
+  const inParty = (party, name) => partyOf.get(name) === party.id;
   function emitParty(party) {
-    room.to("party:" + party.id).emit("rpgParty", partyView(party));
+    const view = partyView(party);
+    for (const name of party.members) if (inParty(party, name)) socketsOf(name).forEach((socket) => socket.emit("rpgParty", view));
+  }
+
+  // A player out of a party: the pages told - unless the player is in another party by now
+  function letGo(party, name) {
+    if (!inParty(party, name)) return;
+    partyOf.delete(name);
+    socketsOf(name).forEach((socket) => {
+      socket.leave("party:" + party.id);
+      socket.emit("rpgParty", null);
+    });
   }
 
   async function sendCoins(name) {
@@ -160,11 +173,7 @@ module.exports = function (io, options = {}) {
 
   function leave(party, name) {
     party.members = party.members.filter((member) => member !== name);
-    partyOf.delete(name);
-    socketsOf(name).forEach((socket) => {
-      socket.leave("party:" + party.id);
-      socket.emit("rpgParty", null);
-    });
+    letGo(party, name);
     if (!party.members.length) return close(party);
     if (party.leader === name) party.leader = party.members[0];
     emitParty(party);
@@ -173,13 +182,7 @@ module.exports = function (io, options = {}) {
   function close(party) {
     clearTimeout(party.timer);
     parties.delete(party.id);
-    for (const name of party.members) {
-      partyOf.delete(name);
-      socketsOf(name).forEach((socket) => {
-        socket.leave("party:" + party.id);
-        socket.emit("rpgParty", null);
-      });
-    }
+    for (const name of party.members) letGo(party, name);
   }
 
   // The clock of a fight - started anew only when the turn changes (a card played doesn't): the time up, the
@@ -239,11 +242,7 @@ module.exports = function (io, options = {}) {
       sendHero(name);
     }
     party.members = party.members.filter((member) => member !== name);
-    partyOf.delete(name);
-    socketsOf(name).forEach((socket) => {
-      socket.leave("party:" + party.id);
-      socket.emit("rpgParty", null);
-    });
+    letGo(party, name);
     if (party.leader === name && party.members.length) party.leader = party.members[0];
     afterChange(party);
     emitParties();
@@ -348,14 +347,16 @@ module.exports = function (io, options = {}) {
     party.timer = setTimeout(() => close(party), timing.close);
   }
 
-  // The test mode stopped: the hero is gone (nothing of the test world stays)
-  testMode.changes.on("change", (name) => {
-    if (testMode.active(name)) return;
-    const party = parties.get(partyOf.get(name));
-    if (party && !party.run) leave(party, name);
-    else if (party) partyOf.delete(name);
-    heroes.delete(name);
-  });
+  // The test mode stopped: the hero is gone (nothing of the test world stays) - out of its party or run too
+  // (only the test world's dungeon: the characters of the normal casino stay)
+  if (world === worlds.TEST)
+    testMode.changes.on("change", (name) => {
+      if (testMode.active(name)) return;
+      const party = parties.get(partyOf.get(name));
+      if (party && party.run && !party.result) abandonRun(party, name);
+      else if (party) leave(party, name);
+      heroes.delete(name);
+    });
 
   room.on("connection", (socket) => {
     version.announce(socket);
