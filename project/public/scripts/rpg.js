@@ -20,7 +20,7 @@ try {
   // no storage: play
 }
 var picking = null; // in a room: the choice waiting for a card of the deck ("smith", "purge", "remove")
-var filters = { type: "all", cost: "all", rarity: "all", owned: false }; // the deck builder's
+var filters = { type: "all", cost: "all", rarity: "all", owned: false, mine: false }; // the deck builder's
 var search = "";
 var lastRoom = 0;
 var FLOOR_KEY = "rpgFloor";
@@ -844,9 +844,11 @@ function packArt(id, className) {
 
 // The collection: the cards found, the copies (the deck builder)
 function renderCollectionBar() {
-  var cards = hero.pool.filter((id) => cardOf(id).rarity != "basic");
-  var found = cards.filter((id) => hero.collection[id]).length;
-  var copies = cards.reduce((sum, id) => sum + (hero.collection[id] || 0), 0);
+  // (the whole set - every class's cards, all characters' copies)
+  var cards = Object.keys(rules.cards).filter((id) => cardOf(id).rarity != "basic");
+  var owned = hero.owned || {};
+  var found = cards.filter((id) => owned[id]).length;
+  var copies = cards.reduce((sum, id) => sum + Math.min(owned[id] || 0, rules.cardRarities[cardOf(id).rarity].copies), 0);
   var most = cards.reduce((sum, id) => sum + rules.cardRarities[cardOf(id).rarity].copies, 0);
   var progress = el("div", "rpg-shop-bar");
   progress.append(el("span", "", "📚 Collection"), bar(found, cards.length, "xp", " cards"), el("span", "mm-muted small", copies + " / " + most + " copies"));
@@ -1211,20 +1213,29 @@ function renderBuilder() {
       }
       group.appendChild(chip);
     });
-    if (key == "type") group.appendChild(button((filters.owned ? "✓ " : "") + "Owned only", "filter", { id: "owned:toggle", className: "chip owned" + (filters.owned ? " active" : "") }));
+    if (key == "type") {
+      group.appendChild(button((filters.owned ? "✓ " : "") + "Owned only", "filter", { id: "owned:toggle", className: "chip owned" + (filters.owned ? " active" : "") }));
+      group.appendChild(button((filters.mine ? "✓ " : "") + "Class only", "filter", { id: "mine:toggle", className: "chip owned" + (filters.mine ? " active" : "") }));
+    }
     chips.push(group);
   });
   morphChildren(document.getElementById("rpgFilterChips"), chips);
 
   // The collection: every card of the class - owned (spare copies: into the deck) or locked
   var text = search.trim().toLowerCase();
-  var shown = hero.pool
+  // (every card of the set - "Class only": the class's and the neutral ones)
+  var mine = {};
+  hero.pool.forEach((id) => (mine[id] = true));
+  var ownedAll = hero.owned || {};
+  var shown = Object.keys(rules.cards)
     .filter((id) => {
       var card = cardOf(id);
+      if (filters.mine && !mine[id]) return false;
+      if (card.rarity == "basic" && !mine[id]) return false;
       if (filters.type != "all" && card.type != filters.type) return false;
       if (filters.cost != "all" && Math.min(3, card.cost) != Number(filters.cost)) return false;
       if (filters.rarity != "all" && card.rarity != filters.rarity) return false;
-      if (filters.owned && !hero.collection[id]) return false;
+      if (filters.owned && !(mine[id] ? hero.collection[id] : ownedAll[id])) return false;
       return !text || (card.name + " " + card.text).toLowerCase().includes(text);
     })
     .sort(byRarity);
@@ -1232,6 +1243,14 @@ function renderBuilder() {
     document.getElementById("rpgBuilderGrid"),
     shown.length
       ? shown.map((id) => {
+          // (another class's card: only to look at - how many of it the player has)
+          if (!mine[id]) {
+            var have = ownedAll[id] || 0;
+            var other = cardEl(id, { className: (have ? "" : "unowned") + " spent" });
+            other.appendChild(el("span", "rpg-cardx-count", have ? "×" + have : "🔒"));
+            other.title = (have ? have + " owned - " : "Not owned yet - ") + "another class's card";
+            return other;
+          }
           var all = hero.collection[id] || 0;
           var owned = Math.min(all, rules.cardRarities[cardOf(id).rarity].copies);
           var spare = owned - (counts[id] || 0);
@@ -2258,6 +2277,7 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "filter") {
     var [key, value] = id.split(":");
     if (key == "owned") filters.owned = !filters.owned;
+    else if (key == "mine") filters.mine = !filters.mine;
     else filters[key] = value;
     render();
   } else if (act == "deckClear") socket.emit("deckSet", { ids: [] });

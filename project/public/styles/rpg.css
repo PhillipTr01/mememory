@@ -5857,7 +5857,7 @@ button.rpg-cardx.off {
 }
 
 /* (the deck builder: only the own class - the copies under the card instead) */
-#rpgBuilderGrid .rpg-card-class {
+#rpgBuilderGrid .rpg-cardx:not(.other-class) .rpg-card-class {
   display: none;
 }
 
@@ -5881,4 +5881,9 @@ button.rpg-cardx.off {
   font-size: 0.75rem;
   font-weight: 700;
   color: #ffb27a;
+}
+
+/* 35. "Owned only" and "Class only" side by side */
+.rpg-chip-group .chip.owned + .chip.owned {
+  margin-left: 0.35rem;
 }

@@ -861,6 +861,11 @@ function heroView(hero) {
     cleared: char.cleared,
     deck: char.deck,
     collection: char.collection,
+    // (every card of the player - all its characters' collections: the whole set's progress)
+    owned: Object.values(hero.chars || {}).reduce((all, one) => {
+      for (const [id, n] of Object.entries(one.collection || {})) all[id] = (all[id] || 0) + n;
+      return all;
+    }, {}),
     packs: hero.packs || {},
     potionPrice: potionPrice(maxFloor(hero)),
     deckMax: deckLimits(hero).max,
