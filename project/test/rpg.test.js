@@ -722,10 +722,15 @@ test("rpg: co-op - one opens a party, another joins, the leader starts (both pay
   const waiting = await waitFor(bob, "rpgParty", (p) => p && p.run.heroes.find((h) => h.name == "rpg_alice").ended);
   assert.strictEqual(waiting.run.turn, 1);
   assert.ok(!waiting.run.heroes.find((h) => h.name == "rpg_bob").ended);
-  // (the cards of a hero who ended the turn wait)
-  const ended = h.once(alice, "rpgError");
+  // (the cards of a hero who ended the turn wait - a late click on one: ignored, no message)
+  let told = null;
+  const tell = (message) => (told = message);
+  alice.on("rpgError", tell);
   alice.emit("play", { uid: waiting.run.heroes.find((h) => h.name == "rpg_alice").hand[0].uid, target: waiting.run.monsters[0].id });
-  assert.match(await ended, /ended your turn/);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  alice.off("rpgError", tell);
+  assert.strictEqual(told, null);
+  assert.strictEqual(rpg.play(server.test.rpg.parties.get(waiting.id).run, "rpg_alice", { uid: "x" }), "You ended your turn.");
 
   // Fight on - both vote for the doors (a tie: the leader), both play their cards
   autoplay(alice, "rpg_alice", { vote: true });

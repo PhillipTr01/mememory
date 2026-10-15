@@ -1968,6 +1968,9 @@ function healHero(run, hero, amount) {
 
 // Plays a card of a hero's hand: {uid, target (a monster's id), ally (a hero's name)} -> an error or null
 const NOT_IN_HAND = "That card isn't in your hand.";
+// Answers to a click that came too late - the run went on meanwhile (a double click, a click during the monsters'
+// turn): the pages aren't told (nothing went wrong for the player)
+const STALE = new Set([NOT_IN_HAND, "Nothing to vote on now.", "Nothing to choose here.", "You chose already.", "Not one of the choices.", "Unknown door.", "You ended your turn.", "No fight now.", "Not now.", "No card to pick.", "Picked already.", "No relic to pick.", "No merchant here.", "Sold already.", "Too late."]);
 function play(run, name, input, rng = Math.random) {
   if (run.phase != "fight") return "No fight now.";
   const hero = run.heroes.find((h) => h.name == name);
@@ -2640,6 +2643,7 @@ module.exports = {
   POTION_MANA,
   POTION_HEAL,
   NOT_IN_HAND,
+  STALE,
   get DEATH_COOLDOWN() {
     return config.RPG_DEATH_TIME;
   },
