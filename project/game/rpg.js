@@ -68,7 +68,7 @@ const MAIN_BONUS = 1.5;
 const DODGE_MAX = 40;
 
 // What a room puts in the pot (per hero, a share of the entry)
-const REWARD = { fight: 0.21, hard: 0.4, elite: 0.4, boss: 1, chest: 0.17, trap: 0, rest: 0, shrine: 0, merchant: 0 };
+const REWARD = { fight: 0.21, hard: 0.4, elite: 0.4, boss: 0.65, chest: 0.17, trap: 0, rest: 0, shrine: 0, merchant: 0 };
 
 /* ---------- Classes and their cards ---------- */
 
@@ -291,17 +291,17 @@ const MONSTERS = [
   ],
   [
     { name: "Orc", icon: "👹", hp: 1.2, atk: 1, traits: ["spiked"], moves: ["attack", "smash", "howl"] },
-    { name: "Troll", icon: "🧌", hp: 1.5, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"] },
+    { name: "Troll", icon: "🧌", hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"] },
     { name: "Shaman", icon: "🧙", hp: 0.8, atk: 0.9, moves: ["attack", "heal", "burn", "purge"] },
   ],
   [
     { name: "Demon", icon: "😈", hp: 1.1, atk: 1.1, traits: ["fireproof"], moves: ["attack", "burn", "smash"] },
-    { name: "Golem", icon: "🗿", hp: 1.8, atk: 0.85, armor: 0.1, traits: ["venomproof", "bulky"], moves: ["smash", "defend", "attack"] },
+    { name: "Golem", icon: "🗿", hp: 1.4, atk: 0.85, armor: 0.1, traits: ["venomproof", "bulky"], moves: ["smash", "defend", "attack"] },
     { name: "Wraith", icon: "🌫️", hp: 0.9, atk: 1.1, undead: true, dodge: 0.15, moves: ["drain", "fade", "attack", "curse"] },
   ],
   [
     { name: "Hellhound", icon: "🐕", hp: 1, atk: 1.15, traits: ["fireproof", "spiked"], moves: ["attack", "burn", "howl"] },
-    { name: "Gargoyle", icon: "🗽", hp: 1.4, atk: 0.95, armor: 0.15, traits: ["venomproof", "bulky"], moves: ["smash", "defend", "attack"] },
+    { name: "Gargoyle", icon: "🗽", hp: 1.25, atk: 0.95, armor: 0.15, traits: ["venomproof", "bulky"], moves: ["smash", "defend", "attack"] },
     { name: "Cultist", icon: "🧛", hp: 0.9, atk: 1, moves: ["attack", "curse", "purge", "drain"] },
   ],
 ];
@@ -321,22 +321,22 @@ const BOSSES = [
   { name: "Goblin Warlord", icon: "👺", hp: 1.2, atk: 1, moves: ["attack", "smash", "steal", "summon"], summon: 1, phase: { atk: 1.35, moves: ["smash", "howl", "attack"], text: "calls the whole tribe" } },
   { name: "Bone Lord", icon: "☠️", hp: 1.2, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "drain", "summon"], summon: 2, phase: { atk: 1.3, moves: ["drain", "smash", "summon", "curse"], text: "raises the dead around it" } },
   { name: "Troll Chieftain", icon: "🧌", hp: 1.15, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"], summon: 3, phase: { atk: 1.35, moves: ["smash", "attack", "regen", "howl"], text: "goes berserk" } },
-  { name: "Demon Prince", icon: "👿", hp: 1.15, atk: 1, traits: ["fireproof"], moves: ["attack", "burn", "smash", "summon"], summon: 4, phase: { atk: 1.35, moves: ["burn", "smash", "curse"], text: "bursts into flames" } },
+  { name: "Demon Prince", icon: "👿", hp: 1, atk: 1, traits: ["fireproof"], moves: ["attack", "burn", "smash", "summon"], summon: 4, phase: { atk: 1.35, moves: ["burn", "smash", "curse"], text: "bursts into flames" } },
   { name: "The Lich", icon: "🧟", hp: 0.9, atk: 0.85, undead: true, traits: ["venomproof"], moves: ["curse", "drain", "summon", "attack"], summon: 5, phase: { atk: 1.25, moves: ["curse", "drain", "burn", "smash"], text: "tears open its phylactery" } },
 ];
 const MONSTER_HP = 52;
-const MONSTER_HP_GROWTH = 1.14;
+const MONSTER_HP_GROWTH = 1.135;
 const MONSTER_ATK = 11;
-const MONSTER_ATK_GROWTH = 1.115;
-const MONSTER_CURVE = 0.0003; // (the growth steeper the deeper: x(1 + this x (floor - 1)²))
+const MONSTER_ATK_GROWTH = 1.11;
+const MONSTER_CURVE = 0; // (the growth steeper the deeper: x(1 + this x (floor - 1)²))
 const MONSTER_DEPTH = 0.035; // a row of the map deeper into a floor: this much stronger
 const MONSTER_SPREAD = 0.25; // every monster up to this much stronger or weaker
 // A bigger party: every monster has this much more HP and attack per hero after the first - and there are more of
 // them (a party is no easier than going alone)
-const PARTY_HP = 1.0;
+const PARTY_HP = 1.2;
 const PARTY_ATK = 0.15;
 // ... and pays more: the loot (each) and the first clear's bonus this much more per hero after the first
-const PARTY_LOOT = 0.2;
+const PARTY_LOOT = 0.1;
 function partyBonus(size) {
   return 1 + PARTY_LOOT * Math.max(0, size - 1);
 }
@@ -1012,7 +1012,7 @@ function monstersFor(floor, size, room, rng = Math.random, depth = 0) {
     return list;
   }
   const extra = room == "hard" ? 1 : 0;
-  const count = Math.min(5, 1 + Math.floor(rng() * 2) + Math.floor(size / 2) + extra);
+  const count = Math.min(5, 1 + Math.floor(rng() * 2) + Math.floor((size - 1) / 2) + extra);
   return Array.from({ length: count }, () => monster(floor, size, pick(rng, group), room == "hard" ? RANKS.hard : RANKS.normal, depth, rng));
 }
 
