@@ -75,10 +75,10 @@ const REWARD = { fight: 0.21, hard: 0.4, elite: 0.4, boss: 1, chest: 0.17, trap:
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
   warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.5 } }, about: "Strength - heavy blows, cleaves the pack, a war cry for the party", hp: 1.15, atk: 1.15, def: 2, luck: 0, agi: 0, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Who hits you takes {thornsDef}% of your armor back, {block}% more block.", perks: { thornsDef: 1, block: 0.2 } }, about: "Armor - draws the attacks, shields the party, judges with his armor", hp: 1.0, atk: 0.8, def: 1, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Heals {heal}% stronger, attacks heal you for {lifesteal}% of the damage.", perks: { heal: 0.2, lifesteal: 0.15 } }, about: "Vitality - heals, smites the undead, brings the fallen back", hp: 1.2, atk: 0.88, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison {poison}% stronger, +{crit}% critical hits.", perks: { poison: 0.5, crit: 10 } }, about: "Agility - dodges, poisons, then strikes where it hurts", hp: 1.15, atk: 1.54, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe deal {aoe}% more, +{crit}% critical hits.", perks: { aoe: 0.4, crit: 8 } }, about: "Luck - spells that crit, fire on all foes, frost that weakens", hp: 1.1, atk: 1.9, def: 1, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Who hits you takes {thornsDef}% of your armor back, {block}% more block.", perks: { thornsDef: 1, block: 0.2 }, top: 2.4 }, about: "Armor - draws the attacks, shields the party, judges with his armor", hp: 1.3, atk: 0.9, def: 1, luck: 0, agi: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Heals {heal}% stronger, attacks heal you for {lifesteal}% of the damage.", perks: { heal: 0.2, lifesteal: 0.15 } }, about: "Vitality - heals, smites the undead, brings the fallen back", hp: 1.1, atk: 0.98, def: 1, luck: 0, agi: 0, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison {poison}% stronger, +{crit}% critical hits.", perks: { poison: 0.5, crit: 10 } }, about: "Agility - dodges, poisons, then strikes where it hurts", hp: 1.45, atk: 1.64, def: 0, luck: 5, agi: 8, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe deal {aoe}% more, +{crit}% critical hits.", perks: { aoe: 0.4, crit: 8 }, top: 2.2 }, about: "Luck - spells that crit, fire on all foes, frost that weakens", hp: 1.1, atk: 2, def: 1, luck: 8, agi: 0, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -587,12 +587,12 @@ function pickTalent(hero, tier, id) {
   return null;
 }
 
-// A class's strength at a character level: its perks grow from the base at level 1 to STRENGTH_TOP times it at the
-// highest level -> {name, icon, perks, text} (the text with the numbers of that level)
+// A class's strength at a character level: its perks grow from the base at level 1 to STRENGTH_TOP times it (or its
+// own top) at the highest level -> {name, icon, perks, text} (the text with the numbers of that level)
 const STRENGTH_TOP = 2;
 function strengthOf(cls, level = 1) {
   const base = CLASSES[cls].strength;
-  const grow = 1 + ((STRENGTH_TOP - 1) * (Math.max(1, level) - 1)) / (HERO_LEVEL_MAX - 1);
+  const grow = 1 + (((base.top || STRENGTH_TOP) - 1) * (Math.max(1, level) - 1)) / (HERO_LEVEL_MAX - 1);
   const perks = Object.fromEntries(Object.entries(base.perks).map(([key, value]) => [key, Math.round(value * grow * 1000) / 1000]));
   // (shares as %, crit already in %)
   const text = base.text.replace(/\{(\w+)\}/g, (_, key) => String(key == "crit" ? Math.round(perks[key]) : Math.round(perks[key] * 100)));
@@ -1582,7 +1582,7 @@ function strike(run, hero, foe, power, rng, options = {}) {
   return damage;
 }
 
-// Damage to a hero: smoke, a dodge, armor (at most 75% of a hit), taunt - then the block takes it
+// Damage to a hero: smoke, a dodge, armor (diminishing), taunt - then the block takes it
 function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
   if (hero.evading) {
     say(run, `${source} misses ${hero.name} in the smoke.`);
@@ -1594,7 +1594,8 @@ function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
     fx(run, { k: "miss", to: hero.name, dodge: true });
     return 0;
   }
-  let damage = Math.max(raw * 0.25, raw - hero.def);
+  // (armor: less of a hit the more armor - with diminishing returns: as much armor as the hit halves it)
+  let damage = (raw * raw) / (raw + Math.max(0, hero.def));
   if (hero.taunting) damage *= TAUNT;
   damage = Math.max(1, Math.round(damage));
   const blocked = Math.min(hero.block, damage);
@@ -2049,25 +2050,68 @@ function incoming(run, hero) {
   return alive(run.monsters).reduce((sum, m) => {
     if (!m.intent || m.effects.stun) return sum;
     const move = MOVES[m.intent.move];
-    if (move.all || m.intent.target == hero.name) return sum + Math.max(m.intent ? intentDamage(m, m.intent.move) * 0.25 : 0, intentDamage(m, m.intent.move) - hero.def);
+    const raw = intentDamage(m, m.intent.move);
+    if (move.all || m.intent.target == hero.name) return sum + (raw * raw) / (raw + Math.max(0, hero.def));
     return sum;
   }, 0);
 }
 
-// A plain player: blocks what comes at it, heals when low, hits the weakest foe with the rest
+// A sensible player (the simulations): every card valued by what it does now - damage the foes still have, block
+// against what comes, healing of what is missing, poison and stuns where they count - the best per mana first
 function simulatedTurn(run, me, rng) {
-  if (me.hp < me.maxHp * 0.3 && me.potions > 0) drink(run, me.name);
+  if (me.hp < me.maxHp * 0.3 && me.potions > 0 && me.energy >= POTION_MANA) drink(run, me.name);
   for (let guard = 0; guard < 20 && run.phase == "fight" && !me.ended; guard++) {
-    const playable = me.hand.filter((c) => cardInfo(c.id).cost <= me.energy && cardInfo(c.id).target != "fallen");
-    if (!playable.length) break;
-    const need = incoming(run, me) - me.block;
-    const blockCard = playable.find((c) => ["defend", "bulwark", "secondwind", "taunt", "smoke", "holyshield", "barrier"].includes(baseCard(c.id)));
-    const healCard = playable.find((c) => ["heal", "prayer"].includes(baseCard(c.id)));
-    const attack = playable.find((c) => cardInfo(c.id).type == "attack") || playable.find((c) => !["defend", "bulwark", "secondwind", "taunt", "smoke", "holyshield", "barrier", "heal", "prayer"].includes(baseCard(c.id)));
-    const card = me.hp < me.maxHp * 0.5 && healCard ? healCard : need > 2 && blockCard ? blockCard : attack || blockCard || healCard;
-    if (!card) break;
-    const foe = alive(run.monsters).sort((a, b) => a.hp - b.hp)[0];
-    if (play(run, me.name, { uid: card.uid, target: foe && foe.id, ally: me.name }, rng)) break;
+    const foes = alive(run.monsters);
+    if (!foes.length) break;
+    const need = Math.max(0, incoming(run, me) - me.block);
+    // (the foe to hit: one that can fall now - else the one that hurts most)
+    const threat = (m) => (m.intent && !m.effects.stun ? intentDamage(m, m.intent.move) : 0);
+    const target = foes.slice().sort((x, y) => x.hp - y.hp)[0];
+    const worst = foes.slice().sort((x, y) => threat(y) - threat(x))[0];
+    const ally = alive(run.heroes).sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp)[0];
+    const fallen = run.heroes.find((h) => h.down);
+    let best = null;
+    for (const c of me.hand) {
+      const card = cardInfo(c.id);
+      if (card.cost > me.energy) continue;
+      if (card.target == "fallen" && !fallen) continue;
+      const up = isUpgraded(c.id) ? UPGRADE : 1;
+      const foe = card.fx.some((f) => f.status == "stun" && !f.to) ? worst : target;
+      let value = 0;
+      let blocked = 0;
+      for (const f of card.fx) {
+        const many = f.to == "all" ? foes : [foe];
+        if (f.hit != null) {
+          for (const m of many) {
+            const cond = f.bonusIf && f.bonusIf.split("|").some((k) => (k == "undead" ? m.undead : k == "low" ? me.hp < me.maxHp / 2 : m.effects[k]));
+            const dmg = me.atk * (cond ? f.bonus : f.hit) * (f.times || 1) * up * (1 - (m.armor || 0) * Math.max(0, 1 - perk(me, "pierce")));
+            value += Math.min(dmg, m.hp) + (dmg >= m.hp ? threat(m) : 0);
+          }
+        } else if (f.block != null) {
+          const amount = (f.block + (f.def || 0) * me.def + (f.atk || 0) * me.atk + (f.agi || 0) * me.agi) * up;
+          value += Math.min(amount, Math.max(0, need - blocked));
+          blocked += amount;
+        } else if (f.heal != null) value += Math.min(me.maxHp * f.heal * up, ally.maxHp - ally.hp) * (ally.hp < ally.maxHp / 2 ? 1.2 : 0.6);
+        else if (f.status == "poison" || f.status == "burn") value += many.length * me.atk * 0.4 * (f.turns || 2);
+        else if (f.status == "stun") value += f.to == "all" ? foes.reduce((sum, m) => sum + threat(m), 0) : threat(foe);
+        else if (f.status == "chill") value += (f.to == "all" ? foes.reduce((sum, m) => sum + threat(m), 0) : threat(foe)) * 0.4;
+        else if (f.might != null) value += me.atk * 0.3 * f.might;
+        else if (f.draw != null) value += me.atk * 0.4 * f.draw;
+        else if (f.mana != null) value += me.atk * 0.8 * f.mana;
+        else if (f.lose != null) value -= me.maxHp * f.lose * 0.5;
+        else if (f.evade) value += need;
+        else if (f.revive != null) value += fallen ? me.maxHp * 2 : 0;
+        else if (f.cleanse) value += ally.effects.poison || ally.effects.burn ? me.atk : 0;
+        else if (f.extend != null || f.amplify) value += foes.some((m) => m.effects.poison) ? me.atk : 0;
+      }
+      // (a once-a-run card: kept for a hard fight - an exhausting one a bit less eager)
+      if (card.mythic) value *= run.monsters.some((m) => m.rank != "normal") ? 1 : 0.3;
+      else if (card.exhaust) value *= 0.85;
+      const score = value / Math.max(0.5, card.cost);
+      if (value > 0 && (!best || score > best.score)) best = { c, card, foe, score };
+    }
+    if (!best) break;
+    if (play(run, me.name, { uid: best.c.uid, target: best.foe && best.foe.id, ally: best.card.target == "fallen" ? fallen.name : ally.name }, rng)) break;
   }
 }
 

@@ -93,7 +93,10 @@
                         <div>
                             <h1 class="jp-title rpg-heading" data-info="rpg"><span class="cs-title-icon rpg-title-icon" aria-hidden="true">⚔️</span> Dungeon <span class="rpg-test" title="Only in test mode for now">🧪 Test</span></h1>
                         </div>
-                        <button type="button" class="cs-fs-btn" data-fullscreen=".rpg-main"></button>
+                        <div class="rpg-head-tools">
+                            <button type="button" class="cs-fs-btn rpg-sound-btn" data-sound></button>
+                            <button type="button" class="cs-fs-btn" data-fullscreen=".rpg-main"></button>
+                        </div>
                     </div>
 
                     <!--- No party: the hero on top (always), the sections - play, the hero, talents, gear, the deck, the shop --->
@@ -456,6 +459,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="/static/scripts/avatar.js"></script>
     <script src="/static/scripts/ui.js"></script>
+    <script src="/static/scripts/rpg_sound.js"></script>
     <script src="/static/scripts/casino_looks.js"></script>
     <script src="/static/scripts/casino_coin.js"></script>
     <script src="/static/scripts/nav.js"></script>

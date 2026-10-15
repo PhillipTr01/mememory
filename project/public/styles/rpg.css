@@ -5644,3 +5644,128 @@ button.rpg-cardx.off {
   text-transform: uppercase;
   color: var(--mm-muted);
 }
+
+/* 30. Phones: the tools of the head together, every tab in reach, the hand in one row to swipe */
+.rpg-head-tools {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-left: auto;
+}
+
+@media (max-width: 575px) {
+  .rpg-main .jp-head {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .rpg-nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
+  }
+
+  .rpg-nav .rpg-nav-btn {
+    justify-content: center;
+    padding: 0.45rem 0.3rem;
+    font-size: 0.78rem;
+  }
+
+  /* The hand: one row (swipe it) - the mana and the piles on the left, End turn and the potion on the right */
+  .rpg-handbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.6rem;
+    padding: 0.7rem 0.6rem 0.6rem;
+  }
+
+  .rpg-handbar .rpg-hand {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 1rem 0.4rem 0.4rem;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .rpg-handbar .rpg-hand::-webkit-scrollbar {
+    display: none;
+  }
+
+  .rpg-handbar .rpg-hand .rpg-cardx {
+    flex: none;
+    width: 6.4rem;
+    min-height: 9rem;
+    margin: 0 0.15rem;
+    transform: none;
+    scroll-snap-align: start;
+  }
+
+  .rpg-handbar .rpg-hand .rpg-cardx-text {
+    font-size: 0.6rem;
+  }
+
+  .rpg-handbar .rpg-hand-side {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .rpg-handbar .rpg-hand-side:last-child {
+    justify-content: flex-end;
+  }
+
+  .rpg-handbar .rpg-energy {
+    width: 2.8rem;
+    height: 2.8rem;
+  }
+
+  .rpg-handbar .rpg-end {
+    min-width: 6rem;
+  }
+
+  .rpg-handbar .rpg-aim-hint {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+}
+
+@media (max-width: 575px) {
+  .rpg-gear,
+  .rpg-bag {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .rpg-gear-tile {
+    padding: 0.55rem 0.4rem 0.5rem;
+  }
+
+  .rpg-gear-tile.empty {
+    min-height: 6.5rem;
+  }
+
+  .rpg-gear-icon {
+    font-size: 1.6rem;
+  }
+
+  .rpg-gear-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .rpg-upgrade {
+    flex-wrap: wrap;
+    padding: 0.8rem;
+  }
+
+  .rpg-upgrade-text {
+    flex: 1 1 10rem;
+    min-width: 0;
+  }
+
+  .rpg-upgrade .rpg-btn.primary {
+    width: 100%;
+  }
+}

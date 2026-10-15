@@ -294,6 +294,7 @@ function showPlayed(e) {
 
 // One event shown
 function showFx(e, live) {
+  if (window.sfx) window.sfx(e.k == "hit" ? (e.dot ? "dot" : e.crit ? "crit" : "hit") : e.k == "turn" && e.side == "foes" ? null : e.k);
   if (e.k == "card") showPlayed(e);
   else if (e.k == "hit") {
     floatOver(e.to, "-" + e.n + (e.crit ? "!" : ""), e.dot ? "dot " + e.dot : e.crit ? "crit" : "hit");
@@ -952,6 +953,7 @@ function openingFoot() {
 // A card turned over - in place (the others stay as they are)
 function flipSlot(slot) {
   var i = Number(slot.dataset.flip);
+  if (window.sfx) window.sfx("flip", cardOf(opening.cards[i].id).rarity);
   opening.flipped[i] = true;
   slot.classList.add("flipped");
   var c = opening.cards[i];
@@ -1009,6 +1011,7 @@ function onOpeningClick(event) {
   if (!target) return;
   if (target.dataset.open == "pack" && !opening.asked) {
     opening.asked = true;
+    if (window.sfx) window.sfx("burst");
     renderOpening();
     if (opening.pack == "all") socket.emit("openAll");
     else socket.emit("openPack", { pack: opening.pack });
@@ -1461,7 +1464,7 @@ function renderPartyStats(run) {
       [
         ["❤️", h.hp + " / " + h.maxHp, "HP"],
         ["⚔️", h.atk, "Attack: 100% damage of a Strike"],
-        ["🛡️", h.def, "Armor: taken off every hit (at most 75%), more block"],
+        ["🛡️", h.def, "Armor: less of every hit (as much armor as a hit halves it), more block"],
         ["🍀", h.luck + (h.perks.crit || 0) + "%", "Critical hits (x1.8) - and sensing the doors"],
         ["🪶", h.agi + "%", "Dodge an attack"],
         [null, h.potions, "Potions"],
@@ -2196,6 +2199,7 @@ socket.on("rpgPack", (data) => {
 // Packs bought: into "your packs"
 socket.on("rpgBought", (data) => {
   cart = {};
+  if (window.sfx) window.sfx("coins");
   var n = data.items.reduce((sum, [, count]) => sum + count, 0);
   render();
   // (the hint on the Inventory tab - it glows a moment: the packs wait there)
