@@ -476,6 +476,8 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (dupl
   // 10 to 15 cards - a charm makes room for more, or lets the deck go down with fewer
   assert.deepStrictEqual(rpg.deckLimits(hero), { min: 10, max: 15 });
   while (char.deck.length < 15) char.deck.push("defend");
+  // (owned - the packs are random)
+  if (!char.collection.flurry) rpg.collect(char, "flurry");
   assert.match(rpg.deckAdd(hero, "flurry"), /At most 15/);
   char.gear.charm = { slot: "charm", luck: 1, deckMax: 3 };
   assert.deepStrictEqual(rpg.deckLimits(hero), { min: 10, max: 18 });

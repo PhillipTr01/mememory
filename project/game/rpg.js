@@ -605,7 +605,7 @@ function cardClass(id) {
   return cardClasses[id] || null;
 }
 // A pack: the cards of the own class and the neutral ones this much more often than another class's
-const OWN_PACK_WEIGHT = 3;
+const OWN_PACK_WEIGHT = 2;
 
 // A booster pack opened: its cards of the class (the last ones of a rarity at least) -> [{id, fresh, coins}] -
 // a card the collection holds all copies of already stays in it too (fresh: false)
