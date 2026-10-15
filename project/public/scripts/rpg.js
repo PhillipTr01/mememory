@@ -1244,6 +1244,12 @@ function shareOf(n) {
   return under <= 0 ? 1 : Math.max(low.min / 100, 1 - (low.cut / 100) * under);
 }
 
+// A party's levels and mine: too far apart to join?
+function gapOf(p) {
+  var all = (p.levels || []).concat([hero.level || 1]);
+  return Math.max.apply(null, all) - Math.min.apply(null, all) > rules.partyGap;
+}
+
 // The pot - what of it is mine in this run
 function myPot(run) {
   var me = run.heroes.find((h) => h.name == myName);
@@ -1265,7 +1271,7 @@ function renderDoor() {
   var tag = cool
     ? el("span", "rpg-floor-tag cool", "⏳ Cooldown " + duration(cool))
     : el("span", "rpg-floor-tag " + (cleared ? "cleared" : "new"), cleared ? "✓ Cleared" : "✦ New");
-  if (cool) tag.title = "On cooldown - join another party on this floor meanwhile";
+  if (cool) tag.title = "You ran this floor lately - back in " + duration(cool);
   // (the time on the tag counts down - the buttons back when it's over)
   clearTimeout(coolTimer);
   if (cool) coolTimer = setTimeout(renderDoor, Math.min(cool + 50, 30000));
@@ -1298,20 +1304,19 @@ function renderDoor() {
         var faces = el("div", "rpg-party-faces");
         p.members.forEach((name) => faces.appendChild(createAvatar(name, "sm")));
         // (the floor the party goes down to: a badge in front - out of reach: dimmed)
-        var badge = el("div", "rpg-party-floor" + (p.floor > hero.maxFloor ? " locked" : ""));
+        var badge = el("div", "rpg-party-floor" + (p.floor > hero.maxFloor || cooldownOf(p.floor) || gapOf(p) ? " locked" : ""));
         badge.append(el("span", "rpg-party-floor-label", "Floor"), el("b", "", String(p.floor)));
         badge.title = "Entry 🪙 " + formatCoins(rules.entries[p.floor - 1]) + " each";
         var text = el("div", "rpg-party-text");
         var lowShare = shareOf(p.floor);
-        text.append(el("div", "rpg-party-name", p.leader + "'s party"), el("div", "mm-muted small", p.members.length + " / " + p.size + " heroes · entry 🪙 " + formatCoins(rules.entries[p.floor - 1]) + " · loot +" + Math.round(rules.partyLoot * 100 * (p.size - 1)) + "%" + (lowShare < 1 ? " · yours " + Math.round(lowShare * 100) + "%" : "")));
+        var lv = p.levels && p.levels.length ? " · Lv " + Math.min.apply(null, p.levels) + (Math.max.apply(null, p.levels) > Math.min.apply(null, p.levels) ? "–" + Math.max.apply(null, p.levels) : "") : "";
+        text.append(el("div", "rpg-party-name", p.leader + "'s party" + lv), el("div", "mm-muted small", p.members.length + " / " + p.size + " heroes · entry 🪙 " + formatCoins(rules.entries[p.floor - 1]) + " · loot +" + Math.round(rules.partyLoot * 100 * (p.size - 1)) + "%" + (lowShare < 1 ? " · yours " + Math.round(lowShare * 100) + "%" : "")));
         row.append(badge, faces, text);
         if (p.started) row.appendChild(el("span", "mm-muted small", "in the dungeon"));
         else if (p.floor > hero.maxFloor) row.appendChild(el("span", "mm-muted small", "floor not open"));
-        else {
-          var join = button("Join", "join", { id: p.id, className: "small", disabled: p.members.length >= p.size });
-          if (cooldownOf(p.floor)) join.title = "Your cooldown on this floor doesn't count in another party";
-          row.appendChild(join);
-        }
+        else if (cooldownOf(p.floor)) row.appendChild(el("span", "mm-muted small", "⏳ " + duration(cooldownOf(p.floor))));
+        else if (gapOf(p)) row.appendChild(el("span", "mm-muted small", "level gap too big"));
+        else row.appendChild(button("Join", "join", { id: p.id, className: "small", disabled: p.members.length >= p.size }));
         return row;
       })
     : [el("div", "rpg-empty mm-muted", "No open parties.")];

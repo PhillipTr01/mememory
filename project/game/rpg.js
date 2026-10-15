@@ -711,6 +711,13 @@ function coolFloor(hero, floor, cls = hero.cls, now = Date.now()) {
   if (config.RPG_FLOOR_COOLDOWN > 0) char.cooldowns[floor] = now + config.RPG_FLOOR_COOLDOWN;
 }
 
+// A character of this level in a party with these levels: too far apart? (null: fine)
+function levelGap(levels, level) {
+  const all = [...levels, level];
+  const gap = Math.max(...all) - Math.min(...all);
+  return gap > config.RPG_PARTY_GAP ? gap : null;
+}
+
 // The floors cooling down now: {floor: ms left}
 function cooldownsOf(hero, now = Date.now()) {
   const out = {};
@@ -2417,6 +2424,7 @@ module.exports = {
   floorCooldown,
   coolFloor,
   lootShare,
+  levelGap,
   revivePrice,
   revive,
   abandon,

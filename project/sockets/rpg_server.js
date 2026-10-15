@@ -83,7 +83,7 @@ module.exports = function (io, options = {}) {
   }
 
   function emitParties() {
-    const list = [...parties.values()].filter((party) => !party.result).map((party) => ({ id: party.id, leader: party.leader, floor: party.floor, size: party.size, members: party.members, started: party.run != null }));
+    const list = [...parties.values()].filter((party) => !party.result).map((party) => ({ id: party.id, leader: party.leader, floor: party.floor, size: party.size, members: party.members, levels: party.members.map((name) => rpg.charOf(heroOf(name)).level), started: party.run != null }));
     room.to(ROOM).emit("rpgParties", list);
   }
 
@@ -117,6 +117,7 @@ module.exports = function (io, options = {}) {
       cardRarities: rpg.CARD_RARITIES,
       heroLevelMax: rpg.HERO_LEVEL_MAX,
       partyLoot: rpg.PARTY_LOOT,
+      partyGap: config.RPG_PARTY_GAP,
       low: { free: config.RPG_LOW_FREE, cut: config.RPG_LOW_CUT, min: config.RPG_LOW_MIN },
       deckMin: rpg.DECK_MIN,
       deckMax: rpg.DECK_MAX,
@@ -275,7 +276,7 @@ module.exports = function (io, options = {}) {
     for (const name of party.members) {
       const hero = heroOf(name);
       rpg.charOf(hero).runs++;
-      // (the floor cools down for everyone - joining another one's party on it stays fine)
+      // (the floor cools down for everyone of the party)
       if (!party.tutorial) rpg.coolFloor(hero, party.floor);
       // (the potions go along - what is left comes back)
       hero.potions = 0;
@@ -590,7 +591,7 @@ module.exports = function (io, options = {}) {
 
     /* ---------- Parties ---------- */
 
-    const cooling = (floor) => `Floor ${floor} is on cooldown for you (${Math.ceil(rpg.floorCooldown(heroOf(username), floor) / 60000)} min) - join another party on it meanwhile.`;
+    const cooling = (floor) => `Floor ${floor} is on cooldown for you (${Math.ceil(rpg.floorCooldown(heroOf(username), floor) / 60000)} min) - back then.`;
 
     on("create", async (data) => {
       const floor = Number(data.floor);
@@ -627,6 +628,8 @@ module.exports = function (io, options = {}) {
       if (rpg.deckReady(heroOf(username))) return error(rpg.deckReady(heroOf(username)));
       if (rpg.deadFor(heroOf(username))) return error("Your character is dead - revive it or wait.");
       if (party.floor > rpg.maxFloor(heroOf(username))) return error(`Floor ${party.floor} isn't open for you yet.`);
+      if (rpg.floorCooldown(heroOf(username), party.floor)) return error(cooling(party.floor));
+      if (rpg.levelGap(party.members.map((name) => rpg.charOf(heroOf(name)).level), rpg.charOf(heroOf(username)).level)) return error(`The levels in a party can be at most ${config.RPG_PARTY_GAP} apart.`);
       join(party, username);
       emitParty(party);
       emitParties();
