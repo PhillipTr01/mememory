@@ -117,6 +117,7 @@ module.exports = function (io, options = {}) {
       cardRarities: rpg.CARD_RARITIES,
       heroLevelMax: rpg.HERO_LEVEL_MAX,
       partyLoot: rpg.PARTY_LOOT,
+      low: { free: config.RPG_LOW_FREE, cut: config.RPG_LOW_CUT, min: config.RPG_LOW_MIN },
       deckMin: rpg.DECK_MIN,
       deckMax: rpg.DECK_MAX,
       deckLeast: rpg.DECK_LEAST,
@@ -329,7 +330,9 @@ module.exports = function (io, options = {}) {
           else if (ours(one.name)) await coins.add(one.name, item.value, { reason: "rpg sell", note: item.name });
         }
       }
-      if (run.pot > 0 && ours(one.name)) await coins.add(one.name, run.pot, { reason: "rpg loot", note: "floor " + run.floor + " - " + result });
+      // (a character far deeper than this floor: a smaller share)
+      const pot = Math.round(run.pot * (one.share == null ? 1 : one.share));
+      if (pot > 0 && ours(one.name)) await coins.add(one.name, pot, { reason: "rpg loot", note: "floor " + run.floor + " - " + result });
       sendHero(one.name);
     }
     emitParty(party);

@@ -1237,6 +1237,19 @@ function renderBuilder() {
 
 var coolTimer = null;
 
+// My share of the loot pot on a floor: far under my deepest cleared floor - less (as the server counts it)
+function shareOf(n) {
+  var low = rules.low || { free: 0, cut: 0, min: 100 };
+  var under = (hero.deepest || 0) - n - low.free;
+  return under <= 0 ? 1 : Math.max(low.min / 100, 1 - (low.cut / 100) * under);
+}
+
+// The pot - what of it is mine in this run
+function myPot(run) {
+  var me = run.heroes.find((h) => h.name == myName);
+  return Math.round(run.pot * (me && me.share != null ? me.share : 1));
+}
+
 // A floor's cooldown left (ms) - counted down from when the hero came
 function cooldownOf(n) {
   return Math.max(0, ((hero.cooldowns || {})[n] || 0) - (Date.now() - heroAt));
@@ -1256,7 +1269,15 @@ function renderDoor() {
   // (the time on the tag counts down - the buttons back when it's over)
   clearTimeout(coolTimer);
   if (cool) coolTimer = setTimeout(renderDoor, Math.min(cool + 50, 30000));
-  morphChildren(document.getElementById("rpgFloorInfo"), [el("span", "", "Entry 🪙 " + formatCoins(entry) + " each"), tag]);
+  var info = [el("span", "", "Entry 🪙 " + formatCoins(entry) + " each"), tag];
+  // (far under my best floor: less loot - said right here)
+  var share = shareOf(floor);
+  if (share < 1) {
+    var low = el("span", "rpg-floor-tag low", "🪙 " + Math.round(share * 100) + "% loot");
+    low.title = "Far under your deepest floor - you get only " + Math.round(share * 100) + "% of the loot pot";
+    info.push(low);
+  }
+  morphChildren(document.getElementById("rpgFloorInfo"), info);
   document.getElementById("rpgFloorDown").disabled = floor <= 1;
   document.getElementById("rpgFloorUp").disabled = floor >= hero.maxFloor;
   document.getElementById("rpgSolo").disabled = myCoins < entry || !hero.cls || cool > 0;
@@ -1281,7 +1302,8 @@ function renderDoor() {
         badge.append(el("span", "rpg-party-floor-label", "Floor"), el("b", "", String(p.floor)));
         badge.title = "Entry 🪙 " + formatCoins(rules.entries[p.floor - 1]) + " each";
         var text = el("div", "rpg-party-text");
-        text.append(el("div", "rpg-party-name", p.leader + "'s party"), el("div", "mm-muted small", p.members.length + " / " + p.size + " heroes · entry 🪙 " + formatCoins(rules.entries[p.floor - 1]) + " · loot +" + Math.round(rules.partyLoot * 100 * (p.size - 1)) + "%"));
+        var lowShare = shareOf(p.floor);
+        text.append(el("div", "rpg-party-name", p.leader + "'s party"), el("div", "mm-muted small", p.members.length + " / " + p.size + " heroes · entry 🪙 " + formatCoins(rules.entries[p.floor - 1]) + " · loot +" + Math.round(rules.partyLoot * 100 * (p.size - 1)) + "%" + (lowShare < 1 ? " · yours " + Math.round(lowShare * 100) + "%" : "")));
         row.append(badge, faces, text);
         if (p.started) row.appendChild(el("span", "mm-muted small", "in the dungeon"));
         else if (p.floor > hero.maxFloor) row.appendChild(el("span", "mm-muted small", "floor not open"));
@@ -1350,7 +1372,9 @@ function renderRun() {
   var me = run.heroes.find((h) => h.name == myName);
   document.getElementById("rpgRunFloor").innerText = run.tutorial ? "🎓 Practice" : "Floor " + run.floor;
   renderCoach(run, me);
-  document.getElementById("rpgPot").innerText = "🪙 " + formatCoins(run.pot) + " each";
+  var pot = document.getElementById("rpgPot");
+  pot.innerText = me && me.share < 1 ? "🪙 " + formatCoins(myPot(run)) + " for you (" + Math.round(me.share * 100) + "%)" : "🪙 " + formatCoins(run.pot) + " each";
+  pot.title = me && me.share < 1 ? "Far under your deepest floor: " + Math.round(me.share * 100) + "% of the pot" : "";
   var quit = document.getElementById("rpgQuit");
   quit.hidden = !!party.result;
 
@@ -1846,7 +1870,7 @@ function handBar(run, me) {
   if (party.result) {
     var box = el("div", "rpg-result");
     var loot = party.result == "lost" ? [] : run.loot[myName] || [];
-    box.append(el("div", "rpg-result-title", party.result == "lost" ? "💀 Lost" : party.result == "won" ? "🎉 Cleared - 🪙 " + formatCoins(run.pot) + " for you" : "🚪 Left - 🪙 " + formatCoins(run.pot) + " for you"));
+    box.append(el("div", "rpg-result-title", party.result == "lost" ? "💀 Lost" : party.result == "won" ? "🎉 Cleared - 🪙 " + formatCoins(myPot(run)) + " for you" : "🚪 Left - 🪙 " + formatCoins(myPot(run)) + " for you"));
     var sum = party.summary && party.summary[myName];
     if (sum) {
       var gains = el("div", "rpg-summary");
@@ -1867,7 +1891,7 @@ function handBar(run, me) {
   if (run.phase == "between") {
     var voted = run.votes[myName];
     var count = Object.keys(run.votes).length;
-    var leave = button("🚪 Leave with 🪙 " + formatCoins(run.pot), "vote", { id: "leave", className: voted === "leave" ? "voted" : "" });
+    var leave = button("🚪 Leave with 🪙 " + formatCoins(myPot(run)), "vote", { id: "leave", className: voted === "leave" ? "voted" : "" });
     var leavers = Object.keys(run.votes).filter((name) => run.votes[name] === "leave");
     if (leavers.length) leave.innerText += " (" + leavers.length + ")";
     if (run.heroes.length < 2) return [potion, el("div", "rpg-wait mm-muted", "🗺️ Pick the next room on the map"), leave];

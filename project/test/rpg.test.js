@@ -794,6 +794,11 @@ test("rpg: leaving - one away doesn't hold the party up, one out of the run lose
   assert.strictEqual(rpg.floorCooldown(hero, 3, now), 0);
   assert.strictEqual(rpg.floorCooldown(hero, 4, now), 0);
   assert.strictEqual(rpg.floorCooldown(hero, 2, now + 24 * 3600 * 1000), 0);
+  // Low floors: the full loot near the deepest floor - less far under it, never under the least
+  assert.strictEqual(rpg.lootShare(10, 11), 1);
+  assert.strictEqual(rpg.lootShare(10, 8), 1);
+  assert.ok(Math.abs(rpg.lootShare(10, 7) - 0.85) < 1e-9);
+  assert.strictEqual(rpg.lootShare(30, 1), 0.1);
 });
 
 test("rpg: the bag - 5 slots, more bought up to 15, every one dearer", () => {

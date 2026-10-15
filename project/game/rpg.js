@@ -341,6 +341,13 @@ function partyBonus(size) {
   return 1 + PARTY_LOOT * Math.max(0, size - 1);
 }
 
+// A character's share of the loot pot on a floor: far under its deepest cleared floor - less (no farming low floors)
+function lootShare(deepest, floor) {
+  const under = deepest - floor - config.RPG_LOW_FREE;
+  if (under <= 0) return 1;
+  return Math.max(config.RPG_LOW_MIN / 100, 1 - (config.RPG_LOW_CUT / 100) * under);
+}
+
 /* ---------- Progression: hero levels, talents, relics, card upgrades ---------- */
 
 // Perks: what talents and relics give (added up per hero): startBlock (block at the start of a fight), firstMana
@@ -1032,6 +1039,7 @@ function newRun(floor, party, rng = Math.random, options = {}) {
         cls: hero.cls,
         level: charOf(hero).level,
         maxFloor: maxFloor(hero),
+        share: lootShare(charOf(hero).deepest, floor),
         ...stats,
         hp: stats.maxHp,
         perks,
@@ -2149,6 +2157,7 @@ function runView(run) {
       block: h.block,
       ended: h.ended,
       away: !!h.away,
+      share: h.share,
       blessed: h.blessed,
       effects: effectsOf(h.effects),
       hand: h.hand,
@@ -2407,6 +2416,7 @@ module.exports = {
   die,
   floorCooldown,
   coolFloor,
+  lootShare,
   revivePrice,
   revive,
   abandon,
