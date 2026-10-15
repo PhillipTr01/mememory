@@ -88,6 +88,8 @@ const FIELDS = [
   { group: "rpg", section: "Floors", key: "RPG_LOW_FREE", label: "Full loot below the best", hint: "Full pot on floors this far under the deepest cleared one.", unit: "floors", step: 1, min: 0, max: 100 },
   { group: "rpg", section: "Floors", key: "RPG_LOW_CUT", label: "Less loot per floor lower", hint: "Each floor lower: this much less of the pot.", unit: "%", step: 1, min: 0, max: 100 },
   { group: "rpg", section: "Floors", key: "RPG_LOW_MIN", label: "Loot at least", hint: "The pot share never drops under this.", unit: "%", step: 1, min: 0, max: 100 },
+  { group: "rpg", section: "Characters", key: "RPG_CHAR_PRICE", label: "Stats dearer per character", hint: "Every character after a player's first: stat levels this much dearer.", unit: "%", step: 5, min: 0, max: 1000 },
+  { group: "rpg", section: "Characters", key: "RPG_CHAR_HARDER", label: "Monsters stronger per character", hint: "Every character after a player's first: monsters this much stronger. A party: the average.", unit: "%", step: 1, min: 0, max: 200 },
   { group: "rpg", section: "Floors", key: "RPG_PARTY_GAP", label: "Party level gap", hint: "Max level difference in a party.", unit: "levels", step: 1, min: 0, max: 50 },
   { group: "rpg", section: "Floors", key: "RPG_FLOOR_COOLDOWN", label: "Floor cooldown", hint: "After a run on a cleared floor, wait this long to run it again.", unit: "min", scale: 60000, step: 15, min: 0, max: 10080 },
   { group: "rpg", section: "Death", key: "RPG_DEATH_TIME", label: "Dead for", hint: "After the whole party falls.", unit: "min", scale: 60000, step: 30, min: 0, max: 10080 },

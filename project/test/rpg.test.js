@@ -34,7 +34,7 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   // (every 5th floor: its boss at the end)
   assert.strictEqual(rpg.BOSS_EVERY, 5);
   const bossRun = rpg.newRun(5, [{ name: "a", hero: rpg.newHero("warrior") }]);
-  assert.strictEqual(bossRun.map[rpg.ROOMS - 1][0].kind, "boss");
+  assert.strictEqual(bossRun.map[bossRun.map.length - 1][0].kind, "boss");
   // The map: ROOMS rows - a fight first, the guarded gate last, 2 to 4 rooms a row between;
   // every room leads on, every room is reached, the paths never cross
   const kinds = new Map();
@@ -806,6 +806,19 @@ test("rpg: leaving - one away doesn't hold the party up, one out of the run lose
   assert.strictEqual(rpg.lootShare(10, 8), 1);
   assert.ok(Math.abs(rpg.lootShare(10, 7) - 0.85) < 1e-9);
   assert.strictEqual(rpg.lootShare(30, 1), 0.1);
+  // Longer maps deeper down and on boss floors
+  for (let i = 0; i < 20; i++) {
+    assert.strictEqual(rpg.rowsFor(1), rpg.ROOMS);
+    assert.strictEqual(rpg.rowsFor(5), rpg.ROOMS + 1);
+    assert.ok(rpg.rowsFor(25) >= rpg.ROOMS + 2 && rpg.rowsFor(25) <= rpg.ROOMS + 4);
+  }
+  // A player's later characters: dearer stats, stronger monsters
+  const multi = rpg.newHero("warrior");
+  rpg.unlock(multi, "mage");
+  assert.strictEqual(rpg.charIndex(multi), 1);
+  assert.ok(rpg.statPrice(multi, 0) > rpg.upgradeCost(0));
+  assert.ok(rpg.newRun(1, [{ name: "a", hero: multi }]).harder > 1);
+  assert.strictEqual(rpg.newRun(1, [{ name: "a", hero: rpg.newHero("warrior") }]).harder, 1);
   // Class relics: only for their classes
   for (let i = 0; i < 30; i++) assert.ok(!rpg.relicOffer({ cls: "warrior", relics: [] }, Math.random, 5).includes("vial"));
   assert.ok(rpg.relicOffer({ cls: "rogue", relics: [] }, Math.random, 99).includes("vial"));
@@ -845,7 +858,7 @@ test("rpg: monsters - traits counter some heroes, a boss turns at half HP, summo
   assert.strictEqual(rpg.afflict({ effects: {}, traits: ["fireproof"] }, "burn", 3, 10), false);
   // A boss: its own name, a second phase at half HP
   const run = rpg.newRun(5, [{ name: "a", hero: rpg.newHero("warrior") }]);
-  run.doors = [run.map[rpg.ROOMS - 1][0]];
+  run.doors = [run.map[run.map.length - 1][0]];
   rpg.enterRoom(run, 0, () => 0.5);
   const boss = run.monsters[0];
   assert.strictEqual(boss.name, rpg.BOSSES[0].name);
@@ -860,7 +873,7 @@ test("rpg: monsters - traits counter some heroes, a boss turns at half HP, summo
   assert.ok(boss.down || (boss.phased && boss.atk > atk));
   // A summon: more monsters, at most 4 standing
   const run2 = rpg.newRun(5, [{ name: "a", hero: rpg.newHero("warrior") }]);
-  run2.doors = [run2.map[rpg.ROOMS - 1][0]];
+  run2.doors = [run2.map[run2.map.length - 1][0]];
   rpg.enterRoom(run2, 0, () => 0.5);
   const lead = run2.monsters[0];
   run2.monsters.forEach((m) => (m.intent = { move: "defend" }));

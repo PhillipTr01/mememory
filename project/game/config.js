@@ -235,6 +235,8 @@ module.exports = {
   RPG_LOW_FREE: 2, // floors this far under the deepest cleared: the full loot
   RPG_LOW_CUT: 15, // % of the loot less for every floor lower than that (a high character farming low floors)
   RPG_LOW_MIN: 10, // % of the loot at least
+  RPG_CHAR_PRICE: 50, // every character after the first: stat levels this % dearer (the 2nd +50%, the 3rd +100%...)
+  RPG_CHAR_HARDER: 10, // every character after the first: monsters this % stronger (a party: the average)
   RPG_PARTY_GAP: 10, // a party: its characters' levels at most this far apart
   RPG_FLOOR_COOLDOWN: 2 * 3600 * 1000, // a cleared floor: not opened again this long (another one's party on it: fine)
   RPG_DEATH_TIME: 6 * 3600 * 1000, // the party down: the character dead this long

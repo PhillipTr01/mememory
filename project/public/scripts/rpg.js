@@ -553,6 +553,12 @@ function renderHero() {
     var mineStrength = hero.strength || mine.strength;
     strength.append(el("span", "rpg-strength-icon", mineStrength.icon), el("b", "", mineStrength.name), el("span", "", mineStrength.text), el("span", "rpg-strength-grow", "grows with your level"));
     info.push(el("div", "rpg-class-about", mine.about), strength);
+    // (a later character of the player: dearer stats, stronger monsters)
+    if (hero.charIndex > 0) {
+      var later = el("div", "rpg-class-later", "Character #" + (hero.charIndex + 1) + ": stats +" + rules.charPrice * hero.charIndex + "% · monsters +" + rules.charHarder * hero.charIndex + "%");
+      later.title = "Every character after your first costs more and fights harder";
+      info.push(later);
+    }
   } else info.push(el("div", "rpg-class-about first", "Your first class is free."));
   morphChildren(document.getElementById("rpgClassInfo"), info);
   document.getElementById("rpgStats").hidden = !picked;

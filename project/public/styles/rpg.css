@@ -5868,3 +5868,11 @@ button.rpg-cardx.off {
   left: auto;
   transform: none;
 }
+
+/* 34. A later character: what it costs more */
+.rpg-class-later {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ffb27a;
+}

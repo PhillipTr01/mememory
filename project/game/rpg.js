@@ -697,6 +697,17 @@ function statFull(hero, id) {
   return cap != null && statsOf(hero)[id] >= cap;
 }
 
+// The place of a character among its player's (0: the first class unlocked) - later ones pay more, fight harder
+function charIndex(hero, cls = hero.cls) {
+  return Math.max(0, (hero.unlocked || []).indexOf(cls));
+}
+
+// The price of a stat level for this character: later characters pay RPG_CHAR_PRICE % more each
+function statPrice(hero, level, cls = hero.cls) {
+  const cost = upgradeCost(level);
+  return cost == null ? null : round100(cost * (1 + (config.RPG_CHAR_PRICE / 100) * charIndex(hero, cls)));
+}
+
 // The price of the next level of a stat (null: the last level reached)
 function upgradeCost(level) {
   if (level >= LEVEL_MAX) return null;
@@ -788,7 +799,8 @@ function heroView(hero) {
     chars: Object.fromEntries(hero.unlocked.map((id) => [id, { level: charOf(hero, id).level, deepest: charOf(hero, id).deepest, deadFor: deadFor(hero, Date.now(), id) }])),
     levels: { ...newChar().levels, ...char.levels },
     stats: statsOf(hero),
-    upgrades: Object.fromEntries(STAT_IDS.map((id) => [id, statFull(hero, id) ? null : upgradeCost(char.levels[id] || 0)])),
+    upgrades: Object.fromEntries(STAT_IDS.map((id) => [id, statFull(hero, id) ? null : statPrice(hero, char.levels[id] || 0)])),
+    charIndex: charIndex(hero),
     full: Object.fromEntries(STAT_IDS.map((id) => [id, statFull(hero, id)])),
     gear: char.gear,
     bag: hero.bag,
@@ -908,11 +920,22 @@ function weighted(rng, entries) {
   return entries[entries.length - 1][0];
 }
 
+// The rows of a floor's map: ROOMS - deeper floors sometimes more (from floor 11 maybe one, from 21 one or two),
+// a boss floor one more
+function rowsFor(floor, rng = Math.random) {
+  let rows = ROOMS;
+  if (floor >= 11 && rng() < 0.5) rows++;
+  if (floor >= 21) rows += 1 + (rng() < 0.5 ? 1 : 0);
+  if (BOSS_EVERY && floor % BOSS_EVERY == 0) rows++;
+  return rows;
+}
+
 // The map of a floor: ROOMS rows - the first a fight, the last the guarded gate, between them 2 to 4 rooms a row;
 // every room leads to one or more of the next row (the paths never cross). A room's kind is hidden - sensed
 // (shown) at SENSE_BASE + SENSE x luck %
 function makeMap(run, rng = Math.random) {
   const chance = senseChance(run);
+  const ROOMS = rowsFor(run.floor, rng);
   const middle = (LANES - 1) / 2;
   const rows = [];
   for (let r = 0; r < ROOMS; r++) {
@@ -1030,6 +1053,15 @@ function monster(floor, size, kind, rank, depth = 0, rng = Math.random) {
   return foe;
 }
 
+// A monster of a run with later characters in it: stronger (run.harder)
+function toughen(run, foe) {
+  if (run.harder > 1) {
+    foe.maxHp = foe.hp = Math.max(1, Math.round(foe.maxHp * run.harder));
+    foe.atk = Math.max(1, Math.round(foe.atk * run.harder));
+  }
+  return foe;
+}
+
 // A monster's armor: the share of a hit it takes off - more deeper down, on elites and bosses, on the armored kinds
 function armorOf(floor, kind, rank) {
   const extra = rank.id == "boss" ? 0.15 : rank.id == "elite" ? 0.1 : 0;
@@ -1110,6 +1142,8 @@ function newRun(floor, party, rng = Math.random, options = {}) {
     log: [],
   };
   if (options.tutorial) run.tutorial = true;
+  // (later characters of their players: stronger monsters - a party: the average)
+  run.harder = 1 + (config.RPG_CHAR_HARDER / 100) * (party.reduce((sum, { hero }) => sum + charIndex(hero), 0) / Math.max(1, party.length));
   run.map = run.tutorial ? tutorialMap() : makeMap(run, rng);
   run.doors = doorsFor(run);
   return run;
@@ -1310,6 +1344,7 @@ function enterRoom(run, door = 0, rng = Math.random) {
   if (!chosen.open && !chosen.sensed) say(run, `Room ${n}: ${ROOM_KINDS[kind].icon} ${ROOM_KINDS[kind].name}!`);
   if (kind == "fight" || kind == "hard" || kind == "elite" || kind == "boss") {
     run.monsters = monstersFor(run.floor, run.heroes.length, kind, rng, chosen.row || 0);
+    run.monsters.forEach((m) => toughen(run, m));
     // (the practice run: one slime first, then two easy foes - half as strong)
     if (run.tutorial) {
       run.monsters = run.monsters.slice(0, run.rooms.length == 1 ? 1 : 2);
@@ -2043,7 +2078,7 @@ function monsterMove(run, foe, rng) {
       const group = MONSTERS[Math.min(MONSTERS.length - 1, foe.summon != null ? foe.summon : Math.floor((run.floor - 1) / 5))];
       const count = Math.min(2, 4 - alive(run.monsters).length);
       for (let i = 0; i < count; i++) {
-        const add = monster(run.floor, run.heroes.length, pick(rng, group), RANKS.normal, 0, rng);
+        const add = toughen(run, monster(run.floor, run.heroes.length, pick(rng, group), RANKS.normal, 0, rng));
         run.monsters.push(add);
       }
       say(run, `${source} calls for help 📣 - ${count} more!`);
@@ -2340,6 +2375,7 @@ function simulate(hero, floor, runs = 500, rng = Math.random) {
 module.exports = {
   FLOORS,
   ROOMS,
+  rowsFor,
   DOORS,
   PARTY_MAX,
   BAG_MAX,
@@ -2438,6 +2474,8 @@ module.exports = {
   newHero,
   statsOf,
   upgradeCost,
+  statPrice,
+  charIndex,
   statFull,
   maxFloor,
   entryCost,

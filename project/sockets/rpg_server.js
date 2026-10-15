@@ -118,6 +118,8 @@ module.exports = function (io, options = {}) {
       heroLevelMax: rpg.HERO_LEVEL_MAX,
       partyLoot: rpg.PARTY_LOOT,
       partyGap: config.RPG_PARTY_GAP,
+      charPrice: config.RPG_CHAR_PRICE,
+      charHarder: config.RPG_CHAR_HARDER,
       low: { free: config.RPG_LOW_FREE, cut: config.RPG_LOW_CUT, min: config.RPG_LOW_MIN },
       deckMin: rpg.DECK_MIN,
       deckMax: rpg.DECK_MAX,
@@ -395,7 +397,7 @@ module.exports = function (io, options = {}) {
       const char = rpg.charOf(hero);
       if (!hero.cls) return error("Pick a class first.");
       const level = char.levels[data.stat] || 0;
-      const cost = rpg.upgradeCost(level);
+      const cost = rpg.statPrice(hero, level);
       if (cost == null) return error("Already max level.");
       if (rpg.statFull(hero, data.stat)) return error("Already capped.");
       if (!(await coins.spend(username, cost, { reason: "rpg upgrade", note: data.stat }))) return error(coins.refusal(username) || "You don't have enough coins.");
