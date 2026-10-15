@@ -689,6 +689,31 @@ function die(hero, cls, now = Date.now()) {
   charOf(hero, cls).deadUntil = now + config.RPG_DEATH_TIME;
 }
 
+/* ---------- The floor cooldown: a cleared floor not opened again for a while (no farming) - another one's party on it: fine ---------- */
+
+function floorCooldown(hero, floor, now = Date.now(), cls = hero.cls) {
+  const char = charOf(hero, cls);
+  // (the next floor - not cleared yet: always open)
+  if (floor > char.deepest) return 0;
+  return Math.max(0, ((char.cooldowns || {})[floor] || 0) - now);
+}
+
+function coolFloor(hero, floor, cls = hero.cls, now = Date.now()) {
+  const char = charOf(hero, cls);
+  char.cooldowns = Object.fromEntries(Object.entries(char.cooldowns || {}).filter(([, until]) => until > now));
+  if (config.RPG_FLOOR_COOLDOWN > 0) char.cooldowns[floor] = now + config.RPG_FLOOR_COOLDOWN;
+}
+
+// The floors cooling down now: {floor: ms left}
+function cooldownsOf(hero, now = Date.now()) {
+  const out = {};
+  for (const floor of Object.keys(charOf(hero).cooldowns || {})) {
+    const left = floorCooldown(hero, Number(floor), now);
+    if (left > 0) out[floor] = left;
+  }
+  return out;
+}
+
 // The revives of today (back to 0 at midnight)
 function revivesToday(hero, now = Date.now()) {
   return hero.revives && hero.revives.day == dayOf(now) ? hero.revives.count : 0;
@@ -742,6 +767,7 @@ function heroView(hero) {
     bagSlotPrice: bagSlotPrice(hero),
     tutorialDone: !!char.tutorialDone,
     deadFor: deadFor(hero),
+    cooldowns: cooldownsOf(hero),
     revivePrice: revivePrice(hero),
     revives: revivesToday(hero),
   };
@@ -2379,6 +2405,8 @@ module.exports = {
   },
   deadFor,
   die,
+  floorCooldown,
+  coolFloor,
   revivePrice,
   revive,
   abandon,

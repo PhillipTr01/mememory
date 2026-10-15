@@ -85,6 +85,7 @@ const FIELDS = [
   { group: "rpg", section: "Difficulty", key: "RPG_MONSTER_HP", label: "Monster HP", hint: "100%: as designed.", unit: "%", step: 5, min: 10, max: 1000 },
   { group: "rpg", section: "Difficulty", key: "RPG_MONSTER_ATK", label: "Monster attack", hint: "100%: as designed.", unit: "%", step: 5, min: 10, max: 1000 },
   { group: "rpg", section: "Difficulty", key: "RPG_LOOT", label: "Loot", hint: "Of the coins every room puts in the pot. 100%: as designed.", unit: "%", step: 5, min: 0, max: 1000 },
+  { group: "rpg", section: "Floors", key: "RPG_FLOOR_COOLDOWN", label: "Floor cooldown", hint: "After a run on a cleared floor the character can't open it again this long. Joining another hero's party on it is always fine.", unit: "min", scale: 60000, step: 15, min: 0, max: 10080 },
   { group: "rpg", section: "Death", key: "RPG_DEATH_TIME", label: "Dead for", hint: "The whole party down: the character can't go down again this long.", unit: "min", scale: 60000, step: 30, min: 0, max: 10080 },
   { group: "rpg", section: "Death", key: "RPG_REVIVE_ENTRIES", label: "Revive price", hint: "Entries of the deepest floor open - twice as much with every revive of a day.", unit: "entries", step: 1, min: 0, max: 100 },
   { group: "rpg", section: "Fights", key: "RPG_TURN_TIME", label: "Time per turn", hint: "Then the monsters move.", unit: "s", scale: 1000, step: 5, min: 10, max: 600 },

@@ -786,6 +786,14 @@ test("rpg: leaving - one away doesn't hold the party up, one out of the run lose
   // (midnight: the price back to the start)
   assert.strictEqual(rpg.revivePrice(hero, now + 24 * 3600 * 1000), price);
   assert.match(rpg.revive(hero, now), /isn't dead/);
+  // The floor cooldown: a cleared floor only - the next one always open
+  rpg.charOf(hero).deepest = 3;
+  rpg.coolFloor(hero, 2, "warrior", now);
+  rpg.coolFloor(hero, 4, "warrior", now);
+  assert.ok(rpg.floorCooldown(hero, 2, now + 1000) > 0);
+  assert.strictEqual(rpg.floorCooldown(hero, 3, now), 0);
+  assert.strictEqual(rpg.floorCooldown(hero, 4, now), 0);
+  assert.strictEqual(rpg.floorCooldown(hero, 2, now + 24 * 3600 * 1000), 0);
 });
 
 test("rpg: the bag - 5 slots, more bought up to 15, every one dearer", () => {

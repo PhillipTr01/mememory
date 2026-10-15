@@ -1235,16 +1235,32 @@ function renderBuilder() {
   ]);
 }
 
+var coolTimer = null;
+
+// A floor's cooldown left (ms) - counted down from when the hero came
+function cooldownOf(n) {
+  return Math.max(0, ((hero.cooldowns || {})[n] || 0) - (Date.now() - heroAt));
+}
+
 function renderDoor() {
   floor = Math.max(1, Math.min(hero.maxFloor, floor));
   var entry = rules.entries[floor - 1];
   document.getElementById("rpgFloor").innerText = "Floor " + floor;
   var cleared = floor <= hero.deepest;
-  morphChildren(document.getElementById("rpgFloorInfo"), [el("span", "", "Entry 🪙 " + formatCoins(entry) + " each"), el("span", "rpg-floor-tag " + (cleared ? "cleared" : "new"), cleared ? "✓ Cleared" : "✦ New")]);
+  // (a cleared floor run lately: cooling down - only another one's party goes there)
+  var cool = cooldownOf(floor);
+  var tag = cool
+    ? el("span", "rpg-floor-tag cool", "⏳ Cooldown " + duration(cool))
+    : el("span", "rpg-floor-tag " + (cleared ? "cleared" : "new"), cleared ? "✓ Cleared" : "✦ New");
+  if (cool) tag.title = "On cooldown - join another party on this floor meanwhile";
+  // (the time on the tag counts down - the buttons back when it's over)
+  clearTimeout(coolTimer);
+  if (cool) coolTimer = setTimeout(renderDoor, Math.min(cool + 50, 30000));
+  morphChildren(document.getElementById("rpgFloorInfo"), [el("span", "", "Entry 🪙 " + formatCoins(entry) + " each"), tag]);
   document.getElementById("rpgFloorDown").disabled = floor <= 1;
   document.getElementById("rpgFloorUp").disabled = floor >= hero.maxFloor;
-  document.getElementById("rpgSolo").disabled = myCoins < entry || !hero.cls;
-  document.getElementById("rpgOpen").disabled = !hero.cls;
+  document.getElementById("rpgSolo").disabled = myCoins < entry || !hero.cls || cool > 0;
+  document.getElementById("rpgOpen").disabled = !hero.cls || cool > 0;
   var sizes = [];
   // (the party size: a segment each - its number, a figure for every hero)
   for (var n = 2; n <= rules.partyMax; n++) {
@@ -1269,7 +1285,11 @@ function renderDoor() {
         row.append(badge, faces, text);
         if (p.started) row.appendChild(el("span", "mm-muted small", "in the dungeon"));
         else if (p.floor > hero.maxFloor) row.appendChild(el("span", "mm-muted small", "floor not open"));
-        else row.appendChild(button("Join", "join", { id: p.id, className: "small", disabled: p.members.length >= p.size }));
+        else {
+          var join = button("Join", "join", { id: p.id, className: "small", disabled: p.members.length >= p.size });
+          if (cooldownOf(p.floor)) join.title = "Your cooldown on this floor doesn't count in another party";
+          row.appendChild(join);
+        }
         return row;
       })
     : [el("div", "rpg-empty mm-muted", "No open parties.")];

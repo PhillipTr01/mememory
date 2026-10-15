@@ -232,6 +232,7 @@ module.exports = {
   RPG_UPGRADE_MAX: 10000000, // a stat level costs at most this much
   RPG_CLASS_PRICE: 1000000, // another class
   RPG_POTION_PRICE: 5000, // a potion with floor 1 open (12% dearer every floor reached)
+  RPG_FLOOR_COOLDOWN: 2 * 3600 * 1000, // a cleared floor: not opened again this long (another one's party on it: fine)
   RPG_DEATH_TIME: 6 * 3600 * 1000, // the party down: the character dead this long
   RPG_REVIVE_ENTRIES: 3, // a revive: this many entries of the deepest floor open (twice as much each one of a day)
   RPG_MONSTER_HP: 100, // % of the monsters' HP

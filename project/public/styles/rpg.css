@@ -3583,6 +3583,12 @@ button.rpg-cardx.off {
   gap: 0.5rem;
 }
 
+.rpg-floor-tag.cool {
+  color: #9cc4ff;
+  background: rgba(120, 170, 255, 0.12);
+  border: 1px solid rgba(120, 170, 255, 0.4);
+}
+
 .rpg-ready-list {
   display: flex;
   flex-direction: column;

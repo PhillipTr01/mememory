@@ -274,6 +274,8 @@ module.exports = function (io, options = {}) {
     for (const name of party.members) {
       const hero = heroOf(name);
       rpg.charOf(hero).runs++;
+      // (the floor cools down for everyone - joining another one's party on it stays fine)
+      if (!party.tutorial) rpg.coolFloor(hero, party.floor);
       // (the potions go along - what is left comes back)
       hero.potions = 0;
     }
@@ -585,6 +587,8 @@ module.exports = function (io, options = {}) {
 
     /* ---------- Parties ---------- */
 
+    const cooling = (floor) => `Floor ${floor} is on cooldown for you (${Math.ceil(rpg.floorCooldown(heroOf(username), floor) / 60000)} min) - join another party on it meanwhile.`;
+
     on("create", async (data) => {
       const floor = Number(data.floor);
       const size = Number(data.size);
@@ -593,6 +597,7 @@ module.exports = function (io, options = {}) {
       if (rpg.deckReady(heroOf(username))) return error(rpg.deckReady(heroOf(username)));
       if (rpg.deadFor(heroOf(username))) return error("Your character is dead - revive it or wait.");
       if (!Number.isInteger(floor) || floor < 1 || floor > rpg.maxFloor(heroOf(username))) return error("That floor isn't open for you yet.");
+      if (rpg.floorCooldown(heroOf(username), floor)) return error(cooling(floor));
       if (!Number.isInteger(size) || size < 1 || size > rpg.PARTY_MAX) return;
       const party = { id: "p" + ++partyCount, leader: username, floor, size, members: [], run: null, endsAt: null, timer: null, result: null };
       parties.set(party.id, party);
@@ -637,6 +642,8 @@ module.exports = function (io, options = {}) {
       const party = myParty();
       if (!party || party.run) return;
       if (party.leader !== username) return error("Only the leader starts.");
+      // (the leader's own floor cooling down - a leader after the first one left)
+      if (rpg.floorCooldown(heroOf(username), party.floor)) return error(cooling(party.floor));
       const dead = party.members.find((name) => rpg.deadFor(heroOf(name)));
       if (dead) return error(dead === username ? "Your character is dead - revive it or wait." : `${dead}'s character is dead.`);
       const unready = party.members.find((name) => rpg.deckReady(heroOf(name)));
