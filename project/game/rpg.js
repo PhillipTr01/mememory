@@ -68,7 +68,7 @@ const MAIN_BONUS = 1.5;
 const DODGE_MAX = STATS.agi.cap;
 
 // What a room puts in the pot (per hero, a share of the entry)
-const REWARD = { fight: 0.21, hard: 0.4, elite: 0.4, boss: 0.65, chest: 0.17, trap: 0, rest: 0, shrine: 0, merchant: 0 };
+const REWARD = { fight: 0.25, hard: 0.47, elite: 0.4, boss: 0.65, chest: 0.25, trap: 0, rest: 0, shrine: 0, merchant: 0 };
 
 /* ---------- Classes and their cards ---------- */
 
@@ -325,7 +325,7 @@ const BOSSES = [
   { name: "The Lich", icon: "🧟", hp: 0.9, atk: 0.85, undead: true, traits: ["venomproof"], moves: ["curse", "drain", "summon", "attack"], summon: 5, phase: { atk: 1.25, moves: ["curse", "drain", "burn", "smash"], text: "tears open its phylactery" } },
 ];
 const MONSTER_HP = 52;
-const MONSTER_HP_GROWTH = 1.135;
+const MONSTER_HP_GROWTH = 1.13;
 const MONSTER_ATK = 11;
 const MONSTER_ATK_GROWTH = 1.11;
 const MONSTER_CURVE = 0; // (the growth steeper the deeper: x(1 + this x (floor - 1)²))
@@ -430,9 +430,12 @@ const RELICS = {
   clover: { name: "Four-Leaf Clover", icon: "🍀", text: "+10% critical hits.", perks: { crit: 10 } },
   salve: { name: "Mending Salve", icon: "🧴", text: "Heal 10% after every fight won.", perks: { afterFight: 0.1 } },
   helm: { name: "Berserker Helm", icon: "🪖", text: "30% more damage below half HP.", perks: { lowHp: 0.3 } },
-  vial: { name: "Venom Vial", icon: "🧪", text: "Your poison is 50% stronger.", perks: { poison: 0.5 } },
-  symbol: { name: "Holy Symbol", icon: "✝️", text: "30% more healing.", perks: { heal: 0.3 } },
-  sigil: { name: "Shield Sigil", icon: "🔰", text: "25% more block from your cards.", perks: { block: 0.25 } },
+  // (classes: only these find it - the rest of no use to the others)
+  vial: { name: "Venom Vial", icon: "🧪", text: "Your poison is 50% stronger.", perks: { poison: 0.5 }, classes: ["rogue"] },
+  symbol: { name: "Holy Symbol", icon: "✝️", text: "30% more healing.", perks: { heal: 0.3 }, classes: ["cleric", "paladin"] },
+  sigil: { name: "Shield Sigil", icon: "🔰", text: "25% more block from your cards.", perks: { block: 0.25 }, classes: ["warrior", "paladin"] },
+  orb: { name: "Arcane Orb", icon: "🔮", text: "Hits on every foe deal 25% more.", perks: { aoe: 0.25 }, classes: ["mage"] },
+  grip: { name: "Giant's Grip", icon: "🦾", text: "Ignore 15% more armor.", perks: { pierce: 0.15 }, classes: ["warrior"] },
   banner: { name: "War Banner", icon: "🚩", text: "Your first attack each turn deals 40% more.", perks: { firstStrike: 0.4 } },
 };
 const RELIC_IDS = Object.keys(RELICS);
@@ -870,7 +873,7 @@ const ROOM_KINDS = {
   event: { name: "Encounter", icon: "📜", about: "Something strange - a choice to make" },
 };
 // What waits in a room of the map (weights) - mostly fights
-const DOOR_POOL = { fight: 10, hard: 3.5, trap: 0.4, chest: 0.6, rest: 0.5, shrine: 0.2, merchant: 0.3, event: 0.6 };
+const DOOR_POOL = { fight: 7, hard: 2.5, trap: 0.6, chest: 1, rest: 1, shrine: 0.5, merchant: 0.6, event: 1.4 };
 const LANES = 4; // the columns of the map
 // What a room of the map is - hidden; the party senses it (sees its kind) that often: SENSE_BASE + SENSE x luck %
 const SENSE_BASE = 20;
@@ -1134,7 +1137,7 @@ function giveRelic(run, hero, id) {
 
 // Three relics a hero hasn't got yet
 function relicOffer(hero, rng, count = 3) {
-  const free = RELIC_IDS.filter((id) => !hero.relics.includes(id));
+  const free = RELIC_IDS.filter((id) => !hero.relics.includes(id) && (!RELICS[id].classes || RELICS[id].classes.includes(hero.cls)));
   return shuffle(free, rng).slice(0, count);
 }
 const roomNumber = (run) => run.rooms.length;
@@ -2383,6 +2386,7 @@ module.exports = {
   TALENTS,
   TALENT_LEVELS,
   RELICS,
+  relicOffer,
   AFFIXES,
   MONSTER_TRAITS,
   BOSSES,

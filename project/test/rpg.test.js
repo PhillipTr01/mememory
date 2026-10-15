@@ -805,6 +805,9 @@ test("rpg: leaving - one away doesn't hold the party up, one out of the run lose
   assert.strictEqual(rpg.lootShare(10, 8), 1);
   assert.ok(Math.abs(rpg.lootShare(10, 7) - 0.85) < 1e-9);
   assert.strictEqual(rpg.lootShare(30, 1), 0.1);
+  // Class relics: only for their classes
+  for (let i = 0; i < 30; i++) assert.ok(!rpg.relicOffer({ cls: "warrior", relics: [] }, Math.random, 5).includes("vial"));
+  assert.ok(rpg.relicOffer({ cls: "rogue", relics: [] }, Math.random, 99).includes("vial"));
   // A party: the levels at most RPG_PARTY_GAP apart
   assert.strictEqual(rpg.levelGap([10, 15], 20), null);
   assert.strictEqual(rpg.levelGap([10, 15], 21), 11);
