@@ -34,8 +34,8 @@ try {
   // no storage: the defaults
 }
 
-var EFFECT_ICONS = { poison: "☠️", burn: "🔥", stun: "💫", chill: "❄️", rage: "😡", might: "📯" };
-var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned - loses its next move", chill: "Chilled - half damage", rage: "Raging - more damage", might: "Might - 30% more damage" };
+var EFFECT_ICONS = { poison: "☠️", burn: "🔥", stun: "💫", chill: "❄️", rage: "😡", might: "📯", weak: "🕯️" };
+var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned - loses its next move", chill: "Chilled - half damage", rage: "Raging - more damage", might: "Might - 30% more damage", weak: "Cursed - 30% less damage" };
 var RARITY_NAMES = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary" };
 var SLOT_NAMES = { weapon: "Weapon", armor: "Armor", charm: "Charm" };
 
@@ -318,6 +318,10 @@ function showFx(e, live) {
     banner("Victory!", "victory", 1500);
     holdModal = Date.now() + 1500;
   } else if (e.k == "defeat") banner("Defeat", "defeat", 1800);
+  else if (e.k == "phase") {
+    flash(e.by, "rpg-acting", 700);
+    banner("💢 " + e.text, "foes", 1300);
+  }
 }
 
 // The events in beats: the hero's cards at once - every monster's move a beat of its own
@@ -1313,7 +1317,7 @@ function renderRun() {
   var scene;
   if (fighting) {
     scene = run.monsters.map((m) => {
-      var card = el("div", "rpg-monster rank-" + m.rank + (m.down ? " down" : "") + (m.id == target ? " target" : ""));
+      var card = el("div", "rpg-monster rank-" + m.rank + (m.boss ? " boss" : "") + (m.phased ? " phased" : "") + (m.down ? " down" : "") + (m.id == target ? " target" : ""));
       card.dataset.act = m.down ? "" : "target";
       card.dataset.id = m.id;
       if (m.intent) card.appendChild(intentBadge(m));
@@ -1328,6 +1332,17 @@ function renderRun() {
         art.appendChild(armor);
       }
       card.append(art, name, bar(m.hp, m.maxHp, "foe"), effectsRow(m.effects));
+      // (what makes it hard: venomproof, fireproof, bulky, spiked)
+      if ((m.traits || []).length) {
+        var traits = el("div", "rpg-traits");
+        m.traits.forEach((id) => {
+          var t = rules.monsterTraits[id];
+          var chip = el("span", "rpg-trait", t.icon + " " + t.name);
+          chip.title = t.text;
+          traits.appendChild(chip);
+        });
+        card.appendChild(traits);
+      }
       if (m.affix) card.appendChild(el("div", "rpg-affix", rules.affixes[m.affix].icon + " " + rules.affixes[m.affix].text));
       return card;
     });

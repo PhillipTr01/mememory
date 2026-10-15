@@ -17,7 +17,7 @@
  * effects: poison, burn, stun (loses its next move), chill (half damage), might (more damage), rage
  * (monsters, more damage). Block takes the damage of the monsters' turn, then it is gone.
  *
- * Bosses: the hook is here (BOSS_EVERY - the last room of every n-th floor), the bosses come later.
+ * Bosses: the last room of every BOSS_EVERY-th floor (BOSSES) - a second phase at half HP.
  *
  * Everything random comes from `rng` (Math.random - the tests give their own).
  */
@@ -49,7 +49,7 @@ function potionPrice(floor = 1) {
   return round100(config.RPG_POTION_PRICE * Math.pow(POTION_GROWTH, Math.max(0, floor - 1)));
 }
 // Bosses: the last room of every n-th floor (0: none yet - they come later)
-const BOSS_EVERY = 0;
+const BOSS_EVERY = 5; // the last room of every 5th floor: its boss
 
 // The stats: what a level gives
 const STATS = {
@@ -266,6 +266,9 @@ const MOVES = {
   heal: { name: "Heal ally", icon: "💚", self: true },
   howl: { name: "Howl", icon: "📯", self: true },
   fade: { name: "Fade", icon: "🌫️", self: true },
+  purge: { name: "Purge", icon: "✨", self: true },
+  curse: { name: "Curse", icon: "🕯️", power: 0.4 },
+  summon: { name: "Summon", icon: "📣", self: true },
 };
 
 // The monsters: a group per 5 floors (hp, atk: times the floor's; dodge: misses a hit that often; moves: what it does)
@@ -277,24 +280,48 @@ const MONSTERS = [
   ],
   [
     { name: "Goblin", icon: "👺", hp: 1, atk: 1, moves: ["attack", "attack", "steal"] },
-    { name: "Spider", icon: "🕷️", hp: 0.8, atk: 1.1, moves: ["poison", "attack"] },
+    { name: "Spider", icon: "🕷️", hp: 0.8, atk: 1.1, traits: ["venomproof"], moves: ["poison", "attack"] },
     { name: "Wolf", icon: "🐺", hp: 0.9, atk: 1.05, dodge: 0.1, moves: ["attack", "attack", "howl"] },
   ],
   [
-    { name: "Skeleton", icon: "💀", hp: 1, atk: 1, undead: true, moves: ["attack", "attack", "defend"] },
+    { name: "Skeleton", icon: "💀", hp: 1, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "attack", "defend"] },
     { name: "Ghost", icon: "👻", hp: 0.7, atk: 1, undead: true, moves: ["attack", "fade", "drain"] },
-    { name: "Zombie", icon: "🧟", hp: 1.4, atk: 0.8, undead: true, moves: ["attack", "smash", "poison"] },
+    { name: "Zombie", icon: "🧟", hp: 1.4, atk: 0.8, undead: true, traits: ["bulky"], moves: ["attack", "smash", "poison"] },
   ],
   [
-    { name: "Orc", icon: "👹", hp: 1.2, atk: 1, moves: ["attack", "smash", "howl"] },
-    { name: "Troll", icon: "🧌", hp: 1.5, atk: 0.9, moves: ["attack", "smash", "regen"] },
-    { name: "Shaman", icon: "🧙", hp: 0.8, atk: 0.9, moves: ["attack", "heal", "burn"] },
+    { name: "Orc", icon: "👹", hp: 1.2, atk: 1, traits: ["spiked"], moves: ["attack", "smash", "howl"] },
+    { name: "Troll", icon: "🧌", hp: 1.5, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"] },
+    { name: "Shaman", icon: "🧙", hp: 0.8, atk: 0.9, moves: ["attack", "heal", "burn", "purge"] },
   ],
   [
-    { name: "Demon", icon: "😈", hp: 1.1, atk: 1.1, moves: ["attack", "burn", "smash"] },
-    { name: "Golem", icon: "🗿", hp: 1.8, atk: 0.85, moves: ["smash", "defend", "attack"] },
-    { name: "Wraith", icon: "🌫️", hp: 0.9, atk: 1.1, undead: true, dodge: 0.15, moves: ["drain", "fade", "attack"] },
+    { name: "Demon", icon: "😈", hp: 1.1, atk: 1.1, traits: ["fireproof"], moves: ["attack", "burn", "smash"] },
+    { name: "Golem", icon: "🗿", hp: 1.8, atk: 0.85, armor: 0.1, traits: ["venomproof", "bulky"], moves: ["smash", "defend", "attack"] },
+    { name: "Wraith", icon: "🌫️", hp: 0.9, atk: 1.1, undead: true, dodge: 0.15, moves: ["drain", "fade", "attack", "curse"] },
   ],
+  [
+    { name: "Hellhound", icon: "🐕", hp: 1, atk: 1.15, traits: ["fireproof", "spiked"], moves: ["attack", "burn", "howl"] },
+    { name: "Gargoyle", icon: "🗽", hp: 1.4, atk: 0.95, armor: 0.15, traits: ["venomproof", "bulky"], moves: ["smash", "defend", "attack"] },
+    { name: "Cultist", icon: "🧛", hp: 0.9, atk: 1, moves: ["attack", "curse", "purge", "drain"] },
+  ],
+];
+
+// What makes a monster hard for some heroes - shown on it
+const MONSTER_TRAITS = {
+  venomproof: { name: "Venomproof", icon: "🧪", text: "Poison does nothing." },
+  fireproof: { name: "Fireproof", icon: "🔥", text: "Burns do nothing." },
+  bulky: { name: "Bulky", icon: "🪨", text: "Half damage from hits on every foe." },
+  spiked: { name: "Spiked", icon: "🦔", text: "Who hits it takes 20% of the damage back." },
+};
+
+// The bosses: the last room of every BOSS_EVERY-th floor - one per group of floors, a second phase at half HP
+// (phase: what changes then - more attack, other moves, a summon of its kind)
+const BOSSES = [
+  { name: "Slime King", icon: "🫧", hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "summon"], summon: 0, phase: { atk: 1.3, moves: ["smash", "summon", "attack"], text: "splits and swells with rage" } },
+  { name: "Goblin Warlord", icon: "👺", hp: 1.2, atk: 1, moves: ["attack", "smash", "steal", "summon"], summon: 1, phase: { atk: 1.35, moves: ["smash", "howl", "attack"], text: "calls the whole tribe" } },
+  { name: "Bone Lord", icon: "☠️", hp: 1.2, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "drain", "summon"], summon: 2, phase: { atk: 1.3, moves: ["drain", "smash", "summon", "curse"], text: "raises the dead around it" } },
+  { name: "Troll Chieftain", icon: "🧌", hp: 1.15, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"], summon: 3, phase: { atk: 1.35, moves: ["smash", "attack", "regen", "howl"], text: "goes berserk" } },
+  { name: "Demon Prince", icon: "👿", hp: 1.15, atk: 1, traits: ["fireproof"], moves: ["attack", "burn", "smash", "summon"], summon: 4, phase: { atk: 1.35, moves: ["burn", "smash", "curse"], text: "bursts into flames" } },
+  { name: "The Lich", icon: "🧟", hp: 0.9, atk: 0.85, undead: true, traits: ["venomproof"], moves: ["curse", "drain", "summon", "attack"], summon: 5, phase: { atk: 1.25, moves: ["curse", "drain", "burn", "smash"], text: "tears open its phylactery" } },
 ];
 const MONSTER_HP = 52;
 const MONSTER_HP_GROWTH = 1.14;
@@ -893,7 +920,7 @@ const RANKS = {
   hard: { id: "normal", prefix: "", hp: 1.35, atk: 1.15 },
   elite: { id: "elite", prefix: "Elite ", hp: 2.4, atk: 1.3 },
   // (the bosses come later - for now a much stronger one of the floor's monsters)
-  boss: { id: "boss", prefix: "Boss ", hp: 5, atk: 1.6 },
+  boss: { id: "boss", prefix: "", hp: 3, atk: 1.3 },
 };
 
 // How much harder a floor is than the first: exponential - and steeper the deeper it goes
@@ -910,9 +937,15 @@ function monster(floor, size, kind, rank, depth = 0, rng = Math.random) {
   const max = Math.max(1, Math.round(hp));
   // (an elite also smashes)
   const moves = rank.id != "normal" && !kind.moves.includes("smash") ? [...kind.moves, "smash"] : kind.moves;
-  const foe = { id: "m" + ++monsterCount, name: rank.prefix + kind.name, icon: kind.icon, hp: max, maxHp: max, atk: Math.max(1, Math.round(atk)), armor: armorOf(floor, kind, rank), dodge: kind.dodge || 0, undead: !!kind.undead, moves, rank: rank.id, effects: {}, intent: null, affix: null };
+  const foe = { id: "m" + ++monsterCount, name: rank.prefix + kind.name, icon: kind.icon, hp: max, maxHp: max, atk: Math.max(1, Math.round(atk)), armor: armorOf(floor, kind, rank), dodge: kind.dodge || 0, undead: !!kind.undead, traits: kind.traits || [], moves, rank: rank.id, effects: {}, intent: null, affix: null };
+  // (a boss: its own name, its second phase, its summons)
+  if (kind.phase) {
+    foe.name = kind.name;
+    foe.phase = kind.phase;
+    foe.summon = kind.summon;
+  }
   // (an elite has a trait from floor 3 on: armored, enraged or regenerating)
-  if ((rank.id == "elite" && floor >= 3) || rank.id == "boss") {
+  if (rank.id == "elite" && floor >= 3) {
     foe.affix = affixRoll();
     foe.name = AFFIXES[foe.affix].name + " " + foe.name;
     if (foe.affix == "enraged") foe.atk = Math.round(foe.atk * 1.3);
@@ -931,7 +964,8 @@ function armorOf(floor, kind, rank) {
 function monstersFor(floor, size, room, rng = Math.random, depth = 0) {
   const group = MONSTERS[Math.min(MONSTERS.length - 1, Math.floor((floor - 1) / 5))];
   if (room == "elite" || room == "boss") {
-    const list = [monster(floor, size, pick(rng, group), RANKS[room], depth, rng)];
+    const lead = room == "boss" ? BOSSES[Math.min(BOSSES.length - 1, Math.floor((floor - 1) / BOSS_EVERY))] : pick(rng, group);
+    const list = [monster(floor, size, lead, RANKS[room], depth, rng)];
     for (let i = 0; i < Math.ceil(size / 2); i++) list.push(monster(floor, size, pick(rng, group), RANKS.normal, depth, rng));
     return list;
   }
@@ -1481,6 +1515,8 @@ function rewardFor(hero, rng, count = 3) {
 
 // Poison stacks (the damage adds up, the longer time counts); a burn doesn't - a new one only replaces a weaker one
 function afflict(one, kind, turns, dmg) {
+  // (a monster that shrugs it off)
+  if (one.traits && one.traits.includes(kind == "poison" ? "venomproof" : "fireproof")) return false;
   const old = one.effects[kind];
   if (kind == "poison" && old) one.effects.poison = { turns: Math.max(old.turns, turns), dmg: old.dmg + dmg };
   else if (old) one.effects[kind] = { turns: Math.max(old.turns, turns), dmg: Math.max(old.dmg, dmg) };
@@ -1527,6 +1563,9 @@ function planIntents(run, rng = Math.random) {
       if (move == "heal") return alive(run.monsters).some((m) => m.hp < m.maxHp * 0.7);
       if (move == "howl") return !foe.effects.rage;
       if (move == "steal") return heroes.some((h) => h.potions > 0);
+      if (move == "summon") return alive(run.monsters).length < 4;
+      if (move == "purge") return alive(run.monsters).some((m) => m.effects.poison || m.effects.burn);
+      if (move == "curse") return heroes.some((h) => !h.effects.weak);
       return true;
     });
     if (!options.length) options = ["attack"];
@@ -1553,6 +1592,19 @@ function intentDamage(foe, move) {
   return Math.max(1, Math.round(damage));
 }
 
+const WEAK = 0.7; // a cursed hero's damage
+const SPIKES = 0.2; // of a hit on a spiked monster: back to the hitter
+
+// A boss at half HP: its second phase - once (more attack, other moves, a word about it)
+function bossPhase(run, foe) {
+  if (!foe.phase || foe.phased || foe.down || foe.hp > foe.maxHp / 2) return;
+  foe.phased = true;
+  foe.atk = Math.round(foe.atk * foe.phase.atk);
+  foe.moves = foe.phase.moves;
+  say(run, `${foe.icon} ${foe.name} ${foe.phase.text}!`);
+  fxEvent(run, { k: "phase", by: foe.id, text: foe.phase.text });
+}
+
 // A hit of a hero on a monster: the damage done (a plain attack may be dodged - a fading foe dodges them all)
 function strike(run, hero, foe, power, rng, options = {}) {
   if (foe.down) return 0;
@@ -1568,17 +1620,32 @@ function strike(run, hero, foe, power, rng, options = {}) {
   if (foe.defending) damage *= 0.5;
   // (armor - the warrior's hits break through a part of it; a hit on every foe: the mage's strength)
   damage *= 1 - (foe.armor || 0) * Math.max(0, 1 - perk(hero, "pierce"));
-  if (options.aoe) damage *= 1 + perk(hero, "aoe");
+  if (options.aoe) damage *= (1 + perk(hero, "aoe")) * (foe.traits && foe.traits.includes("bulky") ? 0.5 : 1);
+  // (cursed: the hero hits softer)
+  if (hero.effects.weak) damage *= WEAK;
   damage = Math.max(1, Math.round(damage));
   foe.hp = Math.max(0, foe.hp - damage);
   say(run, `${hero.name}${options.verb ? " " + options.verb : " hits"} ${foe.icon} ${foe.name} for ${damage}${crit ? " (critical!)" : ""}${foe.defending ? " (blocked half)" : ""}.`);
   fx(run, { k: "hit", to: foe.id, n: damage, crit });
   if (perk(hero, "lifesteal") && !hero.down) healHero(run, hero, damage * perk(hero, "lifesteal"));
+  // (spiked: a part of the hit comes back)
+  if (foe.traits && foe.traits.includes("spiked") && !hero.down) {
+    const back = Math.max(1, Math.round(damage * SPIKES));
+    hero.hp = Math.max(0, hero.hp - back);
+    fx(run, { k: "hit", to: hero.name, n: back, thorns: true });
+    if (hero.hp == 0) {
+      hero.down = true;
+      hero.effects = {};
+      hero.block = 0;
+      fx(run, { k: "down", to: hero.name });
+      say(run, `${hero.name} is down - the spikes!`);
+    }
+  }
   if (foe.hp == 0) {
     foe.down = true;
     say(run, `${foe.icon} ${foe.name} is defeated.`);
     fx(run, { k: "down", to: foe.id });
-  }
+  } else bossPhase(run, foe);
   return damage;
 }
 
@@ -1864,6 +1931,30 @@ function monsterMove(run, foe, rng) {
     case "fade":
       say(run, `${source} fades back.`);
       break;
+    case "purge":
+      for (const one of alive(run.monsters)) {
+        delete one.effects.poison;
+        delete one.effects.burn;
+      }
+      say(run, `${source} purges the poison and the flames ✨.`);
+      break;
+    case "curse":
+      if (hurt(run, target, damage, source, rng, foe) > 0 && !target.down) {
+        target.effects.weak = 2;
+        say(run, `${target.name} is cursed 🕯️ - hits softer for 2 turns.`);
+      }
+      break;
+    case "summon": {
+      // (its kind of the floors - at most 4 standing)
+      const group = MONSTERS[Math.min(MONSTERS.length - 1, foe.summon != null ? foe.summon : Math.floor((run.floor - 1) / 5))];
+      const count = Math.min(2, 4 - alive(run.monsters).length);
+      for (let i = 0; i < count; i++) {
+        const add = monster(run.floor, run.heroes.length, pick(rng, group), RANKS.normal, 0, rng);
+        run.monsters.push(add);
+      }
+      say(run, `${source} calls for help 📣 - ${count} more!`);
+      break;
+    }
   }
   // (chill wears off with every move that hurts)
   if (foe.effects.chill && move.power) {
@@ -1903,13 +1994,14 @@ function monsterTurn(run, rng = Math.random) {
       say(run, `${label} takes ${effect.dmg} from ${kind == "poison" ? "poison ☠️" : "the burn 🔥"}.`);
       fx(run, { k: "hit", to: one.icon ? one.id : one.name, n: effect.dmg, dot: kind });
       if (--effect.turns <= 0) delete one.effects[kind];
+      if (one.icon) bossPhase(run, one);
       if (one.hp == 0) {
         one.down = true;
         fx(run, { k: "down", to: one.icon ? one.id : one.name });
         say(run, `${label} ${one.icon ? "is defeated" : "is down"}!`);
       }
     }
-    for (const kind of ["rage", "might"]) if (one.effects[kind] && --one.effects[kind] <= 0) delete one.effects[kind];
+    for (const kind of ["rage", "might", "weak"]) if (one.effects[kind] && --one.effects[kind] <= 0) delete one.effects[kind];
   }
   for (const hero of run.heroes) {
     hero.taunting = hero.evading = false;
@@ -1958,7 +2050,14 @@ function winFight(run, rng) {
     // (a perk: healed after a fight won)
     if (perk(hero, "afterFight")) healHero(run, hero, hero.maxHp * perk(hero, "afterFight"));
     // (a hard fight won: one of three relics)
-    if (room.kind == "hard") hero.relicChoice = relicOffer(hero, rng);
+    if (room.kind == "hard" || room.kind == "boss") hero.relicChoice = relicOffer(hero, rng);
+    // (a boss: a piece of epic gear or better too)
+    if (room.kind == "boss") {
+      let item = makeGear(run.floor, rng, hero.luck, hero.cls);
+      for (let i = 0; i < 60 && !["epic", "legendary"].includes(item.rarity); i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
+      (run.loot[hero.name] = run.loot[hero.name] || []).push(item);
+      say(run, `${hero.name} takes ${item.icon} ${item.name} from the boss.`);
+    }
   }
   room.done = true;
   afterRoom(run, rng);
@@ -2027,6 +2126,9 @@ function runView(run) {
       maxHp: m.maxHp,
       atk: m.atk,
       armor: m.armor || 0,
+      traits: m.traits || [],
+      boss: !!m.phase,
+      phased: !!m.phased,
       rank: m.rank,
       undead: m.undead,
       affix: m.affix,
@@ -2060,7 +2162,7 @@ function incoming(run, hero) {
 // against what comes, healing of what is missing, poison and stuns where they count - the best per mana first
 function simulatedTurn(run, me, rng) {
   if (me.hp < me.maxHp * 0.3 && me.potions > 0 && me.energy >= POTION_MANA) drink(run, me.name);
-  for (let guard = 0; guard < 20 && run.phase == "fight" && !me.ended; guard++) {
+  for (let guard = 0; guard < 20 && run.phase == "fight" && !me.ended && !me.down; guard++) {
     const foes = alive(run.monsters);
     if (!foes.length) break;
     const need = Math.max(0, incoming(run, me) - me.block);
@@ -2068,7 +2170,7 @@ function simulatedTurn(run, me, rng) {
     const threat = (m) => (m.intent && !m.effects.stun ? intentDamage(m, m.intent.move) : 0);
     const target = foes.slice().sort((x, y) => x.hp - y.hp)[0];
     const worst = foes.slice().sort((x, y) => threat(y) - threat(x))[0];
-    const ally = alive(run.heroes).sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp)[0];
+    const ally = alive(run.heroes).sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp)[0] || me;
     const fallen = run.heroes.find((h) => h.down);
     let best = null;
     for (const c of me.hand) {
@@ -2130,7 +2232,7 @@ function simulate(hero, floor, runs = 500, rng = Math.random) {
       let turns = 0;
       while (run.phase == "fight" && turns++ < 100) {
         simulatedTurn(run, run.heroes[0], rng);
-        if (run.phase == "fight" && endTurn(run, "sim")) monsterTurn(run, rng);
+        if (run.phase == "fight" && (endTurn(run, "sim") || turnDone(run))) monsterTurn(run, rng);
       }
     }
     if (run.phase == "won") cleared++;
@@ -2206,6 +2308,8 @@ module.exports = {
   TALENT_LEVELS,
   RELICS,
   AFFIXES,
+  MONSTER_TRAITS,
+  BOSSES,
   UPGRADE,
   cardInfo,
   xpNeed,
@@ -2271,4 +2375,5 @@ module.exports = {
   afflict,
   liveTexts,
   thornsOf,
+  bossPhase,
 };

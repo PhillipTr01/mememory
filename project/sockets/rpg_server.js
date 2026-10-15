@@ -139,6 +139,7 @@ module.exports = function (io, options = {}) {
       talentLevels: rpg.TALENT_LEVELS,
       relics: rpg.RELICS,
       affixes: rpg.AFFIXES,
+      monsterTraits: rpg.MONSTER_TRAITS,
       doors: rpg.DOORS,
     };
   }

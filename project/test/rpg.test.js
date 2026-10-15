@@ -30,7 +30,10 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   assert.strictEqual(rpg.charOf(hero).levels.agi, 0);
   rpg.charOf(hero).deepest = rpg.FLOORS;
   assert.strictEqual(rpg.maxFloor(hero), rpg.FLOORS);
-  assert.strictEqual(rpg.BOSS_EVERY, 0);
+  // (every 5th floor: its boss at the end)
+  assert.strictEqual(rpg.BOSS_EVERY, 5);
+  const bossRun = rpg.newRun(5, [{ name: "a", hero: rpg.newHero("warrior") }]);
+  assert.strictEqual(bossRun.map[rpg.ROOMS - 1][0].kind, "boss");
   // The map: ROOMS rows - a fight first, the guarded gate last, 2 to 4 rooms a row between;
   // every room leads on, every room is reached, the paths never cross
   const kinds = new Map();
@@ -807,4 +810,36 @@ test("rpg: cards fit their rarity - the rarer, the more a mana buys", () => {
   // (the same kind of card: a plain hit - a legendary one hits much harder per mana than a common one)
   const perMana = (id) => rpg.CARDS[id].fx[0].hit / rpg.CARDS[id].cost;
   assert.ok(perMana("bludgeon") > perMana("heavyslash") * 1.3);
+});
+
+test("rpg: monsters - traits counter some heroes, a boss turns at half HP, summons and curses", () => {
+  // Venomproof: no poison; fireproof: no burn
+  assert.strictEqual(rpg.afflict({ effects: {}, traits: ["venomproof"] }, "poison", 3, 10), false);
+  assert.strictEqual(rpg.afflict({ effects: {}, traits: ["fireproof"] }, "burn", 3, 10), false);
+  // A boss: its own name, a second phase at half HP
+  const run = rpg.newRun(5, [{ name: "a", hero: rpg.newHero("warrior") }]);
+  run.doors = [run.map[rpg.ROOMS - 1][0]];
+  rpg.enterRoom(run, 0, () => 0.5);
+  const boss = run.monsters[0];
+  assert.strictEqual(boss.name, rpg.BOSSES[0].name);
+  const atk = boss.atk;
+  const me = run.heroes[0];
+  me.hand = [{ uid: "x", id: "strike" }];
+  me.energy = 1;
+  boss.hp = Math.round(boss.maxHp * 0.52);
+  boss.armor = 0;
+  me.atk = boss.maxHp;
+  rpg.play(run, "a", { uid: "x", target: boss.id }, () => 0.5);
+  assert.ok(boss.down || (boss.phased && boss.atk > atk));
+  // A summon: more monsters, at most 4 standing
+  const run2 = rpg.newRun(5, [{ name: "a", hero: rpg.newHero("warrior") }]);
+  run2.doors = [run2.map[rpg.ROOMS - 1][0]];
+  rpg.enterRoom(run2, 0, () => 0.5);
+  const lead = run2.monsters[0];
+  run2.monsters.forEach((m) => (m.intent = { move: "defend" }));
+  lead.intent = { move: "summon" };
+  const before = run2.monsters.filter((m) => !m.down).length;
+  run2.heroes[0].ended = true;
+  rpg.monsterTurn(run2, () => 0.5);
+  assert.ok(run2.monsters.filter((m) => !m.down).length > before && run2.monsters.filter((m) => !m.down).length <= 4);
 });

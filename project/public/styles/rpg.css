@@ -5769,3 +5769,52 @@ button.rpg-cardx.off {
     width: 100%;
   }
 }
+
+/* 31. A monster's traits; a boss - bigger, a crown of fire in its second phase */
+.rpg-traits {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.2rem;
+}
+
+.rpg-trait {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #e6d9c2;
+  background: rgba(120, 90, 50, 0.35);
+  border: 1px solid rgba(245, 197, 66, 0.25);
+}
+
+.rpg-monster.boss {
+  width: 12rem;
+  border-width: 2px;
+}
+
+.rpg-monster.boss .rpg-monster-icon {
+  font-size: 3.8rem;
+}
+
+.rpg-monster.boss .rpg-monster-name {
+  font-size: 1rem;
+  color: #ffb4b4;
+}
+
+.rpg-monster.boss.phased {
+  box-shadow: 0 0 0 2px rgba(var(--rpg-red-rgb), 0.6), 0 0 34px rgba(var(--rpg-red-rgb), 0.45);
+  animation: rpg-boss-rage 1.6s ease-in-out infinite;
+}
+
+@keyframes rpg-boss-rage {
+  50% {
+    box-shadow: 0 0 0 2px rgba(var(--rpg-red-rgb), 0.9), 0 0 48px rgba(var(--rpg-red-rgb), 0.7);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rpg-monster.boss.phased {
+    animation: none;
+  }
+}
