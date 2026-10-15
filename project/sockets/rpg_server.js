@@ -256,7 +256,8 @@ module.exports = function (io, options = {}) {
   async function start(party) {
     const entry = rpg.entryCost(party.floor);
     const paid = [];
-    for (const name of party.members) {
+    // (the practice run: free)
+    for (const name of party.tutorial ? [] : party.members) {
       if (!(await coins.spend(name, entry, { reason: "rpg entry", note: "floor " + party.floor }))) {
         // (one can't pay: nobody pays)
         await Promise.all(paid.map((who) => coins.add(who, entry, { reason: "rpg refund" })));
@@ -267,6 +268,8 @@ module.exports = function (io, options = {}) {
     party.run = rpg.newRun(
       party.floor,
       party.members.map((name) => ({ name, hero: heroOf(name) })),
+      Math.random,
+      { tutorial: party.tutorial },
     );
     for (const name of party.members) {
       const hero = heroOf(name);
@@ -294,6 +297,13 @@ module.exports = function (io, options = {}) {
       if (!heroes.has(one.name)) continue;
       const hero = heroOf(one.name);
       hero.potions = Math.min(rpg.POTIONS_MAX, hero.potions + one.potions);
+      // (the practice run: done - nothing else counts, nobody dies)
+      if (run.tutorial) {
+        rpg.charOf(hero, one.cls).tutorialDone = true;
+        party.summary[one.name] = { xp: 0, ups: 0, level: rpg.charOf(hero, one.cls).level, firstClear: 0 };
+        sendHero(one.name);
+        continue;
+      }
       // (the floor counts for the character that went down - its class)
       const char = rpg.charOf(hero, one.cls);
       // XP for the character (lost: half of it) - a floor cleared the first time: a bonus (coins, XP)
@@ -489,6 +499,25 @@ module.exports = function (io, options = {}) {
     });
 
     // Dead (the party went down): back right away for coins - dearer with every revive of the day
+    // The practice run: free, alone - or skipped
+    on("tutorial", async () => {
+      if (myParty()) return error("You are in a party already.");
+      const hero = heroOf(username);
+      if (!hero.cls) return error("Pick a class first.");
+      if (rpg.deckReady(hero)) return error(rpg.deckReady(hero));
+      const party = { id: "p" + ++partyCount, leader: username, floor: 1, size: 1, members: [], run: null, endsAt: null, timer: null, result: null, tutorial: true };
+      parties.set(party.id, party);
+      join(party, username);
+      await start(party);
+    });
+
+    on("skipTutorial", () => {
+      const hero = heroOf(username);
+      if (!hero.cls) return;
+      rpg.charOf(hero).tutorialDone = true;
+      sendHero(username);
+    });
+
     on("revive", async () => {
       if (inRun()) return error("Not during a run.");
       const hero = heroOf(username);

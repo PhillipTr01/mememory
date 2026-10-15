@@ -5818,3 +5818,27 @@ button.rpg-cardx.off {
     animation: none;
   }
 }
+
+/* 32. The practice run: the offer in the Ready card, the coach over the run */
+.rpg-practice-go {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.rpg-coach {
+  padding: 0.65rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(245, 197, 66, 0.45);
+  background: linear-gradient(90deg, rgba(245, 197, 66, 0.16), rgba(245, 197, 66, 0.04));
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  animation: rpg-coach-in 0.3s ease-out;
+}
+
+@keyframes rpg-coach-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}

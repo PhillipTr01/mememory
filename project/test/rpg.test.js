@@ -843,3 +843,22 @@ test("rpg: monsters - traits counter some heroes, a boss turns at half HP, summo
   rpg.monsterTurn(run2, () => 0.5);
   assert.ok(run2.monsters.filter((m) => !m.down).length > before && run2.monsters.filter((m) => !m.down).length <= 4);
 });
+
+test("rpg: the practice run - three rooms, one weak monster first, no coins", () => {
+  const hero = rpg.newHero("warrior");
+  const run = rpg.newRun(1, [{ name: "a", hero }], Math.random, { tutorial: true });
+  assert.deepStrictEqual(run.map.map((row) => row[0].kind), ["fight", "rest", "fight"]);
+  rpg.enterRoom(run, 0, () => 0.5);
+  assert.strictEqual(run.monsters.length, 1);
+  const normal = rpg.newRun(1, [{ name: "b", hero: rpg.newHero("warrior") }]);
+  rpg.enterRoom(normal, 0, () => 0.5);
+  assert.ok(run.monsters[0].maxHp < normal.monsters[0].maxHp);
+  // (won: nothing for the pot)
+  run.monsters[0].hp = 1;
+  const me = run.heroes[0];
+  me.hand = [{ uid: "x", id: "strike" }];
+  me.energy = 1;
+  rpg.play(run, "a", { uid: "x", target: run.monsters[0].id }, () => 0.5);
+  assert.strictEqual(run.pot, 0);
+  assert.strictEqual(run.phase, "between");
+});

@@ -629,9 +629,39 @@ function renderHero() {
   if (view == "play" && picked) renderReady();
 }
 
+// The practice run: a word for every step - what to do now
+function renderCoach(run, me) {
+  var box = document.getElementById("rpgCoach");
+  box.hidden = !run.tutorial;
+  if (!run.tutorial) return;
+  var text;
+  var event = run.event;
+  if (party.result || run.phase == "won") text = "🎉 Done! The real floors cost an entry and pay coins - harder the deeper you go. Good luck!";
+  else if (run.phase == "lost") text = "💀 Down - no harm done, it's practice. Defend when the badges over the monsters show big hits.";
+  else if (run.phase == "fight" && me) {
+    if (me.ended) text = "⏳ The monsters move now - then your next turn.";
+    else if (run.turn == 1 && me.energy == rules.energy) text = "🃏 Drag a card onto the monster - or click the card, then the monster. A card costs the 💧 mana in its drop; you have " + rules.energy + " a turn.";
+    else if (me.energy > 0 && me.hand.some((c) => cardOf(c.id).cost <= me.energy)) text = "🛡️ The badge over a monster shows its next move. Defend blocks that hit. The cards you keep stay in your hand.";
+    else text = "⏭️ Out of mana - press End turn. Your hand fills up to 5 cards again.";
+  } else if (me && me.reward) text = "🎁 Won! Pick one card - it joins your deck for this run (packs grow your collection for good).";
+  else if (event && event.kind == "rest" && event.choices && !event.choices[myName]) text = "🔥 A camp fire: Rest heals you, Smith makes a card 40% stronger.";
+  else text = "🗺️ Pick the next room on the map - the lit circle. In real floors some rooms stay hidden.";
+  if (box.innerText != text) box.innerText = text;
+}
+
 // Ready to go down? Every thing that still waits - with a button to it
 function renderReady() {
   var items = [];
+  if (!hero.tutorialDone) {
+    var practice = el("div", "rpg-ready-item new rpg-practice");
+    var words = el("div", "rpg-ready-text");
+    words.append(el("b", "", "First time here?"), el("span", "rpg-ready-sub", "A free practice run - three rooms, every step explained"));
+    var go = el("div", "rpg-practice-go");
+    go.append(button("Start", "tutorial", { className: "small primary" }), button("Skip", "skipTutorial", { className: "small" }));
+    var bubble = el("span", "rpg-ready-icon", "🎓");
+    practice.append(bubble, words, go);
+    items.push(practice);
+  }
   // (a row: a picture, what it is, a line under it, a button - state: ok / warn / new)
   var item = (icon, title, sub, state, act, id, label, extra) => {
     var row = el("div", "rpg-ready-item " + state);
@@ -1298,13 +1328,14 @@ function intentBadge(m) {
 function renderRun() {
   var run = party.run;
   var me = run.heroes.find((h) => h.name == myName);
-  document.getElementById("rpgRunFloor").innerText = "Floor " + run.floor;
+  document.getElementById("rpgRunFloor").innerText = run.tutorial ? "🎓 Practice" : "Floor " + run.floor;
+  renderCoach(run, me);
   document.getElementById("rpgPot").innerText = "🪙 " + formatCoins(run.pot) + " each";
   var quit = document.getElementById("rpgQuit");
   quit.hidden = !!party.result;
 
   var current = run.rooms[run.rooms.length - 1];
-  document.getElementById("rpgRunRoom").innerText = current ? "Room " + run.rooms.length + " / " + rules.rooms + " · " + rules.roomKinds[current.kind].icon + " " + rules.roomKinds[current.kind].name : "";
+  document.getElementById("rpgRunRoom").innerText = current ? "Room " + run.rooms.length + " / " + run.map.length + " · " + rules.roomKinds[current.kind].icon + " " + rules.roomKinds[current.kind].name : "";
   renderMap(run);
   var fighting = run.phase == "fight";
   var arena = document.querySelector(".rpg-arena");
@@ -2084,6 +2115,8 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "potion") socket.emit("potion");
   else if (act == "revive") socket.emit("revive");
   else if (act == "bagSlot") socket.emit("bagSlot");
+  else if (act == "tutorial") socket.emit("tutorial");
+  else if (act == "skipTutorial") socket.emit("skipTutorial");
   else if (act == "deckHelp") showDeckHelp();
   else if (act == "quitRun") {
     var asked = confirmDialog({ title: "Leave the run?", text: "You lose your share of the pot and the loot.", confirmLabel: "Leave", danger: true });

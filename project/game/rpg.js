@@ -49,6 +49,7 @@ function potionPrice(floor = 1) {
   return round100(config.RPG_POTION_PRICE * Math.pow(POTION_GROWTH, Math.max(0, floor - 1)));
 }
 // Bosses: the last room of every n-th floor (0: none yet - they come later)
+const TUTORIAL_POWER = 0.5; // the practice run's monsters: this strong
 const BOSS_EVERY = 5; // the last room of every 5th floor: its boss
 
 // The stats: what a level gives
@@ -739,6 +740,7 @@ function heroView(hero) {
     talents: char.talents,
     bagSize: bagSize(hero),
     bagSlotPrice: bagSlotPrice(hero),
+    tutorialDone: !!char.tutorialDone,
     deadFor: deadFor(hero),
     revivePrice: revivePrice(hero),
     revives: revivesToday(hero),
@@ -981,7 +983,8 @@ function starterDeck(cls) {
   return ["strike", "strike", "strike", "strike", "defend", "defend", "defend", "defend", ...(CLASSES[cls] || CLASSES.warrior).signature];
 }
 
-function newRun(floor, party, rng = Math.random) {
+// (options.tutorial: the practice run - a short map, weak monsters, no coins)
+function newRun(floor, party, rng = Math.random, options = {}) {
   const run = {
     floor,
     rooms: [], // [{kind, done}] the rooms entered
@@ -1031,9 +1034,16 @@ function newRun(floor, party, rng = Math.random) {
     loot: Object.fromEntries(party.map(({ name }) => [name, []])),
     log: [],
   };
-  run.map = makeMap(run, rng);
+  if (options.tutorial) run.tutorial = true;
+  run.map = run.tutorial ? tutorialMap() : makeMap(run, rng);
   run.doors = doorsFor(run);
   return run;
+}
+
+// The practice run's map: a fight, a camp fire, a fight - everything shown
+function tutorialMap() {
+  const node = (row, kind) => ({ row, index: 0, col: 1.5, kind, open: true, sensed: false, visited: false, next: row < 2 ? [0] : [] });
+  return [[node(0, "fight")], [node(1, "rest")], [node(2, "fight")]];
 }
 
 function say(run, text) {
@@ -1225,6 +1235,15 @@ function enterRoom(run, door = 0, rng = Math.random) {
   if (!chosen.open && !chosen.sensed) say(run, `Room ${n}: the door opens - ${ROOM_KINDS[kind].icon} ${ROOM_KINDS[kind].name}!`);
   if (kind == "fight" || kind == "hard" || kind == "elite" || kind == "boss") {
     run.monsters = monstersFor(run.floor, run.heroes.length, kind, rng, chosen.row || 0);
+    // (the practice run: one slime first, then two easy foes - half as strong)
+    if (run.tutorial) {
+      run.monsters = run.monsters.slice(0, run.rooms.length == 1 ? 1 : 2);
+      for (const m of run.monsters) {
+        m.maxHp = m.hp = Math.max(1, Math.round(m.maxHp * TUTORIAL_POWER));
+        m.atk = Math.max(1, Math.round(m.atk * TUTORIAL_POWER));
+        m.armor = 0;
+      }
+    }
     run.phase = "fight";
     run.turn = 0;
     for (const hero of run.heroes) {
@@ -1278,7 +1297,7 @@ function enterRoom(run, door = 0, rng = Math.random) {
 // A room done: the next rooms of the map to pick - or the floor is cleared
 function afterRoom(run) {
   run.monsters = [];
-  if (run.rooms.length >= ROOMS) {
+  if (run.rooms.length >= (run.map ? run.map.length : ROOMS)) {
     run.phase = "won";
     say(run, `Floor ${run.floor} cleared! 🎉`);
     return;
@@ -2025,7 +2044,7 @@ function monsterTurn(run, rng = Math.random) {
 
 function winFight(run, rng) {
   const room = run.rooms[run.rooms.length - 1];
-  const coins = Math.round(entryCost(run.floor) * REWARD[room.kind] * (config.RPG_LOOT / 100) * partyBonus(run.heroes.length));
+  const coins = run.tutorial ? 0 : Math.round(entryCost(run.floor) * REWARD[room.kind] * (config.RPG_LOOT / 100) * partyBonus(run.heroes.length));
   run.pot += coins;
   say(run, `Victory! 🪙 ${coins} each for the pot.`);
   fx(run, { k: "victory", coins });
@@ -2076,6 +2095,7 @@ function runView(run) {
     map: (run.map || []).map((row) => row.map((node) => ({ col: node.col, kind: shownKind(node), sensed: node.sensed, visited: node.visited, next: node.next }))),
     at: run.at,
     doors: run.doors.map((door) => ({ row: door.row, index: door.index, kind: shownKind(door) })),
+    tutorial: !!run.tutorial,
     sense: senseChance(run),
     event: run.event && {
       kind: run.event.kind,
