@@ -513,11 +513,11 @@ function renderTop() {
   xpBox.title = "XP from fights and floors. Each level: a stat point. Talents at levels " + rules.talentLevels.join(", ") + ". Max level " + rules.heroLevelMax + ".";
   var top = hero.level >= rules.heroLevelMax;
   if (picked) morphChildren(xpBox, [el("span", "rpg-level", "Lv " + hero.level), top ? el("span", "rpg-max mm-muted small", "Max level") : bar(hero.xp, hero.xpNeed, "xp", " XP"), hero.points ? el("span", "rpg-points", "+" + hero.points + " point" + (hero.points == 1 ? "" : "s")) : null]);
-  morphChildren(document.getElementById("rpgPotions"), [flask(), el("span", "", hero.potions + " / " + rules.potionsMax)]);
+  morphChildren(document.getElementById("rpgPotions"), [flask(), el("span", "", hero.potions + " / " + hero.potionsMax)]);
   var buy = document.getElementById("rpgBuyPotion");
   buy.innerText = "+ 🪙 " + formatCoins(hero.potionPrice);
   buy.title = "Potion: heals 40% HP";
-  buy.disabled = hero.potions >= rules.potionsMax || myCoins < hero.potionPrice;
+  buy.disabled = hero.potions >= hero.potionsMax || myCoins < hero.potionPrice;
 }
 
 function renderHero() {
@@ -706,8 +706,8 @@ function renderReady() {
   item("🃏", deckOk ? "Deck ready" : "Deck not ready", n + " cards · " + hero.deckMin + " to " + hero.deckMax, deckOk ? "ok" : "warn", "view", "deck", deckOk ? "Edit" : "Build it");
   if (hero.deadFor > 0) item("💀", "Dead", "Back in " + duration(hero.deadFor - (Date.now() - heroAt)), "warn", "revive", null, "Revive · 🪙 " + formatCoins(hero.revivePrice));
   var pips = el("div", "rpg-ready-pips");
-  for (var i = 0; i < rules.potionsMax; i++) pips.appendChild(flask(i < hero.potions ? "" : "off"));
-  item(flask(), "Potions", null, hero.potions ? "ok" : "warn", hero.potions < rules.potionsMax ? "potion" : null, null, "+1 · 🪙 " + formatCoins(hero.potionPrice), pips);
+  for (var i = 0; i < hero.potionsMax; i++) pips.appendChild(flask(i < hero.potions ? "" : "off"));
+  item(flask(), "Potions", null, hero.potions ? "ok" : "warn", hero.potions < hero.potionsMax ? "potion" : null, null, "+1 · 🪙 " + formatCoins(hero.potionPrice), pips);
   if (hero.points) item("⬆️", hero.points + " stat point" + (hero.points == 1 ? "" : "s"), "To spend", "new", "view", "hero", "Spend");
   if (rules.talentLevels.some((lv, tier) => hero.level >= lv && !hero.talents[tier])) item("⭐", "A talent", "To pick", "new", "view", "talents", "Pick");
   var packs = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);
@@ -883,7 +883,16 @@ function renderShop() {
   words.append(el("b", "", "Bag slot"), el("span", "mm-muted small", hero.bagSize + " / " + rules.bagTop + " slots"), cells);
   slot.append(el("span", "rpg-upgrade-icon", "🎒"), words);
   slot.appendChild(price == null ? el("span", "rpg-upgrade-max", "✓ Max") : button("+1 slot · 🪙 " + formatCoins(price), "bagSlot", { className: "primary", disabled: price > myCoins }));
-  morphChildren(document.getElementById("rpgShopUpgrades"), [slot]);
+  // (more potions to carry - dearer still)
+  var flasks = el("div", "rpg-upgrade");
+  var fprice = hero.potionSlotPrice;
+  var fcells = el("div", "rpg-upgrade-cells");
+  for (var f = 0; f < rules.potionsTop; f++) fcells.appendChild(el("i", f < rules.potionsMax ? "base" : f < hero.potionsMax ? "on" : ""));
+  var fwords = el("div", "rpg-upgrade-text");
+  fwords.append(el("b", "", "Potion slot"), el("span", "mm-muted small", hero.potionsMax + " / " + rules.potionsTop + " potions"), fcells);
+  flasks.append(withFlask(el("span", "rpg-upgrade-icon", "")), fwords);
+  flasks.appendChild(fprice == null ? el("span", "rpg-upgrade-max", "✓ Max") : button("+1 slot · 🪙 " + formatCoins(fprice), "potionSlot", { className: "primary", disabled: fprice > myCoins }));
+  morphChildren(document.getElementById("rpgShopUpgrades"), [slot, flasks]);
   document.getElementById("rpgShopTitle").innerText = "🛒 Card shop · " + cls.icon + " " + cls.name;
   // The packs to buy: into the cart
   morphChildren(
@@ -1775,7 +1784,7 @@ function shopNodes(run, me) {
   });
   var services = el("div", "rpg-shop-services");
   services.append(
-    withFlask(button(" Potion · 🪙 " + formatCoins(price("potion")) + " (" + me.potions + "/" + rules.potionsMax + ")", "buy", { id: "potion", disabled: me.potions >= rules.potionsMax || myCoins < price("potion") })),
+    withFlask(button(" Potion · 🪙 " + formatCoins(price("potion")) + " (" + me.potions + "/" + (me.potionsMax || rules.potionsMax) + ")", "buy", { id: "potion", disabled: me.potions >= (me.potionsMax || rules.potionsMax) || myCoins < price("potion") })),
     button(offer.removed ? "🗑️ Card removed ✓" : "🗑️ Remove a card · 🪙 " + formatCoins(price("remove")), "pickMode", { id: "remove", className: picking == "remove" ? "voted" : "", disabled: offer.removed || myCoins < price("remove") || me.deck.length <= rules.deckLeast, title: "Remove a card for this run" }),
   );
   var nodes = [el("div", "rpg-shop-coins", "Your coins: 🪙 " + formatCoins(myCoins)), el("div", "rpg-label", "Cards · this run"), cards, el("div", "rpg-label", "Relics · this run"), relics, el("div", "rpg-label", "Services"), services];
@@ -2198,6 +2207,7 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "potion") socket.emit("potion");
   else if (act == "revive") socket.emit("revive");
   else if (act == "bagSlot") socket.emit("bagSlot");
+  else if (act == "potionSlot") socket.emit("potionSlot");
   else if (act == "tutorial") socket.emit("tutorial");
   else if (act == "skipTutorial") socket.emit("skipTutorial");
   else if (act == "deckHelp") showDeckHelp();

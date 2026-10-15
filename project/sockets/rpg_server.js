@@ -108,6 +108,7 @@ module.exports = function (io, options = {}) {
       bagMax: rpg.BAG_MAX,
       bagTop: rpg.BAG_TOP,
       potionsMax: rpg.POTIONS_MAX,
+      potionsTop: rpg.POTIONS_TOP,
       potionMana: rpg.POTION_MANA,
       potionPrice: rpg.POTION_PRICE,
       stats: rpg.STATS,
@@ -230,7 +231,7 @@ module.exports = function (io, options = {}) {
     if (!gone) return;
     if (heroes.has(name)) {
       const hero = heroOf(name);
-      hero.potions = Math.min(rpg.POTIONS_MAX, hero.potions + gone.potions);
+      hero.potions = Math.min(rpg.potionsMax(hero), hero.potions + gone.potions);
       rpg.gainXp(rpg.charOf(hero, gone.cls), Math.round(gone.xp / 2));
       sendHero(name);
     }
@@ -302,7 +303,7 @@ module.exports = function (io, options = {}) {
     for (const one of run.heroes) {
       if (!heroes.has(one.name)) continue;
       const hero = heroOf(one.name);
-      hero.potions = Math.min(rpg.POTIONS_MAX, hero.potions + one.potions);
+      hero.potions = Math.min(rpg.potionsMax(hero), hero.potions + one.potions);
       // (the practice run: done - nothing else counts, nobody dies)
       if (run.tutorial) {
         rpg.charOf(hero, one.cls).tutorialDone = true;
@@ -548,10 +549,21 @@ module.exports = function (io, options = {}) {
       sendHero(username);
     });
 
+    // One more potion slot (up to POTIONS_TOP) - dearer every time
+    on("potionSlot", async () => {
+      if (inRun()) return error("Not during a run.");
+      const hero = heroOf(username);
+      const price = rpg.potionSlotPrice(hero);
+      if (price == null) return error("Potion slots are at max.");
+      if (!(await coins.spend(username, price, { reason: "rpg potion slot" }))) return error(coins.refusal(username) || "You don't have enough coins.");
+      hero.potionSlots = (hero.potionSlots || 0) + 1;
+      sendHero(username);
+    });
+
     on("potion", async () => {
       if (inRun()) return error("Not during a run.");
       const hero = heroOf(username);
-      if (hero.potions >= rpg.POTIONS_MAX) return error(`At most ${rpg.POTIONS_MAX} potions.`);
+      if (hero.potions >= rpg.potionsMax(hero)) return error(`At most ${rpg.potionsMax(hero)} potions.`);
       if (!(await coins.spend(username, rpg.potionPrice(rpg.maxFloor(hero)), { reason: "rpg potion" }))) return error(coins.refusal(username) || "You don't have enough coins.");
       hero.potions++;
       sendHero(username);

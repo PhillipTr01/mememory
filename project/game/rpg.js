@@ -29,8 +29,8 @@ const ROOMS = 6;
 const PARTY_MAX = 4;
 const BAG_MAX = 5; // the bag at first - room for more in the shop
 const BAG_TOP = 15; // at most
-const BAG_SLOT_PRICE = 50000; // the first slot more - every next one 50% dearer
-const BAG_SLOT_GROWTH = 1.5;
+const BAG_SLOT_PRICE = 100000; // the first slot more - every next one 60% dearer
+const BAG_SLOT_GROWTH = 1.6;
 
 // The room in a hero's bag
 function bagSize(hero) {
@@ -42,7 +42,20 @@ function bagSlotPrice(hero) {
   const n = hero.bagSlots || 0;
   return BAG_MAX + n >= BAG_TOP ? null : round100(BAG_SLOT_PRICE * Math.pow(BAG_SLOT_GROWTH, n));
 }
-const POTIONS_MAX = 5;
+const POTIONS_MAX = 5; // the potions a hero carries at first - room for more in the shop
+const POTIONS_TOP = 10; // at most
+const POTION_SLOT_PRICE = 250000; // 2.5x a bag slot - every next one 60% dearer too
+
+// The potions a hero may carry
+function potionsMax(hero) {
+  return POTIONS_MAX + (hero.potionSlots || 0);
+}
+
+// The price of the next potion slot (null: as many as it gets)
+function potionSlotPrice(hero) {
+  const n = hero.potionSlots || 0;
+  return POTIONS_MAX + n >= POTIONS_TOP ? null : round100(POTION_SLOT_PRICE * Math.pow(BAG_SLOT_GROWTH, n));
+}
 const POTION_HEAL = 0.4; // of the max HP
 const POTION_GROWTH = 1.12;
 function potionPrice(floor = 1) {
@@ -862,6 +875,8 @@ function heroView(hero) {
     points: char.points,
     talents: char.talents,
     bagSize: bagSize(hero),
+    potionsMax: potionsMax(hero),
+    potionSlotPrice: potionSlotPrice(hero),
     bagSlotPrice: bagSlotPrice(hero),
     tutorialDone: !!char.tutorialDone,
     deadFor: deadFor(hero),
@@ -1153,6 +1168,7 @@ function newRun(floor, party, rng = Math.random, options = {}) {
         level: charOf(hero).level,
         maxFloor: maxFloor(hero),
         levels: { ...charOf(hero).levels },
+        potionsMax: potionsMax(hero),
         share: lootShare(charOf(hero).deepest, floor),
         ...stats,
         hp: stats.maxHp,
@@ -1545,7 +1561,7 @@ function choose(run, name, input = {}, rng = Math.random) {
     if (option.card == "deck" && hero.deck.length <= DECK_LEAST) return `Your deck keeps at least ${DECK_LEAST} cards.`;
   }
   if (option.card == "offer" && !(event.offers[name] || []).includes(input.card)) return "Pick one of the cards.";
-  if (option.id == "bottle" && hero.potions >= POTIONS_MAX) return `At most ${POTIONS_MAX} potions.`;
+  if (option.id == "bottle" && hero.potions >= (hero.potionsMax || POTIONS_MAX)) return `At most ${hero.potionsMax || POTIONS_MAX} potions.`;
   const note = (text) => {
     event.lines.push(text);
     say(run, text);
@@ -1663,7 +1679,7 @@ function canBuy(run, name, item) {
   const offer = run.event && run.event.offers && run.event.kind == "merchant" && run.event.offers[name];
   if (run.phase != "between" || !offer || !hero) return { error: "No merchant here." };
   if (item == "potion") {
-    if (hero.potions >= POTIONS_MAX) return { error: `At most ${POTIONS_MAX} potions.` };
+    if (hero.potions >= (hero.potionsMax || POTIONS_MAX)) return { error: `At most ${hero.potionsMax || POTIONS_MAX} potions.` };
     return { price: offer.prices.potion };
   }
   if (/^remove:\d+$/.test(item)) {
@@ -2456,6 +2472,9 @@ module.exports = {
   bagSize,
   bagSlotPrice,
   POTIONS_MAX,
+  POTIONS_TOP,
+  potionsMax,
+  potionSlotPrice,
   get POTION_PRICE() {
     return config.RPG_POTION_PRICE;
   },
