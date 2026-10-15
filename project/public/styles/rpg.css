@@ -5855,15 +5855,16 @@ button.rpg-cardx.off {
   }
 }
 
-/* 33. A pack card of another class: dimmed, its class on a badge */
-.rpg-flip.other-class .rpg-flip-front {
+/* 33. Another class's card: dimmed, its class icon at the bottom; in an opening "New!" up in the corner */
+.rpg-cardx.other-class > :not(.rpg-other-class) {
   filter: grayscale(0.7) brightness(0.75);
 }
 
 .rpg-other-class {
   position: absolute;
-  bottom: -0.75rem;
-  left: 0.35rem;
+  bottom: 0.35rem;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 3;
   display: grid;
   place-items: center;
@@ -5874,4 +5875,12 @@ button.rpg-cardx.off {
   border: 1px solid rgba(255, 255, 255, 0.35);
   font-size: 0.9rem;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.rpg-flip .rpg-flip-note {
+  top: -0.6rem;
+  right: -0.5rem;
+  bottom: auto;
+  left: auto;
+  transform: none;
 }

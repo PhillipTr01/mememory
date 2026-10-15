@@ -117,6 +117,14 @@ function cardEl(id, options) {
   var art = el("span", "rpg-cardx-art", card.icon);
   if (card.rarity && card.rarity != "basic") art.appendChild(el("i", "rpg-cardx-gem"));
   node.append(cost, art, el("span", "rpg-cardx-name", card.name), cardType(card), el("span", "rpg-cardx-text", card.text));
+  // (another class's card: its class icon at the bottom - this character can't use it)
+  if (card.cls && hero && card.cls != hero.cls && rules.classes[card.cls]) {
+    var other = rules.classes[card.cls];
+    var mark = el("span", "rpg-other-class", other.icon);
+    mark.title = other.name + " card - not usable by this character";
+    node.classList.add("other-class");
+    node.appendChild(mark);
+  }
   return node;
 }
 
@@ -993,15 +1001,6 @@ function flipNote(c) {
   return el("span", "rpg-flip-note" + (c.fresh ? " fresh" : ""), text);
 }
 
-// Another class's card: a badge on it - not for this character's deck
-function otherClassBadge(slot, c) {
-  if (!c.cls || !rules.classes[c.cls] || slot.querySelector(".rpg-other-class")) return;
-  var cls = rules.classes[c.cls];
-  var badge = el("span", "rpg-other-class", cls.icon);
-  badge.title = cls.name + " card - not usable by this character";
-  slot.classList.add("other-class");
-  slot.appendChild(badge);
-}
 
 // A card turned over - in place (the others stay as they are)
 function flipSlot(slot) {
@@ -1011,7 +1010,6 @@ function flipSlot(slot) {
   slot.classList.add("flipped");
   var c = opening.cards[i];
   if (!slot.querySelector(".rpg-flip-note")) slot.appendChild(flipNote(c));
-  otherClassBadge(slot, c);
 }
 
 function refreshOpeningFoot() {
@@ -1050,10 +1048,7 @@ function renderOpening() {
       front.appendChild(card);
       inner.append(back, front);
       slot.appendChild(inner);
-      if (opening.flipped[i]) {
-        slot.appendChild(flipNote(c));
-        otherClassBadge(slot, c);
-      }
+      if (opening.flipped[i]) slot.appendChild(flipNote(c));
       row.appendChild(slot);
     });
     var foot = openingFoot();

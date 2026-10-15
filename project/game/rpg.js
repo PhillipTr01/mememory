@@ -104,6 +104,8 @@ const CARD_RARITIES = {
 const MORE_CARDS = require("./rpg_cards");
 Object.assign(CARDS, MORE_CARDS.cards);
 for (const [cls, ids] of Object.entries(MORE_CARDS.classCards)) CLASSES[cls].cards.push(...ids);
+// (every class card knows its class - the page marks another class's cards)
+for (const [cls, c] of Object.entries(CLASSES)) for (const id of [...c.cards, c.mythic]) if (CARDS[id]) CARDS[id].cls = cls;
 // The deck: DECK_MIN to DECK_MAX cards - a charm may make room for more, or let it go down with fewer
 const DECK_MIN = 10;
 const DECK_MAX = 15;

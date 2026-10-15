@@ -73,10 +73,10 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   const view = rpg.runView(run);
   view.map[1].forEach((node, i) => assert.strictEqual(node.kind, run.map[1][i].sensed ? run.map[1][i].kind : null));
   assert.strictEqual(view.map[0][0].kind, "fight");
-  // The classes: a main stat, two signature cards in the starter deck, 31 cards of their own - more than 50 to collect
+  // The classes: a main stat, two signature cards in the starter deck, 43 cards of their own - more than 50 to collect
   for (const id of rpg.CLASS_IDS) {
     assert.ok(rpg.STATS[rpg.CLASSES[id].main], id);
-    assert.strictEqual(rpg.CLASSES[id].cards.length, 31);
+    assert.strictEqual(rpg.CLASSES[id].cards.length, 43);
     assert.ok(rpg.poolOf(id).length >= 50, id);
     rpg.CLASSES[id].cards.forEach((card) => assert.ok(rpg.CARDS[card], card));
     assert.deepStrictEqual(rpg.starterDeck(id).slice(8), rpg.CLASSES[id].signature);
