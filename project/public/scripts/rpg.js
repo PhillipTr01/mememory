@@ -554,7 +554,14 @@ function renderHero() {
   current.type = "button";
   current.dataset.act = "classMenu";
   current.append(el("span", "rpg-class-icon", picked ? mine.icon : "❔"), el("span", "rpg-class-name", picked ? mine.name : "Pick a class"), el("span", "rpg-class-note", picked ? "Lv " + hero.chars[hero.cls].level + " · floor " + hero.chars[hero.cls].deepest : ""), el("span", "rpg-class-caret", "▾"));
-  var pickNodes = [current];
+  // (an i to the right of it: every class side by side)
+  var classInfo = el("button", "cs-info-btn rpg-class-help", "i");
+  classInfo.type = "button";
+  classInfo.title = "All classes";
+  classInfo.dataset.act = "classHelp";
+  var pickRow = el("div", "rpg-class-row");
+  pickRow.append(current, classInfo);
+  var pickNodes = [pickRow];
   if (classMenu) {
     var menu = el("div", "rpg-class-menu");
     Object.keys(rules.classes).forEach((id) => {
@@ -576,14 +583,7 @@ function renderHero() {
     var strength = el("div", "rpg-class-strength");
     var mineStrength = hero.strength || mine.strength;
     strength.append(el("span", "rpg-strength-icon", mineStrength.icon), el("b", "", mineStrength.name), el("span", "", mineStrength.text), el("span", "rpg-strength-grow", "grows with your level"));
-    // (an i: every class side by side)
-    var about = el("div", "rpg-class-about", mine.about + " ");
-    var classInfo = el("button", "cs-info-btn", "i");
-    classInfo.type = "button";
-    classInfo.title = "All classes";
-    classInfo.dataset.act = "classHelp";
-    about.appendChild(classInfo);
-    info.push(about, strength);
+    info.push(el("div", "rpg-class-about", mine.about), strength);
     // (out of the fights: the class's help for the party - grows with the main stat)
     if (hero.ability) {
       var ability = el("div", "rpg-class-strength ability");
@@ -1998,13 +1998,6 @@ function showPile(kind) {
 
 // How the cards work (the Deck tab)
 // How cards work: the (i) of the deck builder
-var DECK_HELP = [
-  ["🃏 Your deck", "Shuffled at the start of every fight."],
-  ["✋ A turn", "5 cards and 3 mana. Cards cost mana."],
-  ["⚔️ Play", "Attacks hit, skills block, heal or help."],
-  ["⏭️ End turn", "Unplayed cards stay. Monsters do what their badges show."],
-  ["🎁 Grow it", "Win a fight: pick a card for the run. Packs grow your collection."],
-];
 
 // Every class side by side: its main stat, its strength in fights, its help out of them
 function showClassHelp() {
@@ -2013,9 +2006,48 @@ function showClassHelp() {
   showBoard("Classes", "Strength in fights, an ability out of them - both grow.", [grid]);
 }
 
+// How cards work - shown with cards: the deck, a turn, attacks and skills, the cost, the monsters' turn, rarities
 function showDeckHelp() {
-  window.casinoInfo({ title: "How cards work", sections: DECK_HELP.map(([heading, text]) => ({ heading: heading, items: [text] })) });
-  intoFullscreen();
+  var cls = hero && hero.cls ? rules.classes[hero.cls] : rules.classes.warrior;
+  var ids = Object.keys(rules.cards);
+  var mine = (id) => !rules.cards[id].cls || rules.cards[id].cls == (hero && hero.cls);
+  var find = (test) => ids.find((id) => mine(id) && test(rules.cards[id])) || ids.find((id) => test(rules.cards[id]));
+  var attack = find((c) => c.type == "attack" && c.cost == 1 && (c.rarity || "basic") == "basic") || cls.signature[0];
+  var skill = find((c) => c.type == "skill" && c.cost == 1 && (c.rarity || "basic") == "basic") || cls.signature[1];
+  var dear = find((c) => c.cost == 2) || attack;
+  var card = (id, extra) => cardEl(id, { className: "small" + (extra ? " " + extra : "") });
+  var row = (nodes, extra) => {
+    var box = el("div", "rpg-help-cards" + (extra ? " " + extra : ""));
+    nodes.forEach((n) => box.appendChild(n));
+    return box;
+  };
+  var tile = (title, visual, text) => {
+    var t = el("div", "rpg-help-tile");
+    t.append(el("div", "rpg-help-title", title), visual, el("div", "rpg-help-text", text));
+    return t;
+  };
+  // (a monster's badge: what it does next)
+  var intent = el("div", "rpg-help-intent");
+  var badge = el("div", "rpg-intent move-attack", "⚔️ 9");
+  intent.append(badge, el("div", "rpg-help-monster", "🐺"), el("div", "rpg-help-note", "Its badge: an attack for 9 next"));
+  var mana = el("div", "rpg-help-mana");
+  for (var i = 0; i < 3; i++) mana.appendChild(el("span", "rpg-help-gem", ""));
+  var turn = el("div", "rpg-help-turn");
+  turn.append(row([card(attack), card(skill), card(attack), card(skill), card(cls.signature[0])], "hand"), mana);
+  var costCard = card(dear, "cost-call");
+  var cost = el("div", "rpg-help-cost");
+  cost.append(costCard, el("div", "rpg-help-note", "The drop in the corner: its mana cost"));
+  var rarities = ["common", "rare", "epic", "legendary"].map((r) => find((c) => (c.rarity || "basic") == r)).filter(Boolean);
+  var grid = el("div", "rpg-help-grid");
+  grid.append(
+    tile("🃏 Your deck", row(cls.signature.concat([attack]).map((id) => card(id)), "fan"), "Shuffled at the start of every fight."),
+    tile("✋ A turn", turn, "5 cards, 3 mana - every card costs some."),
+    tile("⚔️ Attack or 🛡️ skill", row([card(attack), card(skill)]), "Attacks hit. Skills block, heal or help."),
+    tile("💧 The cost", cost, "Play what your mana pays for."),
+    tile("⏭️ End the turn", intent, "Cards you keep stay in your hand. Then the monsters act."),
+    tile("🎁 Grow it", row(rarities.map((id) => card(id)), "fan"), "A won fight: a card for the run. Packs: your collection."),
+  );
+  showBoard("How cards work", "Play cards with mana - the monsters show what they do next.", [grid]);
 }
 
 // A dialog just opened (on the body): into the full screen, if the page is in it - else it would stay hidden

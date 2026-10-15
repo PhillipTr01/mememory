@@ -6089,3 +6089,155 @@ button.rpg-cardx.off {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   cursor: help;
 }
+
+/* (the class dropdown and its i side by side) */
+.rpg-class-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 24.5rem;
+}
+
+.rpg-class-row .rpg-class-pick {
+  flex: 1;
+  min-width: 0;
+}
+
+.rpg-class-row .rpg-class-help {
+  flex: none;
+}
+
+/* (How cards work: tiles with cards) */
+.rpg-help-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0.4rem 0 0.9rem;
+}
+
+.rpg-help-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.85rem 0.7rem;
+  border-radius: 14px;
+  background: var(--rpg-surface, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--mm-border);
+  text-align: center;
+}
+
+.rpg-help-title {
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.rpg-help-text {
+  font-size: 0.8rem;
+  color: var(--mm-muted);
+  line-height: 1.35;
+}
+
+.rpg-help-note {
+  font-size: 0.72rem;
+  color: var(--mm-muted);
+}
+
+.rpg-help-cards {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0.35rem;
+  min-height: 7.5rem;
+}
+
+/* (a fan: the cards overlap, a little turned - smaller, room for their class badge under them) */
+.rpg-help-cards.fan {
+  zoom: 0.78;
+  padding: 0 1.2rem 1rem;
+}
+
+.rpg-help-cards.fan > * {
+  margin: 0 -1rem;
+}
+
+.rpg-help-cards.fan > :nth-child(1) {
+  transform: rotate(-8deg) translateY(4px);
+}
+
+.rpg-help-cards.fan > :nth-child(2) {
+  transform: rotate(-3deg);
+}
+
+.rpg-help-cards.fan > :nth-child(4) {
+  transform: rotate(4deg);
+}
+
+.rpg-help-cards.fan > :nth-child(5) {
+  transform: rotate(8deg) translateY(4px);
+}
+
+.rpg-help-cards.fan > :nth-last-child(1):nth-child(3) {
+  transform: rotate(7deg) translateY(4px);
+}
+
+.rpg-help-cards.hand {
+  zoom: 0.56;
+  min-height: 0;
+  padding-bottom: 1rem;
+}
+
+.rpg-help-tile {
+  overflow: hidden;
+}
+
+.rpg-help-turn,
+.rpg-help-cost,
+.rpg-help-intent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 7.5rem;
+}
+
+.rpg-help-mana {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.rpg-help-gem {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #a5d8ff, #3b82f6 65%, #1e40af);
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
+}
+
+.rpg-help-intent .rpg-intent {
+  position: static;
+  transform: none;
+}
+
+@media (max-width: 720px) {
+  .rpg-help-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 460px) {
+  .rpg-help-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rpg-help-cards.hand {
+    zoom: 0.44;
+  }
+}
+
+.rpg-help-monster {
+  font-size: 2.6rem;
+  line-height: 1;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.5));
+}
