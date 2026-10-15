@@ -5857,7 +5857,8 @@ button.rpg-cardx.off {
 }
 
 /* (the deck builder: only the own class - the copies under the card instead) */
-#rpgBuilderGrid .rpg-cardx:not(.other-class) .rpg-card-class {
+#rpgBuilderGrid .rpg-cardx:not(.other-class) .rpg-card-class,
+.rpg-first-cards .rpg-card-class {
   display: none;
 }
 

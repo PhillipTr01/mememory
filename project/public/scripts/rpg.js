@@ -120,7 +120,7 @@ function cardEl(id, options) {
   // (a class card: its class icon on top - another class's one dimmed, this character can't use it)
   if (card.cls && rules.classes[card.cls]) {
     var owner = rules.classes[card.cls];
-    var other = hero && card.cls != hero.cls;
+    var other = hero && hero.cls && card.cls != hero.cls;
     var mark = el("span", "rpg-card-class", owner.icon);
     mark.title = owner.name + " card" + (other ? " - not usable by this character" : "");
     node.classList.add("has-class");
