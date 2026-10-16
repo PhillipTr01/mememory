@@ -1482,12 +1482,15 @@ function enterRoom(run, door = 0, rng = Math.random) {
     const smash = abilityLevel(run, "warrior");
     const coins = Math.round(entryCost(run.floor) * REWARD.chest * (config.RPG_LOOT / 100) * partyBonus(run.heroes.length) * (1 + ABILITIES.warrior.coins * (smash || 0)));
     run.pot += coins;
+    run.event.shared = [{ k: "coins", n: coins }];
+    run.event.results = {};
     note(`🪙 ${coins} each to the pot.`);
     if (smash != null)
       for (const hero of heroes)
         if (rng() < ABILITIES.warrior.gear * smash) {
           const item = makeGear(run.floor, rng, hero.luck, hero.cls);
           run.loot[hero.name].push(item);
+          (run.event.results[hero.name] = run.event.results[hero.name] || []).push({ k: "gear", item, smashed: true });
           note(`🔨 Smashed open: ${hero.name} finds ${item.icon} ${item.name}.`);
         }
   } else if (kind == "merchant") {
@@ -1605,34 +1608,46 @@ function choose(run, name, input = {}, rng = Math.random) {
     event.lines.push(text);
     say(run, text);
   };
+  // (what the hero got, for the page's cards: {k: "gear", item} {k: "relic", id} {k: "hp", n} {k: "heal", n}
+  // {k: "potion"} {k: "card", id} {k: "upgrade", ids} {k: "buff", text} {k: "nothing"})
+  if (!event.results) event.results = {};
+  const got = (result) => (event.results[name] = event.results[name] || []).push(result);
   // (a paladin shields the party: traps and shrines hurt less)
   const shield = abilityLevel(run, "paladin") || 0;
   const lose = (share, cut = 0) => {
     const damage = Math.round(hero.maxHp * share * Math.max(0, 1 - cut * shield));
     hero.hp = Math.max(1, hero.hp - damage);
+    got({ k: "hp", n: damage });
     return damage;
   };
   const gear = () => {
     const item = makeGear(run.floor, rng, hero.luck, hero.cls);
     run.loot[hero.name].push(item);
+    got({ k: "gear", item });
     return item;
   };
   const relic = () => {
     const [id] = relicOffer(hero, rng, 1);
     if (id) giveRelic(run, hero, id);
+    if (id) got({ k: "relic", id });
     return id;
   };
+  const healed = (n) => (got({ k: "heal", n }), n);
   event.choices[name] = option.id;
   switch (option.id) {
     case "open": {
-      // (every hero rolls on its own - luck helps)
-      if (rng() * 100 < 40 + hero.luck / 2) {
+      // (every hero rolls on its own - luck helps: gear, maybe a relic - nothing of both: dust)
+      const lucky = rng() * 100 < 40 + hero.luck / 2;
+      const withRelic = rng() < 0.2;
+      if (lucky) {
         const item = gear();
         note(`${name} finds ${item.icon} ${item.name} (${item.rarity}).`);
-      } else note(`${name} finds nothing but dust.`);
-      if (rng() < 0.2) {
-        const id = relic();
-        if (id) note(`${name} finds a relic: ${RELICS[id].icon} ${RELICS[id].name}.`);
+      }
+      const id = withRelic ? relic() : null;
+      if (id) note(`${name} finds a relic: ${RELICS[id].icon} ${RELICS[id].name}.`);
+      if (!lucky && !id) {
+        got({ k: "nothing" });
+        note(`${name} finds nothing but dust.`);
       }
       break;
     }
@@ -1647,36 +1662,42 @@ function choose(run, name, input = {}, rng = Math.random) {
       break;
     case "rest":
       hero.bonusEnergy = 1;
-      note(`${name} rests: +${healHero(run, hero, hero.maxHp * REST_HEAL * (1 + ABILITIES.cleric.rest * (abilityLevel(run, "cleric") || 0)))} HP, +1 mana in the next fight.`);
+      note(`${name} rests: +${healed(healHero(run, hero, hero.maxHp * REST_HEAL * (1 + ABILITIES.cleric.rest * (abilityLevel(run, "cleric") || 0))))} HP, +1 mana in the next fight.`);
+      got({ k: "buff", icon: "💧", text: "+1 mana in the next fight" });
       break;
     case "smith": {
       const id = hero.deck[index];
       hero.deck[index] = id + "+";
+      got({ k: "card", id: id + "+" });
       note(`${name} smiths ${CARDS[id].icon} ${CARDS[id].name}+ ⚒️.`);
       break;
     }
     case "pray":
       hero.blessed = true;
+      got({ k: "buff", icon: "✨", text: "+25% damage this run" });
       note(`${name} gives ${lose(SHRINE_COST, ABILITIES.paladin.shrine)} HP: +25% damage this run.`);
       break;
     case "drink":
-      note(`${name} drinks: +${healHero(run, hero, hero.maxHp * 0.3)} HP.`);
+      note(`${name} drinks: +${healed(healHero(run, hero, hero.maxHp * 0.3))} HP.`);
       break;
     case "bottle":
       hero.potions++;
+      got({ k: "potion" });
       note(`${name} fills a flask: +1 potion 🧪.`);
       break;
     case "read":
       hero.deck.push(input.card);
+      got({ k: "card", id: input.card });
       note(`${name} studies ${CARDS[input.card].icon} ${CARDS[input.card].name}.`);
       break;
     case "nap":
-      note(`${name} naps: +${healHero(run, hero, hero.maxHp * 0.2)} HP.`);
+      note(`${name} naps: +${healed(healHero(run, hero, hero.maxHp * 0.2))} HP.`);
       break;
     case "temper": {
       const free = hero.deck.map((id, i) => i).filter((i) => !isUpgraded(hero.deck[i]));
       const picked = shuffle(free, rng).slice(0, 2);
       picked.forEach((i) => (hero.deck[i] += "+"));
+      picked.forEach((i) => got({ k: "card", id: hero.deck[i] }));
       note(`${name} tempers ${picked.map((i) => cardInfo(hero.deck[i]).name).join(" and ") || "nothing"}: ${lose(0.08)} damage.`);
       break;
     }
@@ -1684,21 +1705,25 @@ function choose(run, name, input = {}, rng = Math.random) {
       const id = relic();
       hero.maxHp = Math.max(1, Math.round(hero.maxHp * 0.9));
       hero.hp = Math.min(hero.hp, hero.maxHp);
+      got({ k: "buff", icon: "💔", text: "-10% max HP this run", bad: true });
       note(id ? `${name} takes the idol: ${RELICS[id].icon} ${RELICS[id].name}, -10% max HP.` : `${name} takes the idol - it crumbles to dust.`);
       break;
     }
     case "purge": {
       const [id] = hero.deck.splice(index, 1);
+      got({ k: "card", id, lost: true });
       note(`${name} gives ${cardInfo(id).icon} ${cardInfo(id).name} to the hermit.`);
       break;
     }
     case "roll":
       if (rng() < 0.5) {
         const id = relic();
+        if (!id) got({ k: "nothing" });
         note(id ? `${name} wins 🎲: ${RELICS[id].icon} ${RELICS[id].name}!` : `${name} wins - but the imp has nothing left.`);
       } else note(`${name} loses 🎲: ${lose(0.15)} damage.`);
       break;
     default:
+      got({ k: "nothing", walked: true });
       note(`${name} walks on.`);
   }
   return null;
@@ -2353,6 +2378,8 @@ function runView(run) {
       encounter: run.event.id ? ENCOUNTERS[run.event.id] : null,
       options: optionsOf(run.event),
       lines: run.event.lines,
+      results: run.event.results || {},
+      shared: run.event.shared || [],
       choices: run.event.choices,
       offers: run.event.offers,
       disarm: run.event.kind == "trap" ? Object.fromEntries(run.heroes.map((h) => [h.name, disarmChance(h)])) : null,

@@ -1853,12 +1853,26 @@ function roomScene(run, me) {
   var body = el("div", "rpg-scene-body");
   if (ev.kind == "merchant") body.append(...shopNodes(run, me));
   else if (me && ev.choices && myName in ev.choices) body.append(...choiceNodes(run, me));
-  // What happened in the room (not at the merchant: "Sold ✓" shows it - the battle log keeps every buy)
-  if (ev.lines.length && ev.kind != "merchant") {
+  // What happened in the room: cards of what I got (hover: the stats) - the others' in small (not at the merchant:
+  // "Sold ✓" shows it - the battle log keeps every buy)
+  var results = ev.results || {};
+  var shared = ev.shared || [];
+  if (ev.kind != "merchant" && (shared.length || Object.keys(results).length)) {
     var box = el("div", "rpg-event-box");
-    var lines = el("ul", "rpg-event-lines");
-    ev.lines.forEach((line) => lines.appendChild(el("li", "", line)));
-    box.append(el("div", "rpg-label", "What happened"), lines);
+    var mine = shared.concat(results[myName] || []);
+    if (mine.length) {
+      var row = el("div", "rpg-results");
+      mine.forEach((r) => row.appendChild(resultCard(r)));
+      box.append(el("div", "rpg-label", run.heroes.length > 1 ? "You got" : "What happened"), row);
+    }
+    Object.keys(results)
+      .filter((name) => name != myName && results[name].length)
+      .forEach((name) => {
+        var other = el("div", "rpg-results small");
+        other.appendChild(createAvatar(name, "sm"));
+        results[name].forEach((r) => other.appendChild(resultCard(r)));
+        box.appendChild(other);
+      });
     body.appendChild(box);
   }
   // Who has chosen
@@ -1874,6 +1888,60 @@ function roomScene(run, me) {
   }
   scene.append(art, head, body);
   return [scene];
+}
+
+// What a room gave (or took): a small card - its stats on hover
+function resultCard(r) {
+  var node = el("div", "rpg-result");
+  var icon = "✦";
+  var name = "";
+  var tip = "";
+  if (r.k == "gear") {
+    node.classList.add("rarity-" + r.item.rarity);
+    icon = r.item.icon;
+    name = r.item.name;
+    tip = RARITY_NAMES[r.item.rarity] + " " + SLOT_NAMES[r.item.slot].toLowerCase() + "\n" + bonusOf(r.item).split(" · ").join("\n") + (r.item.classes ? "\n" + r.item.classes.map((id) => rules.classes[id].name).join(", ") + " only" : "");
+  } else if (r.k == "relic") {
+    var relic = rules.relics[r.id] || { icon: "🏺", name: r.id, text: "" };
+    node.classList.add("relic");
+    icon = relic.icon;
+    name = relic.name;
+    tip = "Relic · this run\n" + relic.text;
+  } else if (r.k == "card") {
+    var card = cardEl(r.id, { className: "small" + (r.lost ? " off" : "") });
+    if (r.lost) card.appendChild(el("span", "rpg-result-tag bad", "Given away"));
+    return card;
+  } else if (r.k == "coins") {
+    node.classList.add("coins");
+    icon = "🪙";
+    name = formatCoins(r.n);
+    tip = "Into the pot for everyone - paid at the end";
+  } else if (r.k == "hp") {
+    node.classList.add("bad");
+    icon = "💔";
+    name = "-" + formatCoins(r.n) + " HP";
+  } else if (r.k == "heal") {
+    node.classList.add("good");
+    icon = "💚";
+    name = "+" + formatCoins(r.n) + " HP";
+  } else if (r.k == "potion") {
+    node.classList.add("good");
+    node.appendChild(flask());
+    name = "+1 potion";
+    icon = null;
+  } else if (r.k == "buff") {
+    node.classList.add(r.bad ? "bad" : "good");
+    icon = r.icon;
+    name = r.text;
+  } else {
+    node.classList.add("none");
+    icon = r.walked ? "🚶" : "🕸️";
+    name = r.walked ? "Walked on" : "Nothing";
+  }
+  if (icon) node.appendChild(el("span", "rpg-result-icon", icon));
+  node.appendChild(el("span", "rpg-result-name", name));
+  if (tip) node.title = tip;
+  return node;
 }
 
 // A picture for every choice of a room
