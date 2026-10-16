@@ -3,12 +3,6 @@ const coins = require("./coins");
 const slots = require("./slots");
 
 // What the slot machine pays back on average (worked out from its reels and paytable once - it doesn't change)
-let slotsRtpText = null;
-function slotsRtp() {
-  if (slotsRtpText == null) slotsRtpText = (slots.rtp().rtp * 100).toFixed(1);
-  return slotsRtpText;
-}
-const roulette = require("./roulette");
 const limits = require("./limits");
 const baucua = require("./baucua");
 
@@ -31,11 +25,6 @@ function caseTiles() {
   const off = config.BATTLE_CASES_OFF || [];
   const list = require("./cases").list().filter((box) => !box.off && !off.includes(box.id));
   const of = (risk) => list.filter((box) => box.risk === risk);
-  const range = (boxes) => {
-    const low = Math.round(Math.min(...boxes.map((box) => box.rtp)) * 100);
-    const high = Math.round(Math.max(...boxes.map((box) => box.rtp)) * 100);
-    return low === high ? `${low}%` : `${low}-${high}%`;
-  };
   const top = (boxes) => {
     const most = Math.max(...boxes.map((box) => box.top));
     return most < 10 ? String(Math.round(most * 10) / 10) : String(Math.round(most));
@@ -43,7 +32,7 @@ function caseTiles() {
   const looks = { low: ["🛡️", "Low risk", "Items close to the price"], balanced: ["⚖️", "Balanced", "A bit of both"], high: ["🔥", "High risk", "Mostly cheap - a small chance of a lot"] };
   return ["low", "balanced", "high"]
     .filter((risk) => of(risk).length)
-    .map((risk) => tile(looks[risk][0], looks[risk][1], `${looks[risk][2]}. Pays back ${range(of(risk))} on average.`, { tags: [[`up to ${top(of(risk))}×`, risk === "high" ? "gold" : risk === "low" ? "green" : "blue"]] }));
+    .map((risk) => tile(looks[risk][0], looks[risk][1], `${looks[risk][2]}.`, { tags: [[`up to ${top(of(risk))}×`, risk === "high" ? "gold" : risk === "low" ? "green" : "blue"]] }));
 }
 
 const GAMES = {
@@ -54,11 +43,8 @@ const GAMES = {
       section("How it works", [
         tile("💰", "One pot", "Everybody bets into one pot. One player wins all of it.", { coins: ["1,000", "3,000"] }),
         tile("🎯", "Your chance", "Your share of the pot: 1,000 of 4,000 = 25%.", { split: [["You", 25, "gold"], ["Others", 75, "muted"]] }),
-        tile("⏱️", "Countdown", `${seconds(config.JACKPOT_COUNTDOWN)} from the second player on - bets during it still count.`, { steps: ["👤", "👥", "⏱️", "🎉"] }),
         tile("👻", "The ghost", `Alone for ${seconds(config.JACKPOT_GHOST_AFTER)}: the house joins once with ${config.JACKPOT_GHOST_MIN}-${config.JACKPOT_GHOST_TOP}% of your coins (max 🪙 ${n(config.JACKPOT_GHOST_MAX)}). If it wins, it keeps the pot.`, { emoji: ["👻"] }),
         tile("🏦", "The house", `Keeps ${config.JACKPOT_RAKE}% of the pot - never more than half of the others' coins: you never win less than you bet.`, { tags: [[`${config.JACKPOT_RAKE}%`, "gold"]] }),
-        tile("🛬", "Bets land", `After ${seconds(config.JACKPOT_BET_DELAY[0])}-${seconds(config.JACKPOT_BET_DELAY[1])}. Too late for the draw: into the next pot.`, { steps: ["🪙", "⏳", "🍯"] }),
-        tile("🎡", "The draw", "A random animation picks the winner - your spot means nothing. Paid when it's over.", { emoji: ["🎡", "🏇", "🎰"] }),
       ]),
       section("Limits", [
         tile("🔢", "Bets", `Up to ${n(L.JACKPOT_MAX_BETS)} bets per round.`, { big: n(L.JACKPOT_MAX_BETS) }),
@@ -87,7 +73,7 @@ const GAMES = {
         tile("🥄", "Worst of", "The worst item wins the round - the most rounds win."),
         tile("❓", "Random", "One of the others, picked at the very end."),
       ]),
-      section("Cases", [tile("🔍", "Look inside", "Click a case: every item and its chance.", { emoji: ["🔍", "📦"] }), ...caseTiles(), tile("🔒", "Provably fair", "The seed's hash shows before the battle, the seed after it.", { emoji: ["🔒", "🔑"] })]),
+      section("Cases", [tile("🔍", "Look inside", "Click a case: every item and its chance.", { emoji: ["🔍", "📦"] }), ...caseTiles()]),
       section("Limits", [
         tile("📦", "Cases", `Up to ${n(L.BATTLE_MAX_CASES)} per battle.`, { big: n(L.BATTLE_MAX_CASES) }),
         tile("🪙", "Cost", `At most 🪙 ${n(L.BATTLE_MAX_COST)} per player.`, { coins: [n(L.BATTLE_MAX_COST)] }),
@@ -149,7 +135,7 @@ const GAMES = {
     const rpg = require("./rpg");
     const packs = Object.values(rpg.PACKS);
     return {
-      title: "⚔️ Dungeon",
+      title: "Dungeon",
       sub: "A character, a deck of cards - and floors that pay.",
       sections: [
         section("Your character", [
@@ -192,10 +178,9 @@ const GAMES = {
       sub: `5 reels, ${slots.LINE_COUNT} lines - free spins and a coin game on top.`,
       sections: [
         section("How it works", [
-          tile("🎰", "The reels", `5 reels, 3 rows, ${slots.LINE_COUNT} lines - all play. The bet is for the whole spin.`, { grid: [["🍌", "🐸", "💎", "🐕", "🚀"], ["🐸", "🐸", "🐸", "💰", "🍌"], ["🚀", "🐕", "🍌", "👑", "🐸"]] }),
+          tile("🎰", "The reels", `5 reels, 3 rows, ${slots.LINE_COUNT} lines.`, { grid: [["🍌", "🐸", "💎", "🐕", "🚀"], ["🐸", "🐸", "🐸", "💰", "🍌"], ["🚀", "🐕", "🍌", "👑", "🐸"]] }),
           tile("➡️", "Line wins", "3, 4 or 5 of a symbol on a line, from the left reel. The paytable shows what each pays.", { emoji: ["🐸", "🐸", "🐸"] }),
           tile("👑", "Wild", "Stands for every symbol.", { emoji: ["👑"] }),
-          tile("📊", "Payback", `About ${slotsRtp()}% of the bets on average. Coins come when the spin is over.`, { big: slotsRtp() + "%" }),
         ]),
         section("Free spins", [
           tile("🎁", "Start them", "🎁 on reels 1, 3 and 5 at once.", { grid: [["🎁", "·", "🎁", "·", "🎁"]] }),
@@ -224,10 +209,8 @@ const GAMES = {
     sections: [
       section("How it works", [
         tile("🎡", "The reel", "15 slots: 7 red, 7 blue and 1 green.", { emoji: ["🟥", "🟦", "🟥", "🟦", "🟩", "🟥", "🟦"] }),
-        tile("💰", "Pays", `Red and blue 2×, green 14×. About ${(roulette.rtp("red") * 100).toFixed(1)}% back on average.`, { tags: [["🟥 2×", "red"], ["🟦 2×", "blue"], ["🟩 14×", "green"]] }),
+        tile("💰", "Pays", "Red and blue 2×, green 14×.", { tags: [["🟥 2×", "red"], ["🟦 2×", "blue"], ["🟩 14×", "green"]] }),
         tile("⚖️", "Red or blue", "Never both in a round - green goes with either.", { tags: [["🟥 + 🟩"], ["🟦 + 🟩"]] }),
-        tile("⏱️", "The timer", `The first bet starts it (${seconds(config.ROULETTE_TIMER)}) - then the reel rolls.`, { steps: ["🪙", "⏱️", "🎡"] }),
-        tile("🔒", "Provably fair", "The seed's hash before the bets, the seed after the roll.", { emoji: ["🔒", "🔑"] }),
       ]),
       section("Limits", [tile("🪙", "Bets", `At least 🪙 ${n(L.ROULETTE_MIN_BET)} per bet, at most 🪙 ${n(L.ROULETTE_MAX_BET)} per round.`, { coins: [n(L.ROULETTE_MIN_BET), n(L.ROULETTE_MAX_BET)] })]),
     ],
@@ -240,10 +223,7 @@ const GAMES = {
       section("How it works", [
         tile("🎲", "Three dice", "Every die shows one of six animals: tiger, gourd, rooster, fish, crab, shrimp.", { dice: ["tiger", "crab", "fish"] }),
         tile("🎯", "Your bet", "On one animal or several - everybody bets on the same roll.", { animals: ["tiger", "gourd", "rooster", "fish", "crab", "shrimp"] }),
-        tile("💰", "Pays", `Per die with your animal: 1 ${baucua.PAYOUT[1]}×, 2 ${baucua.PAYOUT[2]}×, 3 ${baucua.PAYOUT[3]}× (your bet included).`, { tags: [[`1 · ${baucua.PAYOUT[1]}×`], [`2 · ${baucua.PAYOUT[2]}×`, "blue"], [`3 · ${baucua.PAYOUT[3]}×`, "gold"]] }),
-        tile("📊", "Payback", `About ${(baucua.rtp() * 100).toFixed(1)}% - the same for every animal.`, { big: (baucua.rtp() * 100).toFixed(1) + "%" }),
-        tile("⏱️", "The timer", `The first bet starts it (${seconds(config.BAUCUA_TIMER)}) - then the bowl shakes.`, { steps: ["🪙", "⏱️", "🥣"] }),
-        tile("🔒", "Provably fair", "The seed's hash before the bets, the seed after the roll.", { emoji: ["🔒", "🔑"] }),
+        tile("💰", "Pays", `Per die with your animal: 1 ${baucua.PAYOUT[1]}×, 2 ${baucua.PAYOUT[2]}×, 3 ${baucua.PAYOUT[3]}×.`, { tags: [[`1 · ${baucua.PAYOUT[1]}×`], [`2 · ${baucua.PAYOUT[2]}×`, "blue"], [`3 · ${baucua.PAYOUT[3]}×`, "gold"]] }),
       ]),
       section("Limits", [
         tile("🪙", "Bets", `At least 🪙 ${n(L.BAUCUA_MIN_BET)} per bet, at most 🪙 ${n(L.BAUCUA_MAX_BET)} per round.`, { coins: [n(L.BAUCUA_MIN_BET), n(L.BAUCUA_MAX_BET)] }),
@@ -262,22 +242,20 @@ const GAMES = {
       sections: [
         section("How it works", [
           tile("🏆", "By coins", "All players, the most coins first.", { emoji: ["🥇", "🥈", "🥉"] }),
-          tile("📶", "Live", "Without a season always up to date. The arrows: up or down since midnight.", { tags: [["▲ 2", "green"], ["▼ 1", "red"]] }),
           tile("🎁", "Daily coins", `${season ? "" : "🪙 "}${n(daily)} free every day - claim them on your first visit.`, { coins: [n(daily)] }),
-          ...(L.CASHBACK_PERCENT > 0 ? [tile("💸", "Cashback", `After midnight ${L.CASHBACK_PERCENT}% of yesterday's losses come back${L.CASHBACK_MAX > 0 ? ` (up to ${n(L.CASHBACK_MAX)})` : ""}.${season ? " Second chances' coins don't count." : ""}`, { tags: [[`${L.CASHBACK_PERCENT}%`, "green"]] })] : []),
+          ...(L.CASHBACK_PERCENT > 0 ? [tile("💸", "Cashback", `After midnight ${L.CASHBACK_PERCENT}% of yesterday's losses come back${L.CASHBACK_MAX > 0 ? `, up to ${n(L.CASHBACK_MAX)}` : ""}.`, { tags: [[`${L.CASHBACK_PERCENT}%`, "green"]] })] : []),
           ...(streak.on ? [tile("🔥", "Daily streak", `Claim day after day and it grows - up to ${n(Math.round((daily * Math.max(...streak.rewards)) / 100))} a day. Miss one: it starts over.`, { steps: ["🔥", "🔥🔥", "🔥🔥🔥"] })] : []),
         ]),
         section("Ranking", [
           tile("💔", "In a season", "The same coins: fewer second chances first - then more coins wagered.", { tags: [["💔 1"], ["🫴🏽 50k"]] }),
-          tile("🎟️", "A place", "Needs a wager: the start coins × the season's factor (daily bonuses add to it).", { steps: ["🪙", "🫴🏽", "🏅"] }),
+          tile("🎟️", "A place", "Needs a wager: the start coins × the season's factor.", { steps: ["🪙", "🫴🏽", "🏅"] }),
           tile("🤝", "Shared places", "Only the same coins, chances and wagers share a place - and its prize.", { tags: [["1st"], ["1st"], ["3rd", "muted"]] }),
         ]),
         section("Seasons", [
-          tile("🗓️", "Start", "Hit Start to play: the start budget (and the daily coins you missed).", { steps: ["▶️", "🪙", "🏁"] }),
+          tile("🗓️", "Start", "Hit Start to play with the start budget.", { steps: ["▶️", "🪙", "🏁"] }),
           tile("🏁", "Win", "The same coins for everybody - the most at the end wins the prizes.", { emoji: ["🏆"] }),
           tile("💼", "Your coins", "Kept aside meanwhile - back after the season, with your season coins on top.", { coins: ["kept"] }),
           tile("💔", "Second chances", "Lost everything? Start again with the budget - the next one after a wait.", { emoji: ["💔", "🔁"] }),
-          tile("⏸️", "Closing", "Before a season starts and ends the casino closes for a moment.", { steps: ["🎲", "⏸️", "▶️"] }),
         ]),
       ],
     };

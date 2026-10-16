@@ -220,9 +220,7 @@ function render() {
   document.getElementById("lbNextTitle").lastChild.textContent = board.live ? "Updates" : "Next update";
   setText(
     document.getElementById("lbNextNote"),
-    board.live
-      ? "Arrows: change since midnight."
-      : "The places of the season are counted " + (EVERY_TEXT[season && season.every] || "regularly") + " - the arrows show the change since the update before.",
+    board.live ? "" : "Counted " + (EVERY_TEXT[season && season.every] || "regularly") + ".",
   );
 }
 

@@ -181,7 +181,7 @@
   function rainSection() {
     var box = section("Money rain", "💸");
     var mod = state.mod;
-    var limits = "Every player online gets it · at most 🪙 " + format(mod.rainMax) + " per player · " + state.rainWait.hours + " h between two money rains (of all moderators)" + (state.rainLeft != null ? " · 🪙 " + format(state.rainLeft) + " left this week (of " + format(mod.rainWeekly) + ")" : "");
+    var limits = "Every player online gets it · at most 🪙 " + format(mod.rainMax) + " per player · " + state.rainWait.hours + " h between two money rains" + (state.rainLeft != null ? " · 🪙 " + format(state.rainLeft) + " of " + format(mod.rainWeekly) + " left this week" : "");
     box.appendChild(el("p", "cs-mod-note", limits));
     var amount = Object.assign(el("input", "mm-input"), { type: "number", min: 1, step: 1000, placeholder: "Coins per player" });
     amount.setAttribute("aria-label", "Coins per player");
