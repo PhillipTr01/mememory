@@ -317,7 +317,9 @@ test("rpg: the map - a Rogue's instinct senses what a room is; rooms to choose i
   into(run, "chest");
   assert.ok(run.pot > pot);
   rpg.choose(run, "a", { option: "open" }, () => 0);
-  assert.strictEqual(run.loot.a.length, 2);
+  // (gear - and, with luck, a card for the collection)
+  assert.strictEqual(run.loot.a.filter((item) => !item.card).length, 2);
+  assert.ok(run.loot.a.some((item) => item.card));
   // Encounters: one at random, never twice a run - the hermit takes a card, the library gives one
   const ids = new Set();
   for (let i = 0; i < Object.keys(rpg.ENCOUNTERS).length; i++) {
@@ -1421,4 +1423,23 @@ test("rpg: a mana aura pays at the start of the next turns - the page sees it", 
   rpg.endTurn(run, "a");
   rpg.monsterTurn(run);
   assert.strictEqual(me.energy, rpg.ENERGY);
+});
+
+test("rpg: cards as loot - a boss always drops one, rare or better, for the collection of the class", () => {
+  const hero = rpg.newHero("mage");
+  for (let i = 0; i < 50; i++) {
+    const { card } = rpg.lootCard(hero, Math.random, "rare");
+    assert.ok(rpg.poolOf("mage").includes(card), card);
+    assert.ok(!["basic", "common", "mythic"].includes(rpg.CARDS[card].rarity), card);
+  }
+  // A boss won: a card in the loot of every hero standing
+  const run = rpg.newRun(5, [{ name: "a", hero }], seeded(2));
+  run.doors = [{ kind: "boss", row: 0, index: 0, open: true }];
+  rpg.enterRoom(run, 0, seeded(2));
+  for (const m of run.monsters) {
+    m.hp = 0;
+    m.down = true;
+  }
+  rpg.winFight(run, seeded(3));
+  assert.ok(run.loot.a.some((item) => item.card && rpg.CARDS[item.card]));
 });

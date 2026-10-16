@@ -2099,6 +2099,10 @@ function resultCard(r) {
   } else if (r.k == "card") {
     var card = cardEl(r.id, { className: "small" + (r.lost ? " off" : "") });
     if (r.lost) card.appendChild(el("span", "rpg-got-tag bad", "Given away"));
+    if (r.loot) {
+      card.appendChild(el("span", "rpg-got-tag good", "For your collection"));
+      card.title = "Yours for good once the run ends.";
+    }
     // (an upgrade: what it changed, under the card)
     if (!r.lost && /\+$/.test(r.id)) {
       var up = el("div", "rpg-got-upgrade");
@@ -2459,7 +2463,14 @@ function handBar(run, me) {
     }
     if (loot.length) {
       var list = el("div", "rpg-result-loot");
-      loot.forEach((item) => list.appendChild(itemCard(item)));
+      loot.forEach((item) => {
+        // (a card: for the collection - gear: for the bag)
+        if (item.card) {
+          var won = cardEl(item.card, { className: "small" });
+          won.appendChild(el("span", "rpg-got-tag good", "New card"));
+          list.appendChild(won);
+        } else list.appendChild(itemCard(item));
+      });
       box.appendChild(list);
     }
     box.appendChild(button("Back", "leave", { className: "primary" }));

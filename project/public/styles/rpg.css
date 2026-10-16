@@ -6511,6 +6511,11 @@ button.rpg-cardx.off {
 .rpg-got-tag.bad {
   color: #fca5a5;
 }
+
+.rpg-got-tag.good {
+  color: #86efac;
+  white-space: nowrap;
+}
 @keyframes rpg-result-in {
   from {
     opacity: 0;

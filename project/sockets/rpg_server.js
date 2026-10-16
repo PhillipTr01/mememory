@@ -337,6 +337,11 @@ module.exports = function (io, options = {}) {
       if (result === "lost") rpg.die(hero, one.cls);
       if (result !== "lost") {
         for (const item of run.loot[one.name] || []) {
+          // (a card: into the character's collection)
+          if (item.card) {
+            rpg.collect(rpg.charOf(hero, one.cls), item.card);
+            continue;
+          }
           if (hero.bag.length < rpg.bagSize(hero)) hero.bag.push(item);
           // (the bag full: sold right away)
           else if (ours(one.name)) await coins.add(one.name, item.value, { reason: "rpg sell", note: item.name });

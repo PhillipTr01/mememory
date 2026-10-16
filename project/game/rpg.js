@@ -670,6 +670,17 @@ function collect(char, id) {
   return owned < CARD_RARITIES[CARDS[id].rarity].copies;
 }
 
+// A card as loot: one of the class's (and the neutral ones) for the collection, by its rarity's weight - least: at
+// least that rare. It is the character's once the run ends (lost: gone, like the gear)
+const LOOT_CARD = { chest: 0.25, hard: 0.15 };
+function lootCard(hero, rng = Math.random, least = "common") {
+  const from = RARITY_RANK.indexOf(least);
+  const pool = poolOf(hero.cls)
+    .filter((id) => CARDS[id].rarity != "basic" && CARDS[id].rarity != "mythic" && RARITY_RANK.indexOf(CARDS[id].rarity) >= from)
+    .map((id) => [id, CARD_RARITIES[CARDS[id].rarity].weight]);
+  return { card: weighted(rng, pool) };
+}
+
 // The copies of a card a deck may hold: the ones owned - at most the rarity's copies
 function usable(char, id) {
   return Math.min(char.collection[id] || 0, CARD_RARITIES[CARDS[id].rarity].copies);
@@ -1947,7 +1958,14 @@ function applyChoice(run, hero, option, input, rng) {
       }
       const id = withRelic ? relic() : null;
       if (id) note(`${name} finds a relic: ${RELICS[id].icon} ${RELICS[id].name}.`);
-      if (!lucky && !id) {
+      // (sometimes a card for the collection)
+      const found = rng() < LOOT_CARD.chest ? lootCard(hero, rng) : null;
+      if (found) {
+        run.loot[hero.name].push(found);
+        got({ k: "card", id: found.card, loot: true });
+        note(`${name} finds a card: ${CARDS[found.card].icon} ${CARDS[found.card].name}.`);
+      }
+      if (!lucky && !id && !found) {
         got({ k: "nothing" });
         note(`${name} finds nothing but dust.`);
       }
@@ -2753,6 +2771,12 @@ function winFight(run, rng) {
     if (perk(hero, "afterFight")) healHero(run, hero, hero.maxHp * perk(hero, "afterFight"));
     // (a hard fight won: one of three relics)
     if (room.kind == "hard" || room.kind == "boss") hero.relicChoice = relicOffer(hero, rng);
+    // (a card for the collection: a hard fight sometimes, a boss always - rare or better)
+    const card = room.kind == "boss" ? lootCard(hero, rng, "rare") : room.kind == "hard" && rng() < LOOT_CARD.hard ? lootCard(hero, rng) : null;
+    if (card) {
+      (run.loot[hero.name] = run.loot[hero.name] || []).push(card);
+      say(run, `${hero.name} finds a card: ${CARDS[card.card].icon} ${CARDS[card.card].name}.`);
+    }
     // (a boss: a piece of epic gear or better too)
     if (room.kind == "boss") {
       let item = makeGear(run.floor, rng, hero.luck, hero.cls);
@@ -3102,6 +3126,9 @@ module.exports = {
   DEEP_POWER,
   DEEP_PAY,
   upgradeNote,
+  lootCard,
+  winFight,
+  LOOT_CARD,
   deckRule,
   cardInfo,
   xpNeed,
