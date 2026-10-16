@@ -793,19 +793,6 @@ function renderCoach(run, me) {
   if (box.innerText != text) box.innerText = text;
 }
 
-// The practice run: a popup - skipping it is asked once more (it isn't offered again)
-var tutorialAsked = null;
-function offerTutorial() {
-  tutorialAsked = hero.cls;
-  var asked = confirmDialog({ title: "🎓 First time here?", text: "A free practice run: three rooms, every step explained.", confirmLabel: "Start", cancelLabel: "Skip" });
-  intoFullscreen();
-  asked.then((start) => {
-    if (start) return socket.emit("tutorial");
-    var sure = confirmDialog({ title: "Skip the practice run?", text: "It won't be offered again for this character.", confirmLabel: "Skip it", cancelLabel: "Back", danger: true });
-    intoFullscreen();
-    sure.then((skip) => (skip ? socket.emit("skipTutorial") : offerTutorial()));
-  });
-}
 
 // My buffs in a fight (top left): an icon each, the turns left on it - what it does on hover
 var AURA_ICONS = { guard: "🛡️", regen: "💚", focus: "💧" };
@@ -853,8 +840,6 @@ function deckSwitch() {
 // Ready to go down? Every thing that still waits - with a button to it
 function renderReady() {
   var items = [];
-  // (a new character: the practice run offered in a popup - once a page)
-  if (!hero.tutorialDone && hero.cls && !party && tutorialAsked != hero.cls) offerTutorial();
   // (a row: a picture, what it is, a line under it, a button - state: ok / warn / new)
   var item = (icon, title, sub, state, act, id, label, extra) => {
     var row = el("div", "rpg-ready-item " + state);
@@ -914,7 +899,11 @@ function renderReady() {
   var worn = ["weapon", "armor", "charm"].filter((slot) => hero.gear[slot]).length;
   loadout.appendChild(line("🎒", "Gear", worn + " / 3 worn", worn ? "ok" : "warn", "view", "gear", null, slots));
   items.push(loadout);
-  // (what still waits: a row each)
+  // (what still waits: a row each - a new character's practice run first, with a Skip)
+  if (!hero.tutorialDone && hero.cls) {
+    item("🎓", "Practice run", "Free · 3 rooms", "new", "tutorial", null, "Start");
+    items[items.length - 1].appendChild(button("Skip", "skipTutorial", { className: "small" }));
+  }
   if (hero.deadFor > 0) item("💀", "Dead", "Back in " + duration(hero.deadFor - (Date.now() - heroAt)), "warn", "revive", null, "Revive · 🪙 " + formatCoins(hero.revivePrice));
   if (hero.points) item("⬆️", hero.points + " stat point" + (hero.points == 1 ? "" : "s"), "To spend", "new", "view", "hero", "Spend");
   if (rules.talentLevels.some((lv, tier) => hero.level >= lv && !hero.talents[tier])) item("⭐", "A talent", "To pick", "new", "view", "talents", "Pick");
