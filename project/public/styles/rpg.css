@@ -7392,3 +7392,46 @@ button.rpg-cardx.off {
   text-align: center;
   max-width: 34rem;
 }
+
+/* (the imp's die: it tumbles, then lands) */
+.rpg-die {
+  display: inline-block;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.rpg-die.rolling {
+  animation: rpg-die-roll 0.18s linear infinite;
+}
+
+.rpg-die.landed {
+  animation: rpg-die-land 0.4s ease-out;
+}
+
+@keyframes rpg-die-roll {
+  from {
+    transform: rotate(0deg) translateY(0);
+  }
+  50% {
+    transform: rotate(180deg) translateY(-6px);
+  }
+  to {
+    transform: rotate(360deg) translateY(0);
+  }
+}
+
+@keyframes rpg-die-land {
+  0% {
+    transform: scale(1.5);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rpg-die.rolling,
+  .rpg-die.landed {
+    animation: none;
+  }
+}

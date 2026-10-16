@@ -1590,7 +1590,7 @@ const ENCOUNTERS = {
     name: "The Gambler",
     icon: "🎲",
     story: 'A grinning imp shakes a cup of dice: "Your blood against my treasure?"',
-    options: [{ id: "roll", label: "Roll the dice", text: "Win a relic with a 50% chance, otherwise lose 15% of your HP." }, LEAVE],
+    options: [{ id: "roll", label: "Roll the dice", text: "Roll a 4 or higher to win a relic, otherwise lose 15% of your HP." }, LEAVE],
   },
 };
 const DISARM_BASE = 30; // + 2 x luck %
@@ -1999,13 +1999,17 @@ function applyChoice(run, hero, option, input, rng) {
       note(`${name} gives ${cardInfo(id).icon} ${cardInfo(id).name} to the hermit.`);
       break;
     }
-    case "roll":
-      if (rng() < 0.5) {
+    case "roll": {
+      // (a die: 4 or more wins - the page rolls it)
+      const roll = 1 + Math.floor(rng() * 6);
+      got({ k: "dice", n: roll, win: roll >= 4 });
+      if (roll >= 4) {
         const id = relic();
         if (!id) got({ k: "nothing" });
-        note(id ? `${name} wins 🎲: ${RELICS[id].icon} ${RELICS[id].name}!` : `${name} wins - but the imp has nothing left.`);
-      } else note(`${name} loses 🎲: ${lose(0.15)} damage.`);
+        note(id ? `${name} rolls a ${roll} and wins 🎲: ${RELICS[id].icon} ${RELICS[id].name}!` : `${name} wins - but the imp has nothing left.`);
+      } else note(`${name} rolls a ${roll} and loses 🎲: ${lose(0.15)} damage.`);
       break;
+    }
     default:
       got({ k: "nothing", walked: true });
       note(`${name} walks on.`);

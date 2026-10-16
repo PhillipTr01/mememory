@@ -2060,6 +2060,10 @@ function roomScene(run, me) {
   return [scene];
 }
 
+// The faces of a die - and the rolls already shown (a die rolls once)
+var DICE = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+var rolled = new Set();
+
 // What a room gave (or took): a small card - its stats on hover
 function resultCard(r) {
   var node = el("div", "rpg-got");
@@ -2087,6 +2091,28 @@ function resultCard(r) {
       return up;
     }
     return card;
+  } else if (r.k == "dice") {
+    // (the imp's die: it tumbles, then the face lands)
+    node.classList.add("dice", r.win ? "good" : "bad");
+    var die = el("span", "rpg-die", DICE[r.n - 1]);
+    var key = (party && party.run ? party.run.uid + ":" + party.run.rooms.length : "") + ":" + r.n;
+    if (!rolled.has(key)) {
+      rolled.add(key);
+      die.classList.add("rolling");
+      var turns = 0;
+      var spin = setInterval(() => {
+        die.innerText = DICE[Math.floor(Math.random() * 6)];
+        if (++turns >= 9) {
+          clearInterval(spin);
+          die.innerText = DICE[r.n - 1];
+          die.classList.remove("rolling");
+          die.classList.add("landed");
+        }
+      }, 90);
+    }
+    node.appendChild(die);
+    icon = null;
+    name = "Rolled " + r.n + (r.win ? ", you win" : ", you lose");
   } else if (r.k == "coins") {
     node.classList.add("coins");
     icon = "🪙";
