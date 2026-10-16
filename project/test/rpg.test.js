@@ -891,8 +891,8 @@ test("rpg: the bag - 5 slots, more bought up to 15, every one dearer", () => {
 test("rpg: class strengths grow with the level - the base at 1, its top times it at the highest level", () => {
   assert.strictEqual(rpg.strengthOf("warrior", 1).perks.pierce, 0.4);
   assert.strictEqual(rpg.strengthOf("warrior", rpg.HERO_LEVEL_MAX).perks.pierce, 0.6);
-  assert.match(rpg.strengthOf("paladin", 1).text, /85% of your armor\. Your block cards block 17% more/);
-  assert.match(rpg.strengthOf("rogue", rpg.HERO_LEVEL_MAX).text, /\+30% critical/);
+  assert.match(rpg.strengthOf("paladin", 1).text, /equal to 85% of your armor\. Your block cards block 17% more/);
+  assert.match(rpg.strengthOf("rogue", rpg.HERO_LEVEL_MAX).text, /crit 30% more often/);
 });
 
 test("rpg: cards fit their rarity - the rarer, the more a mana buys", () => {

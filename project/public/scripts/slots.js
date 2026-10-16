@@ -287,7 +287,7 @@ function spin(buy) {
   if (spinning || setup == null) return;
   if (Date.now() < pausedUntil) {
     if (!buy && !queuedSpin) queuedSpin = setTimeout(() => ((queuedSpin = null), spin()), pausedUntil - Date.now() + 10);
-    if (buy) showHint("A moment - the reels are still settling.", "error");
+    if (buy) showHint("One moment, the reels are still settling.", "error");
     return;
   }
   if (buy) return buySpin(buy);

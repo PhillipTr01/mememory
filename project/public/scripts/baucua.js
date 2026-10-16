@@ -294,7 +294,7 @@ function renderFair() {
   };
   var parts = [el("i", "bi bi-shield-check"), part("Round hash", table.fair.hash)];
   if (table.fair.seed && !rolling) parts.push(part("Seed", table.fair.seed));
-  fair.title = 'Provably fair: die i (0, 1, 2) comes from the seed (hmac-sha256(seed, "baucua:" + round + ":" + i)). sha256(seed) = round hash';
+  fair.title = "The dice come from the seed. Its hash shows before the roll and the seed after it.";
   fair.replaceChildren(...parts);
 }
 

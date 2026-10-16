@@ -96,11 +96,11 @@ const BOSS_EVERY = 5; // the last room of every 5th floor: its boss
 
 // The stats: what a level gives
 const STATS = {
-  hp: { name: "Vitality", icon: "❤️", base: 100, per: 7.5, about: "+7.5 max HP", desc: "Your max HP." },
-  atk: { name: "Strength", icon: "⚔️", base: 10, per: 1.5, about: "+1.5 attack", desc: "The damage of your attacks." },
-  def: { name: "Armor", icon: "🛡️", base: 0, per: 1, about: "+1 armor", desc: "Less damage taken, more block." },
-  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, soft: [50, 80], about: "+0.6% luck", desc: "Crits, traps, loot. Grows slower past 50%." },
-  agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, soft: [30, 60], about: "+0.4% dodge", desc: "Dodge, sense rooms - a Rogue far better. Grows slower past 30%." },
+  hp: { name: "Vitality", icon: "❤️", base: 100, per: 7.5, about: "+7.5 max HP", desc: "Raises your max HP." },
+  atk: { name: "Strength", icon: "⚔️", base: 10, per: 1.5, about: "+1.5 attack", desc: "Raises the damage of your attacks." },
+  def: { name: "Armor", icon: "🛡️", base: 0, per: 1, about: "+1 armor", desc: "You take less damage and block more." },
+  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, soft: [50, 80], about: "+0.6% luck", desc: "Raises your crits, your luck with traps and your loot. It grows slower past 50%." },
+  agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, soft: [30, 60], about: "+0.4% dodge", desc: "Raises your dodge and your chance to sense rooms. A Rogue senses far better. It grows slower past 30%." },
 };
 const STAT_IDS = Object.keys(STATS);
 const LEVEL_MAX = 100;
@@ -121,11 +121,11 @@ const REWARD = { fight: 0.3, hard: 0.55, elite: 0.55, boss: 0.9, chest: 0.3, tra
 // main: the stat its levels count 1.5x for; hp, atk: times the stats; def, luck, agi: added;
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
-  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.4 }, top: 1.5 }, about: "Strength - heavy blows, cleave, war cry", hp: 1.25, atk: 1.4, def: 2, luck: 0, agi: 0, mainBonus: 1.3, hpPlus: 8, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Thorns: who hits you takes damage, {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.85, block: 0.17 }, top: 1.5 }, about: "Armor - taunts, shields the party", hp: 1.25, atk: 1.25, def: 3, luck: 0, agi: 0, mainBonus: 1.25, atkPlus: 3, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Heals {heal}% stronger.", perks: { heal: 0.2 }, top: 1.5 }, about: "Vitality - heals, smites undead, revives", hp: 1.05, atk: 1.15, def: 4, luck: 0, agi: 0, mainBonus: 1.25, hpPlus: 30, atkPlus: 6, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison {poison}% stronger, +{crit}% critical hits.", perks: { poison: 0.6, crit: 12 }, top: 2.5 }, about: "Instinct - dodge, scout rooms, poison", hp: 1.35, atk: 1.55, def: 0, luck: 6, agi: 13, mainBonus: 1.7, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Area hits {aoe}% stronger, +{crit}% critical hits.", perks: { aoe: 0.5, crit: 10 }, top: 2.6 }, about: "Luck - crits, fire, frost", hp: 1.35, atk: 1.5, def: 1, luck: 8, agi: 0, mainBonus: 1.8, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
+  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.4 }, top: 1.5 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.25, atk: 1.4, def: 2, luck: 0, agi: 0, mainBonus: 1.3, hpPlus: 8, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.85, block: 0.17 }, top: 1.5 }, about: "Armor class with taunts and party shields", hp: 1.25, atk: 1.25, def: 3, luck: 0, agi: 0, mainBonus: 1.25, atkPlus: 3, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger.", perks: { heal: 0.2 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.05, atk: 1.15, def: 4, luck: 0, agi: 0, mainBonus: 1.25, hpPlus: 30, atkPlus: 6, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.6, crit: 12 }, top: 2.5 }, about: "Instinct class with dodge, scouting and poison", hp: 1.35, atk: 1.55, def: 0, luck: 6, agi: 13, mainBonus: 1.7, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.5, crit: 10 }, top: 2.6 }, about: "Luck class with crits, fire and frost", hp: 1.35, atk: 1.5, def: 1, luck: 8, agi: 0, mainBonus: 1.8, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -168,8 +168,8 @@ function deckMax() {
 // The booster packs of the base set (the shop): how many cards, the last ones at least of a rarity, the rarer
 // ones more often (x their weight)
 const PACKS = {
-  standard: { name: "Base Set Pack", icon: "🎴", about: "The classic: 5 cards, the last one rare or better.", get price() { return config.RPG_PACK_STANDARD; }, size: 5, better: 1, least: "rare", boost: { epic: 0.7, legendary: 0.5, mythic: 0.5 } },
-  premium: { name: "Hero Pack", icon: "💎", about: "5 cards, all rare or better, more epics.", get price() { return config.RPG_PACK_PREMIUM; }, size: 5, better: 5, least: "rare", boost: { epic: 2, legendary: 2.1 } },
+  standard: { name: "Base Set Pack", icon: "🎴", about: "5 cards. The last one is rare or better.", get price() { return config.RPG_PACK_STANDARD; }, size: 5, better: 1, least: "rare", boost: { epic: 0.7, legendary: 0.5, mythic: 0.5 } },
+  premium: { name: "Hero Pack", icon: "💎", about: "5 cards, all rare or better, with more epics.", get price() { return config.RPG_PACK_PREMIUM; }, size: 5, better: 5, least: "rare", boost: { epic: 2, legendary: 2.1 } },
   mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards, all epic or better.", get price() { return config.RPG_PACK_MYTHIC; }, size: 4, better: 4, least: "epic", boost: { legendary: 1.5 } },
 };
 const PACK_IDS = Object.keys(PACKS);
@@ -710,11 +710,11 @@ function pickTalent(hero, tier, id) {
 
 // (per level of the class's main stat, 0 to LEVEL_MAX)
 const ABILITIES = {
-  warrior: { name: "Smash Open", icon: "🔨", coins: 0.01, gear: 0.003, about: "Treasure: +1% coins and +0.3% extra gear per level." },
-  paladin: { name: "Shield the Party", icon: "🛡️", trap: 0.006, shrine: 0.005, about: "Traps -0.6% and shrines -0.5% damage per level." },
-  cleric: { name: "Sanctuary", icon: "🕊️", rest: 0.01, rise: 0.003, about: "Camp fires +1% healing, the fallen rise with +0.3% HP per level." },
-  mage: { name: "Arcane Insight", icon: "🔮", discount: 0.003, rerollEvery: 25, about: "Merchant -0.3% per level, a card reroll a run (+1 every 25 levels)." },
-  rogue: { name: "Scout", icon: "🦊", about: "Senses hidden rooms far better - more with every level." },
+  warrior: { name: "Smash Open", icon: "🔨", coins: 0.01, gear: 0.003, about: "Every level gives 1% more coins and 0.3% more gear from treasures." },
+  paladin: { name: "Shield the Party", icon: "🛡️", trap: 0.006, shrine: 0.005, about: "Every level lowers the damage of traps by 0.6% and of shrines by 0.5%." },
+  cleric: { name: "Sanctuary", icon: "🕊️", rest: 0.01, rise: 0.003, about: "Every level gives 1% more healing at camp fires and the fallen rise with 0.3% more HP." },
+  mage: { name: "Arcane Insight", icon: "🔮", discount: 0.003, rerollEvery: 25, about: "Every level makes the merchant 0.3% cheaper. You can reroll a card reward once per run, and once more every 25 levels." },
+  rogue: { name: "Scout", icon: "🦊", about: "Senses hidden rooms far better, more with every level." },
 };
 
 // The level of a class's ability in a run: the highest main-stat level of its heroes standing (null: none of them)
@@ -992,15 +992,15 @@ function makeGear(floor, rng = Math.random, luck = 0, cls = null) {
 /* ---------- The map of a floor: rows of rooms, paths between them ---------- */
 
 const ROOM_KINDS = {
-  fight: { name: "Fight", icon: "⚔️", about: "Monsters, loot" },
-  hard: { name: "Hard fight", icon: "☠️", about: "Tougher monsters, more loot, a relic" },
+  fight: { name: "Fight", icon: "⚔️", about: "Monsters and loot" },
+  hard: { name: "Hard fight", icon: "☠️", about: "Tougher monsters, more loot and a relic" },
   elite: { name: "The guarded gate", icon: "👑", about: "Beat it to clear the floor" },
   boss: { name: "Boss", icon: "💀", about: "The master of the floor" },
-  chest: { name: "Treasure", icon: "🎁", about: "Coins, gear, maybe a relic" },
+  chest: { name: "Treasure", icon: "🎁", about: "Coins, gear and maybe a relic" },
   trap: { name: "Trap", icon: "🪤", about: "Disarm or sneak past" },
   rest: { name: "Camp fire", icon: "🔥", about: "Rest or upgrade a card" },
-  shrine: { name: "Shrine", icon: "⛩️", about: "Blood for power" },
-  merchant: { name: "Merchant", icon: "⚖️", about: "Cards, relics, potions, card removal" },
+  shrine: { name: "Shrine", icon: "⛩️", about: "Trade HP for power" },
+  merchant: { name: "Merchant", icon: "⚖️", about: "Cards, relics, potions and card removal" },
   event: { name: "Encounter", icon: "📜", about: "A strange choice" },
 };
 // What waits in a room of the map (weights) - mostly fights
@@ -1378,21 +1378,21 @@ function tally(run, rng = Math.random) {
 // The rooms that aren't fights: what every hero may choose there (card: the choice needs a card - "smith", "deck":
 // one of the deck, "offer": one of the cards offered)
 const ROOM_OPTIONS = {
-  chest: [{ id: "open", label: "Open it", text: "Gear, maybe a relic" }],
+  chest: [{ id: "open", label: "Open it", text: "Find gear and maybe a relic." }],
   trap: [
-    { id: "disarm", label: "Disarm it", text: "Luck: gear. Fail: 25% damage" },
-    { id: "sneak", label: "Sneak past", text: "Take 10% damage" },
+    { id: "disarm", label: "Disarm it", text: "With luck you find gear. If it fails, you take 25% damage." },
+    { id: "sneak", label: "Sneak past", text: "You take 10% damage." },
   ],
   rest: [
-    { id: "rest", label: "Rest", text: "Heal 35% HP, +1 mana in the next fight" },
-    { id: "smith", label: "Smith", text: "Upgrade a card: +40%", card: "smith" },
+    { id: "rest", label: "Rest", text: "Heal 35% of your HP and get 1 more mana in the next fight." },
+    { id: "smith", label: "Smith", text: "Upgrade a card to make it 40% stronger.", card: "smith" },
   ],
   shrine: [
-    { id: "pray", label: "Pray", text: "-20% HP, +25% damage this run" },
-    { id: "leave", label: "Walk on", text: "Nothing happens" },
+    { id: "pray", label: "Pray", text: "Lose 20% of your HP and deal 25% more damage this run." },
+    { id: "leave", label: "Walk on", text: "Nothing happens." },
   ],
 };
-const LEAVE = { id: "leave", label: "Leave", text: "Nothing happens" };
+const LEAVE = { id: "leave", label: "Leave", text: "Nothing happens." };
 // The encounters (rooms of the kind "event") - one at random, none twice a run
 const ENCOUNTERS = {
   fountain: {
@@ -1400,8 +1400,8 @@ const ENCOUNTERS = {
     icon: "⛲",
     story: "Clear water bubbles up in an old stone basin. It glows faintly.",
     options: [
-      { id: "drink", label: "Drink", text: "Heal 30% HP" },
-      { id: "bottle", label: "Fill a flask", text: "+1 potion" },
+      { id: "drink", label: "Drink", text: "Heal 30% of your HP." },
+      { id: "bottle", label: "Fill a flask", text: "Get one more potion." },
     ],
   },
   library: {
@@ -1409,33 +1409,33 @@ const ENCOUNTERS = {
     icon: "📚",
     story: "Dusty shelves full of old battle manuals.",
     options: [
-      { id: "read", label: "Study", text: "Pick 1 of 5 cards for your deck", card: "offer" },
-      { id: "nap", label: "Take a nap", text: "Heal 20% HP" },
+      { id: "read", label: "Study", text: "Pick 1 of 5 cards for your deck.", card: "offer" },
+      { id: "nap", label: "Take a nap", text: "Heal 20% of your HP." },
     ],
   },
   forge: {
     name: "The Abandoned Forge",
     icon: "⚒️",
     story: "The anvil is still warm, the coals hot.",
-    options: [{ id: "temper", label: "Temper", text: "Upgrade 2 random cards - lose 8% HP" }, LEAVE],
+    options: [{ id: "temper", label: "Temper", text: "Upgrade 2 random cards and lose 8% of your HP." }, LEAVE],
   },
   idol: {
     name: "The Golden Idol",
     icon: "🗿",
     story: "A golden idol on a stone pedestal. It is surely cursed.",
-    options: [{ id: "take", label: "Take it", text: "A random relic, -10% max HP this run" }, LEAVE],
+    options: [{ id: "take", label: "Take it", text: "Get a random relic and lose 10% max HP for this run." }, LEAVE],
   },
   hermit: {
     name: "The Hermit",
     icon: "🧙",
     story: 'An old hermit by a small fire: "You carry too much. Give me one of your cards."',
-    options: [{ id: "purge", label: "Give a card", text: "Remove a card this run", card: "deck" }, LEAVE],
+    options: [{ id: "purge", label: "Give a card", text: "Remove a card for this run.", card: "deck" }, LEAVE],
   },
   gambler: {
     name: "The Gambler",
     icon: "🎲",
     story: 'A grinning imp shakes a cup of dice: "Your blood against my treasure?"',
-    options: [{ id: "roll", label: "Roll the dice", text: "50%: a relic, else -15% HP" }, LEAVE],
+    options: [{ id: "roll", label: "Roll the dice", text: "Win a relic with a 50% chance, otherwise lose 15% of your HP." }, LEAVE],
   },
 };
 const DISARM_BASE = 30; // + 2 x luck %

@@ -400,7 +400,7 @@ function renderFair() {
   if (state.fair.number != null && !spinning) {
     parts.push(fairPart("Number", state.fair.number), fairPart("Secret", state.fair.secret));
   }
-  fair.title = "Provably fair: the winning number is chosen before the round. sha256(number + \":\" + secret) = round hash";
+  fair.title = "The winning number is chosen before the round. Its hash shows before the round and the number after it.";
   fair.replaceChildren(...parts);
 }
 

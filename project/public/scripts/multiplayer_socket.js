@@ -179,7 +179,7 @@ function awaySeconds(player) {
 function createAwayTag() {
   var tag = document.createElement("span");
   tag.className = "player-tag away";
-  tag.title = "Left - can still come back";
+  tag.title = "Left the game but can still come back.";
   tag.innerText = "Away";
   return tag;
 }

@@ -345,7 +345,7 @@ async function load(quiet) {
     render();
     tick();
   } catch (error) {
-    if (!quiet) showHint("The leaderboard couldn't be loaded - trying again soon.", "error", document.querySelector("main"));
+    if (!quiet) showHint("The leaderboard couldn't be loaded. Trying again soon.", "error", document.querySelector("main"));
   }
   var wait = board && board.live ? 10000 : nextAt ? Math.max(3000, nextAt - Date.now() + 2000) : 30000;
   refreshTimer = setTimeout(() => load(true), Math.min(wait, 10 * 60 * 1000));

@@ -931,7 +931,7 @@ function renderBattle() {
         both.append(el("span", "", "🎰 " + ((counted[index] / pot) * 100).toFixed(1) + "%"));
         // The rounds won as the best (🏅) and as the worst (🥄)
         both.append(el("span", "", "🏅 " + hiddenPoints[index]), el("span", "", "🥄 " + hiddenWorst[index]));
-        both.title = "Chance in jackpot mode · rounds won with the best item (best of) · with the worst item (worst of)";
+        both.title = "Shows the chance in Jackpot mode and the rounds won in Best of and Worst of.";
         head.appendChild(both);
       }
     }
@@ -1306,7 +1306,7 @@ function renderBattleStatus(battle, after) {
 
 function fairLine(battle) {
   var fair = el("div", "jp-fair");
-  fair.title = "Provably fair: every item comes from the seed. sha256(seed) = hash, the seed is shown after the battle";
+  fair.title = "Every item comes from the seed. Its hash shows before the battle and the seed after it.";
   fair.append(createIcon("bi-shield-check"), fairPart("Hash", battle.fair.hash));
   if (battle.fair.seed && !spinning) fair.appendChild(fairPart("Seed", battle.fair.seed));
   return fair;

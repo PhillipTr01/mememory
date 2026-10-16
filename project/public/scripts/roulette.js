@@ -300,7 +300,7 @@ function renderFair() {
   };
   var parts = [el("i", "bi bi-shield-check"), part("Round hash", table.fair.hash)];
   if (table.fair.seed && !rolling) parts.push(part("Seed", table.fair.seed));
-  fair.title = "Provably fair: the slot comes from the seed (hmac-sha256(seed, \"roulette:\" + round)). sha256(seed) = round hash";
+  fair.title = "The slot comes from the seed. Its hash shows before the roll and the seed after it.";
   fair.replaceChildren(...parts);
 }
 

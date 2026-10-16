@@ -6892,12 +6892,6 @@ button.rpg-cardx.off {
   background: rgba(var(--load), 0.14);
 }
 
-/* (a word of the game on a card: hover explains it) */
-.rpg-kw {
-  text-decoration: underline dotted rgba(255, 255, 255, 0.45);
-  text-underline-offset: 2px;
-  cursor: help;
-}
 /* (exhaust, once a run: a tag under the text) */
 .rpg-cardx-tag {
   display: table;

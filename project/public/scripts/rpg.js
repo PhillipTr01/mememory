@@ -123,7 +123,7 @@ function cardEl(id, options) {
     var owner = rules.classes[card.cls];
     var other = hero && hero.cls && card.cls != hero.cls;
     var mark = el("span", "rpg-card-class", owner.icon);
-    mark.title = owner.name + " card" + (other ? " - not usable by this character" : "");
+    mark.title = owner.name + " card" + (other ? ". This character can't use it." : "");
     node.classList.add("has-class");
     if (other) node.classList.add("other-class");
     node.appendChild(mark);
@@ -131,37 +131,13 @@ function cardEl(id, options) {
   return node;
 }
 
-// The words of the game on a card: underlined - what they mean on hover
-var KEYWORDS = [
-  [/\b(poison(?:ed|s)?)\b/i, "Poison: damage at the end of every turn - it stacks"],
-  [/\b(burn(?:ing|s)?)\b/i, "Burn: damage at the end of every turn - it doesn't stack"],
-  [/\b(chill(?:ed|s)?)\b/i, "Chill: the foe deals half damage"],
-  [/\b(stun(?:ned|s)?)\b/i, "Stun: the foe skips its next move"],
-  [/\b(taunts?)\b/i, "Taunt: the foes attack you"],
-  [/\b(block(?:s)?)\b/i, "Block: takes damage for you until your next turn"],
-  [/\b(curse[ds]?)\b/i, "Cursed: 30% less damage"],
-  [/\b(armor)\b/i, "Armor: less damage taken, more block"],
-];
-// A card's text: its keywords explained on hover - "Exhaust" and "Once a run" as a tag of their own
+// A card's text - "Exhaust" and "Once a run" as a tag of their own
 function cardText(card) {
-  var box = el("span", "rpg-cardx-text");
-  var text = card.text.replace(/ ?(Exhaust|Mythic)\.$/, "");
-  var parts = [text];
-  KEYWORDS.forEach(([re, tip]) => {
-    parts = parts.flatMap((part) => {
-      if (typeof part != "string") return [part];
-      var m = part.match(re);
-      if (!m) return [part];
-      var word = el("u", "rpg-kw", m[1]);
-      word.title = tip;
-      return [part.slice(0, m.index), word, part.slice(m.index + m[1].length)];
-    });
-  });
-  parts.forEach((part) => box.append(part));
+  var box = el("span", "rpg-cardx-text", card.text.replace(/ ?(Exhaust|Mythic)\.$/, ""));
   var once = card.mythic || / Mythic\.$/.test(card.text);
   if (once || card.exhaust) {
     var tag = el("span", "rpg-cardx-tag " + (once ? "once" : "exhaust"), once ? "✦ Once a run" : "🔥 Exhaust");
-    tag.title = once ? "Played once a run - then gone until the run ends" : "Exhaust: once played, gone until the fight ends";
+    tag.title = once ? "Can be played once per run." : "Once played, the card is gone until the fight ends.";
     box.appendChild(tag);
   }
   return box;
@@ -620,13 +596,13 @@ function renderTop() {
   // The hero's level: XP from the fights - every level a stat point, talents at levels 3 to 50
   var xpBox = document.getElementById("rpgXp");
   xpBox.hidden = !picked;
-  xpBox.title = "XP from fights and floors. Each level: a stat point. Talents at levels " + rules.talentLevels.join(", ") + ". Max level " + rules.heroLevelMax + ".";
+  xpBox.title = "Fights and floors give XP. Every level gives a stat point and talents unlock at levels " + rules.talentLevels.join(", ") + ".";
   var top = hero.level >= rules.heroLevelMax;
   if (picked) morphChildren(xpBox, [el("span", "rpg-level", "Lv " + hero.level), top ? el("span", "rpg-max mm-muted small", "Max level") : bar(hero.xp, hero.xpNeed, "xp", " XP"), hero.points ? el("span", "rpg-points", "+" + hero.points + " point" + (hero.points == 1 ? "" : "s")) : null]);
   morphChildren(document.getElementById("rpgPotions"), [flask(), el("span", "", hero.potions + " / " + hero.potionsMax)]);
   var buy = document.getElementById("rpgBuyPotion");
   buy.innerText = "+ 🪙 " + formatCoins(hero.potionPrice);
-  buy.title = "Potion: heals " + Math.round(rules.potionHeal * 100) + "% HP";
+  buy.title = "A potion heals " + Math.round(rules.potionHeal * 100) + "% of your HP.";
   buy.disabled = hero.potions >= hero.potionsMax || myCoins < hero.potionPrice;
 }
 
@@ -679,7 +655,7 @@ function renderHero() {
     // (a later character of the player: dearer stats, stronger monsters)
     if (hero.charIndex > 0) {
       var later = el("div", "rpg-class-later", "Character #" + (hero.charIndex + 1) + ": stats +" + rules.charPrice * hero.charIndex + "% · monsters +" + rules.charHarder * hero.charIndex + "%");
-      later.title = "Every character after your first costs more and fights harder";
+      later.title = "Every character after your first costs more and fights stronger monsters.";
       info.push(later);
     }
   } else info.push(el("div", "rpg-class-about first", "Your first class is free."));
@@ -695,7 +671,7 @@ function renderHero() {
     name.append(el("span", "rpg-stat-icon", stat.icon), el("span", "", stat.name), el("span", "rpg-stat-level", "Lv " + hero.levels[id] + " / " + rules.levelMax));
     if (main) {
       var star = el("span", "rpg-stat-main", "★ " + mine.name);
-      star.title = "Main stat: counts " + (mine.mainBonus || rules.mainBonus) + "x";
+      star.title = "Your main stat counts " + (mine.mainBonus || rules.mainBonus) + "x.";
       name.appendChild(star);
     }
     var head = el("div", "rpg-stat-head");
@@ -704,7 +680,7 @@ function renderHero() {
     // (a stat point: a free level - else coins)
     if (cost == null) {
       var max = el("span", "rpg-stat-max mm-muted", "Max");
-      max.title = "The last level";
+      max.title = "This is the highest level.";
       row.appendChild(max);
     }
     else if (hero.points > 0) row.appendChild(button("+1 free", "point", { id: id, className: "small point", title: stat.about }));
@@ -780,16 +756,16 @@ function renderCoach(run, me) {
   if (!run.tutorial) return;
   var text;
   var event = run.event;
-  if (party.result || run.phase == "won") text = "🎉 Done! Real floors cost an entry and pay coins. Good luck!";
-  else if (run.phase == "lost") text = "💀 Down - it's only practice. Defend against big hits.";
+  if (party.result || run.phase == "won") text = "🎉 Done! Real floors cost an entry and pay out coins. Good luck!";
+  else if (run.phase == "lost") text = "💀 You fell, but it is only practice. Use Defend against big hits.";
   else if (run.phase == "fight" && me) {
     if (me.ended) text = "⏳ Monsters' turn.";
-    else if (run.turn == 1 && me.energy == rules.energy) text = "🃏 Drag a card onto the monster. Cards cost 💧 mana; you have " + rules.energy + " a turn.";
-    else if (me.energy > 0 && me.hand.some((c) => cardOf(c.id).cost <= me.energy)) text = "🛡️ The badge shows the monster's next move. Defend blocks it.";
-    else text = "⏭️ Out of mana - press End turn.";
-  } else if (me && me.reward) text = "🎁 Won! Pick a card for this run.";
-  else if (event && event.kind == "rest" && event.choices && !event.choices[myName]) text = "🔥 Camp fire: Rest heals, Smith upgrades a card.";
-  else text = "🗺️ Pick the next room - the lit circle.";
+    else if (run.turn == 1 && me.energy == rules.energy) text = "🃏 Drag a card onto the monster. Cards cost 💧 mana and you have " + rules.energy + " every turn.";
+    else if (me.energy > 0 && me.hand.some((c) => cardOf(c.id).cost <= me.energy)) text = "🛡️ The badge shows the monster's next move. Defend blocks the hit.";
+    else text = "⏭️ You are out of mana. Press End turn.";
+  } else if (me && me.reward) text = "🎁 You won! Pick a card for this run.";
+  else if (event && event.kind == "rest" && event.choices && !event.choices[myName]) text = "🔥 At the camp fire, Rest heals you and Smith upgrades a card.";
+  else text = "🗺️ Pick the next room on the map.";
   if (box.innerText != text) box.innerText = text;
 }
 
@@ -831,7 +807,7 @@ function deckSwitch() {
     var pill = el("span", "rpg-deck-slot" + (i == hero.deckAt ? " active" : "") + (n ? "" : " empty"), String(i + 1));
     pill.dataset.act = "deckUse";
     pill.dataset.id = String(i);
-    pill.title = "Deck " + (i + 1) + " · " + n + " cards" + (i == hero.deckAt ? " · in use" : "");
+    pill.title = "Deck " + (i + 1) + " has " + n + " cards" + (i == hero.deckAt ? " and is in use." : ".");
     box.appendChild(pill);
   });
   return box;
@@ -893,7 +869,7 @@ function renderReady() {
   ["weapon", "armor", "charm"].forEach((slot) => {
     var item = hero.gear[slot];
     var mark = el("span", "rpg-load-slot" + (item ? " rarity-" + item.rarity : " empty"), item ? item.icon : SLOT_ICONS[slot]);
-    mark.title = item ? item.name + "\n" + bonusOf(item).split(" · ").join("\n") : SLOT_NAMES[slot] + ": empty";
+    mark.title = item ? item.name + "\n" + bonusOf(item).split(" · ").join("\n") : "No " + SLOT_NAMES[slot].toLowerCase() + " worn.";
     slots.appendChild(mark);
   });
   var worn = ["weapon", "armor", "charm"].filter((slot) => hero.gear[slot]).length;
@@ -929,7 +905,7 @@ function curve(deck) {
   var box = el("div", "rpg-curve");
   counts.forEach((n, cost) => {
     var col = el("div", "rpg-curve-col");
-    col.title = n + " card" + (n == 1 ? "" : "s") + " costing " + (cost == 3 ? "3 or more" : cost);
+    col.title = n + " card" + (n == 1 ? "" : "s") + " cost " + (cost == 3 ? "3 or more" : cost) + " mana.";
     var barBox = el("div", "rpg-curve-bar");
     var fill = el("div", "rpg-curve-fill");
     fill.style.height = (n / most) * 100 + "%";
@@ -1417,7 +1393,7 @@ function renderBuilder() {
   var count = document.getElementById("rpgBuilderCount");
   count.innerText = deck.length + " / " + hero.deckMax;
   count.className = "rpg-builder-count" + (short ? " bad" : deck.length >= hero.deckMax ? " full" : " ok");
-  count.title = hero.deckMin + " to " + hero.deckMax + " cards";
+  count.title = "Your deck holds " + hero.deckMin + " to " + hero.deckMax + " cards.";
 
   // The filters: a segmented control each (type, cost, rarity) - and two toggles
   var chips = [];
@@ -1431,7 +1407,7 @@ function renderBuilder() {
         var drop = el("span", "rpg-row-cost");
         drop.dataset.cost = label;
         chip.appendChild(drop);
-        chip.title = "Costs " + label;
+        chip.title = "Cards that cost " + label + " mana";
       }
       // (a rarity: its colored dot)
       if (key == "rarity" && value != "all") {
@@ -1481,7 +1457,7 @@ function renderBuilder() {
             var have = ownedAll[id] || 0;
             var other = cardEl(id, { base: true, className: (have ? "" : "unowned") + " spent" });
             other.appendChild(el("span", "rpg-cardx-count", have ? "×" + have : "🔒"));
-            other.title = (have ? have + " owned - " : "Not owned yet - ") + "another class's card";
+            other.title = (have ? "You own " + have + ". " : "Not owned yet. ") + "This card belongs to another class.";
             return other;
           }
           var all = hero.collection[id] || 0;
@@ -1495,7 +1471,7 @@ function renderBuilder() {
           for (var i = 0; i < Math.max(owned, 1); i++) pips.appendChild(el("i", i < (counts[id] || 0) ? "used" : i < owned ? "" : "none"));
           node.appendChild(pips);
           node.appendChild(el("span", "rpg-cardx-count", owned ? (counts[id] || 0) + " / " + owned + (all > owned ? " · +" + (all - owned) : "") : "🔒"));
-          node.title = !owned ? "Not owned yet" : spare <= 0 ? "All your copies are in the deck" : full ? "Your deck is full" : "Click or drag to add";
+          node.title = !owned ? "Not owned yet." : spare <= 0 ? "All your copies are in the deck." : full ? "Your deck is full." : "Click or drag it into your deck.";
           return node;
         })
       : [el("div", "rpg-empty mm-muted", "No card fits the filters.")],
@@ -1514,7 +1490,7 @@ function renderBuilder() {
           row.dataset.id = id;
           row.dataset.drag = "out:" + id;
           row.draggable = true;
-          row.title = card.text + " - click to remove";
+          row.title = card.text + " Click to remove it.";
           var cost = el("span", "rpg-row-cost");
           cost.dataset.cost = String(card.cost);
           row.append(cost, el("span", "rpg-row-icon", card.icon), el("span", "rpg-row-name", card.name));
@@ -1578,7 +1554,7 @@ function renderDoor() {
   var tag = cool
     ? el("span", "rpg-floor-tag cool", "⏳ Cooldown " + duration(cool))
     : el("span", "rpg-floor-tag " + (cleared ? "cleared" : "new"), cleared ? "✓ Cleared" : "✦ New");
-  if (cool) tag.title = "Back in " + duration(cool);
+  if (cool) tag.title = "Open again in " + duration(cool) + ".";
   // (the time on the tag counts down - the buttons back when it's over)
   clearTimeout(coolTimer);
   if (cool) coolTimer = setTimeout(renderDoor, Math.min(cool + 50, 30000));
@@ -1587,7 +1563,7 @@ function renderDoor() {
   var share = shareOf(floor);
   if (share < 1) {
     var low = el("span", "rpg-floor-tag low", "🪙 " + Math.round(share * 100) + "% loot");
-    low.title = "Low floor: " + Math.round(share * 100) + "% of the pot";
+    low.title = "This floor is far below your best, so you get " + Math.round(share * 100) + "% of the pot.";
     info.push(low);
   }
   morphChildren(document.getElementById("rpgFloorInfo"), info);
@@ -1600,7 +1576,7 @@ function renderDoor() {
   for (var n = 2; n <= rules.partyMax; n++) {
     var seg = button("", "size", { id: n, className: "rpg-seg-btn" + (n == size ? " active" : ""), title: n + " heroes" });
     seg.append(el("b", "", String(n)), el("span", "rpg-seg-figs", "👤".repeat(n)));
-    seg.title = n + " heroes: +" + Math.round(rules.partyLoot * 100 * (n - 1)) + "% loot";
+    seg.title = "A party of " + n + " gets " + Math.round(rules.partyLoot * 100 * (n - 1)) + "% more loot.";
     sizes.push(seg);
   }
   morphChildren(document.getElementById("rpgSize"), sizes);
@@ -1613,7 +1589,7 @@ function renderDoor() {
         // (the floor the party goes down to: a badge in front - out of reach: dimmed)
         var badge = el("div", "rpg-party-floor" + (p.floor > hero.maxFloor || cooldownOf(p.floor) || gapOf(p) ? " locked" : ""));
         badge.append(el("span", "rpg-party-floor-label", "Floor"), el("b", "", String(p.floor)));
-        badge.title = "Entry 🪙 " + formatCoins(rules.entries[p.floor - 1]) + " each";
+        badge.title = "Every hero pays 🪙 " + formatCoins(rules.entries[p.floor - 1]) + " to enter.";
         var text = el("div", "rpg-party-text");
         var lowShare = shareOf(p.floor);
         var lv = p.levels && p.levels.length ? " · Lv " + Math.min.apply(null, p.levels) + (Math.max.apply(null, p.levels) > Math.min.apply(null, p.levels) ? "–" + Math.max.apply(null, p.levels) : "") : "";
@@ -1679,7 +1655,7 @@ function intentBadge(m) {
   else if (m.intent.move == "defend") text += "Blocks 50%";
   else text += move.name;
   badge.innerText = text;
-  badge.title = m.intent.stunned ? "Stunned" : m.intent.move == "defend" ? "On guard: your hits deal half this turn" : move.name + (m.intent.target ? " on " + m.intent.target : "");
+  badge.title = m.intent.stunned ? "Stunned, it skips its next move." : m.intent.move == "defend" ? "On guard, your hits deal half damage this turn." : move.name + (m.intent.target ? " on " + m.intent.target : "");
   if (m.intent.target == myName && m.intent.damage && !m.intent.stunned) badge.classList.add("at-me");
   return badge;
 }
@@ -1691,7 +1667,7 @@ function renderRun() {
   renderCoach(run, me);
   var pot = document.getElementById("rpgPot");
   pot.innerText = me && me.share < 1 ? "🪙 " + formatCoins(myPot(run)) + " for you (" + Math.round(me.share * 100) + "%)" : "🪙 " + formatCoins(run.pot) + " each";
-  pot.title = me && me.share < 1 ? "Low floor: " + Math.round(me.share * 100) + "% of the pot" : "";
+  pot.title = me && me.share < 1 ? "This floor is far below your best, so you get " + Math.round(me.share * 100) + "% of the pot." : "";
   var quit = document.getElementById("rpgQuit");
   quit.hidden = !!party.result;
 
@@ -1728,7 +1704,7 @@ function renderRun() {
       // (its armor: the share of every hit it takes off)
       if (m.armor) {
         var armor = el("span", "rpg-monster-armor", "🛡 " + Math.round(m.armor * 100) + "%");
-        armor.title = "Armor: -" + Math.round(m.armor * 100) + "% damage";
+        armor.title = "Its armor blocks " + Math.round(m.armor * 100) + "% of your damage.";
         art.appendChild(armor);
       }
       card.append(art, name, bar(m.hp, m.maxHp, "foe"), effectsRow(m.effects));
@@ -1933,7 +1909,7 @@ function rewardPanel(me) {
   me.reward.forEach((id) => cards.appendChild(cardEl(id, { tag: "button", act: "pick", className: "pickable" })));
   return [
     el("div", "rpg-reward-title", "🃏 Add a card to your deck"),
-    el("div", "rpg-reward-note mm-muted small", "For this run only."),
+    el("div", "rpg-reward-note mm-muted small", "The card stays in your deck for this run."),
     cards,
     // (a mage in the party: other cards - a few times a run)
     party.run.rerolls != null ? button("🔮 Reroll (" + party.run.rerolls + " left)", "reroll", { className: "small", disabled: party.run.rerolls <= 0 }) : null,
@@ -1998,7 +1974,7 @@ function roomScene(run, me) {
     Object.keys(ev.choices).forEach((name) => {
       var chip = el("span", "rpg-chose" + (ev.choices[name] ? " done" : ""));
       chip.append(createAvatar(name, "sm"), el("span", "", ev.choices[name] ? "✓" : "…"));
-      chip.title = name + (ev.choices[name] ? " has chosen" : " is choosing");
+      chip.title = name + (ev.choices[name] ? " has chosen." : " is still choosing.");
       who.appendChild(chip);
     });
     body.appendChild(who);
@@ -2023,7 +1999,7 @@ function resultCard(r) {
     node.classList.add("relic");
     icon = relic.icon;
     name = relic.name;
-    tip = "Relic · this run\n" + relic.text;
+    tip = relic.text + " Lasts for this run.";
   } else if (r.k == "card") {
     var card = cardEl(r.id, { className: "small" + (r.lost ? " off" : "") });
     if (r.lost) card.appendChild(el("span", "rpg-result-tag bad", "Given away"));
@@ -2032,7 +2008,7 @@ function resultCard(r) {
     node.classList.add("coins");
     icon = "🪙";
     name = formatCoins(r.n);
-    tip = "Into the pot for everyone - paid at the end";
+    tip = "Goes into the pot and is paid out at the end.";
   } else if (r.k == "hp") {
     node.classList.add("bad");
     icon = "💔";
@@ -2204,7 +2180,7 @@ function renderMap(run) {
         b.dataset.act = "vote";
         b.dataset.id = door;
       } else b.disabled = true;
-      b.title = kind ? kind.name + " - " + kind.about : "Hidden";
+      b.title = kind ? kind.name + ". " + kind.about + "." : "A hidden room.";
       var voters = door >= 0 ? Object.keys(run.votes).filter((name) => run.votes[name] === door) : [];
       if (voters.length) {
         var faces = el("span", "rpg-node-votes");
@@ -2221,7 +2197,7 @@ function renderMap(run) {
   // (the chance to sense a room: instinct raises it - a Rogue far more)
   var sense = document.getElementById("rpgMapSense");
   sense.innerText = "🦊 " + run.sense + "%";
-  sense.title = "Chance to sense a room - instinct raises it, a Rogue far more";
+  sense.title = "Your chance to sense a room. It scales with the instinct attribute, a Rogue senses far better.";
   var count = Object.keys(run.votes).length;
   document.getElementById("rpgMapNote").innerText = party.result ? "" : between ? (run.heroes.length > 1 ? count + " / " + run.heroes.length + " voted · a tie: random" : "Pick a lit room") : "";
 }
@@ -2355,10 +2331,10 @@ function handBar(run, me) {
     votes.appendChild(el("span", "rpg-votes-note mm-muted small", count + " / " + run.heroes.length + " · a tie: random"));
     return [potion, votes, leave];
   }
-  if (!me || me.down) return [el("div", "rpg-wait mm-muted", "💤 You're down until the fight ends.")];
+  if (!me || me.down) return [el("div", "rpg-wait mm-muted", "💤 You are down until the fight ends.")];
   var energy = el("div", "rpg-energy" + (me.energy <= 0 ? " empty" : ""));
   energy.dataset.mana = me.energy + "/" + rules.energy;
-  energy.title = "Mana, refills every turn";
+  energy.title = "Your mana refills every turn.";
   var draw = pileButton("draw", "", me.drawCount, "Draw pile");
   var left = el("div", "rpg-hand-side");
   left.append(energy, draw);
@@ -2419,7 +2395,7 @@ function potionButton(me, run) {
   b.type = "button";
   b.dataset.act = "drink";
   b.disabled = !me || me.down || me.potions <= 0 || me.hp >= me.maxHp || (fight && (me.ended || me.energy < rules.potionMana));
-  b.title = "Health potion: +" + Math.round(rules.potionHeal * 100) + "% HP" + (fight ? " · " + rules.potionMana + " mana" : "");
+  b.title = "A potion heals " + Math.round(rules.potionHeal * 100) + "% of your HP" + (fight ? " and costs " + rules.potionMana + " mana in a fight." : ".");
   b.innerHTML = POTION_SVG;
   b.appendChild(el("span", "rpg-potion-count", String(me ? me.potions : 0)));
   if (fight) b.appendChild(el("span", "rpg-potion-mana", String(rules.potionMana)));
@@ -2457,7 +2433,7 @@ function tick() {
     var left = Math.max(0, Math.ceil((party.timeLeft - (Date.now() - partyAt)) / 1000));
     text = "⏱ " + left + "s";
     clock.classList.toggle("low", left <= 10);
-    clock.title = "Time left for this turn";
+    clock.title = "Time left for this turn.";
   }
   if (clock.innerText != text) clock.innerText = text;
   setTimeout(tick, 250);
@@ -2629,7 +2605,7 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "deckHelp") showDeckHelp();
   else if (act == "classHelp") showClassHelp();
   else if (act == "quitRun") {
-    var asked = confirmDialog({ title: "Leave the run?", text: "You lose your share of the pot and the loot.", confirmLabel: "Leave", danger: true });
+    var asked = confirmDialog({ title: "Leave the run?", text: "You lose your share of the pot and your loot.", confirmLabel: "Leave", danger: true });
     intoFullscreen();
     asked.then((sure) => sure && socket.emit("leave"));
   } else if (act == "cartAdd") {

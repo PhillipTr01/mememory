@@ -34,11 +34,11 @@ test("info: the season world shows its own limits - and the max bet by balance",
   try {
     const season = JSON.stringify(info.get("slots", "/season"));
     assert.match(season, /1,170/);
-    assert.match(JSON.stringify(info.get("roulette", "/season")), /at most 10% of your coins/);
+    assert.match(JSON.stringify(info.get("roulette", "/season")), /limited to 10% of your coins/);
     // (slots: 1/x of it)
-    assert.match(season, new RegExp(`at most ${Math.round((10 / config.SLOTS_CAP_DIV) * 100) / 100}% of your coins`));
+    assert.match(season, new RegExp(`limited to ${Math.round((10 / config.SLOTS_CAP_DIV) * 100) / 100}% of your coins`));
     assert.doesNotMatch(JSON.stringify(info.get("slots", "")), /1,170/);
-    assert.match(JSON.stringify(info.get("roulette", "")), new RegExp(`at most ${config.BET_CAP_SHARE}% of your coins`));
+    assert.match(JSON.stringify(info.get("roulette", "")), new RegExp(`limited to ${config.BET_CAP_SHARE}% of your coins`));
   } finally {
     config.SEASON_LIMITS = before;
     slots.setCurrent("season", null);

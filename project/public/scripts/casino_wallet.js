@@ -325,7 +325,7 @@
     document.getElementById("navCoinsValue").innerText = format(coins);
     // The admin's test mode: test coins (nothing is saved)
     button.classList.toggle("test", data.test === true);
-    if (data.test) button.title = "🧪 Test mode - test coins, nothing is saved";
+    if (data.test) button.title = "🧪 Test mode. You play with test coins and nothing is saved.";
     // The season world: on hover, how much is still to wager for a place on the leaderboard
     var stored = document.getElementById("navCoinsStored");
     var wager = data.wager;
