@@ -1343,9 +1343,11 @@ function onOpeningClick(event) {
 
 /* ---------- The deck builder ---------- */
 
-// The starter deck of my class: 4 strikes, 4 defends, the two signature cards
+// The starter deck of my class: 4 strikes, 4 defends (two of them the class's guard card), the two signature cards
 function starterDeck() {
-  return ["strike", "strike", "strike", "strike", "defend", "defend", "defend", "defend"].concat(rules.classes[hero.cls].signature);
+  var cls = rules.classes[hero.cls];
+  var guard = cls.guard || "defend";
+  return ["strike", "strike", "strike", "strike", "defend", "defend", guard, guard].concat(cls.signature);
 }
 
 document.getElementById("rpgSearch").addEventListener("input", (event) => {

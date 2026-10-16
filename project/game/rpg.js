@@ -121,11 +121,11 @@ const REWARD = { fight: 0.3, hard: 0.55, elite: 0.55, boss: 0.9, chest: 0.3, tra
 // main: the stat its levels count 1.5x for; hp, atk: times the stats; def, luck, agi: added;
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
-  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.15 }, top: 1.6 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.2, atk: 1.6, def: 2, luck: 0, agi: 0, mainBonus: 1.29, hpPlus: 54, atkPlus: 23, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.55, block: 0.11 }, top: 3.1 }, about: "Armor class with taunts and party shields", hp: 1.35, atk: 1.3, def: 12, luck: 0, agi: 0, mainBonus: 1.55, hpPlus: 90, atkPlus: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe.", perks: { heal: 0.1, healHit: 0.1 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 2.1, hpPlus: 192, atkPlus: 4, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.15, crit: 2.5 }, top: 1.7 }, about: "Instinct class with dodge, scouting and poison", hp: 1.19, atk: 1.42, def: 0, luck: 4, agi: 9, mainBonus: 1.55, hpPlus: 96, atkPlus: 22, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 8 }, about: "Luck class with crits, fire and frost", hp: 1.15, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.5, hpPlus: 100, atkPlus: 20, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
+  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.15 }, top: 1.3 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.2, atk: 1.6, def: 2, luck: 0, agi: 0, mainBonus: 1.29, hpPlus: 54, atkPlus: 25, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.55, block: 0.11 }, top: 5 }, about: "Armor class with taunts and party shields", hp: 1.35, atk: 1.3, def: 13, luck: 0, agi: 0, mainBonus: 1.2, hpPlus: 90, atkPlus: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe.", perks: { heal: 0.1, healHit: 0.1 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 2.04, hpPlus: 200, atkPlus: 4, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.15, crit: 2.5 }, top: 1.7 }, about: "Instinct class with dodge, scouting and poison", hp: 1.19, atk: 1.42, def: 0, luck: 4, agi: 14, mainBonus: 2.5, hpPlus: 96, atkPlus: 20, signature: ["poisonblade", "backstab"], guard: "dodgeroll", guardCount: 3, cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 8 }, about: "Luck class with crits, fire and frost", hp: 1.15, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.45, hpPlus: 100, atkPlus: 17, signature: ["frost", "fireball"], guard: "icearmor", cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -372,12 +372,12 @@ const MONSTER_TRAITS = {
 // The bosses: the last room of every BOSS_EVERY-th floor - one per group of floors, a second phase at half HP
 // (phase: what changes then - more attack, other moves, a summon of its kind)
 const BOSSES = [
-  { name: "Slime King", icon: "🫧", type: "ooze", power: 0.561, hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "summon"], summon: 0, phase: { atk: 1.3, moves: ["smash", "summon", "attack"], text: "splits and swells with rage" } },
-  { name: "Goblin Warlord", icon: "👺", type: "humanoid", power: 0.825, hp: 1.2, atk: 1, moves: ["attack", "smash", "steal", "summon"], summon: 1, phase: { atk: 1.35, moves: ["smash", "howl", "attack"], text: "calls the whole tribe" } },
-  { name: "Bone Lord", icon: "☠️", type: "undead", power: 0.787, hp: 1.2, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "drain", "summon"], summon: 2, phase: { atk: 1.3, moves: ["drain", "smash", "summon", "curse"], text: "raises the dead around it" } },
-  { name: "Troll Chieftain", icon: "🧌", type: "humanoid", power: 1.146, hp: 1.15, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"], summon: 3, phase: { atk: 1.35, moves: ["smash", "attack", "regen", "howl"], text: "goes berserk" } },
+  { name: "Slime King", icon: "🫧", type: "ooze", power: 0.579, hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "summon"], summon: 0, phase: { atk: 1.3, moves: ["smash", "summon", "attack"], text: "splits and swells with rage" } },
+  { name: "Goblin Warlord", icon: "👺", type: "humanoid", power: 0.845, hp: 1.2, atk: 1, moves: ["attack", "smash", "steal", "summon"], summon: 1, phase: { atk: 1.35, moves: ["smash", "howl", "attack"], text: "calls the whole tribe" } },
+  { name: "Bone Lord", icon: "☠️", type: "undead", power: 0.778, hp: 1.2, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "drain", "summon"], summon: 2, phase: { atk: 1.3, moves: ["drain", "smash", "summon", "curse"], text: "raises the dead around it" } },
+  { name: "Troll Chieftain", icon: "🧌", type: "humanoid", power: 1.176, hp: 1.15, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"], summon: 3, phase: { atk: 1.35, moves: ["smash", "attack", "regen", "howl"], text: "goes berserk" } },
   { name: "Demon Prince", icon: "👿", type: "demon", power: 1.115, hp: 1, atk: 1, traits: ["fireproof"], moves: ["attack", "burn", "smash", "summon"], summon: 4, phase: { atk: 1.35, moves: ["burn", "smash", "curse"], text: "bursts into flames" } },
-  { name: "The Lich", icon: "🧟", type: "undead", power: 1.613, hp: 0.9, atk: 0.85, undead: true, traits: ["venomproof"], moves: ["curse", "drain", "summon", "attack"], summon: 5, phase: { atk: 1.25, moves: ["curse", "drain", "burn", "smash"], text: "tears open its phylactery" } },
+  { name: "The Lich", icon: "🧟", type: "undead", power: 1.569, hp: 0.9, atk: 0.85, undead: true, traits: ["venomproof"], moves: ["curse", "drain", "summon", "attack"], summon: 5, phase: { atk: 1.25, moves: ["curse", "drain", "burn", "smash"], text: "tears open its phylactery" } },
 ];
 const MONSTER_HP = 52;
 const MONSTER_HP_GROWTH = 0.7; // (every floor deeper: this share of floor 1 more - as even as a character grows)
@@ -568,6 +568,14 @@ function charOf(hero, cls = hero.cls) {
     char.deck = starterDeck(cls);
     char.collection = {};
     for (const id of char.deck) char.collection[id] = (char.collection[id] || 0) + 1;
+  }
+  // (a character from before the guard cards: its two copies - an untouched starter deck takes them in)
+  const guard = CLASSES[cls] && CLASSES[cls].guard;
+  if (guard && !char.guarded) {
+    char.guarded = true;
+    char.collection[guard] = Math.max(CLASSES[cls].guardCount || 2, char.collection[guard] || 0);
+    const old = ["strike", "strike", "strike", "strike", "defend", "defend", "defend", "defend", ...CLASSES[cls].signature];
+    if ([...char.deck].sort().join() == old.sort().join()) char.deck = starterDeck(cls);
   }
   return char;
 }
@@ -1156,7 +1164,7 @@ const RANKS = {
 const DEPTH_EXTRA = 0.015;
 // The difficulty of the floors on top: [floor, power] - between two of them evenly (fitted with the simulator, every
 // class on its stat curve clearing about three runs of four)
-const FLOOR_POWER = [[1, 2.209], [2, 2.602], [4, 2.067], [8, 1.974], [12, 1.66], [18, 1.504], [23, 1.739], [28, 1.084]];
+const FLOOR_POWER = [[1, 2.209], [2, 2.674], [4, 2.122], [8, 1.95], [12, 1.66], [18, 1.504], [23, 1.739], [28, 1.069]];
 function floorPower(floor) {
   const points = FLOOR_POWER;
   if (floor <= points[0][0]) return points[0][1];
@@ -1230,9 +1238,12 @@ function monstersFor(floor, size, room, rng = Math.random, depth = 0) {
 
 /* ---------- A run ---------- */
 
-// The starter deck of a class: 4 strikes, 4 defends, its two signature cards
+// The starter deck of a class: 4 strikes, 4 defends, its two signature cards (a class without armor: two of the
+// defends its own guard card - a block of its own stat)
 function starterDeck(cls) {
-  return ["strike", "strike", "strike", "strike", "defend", "defend", "defend", "defend", ...(CLASSES[cls] || CLASSES.warrior).signature];
+  const c = CLASSES[cls] || CLASSES.warrior;
+  const guards = c.guard ? c.guardCount || 2 : 0;
+  return ["strike", "strike", "strike", "strike", ...Array(4 - guards).fill("defend"), ...Array(guards).fill(c.guard), ...c.signature];
 }
 
 // (options.tutorial: the practice run - a short map, weak monsters, no coins)

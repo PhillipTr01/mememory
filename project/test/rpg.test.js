@@ -445,7 +445,7 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (dupl
   const hero = rpg.newHero("rogue");
   const char = rpg.charOf(hero);
   assert.strictEqual(char.deck.length, 10);
-  assert.deepStrictEqual([char.collection.strike, char.collection.defend, char.collection.poisonblade], [4, 4, 1]);
+  assert.deepStrictEqual([char.collection.strike, char.collection.defend, char.collection.dodgeroll, char.collection.poisonblade], [4, 1, 3, 1]);
   // The deck: only owned cards, only the class's - built freely, but a run needs DECK_MIN cards
   assert.strictEqual(rpg.deckReady(hero), null);
   assert.strictEqual(rpg.deckRemove(hero, "strike"), null);
@@ -900,7 +900,7 @@ test("rpg: the bag - 5 slots, more bought up to 15, every one dearer", () => {
 
 test("rpg: class strengths grow with the level - the base at 1, its top times it at the highest level", () => {
   assert.strictEqual(rpg.strengthOf("warrior", 1).perks.pierce, 0.15);
-  assert.strictEqual(rpg.strengthOf("warrior", rpg.HERO_LEVEL_MAX).perks.pierce, 0.24);
+  assert.strictEqual(rpg.strengthOf("warrior", rpg.HERO_LEVEL_MAX).perks.pierce, Math.round(0.15 * rpg.CLASSES.warrior.strength.top * 1000) / 1000);
   assert.match(rpg.strengthOf("paladin", 1).text, /equal to 55% of your armor\. Your block cards block 11% more/);
   assert.match(rpg.strengthOf("mage", rpg.HERO_LEVEL_MAX).text, /crit 24% more often/);
 });
@@ -1180,4 +1180,24 @@ test("rpg: a hit on a hero tells what its armor took and how much block is left"
   // (20 against 10 armor: 13 come through - 7 taken by the armor, 5 by the block, 8 hurt)
   assert.deepStrictEqual([hit.n, hit.b, hit.a, hit.left], [8, 5, 7, 0]);
   assert.strictEqual(hero.hp, 92);
+});
+
+test("rpg: the frail classes start with their own guard card - older characters get its copies", () => {
+  for (const id of ["rogue", "mage"]) {
+    const guard = rpg.CLASSES[id].guard;
+    assert.ok(rpg.poolOf(id).includes(guard), id);
+    const n = rpg.CLASSES[id].guardCount || 2;
+    assert.strictEqual(rpg.starterDeck(id).filter((c) => c == guard).length, n);
+    assert.strictEqual(rpg.starterDeck(id).filter((c) => c == "defend").length, 4 - n);
+    // (an old character with the old starter deck)
+    const hero = rpg.newHero(id);
+    const old = ["strike", "strike", "strike", "strike", "defend", "defend", "defend", "defend", ...rpg.CLASSES[id].signature];
+    const counts = {};
+    old.forEach((c) => (counts[c] = (counts[c] || 0) + 1));
+    hero.chars[id] = { ...rpg.charOf(hero, id), deck: [...old], collection: counts, guarded: false };
+    const char = rpg.charOf(hero, id);
+    assert.strictEqual(char.collection[guard], n);
+    assert.deepStrictEqual(char.deck, rpg.starterDeck(id));
+  }
+  assert.strictEqual(rpg.starterDeck("paladin").filter((c) => c == "defend").length, 4);
 });
