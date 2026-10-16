@@ -6914,3 +6914,31 @@ button.rpg-cardx.off {
     padding: 0.6rem 0.4rem 0.5rem;
   }
 }
+
+/* (a word of the game on a card: hover explains it) */
+.rpg-kw {
+  text-decoration: underline dotted rgba(255, 255, 255, 0.45);
+  text-underline-offset: 2px;
+  cursor: help;
+}
+/* (exhaust, once a run: a tag under the text) */
+.rpg-cardx-tag {
+  display: table;
+  margin: 0.3rem auto 0;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  cursor: help;
+}
+.rpg-cardx-tag.exhaust {
+  color: #fdba74;
+  background: rgba(249, 115, 22, 0.15);
+  border: 1px solid rgba(249, 115, 22, 0.45);
+}
+.rpg-cardx-tag.once {
+  color: #f0abfc;
+  background: rgba(217, 70, 239, 0.15);
+  border: 1px solid rgba(217, 70, 239, 0.45);
+}

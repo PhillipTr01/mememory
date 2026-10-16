@@ -117,7 +117,7 @@ function cardEl(id, options) {
   cost.title = card.cost + " mana";
   var art = el("span", "rpg-cardx-art", card.icon);
   if (card.rarity && card.rarity != "basic") art.appendChild(el("i", "rpg-cardx-gem"));
-  node.append(cost, art, el("span", "rpg-cardx-name", card.name), cardType(card), el("span", "rpg-cardx-text", card.text));
+  node.append(cost, art, el("span", "rpg-cardx-name", card.name), cardType(card), cardText(card));
   // (a class card: its class icon on top - another class's one dimmed, this character can't use it)
   if (card.cls && rules.classes[card.cls]) {
     var owner = rules.classes[card.cls];
@@ -129,6 +129,42 @@ function cardEl(id, options) {
     node.appendChild(mark);
   }
   return node;
+}
+
+// The words of the game on a card: underlined - what they mean on hover
+var KEYWORDS = [
+  [/\b(poison(?:ed|s)?)\b/i, "Poison: damage at the end of every turn - it stacks"],
+  [/\b(burn(?:ing|s)?)\b/i, "Burn: damage at the end of every turn - it doesn't stack"],
+  [/\b(chill(?:ed|s)?)\b/i, "Chill: the foe deals half damage"],
+  [/\b(stun(?:ned|s)?)\b/i, "Stun: the foe skips its next move"],
+  [/\b(taunts?)\b/i, "Taunt: the foes attack you"],
+  [/\b(block(?:s)?)\b/i, "Block: takes damage for you until your next turn"],
+  [/\b(curse[ds]?)\b/i, "Cursed: 30% less damage"],
+  [/\b(armor)\b/i, "Armor: less damage taken, more block"],
+];
+// A card's text: its keywords explained on hover - "Exhaust" and "Once a run" as a tag of their own
+function cardText(card) {
+  var box = el("span", "rpg-cardx-text");
+  var text = card.text.replace(/ ?(Exhaust|Mythic)\.$/, "");
+  var parts = [text];
+  KEYWORDS.forEach(([re, tip]) => {
+    parts = parts.flatMap((part) => {
+      if (typeof part != "string") return [part];
+      var m = part.match(re);
+      if (!m) return [part];
+      var word = el("u", "rpg-kw", m[1]);
+      word.title = tip;
+      return [part.slice(0, m.index), word, part.slice(m.index + m[1].length)];
+    });
+  });
+  parts.forEach((part) => box.append(part));
+  var once = card.mythic || / Mythic\.$/.test(card.text);
+  if (once || card.exhaust) {
+    var tag = el("span", "rpg-cardx-tag " + (once ? "once" : "exhaust"), once ? "✦ Once a run" : "🔥 Exhaust");
+    tag.title = once ? "Played once a run - then gone until the run ends" : "Exhaust: once played, gone until the fight ends";
+    box.appendChild(tag);
+  }
+  return box;
 }
 
 // A time left in short: "5h 12m", "3m"
