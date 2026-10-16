@@ -1664,6 +1664,22 @@ function renderLobby() {
       var cls = rules.classes[who.cls] || { icon: "❔", name: "" };
       if (name == party.leader) seat.appendChild(el("span", "rpg-seat-crown", "👑"));
       seat.append(createAvatar(name, "lg"), el("div", "rpg-seat-name", name), el("div", "rpg-seat-class", cls.icon + " " + cls.name + (who.level ? " · Lv " + who.level : "")));
+      // (what the member brings: the stats the run starts with, the deepest floor cleared)
+      if (who.hp) {
+        var stats = el("div", "rpg-seat-stats");
+        [
+          ["💚", formatCoins(who.hp), "Max HP"],
+          ["💪", who.atk, "Attack"],
+          ["🛡️", who.def, "Armor"],
+          ["🍀", who.crit + "%", "Chance of a critical hit"],
+          ["🦊", who.dodge + "%", "Chance to dodge a hit"],
+        ].forEach(([icon, value, tip]) => {
+          var chip = el("span", "rpg-seat-stat", icon + " " + value);
+          chip.title = tip;
+          stats.appendChild(chip);
+        });
+        seat.append(stats, el("div", "rpg-seat-deepest", who.deepest ? "🏰 Deepest floor " + who.deepest : "🏰 No floor cleared yet"));
+      }
     } else seat.append(el("div", "rpg-seat-free", "…"), el("div", "rpg-seat-name mm-muted", "Waiting"));
     seats.push(seat);
   }

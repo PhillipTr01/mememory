@@ -65,6 +65,23 @@ module.exports = function (io, options = {}) {
     socketsOf(name).forEach((socket) => socket.emit("rpgHero", view));
   }
 
+  // A member for the lobby: the class, the level, the deepest floor and the stats the run will start with
+  function whoOf(hero) {
+    const char = rpg.charOf(hero);
+    const perks = rpg.talentPerks(hero);
+    const stats = rpg.statsOf(hero, hero.cls, { agi: perks.agi || 0 });
+    return {
+      cls: hero.cls,
+      level: char.level,
+      deepest: char.deepest || 0,
+      hp: Math.round(stats.maxHp * (1 + (perks.maxHp || 0))),
+      atk: stats.atk,
+      def: stats.def,
+      crit: Math.round(stats.luck + (perks.crit || 0)),
+      dodge: Math.round(stats.agi),
+    };
+  }
+
   function partyView(party) {
     return {
       id: party.id,
@@ -74,7 +91,7 @@ module.exports = function (io, options = {}) {
       entry: rpg.entryCost(party.floor),
       members: party.members,
       // (who they are: the class, the level - for the lobby)
-      who: Object.fromEntries(party.members.map((name) => [name, { cls: heroOf(name).cls, level: rpg.charOf(heroOf(name)).level }])),
+      who: Object.fromEntries(party.members.map((name) => [name, whoOf(heroOf(name))])),
       started: party.run != null,
       result: party.result || null,
       summary: party.summary || null,

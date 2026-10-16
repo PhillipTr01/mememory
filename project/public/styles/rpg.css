@@ -7513,3 +7513,30 @@ body.rpg-dragging {
   gap: 1rem;
   margin-top: 0.4rem;
 }
+
+/* (a party's lobby: what every member brings - the stats as small chips, the deepest floor) */
+.rpg-seat:not(.empty) {
+  width: 11rem;
+}
+
+.rpg-seat-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.rpg-seat-stat {
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rpg-seat-deepest {
+  font-size: 0.7rem;
+  color: var(--mm-muted);
+}
