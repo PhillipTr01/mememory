@@ -6341,8 +6341,8 @@ button.rpg-cardx.off {
     scale: 0.55;
     rotate: -18deg;
   }
+  /* (no opacity here: it ends at the card's own - a card too expensive stays greyed out) */
   to {
-    opacity: 1;
     translate: 0 0;
     scale: 1;
     rotate: 0deg;
