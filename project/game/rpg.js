@@ -1139,10 +1139,11 @@ const DOOR_POOL = { fight: 15, hard: 5.4, trap: 0.6, chest: 1, rest: 1, shrine: 
 const LANES = 4; // the columns of the map
 // What a room of the map is - hidden; the party senses it (sees its kind): its best hero's base + per point of
 // instinct (agility) - a Rogue far better at it
-const SENSE = { base: 10, per: 0.5 };
-const SENSE_ROGUE = { base: 25, per: 1.5 };
-const SENSE_MAX = 90;
-const SENSE_DEPTH = 0.02; // a floor deeper: rooms 2% harder to sense (floor 30: less than half)
+// (a fresh Rogue: about 18%, a well trained one 35 to 45% - the others about 10 to 15%)
+const SENSE = { base: 5, per: 0.4 };
+const SENSE_ROGUE = { base: 5, per: 0.9 };
+const SENSE_MAX = 60;
+const SENSE_DEPTH = 0.01; // a floor deeper: rooms 1% harder to sense (floor 30: about 70%)
 // (kept for the page: one of the doors to pick)
 const DOORS = LANES;
 
@@ -1247,7 +1248,7 @@ function senseChance(run) {
     return s.base + s.per * (h.agi || 0);
   };
   // (deeper down the rooms hide better: SENSE_DEPTH less a floor)
-  const depth = Math.max(0.3, 1 - SENSE_DEPTH * ((run.floor || 1) - 1));
+  const depth = Math.max(0.6, 1 - SENSE_DEPTH * ((run.floor || 1) - 1));
   return Math.min(SENSE_MAX, Math.round(Math.max(0, ...alive(run.heroes).map(of)) * depth));
 }
 

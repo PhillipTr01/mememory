@@ -274,9 +274,9 @@ test("rpg: the map - a Rogue's instinct senses what a room is; rooms to choose i
   const none = sensed("warrior", 40);
   const young = sensed("rogue", 10);
   const scout = sensed("rogue", 40);
-  assert.ok(none > 0.2 && none < 0.4 && none < young, String(none));
-  assert.ok(young > 0.3 && young < 0.5, String(young));
-  assert.ok(scout > 0.75 && scout < 0.95, String(scout));
+  assert.ok(none > 0.15 && none < 0.28 && none < scout, String(none));
+  assert.ok(young > 0.1 && young < 0.2, String(young));
+  assert.ok(scout > 0.35 && scout < 0.48, String(scout));
   run.heroes[0].cls = "warrior";
   run.heroes[0].agi = 0;
   rpg.enterRoom(run, 0);
