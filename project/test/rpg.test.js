@@ -407,7 +407,7 @@ test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/
   assert.strictEqual(rpg.pickTalent(hero, 0, "ironskin"), null);
   assert.match(rpg.pickTalent(hero, 0, "rhythm"), /already/);
   // (the class strength - the warrior breaks armor - and the talent)
-  assert.deepStrictEqual(rpg.talentPerks(hero), { pierce: rpg.strengthOf("warrior", rpg.charOf(hero).level).perks.pierce, startBlock: rpg.TALENTS.warrior[0][0].perks.startBlock });
+  assert.deepStrictEqual(rpg.talentPerks(hero), { pierce: rpg.strengthOf("warrior", rpg.charOf(hero).level).perks.pierce, ...rpg.TALENTS.warrior[0][0].perks });
   // In a fight: the talent's block at the start, a relic's damage, an upgraded strike
   const run = rpg.newRun(1, [{ name: "a", hero }]);
   rpg.enterRoom(run, 0);

@@ -418,7 +418,7 @@ const PERK_KEYS = ["healHit", "pierce", "thornsDef", "aoe", "startBlock", "first
 const TALENT_LEVELS = [3, 6, 10, 15, 20, 25, 30, 40, 50];
 const TALENTS = {
   warrior: [
-    [{ id: "ironskin", name: "Iron Skin", icon: "🪨", text: "Start every turn with 14 block.", perks: { startBlock: 14 } }, { id: "rhythm", name: "Battle Rhythm", icon: "🥁", text: "Your first attack each turn deals 40% more.", perks: { firstStrike: 0.4 } }],
+    [{ id: "ironskin", name: "Iron Skin", icon: "🪨", text: "+10% max HP. Start every turn with 10 block.", perks: { maxHp: 0.1, startBlock: 10 } }, { id: "rhythm", name: "Battle Rhythm", icon: "🥁", text: "Your first attack each turn deals 30% more.", perks: { firstStrike: 0.3 } }],
     [{ id: "berserk", name: "Berserker", icon: "😤", text: "35% more damage below half HP.", perks: { lowHp: 0.35 } }, { id: "sunder", name: "Sunder", icon: "🪓", text: "Ignore 30% more armor.", perks: { pierce: 0.3 } }],
     [{ id: "bloodthirst", name: "Bloodthirst", icon: "🩸", text: "Heal 3% of your attack damage.", perks: { lifesteal: 0.03 } }, { id: "cleaver", name: "Cleaver", icon: "⚔️", text: "15% more damage.", perks: { attack: 0.15 } }],
     [{ id: "shatter", name: "Shatter", icon: "🔨", text: "Ignore 30% more armor, 5% more damage.", perks: { pierce: 0.3, attack: 0.05 } }, { id: "juggernaut", name: "Juggernaut", icon: "🚂", text: "+15% max HP.", perks: { maxHp: 0.15 } }],
@@ -441,20 +441,20 @@ const TALENTS = {
   ],
   cleric: [
     [{ id: "mercy", name: "Mercy", icon: "💚", text: "30% more healing.", perks: { heal: 0.3 } }, { id: "vital", name: "Vitality", icon: "❤️", text: "+15% max HP.", perks: { maxHp: 0.15 } }],
-    [{ id: "halo", name: "Halo", icon: "😇", text: "+10% max HP. Heal 20% after every fight won.", perks: { maxHp: 0.1, afterFight: 0.2 } }, { id: "zeal", name: "Zeal", icon: "🔥", text: "Your first attack each turn deals 20% more.", perks: { firstStrike: 0.2 } }],
+    [{ id: "halo", name: "Halo", icon: "😇", text: "+15% max HP. Heal 20% after every fight won.", perks: { maxHp: 0.15, afterFight: 0.2 } }, { id: "zeal", name: "Zeal", icon: "🔥", text: "Your first attack each turn deals 15% more.", perks: { firstStrike: 0.15 } }],
     [{ id: "miracle", name: "Miracle", icon: "✨", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }, { id: "leechlight", name: "Siphon Light", icon: "🕯️", text: "Heal 10% more of your attack damage.", perks: { lifesteal: 0.1 } }],
     [{ id: "grace", name: "Grace", icon: "🕊️", text: "35% more healing.", perks: { heal: 0.35 } }, { id: "sanctuary", name: "Light's Favor", icon: "⛪", text: "+10% max HP, 20% more healing.", perks: { maxHp: 0.1, heal: 0.2 } }],
     [{ id: "devotion", name: "Devotion", icon: "🙏", text: "+20% max HP.", perks: { maxHp: 0.2 } }, { id: "prophet", name: "Prophet", icon: "📜", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
-    [{ id: "renewal", name: "Renewal", icon: "🌱", text: "20% more healing. Heal 20% after every fight won.", perks: { heal: 0.2, afterFight: 0.2 } }, { id: "smiter", name: "Smiter", icon: "🔨", text: "15% more damage.", perks: { attack: 0.15 } }],
+    [{ id: "renewal", name: "Renewal", icon: "🌱", text: "30% more healing. Heal 20% after every fight won.", perks: { heal: 0.3, afterFight: 0.2 } }, { id: "smiter", name: "Smiter", icon: "🔨", text: "10% more damage.", perks: { attack: 0.1 } }],
     [{ id: "saint", name: "Saint", icon: "😇", text: "40% more healing.", perks: { heal: 0.4 } }, { id: "benediction", name: "Benediction", icon: "⛪", text: "Heal 10% after every fight won, 15% more healing.", perks: { afterFight: 0.1, heal: 0.15 } }],
     [{ id: "lightwell", name: "Lightwell", icon: "⛲", text: "Heal 15% more of your attack damage.", perks: { lifesteal: 0.15 } }, { id: "inquisitor", name: "Inquisitor", icon: "⚖️", text: "+10% critical hits.", perks: { crit: 10 } }],
     [{ id: "archangel", name: "Archangel", icon: "🪽", text: "+25% max HP, 20% more healing.", perks: { maxHp: 0.25, heal: 0.2 } }, { id: "radiance", name: "Radiance", icon: "🌞", text: "20% more damage.", perks: { attack: 0.2 } }],
   ],
   rogue: [
     [{ id: "venom", name: "Venom", icon: "🐍", text: "Your poison is 40% stronger.", perks: { poison: 0.4 } }, { id: "swift", name: "Swift", icon: "💧", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
-    [{ id: "assassin", name: "Assassin", icon: "🗡️", text: "Your first attack each turn deals 50% more.", perks: { firstStrike: 0.5 } }, { id: "evasion", name: "Evasion", icon: "🪶", text: "+8% to dodge a hit.", perks: { agi: 8 } }],
+    [{ id: "assassin", name: "Assassin", icon: "🗡️", text: "Your first attack each turn deals 40% more.", perks: { firstStrike: 0.4 } }, { id: "evasion", name: "Evasion", icon: "🪶", text: "+12% to dodge a hit.", perks: { agi: 12 } }],
     [{ id: "lethal", name: "Lethal", icon: "🎯", text: "+12% critical hits.", perks: { crit: 12 } }, { id: "toxicologist", name: "Toxicologist", icon: "🧪", text: "Your poison is 50% stronger.", perks: { poison: 0.5 } }],
-    [{ id: "quick", name: "Quick Hands", icon: "🤹", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "leech", name: "Leech", icon: "🦇", text: "Heal 3% of your attack damage.", perks: { lifesteal: 0.03 } }],
+    [{ id: "quick", name: "Quick Hands", icon: "🤹", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "leech", name: "Leech", icon: "🦇", text: "Heal 2% of your attack damage.", perks: { lifesteal: 0.02 } }],
     [{ id: "opportunist", name: "Opportunist", icon: "🎭", text: "Your first attack each turn deals 45% more.", perks: { firstStrike: 0.45 } }, { id: "cutthroat", name: "Cutthroat", icon: "🔪", text: "+20% critical hits.", perks: { crit: 20 } }],
     [{ id: "venomancer", name: "Venomancer", icon: "🐍", text: "Your poison is 60% stronger.", perks: { poison: 0.6 } }, { id: "shadow", name: "Shadow", icon: "🌑", text: "+8% to dodge a hit.", perks: { agi: 8 } }],
     [{ id: "deadeye", name: "Deadeye", icon: "👁️", text: "+15% critical hits.", perks: { crit: 15 } }, { id: "sleight", name: "Sleight of Hand", icon: "🃏", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
