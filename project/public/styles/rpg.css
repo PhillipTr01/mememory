@@ -7246,9 +7246,9 @@ button.rpg-cardx.off {
 
 /* (the deep stairs: the floor cleared - a stairway down) */
 .rpg-scene.kind-deep {
-  background: radial-gradient(circle at 50% 0%, rgba(120, 60, 200, 0.32), rgba(10, 8, 20, 0.9));
-  border-color: rgba(160, 110, 255, 0.4);
-  box-shadow: 0 0 40px rgba(110, 60, 220, 0.25);
+  background: radial-gradient(circle at 50% 0%, rgba(120, 90, 190, 0.18), rgba(14, 12, 22, 0.88));
+  border-color: rgba(160, 130, 230, 0.22);
+  box-shadow: 0 0 30px rgba(110, 80, 200, 0.12);
 }
 
 .rpg-deep-icon {
@@ -7259,7 +7259,7 @@ button.rpg-cardx.off {
 @keyframes rpg-deep-pulse {
   50% {
     transform: scale(1.12);
-    filter: drop-shadow(0 0 12px rgba(160, 110, 255, 0.8));
+    filter: drop-shadow(0 0 8px rgba(160, 130, 230, 0.45));
   }
 }
 
@@ -7276,8 +7276,12 @@ button.rpg-cardx.off {
 }
 
 .rpg-deep-pick button.danger {
-  background: linear-gradient(180deg, #7a3cf0, #4b1fa8);
-  border-color: rgba(190, 150, 255, 0.6);
-  color: #fff;
-  font-weight: 800;
+  background: rgba(140, 100, 220, 0.18);
+  border-color: rgba(170, 135, 240, 0.35);
+  color: #e4d8ff;
+  font-weight: 700;
+}
+
+.rpg-deep-pick button.danger:hover {
+  background: rgba(140, 100, 220, 0.28);
 }
