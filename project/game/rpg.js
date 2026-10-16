@@ -130,8 +130,8 @@ const DEEP_PAY = 2;
 const CLASSES = {
   warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.15 }, top: 1.3 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.2, atk: 1.6, def: 2, luck: 0, agi: 0, mainBonus: 1.29, hpPlus: 54, atkPlus: 25, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
   paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.55, block: 0.11 }, top: 6 }, about: "Armor class with taunts and party shields", hp: 1.35, atk: 1.3, def: 13, luck: 0, agi: 0, mainBonus: 1.2, hpPlus: 90, atkPlus: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe.", perks: { heal: 0.1, healHit: 0.15 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 2.04, hpPlus: 140, atkPlus: 4, signature: ["heal", "smite"], opener: "banish", cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.15, crit: 2.5 }, top: 1.7 }, about: "Instinct class with dodge, scouting and poison", hp: 1.3, atk: 1.42, def: 0, luck: 4, agi: 14, mainBonus: 2.5, hpPlus: 80, atkPlus: 20, signature: ["poisonblade", "backstab"], guard: "dodgeroll", cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe.", perks: { heal: 0.1, healHit: 0.12 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 1.7, hpPlus: 180, atkPlus: 4, signature: ["heal", "smite"], opener: "banish", cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.3, crit: 4 }, top: 3 }, about: "Instinct class with dodge, scouting and poison", hp: 1.3, atk: 1.42, def: 0, luck: 4, agi: 14, mainBonus: 2.5, hpPlus: 94, atkPlus: 20, signature: ["poisonblade", "backstab"], guard: "dodgeroll", cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
   mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 8 }, about: "Luck class with crits, fire and frost", hp: 1.15, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.45, hpPlus: 100, atkPlus: 17, signature: ["frost", "fireball"], guard: "icearmor", cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
@@ -379,11 +379,11 @@ const MONSTER_TRAITS = {
 // The bosses: the last room of every BOSS_EVERY-th floor - one per group of floors, a second phase at half HP
 // (phase: what changes then - more attack, other moves, a summon of its kind)
 const BOSSES = [
-  { name: "Slime King", icon: "🫧", type: "ooze", power: 0.608, hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "summon"], summon: 0, phase: { atk: 1.3, moves: ["smash", "summon", "attack"], text: "splits and swells with rage" } },
-  { name: "Goblin Warlord", icon: "👺", type: "humanoid", power: 0.862, hp: 1.2, atk: 1, moves: ["attack", "smash", "steal", "summon"], summon: 1, phase: { atk: 1.35, moves: ["smash", "howl", "attack"], text: "calls the whole tribe" } },
-  { name: "Bone Lord", icon: "☠️", type: "undead", power: 0.809, hp: 1.2, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "drain", "summon"], summon: 2, phase: { atk: 1.3, moves: ["drain", "smash", "summon", "curse"], text: "raises the dead around it" } },
-  { name: "Troll Chieftain", icon: "🧌", type: "humanoid", power: 1.223, hp: 1.15, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"], summon: 3, phase: { atk: 1.35, moves: ["smash", "attack", "regen", "howl"], text: "goes berserk" } },
-  { name: "Demon Prince", icon: "👿", type: "demon", power: 1.193, hp: 1, atk: 1, traits: ["fireproof"], moves: ["attack", "burn", "smash", "summon"], summon: 4, phase: { atk: 1.35, moves: ["burn", "smash", "curse"], text: "bursts into flames" } },
+  { name: "Slime King", icon: "🫧", type: "ooze", power: 0.525, hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "summon"], summon: 0, phase: { atk: 1.3, moves: ["smash", "summon", "attack"], text: "splits and swells with rage" } },
+  { name: "Goblin Warlord", icon: "👺", type: "humanoid", power: 0.698, hp: 1.2, atk: 1, moves: ["attack", "smash", "steal", "summon"], summon: 1, phase: { atk: 1.35, moves: ["smash", "howl", "attack"], text: "calls the whole tribe" } },
+  { name: "Bone Lord", icon: "☠️", type: "undead", power: 0.74, hp: 1.2, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "drain", "summon"], summon: 2, phase: { atk: 1.3, moves: ["drain", "smash", "summon", "curse"], text: "raises the dead around it" } },
+  { name: "Troll Chieftain", icon: "🧌", type: "humanoid", power: 1.058, hp: 1.15, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"], summon: 3, phase: { atk: 1.35, moves: ["smash", "attack", "regen", "howl"], text: "goes berserk" } },
+  { name: "Demon Prince", icon: "👿", type: "demon", power: 1.175, hp: 1, atk: 1, traits: ["fireproof"], moves: ["attack", "burn", "smash", "summon"], summon: 4, phase: { atk: 1.35, moves: ["burn", "smash", "curse"], text: "bursts into flames" } },
   { name: "The Lich", icon: "🧟", type: "undead", power: 1.616, hp: 0.9, atk: 0.85, undead: true, traits: ["venomproof"], moves: ["curse", "drain", "summon", "attack"], summon: 5, phase: { atk: 1.25, moves: ["curse", "drain", "burn", "smash"], text: "tears open its phylactery" } },
 ];
 const MONSTER_HP = 52;
@@ -513,6 +513,9 @@ const AFFIXES = {
   armored: { name: "Armored", icon: "🛡️", text: "+30% armor." },
   enraged: { name: "Enraged", icon: "😡", text: "Hits 30% harder." },
   regen: { name: "Regenerating", icon: "💚", text: "Heals 8% every turn." },
+  splitter: { name: "Splitting", icon: "🧬", text: "Splits in two at half HP." },
+  thief: { name: "Thieving", icon: "🫳", text: "Every hit steals a card from your hand for this fight." },
+  hasty: { name: "Hasty", icon: "⚡", text: "Acts twice every turn, but hits softer." },
 };
 
 // A card upgraded at a camp fire ("strike+"): its damage, block, healing and poison 40% stronger (at play) - and
@@ -1263,7 +1266,7 @@ const RANKS = {
 const DEPTH_EXTRA = 0.015;
 // The difficulty of the floors on top: [floor, power] - between two of them evenly (fitted with the simulator, every
 // class on its stat curve clearing about three runs of four)
-const FLOOR_POWER = [[1, 2.209], [2, 2.674], [4, 2.122], [8, 1.95], [12, 1.66], [18, 1.504], [23, 1.739], [28, 1.069]];
+const FLOOR_POWER = [[1, 2.239], [2, 2.688], [4, 2.238], [8, 2.241], [12, 1.793], [18, 1.504], [23, 1.823], [28, 1.056]];
 function floorPower(floor, points = FLOOR_POWER) {
   if (floor <= points[0][0]) return points[0][1];
   for (let i = 1; i < points.length; i++) {
@@ -1300,6 +1303,7 @@ function monster(floor, size, kind, rank, depth = 0, rng = Math.random) {
     foe.affix = affixRoll();
     foe.name = AFFIXES[foe.affix].name + " " + foe.name;
     if (foe.affix == "enraged") foe.atk = Math.round(foe.atk * 1.3);
+    if (foe.affix == "hasty") foe.atk = Math.max(1, Math.round(foe.atk * 0.65));
     if (foe.affix == "armored") foe.armor = Math.min(ARMOR_MAX, foe.armor + 0.3);
   }
   return foe;
@@ -2148,6 +2152,18 @@ function bossPhase(run, foe) {
 }
 
 // A hit of a hero on a monster: the damage done (a plain attack may be dodged - a fading foe dodges them all)
+// A splitting monster at half HP the first time: two of it, the HP shared
+function splitCheck(run, foe) {
+  if (foe.affix != "splitter" || foe.split || foe.down || foe.hp <= 0 || foe.hp > foe.maxHp / 2) return;
+  foe.split = true;
+  const half = Math.max(1, Math.ceil(foe.hp / 2));
+  foe.hp = half;
+  const twin = { ...foe, id: "m" + ++monsterCount, effects: {}, intent: foe.intent, hp: half };
+  run.monsters.splice(run.monsters.indexOf(foe) + 1, 0, twin);
+  say(run, `${foe.icon} ${foe.name} splits in two! 🧬`);
+  fx(run, { k: "phase", by: foe.id, text: "Splits in two!" });
+}
+
 function strike(run, hero, foe, power, rng, options = {}) {
   if (foe.down) return 0;
   if (!options.sure && (foe.fading || rng() < foe.dodge)) {
@@ -2189,7 +2205,10 @@ function strike(run, hero, foe, power, rng, options = {}) {
     foe.down = true;
     say(run, `${foe.icon} ${foe.name} is defeated.`);
     fx(run, { k: "down", to: foe.id });
-  } else bossPhase(run, foe);
+  } else {
+    bossPhase(run, foe);
+    splitCheck(run, foe);
+  }
   return damage;
 }
 
@@ -2457,9 +2476,17 @@ function monsterMove(run, foe, rng) {
   const damage = intentDamage(foe, intent.move);
   switch (intent.move) {
     case "attack":
-    case "smash":
-      hurt(run, target, damage * between(rng, 0.9, 1.1), intent.move == "smash" ? source + " 💥" : source, rng, foe);
+    case "smash": {
+      const done = hurt(run, target, damage * between(rng, 0.9, 1.1), intent.move == "smash" ? source + " 💥" : source, rng, foe);
+      // (a thief: a card of the hand gone for the rest of the fight)
+      if (foe.affix == "thief" && done > 0 && !target.down && target.hand.length) {
+        const [card] = target.hand.splice(Math.floor(rng() * target.hand.length), 1);
+        target.exhausted.push(card.id);
+        say(run, `${source} steals ${cardInfo(card.id).icon} ${cardInfo(card.id).name} from ${target.name} 🫳.`);
+        fx(run, { k: "phase", by: foe.id, text: "Steals " + cardInfo(card.id).name });
+      }
       break;
+    }
     case "poison":
       if (hurt(run, target, damage, source, rng, foe) > 0 && !target.down) {
         afflict(target, "poison", 3, Math.max(1, Math.round(foe.atk * 0.35)));
@@ -2554,6 +2581,12 @@ function monsterTurn(run, rng = Math.random) {
     fx(run, { k: "move", by: foe.id, move: (foe.intent || { move: "attack" }).move });
     monsterMove(run, foe, rng);
     if (!alive(run.heroes).length) break;
+    // (hasty: once more)
+    if (foe.affix == "hasty" && !foe.down) {
+      fx(run, { k: "move", by: foe.id, move: (foe.intent || { move: "attack" }).move });
+      monsterMove(run, foe, rng);
+      if (!alive(run.heroes).length) break;
+    }
   }
   // (a long fight: the monsters grow furious - say it once)
   if (furious(run)) {
@@ -2580,6 +2613,7 @@ function monsterTurn(run, rng = Math.random) {
       fx(run, { k: "hit", to: one.icon ? one.id : one.name, n: effect.dmg, dot: kind });
       if (--effect.turns <= 0) delete one.effects[kind];
       if (one.icon) bossPhase(run, one);
+      if (one.icon && one.hp > 0) splitCheck(run, one);
       if (one.hp == 0) {
         one.down = true;
         fx(run, { k: "down", to: one.icon ? one.id : one.name });
@@ -3032,6 +3066,7 @@ module.exports = {
   doorsFor,
   monstersFor,
   afterRoom,
+  splitCheck,
   newRun,
   vote,
   allVoted,
@@ -3061,6 +3096,7 @@ module.exports = {
   play,
   endTurn,
   monsterTurn,
+  monsterMove,
   runView,
   simulate,
   simulatedTurn,

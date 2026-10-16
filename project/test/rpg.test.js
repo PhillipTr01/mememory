@@ -1299,3 +1299,32 @@ test("rpg: combo cards hit far harder after a skill this turn - the next turn st
   assert.ok(combo > plain * 2, `${plain} -> ${combo}`);
   assert.match(rpg.CARDS.followthrough.text, /if you played a skill this turn/);
 });
+
+test("rpg: elite affixes - splitting at half HP, thieving cards, acting twice", () => {
+  // Splitting: at half HP two of it, the HP shared
+  let run = duel("warrior", "defend", ["strike"]);
+  let foe = run.monsters[0];
+  foe.affix = "splitter";
+  foe.hp = 400;
+  rpg.splitCheck(run, foe);
+  assert.strictEqual(run.monsters.length, 2);
+  assert.deepStrictEqual(run.monsters.map((m) => m.hp), [200, 200]);
+  rpg.splitCheck(run, foe);
+  assert.strictEqual(run.monsters.length, 2, "once");
+  // Thieving: a hit takes a card of the hand for the fight
+  run = duel("warrior", "attack", ["strike", "defend"]);
+  foe = run.monsters[0];
+  foe.affix = "thief";
+  const me = run.heroes[0];
+  me.block = 0;
+  me.agi = 0;
+  rpg.monsterMove(run, foe, () => 0.5);
+  assert.strictEqual(me.hand.length, 1);
+  assert.strictEqual(me.exhausted.length, 1);
+  // Hasty: two moves a turn
+  run = duel("warrior", "attack", ["strike"]);
+  run.monsters[0].affix = "hasty";
+  run.heroes[0].agi = 0;
+  rpg.monsterTurn(run, () => 0.5);
+  assert.strictEqual(run.fx.filter((e) => e.k == "move" && e.by == "m1").length, 2);
+});
