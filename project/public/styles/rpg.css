@@ -6367,20 +6367,20 @@ button.rpg-cardx.off {
   gap: 0.35rem;
   opacity: 0.85;
 }
-.rpg-results.small .rpg-result {
+.rpg-results.small .rpg-got {
   min-width: 0;
   padding: 0.3rem 0.55rem;
   flex-direction: row;
   gap: 0.35rem;
 }
-.rpg-results.small .rpg-result-icon {
+.rpg-results.small .rpg-got-icon {
   font-size: 1rem;
 }
 .rpg-results.small .rpg-cardx.small {
   width: 4.6rem;
   min-height: 6.4rem;
 }
-.rpg-result {
+.rpg-got {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -6397,54 +6397,54 @@ button.rpg-cardx.off {
   cursor: default;
   animation: rpg-result-in 0.35s ease both;
 }
-.rpg-result-icon {
+.rpg-got-icon {
   font-size: 1.7rem;
   line-height: 1;
 }
-.rpg-result .rpg-flask {
+.rpg-got .rpg-flask {
   width: 1.7rem;
   height: 2rem;
 }
-.rpg-result-name {
+.rpg-got-name {
   font-size: 0.78rem;
   font-weight: 700;
   line-height: 1.2;
 }
-.rpg-result.rarity-common {
+.rpg-got.rarity-common {
   border-color: rgba(200, 200, 200, 0.4);
 }
-.rpg-result.rarity-rare {
+.rpg-got.rarity-rare {
   border-color: rgba(96, 165, 250, 0.7);
   box-shadow: 0 0 12px rgba(96, 165, 250, 0.2);
 }
-.rpg-result.rarity-epic {
+.rpg-got.rarity-epic {
   border-color: rgba(167, 139, 250, 0.75);
   box-shadow: 0 0 14px rgba(167, 139, 250, 0.25);
 }
-.rpg-result.rarity-legendary {
+.rpg-got.rarity-legendary {
   border-color: rgba(245, 197, 66, 0.85);
   box-shadow: 0 0 16px rgba(245, 197, 66, 0.3);
 }
-.rpg-result.relic {
+.rpg-got.relic {
   border-color: rgba(245, 158, 11, 0.7);
   background: linear-gradient(180deg, rgba(245, 158, 11, 0.16), rgba(245, 158, 11, 0.03));
 }
-.rpg-result.coins {
+.rpg-got.coins {
   border-color: rgba(245, 197, 66, 0.55);
   color: var(--rpg-gold);
 }
-.rpg-result.good {
+.rpg-got.good {
   border-color: rgba(74, 222, 128, 0.45);
   color: #86efac;
 }
-.rpg-result.bad {
+.rpg-got.bad {
   border-color: rgba(248, 113, 113, 0.5);
   color: #fca5a5;
 }
-.rpg-result.none {
+.rpg-got.none {
   opacity: 0.65;
 }
-.rpg-result-tag {
+.rpg-got-tag {
   position: absolute;
   bottom: 0.3rem;
   left: 50%;
@@ -6456,7 +6456,7 @@ button.rpg-cardx.off {
   background: rgba(0, 0, 0, 0.6);
   white-space: nowrap;
 }
-.rpg-result-tag.bad {
+.rpg-got-tag.bad {
   color: #fca5a5;
 }
 @keyframes rpg-result-in {
@@ -6952,20 +6952,20 @@ button.rpg-cardx.off {
   font-size: 0.68rem;
   color: rgba(255, 255, 255, 0.4);
 }
-.rpg-result {
+.rpg-got {
   border-radius: 16px;
   border-color: rgba(255, 255, 255, 0.07);
   background: rgba(255, 255, 255, 0.045);
   box-shadow: none;
 }
-.rpg-result.rarity-common { border-color: rgba(255, 255, 255, 0.1); }
-.rpg-result.rarity-rare { border-color: rgba(96, 165, 250, 0.3); background: rgba(96, 165, 250, 0.07); box-shadow: none; }
-.rpg-result.rarity-epic { border-color: rgba(167, 139, 250, 0.32); background: rgba(167, 139, 250, 0.08); box-shadow: none; }
-.rpg-result.rarity-legendary { border-color: rgba(245, 197, 66, 0.35); background: rgba(245, 197, 66, 0.08); box-shadow: none; }
-.rpg-result.relic { border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.08); }
-.rpg-result.coins { border-color: rgba(245, 197, 66, 0.25); background: rgba(245, 197, 66, 0.07); }
-.rpg-result.good { border-color: rgba(74, 222, 128, 0.22); background: rgba(74, 222, 128, 0.06); }
-.rpg-result.bad { border-color: rgba(248, 113, 113, 0.25); background: rgba(248, 113, 113, 0.06); }
+.rpg-got.rarity-common { border-color: rgba(255, 255, 255, 0.1); }
+.rpg-got.rarity-rare { border-color: rgba(96, 165, 250, 0.3); background: rgba(96, 165, 250, 0.07); box-shadow: none; }
+.rpg-got.rarity-epic { border-color: rgba(167, 139, 250, 0.32); background: rgba(167, 139, 250, 0.08); box-shadow: none; }
+.rpg-got.rarity-legendary { border-color: rgba(245, 197, 66, 0.35); background: rgba(245, 197, 66, 0.08); box-shadow: none; }
+.rpg-got.relic { border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.08); }
+.rpg-got.coins { border-color: rgba(245, 197, 66, 0.25); background: rgba(245, 197, 66, 0.07); }
+.rpg-got.good { border-color: rgba(74, 222, 128, 0.22); background: rgba(74, 222, 128, 0.06); }
+.rpg-got.bad { border-color: rgba(248, 113, 113, 0.25); background: rgba(248, 113, 113, 0.06); }
 .rpg-scene {
   border-color: rgba(255, 255, 255, 0.06);
 }
@@ -7095,4 +7095,54 @@ button.rpg-cardx.off {
 .rpg-ready-list .rpg-ready-sub {
   font-size: 0.74rem;
   color: rgba(255, 255, 255, 0.5);
+}
+
+/* The end of a run: a centered card - the result, the coins, what was gained */
+.rpg-handbar .rpg-result {
+  --end: 245, 197, 66;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  max-width: none;
+  padding: 1.2rem 1rem;
+  border: 0;
+  border-radius: 18px;
+  background: radial-gradient(70% 90% at 50% 0%, rgba(var(--end), 0.14), transparent 70%);
+  text-align: center;
+}
+.rpg-handbar .rpg-result.lost { --end: 248, 113, 113; }
+.rpg-handbar .rpg-result.left { --end: 148, 163, 184; }
+.rpg-result-icon {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+.rpg-handbar .rpg-result-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+.rpg-result-coins {
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgb(var(--end));
+}
+.rpg-result-note {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+.rpg-handbar .rpg-result .rpg-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+}
+.rpg-handbar .rpg-result .rpg-gain {
+  white-space: nowrap;
+  font-size: 0.82rem;
+}
+.rpg-handbar .rpg-result .rpg-btn {
+  min-width: 8rem;
+  margin-top: 0.3rem;
 }

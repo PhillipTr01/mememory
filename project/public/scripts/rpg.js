@@ -1986,7 +1986,7 @@ function roomScene(run, me) {
 
 // What a room gave (or took): a small card - its stats on hover
 function resultCard(r) {
-  var node = el("div", "rpg-result");
+  var node = el("div", "rpg-got");
   var icon = "✦";
   var name = "";
   var tip = "";
@@ -2003,7 +2003,7 @@ function resultCard(r) {
     tip = relic.text + " Lasts for this run.";
   } else if (r.k == "card") {
     var card = cardEl(r.id, { className: "small" + (r.lost ? " off" : "") });
-    if (r.lost) card.appendChild(el("span", "rpg-result-tag bad", "Given away"));
+    if (r.lost) card.appendChild(el("span", "rpg-got-tag bad", "Given away"));
     return card;
   } else if (r.k == "coins") {
     node.classList.add("coins");
@@ -2032,8 +2032,8 @@ function resultCard(r) {
     icon = r.walked ? "🚶" : "🕸️";
     name = r.walked ? "Walked on" : "Nothing";
   }
-  if (icon) node.appendChild(el("span", "rpg-result-icon", icon));
-  node.appendChild(el("span", "rpg-result-name", name));
+  if (icon) node.appendChild(el("span", "rpg-got-icon", icon));
+  node.appendChild(el("span", "rpg-got-name", name));
   if (tip) node.title = tip;
   return node;
 }
@@ -2295,14 +2295,21 @@ function handBar(run, me) {
   if (party.result) {
     var box = el("div", "rpg-result");
     var loot = party.result == "lost" ? [] : run.loot[myName] || [];
-    box.append(el("div", "rpg-result-title", party.result == "lost" ? "💀 Lost" : party.result == "won" ? "🎉 Cleared - 🪙 " + formatCoins(myPot(run)) + " for you" : "🚪 Left - 🪙 " + formatCoins(myPot(run)) + " for you"));
+    var lost = party.result == "lost";
+    box.classList.add(lost ? "lost" : party.result == "won" ? "won" : "left");
+    box.append(
+      el("div", "rpg-result-icon", lost ? "💀" : party.result == "won" ? "🎉" : "🚪"),
+      el("div", "rpg-result-title", lost ? "The party fell" : party.result == "won" ? "Floor cleared" : "You left the dungeon"),
+      el("div", "rpg-result-coins", lost ? "The loot is lost." : "You get 🪙 " + formatCoins(myPot(run)) + "."),
+    );
     var sum = party.summary && party.summary[myName];
     if (sum) {
       var gains = el("div", "rpg-summary");
-      gains.appendChild(el("span", "rpg-gain", "+" + sum.xp + " XP" + (party.result == "lost" ? " (half - lost)" : "")));
-      if (sum.ups) gains.appendChild(el("span", "rpg-gain up", "⬆️ Level " + sum.level + "! +" + sum.ups + " stat point" + (sum.ups == 1 ? "" : "s")));
-      if (sum.firstClear) gains.appendChild(el("span", "rpg-gain first", "🏆 First clear: +🪙 " + formatCoins(sum.firstClear)));
+      gains.appendChild(el("span", "rpg-gain", "+" + sum.xp + " XP"));
+      if (sum.ups) gains.appendChild(el("span", "rpg-gain up", "⬆️ Level " + sum.level + " and " + sum.ups + " new stat point" + (sum.ups == 1 ? "" : "s")));
+      if (sum.firstClear) gains.appendChild(el("span", "rpg-gain first", "🏆 First clear bonus of 🪙 " + formatCoins(sum.firstClear)));
       box.appendChild(gains);
+      if (lost) box.appendChild(el("div", "rpg-result-note", "You keep half of the XP."));
     }
     if (loot.length) {
       var list = el("div", "rpg-result-loot");
