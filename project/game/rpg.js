@@ -240,6 +240,8 @@ const HAND_MAX = 10;
 const TAUNT = 0.7;
 const CRIT = 1.8;
 const MIGHT = 1.3;
+// The damage of a hero's might: 30% more for every stack
+const mightOf = (hero) => 1 + (MIGHT - 1) * ((hero.effects && hero.effects.might && hero.effects.might.n) || 0);
 const REVIVE = 0.2; // a hero down: back up after the fight with this much HP
 const REST_HEAL = 0.35;
 const SHRINE_COST = 0.2; // of the max HP
@@ -2268,7 +2270,7 @@ function strike(run, hero, foe, power, rng, options = {}) {
   const crit = rng() * 100 < hero.luck + perk(hero, "crit");
   // (the perks of talents and relics: more damage, the first attack of a turn, low HP)
   const bonus = 1 + perk(hero, "attack") + (hero.firstAttack ? perk(hero, "firstStrike") : 0) + (hero.hp < hero.maxHp / 2 ? perk(hero, "lowHp") : 0);
-  let damage = hero.atk * between(rng, 0.9, 1.1) * power * bonus * (crit ? CRIT : 1) * (hero.blessed ? SHRINE_POWER : 1) * (hero.effects.might ? MIGHT : 1);
+  let damage = hero.atk * between(rng, 0.9, 1.1) * power * bonus * (crit ? CRIT : 1) * (hero.blessed ? SHRINE_POWER : 1) * mightOf(hero);
   // (armor - the warrior's hits break through a part of it; a hit on every foe: the mage's strength)
   damage *= 1 - (foe.armor || 0) * Math.max(0, 1 - perk(hero, "pierce"));
   if (options.aoe) damage *= (1 + perk(hero, "aoe")) * (foe.traits && foe.traits.includes("bulky") ? 0.7 : 1);
@@ -2424,12 +2426,14 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
 // - stats: {atk, def, agi, maxHp, perks}; ids: the cards (an upgraded one "id+")
 function liveTexts(stats, ids) {
   const texts = {};
+  // (in a run: the boosts of the moment in the numbers too - might, the shrine's blessing, a curse)
+  const boost = (stats.blessed ? SHRINE_POWER : 1) * mightOf(stats) * (stats.effects && stats.effects.weak ? WEAK : 1);
   for (const id of new Set(ids)) {
     const card = cardInfo(id);
     if (!card) continue;
     const up = isUpgraded(id) ? UPGRADE : 1;
     const p = (key) => (stats.perks && stats.perks[key]) || 0;
-    const dmg = (power, fx = {}) => Math.max(1, Math.round((stats.atk * power + (fx.def || 0) * stats.def) * (1 + p("attack")) * (fx.to == "all" ? 1 + p("aoe") : 1) * up));
+    const dmg = (power, fx = {}) => Math.max(1, Math.round((stats.atk * power + (fx.def || 0) * stats.def) * (1 + p("attack") + (stats.firstAttack ? p("firstStrike") : 0) + (stats.hp < stats.maxHp / 2 ? p("lowHp") : 0)) * (fx.to == "all" ? 1 + p("aoe") : 1) * up * boost));
     const n = {
       dmg,
       block: (fx) => Math.round((fx.block + (fx.def || 0) * stats.def + (fx.atk || 0) * stats.atk + (fx.agi || 0) * stats.agi) * (1 + p("block")) * up),
@@ -2513,7 +2517,11 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
       else m.effects[fx.status] = fx.turns || 1;
     }
   } else if (fx.might != null) {
-    for (const one of heroesOf(fx.to)) one.effects.might = fx.might;
+    // (might stacks: 30% more each time, as long as the longest one lasts)
+    for (const one of heroesOf(fx.to)) {
+      const old = one.effects.might;
+      one.effects.might = old ? { turns: Math.max(old.turns, fx.might), n: old.n + 1 } : { turns: fx.might, n: 1 };
+    }
   } else if (fx.draw != null) for (const one of fx.to == "party" ? alive(run.heroes) : [hero]) drawCards(one, fx.draw, rng);
   else if (fx.mana != null) hero.energy += fx.mana;
   else if (fx.lose != null) hero.hp = Math.max(1, hero.hp - Math.round(hero.maxHp * fx.lose));
@@ -2718,7 +2726,8 @@ function monsterTurn(run, rng = Math.random) {
         say(run, `${label} ${one.icon ? "is defeated" : "is down"}!`);
       }
     }
-    for (const kind of ["rage", "might", "weak"]) if (one.effects[kind] && --one.effects[kind] <= 0) delete one.effects[kind];
+    for (const kind of ["rage", "weak"]) if (one.effects[kind] && --one.effects[kind] <= 0) delete one.effects[kind];
+    if (one.effects.might && --one.effects.might.turns <= 0) delete one.effects.might;
   }
   for (const hero of run.heroes) {
     hero.taunting = hero.evading = false;
@@ -2855,6 +2864,7 @@ function runView(run) {
       share: h.share,
       blessed: h.blessed,
       effects: effectsOf(h.effects),
+      might: h.effects.might ? h.effects.might.n : 0,
       auras: (h.auras || []).map((aura) => ({ kind: aura.kind, value: aura.value, turns: aura.turns, card: aura.card })),
       hand: h.hand,
       drawCount: h.draw.length,
@@ -2957,7 +2967,7 @@ function simulatedTurn(run, me, rng) {
         else if (f.status == "poison" || f.status == "burn") value += many.length * me.atk * 0.4 * (f.turns || 2);
         else if (f.status == "stun") value += f.to == "all" ? foes.reduce((sum, m) => sum + threat(m), 0) : threat(foe);
         else if (f.status == "chill") value += (f.to == "all" ? foes.reduce((sum, m) => sum + threat(m), 0) : threat(foe)) * 0.4;
-        else if (f.might != null) value += me.atk * 0.3 * f.might;
+        else if (f.might != null) value += me.atk * 0.3 * f.might * (me.effects && me.effects.might ? 0.8 : 1);
         else if (f.draw != null) value += me.atk * 0.4 * f.draw;
         else if (f.mana != null) value += me.atk * 0.8 * f.mana;
         else if (f.lose != null) value -= me.maxHp * f.lose * 0.5;

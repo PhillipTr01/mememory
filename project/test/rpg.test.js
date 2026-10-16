@@ -1443,3 +1443,20 @@ test("rpg: cards as loot - a boss always drops one, rare or better, for the coll
   rpg.winFight(run, seeded(3));
   assert.ok(run.loot.a.some((item) => item.card && rpg.CARDS[item.card]));
 });
+
+test("rpg: might stacks - every play 30% more, the longest turns count, the card numbers show it", () => {
+  const run = duel("warrior", "attack", ["battlecry", "battlecry", "strike"]);
+  const me = run.heroes[0];
+  const before = rpg.runView(run).heroes[0].texts.strike;
+  assert.strictEqual(rpg.play(run, "a", { uid: "t0" }), null);
+  assert.strictEqual(rpg.play(run, "a", { uid: "t1" }), null);
+  assert.deepStrictEqual(me.effects.might, { turns: 2, n: 2 });
+  const view = rpg.runView(run).heroes[0];
+  assert.strictEqual(view.might, 2);
+  const number = (text) => Number(text.match(/(\d+) damage/)[1]);
+  assert.ok(Math.abs(number(view.texts.strike) - number(before) * 1.6) <= 1, view.texts.strike + " vs " + before);
+  me.energy = 5;
+  const hp = run.monsters[0].hp;
+  rpg.play(run, "a", { uid: "t2", target: "m1" });
+  assert.ok(hp - run.monsters[0].hp >= Math.floor(number(before) * 0.9 * 1.6), "the hit is 60% stronger");
+});

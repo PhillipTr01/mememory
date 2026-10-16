@@ -815,7 +815,8 @@ function renderBuffs(run, me) {
       list.push([AURA_ICONS[a.kind], a.turns, card.name + ": " + what + " at the start of your turn · " + a.turns + " turn" + (a.turns == 1 ? "" : "s") + " left", "good"]);
     });
     var fx = me.effects || {};
-    if (fx.might) list.push([EFFECT_ICONS.might, fx.might.turns || fx.might, "Might: 30% more damage", "good"]);
+    // (might stacks: the icon shows the stacks, the hover the whole boost)
+    if (fx.might) list.push([EFFECT_ICONS.might + (me.might > 1 ? "×" + me.might : ""), fx.might.turns || fx.might, "You deal " + 30 * (me.might || 1) + "% more damage.", "good"]);
     if (me.blessed) list.push(["✨", "", "Blessed: 25% more damage this run", "good"]);
     if (fx.weak) list.push([EFFECT_ICONS.weak, fx.weak.turns || fx.weak, "Cursed: 30% less damage", "bad"]);
     if (fx.poison) list.push([EFFECT_ICONS.poison, fx.poison.turns || "", "Poisoned: damage at the end of every turn", "bad"]);
