@@ -516,6 +516,12 @@ module.exports = function () {
     if (result.error) return res.status(400).json(result);
     res.json({ ...result, testers: testMode.list() });
   });
+  // {username, on}: the test coins filled up by themselves - or not
+  router.post("/api/test/refill", admin, (req, res) => {
+    const result = testMode.setRefill(String((req.body && req.body.username) || ""), req.body && req.body.on === true);
+    if (result.error) return res.status(400).json(result);
+    res.json({ ...result, testers: testMode.list() });
+  });
   router.post("/api/test/stop", admin, (req, res) => {
     const result = testMode.stop(String((req.body && req.body.username) || ""));
     if (result.error) return res.status(400).json(result);

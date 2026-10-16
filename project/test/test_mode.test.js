@@ -141,3 +141,17 @@ test("test mode debug levers: the next winner, roulette color, slots bonus, stac
     testMode.stop("admin1");
   }
 });
+
+test("test mode: auto refill can be turned off - the test coins then run out like real ones", () => {
+  const tm = require("../game/test_mode");
+  tm.start("tm_refill", 1000);
+  assert.strictEqual(tm.view("tm_refill").refill, true);
+  assert.strictEqual(tm.spend("tm_refill", 1500), true, "on: filled up");
+  assert.strictEqual(tm.setRefill("tm_refill", false).tester.refill, false);
+  tm.start("tm_refill", 1000);
+  assert.strictEqual(tm.view("tm_refill").refill, false, "a new balance keeps the switch");
+  assert.strictEqual(tm.spend("tm_refill", 800), true);
+  assert.strictEqual(tm.spend("tm_refill", 800), false, "off: not enough");
+  assert.strictEqual(tm.balance("tm_refill"), 200);
+  tm.stop("tm_refill");
+});

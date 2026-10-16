@@ -1273,6 +1273,24 @@ function renderTesters(testers) {
       refill.type = "button";
       refill.title = "Back to 🪙 " + formatCoins(tester.start);
       refill.addEventListener("click", () => startTest(tester.username, tester.start, refill));
+      // (auto refill: out of coins - filled up again)
+      var auto = el("label", "ad-switch ad-test-auto");
+      var check = document.createElement("input");
+      check.type = "checkbox";
+      check.checked = tester.refill !== false;
+      check.setAttribute("aria-label", "Auto refill for " + tester.username);
+      auto.append(check, el("span", "ad-switch-track"), el("span", "ad-switch-text", "Auto refill"));
+      auto.title = "Out of coins: back to 🪙 " + formatCoins(tester.start);
+      check.addEventListener("change", async () => {
+        check.disabled = true;
+        try {
+          renderTesters((await api("test/refill", { username: tester.username, on: check.checked })).testers);
+        } catch (error) {
+          fail(error);
+          check.checked = !check.checked;
+          check.disabled = false;
+        }
+      });
       var stop = el("button", "mm-btn mm-btn-sm mm-btn-danger-solid", "Stop");
       stop.type = "button";
       stop.addEventListener("click", async () => {
@@ -1285,7 +1303,7 @@ function renderTesters(testers) {
           stop.disabled = false;
         }
       });
-      row.append(who, refill, stop);
+      row.append(who, auto, refill, stop);
       return row;
     }),
   );

@@ -324,7 +324,8 @@ function makeWallet(kind) {
         refusals.set(username, capText(cap, round));
         return false;
       }
-      testMode().spend(username, amount);
+      // (auto refill off: the test coins run out)
+      if (!testMode().spend(username, amount)) return false;
       spentAt.set(username, Date.now());
       notify(username);
       return true;

@@ -2,7 +2,7 @@
  * The admin's test mode: a player account (the admin's own) plays in a world
  * of its own (game/worlds.js: every game once more, only for testers - real
  * players never see it) with a sandbox balance - as good as unlimited,
- * refilled by itself - and every item of the shop to wear. Nothing of it is
+ * refilled by itself (unless the admin turns that off) - and every item of the shop to wear. Nothing of it is
  * saved: no coin history, no change to the real balance, the leaderboard or
  * the season. Stopped (or a restart of the server): it is gone, the account
  * is as it was. Test coins never go to real players (no gifts).
@@ -29,7 +29,7 @@ function start(username, coins = DEFAULT_COINS) {
   if (!username) return { error: "Pick a player." };
   if (!Number.isInteger(coins) || coins < 1 || coins > 1000000000000) return { error: "Coins from 1 to 1,000,000,000,000." };
   const before = testers.get(username);
-  testers.set(username, { coins: coins, start: coins, since: before ? before.since : Date.now(), looks: before ? before.looks : { frame: null, effect: null, background: null } });
+  testers.set(username, { coins: coins, start: coins, since: before ? before.since : Date.now(), refill: before ? before.refill : true, looks: before ? before.looks : { frame: null, effect: null, background: null } });
   // (again: only the balance - the pages stay where they are)
   changes.emit(before ? "coins" : "change", username);
   return { tester: view(username) };
@@ -43,7 +43,7 @@ function stop(username) {
 
 function view(username) {
   const t = testers.get(username);
-  return t ? { username: username, coins: t.coins, start: t.start, since: t.since } : null;
+  return t ? { username: username, coins: t.coins, start: t.start, since: t.since, refill: t.refill } : null;
 }
 
 function list() {
@@ -62,13 +62,22 @@ function add(username, amount) {
   return true;
 }
 
-// As good as unlimited: not enough left - it is filled up to the start again (at least the amount)
+// Auto refill on (the admin panel's switch): as good as unlimited - not enough left, filled up to the start again (at
+// least the amount). Off: the coins run out like real ones.
 function spend(username, amount) {
   const t = testers.get(username);
   if (!t) return false;
+  if (t.coins < amount && !t.refill) return false;
   if (t.coins < amount) t.coins = Math.max(t.start, amount);
   t.coins -= amount;
   return true;
+}
+
+function setRefill(username, on) {
+  const t = testers.get(username);
+  if (!t) return { error: "Not in test mode." };
+  t.refill = on === true;
+  return { tester: view(username) };
 }
 
 function looks(username) {
@@ -90,4 +99,4 @@ function reset() {
   names.forEach((name) => changes.emit("change", name));
 }
 
-module.exports = { DEFAULT_COINS, BLOCKED_REASONS, MESSAGE, active, start, stop, view, list, balance, add, spend, looks, wear, reset, changes };
+module.exports = { DEFAULT_COINS, BLOCKED_REASONS, MESSAGE, active, start, stop, view, list, balance, add, spend, setRefill, looks, wear, reset, changes };
