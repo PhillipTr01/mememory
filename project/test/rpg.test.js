@@ -77,7 +77,7 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   // The classes: a main stat, two signature cards in the starter deck, 43 cards of their own - more than 50 to collect
   for (const id of rpg.CLASS_IDS) {
     assert.ok(rpg.STATS[rpg.CLASSES[id].main], id);
-    assert.strictEqual(rpg.CLASSES[id].cards.length, 45);
+    assert.ok(rpg.CLASSES[id].cards.length >= 45, id);
     assert.ok(rpg.poolOf(id).length >= 50, id);
     rpg.CLASSES[id].cards.forEach((card) => assert.ok(rpg.CARDS[card], card));
     assert.deepStrictEqual(rpg.starterDeck(id).slice(8), rpg.CLASSES[id].signature);
@@ -980,4 +980,27 @@ test("rpg: deck slots - one at first, more bought (up to 5), each keeps its own 
   assert.deepStrictEqual(rpg.heroView(hero).decks, [first.length, 1]);
   hero.deckSlots = 4;
   assert.strictEqual(rpg.deckSlotPrice(hero), null, "5 at most");
+});
+
+test("rpg: AURA cards - a type of their own, their block, healing or mana at the start of the next turns", () => {
+  assert.strictEqual(rpg.CARDS.stoneskin.type, "aura");
+  assert.strictEqual(rpg.CARDS.battlecry.type, "aura", "more damage for 2 turns: an aura too");
+  assert.match(rpg.CARDS.stoneskin.text, /every turn for 3 turns/);
+  const hero = rpg.newHero("warrior");
+  const run = rpg.newRun(1, [{ name: "a", hero }]);
+  rpg.enterRoom(run, 0);
+  const me = run.heroes[0];
+  me.hand.push({ uid: "aura1", id: "stoneskin" });
+  me.energy = 3;
+  run.monsters.forEach((m) => (m.hp = m.maxHp = 9999));
+  assert.strictEqual(rpg.play(run, "a", { uid: "aura1" }), null);
+  assert.strictEqual(me.auras.length, 1);
+  const value = me.auras[0].value;
+  rpg.endTurn(run, "a");
+  rpg.monsterTurn(run, () => 0.99);
+  assert.strictEqual(me.block, value, "the turn after: its block");
+  assert.strictEqual(me.auras[0].turns, 2);
+  assert.strictEqual(rpg.runView(run).heroes[0].auras[0].turns, 2);
+  // (more mana: every class has cheap mana cards now)
+  for (const cls of rpg.CLASS_IDS) assert.ok(rpg.poolOf(cls).filter((id) => rpg.CARDS[id].fx.some((f) => f.mana || f.aura == "focus") && ["common", "rare"].includes(rpg.CARDS[id].rarity)).length >= 3, cls);
 });

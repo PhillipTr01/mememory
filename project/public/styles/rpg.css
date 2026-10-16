@@ -7009,3 +7009,69 @@ button.rpg-cardx.off {
 .rpg-load .rpg-deck-switch {
   margin-left: 0;
 }
+
+/* AURA cards: lasting a few turns - teal */
+.rpg-cardx.type-aura {
+  --card-edge: rgba(45, 212, 191, 0.65);
+}
+.rpg-cardx.type-aura .rpg-cardx-art {
+  background: radial-gradient(circle at 50% 60%, rgba(45, 212, 191, 0.28), rgba(45, 212, 191, 0.06) 70%);
+}
+.rpg-cardx.type-aura .rpg-cardx-kind {
+  color: #99f6e4;
+  background: rgba(45, 212, 191, 0.22);
+}
+.rpg-deck-row.type-aura {
+  --strip: #2dd4bf;
+}
+
+/* My buffs in a fight: top left of the scene - an icon, the turns left */
+.rpg-buffs {
+  position: absolute;
+  top: 0.6rem;
+  left: 2.6rem;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  max-width: 45%;
+}
+.rpg-buff {
+  position: relative;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 15, 20, 0.75);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  backdrop-filter: blur(4px);
+  cursor: help;
+  animation: rpg-result-in 0.3s ease both;
+}
+.rpg-buff.bad {
+  border-color: rgba(248, 113, 113, 0.4);
+}
+.rpg-buff-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+.rpg-buff-n {
+  position: absolute;
+  right: -0.3rem;
+  bottom: -0.3rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #0b1f1c;
+  background: #5eead4;
+}
+.rpg-buff.bad .rpg-buff-n {
+  color: #fff;
+  background: #ef4444;
+}

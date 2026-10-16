@@ -95,7 +95,7 @@ function liveText(id) {
 // The type line of a card: attack (⚔️ red) or skill (🛡️ blue) - and its rarity
 function cardType(card) {
   var line = el("span", "rpg-cardx-type");
-  line.append(el("span", "rpg-cardx-kind", card.type == "attack" ? "⚔ Attack" : "✦ Skill"));
+  line.append(el("span", "rpg-cardx-kind", card.type == "attack" ? "⚔ Attack" : card.type == "aura" ? "✺ Aura" : "✦ Skill"));
   var rarity = (rules.cardRarities[card.rarity] || {}).name;
   if (rarity && card.rarity != "basic") line.append(" · " + rarity);
   return line;
@@ -807,6 +807,35 @@ function offerTutorial() {
   });
 }
 
+// My buffs in a fight (top left): an icon each, the turns left on it - what it does on hover
+var AURA_ICONS = { guard: "🛡️", regen: "💚", focus: "💧" };
+function renderBuffs(run, me) {
+  var list = [];
+  if (me && run.phase == "fight" && !me.down) {
+    (me.auras || []).forEach((a) => {
+      var card = rules.cards[a.card] || { name: "Aura" };
+      var what = a.kind == "guard" ? "Block " + a.value : a.kind == "regen" ? "+" + a.value + " HP" : "+" + a.value + " mana";
+      list.push([AURA_ICONS[a.kind], a.turns, card.name + ": " + what + " at the start of your turn · " + a.turns + " turn" + (a.turns == 1 ? "" : "s") + " left", "good"]);
+    });
+    var fx = me.effects || {};
+    if (fx.might) list.push([EFFECT_ICONS.might, fx.might.turns || fx.might, "Might: 30% more damage", "good"]);
+    if (me.blessed) list.push(["✨", "", "Blessed: 25% more damage this run", "good"]);
+    if (fx.weak) list.push([EFFECT_ICONS.weak, fx.weak.turns || fx.weak, "Cursed: 30% less damage", "bad"]);
+    if (fx.poison) list.push([EFFECT_ICONS.poison, fx.poison.turns || "", "Poisoned: damage at the end of every turn", "bad"]);
+    if (fx.burn) list.push([EFFECT_ICONS.burn, fx.burn.turns || "", "Burning: damage at the end of every turn", "bad"]);
+  }
+  morphChildren(
+    document.getElementById("rpgBuffs"),
+    list.map(([icon, n, tip, kind]) => {
+      var b = el("span", "rpg-buff " + kind);
+      b.append(el("span", "rpg-buff-icon", icon));
+      if (n !== "" && n != null) b.appendChild(el("b", "rpg-buff-n", String(n)));
+      b.title = tip;
+      return b;
+    }),
+  );
+}
+
 // The deck slots: a numbered pill each - the one played lit (only with more than one slot)
 function deckSwitch() {
   if (!hero.decks || hero.decks.length < 2) return null;
@@ -1375,7 +1404,7 @@ document.addEventListener("dragend", () => {
 // [key, label of the row, the options]
 var FILTERS = [
   ["pool", "Cards", [["all", "All cards"], ["class", "Class"], ["neutral", "Neutral"], ["both", "Class + neutral"]]],
-  ["type", "Type", [["all", "All"], ["attack", "Attacks"], ["skill", "Skills"]]],
+  ["type", "Type", [["all", "All"], ["attack", "Attacks"], ["skill", "Skills"], ["aura", "Auras"]]],
   ["cost", "Cost", [["all", "Any"], ["0", "0"], ["1", "1"], ["2", "2"], ["3", "3+"]]],
   ["rarity", "Rarity", [["all", "Any"], ["basic", "Basic"], ["common", "Common"], ["rare", "Rare"], ["epic", "Epic"], ["legendary", "Legendary"], ["mythic", "Mythic"]]],
 ];
@@ -1687,6 +1716,7 @@ function renderRun() {
 
   renderModal(run, me);
   renderPartyStats(run);
+  renderBuffs(run, me);
 
   var scene;
   if (fighting) {

@@ -8,6 +8,8 @@
  *   {status: "poison" | "burn" | "chill" | "stun", turns, to: "foe" | "all" | "random"}
  *   {might: turns, to: "self" | "ally" | "party"} - 30% more damage
  *   {draw: n} {mana: n} {lose: share of the max HP} {evade: true}
+ *   {aura: "guard" | "regen" | "focus", turns, to: "self" | "party", block, def, agi | heal | mana} - an AURA: at the start
+ *   of each of the next turns (block, healing, mana)
  * States for bonusIf: poison, burn, chill, stun, undead (the foe) - low (the hero below half HP)
  */
 
@@ -88,6 +90,9 @@ const NEUTRAL = {
   inspire: ["Inspire", "🎺", 1, "rare", [{ might: 2, to: "ally" }, { draw: 1 }]],
   gamble: ["Desperate Gamble", "🎲", 0, "rare", [{ mana: 1 }, { draw: 2 }, { lose: 0.06 }], true],
   panacea: ["Panacea", "🧴", 1, "rare", [{ heal: 0.1, to: "party" }]],
+  // (AURAS: lasting a few turns)
+  steadybreath: ["Steady Breath", "🌬️", 1, "common", [{ aura: "focus", mana: 1, turns: 2 }], true],
+  stoneskin: ["Stoneskin", "🪨", 1, "rare", [{ aura: "guard", block: 5, turns: 3 }]],
   berserkerbrew: ["Berserker Brew", "🍷", 0, "legendary", [{ mana: 2 }, { might: 2 }], true],
   goldenstrike: ["Golden Strike", "🏆", 3, "legendary", [{ hit: 2.5 }, { draw: 1 }]],
   wish: ["Wish", "🌟", 0, "mythic", [{ heal: 0.3 }, { mana: 2 }, { draw: 3 }], "mythic"],
@@ -110,6 +115,7 @@ const NEUTRAL = {
 
 const CLASS = {
   warrior: {
+    warbanner: ["War Banner", "🚩", 2, "epic", [{ aura: "guard", block: 6, def: 0.5, turns: 3 }, { might: 3 }]],
     heavyslash: ["Heavy Slash", "⚒️", 1, "common", [{ hit: 1.35 }]],
     shieldup: ["Shield Up", "🛡️", 1, "common", [{ block: 9, def: 1 }]],
     headbutt: ["Headbutt", "🐏", 1, "common", [{ hit: 1 }, { draw: 1 }]],
@@ -149,6 +155,8 @@ const CLASS = {
     warpath: ["Warpath", "🐗", 4, "epic", [{ hit: 1.1, times: 3 }]],
   },
   paladin: {
+    zeal: ["Zeal", "🔥", 0, "common", [{ mana: 1 }, { block: 3, def: 0.5 }], true],
+    devotionaura: ["Devotion Aura", "🔆", 1, "rare", [{ aura: "guard", block: 4, def: 0.5, turns: 3, to: "party" }]],
     shieldslam: ["Shield Slam", "🔘", 1, "common", [{ hit: 0.6, def: 1 }]],
     guard: ["Guard", "🚧", 1, "common", [{ block: 7, def: 1, to: "ally" }]],
     holystrike: ["Holy Strike", "✝️", 1, "common", [{ hit: 1.1, bonusIf: "stun", bonus: 2.2 }]],
@@ -188,6 +196,7 @@ const CLASS = {
     bastion: ["Bastion", "🏯", 4, "epic", [{ block: 18, def: 2, to: "party" }], true],
   },
   cleric: {
+    renewalaura: ["Aura of Renewal", "🌿", 1, "rare", [{ aura: "regen", heal: 0.05, turns: 3, to: "party" }]],
     mend: ["Mend", "🌿", 1, "common", [{ heal: 0.15, to: "ally" }]],
     holybolt: ["Holy Bolt", "🌠", 1, "common", [{ hit: 1, bonusIf: "undead", bonus: 2.2 }]],
     renew: ["Renew", "🌱", 1, "common", [{ heal: 0.08, to: "party" }]],
@@ -227,6 +236,8 @@ const CLASS = {
     salvation: ["Salvation", "🕊️", 4, "legendary", [{ heal: 0.35, to: "party" }, { cleanse: true, to: "party" }, { block: 8, to: "party" }], true],
   },
   rogue: {
+    preparation: ["Preparation", "🎒", 0, "common", [{ mana: 1 }, { block: 3, agi: 0.2 }], true],
+    shadowveil: ["Shadow Veil", "🌫️", 1, "rare", [{ aura: "guard", block: 4, agi: 0.3, turns: 3 }]],
     shiv: ["Shiv", "🪡", 0, "common", [{ hit: 0.5 }]],
     deadlypoison: ["Deadly Poison", "🐍", 1, "common", [{ status: "poison", turns: 4 }]],
     sneakattack: ["Sneak Attack", "🥷", 1, "common", [{ hit: 0.9, bonusIf: "stun", bonus: 2.2 }]],
@@ -266,6 +277,7 @@ const CLASS = {
     kingslayer: ["Kingslayer", "👑", 4, "epic", [{ hit: 3.2, bonusIf: "poison|stun", bonus: 4.6 }]],
   },
   mage: {
+    arcaneaura: ["Arcane Aura", "🔷", 1, "epic", [{ aura: "focus", mana: 1, turns: 3 }], true],
     firebolt: ["Fire Bolt", "🌶️", 1, "common", [{ hit: 0.8 }, { status: "burn", turns: 2 }]],
     frostnova: ["Frost Nova", "💠", 1, "common", [{ status: "chill", turns: 2, to: "all" }, { block: 4 }]],
     missile: ["Magic Missile", "🪄", 1, "common", [{ hit: 0.4, to: "random", times: 3 }]],
@@ -328,6 +340,11 @@ function amount(fx) {
 }
 
 function phrase(fx, n) {
+  if (fx.aura) {
+    const who = fx.to == "party" ? "the party " : "";
+    const each = fx.aura == "guard" ? who + (who ? "blocks " : "block ") + (n && n.block ? n.block(fx) : amount(fx)) : fx.aura == "regen" ? who + (who ? "heals " : "heal ") + (n && n.heal ? n.heal(fx.heal) + " HP" : pct(fx.heal) + " of your max HP") : "+" + fx.mana + " mana";
+    return each + " every turn for " + fx.turns + " turns";
+  }
   if (fx.hit != null) {
     let text = "deal " + (n ? n.dmg(fx.hit, fx) : pct(fx.hit)) + " damage";
     if (fx.def && !n) text += " + " + (fx.def == 1 ? "your armor" : pct(fx.def) + " of your armor");
@@ -396,6 +413,7 @@ function targetOf(fx) {
 // part that isn't scaled (mana, cards, states)
 const FOES = 2.2; // foes in a fight, on average (a hit to every foe)
 function worth(fx) {
+  if (fx.aura) return { scaled: 0, fixed: fx.turns * (fx.to == "party" ? 1.6 : 1) * (fx.aura == "focus" ? fx.mana : fx.aura == "regen" ? fx.heal / 0.12 : fx.block / 7 + (fx.def || 0) * 0.3 + (fx.agi || 0) * 0.05) * 0.7 };
   if (fx.hit != null) {
     const base = (fx.bonusIf ? fx.hit * 0.75 + fx.bonus * 0.25 : fx.hit) * (fx.fromBlock ? 2 : 1) * (fx.execute ? 1.3 : 1);
     return { scaled: (base + (fx.def || 0) * 0.5) * (fx.times || 1) * (fx.to == "all" ? FOES * 0.75 : 1), fixed: 0 };
@@ -434,6 +452,7 @@ function balanced(fx, cost, rarity, exhaust) {
   const round = (value, step) => Math.round(value / step) * step;
   return fx.map((one) => {
     const out = { ...one };
+    if (one.aura) return out;
     if (one.hit != null) {
       out.hit = round(one.hit * k, 0.05);
       if (one.bonus != null) out.bonus = round(one.bonus * k, 0.05);
@@ -451,7 +470,7 @@ function build(list) {
   const cards = {};
   for (const [id, [name, icon, cost, rarity, written, exhaust]] of Object.entries(list)) {
     const fx = balanced(written, cost, rarity, exhaust);
-    cards[id] = { name, icon, cost, type: fx.some((one) => one.hit != null) ? "attack" : "skill", target: targetOf(fx), exhaust: exhaust === true, mythic: exhaust == "mythic", rarity, fx, text: textOf(fx, exhaust) };
+    cards[id] = { name, icon, cost, type: fx.some((one) => one.hit != null) ? "attack" : fx.some((one) => one.aura || (one.might != null && one.might > 1)) ? "aura" : "skill", target: targetOf(fx), exhaust: exhaust === true, mythic: exhaust == "mythic", rarity, fx, text: textOf(fx, exhaust) };
   }
   return cards;
 }

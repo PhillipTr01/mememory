@@ -430,7 +430,7 @@ const TALENTS = {
   ],
   paladin: [
     [{ id: "spikes", name: "Spiked Armor", icon: "🌵", text: "Thorns +30% of your armor.", perks: { thornsDef: 0.3 } }, { id: "bastion", name: "Bastion", icon: "🏰", text: "25% more block from your cards.", perks: { block: 0.25 } }],
-    [{ id: "aegis", name: "Aegis", icon: "🛡️", text: "Start every fight with 12 block.", perks: { startBlock: 12 } }, { id: "vigil", name: "Vigil", icon: "❤️", text: "+15% max HP.", perks: { maxHp: 0.15 } }],
+    [{ id: "aegis", name: "Aegis", icon: "🛡️", text: "Start every fight with 12 block.", perks: { startBlock: 12 } }, { id: "zealous", name: "Zealous", icon: "💧", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
     [{ id: "retribution", name: "Retribution", icon: "⚡", text: "Thorns +40% of your armor.", perks: { thornsDef: 0.4 } }, { id: "shieldwall", name: "Shield Wall", icon: "🧱", text: "30% more block from your cards.", perks: { block: 0.3 } }],
     [{ id: "holyarmor", name: "Holy Armor", icon: "📿", text: "Start every fight with 10 block, thorns +5.", perks: { startBlock: 10, thorns: 5 } }, { id: "rampart", name: "Rampart", icon: "🏯", text: "Start every fight with 15 block.", perks: { startBlock: 15 } }],
     [{ id: "thornlord", name: "Thorn Lord", icon: "🌹", text: "Thorns +10 and +30% of your armor.", perks: { thorns: 10, thornsDef: 0.3 } }, { id: "steadfast", name: "Steadfast", icon: "⚓", text: "+20% max HP.", perks: { maxHp: 0.2 } }],
@@ -454,7 +454,7 @@ const TALENTS = {
     [{ id: "venom", name: "Venom", icon: "🐍", text: "Your poison is 40% stronger.", perks: { poison: 0.4 } }, { id: "quick", name: "Quick Hands", icon: "🤹", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
     [{ id: "assassin", name: "Assassin", icon: "🗡️", text: "Your first attack each turn deals 50% more.", perks: { firstStrike: 0.5 } }, { id: "evasion", name: "Evasion", icon: "🪶", text: "+8% to dodge a hit.", perks: { agi: 8 } }],
     [{ id: "lethal", name: "Lethal", icon: "🎯", text: "+12% critical hits.", perks: { crit: 12 } }, { id: "toxicologist", name: "Toxicologist", icon: "🧪", text: "Your poison is 50% stronger.", perks: { poison: 0.5 } }],
-    [{ id: "nimble", name: "Nimble", icon: "🤸", text: "+6% to dodge a hit.", perks: { agi: 6 } }, { id: "leech", name: "Leech", icon: "🦇", text: "Heal 10% of your attack damage.", perks: { lifesteal: 0.1 } }],
+    [{ id: "swift", name: "Swift", icon: "💧", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }, { id: "leech", name: "Leech", icon: "🦇", text: "Heal 10% of your attack damage.", perks: { lifesteal: 0.1 } }],
     [{ id: "opportunist", name: "Opportunist", icon: "🎭", text: "Your first attack each turn deals 60% more.", perks: { firstStrike: 0.6 } }, { id: "cutthroat", name: "Cutthroat", icon: "🔪", text: "+12% critical hits.", perks: { crit: 12 } }],
     [{ id: "venomancer", name: "Venomancer", icon: "🐍", text: "Your poison is 60% stronger.", perks: { poison: 0.6 } }, { id: "shadow", name: "Shadow", icon: "🌑", text: "+8% to dodge a hit.", perks: { agi: 8 } }],
     [{ id: "deadeye", name: "Deadeye", icon: "👁️", text: "+15% critical hits.", perks: { crit: 15 } }, { id: "sleight", name: "Sleight of Hand", icon: "🃏", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
@@ -1488,6 +1488,7 @@ function enterRoom(run, door = 0, rng = Math.random) {
       hero.discard = [];
       hero.exhausted = [];
       hero.effects = {};
+      hero.auras = [];
       hero.reward = null;
     }
     say(run, `${run.monsters.map((m) => m.icon + " " + m.name).join(", ")}!`);
@@ -1868,6 +1869,16 @@ function startRound(run, rng) {
     hero.bonusEnergy = 0;
     hero.ended = false;
     hero.attacked = false;
+    // (the AURAS: their block, healing, mana - a turn less)
+    for (const aura of hero.auras || []) {
+      if (aura.kind == "guard") {
+        hero.block += aura.value;
+        fx(run, { k: "block", to: hero.name, n: aura.value });
+      } else if (aura.kind == "regen") healHero(run, hero, aura.value);
+      else if (aura.kind == "focus") hero.energy += aura.value;
+      aura.turns--;
+    }
+    if (hero.auras) hero.auras = hero.auras.filter((aura) => aura.turns > 0);
     drawCards(hero, Math.max(0, HAND + perk(hero, "draw") - hero.hand.length), rng);
   }
   planIntents(run, rng);
@@ -2078,7 +2089,7 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
   const venom = up * (1 + perk(hero, "poison"));
   const info = CARDS[baseCard(id)];
   if (info.type != "attack") say(run, `${hero.name} plays ${info.icon} ${info.name}.`);
-  for (const fx of info.fx) playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal }, rng);
+  for (const fx of info.fx) playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, card: baseCard(id) }, rng);
 }
 
 // The texts of cards with a character's numbers (its damage, block, healing) instead of the shares: {id: text}
@@ -2106,7 +2117,7 @@ function liveTexts(stats, ids) {
 // (the event of the playback - the step below is called fx)
 const fxEvent = (run, event) => fx(run, event);
 
-function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal }, rng) {
+function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, card }, rng) {
   const foesOf = (to) => {
     const standing = alive(run.monsters);
     if (to == "all") return standing;
@@ -2119,6 +2130,17 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal }, 
     if (to == "weakest") return alive(run.heroes).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, 1);
     return [hero];
   };
+  if (fx.aura) {
+    // (an AURA: its value now - given at the start of each of the next turns)
+    const value =
+      fx.aura == "guard"
+        ? Math.round((fx.block + (fx.def || 0) * hero.def + (fx.atk || 0) * hero.atk + (fx.agi || 0) * hero.agi) * up * (1 + perk(hero, "block")))
+        : fx.aura == "regen"
+          ? Math.round(hero.maxHp * fx.heal * up * (1 + perk(hero, "heal")))
+          : fx.mana;
+    for (const one of heroesOf(fx.to)) (one.auras = one.auras || []).push({ kind: fx.aura, value, turns: fx.turns, card });
+    return;
+  }
   // (a condition - "poison|stun": any of them)
   const state = (m, cond) => cond.split("|").some((one) => (one == "low" ? hero.hp < hero.maxHp / 2 : one == "undead" ? m.undead : !!m.effects[one]));
   if (fx.hit != null) {
@@ -2362,6 +2384,7 @@ function winFight(run, rng) {
   const rise = REVIVE + ABILITIES.cleric.rise * (abilityLevel(run, "cleric") || 0);
   for (const hero of run.heroes) {
     hero.effects = {};
+    hero.auras = [];
     hero.block = 0;
     hero.taunting = hero.evading = false;
     hero.hand = [];
@@ -2439,6 +2462,7 @@ function runView(run) {
       share: h.share,
       blessed: h.blessed,
       effects: effectsOf(h.effects),
+      auras: (h.auras || []).map((aura) => ({ kind: aura.kind, value: aura.value, turns: aura.turns, card: aura.card })),
       hand: h.hand,
       drawCount: h.draw.length,
       discardCount: h.discard.length,
