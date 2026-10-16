@@ -85,7 +85,7 @@ function softStat(id, raw) {
 }
 
 // What a room puts in the pot (per hero, a share of the entry)
-const REWARD = { fight: 0.27, hard: 0.52, elite: 0.52, boss: 0.85, chest: 0.22, trap: 0, rest: 0, shrine: 0, merchant: 0 };
+const REWARD = { fight: 0.3, hard: 0.55, elite: 0.55, boss: 0.9, chest: 0.3, trap: 0, rest: 0, shrine: 0, merchant: 0 };
 
 /* ---------- Classes and their cards ---------- */
 
@@ -1729,11 +1729,14 @@ function choose(run, name, input = {}, rng = Math.random) {
 
 // What a hero may buy at one merchant
 const MERCHANT_BUY = { cards: 2, relics: 1 };
+const MERCHANT_CARD = 0.25; // a common card at the merchant: this share of the floor's entry
 // The merchant's prices (coins): a potion, a (common) card, a relic, a card taken out of the deck
 const CARD_PRICE = { common: 1, rare: 1.5, epic: 2.5, legendary: 3.5, basic: 1, mythic: 5 };
+// (the cards are only for the run: cheap - a quarter of the floor's entry, 2,500 on floor 1, growing with the floors
+// as the entry, the loot and the stat levels do)
 function merchantPrices(floor) {
-  const card = round100(Math.max(4000, entryCost(floor) * 0.8));
-  return { card, relic: card * 3, remove: card };
+  const card = round100(entryCost(floor) * MERCHANT_CARD);
+  return { card, relic: card * 2, remove: card };
 }
 
 // What a hero may buy of the merchant: {price} or {error} (item: "potion", "remove:<index of the deck>", a card or a

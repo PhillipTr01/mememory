@@ -352,6 +352,8 @@ test("rpg: the map - a Rogue's instinct senses what a room is; rooms to choose i
   assert.match(rpg.canBuy(run, "a", offer.cards[2]).error, /2 cards/);
   me.deck.pop();
   assert.strictEqual(rpg.canBuy(run, "a", "remove:0").price, rpg.merchantPrices(1).remove);
+  assert.deepStrictEqual(rpg.merchantPrices(1), { card: 2500, relic: 5000, remove: 2500 }, "floor 1: 2,500 a card - growing with the entry");
+  assert.ok(rpg.merchantPrices(5).card > rpg.merchantPrices(4).card);
   rpg.bought(run, "a", "remove:1");
   assert.strictEqual(me.deck.length, deck);
   assert.match(rpg.canBuy(run, "a", "remove:0").error, /one card a visit/);
