@@ -826,41 +826,47 @@ function renderReady() {
     if (act) row.appendChild(button(label, act, { id: id, className: "small" + (state == "warn" ? " primary" : "") }));
     items.push(row);
   };
-  // The loadout - what counts in the dungeon: the deck, the potions, the gear worn
+  // The loadout - what counts in the dungeon: the deck, the potions, the gear worn - a soft row each
   var n = hero.deck.length;
   var deckOk = n >= hero.deckMin && n <= hero.deckMax;
   var loadout = el("div", "rpg-loadout");
-  var tile = (cls, act, id, title, state, body, foot) => {
-    var t = el("button", "rpg-load " + cls + " " + state);
-    t.type = "button";
-    t.dataset.act = act;
-    if (id) t.dataset.id = id;
-    var head = el("div", "rpg-load-head");
-    head.append(el("span", "rpg-load-title", title), el("span", "rpg-load-state", state == "ok" ? "✓" : "!"));
-    t.append(head, body);
-    if (foot) t.appendChild(foot);
-    return t;
+  var line = (icon, title, value, state, act, id, tip, extra) => {
+    var row = el("button", "rpg-load " + state);
+    row.type = "button";
+    if (act) row.dataset.act = act;
+    if (id) row.dataset.id = id;
+    if (tip) row.title = tip;
+    var pic = el("span", "rpg-load-icon");
+    if (typeof icon == "string") pic.innerText = icon;
+    else pic.appendChild(icon);
+    var text = el("span", "rpg-load-text");
+    text.append(el("span", "rpg-load-title", title), el("span", "rpg-load-value", value));
+    row.append(pic, text);
+    if (extra) row.appendChild(extra);
+    row.appendChild(el("span", "rpg-load-state", state == "ok" ? "✓" : "!"));
+    return row;
   };
-  // (the deck: a fan of card backs, its count)
-  var fan = el("div", "rpg-load-fan");
-  for (var f = 0; f < 3; f++) fan.appendChild(el("i", ""));
-  fan.appendChild(el("b", "", String(n)));
-  loadout.appendChild(tile("deck", "view", "deck", "🃏 Deck", deckOk ? "ok" : "warn", fan, el("span", "rpg-load-foot", deckOk ? hero.deckMin + " to " + hero.deckMax + " cards" : n < hero.deckMin ? hero.deckMin - n + " more needed" : n - hero.deckMax + " too many")));
-  // (the potions: a flask each)
-  var flasks = el("div", "rpg-load-flasks");
+  // (the deck: a meter between the fewest and the most cards)
+  var meter = el("span", "rpg-load-meter");
+  var fill = el("i");
+  fill.style.width = Math.min(100, (n / hero.deckMax) * 100) + "%";
+  meter.appendChild(fill);
+  loadout.appendChild(line("🃏", "Deck", n + " cards", deckOk ? "ok" : "warn", "view", "deck", hero.deckMin + " to " + hero.deckMax + " cards", meter));
+  // (the potions: a small flask each)
+  var flasks = el("span", "rpg-load-flasks");
   for (var i = 0; i < hero.potionsMax; i++) flasks.appendChild(flask(i < hero.potions ? "" : "off"));
-  var buyFoot = el("span", "rpg-load-foot", hero.potions < hero.potionsMax ? "+1 · 🪙 " + formatCoins(hero.potionPrice) : hero.potions + " / " + hero.potionsMax + " · full");
-  loadout.appendChild(tile("potions", hero.potions < hero.potionsMax ? "potion" : "", null, "Potions", hero.potions ? "ok" : "warn", flasks, buyFoot));
-  // (the gear: the three slots)
-  var slots = el("div", "rpg-load-slots");
+  var full = hero.potions >= hero.potionsMax;
+  loadout.appendChild(line(flask(), "Potions", hero.potions + " / " + hero.potionsMax, hero.potions ? "ok" : "warn", full ? null : "potion", null, full ? "Full" : "Buy one: 🪙 " + formatCoins(hero.potionPrice), flasks));
+  // (the gear: the three slots - what is worn)
+  var slots = el("span", "rpg-load-slots");
   ["weapon", "armor", "charm"].forEach((slot) => {
     var item = hero.gear[slot];
-    var box = el("span", "rpg-load-slot" + (item ? " rarity-" + item.rarity : " empty"), item ? item.icon : SLOT_ICONS[slot]);
-    box.title = item ? item.name + "\n" + bonusOf(item).split(" · ").join("\n") : SLOT_NAMES[slot] + ": empty";
-    slots.appendChild(box);
+    var mark = el("span", "rpg-load-slot" + (item ? " rarity-" + item.rarity : " empty"), item ? item.icon : SLOT_ICONS[slot]);
+    mark.title = item ? item.name + "\n" + bonusOf(item).split(" · ").join("\n") : SLOT_NAMES[slot] + ": empty";
+    slots.appendChild(mark);
   });
   var worn = ["weapon", "armor", "charm"].filter((slot) => hero.gear[slot]).length;
-  loadout.appendChild(tile("gear", "view", "gear", "🎒 Gear", worn ? "ok" : "warn", slots, el("span", "rpg-load-foot", worn + " / 3 worn" + (hero.bag.length ? " · " + hero.bag.length + " in the bag" : ""))));
+  loadout.appendChild(line("🎒", "Gear", worn + " / 3 worn", worn ? "ok" : "warn", "view", "gear", null, slots));
   items.push(loadout);
   // (what still waits: a row each)
   if (hero.deadFor > 0) item("💀", "Dead", "Back in " + duration(hero.deadFor - (Date.now() - heroAt)), "warn", "revive", null, "Revive · 🪙 " + formatCoins(hero.revivePrice));
