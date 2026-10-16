@@ -1814,6 +1814,7 @@ function renderRun() {
   morphChildren(document.getElementById("rpgHeroes"), heroes);
 
   morphChildren(document.getElementById("rpgHandBar"), handBar(run, me));
+  fitFullscreen();
   fitHand();
 
   if (me) {
@@ -2607,10 +2608,21 @@ function fitHand() {
   if (!first) return;
   var n = hand.querySelectorAll(".rpg-cardx").length;
   // (room left for the tilt of the outer cards)
-  var squeeze = Math.max(5.6, (n * first.offsetWidth - (hand.clientWidth - 48)) / (2 * n));
+  var squeeze = Math.max(1, (n * first.offsetWidth - (hand.clientWidth - 48)) / (2 * n));
   hand.style.setProperty("--squeeze", squeeze + "px");
 }
 window.addEventListener("resize", fitHand);
+
+// Full screen: the fight as high as the screen below the header (the hand never under its edge)
+function fitFullscreen() {
+  var main = document.querySelector(".rpg-main");
+  var stage = document.querySelector(".rpg-stage");
+  if (!main || !stage || document.fullscreenElement != main || stage.offsetParent == null) return;
+  var top = stage.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop;
+  main.style.setProperty("--rpg-fs-top", Math.ceil(top + parseFloat(getComputedStyle(main).paddingBottom)) + "px");
+}
+window.addEventListener("resize", fitFullscreen);
+document.addEventListener("fullscreenchange", () => setTimeout(fitFullscreen, 50));
 
 // The time of a turn (only with others), counting down
 function tick() {

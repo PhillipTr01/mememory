@@ -1155,6 +1155,11 @@ button.rpg-cardx.off {
   transform: rotate(var(--tilt, 0deg)) translateY(var(--lift, 0px));
 }
 
+/* (a card in a crowded hand: on hover in front of its neighbors, readable - also one you can't play now) */
+.rpg-hand .rpg-cardx:hover {
+  z-index: 3;
+}
+
 .rpg-hand.ended .rpg-cardx {
   filter: saturate(0.4);
 }
@@ -5579,11 +5584,9 @@ button.rpg-cardx.off {
 .rpg-main.cs-fullscreen .rpg-run:not([hidden]) {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 2rem);
 }
 
 .rpg-main.cs-fullscreen .rpg-run-body {
-  flex: 1;
   grid-template-columns: minmax(0, 1fr) 17rem;
   align-items: stretch;
 }
@@ -5593,11 +5596,18 @@ button.rpg-cardx.off {
 }
 
 .rpg-main.cs-fullscreen .rpg-stage {
-  min-height: calc(100vh - 6rem);
+  height: calc(100vh - var(--rpg-fs-top, 8rem));
+  min-height: 34rem;
+}
+
+.rpg-main.cs-fullscreen .rpg-handbar {
+  flex: none;
 }
 
 .rpg-main.cs-fullscreen .rpg-arena {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   justify-content: space-around;
 }
 
@@ -5616,7 +5626,7 @@ button.rpg-cardx.off {
 
 .rpg-main.cs-fullscreen .rpg-map-box {
   position: static;
-  justify-content: center;
+  align-self: start;
 }
 
 .rpg-main.cs-fullscreen .rpg-home,
