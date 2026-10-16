@@ -1810,6 +1810,9 @@ function pickRelic(run, name, id) {
 }
 
 // A hero's choice in a room: {option, card} (card: an index of the deck - or a card offered) -> an error or null
+// A choice in a room: alone (and at the merchant) it happens at once - in a party it is a vote: the most votes
+// (a tie: one of them at random) happens for everyone once all have voted (a hero voting for another option gets
+// a card of its own picked for it)
 function choose(run, name, input = {}, rng = Math.random) {
   const hero = run.heroes.find((h) => h.name == name);
   const event = run.event;
@@ -1817,16 +1820,64 @@ function choose(run, name, input = {}, rng = Math.random) {
   if (event.choices[name]) return "You chose already.";
   const option = optionsOf(event).find((o) => o.id == input.option);
   if (!option) return "Not one of the choices.";
-  let index = null;
+  const error = choiceError(run, event, hero, option, input);
+  if (error) return error;
+  const voters = Object.keys(event.choices).filter((one) => run.heroes.some((h) => h.name == one));
+  if (voters.length <= 1 || event.kind == "merchant") return applyChoice(run, hero, option, input, rng);
+  event.votes = event.votes || {};
+  if (event.votes[name]) return "You voted already.";
+  event.votes[name] = { option: option.id, card: input.card };
+  const here = run.heroes.filter((h) => !h.away && voters.includes(h.name));
+  if (!here.every((h) => event.votes[h.name])) return null;
+  // (everyone voted: the most votes - for everyone)
+  const counts = {};
+  for (const vote of Object.values(event.votes)) counts[vote.option] = (counts[vote.option] || 0) + 1;
+  const most = Math.max(...Object.values(counts));
+  const top = Object.keys(counts).filter((id) => counts[id] == most);
+  const winner = optionsOf(event).find((o) => o.id == (top.length == 1 ? top[0] : pick(rng, top)));
+  event.chosen = winner.id;
+  for (const one of voters.map((n) => run.heroes.find((h) => h.name == n))) {
+    if (event.choices[one.name]) continue;
+    const own = event.votes[one.name] && event.votes[one.name].option == winner.id ? { option: winner.id, card: event.votes[one.name].card } : autoInput(run, event, one, winner, rng);
+    if (own && !choiceError(run, event, one, winner, own)) applyChoice(run, one, winner, own, rng);
+    else applyChoice(run, one, LEAVE, { option: "leave" }, rng);
+  }
+  return null;
+}
+
+// What keeps a hero from a choice (its card, its potions) -> an error or null
+function choiceError(run, event, hero, option, input) {
   if (option.card == "smith" || option.card == "deck") {
-    index = Number(input.card);
+    const index = Number(input.card);
     if (!Number.isInteger(index) || !hero.deck[index]) return "Pick a card of your deck.";
     if (option.card == "smith" && isUpgraded(hero.deck[index])) return "That card is upgraded already.";
     if (option.card == "deck" && hero.deck.length <= DECK_LEAST) return `Your deck keeps at least ${DECK_LEAST} cards.`;
   }
-  if (option.card == "offer" && !(event.offers[name] || []).includes(input.card)) return "Pick one of the cards.";
+  if (option.card == "offer" && !((event.offers || {})[hero.name] || []).includes(input.card)) return "Pick one of the cards.";
   if (option.card == "offer" && deckRule(hero.deck, input.card)) return deckRule(hero.deck, input.card);
   if (option.id == "bottle" && hero.potions >= (hero.potionsMax || POTIONS_MAX)) return `At most ${hero.potionsMax || POTIONS_MAX} potions.`;
+  return null;
+}
+
+// The card for a hero the party's choice needs one of (it voted for another option): picked at random
+function autoInput(run, event, hero, option, rng) {
+  if (option.card == "smith") {
+    const free = hero.deck.map((id, i) => i).filter((i) => !isUpgraded(hero.deck[i]));
+    return free.length ? { option: option.id, card: pick(rng, free) } : null;
+  }
+  if (option.card == "deck") return { option: option.id, card: Math.floor(rng() * hero.deck.length) };
+  if (option.card == "offer") {
+    const fits = ((event.offers || {})[hero.name] || []).filter((id) => !deckRule(hero.deck, id));
+    return fits.length ? { option: option.id, card: pick(rng, fits) } : null;
+  }
+  return { option: option.id };
+}
+
+// A choice made for a hero: what happens to it (in a room's lines, its results)
+function applyChoice(run, hero, option, input, rng) {
+  const event = run.event;
+  const name = hero.name;
+  const index = option.card == "smith" || option.card == "deck" ? Number(input.card) : null;
   const note = (text) => {
     event.lines.push(text);
     say(run, text);
@@ -2727,6 +2778,9 @@ function runView(run) {
       offers: run.event.offers,
       disarm: run.event.kind == "trap" ? Object.fromEntries(run.heroes.map((h) => [h.name, disarmChance(h)])) : null,
       cursed: !!run.event.cursed,
+      // (a party's votes in the room: name -> the option; the one that won)
+      votes: Object.fromEntries(Object.entries(run.event.votes || {}).map(([n, v]) => [n, v.option])),
+      chosen: run.event.chosen || null,
       sealed: run.event.sealed || null,
     },
     votes: run.votes,

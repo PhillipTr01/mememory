@@ -1271,11 +1271,12 @@ test("rpg: a cursed chest - breaking the seal triples the coins, the next fight 
   assert.strictEqual(run.event.cursed, true);
   assert.ok(rpg.runView(run).event.options.some((o) => o.id == "seal"));
   const pot = run.pot;
+  // (a party votes: nothing happens before everyone voted - then once, for everyone)
   assert.strictEqual(rpg.choose(run, "a", { option: "seal" }, seeded(1)), null);
-  assert.strictEqual(run.pot, pot + run.event.coins * 2);
-  // (once: a second hero breaking it again adds nothing)
+  assert.strictEqual(run.pot, pot);
   assert.strictEqual(rpg.choose(run, "b", { option: "seal" }, seeded(1)), null);
   assert.strictEqual(run.pot, pot + run.event.coins * 2);
+  assert.deepStrictEqual(run.event.choices, { a: "seal", b: "seal" });
   // (the next fight: cursed monsters)
   run.doors = [{ kind: "fight", row: 1, index: 0, open: true }];
   rpg.enterRoom(run, 0, seeded(2));
@@ -1327,4 +1328,22 @@ test("rpg: elite affixes - splitting at half HP, thieving cards, acting twice", 
   run.heroes[0].agi = 0;
   rpg.monsterTurn(run, () => 0.5);
   assert.strictEqual(run.fx.filter((e) => e.k == "move" && e.by == "m1").length, 2);
+});
+
+test("rpg: a party votes in a room - the most votes happen for everyone, a card picked for who voted otherwise", () => {
+  const run = rpg.newRun(3, [{ name: "a", hero: rpg.newHero("warrior") }, { name: "b", hero: rpg.newHero("mage") }, { name: "c", hero: rpg.newHero("rogue") }], seeded(4));
+  run.doors = [{ kind: "rest", row: 0, index: 0, open: true }];
+  rpg.enterRoom(run, 0, seeded(1));
+  for (const h of run.heroes) h.hp = Math.round(h.maxHp / 2);
+  assert.strictEqual(rpg.choose(run, "a", { option: "smith", card: 0 }, seeded(1)), null);
+  assert.strictEqual(rpg.choose(run, "b", { option: "rest" }, seeded(1)), null);
+  assert.match(rpg.choose(run, "b", { option: "smith", card: 0 }, seeded(1)), /already/);
+  assert.ok(run.heroes.every((h) => h.hp == Math.round(h.maxHp / 2)), "nothing yet");
+  assert.strictEqual(rpg.choose(run, "c", { option: "smith", card: 1 }, seeded(1)), null);
+  // (smith won 2:1 - everyone upgrades a card, b one picked for it)
+  assert.strictEqual(run.event.chosen, "smith");
+  assert.deepStrictEqual(Object.values(run.event.choices), ["smith", "smith", "smith"]);
+  assert.ok(run.heroes[0].deck[0].endsWith("+") && run.heroes[2].deck[1].endsWith("+"));
+  assert.strictEqual(run.heroes[1].deck.filter((id) => id.endsWith("+")).length, 1);
+  assert.ok(run.heroes.every((h) => h.hp == Math.round(h.maxHp / 2)), "nobody rested");
 });

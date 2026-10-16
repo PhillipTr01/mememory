@@ -2018,9 +2018,10 @@ function roomScene(run, me) {
   if (ev.choices && run.heroes.length > 1) {
     var who = el("div", "rpg-scene-party");
     Object.keys(ev.choices).forEach((name) => {
-      var chip = el("span", "rpg-chose" + (ev.choices[name] ? " done" : ""));
-      chip.append(createAvatar(name, "sm"), el("span", "", ev.choices[name] ? "✓" : "…"));
-      chip.title = name + (ev.choices[name] ? " has chosen." : " is still choosing.");
+      var done = ev.choices[name] || (ev.votes || {})[name];
+      var chip = el("span", "rpg-chose" + (done ? " done" : ""));
+      chip.append(createAvatar(name, "sm"), el("span", "", done ? "✓" : "…"));
+      chip.title = name + (done ? " has voted." : " is still choosing.");
       who.appendChild(chip);
     });
     body.appendChild(who);
@@ -2096,20 +2097,30 @@ var OPTION_ICONS = { seal: "⛓️", rest: "💤", smith: "🔨", open: "🗝️
 function choiceNodes(run, me) {
   var ev = run.event;
   var chosen = ev.choices[myName];
+  // (a party: a vote - who voted for what on every option)
+  var votes = ev.votes || {};
+  var voted = votes[myName] || null;
+  var party = Object.keys(ev.choices).length > 1 && ev.kind != "merchant";
   var nodes = [];
   var row = el("div", "rpg-options");
   ev.options.forEach((o) => {
     var text = o.text;
     if (o.id == "disarm" && ev.disarm) text += " (🍀 " + ev.disarm[myName] + "%)";
-    var b = el("button", "rpg-option" + (chosen == o.id ? " chosen" : "") + (picking == o.id ? " picking" : "") + (o.card == "offer" ? " offer" : ""));
+    var b = el("button", "rpg-option" + (chosen == o.id || voted == o.id ? " chosen" : "") + (picking == o.id ? " picking" : "") + (o.card == "offer" ? " offer" : ""));
     b.type = "button";
-    if (chosen || o.card == "offer") b.disabled = true;
+    if (chosen || voted || o.card == "offer") b.disabled = true;
     else {
       b.dataset.act = o.card ? "pickMode" : "choose";
       b.dataset.id = o.id;
     }
     b.append(el("span", "rpg-option-icon", OPTION_ICONS[o.id] || "✦"), el("b", "", o.label + (o.card == "offer" && !chosen ? " ↓" : "")), el("span", "", text));
-    if (chosen == o.id) b.appendChild(el("i", "rpg-option-check", "✓"));
+    if (chosen == o.id || (!chosen && voted == o.id)) b.appendChild(el("i", "rpg-option-check", "✓"));
+    var backers = Object.keys(votes).filter((n) => votes[n] == o.id);
+    if (party && backers.length && !chosen) {
+      var faces = el("span", "rpg-option-votes");
+      backers.forEach((n) => faces.appendChild(createAvatar(n, "sm")));
+      b.appendChild(faces);
+    }
     row.appendChild(b);
   });
   nodes.push(row);
@@ -2117,6 +2128,11 @@ function choiceNodes(run, me) {
     nodes.push(el("div", "rpg-scene-done", "Pick the next room on the map 🗺️"));
     return nodes;
   }
+  if (voted) {
+    nodes.push(el("div", "rpg-scene-done", "The party votes. The choice with the most votes happens for everyone."));
+    return nodes;
+  }
+  if (party) nodes.push(el("div", "rpg-label", "The party votes. The choice with the most votes happens for everyone."));
   // The library: the cards to study, right there
   var offer = ev.options.find((o) => o.card == "offer");
   if (offer && ev.offers && ev.offers[myName]) {

@@ -7285,3 +7285,15 @@ button.rpg-cardx.off {
 .rpg-deep-pick button.danger:hover {
   background: rgba(140, 100, 220, 0.28);
 }
+
+/* (a party's vote in a room: the faces of who voted for an option) */
+.rpg-option-votes {
+  display: inline-flex;
+  gap: 0.15rem;
+  margin-left: auto;
+}
+
+.rpg-option-votes .mm-avatar {
+  width: 22px;
+  height: 22px;
+}
