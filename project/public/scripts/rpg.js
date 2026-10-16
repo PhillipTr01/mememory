@@ -2029,18 +2029,32 @@ function roomScene(run, me) {
         box.append(el("div", "rpg-label", run.heroes.length > 1 ? "You got" : "What happened"), row);
       }
     } else {
-      // (a party: everyone's in one line - the face of who got it on the top right)
+      // (a party: everyone's in one line - the faces of who got it on the top right; the very same loot once, with
+      // all their faces; the pot's coins once, for everyone)
       var line = el("div", "rpg-results rpg-results-party");
-      var group = (name, list) => {
-        var g = el("div", "rpg-got-group" + (name == myName ? " mine" : ""));
-        list.forEach((r) => g.appendChild(resultCard(r)));
-        var face = createAvatar(name, "sm");
-        face.classList.add("rpg-got-face");
-        g.appendChild(face);
+      var sameAs = (r) => JSON.stringify(r.k == "gear" ? { k: "gear", name: r.item.name, rarity: r.item.rarity, slot: r.item.slot } : r);
+      var groups = [];
+      [myName].concat(others).forEach((name) => {
+        var list = results[name] || [];
+        if (!list.length) return;
+        var key = list.map(sameAs).join("|");
+        var same = groups.find((g) => g.key == key);
+        if (same) same.names.push(name);
+        else groups.push({ key: key, list: list, names: [name] });
+      });
+      if (shared.length) {
+        var all = el("div", "rpg-got-group");
+        shared.forEach((r) => all.appendChild(resultCard(r)));
+        line.appendChild(all);
+      }
+      groups.forEach((group) => {
+        var g = el("div", "rpg-got-group" + (group.names.includes(myName) ? " mine" : ""));
+        group.list.forEach((r) => g.appendChild(resultCard(r)));
+        var faces = el("div", "rpg-got-faces");
+        group.names.forEach((name) => faces.appendChild(createAvatar(name, "sm")));
+        g.appendChild(faces);
         line.appendChild(g);
-      };
-      if (mine.length) group(myName, mine);
-      others.forEach((name) => group(name, results[name]));
+      });
       box.append(el("div", "rpg-label", "What the party got"), line);
     }
     body.appendChild(box);

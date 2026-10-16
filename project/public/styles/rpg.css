@@ -7388,14 +7388,22 @@ button.rpg-cardx.off {
   background: rgba(245, 196, 81, 0.06);
 }
 
-.rpg-got-group > .rpg-got-face {
+.rpg-got-faces {
   position: absolute;
   top: -0.45rem;
   right: -0.45rem;
+  display: flex;
+}
+
+.rpg-got-faces .mm-avatar {
   width: 24px;
   height: 24px;
   box-shadow: 0 0 0 2px #15171d;
   border-radius: 50%;
+}
+
+.rpg-got-faces .mm-avatar + .mm-avatar {
+  margin-left: -6px;
 }
 
 /* (a centered scene: its story centered under the title) */
