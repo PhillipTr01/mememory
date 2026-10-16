@@ -985,7 +985,7 @@ function classTile(id, pick) {
   if (cls.luck) chip("🍀 +" + cls.luck + "% luck", true, "Crits, loot");
   if (cls.agi) chip("🦊 +" + cls.agi + "% instinct", true, "Dodge attacks");
   var ability = rules.abilities[id];
-  var strength = cls.strength.text.replace(/\{(\w+)\}/g, (_, key) => (key == "crit" || key == "thorns" ? cls.strength.perks[key] : Math.round(cls.strength.perks[key] * 100)));
+  var strength = cls.strength.text.replace(/\{(\w+)\}/g, (_, key) => (key == "crit" || key == "thorns" ? Math.round(cls.strength.perks[key]) : Math.round(cls.strength.perks[key] * 100)));
   // (the signature cards: whole cards in the class overview - chips in the picker, it fits the screen; hover: the text)
   var cards = el("div", pick ? "rpg-first-sigs" : "rpg-first-cards");
   cls.signature.forEach((id) => {
@@ -1885,21 +1885,21 @@ function spoilsPanel(run, me, spoils) {
 // The party: every hero's stats, perks (talents, relics) and relics
 var PERK_TEXT = {
   healHit: (v) => Math.round(v * 100) + "% of heals smite",
-  startBlock: (v) => "+" + v + " block every turn",
+  startBlock: (v) => "+" + Math.round(v) + " block every turn",
   firstMana: (v) => "+" + v + " mana on turn one",
   draw: (v) => "+" + v + " card a turn",
   attack: (v) => "+" + Math.round(v * 100) + "% damage",
   firstStrike: (v) => "+" + Math.round(v * 100) + "% first attack",
   lowHp: (v) => "+" + Math.round(v * 100) + "% damage below half HP",
-  crit: (v) => "+" + v + "% crit",
+  crit: (v) => "+" + Math.round(v) + "% crit",
   lifesteal: (v) => Math.round(v * 100) + "% lifesteal",
-  thorns: (v) => v + " thorns",
+  thorns: (v) => Math.round(v) + " thorns",
   block: (v) => "+" + Math.round(v * 100) + "% block",
   heal: (v) => "+" + Math.round(v * 100) + "% healing",
   afterFight: (v) => "heal " + Math.round(v * 100) + "% after a fight",
   poison: (v) => "+" + Math.round(v * 100) + "% poison",
   maxHp: (v) => "+" + Math.round(v * 100) + "% max HP",
-  agi: (v) => "+" + v + "% dodge",
+  agi: (v) => "+" + Math.round(v) + "% dodge",
 };
 function renderPartyStats(run) {
   morphChildren(
@@ -1917,8 +1917,8 @@ function renderPartyStats(run) {
       [
         ["💪", h.atk, "Attack", "Damage of your attacks"],
         ["🛡️", h.def, "Armor", "Less damage taken, more block"],
-        ["🍀", h.luck + (h.perks.crit || 0) + "%", "Crit", "Chance of a critical hit"],
-        ["🦊", h.agi + "%", "Dodge", h.cls == "rogue" ? "Dodge hits, sense rooms (far better)" : "Dodge hits, sense rooms"],
+        ["🍀", Math.round(h.luck + (h.perks.crit || 0)) + "%", "Crit", "Chance of a critical hit"],
+        ["🦊", Math.round(h.agi) + "%", "Dodge", h.cls == "rogue" ? "Dodge hits, sense rooms (far better)" : "Dodge hits, sense rooms"],
         [null, h.potions + " / " + (h.potionsMax || rules.potionsMax), "Potions", "Heal " + Math.round(rules.potionHeal * 100) + "% HP"],
       ].forEach(([icon, value, label, tip]) => {
         var tile = el("div", "rpg-pstat-tile");
