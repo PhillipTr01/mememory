@@ -1763,35 +1763,40 @@ function renderPartyStats(run) {
     document.getElementById("rpgPartyStats"),
     run.heroes.map((h) => {
       var cls = rules.classes[h.cls] || { icon: "", name: "" };
-      var row = el("div", "rpg-pstat" + (h.name == myName ? " me" : ""));
+      var row = el("div", "rpg-pstat cls-" + h.cls + (h.name == myName ? " me" : ""));
       var head = el("div", "rpg-pstat-head");
-      head.append(createAvatar(h.name, "sm"), el("b", "", h.name), el("span", "mm-muted small", cls.icon + " " + cls.name));
+      var who = el("div", "rpg-pstat-who");
+      who.append(el("b", "", h.name), el("span", "rpg-pstat-class", cls.icon + " " + cls.name));
+      head.append(createAvatar(h.name, "md"), who);
+      // (the HP as a bar on top - then a tile for every stat)
+      head.appendChild(bar(h.hp, h.maxHp, "hero"));
       var stats = el("div", "rpg-pstat-stats");
       [
-        ["❤️", h.hp + " / " + h.maxHp, "HP"],
-        ["⚔️", h.atk, "Attack"],
-        ["🛡️", h.def, "Armor: less damage, more block"],
-        ["🍀", h.luck + (h.perks.crit || 0) + "%", "Crits"],
-        ["🦊", h.agi + "%", h.cls == "rogue" ? "Dodge, sense rooms (far better)" : "Dodge, sense rooms"],
-        [null, h.potions, "Potions"],
-      ].forEach(([icon, value, tip]) => {
-        var chip = el("span", "rpg-pstat-chip", icon ? icon + " " + value : "");
-        if (!icon) chip.append(flask(), " " + value);
-        chip.title = tip;
-        stats.appendChild(chip);
+        ["⚔️", h.atk, "Attack", "Damage of your attacks"],
+        ["🛡️", h.def, "Armor", "Less damage taken, more block"],
+        ["🍀", h.luck + (h.perks.crit || 0) + "%", "Crit", "Chance of a critical hit"],
+        ["🦊", h.agi + "%", "Dodge", h.cls == "rogue" ? "Dodge hits, sense rooms (far better)" : "Dodge hits, sense rooms"],
+        [null, h.potions + " / " + (h.potionsMax || rules.potionsMax), "Potions", "Heal " + Math.round(rules.potionHeal * 100) + "% HP"],
+      ].forEach(([icon, value, label, tip]) => {
+        var tile = el("div", "rpg-pstat-tile");
+        var pic = el("span", "rpg-pstat-icon", icon || "");
+        if (!icon) pic.appendChild(flask());
+        tile.append(pic, el("span", "rpg-pstat-value", String(value)), el("span", "rpg-pstat-label", label));
+        tile.title = tip;
+        stats.appendChild(tile);
       });
-      var perks = Object.keys(h.perks || {})
-        .filter((k) => h.perks[k] && PERK_TEXT[k])
-        .map((k) => PERK_TEXT[k](h.perks[k]));
-      var relics = el("div", "rpg-relics");
+      var extras = el("div", "rpg-pstat-extras");
       (h.relics || []).forEach((id) => {
         var relic = rules.relics[id];
-        var chip = el("span", "rpg-relic-chip big", relic.icon + " " + relic.name);
+        var chip = el("span", "rpg-pstat-tag relic", relic.icon + " " + relic.name);
         chip.title = relic.text;
-        relics.appendChild(chip);
+        extras.appendChild(chip);
       });
-      if (!(h.relics || []).length) relics.appendChild(el("span", "mm-muted small", "No relics yet"));
-      row.append(head, stats, relics, el("div", "mm-muted small", perks.length ? "Perks: " + perks.join(" · ") : "No perks yet"));
+      Object.keys(h.perks || {})
+        .filter((k) => h.perks[k] && PERK_TEXT[k])
+        .forEach((k) => extras.appendChild(el("span", "rpg-pstat-tag", "✦ " + PERK_TEXT[k](h.perks[k]))));
+      if (!extras.childNodes.length) extras.appendChild(el("span", "rpg-pstat-tag none", "No relics or perks yet"));
+      row.append(head, stats, extras);
       return row;
     }),
   );
@@ -1966,11 +1971,12 @@ function choiceNodes(run, me) {
       b.dataset.id = o.id;
     }
     b.append(el("span", "rpg-option-icon", OPTION_ICONS[o.id] || "✦"), el("b", "", o.label + (o.card == "offer" && !chosen ? " ↓" : "")), el("span", "", text));
+    if (chosen == o.id) b.appendChild(el("i", "rpg-option-check", "✓"));
     row.appendChild(b);
   });
   nodes.push(row);
   if (chosen) {
-    nodes.push(el("div", "rpg-scene-done", "✓ Done - pick the next room 🗺️"));
+    nodes.push(el("div", "rpg-scene-done", "Pick the next room on the map 🗺️"));
     return nodes;
   }
   // The library: the cards to study, right there
@@ -2243,7 +2249,7 @@ function handBar(run, me) {
   var energy = el("div", "rpg-energy" + (me.energy <= 0 ? " empty" : ""));
   energy.dataset.mana = me.energy + "/" + rules.energy;
   energy.title = "Mana, refills every turn";
-  var draw = pileButton("draw", "🂠", me.drawCount, "Draw pile");
+  var draw = pileButton("draw", "", me.drawCount, "Draw pile");
   var left = el("div", "rpg-hand-side");
   left.append(energy, draw);
   var hand = el("div", "rpg-hand" + (me.ended ? " ended" : ""));
@@ -2268,7 +2274,7 @@ function handBar(run, me) {
   if (!me.hand.length) hand.appendChild(el("div", "rpg-wait mm-muted", "No cards left"));
   var waiting = run.heroes.filter((h) => !h.down && !h.ended).length;
   var end = button(me.ended ? "Waiting… (" + waiting + ")" : "End turn", "endTurn", { className: "primary rpg-end", disabled: me.ended });
-  var discard = pileButton("discard", "♻️", me.discardCount, "Discard pile");
+  var discard = pileButton("discard", "♻", me.discardCount, "Discard pile");
   var exhausted = me.piles && me.piles.exhausted.length ? pileButton("exhausted", "🔥", me.piles.exhausted.length, "Exhausted") : null;
   var tools = el("div", "rpg-hand-tools");
   tools.append(potion, discard);
@@ -2311,9 +2317,13 @@ function potionButton(me, run) {
 }
 
 // A pile to look into: its icon, its count
+// A pile beside the hand: a little stack of card backs, its count - a click looks into it
+var PILE_LABELS = { draw: "Draw", discard: "Discard", exhausted: "Exhausted" };
 function pileButton(id, icon, count, title) {
-  var b = button("", "pile", { id: id, className: "rpg-pile", title: title + " - click to look" });
-  b.append(el("span", "rpg-pile-icon", icon), el("b", "", String(count)));
+  var b = button("", "pile", { id: id, className: "rpg-pile pile-" + id + (count ? "" : " empty"), title: title + " - click to look" });
+  var stack = el("span", "rpg-pile-stack");
+  stack.append(el("i", ""), el("i", ""), el("span", "rpg-pile-icon", icon));
+  b.append(stack, el("b", "rpg-pile-count", String(count)), el("span", "rpg-pile-label", PILE_LABELS[id] || title));
   return b;
 }
 
