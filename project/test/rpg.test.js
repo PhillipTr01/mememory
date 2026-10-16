@@ -126,12 +126,13 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   assert.strictEqual(rpg.statsOf(quick).agi, dodge + 4);
 });
 
-test("rpg: a new hero clears floor 1 but not floor 8 - upgrades take it deeper; a full clear pays about 1.9x the entry", () => {
+test("rpg: a new hero clears floor 1 most of the time but not floor 8 - upgrades take it deeper; a full clear pays about 2x the entry", () => {
   const weak = rpg.newHero("warrior");
-  assert.ok(rpg.simulate(weak, 1, 200).cleared > 0.75);
+  const first = rpg.simulate(weak, 1, 300).cleared;
+  assert.ok(first > 0.55 && first < 0.9, String(first));
   assert.ok(rpg.simulate(weak, 8, 200).cleared < 0.05);
   const strong = rpg.newHero("warrior");
-  for (const id of rpg.STAT_IDS) rpg.charOf(strong).levels[id] = 35;
+  for (const id of rpg.STAT_IDS) rpg.charOf(strong).levels[id] = 70;
   const deep = rpg.simulate(strong, 8, 200);
   assert.ok(deep.cleared > 0.9, JSON.stringify(deep));
   assert.ok(deep.payback > 1.5 && deep.payback < 2.4, JSON.stringify(deep));
@@ -644,7 +645,8 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; between 
   assert.strictEqual(warrior.levels.atk, 0);
   alice.emit("upgrade", { stat: "atk" });
   const up = await waitFor(alice, "rpgHero", (view) => view.levels.atk == 1);
-  assert.strictEqual(up.stats.atk, Math.round((rpg.STATS.atk.base + rpg.STATS.atk.per * rpg.MAIN_BONUS) * rpg.CLASSES.warrior.atk));
+  const cls = rpg.CLASSES.warrior;
+  assert.strictEqual(up.stats.atk, Math.round((rpg.STATS.atk.base + rpg.STATS.atk.per * cls.mainBonus) * cls.atk + cls.atkPlus));
   assert.strictEqual(testMode.balance("rpg_alice"), 5000000 - rpg.upgradeCost(0));
   alice.emit("potion");
   await waitFor(alice, "rpgHero", (view) => view.potions == 3);
@@ -782,7 +784,7 @@ test("rpg: the fight rules - the hand stays (filled up to 5), poison stacks and 
   rpg.afflict(foe, "burn", 1, 6);
   assert.deepStrictEqual(foe.effects.burn, { turns: 2, dmg: 8 });
   // (the strengths: the paladin's thorns grow with the armor)
-  assert.strictEqual(rpg.thornsOf({ def: 20, perks: rpg.CLASSES.paladin.strength.perks }), 17);
+  assert.strictEqual(rpg.thornsOf({ def: 20, perks: rpg.CLASSES.paladin.strength.perks }), 11);
   assert.ok(rpg.CLASSES.warrior.strength.perks.pierce > 0 && rpg.CLASSES.mage.strength.perks.aoe > 0);
   // (the texts: numbers, no shares)
   const texts = rpg.liveTexts({ atk: 50, def: 10, agi: 0, maxHp: 200, perks: {} }, ["strike", "defend", "heavyslash", "mend", "strike+"]);
@@ -897,10 +899,10 @@ test("rpg: the bag - 5 slots, more bought up to 15, every one dearer", () => {
 });
 
 test("rpg: class strengths grow with the level - the base at 1, its top times it at the highest level", () => {
-  assert.strictEqual(rpg.strengthOf("warrior", 1).perks.pierce, 0.4);
-  assert.strictEqual(rpg.strengthOf("warrior", rpg.HERO_LEVEL_MAX).perks.pierce, 0.6);
-  assert.match(rpg.strengthOf("paladin", 1).text, /equal to 85% of your armor\. Your block cards block 17% more/);
-  assert.match(rpg.strengthOf("rogue", rpg.HERO_LEVEL_MAX).text, /crit 30% more often/);
+  assert.strictEqual(rpg.strengthOf("warrior", 1).perks.pierce, 0.15);
+  assert.strictEqual(rpg.strengthOf("warrior", rpg.HERO_LEVEL_MAX).perks.pierce, 0.24);
+  assert.match(rpg.strengthOf("paladin", 1).text, /equal to 55% of your armor\. Your block cards block 11% more/);
+  assert.match(rpg.strengthOf("mage", rpg.HERO_LEVEL_MAX).text, /crit 24% more often/);
 });
 
 test("rpg: cards fit their rarity - the rarer, the more a mana buys", () => {
@@ -910,9 +912,11 @@ test("rpg: cards fit their rarity - the rarer, the more a mana buys", () => {
 });
 
 test("rpg: monsters - traits counter some heroes, a boss turns at half HP, summons and curses", () => {
-  // Venomproof: no poison; fireproof: no burn
-  assert.strictEqual(rpg.afflict({ effects: {}, traits: ["venomproof"] }, "poison", 3, 10), false);
-  assert.strictEqual(rpg.afflict({ effects: {}, traits: ["fireproof"] }, "burn", 3, 10), false);
+  // Venomproof: half the poison; fireproof: half the burn
+  const proof = { effects: {}, traits: ["venomproof", "fireproof"] };
+  rpg.afflict(proof, "poison", 3, 10);
+  rpg.afflict(proof, "burn", 3, 10);
+  assert.deepStrictEqual(proof.effects, { poison: { turns: 3, dmg: 5 }, burn: { turns: 3, dmg: 5 } });
   // A boss: its own name, a second phase at half HP
   const run = rpg.newRun(5, [{ name: "a", hero: rpg.newHero("warrior") }]);
   run.doors = [run.map[run.map.length - 1][0]];
@@ -1068,7 +1072,7 @@ test("rpg: every card plays on every class without broken numbers (NaN, negative
   }
 });
 
-test("rpg: the cleric's heals smite a random foe", () => {
+test("rpg: the cleric's heals smite every foe", () => {
   const hero = rpg.newHero("cleric");
   const run = rpg.newRun(1, [{ name: "a", hero }], seeded(3));
   rpg.enterRoom(run, 0, seeded(3));
@@ -1081,7 +1085,7 @@ test("rpg: the cleric's heals smite a random foe", () => {
   const before = run.monsters.reduce((sum, m) => sum + m.hp, 0);
   assert.strictEqual(rpg.play(run, "a", { uid: "h", ally: "a" }, seeded(3)), null);
   assert.ok(run.monsters.reduce((sum, m) => sum + m.hp, 0) < before, "a foe took the smite");
-  assert.match(rpg.strengthOf("cleric", 1).text, /smites a random foe/);
+  assert.match(rpg.strengthOf("cleric", 1).text, /smites every foe/);
 });
 
 test("rpg: balance - every class on the curve of its floor clears early, mid and late floors; far under it, deep floors are hard", () => {
@@ -1115,17 +1119,22 @@ test("rpg: balance - every class on the curve of its floor clears early, mid and
     for (let i = 0; i < runs; i++) won += rpg.simulate(heroFor(cls, floor, curve, rng), floor, 1, rng).cleared;
     return won / runs;
   };
+  // (every class has a fair chance, the classes together clear about three of four runs)
+  const rates = [];
   for (const cls of rpg.CLASS_IDS) {
     for (const floor of [2, 12, 27]) {
       const rate = clear(cls, floor, 1);
-      assert.ok(rate >= (floor == 27 ? 0.45 : 0.75), `${cls} on floor ${floor}, on its curve: ${Math.round(rate * 100)}%`);
+      rates.push(rate);
+      assert.ok(rate >= (floor == 27 ? 0.4 : 0.45), `${cls} on floor ${floor}, on its curve: ${Math.round(rate * 100)}%`);
     }
     const under = clear(cls, 27, 0.2);
-    assert.ok(under <= 0.6, `${cls} far under its curve on floor 27: ${Math.round(under * 100)}%`);
+    assert.ok(under <= 0.4, `${cls} far under its curve on floor 27: ${Math.round(under * 100)}%`);
   }
+  const average = rates.reduce((a, b) => a + b, 0) / rates.length;
+  assert.ok(average > 0.65 && average < 0.95, `on the curve: ${Math.round(average * 100)}%`);
 });
 
-test("rpg: a party heal of the cleric smites once - not once for every hero it heals", () => {
+test("rpg: a party heal of the cleric smites every foe once - not once for every hero it heals", () => {
   const cleric = rpg.newHero("cleric");
   const other = rpg.newHero("warrior");
   const run = rpg.newRun(1, [{ name: "c", hero: cleric }, { name: "w", hero: other }], seeded(5));
@@ -1138,7 +1147,8 @@ test("rpg: a party heal of the cleric smites once - not once for every hero it h
   const seen = run.fxSeq || 0;
   assert.strictEqual(rpg.play(run, "c", { uid: "p" }, seeded(5)), null);
   const hits = run.fx.filter((e) => e.id > seen && e.k == "hit");
-  assert.strictEqual(hits.length, 1);
+  // (one smite on every foe - not one for every hero healed)
+  assert.strictEqual(hits.length, run.monsters.filter((m) => !m.down).length);
 });
 
 test("rpg: a boss calls at most 4 monsters a fight - none once the monsters are furious", () => {
@@ -1160,4 +1170,14 @@ test("rpg: a boss calls at most 4 monsters a fight - none once the monsters are 
   }
   assert.ok(boss.summoned > 0 && boss.summoned <= 4, `summoned ${boss.summoned}`);
   assert.ok(calls <= 4, `called ${calls}`);
+});
+
+test("rpg: a hit on a hero tells what its armor took and how much block is left", () => {
+  const run = { log: [], heroes: [] };
+  const hero = { name: "a", hp: 100, maxHp: 100, def: 10, block: 5, agi: 0, perks: {}, effects: {} };
+  rpg.hurt(run, hero, 20, "Rat", () => 0.99);
+  const hit = run.fx.find((e) => e.k == "hit");
+  // (20 against 10 armor: 13 come through - 7 taken by the armor, 5 by the block, 8 hurt)
+  assert.deepStrictEqual([hit.n, hit.b, hit.a, hit.left], [8, 5, 7, 0]);
+  assert.strictEqual(hero.hp, 92);
 });

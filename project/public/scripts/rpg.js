@@ -337,6 +337,15 @@ function barBy(id, delta) {
   if (text) text.innerText = formatCoins(unit.hp) + " / " + formatCoins(unit.maxHp);
 }
 
+// The block of a hero going down hit by hit (its badge on the HP bar)
+function blockTo(id, left) {
+  var node = unitNode(id);
+  var badge = node && node.querySelector(".rpg-block");
+  if (!badge) return;
+  if (left > 0) badge.innerText = "🧱 " + left;
+  else badge.remove();
+}
+
 // A big word over the scene: "Monsters' turn", "Your turn", "Victory!"
 function banner(text, kind, ms) {
   var arena = document.querySelector(".rpg-arena");
@@ -363,15 +372,17 @@ function showFx(e, live) {
   if (window.sfx) window.sfx(e.k == "hit" ? (e.dot ? "dot" : e.crit ? "crit" : "hit") : e.k == "turn" && e.side == "foes" ? null : e.k);
   if (e.k == "card") showPlayed(e);
   else if (e.k == "hit") {
-    floatOver(e.to, "-" + e.n + (e.crit ? "!" : ""), e.dot ? "dot " + e.dot : e.crit ? "crit" : "hit");
-    if (e.b) floatOver(e.to, "🛡️ " + e.b, "blocked");
+    if (e.n > 0 || !e.b) floatOver(e.to, "-" + e.n + (e.crit ? "!" : ""), e.dot ? "dot " + e.dot : e.crit ? "crit" : "hit");
+    if (e.b) floatOver(e.to, "🧱 -" + e.b, "blocked");
+    if (e.a) floatOver(e.to, "🛡️ -" + e.a, "armored");
     flash(e.to, "rpg-hit", 420);
     if (!live) barBy(e.to, -e.n);
+    if (!live && e.left != null) blockTo(e.to, e.left);
   } else if (e.k == "miss") floatOver(e.to, e.dodge ? "Dodge" : "Miss", "miss");
   else if (e.k == "heal") {
     floatOver(e.to, "+" + e.n, "heal");
     if (!live) barBy(e.to, e.n);
-  } else if (e.k == "block") floatOver(e.to, "🛡️ +" + e.n, "block");
+  } else if (e.k == "block") floatOver(e.to, "🧱 +" + e.n, "block");
   else if (e.k == "down") flash(e.to, "rpg-dying", 0);
   else if (e.k == "move") {
     flash(e.by, e.move == "stunned" ? "rpg-stunned-act" : "rpg-acting", 520);
@@ -1752,9 +1763,11 @@ function renderRun() {
     var head = el("div", "rpg-fighter-head");
     head.append(createAvatar(h.name, "sm"), el("span", "rpg-fighter-name", (h.name == party.leader ? "👑 " : "") + h.name), el("span", "rpg-fighter-state", state));
     var info = el("div", "rpg-fighter-info mm-muted small");
-    info.append(el("span", "", cls.icon + " " + (rules.classes[h.cls] || {}).name), withFlask(el("span", "", " " + h.potions + (h.blessed ? " · ⛩️" : ""))));
+    var armor = el("span", "rpg-armor", "🛡️ " + (h.def || 0));
+    armor.title = "Armor takes part of every hit.";
+    info.append(el("span", "", cls.icon + " " + (rules.classes[h.cls] || {}).name), armor, withFlask(el("span", "", " " + h.potions + (h.blessed ? " · ⛩️" : ""))));
     var hp = bar(h.hp, h.maxHp, "hero");
-    if (h.block > 0) hp.appendChild(el("span", "rpg-block", "🛡️ " + h.block));
+    if (h.block > 0) hp.appendChild(el("span", "rpg-block", "🧱 " + h.block));
     var relics = el("div", "rpg-relics");
     (h.relics || []).forEach((id) => {
       var chip = el("span", "rpg-relic-chip", rules.relics[id].icon);

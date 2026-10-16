@@ -940,6 +940,12 @@
   gap: 0.4rem;
 }
 
+/* Armor of a hero */
+.rpg-armor {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 /* Block on a hero's HP */
 .rpg-block {
   position: absolute;
@@ -3756,6 +3762,16 @@ button.rpg-cardx.off {
 
 .rpg-float.heal {
   color: #7fe0a0;
+}
+
+.rpg-float.armored {
+  color: #c9d3e0;
+  font-size: 1rem;
+  margin-top: 2.6rem;
+}
+
+.rpg-float.blocked {
+  margin-top: 1.3rem;
 }
 
 .rpg-float.block,

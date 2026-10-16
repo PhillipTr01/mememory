@@ -121,11 +121,11 @@ const REWARD = { fight: 0.3, hard: 0.55, elite: 0.55, boss: 0.9, chest: 0.3, tra
 // main: the stat its levels count 1.5x for; hp, atk: times the stats; def, luck, agi: added;
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
-  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.4 }, top: 1.5 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.18, atk: 1.25, def: 2, luck: 0, agi: 0, mainBonus: 1.3, hpPlus: 8, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.85, block: 0.17 }, top: 1.5 }, about: "Armor class with taunts and party shields", hp: 1.31, atk: 1.48, def: 3, luck: 0, agi: 0, mainBonus: 1.25, atkPlus: 21, hpPlus: 77, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites a random foe.", perks: { heal: 0.2, healHit: 0.25 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 0.99, atk: 1.2, def: 4, luck: 0, agi: 0, mainBonus: 1.25, hpPlus: 59, atkPlus: 13, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.6, crit: 12 }, top: 2.5 }, about: "Instinct class with dodge, scouting and poison", hp: 1.35, atk: 1.55, def: 0, luck: 6, agi: 13, mainBonus: 1.7, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.5, crit: 10 }, top: 2.6 }, about: "Luck class with crits, fire and frost", hp: 1.53, atk: 1.56, def: 1, luck: 8, agi: 0, mainBonus: 1.8, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
+  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.15 }, top: 1.6 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.2, atk: 1.6, def: 2, luck: 0, agi: 0, mainBonus: 1.29, hpPlus: 54, atkPlus: 23, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.55, block: 0.11 }, top: 3.1 }, about: "Armor class with taunts and party shields", hp: 1.35, atk: 1.3, def: 12, luck: 0, agi: 0, mainBonus: 1.55, hpPlus: 90, atkPlus: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe.", perks: { heal: 0.1, healHit: 0.1 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 2.1, hpPlus: 192, atkPlus: 4, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.15, crit: 2.5 }, top: 1.7 }, about: "Instinct class with dodge, scouting and poison", hp: 1.19, atk: 1.42, def: 0, luck: 4, agi: 9, mainBonus: 1.55, hpPlus: 96, atkPlus: 22, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 8 }, about: "Luck class with crits, fire and frost", hp: 1.15, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.5, hpPlus: 100, atkPlus: 20, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -363,8 +363,8 @@ const MONSTER_TYPES = {
   construct: { name: "Construct", icon: "⚙️" },
 };
 const MONSTER_TRAITS = {
-  venomproof: { name: "Venomproof", icon: "🧪", text: "Poison does nothing." },
-  fireproof: { name: "Fireproof", icon: "🔥", text: "Burns do nothing." },
+  venomproof: { name: "Venomproof", icon: "🧪", text: "Poison deals half damage." },
+  fireproof: { name: "Fireproof", icon: "🔥", text: "Burns deal half damage." },
   bulky: { name: "Bulky", icon: "🪨", text: "Half damage from area hits." },
   spiked: { name: "Spiked", icon: "🦔", text: "Reflects 20% of damage." },
 };
@@ -372,12 +372,12 @@ const MONSTER_TRAITS = {
 // The bosses: the last room of every BOSS_EVERY-th floor - one per group of floors, a second phase at half HP
 // (phase: what changes then - more attack, other moves, a summon of its kind)
 const BOSSES = [
-  { name: "Slime King", icon: "🫧", type: "ooze", power: 0.38, hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "summon"], summon: 0, phase: { atk: 1.3, moves: ["smash", "summon", "attack"], text: "splits and swells with rage" } },
-  { name: "Goblin Warlord", icon: "👺", type: "humanoid", power: 0.68, hp: 1.2, atk: 1, moves: ["attack", "smash", "steal", "summon"], summon: 1, phase: { atk: 1.35, moves: ["smash", "howl", "attack"], text: "calls the whole tribe" } },
-  { name: "Bone Lord", icon: "☠️", type: "undead", power: 0.54, hp: 1.2, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "drain", "summon"], summon: 2, phase: { atk: 1.3, moves: ["drain", "smash", "summon", "curse"], text: "raises the dead around it" } },
-  { name: "Troll Chieftain", icon: "🧌", type: "humanoid", power: 1.45, hp: 1.15, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"], summon: 3, phase: { atk: 1.35, moves: ["smash", "attack", "regen", "howl"], text: "goes berserk" } },
-  { name: "Demon Prince", icon: "👿", type: "demon", power: 1.35, hp: 1, atk: 1, traits: ["fireproof"], moves: ["attack", "burn", "smash", "summon"], summon: 4, phase: { atk: 1.35, moves: ["burn", "smash", "curse"], text: "bursts into flames" } },
-  { name: "The Lich", icon: "🧟", type: "undead", power: 1.25, hp: 0.9, atk: 0.85, undead: true, traits: ["venomproof"], moves: ["curse", "drain", "summon", "attack"], summon: 5, phase: { atk: 1.25, moves: ["curse", "drain", "burn", "smash"], text: "tears open its phylactery" } },
+  { name: "Slime King", icon: "🫧", type: "ooze", power: 0.561, hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "summon"], summon: 0, phase: { atk: 1.3, moves: ["smash", "summon", "attack"], text: "splits and swells with rage" } },
+  { name: "Goblin Warlord", icon: "👺", type: "humanoid", power: 0.825, hp: 1.2, atk: 1, moves: ["attack", "smash", "steal", "summon"], summon: 1, phase: { atk: 1.35, moves: ["smash", "howl", "attack"], text: "calls the whole tribe" } },
+  { name: "Bone Lord", icon: "☠️", type: "undead", power: 0.787, hp: 1.2, atk: 1, undead: true, traits: ["venomproof"], moves: ["attack", "drain", "summon"], summon: 2, phase: { atk: 1.3, moves: ["drain", "smash", "summon", "curse"], text: "raises the dead around it" } },
+  { name: "Troll Chieftain", icon: "🧌", type: "humanoid", power: 1.146, hp: 1.15, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"], summon: 3, phase: { atk: 1.35, moves: ["smash", "attack", "regen", "howl"], text: "goes berserk" } },
+  { name: "Demon Prince", icon: "👿", type: "demon", power: 1.115, hp: 1, atk: 1, traits: ["fireproof"], moves: ["attack", "burn", "smash", "summon"], summon: 4, phase: { atk: 1.35, moves: ["burn", "smash", "curse"], text: "bursts into flames" } },
+  { name: "The Lich", icon: "🧟", type: "undead", power: 1.613, hp: 0.9, atk: 0.85, undead: true, traits: ["venomproof"], moves: ["curse", "drain", "summon", "attack"], summon: 5, phase: { atk: 1.25, moves: ["curse", "drain", "burn", "smash"], text: "tears open its phylactery" } },
 ];
 const MONSTER_HP = 52;
 const MONSTER_HP_GROWTH = 0.7; // (every floor deeper: this share of floor 1 more - as even as a character grows)
@@ -451,10 +451,10 @@ const TALENTS = {
     [{ id: "archangel", name: "Archangel", icon: "🪽", text: "+25% max HP, 20% more healing.", perks: { maxHp: 0.25, heal: 0.2 } }, { id: "radiance", name: "Radiance", icon: "🌞", text: "25% more damage.", perks: { attack: 0.25 } }],
   ],
   rogue: [
-    [{ id: "venom", name: "Venom", icon: "🐍", text: "Your poison is 40% stronger.", perks: { poison: 0.4 } }, { id: "quick", name: "Quick Hands", icon: "🤹", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
+    [{ id: "venom", name: "Venom", icon: "🐍", text: "Your poison is 40% stronger.", perks: { poison: 0.4 } }, { id: "swift", name: "Swift", icon: "💧", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
     [{ id: "assassin", name: "Assassin", icon: "🗡️", text: "Your first attack each turn deals 50% more.", perks: { firstStrike: 0.5 } }, { id: "evasion", name: "Evasion", icon: "🪶", text: "+8% to dodge a hit.", perks: { agi: 8 } }],
     [{ id: "lethal", name: "Lethal", icon: "🎯", text: "+12% critical hits.", perks: { crit: 12 } }, { id: "toxicologist", name: "Toxicologist", icon: "🧪", text: "Your poison is 50% stronger.", perks: { poison: 0.5 } }],
-    [{ id: "swift", name: "Swift", icon: "💧", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }, { id: "leech", name: "Leech", icon: "🦇", text: "Heal 10% of your attack damage.", perks: { lifesteal: 0.1 } }],
+    [{ id: "quick", name: "Quick Hands", icon: "🤹", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "leech", name: "Leech", icon: "🦇", text: "Heal 10% of your attack damage.", perks: { lifesteal: 0.1 } }],
     [{ id: "opportunist", name: "Opportunist", icon: "🎭", text: "Your first attack each turn deals 60% more.", perks: { firstStrike: 0.6 } }, { id: "cutthroat", name: "Cutthroat", icon: "🔪", text: "+12% critical hits.", perks: { crit: 12 } }],
     [{ id: "venomancer", name: "Venomancer", icon: "🐍", text: "Your poison is 60% stronger.", perks: { poison: 0.6 } }, { id: "shadow", name: "Shadow", icon: "🌑", text: "+8% to dodge a hit.", perks: { agi: 8 } }],
     [{ id: "deadeye", name: "Deadeye", icon: "👁️", text: "+15% critical hits.", perks: { crit: 15 } }, { id: "sleight", name: "Sleight of Hand", icon: "🃏", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
@@ -462,11 +462,11 @@ const TALENTS = {
     [{ id: "plague", name: "Plague", icon: "☣️", text: "Your poison is twice as strong.", perks: { poison: 1 } }, { id: "deathshand", name: "Death's Hand", icon: "💀", text: "+15% critical hits, 15% more damage.", perks: { crit: 15, attack: 0.15 } }],
   ],
   mage: [
-    [{ id: "spellstorm", name: "Spellstorm", icon: "🌪️", text: "Hits on every foe deal 20% more.", perks: { aoe: 0.2 } }, { id: "insight", name: "Insight", icon: "📖", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
+    [{ id: "spellstorm", name: "Spellstorm", icon: "🌪️", text: "Hits on every foe deal 20% more.", perks: { aoe: 0.2 } }, { id: "clarity", name: "Clarity", icon: "💎", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
     [{ id: "fortune", name: "Fortune", icon: "🍀", text: "+10% critical hits.", perks: { crit: 10 } }, { id: "wellspring", name: "Wellspring", icon: "💧", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
     [{ id: "archmage", name: "Archmage", icon: "🧙", text: "20% more damage.", perks: { attack: 0.2 } }, { id: "ward", name: "Ward", icon: "🔰", text: "Start every fight with 10 block.", perks: { startBlock: 10 } }],
     [{ id: "cataclysm", name: "Cataclysm", icon: "☄️", text: "Hits on every foe deal 30% more.", perks: { aoe: 0.3 } }, { id: "precision", name: "Precision", icon: "🎯", text: "+12% critical hits.", perks: { crit: 12 } }],
-    [{ id: "clarity", name: "Clarity", icon: "💎", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }, { id: "manashield", name: "Mana Shield", icon: "🔷", text: "Start every fight with 12 block.", perks: { startBlock: 12 } }],
+    [{ id: "insight", name: "Insight", icon: "📖", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "manashield", name: "Mana Shield", icon: "🔷", text: "Start every fight with 12 block.", perks: { startBlock: 12 } }],
     [{ id: "inferno", name: "Inferno", icon: "🔥", text: "Hits on every foe deal 35% more.", perks: { aoe: 0.35 } }, { id: "spellweaver", name: "Spellweaver", icon: "🕸️", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
     [{ id: "arcaneskin", name: "Arcane Skin", icon: "🧿", text: "+15% max HP.", perks: { maxHp: 0.15 } }, { id: "overload", name: "Overload", icon: "⚡", text: "Your first attack each turn deals 50% more.", perks: { firstStrike: 0.5 } }],
     [{ id: "archon", name: "Archon", icon: "🌌", text: "25% more damage.", perks: { attack: 0.25 } }, { id: "timeweaver", name: "Timeweaver", icon: "⏳", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
@@ -1017,6 +1017,7 @@ const LANES = 4; // the columns of the map
 const SENSE = { base: 10, per: 0.5 };
 const SENSE_ROGUE = { base: 25, per: 1.5 };
 const SENSE_MAX = 90;
+const SENSE_DEPTH = 0.02; // a floor deeper: rooms 2% harder to sense (floor 30: less than half)
 // (kept for the page: one of the doors to pick)
 const DOORS = LANES;
 
@@ -1120,7 +1121,9 @@ function senseChance(run) {
     const s = h.cls == "rogue" ? SENSE_ROGUE : SENSE;
     return s.base + s.per * (h.agi || 0);
   };
-  return Math.min(SENSE_MAX, Math.round(Math.max(0, ...alive(run.heroes).map(of))));
+  // (deeper down the rooms hide better: SENSE_DEPTH less a floor)
+  const depth = Math.max(0.3, 1 - SENSE_DEPTH * ((run.floor || 1) - 1));
+  return Math.min(SENSE_MAX, Math.round(Math.max(0, ...alive(run.heroes).map(of)) * depth));
 }
 
 // A room's kind as the party knows it (null: hidden)
@@ -1151,8 +1154,21 @@ const RANKS = {
 // How much harder a floor is than the first: evenly, like a character's stats grow (its group a bit more or less)
 // (deeper down a character has better gear, talents and cards too: the monsters a bit more on top - DEPTH_EXTRA a floor)
 const DEPTH_EXTRA = 0.015;
+// The difficulty of the floors on top: [floor, power] - between two of them evenly (fitted with the simulator, every
+// class on its stat curve clearing about three runs of four)
+const FLOOR_POWER = [[1, 2.209], [2, 2.602], [4, 2.067], [8, 1.974], [12, 1.66], [18, 1.504], [23, 1.739], [28, 1.084]];
+function floorPower(floor) {
+  const points = FLOOR_POWER;
+  if (floor <= points[0][0]) return points[0][1];
+  for (let i = 1; i < points.length; i++) {
+    const [f1, p1] = points[i];
+    const [f0, p0] = points[i - 1];
+    if (floor <= f1) return p0 + ((p1 - p0) * (floor - f0)) / (f1 - f0);
+  }
+  return points[points.length - 1][1];
+}
 function floorCurve(growth, floor) {
-  return (1 + growth * (floor - 1)) * (1 + DEPTH_EXTRA * (floor - 1)) * GROUP_POWER[Math.min(GROUP_POWER.length - 1, Math.floor((floor - 1) / 5))];
+  return (1 + growth * (floor - 1)) * (1 + DEPTH_EXTRA * (floor - 1)) * floorPower(floor) * GROUP_POWER[Math.min(GROUP_POWER.length - 1, Math.floor((floor - 1) / 5))];
 }
 
 // A monster of a floor (depth: the row of the map - the deeper into the floor, the stronger; every one a bit
@@ -1843,8 +1859,8 @@ function rewardFor(hero, rng, count = 3) {
 
 // Poison stacks (the damage adds up, the longer time counts); a burn doesn't - a new one only replaces a weaker one
 function afflict(one, kind, turns, dmg) {
-  // (a monster that shrugs it off)
-  if (one.traits && one.traits.includes(kind == "poison" ? "venomproof" : "fireproof")) return false;
+  // (a monster that resists it: half the damage)
+  if (one.traits && one.traits.includes(kind == "poison" ? "venomproof" : "fireproof")) dmg = Math.max(1, Math.round(dmg / 2));
   const old = one.effects[kind];
   if (kind == "poison" && old) one.effects.poison = { turns: Math.max(old.turns, turns), dmg: old.dmg + dmg };
   else if (old) one.effects[kind] = { turns: Math.max(old.turns, turns), dmg: Math.max(old.dmg, dmg) };
@@ -1925,7 +1941,7 @@ function planIntents(run, rng = Math.random) {
 // What a monster's move would do now (the page shows it)
 // A fight that drags on: from FURY_TURN the monsters are furious - no more healing, every turn 20% more damage on top
 // (no fight lasts forever, not even against a regenerating monster or a hero who only blocks)
-const FURY_TURN = 12;
+const FURY_TURN = 16;
 const SUMMON_MAX = 4; // the monsters one boss may call in a fight
 const FURY_STEP = 0.2;
 const furious = (run) => run.turn >= FURY_TURN;
@@ -1967,7 +1983,7 @@ function strike(run, hero, foe, power, rng, options = {}) {
   let damage = hero.atk * between(rng, 0.9, 1.1) * power * bonus * (crit ? CRIT : 1) * (hero.blessed ? SHRINE_POWER : 1) * (hero.effects.might ? MIGHT : 1);
   // (armor - the warrior's hits break through a part of it; a hit on every foe: the mage's strength)
   damage *= 1 - (foe.armor || 0) * Math.max(0, 1 - perk(hero, "pierce"));
-  if (options.aoe) damage *= (1 + perk(hero, "aoe")) * (foe.traits && foe.traits.includes("bulky") ? 0.5 : 1);
+  if (options.aoe) damage *= (1 + perk(hero, "aoe")) * (foe.traits && foe.traits.includes("bulky") ? 0.7 : 1);
   // (cursed: the hero hits softer)
   if (hero.effects.weak) damage *= WEAK;
   // (a foe on guard: half of the hit blocked - the page shows how much)
@@ -2013,6 +2029,8 @@ function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
   }
   // (armor: less of a hit the more armor - with diminishing returns: as much armor as the hit halves it)
   let damage = (raw * raw) / (raw + Math.max(0, hero.def));
+  // (what the armor took off the hit)
+  const armor = Math.round((raw - damage) * (hero.taunting ? TAUNT : 1));
   if (hero.taunting) damage *= TAUNT;
   damage = Math.max(1, Math.round(damage));
   const blocked = Math.min(hero.block, damage);
@@ -2020,7 +2038,7 @@ function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
   damage -= blocked;
   hero.hp = Math.max(0, hero.hp - damage);
   say(run, `${source} hits ${hero.name} for ${damage}${blocked ? ` (${blocked} blocked)` : ""}.`);
-  fx(run, { k: "hit", to: hero.name, n: damage, b: blocked });
+  fx(run, { k: "hit", to: hero.name, n: damage, b: blocked, a: armor, left: hero.block });
   // (thorns: who hits pays)
   const thorns = thornsOf(hero);
   if (foe && thorns && !foe.down) {
@@ -2182,10 +2200,10 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
     for (const one of heroesOf(fx.to)) block(one, value);
   } else if (fx.heal != null) {
     for (const one of heroesOf(fx.to)) heal(one, hero.maxHp * fx.heal);
-    // (the cleric's light: a share of a heal - once a card, whoever it heals, even at full HP - hits a random foe)
+    // (the cleric's light: a share of a heal - once a card, whoever it heals, even at full HP - smites every foe)
     const smite = perk(hero, "healHit");
     const standing = alive(run.monsters);
-    if (smite > 0 && standing.length && run.phase == "fight") strike(run, hero, pick(rng, standing), (hero.maxHp * fx.heal * up * (1 + perk(hero, "heal")) * smite) / Math.max(1, hero.atk), rng, { sure: true, verb: "smites" });
+    if (smite > 0 && standing.length && run.phase == "fight") for (const foe of standing) strike(run, hero, foe, (hero.maxHp * fx.heal * up * (1 + perk(hero, "heal")) * smite) / Math.max(1, hero.atk), rng, { sure: true, verb: "smites" });
   } else if (fx.status) {
     for (const m of foesOf(fx.to)) {
       if (fx.status == "poison") afflict(m, "poison", fx.turns || 3, Math.max(1, Math.round(hero.atk * 0.45 * venom)));
@@ -2615,17 +2633,58 @@ function simulatedTurn(run, me, rng) {
 }
 
 // How a floor goes for a hero this strong alone: {cleared: share of the runs, payback: back per coin}
+// The simulator between two rooms, as a player would: the card and the relic taken, a choice in the room, then a door -
+// what the party sensed of the rooms counts (a Rogue senses far more): low on HP a camp fire, hard fights only when fit
+function simBetween(run, rng = Math.random) {
+  for (const me of run.heroes) {
+    if (me.reward) pickReward(run, me.name, me.reward[0]);
+    if (me.relicChoice) pickRelic(run, me.name, me.relicChoice[0]);
+    const ev = run.event;
+    if (!ev || !ev.choices || ev.choices[me.name] !== null) continue;
+    const low = me.hp < me.maxHp * 0.6;
+    const want = {
+      chest: ["open"],
+      trap: [disarmChance(me) >= 50 ? "disarm" : "sneak"],
+      rest: low ? ["rest", "smith"] : ["smith", "rest"],
+      shrine: me.hp > me.maxHp * 0.8 ? ["pray", "leave"] : ["leave"],
+      event: ["drink", "nap", "bottle", "read", "temper", "take", "roll", "leave", "purge"],
+    }[ev.kind] || ["leave"];
+    for (const option of want) {
+      const card = option == "smith" ? me.deck.findIndex((id) => !isUpgraded(id)) : option == "read" ? ev.offers && ev.offers[me.name] && ev.offers[me.name][0] : option == "purge" ? 0 : null;
+      if (choose(run, me.name, { option, card }, rng) == null) break;
+    }
+  }
+}
+function simDoor(run, rng = Math.random) {
+  const heroes = alive(run.heroes);
+  const health = heroes.length ? Math.min(...heroes.map((h) => h.hp / h.maxHp)) : 1;
+  const worth = (kind) => {
+    if (kind == null) return 0.95;
+    if (kind == "rest") return health < 0.6 ? 3 : 0.9;
+    if (kind == "hard") return health > 0.7 ? 1.1 : 0.3;
+    if (kind == "fight") return health > 0.4 ? 1 : 0.6;
+    return { chest: 1.5, event: 1.2, merchant: 0.7, shrine: health > 0.8 ? 1 : 0.3, trap: 0.5, elite: 1, boss: 1 }[kind] || 1;
+  };
+  let best = 0;
+  let top = -1;
+  run.doors.forEach((door, i) => {
+    const value = worth(shownKind(door)) + rng() * 0.05;
+    if (value > top) {
+      top = value;
+      best = i;
+    }
+  });
+  return best;
+}
+
 function simulate(hero, floor, runs = 500, rng = Math.random) {
   let cleared = 0;
   let back = 0;
   for (let i = 0; i < runs; i++) {
     const run = newRun(floor, [{ name: "sim", hero }], rng);
     while (run.phase == "between") {
-      const me = run.heroes[0];
-      if (me.reward) pickReward(run, "sim", me.reward[0]);
-      if (me.relicChoice) pickRelic(run, "sim", me.relicChoice[0]);
-      if (run.event && run.event.kind == "rest") choose(run, "sim", me.hp < me.maxHp * 0.7 ? { option: "rest" } : { option: "smith", card: me.deck.findIndex((id) => !isUpgraded(id)) }, rng);
-      enterRoom(run, Math.floor(rng() * run.doors.length), rng);
+      simBetween(run, rng);
+      enterRoom(run, simDoor(run, rng), rng);
       let turns = 0;
       while (run.phase == "fight" && turns++ < 100) {
         simulatedTurn(run, run.heroes[0], rng);
@@ -2794,9 +2853,13 @@ module.exports = {
   runView,
   simulate,
   simulatedTurn,
+  FLOOR_POWER,
+  simBetween,
+  simDoor,
   FURY_TURN,
   afflict,
   liveTexts,
   thornsOf,
+  hurt,
   bossPhase,
 };
