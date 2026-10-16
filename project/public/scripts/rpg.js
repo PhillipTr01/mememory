@@ -1490,8 +1490,11 @@ function renderLobby() {
   var leader = party.leader == myName;
   var start = document.getElementById("rpgStart");
   start.hidden = !leader;
-  start.innerText = party.members.length < party.size ? "⚔️ Start with " + party.members.length : "⚔️ Start";
-  document.getElementById("rpgLobbyNote").innerText = leader ? "" : "Waiting for " + party.leader + " to start.";
+  // (a party: at least two - alone is "Go alone")
+  var few = party.members.length < 2;
+  start.disabled = few;
+  start.innerText = few || party.members.length == party.size ? "⚔️ Start" : "⚔️ Start with " + party.members.length;
+  document.getElementById("rpgLobbyNote").innerText = leader ? (few ? "Waiting for a second hero." : "") : "Waiting for " + party.leader + " to start.";
 }
 
 /* ---------- A run ---------- */
@@ -2195,8 +2198,7 @@ function fitHand() {
 }
 window.addEventListener("resize", fitHand);
 
-// The time of the turn / the vote, running down
-// The time of the turn / the vote: seconds, counting down
+// The time of a turn (only with others), counting down
 function tick() {
   var clock = document.getElementById("rpgClock");
   var text = "";

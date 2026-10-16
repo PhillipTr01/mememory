@@ -94,7 +94,7 @@ const FIELDS = [
   { group: "rpg", section: "Floors", key: "RPG_FLOOR_COOLDOWN", label: "Floor cooldown", hint: "After a run on a cleared floor, wait this long to run it again.", unit: "min", scale: 60000, step: 15, min: 0, max: 10080 },
   { group: "rpg", section: "Death", key: "RPG_DEATH_TIME", label: "Dead for", hint: "After the whole party falls.", unit: "min", scale: 60000, step: 30, min: 0, max: 10080 },
   { group: "rpg", section: "Death", key: "RPG_REVIVE_ENTRIES", label: "Revive price", hint: "In entries of the deepest open floor; doubles with each revive that day.", unit: "entries", step: 1, min: 0, max: 100 },
-  { group: "rpg", section: "Fights", key: "RPG_TURN_TIME", label: "Time per turn", hint: "Then the monsters move.", unit: "s", scale: 1000, step: 5, min: 10, max: 600 },
+  { group: "rpg", section: "Fights", key: "RPG_TURN_TIME", label: "Time per turn", hint: "In a party (alone: no clock). Then the monsters move.", unit: "s", scale: 1000, step: 5, min: 10, max: 600 },
 ];
 
 const BY_KEY = new Map(FIELDS.map((field) => [field.key, field]));

@@ -188,10 +188,10 @@ module.exports = function (io, options = {}) {
   }
 
   // The clock of a fight - started anew only when the turn changes (a card played doesn't): the time up, the
-  // monsters' turn. Between the rooms: no clock. A run alone stands still while its hero is away from the page.
+  // monsters' turn. Only with others (alone: no clock), only in a fight. A run stands still while all are away.
   function schedule(party) {
     const run = party.run;
-    const paused = run && run.heroes.every((h) => h.away);
+    const paused = run && (run.heroes.length < 2 || run.heroes.every((h) => h.away));
     const key = run && !paused ? run.phase + ":" + run.rooms.length + ":" + run.turn : null;
     if (key === party.clock) return;
     party.clock = key;
@@ -673,6 +673,7 @@ module.exports = function (io, options = {}) {
       const party = myParty();
       if (!party || party.run) return;
       if (party.leader !== username) return error("Only the leader starts.");
+      if (party.members.length < 2) return error("Wait for a second hero - or go alone.");
       // (the leader's own floor cooling down - a leader after the first one left)
       if (rpg.floorCooldown(heroOf(username), party.floor)) return error(cooling(party.floor));
       const dead = party.members.find((name) => rpg.deadFor(heroOf(name)));

@@ -561,12 +561,20 @@ function waitFor(socket, event, predicate, timeout = 4000) {
 function autoplay(socket, name, options) {
   const sent = new Set();
   const done = new Set();
+  // (a play refused - the foe down meanwhile: the turn ends - alone there is no clock to end it)
+  let last = null;
+  socket.on("rpgError", () => {
+    if (!last || done.has(last)) return;
+    done.add(last);
+    socket.emit("endTurn");
+  });
   socket.on("rpgParty", (p) => {
     if (!p || !p.run || p.result) return;
     const run = p.run;
     const me = run.heroes.find((h) => h.name == name);
     if (!me) return;
     const turn = run.rooms.length + ":" + run.turn;
+    if (run.phase == "fight") last = turn;
     if (run.phase == "fight" && !me.down && !me.ended && !done.has(turn)) {
       const foe = run.monsters.find((m) => !m.down);
       const spent = me.hand.filter((c) => sent.has(c.uid)).reduce((sum, c) => sum + rpg.CARDS[c.id].cost, 0);
@@ -656,11 +664,14 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; between 
   const fight = await waitFor(alice, "rpgParty", (p) => p && p.run && p.run.phase == "fight");
   assert.strictEqual(testMode.balance("rpg_alice"), before - rpg.entryCost(1));
   assert.ok(fight.run.monsters.length >= 1);
+  assert.strictEqual(fight.timeLeft, null, "alone: no turn clock");
   // Not during a run
   const busy = h.once(alice, "rpgError");
   alice.emit("upgrade", { stat: "hp" });
   assert.match(await busy, /Not during a run/);
   autoplay(alice, "rpg_alice", { vote: false });
+  // (alone: no clock - the first turn ended by hand, the next ones by the autoplay)
+  alice.emit("endTurn");
   const between = await waitFor(alice, "rpgParty", (p) => p && p.run && p.run.phase == "between");
   assert.ok(between.run.pot > 0);
   // No clock between the rooms: out with the loot when the hero says so
@@ -703,6 +714,10 @@ test("rpg: co-op - one opens a party, another joins, the leader starts (both pay
   alice.emit("create", { floor: 1, size: 2 });
   const open = await waitFor(bob, "rpgParties", (list) => list.some((p) => p.leader == "rpg_alice" && !p.started));
   const id = open.find((p) => p.leader == "rpg_alice").id;
+  // (a party starts with two at least - alone is "Go alone")
+  const alone = h.once(alice, "rpgError");
+  alice.emit("start");
+  assert.match(await alone, /second hero/);
   bob.emit("join", { id });
   await waitFor(alice, "rpgParty", (p) => p && p.members.length == 2);
   // Only the leader starts
@@ -716,6 +731,7 @@ test("rpg: co-op - one opens a party, another joins, the leader starts (both pay
   assert.strictEqual(testMode.balance("rpg_alice"), aliceBefore - rpg.entryCost(1));
   assert.strictEqual(testMode.balance("rpg_bob"), bobBefore - rpg.entryCost(1));
   assert.strictEqual(fight.run.heroes.length, 2);
+  assert.ok(fight.timeLeft > 0, "with others: the turn clock");
 
   // The turn waits for both heroes
   alice.emit("endTurn");
