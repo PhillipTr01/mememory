@@ -1343,16 +1343,21 @@ test("rpg: a party votes in a room - the most votes happen for everyone, a card 
   run.doors = [{ kind: "rest", row: 0, index: 0, open: true }];
   rpg.enterRoom(run, 0, seeded(1));
   for (const h of run.heroes) h.hp = Math.round(h.maxHp / 2);
-  assert.strictEqual(rpg.choose(run, "a", { option: "smith", card: 0 }, seeded(1)), null);
+  // (the vote: the option first - no card yet)
+  assert.strictEqual(rpg.choose(run, "a", { option: "smith" }, seeded(1)), null);
   assert.strictEqual(rpg.choose(run, "b", { option: "rest" }, seeded(1)), null);
-  assert.match(rpg.choose(run, "b", { option: "smith", card: 0 }, seeded(1)), /already/);
+  assert.match(rpg.choose(run, "b", { option: "smith" }, seeded(1)), /already/);
   assert.ok(run.heroes.every((h) => h.hp == Math.round(h.maxHp / 2)), "nothing yet");
-  assert.strictEqual(rpg.choose(run, "c", { option: "smith", card: 1 }, seeded(1)), null);
-  // (smith won 2:1 - everyone upgrades a card, b one picked for it)
+  assert.strictEqual(rpg.choose(run, "c", { option: "smith" }, seeded(1)), null);
+  // (smith won 2:1 - now every hero picks its own card to upgrade, b too)
   assert.strictEqual(run.event.chosen, "smith");
+  assert.deepStrictEqual(Object.values(run.event.choices), [null, null, null]);
+  assert.match(rpg.choose(run, "b", { option: "rest" }, seeded(1)), /another option/);
+  assert.strictEqual(rpg.choose(run, "a", { option: "smith", card: 0 }, seeded(1)), null);
+  assert.strictEqual(rpg.choose(run, "b", { option: "smith", card: 2 }, seeded(1)), null);
+  assert.strictEqual(rpg.choose(run, "c", { option: "smith", card: 1 }, seeded(1)), null);
   assert.deepStrictEqual(Object.values(run.event.choices), ["smith", "smith", "smith"]);
-  assert.ok(run.heroes[0].deck[0].endsWith("+") && run.heroes[2].deck[1].endsWith("+"));
-  assert.strictEqual(run.heroes[1].deck.filter((id) => id.endsWith("+")).length, 1);
+  assert.ok(run.heroes[0].deck[0].endsWith("+") && run.heroes[1].deck[2].endsWith("+") && run.heroes[2].deck[1].endsWith("+"));
   assert.ok(run.heroes.every((h) => h.hp == Math.round(h.maxHp / 2)), "nobody rested");
 });
 

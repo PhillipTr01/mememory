@@ -1815,8 +1815,8 @@ function pickRelic(run, name, id) {
 
 // A hero's choice in a room: {option, card} (card: an index of the deck - or a card offered) -> an error or null
 // A choice in a room: alone (and at the merchant) it happens at once - in a party it is a vote: the most votes
-// (a tie: one of them at random) happens for everyone once all have voted (a hero voting for another option gets
-// a card of its own picked for it)
+// (a tie: one of them at random) happens for everyone once all have voted; a choice that needs a card (smith, the
+// hermit, the library): every hero picks its own after the vote
 function choose(run, name, input = {}, rng = Math.random) {
   const hero = run.heroes.find((h) => h.name == name);
   const event = run.event;
@@ -1824,13 +1824,23 @@ function choose(run, name, input = {}, rng = Math.random) {
   if (event.choices[name]) return "You chose already.";
   const option = optionsOf(event).find((o) => o.id == input.option);
   if (!option) return "Not one of the choices.";
-  const error = choiceError(run, event, hero, option, input);
-  if (error) return error;
   const voters = Object.keys(event.choices).filter((one) => run.heroes.some((h) => h.name == one));
-  if (voters.length <= 1 || event.kind == "merchant") return applyChoice(run, hero, option, input, rng);
+  const party = voters.length > 1 && event.kind != "merchant";
+  // (alone: at once - in a party, once the vote is over, the card of a choice that needs one)
+  if (!party || event.chosen) {
+    if (party && option.id != event.chosen) return "The party chose another option.";
+    const error = choiceError(run, event, hero, option, input);
+    if (error) return error;
+    return applyChoice(run, hero, option, input, rng);
+  }
+  // A party: the vote - the option first, a card (if it needs one) after
+  if (!option.card) {
+    const error = choiceError(run, event, hero, option, input);
+    if (error) return error;
+  }
   event.votes = event.votes || {};
   if (event.votes[name]) return "You voted already.";
-  event.votes[name] = { option: option.id, card: input.card };
+  event.votes[name] = { option: option.id };
   const here = run.heroes.filter((h) => !h.away && voters.includes(h.name));
   if (!here.every((h) => event.votes[h.name])) return null;
   // (everyone voted: the most votes - for everyone)
@@ -1842,8 +1852,12 @@ function choose(run, name, input = {}, rng = Math.random) {
   event.chosen = winner.id;
   for (const one of voters.map((n) => run.heroes.find((h) => h.name == n))) {
     if (event.choices[one.name]) continue;
-    const own = event.votes[one.name] && event.votes[one.name].option == winner.id ? { option: winner.id, card: event.votes[one.name].card } : autoInput(run, event, one, winner, rng);
-    if (own && !choiceError(run, event, one, winner, own)) applyChoice(run, one, winner, own, rng);
+    // (a card to pick: every hero picks its own now - who can't, walks on)
+    if (winner.card) {
+      if (!autoInput(run, event, one, winner, rng)) applyChoice(run, one, LEAVE, { option: "leave" }, rng);
+      continue;
+    }
+    if (!choiceError(run, event, one, winner, { option: winner.id })) applyChoice(run, one, winner, { option: winner.id }, rng);
     else applyChoice(run, one, LEAVE, { option: "leave" }, rng);
   }
   return null;
@@ -1863,7 +1877,7 @@ function choiceError(run, event, hero, option, input) {
   return null;
 }
 
-// The card for a hero the party's choice needs one of (it voted for another option): picked at random
+// A card for a hero the party's choice needs one of: one at random (null: none fits - see choose)
 function autoInput(run, event, hero, option, rng) {
   if (option.card == "smith") {
     const free = hero.deck.map((id, i) => i).filter((i) => !isUpgraded(hero.deck[i]));

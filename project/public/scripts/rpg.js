@@ -2168,24 +2168,28 @@ var OPTION_ICONS = { seal: "⛓️", rest: "💤", smith: "🔨", open: "🗝️
 function choiceNodes(run, me) {
   var ev = run.event;
   var chosen = ev.choices[myName];
-  // (a party: a vote - who voted for what on every option)
+  // (a party: a vote - who voted for what on every option; a card the choice needs: picked after the vote)
   var votes = ev.votes || {};
   var voted = votes[myName] || null;
   var party = Object.keys(ev.choices).length > 1 && ev.kind != "merchant";
+  var won = party && ev.chosen ? ev.options.find((o) => o.id == ev.chosen) : null;
+  var voting = party && !won;
   var nodes = [];
   var row = el("div", "rpg-options");
   ev.options.forEach((o) => {
     var text = o.text;
     if (o.id == "disarm" && ev.disarm) text += " (🍀 " + ev.disarm[myName] + "%)";
-    var b = el("button", "rpg-option" + (chosen == o.id || voted == o.id ? " chosen" : "") + (picking == o.id ? " picking" : "") + (o.card == "offer" ? " offer" : ""));
+    var mine = chosen == o.id || voted == o.id || (won && won.id == o.id);
+    var b = el("button", "rpg-option" + (mine ? " chosen" : "") + (picking == o.id ? " picking" : "") + (o.card == "offer" && !voting ? " offer" : ""));
     b.type = "button";
-    if (chosen || voted || o.card == "offer") b.disabled = true;
+    if (chosen || voted || won || (o.card == "offer" && !voting)) b.disabled = true;
     else {
-      b.dataset.act = o.card ? "pickMode" : "choose";
+      // (alone: a card option opens the deck to pick from - in a party's vote it is only a vote)
+      b.dataset.act = o.card && !voting ? "pickMode" : "choose";
       b.dataset.id = o.id;
     }
-    b.append(el("span", "rpg-option-icon", OPTION_ICONS[o.id] || "✦"), el("b", "", o.label + (o.card == "offer" && !chosen ? " ↓" : "")), el("span", "", text));
-    if (chosen == o.id || (!chosen && voted == o.id)) b.appendChild(el("i", "rpg-option-check", "✓"));
+    b.append(el("span", "rpg-option-icon", OPTION_ICONS[o.id] || "✦"), el("b", "", o.label + (o.card == "offer" && !chosen && !voting ? " ↓" : "")), el("span", "", text));
+    if (mine) b.appendChild(el("i", "rpg-option-check", "✓"));
     var backers = Object.keys(votes).filter((n) => votes[n] == o.id);
     if (party && backers.length && !chosen) {
       var faces = el("span", "rpg-option-votes");
@@ -2199,19 +2203,21 @@ function choiceNodes(run, me) {
     nodes.push(el("div", "rpg-scene-done", "Pick the next room on the map 🗺️"));
     return nodes;
   }
-  if (voted) {
-    nodes.push(el("div", "rpg-scene-done", "The party votes. The choice with the most votes happens for everyone."));
+  if (voting) {
+    nodes.push(el("div", voted ? "rpg-scene-done" : "rpg-label", "The party votes. The choice with the most votes happens for everyone."));
     return nodes;
   }
-  if (party) nodes.push(el("div", "rpg-label", "The party votes. The choice with the most votes happens for everyone."));
-  // The library: the cards to study, right there
-  var offer = ev.options.find((o) => o.card == "offer");
+  // The card to pick: alone after choosing - in a party after the vote, for the option that won
+  var cardOption = won ? (won.card ? won : null) : null;
+  if (won && cardOption) nodes.push(el("div", "rpg-label", "The party chose " + won.label + "."));
+  var offer = cardOption ? (cardOption.card == "offer" ? cardOption : null) : ev.options.find((o) => o.card == "offer");
   if (offer && ev.offers && ev.offers[myName]) {
     var cards = el("div", "rpg-reward-cards");
     ev.offers[myName].forEach((id) => cards.appendChild(cardEl(id, { tag: "button", act: "chooseCard", id: offer.id + ":" + id, className: "pickable" })));
-    nodes.push(el("div", "rpg-label", offer.label + " - pick one"), cards);
+    nodes.push(el("div", "rpg-label", "Pick one card for your deck."), cards);
   }
-  if (picking && ev.options.some((o) => o.id == picking)) nodes.push(...deckPicker(me, picking == "smith" ? "Pick a card to upgrade. Hover a card to see what changes." : "Pick a card to give", picking));
+  var deckOption = cardOption && cardOption.card != "offer" ? cardOption.id : picking && ev.options.some((o) => o.id == picking) ? picking : null;
+  if (deckOption) nodes.push(...deckPicker(me, deckOption == "smith" ? "Pick a card to upgrade. Hover a card to see what changes." : "Pick a card to give", deckOption));
   return nodes;
 }
 
