@@ -239,8 +239,8 @@ module.exports = {
   RPG_CHAR_PRICE: 50, // every character after the first: stat levels this % dearer (the 2nd +50%, the 3rd +100%...)
   RPG_CHAR_HARDER: 10, // every character after the first: monsters this % stronger (a party: the average)
   RPG_PARTY_GAP: 10, // a party: its characters' levels at most this far apart
-  RPG_FLOOR_COOLDOWN: 2 * 3600 * 1000, // a cleared floor: not opened again this long (another one's party on it: fine)
-  RPG_DEATH_TIME: 6 * 3600 * 1000, // the party down: the character dead this long
+  RPG_FLOOR_COOLDOWN: 30 * 60 * 1000, // a cleared floor: not opened again this long (another one's party on it: fine)
+  RPG_DEATH_TIME: 2 * 3600 * 1000, // the party down: the character dead this long
   RPG_REVIVE_ENTRIES: 3, // a revive: this many entries of the deepest floor open (twice as much each one of a day)
   RPG_MONSTER_HP: 100, // % of the monsters' HP
   RPG_MONSTER_ATK: 100, // % of the monsters' attack
