@@ -829,7 +829,7 @@ const ABILITIES = {
   warrior: { name: "Smash Open", icon: "🔨", coins: 0.01, gear: 0.003, about: "Every level gives 1% more coins and 0.3% more gear from treasures." },
   paladin: { name: "Shield the Party", icon: "🛡️", trap: 0.006, shrine: 0.005, about: "Every level lowers the damage of traps by 0.6% and of shrines by 0.5%." },
   cleric: { name: "Sanctuary", icon: "🕊️", rest: 0.01, rise: 0.003, about: "Every level gives 1% more healing at camp fires and the fallen rise with 0.3% more HP." },
-  mage: { name: "Arcane Insight", icon: "🔮", discount: 0.003, rerollEvery: 25, about: "Every level makes the merchant 0.3% cheaper. You can reroll a card reward once per run, and once more every 25 levels." },
+  mage: { name: "Arcane Insight", icon: "🔮", discount: 0.003, rerollEvery: 25, about: "Every level makes the merchant 0.3% cheaper for the party. You can reroll your card reward once per run, and once more every 25 levels." },
   rogue: { name: "Scout", icon: "🦊", about: "Senses hidden rooms far better, more with every level." },
 };
 
@@ -1787,12 +1787,14 @@ function pickReward(run, name, card) {
   return null;
 }
 
-// A mage's insight: the card reward drawn again - 1 + one more every rerollEvery levels a run, for the party
+// A mage's insight: its own card reward drawn again - 1 + one more every rerollEvery levels a run (only the
+// mage's: the merchant's discount is the party's)
 function rerollReward(run, name, rng = Math.random) {
   const hero = run.heroes.find((h) => h.name == name);
   if (!hero || !hero.reward) return "No card to pick.";
+  if (hero.cls != "mage") return "Only a mage can reroll.";
   const level = abilityLevel(run, "mage");
-  if (level == null) return "No mage in the party.";
+  if (level == null) return "Only a mage can reroll.";
   if (run.rerolls == null) run.rerolls = 1 + Math.floor(level / ABILITIES.mage.rerollEvery);
   if (run.rerolls <= 0) return "No rerolls left.";
   run.rerolls--;

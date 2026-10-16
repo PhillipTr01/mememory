@@ -869,9 +869,12 @@ test("rpg: leaving - one away doesn't hold the party up, one out of the run lose
   assert.strictEqual(rpg.abilityLevel(abRun, "warrior"), 40);
   assert.strictEqual(rpg.abilityLevel(abRun, "cleric"), null);
   assert.match(rpg.abilityOf("warrior", 40).text, /\+40% coins/);
+  // (the reroll: only the mage's own reward)
   abRun.heroes[0].reward = ["jab", "brace", "dash"];
-  for (let i = 0; i < 3; i++) assert.strictEqual(rpg.rerollReward(abRun, "h0"), null);
-  assert.match(rpg.rerollReward(abRun, "h0"), /No rerolls left/);
+  assert.match(rpg.rerollReward(abRun, "h0"), /Only a mage/);
+  abRun.heroes[1].reward = ["jab", "brace", "dash"];
+  for (let i = 0; i < 3; i++) assert.strictEqual(rpg.rerollReward(abRun, "h1"), null);
+  assert.match(rpg.rerollReward(abRun, "h1"), /No rerolls left/);
   // Longer maps deeper down and on boss floors
   for (let i = 0; i < 20; i++) {
     assert.strictEqual(rpg.rowsFor(1), rpg.ROOMS);

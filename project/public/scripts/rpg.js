@@ -1966,8 +1966,8 @@ function rewardPanel(me) {
     el("div", "rpg-reward-title", "🃏 Add a card to your deck"),
     el("div", "rpg-reward-note mm-muted small", "The card stays in your deck for this run."),
     cards,
-    // (a mage in the party: other cards - a few times a run)
-    party.run.rerolls != null ? button("🔮 Reroll (" + party.run.rerolls + " left)", "reroll", { className: "small", disabled: party.run.rerolls <= 0 }) : null,
+    // (a mage: other cards - a few times a run, only its own)
+    party.run.rerolls != null && me.cls == "mage" ? button("🔮 Reroll (" + party.run.rerolls + " left)", "reroll", { className: "small", disabled: party.run.rerolls <= 0 }) : null,
     button("Skip this card", "pick", { id: "", className: "small" }),
     button("‹ Back", "rewardView", { id: "list", className: "small" }),
   ];
