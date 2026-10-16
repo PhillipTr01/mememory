@@ -714,7 +714,8 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; between 
   alice.emit("revive");
   await waitFor(alice, "rpgHero", (view) => view.deadFor == 0);
   assert.strictEqual(testMode.balance("rpg_alice"), coinsDead - price);
-  assert.strictEqual(rpg.revivePrice(mine), Math.round(price * 1.5));
+  // (1.5 times as much - rounded to the price steps)
+  assert.ok(Math.abs(rpg.revivePrice(mine) - price * 1.5) <= 50, String(rpg.revivePrice(mine)));
   // (this tab plays no more)
   alice.close();
 });
@@ -839,7 +840,7 @@ test("rpg: leaving - one away doesn't hold the party up, one out of the run lose
   const price = rpg.revivePrice(hero, now);
   assert.strictEqual(rpg.revive(hero, now), null);
   assert.strictEqual(rpg.deadFor(hero, now), 0);
-  assert.strictEqual(rpg.revivePrice(hero, now), Math.round(price * 1.5));
+  assert.ok(Math.abs(rpg.revivePrice(hero, now) - price * 1.5) <= 50, String(rpg.revivePrice(hero, now)));
   // (midnight: the price back to the start)
   assert.strictEqual(rpg.revivePrice(hero, now + 24 * 3600 * 1000), price);
   assert.match(rpg.revive(hero, now), /isn't dead/);

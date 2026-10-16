@@ -241,7 +241,7 @@ module.exports = {
   RPG_PARTY_GAP: 10, // a party: its characters' levels at most this far apart
   RPG_FLOOR_COOLDOWN: 30 * 60 * 1000, // a cleared floor: not opened again this long (another one's party on it: fine)
   RPG_DEATH_TIME: 2 * 3600 * 1000, // the party down: the character dead this long
-  RPG_REVIVE_ENTRIES: 2, // a revive: this many entries of the deepest floor open (1.5 times as much each one of a day)
+  RPG_REVIVE_PERCENT: 150, // a revive: this share of an entry of the deepest floor open, % (1.5 times as much each one of a day)
   RPG_MONSTER_HP: 100, // % of the monsters' HP
   RPG_MONSTER_ATK: 100, // % of the monsters' attack
   RPG_LOOT: 100, // % of the coins a room puts in the pot
