@@ -1595,9 +1595,15 @@ const MERCHANT_RELICS = 2;
 const DECK_LEAST = 5; // a run's deck: never fewer cards (the hermit, the merchant take some)
 
 // What a room offers to choose
+// A cursed chest: far more coins for a curse on the next fight (its monsters CURSE times as strong)
+const CURSED_CHANCE = 0.3;
+const CURSE = { atk: 1.35, hp: 1.15 };
+const SEAL = { id: "seal", label: "Break the seal", text: "The pot gets three times the coins, but the next fight's monsters hit far harder." };
+
 function optionsOf(event) {
   if (!event) return [];
   if (event.kind == "event") return ENCOUNTERS[event.id].options;
+  if (event.kind == "chest" && event.cursed) return [...ROOM_OPTIONS.chest, SEAL];
   return ROOM_OPTIONS[event.kind] || [];
 }
 
@@ -1622,6 +1628,16 @@ function enterRoom(run, door = 0, rng = Math.random) {
   if (kind == "fight" || kind == "hard" || kind == "elite" || kind == "boss" || kind == "deep") {
     run.monsters = monstersFor(run.floor, run.heroes.length, kind, rng, chosen.row || 0);
     run.monsters.forEach((m) => toughen(run, m));
+    // (a cursed chest opened before: these monsters are far stronger)
+    if (run.curse) {
+      run.curse = false;
+      for (const m of run.monsters) {
+        m.maxHp = m.hp = Math.round(m.hp * CURSE.hp);
+        m.atk = Math.round(m.atk * CURSE.atk);
+        m.cursed = true;
+      }
+      say(run, "The curse of the chest follows the party ⛓️. The monsters hit far harder.");
+    }
     // (the practice run: one slime first, then two easy foes - half as strong)
     if (run.tutorial) {
       run.monsters = run.monsters.slice(0, run.rooms.length == 1 ? 1 : 2);
@@ -1666,7 +1682,10 @@ function enterRoom(run, door = 0, rng = Math.random) {
     run.pot += coins;
     run.event.shared = [{ k: "coins", n: coins }];
     run.event.results = {};
+    run.event.coins = coins;
+    run.event.cursed = rng() < CURSED_CHANCE;
     note(`🪙 ${coins} each to the pot.`);
+    if (run.event.cursed) note("Black chains bind the chest. Something hums inside. ⛓️");
     if (smash != null)
       for (const hero of heroes)
         if (rng() < ABILITIES.warrior.gear * smash) {
@@ -1835,6 +1854,16 @@ function choose(run, name, input = {}, rng = Math.random) {
   const healed = (n) => (got({ k: "heal", n }), n);
   event.choices[name] = option.id;
   switch (option.id) {
+    case "seal":
+      // (the seal broken - once: twice the coins more, the curse on the next fight; then the chest opens as usual)
+      if (!event.sealed) {
+        event.sealed = name;
+        run.pot += event.coins * 2;
+        run.curse = true;
+        (event.shared = event.shared || []).push({ k: "coins", n: event.coins * 2 });
+        note(`${name} breaks the seal ⛓️: 🪙 ${event.coins * 2} more each to the pot. The next fight is cursed.`);
+      }
+    // falls through
     case "open": {
       // (every hero rolls on its own - luck helps: gear, maybe a relic - nothing of both: dust)
       const lucky = rng() * 100 < 40 + hero.luck / 2;
@@ -2660,6 +2689,8 @@ function runView(run) {
       choices: run.event.choices,
       offers: run.event.offers,
       disarm: run.event.kind == "trap" ? Object.fromEntries(run.heroes.map((h) => [h.name, disarmChance(h)])) : null,
+      cursed: !!run.event.cursed,
+      sealed: run.event.sealed || null,
     },
     votes: run.votes,
     heroes: run.heroes.map((h) => ({
@@ -2709,6 +2740,7 @@ function runView(run) {
       rank: m.rank,
       undead: m.undead,
       affix: m.affix,
+      cursed: !!m.cursed,
       down: !!m.down,
       effects: effectsOf(m.effects),
       intent: m.down || !m.intent ? null : { move: m.intent.move, target: m.intent.target || null, damage: intentDamage(m, m.intent.move), stunned: !!m.effects.stun },

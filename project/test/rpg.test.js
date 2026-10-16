@@ -1262,3 +1262,23 @@ test("rpg: the deep stairs - sometimes the end of a floor leads deeper; won, the
   rpg.afterRoom(plain, () => 0);
   assert.strictEqual(plain.phase, "won");
 });
+
+test("rpg: a cursed chest - breaking the seal triples the coins, the next fight is far harder", () => {
+  const hero = rpg.newHero("warrior");
+  const run = rpg.newRun(3, [{ name: "a", hero }, { name: "b", hero: rpg.newHero("mage") }], seeded(4));
+  run.doors = [{ kind: "chest", row: 0, index: 0, open: true }];
+  rpg.enterRoom(run, 0, () => 0.01);
+  assert.strictEqual(run.event.cursed, true);
+  assert.ok(rpg.runView(run).event.options.some((o) => o.id == "seal"));
+  const pot = run.pot;
+  assert.strictEqual(rpg.choose(run, "a", { option: "seal" }, seeded(1)), null);
+  assert.strictEqual(run.pot, pot + run.event.coins * 2);
+  // (once: a second hero breaking it again adds nothing)
+  assert.strictEqual(rpg.choose(run, "b", { option: "seal" }, seeded(1)), null);
+  assert.strictEqual(run.pot, pot + run.event.coins * 2);
+  // (the next fight: cursed monsters)
+  run.doors = [{ kind: "fight", row: 1, index: 0, open: true }];
+  rpg.enterRoom(run, 0, seeded(2));
+  assert.ok(run.monsters.every((m) => m.cursed));
+  assert.strictEqual(run.curse, false);
+});

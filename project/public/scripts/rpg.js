@@ -1750,6 +1750,7 @@ function renderRun() {
         card.appendChild(traits);
       }
       if (m.affix) card.appendChild(el("div", "rpg-affix", rules.affixes[m.affix].icon + " " + rules.affixes[m.affix].text));
+      if (m.cursed) card.appendChild(el("div", "rpg-affix", "⛓️ Cursed by the chest. It hits far harder."));
       if (badge) card.appendChild(badge);
       return card;
     });
@@ -1987,7 +1988,7 @@ function roomScene(run, me) {
   var art = el("div", "rpg-scene-art");
   art.appendChild(el("span", "rpg-scene-icon", enc ? enc.icon : kind.icon));
   var head = el("div", "rpg-scene-head");
-  head.append(el("div", "rpg-scene-title", enc ? enc.name : kind.name), el("div", "rpg-scene-story", enc ? enc.story : ROOM_STORY[ev.kind] || kind.about));
+  head.append(el("div", "rpg-scene-title", enc ? enc.name : kind.name), el("div", "rpg-scene-story", enc ? enc.story : ev.cursed ? "A heavy chest bound in black chains. Something hums inside." : ROOM_STORY[ev.kind] || kind.about));
   var body = el("div", "rpg-scene-body");
   if (ev.kind == "merchant") body.append(...shopNodes(run, me));
   else if (me && ev.choices && myName in ev.choices) body.append(...choiceNodes(run, me));
@@ -2089,7 +2090,7 @@ function resultCard(r) {
 }
 
 // A picture for every choice of a room
-var OPTION_ICONS = { rest: "💤", smith: "🔨", open: "🗝️", disarm: "🛠️", sneak: "👣", pray: "🙏", leave: "🚶", bottle: "⚗️", drink: "🍶", nap: "😴", purge: "🎁", read: "📖", roll: "🎲", take: "✋", temper: "🔥" };
+var OPTION_ICONS = { seal: "⛓️", rest: "💤", smith: "🔨", open: "🗝️", disarm: "🛠️", sneak: "👣", pray: "🙏", leave: "🚶", bottle: "⚗️", drink: "🍶", nap: "😴", purge: "🎁", read: "📖", roll: "🎲", take: "✋", temper: "🔥" };
 
 // The choices of a room: big buttons - one of them (a card to pick: of the deck, or of the cards offered)
 function choiceNodes(run, me) {
