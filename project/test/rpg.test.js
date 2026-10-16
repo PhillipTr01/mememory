@@ -1124,10 +1124,11 @@ test("rpg: balance - every class on the curve of its floor clears early, mid and
     if (floor <= 3) char.deck.unshift(...rpg.starterDeck(cls).slice(0, 8));
     return hero;
   }
+  // (far under the curve: more runs - a few lucky ones don't tip it)
   const clear = (cls, floor, curve) => {
     const rng = seeded(floor * 97 + cls.length);
     let won = 0;
-    const runs = 24;
+    const runs = curve < 1 ? 48 : 24;
     for (let i = 0; i < runs; i++) won += rpg.simulate(heroFor(cls, floor, curve, rng), floor, 1, rng).cleared;
     return won / runs;
   };

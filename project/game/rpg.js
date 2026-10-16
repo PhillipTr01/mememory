@@ -252,7 +252,7 @@ const RARITIES = [
   { id: "common", name: "Common", weight: 60, deep: 60, power: 1 },
   { id: "rare", name: "Rare", weight: 20, deep: 32, power: 1.5 },
   { id: "epic", name: "Epic", weight: 4, deep: 14, power: 2.2 },
-  { id: "legendary", name: "Legendary", weight: 0.5, deep: 3.5, power: 3.2 },
+  { id: "legendary", name: "Legendary", weight: 0.3, deep: 2, power: 3.2 },
 ];
 // The gear: three slots, every kind with its own mix of stats (x the slot's base for them) - every weapon also
 // gives agility (dodge); a charm's "deck": how often it changes the deck's size
@@ -674,7 +674,7 @@ function collect(char, id) {
 
 // A card as loot: one of the class's (and the neutral ones) for the collection, by its rarity's weight - least: at
 // least that rare. It is the character's once the run ends (lost: gone, like the gear)
-const LOOT_CARD = { chest: 0.25, hard: 0.15 };
+const LOOT_CARD = { chest: 0.12, hard: 0.15 };
 function lootCard(hero, rng = Math.random, least = "common") {
   const from = RARITY_RANK.indexOf(least);
   const pool = poolOf(hero.cls)
@@ -1081,7 +1081,8 @@ function canWear(item, cls) {
 function makeGear(floor, rng = Math.random, luck = 0, cls = null) {
   const shift = Math.min(0.5, luck / 100);
   const depth = Math.min(1, Math.max(0, (floor - 1) / (FLOORS - 1)));
-  const weights = RARITIES.map((rarity, i) => (rarity.weight + (rarity.deep - rarity.weight) * depth) * (i == 0 ? 1 - shift : 1 + shift * i));
+  // (luck: better pieces more often - a legendary at most twice as often)
+  const weights = RARITIES.map((rarity, i) => (rarity.weight + (rarity.deep - rarity.weight) * depth) * (i == 0 ? 1 - shift : 1 + shift * Math.min(i, 2)));
   let roll = rng() * weights.reduce((a, b) => a + b, 0);
   let index = 0;
   while (roll >= weights[index] && index < RARITIES.length - 1) roll -= weights[index++];
@@ -2800,11 +2801,11 @@ function winFight(run, rng) {
   afterRoom(run, rng);
   // (the floor's XP: once - when it is cleared)
   if ((run.phase == "won" && !before) || (run.cleared && !before)) for (const hero of run.heroes) hero.xp += xpFor("floor", run.floor);
-  // (the deep guardian: a piece of legendary gear for everyone)
+  // (the deep guardian: a piece of epic gear or better for everyone - legendary only sometimes)
   if (room.kind == "deep") {
     for (const hero of alive(run.heroes)) {
       let item = makeGear(run.floor, rng, hero.luck, hero.cls);
-      for (let i = 0; i < 2000 && item.rarity != "legendary"; i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
+      for (let i = 0; i < 400 && !["epic", "legendary"].includes(item.rarity); i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
       (run.loot[hero.name] = run.loot[hero.name] || []).push(item);
     }
   }
