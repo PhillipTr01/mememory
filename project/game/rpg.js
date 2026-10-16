@@ -245,11 +245,12 @@ const REST_HEAL = 0.35;
 const SHRINE_COST = 0.2; // of the max HP
 const SHRINE_POWER = 1.25; // the blessing: more damage for the rest of the run
 
+// (weight: on floor 1 - deep: on the last floor, the weight in between in line; the rarer, the more it grows)
 const RARITIES = [
-  { id: "common", name: "Common", weight: 60, power: 1 },
-  { id: "rare", name: "Rare", weight: 28, power: 1.5 },
-  { id: "epic", name: "Epic", weight: 10, power: 2.2 },
-  { id: "legendary", name: "Legendary", weight: 2, power: 3.2 },
+  { id: "common", name: "Common", weight: 60, deep: 60, power: 1 },
+  { id: "rare", name: "Rare", weight: 20, deep: 32, power: 1.5 },
+  { id: "epic", name: "Epic", weight: 4, deep: 14, power: 2.2 },
+  { id: "legendary", name: "Legendary", weight: 0.5, deep: 3.5, power: 3.2 },
 ];
 // The gear: three slots, every kind with its own mix of stats (x the slot's base for them) - every weapon also
 // gives agility (dodge); a charm's "deck": how often it changes the deck's size
@@ -1066,7 +1067,8 @@ function canWear(item, cls) {
 // and charms every one)
 function makeGear(floor, rng = Math.random, luck = 0, cls = null) {
   const shift = Math.min(0.5, luck / 100);
-  const weights = RARITIES.map((rarity, i) => rarity.weight * (i == 0 ? 1 - shift : 1 + shift * i));
+  const depth = Math.min(1, Math.max(0, (floor - 1) / (FLOORS - 1)));
+  const weights = RARITIES.map((rarity, i) => (rarity.weight + (rarity.deep - rarity.weight) * depth) * (i == 0 ? 1 - shift : 1 + shift * i));
   let roll = rng() * weights.reduce((a, b) => a + b, 0);
   let index = 0;
   while (roll >= weights[index] && index < RARITIES.length - 1) roll -= weights[index++];
@@ -2735,7 +2737,7 @@ function winFight(run, rng) {
     // (a boss: a piece of epic gear or better too)
     if (room.kind == "boss") {
       let item = makeGear(run.floor, rng, hero.luck, hero.cls);
-      for (let i = 0; i < 60 && !["epic", "legendary"].includes(item.rarity); i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
+      for (let i = 0; i < 400 && !["epic", "legendary"].includes(item.rarity); i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
       (run.loot[hero.name] = run.loot[hero.name] || []).push(item);
       say(run, `${hero.name} takes ${item.icon} ${item.name} from the boss.`);
     }
@@ -2749,7 +2751,7 @@ function winFight(run, rng) {
   if (room.kind == "deep") {
     for (const hero of alive(run.heroes)) {
       let item = makeGear(run.floor, rng, hero.luck, hero.cls);
-      for (let i = 0; i < 80 && item.rarity != "legendary"; i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
+      for (let i = 0; i < 2000 && item.rarity != "legendary"; i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
       (run.loot[hero.name] = run.loot[hero.name] || []).push(item);
     }
   }

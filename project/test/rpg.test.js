@@ -589,6 +589,8 @@ function autoplay(socket, name, options) {
     const me = run.heroes.find((h) => h.name == name);
     if (!me) return;
     const turn = run.rooms.length + ":" + run.turn;
+    // (a new turn: what was sent before is forgotten - the hand stays, a card the clock beat stays in it)
+    if (run.phase == "fight" && last != turn) sent.clear();
     if (run.phase == "fight") last = turn;
     if (run.phase == "fight" && !me.down && !me.ended && !done.has(turn)) {
       const foe = run.monsters.find((m) => !m.down);
@@ -1379,4 +1381,16 @@ test("rpg: every card's bonus can happen - its class has a common or rare card f
   }
   // Every monster move says what it does
   for (const [id, move] of Object.entries(rpg.MOVES)) assert.ok(move.text, id);
+});
+
+test("rpg: gear gets rarer the shallower the floor - legendary items are a deep floors' find", () => {
+  const share = (floor, rarity) => {
+    let n = 0;
+    const rng = seeded(floor * 7);
+    for (let i = 0; i < 3000; i++) if (rpg.makeGear(floor, rng, 5).rarity == rarity) n++;
+    return n / 3000;
+  };
+  assert.ok(share(1, "legendary") < 0.015);
+  assert.ok(share(30, "legendary") > share(1, "legendary") * 2.5);
+  assert.ok(share(30, "epic") > share(1, "epic") * 1.8);
 });
