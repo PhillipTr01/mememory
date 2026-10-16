@@ -1566,9 +1566,11 @@ function intentBadge(m) {
   var text = move.icon + " ";
   if (m.intent.stunned) text = "💫 stunned";
   else if (m.intent.damage) text += m.intent.damage + (move.all ? " to all" : m.intent.target ? " → " + m.intent.target : "");
+  // (on guard this turn: half of every hit blocked)
+  else if (m.intent.move == "defend") text += "Blocks 50%";
   else text += move.name;
   badge.innerText = text;
-  badge.title = m.intent.stunned ? "Stunned" : move.name + (m.intent.target ? " on " + m.intent.target : "");
+  badge.title = m.intent.stunned ? "Stunned" : m.intent.move == "defend" ? "On guard: your hits deal half this turn" : move.name + (m.intent.target ? " on " + m.intent.target : "");
   if (m.intent.target == myName && m.intent.damage && !m.intent.stunned) badge.classList.add("at-me");
   return badge;
 }

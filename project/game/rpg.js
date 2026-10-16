@@ -1879,6 +1879,7 @@ function intentDamage(foe, move) {
 }
 
 const WEAK = 0.7; // a cursed hero's damage
+const DEFEND = 0.5; // a monster on guard: this much of a hit gets through
 const SPIKES = 0.2; // of a hit on a spiked monster: back to the hitter
 
 // A boss at half HP: its second phase - once (more attack, other moves, a word about it)
@@ -1903,16 +1904,18 @@ function strike(run, hero, foe, power, rng, options = {}) {
   // (the perks of talents and relics: more damage, the first attack of a turn, low HP)
   const bonus = 1 + perk(hero, "attack") + (hero.firstAttack ? perk(hero, "firstStrike") : 0) + (hero.hp < hero.maxHp / 2 ? perk(hero, "lowHp") : 0);
   let damage = hero.atk * between(rng, 0.9, 1.1) * power * bonus * (crit ? CRIT : 1) * (hero.blessed ? SHRINE_POWER : 1) * (hero.effects.might ? MIGHT : 1);
-  if (foe.defending) damage *= 0.5;
   // (armor - the warrior's hits break through a part of it; a hit on every foe: the mage's strength)
   damage *= 1 - (foe.armor || 0) * Math.max(0, 1 - perk(hero, "pierce"));
   if (options.aoe) damage *= (1 + perk(hero, "aoe")) * (foe.traits && foe.traits.includes("bulky") ? 0.5 : 1);
   // (cursed: the hero hits softer)
   if (hero.effects.weak) damage *= WEAK;
-  damage = Math.max(1, Math.round(damage));
+  // (a foe on guard: half of the hit blocked - the page shows how much)
+  const full = Math.max(1, Math.round(damage));
+  damage = foe.defending ? Math.max(1, Math.round(damage * DEFEND)) : full;
+  const blocked = full - damage;
   foe.hp = Math.max(0, foe.hp - damage);
   say(run, `${hero.name}${options.verb ? " " + options.verb : " hits"} ${foe.icon} ${foe.name} for ${damage}${crit ? " (crit!)" : ""}${foe.defending ? " (half)" : ""}.`);
-  fx(run, { k: "hit", to: foe.id, n: damage, crit });
+  fx(run, blocked > 0 ? { k: "hit", to: foe.id, n: damage, crit, b: blocked } : { k: "hit", to: foe.id, n: damage, crit });
   if (perk(hero, "lifesteal") && !hero.down) healHero(run, hero, damage * perk(hero, "lifesteal"));
   // (spiked: a part of the hit comes back)
   if (foe.traits && foe.traits.includes("spiked") && !hero.down) {
