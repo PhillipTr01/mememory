@@ -933,8 +933,8 @@ function entryCost(floor) {
 
 /* ---------- Death: a character down with its party rests 6 hours - or is brought back for coins ---------- */
 
-// The price of bringing it back: entries of its deepest floor open (config) - twice as much with every revive of the day
-const REVIVE_GROWTH = 2;
+// The price of bringing it back: entries of its deepest floor open (config) - 1.5 times as much with every revive of the day
+const REVIVE_GROWTH = 1.5;
 
 const dayOf = (now) => new Date(now).toDateString();
 
