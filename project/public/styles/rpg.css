@@ -7457,3 +7457,30 @@ button.rpg-cardx.off {
   color: #8ec5ff;
   font-size: 1.05rem;
 }
+
+/* (a party's results: every tile the same size, so the line stays calm) */
+.rpg-results-party .rpg-got {
+  width: 7.5rem;
+  min-width: 7.5rem;
+  max-width: 7.5rem;
+  height: 5.8rem;
+  padding: 0.5rem 0.55rem;
+}
+
+.rpg-results-party .rpg-got-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* (a card won for the collection: the card with a small note under it) */
+.rpg-got-upgrade.loot {
+  width: auto;
+  gap: 0.95rem;
+}
+
+.rpg-got-upgrade.loot .rpg-got-note {
+  color: #86efac;
+  font-weight: 700;
+}

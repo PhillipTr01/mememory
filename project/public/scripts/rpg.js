@@ -2042,18 +2042,24 @@ function roomScene(run, me) {
         if (same) same.names.push(name);
         else groups.push({ key: key, list: list, names: [name] });
       });
-      if (shared.length) {
+      // (the pot's coins of a room: one tile, summed)
+      var pot = shared.filter((r) => r.k == "coins").reduce((sum, r) => sum + r.n, 0);
+      var common = shared.filter((r) => r.k != "coins");
+      if (pot) common.unshift({ k: "coins", n: pot });
+      if (common.length) {
         var all = el("div", "rpg-got-group");
-        shared.forEach((r) => all.appendChild(resultCard(r)));
+        common.forEach((r) => all.appendChild(resultCard(r)));
         line.appendChild(all);
       }
+      // (every tile carries the faces of who got it)
       groups.forEach((group) => {
-        var g = el("div", "rpg-got-group" + (group.names.includes(myName) ? " mine" : ""));
-        group.list.forEach((r) => g.appendChild(resultCard(r)));
-        var faces = el("div", "rpg-got-faces");
-        group.names.forEach((name) => faces.appendChild(createAvatar(name, "sm")));
-        g.appendChild(faces);
-        line.appendChild(g);
+        group.list.forEach((r) => {
+          var g = el("div", "rpg-got-group" + (group.names.includes(myName) ? " mine" : ""));
+          var faces = el("div", "rpg-got-faces");
+          group.names.forEach((name) => faces.appendChild(createAvatar(name, "sm")));
+          g.append(resultCard(r), faces);
+          line.appendChild(g);
+        });
       });
       box.append(el("div", "rpg-label", "What the party got"), line);
     }
@@ -2099,9 +2105,12 @@ function resultCard(r) {
   } else if (r.k == "card") {
     var card = cardEl(r.id, { className: "small" + (r.lost ? " off" : "") });
     if (r.lost) card.appendChild(el("span", "rpg-got-tag bad", "Given away"));
+    // (a card for the collection: a calm note under the card, not on it)
     if (r.loot) {
-      card.appendChild(el("span", "rpg-got-tag good", "For your collection"));
-      card.title = "Yours for good once the run ends.";
+      var kept = el("div", "rpg-got-upgrade loot");
+      kept.append(card, el("div", "rpg-got-note", "🎴 New card"));
+      kept.title = "This card joins your collection when the run ends.";
+      return kept;
     }
     // (an upgrade: what it changed, under the card)
     if (!r.lost && /\+$/.test(r.id)) {
