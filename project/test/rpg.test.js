@@ -444,6 +444,7 @@ test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/
 test("rpg: collection and deck - the starter deck owned, packs bring cards (duplicates kept), the deck from 10 to deckMax, mythic cards once a run", () => {
   const hero = rpg.newHero("rogue");
   const char = rpg.charOf(hero);
+  assert.strictEqual(hero.packs.standard, 1);
   assert.strictEqual(char.deck.length, 10);
   assert.deepStrictEqual([char.collection.strike, char.collection.defend, char.collection.dodgeroll, char.collection.poisonblade], [4, 2, 2, 1]);
   // The deck: only owned cards, only the class's - built freely, but a run needs DECK_MIN cards
@@ -524,8 +525,9 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (dupl
   // Open all: every pack waiting
   rpg.addPacks(hero, [["standard", 2], ["mythic", 1]]);
   const all = rpg.openAll(hero);
-  assert.strictEqual(all.count, 3);
-  assert.strictEqual(all.cards.length, 2 * 5 + 4);
+  // (the Base Set Pack every new character starts with too)
+  assert.strictEqual(all.count, 4);
+  assert.strictEqual(all.cards.length, 3 * 5 + 4);
   assert.deepStrictEqual([hero.packs.standard, hero.packs.mythic], [0, 0]);
   assert.match(rpg.openAll(hero), /No packs/);
   // A mythic card: played once - gone from the run's deck
