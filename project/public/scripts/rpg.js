@@ -2473,16 +2473,17 @@ function handBar(run, me) {
       if (lost) box.appendChild(el("div", "rpg-result-note", "You keep half of the XP."));
     }
     if (loot.length) {
+      // (gear for the bag first - the cards for the collection in a row of their own below)
       var list = el("div", "rpg-result-loot");
-      loot.forEach((item) => {
-        // (a card: for the collection - gear: for the bag)
-        if (item.card) {
-          var won = cardEl(item.card, { className: "small" });
-          won.appendChild(el("span", "rpg-got-tag good", "New card"));
-          list.appendChild(won);
-        } else list.appendChild(itemCard(item));
+      loot.filter((item) => !item.card).forEach((item) => list.appendChild(itemCard(item)));
+      if (list.children.length) box.appendChild(list);
+      var cards = el("div", "rpg-result-cards");
+      loot.filter((item) => item.card).forEach((item) => {
+        var won = el("div", "rpg-got-upgrade loot");
+        won.append(cardEl(item.card, { className: "small" }), el("div", "rpg-got-note", "🎴 New card"));
+        cards.appendChild(won);
       });
-      box.appendChild(list);
+      if (cards.children.length) box.appendChild(cards);
     }
     box.appendChild(button("Back", "leave", { className: "primary" }));
     return [box];

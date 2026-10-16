@@ -7504,3 +7504,12 @@ body.rpg-dragging {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* (the end of a run: the cards won in a row under the gear) */
+.rpg-result-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.4rem;
+}
