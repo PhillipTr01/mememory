@@ -2140,7 +2140,10 @@ function startRound(run, rng) {
         hero.block += aura.value;
         fx(run, { k: "block", to: hero.name, n: aura.value });
       } else if (aura.kind == "regen") healHero(run, hero, aura.value);
-      else if (aura.kind == "focus") hero.energy += aura.value;
+      else if (aura.kind == "focus") {
+        hero.energy += aura.value;
+        fx(run, { k: "mana", to: hero.name, n: aura.value });
+      }
       aura.turns--;
     }
     if (hero.auras) hero.auras = hero.auras.filter((aura) => aura.turns > 0);

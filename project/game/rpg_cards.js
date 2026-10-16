@@ -360,7 +360,8 @@ function phrase(fx, n) {
   if (fx.aura) {
     const who = fx.to == "party" ? "the party " : "";
     const each = fx.aura == "guard" ? who + (who ? "blocks " : "block ") + (n && n.block ? n.block(fx) : amount(fx)) : fx.aura == "regen" ? who + (who ? "heals " : "heal ") + (n && n.heal ? n.heal(fx.heal) + " HP" : pct(fx.heal) + " of your max HP") : "+" + fx.mana + " mana";
-    return each + " every turn for " + fx.turns + " turns";
+    // (an aura works from the next turn on - it says so)
+    return each + " at the start of your next " + fx.turns + " turns";
   }
   if (fx.hit != null) {
     let text = "deal " + (n ? n.dmg(fx.hit, fx) : pct(fx.hit)) + " damage";

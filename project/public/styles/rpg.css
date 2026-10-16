@@ -7447,3 +7447,9 @@ button.rpg-cardx.off {
     animation: none;
   }
 }
+
+/* (an aura's mana at the start of a turn) */
+.rpg-float.mana {
+  color: #8ec5ff;
+  font-size: 1.05rem;
+}

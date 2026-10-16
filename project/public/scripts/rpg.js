@@ -387,6 +387,7 @@ function showFx(e, live) {
     floatOver(e.to, "+" + e.n, "heal");
     if (!live) barBy(e.to, e.n);
   } else if (e.k == "block") floatOver(e.to, "🛡️ +" + e.n, "block");
+  else if (e.k == "mana") floatOver(e.to, "💧 +" + e.n + " mana", "mana");
   else if (e.k == "taunt") {
     // (the foes turn to the one taunting: their badge points at the new target)
     (e.foes || []).forEach((id) => {

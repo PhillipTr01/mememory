@@ -1007,7 +1007,7 @@ test("rpg: deck slots - one at first, more bought (up to 5), each keeps its own 
 test("rpg: AURA cards - a type of their own, their block, healing or mana at the start of the next turns", () => {
   assert.strictEqual(rpg.CARDS.stoneskin.type, "aura");
   assert.strictEqual(rpg.CARDS.battlecry.type, "aura", "more damage for 2 turns: an aura too");
-  assert.match(rpg.CARDS.stoneskin.text, /every turn for 3 turns/);
+  assert.match(rpg.CARDS.stoneskin.text, /at the start of your next 3 turns/);
   const hero = rpg.newHero("warrior");
   const run = rpg.newRun(1, [{ name: "a", hero }]);
   rpg.enterRoom(run, 0);
@@ -1396,4 +1396,24 @@ test("rpg: gear gets rarer the shallower the floor - legendary items are a deep 
   assert.ok(share(1, "legendary") < 0.015);
   assert.ok(share(30, "legendary") > share(1, "legendary") * 2.5);
   assert.ok(share(30, "epic") > share(1, "epic") * 1.8);
+});
+
+test("rpg: a mana aura pays at the start of the next turns - the page sees it", () => {
+  const run = rpg.newRun(1, [{ name: "a", hero: rpg.newHero("warrior") }]);
+  rpg.enterRoom(run, 0);
+  const me = run.heroes[0];
+  me.hand.push({ uid: "sb", id: "steadybreath" });
+  me.energy = rpg.ENERGY;
+  assert.strictEqual(rpg.play(run, "a", { uid: "sb" }), null);
+  assert.strictEqual(me.energy, rpg.ENERGY - 1);
+  rpg.endTurn(run, "a");
+  rpg.monsterTurn(run);
+  assert.strictEqual(me.energy, rpg.ENERGY + 1);
+  assert.ok(run.fx.some((e) => e.k == "mana" && e.to == "a" && e.n == 1));
+  rpg.endTurn(run, "a");
+  rpg.monsterTurn(run);
+  assert.strictEqual(me.energy, rpg.ENERGY + 1);
+  rpg.endTurn(run, "a");
+  rpg.monsterTurn(run);
+  assert.strictEqual(me.energy, rpg.ENERGY);
 });
