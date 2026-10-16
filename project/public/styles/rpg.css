@@ -7494,3 +7494,13 @@ button.rpg-cardx.off {
   color: #86efac;
   font-weight: 700;
 }
+
+/* (cards, the hand and the arena: dragged and clicked, never selected as text) */
+.rpg-cardx,
+.rpg-handbar,
+.rpg-arena,
+.rpg-ghost,
+body.rpg-dragging {
+  user-select: none;
+  -webkit-user-select: none;
+}

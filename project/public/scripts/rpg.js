@@ -2684,6 +2684,10 @@ document.addEventListener("pointermove", (event) => {
     if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 10) return;
     drag.ghost = drag.source.cloneNode(true);
     drag.ghost.classList.add("rpg-ghost");
+    // (no text marked while dragging)
+    document.body.classList.add("rpg-dragging");
+    var marked = window.getSelection && window.getSelection();
+    if (marked) marked.removeAllRanges();
     document.body.appendChild(drag.ghost);
     drag.source.classList.add("dragging");
     var entry = findInHand(drag.uid);
@@ -2703,6 +2707,7 @@ document.addEventListener("pointerup", (event) => {
   if (!drag) return;
   var current = drag;
   drag = null;
+  document.body.classList.remove("rpg-dragging");
   if (!current.ghost) return;
   dragged = true;
   setTimeout(() => (dragged = false), 0);

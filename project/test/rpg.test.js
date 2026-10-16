@@ -1406,12 +1406,11 @@ test("rpg: gear gets rarer the shallower the floor - legendary items are a deep 
 });
 
 test("rpg: a mana aura pays at the start of the next turns - the page sees it", () => {
-  const run = rpg.newRun(1, [{ name: "a", hero: rpg.newHero("warrior") }]);
-  rpg.enterRoom(run, 0);
+  // (a fixed dummy that only guards: nothing random in the way)
+  const run = duel("warrior", "defend", ["steadybreath"]);
   const me = run.heroes[0];
-  me.hand.push({ uid: "sb", id: "steadybreath" });
   me.energy = rpg.ENERGY;
-  assert.strictEqual(rpg.play(run, "a", { uid: "sb" }), null);
+  assert.strictEqual(rpg.play(run, "a", { uid: "t0" }), null);
   assert.strictEqual(me.energy, rpg.ENERGY - 1);
   rpg.endTurn(run, "a");
   rpg.monsterTurn(run);
