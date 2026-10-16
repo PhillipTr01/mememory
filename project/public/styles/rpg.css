@@ -6942,3 +6942,59 @@ button.rpg-cardx.off {
   background: rgba(217, 70, 239, 0.15);
   border: 1px solid rgba(217, 70, 239, 0.45);
 }
+
+/* (the room, softer: quiet borders, tints instead of outlines) */
+.rpg-scene .rpg-option.chosen,
+.rpg-scene .rpg-option.picking {
+  border-color: rgba(var(--art), 0.22);
+  background: rgba(var(--art), 0.08);
+  box-shadow: none;
+}
+.rpg-scene .rpg-option.chosen .rpg-option-icon {
+  background: rgba(var(--art), 0.12);
+  border-color: transparent;
+}
+.rpg-option-check {
+  top: 50%;
+  right: 0.9rem;
+  transform: translateY(-50%);
+  width: 1.3rem;
+  height: 1.3rem;
+  font-size: 0.7rem;
+  color: #bbf7d0;
+  background: rgba(74, 222, 128, 0.18);
+  box-shadow: none;
+}
+.rpg-scene .rpg-scene-done {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+}
+.rpg-scene .rpg-event-box {
+  padding: 0.2rem 0 0;
+  border: 0;
+  background: none;
+}
+.rpg-scene .rpg-event-box .rpg-label {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+.rpg-result {
+  border-radius: 16px;
+  border-color: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: none;
+}
+.rpg-result.rarity-common { border-color: rgba(255, 255, 255, 0.1); }
+.rpg-result.rarity-rare { border-color: rgba(96, 165, 250, 0.3); background: rgba(96, 165, 250, 0.07); box-shadow: none; }
+.rpg-result.rarity-epic { border-color: rgba(167, 139, 250, 0.32); background: rgba(167, 139, 250, 0.08); box-shadow: none; }
+.rpg-result.rarity-legendary { border-color: rgba(245, 197, 66, 0.35); background: rgba(245, 197, 66, 0.08); box-shadow: none; }
+.rpg-result.relic { border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.08); }
+.rpg-result.coins { border-color: rgba(245, 197, 66, 0.25); background: rgba(245, 197, 66, 0.07); }
+.rpg-result.good { border-color: rgba(74, 222, 128, 0.22); background: rgba(74, 222, 128, 0.06); }
+.rpg-result.bad { border-color: rgba(248, 113, 113, 0.25); background: rgba(248, 113, 113, 0.06); }
+.rpg-scene {
+  border-color: rgba(255, 255, 255, 0.06);
+}

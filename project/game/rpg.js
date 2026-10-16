@@ -93,7 +93,7 @@ const REWARD = { fight: 0.27, hard: 0.52, elite: 0.52, boss: 0.85, chest: 0.22, 
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
   warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.4 }, top: 1.5 }, about: "Strength - heavy blows, cleave, war cry", hp: 1.25, atk: 1.4, def: 2, luck: 0, agi: 0, mainBonus: 1.3, hpPlus: 8, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take {thornsDef}% of your armor back, {block}% more block.", perks: { thornsDef: 0.85, block: 0.17 }, top: 1.5 }, about: "Armor - taunts, shields the party", hp: 1.25, atk: 1.25, def: 3, luck: 0, agi: 0, mainBonus: 1.25, atkPlus: 3, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Thorns: who hits you takes damage, {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.85, block: 0.17 }, top: 1.5 }, about: "Armor - taunts, shields the party", hp: 1.25, atk: 1.25, def: 3, luck: 0, agi: 0, mainBonus: 1.25, atkPlus: 3, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
   cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Heals {heal}% stronger.", perks: { heal: 0.2 }, top: 1.5 }, about: "Vitality - heals, smites undead, revives", hp: 1.05, atk: 1.15, def: 4, luck: 0, agi: 0, mainBonus: 1.25, hpPlus: 30, atkPlus: 6, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
   rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Poison {poison}% stronger, +{crit}% critical hits.", perks: { poison: 0.6, crit: 12 }, top: 2.5 }, about: "Instinct - dodge, scout rooms, poison", hp: 1.35, atk: 1.55, def: 0, luck: 6, agi: 13, mainBonus: 1.7, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
   mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Area hits {aoe}% stronger, +{crit}% critical hits.", perks: { aoe: 0.5, crit: 10 }, top: 2.6 }, about: "Luck - crits, fire, frost", hp: 1.35, atk: 1.5, def: 1, luck: 8, agi: 0, mainBonus: 1.8, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
@@ -144,18 +144,16 @@ const PACKS = {
   mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards, all epic or better.", get price() { return config.RPG_PACK_MYTHIC; }, size: 4, better: 4, least: "epic", boost: { legendary: 1.5 } },
 };
 const PACK_IDS = Object.keys(PACKS);
-const PACK_BUNDLE = 3; // three packs at once ...
-const BUNDLE_OFF = 0.1; // ... 10% off
 const PACK_SIZE = PACKS.standard.size;
 const RARITY_RANK = ["basic", "common", "rare", "epic", "legendary", "mythic"];
 
 const CART_MAX = 50; // packs of a kind in one cart
 
-// The price of packs of a kind: PACK_BUNDLE or more at once - 10% off
+// The price of packs of a kind
 function packPrice(id, count = 1) {
   const pack = PACKS[id];
   if (!pack) return null;
-  return count >= PACK_BUNDLE ? Math.round((pack.price * count * (1 - BUNDLE_OFF)) / 100) * 100 : pack.price * count;
+  return pack.price * count;
 }
 
 // A cart ({pack id: count}) -> {total, items: [[id, count]]} or {error}
@@ -466,7 +464,7 @@ const RELICS = {
   orb: { name: "Arcane Orb", icon: "🔮", text: "Hits on every foe deal 25% more.", perks: { aoe: 0.25 }, classes: ["mage"] },
   grip: { name: "Giant's Grip", icon: "🦾", text: "Ignore 15% more armor.", perks: { pierce: 0.15 }, classes: ["warrior"] },
   belt: { name: "Titan Belt", icon: "🥋", text: "+10% max HP, 25% more damage below half HP.", perks: { maxHp: 0.1, lowHp: 0.25 }, classes: ["warrior"] },
-  pauldrons: { name: "Spiked Pauldrons", icon: "🦔", text: "Attackers take 30% of your armor back.", perks: { thornsDef: 0.3 }, classes: ["paladin"] },
+  pauldrons: { name: "Spiked Pauldrons", icon: "🦔", text: "Thorns: who hits you takes damage, 30% of your armor.", perks: { thornsDef: 0.3 }, classes: ["paladin"] },
   rosary: { name: "Rosary", icon: "📿", text: "Heal 12% after every fight won, attacks heal 5%.", perks: { afterFight: 0.12, lifesteal: 0.05 }, classes: ["cleric"] },
   cloak: { name: "Shadow Cloak", icon: "🧥", text: "+8% dodge.", perks: { agi: 8 }, classes: ["rogue"] },
   focusgem: { name: "Focus Gem", icon: "💠", text: "+12% critical hits.", perks: { crit: 12 }, classes: ["mage"] },
@@ -2596,8 +2594,6 @@ module.exports = {
   },
   PACKS,
   PACK_IDS,
-  PACK_BUNDLE,
-  BUNDLE_OFF,
   packPrice,
   cartPrice,
   addPacks,

@@ -146,8 +146,6 @@ module.exports = function (io, options = {}) {
       packPrice: rpg.PACK_PRICE,
       packSize: rpg.PACK_SIZE,
       packs: rpg.PACKS,
-      packBundle: rpg.PACK_BUNDLE,
-      bundleOff: rpg.BUNDLE_OFF,
       cartMax: rpg.CART_MAX,
       mainBonus: rpg.MAIN_BONUS,
       moves: rpg.MOVES,
@@ -452,7 +450,7 @@ module.exports = function (io, options = {}) {
       sendHero(username);
     });
 
-    // The shop's cart: {cart: {pack id: count}} - paid at once (10% off for 3 or more of a kind), the packs wait
+    // The shop's cart: {cart: {pack id: count}} - paid at once, the packs wait
     // unopened
     on("buyPacks", async (data) => {
       const hero = heroOf(username);

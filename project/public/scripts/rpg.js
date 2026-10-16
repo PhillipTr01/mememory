@@ -1003,10 +1003,9 @@ function packOdds(pack) {
 
 var cart = {}; // the shop's cart: {pack id: count}
 
-// The price of packs of a kind (as the server counts it): 3 or more - 10% off
+// The price of packs of a kind
 function packCost(id, n) {
-  var price = rules.packs[id].price * n;
-  return n >= rules.packBundle ? Math.round((price * (1 - rules.bundleOff)) / 100) * 100 : price;
+  return rules.packs[id].price * n;
 }
 
 // A sealed pack (the art): the shop, the packs waiting, the opening
@@ -1108,7 +1107,7 @@ function renderShop() {
   var lines = Object.keys(cart).filter((id) => cart[id] > 0);
   var total = lines.reduce((sum, id) => sum + packCost(id, cart[id]), 0);
   var nodes = [el("div", "rpg-cart-title", "🛒 Your cart")];
-  if (!lines.length) nodes.push(el("div", "rpg-empty mm-muted", "Empty · 3+ of a kind: 10% off"));
+  if (!lines.length) nodes.push(el("div", "rpg-empty mm-muted", "Empty"));
   lines.forEach((id) => {
     var pack = rules.packs[id];
     var row = el("div", "rpg-cart-line");
@@ -1116,7 +1115,6 @@ function renderShop() {
     step.append(button("−", "cartLess", { id: id, className: "small" }), el("b", "", String(cart[id])), button("+", "cartAdd", { id: id, className: "small", disabled: cart[id] >= rules.cartMax }));
     var price = el("div", "rpg-cart-price");
     price.appendChild(el("b", "", "🪙 " + formatCoins(packCost(id, cart[id]))));
-    if (cart[id] >= rules.packBundle) price.appendChild(el("span", "rpg-cart-off", "-10%"));
     row.append(el("span", "rpg-cart-icon", pack.icon), el("span", "rpg-cart-name", pack.name), step, price);
     nodes.push(row);
   });
