@@ -46,7 +46,7 @@ const BASE = {
   aegis: ["Aegis", "🪬", 1, "common", [{ block: 12, def: 1, to: "ally" }]],
   retribution: ["Retribution", "⚜️", 1, "rare", [{ hit: 0.7, to: "all" }, { block: 4, def: 1 }]],
   layhands: ["Sacred Shield", "🛡️", 2, "epic", [{ block: 20, def: 1.5, to: "ally" }], true],
-  bulwark: ["Bulwark", "🏰", 1, "common", [{ block: 10, def: 2 }]],
+  bulwark: ["Bulwark", "🏰", 1, "common", [{ block: 10, def: 1.3 }]],
   heal: ["Heal", "💚", 1, "common", [{ heal: 0.25, to: "ally" }]],
   smite: ["Smite", "🌟", 1, "common", [{ hit: 1.2, bonusIf: "undead", bonus: 2.5 }]],
   revive: ["Revive", "🕊️", 2, "epic", [{ revive: 0.4 }], true],
@@ -163,7 +163,7 @@ const CLASS = {
     vow: ["Vow", "📜", 1, "common", [{ block: 5, def: 1 }, { draw: 1 }]],
     crusade: ["Crusade", "🏇", 2, "common", [{ hit: 0.6, def: 0.5, to: "all" }]],
     radiance: ["Radiance", "🔅", 1, "common", [{ hit: 0.7 }, { block: 3, def: 0.5, to: "party" }]],
-    steadfast: ["Steadfast", "⚓", 1, "common", [{ block: 4, def: 2 }]],
+    steadfast: ["Steadfast", "⚓", 1, "common", [{ block: 6, def: 1.3 }]],
     rebuke: ["Rebuke", "🙅", 1, "common", [{ hit: 0.8 }, { taunt: true }]],
     sanctuary: ["Sanctuary", "⛪", 2, "rare", [{ block: 6, def: 1, to: "party" }, { taunt: true }]],
     avenger: ["Avenger's Shield", "🥏", 2, "rare", [{ hit: 0.5, def: 0.4, to: "random", times: 3 }]],
@@ -413,6 +413,12 @@ function targetOf(fx) {
 // part that isn't scaled (mana, cards, states)
 const FOES = 2.2; // foes in a fight, on average (a hit to every foe)
 const PARTY_WORTH = 2.8; // a block or heal for the whole party: worth this many single ones
+// How much a share of the armor in a block is worth (a share of 1: the hero's armor) - the Paladin's common cards
+// count it higher, its armor makes them block far more early on than the other classes'
+let defWorth = 0.3;
+const DEF_WORTH = { paladin: { common: 0.55 } };
+// (the Paladin's cards of the first set: CLASSES.paladin in game/rpg.js)
+const BASE_OWNER = { paladin: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"] };
 function worth(fx) {
   if (fx.aura) return { scaled: 0, fixed: fx.turns * (fx.to == "party" ? PARTY_WORTH : 1) * (fx.aura == "focus" ? fx.mana : fx.aura == "regen" ? fx.heal / 0.12 : fx.block / 7 + (fx.def || 0) * 0.3 + (fx.agi || 0) * 0.05) * 0.7 };
   if (fx.hit != null) {
@@ -420,7 +426,7 @@ function worth(fx) {
     return { scaled: (base + (fx.def || 0) * 0.5) * (fx.times || 1) * (fx.to == "all" ? FOES * 0.75 : 1), fixed: 0 };
   }
   // (the whole party: worth more - in a party it covers 2 to 4 heroes)
-  if (fx.block != null) return { scaled: (fx.block / 7 + (fx.def || 0) * 0.3 + (fx.atk || 0) + (fx.agi || 0) * 0.05) * (fx.to == "party" ? PARTY_WORTH : 1) * (fx.low ? 1.4 : 1), fixed: 0 };
+  if (fx.block != null) return { scaled: (fx.block / 7 + (fx.def || 0) * defWorth + (fx.atk || 0) + (fx.agi || 0) * 0.05) * (fx.to == "party" ? PARTY_WORTH : 1) * (fx.low ? 1.4 : 1), fixed: 0 };
   if (fx.heal != null) return { scaled: (fx.heal / 0.12) * (fx.to == "party" ? PARTY_WORTH : 1), fixed: 0 };
   let fixed = 0;
   if (fx.status) fixed = { poison: 0.45, burn: 0.3, chill: 0.45, stun: 1 }[fx.status] * (fx.status == "stun" ? 1 : fx.turns || 1) * (fx.to == "all" ? FOES * 0.75 : 1);
@@ -471,10 +477,13 @@ function balanced(fx, cost, rarity, exhaust) {
 }
 
 // The cards: {id: card} - with their rarity, the class ones per class, the neutral ones
-function build(list) {
+function build(list, cls) {
   const cards = {};
   for (const [id, [name, icon, cost, rarity, written, exhaust]] of Object.entries(list)) {
+    const owner = cls || Object.keys(BASE_OWNER).find((one) => BASE_OWNER[one].includes(id));
+    defWorth = (DEF_WORTH[owner] && DEF_WORTH[owner][rarity]) || 0.3;
     const fx = balanced(written, cost, rarity, exhaust);
+    defWorth = 0.3;
     cards[id] = { name, icon, cost, type: fx.some((one) => one.hit != null) ? "attack" : fx.some((one) => one.aura || (one.might != null && one.might > 1)) ? "aura" : "skill", target: targetOf(fx), exhaust: exhaust === true, mythic: exhaust == "mythic", rarity, fx, text: textOf(fx, exhaust) };
   }
   return cards;
@@ -482,7 +491,7 @@ function build(list) {
 
 const base = build(BASE);
 const neutral = build(NEUTRAL);
-const byClass = Object.fromEntries(Object.entries(CLASS).map(([cls, list]) => [cls, build(list)]));
+const byClass = Object.fromEntries(Object.entries(CLASS).map(([cls, list]) => [cls, build(list, cls)]));
 
 module.exports = {
   textOf,

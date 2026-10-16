@@ -342,7 +342,7 @@ function blockTo(id, left) {
   var node = unitNode(id);
   var badge = node && node.querySelector(".rpg-block");
   if (!badge) return;
-  if (left > 0) badge.innerText = "🧱 " + left;
+  if (left > 0) badge.innerText = "🛡️ " + left;
   else badge.remove();
 }
 
@@ -373,8 +373,8 @@ function showFx(e, live) {
   if (e.k == "card") showPlayed(e);
   else if (e.k == "hit") {
     if (e.n > 0 || !e.b) floatOver(e.to, "-" + e.n + (e.crit ? "!" : ""), e.dot ? "dot " + e.dot : e.crit ? "crit" : "hit");
-    if (e.b) floatOver(e.to, "🧱 -" + e.b, "blocked");
-    if (e.a) floatOver(e.to, "🛡️ -" + e.a, "armored");
+    if (e.b) floatOver(e.to, "🛡️ -" + e.b, "blocked");
+    if (e.a) floatOver(e.to, "-" + e.a + " armor", "armored");
     flash(e.to, "rpg-hit", 420);
     if (!live) barBy(e.to, -e.n);
     if (!live && e.left != null) blockTo(e.to, e.left);
@@ -382,7 +382,7 @@ function showFx(e, live) {
   else if (e.k == "heal") {
     floatOver(e.to, "+" + e.n, "heal");
     if (!live) barBy(e.to, e.n);
-  } else if (e.k == "block") floatOver(e.to, "🧱 +" + e.n, "block");
+  } else if (e.k == "block") floatOver(e.to, "🛡️ +" + e.n, "block");
   else if (e.k == "down") flash(e.to, "rpg-dying", 0);
   else if (e.k == "move") {
     flash(e.by, e.move == "stunned" ? "rpg-stunned-act" : "rpg-acting", 520);
@@ -1769,7 +1769,7 @@ function renderRun() {
     armor.title = "Armor takes part of every hit.";
     info.append(el("span", "", cls.icon + " " + (rules.classes[h.cls] || {}).name), armor, withFlask(el("span", "", " " + h.potions + (h.blessed ? " · ⛩️" : ""))));
     var hp = bar(h.hp, h.maxHp, "hero");
-    if (h.block > 0) hp.appendChild(el("span", "rpg-block", "🧱 " + h.block));
+    if (h.block > 0) hp.appendChild(el("span", "rpg-block", "🛡️ " + h.block));
     var relics = el("div", "rpg-relics");
     (h.relics || []).forEach((id) => {
       var chip = el("span", "rpg-relic-chip", rules.relics[id].icon);
