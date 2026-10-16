@@ -321,9 +321,9 @@ const STATUS = {
 
 function amount(fx) {
   const parts = [String(fx.block)];
-  if (fx.def) parts.push(fx.def == 1 ? "armor" : fx.def + "x armor");
+  if (fx.def) parts.push(fx.def == 1 ? "your armor" : pct(fx.def) + " of your armor");
   if (fx.atk) parts.push(pct(fx.atk) + " of your attack");
-  if (fx.agi) parts.push(fx.agi == 0.5 ? "half your dodge" : fx.agi == 1 ? "your dodge" : fx.agi + "x your dodge");
+  if (fx.agi) parts.push(fx.agi == 0.5 ? "half your dodge" : fx.agi == 1 ? "your dodge" : pct(fx.agi) + " of your dodge");
   return parts.join(" + ");
 }
 

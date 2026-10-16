@@ -2510,9 +2510,10 @@ button.rpg-cardx.off {
   opacity: 0.55;
 }
 
+/* (the copies: on top of the card - the class icon keeps its place at the bottom) */
 .rpg-copies {
   position: absolute;
-  bottom: -0.45rem;
+  top: -0.45rem;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -3691,6 +3692,14 @@ button.rpg-cardx.off {
 .rpg-float.move {
   color: rgba(255, 255, 255, 0.85);
   font-size: 1rem;
+}
+
+/* (several hits at once: "×6" over the one hitting) */
+.rpg-float.multi {
+  color: var(--rpg-gold);
+  font-size: 1.5rem;
+  font-weight: 900;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
 }
 
 @keyframes rpg-float {
@@ -5860,8 +5869,6 @@ button.rpg-cardx.off {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
-/* (the deck builder: only the own class - the copies under the card instead) */
-#rpgBuilderGrid .rpg-cardx:not(.other-class) .rpg-card-class,
 .rpg-first-cards .rpg-card-class {
   display: none;
 }
@@ -6239,4 +6246,36 @@ button.rpg-cardx.off {
   font-size: 2.6rem;
   line-height: 1;
   filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.5));
+}
+
+/* (a card played with the final blow: out of the hand while the victory plays back) */
+.rpg-cardx.rpg-card-gone {
+  opacity: 0;
+  transform: translateY(-40px) scale(0.85);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* (a card drawn: from the draw pile into the hand) */
+.rpg-hand .rpg-cardx.rpg-drawn {
+  animation: rpg-draw 0.42s cubic-bezier(0.2, 0.8, 0.3, 1.1) var(--draw-delay, 0ms) both;
+}
+@keyframes rpg-draw {
+  from {
+    opacity: 0;
+    translate: -260px 60px;
+    scale: 0.55;
+    rotate: -18deg;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+    rotate: 0deg;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rpg-hand .rpg-cardx.rpg-drawn {
+    animation: none;
+  }
 }

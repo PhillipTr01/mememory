@@ -215,6 +215,15 @@ function receiveParty(data) {
     socket.emit("stray", { party: party.id, run: shown.uid, gotParty: data.id, got: data.run.uid, phase: data.run.phase });
     return;
   }
+  // (a card I played that is gone in the new state - the final blow: the victory plays back over the old scene,
+  // the card leaves the hand right away)
+  var newMe = data && data.run && data.run.heroes.find((h) => h.name == myName);
+  var kept = new Set(newMe ? newMe.hand.map((c) => c.uid) : []);
+  sentPlays.forEach((uid) => {
+    if (kept.has(uid)) return;
+    var node = document.querySelector('#rpgRun [data-act="card"][data-id="' + uid + '"]');
+    if (node) node.classList.add("rpg-card-gone");
+  });
   sentPlays.clear();
   // (a new room: when - a door clicked right after doesn't count, see the votes)
   var where = data && data.run ? data.run.rooms.length + ":" + data.run.phase : "";
@@ -224,7 +233,7 @@ function receiveParty(data) {
   }
   var events = freshFx(data);
   // The monsters' turn, a fight won or lost: played back over the scene as it was - then the new state
-  if (events.some((e) => e.k == "turn" && e.side == "foes") || events.some((e) => e.k == "victory" || e.k == "defeat")) {
+  if (events.some((e) => e.k == "turn" && e.side == "foes") || events.some((e) => e.k == "victory" || e.k == "defeat") || multiHit(events)) {
     fxBusy = true;
     playFx(events, () => {
       fxBusy = false;
@@ -369,6 +378,22 @@ function showFx(e, live) {
   }
 }
 
+// Several hits at once (a card or a move): "×N" over the one hitting
+function markHits(beat, hits) {
+  var by = beat[0].k == "move" ? beat[0].by : (beat.find((e) => e.k == "card") || {}).by;
+  if (by != null) floatOver(by, "×" + hits, "multi");
+}
+
+// Several hits in one go (a card hitting more than once): played back hit by hit, the state waits
+function multiHit(events) {
+  var hits = 0;
+  for (var e of events) {
+    if (e.k == "card") hits = 0;
+    else if (e.k == "hit" && !e.dot && ++hits > 1) return true;
+  }
+  return false;
+}
+
 // The events in beats: the hero's cards at once - every monster's move a beat of its own
 function playFx(events, done) {
   var live = !done;
@@ -392,11 +417,24 @@ function playFx(events, done) {
   beats = beats.filter((b) => b.length);
   var at = 0;
   beats.forEach((beat) => {
+    // (one hit after the other - a card or a move that hits several times: a beat between the hits, the HP going
+    // down hit by hit)
+    var offset = beat[0].k == "move" ? 240 : 0;
+    var hits = 0;
+    var times = beat.map((e, i) => {
+      if (i == 0 && e.k == "move") return 0;
+      var multi = e.k == "hit" && !e.dot;
+      if (multi && hits++ > 0) offset += 340;
+      else if (i > 0) offset += 90;
+      return offset;
+    });
     setTimeout(() => {
-      beat.forEach((e, i) => setTimeout(() => showFx(e, false), e.k == "move" ? 0 : i * 90 + (beat[0].k == "move" ? 240 : 0)));
+      if (hits > 1) markHits(beat, hits);
+      beat.forEach((e, i) => setTimeout(() => showFx(e, false), times[i]));
     }, at);
     var first = beat[0];
-    at += first.k == "move" ? 650 : first.k == "turn" ? (first.side == "foes" ? 750 : 0) : first.k == "victory" ? 1500 : first.k == "defeat" ? 1800 : 450;
+    var base = first.k == "move" ? 650 : first.k == "turn" ? (first.side == "foes" ? 750 : 0) : first.k == "victory" ? 1500 : first.k == "defeat" ? 1800 : 450;
+    at += Math.max(base, offset + 400);
   });
   setTimeout(done, at + 150);
 }
@@ -2139,6 +2177,10 @@ function handBar(run, me) {
   var left = el("div", "rpg-hand-side");
   left.append(energy, draw);
   var hand = el("div", "rpg-hand" + (me.ended ? " ended" : ""));
+  // (cards new in the hand: drawn - they fly in from the draw pile, one after the other)
+  var handKey = run.uid + ":" + run.rooms.length;
+  if (handSeen.key != handKey) handSeen = { key: handKey, uids: new Set() };
+  var drawn = 0;
   me.hand.forEach((c, i) => {
     var card = cardOf(c.id);
     var node = cardEl(c.id, { tag: "button", act: "card", id: c.uid, disabled: me.ended || card.cost > me.energy, className: aiming && aiming.uid == c.uid ? "aimed" : "" });
@@ -2146,6 +2188,11 @@ function handBar(run, me) {
     var mid = (me.hand.length - 1) / 2;
     node.style.setProperty("--tilt", (i - mid) * 3 + "deg");
     node.style.setProperty("--lift", Math.abs(i - mid) * 4 + "px");
+    if (!handSeen.uids.has(c.uid)) {
+      handSeen.uids.add(c.uid);
+      node.classList.add("rpg-drawn");
+      node.style.setProperty("--draw-delay", drawn++ * 110 + "ms");
+    }
     hand.appendChild(node);
   });
   if (!me.hand.length) hand.appendChild(el("div", "rpg-wait mm-muted", "No cards left"));
@@ -2162,6 +2209,8 @@ function handBar(run, me) {
   if (aiming) nodes.unshift(el("div", "rpg-aim-hint", aiming.target == "foe" ? "🎯 Pick a foe" : "🎯 Pick an ally"));
   return nodes;
 }
+
+var handSeen = { key: null, uids: new Set() }; // the cards of the hand shown already (the new ones: drawn)
 
 // A health potion: a red flask - its count, its mana in a fight
 var POTION_SVG =
