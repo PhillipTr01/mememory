@@ -6758,3 +6758,159 @@ button.rpg-cardx.off {
   border: 1px solid rgba(224, 52, 74, 0.4);
   background: radial-gradient(circle at 50% 75%, rgba(224, 52, 74, 0.3), rgba(20, 12, 14, 0.9) 70%);
 }
+
+/* (the deepest floor cleared: a pill under the class) */
+.rpg-deepest {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--rpg-gold);
+  background: rgba(245, 197, 66, 0.12);
+  border: 1px solid rgba(245, 197, 66, 0.35);
+}
+.rpg-deepest.none {
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Ready? The loadout: deck, potions, gear - a tile each */
+.rpg-loadout {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.rpg-load {
+  --load: 74, 222, 128;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.75rem 0.7rem 0.65rem;
+  border-radius: 16px;
+  border: 1px solid rgba(var(--load), 0.28);
+  background:
+    radial-gradient(100% 70% at 50% 0%, rgba(var(--load), 0.12), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.rpg-load.warn {
+  --load: 245, 158, 11;
+}
+.rpg-load:hover {
+  transform: translateY(-3px);
+  border-color: rgba(var(--load), 0.55);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+.rpg-load:not([data-act]),
+.rpg-load[data-act=""] {
+  cursor: default;
+}
+.rpg-load-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem;
+}
+.rpg-load-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.75);
+}
+.rpg-load-state {
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: #0c1a10;
+  background: rgb(var(--load));
+}
+.rpg-load-foot {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+.rpg-load-fan {
+  position: relative;
+  height: 3.6rem;
+  display: grid;
+  place-items: center;
+}
+.rpg-load-fan i {
+  position: absolute;
+  width: 2.3rem;
+  height: 3.2rem;
+  border-radius: 7px;
+  border: 1px solid rgba(96, 165, 250, 0.55);
+  background:
+    repeating-linear-gradient(45deg, rgba(96, 165, 250, 0.14) 0 4px, transparent 4px 8px),
+    linear-gradient(160deg, #24426e, #0f1626);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+}
+.rpg-load-fan i:nth-child(1) { transform: translateX(-0.9rem) rotate(-12deg); }
+.rpg-load-fan i:nth-child(3) { transform: translateX(0.9rem) rotate(12deg); }
+.rpg-load-fan b {
+  position: relative;
+  font-size: 1.15rem;
+  font-weight: 900;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+.rpg-load-flasks {
+  height: 3.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 0.15rem;
+}
+.rpg-load-flasks .rpg-flask {
+  width: 0.95rem;
+  height: 1.25rem;
+}
+.rpg-load-slots {
+  height: 3.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+.rpg-load-slot {
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 1.15rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.rpg-load-slot.empty {
+  opacity: 0.35;
+  border-style: dashed;
+  filter: grayscale(1);
+}
+.rpg-load-slot.rarity-rare { border-color: rgba(96, 165, 250, 0.8); }
+.rpg-load-slot.rarity-epic { border-color: rgba(167, 139, 250, 0.85); }
+.rpg-load-slot.rarity-legendary { border-color: rgba(245, 197, 66, 0.9); box-shadow: 0 0 10px rgba(245, 197, 66, 0.3); }
+@media (max-width: 520px) {
+  .rpg-loadout {
+    gap: 0.4rem;
+  }
+  .rpg-load {
+    padding: 0.6rem 0.4rem 0.5rem;
+  }
+}

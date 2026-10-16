@@ -579,7 +579,8 @@ function renderTop() {
     }),
   );
   document.getElementById("rpgHeroName").innerText = picked ? mine.icon + " " + mine.name : "Pick your class";
-  document.getElementById("rpgHeroSub").innerText = picked ? "Deepest floor " + hero.deepest + " · " + hero.cleared + " / " + hero.runs + " runs cleared" : "";
+  // (the deepest floor cleared: a pill)
+  morphChildren(document.getElementById("rpgHeroSub"), picked ? [el("span", "rpg-deepest" + (hero.deepest ? "" : " none"), hero.deepest ? "🏰 Deepest floor " + hero.deepest : "🏰 No floor cleared yet")] : []);
   // The hero's level: XP from the fights - every level a stat point, talents at levels 3 to 50
   var xpBox = document.getElementById("rpgXp");
   xpBox.hidden = !picked;
@@ -789,24 +790,48 @@ function renderReady() {
     if (act) row.appendChild(button(label, act, { id: id, className: "small" + (state == "warn" ? " primary" : "") }));
     items.push(row);
   };
+  // The loadout - what counts in the dungeon: the deck, the potions, the gear worn
   var n = hero.deck.length;
   var deckOk = n >= hero.deckMin && n <= hero.deckMax;
-  item("🃏", deckOk ? "Deck ready" : "Deck not ready", n + " cards · " + hero.deckMin + " to " + hero.deckMax, deckOk ? "ok" : "warn", "view", "deck", deckOk ? "Edit" : "Build it");
+  var loadout = el("div", "rpg-loadout");
+  var tile = (cls, act, id, title, state, body, foot) => {
+    var t = el("button", "rpg-load " + cls + " " + state);
+    t.type = "button";
+    t.dataset.act = act;
+    if (id) t.dataset.id = id;
+    var head = el("div", "rpg-load-head");
+    head.append(el("span", "rpg-load-title", title), el("span", "rpg-load-state", state == "ok" ? "✓" : "!"));
+    t.append(head, body);
+    if (foot) t.appendChild(foot);
+    return t;
+  };
+  // (the deck: a fan of card backs, its count)
+  var fan = el("div", "rpg-load-fan");
+  for (var f = 0; f < 3; f++) fan.appendChild(el("i", ""));
+  fan.appendChild(el("b", "", String(n)));
+  loadout.appendChild(tile("deck", "view", "deck", "🃏 Deck", deckOk ? "ok" : "warn", fan, el("span", "rpg-load-foot", deckOk ? hero.deckMin + " to " + hero.deckMax + " cards" : n < hero.deckMin ? hero.deckMin - n + " more needed" : n - hero.deckMax + " too many")));
+  // (the potions: a flask each)
+  var flasks = el("div", "rpg-load-flasks");
+  for (var i = 0; i < hero.potionsMax; i++) flasks.appendChild(flask(i < hero.potions ? "" : "off"));
+  var buyFoot = el("span", "rpg-load-foot", hero.potions < hero.potionsMax ? "+1 · 🪙 " + formatCoins(hero.potionPrice) : hero.potions + " / " + hero.potionsMax + " · full");
+  loadout.appendChild(tile("potions", hero.potions < hero.potionsMax ? "potion" : "", null, "Potions", hero.potions ? "ok" : "warn", flasks, buyFoot));
+  // (the gear: the three slots)
+  var slots = el("div", "rpg-load-slots");
+  ["weapon", "armor", "charm"].forEach((slot) => {
+    var item = hero.gear[slot];
+    var box = el("span", "rpg-load-slot" + (item ? " rarity-" + item.rarity : " empty"), item ? item.icon : SLOT_ICONS[slot]);
+    box.title = item ? item.name + "\n" + bonusOf(item).split(" · ").join("\n") : SLOT_NAMES[slot] + ": empty";
+    slots.appendChild(box);
+  });
+  var worn = ["weapon", "armor", "charm"].filter((slot) => hero.gear[slot]).length;
+  loadout.appendChild(tile("gear", "view", "gear", "🎒 Gear", worn ? "ok" : "warn", slots, el("span", "rpg-load-foot", worn + " / 3 worn" + (hero.bag.length ? " · " + hero.bag.length + " in the bag" : ""))));
+  items.push(loadout);
+  // (what still waits: a row each)
   if (hero.deadFor > 0) item("💀", "Dead", "Back in " + duration(hero.deadFor - (Date.now() - heroAt)), "warn", "revive", null, "Revive · 🪙 " + formatCoins(hero.revivePrice));
-  var pips = el("div", "rpg-ready-pips");
-  for (var i = 0; i < hero.potionsMax; i++) pips.appendChild(flask(i < hero.potions ? "" : "off"));
-  item(flask(), "Potions", null, hero.potions ? "ok" : "warn", hero.potions < hero.potionsMax ? "potion" : null, null, "+1 · 🪙 " + formatCoins(hero.potionPrice), pips);
   if (hero.points) item("⬆️", hero.points + " stat point" + (hero.points == 1 ? "" : "s"), "To spend", "new", "view", "hero", "Spend");
   if (rules.talentLevels.some((lv, tier) => hero.level >= lv && !hero.talents[tier])) item("⭐", "A talent", "To pick", "new", "view", "talents", "Pick");
   var packs = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);
   if (packs) item("🎴", packs + " pack" + (packs == 1 ? "" : "s"), "To open", "new", "view", "gear", "Open");
-  if (hero.bag.length) item("🎒", "Bag", hero.bag.length + " / " + hero.bagSize + " items", "", "view", "gear", "Look");
-  var found = hero.pool.filter((id) => hero.collection[id]).length;
-  var progress = el("div", "rpg-ready-bar");
-  var fill = el("i");
-  fill.style.width = (found / hero.pool.length) * 100 + "%";
-  progress.appendChild(fill);
-  item("📚", "Collection", found + " / " + hero.pool.length + " cards", "", "view", "shop", "Packs", progress);
   morphChildren(document.getElementById("rpgReady"), items);
 }
 
