@@ -97,7 +97,7 @@ const BOSS_EVERY = 5; // the last room of every 5th floor: its boss
 // The stats: what a level gives
 const STATS = {
   hp: { name: "Vitality", icon: "❤️", base: 100, per: 7.5, about: "+7.5 max HP", desc: "Raises your max HP." },
-  atk: { name: "Strength", icon: "⚔️", base: 10, per: 1.5, about: "+1.5 attack", desc: "Raises the damage of your attacks." },
+  atk: { name: "Strength", icon: "💪", base: 10, per: 1.5, about: "+1.5 attack", desc: "Raises the damage of your attacks." },
   def: { name: "Armor", icon: "🛡️", base: 0, per: 1, about: "+1 armor", desc: "You take less damage and block more." },
   luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, soft: [50, 80], about: "+0.6% luck", desc: "Raises your crits, your luck with traps and your loot. It grows slower past 50%." },
   agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, soft: [30, 60], about: "+0.4% dodge", desc: "Raises your dodge and your chance to sense rooms. A Rogue senses far better. It grows slower past 30%." },

@@ -514,7 +514,7 @@ function gearTile(item, slot, actions) {
   tile.append(el("span", "rpg-gear-icon", item.icon), el("span", "rpg-gear-name", item.name));
   var chips = el("div", "rpg-gear-stats");
   var worn = !slot && hero.gear[item.slot];
-  [["atk", "⚔️", ""], ["def", "🛡️", ""], ["hp", "❤️", ""], ["agi", "🦊", "%"], ["luck", "🍀", "%"]].forEach(([key, icon, unit]) => {
+  [["atk", "💪", ""], ["def", "🛡️", ""], ["hp", "❤️", ""], ["agi", "🦊", "%"], ["luck", "🍀", "%"]].forEach(([key, icon, unit]) => {
     if (!item[key] && !(worn && worn[key])) return;
     var diff = worn ? (item[key] || 0) - (worn[key] || 0) : 0;
     var chip = el("span", "rpg-gear-chip" + (!item[key] ? " none" : ""), icon + " " + (item[key] || 0) + unit);
@@ -939,13 +939,13 @@ function classTile(id, pick) {
     c.title = tip;
     chips.appendChild(c);
   };
-  [["❤️", "HP", "hp"], ["⚔️", "attack", "atk"]].forEach(([icon, name, key]) => {
+  [["❤️", "HP", "hp"], ["💪", "attack", "atk"]].forEach(([icon, name, key]) => {
     var average = all.reduce((sum, c) => sum + c[key], 0) / all.length;
     var diff = Math.round((cls[key] / average - 1) * 100);
     chip(icon + " " + (diff > 0 ? "+" : diff < 0 ? "−" : "±") + Math.abs(diff) + "% " + name, diff > 0 ? true : diff < 0 ? false : null, "Against the average class");
   });
   if (cls.hpPlus) chip("❤️ +" + cls.hpPlus + " HP", true, "Extra HP from the start");
-  if (cls.atkPlus) chip("⚔️ +" + cls.atkPlus + " attack", true, "Extra attack from the start");
+  if (cls.atkPlus) chip("💪 +" + cls.atkPlus + " attack", true, "Extra attack from the start");
   if (cls.def) chip("🛡️ +" + cls.def + " armor", true, "Armor from the start");
   if (cls.luck) chip("🍀 +" + cls.luck + "% luck", true, "Crits, loot");
   if (cls.agi) chip("🦊 +" + cls.agi + "% instinct", true, "Dodge attacks");
@@ -1868,7 +1868,7 @@ function renderPartyStats(run) {
       head.appendChild(bar(h.hp, h.maxHp, "hero"));
       var stats = el("div", "rpg-pstat-stats");
       [
-        ["⚔️", h.atk, "Attack", "Damage of your attacks"],
+        ["💪", h.atk, "Attack", "Damage of your attacks"],
         ["🛡️", h.def, "Armor", "Less damage taken, more block"],
         ["🍀", h.luck + (h.perks.crit || 0) + "%", "Crit", "Chance of a critical hit"],
         ["🦊", h.agi + "%", "Dodge", h.cls == "rogue" ? "Dodge hits, sense rooms (far better)" : "Dodge hits, sense rooms"],
