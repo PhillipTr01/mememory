@@ -29,7 +29,7 @@ const ROOMS = 6;
 const PARTY_MAX = 4;
 const BAG_MAX = 5; // the bag at first - room for more in the shop
 const BAG_TOP = 15; // at most
-const BAG_SLOT_PRICE = 100000; // the first slot more - every next one 60% dearer
+const BAG_SLOT_PRICE = 25000; // the first slot more - every next one 60% dearer
 const BAG_SLOT_GROWTH = 1.6;
 
 // The room in a hero's bag
@@ -44,7 +44,7 @@ function bagSlotPrice(hero) {
 }
 // Deck slots: decks kept ready, one played - a slot at first, more in the shop (up to DECKS_TOP, for every character)
 const DECKS_TOP = 5;
-const DECK_SLOT_PRICE = 50000; // the second slot - every next one 60% dearer
+const DECK_SLOT_PRICE = 250000; // the second slot (far dearer than a potion slot) - every next one 60% dearer
 function deckSlots(hero) {
   return 1 + (hero.deckSlots || 0);
 }
@@ -73,7 +73,7 @@ function decksOf(hero) {
 }
 const POTIONS_MAX = 5; // the potions a hero carries at first - room for more in the shop
 const POTIONS_TOP = 10; // at most
-const POTION_SLOT_PRICE = 250000; // 2.5x a bag slot - every next one 60% dearer too
+const POTION_SLOT_PRICE = 50000; // 2x a bag slot - every next one 60% dearer too
 
 // The potions a hero may carry
 function potionsMax(hero) {
@@ -140,11 +140,11 @@ const CARDS = {};
 // in a Base Set pack - the packs are priced by it)
 const CARD_RARITIES = {
   basic: { name: "Basic", weight: 0, copies: 4, value: 0 },
-  common: { name: "Common", weight: 64, copies: 3, value: 500 },
-  rare: { name: "Rare", weight: 26, copies: 2, value: 2500 },
-  epic: { name: "Epic", weight: 8, copies: 2, value: 10000 },
-  legendary: { name: "Legendary", weight: 3, copies: 1, value: 50000 },
-  mythic: { name: "Mythic", weight: 0.08, copies: 1, value: 500000 },
+  common: { name: "Common", weight: 64, copies: 3, value: 125 },
+  rare: { name: "Rare", weight: 26, copies: 2, value: 625 },
+  epic: { name: "Epic", weight: 8, copies: 2, value: 2500 },
+  legendary: { name: "Legendary", weight: 3, copies: 1, value: 12500 },
+  mythic: { name: "Mythic", weight: 0.08, copies: 1, value: 125000 },
 };
 // The larger part of the base set: cards made of effects (game/rpg_cards.js)
 const MORE_CARDS = require("./rpg_cards");
@@ -529,7 +529,11 @@ function xpFor(kind, floor) {
   return Math.round((XP[kind] || 0) * (1 + (floor - 1) * 0.35));
 }
 
-const round100 = (value) => Math.max(100, Math.round(value / 100) * 100);
+// A price, rounded to a step that fits its size: 10 under 1,000, 50 under 10,000, else 100
+const round100 = (value) => {
+  const step = value < 1000 ? 10 : value < 10000 ? 50 : 100;
+  return Math.max(10, Math.round(value / step) * step);
+};
 const between = (rng, low, high) => low + rng() * (high - low);
 const pick = (rng, list) => list[Math.floor(rng() * list.length)];
 
@@ -1539,7 +1543,7 @@ function enterRoom(run, door = 0, rng = Math.random) {
       const relics = relicOffer(hero, rng, MERCHANT_RELICS);
       // (the floor's prices - the deeper, the dearer)
       const price = { potion: round100(potionPrice(run.floor) * off), remove: prices.remove };
-      for (const id of cards) price[id] = Math.round((prices.card * CARD_PRICE[CARDS[id].rarity]) / 100) * 100;
+      for (const id of cards) price[id] = round100(prices.card * CARD_PRICE[CARDS[id].rarity]);
       for (const id of relics) price[id] = prices.relic;
       run.event.offers[hero.name] = { cards, relics, bought: [], removed: false, prices: price };
     }
