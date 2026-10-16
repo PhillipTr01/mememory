@@ -1962,6 +1962,18 @@ var ROOM_STORY = {
 
 function roomScene(run, me) {
   var ev = run.event;
+  if (!ev && run.cleared) {
+    // (the deep stairs: the floor is cleared - a stairway down to a far stronger guardian)
+    var deep = el("div", "rpg-scene kind-deep");
+    var body = el("div", "rpg-scene-body center");
+    body.append(
+      el("div", "rpg-deep-icon", "🕳️"),
+      el("div", "rpg-scene-title", "The floor is cleared, but a dark stairway leads deeper"),
+      el("div", "rpg-scene-story", "A guardian far stronger than this floor waits below. Beat it and your pot " + (run.deepPay == 2 ? "doubles" : "grows " + run.deepPay + " times") + ". Fall and the pot is lost."),
+    );
+    deep.appendChild(body);
+    return [deep];
+  }
   if (!ev) {
     var done = el("div", "rpg-scene kind-cleared");
     var plain = el("div", "rpg-scene-body center");
@@ -2366,7 +2378,19 @@ function handBar(run, me) {
     var leave = button("🚪 Leave with 🪙 " + formatCoins(myPot(run)), "vote", { id: "leave", className: voted === "leave" ? "voted" : "" });
     var leavers = Object.keys(run.votes).filter((name) => run.votes[name] === "leave");
     if (leavers.length) leave.innerText += " (" + leavers.length + ")";
-    if (run.heroes.length < 2) return [potion, el("div", "rpg-wait mm-muted", "🗺️ Pick the next room on the map"), leave];
+    // (the deep stairs: down for twice the pot - or out with it)
+    var deep = null;
+    if (run.cleared) {
+      deep = button("🕳️ Go deeper for 🪙 " + formatCoins(myPot(run) * run.deepPay), "vote", { id: "0", className: "danger" + (voted === 0 ? " voted" : "") });
+      var divers = Object.keys(run.votes).filter((name) => run.votes[name] === 0);
+      if (divers.length) deep.innerText += " (" + divers.length + ")";
+    }
+    if (deep) {
+      var both = el("div", "rpg-deep-pick");
+      both.append(deep, leave);
+      leave = both;
+    }
+    if (run.heroes.length < 2) return deep ? [potion, leave] : [potion, el("div", "rpg-wait mm-muted", "🗺️ Pick the next room on the map"), leave];
     // (who voted for what - a tie: random)
     var votes = el("div", "rpg-votes");
     run.heroes.forEach((h) => {

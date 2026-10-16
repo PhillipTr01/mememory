@@ -114,7 +114,14 @@ function softStat(id, raw) {
 }
 
 // What a room puts in the pot (per hero, a share of the entry)
-const REWARD = { fight: 0.36, hard: 0.66, elite: 0.66, boss: 1.08, chest: 0.36, trap: 0, rest: 0, shrine: 0, merchant: 0 };
+const REWARD = { fight: 0.36, hard: 0.66, elite: 0.66, boss: 1.08, chest: 0.36, trap: 0, rest: 0, shrine: 0, merchant: 0, deep: 0 };
+// The deep stairs: sometimes the end of a floor isn't the end - the floor is cleared, but a stairway leads to a
+// guardian far stronger (the next boss, DEEP_POWER times as strong): won, the pot DEEP_PAY times - lost, all of it
+const DEEPER_CHANCE = 0.2;
+// (how much stronger the guardian is, per floor - points between them in line; tuned so a party on the curve of
+// its floor wins about one try in three)
+const DEEP_POWER = [[1, 1.1], [4, 1.1], [10, 1.25], [14, 1.2], [18, 1.6], [22, 1.25], [26, 1.3], [30, 1.3]];
+const DEEP_PAY = 2;
 
 /* ---------- Classes and their cards ---------- */
 
@@ -575,7 +582,7 @@ function xpNeed(level) {
   return Math.round(40 * Math.pow(level, 1.5));
 }
 // XP: a fight won (by its kind), a floor cleared - x1.35 every floor deeper; at most HERO_LEVEL_MAX
-const XP = { fight: 3, hard: 5, elite: 10, boss: 20, floor: 8 };
+const XP = { fight: 3, hard: 5, elite: 10, boss: 20, floor: 8, deep: 30 };
 const HERO_LEVEL_MAX = 50;
 const FIRST_CLEAR = 0.5; // a floor cleared the first time: this share of its entry more
 function xpFor(kind, floor) {
@@ -1101,6 +1108,7 @@ const ROOM_KINDS = {
   hard: { name: "Hard fight", icon: "☠️", about: "Tougher monsters, more loot and a relic" },
   elite: { name: "The guarded gate", icon: "👑", about: "Beat it to clear the floor" },
   boss: { name: "Boss", icon: "💀", about: "The master of the floor" },
+  deep: { name: "The deep stairs", icon: "🕳️", about: "A guardian far stronger than the floor" },
   chest: { name: "Treasure", icon: "🎁", about: "Coins, gear and maybe a relic" },
   trap: { name: "Trap", icon: "🪤", about: "Disarm or sneak past" },
   rest: { name: "Camp fire", icon: "🔥", about: "Rest or upgrade a card" },
@@ -1256,8 +1264,7 @@ const DEPTH_EXTRA = 0.015;
 // The difficulty of the floors on top: [floor, power] - between two of them evenly (fitted with the simulator, every
 // class on its stat curve clearing about three runs of four)
 const FLOOR_POWER = [[1, 2.209], [2, 2.674], [4, 2.122], [8, 1.95], [12, 1.66], [18, 1.504], [23, 1.739], [28, 1.069]];
-function floorPower(floor) {
-  const points = FLOOR_POWER;
+function floorPower(floor, points = FLOOR_POWER) {
   if (floor <= points[0][0]) return points[0][1];
   for (let i = 1; i < points.length; i++) {
     const [f1, p1] = points[i];
@@ -1316,6 +1323,19 @@ function armorOf(floor, kind, rank) {
 // The monsters of a fight: 1 to 3 (more with a bigger party, a hard fight one more) - an elite with a few others
 function monstersFor(floor, size, room, rng = Math.random, depth = 0) {
   const group = MONSTERS[Math.min(MONSTERS.length - 1, Math.floor((floor - 1) / 5))];
+  if (room == "deep") {
+    // (the guardian: this floor's boss risen from the deep - DEEP_POWER times as strong)
+    const lead = BOSSES[Math.min(BOSSES.length - 1, Math.floor((floor - 1) / BOSS_EVERY))];
+    const list = [monster(floor, size, lead, RANKS.boss, depth, rng)];
+    for (let i = 0; i < Math.ceil(size / 2); i++) list.push(monster(floor, size, pick(rng, group), RANKS.hard, depth, rng));
+    const power = floorPower(floor, DEEP_POWER);
+    for (const one of list) {
+      one.maxHp = one.hp = Math.round(one.hp * power);
+      one.atk = Math.round(one.atk * power);
+    }
+    list[0].name = "Deep " + list[0].name;
+    return list;
+  }
   if (room == "elite" || room == "boss") {
     const lead = room == "boss" ? BOSSES[Math.min(BOSSES.length - 1, Math.floor((floor - 1) / BOSS_EVERY))] : pick(rng, group);
     const list = [monster(floor, size, lead, RANKS[room], depth, rng)];
@@ -1353,6 +1373,9 @@ function newRun(floor, party, rng = Math.random, options = {}) {
     doors: [], // the rooms of the map it may go to next
     votes: {}, // name -> a door's index or "leave"
     phase: "between",
+    // (the deep stairs: how often a floor's end leads deeper - only real runs, see DEEPER_CHANCE)
+    deeper: options.deeper || 0,
+    cleared: false,
     heroes: party.map(({ name, hero }) => {
       // (the talents of the character: perks for the whole run - relics add theirs; dodge from them: past the knee, slower too)
       const perks = talentPerks(hero);
@@ -1596,7 +1619,7 @@ function enterRoom(run, door = 0, rng = Math.random) {
   const heroes = alive(run.heroes);
   const n = roomNumber(run);
   if (!chosen.open && !chosen.sensed) say(run, `Room ${n}: ${ROOM_KINDS[kind].icon} ${ROOM_KINDS[kind].name}!`);
-  if (kind == "fight" || kind == "hard" || kind == "elite" || kind == "boss") {
+  if (kind == "fight" || kind == "hard" || kind == "elite" || kind == "boss" || kind == "deep") {
     run.monsters = monstersFor(run.floor, run.heroes.length, kind, rng, chosen.row || 0);
     run.monsters.forEach((m) => toughen(run, m));
     // (the practice run: one slime first, then two easy foes - half as strong)
@@ -1676,11 +1699,27 @@ function enterRoom(run, door = 0, rng = Math.random) {
 }
 
 // A room done: the next rooms of the map to pick - or the floor is cleared
-function afterRoom(run) {
+function afterRoom(run, rng = Math.random) {
   run.monsters = [];
-  if (run.rooms.length >= (run.map ? run.map.length : ROOMS)) {
+  // (the deep stairs taken and won: the pot twice)
+  if (run.cleared && run.rooms[run.rooms.length - 1].kind == "deep") {
+    run.pot = Math.round(run.pot * DEEP_PAY);
     run.phase = "won";
+    say(run, `The deep guardian falls! The pot doubles. 💰`);
+    return;
+  }
+  if (run.rooms.length >= (run.map ? run.map.length : ROOMS)) {
     say(run, `Floor ${run.floor} cleared! 🎉`);
+    // (sometimes the end isn't the end: a stairway leads deeper - the floor is cleared either way)
+    if (run.deeper && !run.cleared && rng() < run.deeper) {
+      run.cleared = true;
+      run.phase = "between";
+      run.votes = {};
+      run.doors = [{ kind: "deep", row: run.at ? run.at.row + 1 : run.rooms.length, index: 0, open: true }];
+      say(run, "A dark stairway leads deeper... 🕳️");
+      return;
+    }
+    run.phase = "won";
     return;
   }
   run.phase = "between";
@@ -2577,8 +2616,18 @@ function winFight(run, rng) {
     }
   }
   room.done = true;
+  const before = run.cleared;
   afterRoom(run, rng);
-  if (run.phase == "won") for (const hero of run.heroes) hero.xp += xpFor("floor", run.floor);
+  // (the floor's XP: once - when it is cleared)
+  if ((run.phase == "won" && !before) || (run.cleared && !before)) for (const hero of run.heroes) hero.xp += xpFor("floor", run.floor);
+  // (the deep guardian: a piece of legendary gear for everyone)
+  if (room.kind == "deep") {
+    for (const hero of alive(run.heroes)) {
+      let item = makeGear(run.floor, rng, hero.luck, hero.cls);
+      for (let i = 0; i < 80 && item.rarity != "legendary"; i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
+      (run.loot[hero.name] = run.loot[hero.name] || []).push(item);
+    }
+  }
 }
 
 // For the pages
@@ -2595,6 +2644,9 @@ function runView(run) {
     at: run.at,
     doors: run.doors.map((door) => ({ row: door.row, index: door.index, kind: shownKind(door) })),
     tutorial: !!run.tutorial,
+    // (the floor cleared, the deep stairs waiting - or taken)
+    cleared: !!run.cleared,
+    deepPay: DEEP_PAY,
     sense: senseChance(run),
     rerolls: abilityLevel(run, "mage") == null ? null : run.rerolls == null ? 1 + Math.floor(abilityLevel(run, "mage") / ABILITIES.mage.rerollEvery) : run.rerolls,
     event: run.event && {
@@ -2894,6 +2946,9 @@ module.exports = {
   MONSTER_TYPES,
   BOSSES,
   UPGRADE,
+  DEEPER_CHANCE,
+  DEEP_POWER,
+  DEEP_PAY,
   upgradeNote,
   deckRule,
   cardInfo,
@@ -2941,6 +2996,7 @@ module.exports = {
   starterDeck,
   doorsFor,
   monstersFor,
+  afterRoom,
   newRun,
   vote,
   allVoted,

@@ -215,7 +215,8 @@ module.exports = function (io, options = {}) {
   async function decide(party) {
     if (!party.run || party.run.phase !== "between" || party.result) return;
     const choice = rpg.tally(party.run);
-    if (choice === "leave") return finish(party, "left");
+    // (the floor cleared, the deep stairs not taken: out with the loot - a clear)
+    if (choice === "leave") return finish(party, party.run.cleared ? "won" : "left");
     rpg.enterRoom(party.run, choice);
     afterChange(party);
   }
@@ -279,7 +280,7 @@ module.exports = function (io, options = {}) {
       party.floor,
       party.members.map((name) => ({ name, hero: heroOf(name) })),
       Math.random,
-      { tutorial: party.tutorial },
+      { tutorial: party.tutorial, deeper: party.tutorial ? 0 : rpg.DEEPER_CHANCE },
     );
     for (const name of party.members) {
       const hero = heroOf(name);
@@ -319,14 +320,16 @@ module.exports = function (io, options = {}) {
       // (the floor counts for the character that went down - its class)
       const char = rpg.charOf(hero, one.cls);
       // XP for the character (lost: half of it) - a floor cleared the first time: a bonus (coins, XP)
-      const firstClear = result === "won" && run.floor > char.deepest;
+      // (the floor counts as cleared even when the deep stairs went wrong)
+      const cleared = result === "won" || !!run.cleared;
+      const firstClear = cleared && run.floor > char.deepest;
       // (the first clear: half the entry more - a bigger party more)
       const bonus = firstClear ? Math.round((rpg.entryCost(run.floor) * rpg.FIRST_CLEAR * rpg.partyBonus(run.heroes.length)) / 100) * 100 : 0;
       const xp = Math.round((result === "lost" ? one.xp / 2 : one.xp) + (firstClear ? rpg.xpFor("floor", run.floor) * 2 : 0));
       const ups = rpg.gainXp(char, xp);
       party.summary[one.name] = { xp, ups, level: char.level, firstClear: bonus };
       if (bonus && ours(one.name)) await coins.add(one.name, bonus, { reason: "rpg first clear", note: "floor " + run.floor });
-      if (result === "won") {
+      if (cleared) {
         char.deepest = Math.max(char.deepest, run.floor);
         char.cleared++;
       }

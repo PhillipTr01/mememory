@@ -1232,3 +1232,33 @@ test("rpg: the deck rule - a basic card up to 4 times, a legendary or mythic car
   assert.deepStrictEqual(rpg.charOf(hero).deck, [common, common, "strike"]);
   assert.strictEqual(rpg.charOf(hero).collection[common], 3);
 });
+
+test("rpg: the deep stairs - sometimes the end of a floor leads deeper; won, the pot doubles", () => {
+  const hero = rpg.newHero("warrior");
+  const run = rpg.newRun(3, [{ name: "a", hero }], seeded(9), { deeper: 1 });
+  // (the last room of the floor won)
+  run.rooms = run.map.map(() => ({ kind: "fight", done: true }));
+  run.at = { row: run.map.length - 1, index: 0 };
+  run.pot = 1000;
+  rpg.afterRoom(run, () => 0);
+  assert.strictEqual(run.phase, "between");
+  assert.strictEqual(run.cleared, true);
+  assert.deepStrictEqual(run.doors.map((d) => d.kind), ["deep"]);
+  assert.strictEqual(rpg.runView(run).cleared, true);
+  // (down: the floor's boss risen from the deep, stronger than the floor's boss)
+  rpg.enterRoom(run, 0, seeded(3));
+  assert.strictEqual(run.phase, "fight");
+  assert.match(run.monsters[0].name, /^Deep /);
+  const boss = rpg.monstersFor(3, 1, "boss", seeded(3))[0];
+  assert.ok(run.monsters[0].maxHp > boss.maxHp * 0.9);
+  // (won: the pot twice)
+  run.monsters = [];
+  rpg.afterRoom(run, () => 0);
+  assert.strictEqual(run.phase, "won");
+  assert.strictEqual(run.pot, 2000);
+  // (no stairs without the option - the simulations, the practice run)
+  const plain = rpg.newRun(3, [{ name: "a", hero }], seeded(9));
+  plain.rooms = plain.map.map(() => ({ kind: "fight", done: true }));
+  rpg.afterRoom(plain, () => 0);
+  assert.strictEqual(plain.phase, "won");
+});
