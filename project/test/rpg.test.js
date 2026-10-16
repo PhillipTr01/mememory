@@ -1132,3 +1132,24 @@ test("rpg: a party heal of the cleric smites once - not once for every hero it h
   const hits = run.fx.filter((e) => e.id > seen && e.k == "hit");
   assert.strictEqual(hits.length, 1);
 });
+
+test("rpg: a boss calls at most 4 monsters a fight - none once the monsters are furious", () => {
+  const hero = rpg.newHero("warrior");
+  const run = rpg.newRun(10, [{ name: "a", hero }], seeded(11));
+  rpg.enterRoom(run, 0, seeded(11));
+  const boss = run.monsters[0];
+  boss.moves = ["summon"];
+  boss.maxHp = boss.hp = 1e6;
+  run.heroes[0].def = 5000;
+  run.heroes[0].maxHp = run.heroes[0].hp = 1e7;
+  const start = run.monsters.length;
+  let calls = 0;
+  for (let turn = 0; turn < 10 && run.phase == "fight"; turn++) {
+    run.monsters.filter((m) => m != boss).forEach((m) => ((m.hp = 0), (m.down = true)));
+    rpg.endTurn(run, "a");
+    rpg.monsterTurn(run, seeded(turn));
+    calls = run.monsters.length - start;
+  }
+  assert.ok(boss.summoned > 0 && boss.summoned <= 4, `summoned ${boss.summoned}`);
+  assert.ok(calls <= 4, `called ${calls}`);
+});

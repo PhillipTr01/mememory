@@ -121,11 +121,11 @@ const REWARD = { fight: 0.3, hard: 0.55, elite: 0.55, boss: 0.9, chest: 0.3, tra
 // main: the stat its levels count 1.5x for; hp, atk: times the stats; def, luck, agi: added;
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
-  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.4 }, top: 1.5 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.25, atk: 1.4, def: 2, luck: 0, agi: 0, mainBonus: 1.3, hpPlus: 8, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.85, block: 0.17 }, top: 1.5 }, about: "Armor class with taunts and party shields", hp: 1.25, atk: 1.35, def: 3, luck: 0, agi: 0, mainBonus: 1.25, atkPlus: 3, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites a random foe.", perks: { heal: 0.2, healHit: 0.25 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.05, atk: 1.35, def: 4, luck: 0, agi: 0, mainBonus: 1.25, hpPlus: 30, atkPlus: 6, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
+  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.4 }, top: 1.5 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.18, atk: 1.25, def: 2, luck: 0, agi: 0, mainBonus: 1.3, hpPlus: 8, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.85, block: 0.17 }, top: 1.5 }, about: "Armor class with taunts and party shields", hp: 1.32, atk: 1.5, def: 3, luck: 0, agi: 0, mainBonus: 1.25, atkPlus: 12, hpPlus: 40, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites a random foe.", perks: { heal: 0.2, healHit: 0.25 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.03, atk: 1.29, def: 4, luck: 0, agi: 0, mainBonus: 1.25, hpPlus: 30, atkPlus: 6, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
   rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.6, crit: 12 }, top: 2.5 }, about: "Instinct class with dodge, scouting and poison", hp: 1.35, atk: 1.55, def: 0, luck: 6, agi: 13, mainBonus: 1.7, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.5, crit: 10 }, top: 2.6 }, about: "Luck class with crits, fire and frost", hp: 1.5, atk: 1.5, def: 1, luck: 8, agi: 0, mainBonus: 1.8, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.5, crit: 10 }, top: 2.6 }, about: "Luck class with crits, fire and frost", hp: 1.52, atk: 1.54, def: 1, luck: 8, agi: 0, mainBonus: 1.8, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -390,7 +390,7 @@ const MONSTER_SPREAD = 0.25; // every monster up to this much stronger or weaker
 // A bigger party: every monster has this much more HP and attack per hero after the first - and there are more of
 // them (a party is no easier than going alone)
 const PARTY_HP = 1.5;
-const PARTY_ATK = 0.15;
+const PARTY_ATK = 0.3;
 // ... and pays more: the loot (each) and the first clear's bonus this much more per hero after the first
 const PARTY_LOOT = 0.1;
 function partyBonus(size) {
@@ -1896,7 +1896,8 @@ function planIntents(run, rng = Math.random) {
       if (move == "heal") return alive(run.monsters).some((m) => m.hp < m.maxHp * 0.7);
       if (move == "howl") return !foe.effects.rage;
       if (move == "steal") return heroes.some((h) => h.potions > 0);
-      if (move == "summon") return alive(run.monsters).length < 4;
+      // (calls for help: at most SUMMON_MAX monsters a fight - none once furious)
+      if (move == "summon") return alive(run.monsters).length < 4 && (foe.summoned || 0) < SUMMON_MAX && !furious(run);
       if (move == "purge") return alive(run.monsters).some((m) => m.effects.poison || m.effects.burn);
       if (move == "curse") return heroes.some((h) => !h.effects.weak);
       return true;
@@ -1919,6 +1920,7 @@ function planIntents(run, rng = Math.random) {
 // A fight that drags on: from FURY_TURN the monsters are furious - no more healing, every turn 20% more damage on top
 // (no fight lasts forever, not even against a regenerating monster or a hero who only blocks)
 const FURY_TURN = 12;
+const SUMMON_MAX = 4; // the monsters one boss may call in a fight
 const FURY_STEP = 0.2;
 const furious = (run) => run.turn >= FURY_TURN;
 
@@ -2308,7 +2310,8 @@ function monsterMove(run, foe, rng) {
     case "summon": {
       // (its kind of the floors - at most 4 standing)
       const group = MONSTERS[Math.min(MONSTERS.length - 1, foe.summon != null ? foe.summon : Math.floor((run.floor - 1) / 5))];
-      const count = Math.min(2, 4 - alive(run.monsters).length);
+      const count = Math.max(0, Math.min(2, 4 - alive(run.monsters).length, SUMMON_MAX - (foe.summoned || 0)));
+      foe.summoned = (foe.summoned || 0) + count;
       for (let i = 0; i < count; i++) {
         const add = toughen(run, monster(run.floor, run.heroes.length, pick(rng, group), RANKS.normal, 0, rng));
         run.monsters.push(add);
