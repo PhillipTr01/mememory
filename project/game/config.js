@@ -231,7 +231,7 @@ module.exports = {
   RPG_ENTRY_BASE: 2500, // the entry of floor 1
   RPG_ENTRY_GROWTH: 27, // % dearer every floor deeper
   RPG_STAT_SHARE: 20, // % of a floor's entry: a stat level (level 1 - floor 1, the last - floor 30)
-  RPG_CLASS_PRICE: 250000, // another class
+  RPG_CLASS_PRICE: 1000000, // another class
   RPG_POTION_SHARE: 10, // % of a floor's entry: a potion (the deepest open floor's - at the merchant: the floor's)
   RPG_LOW_FREE: 2, // floors this far under the deepest cleared: the full loot
   RPG_LOW_CUT: 15, // % of the loot less for every floor lower than that (a high character farming low floors)
@@ -245,9 +245,9 @@ module.exports = {
   RPG_MONSTER_HP: 100, // % of the monsters' HP
   RPG_MONSTER_ATK: 100, // % of the monsters' attack
   RPG_LOOT: 100, // % of the coins a room puts in the pot
-  RPG_PACK_STANDARD: 2500,
-  RPG_PACK_PREMIUM: 10000, // (the packs: 1.1x what their cards are worth - CARD_RARITIES)
-  RPG_PACK_MYTHIC: 29000,
+  RPG_PACK_STANDARD: 10000,
+  RPG_PACK_PREMIUM: 40000, // (the packs: 1.1x what their cards are worth - CARD_RARITIES)
+  RPG_PACK_MYTHIC: 115000,
   RPG_TURN_TIME: 45000, // a turn of a fight
 
   // The tables of the lobby (in this order, limits from the keys above); a page without a table opens "classic"

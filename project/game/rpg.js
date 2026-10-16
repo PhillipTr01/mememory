@@ -29,7 +29,7 @@ const ROOMS = 6;
 const PARTY_MAX = 4;
 const BAG_MAX = 5; // the bag at first - room for more in the shop
 const BAG_TOP = 15; // at most
-const BAG_SLOT_PRICE = 25000; // the first slot more - every next one 60% dearer
+const BAG_SLOT_PRICE = 100000; // the first slot more - every next one 60% dearer
 const BAG_SLOT_GROWTH = 1.6;
 
 // The room in a hero's bag
@@ -73,7 +73,7 @@ function decksOf(hero) {
 }
 const POTIONS_MAX = 5; // the potions a hero carries at first - room for more in the shop
 const POTIONS_TOP = 10; // at most
-const POTION_SLOT_PRICE = 50000; // 2x a bag slot - every next one 60% dearer too
+const POTION_SLOT_PRICE = 200000; // every next one 60% dearer too
 
 // The potions a hero may carry
 function potionsMax(hero) {
@@ -140,11 +140,11 @@ const CARDS = {};
 // in a Base Set pack - the packs are priced by it)
 const CARD_RARITIES = {
   basic: { name: "Basic", weight: 0, copies: 4, value: 0 },
-  common: { name: "Common", weight: 64, copies: 3, value: 125 },
-  rare: { name: "Rare", weight: 26, copies: 2, value: 625 },
-  epic: { name: "Epic", weight: 8, copies: 2, value: 2500 },
-  legendary: { name: "Legendary", weight: 3, copies: 1, value: 12500 },
-  mythic: { name: "Mythic", weight: 0.08, copies: 1, value: 125000 },
+  common: { name: "Common", weight: 64, copies: 3, value: 500 },
+  rare: { name: "Rare", weight: 26, copies: 2, value: 2500 },
+  epic: { name: "Epic", weight: 8, copies: 2, value: 10000 },
+  legendary: { name: "Legendary", weight: 3, copies: 1, value: 50000 },
+  mythic: { name: "Mythic", weight: 0.08, copies: 1, value: 500000 },
 };
 // The larger part of the base set: cards made of effects (game/rpg_cards.js)
 const MORE_CARDS = require("./rpg_cards");
@@ -681,8 +681,10 @@ function unlock(hero, cls) {
 }
 
 // The price of the next class (0: the first one)
+// Another character: the first free, the second RPG_CLASS_PRICE - every next one twice as much
 function classPrice(hero) {
-  return hero.unlocked.length ? config.RPG_CLASS_PRICE : 0;
+  const n = hero.unlocked.length;
+  return n ? config.RPG_CLASS_PRICE * Math.pow(2, n - 1) : 0;
 }
 
 // XP for a character: level ups (a stat point each) -> the levels gained

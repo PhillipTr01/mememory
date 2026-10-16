@@ -139,7 +139,7 @@ const GAMES = {
       sub: "Build a character and a deck, then clear floors for coins.",
       sections: [
         section("Your character", [
-          tile("🧙", "5 classes", `Every class is a character of its own. The first one is free, every other costs 🪙 ${n(rpg.CLASS_PRICE)}.`, { emoji: ["⚔️", "🔰", "✨", "🗡️", "🔮"] }),
+          tile("🧙", "5 classes", `Every class is a character of its own. The first one is free, the second costs 🪙 ${n(rpg.CLASS_PRICE)} and every next one twice as much.`, { emoji: ["⚔️", "🔰", "✨", "🗡️", "🔮"] }),
           tile("📈", "Stats", `Raise your stats with coins or with points from level ups. Your main stat counts more.`, { tags: [["❤️ HP"], ["⚔️ Attack"], ["🛡️ Armor"], ["🍀 Luck"], ["🦊 Instinct"]] }),
           tile("⭐", "Levels", `Fights and floors give XP. New talents unlock at levels ${rpg.TALENT_LEVELS.join(", ")}.`, { big: "Lv " + rpg.HERO_LEVEL_MAX }),
           tile("🗡️", "Gear", "Weapons, armor and charms drop in the dungeon.", { emoji: ["🗡️", "🛡️", "📿"] }),

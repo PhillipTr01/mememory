@@ -77,7 +77,7 @@ const FIELDS = [
   { group: "rpg", section: "Prices", key: "RPG_ENTRY_BASE", label: "Entry of floor 1", hint: "What a hero pays to go down to floor 1.", step: 100, min: 1, max: 100000000 },
   { group: "rpg", section: "Prices", key: "RPG_ENTRY_GROWTH", label: "Entry dearer per floor", hint: "Each floor deeper costs this much more. With 27%, floor 30 costs about 2.6 million.", unit: "%", step: 1, min: 0, max: 100 },
   { group: "rpg", section: "Prices", key: "RPG_STAT_SHARE", label: "Stat level", hint: "Of the entry of the floor it belongs to (level 1: floor 1, level 100: floor 30) - it grows with the loot.", unit: "%", step: 1, min: 1, max: 500 },
-  { group: "rpg", section: "Prices", key: "RPG_CLASS_PRICE", label: "Another class", step: 10000, min: 0, max: 1000000000 },
+  { group: "rpg", section: "Prices", key: "RPG_CLASS_PRICE", label: "Another class", hint: "The second character costs this. Every next one costs twice as much.", step: 10000, min: 0, max: 1000000000 },
   { group: "rpg", section: "Prices", key: "RPG_POTION_SHARE", label: "Potion", hint: "Of the entry of your deepest open floor (at the merchant: of that floor).", unit: "%", step: 1, min: 0, max: 500 },
   { group: "rpg", section: "Packs", key: "RPG_PACK_STANDARD", label: "Base Set Pack", step: 1000, min: 1, max: 100000000 },
   { group: "rpg", section: "Packs", key: "RPG_PACK_PREMIUM", label: "Hero Pack", step: 1000, min: 1, max: 100000000 },

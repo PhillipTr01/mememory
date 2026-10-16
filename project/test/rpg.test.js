@@ -23,6 +23,12 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   assert.strictEqual(rpg.classPrice(fresh), 0);
   const hero = rpg.newHero("warrior");
   assert.deepStrictEqual([hero.cls, hero.unlocked, rpg.classPrice(hero)], ["warrior", ["warrior"], rpg.CLASS_PRICE]);
+  // (every next character: twice as much)
+  const many = rpg.newHero("warrior");
+  rpg.unlock(many, "rogue");
+  assert.strictEqual(rpg.classPrice(many), rpg.CLASS_PRICE * 2);
+  rpg.unlock(many, "mage");
+  assert.strictEqual(rpg.classPrice(many), rpg.CLASS_PRICE * 4);
   assert.strictEqual(rpg.maxFloor(hero), 1);
   rpg.charOf(hero).deepest = 4;
   assert.strictEqual(rpg.maxFloor(hero), 5);
