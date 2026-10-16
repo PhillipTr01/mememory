@@ -6975,3 +6975,37 @@ button.rpg-cardx.off {
 .rpg-scene {
   border-color: rgba(255, 255, 255, 0.06);
 }
+
+/* (the deck slots: numbered pills - the one played lit) */
+.rpg-deck-switch {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-left: 0.4rem;
+}
+.rpg-deck-slot {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.rpg-deck-slot:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.rpg-deck-slot.active {
+  color: #1a1204;
+  background: var(--rpg-gold);
+}
+.rpg-deck-slot.empty:not(.active) {
+  opacity: 0.5;
+}
+.rpg-load .rpg-deck-switch {
+  margin-left: 0;
+}

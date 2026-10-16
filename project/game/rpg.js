@@ -42,6 +42,35 @@ function bagSlotPrice(hero) {
   const n = hero.bagSlots || 0;
   return BAG_MAX + n >= BAG_TOP ? null : round100(BAG_SLOT_PRICE * Math.pow(BAG_SLOT_GROWTH, n));
 }
+// Deck slots: decks kept ready, one played - a slot at first, more in the shop (up to DECKS_TOP, for every character)
+const DECKS_TOP = 5;
+const DECK_SLOT_PRICE = 50000; // the second slot - every next one 60% dearer
+function deckSlots(hero) {
+  return 1 + (hero.deckSlots || 0);
+}
+function deckSlotPrice(hero) {
+  const n = hero.deckSlots || 0;
+  return 1 + n >= DECKS_TOP ? null : round100(DECK_SLOT_PRICE * Math.pow(BAG_SLOT_GROWTH, n));
+}
+// Another deck of the character played: the one built kept in its slot (an empty slot: an empty deck) -> an error or null
+function useDeck(hero, slot) {
+  const char = charOf(hero);
+  if (!Number.isInteger(slot) || slot < 0 || slot >= deckSlots(hero)) return "No such deck slot.";
+  const at = char.deckAt || 0;
+  if (slot == at) return null;
+  char.decks = char.decks || [];
+  char.decks[at] = [...char.deck];
+  char.deck = [...(char.decks[slot] || [])];
+  char.deckAt = slot;
+  return null;
+}
+// The decks of the character played: their sizes (the one played: its own now)
+function decksOf(hero) {
+  if (!hero.cls) return [0];
+  const char = charOf(hero);
+  const at = char.deckAt || 0;
+  return Array.from({ length: deckSlots(hero) }, (_, i) => (i == at ? char.deck : (char.decks || [])[i] || []).length);
+}
 const POTIONS_MAX = 5; // the potions a hero carries at first - room for more in the shop
 const POTIONS_TOP = 10; // at most
 const POTION_SLOT_PRICE = 250000; // 2.5x a bag slot - every next one 60% dearer too
@@ -894,6 +923,9 @@ function heroView(hero) {
     bagSize: bagSize(hero),
     potionsMax: potionsMax(hero),
     potionSlotPrice: potionSlotPrice(hero),
+    deckSlotPrice: deckSlotPrice(hero),
+    decks: decksOf(hero),
+    deckAt: charOf(hero).deckAt || 0,
     bagSlotPrice: bagSlotPrice(hero),
     tutorialDone: !!char.tutorialDone,
     deadFor: deadFor(hero),
@@ -2558,6 +2590,10 @@ module.exports = {
   POTIONS_TOP,
   potionsMax,
   potionSlotPrice,
+  deckSlots,
+  deckSlotPrice,
+  useDeck,
+  DECKS_TOP,
   get POTION_PRICE() {
     return potionPrice(1);
   },

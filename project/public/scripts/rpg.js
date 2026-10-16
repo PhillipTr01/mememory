@@ -807,6 +807,20 @@ function offerTutorial() {
   });
 }
 
+// The deck slots: a numbered pill each - the one played lit (only with more than one slot)
+function deckSwitch() {
+  if (!hero.decks || hero.decks.length < 2) return null;
+  var box = el("span", "rpg-deck-switch");
+  hero.decks.forEach((n, i) => {
+    var pill = el("span", "rpg-deck-slot" + (i == hero.deckAt ? " active" : "") + (n ? "" : " empty"), String(i + 1));
+    pill.dataset.act = "deckUse";
+    pill.dataset.id = String(i);
+    pill.title = "Deck " + (i + 1) + " · " + n + " cards" + (i == hero.deckAt ? " · in use" : "");
+    box.appendChild(pill);
+  });
+  return box;
+}
+
 // Ready to go down? Every thing that still waits - with a button to it
 function renderReady() {
   var items = [];
@@ -851,7 +865,10 @@ function renderReady() {
   var fill = el("i");
   fill.style.width = Math.min(100, (n / hero.deckMax) * 100) + "%";
   meter.appendChild(fill);
-  loadout.appendChild(line("🃏", "Deck", n + " cards", deckOk ? "ok" : "warn", "view", "deck", hero.deckMin + " to " + hero.deckMax + " cards", meter));
+  var deckRow = line("🃏", "Deck" + (hero.decks && hero.decks.length > 1 ? " " + (hero.deckAt + 1) : ""), n + " cards", deckOk ? "ok" : "warn", "view", "deck", hero.deckMin + " to " + hero.deckMax + " cards", meter);
+  var sw = deckSwitch();
+  if (sw) deckRow.insertBefore(sw, deckRow.lastChild);
+  loadout.appendChild(deckRow);
   // (the potions: a small flask each)
   var flasks = el("span", "rpg-load-flasks");
   for (var i = 0; i < hero.potionsMax; i++) flasks.appendChild(flask(i < hero.potions ? "" : "off"));
@@ -1081,7 +1098,16 @@ function renderShop() {
   fwords.append(el("b", "", "Potion slot"), el("span", "mm-muted small", hero.potionsMax + " / " + rules.potionsTop + " potions"), fcells);
   flasks.append(withFlask(el("span", "rpg-upgrade-icon", "")), fwords);
   flasks.appendChild(fprice == null ? el("span", "rpg-upgrade-max", "✓ Max") : button("+1 slot · 🪙 " + formatCoins(fprice), "potionSlot", { className: "primary", disabled: fprice > myCoins }));
-  morphChildren(document.getElementById("rpgShopUpgrades"), [slot, flasks]);
+  // (deck slots: more decks kept ready)
+  var decks = el("div", "rpg-upgrade");
+  var dprice = hero.deckSlotPrice;
+  var dcells = el("div", "rpg-upgrade-cells");
+  for (var d = 0; d < rules.decksTop; d++) dcells.appendChild(el("i", d < 1 ? "base" : d < hero.decks.length ? "on" : ""));
+  var dwords = el("div", "rpg-upgrade-text");
+  dwords.append(el("b", "", "Deck slot"), el("span", "mm-muted small", hero.decks.length + " / " + rules.decksTop + " decks"), dcells);
+  decks.append(el("span", "rpg-upgrade-icon", "🗂️"), dwords);
+  decks.appendChild(dprice == null ? el("span", "rpg-upgrade-max", "✓ Max") : button("+1 slot · 🪙 " + formatCoins(dprice), "deckSlot", { className: "primary", disabled: dprice > myCoins }));
+  morphChildren(document.getElementById("rpgShopUpgrades"), [slot, flasks, decks]);
   document.getElementById("rpgShopTitle").innerText = "🛒 Card shop · " + cls.icon + " " + cls.name;
   // The packs to buy: into the cart
   morphChildren(
@@ -1365,7 +1391,7 @@ function renderBuilder() {
   info.type = "button";
   info.title = "How cards work";
   info.dataset.act = "deckHelp";
-  morphChildren(document.getElementById("rpgBuilderTitle"), [el("span", "", "🃏 Deck builder · " + cls.icon + " " + cls.name), info]);
+  morphChildren(document.getElementById("rpgBuilderTitle"), [el("span", "", "🃏 Deck builder · " + cls.icon + " " + cls.name), info, deckSwitch()]);
   var deck = hero.deck;
   var counts = {};
   deck.forEach((id) => (counts[id] = (counts[id] || 0) + 1));
@@ -2577,6 +2603,8 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "revive") socket.emit("revive");
   else if (act == "bagSlot") socket.emit("bagSlot");
   else if (act == "potionSlot") socket.emit("potionSlot");
+  else if (act == "deckSlot") socket.emit("deckSlot");
+  else if (act == "deckUse") socket.emit("deckUse", { slot: Number(id) });
   else if (act == "tutorial") socket.emit("tutorial");
   else if (act == "skipTutorial") socket.emit("skipTutorial");
   else if (act == "deckHelp") showDeckHelp();

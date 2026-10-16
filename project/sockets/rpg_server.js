@@ -123,6 +123,7 @@ module.exports = function (io, options = {}) {
       bagTop: rpg.BAG_TOP,
       potionsMax: rpg.POTIONS_MAX,
       potionsTop: rpg.POTIONS_TOP,
+      decksTop: rpg.DECKS_TOP,
       potionMana: rpg.POTION_MANA,
       potionHeal: rpg.POTION_HEAL,
       merchantBuy: rpg.MERCHANT_BUY,
@@ -553,6 +554,25 @@ module.exports = function (io, options = {}) {
       if (price == null) return error("Bag is at max size.");
       if (!(await coins.spend(username, price, { reason: "rpg bag slot" }))) return error(coins.refusal(username) || "You don't have enough coins.");
       hero.bagSlots = (hero.bagSlots || 0) + 1;
+      sendHero(username);
+    });
+
+    // One more deck slot (up to DECKS_TOP) - dearer every time
+    on("deckSlot", async () => {
+      if (inRun()) return error("Not during a run.");
+      const hero = heroOf(username);
+      const price = rpg.deckSlotPrice(hero);
+      if (price == null) return error("Deck slots are at max.");
+      if (!(await coins.spend(username, price, { reason: "rpg deck slot" }))) return error(coins.refusal(username) || "You don't have enough coins.");
+      hero.deckSlots = (hero.deckSlots || 0) + 1;
+      sendHero(username);
+    });
+
+    // Another deck of the slots played: {slot}
+    on("deckUse", (data) => {
+      if (inRun() || myParty()) return error("Not in a party.");
+      const problem = rpg.useDeck(heroOf(username), Number(data.slot));
+      if (problem) return error(problem);
       sendHero(username);
     });
 

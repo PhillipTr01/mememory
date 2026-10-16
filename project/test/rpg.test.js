@@ -959,3 +959,25 @@ test("rpg: the normal casino's dungeon listens on /rpg - not a second server on 
   live.stop();
   assert.strictEqual(names[0], "/rpg");
 });
+
+test("rpg: deck slots - one at first, more bought (up to 5), each keeps its own deck", () => {
+  const hero = rpg.newHero("warrior");
+  assert.strictEqual(rpg.deckSlots(hero), 1);
+  assert.match(rpg.useDeck(hero, 1), /No such/);
+  const price = rpg.deckSlotPrice(hero);
+  assert.ok(price > 0);
+  hero.deckSlots = 1;
+  assert.ok(rpg.deckSlotPrice(hero) > price, "dearer every time");
+  const first = [...rpg.charOf(hero).deck];
+  assert.strictEqual(rpg.useDeck(hero, 1), null);
+  assert.deepStrictEqual(rpg.charOf(hero).deck, [], "a new slot: an empty deck");
+  assert.ok(rpg.deckReady(hero), "not ready");
+  rpg.charOf(hero).deck.push("strike");
+  assert.strictEqual(rpg.useDeck(hero, 0), null);
+  assert.deepStrictEqual(rpg.charOf(hero).deck, first);
+  assert.strictEqual(rpg.useDeck(hero, 1), null);
+  assert.deepStrictEqual(rpg.charOf(hero).deck, ["strike"]);
+  assert.deepStrictEqual(rpg.heroView(hero).decks, [first.length, 1]);
+  hero.deckSlots = 4;
+  assert.strictEqual(rpg.deckSlotPrice(hero), null, "5 at most");
+});
