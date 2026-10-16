@@ -1586,7 +1586,7 @@ const ENCOUNTERS = {
     name: "The Hermit",
     icon: "🧙",
     story: 'An old hermit by a small fire: "You carry too much. Give me one of your cards."',
-    options: [{ id: "purge", label: "Give a card", text: "Remove a card for this run.", card: "deck" }, LEAVE],
+    options: [{ id: "purge", label: "Give a card away", text: "Pick a card of your deck. The hermit keeps it for the rest of this run.", card: "deck" }, LEAVE],
   },
   gambler: {
     name: "The Gambler",

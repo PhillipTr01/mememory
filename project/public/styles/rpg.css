@@ -7341,10 +7341,21 @@ button.rpg-cardx.off {
 }
 
 /* (a party's vote in a room: the faces of who voted for an option) */
+.rpg-option {
+  position: relative;
+}
+
 .rpg-option-votes {
+  position: absolute;
+  top: -0.6rem;
+  right: 0.6rem;
   display: inline-flex;
   gap: 0.15rem;
-  margin-left: auto;
+}
+
+.rpg-option-votes .mm-avatar {
+  box-shadow: 0 0 0 2px #15171d;
+  border-radius: 50%;
 }
 
 .rpg-option-votes .mm-avatar {
