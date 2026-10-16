@@ -10,7 +10,8 @@
  *   {draw: n} {mana: n} {lose: share of the max HP} {evade: true}
  *   {aura: "guard" | "regen" | "focus", turns, to: "self" | "party", block, def, agi | heal | mana} - an AURA: at the start
  *   of each of the next turns (block, healing, mana)
- * States for bonusIf: poison, burn, chill, stun, undead, boss, called (summoned) (the foe) - low (the hero below half HP)
+ * States for bonusIf: poison, burn, chill, stun, undead, boss, called (summoned) (the foe) - low (the hero below half HP),
+ *   combo (the hero played a skill this turn)
  */
 
 // The first cards of the game (the starter decks, the classes' own) - class membership: CLASSES in game/rpg.js
@@ -84,6 +85,8 @@ const BASE = {
 // id: [name, icon, cost, rarity, fx, exhaust (true - or "mythic": once a run)]
 const NEUTRAL = {
   jab: ["Jab", "🥊", 0, "common", [{ hit: 0.5 }]],
+  // (combos: far harder after a skill this turn)
+  riposte: ["Riposte", "🤺", 1, "common", [{ hit: 0.6, bonusIf: "combo", bonus: 1.6 }]],
   brace: ["Brace", "🪵", 1, "common", [{ block: 10 }]],
   firstaid: ["First Aid", "⛑️", 1, "common", [{ heal: 0.12 }]],
   dash: ["Dash", "🏃", 1, "common", [{ hit: 0.6 }, { block: 5 }]],
@@ -117,6 +120,7 @@ const CLASS = {
   warrior: {
     warbanner: ["War Banner", "🚩", 2, "epic", [{ aura: "guard", block: 6, def: 0.5, turns: 3 }, { might: 3 }]],
     heavyslash: ["Heavy Slash", "⚒️", 1, "common", [{ hit: 1.35 }]],
+    followthrough: ["Follow Through", "🔁", 1, "common", [{ hit: 0.8, bonusIf: "combo", bonus: 1.9 }]],
     shieldup: ["Shield Up", "🛡️", 1, "common", [{ block: 9, def: 1 }]],
     headbutt: ["Headbutt", "🐏", 1, "common", [{ hit: 1 }, { draw: 1 }]],
     warstomp: ["War Stomp", "🦶", 2, "common", [{ hit: 0.7, to: "all" }, { block: 4, def: 0.5 }]],
@@ -159,6 +163,7 @@ const CLASS = {
     devotionaura: ["Devotion Aura", "🔆", 1, "rare", [{ aura: "guard", block: 4, def: 0.5, turns: 3, to: "party" }]],
     shieldslam: ["Shield Slam", "🔘", 1, "common", [{ hit: 0.6, def: 1 }]],
     guard: ["Guard", "🚧", 1, "common", [{ block: 7, def: 1, to: "ally" }]],
+    shieldslam: ["Shield Slam", "🛡️", 1, "common", [{ hit: 0.5, def: 0.5, bonusIf: "combo", bonus: 1.4 }]],
     holystrike: ["Holy Strike", "✝️", 1, "common", [{ hit: 1.1, bonusIf: "stun", bonus: 2.2 }]],
     vow: ["Vow", "📜", 1, "common", [{ block: 5, def: 1 }, { draw: 1 }]],
     crusade: ["Crusade", "🏇", 2, "common", [{ hit: 0.6, def: 0.5, to: "all" }]],
@@ -200,6 +205,7 @@ const CLASS = {
     mend: ["Mend", "🌿", 1, "common", [{ heal: 0.15, to: "ally" }]],
     holybolt: ["Holy Bolt", "🌠", 1, "common", [{ hit: 1, bonusIf: "undead", bonus: 2.2 }]],
     banish: ["Banish", "🔆", 1, "common", [{ hit: 0.6, to: "all", bonusIf: "called", bonus: 1.8 }]],
+    answered: ["Answered Prayer", "📿", 1, "common", [{ hit: 0.7, bonusIf: "combo", bonus: 1.7 }]],
     renew: ["Renew", "🌱", 1, "common", [{ heal: 0.08, to: "party" }]],
     faith: ["Blessed Ward", "🛡️", 1, "common", [{ block: 9, to: "ally" }]],
     chastise: ["Chastise", "☝️", 1, "common", [{ hit: 0.8, bonusIf: "undead", bonus: 1.8 }]],
@@ -243,6 +249,7 @@ const CLASS = {
     deadlypoison: ["Deadly Poison", "🐍", 1, "common", [{ status: "poison", turns: 4 }]],
     sneakattack: ["Sneak Attack", "🥷", 1, "common", [{ hit: 0.9, bonusIf: "stun", bonus: 2.2 }]],
     dodgeroll: ["Dodge and Roll", "🤸", 1, "common", [{ block: 7, agi: 0.5 }]],
+    nightcut: ["Night Cut", "🌘", 0, "common", [{ hit: 0.45, bonusIf: "combo", bonus: 1.3 }]],
     slice: ["Slice", "✂️", 0, "common", [{ hit: 0.6 }]],
     garrote: ["Garrote", "🪢", 1, "common", [{ hit: 0.7 }, { status: "poison", turns: 2 }]],
     caltrops: ["Caltrops", "📌", 1, "common", [{ hit: 0.3, to: "all" }, { status: "poison", turns: 2, to: "all" }]],
@@ -305,6 +312,7 @@ const CLASS = {
     staticfield: ["Static Field", "🌀", 1, "rare", [{ hit: 0.4, to: "all" }, { draw: 1 }]],
     blink: ["Blink", "🌟", 1, "rare", [{ block: 6 }, { draw: 2 }]],
     frostbite: ["Frostbite", "🥶", 1, "rare", [{ hit: 0.8 }, { status: "chill", turns: 2 }]],
+    spellecho: ["Spell Echo", "🔮", 1, "rare", [{ hit: 0.55, to: "all", bonusIf: "combo", bonus: 1.2 }]],
     firewave: ["Fire Wave", "🌊", 2, "epic", [{ hit: 1, to: "all" }, { status: "burn", turns: 1, to: "all" }]],
     iceshards: ["Ice Shards", "❄️", 1, "epic", [{ hit: 0.5, times: 3 }, { status: "chill", turns: 1 }]],
     arcanesurge: ["Arcane Surge", "🔷", 0, "epic", [{ mana: 2 }, { draw: 1 }], true],
@@ -330,7 +338,7 @@ const ifText = (cond) => {
   if (parts.every((one) => one.startsWith("against "))) return "against " + parts.map((one) => one.replace(/^against /, "")).join(" or ");
   return "on a " + parts.map((one) => one.replace(/^on a | foe$/g, "")).join(" or ") + " foe";
 };
-const IF = { poison: "on a poisoned foe", burn: "on a burning foe", chill: "on a chilled foe", stun: "on a stunned foe", undead: "against the undead", boss: "against a boss", called: "against a summoned foe", low: "while you are below half HP" };
+const IF = { poison: "on a poisoned foe", burn: "on a burning foe", chill: "on a chilled foe", stun: "on a stunned foe", undead: "against the undead", boss: "against a boss", called: "against a summoned foe", low: "while you are below half HP", combo: "if you played a skill this turn" };
 const STATUS = {
   poison: ["poison", "poisoned"],
   burn: ["burn", "burning"],

@@ -1282,3 +1282,20 @@ test("rpg: a cursed chest - breaking the seal triples the coins, the next fight 
   assert.ok(run.monsters.every((m) => m.cursed));
   assert.strictEqual(run.curse, false);
 });
+
+test("rpg: combo cards hit far harder after a skill this turn - the next turn starts fresh", () => {
+  const hit = (hand, skillFirst) => {
+    const run = duel("warrior", "defend", hand);
+    const me = run.heroes[0];
+    me.luck = 0;
+    me.energy = 3;
+    if (skillFirst) assert.strictEqual(rpg.play(run, "a", { uid: "t1" }, () => 0.5), null);
+    const before = run.monsters[0].hp;
+    assert.strictEqual(rpg.play(run, "a", { uid: "t0", target: "m1" }, () => 0.5), null);
+    return before - run.monsters[0].hp;
+  };
+  const plain = hit(["followthrough", "defend"], false);
+  const combo = hit(["followthrough", "defend"], true);
+  assert.ok(combo > plain * 2, `${plain} -> ${combo}`);
+  assert.match(rpg.CARDS.followthrough.text, /if you played a skill this turn/);
+});

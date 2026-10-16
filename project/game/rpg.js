@@ -2070,6 +2070,7 @@ function startRound(run, rng) {
     hero.bonusEnergy = 0;
     hero.ended = false;
     hero.attacked = false;
+    hero.skilled = false;
     // (the AURAS: their block, healing, mana - a turn less)
     for (const aura of hero.auras || []) {
       if (aura.kind == "guard") {
@@ -2284,6 +2285,8 @@ function play(run, name, input, rng = Math.random) {
   fx(run, { k: "card", by: hero.name, card: id, to: card.target == "foe" ? foe.id : card.target == "ally" ? friend.name : card.target == "fallen" ? fallen.name : null });
   cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng);
   hero.firstAttack = false;
+  // (a skill played: the combo cards hit harder for the rest of the turn)
+  if (card.type != "attack") hero.skilled = true;
   if (!alive(run.monsters).length) winFight(run, rng);
   return null;
 }
@@ -2362,7 +2365,7 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
     return;
   }
   // (a condition - "poison|stun": any of them)
-  const state = (m, cond) => cond.split("|").some((one) => (one == "low" ? hero.hp < hero.maxHp / 2 : foeIs(m, one)));
+  const state = (m, cond) => cond.split("|").some((one) => (one == "low" ? hero.hp < hero.maxHp / 2 : one == "combo" ? !!hero.skilled : foeIs(m, one)));
   if (fx.hit != null) {
     for (let i = 0; i < (fx.times || 1); i++) {
       for (const m of foesOf(fx.to)) {
@@ -2801,7 +2804,7 @@ function simulatedTurn(run, me, rng) {
         }
         if (f.hit != null) {
           for (const m of many) {
-            const cond = f.bonusIf && f.bonusIf.split("|").some((k) => (k == "low" ? me.hp < me.maxHp / 2 : foeIs(m, k)));
+            const cond = f.bonusIf && f.bonusIf.split("|").some((k) => (k == "low" ? me.hp < me.maxHp / 2 : k == "combo" ? !!me.skilled : foeIs(m, k)));
             const dmg = me.atk * (cond ? f.bonus : f.hit) * (f.times || 1) * up * (1 - (m.armor || 0) * Math.max(0, 1 - perk(me, "pierce")));
             value += Math.min(dmg, m.hp) + (dmg >= m.hp ? threat(m) : 0);
           }
