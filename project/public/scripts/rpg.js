@@ -1828,6 +1828,7 @@ function spoilsPanel(run, me, spoils) {
 
 // The party: every hero's stats, perks (talents, relics) and relics
 var PERK_TEXT = {
+  healHit: (v) => Math.round(v * 100) + "% of heals smite",
   startBlock: (v) => "+" + v + " block at the start",
   firstMana: (v) => "+" + v + " mana on turn one",
   draw: (v) => "+" + v + " card a turn",

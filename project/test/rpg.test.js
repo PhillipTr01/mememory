@@ -1004,3 +1004,131 @@ test("rpg: AURA cards - a type of their own, their block, healing or mana at the
   // (more mana: every class has cheap mana cards now)
   for (const cls of rpg.CLASS_IDS) assert.ok(rpg.poolOf(cls).filter((id) => rpg.CARDS[id].fx.some((f) => f.mana || f.aura == "focus") && ["common", "rare"].includes(rpg.CARDS[id].rarity)).length >= 3, cls);
 });
+
+// A deterministic random source for the balance checks
+function seeded(seed) {
+  return () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+}
+
+test("rpg: no fight lasts forever - from the furious turn on the monsters stop healing and hit harder every turn", () => {
+  const hero = rpg.newHero("cleric");
+  const run = rpg.newRun(5, [{ name: "a", hero }], seeded(7));
+  rpg.enterRoom(run, 0, seeded(7));
+  const me = run.heroes[0];
+  // (a monster nobody can kill: it regenerates - the hero only waits)
+  for (const m of run.monsters) {
+    m.maxHp = m.hp = 1e6;
+    m.affix = "regen";
+  }
+  // (a hero hard to hurt: lots of armor)
+  me.def = 2000;
+  const first = rpg.runView(run).monsters[0];
+  let turns = 0;
+  while (run.phase == "fight" && turns++ < 80) {
+    rpg.endTurn(run, "a");
+    rpg.monsterTurn(run, seeded(turns));
+  }
+  assert.strictEqual(run.phase, "lost", "the fight ended");
+  assert.ok(turns < 60, `ended after ${turns} turns`);
+  assert.ok(first, "a monster to look at");
+  assert.ok(me.hp == 0 || me.down);
+});
+
+test("rpg: every card plays on every class without broken numbers (NaN, negative HP, endless loops)", () => {
+  const rng = seeded(42);
+  for (const cls of rpg.CLASS_IDS) {
+    const hero = rpg.newHero(cls);
+    for (const s of rpg.STAT_IDS) rpg.charOf(hero).levels[s] = 40;
+    for (const id of rpg.poolOf(cls)) {
+      const run = rpg.newRun(10, [{ name: "a", hero }], rng);
+      rpg.enterRoom(run, 0, rng);
+      const me = run.heroes[0];
+      me.energy = 9;
+      me.hand.push({ uid: "t", id }, { uid: "u", id: id + "+" });
+      for (const uid of ["t", "u"]) {
+        const card = rpg.CARDS[id];
+        const foe = run.monsters.find((m) => !m.down);
+        if (run.phase != "fight") break;
+        rpg.play(run, "a", { uid, target: foe && foe.id, ally: "a" }, rng);
+      }
+      for (const one of [...run.heroes, ...run.monsters]) for (const key of ["hp", "maxHp", "block", "atk"]) assert.ok(Number.isFinite(one[key] || 0) && (one[key] || 0) >= 0, `${cls} ${id}: ${key}=${one[key]}`);
+      assert.ok(Number.isFinite(run.pot) && run.pot >= 0, id);
+      // (the monsters' turn after it too)
+      if (run.phase == "fight") rpg.monsterTurn(run, rng);
+      assert.ok(Number.isFinite(me.hp) && me.hp >= 0, `${cls} ${id}: after the monsters`);
+    }
+  }
+});
+
+test("rpg: the cleric's heals smite a random foe", () => {
+  const hero = rpg.newHero("cleric");
+  const run = rpg.newRun(1, [{ name: "a", hero }], seeded(3));
+  rpg.enterRoom(run, 0, seeded(3));
+  const me = run.heroes[0];
+  me.perks.healHit = 0.5;
+  run.monsters.forEach((m) => (m.maxHp = m.hp = 5000));
+  me.hp = Math.round(me.maxHp / 2);
+  me.hand.push({ uid: "h", id: "heal" });
+  me.energy = 3;
+  const before = run.monsters.reduce((sum, m) => sum + m.hp, 0);
+  assert.strictEqual(rpg.play(run, "a", { uid: "h", ally: "a" }, seeded(3)), null);
+  assert.ok(run.monsters.reduce((sum, m) => sum + m.hp, 0) < before, "a foe took the smite");
+  assert.match(rpg.strengthOf("cleric", 1).text, /smites a random foe/);
+});
+
+test("rpg: balance - every class on the curve of its floor clears early, mid and late floors; far under it, deep floors are hard", () => {
+  // (a character as the loot of its floor buys it: stat levels, its level, talents, gear of the stage, a deck of it)
+  const stage = (floor) => (floor <= 3 ? ["common"] : floor <= 15 ? ["rare", "epic"] : ["epic", "legendary"]);
+  const rarities = (floor) => (floor <= 3 ? ["basic", "common"] : floor <= 15 ? ["basic", "common", "rare", "epic"] : ["common", "rare", "epic", "legendary", "mythic"]);
+  function heroFor(cls, floor, curve, rng) {
+    const hero = rpg.newHero(cls);
+    const char = rpg.charOf(hero);
+    const lv = Math.round(Math.min(100, Math.round(((floor - 1) * 99) / 29) + 2) * curve);
+    for (const s of rpg.STAT_IDS) char.levels[s] = Math.min(100, s == rpg.CLASSES[cls].main ? lv + 6 : lv);
+    char.level = Math.min(rpg.HERO_LEVEL_MAX, Math.round(2 + floor * 1.6));
+    rpg.TALENT_LEVELS.forEach((need, tier) => char.level >= need && (char.talents[tier] = rpg.TALENTS[cls][tier][tier % 2].id));
+    for (const slot of ["weapon", "armor", "charm"])
+      for (let i = 0; i < 400; i++) {
+        const g = rpg.makeGear(floor, rng, 0, cls);
+        if (g.slot == slot && stage(floor).includes(g.rarity) && !rpg.canWear(g, cls)) {
+          char.gear[slot] = g;
+          break;
+        }
+      }
+    const pool = rpg.poolOf(cls).filter((id) => rarities(floor).includes(rpg.CARDS[id].rarity) && rpg.CARDS[id].cost < 4);
+    char.deck = pool.sort(() => rng() - 0.5).slice(0, floor <= 3 ? 4 : 15);
+    if (floor <= 3) char.deck.unshift(...rpg.starterDeck(cls).slice(0, 8));
+    return hero;
+  }
+  const clear = (cls, floor, curve) => {
+    const rng = seeded(floor * 97 + cls.length);
+    let won = 0;
+    const runs = 24;
+    for (let i = 0; i < runs; i++) won += rpg.simulate(heroFor(cls, floor, curve, rng), floor, 1, rng).cleared;
+    return won / runs;
+  };
+  for (const cls of rpg.CLASS_IDS) {
+    for (const floor of [2, 12, 27]) {
+      const rate = clear(cls, floor, 1);
+      assert.ok(rate >= (floor == 27 ? 0.45 : 0.75), `${cls} on floor ${floor}, on its curve: ${Math.round(rate * 100)}%`);
+    }
+    const under = clear(cls, 27, 0.2);
+    assert.ok(under <= 0.6, `${cls} far under its curve on floor 27: ${Math.round(under * 100)}%`);
+  }
+});
+
+test("rpg: a party heal of the cleric smites once - not once for every hero it heals", () => {
+  const cleric = rpg.newHero("cleric");
+  const other = rpg.newHero("warrior");
+  const run = rpg.newRun(1, [{ name: "c", hero: cleric }, { name: "w", hero: other }], seeded(5));
+  rpg.enterRoom(run, 0, seeded(5));
+  const me = run.heroes[0];
+  me.perks.healHit = 0.5;
+  run.monsters.forEach((m) => (m.maxHp = m.hp = 50000));
+  me.hand.push({ uid: "p", id: "prayer" });
+  me.energy = 3;
+  const seen = run.fxSeq || 0;
+  assert.strictEqual(rpg.play(run, "c", { uid: "p" }, seeded(5)), null);
+  const hits = run.fx.filter((e) => e.id > seen && e.k == "hit");
+  assert.strictEqual(hits.length, 1);
+});

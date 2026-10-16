@@ -122,10 +122,10 @@ const REWARD = { fight: 0.3, hard: 0.55, elite: 0.55, boss: 0.9, chest: 0.3, tra
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
   warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.4 }, top: 1.5 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.25, atk: 1.4, def: 2, luck: 0, agi: 0, mainBonus: 1.3, hpPlus: 8, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.85, block: 0.17 }, top: 1.5 }, about: "Armor class with taunts and party shields", hp: 1.25, atk: 1.25, def: 3, luck: 0, agi: 0, mainBonus: 1.25, atkPlus: 3, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger.", perks: { heal: 0.2 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.05, atk: 1.15, def: 4, luck: 0, agi: 0, mainBonus: 1.25, hpPlus: 30, atkPlus: 6, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.85, block: 0.17 }, top: 1.5 }, about: "Armor class with taunts and party shields", hp: 1.25, atk: 1.35, def: 3, luck: 0, agi: 0, mainBonus: 1.25, atkPlus: 3, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites a random foe.", perks: { heal: 0.2, healHit: 0.25 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.05, atk: 1.35, def: 4, luck: 0, agi: 0, mainBonus: 1.25, hpPlus: 30, atkPlus: 6, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
   rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.6, crit: 12 }, top: 2.5 }, about: "Instinct class with dodge, scouting and poison", hp: 1.35, atk: 1.55, def: 0, luck: 6, agi: 13, mainBonus: 1.7, signature: ["poisonblade", "backstab"], cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.5, crit: 10 }, top: 2.6 }, about: "Luck class with crits, fire and frost", hp: 1.35, atk: 1.5, def: 1, luck: 8, agi: 0, mainBonus: 1.8, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.5, crit: 10 }, top: 2.6 }, about: "Luck class with crits, fire and frost", hp: 1.5, atk: 1.5, def: 1, luck: 8, agi: 0, mainBonus: 1.8, signature: ["frost", "fireball"], cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -389,7 +389,7 @@ const MONSTER_DEPTH = 0.035; // a row of the map deeper into a floor: this much 
 const MONSTER_SPREAD = 0.25; // every monster up to this much stronger or weaker
 // A bigger party: every monster has this much more HP and attack per hero after the first - and there are more of
 // them (a party is no easier than going alone)
-const PARTY_HP = 1.2;
+const PARTY_HP = 1.5;
 const PARTY_ATK = 0.15;
 // ... and pays more: the loot (each) and the first clear's bonus this much more per hero after the first
 const PARTY_LOOT = 0.1;
@@ -412,7 +412,7 @@ function lootShare(deepest, floor) {
 // thorns (damage back when hit), block (more block, share), heal (more healing, share), afterFight (healed after a
 // fight won, share of max HP), poison (stronger poison, share), maxHp (share), agi (dodge, %), pierce (share of
 // a foe's armor ignored), thornsDef (thorns: share of the armor), aoe (more damage on hits to every foe)
-const PERK_KEYS = ["pierce", "thornsDef", "aoe", "startBlock", "firstMana", "draw", "attack", "firstStrike", "lowHp", "crit", "lifesteal", "thorns", "block", "heal", "afterFight", "poison", "maxHp", "agi"];
+const PERK_KEYS = ["healHit", "pierce", "thornsDef", "aoe", "startBlock", "firstMana", "draw", "attack", "firstStrike", "lowHp", "crit", "lifesteal", "thorns", "block", "heal", "afterFight", "poison", "maxHp", "agi"];
 
 // Talents: every class at hero level 3, 6 and 10 - one of two
 const TALENT_LEVELS = [3, 6, 10, 15, 20, 25, 30, 40, 50];
@@ -1143,8 +1143,10 @@ const RANKS = {
 };
 
 // How much harder a floor is than the first: evenly, like a character's stats grow (its group a bit more or less)
+// (deeper down a character has better gear, talents and cards too: the monsters a bit more on top - DEPTH_EXTRA a floor)
+const DEPTH_EXTRA = 0.015;
 function floorCurve(growth, floor) {
-  return (1 + growth * (floor - 1)) * GROUP_POWER[Math.min(GROUP_POWER.length - 1, Math.floor((floor - 1) / 5))];
+  return (1 + growth * (floor - 1)) * (1 + DEPTH_EXTRA * (floor - 1)) * GROUP_POWER[Math.min(GROUP_POWER.length - 1, Math.floor((floor - 1) / 5))];
 }
 
 // A monster of a floor (depth: the row of the map - the deeper into the floor, the stronger; every one a bit
@@ -1889,6 +1891,7 @@ function planIntents(run, rng = Math.random) {
   const heroes = alive(run.heroes);
   for (const foe of alive(run.monsters)) {
     let options = foe.moves.filter((move) => {
+      if ((move == "regen" || move == "heal") && furious(run)) return false;
       if (move == "regen") return foe.hp < foe.maxHp * 0.7;
       if (move == "heal") return alive(run.monsters).some((m) => m.hp < m.maxHp * 0.7);
       if (move == "howl") return !foe.effects.rage;
@@ -1913,10 +1916,16 @@ function planIntents(run, rng = Math.random) {
 }
 
 // What a monster's move would do now (the page shows it)
+// A fight that drags on: from FURY_TURN the monsters are furious - no more healing, every turn 20% more damage on top
+// (no fight lasts forever, not even against a regenerating monster or a hero who only blocks)
+const FURY_TURN = 12;
+const FURY_STEP = 0.2;
+const furious = (run) => run.turn >= FURY_TURN;
+
 function intentDamage(foe, move) {
   const info = MOVES[move];
   if (!info.power) return 0;
-  let damage = foe.atk * info.power;
+  let damage = foe.atk * info.power * Math.pow(1 + FURY_STEP, foe.fury || 0);
   if (foe.effects.rage) damage *= 1.3;
   if (foe.effects.chill) damage *= 0.5;
   return Math.max(1, Math.round(damage));
@@ -2165,6 +2174,10 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
     for (const one of heroesOf(fx.to)) block(one, value);
   } else if (fx.heal != null) {
     for (const one of heroesOf(fx.to)) heal(one, hero.maxHp * fx.heal);
+    // (the cleric's light: a share of a heal - once a card, whoever it heals, even at full HP - hits a random foe)
+    const smite = perk(hero, "healHit");
+    const standing = alive(run.monsters);
+    if (smite > 0 && standing.length && run.phase == "fight") strike(run, hero, pick(rng, standing), (hero.maxHp * fx.heal * up * (1 + perk(hero, "heal")) * smite) / Math.max(1, hero.atk), rng, { sure: true, verb: "smites" });
   } else if (fx.status) {
     for (const m of foesOf(fx.to)) {
       if (fx.status == "poison") afflict(m, "poison", fx.turns || 3, Math.max(1, Math.round(hero.atk * 0.45 * venom)));
@@ -2326,8 +2339,16 @@ function monsterTurn(run, rng = Math.random) {
     monsterMove(run, foe, rng);
     if (!alive(run.heroes).length) break;
   }
+  // (a long fight: the monsters grow furious - say it once)
+  if (furious(run)) {
+    if (run.turn == FURY_TURN) {
+      say(run, "The monsters grow furious! 😡");
+      fx(run, { k: "phase", by: (alive(run.monsters)[0] || {}).id, text: "Furious!" });
+    }
+    for (const foe of alive(run.monsters)) foe.fury = (foe.fury || 0) + 1;
+  }
   for (const foe of alive(run.monsters)) {
-    if (foe.affix != "regen" || foe.hp >= foe.maxHp) continue;
+    if (foe.affix != "regen" || foe.hp >= foe.maxHp || furious(run)) continue;
     const heal = Math.min(foe.maxHp - foe.hp, Math.round(foe.maxHp * 0.08));
     foe.hp += heal;
     say(run, `${foe.icon} ${foe.name} regenerates ${heal} 💚.`);
@@ -2542,6 +2563,13 @@ function simulatedTurn(run, me, rng) {
       let blocked = 0;
       for (const f of card.fx) {
         const many = f.to == "all" ? foes : [foe];
+        // (an AURA: what it gives over its turns - a bit less, it comes later)
+        if (f.aura) {
+          const party = f.to == "party" ? alive(run.heroes).length : 1;
+          const each = f.aura == "guard" ? f.block + (f.def || 0) * me.def + (f.atk || 0) * me.atk + (f.agi || 0) * me.agi : f.aura == "regen" ? me.maxHp * f.heal : me.atk * 0.8 * f.mana;
+          value += each * f.turns * party * up * 0.6;
+          continue;
+        }
         if (f.hit != null) {
           for (const m of many) {
             const cond = f.bonusIf && f.bonusIf.split("|").some((k) => (k == "undead" ? m.undead : k == "low" ? me.hp < me.maxHp / 2 : m.effects[k]));
@@ -2552,7 +2580,7 @@ function simulatedTurn(run, me, rng) {
           const amount = (f.block + (f.def || 0) * me.def + (f.atk || 0) * me.atk + (f.agi || 0) * me.agi) * up;
           value += Math.min(amount, Math.max(0, need - blocked));
           blocked += amount;
-        } else if (f.heal != null) value += Math.min(me.maxHp * f.heal * up, ally.maxHp - ally.hp) * (ally.hp < ally.maxHp / 2 ? 1.2 : 0.6);
+        } else if (f.heal != null) value += Math.min(me.maxHp * f.heal * up, ally.maxHp - ally.hp) * (ally.hp < ally.maxHp / 2 ? 1.2 : 0.6) + me.maxHp * f.heal * up * perk(me, "healHit");
         else if (f.status == "poison" || f.status == "burn") value += many.length * me.atk * 0.4 * (f.turns || 2);
         else if (f.status == "stun") value += f.to == "all" ? foes.reduce((sum, m) => sum + threat(m), 0) : threat(foe);
         else if (f.status == "chill") value += (f.to == "all" ? foes.reduce((sum, m) => sum + threat(m), 0) : threat(foe)) * 0.4;
@@ -2561,6 +2589,7 @@ function simulatedTurn(run, me, rng) {
         else if (f.mana != null) value += me.atk * 0.8 * f.mana;
         else if (f.lose != null) value -= me.maxHp * f.lose * 0.5;
         else if (f.evade) value += need;
+        else if (f.taunt) value += run.heroes.length > 1 ? need * 0.5 : 0;
         else if (f.revive != null) value += fallen ? me.maxHp * 2 : 0;
         else if (f.cleanse) value += ally.effects.poison || ally.effects.burn ? me.atk : 0;
         else if (f.extend != null || f.amplify) value += foes.some((m) => m.effects.poison) ? me.atk : 0;
@@ -2755,6 +2784,8 @@ module.exports = {
   monsterTurn,
   runView,
   simulate,
+  simulatedTurn,
+  FURY_TURN,
   afflict,
   liveTexts,
   thornsOf,

@@ -154,6 +154,7 @@ const GAMES = {
           tile("✋", "A turn", `Every turn you get ${rpg.ENERGY} mana and 5 cards. Drag a card onto its target and end the turn when you are done.`, { emoji: ["🃏", "🃏", "🃏", "🃏", "🃏"] }),
           tile("🛡️", "Block", "Block takes the hits until your next turn. Exhausted cards are gone until the fight ends.", { tags: [["🛡️ 12", "blue"]] }),
           tile("🏷️", "Badges", "Every monster shows what it does next.", { tags: [["⚔️ 9", "red"], ["🛡️ Defend", "blue"]] }),
+          tile("😡", "Long fights", `After ${rpg.FURY_TURN} turns the monsters grow furious. They stop healing and hit harder every turn.`, { steps: ["⚔️", "⏳", "😡"] }),
         ]),
         section("Cards and packs", [
           tile("🃏", "Your deck", `Your deck holds ${rpg.DECK_MIN} to ${rpg.DECK_MAX} cards from your collection.`, { big: `${rpg.DECK_MIN}-${rpg.DECK_MAX}` }),
