@@ -412,17 +412,19 @@ function targetOf(fx) {
 // What a step is worth in "units" (1 unit: what 1 mana buys in a Strike - 100% damage to one foe); fixed: the
 // part that isn't scaled (mana, cards, states)
 const FOES = 2.2; // foes in a fight, on average (a hit to every foe)
+const PARTY_WORTH = 2.8; // a block or heal for the whole party: worth this many single ones
 function worth(fx) {
-  if (fx.aura) return { scaled: 0, fixed: fx.turns * (fx.to == "party" ? 1.6 : 1) * (fx.aura == "focus" ? fx.mana : fx.aura == "regen" ? fx.heal / 0.12 : fx.block / 7 + (fx.def || 0) * 0.3 + (fx.agi || 0) * 0.05) * 0.7 };
+  if (fx.aura) return { scaled: 0, fixed: fx.turns * (fx.to == "party" ? PARTY_WORTH : 1) * (fx.aura == "focus" ? fx.mana : fx.aura == "regen" ? fx.heal / 0.12 : fx.block / 7 + (fx.def || 0) * 0.3 + (fx.agi || 0) * 0.05) * 0.7 };
   if (fx.hit != null) {
     const base = (fx.bonusIf ? fx.hit * 0.75 + fx.bonus * 0.25 : fx.hit) * (fx.fromBlock ? 2 : 1) * (fx.execute ? 1.3 : 1);
     return { scaled: (base + (fx.def || 0) * 0.5) * (fx.times || 1) * (fx.to == "all" ? FOES * 0.75 : 1), fixed: 0 };
   }
-  if (fx.block != null) return { scaled: (fx.block / 7 + (fx.def || 0) * 0.3 + (fx.atk || 0) + (fx.agi || 0) * 0.05) * (fx.to == "party" ? 1.6 : 1) * (fx.low ? 1.4 : 1), fixed: 0 };
-  if (fx.heal != null) return { scaled: (fx.heal / 0.12) * (fx.to == "party" ? 1.6 : 1), fixed: 0 };
+  // (the whole party: worth more - in a party it covers 2 to 4 heroes)
+  if (fx.block != null) return { scaled: (fx.block / 7 + (fx.def || 0) * 0.3 + (fx.atk || 0) + (fx.agi || 0) * 0.05) * (fx.to == "party" ? PARTY_WORTH : 1) * (fx.low ? 1.4 : 1), fixed: 0 };
+  if (fx.heal != null) return { scaled: (fx.heal / 0.12) * (fx.to == "party" ? PARTY_WORTH : 1), fixed: 0 };
   let fixed = 0;
   if (fx.status) fixed = { poison: 0.45, burn: 0.3, chill: 0.45, stun: 1 }[fx.status] * (fx.status == "stun" ? 1 : fx.turns || 1) * (fx.to == "all" ? FOES * 0.75 : 1);
-  else if (fx.might != null) fixed = 0.35 * fx.might * (fx.to == "party" ? 1.6 : 1);
+  else if (fx.might != null) fixed = 0.35 * fx.might * (fx.to == "party" ? PARTY_WORTH : 1);
   else if (fx.draw != null) fixed = 0.5 * fx.draw;
   else if (fx.mana != null) fixed = fx.mana;
   else if (fx.lose != null) fixed = (-fx.lose / 0.12) * 0.7;
