@@ -21,7 +21,7 @@ const ROOM = "rpg";
  * goes to the bags, the potions left go back - lost: nothing but the potions drunk.
  */
 module.exports = function (io, options = {}) {
-  const world = options.world || worlds.TEST;
+  const world = options.world != null ? options.world : worlds.TEST;
   const { coins, casinoChat, persist } = worlds.services(world);
   const room = io.of(world + "/rpg");
   room.use(socketAuth.casino);

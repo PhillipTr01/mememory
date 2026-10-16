@@ -933,3 +933,11 @@ test("rpg: the practice run - three rooms, one weak monster first, no coins", ()
   assert.strictEqual(run.pot, 0);
   assert.strictEqual(run.phase, "between");
 });
+
+test("rpg: the normal casino's dungeon listens on /rpg - not a second server on the test world's (every click handled twice)", () => {
+  const names = [];
+  const fake = { of: (name) => (names.push(name), { use() {}, on() {}, sockets: new Map(), to: () => ({ emit() {} }), emit() {} }) };
+  const live = require("../sockets/rpg_server")(fake, { world: "" });
+  live.stop();
+  assert.strictEqual(names[0], "/rpg");
+});

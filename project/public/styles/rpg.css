@@ -53,20 +53,6 @@
   --rpg-fire: 255, 150, 60;
 }
 
-.rpg-test {
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  background: rgba(167, 139, 250, 0.15);
-  color: var(--rpg-purple);
-  vertical-align: middle;
-}
-
-.rpg-title-icon {
-  font-size: 0.9em;
-}
-
 .rpg-card {
   background: var(--rpg-surface);
   border: 1px solid var(--mm-border);
