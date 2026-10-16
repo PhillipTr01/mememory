@@ -7363,29 +7363,20 @@ button.rpg-cardx.off {
   height: 22px;
 }
 
-/* (a party's results: one line, every hero's in a group - its face on the top right) */
+/* (a party's results: one calm line - every piece of loot with the faces of who got it on its corner) */
 .rpg-results-party {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  align-items: stretch;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  padding: 0.6rem 0.6rem 0.2rem;
+  gap: 1.1rem;
+  padding: 0.7rem 0.5rem 0.2rem;
 }
 
 .rpg-got-group {
   position: relative;
   display: flex;
-  gap: 0.4rem;
-  align-items: flex-start;
-  padding: 0.5rem 0.6rem 0.4rem;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  flex-shrink: 0;
-}
-
-.rpg-got-group.mine {
-  background: rgba(245, 196, 81, 0.06);
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .rpg-got-faces {
