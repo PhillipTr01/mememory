@@ -16,7 +16,7 @@
 // The first cards of the game (the starter decks, the classes' own) - class membership: CLASSES in game/rpg.js
 const BASE = {
   strike: ["Strike", "⚔️", 1, "basic", [{ hit: 1 }]],
-  defend: ["Defend", "🛡️", 1, "basic", [{ block: 6, def: 1, to: "ally" }]],
+  defend: ["Defend", "🛡️", 1, "basic", [{ block: 5, def: 0.7, to: "ally" }]],
   focus: ["Focus", "🧠", 0, "common", [{ draw: 2 }], true],
   secondwind: ["Second Wind", "🌬️", 1, "common", [{ block: 5, def: 1 }, { heal: 0.06 }]],
   adrenaline: ["Adrenaline", "💉", 0, "rare", [{ mana: 1 }, { draw: 1 }], true],
@@ -444,6 +444,9 @@ function budget(cost, rarity, exhaust) {
 // The damage, block and healing of a card scaled to its budget (at most 0.6x to 1.8x what was written) - cards
 // that are mostly mana, cards or states stay as they are
 function balanced(fx, cost, rarity, exhaust) {
+  // (a block with nothing of the hero's stats in it: a part of the armor too - it grows with the character, as Defend
+  // does; a pack card is never worse than a basic one later on)
+  if (rarity != "basic") fx = fx.map((one) => (one.block != null && !one.def && !one.atk && !one.agi ? { ...one, block: Math.max(2, Math.round(one.block * 0.7)), def: 1 } : one));
   const parts = fx.map(worth);
   const scaled = parts.reduce((sum, p) => sum + p.scaled, 0);
   const fixed = parts.reduce((sum, p) => sum + p.fixed, 0);

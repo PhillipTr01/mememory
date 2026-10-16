@@ -153,14 +153,14 @@ test("rpg: cards - energy, targets, block takes a smash, a stun skips it; the tu
   // Two defends: the smash mostly blocked
   assert.strictEqual(rpg.play(run, "a", { uid: "t1" }), null);
   assert.strictEqual(rpg.play(run, "a", { uid: "t2" }), null);
-  assert.strictEqual(me.block, 2 * (6 + me.def));
+  assert.strictEqual(me.block, 2 * Math.round(5 + 0.7 * me.def));
   assert.strictEqual(me.energy, 1);
   assert.match(rpg.play(run, "a", { uid: "t3", target: "m1" }), /needs 2 mana/);
   const fresh = me.hp;
   assert.strictEqual(rpg.endTurn(run, "a"), true);
   rpg.monsterTurn(run, () => 0.5);
   // (armor first, then the block)
-  assert.strictEqual(fresh - me.hp, Math.round(smash - me.def) - 2 * (6 + me.def));
+  assert.strictEqual(fresh - me.hp, Math.round(smash - me.def) - 2 * Math.round(5 + 0.7 * me.def));
   // The next turn: block gone, full energy, five new cards (the old hand to the discard pile)
   assert.strictEqual(me.block, 0);
   assert.strictEqual(me.energy, rpg.ENERGY);
@@ -780,7 +780,7 @@ test("rpg: the fight rules - the hand stays (filled up to 5), poison stacks and 
   const texts = rpg.liveTexts({ atk: 50, def: 10, agi: 0, maxHp: 200, perks: {} }, ["strike", "defend", "heavyslash", "mend", "strike+"]);
   assert.strictEqual(texts.strike, "Deal 50 damage.");
   assert.strictEqual(texts["strike+"], "Deal 70 damage.");
-  assert.match(texts.defend, /block 16\./);
+  assert.match(texts.defend, /block 12\./);
   assert.match(texts.mend, /heals? \d+ HP/);
   // The hand stays from turn to turn - drawn up to 5
   const hero = rpg.newHero("warrior");
