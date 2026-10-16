@@ -75,13 +75,16 @@ function bar(value, max, className, extra) {
   return outer;
 }
 
-// A card by its id - "strike+": upgraded at a camp fire (40% stronger); base: its text as written (the collection:
+// A card by its id - "strike+": upgraded at a camp fire (rules.upgrades); base: its text as written (the collection:
 // percents) - not with my numbers
 function cardOf(id, base) {
   var plus = /\+$/.test(id);
   var card = rules.cards[id.replace(/\+$/, "")];
   var live = base ? null : liveText(id);
-  if (plus) return Object.assign({}, card, { name: card.name + "+", text: live || card.text + " (+40%)", upgraded: true });
+  if (plus) {
+    var up = (rules.upgrades && rules.upgrades[id.replace(/\+$/, "")]) || { cost: card.cost, text: card.text, note: "" };
+    return Object.assign({}, card, { name: card.name + "+", cost: up.cost, text: live || up.text, note: up.note, upgraded: true });
+  }
   return live ? Object.assign({}, card, { text: live }) : card;
 }
 
@@ -112,6 +115,7 @@ function cardEl(id, options) {
   }
   if (options.tag == "button") node.type = "button";
   if (options.disabled) node.classList.add("off");
+  if (card.upgraded && card.note) node.title = card.note;
   var cost = el("span", "rpg-cardx-cost");
   cost.dataset.cost = String(card.cost);
   cost.title = card.cost + " mana";
@@ -2032,6 +2036,12 @@ function resultCard(r) {
   } else if (r.k == "card") {
     var card = cardEl(r.id, { className: "small" + (r.lost ? " off" : "") });
     if (r.lost) card.appendChild(el("span", "rpg-got-tag bad", "Given away"));
+    // (an upgrade: what it changed, under the card)
+    if (!r.lost && /\+$/.test(r.id)) {
+      var up = el("div", "rpg-got-upgrade");
+      up.append(card, el("div", "rpg-got-note", "🔨 " + cardOf(r.id).note));
+      return up;
+    }
     return card;
   } else if (r.k == "coins") {
     node.classList.add("coins");
@@ -2101,7 +2111,7 @@ function choiceNodes(run, me) {
     ev.offers[myName].forEach((id) => cards.appendChild(cardEl(id, { tag: "button", act: "chooseCard", id: offer.id + ":" + id, className: "pickable" })));
     nodes.push(el("div", "rpg-label", offer.label + " - pick one"), cards);
   }
-  if (picking && ev.options.some((o) => o.id == picking)) nodes.push(...deckPicker(me, picking == "smith" ? "Pick a card to upgrade (+40%)" : "Pick a card to give", picking));
+  if (picking && ev.options.some((o) => o.id == picking)) nodes.push(...deckPicker(me, picking == "smith" ? "Pick a card to upgrade. Hover a card to see what changes." : "Pick a card to give", picking));
   return nodes;
 }
 
@@ -2110,7 +2120,9 @@ function deckPicker(me, text, option) {
   var deck = el("div", "rpg-reward-cards rpg-deck-pick");
   me.deck.forEach((id, i) => {
     var off = option == "smith" && /\+$/.test(id);
-    deck.appendChild(cardEl(id, { tag: "button", act: off ? "" : "chooseCard", id: option + ":" + i, className: "small" + (off ? " off" : " pickable") }));
+    var node = cardEl(id, { tag: "button", act: off ? "" : "chooseCard", id: option + ":" + i, className: "small" + (off ? " off" : " pickable") });
+    if (option == "smith" && !off) node.title = cardOf(id + "+").note;
+    deck.appendChild(node);
   });
   return [el("div", "rpg-label", text), deck];
 }

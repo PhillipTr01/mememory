@@ -131,6 +131,8 @@ module.exports = function (io, options = {}) {
       stats: rpg.STATS,
       levelMax: rpg.LEVEL_MAX,
       classes: rpg.CLASSES,
+      // (every card upgraded: its cost and text - and what the upgrade changes)
+      upgrades: Object.fromEntries(Object.keys(rpg.CARDS).map((id) => [id, { cost: rpg.cardInfo(id + "+").cost, text: rpg.cardInfo(id + "+").text, note: rpg.upgradeNote(id) }])),
       classPrice: rpg.CLASS_PRICE,
       cardRarities: rpg.CARD_RARITIES,
       heroLevelMax: rpg.HERO_LEVEL_MAX,

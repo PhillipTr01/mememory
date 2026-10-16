@@ -508,13 +508,66 @@ const AFFIXES = {
   regen: { name: "Regenerating", icon: "💚", text: "Heals 8% every turn." },
 };
 
-// A card upgraded at a camp fire ("strike+"): 40% stronger
+// A card upgraded at a camp fire ("strike+"): its damage, block, healing and poison 40% stronger (at play) - and
+// what has no number to grow: a card more, a mana more, a turn longer; a card with none of these costs 1 less
 const UPGRADE = 1.4;
 const baseCard = (id) => id.replace(/\+$/, "");
 const isUpgraded = (id) => id.endsWith("+");
+const grows = (f) => f.hit != null || f.block != null || f.heal != null || (f.aura && f.aura != "focus") || f.status == "poison" || f.status == "burn";
+function upgradeFx(fx) {
+  return fx.map((f) => {
+    const o = { ...f };
+    if (o.draw != null) o.draw += 1;
+    if (o.mana != null && !o.aura) o.mana += 1;
+    if (o.aura == "focus") o.turns += 1;
+    if (o.might != null) o.might += 1;
+    if (o.status == "chill") o.turns = (o.turns || 1) + 1;
+    if (o.revive != null) o.revive = Math.min(1, Math.round(o.revive * UPGRADE * 100) / 100);
+    if (o.extend != null) o.extend += 1;
+    if (o.lose != null) o.lose = Math.round((o.lose / 2) * 100) / 100;
+    return o;
+  });
+}
+const upgraded = {};
 function cardInfo(id) {
   const card = CARDS[baseCard(id)];
-  return isUpgraded(id) ? { ...card, name: card.name + "+", upgraded: true } : card;
+  if (!isUpgraded(id) || !card) return card;
+  if (!upgraded[id]) {
+    const fx = upgradeFx(card.fx);
+    const same = JSON.stringify(fx) == JSON.stringify(card.fx) && !card.fx.some(grows);
+    const cost = same ? Math.max(0, card.cost - 1) : card.cost;
+    // (the text: the shares as they play - 40% more)
+    const r = (v) => Math.round(v * UPGRADE * 100) / 100;
+    const shown = fx.map((f) => {
+      const o = { ...f };
+      if (grows(o)) for (const key of ["hit", "bonus", "block", "def", "atk", "agi", "heal"]) if (typeof o[key] == "number") o[key] = key == "block" ? Math.round(o[key] * UPGRADE) : r(o[key]);
+      return o;
+    });
+    upgraded[id] = { ...card, name: card.name + "+", upgraded: true, fx, cost, text: MORE_CARDS.textOf(shown, card.mythic ? "mythic" : card.exhaust) };
+  }
+  return upgraded[id];
+}
+
+// What an upgrade changes - plain sentences for the page
+function upgradeNote(id) {
+  const card = CARDS[baseCard(id)];
+  const up = cardInfo(baseCard(id) + "+");
+  const has = (test) => card.fx.some(test);
+  const notes = [];
+  if (has((f) => f.hit != null)) notes.push("It deals 40% more damage.");
+  if (has((f) => f.block != null || f.aura == "guard")) notes.push("It blocks 40% more.");
+  if (has((f) => f.heal != null || f.aura == "regen")) notes.push("It heals 40% more.");
+  if (has((f) => f.status == "poison")) notes.push("Its poison is 40% stronger.");
+  if (has((f) => f.status == "burn")) notes.push("Its burn is 40% stronger.");
+  if (has((f) => f.draw != null)) notes.push("It draws 1 more card.");
+  if (has((f) => f.mana != null && !f.aura)) notes.push("It gives 1 more mana.");
+  if (has((f) => f.might != null || f.aura == "focus")) notes.push("It lasts 1 turn longer.");
+  if (has((f) => f.status == "chill")) notes.push("Its chill lasts 1 move longer.");
+  if (has((f) => f.revive != null)) notes.push("The fallen stand up with more HP.");
+  if (has((f) => f.extend != null)) notes.push("It adds 1 more turn of poison.");
+  if (has((f) => f.lose != null)) notes.push("It costs half the HP.");
+  if (up.cost < card.cost) notes.push("It costs 1 less mana.");
+  return notes.join(" ");
 }
 
 // Hero levels: the XP for the next one; what a fight gives
@@ -1420,7 +1473,7 @@ const ROOM_OPTIONS = {
   ],
   rest: [
     { id: "rest", label: "Rest", text: "Heal 35% of your HP and get 1 more mana in the next fight." },
-    { id: "smith", label: "Smith", text: "Upgrade a card to make it 40% stronger.", card: "smith" },
+    { id: "smith", label: "Smith", text: "Upgrade a card to make it stronger.", card: "smith" },
   ],
   shrine: [
     { id: "pray", label: "Pray", text: "Lose 20% of your HP and deal 25% more damage this run." },
@@ -2133,7 +2186,7 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
   };
   const heal = (who, amount) => healHero(run, who, amount * up * (1 + perk(hero, "heal")));
   const venom = up * (1 + perk(hero, "poison"));
-  const info = CARDS[baseCard(id)];
+  const info = cardInfo(id);
   if (info.type != "attack") say(run, `${hero.name} plays ${info.icon} ${info.name}.`);
   for (const fx of info.fx) playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, card: baseCard(id) }, rng);
 }
@@ -2143,7 +2196,7 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
 function liveTexts(stats, ids) {
   const texts = {};
   for (const id of new Set(ids)) {
-    const card = CARDS[baseCard(id)];
+    const card = cardInfo(id);
     if (!card) continue;
     const up = isUpgraded(id) ? UPGRADE : 1;
     const p = (key) => (stats.perks && stats.perks[key]) || 0;
@@ -2787,6 +2840,7 @@ module.exports = {
   MONSTER_TYPES,
   BOSSES,
   UPGRADE,
+  upgradeNote,
   cardInfo,
   xpNeed,
   xpFor,

@@ -1201,3 +1201,17 @@ test("rpg: the frail classes start with their own guard card - older characters 
   }
   assert.strictEqual(rpg.starterDeck("paladin").filter((c) => c == "defend").length, 4);
 });
+
+test("rpg: every card gets better when upgraded - and the page can say how", () => {
+  for (const id of Object.keys(rpg.CARDS)) {
+    const card = rpg.CARDS[id];
+    const up = rpg.cardInfo(id + "+");
+    const stronger = card.fx.some((f) => f.status == "poison" || f.status == "burn");
+    assert.ok(up.text != card.text || up.cost < card.cost || stronger, id);
+    assert.ok(rpg.upgradeNote(id).length > 0, id);
+  }
+  // (a card of draws: one more card; a card without a number: 1 mana less)
+  assert.strictEqual(rpg.cardInfo("focus+").fx[0].draw, rpg.CARDS.focus.fx[0].draw + 1);
+  assert.strictEqual(rpg.cardInfo("smoke+").cost, rpg.CARDS.smoke.cost - 1);
+  assert.match(rpg.upgradeNote("strike"), /40% more damage/);
+});

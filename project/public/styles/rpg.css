@@ -7227,3 +7227,19 @@ button.rpg-cardx.off {
     scroll-snap-align: center;
   }
 }
+
+/* (an upgraded card won: the card and what the upgrade changed) */
+.rpg-got-upgrade {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  max-width: 11rem;
+}
+
+.rpg-got-note {
+  font-size: 0.72rem;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--rpg-gold, #f5c451);
+}
