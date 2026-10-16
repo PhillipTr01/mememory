@@ -1733,6 +1733,19 @@ button.rpg-cardx.off {
   white-space: nowrap;
 }
 
+/* (a class card in the deck: its class's icon) */
+.rpg-row-class {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
 .rpg-row-count {
   font-weight: 800;
   color: var(--mm-accent);

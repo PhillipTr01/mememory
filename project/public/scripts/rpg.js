@@ -20,7 +20,7 @@ try {
   // no storage: play
 }
 var picking = null; // in a room: the choice waiting for a card of the deck ("smith", "purge", "remove")
-var filters = { type: "all", cost: "all", rarity: "all", owned: false, mine: false }; // the deck builder's
+var filters = { type: "all", cost: "all", rarity: "all", owned: false, pool: "all" }; // the deck builder's
 var search = "";
 var lastRoom = 0;
 var FLOOR_KEY = "rpgFloor";
@@ -75,11 +75,12 @@ function bar(value, max, className, extra) {
   return outer;
 }
 
-// A card by its id - "strike+": upgraded at a camp fire (40% stronger)
-function cardOf(id) {
+// A card by its id - "strike+": upgraded at a camp fire (40% stronger); base: its text as written (the collection:
+// percents) - not with my numbers
+function cardOf(id, base) {
   var plus = /\+$/.test(id);
   var card = rules.cards[id.replace(/\+$/, "")];
-  var live = liveText(id);
+  var live = base ? null : liveText(id);
   if (plus) return Object.assign({}, card, { name: card.name + "+", text: live || card.text + " (+40%)", upgraded: true });
   return live ? Object.assign({}, card, { text: live }) : card;
 }
@@ -103,7 +104,7 @@ function cardType(card) {
 // A card (of the hand, a reward, the deck): the cost, the picture, the name, what it does
 function cardEl(id, options) {
   options = options || {};
-  var card = cardOf(id);
+  var card = cardOf(id, options.base);
   var node = el(options.tag || "div", "rpg-cardx type-" + card.type + " rarity-" + (card.rarity || "basic") + (card.upgraded ? " upgraded" : "") + (card.mythic ? " mythic" : "") + (options.className ? " " + options.className : ""));
   if (options.act) {
     node.dataset.act = options.act;
@@ -1244,6 +1245,7 @@ document.addEventListener("dragend", () => {
 
 // [key, label of the row, the options]
 var FILTERS = [
+  ["pool", "Cards", [["all", "All cards"], ["class", "Class"], ["neutral", "Neutral"], ["both", "Class + neutral"]]],
   ["type", "Type", [["all", "All"], ["attack", "Attacks"], ["skill", "Skills"]]],
   ["cost", "Cost", [["all", "Any"], ["0", "0"], ["1", "1"], ["2", "2"], ["3", "3+"]]],
   ["rarity", "Rarity", [["all", "Any"], ["basic", "Basic"], ["common", "Common"], ["rare", "Rare"], ["epic", "Epic"], ["legendary", "Legendary"], ["mythic", "Mythic"]]],
@@ -1276,7 +1278,7 @@ function renderBuilder() {
     var group = el("div", "rpg-seg-filter " + key);
     group.title = name;
     options.forEach(([value, label]) => {
-      var chip = button(value == "all" ? (key == "type" ? "All" : "Any " + name.toLowerCase()) : label, "filter", { id: key + ":" + value, className: "rpg-seg-opt" + (filters[key] == value ? " active" : "") });
+      var chip = button(value == "all" ? (key == "type" || key == "pool" ? label : "Any " + name.toLowerCase()) : label, "filter", { id: key + ":" + value, className: "rpg-seg-opt" + (filters[key] == value ? " active" : "") });
       if (key == "cost" && value != "all") {
         chip.innerText = "";
         var drop = el("span", "rpg-row-cost");
@@ -1294,7 +1296,7 @@ function renderBuilder() {
     chips.push(group);
   });
   var toggles = el("div", "rpg-filter-toggles");
-  [["owned", "Owned"], ["mine", "Class only"]].forEach(([key, label]) => {
+  [["owned", "Owned"]].forEach(([key, label]) => {
     var toggle = button("", "filter", { id: key + ":toggle", className: "rpg-toggle" + (filters[key] ? " on" : "") });
     toggle.append(el("i", "rpg-toggle-knob"), el("span", "", label));
     toggles.appendChild(toggle);
@@ -1304,15 +1306,18 @@ function renderBuilder() {
 
   // The collection: every card of the class - owned (spare copies: into the deck) or locked
   var text = search.trim().toLowerCase();
-  // (every card of the set - "Class only": the class's and the neutral ones)
+  // (every card of the set - or the class's, the neutral ones (the basics too), both: what this deck can take)
   var mine = {};
   hero.pool.forEach((id) => (mine[id] = true));
   var ownedAll = hero.owned || {};
   var shown = Object.keys(rules.cards)
     .filter((id) => {
       var card = cardOf(id);
-      if (filters.mine && !mine[id]) return false;
       if (card.rarity == "basic" && !mine[id]) return false;
+      var own = card.cls && card.cls == hero.cls;
+      if (filters.pool == "class" && !own) return false;
+      if (filters.pool == "neutral" && card.cls) return false;
+      if (filters.pool == "both" && !mine[id]) return false;
       if (filters.type != "all" && card.type != filters.type) return false;
       if (filters.cost != "all" && Math.min(3, card.cost) != Number(filters.cost)) return false;
       if (filters.rarity != "all" && card.rarity != filters.rarity) return false;
@@ -1327,7 +1332,7 @@ function renderBuilder() {
           // (another class's card: only to look at - how many of it the player has)
           if (!mine[id]) {
             var have = ownedAll[id] || 0;
-            var other = cardEl(id, { className: (have ? "" : "unowned") + " spent" });
+            var other = cardEl(id, { base: true, className: (have ? "" : "unowned") + " spent" });
             other.appendChild(el("span", "rpg-cardx-count", have ? "×" + have : "🔒"));
             other.title = (have ? have + " owned - " : "Not owned yet - ") + "another class's card";
             return other;
@@ -1336,7 +1341,7 @@ function renderBuilder() {
           var owned = Math.min(all, rules.cardRarities[cardOf(id).rarity].copies);
           var spare = owned - (counts[id] || 0);
           var full = deck.length >= hero.deckMax;
-          var node = cardEl(id, { act: spare > 0 && !full ? "deckAdd" : "", className: (owned ? "" : "unowned") + (spare > 0 && !full ? " pickable" : " spent") });
+          var node = cardEl(id, { base: true, act: spare > 0 && !full ? "deckAdd" : "", className: (owned ? "" : "unowned") + (spare > 0 && !full ? " pickable" : " spent") });
           if (spare > 0) node.dataset.drag = "in:" + id;
           node.draggable = spare > 0;
           var pips = el("span", "rpg-copies");
@@ -1365,7 +1370,14 @@ function renderBuilder() {
           row.title = card.text + " - click to remove";
           var cost = el("span", "rpg-row-cost");
           cost.dataset.cost = String(card.cost);
-          row.append(cost, el("span", "rpg-row-icon", card.icon), el("span", "rpg-row-name", card.name), el("span", "rpg-row-count", counts[id] > 1 ? "×" + counts[id] : card.mythic ? "★" : ""));
+          row.append(cost, el("span", "rpg-row-icon", card.icon), el("span", "rpg-row-name", card.name));
+          // (a class card: the class's icon)
+          if (card.cls && rules.classes[card.cls]) {
+            var mark = el("span", "rpg-row-class", rules.classes[card.cls].icon);
+            mark.title = rules.classes[card.cls].name + " card";
+            row.appendChild(mark);
+          }
+          row.appendChild(el("span", "rpg-row-count", counts[id] > 1 ? "×" + counts[id] : card.mythic ? "★" : ""));
           return row;
         })
       : [el("div", "rpg-empty mm-muted", "Empty")],
@@ -2394,7 +2406,6 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "filter") {
     var [key, value] = id.split(":");
     if (key == "owned") filters.owned = !filters.owned;
-    else if (key == "mine") filters.mine = !filters.mine;
     else filters[key] = value;
     render();
   } else if (act == "deckClear") socket.emit("deckSet", { ids: [] });
