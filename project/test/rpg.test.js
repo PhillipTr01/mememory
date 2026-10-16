@@ -554,10 +554,12 @@ function client(name, namespace = "/test/rpg") {
 }
 
 function waitFor(socket, event, predicate, timeout = 4000) {
+  // (where it waited from - a timeout says which wait it was)
+  const from = (new Error().stack.split("\n")[2] || "").trim();
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       socket.off(event, handler);
-      reject(new Error(`Timeout waiting for "${event}"`));
+      reject(new Error(`Timeout waiting for "${event}" ${from}`));
     }, timeout);
     function handler(data) {
       if (!predicate(data)) return;
@@ -608,7 +610,8 @@ function autoplay(socket, name, options) {
       }
       if (options.vote && !(name in run.votes) && !done.has("vote" + turn)) {
         done.add("vote" + turn);
-        socket.emit("vote", { door: 0 });
+        // (the floor cleared, the deep stairs waiting: out with the loot)
+        socket.emit("vote", { door: run.cleared ? "leave" : 0 });
       }
     }
   });
