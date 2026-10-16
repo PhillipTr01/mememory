@@ -123,8 +123,8 @@ const REWARD = { fight: 0.3, hard: 0.55, elite: 0.55, boss: 0.9, chest: 0.3, tra
 const CLASSES = {
   warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.15 }, top: 1.3 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.2, atk: 1.6, def: 2, luck: 0, agi: 0, mainBonus: 1.29, hpPlus: 54, atkPlus: 25, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
   paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.55, block: 0.11 }, top: 6 }, about: "Armor class with taunts and party shields", hp: 1.35, atk: 1.3, def: 13, luck: 0, agi: 0, mainBonus: 1.2, hpPlus: 90, atkPlus: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe.", perks: { heal: 0.1, healHit: 0.15 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 2.04, hpPlus: 140, atkPlus: 4, signature: ["heal", "smite"], cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.15, crit: 2.5 }, top: 1.7 }, about: "Instinct class with dodge, scouting and poison", hp: 1.3, atk: 1.42, def: 0, luck: 4, agi: 14, mainBonus: 2.5, hpPlus: 80, atkPlus: 20, signature: ["poisonblade", "backstab"], guard: "dodgeroll", guardCount: 3, cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe.", perks: { heal: 0.1, healHit: 0.15 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 2.04, hpPlus: 140, atkPlus: 4, signature: ["heal", "smite"], opener: "banish", cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.15, crit: 2.5 }, top: 1.7 }, about: "Instinct class with dodge, scouting and poison", hp: 1.3, atk: 1.42, def: 0, luck: 4, agi: 14, mainBonus: 2.5, hpPlus: 80, atkPlus: 20, signature: ["poisonblade", "backstab"], guard: "dodgeroll", cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
   mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 8 }, about: "Luck class with crits, fire and frost", hp: 1.15, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.45, hpPlus: 100, atkPlus: 17, signature: ["frost", "fireball"], guard: "icearmor", cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
@@ -140,7 +140,7 @@ const CARDS = {};
 // in a Base Set pack - the packs are priced by it)
 const CARD_RARITIES = {
   basic: { name: "Basic", weight: 0, copies: 4, value: 0 },
-  common: { name: "Common", weight: 64, copies: 3, value: 500 },
+  common: { name: "Common", weight: 64, copies: 2, value: 500 },
   rare: { name: "Rare", weight: 26, copies: 2, value: 2500 },
   epic: { name: "Epic", weight: 8, copies: 2, value: 10000 },
   legendary: { name: "Legendary", weight: 3, copies: 1, value: 50000 },
@@ -622,8 +622,18 @@ function charOf(hero, cls = hero.cls) {
     char.collection = {};
     for (const id of char.deck) char.collection[id] = (char.collection[id] || 0) + 1;
   }
+  // (a deck from before the deck rule: cut to it - the cards stay in the collection)
+  if (!char.ruled) {
+    char.ruled = true;
+    char.deck = deckCut(char.deck);
+  }
   // (a character from before the guard cards: its two copies - an untouched starter deck takes them in)
   const guard = CLASSES[cls] && CLASSES[cls].guard;
+  const opener = CLASSES[cls] && CLASSES[cls].opener;
+  if (opener && !char.opened) {
+    char.opened = true;
+    char.collection[opener] = Math.max(1, char.collection[opener] || 0);
+  }
   if (guard && !char.guarded) {
     char.guarded = true;
     char.collection[guard] = Math.max(CLASSES[cls].guardCount || 2, char.collection[guard] || 0);
@@ -654,6 +664,22 @@ function usable(char, id) {
   return Math.min(char.collection[id] || 0, CARD_RARITIES[CARDS[id].rarity].copies);
 }
 
+// The rule of a deck, per card: a basic card up to 4 times, a legendary or mythic one once, any other twice (an
+// upgraded copy counts as the card) -> an error or null for one more of the card
+function deckRule(deck, id) {
+  const card = CARDS[baseCard(id)];
+  if (!card) return "Unknown card.";
+  const copies = CARD_RARITIES[card.rarity].copies;
+  if (deck.filter((one) => baseCard(one) == baseCard(id)).length >= copies) return copies == 1 ? `Only one ${card.name} fits in a deck.` : `At most ${copies} of ${card.name} in a deck.`;
+  return null;
+}
+// (a deck cut to the rule: the copies past it out - in the order they came)
+function deckCut(deck) {
+  const kept = [];
+  for (const id of deck) if (!deckRule(kept, id)) kept.push(id);
+  return kept;
+}
+
 // A card of the collection into the deck -> an error or null
 function deckAdd(hero, id) {
   const char = charOf(hero);
@@ -662,6 +688,8 @@ function deckAdd(hero, id) {
   if (inDeck >= usable(char, id)) return (char.collection[id] || 0) > inDeck ? `At most ${CARD_RARITIES[CARDS[id].rarity].copies} of a ${CARD_RARITIES[CARDS[id].rarity].name.toLowerCase()} card.` : "You don't own more copies.";
   const { max } = deckLimits(hero);
   if (char.deck.length >= max) return `At most ${max} cards.`;
+  const rule = deckRule(char.deck, id);
+  if (rule) return rule;
   char.deck.push(id);
   return null;
 }
@@ -687,6 +715,10 @@ function deckSet(hero, ids) {
     if (!CARDS[id] || !pool.includes(id)) return "Not a card of your class.";
     counts[id] = (counts[id] || 0) + 1;
     if (counts[id] > usable(char, id)) return `You don't own that many of ${CARDS[id].name}.`;
+  }
+  for (let i = 0; i < ids.length; i++) {
+    const rule = deckRule(ids.slice(0, i), ids[i]);
+    if (rule) return rule;
   }
   char.deck = [...ids];
   return null;
@@ -1296,7 +1328,9 @@ function monstersFor(floor, size, room, rng = Math.random, depth = 0) {
 function starterDeck(cls) {
   const c = CLASSES[cls] || CLASSES.warrior;
   const guards = c.guard ? c.guardCount || 2 : 0;
-  return ["strike", "strike", "strike", "strike", ...Array(4 - guards).fill("defend"), ...Array(guards).fill(c.guard), ...c.signature];
+  // (a class's own opener in place of a strike: the Cleric's Banish)
+  const strikes = c.opener ? ["strike", "strike", "strike", c.opener] : ["strike", "strike", "strike", "strike"];
+  return [...strikes, ...Array(4 - guards).fill("defend"), ...Array(guards).fill(c.guard), ...c.signature];
 }
 
 // (options.tutorial: the practice run - a short map, weak monsters, no coins)
@@ -1674,6 +1708,7 @@ function pickReward(run, name, card) {
   const hero = run.heroes.find((h) => h.name == name);
   if (!hero || !hero.reward) return "No card to pick.";
   if (card != null && !hero.reward.includes(card)) return "Not one of your cards.";
+  if (card != null && deckRule(hero.deck, card)) return deckRule(hero.deck, card);
   if (card != null) {
     hero.deck.push(card);
     say(run, `${hero.name} takes ${CARDS[card].icon} ${CARDS[card].name} into the deck.`);
@@ -1722,6 +1757,7 @@ function choose(run, name, input = {}, rng = Math.random) {
     if (option.card == "deck" && hero.deck.length <= DECK_LEAST) return `Your deck keeps at least ${DECK_LEAST} cards.`;
   }
   if (option.card == "offer" && !(event.offers[name] || []).includes(input.card)) return "Pick one of the cards.";
+  if (option.card == "offer" && deckRule(hero.deck, input.card)) return deckRule(hero.deck, input.card);
   if (option.id == "bottle" && hero.potions >= (hero.potionsMax || POTIONS_MAX)) return `At most ${hero.potionsMax || POTIONS_MAX} potions.`;
   const note = (text) => {
     event.lines.push(text);
@@ -1878,6 +1914,7 @@ function canBuy(run, name, item) {
   }
   if (offer.bought.includes(item)) return { error: "Sold already." };
   if (!offer.cards.includes(item) && !offer.relics.includes(item)) return { error: "He doesn't sell that." };
+  if (offer.cards.includes(item) && deckRule(hero.deck, item)) return { error: deckRule(hero.deck, item) };
   // (a visit: at most MERCHANT_BUY.cards cards and MERCHANT_BUY.relics relics - potions up to the max, a card removed)
   const relic = offer.relics.includes(item);
   const had = offer.bought.filter((id) => offer.relics.includes(id) == relic).length;
@@ -1915,7 +1952,9 @@ function bought(run, name, item) {
 // Three different cards: mostly the class's, sometimes a neutral one
 function rewardFor(hero, rng, count = 3) {
   // (the class's cards and the neutral ones - weighted by their rarity; no basic, no mythic one)
-  const pool = poolOf(hero.cls).filter((id) => !["basic", "mythic"].includes(CARDS[id].rarity)).map((id) => [id, CARD_RARITIES[CARDS[id].rarity].weight]);
+  const pool = poolOf(hero.cls)
+    .filter((id) => !["basic", "mythic"].includes(CARDS[id].rarity) && !deckRule(hero.deck || [], id))
+    .map((id) => [id, CARD_RARITIES[CARDS[id].rarity].weight]);
   const cards = [];
   while (cards.length < Math.min(count, pool.length)) cards.push(weighted(rng, pool.filter(([id]) => !cards.includes(id))));
   return cards;
@@ -2216,6 +2255,14 @@ function liveTexts(stats, ids) {
 // (the event of the playback - the step below is called fx)
 const fxEvent = (run, event) => fx(run, event);
 
+// A foe in a state a card asks for: undead, a boss, summoned in the fight (called) - or its effects (poison ...)
+function foeIs(m, state) {
+  if (state == "undead") return !!m.undead;
+  if (state == "boss") return m.rank == "boss";
+  if (state == "called") return !!m.called;
+  return !!m.effects[state];
+}
+
 function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, card }, rng) {
   const foesOf = (to) => {
     const standing = alive(run.monsters);
@@ -2241,7 +2288,7 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
     return;
   }
   // (a condition - "poison|stun": any of them)
-  const state = (m, cond) => cond.split("|").some((one) => (one == "low" ? hero.hp < hero.maxHp / 2 : one == "undead" ? m.undead : !!m.effects[one]));
+  const state = (m, cond) => cond.split("|").some((one) => (one == "low" ? hero.hp < hero.maxHp / 2 : foeIs(m, one)));
   if (fx.hit != null) {
     for (let i = 0; i < (fx.times || 1); i++) {
       for (const m of foesOf(fx.to)) {
@@ -2402,6 +2449,7 @@ function monsterMove(run, foe, rng) {
       foe.summoned = (foe.summoned || 0) + count;
       for (let i = 0; i < count; i++) {
         const add = toughen(run, monster(run.floor, run.heroes.length, pick(rng, group), RANKS.normal, 0, rng));
+        add.called = true;
         run.monsters.push(add);
       }
       say(run, `${source} calls for help 📣 - ${count} more!`);
@@ -2663,7 +2711,7 @@ function simulatedTurn(run, me, rng) {
         }
         if (f.hit != null) {
           for (const m of many) {
-            const cond = f.bonusIf && f.bonusIf.split("|").some((k) => (k == "undead" ? m.undead : k == "low" ? me.hp < me.maxHp / 2 : m.effects[k]));
+            const cond = f.bonusIf && f.bonusIf.split("|").some((k) => (k == "low" ? me.hp < me.maxHp / 2 : foeIs(m, k)));
             const dmg = me.atk * (cond ? f.bonus : f.hit) * (f.times || 1) * up * (1 - (m.armor || 0) * Math.max(0, 1 - perk(me, "pierce")));
             value += Math.min(dmg, m.hp) + (dmg >= m.hp ? threat(m) : 0);
           }
@@ -2841,6 +2889,7 @@ module.exports = {
   BOSSES,
   UPGRADE,
   upgradeNote,
+  deckRule,
   cardInfo,
   xpNeed,
   xpFor,

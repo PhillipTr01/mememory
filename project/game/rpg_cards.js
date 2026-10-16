@@ -10,7 +10,7 @@
  *   {draw: n} {mana: n} {lose: share of the max HP} {evade: true}
  *   {aura: "guard" | "regen" | "focus", turns, to: "self" | "party", block, def, agi | heal | mana} - an AURA: at the start
  *   of each of the next turns (block, healing, mana)
- * States for bonusIf: poison, burn, chill, stun, undead (the foe) - low (the hero below half HP)
+ * States for bonusIf: poison, burn, chill, stun, undead, boss, called (summoned) (the foe) - low (the hero below half HP)
  */
 
 // The first cards of the game (the starter decks, the classes' own) - class membership: CLASSES in game/rpg.js
@@ -48,7 +48,7 @@ const BASE = {
   layhands: ["Sacred Shield", "🛡️", 2, "epic", [{ block: 20, def: 1.5, to: "ally" }], true],
   bulwark: ["Bulwark", "🏰", 1, "common", [{ block: 10, def: 1.3 }]],
   heal: ["Heal", "💚", 1, "common", [{ heal: 0.25, to: "ally" }]],
-  smite: ["Smite", "🌟", 1, "common", [{ hit: 1.2, bonusIf: "undead", bonus: 2.5 }]],
+  smite: ["Smite", "🌟", 1, "common", [{ hit: 1.2, bonusIf: "undead|boss", bonus: 2.5 }]],
   revive: ["Revive", "🕊️", 2, "epic", [{ revive: 0.4 }], true],
   prayer: ["Prayer", "🙏", 2, "rare", [{ heal: 0.12, to: "party" }]],
   holylight: ["Holy Light", "🕯️", 1, "common", [{ hit: 0.9 }, { heal: 0.08, to: "weakest" }]],
@@ -199,6 +199,7 @@ const CLASS = {
     renewalaura: ["Aura of Renewal", "🌿", 1, "rare", [{ aura: "regen", heal: 0.05, turns: 3, to: "party" }]],
     mend: ["Mend", "🌿", 1, "common", [{ heal: 0.15, to: "ally" }]],
     holybolt: ["Holy Bolt", "🌠", 1, "common", [{ hit: 1, bonusIf: "undead", bonus: 2.2 }]],
+    banish: ["Banish", "🔆", 1, "common", [{ hit: 0.6, to: "all", bonusIf: "called", bonus: 1.8 }]],
     renew: ["Renew", "🌱", 1, "common", [{ heal: 0.08, to: "party" }]],
     faith: ["Blessed Ward", "🛡️", 1, "common", [{ block: 9, to: "ally" }]],
     chastise: ["Chastise", "☝️", 1, "common", [{ hit: 0.8, bonusIf: "undead", bonus: 1.8 }]],
@@ -322,8 +323,14 @@ const CLASS = {
 
 const pct = (value) => Math.round(value * 100) + "%";
 // (a condition - or more of them, "poison|stun": any of them)
-const ifText = (cond) => (cond.includes("|") ? "on a " + cond.split("|").map((one) => IF[one].replace(/^on a | foe$/g, "")).join(" or ") + " foe" : IF[cond]);
-const IF = { poison: "on a poisoned foe", burn: "on a burning foe", chill: "on a chilled foe", stun: "on a stunned foe", undead: "against the undead", low: "while you are below half HP" };
+const ifText = (cond) => {
+  if (!cond.includes("|")) return IF[cond];
+  const parts = cond.split("|").map((one) => IF[one]);
+  // ("against the undead or a boss" - "on a poisoned or stunned foe")
+  if (parts.every((one) => one.startsWith("against "))) return "against " + parts.map((one) => one.replace(/^against /, "")).join(" or ");
+  return "on a " + parts.map((one) => one.replace(/^on a | foe$/g, "")).join(" or ") + " foe";
+};
+const IF = { poison: "on a poisoned foe", burn: "on a burning foe", chill: "on a chilled foe", stun: "on a stunned foe", undead: "against the undead", boss: "against a boss", called: "against a summoned foe", low: "while you are below half HP" };
 const STATUS = {
   poison: ["poison", "poisoned"],
   burn: ["burn", "burning"],
@@ -351,14 +358,14 @@ function phrase(fx, n) {
     if (fx.to == "all") text += " to every foe";
     if (fx.to == "random") text += " to a random foe";
     if (fx.times) text += fx.times == 2 ? " twice" : " " + fx.times + " times";
-    if (fx.bonusIf) text += " - " + (n ? n.dmg(fx.bonus, fx) : pct(fx.bonus)) + " " + ifText(fx.bonusIf);
+    if (fx.bonusIf) text += ", or " + (n ? n.dmg(fx.bonus, fx) : pct(fx.bonus)) + " " + ifText(fx.bonusIf);
     if (fx.fromBlock) text = "deal your block as damage, min " + (n ? n.dmg(fx.hit, fx) : pct(fx.hit));
     if (fx.execute) text = "a foe below " + pct(fx.execute) + " HP dies (no boss), else " + text.replace(/^deal /, "");
     return text;
   }
   if (fx.block != null) {
     const value = n ? n.block(fx) : amount(fx);
-    const low = fx.low ? " - below half HP: " + fx.low + "x" : "";
+    const low = fx.low ? ", " + (fx.low == 2 ? "twice" : fx.low + " times") + " as much while you are below half HP" : "";
     if (fx.to == "ally") return "you or an ally block " + value + low;
     if (fx.to == "party") return "the party blocks " + value + low;
     return "block " + value + low;

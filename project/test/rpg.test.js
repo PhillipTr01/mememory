@@ -445,7 +445,7 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (dupl
   const hero = rpg.newHero("rogue");
   const char = rpg.charOf(hero);
   assert.strictEqual(char.deck.length, 10);
-  assert.deepStrictEqual([char.collection.strike, char.collection.defend, char.collection.dodgeroll, char.collection.poisonblade], [4, 1, 3, 1]);
+  assert.deepStrictEqual([char.collection.strike, char.collection.defend, char.collection.dodgeroll, char.collection.poisonblade], [4, 2, 2, 1]);
   // The deck: only owned cards, only the class's - built freely, but a run needs DECK_MIN cards
   assert.strictEqual(rpg.deckReady(hero), null);
   assert.strictEqual(rpg.deckRemove(hero, "strike"), null);
@@ -1214,4 +1214,19 @@ test("rpg: every card gets better when upgraded - and the page can say how", () 
   assert.strictEqual(rpg.cardInfo("focus+").fx[0].draw, rpg.CARDS.focus.fx[0].draw + 1);
   assert.strictEqual(rpg.cardInfo("smoke+").cost, rpg.CARDS.smoke.cost - 1);
   assert.match(rpg.upgradeNote("strike"), /40% more damage/);
+});
+
+test("rpg: the deck rule - a basic card up to 4 times, a legendary or mythic card once, any other twice", () => {
+  const legendary = Object.keys(rpg.CARDS).find((id) => rpg.CARDS[id].rarity == "legendary");
+  const common = Object.keys(rpg.CARDS).find((id) => rpg.CARDS[id].rarity == "common");
+  assert.strictEqual(rpg.deckRule(["strike", "strike", "strike"], "strike"), null);
+  assert.match(rpg.deckRule(["strike", "strike", "strike", "strike+"], "strike"), /At most 4/);
+  assert.strictEqual(rpg.deckRule([common], common + "+"), null);
+  assert.match(rpg.deckRule([common, common + "+"], common), /At most 2/);
+  assert.match(rpg.deckRule([legendary], legendary), /Only one/);
+  // (an old deck: cut to the rule when the character loads, the cards stay owned)
+  const hero = rpg.newHero("warrior");
+  hero.chars.warrior = { ...rpg.charOf(hero), deck: [common, common, common, "strike"], collection: { [common]: 3, strike: 1 }, ruled: false };
+  assert.deepStrictEqual(rpg.charOf(hero).deck, [common, common, "strike"]);
+  assert.strictEqual(rpg.charOf(hero).collection[common], 3);
 });
