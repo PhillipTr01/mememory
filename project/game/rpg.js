@@ -2478,6 +2478,10 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
   else if (fx.taunt) {
     hero.taunting = true;
     say(run, `${hero.name} taunts the foes 📣.`);
+    // (the foes about to hit one hero: now at the one taunting - the page shows the switch)
+    const turned = alive(run.monsters).filter((m) => m.intent && m.intent.target && m.intent.target != hero.name && !(MOVES[m.intent.move] || {}).all);
+    for (const m of turned) m.intent.target = hero.name;
+    if (turned.length) fxEvent(run, { k: "taunt", by: hero.name, foes: turned.map((m) => m.id) });
   } else if (fx.revive != null) {
     for (const one of fx.to == "all" ? run.heroes.filter((h) => h.down) : fallen ? [fallen] : []) {
       one.down = false;
@@ -2534,7 +2538,7 @@ function monsterMove(run, foe, rng) {
         const [card] = target.hand.splice(Math.floor(rng() * target.hand.length), 1);
         target.exhausted.push(card.id);
         say(run, `${source} steals ${cardInfo(card.id).icon} ${cardInfo(card.id).name} from ${target.name} 🫳.`);
-        fx(run, { k: "phase", by: foe.id, text: "Steals " + cardInfo(card.id).name });
+        fx(run, { k: "steal", by: foe.id, to: target.name, card: card.id });
       }
       break;
     }

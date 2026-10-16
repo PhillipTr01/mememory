@@ -1645,10 +1645,63 @@ button.rpg-cardx.off {
 
 /* Elites: their trait */
 .rpg-affix {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: #f0c08a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  margin-top: 0.3rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 10px;
+  background: rgba(240, 192, 138, 0.1);
+  border: 1px solid rgba(240, 192, 138, 0.35);
   text-align: center;
+}
+
+.rpg-affix-name {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #f5cf9b;
+  letter-spacing: 0.02em;
+}
+
+.rpg-affix-text {
+  font-size: 0.64rem;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.rpg-affix.affix-thief,
+.rpg-affix.affix-cursed {
+  background: rgba(200, 120, 220, 0.1);
+  border-color: rgba(200, 140, 230, 0.4);
+}
+
+.rpg-affix.affix-thief .rpg-affix-name,
+.rpg-affix.affix-cursed .rpg-affix-name {
+  color: #e2b6f2;
+}
+
+/* (a foe taunted: its badge turns to the new target) */
+.rpg-retargeted .rpg-intent {
+  animation: rpg-retarget 1.2s ease;
+}
+
+@keyframes rpg-retarget {
+  0% {
+    transform: translateX(-50%) scale(1);
+  }
+  30% {
+    transform: translateX(-50%) scale(1.25);
+    box-shadow: 0 0 0 3px rgba(245, 196, 81, 0.7);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+.rpg-float.stolen {
+  color: #e2b6f2;
+  font-size: 1.05rem;
 }
 
 /* Upgraded cards */

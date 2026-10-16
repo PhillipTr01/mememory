@@ -387,6 +387,20 @@ function showFx(e, live) {
     floatOver(e.to, "+" + e.n, "heal");
     if (!live) barBy(e.to, e.n);
   } else if (e.k == "block") floatOver(e.to, "🛡️ +" + e.n, "block");
+  else if (e.k == "taunt") {
+    // (the foes turn to the one taunting: their badge points at the new target)
+    (e.foes || []).forEach((id) => {
+      flash(id, "rpg-retargeted", 1200);
+      floatOver(id, "📣 → " + e.by, "move");
+    });
+  } else if (e.k == "steal") {
+    // (a card stolen from the hand: plain to see, on both sides)
+    var stolen = cardOf(e.card);
+    floatOver(e.to, "🫳 " + stolen.name + " stolen", "stolen");
+    floatOver(e.by, "🫳 " + stolen.icon, "move");
+    flash(e.by, "rpg-acting", 520);
+    banner("🫳 " + stolen.name + " was stolen from " + (e.to == myName ? "you" : e.to), "foes", 1300);
+  }
   else if (e.k == "down") flash(e.to, "rpg-dying", 0);
   else if (e.k == "move") {
     // (a move on itself - defend, regenerate, howl ...: no lunge, only its name)
@@ -1749,8 +1763,15 @@ function renderRun() {
         });
         card.appendChild(traits);
       }
-      if (m.affix) card.appendChild(el("div", "rpg-affix", rules.affixes[m.affix].icon + " " + rules.affixes[m.affix].text));
-      if (m.cursed) card.appendChild(el("div", "rpg-affix", "⛓️ Cursed by the chest. It hits far harder."));
+      // (an elite's affix and a chest's curse: a badge on top - what it does under its name)
+      var marks = [];
+      if (m.affix) marks.push([rules.affixes[m.affix].icon + " " + rules.affixes[m.affix].name, rules.affixes[m.affix].text, "affix-" + m.affix]);
+      if (m.cursed) marks.push(["⛓️ Cursed", "Cursed by the chest. It hits far harder.", "affix-cursed"]);
+      marks.forEach(([label, text, kind]) => {
+        var mark = el("div", "rpg-affix " + kind);
+        mark.append(el("b", "rpg-affix-name", label), el("span", "rpg-affix-text", text));
+        card.appendChild(mark);
+      });
       if (badge) card.appendChild(badge);
       return card;
     });

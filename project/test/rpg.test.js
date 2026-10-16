@@ -1350,3 +1350,15 @@ test("rpg: a party votes in a room - the most votes happen for everyone, a card 
   assert.strictEqual(run.heroes[1].deck.filter((id) => id.endsWith("+")).length, 1);
   assert.ok(run.heroes.every((h) => h.hp == Math.round(h.maxHp / 2)), "nobody rested");
 });
+
+test("rpg: a taunt turns the foes about to hit another hero to the one taunting - the page sees the switch", () => {
+  const run = rpg.newRun(1, [{ name: "a", hero: rpg.newHero("paladin") }, { name: "b", hero: rpg.newHero("mage") }], seeded(3));
+  rpg.enterRoom(run, 0, seeded(3));
+  run.monsters = [{ id: "m1", name: "Dummy", icon: "🎯", hp: 500, maxHp: 500, atk: 10, dodge: 0, moves: ["attack"], rank: "normal", effects: {}, intent: { move: "attack", target: "b" } }];
+  const me = run.heroes[0];
+  me.hand = [{ uid: "t", id: "taunt" }];
+  me.energy = 3;
+  assert.strictEqual(rpg.play(run, "a", { uid: "t" }, () => 0.5), null);
+  assert.strictEqual(run.monsters[0].intent.target, "a");
+  assert.deepStrictEqual(run.fx.find((e) => e.k == "taunt").foes, ["m1"]);
+});
