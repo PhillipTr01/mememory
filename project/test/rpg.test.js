@@ -126,7 +126,7 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   assert.strictEqual(rpg.statsOf(quick).agi, dodge + 4);
 });
 
-test("rpg: a new hero clears floor 1 most of the time but not floor 8 - upgrades take it deeper; a full clear pays about 2x the entry", () => {
+test("rpg: a new hero clears floor 1 most of the time but not floor 8 - upgrades take it deeper; a full clear pays about 2.5x the entry", () => {
   const weak = rpg.newHero("warrior");
   const first = rpg.simulate(weak, 1, 300).cleared;
   assert.ok(first > 0.55 && first < 0.9, String(first));
@@ -135,7 +135,7 @@ test("rpg: a new hero clears floor 1 most of the time but not floor 8 - upgrades
   for (const id of rpg.STAT_IDS) rpg.charOf(strong).levels[id] = 70;
   const deep = rpg.simulate(strong, 8, 200);
   assert.ok(deep.cleared > 0.9, JSON.stringify(deep));
-  assert.ok(deep.payback > 1.5 && deep.payback < 2.4, JSON.stringify(deep));
+  assert.ok(deep.payback > 1.9 && deep.payback < 2.9, JSON.stringify(deep));
 });
 
 // A fight with one monster of fixed numbers (the tests decide what it does) and the hand the tests give

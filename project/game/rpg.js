@@ -114,7 +114,7 @@ function softStat(id, raw) {
 }
 
 // What a room puts in the pot (per hero, a share of the entry)
-const REWARD = { fight: 0.3, hard: 0.55, elite: 0.55, boss: 0.9, chest: 0.3, trap: 0, rest: 0, shrine: 0, merchant: 0 };
+const REWARD = { fight: 0.36, hard: 0.66, elite: 0.66, boss: 1.08, chest: 0.36, trap: 0, rest: 0, shrine: 0, merchant: 0 };
 
 /* ---------- Classes and their cards ---------- */
 
