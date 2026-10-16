@@ -407,12 +407,12 @@ test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/
   assert.strictEqual(rpg.pickTalent(hero, 0, "ironskin"), null);
   assert.match(rpg.pickTalent(hero, 0, "rhythm"), /already/);
   // (the class strength - the warrior breaks armor - and the talent)
-  assert.deepStrictEqual(rpg.talentPerks(hero), { pierce: rpg.strengthOf("warrior", rpg.charOf(hero).level).perks.pierce, startBlock: 8 });
+  assert.deepStrictEqual(rpg.talentPerks(hero), { pierce: rpg.strengthOf("warrior", rpg.charOf(hero).level).perks.pierce, startBlock: rpg.TALENTS.warrior[0][0].perks.startBlock });
   // In a fight: the talent's block at the start, a relic's damage, an upgraded strike
   const run = rpg.newRun(1, [{ name: "a", hero }]);
   rpg.enterRoom(run, 0);
   const me = run.heroes[0];
-  assert.strictEqual(me.block, 8);
+  assert.strictEqual(me.block, rpg.TALENTS.warrior[0][0].perks.startBlock);
   run.monsters = [{ id: "m1", name: "Dummy", icon: "🎯", hp: 10000, maxHp: 10000, atk: 1, dodge: 0, moves: ["defend"], rank: "normal", effects: {}, intent: { move: "attack", target: "a" } }];
   const hit = (id) => {
     me.hand = [{ uid: "x", id }];

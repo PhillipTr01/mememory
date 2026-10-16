@@ -385,9 +385,13 @@ function showFx(e, live) {
   } else if (e.k == "block") floatOver(e.to, "🛡️ +" + e.n, "block");
   else if (e.k == "down") flash(e.to, "rpg-dying", 0);
   else if (e.k == "move") {
-    flash(e.by, e.move == "stunned" ? "rpg-stunned-act" : "rpg-acting", 520);
-    if (e.move == "stunned") floatOver(e.by, "💫 Stunned", "miss");
-    else if (rules.moves[e.move] && rules.moves[e.move].self) floatOver(e.by, rules.moves[e.move].icon + " " + rules.moves[e.move].name, "move");
+    // (a move on itself - defend, regenerate, howl ...: no lunge, only its name)
+    var self = rules.moves[e.move] && rules.moves[e.move].self;
+    if (e.move == "stunned") {
+      flash(e.by, "rpg-stunned-act", 520);
+      floatOver(e.by, "💫 Stunned", "miss");
+    } else if (self) floatOver(e.by, rules.moves[e.move].icon + " " + rules.moves[e.move].name, "move");
+    else flash(e.by, "rpg-acting", 520);
   } else if (e.k == "turn") {
     if (e.side == "foes") banner("Monsters' turn", "foes", 900);
     else banner(e.first ? "⚔️ Fight!" : "Your turn", "heroes", 900);
@@ -1853,7 +1857,7 @@ function spoilsPanel(run, me, spoils) {
 // The party: every hero's stats, perks (talents, relics) and relics
 var PERK_TEXT = {
   healHit: (v) => Math.round(v * 100) + "% of heals smite",
-  startBlock: (v) => "+" + v + " block at the start",
+  startBlock: (v) => "+" + v + " block every turn",
   firstMana: (v) => "+" + v + " mana on turn one",
   draw: (v) => "+" + v + " card a turn",
   attack: (v) => "+" + Math.round(v * 100) + "% damage",
