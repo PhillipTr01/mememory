@@ -309,20 +309,20 @@ const MATERIALS = ["Rusty", "Iron", "Steel", "Mythril", "Obsidian", "Celestial"]
 
 // What a monster can do (power: times its attack; all: every hero)
 const MOVES = {
-  attack: { name: "Attack", icon: "⚔️", power: 1 },
-  smash: { name: "Smash", icon: "💥", power: 2.2 },
-  poison: { name: "Poison bite", icon: "☠️", power: 0.6 },
-  steal: { name: "Steal", icon: "🫳", power: 0.5 },
-  burn: { name: "Fire wave", icon: "🔥", power: 0.5, all: true },
-  drain: { name: "Drain", icon: "🩸", power: 1 },
-  defend: { name: "Defend", icon: "🛡️", self: true },
-  regen: { name: "Regenerate", icon: "💚", self: true },
-  heal: { name: "Heal ally", icon: "💚", self: true },
-  howl: { name: "Howl", icon: "📯", self: true },
-  fade: { name: "Fade", icon: "🌫️", self: true },
-  purge: { name: "Purge", icon: "✨", self: true },
-  curse: { name: "Curse", icon: "🕯️", power: 0.4 },
-  summon: { name: "Summon", icon: "📣", self: true },
+  attack: { name: "Attack", icon: "⚔️", power: 1, text: "It hits one hero." },
+  smash: { name: "Smash", icon: "💥", power: 2.2, text: "A heavy hit on one hero." },
+  poison: { name: "Poison bite", icon: "☠️", power: 0.6, text: "It hits one hero and poisons them." },
+  steal: { name: "Steal", icon: "🫳", power: 0.5, text: "It hits one hero and steals a potion." },
+  burn: { name: "Fire wave", icon: "🔥", power: 0.5, all: true, text: "It hits every hero and sets them on fire." },
+  drain: { name: "Drain", icon: "🩸", power: 1, text: "It hits one hero and heals by the damage." },
+  defend: { name: "Defend", icon: "🛡️", self: true, text: "It guards. Your hits deal half damage to it this turn." },
+  regen: { name: "Regenerate", icon: "💚", self: true, text: "It heals a quarter of its HP." },
+  heal: { name: "Heal ally", icon: "💚", self: true, text: "It heals its most hurt ally." },
+  howl: { name: "Howl", icon: "📯", self: true, text: "Every monster hits 30% harder for 2 turns." },
+  fade: { name: "Fade", icon: "🌫️", self: true, text: "It fades back. Your plain attacks miss it this turn." },
+  purge: { name: "Purge", icon: "✨", self: true, text: "It clears poison and burns from every monster." },
+  curse: { name: "Curse", icon: "🕯️", power: 0.4, text: "It hits one hero, who deals less damage for 2 turns." },
+  summon: { name: "Summon", icon: "📣", self: true, text: "It calls more monsters into the fight." },
 };
 
 // The monsters: a group per 5 floors (hp, atk: times the floor's; dodge: misses a hit that often; moves: what it does)

@@ -1699,7 +1699,7 @@ function intentBadge(m) {
   else if (m.intent.move == "defend") text += "Blocks 50%";
   else text += move.name;
   badge.innerText = text;
-  badge.title = m.intent.stunned ? "Stunned, it skips its next move." : m.intent.move == "defend" ? "On guard, your hits deal half damage this turn." : move.name + (m.intent.target ? " on " + m.intent.target : "");
+  badge.title = m.intent.stunned ? "Stunned, it skips its next move." : move.name + (m.intent.target ? " on " + m.intent.target : "") + ". " + (move.text || "");
   if (m.intent.target == myName && m.intent.damage && !m.intent.stunned) badge.classList.add("at-me");
   return badge;
 }

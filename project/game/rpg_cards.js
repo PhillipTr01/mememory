@@ -164,7 +164,8 @@ const CLASS = {
     shieldslam: ["Shield Slam", "🔘", 1, "common", [{ hit: 0.6, def: 1 }]],
     guard: ["Guard", "🚧", 1, "common", [{ block: 7, def: 1, to: "ally" }]],
     shieldslam: ["Shield Slam", "🛡️", 1, "common", [{ hit: 0.5, def: 0.5, bonusIf: "combo", bonus: 1.4 }]],
-    holystrike: ["Holy Strike", "✝️", 1, "common", [{ hit: 1.1, bonusIf: "stun", bonus: 2.2 }]],
+    shieldbash: ["Shield Bash", "🛡️", 2, "common", [{ hit: 0.5, def: 0.5 }, { status: "stun" }]],
+    holystrike: ["Holy Strike", "✝️", 1, "common", [{ hit: 1.1, bonusIf: "stun|undead", bonus: 2.2 }]],
     vow: ["Vow", "📜", 1, "common", [{ block: 5, def: 1 }, { draw: 1 }]],
     crusade: ["Crusade", "🏇", 2, "common", [{ hit: 0.6, def: 0.5, to: "all" }]],
     radiance: ["Radiance", "🔅", 1, "common", [{ hit: 0.7 }, { block: 3, def: 0.5, to: "party" }]],
@@ -179,16 +180,16 @@ const CLASS = {
     guardianangel: ["Guardian Angel", "😇", 2, "epic", [{ block: 15, def: 1, to: "party" }], true],
     divinestorm: ["Divine Storm", "⛈️", 3, "legendary", [{ hit: 1.3, def: 0.5, to: "all" }]],
     avatar: ["Avatar of Light", "☀️", 2, "epic", [{ might: 3 }, { block: 10, def: 1 }], true],
-    verdict: ["Final Verdict", "🏛️", 3, "legendary", [{ hit: 2, def: 1, bonusIf: "stun", bonus: 3 }]],
+    verdict: ["Final Verdict", "🏛️", 3, "legendary", [{ hit: 2, def: 1, bonusIf: "stun|undead", bonus: 3 }]],
     oath: ["Crusader's Oath", "📯", 2, "legendary", [{ block: 12, def: 1, to: "party" }, { taunt: true }], true],
     justice: ["Hammer of Justice", "🛕", 2, "legendary", [{ hit: 2.2, def: 1 }, { status: "stun" }]],
     aegisgods: ["Aegis of the Gods", "🌐", 2, "mythic", [{ block: 40, def: 1, to: "party" }], "mythic"],
     holyavenger: ["Holy Avenger", "🗡️", 2, "mythic", [{ hit: 3, def: 2 }, { block: 15, def: 1, to: "party" }], "mythic"],
     hallowedshield: ["Hallowed Shield", "🛡️", 1, "rare", [{ block: 8, def: 1, to: "ally" }]],
-    smiteevil: ["Shield Toss", "🥏", 1, "rare", [{ hit: 0.8, def: 0.6, bonusIf: "stun", bonus: 1.8 }]],
+    smiteevil: ["Shield Toss", "🥏", 1, "rare", [{ hit: 0.8, def: 0.6, bonusIf: "stun|undead", bonus: 1.8 }]],
     standfirm: ["Stand Firm", "🗿", 1, "rare", [{ taunt: true }, { block: 6, def: 1 }]],
     shieldfaith: ["Shield of Faith", "🔰", 1, "epic", [{ block: 12, def: 1.2, to: "ally" }, { taunt: true }]],
-    crusaderstrike: ["Crusader Strike", "⚔️", 1, "epic", [{ hit: 1.2, bonusIf: "stun", bonus: 2.4 }, { block: 4, def: 0.5 }]],
+    crusaderstrike: ["Crusader Strike", "⚔️", 1, "epic", [{ hit: 1.2, bonusIf: "stun|undead", bonus: 2.4 }, { block: 4, def: 0.5 }]],
     hallowground: ["Hallowed Ground", "🕯️", 2, "epic", [{ hit: 0.7, def: 0.3, to: "all" }, { taunt: true }]],
     divineprotection: ["Divine Protection", "🙏", 1, "epic", [{ block: 8, def: 1.5 }]],
     lightswrath: ["Light's Wrath", "🌩️", 3, "epic", [{ hit: 1.8, def: 0.5 }]],
@@ -247,7 +248,7 @@ const CLASS = {
     shadowveil: ["Shadow Veil", "🌫️", 1, "rare", [{ aura: "guard", block: 4, agi: 0.3, turns: 3 }]],
     shiv: ["Shiv", "🪡", 0, "common", [{ hit: 0.5 }]],
     deadlypoison: ["Deadly Poison", "🐍", 1, "common", [{ status: "poison", turns: 4 }]],
-    sneakattack: ["Sneak Attack", "🥷", 1, "common", [{ hit: 0.9, bonusIf: "stun", bonus: 2.2 }]],
+    sneakattack: ["Sneak Attack", "🥷", 1, "common", [{ hit: 0.9, bonusIf: "poison|stun", bonus: 2.2 }]],
     dodgeroll: ["Dodge and Roll", "🤸", 1, "common", [{ block: 7, agi: 0.5 }]],
     nightcut: ["Night Cut", "🌘", 0, "common", [{ hit: 0.45, bonusIf: "combo", bonus: 1.3 }]],
     slice: ["Slice", "✂️", 0, "common", [{ hit: 0.6 }]],
@@ -256,7 +257,7 @@ const CLASS = {
     pickpocket: ["Pickpocket", "🫳", 1, "common", [{ hit: 0.6 }, { draw: 1 }]],
     bladedance: ["Blade Dance", "💃", 1, "rare", [{ hit: 0.35, to: "random", times: 4 }]],
     noxious: ["Noxious Fumes", "🌫️", 1, "rare", [{ status: "poison", turns: 3, to: "all" }]],
-    ambush: ["Ambush", "🌑", 2, "rare", [{ hit: 2, bonusIf: "stun", bonus: 3 }]],
+    ambush: ["Ambush", "🌑", 2, "rare", [{ hit: 2, bonusIf: "poison|stun", bonus: 3 }]],
     vanish: ["Vanish", "🫥", 1, "rare", [{ evade: true }, { draw: 2 }], true],
     crippling: ["Crippling Cloud", "☁️", 2, "rare", [{ status: "poison", turns: 3, to: "all" }, { draw: 1 }]],
     footwork: ["Footwork", "👟", 1, "rare", [{ block: 5, agi: 1 }, { might: 1 }]],
@@ -273,7 +274,7 @@ const CLASS = {
     feint: ["Feint", "🎭", 1, "rare", [{ block: 5, agi: 0.5 }, { draw: 1 }]],
     twinfangs: ["Twin Fangs", "🐍", 1, "epic", [{ hit: 0.6, times: 2 }, { status: "poison", turns: 2 }]],
     bladeflurry: ["Blade Flurry", "🔪", 3, "epic", [{ hit: 0.5, to: "random", times: 4 }]],
-    shadowstrike: ["Shadow Strike", "🌘", 1, "epic", [{ hit: 1.3, bonusIf: "stun", bonus: 2.4 }]],
+    shadowstrike: ["Shadow Strike", "🌘", 1, "epic", [{ hit: 1.3, bonusIf: "poison|stun", bonus: 2.4 }]],
     toxiccloud: ["Toxic Cloud", "🟢", 1, "epic", [{ status: "poison", turns: 3, to: "all" }]],
     evasion: ["Evasion", "🦘", 1, "epic", [{ evade: true }, { draw: 1 }], true],
     cheapshot: ["Cheap Shot", "🥾", 1, "epic", [{ hit: 0.7 }, { status: "stun" }]],
@@ -334,9 +335,10 @@ const pct = (value) => Math.round(value * 100) + "%";
 const ifText = (cond) => {
   if (!cond.includes("|")) return IF[cond];
   const parts = cond.split("|").map((one) => IF[one]);
-  // ("against the undead or a boss" - "on a poisoned or stunned foe")
+  // ("against the undead or a boss" - "on a poisoned or stunned foe" - "on a stunned foe or against the undead")
   if (parts.every((one) => one.startsWith("against "))) return "against " + parts.map((one) => one.replace(/^against /, "")).join(" or ");
-  return "on a " + parts.map((one) => one.replace(/^on a | foe$/g, "")).join(" or ") + " foe";
+  if (parts.every((one) => /^on a .* foe$/.test(one))) return "on a " + parts.map((one) => one.replace(/^on a | foe$/g, "")).join(" or ") + " foe";
+  return parts.join(" or ");
 };
 const IF = { poison: "on a poisoned foe", burn: "on a burning foe", chill: "on a chilled foe", stun: "on a stunned foe", undead: "against the undead", boss: "against a boss", called: "against a summoned foe", low: "while you are below half HP", combo: "if you played a skill this turn" };
 const STATUS = {

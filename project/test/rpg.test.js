@@ -1362,3 +1362,21 @@ test("rpg: a taunt turns the foes about to hit another hero to the one taunting 
   assert.strictEqual(run.monsters[0].intent.target, "a");
   assert.deepStrictEqual(run.fx.find((e) => e.k == "taunt").foes, ["m1"]);
 });
+
+test("rpg: every card's bonus can happen - its class has a common or rare card for the state it needs", () => {
+  for (const cls of rpg.CLASS_IDS) {
+    const pool = rpg.poolOf(cls);
+    const makes = new Set();
+    for (const id of pool) if (["basic", "common", "rare"].includes(rpg.CARDS[id].rarity)) for (const f of rpg.CARDS[id].fx) if (f.status) makes.add(f.status);
+    for (const id of pool)
+      for (const f of rpg.CARDS[id].fx) {
+        if (!f.bonusIf) continue;
+        const states = f.bonusIf.split("|");
+        // (the foe's own kind, a boss, summoned, the hero's HP or a skill played: always possible)
+        const free = states.some((k) => !["poison", "burn", "chill", "stun"].includes(k));
+        assert.ok(free || states.some((k) => makes.has(k)), `${cls}: ${id} needs ${f.bonusIf}`);
+      }
+  }
+  // Every monster move says what it does
+  for (const [id, move] of Object.entries(rpg.MOVES)) assert.ok(move.text, id);
+});
