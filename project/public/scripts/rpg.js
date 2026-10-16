@@ -1999,19 +1999,28 @@ function roomScene(run, me) {
   if (ev.kind != "merchant" && (shared.length || Object.keys(results).length)) {
     var box = el("div", "rpg-event-box");
     var mine = shared.concat(results[myName] || []);
-    if (mine.length) {
-      var row = el("div", "rpg-results");
-      mine.forEach((r) => row.appendChild(resultCard(r)));
-      box.append(el("div", "rpg-label", run.heroes.length > 1 ? "You got" : "What happened"), row);
+    var others = Object.keys(results).filter((name) => name != myName && results[name].length);
+    if (!others.length) {
+      if (mine.length) {
+        var row = el("div", "rpg-results");
+        mine.forEach((r) => row.appendChild(resultCard(r)));
+        box.append(el("div", "rpg-label", run.heroes.length > 1 ? "You got" : "What happened"), row);
+      }
+    } else {
+      // (a party: everyone's in one line - the face of who got it on the top right)
+      var line = el("div", "rpg-results rpg-results-party");
+      var group = (name, list) => {
+        var g = el("div", "rpg-got-group" + (name == myName ? " mine" : ""));
+        list.forEach((r) => g.appendChild(resultCard(r)));
+        var face = createAvatar(name, "sm");
+        face.classList.add("rpg-got-face");
+        g.appendChild(face);
+        line.appendChild(g);
+      };
+      if (mine.length) group(myName, mine);
+      others.forEach((name) => group(name, results[name]));
+      box.append(el("div", "rpg-label", "What the party got"), line);
     }
-    Object.keys(results)
-      .filter((name) => name != myName && results[name].length)
-      .forEach((name) => {
-        var other = el("div", "rpg-results small");
-        other.appendChild(createAvatar(name, "sm"));
-        results[name].forEach((r) => other.appendChild(resultCard(r)));
-        box.appendChild(other);
-      });
     body.appendChild(box);
   }
   // Who has chosen
