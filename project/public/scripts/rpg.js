@@ -951,8 +951,15 @@ function classTile(id, pick) {
   if (cls.agi) chip("🦊 +" + cls.agi + "% instinct", true, "Dodge attacks");
   var ability = rules.abilities[id];
   var strength = cls.strength.text.replace(/\{(\w+)\}/g, (_, key) => (key == "crit" || key == "thorns" ? cls.strength.perks[key] : Math.round(cls.strength.perks[key] * 100)));
-  var cards = el("div", "rpg-first-cards");
-  cls.signature.forEach((card) => cards.appendChild(cardEl(card, { className: "small" })));
+  // (the signature cards: whole cards in the class overview - chips in the picker, it fits the screen; hover: the text)
+  var cards = el("div", pick ? "rpg-first-sigs" : "rpg-first-cards");
+  cls.signature.forEach((id) => {
+    if (!pick) return cards.appendChild(cardEl(id, { className: "small" }));
+    var card = cardOf(id, true);
+    var sig = el("span", "rpg-first-sig type-" + card.type, card.icon + " " + card.name);
+    sig.title = card.text;
+    cards.appendChild(sig);
+  });
   tile.append(
     el("span", "rpg-first-icon", cls.icon),
     el("span", "rpg-first-name", cls.name),
@@ -971,14 +978,16 @@ function classTile(id, pick) {
 function renderFirst() {
   var grid = el("div", "rpg-first-grid");
   Object.keys(rules.classes).forEach((id) => grid.appendChild(classTile(id, true)));
-  // (not now: back to the casino - the jackpot)
-  var later = el("a", "rpg-first-later", "Later");
-  later.href = "./";
+  // (not now: the X - back to the casino, the jackpot)
+  var close = el("a", "rpg-first-close", "✕");
+  close.href = "./";
+  close.title = "Back to the casino";
+  close.setAttribute("aria-label", "Back to the casino");
   morphChildren(document.getElementById("rpgFirstBox"), [
+    close,
     el("div", "rpg-first-title", "⚔️ Choose your class"),
-    el("div", "rpg-first-sub mm-muted", "First one free, then 🪙 " + formatCoins(rules.classPrice) + "."),
+    el("div", "rpg-first-sub mm-muted", "Your first class is free."),
     grid,
-    later,
   ]);
 }
 

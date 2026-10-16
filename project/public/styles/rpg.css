@@ -3085,6 +3085,7 @@ button.rpg-cardx.off {
 .rpg-first-pick {
   margin-top: auto;
   width: 100%;
+  box-sizing: border-box;
   padding: 0.45rem;
   border-radius: 10px;
   font-weight: 700;
@@ -6111,24 +6112,6 @@ button.rpg-cardx.off {
   display: none;
 }
 
-/* (the class picker: not now) */
-.rpg-first-later {
-  display: block;
-  width: fit-content;
-  margin: 0.5rem auto 0;
-  padding: 0.45rem 1.4rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: var(--mm-muted);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.rpg-first-later:hover {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
 /* (a stat: name, value, price on one line - the description under them, the whole width) */
 .rpg-stat {
   row-gap: 0.15rem;
@@ -7145,4 +7128,86 @@ button.rpg-cardx.off {
 .rpg-handbar .rpg-result .rpg-btn {
   min-width: 8rem;
   margin-top: 0.3rem;
+}
+
+/* The class picker: on one screen, no scrolling - a close X on top */
+#rpgFirstBox.rpg-first-box {
+  position: relative;
+  max-height: none;
+  overflow: visible;
+  padding-top: 1rem;
+  gap: 0.5rem;
+}
+.rpg-first-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.07);
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.rpg-first-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+}
+#rpgFirstBox .rpg-first-class {
+  gap: 0.35rem;
+  padding: 0.8rem 0.7rem;
+}
+#rpgFirstBox .rpg-first-icon {
+  font-size: 2rem;
+}
+.rpg-first-sigs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem;
+}
+.rpg-first-sig {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(91, 143, 214, 0.15);
+  color: #b9d3ff;
+  cursor: help;
+}
+.rpg-first-sig.type-attack {
+  background: rgba(var(--rpg-red-rgb), 0.18);
+  color: #ffb4b4;
+}
+.rpg-first-sig.type-aura {
+  background: rgba(45, 212, 191, 0.15);
+  color: #99f6e4;
+}
+/* (a phone: the classes side by side, swiped) */
+@media (max-width: 760px) {
+  #rpgFirstBox.rpg-first-box {
+    box-sizing: border-box;
+    width: calc(100vw - 1.5rem);
+    max-width: calc(100vw - 1.5rem);
+    min-width: 0;
+    margin: 0 auto;
+  }
+  #rpgFirstBox .rpg-first-grid {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 0.6rem;
+    padding-bottom: 0.4rem;
+  }
+  #rpgFirstBox .rpg-first-class {
+    flex: 0 0 78%;
+    scroll-snap-align: center;
+  }
 }
