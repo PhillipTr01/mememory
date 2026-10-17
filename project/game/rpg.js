@@ -838,13 +838,12 @@ function openPack(hero, rng = Math.random, packId = "standard") {
 }
 
 // A class unlocked (and played) - the price is the server's business
-// (a new character: a Base Set Pack to start with - opened, its cards are the character's)
-const START_PACKS = 1;
+// (a new character: a Hero Pack and two Base Set Packs to start with - opened, their cards are the character's)
+const START_PACKS = [["premium", 1], ["standard", 2]];
 function unlock(hero, cls) {
   if (!hero.unlocked.includes(cls)) {
     hero.unlocked.push(cls);
-    if (!hero.packs) hero.packs = {};
-    hero.packs.standard = (hero.packs.standard || 0) + START_PACKS;
+    addPacks(hero, START_PACKS);
   }
   charOf(hero, cls);
   hero.cls = cls;

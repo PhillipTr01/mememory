@@ -446,7 +446,7 @@ test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/
 test("rpg: collection and deck - the starter deck owned, packs bring cards (duplicates kept), the deck from 10 to deckMax, mythic cards once a run", () => {
   const hero = rpg.newHero("rogue");
   const char = rpg.charOf(hero);
-  assert.strictEqual(hero.packs.standard, 1);
+  assert.deepStrictEqual([hero.packs.premium, hero.packs.standard], [1, 2], "a Hero Pack and two Base Set Packs to start with");
   assert.strictEqual(char.deck.length, 10);
   assert.deepStrictEqual([char.collection.strike, char.collection.defend, char.collection.dodgeroll, char.collection.poisonblade], [4, 2, 2, 1]);
   // The deck: only owned cards, only the class's - built freely, but a run needs DECK_MIN cards
@@ -521,15 +521,16 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (dupl
   assert.match(rpg.cartPrice({ standard: 1.5 }).error, /1 to/);
   rpg.addPacks(hero, [["premium", 2]]);
   assert.strictEqual(rpg.openStored(hero, "premium").length, 5);
-  assert.strictEqual(hero.packs.premium, 1);
+  assert.strictEqual(hero.packs.premium, 2);
+  rpg.openStored(hero, "premium");
   rpg.openStored(hero, "premium");
   assert.match(rpg.openStored(hero, "premium"), /No such pack/);
   // Open all: every pack waiting
   rpg.addPacks(hero, [["standard", 2], ["mythic", 1]]);
   const all = rpg.openAll(hero);
-  // (the Base Set Pack every new character starts with too)
-  assert.strictEqual(all.count, 4);
-  assert.strictEqual(all.cards.length, 3 * 5 + 4);
+  // (the two Base Set Packs every new character starts with too)
+  assert.strictEqual(all.count, 5);
+  assert.strictEqual(all.cards.length, 4 * 5 + 4);
   assert.deepStrictEqual([hero.packs.standard, hero.packs.mythic], [0, 0]);
   assert.match(rpg.openAll(hero), /No packs/);
   // A mythic card: played once - gone from the run's deck
@@ -1621,6 +1622,7 @@ test("rpg: deck slots get names - empty: back to the number, long ones cut", () 
 test("rpg: the shop's cart paid with dust - each pack its dust price, not without enough dust", () => {
   const hero = rpg.newHero("warrior");
   const before = hero.packs.standard || 0;
+  const heroPacks = hero.packs.premium || 0;
   const cost = rpg.PACKS.standard.dust * 2 + rpg.PACKS.premium.dust;
   hero.dust = cost - 1;
   assert.match(rpg.buyCartDust(hero, { standard: 2, premium: 1 }), new RegExp("You need " + cost + " dust"));
@@ -1628,7 +1630,7 @@ test("rpg: the shop's cart paid with dust - each pack its dust price, not withou
   assert.strictEqual(rpg.buyCartDust(hero, { standard: 2, premium: 1 }), null);
   assert.strictEqual(hero.dust, 0);
   assert.strictEqual(hero.packs.standard, before + 2);
-  assert.strictEqual(hero.packs.premium, 1);
+  assert.strictEqual(hero.packs.premium, heroPacks + 1);
 });
 
 test("rpg: dust a copy that isn't spare - only when asked for, it leaves the decks; the free starter copies never", () => {
