@@ -455,7 +455,7 @@ module.exports = function (io, options = {}) {
     for (const [id, offer] of trades) if (now - offer.at > TRADE_TIME) trades.delete(id);
     const list = [...trades.values()]
       .filter((offer) => offer.from === name || offer.to === name)
-      .map((offer) => ({ id: offer.id, from: offer.from, to: offer.to, give: sideView(heroOf(offer.from), offer.give), take: sideView(heroOf(offer.to), offer.take), left: Math.max(0, TRADE_TIME - (now - offer.at)) }));
+      .map((offer) => ({ id: offer.id, from: offer.from, to: offer.to, give: sideView(heroOf(offer.from), offer.give), take: sideView(heroOf(offer.to), offer.take), giveCoins: offer.giveCoins || 0, takeCoins: offer.takeCoins || 0, left: Math.max(0, TRADE_TIME - (now - offer.at)) }));
     socketsOf(name).forEach((socket) => socket.emit("rpgTrades", list));
   }
 
@@ -822,13 +822,17 @@ module.exports = function (io, options = {}) {
       socket.emit("rpgTradeLook", { name, cls: heroOf(name).cls, list: rpg.tradeList(heroOf(name)) });
     });
 
-    on("tradeOffer", (data) => {
+    on("tradeOffer", async (data) => {
       const to = String(data.to || "");
       const give = cleanSide(data.give);
       const take = cleanSide(data.take);
-      if (!give || !take) return;
+      const giveCoins = rpg.tradeCoins(data.giveCoins);
+      const takeCoins = rpg.tradeCoins(data.takeCoins);
+      if (!give || !take || giveCoins == null || takeCoins == null) return;
       if (to === username || !heroes.has(to) || !ours(to)) return error("No such player.");
-      if (!give.length && !take.length) return error("Pick something to trade.");
+      // (coins go along - never alone)
+      if (!give.length && !take.length) return error(giveCoins || takeCoins ? "Add a card or a piece of gear. Coins alone can't be traded." : "Pick something to trade.");
+      if (giveCoins && (await coins.get(username)).coins < giveCoins) return error("You don't have that many coins.");
       const mixed = rpg.tradeMixed(give, take);
       if (mixed) return error(mixed);
       if ([...trades.values()].filter((offer) => offer.from === username).length >= TRADES_OPEN) return error(`At most ${TRADES_OPEN} offers at once.`);
@@ -836,15 +840,15 @@ module.exports = function (io, options = {}) {
       if (mine.error) return error(mine.error);
       const theirs = rpg.tradeSide(heroOf(to), take);
       if (theirs.error) return error(theirs.error);
-      const unfair = rpg.tradeFair(mine.value, theirs.value, mine.top || theirs.top);
+      const unfair = rpg.tradeFair(mine.value + giveCoins, theirs.value + takeCoins, mine.top || theirs.top);
       if (unfair) return error(unfair);
       const id = "t" + ++tradeCount;
-      trades.set(id, { id, from: username, to, give, take, at: Date.now() });
+      trades.set(id, { id, from: username, to, give, take, giveCoins, takeCoins, at: Date.now() });
       sendTrades(username);
       sendTrades(to);
     });
 
-    on("tradeAnswer", (data) => {
+    on("tradeAnswer", async (data) => {
       const offer = trades.get(String(data.id));
       if (!offer || offer.to !== username) return;
       if (!data.accept) {
@@ -854,7 +858,23 @@ module.exports = function (io, options = {}) {
         return;
       }
       if (running(offer.from) || running(offer.to)) return error("Not while one of you is in a run.");
-      const problem = rpg.trade(heroOf(offer.from), heroOf(offer.to), offer.give, offer.take);
+      // (the coins first: taken from who pays them - not there: the trade waits)
+      const giveCoins = offer.giveCoins || 0;
+      const takeCoins = offer.takeCoins || 0;
+      if (takeCoins && !(await coins.spend(offer.to, takeCoins, { reason: "rpg trade", note: "to " + offer.from }))) return error("You don't have enough coins for this trade.");
+      if (giveCoins && !(await coins.spend(offer.from, giveCoins, { reason: "rpg trade", note: "to " + offer.to }))) {
+        if (takeCoins) await coins.add(offer.to, takeCoins, { reason: "rpg trade", note: "refund" });
+        return error(offer.from + " doesn't have the coins for this trade any more.");
+      }
+      const problem = rpg.trade(heroOf(offer.from), heroOf(offer.to), offer.give, offer.take, { give: giveCoins, take: takeCoins });
+      // (the trade failed: the coins back)
+      if (problem) {
+        if (takeCoins) await coins.add(offer.to, takeCoins, { reason: "rpg trade", note: "refund" });
+        if (giveCoins) await coins.add(offer.from, giveCoins, { reason: "rpg trade", note: "refund" });
+      } else {
+        if (giveCoins) await coins.add(offer.to, giveCoins, { reason: "rpg trade", note: "from " + offer.from });
+        if (takeCoins) await coins.add(offer.from, takeCoins, { reason: "rpg trade", note: "from " + offer.to });
+      }
       // (a full bag: the offer stays - room made, it can be taken)
       if (problem && /bag is full/.test(problem)) return error(problem);
       trades.delete(offer.id);

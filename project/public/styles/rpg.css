@@ -8622,3 +8622,26 @@ button.rpg-trade-row:active {
   opacity: 0.35;
   cursor: not-allowed;
 }
+
+/* Coins in a trade: a field on each side of a new offer, a line in an offer */
+.rpg-trade-coins {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--rpg-gold);
+}
+
+.rpg-trade-coins .mm-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.5rem;
+}
+
+.rpg-trade-coins.shown {
+  padding: 0.4rem 0.6rem;
+  border-radius: 10px;
+  background: rgba(245, 197, 66, 0.1);
+}

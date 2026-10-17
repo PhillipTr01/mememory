@@ -1361,18 +1361,26 @@ function tradeMixed(give, take) {
   return kinds.size > 1 ? "Trade cards for cards and gear for gear." : null;
 }
 
-// A trade done: both sides checked again, then swapped -> an error or null
+// Coins on a side of a trade: a whole number, 0 to TRADE_COINS_MAX (anything else: null)
+const TRADE_COINS_MAX = 1e9;
+function tradeCoins(n) {
+  const coins = n == null || n === "" ? 0 : Number(n);
+  return Number.isInteger(coins) && coins >= 0 && coins <= TRADE_COINS_MAX ? coins : null;
+}
+
+// A trade done: both sides checked again, then swapped -> an error or null - coins: {give, take} added to the
+// sides' values (the server moves them); never coins alone
 // (a card: into the receiver's character of its class - a neutral one: the character played; gear: the bag)
-function trade(fromHero, toHero, give, take) {
+function trade(fromHero, toHero, give, take, coins = { give: 0, take: 0 }) {
   if (!fromHero.cls || !toHero.cls) return "Both players need a character.";
   const a = tradeSide(fromHero, give);
   if (a.error) return a.error;
   const b = tradeSide(toHero, take);
   if (b.error) return b.error;
-  if (!give.length && !take.length) return "Nothing to trade.";
+  if (!give.length && !take.length) return coins.give || coins.take ? "Add a card or a piece of gear. Coins alone can't be traded." : "Nothing to trade.";
   const mixed = tradeMixed(give, take);
   if (mixed) return mixed;
-  const unfair = tradeFair(a.value, b.value, a.top || b.top);
+  const unfair = tradeFair(a.value + (coins.give || 0), b.value + (coins.take || 0), a.top || b.top);
   if (unfair) return unfair;
   const gearIn = (side) => side.filter((one) => one.k == "gear").length;
   if (toHero.bag.length - gearIn(take) + gearIn(give) > bagSize(toHero)) return "Their bag is full.";
@@ -3492,6 +3500,7 @@ module.exports = {
   tradeSide,
   tradeFair,
   tradeMixed,
+  tradeCoins,
   trade,
   FLOORS,
   ROOMS,

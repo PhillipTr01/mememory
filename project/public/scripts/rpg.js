@@ -239,6 +239,7 @@ var tradePlayers = [];
 var tradeWith = "";
 var tradeTheirs = null;
 var tradePick = { give: {}, take: {} };
+var tradeCoinPick = { give: 0, take: 0 }; // (coins on each side of the new offer)
 socket.on("rpgTrades", (list) => {
   trades = list;
   // (a trade done or gone: what the other player has may have changed)
@@ -936,15 +937,24 @@ function tradeRow(one, side, picks, act) {
 }
 
 // A side of the trade: its title and total, the cards and the gear in groups
-function tradePanel(title, list, side, picks, act, empty) {
+function tradePanel(title, list, side, picks, act, empty, coins) {
   var panel = el("div", "rpg-trade-col " + side);
   var head = el("div", "rpg-trade-col-head");
-  var total = act ? pickValue(list, picks) : list.reduce((sum, one) => sum + one.value, 0);
+  var total = (act ? pickValue(list, picks) : list.reduce((sum, one) => sum + one.value, 0)) + (coins || 0);
   head.append(el("span", "", title), el("span", "rpg-trade-total", "🪙 " + formatCoins(total)));
   // (the head stays, the list under it scrolls)
   var body = el("div", "rpg-trade-scroll");
   panel.append(head, body);
-  if (!list.length) body.appendChild(el("div", "rpg-trade-empty", empty));
+  // (coins along with the cards or the gear: a field in a new offer, a line in an offer)
+  if (act) {
+    var field = el("label", "rpg-trade-coins");
+    var input = el("input", "mm-input");
+    Object.assign(input, { type: "number", min: 0, step: 100, placeholder: "0" });
+    input.dataset.side = side;
+    field.append(el("span", "", "🪙 Coins"), input);
+    body.appendChild(field);
+  } else if (coins) body.appendChild(el("div", "rpg-trade-coins shown", "🪙 " + formatCoins(coins) + " coins"));
+  if (!list.length && !(coins && !act)) body.appendChild(el("div", "rpg-trade-empty", empty));
   [
     ["Cards", list.filter((one) => one.k == "card")],
     ["Gear", list.filter((one) => one.k != "card")],
@@ -999,16 +1009,20 @@ function renderTrade() {
       head.append(createAvatar(other, "sm"), el("b", "", mine ? "Your offer to " + other : other + " offers you a trade"));
       var give = mine ? offer.give : offer.take;
       var take = mine ? offer.take : offer.give;
+      var payCoins = mine ? offer.giveCoins : offer.takeCoins;
+      var getCoins = mine ? offer.takeCoins : offer.giveCoins;
       var sides = el("div", "rpg-trade-board");
-      sides.append(tradePanel("You give", give, "give", {}, null, "Nothing."), swapIcon(), tradePanel("You get", take, "take", {}, null, "Nothing."));
+      sides.append(tradePanel("You give", give, "give", {}, null, "Nothing.", payCoins), swapIcon(), tradePanel("You get", take, "take", {}, null, "Nothing.", getCoins));
       var actions = el("div", "rpg-trade-actions");
       if (mine) actions.append(el("span", "mm-muted small", "Waiting for " + other + "."), button("Take back", "tradeCancel", { id: offer.id, className: "small" }));
       else {
         // (the gear coming in has no room in the bag: no accepting until there is)
         var gearOf = (side) => side.filter((one) => one.k == "gear").length;
         var full = hero.bag.length - gearOf(give) + gearOf(take) > hero.bagSize;
-        var accept = button("✓ Accept", "tradeAccept", { id: offer.id, className: "small primary", disabled: full });
+        var broke = payCoins > myCoins;
+        var accept = button("✓ Accept", "tradeAccept", { id: offer.id, className: "small primary", disabled: full || broke });
         if (full) accept.title = "Your bag is full. Make room in it to accept this trade.";
+        else if (broke) accept.title = "You don't have enough coins for this trade.";
         actions.append(button("Decline", "tradeDecline", { id: offer.id, className: "small" }), accept);
       }
       box.append(head, sides, actions);
@@ -1045,22 +1059,25 @@ function renderTrade() {
   nodes.push(who);
   var mineList = hero.tradeable || [];
   var theirList = tradeTheirs ? tradeTheirs.list : [];
-  var give = pickValue(mineList, tradePick.give);
-  var take = pickValue(theirList, tradePick.take);
+  var give = pickValue(mineList, tradePick.give) + tradeCoinPick.give;
+  var take = pickValue(theirList, tradePick.take) + tradeCoinPick.take;
   var top = topPicked(mineList, tradePick.give) || topPicked(theirList, tradePick.take);
   var board = el("div", "rpg-trade-board");
   var middle = el("div", "rpg-trade-middle");
   middle.append(swapIcon(), tradeScale(give, take, top));
   board.append(
-    tradePanel("You give", mineList, "give", tradePick.give, "tradePick", "You have no spare cards or gear."),
+    tradePanel("You give", mineList, "give", tradePick.give, "tradePick", "You have no spare cards or gear.", tradeCoinPick.give),
     middle,
-    tradePanel(tradeWith ? "You get from " + tradeWith : "You get", theirList, "take", tradePick.take, "tradePick", tradeWith ? (tradeTheirs ? "They have nothing to trade." : "Loading…") : "Pick a player first."),
+    tradePanel(tradeWith ? "You get from " + tradeWith : "You get", theirList, "take", tradePick.take, "tradePick", tradeWith ? (tradeTheirs ? "They have nothing to trade." : "Loading…") : "Pick a player first.", tradeCoinPick.take),
   );
   nodes.push(board);
   var gap = tradeGap(give, take, top);
   var any = Object.keys(tradePick.give).length + Object.keys(tradePick.take).length > 0;
+  var coinsOnly = !any && tradeCoinPick.give + tradeCoinPick.take > 0;
+  var broke = tradeCoinPick.give > myCoins;
+  var note = coinsOnly ? "Add a card or a piece of gear. Coins alone can't be traded." : broke ? "You don't have that many coins." : any && gap ? (top ? "Trades with a legendary or mythic need nearly the same value on both sides." : "Bigger trades need nearly the same value on both sides.") : any ? "" : tradeWith ? "Click what you give and what you want." : "";
   var foot = el("div", "rpg-trade-foot");
-  foot.append(el("span", "rpg-trade-note", any && gap ?  (top ? "Trades with a legendary or mythic need nearly the same value on both sides." : "Bigger trades need nearly the same value on both sides.") : any ? "" : tradeWith ? "Click what you give and what you want." : ""), button("Send offer", "tradeSend", { className: "primary", disabled: !tradeWith || !any || !!gap }));
+  foot.append(el("span", "rpg-trade-note", note), button("Send offer", "tradeSend", { className: "primary", disabled: !tradeWith || !any || !!gap || broke }));
   nodes.push(foot);
   morphChildren(document.getElementById("rpgTrade"), nodes);
 }
@@ -3258,8 +3275,10 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     else tradePick[side][key] = next;
     render();
   } else if (act == "tradeSend") {
-    socket.emit("tradeOffer", { to: tradeWith, give: tradeSide(hero.tradeable || [], tradePick.give), take: tradeSide(tradeTheirs ? tradeTheirs.list : [], tradePick.take) });
+    socket.emit("tradeOffer", { to: tradeWith, give: tradeSide(hero.tradeable || [], tradePick.give), take: tradeSide(tradeTheirs ? tradeTheirs.list : [], tradePick.take), giveCoins: tradeCoinPick.give, takeCoins: tradeCoinPick.take });
     tradePick = { give: {}, take: {} };
+    tradeCoinPick = { give: 0, take: 0 };
+    document.querySelectorAll(".rpg-trade-coins input").forEach((input) => (input.value = ""));
   } else if (act == "tradeAccept") socket.emit("tradeAnswer", { id: id, accept: true });
   else if (act == "tradeDecline") socket.emit("tradeAnswer", { id: id, accept: false });
   else if (act == "tradeCancel") socket.emit("tradeCancel", { id: id });
@@ -3516,3 +3535,12 @@ document.getElementById("rpgLeave").addEventListener("click", () => socket.emit(
 })();
 
 document.addEventListener("DOMContentLoaded", () => setupChat());
+
+// The coins of a new trade offer typed in: counted on their side right away
+document.addEventListener("input", (event) => {
+  var input = event.target.closest(".rpg-trade-coins input");
+  if (!input) return;
+  var n = Math.floor(Number(input.value));
+  tradeCoinPick[input.dataset.side] = Number.isFinite(n) && n > 0 ? n : 0;
+  renderTrade();
+});

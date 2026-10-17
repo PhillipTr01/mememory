@@ -1614,6 +1614,20 @@ test("rpg: trades over the sockets - an offer, a refused unfair one, accepted: t
   tia.emit("dust", { cls: "warrior", id: "impervious", n: 2 });
   const dusted = await waitFor(tia, "rpgHero", (view) => view.dust == 2 * rpg.DUST.epic.get);
   assert.ok(!dusted.dustable.some((one) => one.id == "impervious"));
+  // Coins: never alone - with a card they count for its side
+  const alone = h.once(tia, "rpgError");
+  tia.emit("tradeOffer", { to: "rpg_tom", give: [], take: [], takeCoins: 5000 });
+  assert.match(await alone, /Coins alone/);
+  const tiaCoins = testMode.balance("rpg_tia");
+  const tomCoins = testMode.balance("rpg_tom");
+  tia.emit("tradeOffer", { to: "rpg_tom", give: [{ k: "card", cls: "warrior", id: "impervious", n: 1 }], take: [], takeCoins: 8000 });
+  const sale = await waitFor(tom, "rpgTrades", (list) => list.length == 1);
+  assert.strictEqual(sale[0].takeCoins, 8000);
+  tom.emit("tradeAnswer", { id: sale[0].id, accept: true });
+  await waitFor(tom, "rpgTrades", (list) => list.length == 0);
+  assert.strictEqual(testMode.balance("rpg_tia"), tiaCoins + 8000);
+  assert.strictEqual(testMode.balance("rpg_tom"), tomCoins - 8000);
+  assert.strictEqual(rpg.charOf(b, "warrior").collection.impervious, 2);
   tia.disconnect();
   tom.disconnect();
 });
