@@ -438,7 +438,7 @@ function payout(run, hero, result) {
 }
 
 // The same floor again on the same day: less of the pot each time (per character - midnight starts over)
-const REPEAT_PAY = [1, 0.8, 0.6, 0.45];
+const REPEAT_PAY = [1, 0.9, 0.8, 0.7, 0.6, 0.45];
 function runsToday(hero, floor, cls = hero.cls, now = Date.now()) {
   const runs = charOf(hero, cls).floorRuns;
   return runs && runs.day == dayOf(now) ? runs.floors[floor] || 0 : 0;
