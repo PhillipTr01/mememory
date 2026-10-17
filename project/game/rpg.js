@@ -1037,6 +1037,9 @@ function heroView(hero) {
       return all;
     }, {}),
     packs: hero.packs || {},
+    dust: hero.dust || 0,
+    dustable: dustList(hero),
+    tradeable: tradeList(hero),
     potionPrice: potionPrice(maxFloor(hero)),
     deckMax: deckLimits(hero).max,
     deckMin: deckLimits(hero).min,
@@ -1062,6 +1065,179 @@ function heroView(hero) {
     revivePrice: revivePrice(hero),
     revives: revivesToday(hero),
   };
+}
+
+/* ---------- Dust and trades: spare cards turned to dust, dust turned to cards - and swaps between players ---------- */
+
+// What a card gives as dust, what it costs to make (basic: neither - mythic: not made)
+const DUST = {
+  common: { get: 5, craft: 40 },
+  rare: { get: 20, craft: 100 },
+  epic: { get: 100, craft: 400 },
+  legendary: { get: 400, craft: 1600 },
+  mythic: { get: 1600, craft: null },
+};
+
+// The most copies of a card in any deck slot of a character (those never leave the collection)
+function inDecks(char, id) {
+  return Math.max(0, ...[char.deck || [], ...(char.decks || [])].map((deck) => deck.filter((one) => baseCard(one) == id).length));
+}
+
+// The copies every character gets for free (its starter cards): never dust, never traded
+const starterCopies = {};
+function freeCopies(cls, id) {
+  if (!starterCopies[cls]) starterCopies[cls] = { ...charOf(newHero(cls)).collection };
+  return starterCopies[cls][id] || 0;
+}
+
+// Copies a character can't use: its class not unlocked, or a card not of its class
+const unusable = (hero, cls, id) => !hero.unlocked.includes(cls) || !poolOf(cls).includes(id);
+
+// The copies of a card that can be dusted: past what a deck may hold - all of them when unusable
+function dustable(hero, cls, id) {
+  const char = hero.chars[cls];
+  const card = CARDS[id];
+  if (!char || !card || !DUST[card.rarity]) return 0;
+  const owned = (char.collection || {})[id] || 0;
+  if (unusable(hero, cls, id)) return Math.max(0, owned - freeCopies(cls, id));
+  return Math.max(0, owned - Math.max(CARD_RARITIES[card.rarity].copies, inDecks(char, id), freeCopies(cls, id)));
+}
+
+// Every card that can be dusted -> [{cls, id, n, dust}]
+function dustList(hero) {
+  const list = [];
+  for (const [cls, char] of Object.entries(hero.chars || {}))
+    for (const id of Object.keys(char.collection || {})) {
+      const n = dustable(hero, cls, id);
+      if (n > 0) list.push({ cls, id, n, dust: n * DUST[CARDS[id].rarity].get });
+    }
+  return list;
+}
+
+// Copies of a card dusted (n: how many, at most the dustable ones) -> {error} or {dust}
+function dustCard(hero, cls, id, n = 1) {
+  const free = dustable(hero, cls, id);
+  if (!Number.isInteger(n) || n < 1) return { error: "Pick how many." };
+  if (n > free) return { error: free ? `Only ${free} can be dusted.` : "You need every copy of this card." };
+  const char = hero.chars[cls];
+  char.collection[id] -= n;
+  if (!char.collection[id]) delete char.collection[id];
+  const dust = n * DUST[CARDS[id].rarity].get;
+  hero.dust = (hero.dust || 0) + dust;
+  return { dust };
+}
+
+// Every spare card at once -> the dust gained
+function dustAll(hero) {
+  let dust = 0;
+  for (const one of dustList(hero)) dust += dustCard(hero, one.cls, one.id, one.n).dust;
+  return dust;
+}
+
+// A card of the class made of dust (not past what a deck may hold) -> an error or null
+function craftCard(hero, id) {
+  if (!hero.cls) return "Pick a class first.";
+  const card = CARDS[id];
+  if (!card || !poolOf(hero.cls).includes(id)) return "Not a card of your class.";
+  const cost = (DUST[card.rarity] || {}).craft;
+  if (!cost) return `${CARD_RARITIES[card.rarity].name} cards can't be made.`;
+  const char = charOf(hero);
+  if ((char.collection[id] || 0) >= CARD_RARITIES[card.rarity].copies) return "You already have every copy a deck can hold.";
+  if ((hero.dust || 0) < cost) return `You need ${cost} dust.`;
+  hero.dust -= cost;
+  collect(char, id);
+  return null;
+}
+
+// The copies of a card a player can trade away: all but the ones in a deck
+function tradeable(hero, cls, id) {
+  const char = hero.chars[cls];
+  const card = CARDS[id];
+  if (!char || !card || card.rarity == "basic") return 0;
+  return Math.max(0, ((char.collection || {})[id] || 0) - Math.max(inDecks(char, id), freeCopies(cls, id)));
+}
+
+// What a player can trade: spare cards of every character, the gear in the bag -> [{k, cls, id, n, value} | {k, item, value}]
+function tradeList(hero) {
+  const list = [];
+  for (const [cls, char] of Object.entries(hero.chars || {}))
+    for (const id of Object.keys(char.collection || {})) {
+      const n = tradeable(hero, cls, id);
+      if (n > 0) list.push({ k: "card", cls, id, n, value: CARD_RARITIES[CARDS[id].rarity].value });
+    }
+  for (const item of hero.bag || []) list.push({ k: "gear", item, value: item.value || 0 });
+  return list;
+}
+
+// A side of a trade checked against what the player has -> {error} or {value}
+// (side: [{k: "card", cls, id, n} | {k: "gear", id}])
+function tradeSide(hero, side) {
+  if (!Array.isArray(side) || side.length > 20) return { error: "Too much at once." };
+  let value = 0;
+  const cards = {};
+  const gear = new Set();
+  for (const one of side) {
+    if (one && one.k == "card") {
+      const n = Number(one.n) || 1;
+      const key = one.cls + ":" + one.id;
+      cards[key] = (cards[key] || 0) + n;
+      if (!Number.isInteger(n) || n < 1 || cards[key] > tradeable(hero, String(one.cls), String(one.id))) return { error: "A card isn't there to trade any more." };
+      value += n * CARD_RARITIES[CARDS[one.id].rarity].value;
+    } else if (one && one.k == "gear") {
+      const item = (hero.bag || []).find((piece) => piece.id === one.id);
+      if (!item || gear.has(one.id)) return { error: "A piece of gear isn't there to trade any more." };
+      gear.add(one.id);
+      value += item.value || 0;
+    } else return { error: "Not something to trade." };
+  }
+  return { value };
+}
+
+// Is a trade fair enough: big ones nearly even (config: what is small, how far apart they may be) -> an error or null
+function tradeFair(give, take) {
+  const high = Math.max(give, take);
+  const low = Math.min(give, take);
+  if (high <= config.RPG_TRADE_FREE) return null;
+  if (low < high * (1 - config.RPG_TRADE_DEVIATION / 100)) return `Both sides need nearly the same value. The smaller one needs at least ${Math.ceil(high * (1 - config.RPG_TRADE_DEVIATION / 100))}.`;
+  return null;
+}
+
+// A trade done: both sides checked again, then swapped -> an error or null
+// (a card: into the receiver's character of its class - a neutral one: the character played; gear: the bag)
+function trade(fromHero, toHero, give, take) {
+  if (!fromHero.cls || !toHero.cls) return "Both players need a character.";
+  const a = tradeSide(fromHero, give);
+  if (a.error) return a.error;
+  const b = tradeSide(toHero, take);
+  if (b.error) return b.error;
+  if (!give.length && !take.length) return "Nothing to trade.";
+  const unfair = tradeFair(a.value, b.value);
+  if (unfair) return unfair;
+  const gearIn = (side) => side.filter((one) => one.k == "gear").length;
+  if (toHero.bag.length - gearIn(take) + gearIn(give) > bagSize(toHero)) return "Their bag is full.";
+  if (fromHero.bag.length - gearIn(give) + gearIn(take) > bagSize(fromHero)) return "Your bag is full.";
+  const move = (from, to, side) => {
+    const items = [];
+    for (const one of side) {
+      if (one.k == "card") {
+        const n = Number(one.n) || 1;
+        const char = from.chars[one.cls];
+        char.collection[one.id] -= n;
+        if (!char.collection[one.id]) delete char.collection[one.id];
+        items.push({ card: one.id, n });
+      } else {
+        const index = from.bag.findIndex((piece) => piece.id === one.id);
+        items.push({ item: from.bag.splice(index, 1)[0] });
+      }
+    }
+    for (const one of items) {
+      if (one.item) to.bag.push(one.item);
+      else for (let i = 0; i < one.n; i++) collect(charOf(to, cardClass(one.card) || to.cls), one.card);
+    }
+  };
+  move(fromHero, toHero, give);
+  move(toHero, fromHero, take);
+  return null;
 }
 
 /* ---------- Gear ---------- */
@@ -3056,6 +3232,17 @@ function simulate(hero, floor, runs = 500, rng = Math.random) {
 }
 
 module.exports = {
+  DUST,
+  dustable,
+  dustList,
+  dustCard,
+  dustAll,
+  craftCard,
+  tradeable,
+  tradeList,
+  tradeSide,
+  tradeFair,
+  trade,
   FLOORS,
   ROOMS,
   rowsFor,

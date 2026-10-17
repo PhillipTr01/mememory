@@ -195,6 +195,28 @@ socket.on("rpgHero", (data) => {
   heroAt = Date.now();
   render();
 });
+// Trades: the offers made and received, the players to trade with, the one picked and what they have, what is picked
+var trades = [];
+var tradePlayers = [];
+var tradeWith = "";
+var tradeTheirs = null;
+var tradePick = { give: {}, take: {} };
+socket.on("rpgTrades", (list) => {
+  trades = list;
+  // (a trade done or gone: what the other player has may have changed)
+  if (tradeWith) socket.emit("tradeLook", { name: tradeWith });
+  render();
+});
+socket.on("rpgTradePlayers", (list) => {
+  tradePlayers = list;
+  render();
+});
+socket.on("rpgTradeLook", (data) => {
+  if (data.name != tradeWith) return;
+  tradeTheirs = data;
+  render();
+});
+socket.on("rpgToast", (message) => showToast(message, "success"));
 socket.on("rpgParties", (list) => {
   parties = list;
   render();
@@ -586,6 +608,7 @@ var VIEWS = [
   ["talents", "⭐ Talents"],
   ["gear", "🎒 Inventory"],
   ["deck", "🃏 Deck"],
+  ["trade", "🤝 Trade"],
   ["shop", "🛒 Shop"],
 ];
 
@@ -601,11 +624,16 @@ function viewBadge(id) {
     return hero.bag.length ? [String(hero.bag.length), ""] : null;
   }
   if (id == "deck") return [String(hero.deck.length), hero.deck.length < hero.deckMin || hero.deck.length > hero.deckMax ? "warn" : ""];
+  if (id == "trade") {
+    var waiting = trades.filter((offer) => offer.to == myName).length;
+    return waiting ? [String(waiting), "new"] : null;
+  }
   return null;
 }
 
 function setView(id) {
   view = id;
+  if (id == "trade") socket.emit("tradePlayers");
   remember(VIEW_KEY, id);
   render();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -781,7 +809,141 @@ function renderHero() {
   if (view == "gear" && picked) renderOwnedPacks();
 
   if (view == "play" && picked) renderReady();
+  if (view == "trade" && picked) renderTrade();
 }
+
+/* ---------- Trades ---------- */
+
+// A thing to trade as a key: a card of a character ("c:cls:id"), a piece of gear ("g:id")
+var tradeKey = (one) => (one.k == "card" ? "c:" + one.cls + ":" + one.id : "g:" + (one.item ? one.item.id : one.id));
+var tradeAsked = false;
+
+// The value of a side picked
+function pickValue(list, picks) {
+  return list.reduce((sum, one) => sum + (picks[tradeKey(one)] || 0) * one.value, 0);
+}
+
+// Is a trade fair: small ones always, bigger ones nearly even -> null or what is missing
+function tradeGap(give, take) {
+  var high = Math.max(give, take);
+  var low = Math.min(give, take);
+  if (high <= rules.tradeFree) return null;
+  var need = Math.ceil(high * (1 - rules.tradeDeviation / 100));
+  return low >= need ? null : need - low;
+}
+
+// A row of something to trade: a card (icon, name, rarity) or a piece of gear - a click picks one more
+function tradeRow(one, side, picks, act) {
+  var key = tradeKey(one);
+  var picked = picks[key] || 0;
+  var row = el(act ? "button" : "div", "rpg-trade-row" + (picked ? " picked" : ""));
+  if (act) {
+    row.type = "button";
+    row.dataset.act = act;
+    row.dataset.id = side + "|" + key;
+  }
+  if (one.k == "card") {
+    var card = cardOf(one.id);
+    var owner = card.cls && rules.classes[card.cls];
+    row.classList.add("rarity-" + card.rarity);
+    row.append(el("span", "rpg-trade-icon", card.icon), el("span", "rpg-trade-name", card.name + (owner ? " " + owner.icon : "")));
+    row.title = card.text;
+  } else if (one.gone) {
+    row.append(el("span", "rpg-trade-icon", "❔"), el("span", "rpg-trade-name mm-muted", "Gone"));
+  } else {
+    row.classList.add("rarity-" + one.item.rarity);
+    row.append(el("span", "rpg-trade-icon", one.item.icon), el("span", "rpg-trade-name", one.item.name));
+    row.title = bonusOf(one.item);
+  }
+  var count = act ? (one.n > 1 || picked ? picked + " / " + (one.n || 1) : "") : one.n > 1 ? "×" + one.n : "";
+  row.append(el("span", "rpg-trade-n", count), el("span", "rpg-trade-value", "🪙 " + formatCoins(one.value)));
+  return row;
+}
+
+function renderTrade() {
+  if (!tradeAsked) {
+    tradeAsked = true;
+    socket.emit("tradePlayers");
+  }
+  var nodes = [];
+  // The offers: received ones to take or turn down, made ones to take back
+  if (trades.length) {
+    var offers = el("div", "rpg-trade-offers");
+    offers.appendChild(el("div", "rpg-label", "Offers"));
+    trades.forEach((offer) => {
+      var mine = offer.from == myName;
+      var box = el("div", "rpg-trade-offer" + (mine ? " mine" : ""));
+      var head = el("div", "rpg-trade-offer-head");
+      head.append(createAvatar(mine ? offer.to : offer.from, "sm"), el("b", "", mine ? "Your offer to " + offer.to : offer.from + " offers you a trade"));
+      var sides = el("div", "rpg-trade-sides");
+      [
+        [mine ? "You give" : "You get", offer.give],
+        [mine ? "You get" : "You give", offer.take],
+      ].forEach(([label, side]) => {
+        var col = el("div", "rpg-trade-col");
+        col.appendChild(el("div", "rpg-trade-col-head", label + " · 🪙 " + formatCoins(side.reduce((sum, one) => sum + one.value, 0))));
+        if (!side.length) col.appendChild(el("div", "mm-muted small", "Nothing."));
+        side.forEach((one) => col.appendChild(tradeRow(one, "", {}, null)));
+        sides.appendChild(col);
+      });
+      var actions = el("div", "rpg-trade-actions");
+      if (mine) actions.appendChild(button("Take back", "tradeCancel", { id: offer.id, className: "small" }));
+      else actions.append(button("Accept", "tradeAccept", { id: offer.id, className: "small primary" }), button("Decline", "tradeDecline", { id: offer.id, className: "small" }));
+      box.append(head, sides, actions);
+      offers.appendChild(box);
+    });
+    nodes.push(offers);
+  }
+  // A new offer: the player, what you give, what you get
+  var who = el("div", "rpg-trade-who");
+  var select = el("select", "rpg-trade-select");
+  select.id = "rpgTradeWho";
+  select.appendChild(new Option(tradePlayers.length ? "Pick a player" : "Nobody to trade with yet", ""));
+  tradePlayers.forEach((p) => select.appendChild(new Option(p.name + " · " + ((rules.classes[p.cls] || {}).name || "") + " Lv " + p.level, p.name)));
+  select.value = tradeWith;
+  who.append(el("span", "rpg-label", "Trade with"), select);
+  nodes.push(who);
+  var mineList = hero.tradeable || [];
+  var theirList = tradeTheirs ? tradeTheirs.list : [];
+  var cols = el("div", "rpg-trade-sides");
+  [
+    ["You give", mineList, "give"],
+    ["You get", theirList, "take"],
+  ].forEach(([label, list, side]) => {
+    var col = el("div", "rpg-trade-col");
+    col.appendChild(el("div", "rpg-trade-col-head", label + " · 🪙 " + formatCoins(pickValue(list, tradePick[side]))));
+    if (side == "take" && !tradeWith) col.appendChild(el("div", "mm-muted small", "Pick a player first."));
+    else if (!list.length) col.appendChild(el("div", "mm-muted small", side == "give" ? "You have no spare cards or gear." : "They have nothing to trade."));
+    list.forEach((one) => col.appendChild(tradeRow(one, side, tradePick[side], "tradePick")));
+    cols.appendChild(col);
+  });
+  nodes.push(cols);
+  var give = pickValue(mineList, tradePick.give);
+  var take = pickValue(theirList, tradePick.take);
+  var gap = tradeGap(give, take);
+  var any = give + take > 0 || Object.keys(tradePick.give).length + Object.keys(tradePick.take).length > 0;
+  var note = !tradeWith ? "" : !any ? "Click what you want to give and what you want to get." : gap ? "Bigger trades need nearly the same value on both sides. The smaller side needs 🪙 " + formatCoins(gap) + " more." : "This trade is fair.";
+  var foot = el("div", "rpg-trade-foot");
+  foot.append(el("span", "rpg-trade-note" + (gap ? " bad" : ""), note), button("Send offer", "tradeSend", { className: "primary", disabled: !tradeWith || !any || !!gap }));
+  nodes.push(foot);
+  morphChildren(document.getElementById("rpgTrade"), nodes);
+}
+
+// What is picked, as the server takes it
+function tradeSide(list, picks) {
+  return list
+    .filter((one) => picks[tradeKey(one)])
+    .map((one) => (one.k == "card" ? { k: "card", cls: one.cls, id: one.id, n: picks[tradeKey(one)] } : { k: "gear", id: one.item.id }));
+}
+
+document.addEventListener("change", (event) => {
+  if (event.target.id != "rpgTradeWho") return;
+  tradeWith = event.target.value;
+  tradeTheirs = null;
+  tradePick = { give: tradePick.give, take: {} };
+  if (tradeWith) socket.emit("tradeLook", { name: tradeWith });
+  render();
+});
 
 // The practice run: a word for every step - what to do now
 function renderCoach(run, me) {
@@ -1087,6 +1249,14 @@ function renderCollectionBar() {
   var most = cards.reduce((sum, id) => sum + rules.cardRarities[cardOf(id).rarity].copies, 0);
   var progress = el("div", "rpg-shop-bar");
   progress.append(el("span", "", "📚 Collection"), bar(found, cards.length, "xp", " cards"), el("span", "mm-muted small", copies + " / " + most + " copies"));
+  // (dust: from spare cards - it makes the cards still missing)
+  var dust = el("div", "rpg-dust-bar");
+  var amount = el("span", "rpg-dust-amount", "✨ " + formatCoins(hero.dust || 0) + " dust");
+  amount.title = "Turn spare cards into dust and make the cards you miss with it.";
+  dust.appendChild(amount);
+  var spare = (hero.dustable || []).reduce((sum, one) => sum + one.n, 0);
+  if (spare) dust.appendChild(button("Dust " + spare + " spare card" + (spare == 1 ? "" : "s"), "dustAll", { className: "small" }));
+  progress.appendChild(dust);
   morphChildren(document.getElementById("rpgShopProgress"), [progress]);
 
 }
@@ -1424,6 +1594,16 @@ var RARITY_ORDER = ["basic", "common", "rare", "epic", "legendary", "mythic"];
 var byRarity = (a, b) => RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.indexOf(cardOf(b).rarity) || cardOf(a).cost - cardOf(b).cost || cardOf(a).name.localeCompare(cardOf(b).name);
 var byCost = (a, b) => cardOf(a).cost - cardOf(b).cost || RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.indexOf(cardOf(b).rarity) || cardOf(a).name.localeCompare(cardOf(b).name);
 
+// A card with spare copies (past what a deck holds, or of a class not played): a button to dust one
+function dustButton(node, id) {
+  var spare = (hero.dustable || []).find((one) => one.id == id);
+  if (!spare) return;
+  var get = rules.dust[cardOf(id).rarity].get;
+  var b = button("Dust +" + get, "dustOne", { id: spare.cls + "|" + id, className: "rpg-card-act" });
+  b.title = "Turn one spare copy into " + get + " dust.";
+  node.appendChild(b);
+}
+
 function renderBuilder() {
   renderCollectionBar();
   var cls = rules.classes[hero.cls];
@@ -1504,6 +1684,7 @@ function renderBuilder() {
             var other = cardEl(id, { base: true, className: (have ? "" : "unowned") + " spent" });
             other.appendChild(el("span", "rpg-cardx-count", have ? "×" + have : "🔒"));
             other.title = (have ? "You own " + have + ". " : "Not owned yet. ") + "This card belongs to another class.";
+            dustButton(other, id);
             return other;
           }
           var all = hero.collection[id] || 0;
@@ -1518,6 +1699,13 @@ function renderBuilder() {
           node.appendChild(pips);
           node.appendChild(el("span", "rpg-cardx-count", owned ? (counts[id] || 0) + " / " + owned + (all > owned ? " · +" + (all - owned) : "") : "🔒"));
           node.title = !owned ? "Not owned yet." : spare <= 0 ? "All your copies are in the deck." : full ? "Your deck is full." : "Click or drag it into your deck.";
+          // (a copy missing: made of dust - spare copies: to dust)
+          var craft = (rules.dust[cardOf(id).rarity] || {}).craft;
+          if (craft && all < rules.cardRarities[cardOf(id).rarity].copies) {
+            var make = button("✨ " + craft, "craft", { id: id, className: "rpg-card-act", disabled: (hero.dust || 0) < craft });
+            make.title = "Make a copy for " + craft + " dust.";
+            node.appendChild(make);
+          } else dustButton(node, id);
           return node;
         })
       : [el("div", "rpg-empty mm-muted", "No card fits the filters.")],
@@ -2801,6 +2989,30 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     document.getElementById("rpgPackModal").remove();
   } else if (act == "pile") showPile(id);
   else if (act == "view") setView(id);
+  else if (act == "tradePick") {
+    var [side, key] = id.split("|");
+    var list = side == "give" ? hero.tradeable || [] : tradeTheirs ? tradeTheirs.list : [];
+    var one = list.find((entry) => tradeKey(entry) == key);
+    if (!one) return;
+    var next = (tradePick[side][key] || 0) + 1;
+    if (next > (one.k == "card" ? one.n : 1)) delete tradePick[side][key];
+    else tradePick[side][key] = next;
+    render();
+  } else if (act == "tradeSend") {
+    socket.emit("tradeOffer", { to: tradeWith, give: tradeSide(hero.tradeable || [], tradePick.give), take: tradeSide(tradeTheirs ? tradeTheirs.list : [], tradePick.take) });
+    tradePick = { give: {}, take: {} };
+  } else if (act == "tradeAccept") socket.emit("tradeAnswer", { id: id, accept: true });
+  else if (act == "tradeDecline") socket.emit("tradeAnswer", { id: id, accept: false });
+  else if (act == "tradeCancel") socket.emit("tradeCancel", { id: id });
+  else if (act == "dustAll") {
+    var spare = hero.dustable || [];
+    var total = spare.reduce((sum, one) => sum + one.dust, 0);
+    var count = spare.reduce((sum, one) => sum + one.n, 0);
+    confirmDialog({ title: "Dust " + count + " spare card" + (count == 1 ? "" : "s") + "?", text: "You get " + total + " dust. Copies a deck needs and cards you use stay.", confirmLabel: "Dust them" }).then((sure) => sure && socket.emit("dustAll"));
+  } else if (act == "dustOne") {
+    var [cls, cardId] = id.split("|");
+    socket.emit("dust", { cls: cls, id: cardId, n: 1 });
+  } else if (act == "craft") socket.emit("craft", { id: id });
   else if (act == "rewardView") {
     rewardView = id;
     render();

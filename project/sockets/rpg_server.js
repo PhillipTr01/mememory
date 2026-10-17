@@ -134,6 +134,9 @@ module.exports = function (io, options = {}) {
     return {
       floors: rpg.FLOORS,
       rooms: rpg.ROOMS,
+      dust: rpg.DUST,
+      tradeFree: config.RPG_TRADE_FREE,
+      tradeDeviation: config.RPG_TRADE_DEVIATION,
       entries: Array.from({ length: rpg.FLOORS }, (_, i) => rpg.entryCost(i + 1)),
       partyMax: rpg.PARTY_MAX,
       bagMax: rpg.BAG_MAX,
@@ -386,6 +389,50 @@ module.exports = function (io, options = {}) {
       heroes.delete(name);
     });
 
+  /* ---------- Trades: an offer from one player to another - checked again when it is taken ---------- */
+
+  const trades = new Map(); // id -> {id, from, to, give, take, at}
+  let tradeCount = 0;
+  const TRADE_TIME = 30 * 60000; // an offer not answered: gone after this long
+  const TRADES_OPEN = 5; // offers a player may have out at once
+
+  // A player in a run right now (trades wait)
+  const running = (name) => {
+    const party = parties.get(partyOf.get(name));
+    return party != null && party.run != null && !party.result;
+  };
+
+  // A side of an offer as the client sends it -> clean entries (or null)
+  function cleanSide(side) {
+    if (!Array.isArray(side) || side.length > 20) return null;
+    const clean = [];
+    for (const one of side) {
+      if (one && one.k === "card" && rpg.CLASS_IDS.includes(one.cls) && rpg.CARDS[one.id] && Number.isInteger(one.n) && one.n > 0) clean.push({ k: "card", cls: one.cls, id: one.id, n: one.n });
+      else if (one && one.k === "gear" && typeof one.id === "string") clean.push({ k: "gear", id: one.id });
+      else return null;
+    }
+    return clean;
+  }
+
+  // A side for the page: what it is, what it is worth (a piece no longer there: gone)
+  function sideView(hero, side) {
+    return side.map((one) => {
+      if (one.k === "card") return { ...one, value: rpg.CARD_RARITIES[rpg.CARDS[one.id].rarity].value * one.n };
+      const item = hero.bag.find((piece) => piece.id === one.id);
+      return item ? { k: "gear", id: one.id, item, value: item.value || 0 } : { k: "gear", id: one.id, gone: true, value: 0 };
+    });
+  }
+
+  // The offers of a player (made and received) to its pages
+  function sendTrades(name) {
+    const now = Date.now();
+    for (const [id, offer] of trades) if (now - offer.at > TRADE_TIME) trades.delete(id);
+    const list = [...trades.values()]
+      .filter((offer) => offer.from === name || offer.to === name)
+      .map((offer) => ({ id: offer.id, from: offer.from, to: offer.to, give: sideView(heroOf(offer.from), offer.give), take: sideView(heroOf(offer.to), offer.take), left: Math.max(0, TRADE_TIME - (now - offer.at)) }));
+    socketsOf(name).forEach((socket) => socket.emit("rpgTrades", list));
+  }
+
   room.on("connection", (socket) => {
     version.announce(socket);
     const username = socket.data.username;
@@ -393,6 +440,7 @@ module.exports = function (io, options = {}) {
     socket.emit("joined", { username: username });
     socket.emit("rpgRules", rules());
     socket.emit("rpgHero", rpg.heroView(heroOf(username)));
+    sendTrades(username);
     casinoChat.join(socket);
     const mine = parties.get(partyOf.get(username));
     if (mine) {
@@ -657,6 +705,95 @@ module.exports = function (io, options = {}) {
       const [item] = hero.bag.splice(index, 1);
       await coins.add(username, item.value, { reason: "rpg sell", note: item.name });
       sendHero(username);
+    });
+
+    /* ---------- Dust: spare cards to dust, dust to cards ---------- */
+
+    on("dust", (data) => {
+      if (inRun()) return error("Not during a run.");
+      if (!rpg.CLASS_IDS.includes(data.cls) || !rpg.CARDS[data.id]) return;
+      const done = rpg.dustCard(heroOf(username), data.cls, data.id, Number.isInteger(data.n) ? data.n : 1);
+      if (done.error) return error(done.error);
+      sendHero(username);
+    });
+
+    on("dustAll", () => {
+      if (inRun()) return error("Not during a run.");
+      if (!rpg.dustAll(heroOf(username))) return error("No spare cards to dust.");
+      sendHero(username);
+    });
+
+    on("craft", (data) => {
+      if (inRun()) return error("Not during a run.");
+      const problem = rpg.craftCard(heroOf(username), String(data.id));
+      if (problem) return error(problem);
+      sendHero(username);
+    });
+
+    /* ---------- Trades ---------- */
+
+    // The players to trade with: everyone with a character
+    on("tradePlayers", () => {
+      const list = [...heroes.entries()].filter(([name, hero]) => name !== username && hero.cls && ours(name)).map(([name, hero]) => ({ name, cls: hero.cls, level: rpg.charOf(hero).level }));
+      socket.emit("rpgTradePlayers", list);
+    });
+
+    // What another player has to trade
+    on("tradeLook", (data) => {
+      const name = String(data.name || "");
+      if (name === username || !heroes.has(name) || !heroOf(name).cls) return error("No such player.");
+      socket.emit("rpgTradeLook", { name, cls: heroOf(name).cls, list: rpg.tradeList(heroOf(name)) });
+    });
+
+    on("tradeOffer", (data) => {
+      const to = String(data.to || "");
+      const give = cleanSide(data.give);
+      const take = cleanSide(data.take);
+      if (!give || !take) return;
+      if (to === username || !heroes.has(to) || !ours(to)) return error("No such player.");
+      if (!give.length && !take.length) return error("Pick something to trade.");
+      if ([...trades.values()].filter((offer) => offer.from === username).length >= TRADES_OPEN) return error(`At most ${TRADES_OPEN} offers at once.`);
+      const mine = rpg.tradeSide(heroOf(username), give);
+      if (mine.error) return error(mine.error);
+      const theirs = rpg.tradeSide(heroOf(to), take);
+      if (theirs.error) return error(theirs.error);
+      const unfair = rpg.tradeFair(mine.value, theirs.value);
+      if (unfair) return error(unfair);
+      const id = "t" + ++tradeCount;
+      trades.set(id, { id, from: username, to, give, take, at: Date.now() });
+      sendTrades(username);
+      sendTrades(to);
+    });
+
+    on("tradeAnswer", (data) => {
+      const offer = trades.get(String(data.id));
+      if (!offer || offer.to !== username) return;
+      if (!data.accept) {
+        trades.delete(offer.id);
+        sendTrades(offer.from);
+        sendTrades(offer.to);
+        return;
+      }
+      if (running(offer.from) || running(offer.to)) return error("Not while one of you is in a run.");
+      const problem = rpg.trade(heroOf(offer.from), heroOf(offer.to), offer.give, offer.take);
+      trades.delete(offer.id);
+      if (problem) error(problem);
+      else {
+        persist.changed("rpg");
+        sendHero(offer.from);
+        sendHero(offer.to);
+        socketsOf(offer.from).forEach((one) => one.emit("rpgToast", `${offer.to} took your trade.`));
+      }
+      sendTrades(offer.from);
+      sendTrades(offer.to);
+    });
+
+    on("tradeCancel", (data) => {
+      const offer = trades.get(String(data.id));
+      if (!offer || offer.from !== username) return;
+      trades.delete(offer.id);
+      sendTrades(offer.from);
+      sendTrades(offer.to);
     });
 
     /* ---------- Parties ---------- */

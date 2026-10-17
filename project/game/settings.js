@@ -94,6 +94,8 @@ const FIELDS = [
   { group: "rpg", section: "Floors", key: "RPG_FLOOR_COOLDOWN", label: "Floor cooldown", hint: "After a run on a cleared floor, wait this long to run it again.", unit: "min", scale: 60000, step: 15, min: 0, max: 10080 },
   { group: "rpg", section: "Death", key: "RPG_DEATH_TIME", label: "Dead for", hint: "After the whole party falls.", unit: "min", scale: 60000, step: 30, min: 0, max: 10080 },
   { group: "rpg", section: "Death", key: "RPG_REVIVE_PERCENT", label: "Revive price", hint: "In percent of an entry of the deepest open floor; 1.5 times as much with each revive that day.", unit: "% of an entry", step: 10, min: 0, max: 10000 },
+  { group: "rpg", section: "Trades", key: "RPG_TRADE_FREE", label: "Free trades up to", hint: "A trade worth at most this much on its bigger side needs no balance.", unit: "coins", step: 500, min: 0, max: 100000000 },
+  { group: "rpg", section: "Trades", key: "RPG_TRADE_DEVIATION", label: "Trade deviation", hint: "In bigger trades the smaller side may be at most this much under the bigger one.", unit: "%", step: 1, min: 0, max: 100 },
   { group: "rpg", section: "Fights", key: "RPG_TURN_TIME", label: "Time per turn", hint: "In a party (alone: no clock). Then the monsters move.", unit: "s", scale: 1000, step: 5, min: 10, max: 600 },
 ];
 

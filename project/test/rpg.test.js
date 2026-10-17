@@ -623,7 +623,7 @@ function autoplay(socket, name, options) {
 
 before(async () => {
   server = await h.startServer();
-  for (const name of ["rpg_alice", "rpg_bob", "rpg_real"]) tokens[name] = h.addUser(name);
+  for (const name of ["rpg_alice", "rpg_bob", "rpg_real", "rpg_tia", "rpg_tom"]) tokens[name] = h.addUser(name);
   Object.assign(server.test.rpg.timing, { turn: 300, away: 300, close: 300 });
 });
 
@@ -1460,4 +1460,108 @@ test("rpg: might stacks - every play 30% more, the longest turns count, the card
   const hp = run.monsters[0].hp;
   rpg.play(run, "a", { uid: "t2", target: "m1" });
   assert.ok(hp - run.monsters[0].hp >= Math.floor(number(before) * 0.9 * 1.6), "the hit is 60% stronger");
+});
+
+test("rpg: dust - copies past what a deck holds and cards no character can use; never a copy a deck needs; dust makes cards", () => {
+  const hero = rpg.newHero("warrior");
+  const char = rpg.charOf(hero);
+  // (a common of the class: 2 fit a deck - 5 owned, 3 to dust)
+  char.collection.ironwave = 5;
+  // (a mage's legendary from a pack: the mage isn't unlocked - all of it)
+  rpg.charOf(hero, "mage").collection.pyroblast = 1;
+  const list = rpg.dustList(hero);
+  assert.deepStrictEqual(list.find((one) => one.id == "ironwave"), { cls: "warrior", id: "ironwave", n: 3, dust: 3 * rpg.DUST.common.get });
+  assert.strictEqual(list.find((one) => one.id == "pyroblast").n, 1);
+  // (the starter cards every character gets for free - also the mage's, made by the pack: never dust)
+  assert.deepStrictEqual(list.map((one) => one.id).sort(), ["ironwave", "pyroblast"]);
+  assert.match(rpg.dustCard(hero, "warrior", "ironwave", 4).error, /Only 3/);
+  assert.strictEqual(rpg.dustCard(hero, "warrior", "ironwave", 3).dust, 15);
+  assert.strictEqual(char.collection.ironwave, 2);
+  assert.match(rpg.dustCard(hero, "warrior", "ironwave", 1).error, /every copy/);
+  assert.strictEqual(rpg.dustAll(hero), rpg.DUST.legendary.get);
+  assert.strictEqual(hero.dust, 15 + rpg.DUST.legendary.get);
+  assert.ok(!rpg.charOf(hero, "mage").collection.pyroblast);
+  // Made of dust: a card of the class, not past what a deck holds, not a mythic one
+  assert.match(rpg.craftCard(hero, "pyroblast"), /Not a card of your class/);
+  assert.match(rpg.craftCard(hero, "ironwave"), /already have every copy/);
+  hero.dust = 0;
+  assert.match(rpg.craftCard(hero, "impervious"), /You need 400 dust/);
+  hero.dust = 400;
+  assert.strictEqual(rpg.craftCard(hero, "impervious"), null);
+  assert.strictEqual(char.collection.impervious, 1);
+  assert.strictEqual(hero.dust, 0);
+});
+
+test("rpg: trades - spare cards and the bag's gear; big trades nearly even; a card goes to the character of its class", () => {
+  const a = rpg.newHero("warrior");
+  const b = rpg.newHero("paladin");
+  rpg.charOf(a).collection.ironwave = 3;
+  rpg.charOf(a).deck.push("ironwave");
+  rpg.charOf(a, "mage").collection.pyroblast = 1;
+  // (what a can trade: the copies of bash outside the deck, the mage's card - never a basic card)
+  const list = rpg.tradeList(a);
+  assert.strictEqual(list.find((one) => one.id == "ironwave").n, 2);
+  assert.ok(list.find((one) => one.id == "pyroblast"));
+  assert.deepStrictEqual(list.map((one) => one.id).sort(), ["ironwave", "pyroblast"]);
+  // Small trades: anything goes - a common for nothing
+  assert.strictEqual(rpg.tradeFair(500, 0), null);
+  // Big ones: the smaller side at most 25% under
+  assert.match(rpg.tradeFair(50000, 10000), /nearly the same value/);
+  assert.strictEqual(rpg.tradeFair(50000, 40000), null);
+  // A legendary for a few commons: refused
+  const commons = [{ k: "card", cls: "warrior", id: "ironwave", n: 2 }];
+  assert.match(rpg.trade(b, a, [], [{ k: "card", cls: "mage", id: "pyroblast", n: 1 }]), /nearly the same value/);
+  // An epic piece of gear of about the same value: done
+  const gear = { ...rpg.makeGear(30, () => 0.99), id: "gx" };
+  gear.value = 45000;
+  b.bag.push(gear);
+  assert.strictEqual(rpg.trade(b, a, [{ k: "gear", id: "gx" }], [{ k: "card", cls: "mage", id: "pyroblast", n: 1 }]), null);
+  assert.ok(a.bag.some((item) => item.id == "gx"));
+  // (the mage's card: to b's mage - b plays a paladin)
+  assert.strictEqual(rpg.charOf(b, "mage").collection.pyroblast, 1);
+  assert.ok(!rpg.charOf(a, "mage").collection.pyroblast);
+  // Gone already: refused
+  assert.match(rpg.trade(a, b, [{ k: "card", cls: "mage", id: "pyroblast", n: 1 }], []), /isn't there/);
+  // Commons as a gift: fine
+  assert.strictEqual(rpg.trade(a, b, commons, []), null);
+  assert.strictEqual(rpg.charOf(b, "warrior").collection.ironwave, 2);
+  assert.strictEqual(rpg.charOf(a).collection.ironwave, 1);
+});
+
+test("rpg: trades over the sockets - an offer, a refused unfair one, accepted: the cards swap; dust over the sockets", async () => {
+  testMode.start("rpg_tia", 1000000);
+  testMode.start("rpg_tom", 1000000);
+  const tia = client("rpg_tia");
+  const tom = client("rpg_tom");
+  await h.once(tia, "rpgHero");
+  await h.once(tom, "rpgHero");
+  tia.emit("unlock", { id: "warrior" });
+  tom.emit("unlock", { id: "mage" });
+  await waitFor(tia, "rpgHero", (view) => view.cls == "warrior");
+  await waitFor(tom, "rpgHero", (view) => view.cls == "mage");
+  const a = server.test.rpg.heroOf("rpg_tia");
+  const b = server.test.rpg.heroOf("rpg_tom");
+  rpg.charOf(a, "mage").collection.pyroblast = 1;
+  rpg.charOf(b, "warrior").collection.impervious = 5;
+  // Unfair: a legendary for an epic
+  const unfair = h.once(tia, "rpgError");
+  tia.emit("tradeOffer", { to: "rpg_tom", give: [{ k: "card", cls: "mage", id: "pyroblast", n: 1 }], take: [{ k: "card", cls: "warrior", id: "impervious", n: 1 }] });
+  assert.match(await unfair, /nearly the same value/);
+  // Fair: the legendary for four epics
+  tia.emit("tradeOffer", { to: "rpg_tom", give: [{ k: "card", cls: "mage", id: "pyroblast", n: 1 }], take: [{ k: "card", cls: "warrior", id: "impervious", n: 4 }] });
+  const offer = await waitFor(tom, "rpgTrades", (list) => list.length == 1);
+  assert.strictEqual(offer[0].from, "rpg_tia");
+  // (only the one it is for takes it)
+  tia.emit("tradeAnswer", { id: offer[0].id, accept: true });
+  tom.emit("tradeAnswer", { id: offer[0].id, accept: true });
+  await waitFor(tom, "rpgTrades", (list) => list.length == 0);
+  assert.strictEqual(rpg.charOf(b, "mage").collection.pyroblast, 1);
+  assert.strictEqual(rpg.charOf(a, "warrior").collection.impervious, 4);
+  assert.strictEqual(rpg.charOf(b, "warrior").collection.impervious, 1);
+  // Dust: the epics past what a deck holds
+  tia.emit("dust", { cls: "warrior", id: "impervious", n: 2 });
+  const dusted = await waitFor(tia, "rpgHero", (view) => view.dust == 2 * rpg.DUST.epic.get);
+  assert.ok(!dusted.dustable.some((one) => one.id == "impervious"));
+  tia.disconnect();
+  tom.disconnect();
 });
