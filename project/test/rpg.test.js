@@ -1752,7 +1752,7 @@ test("rpg: a cheap legendary piece still needs a fair trade, a full bag takes no
   a.bag.push({ id: "gC", slot: "charm", rarity: "common", value: 1000 });
   assert.match(rpg.trade(a, b, [{ k: "gear", id: "gC" }], []), /bag is full/);
 });
-test("rpg: free drawing cards never loop - a card never draws itself, a card's draw reshuffles once a turn", () => {
+test("rpg: free drawing cards never loop - a card never draws itself, only a new turn reshuffles the discard pile", () => {
   // Quick Slash alone with an empty deck: played once, it doesn't come back
   let run = duel("rogue", "defend", ["quickslash"]);
   let me = run.heroes[0];
@@ -1771,5 +1771,8 @@ test("rpg: free drawing cards never loop - a card never draws itself, a card's d
     assert.strictEqual(rpg.play(run, "a", { uid: card.uid, target: "m1" }), null);
     plays++;
   }
-  assert.ok(plays <= 3, String(plays));
+  assert.strictEqual(plays, 2);
+  // (both wait on the discard pile for the next turn)
+  assert.strictEqual(me.draw.length + me.hand.length, 0);
+  assert.strictEqual(me.discard.length, 2);
 });

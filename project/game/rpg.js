@@ -2472,12 +2472,11 @@ function afflict(one, kind, turns, dmg) {
 
 let cardCount = 0;
 
-// (byCard: a card's draw - it shuffles the discard pile back in once a turn at most, so free drawing cards never loop)
+// (byCard: a card's draw - it never shuffles the discard pile back in, only a new turn does: free drawing cards never loop)
 function drawCards(hero, count, rng, byCard = false) {
   for (let i = 0; i < count && hero.hand.length < HAND_MAX; i++) {
     if (!hero.draw.length) {
-      if (!hero.discard.length || (byCard && hero.reshuffled)) break;
-      if (byCard) hero.reshuffled = true;
+      if (!hero.discard.length || byCard) break;
       hero.draw = shuffle(hero.discard, rng);
       hero.discard = [];
     }
@@ -2497,7 +2496,6 @@ function startRound(run, rng) {
     hero.ended = false;
     hero.attacked = false;
     hero.skilled = false;
-    hero.reshuffled = false;
     // (the AURAS: their block, healing, mana - a turn less)
     for (const aura of hero.auras || []) {
       if (aura.kind == "guard") {
