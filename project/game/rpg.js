@@ -139,11 +139,11 @@ const DEEP_PAY = 2;
 // main: the stat its levels count 1.5x for; hp, atk: times the stats; def, luck, agi: added;
 // deck: the starter deck; cards: the class's cards (the rewards)
 const CLASSES = {
-  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.15 }, top: 1.3 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.2, atk: 1.6, def: 2, luck: 0, agi: 0, mainBonus: 1.29, hpPlus: 54, atkPlus: 25, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
-  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.55, block: 0.11 }, top: 6 }, about: "Armor class with taunts and party shields", hp: 1.35, atk: 1.3, def: 13, luck: 0, agi: 0, mainBonus: 1.2, hpPlus: 90, atkPlus: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe.", perks: { heal: 0.1, healHit: 0.05 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 1.7, hpPlus: 180, atkPlus: 4, signature: ["heal", "smite"], opener: "banish", cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.3, crit: 4 }, top: 4.5 }, about: "Instinct class with dodge, scouting and poison", hp: 1.3, atk: 1.42, def: 0, luck: 4, agi: 14, mainBonus: 2.5, hpPlus: 94, atkPlus: 20, signature: ["poisonblade", "backstab"], guard: "dodgeroll", cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 10 }, about: "Luck class with crits, fire and frost", hp: 1.15, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.45, hpPlus: 100, atkPlus: 17, signature: ["frost", "fireball"], guard: "icearmor", cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
+  warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.15 }, top: 2 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.2, atk: 1.68, def: 2, luck: 0, agi: 0, mainBonus: 1.29, hpPlus: 70, atkPlus: 28, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
+  paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor, and half of your block counts as armor for it. Your block cards block {block}% more.", perks: { thornsDef: 0.3, block: 0.11 }, top: 4.5 }, about: "Armor class with taunts and party shields", hp: 1.35, atk: 1.3, def: 11, luck: 0, agi: 0, mainBonus: 1.2, hpPlus: 90, atkPlus: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe.", perks: { heal: 0.1, healHit: 0.04 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 1.7, hpPlus: 180, atkPlus: 8, signature: ["heal", "smite"], opener: "banish", cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.3, crit: 4 }, top: 4.5 }, about: "Instinct class with dodge, scouting and poison", hp: 1.3, atk: 1.42, def: 0, luck: 4, agi: 14, mainBonus: 2.5, hpPlus: 94, atkPlus: 24, signature: ["poisonblade", "backstab"], guard: "dodgeroll", cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 9 }, about: "Luck class with crits, fire and frost", hp: 1.2, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.45, hpPlus: 120, atkPlus: 17, signature: ["frost", "fireball"], guard: "icearmor", cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -533,12 +533,12 @@ const TALENTS = {
     [{ id: "spellstorm", name: "Spellstorm", icon: "🌪️", text: "Hits on every foe deal 20% more.", perks: { aoe: 0.2 } }, { id: "clarity", name: "Clarity", icon: "💎", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
     [{ id: "fortune", name: "Fortune", icon: "🍀", text: "+10% critical hits.", perks: { crit: 10 } }, { id: "wellspring", name: "Wellspring", icon: "💧", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
     [{ id: "archmage", name: "Archmage", icon: "🧙", text: "20% more damage.", perks: { attack: 0.2 } }, { id: "ward", name: "Ward", icon: "🔰", text: "Start every turn with 10 block.", perks: { startBlock: 10 } }],
-    [{ id: "cataclysm", name: "Cataclysm", icon: "☄️", text: "Hits on every foe deal 30% more.", perks: { aoe: 0.3 } }, { id: "precision", name: "Precision", icon: "🎯", text: "+12% critical hits.", perks: { crit: 12 } }],
+    [{ id: "cataclysm", name: "Cataclysm", icon: "☄️", text: "Hits on every foe deal 20% more.", perks: { aoe: 0.2 } }, { id: "precision", name: "Precision", icon: "🎯", text: "+12% critical hits.", perks: { crit: 12 } }],
     [{ id: "insight", name: "Insight", icon: "📖", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "manashield", name: "Mana Shield", icon: "🔷", text: "Start every turn with 9 block.", perks: { startBlock: 9 } }],
-    [{ id: "inferno", name: "Inferno", icon: "🔥", text: "Hits on every foe deal 35% more.", perks: { aoe: 0.35 } }, { id: "spellweaver", name: "Spellweaver", icon: "🕸️", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
-    [{ id: "arcaneskin", name: "Arcane Skin", icon: "🧿", text: "+25% max HP.", perks: { maxHp: 0.25 } }, { id: "overload", name: "Overload", icon: "⚡", text: "Your first attack each turn deals 50% more.", perks: { firstStrike: 0.5 } }],
-    [{ id: "archon", name: "Archon", icon: "🌌", text: "35% more damage.", perks: { attack: 0.35 } }, { id: "timeweaver", name: "Timeweaver", icon: "⏳", text: "+2 mana on the first turn of a fight.", perks: { firstMana: 2 } }],
-    [{ id: "armageddon", name: "Armageddon", icon: "🌋", text: "Hits on every foe deal 65% more.", perks: { aoe: 0.65 } }, { id: "grandmagus", name: "Grand Magus", icon: "🧙", text: "+20% critical hits, 10% more damage.", perks: { crit: 20, attack: 0.1 } }],
+    [{ id: "inferno", name: "Inferno", icon: "🔥", text: "Hits on every foe deal 25% more.", perks: { aoe: 0.25 } }, { id: "spellweaver", name: "Spellweaver", icon: "🕸️", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
+    [{ id: "arcaneskin", name: "Arcane Skin", icon: "🧿", text: "+35% max HP.", perks: { maxHp: 0.35 } }, { id: "overload", name: "Overload", icon: "⚡", text: "Your first attack each turn deals 70% more.", perks: { firstStrike: 0.7 } }],
+    [{ id: "archon", name: "Archon", icon: "🌌", text: "60% more damage.", perks: { attack: 0.6 } }, { id: "timeweaver", name: "Timeweaver", icon: "⏳", text: "+2 mana on the first turn of a fight, 20% more damage.", perks: { firstMana: 2, attack: 0.2 } }],
+    [{ id: "armageddon", name: "Armageddon", icon: "🌋", text: "Hits on every foe deal twice as much.", perks: { aoe: 1 } }, { id: "grandmagus", name: "Grand Magus", icon: "🧙", text: "+20% critical hits, 30% more damage.", perks: { crit: 20, attack: 0.3 } }],
   ],
 };
 
@@ -2740,6 +2740,8 @@ function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
   const armor = Math.round((raw - damage) * (hero.taunting ? TAUNT : 1));
   if (hero.taunting) damage *= TAUNT;
   damage = Math.max(1, Math.round(damage));
+  // (thorns count the block the hit meets - before it is used up)
+  const thorns = thornsOf(hero);
   const blocked = Math.min(hero.block, damage);
   hero.block -= blocked;
   damage -= blocked;
@@ -2747,7 +2749,6 @@ function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
   say(run, `${source} hits ${hero.name} for ${damage}${blocked ? ` (${blocked} blocked)` : ""}.`);
   fx(run, { k: "hit", to: hero.name, n: damage, b: blocked, a: armor, left: hero.block });
   // (thorns: who hits pays)
-  const thorns = thornsOf(hero);
   if (foe && thorns && !foe.down) {
     foe.hp = Math.max(0, foe.hp - thorns);
     say(run, `${foe.icon} ${foe.name} takes ${thorns} from ${hero.name}'s thorns 🌵.`);
@@ -2769,8 +2770,10 @@ function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
 }
 
 // Thorns: the damage back to who hits - a flat part, a share of the armor (the paladin)
+// Thorns: the flat ones and a share of the armor - and of the block up (a share of it counts as armor for them)
+const THORNS_BLOCK = 0.5;
 function thornsOf(hero) {
-  return Math.round(perk(hero, "thorns") + perk(hero, "thornsDef") * hero.def);
+  return Math.round(perk(hero, "thorns") + perk(hero, "thornsDef") * (hero.def + THORNS_BLOCK * (hero.block || 0)));
 }
 
 function healHero(run, hero, amount) {

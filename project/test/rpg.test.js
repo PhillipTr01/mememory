@@ -814,7 +814,9 @@ test("rpg: the fight rules - the hand stays (filled up to 5), poison stacks and 
   rpg.afflict(foe, "burn", 1, 6);
   assert.deepStrictEqual(foe.effects.burn, { turns: 2, dmg: 8 });
   // (the strengths: the paladin's thorns grow with the armor)
-  assert.strictEqual(rpg.thornsOf({ def: 20, perks: rpg.CLASSES.paladin.strength.perks }), 11);
+  assert.strictEqual(rpg.thornsOf({ def: 20, perks: rpg.CLASSES.paladin.strength.perks }), 6);
+  // (and with the block up: half of it counts as armor for them)
+  assert.strictEqual(rpg.thornsOf({ def: 20, block: 20, perks: rpg.CLASSES.paladin.strength.perks }), 9);
   assert.ok(rpg.CLASSES.warrior.strength.perks.pierce > 0 && rpg.CLASSES.mage.strength.perks.aoe > 0);
   // (the texts: numbers, no shares)
   const texts = rpg.liveTexts({ atk: 50, def: 10, agi: 0, maxHp: 200, perks: {} }, ["strike", "defend", "heavyslash", "mend", "strike+"]);
@@ -943,8 +945,8 @@ test("rpg: the bag - 5 slots, more bought up to 15, every one dearer", () => {
 test("rpg: class strengths grow with the level - the base at 1, its top times it at the highest level", () => {
   assert.strictEqual(rpg.strengthOf("warrior", 1).perks.pierce, 0.15);
   assert.strictEqual(rpg.strengthOf("warrior", rpg.HERO_LEVEL_MAX).perks.pierce, Math.round(0.15 * rpg.CLASSES.warrior.strength.top * 1000) / 1000);
-  assert.match(rpg.strengthOf("paladin", 1).text, /equal to 55% of your armor\. Your block cards block 11% more/);
-  assert.match(rpg.strengthOf("mage", rpg.HERO_LEVEL_MAX).text, /crit 30% more often/);
+  assert.match(rpg.strengthOf("paladin", 1).text, /equal to 30% of your armor, and half of your block counts as armor for it\. Your block cards block 11% more/);
+  assert.match(rpg.strengthOf("mage", rpg.HERO_LEVEL_MAX).text, /crit 27% more often/);
 });
 
 test("rpg: cards fit their rarity - the rarer, the more a mana buys", () => {

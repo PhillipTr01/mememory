@@ -2402,7 +2402,7 @@ function renderPartyStats(run) {
       // (thorns: the whole of it - the flat part and the share of the armor)
       if (h.thorns) {
         var thorns = el("span", "rpg-pstat-tag", "🌵 " + h.thorns + " thorns");
-        thorns.title = "Who hits you takes " + h.thorns + " damage. It grows with your armor.";
+        thorns.title = "Who hits you takes " + h.thorns + " damage. It grows with your armor and your block.";
         extras.appendChild(thorns);
       }
       Object.keys(h.perks || {})
