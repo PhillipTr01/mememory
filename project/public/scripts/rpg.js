@@ -2563,6 +2563,9 @@ function resultCard(r) {
     icon = r.walked ? "🚶" : "🕸️";
     name = r.walked ? "Walked on" : "Nothing";
   }
+  // (what kind of thing it is: a small label on top)
+  var kind = { gear: r.item ? SLOT_NAMES[r.item.slot] : "Gear", relic: "Relic", coins: "Coins", hp: "Damage", heal: "Healing", potion: "Potion", buff: r.bad ? "Curse" : "Stat boost", dice: "Dice" }[r.k];
+  if (kind) node.prepend(el("span", "rpg-got-kind", kind));
   if (icon) node.appendChild(el("span", "rpg-got-icon", icon));
   node.appendChild(el("span", "rpg-got-name", name));
   if (tip) node.title = tip;

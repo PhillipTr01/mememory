@@ -8549,3 +8549,12 @@ button.rpg-trade-row:active {
   font-size: 0.8rem;
   z-index: 2;
 }
+
+/* (a room's result: what kind of thing it is, small on top) */
+.rpg-got-kind {
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
