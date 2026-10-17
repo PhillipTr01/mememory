@@ -1386,7 +1386,10 @@ function renderShop() {
   decks.append(el("span", "rpg-upgrade-icon", "🗂️"), dwords);
   decks.appendChild(dprice == null ? el("span", "rpg-upgrade-max", "✓ Max") : button("+1 slot · 🪙 " + formatCoins(dprice), "deckSlot", { className: "primary", disabled: dprice > myCoins }));
   morphChildren(document.getElementById("rpgShopUpgrades"), [slot, flasks, decks]);
-  document.getElementById("rpgShopTitle").innerText = "🛒 Card shop · " + cls.icon + " " + cls.name;
+  document.getElementById("rpgShopTitle").innerText = "🛒 Card shop";
+  var dustTag = document.getElementById("rpgShopDust");
+  dustTag.innerText = "✨ " + formatCoins(hero.dust || 0) + " dust";
+  dustTag.title = "Dust comes from cards you turn into dust. It buys packs and makes cards.";
   // The packs to buy: into the cart
   morphChildren(
     document.getElementById("rpgShopPacks"),
