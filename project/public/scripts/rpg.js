@@ -1967,7 +1967,7 @@ function renderDoor() {
   // (the time on the tag counts down - the buttons back when it's over)
   clearTimeout(coolTimer);
   if (cool) coolTimer = setTimeout(renderDoor, Math.min(cool + 50, 30000));
-  var info = [el("span", "", "Entry 🪙 " + formatCoins(entry) + " each"), tag];
+  var info = [tag];
   // (how often this character already ran the floor today)
   var runs = (hero.runsToday || {})[floor] || 0;
   if (runs) {
@@ -1985,7 +1985,8 @@ function renderDoor() {
     low.title = (below && repeat ? "This floor is far below your best and you already ran it today" : repeat ? "You already ran this floor today" : "This floor is far below your best") + ", so you get " + Math.round(share * 100) + "% of the pot.";
     info.push(low);
   }
-  morphChildren(document.getElementById("rpgFloorInfo"), info);
+  document.getElementById("rpgFloorInfo").innerText = "Entry 🪙 " + formatCoins(entry) + " each";
+  morphChildren(document.getElementById("rpgFloorTags"), info);
   document.getElementById("rpgFloorDown").disabled = floor <= 1;
   document.getElementById("rpgFloorUp").disabled = floor >= hero.maxFloor;
   document.getElementById("rpgSolo").disabled = myCoins < entry || !hero.cls || cool > 0;

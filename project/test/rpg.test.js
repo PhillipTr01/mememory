@@ -701,6 +701,8 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; between 
   alice.emit("vote", { door: "leave" });
   const done = await waitFor(alice, "rpgParty", (p) => p && p.result == "left");
   assert.strictEqual(testMode.balance("rpg_alice"), before - rpg.entryCost(1) + done.run.pot);
+  // (left before the floor was cleared: the run does not count for today)
+  assert.strictEqual(rpg.runsToday(mine, 1), 0);
   // Back to the hero (the party closes)
   alice.emit("leave");
   await waitFor(alice, "rpgParty", (p) => p == null);

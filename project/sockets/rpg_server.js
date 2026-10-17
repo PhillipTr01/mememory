@@ -306,11 +306,8 @@ module.exports = function (io, options = {}) {
     for (const name of party.members) {
       const hero = heroOf(name);
       rpg.charOf(hero).runs++;
-      // (the floor cools down for everyone of the party - and counts for today: the next run of it pays less)
-      if (!party.tutorial) {
-        rpg.coolFloor(hero, party.floor);
-        rpg.countRun(hero, party.floor);
-      }
+      // (the floor cools down for everyone of the party)
+      if (!party.tutorial) rpg.coolFloor(hero, party.floor);
       // (the potions go along - what is left comes back)
       hero.potions = 0;
     }
@@ -356,6 +353,8 @@ module.exports = function (io, options = {}) {
       if (cleared) {
         char.deepest = Math.max(char.deepest, run.floor);
         char.cleared++;
+        // (a cleared run counts for today: the next run of the floor pays less)
+        rpg.countRun(hero, run.floor, one.cls);
       }
       // (the party down: the character is dead for a while)
       // (the floor open again: the death is wait enough)

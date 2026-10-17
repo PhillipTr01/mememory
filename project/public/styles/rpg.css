@@ -425,7 +425,7 @@
 .rpg-floor {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 1rem;
   padding: 1rem 0.75rem;
   border-radius: 12px;
@@ -436,6 +436,18 @@
 .rpg-floor-mid {
   text-align: center;
   min-width: 10rem;
+}
+
+.rpg-floor-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.rpg-floor-tags .rpg-floor-tag {
+  margin-left: 0;
 }
 
 .rpg-floor-num {
