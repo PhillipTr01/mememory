@@ -594,7 +594,8 @@ var SLOT_ICONS = { weapon: "⚔️", armor: "🛡️", charm: "💍" };
 // classes it fits, the buttons
 function gearTile(item, slot, actions) {
   var tile = el("div", "rpg-gear-tile rarity-" + item.rarity);
-  tile.appendChild(el("span", "rpg-gear-slot", (slot ? SLOT_NAMES[slot] : SLOT_NAMES[item.slot]) + " · " + RARITY_NAMES[item.rarity]));
+  // (the floor it is from: its stats and its price are that floor's)
+  tile.appendChild(el("span", "rpg-gear-slot", (slot ? SLOT_NAMES[slot] : SLOT_NAMES[item.slot]) + " · " + RARITY_NAMES[item.rarity] + (item.floor ? " · Floor " + item.floor : "")));
   tile.append(el("span", "rpg-gear-icon", item.icon), el("span", "rpg-gear-name", item.name));
   var chips = el("div", "rpg-gear-stats");
   var worn = !slot && hero.gear[item.slot];
@@ -619,7 +620,7 @@ function itemCard(item, actions) {
   var card = el("div", "rpg-item rarity-" + item.rarity);
   card.append(el("span", "rpg-item-icon", item.icon));
   var text = el("div", "rpg-item-text");
-  text.append(el("div", "rpg-item-name", item.name), el("div", "rpg-item-bonus", RARITY_NAMES[item.rarity] + " · " + bonusOf(item)));
+  text.append(el("div", "rpg-item-name", item.name), el("div", "rpg-item-bonus", RARITY_NAMES[item.rarity] + (item.floor ? " · Floor " + item.floor : "") + " · " + bonusOf(item)));
   card.appendChild(text);
   if (actions && actions.length) {
     var row = el("div", "rpg-item-actions");

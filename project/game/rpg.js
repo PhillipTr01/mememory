@@ -1375,13 +1375,13 @@ function makeGear(floor, rng = Math.random, luck = 0, cls = null) {
   const slot = pick(rng, Object.keys(SLOTS));
   const fitting = SLOTS[slot].kinds.filter((k) => !k[3] || k[3].includes(cls));
   const [icon, kind, mix, classes] = pick(rng, cls && fitting.length && rng() < GEAR_OWN_CLASS ? fitting : SLOTS[slot].kinds);
-  // (the name: the floor's material - an epic one a step better, a legendary or mythic one a name of its own)
+  // (the name: the floor's material - a legendary or mythic one a name of its own)
   const material =
     rarity.id == "mythic"
       ? pick(rng, MYTHIC_NAMES)
       : rarity.id == "legendary"
         ? pick(rng, LEGENDARY_NAMES)
-        : MATERIALS[Math.min(MATERIALS.length - 1, Math.floor((floor - 1) / 5) + (rarity.id == "epic" ? 1 : 0))];
+        : MATERIALS[Math.min(MATERIALS.length - 1, Math.floor((floor - 1) / 5))];
   const base = 2 + floor * 1.2;
   const item = { id: "g" + Date.now().toString(36) + (++gearCount).toString(36), slot, rarity: rarity.id, name: material + " " + kind, icon, floor };
   if (classes) item.classes = classes;
