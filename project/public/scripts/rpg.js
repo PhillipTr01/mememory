@@ -2419,7 +2419,7 @@ function roomScene(run, me) {
     body.append(
       el("div", "rpg-deep-icon", "🕳️"),
       el("div", "rpg-scene-title", "The floor is cleared, but a dark stairway leads deeper"),
-      el("div", "rpg-scene-story", "A guardian far stronger than this floor waits below. Beat it and your pot " + (run.deepPay == 2 ? "doubles" : "grows " + run.deepPay + " times") + ". Fall and the pot is lost."),
+      el("div", "rpg-scene-story", "Going down costs nothing. A guardian far stronger than this floor waits below. Beat it and your pot " + (run.deepPay == 2 ? "doubles" : "grows " + run.deepPay + " times") + " to 🪙 " + formatCoins(myPot(run) * run.deepPay) + ". Fall and you lose the whole pot."),
     );
     deep.appendChild(body);
     return [deep];
@@ -2926,7 +2926,8 @@ function handBar(run, me) {
     // (the deep stairs: down for twice the pot - or out with it)
     var deep = null;
     if (run.cleared) {
-      deep = button("🕳️ Go deeper for 🪙 " + formatCoins(myPot(run) * run.deepPay), "vote", { id: "0", className: "danger" + (voted === 0 ? " voted" : "") });
+      deep = button("🕳️ Go deeper to win 🪙 " + formatCoins(myPot(run) * run.deepPay), "vote", { id: "0", className: "danger" + (voted === 0 ? " voted" : "") });
+      deep.title = "Free to enter. Win and you leave with 🪙 " + formatCoins(myPot(run) * run.deepPay) + ". Lose and you get nothing.";
       var divers = Object.keys(run.votes).filter((name) => run.votes[name] === 0);
       if (divers.length) deep.innerText += " (" + divers.length + ")";
     }
