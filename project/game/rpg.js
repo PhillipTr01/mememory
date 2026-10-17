@@ -14,7 +14,7 @@
  * every fight won: one card more, picked of three), draws 5 cards a turn and has 3 energy to play them
  * (attacks, block, the class's skills). Every monster shows what it does next and to whom (its intent);
  * when every hero has ended the turn, the monsters do what they showed, poison and burns tick. Status
- * effects: poison, burn, stun (loses its next move), steady (no stun until it acts again), chill (half damage), might (more damage), rage
+ * effects: poison, burn, stun (loses its next move), steady (often no stun until it acts again), chill (half damage), might (more damage), rage
  * (monsters, more damage). Block takes the damage of the monsters' turn, then it is gone.
  *
  * Bosses: the last room of every BOSS_EVERY-th floor (BOSSES) - a second phase at half HP.
@@ -141,7 +141,7 @@ const DEEP_PAY = 2;
 const CLASSES = {
   warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.15 }, top: 1.3 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.2, atk: 1.6, def: 2, luck: 0, agi: 0, mainBonus: 1.29, hpPlus: 54, atkPlus: 25, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
   paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor. Your block cards block {block}% more.", perks: { thornsDef: 0.55, block: 0.11 }, top: 6 }, about: "Armor class with taunts and party shields", hp: 1.35, atk: 1.3, def: 13, luck: 0, agi: 0, mainBonus: 1.2, hpPlus: 90, atkPlus: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe.", perks: { heal: 0.1, healHit: 0.12 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 1.7, hpPlus: 180, atkPlus: 4, signature: ["heal", "smite"], opener: "banish", cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe.", perks: { heal: 0.1, healHit: 0.05 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 1.7, hpPlus: 180, atkPlus: 4, signature: ["heal", "smite"], opener: "banish", cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
   rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.3, crit: 4 }, top: 3 }, about: "Instinct class with dodge, scouting and poison", hp: 1.3, atk: 1.42, def: 0, luck: 4, agi: 14, mainBonus: 2.5, hpPlus: 94, atkPlus: 20, signature: ["poisonblade", "backstab"], guard: "dodgeroll", cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
   mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 8 }, about: "Luck class with crits, fire and frost", hp: 1.15, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.45, hpPlus: 100, atkPlus: 17, signature: ["frost", "fireball"], guard: "icearmor", cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
@@ -2568,16 +2568,17 @@ const WEAK = 0.7; // a cursed hero's damage
 const DEFEND = 0.5; // a monster on guard: this much of a hit gets through
 const SPIKES = 0.2; // of a hit on a spiked monster: back to the hitter
 
-// A stun - a steady foe shrugs it off (just out of a stun, a boss in its second phase, a split monster)
-function stun(run, foe) {
-  if (foe.effects.steady) {
+// A stun - a steady foe often shrugs it off (just out of a stun, a boss in its second phase, a split monster)
+const STEADY_RESIST = 0.6;
+function stun(run, foe, rng = Math.random) {
+  if (foe.effects.steady && rng() < STEADY_RESIST) {
     say(run, `${foe.icon} ${foe.name} is steady and shrugs off the stun.`);
     fx(run, { k: "miss", to: foe.id });
     return;
   }
   foe.effects.stun = 1;
 }
-// (steady until it acts again: no stun on it in the meantime)
+// (steady until it acts again: a stun on it mostly fails in the meantime)
 function steady(foe) {
   delete foe.effects.stun;
   foe.effects.steady = 1;
@@ -2715,6 +2716,11 @@ function healHero(run, hero, amount) {
   return heal;
 }
 
+// A card that lets nothing hit the hero: not two turns in a row
+function smokeLocked(run, hero, card) {
+  return card.fx.some((f) => f.evade) && hero.evadedTurn != null && hero.evadedTurn == run.turn - 1;
+}
+
 // Plays a card of a hero's hand: {uid, target (a monster's id), ally (a hero's name)} -> an error or null
 const NOT_IN_HAND = "That card isn't in your hand.";
 // Answers to a click that came too late - the run went on meanwhile (a double click, a click during the monsters'
@@ -2729,6 +2735,7 @@ function play(run, name, input, rng = Math.random) {
   if (index < 0) return NOT_IN_HAND;
   const card = cardInfo(hero.hand[index].id);
   if (hero.energy < card.cost) return `${card.name} needs ${card.cost} mana.`;
+  if (smokeLocked(run, hero, card)) return "You can't hide in the smoke two turns in a row.";
   const foes = alive(run.monsters);
   const foe = foes.find((m) => m.id == input.target) || null;
   if (card.target == "foe" && !foe) return "Pick a foe for it.";
@@ -2863,7 +2870,7 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
     for (const m of foesOf(fx.to)) {
       if (fx.status == "poison") afflict(m, "poison", fx.turns || 3, Math.max(1, Math.round(hero.atk * 0.45 * venom)));
       else if (fx.status == "burn") afflict(m, "burn", fx.turns || 2, Math.max(1, Math.round(hero.atk * 0.3 * up)));
-      else if (fx.status == "stun") stun(run, m);
+      else if (fx.status == "stun") stun(run, m, rng);
       else m.effects[fx.status] = fx.turns || 1;
     }
   } else if (fx.might != null) {
@@ -2875,7 +2882,10 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
   } else if (fx.draw != null) for (const one of fx.to == "party" ? alive(run.heroes) : [hero]) drawCards(one, fx.draw, rng, true);
   else if (fx.mana != null) hero.energy += fx.mana;
   else if (fx.lose != null) hero.hp = Math.max(1, hero.hp - Math.round(hero.maxHp * fx.lose));
-  else if (fx.evade) hero.evading = true;
+  else if (fx.evade) {
+    hero.evading = true;
+    hero.evadedTurn = run.turn;
+  }
   else if (fx.taunt) {
     hero.taunting = true;
     say(run, `${hero.name} taunts the foes 📣.`);
@@ -3117,6 +3127,7 @@ function winFight(run, rng) {
     hero.auras = [];
     hero.block = 0;
     hero.taunting = hero.evading = false;
+    hero.evadedTurn = null;
     hero.hand = [];
     hero.draw = [];
     hero.discard = [];
@@ -3210,6 +3221,7 @@ function runView(run) {
       down: h.down,
       potions: h.potions,
       energy: h.energy,
+      smokeLocked: h.evadedTurn != null && h.evadedTurn == run.turn - 1,
       block: h.block,
       ended: h.ended,
       away: !!h.away,
@@ -3284,7 +3296,7 @@ function simulatedTurn(run, me, rng) {
     const need = Math.max(0, incoming(run, me) - me.block);
     // (the foe to hit: one that can fall now - else the one that hurts most)
     const threat = (m) => (m.intent && !m.effects.stun ? intentDamage(m, m.intent.move) : 0);
-    const stunnable = (m) => (m.effects.steady ? 0 : threat(m));
+    const stunnable = (m) => threat(m) * (m.effects.steady ? 1 - STEADY_RESIST : 1);
     const target = foes.slice().sort((x, y) => x.hp - y.hp)[0];
     const worst = foes.slice().sort((x, y) => threat(y) - threat(x))[0];
     const ally = alive(run.heroes).sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp)[0] || me;
@@ -3294,6 +3306,7 @@ function simulatedTurn(run, me, rng) {
       const card = cardInfo(c.id);
       if (card.cost > me.energy) continue;
       if (card.target == "fallen" && !fallen) continue;
+      if (smokeLocked(run, me, card)) continue;
       const up = isUpgraded(c.id) ? UPGRADE : 1;
       const foe = card.fx.some((f) => f.status == "stun" && !f.to) ? worst : target;
       let value = 0;

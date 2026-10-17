@@ -35,7 +35,7 @@ try {
 }
 
 var EFFECT_ICONS = { poison: "☠️", burn: "🔥", stun: "💫", steady: "🪨", chill: "❄️", rage: "😡", might: "📯", weak: "🕯️" };
-var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned: skips a move", steady: "Steady: can't be stunned until it acts again", chill: "Chilled: half damage", rage: "Raging: more damage", might: "Might: +30% damage", weak: "Cursed: -30% damage" };
+var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned: skips a move", steady: "Steady: stuns often fail until it acts again", chill: "Chilled: half damage", rage: "Raging: more damage", might: "Might: +30% damage", weak: "Cursed: -30% damage" };
 var RARITY_NAMES = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", mythic: "Mythic" };
 var SLOT_NAMES = { weapon: "Weapon", armor: "Armor", charm: "Charm" };
 
@@ -77,6 +77,11 @@ function bar(value, max, className, extra) {
 
 // A card by its id - "strike+": upgraded at a camp fire (rules.upgrades); base: its text as written (the collection:
 // percents) - not with my numbers
+// (a card that lets nothing hit me: not two turns in a row)
+function hidden(me, card) {
+  return !!me.smokeLocked && (card.fx || []).some((f) => f.evade);
+}
+
 function cardOf(id, base) {
   var plus = /\+$/.test(id);
   var card = rules.cards[id.replace(/\+$/, "")];
@@ -2955,7 +2960,8 @@ function handBar(run, me) {
   var drawn = 0;
   me.hand.forEach((c, i) => {
     var card = cardOf(c.id);
-    var node = cardEl(c.id, { tag: "button", act: "card", id: c.uid, disabled: me.ended || card.cost > me.energy, className: aiming && aiming.uid == c.uid ? "aimed" : "" });
+    var node = cardEl(c.id, { tag: "button", act: "card", id: c.uid, disabled: me.ended || card.cost > me.energy || hidden(me, card), className: aiming && aiming.uid == c.uid ? "aimed" : "" });
+    if (hidden(me, card)) node.title = "You can't hide in the smoke two turns in a row.";
     // (fanned a little)
     var mid = (me.hand.length - 1) / 2;
     node.style.setProperty("--tilt", (i - mid) * 3 + "deg");
@@ -3075,7 +3081,7 @@ function clickCard(uid) {
   var entry = me.hand.find((c) => c.uid == uid);
   if (!entry) return;
   var card = cardOf(entry.id);
-  if (card.cost > me.energy || me.ended) return;
+  if (card.cost > me.energy || me.ended || hidden(me, card)) return;
   var foes = run.monsters.filter((m) => !m.down);
   var standing = run.heroes.filter((h) => !h.down);
   var fallen = run.heroes.filter((h) => h.down);

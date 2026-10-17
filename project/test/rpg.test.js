@@ -1801,9 +1801,28 @@ test("rpg: a stunned foe is steady afterwards - no stun again before it acted", 
   me.hand = [{ uid: "x", id: "huntersmark" }];
   me.energy = 5;
   me.ended = false;
-  assert.strictEqual(rpg.play(run, "a", { uid: "x", target: "m1" }), null);
+  // (steady: the stun mostly fails - with a roll under the chance always)
+  assert.strictEqual(rpg.play(run, "a", { uid: "x", target: "m1" }, () => 0), null);
   assert.ok(!run.monsters[0].effects.stun);
   // (once it acted: stunnable again)
   rpg.monsterTurn(run);
   assert.ok(!run.monsters[0].effects.steady);
+});
+
+test("rpg: Smoke Bomb not two turns in a row", () => {
+  const run = duel("rogue", "attack", ["smoke", "smoke"]);
+  const me = run.heroes[0];
+  me.energy = 5;
+  assert.strictEqual(rpg.play(run, "a", { uid: "t0" }), null);
+  assert.ok(me.evading);
+  rpg.endTurn(run, "a");
+  rpg.monsterTurn(run);
+  me.energy = 5;
+  assert.ok(rpg.runView(run).heroes[0].smokeLocked);
+  assert.match(rpg.play(run, "a", { uid: "t1" }), /two turns in a row/);
+  // (a turn later: fine again)
+  rpg.endTurn(run, "a");
+  rpg.monsterTurn(run);
+  me.energy = 5;
+  assert.strictEqual(rpg.play(run, "a", { uid: "t1" }), null);
 });
