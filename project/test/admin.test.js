@@ -394,7 +394,7 @@ test("admin: in a season the players show their normal coins, changes go there; 
 
 test("admin: a player in detail - coins, what the games added up to, the items bought and given; an item taken away comes off", async () => {
   const shop = require("../game/shop");
-  h.setCoins("quinn", 500000);
+  h.setCoins("quinn", 5000000);
   assert.ok(!(await shop.buy("quinn", "gold")).error);
   await shop.give({ username: "quinn", items: ["neon"], note: "Poker night" });
   await coins.spend("quinn", 1000, { reason: "slots bet" });
