@@ -59,7 +59,7 @@ const BASE = {
   blessing: ["Blessing", "🌞", 1, "rare", [{ might: 2, to: "ally" }, { block: 5, to: "ally" }]],
   poisonblade: ["Poison Blade", "☠️", 1, "common", [{ hit: 0.6 }, { status: "poison", turns: 3 }]],
   backstab: ["Backstab", "🔪", 1, "common", [{ hit: 1.2, bonusIf: "poison|stun", bonus: 3 }]],
-  smoke: ["Smoke Bomb", "💨", 1, "rare", [{ evade: true }]],
+  smoke: ["Smoke Bomb", "💨", 1, "rare", [{ evade: true }], true],
   envenom: ["Envenom", "🧪", 1, "rare", [{ status: "poison", turns: 2, to: "all" }]],
   daggers: ["Throwing Daggers", "🗡️", 1, "common", [{ hit: 0.5, times: 2, bonusIf: "poison", bonus: 0.8 }]],
   shadowstep: ["Shadow Step", "👤", 1, "common", [{ block: 5, agi: 0.5 }, { draw: 1 }]],

@@ -1776,3 +1776,21 @@ test("rpg: free drawing cards never loop - a card never draws itself, only a new
   assert.strictEqual(me.draw.length + me.hand.length, 0);
   assert.strictEqual(me.discard.length, 2);
 });
+test("rpg: a stunned foe is steady afterwards - no stun again before it acted", () => {
+  const run = duel("warrior", "attack", ["huntersmark", "huntersmark"]);
+  const me = run.heroes[0];
+  me.energy = 5;
+  assert.strictEqual(rpg.play(run, "a", { uid: "t0", target: "m1" }), null);
+  assert.ok(run.monsters[0].effects.stun);
+  rpg.monsterTurn(run);
+  // (it skipped its move - now steady: the next stun does nothing)
+  assert.ok(run.monsters[0].effects.steady);
+  me.hand = [{ uid: "x", id: "huntersmark" }];
+  me.energy = 5;
+  me.ended = false;
+  assert.strictEqual(rpg.play(run, "a", { uid: "x", target: "m1" }), null);
+  assert.ok(!run.monsters[0].effects.stun);
+  // (once it acted: stunnable again)
+  rpg.monsterTurn(run);
+  assert.ok(!run.monsters[0].effects.steady);
+});

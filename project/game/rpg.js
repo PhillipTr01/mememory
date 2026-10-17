@@ -14,7 +14,7 @@
  * every fight won: one card more, picked of three), draws 5 cards a turn and has 3 energy to play them
  * (attacks, block, the class's skills). Every monster shows what it does next and to whom (its intent);
  * when every hero has ended the turn, the monsters do what they showed, poison and burns tick. Status
- * effects: poison, burn, stun (loses its next move), chill (half damage), might (more damage), rage
+ * effects: poison, burn, stun (loses its next move), steady (no stun until it acts again), chill (half damage), might (more damage), rage
  * (monsters, more damage). Block takes the damage of the monsters' turn, then it is gone.
  *
  * Bosses: the last room of every BOSS_EVERY-th floor (BOSSES) - a second phase at half HP.
@@ -2565,10 +2565,26 @@ const WEAK = 0.7; // a cursed hero's damage
 const DEFEND = 0.5; // a monster on guard: this much of a hit gets through
 const SPIKES = 0.2; // of a hit on a spiked monster: back to the hitter
 
+// A stun - a steady foe shrugs it off (just out of a stun, a boss in its second phase, a split monster)
+function stun(run, foe) {
+  if (foe.effects.steady) {
+    say(run, `${foe.icon} ${foe.name} is steady and shrugs off the stun.`);
+    fx(run, { k: "miss", to: foe.id });
+    return;
+  }
+  foe.effects.stun = 1;
+}
+// (steady until it acts again: no stun on it in the meantime)
+function steady(foe) {
+  delete foe.effects.stun;
+  foe.effects.steady = 1;
+}
+
 // A boss at half HP: its second phase - once (more attack, other moves, a word about it)
 function bossPhase(run, foe) {
   if (!foe.phase || foe.phased || foe.down || foe.hp > foe.maxHp / 2) return;
   foe.phased = true;
+  steady(foe);
   foe.atk = Math.round(foe.atk * foe.phase.atk);
   foe.moves = foe.phase.moves;
   say(run, `${foe.icon} ${foe.name} ${foe.phase.text}!`);
@@ -2583,6 +2599,8 @@ function splitCheck(run, foe) {
   const half = Math.max(1, Math.ceil(foe.hp / 2));
   foe.hp = half;
   const twin = { ...foe, id: "m" + ++monsterCount, effects: {}, intent: foe.intent, hp: half };
+  steady(foe);
+  steady(twin);
   run.monsters.splice(run.monsters.indexOf(foe) + 1, 0, twin);
   say(run, `${foe.icon} ${foe.name} splits in two! 🧬`);
   fx(run, { k: "phase", by: foe.id, text: "Splits in two!" });
@@ -2842,7 +2860,7 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
     for (const m of foesOf(fx.to)) {
       if (fx.status == "poison") afflict(m, "poison", fx.turns || 3, Math.max(1, Math.round(hero.atk * 0.45 * venom)));
       else if (fx.status == "burn") afflict(m, "burn", fx.turns || 2, Math.max(1, Math.round(hero.atk * 0.3 * up)));
-      else if (fx.status == "stun") m.effects.stun = 1;
+      else if (fx.status == "stun") stun(run, m);
       else m.effects[fx.status] = fx.turns || 1;
     }
   } else if (fx.might != null) {
@@ -3008,11 +3026,13 @@ function monsterTurn(run, rng = Math.random) {
   fx(run, { k: "turn", side: "foes" });
   for (const foe of alive(run.monsters)) {
     if (foe.effects.stun) {
-      delete foe.effects.stun;
+      // (out of a stun: steady - no stun again before it acted)
+      steady(foe);
       say(run, `${foe.icon} ${foe.name} is stunned and does nothing.`);
       fx(run, { k: "move", by: foe.id, move: "stunned" });
       continue;
     }
+    delete foe.effects.steady;
     fx(run, { k: "move", by: foe.id, move: (foe.intent || { move: "attack" }).move });
     monsterMove(run, foe, rng);
     if (!alive(run.heroes).length) break;
@@ -3261,6 +3281,7 @@ function simulatedTurn(run, me, rng) {
     const need = Math.max(0, incoming(run, me) - me.block);
     // (the foe to hit: one that can fall now - else the one that hurts most)
     const threat = (m) => (m.intent && !m.effects.stun ? intentDamage(m, m.intent.move) : 0);
+    const stunnable = (m) => (m.effects.steady ? 0 : threat(m));
     const target = foes.slice().sort((x, y) => x.hp - y.hp)[0];
     const worst = foes.slice().sort((x, y) => threat(y) - threat(x))[0];
     const ally = alive(run.heroes).sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp)[0] || me;
@@ -3295,7 +3316,7 @@ function simulatedTurn(run, me, rng) {
           blocked += amount;
         } else if (f.heal != null) value += Math.min(me.maxHp * f.heal * up, ally.maxHp - ally.hp) * (ally.hp < ally.maxHp / 2 ? 1.2 : 0.6) + me.maxHp * f.heal * up * perk(me, "healHit");
         else if (f.status == "poison" || f.status == "burn") value += many.length * me.atk * 0.4 * (f.turns || 2);
-        else if (f.status == "stun") value += f.to == "all" ? foes.reduce((sum, m) => sum + threat(m), 0) : threat(foe);
+        else if (f.status == "stun") value += f.to == "all" ? foes.reduce((sum, m) => sum + stunnable(m), 0) : stunnable(foe);
         else if (f.status == "chill") value += (f.to == "all" ? foes.reduce((sum, m) => sum + threat(m), 0) : threat(foe)) * 0.4;
         else if (f.might != null) value += me.atk * 0.3 * f.might * (me.effects && me.effects.might ? 0.8 : 1);
         else if (f.draw != null) value += me.atk * 0.4 * f.draw;
