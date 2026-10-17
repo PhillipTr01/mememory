@@ -1430,11 +1430,10 @@ test("rpg: a mana aura pays at the start of the next turns - the page sees it", 
   assert.strictEqual(me.energy, rpg.ENERGY);
 });
 
-test("rpg: cards as loot - a boss always drops one, rare or better, for the collection of the class", () => {
+test("rpg: cards as loot - a boss always drops one, rare or better, for the collection", () => {
   const hero = rpg.newHero("mage");
   for (let i = 0; i < 50; i++) {
     const { card } = rpg.lootCard(hero, Math.random, "rare");
-    assert.ok(rpg.poolOf("mage").includes(card), card);
     assert.ok(!["basic", "common", "mythic"].includes(rpg.CARDS[card].rarity), card);
   }
   // A boss won: a card in the loot of every hero standing
@@ -1682,14 +1681,17 @@ test("rpg: a cleared floor never pays less than 1.1 times its entry - a low shar
   assert.strictEqual(rpg.payout(run, { share: 0.5 }, "left"), 500);
 });
 
-test("rpg: a chest's card is now and then another class's - a boss's or a hard fight's always the own class's", () => {
+test("rpg: loot cards like a pack's - any class's, the own class and the neutral ones more often; a boss's rare or better", () => {
   const hero = rpg.newHero("warrior");
+  let own = 0;
   let other = 0;
-  for (let i = 0; i < 2000; i++) {
-    const { card } = rpg.lootCard(hero, Math.random, "common", true);
+  for (let i = 0; i < 3000; i++) {
+    const { card } = rpg.lootCard(hero, Math.random, i % 2 ? "rare" : "common");
     assert.ok(!["basic", "mythic"].includes(rpg.CARDS[card].rarity), card);
-    if (rpg.cardClass(card) && rpg.cardClass(card) != "warrior") other++;
+    if (i % 2) assert.ok(rpg.CARDS[card].rarity != "common", card);
+    if (rpg.poolOf("warrior").includes(card)) own++;
+    else other++;
   }
-  assert.ok(other > 350 && other < 650, String(other));
-  for (let i = 0; i < 300; i++) assert.ok(rpg.poolOf("warrior").includes(rpg.lootCard(hero, Math.random, "rare").card));
+  assert.ok(other > 300, String(other));
+  assert.ok(own > 900, String(own));
 });
