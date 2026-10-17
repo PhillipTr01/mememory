@@ -64,6 +64,17 @@ function useDeck(hero, slot) {
   char.deckAt = slot;
   return null;
 }
+// A deck slot of the character played named (empty: back to its number) -> an error or null
+const DECK_NAME_MAX = 20;
+function nameDeck(hero, slot, name) {
+  const char = charOf(hero);
+  if (!Number.isInteger(slot) || slot < 0 || slot >= deckSlots(hero)) return "No such deck slot.";
+  const clean = String(name || "").replace(/\s+/g, " ").trim().slice(0, DECK_NAME_MAX);
+  char.deckNames = char.deckNames || [];
+  char.deckNames[slot] = clean || null;
+  return null;
+}
+
 // The decks of the character played: their sizes (the one played: its own now)
 function decksOf(hero) {
   if (!hero.cls) return [0];
@@ -1061,6 +1072,7 @@ function heroView(hero) {
     potionSlotPrice: potionSlotPrice(hero),
     deckSlotPrice: deckSlotPrice(hero),
     decks: decksOf(hero),
+    deckNames: Array.from({ length: deckSlots(hero) }, (_, i) => (charOf(hero).deckNames || [])[i] || null),
     deckAt: charOf(hero).deckAt || 0,
     bagSlotPrice: bagSlotPrice(hero),
     tutorialDone: !!char.tutorialDone,
@@ -3256,6 +3268,7 @@ module.exports = {
   dustAll,
   craftCard,
   buyPackDust,
+  nameDeck,
   tradeable,
   tradeList,
   tradeSide,

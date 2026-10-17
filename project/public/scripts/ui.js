@@ -355,6 +355,7 @@ function copyText(text, button) {
 /*
  * Styled confirm dialog instead of the browser's confirm().
  * Returns a Promise<boolean>. Escape / click outside = cancel.
+ * options.input ({value, placeholder, maxLength}): a text field - the Promise gives its text (false: cancelled).
  */
 function confirmDialog(options) {
   return new Promise((resolve) => {
@@ -394,7 +395,18 @@ function confirmDialog(options) {
     confirm.appendChild(document.createTextNode(options.confirmLabel || "OK"));
 
     actions.append(cancel, confirm);
-    dialog.append(title, text, actions);
+    var field = null;
+    if (options.input) {
+      field = document.createElement("input");
+      field.type = "text";
+      field.className = "mm-input mm-dialog-input";
+      field.value = options.input.value || "";
+      field.placeholder = options.input.placeholder || "";
+      if (options.input.maxLength) field.maxLength = options.input.maxLength;
+    }
+    dialog.append(title, text);
+    if (field) dialog.appendChild(field);
+    dialog.appendChild(actions);
     backdrop.appendChild(dialog);
     document.body.appendChild(backdrop);
 
@@ -406,24 +418,30 @@ function confirmDialog(options) {
       resolve(result);
     }
 
+    var answer = () => (field ? field.value : true);
     function onKey(event) {
       if (event.key == "Escape") close(false);
+      if (event.key == "Enter" && field && document.activeElement == field) close(answer());
       // Keep the focus inside the dialog
       if (event.key == "Tab") {
         event.preventDefault();
-        (document.activeElement == cancel ? confirm : cancel).focus();
+        var stops = field ? [field, cancel, confirm] : [cancel, confirm];
+        stops[(stops.indexOf(document.activeElement) + 1) % stops.length].focus();
       }
     }
 
     cancel.addEventListener("click", () => close(false));
-    confirm.addEventListener("click", () => close(true));
+    confirm.addEventListener("click", () => close(answer()));
     backdrop.addEventListener("click", (event) => {
       if (event.target == backdrop) close(false);
     });
     document.addEventListener("keydown", onKey);
 
-    // The safe choice has the focus
-    cancel.focus();
+    // The safe choice has the focus (a text field: the field)
+    if (field) {
+      field.focus();
+      field.select();
+    } else cancel.focus();
   });
 }
 

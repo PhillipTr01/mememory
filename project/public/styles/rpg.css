@@ -7555,25 +7555,7 @@ body.rpg-dragging {
   white-space: nowrap;
 }
 
-/* (a card in the builder: make a copy of dust, or dust a spare one) */
-.rpg-cardx .rpg-btn.rpg-card-act {
-  position: absolute;
-  bottom: 0.35rem;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0.12rem 0.5rem;
-  font-size: 0.66rem;
-  border-radius: 999px;
-  background: rgba(124, 58, 237, 0.25);
-  border-color: rgba(167, 139, 250, 0.45);
-  color: #ddd6fe;
-  white-space: nowrap;
-  z-index: 2;
-}
 
-.rpg-cardx .rpg-btn.rpg-card-act:hover:not(:disabled) {
-  background: rgba(124, 58, 237, 0.4);
-}
 
 .rpg-trade {
   display: flex;
@@ -7761,4 +7743,426 @@ button.rpg-trade-row:hover {
 
 .rpg-btn.rpg-dust-buy:hover:not(:disabled) {
   background: rgba(124, 58, 237, 0.35);
+}
+
+/* ======================= Trades, the board ======================= */
+.rpg-trade-players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-height: 9.5rem;
+  overflow-y: auto;
+  padding: 0.1rem;
+}
+
+.rpg-btn.rpg-trade-player {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.8rem 0.4rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--mm-border);
+  background: rgba(255, 255, 255, 0.03);
+  text-align: left;
+}
+
+.rpg-btn.rpg-trade-player:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.rpg-btn.rpg-trade-player.active {
+  border-color: rgba(245, 197, 66, 0.7);
+  background: rgba(245, 197, 66, 0.12);
+  box-shadow: 0 0 0 3px rgba(245, 197, 66, 0.1);
+}
+
+.rpg-trade-player-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.rpg-trade-player-text b {
+  font-size: 0.82rem;
+}
+
+.rpg-trade-player-text span {
+  font-size: 0.68rem;
+  color: var(--mm-muted);
+  font-weight: 600;
+}
+
+.rpg-trade-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+@media (max-width: 800px) {
+  .rpg-trade-board {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rpg-trade-middle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-width: 9.5rem;
+}
+
+.rpg-trade-swap {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 1px solid rgba(245, 197, 66, 0.35);
+  background: rgba(245, 197, 66, 0.08);
+  color: var(--rpg-gold, #f5c451);
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.rpg-trade-scale {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border-radius: 12px;
+  border: 1px solid var(--mm-border);
+  background: rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.rpg-trade-state {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--mm-muted);
+}
+
+.rpg-trade-scale.good {
+  border-color: rgba(74, 222, 128, 0.4);
+}
+
+.rpg-trade-scale.good .rpg-trade-state {
+  color: #86efac;
+}
+
+.rpg-trade-scale.bad {
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.rpg-trade-scale.bad .rpg-trade-state {
+  color: #fca5a5;
+}
+
+.rpg-trade-beam {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.rpg-trade-beam i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  transition: width 0.25s ease;
+}
+
+.rpg-trade-beam i.give {
+  right: 50%;
+  background: linear-gradient(90deg, rgba(96, 165, 250, 0.3), #60a5fa);
+  border-radius: 999px 0 0 999px;
+}
+
+.rpg-trade-beam i.take {
+  left: 50%;
+  background: linear-gradient(90deg, #f5c542, rgba(245, 197, 66, 0.3));
+  border-radius: 0 999px 999px 0;
+}
+
+.rpg-trade-col {
+  gap: 0.45rem;
+  padding: 0.8rem;
+  border-radius: 14px;
+  max-height: 26rem;
+}
+
+.rpg-trade-col.give {
+  background: linear-gradient(180deg, rgba(96, 165, 250, 0.07), rgba(0, 0, 0, 0.18));
+}
+
+.rpg-trade-col.take {
+  background: linear-gradient(180deg, rgba(245, 197, 66, 0.07), rgba(0, 0, 0, 0.18));
+}
+
+.rpg-trade-col-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  position: sticky;
+  top: -0.8rem;
+  margin: -0.8rem -0.8rem 0.2rem;
+  padding: 0.7rem 0.8rem 0.5rem;
+  background: inherit;
+  z-index: 1;
+}
+
+.rpg-trade-total {
+  font-size: 0.8rem;
+  color: var(--rpg-gold, #f5c451);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.rpg-trade-group {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--mm-muted);
+  margin-top: 0.2rem;
+}
+
+.rpg-trade-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.rpg-trade-empty {
+  padding: 1.2rem 0.5rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--mm-muted);
+}
+
+.rpg-trade-row {
+  grid-template-columns: 2.1rem minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 10px;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+button.rpg-trade-row:active {
+  transform: scale(0.99);
+}
+
+.rpg-trade-icon {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  font-size: 1.15rem;
+}
+
+.rpg-trade-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.rpg-trade-sub {
+  font-size: 0.68rem;
+  color: var(--mm-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rpg-trade-row.rarity-rare .rpg-trade-sub {
+  color: #93c5fd;
+}
+
+.rpg-trade-row.rarity-epic .rpg-trade-sub {
+  color: #c4b5fd;
+}
+
+.rpg-trade-row.rarity-legendary .rpg-trade-sub,
+.rpg-trade-row.rarity-mythic .rpg-trade-sub {
+  color: #fcd34d;
+}
+
+.rpg-trade-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.rpg-trade-n {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--mm-muted);
+  font-size: 0.68rem;
+}
+
+.rpg-trade-n.on {
+  background: rgba(245, 197, 66, 0.2);
+  color: var(--rpg-gold, #f5c451);
+}
+
+.rpg-trade-row.picked {
+  box-shadow: inset 0 0 0 1px rgba(245, 197, 66, 0.35);
+}
+
+.rpg-trade-foot {
+  justify-content: flex-end;
+}
+
+.rpg-trade-note {
+  margin-right: auto;
+  color: var(--mm-muted);
+}
+
+.rpg-trade-actions {
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.rpg-trade-actions .mm-muted {
+  margin-right: auto;
+}
+
+
+
+/* ======================= Craft mode and deck names ======================= */
+.rpg-btn.rpg-craft-toggle {
+  margin-left: auto;
+  border-color: rgba(167, 139, 250, 0.45);
+  background: rgba(124, 58, 237, 0.15);
+  color: #ddd6fe;
+}
+
+.rpg-btn.rpg-craft-toggle.on {
+  background: rgba(124, 58, 237, 0.4);
+  border-color: rgba(196, 181, 253, 0.7);
+  color: #fff;
+}
+
+/* (craft mode: the grid a little purple - a card with its actions under it) */
+.rpg-builder.crafting .rpg-builder-grid {
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.25);
+  background: radial-gradient(circle at 50% 0%, rgba(124, 58, 237, 0.08), transparent 60%);
+}
+
+.rpg-craft-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.rpg-craft-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  width: 8.2rem;
+  margin-top: 0.5rem;
+}
+
+.rpg-craft-have {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+  text-align: center;
+}
+
+.rpg-craft-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.rpg-btn.rpg-craft-btn {
+  width: 100%;
+  justify-content: center;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.74rem;
+  border-radius: 9px;
+}
+
+.rpg-btn.rpg-craft-btn.make {
+  background: rgba(124, 58, 237, 0.28);
+  border-color: rgba(167, 139, 250, 0.5);
+  color: #ede9fe;
+}
+
+.rpg-btn.rpg-craft-btn.make:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.45);
+}
+
+.rpg-btn.rpg-craft-btn.dust {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.rpg-craft-cell.spare .rpg-btn.rpg-craft-btn.dust {
+  border-color: rgba(245, 197, 66, 0.45);
+  color: var(--rpg-gold, #f5c451);
+}
+
+.rpg-btn.rpg-craft-btn:disabled {
+  opacity: 0.45;
+}
+
+.rpg-deck-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.rpg-deck-name b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rpg-btn.rpg-deck-rename {
+  padding: 0.1rem 0.35rem;
+  font-size: 0.75rem;
+  background: transparent;
+  border-color: transparent;
+  opacity: 0.6;
+}
+
+.rpg-btn.rpg-deck-rename:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.rpg-deck-slot.named {
+  display: block;
+  line-height: 1.6rem;
+  border-radius: 999px;
+  width: auto;
+  max-width: 8rem;
+  padding: 0 0.55rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mm-dialog-input {
+  width: 100%;
+  margin: 0.2rem 0 1rem;
 }

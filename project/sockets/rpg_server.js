@@ -730,6 +730,13 @@ module.exports = function (io, options = {}) {
       sendHero(username);
     });
 
+    // A deck slot named
+    on("deckName", (data) => {
+      const problem = rpg.nameDeck(heroOf(username), data.slot, data.name);
+      if (problem) return error(problem);
+      sendHero(username);
+    });
+
     // A pack for dust: into the inventory, opened there
     on("packDust", (data) => {
       const problem = rpg.buyPackDust(heroOf(username), String(data.id), 1);

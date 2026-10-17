@@ -1581,3 +1581,16 @@ test("rpg: trades over the sockets - an offer, a refused unfair one, accepted: t
   tia.disconnect();
   tom.disconnect();
 });
+
+test("rpg: deck slots get names - empty: back to the number, long ones cut", () => {
+  const hero = rpg.newHero("warrior");
+  hero.deckSlots = 1;
+  assert.strictEqual(rpg.nameDeck(hero, 1, "  Big   Hitters "), null);
+  assert.strictEqual(rpg.heroView(hero).deckNames[1], "Big Hitters");
+  assert.strictEqual(rpg.heroView(hero).deckNames[0], null);
+  rpg.nameDeck(hero, 1, "x".repeat(50));
+  assert.strictEqual(rpg.heroView(hero).deckNames[1].length, 20);
+  rpg.nameDeck(hero, 1, "");
+  assert.strictEqual(rpg.heroView(hero).deckNames[1], null);
+  assert.match(rpg.nameDeck(hero, 2, "Nope"), /No such deck slot/);
+});

@@ -197,6 +197,7 @@ socket.on("rpgHero", (data) => {
 });
 // Trades: the offers made and received, the players to trade with, the one picked and what they have, what is picked
 var trades = [];
+var craftMode = false; // the deck builder in craft mode: cards made and dusted, not built into the deck
 var tradePlayers = [];
 var tradeWith = "";
 var tradeTheirs = null;
@@ -832,7 +833,7 @@ function tradeGap(give, take) {
   return low >= need ? null : need - low;
 }
 
-// A row of something to trade: a card (icon, name, rarity) or a piece of gear - a click picks one more
+// A tile of something to trade: a card (its art, name, rarity) or a piece of gear - a click picks one more
 function tradeRow(one, side, picks, act) {
   var key = tradeKey(one);
   var picked = picks[key] || 0;
@@ -842,22 +843,73 @@ function tradeRow(one, side, picks, act) {
     row.dataset.act = act;
     row.dataset.id = side + "|" + key;
   }
+  var icon = el("span", "rpg-trade-icon");
+  var name = el("span", "rpg-trade-name");
+  var sub = el("span", "rpg-trade-sub");
   if (one.k == "card") {
     var card = cardOf(one.id);
     var owner = card.cls && rules.classes[card.cls];
     row.classList.add("rarity-" + card.rarity);
-    row.append(el("span", "rpg-trade-icon", card.icon), el("span", "rpg-trade-name", card.name + (owner ? " " + owner.icon : "")));
+    icon.innerText = card.icon;
+    name.innerText = card.name;
+    sub.innerText = rules.cardRarities[card.rarity].name + (owner ? " · " + owner.icon + " " + owner.name : " · Neutral");
     row.title = card.text;
   } else if (one.gone) {
-    row.append(el("span", "rpg-trade-icon", "❔"), el("span", "rpg-trade-name mm-muted", "Gone"));
+    icon.innerText = "❔";
+    name.innerText = "Gone";
   } else {
     row.classList.add("rarity-" + one.item.rarity);
-    row.append(el("span", "rpg-trade-icon", one.item.icon), el("span", "rpg-trade-name", one.item.name));
-    row.title = bonusOf(one.item);
+    icon.innerText = one.item.icon;
+    name.innerText = one.item.name;
+    sub.innerText = RARITY_NAMES[one.item.rarity] + " " + SLOT_NAMES[one.item.slot].toLowerCase();
+    row.title = bonusOf(one.item).split(" · ").join("\n");
   }
-  var count = act ? (one.n > 1 || picked ? picked + " / " + (one.n || 1) : "") : one.n > 1 ? "×" + one.n : "";
-  row.append(el("span", "rpg-trade-n", count), el("span", "rpg-trade-value", "🪙 " + formatCoins(one.value)));
+  var text = el("span", "rpg-trade-text");
+  text.append(name, sub);
+  var right = el("span", "rpg-trade-right");
+  right.appendChild(el("span", "rpg-trade-value", "🪙 " + formatCoins(one.value)));
+  // (picked: how many of how many - shown in a gold badge; a list of an offer: how many)
+  if (act && (picked || one.n > 1)) right.appendChild(el("span", "rpg-trade-n" + (picked ? " on" : ""), picked ? picked + " / " + (one.n || 1) : "×" + one.n));
+  else if (!act && one.n > 1) right.appendChild(el("span", "rpg-trade-n on", "×" + one.n));
+  row.append(icon, text, right);
   return row;
+}
+
+// A side of the trade: its title and total, the cards and the gear in groups
+function tradePanel(title, list, side, picks, act, empty) {
+  var panel = el("div", "rpg-trade-col " + side);
+  var head = el("div", "rpg-trade-col-head");
+  var total = act ? pickValue(list, picks) : list.reduce((sum, one) => sum + one.value, 0);
+  head.append(el("span", "", title), el("span", "rpg-trade-total", "🪙 " + formatCoins(total)));
+  panel.appendChild(head);
+  if (!list.length) panel.appendChild(el("div", "rpg-trade-empty", empty));
+  [
+    ["Cards", list.filter((one) => one.k == "card")],
+    ["Gear", list.filter((one) => one.k != "card")],
+  ].forEach(([label, group]) => {
+    if (!group.length) return;
+    if (act) panel.appendChild(el("div", "rpg-trade-group", label));
+    var grid = el("div", "rpg-trade-grid");
+    group.forEach((one) => grid.appendChild(tradeRow(one, side, picks, act)));
+    panel.appendChild(grid);
+  });
+  return panel;
+}
+
+// The balance between the two sides: a scale - fair, or how much is missing on which side
+function tradeScale(give, take) {
+  var gap = tradeGap(give, take);
+  var box = el("div", "rpg-trade-scale" + (give + take == 0 ? "" : gap ? " bad" : " good"));
+  var high = Math.max(give, take, 1);
+  var beam = el("div", "rpg-trade-beam");
+  var left = el("i", "give");
+  var right = el("i", "take");
+  left.style.width = (give / high) * 50 + "%";
+  right.style.width = (take / high) * 50 + "%";
+  beam.append(left, right);
+  var state = give + take == 0 ? "⚖️" : gap ? "⚖️ " + (give < take ? "Add 🪙 " + formatCoins(gap) + " on your side" : "Ask for 🪙 " + formatCoins(gap) + " more") : "⚖️ Fair";
+  box.append(el("span", "rpg-trade-state", state), beam);
+  return box;
 }
 
 function renderTrade() {
@@ -872,59 +924,52 @@ function renderTrade() {
     offers.appendChild(el("div", "rpg-label", "Offers"));
     trades.forEach((offer) => {
       var mine = offer.from == myName;
+      var other = mine ? offer.to : offer.from;
       var box = el("div", "rpg-trade-offer" + (mine ? " mine" : ""));
       var head = el("div", "rpg-trade-offer-head");
-      head.append(createAvatar(mine ? offer.to : offer.from, "sm"), el("b", "", mine ? "Your offer to " + offer.to : offer.from + " offers you a trade"));
-      var sides = el("div", "rpg-trade-sides");
-      [
-        [mine ? "You give" : "You get", offer.give],
-        [mine ? "You get" : "You give", offer.take],
-      ].forEach(([label, side]) => {
-        var col = el("div", "rpg-trade-col");
-        col.appendChild(el("div", "rpg-trade-col-head", label + " · 🪙 " + formatCoins(side.reduce((sum, one) => sum + one.value, 0))));
-        if (!side.length) col.appendChild(el("div", "mm-muted small", "Nothing."));
-        side.forEach((one) => col.appendChild(tradeRow(one, "", {}, null)));
-        sides.appendChild(col);
-      });
+      head.append(createAvatar(other, "sm"), el("b", "", mine ? "Your offer to " + other : other + " offers you a trade"));
+      var give = mine ? offer.give : offer.take;
+      var take = mine ? offer.take : offer.give;
+      var sides = el("div", "rpg-trade-board");
+      sides.append(tradePanel("You give", give, "give", {}, null, "Nothing."), el("div", "rpg-trade-swap", "⇄"), tradePanel("You get", take, "take", {}, null, "Nothing."));
       var actions = el("div", "rpg-trade-actions");
-      if (mine) actions.appendChild(button("Take back", "tradeCancel", { id: offer.id, className: "small" }));
-      else actions.append(button("Accept", "tradeAccept", { id: offer.id, className: "small primary" }), button("Decline", "tradeDecline", { id: offer.id, className: "small" }));
+      if (mine) actions.append(el("span", "mm-muted small", "Waiting for " + other + "."), button("Take back", "tradeCancel", { id: offer.id, className: "small" }));
+      else actions.append(button("Decline", "tradeDecline", { id: offer.id, className: "small" }), button("✓ Accept", "tradeAccept", { id: offer.id, className: "small primary" }));
       box.append(head, sides, actions);
       offers.appendChild(box);
     });
     nodes.push(offers);
   }
-  // A new offer: the player, what you give, what you get
-  var who = el("div", "rpg-trade-who");
-  var select = el("select", "rpg-trade-select");
-  select.id = "rpgTradeWho";
-  select.appendChild(new Option(tradePlayers.length ? "Pick a player" : "Nobody to trade with yet", ""));
-  tradePlayers.forEach((p) => select.appendChild(new Option(p.name + " · " + ((rules.classes[p.cls] || {}).name || "") + " Lv " + p.level, p.name)));
-  select.value = tradeWith;
-  who.append(el("span", "rpg-label", "Trade with"), select);
+  // A new offer: the player (a chip each), what you give, what you get
+  nodes.push(el("div", "rpg-label", "New trade"));
+  var who = el("div", "rpg-trade-players");
+  if (!tradePlayers.length) who.appendChild(el("div", "rpg-trade-empty", "Nobody to trade with yet."));
+  tradePlayers.forEach((p) => {
+    var cls = rules.classes[p.cls] || { icon: "", name: "" };
+    var chip = button("", "tradeWho", { id: p.name, className: "rpg-trade-player" + (p.name == tradeWith ? " active" : "") });
+    var text = el("span", "rpg-trade-player-text");
+    text.append(el("b", "", p.name), el("span", "", cls.icon + " " + cls.name + " · Lv " + p.level));
+    chip.append(createAvatar(p.name, "sm"), text);
+    who.appendChild(chip);
+  });
   nodes.push(who);
   var mineList = hero.tradeable || [];
   var theirList = tradeTheirs ? tradeTheirs.list : [];
-  var cols = el("div", "rpg-trade-sides");
-  [
-    ["You give", mineList, "give"],
-    ["You get", theirList, "take"],
-  ].forEach(([label, list, side]) => {
-    var col = el("div", "rpg-trade-col");
-    col.appendChild(el("div", "rpg-trade-col-head", label + " · 🪙 " + formatCoins(pickValue(list, tradePick[side]))));
-    if (side == "take" && !tradeWith) col.appendChild(el("div", "mm-muted small", "Pick a player first."));
-    else if (!list.length) col.appendChild(el("div", "mm-muted small", side == "give" ? "You have no spare cards or gear." : "They have nothing to trade."));
-    list.forEach((one) => col.appendChild(tradeRow(one, side, tradePick[side], "tradePick")));
-    cols.appendChild(col);
-  });
-  nodes.push(cols);
   var give = pickValue(mineList, tradePick.give);
   var take = pickValue(theirList, tradePick.take);
+  var board = el("div", "rpg-trade-board");
+  var middle = el("div", "rpg-trade-middle");
+  middle.append(el("div", "rpg-trade-swap", "⇄"), tradeScale(give, take));
+  board.append(
+    tradePanel("You give", mineList, "give", tradePick.give, "tradePick", "You have no spare cards or gear."),
+    middle,
+    tradePanel(tradeWith ? "You get from " + tradeWith : "You get", theirList, "take", tradePick.take, "tradePick", tradeWith ? (tradeTheirs ? "They have nothing to trade." : "Loading…") : "Pick a player first."),
+  );
+  nodes.push(board);
   var gap = tradeGap(give, take);
-  var any = give + take > 0 || Object.keys(tradePick.give).length + Object.keys(tradePick.take).length > 0;
-  var note = !tradeWith ? "" : !any ? "Click what you want to give and what you want to get." : gap ? "Bigger trades need nearly the same value on both sides. The smaller side needs 🪙 " + formatCoins(gap) + " more." : "This trade is fair.";
+  var any = Object.keys(tradePick.give).length + Object.keys(tradePick.take).length > 0;
   var foot = el("div", "rpg-trade-foot");
-  foot.append(el("span", "rpg-trade-note" + (gap ? " bad" : ""), note), button("Send offer", "tradeSend", { className: "primary", disabled: !tradeWith || !any || !!gap }));
+  foot.append(el("span", "rpg-trade-note", any && gap ? "Bigger trades need nearly the same value on both sides." : any ? "" : tradeWith ? "Click what you give and what you want." : ""), button("Send offer", "tradeSend", { className: "primary", disabled: !tradeWith || !any || !!gap }));
   nodes.push(foot);
   morphChildren(document.getElementById("rpgTrade"), nodes);
 }
@@ -935,15 +980,6 @@ function tradeSide(list, picks) {
     .filter((one) => picks[tradeKey(one)])
     .map((one) => (one.k == "card" ? { k: "card", cls: one.cls, id: one.id, n: picks[tradeKey(one)] } : { k: "gear", id: one.item.id }));
 }
-
-document.addEventListener("change", (event) => {
-  if (event.target.id != "rpgTradeWho") return;
-  tradeWith = event.target.value;
-  tradeTheirs = null;
-  tradePick = { give: tradePick.give, take: {} };
-  if (tradeWith) socket.emit("tradeLook", { name: tradeWith });
-  render();
-});
 
 // The practice run: a word for every step - what to do now
 function renderCoach(run, me) {
@@ -1001,10 +1037,11 @@ function deckSwitch() {
   if (!hero.decks || hero.decks.length < 2) return null;
   var box = el("span", "rpg-deck-switch");
   hero.decks.forEach((n, i) => {
-    var pill = el("span", "rpg-deck-slot" + (i == hero.deckAt ? " active" : "") + (n ? "" : " empty"), String(i + 1));
+    var name = (hero.deckNames || [])[i];
+    var pill = el("span", "rpg-deck-slot" + (i == hero.deckAt ? " active" : "") + (n ? "" : " empty") + (name ? " named" : ""), name || String(i + 1));
     pill.dataset.act = "deckUse";
     pill.dataset.id = String(i);
-    pill.title = "Deck " + (i + 1) + " has " + n + " cards" + (i == hero.deckAt ? " and is in use." : ".");
+    pill.title = (name || "Deck " + (i + 1)) + " has " + n + " cards" + (i == hero.deckAt ? " and is in use." : ".");
     box.appendChild(pill);
   });
   return box;
@@ -1596,14 +1633,32 @@ var RARITY_ORDER = ["basic", "common", "rare", "epic", "legendary", "mythic"];
 var byRarity = (a, b) => RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.indexOf(cardOf(b).rarity) || cardOf(a).cost - cardOf(b).cost || cardOf(a).name.localeCompare(cardOf(b).name);
 var byCost = (a, b) => cardOf(a).cost - cardOf(b).cost || RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.indexOf(cardOf(b).rarity) || cardOf(a).name.localeCompare(cardOf(b).name);
 
-// A card with spare copies (past what a deck holds, or of a class not played): a button to dust one
-function dustButton(node, id) {
+// Craft mode: a card with what can be done with it under it - made of dust, or a spare copy dusted
+function craftCell(card, id) {
+  var info = cardOf(id);
+  var cost = rules.dust[info.rarity] || {};
+  var copies = rules.cardRarities[info.rarity].copies;
+  var mine = hero.pool.includes(id);
+  var have = mine ? hero.collection[id] || 0 : (hero.owned || {})[id] || 0;
   var spare = (hero.dustable || []).find((one) => one.id == id);
-  if (!spare) return;
-  var get = rules.dust[cardOf(id).rarity].get;
-  var b = button("Dust +" + get, "dustOne", { id: spare.cls + "|" + id, className: "rpg-card-act" });
-  b.title = "Turn one spare copy into " + get + " dust.";
-  node.appendChild(b);
+  var cell = el("div", "rpg-craft-cell" + (spare ? " spare" : ""));
+  var bar = el("div", "rpg-craft-bar");
+  bar.appendChild(el("span", "rpg-craft-have", info.rarity == "basic" ? "Basic card" : mine ? have + " of " + copies + " for a deck" + (have > copies ? " · " + (have - copies) + " spare" : "") : have ? have + " owned · another class" : "Another class"));
+  var buttons = el("div", "rpg-craft-buttons");
+  if (cost.craft && mine) {
+    var full = have >= copies;
+    var make = button("✨ Craft · " + cost.craft, "craft", { id: id, className: "rpg-craft-btn make", disabled: full || (hero.dust || 0) < cost.craft });
+    make.title = full ? "You have every copy a deck can hold." : (hero.dust || 0) < cost.craft ? "You need " + cost.craft + " dust." : "Make a copy for " + cost.craft + " dust.";
+    buttons.appendChild(make);
+  }
+  if (cost.get) {
+    var dust = button("💨 Dust · +" + cost.get, "dustOne", { id: spare ? spare.cls + "|" + id : "", className: "rpg-craft-btn dust", disabled: !spare });
+    dust.title = spare ? "Turn one spare copy into " + cost.get + " dust." : "You have no spare copy of this card.";
+    buttons.appendChild(dust);
+  }
+  bar.appendChild(buttons);
+  cell.append(card, bar);
+  return cell;
 }
 
 function renderBuilder() {
@@ -1613,7 +1668,16 @@ function renderBuilder() {
   info.type = "button";
   info.title = "How cards work";
   info.dataset.act = "deckHelp";
-  morphChildren(document.getElementById("rpgBuilderTitle"), [el("span", "", "🃏 Deck builder · " + cls.icon + " " + cls.name), info, deckSwitch()]);
+  var crafting = button(craftMode ? "✓ Craft mode" : "✨ Craft mode", "craftMode", { className: "small rpg-craft-toggle" + (craftMode ? " on" : "") });
+  crafting.title = craftMode ? "Back to building your deck." : "Make missing cards with dust and dust spare ones.";
+  morphChildren(document.getElementById("rpgBuilderTitle"), [el("span", "", "🃏 Deck builder · " + cls.icon + " " + cls.name), info, deckSwitch(), crafting]);
+  document.getElementById("rpgBuilder").classList.toggle("crafting", craftMode);
+  document.getElementById("rpgBuilderHint").innerText = craftMode ? "Make the cards you miss with dust and dust the copies you don't need." : "Click or drag cards in and out.";
+  // (the deck in use: its name - a pencil renames it)
+  var deckName = (hero.deckNames || [])[hero.deckAt || 0];
+  var rename = button("✏️", "deckRename", { className: "small rpg-deck-rename" });
+  rename.title = "Rename this deck.";
+  morphChildren(document.getElementById("rpgDeckName"), [el("b", "", deckName || (hero.decks && hero.decks.length > 1 ? "Deck " + ((hero.deckAt || 0) + 1) : "Your deck")), rename]);
   var deck = hero.deck;
   var counts = {};
   deck.forEach((id) => (counts[id] = (counts[id] || 0) + 1));
@@ -1686,8 +1750,7 @@ function renderBuilder() {
             var other = cardEl(id, { base: true, className: (have ? "" : "unowned") + " spent" });
             other.appendChild(el("span", "rpg-cardx-count", have ? "×" + have : "🔒"));
             other.title = (have ? "You own " + have + ". " : "Not owned yet. ") + "This card belongs to another class.";
-            dustButton(other, id);
-            return other;
+            return craftMode ? craftCell(other, id) : other;
           }
           var all = hero.collection[id] || 0;
           var owned = Math.min(all, rules.cardRarities[cardOf(id).rarity].copies);
@@ -1702,12 +1765,12 @@ function renderBuilder() {
           node.appendChild(el("span", "rpg-cardx-count", owned ? (counts[id] || 0) + " / " + owned + (all > owned ? " · +" + (all - owned) : "") : "🔒"));
           node.title = !owned ? "Not owned yet." : spare <= 0 ? "All your copies are in the deck." : full ? "Your deck is full." : "Click or drag it into your deck.";
           // (a copy missing: made of dust - spare copies: to dust)
-          var craft = (rules.dust[cardOf(id).rarity] || {}).craft;
-          if (craft && all < rules.cardRarities[cardOf(id).rarity].copies) {
-            var make = button("✨ " + craft, "craft", { id: id, className: "rpg-card-act", disabled: (hero.dust || 0) < craft });
-            make.title = "Make a copy for " + craft + " dust.";
-            node.appendChild(make);
-          } else dustButton(node, id);
+          if (craftMode) {
+            // (craft mode: the card only to look at - the actions under it)
+            var plain = cardEl(id, { base: true, className: owned ? "" : "unowned" });
+            plain.appendChild(el("span", "rpg-cardx-count", all ? "×" + all : "🔒"));
+            return craftCell(plain, id);
+          }
           return node;
         })
       : [el("div", "rpg-empty mm-muted", "No card fits the filters.")],
@@ -2991,7 +3054,13 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     document.getElementById("rpgPackModal").remove();
   } else if (act == "pile") showPile(id);
   else if (act == "view") setView(id);
-  else if (act == "tradePick") {
+  else if (act == "tradeWho") {
+    tradeWith = id == tradeWith ? "" : id;
+    tradeTheirs = null;
+    tradePick = { give: tradePick.give, take: {} };
+    if (tradeWith) socket.emit("tradeLook", { name: tradeWith });
+    render();
+  } else if (act == "tradePick") {
     var [side, key] = id.split("|");
     var list = side == "give" ? hero.tradeable || [] : tradeTheirs ? tradeTheirs.list : [];
     var one = list.find((entry) => tradeKey(entry) == key);
@@ -3016,6 +3085,13 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     socket.emit("dust", { cls: cls, id: cardId, n: 1 });
   } else if (act == "craft") socket.emit("craft", { id: id });
   else if (act == "packDust") socket.emit("packDust", { id: id });
+  else if (act == "craftMode") {
+    craftMode = !craftMode;
+    render();
+  } else if (act == "deckRename") {
+    var slot = hero.deckAt || 0;
+    confirmDialog({ title: "Rename this deck", text: "Give it a short name, or leave it empty for its number.", confirmLabel: "Save", input: { value: (hero.deckNames || [])[slot] || "", placeholder: "Deck " + (slot + 1), maxLength: 20 } }).then((name) => name !== false && socket.emit("deckName", { slot: slot, name: name }));
+  }
   else if (act == "rewardView") {
     rewardView = id;
     render();
