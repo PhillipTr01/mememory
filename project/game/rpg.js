@@ -428,6 +428,15 @@ function partyBonus(size) {
   return 1 + PARTY_LOOT * Math.max(0, size - 1);
 }
 
+// What a hero takes out of a run: its share of the pot - a floor cleared never pays less than CLEAR_PAY times
+// its entry (the share for a low floor included)
+const CLEAR_PAY = 1.1;
+function payout(run, hero, result) {
+  const pot = Math.round(run.pot * (hero.share == null ? 1 : hero.share));
+  if (result !== "won") return pot;
+  return Math.max(pot, round100(entryCost(run.floor) * CLEAR_PAY));
+}
+
 // A character's share of the loot pot on a floor: far under its deepest cleared floor - less (no farming low floors)
 function lootShare(deepest, floor) {
   const under = deepest - floor - config.RPG_LOW_FREE;
@@ -3510,6 +3519,8 @@ module.exports = {
   floorCooldown,
   coolFloor,
   warmFloor,
+  payout,
+  CLEAR_PAY,
   lootShare,
   levelGap,
   revivePrice,

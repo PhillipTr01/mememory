@@ -2840,7 +2840,7 @@ function handBar(run, me) {
     box.append(
       el("div", "rpg-result-icon", lost ? "💀" : party.result == "won" ? "🎉" : "🚪"),
       el("div", "rpg-result-title", lost ? "The party fell" : party.result == "won" ? "Floor cleared" : "You left the dungeon"),
-      el("div", "rpg-result-coins", lost ? "The loot is lost." : "You get 🪙 " + formatCoins(myPot(run)) + "."),
+      el("div", "rpg-result-coins", lost ? "The loot is lost." : "You get 🪙 " + formatCoins(party.summary && party.summary[myName] && party.summary[myName].pot != null ? party.summary[myName].pot : myPot(run)) + "."),
     );
     var sum = party.summary && party.summary[myName];
     if (sum) {

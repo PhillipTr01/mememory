@@ -1672,3 +1672,12 @@ test("rpg: starting over - everything gone, nothing sold for it; once in three d
   assert.match(await again, /reset again/);
   rex.disconnect();
 });
+
+test("rpg: a cleared floor never pays less than 1.1 times its entry - a low share included; leaving early or falling: as it is", () => {
+  const run = { floor: 6, pot: 1000 };
+  const entry = rpg.entryCost(6);
+  assert.strictEqual(rpg.payout(run, { share: 0.5 }, "won"), Math.round(entry * 1.1 / 100) * 100);
+  assert.strictEqual(rpg.payout({ floor: 6, pot: entry * 3 }, {}, "won"), entry * 3);
+  assert.strictEqual(rpg.payout(run, {}, "left"), 1000);
+  assert.strictEqual(rpg.payout(run, { share: 0.5 }, "left"), 500);
+});

@@ -373,7 +373,8 @@ module.exports = function (io, options = {}) {
         }
       }
       // (a character far deeper than this floor: a smaller share)
-      const pot = Math.round(run.pot * (one.share == null ? 1 : one.share));
+      const pot = rpg.payout(run, one, result);
+      party.summary[one.name].pot = pot;
       if (pot > 0 && ours(one.name)) await coins.add(one.name, pot, { reason: "rpg loot", note: "floor " + run.floor + " - " + result });
       sendHero(one.name);
     }
