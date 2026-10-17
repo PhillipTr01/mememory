@@ -85,7 +85,7 @@ const FIELDS = [
   { group: "rpg", section: "Packs", key: "RPG_PACK_MYTHIC", label: "Mythic Pack", step: 1000, min: 1, max: 100000000 },
   { group: "rpg", section: "Difficulty", key: "RPG_MONSTER_HP", label: "Monster HP", hint: "100%: as designed.", unit: "%", step: 5, min: 10, max: 1000 },
   { group: "rpg", section: "Difficulty", key: "RPG_MONSTER_ATK", label: "Monster attack", hint: "100%: as designed.", unit: "%", step: 5, min: 10, max: 1000 },
-  { group: "rpg", section: "Difficulty", key: "RPG_LOOT", label: "Loot", hint: "Of the coins every room puts in the pot. 130%: a floor pays about 2.5 times its entry on average.", unit: "%", step: 5, min: 0, max: 1000 },
+  { group: "rpg", section: "Difficulty", key: "RPG_LOOT", label: "Loot", hint: "Of the coins every room puts in the pot. 100%: a floor pays about 2 times its entry on average.", unit: "%", step: 5, min: 0, max: 1000 },
   { group: "rpg", section: "Floors", key: "RPG_LOW_FREE", label: "Full loot below the best", hint: "Full pot on floors this far under the deepest cleared one.", unit: "floors", step: 1, min: 0, max: 100 },
   { group: "rpg", section: "Floors", key: "RPG_LOW_CUT", label: "Less loot per floor lower", hint: "Each floor lower: this much less of the pot.", unit: "%", step: 1, min: 0, max: 100 },
   { group: "rpg", section: "Floors", key: "RPG_LOW_MIN", label: "Loot at least", hint: "The pot share never drops under this.", unit: "%", step: 1, min: 0, max: 100 },
