@@ -242,7 +242,7 @@ module.exports = {
   RPG_FLOOR_COOLDOWN: 2 * 3600 * 1000, // a cleared floor: not opened again this long (another one's party on it: fine)
   RPG_DEATH_TIME: 3 * 3600 * 1000, // the party down: the character dead this long
   RPG_RESET_COOLDOWN: 3 * 24 * 3600 * 1000, // a player's dungeon reset: once in this long
-  RPG_REVIVE_PERCENT: 150, // a revive: this share of an entry of the deepest floor open, % (1.5 times as much each one of a day)
+  RPG_REVIVE_PERCENT: 100, // a revive: this share of an entry of the deepest floor open, % (25% of it more with each one of a day)
   RPG_MONSTER_HP: 100, // % of the monsters' HP
   RPG_MONSTER_ATK: 100, // % of the monsters' attack
   RPG_LOOT: 100, // % of the coins a room puts in the pot

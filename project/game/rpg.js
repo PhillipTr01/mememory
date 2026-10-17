@@ -1003,10 +1003,10 @@ function entryCost(floor) {
   return round100(config.RPG_ENTRY_BASE * Math.pow(1 + config.RPG_ENTRY_GROWTH / 100, floor - 1));
 }
 
-/* ---------- Death: a character down with its party rests 6 hours - or is brought back for coins ---------- */
+/* ---------- Death: a character down with its party rests 3 hours - or is brought back for coins ---------- */
 
-// The price of bringing it back: a share of an entry of its deepest floor open (config) - 1.5 times as much with every revive of the day
-const REVIVE_GROWTH = 1.5;
+// The price of bringing it back: a share of an entry of its deepest floor open (config) - 25% of it more with every revive of the day
+const REVIVE_GROWTH = 0.25; // (each next revive of a day: this much of the first price more)
 
 const dayOf = (now) => new Date(now).toDateString();
 
@@ -1066,7 +1066,7 @@ function revivesToday(hero, now = Date.now()) {
 function revivePrice(hero, now = Date.now()) {
   const done = revivesToday(hero, now);
   if (!done) return 0;
-  return round100((config.RPG_REVIVE_PERCENT / 100) * entryCost(maxFloor(hero)) * Math.pow(REVIVE_GROWTH, done - 1));
+  return round100((config.RPG_REVIVE_PERCENT / 100) * entryCost(maxFloor(hero)) * (1 + REVIVE_GROWTH * (done - 1)));
 }
 
 // Brought back (paid already) -> an error or null

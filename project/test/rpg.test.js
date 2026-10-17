@@ -725,8 +725,8 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; between 
   alice.emit("revive");
   await waitFor(alice, "rpgHero", (view) => view.deadFor == 0);
   assert.strictEqual(testMode.balance("rpg_alice"), coinsDead - price);
-  // (1.5 times as much - rounded to the price steps)
-  assert.ok(Math.abs(rpg.revivePrice(mine) - price * 1.5) <= 50, String(rpg.revivePrice(mine)));
+  // (1.25 times as much - rounded to the price steps)
+  assert.ok(Math.abs(rpg.revivePrice(mine) - price * 1.25) <= 50, String(rpg.revivePrice(mine)));
   // (this tab plays no more)
   alice.close();
 });
@@ -856,7 +856,7 @@ test("rpg: leaving - one away doesn't hold the party up, one out of the run lose
   assert.ok(price > 0);
   rpg.die(hero, "warrior", now);
   assert.strictEqual(rpg.revive(hero, now), null);
-  assert.ok(Math.abs(rpg.revivePrice(hero, now) - price * 1.5) <= 50, String(rpg.revivePrice(hero, now)));
+  assert.ok(Math.abs(rpg.revivePrice(hero, now) - price * 1.25) <= 50, String(rpg.revivePrice(hero, now)));
   // (midnight: free again)
   assert.strictEqual(rpg.revivePrice(hero, now + 24 * 3600 * 1000), 0);
   assert.match(rpg.revive(hero, now), /isn't dead/);
@@ -1859,4 +1859,17 @@ test("rpg: up to 7 monsters deep down - 5 before floor 15, 6 before floor 25", (
   for (let i = 0; i < 400; i++) most = Math.max(most, rpg.monstersFor(28, 4, "hard").length);
   assert.strictEqual(most, 7);
   for (let i = 0; i < 200; i++) assert.ok(rpg.monstersFor(5, 4, "hard").length <= 5);
+});
+test("rpg: revives - the first of a day free, then 1x an entry of the deepest open floor, 1.25x, 1.5x ...", () => {
+  const hero = rpg.newHero("warrior");
+  const now = new Date(2026, 5, 1, 12).getTime();
+  const entry = rpg.entryCost(rpg.maxFloor(hero));
+  const prices = [];
+  for (let i = 0; i < 4; i++) {
+    prices.push(rpg.revivePrice(hero, now));
+    rpg.die(hero, "warrior", now);
+    rpg.revive(hero, now);
+  }
+  // (rounded to the price steps)
+  [0, entry, entry * 1.25, entry * 1.5].forEach((want, i) => assert.ok(Math.abs(prices[i] - want) <= 50, `${i}: ${prices[i]} for ${want}`));
 });
