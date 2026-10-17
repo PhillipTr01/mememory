@@ -1968,6 +1968,13 @@ function renderDoor() {
   clearTimeout(coolTimer);
   if (cool) coolTimer = setTimeout(renderDoor, Math.min(cool + 50, 30000));
   var info = [el("span", "", "Entry 🪙 " + formatCoins(entry) + " each"), tag];
+  // (how often this character already ran the floor today)
+  var runs = (hero.runsToday || {})[floor] || 0;
+  if (runs) {
+    var again = el("span", "rpg-floor-tag runs", "🔁 " + runs + "× today");
+    again.title = "You ran this floor " + (runs == 1 ? "once" : runs + " times") + " today. Each run on the same day gives a little less loot.";
+    info.push(again);
+  }
   // (far under my best floor: less loot - said right here)
   var share = shareOf(floor);
   if (share < 1) {

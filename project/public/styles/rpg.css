@@ -3708,6 +3708,12 @@ button.rpg-cardx.off {
   border: 1px solid rgba(120, 170, 255, 0.4);
 }
 
+.rpg-floor-tag.runs {
+  color: #d7c4ff;
+  background: rgba(170, 130, 255, 0.12);
+  border: 1px solid rgba(170, 130, 255, 0.4);
+}
+
 .rpg-floor-tag.low {
   color: #ffb27a;
   background: rgba(255, 150, 80, 0.12);

@@ -1713,3 +1713,10 @@ test("rpg: the same floor again on the same day pays less - 100, 85, 70, 60, 50,
   const run = rpg.newRun(3, [{ name: "a", hero }]);
   assert.strictEqual(run.heroes[0].share, 0.45);
 });
+test("rpg: the hero's view counts the runs of each floor today", () => {
+  const hero = rpg.newHero("warrior");
+  rpg.countRun(hero, 2, "warrior");
+  rpg.countRun(hero, 2, "warrior");
+  const view = rpg.heroView(hero);
+  assert.deepStrictEqual(view.runsToday, { 2: 2 });
+});

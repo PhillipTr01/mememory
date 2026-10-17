@@ -1123,6 +1123,7 @@ function heroView(hero) {
     deadFor: deadFor(hero),
     cooldowns: cooldownsOf(hero),
     // (the floors run today: the next run of one pays less)
+    runsToday: Object.fromEntries(Array.from({ length: FLOORS }, (_, i) => [i + 1, runsToday(hero, i + 1)]).filter(([, runs]) => runs > 0)),
     repeatPay: Object.fromEntries(Array.from({ length: FLOORS }, (_, i) => [i + 1, repeatPay(hero, i + 1)]).filter(([, pay]) => pay < 1)),
     revivePrice: revivePrice(hero),
     revives: revivesToday(hero),
