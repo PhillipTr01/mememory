@@ -1886,7 +1886,7 @@ test("rpg: up to 7 monsters deep down - 5 before floor 15, 6 before floor 25", (
   assert.strictEqual(most, 7);
   for (let i = 0; i < 200; i++) assert.ok(rpg.monstersFor(5, 4, "hard").length <= 5);
 });
-test("rpg: revives - the first of a day free, then 1x an entry of the deepest open floor, 1.25x, 1.5x ... up to 2x", () => {
+test("rpg: revives - the first of a day free, then 1x an entry of the deepest open floor, 1.25x, then 1.5x at most", () => {
   const hero = rpg.newHero("warrior");
   const now = new Date(2026, 5, 1, 12).getTime();
   const entry = rpg.entryCost(rpg.maxFloor(hero));
@@ -1898,12 +1898,12 @@ test("rpg: revives - the first of a day free, then 1x an entry of the deepest op
   }
   // (rounded to the price steps)
   [0, entry, entry * 1.25, entry * 1.5].forEach((want, i) => assert.ok(Math.abs(prices[i] - want) <= 50, `${i}: ${prices[i]} for ${want}`));
-  // (at most twice the first price)
+  // (at most 1.5 times the first price)
   for (let i = 0; i < 6; i++) {
     rpg.die(hero, "warrior", now);
     rpg.revive(hero, now);
   }
-  assert.ok(Math.abs(rpg.revivePrice(hero, now) - entry * 2) <= 50, String(rpg.revivePrice(hero, now)));
+  assert.ok(Math.abs(rpg.revivePrice(hero, now) - entry * 1.5) <= 50, String(rpg.revivePrice(hero, now)));
 });
 
 test("rpg: luck helps against steady foes - they shrug off fewer stuns", () => {

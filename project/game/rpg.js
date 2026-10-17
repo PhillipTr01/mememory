@@ -1007,7 +1007,7 @@ function entryCost(floor) {
 
 // The price of bringing it back: a share of an entry of its deepest floor open (config) - 25% of it more with every revive of the day
 const REVIVE_GROWTH = 0.25; // (each next revive of a day: this much of the first price more)
-const REVIVE_TOP = 2; // (never more than this many times the first price)
+const REVIVE_TOP = 1.5; // (never more than this many times the first price)
 
 const dayOf = (now) => new Date(now).toDateString();
 
