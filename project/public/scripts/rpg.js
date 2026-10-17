@@ -1174,6 +1174,10 @@ function renderReady() {
   for (var i = 0; i < hero.potionsMax; i++) flasks.appendChild(flask(i < hero.potions ? "" : "off"));
   var full = hero.potions >= hero.potionsMax;
   loadout.appendChild(line(flask(), "Potions", hero.potions + " / " + hero.potionsMax, hero.potions ? "ok" : "warn", full ? null : "potion", null, full ? "Full" : "Buy one: 🪙 " + formatCoins(hero.potionPrice), flasks));
+  // (the auto refill: after every run the potions bought up to the most)
+  var refill = button("", "autoPotions", { className: "rpg-toggle rpg-auto-potions" + (hero.autoPotions ? " on" : ""), title: "After every run, potions are bought for 🪙 " + formatCoins(hero.potionPrice) + " each until you carry the most you can." });
+  refill.append(el("i", "rpg-toggle-knob"), el("span", "", "Refill potions after every run"));
+  loadout.appendChild(refill);
   // (the gear: the three slots - what is worn)
   var slots = el("span", "rpg-load-slots");
   ["weapon", "armor", "charm"].forEach((slot) => {
@@ -3285,6 +3289,7 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "builder") setView("deck");
   else if (act == "shop") setView("shop");
   else if (act == "potion") socket.emit("potion");
+  else if (act == "autoPotions") socket.emit("autoPotions", { on: !hero.autoPotions });
   else if (act == "revive") socket.emit("revive");
   else if (act == "bagSlot") socket.emit("bagSlot");
   else if (act == "potionSlot") socket.emit("potionSlot");

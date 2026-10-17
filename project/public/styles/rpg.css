@@ -8605,3 +8605,9 @@ button.rpg-trade-row:active {
     width: calc(33.3% - 0.4rem);
   }
 }
+
+/* The auto refill of the potions: a switch under the loadout */
+.rpg-auto-potions {
+  align-self: flex-start;
+  margin: -0.1rem 0 0.2rem 0.6rem;
+}

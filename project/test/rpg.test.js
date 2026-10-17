@@ -660,6 +660,15 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; between 
   assert.strictEqual(testMode.balance("rpg_alice"), 5000000 - rpg.upgradeCost(0));
   alice.emit("potion");
   await waitFor(alice, "rpgHero", (view) => view.potions == 3);
+  // The auto refill: on - filled up right away (each at the potion price), off again
+  const mine0 = server.test.rpg.heroOf("rpg_alice");
+  const wallet = testMode.balance("rpg_alice");
+  alice.emit("autoPotions", { on: true });
+  const full = await waitFor(alice, "rpgHero", (view) => view.autoPotions && view.potions == view.potionsMax);
+  assert.strictEqual(testMode.balance("rpg_alice"), wallet - (full.potionsMax - 3) * rpg.potionPrice(rpg.maxFloor(mine0)));
+  alice.emit("autoPotions", { on: false });
+  await waitFor(alice, "rpgHero", (view) => !view.autoPotions);
+  mine0.potions = 3;
   // Another class: locked - bought, a character of its own (its own levels)
   const locked = h.once(alice, "rpgError");
   alice.emit("class", { id: "mage" });

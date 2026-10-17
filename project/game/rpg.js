@@ -1111,6 +1111,7 @@ function heroView(hero) {
       return all;
     }, {}),
     packs: packsOf(hero),
+    autoPotions: !!hero.autoPotions,
     dust: hero.dust || 0,
     dustable: dustList(hero),
     dustAny: dustAnyList(hero),

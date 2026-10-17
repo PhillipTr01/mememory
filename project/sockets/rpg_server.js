@@ -255,6 +255,16 @@ module.exports = function (io, options = {}) {
     emitParty(party);
   }
 
+  // The potions refilled (auto refill on): bought one by one up to the most - until the coins run out
+  async function refill(name) {
+    const hero = heroOf(name);
+    if (!hero.autoPotions || !hero.cls) return;
+    while (hero.potions < rpg.potionsMax(hero)) {
+      if (!(await coins.spend(name, rpg.potionPrice(rpg.maxFloor(hero)), { reason: "rpg potion" }))) return;
+      hero.potions++;
+    }
+  }
+
   // Out of a run before its end (left, or away too long): no share of the pot, no loot - half the XP; the others
   // go on
   function abandonRun(party, name) {
@@ -267,6 +277,9 @@ module.exports = function (io, options = {}) {
       hero.potions = Math.min(rpg.potionsMax(hero), hero.potions + gone.potions);
       rpg.gainXp(rpg.charOf(hero, gone.cls), Math.round(gone.xp / 2));
       sendHero(name);
+      refill(name)
+        .then(() => sendHero(name))
+        .catch((error) => console.error("[rpg] Could not refill potions:", error));
     }
     party.members = party.members.filter((member) => member !== name);
     letGo(party, name);
@@ -381,6 +394,7 @@ module.exports = function (io, options = {}) {
       const pot = rpg.payout(run, one, result);
       party.summary[one.name].pot = pot;
       if (pot > 0 && ours(one.name)) await coins.add(one.name, pot, { reason: "rpg loot", note: "floor " + run.floor + " - " + result });
+      await refill(one.name);
       sendHero(one.name);
     }
     emitParty(party);
@@ -690,6 +704,14 @@ module.exports = function (io, options = {}) {
       if (hero.potions >= rpg.potionsMax(hero)) return error(`At most ${rpg.potionsMax(hero)} potions.`);
       if (!(await coins.spend(username, rpg.potionPrice(rpg.maxFloor(hero)), { reason: "rpg potion" }))) return error(coins.refusal(username) || "You don't have enough coins.");
       hero.potions++;
+      sendHero(username);
+    });
+
+    // The auto refill of the potions after every run: on / off (on: filled up right away)
+    on("autoPotions", async (data) => {
+      const hero = heroOf(username);
+      hero.autoPotions = !!(data && data.on);
+      if (!inRun()) await refill(username);
       sendHero(username);
     });
 
