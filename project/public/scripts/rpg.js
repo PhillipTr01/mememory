@@ -198,6 +198,7 @@ socket.on("rpgHero", (data) => {
 // Trades: the offers made and received, the players to trade with, the one picked and what they have, what is picked
 var trades = [];
 var deckMenu = false; // the deck builder's deck dropdown open
+var playerMenu = false; // the trade's player dropdown open
 var craftMode = false; // the deck builder in craft mode: cards made and dusted, not built into the deck
 var tradePlayers = [];
 var tradeWith = "";
@@ -882,19 +883,28 @@ function tradePanel(title, list, side, picks, act, empty) {
   var head = el("div", "rpg-trade-col-head");
   var total = act ? pickValue(list, picks) : list.reduce((sum, one) => sum + one.value, 0);
   head.append(el("span", "", title), el("span", "rpg-trade-total", "🪙 " + formatCoins(total)));
-  panel.appendChild(head);
-  if (!list.length) panel.appendChild(el("div", "rpg-trade-empty", empty));
+  // (the head stays, the list under it scrolls)
+  var body = el("div", "rpg-trade-scroll");
+  panel.append(head, body);
+  if (!list.length) body.appendChild(el("div", "rpg-trade-empty", empty));
   [
     ["Cards", list.filter((one) => one.k == "card")],
     ["Gear", list.filter((one) => one.k != "card")],
   ].forEach(([label, group]) => {
     if (!group.length) return;
-    if (act) panel.appendChild(el("div", "rpg-trade-group", label));
+    if (act) body.appendChild(el("div", "rpg-trade-group", label));
     var grid = el("div", "rpg-trade-grid");
     group.forEach((one) => grid.appendChild(tradeRow(one, side, picks, act)));
-    panel.appendChild(grid);
+    body.appendChild(grid);
   });
   return panel;
+}
+
+// Two arrows: the swap between the two sides
+function swapIcon() {
+  var box = el("div", "rpg-trade-swap");
+  box.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14m0 0-4-4m4 4-4 4M20 16H6m0 0 4-4m-4 4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  return box;
 }
 
 // The balance between the two sides: a scale - fair, or how much is missing on which side
@@ -932,7 +942,7 @@ function renderTrade() {
       var give = mine ? offer.give : offer.take;
       var take = mine ? offer.take : offer.give;
       var sides = el("div", "rpg-trade-board");
-      sides.append(tradePanel("You give", give, "give", {}, null, "Nothing."), el("div", "rpg-trade-swap", "⇄"), tradePanel("You get", take, "take", {}, null, "Nothing."));
+      sides.append(tradePanel("You give", give, "give", {}, null, "Nothing."), swapIcon(), tradePanel("You get", take, "take", {}, null, "Nothing."));
       var actions = el("div", "rpg-trade-actions");
       if (mine) actions.append(el("span", "mm-muted small", "Waiting for " + other + "."), button("Take back", "tradeCancel", { id: offer.id, className: "small" }));
       else actions.append(button("Decline", "tradeDecline", { id: offer.id, className: "small" }), button("✓ Accept", "tradeAccept", { id: offer.id, className: "small primary" }));
@@ -943,16 +953,30 @@ function renderTrade() {
   }
   // A new offer: the player (a chip each), what you give, what you get
   nodes.push(el("div", "rpg-label", "New trade"));
-  var who = el("div", "rpg-trade-players");
-  if (!tradePlayers.length) who.appendChild(el("div", "rpg-trade-empty", "Nobody to trade with yet."));
-  tradePlayers.forEach((p) => {
+  // (the player: a dropdown - avatar, name, class and level)
+  var who = el("div", "rpg-deck-drop rpg-trade-who" + (playerMenu ? " open" : ""));
+  var picked = tradePlayers.find((p) => p.name == tradeWith);
+  var playerLine = (p, node) => {
     var cls = rules.classes[p.cls] || { icon: "", name: "" };
-    var chip = button("", "tradeWho", { id: p.name, className: "rpg-trade-player" + (p.name == tradeWith ? " active" : "") });
     var text = el("span", "rpg-trade-player-text");
     text.append(el("b", "", p.name), el("span", "", cls.icon + " " + cls.name + " · Lv " + p.level));
-    chip.append(createAvatar(p.name, "sm"), text);
-    who.appendChild(chip);
-  });
+    node.append(createAvatar(p.name, "sm"), text);
+  };
+  var pick = button("", "playerMenu", { className: "rpg-deck-drop-btn rpg-trade-pick" });
+  if (picked) playerLine(picked, pick);
+  else pick.appendChild(el("b", "", tradePlayers.length ? "Pick a player" : "Nobody to trade with yet"));
+  pick.appendChild(el("span", "rpg-deck-drop-caret", "▾"));
+  if (!tradePlayers.length) pick.disabled = true;
+  who.appendChild(pick);
+  if (playerMenu) {
+    var list = el("div", "rpg-deck-drop-menu");
+    tradePlayers.forEach((p) => {
+      var item = button("", "tradeWho", { id: p.name, className: "rpg-deck-drop-item rpg-trade-player" + (p.name == tradeWith ? " active" : "") });
+      playerLine(p, item);
+      list.appendChild(item);
+    });
+    who.appendChild(list);
+  }
   nodes.push(who);
   var mineList = hero.tradeable || [];
   var theirList = tradeTheirs ? tradeTheirs.list : [];
@@ -960,7 +984,7 @@ function renderTrade() {
   var take = pickValue(theirList, tradePick.take);
   var board = el("div", "rpg-trade-board");
   var middle = el("div", "rpg-trade-middle");
-  middle.append(el("div", "rpg-trade-swap", "⇄"), tradeScale(give, take));
+  middle.append(swapIcon(), tradeScale(give, take));
   board.append(
     tradePanel("You give", mineList, "give", tradePick.give, "tradePick", "You have no spare cards or gear."),
     middle,
@@ -3035,8 +3059,8 @@ function dropTarget(event) {
 
 // (a click anywhere else: the class dropdown closes)
 document.addEventListener("click", (event) => {
-  if (deckMenu && !event.target.closest(".rpg-deck-drop")) {
-    deckMenu = false;
+  if ((deckMenu || playerMenu) && !event.target.closest(".rpg-deck-drop")) {
+    deckMenu = playerMenu = false;
     render();
   }
   if (classMenu && !event.target.closest(".rpg-classes")) {
@@ -3077,7 +3101,8 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   } else if (act == "pile") showPile(id);
   else if (act == "view") setView(id);
   else if (act == "tradeWho") {
-    tradeWith = id == tradeWith ? "" : id;
+    playerMenu = false;
+    tradeWith = id;
     tradeTheirs = null;
     tradePick = { give: tradePick.give, take: {} };
     if (tradeWith) socket.emit("tradeLook", { name: tradeWith });
@@ -3107,7 +3132,10 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     socket.emit("dust", { cls: cls, id: cardId, n: 1 });
   } else if (act == "craft") socket.emit("craft", { id: id });
   else if (act == "packDust") socket.emit("packDust", { id: id });
-  else if (act == "deckMenu") {
+  else if (act == "playerMenu") {
+    playerMenu = !playerMenu;
+    render();
+  } else if (act == "deckMenu") {
     deckMenu = !deckMenu;
     render();
   } else if (act == "craftMode") {
