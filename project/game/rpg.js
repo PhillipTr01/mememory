@@ -1354,6 +1354,12 @@ function tradeFair(give, take, top = false) {
   return null;
 }
 
+// Cards trade only for cards, gear only for gear (cards keep their value, gear's changes with its floor) -> an error or null
+function tradeMixed(give, take) {
+  const kinds = new Set([...give, ...take].map((one) => (one && one.k == "card" ? "card" : "gear")));
+  return kinds.size > 1 ? "Trade cards for cards and gear for gear." : null;
+}
+
 // A trade done: both sides checked again, then swapped -> an error or null
 // (a card: into the receiver's character of its class - a neutral one: the character played; gear: the bag)
 function trade(fromHero, toHero, give, take) {
@@ -1363,6 +1369,8 @@ function trade(fromHero, toHero, give, take) {
   const b = tradeSide(toHero, take);
   if (b.error) return b.error;
   if (!give.length && !take.length) return "Nothing to trade.";
+  const mixed = tradeMixed(give, take);
+  if (mixed) return mixed;
   const unfair = tradeFair(a.value, b.value, a.top || b.top);
   if (unfair) return unfair;
   const gearIn = (side) => side.filter((one) => one.k == "gear").length;
@@ -3482,6 +3490,7 @@ module.exports = {
   tradeList,
   tradeSide,
   tradeFair,
+  tradeMixed,
   trade,
   FLOORS,
   ROOMS,

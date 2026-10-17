@@ -1560,12 +1560,15 @@ test("rpg: trades - spare cards and the bag's gear; big trades nearly even; a ca
   // A legendary for a few commons: refused
   const commons = [{ k: "card", cls: "warrior", id: "ironwave", n: 2 }];
   assert.match(rpg.trade(b, a, [], [{ k: "card", cls: "mage", id: "pyroblast", n: 1 }]), /nearly the same value/);
-  // An epic piece of gear of about the same value: done
+  // Gear for a card: never (cards only for cards, gear only for gear)
   const gear = { ...rpg.makeGear(30, () => 0.99), id: "gx" };
   gear.value = 45000;
   b.bag.push(gear);
-  assert.strictEqual(rpg.trade(b, a, [{ k: "gear", id: "gx" }], [{ k: "card", cls: "mage", id: "pyroblast", n: 1 }]), null);
-  assert.ok(a.bag.some((item) => item.id == "gx"));
+  assert.match(rpg.trade(b, a, [{ k: "gear", id: "gx" }], [{ k: "card", cls: "mage", id: "pyroblast", n: 1 }]), /cards for cards/);
+  // A legendary card for it: done
+  rpg.charOf(b, "paladin").collection.verdict = 1;
+  assert.strictEqual(rpg.trade(b, a, [{ k: "card", cls: "paladin", id: "verdict", n: 1 }], [{ k: "card", cls: "mage", id: "pyroblast", n: 1 }]), null);
+  assert.strictEqual(rpg.charOf(a, "paladin").collection.verdict, 1);
   // (the mage's card: to b's mage - b plays a paladin)
   assert.strictEqual(rpg.charOf(b, "mage").collection.pyroblast, 1);
   assert.ok(!rpg.charOf(a, "mage").collection.pyroblast);

@@ -829,6 +829,8 @@ module.exports = function (io, options = {}) {
       if (!give || !take) return;
       if (to === username || !heroes.has(to) || !ours(to)) return error("No such player.");
       if (!give.length && !take.length) return error("Pick something to trade.");
+      const mixed = rpg.tradeMixed(give, take);
+      if (mixed) return error(mixed);
       if ([...trades.values()].filter((offer) => offer.from === username).length >= TRADES_OPEN) return error(`At most ${TRADES_OPEN} offers at once.`);
       const mine = rpg.tradeSide(heroOf(username), give);
       if (mine.error) return error(mine.error);

@@ -878,11 +878,19 @@ function tradeGap(give, take, top) {
   return low >= need ? null : need - low;
 }
 
+// What the new trade is about: "card", "gear" or null (nothing picked yet)
+function tradeKind() {
+  var keys = Object.keys(tradePick.give).concat(Object.keys(tradePick.take));
+  return keys.length ? (keys[0].startsWith("c:") ? "card" : "gear") : null;
+}
+
 // A tile of something to trade: a card (its art, name, rarity) or a piece of gear - a click picks one more
 function tradeRow(one, side, picks, act) {
   var key = tradeKey(one);
   var picked = picks[key] || 0;
-  var row = el(act ? "button" : "div", "rpg-trade-row" + (picked ? " picked" : ""));
+  // (cards only for cards, gear only for gear: the other kind dimmed once something is picked)
+  var other = act && tradeKind() && tradeKind() != (one.k == "card" ? "card" : "gear");
+  var row = el(act ? "button" : "div", "rpg-trade-row" + (picked ? " picked" : "") + (other ? " other" : ""));
   if (act) {
     row.type = "button";
     row.dataset.act = act;
@@ -898,7 +906,7 @@ function tradeRow(one, side, picks, act) {
     icon.innerText = card.icon;
     name.innerText = card.name;
     sub.innerText = rules.cardRarities[card.rarity].name + (owner ? " · " + owner.icon + " " + owner.name : " · Neutral");
-    row.title = card.text;
+    row.title = other ? "Cards trade only for cards." : card.text;
   } else if (one.gone) {
     icon.innerText = "❔";
     name.innerText = "Gone";
@@ -907,7 +915,7 @@ function tradeRow(one, side, picks, act) {
     icon.innerText = one.item.icon;
     name.innerText = one.item.name;
     sub.innerText = RARITY_NAMES[one.item.rarity] + " " + SLOT_NAMES[one.item.slot].toLowerCase();
-    row.title = bonusOf(one.item).split(" · ").join("\n");
+    row.title = other ? "Gear trades only for gear." : bonusOf(one.item).split(" · ").join("\n");
   }
   var text = el("span", "rpg-trade-text");
   text.append(name, sub);
@@ -3237,6 +3245,7 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     var list = side == "give" ? hero.tradeable || [] : tradeTheirs ? tradeTheirs.list : [];
     var one = list.find((entry) => tradeKey(entry) == key);
     if (!one) return;
+    if (tradeKind() && tradeKind() != (one.k == "card" ? "card" : "gear")) return;
     var next = (tradePick[side][key] || 0) + 1;
     if (next > (one.k == "card" ? one.n : 1)) delete tradePick[side][key];
     else tradePick[side][key] = next;

@@ -8616,3 +8616,9 @@ button.rpg-trade-row:active {
 .rpg-auto-potions .rpg-toggle-knob {
   transform: scale(0.85);
 }
+
+/* A trade: the other kind than what is picked - cards only for cards, gear only for gear */
+.rpg-trade-row.other {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
