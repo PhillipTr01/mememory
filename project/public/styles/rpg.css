@@ -6872,6 +6872,7 @@ button.rpg-cardx.off {
 }
 .rpg-load {
   --load: 74, 222, 128;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -8606,8 +8607,12 @@ button.rpg-trade-row:active {
   }
 }
 
-/* The auto refill of the potions: a switch under the loadout */
+/* The auto refill of the potions: a switch in the potions row */
 .rpg-auto-potions {
-  align-self: flex-start;
-  margin: -0.1rem 0 0.2rem 0.6rem;
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+}
+
+.rpg-auto-potions .rpg-toggle-knob {
+  transform: scale(0.85);
 }

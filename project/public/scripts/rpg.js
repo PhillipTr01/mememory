@@ -1144,9 +1144,10 @@ function renderReady() {
   var n = hero.deck.length;
   var deckOk = n >= hero.deckMin && n <= hero.deckMax;
   var loadout = el("div", "rpg-loadout");
-  var line = (icon, title, value, state, act, id, tip, extra) => {
-    var row = el("button", "rpg-load " + state);
-    row.type = "button";
+  // (tag: "div" for a row with a button of its own inside)
+  var line = (icon, title, value, state, act, id, tip, extra, tag) => {
+    var row = el(tag || "button", "rpg-load " + state);
+    if (!tag) row.type = "button";
     if (act) row.dataset.act = act;
     if (id) row.dataset.id = id;
     if (tip) row.title = tip;
@@ -1173,11 +1174,12 @@ function renderReady() {
   var flasks = el("span", "rpg-load-flasks");
   for (var i = 0; i < hero.potionsMax; i++) flasks.appendChild(flask(i < hero.potions ? "" : "off"));
   var full = hero.potions >= hero.potionsMax;
-  loadout.appendChild(line(flask(), "Potions", hero.potions + " / " + hero.potionsMax, hero.potions ? "ok" : "warn", full ? null : "potion", null, full ? "Full" : "Buy one: 🪙 " + formatCoins(hero.potionPrice), flasks));
-  // (the auto refill: after every run the potions bought up to the most)
+  var potRow = line(flask(), "Potions", hero.potions + " / " + hero.potionsMax, hero.potions ? "ok" : "warn", full ? null : "potion", null, full ? "Full" : "Buy one: 🪙 " + formatCoins(hero.potionPrice), flasks, "div");
+  // (the auto refill: after every run the potions bought up to the most - a switch in the row)
   var refill = button("", "autoPotions", { className: "rpg-toggle rpg-auto-potions" + (hero.autoPotions ? " on" : ""), title: "After every run, potions are bought for 🪙 " + formatCoins(hero.potionPrice) + " each until you carry the most you can." });
-  refill.append(el("i", "rpg-toggle-knob"), el("span", "", "Refill potions after every run"));
-  loadout.appendChild(refill);
+  refill.append(el("i", "rpg-toggle-knob"), el("span", "", "Auto refill"));
+  potRow.querySelector(".rpg-load-text").appendChild(refill);
+  loadout.appendChild(potRow);
   // (the gear: the three slots - what is worn)
   var slots = el("span", "rpg-load-slots");
   ["weapon", "armor", "charm"].forEach((slot) => {
