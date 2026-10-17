@@ -1007,6 +1007,7 @@ function entryCost(floor) {
 
 // The price of bringing it back: a share of an entry of its deepest floor open (config) - 25% of it more with every revive of the day
 const REVIVE_GROWTH = 0.25; // (each next revive of a day: this much of the first price more)
+const REVIVE_TOP = 2; // (never more than this many times the first price)
 
 const dayOf = (now) => new Date(now).toDateString();
 
@@ -1066,7 +1067,7 @@ function revivesToday(hero, now = Date.now()) {
 function revivePrice(hero, now = Date.now()) {
   const done = revivesToday(hero, now);
   if (!done) return 0;
-  return round100((config.RPG_REVIVE_PERCENT / 100) * entryCost(maxFloor(hero)) * (1 + REVIVE_GROWTH * (done - 1)));
+  return round100((config.RPG_REVIVE_PERCENT / 100) * entryCost(maxFloor(hero)) * Math.min(REVIVE_TOP, 1 + REVIVE_GROWTH * (done - 1)));
 }
 
 // Brought back (paid already) -> an error or null
@@ -2601,9 +2602,11 @@ const DEFEND = 0.5; // a monster on guard: this much of a hit gets through
 const SPIKES = 0.2; // of a hit on a spiked monster: back to the hitter
 
 // A stun - a steady foe often shrugs it off (just out of a stun, a boss in its second phase, a split monster)
+// (luck helps: half as often shrugged off at 100% luck)
 const STEADY_RESIST = 0.6;
-function stun(run, foe, rng = Math.random) {
-  if (foe.effects.steady && rng() < STEADY_RESIST) {
+const steadyResist = (hero) => STEADY_RESIST * (1 - Math.min(0.5, ((hero && hero.luck) || 0) / 200));
+function stun(run, foe, rng = Math.random, hero = null) {
+  if (foe.effects.steady && rng() < steadyResist(hero)) {
     say(run, `${foe.icon} ${foe.name} is steady and shrugs off the stun.`);
     fx(run, { k: "miss", to: foe.id });
     return;
@@ -2902,7 +2905,7 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
     for (const m of foesOf(fx.to)) {
       if (fx.status == "poison") afflict(m, "poison", fx.turns || 3, Math.max(1, Math.round(hero.atk * 0.45 * venom)));
       else if (fx.status == "burn") afflict(m, "burn", fx.turns || 2, Math.max(1, Math.round(hero.atk * 0.3 * up)));
-      else if (fx.status == "stun") stun(run, m, rng);
+      else if (fx.status == "stun") stun(run, m, rng, hero);
       else m.effects[fx.status] = fx.turns || 1;
     }
   } else if (fx.might != null) {
@@ -3328,7 +3331,7 @@ function simulatedTurn(run, me, rng) {
     const need = Math.max(0, incoming(run, me) - me.block);
     // (the foe to hit: one that can fall now - else the one that hurts most)
     const threat = (m) => (m.intent && !m.effects.stun ? intentDamage(m, m.intent.move) : 0);
-    const stunnable = (m) => threat(m) * (m.effects.steady ? 1 - STEADY_RESIST : 1);
+    const stunnable = (m) => threat(m) * (m.effects.steady ? 1 - steadyResist(me) : 1);
     const target = foes.slice().sort((x, y) => x.hp - y.hp)[0];
     const worst = foes.slice().sort((x, y) => threat(y) - threat(x))[0];
     const ally = alive(run.heroes).sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp)[0] || me;
@@ -3603,6 +3606,7 @@ module.exports = {
   doorsFor,
   monstersFor,
   maxFoes,
+  steadyResist,
   afterRoom,
   splitCheck,
   newRun,
