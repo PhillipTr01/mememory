@@ -110,7 +110,7 @@ const STATS = {
   hp: { name: "Vitality", icon: "❤️", base: 100, per: 7.5, about: "+7.5 max HP", desc: "Raises your max HP." },
   atk: { name: "Strength", icon: "💪", base: 10, per: 1.5, about: "+1.5 attack", desc: "Raises the damage of your attacks." },
   def: { name: "Armor", icon: "🛡️", base: 0, per: 1, about: "+1 armor", desc: "You take less damage and block more." },
-  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, soft: [50, 80], about: "+0.6% luck", desc: "Raises your crits, your luck with traps and your loot. It grows slower past 50%." },
+  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, soft: [50, 80], about: "+0.6% luck", desc: "Raises your crits, your loot and your luck with traps, and makes your poison, burns and stuns stronger. It grows slower past 50%." },
   agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, soft: [30, 60], about: "+0.4% dodge", desc: "Raises your dodge and your chance to sense rooms. A Rogue senses far better. It grows slower past 30%." },
 };
 const STAT_IDS = Object.keys(STATS);
@@ -2603,6 +2603,8 @@ const DEFEND = 0.5; // a monster on guard: this much of a hit gets through
 const SPIKES = 0.2; // of a hit on a spiked monster: back to the hitter
 
 // A stun - a steady foe often shrugs it off (just out of a stun, a boss in its second phase, a split monster)
+// Luck makes poison and burns stronger (25% at 100% luck) - and stuns stick better on a steady foe
+const luckBoost = (hero) => 1 + Math.min(0.25, ((hero && hero.luck) || 0) / 400);
 // (luck helps: half as often shrugged off at 100% luck)
 const STEADY_RESIST = 0.6;
 const steadyResist = (hero) => STEADY_RESIST * (1 - Math.min(0.5, ((hero && hero.luck) || 0) / 200));
@@ -2904,8 +2906,8 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
     if (smite > 0 && standing.length && run.phase == "fight") for (const foe of standing) strike(run, hero, foe, (hero.maxHp * fx.heal * up * (1 + perk(hero, "heal")) * smite) / Math.max(1, hero.atk), rng, { sure: true, verb: "smites" });
   } else if (fx.status) {
     for (const m of foesOf(fx.to)) {
-      if (fx.status == "poison") afflict(m, "poison", fx.turns || 3, Math.max(1, Math.round(hero.atk * 0.45 * venom)));
-      else if (fx.status == "burn") afflict(m, "burn", fx.turns || 2, Math.max(1, Math.round(hero.atk * 0.3 * up)));
+      if (fx.status == "poison") afflict(m, "poison", fx.turns || 3, Math.max(1, Math.round(hero.atk * 0.45 * venom * luckBoost(hero))));
+      else if (fx.status == "burn") afflict(m, "burn", fx.turns || 2, Math.max(1, Math.round(hero.atk * 0.3 * up * luckBoost(hero))));
       else if (fx.status == "stun") stun(run, m, rng, hero);
       else m.effects[fx.status] = fx.turns || 1;
     }
@@ -3608,6 +3610,7 @@ module.exports = {
   monstersFor,
   maxFoes,
   steadyResist,
+  luckBoost,
   afterRoom,
   splitCheck,
   newRun,

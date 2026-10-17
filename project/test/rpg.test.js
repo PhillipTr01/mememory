@@ -1894,3 +1894,9 @@ test("rpg: luck helps against steady foes - they shrug off fewer stuns", () => {
   assert.ok(Math.abs(rpg.steadyResist({ luck: 60 }) - 0.42) < 1e-9);
   assert.strictEqual(rpg.steadyResist({ luck: 300 }), 0.3);
 });
+
+test("rpg: luck makes poison and burns stronger - a quarter more at most", () => {
+  assert.strictEqual(rpg.luckBoost({ luck: 0 }), 1);
+  assert.strictEqual(rpg.luckBoost({ luck: 40 }), 1.1);
+  assert.strictEqual(rpg.luckBoost({ luck: 500 }), 1.25);
+});
