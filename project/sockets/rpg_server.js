@@ -634,7 +634,8 @@ module.exports = function (io, options = {}) {
       if (inRun()) return error("Not during a run.");
       const hero = heroOf(username);
       if (!rpg.deadFor(hero)) return error("Your character isn't dead.");
-      if (!(await coins.spend(username, rpg.revivePrice(hero), { reason: "rpg revive" }))) return error(coins.refusal(username) || "You don't have enough coins.");
+      const price = rpg.revivePrice(hero);
+      if (price > 0 && !(await coins.spend(username, price, { reason: "rpg revive" }))) return error(coins.refusal(username) || "You don't have enough coins.");
       rpg.revive(hero);
       sendHero(username);
     });

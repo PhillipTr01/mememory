@@ -711,8 +711,16 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; between 
   const dead = h.once(alice, "rpgError");
   alice.emit("create", { floor: 1, size: 1 });
   assert.match(await dead, /dead/);
-  const price = rpg.revivePrice(mine);
+  // (the first revive of the day: free)
+  assert.strictEqual(rpg.revivePrice(mine), 0);
   const coinsDead = testMode.balance("rpg_alice");
+  alice.emit("revive");
+  await waitFor(alice, "rpgHero", (view) => view.deadFor == 0);
+  assert.strictEqual(testMode.balance("rpg_alice"), coinsDead);
+  // (the second one costs)
+  rpg.die(mine, "warrior");
+  const price = rpg.revivePrice(mine);
+  assert.ok(price > 0);
   alice.emit("revive");
   await waitFor(alice, "rpgHero", (view) => view.deadFor == 0);
   assert.strictEqual(testMode.balance("rpg_alice"), coinsDead - price);
@@ -839,12 +847,17 @@ test("rpg: leaving - one away doesn't hold the party up, one out of the run lose
   const now = new Date(2026, 5, 1, 12).getTime();
   rpg.die(hero, "warrior", now);
   assert.strictEqual(rpg.deadFor(hero, now + 1000), rpg.DEATH_COOLDOWN - 1000);
-  const price = rpg.revivePrice(hero, now);
+  // (the first of the day free, then dearer every time)
+  assert.strictEqual(rpg.revivePrice(hero, now), 0);
   assert.strictEqual(rpg.revive(hero, now), null);
   assert.strictEqual(rpg.deadFor(hero, now), 0);
+  const price = rpg.revivePrice(hero, now);
+  assert.ok(price > 0);
+  rpg.die(hero, "warrior", now);
+  assert.strictEqual(rpg.revive(hero, now), null);
   assert.ok(Math.abs(rpg.revivePrice(hero, now) - price * 1.5) <= 50, String(rpg.revivePrice(hero, now)));
-  // (midnight: the price back to the start)
-  assert.strictEqual(rpg.revivePrice(hero, now + 24 * 3600 * 1000), price);
+  // (midnight: free again)
+  assert.strictEqual(rpg.revivePrice(hero, now + 24 * 3600 * 1000), 0);
   assert.match(rpg.revive(hero, now), /isn't dead/);
   // Instinct past the knee: still grows, slower - never the max
   rpg.charOf(hero).levels.agi = 99;

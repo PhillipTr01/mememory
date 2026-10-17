@@ -1185,7 +1185,7 @@ function renderReady() {
     item("🎓", "Practice run", "Free · 3 rooms", "new", "tutorial", null, "Start");
     items[items.length - 1].appendChild(button("Skip", "skipTutorial", { className: "small" }));
   }
-  if (hero.deadFor > 0) item("💀", "Dead", "Back in " + duration(hero.deadFor - (Date.now() - heroAt)), "warn", "revive", null, "Revive · 🪙 " + formatCoins(hero.revivePrice));
+  if (hero.deadFor > 0) item("💀", "Dead", "Back in " + duration(hero.deadFor - (Date.now() - heroAt)), "warn", "revive", null, (hero.revivePrice ? "Revive · 🪙 " + formatCoins(hero.revivePrice) : "Revive · Free"));
   if (hero.points) item("⬆️", hero.points + " stat point" + (hero.points == 1 ? "" : "s"), "To spend", "new", "view", "hero", "Spend");
   if (rules.talentLevels.some((lv, tier) => hero.level >= lv && !hero.talents[tier])) item("⭐", "A talent", "To pick", "new", "view", "talents", "Pick");
   var packs = Object.values(hero.packs || {}).reduce((a, b) => a + b, 0);

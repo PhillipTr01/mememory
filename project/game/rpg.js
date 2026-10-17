@@ -1050,8 +1050,11 @@ function revivesToday(hero, now = Date.now()) {
   return hero.revives && hero.revives.day == dayOf(now) ? hero.revives.count : 0;
 }
 
+// (the first revive of the day: free - the next ones dearer every time)
 function revivePrice(hero, now = Date.now()) {
-  return round100((config.RPG_REVIVE_PERCENT / 100) * entryCost(maxFloor(hero)) * Math.pow(REVIVE_GROWTH, revivesToday(hero, now)));
+  const done = revivesToday(hero, now);
+  if (!done) return 0;
+  return round100((config.RPG_REVIVE_PERCENT / 100) * entryCost(maxFloor(hero)) * Math.pow(REVIVE_GROWTH, done - 1));
 }
 
 // Brought back (paid already) -> an error or null
