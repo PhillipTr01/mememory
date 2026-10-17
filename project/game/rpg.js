@@ -1115,13 +1115,13 @@ function freeCopies(cls, id) {
 // Copies a character can't use: its class not unlocked, or a card not of its class
 const unusable = (hero, cls, id) => !hero.unlocked.includes(cls) || !poolOf(cls).includes(id);
 
-// The copies of a card that can be dusted: past what a deck may hold - all of them when unusable
+// The spare copies of a card: past what a deck may hold - of every class, also one not played (a single copy of
+// another class's card is no spare: it can be traded, or dusted on its own when asked for)
 function dustable(hero, cls, id) {
   const char = hero.chars[cls];
   const card = CARDS[id];
   if (!char || !card || !DUST[card.rarity]) return 0;
   const owned = (char.collection || {})[id] || 0;
-  if (unusable(hero, cls, id)) return Math.max(0, owned - freeCopies(cls, id));
   return Math.max(0, owned - Math.max(CARD_RARITIES[card.rarity].copies, inDecks(char, id), freeCopies(cls, id)));
 }
 

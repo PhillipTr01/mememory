@@ -3153,7 +3153,7 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     var spare = hero.dustable || [];
     var total = spare.reduce((sum, one) => sum + one.dust, 0);
     var count = spare.reduce((sum, one) => sum + one.n, 0);
-    confirmDialog({ title: "Dust " + count + " spare card" + (count == 1 ? "" : "s") + "?", text: "You get " + total + " dust. Copies a deck needs and cards you use stay.", confirmLabel: "Dust them" }).then((sure) => sure && socket.emit("dustAll"));
+    confirmDialog({ title: "Dust " + count + " spare card" + (count == 1 ? "" : "s") + "?", text: "Only copies past what a deck can hold are dusted, for every class. You get " + total + " dust.", confirmLabel: "Dust them" }).then((sure) => sure && socket.emit("dustAll"));
   } else if (act == "dustNeeded") {
     var [needCls, needId] = id.split("|");
     var needCard = cardOf(needId);

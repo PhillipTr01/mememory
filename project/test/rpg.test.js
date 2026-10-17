@@ -1467,8 +1467,8 @@ test("rpg: dust - copies past what a deck holds and cards no character can use; 
   const char = rpg.charOf(hero);
   // (a common of the class: 2 fit a deck - 5 owned, 3 to dust)
   char.collection.ironwave = 5;
-  // (a mage's legendary from a pack: the mage isn't unlocked - all of it)
-  rpg.charOf(hero, "mage").collection.pyroblast = 1;
+  // (a mage's legendary from a pack: the mage isn't unlocked - one copy is no spare, a second one is)
+  rpg.charOf(hero, "mage").collection.pyroblast = 2;
   const list = rpg.dustList(hero);
   assert.deepStrictEqual(list.find((one) => one.id == "ironwave"), { cls: "warrior", id: "ironwave", n: 3, dust: 3 * rpg.DUST.common.get });
   assert.strictEqual(list.find((one) => one.id == "pyroblast").n, 1);
@@ -1480,7 +1480,7 @@ test("rpg: dust - copies past what a deck holds and cards no character can use; 
   assert.match(rpg.dustCard(hero, "warrior", "ironwave", 1).error, /every copy/);
   assert.strictEqual(rpg.dustAll(hero), rpg.DUST.legendary.get);
   assert.strictEqual(hero.dust, 3 * rpg.DUST.common.get + rpg.DUST.legendary.get);
-  assert.ok(!rpg.charOf(hero, "mage").collection.pyroblast);
+  assert.strictEqual(rpg.charOf(hero, "mage").collection.pyroblast, 1);
   // Made of dust: a card of the class, not past what a deck holds, not a mythic one
   assert.match(rpg.craftCard(hero, "pyroblast"), /Not a card of your class/);
   assert.match(rpg.craftCard(hero, "ironwave"), /already have every copy/);
