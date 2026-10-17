@@ -8533,3 +8533,19 @@ button.rpg-trade-row:active {
   transform: none;
   box-shadow: none;
 }
+
+/* (a monster summoned in the fight: a mark in its top left corner) */
+.rpg-summoned {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.4rem;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: rgba(124, 58, 237, 0.3);
+  border: 1px solid rgba(167, 139, 250, 0.55);
+  font-size: 0.8rem;
+  z-index: 2;
+}

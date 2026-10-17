@@ -190,9 +190,14 @@ socket.on("rpgRules", (data) => {
   rules = data;
   render();
 });
+var floorPicked = false; // the floor set to the deepest one when the page opens
 socket.on("rpgHero", (data) => {
   hero = data;
   heroAt = Date.now();
+  if (!floorPicked && data.cls) {
+    floorPicked = true;
+    floor = data.maxFloor;
+  }
   render();
 });
 // The info board of the dungeon: at its end, starting over (a danger zone - "RESET" typed to confirm)
@@ -662,6 +667,8 @@ function viewBadge(id) {
 
 function setView(id) {
   view = id;
+  // (the play tab: always the deepest floor open)
+  if (id == "play" && hero && hero.cls) floor = hero.maxFloor;
   if (id == "trade") socket.emit("tradePlayers");
   remember(VIEW_KEY, id);
   render();
@@ -2155,6 +2162,12 @@ function renderRun() {
         card.appendChild(mark);
       });
       if (badge) card.appendChild(badge);
+      // (summoned in this fight: a mark in its corner)
+      if (m.called) {
+        var called = el("span", "rpg-summoned", "🌀");
+        called.title = "Summoned in this fight.";
+        card.appendChild(called);
+      }
       return card;
     });
   } else if (run.phase == "between") scene = [];

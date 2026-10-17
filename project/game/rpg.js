@@ -3193,6 +3193,7 @@ function runView(run) {
       undead: m.undead,
       affix: m.affix,
       cursed: !!m.cursed,
+      called: !!m.called,
       down: !!m.down,
       effects: effectsOf(m.effects),
       intent: m.down || !m.intent ? null : { move: m.intent.move, target: m.intent.target || null, damage: intentDamage(m, m.intent.move), stunned: !!m.effects.stun },
