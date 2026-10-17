@@ -1321,9 +1321,9 @@ function renderCollectionBar() {
   progress.append(el("span", "", "📚 Collection"), bar(found, cards.length, "xp", " cards"), el("span", "mm-muted small", copies + " / " + most + " copies"));
   // (dust: from spare cards - it makes the cards still missing)
   var dust = el("div", "rpg-dust-bar");
-  var amount = el("span", "rpg-dust-amount", "✨ " + formatCoins(hero.dust || 0) + " dust");
-  amount.title = "Turn spare cards into dust and make the cards you miss with it.";
-  dust.appendChild(amount);
+  var crafting = button(craftMode ? "✓ Craft mode" : "✨ Craft mode", "craftMode", { className: "small rpg-craft-toggle" + (craftMode ? " on" : "") });
+  crafting.title = craftMode ? "Back to building your deck." : "Make missing cards with dust and dust spare ones.";
+  dust.appendChild(crafting);
   var spare = (hero.dustable || []).reduce((sum, one) => sum + one.n, 0);
   if (spare) dust.appendChild(button("Dust " + spare + " spare card" + (spare == 1 ? "" : "s"), "dustAll", { className: "small" }));
   progress.appendChild(dust);
@@ -1723,9 +1723,9 @@ function renderBuilder() {
   info.type = "button";
   info.title = "How cards work";
   info.dataset.act = "deckHelp";
-  var crafting = button(craftMode ? "✓ Craft mode" : "✨ Craft mode", "craftMode", { className: "small rpg-craft-toggle" + (craftMode ? " on" : "") });
-  crafting.title = craftMode ? "Back to building your deck." : "Make missing cards with dust and dust spare ones.";
-  morphChildren(document.getElementById("rpgBuilderTitle"), [el("span", "", "🃏 Deck builder"), info, crafting]);
+  var dustTag = el("span", "rpg-dust-tag rpg-builder-dust", "✨ " + formatCoins(hero.dust || 0) + " dust");
+  dustTag.title = "Turn cards into dust and make the cards you miss with it.";
+  morphChildren(document.getElementById("rpgBuilderTitle"), [el("span", "", "🃏 Deck builder"), info, dustTag]);
   // (the decks: a dropdown - the one in use on its button, the others to switch to, a rename)
   var decks = hero.decks || [hero.deck.length];
   var at = hero.deckAt || 0;

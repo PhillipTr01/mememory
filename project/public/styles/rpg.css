@@ -8456,3 +8456,12 @@ button.rpg-trade-row:active {
   font-weight: 800;
   white-space: nowrap;
 }
+
+/* (the deck builder's head: the dust on the right) */
+.rpg-dust-tag.rpg-builder-dust {
+  margin-left: auto;
+}
+
+.rpg-dust-bar .rpg-btn.rpg-craft-toggle {
+  margin-left: 0;
+}
