@@ -364,7 +364,8 @@ module.exports = function (io, options = {}) {
         for (const item of run.loot[one.name] || []) {
           // (a card: into the character's collection)
           if (item.card) {
-            rpg.collect(rpg.charOf(hero, one.cls), item.card);
+            // (another class's card: to that class's character - like a pack's)
+            rpg.collect(rpg.charOf(hero, rpg.cardClass(item.card) || one.cls), item.card);
             continue;
           }
           if (hero.bag.length < rpg.bagSize(hero)) hero.bag.push(item);

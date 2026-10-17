@@ -704,10 +704,12 @@ function collect(char, id) {
 
 // A card as loot: one of the class's (and the neutral ones) for the collection, by its rarity's weight - least: at
 // least that rare. It is the character's once the run ends (lost: gone, like the gear)
-const LOOT_CARD = { chest: 0.12, hard: 0.15 };
-function lootCard(hero, rng = Math.random, least = "common") {
+const LOOT_CARD = { chest: 0.12, hard: 0.15, otherClass: 0.25 };
+// (other: now and then a card of another class - a chest's - for that class's character)
+function lootCard(hero, rng = Math.random, least = "common", other = false) {
   const from = RARITY_RANK.indexOf(least);
-  const pool = poolOf(hero.cls)
+  const others = Object.keys(CLASSES).filter((cls) => cls != hero.cls);
+  const pool = (other && others.length && rng() < LOOT_CARD.otherClass ? CLASSES[pick(rng, others)].cards : poolOf(hero.cls))
     .filter((id) => CARDS[id].rarity != "basic" && CARDS[id].rarity != "mythic" && RARITY_RANK.indexOf(CARDS[id].rarity) >= from)
     .map((id) => [id, CARD_RARITIES[CARDS[id].rarity].weight]);
   return { card: weighted(rng, pool) };
@@ -2259,7 +2261,7 @@ function applyChoice(run, hero, option, input, rng) {
       const id = withRelic ? relic() : null;
       if (id) note(`${name} finds a relic: ${RELICS[id].icon} ${RELICS[id].name}.`);
       // (sometimes a card for the collection)
-      const found = rng() < LOOT_CARD.chest ? lootCard(hero, rng) : null;
+      const found = rng() < LOOT_CARD.chest ? lootCard(hero, rng, "common", true) : null;
       if (found) {
         run.loot[hero.name].push(found);
         got({ k: "card", id: found.card, loot: true });

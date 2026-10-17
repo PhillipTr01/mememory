@@ -1681,3 +1681,15 @@ test("rpg: a cleared floor never pays less than 1.1 times its entry - a low shar
   assert.strictEqual(rpg.payout(run, {}, "left"), 1000);
   assert.strictEqual(rpg.payout(run, { share: 0.5 }, "left"), 500);
 });
+
+test("rpg: a chest's card is now and then another class's - a boss's or a hard fight's always the own class's", () => {
+  const hero = rpg.newHero("warrior");
+  let other = 0;
+  for (let i = 0; i < 2000; i++) {
+    const { card } = rpg.lootCard(hero, Math.random, "common", true);
+    assert.ok(!["basic", "mythic"].includes(rpg.CARDS[card].rarity), card);
+    if (rpg.cardClass(card) && rpg.cardClass(card) != "warrior") other++;
+  }
+  assert.ok(other > 350 && other < 650, String(other));
+  for (let i = 0; i < 300; i++) assert.ok(rpg.poolOf("warrior").includes(rpg.lootCard(hero, Math.random, "rare").card));
+});
