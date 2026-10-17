@@ -1122,7 +1122,7 @@ function renderBuffs(run, me) {
     });
     var fx = me.effects || {};
     // (might stacks: the icon shows the stacks, the hover the whole boost)
-    if (fx.might) list.push([EFFECT_ICONS.might + (me.might > 1 ? "×" + me.might : ""), fx.might.turns || fx.might, "You deal " + 30 * (me.might || 1) + "% more damage.", "good"]);
+    if (fx.might) list.push([EFFECT_ICONS.might, fx.might.turns || fx.might, "You deal " + 30 * (me.might || 1) + "% more damage.", "good", me.might > 1 ? me.might : 0]);
     if (me.blessed) list.push(["✨", "", "Blessed: 25% more damage this run", "good"]);
     if (fx.weak) list.push([EFFECT_ICONS.weak, fx.weak.turns || fx.weak, "Cursed: 30% less damage", "bad"]);
     if (fx.poison) list.push([EFFECT_ICONS.poison, fx.poison.turns || "", "Poisoned: damage at the end of every turn", "bad"]);
@@ -1130,9 +1130,11 @@ function renderBuffs(run, me) {
   }
   morphChildren(
     document.getElementById("rpgBuffs"),
-    list.map(([icon, n, tip, kind]) => {
+    list.map(([icon, n, tip, kind, stacks]) => {
       var b = el("span", "rpg-buff " + kind);
       b.append(el("span", "rpg-buff-icon", icon));
+      // (stacks: a badge of its own on the top - the turns left on the bottom)
+      if (stacks) b.appendChild(el("b", "rpg-buff-stack", "×" + stacks));
       if (n !== "" && n != null) b.appendChild(el("b", "rpg-buff-n", String(n)));
       b.title = tip;
       return b;

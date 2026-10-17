@@ -8695,3 +8695,20 @@ button.rpg-trade-row:active {
 .rpg-monster:hover .rpg-monster-armor.dodge {
   opacity: 1;
 }
+
+/* A buff's stacks (might): a gold badge on the top right - the turns stay on the bottom */
+.rpg-buff-stack {
+  position: absolute;
+  right: -0.35rem;
+  top: -0.35rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #2a1a00;
+  background: var(--rpg-gold, #f5c451);
+}
