@@ -354,7 +354,11 @@ module.exports = function (io, options = {}) {
         char.cleared++;
       }
       // (the party down: the character is dead for a while)
-      if (result === "lost") rpg.die(hero, one.cls);
+      // (the floor open again: the death is wait enough)
+      if (result === "lost") {
+        rpg.die(hero, one.cls);
+        rpg.warmFloor(hero, run.floor, one.cls);
+      }
       if (result !== "lost") {
         for (const item of run.loot[one.name] || []) {
           // (a card: into the character's collection)

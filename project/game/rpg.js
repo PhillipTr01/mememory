@@ -131,7 +131,7 @@ const REWARD = { fight: 0.36, hard: 0.66, elite: 0.66, boss: 1.08, chest: 0.36, 
 const DEEPER_CHANCE = 0.2;
 // (how much stronger the guardian is, per floor - points between them in line; tuned so a party on the curve of
 // its floor wins about one try in three)
-const DEEP_POWER = [[1, 1.1], [4, 1.1], [10, 1.25], [14, 1.2], [18, 1.6], [22, 1.25], [26, 1.3], [30, 1.3]];
+const DEEP_POWER = [[1, 1.16], [4, 1.16], [10, 1.36], [14, 1.35], [18, 1.8], [22, 1.4], [26, 1.45], [30, 1.45]];
 const DEEP_PAY = 2;
 
 /* ---------- Classes and their cards ---------- */
@@ -994,6 +994,12 @@ function coolFloor(hero, floor, cls = hero.cls, now = Date.now()) {
   const char = charOf(hero, cls);
   char.cooldowns = Object.fromEntries(Object.entries(char.cooldowns || {}).filter(([, until]) => until > now));
   if (config.RPG_FLOOR_COOLDOWN > 0) char.cooldowns[floor] = now + config.RPG_FLOOR_COOLDOWN;
+}
+
+// The floor open again (the party fell: no cooldown on top of the death)
+function warmFloor(hero, floor, cls = hero.cls) {
+  const char = charOf(hero, cls);
+  if (char.cooldowns) delete char.cooldowns[floor];
 }
 
 // A character of this level in a party with these levels: too far apart? (null: fine)
@@ -3054,10 +3060,10 @@ function winFight(run, rng) {
       (run.loot[hero.name] = run.loot[hero.name] || []).push(card);
       say(run, `${hero.name} finds a card: ${CARDS[card.card].icon} ${CARDS[card.card].name}.`);
     }
-    // (a boss: a piece of epic gear or better too)
+    // (a boss: a piece of rare gear or better too)
     if (room.kind == "boss") {
       let item = makeGear(run.floor, rng, hero.luck, hero.cls);
-      for (let i = 0; i < 400 && !rarityAtLeast(item, "epic"); i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
+      for (let i = 0; i < 400 && !rarityAtLeast(item, "rare"); i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
       (run.loot[hero.name] = run.loot[hero.name] || []).push(item);
       say(run, `${hero.name} takes ${item.icon} ${item.name} from the boss.`);
     }
@@ -3067,11 +3073,11 @@ function winFight(run, rng) {
   afterRoom(run, rng);
   // (the floor's XP: once - when it is cleared)
   if ((run.phase == "won" && !before) || (run.cleared && !before)) for (const hero of run.heroes) hero.xp += xpFor("floor", run.floor);
-  // (the deep guardian: a piece of rare gear or better for everyone - the pot twice is the real prize)
+  // (the deep guardian: the better prize - a piece of epic gear or better for everyone, and the pot twice)
   if (room.kind == "deep") {
     for (const hero of alive(run.heroes)) {
       let item = makeGear(run.floor, rng, hero.luck, hero.cls);
-      for (let i = 0; i < 400 && !rarityAtLeast(item, "rare"); i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
+      for (let i = 0; i < 400 && !rarityAtLeast(item, "epic"); i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
       (run.loot[hero.name] = run.loot[hero.name] || []).push(item);
     }
   }
@@ -3486,6 +3492,7 @@ module.exports = {
   die,
   floorCooldown,
   coolFloor,
+  warmFloor,
   lootShare,
   levelGap,
   revivePrice,
