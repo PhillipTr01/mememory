@@ -175,10 +175,14 @@ function deckMax() {
 // The booster packs of the base set (the shop): how many cards, the last ones at least of a rarity, the rarer
 // ones more often (x their weight)
 const PACKS = {
-  standard: { name: "Base Set Pack", icon: "🎴", about: "5 cards. The last one is rare or better.", get price() { return config.RPG_PACK_STANDARD; }, size: 5, better: 1, least: "rare", boost: { epic: 0.7, legendary: 0.5, mythic: 0.5 }, dust: 600 },
-  premium: { name: "Hero Pack", icon: "💎", about: "5 cards, all rare or better, with more epics.", get price() { return config.RPG_PACK_PREMIUM; }, size: 5, better: 5, least: "rare", boost: { epic: 2, legendary: 2.1 }, dust: 2000 },
-  mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards, all epic or better.", get price() { return config.RPG_PACK_MYTHIC; }, size: 4, better: 4, least: "epic", boost: { legendary: 1.5 }, dust: 3500 },
+  standard: { name: "Base Set Pack", icon: "🎴", about: "5 cards. The last one is rare or better.", get price() { return config.RPG_PACK_STANDARD; }, size: 5, better: 1, least: "rare", boost: { epic: 0.7, legendary: 0.5, mythic: 0.5 } },
+  premium: { name: "Hero Pack", icon: "💎", about: "5 cards, all rare or better, with more epics.", get price() { return config.RPG_PACK_PREMIUM; }, size: 5, better: 5, least: "rare", boost: { epic: 2, legendary: 2.1 } },
+  mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards, all epic or better.", get price() { return config.RPG_PACK_MYTHIC; }, size: 4, better: 4, least: "epic", boost: { legendary: 1.5 } },
 };
+// Packs for dust too: a dust is worth this many coins
+const DUST_COINS = 20;
+for (const pack of Object.values(PACKS))
+  Object.defineProperty(pack, "dust", { enumerable: true, get: () => Math.round(pack.price / DUST_COINS) });
 const PACK_IDS = Object.keys(PACKS);
 const PACK_SIZE = PACKS.standard.size;
 const RARITY_RANK = ["basic", "common", "rare", "epic", "legendary", "mythic"];
@@ -1069,14 +1073,13 @@ function heroView(hero) {
 
 /* ---------- Dust and trades: spare cards turned to dust, dust turned to cards - and swaps between players ---------- */
 
-// What a card gives as dust, what it costs to make: a quarter of its cost - and just what the next lower rarity
-// costs to make (basic: neither - mythic: not made)
+// What a card gives as dust, what it costs to make - Hearthstone's numbers (basic: neither - mythic: not made)
 const DUST = {
-  common: { get: 10, craft: 40 },
-  rare: { get: 40, craft: 160 },
-  epic: { get: 160, craft: 640 },
-  legendary: { get: 640, craft: 2560 },
-  mythic: { get: 2560, craft: null },
+  common: { get: 5, craft: 40 },
+  rare: { get: 20, craft: 100 },
+  epic: { get: 100, craft: 400 },
+  legendary: { get: 400, craft: 1600 },
+  mythic: { get: 1600, craft: null },
 };
 
 // The most copies of a card in any deck slot of a character (those never leave the collection)
@@ -1150,7 +1153,7 @@ function craftCard(hero, id) {
   return null;
 }
 
-// Packs bought with dust (about three times what their cards give as dust: no circle) -> an error or null
+// Packs bought with dust (DUST_COINS a dust - far more than their cards give as dust: no circle) -> an error or null
 function buyPackDust(hero, id, count = 1) {
   const pack = PACKS[id];
   if (!pack) return "No such pack.";

@@ -1490,16 +1490,15 @@ test("rpg: dust - copies past what a deck holds and cards no character can use; 
   assert.strictEqual(rpg.craftCard(hero, "impervious"), null);
   assert.strictEqual(char.collection.impervious, 1);
   assert.strictEqual(hero.dust, 0);
-  // Like in the card games: dust a quarter of the cost - and just what the next lower rarity costs to make
-  const ranks = ["common", "rare", "epic", "legendary", "mythic"];
-  ranks.forEach((rarity, i) => {
-    if (rpg.DUST[rarity].craft) assert.strictEqual(rpg.DUST[rarity].get * 4, rpg.DUST[rarity].craft);
-    if (i > 0) assert.strictEqual(rpg.DUST[rarity].get, rpg.DUST[ranks[i - 1]].craft);
-  });
+  // Hearthstone's numbers: an epic dusts for a rare, a legendary for an epic
+  assert.strictEqual(rpg.DUST.epic.get, rpg.DUST.rare.craft);
+  assert.strictEqual(rpg.DUST.legendary.get, rpg.DUST.epic.craft);
   assert.strictEqual(rpg.DUST.mythic.craft, null);
   // Packs for dust: into the inventory - dearer than what their cards give as dust
-  assert.match(rpg.buyPackDust(hero, "standard"), /You need 600 dust/);
-  hero.dust = 700;
+  // (a dust: 20 coins - the pack's coin price in dust)
+  assert.strictEqual(rpg.PACKS.standard.dust, Math.round(rpg.PACKS.standard.price / 20));
+  assert.match(rpg.buyPackDust(hero, "standard"), new RegExp("You need " + rpg.PACKS.standard.dust + " dust"));
+  hero.dust = rpg.PACKS.standard.dust + 100;
   const before = hero.packs.standard || 0;
   assert.strictEqual(rpg.buyPackDust(hero, "standard"), null);
   assert.strictEqual(hero.packs.standard, before + 1);
