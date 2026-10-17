@@ -356,7 +356,7 @@ const MOVES = {
   regen: { name: "Regenerate", icon: "💚", self: true, text: "It heals a quarter of its HP." },
   heal: { name: "Heal ally", icon: "💚", self: true, text: "It heals its most hurt ally." },
   howl: { name: "Howl", icon: "📯", self: true, text: "Every monster hits 30% harder for 2 turns." },
-  fade: { name: "Fade", icon: "🌫️", self: true, text: "It fades back. Your plain attacks miss it this turn." },
+  fade: { name: "Fade", icon: "🌫️", self: true, text: "It fades back. Attacks on a single foe miss it this turn." },
   purge: { name: "Purge", icon: "✨", self: true, text: "It clears poison and burns from every monster." },
   curse: { name: "Curse", icon: "🕯️", power: 0.4, text: "It hits one hero, who deals less damage for 2 turns." },
   summon: { name: "Summon", icon: "📣", self: true, text: "It calls more monsters into the fight." },
@@ -367,7 +367,7 @@ const MONSTERS = [
   [
     { name: "Slime", icon: "🟢", type: "ooze", hp: 1, atk: 0.8, moves: ["attack", "attack", "defend"] },
     { name: "Rat", icon: "🐀", type: "beast", hp: 0.7, atk: 1, moves: ["attack", "poison"] },
-    { name: "Bat", icon: "🦇", type: "beast", hp: 0.6, atk: 0.9, dodge: 0.2, moves: ["attack", "drain"] },
+    { name: "Bat", icon: "🦇", type: "beast", hp: 0.6, atk: 0.9, dodge: 0.1, moves: ["attack", "drain"] },
   ],
   [
     { name: "Goblin", icon: "👺", type: "humanoid", hp: 1, atk: 1, moves: ["attack", "attack", "steal"] },
@@ -2657,7 +2657,7 @@ function bossPhase(run, foe) {
   fxEvent(run, { k: "phase", by: foe.id, text: foe.phase.text });
 }
 
-// A hit of a hero on a monster: the damage done (a plain attack may be dodged - a fading foe dodges them all)
+// A hit of a hero on a monster: the damage done (a hit on a single foe may be dodged - a fading foe dodges them all)
 // A splitting monster at half HP the first time: two of it, the HP shared
 function splitCheck(run, foe) {
   if (foe.affix != "splitter" || foe.split || foe.down || foe.hp <= 0 || foe.hp > foe.maxHp / 2 || alive(run.monsters).length >= maxFoes(run.floor)) return;
@@ -2916,7 +2916,8 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
         let power = (fx.bonusIf && state(m, fx.bonusIf) ? fx.bonus : fx.hit) + ((fx.def || 0) * hero.def) / Math.max(1, hero.atk);
         // (damage of the block - at least the card's)
         if (fx.fromBlock) power = Math.max(power, hero.block / Math.max(1, hero.atk));
-        strike(run, hero, m, power * up, rng, { sure: true, aoe: fx.to == "all" });
+        // (a hit on every foe always lands - one on a single foe may be dodged, a fading foe dodges it for sure)
+        strike(run, hero, m, power * up, rng, { sure: fx.to == "all", aoe: fx.to == "all" });
       }
     }
   } else if (fx.block != null) {
@@ -3359,7 +3360,8 @@ function simulatedTurn(run, me, rng) {
     // (the foe to hit: one that can fall now - else the one that hurts most)
     const threat = (m) => (m.intent && !m.effects.stun ? intentDamage(m, m.intent.move) : 0);
     const stunnable = (m) => threat(m) * (m.effects.steady ? 1 - steadyResist(me) : 1);
-    const target = foes.slice().sort((x, y) => x.hp - y.hp)[0];
+    // (a fading foe: not the one to hit)
+    const target = foes.slice().sort((x, y) => (x.fading ? 1 : 0) - (y.fading ? 1 : 0) || x.hp - y.hp)[0];
     const worst = foes.slice().sort((x, y) => threat(y) - threat(x))[0];
     const ally = alive(run.heroes).sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp)[0] || me;
     const fallen = run.heroes.find((h) => h.down);

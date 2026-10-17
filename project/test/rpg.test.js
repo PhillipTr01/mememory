@@ -1922,3 +1922,15 @@ test("rpg: loot per room - deeper floors with more rooms pay less a room, the sa
   assert.ok(rpg.lootScale(5) < 1, "a boss floor: one room more");
   assert.ok(rpg.lootScale(27) < rpg.lootScale(12));
 });
+test("rpg: a fading foe dodges hits on a single foe - hits on every foe still land", () => {
+  const run = duel("warrior", "attack", ["strike", "cleave"]);
+  const me = run.heroes[0];
+  me.energy = 5;
+  const foe = run.monsters[0];
+  foe.fading = true;
+  const hp = foe.hp;
+  assert.strictEqual(rpg.play(run, "a", { uid: "t0", target: "m1" }), null);
+  assert.strictEqual(foe.hp, hp, "the strike missed");
+  assert.strictEqual(rpg.play(run, "a", { uid: "t1", target: "m1" }), null);
+  assert.ok(foe.hp < hp, "the cleave hit");
+});
