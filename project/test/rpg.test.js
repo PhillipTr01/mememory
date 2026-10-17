@@ -1722,3 +1722,16 @@ test("rpg: the hero's view counts the runs of each floor today", () => {
   const view = rpg.heroView(hero);
   assert.deepStrictEqual(view.runsToday, { 2: 2 });
 });
+test("rpg: a charm needing fewer cards in the deck is rare - rarer on worse pieces", () => {
+  const rate = { common: [0, 0], epic: [0, 0] };
+  for (let i = 0; i < 40000; i++) {
+    const item = rpg.makeGear(15);
+    if (item.slot != "charm" || !rate[item.rarity]) continue;
+    rate[item.rarity][1]++;
+    if (item.deckMin) rate[item.rarity][0]++;
+  }
+  const common = rate.common[0] / rate.common[1];
+  const epic = rate.epic[0] / rate.epic[1];
+  assert.ok(common < 0.04, "common " + common);
+  assert.ok(epic > common && epic < 0.15, "epic " + epic);
+});

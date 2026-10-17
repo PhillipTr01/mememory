@@ -1383,6 +1383,8 @@ function canWear(item, cls) {
 // A piece of gear from a chest of `floor` (luck: a bit more often a better one)
 // (cls: who found it - half the time a piece its class can wear; weapons and armor fit some classes only, boots
 // and charms every one)
+// (a charm needing fewer cards in the deck: per rarity - times the kind's deck mix)
+const DECK_MIN_CHANCE = [0.02, 0.04, 0.08, 0.15, 0.25];
 function makeGear(floor, rng = Math.random, luck = 0, cls = null) {
   const shift = Math.min(0.5, luck / 100);
   const depth = Math.min(1, Math.max(0, (floor - 1) / (FLOORS - 1)));
@@ -1426,11 +1428,12 @@ function makeGear(floor, rng = Math.random, luck = 0, cls = null) {
     }
   }
   if (slot == "charm") {
-    // (a charm may change the deck: room for more cards - or fewer needed)
+    // (a charm may change the deck: room for more cards - or, rare, fewer needed: the strong one, the rarer the piece the likelier)
     const roll = rng();
     const deck = mix.deck || 1;
-    if (roll < 0.35 * deck) item.deckMax = [1, 2, 3, 5, 6][index];
-    else if (roll < 0.6 * deck) item.deckMin = [1, 1, 2, 3, 4][index];
+    const fewer = DECK_MIN_CHANCE[index] * deck;
+    if (roll < fewer) item.deckMin = [1, 1, 2, 2, 3][index];
+    else if (roll < fewer + 0.35 * deck) item.deckMax = [1, 2, 3, 5, 6][index];
   }
   item.value = round100(entryCost(floor) * 0.15 * rarity.power);
   return item;
