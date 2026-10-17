@@ -199,7 +199,8 @@ socket.on("rpgHero", (data) => {
 var trades = [];
 var deckMenu = false; // the deck builder's deck dropdown open
 var playerMenu = false; // the trade's player dropdown open
-var craftMode = false; // the deck builder in craft mode: cards made and dusted, not built into the deck
+var craftMode = false;
+var payDust = false; // the shop's cart paid with dust // the deck builder in craft mode: cards made and dusted, not built into the deck
 var tradePlayers = [];
 var tradeWith = "";
 var tradeTheirs = null;
@@ -1289,6 +1290,13 @@ function packOdds(pack) {
 var cart = {}; // the shop's cart: {pack id: count}
 
 // The price of packs of a kind
+// A pack's price: in coins and in dust
+function packPrice(pack) {
+  var line = el("div", "rpg-pack-price");
+  line.append(el("span", "", "🪙 " + formatCoins(pack.price)), el("span", "rpg-pack-dot", "·"), el("span", "rpg-pack-dust", "✨ " + formatCoins(pack.dust)));
+  return line;
+}
+
 function packCost(id, n) {
   return rules.packs[id].price * n;
 }
@@ -1395,13 +1403,11 @@ function renderShop() {
       tile.append(
         packArt(id),
         el("div", "rpg-pack-name", pack.name),
-        el("div", "rpg-pack-price", "🪙 " + formatCoins(pack.price)),
+        packPrice(pack),
         el("div", "mm-muted small", pack.about),
         el("div", "rpg-label", "Odds per card"),
         odds,
-        button(inCart ? "+ One more (" + inCart + " in the cart)" : "🛒 Add to cart", "cartAdd", { id: id, className: "primary" }),
-        // (or for dust: right away into the inventory)
-        button("✨ Buy for " + formatCoins(pack.dust) + " dust", "packDust", { id: id, className: "rpg-dust-buy", disabled: (hero.dust || 0) < pack.dust, title: "You have " + formatCoins(hero.dust || 0) + " dust." }),
+        button(inCart ? "🛒 Add to cart (" + inCart + ")" : "🛒 Add to cart", "cartAdd", { id: id, className: "primary" }),
       );
       return tile;
     }),
@@ -1409,8 +1415,16 @@ function renderShop() {
 
   // The cart: the lines, the total - buy
   var lines = Object.keys(cart).filter((id) => cart[id] > 0);
-  var total = lines.reduce((sum, id) => sum + packCost(id, cart[id]), 0);
+  // (paid with coins or with dust - the cart's switch)
+  var cost = (id, n) => (payDust ? rules.packs[id].dust * n : packCost(id, n));
+  var money = (n) => (payDust ? "✨ " : "🪙 ") + formatCoins(n);
+  var total = lines.reduce((sum, id) => sum + cost(id, cart[id]), 0);
+  var have = payDust ? hero.dust || 0 : myCoins;
   var nodes = [el("div", "rpg-cart-title", "🛒 Your cart")];
+  var pay = el("div", "rpg-seg rpg-pay");
+  pay.append(button("🪙 Coins", "payWith", { id: "coins", className: "rpg-seg-opt" + (payDust ? "" : " active") }), button("✨ Dust", "payWith", { id: "dust", className: "rpg-seg-opt" + (payDust ? " active" : "") }));
+  pay.title = "You have " + formatCoins(hero.dust || 0) + " dust.";
+  nodes.push(pay);
   if (!lines.length) nodes.push(el("div", "rpg-empty mm-muted", "Empty"));
   lines.forEach((id) => {
     var pack = rules.packs[id];
@@ -1418,17 +1432,18 @@ function renderShop() {
     var step = el("div", "rpg-stepper");
     step.append(button("−", "cartLess", { id: id, className: "small" }), el("b", "", String(cart[id])), button("+", "cartAdd", { id: id, className: "small", disabled: cart[id] >= rules.cartMax }));
     var price = el("div", "rpg-cart-price");
-    price.appendChild(el("b", "", "🪙 " + formatCoins(packCost(id, cart[id]))));
+    price.appendChild(el("b", "", money(cost(id, cart[id]))));
     row.append(el("span", "rpg-cart-icon", pack.icon), el("span", "rpg-cart-name", pack.name), step, price);
     nodes.push(row);
   });
   if (lines.length) {
     var sum = el("div", "rpg-cart-total");
-    sum.append(el("span", "", "Total"), el("b", "", "🪙 " + formatCoins(total)));
-    nodes.push(sum, button("Buy · 🪙 " + formatCoins(total), "cartBuy", { className: "primary", disabled: total > myCoins }), button("Empty the cart", "cartClear", { className: "small" }));
-    if (total > myCoins) nodes.push(el("div", "rpg-warn", "Not enough coins."));
+    sum.append(el("span", "", "Total"), el("b", "", money(total)));
+    nodes.push(sum, button("Buy · " + money(total), "cartBuy", { className: "primary", disabled: total > have }), button("Empty the cart", "cartClear", { className: "small" }));
+    if (total > have) nodes.push(el("div", "rpg-warn", payDust ? "Not enough dust." : "Not enough coins."));
   }
   morphChildren(document.getElementById("rpgCart"), nodes);
+  document.getElementById("rpgCart").classList.toggle("dust", payDust);
 
 }
 
@@ -3187,7 +3202,11 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   } else if (act == "cartClear") {
     cart = {};
     render();
-  } else if (act == "cartBuy") socket.emit("buyPacks", { cart: cart });
+  } else if (act == "cartBuy") socket.emit("buyPacks", { cart: cart, dust: payDust });
+  else if (act == "payWith") {
+    payDust = id == "dust";
+    render();
+  }
   else if (act == "openPack") startOpening(id);
   else if (act == "openAll") startOpeningAll();
   else if (act == "filter") {

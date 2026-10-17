@@ -8346,3 +8346,68 @@ button.rpg-trade-row:active {
   user-select: text;
   -webkit-user-select: text;
 }
+
+/* (a pack: its buttons at the bottom of the tile, on one line with the other packs') */
+.rpg-pack-tile > .rpg-btn:last-child {
+  margin-top: auto;
+}
+
+.rpg-pay {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.rpg-pay .rpg-btn.rpg-seg-opt {
+  justify-content: center;
+  padding: 0.35rem 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--mm-muted);
+  font-weight: 700;
+}
+
+.rpg-pay .rpg-btn.rpg-seg-opt.active {
+  background: var(--mm-accent);
+  color: #1a1408;
+}
+
+/* (a pack's price: the dust part purple) */
+.rpg-pack-price {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.rpg-pack-dot {
+  color: var(--mm-muted);
+}
+
+.rpg-pack-dust {
+  color: #c4b5fd;
+}
+
+/* (the cart paid with dust: purple instead of gold) */
+#rpgCart.dust {
+  border-color: rgba(167, 139, 250, 0.45);
+}
+
+#rpgCart.dust .rpg-pay .rpg-btn.rpg-seg-opt.active {
+  background: #8b5cf6;
+  color: #fff;
+}
+
+#rpgCart.dust .rpg-cart-price b,
+#rpgCart.dust .rpg-cart-total b {
+  color: #c4b5fd;
+}
+
+#rpgCart.dust .rpg-btn.primary {
+  background: linear-gradient(180deg, #8b5cf6, #7c3aed);
+  border-color: #a78bfa;
+  color: #fff;
+}
+
+#rpgCart.dust .rpg-btn.primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #9d74f8, #8b5cf6);
+}

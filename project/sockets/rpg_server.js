@@ -530,6 +530,15 @@ module.exports = function (io, options = {}) {
     // unopened
     on("buyPacks", async (data) => {
       const hero = heroOf(username);
+      // (paid with dust: no coins)
+      if (data.dust) {
+        const problem = rpg.buyCartDust(hero, data.cart);
+        if (problem) return error(problem);
+        const items = rpg.cartPrice(data.cart).items;
+        socket.emit("rpgBought", { items, total: 0, dust: true });
+        sendHero(username);
+        return;
+      }
       const check = rpg.cartPrice(data.cart);
       if (check.error) return error(check.error);
       const note = check.items.map(([id, n]) => id + " x" + n).join(", ");

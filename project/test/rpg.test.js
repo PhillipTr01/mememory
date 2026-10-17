@@ -1594,3 +1594,16 @@ test("rpg: deck slots get names - empty: back to the number, long ones cut", () 
   assert.strictEqual(rpg.heroView(hero).deckNames[1], null);
   assert.match(rpg.nameDeck(hero, 2, "Nope"), /No such deck slot/);
 });
+
+test("rpg: the shop's cart paid with dust - each pack its dust price, not without enough dust", () => {
+  const hero = rpg.newHero("warrior");
+  const before = hero.packs.standard || 0;
+  const cost = rpg.PACKS.standard.dust * 2 + rpg.PACKS.premium.dust;
+  hero.dust = cost - 1;
+  assert.match(rpg.buyCartDust(hero, { standard: 2, premium: 1 }), new RegExp("You need " + cost + " dust"));
+  hero.dust = cost;
+  assert.strictEqual(rpg.buyCartDust(hero, { standard: 2, premium: 1 }), null);
+  assert.strictEqual(hero.dust, 0);
+  assert.strictEqual(hero.packs.standard, before + 2);
+  assert.strictEqual(hero.packs.premium, 1);
+});

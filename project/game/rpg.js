@@ -1178,6 +1178,17 @@ function buyPackDust(hero, id, count = 1) {
   return null;
 }
 
+// A cart paid with dust (each pack its dust price) -> an error or null
+function buyCartDust(hero, cart) {
+  const check = cartPrice(cart);
+  if (check.error) return check.error;
+  const cost = check.items.reduce((sum, [id, n]) => sum + PACKS[id].dust * n, 0);
+  if ((hero.dust || 0) < cost) return `You need ${cost} dust.`;
+  hero.dust -= cost;
+  addPacks(hero, check.items);
+  return null;
+}
+
 // The copies of a card a player can trade away: all but the ones in a deck
 function tradeable(hero, cls, id) {
   const char = hero.chars[cls];
@@ -3268,6 +3279,7 @@ module.exports = {
   dustAll,
   craftCard,
   buyPackDust,
+  buyCartDust,
   nameDeck,
   tradeable,
   tradeList,
