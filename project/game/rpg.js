@@ -1501,6 +1501,13 @@ function weighted(rng, entries) {
 
 // The rows of a floor's map: ROOMS - deeper floors sometimes more (from floor 11 maybe one, from 21 one or two),
 // a boss floor one more
+// The coins of a room on a floor: deeper floors have more rooms - each pays a little less, so a floor's pot is about
+// the same share of its entry on every floor
+function lootScale(floor) {
+  const rows = ROOMS + (floor >= 11 ? 0.5 : 0) + (floor >= 21 ? 1.5 : 0) + (BOSS_EVERY && floor % BOSS_EVERY == 0 ? 1 : 0);
+  return ROOMS / rows;
+}
+
 function rowsFor(floor, rng = Math.random) {
   let rows = ROOMS;
   if (floor >= 11 && rng() < 0.5) rows++;
@@ -2061,7 +2068,7 @@ function enterRoom(run, door = 0, rng = Math.random) {
   } else if (kind == "chest") {
     // (a warrior smashes it open: more coins, maybe gear for everyone)
     const smash = abilityLevel(run, "warrior");
-    const coins = Math.round(entryCost(run.floor) * REWARD.chest * (config.RPG_LOOT / 100) * partyBonus(run.heroes.length) * (1 + ABILITIES.warrior.coins * (smash || 0)));
+    const coins = Math.round(entryCost(run.floor) * lootScale(run.floor) * REWARD.chest * (config.RPG_LOOT / 100) * partyBonus(run.heroes.length) * (1 + ABILITIES.warrior.coins * (smash || 0)));
     run.pot += coins;
     run.event.shared = [{ k: "coins", n: coins }];
     run.event.results = {};
@@ -3151,7 +3158,7 @@ function monsterTurn(run, rng = Math.random) {
 
 function winFight(run, rng) {
   const room = run.rooms[run.rooms.length - 1];
-  const coins = run.tutorial ? 0 : Math.round(entryCost(run.floor) * REWARD[room.kind] * (config.RPG_LOOT / 100) * partyBonus(run.heroes.length));
+  const coins = run.tutorial ? 0 : Math.round(entryCost(run.floor) * lootScale(run.floor) * REWARD[room.kind] * (config.RPG_LOOT / 100) * partyBonus(run.heroes.length));
   run.pot += coins;
   say(run, `Victory! 🪙 ${coins} each for the pot.`);
   fx(run, { k: "victory", coins });
@@ -3611,6 +3618,7 @@ module.exports = {
   maxFoes,
   steadyResist,
   luckBoost,
+  lootScale,
   afterRoom,
   splitCheck,
   newRun,

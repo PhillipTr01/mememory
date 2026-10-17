@@ -245,7 +245,7 @@ module.exports = {
   RPG_REVIVE_PERCENT: 100, // a revive: this share of an entry of the deepest floor open, % (25% of it more with each one of a day)
   RPG_MONSTER_HP: 100, // % of the monsters' HP
   RPG_MONSTER_ATK: 100, // % of the monsters' attack
-  RPG_LOOT: 100, // % of the coins a room puts in the pot
+  RPG_LOOT: 130, // % of the coins a room puts in the pot (130: a floor pays about 2.5 times its entry on average)
   RPG_PACK_STANDARD: 10000,
   RPG_TRADE_FREE: 2500, // a trade worth at most this much (coins, the bigger side): anything goes - unless a legendary or mythic is in it
   RPG_TRADE_DEVIATION: 25, // a bigger trade: the smaller side at most this much (%) under the bigger one
