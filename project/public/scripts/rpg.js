@@ -2399,8 +2399,14 @@ function renderPartyStats(run) {
         chip.title = relic.text;
         extras.appendChild(chip);
       });
+      // (thorns: the whole of it - the flat part and the share of the armor)
+      if (h.thorns) {
+        var thorns = el("span", "rpg-pstat-tag", "🌵 " + h.thorns + " thorns");
+        thorns.title = "Who hits you takes " + h.thorns + " damage. It grows with your armor.";
+        extras.appendChild(thorns);
+      }
       Object.keys(h.perks || {})
-        .filter((k) => h.perks[k] && PERK_TEXT[k])
+        .filter((k) => h.perks[k] && PERK_TEXT[k] && k != "thorns")
         .forEach((k) => extras.appendChild(el("span", "rpg-pstat-tag", "✦ " + PERK_TEXT[k](h.perks[k]))));
       if (!extras.childNodes.length) extras.appendChild(el("span", "rpg-pstat-tag none", "No relics or perks yet"));
       row.append(head, stats, extras);

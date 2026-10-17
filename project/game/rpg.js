@@ -3284,6 +3284,8 @@ function runView(run) {
       maxHp: h.maxHp,
       atk: h.atk,
       def: h.def,
+      // (what an attacker takes: the flat thorns and the share of the whole armor, gear included)
+      thorns: thornsOf(h),
       luck: h.luck,
       agi: h.agi,
       down: h.down,

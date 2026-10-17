@@ -1947,3 +1947,11 @@ test("rpg: Fade - its next attack deals half again as much, then it is back to n
   rpg.monsterTurn(run);
   assert.ok(!foe.effects.ambush, "used up by the attack");
 });
+test("rpg: thorns grow with the whole armor - gear included - and the run shows the whole of it", () => {
+  const hero = rpg.newHero("paladin");
+  const bare = rpg.newRun(1, [{ name: "a", hero }]).heroes[0];
+  rpg.charOf(hero).gear.armor = { slot: "armor", def: 40, rarity: "rare" };
+  const run = rpg.newRun(1, [{ name: "a", hero }]);
+  assert.ok(rpg.thornsOf(run.heroes[0]) > rpg.thornsOf(bare));
+  assert.strictEqual(rpg.runView(run).heroes[0].thorns, rpg.thornsOf(run.heroes[0]));
+});
