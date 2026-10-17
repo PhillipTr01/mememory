@@ -8166,3 +8166,62 @@ button.rpg-trade-row:active {
   width: 100%;
   margin: 0.2rem 0 1rem;
 }
+
+/* (the deck builder's decks: a tab each, under the title) */
+.rpg-deck-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+
+.rpg-btn.rpg-deck-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.38rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid var(--mm-border);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.8rem;
+}
+
+.rpg-btn.rpg-deck-tab b {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rpg-btn.rpg-deck-tab span {
+  font-size: 0.7rem;
+  color: var(--mm-muted);
+  font-weight: 600;
+}
+
+.rpg-btn.rpg-deck-tab:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.rpg-btn.rpg-deck-tab.empty b {
+  color: var(--mm-muted);
+}
+
+.rpg-btn.rpg-deck-tab.active {
+  border-color: rgba(245, 197, 66, 0.7);
+  background: rgba(245, 197, 66, 0.12);
+  cursor: default;
+}
+
+.rpg-deck-tab-pen {
+  font-size: 0.72rem;
+  padding: 0.05rem 0.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.65;
+}
+
+.rpg-deck-tab-pen:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+}

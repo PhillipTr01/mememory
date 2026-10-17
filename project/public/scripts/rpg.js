@@ -1670,14 +1670,28 @@ function renderBuilder() {
   info.dataset.act = "deckHelp";
   var crafting = button(craftMode ? "✓ Craft mode" : "✨ Craft mode", "craftMode", { className: "small rpg-craft-toggle" + (craftMode ? " on" : "") });
   crafting.title = craftMode ? "Back to building your deck." : "Make missing cards with dust and dust spare ones.";
-  morphChildren(document.getElementById("rpgBuilderTitle"), [el("span", "", "🃏 Deck builder · " + cls.icon + " " + cls.name), info, deckSwitch(), crafting]);
+  morphChildren(document.getElementById("rpgBuilderTitle"), [el("span", "", "🃏 Deck builder"), info, crafting]);
+  // (the decks: a tab each - its name and size; the one in use gets the pencil to rename it)
+  morphChildren(
+    document.getElementById("rpgDeckTabs"),
+    (hero.decks || [hero.deck.length]).map((n, i) => {
+      var active = i == (hero.deckAt || 0);
+      var tab = button("", active ? "" : "deckUse", { id: String(i), className: "rpg-deck-tab" + (active ? " active" : "") + (n ? "" : " empty") });
+      tab.append(el("b", "", (hero.deckNames || [])[i] || "Deck " + (i + 1)), el("span", "", n + (n == 1 ? " card" : " cards")));
+      tab.title = active ? "The deck you play." : "Switch to this deck.";
+      if (active) {
+        var pen = el("span", "rpg-deck-tab-pen", "✏️");
+        pen.dataset.act = "deckRename";
+        pen.title = "Rename this deck.";
+        tab.appendChild(pen);
+      }
+      return tab;
+    }),
+  );
   document.getElementById("rpgBuilder").classList.toggle("crafting", craftMode);
-  document.getElementById("rpgBuilderHint").innerText = craftMode ? "Make the cards you miss with dust and dust the copies you don't need." : "Click or drag cards in and out.";
-  // (the deck in use: its name - a pencil renames it)
+  // (the deck in use: its name)
   var deckName = (hero.deckNames || [])[hero.deckAt || 0];
-  var rename = button("✏️", "deckRename", { className: "small rpg-deck-rename" });
-  rename.title = "Rename this deck.";
-  morphChildren(document.getElementById("rpgDeckName"), [el("b", "", deckName || (hero.decks && hero.decks.length > 1 ? "Deck " + ((hero.deckAt || 0) + 1) : "Your deck")), rename]);
+  morphChildren(document.getElementById("rpgDeckName"), [el("b", "", deckName || "Deck " + ((hero.deckAt || 0) + 1))]);
   var deck = hero.deck;
   var counts = {};
   deck.forEach((id) => (counts[id] = (counts[id] || 0) + 1));
