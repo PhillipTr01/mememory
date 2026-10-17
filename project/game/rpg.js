@@ -2472,10 +2472,12 @@ function afflict(one, kind, turns, dmg) {
 
 let cardCount = 0;
 
-function drawCards(hero, count, rng) {
+// (byCard: a card's draw - it shuffles the discard pile back in once a turn at most, so free drawing cards never loop)
+function drawCards(hero, count, rng, byCard = false) {
   for (let i = 0; i < count && hero.hand.length < HAND_MAX; i++) {
     if (!hero.draw.length) {
-      if (!hero.discard.length) break;
+      if (!hero.discard.length || (byCard && hero.reshuffled)) break;
+      if (byCard) hero.reshuffled = true;
       hero.draw = shuffle(hero.discard, rng);
       hero.discard = [];
     }
@@ -2495,6 +2497,7 @@ function startRound(run, rng) {
     hero.ended = false;
     hero.attacked = false;
     hero.skilled = false;
+    hero.reshuffled = false;
     // (the AURAS: their block, healing, mana - a turn less)
     for (const aura of hero.auras || []) {
       if (aura.kind == "guard") {
@@ -2715,7 +2718,6 @@ function play(run, name, input, rng = Math.random) {
   if (card.target == "fallen" && !fallen) return "Nobody to bring back.";
   hero.energy -= card.cost;
   const [{ id }] = hero.hand.splice(index, 1);
-  (card.exhaust || card.mythic ? hero.exhausted : hero.discard).push(id);
   // (mythic: once per run - out of the run's deck)
   if (card.mythic) {
     const at = hero.deck.indexOf(id);
@@ -2726,6 +2728,8 @@ function play(run, name, input, rng = Math.random) {
   if (card.type == "attack") hero.attacked = true;
   fx(run, { k: "card", by: hero.name, card: id, to: card.target == "foe" ? foe.id : card.target == "ally" ? friend.name : card.target == "fallen" ? fallen.name : null });
   cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng);
+  // (onto the discard pile only once it is done: a card that draws never draws itself again)
+  (card.exhaust || card.mythic ? hero.exhausted : hero.discard).push(id);
   hero.firstAttack = false;
   // (a skill played: the combo cards hit harder for the rest of the turn)
   if (card.type != "attack") hero.skilled = true;
@@ -2849,7 +2853,7 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
       const old = one.effects.might;
       one.effects.might = old ? { turns: Math.max(old.turns, fx.might), n: old.n + 1 } : { turns: fx.might, n: 1 };
     }
-  } else if (fx.draw != null) for (const one of fx.to == "party" ? alive(run.heroes) : [hero]) drawCards(one, fx.draw, rng);
+  } else if (fx.draw != null) for (const one of fx.to == "party" ? alive(run.heroes) : [hero]) drawCards(one, fx.draw, rng, true);
   else if (fx.mana != null) hero.energy += fx.mana;
   else if (fx.lose != null) hero.hp = Math.max(1, hero.hp - Math.round(hero.maxHp * fx.lose));
   else if (fx.evade) hero.evading = true;
