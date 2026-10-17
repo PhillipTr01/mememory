@@ -3,6 +3,8 @@ const assert = require("node:assert");
 const h = require("./helpers");
 const rpg = require("../game/rpg");
 const config = require("../game/config");
+// (the tests: a death that lasts - the default is none)
+config.RPG_DEATH_TIME = 3 * 3600 * 1000;
 const testMode = require("../game/test_mode");
 // (a price as the game rounds it: to 10 under 1,000, to 50 under 10,000, else to 100)
 const price = (v) => { const step = v < 1000 ? 10 : v < 10000 ? 50 : 100; return Math.max(10, Math.round(v / step) * step); };
@@ -1976,4 +1978,12 @@ test("rpg: cards sold - 75% of what their dust is worth in coins, only spare cop
   char.collection.ironwave = 4;
   assert.ok(rpg.sellAll(hero) > 0);
   assert.strictEqual(rpg.sellAll(hero), 0);
+});
+test("rpg: no death time - a party down is back right away", () => {
+  const before = config.RPG_DEATH_TIME;
+  config.RPG_DEATH_TIME = 0;
+  const hero = rpg.newHero("warrior");
+  rpg.die(hero, "warrior");
+  assert.strictEqual(rpg.deadFor(hero), 0);
+  config.RPG_DEATH_TIME = before;
 });
