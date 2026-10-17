@@ -306,8 +306,11 @@ module.exports = function (io, options = {}) {
     for (const name of party.members) {
       const hero = heroOf(name);
       rpg.charOf(hero).runs++;
-      // (the floor cools down for everyone of the party)
-      if (!party.tutorial) rpg.coolFloor(hero, party.floor);
+      // (the floor cools down for everyone of the party - and counts for today: the next run of it pays less)
+      if (!party.tutorial) {
+        rpg.coolFloor(hero, party.floor);
+        rpg.countRun(hero, party.floor);
+      }
       // (the potions go along - what is left comes back)
       hero.potions = 0;
     }

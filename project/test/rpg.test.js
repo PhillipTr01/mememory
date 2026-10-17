@@ -1695,3 +1695,21 @@ test("rpg: loot cards like a pack's - any class's, the own class and the neutral
   assert.ok(other > 300, String(other));
   assert.ok(own > 900, String(own));
 });
+test("rpg: the same floor again on the same day pays less - 100, 80, 60, then 45%; midnight starts over", () => {
+  const hero = rpg.newHero("warrior");
+  const now = new Date(2026, 5, 1, 12).getTime();
+  assert.strictEqual(rpg.repeatPay(hero, 3, "warrior", now), 1);
+  const pays = [];
+  for (let i = 0; i < 5; i++) {
+    rpg.countRun(hero, 3, "warrior", now);
+    pays.push(rpg.repeatPay(hero, 3, "warrior", now));
+  }
+  assert.deepStrictEqual(pays, [0.8, 0.6, 0.45, 0.45, 0.45]);
+  // (another floor: its own count - the next day: all again)
+  assert.strictEqual(rpg.repeatPay(hero, 4, "warrior", now), 1);
+  assert.strictEqual(rpg.repeatPay(hero, 3, "warrior", now + 24 * 3600 * 1000), 1);
+  // A run on it: the share of the pot that small
+  hero.chars.warrior.floorRuns.day = new Date().toDateString();
+  const run = rpg.newRun(3, [{ name: "a", hero }]);
+  assert.strictEqual(run.heroes[0].share, 0.45);
+});

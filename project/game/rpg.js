@@ -437,6 +437,21 @@ function payout(run, hero, result) {
   return Math.max(pot, round100(entryCost(run.floor) * CLEAR_PAY));
 }
 
+// The same floor again on the same day: less of the pot each time (per character - midnight starts over)
+const REPEAT_PAY = [1, 0.8, 0.6, 0.45];
+function runsToday(hero, floor, cls = hero.cls, now = Date.now()) {
+  const runs = charOf(hero, cls).floorRuns;
+  return runs && runs.day == dayOf(now) ? runs.floors[floor] || 0 : 0;
+}
+function repeatPay(hero, floor, cls = hero.cls, now = Date.now()) {
+  return REPEAT_PAY[Math.min(REPEAT_PAY.length - 1, runsToday(hero, floor, cls, now))];
+}
+function countRun(hero, floor, cls = hero.cls, now = Date.now()) {
+  const char = charOf(hero, cls);
+  if (!char.floorRuns || char.floorRuns.day != dayOf(now)) char.floorRuns = { day: dayOf(now), floors: {} };
+  char.floorRuns.floors[floor] = (char.floorRuns.floors[floor] || 0) + 1;
+}
+
 // A character's share of the loot pot on a floor: far under its deepest cleared floor - less (no farming low floors)
 function lootShare(deepest, floor) {
   const under = deepest - floor - config.RPG_LOW_FREE;
@@ -1107,6 +1122,8 @@ function heroView(hero) {
     tutorialDone: !!char.tutorialDone,
     deadFor: deadFor(hero),
     cooldowns: cooldownsOf(hero),
+    // (the floors run today: the next run of one pays less)
+    repeatPay: Object.fromEntries(Array.from({ length: FLOORS }, (_, i) => [i + 1, repeatPay(hero, i + 1)]).filter(([, pay]) => pay < 1)),
     revivePrice: revivePrice(hero),
     revives: revivesToday(hero),
     resetLeft: resetLeft(hero),
@@ -1707,7 +1724,7 @@ function newRun(floor, party, rng = Math.random, options = {}) {
         maxFloor: maxFloor(hero),
         levels: { ...charOf(hero).levels },
         potionsMax: potionsMax(hero),
-        share: lootShare(charOf(hero).deepest, floor),
+        share: lootShare(charOf(hero).deepest, floor) * repeatPay(hero, floor),
         ...stats,
         hp: stats.maxHp,
         perks,
@@ -3522,6 +3539,10 @@ module.exports = {
   floorCooldown,
   coolFloor,
   warmFloor,
+  countRun,
+  runsToday,
+  repeatPay,
+  REPEAT_PAY,
   payout,
   CLEAR_PAY,
   lootShare,

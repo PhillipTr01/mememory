@@ -1927,7 +1927,8 @@ var coolTimer = null;
 function shareOf(n) {
   var low = rules.low || { free: 0, cut: 0, min: 100 };
   var under = (hero.deepest || 0) - n - low.free;
-  return under <= 0 ? 1 : Math.max(low.min / 100, 1 - (low.cut / 100) * under);
+  // (and the same floor again today: less each time)
+  return (under <= 0 ? 1 : Math.max(low.min / 100, 1 - (low.cut / 100) * under)) * ((hero.repeatPay || {})[n] || 1);
 }
 
 // A party's levels and mine: too far apart to join?
@@ -1971,7 +1972,7 @@ function renderDoor() {
   var share = shareOf(floor);
   if (share < 1) {
     var low = el("span", "rpg-floor-tag low", "🪙 " + Math.round(share * 100) + "% loot");
-    low.title = "This floor is far below your best, so you get " + Math.round(share * 100) + "% of the pot.";
+    low.title = ((hero.repeatPay || {})[floor] ? "You already ran this floor today" : "This floor is far below your best") + ", so you get " + Math.round(share * 100) + "% of the pot.";
     info.push(low);
   }
   morphChildren(document.getElementById("rpgFloorInfo"), info);
