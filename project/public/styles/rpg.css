@@ -8650,3 +8650,32 @@ button.rpg-trade-row:active {
 .rpg-btn.rpg-craft-btn.sell {
   background: rgba(255, 255, 255, 0.04);
 }
+
+/* Craft mode: the spare copies of every class - dusted or sold at once, above the cards */
+.rpg-spare-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.rpg-spare-bar[hidden] {
+  display: none;
+}
+
+.rpg-spare-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.rpg-spare-acts {
+  display: flex;
+  gap: 0.5rem;
+}

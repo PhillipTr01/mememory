@@ -1412,8 +1412,6 @@ function renderCollectionBar() {
   var crafting = button(craftMode ? "✓ Craft mode" : "✨ Craft mode", "craftMode", { className: "small rpg-craft-toggle" + (craftMode ? " on" : "") });
   crafting.title = craftMode ? "Back to building your deck." : "Make missing cards with dust and dust spare ones.";
   dust.appendChild(crafting);
-  var spare = (hero.dustable || []).reduce((sum, one) => sum + one.n, 0);
-  if (spare) dust.append(button("Dust " + spare + " spare card" + (spare == 1 ? "" : "s"), "dustAll", { className: "small" }), button("Sell " + spare + " spare card" + (spare == 1 ? "" : "s"), "sellAll", { className: "small" }));
   progress.appendChild(dust);
   morphChildren(document.getElementById("rpgShopProgress"), [progress]);
 
@@ -1905,6 +1903,20 @@ function renderBuilder() {
       return !text || (card.name + " " + card.text).toLowerCase().includes(text);
     })
     .sort(byRarity);
+  // (craft mode: the spare copies of every class at once - dusted or sold, above the cards)
+  var spares = hero.dustable || [];
+  var spareCount = spares.reduce((sum, one) => sum + one.n, 0);
+  var spareBar = document.getElementById("rpgSpareBar");
+  spareBar.hidden = !craftMode || !spareCount;
+  if (craftMode && spareCount) {
+    var spareDust = spares.reduce((sum, one) => sum + one.dust, 0);
+    var spareCoins = spares.reduce((sum, one) => sum + one.n * ((rules.sell || {})[cardOf(one.id).rarity] || 0), 0);
+    var spareText = el("span", "rpg-spare-text");
+    spareText.append(el("b", "", "♻️ " + spareCount + " spare card" + (spareCount == 1 ? "" : "s")), el("span", "mm-muted small", "Copies past what a deck can hold, for every class."));
+    var spareActs = el("div", "rpg-spare-acts");
+    spareActs.append(button("💨 Dust all · +" + spareDust, "dustAll", { className: "small rpg-craft-btn dust" }), button("🪙 Sell all · " + formatCoins(spareCoins), "sellAll", { className: "small rpg-craft-btn sell" }));
+    morphChildren(spareBar, [spareText, spareActs]);
+  }
   morphChildren(
     document.getElementById("rpgBuilderGrid"),
     shown.length
