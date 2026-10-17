@@ -1464,7 +1464,7 @@ const ROOM_KINDS = {
   event: { name: "Encounter", icon: "📜", about: "A strange choice" },
 };
 // What waits in a room of the map (weights) - mostly fights
-const DOOR_POOL = { fight: 15, hard: 5.4, trap: 0.6, chest: 1, rest: 1, shrine: 0.5, merchant: 0.6, event: 1.4 };
+const DOOR_POOL = { fight: 17, hard: 6, trap: 0.5, chest: 0.8, rest: 0.8, shrine: 0.4, merchant: 0.5, event: 1.1 };
 const LANES = 4; // the columns of the map
 // What a room of the map is - hidden; the party senses it (sees its kind): its best hero's base + per point of
 // instinct (agility) - a Rogue far better at it
@@ -1527,7 +1527,11 @@ function makeMap(run, rng = Math.random) {
   const boss = rows[ROOMS - 1][0].kind == "boss";
   const before = rows[ROOMS - 2];
   if (ROOMS > 3) {
-    if (boss) before.forEach((node) => (node.kind = "rest"));
+    if (boss) {
+      // (before a boss: two camp fires at most - the other rooms fights)
+      const fires = shuffle(before.map((node) => node.index), rng).slice(0, 2);
+      before.forEach((node) => (node.kind = fires.includes(node.index) ? "rest" : "fight"));
+    }
     else if (!before.some((node) => node.kind == "rest")) before[Math.floor(rng() * before.length)].kind = "rest";
     rows[ROOMS - 3].forEach((node) => {
       if (node.kind == "rest") node.kind = "fight";
