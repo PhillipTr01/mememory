@@ -3317,6 +3317,8 @@ function runView(run) {
       def: h.def,
       // (what an attacker takes: the flat thorns and the share of the whole armor, gear included)
       thorns: thornsOf(h),
+      // (how often a stun lands on a steady foe - luck helps)
+      steadyStun: Math.round((1 - steadyResist(h)) * 100),
       luck: h.luck,
       agi: h.agi,
       down: h.down,
@@ -3353,6 +3355,8 @@ function runView(run) {
       maxHp: m.maxHp,
       atk: m.atk,
       armor: m.armor || 0,
+      // (how often it dodges an attack on a single foe - fading: every one)
+      dodge: m.fading ? 1 : m.dodge || 0,
       traits: m.traits || [],
       boss: !!m.phase,
       phased: !!m.phased,

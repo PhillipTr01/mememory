@@ -2152,11 +2152,12 @@ function renderLobby() {
 
 /* ---------- A run ---------- */
 
-function effectsRow(effects) {
+// (tips: other hover texts for some effects - a steady foe: how often my stun lands)
+function effectsRow(effects, tips) {
   var row = el("div", "rpg-effects");
   Object.keys(effects).forEach((kind) => {
     var chip = el("span", "rpg-effect " + kind, EFFECT_ICONS[kind] + (effects[kind] > 1 ? " " + effects[kind] : ""));
-    chip.title = EFFECT_NAMES[kind];
+    chip.title = (tips && tips[kind]) || EFFECT_NAMES[kind];
     row.appendChild(chip);
   });
   return row;
@@ -2225,7 +2226,15 @@ function renderRun() {
         armor.title = "Its armor blocks " + Math.round(m.armor * 100) + "% of your damage.";
         art.appendChild(armor);
       }
-      card.append(art, name, bar(m.hp, m.maxHp, "foe"), effectsRow(m.effects));
+      // (how often it dodges an attack on a single foe)
+      if (m.dodge) {
+        var dodge = el("span", "rpg-monster-armor dodge", "🪶 " + Math.round(m.dodge * 100) + "%");
+        dodge.title = m.dodge >= 1 ? "It dodges every attack on a single foe this turn." : "It dodges " + Math.round(m.dodge * 100) + "% of attacks on a single foe.";
+        art.appendChild(dodge);
+      }
+      var mine = run.heroes.find((h) => h.name == myName);
+      var tips = mine ? { steady: "Steady: your stuns land " + mine.steadyStun + "% of the time until it acts again." } : null;
+      card.append(art, name, bar(m.hp, m.maxHp, "foe"), effectsRow(m.effects, tips));
       // (what makes it hard: venomproof, fireproof, bulky, spiked)
       if ((m.traits || []).length) {
         var traits = el("div", "rpg-traits");
@@ -2400,6 +2409,7 @@ function renderPartyStats(run) {
         ["🛡️", h.def, "Armor", "Less damage taken, more block"],
         ["🍀", Math.round(h.luck + (h.perks.crit || 0)) + "%", "Crit", "Chance of a critical hit"],
         ["🦊", Math.round(h.agi) + "%", "Dodge", h.cls == "rogue" ? "Dodge hits, sense rooms (far better)" : "Dodge hits, sense rooms"],
+        ["💫", h.steadyStun + "%", "Stun", "How often a stun lands on a steady foe. Luck raises it."],
         [null, h.potions + " / " + (h.potionsMax || rules.potionsMax), "Potions", "Heal " + Math.round(rules.potionHeal * 100) + "% HP"],
       ].forEach(([icon, value, label, tip]) => {
         var tile = el("div", "rpg-pstat-tile");

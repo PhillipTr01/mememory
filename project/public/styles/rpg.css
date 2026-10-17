@@ -8679,3 +8679,9 @@ button.rpg-trade-row:active {
   display: flex;
   gap: 0.5rem;
 }
+
+/* A monster's dodge: a chip on the left, its armor on the right */
+.rpg-monster-armor.dodge {
+  right: auto;
+  left: -0.2rem;
+}
