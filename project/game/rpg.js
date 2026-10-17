@@ -158,11 +158,11 @@ const CARDS = {};
 // in a Base Set pack - the packs are priced by it)
 const CARD_RARITIES = {
   basic: { name: "Basic", weight: 0, copies: 4, value: 0 },
-  common: { name: "Common", weight: 64, copies: 2, value: 500 },
-  rare: { name: "Rare", weight: 26, copies: 2, value: 2500 },
-  epic: { name: "Epic", weight: 8, copies: 2, value: 10000 },
-  legendary: { name: "Legendary", weight: 3, copies: 1, value: 50000 },
-  mythic: { name: "Mythic", weight: 0.08, copies: 1, value: 500000 },
+  common: { name: "Common", weight: 64, copies: 2, value: 400 },
+  rare: { name: "Rare", weight: 26, copies: 2, value: 2000 },
+  epic: { name: "Epic", weight: 8, copies: 2, value: 8000 },
+  legendary: { name: "Legendary", weight: 3, copies: 1, value: 32000 },
+  mythic: { name: "Mythic", weight: 0.08, copies: 1, value: 128000 },
 };
 // The larger part of the base set: cards made of effects (game/rpg_cards.js)
 const MORE_CARDS = require("./rpg_cards");
@@ -1150,14 +1150,15 @@ function heroView(hero) {
 
 /* ---------- Dust and trades: spare cards turned to dust, dust turned to cards - and swaps between players ---------- */
 
-// What a card gives as dust, what it costs to make - Hearthstone's numbers (basic: neither - mythic: not made)
-const DUST = {
-  common: { get: 5, craft: 40 },
-  rare: { get: 20, craft: 100 },
-  epic: { get: 100, craft: 400 },
-  legendary: { get: 400, craft: 1600 },
-  mythic: { get: 1600, craft: null },
-};
+// What a card costs to make and gives as dust - from its value (a dust worth DUST_COINS coins): made for its
+// value, a quarter of that back (basic: neither - mythic: not made)
+const DUST_BACK = 0.25;
+const DUST = Object.fromEntries(
+  ["common", "rare", "epic", "legendary", "mythic"].map((id) => {
+    const craft = CARD_RARITIES[id].value / DUST_COINS;
+    return [id, { get: Math.round(craft * DUST_BACK), craft: id == "mythic" ? null : craft }];
+  }),
+);
 
 // The most copies of a card in any deck slot of a character (those never leave the collection)
 function inDecks(char, id) {

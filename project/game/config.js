@@ -249,8 +249,8 @@ module.exports = {
   RPG_PACK_STANDARD: 10000,
   RPG_TRADE_FREE: 2500, // a trade worth at most this much (coins, the bigger side): anything goes - unless a legendary or mythic is in it
   RPG_TRADE_DEVIATION: 25, // a bigger trade: the smaller side at most this much (%) under the bigger one
-  RPG_PACK_PREMIUM: 40000, // (the packs: 1.1x what their cards are worth - CARD_RARITIES)
-  RPG_PACK_MYTHIC: 115000,
+  RPG_PACK_PREMIUM: 36000, // (the packs: 1.1x what their cards are worth - CARD_RARITIES)
+  RPG_PACK_MYTHIC: 64000,
   RPG_TURN_TIME: 45000, // a turn of a fight
 
   // The tables of the lobby (in this order, limits from the keys above); a page without a table opens "classic"
