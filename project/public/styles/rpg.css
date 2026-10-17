@@ -8685,3 +8685,13 @@ button.rpg-trade-row:active {
   right: auto;
   left: -0.2rem;
 }
+
+/* (the dodge: only while the monster is hovered) */
+.rpg-monster .rpg-monster-armor.dodge {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.rpg-monster:hover .rpg-monster-armor.dodge {
+  opacity: 1;
+}
