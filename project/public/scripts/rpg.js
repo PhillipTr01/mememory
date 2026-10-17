@@ -3488,3 +3488,5 @@ document.getElementById("rpgLeave").addEventListener("click", () => socket.emit(
   );
   pick();
 })();
+
+document.addEventListener("DOMContentLoaded", () => setupChat());
