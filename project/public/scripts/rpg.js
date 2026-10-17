@@ -598,6 +598,13 @@ function bonusOf(item) {
   return parts.join(" · ");
 }
 
+// Who can wear a piece: "For every class" - or the classes it is made for
+function wearers(item) {
+  if (!item.classes) return "For every class";
+  var names = item.classes.map((id) => rules.classes[id].icon + " " + rules.classes[id].name);
+  return "Only for " + (names.length > 1 ? names.slice(0, -1).join(", ") + " and " + names[names.length - 1] : names[0]);
+}
+
 var SLOT_ICONS = { weapon: "⚔️", armor: "🛡️", charm: "💍" };
 
 // A piece of gear as a tile: the slot, the picture, the name, its stats (better / worse than the one worn), the
@@ -915,7 +922,7 @@ function tradeRow(one, side, picks, act) {
     icon.innerText = one.item.icon;
     name.innerText = one.item.name;
     sub.innerText = RARITY_NAMES[one.item.rarity] + " " + SLOT_NAMES[one.item.slot].toLowerCase();
-    row.title = other ? "Gear trades only for gear." : bonusOf(one.item).split(" · ").join("\n");
+    row.title = other ? "Gear trades only for gear." : bonusOf(one.item).split(" · ").join("\n") + "\n" + wearers(one.item);
   }
   var text = el("span", "rpg-trade-text");
   text.append(name, sub);
@@ -1193,7 +1200,7 @@ function renderReady() {
   ["weapon", "armor", "charm"].forEach((slot) => {
     var item = hero.gear[slot];
     var mark = el("span", "rpg-load-slot" + (item ? " rarity-" + item.rarity : " empty"), item ? item.icon : SLOT_ICONS[slot]);
-    mark.title = item ? item.name + "\n" + bonusOf(item).split(" · ").join("\n") : "No " + SLOT_NAMES[slot].toLowerCase() + " worn.";
+    mark.title = item ? item.name + "\n" + bonusOf(item).split(" · ").join("\n") + "\n" + wearers(item) : "No " + SLOT_NAMES[slot].toLowerCase() + " worn.";
     slots.appendChild(mark);
   });
   var worn = ["weapon", "armor", "charm"].filter((slot) => hero.gear[slot]).length;
@@ -2536,7 +2543,7 @@ function resultCard(r) {
     node.classList.add("rarity-" + r.item.rarity);
     icon = r.item.icon;
     name = r.item.name;
-    tip = RARITY_NAMES[r.item.rarity] + " " + SLOT_NAMES[r.item.slot].toLowerCase() + "\n" + bonusOf(r.item).split(" · ").join("\n") + (r.item.classes ? "\n" + r.item.classes.map((id) => rules.classes[id].name).join(", ") + " only" : "");
+    tip = RARITY_NAMES[r.item.rarity] + " " + SLOT_NAMES[r.item.slot].toLowerCase() + "\n" + bonusOf(r.item).split(" · ").join("\n") + "\n" + wearers(r.item);
   } else if (r.k == "relic") {
     var relic = rules.relics[r.id] || { icon: "🏺", name: r.id, text: "" };
     node.classList.add("relic");
