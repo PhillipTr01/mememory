@@ -1851,3 +1851,10 @@ test("rpg: a restart keeps the parties, their runs and the trade offers - the he
   assert.ok(live.trades.has("t9"));
   live.stop();
 });
+test("rpg: up to 7 monsters deep down - 5 before floor 15, 6 before floor 25", () => {
+  assert.deepStrictEqual([rpg.maxFoes(1), rpg.maxFoes(15), rpg.maxFoes(25)], [5, 6, 7]);
+  let most = 0;
+  for (let i = 0; i < 400; i++) most = Math.max(most, rpg.monstersFor(28, 4, "hard").length);
+  assert.strictEqual(most, 7);
+  for (let i = 0; i < 200; i++) assert.ok(rpg.monstersFor(5, 4, "hard").length <= 5);
+});

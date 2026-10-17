@@ -2203,6 +2203,8 @@ function renderRun() {
   } else if (run.phase == "between") scene = [];
   else scene = [el("div", "rpg-quiet", sceneText(run))];
   morphChildren(document.getElementById("rpgMonsters"), scene);
+  // (six or seven monsters: smaller cards - two rows)
+  document.getElementById("rpgMonsters").classList.toggle("many", run.phase == "fight" && run.monsters.length >= 6);
   // Between the rooms: the room the party is in (a camp fire, a merchant, an encounter ...) - its choices
   var roomBox = document.getElementById("rpgRoom");
   var inRoom = run.phase == "between" && !party.result;

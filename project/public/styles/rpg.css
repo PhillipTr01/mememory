@@ -8576,3 +8576,32 @@ button.rpg-trade-row:active {
   letter-spacing: 0.08em;
   opacity: 0.7;
 }
+
+/* Six or seven monsters: smaller cards, four to a row */
+.rpg-monsters.many {
+  gap: 1.15rem 0.6rem;
+}
+
+.rpg-monsters.many .rpg-monster {
+  width: 7.6rem;
+  padding: 1.4rem 0.5rem 0.6rem;
+}
+
+.rpg-monsters.many .rpg-monster-icon {
+  font-size: 1.9rem;
+}
+
+.rpg-monsters.many .rank-elite .rpg-monster-icon,
+.rpg-monsters.many .rank-boss .rpg-monster-icon {
+  font-size: 2.4rem;
+}
+
+@media (max-width: 700px) {
+  .rpg-arena .rpg-monsters.many {
+    row-gap: 1.5rem;
+  }
+
+  .rpg-monsters.many .rpg-monster {
+    width: calc(33.3% - 0.4rem);
+  }
+}

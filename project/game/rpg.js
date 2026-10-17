@@ -1674,6 +1674,13 @@ function armorOf(floor, kind, rank) {
 }
 
 // The monsters of a fight: 1 to 3 (more with a bigger party, a hard fight one more) - an elite with a few others
+// The most monsters in a fight at once: 5 - from floor 15 on 6, from floor 25 on 7 (summons and splits too)
+// (more of them than usual: their strength shared - their HP a little lower still, a split is no stronger)
+const MORE_HP = 0.8;
+function maxFoes(floor) {
+  return floor >= 25 ? 7 : floor >= 15 ? 6 : 5;
+}
+
 function monstersFor(floor, size, room, rng = Math.random, depth = 0) {
   const group = MONSTERS[Math.min(MONSTERS.length - 1, Math.floor((floor - 1) / 5))];
   if (room == "deep") {
@@ -1696,8 +1703,17 @@ function monstersFor(floor, size, room, rng = Math.random, depth = 0) {
     return list;
   }
   const extra = room == "hard" ? 1 : 0;
-  const count = Math.min(5, 1 + Math.floor(rng() * 2) + Math.floor((size - 1) / 2) + extra);
-  return Array.from({ length: count }, () => monster(floor, size, pick(rng, group), room == "hard" ? RANKS.hard : RANKS.normal, depth, rng));
+  const base = Math.min(5, 1 + Math.floor(rng() * 2) + Math.floor((size - 1) / 2) + extra);
+  // (deeper: sometimes more of them - the same strength shared among them)
+  const more = (floor >= 15 ? Math.floor(rng() * 3) : 0) + (floor >= 25 ? Math.floor(rng() * 2) : 0);
+  const count = Math.min(maxFoes(floor), base + more);
+  const list = Array.from({ length: count }, () => monster(floor, size, pick(rng, group), room == "hard" ? RANKS.hard : RANKS.normal, depth, rng));
+  if (count > base)
+    for (const one of list) {
+      one.maxHp = one.hp = Math.max(1, Math.round((one.hp * base * MORE_HP) / count));
+      one.atk = Math.max(1, Math.round((one.atk * base) / count));
+    }
+  return list;
 }
 
 /* ---------- A run ---------- */
@@ -2532,7 +2548,7 @@ function planIntents(run, rng = Math.random) {
       if (move == "howl") return !foe.effects.rage;
       if (move == "steal") return heroes.some((h) => h.potions > 0);
       // (calls for help: at most SUMMON_MAX monsters a fight - none once furious)
-      if (move == "summon") return alive(run.monsters).length < 4 && (foe.summoned || 0) < SUMMON_MAX && !furious(run);
+      if (move == "summon") return alive(run.monsters).length < maxFoes(run.floor) - 1 && (foe.summoned || 0) < SUMMON_MAX && !furious(run);
       if (move == "purge") return alive(run.monsters).some((m) => m.effects.poison || m.effects.burn);
       if (move == "curse") return heroes.some((h) => !h.effects.weak);
       return true;
@@ -2602,7 +2618,7 @@ function bossPhase(run, foe) {
 // A hit of a hero on a monster: the damage done (a plain attack may be dodged - a fading foe dodges them all)
 // A splitting monster at half HP the first time: two of it, the HP shared
 function splitCheck(run, foe) {
-  if (foe.affix != "splitter" || foe.split || foe.down || foe.hp <= 0 || foe.hp > foe.maxHp / 2) return;
+  if (foe.affix != "splitter" || foe.split || foe.down || foe.hp <= 0 || foe.hp > foe.maxHp / 2 || alive(run.monsters).length >= maxFoes(run.floor)) return;
   foe.split = true;
   const half = Math.max(1, Math.ceil(foe.hp / 2));
   foe.hp = half;
@@ -3019,7 +3035,7 @@ function monsterMove(run, foe, rng) {
     case "summon": {
       // (its kind of the floors - at most 4 standing)
       const group = MONSTERS[Math.min(MONSTERS.length - 1, foe.summon != null ? foe.summon : Math.floor((run.floor - 1) / 5))];
-      const count = Math.max(0, Math.min(2, 4 - alive(run.monsters).length, SUMMON_MAX - (foe.summoned || 0)));
+      const count = Math.max(0, Math.min(2, maxFoes(run.floor) - 1 - alive(run.monsters).length, SUMMON_MAX - (foe.summoned || 0)));
       foe.summoned = (foe.summoned || 0) + count;
       for (let i = 0; i < count; i++) {
         const add = toughen(run, monster(run.floor, run.heroes.length, pick(rng, group), RANKS.normal, 0, rng));
@@ -3573,6 +3589,7 @@ module.exports = {
   starterDeck,
   doorsFor,
   monstersFor,
+  maxFoes,
   afterRoom,
   splitCheck,
   newRun,
