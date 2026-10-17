@@ -808,7 +808,7 @@ module.exports = function (io, options = {}) {
       if (mine.error) return error(mine.error);
       const theirs = rpg.tradeSide(heroOf(to), take);
       if (theirs.error) return error(theirs.error);
-      const unfair = rpg.tradeFair(mine.value, theirs.value);
+      const unfair = rpg.tradeFair(mine.value, theirs.value, mine.top || theirs.top);
       if (unfair) return error(unfair);
       const id = "t" + ++tradeCount;
       trades.set(id, { id, from: username, to, give, take, at: Date.now() });
@@ -827,6 +827,8 @@ module.exports = function (io, options = {}) {
       }
       if (running(offer.from) || running(offer.to)) return error("Not while one of you is in a run.");
       const problem = rpg.trade(heroOf(offer.from), heroOf(offer.to), offer.give, offer.take);
+      // (a full bag: the offer stays - room made, it can be taken)
+      if (problem && /bag is full/.test(problem)) return error(problem);
       trades.delete(offer.id);
       if (problem) error(problem);
       else {

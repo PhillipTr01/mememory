@@ -1303,6 +1303,8 @@ function tradeList(hero) {
 function tradeSide(hero, side) {
   if (!Array.isArray(side) || side.length > 20) return { error: "Too much at once." };
   let value = 0;
+  // (a legendary or mythic in it: the trade always needs nearly the same value)
+  let top = false;
   const cards = {};
   const gear = new Set();
   for (const one of side) {
@@ -1312,21 +1314,25 @@ function tradeSide(hero, side) {
       cards[key] = (cards[key] || 0) + n;
       if (!Number.isInteger(n) || n < 1 || cards[key] > tradeable(hero, String(one.cls), String(one.id))) return { error: "A card isn't there to trade any more." };
       value += n * CARD_RARITIES[CARDS[one.id].rarity].value;
+      top = top || TOP_RARITIES.includes(CARDS[one.id].rarity);
     } else if (one && one.k == "gear") {
       const item = (hero.bag || []).find((piece) => piece.id === one.id);
       if (!item || gear.has(one.id)) return { error: "A piece of gear isn't there to trade any more." };
       gear.add(one.id);
       value += item.value || 0;
+      top = top || TOP_RARITIES.includes(item.rarity);
     } else return { error: "Not something to trade." };
   }
-  return { value };
+  return { value, top };
 }
 
 // Is a trade fair enough: big ones nearly even (config: what is small, how far apart they may be) -> an error or null
-function tradeFair(give, take) {
+// (top: a legendary or mythic on a side - then never small)
+const TOP_RARITIES = ["legendary", "mythic"];
+function tradeFair(give, take, top = false) {
   const high = Math.max(give, take);
   const low = Math.min(give, take);
-  if (high <= config.RPG_TRADE_FREE) return null;
+  if (high <= config.RPG_TRADE_FREE && !top) return null;
   if (low < high * (1 - config.RPG_TRADE_DEVIATION / 100)) return `Both sides need nearly the same value. The smaller one needs at least ${Math.ceil(high * (1 - config.RPG_TRADE_DEVIATION / 100))}.`;
   return null;
 }
@@ -1340,7 +1346,7 @@ function trade(fromHero, toHero, give, take) {
   const b = tradeSide(toHero, take);
   if (b.error) return b.error;
   if (!give.length && !take.length) return "Nothing to trade.";
-  const unfair = tradeFair(a.value, b.value);
+  const unfair = tradeFair(a.value, b.value, a.top || b.top);
   if (unfair) return unfair;
   const gearIn = (side) => side.filter((one) => one.k == "gear").length;
   if (toHero.bag.length - gearIn(take) + gearIn(give) > bagSize(toHero)) return "Their bag is full.";

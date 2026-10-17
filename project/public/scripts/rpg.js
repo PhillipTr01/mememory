@@ -859,11 +859,16 @@ function pickValue(list, picks) {
   return list.reduce((sum, one) => sum + (picks[tradeKey(one)] || 0) * one.value, 0);
 }
 
+// A legendary or mythic among the picks: the trade always needs nearly the same value
+function topPicked(list, picks) {
+  return list.some((one) => picks[tradeKey(one)] && ["legendary", "mythic"].includes(one.k == "card" ? cardOf(one.id).rarity : one.item.rarity));
+}
+
 // Is a trade fair: small ones always, bigger ones nearly even -> null or what is missing
-function tradeGap(give, take) {
+function tradeGap(give, take, top) {
   var high = Math.max(give, take);
   var low = Math.min(give, take);
-  if (high <= rules.tradeFree) return null;
+  if (high <= rules.tradeFree && !top) return null;
   var need = Math.ceil(high * (1 - rules.tradeDeviation / 100));
   return low >= need ? null : need - low;
 }
@@ -941,8 +946,8 @@ function swapIcon() {
 }
 
 // The balance between the two sides: a scale - fair, or how much is missing on which side
-function tradeScale(give, take) {
-  var gap = tradeGap(give, take);
+function tradeScale(give, take, top) {
+  var gap = tradeGap(give, take, top);
   var box = el("div", "rpg-trade-scale" + (give + take == 0 ? "" : gap ? " bad" : " good"));
   var high = Math.max(give, take, 1);
   var beam = el("div", "rpg-trade-beam");
@@ -978,7 +983,14 @@ function renderTrade() {
       sides.append(tradePanel("You give", give, "give", {}, null, "Nothing."), swapIcon(), tradePanel("You get", take, "take", {}, null, "Nothing."));
       var actions = el("div", "rpg-trade-actions");
       if (mine) actions.append(el("span", "mm-muted small", "Waiting for " + other + "."), button("Take back", "tradeCancel", { id: offer.id, className: "small" }));
-      else actions.append(button("Decline", "tradeDecline", { id: offer.id, className: "small" }), button("✓ Accept", "tradeAccept", { id: offer.id, className: "small primary" }));
+      else {
+        // (the gear coming in has no room in the bag: no accepting until there is)
+        var gearOf = (side) => side.filter((one) => one.k == "gear").length;
+        var full = hero.bag.length - gearOf(give) + gearOf(take) > hero.bagSize;
+        var accept = button("✓ Accept", "tradeAccept", { id: offer.id, className: "small primary", disabled: full });
+        if (full) accept.title = "Your bag is full. Make room in it to accept this trade.";
+        actions.append(button("Decline", "tradeDecline", { id: offer.id, className: "small" }), accept);
+      }
       box.append(head, sides, actions);
       offers.appendChild(box);
     });
@@ -1015,19 +1027,20 @@ function renderTrade() {
   var theirList = tradeTheirs ? tradeTheirs.list : [];
   var give = pickValue(mineList, tradePick.give);
   var take = pickValue(theirList, tradePick.take);
+  var top = topPicked(mineList, tradePick.give) || topPicked(theirList, tradePick.take);
   var board = el("div", "rpg-trade-board");
   var middle = el("div", "rpg-trade-middle");
-  middle.append(swapIcon(), tradeScale(give, take));
+  middle.append(swapIcon(), tradeScale(give, take, top));
   board.append(
     tradePanel("You give", mineList, "give", tradePick.give, "tradePick", "You have no spare cards or gear."),
     middle,
     tradePanel(tradeWith ? "You get from " + tradeWith : "You get", theirList, "take", tradePick.take, "tradePick", tradeWith ? (tradeTheirs ? "They have nothing to trade." : "Loading…") : "Pick a player first."),
   );
   nodes.push(board);
-  var gap = tradeGap(give, take);
+  var gap = tradeGap(give, take, top);
   var any = Object.keys(tradePick.give).length + Object.keys(tradePick.take).length > 0;
   var foot = el("div", "rpg-trade-foot");
-  foot.append(el("span", "rpg-trade-note", any && gap ? "Bigger trades need nearly the same value on both sides." : any ? "" : tradeWith ? "Click what you give and what you want." : ""), button("Send offer", "tradeSend", { className: "primary", disabled: !tradeWith || !any || !!gap }));
+  foot.append(el("span", "rpg-trade-note", any && gap ?  (top ? "Trades with a legendary or mythic need nearly the same value on both sides." : "Bigger trades need nearly the same value on both sides.") : any ? "" : tradeWith ? "Click what you give and what you want." : ""), button("Send offer", "tradeSend", { className: "primary", disabled: !tradeWith || !any || !!gap }));
   nodes.push(foot);
   morphChildren(document.getElementById("rpgTrade"), nodes);
 }

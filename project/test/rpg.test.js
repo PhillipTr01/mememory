@@ -1526,6 +1526,11 @@ test("rpg: trades - spare cards and the bag's gear; big trades nearly even; a ca
   assert.deepStrictEqual(list.map((one) => one.id).sort(), ["ironwave", "pyroblast"]);
   // Small trades: anything goes - a common for nothing
   assert.strictEqual(rpg.tradeFair(500, 0), null);
+  assert.strictEqual(rpg.tradeFair(1500, 0), null);
+  assert.match(rpg.tradeFair(2500, 0), /nearly the same value/);
+  // (a legendary or mythic in it: always nearly the same value, however small)
+  assert.match(rpg.tradeFair(1000, 0, true), /nearly the same value/);
+  assert.strictEqual(rpg.tradeFair(1000, 900, true), null);
   // Big ones: the smaller side at most 25% under
   assert.match(rpg.tradeFair(50000, 10000), /nearly the same value/);
   assert.strictEqual(rpg.tradeFair(50000, 40000), null);
@@ -1734,4 +1739,16 @@ test("rpg: a charm needing fewer cards in the deck is rare - rarer on worse piec
   const epic = rate.epic[0] / rate.epic[1];
   assert.ok(common < 0.04, "common " + common);
   assert.ok(epic > common && epic < 0.15, "epic " + epic);
+});
+test("rpg: a cheap legendary piece still needs a fair trade, a full bag takes no gear", () => {
+  const a = rpg.newHero("warrior");
+  const b = rpg.newHero("mage");
+  a.bag.push({ id: "gL", slot: "charm", rarity: "legendary", value: 1000 });
+  assert.match(rpg.trade(a, b, [{ k: "gear", id: "gL" }], []), /nearly the same value/);
+  b.bag.push({ id: "gR", slot: "charm", rarity: "rare", value: 1000 });
+  assert.strictEqual(rpg.trade(a, b, [{ k: "gear", id: "gL" }], [{ k: "gear", id: "gR" }]), null);
+  // (a common piece that cheap: a gift is fine - unless the bag is full)
+  while (b.bag.length < rpg.bagSize(b)) b.bag.push({ id: "f" + b.bag.length, slot: "charm", rarity: "common", value: 100 });
+  a.bag.push({ id: "gC", slot: "charm", rarity: "common", value: 1000 });
+  assert.match(rpg.trade(a, b, [{ k: "gear", id: "gC" }], []), /bag is full/);
 });
