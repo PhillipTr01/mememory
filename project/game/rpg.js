@@ -1047,8 +1047,13 @@ function heroView(hero) {
     deck: char.deck,
     collection: char.collection,
     // (every card of the player - all its characters' collections: the whole set's progress)
-    owned: Object.values(hero.chars || {}).reduce((all, one) => {
-      for (const [id, n] of Object.entries(one.collection || {})) all[id] = (all[id] || 0) + n;
+    // (a class not unlocked yet: its free starter copies don't count - they come with the class)
+    owned: Object.entries(hero.chars || {}).reduce((all, [cls, one]) => {
+      const locked = !hero.unlocked.includes(cls);
+      for (const [id, n] of Object.entries(one.collection || {})) {
+        const real = locked ? n - freeCopies(cls, id) : n;
+        if (real > 0) all[id] = (all[id] || 0) + real;
+      }
       return all;
     }, {}),
     packs: hero.packs || {},

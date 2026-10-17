@@ -1696,7 +1696,7 @@ function craftCell(card, id) {
     // (a spare copy: right away - a copy you need: asked first)
     var from = spare || any;
     var dust = button("💨 Dust · +" + cost.get, spare ? "dustOne" : "dustNeeded", { id: from ? from.cls + "|" + id : "", className: "rpg-craft-btn dust", disabled: !from });
-    dust.title = spare ? "Turn one spare copy into " + cost.get + " dust." : from ? "Turn one copy into " + cost.get + " dust. You need it for a full deck." : "You have no copy to dust.";
+    dust.title = spare ? "Turn one spare copy into " + cost.get + " dust." : from ? "Turn one copy into " + cost.get + " dust. You need it for a full deck." : have ? "Starter copies can't be dusted." : "You have no copy to dust.";
     buttons.appendChild(dust);
   }
   bar.appendChild(buttons);
