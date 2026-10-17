@@ -1972,7 +1972,10 @@ function renderDoor() {
   var share = shareOf(floor);
   if (share < 1) {
     var low = el("span", "rpg-floor-tag low", "🪙 " + Math.round(share * 100) + "% loot");
-    low.title = ((hero.repeatPay || {})[floor] ? "You already ran this floor today" : "This floor is far below your best") + ", so you get " + Math.round(share * 100) + "% of the pot.";
+    // (both cuts multiply: a floor far below the best - and the same floor again today)
+    var repeat = (hero.repeatPay || {})[floor];
+    var below = share < (repeat || 1) - 0.001;
+    low.title = (below && repeat ? "This floor is far below your best and you already ran it today" : repeat ? "You already ran this floor today" : "This floor is far below your best") + ", so you get " + Math.round(share * 100) + "% of the pot.";
     info.push(low);
   }
   morphChildren(document.getElementById("rpgFloorInfo"), info);
