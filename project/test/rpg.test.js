@@ -704,7 +704,7 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; between 
   // Back to the hero (the party closes)
   alice.emit("leave");
   await waitFor(alice, "rpgParty", (p) => p == null);
-  // Dead (the party went down): no run for an hour - or a revive for coins, dearer the next time today
+  // Dead (the party went down): no run for 3 hours - or a revive for coins, dearer the next time today
   rpg.die(mine, "warrior");
   const dead = h.once(alice, "rpgError");
   alice.emit("create", { floor: 1, size: 1 });
@@ -817,7 +817,7 @@ test("rpg: the fight rules - the hand stays (filled up to 5), poison stacks and 
   assert.deepStrictEqual(me.hand.slice(0, 4).map((c) => c.uid), kept);
 });
 
-test("rpg: leaving - one away doesn't hold the party up, one out of the run loses the share; dead: an hour or a revive, dearer the same day", () => {
+test("rpg: leaving - one away doesn't hold the party up, one out of the run loses the share; dead: 3 hours or a revive, dearer the same day", () => {
   const run = rpg.newRun(1, [{ name: "a", hero: rpg.newHero("warrior") }, { name: "b", hero: rpg.newHero("mage") }]);
   rpg.enterRoom(run, 0, () => 0.5);
   rpg.endTurn(run, "a");
