@@ -8482,3 +8482,41 @@ button.rpg-trade-row:active {
 .rpg-load-slot.rarity-mythic {
   background: rgba(45, 212, 191, 0.18);
 }
+
+/* (the info board's end: starting over - a calm red zone) */
+.rpg-reset-zone {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.2rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.06);
+  text-align: left;
+}
+
+.rpg-reset-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+  font-size: 0.82rem;
+  color: var(--mm-muted);
+}
+
+.rpg-reset-text b {
+  color: #fca5a5;
+  font-size: 0.9rem;
+}
+
+.rpg-reset-btn {
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .rpg-reset-zone {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

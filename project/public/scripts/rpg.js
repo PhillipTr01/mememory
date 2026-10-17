@@ -195,6 +195,30 @@ socket.on("rpgHero", (data) => {
   heroAt = Date.now();
   render();
 });
+// The info board of the dungeon: at its end, starting over (a danger zone - "RESET" typed to confirm)
+window.casinoInfoFooter = (game, close) => {
+  if (game != "rpg" || !hero || !hero.unlocked || !hero.unlocked.length) return null;
+  var box = el("div", "rpg-reset-zone");
+  var text = el("div", "rpg-reset-text");
+  var wait = Math.max(0, (hero.resetLeft || 0) - (Date.now() - heroAt));
+  text.append(el("b", "", "Start over"), el("span", "", wait ? "You can reset again in " + duration(wait) + "." : "Delete your whole dungeon progress and begin from the start. You can do this once every " + (rules.resetCooldown % 86400000 ? Math.round(rules.resetCooldown / 3600000) + " hours." : rules.resetCooldown / 86400000 + " days.")));
+  var go = el("button", "mm-btn mm-btn-danger-solid rpg-reset-btn", "Reset my progress");
+  go.type = "button";
+  go.disabled = wait > 0;
+  go.addEventListener("click", () => {
+    close();
+    confirmDialog({
+      title: "Reset your dungeon progress?",
+      text: "Your characters, levels, talents, gear, cards, dust and packs are gone for good. Sell your gear first if you want coins for it. Type RESET to confirm.",
+      confirmLabel: "Reset",
+      danger: true,
+      input: { placeholder: "RESET", require: "RESET", maxLength: 5 },
+    }).then((typed) => typed === "RESET" && socket.emit("resetHero", { confirm: "RESET" }));
+  });
+  box.append(text, go);
+  return box;
+};
+
 // Trades: the offers made and received, the players to trade with, the one picked and what they have, what is picked
 var trades = [];
 var deckMenu = false; // the deck builder's deck dropdown open

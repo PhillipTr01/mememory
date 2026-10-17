@@ -1098,6 +1098,7 @@ function heroView(hero) {
     cooldowns: cooldownsOf(hero),
     revivePrice: revivePrice(hero),
     revives: revivesToday(hero),
+    resetLeft: resetLeft(hero),
   };
 }
 
@@ -1232,6 +1233,20 @@ function buyCartDust(hero, cart) {
   hero.dust -= cost;
   addPacks(hero, check.items);
   return null;
+}
+
+// A player starts over: a hero as on the first day - the characters, their levels and gear, the bag, the cards,
+// the dust and the packs gone (nothing sold for it). Once every RPG_RESET_COOLDOWN.
+// -> how long until the next reset (0: now)
+function resetLeft(hero, now = Date.now()) {
+  return Math.max(0, (hero.resetAt || 0) + config.RPG_RESET_COOLDOWN - now);
+}
+// -> {error} or {hero: the new one}
+function resetHero(hero, now = Date.now()) {
+  if (resetLeft(hero, now) > 0) return { error: "You can reset again in " + Math.ceil(resetLeft(hero, now) / 3600000) + " hours." };
+  const fresh = newHero();
+  fresh.resetAt = now;
+  return { hero: fresh };
 }
 
 // The copies of a card a player can trade away: all but the ones in a deck
@@ -3337,6 +3352,8 @@ module.exports = {
   craftCard,
   buyPackDust,
   buyCartDust,
+  resetHero,
+  resetLeft,
   nameDeck,
   tradeable,
   tradeList,

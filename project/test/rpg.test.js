@@ -623,7 +623,7 @@ function autoplay(socket, name, options) {
 
 before(async () => {
   server = await h.startServer();
-  for (const name of ["rpg_alice", "rpg_bob", "rpg_real", "rpg_tia", "rpg_tom"]) tokens[name] = h.addUser(name);
+  for (const name of ["rpg_alice", "rpg_bob", "rpg_real", "rpg_tia", "rpg_tom", "rpg_rex"]) tokens[name] = h.addUser(name);
   Object.assign(server.test.rpg.timing, { turn: 300, away: 300, close: 300 });
 });
 
@@ -1633,7 +1633,7 @@ test("rpg: dust a copy that isn't spare - only when asked for, it leaves the dec
 test("rpg: gear names fit the rarity - legendary and mythic pieces are never rusty; mythic pieces are rare and the strongest", () => {
   const seen = {};
   let mythic = null;
-  for (let i = 0; i < 40000 && (!mythic || Object.keys(seen).length < 5); i++) {
+  for (let i = 0; i < 40000; i++) {
     const item = rpg.makeGear(1, Math.random, 50);
     seen[item.rarity] = (seen[item.rarity] || 0) + 1;
     if (["legendary", "mythic"].includes(item.rarity)) assert.ok(!/^(Rusty|Iron|Steel)/.test(item.name), item.name);
@@ -1642,4 +1642,33 @@ test("rpg: gear names fit the rarity - legendary and mythic pieces are never rus
   assert.ok(mythic, "a mythic piece drops now and then");
   assert.ok(seen.mythic < seen.legendary, JSON.stringify(seen));
   assert.ok(mythic.value > rpg.makeGear(1, () => 0).value * 4);
+});
+
+test("rpg: starting over - everything gone, nothing sold for it; once in three days", async () => {
+  const hero = rpg.newHero("warrior");
+  hero.bag.push(rpg.makeGear(5));
+  hero.dust = 500;
+  const now = Date.now();
+  const done = rpg.resetHero(hero, now);
+  assert.deepStrictEqual([done.hero.cls, done.hero.unlocked.length, done.hero.bag.length, done.hero.dust || 0], [null, 0, 0, 0]);
+  assert.match(rpg.resetHero(done.hero, now + 3600000).error, /reset again in 71 hours/);
+  assert.ok(!rpg.resetHero(done.hero, now + 3 * 24 * 3600000).error);
+  // Over the sockets: RESET typed - the hero fresh, no coins for the gear
+  testMode.start("rpg_rex", 1000000);
+  const rex = client("rpg_rex");
+  await h.once(rex, "rpgHero");
+  rex.emit("unlock", { id: "warrior" });
+  await waitFor(rex, "rpgHero", (view) => view.cls == "warrior");
+  server.test.rpg.heroOf("rpg_rex").bag.push(rpg.makeGear(5));
+  const coins = testMode.balance("rpg_rex");
+  rex.emit("resetHero", { confirm: "nope" });
+  rex.emit("resetHero", { confirm: "RESET" });
+  const fresh = await waitFor(rex, "rpgHero", (view) => view.cls == null);
+  assert.strictEqual(fresh.bag.length, 0);
+  assert.ok(fresh.resetLeft > 0);
+  assert.strictEqual(testMode.balance("rpg_rex"), coins);
+  const again = h.once(rex, "rpgError");
+  rex.emit("resetHero", { confirm: "RESET" });
+  assert.match(await again, /reset again/);
+  rex.disconnect();
 });

@@ -135,6 +135,7 @@ module.exports = function (io, options = {}) {
       floors: rpg.FLOORS,
       rooms: rpg.ROOMS,
       dust: rpg.DUST,
+      resetCooldown: config.RPG_RESET_COOLDOWN,
       tradeFree: config.RPG_TRADE_FREE,
       tradeDeviation: config.RPG_TRADE_DEVIATION,
       entries: Array.from({ length: rpg.FLOORS }, (_, i) => rpg.entryCost(i + 1)),
@@ -756,6 +757,24 @@ module.exports = function (io, options = {}) {
       if (problem) return error(problem);
       socket.emit("rpgToast", `${rpg.PACKS[data.id].name} bought. Open it in your inventory.`);
       sendHero(username);
+    });
+
+    // Starting over: every thing of the dungeon gone, nothing sold for it - "RESET" typed, once in a while
+    on("resetHero", (data) => {
+      if (data.confirm !== "RESET") return;
+      if (myParty()) return error("Leave your party first.");
+      const done = rpg.resetHero(heroOf(username));
+      if (done.error) return error(done.error);
+      heroes.set(username, done.hero);
+      for (const [id, offer] of trades)
+        if (offer.from === username || offer.to === username) {
+          trades.delete(id);
+          sendTrades(offer.from === username ? offer.to : offer.from);
+        }
+      persist.changed("rpg");
+      sendTrades(username);
+      sendHero(username);
+      socket.emit("rpgToast", "Your dungeon starts fresh.");
     });
 
     /* ---------- Trades ---------- */

@@ -355,7 +355,8 @@ function copyText(text, button) {
 /*
  * Styled confirm dialog instead of the browser's confirm().
  * Returns a Promise<boolean>. Escape / click outside = cancel.
- * options.input ({value, placeholder, maxLength}): a text field - the Promise gives its text (false: cancelled).
+ * options.input ({value, placeholder, maxLength, require}): a text field - the Promise gives its text (false:
+ * cancelled); require: the confirm button only works once exactly this is typed.
  */
 function confirmDialog(options) {
   return new Promise((resolve) => {
@@ -403,6 +404,11 @@ function confirmDialog(options) {
       field.value = options.input.value || "";
       field.placeholder = options.input.placeholder || "";
       if (options.input.maxLength) field.maxLength = options.input.maxLength;
+      if (options.input.require) {
+        var check = () => (confirm.disabled = field.value != options.input.require);
+        field.addEventListener("input", check);
+        check();
+      }
     }
     dialog.append(title, text);
     if (field) dialog.appendChild(field);
@@ -421,7 +427,7 @@ function confirmDialog(options) {
     var answer = () => (field ? field.value : true);
     function onKey(event) {
       if (event.key == "Escape") close(false);
-      if (event.key == "Enter" && field && document.activeElement == field) close(answer());
+      if (event.key == "Enter" && field && document.activeElement == field && !confirm.disabled) close(answer());
       // Keep the focus inside the dialog
       if (event.key == "Tab") {
         event.preventDefault();

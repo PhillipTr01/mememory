@@ -158,7 +158,7 @@ const GAMES = {
         ]),
         section("Cards and packs", [
           tile("🃏", "Your deck", `Your deck holds ${rpg.DECK_MIN} to ${rpg.DECK_MAX} cards from your collection.`, { big: `${rpg.DECK_MIN}-${rpg.DECK_MAX}` }),
-          tile("🛒", "The shop", "Buy card packs and upgrades. Extra copies of a card are sold automatically.", { emoji: packs.map((pack) => pack.icon) }),
+          tile("🛒", "The shop", "Buy card packs with coins or dust. Spare cards turn into dust that makes the cards you miss.", { emoji: packs.map((pack) => pack.icon) }),
         ]),
       ],
     };

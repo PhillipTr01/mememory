@@ -67,7 +67,8 @@
     return box;
   }
 
-  function show(about) {
+  // (game: the page's own extra at the end of the board - window.casinoInfoFooter(game, close) -> a node or null)
+  function show(about, game) {
     var backdrop = make("div", "mm-dialog-backdrop");
     var dialog = make("div", "mm-dialog cs-info ci-board");
     dialog.setAttribute("role", "dialog");
@@ -88,6 +89,8 @@
     });
     var close = make("button", "mm-btn ci-close", "Got it");
     close.type = "button";
+    var footer = game && typeof window.casinoInfoFooter == "function" ? window.casinoInfoFooter(game, () => done()) : null;
+    if (footer) dialog.appendChild(footer);
     dialog.appendChild(close);
     backdrop.appendChild(dialog);
     (document.fullscreenElement || document.body).appendChild(backdrop);
@@ -123,7 +126,9 @@
             if (!response.ok) throw new Error();
             return response.json();
           })
-          .then(show)
+          .then(function (about) {
+            show(about, title.dataset.info);
+          })
           .catch(function () {});
       });
       // Right behind the name of the game, before the tags
