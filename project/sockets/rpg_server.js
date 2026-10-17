@@ -137,6 +137,7 @@ module.exports = function (io, options = {}) {
       floors: rpg.FLOORS,
       rooms: rpg.ROOMS,
       dust: rpg.DUST,
+      sellShare: config.RPG_CARD_SELL,
       sell: Object.fromEntries(Object.keys(rpg.DUST).map((rarity) => [rarity, rpg.sellPrice(rarity)])),
       resetCooldown: config.RPG_RESET_COOLDOWN,
       tradeFree: config.RPG_TRADE_FREE,

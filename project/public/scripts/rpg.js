@@ -1792,7 +1792,7 @@ function craftCell(card, id) {
     // (sold: coins right away - less than the dust is worth)
     var price = (rules.sell || {})[info.rarity] || 0;
     var sell = button("🪙 Sell · " + formatCoins(price), spare ? "sellOne" : "sellNeeded", { id: from ? from.cls + "|" + id : "", className: "rpg-craft-btn sell", disabled: !from });
-    sell.title = from ? "Sell one copy for " + formatCoins(price) + " coins." : have ? "Starter copies can't be sold." : "You have no copy to sell.";
+    sell.title = from ? "Sell one copy for " + formatCoins(price) + " coins, " + rules.sellShare + "% of what its dust is worth." : have ? "Starter copies can't be sold." : "You have no copy to sell.";
     buttons.appendChild(sell);
   }
   bar.appendChild(buttons);
@@ -3310,13 +3310,13 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     var coinsFor = spares.reduce((sum, one) => sum + one.n * ((rules.sell || {})[cardOf(one.id).rarity] || 0), 0);
     var dustFor = spares.reduce((sum, one) => sum + one.dust, 0);
     var many = spares.reduce((sum, one) => sum + one.n, 0);
-    confirmDialog({ title: "Sell " + many + " spare card" + (many == 1 ? "" : "s") + "?", text: "Only copies past what a deck can hold are sold, for every class. You get 🪙 " + formatCoins(coinsFor) + ". As dust they would give " + dustFor + " dust.", confirmLabel: "Sell them" }).then((sure) => sure && socket.emit("sellAll"));
+    confirmDialog({ title: "Sell " + many + " spare card" + (many == 1 ? "" : "s") + "?", text: "Only copies past what a deck can hold are sold, for every class. You get 🪙 " + formatCoins(coinsFor) + ", " + rules.sellShare + "% of what their " + dustFor + " dust would be worth.", confirmLabel: "Sell them" }).then((sure) => sure && socket.emit("sellAll"));
   } else if (act == "sellNeeded" || act == "sellOne") {
     var [sellCls, sellId] = id.split("|");
     var sellInfo = cardOf(sellId);
     var price = (rules.sell || {})[sellInfo.rarity] || 0;
     if (act == "sellOne") socket.emit("sell", { cls: sellCls, id: sellId, n: 1 });
-    else confirmDialog({ title: "Sell " + sellInfo.name + "?", text: "This copy is not spare. It leaves every deck that uses it and you get 🪙 " + formatCoins(price) + ".", confirmLabel: "Sell it", danger: true }).then((sure) => sure && socket.emit("sell", { cls: sellCls, id: sellId, n: 1, any: true }));
+    else confirmDialog({ title: "Sell " + sellInfo.name + "?", text: "This copy is not spare. It leaves every deck that uses it and you get 🪙 " + formatCoins(price) + ", " + rules.sellShare + "% of what its dust is worth.", confirmLabel: "Sell it", danger: true }).then((sure) => sure && socket.emit("sell", { cls: sellCls, id: sellId, n: 1, any: true }));
   } else if (act == "craft") socket.emit("craft", { id: id });
   else if (act == "packDust") socket.emit("packDust", { id: id });
   else if (act == "playerMenu") {
