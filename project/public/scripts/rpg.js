@@ -1704,6 +1704,15 @@ function craftCell(card, id) {
   return cell;
 }
 
+// The builder's grid with no card: a calm note in the middle - and the way back to every card
+function emptyGrid() {
+  var box = el("div", "rpg-grid-empty");
+  var filtered = search || Object.keys(filters).some((key) => filters[key] != (key == "owned" ? false : "all"));
+  box.append(el("span", "rpg-grid-empty-icon", "🔍"), el("b", "", "No card fits the filters."), el("span", "mm-muted small", filtered ? "Try another search or show every card again." : "Open packs to find more cards."));
+  if (filtered) box.appendChild(button("Show all cards", "filtersReset", { className: "small" }));
+  return box;
+}
+
 function renderBuilder() {
   renderCollectionBar();
   var cls = rules.classes[hero.cls];
@@ -1833,7 +1842,7 @@ function renderBuilder() {
           }
           return node;
         })
-      : [el("div", "rpg-empty mm-muted", "No card fits the filters.")],
+      : [emptyGrid()],
   );
 
   // The deck: rows (cheapest first) - a click takes one out
@@ -3210,7 +3219,12 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     cart = {};
     render();
   } else if (act == "cartBuy") socket.emit("buyPacks", { cart: cart, dust: payDust });
-  else if (act == "payWith") {
+  else if (act == "filtersReset") {
+    filters = { type: "all", cost: "all", rarity: "all", owned: false, pool: "all" };
+    search = "";
+    document.getElementById("rpgSearch").value = "";
+    render();
+  } else if (act == "payWith") {
     payDust = id == "dust";
     render();
   }

@@ -8411,3 +8411,36 @@ button.rpg-trade-row:active {
 #rpgCart.dust .rpg-btn.primary:hover:not(:disabled) {
   background: linear-gradient(180deg, #9d74f8, #8b5cf6);
 }
+
+/* (the deck builder's grid with no card: a note in the middle of the whole grid) */
+.rpg-grid-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 11rem;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.rpg-grid-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 3.2rem;
+  height: 3.2rem;
+  margin-bottom: 0.2rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--mm-border);
+  font-size: 1.4rem;
+}
+
+.rpg-grid-empty b {
+  font-size: 1rem;
+}
+
+.rpg-grid-empty .rpg-btn {
+  margin-top: 0.4rem;
+}
