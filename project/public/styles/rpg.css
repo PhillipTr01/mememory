@@ -8465,3 +8465,20 @@ button.rpg-trade-row:active {
 .rpg-dust-bar .rpg-btn.rpg-craft-toggle {
   margin-left: 0;
 }
+
+/* (mythic gear: teal like the mythic cards - with a soft glow) */
+.rpg-item.rarity-mythic,
+.rpg-gear-tile.rarity-mythic {
+  --rarity: #2dd4bf;
+  box-shadow: 0 0 20px rgba(45, 212, 191, 0.22);
+}
+
+.rpg-got.rarity-mythic {
+  border-color: rgba(45, 212, 191, 0.55);
+  background: rgba(45, 212, 191, 0.08);
+  box-shadow: 0 0 14px rgba(45, 212, 191, 0.2);
+}
+
+.rpg-load-slot.rarity-mythic {
+  background: rgba(45, 212, 191, 0.18);
+}

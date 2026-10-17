@@ -268,7 +268,10 @@ const RARITIES = [
   { id: "rare", name: "Rare", weight: 20, deep: 32, power: 1.5 },
   { id: "epic", name: "Epic", weight: 4, deep: 14, power: 2.2 },
   { id: "legendary", name: "Legendary", weight: 0.3, deep: 2, power: 3.2 },
+  { id: "mythic", name: "Mythic", weight: 0.02, deep: 0.25, power: 4.5 },
 ];
+// (a piece at least this rare: epic or better from a boss)
+const rarityAtLeast = (item, id) => RARITIES.findIndex((r) => r.id == item.rarity) >= RARITIES.findIndex((r) => r.id == id);
 // The gear: three slots, every kind with its own mix of stats (x the slot's base for them) - every weapon also
 // gives agility (dodge); a charm's "deck": how often it changes the deck's size
 const SLOTS = {
@@ -322,6 +325,9 @@ const GEAR_AFFIXES = [
   ["of Fortune", "luck"],
 ];
 const MATERIALS = ["Rusty", "Iron", "Steel", "Mythril", "Obsidian", "Celestial"];
+// (a legendary or mythic piece: a name of its own, never a plain material)
+const LEGENDARY_NAMES = ["Dragonforged", "Sunfire", "Stormborn", "Kingsguard", "Shadowfang", "Frostbound", "Bloodmoon", "Starfall"];
+const MYTHIC_NAMES = ["Godforged", "Eternal", "Worldbreaker", "Voidborn", "Astral"];
 
 /* ---------- Monsters and what they do ---------- */
 
@@ -1339,7 +1345,13 @@ function makeGear(floor, rng = Math.random, luck = 0, cls = null) {
   const slot = pick(rng, Object.keys(SLOTS));
   const fitting = SLOTS[slot].kinds.filter((k) => !k[3] || k[3].includes(cls));
   const [icon, kind, mix, classes] = pick(rng, cls && fitting.length && rng() < GEAR_OWN_CLASS ? fitting : SLOTS[slot].kinds);
-  const material = MATERIALS[Math.min(MATERIALS.length - 1, Math.floor((floor - 1) / 5))];
+  // (the name: the floor's material - an epic one a step better, a legendary or mythic one a name of its own)
+  const material =
+    rarity.id == "mythic"
+      ? pick(rng, MYTHIC_NAMES)
+      : rarity.id == "legendary"
+        ? pick(rng, LEGENDARY_NAMES)
+        : MATERIALS[Math.min(MATERIALS.length - 1, Math.floor((floor - 1) / 5) + (rarity.id == "epic" ? 1 : 0))];
   const base = 2 + floor * 1.2;
   const item = { id: "g" + Date.now().toString(36) + (++gearCount).toString(36), slot, rarity: rarity.id, name: material + " " + kind, icon, floor };
   if (classes) item.classes = classes;
@@ -1357,13 +1369,18 @@ function makeGear(floor, rng = Math.random, luck = 0, cls = null) {
     const [suffix, key] = pick(rng, GEAR_AFFIXES);
     item.name += " " + suffix;
     item[key] = (item[key] || 0) + stat[key](0.5);
+    // (mythic: a second bonus)
+    if (rarity.id == "mythic") {
+      const [, other] = pick(rng, GEAR_AFFIXES.filter(([, k]) => k != key));
+      item[other] = (item[other] || 0) + stat[other](0.5);
+    }
   }
   if (slot == "charm") {
     // (a charm may change the deck: room for more cards - or fewer needed)
     const roll = rng();
     const deck = mix.deck || 1;
-    if (roll < 0.35 * deck) item.deckMax = [1, 2, 3, 5][index];
-    else if (roll < 0.6 * deck) item.deckMin = [1, 1, 2, 3][index];
+    if (roll < 0.35 * deck) item.deckMax = [1, 2, 3, 5, 6][index];
+    else if (roll < 0.6 * deck) item.deckMin = [1, 1, 2, 3, 4][index];
   }
   item.value = round100(entryCost(floor) * 0.15 * rarity.power);
   return item;
@@ -3040,7 +3057,7 @@ function winFight(run, rng) {
     // (a boss: a piece of epic gear or better too)
     if (room.kind == "boss") {
       let item = makeGear(run.floor, rng, hero.luck, hero.cls);
-      for (let i = 0; i < 400 && !["epic", "legendary"].includes(item.rarity); i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
+      for (let i = 0; i < 400 && !rarityAtLeast(item, "epic"); i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
       (run.loot[hero.name] = run.loot[hero.name] || []).push(item);
       say(run, `${hero.name} takes ${item.icon} ${item.name} from the boss.`);
     }
@@ -3050,11 +3067,11 @@ function winFight(run, rng) {
   afterRoom(run, rng);
   // (the floor's XP: once - when it is cleared)
   if ((run.phase == "won" && !before) || (run.cleared && !before)) for (const hero of run.heroes) hero.xp += xpFor("floor", run.floor);
-  // (the deep guardian: a piece of epic gear or better for everyone - legendary only sometimes)
+  // (the deep guardian: a piece of rare gear or better for everyone - the pot twice is the real prize)
   if (room.kind == "deep") {
     for (const hero of alive(run.heroes)) {
       let item = makeGear(run.floor, rng, hero.luck, hero.cls);
-      for (let i = 0; i < 400 && !["epic", "legendary"].includes(item.rarity); i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
+      for (let i = 0; i < 400 && !rarityAtLeast(item, "rare"); i++) item = makeGear(run.floor, rng, hero.luck, hero.cls);
       (run.loot[hero.name] = run.loot[hero.name] || []).push(item);
     }
   }

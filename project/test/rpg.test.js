@@ -118,7 +118,7 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
     if (gear.slot == "weapon") assert.ok(gear.atk > 0 && gear.agi > 0, JSON.stringify(gear));
     if (gear.slot == "armor") assert.ok(gear.def > 0 && gear.hp > 0, JSON.stringify(gear));
     if (gear.slot == "charm") assert.ok(gear.luck > 0, JSON.stringify(gear));
-    if (gear.rarity == "epic" || gear.rarity == "legendary") assert.match(gear.name, / of /);
+    if (["epic", "legendary", "mythic"].includes(gear.rarity)) assert.match(gear.name, / of /);
   }
   const quick = rpg.newHero("rogue");
   const dodge = rpg.statsOf(quick).agi;
@@ -1624,4 +1624,18 @@ test("rpg: dust a copy that isn't spare - only when asked for, it leaves the dec
   const starter = Object.keys(char.collection).find((id) => rpg.CARDS[id].rarity != "basic" && rpg.dustableAny(hero, "warrior", id) == 0);
   assert.ok(starter);
   assert.match(rpg.dustCard(hero, "warrior", starter, 1, true).error, /can't be dusted/);
+});
+
+test("rpg: gear names fit the rarity - legendary and mythic pieces are never rusty; mythic pieces are rare and the strongest", () => {
+  const seen = {};
+  let mythic = null;
+  for (let i = 0; i < 40000 && (!mythic || Object.keys(seen).length < 5); i++) {
+    const item = rpg.makeGear(1, Math.random, 50);
+    seen[item.rarity] = (seen[item.rarity] || 0) + 1;
+    if (["legendary", "mythic"].includes(item.rarity)) assert.ok(!/^(Rusty|Iron|Steel)/.test(item.name), item.name);
+    if (item.rarity == "mythic") mythic = item;
+  }
+  assert.ok(mythic, "a mythic piece drops now and then");
+  assert.ok(seen.mythic < seen.legendary, JSON.stringify(seen));
+  assert.ok(mythic.value > rpg.makeGear(1, () => 0).value * 4);
 });
