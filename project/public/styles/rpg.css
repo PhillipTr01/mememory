@@ -8520,3 +8520,16 @@ button.rpg-trade-row:active {
     align-items: stretch;
   }
 }
+
+/* (the character dead: the ways down greyed, the reason on hover) */
+.rpg-mode.solo.dead,
+.rpg-btn.dead {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+  cursor: not-allowed;
+}
+
+.rpg-mode.solo.dead:hover {
+  transform: none;
+  box-shadow: none;
+}

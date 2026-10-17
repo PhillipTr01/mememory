@@ -1939,6 +1939,11 @@ function cooldownOf(n) {
   return Math.max(0, ((hero.cooldowns || {})[n] || 0) - (Date.now() - heroAt));
 }
 
+// How long the character played is still dead (ms, 0: alive)
+function deadNow() {
+  return hero && hero.deadFor > 0 ? Math.max(0, hero.deadFor - (Date.now() - heroAt)) : 0;
+}
+
 function renderDoor() {
   floor = Math.max(1, Math.min(hero.maxFloor, floor));
   var entry = rules.entries[floor - 1];
@@ -1966,6 +1971,14 @@ function renderDoor() {
   document.getElementById("rpgFloorUp").disabled = floor >= hero.maxFloor;
   document.getElementById("rpgSolo").disabled = myCoins < entry || !hero.cls || cool > 0;
   document.getElementById("rpgOpen").disabled = !hero.cls || cool > 0;
+  // (the character dead: the ways down greyed - why on hover, a click does nothing)
+  var deadTip = deadNow() ? "Your character is dead. It is back in " + duration(deadNow()) + "." : "";
+  ["rpgSolo", "rpgOpen"].forEach((id) => {
+    var b = document.getElementById(id);
+    b.classList.toggle("dead", !!deadTip);
+    if (deadTip) b.title = deadTip;
+    else b.removeAttribute("title");
+  });
   var sizes = [];
   // (the party size: a segment each - its number, a figure for every hero)
   for (var n = 2; n <= rules.partyMax; n++) {
@@ -1994,6 +2007,7 @@ function renderDoor() {
         else if (p.floor > hero.maxFloor) row.appendChild(el("span", "mm-muted small", "floor not open"));
         else if (cooldownOf(p.floor)) row.appendChild(el("span", "mm-muted small", "⏳ " + duration(cooldownOf(p.floor))));
         else if (gapOf(p)) row.appendChild(el("span", "mm-muted small", "level gap too big"));
+        else if (deadNow()) row.appendChild(button("Join", "", { className: "small dead", title: deadTip }));
         else row.appendChild(button("Join", "join", { id: p.id, className: "small", disabled: p.members.length >= p.size }));
         return row;
       })
@@ -3356,8 +3370,8 @@ document.getElementById("rpgFloorUp").addEventListener("click", () => {
   remember(FLOOR_KEY, floor);
   render();
 });
-document.getElementById("rpgSolo").addEventListener("click", () => socket.emit("create", { floor: floor, size: 1 }));
-document.getElementById("rpgOpen").addEventListener("click", () => socket.emit("create", { floor: floor, size: size }));
+document.getElementById("rpgSolo").addEventListener("click", () => deadNow() || socket.emit("create", { floor: floor, size: 1 }));
+document.getElementById("rpgOpen").addEventListener("click", () => deadNow() || socket.emit("create", { floor: floor, size: size }));
 document.getElementById("rpgBuyPotion").addEventListener("click", () => socket.emit("potion"));
 
 // A pack opened (the server dealt its cards): they lie face down - the pack's burst first
