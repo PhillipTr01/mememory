@@ -1241,13 +1241,13 @@ function classTile(id, pick) {
   var chips = el("div", "rpg-first-chips");
   var chip = (text, good, tip) => {
     var c = el("span", "rpg-first-chip" + (good ? " good" : good === false ? " bad" : ""), text);
-    c.title = tip;
+    if (tip) c.title = tip;
     chips.appendChild(c);
   };
   [["❤️", "HP", "hp"], ["💪", "attack", "atk"]].forEach(([icon, name, key]) => {
     var average = all.reduce((sum, c) => sum + c[key], 0) / all.length;
     var diff = Math.round((cls[key] / average - 1) * 100);
-    chip(icon + " " + (diff > 0 ? "+" : diff < 0 ? "−" : "±") + Math.abs(diff) + "% " + name, diff > 0 ? true : diff < 0 ? false : null, "Against the average class");
+    chip(icon + " " + (diff > 0 ? "+" : diff < 0 ? "−" : "±") + Math.abs(diff) + "% " + name, diff > 0 ? true : diff < 0 ? false : null);
   });
   if (cls.hpPlus) chip("❤️ +" + cls.hpPlus + " HP", true, "Extra HP from the start");
   if (cls.atkPlus) chip("💪 +" + cls.atkPlus + " attack", true, "Extra attack from the start");
