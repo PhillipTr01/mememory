@@ -232,6 +232,7 @@ module.exports = {
   RPG_ENTRY_GROWTH: 27, // % dearer every floor deeper
   RPG_STAT_SHARE: 35, // % of a floor's entry: a stat level (level 1 - floor 1, the last - floor 30)
   RPG_CLASS_PRICE: 500000, // another class
+  RPG_CARD_SELL: 75, // a card sold: this share (%) of what its dust is worth in coins
   RPG_POTION_SHARE: 5, // % of a floor's entry: a potion (the deepest open floor's - at the merchant: the floor's)
   RPG_LOW_FREE: 2, // floors this far under the deepest cleared: the full loot
   RPG_LOW_CUT: 15, // % of the loot less for every floor lower than that (a high character farming low floors)

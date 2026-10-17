@@ -1413,7 +1413,7 @@ function renderCollectionBar() {
   crafting.title = craftMode ? "Back to building your deck." : "Make missing cards with dust and dust spare ones.";
   dust.appendChild(crafting);
   var spare = (hero.dustable || []).reduce((sum, one) => sum + one.n, 0);
-  if (spare) dust.appendChild(button("Dust " + spare + " spare card" + (spare == 1 ? "" : "s"), "dustAll", { className: "small" }));
+  if (spare) dust.append(button("Dust " + spare + " spare card" + (spare == 1 ? "" : "s"), "dustAll", { className: "small" }), button("Sell " + spare + " spare card" + (spare == 1 ? "" : "s"), "sellAll", { className: "small" }));
   progress.appendChild(dust);
   morphChildren(document.getElementById("rpgShopProgress"), [progress]);
 
@@ -1789,6 +1789,11 @@ function craftCell(card, id) {
     var dust = button("💨 Dust · +" + cost.get, spare ? "dustOne" : "dustNeeded", { id: from ? from.cls + "|" + id : "", className: "rpg-craft-btn dust", disabled: !from });
     dust.title = spare ? "Turn one spare copy into " + cost.get + " dust." : from ? "Turn one copy into " + cost.get + " dust. You need it for a full deck." : have ? "Starter copies can't be dusted." : "You have no copy to dust.";
     buttons.appendChild(dust);
+    // (sold: coins right away - less than the dust is worth)
+    var price = (rules.sell || {})[info.rarity] || 0;
+    var sell = button("🪙 Sell · " + formatCoins(price), spare ? "sellOne" : "sellNeeded", { id: from ? from.cls + "|" + id : "", className: "rpg-craft-btn sell", disabled: !from });
+    sell.title = from ? "Sell one copy for " + formatCoins(price) + " coins." : have ? "Starter copies can't be sold." : "You have no copy to sell.";
+    buttons.appendChild(sell);
   }
   bar.appendChild(buttons);
   cell.append(card, bar);
@@ -3300,6 +3305,18 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   } else if (act == "dustOne") {
     var [cls, cardId] = id.split("|");
     socket.emit("dust", { cls: cls, id: cardId, n: 1 });
+  } else if (act == "sellAll") {
+    var spares = hero.dustable || [];
+    var coinsFor = spares.reduce((sum, one) => sum + one.n * ((rules.sell || {})[cardOf(one.id).rarity] || 0), 0);
+    var dustFor = spares.reduce((sum, one) => sum + one.dust, 0);
+    var many = spares.reduce((sum, one) => sum + one.n, 0);
+    confirmDialog({ title: "Sell " + many + " spare card" + (many == 1 ? "" : "s") + "?", text: "Only copies past what a deck can hold are sold, for every class. You get 🪙 " + formatCoins(coinsFor) + ". As dust they would give " + dustFor + " dust.", confirmLabel: "Sell them" }).then((sure) => sure && socket.emit("sellAll"));
+  } else if (act == "sellNeeded" || act == "sellOne") {
+    var [sellCls, sellId] = id.split("|");
+    var sellInfo = cardOf(sellId);
+    var price = (rules.sell || {})[sellInfo.rarity] || 0;
+    if (act == "sellOne") socket.emit("sell", { cls: sellCls, id: sellId, n: 1 });
+    else confirmDialog({ title: "Sell " + sellInfo.name + "?", text: "This copy is not spare. It leaves every deck that uses it and you get 🪙 " + formatCoins(price) + ".", confirmLabel: "Sell it", danger: true }).then((sure) => sure && socket.emit("sell", { cls: sellCls, id: sellId, n: 1, any: true }));
   } else if (act == "craft") socket.emit("craft", { id: id });
   else if (act == "packDust") socket.emit("packDust", { id: id });
   else if (act == "playerMenu") {

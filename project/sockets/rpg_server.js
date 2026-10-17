@@ -137,6 +137,7 @@ module.exports = function (io, options = {}) {
       floors: rpg.FLOORS,
       rooms: rpg.ROOMS,
       dust: rpg.DUST,
+      sell: Object.fromEntries(Object.keys(rpg.DUST).map((rarity) => [rarity, rpg.sellPrice(rarity)])),
       resetCooldown: config.RPG_RESET_COOLDOWN,
       tradeFree: config.RPG_TRADE_FREE,
       tradeDeviation: config.RPG_TRADE_DEVIATION,
@@ -764,6 +765,24 @@ module.exports = function (io, options = {}) {
     on("dustAll", () => {
       if (inRun()) return error("Not during a run.");
       if (!rpg.dustAll(heroOf(username))) return error("No spare cards to dust.");
+      sendHero(username);
+    });
+
+    // Cards sold for coins (spare copies - or, asked first, one a deck needs)
+    on("sell", async (data) => {
+      if (inRun()) return error("Not during a run.");
+      if (!rpg.CLASS_IDS.includes(data.cls) || !rpg.CARDS[data.id]) return;
+      const done = rpg.sellCard(heroOf(username), data.cls, data.id, Number.isInteger(data.n) ? data.n : 1, data.any === true);
+      if (done.error) return error(done.error);
+      if (done.coins > 0 && ours(username)) await coins.add(username, done.coins, { reason: "rpg card sale", note: rpg.CARDS[data.id].name });
+      sendHero(username);
+    });
+
+    on("sellAll", async () => {
+      if (inRun()) return error("Not during a run.");
+      const got = rpg.sellAll(heroOf(username));
+      if (!got) return error("No spare cards to sell.");
+      if (ours(username)) await coins.add(username, got, { reason: "rpg card sale", note: "spare cards" });
       sendHero(username);
     });
 

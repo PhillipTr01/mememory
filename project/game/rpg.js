@@ -1215,11 +1215,12 @@ function dustAnyList(hero) {
   return list;
 }
 
-// Copies of a card dusted (n: how many - any: also copies a deck uses, they leave the decks) -> {error} or {dust}
-function dustCard(hero, cls, id, n = 1, any = false) {
+// Copies of a card taken out of the collection (dusted or sold - n: how many - any: also copies a deck uses, they
+// leave the decks) -> {error} or {}
+function takeCopies(hero, cls, id, n, any, verb) {
   const free = any ? dustableAny(hero, cls, id) : dustable(hero, cls, id);
   if (!Number.isInteger(n) || n < 1) return { error: "Pick how many." };
-  if (n > free) return { error: free ? `Only ${free} can be dusted.` : any ? "This card can't be dusted." : "You need every copy of this card." };
+  if (n > free) return { error: free ? `Only ${free} can be ${verb}.` : any ? `This card can't be ${verb}.` : "You need every copy of this card." };
   const char = hero.chars[cls];
   char.collection[id] -= n;
   if (!char.collection[id]) delete char.collection[id];
@@ -1231,6 +1232,13 @@ function dustCard(hero, cls, id, n = 1, any = false) {
   };
   if (char.deck) char.deck = trim(char.deck);
   if (char.decks) char.decks = char.decks.map((deck) => (deck ? trim(deck) : deck));
+  return {};
+}
+
+// Copies of a card dusted -> {error} or {dust}
+function dustCard(hero, cls, id, n = 1, any = false) {
+  const taken = takeCopies(hero, cls, id, n, any, "dusted");
+  if (taken.error) return taken;
   const dust = n * DUST[CARDS[id].rarity].get;
   hero.dust = (hero.dust || 0) + dust;
   return { dust };
@@ -1241,6 +1249,26 @@ function dustAll(hero) {
   let dust = 0;
   for (const one of dustList(hero)) dust += dustCard(hero, one.cls, one.id, one.n).dust;
   return dust;
+}
+
+// A card sold: a share (config, %) of what its dust is worth in coins - dust stays the better deal
+function sellPrice(rarity) {
+  const dust = DUST[rarity];
+  return dust ? Math.round((dust.get * DUST_COINS * config.RPG_CARD_SELL) / 100) : 0;
+}
+
+// Copies of a card sold -> {error} or {coins} (the server pays them)
+function sellCard(hero, cls, id, n = 1, any = false) {
+  const taken = takeCopies(hero, cls, id, n, any, "sold");
+  if (taken.error) return taken;
+  return { coins: n * sellPrice(CARDS[id].rarity) };
+}
+
+// Every spare card sold at once -> the coins
+function sellAll(hero) {
+  let coins = 0;
+  for (const one of dustList(hero)) coins += sellCard(hero, one.cls, one.id, one.n).coins;
+  return coins;
 }
 
 // A card of the class made of dust (not past what a deck may hold) -> an error or null
@@ -3501,6 +3529,9 @@ module.exports = {
   dustCard,
   dustableAny,
   dustAll,
+  sellPrice,
+  sellCard,
+  sellAll,
   craftCard,
   buyPackDust,
   buyCartDust,

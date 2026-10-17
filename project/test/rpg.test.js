@@ -1630,6 +1630,11 @@ test("rpg: trades over the sockets - an offer, a refused unfair one, accepted: t
   assert.strictEqual(testMode.balance("rpg_tia"), tiaCoins + 8000);
   assert.strictEqual(testMode.balance("rpg_tom"), tomCoins - 8000);
   assert.strictEqual(rpg.charOf(b, "warrior").collection.impervious, 2);
+  // Sold: the coins right away
+  const before = testMode.balance("rpg_tom");
+  tom.emit("sell", { cls: "warrior", id: "impervious", n: 1, any: true });
+  await waitFor(tom, "rpgHero", () => rpg.charOf(b, "warrior").collection.impervious == 1);
+  assert.strictEqual(testMode.balance("rpg_tom"), before + rpg.sellPrice("epic"));
   tia.disconnect();
   tom.disconnect();
 });
@@ -1956,4 +1961,19 @@ test("rpg: thorns grow with the whole armor - gear included - and the run shows 
   const run = rpg.newRun(1, [{ name: "a", hero }]);
   assert.ok(rpg.thornsOf(run.heroes[0]) > rpg.thornsOf(bare));
   assert.strictEqual(rpg.runView(run).heroes[0].thorns, rpg.thornsOf(run.heroes[0]));
+});
+test("rpg: cards sold - 75% of what their dust is worth in coins, only spare copies unless asked, never starter ones", () => {
+  assert.deepStrictEqual(["common", "rare", "epic", "legendary", "mythic"].map(rpg.sellPrice), [75, 375, 1500, 6000, 24000]);
+  // (dust stays the better deal)
+  for (const rarity of ["common", "rare", "epic", "legendary", "mythic"]) assert.ok(rpg.sellPrice(rarity) < rpg.DUST[rarity].get * 20);
+  const hero = rpg.newHero("warrior");
+  const char = rpg.charOf(hero);
+  char.collection.impervious = 3;
+  assert.deepStrictEqual(rpg.sellCard(hero, "warrior", "impervious", 1), { coins: 1500 });
+  assert.strictEqual(char.collection.impervious, 2);
+  assert.match(rpg.sellCard(hero, "warrior", "impervious", 1).error, /every copy/);
+  assert.strictEqual(rpg.sellCard(hero, "warrior", "impervious", 1, true).coins, 1500);
+  char.collection.ironwave = 4;
+  assert.ok(rpg.sellAll(hero) > 0);
+  assert.strictEqual(rpg.sellAll(hero), 0);
 });

@@ -8645,3 +8645,8 @@ button.rpg-trade-row:active {
   border-radius: 10px;
   background: rgba(245, 197, 66, 0.1);
 }
+
+/* Craft mode: a card sold for coins */
+.rpg-btn.rpg-craft-btn.sell {
+  background: rgba(255, 255, 255, 0.04);
+}
