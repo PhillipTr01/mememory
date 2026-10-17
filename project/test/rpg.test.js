@@ -1475,21 +1475,38 @@ test("rpg: dust - copies past what a deck holds and cards no character can use; 
   // (the starter cards every character gets for free - also the mage's, made by the pack: never dust)
   assert.deepStrictEqual(list.map((one) => one.id).sort(), ["ironwave", "pyroblast"]);
   assert.match(rpg.dustCard(hero, "warrior", "ironwave", 4).error, /Only 3/);
-  assert.strictEqual(rpg.dustCard(hero, "warrior", "ironwave", 3).dust, 15);
+  assert.strictEqual(rpg.dustCard(hero, "warrior", "ironwave", 3).dust, 3 * rpg.DUST.common.get);
   assert.strictEqual(char.collection.ironwave, 2);
   assert.match(rpg.dustCard(hero, "warrior", "ironwave", 1).error, /every copy/);
   assert.strictEqual(rpg.dustAll(hero), rpg.DUST.legendary.get);
-  assert.strictEqual(hero.dust, 15 + rpg.DUST.legendary.get);
+  assert.strictEqual(hero.dust, 3 * rpg.DUST.common.get + rpg.DUST.legendary.get);
   assert.ok(!rpg.charOf(hero, "mage").collection.pyroblast);
   // Made of dust: a card of the class, not past what a deck holds, not a mythic one
   assert.match(rpg.craftCard(hero, "pyroblast"), /Not a card of your class/);
   assert.match(rpg.craftCard(hero, "ironwave"), /already have every copy/);
   hero.dust = 0;
-  assert.match(rpg.craftCard(hero, "impervious"), /You need 400 dust/);
-  hero.dust = 400;
+  assert.match(rpg.craftCard(hero, "impervious"), new RegExp("You need " + rpg.DUST.epic.craft + " dust"));
+  hero.dust = rpg.DUST.epic.craft;
   assert.strictEqual(rpg.craftCard(hero, "impervious"), null);
   assert.strictEqual(char.collection.impervious, 1);
   assert.strictEqual(hero.dust, 0);
+  // Like in the card games: dust a quarter of the cost - and just what the next lower rarity costs to make
+  const ranks = ["common", "rare", "epic", "legendary", "mythic"];
+  ranks.forEach((rarity, i) => {
+    if (rpg.DUST[rarity].craft) assert.strictEqual(rpg.DUST[rarity].get * 4, rpg.DUST[rarity].craft);
+    if (i > 0) assert.strictEqual(rpg.DUST[rarity].get, rpg.DUST[ranks[i - 1]].craft);
+  });
+  assert.strictEqual(rpg.DUST.mythic.craft, null);
+  // Packs for dust: into the inventory - dearer than what their cards give as dust
+  assert.match(rpg.buyPackDust(hero, "standard"), /You need 600 dust/);
+  hero.dust = 700;
+  const before = hero.packs.standard || 0;
+  assert.strictEqual(rpg.buyPackDust(hero, "standard"), null);
+  assert.strictEqual(hero.packs.standard, before + 1);
+  assert.strictEqual(hero.dust, 100);
+  let out = 0;
+  for (let i = 0; i < 300; i++) for (const card of rpg.openPack(rpg.newHero("warrior"), Math.random, "standard")) out += rpg.DUST[rpg.CARDS[card.id].rarity].get;
+  assert.ok(out / 300 < rpg.PACKS.standard.dust / 2, String(out / 300));
 });
 
 test("rpg: trades - spare cards and the bag's gear; big trades nearly even; a card goes to the character of its class", () => {

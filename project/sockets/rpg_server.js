@@ -730,6 +730,14 @@ module.exports = function (io, options = {}) {
       sendHero(username);
     });
 
+    // A pack for dust: into the inventory, opened there
+    on("packDust", (data) => {
+      const problem = rpg.buyPackDust(heroOf(username), String(data.id), 1);
+      if (problem) return error(problem);
+      socket.emit("rpgToast", `${rpg.PACKS[data.id].name} bought. Open it in your inventory.`);
+      sendHero(username);
+    });
+
     /* ---------- Trades ---------- */
 
     // The players to trade with: everyone with a character

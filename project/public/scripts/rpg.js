@@ -1338,6 +1338,8 @@ function renderShop() {
         el("div", "rpg-label", "Odds per card"),
         odds,
         button(inCart ? "+ One more (" + inCart + " in the cart)" : "🛒 Add to cart", "cartAdd", { id: id, className: "primary" }),
+        // (or for dust: right away into the inventory)
+        button("✨ Buy for " + formatCoins(pack.dust) + " dust", "packDust", { id: id, className: "rpg-dust-buy", disabled: (hero.dust || 0) < pack.dust, title: "You have " + formatCoins(hero.dust || 0) + " dust." }),
       );
       return tile;
     }),
@@ -3013,6 +3015,7 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     var [cls, cardId] = id.split("|");
     socket.emit("dust", { cls: cls, id: cardId, n: 1 });
   } else if (act == "craft") socket.emit("craft", { id: id });
+  else if (act == "packDust") socket.emit("packDust", { id: id });
   else if (act == "rewardView") {
     rewardView = id;
     render();

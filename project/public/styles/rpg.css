@@ -7751,3 +7751,14 @@ button.rpg-trade-row:hover {
 .rpg-shop-bar:has(.rpg-dust-bar) {
   grid-template-columns: auto minmax(0, 1fr) auto auto;
 }
+
+/* (a pack for dust: under the cart button) */
+.rpg-btn.rpg-dust-buy {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(167, 139, 250, 0.45);
+  color: #ddd6fe;
+}
+
+.rpg-btn.rpg-dust-buy:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.35);
+}
