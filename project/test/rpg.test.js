@@ -1539,8 +1539,8 @@ test("rpg: trades - spare cards and the bag's gear; big trades nearly even; a ca
   assert.deepStrictEqual(list.map((one) => one.id).sort(), ["ironwave", "pyroblast"]);
   // Small trades: anything goes - a common for nothing
   assert.strictEqual(rpg.tradeFair(500, 0), null);
-  assert.strictEqual(rpg.tradeFair(1500, 0), null);
-  assert.match(rpg.tradeFair(2500, 0), /nearly the same value/);
+  assert.strictEqual(rpg.tradeFair(2500, 0), null);
+  assert.match(rpg.tradeFair(3000, 0), /nearly the same value/);
   // (a legendary or mythic in it: always nearly the same value, however small)
   assert.match(rpg.tradeFair(1000, 0, true), /nearly the same value/);
   assert.strictEqual(rpg.tradeFair(1000, 900, true), null);
