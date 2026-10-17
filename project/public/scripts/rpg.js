@@ -197,6 +197,7 @@ socket.on("rpgHero", (data) => {
 });
 // Trades: the offers made and received, the players to trade with, the one picked and what they have, what is picked
 var trades = [];
+var deckMenu = false; // the deck builder's deck dropdown open
 var craftMode = false; // the deck builder in craft mode: cards made and dusted, not built into the deck
 var tradePlayers = [];
 var tradeWith = "";
@@ -1671,23 +1672,26 @@ function renderBuilder() {
   var crafting = button(craftMode ? "✓ Craft mode" : "✨ Craft mode", "craftMode", { className: "small rpg-craft-toggle" + (craftMode ? " on" : "") });
   crafting.title = craftMode ? "Back to building your deck." : "Make missing cards with dust and dust spare ones.";
   morphChildren(document.getElementById("rpgBuilderTitle"), [el("span", "", "🃏 Deck builder"), info, crafting]);
-  // (the decks: a tab each - its name and size; the one in use gets the pencil to rename it)
-  morphChildren(
-    document.getElementById("rpgDeckTabs"),
-    (hero.decks || [hero.deck.length]).map((n, i) => {
-      var active = i == (hero.deckAt || 0);
-      var tab = button("", active ? "" : "deckUse", { id: String(i), className: "rpg-deck-tab" + (active ? " active" : "") + (n ? "" : " empty") });
-      tab.append(el("b", "", (hero.deckNames || [])[i] || "Deck " + (i + 1)), el("span", "", n + (n == 1 ? " card" : " cards")));
-      tab.title = active ? "The deck you play." : "Switch to this deck.";
-      if (active) {
-        var pen = el("span", "rpg-deck-tab-pen", "✏️");
-        pen.dataset.act = "deckRename";
-        pen.title = "Rename this deck.";
-        tab.appendChild(pen);
-      }
-      return tab;
-    }),
-  );
+  // (the decks: a dropdown - the one in use on its button, the others to switch to, a rename)
+  var decks = hero.decks || [hero.deck.length];
+  var at = hero.deckAt || 0;
+  var deckLabel = (i) => (hero.deckNames || [])[i] || "Deck " + (i + 1);
+  var drop = el("div", "rpg-deck-drop" + (deckMenu ? " open" : ""));
+  var current = button("", "deckMenu", { className: "rpg-deck-drop-btn" });
+  current.append(el("b", "", deckLabel(at)), el("span", "rpg-deck-drop-n", decks[at] + (decks[at] == 1 ? " card" : " cards")), el("span", "rpg-deck-drop-caret", "▾"));
+  drop.appendChild(current);
+  if (deckMenu) {
+    var menu = el("div", "rpg-deck-drop-menu");
+    decks.forEach((n, i) => {
+      var item = button("", i == at ? "deckMenu" : "deckUse", { id: String(i), className: "rpg-deck-drop-item" + (i == at ? " active" : "") + (n ? "" : " empty") });
+      item.append(el("b", "", deckLabel(i)), el("span", "", n + (n == 1 ? " card" : " cards")));
+      menu.appendChild(item);
+    });
+    var rename = button("✏️ Rename this deck", "deckRename", { className: "rpg-deck-drop-item rename" });
+    menu.appendChild(rename);
+    drop.appendChild(menu);
+  }
+  morphChildren(document.getElementById("rpgDeckTabs"), [drop]);
   document.getElementById("rpgBuilder").classList.toggle("crafting", craftMode);
   // (the deck in use: its name)
   var deckName = (hero.deckNames || [])[hero.deckAt || 0];
@@ -3031,6 +3035,10 @@ function dropTarget(event) {
 
 // (a click anywhere else: the class dropdown closes)
 document.addEventListener("click", (event) => {
+  if (deckMenu && !event.target.closest(".rpg-deck-drop")) {
+    deckMenu = false;
+    render();
+  }
   if (classMenu && !event.target.closest(".rpg-classes")) {
     classMenu = false;
     render();
@@ -3099,10 +3107,15 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     socket.emit("dust", { cls: cls, id: cardId, n: 1 });
   } else if (act == "craft") socket.emit("craft", { id: id });
   else if (act == "packDust") socket.emit("packDust", { id: id });
-  else if (act == "craftMode") {
+  else if (act == "deckMenu") {
+    deckMenu = !deckMenu;
+    render();
+  } else if (act == "craftMode") {
     craftMode = !craftMode;
     render();
   } else if (act == "deckRename") {
+    deckMenu = false;
+    render();
     var slot = hero.deckAt || 0;
     confirmDialog({ title: "Rename this deck", text: "Give it a short name, or leave it empty for its number.", confirmLabel: "Save", input: { value: (hero.deckNames || [])[slot] || "", placeholder: "Deck " + (slot + 1), maxLength: 20 } }).then((name) => name !== false && socket.emit("deckName", { slot: slot, name: name }));
   }
@@ -3125,7 +3138,10 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "bagSlot") socket.emit("bagSlot");
   else if (act == "potionSlot") socket.emit("potionSlot");
   else if (act == "deckSlot") socket.emit("deckSlot");
-  else if (act == "deckUse") socket.emit("deckUse", { slot: Number(id) });
+  else if (act == "deckUse") {
+    deckMenu = false;
+    socket.emit("deckUse", { slot: Number(id) });
+  }
   else if (act == "tutorial") socket.emit("tutorial");
   else if (act == "skipTutorial") socket.emit("skipTutorial");
   else if (act == "deckHelp") showDeckHelp();

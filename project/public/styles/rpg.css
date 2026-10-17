@@ -8167,61 +8167,112 @@ button.rpg-trade-row:active {
   margin: 0.2rem 0 1rem;
 }
 
-/* (the deck builder's decks: a tab each, under the title) */
+/* (the deck builder's decks: a dropdown under the title) */
 .rpg-deck-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
   margin-top: 0.55rem;
 }
 
-.rpg-btn.rpg-deck-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.38rem 0.8rem;
-  border-radius: 10px;
-  border: 1px solid var(--mm-border);
-  background: rgba(255, 255, 255, 0.03);
-  font-size: 0.8rem;
+.rpg-deck-drop {
+  position: relative;
+  display: inline-block;
 }
 
-.rpg-btn.rpg-deck-tab b {
-  max-width: 10rem;
+.rpg-btn.rpg-deck-drop-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 14rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 197, 66, 0.45);
+  background: rgba(245, 197, 66, 0.08);
+  font-size: 0.85rem;
+}
+
+.rpg-btn.rpg-deck-drop-btn:hover {
+  background: rgba(245, 197, 66, 0.14);
+}
+
+.rpg-deck-drop-btn b,
+.rpg-deck-drop-item b {
+  max-width: 11rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.rpg-btn.rpg-deck-tab span {
-  font-size: 0.7rem;
+.rpg-deck-drop-n,
+.rpg-deck-drop-item span {
+  font-size: 0.72rem;
   color: var(--mm-muted);
   font-weight: 600;
 }
 
-.rpg-btn.rpg-deck-tab:hover:not(.active) {
+.rpg-deck-drop-caret {
+  margin-left: auto;
+  color: var(--mm-muted);
+  transition: transform 0.15s ease;
+}
+
+.rpg-deck-drop.open .rpg-deck-drop-caret {
+  transform: rotate(180deg);
+}
+
+.rpg-deck-drop-menu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 100%;
+  padding: 0.35rem;
+  border-radius: 12px;
+  border: 1px solid var(--mm-border);
+  background: #1c1c21;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  animation: rpg-drop-in 0.12s ease both;
+}
+
+@keyframes rpg-drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.rpg-btn.rpg-deck-drop-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.rpg-btn.rpg-deck-drop-item:hover {
   background: rgba(255, 255, 255, 0.07);
 }
 
-.rpg-btn.rpg-deck-tab.empty b {
+.rpg-btn.rpg-deck-drop-item.active {
+  background: rgba(245, 197, 66, 0.12);
+  color: var(--rpg-gold, #f5c451);
+}
+
+.rpg-btn.rpg-deck-drop-item.empty b {
   color: var(--mm-muted);
 }
 
-.rpg-btn.rpg-deck-tab.active {
-  border-color: rgba(245, 197, 66, 0.7);
-  background: rgba(245, 197, 66, 0.12);
-  cursor: default;
-}
-
-.rpg-deck-tab-pen {
-  font-size: 0.72rem;
-  padding: 0.05rem 0.25rem;
-  border-radius: 6px;
-  cursor: pointer;
-  opacity: 0.65;
-}
-
-.rpg-deck-tab-pen:hover {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.08);
+.rpg-btn.rpg-deck-drop-item.rename {
+  margin-top: 0.2rem;
+  border-top: 1px solid var(--mm-border);
+  border-radius: 0 0 8px 8px;
+  color: var(--mm-muted);
+  justify-content: flex-start;
 }
