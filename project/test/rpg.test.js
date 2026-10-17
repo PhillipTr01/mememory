@@ -1607,3 +1607,21 @@ test("rpg: the shop's cart paid with dust - each pack its dust price, not withou
   assert.strictEqual(hero.packs.standard, before + 2);
   assert.strictEqual(hero.packs.premium, 1);
 });
+
+test("rpg: dust a copy that isn't spare - only when asked for, it leaves the decks; the free starter copies never", () => {
+  const hero = rpg.newHero("warrior");
+  const char = rpg.charOf(hero);
+  char.collection.ironwave = 2;
+  char.deck.push("ironwave", "ironwave");
+  char.decks = [null, ["ironwave", "ironwave", "strike"]];
+  // (not spare: refused - unless asked for)
+  assert.match(rpg.dustCard(hero, "warrior", "ironwave", 1).error, /every copy/);
+  assert.strictEqual(rpg.dustCard(hero, "warrior", "ironwave", 1, true).dust, rpg.DUST.common.get);
+  assert.strictEqual(char.collection.ironwave, 1);
+  assert.strictEqual(char.deck.filter((id) => id == "ironwave").length, 1);
+  assert.deepStrictEqual(char.decks[1], ["ironwave", "strike"]);
+  // (the starter's own copies - the ones every character gets for free: never dust)
+  const starter = Object.keys(char.collection).find((id) => rpg.CARDS[id].rarity != "basic" && rpg.dustableAny(hero, "warrior", id) == 0);
+  assert.ok(starter);
+  assert.match(rpg.dustCard(hero, "warrior", starter, 1, true).error, /can't be dusted/);
+});

@@ -721,7 +721,7 @@ module.exports = function (io, options = {}) {
     on("dust", (data) => {
       if (inRun()) return error("Not during a run.");
       if (!rpg.CLASS_IDS.includes(data.cls) || !rpg.CARDS[data.id]) return;
-      const done = rpg.dustCard(heroOf(username), data.cls, data.id, Number.isInteger(data.n) ? data.n : 1);
+      const done = rpg.dustCard(heroOf(username), data.cls, data.id, Number.isInteger(data.n) ? data.n : 1, data.any === true);
       if (done.error) return error(done.error);
       sendHero(username);
     });

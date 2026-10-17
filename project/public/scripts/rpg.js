@@ -1407,7 +1407,7 @@ function renderShop() {
         el("div", "mm-muted small", pack.about),
         el("div", "rpg-label", "Odds per card"),
         odds,
-        button(inCart ? "🛒 Add to cart (" + inCart + ")" : "🛒 Add to cart", "cartAdd", { id: id, className: "primary" }),
+        button("🛒 Add to cart", "cartAdd", { id: id, className: "primary" }),
       );
       return tile;
     }),
@@ -1681,6 +1681,7 @@ function craftCell(card, id) {
   var mine = hero.pool.includes(id);
   var have = mine ? hero.collection[id] || 0 : (hero.owned || {})[id] || 0;
   var spare = (hero.dustable || []).find((one) => one.id == id);
+  var any = (hero.dustAny || []).find((one) => one.id == id);
   var cell = el("div", "rpg-craft-cell" + (spare ? " spare" : ""));
   var bar = el("div", "rpg-craft-bar");
   bar.appendChild(el("span", "rpg-craft-have", info.rarity == "basic" ? "Basic card" : mine ? have + " of " + copies + " for a deck" + (have > copies ? " · " + (have - copies) + " spare" : "") : have ? have + " owned · another class" : "Another class"));
@@ -1692,8 +1693,10 @@ function craftCell(card, id) {
     buttons.appendChild(make);
   }
   if (cost.get) {
-    var dust = button("💨 Dust · +" + cost.get, "dustOne", { id: spare ? spare.cls + "|" + id : "", className: "rpg-craft-btn dust", disabled: !spare });
-    dust.title = spare ? "Turn one spare copy into " + cost.get + " dust." : "You have no spare copy of this card.";
+    // (a spare copy: right away - a copy you need: asked first)
+    var from = spare || any;
+    var dust = button("💨 Dust · +" + cost.get, spare ? "dustOne" : "dustNeeded", { id: from ? from.cls + "|" + id : "", className: "rpg-craft-btn dust", disabled: !from });
+    dust.title = spare ? "Turn one spare copy into " + cost.get + " dust." : from ? "Turn one copy into " + cost.get + " dust. You need it for a full deck." : "You have no copy to dust.";
     buttons.appendChild(dust);
   }
   bar.appendChild(buttons);
@@ -3142,6 +3145,10 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     var total = spare.reduce((sum, one) => sum + one.dust, 0);
     var count = spare.reduce((sum, one) => sum + one.n, 0);
     confirmDialog({ title: "Dust " + count + " spare card" + (count == 1 ? "" : "s") + "?", text: "You get " + total + " dust. Copies a deck needs and cards you use stay.", confirmLabel: "Dust them" }).then((sure) => sure && socket.emit("dustAll"));
+  } else if (act == "dustNeeded") {
+    var [needCls, needId] = id.split("|");
+    var needCard = cardOf(needId);
+    confirmDialog({ title: "Dust " + needCard.name + "?", text: "This copy is not spare. It leaves every deck that uses it and you get " + rules.dust[needCard.rarity].get + " dust.", confirmLabel: "Dust it", danger: true }).then((sure) => sure && socket.emit("dust", { cls: needCls, id: needId, n: 1, any: true }));
   } else if (act == "dustOne") {
     var [cls, cardId] = id.split("|");
     socket.emit("dust", { cls: cls, id: cardId, n: 1 });

@@ -1054,6 +1054,7 @@ function heroView(hero) {
     packs: hero.packs || {},
     dust: hero.dust || 0,
     dustable: dustList(hero),
+    dustAny: dustAnyList(hero),
     tradeable: tradeList(hero),
     potionPrice: potionPrice(maxFloor(hero)),
     deckMax: deckLimits(hero).max,
@@ -1096,7 +1097,7 @@ const DUST = {
 
 // The most copies of a card in any deck slot of a character (those never leave the collection)
 function inDecks(char, id) {
-  return Math.max(0, ...[char.deck || [], ...(char.decks || [])].map((deck) => deck.filter((one) => baseCard(one) == id).length));
+  return Math.max(0, ...[char.deck || [], ...(char.decks || []).filter(Boolean)].map((deck) => deck.filter((one) => baseCard(one) == id).length));
 }
 
 // The copies every character gets for free (its starter cards): never dust, never traded
@@ -1130,14 +1131,41 @@ function dustList(hero) {
   return list;
 }
 
-// Copies of a card dusted (n: how many, at most the dustable ones) -> {error} or {dust}
-function dustCard(hero, cls, id, n = 1) {
-  const free = dustable(hero, cls, id);
+// Every copy that can be dusted at all (not only the spare ones): all but the free starter copies
+function dustableAny(hero, cls, id) {
+  const char = hero.chars[cls];
+  const card = CARDS[id];
+  if (!char || !card || !DUST[card.rarity]) return 0;
+  return Math.max(0, ((char.collection || {})[id] || 0) - freeCopies(cls, id));
+}
+
+// Every card with copies that can be dusted (spare or not) -> [{cls, id, n}]
+function dustAnyList(hero) {
+  const list = [];
+  for (const [cls, char] of Object.entries(hero.chars || {}))
+    for (const id of Object.keys(char.collection || {})) {
+      const n = dustableAny(hero, cls, id);
+      if (n > 0) list.push({ cls, id, n });
+    }
+  return list;
+}
+
+// Copies of a card dusted (n: how many - any: also copies a deck uses, they leave the decks) -> {error} or {dust}
+function dustCard(hero, cls, id, n = 1, any = false) {
+  const free = any ? dustableAny(hero, cls, id) : dustable(hero, cls, id);
   if (!Number.isInteger(n) || n < 1) return { error: "Pick how many." };
-  if (n > free) return { error: free ? `Only ${free} can be dusted.` : "You need every copy of this card." };
+  if (n > free) return { error: free ? `Only ${free} can be dusted.` : any ? "This card can't be dusted." : "You need every copy of this card." };
   const char = hero.chars[cls];
   char.collection[id] -= n;
   if (!char.collection[id]) delete char.collection[id];
+  // (fewer copies than a deck holds now: the ones too many leave every deck slot)
+  const keep = usable(char, id);
+  const trim = (deck) => {
+    let seen = 0;
+    return deck.filter((one) => baseCard(one) != id || ++seen <= keep);
+  };
+  if (char.deck) char.deck = trim(char.deck);
+  if (char.decks) char.decks = char.decks.map((deck) => (deck ? trim(deck) : deck));
   const dust = n * DUST[CARDS[id].rarity].get;
   hero.dust = (hero.dust || 0) + dust;
   return { dust };
@@ -3276,6 +3304,7 @@ module.exports = {
   dustable,
   dustList,
   dustCard,
+  dustableAny,
   dustAll,
   craftCard,
   buyPackDust,
