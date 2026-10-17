@@ -356,7 +356,7 @@ const MOVES = {
   regen: { name: "Regenerate", icon: "💚", self: true, text: "It heals a quarter of its HP." },
   heal: { name: "Heal ally", icon: "💚", self: true, text: "It heals its most hurt ally." },
   howl: { name: "Howl", icon: "📯", self: true, text: "Every monster hits 30% harder for 2 turns." },
-  fade: { name: "Fade", icon: "🌫️", self: true, text: "It fades back. Attacks on a single foe miss it this turn." },
+  fade: { name: "Fade", icon: "🌫️", self: true, text: "It fades back. Attacks on a single foe miss it this turn and its next attack deals 50% more." },
   purge: { name: "Purge", icon: "✨", self: true, text: "It clears poison and burns from every monster." },
   curse: { name: "Curse", icon: "🕯️", power: 0.4, text: "It hits one hero, who deals less damage for 2 turns." },
   summon: { name: "Summon", icon: "📣", self: true, text: "It calls more monsters into the fight." },
@@ -2619,10 +2619,12 @@ function intentDamage(foe, move) {
   let damage = foe.atk * info.power * Math.pow(1 + FURY_STEP, foe.fury || 0);
   if (foe.effects.rage) damage *= 1.3;
   if (foe.effects.chill) damage *= 0.5;
+  if (foe.effects.ambush) damage *= AMBUSH;
   return Math.max(1, Math.round(damage));
 }
 
 const WEAK = 0.7; // a cursed hero's damage
+const AMBUSH = 1.5; // out of the mist (after a fade): the next attack this much harder
 const DEFEND = 0.5; // a monster on guard: this much of a hit gets through
 const SPIKES = 0.2; // of a hit on a spiked monster: back to the hitter
 
@@ -3003,6 +3005,8 @@ function monsterMove(run, foe, rng) {
   const target = move.self || move.all ? null : taunter || heroes.find((h) => h.name == intent.target) || pick(rng, heroes);
   const source = `${foe.icon} ${foe.name}`;
   const damage = intentDamage(foe, intent.move);
+  // (out of the mist: the attack after a fade the harder one - then it is used up)
+  if (move.power) delete foe.effects.ambush;
   switch (intent.move) {
     case "attack":
     case "smash": {
@@ -3060,7 +3064,8 @@ function monsterMove(run, foe, rng) {
       say(run, `${source} holds its guard.`);
       break;
     case "fade":
-      say(run, `${source} fades back.`);
+      say(run, `${source} fades back. Its next attack will be stronger.`);
+      foe.effects.ambush = 1;
       break;
     case "purge":
       for (const one of alive(run.monsters)) {

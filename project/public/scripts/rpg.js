@@ -34,8 +34,8 @@ try {
   // no storage: the defaults
 }
 
-var EFFECT_ICONS = { poison: "☠️", burn: "🔥", stun: "💫", steady: "🪨", chill: "❄️", rage: "😡", might: "📯", weak: "🕯️" };
-var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned: skips a move", steady: "Steady: stuns often fail until it acts again, less often with luck", chill: "Chilled: half damage", rage: "Raging: more damage", might: "Might: +30% damage", weak: "Cursed: -30% damage" };
+var EFFECT_ICONS = { poison: "☠️", burn: "🔥", stun: "💫", steady: "🪨", ambush: "🌫️", chill: "❄️", rage: "😡", might: "📯", weak: "🕯️" };
+var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned: skips a move", steady: "Steady: stuns often fail until it acts again, less often with luck", ambush: "Ambush: its next attack deals 50% more", chill: "Chilled: half damage", rage: "Raging: more damage", might: "Might: +30% damage", weak: "Cursed: -30% damage" };
 var RARITY_NAMES = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", mythic: "Mythic" };
 var SLOT_NAMES = { weapon: "Weapon", armor: "Armor", charm: "Charm" };
 

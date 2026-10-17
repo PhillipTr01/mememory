@@ -1934,3 +1934,16 @@ test("rpg: a fading foe dodges hits on a single foe - hits on every foe still la
   assert.strictEqual(rpg.play(run, "a", { uid: "t1", target: "m1" }), null);
   assert.ok(foe.hp < hp, "the cleave hit");
 });
+test("rpg: Fade - its next attack deals half again as much, then it is back to normal", () => {
+  const run = duel("warrior", "fade", []);
+  const foe = run.monsters[0];
+  const normal = rpg.intentDamage ? rpg.intentDamage(foe, "attack") : null;
+  rpg.monsterTurn(run);
+  assert.ok(foe.effects.ambush);
+  if (normal != null) assert.ok(Math.abs(rpg.intentDamage(foe, "attack") - normal * 1.5) <= 1);
+  foe.intent = { move: "attack", target: "a" };
+  foe.moves = ["attack"];
+  rpg.endTurn(run, "a");
+  rpg.monsterTurn(run);
+  assert.ok(!foe.effects.ambush, "used up by the attack");
+});
