@@ -1907,9 +1907,9 @@ test("rpg: revives - the first of a day free, then 1x an entry of the deepest op
 });
 
 test("rpg: luck helps against steady foes - they shrug off fewer stuns", () => {
-  assert.strictEqual(rpg.steadyResist({ luck: 0 }), 0.6);
-  assert.ok(Math.abs(rpg.steadyResist({ luck: 60 }) - 0.42) < 1e-9);
-  assert.strictEqual(rpg.steadyResist({ luck: 300 }), 0.3);
+  assert.strictEqual(rpg.steadyResist({ luck: 0 }), 0.8);
+  assert.ok(Math.abs(rpg.steadyResist({ luck: 60 }) - 0.68) < 1e-9);
+  assert.ok(Math.abs(rpg.steadyResist({ luck: 300 }) - 0.6) < 1e-9);
 });
 
 test("rpg: luck makes poison and burns stronger - a quarter more at most", () => {
