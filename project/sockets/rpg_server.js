@@ -108,6 +108,8 @@ module.exports = function (io, options = {}) {
   // (only to the members whose party it is now - never to a page of another run)
   const inParty = (party, name) => partyOf.get(name) === party.id;
   function emitParty(party) {
+    // (a run changed: saved soon after - it goes on after a restart)
+    persist.changed("rpg");
     const view = partyView(party);
     for (const name of party.members) if (inParty(party, name)) socketsOf(name).forEach((socket) => socket.emit("rpgParty", view));
   }
@@ -434,6 +436,7 @@ module.exports = function (io, options = {}) {
 
   // The offers of a player (made and received) to its pages
   function sendTrades(name) {
+    persist.changed("rpg");
     const now = Date.now();
     for (const [id, offer] of trades) if (now - offer.at > TRADE_TIME) trades.delete(id);
     const list = [...trades.values()]
@@ -1043,23 +1046,44 @@ module.exports = function (io, options = {}) {
     });
   });
 
-  // Saved (the normal casino): the characters - a run cut by a restart can't go on: its entry and potions come back
+  // Saved (the normal casino): the characters, the parties with their runs, the trade offers - after a restart a run
+  // goes on where it was (its heroes away until their pages are back; in a party: a while to come back)
+  const RESTORE_GRACE = 10 * 60000;
   persist.register(
     "rpg",
     () => ({
       heroes,
-      cut: [...parties.values()]
-        .filter((party) => party.run && !party.result)
-        .map((party) => ({ entry: party.tutorial ? 0 : rpg.entryCost(party.floor), heroes: party.run.heroes.map((one) => ({ name: one.name, potions: one.potions })) })),
+      parties: [...parties.values()].filter((party) => !party.result).map(({ timer, away, clock, endsAt, ...party }) => party),
+      trades: [...trades.values()],
     }),
     (saved) => {
       heroes.clear();
+      for (const party of parties.values()) clearTimeout(party.timer);
+      parties.clear();
+      partyOf.clear();
+      trades.clear();
       for (const [name, hero] of saved.heroes || []) heroes.set(name, hero);
+      // (saved before the runs were kept: a run cut by the restart - its entry and potions back)
       for (const run of saved.cut || []) {
         for (const one of run.heroes) {
           if (heroes.has(one.name)) heroOf(one.name).potions = Math.min(rpg.potionsMax(heroOf(one.name)), heroOf(one.name).potions + one.potions);
           if (run.entry > 0) coins.add(one.name, run.entry, { reason: "rpg refund", note: "server restart" }).catch(() => {});
         }
+      }
+      for (const party of saved.parties || []) {
+        Object.assign(party, { timer: null, away: {}, clock: null, endsAt: null });
+        parties.set(party.id, party);
+        for (const name of party.members) partyOf.set(name, party.id);
+        partyCount = Math.max(partyCount, Number(String(party.id).slice(1)) || 0);
+        if (!party.run) continue;
+        for (const one of party.run.heroes) {
+          rpg.setAway(party.run, one.name, true);
+          if (party.run.heroes.length > 1) party.away[one.name] = setTimeout(() => abandonRun(party, one.name), RESTORE_GRACE);
+        }
+      }
+      for (const offer of saved.trades || []) {
+        trades.set(offer.id, offer);
+        tradeCount = Math.max(tradeCount, Number(String(offer.id).slice(1)) || 0);
       }
     },
   );
@@ -1067,8 +1091,9 @@ module.exports = function (io, options = {}) {
   return {
     heroes,
     parties,
+    trades,
     timing,
     heroOf,
-    stop: () => parties.forEach((party) => clearTimeout(party.timer)),
+    stop: () => parties.forEach((party) => [party.timer, ...Object.values(party.away || {})].forEach(clearTimeout)),
   };
 };

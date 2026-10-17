@@ -1826,3 +1826,28 @@ test("rpg: Smoke Bomb not two turns in a row", () => {
   me.energy = 5;
   assert.strictEqual(rpg.play(run, "a", { uid: "t1" }), null);
 });
+
+test("rpg: a restart keeps the parties, their runs and the trade offers - the heroes away until they are back", async () => {
+  const persist = require("../game/persist");
+  const fake = { of: () => ({ use() {}, on() {}, sockets: new Map(), to: () => ({ emit() {} }), emit() {} }) };
+  const live = require("../sockets/rpg_server")(fake, { world: "" });
+  const a = live.heroOf("keep_a");
+  const b = live.heroOf("keep_b");
+  rpg.unlock(a, "warrior");
+  rpg.unlock(b, "mage");
+  const run = rpg.newRun(1, [{ name: "keep_a", hero: a }, { name: "keep_b", hero: b }]);
+  rpg.enterRoom(run, 0);
+  live.parties.set("p41", { id: "p41", leader: "keep_a", floor: 1, size: 2, members: ["keep_a", "keep_b"], run, result: null, timer: setTimeout(() => {}, 1), away: {}, endsAt: 5 });
+  live.trades.set("t9", { id: "t9", from: "keep_a", to: "keep_b", give: [], take: [], at: Date.now() });
+  const saved = persist.snapshotAll();
+  live.parties.clear();
+  live.trades.clear();
+  await persist.restoreSnapshots(saved, persist.keys().filter((key) => key != "rpg"));
+  const back = live.parties.get("p41");
+  assert.ok(back && back.run, "the party and its run are back");
+  assert.strictEqual(back.run.phase, "fight");
+  assert.deepStrictEqual(back.run.monsters.map((m) => m.hp), run.monsters.map((m) => m.hp));
+  assert.ok(back.run.heroes.every((h) => h.away), "away until their pages are back");
+  assert.ok(live.trades.has("t9"));
+  live.stop();
+});
