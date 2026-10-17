@@ -249,7 +249,7 @@ module.exports = {
   RPG_LOOT: 130, // % of the coins a room puts in the pot (130: a floor pays about 2.5 times its entry on average)
   RPG_PACK_STANDARD: 10000,
   RPG_TRADE_FREE: 2500, // a trade worth at most this much (coins, the bigger side): anything goes - unless a legendary or mythic is in it
-  RPG_TRADE_DEVIATION: 25, // a bigger trade: the smaller side at most this much (%) under the bigger one
+  RPG_TRADE_DEVIATION: 40, // a bigger trade: the smaller side at most this much (%) under the bigger one
   RPG_PACK_PREMIUM: 36000, // (the packs: 1.1x what their cards are worth - CARD_RARITIES)
   RPG_PACK_MYTHIC: 64000,
   RPG_TURN_TIME: 45000, // a turn of a fight
