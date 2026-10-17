@@ -49,6 +49,8 @@ function services(world) {
 
 // The game servers of the test world (for the debug tools of the admin panel): name -> what the server returns
 const servers = new Map();
+// The game servers of the normal casino that the admin panel talks to (the dungeon): name -> what the server returns
+const normalServers = new Map();
 // The game servers of the season worlds: world -> name -> what the server returns
 const seasonServers = new Map(SEASONS.map((world) => [world, new Map()]));
 
@@ -74,4 +76,4 @@ function worldOf(username) {
 
 const isSeason = (world) => slots.isSeason(world);
 
-module.exports = { TEST, SEASON, SEASONS, WORLDS, isSeason, services, servers, seasonServers, isTest, worldOfNamespace, worldOf, testChat };
+module.exports = { TEST, SEASON, SEASONS, WORLDS, isSeason, services, servers, normalServers, seasonServers, isTest, worldOfNamespace, worldOf, testChat };

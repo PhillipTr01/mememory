@@ -579,7 +579,7 @@ module.exports = function (io, options = {}) {
       if (typeof cards === "string") return error(cards);
       const spare = cards.reduce((sum, card) => sum + card.coins, 0);
       if (spare > 0) await coins.add(username, spare, { reason: "rpg spare cards" });
-      socket.emit("rpgPack", { cards, spare, pack: id, left: hero.packs[id] || 0 });
+      socket.emit("rpgPack", { cards, spare, pack: id, left: rpg.packsOf(hero)[id] || 0 });
       sendHero(username);
     });
 
@@ -1088,10 +1088,33 @@ module.exports = function (io, options = {}) {
     },
   );
 
+  // Packs from the admin: {pack id: count} for a character of the player (its class) -> an error or null
+  function givePacks(name, cls, packs) {
+    if (!heroes.has(name)) return "This player has no character yet.";
+    const hero = heroOf(name);
+    if (!hero.unlocked.includes(cls)) return "This player has no such character.";
+    const items = Object.entries(packs || {}).filter(([id, n]) => rpg.PACKS[id] && Number.isInteger(n) && n > 0);
+    if (!items.length || items.some(([, n]) => n > 100)) return "Pick 1 to 100 packs.";
+    rpg.addPacks(hero, items, cls);
+    sendHero(name);
+    const what = items.map(([id, n]) => n + " " + rpg.PACKS[id].name + (n > 1 ? "s" : "")).join(", ");
+    socketsOf(name).forEach((socket) => socket.emit("rpgToast", `🎁 You got ${what} for your ${rpg.CLASSES[cls].name}.`));
+    return null;
+  }
+
+  // A player's characters for the admin: [{id, name, icon, level}]
+  function charactersOf(name) {
+    if (!heroes.has(name)) return [];
+    const hero = heroOf(name);
+    return hero.unlocked.map((id) => ({ id, name: rpg.CLASSES[id].name, icon: rpg.CLASSES[id].icon, level: rpg.charOf(hero, id).level }));
+  }
+
   return {
     heroes,
     parties,
     trades,
+    givePacks,
+    charactersOf,
     timing,
     heroOf,
     stop: () => parties.forEach((party) => [party.timer, ...Object.values(party.away || {})].forEach(clearTimeout)),

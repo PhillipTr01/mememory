@@ -519,6 +519,7 @@ function renderPlayerDetail(p) {
   };
   if (kind == "in") {
     button("🎁 Reward", "mm-btn-primary", () => rewardDialog(row));
+    button("🎴 Packs", "", () => packsDialog(row));
     button("Correct balance", "", () => editPlayerCoins(row));
     button("Revoke", "ad-btn-quiet-danger", (b) => setAccess(row, false, b));
   } else if (kind == "waiting") {
@@ -985,6 +986,80 @@ async function rewardDialog(p) {
     }
   });
   frame.focus();
+}
+
+// Booster packs of the dungeon for one character of a player: they wait unopened until that character opens them
+async function packsDialog(p) {
+  var data;
+  try {
+    data = await api("rpg/characters/" + encodeURIComponent(p.username));
+  } catch (error) {
+    return fail(error);
+  }
+  if (!data.characters.length) return showHint(p.username + " has no dungeon character yet.", "error");
+  var backdrop = el("div", "mm-dialog-backdrop");
+  var dialog = el("form", "mm-dialog ad-coins-dialog ad-reward-dialog");
+  dialog.noValidate = true;
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  var field = (label, control) => {
+    var box = el("label", "ad-field");
+    box.append(el("span", "ad-label", label), control);
+    return box;
+  };
+  var who = el("select", "mm-input");
+  data.characters.forEach((c) => who.appendChild(Object.assign(el("option", "", c.icon + " " + c.name + " · Lv " + c.level), { value: c.id })));
+  var grid = el("div", "ad-reward-grid");
+  var character = field("Character", who);
+  character.classList.add("wide");
+  grid.appendChild(character);
+  var counts = {};
+  data.packs.forEach((pack) => {
+    var input = Object.assign(el("input", "mm-input"), { type: "number", min: 0, max: 100, step: 1, placeholder: "0" });
+    counts[pack.id] = input;
+    grid.appendChild(field(pack.icon + " " + pack.name, input));
+  });
+  var error = el("p", "ad-form-error");
+  error.hidden = true;
+  var cancel = el("button", "mm-btn", "Cancel");
+  cancel.type = "button";
+  var give = el("button", "mm-btn mm-btn-primary", "Give");
+  give.type = "submit";
+  var actions = el("div", "mm-dialog-actions");
+  actions.append(cancel, give);
+  dialog.append(el("h2", "mm-dialog-title", "🎴 Packs for " + p.username), el("p", "mm-dialog-text", "The packs wait unopened until " + p.username + " opens them with this character."), grid, error, actions);
+  backdrop.appendChild(dialog);
+  document.body.appendChild(backdrop);
+  var close = () => {
+    document.removeEventListener("keydown", onKey);
+    backdrop.remove();
+  };
+  var onKey = (event) => event.key == "Escape" && close();
+  document.addEventListener("keydown", onKey);
+  cancel.addEventListener("click", close);
+  backdrop.addEventListener("click", (event) => event.target == backdrop && close());
+  dialog.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    error.hidden = true;
+    var packs = {};
+    Object.entries(counts).forEach(([id, input]) => {
+      var n = Math.floor(Number(input.value) || 0);
+      if (n > 0) packs[id] = n;
+    });
+    give.disabled = true;
+    try {
+      await api("rpg/packs", { username: p.username, cls: who.value, packs: packs });
+      close();
+      var cls = data.characters.find((c) => c.id == who.value);
+      var sent = data.packs.filter((pack) => packs[pack.id]).map((pack) => packs[pack.id] + "× " + pack.icon + " " + pack.name).join(" · ");
+      casinoNotice({ icon: "🎴", title: "Packs sent to " + p.username, text: sent + " for the " + cls.icon + " " + cls.name, ms: 6000, key: "packs" });
+    } catch (problem) {
+      give.disabled = false;
+      error.innerText = problem.message;
+      error.hidden = false;
+    }
+  });
+  who.focus();
 }
 
 /* ---------- History ---------- */

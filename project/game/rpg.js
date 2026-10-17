@@ -219,10 +219,20 @@ function cartPrice(cart) {
   return { total: items.reduce((sum, [id, n]) => sum + packPrice(id, n), 0), items };
 }
 
-// Packs bought: waiting, unopened (opened one after the other - for the class played then)
-function addPacks(hero, items) {
-  if (!hero.packs) hero.packs = {};
-  for (const [id, n] of items) hero.packs[id] = (hero.packs[id] || 0) + n;
+// Packs bought: waiting, unopened (opened one after the other - for the class played then); cls: packs only that
+// character opens (given by the admin)
+function addPacks(hero, items, cls = null) {
+  const box = cls ? charOf(hero, cls) : hero;
+  if (!box.packs) box.packs = {};
+  for (const [id, n] of items) box.packs[id] = (box.packs[id] || 0) + n;
+}
+
+// The packs the character played can open: the shared ones and its own -> {id: count}
+function packsOf(hero) {
+  const own = (hero.cls && hero.chars[hero.cls] && hero.chars[hero.cls].packs) || {};
+  const all = { ...(hero.packs || {}) };
+  for (const [id, n] of Object.entries(own)) if (n > 0) all[id] = (all[id] || 0) + n;
+  return all;
 }
 
 // Every pack waiting opened (at most OPEN_ALL_MAX) -> {cards: [{id, fresh, coins, pack}], count} or an error (a string)
@@ -232,7 +242,7 @@ function openAll(hero, rng = Math.random) {
   const cards = [];
   let count = 0;
   for (const id of PACK_IDS) {
-    while (hero.packs && hero.packs[id] > 0 && count < OPEN_ALL_MAX) {
+    while (packsOf(hero)[id] > 0 && count < OPEN_ALL_MAX) {
       cards.push(...openStored(hero, id, rng).map((card) => ({ ...card, pack: id })));
       count++;
     }
@@ -243,8 +253,11 @@ function openAll(hero, rng = Math.random) {
 // An unopened pack opened -> its cards (openPack) or an error (a string)
 function openStored(hero, id, rng = Math.random) {
   if (!hero.cls) return "Pick a class first.";
-  if (!hero.packs || !(hero.packs[id] > 0)) return "No such pack left.";
-  hero.packs[id]--;
+  // (the character's own packs first)
+  const own = hero.chars[hero.cls] && hero.chars[hero.cls].packs;
+  if (own && own[id] > 0) own[id]--;
+  else if (hero.packs && hero.packs[id] > 0) hero.packs[id]--;
+  else return "No such pack left.";
   return openPack(hero, rng, id);
 }
 const NEUTRAL_CARDS = ["focus", "secondwind", "adrenaline", "quickslash", "shrug", "pommel", "bandage", "twinstrike", "overpower", "trance", "laststand", "rally", ...MORE_CARDS.neutral];
@@ -1096,7 +1109,7 @@ function heroView(hero) {
       }
       return all;
     }, {}),
-    packs: hero.packs || {},
+    packs: packsOf(hero),
     dust: hero.dust || 0,
     dustable: dustList(hero),
     dustAny: dustAnyList(hero),
@@ -3516,6 +3529,7 @@ module.exports = {
   packPrice,
   cartPrice,
   addPacks,
+  packsOf,
   openStored,
   openAll,
   CART_MAX,

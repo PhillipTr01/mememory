@@ -422,6 +422,33 @@ test("admin: a player in detail - coins, what the games added up to, the items b
   assert.deepStrictEqual((await shop.view("quinn")).owned, []);
 });
 
+test("admin: dungeon packs for one character of a player - they wait until that character opens them", async () => {
+  const worlds = require("../game/worlds");
+  const rpg = require("../game/rpg");
+  const fake = { of: () => ({ use() {}, on() {}, sockets: new Map(), to: () => ({ emit() {} }), emit() {} }) };
+  const live = require("../sockets/rpg_server")(fake, { world: "" });
+  worlds.normalServers.set("rpg", live);
+  const hero = live.heroOf("quinn");
+  rpg.unlock(hero, "warrior");
+  rpg.unlock(hero, "mage");
+  const list = await adminApi("rpg/characters/quinn");
+  assert.deepStrictEqual(list.body.characters.map((c) => c.id), ["warrior", "mage"]);
+  assert.ok(list.body.packs.some((p) => p.id == "premium"));
+  assert.match((await adminApi("rpg/packs", { username: "quinn", cls: "rogue", packs: { premium: 1 } })).body.error, /no such character/);
+  assert.match((await adminApi("rpg/packs", { username: "quinn", cls: "mage", packs: {} })).body.error, /Pick/);
+  assert.strictEqual((await adminApi("rpg/packs", { username: "quinn", cls: "warrior", packs: { premium: 2, mythic: 1 } })).status, 200);
+  // (the mage played: the warrior's packs are not its own)
+  const shared = { ...hero.packs };
+  assert.deepStrictEqual(rpg.packsOf(hero), shared);
+  hero.cls = "warrior";
+  assert.strictEqual(rpg.packsOf(hero).premium, (shared.premium || 0) + 2);
+  assert.strictEqual(rpg.packsOf(hero).mythic, 1);
+  rpg.openStored(hero, "mythic");
+  assert.strictEqual(rpg.packsOf(hero).mythic || 0, 0);
+  live.stop();
+  worlds.normalServers.delete("rpg");
+});
+
 test("admin: the hard reset part by part - the records go, access, purchases, seasons and settings stay", async () => {
   const CoinLog = require("../models/CoinLog");
   const User = require("../models/User");

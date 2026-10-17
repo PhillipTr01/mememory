@@ -16,6 +16,7 @@ const maintenance = require("../game/maintenance");
 const shop = require("../game/shop");
 const testMode = require("../game/test_mode");
 const worlds = require("../game/worlds");
+const rpg = require("../game/rpg");
 const rtpMonitor = require("../game/rtp_monitor");
 const streak = require("../game/streak");
 const userController = require("../controllers/user_controller");
@@ -644,6 +645,20 @@ module.exports = function () {
       res.json({ ...result, owners: await shop.owners() });
     }),
   );
+
+  /* ---------- The dungeon: booster packs for a character of a player ---------- */
+
+  router.get("/api/rpg/characters/:username", admin, (req, res) => {
+    const server = worlds.normalServers.get("rpg");
+    res.json({ characters: server ? server.charactersOf(req.params.username) : [], packs: Object.entries(rpg.PACKS).map(([id, pack]) => ({ id, name: pack.name, icon: pack.icon })) });
+  });
+  router.post("/api/rpg/packs", admin, (req, res) => {
+    const { username, cls, packs } = req.body || {};
+    const server = worlds.normalServers.get("rpg");
+    const problem = server ? server.givePacks(String(username || ""), String(cls || ""), packs) : "The dungeon isn't running.";
+    if (problem) return res.status(400).json({ error: problem });
+    res.json({ ok: true });
+  });
 
   /* ---------- The cases of the case battles ---------- */
 
