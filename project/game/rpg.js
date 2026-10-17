@@ -2660,7 +2660,7 @@ const SPIKES = 0.2; // of a hit on a spiked monster: back to the hitter
 // Luck makes poison and burns stronger (25% at 100% luck) - and stuns stick better on a steady foe
 const luckBoost = (hero) => 1 + Math.min(0.25, ((hero && hero.luck) || 0) / 400);
 // (luck helps: a quarter less often shrugged off at 100% luck)
-const STEADY_RESIST = 0.8;
+const STEADY_RESIST = 0.65;
 const steadyResist = (hero) => STEADY_RESIST * (1 - Math.min(0.25, ((hero && hero.luck) || 0) / 400));
 function stun(run, foe, rng = Math.random, hero = null) {
   if (foe.effects.steady && rng() < steadyResist(hero)) {
