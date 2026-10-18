@@ -101,7 +101,8 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
   const lucky = rpg.newHero("mage");
   rpg.charOf(lucky).levels = { hp: 0, atk: 4, def: 0, luck: 4, agi: 0 };
   const W = rpg.CLASSES.warrior, M = rpg.CLASSES.mage;
-  assert.strictEqual(rpg.statsOf(strong).atk, Math.round((10 + rpg.STATS.atk.per * 4 * W.mainBonus) * W.atk + (W.atkPlus || 0)));
+  // (the class's power: its attack and HP evened against the other classes)
+  assert.strictEqual(rpg.statsOf(strong).atk, Math.round(((10 + rpg.STATS.atk.per * 4 * W.mainBonus) * W.atk + (W.atkPlus || 0)) * (W.power || 1)));
   assert.strictEqual(rpg.statsOf(lucky).luck, Math.round(5 + rpg.STATS.luck.per * 4 * M.mainBonus + M.luck));
   assert.strictEqual(rpg.statsOf(strong).luck, Math.round(5 + rpg.STATS.luck.per * 4 + rpg.CLASSES.warrior.luck));
   // Gear makes a hero stronger
@@ -1170,11 +1171,11 @@ test("rpg: balance - every class on the curve of its floor clears early, mid and
     if (floor <= 3) char.deck.unshift(...rpg.starterDeck(cls).slice(0, 8));
     return hero;
   }
-  // (far under the curve: more runs - a few lucky ones don't tip it)
+  // (48 runs each: a few lucky or unlucky ones don't tip it)
   const clear = (cls, floor, curve) => {
     const rng = seeded(floor * 97 + cls.length);
     let won = 0;
-    const runs = curve < 1 ? 48 : 24;
+    const runs = 48;
     for (let i = 0; i < runs; i++) won += rpg.simulate(heroFor(cls, floor, curve, rng), floor, 1, rng).cleared;
     return won / runs;
   };
