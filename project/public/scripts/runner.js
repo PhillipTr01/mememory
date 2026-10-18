@@ -434,8 +434,9 @@ function drawGround(v, pos) {
   // Walls: in pieces of 6 m (a bit lighter every other one), so their speed shows
   for (var side = -1; side <= 1; side += 2) {
     var x = side * WALL;
+    // (on a fixed grid of the track - never from the moving far end: no flicker)
     var start = Math.floor(near / 6) * 6;
-    for (var z = Math.min(far, start + VIEW + 6); z >= start; z -= 6) {
+    for (var z = Math.floor(far / 6) * 6; z >= start; z -= 6) {
       var z0 = Math.max(z, near);
       var z1 = z + 6;
       if (z1 <= z0) continue;
@@ -450,8 +451,9 @@ function drawGround(v, pos) {
     var cx = (lane - 1) * LANE;
     poly(v, [[cx - 1.18, 0, near], [cx + 1.18, 0, near], [cx + 1.18, 0, far], [cx - 1.18, 0, far]], "rgba(70, 60, 62, 0.55)");
   }
-  var first = Math.ceil(near / 1.4) * 1.4;
-  for (var zz = Math.min(far, first + VIEW); zz >= first; zz -= 1.4) {
+  var first = Math.ceil(near / 1.4);
+  for (var n = Math.floor(far / 1.4); n >= first; n--) {
+    var zz = n * 1.4;
     var dd = zz - v.camZ;
     var sleeper = shade([96, 66, 48], dd);
     for (var l = 0; l < 3; l++) {
@@ -472,8 +474,9 @@ function drawGround(v, pos) {
 function drawLamps(v, pos) {
   var near = v.camZ + 0.6;
   var far = pos.z + VIEW;
-  var start = Math.ceil(near / 18) * 18;
-  for (var z = Math.min(far, start + VIEW); z >= start; z -= 18) {
+  var start = Math.ceil(near / 18);
+  for (var n = Math.floor(far / 18); n >= start; n--) {
+    var z = n * 18;
     for (var side = -1; side <= 1; side += 2) {
       var x = side * (WALL - 0.1);
       var d = z - v.camZ;

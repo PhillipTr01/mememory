@@ -239,7 +239,7 @@ module.exports = {
   RUNNER_EVEN: 750, // the score that pays the entry back (1x)
   RUNNER_MIN: 0.25, // below this share of RUNNER_EVEN: nothing - from it on the share of the entry (up to 1x)
   RUNNER_SLOPE: 0.5, // above RUNNER_EVEN: this much more per RUNNER_EVEN run
-  RUNNER_MAX: 3, // the highest multiplier
+  RUNNER_MAX: 10, // the highest multiplier
   RUNNER_DAILY: 0, // paid runs a player may start a day (0: no limit)
   RUNNER_COUNTDOWN: 2000, // ms: 3 - 2 - 1 on the page before the runner starts
   RUNNER_SLACK: 3000, // ms: a run may claim this much more time than it took on the server (the network)
