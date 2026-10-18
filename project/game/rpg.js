@@ -145,8 +145,8 @@ const CLASSES = {
   warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.15 }, top: 2 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.2, atk: 1.68, def: 2, luck: 0, agi: 0, mainBonus: 1.29, hpPlus: 70, atkPlus: 28, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
   paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor, and half of your block counts as armor for it. Your block cards block {block}% more.", perks: { thornsDef: 0.3, block: 0.11 }, top: 4.5 }, about: "Armor class with taunts and party shields", hp: 1.35, atk: 1.3, def: 11, luck: 0, agi: 0, mainBonus: 1.2, hpPlus: 90, atkPlus: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
   cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe.", perks: { heal: 0.1, healHit: 0.04 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 1.7, hpPlus: 180, atkPlus: 8, signature: ["heal", "smite"], opener: "banish", cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.3, crit: 4 }, top: 4.5 }, about: "Instinct class with dodge, scouting and poison", hp: 1.3, atk: 1.42, def: 0, luck: 4, agi: 14, mainBonus: 2.5, hpPlus: 94, atkPlus: 24, signature: ["poisonblade", "backstab"], guard: "dodgeroll", cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 9 }, about: "Luck class with crits, fire and frost", hp: 1.2, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.45, hpPlus: 120, atkPlus: 17, signature: ["frost", "fireball"], guard: "icearmor", cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
+  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.3, crit: 4 }, top: 8 }, about: "Instinct class with dodge, scouting and poison", hp: 1.42, atk: 1.42, def: 0, luck: 4, agi: 14, mainBonus: 2.5, hpPlus: 94, atkPlus: 24, signature: ["poisonblade", "backstab"], guard: "dodgeroll", cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 15 }, about: "Luck class with crits, fire and frost", hp: 1.35, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.45, hpPlus: 120, atkPlus: 17, signature: ["frost", "fireball"], guard: "icearmor", cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -393,7 +393,7 @@ const MONSTERS = [
   ],
   [
     { name: "Hellhound", icon: "🐕", type: "demon", hp: 1, atk: 1.15, traits: ["fireproof", "spiked"], moves: ["attack", "burn", "howl"] },
-    { name: "Gargoyle", icon: "🗽", type: "construct", hp: 1.25, atk: 0.95, armor: 0.15, traits: ["venomproof", "bulky"], moves: ["smash", "defend", "attack"] },
+    { name: "Gargoyle", icon: "🗽", type: "construct", hp: 1.25, atk: 0.95, armor: 0.15, moves: ["smash", "defend", "attack"] },
     { name: "Cultist", icon: "🧛", type: "humanoid", hp: 0.9, atk: 1, moves: ["attack", "curse", "purge", "drain"] },
   ],
 ];
@@ -1665,9 +1665,10 @@ const RANKS = {
 // How much harder a floor is than the first: evenly, like a character's stats grow (its group a bit more or less)
 // (deeper down a character has better gear, talents and cards too: the monsters a bit more on top - DEPTH_EXTRA a floor)
 const DEPTH_EXTRA = 0.015;
-// The difficulty of the floors on top: [floor, power] - between two of them evenly (fitted with the simulator, every
-// class on its stat curve clearing about three runs of four)
-const FLOOR_POWER = [[1, 2.239], [2, 2.688], [4, 2.238], [8, 2.241], [12, 1.793], [18, 1.504], [23, 1.823], [28, 1.056]];
+// The difficulty of the floors on top: [floor, power] - between two of them evenly (fitted with the simulator: the
+// classes on their stat curve clear about three runs of four up to floor 14, down to two of three at floor 30 - a
+// character behind its curve falls off fast down there)
+const FLOOR_POWER = [[1, 2.239], [2, 2.688], [4, 2.238], [8, 2.241], [12, 1.793], [14, 1.699], [16, 1.819], [18, 1.853], [20, 1.872], [22, 2.004], [24, 2.162], [26, 1.604], [28, 1.592], [30, 1.29]];
 function floorPower(floor, points = FLOOR_POWER) {
   if (floor <= points[0][0]) return points[0][1];
   for (let i = 1; i < points.length; i++) {

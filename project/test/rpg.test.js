@@ -960,7 +960,7 @@ test("rpg: class strengths grow with the level - the base at 1, its top times it
   assert.strictEqual(rpg.strengthOf("warrior", 1).perks.pierce, 0.15);
   assert.strictEqual(rpg.strengthOf("warrior", rpg.HERO_LEVEL_MAX).perks.pierce, Math.round(0.15 * rpg.CLASSES.warrior.strength.top * 1000) / 1000);
   assert.match(rpg.strengthOf("paladin", 1).text, /equal to 30% of your armor, and half of your block counts as armor for it\. Your block cards block 11% more/);
-  assert.match(rpg.strengthOf("mage", rpg.HERO_LEVEL_MAX).text, /crit 27% more often/);
+  assert.match(rpg.strengthOf("mage", rpg.HERO_LEVEL_MAX).text, /crit 45% more often/);
 });
 
 test("rpg: cards fit their rarity - the rarer, the more a mana buys", () => {
