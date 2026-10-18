@@ -9,9 +9,9 @@
  */
 (function (root) {
   var TPS = 60; // ticks a second
-  var V0 = 11; // m/s at the start ...
-  var ACC = 0.15; // ... and this much faster every second
-  var VMAX = 38;
+  var V0 = 14; // m/s at the start ...
+  var ACC = 0.22; // ... and this much faster every second
+  var VMAX = 44;
   var LANE_TICKS = 9; // one lane over
   var JUMP_TICKS = 40;
   var JUMP_HEIGHT = 1.3; // m
@@ -19,7 +19,8 @@
   var ROLL_TICKS = 40;
   var JUMP_BUFFER = 10; // a jump pressed this many ticks before landing: it jumps again on landing
   var START = 45; // m without anything at the start
-  var GAP = [16, 30]; // m between two rows
+  var GAP = [12, 22]; // m between two rows (at least GAP_TIME of running - a flawless player always gets through)
+  var GAP_TIME = 0.42; // s
   var HIT_WIDTH = 0.55; // of a lane: closer to a lane's middle than this - in it
   var DEPTH = 1; // m: a barrier, a bar
   var COIN_SCORE = 2; // a coin: this many points (a meter: 1)
@@ -63,9 +64,10 @@
   function addRow(run) {
     var rng = run.rng;
     var z = run.next;
-    var gap = GAP[0] + rng() * (GAP[1] - GAP[0]);
+    var low = Math.max(GAP[0], run.speed * GAP_TIME);
+    var gap = low + rng() * (Math.max(GAP[1], low + 6) - low);
     var r = rng();
-    var blocked = r < 0.4 ? 1 : r < 0.9 ? 2 : 3;
+    var blocked = r < 0.25 ? 1 : r < 0.8 ? 2 : 3;
     var order = [0, 1, 2];
     for (var i = 2; i > 0; i--) {
       var j = Math.floor(rng() * (i + 1));
@@ -81,6 +83,9 @@
       var p = rng();
       var kind = p < 0.45 ? "train" : p < 0.75 ? "low" : "high";
       if (kind === "train" && (trains === 2 || (blocked === 3 && trains === 1))) kind = rng() < 0.5 ? "low" : "high";
+      // (a low barrier right after one in the same lane - too close for a second jump: a high bar, a roll cuts the jump)
+      var before = run.rows.length ? run.rows[run.rows.length - 1].lanes[order[k]] : null;
+      if (kind === "low" && before && before.kind === "low" && z - before.z0 < (run.speed * JUMP_TICKS) / TPS + 2) kind = "high";
       if (kind === "train") trains++;
       var length = kind === "train" ? Math.max(6, Math.min(30, 8 + rng() * 22, gap - free)) : DEPTH;
       lanes[order[k]] = { kind: kind, z0: z, z1: z + length };

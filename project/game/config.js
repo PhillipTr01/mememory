@@ -236,7 +236,7 @@ module.exports = {
 
   // The runner (game/runner.js, public/scripts/runner_engine.js): an entry, the score decides the payout
   RUNNER_STAKES: [100, 1000, 10000], // the entries to choose from (0: a free practice run, always)
-  RUNNER_EVEN: 1400, // the score that pays the entry back (1x)
+  RUNNER_EVEN: 750, // the score that pays the entry back (1x)
   RUNNER_MIN: 0.25, // below this share of RUNNER_EVEN: nothing - from it on the share of the entry (up to 1x)
   RUNNER_SLOPE: 0.5, // above RUNNER_EVEN: this much more per RUNNER_EVEN run
   RUNNER_MAX: 3, // the highest multiplier
