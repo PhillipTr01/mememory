@@ -19,7 +19,8 @@ const BETTING = ["preflop", "flop", "turn", "river"];
  * with coins (the same coins as in the jackpot) and get their chips back as
  * coins when they stand up. The server deals, only the own cards are sent.
  * Too few people: bots fill the table (game/poker_bot.js) - they play with the house's chips
- * (no coins, the house's ledger counts what they bought in and took out) and leave as people come.
+ * (no coins, the house's ledger counts what they bought in and took out). A player takes the
+ * seat of a bot: right away between hands, during one after it (the coins are paid now).
  */
 module.exports = function (io, options = {}) {
   // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
@@ -149,18 +150,22 @@ module.exports = function (io, options = {}) {
     else if (seat.stack > 0) coins.add(seat.name, seat.stack, { reason: "poker cash-out" }).catch((error) => console.error("[poker] Could not cash out:", error));
   }
 
-  /* ---------- Bots: a table of POKER_BOT_COUNT + 1 for one or two people, none when nobody plays ---------- */
+  /* ---------- Bots: every free seat for anybody playing (at most POKER_BOT_COUNT), none when nobody plays ---------- */
 
   const isBot = (i) => table.seats[i] != null && table.seats[i].bot === true;
   const people = () => indexes().filter((i) => table.seats[i] && !table.seats[i].bot && !table.seats[i].leaving);
   const botSeats = () => indexes().filter((i) => isBot(i) && !table.seats[i].leaving && !table.seats[i].leaveAfter);
+  // (the people waiting for the seat of a bot - after the hand: {name, buyIn} at that seat)
+  const takers = () => indexes().filter((i) => isBot(i) && table.seats[i].taker);
+  const takerSeat = (name) => takers().find((i) => table.seats[i].taker.name === name);
+  const waiting = (name) => seatOf(name) >= 0 || takerSeat(name) != null;
   // (what a bot sits down with: 100 big blinds of the level now, within the buy-in limits)
   const botBuyIn = () => Math.min(limits.POKER_MAX_BUYIN, Math.max(limits.POKER_MIN_BUYIN, 100 * blinds().big));
 
   function botsWanted() {
     if (!config.POKER_BOTS || casinoLock.locked()) return 0;
-    const count = people().length;
-    return count === 0 ? 0 : Math.max(0, Math.min(config.POKER_BOT_COUNT, config.POKER_BOT_COUNT + 1 - count));
+    const count = people().length + takers().length;
+    return count === 0 ? 0 : Math.max(0, Math.min(config.POKER_BOT_COUNT, pokerBot.NAMES.length, table.seats.length - count));
   }
 
   // The bots the table needs: too many leave (between hands right away, in a hand after it - nobody left: right
@@ -169,13 +174,13 @@ module.exports = function (io, options = {}) {
     const want = botsWanted();
     let have = botSeats();
     // (staying after all: a bot about to leave)
-    for (const i of indexes()) if (have.length < want && isBot(i) && table.seats[i].leaveAfter) {
+    for (const i of indexes()) if (have.length < want && isBot(i) && table.seats[i].leaveAfter && !table.seats[i].taker) {
       table.seats[i].leaveAfter = false;
       have = botSeats();
     }
     for (const i of have.slice(want)) {
       const seat = table.seats[i];
-      if (want === 0 && people().length === 0) standUp(i, true);
+      if (want === 0 && people().length + takers().length === 0) standUp(i, true);
       else if (!seat.inHand || table.phase === "waiting") cashOut(i);
       else seat.leaveAfter = true;
     }
@@ -238,6 +243,34 @@ module.exports = function (io, options = {}) {
     if (act(i, choice.type, choice.amount)) act(i, toCall > 0 ? "call" : "check");
   }
 
+  // Somebody waiting for a bot's seat changed their mind (or left, or the table closes): the coins back
+  function dropTaker(i) {
+    const seat = table.seats[i];
+    if (!seat || !seat.taker) return;
+    const { name, buyIn } = seat.taker;
+    seat.taker = null;
+    seat.leaveAfter = false;
+    coins.add(name, buyIn, { reason: "poker refund" }).catch((error) => console.error("[poker] Could not refund:", error));
+  }
+
+  // A person sits down at a seat (a free one - or the one a bot just left)
+  function seatPerson(i, name, stack) {
+    table.seats[i] = {
+      name,
+      stack,
+      cards: [],
+      bet: 0,
+      total: 0,
+      folded: false,
+      allIn: false,
+      acted: false,
+      inHand: false, // plays from the next hand on
+      lastAction: null,
+      awaySince: connected(name) ? null : Date.now(),
+      awayTimer: null,
+    };
+  }
+
   /* ---------- State ---------- */
 
   function serialize(viewer) {
@@ -259,6 +292,8 @@ module.exports = function (io, options = {}) {
             lastAction: seat.lastAction,
             away: seat.awaySince != null,
             leaving: seat.leaving === true,
+            // (a bot's seat somebody takes after the hand)
+            taker: seat.taker ? seat.taker.name : null,
             // Only the own cards - the others' only after a showdown (or when they show them)
             cards: seat.name === viewer || seat.shown ? seat.cards : seat.cards.map(() => null),
             shown: seat.shown === true,
@@ -691,7 +726,12 @@ module.exports = function (io, options = {}) {
         seat.stack = botBuyIn();
       }
       // Out of chips, standing up or gone (left the page during the hand): off the table
-      if (seat.leaving || seat.leaveAfter || seat.stack === 0 || (seat.awaySince != null && !connected(seat.name))) cashOut(i);
+      if (seat.leaving || seat.leaveAfter || seat.stack === 0 || (seat.awaySince != null && !connected(seat.name))) {
+        const taker = seat.taker;
+        cashOut(i);
+        // (the bot's seat goes to who waited for it)
+        if (taker) seatPerson(i, taker.name, taker.buyIn);
+      }
     });
     syncBots();
     table.board = [];
@@ -710,7 +750,11 @@ module.exports = function (io, options = {}) {
     clearTimeout(table.botTimer);
     table.botTimer = null;
     table.startAt = null;
-    table.seats.forEach((seat, i) => seat && cashOut(i));
+    table.seats.forEach((seat, i) => {
+      if (!seat) return;
+      dropTaker(i);
+      cashOut(i);
+    });
     emitState();
   }
   casinoLock.changes.on("locked", () => {
@@ -782,7 +826,10 @@ module.exports = function (io, options = {}) {
           error(`Buy in with ${limits.POKER_MIN_BUYIN} - ${limits.POKER_MAX_BUYIN} coins.`);
           return;
         }
-        if (table.seats[seat] != null || seatOf(username) >= 0 || busy.has(username)) return;
+        // (a seat of a bot: taken from it - unless somebody else takes it already)
+        const free = (i) => table.seats[i] == null || (isBot(i) && !table.seats[i].taker);
+        if (table.seats[seat] && table.seats[seat].taker) return error("Somebody else takes this seat after the hand.");
+        if (!free(seat) || waiting(username) || busy.has(username)) return;
         busy.add(username);
         try {
           if (!(await coins.spend(username, buyIn, { reason: "poker buy-in" }))) {
@@ -790,25 +837,21 @@ module.exports = function (io, options = {}) {
             return;
           }
           // Somebody was faster
-          if (table.seats[seat] != null || seatOf(username) >= 0) {
+          if (!free(seat) || waiting(username)) {
             await coins.add(username, buyIn, { reason: "poker refund" });
             error("This seat was just taken.");
             return;
           }
-          table.seats[seat] = {
-            name: username,
-            stack: buyIn,
-            cards: [],
-            bet: 0,
-            total: 0,
-            folded: false,
-            allIn: false,
-            acted: false,
-            inHand: false, // plays from the next hand on
-            lastAction: null,
-            awaySince: null,
-            awayTimer: null,
-          };
+          const bot = table.seats[seat];
+          if (bot && bot.inHand && table.phase !== "waiting") {
+            // A bot in a hand: it plays it to the end, then the seat is theirs
+            bot.taker = { name: username, buyIn };
+            bot.leaveAfter = true;
+            emitState();
+            return;
+          }
+          if (bot) cashOut(seat);
+          seatPerson(seat, username, buyIn);
           syncBots();
           scheduleStart();
           emitState();
@@ -869,6 +912,13 @@ module.exports = function (io, options = {}) {
       safe("stand", () => {
         const i = seatOf(username);
         if (i >= 0) standUp(i);
+        // (waiting for a bot's seat: not anymore)
+        const waitingAt = takerSeat(username);
+        if (waitingAt != null) {
+          dropTaker(waitingAt);
+          syncBots();
+          emitState();
+        }
       }),
     );
 
@@ -893,6 +943,11 @@ module.exports = function (io, options = {}) {
     socket.on(
       "disconnect",
       safe("disconnect", () => {
+        const waitingAt = takerSeat(username);
+        if (waitingAt != null && !connected(username)) {
+          dropTaker(waitingAt);
+          syncBots();
+        }
         const i = seatOf(username);
         if (i >= 0 && !connected(username)) {
           const seat = table.seats[i];
@@ -932,6 +987,7 @@ module.exports = function (io, options = {}) {
       clearTimeout(seat.awayTimer);
       const chips = seat.stack + (table.phase === "showdown" ? 0 : seat.total);
       table.seats[i] = null;
+      if (seat.taker) payments.push(coins.add(seat.taker.name, seat.taker.buyIn, { reason: "poker refund" }).catch((e) => console.error("[poker] Refund failed:", e)));
       if (seat.bot) table.botLedger.cashed += chips;
       else if (chips > 0) payments.push(coins.add(seat.name, chips, { reason: "poker refund" }).catch((e) => console.error("[poker] Refund failed:", e)));
     });
@@ -941,7 +997,10 @@ module.exports = function (io, options = {}) {
   /* ---------- Restart of the server ---------- */
 
   // Coins in play: a seat with chips (or chips in the pot)
-  inPlay.register("poker", (name) => table.seats.some((seat) => seat && seat.name === name && (seat.stack > 0 || (table.phase !== "waiting" && table.phase !== "showdown" && !seat.folded && seat.total > 0))));
+  // (waiting for a bot's seat: the buy-in is paid already)
+  inPlay.register("poker", (name) =>
+    table.seats.some((seat) => seat && ((seat.taker && seat.taker.name === name) || (seat.name === name && (seat.stack > 0 || (table.phase !== "waiting" && table.phase !== "showdown" && !seat.folded && seat.total > 0))))),
+  );
 
   liveGames.register("poker", () => ({ phase: table.phase, hand: table.hand, seated: table.seats.filter(Boolean).length, seats: table.seats.length }));
 

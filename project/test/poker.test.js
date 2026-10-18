@@ -420,17 +420,45 @@ test("poker bots: not face up - weak hands bluff, strong ones sometimes check, t
   assert.notDeepStrictEqual(bot.styleOf(bot.NAMES[1]), bot.styleOf(bot.NAMES[2]));
 });
 
-test("poker bots: two fill the table for one player, one leaves for a second, all leave with the people - with the house's chips", async () => {
+test("poker bots: they fill every free seat, a player takes a bot's seat - during a hand after it, coins back when not - all leave with the people", async () => {
   config.POKER_BOTS = true;
-  h.setCoins("alice", 1000);
-  h.setCoins("bob", 1000);
+  for (const name of ["alice", "bob", "carol"]) h.setCoins(name, 1000);
   const alice = client("alice");
   const bob = client("bob");
-  await Promise.all([waitFor(alice, "coins", (d) => d.coins === 1000), waitFor(bob, "coins", (d) => d.coins === 1000)]);
+  const carol = client("carol");
+  await Promise.all([alice, bob, carol].map((socket) => waitFor(socket, "coins", (d) => d.coins === 1000)));
   const ledger = () => server.poker.table.botLedger;
   const before = { ...ledger() };
   const bots = (state) => state.seats.filter((seat) => seat && seat.bot);
-  // (the people just call along)
+  const botAt = (state, skip = -1) => state.seats.findIndex((seat, i) => seat && seat.bot && !seat.taker && i !== skip);
+
+  alice.emit("sit", { seat: 0, buyIn: 900 });
+  // Every other seat: a bot - alice's turn waits (she doesn't act yet)
+  const dealt = await waitFor(alice, "pokerState", (s) => bots(s).length === config.POKER_SEATS - 1 && s.phase === "preflop", 4000);
+  bots(dealt).forEach((seat) => assert.deepStrictEqual(seat.cards, [null, null]));
+  const turn = await waitFor(alice, "pokerState", (s) => s.current === 0, 4000);
+
+  // During the hand: bob takes a bot's seat - paid now, the bot plays the hand to its end
+  const bobSeat = botAt(turn);
+  bob.emit("sit", { seat: bobSeat, buyIn: 300 });
+  let s = await waitFor(alice, "pokerState", (x) => x.seats[bobSeat].taker === "bob");
+  assert.strictEqual(s.seats[bobSeat].bot, true);
+  assert.strictEqual(h.coinsOf("bob"), 700);
+  // (nobody else gets that seat meanwhile)
+  const taken = h.once(carol, "pokerError");
+  carol.emit("sit", { seat: bobSeat, buyIn: 300 });
+  assert.match(await taken, /Somebody else takes this seat/);
+  // Carol waits for another one - and changes her mind: the coins come back
+  const carolSeat = botAt(s, bobSeat);
+  carol.emit("sit", { seat: carolSeat, buyIn: 200 });
+  await waitFor(alice, "pokerState", (x) => x.seats[carolSeat].taker === "carol");
+  assert.strictEqual(h.coinsOf("carol"), 800);
+  carol.emit("stand");
+  await waitFor(alice, "pokerState", (x) => x.seats[carolSeat].taker == null && x.seats[carolSeat].bot);
+  await h.wait(30);
+  assert.strictEqual(h.coinsOf("carol"), 1000);
+
+  // The hand goes on (alice and bob just call): after it bob sits where the bot was
   const play = (socket, name) =>
     socket.on("pokerState", (state) => {
       const me = seatOf(state, name);
@@ -438,31 +466,23 @@ test("poker bots: two fill the table for one player, one leaves for a second, al
     });
   play(alice, "alice");
   play(bob, "bob");
-
-  alice.emit("sit", { seat: 0, buyIn: 900 });
-  const dealt = await waitFor(alice, "pokerState", (s) => bots(s).length === 2 && s.phase === "preflop" && s.seats[0].inHand, 4000);
-  // A bot's cards stay hidden, it is marked as one
-  bots(dealt).forEach((seat) => assert.deepStrictEqual(seat.cards, [null, null]));
-  assert.ok(bots(dealt).every((seat) => seat.name.startsWith("Bot ")));
-  // The bots play: a hand ends
-  const ended = await waitFor(alice, "pokerState", (s) => s.phase === "showdown", 8000);
-
-  // A second player: one bot leaves after the hand
-  bob.emit("sit", { seat: ended.seats.findIndex((seat) => seat == null), buyIn: 300 });
-  await waitFor(alice, "pokerState", (s) => seatOf(s, "bob") >= 0 && bots(s).length === 1, 15000);
+  alice.emit("action", { type: "call" });
+  s = await waitFor(alice, "pokerState", (x) => x.seats[bobSeat] && x.seats[bobSeat].name === "bob", 15000);
+  // (dealt in right away maybe - a blind in front of him)
+  assert.strictEqual(s.seats[bobSeat].stack + s.seats[bobSeat].bet, 300);
+  assert.strictEqual(bots(s).length, config.POKER_SEATS - 2);
 
   // Everybody stands up: the bots go too
   alice.emit("stand");
   bob.emit("stand");
-  await waitFor(alice, "pokerState", (s) => s.seats.every((seat) => seat == null), 15000);
+  await waitFor(alice, "pokerState", (x) => x.seats.every((seat) => seat == null), 15000);
   await h.wait(30);
   // No coins for a bot: what the people won or lost is what the house's bots lost or won (no rake here)
   const house = ledger().cashed - before.cashed - (ledger().bought - before.bought);
-  assert.ok(ledger().bought - before.bought >= 2 * 1000, "two bots of 100 big blinds");
   assert.ok(ledger().hands > before.hands);
   assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob") + house, 2000);
-  alice.removeAllListeners("pokerState");
-  bob.removeAllListeners("pokerState");
+  assert.strictEqual(h.coinsOf("carol"), 1000);
+  for (const socket of [alice, bob]) socket.removeAllListeners("pokerState");
   config.POKER_BOTS = false;
 });
 

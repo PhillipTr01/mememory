@@ -197,13 +197,16 @@ function renderSeats() {
       spot.style.top = place.y + "%";
       spot.dataset.seat = i;
 
+      // (waiting for the seat of a bot: no other seat to take meanwhile)
+      var waitingAt = state.seats.findIndex((s) => s && s.taker == myName);
+      var canSit = me < 0 && waitingAt < 0;
       if (seat == null) {
         spot.classList.add("empty");
         // A chair: free to sit down (or just empty when I'm already at the table)
         var sit = el("button", "pk-sit");
         sit.type = "button";
-        sit.append(el("span", "pk-sit-chair", "🪑"), el("span", "pk-sit-text", me < 0 ? "Sit down" : "Empty"));
-        if (me < 0) {
+        sit.append(el("span", "pk-sit-chair", "🪑"), el("span", "pk-sit-text", canSit ? "Sit down" : "Empty"));
+        if (canSit) {
           sit.title = "Sit down with your coins";
           sit.addEventListener("click", () => buyIn(i));
         } else {
@@ -237,7 +240,7 @@ function renderSeats() {
       // (a bot: the robot says it - "Bot Ace" shows as "🤖 Ace")
       var name = el("span", "pk-name", seat.bot ? "🤖 " + seat.name.replace(/^Bot /, "") : seat.name);
       if (seat.away) name.title = "Away";
-      if (seat.bot) name.title = "A bot that fills the table. It leaves when more players sit down.";
+      if (seat.bot) name.title = "A bot that fills the table. Click it to take its seat.";
       var stack = el("span", "pk-stack");
       stack.appendChild(chipsEl(seat.stack));
       info.append(name, stack);
@@ -254,6 +257,26 @@ function renderSeats() {
 
       spot.append(cards, avatarWrap, info);
       if (tag) spot.appendChild(tag);
+      // A bot's seat: free to take (during a hand: after it) - or somebody takes it already
+      if (seat.bot && seat.taker) {
+        var next = el("span", "pk-tag pk-next", seat.taker == myName ? "Yours next" : seat.taker + " next");
+        if (seat.taker == myName) {
+          var cancel = el("button", "pk-next-cancel", "✕");
+          cancel.type = "button";
+          cancel.title = "Don't take the seat. Your coins come back.";
+          cancel.addEventListener("click", () => socket.emit("stand"));
+          next.appendChild(cancel);
+        }
+        next.title = seat.taker == myName ? "You sit here once this hand is over." : seat.taker + " sits here once this hand is over.";
+        spot.appendChild(next);
+      } else if (seat.bot && canSit) {
+        var take = el("button", "pk-take", "Take seat");
+        take.type = "button";
+        take.title = state.phase == "waiting" ? "Sit down here instead of the bot." : "Sit down here once this hand is over.";
+        take.addEventListener("click", () => buyIn(i, true));
+        spot.classList.add("takeable");
+        spot.appendChild(take);
+      }
       // What the player has right now (own cards, or cards that are shown) - not again at the end
       if (seat.handName && state.phase != "showdown") {
         var hand = el("span", "pk-handname", seat.handName);
@@ -629,10 +652,10 @@ function chipsDialog(options) {
   slider.focus();
 }
 
-function buyIn(seat) {
+function buyIn(seat, fromBot) {
   chipsDialog({
     title: "Take a seat",
-    text: "Chips turn back into coins when you stand up.",
+    text: fromBot && state.phase != "waiting" ? "The bot finishes this hand, then the seat is yours. Chips turn back into coins when you stand up." : "Chips turn back into coins when you stand up.",
     min: state.rules.minBuyIn,
     // (never more than the max bet by balance)
     max: Math.max(state.rules.minBuyIn, Math.min(state.rules.maxBuyIn, capLeft(0))),

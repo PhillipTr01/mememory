@@ -417,6 +417,42 @@
   white-space: nowrap;
 }
 
+/* A bot's seat: take it (during a hand: after it) */
+.pk-take {
+  margin-top: 4px;
+  padding: 0.1rem 0.65rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mm-accent);
+  color: var(--mm-on-accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pk-take:hover {
+  filter: brightness(1.1);
+}
+
+.pk-tag.pk-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(var(--mm-accent-rgb, 212, 168, 67), 0.25);
+  color: var(--mm-accent);
+}
+
+.pk-next-cancel {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .pk-tag.allin {
   background: var(--mm-danger);
   color: #fff;
