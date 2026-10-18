@@ -20,7 +20,8 @@ try {
   // no storage: play
 }
 var picking = null; // in a room: the choice waiting for a card of the deck ("smith", "purge", "remove")
-var filters = { type: "all", cost: "all", rarity: "all", owned: false, pool: "all" }; // the deck builder's
+var filters = { type: "all", cost: "all", rarity: "all", owned: false }; // the deck builder's
+var collTab = null; // the collection's tab: a class or "neutral" (null: the hero's own class)
 var search = "";
 var lastRoom = 0;
 var FLOOR_KEY = "rpgFloor";
@@ -1762,7 +1763,6 @@ document.addEventListener("dragend", () => {
 
 // [key, label of the row, the options]
 var FILTERS = [
-  ["pool", "Cards", [["all", "All cards"], ["class", "Class"], ["neutral", "Neutral"], ["both", "Class + neutral"]]],
   ["type", "Type", [["all", "All"], ["attack", "Attacks"], ["skill", "Skills"], ["aura", "Auras"]]],
   ["cost", "Cost", [["all", "Any"], ["0", "0"], ["1", "1"], ["2", "2"], ["3", "3+"]]],
   ["rarity", "Rarity", [["all", "Any"], ["basic", "Basic"], ["common", "Common"], ["rare", "Rare"], ["epic", "Epic"], ["legendary", "Legendary"], ["mythic", "Mythic"]]],
@@ -1866,7 +1866,7 @@ function renderBuilder() {
     var group = el("div", "rpg-seg-filter " + key);
     group.title = name;
     options.forEach(([value, label]) => {
-      var chip = button(value == "all" ? (key == "type" || key == "pool" ? label : "Any " + name.toLowerCase()) : label, "filter", { id: key + ":" + value, className: "rpg-seg-opt" + (filters[key] == value ? " active" : "") });
+      var chip = button(value == "all" ? (key == "type" ? label : "Any " + name.toLowerCase()) : label, "filter", { id: key + ":" + value, className: "rpg-seg-opt" + (filters[key] == value ? " active" : "") });
       if (key == "cost" && value != "all") {
         chip.innerText = "";
         var drop = el("span", "rpg-row-cost");
@@ -1894,18 +1894,38 @@ function renderBuilder() {
 
   // The collection: every card of the class - owned (spare copies: into the deck) or locked
   var text = search.trim().toLowerCase();
-  // (every card of the set - or the class's, the neutral ones (the basics too), both: what this deck can take)
   var mine = {};
   hero.pool.forEach((id) => (mine[id] = true));
   var ownedAll = hero.owned || {};
+  // The tabs, like a card book: the own class first, the neutral cards, then the other classes (to look at, craft
+  // and trade) - every tab its cards owned of all
+  var tab = collTab && (collTab == "neutral" || rules.classes[collTab]) ? collTab : hero.cls;
+  document.getElementById("rpgBuilder").dataset.tab = tab;
+  var tabIds = [hero.cls, "neutral"].concat(Object.keys(rules.classes).filter((cls) => cls != hero.cls));
+  var inTab = (id, which) => {
+    var card = cardOf(id);
+    if (card.rarity == "basic" && !mine[id]) return false;
+    return which == "neutral" ? !card.cls : card.cls == which;
+  };
+  morphChildren(
+    document.getElementById("rpgClassTabs"),
+    tabIds.map((which) => {
+      var info = which == "neutral" ? { icon: "⚪", name: "Neutral" } : rules.classes[which];
+      var ids = Object.keys(rules.cards).filter((id) => inTab(id, which));
+      var have = ids.filter((id) => (mine[id] ? hero.collection[id] : ownedAll[id])).length;
+      var other = which != "neutral" && which != hero.cls;
+      var b = button("", "collTab", { id: which, className: "rpg-class-tab cls-" + which + (which == tab ? " active" : "") + (other ? " other" : "") });
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", which == tab ? "true" : "false");
+      b.append(el("span", "rpg-class-tab-icon", info.icon), el("span", "rpg-class-tab-name", info.name), el("span", "rpg-class-tab-count", have + " / " + ids.length));
+      b.title = other ? "Cards of another class. You can craft and trade them, but only a " + info.name + " can play them." : which == "neutral" ? "Cards every class can play." : "Your class's own cards.";
+      return b;
+    }),
+  );
   var shown = Object.keys(rules.cards)
     .filter((id) => {
       var card = cardOf(id);
-      if (card.rarity == "basic" && !mine[id]) return false;
-      var own = card.cls && card.cls == hero.cls;
-      if (filters.pool == "class" && !own) return false;
-      if (filters.pool == "neutral" && card.cls) return false;
-      if (filters.pool == "both" && !mine[id]) return false;
+      if (!inTab(id, tab)) return false;
       if (filters.type != "all" && card.type != filters.type) return false;
       if (filters.cost != "all" && Math.min(3, card.cost) != Number(filters.cost)) return false;
       if (filters.rarity != "all" && card.rarity != filters.rarity) return false;
@@ -3407,7 +3427,7 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     render();
   } else if (act == "cartBuy") socket.emit("buyPacks", { cart: cart, dust: payDust });
   else if (act == "filtersReset") {
-    filters = { type: "all", cost: "all", rarity: "all", owned: false, pool: "all" };
+    filters = { type: "all", cost: "all", rarity: "all", owned: false };
     search = "";
     document.getElementById("rpgSearch").value = "";
     render();
@@ -3417,7 +3437,10 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   }
   else if (act == "openPack") startOpening(id);
   else if (act == "openAll") startOpeningAll();
-  else if (act == "filter") {
+  else if (act == "collTab") {
+    collTab = id == hero.cls ? null : id;
+    render();
+  } else if (act == "filter") {
     var [key, value] = id.split(":");
     if (key == "owned") filters.owned = !filters.owned;
     else filters[key] = value;

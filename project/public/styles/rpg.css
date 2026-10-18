@@ -8920,3 +8920,98 @@ button.rpg-trade-row:active {
     zoom: 1.25;
   }
 }
+
+/* The collection's class tabs: a card book - one tab a class (its color), the neutral cards, the other classes */
+.rpg-builder {
+  --tab: 156, 163, 175;
+}
+
+.rpg-builder[data-tab="warrior"] { --tab: 220, 80, 70; }
+.rpg-builder[data-tab="paladin"] { --tab: 232, 182, 64; }
+.rpg-builder[data-tab="cleric"] { --tab: 236, 226, 196; }
+.rpg-builder[data-tab="rogue"] { --tab: 150, 120, 220; }
+.rpg-builder[data-tab="mage"] { --tab: 80, 150, 245; }
+
+.rpg-class-tabs {
+  display: flex;
+  gap: 0.3rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 2px solid rgba(var(--tab), 0.55);
+  padding: 0 0.2rem;
+}
+
+.rpg-class-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.rpg-btn.rpg-class-tab {
+  --c: 156, 163, 175;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  min-width: 5.4rem;
+  padding: 0.45rem 0.6rem 0.4rem;
+  border-radius: 12px 12px 0 0;
+  border: 1px solid rgba(var(--c), 0.25);
+  border-bottom: 0;
+  background: linear-gradient(180deg, rgba(var(--c), 0.12), rgba(0, 0, 0, 0.25));
+  color: var(--mm-muted);
+  transform: translateY(2px);
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+
+.rpg-btn.rpg-class-tab.cls-warrior { --c: 220, 80, 70; }
+.rpg-btn.rpg-class-tab.cls-paladin { --c: 232, 182, 64; }
+.rpg-btn.rpg-class-tab.cls-cleric { --c: 236, 226, 196; }
+.rpg-btn.rpg-class-tab.cls-rogue { --c: 150, 120, 220; }
+.rpg-btn.rpg-class-tab.cls-mage { --c: 80, 150, 245; }
+
+.rpg-btn.rpg-class-tab:hover {
+  color: var(--mm-text);
+  background: linear-gradient(180deg, rgba(var(--c), 0.22), rgba(0, 0, 0, 0.2));
+}
+
+.rpg-btn.rpg-class-tab.active {
+  color: var(--mm-text);
+  border-color: rgba(var(--c), 0.7);
+  background: linear-gradient(180deg, rgba(var(--c), 0.35), rgba(var(--c), 0.08));
+  transform: translateY(0);
+  box-shadow: 0 -4px 14px rgba(var(--c), 0.2);
+}
+
+/* (another class's tab: quieter - its cards are to look at, craft and trade) */
+.rpg-btn.rpg-class-tab.other:not(.active) {
+  opacity: 0.7;
+}
+
+.rpg-class-tab-icon {
+  font-size: 1.25rem;
+  line-height: 1.1;
+}
+
+.rpg-class-tab-name {
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.rpg-class-tab-count {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--mm-muted);
+}
+
+/* (the grid under the tabs: the open tab's color at its edge) */
+.rpg-builder .rpg-builder-grid {
+  box-shadow: inset 0 3px 0 rgba(var(--tab), 0.35);
+}
+
+@media (max-width: 575px) {
+  .rpg-btn.rpg-class-tab {
+    flex: none;
+    min-width: 4.6rem;
+    padding: 0.4rem 0.45rem 0.35rem;
+  }
+}
