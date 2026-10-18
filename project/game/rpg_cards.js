@@ -398,7 +398,7 @@ const CLASS = {
     cheapshot: ["Cheap Shot", "🥾", 1, "epic", [{ hit: 0.7 }, { status: "stun" }]],
     lacerate: ["Lacerate", "🩸", 1, "epic", [{ hit: 0.9 }, { extend: 2 }]],
     shadowdeath: ["Death From Shadows", "🌑", 3, "legendary", [{ hit: 2.4, bonusIf: "poison|stun", bonus: 3.6 }]],
-    venomstorm: ["Venom Storm", "☠️", 2, "legendary", [{ status: "poison", turns: 4, to: "all" }, { amplify: true }], true],
+    venomstorm: ["Venom Storm", "☠️", 2, "legendary", [{ status: "poison", turns: 4, to: "all" }, { amplify: true, to: "all" }], true],
     // (4 mana)
     massacre: ["Massacre", "🩸", 4, "legendary", [{ hit: 0.9, to: "all", times: 2 }, { status: "poison", turns: 4, to: "all" }]],
     kingslayer: ["Kingslayer", "👑", 4, "epic", [{ hit: 3.2, bonusIf: "poison|stun", bonus: 4.6 }]],
@@ -620,7 +620,7 @@ function phrase(fx, n) {
   if (fx.revive != null) return (fx.to == "all" ? "every fallen ally stands up" : "a fallen ally stands up") + " with " + pct(fx.revive) + " HP";
   if (fx.cleanse) return (fx.to == "ally" ? "you or an ally lose" : "lose") + " poison and burns";
   if (fx.extend != null) return "its poison lasts " + fx.extend + " turns longer";
-  if (fx.amplify) return "the poison on every foe: twice as strong, 3 turns longer";
+  if (fx.amplify) return "double the poison on every foe and make it last 3 turns longer";
   return "";
 }
 

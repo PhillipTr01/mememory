@@ -1519,6 +1519,19 @@ test("rpg: the second set - expose, thorns, drain, shivs, shatter, chain, block 
   assert.match(rpg.CARDS.conjuresparks.text, /Sparks to your hand/);
 });
 
+test("rpg: Venom Storm poisons every foe, then doubles all of it and makes it last 3 turns longer", () => {
+  const run = rpg.newRun(1, [{ name: "a", hero: rpg.newHero("rogue") }], seeded(3));
+  rpg.enterRoom(run, 0, seeded(3));
+  const dummy = (id) => ({ id, name: "Dummy", icon: "🎯", hp: 5000, maxHp: 5000, atk: 1, dodge: 0, moves: ["attack"], rank: "normal", effects: {}, intent: { move: "attack", target: "a" } });
+  run.monsters = [dummy("m1"), dummy("m2")];
+  const me = run.heroes[0];
+  me.energy = 5;
+  me.hand = [{ uid: "v", id: "venomstorm" }];
+  assert.strictEqual(rpg.play(run, "a", { uid: "v" }, () => 0.5), null);
+  for (const m of run.monsters) assert.strictEqual(m.effects.poison.turns, 7);
+  assert.match(rpg.CARDS.venomstorm.text, /double the poison on every foe and make it last 3 turns longer/);
+});
+
 test("rpg: every card's bonus can happen - its class has a common or rare card for the state it needs", () => {
   for (const cls of rpg.CLASS_IDS) {
     const pool = rpg.poolOf(cls);
