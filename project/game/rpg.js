@@ -2033,7 +2033,12 @@ const ENCOUNTERS = {
     options: [{ id: "roll", label: "Roll the dice", text: "Roll a 4 or higher to win a relic, otherwise lose 15% of your HP." }, LEAVE],
   },
 };
-const DISARM_BASE = 30; // + 2 x luck %
+// Disarming a trap: half the time with the luck a hero has on that floor - more luck, more often; the deeper, the harder
+const DISARM_BASE = 50;
+const DISARM_PER_LUCK = 1.5; // % per point of luck above (or below) the floor's
+const DISARM_RANGE = [10, 85];
+// (the luck a hero has on a floor: about 7 on the first, 40 on floor 12, 70 from floor 21 on)
+const floorLuck = (floor) => Math.min(70, 5 + 3.3 * (floor - 1));
 const MERCHANT_CARDS = 5;
 const MERCHANT_RELICS = 2;
 const DECK_LEAST = 5; // a run's deck: never fewer cards (the hermit, the merchant take some)
@@ -2051,8 +2056,9 @@ function optionsOf(event) {
   return ROOM_OPTIONS[event.kind] || [];
 }
 
-function disarmChance(hero) {
-  return Math.min(90, DISARM_BASE + 2 * hero.luck);
+function disarmChance(hero, floor = 1) {
+  const chance = DISARM_BASE + DISARM_PER_LUCK * (hero.luck - floorLuck(floor));
+  return Math.round(Math.min(DISARM_RANGE[1], Math.max(DISARM_RANGE[0], chance)));
 }
 
 // Into a room of the map (its index of run.doors): a fight starts - in the other rooms every hero chooses
@@ -2401,7 +2407,7 @@ function applyChoice(run, hero, option, input, rng) {
       break;
     }
     case "disarm":
-      if (rng() * 100 < disarmChance(hero)) {
+      if (rng() * 100 < disarmChance(hero, run.floor)) {
         const item = gear();
         note(`${name} disarms the trap 🍀: ${item.icon} ${item.name}.`);
       } else note(`${name} sets it off: ${lose(0.25, ABILITIES.paladin.trap)} damage.`);
@@ -3384,7 +3390,7 @@ function runView(run) {
       shared: run.event.shared || [],
       choices: run.event.choices,
       offers: run.event.offers,
-      disarm: run.event.kind == "trap" ? Object.fromEntries(run.heroes.map((h) => [h.name, disarmChance(h)])) : null,
+      disarm: run.event.kind == "trap" ? Object.fromEntries(run.heroes.map((h) => [h.name, disarmChance(h, run.floor)])) : null,
       cursed: !!run.event.cursed,
       // (a party's votes in the room: name -> the option; the one that won)
       votes: Object.fromEntries(Object.entries(run.event.votes || {}).map(([n, v]) => [n, v.option])),
@@ -3562,7 +3568,7 @@ function simBetween(run, rng = Math.random) {
     const low = me.hp < me.maxHp * 0.6;
     const want = {
       chest: ["open"],
-      trap: [disarmChance(me) >= 50 ? "disarm" : "sneak"],
+      trap: [disarmChance(me, run.floor) >= 50 ? "disarm" : "sneak"],
       rest: low ? ["rest", "smith"] : ["smith", "rest"],
       shrine: me.hp > me.maxHp * 0.8 ? ["pray", "leave"] : ["leave"],
       event: ["drink", "nap", "bottle", "read", "temper", "take", "roll", "leave", "purge"],

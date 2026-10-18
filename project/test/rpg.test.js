@@ -1176,11 +1176,11 @@ test("rpg: balance - every class on the curve of its floor clears early, mid and
     if (floor <= 3) char.deck.unshift(...rpg.starterDeck(cls).slice(0, 8));
     return hero;
   }
-  // (48 runs each: a few lucky or unlucky ones don't tip it)
+  // (96 runs each: a few lucky or unlucky ones don't tip it)
   const clear = (cls, floor, curve) => {
     const rng = seeded32(floor * 97 + cls.length);
     let won = 0;
-    const runs = 48;
+    const runs = 96;
     for (let i = 0; i < runs; i++) won += rpg.simulate(heroFor(cls, floor, curve, rng), floor, 1, rng).cleared;
     return won / runs;
   };
@@ -2161,4 +2161,13 @@ test("rpg: a spiked foe's damage back is softened by armor and taken by the bloc
   const before = hero.hp;
   rpg.play(naked, "a", { uid: "t0", target: "m1" });
   assert.strictEqual(before - hero.hp, 1);
+});
+
+test("rpg: disarming a trap - more luck helps, a deeper floor makes it harder, never sure and never hopeless", () => {
+  const lucky = { luck: 40 };
+  assert.ok(rpg.disarmChance(lucky, 3) > rpg.disarmChance(lucky, 12));
+  assert.ok(rpg.disarmChance(lucky, 12) > rpg.disarmChance(lucky, 25));
+  assert.ok(rpg.disarmChance({ luck: 60 }, 12) > rpg.disarmChance(lucky, 12));
+  assert.strictEqual(rpg.disarmChance({ luck: 200 }, 1), 85);
+  assert.strictEqual(rpg.disarmChance({ luck: 0 }, 30), 10);
 });
