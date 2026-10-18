@@ -435,8 +435,11 @@ const MONSTER_DEPTH = 0.035; // a row of the map deeper into a floor: this much 
 const MONSTER_SPREAD = 0.25; // every monster up to this much stronger or weaker
 // A bigger party: every monster has this much more HP and attack per hero after the first - and there are more of
 // them (a party is no easier than going alone)
-const PARTY_HP = 1.5;
-const PARTY_ATK = 0.2;
+// (early floors gently - the first decks have little to share - from PARTY_FULL on in full)
+const PARTY_HP = [1.5, 2];
+const PARTY_ATK = [0.2, 0.55];
+const PARTY_FULL = 10;
+const partyScale = ([from, to], floor) => from + (to - from) * Math.min(1, Math.max(0, floor - 1) / (PARTY_FULL - 1));
 // ... and pays more: the loot (each) and the first clear's bonus this much more per hero after the first
 const PARTY_LOOT = 0.1;
 function partyBonus(size) {
@@ -1699,8 +1702,8 @@ function monster(floor, size, kind, rank, depth = 0, rng = Math.random) {
   const deeper = 1 + MONSTER_DEPTH * depth;
   // (a boss: its own power - every one as hard to beat, compared with its floors)
   const power = kind.power || 1;
-  const hp = power * MONSTER_HP * (config.RPG_MONSTER_HP / 100) * floorCurve(MONSTER_HP_GROWTH, floor) * deeper * between(rng, 1 - MONSTER_SPREAD, 1 + MONSTER_SPREAD) * kind.hp * (1 + PARTY_HP * (size - 1)) * rank.hp;
-  const atk = power * MONSTER_ATK * (config.RPG_MONSTER_ATK / 100) * floorCurve(MONSTER_ATK_GROWTH, floor) * deeper * between(rng, 1 - MONSTER_SPREAD, 1 + MONSTER_SPREAD) * kind.atk * rank.atk * (1 + PARTY_ATK * (size - 1));
+  const hp = power * MONSTER_HP * (config.RPG_MONSTER_HP / 100) * floorCurve(MONSTER_HP_GROWTH, floor) * deeper * between(rng, 1 - MONSTER_SPREAD, 1 + MONSTER_SPREAD) * kind.hp * (1 + partyScale(PARTY_HP, floor) * (size - 1)) * rank.hp;
+  const atk = power * MONSTER_ATK * (config.RPG_MONSTER_ATK / 100) * floorCurve(MONSTER_ATK_GROWTH, floor) * deeper * between(rng, 1 - MONSTER_SPREAD, 1 + MONSTER_SPREAD) * kind.atk * rank.atk * (1 + partyScale(PARTY_ATK, floor) * (size - 1));
   const max = Math.max(1, Math.round(hp));
   // (an elite also smashes)
   const moves = rank.id != "normal" && !kind.moves.includes("smash") ? [...kind.moves, "smash"] : kind.moves;
@@ -2275,7 +2278,9 @@ function choose(run, name, input = {}, rng = Math.random) {
   for (const vote of Object.values(event.votes)) counts[vote.option] = (counts[vote.option] || 0) + 1;
   const most = Math.max(...Object.values(counts));
   const top = Object.keys(counts).filter((id) => counts[id] == most);
-  const winner = optionsOf(event).find((o) => o.id == (top.length == 1 ? top[0] : pick(rng, top)));
+  // (a tie: one random pick - drawn once, not once for every option compared)
+  const won = top.length == 1 ? top[0] : pick(rng, top);
+  const winner = optionsOf(event).find((o) => o.id == won);
   event.chosen = winner.id;
   for (const one of voters.map((n) => run.heroes.find((h) => h.name == n))) {
     if (event.choices[one.name]) continue;

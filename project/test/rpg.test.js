@@ -1519,6 +1519,20 @@ test("rpg: the second set - expose, thorns, drain, shivs, shatter, chain, block 
   assert.match(rpg.CARDS.conjuresparks.text, /Sparks to your hand/);
 });
 
+test("rpg: a tied vote in a room picks one option - drawn once, never none", () => {
+  const run = rpg.newRun(2, [{ name: "a", hero: rpg.newHero("warrior") }, { name: "b", hero: rpg.newHero("mage") }]);
+  run.phase = "between";
+  run.rooms = [];
+  run.doors = [{ kind: "rest", sensed: false, open: false, visited: false }];
+  rpg.enterRoom(run, 0);
+  // (a draw for every option compared picked "smith" for "rest" and "rest" for "smith": no option at all)
+  const flip = [0.99, 0, 0.99, 0];
+  const rng = () => flip.shift() ?? 0.5;
+  assert.strictEqual(rpg.choose(run, "a", { option: "rest" }, rng), null);
+  assert.strictEqual(rpg.choose(run, "b", { option: "smith", card: 0 }, rng), null);
+  assert.ok(["rest", "smith"].includes(run.event.chosen));
+});
+
 test("rpg: Venom Storm poisons every foe, then doubles all of it and makes it last 3 turns longer", () => {
   const run = rpg.newRun(1, [{ name: "a", hero: rpg.newHero("rogue") }], seeded(3));
   rpg.enterRoom(run, 0, seeded(3));
