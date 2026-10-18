@@ -35,7 +35,23 @@ const GAMES = [
     about: "The average of the cases that are on - every case pays back its own.",
   },
   { id: "jackpot", name: "Jackpot", icon: "💰", bet: ["jackpot bet"], win: ["jackpot win"], refund: ["jackpot refund"], theory: () => 1 - config.JACKPOT_RAKE / 100, about: () => `Players against players: the house keeps at most ${config.JACKPOT_RAKE}% of a pot (less when one player put in nearly all of it).` },
-  { id: "poker", name: "Poker", icon: "♠️", bet: ["poker buy-in", "poker chips"], win: ["poker cash-out"], refund: ["poker refund"], theory: () => null, about: () => `Players against players: the house keeps ${config.POKER_RAKE}% of every pot that saw the flop. Chips still on a table count as not paid back yet.` },
+  {
+    id: "poker",
+    name: "Poker",
+    icon: "♠️",
+    bet: ["poker buy-in", "poker chips"],
+    win: ["poker cash-out"],
+    refund: ["poker refund"],
+    theory: () => null,
+    about: (world) => {
+      const text = `Players against players: the house keeps ${config.POKER_RAKE}% of every pot that saw the flop. Chips still on a table count as not paid back yet.`;
+      // (the bots play with the house's chips: what they won or lost so far - all time, chips on the table not counted)
+      const ledger = require("./poker_bot").ledgerOf(world === "normal" ? "" : (seasonSlots.of(world) || {}).world);
+      if (!ledger || !ledger.hands) return text;
+      const net = ledger.cashed - ledger.bought;
+      return `${text} The bots played ${ledger.hands.toLocaleString("en")} hands and are ${net >= 0 ? "up" : "down"} ${Math.abs(net).toLocaleString("en")} chips for the house in all.`;
+    },
+  },
 ];
 
 const RANGES = { today: "Today", week: "7 days", month: "30 days", all: "All time" };
@@ -59,7 +75,7 @@ async function sums(range, world, now) {
   return new Map(rows.map((row) => [row._id, row]));
 }
 
-const text = (value) => (typeof value === "function" ? value() : value || null);
+const text = (value, world) => (typeof value === "function" ? value(world) : value || null);
 
 /*
  * {range, world, games: [{id, name, icon, bets, wagered, paid, profit, rtp, theory, spread, status, about}]}
@@ -95,7 +111,7 @@ async function report(range = "week", world = "normal", now = Date.now()) {
       const off = Math.abs(rtp - theory) / Math.max(spread, 0.001);
       status = off > 3 ? "check" : off > 2 ? "watch" : "ok";
     }
-    return { id: game.id, name: game.name, icon: game.icon, bets: bets, wins: wins, wagered: wagered, paid: paid, profit: wagered - paid, rtp: rtp, theory: theory, spread: spread, status: status, about: text(game.about) };
+    return { id: game.id, name: game.name, icon: game.icon, bets: bets, wins: wins, wagered: wagered, paid: paid, profit: wagered - paid, rtp: rtp, theory: theory, spread: spread, status: status, about: text(game.about, world) };
   });
   const wagered = games.reduce((sum, game) => sum + game.wagered, 0);
   const paid = games.reduce((sum, game) => sum + game.paid, 0);

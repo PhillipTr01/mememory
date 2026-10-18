@@ -234,8 +234,10 @@ function renderSeats() {
       if (state.button == i) avatarWrap.appendChild(el("span", "pk-dealer", "D"));
 
       var info = el("div", "pk-info");
-      var name = el("span", "pk-name", seat.name);
+      // (a bot: the robot says it - "Bot Ace" shows as "🤖 Ace")
+      var name = el("span", "pk-name", seat.bot ? "🤖 " + seat.name.replace(/^Bot /, "") : seat.name);
       if (seat.away) name.title = "Away";
+      if (seat.bot) name.title = "A bot that fills the table. It leaves when more players sit down.";
       var stack = el("span", "pk-stack");
       stack.appendChild(chipsEl(seat.stack));
       info.append(name, stack);

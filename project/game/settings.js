@@ -51,6 +51,7 @@ const FIELDS = [
   { group: "poker", section: "Poker", key: "GAME_POKER", type: "toggle", label: "Poker is on", hint: "Off: hidden for players - test mode still has it, to try it out first." },
   { group: "poker", section: "Buy-in", key: "POKER_MIN_BUYIN", season: true, label: "Min buy-in", step: 100, min: 1, max: 100000000 },
   { group: "poker", section: "Buy-in", key: "POKER_MAX_BUYIN", season: true, label: "Max buy-in", step: 500, min: 1, max: 100000000 },
+  { group: "poker", section: "Bots", key: "POKER_BOTS", type: "toggle", label: "Bots fill the table", hint: "On: a player alone at the table gets 2 bots to play with, two players get 1. They play with the house's chips and leave when more people sit down." },
   { group: "poker", section: "Rake", key: "POKER_RAKE", label: "Rake", hint: "Percent of every pot that saw the flop the house keeps (5%: a payback of about 95%).", unit: "%", step: 1, min: 0, max: 50 },
   { group: "slots", section: "Slots", key: "GAME_SLOTS", type: "toggle", label: "Slots are on", hint: "Off: hidden for players - test mode still has it, to try it out first." },
   { group: "slots", section: "Bets", key: "SLOTS_MIN_BET", season: true, label: "Min bet per spin", hint: "For all 9 lines together.", step: 9, min: 9, max: 100000000 },

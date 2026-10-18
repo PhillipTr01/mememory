@@ -92,6 +92,7 @@ const GAMES = {
           tile("♠️", "Your hand", `Up to ${config.POKER_SEATS} players sit at a table and everybody gets 2 cards.`, { cards: ["A♠", "K♠"] }),
           tile("🃏", "The board", "Five cards come on the board. The best five of your seven cards count.", { cards: ["Q♠", "J♠", "10♠", "4♥", "2♦"] }),
           tile("🏦", "Rake", `The house keeps ${config.POKER_RAKE}% of every pot that reaches the flop.`, { tags: [[`${config.POKER_RAKE}%`, "gold"]] }),
+          ...(config.POKER_BOTS ? [tile("🤖", "Bots", "When you sit alone, two bots join so you can play. They leave when more players sit down.")] : []),
           tile("🎚️", "Betting", "Use the slider, the mouse wheel or your own presets to set your bet.", { tags: [["½ pot"], ["Pot"], ["All in", "gold"]] }),
           tile("⏱️", "Your turn", `You have ${seconds(config.POKER_TURN)} per decision. After that you check or fold.`, { big: seconds(config.POKER_TURN) }),
           tile("🙈", "Show or muck", `After a hand you have ${seconds(config.POKER_DECIDE)} to show or hide your cards. The winner of a showdown always shows.`, { cards: ["?", "?"] }),

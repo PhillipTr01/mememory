@@ -175,6 +175,11 @@ module.exports = {
   // round: off the seat after this short wait (a reload keeps the seat)
   CASINO_LEAVE: 3000,
   POKER_HISTORY: 10,
+  // Bots fill the poker table: one person plays with POKER_BOT_COUNT bots, two with one less - none for three
+  POKER_BOTS: true,
+  POKER_BOT_COUNT: 2,
+  POKER_BOT_JOIN: 4000, // they sit down after this wait (somebody else may still come)
+  POKER_BOT_THINK: 1600, // about this long for a move
 
   // Blackjack (hidden): one table against the dealer, a player can take several seats
   BJ_SEATS: 5, // seats per table

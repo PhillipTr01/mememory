@@ -8,6 +8,8 @@ const { bestHand, compare, pots, payout, payoutByPot, handName, newDeck, shuffle
 Object.assign(config, { POKER_START: 30, POKER_SHOWDOWN: 60, POKER_DECIDE: 400, POKER_AFTER_DECIDE: 50, POKER_STREET: 10, POKER_TURN: 3000, POKER_AWAY: 100 });
 // (the amounts of these tests are made for small blinds - the levels are the same)
 Object.assign(config, { POKER_SMALL_BLIND: 5, POKER_BIG_BLIND: 10, POKER_MIN_BUYIN: 100, POKER_RAKE: 0 });
+// (no bots - only the bot test below calls them)
+Object.assign(config, { POKER_BOTS: false, POKER_BOT_JOIN: 30, POKER_BOT_THINK: 20 });
 
 /* ---------- Hands ---------- */
 
@@ -375,6 +377,77 @@ test("poker: after a hand the player decides to show or muck - with a timer, the
   assert.ok(shown.seats[winner].cards.every((card) => typeof card === "string"), "the winner showed the cards");
   assert.strictEqual(shown.decideIn, null, "nobody decides anymore");
   await clearTable([alice, bob]);
+});
+
+test("poker bots: the fast score ranks like the full one, a strong hand plays, a weak one folds to a big bet, free cards are taken", () => {
+  const bot = require("../game/poker_bot");
+  for (let i = 0; i < 3000; i++) {
+    const deck = shuffle(newDeck());
+    const n = 5 + (i % 3);
+    const a = deck.slice(0, n);
+    const b = deck.slice(7, 7 + n);
+    assert.strictEqual(Math.sign(bot.fastScore(a) - bot.fastScore(b)), Math.sign(compare(bestHand(a).score, bestHand(b).score)), a + " vs " + b);
+  }
+  // (the chance to win: aces before the flop about 85% heads-up, a made royal flush always)
+  assert.ok(Math.abs(bot.equity(["As", "Ad"], [], 1) - 0.85) < 0.06);
+  assert.strictEqual(bot.equity(["As", "Ks"], ["Qs", "Js", "Ts"], 2), 1);
+  const view = { pot: 300, bet: 0, stack: 2000, highBet: 0, minRaise: 100, bigBlind: 100, opponents: 1, raises: 0 };
+  const nuts = bot.decide({ ...view, cards: ["As", "Ks"], board: ["Qs", "Js", "Ts"], toCall: 1000, highBet: 1000 });
+  assert.ok(["call", "raise"].includes(nuts.type), JSON.stringify(nuts));
+  const trash = bot.decide({ ...view, cards: ["7c", "2d"], board: ["As", "Kh", "Qs"], toCall: 1000, highBet: 1000 }, () => 0.99);
+  assert.strictEqual(trash.type, "fold");
+  assert.strictEqual(bot.decide({ ...view, cards: ["7c", "2d"], board: ["As", "Kh", "Qs"], toCall: 0 }, () => 0.99).type, "check");
+  // (a raise is always a legal amount: at least a full raise, at most all its chips)
+  const raise = bot.decide({ ...view, cards: ["As", "Ks"], board: ["Qs", "Js", "Ts"], toCall: 0 }, () => 0);
+  assert.strictEqual(raise.type, "raise");
+  assert.ok(raise.amount >= 100 && raise.amount <= 2000, JSON.stringify(raise));
+  assert.strictEqual(bot.decide({ ...view, stack: 150, cards: ["As", "Ks"], board: ["Qs", "Js", "Ts"], toCall: 0 }, () => 0).amount, 150);
+});
+
+test("poker bots: two fill the table for one player, one leaves for a second, all leave with the people - with the house's chips", async () => {
+  config.POKER_BOTS = true;
+  h.setCoins("alice", 1000);
+  h.setCoins("bob", 1000);
+  const alice = client("alice");
+  const bob = client("bob");
+  await Promise.all([waitFor(alice, "coins", (d) => d.coins === 1000), waitFor(bob, "coins", (d) => d.coins === 1000)]);
+  const ledger = () => server.poker.table.botLedger;
+  const before = { ...ledger() };
+  const bots = (state) => state.seats.filter((seat) => seat && seat.bot);
+  // (the people just call along)
+  const play = (socket, name) =>
+    socket.on("pokerState", (state) => {
+      const me = seatOf(state, name);
+      if (me >= 0 && state.current === me) socket.emit("action", { type: "call" });
+    });
+  play(alice, "alice");
+  play(bob, "bob");
+
+  alice.emit("sit", { seat: 0, buyIn: 900 });
+  const dealt = await waitFor(alice, "pokerState", (s) => bots(s).length === 2 && s.phase === "preflop" && s.seats[0].inHand, 4000);
+  // A bot's cards stay hidden, it is marked as one
+  bots(dealt).forEach((seat) => assert.deepStrictEqual(seat.cards, [null, null]));
+  assert.ok(bots(dealt).every((seat) => seat.name.startsWith("Bot ")));
+  // The bots play: a hand ends
+  const ended = await waitFor(alice, "pokerState", (s) => s.phase === "showdown", 8000);
+
+  // A second player: one bot leaves after the hand
+  bob.emit("sit", { seat: ended.seats.findIndex((seat) => seat == null), buyIn: 300 });
+  await waitFor(alice, "pokerState", (s) => seatOf(s, "bob") >= 0 && bots(s).length === 1, 15000);
+
+  // Everybody stands up: the bots go too
+  alice.emit("stand");
+  bob.emit("stand");
+  await waitFor(alice, "pokerState", (s) => s.seats.every((seat) => seat == null), 15000);
+  await h.wait(30);
+  // No coins for a bot: what the people won or lost is what the house's bots lost or won (no rake here)
+  const house = ledger().cashed - before.cashed - (ledger().bought - before.bought);
+  assert.ok(ledger().bought - before.bought >= 2 * 1000, "two bots of 100 big blinds");
+  assert.ok(ledger().hands > before.hands);
+  assert.strictEqual(h.coinsOf("alice") + h.coinsOf("bob") + house, 2000);
+  alice.removeAllListeners("pokerState");
+  bob.removeAllListeners("pokerState");
+  config.POKER_BOTS = false;
 });
 
 test("poker: a server stop gives every chip back, also the ones in the pot", async () => {
