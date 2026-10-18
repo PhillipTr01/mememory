@@ -12,7 +12,7 @@ const offseason = require("../game/offseason");
 const safe = require("./safe_handler");
 
 // The games - in the normal casino, the season world and the admin's test world (game/worlds.js)
-const REAL = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/roulette", "/baucua"];
+const REAL = ["/jackpot", "/battles", "/poker", "/blackjack", "/slots", "/roulette", "/baucua", "/runner"];
 // (every season world: one per season slot)
 const SEASON = worlds.SEASONS.flatMap((world) => REAL.map((name) => world + name));
 // (the dungeon: the normal casino and the test world only)

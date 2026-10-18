@@ -13,6 +13,7 @@ var HISTORY_KINDS = [
   ["Slots", [["slots bet", "Bet"], ["slots win", "Win"]]],
   ["Roulette", [["roulette bet", "Bet"], ["roulette win", "Win"], ["roulette refund", "Refund"]]],
   ["Bầu Cua", [["baucua bet", "Bet"], ["baucua win", "Win"], ["baucua refund", "Refund"]]],
+  ["Runner", [["runner bet", "Entry"], ["runner win", "Win"]]],
 ];
 
 
@@ -122,11 +123,12 @@ var SETTING_GROUPS = {
   slots: ["Slots", "Turn slots on or off, the bet per spin."],
   roulette: ["Roulette", "Turn the roulette on or off, the bets, the time to bet."],
   baucua: ["Bầu Cua", "Turn Bầu Cua on or off, the bets, the time to bet."],
+  runner: ["Runner", "Turn the runner on or off, the entries and the payout curve."],
   rpg: ["Dungeon", "On or only in test mode, prices, packs, difficulty, death."],
 };
 var settingsGroup = "general";
 
-var GAME_GROUPS = ["jackpot", "roulette", "baucua", "battles", "poker", "blackjack", "slots", "rpg"];
+var GAME_GROUPS = ["jackpot", "roulette", "baucua", "battles", "poker", "blackjack", "slots", "runner", "rpg"];
 
 // Old addresses (bookmarks): to where it is now
 function redirect(parts) {
@@ -320,6 +322,8 @@ function renderLive(games) {
   if (pk) rows.push(liveRow("🃏", "Poker", (PHASE_TEXT[pk.phase] || pk.phase) + (pk.hand ? " · hand " + pk.hand : ""), pk.seated + " / " + pk.seats + " seats", pk.seated > 0));
   var sl = games.slots;
   if (sl) rows.push(liveRow("🎰", "Slots", sl.playing + (sl.playing == 1 ? " player" : " players") + " at the machines", formatCoins(sl.spins) + " spins", sl.playing > 0));
+  var rn = games.runner;
+  if (rn) rows.push(liveRow("🏃", "Runner", rn.running + (rn.running == 1 ? " run" : " runs") + " going", formatCoins(rn.played) + " played", rn.running > 0));
   (games.blackjack || []).forEach((t) => rows.push(liveRow(t.icon, "Blackjack · " + t.name, (PHASE_TEXT[t.phase] || t.phase) + " · round " + t.round, t.taken + " / " + t.seats + " seats", t.taken > 0)));
   document.getElementById("adLive").replaceChildren(...(rows.length ? rows : [el("p", "ad-empty", "No game is running.")]));
 }

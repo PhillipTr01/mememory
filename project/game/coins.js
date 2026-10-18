@@ -8,7 +8,7 @@ const streak = require("./streak");
 const slots = require("./season_slots");
 
 // Bets (every game): one may take at most limits.betCap of the balance - more only with options.nocap (a double, a split)
-const BET_REASONS = ["jackpot bet", "battle", "poker buy-in", "poker chips", "blackjack bet", "slots bet", "roulette bet", "baucua bet"];
+const BET_REASONS = ["jackpot bet", "battle", "poker buy-in", "poker chips", "blackjack bet", "slots bet", "roulette bet", "baucua bet", "runner bet"];
 
 /*
  * "change" (username) after every change of a balance: every page that shows

@@ -58,6 +58,7 @@ module.exports = {
   GAME_SLOTS: true,
   GAME_ROULETTE: true,
   GAME_BAUCUA: true,
+  GAME_RUNNER: false, // (new: off until the admin turns it on - test mode has it)
   // (the dungeon: off - only test mode has it until the admin turns it on)
   GAME_RPG: false,
 
@@ -232,6 +233,18 @@ module.exports = {
   BAUCUA_SPIN: 6500, // the bowl shakes and is lifted on the pages
   BAUCUA_PAUSE: 3500, // the dice are shown, then the next round waits for a bet
   BAUCUA_HISTORY: 20, // last results in the row
+
+  // The runner (game/runner.js, public/scripts/runner_engine.js): an entry, the score decides the payout
+  RUNNER_STAKES: [100, 1000, 10000], // the entries to choose from (0: a free practice run, always)
+  RUNNER_EVEN: 1400, // the score that pays the entry back (1x)
+  RUNNER_MIN: 0.25, // below this share of RUNNER_EVEN: nothing - from it on the share of the entry (up to 1x)
+  RUNNER_SLOPE: 0.5, // above RUNNER_EVEN: this much more per RUNNER_EVEN run
+  RUNNER_MAX: 3, // the highest multiplier
+  RUNNER_DAILY: 0, // paid runs a player may start a day (0: no limit)
+  RUNNER_COUNTDOWN: 2000, // ms: 3 - 2 - 1 on the page before the runner starts
+  RUNNER_SLACK: 3000, // ms: a run may claim this much more time than it took on the server (the network)
+  RUNNER_LATE: 2500, // ms: a move reaching the server later than this after its time (and the countdown) is dropped
+  RUNNER_IDLE: 20000, // ms without a word from the page: the run ends where it is
 
   // The dungeon (test world only, see game/rpg.js) - the admin panel changes these
   RPG_ENTRY_BASE: 2500, // the entry of floor 1
