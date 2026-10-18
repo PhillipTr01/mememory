@@ -1072,7 +1072,14 @@ module.exports = function (io, options = {}) {
         await coins.add(username, check.price, { reason: "rpg refund" });
         return error("Too late.");
       }
-      rpg.bought(party.run, username, item);
+      const got = rpg.bought(party.run, username, item);
+      // (a card bought: the player's for good - into the collection now, whatever becomes of the run)
+      if (got && got.card) {
+        const hero = heroOf(username);
+        const one = party.run.heroes.find((h) => h.name == username);
+        rpg.collect(rpg.charOf(hero, rpg.cardClass(got.card) || one.cls), got.card);
+        sendHero(username);
+      }
       emitParty(party);
     });
 

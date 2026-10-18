@@ -352,7 +352,9 @@ test("rpg: the map - a Rogue's instinct senses what a room is; rooms to choose i
   // (a mage's card: never in the warrior's offer)
   assert.match(rpg.canBuy(run, "a", "meteor").error, /doesn't sell/);
   const card = offer.cards[0];
-  assert.ok(rpg.canBuy(run, "a", card).price >= rpg.merchantPrices(1).card);
+  // (a card: half its trade value, on every floor - it is the player's to keep)
+  assert.strictEqual(rpg.canBuy(run, "a", card).price, rpg.CARD_RARITIES[rpg.CARDS[card].rarity].value / 2);
+  assert.strictEqual(rpg.merchantCardPrice(card), rpg.CARD_RARITIES[rpg.CARDS[card].rarity].value / 2);
   const deck = me.deck.length;
   rpg.bought(run, "a", card);
   assert.strictEqual(me.deck.length, deck + 1);
@@ -365,7 +367,7 @@ test("rpg: the map - a Rogue's instinct senses what a room is; rooms to choose i
   assert.match(rpg.canBuy(run, "a", offer.cards[2]).error, /2 cards/);
   me.deck.pop();
   assert.strictEqual(rpg.canBuy(run, "a", "remove:0").price, rpg.merchantPrices(1).remove);
-  assert.deepStrictEqual(rpg.merchantPrices(1), { card: 630, relic: 1260, remove: 630 }, "floor 1: a quarter of the entry a card - growing with the entry");
+  assert.deepStrictEqual(rpg.merchantPrices(1), { card: 630, relic: 1260, remove: 630 }, "floor 1: a relic, a card removed - growing with the entry");
   assert.ok(rpg.merchantPrices(5).card > rpg.merchantPrices(4).card);
   rpg.bought(run, "a", "remove:1");
   assert.strictEqual(me.deck.length, deck);
@@ -710,9 +712,19 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; between 
   // No clock between the rooms: out with the loot when the hero says so
   await new Promise((resolve) => setTimeout(resolve, 600));
   assert.ok(!server.test.rpg.parties.get(between.id).result);
+  // The merchant: a card bought is half its trade value - and in the collection for good, right away
+  const shopRun = server.test.rpg.parties.get(between.id).run;
+  const ware = rpg.poolOf("warrior").find((id) => rpg.CARDS[id].rarity == "rare");
+  shopRun.event = { kind: "merchant", id: null, lines: [], choices: null, results: {}, shared: [], offers: { rpg_alice: { cards: [ware], relics: [], bought: [], removed: false, prices: { potion: 100, remove: 100, [ware]: rpg.merchantCardPrice(ware) } } } };
+  const owned = rpg.charOf(mine).collection[ware] || 0;
+  const wallet1 = testMode.balance("rpg_alice");
+  alice.emit("buy", { item: ware });
+  await waitFor(alice, "rpgHero", () => (rpg.charOf(mine).collection[ware] || 0) == owned + 1);
+  assert.strictEqual(testMode.balance("rpg_alice"), wallet1 - rpg.CARD_RARITIES.rare.value / 2);
+  shopRun.event = null;
   alice.emit("vote", { door: "leave" });
   const done = await waitFor(alice, "rpgParty", (p) => p && p.result == "left");
-  assert.strictEqual(testMode.balance("rpg_alice"), before - rpg.entryCost(1) + done.run.pot);
+  assert.strictEqual(testMode.balance("rpg_alice"), before - rpg.entryCost(1) - rpg.CARD_RARITIES.rare.value / 2 + done.run.pot);
   // (left before the floor was cleared: the run does not count for today)
   assert.strictEqual(rpg.runsToday(mine, 1), 0);
   // Back to the hero (the party closes)

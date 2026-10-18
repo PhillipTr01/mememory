@@ -1523,7 +1523,7 @@ const ROOM_KINDS = {
   event: { name: "Encounter", icon: "📜", about: "A strange choice" },
 };
 // What waits in a room of the map (weights) - mostly fights
-const DOOR_POOL = { fight: 17, hard: 6, trap: 0.5, chest: 0.8, rest: 0.8, shrine: 0.4, merchant: 0.5, event: 1.1 };
+const DOOR_POOL = { fight: 17, hard: 6, trap: 0.5, chest: 0.8, rest: 0.8, shrine: 0.4, merchant: 0.3, event: 1.1 };
 const LANES = 4; // the columns of the map
 // What a room of the map is - hidden; the party senses it (sees its kind): its best hero's base + per point of
 // instinct (agility) - a Rogue far better at it
@@ -2142,7 +2142,7 @@ function enterRoom(run, door = 0, rng = Math.random) {
       const relics = relicOffer(hero, rng, MERCHANT_RELICS);
       // (the floor's prices - the deeper, the dearer)
       const price = { potion: round100(potionPrice(run.floor) * off), remove: prices.remove };
-      for (const id of cards) price[id] = round100(prices.card * CARD_PRICE[CARDS[id].rarity]);
+      for (const id of cards) price[id] = Math.round((merchantCardPrice(id) * off) / 10) * 10;
       for (const id of relics) price[id] = prices.relic;
       run.event.offers[hero.name] = { cards, relics, bought: [], removed: false, prices: price };
     }
@@ -2473,11 +2473,11 @@ function applyChoice(run, hero, option, input, rng) {
 
 // What a hero may buy at one merchant
 const MERCHANT_BUY = { cards: 2, relics: 1 };
-const MERCHANT_CARD = 0.25; // a common card at the merchant: this share of the floor's entry
-// The merchant's prices (coins): a potion, a (common) card, a relic, a card taken out of the deck
-const CARD_PRICE = { common: 1, rare: 1.5, epic: 2.5, legendary: 3.5, basic: 1, mythic: 5 };
-// (the cards are only for the run: cheap - a quarter of the floor's entry, 2,500 on floor 1, growing with the floors
-// as the entry, the loot and the stat levels do)
+const MERCHANT_CARD = 0.25; // a relic, a card removed: priced off this share of the floor's entry
+// A card at the merchant: this share of its trade value - it goes into the run's deck and stays in the collection
+const MERCHANT_CARD_VALUE = 0.5;
+const merchantCardPrice = (id) => Math.round((CARD_RARITIES[CARDS[id].rarity].value * MERCHANT_CARD_VALUE) / 10) * 10;
+// The merchant's prices (coins) by the floor: a relic, a card taken out of the deck (card: the base of both)
 function merchantPrices(floor) {
   const card = round100(entryCost(floor) * MERCHANT_CARD);
   return { card, relic: card * 2, remove: card };
@@ -2534,6 +2534,7 @@ function bought(run, name, item) {
   }
   hero.deck.push(item);
   note(`${name} buys ${CARDS[item].icon} ${CARDS[item].name}.`);
+  return { card: item };
 }
 
 // Three different cards: mostly the class's, sometimes a neutral one
@@ -3660,6 +3661,7 @@ module.exports = {
   deckReady,
   giveRelic,
   merchantPrices,
+  merchantCardPrice,
   MERCHANT_BUY,
   canBuy,
   bought,

@@ -2793,7 +2793,7 @@ function shopNodes(run, me) {
     withFlask(button(" Potion · 🪙 " + formatCoins(price("potion")) + " (" + me.potions + "/" + (me.potionsMax || rules.potionsMax) + ")", "buy", { id: "potion", disabled: me.potions >= (me.potionsMax || rules.potionsMax) || myCoins < price("potion") })),
     button(offer.removed ? "🗑️ Card removed ✓" : "🗑️ Remove a card · 🪙 " + formatCoins(price("remove")), "pickMode", { id: "remove", className: picking == "remove" ? "voted" : "", disabled: offer.removed || myCoins < price("remove") || me.deck.length <= rules.deckLeast, title: "Remove a card for this run" }),
   );
-  var nodes = [el("div", "rpg-shop-coins", "Your coins: 🪙 " + formatCoins(myCoins)), el("div", "rpg-label", "Cards · this run · " + Math.max(0, cardsLeft) + " of " + limit.cards + " left"), cards, el("div", "rpg-label", "Relics · this run · " + Math.max(0, relicsLeft) + " of " + limit.relics + " left"), relics, el("div", "rpg-label", "Services"), services];
+  var nodes = [el("div", "rpg-shop-coins", "Your coins: 🪙 " + formatCoins(myCoins)), el("div", "rpg-label", "Cards · yours to keep · " + Math.max(0, cardsLeft) + " of " + limit.cards + " left"), cards, el("div", "rpg-label", "Relics · this run · " + Math.max(0, relicsLeft) + " of " + limit.relics + " left"), relics, el("div", "rpg-label", "Services"), services];
   if (picking == "remove" && !offer.removed) nodes.push(...deckPicker(me, "Pick a card to remove", "remove"));
   return nodes;
 }
