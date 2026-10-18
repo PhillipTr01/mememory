@@ -1422,6 +1422,97 @@ test("rpg: a taunt turns the foes about to hit another hero to the one taunting 
   assert.deepStrictEqual(run.fx.find((e) => e.k == "taunt").foes, ["m1"]);
 });
 
+test("rpg: the second set - expose, thorns, drain, shivs, shatter, chain, block up, a heal before, burning and chilled", () => {
+  const dummy = (id) => ({ id, name: "Dummy", icon: "🎯", hp: 5000, maxHp: 5000, atk: 50, armor: 0, dodge: 0, moves: ["attack"], rank: "normal", effects: {}, intent: { move: "attack", target: "a" } });
+  const setup = (cls) => {
+    const run = rpg.newRun(1, [{ name: "a", hero: rpg.newHero(cls) }], seeded(3));
+    rpg.enterRoom(run, 0, seeded(3));
+    run.monsters = [dummy("m1"), dummy("m2")];
+    const me = run.heroes[0];
+    me.energy = 10;
+    me.luck = 0;
+    return { run, me };
+  };
+  const hand = (me, ...ids) => (me.hand = ids.map((id, i) => ({ uid: "u" + i, id })));
+  const hit = (run, id) => 5000 - run.monsters.find((m) => m.id == id).hp;
+  // Exposed: 25% more damage taken, for its turns
+  {
+    const { run, me } = setup("warrior");
+    hand(me, "strike", "sunder", "strike");
+    rpg.play(run, "a", { uid: "u0", target: "m1" }, () => 0.5);
+    const plain = hit(run, "m1");
+    rpg.play(run, "a", { uid: "u1", target: "m2" }, () => 0.5);
+    assert.strictEqual(run.monsters[1].effects.exposed, 2);
+    const before = hit(run, "m2");
+    rpg.play(run, "a", { uid: "u2", target: "m2" }, () => 0.5);
+    assert.ok(Math.abs(hit(run, "m2") - before - plain * 1.25) <= 2, `${hit(run, "m2") - before} vs ${plain}`);
+    // (a blow that ends it: the bonus, then the foe is exposed no more)
+    hand(me, "bonebreaker");
+    rpg.play(run, "a", { uid: "u0", target: "m2" }, () => 0.5);
+    assert.ok(!run.monsters[1].effects.exposed);
+  }
+  // Thorns: who hits the paladin pays for a few turns
+  {
+    const { run, me } = setup("paladin");
+    hand(me, "spikedmail");
+    rpg.play(run, "a", { uid: "u0" }, () => 0.5);
+    assert.strictEqual(me.effects.thorns.turns, 3);
+    assert.ok(rpg.thornsOf(me) >= me.effects.thorns.n);
+    // Guarded: a blow harder while the paladin has block
+    hand(me, "retaliate", "retaliate");
+    me.block = 0;
+    rpg.play(run, "a", { uid: "u0", target: "m1" }, () => 0.5);
+    const bare = hit(run, "m1");
+    me.block = 10;
+    rpg.play(run, "a", { uid: "u1", target: "m2" }, () => 0.5);
+    assert.ok(hit(run, "m2") > bare * 1.5, `${hit(run, "m2")} vs ${bare}`);
+  }
+  // Atonement: a share of the damage heals the weakest ally - a blow harder after a heal this turn
+  {
+    const { run, me } = setup("cleric");
+    me.hp = Math.round(me.maxHp / 2);
+    hand(me, "atonement");
+    const hp = me.hp;
+    rpg.play(run, "a", { uid: "u0", target: "m1" }, () => 0.5);
+    assert.strictEqual(me.hp - hp, Math.round(hit(run, "m1") * rpg.CARDS.atonement.fx[0].drain));
+    assert.ok(!me.healed);
+    hand(me, "mend", "searinglight");
+    rpg.play(run, "a", { uid: "u0", ally: "a" }, () => 0.5);
+    assert.ok(me.healed);
+    rpg.play(run, "a", { uid: "u1", target: "m2" }, () => 0.5);
+    assert.ok(hit(run, "m2") > me.atk * rpg.CARDS.searinglight.fx[0].bonus * 0.85);
+  }
+  // Shivs: made into the hand, gone once played - after two other cards the chain blows hit harder
+  {
+    const { run, me } = setup("rogue");
+    hand(me, "bladestash", "finishingblow");
+    rpg.play(run, "a", { uid: "u0" }, () => 0.5);
+    const shivs = me.hand.filter((c) => c.temp);
+    assert.deepStrictEqual(shivs.map((c) => c.id), ["shiv", "shiv"]);
+    rpg.play(run, "a", { uid: shivs[0].uid, target: "m2" }, () => 0.5);
+    assert.ok(!me.discard.includes("shiv") && !me.exhausted.includes("shiv"), "a made card is gone");
+    assert.strictEqual(me.played, 2);
+    rpg.play(run, "a", { uid: "u1", target: "m1" }, () => 0.5);
+    assert.ok(hit(run, "m1") > me.atk * rpg.CARDS.finishingblow.fx[0].bonus * 0.85);
+  }
+  // Shatter: far harder on a chilled foe - the chill is gone; frostfire: on a burning and chilled foe
+  {
+    const { run, me } = setup("mage");
+    run.monsters[0].effects.chill = 2;
+    hand(me, "shatter", "frostfirebolt");
+    rpg.play(run, "a", { uid: "u0", target: "m1" }, () => 0.5);
+    assert.ok(!run.monsters[0].effects.chill);
+    assert.ok(hit(run, "m1") > me.atk * rpg.CARDS.shatter.fx[0].bonus * 0.85);
+    run.monsters[1].effects.chill = 2;
+    run.monsters[1].effects.burn = { turns: 2, dmg: 1 };
+    rpg.play(run, "a", { uid: "u1", target: "m2" }, () => 0.5);
+    assert.ok(hit(run, "m2") > me.atk * rpg.CARDS.frostfirebolt.fx[0].bonus * 0.85);
+    assert.strictEqual(run.monsters[1].effects.chill, 2, "no consume: the chill stays");
+  }
+  // (a made card: its name in the text)
+  assert.match(rpg.CARDS.conjuresparks.text, /Sparks to your hand/);
+});
+
 test("rpg: every card's bonus can happen - its class has a common or rare card for the state it needs", () => {
   for (const cls of rpg.CLASS_IDS) {
     const pool = rpg.poolOf(cls);
@@ -1430,10 +1521,10 @@ test("rpg: every card's bonus can happen - its class has a common or rare card f
     for (const id of pool)
       for (const f of rpg.CARDS[id].fx) {
         if (!f.bonusIf) continue;
-        const states = f.bonusIf.split("|");
-        // (the foe's own kind, a boss, summoned, the hero's HP or a skill played: always possible)
-        const free = states.some((k) => !["poison", "burn", "chill", "stun"].includes(k));
-        assert.ok(free || states.some((k) => makes.has(k)), `${cls}: ${id} needs ${f.bonusIf}`);
+        // ("a|b": any of them - "a&b": both; the foe's own kind, a boss, summoned, the hero's HP, block, a skill, a heal
+        // or the cards played before: always possible)
+        const can = (k) => !["poison", "burn", "chill", "stun", "exposed"].includes(k) || makes.has(k);
+        assert.ok(f.bonusIf.split("|").some((any) => any.split("&").every(can)), `${cls}: ${id} needs ${f.bonusIf}`);
       }
   }
   // Every monster move says what it does

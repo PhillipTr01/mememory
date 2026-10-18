@@ -584,7 +584,7 @@ const AFFIXES = {
 const UPGRADE = 1.4;
 const baseCard = (id) => id.replace(/\+$/, "");
 const isUpgraded = (id) => id.endsWith("+");
-const grows = (f) => f.hit != null || f.block != null || f.heal != null || (f.aura && f.aura != "focus") || f.status == "poison" || f.status == "burn";
+const grows = (f) => f.hit != null || f.block != null || f.heal != null || f.thorns != null || (f.aura && f.aura != "focus") || f.status == "poison" || f.status == "burn";
 function upgradeFx(fx) {
   return fx.map((f) => {
     const o = { ...f };
@@ -593,6 +593,8 @@ function upgradeFx(fx) {
     if (o.aura == "focus") o.turns += 1;
     if (o.might != null) o.might += 1;
     if (o.status == "chill") o.turns = (o.turns || 1) + 1;
+    if (o.status == "exposed") o.turns = (o.turns || 2) + 1;
+    if (o.conjure) o.n += 1;
     if (o.revive != null) o.revive = Math.min(1, Math.round(o.revive * UPGRADE * 100) / 100);
     if (o.extend != null) o.extend += 1;
     if (o.lose != null) o.lose = Math.round((o.lose / 2) * 100) / 100;
@@ -611,7 +613,7 @@ function cardInfo(id) {
     const r = (v) => Math.round(v * UPGRADE * 100) / 100;
     const shown = fx.map((f) => {
       const o = { ...f };
-      if (grows(o)) for (const key of ["hit", "bonus", "block", "def", "atk", "agi", "heal"]) if (typeof o[key] == "number") o[key] = key == "block" ? Math.round(o[key] * UPGRADE) : r(o[key]);
+      if (grows(o)) for (const key of ["hit", "bonus", "block", "def", "atk", "agi", "heal", "thorns"]) if (typeof o[key] == "number") o[key] = key == "block" || key == "thorns" ? Math.round(o[key] * UPGRADE) : r(o[key]);
       return o;
     });
     upgraded[id] = { ...card, name: card.name + "+", upgraded: true, fx, cost, text: MORE_CARDS.textOf(shown, card.mythic ? "mythic" : card.exhaust) };
@@ -634,6 +636,9 @@ function upgradeNote(id) {
   if (has((f) => f.mana != null && !f.aura)) notes.push("It gives 1 more mana.");
   if (has((f) => f.might != null || f.aura == "focus")) notes.push("It lasts 1 turn longer.");
   if (has((f) => f.status == "chill")) notes.push("Its chill lasts 1 move longer.");
+  if (has((f) => f.status == "exposed")) notes.push("The foe stays exposed 1 turn longer.");
+  if (has((f) => f.thorns != null)) notes.push("Its thorns are 40% stronger.");
+  if (has((f) => f.conjure)) notes.push("It makes 1 more card.");
   if (has((f) => f.revive != null)) notes.push("The fallen stand up with more HP.");
   if (has((f) => f.extend != null)) notes.push("It adds 1 more turn of poison.");
   if (has((f) => f.lose != null)) notes.push("It costs half the HP.");
@@ -2586,6 +2591,8 @@ function startRound(run, rng) {
     hero.ended = false;
     hero.attacked = false;
     hero.skilled = false;
+    hero.healed = false;
+    hero.played = 0;
     // (the AURAS: their block, healing, mana - a turn less)
     for (const aura of hero.auras || []) {
       if (aura.kind == "guard") {
@@ -2653,6 +2660,7 @@ function intentDamage(foe, move) {
 }
 
 const WEAK = 0.7; // a cursed hero's damage
+const EXPOSED = 1.25; // an exposed foe (the warrior's sunder): this much more damage taken
 const AMBUSH = 1.5; // out of the mist (after a fade): the next attack this much harder
 const DEFEND = 0.5; // a monster on guard: this much of a hit gets through
 const SPIKES = 0.2; // of a hit on a spiked monster: back to the hitter
@@ -2717,8 +2725,9 @@ function strike(run, hero, foe, power, rng, options = {}) {
   // (armor - the warrior's hits break through a part of it; a hit on every foe: the mage's strength)
   damage *= 1 - (foe.armor || 0) * Math.max(0, 1 - perk(hero, "pierce"));
   if (options.aoe) damage *= (1 + perk(hero, "aoe")) * (foe.traits && foe.traits.includes("bulky") ? 0.7 : 1);
-  // (cursed: the hero hits softer)
+  // (cursed: the hero hits softer - an exposed foe takes more)
   if (hero.effects.weak) damage *= WEAK;
+  if (foe.effects.exposed) damage *= EXPOSED;
   // (a foe on guard: half of the hit blocked - the page shows how much)
   const full = Math.max(1, Math.round(damage));
   damage = foe.defending ? Math.max(1, Math.round(damage * DEFEND)) : full;
@@ -2802,7 +2811,7 @@ function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
 // Thorns: the flat ones and a share of the armor - and of the block up (a share of it counts as armor for them)
 const THORNS_BLOCK = 0.5;
 function thornsOf(hero) {
-  return Math.round(perk(hero, "thorns") + perk(hero, "thornsDef") * (hero.def + THORNS_BLOCK * (hero.block || 0)));
+  return Math.round(perk(hero, "thorns") + perk(hero, "thornsDef") * (hero.def + THORNS_BLOCK * (hero.block || 0)) + ((hero.effects && hero.effects.thorns && hero.effects.thorns.n) || 0));
 }
 
 function healHero(run, hero, amount) {
@@ -2839,7 +2848,7 @@ function play(run, name, input, rng = Math.random) {
   const fallen = run.heroes.find((h) => h.down && h.name == input.ally) || run.heroes.find((h) => h.down);
   if (card.target == "fallen" && !fallen) return "Nobody to bring back.";
   hero.energy -= card.cost;
-  const [{ id }] = hero.hand.splice(index, 1);
+  const [{ id, temp }] = hero.hand.splice(index, 1);
   // (mythic: once per run - out of the run's deck)
   if (card.mythic) {
     const at = hero.deck.indexOf(id);
@@ -2850,11 +2859,13 @@ function play(run, name, input, rng = Math.random) {
   if (card.type == "attack") hero.attacked = true;
   fx(run, { k: "card", by: hero.name, card: id, to: card.target == "foe" ? foe.id : card.target == "ally" ? friend.name : card.target == "fallen" ? fallen.name : null });
   cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng);
-  // (onto the discard pile only once it is done: a card that draws never draws itself again)
-  (card.exhaust || card.mythic ? hero.exhausted : hero.discard).push(id);
+  // (onto the discard pile only once it is done: a card that draws never draws itself again - a made one is gone)
+  if (!temp) (card.exhaust || card.mythic ? hero.exhausted : hero.discard).push(id);
   hero.firstAttack = false;
-  // (a skill played: the combo cards hit harder for the rest of the turn)
+  // (a skill played: the combo cards hit harder for the rest of the turn - a heal: the "healed" ones; the chain counts)
   if (card.type != "attack") hero.skilled = true;
+  if (card.fx.some((f) => f.heal != null)) hero.healed = true;
+  hero.played = (hero.played || 0) + 1;
   if (!alive(run.monsters).length) winFight(run, rng);
   return null;
 }
@@ -2892,6 +2903,7 @@ function liveTexts(stats, ids) {
       block: (fx) => Math.round((fx.block + (fx.def || 0) * stats.def + (fx.atk || 0) * stats.atk + (fx.agi || 0) * stats.agi) * (1 + p("block")) * up),
       heal: (share) => Math.round(stats.maxHp * share * (1 + p("heal")) * up),
       lose: (share) => Math.round(stats.maxHp * share),
+      thorns: (fx) => Math.round((fx.thorns + (fx.def || 0) * stats.def) * (1 + p("block")) * up),
     };
     texts[id] = MORE_CARDS.textOf(card.fx, card.mythic ? "mythic" : card.exhaust, n);
   }
@@ -2901,6 +2913,14 @@ function liveTexts(stats, ids) {
 // A step of a card made of effects (game/rpg_cards.js)
 // (the event of the playback - the step below is called fx)
 const fxEvent = (run, event) => fx(run, event);
+
+// A condition of a card (bonusIf): "poison|stun" - any of them, "burn&chill" - all of them; the hero's (low HP, a skill
+// played, block up, a heal played, two cards played before) or the foe's (its states, undead, a boss, summoned)
+const CHAIN = 2; // "chain": this many cards played before in the turn
+function meets(hero, m, cond) {
+  const one = (k) => (k == "low" ? hero.hp < hero.maxHp / 2 : k == "combo" ? !!hero.skilled : k == "guarded" ? hero.block > 0 : k == "healed" ? !!hero.healed : k == "chain" ? (hero.played || 0) >= CHAIN : !!m && foeIs(m, k));
+  return cond.split("|").some((any) => any.split("&").every(one));
+}
 
 // A foe in a state a card asks for: undead, a boss, summoned in the fight (called) - or its effects (poison ...)
 function foeIs(m, state) {
@@ -2934,9 +2954,10 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
     for (const one of heroesOf(fx.to)) (one.auras = one.auras || []).push({ kind: fx.aura, value, turns: fx.turns, card });
     return;
   }
-  // (a condition - "poison|stun": any of them)
-  const state = (m, cond) => cond.split("|").some((one) => (one == "low" ? hero.hp < hero.maxHp / 2 : one == "combo" ? !!hero.skilled : foeIs(m, one)));
+  const state = (m, cond) => meets(hero, m, cond);
   if (fx.hit != null) {
+    let dealt = 0;
+    const consumed = new Set();
     for (let i = 0; i < (fx.times || 1); i++) {
       for (const m of foesOf(fx.to)) {
         // (a mark of death: below the share - gone, not a boss)
@@ -2947,13 +2968,29 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
           fxEvent(run, { k: "down", to: m.id });
           continue;
         }
-        let power = (fx.bonusIf && state(m, fx.bonusIf) ? fx.bonus : fx.hit) + ((fx.def || 0) * hero.def) / Math.max(1, hero.atk);
+        const met = fx.bonusIf && state(m, fx.bonusIf);
+        let power = (met ? fx.bonus : fx.hit) + ((fx.def || 0) * hero.def) / Math.max(1, hero.atk);
         // (damage of the block - at least the card's)
         if (fx.fromBlock) power = Math.max(power, hero.block / Math.max(1, hero.atk));
         // (a hit on every foe always lands - one on a single foe may be dodged, a fading foe dodges it for sure)
-        strike(run, hero, m, power * up, rng, { sure: fx.to == "all", aoe: fx.to == "all" });
+        dealt += strike(run, hero, m, power * up, rng, { sure: fx.to == "all", aoe: fx.to == "all" });
+        // (consume: the state the bonus asked for is used up by it - once every hit of the card is done)
+        if (met && fx.consume) consumed.add(m);
       }
     }
+    for (const m of consumed) for (const k of fx.bonusIf.split(/[|&]/)) delete m.effects[k];
+    // (drain: a share of the damage dealt heals - the hero, the weakest ally or the party)
+    if (fx.drain && dealt > 0) for (const one of heroesOf(fx.drainTo || "self")) healHero(run, one, dealt * fx.drain);
+  } else if (fx.thorns != null) {
+    // (thorns for a few turns: who hits pays - a base and a share of the armor)
+    const n = Math.round((fx.thorns + (fx.def || 0) * hero.def) * up * (1 + perk(hero, "block")));
+    for (const one of heroesOf(fx.to)) {
+      const old = one.effects.thorns;
+      one.effects.thorns = { turns: Math.max(fx.turns, old ? old.turns : 0), n: Math.max(n, old ? old.n : 0) };
+    }
+  } else if (fx.conjure) {
+    // (cards made in the fight: into the hand - played once, then gone)
+    for (let i = 0; i < fx.n && hero.hand.length < HAND_MAX; i++) hero.hand.push({ uid: "c" + ++cardCount, id: fx.conjure, temp: true });
   } else if (fx.block != null) {
     const value = (fx.block + (fx.def || 0) * hero.def + (fx.atk || 0) * hero.atk + (fx.agi || 0) * hero.agi) * (fx.low && hero.hp < hero.maxHp / 2 ? fx.low : 1);
     for (const one of heroesOf(fx.to)) block(one, value);
@@ -2968,6 +3005,7 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
       if (fx.status == "poison") afflict(m, "poison", fx.turns || 3, Math.max(1, Math.round(hero.atk * 0.45 * venom * luckBoost(hero))));
       else if (fx.status == "burn") afflict(m, "burn", fx.turns || 2, Math.max(1, Math.round(hero.atk * 0.3 * up * luckBoost(hero))));
       else if (fx.status == "stun") stun(run, m, rng, hero);
+      else if (fx.status == "exposed") m.effects.exposed = Math.max(m.effects.exposed || 0, fx.turns || 2);
       else m.effects[fx.status] = fx.turns || 1;
     }
   } else if (fx.might != null) {
@@ -3188,14 +3226,14 @@ function monsterTurn(run, rng = Math.random) {
         say(run, `${label} ${one.icon ? "is defeated" : "is down"}!`);
       }
     }
-    for (const kind of ["rage", "weak"]) if (one.effects[kind] && --one.effects[kind] <= 0) delete one.effects[kind];
-    if (one.effects.might && --one.effects.might.turns <= 0) delete one.effects.might;
+    for (const kind of ["rage", "weak", "exposed"]) if (one.effects[kind] && --one.effects[kind] <= 0) delete one.effects[kind];
+    for (const kind of ["might", "thorns"]) if (one.effects[kind] && --one.effects[kind].turns <= 0) delete one.effects[kind];
   }
   for (const hero of run.heroes) {
     hero.taunting = hero.evading = false;
     // (the hand stays - only the ones down lose theirs)
     if (hero.down) {
-      hero.discard.push(...hero.hand.map((c) => c.id));
+      hero.discard.push(...hero.hand.filter((c) => !c.temp).map((c) => c.id));
       hero.hand = [];
       hero.block = 0;
     }
@@ -3429,9 +3467,9 @@ function simulatedTurn(run, me, rng) {
         }
         if (f.hit != null) {
           for (const m of many) {
-            const cond = f.bonusIf && f.bonusIf.split("|").some((k) => (k == "low" ? me.hp < me.maxHp / 2 : k == "combo" ? !!me.skilled : foeIs(m, k)));
-            const dmg = me.atk * (cond ? f.bonus : f.hit) * (f.times || 1) * up * (1 - (m.armor || 0) * Math.max(0, 1 - perk(me, "pierce")));
-            value += Math.min(dmg, m.hp) + (dmg >= m.hp ? threat(m) : 0);
+            const cond = f.bonusIf && meets(me, m, f.bonusIf);
+            const dmg = me.atk * (cond ? f.bonus : f.hit) * (f.times || 1) * up * (1 - (m.armor || 0) * Math.max(0, 1 - perk(me, "pierce"))) * (m.effects.exposed ? EXPOSED : 1);
+            value += Math.min(dmg, m.hp) + (dmg >= m.hp ? threat(m) : 0) + (f.drain ? Math.min(dmg, m.hp) * f.drain * 0.5 : 0);
           }
         } else if (f.block != null) {
           const amount = (f.block + (f.def || 0) * me.def + (f.atk || 0) * me.atk + (f.agi || 0) * me.agi) * up;
@@ -3441,6 +3479,9 @@ function simulatedTurn(run, me, rng) {
         else if (f.status == "poison" || f.status == "burn") value += many.length * me.atk * 0.4 * (f.turns || 2);
         else if (f.status == "stun") value += f.to == "all" ? foes.reduce((sum, m) => sum + stunnable(m), 0) : stunnable(foe);
         else if (f.status == "chill") value += (f.to == "all" ? foes.reduce((sum, m) => sum + threat(m), 0) : threat(foe)) * 0.4;
+        else if (f.status == "exposed") value += many.filter((m) => m && !m.effects.exposed).length * me.atk * 0.35 * (f.turns || 2);
+        else if (f.thorns != null) value += (f.thorns + (f.def || 0) * me.def) * up * Math.min(f.turns, 2) * foes.length * 0.5 * (f.to == "party" ? alive(run.heroes).length : 1);
+        else if (f.conjure) value += me.atk * 0.45 * f.n;
         else if (f.might != null) value += me.atk * 0.3 * f.might * (me.effects && me.effects.might ? 0.8 : 1);
         else if (f.draw != null) value += me.atk * 0.4 * f.draw;
         else if (f.mana != null) value += me.atk * 0.8 * f.mana;

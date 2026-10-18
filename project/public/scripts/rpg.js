@@ -34,8 +34,8 @@ try {
   // no storage: the defaults
 }
 
-var EFFECT_ICONS = { poison: "☠️", burn: "🔥", stun: "💫", steady: "🪨", ambush: "🌫️", chill: "❄️", rage: "😡", might: "📯", weak: "🕯️" };
-var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned: skips a move", steady: "Steady: stuns often fail until it acts again, less often with luck", ambush: "Ambush: its next attack deals 50% more", chill: "Chilled: half damage", rage: "Raging: more damage", might: "Might: +30% damage", weak: "Cursed: -30% damage" };
+var EFFECT_ICONS = { poison: "☠️", burn: "🔥", stun: "💫", steady: "🪨", ambush: "🌫️", chill: "❄️", rage: "😡", might: "📯", weak: "🕯️", exposed: "🔻", thorns: "🌵" };
+var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned: skips a move", steady: "Steady: stuns often fail until it acts again, less often with luck", ambush: "Ambush: its next attack deals 50% more", chill: "Chilled: half damage", rage: "Raging: more damage", might: "Might: +30% damage", weak: "Cursed: -30% damage", exposed: "Exposed: takes 25% more damage", thorns: "Thorns: a foe that hits takes damage back" };
 var RARITY_NAMES = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", mythic: "Mythic" };
 var SLOT_NAMES = { weapon: "Weapon", armor: "Armor", charm: "Charm" };
 
@@ -1131,6 +1131,7 @@ function renderBuffs(run, me) {
     // (might stacks: the icon shows the stacks, the hover the whole boost)
     if (fx.might) list.push([EFFECT_ICONS.might, fx.might.turns || fx.might, "You deal " + 30 * (me.might || 1) + "% more damage.", "good", me.might > 1 ? me.might : 0]);
     if (me.blessed) list.push(["✨", "", "Blessed: 25% more damage this run", "good"]);
+    if (fx.thorns) list.push([EFFECT_ICONS.thorns, fx.thorns.turns || fx.thorns, "A foe that hits you takes " + (me.thorns || 0) + " damage.", "good"]);
     if (fx.weak) list.push([EFFECT_ICONS.weak, fx.weak.turns || fx.weak, "Cursed: 30% less damage", "bad"]);
     if (fx.poison) list.push([EFFECT_ICONS.poison, fx.poison.turns || "", "Poisoned: damage at the end of every turn", "bad"]);
     if (fx.burn) list.push([EFFECT_ICONS.burn, fx.burn.turns || "", "Burning: damage at the end of every turn", "bad"]);

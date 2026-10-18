@@ -10,8 +10,14 @@
  *   {draw: n} {mana: n} {lose: share of the max HP} {evade: true}
  *   {aura: "guard" | "regen" | "focus", turns, to: "self" | "party", block, def, agi | heal | mana} - an AURA: at the start
  *   of each of the next turns (block, healing, mana)
- * States for bonusIf: poison, burn, chill, stun, undead, boss, called (summoned) (the foe) - low (the hero below half HP),
- *   combo (the hero played a skill this turn)
+ *   {status: "exposed", turns} - the foe takes 25% more damage (the warrior's sunder)
+ *   {thorns: base, def: share of the armor, turns, to: "self" | "party"} - who hits takes it back (the paladin)
+ *   on a hit: drain: share of the damage dealt healed, drainTo: "self" | "weakest" | "party" (the cleric's atonement)
+ *   on a hit: consume: true - the foe's state the bonus asked for is used up (the mage's shatter and detonate)
+ *   {conjure: card id, n} - cards made for the fight into the hand, gone once played (the rogue's shivs)
+ * States for bonusIf ("a|b": any, "a&b": both): poison, burn, chill, stun, exposed, undead, boss, called (summoned)
+ *   (the foe) - low (the hero below half HP), combo (a skill played this turn), guarded (the hero has block), healed
+ *   (a heal played this turn), chain (two cards played before this one this turn)
  */
 
 // The first cards of the game (the starter decks, the classes' own) - class membership: CLASSES in game/rpg.js
@@ -157,6 +163,44 @@ const CLASS = {
     // (4 mana)
     titansfall: ["Titan's Fall", "🏔️", 4, "legendary", [{ hit: 2, to: "all" }, { status: "stun", to: "all" }], true],
     warpath: ["Warpath", "🐗", 4, "epic", [{ hit: 1.1, times: 3 }]],
+    // (the second set: SUNDER - an exposed foe takes 25% more damage, the big blows hit it far harder - and
+    // BLOODTHIRST - hits that heal)
+    sunder: ["Sunder", "⛓️", 1, "common", [{ hit: 0.8 }, { status: "exposed", turns: 2 }]],
+    armorcrack: ["Armor Crack", "🧱", 1, "common", [{ status: "exposed", turns: 3 }, { block: 5, def: 0.5 }]],
+    punish: ["Punish", "🤜", 1, "common", [{ hit: 0.9, bonusIf: "exposed", bonus: 1.8 }]],
+    rendinghowl: ["Rending Howl", "🐺", 1, "common", [{ status: "exposed", turns: 2, to: "all" }]],
+    bloodthirst: ["Bloodthirst", "🧛", 1, "common", [{ hit: 1, drain: 0.3 }]],
+    brutalsweep: ["Brutal Sweep", "🧹", 2, "common", [{ hit: 0.8, to: "all", bonusIf: "exposed", bonus: 1.4 }]],
+    gauntletjab: ["Gauntlet Jab", "🧤", 0, "common", [{ hit: 0.4 }, { status: "exposed", turns: 1 }]],
+    shieldbreaker: ["Shield Breaker", "🔓", 2, "common", [{ hit: 1.1 }, { status: "exposed", turns: 2 }, { block: 4, def: 0.5 }]],
+    hamstring: ["Hamstring", "🦵", 1, "common", [{ hit: 0.7 }, { status: "chill", turns: 1 }, { status: "exposed", turns: 1 }]],
+    scarredhide: ["Scarred Hide", "🦏", 1, "common", [{ block: 6, def: 1 }, { heal: 0.03 }]],
+    bloodyedge: ["Bloody Edge", "🩸", 1, "common", [{ hit: 0.7, times: 2, drain: 0.15 }]],
+    crushingblow: ["Crushing Blow", "💥", 2, "rare", [{ hit: 1.6, bonusIf: "exposed", bonus: 2.8 }]],
+    mortalstrike: ["Mortal Strike", "🗡️", 2, "rare", [{ hit: 1.4 }, { status: "exposed", turns: 2 }, { draw: 1 }]],
+    intimidate: ["Intimidate", "👺", 1, "rare", [{ status: "exposed", turns: 2, to: "all" }, { block: 5, def: 0.5 }]],
+    savagebite: ["Savage Bite", "🐻", 1, "rare", [{ hit: 1, drain: 0.4, bonusIf: "low", bonus: 1.8 }]],
+    splitapart: ["Split Apart", "🪚", 2, "rare", [{ hit: 0.9, to: "all" }, { status: "exposed", turns: 1, to: "all" }]],
+    bonebreaker: ["Bonebreaker", "🦴", 1, "rare", [{ hit: 1.2, bonusIf: "exposed", bonus: 2.4, consume: true }]],
+    bloodfeast: ["Blood Feast", "🍖", 2, "rare", [{ hit: 0.8, to: "all", drain: 0.25 }]],
+    relentless: ["Relentless", "♾️", 1, "rare", [{ hit: 0.7, bonusIf: "exposed", bonus: 1.3 }, { draw: 1 }]],
+    tasteofblood: ["Taste of Blood", "👅", 0, "rare", [{ lose: 0.05 }, { status: "exposed", turns: 2 }, { draw: 1 }]],
+    shatterguard: ["Shatter Guard", "🪓", 1, "rare", [{ hit: 0.6, times: 2 }, { status: "exposed", turns: 1 }]],
+    executioner: ["Executioner's Swing", "🪓", 2, "epic", [{ hit: 1.2, execute: 0.25 }]],
+    vampiricrage: ["Vampiric Rage", "🦇", 1, "epic", [{ might: 2 }, { hit: 0.9, drain: 0.5 }]],
+    demolish: ["Demolish", "🏚️", 3, "epic", [{ hit: 2.4, bonusIf: "exposed", bonus: 4.2, consume: true }]],
+    battlescars: ["Battle Scars", "🎖️", 1, "epic", [{ block: 8, def: 1, low: 2 }, { status: "exposed", turns: 2, to: "random" }]],
+    rupturearmor: ["Rupture Armor", "🔩", 2, "epic", [{ status: "exposed", turns: 3, to: "all" }, { might: 1 }], true],
+    warhunger: ["War Hunger", "🍗", 2, "epic", [{ hit: 1, to: "all", drain: 0.35 }]],
+    butcher: ["Butcher", "🔪", 1, "epic", [{ hit: 0.6, times: 3, bonusIf: "exposed", bonus: 1 }]],
+    unstoppable: ["Unstoppable", "🦬", 2, "epic", [{ hit: 1.5 }, { block: 8, def: 1 }, { status: "exposed", turns: 2 }]],
+    annihilate: ["Annihilate", "🗯️", 3, "legendary", [{ hit: 3, bonusIf: "exposed", bonus: 5, consume: true }]],
+    bloodgod: ["Blood God", "🏺", 3, "legendary", [{ hit: 1.2, to: "all", drain: 0.5 }, { might: 2 }]],
+    shattertheline: ["Shatter the Line", "🎳", 2, "legendary", [{ status: "exposed", turns: 3, to: "all" }, { hit: 1, to: "all" }]],
+    warlordsfury: ["Warlord's Fury", "🦅", 1, "legendary", [{ might: 3 }, { status: "exposed", turns: 2, to: "all" }], true],
+    crimsontide: ["Crimson Tide", "🌺", 4, "legendary", [{ hit: 1.2, times: 3, drain: 0.3 }]],
+    worldbreaker: ["Worldbreaker", "🗻", 3, "mythic", [{ status: "exposed", turns: 3, to: "all" }, { hit: 2.5, to: "all" }], "mythic"],
+    eternalwar: ["Eternal War", "🏹", 2, "mythic", [{ hit: 3, drain: 1 }, { might: 3 }], "mythic"],
   },
   paladin: {
     zeal: ["Zeal", "🔥", 0, "common", [{ mana: 1 }, { block: 3, def: 0.5 }], true],
@@ -200,6 +244,43 @@ const CLASS = {
     // (4 mana)
     judgementday: ["Judgement Day", "🔔", 4, "legendary", [{ hit: 1.5, def: 1, to: "all" }, { status: "stun", to: "random" }]],
     bastion: ["Bastion", "🏯", 4, "epic", [{ block: 18, def: 2, to: "party" }], true],
+    // (the second set: THORNS - who hits the paladin pays for a few turns - and GUARDED blows, harder while it
+    // has block up)
+    thornedshield: ["Thorned Shield", "🌵", 1, "common", [{ block: 6, def: 1 }, { thorns: 4, def: 0.3, turns: 2 }]],
+    retaliate: ["Retaliate", "↩️", 1, "common", [{ hit: 0.8, bonusIf: "guarded", bonus: 1.5 }]],
+    bastionstrike: ["Bastion Strike", "🔲", 1, "common", [{ hit: 0.6, def: 0.6, bonusIf: "guarded", bonus: 1.2 }]],
+    spikedmail: ["Spiked Mail", "🦔", 1, "common", [{ thorns: 6, def: 0.5, turns: 3 }]],
+    holyrebuke: ["Holy Rebuke", "🛎️", 1, "common", [{ taunt: true }, { thorns: 4, def: 0.3, turns: 1 }]],
+    shieldcharge: ["Shield Charge", "🦏", 2, "common", [{ hit: 1, def: 0.5, bonusIf: "guarded", bonus: 1.8 }, { block: 4, def: 0.5 }]],
+    brambleward: ["Bramble Ward", "🌾", 1, "common", [{ block: 5, def: 0.6, to: "ally" }, { thorns: 3, def: 0.3, turns: 2, to: "party" }]],
+    steelanswer: ["Steel Answer", "⚙️", 1, "common", [{ hit: 0.5, bonusIf: "guarded", bonus: 1 }, { block: 5, def: 0.8 }]],
+    lightsparry: ["Light's Parry", "✋", 1, "common", [{ block: 8, def: 1 }, { thorns: 3, def: 0.4, turns: 1 }]],
+    sanctifiedblade: ["Sanctified Blade", "🗝️", 1, "common", [{ hit: 1, bonusIf: "guarded|undead", bonus: 1.7 }]],
+    thornsaura: ["Aura of Thorns", "🌹", 1, "rare", [{ thorns: 5, def: 0.5, turns: 3, to: "party" }]],
+    vengefulshield: ["Vengeful Shield", "🛡️", 2, "rare", [{ hit: 0.6, def: 0.5, bonusIf: "guarded", bonus: 1.2 }, { block: 8, def: 1.2 }]],
+    ironvow: ["Iron Vow", "📏", 1, "rare", [{ block: 6, def: 1.2 }, { thorns: 4, def: 0.4, turns: 2 }]],
+    radiantspikes: ["Radiant Spikes", "⭐", 2, "rare", [{ hit: 0.7, to: "all", bonusIf: "guarded", bonus: 1.3 }]],
+    guardiansoath: ["Guardian's Oath", "🤝", 1, "rare", [{ taunt: true }, { block: 7, def: 1 }, { thorns: 3, def: 0.3, turns: 1 }]],
+    reprisal: ["Reprisal", "🔄", 2, "rare", [{ hit: 1.4, bonusIf: "guarded", bonus: 2.4 }]],
+    thornwall: ["Wall of Thorns", "🧱", 2, "rare", [{ block: 8, def: 1, to: "party" }, { thorns: 3, def: 0.3, turns: 2, to: "party" }]],
+    blessedspikes: ["Blessed Spikes", "📍", 0, "rare", [{ thorns: 4, def: 0.3, turns: 2 }], true],
+    shieldecho: ["Shield Echo", "🔊", 1, "rare", [{ hit: 0.5, def: 0.5, times: 2, bonusIf: "guarded", bonus: 0.9 }]],
+    martyrsresolve: ["Martyr's Resolve", "🕯️", 1, "rare", [{ lose: 0.05 }, { thorns: 8, def: 0.6, turns: 2 }, { taunt: true }]],
+    crownofthorns: ["Crown of Thorns", "👑", 2, "epic", [{ thorns: 8, def: 0.8, turns: 3 }, { block: 8, def: 1 }]],
+    ramparts: ["Rampart Slam", "🏰", 2, "epic", [{ hit: 1.4, def: 1, bonusIf: "guarded", bonus: 2.4 }]],
+    sacredbrambles: ["Sacred Brambles", "🌳", 2, "epic", [{ thorns: 5, def: 0.5, turns: 3, to: "party" }, { taunt: true }], true],
+    shieldretribution: ["Shield of Retribution", "🔰", 1, "epic", [{ block: 10, def: 1.2 }, { thorns: 6, def: 0.5, turns: 1 }]],
+    lightbarrage: ["Light Barrage", "🌠", 2, "epic", [{ hit: 0.5, def: 0.4, to: "random", times: 4, bonusIf: "guarded", bonus: 0.8 }]],
+    vigilance: ["Vigilance", "👁️", 1, "epic", [{ block: 7, def: 1 }, { thorns: 4, def: 0.4, turns: 2 }, { draw: 1 }]],
+    righteouscounter: ["Righteous Counter", "⚔️", 2, "epic", [{ taunt: true }, { hit: 1.2, def: 0.8, bonusIf: "guarded", bonus: 2 }]],
+    hallowedthorns: ["Hallowed Thorns", "🕸️", 1, "epic", [{ hit: 0.8, to: "all", bonusIf: "undead", bonus: 1.6 }, { thorns: 3, def: 0.4, turns: 1 }]],
+    saintsthorns: ["Thorns of the Saint", "🥀", 2, "legendary", [{ thorns: 10, def: 1, turns: 3, to: "party" }], true],
+    lastjudgement: ["Last Judgement", "🏛️", 3, "legendary", [{ hit: 2.2, def: 1.2, bonusIf: "guarded", bonus: 3.6 }]],
+    eternalguard: ["Eternal Guard", "🛡️", 2, "legendary", [{ block: 14, def: 1.5, to: "party" }, { thorns: 4, def: 0.4, turns: 2, to: "party" }]],
+    sunshield: ["Sun Shield", "☀️", 1, "legendary", [{ block: 10, def: 1.2 }, { hit: 0.7, def: 0.4, to: "all" }]],
+    avengingwrath: ["Avenging Wrath", "🪽", 4, "legendary", [{ hit: 1.4, def: 1, to: "all", bonusIf: "guarded", bonus: 2.2 }, { taunt: true }]],
+    thornheart: ["Thornheart", "❤️‍🔥", 2, "mythic", [{ thorns: 15, def: 1.5, turns: 4, to: "party" }, { block: 20, def: 1, to: "party" }], "mythic"],
+    hammerofdawn: ["Hammer of Dawn", "🔨", 3, "mythic", [{ hit: 4, def: 2, bonusIf: "guarded", bonus: 6 }, { taunt: true }], "mythic"],
   },
   cleric: {
     renewalaura: ["Aura of Renewal", "🌿", 1, "rare", [{ aura: "regen", heal: 0.05, turns: 3, to: "party" }]],
@@ -242,6 +323,43 @@ const CLASS = {
     // (4 mana)
     sacredflame: ["Sacred Flame", "🕯️", 4, "epic", [{ hit: 2.2, bonusIf: "undead", bonus: 4.4 }, { heal: 0.12, to: "party" }]],
     salvation: ["Salvation", "🕊️", 4, "legendary", [{ heal: 0.35, to: "party" }, { cleanse: true, to: "party" }, { block: 8, to: "party" }], true],
+    // (the second set: ATONEMENT - holy blows that heal the weakest ally or the party - and blows harder after a
+    // heal this turn)
+    atonement: ["Atonement", "✝️", 1, "common", [{ hit: 0.8, drain: 0.4, drainTo: "weakest" }]],
+    searinglight: ["Searing Light", "🔦", 1, "common", [{ hit: 0.8, bonusIf: "healed", bonus: 1.6 }]],
+    penitentstrike: ["Penitent Strike", "🛐", 1, "common", [{ heal: 0.06, to: "weakest" }, { hit: 0.6, bonusIf: "healed", bonus: 1.1 }]],
+    mercy: ["Mercy", "🤲", 1, "common", [{ heal: 0.1, to: "weakest" }, { draw: 1 }]],
+    lightlash: ["Light Lash", "〰️", 0, "common", [{ hit: 0.4, drain: 0.5, drainTo: "weakest" }]],
+    holyrain: ["Holy Rain", "🌧️", 2, "common", [{ hit: 0.5, to: "all", drain: 0.3, drainTo: "party" }]],
+    faithfulstrike: ["Faithful Strike", "🙌", 1, "common", [{ hit: 1, bonusIf: "healed|undead", bonus: 1.8 }]],
+    lighttouch: ["Light Touch", "🫳", 0, "common", [{ heal: 0.05, to: "ally" }, { draw: 1 }]],
+    censure: ["Censure", "📖", 1, "common", [{ hit: 0.7, drain: 0.4 }, { status: "burn", turns: 1 }]],
+    kindlefaith: ["Kindle Faith", "🔥", 1, "common", [{ heal: 0.06, to: "party" }, { might: 1 }]],
+    punishment: ["Divine Punishment", "⚡", 2, "rare", [{ hit: 1.5, bonusIf: "healed", bonus: 2.6 }]],
+    bloodoffering: ["Blood Offering", "🩸", 1, "rare", [{ lose: 0.06 }, { heal: 0.14, to: "party" }]],
+    lightsiphon: ["Light Siphon", "🌀", 1, "rare", [{ hit: 0.9, drain: 0.4, drainTo: "weakest" }, { draw: 1 }]],
+    wrathfulprayer: ["Wrathful Prayer", "🌩️", 1, "rare", [{ hit: 0.6, to: "all", bonusIf: "healed", bonus: 1.1 }]],
+    halo: ["Halo", "😇", 1, "rare", [{ aura: "regen", heal: 0.04, turns: 2, to: "party" }, { draw: 1 }]],
+    judgementray: ["Ray of Judgement", "🔆", 2, "rare", [{ hit: 1.2, drain: 0.5, drainTo: "party" }]],
+    shepherdsstaff: ["Shepherd's Staff", "🦯", 1, "rare", [{ hit: 0.5, times: 2, drain: 0.3, drainTo: "weakest" }]],
+    chorus: ["Chorus", "🎼", 1, "rare", [{ heal: 0.06, to: "party" }, { might: 1, to: "party" }]],
+    hallowedlight: ["Hallowed Light", "💡", 2, "rare", [{ hit: 0.7, to: "all", bonusIf: "undead", bonus: 1.6, drain: 0.2, drainTo: "party" }]],
+    litany: ["Litany", "📃", 1, "rare", [{ hit: 0.9, bonusIf: "healed", bonus: 1.6 }, { heal: 0.06, to: "weakest" }]],
+    absolution: ["Absolution", "🫧", 2, "epic", [{ hit: 1.4, drain: 0.6, drainTo: "weakest" }]],
+    holyvengeance: ["Holy Vengeance", "🗡️", 2, "epic", [{ hit: 1.6, bonusIf: "healed", bonus: 2.8 }, { heal: 0.05, to: "party" }]],
+    lightwell: ["Lightwell", "🪔", 1, "epic", [{ aura: "regen", heal: 0.05, turns: 3, to: "party" }, { hit: 0.5, to: "all" }], true],
+    sacredbond: ["Sacred Bond", "💞", 1, "epic", [{ heal: 0.15, to: "weakest" }, { block: 6, to: "party" }]],
+    seraphswing: ["Seraph's Wing", "🕊️", 1, "epic", [{ hit: 0.6, to: "all", drain: 0.4, drainTo: "party" }]],
+    finalrites: ["Final Rites", "⚱️", 3, "epic", [{ hit: 2, bonusIf: "undead|healed", bonus: 3.4 }, { heal: 0.1, to: "weakest" }]],
+    lifetransfer: ["Life Transfer", "🧬", 1, "epic", [{ hit: 1, drain: 0.8, drainTo: "weakest" }], true],
+    divineinsight: ["Divine Insight", "🔭", 0, "epic", [{ heal: 0.06 }, { draw: 2 }], true],
+    lightsjudgement: ["Light's Judgement", "🏵️", 3, "legendary", [{ hit: 1.4, to: "all", drain: 0.5, drainTo: "party" }]],
+    archangel: ["Archangel", "🧚", 2, "legendary", [{ heal: 0.2, to: "party" }, { might: 2, to: "party" }, { draw: 1 }], true],
+    holystorm: ["Holy Storm", "🌪️", 2, "legendary", [{ hit: 0.6, to: "random", times: 4, drain: 0.3, drainTo: "weakest" }]],
+    divinemandate: ["Divine Mandate", "🎗️", 2, "legendary", [{ hit: 2, bonusIf: "healed", bonus: 3.6 }]],
+    lifebloom: ["Lifebloom", "🌸", 1, "legendary", [{ aura: "regen", heal: 0.07, turns: 3, to: "party" }, { cleanse: true, to: "party" }], true],
+    dayoflight: ["Day of Light", "🔆", 2, "mythic", [{ hit: 2.5, to: "all", drain: 0.6, drainTo: "party" }], "mythic"],
+    eternallight: ["Eternal Light", "🕯️", 1, "mythic", [{ heal: 0.4, to: "party" }, { aura: "regen", heal: 0.08, turns: 4, to: "party" }], "mythic"],
   },
   rogue: {
     preparation: ["Preparation", "🎒", 0, "common", [{ mana: 1 }, { block: 3, agi: 0.2 }], true],
@@ -284,6 +402,43 @@ const CLASS = {
     // (4 mana)
     massacre: ["Massacre", "🩸", 4, "legendary", [{ hit: 0.9, to: "all", times: 2 }, { status: "poison", turns: 4, to: "all" }]],
     kingslayer: ["Kingslayer", "👑", 4, "epic", [{ hit: 3.2, bonusIf: "poison|stun", bonus: 4.6 }]],
+    // (the second set: SHIVS - blades made in the fight, gone once thrown - and CHAIN blows, harder after two
+    // cards this turn)
+    knifetoss: ["Knife Toss", "🗡️", 1, "common", [{ hit: 0.5 }, { conjure: "shiv", n: 1 }]],
+    cloakanddagger: ["Cloak and Dagger", "🧥", 1, "common", [{ block: 5, agi: 0.4 }, { conjure: "shiv", n: 1 }]],
+    finishingblow: ["Finishing Blow", "✒️", 1, "common", [{ hit: 0.8, bonusIf: "chain", bonus: 1.8 }]],
+    bladestash: ["Blade Stash", "🧰", 1, "common", [{ conjure: "shiv", n: 2 }]],
+    tempo: ["Tempo", "⏱️", 0, "common", [{ hit: 0.3, bonusIf: "chain", bonus: 0.9 }, { draw: 1 }]],
+    taintedblade: ["Tainted Blade", "🦠", 1, "common", [{ conjure: "shiv", n: 1 }, { status: "poison", turns: 2 }]],
+    countercut: ["Counter Cut", "🔁", 1, "common", [{ block: 4, agi: 0.5 }, { hit: 0.5, bonusIf: "chain", bonus: 1.2 }]],
+    pocketsand: ["Pocket Sand", "🏖️", 0, "common", [{ status: "chill", turns: 1 }, { conjure: "shiv", n: 1 }]],
+    combination: ["Combination", "🔢", 1, "common", [{ hit: 0.4, times: 2, bonusIf: "chain", bonus: 0.9 }]],
+    bleedout: ["Bleed Out", "🩸", 1, "common", [{ hit: 0.6, bonusIf: "chain", bonus: 1 }, { status: "poison", turns: 2 }]],
+    bladefan: ["Blade Fan", "🎐", 2, "rare", [{ hit: 0.5, to: "all" }, { conjure: "shiv", n: 2 }]],
+    flowingstrikes: ["Flowing Strikes", "🌊", 1, "rare", [{ hit: 0.35, to: "random", times: 3, bonusIf: "chain", bonus: 0.7 }]],
+    cutthroat: ["Cutthroat", "🔪", 2, "rare", [{ hit: 1.4, bonusIf: "chain", bonus: 2.8 }]],
+    hiddenarmory: ["Hidden Armory", "🗄️", 1, "rare", [{ conjure: "shiv", n: 3 }], true],
+    shadowplay: ["Shadow Play", "🃏", 0, "rare", [{ draw: 2 }, { conjure: "shiv", n: 1 }], true],
+    toxicrhythm: ["Toxic Rhythm", "🥁", 1, "rare", [{ status: "poison", turns: 3 }, { hit: 0.4, bonusIf: "chain", bonus: 1.2 }]],
+    momentum: ["Momentum", "🛼", 1, "rare", [{ mana: 1 }, { hit: 0.4, bonusIf: "chain", bonus: 1 }], true],
+    venomshivs: ["Venom Shivs", "🐍", 1, "rare", [{ conjure: "shiv", n: 2 }, { status: "poison", turns: 2, to: "random" }]],
+    crescendo: ["Crescendo", "🎻", 2, "rare", [{ hit: 0.6, to: "all", bonusIf: "chain", bonus: 1.2 }]],
+    ricochet: ["Ricochet", "🏓", 1, "rare", [{ hit: 0.4, to: "random", times: 2 }, { conjure: "shiv", n: 1 }]],
+    thousandcuts: ["Thousand Cuts", "🌫️", 2, "epic", [{ hit: 0.3, to: "random", times: 5, bonusIf: "chain", bonus: 0.55 }]],
+    kniferain: ["Knife Rain", "🌧️", 2, "epic", [{ conjure: "shiv", n: 3 }, { hit: 0.4, to: "all" }]],
+    deathblossom: ["Death Blossom", "🌺", 2, "epic", [{ hit: 0.7, to: "all", bonusIf: "chain", bonus: 1.4 }, { status: "poison", turns: 2, to: "all" }]],
+    phantomblade: ["Phantom Blade", "🗡️", 1, "epic", [{ hit: 1.1, bonusIf: "chain", bonus: 2.4 }, { draw: 1 }]],
+    quickdraw: ["Quick Draw", "🤠", 0, "epic", [{ conjure: "shiv", n: 2 }, { draw: 1 }], true],
+    nightfall: ["Nightfall", "🌒", 1, "epic", [{ evade: true }, { conjure: "shiv", n: 2 }], true],
+    markedfordeath: ["Marked for Death", "🎯", 1, "epic", [{ status: "exposed", turns: 2 }, { conjure: "shiv", n: 1 }]],
+    shadowrhythm: ["Shadow Rhythm", "🌑", 1, "epic", [{ block: 6, agi: 0.8 }, { hit: 0.5, bonusIf: "chain", bonus: 1.2 }]],
+    kingofblades: ["King of Blades", "🤴", 2, "legendary", [{ conjure: "shiv", n: 4 }], true],
+    perfectchain: ["Perfect Chain", "⛓️", 2, "legendary", [{ hit: 1.8, bonusIf: "chain", bonus: 4 }]],
+    eclipse: ["Eclipse", "🕳️", 3, "legendary", [{ hit: 0.8, to: "all", times: 2, bonusIf: "chain", bonus: 1.4 }]],
+    venomdance: ["Venom Dance", "🕺", 1, "legendary", [{ hit: 0.4, to: "random", times: 4 }, { status: "poison", turns: 2, to: "all" }, { conjure: "shiv", n: 1 }]],
+    silentreaper: ["Silent Reaper", "🤫", 4, "legendary", [{ hit: 3, bonusIf: "chain|poison", bonus: 5 }]],
+    infiniteblades: ["Infinite Blades", "🌀", 1, "mythic", [{ conjure: "shiv", n: 6 }, { mana: 1 }], "mythic"],
+    grandfinale: ["Grand Finale", "💥", 2, "mythic", [{ hit: 2, to: "all", bonusIf: "chain", bonus: 5 }], "mythic"],
   },
   mage: {
     arcaneaura: ["Arcane Aura", "🔷", 1, "epic", [{ aura: "focus", mana: 1, turns: 3 }], true],
@@ -325,6 +480,44 @@ const CLASS = {
     // (4 mana: a finisher - it needs a mana card, a mana relic or a camp fire first)
     inferno: ["Inferno", "🔥", 4, "epic", [{ hit: 1.8, to: "all" }, { status: "burn", turns: 3, to: "all" }]],
     deepfreeze: ["Deep Freeze", "🧊", 4, "legendary", [{ hit: 1.5, to: "all" }, { status: "chill", turns: 3, to: "all" }, { status: "stun", to: "all" }], true],
+    // (the second set: SHATTER and DETONATE - a chilled or burning foe takes a big blow that ends the state -
+    // FROSTFIRE on a foe both burning and chilled, and conjured Sparks)
+    shatter: ["Shatter", "💎", 1, "common", [{ hit: 0.8, bonusIf: "chill", bonus: 2, consume: true }]],
+    detonate: ["Detonate", "🎇", 1, "common", [{ hit: 0.7, bonusIf: "burn", bonus: 1.9, consume: true }]],
+    frostfirebolt: ["Frostfire Bolt", "🌗", 1, "common", [{ hit: 0.8, bonusIf: "burn&chill", bonus: 2.2 }]],
+    kindling: ["Kindling", "🌡️", 0, "common", [{ status: "burn", turns: 2 }, { draw: 1 }]],
+    rimeshield: ["Rime Shield", "🌫️", 1, "common", [{ status: "chill", turns: 2 }, { block: 5, atk: 0.3 }]],
+    conjuresparks: ["Conjure Sparks", "✴️", 1, "common", [{ conjure: "spark", n: 2 }]],
+    thermalshock: ["Thermal Shock", "🔺", 1, "common", [{ status: "burn", turns: 2 }, { status: "chill", turns: 1 }]],
+    arcaneecho: ["Arcane Echo", "🔈", 1, "common", [{ hit: 0.6 }, { conjure: "spark", n: 1 }]],
+    frozenorb: ["Frozen Orb", "🔵", 2, "common", [{ hit: 0.6, to: "all", bonusIf: "chill", bonus: 1.2 }]],
+    cinderburst: ["Cinder Burst", "🟠", 2, "common", [{ hit: 0.6, to: "all", bonusIf: "burn", bonus: 1.2 }]],
+    manaward: ["Mana Ward", "🟦", 1, "common", [{ block: 6, atk: 0.5 }, { conjure: "spark", n: 1 }]],
+    glassstorm: ["Glass Storm", "🌬️", 2, "rare", [{ hit: 0.6, to: "all", bonusIf: "chill", bonus: 1.5, consume: true }]],
+    pyroclasm: ["Pyroclasm", "🌋", 2, "rare", [{ hit: 0.6, to: "all", bonusIf: "burn", bonus: 1.5, consume: true }]],
+    frostfirenova: ["Frostfire Nova", "🌓", 2, "rare", [{ status: "burn", turns: 2, to: "all" }, { status: "chill", turns: 1, to: "all" }]],
+    arcaneflurry: ["Arcane Flurry", "🎑", 1, "rare", [{ conjure: "spark", n: 3 }], true],
+    steamblast: ["Steam Blast", "🌁", 1, "rare", [{ hit: 1, bonusIf: "burn&chill", bonus: 2.6 }]],
+    mirrorshards: ["Mirror Shards", "🔹", 1, "rare", [{ hit: 0.4, to: "random", times: 3, bonusIf: "chill", bonus: 0.8 }]],
+    wildmagic: ["Wild Magic", "🎰", 1, "rare", [{ hit: 0.5, to: "random", times: 2 }, { status: "burn", turns: 1, to: "random" }, { status: "chill", turns: 1, to: "random" }]],
+    cryoshell: ["Cryo Shell", "🐚", 1, "rare", [{ block: 8, atk: 0.5 }, { status: "chill", turns: 2, to: "random" }]],
+    overload: ["Overload", "🔌", 0, "rare", [{ mana: 1 }, { conjure: "spark", n: 1 }], true],
+    arcanebrand: ["Arcane Brand", "🏷️", 1, "rare", [{ status: "burn", turns: 3 }, { status: "exposed", turns: 1 }]],
+    shatterpoint: ["Shatterpoint", "🔶", 2, "epic", [{ hit: 1.6, bonusIf: "chill", bonus: 3.6, consume: true }]],
+    conflagrate: ["Conflagrate", "🔥", 2, "epic", [{ hit: 1.4, bonusIf: "burn", bonus: 3.2, consume: true }]],
+    elementalfury: ["Elemental Fury", "🌀", 3, "epic", [{ hit: 1.1, to: "all", bonusIf: "burn&chill", bonus: 2.2 }]],
+    sparkstorm: ["Spark Storm", "⛈️", 2, "epic", [{ conjure: "spark", n: 3 }, { draw: 1 }], true],
+    polarity: ["Polarity", "🧲", 1, "epic", [{ status: "burn", turns: 3 }, { status: "chill", turns: 2 }, { draw: 1 }]],
+    frostbinding: ["Frost Binding", "⛓️", 2, "epic", [{ status: "chill", turns: 3, to: "all" }, { block: 8, atk: 0.6 }]],
+    arcaneconduit: ["Arcane Conduit", "📡", 1, "epic", [{ aura: "focus", mana: 1, turns: 2 }, { conjure: "spark", n: 1 }], true],
+    meltdown: ["Meltdown", "🫠", 2, "epic", [{ hit: 0.9, to: "all", bonusIf: "chill", bonus: 1.8, consume: true }, { status: "burn", turns: 2, to: "all" }]],
+    frostfirecomet: ["Frostfire Comet", "☄️", 3, "legendary", [{ hit: 2.4, bonusIf: "burn&chill", bonus: 4.8 }]],
+    heatdeath: ["Heat Death", "🌡️", 3, "legendary", [{ hit: 1.2, to: "all", bonusIf: "burn", bonus: 2.6, consume: true }]],
+    glacier: ["Glacier", "🏔️", 3, "legendary", [{ hit: 1.2, to: "all", bonusIf: "chill", bonus: 2.6, consume: true }, { block: 10, atk: 0.5 }]],
+    sparkweaver: ["Sparkweaver", "🕸️", 1, "legendary", [{ conjure: "spark", n: 3 }, { mana: 1 }], true],
+    twinelements: ["Twin Elements", "♊", 2, "legendary", [{ status: "burn", turns: 3, to: "all" }, { status: "chill", turns: 2, to: "all" }, { draw: 1 }], true],
+    singularity: ["Singularity", "🕳️", 3, "mythic", [{ hit: 2, to: "all", bonusIf: "burn|chill", bonus: 4.5, consume: true }], "mythic"],
+    arcanecascade: ["Arcane Cascade", "🌊", 0, "mythic", [{ conjure: "spark", n: 5 }, { mana: 2 }], "mythic"],
   },
 };
 
@@ -333,6 +526,8 @@ const CLASS = {
 const pct = (value) => Math.round(value * 100) + "%";
 // (a condition - or more of them, "poison|stun": any of them)
 const ifText = (cond) => {
+  // ("burn&chill": a burning and chilled foe)
+  if (cond.includes("&")) return "on a " + cond.split("&").map((one) => STATUS[one][1]).join(" and ") + " foe";
   if (!cond.includes("|")) return IF[cond];
   const parts = cond.split("|").map((one) => IF[one]);
   // ("against the undead or a boss" - "on a poisoned or stunned foe" - "on a stunned foe or against the undead")
@@ -340,12 +535,20 @@ const ifText = (cond) => {
   if (parts.every((one) => /^on a .* foe$/.test(one))) return "on a " + parts.map((one) => one.replace(/^on a | foe$/g, "")).join(" or ") + " foe";
   return parts.join(" or ");
 };
-const IF = { poison: "on a poisoned foe", burn: "on a burning foe", chill: "on a chilled foe", stun: "on a stunned foe", undead: "against the undead", boss: "against a boss", called: "against a summoned foe", low: "while you are below half HP", combo: "if you played a skill this turn" };
+const IF = { poison: "on a poisoned foe", burn: "on a burning foe", chill: "on a chilled foe", stun: "on a stunned foe", exposed: "on an exposed foe", undead: "against the undead", boss: "against a boss", called: "against a summoned foe", low: "while you are below half HP", combo: "if you played a skill this turn", guarded: "while you have block", healed: "if you healed this turn", chain: "if you played 2 other cards this turn" };
 const STATUS = {
   poison: ["poison", "poisoned"],
   burn: ["burn", "burning"],
   chill: ["chill", "chilled"],
   stun: ["stun", "stunned"],
+  exposed: ["expose", "exposed"],
+};
+// (what the end of a state is called: a shatter ends the chill)
+const ENDS = { poison: "its poison", burn: "its burn", chill: "its chill", stun: "its stun", exposed: "the exposure" };
+// The name of a card by its id (a card made in a fight: its name in the text)
+const nameOf = (id) => {
+  for (const list of [BASE, NEUTRAL, ...Object.values(CLASS)]) if (list[id]) return list[id][0];
+  return id;
 };
 
 function amount(fx) {
@@ -370,9 +573,20 @@ function phrase(fx, n) {
     if (fx.to == "random") text += " to a random foe";
     if (fx.times) text += fx.times == 2 ? " twice" : " " + fx.times + " times";
     if (fx.bonusIf) text += ", or " + (n ? n.dmg(fx.bonus, fx) : pct(fx.bonus)) + " " + ifText(fx.bonusIf);
+    if (fx.bonusIf && fx.consume) text += ", which ends " + fx.bonusIf.split(/[|&]/).map((one) => ENDS[one]).join(" and ");
     if (fx.fromBlock) text = "deal your block as damage, min " + (n ? n.dmg(fx.hit, fx) : pct(fx.hit));
     if (fx.execute) text = "a foe below " + pct(fx.execute) + " HP dies (no boss), else " + text.replace(/^deal /, "");
+    if (fx.drain) text += ", " + (fx.drainTo == "weakest" ? "the weakest ally heals " : fx.drainTo == "party" ? "the party heals " : "heal ") + pct(fx.drain) + " of the damage dealt";
     return text;
+  }
+  if (fx.thorns != null) {
+    const value = n && n.thorns ? n.thorns(fx) : String(fx.thorns) + (fx.def ? " + " + (fx.def == 1 ? "your armor" : pct(fx.def) + " of your armor") : "");
+    return "for " + fx.turns + " turn" + (fx.turns == 1 ? "" : "s") + ", a foe that hits " + (fx.to == "party" ? "the party" : "you") + " takes " + value + " as damage";
+  }
+  if (fx.conjure) return "add " + (fx.n == 1 ? "a " + nameOf(fx.conjure) : fx.n + " " + nameOf(fx.conjure) + "s") + " to your hand, gone once played";
+  if (fx.status == "exposed") {
+    const turns = " take" + (fx.to == "all" ? "" : "s") + " 25% more damage for " + (fx.turns || 2) + " turn" + ((fx.turns || 2) == 1 ? "" : "s");
+    return fx.to == "all" ? "expose every foe, they" + turns : fx.to == "random" ? "expose a random foe, it" + turns : "expose it, it" + turns;
   }
   if (fx.block != null) {
     const value = n ? n.block(fx) : amount(fx);
@@ -430,7 +644,9 @@ function targetOf(fx) {
 // What a step is worth in "units" (1 unit: what 1 mana buys in a Strike - 100% damage to one foe); fixed: the
 // part that isn't scaled (mana, cards, states)
 const FOES = 2.2; // foes in a fight, on average (a hit to every foe)
-const PARTY_WORTH = 2.8; // a block or heal for the whole party: worth this many single ones
+const PARTY_WORTH = 2.8;
+// How often a bonus condition is met (the share of its worth the bonus gets) - 0.25 when not listed
+const OFTEN = { guarded: 0.35, chain: 0.4, healed: 0.6, exposed: 0.35 }; // a block or heal for the whole party: worth this many single ones
 // How much a share of the armor in a block is worth (a share of 1: the hero's armor) - the Paladin's common cards
 // count it higher, its armor makes them block far more early on than the other classes'
 let defWorth = 0.3;
@@ -440,14 +656,23 @@ const BASE_OWNER = { paladin: ["taunt", "judgement", "holyshield", "consecrate",
 function worth(fx) {
   if (fx.aura) return { scaled: 0, fixed: fx.turns * (fx.to == "party" ? PARTY_WORTH : 1) * (fx.aura == "focus" ? fx.mana : fx.aura == "regen" ? fx.heal / 0.12 : fx.block / 7 + (fx.def || 0) * 0.3 + (fx.agi || 0) * 0.05) * 0.7 };
   if (fx.hit != null) {
-    const base = (fx.bonusIf ? fx.hit * 0.75 + fx.bonus * 0.25 : fx.hit) * (fx.fromBlock ? 2 : 1) * (fx.execute ? 1.3 : 1);
-    return { scaled: (base + (fx.def || 0) * 0.5) * (fx.times || 1) * (fx.to == "all" ? FOES * 0.75 : 1), fixed: 0 };
+    // (a bonus on two states at once is met less often - one that ends the state: a bit less again)
+    // (some are met most of the time by the class they are made for: block up, two cards before, a heal before)
+    const met = fx.bonusIf ? Math.max(...fx.bonusIf.split("|").map((one) => OFTEN[one] || 0.25)) : 0;
+    const often = fx.bonusIf && fx.bonusIf.includes("&") ? 0.15 : fx.consume ? met * 0.8 : met;
+    const base = (fx.bonusIf ? fx.hit * (1 - often) + fx.bonus * often : fx.hit) * (fx.fromBlock ? 2 : 1) * (fx.execute ? 1.3 : 1);
+    // (drain: the healing is worth a part of it - more when it heals the weakest or the party)
+    const drain = fx.drain ? 1 + fx.drain * (fx.drainTo == "party" ? 1.6 : fx.drainTo == "weakest" ? 1.2 : 0.8) : 1;
+    return { scaled: (base + (fx.def || 0) * 0.5) * (fx.times || 1) * (fx.to == "all" ? FOES * 0.75 : 1) * drain, fixed: 0 };
   }
+  // (thorns: what comes back over the turns - from about two hits a turn)
+  if (fx.thorns != null) return { scaled: 0, fixed: (fx.thorns / 10 + (fx.def || 0) * 0.45) * fx.turns * 0.5 * (fx.to == "party" ? PARTY_WORTH : 1) };
+  if (fx.conjure) return { scaled: 0, fixed: 0.6 * fx.n };
   // (the whole party: worth more - in a party it covers 2 to 4 heroes)
   if (fx.block != null) return { scaled: (fx.block / 7 + (fx.def || 0) * defWorth + (fx.atk || 0) + (fx.agi || 0) * 0.05) * (fx.to == "party" ? PARTY_WORTH : 1) * (fx.low ? 1.4 : 1), fixed: 0 };
   if (fx.heal != null) return { scaled: (fx.heal / 0.12) * (fx.to == "party" ? PARTY_WORTH : 1), fixed: 0 };
   let fixed = 0;
-  if (fx.status) fixed = { poison: 0.45, burn: 0.3, chill: 0.45, stun: 1 }[fx.status] * (fx.status == "stun" ? 1 : fx.turns || 1) * (fx.to == "all" ? FOES * 0.75 : 1);
+  if (fx.status) fixed = { poison: 0.45, burn: 0.3, chill: 0.45, stun: 1, exposed: 0.35 }[fx.status] * (fx.status == "stun" ? 1 : fx.turns || 1) * (fx.to == "all" ? FOES * 0.75 : 1);
   else if (fx.might != null) fixed = 0.35 * fx.might * (fx.to == "party" ? PARTY_WORTH : 1);
   else if (fx.draw != null) fixed = 0.5 * fx.draw;
   else if (fx.mana != null) fixed = fx.mana;
