@@ -164,8 +164,11 @@ test("runner: a paid run costs the entry, the server's own replay decides the pa
     const { moves } = autoPlay(started.seed);
     a.emit("runEnd", { id: started.id, moves: moves });
     const result = await h.once(a, "runnerResult");
-    const own = engine.replay(started.seed, moves.filter((m) => m[0] <= ((config.RUNNER_SLACK + 1000) / 1000) * engine.TPS));
-    assert.ok(Math.abs(result.distance - own.distance) <= 40, `${result.distance} vs ${own.distance}`);
+    // (exactly the run cut at some moment of the time it took plus the slack - not one tick more)
+    const first = Math.floor((config.RUNNER_SLACK / 1000) * engine.TPS);
+    const cuts = [];
+    for (let limit = first; limit <= first + 2 * engine.TPS; limit++) cuts.push(engine.replay(started.seed, moves, limit));
+    assert.ok(cuts.some((own) => own.distance === result.distance && own.coins === result.coins), `${result.distance} m not a cut of the run`);
     const full = engine.replay(started.seed, moves);
     if (full.ticks > ((config.RUNNER_SLACK + 1000) / 1000) * engine.TPS) assert.ok(result.distance < full.distance, "not the whole claimed run");
     assert.strictEqual(result.win, runner.payout(1000, result.distance, result.coins));

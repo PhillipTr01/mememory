@@ -9,9 +9,9 @@
  */
 (function (root) {
   var TPS = 60; // ticks a second
-  var V0 = 18; // m/s at the start ...
-  var ACC = 0.26; // ... and this much faster every second
-  var VMAX = 46;
+  var V0 = 20; // m/s at the start ...
+  var ACC = 0.32; // ... and this much faster every second
+  var VMAX = 50;
   var LANE_TICKS = 9; // one lane over
   var JUMP_TICKS = 40;
   var JUMP_HEIGHT = 1.3; // m
@@ -19,8 +19,8 @@
   var ROLL_TICKS = 40;
   var JUMP_BUFFER = 10; // a jump pressed this many ticks before landing: it jumps again on landing
   var START = 40; // m without anything at the start
-  var GAP = [11, 20]; // m between two rows (at least GAP_TIME of running - a flawless player always gets through)
-  var GAP_TIME = 0.4; // s
+  var GAP = [10, 17]; // m between two rows (at least GAP_TIME of running - a flawless player always gets through)
+  var GAP_TIME = 0.38; // s
   var HIT_WIDTH = 0.55; // of a lane: closer to a lane's middle than this - in it
   var DEPTH = 1; // m: a barrier, a bar
   var COIN_GAP = 2.5; // m between the coins of a line
@@ -66,7 +66,7 @@
     var low = Math.max(GAP[0], run.speed * GAP_TIME);
     var gap = low + rng() * (Math.max(GAP[1], low + 6) - low);
     var r = rng();
-    var blocked = r < 0.25 ? 1 : r < 0.8 ? 2 : 3;
+    var blocked = r < 0.15 ? 1 : r < 0.8 ? 2 : 3;
     var order = [0, 1, 2];
     for (var i = 2; i > 0; i--) {
       var j = Math.floor(rng() * (i + 1));
