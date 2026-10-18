@@ -20,7 +20,7 @@ const payout = (stake, score) => Math.floor(stake * multiplier(score));
 function table() {
   const even = config.RUNNER_EVEN;
   const top = Math.round(even * (1 + (config.RUNNER_MAX - 1) / Math.max(0.0001, config.RUNNER_SLOPE)));
-  return { min: Math.ceil(even * config.RUNNER_MIN), even: even, max: config.RUNNER_MAX, top: top, minMult: multiplier(Math.ceil(even * config.RUNNER_MIN)) };
+  return { min: Math.ceil(even * config.RUNNER_MIN), even: even, max: config.RUNNER_MAX, top: top, minMult: Math.round(config.RUNNER_MIN * 100) / 100 };
 }
 
 module.exports = { engine, multiplier, payout, table };
