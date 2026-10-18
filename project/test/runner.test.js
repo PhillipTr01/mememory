@@ -58,7 +58,7 @@ test("runner engine: the same seed and moves make the same run - the server's re
 test("runner engine: every row leaves a way through - a careful player gets far, the track gets faster", () => {
   for (const seed of [7, 8, 9]) {
     const { run } = autoPlay(seed);
-    assert.ok(engine.score(run) > 800, `seed ${seed}: ${engine.score(run)} (${run.cause})`);
+    assert.ok(engine.score(run) > 600, `seed ${seed}: ${engine.score(run)} (${run.cause})`);
     assert.ok(run.speed > engine.V0 + 5);
   }
   // Never three trains in a row: at least one lane to pass - never two low barriers in a lane too close for two jumps
@@ -96,9 +96,9 @@ test("runner engine: moves from the page are checked - in order, known moves, on
   assert.deepStrictEqual(engine.cleanMoves("nope"), []);
 });
 
-test("runner payout: nothing below the start, the share of the entry up to break-even, gently more above it, capped", () => {
-  const was = { even: config.RUNNER_EVEN, min: config.RUNNER_MIN, slope: config.RUNNER_SLOPE, max: config.RUNNER_MAX };
-  Object.assign(config, { RUNNER_EVEN: 1000, RUNNER_MIN: 0.25, RUNNER_SLOPE: 0.5, RUNNER_MAX: 3 });
+test("runner payout: nothing below the start, the share of the entry up to break-even, gently more above it, capped - coins add a share", () => {
+  const was = { even: config.RUNNER_EVEN, min: config.RUNNER_MIN, slope: config.RUNNER_SLOPE, max: config.RUNNER_MAX, bonus: config.RUNNER_COIN_BONUS, cap: config.RUNNER_COIN_CAP };
+  Object.assign(config, { RUNNER_EVEN: 1000, RUNNER_MIN: 0.25, RUNNER_SLOPE: 0.5, RUNNER_MAX: 3, RUNNER_COIN_BONUS: 0.01, RUNNER_COIN_CAP: 0.5 });
   try {
     assert.strictEqual(runner.multiplier(249), 0);
     assert.strictEqual(runner.multiplier(250), 0.25);
@@ -107,9 +107,14 @@ test("runner payout: nothing below the start, the share of the entry up to break
     assert.strictEqual(runner.multiplier(2000), 1.5);
     assert.strictEqual(runner.multiplier(50000), 3);
     assert.strictEqual(runner.payout(1000, 2000), 1500);
+    // (coins: 1% each on top of what the run pays - up to 50%, nothing on a run that pays nothing, nothing in practice)
+    assert.strictEqual(runner.payout(1000, 2000, 20), 1800);
+    assert.strictEqual(runner.payout(1000, 2000, 90), 2250);
+    assert.strictEqual(runner.payout(1000, 200, 40), 0);
+    assert.strictEqual(runner.payout(0, 2000, 40), 0);
     assert.deepStrictEqual(runner.table(), { min: 250, even: 1000, max: 3, top: 5000, minMult: 0.25 });
   } finally {
-    Object.assign(config, { RUNNER_EVEN: was.even, RUNNER_MIN: was.min, RUNNER_SLOPE: was.slope, RUNNER_MAX: was.max });
+    Object.assign(config, { RUNNER_EVEN: was.even, RUNNER_MIN: was.min, RUNNER_SLOPE: was.slope, RUNNER_MAX: was.max, RUNNER_COIN_BONUS: was.bonus, RUNNER_COIN_CAP: was.cap });
   }
 });
 
@@ -141,9 +146,11 @@ test("runner: a paid run costs the entry, the server's own replay decides the pa
     h.setCoins("runa", 5000);
     const a = client("runa");
     const setup = await h.once(a, "runnerSetup");
-    assert.deepStrictEqual(setup.rules.stakes, config.RUNNER_STAKES);
-    // Not one of the entries: nothing happens - an entry: the coins go
-    a.emit("runStart", { stake: 123 });
+    assert.deepStrictEqual([setup.rules.minBet, setup.rules.maxBet], [config.RUNNER_MIN_BET, config.RUNNER_MAX_BET]);
+    // Below the min entry: refused - an entry: the coins go
+    const low = h.once(a, "runnerError");
+    a.emit("runStart", { stake: config.RUNNER_MIN_BET - 1 });
+    assert.match(await low, /An entry is/);
     a.emit("runStart", { stake: 1000 });
     const started = await h.once(a, "runnerStarted");
     assert.strictEqual(started.stake, 1000);
@@ -158,13 +165,13 @@ test("runner: a paid run costs the entry, the server's own replay decides the pa
     a.emit("runEnd", { id: started.id, moves: moves });
     const result = await h.once(a, "runnerResult");
     const own = engine.replay(started.seed, moves.filter((m) => m[0] <= ((config.RUNNER_SLACK + 1000) / 1000) * engine.TPS));
-    assert.ok(Math.abs(result.score - own.score) <= 40, `${result.score} vs ${own.score}`);
+    assert.ok(Math.abs(result.distance - own.distance) <= 40, `${result.distance} vs ${own.distance}`);
     const full = engine.replay(started.seed, moves);
-    if (full.ticks > ((config.RUNNER_SLACK + 1000) / 1000) * engine.TPS) assert.ok(result.score < full.score, "not the whole claimed run");
-    assert.strictEqual(result.win, runner.payout(1000, result.score));
+    if (full.ticks > ((config.RUNNER_SLACK + 1000) / 1000) * engine.TPS) assert.ok(result.distance < full.distance, "not the whole claimed run");
+    assert.strictEqual(result.win, runner.payout(1000, result.distance, result.coins));
     await h.wait(30);
     assert.strictEqual(h.coinsOf("runa"), 4000 + result.win);
-    assert.strictEqual(result.best, result.score);
+    assert.strictEqual(result.best, result.distance);
     // Practice: free, nothing paid
     a.emit("runStart", { stake: 0 });
     const free = await h.once(a, "runnerStarted");

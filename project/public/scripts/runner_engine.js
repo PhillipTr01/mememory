@@ -5,25 +5,24 @@
  * generator, a fixed 60 ticks a second, only + - * / (the same on every browser and on the server).
  *
  * Three lanes, the runner always runs forward and gets faster. Rows of obstacles come: a train (change the
- * lane), a low barrier (jump), a high bar (roll under it). Coins on the free lanes add a little.
+ * lane), a low barrier (jump), a high bar (roll under it). Coins on the free lanes are paid on top (game/runner.js).
  */
 (function (root) {
   var TPS = 60; // ticks a second
-  var V0 = 14; // m/s at the start ...
-  var ACC = 0.22; // ... and this much faster every second
-  var VMAX = 44;
+  var V0 = 18; // m/s at the start ...
+  var ACC = 0.26; // ... and this much faster every second
+  var VMAX = 46;
   var LANE_TICKS = 9; // one lane over
   var JUMP_TICKS = 40;
   var JUMP_HEIGHT = 1.3; // m
   var CLEAR_LOW = 0.6; // a low barrier: this high in the air at least
   var ROLL_TICKS = 40;
   var JUMP_BUFFER = 10; // a jump pressed this many ticks before landing: it jumps again on landing
-  var START = 45; // m without anything at the start
-  var GAP = [12, 22]; // m between two rows (at least GAP_TIME of running - a flawless player always gets through)
-  var GAP_TIME = 0.42; // s
+  var START = 40; // m without anything at the start
+  var GAP = [11, 20]; // m between two rows (at least GAP_TIME of running - a flawless player always gets through)
+  var GAP_TIME = 0.4; // s
   var HIT_WIDTH = 0.55; // of a lane: closer to a lane's middle than this - in it
   var DEPTH = 1; // m: a barrier, a bar
-  var COIN_SCORE = 2; // a coin: this many points (a meter: 1)
   var COIN_GAP = 2.5; // m between the coins of a line
   var MAX_TICKS = TPS * 60 * 15; // a run never goes longer (15 minutes)
   var KINDS = ["train", "low", "high"];
@@ -78,7 +77,8 @@
     var lanes = [null, null, null];
     var trains = 0;
     // (a train ends early enough before the next row to get around it at this speed)
-    var free = 4 + run.speed * 0.4;
+    // (two lanes over take 0.3 s)
+    var free = 2 + run.speed * 0.34;
     for (var k = 0; k < blocked; k++) {
       var p = rng();
       var kind = p < 0.45 ? "train" : p < 0.75 ? "low" : "high";
@@ -87,7 +87,9 @@
       var before = run.rows.length ? run.rows[run.rows.length - 1].lanes[order[k]] : null;
       if (kind === "low" && before && before.kind === "low" && z - before.z0 < (run.speed * JUMP_TICKS) / TPS + 2) kind = "high";
       if (kind === "train") trains++;
-      var length = kind === "train" ? Math.max(6, Math.min(30, 8 + rng() * 22, gap - free)) : DEPTH;
+      var length = kind === "train" ? Math.max(6, Math.min(18, 6 + rng() * 12, gap - free)) : DEPTH;
+      // (a train: the next row only after room to get around its end at this speed)
+      if (kind === "train") gap = Math.max(gap, length + free);
       lanes[order[k]] = { kind: kind, z0: z, z1: z + length };
     }
     run.rows.push({ z: z, lanes: lanes });
@@ -174,8 +176,9 @@
     return run;
   }
 
+  // (the meters run - the coins are paid on their own, see game/runner.js)
   function score(run) {
-    return Math.floor(run.z) + COIN_SCORE * run.taken;
+    return Math.floor(run.z);
   }
 
   /*
@@ -215,7 +218,7 @@
     return out;
   }
 
-  var api = { TPS: TPS, V0: V0, VMAX: VMAX, JUMP_TICKS: JUMP_TICKS, ROLL_TICKS: ROLL_TICKS, LANE_TICKS: LANE_TICKS, JUMP_HEIGHT: JUMP_HEIGHT, COIN_SCORE: COIN_SCORE, MAX_TICKS: MAX_TICKS, KINDS: KINDS, create: create, step: step, height: height, score: score, replay: replay, cleanMoves: cleanMoves };
+  var api = { TPS: TPS, V0: V0, VMAX: VMAX, JUMP_TICKS: JUMP_TICKS, ROLL_TICKS: ROLL_TICKS, LANE_TICKS: LANE_TICKS, JUMP_HEIGHT: JUMP_HEIGHT, MAX_TICKS: MAX_TICKS, KINDS: KINDS, create: create, step: step, height: height, score: score, replay: replay, cleanMoves: cleanMoves };
   if (typeof module !== "undefined") module.exports = api;
   else root.RunnerEngine = api;
 })(this);

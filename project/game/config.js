@@ -59,6 +59,23 @@ module.exports = {
   GAME_ROULETTE: true,
   GAME_BAUCUA: true,
   GAME_RUNNER: false, // (new: off until the admin turns it on - test mode has it)
+  // Per game (admin panel): in the season worlds too (GAME_X_SEASON) - its bets not limited by the balance (NOCAP_X)
+  GAME_JACKPOT_SEASON: true,
+  GAME_ROULETTE_SEASON: true,
+  GAME_BAUCUA_SEASON: true,
+  GAME_BATTLES_SEASON: true,
+  GAME_POKER_SEASON: true,
+  GAME_BLACKJACK_SEASON: true,
+  GAME_SLOTS_SEASON: true,
+  GAME_RUNNER_SEASON: true,
+  NOCAP_JACKPOT: false,
+  NOCAP_ROULETTE: false,
+  NOCAP_BAUCUA: false,
+  NOCAP_BATTLES: false,
+  NOCAP_POKER: false,
+  NOCAP_BLACKJACK: false,
+  NOCAP_SLOTS: false,
+  NOCAP_RUNNER: false,
   // (the dungeon: off - only test mode has it until the admin turns it on)
   GAME_RPG: false,
 
@@ -235,8 +252,11 @@ module.exports = {
   BAUCUA_HISTORY: 20, // last results in the row
 
   // The runner (game/runner.js, public/scripts/runner_engine.js): an entry, the score decides the payout
-  RUNNER_STAKES: [100, 1000, 10000], // the entries to choose from (0: a free practice run, always)
-  RUNNER_EVEN: 750, // the score that pays the entry back (1x)
+  RUNNER_MIN_BET: 100, // the entry of a run (0: a free practice run, always)
+  RUNNER_MAX_BET: 100000,
+  RUNNER_COIN_BONUS: 0.01, // every coin picked up adds this share to the payout (a run that pays nothing stays at nothing) ...
+  RUNNER_COIN_CAP: 0.5, // ... up to this much
+  RUNNER_EVEN: 600, // the meters that pay the entry back (1x)
   RUNNER_MIN: 0.25, // below this share of RUNNER_EVEN: nothing - from it on the share of the entry (up to 1x)
   RUNNER_SLOPE: 0.5, // above RUNNER_EVEN: this much more per RUNNER_EVEN run
   RUNNER_MAX: 10, // the highest multiplier

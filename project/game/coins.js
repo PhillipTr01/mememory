@@ -220,13 +220,16 @@ function makeWallet(kind) {
     return Number.isFinite(cap) ? cap : null;
   }
 
+  // The max bet by balance of every game (null: none - lifted for the game, or no cap at all) - "slots:buy": a bonus buy
+  const capRules = (world) => Object.fromEntries([...limits.CAP_GAMES, "slots:buy"].map((game) => [game, limits.capRule(world, game)]));
+
   // { coins, bonus, bonusIn, world, betCap } - bonus: the daily free coins can be claimed now
   // (in the season: normal - the normal balance, shown next to the season's)
   async function get(username) {
     // Test mode (the admin): the sandbox - the real balance stays as it is
     if (testMode().active(username)) {
       const balance = testMode().balance(username);
-      return { coins: balance, bonus: true, bonusIn: 0, bonusAmount: dailyBonus(), normal: null, world: kind, joined: null, test: true, betCap: limits.betCap(balance, "normal") === Infinity ? null : limits.betCap(balance, "normal"), betCapRule: limits.capRule("normal"), slotsCapRule: limits.capRule("normal", "slots") };
+      return { coins: balance, bonus: true, bonusIn: 0, bonusAmount: dailyBonus(), normal: null, world: kind, joined: null, test: true, betCap: limits.betCap(balance, "normal") === Infinity ? null : limits.betCap(balance, "normal"), betCapRule: limits.capRule("normal"), slotsCapRule: limits.capRule("normal", "slots"), capRules: capRules("normal") };
     }
     // (after a restart: the season is known first)
     await gate;
@@ -242,6 +245,7 @@ function makeWallet(kind) {
       betCap: capFor(user[f.coins] || 0),
       betCapRule: limits.capRule(kind),
       slotsCapRule: limits.capRule(kind, "slots"),
+      capRules: capRules(kind),
       bonus: available,
       bonusIn: bonusInAt(bonusAtOf(user)),
       bonusAmount: available ? bonusDue(user) : dailyBonus(),
@@ -314,7 +318,7 @@ function makeWallet(kind) {
     refusals.delete(username);
     const capped = BET_REASONS.includes(options && options.reason) && !(options && options.nocap);
     const round = capped ? Math.max(0, Math.floor(Number(options && options.round) || 0)) : 0;
-    // (slots: their own share of the cap - a bonus buy counts like a bet at a table: capGame null)
+    // (slots: their own share of the cap - a bonus buy counts like a bet at a table: capGame "slots:buy")
     const game = options && "capGame" in options ? options.capGame : limits.gameOfReason(options && options.reason);
     if (testMode().active(username)) {
       // (never coins of other players for test coins - the games check it too, with a message)

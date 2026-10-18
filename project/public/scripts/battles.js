@@ -105,7 +105,8 @@ socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  myCapRule = data.betCapRule || null;
+  // (this game's own: null when the admin lifted it)
+  myCapRule = data.capRules && "battles" in data.capRules ? data.capRules.battles : data.betCapRule || null;
   renderCreate();
   renderList();
   if (!spinning) renderBattle();

@@ -3074,7 +3074,7 @@ function renderSettings() {
       // A game on / off: a card of its own, over the whole width
       var choice = section.fields.find((field) => field.type == "choice");
       var toggle = section.fields.find((field) => field.type == "toggle");
-      if (toggle && !choice) return toggleCard(toggle);
+      if (toggle && !choice && section.fields.filter((field) => field.type == "toggle").length == 1) return toggleCard(toggle);
       // A choice with the settings of its section (only the ones of the option picked - like Outside seasons)
       if (choice) return choiceCard(choice, section.fields.filter((field) => field != choice && applies(field)).map((field) => (field.type == "toggle" ? switchRow(field) : settingRow(field))));
       var card = el("div", "ad-card");
@@ -3091,7 +3091,7 @@ function renderSettings() {
         card.classList.add("ad-card-off");
         head.appendChild(el("span", "ad-pill", "Off outside seasons - 💔 no max bet"));
       }
-      section.fields.forEach((field) => card.appendChild(settingRow(field)));
+      section.fields.forEach((field) => card.appendChild(field.type == "toggle" ? switchRow(field) : settingRow(field)));
       return card;
     }),
   );

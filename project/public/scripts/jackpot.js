@@ -65,7 +65,8 @@ socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  myCapRule = data.betCapRule || null;
+  // (this game's own: null when the admin lifted it)
+  myCapRule = data.capRules && "jackpot" in data.capRules ? data.capRules.jackpot : data.betCapRule || null;
   document.getElementById("jpCoins").innerText = "🪙 " + formatCoins(data.coins);
   renderBet();
 });

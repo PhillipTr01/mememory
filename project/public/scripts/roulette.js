@@ -56,7 +56,8 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  myCapRule = data.betCapRule || null;
+  // (this game's own: null when the admin lifted it)
+  myCapRule = data.capRules && "roulette" in data.capRules ? data.capRules.roulette : data.betCapRule || null;
   // While the reel rolls the balance shows the coins before the win
   if (!rolling) renderCoins();
   renderControls();

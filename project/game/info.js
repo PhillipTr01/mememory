@@ -234,7 +234,7 @@ const GAMES = {
     ],
   }),
 
-  runner: () => {
+  runner: (L) => {
     const t = require("./runner").table();
     return {
       title: "Runner",
@@ -242,8 +242,9 @@ const GAMES = {
       sections: [
         section("How it works", [
           tile("🏃", "The run", "Change lanes to dodge trains, jump over barriers and roll under bars. The run gets faster the longer it goes.", { tags: [["← →"], ["↑ jump"], ["↓ roll"]] }),
-          tile("🪙", "Coins", "Every coin you pick up adds 2 meters to your score."),
           tile("💰", "Pays", `From ${n(t.min)} m you get part of your entry back. At ${n(t.even)} m you get your entry back, and longer runs pay up to ${t.max}×.`, { tags: [[`${n(t.min)} m · ${t.minMult}×`], [`${n(t.even)} m · 1×`, "blue"], [`${n(t.top)} m · ${t.max}×`, "gold"]] }),
+          tile("🪙", "Coins", `Every coin you pick up adds ${Math.round(config.RUNNER_COIN_BONUS * 100)}% to your payout, up to ${Math.round(config.RUNNER_COIN_CAP * 100)}%.`, { big: "+" + Math.round(config.RUNNER_COIN_BONUS * 100) + "%" }),
+          tile("🎟️", "Entry", `Enter with 🪙 ${n(L.RUNNER_MIN_BET)} to 🪙 ${n(L.RUNNER_MAX_BET)}.`, { coins: [n(L.RUNNER_MIN_BET), n(L.RUNNER_MAX_BET)] }),
           tile("🎯", "Practice", "Practice runs are free and pay nothing. Use them to get better first."),
         ]),
       ],

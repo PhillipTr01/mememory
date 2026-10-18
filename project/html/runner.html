@@ -112,10 +112,18 @@
                             <div id="rnResult" class="rn-result" hidden></div>
                             <div class="rn-pick">
                                 <span class="rl-label">Entry</span>
-                                <div id="rnStakes" class="rn-stakes"></div>
+                                <div class="rn-amount">
+                                    <button type="button" class="rn-chip" data-amount="half">½</button>
+                                    <input id="rnAmount" class="mm-input rn-amount-input" type="number" inputmode="numeric" aria-label="Entry">
+                                    <button type="button" class="rn-chip" data-amount="double">×2</button>
+                                    <button type="button" class="rn-chip" data-amount="max">Max</button>
+                                </div>
                             </div>
                             <div id="rnTable" class="rn-table"></div>
-                            <button type="button" id="rnStart" class="mm-btn mm-btn-primary rn-start">Run</button>
+                            <div class="rn-actions">
+                                <button type="button" id="rnStart" class="mm-btn mm-btn-primary rn-start">Run</button>
+                                <button type="button" id="rnPractice" class="mm-btn rn-practice">Practice</button>
+                            </div>
                             <p class="rn-help mm-muted">Swipe or use the arrow keys. Change lanes to dodge trains, jump over barriers and roll under bars.</p>
                             <p id="rnBest" class="rn-best mm-muted"></p>
                         </div>

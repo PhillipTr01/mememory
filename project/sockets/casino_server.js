@@ -127,9 +127,12 @@ module.exports = function (io) {
   // A game turned off (admin panel): its open pages go to another game
   settings.changes.on("change", (values) => {
     for (const game of games.GAMES) {
-      if (values[game.key] !== false) continue;
+      const off = values[game.key] === false;
+      // (out of the seasons only: the pages in the season worlds)
+      const seasonsOff = !game.noSeason && values[game.key + "_SEASON"] === false;
+      if (!off && !seasonsOff) continue;
       // (the test world keeps it - a game is tried out there before it opens)
-      for (const socket of [game.namespace, ...(game.noSeason ? [] : worlds.SEASONS.map((world) => world + game.namespace))].flatMap((name) => [...io.of(name).sockets.values()])) {
+      for (const socket of [...(off ? [game.namespace] : []), ...(game.noSeason ? [] : worlds.SEASONS.map((world) => world + game.namespace))].flatMap((name) => [...io.of(name).sockets.values()])) {
         socket.emit("gameOff");
         socket.disconnect(true);
       }

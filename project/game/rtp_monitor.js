@@ -19,7 +19,7 @@ const GAMES = [
   { id: "slots", name: "Slots", icon: "🎰", bet: ["slots bet"], win: ["slots win"], refund: [], theory: () => slots.rtp().rtp, perBet: () => slots.SPIN_SPREAD },
   { id: "roulette", name: "Roulette", icon: "🎡", bet: ["roulette bet"], win: ["roulette win"], refund: ["roulette refund"], theory: () => roulette.rtp("red") },
   { id: "baucua", name: "Bầu Cua", icon: "🦀", bet: ["baucua bet"], win: ["baucua win"], refund: ["baucua refund"], theory: () => baucua.rtp() },
-  { id: "runner", name: "Runner", icon: "🏃", bet: ["runner bet"], win: ["runner win"], refund: [], theory: () => null, about: () => `A game of skill: the payback depends on how well people run. ${config.RUNNER_EVEN.toLocaleString("en-US")} points pay the entry back, the most is ${config.RUNNER_MAX}x.` },
+  { id: "runner", name: "Runner", icon: "🏃", bet: ["runner bet"], win: ["runner win"], refund: [], theory: () => null, about: () => `A game of skill: the payback depends on how well people run. ${config.RUNNER_EVEN.toLocaleString("en-US")} m pay the entry back, the most is ${config.RUNNER_MAX}x - every coin picked up adds ${Math.round(config.RUNNER_COIN_BONUS * 100)}% to the payout (up to ${Math.round(config.RUNNER_COIN_CAP * 100)}%).` },
   { id: "blackjack", name: "Blackjack", icon: "🃏", bet: ["blackjack bet"], win: ["blackjack win"], refund: ["blackjack refund"], theory: () => null, about: "Depends on how the players play - about 99.5% with perfect basic strategy." },
   {
     id: "battles",

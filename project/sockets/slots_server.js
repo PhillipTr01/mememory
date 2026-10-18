@@ -287,7 +287,7 @@ module.exports = function (io, options = {}) {
         try {
           if (early > 0) await new Promise((resolve) => setTimeout(resolve, early));
           // (a buy: its price counts against the max bet by balance like a bet at a table - not the share of a spin)
-          const spent = buy ? await coins.spend(username, cost, { reason: "slots bet", note: "bonus buy: " + BUY_NAMES[buy], capGame: null }) : await coins.spend(username, bet, { reason: "slots bet" });
+          const spent = buy ? await coins.spend(username, cost, { reason: "slots bet", note: "bonus buy: " + BUY_NAMES[buy], capGame: "slots:buy" }) : await coins.spend(username, bet, { reason: "slots bet" });
           if (!spent) return error(coins.refusal(username) || "You don't have enough coins.");
           lastSpin.set(username, Date.now());
           spinTab.set(username, socket.id);

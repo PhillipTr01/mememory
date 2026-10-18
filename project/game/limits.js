@@ -53,6 +53,11 @@ function dividerOf(world, game) {
   return Number.isFinite(x) && x >= 1 ? x : 1;
 }
 
+// The admin lifted the max bet by balance for this game (NOCAP_X)
+function lifted(game) {
+  return game != null && config["NOCAP_" + String(game).split(":")[0].toUpperCase()] === true;
+}
+
 // Outside of seasons with the second chance: the admin can turn the cap off (a season keeps its own)
 function noCap(world) {
   return !slots.of(world) && config.OFFSEASON_MODE === "chance" && config.OFFSEASON_NO_CAP === true;
@@ -60,9 +65,10 @@ function noCap(world) {
 
 // The rule ({floor, share} - null: no cap): everything up to the floor, above it share% of the balance
 // (a game with its own share: both divided by its x). The pages work out what is left of a round themselves.
+// (game: the id of a game - "slots:buy" a bonus buy of the slots: the cap of a table, the slots' own switch)
 function capRule(world, game) {
   const limits = forWorld(world);
-  if (!(limits.BET_CAP_SHARE < 100) || noCap(world)) return null;
+  if (!(limits.BET_CAP_SHARE < 100) || noCap(world) || lifted(game)) return null;
   const x = dividerOf(world, game);
   // (a divided all-in amount up to the next 100 too - 10,000 / 15: 700, not 666)
   return { floor: x > 1 ? roundUp(limits.BET_CAP_FLOOR / x) : limits.BET_CAP_FLOOR, share: limits.BET_CAP_SHARE / x };
@@ -81,9 +87,12 @@ function betCap(balance, world, game) {
   return Math.max(rule.floor, roundUp((balance * rule.share) / 100));
 }
 
-// The game of a bet (the reason of the coin history): only games with their own share
+// The game of a bet (the reason of the coin history)
+const REASON_GAMES = { "jackpot bet": "jackpot", battle: "battles", "poker buy-in": "poker", "poker chips": "poker", "blackjack bet": "blackjack", "slots bet": "slots", "roulette bet": "roulette", "baucua bet": "baucua", "runner bet": "runner" };
 function gameOfReason(reason) {
-  return reason === "slots bet" ? "slots" : null;
+  return REASON_GAMES[reason] || null;
 }
+// The games with a max bet by balance - the pages get the rule of each (coins.get)
+const CAP_GAMES = [...new Set(Object.values(REASON_GAMES))];
 
-module.exports = { forWorld, forSeason, betCap, capRule, dividerOf, gameOfReason };
+module.exports = { forWorld, forSeason, betCap, capRule, dividerOf, gameOfReason, CAP_GAMES };

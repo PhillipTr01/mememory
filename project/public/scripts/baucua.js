@@ -58,7 +58,8 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  myCapRule = data.betCapRule || null;
+  // (this game's own: null when the admin lifted it)
+  myCapRule = data.capRules && "baucua" in data.capRules ? data.capRules.baucua : data.betCapRule || null;
   // While the bowl shakes the balance shows the coins before the win
   if (!rolling) renderCoins();
   renderControls();

@@ -24,8 +24,14 @@ function enabled(id, username) {
   const game = GAMES.find((g) => g.id === id);
   if (game == null) return false;
   if (username != null && testMode.active(username)) return true;
-  if (game.noSeason && username != null && require("./worlds").isSeason(require("./worlds").worldOf(username))) return false;
+  // (a season world: not the Dungeon - and not a game the admin keeps out of the seasons, GAME_X_SEASON)
+  if (username != null && !inSeasons(game) && require("./worlds").isSeason(require("./worlds").worldOf(username))) return false;
   return config[game.key] !== false;
+}
+
+// In the season worlds too
+function inSeasons(game) {
+  return !game.noSeason && config[game.key + "_SEASON"] !== false;
 }
 
 // Where a player goes instead (null: no game is on - the leaderboard)
@@ -33,4 +39,4 @@ function firstEnabled(username) {
   return GAMES.find((game) => !game.noSeason && enabled(game.id, username)) || null;
 }
 
-module.exports = { GAMES, enabled, firstEnabled };
+module.exports = { GAMES, enabled, firstEnabled, inSeasons };

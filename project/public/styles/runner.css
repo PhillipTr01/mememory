@@ -44,8 +44,7 @@
   flex-direction: column;
   padding: 0.3rem 0.7rem;
   border-radius: var(--mm-radius);
-  background: rgba(15, 15, 25, 0.62);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 12, 28, 0.72);
 }
 
 .rn-hud-label {
@@ -102,7 +101,6 @@
   border: 1px solid var(--mm-border);
   border-radius: 16px;
   background: rgba(18, 18, 26, 0.88);
-  backdrop-filter: blur(6px);
   text-align: center;
 }
 
@@ -368,4 +366,52 @@
 
 .rn-stake:hover:not(:disabled):not(.active) {
   border-color: rgba(var(--mm-accent-rgb), 0.6);
+}
+
+/* The entry: an amount with ½ ×2 Max - Run with it, or practice for free */
+.rn-amount {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.rn-amount-input {
+  width: 130px;
+  text-align: center;
+  font-weight: 800;
+}
+
+.rn-chip {
+  min-width: 42px;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.rn-chip:hover {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+}
+
+.rn-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.rn-practice {
+  border: 1px solid var(--mm-border);
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-weight: 700;
+}
+
+.rn-table-item.coin .rn-table-x {
+  color: #fbbf24;
 }

@@ -118,7 +118,8 @@ socket.on("joined", (data) => (myName = data.username));
 
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  myCapRule = data.betCapRule || null;
+  // (this game's own: null when the admin lifted it)
+  myCapRule = data.capRules && "poker" in data.capRules ? data.capRules.poker : data.betCapRule || null;
 });
 
 socket.on("pokerError", (message) => showHint(message, "error"));

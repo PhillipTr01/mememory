@@ -10,7 +10,7 @@ const ROOM = "runner";
 const engine = runner.engine;
 
 /*
- * The runner: every player alone. A run costs an entry (one of RUNNER_STAKES - or nothing: practice). The
+ * The runner: every player alone. A run costs an entry (RUNNER_MIN_BET - RUNNER_MAX_BET - or nothing: practice). The
  * server gives the page a seed, the page plays the run live and sends its moves (a tick and a move each).
  * At the end the server plays the run again from the seed and the moves (public/scripts/runner_engine.js) -
  * its own replay decides the score, never the page. A run can't claim more time than it took here.
@@ -20,7 +20,7 @@ const engine = runner.engine;
 module.exports = function (io, options = {}) {
   // The real casino - or the admin's test world (game/worlds.js): its own namespace, nothing saved
   const world = options.world || "";
-  const { coins, persist, live, inPlay, casinoLock, casinoChat } = require("../game/worlds").services(world);
+  const { coins, persist, live, inPlay, casinoLock, casinoChat, limits } = require("../game/worlds").services(world);
   const room = io.of(world + "/runner");
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
@@ -37,7 +37,7 @@ module.exports = function (io, options = {}) {
   let nextId = 0;
   const timers = new Map(); // username -> the idle timer of the run
 
-  const rules = () => ({ stakes: config.RUNNER_STAKES, table: runner.table(), daily: config.RUNNER_DAILY, tps: engine.TPS, countdown: config.RUNNER_COUNTDOWN, slope: config.RUNNER_SLOPE });
+  const rules = () => ({ minBet: limits.RUNNER_MIN_BET, maxBet: limits.RUNNER_MAX_BET, coinBonus: config.RUNNER_COIN_BONUS, coinCap: config.RUNNER_COIN_CAP, table: runner.table(), daily: config.RUNNER_DAILY, tps: engine.TPS, countdown: config.RUNNER_COUNTDOWN, slope: config.RUNNER_SLOPE });
 
   async function sendCoins(username) {
     const data = await coins.get(username);
@@ -85,24 +85,24 @@ module.exports = function (io, options = {}) {
     timers.delete(username);
     persist.changed("runner");
     const result = engine.replay(run.seed, run.moves, allowed(run));
-    const multiplier = run.stake > 0 ? runner.multiplier(result.score) : 0;
-    const win = run.stake > 0 ? runner.payout(run.stake, result.score) : 0;
+    const multiplier = run.stake > 0 ? runner.multiplier(result.distance) : 0;
+    const win = runner.payout(run.stake, result.distance, result.coins);
     state.played++;
-    const record = result.score > (state.bests[username] || 0);
-    if (record) state.bests[username] = result.score;
+    const record = result.distance > (state.bests[username] || 0);
+    if (record) state.bests[username] = result.distance;
     if (win > 0) {
       try {
-        await coins.add(username, win, { reason: "runner win", note: `${result.distance.toLocaleString("en-US")} m · ${result.coins} coins · x${multiplier}`, bet: run.stake });
+        await coins.add(username, win, { reason: "runner win", note: `${result.distance.toLocaleString("en-US")} m · x${multiplier} · ${result.coins} coins +${Math.round(runner.coinBonus(result.coins) * 100)}%`, bet: run.stake });
         best.changed();
       } catch (error) {
         console.error("[runner] Could not pay a run:", error);
       }
-      state.feed.unshift({ name: username, stake: run.stake, score: result.score, win: win, at: Date.now() });
+      state.feed.unshift({ name: username, stake: run.stake, distance: result.distance, win: win, at: Date.now() });
       state.feed.length = Math.min(state.feed.length, 10);
       room.to(ROOM).emit("runnerFeed", state.feed);
     }
     persist.changed("runner");
-    const answer = { id: run.id, practice: run.stake === 0, stake: run.stake, ...result, multiplier: multiplier, win: win, best: state.bests[username], record: record };
+    const answer = { id: run.id, practice: run.stake === 0, stake: run.stake, ...result, multiplier: multiplier, bonus: runner.coinBonus(result.coins), win: win, best: state.bests[username], record: record };
     toUser(username, "runnerResult", answer);
     return answer;
   }
@@ -126,7 +126,8 @@ module.exports = function (io, options = {}) {
       "runStart",
       safe("runStart", async (data) => {
         const stake = data != null ? data.stake : null;
-        if (!Number.isInteger(stake) || (stake !== 0 && !config.RUNNER_STAKES.includes(stake))) return;
+        if (!Number.isInteger(stake) || stake < 0) return;
+        if (stake !== 0 && (stake < limits.RUNNER_MIN_BET || stake > limits.RUNNER_MAX_BET)) return error(`An entry is ${limits.RUNNER_MIN_BET.toLocaleString("en-US")} to ${limits.RUNNER_MAX_BET.toLocaleString("en-US")} coins.`);
         if (state.runs.has(username)) return error("Finish your run first.");
         if (stake > 0 && casinoLock.locked()) return error(casinoLock.message());
         if (stake > 0 && config.RUNNER_DAILY > 0 && usedToday(username) >= config.RUNNER_DAILY) return error(`You have played your ${config.RUNNER_DAILY} runs for today. Practice is still free.`);

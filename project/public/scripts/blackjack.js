@@ -54,7 +54,8 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  myCapRule = data.betCapRule || null;
+  // (this game's own: null when the admin lifted it)
+  myCapRule = data.capRules && "blackjack" in data.capRules ? data.capRules.blackjack : data.betCapRule || null;
   if (state) renderBars();
 });
 socket.on("blackjackError", (message) => showHint(message, "error"));

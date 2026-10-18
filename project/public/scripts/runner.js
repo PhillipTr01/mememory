@@ -9,7 +9,7 @@ var myName = null;
 var myCoins = 0;
 var rules = null;
 var best = 0;
-var stake = 0; // the entry picked (0: practice)
+var stake = 0; // the entry typed in
 var STAKE_KEY = "runnerStake";
 var game = null; // the run going: {id, seed, stake, run, startAt, queue, moves, sent, over}
 var lastResult = null;
@@ -58,15 +58,19 @@ window.addEventListener("pageshow", (event) => {
 socket.on("joined", (data) => (myName = data.username));
 socket.on("coins", (data) => {
   myCoins = data.coins;
-  renderStakes();
+  // (the runner's own max bet by balance - none when the admin lifted it)
+  myCapRule = data.capRules && "runner" in data.capRules ? data.capRules.runner : data.betCapRule || null;
+  renderPanel();
 });
 socket.on("runnerSetup", (data) => {
   rules = data.rules;
   best = data.best || 0;
+  var saved = null;
   try {
-    var saved = Number(localStorage.getItem(STAKE_KEY));
-    if (saved === 0 || rules.stakes.includes(saved)) stake = saved;
+    saved = Number(localStorage.getItem(STAKE_KEY));
   } catch (error) {}
+  stake = saved > 0 ? saved : rules.minBet * 10;
+  setAmount(stake);
   renderPanel();
 });
 socket.on("runnerError", (message) => {
@@ -90,32 +94,49 @@ function showToast(message) {
 
 /* ---------- The panel: the entry before a run, the result after it ---------- */
 
-// What a score pays (the same curve as the server's game/runner.js)
-function multiplier(score) {
+// What a distance pays (the same curve as the server's game/runner.js) - and what the coins add
+function multiplier(meters) {
   var t = rules.table;
-  if (score < t.min) return 0;
-  if (score < t.even) return Math.round((score / t.even) * 1000) / 1000;
-  return Math.min(t.max, Math.round((1 + rules.slope * (score / t.even - 1)) * 1000) / 1000);
+  if (meters < t.min) return 0;
+  if (meters < t.even) return Math.round((meters / t.even) * 1000) / 1000;
+  return Math.min(t.max, Math.round((1 + rules.slope * (meters / t.even - 1)) * 1000) / 1000);
 }
 
-function renderStakes() {
-  if (!rules) return;
-  var box = document.getElementById("rnStakes");
-  var buttons = [0].concat(rules.stakes).map((value) => {
-    var b = el("button", "rn-stake" + (value == stake ? " active" : ""), value == 0 ? "Practice" : "🪙 " + formatCoins(value));
-    b.type = "button";
-    b.disabled = value > myCoins;
-    b.addEventListener("click", () => {
-      stake = value;
-      try {
-        localStorage.setItem(STAKE_KEY, String(value));
-      } catch (error) {}
-      renderPanel();
-    });
-    return b;
-  });
-  box.replaceChildren(...buttons);
+function coinBonus(coins) {
+  return Math.min(rules.coinCap, coins * rules.coinBonus);
 }
+
+function payout(entry, meters, coins) {
+  return Math.floor(entry * multiplier(meters) * (1 + coinBonus(coins)));
+}
+
+// The most an entry may be now: the max entry, the coins, the max bet by balance
+var myCapRule = null;
+function maxEntry() {
+  return Math.max(0, Math.min(rules.maxBet, myCoins, casinoCapLeft(myCapRule, myCoins, 0)));
+}
+
+var amountInput = document.getElementById("rnAmount");
+function setAmount(value) {
+  if (!rules) return;
+  stake = Math.max(rules.minBet, Math.min(rules.maxBet, Math.floor(Number(value) || 0)));
+  amountInput.value = String(stake);
+  try {
+    localStorage.setItem(STAKE_KEY, String(stake));
+  } catch (error) {}
+  renderPanel();
+}
+amountInput.addEventListener("change", () => setAmount(amountInput.value));
+amountInput.addEventListener("input", () => {
+  stake = Math.floor(Number(amountInput.value) || 0);
+  renderPanel();
+});
+document.querySelectorAll(".rn-chip").forEach((chip) =>
+  chip.addEventListener("click", () => {
+    var kind = chip.dataset.amount;
+    setAmount(kind == "half" ? Math.floor(stake / 2) : kind == "double" ? stake * 2 : maxEntry());
+  }),
+);
 
 function renderPanel() {
   if (!rules) return;
@@ -123,8 +144,10 @@ function renderPanel() {
   var running = game && !game.over;
   panel.hidden = running;
   document.getElementById("rnHud").hidden = !game;
-  renderStakes();
-  // The pay table: where it starts, the entry back, the most
+  amountInput.min = rules.minBet;
+  amountInput.max = rules.maxBet;
+  amountInput.step = rules.minBet;
+  // The pay table: where it starts, the entry back, the most - and the coins
   var t = rules.table;
   var table = document.getElementById("rnTable");
   table.replaceChildren(
@@ -132,17 +155,21 @@ function renderPanel() {
       [formatCoins(t.min) + " m", t.minMult + "×", ""],
       [formatCoins(t.even) + " m", "1×", "even"],
       [formatCoins(t.top) + " m", t.max + "×", "top"],
+      ["each coin", "+" + Math.round(rules.coinBonus * 100) + "%", "coin"],
     ].map(([at, x, kind]) => {
       var row = el("span", "rn-table-item " + kind);
       row.append(el("span", "rn-table-at", at), el("span", "rn-table-x", x));
       return row;
     }),
   );
-  table.hidden = stake == 0;
+  var valid = stake >= rules.minBet && stake <= rules.maxBet;
   var start = document.getElementById("rnStart");
-  start.innerText = game && game.over ? (stake == 0 ? "Practice again" : "Run again for 🪙 " + formatCoins(stake)) : stake == 0 ? "Start practice" : "Run for 🪙 " + formatCoins(stake);
-  start.disabled = (stake > 0 && stake > myCoins) || (game && game.over && !game.result);
-  document.getElementById("rnBest").innerText = best ? "Your best: " + formatCoins(best) + " points" : "";
+  start.innerText = (game && game.over && game.stake > 0 ? "Run again for 🪙 " : "Run for 🪙 ") + formatCoins(Math.max(0, stake));
+  var waiting = game && game.over && !game.result;
+  start.disabled = !valid || stake > maxEntry() || waiting;
+  start.title = !valid ? "An entry is " + formatCoins(rules.minBet) + " to " + formatCoins(rules.maxBet) + " coins." : stake > maxEntry() ? "Your max entry is " + formatCoins(maxEntry()) + "." : "";
+  document.getElementById("rnPractice").disabled = waiting;
+  document.getElementById("rnBest").innerText = best ? "Your best: " + formatCoins(best) + " m" : "";
   // The result of the last run
   var result = document.getElementById("rnResult");
   var r = game && game.over ? game.result : null;
@@ -150,24 +177,27 @@ function renderPanel() {
   if (game && game.over && !r) {
     result.replaceChildren(el("div", "rn-result-wait mm-muted", "Checking your run..."));
   } else if (r) {
-    var head = el("div", "rn-result-score", formatCoins(r.score) + " points");
-    var sub = el("div", "rn-result-sub mm-muted", formatCoins(r.distance) + " m and " + r.coins + (r.coins == 1 ? " coin" : " coins"));
-    var pay = r.practice ? el("div", "rn-result-pay mm-muted", "Practice run") : el("div", "rn-result-pay" + (r.win >= r.stake ? " won" : r.win > 0 ? " part" : " lost"), r.win > 0 ? "You get 🪙 " + formatCoins(r.win) + " (" + r.multiplier + "×)" : "No payout this time");
+    var head = el("div", "rn-result-score", formatCoins(r.distance) + " m");
+    var sub = el("div", "rn-result-sub mm-muted", r.coins + (r.coins == 1 ? " coin" : " coins") + (r.practice ? "" : " · +" + Math.round(r.bonus * 100) + "% on the payout"));
+    var pay = r.practice ? el("div", "rn-result-pay mm-muted", "Practice run") : el("div", "rn-result-pay" + (r.win >= r.stake ? " won" : r.win > 0 ? " part" : " lost"), r.win > 0 ? "You get 🪙 " + formatCoins(r.win) : "No payout this time");
     result.replaceChildren(head, sub, pay);
     if (r.record) result.appendChild(el("div", "rn-result-record", "🏆 New best"));
   }
 }
 
-document.getElementById("rnStart").addEventListener("click", () => {
+function begin(entry) {
   if (!rules || (game && !game.over)) return;
   game = { pending: true };
-  document.getElementById("rnStart").disabled = true;
-  socket.emit("runStart", { stake: stake });
-});
+  renderPanel();
+  socket.emit("runStart", { stake: entry });
+}
+document.getElementById("rnStart").addEventListener("click", () => begin(stake));
+document.getElementById("rnPractice").addEventListener("click", () => begin(0));
 
 /* ---------- A run ---------- */
 
 function startRun(data) {
+  hudKey = null;
   game = { id: data.id, seed: data.seed, stake: data.stake, run: E.create(data.seed), queue: [], moves: [], sent: 0, over: false, result: null, startAt: performance.now() + rules.countdown, deadAt: null };
   renderPanel();
   focusStage();
@@ -235,7 +265,10 @@ document.addEventListener("keydown", (event) => {
   var move = KEYS[event.code];
   if (!move) {
     // (Enter: run again)
-    if (event.code == "Enter" && (!game || game.over) && !document.getElementById("rnStart").disabled && stageVisible()) document.getElementById("rnStart").click();
+    if (event.code == "Enter" && (!game || game.over) && stageVisible() && event.target != amountInput) {
+      var again = game && game.stake === 0 ? document.getElementById("rnPractice") : document.getElementById("rnStart");
+      if (!again.disabled) again.click();
+    }
     return;
   }
   if (game && !game.over && game.run) {
@@ -305,12 +338,51 @@ var lastFrame = 0;
 
 function resize() {
   var rect = canvas.getBoundingClientRect();
-  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  // (at most 1.5 pixels a point: twice as sharp costs twice the painting every frame - the picture moves anyway)
+  var dpr = Math.min(1.5, window.devicePixelRatio || 1);
   W = rect.width;
   H = rect.height;
   canvas.width = Math.round(W * dpr);
   canvas.height = Math.round(H * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // (the pictures made once: new for the new size)
+  cache = {};
+}
+var cache = {};
+
+// A picture made once and drawn again every frame (an offscreen canvas) - in points, sharp like the canvas
+function made(name, w, h, paint) {
+  var key = name + ":" + Math.round(w) + "x" + Math.round(h);
+  if (cache[name] && cache[name].key == key) return cache[name].canvas;
+  var dpr = canvas.width / Math.max(1, W);
+  var c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(w * dpr));
+  c.height = Math.max(1, Math.round(h * dpr));
+  var g = c.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  paint(g, w, h);
+  cache[name] = { key: key, canvas: c };
+  return c;
+}
+
+// A soft round glow (white - tinted by the color of what is drawn under it): drawn scaled wherever a light shines
+var GLOW = (function () {
+  var c = document.createElement("canvas");
+  c.width = c.height = 64;
+  var g = c.getContext("2d");
+  var r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, "rgba(255, 236, 180, 1)");
+  r.addColorStop(0.35, "rgba(255, 220, 150, 0.45)");
+  r.addColorStop(1, "rgba(255, 220, 150, 0)");
+  g.fillStyle = r;
+  g.fillRect(0, 0, 64, 64);
+  return c;
+})();
+function glow(x, y, radius, alpha) {
+  if (radius < 0.5 || alpha <= 0) return;
+  ctx.globalAlpha = Math.min(1, alpha);
+  ctx.drawImage(GLOW, x - radius, y - radius, radius * 2, radius * 2);
+  ctx.globalAlpha = 1;
 }
 window.addEventListener("resize", resize);
 
@@ -357,28 +429,28 @@ function face(v, x0, x1, y0, y1, z, fill) {
   poly(v, [[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]], fill);
 }
 
-/* The sky: a dusk, the sun, clouds, two rows of houses with lit windows */
+/* The sky: a dusk, the sun, clouds, two rows of houses with lit windows - painted once, moved every frame */
+var SKY_H = 400; // the sky picture: drawn stretched down to the horizon
 function drawSky(v, pos) {
   var hz = v.horizon;
-  var sky = ctx.createLinearGradient(0, 0, 0, hz);
-  sky.addColorStop(0, "#0b1026");
-  sky.addColorStop(0.45, "#3b1d6e");
-  sky.addColorStop(0.8, "#c2416b");
-  sky.addColorStop(1, "#ffaa6e");
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, W, hz + 2);
-  // The sun, low and big
+  var sky = made("sky", W, SKY_H, (g, w, h) => {
+    var grad = g.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, "#0b1026");
+    grad.addColorStop(0.45, "#3b1d6e");
+    grad.addColorStop(0.8, "#c2416b");
+    grad.addColorStop(1, "#ffaa6e");
+    g.fillStyle = grad;
+    g.fillRect(0, 0, w, h);
+  });
+  ctx.drawImage(sky, 0, 0, W, hz + 2);
+  // The sun, low and big, with its glow
+  var size = Math.min(W, H);
   var sx = W * 0.68 - v.camX * 4;
-  var sy = hz - Math.min(W, H) * 0.06;
-  var glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, Math.min(W, H) * 0.42);
-  glow.addColorStop(0, "rgba(255, 214, 140, 0.9)");
-  glow.addColorStop(0.18, "rgba(255, 170, 110, 0.55)");
-  glow.addColorStop(1, "rgba(255, 120, 100, 0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, hz + 2);
+  var sy = hz - size * 0.06;
+  glow(sx, sy, size * 0.42, 0.75);
   ctx.fillStyle = "#ffe2a8";
   ctx.beginPath();
-  ctx.arc(sx, sy, Math.min(W, H) * 0.075, 0, Math.PI * 2);
+  ctx.arc(sx, sy, size * 0.075, 0, Math.PI * 2);
   ctx.fill();
   // Clouds drifting
   ctx.fillStyle = "rgba(255, 190, 210, 0.1)";
@@ -395,29 +467,37 @@ function drawSky(v, pos) {
   skyline(v, pos, 0.8, "#2a1640", "rgba(255, 214, 140, 0.8)", 0.42, 23);
 }
 
-// A row of houses: far ones slower (parallax), lit windows here and there
+// A row of houses (far ones slower - parallax), lit windows here and there: a strip of 24 houses painted once,
+// repeated across the screen and moved
 function skyline(v, pos, depth, color, lights, height, seed) {
-  var hz = v.horizon;
+  // (painted for a horizon at 42% of the height - drawn scaled to where it is now: no new painting when it moves)
+  var hz = H * 0.42;
+  var k = v.horizon / hz;
   var bw = Math.max(26, W / (9 + depth * 6));
-  var shift = -(v.camX * 10 * depth + pos.z * 0.15 * depth);
-  var first = Math.floor(-shift / bw) - 1;
-  for (var i = first; i < first + Math.ceil(W / bw) + 3; i++) {
-    var r = Math.abs(Math.sin(i * 12.9898 + seed) * 43758.5453) % 1;
-    var bh = (0.25 + r * 0.75) * hz * height;
-    var x = i * bw + shift;
-    ctx.fillStyle = color;
-    ctx.fillRect(x, hz - bh, bw * 0.92, bh + 1);
-    if (r > 0.55) ctx.fillRect(x + bw * 0.4, hz - bh - bw * 0.25, bw * 0.08, bw * 0.25);
-    ctx.fillStyle = lights;
-    var cols = 3;
-    var wsz = bw * 0.12;
-    for (var row = 0; row < Math.floor(bh / (wsz * 2.6)); row++) {
-      for (var col = 0; col < cols; col++) {
-        var on = Math.abs(Math.sin((i * 7 + row * 3 + col) * 78.233 + seed)) % 1;
-        if (on > 0.72) ctx.fillRect(x + bw * 0.16 + col * bw * 0.26, hz - bh + wsz * 1.5 + row * wsz * 2.6, wsz, wsz * 1.2);
+  var count = 24;
+  var top = Math.ceil(hz * height + bw * 0.3);
+  var strip = made("skyline" + seed, bw * count, top, (g, w, h) => {
+    for (var i = 0; i < count; i++) {
+      var r = Math.abs(Math.sin(i * 12.9898 + seed) * 43758.5453) % 1;
+      var bh = (0.25 + r * 0.75) * hz * height;
+      var x = i * bw;
+      g.fillStyle = color;
+      g.fillRect(x, h - bh, bw * 0.92, bh);
+      if (r > 0.55) g.fillRect(x + bw * 0.4, h - bh - bw * 0.25, bw * 0.08, bw * 0.25);
+      g.fillStyle = lights;
+      var wsz = bw * 0.12;
+      for (var row = 0; row < Math.floor(bh / (wsz * 2.6)); row++) {
+        for (var col = 0; col < 3; col++) {
+          var on = Math.abs(Math.sin((i * 7 + row * 3 + col) * 78.233 + seed)) % 1;
+          if (on > 0.72) g.fillRect(x + bw * 0.16 + col * bw * 0.26, h - bh + wsz * 1.5 + row * wsz * 2.6, wsz, wsz * 1.2);
+        }
       }
     }
-  }
+  });
+  var width = bw * count;
+  var shift = -(v.camX * 10 * depth + pos.z * 0.15 * depth);
+  var x0 = ((shift % width) + width) % width - width;
+  for (var x = x0; x < W; x += width) ctx.drawImage(strip, x, v.horizon - top * k, width, top * k);
 }
 
 /* The ground: walls and lamps at the sides, three beds of gravel with sleepers and rails */
@@ -491,11 +571,7 @@ function drawLamps(v, pos) {
       ctx.lineTo(top.x - side * 0.7 * top.s, top.y);
       ctx.stroke();
       var lx = top.x - side * 0.7 * top.s;
-      var g = ctx.createRadialGradient(lx, top.y, 0, lx, top.y, 1.6 * top.s);
-      g.addColorStop(0, "rgba(255, 220, 150, " + (0.55 * (1 - d / VIEW)) + ")");
-      g.addColorStop(1, "rgba(255, 220, 150, 0)");
-      ctx.fillStyle = g;
-      ctx.fillRect(lx - 1.6 * top.s, top.y - 1.6 * top.s, 3.2 * top.s, 3.2 * top.s);
+      glow(lx, top.y, 1.6 * top.s, 0.6 * (1 - d / VIEW));
       ctx.fillStyle = "#fff4d6";
       ctx.beginPath();
       ctx.arc(lx, top.y + 0.05 * top.s, Math.max(1, 0.12 * top.s), 0, Math.PI * 2);
@@ -548,11 +624,7 @@ function drawTrain(v, o, lane, row) {
     var p = project(v, cx + off, 1.25, z - 0.03);
     if (!p) return;
     var r = Math.max(1.5, 0.14 * p.s);
-    var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 3.5);
-    g.addColorStop(0, "rgba(255, 240, 180, 0.9)");
-    g.addColorStop(1, "rgba(255, 240, 180, 0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(p.x - r * 3.5, p.y - r * 3.5, r * 7, r * 7);
+    glow(p.x, p.y, r * 3.5, 0.9);
     ctx.fillStyle = "#fffbe6";
     ctx.beginPath();
     ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
@@ -605,11 +677,7 @@ function drawCoin(v, coin, tick) {
   if (!p) return;
   var r = 0.3 * p.s;
   var spin = Math.max(0.15, Math.abs(Math.cos(tick / 9 + coin.z)));
-  var glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.2);
-  glow.addColorStop(0, "rgba(255, 220, 90, 0.35)");
-  glow.addColorStop(1, "rgba(255, 220, 90, 0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(p.x - r * 2.2, p.y - r * 2.2, r * 4.4, r * 4.4);
+  glow(p.x, p.y, r * 2.2, 0.35);
   ctx.fillStyle = "#b45309";
   ctx.beginPath();
   ctx.ellipse(p.x, p.y, r * spin, r, 0, 0, Math.PI * 2);
@@ -753,7 +821,7 @@ function coinBurst(run) {
     var a = (i / 8) * Math.PI * 2;
     particles.push({ x: x, y: 0.9, z: run.z + 0.6, vx: Math.cos(a) * 1.6, vy: Math.sin(a) * 1.6 + 1.2, vz: run.speed * 0.9, life: 0, max: 0.45, color: "255, 214, 90", size: 0.07 });
   }
-  particles.push({ x: x, y: 1.6, z: run.z + 1, vx: 0, vy: 1.2, vz: run.speed, life: 0, max: 0.6, text: "+" + E.COIN_SCORE });
+  if (game && game.stake > 0 && coinBonus(run.taken) > coinBonus(run.taken - 1)) particles.push({ x: x, y: 1.6, z: run.z + 1, vx: 0, vy: 1.2, vz: run.speed, life: 0, max: 0.6, text: "+" + Math.round(rules.coinBonus * 100) + "%" });
 }
 
 function dust(run) {
@@ -843,11 +911,19 @@ function drawWorld(run, pos, dt) {
   ctx.restore();
   drawSpeed(run.speed);
   // A soft dark edge around the picture
-  var vig = ctx.createRadialGradient(W / 2, H * 0.55, Math.min(W, H) * 0.35, W / 2, H * 0.55, Math.max(W, H) * 0.8);
-  vig.addColorStop(0, "rgba(0, 0, 0, 0)");
-  vig.addColorStop(1, "rgba(0, 0, 0, 0.45)");
-  ctx.fillStyle = vig;
-  ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(
+    made("vignette", W, H, (g, w, h) => {
+      var vig = g.createRadialGradient(w / 2, h * 0.55, Math.min(w, h) * 0.35, w / 2, h * 0.55, Math.max(w, h) * 0.8);
+      vig.addColorStop(0, "rgba(0, 0, 0, 0)");
+      vig.addColorStop(1, "rgba(0, 0, 0, 0.45)");
+      g.fillStyle = vig;
+      g.fillRect(0, 0, w, h);
+    }),
+    0,
+    0,
+    W,
+    H,
+  );
 }
 
 // Between runs: the track goes by slowly, nobody on it
@@ -895,36 +971,41 @@ function drawHud(now) {
   count.hidden = !(left > 0);
   if (left > 0) {
     var n = String(Math.ceil((left / rules.countdown) * 3));
-    if (count.innerText != n) {
-      count.innerText = n;
+    if (count.textContent != n) {
+      count.textContent = n;
       count.classList.remove("pop");
       void count.offsetWidth;
       count.classList.add("pop");
     }
   }
-  var score = E.score(game.run);
-  document.getElementById("rnDistance").innerText = formatCoins(Math.floor(game.run.z)) + " m";
-  document.getElementById("rnCoins").innerText = String(game.run.taken);
+  // (the numbers only when they change - writing the page every frame costs and flickers)
+  var meters = Math.floor(game.run.z);
+  var key = meters + ":" + game.run.taken;
+  if (hudKey == key) return;
+  hudKey = key;
+  document.getElementById("rnDistance").innerText = formatCoins(meters) + " m";
+  document.getElementById("rnCoins").innerText = game.run.taken + (game.stake > 0 ? " · +" + Math.round(coinBonus(game.run.taken) * 100) + "%" : "");
   var pay = document.getElementById("rnPay");
   var bar = document.getElementById("rnBar");
   if (game.stake > 0) {
-    var x = multiplier(score);
+    var x = multiplier(meters);
     document.getElementById("rnPayLabel").innerText = "Payout";
-    pay.innerText = x > 0 ? "🪙 " + formatCoins(Math.floor(game.stake * x)) + " · " + x.toFixed(2) + "×" : "🪙 0";
+    pay.innerText = "🪙 " + formatCoins(payout(game.stake, meters, game.run.taken));
     pay.classList.toggle("even", x >= 1);
     // (how far to the entry back - then to the most)
     var t = rules.table;
-    var share = score < t.even ? score / t.even : (score - t.even) / (t.top - t.even);
+    var share = meters < t.even ? meters / t.even : (meters - t.even) / (t.top - t.even);
     bar.style.width = Math.min(100, share * 100) + "%";
-    bar.classList.toggle("over", score >= t.even);
+    bar.classList.toggle("over", meters >= t.even);
     bar.parentNode.hidden = false;
   } else {
     document.getElementById("rnPayLabel").innerText = "Practice";
-    pay.innerText = formatCoins(score) + " points";
+    pay.innerText = "No payout";
     pay.classList.remove("even");
     bar.parentNode.hidden = true;
   }
 }
+var hudKey = null;
 
 resize();
 requestAnimationFrame(frame);
