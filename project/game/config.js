@@ -254,7 +254,7 @@ module.exports = {
   // The runner (game/runner.js, public/scripts/runner_engine.js): an entry, the score decides the payout
   RUNNER_MIN_BET: 100, // the entry of a run (0: a free practice run, always)
   RUNNER_MAX_BET: 100000,
-  RUNNER_COIN_BONUS: 0.005, // every coin picked up adds this share to the payout (a run that pays nothing stays at nothing) ...
+  RUNNER_COIN_BONUS: 0.001, // every coin picked up adds this share to the payout (a run that pays nothing stays at nothing) ...
   RUNNER_COIN_CAP: 0.15, // ... up to this much
   RUNNER_EVEN: 550, // the meters that pay the entry back (1x)
   RUNNER_MIN: 0.25, // below this share of RUNNER_EVEN: nothing - from it on the share of the entry (up to 1x)
