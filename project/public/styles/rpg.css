@@ -5626,11 +5626,16 @@ button.rpg-cardx.off {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  justify-content: space-around;
+  justify-content: center;
+  gap: clamp(1.5rem, 6vh, 4rem);
 }
 
 .rpg-main.cs-fullscreen .rpg-monster {
-  width: 11.5rem;
+  width: 13rem;
+}
+
+.rpg-main.cs-fullscreen .rpg-fighter {
+  width: 15rem;
 }
 
 .rpg-main.cs-fullscreen .rpg-monster-icon {
@@ -5651,7 +5656,7 @@ button.rpg-cardx.off {
 .rpg-main.cs-fullscreen .rpg-builder,
 .rpg-main.cs-fullscreen .rpg-shop,
 .rpg-main.cs-fullscreen #rpgTop {
-  max-width: 1500px;
+  max-width: 1240px;
   margin-left: auto;
   margin-right: auto;
   width: 100%;
@@ -8831,5 +8836,87 @@ button.rpg-trade-row:active {
   .rpg-shop-bar:has(.rpg-dust-bar) > span.small {
     grid-column: 1 / -1;
     grid-row: 3;
+  }
+}
+
+/* Full screen on phones and tablets: one column like the page - the map under the fight, nothing squeezed */
+@media (max-width: 991px) {
+  .rpg-main.cs-fullscreen {
+    padding: 0.75rem !important;
+  }
+
+  .rpg-main.cs-fullscreen .rpg-run-body,
+  .rpg-main.cs-fullscreen .rpg-run-body.choosing {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .rpg-main.cs-fullscreen .rpg-stage {
+    height: auto;
+    min-height: 0;
+  }
+
+  .rpg-main.cs-fullscreen .rpg-arena {
+    flex: none;
+    overflow: hidden;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .rpg-main.cs-fullscreen .rpg-monster,
+  .rpg-main.cs-fullscreen .rpg-fighter {
+    width: calc(50% - 0.375rem);
+  }
+
+  .rpg-main.cs-fullscreen .rpg-heroes .rpg-fighter:only-child {
+    width: 100%;
+    max-width: 17rem;
+  }
+
+  .rpg-main.cs-fullscreen .rpg-monster-icon {
+    font-size: 2.4rem;
+  }
+}
+
+/* Full screen on big screens: everything larger, so the screen is filled instead of mostly empty */
+@media (min-width: 1400px) and (min-height: 860px) {
+  .rpg-main.cs-fullscreen #rpgTop,
+  .rpg-main.cs-fullscreen .rpg-home,
+  .rpg-main.cs-fullscreen .rpg-builder,
+  .rpg-main.cs-fullscreen .rpg-shop {
+    zoom: 1.2;
+    max-width: 1180px;
+  }
+
+  .rpg-main.cs-fullscreen .rpg-arena > .rpg-monsters,
+  .rpg-main.cs-fullscreen .rpg-arena > .rpg-heroes,
+  .rpg-main.cs-fullscreen .rpg-arena > .rpg-room-scene {
+    zoom: 1.25;
+  }
+
+  .rpg-main.cs-fullscreen .rpg-handbar > *,
+  .rpg-main.cs-fullscreen .rpg-map-box {
+    zoom: 1.15;
+  }
+}
+
+@media (min-width: 1700px) and (min-height: 1000px) {
+  .rpg-main.cs-fullscreen #rpgTop,
+  .rpg-main.cs-fullscreen .rpg-home,
+  .rpg-main.cs-fullscreen .rpg-builder,
+  .rpg-main.cs-fullscreen .rpg-shop {
+    zoom: 1.35;
+  }
+
+  .rpg-main.cs-fullscreen .rpg-arena > .rpg-monsters,
+  .rpg-main.cs-fullscreen .rpg-arena > .rpg-heroes,
+  .rpg-main.cs-fullscreen .rpg-arena > .rpg-room-scene {
+    zoom: 1.4;
+  }
+
+  .rpg-main.cs-fullscreen .rpg-handbar > *,
+  .rpg-main.cs-fullscreen .rpg-map-box {
+    zoom: 1.25;
   }
 }
