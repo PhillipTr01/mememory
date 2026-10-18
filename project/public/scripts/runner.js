@@ -102,6 +102,11 @@ function multiplier(meters) {
   return Math.min(t.max, Math.round((1 + rules.slope * (meters / t.even - 1)) * 1000) / 1000);
 }
 
+// (a share as a percentage with one decimal: 0.005 - "0.5")
+function pct(share) {
+  return String(Math.round(share * 1000) / 10);
+}
+
 function coinBonus(coins) {
   return Math.min(rules.coinCap, coins * rules.coinBonus);
 }
@@ -155,7 +160,7 @@ function renderPanel() {
       [formatCoins(t.min) + " m", t.minMult + "×", ""],
       [formatCoins(t.even) + " m", "1×", "even"],
       [formatCoins(t.top) + " m", t.max + "×", "top"],
-      ["each coin", "+" + Math.round(rules.coinBonus * 100) + "%", "coin"],
+      ["each coin", "+" + pct(rules.coinBonus) + "%", "coin"],
     ].map(([at, x, kind]) => {
       var row = el("span", "rn-table-item " + kind);
       row.append(el("span", "rn-table-at", at), el("span", "rn-table-x", x));
@@ -178,7 +183,7 @@ function renderPanel() {
     result.replaceChildren(el("div", "rn-result-wait mm-muted", "Checking your run..."));
   } else if (r) {
     var head = el("div", "rn-result-score", formatCoins(r.distance) + " m");
-    var sub = el("div", "rn-result-sub mm-muted", r.coins + (r.coins == 1 ? " coin" : " coins") + (r.practice ? "" : " · +" + Math.round(r.bonus * 100) + "% on the payout"));
+    var sub = el("div", "rn-result-sub mm-muted", r.coins + (r.coins == 1 ? " coin" : " coins") + (r.practice ? "" : " · +" + pct(r.bonus) + "% on the payout"));
     var pay = r.practice ? el("div", "rn-result-pay mm-muted", "Practice run") : el("div", "rn-result-pay" + (r.win >= r.stake ? " won" : r.win > 0 ? " part" : " lost"), r.win > 0 ? "You get 🪙 " + formatCoins(r.win) : "No payout this time");
     result.replaceChildren(head, sub, pay);
     if (r.record) result.appendChild(el("div", "rn-result-record", "🏆 New best"));
@@ -821,7 +826,7 @@ function coinBurst(run) {
     var a = (i / 8) * Math.PI * 2;
     particles.push({ x: x, y: 0.9, z: run.z + 0.6, vx: Math.cos(a) * 1.6, vy: Math.sin(a) * 1.6 + 1.2, vz: run.speed * 0.9, life: 0, max: 0.45, color: "255, 214, 90", size: 0.07 });
   }
-  if (game && game.stake > 0 && coinBonus(run.taken) > coinBonus(run.taken - 1)) particles.push({ x: x, y: 1.6, z: run.z + 1, vx: 0, vy: 1.2, vz: run.speed, life: 0, max: 0.6, text: "+" + Math.round(rules.coinBonus * 100) + "%" });
+  if (game && game.stake > 0 && coinBonus(run.taken) > coinBonus(run.taken - 1)) particles.push({ x: x, y: 1.6, z: run.z + 1, vx: 0, vy: 1.2, vz: run.speed, life: 0, max: 0.6, text: "+" + pct(rules.coinBonus) + "%" });
 }
 
 function dust(run) {
@@ -984,7 +989,7 @@ function drawHud(now) {
   if (hudKey == key) return;
   hudKey = key;
   document.getElementById("rnDistance").innerText = formatCoins(meters) + " m";
-  document.getElementById("rnCoins").innerText = game.run.taken + (game.stake > 0 ? " · +" + Math.round(coinBonus(game.run.taken) * 100) + "%" : "");
+  document.getElementById("rnCoins").innerText = game.run.taken + (game.stake > 0 ? " · +" + pct(coinBonus(game.run.taken)) + "%" : "");
   var pay = document.getElementById("rnPay");
   var bar = document.getElementById("rnBar");
   if (game.stake > 0) {

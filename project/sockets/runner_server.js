@@ -92,7 +92,7 @@ module.exports = function (io, options = {}) {
     if (record) state.bests[username] = result.distance;
     if (win > 0) {
       try {
-        await coins.add(username, win, { reason: "runner win", note: `${result.distance.toLocaleString("en-US")} m · x${multiplier} · ${result.coins} coins +${Math.round(runner.coinBonus(result.coins) * 100)}%`, bet: run.stake });
+        await coins.add(username, win, { reason: "runner win", note: `${result.distance.toLocaleString("en-US")} m · x${multiplier} · ${result.coins} coins +${Math.round(runner.coinBonus(result.coins) * 1000) / 10}%`, bet: run.stake });
         best.changed();
       } catch (error) {
         console.error("[runner] Could not pay a run:", error);
