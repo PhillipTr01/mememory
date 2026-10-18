@@ -190,10 +190,9 @@ const PACKS = {
   premium: { name: "Hero Pack", icon: "💎", about: "5 cards, all rare or better, with more epics.", get price() { return config.RPG_PACK_PREMIUM; }, size: 5, better: 5, least: "rare", boost: { epic: 2, legendary: 2.1 } },
   mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards, all epic or better.", get price() { return config.RPG_PACK_MYTHIC; }, size: 4, better: 4, least: "epic", boost: { legendary: 1.5 } },
 };
-// Packs for dust too: a dust is worth this many coins
+// A dust is worth this many coins: a card is made for its value in dust (dust only makes cards - packs are bought
+// with coins)
 const DUST_COINS = 20;
-for (const pack of Object.values(PACKS))
-  Object.defineProperty(pack, "dust", { enumerable: true, get: () => Math.round(pack.price / DUST_COINS) });
 const PACK_IDS = Object.keys(PACKS);
 const PACK_SIZE = PACKS.standard.size;
 const RARITY_RANK = ["basic", "common", "rare", "epic", "legendary", "mythic"];
@@ -1256,10 +1255,10 @@ function dustAll(hero) {
   return dust;
 }
 
-// A card sold: a share (config, %) of what its dust is worth in coins - dust stays the better deal
+// A card sold: a share (config, %) of its trade value - under what packs cost for their cards, so buying packs to sell
+// them never pays (basic cards: nothing)
 function sellPrice(rarity) {
-  const dust = DUST[rarity];
-  return dust ? Math.round((dust.get * DUST_COINS * config.RPG_CARD_SELL) / 100) : 0;
+  return DUST[rarity] ? Math.round((CARD_RARITIES[rarity].value * config.RPG_CARD_SELL) / 100) : 0;
 }
 
 // Copies of a card sold -> {error} or {coins} (the server pays them)
@@ -1291,30 +1290,6 @@ function craftCard(hero, id) {
   return null;
 }
 
-// Packs bought with dust (DUST_COINS a dust - far more than their cards give as dust: no circle) -> an error or null
-function buyPackDust(hero, id, count = 1) {
-  const pack = PACKS[id];
-  if (!pack) return "No such pack.";
-  if (!Number.isInteger(count) || count < 1 || count > CART_MAX) return "Pick how many.";
-  const cost = pack.dust * count;
-  if ((hero.dust || 0) < cost) return `You need ${cost} dust.`;
-  hero.dust -= cost;
-  if (!hero.packs) hero.packs = {};
-  hero.packs[id] = (hero.packs[id] || 0) + count;
-  return null;
-}
-
-// A cart paid with dust (each pack its dust price) -> an error or null
-function buyCartDust(hero, cart) {
-  const check = cartPrice(cart);
-  if (check.error) return check.error;
-  const cost = check.items.reduce((sum, [id, n]) => sum + PACKS[id].dust * n, 0);
-  if ((hero.dust || 0) < cost) return `You need ${cost} dust.`;
-  hero.dust -= cost;
-  addPacks(hero, check.items);
-  return null;
-}
-
 // A player starts over: a hero as on the first day - the characters, their levels and gear, the bag, the cards,
 // the dust and the packs gone (nothing sold for it). Once every RPG_RESET_COOLDOWN.
 // -> how long until the next reset (0: now)
@@ -1323,7 +1298,10 @@ function resetLeft(hero, now = Date.now()) {
 }
 // -> {error} or {hero: the new one}
 function resetHero(hero, now = Date.now()) {
-  if (resetLeft(hero, now) > 0) return { error: "You can reset again in " + Math.ceil(resetLeft(hero, now) / 3600000) + " hours." };
+  if (resetLeft(hero, now) > 0) {
+    const hours = Math.ceil(resetLeft(hero, now) / 3600000);
+    return { error: "You can reset again in " + (hours > 48 ? Math.ceil(hours / 24) + " days." : hours + " hours.") };
+  }
   const fresh = newHero();
   fresh.resetAt = now;
   return { hero: fresh };
@@ -2480,7 +2458,7 @@ function applyChoice(run, hero, option, input, rng) {
 const MERCHANT_BUY = { cards: 2, relics: 1 };
 const MERCHANT_CARD = 0.25; // a relic, a card removed: priced off this share of the floor's entry
 // A card at the merchant: this share of its trade value - it goes into the run's deck and stays in the collection
-const MERCHANT_CARD_VALUE = 0.5;
+const MERCHANT_CARD_VALUE = 0.8; // (over what a card sells for: buying here to sell never pays)
 const merchantCardPrice = (id) => Math.round((CARD_RARITIES[CARDS[id].rarity].value * MERCHANT_CARD_VALUE) / 10) * 10;
 // The merchant's prices (coins) by the floor: a relic, a card taken out of the deck (card: the base of both)
 function merchantPrices(floor) {
@@ -3579,8 +3557,6 @@ module.exports = {
   sellCard,
   sellAll,
   craftCard,
-  buyPackDust,
-  buyCartDust,
   resetHero,
   resetLeft,
   nameDeck,

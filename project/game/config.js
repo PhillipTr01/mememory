@@ -232,7 +232,7 @@ module.exports = {
   RPG_ENTRY_GROWTH: 27, // % dearer every floor deeper
   RPG_STAT_SHARE: 35, // % of a floor's entry: a stat level (level 1 - floor 1, the last - floor 30)
   RPG_CLASS_PRICE: 500000, // another class
-  RPG_CARD_SELL: 75, // a card sold: this share (%) of what its dust is worth in coins
+  RPG_CARD_SELL: 75, // a card sold: this share (%) of its trade value
   RPG_POTION_SHARE: 5, // % of a floor's entry: a potion (the deepest open floor's - at the merchant: the floor's)
   RPG_LOW_FREE: 2, // floors this far under the deepest cleared: the full loot
   RPG_LOW_CUT: 15, // % of the loot less for every floor lower than that (a high character farming low floors)
@@ -242,7 +242,7 @@ module.exports = {
   RPG_PARTY_GAP: 10, // a party: its characters' levels at most this far apart
   RPG_FLOOR_COOLDOWN: 2 * 3600 * 1000, // a cleared floor: not opened again this long (another one's party on it: fine)
   RPG_DEATH_TIME: 0, // the party down: the character dead this long (0: never - back right away)
-  RPG_RESET_COOLDOWN: 3 * 24 * 3600 * 1000, // a player's dungeon reset: once in this long
+  RPG_RESET_COOLDOWN: 7 * 24 * 3600 * 1000, // a player's dungeon reset: once in this long
   RPG_REVIVE_PERCENT: 100, // a revive: this share of an entry of the deepest floor open, % (25% of it more with each one of a day)
   RPG_MONSTER_HP: 100, // % of the monsters' HP
   RPG_MONSTER_ATK: 100, // % of the monsters' attack

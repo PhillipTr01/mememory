@@ -235,7 +235,7 @@ var trades = [];
 var deckMenu = false; // the deck builder's deck dropdown open
 var playerMenu = false; // the trade's player dropdown open
 var craftMode = false;
-var payDust = false; // the shop's cart paid with dust // the deck builder in craft mode: cards made and dusted, not built into the deck
+// // the deck builder in craft mode: cards made and dusted, not built into the deck
 var tradePlayers = [];
 var tradeWith = "";
 var tradeTheirs = null;
@@ -1389,10 +1389,10 @@ function packOdds(pack) {
 var cart = {}; // the shop's cart: {pack id: count}
 
 // The price of packs of a kind
-// A pack's price: in coins and in dust
+// A pack's price (coins only - dust makes cards)
 function packPrice(pack) {
   var line = el("div", "rpg-pack-price");
-  line.append(el("span", "", "🪙 " + formatCoins(pack.price)), el("span", "rpg-pack-dot", "·"), el("span", "rpg-pack-dust", "✨ " + formatCoins(pack.dust)));
+  line.append(el("span", "", "🪙 " + formatCoins(pack.price)));
   return line;
 }
 
@@ -1486,7 +1486,7 @@ function renderShop() {
   document.getElementById("rpgShopTitle").innerText = "🛒 Card shop";
   var dustTag = document.getElementById("rpgShopDust");
   dustTag.innerText = "✨ " + formatCoins(hero.dust || 0) + " dust";
-  dustTag.title = "Dust comes from cards you turn into dust. It buys packs and makes cards.";
+  dustTag.title = "Dust comes from cards you turn into dust. It makes the cards you miss.";
   // The packs to buy: into the cart
   morphChildren(
     document.getElementById("rpgShopPacks"),
@@ -1515,16 +1515,11 @@ function renderShop() {
 
   // The cart: the lines, the total - buy
   var lines = Object.keys(cart).filter((id) => cart[id] > 0);
-  // (paid with coins or with dust - the cart's switch)
-  var cost = (id, n) => (payDust ? rules.packs[id].dust * n : packCost(id, n));
-  var money = (n) => (payDust ? "✨ " : "🪙 ") + formatCoins(n);
+  var cost = (id, n) => packCost(id, n);
+  var money = (n) => "🪙 " + formatCoins(n);
   var total = lines.reduce((sum, id) => sum + cost(id, cart[id]), 0);
-  var have = payDust ? hero.dust || 0 : myCoins;
+  var have = myCoins;
   var nodes = [el("div", "rpg-cart-title", "🛒 Your cart")];
-  var pay = el("div", "rpg-seg rpg-pay");
-  pay.append(button("🪙 Coins", "payWith", { id: "coins", className: "rpg-seg-opt" + (payDust ? "" : " active") }), button("✨ Dust", "payWith", { id: "dust", className: "rpg-seg-opt" + (payDust ? " active" : "") }));
-  pay.title = "You have " + formatCoins(hero.dust || 0) + " dust.";
-  nodes.push(pay);
   if (!lines.length) nodes.push(el("div", "rpg-empty mm-muted", "Empty"));
   lines.forEach((id) => {
     var pack = rules.packs[id];
@@ -1540,10 +1535,9 @@ function renderShop() {
     var sum = el("div", "rpg-cart-total");
     sum.append(el("span", "", "Total"), el("b", "", money(total)));
     nodes.push(sum, button("Buy · " + money(total), "cartBuy", { className: "primary", disabled: total > have }), button("Empty the cart", "cartClear", { className: "small" }));
-    if (total > have) nodes.push(el("div", "rpg-warn", payDust ? "Not enough dust." : "Not enough coins."));
+    if (total > have) nodes.push(el("div", "rpg-warn", "Not enough coins."));
   }
   morphChildren(document.getElementById("rpgCart"), nodes);
-  document.getElementById("rpgCart").classList.toggle("dust", payDust);
 
 }
 
@@ -1797,10 +1791,10 @@ function craftCell(card, id) {
     var dust = button("💨 Dust · +" + cost.get, spare ? "dustOne" : "dustNeeded", { id: from ? from.cls + "|" + id : "", className: "rpg-craft-btn dust", disabled: !from });
     dust.title = spare ? "Turn one spare copy into " + cost.get + " dust." : from ? "Turn one copy into " + cost.get + " dust. You need it for a full deck." : have ? "Starter copies can't be dusted." : "You have no copy to dust.";
     buttons.appendChild(dust);
-    // (sold: coins right away - less than the dust is worth)
+    // (sold: coins right away - a share of its trade value)
     var price = (rules.sell || {})[info.rarity] || 0;
     var sell = button("🪙 Sell · " + formatCoins(price), spare ? "sellOne" : "sellNeeded", { id: from ? from.cls + "|" + id : "", className: "rpg-craft-btn sell", disabled: !from });
-    sell.title = from ? "Sell one copy for " + formatCoins(price) + " coins, " + rules.sellShare + "% of what its dust is worth." : have ? "Starter copies can't be sold." : "You have no copy to sell.";
+    sell.title = from ? "Sell one copy for " + formatCoins(price) + " coins, " + rules.sellShare + "% of its trade value." : have ? "Starter copies can't be sold." : "You have no copy to sell.";
     buttons.appendChild(sell);
   }
   bar.appendChild(buttons);
@@ -3366,9 +3360,8 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     var sellInfo = cardOf(sellId);
     var price = (rules.sell || {})[sellInfo.rarity] || 0;
     if (act == "sellOne") socket.emit("sell", { cls: sellCls, id: sellId, n: 1 });
-    else confirmDialog({ title: "Sell " + sellInfo.name + "?", text: "This copy is not spare. It leaves every deck that uses it and you get 🪙 " + formatCoins(price) + ", " + rules.sellShare + "% of what its dust is worth.", confirmLabel: "Sell it", danger: true }).then((sure) => sure && socket.emit("sell", { cls: sellCls, id: sellId, n: 1, any: true }));
+    else confirmDialog({ title: "Sell " + sellInfo.name + "?", text: "This copy is not spare. It leaves every deck that uses it and you get 🪙 " + formatCoins(price) + ", " + rules.sellShare + "% of its trade value.", confirmLabel: "Sell it", danger: true }).then((sure) => sure && socket.emit("sell", { cls: sellCls, id: sellId, n: 1, any: true }));
   } else if (act == "craft") socket.emit("craft", { id: id });
-  else if (act == "packDust") socket.emit("packDust", { id: id });
   else if (act == "playerMenu") {
     playerMenu = !playerMenu;
     render();
@@ -3425,14 +3418,11 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   } else if (act == "cartClear") {
     cart = {};
     render();
-  } else if (act == "cartBuy") socket.emit("buyPacks", { cart: cart, dust: payDust });
+  } else if (act == "cartBuy") socket.emit("buyPacks", { cart: cart });
   else if (act == "filtersReset") {
     filters = { type: "all", cost: "all", rarity: "all", owned: false };
     search = "";
     document.getElementById("rpgSearch").value = "";
-    render();
-  } else if (act == "payWith") {
-    payDust = id == "dust";
     render();
   }
   else if (act == "openPack") startOpening(id);

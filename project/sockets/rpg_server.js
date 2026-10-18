@@ -558,15 +558,6 @@ module.exports = function (io, options = {}) {
     // unopened
     on("buyPacks", async (data) => {
       const hero = heroOf(username);
-      // (paid with dust: no coins)
-      if (data.dust) {
-        const problem = rpg.buyCartDust(hero, data.cart);
-        if (problem) return error(problem);
-        const items = rpg.cartPrice(data.cart).items;
-        socket.emit("rpgBought", { items, total: 0, dust: true });
-        sendHero(username);
-        return;
-      }
       const check = rpg.cartPrice(data.cart);
       if (check.error) return error(check.error);
       const note = check.items.map(([id, n]) => id + " x" + n).join(", ");
@@ -798,14 +789,6 @@ module.exports = function (io, options = {}) {
     on("deckName", (data) => {
       const problem = rpg.nameDeck(heroOf(username), data.slot, data.name);
       if (problem) return error(problem);
-      sendHero(username);
-    });
-
-    // A pack for dust: into the inventory, opened there
-    on("packDust", (data) => {
-      const problem = rpg.buyPackDust(heroOf(username), String(data.id), 1);
-      if (problem) return error(problem);
-      socket.emit("rpgToast", `${rpg.PACKS[data.id].name} bought. Open it in your inventory.`);
       sendHero(username);
     });
 

@@ -352,9 +352,9 @@ test("rpg: the map - a Rogue's instinct senses what a room is; rooms to choose i
   // (a mage's card: never in the warrior's offer)
   assert.match(rpg.canBuy(run, "a", "meteor").error, /doesn't sell/);
   const card = offer.cards[0];
-  // (a card: half its trade value, on every floor - it is the player's to keep)
-  assert.strictEqual(rpg.canBuy(run, "a", card).price, rpg.CARD_RARITIES[rpg.CARDS[card].rarity].value / 2);
-  assert.strictEqual(rpg.merchantCardPrice(card), rpg.CARD_RARITIES[rpg.CARDS[card].rarity].value / 2);
+  // (a card: 80% of its trade value, on every floor - over what it sells for; it is the player's to keep)
+  assert.strictEqual(rpg.canBuy(run, "a", card).price, rpg.CARD_RARITIES[rpg.CARDS[card].rarity].value * 0.8);
+  assert.strictEqual(rpg.merchantCardPrice(card), rpg.CARD_RARITIES[rpg.CARDS[card].rarity].value * 0.8);
   const deck = me.deck.length;
   rpg.bought(run, "a", card);
   assert.strictEqual(me.deck.length, deck + 1);
@@ -712,7 +712,7 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; between 
   // No clock between the rooms: out with the loot when the hero says so
   await new Promise((resolve) => setTimeout(resolve, 600));
   assert.ok(!server.test.rpg.parties.get(between.id).result);
-  // The merchant: a card bought is half its trade value - and in the collection for good, right away
+  // The merchant: a card bought is 80% of its trade value - and in the collection for good, right away
   const shopRun = server.test.rpg.parties.get(between.id).run;
   const ware = rpg.poolOf("warrior").find((id) => rpg.CARDS[id].rarity == "rare");
   shopRun.event = { kind: "merchant", id: null, lines: [], choices: null, results: {}, shared: [], offers: { rpg_alice: { cards: [ware], relics: [], bought: [], removed: false, prices: { potion: 100, remove: 100, [ware]: rpg.merchantCardPrice(ware) } } } };
@@ -720,11 +720,11 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; between 
   const wallet1 = testMode.balance("rpg_alice");
   alice.emit("buy", { item: ware });
   await waitFor(alice, "rpgHero", () => (rpg.charOf(mine).collection[ware] || 0) == owned + 1);
-  assert.strictEqual(testMode.balance("rpg_alice"), wallet1 - rpg.CARD_RARITIES.rare.value / 2);
+  assert.strictEqual(testMode.balance("rpg_alice"), wallet1 - rpg.CARD_RARITIES.rare.value * 0.8);
   shopRun.event = null;
   alice.emit("vote", { door: "leave" });
   const done = await waitFor(alice, "rpgParty", (p) => p && p.result == "left");
-  assert.strictEqual(testMode.balance("rpg_alice"), before - rpg.entryCost(1) - rpg.CARD_RARITIES.rare.value / 2 + done.run.pot);
+  assert.strictEqual(testMode.balance("rpg_alice"), before - rpg.entryCost(1) - rpg.CARD_RARITIES.rare.value * 0.8 + done.run.pot);
   // (left before the floor was cleared: the run does not count for today)
   assert.strictEqual(rpg.runsToday(mine, 1), 0);
   // Back to the hero (the party closes)
@@ -1629,18 +1629,9 @@ test("rpg: dust - copies past what a deck holds and cards no character can use; 
   assert.strictEqual(rpg.DUST.epic.get, rpg.DUST.rare.craft);
   assert.strictEqual(rpg.DUST.legendary.get, rpg.DUST.epic.craft);
   assert.strictEqual(rpg.DUST.mythic.craft, null);
-  // Packs for dust: into the inventory - dearer than what their cards give as dust
-  // (a dust: 20 coins - the pack's coin price in dust)
-  assert.strictEqual(rpg.PACKS.standard.dust, Math.round(rpg.PACKS.standard.price / 20));
-  assert.match(rpg.buyPackDust(hero, "standard"), new RegExp("You need " + rpg.PACKS.standard.dust + " dust"));
-  hero.dust = rpg.PACKS.standard.dust + 100;
-  const before = hero.packs.standard || 0;
-  assert.strictEqual(rpg.buyPackDust(hero, "standard"), null);
-  assert.strictEqual(hero.packs.standard, before + 1);
-  assert.strictEqual(hero.dust, 100);
-  let out = 0;
-  for (let i = 0; i < 300; i++) for (const card of rpg.openPack(rpg.newHero("warrior"), Math.random, "standard")) out += rpg.DUST[rpg.CARDS[card.id].rarity].get;
-  assert.ok(out / 300 < rpg.PACKS.standard.dust / 2, String(out / 300));
+  // Dust only makes cards: packs are for coins
+  assert.strictEqual(rpg.buyPackDust, undefined);
+  assert.strictEqual(rpg.PACKS.standard.dust, undefined);
 });
 
 test("rpg: trades - spare cards and the bag's gear; big trades nearly even; a card goes to the character of its class", () => {
@@ -1757,20 +1748,6 @@ test("rpg: deck slots get names - empty: back to the number, long ones cut", () 
   assert.match(rpg.nameDeck(hero, 2, "Nope"), /No such deck slot/);
 });
 
-test("rpg: the shop's cart paid with dust - each pack its dust price, not without enough dust", () => {
-  const hero = rpg.newHero("warrior");
-  const before = hero.packs.standard || 0;
-  const heroPacks = hero.packs.premium || 0;
-  const cost = rpg.PACKS.standard.dust * 2 + rpg.PACKS.premium.dust;
-  hero.dust = cost - 1;
-  assert.match(rpg.buyCartDust(hero, { standard: 2, premium: 1 }), new RegExp("You need " + cost + " dust"));
-  hero.dust = cost;
-  assert.strictEqual(rpg.buyCartDust(hero, { standard: 2, premium: 1 }), null);
-  assert.strictEqual(hero.dust, 0);
-  assert.strictEqual(hero.packs.standard, before + 2);
-  assert.strictEqual(hero.packs.premium, heroPacks + 1);
-});
-
 test("rpg: dust a copy that isn't spare - only when asked for, it leaves the decks; the free starter copies never", () => {
   const hero = rpg.newHero("warrior");
   const char = rpg.charOf(hero);
@@ -1803,15 +1780,16 @@ test("rpg: gear names fit the rarity - legendary and mythic pieces are never rus
   assert.ok(mythic.value > rpg.makeGear(1, () => 0).value * 4);
 });
 
-test("rpg: starting over - everything gone, nothing sold for it; once in three days", async () => {
+test("rpg: starting over - everything gone, nothing sold for it; once a week", async () => {
   const hero = rpg.newHero("warrior");
   hero.bag.push(rpg.makeGear(5));
   hero.dust = 500;
   const now = Date.now();
   const done = rpg.resetHero(hero, now);
   assert.deepStrictEqual([done.hero.cls, done.hero.unlocked.length, done.hero.bag.length, done.hero.dust || 0], [null, 0, 0, 0]);
-  assert.match(rpg.resetHero(done.hero, now + 3600000).error, /reset again in 71 hours/);
-  assert.ok(!rpg.resetHero(done.hero, now + 3 * 24 * 3600000).error);
+  assert.match(rpg.resetHero(done.hero, now + 3600000).error, /reset again in/);
+  assert.ok(rpg.resetHero(done.hero, now + 6 * 24 * 3600000).error);
+  assert.ok(!rpg.resetHero(done.hero, now + 7 * 24 * 3600000).error);
   // Over the sockets: RESET typed - the hero fresh, no coins for the gear
   testMode.start("rpg_rex", 1000000);
   const rex = client("rpg_rex");
@@ -2067,17 +2045,21 @@ test("rpg: thorns grow with the whole armor - gear included - and the run shows 
   assert.ok(rpg.thornsOf(run.heroes[0]) > rpg.thornsOf(bare));
   assert.strictEqual(rpg.runView(run).heroes[0].thorns, rpg.thornsOf(run.heroes[0]));
 });
-test("rpg: cards sold - 75% of what their dust is worth in coins, only spare copies unless asked, never starter ones", () => {
-  assert.deepStrictEqual(["common", "rare", "epic", "legendary", "mythic"].map(rpg.sellPrice), [75, 375, 1500, 6000, 24000]);
-  // (dust stays the better deal)
-  for (const rarity of ["common", "rare", "epic", "legendary", "mythic"]) assert.ok(rpg.sellPrice(rarity) < rpg.DUST[rarity].get * 20);
+test("rpg: cards sold - 75% of their trade value, only spare copies unless asked, never starter ones", () => {
+  assert.deepStrictEqual(["common", "rare", "epic", "legendary", "mythic"].map(rpg.sellPrice), [300, 1500, 6000, 24000, 96000]);
+  // (a pack sold whole: always less than it cost - buying packs to sell them never pays)
+  for (const id of rpg.PACK_IDS) {
+    let back = 0;
+    for (let i = 0; i < 400; i++) for (const card of rpg.openPack(rpg.newHero("warrior"), seeded(i), id)) back += rpg.sellPrice(rpg.CARDS[card.id].rarity);
+    assert.ok(back / 400 < rpg.PACKS[id].price * 0.8, `${id}: ${Math.round(back / 400)}`);
+  }
   const hero = rpg.newHero("warrior");
   const char = rpg.charOf(hero);
   char.collection.impervious = 3;
-  assert.deepStrictEqual(rpg.sellCard(hero, "warrior", "impervious", 1), { coins: 1500 });
+  assert.deepStrictEqual(rpg.sellCard(hero, "warrior", "impervious", 1), { coins: 6000 });
   assert.strictEqual(char.collection.impervious, 2);
   assert.match(rpg.sellCard(hero, "warrior", "impervious", 1).error, /every copy/);
-  assert.strictEqual(rpg.sellCard(hero, "warrior", "impervious", 1, true).coins, 1500);
+  assert.strictEqual(rpg.sellCard(hero, "warrior", "impervious", 1, true).coins, 6000);
   char.collection.ironwave = 4;
   assert.ok(rpg.sellAll(hero) > 0);
   assert.strictEqual(rpg.sellAll(hero), 0);
