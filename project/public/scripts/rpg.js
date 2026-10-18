@@ -688,6 +688,8 @@ function setView(id) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+var navShown = null; // the section the nav row was last scrolled to
+
 // On top of every section: the hero (class, level, potions) and the sections
 function renderTop() {
   var picked = !!hero.cls;
@@ -701,6 +703,11 @@ function renderTop() {
       return b;
     }),
   );
+  // (phones: the sections are one row to swipe - a new section scrolls into sight)
+  var nav = document.getElementById("rpgNav");
+  var active = nav.querySelector(".active");
+  if (active && navShown != view && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = active.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2;
+  navShown = view;
   document.getElementById("rpgHeroName").innerText = picked ? mine.icon + " " + mine.name : "Pick your class";
   // (the deepest floor cleared: a pill)
   morphChildren(document.getElementById("rpgHeroSub"), picked ? [el("span", "rpg-deepest" + (hero.deepest ? "" : " none"), hero.deepest ? "🏰 Deepest floor " + hero.deepest : "🏰 No floor cleared yet")] : []);
@@ -2800,6 +2807,8 @@ function renderMap(run) {
   var lanes = rules.lanes;
   var choosing = run.phase == "between" && !party.result;
   document.querySelector(".rpg-run-body").classList.toggle("choosing", choosing);
+  // (a room to deal with first, e.g. a merchant: phones keep it above the map)
+  document.querySelector(".rpg-run-body").classList.toggle("in-room", !!run.event);
   var rowH = choosing ? MAP_ROW_BIG : MAP_ROW;
   var height = rows.length * rowH;
   var x = (col) => ((col + 0.5) / lanes) * 100;

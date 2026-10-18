@@ -3710,7 +3710,7 @@ button.rpg-cardx.off {
 
 .rpg-home[data-view="hero"] .rpg-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(19rem, 100%), 1fr));
   gap: 0.5rem;
 }
 
@@ -8711,4 +8711,125 @@ button.rpg-trade-row:active {
   font-weight: 800;
   color: #2a1a00;
   background: var(--rpg-gold, #f5c451);
+}
+
+/* ======================= Phones: playable on one screen ======================= */
+
+@media (max-width: 575px) {
+  .mm-card.rpg-main {
+    padding: 0.75rem;
+  }
+
+  /* (the sections: one row to swipe - it keeps the view higher up) */
+  .rpg-nav {
+    position: relative;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .rpg-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .rpg-nav .rpg-nav-btn {
+    flex: none;
+  }
+
+  /* The fight: monsters, heroes and the hand close together */
+  .rpg-arena {
+    padding: 0.9rem 0.5rem 0.6rem;
+    gap: 0.75rem;
+  }
+
+  .rpg-heroes .rpg-fighter:only-child {
+    width: 100%;
+    max-width: 17rem;
+  }
+
+  /* The hand bar: the hand, then mana, piles and potion, then End turn over the whole width */
+  .rpg-handbar .rpg-hand {
+    align-items: stretch;
+    padding: 1rem 0.7rem 0.4rem;
+    scroll-padding-left: 0.7rem;
+  }
+
+  .rpg-handbar .rpg-hand-side:last-child {
+    display: contents;
+  }
+
+  .rpg-handbar .rpg-hand-tools {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .rpg-handbar .rpg-end {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .rpg-handbar .rpg-aim-hint {
+    grid-row: 4;
+  }
+
+  /* Picking the next room: the map right under the run's bar */
+  .rpg-run-body.choosing:not(.in-room) .rpg-map-box {
+    order: -1;
+  }
+
+  /* The deck builder: the deck first, then the collection three cards a row */
+  .rpg-builder-right {
+    order: -1;
+  }
+
+  .rpg-deck-list.col {
+    max-height: 15rem;
+  }
+
+  .rpg-builder-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.9rem 0.35rem;
+    padding: 0.9rem 0.3rem;
+  }
+
+  .rpg-builder .rpg-builder-grid .rpg-cardx {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 8.8rem;
+    padding: 0.55rem 0.35rem 1.2rem;
+  }
+
+  .rpg-builder-grid .rpg-cardx-text {
+    font-size: 0.58rem;
+  }
+
+  /* The collection bar: the title and Craft mode, then the bar, then the copies */
+  .rpg-shop-bar:has(.rpg-dust-bar) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.4rem 0.75rem;
+  }
+
+  .rpg-shop-bar:has(.rpg-dust-bar) > .rpg-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .rpg-shop-bar:has(.rpg-dust-bar) > .rpg-dust-bar {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .rpg-shop-bar:has(.rpg-dust-bar) > span.small {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
 }
