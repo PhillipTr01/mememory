@@ -204,18 +204,27 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+// The run up to now: the ticks that are due (the last state kept - the picture blends between the two)
 function tickTo(now) {
   if (!game || game.over || !game.run || now < game.startAt) return;
+  var run = game.run;
   var target = Math.floor(((now - game.startAt) / 1000) * E.TPS);
   // (a long stall - never more than half a second at once)
   var steps = 0;
-  while (game.run.tick < target && steps < 30 && !game.run.dead) {
+  while (run.tick < target && steps < 30 && !run.dead) {
     var move = game.queue.length ? game.queue.shift() : null;
-    if (move) game.moves.push([game.run.tick, move]);
-    E.step(game.run, move);
+    if (move) game.moves.push([run.tick, move]);
+    var before = { z: run.z, x: run.x, h: E.height(run), taken: run.taken, air: run.jump > 0 };
+    E.step(run, move);
+    game.prev = before;
+    // What the picture adds: sparkles for a coin, dust for a landing
+    if (run.taken > before.taken) coinBurst(run);
+    if (before.air && !run.jump && !run.dead) dust(run);
     steps++;
   }
-  if (game.run.dead) crash(false);
+  // (how far the moment is into the tick after the last one: the picture shows the runner that far from the last state)
+  game.alpha = Math.max(0, Math.min(1, ((now - game.startAt) / 1000) * E.TPS - run.tick));
+  if (run.dead) crash(false);
 }
 
 /* ---------- Controls: keys and swipes ---------- */
@@ -235,6 +244,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+// Swipes: one move as soon as the finger went far enough - then the next one from there (left and up in one go)
 var touch = null;
 var stage = document.getElementById("rnStage");
 stage.addEventListener(
@@ -242,21 +252,21 @@ stage.addEventListener(
   (event) => {
     if (!game || game.over) return;
     var t = event.changedTouches[0];
-    touch = { x: t.clientX, y: t.clientY, done: false };
+    touch = { x: t.clientX, y: t.clientY };
   },
   { passive: true },
 );
 stage.addEventListener(
   "touchmove",
   (event) => {
-    if (!touch || touch.done || !game || game.over) return;
+    if (!touch || !game || game.over) return;
     event.preventDefault();
     var t = event.changedTouches[0];
     var dx = t.clientX - touch.x;
     var dy = t.clientY - touch.y;
-    if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
-    touch.done = true;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 22) return;
     input(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "L" : "R") : dy < 0 ? "J" : "D");
+    touch = { x: t.clientX, y: t.clientY };
   },
   { passive: false },
 );
@@ -278,15 +288,20 @@ var ctx = canvas.getContext("2d");
 var W = 0;
 var H = 0;
 var LANE = 2.6; // m between two lanes
-var CAM_BACK = 4.2; // the camera: this far behind the runner ...
-var CAM_H = 3.1; // ... this high
-var VIEW = 110; // m seen ahead
-var TRAIN_COLORS = [
-  ["#c2410c", "#ea580c", "#fdba74"],
-  ["#1d4ed8", "#3b82f6", "#bfdbfe"],
-  ["#15803d", "#22c55e", "#bbf7d0"],
-  ["#7e22ce", "#a855f7", "#e9d5ff"],
+var CAM_BACK = 4.4; // the camera: this far behind the runner ...
+var CAM_H = 3.2; // ... this high
+var VIEW = 120; // m seen ahead
+var WALL = LANE * 1.5 + 0.7; // the walls at the sides
+var FOG = [255, 170, 110]; // the haze toward the horizon
+var TRAINS = [
+  { body: [234, 88, 12], light: [253, 186, 116], stripe: [255, 247, 237] },
+  { body: [37, 99, 235], light: [147, 197, 253], stripe: [239, 246, 255] },
+  { body: [22, 163, 74], light: [134, 239, 172], stripe: [240, 253, 244] },
+  { body: [147, 51, 234], light: [216, 180, 254], stripe: [250, 245, 255] },
 ];
+var cam = { x: 0, tilt: 0 }; // the camera glides after the runner
+var particles = []; // {x, y, z, vx, vy, vz, life, max, color, size, text}
+var lastFrame = 0;
 
 function resize() {
   var rect = canvas.getBoundingClientRect();
@@ -299,210 +314,422 @@ function resize() {
 }
 window.addEventListener("resize", resize);
 
-// The view of the moment: where the camera is
-function view(run) {
-  // (the ground at the runner near the bottom - and all three lanes in the picture on a narrow screen too)
-  var focal = Math.min((H * 0.7 * 0.82 * CAM_BACK) / CAM_H, (W * CAM_BACK) / (LANE * 2.5));
+// A color with the haze of its distance (d: m from the camera)
+function shade(c, d, k) {
+  var f = Math.min(0.88, Math.pow(Math.max(0, d - 12) / (VIEW - 12), 1.25) * 0.95);
+  var m = k == null ? 1 : k;
+  return "rgb(" + Math.round((c[0] * (1 - f) + FOG[0] * f) * m) + "," + Math.round((c[1] * (1 - f) + FOG[1] * f) * m) + "," + Math.round((c[2] * (1 - f) + FOG[2] * f) * m) + ")";
+}
+
+// The view of the moment: the camera behind the runner (where it is between two ticks)
+function view(pos, speed) {
+  // (the ground at the runner near the bottom - all three lanes in the picture on a narrow screen too - a little wider when fast)
+  var focal = Math.min((H * 0.7 * 0.82 * CAM_BACK) / CAM_H, (W * CAM_BACK) / (LANE * 2.5)) * (1 - ((speed - E.V0) / E.VMAX) * 0.12);
   var horizon = Math.min(H * 0.42, H * 0.9 - (CAM_H * focal) / CAM_BACK);
-  return { horizon: horizon, focal: focal, camZ: run.z - CAM_BACK, camX: (run.x - 1) * LANE * 0.55 };
+  return { horizon: horizon, focal: focal, camZ: pos.z - CAM_BACK, camX: cam.x, camY: CAM_H + pos.h * 0.25 };
 }
 
 // A point of the world (x across, y up, z along the track) on the screen - null: behind the camera
 function project(v, x, y, z) {
   var d = z - v.camZ;
-  if (d < 0.4) return null;
+  if (d < 0.35) return null;
   var s = v.focal / d;
-  return { x: W / 2 + (x - v.camX) * s, y: v.horizon + (CAM_H - y) * s, s: s };
+  return { x: W / 2 + (x - v.camX) * s, y: v.horizon + (v.camY - y) * s, s: s, d: d };
 }
 
-function quad(v, points, fill) {
-  var p = points.map((pt) => project(v, pt[0], pt[1], pt[2]));
-  if (p.some((pt) => pt == null)) return;
+function poly(v, points, fill) {
+  var p = [];
+  for (var i = 0; i < points.length; i++) {
+    var q = project(v, points[i][0], points[i][1], points[i][2]);
+    if (!q) return;
+    p.push(q);
+  }
   ctx.beginPath();
   ctx.moveTo(p[0].x, p[0].y);
-  for (var i = 1; i < p.length; i++) ctx.lineTo(p[i].x, p[i].y);
+  for (var j = 1; j < p.length; j++) ctx.lineTo(p[j].x, p[j].y);
   ctx.closePath();
   ctx.fillStyle = fill;
   ctx.fill();
 }
 
-function drawWorld(run) {
-  var v = view(run);
-  // Sky and the city far away
-  var sky = ctx.createLinearGradient(0, 0, 0, v.horizon);
-  sky.addColorStop(0, "#1e1b4b");
-  sky.addColorStop(1, "#f59e0b");
+// A flat face across the track (x0..x1, y0..y1) at z
+function face(v, x0, x1, y0, y1, z, fill) {
+  poly(v, [[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]], fill);
+}
+
+/* The sky: a dusk, the sun, clouds, two rows of houses with lit windows */
+function drawSky(v, pos) {
+  var hz = v.horizon;
+  var sky = ctx.createLinearGradient(0, 0, 0, hz);
+  sky.addColorStop(0, "#0b1026");
+  sky.addColorStop(0.45, "#3b1d6e");
+  sky.addColorStop(0.8, "#c2416b");
+  sky.addColorStop(1, "#ffaa6e");
   ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, W, v.horizon + 1);
-  ctx.fillStyle = "#312e81";
-  var shift = -v.camX * 6;
-  for (var b = -2; b < 24; b++) {
-    var bw = W / 14;
-    var bh = (0.25 + ((b * 37) % 11) / 18) * v.horizon * 0.8;
-    ctx.fillRect(((b * bw + shift) % (W + bw * 4)) - bw * 2, v.horizon - bh, bw * 0.9, bh);
+  ctx.fillRect(0, 0, W, hz + 2);
+  // The sun, low and big
+  var sx = W * 0.68 - v.camX * 4;
+  var sy = hz - Math.min(W, H) * 0.06;
+  var glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, Math.min(W, H) * 0.42);
+  glow.addColorStop(0, "rgba(255, 214, 140, 0.9)");
+  glow.addColorStop(0.18, "rgba(255, 170, 110, 0.55)");
+  glow.addColorStop(1, "rgba(255, 120, 100, 0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, hz + 2);
+  ctx.fillStyle = "#ffe2a8";
+  ctx.beginPath();
+  ctx.arc(sx, sy, Math.min(W, H) * 0.075, 0, Math.PI * 2);
+  ctx.fill();
+  // Clouds drifting
+  ctx.fillStyle = "rgba(255, 190, 210, 0.1)";
+  for (var c = 0; c < 5; c++) {
+    var cx = (((c * 0.29 + pos.z * 0.0006 + performance.now() * 0.000004) % 1.3) - 0.15) * W;
+    var cy = hz * (0.14 + ((c * 37) % 5) * 0.07);
+    var cw = W * (0.07 + ((c * 13) % 4) * 0.025);
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, cw, cw * 0.12, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx + cw * 0.35, cy - cw * 0.06, cw * 0.5, cw * 0.1, 0, 0, Math.PI * 2);
+    ctx.fill();
   }
-  // The ground
-  ctx.fillStyle = "#3f3a36";
-  ctx.fillRect(0, v.horizon, W, H - v.horizon);
-  var far = run.z + VIEW;
-  // Lanes: gravel beds, sleepers, two rails each
+  skyline(v, pos, 0.35, "#4a2468", "rgba(255, 200, 120, 0.55)", 0.62, 11);
+  skyline(v, pos, 0.8, "#2a1640", "rgba(255, 214, 140, 0.8)", 0.42, 23);
+}
+
+// A row of houses: far ones slower (parallax), lit windows here and there
+function skyline(v, pos, depth, color, lights, height, seed) {
+  var hz = v.horizon;
+  var bw = Math.max(26, W / (9 + depth * 6));
+  var shift = -(v.camX * 10 * depth + pos.z * 0.15 * depth);
+  var first = Math.floor(-shift / bw) - 1;
+  for (var i = first; i < first + Math.ceil(W / bw) + 3; i++) {
+    var r = Math.abs(Math.sin(i * 12.9898 + seed) * 43758.5453) % 1;
+    var bh = (0.25 + r * 0.75) * hz * height;
+    var x = i * bw + shift;
+    ctx.fillStyle = color;
+    ctx.fillRect(x, hz - bh, bw * 0.92, bh + 1);
+    if (r > 0.55) ctx.fillRect(x + bw * 0.4, hz - bh - bw * 0.25, bw * 0.08, bw * 0.25);
+    ctx.fillStyle = lights;
+    var cols = 3;
+    var wsz = bw * 0.12;
+    for (var row = 0; row < Math.floor(bh / (wsz * 2.6)); row++) {
+      for (var col = 0; col < cols; col++) {
+        var on = Math.abs(Math.sin((i * 7 + row * 3 + col) * 78.233 + seed)) % 1;
+        if (on > 0.72) ctx.fillRect(x + bw * 0.16 + col * bw * 0.26, hz - bh + wsz * 1.5 + row * wsz * 2.6, wsz, wsz * 1.2);
+      }
+    }
+  }
+}
+
+/* The ground: walls and lamps at the sides, three beds of gravel with sleepers and rails */
+function drawGround(v, pos) {
+  var hz = v.horizon;
+  var ground = ctx.createLinearGradient(0, hz, 0, H);
+  ground.addColorStop(0, "rgb(" + FOG.join(",") + ")");
+  ground.addColorStop(0.12, "#8a6a5e");
+  ground.addColorStop(1, "#3b3232");
+  ctx.fillStyle = ground;
+  ctx.fillRect(0, hz, W, H - hz);
+  var near = v.camZ + 0.4;
+  var far = pos.z + VIEW;
+  // Walls: in pieces of 6 m (a bit lighter every other one), so their speed shows
+  for (var side = -1; side <= 1; side += 2) {
+    var x = side * WALL;
+    var start = Math.floor(near / 6) * 6;
+    for (var z = Math.min(far, start + VIEW + 6); z >= start; z -= 6) {
+      var z0 = Math.max(z, near);
+      var z1 = z + 6;
+      if (z1 <= z0) continue;
+      var d = z0 - v.camZ;
+      var k = (Math.floor(z / 6) % 2 ? 1 : 0.88);
+      poly(v, [[x, 0, z0], [x, 1.6, z0], [x, 1.6, z1], [x, 0, z1]], shade([92, 78, 96], d, k));
+      poly(v, [[x, 1.6, z0], [x + side * 0.3, 1.6, z0], [x + side * 0.3, 1.6, z1], [x, 1.6, z1]], shade([140, 120, 140], d));
+    }
+  }
+  // Beds, sleepers, rails
   for (var lane = 0; lane < 3; lane++) {
     var cx = (lane - 1) * LANE;
-    quad(v, [[cx - 1.15, 0, v.camZ + 0.5], [cx + 1.15, 0, v.camZ + 0.5], [cx + 1.15, 0, far], [cx - 1.15, 0, far]], "#57504a");
-    var first = Math.ceil((v.camZ + 0.5) / 1.6) * 1.6;
-    for (var z = first; z < far; z += 1.6) quad(v, [[cx - 0.95, 0, z], [cx + 0.95, 0, z], [cx + 0.95, 0, z + 0.35], [cx - 0.95, 0, z + 0.35]], "#6b4f3a");
-    [-0.55, 0.55].forEach((off) => quad(v, [[cx + off - 0.06, 0.05, v.camZ + 0.5], [cx + off + 0.06, 0.05, v.camZ + 0.5], [cx + off + 0.06, 0.05, far], [cx + off - 0.06, 0.05, far]], "#c7ccd4"));
+    poly(v, [[cx - 1.18, 0, near], [cx + 1.18, 0, near], [cx + 1.18, 0, far], [cx - 1.18, 0, far]], "rgba(70, 60, 62, 0.55)");
   }
-  // Haze toward the horizon
-  var haze = ctx.createLinearGradient(0, v.horizon, 0, v.horizon + H * 0.18);
-  haze.addColorStop(0, "rgba(245, 158, 11, 0.45)");
-  haze.addColorStop(1, "rgba(245, 158, 11, 0)");
-  ctx.fillStyle = haze;
-  ctx.fillRect(0, v.horizon, W, H * 0.18);
-
-  // The things on the track: far ones first
-  var things = [];
-  run.rows.forEach((row) =>
-    row.lanes.forEach((o, lane) => {
-      if (o && o.z1 > v.camZ + 0.5 && o.z0 < far) things.push({ z: Math.max(o.z0, v.camZ + 0.6), o: o, lane: lane, row: row });
-    }),
-  );
-  run.coins.forEach((coin) => {
-    if (!coin.taken && coin.z > v.camZ + 0.6 && coin.z < far) things.push({ z: coin.z, coin: coin });
-  });
-  things.sort((a, b) => b.z - a.z);
-  things.forEach((thing) => {
-    if (thing.coin) drawCoin(v, thing.coin, run);
-    else if (thing.o.kind == "train") drawTrain(v, thing.o, thing.lane, thing.row);
-    else if (thing.o.kind == "low") drawLow(v, thing.o, thing.lane);
-    else drawHigh(v, thing.o, thing.lane);
-  });
-  drawRunner(v, run);
+  var first = Math.ceil(near / 1.4) * 1.4;
+  for (var zz = Math.min(far, first + VIEW); zz >= first; zz -= 1.4) {
+    var dd = zz - v.camZ;
+    var sleeper = shade([96, 66, 48], dd);
+    for (var l = 0; l < 3; l++) {
+      var lx = (l - 1) * LANE;
+      poly(v, [[lx - 0.98, 0.01, zz], [lx + 0.98, 0.01, zz], [lx + 0.98, 0.01, zz + 0.32], [lx - 0.98, 0.01, zz + 0.32]], sleeper);
+    }
+  }
+  for (var r = 0; r < 3; r++) {
+    var rx = (r - 1) * LANE;
+    [-0.55, 0.55].forEach((off) => {
+      poly(v, [[rx + off - 0.07, 0.06, near], [rx + off + 0.07, 0.06, near], [rx + off + 0.07, 0.06, far], [rx + off - 0.07, 0.06, far]], "rgba(150, 156, 170, 0.95)");
+      poly(v, [[rx + off - 0.025, 0.07, near], [rx + off + 0.025, 0.07, near], [rx + off + 0.025, 0.07, far], [rx + off - 0.025, 0.07, far]], "rgba(240, 244, 255, 0.85)");
+    });
+  }
 }
 
+// Lamps on the walls every 18 m: a post, a warm light, its glow
+function drawLamps(v, pos) {
+  var near = v.camZ + 0.6;
+  var far = pos.z + VIEW;
+  var start = Math.ceil(near / 18) * 18;
+  for (var z = Math.min(far, start + VIEW); z >= start; z -= 18) {
+    for (var side = -1; side <= 1; side += 2) {
+      var x = side * (WALL - 0.1);
+      var d = z - v.camZ;
+      var base = project(v, x, 1.6, z);
+      var top = project(v, x, 4.2, z);
+      if (!base || !top) continue;
+      ctx.strokeStyle = shade([60, 52, 70], d);
+      ctx.lineWidth = Math.max(1, 0.12 * base.s);
+      ctx.beginPath();
+      ctx.moveTo(base.x, base.y);
+      ctx.lineTo(top.x, top.y);
+      ctx.lineTo(top.x - side * 0.7 * top.s, top.y);
+      ctx.stroke();
+      var lx = top.x - side * 0.7 * top.s;
+      var g = ctx.createRadialGradient(lx, top.y, 0, lx, top.y, 1.6 * top.s);
+      g.addColorStop(0, "rgba(255, 220, 150, " + (0.55 * (1 - d / VIEW)) + ")");
+      g.addColorStop(1, "rgba(255, 220, 150, 0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(lx - 1.6 * top.s, top.y - 1.6 * top.s, 3.2 * top.s, 3.2 * top.s);
+      ctx.fillStyle = "#fff4d6";
+      ctx.beginPath();
+      ctx.arc(lx, top.y + 0.05 * top.s, Math.max(1, 0.12 * top.s), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+/* The things on the track */
 function drawTrain(v, o, lane, row) {
   var cx = (lane - 1) * LANE;
-  var hw = 1.1;
-  var top = 3.2;
-  var near = Math.max(o.z0, v.camZ + 0.6);
-  var colors = TRAIN_COLORS[Math.floor(row.z) % TRAIN_COLORS.length];
-  // (the side the camera sees)
+  var hw = 1.12;
+  var top = 3.3;
+  var near = Math.max(o.z0, v.camZ + 0.45);
+  var look = TRAINS[Math.floor(row.z) % TRAINS.length];
+  var d = near - v.camZ;
+  // (its shadow on the ground)
+  poly(v, [[cx - hw - 0.15, 0.02, near], [cx + hw + 0.15, 0.02, near], [cx + hw + 0.15, 0.02, o.z1 + 0.6], [cx - hw - 0.15, 0.02, o.z1 + 0.6]], "rgba(20, 10, 20, 0.35)");
+  // The side the camera sees: the body, a stripe, windows
   var side = cx - v.camX > 0 ? cx - hw : cx + hw;
-  quad(v, [[side, 0, near], [side, top, near], [side, top, o.z1], [side, 0, o.z1]], colors[0]);
-  quad(v, [[cx - hw, top, near], [cx + hw, top, near], [cx + hw, top, o.z1], [cx - hw, top, o.z1]], colors[1]);
-  if (o.z0 < v.camZ + 0.6) return;
-  // The back of the train: windows, lights
-  quad(v, [[cx - hw, 0, o.z0], [cx + hw, 0, o.z0], [cx + hw, top, o.z0], [cx - hw, top, o.z0]], colors[1]);
-  quad(v, [[cx - 0.85, 1.7, o.z0 - 0.01], [cx - 0.1, 1.7, o.z0 - 0.01], [cx - 0.1, 2.7, o.z0 - 0.01], [cx - 0.85, 2.7, o.z0 - 0.01]], "#1e293b");
-  quad(v, [[cx + 0.1, 1.7, o.z0 - 0.01], [cx + 0.85, 1.7, o.z0 - 0.01], [cx + 0.85, 2.7, o.z0 - 0.01], [cx + 0.1, 2.7, o.z0 - 0.01]], "#1e293b");
-  quad(v, [[cx - hw, 0.25, o.z0 - 0.01], [cx + hw, 0.25, o.z0 - 0.01], [cx + hw, 0.5, o.z0 - 0.01], [cx - hw, 0.5, o.z0 - 0.01]], colors[2]);
-  [-0.75, 0.75].forEach((off) => {
-    var p = project(v, cx + off, 0.95, o.z0 - 0.02);
+  if (Math.abs(cx - v.camX) > 0.3) {
+    poly(v, [[side, 0.15, near], [side, top, near], [side, top, o.z1], [side, 0.15, o.z1]], shade(look.body, d, 0.72));
+    poly(v, [[side, 0.7, near], [side, 0.95, near], [side, 0.95, o.z1], [side, 0.7, o.z1]], shade(look.stripe, d, 0.8));
+    for (var wz = o.z0 + 1.2; wz < o.z1 - 1; wz += 2.6) {
+      if (wz + 1.6 < near) continue;
+      poly(v, [[side, 1.65, Math.max(wz, near)], [side, 2.6, Math.max(wz, near)], [side, 2.6, wz + 1.6], [side, 1.65, wz + 1.6]], shade([30, 41, 59], wz - v.camZ));
+    }
+  }
+  // The roof (with a box on it)
+  poly(v, [[cx - hw, top, near], [cx + hw, top, near], [cx + hw, top, o.z1], [cx - hw, top, o.z1]], shade(look.light, d, 0.85));
+  if (o.z1 - o.z0 > 7) {
+    var rz = o.z0 + 2;
+    if (rz > near) {
+      face(v, cx - 0.6, cx + 0.6, top, top + 0.35, rz, shade([120, 113, 108], rz - v.camZ));
+      poly(v, [[cx - 0.6, top + 0.35, rz], [cx + 0.6, top + 0.35, rz], [cx + 0.6, top + 0.35, rz + 2.4], [cx - 0.6, top + 0.35, rz + 2.4]], shade([168, 162, 158], rz - v.camZ));
+    }
+  }
+  if (o.z0 < v.camZ + 0.45) return;
+  // The back of the train: rounded windows, a stripe, lights
+  var z = o.z0;
+  d = z - v.camZ;
+  face(v, cx - hw, cx + hw, 0.15, top, z, shade(look.body, d));
+  face(v, cx - hw, cx + hw, 0.15, 0.4, z - 0.01, shade([40, 30, 40], d));
+  face(v, cx - hw, cx + hw, 0.7, 0.95, z - 0.01, shade(look.stripe, d));
+  face(v, cx - 0.85, cx - 0.12, 1.65, 2.75, z - 0.01, shade([30, 41, 59], d));
+  face(v, cx + 0.12, cx + 0.85, 1.65, 2.75, z - 0.01, shade([30, 41, 59], d));
+  face(v, cx - 0.8, cx - 0.5, 2.45, 2.7, z - 0.02, shade([120, 160, 220], d, 0.9));
+  face(v, cx + 0.17, cx + 0.47, 2.45, 2.7, z - 0.02, shade([120, 160, 220], d, 0.9));
+  [-0.72, 0.72].forEach((off) => {
+    var p = project(v, cx + off, 1.25, z - 0.03);
     if (!p) return;
-    ctx.fillStyle = "#fde68a";
+    var r = Math.max(1.5, 0.14 * p.s);
+    var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 3.5);
+    g.addColorStop(0, "rgba(255, 240, 180, 0.9)");
+    g.addColorStop(1, "rgba(255, 240, 180, 0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(p.x - r * 3.5, p.y - r * 3.5, r * 7, r * 7);
+    ctx.fillStyle = "#fffbe6";
     ctx.beginPath();
-    ctx.arc(p.x, p.y, Math.max(1.5, 0.16 * p.s), 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
     ctx.fill();
   });
 }
 
-// A low barrier: jump over it - red and white stripes near the ground
+// A low barrier: jump over it - posts and a board with red and white stripes
 function drawLow(v, o, lane) {
   var cx = (lane - 1) * LANE;
-  [-1.05, 0.95].forEach((off) => quad(v, [[cx + off, 0, o.z0], [cx + off + 0.1, 0, o.z0], [cx + off + 0.1, 0.9, o.z0], [cx + off, 0.9, o.z0]], "#9ca3af"));
+  var z = o.z0;
+  var d = z - v.camZ;
+  face(v, cx - 1.08, cx - 0.92, 0, 0.95, z, shade([71, 85, 105], d));
+  face(v, cx + 0.92, cx + 1.08, 0, 0.95, z, shade([71, 85, 105], d));
   for (var i = 0; i < 6; i++) {
     var x0 = cx - 1.1 + (i * 2.2) / 6;
-    quad(v, [[x0, 0.45, o.z0], [x0 + 2.2 / 6, 0.45, o.z0], [x0 + 2.2 / 6, 0.9, o.z0], [x0, 0.9, o.z0]], i % 2 ? "#f8fafc" : "#dc2626");
+    face(v, x0, x0 + 2.2 / 6, 0.45, 0.92, z - 0.01, shade(i % 2 ? [248, 250, 252] : [220, 38, 38], d));
   }
+  poly(v, [[cx - 1.1, 0.92, z - 0.01], [cx + 1.1, 0.92, z - 0.01], [cx + 1.1, 0.92, z + 0.25], [cx - 1.1, 0.92, z + 0.25]], shade([255, 255, 255], d, 0.75));
 }
 
-// A high bar: roll under it - yellow and black up high, posts at the sides
+// A high bar: roll under it - tall posts, a yellow and black board up high
 function drawHigh(v, o, lane) {
   var cx = (lane - 1) * LANE;
-  [-1.15, 1.05].forEach((off) => quad(v, [[cx + off, 0, o.z0], [cx + off + 0.1, 0, o.z0], [cx + off + 0.1, 2.3, o.z0], [cx + off, 2.3, o.z0]], "#64748b"));
+  var z = o.z0;
+  var d = z - v.camZ;
+  face(v, cx - 1.2, cx - 1.04, 0, 2.3, z, shade([71, 85, 105], d));
+  face(v, cx + 1.04, cx + 1.2, 0, 2.3, z, shade([71, 85, 105], d));
   for (var i = 0; i < 8; i++) {
-    var x0 = cx - 1.15 + (i * 2.3) / 8;
-    quad(v, [[x0, 1.25, o.z0], [x0 + 2.3 / 8, 1.25, o.z0], [x0 + 2.3 / 8, 2.1, o.z0], [x0, 2.1, o.z0]], i % 2 ? "#111827" : "#facc15");
+    var x0 = cx - 1.16 + (i * 2.32) / 8;
+    face(v, x0, x0 + 2.32 / 8, 1.3, 2.1, z - 0.01, shade(i % 2 ? [17, 24, 39] : [250, 204, 21], d));
+  }
+  poly(v, [[cx - 1.16, 2.1, z - 0.01], [cx + 1.16, 2.1, z - 0.01], [cx + 1.16, 2.1, z + 0.3], [cx - 1.16, 2.1, z + 0.3]], shade([254, 240, 138], d, 0.85));
+  // (blinking lights on top)
+  if (Math.floor(performance.now() / 400) % 2) {
+    [-0.9, 0.9].forEach((off) => {
+      var p = project(v, cx + off, 2.25, z - 0.02);
+      if (!p) return;
+      ctx.fillStyle = "rgba(255, 80, 60, 0.95)";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(1.2, 0.09 * p.s), 0, Math.PI * 2);
+      ctx.fill();
+    });
   }
 }
 
-function drawCoin(v, coin, run) {
-  var p = project(v, (coin.lane - 1) * LANE, 0.7, coin.z);
+function drawCoin(v, coin, tick) {
+  var bob = Math.sin(tick / 10 + coin.z) * 0.08;
+  var p = project(v, (coin.lane - 1) * LANE, 0.75 + bob, coin.z);
   if (!p) return;
-  var r = 0.32 * p.s;
-  var spin = Math.abs(Math.cos(run.tick / 9 + coin.z));
+  var r = 0.3 * p.s;
+  var spin = Math.max(0.15, Math.abs(Math.cos(tick / 9 + coin.z)));
+  var glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.2);
+  glow.addColorStop(0, "rgba(255, 220, 90, 0.35)");
+  glow.addColorStop(1, "rgba(255, 220, 90, 0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(p.x - r * 2.2, p.y - r * 2.2, r * 4.4, r * 4.4);
   ctx.fillStyle = "#b45309";
   ctx.beginPath();
-  ctx.ellipse(p.x, p.y, Math.max(1, r * spin), r, 0, 0, Math.PI * 2);
+  ctx.ellipse(p.x, p.y, r * spin, r, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#facc15";
+  ctx.fillStyle = "#fbbf24";
   ctx.beginPath();
-  ctx.ellipse(p.x, p.y, Math.max(0.6, r * spin * 0.75), r * 0.75, 0, 0, Math.PI * 2);
+  ctx.ellipse(p.x, p.y, r * spin * 0.8, r * 0.8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#fef3c7";
+  ctx.beginPath();
+  ctx.ellipse(p.x - r * spin * 0.25, p.y - r * 0.3, r * spin * 0.22, r * 0.18, 0, 0, Math.PI * 2);
   ctx.fill();
 }
 
-// The runner from behind: a hoodie, a cap, legs going - in the air when jumping, a ball when rolling
-function drawRunner(v, run) {
-  var x = (run.x - 1) * LANE;
-  var y = E.height(run);
-  var ground = project(v, x, 0, run.z);
-  var p = project(v, x, y, run.z);
+/* The runner from behind: a hoodie, a cap the wrong way round, a little backpack - legs and arms going */
+function drawRunner(v, pos, run) {
+  var x = (pos.x - 1) * LANE;
+  var y = pos.h;
+  var ground = project(v, x, 0, pos.z);
+  var p = project(v, x, y, pos.z);
   if (!ground || !p) return;
   var s = p.s;
-  // (the shadow on the ground)
-  ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+  // (the shadow: smaller the higher it is)
+  ctx.fillStyle = "rgba(15, 5, 15, 0.38)";
   ctx.beginPath();
-  ctx.ellipse(ground.x, ground.y, 0.45 * s * (1 - y / 4), 0.12 * s, 0, 0, Math.PI * 2);
+  ctx.ellipse(ground.x, ground.y, 0.48 * s * (1 - y / 3), 0.13 * s * (1 - y / 3), 0, 0, Math.PI * 2);
   ctx.fill();
   var dead = run.dead;
+  var hoodie = dead ? "#9a3412" : "#f97316";
+  var dark = dead ? "#7c2d12" : "#c2410c";
   if (run.roll && !dead) {
-    ctx.fillStyle = "#f97316";
+    // A ball rolling, with a blur behind it
+    var cy = p.y - 0.45 * s;
+    ctx.fillStyle = "rgba(249, 115, 22, 0.25)";
     ctx.beginPath();
-    ctx.arc(p.x, p.y - 0.42 * s, 0.42 * s, 0, Math.PI * 2);
+    ctx.ellipse(p.x, cy + 0.1 * s, 0.5 * s, 0.38 * s, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "#7c2d12";
-    ctx.lineWidth = Math.max(1, 0.06 * s);
+    var ball = ctx.createRadialGradient(p.x - 0.12 * s, cy - 0.15 * s, 0.05 * s, p.x, cy, 0.45 * s);
+    ball.addColorStop(0, "#fdba74");
+    ball.addColorStop(1, "#c2410c");
+    ctx.fillStyle = ball;
     ctx.beginPath();
-    ctx.arc(p.x, p.y - 0.42 * s, 0.28 * s, run.tick / 3, run.tick / 3 + 2);
+    ctx.arc(p.x, cy, 0.44 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(124, 45, 18, 0.8)";
+    ctx.lineWidth = Math.max(1, 0.07 * s);
+    var a = run.tick / 2.5;
+    ctx.beginPath();
+    ctx.arc(p.x, cy, 0.3 * s, a, a + 1.6);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(p.x, cy, 0.3 * s, a + Math.PI, a + Math.PI + 1.6);
     ctx.stroke();
     return;
   }
-  var phase = (run.z * 1.6) % (Math.PI * 2);
-  var stride = y > 0 ? 0.15 : Math.sin(phase) * 0.22;
+  var air = y > 0.05;
+  var phase = pos.z * 1.7;
+  var bob = air ? 0 : Math.abs(Math.sin(phase)) * 0.06;
+  ctx.save();
+  // (leaning into a lane change)
+  ctx.translate(p.x, p.y);
+  ctx.rotate(cam.tilt * 0.6);
+  ctx.translate(-p.x, -p.y);
+  var hip = p.y - (0.9 + bob) * s;
   ctx.lineCap = "round";
-  // Legs
-  ctx.strokeStyle = "#1e3a8a";
-  ctx.lineWidth = 0.17 * s;
+  ctx.lineJoin = "round";
+  // Legs: thigh and shin, one foot up while the other is down (tucked in a jump)
   [-1, 1].forEach((side) => {
+    var lift = air ? 0.32 : Math.max(0, Math.sin(phase + (side > 0 ? 0 : Math.PI))) * 0.32;
+    var hx = p.x + side * 0.13 * s;
+    var kx = hx + side * 0.04 * s;
+    var ky = hip + (0.42 - lift * 0.6) * s;
+    var fy = p.y - (0.06 + lift) * s;
+    ctx.strokeStyle = "#1e3a8a";
+    ctx.lineWidth = 0.19 * s;
     ctx.beginPath();
-    ctx.moveTo(p.x + side * 0.14 * s, p.y - 0.85 * s);
-    ctx.lineTo(p.x + side * 0.16 * s, p.y - (0.12 + side * stride) * s);
+    ctx.moveTo(hx, hip);
+    ctx.lineTo(kx, ky);
+    ctx.lineTo(hx + side * 0.02 * s, fy);
+    ctx.stroke();
+    ctx.fillStyle = "#f8fafc";
+    roundRect(hx + side * 0.02 * s - 0.11 * s, fy - 0.04 * s, 0.22 * s, 0.13 * s, 0.05 * s);
+    ctx.fillStyle = "#ef4444";
+    ctx.fillRect(hx + side * 0.02 * s - 0.11 * s, fy + 0.06 * s, 0.22 * s, 0.03 * s);
+  });
+  // Arms swing the other way
+  [-1, 1].forEach((side) => {
+    var swing = air ? -0.35 : Math.sin(phase + (side > 0 ? Math.PI : 0)) * 0.22;
+    ctx.strokeStyle = dark;
+    ctx.lineWidth = 0.14 * s;
+    ctx.beginPath();
+    ctx.moveTo(p.x + side * 0.27 * s, hip - 0.62 * s);
+    ctx.lineTo(p.x + side * 0.4 * s, hip - (0.3 - swing) * s);
+    ctx.lineTo(p.x + side * 0.36 * s, hip - (0.05 - swing * 1.4) * s);
     ctx.stroke();
   });
-  // Shoes
-  ctx.fillStyle = "#f8fafc";
-  [-1, 1].forEach((side) => ctx.fillRect(p.x + side * 0.16 * s - 0.1 * s, p.y - (0.14 + side * stride) * s, 0.2 * s, 0.12 * s));
-  // Body
-  ctx.fillStyle = dead ? "#9a3412" : "#f97316";
-  roundRect(p.x - 0.3 * s, p.y - 1.55 * s, 0.6 * s, 0.75 * s, 0.14 * s);
-  // Arms
-  ctx.strokeStyle = dead ? "#9a3412" : "#ea580c";
-  ctx.lineWidth = 0.13 * s;
-  [-1, 1].forEach((side) => {
-    ctx.beginPath();
-    ctx.moveTo(p.x + side * 0.28 * s, p.y - 1.45 * s);
-    ctx.lineTo(p.x + side * 0.4 * s, p.y - (1.0 - side * stride * 0.8) * s);
-    ctx.stroke();
-  });
-  // Head with a cap (from behind)
-  ctx.fillStyle = "#7c4a2d";
+  // The hoodie, its hood and a little backpack
+  var body = ctx.createLinearGradient(p.x - 0.32 * s, 0, p.x + 0.32 * s, 0);
+  body.addColorStop(0, dark);
+  body.addColorStop(0.5, hoodie);
+  body.addColorStop(1, dark);
+  ctx.fillStyle = body;
+  roundRect(p.x - 0.31 * s, hip - 0.78 * s, 0.62 * s, 0.82 * s, 0.16 * s);
+  ctx.fillStyle = "#334155";
+  roundRect(p.x - 0.2 * s, hip - 0.62 * s, 0.4 * s, 0.42 * s, 0.08 * s);
+  ctx.fillStyle = "#475569";
+  ctx.fillRect(p.x - 0.14 * s, hip - 0.36 * s, 0.28 * s, 0.05 * s);
+  ctx.fillStyle = dark;
   ctx.beginPath();
-  ctx.arc(p.x, p.y - 1.78 * s, 0.22 * s, 0, Math.PI * 2);
+  ctx.ellipse(p.x, hip - 0.8 * s, 0.2 * s, 0.1 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // The head with a cap turned back
+  ctx.fillStyle = "#6b3f26";
+  ctx.beginPath();
+  ctx.arc(p.x, hip - 1.02 * s, 0.21 * s, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = "#2563eb";
   ctx.beginPath();
-  ctx.arc(p.x, p.y - 1.84 * s, 0.22 * s, Math.PI, 0);
+  ctx.arc(p.x, hip - 1.06 * s, 0.215 * s, Math.PI * 1.05, Math.PI * 1.95);
+  ctx.closePath();
   ctx.fill();
+  ctx.fillRect(p.x - 0.13 * s, hip - 1.0 * s, 0.26 * s, 0.07 * s);
+  ctx.restore();
 }
 
 function roundRect(x, y, w, h, r) {
@@ -516,28 +743,138 @@ function roundRect(x, y, w, h, r) {
   ctx.fill();
 }
 
-// Between runs: a quiet track with the runner standing
+/* Sparkles, dust and the "+2" of a coin - in the world, they stay where they happened */
+function coinBurst(run) {
+  var x = (run.x - 1) * LANE;
+  for (var i = 0; i < 8; i++) {
+    var a = (i / 8) * Math.PI * 2;
+    particles.push({ x: x, y: 0.9, z: run.z + 0.6, vx: Math.cos(a) * 1.6, vy: Math.sin(a) * 1.6 + 1.2, vz: run.speed * 0.9, life: 0, max: 0.45, color: "255, 214, 90", size: 0.07 });
+  }
+  particles.push({ x: x, y: 1.6, z: run.z + 1, vx: 0, vy: 1.2, vz: run.speed, life: 0, max: 0.6, text: "+" + E.COIN_SCORE });
+}
+
+function dust(run) {
+  var x = (run.x - 1) * LANE;
+  for (var i = 0; i < 6; i++) particles.push({ x: x + (i - 2.5) * 0.12, y: 0.05, z: run.z, vx: (i - 2.5) * 0.6, vy: 0.5 + (i % 3) * 0.2, vz: run.speed * 0.7, life: 0, max: 0.4, color: "220, 200, 190", size: 0.1 });
+}
+
+function drawParticles(v, dt) {
+  particles = particles.filter((q) => (q.life += dt) < q.max);
+  particles.forEach((q) => {
+    q.x += q.vx * dt;
+    q.y = Math.max(0, q.y + q.vy * dt);
+    q.vy -= 4 * dt;
+    q.z += q.vz * dt;
+    var p = project(v, q.x, q.y, q.z);
+    if (!p) return;
+    var fade = 1 - q.life / q.max;
+    if (q.text) {
+      ctx.font = "800 " + Math.max(12, 0.45 * p.s) + "px Poppins, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(255, 230, 120, " + fade + ")";
+      ctx.fillText(q.text, p.x, p.y);
+      return;
+    }
+    ctx.fillStyle = "rgba(" + q.color + ", " + fade + ")";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, Math.max(1, q.size * p.s), 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+// Fast: streaks at the edges
+function drawSpeed(speed) {
+  var k = (speed - 18) / (E.VMAX - 18);
+  if (k <= 0) return;
+  ctx.strokeStyle = "rgba(255, 255, 255, " + Math.min(0.35, k * 0.35) + ")";
+  ctx.lineWidth = 1.5;
+  var t = performance.now() / 70;
+  for (var i = 0; i < 14; i++) {
+    var a = (i / 14) * Math.PI * 2 + 0.3;
+    var r0 = Math.max(W, H) * (0.45 + ((i * 37 + Math.floor(t)) % 10) * 0.03);
+    var r1 = r0 + Math.max(W, H) * 0.12 * k;
+    var cx = W / 2;
+    var cy = H * 0.45;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0 * 0.7);
+    ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1 * 0.7);
+    ctx.stroke();
+  }
+}
+
+function drawWorld(run, pos, dt) {
+  // The camera glides after the runner and leans a little into a lane change
+  var targetX = (pos.x - 1) * LANE * 0.6;
+  var ease = 1 - Math.exp(-dt * 9);
+  cam.x += (targetX - cam.x) * ease;
+  cam.tilt += ((run.lane - pos.x) * 0.06 - cam.tilt) * ease;
+  var v = view(pos, run.speed);
+  drawSky(v, pos);
+  ctx.save();
+  // (the ground tilts with the camera)
+  ctx.translate(W / 2, v.horizon);
+  ctx.rotate(-cam.tilt * 0.35);
+  ctx.translate(-W / 2, -v.horizon);
+  drawGround(v, pos);
+  drawLamps(v, pos);
+  // The things on the track: far ones first
+  var far = pos.z + VIEW;
+  var things = [];
+  run.rows.forEach((row) =>
+    row.lanes.forEach((o, lane) => {
+      if (o && o.z1 > v.camZ + 0.45 && o.z0 < far) things.push({ z: Math.max(o.z0, v.camZ + 0.5), o: o, lane: lane, row: row });
+    }),
+  );
+  run.coins.forEach((coin) => {
+    if (!coin.taken && coin.z > v.camZ + 0.5 && coin.z < far) things.push({ z: coin.z, coin: coin });
+  });
+  things.sort((a, b) => b.z - a.z);
+  things.forEach((thing) => {
+    if (thing.coin) drawCoin(v, thing.coin, run.tick);
+    else if (thing.o.kind == "train") drawTrain(v, thing.o, thing.lane, thing.row);
+    else if (thing.o.kind == "low") drawLow(v, thing.o, thing.lane);
+    else drawHigh(v, thing.o, thing.lane);
+  });
+  drawRunner(v, pos, run);
+  drawParticles(v, dt);
+  ctx.restore();
+  drawSpeed(run.speed);
+  // A soft dark edge around the picture
+  var vig = ctx.createRadialGradient(W / 2, H * 0.55, Math.min(W, H) * 0.35, W / 2, H * 0.55, Math.max(W, H) * 0.8);
+  vig.addColorStop(0, "rgba(0, 0, 0, 0)");
+  vig.addColorStop(1, "rgba(0, 0, 0, 0.45)");
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// Between runs: the track goes by slowly, nobody on it
 var idle = E.create(7);
+idle.rows = [];
 function frame(now) {
   if (!W || canvas.width == 0) resize();
+  var dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 1 / 60;
+  lastFrame = now;
   tickTo(now);
   var run = game && game.run ? game.run : idle;
+  var pos;
   if (!game || !game.run) {
-    // (the waiting track moves slowly)
-    idle.z += 0.04;
+    idle.z += dt * 6;
     idle.tick++;
-    while (idle.next < idle.z + 120) {
-      idle.rows.length = 0;
-      idle.next += 25;
-    }
+    pos = { z: idle.z, x: 1, h: 0 };
+  } else {
+    // (between the last two ticks: smooth on every screen)
+    var a = game.over || !game.prev ? 1 : game.alpha;
+    var prev = game.prev || { z: run.z, x: run.x, h: 0 };
+    pos = { z: prev.z + (run.z - prev.z) * a, x: prev.x + (run.x - prev.x) * a, h: prev.h + (E.height(run) - prev.h) * a };
   }
   ctx.save();
-  // (a crash: the screen shakes a moment)
-  if (game && game.over && game.deadAt && now - game.deadAt < 400) ctx.translate((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10);
-  drawWorld(run);
+  // (a crash: a short shake)
+  var since = game && game.over && game.deadAt ? now - game.deadAt : Infinity;
+  if (since < 300) ctx.translate((Math.random() - 0.5) * 8 * (1 - since / 300), (Math.random() - 0.5) * 8 * (1 - since / 300));
+  drawWorld(run, pos, dt);
   ctx.restore();
-  if (game && game.over && game.deadAt && now - game.deadAt < 500) {
-    ctx.fillStyle = "rgba(220, 38, 38, " + (0.35 * (1 - (now - game.deadAt) / 500)) + ")";
+  if (since < 600) {
+    ctx.fillStyle = "rgba(220, 38, 38, " + 0.3 * (1 - since / 600) + ")";
     ctx.fillRect(0, 0, W, H);
   }
   drawHud(now);
@@ -553,20 +890,36 @@ function drawHud(now) {
   // 3 - 2 - 1 before the start
   var left = game.startAt - now;
   count.hidden = !(left > 0);
-  if (left > 0) count.innerText = String(Math.ceil((left / rules.countdown) * 3));
+  if (left > 0) {
+    var n = String(Math.ceil((left / rules.countdown) * 3));
+    if (count.innerText != n) {
+      count.innerText = n;
+      count.classList.remove("pop");
+      void count.offsetWidth;
+      count.classList.add("pop");
+    }
+  }
   var score = E.score(game.run);
   document.getElementById("rnDistance").innerText = formatCoins(Math.floor(game.run.z)) + " m";
   document.getElementById("rnCoins").innerText = String(game.run.taken);
   var pay = document.getElementById("rnPay");
+  var bar = document.getElementById("rnBar");
   if (game.stake > 0) {
     var x = multiplier(score);
     document.getElementById("rnPayLabel").innerText = "Payout";
     pay.innerText = x > 0 ? "🪙 " + formatCoins(Math.floor(game.stake * x)) + " · " + x.toFixed(2) + "×" : "🪙 0";
     pay.classList.toggle("even", x >= 1);
+    // (how far to the entry back - then to the most)
+    var t = rules.table;
+    var share = score < t.even ? score / t.even : (score - t.even) / (t.top - t.even);
+    bar.style.width = Math.min(100, share * 100) + "%";
+    bar.classList.toggle("over", score >= t.even);
+    bar.parentNode.hidden = false;
   } else {
     document.getElementById("rnPayLabel").innerText = "Practice";
     pay.innerText = formatCoins(score) + " points";
     pay.classList.remove("even");
+    bar.parentNode.hidden = true;
   }
 }
 

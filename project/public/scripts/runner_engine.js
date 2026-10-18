@@ -17,6 +17,7 @@
   var JUMP_HEIGHT = 1.3; // m
   var CLEAR_LOW = 0.6; // a low barrier: this high in the air at least
   var ROLL_TICKS = 40;
+  var JUMP_BUFFER = 10; // a jump pressed this many ticks before landing: it jumps again on landing
   var START = 45; // m without anything at the start
   var GAP = [16, 30]; // m between two rows
   var HIT_WIDTH = 0.55; // of a lane: closer to a lane's middle than this - in it
@@ -48,6 +49,7 @@
       x: 1, // where it is (between two lanes while changing)
       jump: 0, // ticks of a jump done (0: on the ground)
       roll: 0, // ticks of a roll done (0: not rolling)
+      buffer: 0, // a jump waiting for the landing (ticks left)
       rows: [], // {z, lanes: [{kind, z0, z1} | null x3]} - only the ones ahead (and just behind)
       coins: [], // {z, lane, taken}
       next: START, // z of the next row
@@ -112,9 +114,11 @@
     else if (move === "J" && !run.jump) {
       run.jump = 1;
       run.roll = 0;
-    } else if (move === "D") {
+    } else if (move === "J") run.buffer = JUMP_BUFFER;
+    else if (move === "D") {
       // (rolling in the air: straight down)
       run.jump = 0;
+      run.buffer = 0;
       run.roll = 1;
     }
     run.tick++;
@@ -123,6 +127,14 @@
     if (run.x < run.lane) run.x = Math.min(run.lane, run.x + 1 / LANE_TICKS);
     else if (run.x > run.lane) run.x = Math.max(run.lane, run.x - 1 / LANE_TICKS);
     if (run.jump) run.jump = run.jump >= JUMP_TICKS ? 0 : run.jump + 1;
+    if (run.buffer) {
+      run.buffer--;
+      // (landed with a jump pressed just before: up again)
+      if (!run.jump) {
+        run.jump = 1;
+        run.buffer = 0;
+      }
+    }
     if (run.roll) run.roll = run.roll >= ROLL_TICKS ? 0 : run.roll + 1;
     while (run.next < run.z + 120) addRow(run);
     // What the runner meets

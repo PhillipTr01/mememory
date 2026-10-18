@@ -279,3 +279,93 @@
     font-size: 0.9rem;
   }
 }
+
+/* The way to the payout: to the entry back (blue), then to the most (gold) */
+.rn-bar {
+  display: block;
+  width: 100%;
+  min-width: 90px;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.rn-bar[hidden] {
+  display: none;
+}
+
+.rn-bar-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: #60a5fa;
+  transition: width 0.15s linear;
+}
+
+.rn-bar-fill.over {
+  background: var(--mm-accent);
+}
+
+/* 3 - 2 - 1: every number pops in */
+.rn-count.pop {
+  animation: rn-pop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+@keyframes rn-pop {
+  0% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+}
+
+/* A cleaner panel and numbers */
+.rn-panel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(30, 22, 48, 0.9), rgba(16, 14, 26, 0.92));
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  animation: rn-panel-in 0.28s ease-out;
+}
+
+@keyframes rn-panel-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.rn-hud-item {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(14, 10, 26, 0.55);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.rn-start {
+  box-shadow: 0 6px 20px rgba(var(--mm-accent-rgb), 0.35);
+  transition: transform 0.1s ease;
+}
+
+.rn-start:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.rn-stake {
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.rn-stake:hover:not(:disabled):not(.active) {
+  border-color: rgba(var(--mm-accent-rgb), 0.6);
+}

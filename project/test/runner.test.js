@@ -71,6 +71,20 @@ test("runner engine: every row leaves a way through - a careful player gets far,
   assert.ok(run.z > 5000);
 });
 
+test("runner engine: a jump pressed just before landing jumps again on landing - one pressed too early doesn't", () => {
+  const run = engine.create(1);
+  engine.step(run, "J");
+  while (run.jump && run.jump < engine.JUMP_TICKS - 5) engine.step(run, null);
+  engine.step(run, "J");
+  for (let i = 0; i < 8; i++) engine.step(run, null);
+  assert.ok(run.jump > 0, "in the air again");
+  const early = engine.create(1);
+  engine.step(early, "J");
+  engine.step(early, "J");
+  for (let i = 0; i < engine.JUMP_TICKS + 2; i++) engine.step(early, null);
+  assert.strictEqual(early.jump, 0, "landed and stayed down");
+});
+
 test("runner engine: moves from the page are checked - in order, known moves, one a tick", () => {
   assert.deepStrictEqual(engine.cleanMoves([[5, "L"], [3, "R"], [5, "J"], [6, "X"], ["7", "L"], [8, "LR"], [9, "D"], null, [-1, "L"]]), [[5, "L"], [9, "D"]]);
   assert.deepStrictEqual(engine.cleanMoves("nope"), []);
