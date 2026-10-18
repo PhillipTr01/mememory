@@ -1540,10 +1540,14 @@ function weighted(rng, entries) {
 // The rows of a floor's map: ROOMS - deeper floors sometimes more (from floor 11 maybe one, from 21 one or two),
 // a boss floor one more
 // The coins of a room on a floor: deeper floors have more rooms - each pays a little less, so a floor's pot is about
-// the same share of its entry on every floor
+// the same share of its entry on every floor; from LOOT_DEEP_FROM on the floors are harder (fewer runs clear them):
+// a room pays more, evenly up to LOOT_DEEP more at the last floor - every floor about twice its entry, losses included
+const LOOT_DEEP_FROM = 14;
+const LOOT_DEEP = 0.45;
 function lootScale(floor) {
   const rows = ROOMS + (floor >= 11 ? 0.5 : 0) + (floor >= 21 ? 1.5 : 0) + (BOSS_EVERY && floor % BOSS_EVERY == 0 ? 1 : 0);
-  return ROOMS / rows;
+  const deep = 1 + (LOOT_DEEP * Math.max(0, floor - LOOT_DEEP_FROM)) / (FLOORS - LOOT_DEEP_FROM);
+  return (ROOMS / rows) * deep;
 }
 
 function rowsFor(floor, rng = Math.random) {

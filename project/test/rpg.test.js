@@ -2013,10 +2013,14 @@ test("rpg: luck makes poison and burns stronger - a quarter more at most", () =>
   assert.strictEqual(rpg.luckBoost({ luck: 40 }), 1.1);
   assert.strictEqual(rpg.luckBoost({ luck: 500 }), 1.25);
 });
-test("rpg: loot per room - deeper floors with more rooms pay less a room, the same share of the entry a floor", () => {
+test("rpg: loot per room - deeper floors with more rooms pay less a room; the hard deep floors pay more for the risk", () => {
   assert.strictEqual(rpg.lootScale(1), 1);
   assert.ok(rpg.lootScale(5) < 1, "a boss floor: one room more");
-  assert.ok(rpg.lootScale(27) < rpg.lootScale(12));
+  assert.ok(rpg.lootScale(13) < rpg.lootScale(12) * 1.001, "more rooms, the same floor pot");
+  // (from floor 14 on: up to 45% more a room at the last floor)
+  const rooms = (floor) => rpg.lootScale(floor) / (1 + (0.45 * Math.max(0, floor - 14)) / 16);
+  assert.ok(Math.abs(rooms(30) * 1.45 - rpg.lootScale(30)) < 1e-9);
+  assert.ok(rpg.lootScale(29) > rpg.lootScale(21) * 1.15, "the same rooms - deeper pays more");
 });
 test("rpg: a fading foe dodges hits on a single foe - hits on every foe still land", () => {
   const run = duel("warrior", "attack", ["strike", "cleave"]);
