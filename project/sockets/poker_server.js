@@ -228,7 +228,7 @@ module.exports = function (io, options = {}) {
         bigBlind: blinds().big,
         opponents: indexes().filter(live).length - 1,
         raises: seat.botRaises || 0,
-      });
+      }, Math.random, pokerBot.styleOf(seat.name));
     } catch (error) {
       console.error("[poker] Bot failed:", error);
       choice = { type: toCall > 0 ? "fold" : "check" };

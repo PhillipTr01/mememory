@@ -404,6 +404,22 @@ test("poker bots: the fast score ranks like the full one, a strong hand plays, a
   assert.strictEqual(bot.decide({ ...view, stack: 150, cards: ["As", "Ks"], board: ["Qs", "Js", "Ts"], toCall: 0 }, () => 0).amount, 150);
 });
 
+test("poker bots: not face up - weak hands bluff, strong ones sometimes check, the bet size doesn't tell which", () => {
+  const bot = require("../game/poker_bot");
+  const spot = { board: ["Ks", "8d", "3c"], pot: 600, toCall: 0, bet: 0, stack: 50000, highBet: 0, minRaise: 100, bigBlind: 100, opponents: 1, raises: 0 };
+  const play = (cards) => Array.from({ length: 300 }, () => bot.decide({ ...spot, cards }));
+  const weak = play(["7h", "2d"]);
+  const strong = play(["Kd", "Kh"]);
+  const bets = (list) => list.filter((c) => c.type === "raise");
+  assert.ok(bets(weak).length > 10 && bets(weak).length < 100, "a weak hand bluffs sometimes: " + bets(weak).length);
+  assert.ok(bets(strong).length > 100 && bets(strong).length < 280, "a strong hand mostly bets, sometimes checks: " + bets(strong).length);
+  // (the same sizes for both)
+  const sizes = (list) => [...new Set(bets(list).map((c) => c.amount))].sort((x, y) => x - y);
+  assert.deepStrictEqual(sizes(weak), sizes(strong));
+  // Every bot has its own style
+  assert.notDeepStrictEqual(bot.styleOf(bot.NAMES[1]), bot.styleOf(bot.NAMES[2]));
+});
+
 test("poker bots: two fill the table for one player, one leaves for a second, all leave with the people - with the house's chips", async () => {
   config.POKER_BOTS = true;
   h.setCoins("alice", 1000);

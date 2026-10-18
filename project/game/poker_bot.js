@@ -4,12 +4,11 @@ const poker = require("./poker");
  * Poker bots: they fill a table when there are too few people (see sockets/poker_server.js).
  * A bot only knows what a player at its seat knows: its own two cards, the board, the bets.
  * It plays tight and solid - its chance to win against random hands (played out a few
- * hundred times) against the price of a call, a raise with a strong hand, now and then a bluff.
+ * hundred times) against the price of a call - with bluffs, slowplays and bet sizes that don't tell the hand.
  */
 
 const NAMES = ["Bot Ace", "Bot River", "Bot Lucky", "Bot Chip"];
 const TRIALS = 250; // boards played out per decision
-const BLUFF = 0.07; // how often a weak hand bets when nobody did
 const RAISES = 2; // a bot raises at most this often on one street - then it only calls
 
 // A fast score of 5 to 7 cards as one number (bigger wins) - the same order as poker.bestHand, many times faster
@@ -93,17 +92,32 @@ function equity(cards, board, opponents, rng = Math.random, trials = TRIALS) {
   return won / trials;
 }
 
-// How a bot plays: soft on purpose - small value bets, few raises, a little loose - so it is a fair
-// opponent at the table, not a shark that drains weak players
+// How a bot plays. Bet sizes never tell the hand: strong hands, medium ones and bluffs all pick from the
+// same sizes. Strong hands are sometimes slowplayed (checked, then raised), weak ones bluffed on every
+// street, a bet sometimes raised as a bluff - the numbers: how often (0..1) and how strong (times the average)
 const STYLE = {
-  value: 1.6, // bets when its chance is this many times the average ...
-  valueOften: 0.6, // ... this often (a check hides the rest)
-  valueSize: [0.38, 0.55], // of the pot
-  raise: 2.25, // raises a bet when its chance is this many times the average ...
-  raiseOften: 0.42,
-  raiseSize: [0.5, 0.8],
-  loose: 0, // calls when its chance beats the price by this much
+  strong: 1.6, // a strong hand: its chance this many times the average at the table
+  medium: 1.05, // a medium one (below: weak)
+  betStrong: 0.6, // nobody bet: a strong hand bets this often (the rest: a slowplay)
+  betMedium: 0.3,
+  bluff: [0.15, 0.11, 0.09], // a weak hand bets this often on the flop, the turn, the river (heads-up - fewer with more players)
+  raiseStrong: 0.45, // a bet to answer: a strong hand raises this often
+  raiseBluff: 0.05, // ... a weak or medium one raises as a bluff (heads-up)
+  openRange: 1.3, // before the flop: raises with this edge or more ...
+  openOften: 0.55,
+  openBluff: 0.08, // ... and sometimes with anything
+  loose: 0.02, // calls when its chance beats the price by this much (below 0: looser)
+  sizes: [0.33, 0.5, 0.66], // of the pot - one list for every bet
 };
+
+// A few characters (by the bot's name - see NAMES): one plays wilder, one tighter, one bets more
+const PERSONALITIES = [
+  {},
+  { bluff: [0.2, 0.15, 0.12], raiseBluff: 0.08, openBluff: 0.12, betStrong: 0.7, loose: -0.01 },
+  { betStrong: 0.5, betMedium: 0.2, bluff: [0.1, 0.08, 0.06], raiseStrong: 0.55, openOften: 0.45, loose: 0.03 },
+  { bluff: [0.17, 0.12, 0.1], betMedium: 0.35, raiseStrong: 0.4, openRange: 1.2, sizes: [0.4, 0.5, 0.66, 0.8] },
+];
+const styleOf = (name) => ({ ...STYLE, ...PERSONALITIES[Math.max(0, NAMES.indexOf(name)) % PERSONALITIES.length] });
 
 /*
  * What a bot does at its turn. view: {cards, board, pot (every chip in the middle, this
@@ -117,25 +131,40 @@ function decide(view, rng = Math.random, style = STYLE) {
   const win = equity(cards, board, opponents, rng);
   // (how much better than an average hand at this table: 1 = average)
   const edge = win * (opponents + 1);
+  const strong = edge >= style.strong;
+  const medium = !strong && edge >= style.medium;
   const max = bet + stack;
-  const between = ([low, high]) => low + rng() * (high - low);
-  // A raise to: a share of the pot on top of the call - at least a full raise, at most all (less than a raise left: all)
-  const raiseTo = (share) => {
+  // (bluffs: fewer the more players could call)
+  const heads = 1 / opponents;
+  // A raise to: one of the sizes on top of the call, whatever the hand - at least a full raise, at most all
+  // (less than a raise left: all)
+  const raise = () => {
+    const share = style.sizes[Math.floor(rng() * style.sizes.length)];
     const size = Math.max(minRaise, Math.round(((pot + toCall) * share) / bigBlind) * bigBlind);
     const to = highBet + size;
     return { type: "raise", amount: max - to < minRaise ? max : to };
   };
   const canRaise = max > highBet && (view.raises || 0) < RAISES;
+  const preflop = board.length === 0;
 
   if (toCall <= 0) {
-    // Nobody bet: bet a strong hand (not always - a check hides it), sometimes a bluff, else check
-    if (canRaise && edge > style.value && rng() < style.valueOften) return raiseTo(between(style.valueSize));
-    if (canRaise && board.length >= 3 && board.length < 5 && edge < 0.8 && rng() < BLUFF) return raiseTo(style.valueSize[0]);
+    // Nobody bet: strong hands mostly bet (else a slowplay), medium ones sometimes, weak ones bluff now and then
+    if (!canRaise) return { type: "check" };
+    if (preflop) return edge >= style.openRange && rng() < style.openOften ? raise() : { type: "check" };
+    if (strong && rng() < style.betStrong) return raise();
+    if (medium && rng() < style.betMedium) return raise();
+    if (!strong && !medium && rng() < style.bluff[board.length - 3] * heads) return raise();
     return { type: "check" };
   }
-  // A bet to answer: call when the chance to win pays for it, raise a strong hand
+  // A bet to answer: raise strong hands (often - a slowplayed one too), now and then a bluff raise,
+  // call when the chance pays for the price, else fold
   const price = toCall / (pot + toCall);
-  if (canRaise && edge > style.raise && rng() < style.raiseOften) return raiseTo(between(style.raiseSize));
+  if (canRaise) {
+    if (preflop && edge >= style.openRange && rng() < style.openOften) return raise();
+    if (preflop && rng() < style.openBluff * heads) return raise();
+    if (!preflop && strong && rng() < style.raiseStrong) return raise();
+    if (!preflop && !strong && rng() < style.raiseBluff * heads) return raise();
+  }
   if (win > price + style.loose) return { type: "call" };
   // (a cheap call now and then: a bot that always folds is easy to read)
   if (toCall <= bigBlind && win > price - 0.05 && rng() < 0.3) return { type: "call" };
@@ -152,4 +181,4 @@ function ledgerOf(world) {
   return get ? get() : null;
 }
 
-module.exports = { NAMES, STYLE, fastScore, equity, decide, registerLedger, ledgerOf };
+module.exports = { NAMES, STYLE, styleOf, fastScore, equity, decide, registerLedger, ledgerOf };
