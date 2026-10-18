@@ -9007,3 +9007,49 @@ button.rpg-trade-row:active {
     padding: 0.4rem 0.45rem 0.35rem;
   }
 }
+
+/* A party's end: what each hero did */
+.rpg-run-stats-wrap {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+.rpg-run-stats {
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin: 0.2rem auto;
+  max-width: 100%;
+}
+.rpg-run-stats th,
+.rpg-run-stats td {
+  padding: 0.2rem 0.5rem;
+  text-align: center;
+  white-space: nowrap;
+}
+.rpg-run-stats th:first-child,
+.rpg-run-stats .rpg-run-stats-name {
+  text-align: left;
+}
+.rpg-run-stats th {
+  opacity: 0.75;
+  font-weight: 600;
+}
+.rpg-run-stats tr + tr {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.rpg-run-stats tr.me .rpg-run-stats-name {
+  font-weight: 700;
+}
+.rpg-run-stats td.top {
+  color: #f5c542;
+  font-weight: 700;
+}
+@media (max-width: 520px) {
+  .rpg-run-stats {
+    font-size: 0.72rem;
+  }
+  .rpg-run-stats th,
+  .rpg-run-stats td {
+    padding: 0.15rem 0.2rem;
+  }
+}

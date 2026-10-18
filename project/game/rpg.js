@@ -1851,6 +1851,8 @@ function newRun(floor, party, rng = Math.random, options = {}) {
     turn: 0,
     pot: 0,
     loot: Object.fromEntries(party.map(({ name }) => [name, []])),
+    // (what each hero did in the run - the party's end screen shows the best)
+    stats: Object.fromEntries(party.map(({ name }) => [name, { dealt: 0, taken: 0, healed: 0, shielded: 0, kills: 0 }])),
     log: [],
   };
   if (options.tutorial) run.tutorial = true;
@@ -1866,6 +1868,12 @@ function newRun(floor, party, rng = Math.random, options = {}) {
 function tutorialMap() {
   const node = (row, kind) => ({ row, index: 0, col: 1.5, kind, open: true, sensed: false, visited: false, next: row < 2 ? [0] : [] });
   return [[node(0, "fight")], [node(1, "rest")], [node(2, "fight")]];
+}
+
+// Adds to a hero's run stats (dealt, taken, healed, shielded, kills)
+function addStat(run, name, key, n = 1) {
+  const stats = run.stats && run.stats[name];
+  if (stats && n > 0) stats[key] += Math.round(n);
 }
 
 function say(run, text) {
@@ -2552,13 +2560,26 @@ function rewardFor(hero, rng, count = 3) {
 }
 
 // Poison stacks (the damage adds up, the longer time counts); a burn doesn't - a new one only replaces a weaker one
-function afflict(one, kind, turns, dmg) {
+// (by: the hero who gave it - name -> its part of the damage, for the run stats)
+function afflict(one, kind, turns, dmg, by = null) {
   // (a monster that resists it: half the damage)
   if (one.traits && one.traits.includes(kind == "poison" ? "venomproof" : "fireproof")) dmg = Math.max(1, Math.round(dmg / 2));
   const old = one.effects[kind];
-  if (kind == "poison" && old) one.effects.poison = { turns: Math.max(old.turns, turns), dmg: old.dmg + dmg };
-  else if (old) one.effects[kind] = { turns: Math.max(old.turns, turns), dmg: Math.max(old.dmg, dmg) };
-  else one.effects[kind] = { turns, dmg };
+  const mine = by ? { [by]: dmg } : null;
+  let effect;
+  if (kind == "poison" && old) {
+    effect = { turns: Math.max(old.turns, turns), dmg: old.dmg + dmg };
+    if (old.by || mine) effect.by = { ...old.by, [by]: ((old.by || {})[by] || 0) + dmg };
+    if (!by && effect.by) delete effect.by.null;
+  } else if (old) {
+    effect = { turns: Math.max(old.turns, turns), dmg: Math.max(old.dmg, dmg) };
+    const parts = dmg > old.dmg ? mine : old.by;
+    if (parts) effect.by = parts;
+  } else {
+    effect = { turns, dmg };
+    if (mine) effect.by = mine;
+  }
+  one.effects[kind] = effect;
 }
 
 /* ---------- A fight ---------- */
@@ -2596,7 +2617,8 @@ function startRound(run, rng) {
       if (aura.kind == "guard") {
         hero.block += aura.value;
         fx(run, { k: "block", to: hero.name, n: aura.value });
-      } else if (aura.kind == "regen") healHero(run, hero, aura.value);
+        addStat(run, aura.by || hero.name, "shielded", aura.value);
+      } else if (aura.kind == "regen") healHero(run, hero, aura.value, run.heroes.find((h) => h.name == aura.by) || hero);
       else if (aura.kind == "focus") {
         hero.energy += aura.value;
         fx(run, { k: "mana", to: hero.name, n: aura.value });
@@ -2730,6 +2752,7 @@ function strike(run, hero, foe, power, rng, options = {}) {
   const full = Math.max(1, Math.round(damage));
   damage = foe.defending ? Math.max(1, Math.round(damage * DEFEND)) : full;
   const blocked = full - damage;
+  addStat(run, hero.name, "dealt", Math.min(foe.hp, damage));
   foe.hp = Math.max(0, foe.hp - damage);
   say(run, `${hero.name}${options.verb ? " " + options.verb : " hits"} ${foe.icon} ${foe.name} for ${damage}${crit ? " (crit!)" : ""}${foe.defending ? " (half)" : ""}.`);
   fx(run, blocked > 0 ? { k: "hit", to: foe.id, n: damage, crit, b: blocked } : { k: "hit", to: foe.id, n: damage, crit });
@@ -2737,6 +2760,7 @@ function strike(run, hero, foe, power, rng, options = {}) {
   // (spiked: a part of the hit comes back)
   if (foe.traits && foe.traits.includes("spiked") && !hero.down) {
     const back = Math.max(1, Math.round(damage * SPIKES));
+    addStat(run, hero.name, "taken", Math.min(hero.hp, back));
     hero.hp = Math.max(0, hero.hp - back);
     fx(run, { k: "hit", to: hero.name, n: back, thorns: true });
     if (hero.hp == 0) {
@@ -2749,6 +2773,7 @@ function strike(run, hero, foe, power, rng, options = {}) {
   }
   if (foe.hp == 0) {
     foe.down = true;
+    addStat(run, hero.name, "kills");
     say(run, `${foe.icon} ${foe.name} is defeated.`);
     fx(run, { k: "down", to: foe.id });
   } else {
@@ -2781,16 +2806,19 @@ function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
   const blocked = Math.min(hero.block, damage);
   hero.block -= blocked;
   damage -= blocked;
+  addStat(run, hero.name, "taken", Math.min(hero.hp, damage));
   hero.hp = Math.max(0, hero.hp - damage);
   say(run, `${source} hits ${hero.name} for ${damage}${blocked ? ` (${blocked} blocked)` : ""}.`);
   fx(run, { k: "hit", to: hero.name, n: damage, b: blocked, a: armor, left: hero.block });
   // (thorns: who hits pays)
   if (foe && thorns && !foe.down) {
+    addStat(run, hero.name, "dealt", Math.min(foe.hp, thorns));
     foe.hp = Math.max(0, foe.hp - thorns);
     say(run, `${foe.icon} ${foe.name} takes ${thorns} from ${hero.name}'s thorns 🌵.`);
     fx(run, { k: "hit", to: foe.id, n: thorns, thorns: true });
     if (foe.hp == 0) {
       foe.down = true;
+      addStat(run, hero.name, "kills");
       say(run, `${foe.icon} ${foe.name} is defeated.`);
       fx(run, { k: "down", to: foe.id });
     }
@@ -2812,10 +2840,14 @@ function thornsOf(hero) {
   return Math.round(perk(hero, "thorns") + perk(hero, "thornsDef") * (hero.def + THORNS_BLOCK * (hero.block || 0)) + ((hero.effects && hero.effects.thorns && hero.effects.thorns.n) || 0));
 }
 
-function healHero(run, hero, amount) {
+// (by: the hero whose card, perk or aura heals - the run stats count it in fights)
+function healHero(run, hero, amount, by = hero) {
   const heal = Math.min(hero.maxHp - hero.hp, Math.round(amount));
   hero.hp += heal;
-  if (heal > 0 && run.phase == "fight") fx(run, { k: "heal", to: hero.name, n: heal });
+  if (heal > 0 && run.phase == "fight") {
+    fx(run, { k: "heal", to: hero.name, n: heal });
+    addStat(run, by.name, "healed", heal);
+  }
   return heal;
 }
 
@@ -2875,9 +2907,10 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
     const value = Math.round(amount * up * (1 + perk(hero, "block")));
     who.block += value;
     fx(run, { k: "block", to: who.name, n: value });
+    addStat(run, hero.name, "shielded", value);
     return value;
   };
-  const heal = (who, amount) => healHero(run, who, amount * up * (1 + perk(hero, "heal")));
+  const heal = (who, amount) => healHero(run, who, amount * up * (1 + perk(hero, "heal")), hero);
   const venom = up * (1 + perk(hero, "poison"));
   const info = cardInfo(id);
   if (info.type != "attack") say(run, `${hero.name} plays ${info.icon} ${info.name}.`);
@@ -2949,7 +2982,7 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
         : fx.aura == "regen"
           ? Math.round(hero.maxHp * fx.heal * up * (1 + perk(hero, "heal")))
           : fx.mana;
-    for (const one of heroesOf(fx.to)) (one.auras = one.auras || []).push({ kind: fx.aura, value, turns: fx.turns, card });
+    for (const one of heroesOf(fx.to)) (one.auras = one.auras || []).push({ kind: fx.aura, value, turns: fx.turns, card, by: hero.name });
     return;
   }
   const state = (m, cond) => meets(hero, m, cond);
@@ -2960,6 +2993,8 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
       for (const m of foesOf(fx.to)) {
         // (a mark of death: below the share - gone, not a boss)
         if (fx.execute && m.hp < m.maxHp * fx.execute && m.rank != "boss") {
+          addStat(run, hero.name, "dealt", m.hp);
+          addStat(run, hero.name, "kills");
           m.hp = 0;
           m.down = true;
           say(run, `${hero.name} kills ${m.icon} ${m.name} 💀.`);
@@ -2978,7 +3013,7 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
     }
     for (const m of consumed) for (const k of fx.bonusIf.split(/[|&]/)) delete m.effects[k];
     // (drain: a share of the damage dealt heals - the hero, the weakest ally or the party)
-    if (fx.drain && dealt > 0) for (const one of heroesOf(fx.drainTo || "self")) healHero(run, one, dealt * fx.drain);
+    if (fx.drain && dealt > 0) for (const one of heroesOf(fx.drainTo || "self")) healHero(run, one, dealt * fx.drain, hero);
   } else if (fx.thorns != null) {
     // (thorns for a few turns: who hits pays - a base and a share of the armor)
     const n = Math.round((fx.thorns + (fx.def || 0) * hero.def) * up * (1 + perk(hero, "block")));
@@ -3000,8 +3035,8 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
     if (smite > 0 && standing.length && run.phase == "fight") for (const foe of standing) strike(run, hero, foe, (hero.maxHp * fx.heal * up * (1 + perk(hero, "heal")) * smite) / Math.max(1, hero.atk), rng, { sure: true, verb: "smites" });
   } else if (fx.status) {
     for (const m of foesOf(fx.to)) {
-      if (fx.status == "poison") afflict(m, "poison", fx.turns || 3, Math.max(1, Math.round(hero.atk * 0.45 * venom * luckBoost(hero))));
-      else if (fx.status == "burn") afflict(m, "burn", fx.turns || 2, Math.max(1, Math.round(hero.atk * 0.3 * up * luckBoost(hero))));
+      if (fx.status == "poison") afflict(m, "poison", fx.turns || 3, Math.max(1, Math.round(hero.atk * 0.45 * venom * luckBoost(hero))), hero.name);
+      else if (fx.status == "burn") afflict(m, "burn", fx.turns || 2, Math.max(1, Math.round(hero.atk * 0.3 * up * luckBoost(hero))), hero.name);
       else if (fx.status == "stun") stun(run, m, rng, hero);
       else if (fx.status == "exposed") m.effects.exposed = Math.max(m.effects.exposed || 0, fx.turns || 2);
       else m.effects[fx.status] = fx.turns || 1;
@@ -3212,6 +3247,12 @@ function monsterTurn(run, rng = Math.random) {
     for (const kind of ["poison", "burn"]) {
       const effect = one.effects[kind];
       if (!effect || one.down) continue;
+      const lost = Math.min(one.hp, effect.dmg);
+      // (a monster's: the damage to the heroes who gave it, by their parts - the kill to the biggest one)
+      const parts = Object.entries((one.icon && effect.by) || {});
+      const total = parts.reduce((sum, [, n]) => sum + n, 0);
+      for (const [name, n] of parts) addStat(run, name, "dealt", (lost * n) / total);
+      if (!one.icon) addStat(run, one.name, "taken", lost);
       one.hp = Math.max(0, one.hp - effect.dmg);
       say(run, `${label} takes ${effect.dmg} from ${kind == "poison" ? "poison ☠️" : "the burn 🔥"}.`);
       fx(run, { k: "hit", to: one.icon ? one.id : one.name, n: effect.dmg, dot: kind });
@@ -3220,6 +3261,7 @@ function monsterTurn(run, rng = Math.random) {
       if (one.icon && one.hp > 0) splitCheck(run, one);
       if (one.hp == 0) {
         one.down = true;
+        if (parts.length) addStat(run, parts.reduce((a, b) => (b[1] > a[1] ? b : a))[0], "kills");
         fx(run, { k: "down", to: one.icon ? one.id : one.name });
         say(run, `${label} ${one.icon ? "is defeated" : "is down"}!`);
       }
@@ -3345,6 +3387,7 @@ function runView(run) {
       sealed: run.event.sealed || null,
     },
     votes: run.votes,
+    stats: run.stats || {},
     heroes: run.heroes.map((h) => ({
       name: h.name,
       cls: h.cls,

@@ -2109,3 +2109,37 @@ test("rpg: no death time - a party down is back right away", () => {
   assert.strictEqual(rpg.deadFor(hero), 0);
   config.RPG_DEATH_TIME = before;
 });
+
+test("rpg: run stats - damage, kills and poison go to who dealt them, heals and block to who gave them, hits to who took them", () => {
+  const party = rpg.newRun(1, [{ name: "c", hero: rpg.newHero("cleric") }, { name: "r", hero: rpg.newHero("rogue") }]);
+  rpg.enterRoom(party, 0);
+  party.monsters = [{ id: "m1", name: "Dummy", icon: "🎯", hp: 1000, maxHp: 1000, atk: 30, dodge: 0, moves: ["attack"], rank: "normal", effects: {}, intent: { move: "attack", target: "r" } }];
+  const [cleric, rogue] = party.heroes;
+  rogue.agi = 0;
+  rogue.hand = [{ uid: "p", id: "poisonblade" }];
+  rogue.hp = 10;
+  cleric.hand = [{ uid: "h", id: "heal" }, { uid: "d", id: "defend" }];
+  assert.strictEqual(rpg.play(party, "r", { uid: "p", target: "m1" }), null);
+  assert.strictEqual(rpg.play(party, "c", { uid: "h", ally: "r" }), null);
+  assert.strictEqual(rpg.play(party, "c", { uid: "d" }), null);
+  const s = party.stats;
+  // (the cleric's heal smites too)
+  assert.strictEqual(s.r.dealt + s.c.dealt, 1000 - party.monsters[0].hp);
+  assert.ok(s.r.dealt > s.c.dealt);
+  assert.ok(s.c.healed > 0 && s.r.healed == 0, JSON.stringify(s));
+  assert.ok(s.c.shielded > 0, JSON.stringify(s));
+  const hpBefore = party.monsters[0].hp;
+  const dealtBefore = s.r.dealt;
+  assert.strictEqual(rpg.endTurn(party, "c"), false);
+  assert.strictEqual(rpg.endTurn(party, "r"), true);
+  rpg.monsterTurn(party, () => 0.99);
+  // (the poison ticked: the rogue's)
+  assert.strictEqual(s.r.dealt - dealtBefore, hpBefore - party.monsters[0].hp);
+  assert.ok(s.r.taken > 0, JSON.stringify(s));
+  party.monsters[0].hp = 1;
+  rogue.hand = [{ uid: "k", id: "strike" }];
+  rogue.energy = 3;
+  rpg.play(party, "r", { uid: "k", target: "m1" });
+  assert.strictEqual(s.r.kills, 1);
+  assert.deepStrictEqual(rpg.runView(party).stats, s);
+});

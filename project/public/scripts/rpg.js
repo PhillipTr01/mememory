@@ -2964,6 +2964,45 @@ function sceneText(run) {
   return "";
 }
 
+// A party's end: what each hero did in the run - the best of each column crowned
+var STAT_COLUMNS = [
+  { key: "dealt", icon: "⚔️", name: "Damage dealt" },
+  { key: "healed", icon: "💚", name: "Healing" },
+  { key: "shielded", icon: "🛡️", name: "Block given" },
+  { key: "taken", icon: "🩸", name: "Damage taken" },
+  { key: "kills", icon: "💀", name: "Foes defeated" },
+];
+function partyStats(run) {
+  if (!run || !run.stats || run.heroes.length < 2) return null;
+  var table = el("table", "rpg-run-stats");
+  var head = el("tr");
+  head.appendChild(el("th", "", "Party stats"));
+  STAT_COLUMNS.forEach((column) => {
+    var th = el("th", "", column.icon);
+    th.title = column.name;
+    head.appendChild(th);
+  });
+  table.appendChild(head);
+  var best = {};
+  STAT_COLUMNS.forEach((column) => (best[column.key] = Math.max.apply(null, run.heroes.map((h) => (run.stats[h.name] || {})[column.key] || 0))));
+  run.heroes.forEach((h) => {
+    var stats = run.stats[h.name] || {};
+    var row = el("tr", h.name == myName ? "me" : "");
+    row.appendChild(el("td", "rpg-run-stats-name", ((rules.classes[h.cls] || {}).icon || "") + " " + h.name));
+    STAT_COLUMNS.forEach((column) => {
+      var n = stats[column.key] || 0;
+      var top = n > 0 && n == best[column.key];
+      var td = el("td", top ? "top" : "", formatCoins(n) + (top ? " 👑" : ""));
+      td.title = column.name;
+      row.appendChild(td);
+    });
+    table.appendChild(row);
+  });
+  var wrap = el("div", "rpg-run-stats-wrap");
+  wrap.appendChild(table);
+  return wrap;
+}
+
 // The bar under the scene: the hand in a fight, the vote between the rooms, the result at the end
 function handBar(run, me) {
   if (party.result) {
@@ -2985,6 +3024,8 @@ function handBar(run, me) {
       box.appendChild(gains);
       if (lost) box.appendChild(el("div", "rpg-result-note", "You keep half of the XP."));
     }
+    var board = partyStats(run);
+    if (board) box.appendChild(board);
     if (loot.length) {
       // (gear for the bag first - the cards for the collection in a row of their own below)
       var list = el("div", "rpg-result-loot");
