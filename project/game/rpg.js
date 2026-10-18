@@ -45,8 +45,8 @@ function bagSlotPrice(hero) {
 }
 // Deck slots: decks kept ready, one played - a slot at first, more in the shop (up to DECKS_TOP, for every character)
 const DECKS_TOP = 5;
-const DECK_SLOT_PRICE = 25000; // the second deck - priced like the potion slots: every next one 2.6x dearer
-const DECK_SLOT_GROWTH = 2.6;
+const DECK_SLOT_PRICE = 15000; // the second deck (around floor 4) - every next one 2.05x dearer: a few floors apart, the last around floor 13 (a few decks are enough)
+const DECK_SLOT_GROWTH = 2.05;
 function deckSlots(hero) {
   return 1 + (hero.deckSlots || 0);
 }
