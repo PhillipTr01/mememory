@@ -2179,13 +2179,14 @@ function intentBadge(m) {
   var move = rules.moves[m.intent.move];
   var badge = el("div", "rpg-intent move-" + m.intent.move + (m.intent.stunned ? " stunned" : ""));
   var text = move.icon + " ";
-  if (m.intent.stunned) text = "💫 stunned";
+  // (stunned while faded: the fade still holds this turn - both shown)
+  if (m.intent.stunned) text = "💫 stunned" + (m.fading ? " · " + rules.moves.fade.icon + " faded" : "");
   else if (m.intent.damage) text += m.intent.damage + (move.all ? " to all" : m.intent.target ? " → " + m.intent.target : "");
   // (on guard this turn: half of every hit blocked)
   else if (m.intent.move == "defend") text += "Blocks 50%";
   else text += move.name;
   badge.innerText = text;
-  badge.title = m.intent.stunned ? "Stunned, it skips its next move." : move.name + (m.intent.target ? " on " + m.intent.target : "") + ". " + (move.text || "");
+  badge.title = m.intent.stunned ? "Stunned, it skips its next move." + (m.fading ? " It is faded this turn, so hits on a single foe miss it." : "") : move.name + (m.intent.target ? " on " + m.intent.target : "") + ". " + (move.text || "");
   if (m.intent.target == myName && m.intent.damage && !m.intent.stunned) badge.classList.add("at-me");
   return badge;
 }

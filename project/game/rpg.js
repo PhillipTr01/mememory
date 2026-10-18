@@ -3389,6 +3389,7 @@ function runView(run) {
       armor: m.armor || 0,
       // (how often it dodges an attack on a single foe - fading: every one)
       dodge: m.fading ? 1 : m.dodge || 0,
+      fading: !!m.fading,
       traits: m.traits || [],
       boss: !!m.phase,
       phased: !!m.phased,
