@@ -3476,6 +3476,19 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   else if (act == "vote") {
     // (only between two rooms - and not the second click of a double click that just opened this room)
     if (!party || !party.run || party.run.phase != "between" || Date.now() - roomSince < DOOR_DELAY) return;
+    // (leaving before the floor is cleared: asked first - the run ends there)
+    if (id == "leave" && !party.run.cleared) {
+      var solo = party.run.heroes.length < 2;
+      var pot = "🪙 " + formatCoins(myPot(party.run));
+      var asked = confirmDialog(
+        solo
+          ? { title: "Leave the dungeon?", text: "You take " + pot + " with you. The run ends here and the floor doesn't count as cleared.", confirmLabel: "Leave" }
+          : { title: "Vote to leave?", text: "If the vote wins, everyone leaves with their coins. You take " + pot + " and the floor doesn't count as cleared.", confirmLabel: "Vote to leave" },
+      );
+      intoFullscreen();
+      asked.then((sure) => sure && socket.emit("vote", { door: "leave" }));
+      return;
+    }
     socket.emit("vote", { door: id == "leave" ? "leave" : Number(id) });
   }
 });
