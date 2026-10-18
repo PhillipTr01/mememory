@@ -1951,12 +1951,8 @@ function renderBuilder() {
           node.appendChild(el("span", "rpg-cardx-count", owned ? (counts[id] || 0) + " / " + owned + (all > owned ? " · +" + (all - owned) : "") : "🔒"));
           node.title = !owned ? "Not owned yet." : spare <= 0 ? "All your copies are in the deck." : full ? "Your deck is full." : "Click or drag it into your deck.";
           // (a copy missing: made of dust - spare copies: to dust)
-          if (craftMode) {
-            // (craft mode: the card only to look at - the actions under it)
-            var plain = cardEl(id, { base: true, className: owned ? "" : "unowned" });
-            plain.appendChild(el("span", "rpg-cardx-count", all ? "×" + all : "🔒"));
-            return craftCell(plain, id);
-          }
+          // (craft mode: the actions under the card - it still goes into the deck by a click or a drag)
+          if (craftMode) return craftCell(node, id);
           return node;
         })
       : [emptyGrid()],
