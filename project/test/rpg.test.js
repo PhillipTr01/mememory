@@ -2143,3 +2143,22 @@ test("rpg: run stats - damage, kills and poison go to who dealt them, heals and 
   assert.strictEqual(s.r.kills, 1);
   assert.deepStrictEqual(rpg.runView(party).stats, s);
 });
+
+test("rpg: a spiked foe's damage back is softened by armor and taken by the block first", () => {
+  const run = duel("warrior", "defend", ["strike"]);
+  const me = run.heroes[0];
+  run.monsters[0].traits = ["spiked"];
+  me.block = 1000;
+  const hp = me.hp;
+  assert.strictEqual(rpg.play(run, "a", { uid: "t0", target: "m1" }), null);
+  assert.strictEqual(me.hp, hp, "the block took it");
+  assert.ok(me.block < 1000);
+  // (no block: the armor makes it smaller than 20% of the hit)
+  const naked = duel("warrior", "defend", ["strike"]);
+  const hero = naked.heroes[0];
+  naked.monsters[0].traits = ["spiked"];
+  hero.def = 1000;
+  const before = hero.hp;
+  rpg.play(naked, "a", { uid: "t0", target: "m1" });
+  assert.strictEqual(before - hero.hp, 1);
+});

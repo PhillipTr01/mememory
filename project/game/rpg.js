@@ -2757,12 +2757,17 @@ function strike(run, hero, foe, power, rng, options = {}) {
   say(run, `${hero.name}${options.verb ? " " + options.verb : " hits"} ${foe.icon} ${foe.name} for ${damage}${crit ? " (crit!)" : ""}${foe.defending ? " (half)" : ""}.`);
   fx(run, blocked > 0 ? { k: "hit", to: foe.id, n: damage, crit, b: blocked } : { k: "hit", to: foe.id, n: damage, crit });
   if (perk(hero, "lifesteal") && !hero.down) healHero(run, hero, damage * perk(hero, "lifesteal"));
-  // (spiked: a part of the hit comes back)
+  // (spiked: a part of the hit comes back - the armor softens it, the block takes it first, like any hit)
   if (foe.traits && foe.traits.includes("spiked") && !hero.down) {
-    const back = Math.max(1, Math.round(damage * SPIKES));
+    const raw = damage * SPIKES;
+    let back = Math.max(1, Math.round((raw * raw) / (raw + Math.max(0, hero.def))));
+    const armor = Math.max(0, Math.round(raw) - back);
+    const shield = Math.min(hero.block, back);
+    hero.block -= shield;
+    back -= shield;
     addStat(run, hero.name, "taken", Math.min(hero.hp, back));
     hero.hp = Math.max(0, hero.hp - back);
-    fx(run, { k: "hit", to: hero.name, n: back, thorns: true });
+    fx(run, { k: "hit", to: hero.name, n: back, b: shield, a: armor, left: hero.block, thorns: true });
     if (hero.hp == 0) {
       hero.down = true;
       hero.effects = {};
