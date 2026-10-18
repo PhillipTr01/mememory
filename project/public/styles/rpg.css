@@ -7061,38 +7061,41 @@ button.rpg-cardx.off {
   border-color: rgba(255, 255, 255, 0.06);
 }
 
-/* (the deck slots: numbered pills - the one played lit) */
-.rpg-deck-switch {
-  display: inline-flex;
-  gap: 0.25rem;
-  margin-left: 0.4rem;
+/* (the deck to play in the loadout: the builder's dropdown, smaller - its menu over the rows below) */
+.rpg-load .rpg-deck-drop {
+  flex: none;
 }
-.rpg-deck-slot {
-  width: 1.6rem;
-  height: 1.6rem;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.6);
-  background: rgba(255, 255, 255, 0.06);
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+
+.rpg-load .rpg-btn.rpg-deck-drop-btn {
+  min-width: 9.5rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.82rem;
 }
-.rpg-deck-slot:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+
+.rpg-load .rpg-deck-drop-menu {
+  z-index: 20;
+  left: auto;
+  right: 0;
 }
-.rpg-deck-slot.active {
-  color: #1a1204;
-  background: var(--rpg-gold);
-}
-.rpg-deck-slot.empty:not(.active) {
-  opacity: 0.5;
-}
-.rpg-load .rpg-deck-switch {
-  margin-left: 0;
+
+@media (max-width: 575px) {
+  .rpg-load .rpg-deck-drop ~ .rpg-load-meter,
+  .rpg-load:has(.rpg-deck-drop) .rpg-load-meter {
+    display: none;
+  }
+
+  .rpg-load .rpg-btn.rpg-deck-drop-btn {
+    min-width: 0;
+    max-width: 9rem;
+  }
+
+  .rpg-load .rpg-deck-drop-btn b {
+    max-width: 6rem;
+  }
+
+  .rpg-load .rpg-deck-drop-btn .rpg-deck-drop-n {
+    display: none;
+  }
 }
 
 /* AURA cards: lasting a few turns - magenta (apart from the blue skills) */
@@ -8174,17 +8177,6 @@ button.rpg-trade-row:active {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.rpg-deck-slot.named {
-  display: block;
-  line-height: 1.6rem;
-  border-radius: 999px;
-  width: auto;
-  max-width: 8rem;
-  padding: 0 0.55rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .mm-dialog-input {
   width: 100%;

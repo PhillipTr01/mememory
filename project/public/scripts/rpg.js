@@ -1151,19 +1151,27 @@ function renderBuffs(run, me) {
   );
 }
 
-// The deck slots: a numbered pill each - the one played lit (only with more than one slot)
-function deckSwitch() {
-  if (!hero.decks || hero.decks.length < 2) return null;
-  var box = el("span", "rpg-deck-switch");
-  hero.decks.forEach((n, i) => {
-    var name = (hero.deckNames || [])[i];
-    var pill = el("span", "rpg-deck-slot" + (i == hero.deckAt ? " active" : "") + (n ? "" : " empty") + (name ? " named" : ""), name || String(i + 1));
-    pill.dataset.act = "deckUse";
-    pill.dataset.id = String(i);
-    pill.title = (name || "Deck " + (i + 1)) + " has " + n + " cards" + (i == hero.deckAt ? " and is in use." : ".");
-    box.appendChild(pill);
-  });
-  return box;
+// The decks: a dropdown - the one played, every deck with its cards in the menu (any number of deck slots);
+// rename: the builder's own line to rename the deck played
+function deckDropdown(rename) {
+  var decks = hero.decks || [hero.deck.length];
+  var at = hero.deckAt || 0;
+  var deckLabel = (i) => (hero.deckNames || [])[i] || "Deck " + (i + 1);
+  var drop = el("div", "rpg-deck-drop" + (deckMenu ? " open" : ""));
+  var current = button("", "deckMenu", { className: "rpg-deck-drop-btn" });
+  current.append(el("b", "", deckLabel(at)), el("span", "rpg-deck-drop-n", decks[at] + (decks[at] == 1 ? " card" : " cards")), el("span", "rpg-deck-drop-caret", "▾"));
+  drop.appendChild(current);
+  if (deckMenu) {
+    var menu = el("div", "rpg-deck-drop-menu");
+    decks.forEach((n, i) => {
+      var item = button("", i == at ? "deckMenu" : "deckUse", { id: String(i), className: "rpg-deck-drop-item" + (i == at ? " active" : "") + (n ? "" : " empty") });
+      item.append(el("b", "", deckLabel(i)), el("span", "", n + (n == 1 ? " card" : " cards")));
+      menu.appendChild(item);
+    });
+    if (rename) menu.appendChild(button("✏️ Rename this deck", "deckRename", { className: "rpg-deck-drop-item rename" }));
+    drop.appendChild(menu);
+  }
+  return drop;
 }
 
 // Ready to go down? Every thing that still waits - with a button to it
@@ -1209,9 +1217,10 @@ function renderReady() {
   var fill = el("i");
   fill.style.width = Math.min(100, (n / hero.deckMax) * 100) + "%";
   meter.appendChild(fill);
-  var deckRow = line("🃏", "Deck" + (hero.decks && hero.decks.length > 1 ? " " + (hero.deckAt + 1) : ""), n + " cards", deckOk ? "ok" : "warn", "view", "deck", hero.deckMin + " to " + hero.deckMax + " cards", meter);
-  var sw = deckSwitch();
-  if (sw) deckRow.insertBefore(sw, deckRow.lastChild);
+  var many = hero.decks && hero.decks.length > 1;
+  var deckRow = line("🃏", "Deck", n + " cards", deckOk ? "ok" : "warn", "view", "deck", hero.deckMin + " to " + hero.deckMax + " cards", meter, many ? "div" : null);
+  // (more decks: which one to play - a dropdown, the menu lists them all)
+  if (many) deckRow.insertBefore(deckDropdown(false), deckRow.lastChild);
   loadout.appendChild(deckRow);
   // (the potions: a small flask each)
   var flasks = el("span", "rpg-load-flasks");
@@ -1822,25 +1831,7 @@ function renderBuilder() {
   dustTag.title = "Turn cards into dust and make the cards you miss with it.";
   morphChildren(document.getElementById("rpgBuilderTitle"), [el("span", "", "🃏 Deck builder"), info, dustTag]);
   // (the decks: a dropdown - the one in use on its button, the others to switch to, a rename)
-  var decks = hero.decks || [hero.deck.length];
-  var at = hero.deckAt || 0;
-  var deckLabel = (i) => (hero.deckNames || [])[i] || "Deck " + (i + 1);
-  var drop = el("div", "rpg-deck-drop" + (deckMenu ? " open" : ""));
-  var current = button("", "deckMenu", { className: "rpg-deck-drop-btn" });
-  current.append(el("b", "", deckLabel(at)), el("span", "rpg-deck-drop-n", decks[at] + (decks[at] == 1 ? " card" : " cards")), el("span", "rpg-deck-drop-caret", "▾"));
-  drop.appendChild(current);
-  if (deckMenu) {
-    var menu = el("div", "rpg-deck-drop-menu");
-    decks.forEach((n, i) => {
-      var item = button("", i == at ? "deckMenu" : "deckUse", { id: String(i), className: "rpg-deck-drop-item" + (i == at ? " active" : "") + (n ? "" : " empty") });
-      item.append(el("b", "", deckLabel(i)), el("span", "", n + (n == 1 ? " card" : " cards")));
-      menu.appendChild(item);
-    });
-    var rename = button("✏️ Rename this deck", "deckRename", { className: "rpg-deck-drop-item rename" });
-    menu.appendChild(rename);
-    drop.appendChild(menu);
-  }
-  morphChildren(document.getElementById("rpgDeckTabs"), [drop]);
+  morphChildren(document.getElementById("rpgDeckTabs"), [deckDropdown(true)]);
   document.getElementById("rpgBuilder").classList.toggle("crafting", craftMode);
   // (the deck in use: its name)
   var deckName = (hero.deckNames || [])[hero.deckAt || 0];
