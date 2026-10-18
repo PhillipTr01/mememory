@@ -1,0 +1,281 @@
+/* The runner: the track (a canvas), the numbers over it, the panel before and after a run */
+
+.rn-stage {
+  position: relative;
+  width: 100%;
+  height: clamp(380px, 64vh, 640px);
+  border-radius: var(--mm-radius);
+  overflow: hidden;
+  background: #1e1b4b;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.rn-main:fullscreen .rn-stage,
+.rn-main.cs-fs .rn-stage {
+  height: calc(100vh - 110px);
+}
+
+.rn-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The numbers of the run */
+.rn-hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.rn-hud[hidden] {
+  display: none;
+}
+
+.rn-hud-item {
+  display: flex;
+  flex-direction: column;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--mm-radius);
+  background: rgba(15, 15, 25, 0.62);
+  backdrop-filter: blur(4px);
+}
+
+.rn-hud-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.rn-hud-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.rn-hud-pay .rn-hud-value.even {
+  color: var(--mm-accent);
+}
+
+/* 3 - 2 - 1 */
+.rn-count {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(4rem, 14vw, 7rem);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.rn-count[hidden] {
+  display: none;
+}
+
+/* Before a run: the entry - after it: the result too */
+.rn-panel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 1.1rem 1rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 16px;
+  background: rgba(18, 18, 26, 0.88);
+  backdrop-filter: blur(6px);
+  text-align: center;
+}
+
+.rn-panel[hidden] {
+  display: none;
+}
+
+.rn-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.rn-stakes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.rn-stake {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rn-stake.active {
+  border-color: var(--mm-accent);
+  background: var(--mm-accent);
+  color: var(--mm-on-accent);
+}
+
+.rn-stake:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Where the payout starts, the entry back, the most */
+.rn-table {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.rn-table[hidden] {
+  display: none;
+}
+
+.rn-table-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 82px;
+  padding: 0.3rem 0.55rem;
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+}
+
+.rn-table-at {
+  font-size: 0.72rem;
+  color: var(--mm-muted);
+}
+
+.rn-table-x {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.rn-table-item.even .rn-table-x {
+  color: #60a5fa;
+}
+
+.rn-table-item.top .rn-table-x {
+  color: var(--mm-accent);
+}
+
+.rn-start {
+  min-width: 200px;
+  font-weight: 800;
+}
+
+.rn-help,
+.rn-best {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.rn-best:empty {
+  display: none;
+}
+
+/* The result of a run */
+.rn-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.rn-result[hidden] {
+  display: none;
+}
+
+.rn-result-score {
+  font-size: 1.9rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.rn-result-sub {
+  font-size: 0.82rem;
+}
+
+.rn-result-pay {
+  margin-top: 0.3rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.rn-result-pay.won {
+  color: var(--mm-accent);
+}
+
+.rn-result-pay.part {
+  color: #60a5fa;
+}
+
+.rn-result-pay.lost {
+  color: var(--mm-muted);
+}
+
+.rn-result-record {
+  margin-top: 0.2rem;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.2);
+  color: var(--mm-accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.rn-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(220, 38, 38, 0.92);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .rn-stage {
+    height: clamp(420px, 70vh, 640px);
+  }
+
+  .rn-hud-item {
+    padding: 0.25rem 0.5rem;
+  }
+
+  .rn-hud-value {
+    font-size: 0.9rem;
+  }
+}

@@ -234,6 +234,22 @@ const GAMES = {
     ],
   }),
 
+  runner: () => {
+    const t = require("./runner").table();
+    return {
+      title: "Runner",
+      sub: "Run as far as you can. The farther you get, the more you win.",
+      sections: [
+        section("How it works", [
+          tile("🏃", "The run", "Change lanes to dodge trains, jump over barriers and roll under bars. The run gets faster the longer it goes.", { tags: [["← →"], ["↑ jump"], ["↓ roll"]] }),
+          tile("🪙", "Coins", "Every coin you pick up adds 2 meters to your score."),
+          tile("💰", "Pays", `From ${n(t.min)} m you get part of your entry back. At ${n(t.even)} m you get your entry back, and longer runs pay up to ${t.max}×.`, { tags: [[`${n(t.min)} m · ${t.minMult}×`], [`${n(t.even)} m · 1×`, "blue"], [`${n(t.top)} m · ${t.max}×`, "gold"]] }),
+          tile("🎯", "Practice", "Practice runs are free and pay nothing. Use them to get better first."),
+        ]),
+      ],
+    };
+  },
+
   leaderboard: (L, world) => {
     const season = require("./season_slots").isSeason(world);
     const streak = require("./streak").current(world);
@@ -271,8 +287,8 @@ function capText(L, world, game) {
   const x = limits.dividerOf(world, game);
   const share = Math.round(rule.share * 100) / 100;
   // (what counts: everything bet in the round - a spin, a battle, the chips at the table)
-  const what = { slots: "one spin", battles: "one battle", poker: "your chips at the table" }[game] || "all your bets of one round together";
-  return `With up to 🪙 ${n(rule.floor)} you can bet all your coins. With more, ${what} ${game === "slots" || game === "battles" ? "is" : "are"} limited to ${share}% of your coins.` + (x > 1 ? ` Slots allow 1/${x} of the max bet of the other games.` : "");
+  const what = { slots: "one spin", battles: "one battle", poker: "your chips at the table", runner: "the entry of a run" }[game] || "all your bets of one round together";
+  return `With up to 🪙 ${n(rule.floor)} you can bet all your coins. With more, ${what} ${["slots", "battles", "runner"].includes(game) ? "is" : "are"} limited to ${share}% of your coins.` + (x > 1 ? ` Slots allow 1/${x} of the max bet of the other games.` : "");
 }
 
 // world: the limits of that world ("/season": the season's own ones)
