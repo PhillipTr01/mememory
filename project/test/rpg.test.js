@@ -1077,6 +1077,11 @@ test("rpg: AURA cards - a type of their own, their block, healing or mana at the
 });
 
 // A deterministic random source for the balance checks
+// (a 32-bit generator for the long simulations: the one above repeats patterns in its low bits over many runs)
+function seeded32(seed) {
+  let s = seed >>> 0;
+  return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+}
 function seeded(seed) {
   return () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
 }
@@ -1173,7 +1178,7 @@ test("rpg: balance - every class on the curve of its floor clears early, mid and
   }
   // (48 runs each: a few lucky or unlucky ones don't tip it)
   const clear = (cls, floor, curve) => {
-    const rng = seeded(floor * 97 + cls.length);
+    const rng = seeded32(floor * 97 + cls.length);
     let won = 0;
     const runs = 48;
     for (let i = 0; i < runs; i++) won += rpg.simulate(heroFor(cls, floor, curve, rng), floor, 1, rng).cleared;

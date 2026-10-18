@@ -1156,11 +1156,32 @@ module.exports = function (io, options = {}) {
     return null;
   }
 
-  // A player's characters for the admin: [{id, name, icon, level}]
+  // A player's characters for the admin: [{id, name, icon, level, deepest}]
   function charactersOf(name) {
     if (!heroes.has(name)) return [];
     const hero = heroOf(name);
-    return hero.unlocked.map((id) => ({ id, name: rpg.CLASSES[id].name, icon: rpg.CLASSES[id].icon, level: rpg.charOf(hero, id).level }));
+    return hero.unlocked.map((id) => ({ id, name: rpg.CLASSES[id].name, icon: rpg.CLASSES[id].icon, level: rpg.charOf(hero, id).level, deepest: rpg.charOf(hero, id).deepest || 0 }));
+  }
+
+  // The admin sets a character's deepest cleared floor (a bug, a reset to an earlier floor): the next one opens, the
+  // deeper ones close; clear: the floors' cooldowns and today's runs gone too -> an error or null
+  function setFloor(name, cls, deepest, clear) {
+    if (!heroes.has(name)) return "This player has no character yet.";
+    const hero = heroOf(name);
+    if (!hero.unlocked.includes(cls)) return "This player has no such character.";
+    if (!Number.isInteger(deepest) || deepest < 0 || deepest > rpg.FLOORS) return `Pick a floor from 0 to ${rpg.FLOORS}.`;
+    const party = parties.get(partyOf.get(name));
+    if (party && party.run && !party.result) return "This player is in a run right now. Try again after it.";
+    const char = rpg.charOf(hero, cls);
+    char.deepest = deepest;
+    if (clear) {
+      char.cooldowns = {};
+      char.floorRuns = null;
+    }
+    sendHero(name);
+    persist.changed("rpg");
+    socketsOf(name).forEach((socket) => socket.emit("rpgToast", deepest ? `🏰 Your ${rpg.CLASSES[cls].name}'s deepest floor is now ${deepest}.` : `🏰 Your ${rpg.CLASSES[cls].name} starts again from floor 1.`));
+    return null;
   }
 
   return {
@@ -1169,6 +1190,7 @@ module.exports = function (io, options = {}) {
     trades,
     givePacks,
     charactersOf,
+    setFloor,
     timing,
     heroOf,
     stop: () => parties.forEach((party) => [party.timer, ...Object.values(party.away || {})].forEach(clearTimeout)),

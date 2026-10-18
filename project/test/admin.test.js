@@ -445,6 +445,16 @@ test("admin: dungeon packs for one character of a player - they wait until that 
   assert.strictEqual(rpg.packsOf(hero).mythic, 1);
   rpg.openStored(hero, "mythic");
   assert.strictEqual(rpg.packsOf(hero).mythic || 0, 0);
+  // A character's floor set back by the admin: the next floor opens, the deeper ones close - cooldowns cleared if asked
+  rpg.charOf(hero, "warrior").deepest = 12;
+  rpg.charOf(hero, "warrior").cooldowns = { 12: Date.now() + 3600000 };
+  assert.strictEqual((await adminApi("rpg/characters/quinn")).body.characters[0].deepest, 12);
+  assert.match((await adminApi("rpg/floor", { username: "quinn", cls: "warrior", deepest: 99 })).body.error, /from 0 to 30/);
+  assert.match((await adminApi("rpg/floor", { username: "quinn", cls: "rogue", deepest: 3 })).body.error, /no such character/);
+  assert.strictEqual((await adminApi("rpg/floor", { username: "quinn", cls: "warrior", deepest: 5, clear: true })).status, 200);
+  assert.strictEqual(rpg.charOf(hero, "warrior").deepest, 5);
+  assert.deepStrictEqual(rpg.charOf(hero, "warrior").cooldowns, {});
+  assert.strictEqual(rpg.maxFloor(hero), 6);
   live.stop();
   worlds.normalServers.delete("rpg");
 });

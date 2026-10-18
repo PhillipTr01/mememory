@@ -520,6 +520,7 @@ function renderPlayerDetail(p) {
   if (kind == "in") {
     button("🎁 Reward", "mm-btn-primary", () => rewardDialog(row));
     button("🎴 Packs", "", () => packsDialog(row));
+    button("🏰 Floor", "", () => floorDialog(row));
     button("Correct balance", "", () => editPlayerCoins(row));
     button("Revoke", "ad-btn-quiet-danger", (b) => setAccess(row, false, b));
   } else if (kind == "waiting") {
@@ -1060,6 +1061,86 @@ async function packsDialog(p) {
     }
   });
   who.focus();
+}
+
+// A dungeon character's deepest cleared floor: set back (or on) - the next floor opens, the deeper ones close
+async function floorDialog(p) {
+  var data;
+  try {
+    data = await api("rpg/characters/" + encodeURIComponent(p.username));
+  } catch (error) {
+    return fail(error);
+  }
+  if (!data.characters.length) return showHint(p.username + " has no dungeon character yet.", "error");
+  var backdrop = el("div", "mm-dialog-backdrop");
+  var dialog = el("form", "mm-dialog ad-coins-dialog ad-reward-dialog");
+  dialog.noValidate = true;
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  var field = (label, control) => {
+    var box = el("label", "ad-field");
+    box.append(el("span", "ad-label", label), control);
+    return box;
+  };
+  var who = el("select", "mm-input");
+  data.characters.forEach((c) => who.appendChild(Object.assign(el("option", "", c.icon + " " + c.name + " · Lv " + c.level + " · floor " + c.deepest), { value: c.id })));
+  var deepest = Object.assign(el("input", "mm-input"), { type: "number", min: 0, max: 30, step: 1 });
+  var current = () => data.characters.find((c) => c.id == who.value);
+  deepest.value = current().deepest;
+  var note = el("p", "mm-dialog-text");
+  var explain = () => {
+    var n = Math.floor(Number(deepest.value) || 0);
+    note.innerText = n ? "Floor " + (n + 1) + " opens for this character and every floor deeper closes." : "The character starts again from floor 1.";
+  };
+  who.addEventListener("change", () => {
+    deepest.value = current().deepest;
+    explain();
+  });
+  deepest.addEventListener("input", explain);
+  explain();
+  var clearBox = el("label", "ad-check");
+  var clear = Object.assign(el("input"), { type: "checkbox", checked: true });
+  clearBox.append(clear, el("span", "", "Also clear the floor cooldowns and today's runs"));
+  var grid = el("div", "ad-reward-grid");
+  var character = field("Character", who);
+  character.classList.add("wide");
+  grid.append(character, field("Deepest cleared floor", deepest));
+  var error = el("p", "ad-form-error");
+  error.hidden = true;
+  var cancel = el("button", "mm-btn", "Cancel");
+  cancel.type = "button";
+  var save = el("button", "mm-btn mm-btn-primary", "Set floor");
+  save.type = "submit";
+  var actions = el("div", "mm-dialog-actions");
+  actions.append(cancel, save);
+  dialog.append(el("h2", "mm-dialog-title", "🏰 Floor of " + p.username), grid, note, clearBox, error, actions);
+  backdrop.appendChild(dialog);
+  document.body.appendChild(backdrop);
+  var close = () => {
+    document.removeEventListener("keydown", onKey);
+    backdrop.remove();
+  };
+  var onKey = (event) => event.key == "Escape" && close();
+  document.addEventListener("keydown", onKey);
+  cancel.addEventListener("click", close);
+  backdrop.addEventListener("click", (event) => event.target == backdrop && close());
+  dialog.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    error.hidden = true;
+    var n = Math.floor(Number(deepest.value));
+    save.disabled = true;
+    try {
+      await api("rpg/floor", { username: p.username, cls: who.value, deepest: n, clear: clear.checked });
+      close();
+      var cls = current();
+      casinoNotice({ icon: "🏰", title: "Floor set for " + p.username, text: cls.icon + " " + cls.name + ": deepest floor " + n + ".", ms: 6000, key: "floor" });
+    } catch (problem) {
+      save.disabled = false;
+      error.innerText = problem.message;
+      error.hidden = false;
+    }
+  });
+  deepest.focus();
 }
 
 /* ---------- History ---------- */
