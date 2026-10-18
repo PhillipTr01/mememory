@@ -29,7 +29,8 @@ const ROOMS = 6;
 const PARTY_MAX = 4;
 const BAG_MAX = 5; // the bag at first - room for more in the shop
 const BAG_TOP = 15; // at most
-const BAG_SLOT_PRICE = 100000; // the first slot more - every next one 60% dearer
+// (the slots: about three runs' profit of the floor where they start to matter - a run clears about its entry)
+const BAG_SLOT_PRICE = 15000; // the first slot more (around floor 4) - every next one 60% dearer (the last around floor 22)
 const BAG_SLOT_GROWTH = 1.6;
 
 // The room in a hero's bag
@@ -44,13 +45,14 @@ function bagSlotPrice(hero) {
 }
 // Deck slots: decks kept ready, one played - a slot at first, more in the shop (up to DECKS_TOP, for every character)
 const DECKS_TOP = 5;
-const DECK_SLOT_PRICE = 250000; // the second slot (far dearer than a potion slot) - every next one 60% dearer
+const DECK_SLOT_PRICE = 10000; // the second deck (only handy - the cheapest of the slots) - every next one twice as dear
+const DECK_SLOT_GROWTH = 2;
 function deckSlots(hero) {
   return 1 + (hero.deckSlots || 0);
 }
 function deckSlotPrice(hero) {
   const n = hero.deckSlots || 0;
-  return 1 + n >= DECKS_TOP ? null : round100(DECK_SLOT_PRICE * Math.pow(BAG_SLOT_GROWTH, n));
+  return 1 + n >= DECKS_TOP ? null : round100(DECK_SLOT_PRICE * Math.pow(DECK_SLOT_GROWTH, n));
 }
 // Another deck of the character played: the one built kept in its slot (an empty slot: an empty deck) -> an error or null
 function useDeck(hero, slot) {
@@ -84,7 +86,8 @@ function decksOf(hero) {
 }
 const POTIONS_MAX = 5; // the potions a hero carries at first - room for more in the shop
 const POTIONS_TOP = 10; // at most
-const POTION_SLOT_PRICE = 200000; // every next one 60% dearer too
+const POTION_SLOT_PRICE = 25000; // a potion more in a run: real power - every next one 2.6x dearer (floors 6 to 22)
+const POTION_SLOT_GROWTH = 2.6;
 
 // The potions a hero may carry
 function potionsMax(hero) {
@@ -94,7 +97,7 @@ function potionsMax(hero) {
 // The price of the next potion slot (null: as many as it gets)
 function potionSlotPrice(hero) {
   const n = hero.potionSlots || 0;
-  return POTIONS_MAX + n >= POTIONS_TOP ? null : round100(POTION_SLOT_PRICE * Math.pow(BAG_SLOT_GROWTH, n));
+  return POTIONS_MAX + n >= POTIONS_TOP ? null : round100(POTION_SLOT_PRICE * Math.pow(POTION_SLOT_GROWTH, n));
 }
 const POTION_HEAL = 0.25; // of the max HP (little - healing is the cleric's)
 // (a potion: RPG_POTION_SHARE % of the floor's entry - the same share of a run on every floor)
