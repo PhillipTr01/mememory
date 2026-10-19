@@ -91,10 +91,10 @@ module.exports = {
   OFFSEASON_REFILL_WAIT: 30, // minutes from one second chance to the next (0: no wait)
   // With the second chance: no max bet by balance outside of seasons (BET_CAP_*, the slots share too - game/limits.js)
   OFFSEASON_NO_CAP: false,
-  GIFT_LIMIT: 25000, // coins a player can give other players a day
+  GIFT_LIMIT: 25000, // coins a player can give each other player a day
   PAST_SEASON_DAYS: 7, // the leaderboard's menu shows a season that ended this many days after its end (its winners)
   GIFT_COOLDOWN: 60 * 1000, // after a gift a player waits this long before the next one (both worlds; 0: no wait)
-  SEASON_GIFT_LIMIT: 5000, // ... in the season world a day (its coins - an own limit)
+  SEASON_GIFT_LIMIT: 5000, // ... each other player in the season world a day (its coins - an own limit)
   // Max bet by balance: up to BET_CAP_FLOOR a player can bet everything, above it at most BET_CAP_SHARE % of the balance per bet
   BET_CAP_FLOOR: 10000,
   BET_CAP_SHARE: 25, // 100: no cap

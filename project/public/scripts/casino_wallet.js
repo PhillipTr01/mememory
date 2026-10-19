@@ -1425,15 +1425,16 @@
 
     // How much is left to give (of the limit) - and the own coins
     try {
-      var status = await (await fetch("gift", { cache: "no-store" })).json();
+      var status = await (await fetch("gift?to=" + encodeURIComponent(name), { cache: "no-store" })).json();
       left = status.left;
       // (the amounts never break in the middle - the own coins on a line of their own)
       info.replaceChildren(
-        document.createTextNode("You can give "),
+        document.createTextNode("You can give " + name + " "),
         el("b", "", "🪙 " + format(left)),
-        document.createTextNode(" more today (of " + format(status.limit) + " a day)"),
+        document.createTextNode(" more today."),
         el("span", "cs-gift-have", "You have 🪙 " + format(coins)),
       );
+      info.title = "Each player can get 🪙 " + format(status.limit) + " a day from you.";
       if (left < 1) info.classList.add("used");
       if (status.wait > 0) startWait(status.wait);
     } catch (e) {

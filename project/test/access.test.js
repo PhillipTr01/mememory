@@ -244,16 +244,17 @@ test("access: maintenance - closes like a season (games finish, countdown), then
   maintenance.reset();
 });
 
-test("access: gifts - coins for another player, at most GIFT_LIMIT a day", async () => {
+test("access: gifts - coins for another player, at most GIFT_LIMIT a day to each player", async () => {
   tokens.gia = h.addUser("gia");
   tokens.hal = h.addUser("hal");
+  tokens.ike = h.addUser("ike");
   // (from the setting: a share of the limit at a time)
   const L = require("../game/config").GIFT_LIMIT;
   // (several gifts in a row: no wait between them here - see the test of the wait)
   require("../game/config").GIFT_COOLDOWN = 0;
   const n = (value) => value.toLocaleString("en-US");
   const A = Math.floor(0.6 * L); // the first gift
-  h.setCoins("gia", 2 * L);
+  h.setCoins("gia", 3 * L);
   h.setCoins("hal", 100);
   const give = async (to, amount) => {
     const res = await call(CASINO + "/gift", { ...as("gia"), json: { to, amount } });
@@ -265,7 +266,7 @@ test("access: gifts - coins for another player, at most GIFT_LIMIT a day", async
   const heard = h.once(page.socket, "giftReceived");
   const first = await give("hal", A);
   assert.strictEqual(first.status, 200);
-  assert.deepStrictEqual(first.body, { coins: (2 * L - A), left: (L - A), world: "normal" });
+  assert.deepStrictEqual(first.body, { coins: (3 * L - A), left: (L - A), world: "normal" });
   assert.deepStrictEqual(await heard, { from: "gia", amount: A, world: "normal", coinIcon: null });
   assert.strictEqual(h.coinsOf("hal"), 100 + A);
   // More than is left of the limit, to themselves, to nobody, no number: nothing happens
@@ -274,11 +275,16 @@ test("access: gifts - coins for another player, at most GIFT_LIMIT a day", async
   assert.match((await give("nobody", 10)).body.error, /no such player/);
   assert.strictEqual((await give("hal", 1.5)).status, 400);
   assert.strictEqual((await give("hal", -5)).status, 400);
-  assert.strictEqual(h.coinsOf("gia"), (2 * L - A));
+  assert.strictEqual(h.coinsOf("gia"), (3 * L - A));
   // The rest - then the limit is reached
   assert.strictEqual((await give("hal", (L - A))).status, 200);
-  assert.match((await give("hal", 1)).body.error, /the most you can today/);
+  assert.match((await give("hal", 1)).body.error, /gave hal the most you can today/);
   assert.strictEqual(h.coinsOf("hal"), 100 + L);
+  // The limit is for every player on its own: another one can still get all of it
+  assert.deepStrictEqual(await (await call(CASINO + "/gift?to=hal", as("gia"))).json(), { limit: L, given: L, left: 0, world: "normal", wait: 0, cooldown: 0 });
+  assert.deepStrictEqual(await (await call(CASINO + "/gift?to=ike", as("gia"))).json(), { limit: L, given: 0, left: L, world: "normal", wait: 0, cooldown: 0 });
+  assert.strictEqual((await give("ike", L)).status, 200);
+  assert.match((await give("ike", 1)).body.error, /gave ike the most you can today/);
   // Not more than the own coins
   h.setCoins("hal", 50);
   const poor = await call(CASINO + "/gift", { ...as("hal"), json: { to: "gia", amount: 51 } });
@@ -355,7 +361,7 @@ test("access: away - a gift and a money rain wait for the next visit (a popup th
     assert.match((await (await call(CASINO + "/gift", { ...as("ivy"), json: { to: "jon", amount: 300 } })).json()).error, /200 more/);
     // Back in the normal casino: the 🪙 with their limit again
     await seasons.switchWorld("ivy", "normal");
-    assert.deepStrictEqual(await (await call(CASINO + "/gift", as("ivy"))).json(), { limit: config.GIFT_LIMIT, given: 500, left: config.GIFT_LIMIT - 500, world: "normal", wait: 0, cooldown: 0 });
+    assert.deepStrictEqual(await (await call(CASINO + "/gift?to=jon", as("ivy"))).json(), { limit: config.GIFT_LIMIT, given: 500, left: config.GIFT_LIMIT - 500, world: "normal", wait: 0, cooldown: 0 });
   } finally {
     config.SEASON_GIFT_LIMIT = before;
     seasons.reset();

@@ -11,8 +11,8 @@ const CoinLog = require("../models/CoinLog");
  * Coins as a gift to another player (a click on a name in the casino chat) -
  * in the world the giver plays in: the 🪙 in the normal casino, the season's
  * coins in the season world (only to who joined the season). Each world has
- * its own limit a day (GIFT_LIMIT, SEASON_GIFT_LIMIT) - from midnight on the
- * full amount again; both can be sent.
+ * its own limit a day (GIFT_LIMIT, SEASON_GIFT_LIMIT) for every other player on
+ * its own - from midnight on the full amount again; both can be sent.
  */
 const seasons = () => require("./seasons");
 const slots = require("./season_slots");
@@ -30,10 +30,10 @@ function limitOf(world) {
   return own && own.GIFT_LIMIT != null ? own.GIFT_LIMIT : config.SEASON_GIFT_LIMIT;
 }
 
-// What the player gave today in a world (the season's gifts have its era)
-async function given(username, world, now = Date.now()) {
+// What the player gave one other player today in a world (the season's gifts have its era)
+async function given(username, world, to, now = Date.now()) {
   const era = slots.isSeason(world) ? coins.era(world) : null;
-  const rows = await CoinLog.find({ username: username, reason: "gift sent", at: { $gte: new Date(days.dayStart(now)) }, ...(era ? { era: era } : { era: { $exists: false } }) }).lean();
+  const rows = await CoinLog.find({ username: username, reason: "gift sent", note: "to " + to, at: { $gte: new Date(days.dayStart(now)) }, ...(era ? { era: era } : { era: { $exists: false } }) }).lean();
   return rows.reduce((sum, row) => sum + Math.abs(row.amount), 0);
 }
 
@@ -65,9 +65,10 @@ function waitText(ms) {
   return min < 60 ? min + " min" : Math.floor(min / 60) + " h" + (min % 60 ? " " + (min % 60) + " min" : "");
 }
 
-// {limit, given, left, world, wait (ms until the next gift), cooldown} - in the world the player plays in now
-async function status(username, world = worldOf(username)) {
-  const sent = await given(username, world);
+// {limit, given, left, world, wait (ms until the next gift), cooldown} - what the player can still give `to` today, in the
+// world the player plays in now (no one named: the whole limit - for a player not given anything yet)
+async function status(username, to = null, world = worldOf(username)) {
+  const sent = typeof to === "string" && to.trim() ? await given(username, world, to.trim()) : 0;
   const limit = limitOf(world);
   return { limit: limit, given: sent, left: Math.max(0, limit - sent), world: world, wait: await waitLeft(username), cooldown: config.GIFT_COOLDOWN || 0 };
 }
@@ -86,9 +87,9 @@ async function give(from, to, amount) {
   if (slots.isSeason(world) && seasons().joined(to, world) !== true) return { error: `${to} isn't in the season - season coins only go to players in it.` };
   const wallet = coins.wallet(world);
   const coin = slots.isSeason(world) ? "" : "🪙 ";
-  const before = await status(from, world);
+  const before = await status(from, to, world);
   if (before.wait > 0) return { error: `You can send the next gift in ${waitText(before.wait)}.`, wait: before.wait };
-  if (amount > before.left) return { error: before.left > 0 ? `You can give ${coin}${before.left.toLocaleString("en-US")} more today (of ${before.limit.toLocaleString("en-US")} a day).` : `You gave the most you can today (${coin}${before.limit.toLocaleString("en-US")} a day) - more tomorrow.` };
+  if (amount > before.left) return { error: before.left > 0 ? `You can give ${to} ${coin}${before.left.toLocaleString("en-US")} more today. Each player can get ${coin}${before.limit.toLocaleString("en-US")} a day from you.` : `You gave ${to} the most you can today. You can give more tomorrow.` };
   // (the wait starts now - checked and taken without a pause: a second gift at the same moment is refused)
   const previous = lastSent.get(from) || 0;
   if (config.GIFT_COOLDOWN > 0 && Date.now() - previous < config.GIFT_COOLDOWN) return { error: `You can send the next gift in ${waitText(previous + config.GIFT_COOLDOWN - Date.now())}.` };

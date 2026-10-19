@@ -184,12 +184,12 @@ module.exports = function (auth) {
 
   /* ---------- Gifts: coins for another player (a click on a name in the chat) ---------- */
 
-  // How much the player can still give: {limit, given, left}
+  // How much the player can still give a player (?to=name): {limit, given, left}
   router.get(
     "/gift",
     auth,
     approved,
-    asyncHandler(async (req, res) => res.json(await gifts.status(req.username))),
+    asyncHandler(async (req, res) => res.json(await gifts.status(req.username, typeof req.query.to === "string" ? req.query.to : null))),
   );
 
   // {to, amount} -> {coins, left} or {error}
