@@ -459,6 +459,20 @@ test("admin: dungeon packs for one character of a player - they wait until that 
   worlds.normalServers.delete("rpg");
 });
 
+test("admin: the dungeon runs - the real clear rate per class and floor band, solo or in a party", async () => {
+  const runs = await adminApi("rpg/runs?kind=solo");
+  assert.strictEqual(runs.status, 200);
+  assert.strictEqual(runs.body.kind, "solo");
+  assert.deepStrictEqual(runs.body.bands, ["1", "2-5", "6-10", "11-15", "16-20", "21-25", "26-30"]);
+  assert.strictEqual(runs.body.classes.length, 5);
+  assert.ok(runs.body.classes.every((cls) => cls.bands.length == 7 && cls.total.runs >= cls.total.cleared));
+  const all = await adminApi("rpg/runs");
+  assert.strictEqual(all.body.kind, "all");
+  const download = await call(ADMIN + "/api/rpg/runs/download", { cookie: adminCookie });
+  assert.match(download.headers.get("content-disposition"), /dungeon-runs\.json/);
+  assert.ok(Array.isArray((await download.json()).log));
+});
+
 test("admin: the hard reset part by part - the records go, access, purchases, seasons and settings stay", async () => {
   const CoinLog = require("../models/CoinLog");
   const User = require("../models/User");

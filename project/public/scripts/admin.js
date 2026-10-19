@@ -106,6 +106,7 @@ var PAGES = {
   chat: ["Chat", "The chat of the casino - delete messages, ban players."],
   seasons: ["Seasons", "Plan seasons: everybody starts with the same budget, the best win."],
   rtp: ["RTP monitor", "How much of the bets every game really paid back - next to what the maths says."],
+  runs: ["Dungeon runs", "How often the real runs of every class clear the floors."],
 };
 
 // The pages of the settings: general and one per game
@@ -188,6 +189,7 @@ function showTab() {
   if (tab == "history") loadHistory();
   if (tab == "chat") loadChat();
   if (tab == "rtp") loadRtp();
+  if (tab == "runs") loadRuns();
   if (tab == "seasons") {
     seasonView = parts[1] == "new" ? "new" : parts[1] ? Number(parts[1]) : null;
     // #seasons/<id>/edit: the form of the season (its page is only to look at)
@@ -215,7 +217,7 @@ function showTab() {
 window.addEventListener("hashchange", showTab);
 
 // Keeps the open page up to date (the chat has its own timer, the settings stay as they are while editing)
-var REFRESH = { players: () => reloadPlayers(), history: () => loadHistory(), seasons: () => loadSeasons(true), rtp: () => loadRtp() };
+var REFRESH = { players: () => reloadPlayers(), history: () => loadHistory(), seasons: () => loadSeasons(true), rtp: () => loadRtp(), runs: () => loadRuns() };
 
 function refresh() {
   if (document.visibilityState != "visible") return;
@@ -4057,6 +4059,40 @@ function versionsCard(box) {
 
 /* ---------- RTP monitor ---------- */
 
+/* ---------- Dungeon runs: the real clear rate per class and floor ---------- */
+
+var runsKind = "solo";
+async function loadRuns() {
+  try {
+    var data = await api("rpg/runs?kind=" + runsKind);
+    document.querySelectorAll("#adRunsKind button").forEach((button) => button.classList.toggle("active", button.dataset.kind == runsKind));
+    var head = el("tr");
+    head.appendChild(el("th", "", "Class"));
+    data.bands.forEach((band) => head.appendChild(el("th", "num", "Floor " + band)));
+    head.appendChild(el("th", "num", "All floors"));
+    document.getElementById("adRunsHead").replaceChildren(head);
+    // (a cell: the share cleared - the runs under it)
+    var cell = (count) => {
+      var td = el("td", "num");
+      td.appendChild(el("b", "", count.runs ? Math.round((count.cleared / count.runs) * 100) + "%" : "-"));
+      td.appendChild(el("small", "mm-muted ad-runs-n", count.runs + " runs"));
+      return td;
+    };
+    document.getElementById("adRunsBody").replaceChildren(
+      ...data.classes.map((cls) => {
+        var row = el("tr");
+        row.appendChild(el("td", "fw-semibold", cls.icon + " " + cls.name));
+        cls.bands.forEach((count) => row.appendChild(cell(count)));
+        row.appendChild(cell(cls.total));
+        return row;
+      }),
+    );
+    document.getElementById("adRunsNote").innerText = "The share of runs that cleared the floor. Under 30 runs a cell can still be off by a lot. The download holds the last " + formatCoins(data.logged) + " runs with every hero's class, floor, levels and deck.";
+  } catch (error) {
+    fail(error);
+  }
+}
+
 var rtpRange = "week";
 var RTP_STATUS = {
   ok: ["On track", "success", "As close to the maths as chance allows."],
@@ -4162,6 +4198,12 @@ document.getElementById("adRtpRange").addEventListener("click", (event) => {
   loadRtp();
 });
 document.getElementById("adRtpWorld").addEventListener("change", loadRtp);
+document.getElementById("adRunsKind").addEventListener("click", (event) => {
+  var button = event.target.closest("button[data-kind]");
+  if (!button) return;
+  runsKind = button.dataset.kind;
+  loadRuns();
+});
 
 /* ---------- Daily streak ---------- */
 

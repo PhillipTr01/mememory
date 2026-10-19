@@ -334,6 +334,32 @@ module.exports = function (io, options = {}) {
     return null;
   }
 
+  /*
+   * The real runs (the next balancing): every hero's run that ended - its class, floor, level, stat levels and deck,
+   * cleared or not. The last RUN_LOG of them and a tally per class and floor (solo and in a party apart).
+   */
+  const RUN_LOG = 5000;
+  const runStats = { log: [], tally: {} }; // tally: "solo" | "party" -> class -> floor -> {runs, cleared}
+  function recordRun(run, one, char, cleared) {
+    if (world === worlds.TEST || run.tutorial) return;
+    const kind = run.heroes.length > 1 ? "party" : "solo";
+    const byClass = ((runStats.tally[kind] = runStats.tally[kind] || {})[one.cls] = runStats.tally[kind][one.cls] || {});
+    const count = (byClass[run.floor] = byClass[run.floor] || { runs: 0, cleared: 0 });
+    count.runs++;
+    if (cleared) count.cleared++;
+    runStats.log.push({ at: Date.now(), cls: one.cls, floor: run.floor, cleared, party: run.heroes.length, level: char.level, levels: { ...char.levels }, deck: [...(one.deck || [])] });
+    if (runStats.log.length > RUN_LOG) runStats.log.splice(0, runStats.log.length - RUN_LOG);
+    persist.changed("rpgRuns");
+  }
+  persist.register(
+    "rpgRuns",
+    () => runStats,
+    (saved) => {
+      runStats.log = Array.isArray(saved.log) ? saved.log : [];
+      runStats.tally = saved.tally || {};
+    },
+  );
+
   // The end of a run: the pot to every hero, the loot to the bags (not when lost), the potions left back
   async function finish(party, result) {
     if (party.result) return;
@@ -364,6 +390,7 @@ module.exports = function (io, options = {}) {
       // (the first clear: half the entry more - a bigger party more)
       const bonus = firstClear ? Math.round((rpg.entryCost(run.floor) * rpg.FIRST_CLEAR * rpg.partyBonus(run.heroes.length)) / 100) * 100 : 0;
       const xp = Math.round((result === "lost" ? one.xp / 2 : one.xp) + (firstClear ? rpg.xpFor("floor", run.floor) * 2 : 0));
+      recordRun(run, one, char, cleared);
       const ups = rpg.gainXp(char, xp);
       party.summary[one.name] = { xp, ups, level: char.level, firstClear: bonus };
       if (bonus && ours(one.name)) await coins.add(one.name, bonus, { reason: "rpg first clear", note: "floor " + run.floor });
@@ -1191,6 +1218,8 @@ module.exports = function (io, options = {}) {
     givePacks,
     charactersOf,
     setFloor,
+    runStats,
+    finish,
     timing,
     heroOf,
     stop: () => parties.forEach((party) => [party.timer, ...Object.values(party.away || {})].forEach(clearTimeout)),

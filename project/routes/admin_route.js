@@ -669,6 +669,35 @@ module.exports = function () {
     res.json({ ok: true });
   });
 
+  // The real runs of the dungeon: cleared runs per class and floor band (solo, party or all) - the log to download
+  const RUN_BANDS = [[1, 1], [2, 5], [6, 10], [11, 15], [16, 20], [21, 25], [26, 30]];
+  router.get("/api/rpg/runs", admin, (req, res) => {
+    const server = worlds.normalServers.get("rpg");
+    const stats = server ? server.runStats : { log: [], tally: {} };
+    const kinds = req.query.kind === "solo" || req.query.kind === "party" ? [req.query.kind] : ["solo", "party"];
+    const sum = (cls, from, to) => {
+      const out = { runs: 0, cleared: 0 };
+      for (const kind of kinds)
+        for (const [floor, count] of Object.entries((stats.tally[kind] || {})[cls] || {}))
+          if (Number(floor) >= from && Number(floor) <= to) {
+            out.runs += count.runs;
+            out.cleared += count.cleared;
+          }
+      return out;
+    };
+    res.json({
+      kind: kinds.length == 1 ? kinds[0] : "all",
+      bands: RUN_BANDS.map(([from, to]) => (from == to ? String(from) : from + "-" + to)),
+      classes: rpg.CLASS_IDS.map((id) => ({ id, name: rpg.CLASSES[id].name, icon: rpg.CLASSES[id].icon, bands: RUN_BANDS.map(([from, to]) => sum(id, from, to)), total: sum(id, 1, rpg.FLOORS) })),
+      logged: stats.log.length,
+    });
+  });
+  router.get("/api/rpg/runs/download", admin, (req, res) => {
+    const server = worlds.normalServers.get("rpg");
+    res.setHeader("Content-Disposition", 'attachment; filename="dungeon-runs.json"');
+    res.json(server ? server.runStats : { log: [], tally: {} });
+  });
+
   /* ---------- The cases of the case battles ---------- */
 
   const caseResult = (res, result) => (result.error ? res.status(400).json(result) : res.json({ ...result, cases: cases.list() }));

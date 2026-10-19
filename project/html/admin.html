@@ -31,6 +31,7 @@
                 <a href="#players" class="ad-nav-item" data-tab="players"><span class="ad-nav-icon">👥</span><span class="ad-nav-label">Players</span><span id="adWaitingBadge" class="ad-count" hidden></span></a>
                 <a href="#history" class="ad-nav-item" data-tab="history"><span class="ad-nav-icon">📜</span><span class="ad-nav-label">History</span></a>
                 <a href="#rtp" class="ad-nav-item" data-tab="rtp"><span class="ad-nav-icon">📈</span><span class="ad-nav-label">RTP monitor</span><span id="adRtpDot" class="ad-state off" hidden></span></a>
+                <a href="#runs" class="ad-nav-item" data-tab="runs"><span class="ad-nav-icon">🏰</span><span class="ad-nav-label">Dungeon runs</span></a>
                 <a href="#seasons" class="ad-nav-item" data-tab="seasons"><span class="ad-nav-icon">🗓️</span><span class="ad-nav-label">Seasons</span><span id="adSeasonBadge" class="ad-state on" hidden></span></a>
                 <a href="#chat" class="ad-nav-item" data-tab="chat"><span class="ad-nav-icon">💬</span><span class="ad-nav-label">Chat</span></a>
                 <!--- The games: a page each with its settings (case battles: with the cases) --->
@@ -178,6 +179,27 @@
                         </table>
                     </div>
                     <p id="adRtpNote" class="ad-note"></p>
+                </div>
+            </section>
+
+            <!--- Dungeon runs: how often the real runs of every class clear its floors --->
+            <section id="tab-runs" class="ad-tab" hidden>
+                <div class="ad-card">
+                    <div class="ad-card-head">
+                        <div id="adRunsKind" class="ad-filter" role="tablist" aria-label="Runs">
+                            <button type="button" role="tab" data-kind="solo" class="active">Solo</button>
+                            <button type="button" role="tab" data-kind="party">Party</button>
+                            <button type="button" role="tab" data-kind="all">All</button>
+                        </div>
+                        <a href="api/rpg/runs/download" class="mm-btn mm-btn-sm" download>Download runs</a>
+                    </div>
+                    <div class="ad-table-scroll">
+                        <table class="ad-table ad-runs">
+                            <thead id="adRunsHead"></thead>
+                            <tbody id="adRunsBody"></tbody>
+                        </table>
+                    </div>
+                    <p id="adRunsNote" class="ad-note"></p>
                 </div>
             </section>
 

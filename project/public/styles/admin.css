@@ -4489,3 +4489,17 @@ a.ad-case-row:hover {
   height: 1.15em;
   vertical-align: -0.2em;
 }
+
+/* Dungeon runs: the share cleared, the runs under it */
+.ad-runs {
+  min-width: 640px;
+}
+
+.ad-runs td.num b {
+  display: block;
+}
+
+.ad-runs-n {
+  display: block;
+  font-size: 0.72rem;
+}
