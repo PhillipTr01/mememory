@@ -2239,6 +2239,21 @@ test("rpg: the warrior's Spikebreaker talent halves what a spiked foe reflects",
   assert.ok(Math.abs(back(true) - 0.1) < 0.01, String(back(true)));
 });
 
+test("rpg: the warrior's Undying talent - once a fight a deadly blow leaves the hero at 1 HP, the next one takes it down", () => {
+  const run = duel("warrior", "attack", []);
+  const me = run.heroes[0];
+  me.perks.undying = rpg.TALENTS.warrior[7][1].perks.undying;
+  run.monsters[0].atk = 100000;
+  Object.assign(me, { hp: 50, block: 0, def: 0 });
+  rpg.endTurn(run, "a");
+  rpg.monsterTurn(run, seeded(2));
+  assert.ok(!me.down);
+  assert.strictEqual(me.hp, 1);
+  rpg.endTurn(run, "a");
+  rpg.monsterTurn(run, seeded(3));
+  assert.ok(me.down, "only once a fight");
+});
+
 test("rpg: disarming a trap - more luck helps, a deeper floor makes it harder, never sure and never hopeless", () => {
   const lucky = { luck: 40 };
   assert.ok(rpg.disarmChance(lucky, 3) > rpg.disarmChance(lucky, 12));

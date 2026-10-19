@@ -485,7 +485,7 @@ function lootShare(deepest, floor) {
 // thorns (damage back when hit), block (more block, share), heal (more healing, share), afterFight (healed after a
 // fight won, share of max HP), poison (stronger poison, share), maxHp (share), agi (dodge, %), pierce (share of
 // a foe's armor ignored), thornsDef (thorns: share of the armor), aoe (more damage on hits to every foe)
-const PERK_KEYS = ["healHit", "pierce", "thornsDef", "aoe", "startBlock", "firstMana", "draw", "attack", "firstStrike", "lowHp", "crit", "lifesteal", "thorns", "block", "heal", "afterFight", "poison", "maxHp", "agi", "spikeGuard"];
+const PERK_KEYS = ["healHit", "pierce", "thornsDef", "aoe", "startBlock", "firstMana", "draw", "attack", "firstStrike", "lowHp", "crit", "lifesteal", "thorns", "block", "heal", "afterFight", "poison", "maxHp", "agi", "spikeGuard", "undying"];
 
 // Talents: every class at hero level 3, 6 and 10 - one of two
 const TALENT_LEVELS = [3, 6, 10, 15, 20, 25, 30, 40, 50];
@@ -498,7 +498,7 @@ const TALENTS = {
     [{ id: "fury", name: "Fury", icon: "😡", text: "30% more damage below half HP.", perks: { lowHp: 0.3 } }, { id: "warlord", name: "Warlord", icon: "👑", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
     [{ id: "sharpedge", name: "Sharp Edge", icon: "🔪", text: "+10% critical hits.", perks: { crit: 10 } }, { id: "recovery", name: "Recovery", icon: "🩹", text: "Heal 12% after every fight won.", perks: { afterFight: 0.12 } }],
     [{ id: "breaker", name: "Armor Breaker", icon: "⛏️", text: "Ignore 35% more armor, 10% more damage.", perks: { pierce: 0.35, attack: 0.1 } }, { id: "momentum", name: "Momentum", icon: "🌀", text: "Your first attack each turn deals 50% more.", perks: { firstStrike: 0.5 } }],
-    [{ id: "colossus", name: "Colossus", icon: "🗿", text: "+20% max HP.", perks: { maxHp: 0.2 } }, { id: "undying", name: "Undying", icon: "❤️‍🔥", text: "Heal 3% of your attack damage.", perks: { lifesteal: 0.03 } }],
+    [{ id: "colossus", name: "Colossus", icon: "🗿", text: "+20% max HP.", perks: { maxHp: 0.2 } }, { id: "undying", name: "Undying", icon: "❤️‍🔥", text: "Once a fight, a blow that would take you down leaves you at 1 HP.", perks: { undying: 1 } }],
     [{ id: "titan", name: "Titan", icon: "🌋", text: "25% more damage.", perks: { attack: 0.25 } }, { id: "worldsplitter", name: "Worldsplitter", icon: "💥", text: "Ignore 30% more armor, 10% more damage.", perks: { pierce: 0.3, attack: 0.1 } }],
   ],
   paladin: [
@@ -2662,6 +2662,7 @@ function startRound(run, rng) {
   for (const hero of alive(run.heroes)) {
     hero.block = perk(hero, "startBlock");
     hero.energy = ENERGY + hero.bonusEnergy + (first ? perk(hero, "firstMana") : 0);
+    if (first) hero.heldOn = false;
     hero.bonusEnergy = 0;
     hero.ended = false;
     hero.attacked = false;
@@ -2825,6 +2826,7 @@ function strike(run, hero, foe, power, rng, options = {}) {
     addStat(run, hero.name, "taken", Math.min(hero.hp, back));
     hero.hp = Math.max(0, hero.hp - back);
     fx(run, { k: "hit", to: hero.name, n: back, b: shield, a: armor, left: hero.block, thorns: true });
+    holdOn(run, hero);
     if (hero.hp == 0) {
       hero.down = true;
       hero.effects = {};
@@ -2885,6 +2887,7 @@ function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
       fx(run, { k: "down", to: foe.id });
     }
   }
+  holdOn(run, hero);
   if (hero.hp == 0) {
     hero.down = true;
     fx(run, { k: "down", to: hero.name });
@@ -2893,6 +2896,15 @@ function hurt(run, hero, raw, source, rng = Math.random, foe = null) {
     say(run, `${hero.name} is down!`);
   }
   return damage;
+}
+
+// Undying (a talent): once a fight, a blow that would take the hero down leaves it at 1 HP
+function holdOn(run, hero) {
+  if (hero.hp > 0 || hero.heldOn || !perk(hero, "undying")) return;
+  hero.heldOn = true;
+  hero.hp = 1;
+  say(run, `${hero.name} refuses to fall! ❤️‍🔥`);
+  fx(run, { k: "heal", to: hero.name, n: 1 });
 }
 
 // Thorns: the damage back to who hits - a flat part, a share of the armor (the paladin)
@@ -3323,6 +3335,7 @@ function monsterTurn(run, rng = Math.random) {
       one.hp = Math.max(0, one.hp - effect.dmg);
       say(run, `${label} takes ${effect.dmg} from ${kind == "poison" ? "poison ☠️" : "the burn 🔥"}.`);
       fx(run, { k: "hit", to: one.icon ? one.id : one.name, n: effect.dmg, dot: kind });
+      if (!one.icon) holdOn(run, one);
       if (--effect.turns <= 0) delete one.effects[kind];
       if (one.icon) bossPhase(run, one);
       if (one.icon && one.hp > 0) splitCheck(run, one);
