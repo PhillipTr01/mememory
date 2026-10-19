@@ -975,6 +975,16 @@ function addPerks(into, perks) {
 // the classes even on the deep floors without touching the first ones
 const LATE_FROM = 25;
 const lateOf = (cls, level) => 1 + (cls.late || 0) * (Math.max(0, (level || 1) - LATE_FROM) / (HERO_LEVEL_MAX - LATE_FROM));
+// A class floor by floor: its HP and attack in a run this much more or less (the floor's own share, floor 1 first -
+// fitted with the simulator: every class clears every floor as often as the others)
+const CLASS_FLOOR = {
+  warrior: [0.95, 0.86, 0.91, 1.07, 0.97, 1.04, 1.03, 1.05, 1.03, 1.01, 1.05, 1.11, 1.07, 1.05, 1, 0.9, 0.9, 0.89, 0.9, 0.87, 0.95, 0.96, 0.99, 0.99, 1.04, 1.05, 1.01, 1.09, 1.1, 1.11],
+  paladin: [1.01, 1.02, 1, 0.98, 1.07, 1.05, 1.03, 1.02, 1.05, 1.1, 0.99, 1, 0.99, 1.03, 1.05, 1.1, 1.07, 1.14, 1.07, 1, 1, 1.01, 0.97, 0.97, 0.99, 0.96, 0.99, 0.91, 0.93, 0.94],
+  cleric: [1.03, 0.81, 0.88, 1.01, 1.02, 1.01, 1.04, 1, 1.01, 1.04, 0.91, 0.91, 0.91, 0.89, 1, 1.16, 1.15, 1.11, 1.12, 1.26, 0.97, 0.99, 0.95, 0.95, 0.96, 0.96, 0.94, 0.91, 0.9, 0.79],
+  rogue: [1.03, 1.16, 1.1, 0.95, 0.99, 0.99, 0.98, 0.99, 0.99, 1, 1, 0.97, 0.99, 1.02, 1.03, 0.92, 0.94, 0.95, 0.99, 0.89, 1.06, 1.02, 1.03, 1.04, 0.99, 1, 1, 0.99, 0.97, 1.1],
+  mage: [0.96, 1.16, 1.1, 0.98, 0.94, 0.91, 0.9, 0.92, 0.92, 0.85, 1.03, 1, 1.02, 0.99, 0.9, 0.92, 0.93, 0.9, 0.91, 0.96, 0.97, 1, 1.03, 1, 0.95, 1.01, 1.05, 1.08, 1.08, 1.05],
+};
+const classFloor = (clsId, floor) => ((CLASS_FLOOR[clsId] || [])[Math.max(1, Math.min(FLOORS, floor)) - 1] || 1);
 
 // What a character has with its class, levels and gear: {maxHp, atk, def, luck, agi} (agi: the dodge chance, %)
 function statsOf(hero, clsId = hero.cls, extra = {}) {
@@ -1686,11 +1696,10 @@ const RANKS = {
 // How much harder a floor is than the first: evenly, like a character's stats grow (its group a bit more or less)
 // (deeper down a character has better gear, talents and cards too: the monsters a bit more on top - DEPTH_EXTRA a floor)
 const DEPTH_EXTRA = 0.015;
-// The difficulty of the floors on top: [floor, power] - between two of them evenly (fitted with the simulator, its
-// deck built as a player builds it: the classes on their stat curve clear about three runs of four up to floor 14,
-// two of three from floor 16 on, every class about the same - floors 2 and 3 a bit easier: the weakest class there with
-// its first cards still clears more than half - a character behind its curve falls off fast down there)
-const FLOOR_POWER = [[1, 2.239], [2, 2.75], [3, 2.45], [4, 3.29], [6, 2.45], [8, 2.47], [10, 2.3], [12, 1.98], [14, 1.8], [16, 3.1], [18, 3.08], [20, 2.53], [22, 2.3], [24, 2.37], [26, 2.34], [28, 2.23], [30, 1.73]];
+// The difficulty of the floors on top: [floor, power] - every floor its own (fitted with the simulator and player-built
+// decks: a class on its stat curve clears floor 1 in about 85% of runs, every floor a point less, floor 30 about 55%;
+// the classes even on every floor by CLASS_FLOOR - a character behind its curve falls off fast down there)
+const FLOOR_POWER = [[1, 2.18], [2, 2.82], [3, 2.49], [4, 2.88], [5, 3.1], [6, 2.37], [7, 2.25], [8, 2.37], [9, 2.33], [10, 2.43], [11, 1.98], [12, 1.99], [13, 1.95], [14, 1.93], [15, 2.04], [16, 2.84], [17, 2.9], [18, 2.98], [19, 2.93], [20, 2.43], [21, 2.29], [22, 2.29], [23, 2.24], [24, 2.42], [25, 2], [26, 2.49], [27, 2.46], [28, 2.44], [29, 2.43], [30, 1.85]];
 function floorPower(floor, points = FLOOR_POWER) {
   if (floor <= points[0][0]) return points[0][1];
   for (let i = 1; i < points.length; i++) {
@@ -1824,7 +1833,10 @@ function newRun(floor, party, rng = Math.random, options = {}) {
       // (the talents of the character: perks for the whole run - relics add theirs; dodge from them: past the knee, slower too)
       const perks = talentPerks(hero);
       const stats = statsOf(hero, hero.cls, { agi: perks.agi || 0 });
-      stats.maxHp = Math.round(stats.maxHp * (1 + (perks.maxHp || 0)));
+      // (the class on this floor: its share - see CLASS_FLOOR)
+      const share = classFloor(hero.cls, floor);
+      stats.maxHp = Math.round(stats.maxHp * (1 + (perks.maxHp || 0)) * share);
+      stats.atk = Math.round(stats.atk * share);
       return {
         name,
         cls: hero.cls,
@@ -3760,6 +3772,7 @@ module.exports = {
   RARITIES,
   REWARD,
   CLASSES,
+  CLASS_FLOOR,
   CLASS_IDS,
   MAIN_BONUS,
   get CLASS_PRICE() {
