@@ -7677,9 +7677,12 @@ button.rpg-trade-row:hover {
   border-left-color: #a78bfa;
 }
 
-.rpg-trade-row.rarity-legendary,
-.rpg-trade-row.rarity-mythic {
+.rpg-trade-row.rarity-legendary {
   border-left-color: #f5c542;
+}
+
+.rpg-trade-row.rarity-mythic {
+  border-left-color: #2dd4bf;
 }
 
 .rpg-trade-icon {
@@ -8021,9 +8024,12 @@ button.rpg-trade-row:active {
   color: #c4b5fd;
 }
 
-.rpg-trade-row.rarity-legendary .rpg-trade-sub,
-.rpg-trade-row.rarity-mythic .rpg-trade-sub {
+.rpg-trade-row.rarity-legendary .rpg-trade-sub {
   color: #fcd34d;
+}
+
+.rpg-trade-row.rarity-mythic .rpg-trade-sub {
+  color: #5eead4;
 }
 
 .rpg-trade-right {

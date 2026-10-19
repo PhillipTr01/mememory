@@ -950,6 +950,22 @@ function tradeRow(one, side, picks, act) {
   return row;
 }
 
+// The order of a trade list: the rarest first, then by class (neutral last), then by name
+function tradeOrder(a, b) {
+  var info = (one) => {
+    if (one.k == "card") {
+      var card = cardOf(one.id);
+      return [card.rarity, card.cls, card.name];
+    }
+    if (one.gone) return ["", null, ""];
+    return [one.item.rarity, (one.item.classes || [])[0], one.item.name];
+  };
+  var classRank = (cls) => (cls && rules.classes[cls] ? Object.keys(rules.classes).indexOf(cls) : 99);
+  var [ra, ca, na] = info(a);
+  var [rb, cb, nb] = info(b);
+  return RARITY_ORDER.indexOf(rb) - RARITY_ORDER.indexOf(ra) || classRank(ca) - classRank(cb) || String(na).localeCompare(String(nb));
+}
+
 // A side of the trade: its title and total, the cards and the gear in groups
 function tradePanel(title, list, side, picks, act, empty, coins) {
   var panel = el("div", "rpg-trade-col " + side);
@@ -976,7 +992,7 @@ function tradePanel(title, list, side, picks, act, empty, coins) {
     if (!group.length) return;
     if (act) body.appendChild(el("div", "rpg-trade-group", label));
     var grid = el("div", "rpg-trade-grid");
-    group.forEach((one) => grid.appendChild(tradeRow(one, side, picks, act)));
+    group.slice().sort(tradeOrder).forEach((one) => grid.appendChild(tradeRow(one, side, picks, act)));
     body.appendChild(grid);
   });
   return panel;
