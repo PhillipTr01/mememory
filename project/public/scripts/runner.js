@@ -13,6 +13,7 @@ var stake = 0; // the entry typed in
 var STAKE_KEY = "runnerStake";
 var game = null; // the run going: {id, seed, stake, run, startAt, queue, moves, sent, over}
 var lastResult = null;
+var today = 0; // the paid runs of today (rules.daily: how many a day - 0: no limit)
 
 // Used by chat.js
 function chatUsername() {
@@ -65,6 +66,7 @@ socket.on("coins", (data) => {
 socket.on("runnerSetup", (data) => {
   rules = data.rules;
   best = data.best || 0;
+  today = data.today || 0;
   var saved = null;
   try {
     saved = Number(localStorage.getItem(STAKE_KEY));
@@ -78,10 +80,14 @@ socket.on("runnerError", (message) => {
   if (game && !game.run) game = null;
   renderPanel();
 });
-socket.on("runnerStarted", (data) => startRun(data));
+socket.on("runnerStarted", (data) => {
+  if (data.today != null) today = data.today;
+  startRun(data);
+});
 socket.on("runnerResult", (data) => {
   lastResult = data;
   best = data.best || best;
+  if (data.today != null) today = data.today;
   if (game && game.id == data.id) game.result = data;
   renderPanel();
 });
@@ -171,8 +177,17 @@ function renderPanel() {
   var start = document.getElementById("rnStart");
   start.innerText = (game && game.over && game.stake > 0 ? "Run again for 🪙 " : "Run for 🪙 ") + formatCoins(Math.max(0, stake));
   var waiting = game && game.over && !game.result;
-  start.disabled = !valid || stake > maxEntry() || waiting;
-  start.title = !valid ? "An entry is " + formatCoins(rules.minBet) + " to " + formatCoins(rules.maxBet) + " coins." : stake > maxEntry() ? "Your max entry is " + formatCoins(maxEntry()) + "." : "";
+  // The paid runs of a day (when the admin set a limit): how many are left - none: only practice
+  var limited = rules.daily > 0;
+  var used = limited && today >= rules.daily;
+  var daily = document.getElementById("rnDaily");
+  daily.hidden = !limited;
+  if (limited) {
+    daily.textContent = used ? "You played all " + rules.daily + " paid runs for today. Practice is still free." : "Paid runs today: " + today + " / " + rules.daily;
+    daily.classList.toggle("used", used);
+  }
+  start.disabled = !valid || stake > maxEntry() || waiting || used;
+  start.title = used ? "No paid runs left today." : !valid ? "An entry is " + formatCoins(rules.minBet) + " to " + formatCoins(rules.maxBet) + " coins." : stake > maxEntry() ? "Your max entry is " + formatCoins(maxEntry()) + "." : "";
   document.getElementById("rnPractice").disabled = waiting;
   document.getElementById("rnBest").innerText = best ? "Your best: " + formatCoins(best) + " m" : "";
   // The result of the last run

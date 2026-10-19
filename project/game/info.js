@@ -246,6 +246,7 @@ const GAMES = {
           tile("💰", "Pays", `From ${n(t.min)} m you get part of your entry back. At ${n(t.even)} m you get your entry back, and longer runs pay up to ${t.max}×.`, { tags: [[`${n(t.min)} m · ${t.minMult}×`], [`${n(t.even)} m · 1×`, "blue"], [`${n(t.top)} m · ${t.max}×`, "gold"]] }),
           tile("🪙", "Coins", `Every coin you pick up adds ${pct(config.RUNNER_COIN_BONUS)}% to your payout, up to ${pct(config.RUNNER_COIN_CAP)}%.`, { big: "+" + pct(config.RUNNER_COIN_BONUS) + "%" }),
           tile("🎟️", "Entry", `Enter with 🪙 ${n(L.RUNNER_MIN_BET)} to 🪙 ${n(L.RUNNER_MAX_BET)}.`, { coins: [n(L.RUNNER_MIN_BET), n(L.RUNNER_MAX_BET)] }),
+          ...(config.RUNNER_DAILY > 0 ? [tile("📅", "Per day", `You can play ${n(config.RUNNER_DAILY)} paid runs a day. Practice is always free.`, { big: n(config.RUNNER_DAILY) })] : []),
           tile("🎯", "Practice", "Practice runs are free and pay nothing. Use them to get better first."),
         ]),
       ],

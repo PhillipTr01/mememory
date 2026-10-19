@@ -415,3 +415,23 @@
 .rn-table-item.coin .rn-table-x {
   color: #fbbf24;
 }
+
+/* The paid runs of today (with a daily limit) */
+.rn-daily {
+  margin: 0;
+  padding: 0.15rem 0.7rem;
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--mm-text);
+}
+
+.rn-daily[hidden] {
+  display: none;
+}
+
+.rn-daily.used {
+  background: rgba(220, 38, 38, 0.18);
+  color: #fca5a5;
+}

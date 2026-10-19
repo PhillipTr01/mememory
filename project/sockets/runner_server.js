@@ -102,7 +102,7 @@ module.exports = function (io, options = {}) {
       room.to(ROOM).emit("runnerFeed", state.feed);
     }
     persist.changed("runner");
-    const answer = { id: run.id, practice: run.stake === 0, stake: run.stake, ...result, multiplier: multiplier, bonus: runner.coinBonus(result.coins), win: win, best: state.bests[username], record: record };
+    const answer = { id: run.id, practice: run.stake === 0, stake: run.stake, today: usedToday(username), ...result, multiplier: multiplier, bonus: runner.coinBonus(result.coins), win: win, best: state.bests[username], record: record };
     toUser(username, "runnerResult", answer);
     return answer;
   }
