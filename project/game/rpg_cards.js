@@ -111,7 +111,7 @@ const NEUTRAL = {
   smokebomb: ["Smoke Bomb", "💨", 1, "rare", [{ block: 8 }, { status: "chill", turns: 1, to: "all" }]],
   whirlingsteel: ["Whirling Steel", "🌪️", 2, "epic", [{ hit: 0.8, to: "all" }, { draw: 1 }]],
   ironskin: ["Iron Skin", "🧥", 1, "epic", [{ block: 14, def: 1 }, { heal: 0.05 }]],
-  secondbreath: ["Second Breath", "🫁", 0, "epic", [{ mana: 1 }, { heal: 0.08 }], true],
+  secondbreath: ["Second Breath", "🫁", 0, "epic", [{ mana: 1 }, { heal: 0.08 }, { draw: 1 }], true],
   huntersmark: ["Hunter's Mark", "🎯", 1, "epic", [{ hit: 1 }, { status: "stun" }]],
   command: ["Warlord's Command", "📯", 1, "legendary", [{ might: 3, to: "party" }, { draw: 2, to: "party" }], true],
   titangrip: ["Titan Grip", "🗿", 3, "legendary", [{ hit: 1.8 }, { block: 12, def: 1 }]],
