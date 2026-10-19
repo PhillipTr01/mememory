@@ -445,15 +445,21 @@ test("admin: dungeon packs for one character of a player - they wait until that 
   assert.strictEqual(rpg.packsOf(hero).mythic, 1);
   rpg.openStored(hero, "mythic");
   assert.strictEqual(rpg.packsOf(hero).mythic || 0, 0);
-  // A character's floor set back by the admin: the next floor opens, the deeper ones close - cooldowns cleared if asked
+  // A character's floor set back by the admin: the next floor opens, the deeper ones close - that floor and the deeper
+  // ones start over (cooldowns, today's runs), the floors above stay
+  const later = Date.now() + 3600000;
   rpg.charOf(hero, "warrior").deepest = 12;
-  rpg.charOf(hero, "warrior").cooldowns = { 12: Date.now() + 3600000 };
+  rpg.charOf(hero, "warrior").cooldowns = { 3: later, 5: later, 8: later, 12: later };
+  rpg.countRun(hero, 3, "warrior");
+  rpg.countRun(hero, 5, "warrior");
+  rpg.countRun(hero, 9, "warrior");
   assert.strictEqual((await adminApi("rpg/characters/quinn")).body.characters[0].deepest, 12);
   assert.match((await adminApi("rpg/floor", { username: "quinn", cls: "warrior", deepest: 99 })).body.error, /from 0 to 30/);
   assert.match((await adminApi("rpg/floor", { username: "quinn", cls: "rogue", deepest: 3 })).body.error, /no such character/);
-  assert.strictEqual((await adminApi("rpg/floor", { username: "quinn", cls: "warrior", deepest: 5, clear: true })).status, 200);
+  assert.strictEqual((await adminApi("rpg/floor", { username: "quinn", cls: "warrior", deepest: 5 })).status, 200);
   assert.strictEqual(rpg.charOf(hero, "warrior").deepest, 5);
-  assert.deepStrictEqual(rpg.charOf(hero, "warrior").cooldowns, {});
+  assert.deepStrictEqual(rpg.charOf(hero, "warrior").cooldowns, { 3: later });
+  assert.deepStrictEqual([rpg.runsToday(hero, 3, "warrior"), rpg.runsToday(hero, 5, "warrior"), rpg.runsToday(hero, 9, "warrior")], [1, 0, 0]);
   assert.strictEqual(rpg.maxFloor(hero), 6);
   live.stop();
   worlds.normalServers.delete("rpg");

@@ -660,11 +660,11 @@ module.exports = function () {
     res.json({ ok: true });
   });
 
-  // A character's deepest cleared floor: {username, cls, deepest, clear: the cooldowns and today's runs too}
+  // A character's deepest cleared floor: {username, cls, deepest} - that floor and the deeper ones start over
   router.post("/api/rpg/floor", admin, (req, res) => {
-    const { username, cls, deepest, clear } = req.body || {};
+    const { username, cls, deepest } = req.body || {};
     const server = worlds.normalServers.get("rpg");
-    const problem = server ? server.setFloor(String(username || ""), String(cls || ""), Number(deepest), clear === true) : "The dungeon isn't running.";
+    const problem = server ? server.setFloor(String(username || ""), String(cls || ""), Number(deepest)) : "The dungeon isn't running.";
     if (problem) return res.status(400).json({ error: problem });
     res.json({ ok: true });
   });

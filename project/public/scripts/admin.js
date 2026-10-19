@@ -1096,7 +1096,7 @@ async function floorDialog(p) {
   var note = el("p", "mm-dialog-text");
   var explain = () => {
     var n = Math.floor(Number(deepest.value) || 0);
-    note.innerText = n ? "Floor " + (n + 1) + " opens for this character and every floor deeper closes." : "The character starts again from floor 1.";
+    note.innerText = n ? "Floor " + (n + 1) + " opens for this character and every floor deeper closes. Floor " + n + " and deeper start over: no cooldown, no runs today. The floors above stay as they are." : "The character starts again from floor 1, every floor without a cooldown and runs today.";
   };
   who.addEventListener("change", () => {
     deepest.value = current().deepest;
@@ -1104,9 +1104,6 @@ async function floorDialog(p) {
   });
   deepest.addEventListener("input", explain);
   explain();
-  var clearBox = el("label", "ad-check");
-  var clear = Object.assign(el("input"), { type: "checkbox", checked: true });
-  clearBox.append(clear, el("span", "", "Also clear the floor cooldowns and today's runs"));
   var grid = el("div", "ad-reward-grid");
   var character = field("Character", who);
   character.classList.add("wide");
@@ -1119,7 +1116,7 @@ async function floorDialog(p) {
   save.type = "submit";
   var actions = el("div", "mm-dialog-actions");
   actions.append(cancel, save);
-  dialog.append(el("h2", "mm-dialog-title", "🏰 Floor of " + p.username), grid, note, clearBox, error, actions);
+  dialog.append(el("h2", "mm-dialog-title", "🏰 Floor of " + p.username), grid, note, error, actions);
   backdrop.appendChild(dialog);
   document.body.appendChild(backdrop);
   var close = () => {
@@ -1136,7 +1133,7 @@ async function floorDialog(p) {
     var n = Math.floor(Number(deepest.value));
     save.disabled = true;
     try {
-      await api("rpg/floor", { username: p.username, cls: who.value, deepest: n, clear: clear.checked });
+      await api("rpg/floor", { username: p.username, cls: who.value, deepest: n });
       close();
       var cls = current();
       casinoNotice({ icon: "🏰", title: "Floor set for " + p.username, text: cls.icon + " " + cls.name + ": deepest floor " + n + ".", ms: 6000, key: "floor" });

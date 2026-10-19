@@ -1192,7 +1192,8 @@ module.exports = function (io, options = {}) {
 
   // The admin sets a character's deepest cleared floor (a bug, a reset to an earlier floor): the next one opens, the
   // deeper ones close; clear: the floors' cooldowns and today's runs gone too -> an error or null
-  function setFloor(name, cls, deepest, clear) {
+  // (the floor set and every deeper one start over: their cooldowns and today's runs gone - the floors above stay as they are)
+  function setFloor(name, cls, deepest) {
     if (!heroes.has(name)) return "This player has no character yet.";
     const hero = heroOf(name);
     if (!hero.unlocked.includes(cls)) return "This player has no such character.";
@@ -1201,9 +1202,10 @@ module.exports = function (io, options = {}) {
     if (party && party.run && !party.result) return "This player is in a run right now. Try again after it.";
     const char = rpg.charOf(hero, cls);
     char.deepest = deepest;
-    if (clear) {
-      char.cooldowns = {};
-      char.floorRuns = null;
+    const from = Math.max(1, deepest);
+    for (let floor = from; floor <= rpg.FLOORS; floor++) {
+      if (char.cooldowns) delete char.cooldowns[floor];
+      if (char.floorRuns && char.floorRuns.floors) delete char.floorRuns.floors[floor];
     }
     sendHero(name);
     persist.changed("rpg");
