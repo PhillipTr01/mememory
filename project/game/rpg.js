@@ -914,9 +914,9 @@ function pickTalent(hero, tier, id, { swap = false, check = false } = {}) {
   if (!check) char.talents[tier] = id;
   return null;
 }
-// A talent changed: this many coins (a share of an entry of the deepest floor open)
-function talentSwapPrice(hero) {
-  return round100((config.RPG_TALENT_SWAP_PERCENT / 100) * entryCost(maxFloor(hero)));
+// A talent changed: a fixed price
+function talentSwapPrice() {
+  return config.RPG_TALENT_SWAP_PRICE;
 }
 
 /* ---------- Out of the fights: every class helps the whole party, more with the levels of its main stat ---------- */

@@ -420,7 +420,7 @@ test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/
   assert.strictEqual(rpg.pickTalent(hero, 0, "rhythm", { swap: true }), null);
   assert.strictEqual(char.talents[0], "rhythm");
   assert.strictEqual(rpg.pickTalent(hero, 0, "ironskin", { swap: true }), null);
-  assert.strictEqual(rpg.talentSwapPrice(hero), Math.round(((require("../game/config").RPG_TALENT_SWAP_PERCENT / 100) * rpg.entryCost(rpg.maxFloor(hero))) / 100) * 100);
+  assert.strictEqual(rpg.talentSwapPrice(hero), require("../game/config").RPG_TALENT_SWAP_PRICE);
   // (the class strength - the warrior breaks armor - and the talent)
   assert.deepStrictEqual(rpg.talentPerks(hero), { pierce: rpg.strengthOf("warrior", rpg.charOf(hero).level).perks.pierce, ...rpg.TALENTS.warrior[0][0].perks });
   // In a fight: the talent's block at the start, a relic's damage, an upgraded strike
