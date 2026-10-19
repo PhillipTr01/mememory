@@ -961,7 +961,7 @@ test("rpg: class strengths grow with the level - the base at 1, its top times it
   assert.strictEqual(rpg.strengthOf("warrior", 1).perks.pierce, 0.15);
   assert.strictEqual(rpg.strengthOf("warrior", rpg.HERO_LEVEL_MAX).perks.pierce, Math.round(0.15 * rpg.CLASSES.warrior.strength.top * 1000) / 1000);
   assert.match(rpg.strengthOf("paladin", 1).text, /equal to 30% of your armor, and half of your block counts as armor for it\. Your block cards block 11% more/);
-  assert.match(rpg.strengthOf("mage", rpg.HERO_LEVEL_MAX).text, /crit 45% more often/);
+  assert.match(rpg.strengthOf("mage", rpg.HERO_LEVEL_MAX).text, /crit 18% more often/);
 });
 
 test("rpg: cards fit their rarity - the rarer, the more a mana buys", () => {
@@ -2182,4 +2182,17 @@ test("rpg: a hit that misses (dodged, faded) brings nothing of its card either -
   foe.dodge = 0;
   rpg.play(run, "a", { uid: "t1", target: "m1" });
   assert.ok(foe.hp < foe.maxHp && foe.effects.poison, "a hit poisons");
+});
+
+test("rpg: a spiked foe hurts only who hits it directly - a hit on every foe gets nothing back", () => {
+  const run = duel("warrior", "defend", ["cleave", "strike"]);
+  const me = run.heroes[0];
+  run.monsters[0].traits = ["spiked"];
+  me.def = 0;
+  const hp = me.hp;
+  assert.strictEqual(rpg.play(run, "a", { uid: "t0" }), null);
+  assert.ok(run.monsters[0].hp < run.monsters[0].maxHp);
+  assert.strictEqual(me.hp, hp, "no spikes for a hit on every foe");
+  rpg.play(run, "a", { uid: "t1", target: "m1" });
+  assert.ok(me.hp < hp, "a direct hit pays");
 });

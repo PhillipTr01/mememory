@@ -389,7 +389,8 @@ test("poker bots: the fast score ranks like the full one, a strong hand plays, a
     assert.strictEqual(Math.sign(bot.fastScore(a) - bot.fastScore(b)), Math.sign(compare(bestHand(a).score, bestHand(b).score)), a + " vs " + b);
   }
   // (the chance to win: aces before the flop about 85% heads-up, a made royal flush always)
-  assert.ok(Math.abs(bot.equity(["As", "Ad"], [], 1) - 0.85) < 0.06);
+  // (3,000 boards: close enough every time)
+  assert.ok(Math.abs(bot.equity(["As", "Ad"], [], 1, Math.random, 3000) - 0.85) < 0.05);
   assert.strictEqual(bot.equity(["As", "Ks"], ["Qs", "Js", "Ts"], 2), 1);
   const view = { pot: 300, bet: 0, stack: 2000, highBet: 0, minRaise: 100, bigBlind: 100, opponents: 1, raises: 0 };
   const nuts = bot.decide({ ...view, cards: ["As", "Ks"], board: ["Qs", "Js", "Ts"], toCall: 1000, highBet: 1000 });

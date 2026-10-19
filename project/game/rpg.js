@@ -146,7 +146,7 @@ const CLASSES = {
   paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor, and half of your block counts as armor for it. Your block cards block {block}% more.", perks: { thornsDef: 0.3, block: 0.11 }, top: 4.5 }, about: "Armor class with taunts and party shields", hp: 1.35, atk: 1.3, def: 11, luck: 0, agi: 0, mainBonus: 1.2, hpPlus: 90, late: -0.11, power: 1.2, atkPlus: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
   cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe.", perks: { heal: 0.1, healHit: 0.04 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 1.7, hpPlus: 180, late: -0.09, power: 0.96, atkPlus: 8, signature: ["heal", "smite"], opener: "banish", cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
   rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.3, crit: 4 }, top: 8 }, about: "Instinct class with dodge, scouting and poison", hp: 1.42, atk: 1.42, def: 0, luck: 4, agi: 14, mainBonus: 2.5, hpPlus: 94, late: 0.23, power: 0.96, atkPlus: 24, signature: ["poisonblade", "backstab"], guard: "dodgeroll", cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 15 }, about: "Luck class with crits, fire and frost", hp: 1.35, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.45, hpPlus: 120, late: 0.23, power: 0.88, atkPlus: 17, signature: ["frost", "fireball"], guard: "icearmor", cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
+  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 6 }, about: "Luck class with crits, fire and frost", hp: 1.35, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.45, hpPlus: 120, late: -0.1, power: 0.96, atkPlus: 17, signature: ["frost", "fireball"], guard: "icearmor", cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -412,7 +412,7 @@ const MONSTER_TRAITS = {
   venomproof: { name: "Venomproof", icon: "🧪", text: "Poison deals half damage." },
   fireproof: { name: "Fireproof", icon: "🔥", text: "Burns deal half damage." },
   bulky: { name: "Bulky", icon: "🪨", text: "Half damage from area hits." },
-  spiked: { name: "Spiked", icon: "🦔", text: "Reflects 20% of damage." },
+  spiked: { name: "Spiked", icon: "🦔", text: "Reflects 20% of the damage of direct hits." },
 };
 
 // The bosses: the last room of every BOSS_EVERY-th floor - one per group of floors, a second phase at half HP
@@ -2763,8 +2763,9 @@ function strike(run, hero, foe, power, rng, options = {}) {
   say(run, `${hero.name}${options.verb ? " " + options.verb : " hits"} ${foe.icon} ${foe.name} for ${damage}${crit ? " (crit!)" : ""}${foe.defending ? " (half)" : ""}.`);
   fx(run, blocked > 0 ? { k: "hit", to: foe.id, n: damage, crit, b: blocked } : { k: "hit", to: foe.id, n: damage, crit });
   if (perk(hero, "lifesteal") && !hero.down) healHero(run, hero, damage * perk(hero, "lifesteal"));
-  // (spiked: a part of the hit comes back - the armor softens it, the block takes it first, like any hit)
-  if (foe.traits && foe.traits.includes("spiked") && !hero.down) {
+  // (spiked: a part of the hit comes back - the armor softens it, the block takes it first, like any hit; only a
+  // direct hit - not one on every foe, not the cleric's holy light)
+  if (foe.traits && foe.traits.includes("spiked") && !hero.down && !options.aoe && !options.indirect) {
     const raw = damage * SPIKES;
     let back = Math.max(1, Math.round((raw * raw) / (raw + Math.max(0, hero.def))));
     const armor = Math.max(0, Math.round(raw) - back);
@@ -3051,7 +3052,7 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
     // (the cleric's light: a share of a heal - once a card, whoever it heals, even at full HP - smites every foe)
     const smite = perk(hero, "healHit");
     const standing = alive(run.monsters);
-    if (smite > 0 && standing.length && run.phase == "fight") for (const foe of standing) strike(run, hero, foe, (hero.maxHp * fx.heal * up * (1 + perk(hero, "heal")) * smite) / Math.max(1, hero.atk), rng, { sure: true, verb: "smites" });
+    if (smite > 0 && standing.length && run.phase == "fight") for (const foe of standing) strike(run, hero, foe, (hero.maxHp * fx.heal * up * (1 + perk(hero, "heal")) * smite) / Math.max(1, hero.atk), rng, { sure: true, verb: "smites", indirect: true });
   } else if (fx.status) {
     for (const m of foesOf(fx.to)) {
       // (the hit of the card missed it: nothing sticks)
