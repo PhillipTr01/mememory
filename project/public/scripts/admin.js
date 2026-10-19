@@ -4075,7 +4075,7 @@ async function loadRuns() {
     var cell = (count) => {
       var td = el("td", "num");
       td.appendChild(el("b", "", count.runs ? Math.round((count.cleared / count.runs) * 100) + "%" : "-"));
-      td.appendChild(el("small", "mm-muted ad-runs-n", count.runs + " runs"));
+      td.appendChild(el("small", "mm-muted ad-runs-n", count.runs + (count.runs == 1 ? " run" : " runs")));
       return td;
     };
     document.getElementById("adRunsBody").replaceChildren(
@@ -4087,7 +4087,7 @@ async function loadRuns() {
         return row;
       }),
     );
-    document.getElementById("adRunsNote").innerText = "The share of runs that cleared the floor. Under 30 runs a cell can still be off by a lot. The download holds the last " + formatCoins(data.logged) + " runs with every hero's class, floor, levels and deck.";
+    document.getElementById("adRunsNote").innerText = "The share of runs that cleared the floor. Under 30 runs a cell can still be off by a lot. The download holds the last " + formatCoins(data.logged) + (data.logged == 1 ? " run" : " runs") + " with every hero's class, floor, levels and deck.";
   } catch (error) {
     fail(error);
   }
