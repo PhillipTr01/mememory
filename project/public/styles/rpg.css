@@ -9053,3 +9053,8 @@ button.rpg-trade-row:active {
     padding: 0.15rem 0.2rem;
   }
 }
+
+/* The other talent of a tier picked already: it can be switched to (for coins) */
+.rpg-talent.other:not(:disabled):hover {
+  opacity: 0.85;
+}

@@ -830,6 +830,11 @@ function renderHero() {
             if (open && !hero.talents[tier]) {
               tile.dataset.act = "talent";
               tile.dataset.id = tier + ":" + t.id;
+            } else if (open && other) {
+              // (the other one of a tier picked already: a change, for coins)
+              tile.dataset.act = "talentSwap";
+              tile.dataset.id = tier + ":" + t.id;
+              tile.title = "Switch to this talent for 🪙 " + formatCoins(hero.talentSwapPrice) + ".";
             } else tile.disabled = true;
             var words = el("span", "rpg-talent-words");
             words.append(el("b", "", t.name), el("span", "", t.text));
@@ -3473,6 +3478,15 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   } else if (act == "deckClear") socket.emit("deckSet", { ids: [] });
   else if (act == "deckStarter") socket.emit("deckSet", { ids: starterDeck() });
   else if (act == "talent") socket.emit("talent", { tier: Number(id.split(":")[0]), id: id.split(":")[1] });
+  else if (act == "talentSwap") {
+    var [tier, talentId] = id.split(":");
+    var talent = ((rules.talents[hero.cls] || [])[Number(tier)] || []).find((t) => t.id == talentId);
+    confirmDialog({
+      title: "Switch to " + (talent ? talent.name : "this talent") + "?",
+      text: "Your current talent of this tier is replaced. This costs 🪙 " + formatCoins(hero.talentSwapPrice) + ".",
+      confirmLabel: "Switch for 🪙 " + formatCoins(hero.talentSwapPrice),
+    }).then((sure) => sure && socket.emit("talent", { tier: Number(tier), id: talentId, swap: true }));
+  }
   else if (act == "relic") {
     socket.emit("relic", { id: id || null });
     rewardView = "list";

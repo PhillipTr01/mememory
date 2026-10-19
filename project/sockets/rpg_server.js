@@ -617,11 +617,20 @@ module.exports = function (io, options = {}) {
       sendHero(username);
     });
 
-    // A talent of the class (one of two, per tier)
-    on("talent", (data) => {
+    // A talent of the class (one of two, per tier) - the first pick free, a change (swap) for coins
+    on("talent", async (data) => {
       if (inRun()) return error("Not during a run.");
-      const problem = rpg.pickTalent(heroOf(username), Number(data.tier), String(data.id));
+      const hero = heroOf(username);
+      const tier = Number(data.tier);
+      const id = String(data.id);
+      const swap = data.swap === true;
+      const problem = rpg.pickTalent(hero, tier, id, { swap, check: true });
       if (problem) return error(problem);
+      if (swap) {
+        const price = rpg.talentSwapPrice(hero);
+        if (price > 0 && !(await coins.spend(username, price, { reason: "rpg talent", note: id }))) return error(coins.refusal(username) || "You don't have enough coins.");
+      }
+      rpg.pickTalent(hero, tier, id, { swap });
       sendHero(username);
     });
 

@@ -899,16 +899,24 @@ function gainXp(char, xp) {
   return ups;
 }
 
-// A talent picked (tier: 0, 1, 2 - open at TALENT_LEVELS) -> an error or null
-function pickTalent(hero, tier, id) {
+// A talent picked (tier: 0, 1, 2 - open at TALENT_LEVELS) -> an error or null. The first pick of a tier is free; swap:
+// the other one of a tier picked already (paid: talentSwapPrice) - check: only whether it may, nothing changes
+function pickTalent(hero, tier, id, { swap = false, check = false } = {}) {
   const char = charOf(hero);
   const options = (TALENTS[hero.cls] || [])[tier];
   if (!options) return "Unknown talent.";
   if (char.level < TALENT_LEVELS[tier]) return `Opens at level ${TALENT_LEVELS[tier]}.`;
-  if (char.talents[tier] && options.some((t) => t.id == char.talents[tier])) return "Picked already.";
   if (!options.some((t) => t.id == id)) return "Unknown talent.";
-  char.talents[tier] = id;
+  const picked = char.talents[tier] && options.some((t) => t.id == char.talents[tier]);
+  if (picked && char.talents[tier] == id) return "You have this talent already.";
+  if (picked && !swap) return "Picked already.";
+  if (!picked && swap) return "Pick a talent first.";
+  if (!check) char.talents[tier] = id;
   return null;
+}
+// A talent changed: this many coins (a share of an entry of the deepest floor open)
+function talentSwapPrice(hero) {
+  return round100((config.RPG_TALENT_SWAP_PERCENT / 100) * entryCost(maxFloor(hero)));
 }
 
 /* ---------- Out of the fights: every class helps the whole party, more with the levels of its main stat ---------- */
@@ -1177,6 +1185,7 @@ function heroView(hero) {
     runsToday: Object.fromEntries(Array.from({ length: FLOORS }, (_, i) => [i + 1, runsToday(hero, i + 1)]).filter(([, runs]) => runs > 0)),
     repeatPay: Object.fromEntries(Array.from({ length: FLOORS }, (_, i) => [i + 1, repeatPay(hero, i + 1)]).filter(([, pay]) => pay < 1)),
     revivePrice: revivePrice(hero),
+    talentSwapPrice: talentSwapPrice(hero),
     revives: revivesToday(hero),
     resetLeft: resetLeft(hero),
   };
@@ -3838,6 +3847,7 @@ module.exports = {
   PARTY_LOOT,
   gainXp,
   pickTalent,
+  talentSwapPrice,
   talentPerks,
   strengthOf,
   pickRelic,

@@ -408,11 +408,19 @@ test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/
   assert.strictEqual(rpg.gainXp(char, rpg.xpNeed(1) + rpg.xpNeed(2)), 2);
   assert.deepStrictEqual([char.level, char.points], [3, 2]);
   assert.ok(rpg.xpFor("elite", 5) > rpg.xpFor("fight", 5) && rpg.xpFor("fight", 5) > rpg.xpFor("fight", 1));
-  // Talents: open at level 3 - one of two, for good
+  // Talents: open at level 3 - one of two; the other one later only as a change (swap, paid by the server)
   assert.match(rpg.pickTalent(hero, 1, "berserk"), /level 6/);
   assert.match(rpg.pickTalent(hero, 0, "nonsense"), /Unknown/);
+  assert.match(rpg.pickTalent(hero, 0, "ironskin", { swap: true }), /Pick a talent first/);
   assert.strictEqual(rpg.pickTalent(hero, 0, "ironskin"), null);
   assert.match(rpg.pickTalent(hero, 0, "rhythm"), /already/);
+  assert.match(rpg.pickTalent(hero, 0, "ironskin", { swap: true }), /have this talent already/);
+  assert.strictEqual(rpg.pickTalent(hero, 0, "rhythm", { swap: true, check: true }), null);
+  assert.strictEqual(char.talents[0], "ironskin", "a check changes nothing");
+  assert.strictEqual(rpg.pickTalent(hero, 0, "rhythm", { swap: true }), null);
+  assert.strictEqual(char.talents[0], "rhythm");
+  assert.strictEqual(rpg.pickTalent(hero, 0, "ironskin", { swap: true }), null);
+  assert.strictEqual(rpg.talentSwapPrice(hero), Math.round(((require("../game/config").RPG_TALENT_SWAP_PERCENT / 100) * rpg.entryCost(rpg.maxFloor(hero))) / 100) * 100);
   // (the class strength - the warrior breaks armor - and the talent)
   assert.deepStrictEqual(rpg.talentPerks(hero), { pierce: rpg.strengthOf("warrior", rpg.charOf(hero).level).perks.pierce, ...rpg.TALENTS.warrior[0][0].perks });
   // In a fight: the talent's block at the start, a relic's damage, an upgraded strike
@@ -692,6 +700,21 @@ test("rpg: alone - upgrades and potions cost test coins, the entry too; between 
   alice.emit("class", { id: "warrior" });
   const back = await waitFor(alice, "rpgHero", (view) => view.cls == "warrior");
   assert.strictEqual(back.levels.atk, 1);
+  // Talents: the first pick free, a change for coins
+  rpg.charOf(mine0, "warrior").level = 3;
+  alice.emit("talent", { tier: 0, id: "ironskin" });
+  await waitFor(alice, "rpgHero", (view) => view.talents[0] == "ironskin");
+  const beforeSwap = testMode.balance("rpg_alice");
+  assert.strictEqual(beforeSwap, coinsBefore - rpg.CLASS_PRICE);
+  // (the other one without the change: nothing happens, nothing paid)
+  alice.emit("talent", { tier: 0, id: "rhythm" });
+  await h.wait(50);
+  assert.strictEqual(rpg.charOf(mine0, "warrior").talents[0], "ironskin");
+  assert.strictEqual(testMode.balance("rpg_alice"), beforeSwap);
+  alice.emit("talent", { tier: 0, id: "rhythm", swap: true });
+  const swapped = await waitFor(alice, "rpgHero", (view) => view.talents[0] == "rhythm");
+  assert.strictEqual(testMode.balance("rpg_alice"), beforeSwap - swapped.talentSwapPrice);
+  assert.ok(swapped.talentSwapPrice > 0);
   // A floor not open yet
   const refused = h.once(alice, "rpgError");
   alice.emit("create", { floor: 2, size: 1 });
