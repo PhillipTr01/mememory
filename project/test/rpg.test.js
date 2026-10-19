@@ -2171,3 +2171,15 @@ test("rpg: disarming a trap - more luck helps, a deeper floor makes it harder, n
   assert.strictEqual(rpg.disarmChance({ luck: 200 }, 1), 85);
   assert.strictEqual(rpg.disarmChance({ luck: 0 }, 30), 10);
 });
+
+test("rpg: a hit that misses (dodged, faded) brings nothing of its card either - no poison, no stun", () => {
+  const run = duel("rogue", "defend", ["poisonblade", "poisonblade"]);
+  const foe = run.monsters[0];
+  foe.dodge = 1;
+  assert.strictEqual(rpg.play(run, "a", { uid: "t0", target: "m1" }), null);
+  assert.strictEqual(foe.hp, foe.maxHp, "dodged");
+  assert.strictEqual(foe.effects.poison, undefined, "no poison on a miss");
+  foe.dodge = 0;
+  rpg.play(run, "a", { uid: "t1", target: "m1" });
+  assert.ok(foe.hp < foe.maxHp && foe.effects.poison, "a hit poisons");
+});

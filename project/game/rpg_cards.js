@@ -419,7 +419,7 @@ const CLASS = {
     cutthroat: ["Cutthroat", "🔪", 2, "rare", [{ hit: 1.4, bonusIf: "chain", bonus: 2.8 }]],
     hiddenarmory: ["Hidden Armory", "🗄️", 1, "rare", [{ conjure: "shiv", n: 3 }], true],
     shadowplay: ["Shadow Play", "🃏", 0, "rare", [{ draw: 2 }, { conjure: "shiv", n: 1 }], true],
-    toxicrhythm: ["Toxic Rhythm", "🥁", 1, "rare", [{ status: "poison", turns: 3 }, { hit: 0.4, bonusIf: "chain", bonus: 1.2 }]],
+    toxicrhythm: ["Toxic Rhythm", "🥁", 1, "rare", [{ hit: 0.4, bonusIf: "chain", bonus: 1.2 }, { status: "poison", turns: 3 }]],
     momentum: ["Momentum", "🛼", 1, "rare", [{ mana: 1 }, { hit: 0.4, bonusIf: "chain", bonus: 1 }], true],
     venomshivs: ["Venom Shivs", "🐍", 1, "rare", [{ conjure: "shiv", n: 2 }, { status: "poison", turns: 2, to: "random" }]],
     crescendo: ["Crescendo", "🎻", 2, "rare", [{ hit: 0.6, to: "all", bonusIf: "chain", bonus: 1.2 }]],

@@ -2925,7 +2925,9 @@ function cardEffect(run, hero, id, { foe, foes, friend, fallen }, rng) {
   const venom = up * (1 + perk(hero, "poison"));
   const info = cardInfo(id);
   if (info.type != "attack") say(run, `${hero.name} plays ${info.icon} ${info.name}.`);
-  for (const fx of info.fx) playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, card: baseCard(id) }, rng);
+  // (the foes the card's hits all missed - its stun, poison, burn ... don't reach them either)
+  const missed = new Set();
+  for (const fx of info.fx) playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, card: baseCard(id), missed }, rng);
 }
 
 // The texts of cards with a character's numbers (its damage, block, healing) instead of the shares: {id: text}
@@ -2972,7 +2974,7 @@ function foeIs(m, state) {
   return !!m.effects[state];
 }
 
-function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, card }, rng) {
+function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, card, missed = new Set() }, rng) {
   const foesOf = (to) => {
     const standing = alive(run.monsters);
     if (to == "all") return standing;
@@ -3000,6 +3002,7 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
   if (fx.hit != null) {
     let dealt = 0;
     const consumed = new Set();
+    const landed = new Set();
     for (let i = 0; i < (fx.times || 1); i++) {
       for (const m of foesOf(fx.to)) {
         // (a mark of death: below the share - gone, not a boss)
@@ -3017,11 +3020,16 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
         // (damage of the block - at least the card's)
         if (fx.fromBlock) power = Math.max(power, hero.block / Math.max(1, hero.atk));
         // (a hit on every foe always lands - one on a single foe may be dodged, a fading foe dodges it for sure)
-        dealt += strike(run, hero, m, power * up, rng, { sure: fx.to == "all", aoe: fx.to == "all" });
+        const done = strike(run, hero, m, power * up, rng, { sure: fx.to == "all", aoe: fx.to == "all" });
+        dealt += done;
+        // (a miss: dodged, or it faded - no hit of this card landed on it yet)
+        if (done > 0) landed.add(m);
+        else if (!landed.has(m) && !m.down) missed.add(m);
         // (consume: the state the bonus asked for is used up by it - once every hit of the card is done)
         if (met && fx.consume) consumed.add(m);
       }
     }
+    for (const m of landed) missed.delete(m);
     for (const m of consumed) for (const k of fx.bonusIf.split(/[|&]/)) delete m.effects[k];
     // (drain: a share of the damage dealt heals - the hero, the weakest ally or the party)
     if (fx.drain && dealt > 0) for (const one of heroesOf(fx.drainTo || "self")) healHero(run, one, dealt * fx.drain, hero);
@@ -3046,6 +3054,8 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
     if (smite > 0 && standing.length && run.phase == "fight") for (const foe of standing) strike(run, hero, foe, (hero.maxHp * fx.heal * up * (1 + perk(hero, "heal")) * smite) / Math.max(1, hero.atk), rng, { sure: true, verb: "smites" });
   } else if (fx.status) {
     for (const m of foesOf(fx.to)) {
+      // (the hit of the card missed it: nothing sticks)
+      if (missed.has(m)) continue;
       if (fx.status == "poison") afflict(m, "poison", fx.turns || 3, Math.max(1, Math.round(hero.atk * 0.45 * venom * luckBoost(hero))), hero.name);
       else if (fx.status == "burn") afflict(m, "burn", fx.turns || 2, Math.max(1, Math.round(hero.atk * 0.3 * up * luckBoost(hero))), hero.name);
       else if (fx.status == "stun") stun(run, m, rng, hero);
