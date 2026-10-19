@@ -141,13 +141,13 @@ function cardEl(id, options) {
   return node;
 }
 
-// A card's text - "Exhaust" and "Mythic" (in the hand at the start of every fight) as a tag of their own
+// A card's text - "Exhaust" and "Mythic" as a tag of their own
 function cardText(card) {
   var box = el("span", "rpg-cardx-text", card.text.replace(/ ?(Exhaust|Mythic)\.$/, ""));
   var once = card.mythic || / Mythic\.$/.test(card.text);
   if (once || card.exhaust) {
     var tag = el("span", "rpg-cardx-tag " + (once ? "once" : "exhaust"), once ? "✦ Mythic" : "🔥 Exhaust");
-    tag.title = once ? "This card is in your hand at the start of every fight. Once played, it is gone until the fight ends." : "Once played, the card is gone until the fight ends.";
+    tag.title = once ? "Once played, the card is gone until the fight ends. A deck holds one mythic card." : "Once played, the card is gone until the fight ends.";
     box.appendChild(tag);
   }
   return box;
@@ -1947,7 +1947,9 @@ function renderBuilder() {
           var all = hero.collection[id] || 0;
           var owned = Math.min(all, rules.cardRarities[cardOf(id).rarity].copies);
           var spare = owned - (counts[id] || 0);
-          var full = deck.length >= hero.deckMax;
+          // (one mythic card in a deck: another one waits)
+          var mythicIn = cardOf(id).rarity == "mythic" && deck.some((one) => one.replace(/\+$/, "") != id && cardOf(one).rarity == "mythic");
+          var full = deck.length >= hero.deckMax || mythicIn;
           var node = cardEl(id, { base: true, act: spare > 0 && !full ? "deckAdd" : "", className: (owned ? "" : "unowned") + (spare > 0 && !full ? " pickable" : " spent") });
           if (spare > 0) node.dataset.drag = "in:" + id;
           node.draggable = spare > 0;
@@ -1955,7 +1957,7 @@ function renderBuilder() {
           for (var i = 0; i < Math.max(owned, 1); i++) pips.appendChild(el("i", i < (counts[id] || 0) ? "used" : i < owned ? "" : "none"));
           node.appendChild(pips);
           node.appendChild(el("span", "rpg-cardx-count", owned ? (counts[id] || 0) + " / " + owned + (all > owned ? " · +" + (all - owned) : "") : "🔒"));
-          node.title = !owned ? "Not owned yet." : spare <= 0 ? "All your copies are in the deck." : full ? "Your deck is full." : "Click or drag it into your deck.";
+          node.title = !owned ? "Not owned yet." : spare <= 0 ? "All your copies are in the deck." : mythicIn ? "Your deck already has a mythic card." : full ? "Your deck is full." : "Click or drag it into your deck.";
           // (a copy missing: made of dust - spare copies: to dust)
           // (craft mode: the actions under the card - it still goes into the deck by a click or a drag)
           if (craftMode) return craftCell(node, id);

@@ -82,13 +82,15 @@ const BASE = {
   blizzard: ["Blizzard", "🌨️", 2, "epic", [{ hit: 0.8, to: "all" }, { status: "chill", turns: 2, to: "all" }]],
   meteor: ["Meteor", "☄️", 3, "epic", [{ hit: 1.6, to: "all" }]],
   titanswrath: ["Titan's Wrath", "🌋", 2, "mythic", [{ hit: 3.5, to: "all" }], "mythic"],
-  divine: ["Divine Intervention", "👼", 1, "mythic", [{ block: 30, def: 1.5, to: "party" }, { taunt: true }], "mythic"],
-  resurrection: ["Resurrection", "🌅", 2, "mythic", [{ revive: 0.6, to: "all" }, { heal: 0.25, to: "party" }], "mythic"],
+  divine: ["Divine Intervention", "👼", 1, "mythic", [{ block: 30, def: 1.5 }, { taunt: true }, { thorns: 10, def: 1, turns: 1 }], "mythic", 1.8],
+  resurrection: ["Resurrection", "🌅", 2, "mythic", [{ revive: 0.6, to: "all" }, { heal: 0.25, to: "party" }], "mythic", 1.5],
   deathmark: ["Death Mark", "💀", 1, "mythic", [{ hit: 4, execute: 0.5 }], "mythic"],
   timewarp: ["Time Warp", "⏳", 0, "mythic", [{ mana: 4 }, { draw: 4 }], "mythic"],
 };
 
-// id: [name, icon, cost, rarity, fx, exhaust (true - or "mythic": in the hand from the start of every fight, once a fight)]
+// id: [name, icon, cost, rarity, fx, exhaust (true - or "mythic": gone for the fight once played, one mythic card in a deck),
+// boost (more or fewer numbers than the budget gives - for cards that do more or less in a fight than their budget
+// says: the Paladin's and the Cleric's mythic cards, ...)]
 const NEUTRAL = {
   jab: ["Jab", "🥊", 0, "common", [{ hit: 0.5 }]],
   // (combos: far harder after a skill this turn)
@@ -102,14 +104,14 @@ const NEUTRAL = {
   // (AURAS: lasting a few turns)
   steadybreath: ["Steady Breath", "🌬️", 1, "common", [{ aura: "focus", mana: 1, turns: 2 }], true],
   stoneskin: ["Stoneskin", "🪨", 1, "rare", [{ aura: "guard", block: 5, turns: 3 }]],
-  berserkerbrew: ["Berserker Brew", "🍷", 0, "legendary", [{ mana: 2 }, { might: 2 }], true],
+  berserkerbrew: ["Berserker Brew", "🍷", 0, "legendary", [{ mana: 1 }, { might: 2 }], true],
   goldenstrike: ["Golden Strike", "🏆", 3, "legendary", [{ hit: 2.5 }, { draw: 1 }]],
   wish: ["Wish", "🌟", 0, "mythic", [{ heal: 0.3 }, { mana: 2 }, { draw: 3 }], "mythic"],
   kick: ["Kick", "🦵", 1, "common", [{ hit: 0.8 }, { status: "chill", turns: 1 }]],
   smokebomb: ["Smoke Bomb", "💨", 1, "rare", [{ block: 8 }, { status: "chill", turns: 1, to: "all" }]],
   whirlingsteel: ["Whirling Steel", "🌪️", 2, "epic", [{ hit: 0.8, to: "all" }, { draw: 1 }]],
   ironskin: ["Iron Skin", "🧥", 1, "epic", [{ block: 14, def: 1 }, { heal: 0.05 }]],
-  secondbreath: ["Second Breath", "🫁", 0, "epic", [{ mana: 1 }, { heal: 0.08 }, { draw: 1 }], true],
+  secondbreath: ["Second Breath", "🫁", 0, "epic", [{ mana: 1 }, { heal: 0.08 }], true],
   huntersmark: ["Hunter's Mark", "🎯", 1, "epic", [{ hit: 1 }, { status: "stun" }]],
   command: ["Warlord's Command", "📯", 1, "legendary", [{ might: 3, to: "party" }, { draw: 2, to: "party" }], true],
   titangrip: ["Titan Grip", "🗿", 3, "legendary", [{ hit: 1.8 }, { block: 12, def: 1 }]],
@@ -145,7 +147,7 @@ const CLASS = {
     demonform: ["Demon Form", "👹", 1, "legendary", [{ might: 4 }, { mana: 1 }], true],
     bludgeon: ["Bludgeon", "🏏", 3, "legendary", [{ hit: 3.2 }]],
     earthshaker: ["Earthshaker", "🌍", 3, "legendary", [{ hit: 1.6, to: "all" }, { status: "stun", to: "all" }], true],
-    lastbastion: ["Last Bastion", "🛡️", 2, "legendary", [{ block: 20, def: 2 }, { might: 2 }]],
+    lastbastion: ["Last Bastion", "🛡️", 2, "legendary", [{ block: 20, def: 2 }, { might: 2 }], false, 1.5],
     ragnarok: ["Ragnarok", "⚡", 3, "mythic", [{ hit: 2, to: "all", times: 2 }], "mythic"],
     undyingrage: ["Undying Rage", "😡", 1, "mythic", [{ heal: 0.4 }, { might: 3 }, { mana: 2 }], "mythic"],
     doublechop: ["Double Chop", "🪓", 1, "rare", [{ hit: 0.7, times: 2 }]],
@@ -158,7 +160,7 @@ const CLASS = {
     rageburst: ["Rage Burst", "💢", 1, "epic", [{ hit: 1.3, bonusIf: "low", bonus: 2.6 }]],
     rallyingcry: ["Rallying Cry", "📣", 1, "epic", [{ block: 6, to: "party" }, { might: 1, to: "party" }]],
     ironcharge: ["Iron Charge", "🐎", 2, "epic", [{ hit: 1.6 }, { status: "stun" }]],
-    warlord: ["Warlord", "🪖", 2, "legendary", [{ hit: 1.4, to: "all" }, { might: 2, to: "party" }]],
+    warlord: ["Warlord", "🪖", 2, "legendary", [{ hit: 1.4, to: "all" }, { might: 2, to: "party" }], false, 1.4],
     skullsplitter: ["Skullsplitter", "⛏️", 3, "legendary", [{ hit: 3 }, { status: "stun" }]],
     // (4 mana)
     titansfall: ["Titan's Fall", "🏔️", 4, "legendary", [{ hit: 2, to: "all" }, { status: "stun", to: "all" }], true],
@@ -179,7 +181,7 @@ const CLASS = {
     crushingblow: ["Crushing Blow", "💥", 2, "rare", [{ hit: 1.6, bonusIf: "exposed", bonus: 2.8 }]],
     mortalstrike: ["Mortal Strike", "🗡️", 2, "rare", [{ hit: 1.4 }, { status: "exposed", turns: 2 }, { draw: 1 }]],
     intimidate: ["Intimidate", "👺", 1, "rare", [{ status: "exposed", turns: 2, to: "all" }, { block: 5, def: 0.5 }]],
-    savagebite: ["Savage Bite", "🐻", 1, "rare", [{ hit: 1, drain: 0.4, bonusIf: "low", bonus: 1.8 }]],
+    savagebite: ["Savage Bite", "🐻", 1, "rare", [{ hit: 1, drain: 0.4, bonusIf: "low", bonus: 1.8 }], false, 0.75],
     splitapart: ["Split Apart", "🪚", 2, "rare", [{ hit: 0.9, to: "all" }, { status: "exposed", turns: 1, to: "all" }]],
     bonebreaker: ["Bonebreaker", "🦴", 1, "rare", [{ hit: 1.2, bonusIf: "exposed", bonus: 2.4, consume: true }]],
     bloodfeast: ["Blood Feast", "🍖", 2, "rare", [{ hit: 0.8, to: "all", drain: 0.25 }]],
@@ -203,7 +205,7 @@ const CLASS = {
     eternalwar: ["Eternal War", "🏹", 2, "mythic", [{ hit: 3, drain: 1 }, { might: 3 }], "mythic"],
   },
   paladin: {
-    zeal: ["Zeal", "🔥", 0, "common", [{ mana: 1 }, { block: 3, def: 0.5 }], true],
+    zeal: ["Zeal", "🔥", 0, "common", [{ mana: 1 }, { lose: 0.03 }], true],
     devotionaura: ["Devotion Aura", "🔆", 1, "rare", [{ aura: "guard", block: 4, def: 0.5, turns: 3, to: "party" }]],
     shieldslam: ["Shield Slam", "🔘", 1, "common", [{ hit: 0.6, def: 1 }]],
     guard: ["Guard", "🚧", 1, "common", [{ block: 7, def: 1, to: "ally" }]],
@@ -227,8 +229,8 @@ const CLASS = {
     verdict: ["Final Verdict", "🏛️", 3, "legendary", [{ hit: 2, def: 1, bonusIf: "stun|undead", bonus: 3 }]],
     oath: ["Crusader's Oath", "📯", 2, "legendary", [{ block: 12, def: 1, to: "party" }, { taunt: true }], true],
     justice: ["Hammer of Justice", "🛕", 2, "legendary", [{ hit: 2.2, def: 1 }, { status: "stun" }]],
-    aegisgods: ["Aegis of the Gods", "🌐", 2, "mythic", [{ block: 40, def: 1, to: "party" }], "mythic"],
-    holyavenger: ["Holy Avenger", "🗡️", 2, "mythic", [{ hit: 3, def: 2 }, { block: 15, def: 1, to: "party" }], "mythic"],
+    aegisgods: ["Aegis of the Gods", "🌐", 2, "mythic", [{ block: 25, def: 1 }, { aura: "guard", block: 12, def: 0.6, turns: 3 }], "mythic", 1.8],
+    holyavenger: ["Holy Avenger", "🗡️", 2, "mythic", [{ hit: 3, def: 2 }, { block: 15, def: 1 }], "mythic", 1.4],
     hallowedshield: ["Hallowed Shield", "🛡️", 1, "rare", [{ block: 8, def: 1, to: "ally" }]],
     smiteevil: ["Shield Toss", "🥏", 1, "rare", [{ hit: 0.8, def: 0.6, bonusIf: "stun|undead", bonus: 1.8 }]],
     standfirm: ["Stand Firm", "🗿", 1, "rare", [{ taunt: true }, { block: 6, def: 1 }]],
@@ -279,8 +281,8 @@ const CLASS = {
     eternalguard: ["Eternal Guard", "🛡️", 2, "legendary", [{ block: 14, def: 1.5, to: "party" }, { thorns: 4, def: 0.4, turns: 2, to: "party" }]],
     sunshield: ["Sun Shield", "☀️", 1, "legendary", [{ block: 10, def: 1.2 }, { hit: 0.7, def: 0.4, to: "all" }]],
     avengingwrath: ["Avenging Wrath", "🪽", 4, "legendary", [{ hit: 1.4, def: 1, to: "all", bonusIf: "guarded", bonus: 2.2 }, { taunt: true }]],
-    thornheart: ["Thornheart", "❤️‍🔥", 2, "mythic", [{ thorns: 15, def: 1.5, turns: 4, to: "party" }, { block: 20, def: 1, to: "party" }], "mythic"],
-    hammerofdawn: ["Hammer of Dawn", "🔨", 3, "mythic", [{ hit: 4, def: 2, bonusIf: "guarded", bonus: 6 }, { taunt: true }], "mythic"],
+    thornheart: ["Thornheart", "❤️‍🔥", 2, "mythic", [{ thorns: 15, def: 1.5, turns: 4 }, { block: 20, def: 1 }], "mythic", 1.8],
+    hammerofdawn: ["Hammer of Dawn", "🔨", 3, "mythic", [{ block: 15, def: 1 }, { hit: 4, def: 2, bonusIf: "guarded", bonus: 6 }, { taunt: true }], "mythic", 1.3],
   },
   cleric: {
     renewalaura: ["Aura of Renewal", "🌿", 1, "rare", [{ aura: "regen", heal: 0.05, turns: 3, to: "party" }]],
@@ -306,8 +308,8 @@ const CLASS = {
     ascension: ["Ascension", "👑", 2, "legendary", [{ mana: 2 }, { draw: 2 }, { heal: 0.1, to: "party" }], true],
     beacon: ["Beacon of Light", "🗼", 2, "legendary", [{ heal: 0.2, to: "party" }, { block: 8, to: "party" }]],
     dawnbreak: ["Dawnbreak", "🌄", 2, "legendary", [{ hit: 1.2, to: "all", bonusIf: "undead", bonus: 3 }, { heal: 0.08, to: "party" }]],
-    saintsgrace: ["Saint's Grace", "💖", 2, "mythic", [{ heal: 0.5, to: "party" }, { might: 2, to: "party" }], "mythic"],
-    rapture: ["Rapture", "🪐", 2, "mythic", [{ hit: 2, to: "all" }, { heal: 0.2, to: "party" }], "mythic"],
+    saintsgrace: ["Saint's Grace", "💖", 2, "mythic", [{ heal: 0.5, to: "party" }, { might: 2, to: "party" }], "mythic", 1.5],
+    rapture: ["Rapture", "🪐", 2, "mythic", [{ hit: 2, to: "all" }, { heal: 0.2, to: "party" }], "mythic", 1.5],
     prayerbeads: ["Prayer Beads", "📿", 1, "common", [{ heal: 0.06 }, { draw: 1 }]],
     soothe: ["Soothe", "🌿", 1, "rare", [{ heal: 0.1, to: "ally" }]],
     holyspark: ["Holy Spark", "✨", 1, "rare", [{ hit: 0.9 }, { heal: 0.04 }]],
@@ -318,7 +320,7 @@ const CLASS = {
     sanctuarylight: ["Sanctuary Light", "🕊️", 1, "epic", [{ block: 8, to: "ally" }, { heal: 0.08, to: "ally" }]],
     lastrites: ["Last Rites", "🪦", 3, "epic", [{ hit: 1.6, bonusIf: "undead", bonus: 3.2 }]],
     blessedwater: ["Blessed Water", "💧", 0, "epic", [{ heal: 0.1, to: "ally" }, { mana: 1 }], true],
-    divinehymn: ["Divine Hymn", "🎶", 3, "legendary", [{ heal: 0.2, to: "party" }, { block: 6, to: "party" }]],
+    divinehymn: ["Divine Hymn", "🎶", 3, "legendary", [{ heal: 0.2, to: "party" }, { block: 6, to: "party" }], false, 1.5],
     heavenswrath: ["Wrath of Heaven", "🌤️", 3, "legendary", [{ hit: 1.3, to: "all", bonusIf: "undead", bonus: 2.6 }, { heal: 0.08 }]],
     // (4 mana)
     sacredflame: ["Sacred Flame", "🕯️", 4, "epic", [{ hit: 2.2, bonusIf: "undead", bonus: 4.4 }, { heal: 0.12, to: "party" }]],
@@ -358,8 +360,8 @@ const CLASS = {
     holystorm: ["Holy Storm", "🌪️", 2, "legendary", [{ hit: 0.6, to: "random", times: 4, drain: 0.3, drainTo: "weakest" }]],
     divinemandate: ["Divine Mandate", "🎗️", 2, "legendary", [{ hit: 2, bonusIf: "healed", bonus: 3.6 }]],
     lifebloom: ["Lifebloom", "🌸", 1, "legendary", [{ aura: "regen", heal: 0.07, turns: 3, to: "party" }, { cleanse: true, to: "party" }], true],
-    dayoflight: ["Day of Light", "🔆", 2, "mythic", [{ hit: 2.5, to: "all", drain: 0.6, drainTo: "party" }], "mythic"],
-    eternallight: ["Eternal Light", "🕯️", 1, "mythic", [{ heal: 0.4, to: "party" }, { aura: "regen", heal: 0.08, turns: 4, to: "party" }], "mythic"],
+    dayoflight: ["Day of Light", "🔆", 2, "mythic", [{ hit: 2.5, to: "all", drain: 0.6, drainTo: "party" }], "mythic", 1.3],
+    eternallight: ["Eternal Light", "🕯️", 1, "mythic", [{ heal: 0.4, to: "party" }, { aura: "regen", heal: 0.08, turns: 4, to: "party" }], "mythic", 1.5],
   },
   rogue: {
     preparation: ["Preparation", "🎒", 0, "common", [{ mana: 1 }, { block: 3, agi: 0.2 }], true],
@@ -376,7 +378,7 @@ const CLASS = {
     bladedance: ["Blade Dance", "💃", 1, "rare", [{ hit: 0.35, to: "random", times: 4 }]],
     noxious: ["Noxious Fumes", "🌫️", 1, "rare", [{ status: "poison", turns: 3, to: "all" }]],
     ambush: ["Ambush", "🌑", 2, "rare", [{ hit: 2, bonusIf: "poison|stun", bonus: 3 }]],
-    vanish: ["Vanish", "🫥", 1, "rare", [{ evade: true }, { draw: 2 }], true],
+    vanish: ["Vanish", "🫥", 1, "rare", [{ evade: true }, { draw: 1 }], true],
     crippling: ["Crippling Cloud", "☁️", 2, "rare", [{ status: "poison", turns: 3, to: "all" }, { draw: 1 }]],
     footwork: ["Footwork", "👟", 1, "rare", [{ block: 5, agi: 1 }, { might: 1 }]],
     rush: ["Adrenaline Rush", "⚡", 0, "epic", [{ mana: 1 }, { draw: 2 }], true],
@@ -411,7 +413,7 @@ const CLASS = {
     tempo: ["Tempo", "⏱️", 0, "common", [{ hit: 0.3, bonusIf: "chain", bonus: 0.9 }, { draw: 1 }]],
     taintedblade: ["Tainted Blade", "🦠", 1, "common", [{ conjure: "shiv", n: 1 }, { status: "poison", turns: 2 }]],
     countercut: ["Counter Cut", "🔁", 1, "common", [{ block: 4, agi: 0.5 }, { hit: 0.5, bonusIf: "chain", bonus: 1.2 }]],
-    pocketsand: ["Pocket Sand", "🏖️", 0, "common", [{ status: "chill", turns: 1 }, { conjure: "shiv", n: 1 }]],
+    pocketsand: ["Pocket Sand", "🏖️", 1, "common", [{ status: "chill", turns: 1 }, { conjure: "shiv", n: 1 }]],
     combination: ["Combination", "🔢", 1, "common", [{ hit: 0.4, times: 2, bonusIf: "chain", bonus: 0.9 }]],
     bleedout: ["Bleed Out", "🩸", 1, "common", [{ hit: 0.6, bonusIf: "chain", bonus: 1 }, { status: "poison", turns: 2 }]],
     bladefan: ["Blade Fan", "🎐", 2, "rare", [{ hit: 0.5, to: "all" }, { conjure: "shiv", n: 2 }]],
@@ -421,7 +423,7 @@ const CLASS = {
     shadowplay: ["Shadow Play", "🃏", 0, "rare", [{ draw: 2 }, { conjure: "shiv", n: 1 }], true],
     toxicrhythm: ["Toxic Rhythm", "🥁", 1, "rare", [{ hit: 0.4, bonusIf: "chain", bonus: 1.2 }, { status: "poison", turns: 3 }]],
     momentum: ["Momentum", "🛼", 1, "rare", [{ mana: 1 }, { hit: 0.4, bonusIf: "chain", bonus: 1 }], true],
-    venomshivs: ["Venom Shivs", "🐍", 1, "rare", [{ conjure: "shiv", n: 2 }, { status: "poison", turns: 2, to: "random" }]],
+    venomshivs: ["Venom Shivs", "🐍", 1, "rare", [{ conjure: "shiv", n: 1 }, { status: "poison", turns: 2, to: "random" }]],
     crescendo: ["Crescendo", "🎻", 2, "rare", [{ hit: 0.6, to: "all", bonusIf: "chain", bonus: 1.2 }]],
     ricochet: ["Ricochet", "🏓", 1, "rare", [{ hit: 0.4, to: "random", times: 2 }, { conjure: "shiv", n: 1 }]],
     thousandcuts: ["Thousand Cuts", "🌫️", 2, "epic", [{ hit: 0.3, to: "random", times: 5, bonusIf: "chain", bonus: 0.55 }]],
@@ -624,7 +626,7 @@ function phrase(fx, n) {
   return "";
 }
 
-// (exhaust: true - gone for the fight; "mythic" - in the hand from the start of every fight, gone for it once played)
+// (exhaust: true - gone for the fight; "mythic" - gone for the fight too, one in a deck)
 // (n: the numbers of a character - its damage, block, healing - instead of the shares)
 function textOf(fx, exhaust, n) {
   const text = fx.map((one) => phrase(one, n)).filter(Boolean).join(", ");
@@ -688,13 +690,13 @@ function worth(fx) {
 
 // What a card may be worth: its cost (a 0 cost card a bit), more the rarer, more when it is gone after one play
 const RARITY_POWER = { basic: 1, common: 1, rare: 1.15, epic: 1.3, legendary: 1.5, mythic: 2 };
-function budget(cost, rarity, exhaust) {
-  return (Math.max(cost, 0.6) + 0.15) * RARITY_POWER[rarity] * (exhaust === true ? 1.3 : 1) * (exhaust == "mythic" ? 1.5 : 1);
+function budget(cost, rarity, exhaust, boost = 1) {
+  return (Math.max(cost, 0.6) + 0.15) * RARITY_POWER[rarity] * (exhaust === true ? 1.3 : 1) * (exhaust == "mythic" ? 1.5 : 1) * boost;
 }
 
 // The damage, block and healing of a card scaled to its budget (at most 0.6x to 1.8x what was written) - cards
 // that are mostly mana, cards or states stay as they are
-function balanced(fx, cost, rarity, exhaust) {
+function balanced(fx, cost, rarity, exhaust, boost) {
   // (a block with nothing of the hero's stats in it: a part of the armor too - it grows with the character, as Defend
   // does; a pack card is never worse than a basic one later on)
   if (rarity != "basic") fx = fx.map((one) => (one.block != null && !one.def && !one.atk && !one.agi ? { ...one, block: Math.max(2, Math.round(one.block * 0.7)), def: 1 } : one));
@@ -702,7 +704,7 @@ function balanced(fx, cost, rarity, exhaust) {
   const scaled = parts.reduce((sum, p) => sum + p.scaled, 0);
   const fixed = parts.reduce((sum, p) => sum + p.fixed, 0);
   if (scaled < 0.5 || rarity == "basic") return fx;
-  const k = Math.max(0.6, Math.min(1.8, (budget(cost, rarity, exhaust) - fixed) / scaled));
+  const k = Math.max(0.6, Math.min(1.8 * (boost || 1), (budget(cost, rarity, exhaust, boost) - fixed) / scaled));
   const round = (value, step) => Math.round(value / step) * step;
   return fx.map((one) => {
     const out = { ...one };
@@ -722,10 +724,10 @@ function balanced(fx, cost, rarity, exhaust) {
 // The cards: {id: card} - with their rarity, the class ones per class, the neutral ones
 function build(list, cls) {
   const cards = {};
-  for (const [id, [name, icon, cost, rarity, written, exhaust]] of Object.entries(list)) {
+  for (const [id, [name, icon, cost, rarity, written, exhaust, boost]] of Object.entries(list)) {
     const owner = cls || Object.keys(BASE_OWNER).find((one) => BASE_OWNER[one].includes(id));
     defWorth = (DEF_WORTH[owner] && DEF_WORTH[owner][rarity]) || 0.3;
-    const fx = balanced(written, cost, rarity, exhaust);
+    const fx = balanced(written, cost, rarity, exhaust, boost);
     defWorth = 0.3;
     cards[id] = { name, icon, cost, type: fx.some((one) => one.hit != null) ? "attack" : fx.some((one) => one.aura || (one.might != null && one.might > 1)) ? "aura" : "skill", target: targetOf(fx), exhaust: exhaust === true, mythic: exhaust == "mythic", rarity, fx, text: textOf(fx, exhaust) };
   }

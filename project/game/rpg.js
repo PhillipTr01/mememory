@@ -708,6 +708,12 @@ function charOf(hero, cls = hero.cls) {
     char.ruled = true;
     char.deck = deckCut(char.deck);
   }
+  // (decks from before the rule of one mythic card: cut to it)
+  if (!char.oneMythic) {
+    char.oneMythic = true;
+    char.deck = deckCut(char.deck);
+    if (char.decks) char.decks = char.decks.map((deck) => (deck ? deckCut(deck) : deck));
+  }
   // (a character from before the guard cards: its two copies - an untouched starter deck takes them in)
   const guard = CLASSES[cls] && CLASSES[cls].guard;
   const opener = CLASSES[cls] && CLASSES[cls].opener;
@@ -759,10 +765,11 @@ function usable(char, id) {
 }
 
 // The rule of a deck, per card: a basic card up to 4 times, a legendary or mythic one once, any other twice (an
-// upgraded copy counts as the card) -> an error or null for one more of the card
+// upgraded copy counts as the card) - one mythic card in a deck at most -> an error or null for one more of the card
 function deckRule(deck, id) {
   const card = CARDS[baseCard(id)];
   if (!card) return "Unknown card.";
+  if (card.rarity == "mythic" && deck.some((one) => baseCard(one) != baseCard(id) && CARDS[baseCard(one)] && CARDS[baseCard(one)].rarity == "mythic")) return "Only one mythic card fits in a deck.";
   const copies = CARD_RARITIES[card.rarity].copies;
   if (deck.filter((one) => baseCard(one) == baseCard(id)).length >= copies) return copies == 1 ? `Only one ${card.name} fits in a deck.` : `At most ${copies} of ${card.name} in a deck.`;
   return null;
@@ -1682,7 +1689,7 @@ const DEPTH_EXTRA = 0.015;
 // The difficulty of the floors on top: [floor, power] - between two of them evenly (fitted with the simulator, its
 // deck built as a player builds it: the classes on their stat curve clear about three runs of four up to floor 14,
 // two of three from floor 16 on - a character behind its curve falls off fast down there)
-const FLOOR_POWER = [[1, 2.239], [2, 3.01], [4, 3.03], [8, 2.43], [12, 2], [14, 2], [16, 2.8], [18, 2.93], [20, 2.37], [22, 2.15], [24, 2.13], [26, 2.12], [28, 2.14], [30, 1.71]];
+const FLOOR_POWER = [[1, 2.239], [2, 2.9], [4, 3.1], [8, 2.28], [12, 1.85], [14, 1.86], [16, 3.04], [18, 2.95], [20, 2.39], [22, 2.28], [24, 2.21], [26, 2.37], [28, 2.25], [30, 1.75]];
 function floorPower(floor, points = FLOOR_POWER) {
   if (floor <= points[0][0]) return points[0][1];
   for (let i = 1; i < points.length; i++) {
@@ -2100,9 +2107,8 @@ function enterRoom(run, door = 0, rng = Math.random) {
     run.phase = "fight";
     run.turn = 0;
     for (const hero of run.heroes) {
-      // (a mythic card isn't drawn: it is in the hand from the start of every fight - once played, gone for the fight)
-      hero.draw = shuffle(hero.deck.filter((id) => !cardInfo(id).mythic), rng);
-      hero.hand = hero.deck.filter((id) => cardInfo(id).mythic).map((id) => ({ uid: "c" + ++cardCount, id }));
+      hero.draw = shuffle([...hero.deck], rng);
+      hero.hand = [];
       hero.discard = [];
       hero.exhausted = [];
       hero.effects = {};
@@ -2633,8 +2639,7 @@ function startRound(run, rng) {
       aura.turns--;
     }
     if (hero.auras) hero.auras = hero.auras.filter((aura) => aura.turns > 0);
-    // (a mythic card in the hand takes none of the draws)
-    drawCards(hero, Math.max(0, HAND + perk(hero, "draw") - hero.hand.filter((c) => !cardInfo(c.id).mythic).length), rng);
+    drawCards(hero, Math.max(0, HAND + perk(hero, "draw") - hero.hand.length), rng);
   }
   planIntents(run, rng);
 }
@@ -3649,8 +3654,8 @@ function cardWorth(id, me, states = new Set()) {
     else if (f.lose != null) value -= me.maxHp * f.lose * 0.5;
     else if (f.evade) value += me.maxHp * 0.1;
   }
-  // (once a fight: worth less than a card that comes back - a mythic one less so, it is in the hand from the start)
-  return (value / Math.max(0.75, card.cost)) * (card.mythic ? 0.7 : card.exhaust ? 0.5 : 1);
+  // (once a fight: worth less than a card that comes back)
+  return (value / Math.max(0.75, card.cost)) * (card.exhaust || card.mythic ? 0.5 : 1);
 }
 const cycler = (id) => {
   const card = CARDS[baseCard(id)];
@@ -3809,6 +3814,7 @@ module.exports = {
   winFight,
   LOOT_CARD,
   deckRule,
+  deckCut,
   cardInfo,
   xpNeed,
   xpFor,
