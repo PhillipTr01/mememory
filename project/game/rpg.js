@@ -1679,10 +1679,10 @@ const RANKS = {
 // How much harder a floor is than the first: evenly, like a character's stats grow (its group a bit more or less)
 // (deeper down a character has better gear, talents and cards too: the monsters a bit more on top - DEPTH_EXTRA a floor)
 const DEPTH_EXTRA = 0.015;
-// The difficulty of the floors on top: [floor, power] - between two of them evenly (fitted with the simulator: the
-// classes on their stat curve clear about three runs of four up to floor 14, down to two of three at floor 30 - a
-// character behind its curve falls off fast down there)
-const FLOOR_POWER = [[1, 2.239], [2, 2.688], [4, 2.238], [8, 2.241], [12, 1.793], [14, 1.699], [16, 2.45], [18, 2.35], [20, 2.2], [22, 2.2], [24, 2.15], [26, 1.75], [28, 1.72], [30, 1.42]];
+// The difficulty of the floors on top: [floor, power] - between two of them evenly (fitted with the simulator, its
+// deck built as a player builds it: the classes on their stat curve clear about three runs of four up to floor 14,
+// two of three from floor 16 on - a character behind its curve falls off fast down there)
+const FLOOR_POWER = [[1, 2.239], [2, 3.01], [4, 3.03], [8, 2.43], [12, 2], [14, 2], [16, 2.8], [18, 2.93], [20, 2.37], [22, 2.15], [24, 2.13], [26, 2.12], [28, 2.14], [30, 1.71]];
 function floorPower(floor, points = FLOOR_POWER) {
   if (floor <= points[0][0]) return points[0][1];
   for (let i = 1; i < points.length; i++) {
@@ -3517,7 +3517,18 @@ function simulatedTurn(run, me, rng) {
       if (card.target == "fallen" && !fallen) continue;
       if (smokeLocked(run, me, card)) continue;
       const up = isUpgraded(c.id) ? UPGRADE : 1;
-      const foe = card.fx.some((f) => f.status == "stun" && !f.to) ? worst : target;
+      // (a free card that draws or gives mana: first - what it brings may be played this turn)
+      if (cycler(c.id) && me.hand.length < HAND_MAX && (me.draw.length || card.fx.some((f) => f.mana))) {
+        best = { c, card, foe: target, score: Infinity };
+        break;
+      }
+      // (a hit with a bonus: on a foe that meets it - a stun: on the foe that hurts most)
+      const cond = card.fx.find((f) => f.bonusIf && f.hit != null);
+      const ready = cond && foes.filter((m) => meets(me, m, cond.bonusIf)).sort((x, y) => x.hp - y.hp)[0];
+      const foe = ready || (card.fx.some((f) => f.status == "stun" && !f.to) ? worst : target);
+      // (the other cards of the hand still playable after this one - setup first, what profits from it after)
+      const after = me.hand.filter((o) => o !== c && cardInfo(o.id).cost <= me.energy - card.cost).map((o) => cardInfo(o.id));
+      const hitOf = (o) => o.fx.reduce((sum, f) => sum + (f.hit != null ? (me.atk * f.hit + (f.def || 0) * me.def) * (f.times || 1) * (f.to == "all" ? foes.length : 1) : 0), 0);
       let value = 0;
       let blocked = 0;
       for (const f of card.fx) {
@@ -3532,7 +3543,7 @@ function simulatedTurn(run, me, rng) {
         if (f.hit != null) {
           for (const m of many) {
             const cond = f.bonusIf && meets(me, m, f.bonusIf);
-            const dmg = me.atk * (cond ? f.bonus : f.hit) * (f.times || 1) * up * (1 - (m.armor || 0) * Math.max(0, 1 - perk(me, "pierce"))) * (m.effects.exposed ? EXPOSED : 1);
+            const dmg = (me.atk * (cond ? f.bonus : f.hit) + (f.def || 0) * me.def) * (f.times || 1) * up * (1 - (m.armor || 0) * Math.max(0, 1 - perk(me, "pierce"))) * (m.effects.exposed ? EXPOSED : 1);
             value += Math.min(dmg, m.hp) + (dmg >= m.hp ? threat(m) : 0) + (f.drain ? Math.min(dmg, m.hp) * f.drain * 0.5 : 0);
           }
         } else if (f.block != null) {
@@ -3541,12 +3552,16 @@ function simulatedTurn(run, me, rng) {
           blocked += amount;
         } else if (f.heal != null) value += Math.min(me.maxHp * f.heal * up, ally.maxHp - ally.hp) * (ally.hp < ally.maxHp / 2 ? 1.2 : 0.6) + me.maxHp * f.heal * up * perk(me, "healHit");
         else if (f.status == "poison" || f.status == "burn") value += many.length * me.atk * 0.4 * (f.turns || 2);
-        else if (f.status == "stun") value += f.to == "all" ? foes.reduce((sum, m) => sum + stunnable(m), 0) : stunnable(foe);
+        else if (f.status == "stun") {
+          value += f.to == "all" ? foes.reduce((sum, m) => sum + stunnable(m), 0) : stunnable(foe);
+          // (what a bonus on a stunned foe adds - a card of the hand played after it)
+          if (!foe.effects.stun) for (const o of after) for (const g of o.fx) if (g.bonusIf && g.hit != null && g.bonusIf.split("|").includes("stun")) value += me.atk * (g.bonus - g.hit) * (g.times || 1) * 0.5;
+        }
         else if (f.status == "chill") value += (f.to == "all" ? foes.reduce((sum, m) => sum + threat(m), 0) : threat(foe)) * 0.4;
         else if (f.status == "exposed") value += many.filter((m) => m && !m.effects.exposed).length * me.atk * 0.35 * (f.turns || 2);
         else if (f.thorns != null) value += (f.thorns + (f.def || 0) * me.def) * up * Math.min(f.turns, 2) * foes.length * 0.5 * (f.to == "party" ? alive(run.heroes).length : 1);
         else if (f.conjure) value += me.atk * 0.45 * f.n;
-        else if (f.might != null) value += me.atk * 0.3 * f.might * (me.effects && me.effects.might ? 0.8 : 1);
+        else if (f.might != null) value += me.effects && me.effects.might ? me.atk * 0.2 * f.might : me.atk * 0.3 * f.might + after.reduce((sum, o) => sum + hitOf(o) * 0.3, 0);
         else if (f.draw != null) value += me.atk * 0.4 * f.draw;
         else if (f.mana != null) value += me.atk * 0.8 * f.mana;
         else if (f.lose != null) value -= me.maxHp * f.lose * 0.5;
@@ -3557,6 +3572,8 @@ function simulatedTurn(run, me, rng) {
         else if (f.extend != null || f.amplify) value += foes.some((m) => m.effects.poison) ? me.atk : 0;
       }
       // (a once-a-run card: kept for a hard fight - an exhausting one a bit less eager)
+      // (a bonus not met yet that a stun of the hand would meet: wait for it)
+      if (cond && !ready && cond.bonusIf.split("|").includes("stun") && after.some((o) => o.fx.some((f) => f.status == "stun"))) value *= 0.4;
       if (card.mythic) value *= run.monsters.some((m) => m.rank != "normal") ? 1 : 0.3;
       else if (card.exhaust) value *= 0.85;
       const score = value / Math.max(0.5, card.cost);
@@ -3612,6 +3629,61 @@ function simDoor(run, rng = Math.random) {
   return best;
 }
 
+// A deck as a player builds it (the simulations): the owned cards valued for this hero in a typical fight - the best
+// of them, as few as the deck allows. Free cards that draw or give mana and are gone once played make up half of it:
+// they thin the deck in a fight, the strong cards come back every turn
+function cardWorth(id, me, states = new Set()) {
+  const card = CARDS[baseCard(id)];
+  let value = 0;
+  for (const f of card.fx) {
+    const many = f.to == "all" ? 2.5 : 1;
+    if (f.aura) value += (f.aura == "guard" ? (f.block + (f.def || 0) * me.def + (f.atk || 0) * me.atk + (f.agi || 0) * me.agi) * 0.7 : f.aura == "regen" ? me.maxHp * f.heal * 0.5 : me.atk * f.mana * 0.6) * f.turns;
+    else if (f.hit != null) value += me.atk * ((f.bonusIf ? (f.bonusIf.split("|").some((k) => states.has(k)) ? f.hit * 0.3 + f.bonus * 0.7 : f.hit * 0.6 + f.bonus * 0.4) : f.hit) + ((f.def || 0) * me.def) / Math.max(1, me.atk)) * (f.times || 1) * many;
+    else if (f.block != null) value += (f.block + (f.def || 0) * me.def + (f.atk || 0) * me.atk + (f.agi || 0) * me.agi) * 0.7;
+    else if (f.heal != null) value += me.maxHp * f.heal * (0.6 * (1 + perk(me, "heal")) + perk(me, "healHit") * 2.5);
+    else if (f.status == "poison" || f.status == "burn") value += many * me.atk * 0.4 * (f.turns || 2);
+    else if (f.status == "stun") value += many * Math.max(me.atk * 1.2, me.maxHp * 0.08);
+    else if (f.status == "chill") value += many * me.atk * 0.5;
+    else if (f.status == "exposed") value += me.atk * 0.35 * (f.turns || 2);
+    else if (f.thorns != null) value += (f.thorns + (f.def || 0) * me.def) * Math.min(f.turns, 3);
+    else if (f.might != null) value += me.atk * 0.6 * f.might;
+    else if (f.conjure) value += me.atk * 0.45 * f.n;
+    else if (f.draw != null) value += me.atk * 0.5 * f.draw;
+    else if (f.mana != null) value += me.atk * f.mana;
+    else if (f.lose != null) value -= me.maxHp * f.lose * 0.5;
+    else if (f.evade) value += me.maxHp * 0.1;
+  }
+  // (once a fight or once a run: worth less than a card that comes back)
+  return (value / Math.max(0.75, card.cost)) * (card.mythic ? 0.3 : card.exhaust ? 0.5 : 1);
+}
+const cycler = (id) => {
+  const card = CARDS[baseCard(id)];
+  return card.cost == 0 && card.exhaust && card.fx.some((f) => f.draw || f.mana) && !card.fx.some((f) => f.hit != null);
+};
+function simDeck(hero, owned, rng = Math.random) {
+  const run = newRun(1, [{ name: "sim", hero }], rng);
+  const me = run.heroes[0];
+  const { min } = deckLimits(hero);
+  // (the states the owned cards bring: a card with a bonus on one of them is worth more)
+  const states = new Set();
+  for (const id of owned) for (const f of CARDS[baseCard(id)].fx) if (f.status) states.add(f.status);
+  const worth = Object.fromEntries(owned.map((id) => [id, cardWorth(id, me, states)]));
+  const ranked = [...new Set(owned)].sort((a, b) => worth[b] - worth[a]);
+  const deck = [];
+  const add = (ids, most) => {
+    for (const id of ids) for (let copy = owned.filter((one) => one == id).length; copy > 0 && deck.length < most && !deckRule(deck, id); copy--) deck.push(id);
+  };
+  // (the free ones up to half the deck - then the strongest, at least half of the rest hitting, two against the hits:
+  // block, an aura, thorns or a heal)
+  const hits = (id) => CARDS[baseCard(id)].fx.some((f) => f.hit != null);
+  const guards = (id) => CARDS[baseCard(id)].fx.some((f) => f.block != null || f.aura == "guard" || f.aura == "regen" || f.thorns != null || f.heal != null);
+  add(ranked.filter(cycler), Math.floor(min * 0.5));
+  add(ranked.filter((id) => !cycler(id) && hits(id)), deck.length + Math.ceil((min - deck.length) / 2));
+  add(ranked.filter((id) => !cycler(id) && guards(id)), deck.length + 2);
+  add(ranked.filter((id) => !cycler(id)), min);
+  return deck;
+}
+
 function simulate(hero, floor, runs = 500, rng = Math.random) {
   let cleared = 0;
   let back = 0;
@@ -3633,6 +3705,7 @@ function simulate(hero, floor, runs = 500, rng = Math.random) {
 }
 
 module.exports = {
+  simDeck,
   DUST,
   dustable,
   dustList,

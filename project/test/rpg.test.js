@@ -137,7 +137,7 @@ test("rpg: a new hero clears floor 1 most of the time but not floor 8 - upgrades
   const strong = rpg.newHero("warrior");
   for (const id of rpg.STAT_IDS) rpg.charOf(strong).levels[id] = 70;
   const deep = rpg.simulate(strong, 8, 200);
-  assert.ok(deep.cleared > 0.9, JSON.stringify(deep));
+  assert.ok(deep.cleared > 0.8, JSON.stringify(deep));
   assert.ok(deep.payback > 2 && deep.payback < 2.9, JSON.stringify(deep));
 });
 
@@ -1171,9 +1171,10 @@ test("rpg: balance - every class on the curve of its floor clears early, mid and
           break;
         }
       }
+    // (the cards it owns: some of the floor's - its deck built from them as a player builds it)
     const pool = rpg.poolOf(cls).filter((id) => rarities(floor).includes(rpg.CARDS[id].rarity) && rpg.CARDS[id].cost < 4);
-    char.deck = pool.sort(() => rng() - 0.5).slice(0, floor <= 3 ? 4 : 15);
-    if (floor <= 3) char.deck.unshift(...rpg.starterDeck(cls).slice(0, 8));
+    const owned = pool.sort(() => rng() - 0.5).slice(0, 40).flatMap((id) => [id, id]);
+    char.deck = rpg.simDeck(hero, floor <= 3 ? [...rpg.starterDeck(cls), ...owned.slice(0, 12)] : owned, rng);
     return hero;
   }
   // (96 runs each: a few lucky or unlucky ones don't tip it)
