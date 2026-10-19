@@ -2231,7 +2231,7 @@ test("rpg: the warrior's Spikebreaker talent halves what a spiked foe reflects",
     foe.traits = ["spiked"];
     foe.hp = foe.maxHp = 100000;
     Object.assign(me, { def: 0, block: 0, atk: 500, hp: 5000, maxHp: 5000 });
-    if (guard) me.perks.spikeGuard = rpg.TALENTS.warrior[7][1].perks.spikeGuard;
+    if (guard) me.perks.spikeGuard = rpg.TALENTS.warrior[3][1].perks.spikeGuard;
     rpg.play(run, "a", { uid: "t0", target: "m1" }, seeded(4));
     return (5000 - me.hp) / (foe.maxHp - foe.hp);
   };
