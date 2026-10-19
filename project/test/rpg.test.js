@@ -2157,6 +2157,9 @@ test("rpg: cards sold - 75% of their trade value, only spare copies unless asked
   assert.deepStrictEqual(rpg.sellCards(hero, [{ cls: "warrior", id: "impervious", n: 1 }, { cls: "warrior", id: "ironwave", n: 2, any: true }]), { coins: 6000 + 2 * rpg.sellPrice(rpg.CARDS.ironwave.rarity) });
   assert.deepStrictEqual([char.collection.impervious, char.collection.ironwave], [2, 1]);
   assert.match(rpg.sellCards(hero, []).error, /Pick/);
+  char.collection.impervious = 4;
+  assert.deepStrictEqual(rpg.dustCards(hero, [{ cls: "warrior", id: "impervious", n: 2 }]), { dust: 2 * rpg.DUST.epic.get });
+  assert.strictEqual(char.collection.impervious, 2);
 });
 test("rpg: no death time - a party down is back right away", () => {
   const before = config.RPG_DEATH_TIME;

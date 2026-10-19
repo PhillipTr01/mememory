@@ -1956,10 +1956,11 @@ function renderBuilder() {
   if (craftMode && picks.length) {
     var pickCount = picks.reduce((sum, one) => sum + one.n, 0);
     var pickCoins = picks.reduce((sum, one) => sum + one.n * ((rules.sell || {})[cardOf(one.id).rarity] || 0), 0);
+    var pickDust = picks.reduce((sum, one) => sum + one.n * ((((rules.dust || {})[cardOf(one.id).rarity] || {}).get) || 0), 0);
     var pickText = el("span", "rpg-spare-text");
-    pickText.append(el("b", "", "☑ " + pickCount + " card" + (pickCount == 1 ? "" : "s") + " picked"), el("span", "mm-muted small", "They are sold together."));
+    pickText.append(el("b", "", "☑ " + pickCount + " card" + (pickCount == 1 ? "" : "s") + " picked"), el("span", "mm-muted small", "Sell or dust them together."));
     var pickActs = el("div", "rpg-spare-acts");
-    pickActs.append(button("Clear", "sellPickClear", { className: "small" }), button("🪙 Sell picked · " + formatCoins(pickCoins), "sellPicked", { className: "small rpg-craft-btn sell" }));
+    pickActs.append(button("Clear", "sellPickClear", { className: "small" }), button("💨 Dust picked · +" + pickDust, "dustPicked", { className: "small rpg-craft-btn dust" }), button("🪙 Sell picked · " + formatCoins(pickCoins), "sellPicked", { className: "small rpg-craft-btn sell" }));
     morphChildren(spareBar, [pickText, pickActs]);
   } else if (craftMode && spareCount) {
     var spareDust = spares.reduce((sum, one) => sum + one.dust, 0);
@@ -3444,6 +3445,22 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
   } else if (act == "sellPickClear") {
     sellPick = {};
     render();
+  } else if (act == "dustPicked") {
+    var dustList = pickedCards();
+    var dustTotal = dustList.reduce((sum, one) => sum + one.n * ((((rules.dust || {})[cardOf(one.id).rarity] || {}).get) || 0), 0);
+    var dustCount = dustList.reduce((sum, one) => sum + one.n, 0);
+    var dustNeeded = dustList.some((one) => one.any);
+    confirmDialog({
+      title: "Dust " + dustCount + " card" + (dustCount == 1 ? "" : "s") + "?",
+      text: "You get " + dustTotal + " dust." + (dustNeeded ? " Some of these copies are not spare and leave every deck that uses them." : ""),
+      confirmLabel: "Dust them",
+      danger: dustNeeded,
+    }).then((sure) => {
+      if (!sure) return;
+      socket.emit("dustMany", { cards: dustList });
+      sellPick = {};
+      render();
+    });
   } else if (act == "sellPicked") {
     var list = pickedCards();
     var total = list.reduce((sum, one) => sum + one.n * ((rules.sell || {})[cardOf(one.id).rarity] || 0), 0);

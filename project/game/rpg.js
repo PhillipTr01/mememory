@@ -1307,18 +1307,24 @@ function sellCard(hero, cls, id, n = 1, any = false) {
   return { coins: n * sellPrice(CARDS[id].rarity) };
 }
 
-// Several cards sold at once ([{cls, id, n, any}]) -> {error} or {coins}: all of them or none
-function sellCards(hero, list) {
-  if (!Array.isArray(list) || !list.length) return { error: "Pick the cards to sell." };
+// Several cards sold or dusted at once ([{cls, id, n, any}]) -> {error} or what they gave: all of them or none
+function takeCards(hero, list, take, verb) {
+  if (!Array.isArray(list) || !list.length) return { error: `Pick the cards to ${verb}.` };
   const test = JSON.parse(JSON.stringify(hero));
   for (const one of list) {
     if (!one || !CLASS_IDS.includes(one.cls) || !CARDS[one.id]) return { error: "Unknown card." };
-    const done = sellCard(test, one.cls, one.id, one.n, one.any === true);
+    const done = take(test, one.cls, one.id, one.n, one.any === true);
     if (done.error) return { error: `${CARDS[one.id].name}: ${done.error}` };
   }
-  let coins = 0;
-  for (const one of list) coins += sellCard(hero, one.cls, one.id, one.n, one.any === true).coins;
-  return { coins };
+  return list.map((one) => take(hero, one.cls, one.id, one.n, one.any === true));
+}
+function sellCards(hero, list) {
+  const done = takeCards(hero, list, sellCard, "sell");
+  return done.error ? done : { coins: done.reduce((sum, one) => sum + one.coins, 0) };
+}
+function dustCards(hero, list) {
+  const done = takeCards(hero, list, dustCard, "dust");
+  return done.error ? done : { dust: done.reduce((sum, one) => sum + one.dust, 0) };
 }
 
 // Every spare card sold at once -> the coins
@@ -3753,6 +3759,7 @@ module.exports = {
   sellPrice,
   sellCard,
   sellCards,
+  dustCards,
   sellAll,
   craftCard,
   resetHero,

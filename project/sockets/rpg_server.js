@@ -806,10 +806,17 @@ module.exports = function (io, options = {}) {
       sendHero(username);
     });
 
-    // Cards picked in craft mode, sold together
+    // Cards picked in craft mode, sold or dusted together
+    const picked = (data) => (Array.isArray(data && data.cards) ? data.cards.slice(0, 500).map((one) => ({ cls: String(one && one.cls), id: String(one && one.id), n: Number(one && one.n), any: !!one && one.any === true })) : []);
+    on("dustMany", (data) => {
+      if (inRun()) return error("Not during a run.");
+      const done = rpg.dustCards(heroOf(username), picked(data));
+      if (done.error) return error(done.error);
+      sendHero(username);
+    });
     on("sellMany", async (data) => {
       if (inRun()) return error("Not during a run.");
-      const list = Array.isArray(data && data.cards) ? data.cards.slice(0, 500).map((one) => ({ cls: String(one.cls), id: String(one.id), n: Number(one.n), any: one.any === true })) : [];
+      const list = picked(data);
       const done = rpg.sellCards(heroOf(username), list);
       if (done.error) return error(done.error);
       if (done.coins > 0 && ours(username)) await coins.add(username, done.coins, { reason: "rpg card sale", note: list.length + " cards" });
