@@ -1383,22 +1383,10 @@ function showBoard(title, sub, nodes) {
 
 /* ---------- The card shop: booster packs of the base set ---------- */
 
-// The chance of every rarity on a card of a pack (not the guaranteed ones) - by the weights of my class's cards
-function packOdds(pack) {
-  var shares = {};
-  var cards = hero.pool.filter((id) => cardOf(id).rarity != "basic");
-  // (every card of the pack: the last ones only of their rarity or better)
-  for (var i = 0; i < pack.size; i++) {
-    var better = i >= pack.size - pack.better;
-    var choices = cards.filter((id) => !better || RARITY_ORDER.indexOf(cardOf(id).rarity) >= RARITY_ORDER.indexOf(pack.least));
-    var weights = choices.map((id) => rules.cardRarities[cardOf(id).rarity].weight * (pack.boost[cardOf(id).rarity] || 1));
-    var total = weights.reduce((a, b) => a + b, 0);
-    choices.forEach((id, j) => {
-      var rarity = cardOf(id).rarity;
-      shares[rarity] = (shares[rarity] || 0) + (weights[j] / total / pack.size) * 100;
-    });
-  }
-  return RARITY_ORDER.filter((r) => shares[r]).map((r) => [r, shares[r]]);
+// The chance of every rarity on a card of a pack - the server's numbers, as the packs draw them (they add up to 100)
+function packOdds(id) {
+  var odds = (hero.packOdds || {})[id] || {};
+  return RARITY_ORDER.filter((r) => odds[r]).map((r) => [r, odds[r]]);
 }
 
 var cart = {}; // the shop's cart: {pack id: count}
@@ -1509,9 +1497,9 @@ function renderShop() {
       var pack = rules.packs[id];
       var tile = el("div", "rpg-pack-tile tier-" + id);
       var odds = el("div", "rpg-pack-odds");
-      packOdds(pack).forEach(([rarity, pct]) => {
+      packOdds(id).forEach(([rarity, pct]) => {
         var row = el("div", "rpg-odd rarity-" + rarity);
-        row.append(el("span", "", rules.cardRarities[rarity].name), el("b", "", (pct < 0.1 ? pct.toFixed(2) : pct < 1 ? pct.toFixed(1) : Math.round(pct)) + "%"));
+        row.append(el("span", "", rules.cardRarities[rarity].name), el("b", "", pct + "%"));
         odds.appendChild(row);
       });
       var inCart = cart[id] || 0;

@@ -2130,6 +2130,24 @@ test("rpg: thorns grow with the whole armor - gear included - and the run shows 
   assert.ok(rpg.thornsOf(run.heroes[0]) > rpg.thornsOf(bare));
   assert.strictEqual(rpg.runView(run).heroes[0].thorns, rpg.thornsOf(run.heroes[0]));
 });
+test("rpg: pack odds add up to 100% and match what the packs draw; about 1 Mythic Pack in 80 has a mythic card", () => {
+  const hero = rpg.newHero("paladin");
+  for (const id of rpg.PACK_IDS) {
+    const odds = rpg.packOdds(hero, id);
+    assert.strictEqual(Math.round(Object.values(odds).reduce((a, b) => a + b, 0) * 100), 10000, id);
+  }
+  const rng = seeded32(9);
+  let cards = 0, legendary = 0, withMythic = 0;
+  const packs = 20000;
+  for (let i = 0; i < packs; i++) {
+    const got = rpg.openPack(rpg.newHero("paladin"), rng, "mythic").map((c) => rpg.CARDS[c.id].rarity);
+    cards += got.length;
+    legendary += got.filter((r) => r == "legendary").length;
+    if (got.includes("mythic")) withMythic++;
+  }
+  assert.ok(Math.abs((legendary / cards) * 100 - rpg.packOdds(hero, "mythic").legendary) < 1);
+  assert.ok(packs / withMythic > 65 && packs / withMythic < 100, String(packs / withMythic));
+});
 test("rpg: cards sold - 75% of their trade value, only spare copies unless asked, never starter ones", () => {
   assert.deepStrictEqual(["common", "rare", "epic", "legendary", "mythic"].map(rpg.sellPrice), [300, 1500, 6000, 24000, 96000]);
   // (a pack sold whole: always less than it cost - buying packs to sell them never pays)

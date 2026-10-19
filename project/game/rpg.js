@@ -191,7 +191,7 @@ function deckMax() {
 const PACKS = {
   standard: { name: "Base Set Pack", icon: "🎴", about: "5 cards. The last one is rare or better.", get price() { return config.RPG_PACK_STANDARD; }, size: 5, better: 1, least: "rare", boost: { epic: 0.7, legendary: 0.5, mythic: 0.5 } },
   premium: { name: "Hero Pack", icon: "💎", about: "5 cards, all rare or better, with more epics.", get price() { return config.RPG_PACK_PREMIUM; }, size: 5, better: 5, least: "rare", boost: { epic: 2, legendary: 2.1 } },
-  mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards, all epic or better.", get price() { return config.RPG_PACK_MYTHIC; }, size: 4, better: 4, least: "epic", boost: { legendary: 1.5, mythic: 3 } },
+  mythic: { name: "Mythic Pack", icon: "🌟", about: "4 cards, all epic or better.", get price() { return config.RPG_PACK_MYTHIC; }, size: 4, better: 4, least: "epic", boost: { legendary: 1.5, mythic: 1.7 } },
 };
 // A dust is worth this many coins: a card is made for its value in dust (dust only makes cards - packs are bought
 // with coins)
@@ -867,6 +867,30 @@ function openPack(hero, rng = Math.random, packId = "standard") {
   return cards;
 }
 
+// The chance of every rarity on a card of a pack, as openPack draws them (the whole set, the own class's cards twice as
+// likely) -> {rarity: %} - rounded to the shown digits so they add up to exactly 100
+function packOdds(hero, packId) {
+  const pack = PACKS[packId];
+  const own = new Set(hero.cls ? poolOf(hero.cls) : []);
+  const pool = Object.keys(CARDS).filter((id) => CARDS[id].rarity != "basic");
+  const shares = {};
+  for (let i = 0; i < pack.size; i++) {
+    const better = i >= pack.size - pack.better;
+    const choices = pool.filter((id) => !better || RARITY_RANK.indexOf(CARDS[id].rarity) >= RARITY_RANK.indexOf(pack.least));
+    const weights = choices.map((id) => CARD_RARITIES[CARDS[id].rarity].weight * (pack.boost[CARDS[id].rarity] || 1) * (own.has(id) ? OWN_PACK_WEIGHT : 1));
+    const total = weights.reduce((a, b) => a + b, 0);
+    choices.forEach((id, j) => (shares[CARDS[id].rarity] = (shares[CARDS[id].rarity] || 0) + (weights[j] / total / pack.size) * 100));
+  }
+  // (the digits: enough for the smallest one - then the biggest remainders get the last steps)
+  const smallest = Math.min(...Object.values(shares));
+  const digits = smallest < 0.1 ? 2 : smallest < 1 ? 1 : 0;
+  const step = 10 ** digits;
+  const rows = RARITY_RANK.filter((r) => shares[r]).map((r) => ({ r, n: Math.floor(shares[r] * step), rest: shares[r] * step - Math.floor(shares[r] * step) }));
+  let left = 100 * step - rows.reduce((sum, row) => sum + row.n, 0);
+  for (const row of [...rows].sort((a, b) => b.rest - a.rest)) if (left-- > 0) row.n++;
+  return Object.fromEntries(rows.map((row) => [row.r, Number((row.n / step).toFixed(digits))]));
+}
+
 // A class unlocked (and played) - the price is the server's business
 // (a new character: a Hero Pack and two Base Set Packs to start with - opened, their cards are the character's)
 const START_PACKS = [["premium", 1], ["standard", 2]];
@@ -1127,6 +1151,7 @@ function heroView(hero) {
     cls: hero.cls,
     unlocked: hero.unlocked,
     classPrice: classPrice(hero),
+    packOdds: Object.fromEntries(PACK_IDS.map((id) => [id, packOdds(hero, id)])),
     chars: Object.fromEntries(hero.unlocked.map((id) => [id, { level: charOf(hero, id).level, deepest: charOf(hero, id).deepest, deadFor: deadFor(hero, Date.now(), id) }])),
     levels: { ...newChar().levels, ...char.levels },
     stats: statsOf(hero),
@@ -3772,6 +3797,7 @@ module.exports = {
   sellPrice,
   sellCard,
   sellCards,
+  packOdds,
   dustCards,
   sellAll,
   craftCard,
