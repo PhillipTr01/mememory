@@ -2100,8 +2100,9 @@ function enterRoom(run, door = 0, rng = Math.random) {
     run.phase = "fight";
     run.turn = 0;
     for (const hero of run.heroes) {
-      hero.draw = shuffle([...hero.deck], rng);
-      hero.hand = [];
+      // (a mythic card isn't drawn: it is in the hand from the start of every fight - once played, gone for the fight)
+      hero.draw = shuffle(hero.deck.filter((id) => !cardInfo(id).mythic), rng);
+      hero.hand = hero.deck.filter((id) => cardInfo(id).mythic).map((id) => ({ uid: "c" + ++cardCount, id }));
       hero.discard = [];
       hero.exhausted = [];
       hero.effects = {};
@@ -2632,7 +2633,8 @@ function startRound(run, rng) {
       aura.turns--;
     }
     if (hero.auras) hero.auras = hero.auras.filter((aura) => aura.turns > 0);
-    drawCards(hero, Math.max(0, HAND + perk(hero, "draw") - hero.hand.length), rng);
+    // (a mythic card in the hand takes none of the draws)
+    drawCards(hero, Math.max(0, HAND + perk(hero, "draw") - hero.hand.filter((c) => !cardInfo(c.id).mythic).length), rng);
   }
   planIntents(run, rng);
 }
@@ -2891,11 +2893,6 @@ function play(run, name, input, rng = Math.random) {
   if (card.target == "fallen" && !fallen) return "Nobody to bring back.";
   hero.energy -= card.cost;
   const [{ id, temp }] = hero.hand.splice(index, 1);
-  // (mythic: once per run - out of the run's deck)
-  if (card.mythic) {
-    const at = hero.deck.indexOf(id);
-    if (at >= 0) hero.deck.splice(at, 1);
-  }
   // (the first attack of the turn: the perks for it)
   hero.firstAttack = card.type == "attack" && !hero.attacked;
   if (card.type == "attack") hero.attacked = true;
@@ -3571,11 +3568,10 @@ function simulatedTurn(run, me, rng) {
         else if (f.cleanse) value += ally.effects.poison || ally.effects.burn ? me.atk : 0;
         else if (f.extend != null || f.amplify) value += foes.some((m) => m.effects.poison) ? me.atk : 0;
       }
-      // (a once-a-run card: kept for a hard fight - an exhausting one a bit less eager)
       // (a bonus not met yet that a stun of the hand would meet: wait for it)
       if (cond && !ready && cond.bonusIf.split("|").includes("stun") && after.some((o) => o.fx.some((f) => f.status == "stun"))) value *= 0.4;
-      if (card.mythic) value *= run.monsters.some((m) => m.rank != "normal") ? 1 : 0.3;
-      else if (card.exhaust) value *= 0.85;
+      // (a card gone for the fight once played: a bit less eager)
+      if (card.exhaust || card.mythic) value *= 0.85;
       const score = value / Math.max(0.5, card.cost);
       if (value > 0 && (!best || score > best.score)) best = { c, card, foe, score };
     }
@@ -3653,8 +3649,8 @@ function cardWorth(id, me, states = new Set()) {
     else if (f.lose != null) value -= me.maxHp * f.lose * 0.5;
     else if (f.evade) value += me.maxHp * 0.1;
   }
-  // (once a fight or once a run: worth less than a card that comes back)
-  return (value / Math.max(0.75, card.cost)) * (card.mythic ? 0.3 : card.exhaust ? 0.5 : 1);
+  // (once a fight: worth less than a card that comes back - a mythic one less so, it is in the hand from the start)
+  return (value / Math.max(0.75, card.cost)) * (card.mythic ? 0.7 : card.exhaust ? 0.5 : 1);
 }
 const cycler = (id) => {
   const card = CARDS[baseCard(id)];

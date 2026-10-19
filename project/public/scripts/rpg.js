@@ -141,13 +141,13 @@ function cardEl(id, options) {
   return node;
 }
 
-// A card's text - "Exhaust" and "Once a run" as a tag of their own
+// A card's text - "Exhaust" and "Mythic" (in the hand at the start of every fight) as a tag of their own
 function cardText(card) {
   var box = el("span", "rpg-cardx-text", card.text.replace(/ ?(Exhaust|Mythic)\.$/, ""));
   var once = card.mythic || / Mythic\.$/.test(card.text);
   if (once || card.exhaust) {
-    var tag = el("span", "rpg-cardx-tag " + (once ? "once" : "exhaust"), once ? "✦ Once a run" : "🔥 Exhaust");
-    tag.title = once ? "Can be played once per run." : "Once played, the card is gone until the fight ends.";
+    var tag = el("span", "rpg-cardx-tag " + (once ? "once" : "exhaust"), once ? "✦ Mythic" : "🔥 Exhaust");
+    tag.title = once ? "This card is in your hand at the start of every fight. Once played, it is gone until the fight ends." : "Once played, the card is gone until the fight ends.";
     box.appendChild(tag);
   }
   return box;

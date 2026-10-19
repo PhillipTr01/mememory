@@ -88,7 +88,7 @@ const BASE = {
   timewarp: ["Time Warp", "⏳", 0, "mythic", [{ mana: 4 }, { draw: 4 }], "mythic"],
 };
 
-// id: [name, icon, cost, rarity, fx, exhaust (true - or "mythic": once a run)]
+// id: [name, icon, cost, rarity, fx, exhaust (true - or "mythic": in the hand from the start of every fight, once a fight)]
 const NEUTRAL = {
   jab: ["Jab", "🥊", 0, "common", [{ hit: 0.5 }]],
   // (combos: far harder after a skill this turn)
@@ -624,7 +624,7 @@ function phrase(fx, n) {
   return "";
 }
 
-// (exhaust: true - gone for the fight; "mythic" - gone for the run)
+// (exhaust: true - gone for the fight; "mythic" - in the hand from the start of every fight, gone for it once played)
 // (n: the numbers of a character - its damage, block, healing - instead of the shares)
 function textOf(fx, exhaust, n) {
   const text = fx.map((one) => phrase(one, n)).filter(Boolean).join(", ");

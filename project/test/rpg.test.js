@@ -448,7 +448,7 @@ test("rpg: progression - XP and hero levels (a stat point each), talents at 3/6/
   assert.ok(rpg.monstersFor(1, 1, "elite").every((m) => !m.affix));
 });
 
-test("rpg: collection and deck - the starter deck owned, packs bring cards (duplicates kept), the deck from 10 to deckMax, mythic cards once a run", () => {
+test("rpg: collection and deck - the starter deck owned, packs bring cards (duplicates kept), the deck from 10 to deckMax, mythic cards once a fight, in the hand from the start", () => {
   const hero = rpg.newHero("rogue");
   const char = rpg.charOf(hero);
   assert.deepStrictEqual([hero.packs.premium, hero.packs.standard], [1, 2], "a Hero Pack and two Base Set Packs to start with");
@@ -538,16 +538,19 @@ test("rpg: collection and deck - the starter deck owned, packs bring cards (dupl
   assert.strictEqual(all.cards.length, 4 * 5 + 4);
   assert.deepStrictEqual([hero.packs.standard, hero.packs.mythic], [0, 0]);
   assert.match(rpg.openAll(hero), /No packs/);
-  // A mythic card: played once - gone from the run's deck
+  // A mythic card: in the hand from the start of every fight (none of the 5 draws) - played: gone for the fight
   const run = rpg.newRun(1, [{ name: "a", hero }]);
+  run.heroes[0].deck.push("timewarp");
   rpg.enterRoom(run, 0);
   const me = run.heroes[0];
-  me.deck.push("timewarp");
-  me.hand = [{ uid: "e", id: "timewarp" }];
+  assert.strictEqual(me.hand.filter((c) => c.id == "timewarp").length, 1);
+  assert.strictEqual(me.hand.length, 6);
+  assert.ok(!me.draw.includes("timewarp"));
+  const uid = me.hand.find((c) => c.id == "timewarp").uid;
   const mana = me.energy;
-  assert.strictEqual(rpg.play(run, "a", { uid: "e" }), null);
+  assert.strictEqual(rpg.play(run, "a", { uid }), null);
   assert.strictEqual(me.energy, mana + 4);
-  assert.ok(!me.deck.includes("timewarp") && me.exhausted.includes("timewarp"));
+  assert.ok(me.deck.includes("timewarp") && me.exhausted.includes("timewarp") && !me.hand.some((c) => c.id == "timewarp"));
   assert.ok(!char.deck.includes("timewarp"), "the character's deck stays as it was");
 });
 
