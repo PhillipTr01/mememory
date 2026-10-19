@@ -1705,10 +1705,11 @@ const RANKS = {
 // How much harder a floor is than the first: evenly, like a character's stats grow (its group a bit more or less)
 // (deeper down a character has better gear, talents and cards too: the monsters a bit more on top - DEPTH_EXTRA a floor)
 const DEPTH_EXTRA = 0.015;
-// The difficulty of the floors on top: [floor, power] - every floor its own (fitted with the simulator and player-built
-// decks: a class on its stat curve clears floor 1 in about 80% of runs, every floor a bit less, floor 30 about 40%;
+// The difficulty of the floors on top: [floor, power] - every floor its own (fitted with the simulator and the strongest
+// decks a character's cards make: a class on its stat curve clears floor 2 in about 70% of runs, floor 30 about 25% -
+// floor 1 kept for a new character with the starter deck: about 60%;
 // the classes even on every floor by CLASS_FLOOR - a character behind its curve falls off fast down there)
-const FLOOR_POWER = [[1, 2.2], [2, 2.86], [3, 2.57], [4, 3.04], [5, 3.19], [6, 2.47], [7, 2.39], [8, 2.48], [9, 2.48], [10, 2.5], [11, 2.1], [12, 2.1], [13, 2.08], [14, 2.07], [15, 2.12], [16, 3.19], [17, 3.17], [18, 3.23], [19, 3.25], [20, 2.59], [21, 2.53], [22, 2.56], [23, 2.52], [24, 2.66], [25, 2.19], [26, 2.75], [27, 2.79], [28, 2.71], [29, 2.73], [30, 2.08]];
+const FLOOR_POWER = [[1, 2.4], [2, 2.94], [3, 2.84], [4, 3.41], [5, 3.52], [6, 2.71], [7, 2.67], [8, 2.8], [9, 2.69], [10, 2.71], [11, 2.36], [12, 2.41], [13, 2.45], [14, 2.35], [15, 2.5], [16, 4.04], [17, 3.99], [18, 4.29], [19, 4.24], [20, 3], [21, 3.19], [22, 3.19], [23, 3.17], [24, 3.43], [25, 2.72], [26, 3.55], [27, 3.48], [28, 3.43], [29, 3.47], [30, 2.68]];
 function floorPower(floor, points = FLOOR_POWER) {
   if (floor <= points[0][0]) return points[0][1];
   for (let i = 1; i < points.length; i++) {
