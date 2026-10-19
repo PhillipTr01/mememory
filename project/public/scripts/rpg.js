@@ -235,6 +235,7 @@ var trades = [];
 var deckMenu = false; // the deck builder's deck dropdown open
 var playerMenu = false; // the trade's player dropdown open
 var craftMode = false;
+var sellPick = {}; // craft mode: cards picked to sell together - "cls|id" -> copies
 // // the deck builder in craft mode: cards made and dusted, not built into the deck
 var tradePlayers = [];
 var tradeWith = "";
@@ -1781,6 +1782,20 @@ var byRarity = (a, b) => RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.i
 var byCost = (a, b) => cardOf(a).cost - cardOf(b).cost || RARITY_ORDER.indexOf(cardOf(a).rarity) - RARITY_ORDER.indexOf(cardOf(b).rarity) || cardOf(a).name.localeCompare(cardOf(b).name);
 
 // Craft mode: a card with what can be done with it under it - made of dust, or a spare copy dusted
+// The cards picked to sell, as they can still be sold -> [{cls, id, n, any}] (copies gone meanwhile: fewer)
+function pickedCards() {
+  var list = [];
+  Object.keys(sellPick).forEach((key) => {
+    var [cls, id] = key.split("|");
+    var any = (hero.dustAny || []).find((one) => one.cls == cls && one.id == id);
+    var spare = (hero.dustable || []).find((one) => one.cls == cls && one.id == id);
+    var n = Math.min(sellPick[key], any ? any.n : 0);
+    if (n > 0) list.push({ cls: cls, id: id, n: n, any: n > (spare ? spare.n : 0) });
+    else delete sellPick[key];
+  });
+  return list;
+}
+
 function craftCell(card, id) {
   var info = cardOf(id);
   var cost = rules.dust[info.rarity] || {};
@@ -1810,6 +1825,15 @@ function craftCell(card, id) {
     var sell = button("🪙 Sell · " + formatCoins(price), spare ? "sellOne" : "sellNeeded", { id: from ? from.cls + "|" + id : "", className: "rpg-craft-btn sell", disabled: !from });
     sell.title = from ? "Sell one copy for " + formatCoins(price) + " coins, " + rules.sellShare + "% of its trade value." : have ? "Starter copies can't be sold." : "You have no copy to sell.";
     buttons.appendChild(sell);
+    // (picked to sell with others: every click one copy more, past the last one off again)
+    if (from) {
+      var key = from.cls + "|" + id;
+      var picked = sellPick[key] || 0;
+      var pick = button(picked ? "☑ ×" + picked : "☐ Pick", "sellPick", { id: key, className: "rpg-craft-btn pick" + (picked ? " on" : "") });
+      pick.title = picked < from.n ? "Pick a copy to sell together with other cards." : "Click again to unpick it.";
+      buttons.appendChild(pick);
+      if (picked) cell.classList.add("picked");
+    }
   }
   bar.appendChild(buttons);
   cell.append(card, bar);
@@ -1927,8 +1951,17 @@ function renderBuilder() {
   var spares = hero.dustable || [];
   var spareCount = spares.reduce((sum, one) => sum + one.n, 0);
   var spareBar = document.getElementById("rpgSpareBar");
-  spareBar.hidden = !craftMode || !spareCount;
-  if (craftMode && spareCount) {
+  var picks = pickedCards();
+  spareBar.hidden = !craftMode || (!spareCount && !picks.length);
+  if (craftMode && picks.length) {
+    var pickCount = picks.reduce((sum, one) => sum + one.n, 0);
+    var pickCoins = picks.reduce((sum, one) => sum + one.n * ((rules.sell || {})[cardOf(one.id).rarity] || 0), 0);
+    var pickText = el("span", "rpg-spare-text");
+    pickText.append(el("b", "", "☑ " + pickCount + " card" + (pickCount == 1 ? "" : "s") + " picked"), el("span", "mm-muted small", "They are sold together."));
+    var pickActs = el("div", "rpg-spare-acts");
+    pickActs.append(button("Clear", "sellPickClear", { className: "small" }), button("🪙 Sell picked · " + formatCoins(pickCoins), "sellPicked", { className: "small rpg-craft-btn sell" }));
+    morphChildren(spareBar, [pickText, pickActs]);
+  } else if (craftMode && spareCount) {
     var spareDust = spares.reduce((sum, one) => sum + one.dust, 0);
     var spareCoins = spares.reduce((sum, one) => sum + one.n * ((rules.sell || {})[cardOf(one.id).rarity] || 0), 0);
     var spareText = el("span", "rpg-spare-text");
@@ -3401,6 +3434,32 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     var price = (rules.sell || {})[sellInfo.rarity] || 0;
     if (act == "sellOne") socket.emit("sell", { cls: sellCls, id: sellId, n: 1 });
     else confirmDialog({ title: "Sell " + sellInfo.name + "?", text: "This copy is not spare. It leaves every deck that uses it and you get 🪙 " + formatCoins(price) + ", " + rules.sellShare + "% of its trade value.", confirmLabel: "Sell it", danger: true }).then((sure) => sure && socket.emit("sell", { cls: sellCls, id: sellId, n: 1, any: true }));
+  } else if (act == "sellPick") {
+    var [pickCls, pickId] = id.split("|");
+    var most = ((hero.dustAny || []).find((one) => one.cls == pickCls && one.id == pickId) || {}).n || 0;
+    var next = (sellPick[id] || 0) + 1;
+    if (next > most) delete sellPick[id];
+    else sellPick[id] = next;
+    render();
+  } else if (act == "sellPickClear") {
+    sellPick = {};
+    render();
+  } else if (act == "sellPicked") {
+    var list = pickedCards();
+    var total = list.reduce((sum, one) => sum + one.n * ((rules.sell || {})[cardOf(one.id).rarity] || 0), 0);
+    var count = list.reduce((sum, one) => sum + one.n, 0);
+    var needed = list.some((one) => one.any);
+    confirmDialog({
+      title: "Sell " + count + " card" + (count == 1 ? "" : "s") + "?",
+      text: "You get 🪙 " + formatCoins(total) + "." + (needed ? " Some of these copies are not spare and leave every deck that uses them." : ""),
+      confirmLabel: "Sell them",
+      danger: needed,
+    }).then((sure) => {
+      if (!sure) return;
+      socket.emit("sellMany", { cards: list });
+      sellPick = {};
+      render();
+    });
   } else if (act == "craft") socket.emit("craft", { id: id });
   else if (act == "playerMenu") {
     playerMenu = !playerMenu;
@@ -3410,6 +3469,7 @@ document.querySelector(".rpg-main").addEventListener("click", (event) => {
     render();
   } else if (act == "craftMode") {
     craftMode = !craftMode;
+    sellPick = {};
     render();
   } else if (act == "deckRename") {
     deckMenu = false;

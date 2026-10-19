@@ -806,6 +806,16 @@ module.exports = function (io, options = {}) {
       sendHero(username);
     });
 
+    // Cards picked in craft mode, sold together
+    on("sellMany", async (data) => {
+      if (inRun()) return error("Not during a run.");
+      const list = Array.isArray(data && data.cards) ? data.cards.slice(0, 500).map((one) => ({ cls: String(one.cls), id: String(one.id), n: Number(one.n), any: one.any === true })) : [];
+      const done = rpg.sellCards(heroOf(username), list);
+      if (done.error) return error(done.error);
+      if (done.coins > 0 && ours(username)) await coins.add(username, done.coins, { reason: "rpg card sale", note: list.length + " cards" });
+      sendHero(username);
+    });
+
     on("sellAll", async () => {
       if (inRun()) return error("Not during a run.");
       const got = rpg.sellAll(heroOf(username));

@@ -9058,3 +9058,16 @@ button.rpg-trade-row:active {
 .rpg-talent.other:not(:disabled):hover {
   opacity: 0.85;
 }
+
+/* Craft mode: cards picked to sell together */
+.rpg-craft-cell.picked {
+  outline: 2px solid var(--mm-accent);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+.rpg-btn.rpg-craft-btn.pick.on {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.18);
+  color: var(--mm-accent);
+}

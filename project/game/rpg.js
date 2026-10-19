@@ -1307,6 +1307,20 @@ function sellCard(hero, cls, id, n = 1, any = false) {
   return { coins: n * sellPrice(CARDS[id].rarity) };
 }
 
+// Several cards sold at once ([{cls, id, n, any}]) -> {error} or {coins}: all of them or none
+function sellCards(hero, list) {
+  if (!Array.isArray(list) || !list.length) return { error: "Pick the cards to sell." };
+  const test = JSON.parse(JSON.stringify(hero));
+  for (const one of list) {
+    if (!one || !CLASS_IDS.includes(one.cls) || !CARDS[one.id]) return { error: "Unknown card." };
+    const done = sellCard(test, one.cls, one.id, one.n, one.any === true);
+    if (done.error) return { error: `${CARDS[one.id].name}: ${done.error}` };
+  }
+  let coins = 0;
+  for (const one of list) coins += sellCard(hero, one.cls, one.id, one.n, one.any === true).coins;
+  return { coins };
+}
+
 // Every spare card sold at once -> the coins
 function sellAll(hero) {
   let coins = 0;
@@ -3738,6 +3752,7 @@ module.exports = {
   dustAll,
   sellPrice,
   sellCard,
+  sellCards,
   sellAll,
   craftCard,
   resetHero,

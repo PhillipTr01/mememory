@@ -2148,6 +2148,15 @@ test("rpg: cards sold - 75% of their trade value, only spare copies unless asked
   char.collection.ironwave = 4;
   assert.ok(rpg.sellAll(hero) > 0);
   assert.strictEqual(rpg.sellAll(hero), 0);
+  // (several picked cards sold together - all of them or none)
+  char.collection.impervious = 3;
+  char.collection.ironwave = 3;
+  const before = JSON.stringify(hero);
+  assert.match(rpg.sellCards(hero, [{ cls: "warrior", id: "impervious", n: 1 }, { cls: "warrior", id: "ironwave", n: 5 }]).error, /Iron Wave|ironwave|can be sold|every copy/i);
+  assert.strictEqual(JSON.stringify(hero), before, "nothing sold when one of them can't be");
+  assert.deepStrictEqual(rpg.sellCards(hero, [{ cls: "warrior", id: "impervious", n: 1 }, { cls: "warrior", id: "ironwave", n: 2, any: true }]), { coins: 6000 + 2 * rpg.sellPrice(rpg.CARDS.ironwave.rarity) });
+  assert.deepStrictEqual([char.collection.impervious, char.collection.ironwave], [2, 1]);
+  assert.match(rpg.sellCards(hero, []).error, /Pick/);
 });
 test("rpg: no death time - a party down is back right away", () => {
   const before = config.RPG_DEATH_TIME;
