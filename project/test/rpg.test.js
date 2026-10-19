@@ -2223,6 +2223,22 @@ test("rpg: a spiked foe's damage back is softened by armor and taken by the bloc
   assert.strictEqual(before - hero.hp, 1);
 });
 
+test("rpg: the warrior's Spikebreaker talent halves what a spiked foe reflects", () => {
+  const back = (guard) => {
+    const run = duel("warrior", "defend", ["strike"]);
+    const me = run.heroes[0];
+    const foe = run.monsters[0];
+    foe.traits = ["spiked"];
+    foe.hp = foe.maxHp = 100000;
+    Object.assign(me, { def: 0, block: 0, atk: 500, hp: 5000, maxHp: 5000 });
+    if (guard) me.perks.spikeGuard = rpg.TALENTS.warrior[7][1].perks.spikeGuard;
+    rpg.play(run, "a", { uid: "t0", target: "m1" }, seeded(4));
+    return (5000 - me.hp) / (foe.maxHp - foe.hp);
+  };
+  assert.ok(Math.abs(back(false) - 0.2) < 0.01, String(back(false)));
+  assert.ok(Math.abs(back(true) - 0.1) < 0.01, String(back(true)));
+});
+
 test("rpg: disarming a trap - more luck helps, a deeper floor makes it harder, never sure and never hopeless", () => {
   const lucky = { luck: 40 };
   assert.ok(rpg.disarmChance(lucky, 3) > rpg.disarmChance(lucky, 12));

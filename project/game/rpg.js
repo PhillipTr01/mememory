@@ -485,7 +485,7 @@ function lootShare(deepest, floor) {
 // thorns (damage back when hit), block (more block, share), heal (more healing, share), afterFight (healed after a
 // fight won, share of max HP), poison (stronger poison, share), maxHp (share), agi (dodge, %), pierce (share of
 // a foe's armor ignored), thornsDef (thorns: share of the armor), aoe (more damage on hits to every foe)
-const PERK_KEYS = ["healHit", "pierce", "thornsDef", "aoe", "startBlock", "firstMana", "draw", "attack", "firstStrike", "lowHp", "crit", "lifesteal", "thorns", "block", "heal", "afterFight", "poison", "maxHp", "agi"];
+const PERK_KEYS = ["healHit", "pierce", "thornsDef", "aoe", "startBlock", "firstMana", "draw", "attack", "firstStrike", "lowHp", "crit", "lifesteal", "thorns", "block", "heal", "afterFight", "poison", "maxHp", "agi", "spikeGuard"];
 
 // Talents: every class at hero level 3, 6 and 10 - one of two
 const TALENT_LEVELS = [3, 6, 10, 15, 20, 25, 30, 40, 50];
@@ -498,7 +498,7 @@ const TALENTS = {
     [{ id: "fury", name: "Fury", icon: "😡", text: "30% more damage below half HP.", perks: { lowHp: 0.3 } }, { id: "warlord", name: "Warlord", icon: "👑", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
     [{ id: "sharpedge", name: "Sharp Edge", icon: "🔪", text: "+10% critical hits.", perks: { crit: 10 } }, { id: "recovery", name: "Recovery", icon: "🩹", text: "Heal 12% after every fight won.", perks: { afterFight: 0.12 } }],
     [{ id: "breaker", name: "Armor Breaker", icon: "⛏️", text: "Ignore 35% more armor, 10% more damage.", perks: { pierce: 0.35, attack: 0.1 } }, { id: "momentum", name: "Momentum", icon: "🌀", text: "Your first attack each turn deals 50% more.", perks: { firstStrike: 0.5 } }],
-    [{ id: "colossus", name: "Colossus", icon: "🗿", text: "+20% max HP.", perks: { maxHp: 0.2 } }, { id: "undying", name: "Undying", icon: "❤️‍🔥", text: "Heal 3% of your attack damage.", perks: { lifesteal: 0.03 } }],
+    [{ id: "colossus", name: "Colossus", icon: "🗿", text: "+20% max HP.", perks: { maxHp: 0.2 } }, { id: "undying", name: "Spikebreaker", icon: "🦔", text: "Spiked foes reflect half as much damage to you. Heal 3% of your attack damage.", perks: { spikeGuard: 0.5, lifesteal: 0.03 } }],
     [{ id: "titan", name: "Titan", icon: "🌋", text: "25% more damage.", perks: { attack: 0.25 } }, { id: "worldsplitter", name: "Worldsplitter", icon: "💥", text: "Ignore 30% more armor, 10% more damage.", perks: { pierce: 0.3, attack: 0.1 } }],
   ],
   paladin: [
@@ -2816,7 +2816,7 @@ function strike(run, hero, foe, power, rng, options = {}) {
   // (spiked: a part of the hit comes back - the armor softens it, the block takes it first, like any hit; only a
   // direct hit - not one on every foe, not the cleric's holy light)
   if (foe.traits && foe.traits.includes("spiked") && !hero.down && !options.aoe && !options.indirect) {
-    const raw = damage * SPIKES;
+    const raw = damage * SPIKES * Math.max(0, 1 - perk(hero, "spikeGuard"));
     let back = Math.max(1, Math.round((raw * raw) / (raw + Math.max(0, hero.def))));
     const armor = Math.max(0, Math.round(raw) - back);
     const shield = Math.min(hero.block, back);

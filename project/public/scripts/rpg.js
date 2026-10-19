@@ -2433,6 +2433,7 @@ var PERK_TEXT = {
   draw: (v) => "+" + v + " card a turn",
   attack: (v) => "+" + Math.round(v * 100) + "% damage",
   firstStrike: (v) => "+" + Math.round(v * 100) + "% first attack",
+  spikeGuard: (v) => "-" + Math.round(v * 100) + "% spike damage",
   lowHp: (v) => "+" + Math.round(v * 100) + "% damage below half HP",
   crit: (v) => "+" + Math.round(v) + "% crit",
   lifesteal: (v) => Math.round(v * 100) + "% lifesteal",
