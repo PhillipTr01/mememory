@@ -455,8 +455,8 @@ function payout(run, hero, result) {
   return Math.max(pot, round100(entryCost(run.floor) * CLEAR_PAY));
 }
 
-// The same floor again on the same day: less of the pot each time (per character - midnight starts over)
-const REPEAT_PAY = [1, 0.85, 0.7, 0.6, 0.5, 0.45];
+// The same floor again on the same day: 10% less of the pot each time, at least 10% (per character - midnight starts over)
+const REPEAT_PAY = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1];
 function runsToday(hero, floor, cls = hero.cls, now = Date.now()) {
   const runs = charOf(hero, cls).floorRuns;
   return runs && runs.day == dayOf(now) ? runs.floors[floor] || 0 : 0;

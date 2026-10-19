@@ -1895,23 +1895,23 @@ test("rpg: loot cards like a pack's - any class's, the own class and the neutral
   assert.ok(other > 300, String(other));
   assert.ok(own > 900, String(own));
 });
-test("rpg: the same floor again on the same day pays less - 100, 85, 70, 60, 50, then 45%; midnight starts over", () => {
+test("rpg: the same floor again on the same day pays less - 100, 90, 80% and so on, at least 10%; midnight starts over", () => {
   const hero = rpg.newHero("warrior");
   const now = new Date(2026, 5, 1, 12).getTime();
   assert.strictEqual(rpg.repeatPay(hero, 3, "warrior", now), 1);
   const pays = [];
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 11; i++) {
     rpg.countRun(hero, 3, "warrior", now);
     pays.push(rpg.repeatPay(hero, 3, "warrior", now));
   }
-  assert.deepStrictEqual(pays, [0.85, 0.7, 0.6, 0.5, 0.45, 0.45]);
+  assert.deepStrictEqual(pays, [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.1, 0.1]);
   // (another floor: its own count - the next day: all again)
   assert.strictEqual(rpg.repeatPay(hero, 4, "warrior", now), 1);
   assert.strictEqual(rpg.repeatPay(hero, 3, "warrior", now + 24 * 3600 * 1000), 1);
   // A run on it: the share of the pot that small
   hero.chars.warrior.floorRuns.day = new Date().toDateString();
   const run = rpg.newRun(3, [{ name: "a", hero }]);
-  assert.strictEqual(run.heroes[0].share, 0.45);
+  assert.strictEqual(run.heroes[0].share, 0.1);
 });
 test("rpg: the hero's view counts the runs of each floor today", () => {
   const hero = rpg.newHero("warrior");
