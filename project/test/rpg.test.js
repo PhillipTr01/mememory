@@ -132,7 +132,7 @@ test("rpg: upgrades and floors get dearer, a floor opens after the one before; t
 test("rpg: a new hero clears floor 1 most of the time but not floor 8 - upgrades take it deeper; a full clear pays about 2.5x the entry (2x on average with the losses)", () => {
   const weak = rpg.newHero("warrior");
   const first = rpg.simulate(weak, 1, 300).cleared;
-  assert.ok(first > 0.4 && first < 0.85, String(first));
+  assert.ok(first > 0.55 && first < 0.92, String(first));
   assert.ok(rpg.simulate(weak, 8, 200).cleared < 0.05);
   const strong = rpg.newHero("warrior");
   for (const id of rpg.STAT_IDS) rpg.charOf(strong).levels[id] = 70;
@@ -1213,19 +1213,19 @@ test("rpg: balance - every class on the curve of its floor clears early, mid and
     for (let i = 0; i < runs; i++) won += rpg.simulate(heroFor(cls, floor, curve, rng), floor, 1, rng).cleared;
     return won / runs;
   };
-  // (every class has a chance - floor 2 about 70%, floor 12 about 45%, floor 27 about 20% of the runs)
+  // (every class has a chance - floor 2 about 85%, floor 12 about 60%, floor 27 about 30% of the runs)
   const rates = [];
   for (const cls of rpg.CLASS_IDS) {
     for (const floor of [2, 12, 27]) {
       const rate = clear(cls, floor, 1);
       rates.push(rate);
-      assert.ok(rate >= (floor == 27 ? 0.05 : floor == 12 ? 0.2 : 0.35), `${cls} on floor ${floor}, on its curve: ${Math.round(rate * 100)}%`);
+      assert.ok(rate >= (floor == 27 ? 0.1 : floor == 12 ? 0.3 : 0.45), `${cls} on floor ${floor}, on its curve: ${Math.round(rate * 100)}%`);
     }
     const under = clear(cls, 27, 0.2);
     assert.ok(under <= 0.2, `${cls} far under its curve on floor 27: ${Math.round(under * 100)}%`);
   }
   const average = rates.reduce((a, b) => a + b, 0) / rates.length;
-  assert.ok(average > 0.3 && average < 0.7, `on the curve: ${Math.round(average * 100)}%`);
+  assert.ok(average > 0.4 && average < 0.85, `on the curve: ${Math.round(average * 100)}%`);
 });
 
 test("rpg: a party heal of the cleric smites every foe once - not once for every hero it heals", () => {
