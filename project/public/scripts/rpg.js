@@ -243,6 +243,7 @@ var tradeTheirs = null;
 var tradePick = { give: {}, take: {} };
 var tradeCoinPick = { give: 0, take: 0 }; // (coins on each side of the new offer)
 socket.on("rpgTrades", (list) => {
+  tradesAt = Date.now();
   trades = list;
   // (a trade done or gone: what the other player has may have changed)
   if (tradeWith) socket.emit("tradeLook", { name: tradeWith });
@@ -906,6 +907,12 @@ function tradeKind() {
   return keys.length ? (keys[0].startsWith("c:") ? "card" : "gear") : null;
 }
 
+// How long an offer still stands, as a short text
+function expiresIn(ms) {
+  var min = Math.max(1, Math.round(ms / 60000));
+  return "Expires in " + (min >= 60 ? Math.round(min / 60) + " h" : min + " min");
+}
+
 // A tile of something to trade: a card (its art, name, rarity) or a piece of gear - a click picks one more
 function tradeRow(one, side, picks, act) {
   var key = tradeKey(one);
@@ -1036,7 +1043,7 @@ function renderTrade() {
       var other = mine ? offer.to : offer.from;
       var box = el("div", "rpg-trade-offer" + (mine ? " mine" : ""));
       var head = el("div", "rpg-trade-offer-head");
-      head.append(createAvatar(other, "sm"), el("b", "", mine ? "Your offer to " + other : other + " offers you a trade"));
+      head.append(createAvatar(other, "sm"), el("b", "", mine ? "Your offer to " + other : other + " offers you a trade"), el("span", "rpg-trade-left mm-muted small", expiresIn(offer.left - (Date.now() - tradesAt))));
       var give = mine ? offer.give : offer.take;
       var take = mine ? offer.take : offer.give;
       var payCoins = mine ? offer.giveCoins : offer.takeCoins;
@@ -1406,6 +1413,7 @@ function packOdds(id) {
 }
 
 var cart = {}; // the shop's cart: {pack id: count}
+var tradesAt = 0; // when the offers came (their time left counts from then)
 
 // The price of packs of a kind
 // A pack's price (coins only - dust makes cards)

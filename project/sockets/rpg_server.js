@@ -447,7 +447,7 @@ module.exports = function (io, options = {}) {
 
   const trades = new Map(); // id -> {id, from, to, give, take, at}
   let tradeCount = 0;
-  const TRADE_TIME = 30 * 60000; // an offer not answered: gone after this long
+  const TRADE_TIME = 24 * 3600000; // an offer not answered: gone after this long
   const TRADES_OPEN = 5; // offers a player may have out at once
 
   // A player in a run right now (trades wait)

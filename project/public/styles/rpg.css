@@ -7753,6 +7753,11 @@ button.rpg-trade-row:hover {
   gap: 0.5rem;
 }
 
+.rpg-trade-offer-head .rpg-trade-left {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
 .rpg-trade-actions {
   display: flex;
   justify-content: flex-end;
