@@ -144,7 +144,7 @@ const DEEP_PAY = 2;
 const CLASSES = {
   warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.15 }, top: 2 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.2, atk: 1.68, def: 2, luck: 0, agi: 0, mainBonus: 1.29, hpPlus: 70, late: -0.37, power: 1.06, atkPlus: 28, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
   paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor, and half of your block counts as armor for it. Your block cards block {block}% more.", perks: { thornsDef: 0.3, block: 0.11 }, top: 4.5 }, about: "Armor class with taunts and party shields", hp: 1.35, atk: 1.3, def: 11, luck: 0, agi: 0, mainBonus: 1.2, hpPlus: 90, late: 0.11, power: 1.34, atkPlus: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
-  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe.", perks: { heal: 0.1, healHit: 0.04 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 1.7, hpPlus: 180, late: 0.28, power: 0.87, atkPlus: 16, signature: ["heal", "smite"], opener: "banish", cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
+  cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe. After a heal, your attacks deal {healedStrike}% more for the rest of the turn.", perks: { heal: 0.1, healHit: 0.06, healedStrike: 0.2 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 1.7, hpPlus: 180, late: 0.28, power: 0.87, atkPlus: 16, signature: ["heal", "smite"], opener: "banish", cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
   rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.3, crit: 4 }, top: 8 }, about: "Instinct class with dodge, scouting and poison", hp: 1.42, atk: 1.42, def: 0, luck: 4, agi: 14, mainBonus: 2.5, hpPlus: 94, late: -0.04, power: 0.9, atkPlus: 24, signature: ["poisonblade", "backstab"], guard: "dodgeroll", cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
   mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 6 }, about: "Luck class with crits, fire and frost", hp: 1.35, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.45, hpPlus: 120, late: -0.43, power: 0.94, atkPlus: 17, signature: ["frost", "fireball"], guard: "icearmor", cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
@@ -485,7 +485,7 @@ function lootShare(deepest, floor) {
 // thorns (damage back when hit), block (more block, share), heal (more healing, share), afterFight (healed after a
 // fight won, share of max HP), poison (stronger poison, share), maxHp (share), agi (dodge, %), pierce (share of
 // a foe's armor ignored), thornsDef (thorns: share of the armor), aoe (more damage on hits to every foe)
-const PERK_KEYS = ["healHit", "pierce", "thornsDef", "aoe", "startBlock", "firstMana", "draw", "attack", "firstStrike", "lowHp", "crit", "lifesteal", "thorns", "block", "heal", "afterFight", "poison", "maxHp", "agi", "spikeGuard", "undying"];
+const PERK_KEYS = ["healHit", "pierce", "thornsDef", "aoe", "startBlock", "firstMana", "draw", "attack", "firstStrike", "lowHp", "crit", "lifesteal", "thorns", "block", "heal", "afterFight", "poison", "maxHp", "agi", "spikeGuard", "undying", "healedStrike"];
 
 // Talents: every class at hero level 3, 6 and 10 - one of two
 const TALENT_LEVELS = [3, 6, 10, 15, 20, 25, 30, 40, 50];
@@ -1012,7 +1012,7 @@ const lateOf = (cls, level) => 1 + (cls.late || 0) * (Math.max(0, (level || 1) -
 const CLASS_FLOOR = {
   warrior: [0.94, 0.87, 0.94, 1.11, 0.97, 0.99, 1.01, 1.02, 1.03, 1, 1.06, 1.08, 1.08, 1.08, 1.02, 0.91, 0.94, 0.9, 0.91, 0.87, 0.97, 0.95, 0.96, 0.99, 1.03, 1.03, 1.01, 1.07, 1.12, 1.12],
   paladin: [1.03, 1.03, 0.98, 0.96, 1.07, 1.05, 1.05, 1.05, 1.03, 1.1, 1.04, 1.02, 1.02, 1.04, 1.03, 1.11, 1.09, 1.13, 1.11, 1.04, 1.02, 1.05, 1.01, 1, 1, 0.99, 0.98, 0.98, 0.95, 0.96],
-  cleric: [1.01, 0.8, 0.88, 0.98, 1, 1.04, 1.01, 0.99, 1, 1.04, 0.88, 0.89, 0.9, 0.88, 0.98, 1.11, 1.04, 1.12, 1.08, 1.25, 0.96, 0.95, 0.91, 0.93, 0.95, 0.91, 0.93, 0.89, 0.85, 0.81],
+  cleric: [1.01, 0.89, 0.91, 0.9, 0.91, 0.92, 0.92, 0.97, 0.98, 0.92, 0.75, 0.73, 0.75, 0.74, 0.79, 1.2, 1.09, 1.19, 1.22, 1.3, 0.85, 0.88, 0.81, 0.86, 0.9, 0.94, 0.91, 0.9, 0.86, 0.75],
   rogue: [1.01, 1.12, 1.04, 0.95, 0.98, 1.01, 0.99, 0.97, 1, 0.98, 0.97, 1, 0.97, 1, 1.02, 0.97, 0.99, 0.95, 0.97, 0.86, 1.03, 1.03, 1.03, 1.02, 0.99, 0.99, 1.01, 0.95, 0.96, 1.02],
   mage: [0.96, 1.14, 1.12, 0.99, 0.95, 0.9, 0.9, 0.91, 0.92, 0.86, 1.01, 0.98, 0.99, 0.96, 0.89, 0.89, 0.9, 0.87, 0.9, 0.94, 0.94, 0.98, 1.03, 0.98, 0.94, 1.04, 1.03, 1.05, 1.08, 1.05],
 };
@@ -2822,7 +2822,7 @@ function strike(run, hero, foe, power, rng, options = {}) {
   }
   const crit = rng() * 100 < hero.luck + perk(hero, "crit");
   // (the perks of talents and relics: more damage, the first attack of a turn, low HP)
-  const bonus = 1 + perk(hero, "attack") + (hero.firstAttack ? perk(hero, "firstStrike") : 0) + (hero.hp < hero.maxHp / 2 ? perk(hero, "lowHp") : 0);
+  const bonus = 1 + perk(hero, "attack") + (hero.firstAttack ? perk(hero, "firstStrike") : 0) + (hero.hp < hero.maxHp / 2 ? perk(hero, "lowHp") : 0) + (hero.healed ? perk(hero, "healedStrike") : 0);
   let damage = hero.atk * between(rng, 0.9, 1.1) * power * bonus * (crit ? CRIT : 1) * (hero.blessed ? SHRINE_POWER : 1) * mightOf(hero);
   // (armor - the warrior's hits break through a part of it; a hit on every foe: the mage's strength)
   damage *= 1 - (foe.armor || 0) * Math.max(0, 1 - perk(hero, "pierce"));
@@ -3024,7 +3024,7 @@ function liveTexts(stats, ids) {
     if (!card) continue;
     const up = isUpgraded(id) ? UPGRADE : 1;
     const p = (key) => (stats.perks && stats.perks[key]) || 0;
-    const dmg = (power, fx = {}) => Math.max(1, Math.round((stats.atk * power + (fx.def || 0) * stats.def) * (1 + p("attack") + (stats.firstAttack ? p("firstStrike") : 0) + (stats.hp < stats.maxHp / 2 ? p("lowHp") : 0)) * (fx.to == "all" ? 1 + p("aoe") : 1) * up * boost));
+    const dmg = (power, fx = {}) => Math.max(1, Math.round((stats.atk * power + (fx.def || 0) * stats.def) * (1 + p("attack") + (stats.firstAttack ? p("firstStrike") : 0) + (stats.hp < stats.maxHp / 2 ? p("lowHp") : 0) + (stats.healed ? p("healedStrike") : 0)) * (fx.to == "all" ? 1 + p("aoe") : 1) * up * boost));
     const n = {
       dmg,
       block: (fx) => Math.round((fx.block + (fx.def || 0) * stats.def + (fx.atk || 0) * stats.atk + (fx.agi || 0) * stats.agi) * (1 + p("block")) * up),
@@ -3749,6 +3749,8 @@ function simDeck(hero, owned, rng = Math.random) {
   // (the states the owned cards bring: a card with a bonus on one of them is worth more)
   const states = new Set();
   for (const id of owned) for (const f of CARDS[baseCard(id)].fx) if (f.status) states.add(f.status);
+  // (heals in the cards: the attacks that hit harder after a heal are met most turns)
+  if (owned.some((id) => CARDS[baseCard(id)].fx.some((f) => f.heal != null))) states.add("healed");
   const worth = Object.fromEntries(owned.map((id) => [id, cardWorth(id, me, states)]));
   const ranked = [...new Set(owned)].sort((a, b) => worth[b] - worth[a]);
   const deck = [];

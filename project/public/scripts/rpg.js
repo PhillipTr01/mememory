@@ -2439,6 +2439,7 @@ var PERK_TEXT = {
   firstStrike: (v) => "+" + Math.round(v * 100) + "% first attack",
   spikeGuard: (v) => "-" + Math.round(v * 100) + "% spike damage",
   undying: () => "once a fight at 1 HP instead of down",
+  healedStrike: (v) => "+" + Math.round(v * 100) + "% damage after a heal",
   lowHp: (v) => "+" + Math.round(v * 100) + "% damage below half HP",
   crit: (v) => "+" + Math.round(v) + "% crit",
   lifesteal: (v) => Math.round(v * 100) + "% lifesteal",

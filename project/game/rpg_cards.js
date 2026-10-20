@@ -83,7 +83,7 @@ const BASE = {
   meteor: ["Meteor", "☄️", 3, "epic", [{ hit: 1.6, to: "all" }]],
   titanswrath: ["Titan's Wrath", "🌋", 2, "mythic", [{ hit: 3.5, to: "all" }], "mythic"],
   divine: ["Divine Intervention", "👼", 1, "mythic", [{ block: 30, def: 1.5 }, { taunt: true }, { thorns: 10, def: 1, turns: 1 }], "mythic", 1.8],
-  resurrection: ["Resurrection", "🌅", 2, "mythic", [{ revive: 0.6, to: "all" }, { heal: 0.25, to: "party" }], "mythic", 1.5],
+  resurrection: ["Resurrection", "🌅", 2, "mythic", [{ hit: 2.4, to: "all", bonusIf: "undead|boss", bonus: 4.4 }, { revive: 0.5, to: "all" }, { heal: 0.15, to: "party" }], "mythic", 1.5],
   deathmark: ["Death Mark", "💀", 1, "mythic", [{ hit: 4, execute: 0.5 }], "mythic"],
   timewarp: ["Time Warp", "⏳", 0, "mythic", [{ mana: 4 }, { draw: 4 }], "mythic"],
 };
@@ -308,8 +308,8 @@ const CLASS = {
     ascension: ["Ascension", "👑", 2, "legendary", [{ mana: 2 }, { draw: 2 }, { heal: 0.1, to: "party" }], true],
     beacon: ["Beacon of Light", "🗼", 2, "legendary", [{ heal: 0.2, to: "party" }, { block: 8, to: "party" }]],
     dawnbreak: ["Dawnbreak", "🌄", 2, "legendary", [{ hit: 1.2, to: "all", bonusIf: "undead", bonus: 3 }, { heal: 0.08, to: "party" }]],
-    saintsgrace: ["Saint's Grace", "💖", 2, "mythic", [{ heal: 0.5, to: "party" }, { might: 2, to: "party" }], "mythic", 1.5],
-    rapture: ["Rapture", "🪐", 2, "mythic", [{ hit: 2, to: "all" }, { heal: 0.2, to: "party" }], "mythic", 1.5],
+    saintsgrace: ["Saint's Grace", "💖", 2, "mythic", [{ hit: 3, bonusIf: "healed", bonus: 6 }, { heal: 0.2, to: "party" }, { might: 2, to: "party" }], "mythic", 1.5],
+    rapture: ["Rapture", "🪐", 2, "mythic", [{ hit: 2.2, to: "all", bonusIf: "healed", bonus: 4 }, { heal: 0.12, to: "party" }], "mythic", 1.5],
     prayerbeads: ["Prayer Beads", "📿", 1, "common", [{ heal: 0.06 }, { draw: 1 }]],
     soothe: ["Soothe", "🌿", 1, "rare", [{ heal: 0.1, to: "ally" }]],
     holyspark: ["Holy Spark", "✨", 1, "rare", [{ hit: 0.9 }, { heal: 0.04 }]],
@@ -360,8 +360,8 @@ const CLASS = {
     holystorm: ["Holy Storm", "🌪️", 2, "legendary", [{ hit: 0.6, to: "random", times: 4, drain: 0.3, drainTo: "weakest" }]],
     divinemandate: ["Divine Mandate", "🎗️", 2, "legendary", [{ hit: 2, bonusIf: "healed", bonus: 3.6 }]],
     lifebloom: ["Lifebloom", "🌸", 1, "legendary", [{ aura: "regen", heal: 0.07, turns: 3, to: "party" }, { cleanse: true, to: "party" }], true],
-    dayoflight: ["Day of Light", "🔆", 2, "mythic", [{ hit: 2.5, to: "all", drain: 0.6, drainTo: "party" }], "mythic", 1.3],
-    eternallight: ["Eternal Light", "🕯️", 1, "mythic", [{ heal: 0.4, to: "party" }, { aura: "regen", heal: 0.08, turns: 4, to: "party" }], "mythic", 1.5],
+    dayoflight: ["Day of Light", "🔆", 2, "mythic", [{ hit: 2.6, to: "all", bonusIf: "undead|boss", bonus: 4.8, drain: 0.4, drainTo: "party" }], "mythic", 1.5],
+    eternallight: ["Eternal Light", "🕯️", 1, "mythic", [{ heal: 0.18, to: "party" }, { aura: "regen", heal: 0.06, turns: 4, to: "party" }, { might: 4 }, { mana: 1 }], "mythic", 1.5],
   },
   rogue: {
     preparation: ["Preparation", "🎒", 0, "common", [{ mana: 1 }, { block: 3, agi: 0.2 }], true],
@@ -647,6 +647,9 @@ function targetOf(fx) {
 // part that isn't scaled (mana, cards, states)
 const FOES = 2.2; // foes in a fight, on average (a hit to every foe)
 const PARTY_WORTH = 2.8;
+// (healing the whole party: worth less than a block for it - alone it only heals the one who plays it, and a party
+// rarely needs all of it)
+const PARTY_HEAL_WORTH = 1.8;
 // How often a bonus condition is met (the share of its worth the bonus gets) - 0.25 when not listed
 const OFTEN = { guarded: 0.35, chain: 0.4, healed: 0.6, exposed: 0.35 }; // a block or heal for the whole party: worth this many single ones
 // How much a share of the armor in a block is worth (a share of 1: the hero's armor) - the Paladin's common cards
@@ -656,7 +659,7 @@ const DEF_WORTH = { paladin: { common: 0.55 } };
 // (the Paladin's cards of the first set: CLASSES.paladin in game/rpg.js)
 const BASE_OWNER = { paladin: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"] };
 function worth(fx) {
-  if (fx.aura) return { scaled: 0, fixed: fx.turns * (fx.to == "party" ? PARTY_WORTH : 1) * (fx.aura == "focus" ? fx.mana : fx.aura == "regen" ? fx.heal / 0.12 : fx.block / 7 + (fx.def || 0) * 0.3 + (fx.agi || 0) * 0.05) * 0.7 };
+  if (fx.aura) return { scaled: 0, fixed: fx.turns * (fx.to == "party" ? (fx.aura == "regen" ? PARTY_HEAL_WORTH : PARTY_WORTH) : 1) * (fx.aura == "focus" ? fx.mana : fx.aura == "regen" ? fx.heal / 0.12 : fx.block / 7 + (fx.def || 0) * 0.3 + (fx.agi || 0) * 0.05) * 0.7 };
   if (fx.hit != null) {
     // (a bonus on two states at once is met less often - one that ends the state: a bit less again)
     // (some are met most of the time by the class they are made for: block up, two cards before, a heal before)
@@ -672,7 +675,7 @@ function worth(fx) {
   if (fx.conjure) return { scaled: 0, fixed: 0.6 * fx.n };
   // (the whole party: worth more - in a party it covers 2 to 4 heroes)
   if (fx.block != null) return { scaled: (fx.block / 7 + (fx.def || 0) * defWorth + (fx.atk || 0) + (fx.agi || 0) * 0.05) * (fx.to == "party" ? PARTY_WORTH : 1) * (fx.low ? 1.4 : 1), fixed: 0 };
-  if (fx.heal != null) return { scaled: (fx.heal / 0.12) * (fx.to == "party" ? PARTY_WORTH : 1), fixed: 0 };
+  if (fx.heal != null) return { scaled: (fx.heal / 0.12) * (fx.to == "party" ? PARTY_HEAL_WORTH : 1), fixed: 0 };
   let fixed = 0;
   if (fx.status) fixed = { poison: 0.45, burn: 0.3, chill: 0.45, stun: 1, exposed: 0.35 }[fx.status] * (fx.status == "stun" ? 1 : fx.turns || 1) * (fx.to == "all" ? FOES * 0.75 : 1);
   else if (fx.might != null) fixed = 0.35 * fx.might * (fx.to == "party" ? PARTY_WORTH : 1);
