@@ -11,11 +11,12 @@
  *   {aura: "guard" | "regen" | "focus", turns, to: "self" | "party", block, def, agi | heal | mana} - an AURA: at the start
  *   of each of the next turns (block, healing, mana)
  *   {status: "exposed", turns} - the foe takes 25% more damage (the warrior's sunder)
+ *   {status: "sealed", turns} - the foe can't heal (the cleric's seals)
  *   {thorns: base, def: share of the armor, turns, to: "self" | "party"} - who hits takes it back (the paladin)
  *   on a hit: drain: share of the damage dealt healed, drainTo: "self" | "weakest" | "party" (the cleric's atonement)
  *   on a hit: consume: true - the foe's state the bonus asked for is used up (the mage's shatter and detonate)
  *   {conjure: card id, n} - cards made for the fight into the hand, gone once played (the rogue's shivs)
- * States for bonusIf ("a|b": any, "a&b": both): poison, burn, chill, stun, exposed, undead, boss, called (summoned)
+ * States for bonusIf ("a|b": any, "a&b": both): poison, burn, chill, stun, exposed, sealed, undead, boss, called (summoned)
  *   (the foe) - low (the hero below half HP), combo (a skill played this turn), guarded (the hero has block), healed
  *   (a heal played this turn), chain (two cards played before this one this turn)
  */
@@ -362,6 +363,11 @@ const CLASS = {
     lifebloom: ["Lifebloom", "🌸", 1, "legendary", [{ aura: "regen", heal: 0.07, turns: 3, to: "party" }, { cleanse: true, to: "party" }], true],
     dayoflight: ["Day of Light", "🔆", 2, "mythic", [{ hit: 2.6, to: "all", bonusIf: "undead|boss", bonus: 4.8, drain: 0.4, drainTo: "party" }], "mythic", 1.5],
     eternallight: ["Eternal Light", "🕯️", 1, "mythic", [{ heal: 0.18, to: "party" }, { aura: "regen", heal: 0.06, turns: 4, to: "party" }, { might: 4 }, { mana: 1 }], "mythic", 1.5],
+    // (the third set: SEALS - the foe can't heal while sealed, and holy blows that hit a sealed foe far harder)
+    sealoflight: ["Seal of Light", "🔒", 1, "common", [{ hit: 0.8 }, { status: "sealed", turns: 3 }]],
+    holychains: ["Holy Chains", "⛓️", 1, "rare", [{ status: "sealed", turns: 5, to: "all" }, { heal: 0.06, to: "party" }]],
+    condemn: ["Condemn", "⚖️", 2, "epic", [{ hit: 1.4, bonusIf: "sealed", bonus: 2.8 }, { status: "sealed", turns: 3 }]],
+    eternalseal: ["Eternal Seal", "🔐", 1, "legendary", [{ status: "sealed", turns: 8, to: "all" }, { hit: 0.6, to: "all", bonusIf: "sealed", bonus: 1.2 }], true],
   },
   rogue: {
     preparation: ["Preparation", "🎒", 0, "common", [{ mana: 1 }, { block: 3, agi: 0.2 }], true],
@@ -537,16 +543,17 @@ const ifText = (cond) => {
   if (parts.every((one) => /^on a .* foe$/.test(one))) return "on a " + parts.map((one) => one.replace(/^on a | foe$/g, "")).join(" or ") + " foe";
   return parts.join(" or ");
 };
-const IF = { poison: "on a poisoned foe", burn: "on a burning foe", chill: "on a chilled foe", stun: "on a stunned foe", exposed: "on an exposed foe", undead: "against the undead", boss: "against a boss", called: "against a summoned foe", low: "while you are below half HP", combo: "if you played a skill this turn", guarded: "while you have block", healed: "if you healed this turn", chain: "if you played 2 other cards this turn" };
+const IF = { poison: "on a poisoned foe", burn: "on a burning foe", chill: "on a chilled foe", stun: "on a stunned foe", exposed: "on an exposed foe", sealed: "on a sealed foe", undead: "against the undead", boss: "against a boss", called: "against a summoned foe", low: "while you are below half HP", combo: "if you played a skill this turn", guarded: "while you have block", healed: "if you healed this turn", chain: "if you played 2 other cards this turn" };
 const STATUS = {
   poison: ["poison", "poisoned"],
   burn: ["burn", "burning"],
   chill: ["chill", "chilled"],
   stun: ["stun", "stunned"],
   exposed: ["expose", "exposed"],
+  sealed: ["seal", "sealed"],
 };
 // (what the end of a state is called: a shatter ends the chill)
-const ENDS = { poison: "its poison", burn: "its burn", chill: "its chill", stun: "its stun", exposed: "the exposure" };
+const ENDS = { poison: "its poison", burn: "its burn", chill: "its chill", stun: "its stun", exposed: "the exposure", sealed: "the seal" };
 // The name of a card by its id (a card made in a fight: its name in the text)
 const nameOf = (id) => {
   for (const list of [BASE, NEUTRAL, ...Object.values(CLASS)]) if (list[id]) return list[id][0];
@@ -589,6 +596,10 @@ function phrase(fx, n) {
   if (fx.status == "exposed") {
     const turns = " take" + (fx.to == "all" ? "" : "s") + " 25% more damage for " + (fx.turns || 2) + " turn" + ((fx.turns || 2) == 1 ? "" : "s");
     return fx.to == "all" ? "expose every foe, they" + turns : fx.to == "random" ? "expose a random foe, it" + turns : "expose it, it" + turns;
+  }
+  if (fx.status == "sealed") {
+    const turns = " heal for " + (fx.turns || 2) + " turn" + ((fx.turns || 2) == 1 ? "" : "s");
+    return fx.to == "all" ? "seal every foe, they can't" + turns : fx.to == "random" ? "seal a random foe, it can't" + turns : "seal it, it can't" + turns;
   }
   if (fx.block != null) {
     const value = n ? n.block(fx) : amount(fx);
@@ -651,7 +662,7 @@ const PARTY_WORTH = 2.8;
 // rarely needs all of it)
 const PARTY_HEAL_WORTH = 1.8;
 // How often a bonus condition is met (the share of its worth the bonus gets) - 0.25 when not listed
-const OFTEN = { guarded: 0.35, chain: 0.4, healed: 0.6, exposed: 0.35 }; // a block or heal for the whole party: worth this many single ones
+const OFTEN = { guarded: 0.35, chain: 0.4, healed: 0.6, exposed: 0.35, sealed: 0.35 }; // a block or heal for the whole party: worth this many single ones
 // How much a share of the armor in a block is worth (a share of 1: the hero's armor) - the Paladin's common cards
 // count it higher, its armor makes them block far more early on than the other classes'
 let defWorth = 0.3;
@@ -677,7 +688,7 @@ function worth(fx) {
   if (fx.block != null) return { scaled: (fx.block / 7 + (fx.def || 0) * defWorth + (fx.atk || 0) + (fx.agi || 0) * 0.05) * (fx.to == "party" ? PARTY_WORTH : 1) * (fx.low ? 1.4 : 1), fixed: 0 };
   if (fx.heal != null) return { scaled: (fx.heal / 0.12) * (fx.to == "party" ? PARTY_HEAL_WORTH : 1), fixed: 0 };
   let fixed = 0;
-  if (fx.status) fixed = { poison: 0.45, burn: 0.3, chill: 0.45, stun: 1, exposed: 0.35 }[fx.status] * (fx.status == "stun" ? 1 : fx.turns || 1) * (fx.to == "all" ? FOES * 0.75 : 1);
+  if (fx.status) fixed = { poison: 0.45, burn: 0.3, chill: 0.45, stun: 1, exposed: 0.35, sealed: 0.15 }[fx.status] * (fx.status == "stun" ? 1 : fx.turns || 1) * (fx.to == "all" ? FOES * 0.75 : 1);
   else if (fx.might != null) fixed = 0.35 * fx.might * (fx.to == "party" ? PARTY_WORTH : 1);
   else if (fx.draw != null) fixed = 0.5 * fx.draw;
   else if (fx.mana != null) fixed = fx.mana;

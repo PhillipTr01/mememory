@@ -35,8 +35,8 @@ try {
   // no storage: the defaults
 }
 
-var EFFECT_ICONS = { poison: "☠️", burn: "🔥", stun: "💫", steady: "🪨", ambush: "🌫️", chill: "❄️", rage: "😡", might: "📯", weak: "🕯️", exposed: "🔻", thorns: "🌵" };
-var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned: skips a move", steady: "Steady: stuns often fail until it acts again, less often with luck", ambush: "Ambush: its next attack deals 50% more", chill: "Chilled: half damage", rage: "Raging: more damage", might: "Might: +30% damage", weak: "Cursed: -30% damage", exposed: "Exposed: takes 25% more damage", thorns: "Thorns: a foe that hits takes damage back" };
+var EFFECT_ICONS = { poison: "☠️", burn: "🔥", stun: "💫", steady: "🪨", ambush: "🌫️", chill: "❄️", rage: "😡", might: "📯", weak: "🕯️", exposed: "🔻", sealed: "🔒", thorns: "🌵" };
+var EFFECT_NAMES = { poison: "Poisoned", burn: "Burning", stun: "Stunned: skips a move", steady: "Steady: stuns often fail until it acts again, less often with luck", ambush: "Ambush: its next attack deals 50% more", chill: "Chilled: half damage", rage: "Raging: more damage", might: "Might: +30% damage", weak: "Cursed: -30% damage", exposed: "Exposed: takes 25% more damage", sealed: "Sealed: can't heal", thorns: "Thorns: a foe that hits takes damage back" };
 var RARITY_NAMES = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", mythic: "Mythic" };
 var SLOT_NAMES = { weapon: "Weapon", armor: "Armor", charm: "Charm" };
 

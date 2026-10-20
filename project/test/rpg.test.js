@@ -2333,3 +2333,24 @@ test("rpg: floors 31 to 60 - their own monsters and bosses, up to 10 monsters a 
   assert.ok(most > 6 && most <= 10, String(most));
   assert.ok([...names].every((n) => ["Shadow Fiend", "Void Horror", "Soul Reaper"].some((one) => n.includes(one))), [...names].join(", "));
 });
+test("rpg: the cleric's seals - a sealed foe can't heal (regenerate, drain, a healer's heal), the seal wears off", () => {
+  const run = duel("cleric", "regen", ["sealoflight"]);
+  const foe = run.monsters[0];
+  foe.hp = 500;
+  assert.strictEqual(rpg.play(run, "a", { uid: "t0", target: "m1" }, seeded(1)), null);
+  assert.ok(foe.effects.sealed > 0, "sealed");
+  const before = foe.hp;
+  rpg.endTurn(run, "a");
+  rpg.monsterTurn(run, seeded(2));
+  assert.ok(foe.hp <= before, "no regeneration while sealed");
+  // (a drain heals nothing either)
+  foe.effects.sealed = 2;
+  foe.moves = ["drain"];
+  foe.intent = { move: "drain", target: "a" };
+  const hp = foe.hp;
+  rpg.endTurn(run, "a");
+  rpg.monsterTurn(run, seeded(3));
+  assert.strictEqual(foe.hp, hp);
+  assert.match(rpg.CARDS.condemn.text, /on a sealed foe/);
+  assert.ok(rpg.poolOf("cleric").includes("holychains"));
+});

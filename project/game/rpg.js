@@ -664,7 +664,7 @@ function upgradeFx(fx) {
     if (o.aura == "focus") o.turns += 1;
     if (o.might != null) o.might += 1;
     if (o.status == "chill") o.turns = (o.turns || 1) + 1;
-    if (o.status == "exposed") o.turns = (o.turns || 2) + 1;
+    if (o.status == "exposed" || o.status == "sealed") o.turns = (o.turns || 2) + 1;
     if (o.conjure) o.n += 1;
     if (o.revive != null) o.revive = Math.min(1, Math.round(o.revive * UPGRADE * 100) / 100);
     if (o.extend != null) o.extend += 1;
@@ -708,6 +708,7 @@ function upgradeNote(id) {
   if (has((f) => f.might != null || f.aura == "focus")) notes.push("It lasts 1 turn longer.");
   if (has((f) => f.status == "chill")) notes.push("Its chill lasts 1 move longer.");
   if (has((f) => f.status == "exposed")) notes.push("The foe stays exposed 1 turn longer.");
+  if (has((f) => f.status == "sealed")) notes.push("The seal lasts 1 turn longer.");
   if (has((f) => f.thorns != null)) notes.push("Its thorns are 40% stronger.");
   if (has((f) => f.conjure)) notes.push("It makes 1 more card.");
   if (has((f) => f.revive != null)) notes.push("The fallen stand up with more HP.");
@@ -2794,8 +2795,9 @@ function planIntents(run, rng = Math.random) {
   for (const foe of alive(run.monsters)) {
     let options = foe.moves.filter((move) => {
       if ((move == "regen" || move == "heal") && furious(run)) return false;
-      if (move == "regen") return foe.hp < foe.maxHp * 0.7;
-      if (move == "heal") return alive(run.monsters).some((m) => m.hp < m.maxHp * 0.7);
+      // (a sealed foe can't heal: it does something else)
+      if (move == "regen") return foe.hp < foe.maxHp * 0.7 && !foe.effects.sealed;
+      if (move == "heal") return alive(run.monsters).some((m) => m.hp < m.maxHp * 0.7 && !m.effects.sealed);
       if (move == "howl") return !foe.effects.rage;
       if (move == "steal") return heroes.some((h) => h.potions > 0);
       // (calls for help: at most SUMMON_MAX monsters a fight - none once furious)
@@ -3217,7 +3219,7 @@ function playFx(run, hero, fx, { foe, friend, fallen, up, venom, block, heal, ca
       if (fx.status == "poison") afflict(m, "poison", fx.turns || 3, Math.max(1, Math.round(hero.atk * 0.45 * venom * luckBoost(hero))), hero.name);
       else if (fx.status == "burn") afflict(m, "burn", fx.turns || 2, Math.max(1, Math.round(hero.atk * 0.3 * up * luckBoost(hero))), hero.name);
       else if (fx.status == "stun") stun(run, m, rng, hero);
-      else if (fx.status == "exposed") m.effects.exposed = Math.max(m.effects.exposed || 0, fx.turns || 2);
+      else if (fx.status == "exposed" || fx.status == "sealed") m.effects[fx.status] = Math.max(m.effects[fx.status] || 0, fx.turns || 2);
       else m.effects[fx.status] = fx.turns || 1;
     }
   } else if (fx.might != null) {
@@ -3316,7 +3318,8 @@ function monsterMove(run, foe, rng) {
       break;
     case "drain": {
       const done = hurt(run, target, damage, source, rng, foe);
-      foe.hp = Math.min(foe.maxHp, foe.hp + done);
+      // (sealed: the drain heals nothing)
+      if (!foe.effects.sealed) foe.hp = Math.min(foe.maxHp, foe.hp + done);
       break;
     }
     case "burn":
@@ -3326,13 +3329,21 @@ function monsterMove(run, foe, rng) {
       }
       break;
     case "regen": {
+      if (foe.effects.sealed) {
+        say(run, `${source} is sealed and can't heal.`);
+        break;
+      }
       const heal = Math.round(foe.maxHp * 0.25);
       foe.hp = Math.min(foe.maxHp, foe.hp + heal);
       say(run, `${source} regenerates ${heal} HP.`);
       break;
     }
     case "heal": {
-      const hurtOne = alive(run.monsters).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+      const hurtOne = alive(run.monsters).filter((m) => !m.effects.sealed).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+      if (!hurtOne) {
+        say(run, `${source} tries to heal, but every foe is sealed.`);
+        break;
+      }
       const heal = Math.round(hurtOne.maxHp * 0.3);
       hurtOne.hp = Math.min(hurtOne.maxHp, hurtOne.hp + heal);
       say(run, `${source} heals ${hurtOne.icon} ${hurtOne.name} for ${heal}.`);
@@ -3446,7 +3457,7 @@ function monsterTurn(run, rng = Math.random) {
         say(run, `${label} ${one.icon ? "is defeated" : "is down"}!`);
       }
     }
-    for (const kind of ["rage", "weak", "exposed"]) if (one.effects[kind] && --one.effects[kind] <= 0) delete one.effects[kind];
+    for (const kind of ["rage", "weak", "exposed", "sealed"]) if (one.effects[kind] && --one.effects[kind] <= 0) delete one.effects[kind];
     for (const kind of ["might", "thorns"]) if (one.effects[kind] && --one.effects[kind].turns <= 0) delete one.effects[kind];
   }
   for (const hero of run.heroes) {
