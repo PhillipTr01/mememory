@@ -910,7 +910,8 @@ function tradeKind() {
 // How long an offer still stands, as a short text
 function expiresIn(ms) {
   var min = Math.max(1, Math.round(ms / 60000));
-  return "Expires in " + (min >= 60 ? Math.round(min / 60) + " h" : min + " min");
+  var days = Math.round(min / 1440);
+  return "Expires in " + (min >= 2880 ? days + " days" : min >= 60 ? Math.round(min / 60) + " h" : min + " min");
 }
 
 // A tile of something to trade: a card (its art, name, rarity) or a piece of gear - a click picks one more
