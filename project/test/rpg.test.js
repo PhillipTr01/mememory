@@ -11,10 +11,12 @@ const price = (v) => { const step = v < 1000 ? 10 : v < 10000 ? 50 : 100; return
 
 test("rpg: upgrades and floors get dearer, a floor opens after the one before; the map: rows of rooms (mostly fights) and paths, a fight first, the guarded gate last", () => {
   assert.strictEqual(rpg.upgradeCost(0), price((config.RPG_STAT_SHARE / 100) * rpg.entryCost(1)));
-  assert.strictEqual(rpg.LEVEL_MAX, 100);
+  assert.strictEqual(rpg.LEVEL_MAX, 200);
   assert.ok(rpg.upgradeCost(5) > rpg.upgradeCost(4));
   assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX), null);
-  assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX - 1), price((config.RPG_STAT_SHARE / 100) * rpg.entryCost(rpg.FLOORS)));
+  // (level 100: floor 30's price - the levels past it go on with the floors past 30)
+  assert.strictEqual(rpg.upgradeCost(99), price((config.RPG_STAT_SHARE / 100) * rpg.entryCost(30)));
+  assert.ok(rpg.upgradeCost(rpg.LEVEL_MAX - 1) > rpg.upgradeCost(99) && rpg.upgradeCost(rpg.LEVEL_MAX - 1) <= price((config.RPG_STAT_SHARE / 100) * rpg.entryCost(rpg.FLOORS)));
   assert.strictEqual(rpg.entryCost(1), 2500);
   assert.strictEqual(rpg.potionPrice(1), price((config.RPG_POTION_SHARE / 100) * rpg.entryCost(1)));
   assert.ok(rpg.potionPrice(10) > rpg.potionPrice(9));
@@ -2305,4 +2307,22 @@ test("rpg: a spiked foe hurts only who hits it directly - a hit on every foe get
   assert.strictEqual(me.hp, hp, "no spikes for a hit on every foe");
   rpg.play(run, "a", { uid: "t1", target: "m1" });
   assert.ok(me.hp < hp, "a direct hit pays");
+});
+test("rpg: floors 31 to 60 - their own monsters and bosses, up to 10 monsters a fight, entries 12% dearer a floor, stat levels to 200", () => {
+  assert.strictEqual(rpg.FLOORS, 60);
+  assert.strictEqual(rpg.LEVEL_MAX, 200);
+  assert.ok(Math.abs(rpg.entryCost(31) / rpg.entryCost(30) - 1 - config.RPG_ENTRY_GROWTH_DEEP / 100) < 0.01);
+  assert.ok(rpg.upgradeCost(150) > rpg.upgradeCost(99));
+  let most = 0;
+  const names = new Set();
+  for (let i = 0; i < 60; i++) {
+    const hero = rpg.newHero("warrior");
+    rpg.charOf(hero).tutorialDone = true;
+    const run = rpg.newRun(52, [{ name: "a", hero }], seeded32(i));
+    rpg.enterRoom(run, 0, seeded32(i));
+    most = Math.max(most, run.monsters.length);
+    run.monsters.forEach((m) => names.add(m.name));
+  }
+  assert.ok(most > 6 && most <= 10, String(most));
+  assert.ok([...names].every((n) => ["Shadow Fiend", "Void Horror", "Soul Reaper"].some((one) => n.includes(one))), [...names].join(", "));
 });

@@ -454,7 +454,7 @@ test("admin: dungeon packs for one character of a player - they wait until that 
   rpg.countRun(hero, 5, "warrior");
   rpg.countRun(hero, 9, "warrior");
   assert.strictEqual((await adminApi("rpg/characters/quinn")).body.characters[0].deepest, 12);
-  assert.match((await adminApi("rpg/floor", { username: "quinn", cls: "warrior", deepest: 99 })).body.error, /from 0 to 30/);
+  assert.match((await adminApi("rpg/floor", { username: "quinn", cls: "warrior", deepest: 99 })).body.error, /from 0 to 60/);
   assert.match((await adminApi("rpg/floor", { username: "quinn", cls: "rogue", deepest: 3 })).body.error, /no such character/);
   assert.strictEqual((await adminApi("rpg/floor", { username: "quinn", cls: "warrior", deepest: 5 })).status, 200);
   assert.strictEqual(rpg.charOf(hero, "warrior").deepest, 5);

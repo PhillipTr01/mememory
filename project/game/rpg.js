@@ -24,7 +24,9 @@
 
 const config = require("./config");
 
-const FLOORS = 30;
+const FLOORS = 60;
+// The first part of the dungeon: prices, gear and loot were made for it - the floors under it go on from there
+const FIRST_FLOORS = 30;
 const ROOMS = 6;
 const PARTY_MAX = 4;
 const BAG_MAX = 5; // the bag at first - room for more in the shop
@@ -117,8 +119,10 @@ const STATS = {
   agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, soft: [30, 60], about: "+0.4% dodge", desc: "Raises your dodge and your chance to sense rooms. A Rogue senses far better. It grows slower past 30%." },
 };
 const STAT_IDS = Object.keys(STATS);
-const LEVEL_MAX = 100;
-// (a stat level: RPG_STAT_SHARE % of the entry of the floor it belongs to - level 1 floor 1, the last one floor 30)
+const LEVEL_MAX = 200;
+// (a stat level: RPG_STAT_SHARE % of the entry of the floor it belongs to - level 1 floor 1, level 100 floor 30,
+// level 200 about floor 60)
+const LEVEL_FIRST = 100;
 // The main stat of a class: its levels count this much more (a class may have its own: mainBonus)
 const MAIN_BONUS = 1.5;
 // Luck and instinct: full up to the knee, past it every point counts less - never the max ([knee, max])
@@ -134,7 +138,7 @@ const REWARD = { fight: 0.36, hard: 0.66, elite: 0.66, boss: 1.08, chest: 0.36, 
 const DEEPER_CHANCE = 0.2;
 // (how much stronger the guardian is, per floor - points between them in line; tuned so a party on the curve of
 // its floor wins about one try in three)
-const DEEP_POWER = [[1, 1.16], [4, 1.16], [10, 1.36], [14, 1.35], [18, 1.8], [22, 1.4], [26, 1.45], [30, 1.45]];
+const DEEP_POWER = [[1, 1.16], [4, 1.16], [10, 1.36], [14, 1.35], [18, 1.8], [22, 1.4], [26, 1.45], [30, 1.45], [60, 1.45]];
 const DEEP_PAY = 2;
 
 /* ---------- Classes and their cards ---------- */
@@ -396,6 +400,36 @@ const MONSTERS = [
     { name: "Gargoyle", icon: "🗽", type: "construct", hp: 1.25, atk: 0.95, armor: 0.15, moves: ["smash", "defend", "attack"] },
     { name: "Cultist", icon: "🧛", type: "humanoid", hp: 0.9, atk: 1, moves: ["attack", "curse", "purge", "drain"] },
   ],
+  [
+    { name: "Frost Giant", icon: "🧊", type: "humanoid", hp: 1.3, atk: 1, traits: ["bulky"], moves: ["smash", "attack", "defend"] },
+    { name: "Ice Wraith", icon: "❄️", type: "undead", hp: 0.9, atk: 1.1, undead: true, dodge: 0.15, moves: ["drain", "fade", "attack"] },
+    { name: "Dire Bear", icon: "🐻", type: "beast", hp: 1.2, atk: 1.05, moves: ["attack", "smash", "howl"] },
+  ],
+  [
+    { name: "Spore Lord", icon: "🍄", type: "ooze", hp: 1.2, atk: 0.9, traits: ["venomproof"], moves: ["poison", "attack", "regen"] },
+    { name: "Mold Horror", icon: "🦠", type: "ooze", hp: 1, atk: 1, traits: ["venomproof"], moves: ["poison", "curse", "attack"] },
+    { name: "Cave Scorpion", icon: "🦂", type: "beast", hp: 0.9, atk: 1.15, traits: ["spiked"], moves: ["poison", "attack", "attack"] },
+  ],
+  [
+    { name: "Naga", icon: "🐍", type: "beast", hp: 1, atk: 1.1, moves: ["poison", "attack", "curse"] },
+    { name: "Kraken Spawn", icon: "🦑", type: "beast", hp: 1.4, atk: 0.9, traits: ["bulky"], moves: ["smash", "drain", "attack"] },
+    { name: "Drowned Priest", icon: "🧜", type: "undead", hp: 0.9, atk: 1, undead: true, moves: ["heal", "curse", "attack", "purge"] },
+  ],
+  [
+    { name: "Iron Sentinel", icon: "🤖", type: "construct", hp: 1.4, atk: 0.9, armor: 0.15, traits: ["venomproof"], moves: ["smash", "defend", "attack"] },
+    { name: "Forge Golem", icon: "🌋", type: "construct", hp: 1.3, atk: 1, armor: 0.1, traits: ["fireproof", "spiked"], moves: ["burn", "smash", "attack"] },
+    { name: "Clockwork Hound", icon: "⚙️", type: "construct", hp: 1, atk: 1.1, dodge: 0.1, moves: ["attack", "attack", "howl"] },
+  ],
+  [
+    { name: "Shadow Fiend", icon: "👤", type: "demon", hp: 0.9, atk: 1.15, dodge: 0.15, moves: ["drain", "fade", "curse"] },
+    { name: "Void Horror", icon: "🌑", type: "demon", hp: 1.2, atk: 1.05, moves: ["attack", "curse", "smash"] },
+    { name: "Soul Reaper", icon: "🪦", type: "undead", hp: 1, atk: 1.1, undead: true, traits: ["venomproof"], moves: ["drain", "attack", "curse"] },
+  ],
+  [
+    { name: "Archfiend", icon: "🔱", type: "demon", hp: 1.2, atk: 1.15, traits: ["fireproof", "spiked"], moves: ["burn", "smash", "howl"] },
+    { name: "Hellknight", icon: "⚔️", type: "humanoid", hp: 1.3, atk: 1.05, armor: 0.15, moves: ["attack", "smash", "defend"] },
+    { name: "Infernal Warlock", icon: "🧙", type: "humanoid", hp: 0.9, atk: 1, traits: ["fireproof"], moves: ["burn", "curse", "purge", "heal"] },
+  ],
 ];
 
 // What makes a monster hard for some heroes - shown on it
@@ -424,13 +458,19 @@ const BOSSES = [
   { name: "Troll Chieftain", icon: "🧌", type: "humanoid", power: 1.058, hp: 1.15, atk: 0.9, traits: ["bulky"], moves: ["attack", "smash", "regen"], summon: 3, phase: { atk: 1.35, moves: ["smash", "attack", "regen", "howl"], text: "goes berserk" } },
   { name: "Demon Prince", icon: "👿", type: "demon", power: 1.175, hp: 1, atk: 1, traits: ["fireproof"], moves: ["attack", "burn", "smash", "summon"], summon: 4, phase: { atk: 1.35, moves: ["burn", "smash", "curse"], text: "bursts into flames" } },
   { name: "The Lich", icon: "🧟", type: "undead", power: 1.616, hp: 0.9, atk: 0.85, undead: true, traits: ["venomproof"], moves: ["curse", "drain", "summon", "attack"], summon: 5, phase: { atk: 1.25, moves: ["curse", "drain", "burn", "smash"], text: "tears open its phylactery" } },
+  { name: "Frost Titan", icon: "🏔️", type: "humanoid", power: 0.8, hp: 1.3, atk: 0.9, traits: ["bulky"], moves: ["smash", "attack", "defend", "summon"], summon: 6, phase: { atk: 1.35, moves: ["smash", "howl", "attack"], text: "shatters the ice around it" } },
+  { name: "Mother of Spores", icon: "🍄", type: "ooze", power: 0.8, hp: 1.2, atk: 0.9, traits: ["venomproof"], moves: ["poison", "regen", "summon", "attack"], summon: 7, phase: { atk: 1.3, moves: ["poison", "curse", "summon"], text: "bursts into a cloud of spores" } },
+  { name: "Leviathan", icon: "🐋", type: "beast", power: 0.8, hp: 1.4, atk: 0.85, traits: ["bulky"], moves: ["smash", "drain", "attack", "summon"], summon: 8, phase: { atk: 1.35, moves: ["smash", "drain", "howl"], text: "rises from the deep" } },
+  { name: "The Forgemaster", icon: "🛠️", type: "construct", power: 0.8, hp: 1.3, atk: 0.9, armor: 0.15, traits: ["fireproof"], moves: ["burn", "smash", "defend", "summon"], summon: 9, phase: { atk: 1.35, moves: ["burn", "smash", "attack"], text: "stokes the furnace" } },
+  { name: "The Nightmare", icon: "👁️", type: "demon", power: 0.8, hp: 1, atk: 1, dodge: 0.1, moves: ["curse", "drain", "fade", "summon"], summon: 10, phase: { atk: 1.3, moves: ["curse", "drain", "smash"], text: "tears the shadows open" } },
+  { name: "The Infernal King", icon: "👑", type: "demon", power: 0.8, hp: 1.1, atk: 1, traits: ["fireproof", "spiked"], moves: ["burn", "smash", "curse", "summon"], summon: 11, phase: { atk: 1.35, moves: ["burn", "smash", "howl", "curse"], text: "rises from his burning throne" } },
 ];
 const MONSTER_HP = 52;
 const MONSTER_HP_GROWTH = 0.7; // (every floor deeper: this share of floor 1 more - as even as a character grows)
 const MONSTER_ATK = 11;
 const MONSTER_ATK_GROWTH = 0.35;
 // (a group of 5 floors: its monsters this much stronger - some kinds fight longer than their numbers say)
-const GROUP_POWER = [1, 1.03, 1.2, 0.88, 1.15, 1.15];
+const GROUP_POWER = [1, 1.03, 1.2, 0.88, 1.15, 1.15, 1.15, 1.15, 1.15, 1.15, 1.15, 1.15];
 const MONSTER_DEPTH = 0.035; // a row of the map deeper into a floor: this much stronger
 const MONSTER_SPREAD = 0.25; // every monster up to this much stronger or weaker
 // A bigger party: every monster has this much more HP and attack per hero after the first - and there are more of
@@ -1010,11 +1050,11 @@ const lateOf = (cls, level) => 1 + (cls.late || 0) * (Math.max(0, (level || 1) -
 // A class floor by floor: its HP and attack in a run this much more or less (the floor's own share, floor 1 first -
 // fitted with the simulator: every class clears every floor as often as the others)
 const CLASS_FLOOR = {
-  warrior: [0.94, 0.87, 0.94, 1.11, 0.97, 0.99, 1.01, 1.02, 1.03, 1.0, 1.06, 1.08, 1.08, 1.08, 1.02, 0.84, 0.86, 0.81, 0.81, 0.77, 0.85, 0.83, 0.83, 0.84, 0.87, 0.86, 0.83, 0.87, 0.91, 0.9],
-  paladin: [1.03, 1.03, 0.98, 0.96, 1.07, 1.05, 1.05, 1.05, 1.03, 1.1, 1.04, 1.02, 1.02, 1.04, 1.03, 1.11, 1.09, 1.13, 1.11, 1.04, 1.02, 1.05, 1.01, 1, 1, 0.99, 0.98, 0.98, 0.95, 0.96],
-  cleric: [1.01, 0.89, 0.91, 0.9, 0.91, 0.92, 0.92, 0.97, 0.98, 0.92, 0.75, 0.73, 0.75, 0.74, 0.79, 1.2, 1.09, 1.19, 1.22, 1.3, 0.85, 0.88, 0.81, 0.86, 0.9, 0.94, 0.91, 0.9, 0.86, 0.75],
-  rogue: [1.01, 1.12, 1.04, 0.95, 0.98, 1.01, 0.99, 0.97, 1, 0.98, 0.97, 1, 0.97, 1, 1.02, 0.97, 0.99, 0.95, 0.97, 0.86, 1.03, 1.03, 1.03, 1.02, 0.99, 0.99, 1.01, 0.95, 0.96, 1.02],
-  mage: [0.96, 1.14, 1.12, 0.99, 0.95, 0.9, 0.9, 0.91, 0.92, 0.86, 1.01, 0.98, 0.99, 0.96, 0.89, 0.89, 0.9, 0.87, 0.9, 0.94, 0.94, 0.98, 1.03, 0.98, 0.94, 1.04, 1.03, 1.05, 1.08, 1.05],
+  warrior: [0.94, 0.87, 0.94, 1.11, 0.97, 0.99, 1.01, 1.02, 1.03, 1.0, 1.06, 1.08, 1.08, 1.08, 1.02, 0.84, 0.86, 0.81, 0.81, 0.77, 0.85, 0.83, 0.83, 0.84, 0.87, 0.86, 0.83, 0.87, 0.91, 0.9, 0.93, 0.92, 0.9, 0.92, 0.9, 0.88, 0.89, 0.92, 0.89, 0.84, 0.87, 0.92, 0.94, 0.9, 0.84, 0.78, 0.77, 0.77, 0.79, 0.79, 0.8, 0.81, 0.83, 0.79, 0.74, 0.7, 0.7, 0.73, 0.72, 0.73],
+  paladin: [1.03, 1.03, 0.98, 0.96, 1.07, 1.05, 1.05, 1.05, 1.03, 1.1, 1.04, 1.02, 1.02, 1.04, 1.03, 1.11, 1.09, 1.13, 1.11, 1.04, 1.02, 1.05, 1.01, 1.0, 1.0, 0.99, 0.98, 0.98, 0.95, 0.96, 1.13, 1.17, 1.22, 1.22, 1.12, 1.07, 1.06, 1.13, 1.14, 1.14, 1.1, 1.05, 1.02, 1.03, 1.01, 1.01, 1.04, 1.13, 1.16, 1.13, 1.1, 1.08, 1.11, 1.15, 1.17, 1.21, 1.2, 1.17, 1.18, 1.21],
+  cleric: [1.01, 0.89, 0.91, 0.9, 0.91, 0.92, 0.92, 0.97, 0.98, 0.92, 0.75, 0.73, 0.75, 0.74, 0.79, 1.2, 1.09, 1.19, 1.22, 1.3, 0.85, 0.88, 0.81, 0.86, 0.9, 0.94, 0.91, 0.9, 0.86, 0.75, 0.77, 0.75, 0.75, 0.79, 0.8, 0.77, 0.75, 0.76, 0.83, 0.85, 0.85, 0.82, 0.81, 0.87, 0.88, 0.89, 0.85, 0.89, 0.93, 0.92, 0.89, 0.86, 0.86, 0.92, 0.96, 0.98, 0.93, 0.92, 0.93, 0.94],
+  rogue: [1.01, 1.12, 1.04, 0.95, 0.98, 1.01, 0.99, 0.97, 1.0, 0.98, 0.97, 1.0, 0.97, 1.0, 1.02, 0.97, 0.99, 0.95, 0.97, 0.86, 1.03, 1.03, 1.03, 1.02, 0.99, 0.99, 1.01, 0.95, 0.96, 1.02, 0.87, 0.88, 0.9, 0.88, 0.9, 0.9, 0.96, 0.98, 0.97, 0.91, 0.9, 0.87, 0.9, 0.87, 0.88, 0.86, 0.87, 0.88, 0.93, 0.97, 0.94, 0.96, 0.96, 0.99, 0.93, 0.85, 0.81, 0.81, 0.83, 0.83],
+  mage: [0.96, 1.14, 1.12, 0.99, 0.95, 0.9, 0.9, 0.91, 0.92, 0.86, 1.01, 0.98, 0.99, 0.96, 0.89, 0.89, 0.9, 0.87, 0.9, 0.94, 0.94, 0.98, 1.03, 0.98, 0.94, 1.04, 1.03, 1.05, 1.08, 1.05, 0.92, 0.94, 0.96, 1.03, 0.98, 0.95, 0.86, 0.92, 0.92, 0.94, 0.94, 1.02, 1.04, 1.07, 0.98, 1.03, 1.0, 1.06, 1.03, 1.06, 1.04, 1.03, 0.98, 0.97, 0.97, 1.01, 1.0, 1.0, 0.95, 0.97],
 };
 const classFloor = (clsId, floor) => ((CLASS_FLOOR[clsId] || [])[Math.max(1, Math.min(FLOORS, floor)) - 1] || 1);
 
@@ -1057,7 +1097,7 @@ function statPrice(hero, level, cls = hero.cls) {
 // (as dear as the loot of the floor a character with that level plays: the same share of a run all the way)
 function upgradeCost(level) {
   if (level >= LEVEL_MAX) return null;
-  return round100((config.RPG_STAT_SHARE / 100) * entryCost(1 + (level * (FLOORS - 1)) / (LEVEL_MAX - 1)));
+  return round100((config.RPG_STAT_SHARE / 100) * entryCost(1 + (level * (FIRST_FLOORS - 1)) / (LEVEL_FIRST - 1)));
 }
 
 // The highest floor the character played now may enter
@@ -1065,8 +1105,11 @@ function maxFloor(hero) {
   return Math.min(FLOORS, charOf(hero).deepest + 1);
 }
 
+// (past the first floors: dearer by RPG_ENTRY_GROWTH_DEEP a floor - a gentler climb)
 function entryCost(floor) {
-  return round100(config.RPG_ENTRY_BASE * Math.pow(1 + config.RPG_ENTRY_GROWTH / 100, floor - 1));
+  const first = Math.min(floor, FIRST_FLOORS);
+  const deep = Math.max(0, floor - FIRST_FLOORS);
+  return round100(config.RPG_ENTRY_BASE * Math.pow(1 + config.RPG_ENTRY_GROWTH / 100, first - 1) * Math.pow(1 + config.RPG_ENTRY_GROWTH_DEEP / 100, deep));
 }
 
 /* ---------- Death: a character down with its party rests 3 hours - or is brought back for coins ---------- */
@@ -1522,7 +1565,7 @@ function canWear(item, cls) {
 const DECK_MIN_CHANCE = [0.02, 0.04, 0.08, 0.15, 0.25];
 function makeGear(floor, rng = Math.random, luck = 0, cls = null) {
   const shift = Math.min(0.5, luck / 100);
-  const depth = Math.min(1, Math.max(0, (floor - 1) / (FLOORS - 1)));
+  const depth = Math.min(1, Math.max(0, (floor - 1) / (FIRST_FLOORS - 1)));
   // (luck: better pieces more often - a legendary at most twice as often)
   const weights = RARITIES.map((rarity, i) => (rarity.weight + (rarity.deep - rarity.weight) * depth) * (i == 0 ? 1 - shift : 1 + shift * Math.min(i, 2)));
   let roll = rng() * weights.reduce((a, b) => a + b, 0);
@@ -1620,7 +1663,7 @@ const LOOT_DEEP_FROM = 14;
 const LOOT_DEEP = 0.45;
 function lootScale(floor) {
   const rows = ROOMS + (floor >= 11 ? 0.5 : 0) + (floor >= 21 ? 1.5 : 0) + (BOSS_EVERY && floor % BOSS_EVERY == 0 ? 1 : 0);
-  const deep = 1 + (LOOT_DEEP * Math.max(0, floor - LOOT_DEEP_FROM)) / (FLOORS - LOOT_DEEP_FROM);
+  const deep = 1 + (LOOT_DEEP * Math.max(0, floor - LOOT_DEEP_FROM)) / (FIRST_FLOORS - LOOT_DEEP_FROM);
   return (ROOMS / rows) * deep;
 }
 
@@ -1754,7 +1797,7 @@ const DEPTH_EXTRA = 0.015;
 // decks a character's cards make: a class on its stat curve clears floor 2 in about 90% of runs, floor 30 about 40% -
 // floor 1: a new character with the starter deck clears it about 80% of the time;
 // the classes even on every floor by CLASS_FLOOR - a character behind its curve falls off fast down there)
-const FLOOR_POWER = [[1, 2.2], [2, 2.67], [3, 2.32], [4, 2.89], [5, 3.08], [6, 2.37], [7, 2.35], [8, 2.43], [9, 2.37], [10, 2.41], [11, 2.15], [12, 2.12], [13, 2.13], [14, 2.1], [15, 2.26], [16, 3.36], [17, 3.63], [18, 3.66], [19, 3.47], [20, 2.71], [21, 2.77], [22, 2.83], [23, 2.68], [24, 2.98], [25, 2.47], [26, 3.01], [27, 3.19], [28, 3.12], [29, 3.03], [30, 2.42]];
+const FLOOR_POWER = [[1, 2.2], [2, 2.67], [3, 2.32], [4, 2.89], [5, 3.08], [6, 2.37], [7, 2.35], [8, 2.43], [9, 2.37], [10, 2.41], [11, 2.15], [12, 2.12], [13, 2.13], [14, 2.1], [15, 2.26], [16, 3.36], [17, 3.63], [18, 3.66], [19, 3.47], [20, 2.71], [21, 2.77], [22, 2.83], [23, 2.68], [24, 2.98], [25, 2.47], [26, 3.01], [27, 3.19], [28, 3.12], [29, 3.03], [30, 2.42], [31, 3.15], [32, 2.98], [33, 2.95], [34, 2.95], [35, 2.31], [36, 2.73], [37, 2.7], [38, 2.7], [39, 2.68], [40, 2.3], [41, 2.49], [42, 2.47], [43, 2.34], [44, 2.3], [45, 1.81], [46, 1.95], [47, 1.98], [48, 1.91], [49, 1.93], [50, 1.68], [51, 2.12], [52, 2.08], [53, 2.1], [54, 2.1], [55, 1.86], [56, 1.69], [57, 1.67], [58, 1.61], [59, 1.61], [60, 1.6]];
 function floorPower(floor, points = FLOOR_POWER) {
   if (floor <= points[0][0]) return points[0][1];
   for (let i = 1; i < points.length; i++) {
@@ -1813,11 +1856,12 @@ function armorOf(floor, kind, rank) {
 }
 
 // The monsters of a fight: 1 to 3 (more with a bigger party, a hard fight one more) - an elite with a few others
-// The most monsters in a fight at once: 5 - from floor 15 on 6, from floor 25 on 7 (summons and splits too)
+// The most monsters in a fight at once: 5 - from floor 15 on 6, from floor 25 on 7, past floor 30 10 (summons and
+// splits too)
 // (more of them than usual: their strength shared - their HP a little lower still, a split is no stronger)
 const MORE_HP = 0.8;
 function maxFoes(floor) {
-  return floor >= 25 ? 7 : floor >= 15 ? 6 : 5;
+  return floor > FIRST_FLOORS ? 10 : floor >= 25 ? 7 : floor >= 15 ? 6 : 5;
 }
 
 function monstersFor(floor, size, room, rng = Math.random, depth = 0) {
@@ -1844,7 +1888,7 @@ function monstersFor(floor, size, room, rng = Math.random, depth = 0) {
   const extra = room == "hard" ? 1 : 0;
   const base = Math.min(5, 1 + Math.floor(rng() * 2) + Math.floor((size - 1) / 2) + extra);
   // (deeper: sometimes more of them - the same strength shared among them)
-  const more = (floor >= 15 ? Math.floor(rng() * 3) : 0) + (floor >= 25 ? Math.floor(rng() * 2) : 0);
+  const more = (floor >= 15 ? Math.floor(rng() * 3) : 0) + (floor >= 25 ? Math.floor(rng() * 2) : 0) + (floor > FIRST_FLOORS ? Math.floor(rng() * 4) : 0);
   const count = Math.min(maxFoes(floor), base + more);
   const list = Array.from({ length: count }, () => monster(floor, size, pick(rng, group), room == "hard" ? RANKS.hard : RANKS.normal, depth, rng));
   if (count > base)

@@ -8615,6 +8615,22 @@ button.rpg-trade-row:active {
   }
 }
 
+/* Nine or ten monsters: smaller still, five to a row */
+.rpg-monsters.crowd .rpg-monster {
+  width: 6.6rem;
+  padding: 1.3rem 0.4rem 0.5rem;
+}
+
+.rpg-monsters.crowd .rpg-monster-icon {
+  font-size: 1.6rem;
+}
+
+@media (max-width: 700px) {
+  .rpg-monsters.crowd .rpg-monster {
+    width: calc(25% - 0.45rem);
+  }
+}
+
 /* The auto refill of the potions: a switch in the potions row */
 .rpg-auto-potions {
   margin-top: 0.25rem;

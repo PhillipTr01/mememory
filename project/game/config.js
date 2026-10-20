@@ -269,6 +269,7 @@ module.exports = {
   // The dungeon (test world only, see game/rpg.js) - the admin panel changes these
   RPG_ENTRY_BASE: 2500, // the entry of floor 1
   RPG_ENTRY_GROWTH: 27, // % dearer every floor deeper
+  RPG_ENTRY_GROWTH_DEEP: 12, // % dearer every floor deeper past floor 30
   RPG_STAT_SHARE: 35, // % of a floor's entry: a stat level (level 1 - floor 1, the last - floor 30)
   RPG_CLASS_PRICE: 500000, // another class
   RPG_CARD_SELL: 75, // a card sold: this share (%) of its trade value
