@@ -119,10 +119,11 @@ const STATS = {
   agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, soft: [30, 60], about: "+0.4% dodge", desc: "Raises your dodge and your chance to sense rooms. A Rogue senses far better. It grows slower past 30%." },
 };
 const STAT_IDS = Object.keys(STATS);
-const LEVEL_MAX = 200;
+const LEVEL_MAX = 150;
 // (a stat level: RPG_STAT_SHARE % of the entry of the floor it belongs to - level 1 floor 1, level 100 floor 30,
-// level 200 about floor 60)
+// level 150 floor 60)
 const LEVEL_FIRST = 100;
+const statFloor = (level) => (level <= LEVEL_FIRST ? 1 + (level * (FIRST_FLOORS - 1)) / (LEVEL_FIRST - 1) : FIRST_FLOORS + ((level - LEVEL_FIRST) * (FLOORS - FIRST_FLOORS)) / (LEVEL_MAX - LEVEL_FIRST));
 // The main stat of a class: its levels count this much more (a class may have its own: mainBonus)
 const MAIN_BONUS = 1.5;
 // Luck and instinct: full up to the knee, past it every point counts less - never the max ([knee, max])
@@ -528,7 +529,7 @@ function lootShare(deepest, floor) {
 const PERK_KEYS = ["healHit", "pierce", "thornsDef", "aoe", "startBlock", "firstMana", "draw", "attack", "firstStrike", "lowHp", "crit", "lifesteal", "thorns", "block", "heal", "afterFight", "poison", "maxHp", "agi", "spikeGuard", "undying", "healedStrike"];
 
 // Talents: every class at hero level 3, 6 and 10 - one of two
-const TALENT_LEVELS = [3, 6, 10, 15, 20, 25, 30, 40, 50];
+const TALENT_LEVELS = [3, 6, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100];
 const TALENTS = {
   warrior: [
     [{ id: "ironskin", name: "Iron Skin", icon: "🪨", text: "+10% max HP. Start every turn with 10 block.", perks: { maxHp: 0.1, startBlock: 10 } }, { id: "rhythm", name: "Battle Rhythm", icon: "🥁", text: "Your first attack each turn deals 30% more.", perks: { firstStrike: 0.3 } }],
@@ -540,6 +541,11 @@ const TALENTS = {
     [{ id: "breaker", name: "Armor Breaker", icon: "⛏️", text: "Ignore 35% more armor, 10% more damage.", perks: { pierce: 0.35, attack: 0.1 } }, { id: "momentum", name: "Momentum", icon: "🌀", text: "Your first attack each turn deals 50% more.", perks: { firstStrike: 0.5 } }],
     [{ id: "colossus", name: "Colossus", icon: "🗿", text: "+20% max HP.", perks: { maxHp: 0.2 } }, { id: "undying", name: "Undying", icon: "❤️‍🔥", text: "Once a fight, a blow that would take you down leaves you at 1 HP.", perks: { undying: 1 } }],
     [{ id: "titan", name: "Titan", icon: "🌋", text: "25% more damage.", perks: { attack: 0.25 } }, { id: "worldsplitter", name: "Worldsplitter", icon: "💥", text: "Ignore 30% more armor, 10% more damage.", perks: { pierce: 0.3, attack: 0.1 } }],
+    [{ id: "bloodrage", name: "Blood Rage", icon: "🩸", text: "45% more damage below half HP.", perks: { lowHp: 0.45 } }, { id: "ironwill", name: "Iron Will", icon: "🛡️", text: "+20% max HP. Start every turn with 15 block.", perks: { maxHp: 0.2, startBlock: 15 } }],
+    [{ id: "executioner", name: "Executioner", icon: "🪓", text: "30% more damage.", perks: { attack: 0.3 } }, { id: "battlefury", name: "Battle Fury", icon: "🔥", text: "Your first attack each turn deals 70% more.", perks: { firstStrike: 0.7 } }],
+    [{ id: "mountain", name: "Mountain", icon: "⛰️", text: "+30% max HP.", perks: { maxHp: 0.3 } }, { id: "rend", name: "Rend", icon: "🗡️", text: "Ignore 40% more armor, 15% more damage.", perks: { pierce: 0.4, attack: 0.15 } }],
+    [{ id: "warmonger", name: "Warmonger", icon: "📯", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "unstoppable", name: "Unstoppable", icon: "🐂", text: "+1 mana on the first turn of a fight, 15% more damage.", perks: { firstMana: 1, attack: 0.15 } }],
+    [{ id: "avatarofwar", name: "Avatar of War", icon: "⚔️", text: "40% more damage.", perks: { attack: 0.4 } }, { id: "immortal", name: "Immortal", icon: "👑", text: "+35% max HP. Heal 5% of your attack damage.", perks: { maxHp: 0.35, lifesteal: 0.05 } }],
   ],
   paladin: [
     [{ id: "spikes", name: "Spiked Armor", icon: "🌵", text: "Thorns +30% of your armor.", perks: { thornsDef: 0.3 } }, { id: "bastion", name: "Bastion", icon: "🏰", text: "25% more block from your cards.", perks: { block: 0.25 } }],
@@ -551,6 +557,11 @@ const TALENTS = {
     [{ id: "crusader", name: "Crusader", icon: "⚔️", text: "Thorns +50% of your armor.", perks: { thornsDef: 0.5 } }, { id: "zealot", name: "Zealot", icon: "🔥", text: "Your first attack each turn deals 40% more.", perks: { firstStrike: 0.4 } }],
     [{ id: "bulwark", name: "Bulwark", icon: "🧱", text: "Start every turn with 8 block, 20% more block.", perks: { startBlock: 8, block: 0.2 } }, { id: "blessed", name: "Blessed", icon: "🌟", text: "+25% max HP.", perks: { maxHp: 0.25 } }],
     [{ id: "avatar", name: "Avatar of Thorns", icon: "☀️", text: "Thorns +80% of your armor.", perks: { thornsDef: 0.8 } }, { id: "divineaegis", name: "Divine Aegis", icon: "👼", text: "50% more block from your cards.", perks: { block: 0.5 } }],
+    [{ id: "stonewall", name: "Stone Wall", icon: "🧱", text: "40% more block from your cards.", perks: { block: 0.4 } }, { id: "spikedbastion", name: "Spiked Bastion", icon: "🌵", text: "Thorns +60% of your armor.", perks: { thornsDef: 0.6 } }],
+    [{ id: "sacredshield", name: "Sacred Shield", icon: "🔆", text: "Start every turn with 20 block, +15% max HP.", perks: { startBlock: 20, maxHp: 0.15 } }, { id: "righteous", name: "Righteous Fury", icon: "⚡", text: "30% more damage.", perks: { attack: 0.3 } }],
+    [{ id: "fortress", name: "Fortress", icon: "🏰", text: "50% more block from your cards.", perks: { block: 0.5 } }, { id: "thorncrown", name: "Crown of Thorns", icon: "👑", text: "Thorns +80% of your armor.", perks: { thornsDef: 0.8 } }],
+    [{ id: "devout", name: "Devout", icon: "📖", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "crusade", name: "Crusade", icon: "🚩", text: "+1 mana on the first turn of a fight, 15% more damage.", perks: { firstMana: 1, attack: 0.15 } }],
+    [{ id: "divinebulwark", name: "Divine Bulwark", icon: "🛡️", text: "60% more block from your cards, +20% max HP.", perks: { block: 0.6, maxHp: 0.2 } }, { id: "eternalthorns", name: "Eternal Thorns", icon: "🌹", text: "Thorns +100% of your armor.", perks: { thornsDef: 1 } }],
   ],
   cleric: [
     [{ id: "mercy", name: "Mercy", icon: "💚", text: "30% more healing.", perks: { heal: 0.3 } }, { id: "vital", name: "Vitality", icon: "❤️", text: "+15% max HP.", perks: { maxHp: 0.15 } }],
@@ -562,6 +573,11 @@ const TALENTS = {
     [{ id: "saint", name: "Saint", icon: "😇", text: "40% more healing.", perks: { heal: 0.4 } }, { id: "benediction", name: "Benediction", icon: "⛪", text: "Heal 10% after every fight won, 15% more healing.", perks: { afterFight: 0.1, heal: 0.15 } }],
     [{ id: "lightwell", name: "Lightwell", icon: "⛲", text: "Heal 15% more of your attack damage.", perks: { lifesteal: 0.15 } }, { id: "inquisitor", name: "Inquisitor", icon: "⚖️", text: "+10% critical hits.", perks: { crit: 10 } }],
     [{ id: "archangel", name: "Archangel", icon: "🪽", text: "+25% max HP, 20% more healing.", perks: { maxHp: 0.25, heal: 0.2 } }, { id: "radiance", name: "Radiance", icon: "🌞", text: "20% more damage.", perks: { attack: 0.2 } }],
+    [{ id: "lifegiver", name: "Lifegiver", icon: "💚", text: "40% more healing.", perks: { heal: 0.4 } }, { id: "wrathful", name: "Wrathful", icon: "😠", text: "After a heal, your attacks deal 25% more for the rest of the turn.", perks: { healedStrike: 0.25 } }],
+    [{ id: "radianthalo", name: "Radiant Halo", icon: "😇", text: "+25% max HP. Heal 20% after every fight won.", perks: { maxHp: 0.25, afterFight: 0.2 } }, { id: "holyfire", name: "Holy Fire", icon: "🔥", text: "30% more damage.", perks: { attack: 0.3 } }],
+    [{ id: "sanctity", name: "Sanctity", icon: "🕊️", text: "50% more healing.", perks: { heal: 0.5 } }, { id: "judgement", name: "Judgement", icon: "⚖️", text: "Heals smite 8% more. After a heal, your attacks deal 20% more for the rest of the turn.", perks: { healHit: 0.08, healedStrike: 0.2 } }],
+    [{ id: "prophecy", name: "Prophecy", icon: "📜", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "blesseddawn", name: "Blessed Dawn", icon: "🌅", text: "+1 mana on the first turn of a fight, 20% more healing.", perks: { firstMana: 1, heal: 0.2 } }],
+    [{ id: "seraph", name: "Seraph", icon: "👼", text: "+30% max HP, 40% more healing.", perks: { maxHp: 0.3, heal: 0.4 } }, { id: "heavenwrath", name: "Wrath of Heaven", icon: "🌩️", text: "After a heal, your attacks deal 35% more for the rest of the turn. 15% more damage.", perks: { healedStrike: 0.35, attack: 0.15 } }],
   ],
   rogue: [
     [{ id: "venom", name: "Venom", icon: "🐍", text: "Your poison is 40% stronger.", perks: { poison: 0.4 } }, { id: "swift", name: "Swift", icon: "💧", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
@@ -573,6 +589,11 @@ const TALENTS = {
     [{ id: "deadeye", name: "Deadeye", icon: "👁️", text: "+20% critical hits, 10% more damage.", perks: { crit: 20, attack: 0.1 } }, { id: "sleight", name: "Sleight of Hand", icon: "🃏", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
     [{ id: "phantom", name: "Phantom", icon: "👻", text: "+14% to dodge a hit.", perks: { agi: 14 } }, { id: "ruthless", name: "Ruthless", icon: "⚔️", text: "30% more damage.", perks: { attack: 0.3 } }],
     [{ id: "plague", name: "Plague", icon: "☣️", text: "Your poison is 2.5 times as strong.", perks: { poison: 1.5 } }, { id: "deathshand", name: "Death's Hand", icon: "💀", text: "+20% critical hits, 25% more damage.", perks: { crit: 20, attack: 0.25 } }],
+    [{ id: "venomlord", name: "Venom Lord", icon: "🐍", text: "Your poison is 80% stronger.", perks: { poison: 0.8 } }, { id: "nightblade", name: "Nightblade", icon: "🗡️", text: "+15% critical hits.", perks: { crit: 15 } }],
+    [{ id: "shadowform", name: "Shadow Form", icon: "👤", text: "+12% to dodge a hit.", perks: { agi: 12 } }, { id: "ambush", name: "Ambush", icon: "🎯", text: "Your first attack each turn deals 60% more.", perks: { firstStrike: 0.6 } }],
+    [{ id: "plaguebringer", name: "Plaguebringer", icon: "🧪", text: "Your poison is twice as strong.", perks: { poison: 1 } }, { id: "keeneye", name: "Keen Eye", icon: "🎯", text: "+15% critical hits, 15% more damage.", perks: { crit: 15, attack: 0.15 } }],
+    [{ id: "quickhands", name: "Nimble Fingers", icon: "✋", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "swindler", name: "Swindler", icon: "💰", text: "+1 mana on the first turn of a fight, 15% more damage.", perks: { firstMana: 1, attack: 0.15 } }],
+    [{ id: "deathmarked", name: "Toxic Mark", icon: "☠️", text: "Your poison is 2.5 times as strong, +10% critical hits.", perks: { poison: 1.5, crit: 10 } }, { id: "wraithwalker", name: "Wraithwalker", icon: "🌫️", text: "+14% to dodge a hit, 30% more damage.", perks: { agi: 14, attack: 0.3 } }],
   ],
   mage: [
     [{ id: "spellstorm", name: "Spellstorm", icon: "🌪️", text: "Hits on every foe deal 20% more.", perks: { aoe: 0.2 } }, { id: "clarity", name: "Clarity", icon: "💎", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
@@ -584,6 +605,11 @@ const TALENTS = {
     [{ id: "arcaneskin", name: "Arcane Skin", icon: "🧿", text: "+35% max HP.", perks: { maxHp: 0.35 } }, { id: "overload", name: "Overload", icon: "⚡", text: "Your first attack each turn deals 70% more.", perks: { firstStrike: 0.7 } }],
     [{ id: "archon", name: "Archon", icon: "🌌", text: "60% more damage.", perks: { attack: 0.6 } }, { id: "timeweaver", name: "Timeweaver", icon: "⏳", text: "+2 mana on the first turn of a fight, 20% more damage.", perks: { firstMana: 2, attack: 0.2 } }],
     [{ id: "armageddon", name: "Armageddon", icon: "🌋", text: "Hits on every foe deal twice as much.", perks: { aoe: 1 } }, { id: "grandmagus", name: "Grand Magus", icon: "🧙", text: "+20% critical hits, 30% more damage.", perks: { crit: 20, attack: 0.3 } }],
+    [{ id: "arcaneflood", name: "Arcane Flood", icon: "🌊", text: "Hits on every foe deal 30% more.", perks: { aoe: 0.3 } }, { id: "arcanefocus", name: "Arcane Focus", icon: "🎯", text: "+15% critical hits.", perks: { crit: 15 } }],
+    [{ id: "magister", name: "Magister", icon: "🧙", text: "40% more damage.", perks: { attack: 0.4 } }, { id: "manafont", name: "Mana Font", icon: "💧", text: "+1 mana on the first turn of a fight, 15% more damage.", perks: { firstMana: 1, attack: 0.15 } }],
+    [{ id: "devastation", name: "Devastation", icon: "☄️", text: "Hits on every foe deal 40% more.", perks: { aoe: 0.4 } }, { id: "spellblade", name: "Spellblade", icon: "🗡️", text: "+15% critical hits, 20% more damage.", perks: { crit: 15, attack: 0.2 } }],
+    [{ id: "foresight", name: "Foresight", icon: "👁️", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "surge", name: "Surge", icon: "⚡", text: "20% more damage. Your first attack each turn deals 40% more.", perks: { attack: 0.2, firstStrike: 0.4 } }],
+    [{ id: "apotheosis", name: "Apotheosis", icon: "🌟", text: "Hits on every foe deal 50% more, 20% more damage.", perks: { aoe: 0.5, attack: 0.2 } }, { id: "timelord", name: "Time Lord", icon: "⏳", text: "Draw 1 more card every turn, +1 mana on the first turn of a fight.", perks: { draw: 1, firstMana: 1 } }],
   ],
 };
 
@@ -692,12 +718,17 @@ function upgradeNote(id) {
 }
 
 // Hero levels: the XP for the next one; what a fight gives
+// (past level 50: every level about 21% dearer - the XP of the deeper floors grows as fast, so a level takes about as
+// many runs there as before)
 function xpNeed(level) {
-  return Math.round(40 * Math.pow(level, 1.5));
+  return Math.round(40 * Math.pow(level, 1.5) * Math.pow(XP_PAST, Math.max(0, level - STRENGTH_LEVEL)));
 }
+const XP_PAST = 1.206;
 // XP: a fight won (by its kind), a floor cleared - x1.35 every floor deeper; at most HERO_LEVEL_MAX
 const XP = { fight: 3, hard: 5, elite: 10, boss: 20, floor: 8, deep: 30 };
-const HERO_LEVEL_MAX = 50;
+const HERO_LEVEL_MAX = 100;
+// (the class strength and the late factor grow up to this level - past it the talents go on)
+const STRENGTH_LEVEL = 50;
 const FIRST_CLEAR = 0.5; // a floor cleared the first time: this share of its entry more
 function xpFor(kind, floor) {
   return Math.round((XP[kind] || 0) * (1 + (floor - 1) * 0.35));
@@ -1020,7 +1051,7 @@ function abilityOf(cls, level = 0) {
 const STRENGTH_TOP = 2;
 function strengthOf(cls, level = 1) {
   const base = CLASSES[cls].strength;
-  const grow = 1 + (((base.top || STRENGTH_TOP) - 1) * (Math.max(1, level) - 1)) / (HERO_LEVEL_MAX - 1);
+  const grow = 1 + (((base.top || STRENGTH_TOP) - 1) * (Math.min(STRENGTH_LEVEL, Math.max(1, level)) - 1)) / (STRENGTH_LEVEL - 1);
   const perks = Object.fromEntries(Object.entries(base.perks).map(([key, value]) => [key, Math.round(value * grow * 1000) / 1000]));
   // (shares as %, crit already in %)
   const text = base.text.replace(/\{(\w+)\}/g, (_, key) => String(key == "crit" ? Math.round(perks[key]) : Math.round(perks[key] * 100)));
@@ -1046,15 +1077,15 @@ function addPerks(into, perks) {
 // A class late on (late: its HP and attack this share more or less at the highest level - from LATE_FROM on, evenly):
 // the classes even on the deep floors without touching the first ones
 const LATE_FROM = 25;
-const lateOf = (cls, level) => 1 + (cls.late || 0) * (Math.max(0, (level || 1) - LATE_FROM) / (HERO_LEVEL_MAX - LATE_FROM));
+const lateOf = (cls, level) => 1 + (cls.late || 0) * (Math.max(0, Math.min(STRENGTH_LEVEL, level || 1) - LATE_FROM) / (STRENGTH_LEVEL - LATE_FROM));
 // A class floor by floor: its HP and attack in a run this much more or less (the floor's own share, floor 1 first -
 // fitted with the simulator: every class clears every floor as often as the others)
 const CLASS_FLOOR = {
-  warrior: [0.94, 0.87, 0.94, 1.11, 0.97, 0.99, 1.01, 1.02, 1.03, 1.0, 1.06, 1.08, 1.08, 1.08, 1.02, 0.84, 0.86, 0.81, 0.81, 0.77, 0.85, 0.83, 0.83, 0.84, 0.87, 0.86, 0.83, 0.87, 0.91, 0.9, 0.93, 0.92, 0.9, 0.92, 0.9, 0.88, 0.89, 0.92, 0.89, 0.84, 0.87, 0.92, 0.94, 0.9, 0.84, 0.78, 0.77, 0.77, 0.79, 0.79, 0.8, 0.81, 0.83, 0.79, 0.74, 0.7, 0.7, 0.73, 0.72, 0.73],
-  paladin: [1.03, 1.03, 0.98, 0.96, 1.07, 1.05, 1.05, 1.05, 1.03, 1.1, 1.04, 1.02, 1.02, 1.04, 1.03, 1.11, 1.09, 1.13, 1.11, 1.04, 1.02, 1.05, 1.01, 1.0, 1.0, 0.99, 0.98, 0.98, 0.95, 0.96, 1.13, 1.17, 1.22, 1.22, 1.12, 1.07, 1.06, 1.13, 1.14, 1.14, 1.1, 1.05, 1.02, 1.03, 1.01, 1.01, 1.04, 1.13, 1.16, 1.13, 1.1, 1.08, 1.11, 1.15, 1.17, 1.21, 1.2, 1.17, 1.18, 1.21],
-  cleric: [1.01, 0.89, 0.91, 0.9, 0.91, 0.92, 0.92, 0.97, 0.98, 0.92, 0.75, 0.73, 0.75, 0.74, 0.79, 1.2, 1.09, 1.19, 1.22, 1.3, 0.85, 0.88, 0.81, 0.86, 0.9, 0.94, 0.91, 0.9, 0.86, 0.75, 0.77, 0.75, 0.75, 0.79, 0.8, 0.77, 0.75, 0.76, 0.83, 0.85, 0.85, 0.82, 0.81, 0.87, 0.88, 0.89, 0.85, 0.89, 0.93, 0.92, 0.89, 0.86, 0.86, 0.92, 0.96, 0.98, 0.93, 0.92, 0.93, 0.94],
-  rogue: [1.01, 1.12, 1.04, 0.95, 0.98, 1.01, 0.99, 0.97, 1.0, 0.98, 0.97, 1.0, 0.97, 1.0, 1.02, 0.97, 0.99, 0.95, 0.97, 0.86, 1.03, 1.03, 1.03, 1.02, 0.99, 0.99, 1.01, 0.95, 0.96, 1.02, 0.87, 0.88, 0.9, 0.88, 0.9, 0.9, 0.96, 0.98, 0.97, 0.91, 0.9, 0.87, 0.9, 0.87, 0.88, 0.86, 0.87, 0.88, 0.93, 0.97, 0.94, 0.96, 0.96, 0.99, 0.93, 0.85, 0.81, 0.81, 0.83, 0.83],
-  mage: [0.96, 1.14, 1.12, 0.99, 0.95, 0.9, 0.9, 0.91, 0.92, 0.86, 1.01, 0.98, 0.99, 0.96, 0.89, 0.89, 0.9, 0.87, 0.9, 0.94, 0.94, 0.98, 1.03, 0.98, 0.94, 1.04, 1.03, 1.05, 1.08, 1.05, 0.92, 0.94, 0.96, 1.03, 0.98, 0.95, 0.86, 0.92, 0.92, 0.94, 0.94, 1.02, 1.04, 1.07, 0.98, 1.03, 1.0, 1.06, 1.03, 1.06, 1.04, 1.03, 0.98, 0.97, 0.97, 1.01, 1.0, 1.0, 0.95, 0.97],
+  warrior: [0.94, 0.87, 0.94, 1.11, 0.97, 0.99, 1.01, 1.02, 1.03, 1.0, 1.06, 1.08, 1.08, 1.08, 1.02, 0.84, 0.86, 0.81, 0.81, 0.77, 0.85, 0.83, 0.83, 0.84, 0.87, 0.86, 0.83, 0.87, 0.91, 0.9, 0.91, 0.91, 0.88, 0.85, 0.84, 0.82, 0.84, 0.84, 0.82, 0.82, 0.82, 0.84, 0.85, 0.82, 0.78, 0.7, 0.7, 0.71, 0.74, 0.75, 0.77, 0.77, 0.77, 0.7, 0.68, 0.63, 0.64, 0.62, 0.64, 0.64],
+  paladin: [1.03, 1.03, 0.98, 0.96, 1.07, 1.05, 1.05, 1.05, 1.03, 1.1, 1.04, 1.02, 1.02, 1.04, 1.03, 1.11, 1.09, 1.13, 1.11, 1.04, 1.02, 1.05, 1.01, 1.0, 1.0, 0.99, 0.98, 0.98, 0.95, 0.96, 1.11, 1.12, 1.15, 1.13, 1.09, 1.04, 1.0, 1.03, 1.07, 1.09, 1.09, 1.07, 1.1, 1.09, 1.09, 1.02, 1.07, 1.18, 1.32, 1.35, 1.33, 1.28, 1.27, 1.28, 1.34, 1.41, 1.42, 1.43, 1.45, 1.48],
+  cleric: [1.01, 0.89, 0.91, 0.9, 0.91, 0.92, 0.92, 0.97, 0.98, 0.92, 0.75, 0.73, 0.75, 0.74, 0.79, 1.2, 1.09, 1.19, 1.22, 1.3, 0.85, 0.88, 0.81, 0.86, 0.9, 0.94, 0.91, 0.9, 0.86, 0.75, 0.74, 0.76, 0.78, 0.79, 0.76, 0.78, 0.73, 0.73, 0.75, 0.8, 0.8, 0.8, 0.79, 0.88, 0.84, 0.82, 0.79, 0.78, 0.78, 0.74, 0.77, 0.79, 0.78, 0.79, 0.8, 0.84, 0.82, 0.81, 0.82, 0.82],
+  rogue: [1.01, 1.12, 1.04, 0.95, 0.98, 1.01, 0.99, 0.97, 1.0, 0.98, 0.97, 1.0, 0.97, 1.0, 1.02, 0.97, 0.99, 0.95, 0.97, 0.86, 1.03, 1.03, 1.03, 1.02, 0.99, 0.99, 1.01, 0.95, 0.96, 1.02, 0.85, 0.87, 0.9, 0.85, 0.86, 0.88, 0.97, 0.96, 0.99, 0.94, 0.92, 0.86, 0.9, 0.89, 0.91, 0.87, 0.97, 1.05, 1.09, 1.11, 1.11, 1.16, 1.08, 1.01, 0.96, 0.96, 0.99, 1.01, 1.06, 1.07],
+  mage: [0.96, 1.14, 1.12, 0.99, 0.95, 0.9, 0.9, 0.91, 0.92, 0.86, 1.01, 0.98, 0.99, 0.96, 0.89, 0.89, 0.9, 0.87, 0.9, 0.94, 0.94, 0.98, 1.03, 0.98, 0.94, 1.04, 1.03, 1.05, 1.08, 1.05, 0.94, 0.99, 0.98, 1.04, 0.99, 0.96, 0.91, 0.89, 0.9, 0.91, 0.95, 0.99, 0.97, 0.97, 0.92, 0.95, 0.94, 1.03, 1.04, 1.05, 1.01, 0.97, 0.97, 0.97, 0.99, 0.99, 0.97, 0.97, 0.95, 0.96],
 };
 const classFloor = (clsId, floor) => ((CLASS_FLOOR[clsId] || [])[Math.max(1, Math.min(FLOORS, floor)) - 1] || 1);
 
@@ -1097,7 +1128,7 @@ function statPrice(hero, level, cls = hero.cls) {
 // (as dear as the loot of the floor a character with that level plays: the same share of a run all the way)
 function upgradeCost(level) {
   if (level >= LEVEL_MAX) return null;
-  return round100((config.RPG_STAT_SHARE / 100) * entryCost(1 + (level * (FIRST_FLOORS - 1)) / (LEVEL_FIRST - 1)));
+  return round100((config.RPG_STAT_SHARE / 100) * entryCost(statFloor(level)));
 }
 
 // The highest floor the character played now may enter
@@ -1797,7 +1828,7 @@ const DEPTH_EXTRA = 0.015;
 // decks a character's cards make: a class on its stat curve clears floor 2 in about 90% of runs, floor 30 about 40% -
 // floor 1: a new character with the starter deck clears it about 80% of the time;
 // the classes even on every floor by CLASS_FLOOR - a character behind its curve falls off fast down there)
-const FLOOR_POWER = [[1, 2.2], [2, 2.67], [3, 2.32], [4, 2.89], [5, 3.08], [6, 2.37], [7, 2.35], [8, 2.43], [9, 2.37], [10, 2.41], [11, 2.15], [12, 2.12], [13, 2.13], [14, 2.1], [15, 2.26], [16, 3.36], [17, 3.63], [18, 3.66], [19, 3.47], [20, 2.71], [21, 2.77], [22, 2.83], [23, 2.68], [24, 2.98], [25, 2.47], [26, 3.01], [27, 3.19], [28, 3.12], [29, 3.03], [30, 2.42], [31, 3.15], [32, 2.98], [33, 2.95], [34, 2.95], [35, 2.31], [36, 2.73], [37, 2.7], [38, 2.7], [39, 2.68], [40, 2.3], [41, 2.49], [42, 2.47], [43, 2.34], [44, 2.3], [45, 1.81], [46, 1.95], [47, 1.98], [48, 1.91], [49, 1.93], [50, 1.68], [51, 2.12], [52, 2.08], [53, 2.1], [54, 2.1], [55, 1.86], [56, 1.69], [57, 1.67], [58, 1.61], [59, 1.61], [60, 1.6]];
+const FLOOR_POWER = [[1, 2.2], [2, 2.67], [3, 2.32], [4, 2.89], [5, 3.08], [6, 2.37], [7, 2.35], [8, 2.43], [9, 2.37], [10, 2.41], [11, 2.15], [12, 2.12], [13, 2.13], [14, 2.1], [15, 2.26], [16, 3.36], [17, 3.63], [18, 3.66], [19, 3.47], [20, 2.71], [21, 2.77], [22, 2.83], [23, 2.68], [24, 2.98], [25, 2.47], [26, 3.01], [27, 3.19], [28, 3.12], [29, 3.03], [30, 2.42], [31, 3.04], [32, 2.96], [33, 2.93], [34, 2.87], [35, 2.23], [36, 2.79], [37, 2.67], [38, 2.67], [39, 2.65], [40, 2.34], [41, 2.56], [42, 2.4], [43, 2.61], [44, 2.46], [45, 1.95], [46, 2.08], [47, 1.98], [48, 2.18], [49, 2.33], [50, 1.94], [51, 2.64], [52, 2.71], [53, 2.49], [54, 2.47], [55, 2.31], [56, 2.2], [57, 2.11], [58, 2.13], [59, 2.03], [60, 2.03]];
 function floorPower(floor, points = FLOOR_POWER) {
   if (floor <= points[0][0]) return points[0][1];
   for (let i = 1; i < points.length; i++) {

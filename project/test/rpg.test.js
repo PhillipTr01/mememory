@@ -11,7 +11,7 @@ const price = (v) => { const step = v < 1000 ? 10 : v < 10000 ? 50 : 100; return
 
 test("rpg: upgrades and floors get dearer, a floor opens after the one before; the map: rows of rooms (mostly fights) and paths, a fight first, the guarded gate last", () => {
   assert.strictEqual(rpg.upgradeCost(0), price((config.RPG_STAT_SHARE / 100) * rpg.entryCost(1)));
-  assert.strictEqual(rpg.LEVEL_MAX, 200);
+  assert.strictEqual(rpg.LEVEL_MAX, 150);
   assert.ok(rpg.upgradeCost(5) > rpg.upgradeCost(4));
   assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX), null);
   // (level 100: floor 30's price - the levels past it go on with the floors past 30)
@@ -2308,11 +2308,18 @@ test("rpg: a spiked foe hurts only who hits it directly - a hit on every foe get
   rpg.play(run, "a", { uid: "t1", target: "m1" });
   assert.ok(me.hp < hp, "a direct hit pays");
 });
-test("rpg: floors 31 to 60 - their own monsters and bosses, up to 10 monsters a fight, entries 12% dearer a floor, stat levels to 200", () => {
+test("rpg: floors 31 to 60 - their own monsters and bosses, up to 10 monsters a fight, entries 12% dearer a floor, stat levels to 150, hero levels to 100 with talents up to it", () => {
   assert.strictEqual(rpg.FLOORS, 60);
-  assert.strictEqual(rpg.LEVEL_MAX, 200);
+  assert.strictEqual(rpg.LEVEL_MAX, 150);
+  assert.strictEqual(rpg.HERO_LEVEL_MAX, 100);
+  assert.strictEqual(rpg.TALENT_LEVELS[rpg.TALENT_LEVELS.length - 1], 100);
+  for (const cls of rpg.CLASS_IDS) assert.strictEqual(rpg.TALENTS[cls].length, rpg.TALENT_LEVELS.length, cls);
+  // (the class strength grows up to level 50 - past it the talents do)
+  assert.deepStrictEqual(rpg.strengthOf("paladin", 100).perks, rpg.strengthOf("paladin", 50).perks);
+  // (a level past 50 about as many runs as one before: dearer as fast as the XP of the floors grows)
+  assert.ok(rpg.xpNeed(80) / rpg.xpNeed(79) > 1.2);
   assert.ok(Math.abs(rpg.entryCost(31) / rpg.entryCost(30) - 1 - config.RPG_ENTRY_GROWTH_DEEP / 100) < 0.01);
-  assert.ok(rpg.upgradeCost(150) > rpg.upgradeCost(99));
+  assert.ok(rpg.upgradeCost(149) > rpg.upgradeCost(99));
   let most = 0;
   const names = new Set();
   for (let i = 0; i < 60; i++) {
