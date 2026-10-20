@@ -367,7 +367,7 @@ const CLASS = {
     sealoflight: ["Seal of Light", "🔒", 1, "common", [{ hit: 0.8 }, { status: "sealed", turns: 3 }]],
     holychains: ["Holy Chains", "⛓️", 1, "rare", [{ status: "sealed", turns: 5, to: "all" }, { heal: 0.06, to: "party" }]],
     condemn: ["Condemn", "⚖️", 2, "epic", [{ hit: 1.4, bonusIf: "sealed", bonus: 2.8 }, { status: "sealed", turns: 3 }]],
-    eternalseal: ["Eternal Seal", "🔐", 1, "legendary", [{ status: "sealed", turns: 8, to: "all" }, { hit: 0.6, to: "all", bonusIf: "sealed", bonus: 1.2 }], true],
+    eternalseal: ["Eternal Seal", "🔐", 1, "legendary", [{ status: "sealed", turns: 8, to: "all" }, { hit: 0.6, to: "all", bonusIf: "sealed", bonus: 1.2 }], true, 2.2],
   },
   rogue: {
     preparation: ["Preparation", "🎒", 0, "common", [{ mana: 1 }, { block: 3, agi: 0.2 }], true],
