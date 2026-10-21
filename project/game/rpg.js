@@ -614,31 +614,50 @@ const TALENTS = {
 };
 
 // Relics: for one run - a hard fight won gives a choice of three, chests sometimes one, the merchant sells one
+// (the text: {key} - the perk's number on the floor of the run, see relicFor)
 const RELICS = {
-  vampfang: { name: "Vampire Fang", icon: "🦷", text: "Heal 4% of your attack damage.", perks: { lifesteal: 0.04 } },
-  whetstone: { name: "Whetstone", icon: "🪨", text: "15% more damage.", perks: { attack: 0.15 } },
-  buckle: { name: "Iron Buckle", icon: "🔩", text: "Start every turn with 3 block.", perks: { startBlock: 3 } },
+  vampfang: { name: "Vampire Fang", icon: "🦷", text: "Heal {lifesteal}% of your attack damage.", perks: { lifesteal: 0.04 } },
+  whetstone: { name: "Whetstone", icon: "🪨", text: "{attack}% more damage.", perks: { attack: 0.15 } },
+  buckle: { name: "Iron Buckle", icon: "🔩", text: "Start every turn with {startBlock} block.", perks: { startBlock: 3 } },
   crystal: { name: "Mana Crystal", icon: "💎", text: "+1 mana on the first turn of every fight.", perks: { firstMana: 1 } },
   tome: { name: "Ancient Tome", icon: "📜", text: "Draw 1 more card every turn.", perks: { draw: 1 } },
-  thornmail: { name: "Thorn Mail", icon: "🌵", text: "Who hits you takes 4 damage.", perks: { thorns: 4 } },
-  heartstone: { name: "Heart Stone", icon: "❤️‍🔥", text: "+15% max HP.", perks: { maxHp: 0.15 } },
-  clover: { name: "Four-Leaf Clover", icon: "🍀", text: "+10% critical hits.", perks: { crit: 10 } },
-  salve: { name: "Mending Salve", icon: "🧴", text: "Heal 10% after every fight won.", perks: { afterFight: 0.1 } },
-  helm: { name: "Berserker Helm", icon: "🪖", text: "30% more damage below half HP.", perks: { lowHp: 0.3 } },
+  thornmail: { name: "Thorn Mail", icon: "🌵", text: "Who hits you takes {thorns} damage.", perks: { thorns: 4 } },
+  heartstone: { name: "Heart Stone", icon: "❤️‍🔥", text: "+{maxHp}% max HP.", perks: { maxHp: 0.15 } },
+  clover: { name: "Four-Leaf Clover", icon: "🍀", text: "+{crit}% critical hits.", perks: { crit: 10 } },
+  salve: { name: "Mending Salve", icon: "🧴", text: "Heal {afterFight}% after every fight won.", perks: { afterFight: 0.1 } },
+  helm: { name: "Berserker Helm", icon: "🪖", text: "{lowHp}% more damage below half HP.", perks: { lowHp: 0.3 } },
   // (classes: only these find it - the rest of no use to the others)
-  vial: { name: "Venom Vial", icon: "🧪", text: "Your poison is 50% stronger.", perks: { poison: 0.5 }, classes: ["rogue"] },
-  symbol: { name: "Holy Symbol", icon: "✝️", text: "30% more healing.", perks: { heal: 0.3 }, classes: ["cleric"] },
-  sigil: { name: "Shield Sigil", icon: "🔰", text: "25% more block from your cards.", perks: { block: 0.25 }, classes: ["paladin"] },
-  orb: { name: "Arcane Orb", icon: "🔮", text: "Hits on every foe deal 25% more.", perks: { aoe: 0.25 }, classes: ["mage"] },
-  grip: { name: "Giant's Grip", icon: "🦾", text: "Ignore 15% more armor.", perks: { pierce: 0.15 }, classes: ["warrior"] },
-  belt: { name: "Titan Belt", icon: "🥋", text: "+10% max HP, 25% more damage below half HP.", perks: { maxHp: 0.1, lowHp: 0.25 }, classes: ["warrior"] },
-  pauldrons: { name: "Spiked Pauldrons", icon: "🦔", text: "Thorns: who hits you takes damage, 30% of your armor.", perks: { thornsDef: 0.3 }, classes: ["paladin"] },
-  rosary: { name: "Rosary", icon: "📿", text: "Heal 12% after every fight won, attacks heal 5%.", perks: { afterFight: 0.12, lifesteal: 0.05 }, classes: ["cleric"] },
-  cloak: { name: "Shadow Cloak", icon: "🧥", text: "+8% dodge.", perks: { agi: 8 }, classes: ["rogue"] },
-  focusgem: { name: "Focus Gem", icon: "💠", text: "+12% critical hits.", perks: { crit: 12 }, classes: ["mage"] },
-  banner: { name: "War Banner", icon: "🚩", text: "Your first attack each turn deals 40% more.", perks: { firstStrike: 0.4 } },
+  vial: { name: "Venom Vial", icon: "🧪", text: "Your poison is {poison}% stronger.", perks: { poison: 0.5 }, classes: ["rogue"] },
+  symbol: { name: "Holy Symbol", icon: "✝️", text: "{heal}% more healing.", perks: { heal: 0.3 }, classes: ["cleric"] },
+  sigil: { name: "Shield Sigil", icon: "🔰", text: "{block}% more block from your cards.", perks: { block: 0.25 }, classes: ["paladin"] },
+  orb: { name: "Arcane Orb", icon: "🔮", text: "Hits on every foe deal {aoe}% more.", perks: { aoe: 0.25 }, classes: ["mage"] },
+  grip: { name: "Giant's Grip", icon: "🦾", text: "Ignore {pierce}% more armor.", perks: { pierce: 0.15 }, classes: ["warrior"] },
+  belt: { name: "Titan Belt", icon: "🥋", text: "+{maxHp}% max HP, {lowHp}% more damage below half HP.", perks: { maxHp: 0.1, lowHp: 0.25 }, classes: ["warrior"] },
+  pauldrons: { name: "Spiked Pauldrons", icon: "🦔", text: "Who hits you takes damage equal to {thornsDef}% of your armor.", perks: { thornsDef: 0.3 }, classes: ["paladin"] },
+  rosary: { name: "Rosary", icon: "📿", text: "Heal {afterFight}% after every fight won. Your attacks heal {lifesteal}% of their damage.", perks: { afterFight: 0.12, lifesteal: 0.05 }, classes: ["cleric"] },
+  cloak: { name: "Shadow Cloak", icon: "🧥", text: "+{agi}% dodge.", perks: { agi: 8 }, classes: ["rogue"] },
+  focusgem: { name: "Focus Gem", icon: "💠", text: "+{crit}% critical hits.", perks: { crit: 12 }, classes: ["mage"] },
+  banner: { name: "War Banner", icon: "🚩", text: "Your first attack each turn deals {firstStrike}% more.", perks: { firstStrike: 0.4 } },
 };
 const RELIC_IDS = Object.keys(RELICS);
+
+// A relic on a floor: its numbers grow with the floor - shares up to twice as much on the last floor, flat block and
+// thorns as the monsters' attack grows; mana and cards stay
+const RELIC_FLAT = ["startBlock", "thorns"];
+const RELIC_SAME = ["firstMana", "draw"];
+function relicFor(id, floor = 1) {
+  const relic = RELICS[id];
+  const share = 1 + (Math.max(1, floor) - 1) / (FLOORS - 1);
+  // (flat ones a bit slower than the monsters' attack: deeper down there are more of them, each hits a share)
+  const flat = Math.pow(floorCurve(MONSTER_ATK_GROWTH, Math.max(1, floor)) / floorCurve(MONSTER_ATK_GROWTH, 1), 0.75);
+  const perks = Object.fromEntries(
+    Object.entries(relic.perks).map(([key, value]) => [key, RELIC_SAME.includes(key) ? value : RELIC_FLAT.includes(key) ? Math.max(value, Math.round(value * flat)) : key == "crit" || key == "agi" ? Math.round(value * share) : Math.round(value * share * 100) / 100]),
+  );
+  const text = relic.text.replace(/\{(\w+)\}/g, (_, key) => String(RELIC_FLAT.includes(key) || key == "crit" || key == "agi" ? perks[key] : Math.round(perks[key] * 100)));
+  return { ...relic, perks, text };
+}
+// The relics' texts on a floor (for the page)
+const relicTexts = (floor) => Object.fromEntries(RELIC_IDS.map((id) => [id, relicFor(id, floor).text]));
 
 // The traits of an elite: one of them
 const AFFIXES = {
@@ -2047,7 +2066,7 @@ const perk = (hero, key) => (hero.perks && hero.perks[key]) || 0;
 
 // A relic for a hero (its perks for the rest of the run)
 function giveRelic(run, hero, id) {
-  const relic = RELICS[id];
+  const relic = relicFor(id, run.floor);
   hero.relics.push(id);
   addPerks(hero.perks, relic.perks);
   if (relic.perks.maxHp) {
@@ -3547,6 +3566,7 @@ function runView(run) {
   return {
     uid: run.uid,
     floor: run.floor,
+    relicTexts: relicTexts(run.floor),
     phase: run.phase,
     room: run.rooms.length - 1,
     rooms: run.rooms.map((room) => ({ kind: room.kind, done: room.done })),
@@ -3973,6 +3993,8 @@ module.exports = {
   TALENTS,
   TALENT_LEVELS,
   RELICS,
+  relicFor,
+  RELIC_IDS,
   relicOffer,
   AFFIXES,
   MONSTER_TRAITS,

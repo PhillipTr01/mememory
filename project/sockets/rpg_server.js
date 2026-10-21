@@ -185,7 +185,7 @@ module.exports = function (io, options = {}) {
       cards: rpg.CARDS,
       talents: rpg.TALENTS,
       talentLevels: rpg.TALENT_LEVELS,
-      relics: rpg.RELICS,
+      relics: Object.fromEntries(rpg.RELIC_IDS.map((id) => [id, rpg.relicFor(id, 1)])),
       affixes: rpg.AFFIXES,
       monsterTraits: rpg.MONSTER_TRAITS,
       monsterTypes: rpg.MONSTER_TYPES,

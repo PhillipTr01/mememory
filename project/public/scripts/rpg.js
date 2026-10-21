@@ -1405,6 +1405,13 @@ function showBoard(title, sub, nodes) {
   document.getElementById("rpgFirst").parentNode.appendChild(modal);
 }
 
+// A relic with its numbers on the floor of the run (they grow with the floor) - out of a run: floor 1's
+function relicOf(id) {
+  var relic = rules.relics[id];
+  var texts = party && party.run && party.run.relicTexts;
+  return texts && texts[id] ? Object.assign({}, relic, { text: texts[id] }) : relic;
+}
+
 /* ---------- The card shop: booster packs of the base set ---------- */
 
 // The chance of every rarity on a card of a pack - the server's numbers, as the packs draw them (they add up to 100)
@@ -2360,8 +2367,8 @@ function renderRun() {
     if (h.block > 0) hp.appendChild(el("span", "rpg-block", "🛡️ " + h.block));
     var relics = el("div", "rpg-relics");
     (h.relics || []).forEach((id) => {
-      var chip = el("span", "rpg-relic-chip", rules.relics[id].icon);
-      chip.title = rules.relics[id].name + ": " + rules.relics[id].text;
+      var chip = el("span", "rpg-relic-chip", relicOf(id).icon);
+      chip.title = relicOf(id).name + ": " + relicOf(id).text;
       relics.appendChild(chip);
     });
     card.append(head, hp, effectsRow(h.effects), relics, info);
@@ -2491,7 +2498,7 @@ function renderPartyStats(run) {
       });
       var extras = el("div", "rpg-pstat-extras");
       (h.relics || []).forEach((id) => {
-        var relic = rules.relics[id];
+        var relic = relicOf(id);
         var chip = el("span", "rpg-pstat-tag relic", relic.icon + " " + relic.name);
         chip.title = relic.text;
         extras.appendChild(chip);
@@ -2516,7 +2523,7 @@ function renderPartyStats(run) {
 function relicPanel(me) {
   var row = el("div", "rpg-relic-pick");
   me.relicChoice.forEach((id) => {
-    var relic = rules.relics[id];
+    var relic = relicOf(id);
     var tile = el("button", "rpg-relic-tile");
     tile.type = "button";
     tile.dataset.act = "relic";
@@ -2665,7 +2672,7 @@ function resultCard(r) {
     name = r.item.name;
     tip = RARITY_NAMES[r.item.rarity] + " " + SLOT_NAMES[r.item.slot].toLowerCase() + "\n" + bonusOf(r.item).split(" · ").join("\n") + "\n" + wearers(r.item);
   } else if (r.k == "relic") {
-    var relic = rules.relics[r.id] || { icon: "🏺", name: r.id, text: "" };
+    var relic = rules.relics[r.id] ? relicOf(r.id) : { icon: "🏺", name: r.id, text: "" };
     node.classList.add("relic");
     icon = relic.icon;
     name = relic.name;
@@ -2837,7 +2844,7 @@ function shopNodes(run, me) {
   });
   var relics = el("div", "rpg-shop-row");
   offer.relics.forEach((id) => {
-    var relic = rules.relics[id];
+    var relic = relicOf(id);
     var sold = offer.bought.includes(id);
     var shut = !sold && relicsLeft <= 0;
     var tile = el("button", "rpg-relic-tile" + (sold || shut ? " off" : ""));

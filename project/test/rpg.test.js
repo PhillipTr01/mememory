@@ -2354,3 +2354,19 @@ test("rpg: the cleric's seals - a sealed foe can't heal (regenerate, drain, a he
   assert.match(rpg.CARDS.condemn.text, /on a sealed foe/);
   assert.ok(rpg.poolOf("cleric").includes("holychains"));
 });
+test("rpg: relics grow with the floor - shares up to twice as much on the last floor, flat block and thorns with the monsters, mana and cards the same", () => {
+  assert.strictEqual(rpg.relicFor("whetstone", 1).perks.attack, 0.15);
+  assert.strictEqual(rpg.relicFor("whetstone", rpg.FLOORS).perks.attack, 0.3);
+  assert.match(rpg.relicFor("whetstone", rpg.FLOORS).text, /^30% more damage/);
+  assert.ok(rpg.relicFor("buckle", 30).perks.startBlock > 5 * rpg.relicFor("buckle", 1).perks.startBlock);
+  assert.strictEqual(rpg.relicFor("tome", 60).perks.draw, 1);
+  assert.ok(!/\{/.test(Object.values(rpg.RELICS).map((r, i) => rpg.relicFor(rpg.RELIC_IDS[i], 40).text).join("")));
+  // (a relic taken in a run: its numbers on that floor)
+  const hero = rpg.newHero("warrior");
+  rpg.charOf(hero).tutorialDone = true;
+  const run = rpg.newRun(40, [{ name: "a", hero }], seeded32(1));
+  const before = run.heroes[0].perks.attack || 0;
+  rpg.giveRelic(run, run.heroes[0], "whetstone");
+  assert.ok(Math.abs(run.heroes[0].perks.attack - before - rpg.relicFor("whetstone", 40).perks.attack) < 1e-9);
+  assert.strictEqual(rpg.runView(run).relicTexts.whetstone, rpg.relicFor("whetstone", 40).text);
+});
