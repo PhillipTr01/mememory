@@ -11,12 +11,14 @@ const price = (v) => { const step = v < 1000 ? 10 : v < 10000 ? 50 : 100; return
 
 test("rpg: upgrades and floors get dearer, a floor opens after the one before; the map: rows of rooms (mostly fights) and paths, a fight first, the guarded gate last", () => {
   assert.strictEqual(rpg.upgradeCost(0), price((config.RPG_STAT_SHARE / 100) * rpg.entryCost(1)));
-  assert.strictEqual(rpg.LEVEL_MAX, 150);
+  assert.strictEqual(rpg.LEVEL_MAX, 250);
   assert.ok(rpg.upgradeCost(5) > rpg.upgradeCost(4));
   assert.strictEqual(rpg.upgradeCost(rpg.LEVEL_MAX), null);
   // (level 100: floor 30's price - the levels past it go on with the floors past 30)
   assert.strictEqual(rpg.upgradeCost(99), price((config.RPG_STAT_SHARE / 100) * rpg.entryCost(30)));
-  assert.ok(rpg.upgradeCost(rpg.LEVEL_MAX - 1) > rpg.upgradeCost(99) && rpg.upgradeCost(rpg.LEVEL_MAX - 1) <= price((config.RPG_STAT_SHARE / 100) * rpg.entryCost(rpg.FLOORS)));
+  // (level 150: floor 60's price - the levels past it a little dearer each)
+  assert.strictEqual(rpg.upgradeCost(150), price((config.RPG_STAT_SHARE / 100) * rpg.entryCost(rpg.FLOORS)));
+  assert.ok(rpg.upgradeCost(rpg.LEVEL_MAX - 1) > rpg.upgradeCost(150) * 5 && rpg.upgradeCost(rpg.LEVEL_MAX - 1) < rpg.upgradeCost(150) * 10);
   assert.strictEqual(rpg.entryCost(1), 2500);
   assert.strictEqual(rpg.potionPrice(1), price((config.RPG_POTION_SHARE / 100) * rpg.entryCost(1)));
   assert.ok(rpg.potionPrice(10) > rpg.potionPrice(9));
@@ -2310,7 +2312,7 @@ test("rpg: a spiked foe hurts only who hits it directly - a hit on every foe get
 });
 test("rpg: floors 31 to 60 - their own monsters and bosses, up to 10 monsters a fight, entries 12% dearer a floor, stat levels to 150, hero levels to 100 with talents up to it", () => {
   assert.strictEqual(rpg.FLOORS, 60);
-  assert.strictEqual(rpg.LEVEL_MAX, 150);
+  assert.strictEqual(rpg.LEVEL_MAX, 250);
   assert.strictEqual(rpg.HERO_LEVEL_MAX, 100);
   assert.strictEqual(rpg.TALENT_LEVELS[rpg.TALENT_LEVELS.length - 1], 100);
   for (const cls of rpg.CLASS_IDS) assert.strictEqual(rpg.TALENTS[cls].length, rpg.TALENT_LEVELS.length, cls);
@@ -2370,7 +2372,7 @@ test("rpg: relics grow with the floor - shares up to twice as much on the last f
   assert.ok(Math.abs(run.heroes[0].perks.attack - before - rpg.relicFor("whetstone", 40).perks.attack) < 1e-9);
   assert.strictEqual(rpg.runView(run).relicTexts.whetstone, rpg.relicFor("whetstone", 40).text);
 });
-test("rpg: luck and dodge - a main stat keeps growing past level 100, never to 95% luck and 75% dodge; crits at most 95%", () => {
+test("rpg: luck and dodge - the Mage's luck up to 100%, the Rogue's dodge up to 80% at the last level, the others never 95% and 75%; crits at most 100%", () => {
   const at = (cls, lv) => {
     const hero = rpg.newHero(cls);
     const char = rpg.charOf(hero);
@@ -2380,11 +2382,14 @@ test("rpg: luck and dodge - a main stat keeps growing past level 100, never to 9
   };
   assert.ok(at("rogue", 150).agi >= at("rogue", 100).agi + 5, "the rogue's dodge still grows");
   assert.ok(at("mage", 150).luck >= at("mage", 100).luck + 5, "the mage's luck still grows");
-  for (const cls of rpg.CLASS_IDS) {
+  assert.strictEqual(at("mage", rpg.LEVEL_MAX).luck, 100);
+  assert.strictEqual(at("rogue", rpg.LEVEL_MAX).agi, 80);
+  for (const cls of ["warrior", "paladin", "cleric"]) {
     const top = at(cls, rpg.LEVEL_MAX);
     assert.ok(top.luck < 95 && top.agi < 75, `${cls}: ${top.luck} / ${top.agi}`);
   }
-  // (a whole lot more, gear and talents: still under the cap)
-  assert.ok(rpg.statsOf(rpg.newHero("rogue"), "rogue", { agi: 500 }).agi < 75);
-  assert.strictEqual(rpg.CRIT_MAX, 95);
+  // (a whole lot more, gear and talents: never past the cap)
+  assert.strictEqual(rpg.statsOf(rpg.newHero("rogue"), "rogue", { agi: 500 }).agi, 80);
+  assert.ok(rpg.statsOf(rpg.newHero("warrior"), "warrior", { agi: 500 }).agi < 75);
+  assert.strictEqual(rpg.CRIT_MAX, 100);
 });

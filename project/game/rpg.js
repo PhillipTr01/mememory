@@ -115,28 +115,38 @@ const STATS = {
   hp: { name: "Vitality", icon: "❤️", base: 100, per: 7.5, about: "+7.5 max HP", desc: "Raises your max HP." },
   atk: { name: "Strength", icon: "💪", base: 10, per: 1.5, about: "+1.5 attack", desc: "Raises the damage of your attacks." },
   def: { name: "Armor", icon: "🛡️", base: 0, per: 1, about: "+1 armor", desc: "You take less damage and block more." },
-  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, soft: [50, 80], deep: { from: 100, cap: 95, span: 60 }, about: "+0.6% luck", desc: "Raises your crits, your loot and your luck with traps, and makes your poison, burns and stuns stronger. It grows slower past 50% and never reaches 95%." },
-  agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, soft: [30, 60], deep: { from: 100, cap: 75, span: 60 }, about: "+0.4% dodge", desc: "Raises your dodge and your chance to sense rooms. A Rogue senses far better. It grows slower past 30% and never reaches 75%." },
+  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, soft: [50, 80], deep: { from: 100, cap: 95, span: 60 }, about: "+0.6% luck", desc: "Raises your crits, your loot and your luck with traps, and makes your poison, burns and stuns stronger. It grows slower past 50%. A Mage reaches 100% at the last level, the others stay under 95%." },
+  agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, soft: [30, 60], deep: { from: 100, cap: 75, span: 60 }, about: "+0.4% dodge", desc: "Raises your dodge and your chance to sense rooms. A Rogue senses far better. It grows slower past 30%. A Rogue reaches 80% at the last level, the others stay under 75%." },
 };
 const STAT_IDS = Object.keys(STATS);
-const LEVEL_MAX = 150;
+const LEVEL_MAX = 250;
 // (a stat level: RPG_STAT_SHARE % of the entry of the floor it belongs to - level 1 floor 1, level 100 floor 30,
-// level 150 floor 60)
+// level 150 floor 60; past 150 - the grind after the last floor - every level LEVEL_PAST dearer)
 const LEVEL_FIRST = 100;
-const statFloor = (level) => (level <= LEVEL_FIRST ? 1 + (level * (FIRST_FLOORS - 1)) / (LEVEL_FIRST - 1) : FIRST_FLOORS + ((level - LEVEL_FIRST) * (FLOORS - FIRST_FLOORS)) / (LEVEL_MAX - LEVEL_FIRST));
+const LEVEL_DEEP = 150;
+const LEVEL_PAST = 1.02;
+const statFloor = (level) => (level <= LEVEL_FIRST ? 1 + (level * (FIRST_FLOORS - 1)) / (LEVEL_FIRST - 1) : FIRST_FLOORS + ((Math.min(level, LEVEL_DEEP) - LEVEL_FIRST) * (FLOORS - FIRST_FLOORS)) / (LEVEL_DEEP - LEVEL_FIRST));
 // The main stat of a class: its levels count this much more (a class may have its own: mainBonus)
 const MAIN_BONUS = 1.5;
 // Luck and instinct: full up to the knee, past it every point counts less - never the max ([knee, max]); past `deep`
 // (a stat far up, the main one of its class) it grows on toward `cap`, still never reaching it (never 100%)
-function softStat(id, raw) {
+// (a class's own stat - the Mage's luck, the Rogue's dodge: statCap - grows on up to that cap, reached at the last
+// level)
+function softStat(id, raw, clsId) {
   const [knee, max] = STATS[id].soft;
   const curve = (r) => (r <= knee ? r : knee + (max - knee) * (1 - Math.exp(-(r - knee) / (max - knee))));
   const deep = STATS[id].deep;
   if (!deep || raw <= deep.from) return Math.round(curve(raw));
   const base = curve(deep.from);
+  const own = clsId && CLASSES[clsId] && (CLASSES[clsId].statCap || {})[id];
+  if (own) {
+    const cls = CLASSES[clsId];
+    const full = STATS[id].base + STATS[id].per * LEVEL_MAX * (cls.main == id ? cls.mainBonus || MAIN_BONUS : 1) + (cls[id] || 0);
+    return Math.min(own, Math.round(base + (own - base) * Math.pow(Math.min(1, (raw - deep.from) / Math.max(1, full - deep.from)), 0.6)));
+  }
   return Math.min(deep.cap - 1, Math.round(base + (deep.cap - base) * (1 - Math.exp(-(raw - deep.from) / deep.span))));
 }
-const CRIT_MAX = 95; // a critical hit at most this often (luck and the crit perks together)
+const CRIT_MAX = 100; // a critical hit at most this often (luck and the crit perks together)
 
 // What a room puts in the pot (per hero, a share of the entry)
 const REWARD = { fight: 0.36, hard: 0.66, elite: 0.66, boss: 1.08, chest: 0.36, trap: 0, rest: 0, shrine: 0, merchant: 0, deep: 0 };
@@ -156,8 +166,8 @@ const CLASSES = {
   warrior: { name: "Warrior", icon: "⚔️", main: "atk", strength: { name: "Armor Breaker", icon: "🪓", text: "Your hits ignore {pierce}% of a foe's armor.", perks: { pierce: 0.15 }, top: 2 }, about: "Strength class with heavy blows, cleave and war cry", hp: 1.2, atk: 1.68, def: 2, luck: 0, agi: 0, mainBonus: 1.29, hpPlus: 70, late: -0.37, power: 1.06, atkPlus: 28, signature: ["bash", "cleave"], cards: ["bash", "cleave", "battlecry", "ironwave", "bloodlust", "bodyslam", "uppercut", "whirlwind", "impervious"], mythic: "titanswrath" },
   paladin: { name: "Paladin", icon: "🔰", main: "def", strength: { name: "Thorns", icon: "🌵", text: "Attackers take damage equal to {thornsDef}% of your armor, and half of your block counts as armor for it. Your block cards block {block}% more.", perks: { thornsDef: 0.3, block: 0.11 }, top: 4.5 }, about: "Armor class with taunts and party shields", hp: 1.35, atk: 1.3, def: 11, luck: 0, agi: 0, mainBonus: 1.2, hpPlus: 90, late: 0.11, power: 1.34, atkPlus: 0, signature: ["taunt", "judgement"], cards: ["taunt", "judgement", "holyshield", "consecrate", "bulwark", "righteous", "aegis", "retribution", "layhands"], mythic: "divine" },
   cleric: { name: "Cleric", icon: "✨", main: "hp", strength: { name: "Holy Light", icon: "💖", text: "Your heals are {heal}% stronger and {healHit}% of every heal smites every foe. After a heal, your attacks deal {healedStrike}% more for the rest of the turn.", perks: { heal: 0.1, healHit: 0.06, healedStrike: 0.2 }, top: 1.5 }, about: "Vitality class with heals, revives and holy damage against the undead", hp: 1.65, atk: 1.2, def: 2, luck: 0, agi: 0, mainBonus: 1.7, hpPlus: 180, late: 0.28, power: 0.87, atkPlus: 16, signature: ["heal", "smite"], opener: "banish", cards: ["heal", "smite", "revive", "prayer", "blessing", "holylight", "ward", "purify", "wrath"], mythic: "resurrection" },
-  rogue: { name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.3, crit: 4 }, top: 8 }, about: "Instinct class with dodge, scouting and poison", hp: 1.42, atk: 1.42, def: 0, luck: 4, agi: 14, mainBonus: 2.5, hpPlus: 94, late: -0.04, power: 0.9, atkPlus: 24, signature: ["poisonblade", "backstab"], guard: "dodgeroll", cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
-  mage: { name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 6 }, about: "Luck class with crits, fire and frost", hp: 1.35, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.45, hpPlus: 120, late: -0.43, power: 0.94, atkPlus: 17, signature: ["frost", "fireball"], guard: "icearmor", cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
+  rogue: { statCap: { agi: 80 }, name: "Rogue", icon: "🗡️", main: "agi", strength: { name: "Venom", icon: "🐍", text: "Your poison is {poison}% stronger and you crit {crit}% more often.", perks: { poison: 0.3, crit: 4 }, top: 8 }, about: "Instinct class with dodge, scouting and poison", hp: 1.42, atk: 1.42, def: 0, luck: 4, agi: 14, mainBonus: 2.5, hpPlus: 94, late: -0.04, power: 0.9, atkPlus: 24, signature: ["poisonblade", "backstab"], guard: "dodgeroll", cards: ["poisonblade", "backstab", "smoke", "envenom", "flurry", "daggers", "shadowstep", "eviscerate", "lethaldose"], mythic: "deathmark" },
+  mage: { statCap: { luck: 100 }, name: "Mage", icon: "🔮", main: "luck", strength: { name: "Arcane Storm", icon: "🌪️", text: "Hits on every foe are {aoe}% stronger and you crit {crit}% more often.", perks: { aoe: 0.2, crit: 3 }, top: 6 }, about: "Luck class with crits, fire and frost", hp: 1.35, atk: 1.56, def: 1, luck: 6, agi: 0, mainBonus: 1.45, hpPlus: 120, late: -0.43, power: 0.94, atkPlus: 17, signature: ["frost", "fireball"], guard: "icearmor", cards: ["frost", "fireball", "barrier", "arcanebolt", "meteor", "spark", "icearmor", "chainlightning", "blizzard"], mythic: "timewarp" },
 };
 const CLASS_IDS = Object.keys(CLASSES);
 
@@ -1129,8 +1139,8 @@ function statsOf(hero, clsId = hero.cls, extra = {}) {
     maxHp: Math.round(((value("hp") + plus("hp")) * cls.hp + (cls.hpPlus || 0)) * late),
     atk: Math.round(((value("atk") + plus("atk")) * cls.atk + (cls.atkPlus || 0)) * late),
     def: Math.round(value("def") + plus("def") + cls.def),
-    luck: softStat("luck", value("luck") + plus("luck") + cls.luck + (extra.luck || 0)),
-    agi: softStat("agi", value("agi") + plus("agi") + cls.agi + (extra.agi || 0)),
+    luck: softStat("luck", value("luck") + plus("luck") + cls.luck + (extra.luck || 0), clsId),
+    agi: softStat("agi", value("agi") + plus("agi") + cls.agi + (extra.agi || 0), clsId),
   };
 }
 
@@ -1154,7 +1164,7 @@ function statPrice(hero, level, cls = hero.cls) {
 // (as dear as the loot of the floor a character with that level plays: the same share of a run all the way)
 function upgradeCost(level) {
   if (level >= LEVEL_MAX) return null;
-  return round100((config.RPG_STAT_SHARE / 100) * entryCost(statFloor(level)));
+  return round100((config.RPG_STAT_SHARE / 100) * entryCost(statFloor(level)) * Math.pow(LEVEL_PAST, Math.max(0, level - LEVEL_DEEP)));
 }
 
 // The highest floor the character played now may enter
