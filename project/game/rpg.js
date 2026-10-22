@@ -613,17 +613,17 @@ const TALENTS = {
   ],
   mage: [
     [{ id: "spellstorm", name: "Spellstorm", icon: "🌪️", text: "Hits on every foe deal 20% more.", perks: { aoe: 0.2 } }, { id: "clarity", name: "Clarity", icon: "💎", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
-    [{ id: "fortune", name: "Fortune", icon: "🍀", text: "+10% critical hits.", perks: { crit: 10 } }, { id: "wellspring", name: "Wellspring", icon: "💧", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
+    [{ id: "fortune", name: "Fortune", icon: "🍀", text: "+10% critical hits. Your crits deal 15% more.", perks: { crit: 10, critDmg: 0.15 } }, { id: "wellspring", name: "Wellspring", icon: "💧", text: "+1 mana on the first turn of a fight.", perks: { firstMana: 1 } }],
     [{ id: "archmage", name: "Archmage", icon: "🧙", text: "20% more damage.", perks: { attack: 0.2 } }, { id: "ward", name: "Ward", icon: "🔰", text: "Start every turn with 10 block.", perks: { startBlock: 10 } }],
-    [{ id: "cataclysm", name: "Cataclysm", icon: "☄️", text: "Hits on every foe deal 20% more.", perks: { aoe: 0.2 } }, { id: "precision", name: "Precision", icon: "🎯", text: "+12% critical hits.", perks: { crit: 12 } }],
+    [{ id: "cataclysm", name: "Cataclysm", icon: "☄️", text: "Hits on every foe deal 20% more.", perks: { aoe: 0.2 } }, { id: "precision", name: "Precision", icon: "🎯", text: "+12% critical hits. Your crits deal 20% more.", perks: { crit: 12, critDmg: 0.2 } }],
     [{ id: "insight", name: "Insight", icon: "📖", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "manashield", name: "Mana Shield", icon: "🔷", text: "Start every turn with 9 block.", perks: { startBlock: 9 } }],
     [{ id: "inferno", name: "Inferno", icon: "🔥", text: "Hits on every foe deal 25% more.", perks: { aoe: 0.25 } }, { id: "spellweaver", name: "Spellweaver", icon: "🕸️", text: "Draw 1 more card every turn.", perks: { draw: 1 } }],
     [{ id: "arcaneskin", name: "Arcane Skin", icon: "🧿", text: "+35% max HP.", perks: { maxHp: 0.35 } }, { id: "overload", name: "Overload", icon: "⚡", text: "Your first attack each turn deals 70% more.", perks: { firstStrike: 0.7 } }],
     [{ id: "archon", name: "Archon", icon: "🌌", text: "60% more damage.", perks: { attack: 0.6 } }, { id: "timeweaver", name: "Timeweaver", icon: "⏳", text: "+2 mana on the first turn of a fight, 20% more damage.", perks: { firstMana: 2, attack: 0.2 } }],
-    [{ id: "armageddon", name: "Armageddon", icon: "🌋", text: "Hits on every foe deal twice as much.", perks: { aoe: 1 } }, { id: "grandmagus", name: "Grand Magus", icon: "🧙", text: "+20% critical hits, 30% more damage.", perks: { crit: 20, attack: 0.3 } }],
-    [{ id: "arcaneflood", name: "Arcane Flood", icon: "🌊", text: "Hits on every foe deal 30% more.", perks: { aoe: 0.3 } }, { id: "arcanefocus", name: "Arcane Focus", icon: "🎯", text: "+15% critical hits.", perks: { crit: 15 } }],
+    [{ id: "armageddon", name: "Armageddon", icon: "🌋", text: "Hits on every foe deal twice as much.", perks: { aoe: 1 } }, { id: "grandmagus", name: "Grand Magus", icon: "🧙", text: "+20% critical hits, 30% more damage. Your crits deal 30% more.", perks: { crit: 20, attack: 0.3, critDmg: 0.3 } }],
+    [{ id: "arcaneflood", name: "Arcane Flood", icon: "🌊", text: "Hits on every foe deal 30% more.", perks: { aoe: 0.3 } }, { id: "arcanefocus", name: "Arcane Focus", icon: "🎯", text: "+15% critical hits. Your crits deal 30% more.", perks: { crit: 15, critDmg: 0.3 } }],
     [{ id: "magister", name: "Magister", icon: "🧙", text: "40% more damage.", perks: { attack: 0.4 } }, { id: "manafont", name: "Mana Font", icon: "💧", text: "+1 mana on the first turn of a fight, 15% more damage.", perks: { firstMana: 1, attack: 0.15 } }],
-    [{ id: "devastation", name: "Devastation", icon: "☄️", text: "Hits on every foe deal 40% more.", perks: { aoe: 0.4 } }, { id: "spellblade", name: "Spellblade", icon: "🗡️", text: "+15% critical hits, 20% more damage.", perks: { crit: 15, attack: 0.2 } }],
+    [{ id: "devastation", name: "Devastation", icon: "☄️", text: "Hits on every foe deal 40% more.", perks: { aoe: 0.4 } }, { id: "spellblade", name: "Spellblade", icon: "🗡️", text: "+15% critical hits, 20% more damage. Your crits deal 30% more.", perks: { crit: 15, attack: 0.2, critDmg: 0.3 } }],
     [{ id: "foresight", name: "Foresight", icon: "👁️", text: "Draw 1 more card every turn.", perks: { draw: 1 } }, { id: "surge", name: "Surge", icon: "⚡", text: "20% more damage. Your first attack each turn deals 40% more.", perks: { attack: 0.2, firstStrike: 0.4 } }],
     [{ id: "apotheosis", name: "Apotheosis", icon: "🌟", text: "Hits on every foe deal 50% more, 20% more damage.", perks: { aoe: 0.5, attack: 0.2 } }, { id: "timelord", name: "Time Lord", icon: "⏳", text: "Draw 1 more card every turn, +1 mana on the first turn of a fight.", perks: { draw: 1, firstMana: 1 } }],
   ],
@@ -652,7 +652,7 @@ const RELICS = {
   pauldrons: { name: "Spiked Pauldrons", icon: "🦔", text: "Who hits you takes damage equal to {thornsDef}% of your armor.", perks: { thornsDef: 0.3 }, classes: ["paladin"] },
   rosary: { name: "Rosary", icon: "📿", text: "Heal {afterFight}% after every fight won. Your attacks heal {lifesteal}% of their damage.", perks: { afterFight: 0.12, lifesteal: 0.05 }, classes: ["cleric"] },
   cloak: { name: "Shadow Cloak", icon: "🧥", text: "+{agi}% dodge.", perks: { agi: 8 }, classes: ["rogue"] },
-  focusgem: { name: "Focus Gem", icon: "💠", text: "+{crit}% critical hits.", perks: { crit: 12 }, classes: ["mage"] },
+  focusgem: { name: "Focus Gem", icon: "💠", text: "+{crit}% critical hits. Your crits deal {critDmg}% more.", perks: { crit: 12, critDmg: 0.25 }, classes: ["mage"] },
   banner: { name: "War Banner", icon: "🚩", text: "Your first attack each turn deals {firstStrike}% more.", perks: { firstStrike: 0.4 } },
 };
 const RELIC_IDS = Object.keys(RELICS);
@@ -1121,7 +1121,7 @@ const CLASS_FLOOR = {
   paladin: [1.03, 1.03, 0.98, 0.96, 1.07, 1.05, 1.05, 1.05, 1.03, 1.1, 1.04, 1.02, 1.02, 1.04, 1.03, 1.11, 1.09, 1.13, 1.11, 1.04, 1.02, 1.05, 1.01, 1.0, 1.0, 0.99, 0.98, 0.98, 0.95, 0.96, 1.11, 1.12, 1.15, 1.13, 1.09, 1.04, 1.0, 1.03, 1.07, 1.09, 1.09, 1.07, 1.1, 1.09, 1.09, 1.02, 1.07, 1.18, 1.32, 1.35, 1.33, 1.28, 1.27, 1.28, 1.34, 1.41, 1.42, 1.43, 1.45, 1.48],
   cleric: [1.01, 0.89, 0.91, 0.9, 0.91, 0.92, 0.92, 0.97, 0.98, 0.92, 0.75, 0.73, 0.75, 0.74, 0.79, 1.2, 1.09, 1.19, 1.22, 1.3, 0.85, 0.88, 0.81, 0.86, 0.9, 0.94, 0.91, 0.9, 0.86, 0.75, 0.74, 0.76, 0.78, 0.79, 0.76, 0.78, 0.73, 0.73, 0.75, 0.8, 0.8, 0.8, 0.79, 0.88, 0.84, 0.82, 0.79, 0.78, 0.78, 0.74, 0.77, 0.79, 0.78, 0.79, 0.8, 0.84, 0.82, 0.81, 0.82, 0.82],
   rogue: [1.01, 1.12, 1.04, 0.95, 0.98, 1.01, 0.99, 0.97, 1.0, 0.98, 0.97, 1.0, 0.97, 1.0, 1.02, 0.97, 0.99, 0.95, 0.97, 0.86, 1.03, 1.03, 1.03, 1.02, 0.99, 0.99, 1.01, 0.95, 0.96, 1.02, 0.82, 0.84, 0.87, 0.81, 0.82, 0.84, 0.92, 0.9, 0.93, 0.88, 0.85, 0.8, 0.83, 0.76, 0.77, 0.73, 0.82, 0.87, 0.91, 0.92, 0.91, 0.95, 0.88, 0.82, 0.78, 0.77, 0.79, 0.81, 0.85, 0.85],
-  mage: [0.96, 1.14, 1.12, 0.99, 0.95, 0.9, 0.9, 0.91, 0.85, 0.79, 0.91, 0.89, 0.9, 0.83, 0.73, 0.7, 0.67, 0.63, 0.63, 0.66, 0.65, 0.68, 0.71, 0.66, 0.62, 0.68, 0.68, 0.69, 0.72, 0.7, 0.62, 0.68, 0.69, 0.73, 0.68, 0.68, 0.65, 0.64, 0.66, 0.67, 0.71, 0.75, 0.75, 0.73, 0.67, 0.7, 0.69, 0.73, 0.7, 0.71, 0.69, 0.65, 0.63, 0.64, 0.66, 0.66, 0.65, 0.66, 0.65, 0.66],
+  mage: [0.96, 1.14, 1.12, 0.99, 0.95, 0.9, 0.9, 0.91, 0.75, 0.7, 0.81, 0.82, 0.87, 0.79, 0.69, 0.67, 0.65, 0.6, 0.58, 0.61, 0.6, 0.62, 0.63, 0.58, 0.54, 0.59, 0.59, 0.6, 0.63, 0.62, 0.55, 0.62, 0.64, 0.65, 0.57, 0.55, 0.5, 0.48, 0.48, 0.48, 0.51, 0.57, 0.6, 0.56, 0.5, 0.52, 0.51, 0.51, 0.45, 0.46, 0.46, 0.43, 0.42, 0.43, 0.45, 0.44, 0.43, 0.44, 0.43, 0.44],
 };
 const classFloor = (clsId, floor) => ((CLASS_FLOOR[clsId] || [])[Math.max(1, Math.min(FLOORS, floor)) - 1] || 1);
 
