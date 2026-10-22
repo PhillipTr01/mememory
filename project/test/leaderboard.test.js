@@ -128,6 +128,17 @@ test("seasons: a world of its own - at the start everybody may join (the budget,
   await coins.season.add("cleo", 30000, { reason: "test" });
   const between = await leaderboard.view("anna", start + 30 * 60 * 1000);
   assert.strictEqual(between.rows[0].coins, 50000, "not yet");
+  // (the own place: always right now - the others as of the last update)
+  const mine = await leaderboard.view("cleo", start + 30 * 60 * 1000);
+  assert.strictEqual(mine.rows.find((r) => r.username === "cleo").coins, 50000, "the board not yet");
+  assert.ok(mine.me.live && mine.me.coins === 80000, JSON.stringify(mine.me));
+  // The best wins beside the games: on - the admin can turn them off for the season
+  const best = require("../game/best_wins");
+  assert.ok(!(await best.lists("slots win", "/season")).off);
+  assert.ok((await seasons.update(made.season.id, { ...seasons.publicSeason(seasons.running()), bestWins: false })).season);
+  assert.strictEqual((await best.lists("slots win", "/season")).off, true);
+  assert.strictEqual((await best.lists("slots win", "")).off, undefined, "the normal casino keeps them");
+  assert.ok((await seasons.update(made.season.id, { ...seasons.publicSeason(seasons.running()), bestWins: true })).season);
   const update = await leaderboard.view("anna", start + 61 * 60 * 1000);
   assert.deepStrictEqual([update.rows[0].username, update.rows[0].coins], ["cleo", 80000]);
 

@@ -103,6 +103,7 @@ function publicSeason(season) {
     prizes: (season.prizes || []).map((p) => ({ place: p.place, prize: p.prize || "", coins: p.coins || 0, items: p.items || [], label: prizeText(p) })),
     wagerX: wagerXOf(season),
     highlight: season.highlight === true,
+    bestWins: season.bestWins !== false,
     access: accessOf(season),
     status: closingOf(season) && closingOf(season).kind === "start" ? "starting" : status(season),
     // (the slot it runs in: its world - null: not started / over)
@@ -451,6 +452,8 @@ function check(input, current) {
   if (accessNames.some((name) => name.length > 40)) return { error: "A name on the list is too long." };
   if (accessMode === "whitelist" && accessNames.length === 0) return { error: "The whitelist is on - add at least one player." };
   const highlight = input.highlight === true;
+  // The best wins beside the games (on unless turned off)
+  const bestWins = input.bestWins !== false;
   // To get a place: wager this many times the start budget (not given: the setting, 3x)
   const wagerX = input.wagerX == null || input.wagerX === "" ? config.SEASON_WAGER_X : Number(input.wagerX);
   if (!Number.isInteger(wagerX) || wagerX < 0 || wagerX > 1000) return { error: "Wager to get a place: 0 to 1000 times the start budget." };
@@ -466,7 +469,7 @@ function check(input, current) {
   const others = state.seasons.filter((season) => season !== current && !season.ended && season.start < end && start < season.end);
   const crowded = atOnce(others, start, end);
   if (crowded) return { error: `At most ${MAX_AT_ONCE} seasons at the same time - it overlaps with ${crowded.map((season) => `"${season.name}"`).join(" and ")}.` };
-  return { season: { name: name, icon: icon, coinIcon: coinIcon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, chanceDelay: chanceDelay, closeWait: closeWait, color: color, every: every, prizesOn: prizesOn, prizes: clean, access: { mode: accessMode, names: accessNames }, highlight: highlight, wagerX: wagerX } };
+  return { season: { name: name, icon: icon, coinIcon: coinIcon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, chanceDelay: chanceDelay, closeWait: closeWait, color: color, every: every, prizesOn: prizesOn, prizes: clean, access: { mode: accessMode, names: accessNames }, highlight: highlight, bestWins: bestWins, wagerX: wagerX } };
 }
 
 // Seasons (all overlapping start - end) that run together with a new one somewhere in start - end: MAX_AT_ONCE of

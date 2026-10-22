@@ -179,8 +179,15 @@ function render() {
   var me = document.getElementById("lbMe");
   me.hidden = board.me == null;
   if (board.me) {
-    if (board.me.pending) morphChildren(me, [el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", "No place yet"), wagerBar(board.me.wager), el("span", "lb-coins", "🪙 " + formatCoins(board.me.coins))]);
-    else morphChildren(me, [el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", "#" + board.me.rank + " of " + (board.counted != null ? board.counted : board.players)), change(board.me), el("span", "lb-coins", "🪙 " + formatCoins(board.me.coins))]);
+    // (a board updated only now and then: the own place is still right now)
+    var label = el("span", "lb-me-label", "Your place");
+    if (board.me.live) {
+      label.append(" ", el("span", "lb-live-dot"));
+      label.title = "Your coins, wager and place right now. The others are as of the last update.";
+    }
+    var of = board.me.counted != null ? board.me.counted : board.counted != null ? board.counted : board.players;
+    if (board.me.pending) morphChildren(me, [label, el("span", "lb-me-rank", "No place yet"), wagerBar(board.me.wager), el("span", "lb-coins", "🪙 " + formatCoins(board.me.coins))]);
+    else morphChildren(me, [label, el("span", "lb-me-rank", "#" + board.me.rank + " of " + of), change(board.me), el("span", "lb-coins", "🪙 " + formatCoins(board.me.coins))]);
   }
   var when = new Date(board.updatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
   var season = board.season;
@@ -347,7 +354,9 @@ async function load(quiet) {
   } catch (error) {
     if (!quiet) showHint("The leaderboard couldn't be loaded. Trying again soon.", "error", document.querySelector("main"));
   }
+  // (not live: the own place still every 30 s)
   var wait = board && board.live ? 10000 : nextAt ? Math.max(3000, nextAt - Date.now() + 2000) : 30000;
+  if (board && board.me && board.me.live) wait = Math.min(wait, 30000);
   refreshTimer = setTimeout(() => load(true), Math.min(wait, 10 * 60 * 1000));
 }
 

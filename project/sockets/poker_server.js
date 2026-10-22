@@ -30,7 +30,7 @@ module.exports = function (io, options = {}) {
   room.use(socketAuth.casino);
   casinoChat.attach(room, ROOM);
   // The biggest pots won (the side of the page) - a pot becomes chips, not coins: written down here
-  const best = require("../game/best_wins").attachRecorded(room, "poker-best", persist);
+  const best = require("../game/best_wins").attachRecorded(room, "poker-best", persist, world);
 
   const table = {
     seats: new Array(config.POKER_SEATS).fill(null),

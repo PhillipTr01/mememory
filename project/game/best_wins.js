@@ -12,8 +12,16 @@ const days = require("./days");
 const COUNT = 10;
 const DELAY = 1500; // a win is written down a moment after it is paid
 
+// A season world whose season turned the best wins off (admin panel): none, the card hidden
+function offIn(world) {
+  if (!slots.isSeason(world)) return false;
+  const season = require("./seasons").running(world);
+  return !!season && season.bestWins === false;
+}
+
 async function lists(reason, world) {
   if (world === "/test") return { today: [], all: [] };
+  if (offIn(world)) return { today: [], all: [], off: true };
   const era = slots.isSeason(world) ? coins.era(world) : null;
   if (slots.isSeason(world) && !era) return { today: [], all: [] };
   // (a push in blackjack only gives the bet back - not a win)
@@ -74,12 +82,13 @@ function attach(room, reason, world = "") {
  * A game whose wins aren't in the coin history (poker: a pot becomes chips, not coins): it writes its
  * wins down itself - record(name, win, note). The lists are saved with the game (persist, under `key`).
  */
-function attachRecorded(room, key, persist) {
+function attachRecorded(room, key, persist, world = "") {
   let state = { all: [], today: [], day: days.dayStart() };
   const top = (list, entry) => list.concat([entry]).sort((a, b) => b.win - a.win).slice(0, COUNT);
   const current = () => {
     // A new day: the list of today starts empty
     if (state.day !== days.dayStart()) state = { ...state, today: [], day: days.dayStart() };
+    if (offIn(world)) return { today: [], all: [], off: true };
     return { today: state.today, all: state.all };
   };
   room.on("connection", (socket) => socket.emit("bestWins", current()));
@@ -104,4 +113,4 @@ function attachRecorded(room, key, persist) {
   };
 }
 
-module.exports = { attach, attachRecorded, lists, COUNT };
+module.exports = { attach, attachRecorded, lists, offIn, COUNT };

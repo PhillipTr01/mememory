@@ -120,6 +120,13 @@ async function view(username, now = Date.now(), which = null) {
   const board = await get(now, world);
   const season = world ? seasons.running(world) : null;
   const ended = seasons.lastEnded();
+  // (a board updated only now and then: the own row always right now - coins, wager, place among everybody now)
+  let me = board.rows.find((row) => row.username === username) || null;
+  if (!board.live && season && seasons.joined(username, season.id)) {
+    const fresh = await build(now, board, season);
+    const live = fresh.rows.find((row) => row.username === username);
+    if (live) me = { ...live, live: true, counted: fresh.rows.filter((row) => row.rank != null).length };
+  }
   return {
     updatedAt: board.at,
     live: board.live,
@@ -128,7 +135,7 @@ async function view(username, now = Date.now(), which = null) {
     // (a season: who has a place already - the others still have to wager)
     counted: board.rows.filter((row) => row.rank != null).length,
     rows: board.rows.slice(0, SIZE),
-    me: board.rows.find((row) => row.username === username) || null,
+    me: me,
     season: season ? seasons.publicSeason(season) : null,
     world: season ? season.slot : "normal",
     // (the other boards to switch to: the running seasons the player may see)

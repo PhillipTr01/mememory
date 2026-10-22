@@ -119,6 +119,8 @@
   socket.on("slotsSetup", () => setTimeout(render));
   socket.on("bestWins", (lists) => {
     data = lists || { today: [], all: [] };
+    // (a season without best wins: no card)
+    card.hidden = data.off === true;
     render();
   });
   render();

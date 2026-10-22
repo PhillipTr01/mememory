@@ -2428,6 +2428,7 @@ function seasonDetail(season) {
       tile("", season.closeWait + " s", "countdown"),
       tile("", EVERY_NAMES[season.every], "leaderboard updates"),
       tile("", season.highlight ? "✨ yes" : "no", "highlighted before the start"),
+      tile("", season.bestWins === false ? "off" : "on", "best wins beside the games"),
     ),
     card(
       "🎲",
@@ -2538,6 +2539,7 @@ function fillSeasonForm(season) {
   document.getElementById("adSeasonPicker").hidden = access.mode == "all";
   renderPlayerPicks();
   document.getElementById("adSeasonHighlight").checked = season.highlight === true;
+  document.getElementById("adSeasonBestWins").checked = season.bestWins !== false;
   // A running season: start and budget happened already
   var running = season.status == "running";
   document.getElementById("adSeasonStart").disabled = running;
@@ -2836,6 +2838,7 @@ async function saveSeason(event) {
     accessMode: document.getElementById("adSeasonAccess").value,
     accessNames: document.getElementById("adSeasonAccess").value == "all" ? [] : document.getElementById("adSeasonNames").value,
     highlight: document.getElementById("adSeasonHighlight").checked,
+    bestWins: document.getElementById("adSeasonBestWins").checked,
   };
   // A running season keeps its start and budget
   var current = seasonList.find((s) => s.id == editingSeason);
