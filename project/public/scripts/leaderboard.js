@@ -83,7 +83,7 @@ function change(row) {
 function podiumSpot(row) {
   var spot = el("div", "lb-spot place-" + row.rank + (row.username == myName ? " mine" : ""));
   spot.dataset.rank = row.rank;
-  spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), liveAvatar(row.username), nameOf(row.username, "lb-name"), el("span", "lb-coins", unit() + formatCoins(row.coins)), change(row));
+  spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), liveAvatar(row.username), nameOf(row.username, "lb-name", row), el("span", "lb-coins", unit() + formatCoins(row.coins)), change(row));
   if (row.prize) spot.appendChild(el("span", "lb-prize", "🎁 " + row.prize));
   if (decidedOf(row)) spot.appendChild(decidedOf(row));
   spot.appendChild(el("div", "lb-step", String(row.rank)));
@@ -114,9 +114,20 @@ function decidedOf(row) {
 }
 
 // The name, with the "You" tag on your own row
-function nameOf(username, className) {
+function nameOf(username, className, row) {
   var name = el("span", className, username);
+  // (a season: the team and the badges of the player)
+  if (row && row.team) {
+    var team = el("span", "lb-team", row.team.icon);
+    team.title = "Team " + row.team.name;
+    name.prepend(team);
+  }
   if (username == myName) name.appendChild(el("span", "you-tag", "You"));
+  if (row && row.badges && row.badges.length) {
+    var badges = el("span", "lb-badges", row.badges.slice(-3).map((b) => b.icon).join(""));
+    badges.title = row.badges.map((b) => b.icon + " " + b.name).join(", ");
+    name.appendChild(badges);
+  }
   return name;
 }
 
@@ -124,7 +135,7 @@ function listRow(row) {
   var item = el("li", "lb-row" + (row.username == myName ? " mine" : ""));
   item.dataset.rank = row.rank;
   var who = el("span", "lb-who");
-  who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name"));
+  who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name", row));
   if (row.prize) who.appendChild(el("span", "lb-prize", "🎁 " + row.prize));
   if (decidedOf(row)) who.appendChild(decidedOf(row));
   item.append(el("span", "lb-rank", "#" + row.rank), who, change(row), el("span", "lb-coins", unit() + formatCoins(row.coins)));
@@ -151,7 +162,7 @@ function wagerBar(wager) {
 function pendingRow(row) {
   var item = el("li", "lb-row pending" + (row.username == myName ? " mine" : ""));
   var who = el("span", "lb-who");
-  who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name"));
+  who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name", row));
   // (no place yet: the second chances used - the bar shows the wager)
   if (row.chances != null) {
     var used = el("span", "lb-decided", "💔 " + row.chances);

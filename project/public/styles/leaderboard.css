@@ -890,3 +890,14 @@
 }
 
 
+
+/* A season: the team of a player before the name, the badges after it */
+.lb-team {
+  margin-right: 0.3rem;
+}
+
+.lb-badges {
+  margin-left: 0.35rem;
+  font-size: 0.85em;
+  letter-spacing: 0.05em;
+}

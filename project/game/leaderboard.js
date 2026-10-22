@@ -127,6 +127,9 @@ async function view(username, now = Date.now(), which = null) {
     const live = fresh.rows.find((row) => row.username === username);
     if (live) me = { ...live, live: true, counted: fresh.rows.filter((row) => row.rank != null).length };
   }
+  // (a season: the badges and the team of the players next to their names)
+  const marks = season ? await require("./season_kit").marksOf(season) : new Map();
+  const mark = (row) => (row && marks.has(row.username) ? { ...row, ...marks.get(row.username) } : row);
   return {
     updatedAt: board.at,
     live: board.live,
@@ -134,8 +137,8 @@ async function view(username, now = Date.now(), which = null) {
     players: board.rows.length,
     // (a season: who has a place already - the others still have to wager)
     counted: board.rows.filter((row) => row.rank != null).length,
-    rows: board.rows.slice(0, SIZE),
-    me: me,
+    rows: board.rows.slice(0, SIZE).map(mark),
+    me: mark(me),
     season: season ? seasons.publicSeason(season) : null,
     world: season ? season.slot : "normal",
     // (the other boards to switch to: the running seasons the player may see)

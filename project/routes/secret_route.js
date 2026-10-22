@@ -196,6 +196,22 @@ module.exports = function (auth) {
     }),
   );
 
+  // The season shop: {id} -> the goals page again, or {error}
+  router.post(
+    "/goals/buy",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      const world = worlds.worldOf(req.username);
+      const season = worlds.isSeason(world) ? seasons.running(world) : null;
+      if (!season) return res.status(400).json({ error: "There is no season." });
+      const kit = require("../game/season_kit");
+      const result = await kit.buy(season, req.username, String((req.body || {}).id || ""));
+      if (result.error) return res.status(400).json(result);
+      res.json({ season: { id: season.id, name: season.name, icon: season.icon, coinIcon: seasons.publicSeason(season).coinIcon }, ...(await kit.view(season, req.username)) });
+    }),
+  );
+
   /* ---------- Gifts: coins for another player (a click on a name in the chat) ---------- */
 
   // How much the player can still give a player (?to=name): {limit, given, left}

@@ -39,6 +39,8 @@ module.exports = function () {
   const enabled = () => Boolean(config.ADMIN_PASSWORD || config.ADMIN_PASSWORD_HASH);
   // Off: like any address that doesn't exist (the 404 page)
   router.use((req, res, next) => (enabled() ? next() : next(Object.assign(new Error("Not found"), { status: 404 }))));
+  // (a season with its sandbox - goals, shop, boosts - is bigger than the rest)
+  router.use("/api/seasons", express.json({ limit: "256kb" }));
   router.use(express.json({ limit: "4kb" }));
   router.use(express.urlencoded({ extended: false, limit: "2kb" }));
 
@@ -729,7 +731,7 @@ module.exports = function () {
     const kit = require("../game/season_kit");
     const result = kit.check(req.body && req.body.kit);
     if (result.error) return res.json({ error: result.error });
-    res.json({ quests: result.kit.quests.map((q) => kit.questText({ ...q, text: "" })), currencies: result.kit.currencies.map((c) => (c.earn ? kit.earnText(c) : null)) });
+    res.json({ quests: result.kit.quests.map((q) => kit.questText({ ...q, text: "" })), currencies: result.kit.currencies.map((c) => (c.earn ? kit.earnText(c) : null)), boosts: result.kit.boosts.map((b) => kit.boostText({ kit: result.kit }, b)) });
   });
 
   // A new season: {name, icon, start, end (ms), budget, every (minutes), prizesOn, prizes: [{place, prize}]}

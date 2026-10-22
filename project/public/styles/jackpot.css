@@ -5644,3 +5644,151 @@ body.jackpot-theme::before {
 .goals-dialog .mm-dialog-actions .mm-btn {
   flex: 1;
 }
+
+.goals-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.2rem 0 0.4rem;
+}
+
+.goals-tabs[hidden] {
+  display: none;
+}
+
+.goals-tab {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 999px;
+  background: var(--mm-surface-2);
+  color: var(--mm-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.goals-tab.active {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.16);
+  color: var(--mm-accent);
+}
+
+.goals-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.goals-badge {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.goals-day {
+  margin: 0;
+  padding: 0.45rem 0.7rem;
+  border-radius: 10px;
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.goals-quest.locked {
+  opacity: 0.7;
+}
+
+.goals-boost,
+.goals-team,
+.goals-offer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+}
+
+.goals-boost.on {
+  border-color: var(--mm-accent);
+  background: rgba(var(--mm-accent-rgb), 0.12);
+}
+
+.goals-offer {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.goals-offer-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  font-size: 0.88rem;
+}
+
+.goals-offer .mm-btn {
+  white-space: nowrap;
+}
+
+.goals-team .goals-bar-fill {
+  background: var(--team, var(--mm-accent));
+}
+
+.goals-team.mine {
+  border-color: var(--team, var(--mm-accent));
+}
+
+.goals-team-score {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.goals-pass {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.goals-level {
+  display: grid;
+  grid-template-columns: 1.6rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.15rem 0.5rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 10px;
+  background: var(--mm-surface-2);
+}
+
+.goals-level .goals-bar,
+.goals-level .goals-reward {
+  grid-column: 2 / -1;
+}
+
+.goals-level.reached {
+  opacity: 0.65;
+}
+
+.goals-level.next {
+  border-color: var(--mm-accent);
+}
+
+.goals-level-name {
+  font-size: 0.88rem;
+}
+
+.goals-level-at {
+  color: var(--mm-muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.goals-boost .goals-reset {
+  font-size: 0.78rem;
+}

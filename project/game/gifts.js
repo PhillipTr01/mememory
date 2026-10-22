@@ -26,6 +26,8 @@ function worldOf(username) {
 // (a season: its own gift limit if it has one - else the one for seasons)
 function limitOf(world) {
   if (!slots.isSeason(world)) return config.GIFT_LIMIT;
+  // (a season without gifts - the admin built it so: nothing)
+  if (!require("./season_kit").giftsAllowed(seasons().running(world))) return 0;
   const own = config.SEASON_LIMITS[String(slots.seasonIdOf(world))];
   return own && own.GIFT_LIMIT != null ? own.GIFT_LIMIT : config.SEASON_GIFT_LIMIT;
 }
@@ -85,6 +87,7 @@ async function give(from, to, amount) {
   const world = worldOf(from);
   // Season coins only to who plays in the season
   if (slots.isSeason(world) && seasons().joined(to, world) !== true) return { error: `${to} isn't in the season - season coins only go to players in it.` };
+  if (slots.isSeason(world) && !require("./season_kit").giftsAllowed(seasons().running(world))) return { error: "There are no gifts in this season." };
   const wallet = coins.wallet(world);
   const coin = slots.isSeason(world) ? "" : "🪙 ";
   const before = await status(from, to, world);
