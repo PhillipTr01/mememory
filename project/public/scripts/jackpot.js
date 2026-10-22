@@ -372,6 +372,8 @@ function showRound(round, label) {
 }
 
 function renderRecords() {
+  // (a season without best wins: no records row)
+  document.querySelector(".jp-records").hidden = state.recordsOff === true;
   // While the wheel spins, the last winner is still the one before
   recordCard("jpLastWinner", "Last winner", state.history[0] || null, "👑");
   var records = state.records || {};

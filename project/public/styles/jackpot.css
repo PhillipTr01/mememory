@@ -1265,6 +1265,10 @@ body.jackpot-theme {
 }
 
 /* ---------- Records of the day: a row of three cards on top of the game ---------- */
+.jp-records[hidden] {
+  display: none;
+}
+
 .jp-records {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

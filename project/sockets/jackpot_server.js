@@ -96,6 +96,8 @@ module.exports = function (io, options = {}) {
       // The number and the secret are shown after the draw (provably fair)
       fair: pot.phase === PHASE.DRAWING ? pot.fair : { hash: pot.fair.hash },
       records: pot.records,
+      // (a season without best wins: no last winner and no records of the day)
+      recordsOff: require("../game/best_wins").offIn(world),
       spin: config.JACKPOT_SPIN,
       maxBets: limits.JACKPOT_MAX_BETS,
       maxCoins: limits.JACKPOT_MAX_COINS,

@@ -138,6 +138,9 @@ test("seasons: a world of its own - at the start everybody may join (the budget,
   assert.ok((await seasons.update(made.season.id, { ...seasons.publicSeason(seasons.running()), bestWins: false })).season);
   assert.strictEqual((await best.lists("slots win", "/season")).off, true);
   assert.strictEqual((await best.lists("slots win", "")).off, undefined, "the normal casino keeps them");
+  // (the jackpot's last winner and records of the day go with them)
+  assert.strictEqual(best.offIn("/season"), true);
+  assert.strictEqual(best.offIn(""), false);
   assert.ok((await seasons.update(made.season.id, { ...seasons.publicSeason(seasons.running()), bestWins: true })).season);
   const update = await leaderboard.view("anna", start + 61 * 60 * 1000);
   assert.deepStrictEqual([update.rows[0].username, update.rows[0].coins], ["cleo", 80000]);
