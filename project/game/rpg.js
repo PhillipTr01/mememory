@@ -115,8 +115,8 @@ const STATS = {
   hp: { name: "Vitality", icon: "❤️", base: 100, per: 7.5, about: "+7.5 max HP", desc: "Raises your max HP." },
   atk: { name: "Strength", icon: "💪", base: 10, per: 1.5, about: "+1.5 attack", desc: "Raises the damage of your attacks." },
   def: { name: "Armor", icon: "🛡️", base: 0, per: 1, about: "+1 armor", desc: "You take less damage and block more." },
-  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, soft: [50, 80], about: "+0.6% luck", desc: "Raises your crits, your loot and your luck with traps, and makes your poison, burns and stuns stronger. It grows slower past 50%." },
-  agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, soft: [30, 60], about: "+0.4% dodge", desc: "Raises your dodge and your chance to sense rooms. A Rogue senses far better. It grows slower past 30%." },
+  luck: { name: "Luck", icon: "🍀", base: 5, per: 0.6, soft: [50, 80], deep: { from: 100, cap: 95, span: 60 }, about: "+0.6% luck", desc: "Raises your crits, your loot and your luck with traps, and makes your poison, burns and stuns stronger. It grows slower past 50% and never reaches 95%." },
+  agi: { name: "Instinct", icon: "🦊", base: 0, per: 0.4, soft: [30, 60], deep: { from: 100, cap: 75, span: 60 }, about: "+0.4% dodge", desc: "Raises your dodge and your chance to sense rooms. A Rogue senses far better. It grows slower past 30% and never reaches 75%." },
 };
 const STAT_IDS = Object.keys(STATS);
 const LEVEL_MAX = 150;
@@ -126,11 +126,17 @@ const LEVEL_FIRST = 100;
 const statFloor = (level) => (level <= LEVEL_FIRST ? 1 + (level * (FIRST_FLOORS - 1)) / (LEVEL_FIRST - 1) : FIRST_FLOORS + ((level - LEVEL_FIRST) * (FLOORS - FIRST_FLOORS)) / (LEVEL_MAX - LEVEL_FIRST));
 // The main stat of a class: its levels count this much more (a class may have its own: mainBonus)
 const MAIN_BONUS = 1.5;
-// Luck and instinct: full up to the knee, past it every point counts less - never the max ([knee, max])
+// Luck and instinct: full up to the knee, past it every point counts less - never the max ([knee, max]); past `deep`
+// (a stat far up, the main one of its class) it grows on toward `cap`, still never reaching it (never 100%)
 function softStat(id, raw) {
   const [knee, max] = STATS[id].soft;
-  return Math.round(raw <= knee ? raw : knee + (max - knee) * (1 - Math.exp(-(raw - knee) / (max - knee))));
+  const curve = (r) => (r <= knee ? r : knee + (max - knee) * (1 - Math.exp(-(r - knee) / (max - knee))));
+  const deep = STATS[id].deep;
+  if (!deep || raw <= deep.from) return Math.round(curve(raw));
+  const base = curve(deep.from);
+  return Math.min(deep.cap - 1, Math.round(base + (deep.cap - base) * (1 - Math.exp(-(raw - deep.from) / deep.span))));
 }
+const CRIT_MAX = 95; // a critical hit at most this often (luck and the crit perks together)
 
 // What a room puts in the pot (per hero, a share of the entry)
 const REWARD = { fight: 0.36, hard: 0.66, elite: 0.66, boss: 1.08, chest: 0.36, trap: 0, rest: 0, shrine: 0, merchant: 0, deep: 0 };
@@ -1104,7 +1110,7 @@ const CLASS_FLOOR = {
   warrior: [0.94, 0.87, 0.94, 1.11, 0.97, 0.99, 1.01, 1.02, 1.03, 1.0, 1.06, 1.08, 1.08, 1.08, 1.02, 0.84, 0.86, 0.81, 0.81, 0.77, 0.85, 0.83, 0.83, 0.84, 0.87, 0.86, 0.83, 0.87, 0.91, 0.9, 0.73, 0.73, 0.7, 0.68, 0.67, 0.66, 0.67, 0.67, 0.66, 0.66, 0.66, 0.67, 0.68, 0.66, 0.62, 0.56, 0.56, 0.57, 0.59, 0.6, 0.62, 0.62, 0.62, 0.56, 0.54, 0.5, 0.51, 0.5, 0.51, 0.51],
   paladin: [1.03, 1.03, 0.98, 0.96, 1.07, 1.05, 1.05, 1.05, 1.03, 1.1, 1.04, 1.02, 1.02, 1.04, 1.03, 1.11, 1.09, 1.13, 1.11, 1.04, 1.02, 1.05, 1.01, 1.0, 1.0, 0.99, 0.98, 0.98, 0.95, 0.96, 1.11, 1.12, 1.15, 1.13, 1.09, 1.04, 1.0, 1.03, 1.07, 1.09, 1.09, 1.07, 1.1, 1.09, 1.09, 1.02, 1.07, 1.18, 1.32, 1.35, 1.33, 1.28, 1.27, 1.28, 1.34, 1.41, 1.42, 1.43, 1.45, 1.48],
   cleric: [1.01, 0.89, 0.91, 0.9, 0.91, 0.92, 0.92, 0.97, 0.98, 0.92, 0.75, 0.73, 0.75, 0.74, 0.79, 1.2, 1.09, 1.19, 1.22, 1.3, 0.85, 0.88, 0.81, 0.86, 0.9, 0.94, 0.91, 0.9, 0.86, 0.75, 0.74, 0.76, 0.78, 0.79, 0.76, 0.78, 0.73, 0.73, 0.75, 0.8, 0.8, 0.8, 0.79, 0.88, 0.84, 0.82, 0.79, 0.78, 0.78, 0.74, 0.77, 0.79, 0.78, 0.79, 0.8, 0.84, 0.82, 0.81, 0.82, 0.82],
-  rogue: [1.01, 1.12, 1.04, 0.95, 0.98, 1.01, 0.99, 0.97, 1.0, 0.98, 0.97, 1.0, 0.97, 1.0, 1.02, 0.97, 0.99, 0.95, 0.97, 0.86, 1.03, 1.03, 1.03, 1.02, 0.99, 0.99, 1.01, 0.95, 0.96, 1.02, 0.85, 0.87, 0.9, 0.85, 0.86, 0.88, 0.97, 0.96, 0.99, 0.94, 0.92, 0.86, 0.9, 0.89, 0.91, 0.87, 0.97, 1.05, 1.09, 1.11, 1.11, 1.16, 1.08, 1.01, 0.96, 0.96, 0.99, 1.01, 1.06, 1.07],
+  rogue: [1.01, 1.12, 1.04, 0.95, 0.98, 1.01, 0.99, 0.97, 1.0, 0.98, 0.97, 1.0, 0.97, 1.0, 1.02, 0.97, 0.99, 0.95, 0.97, 0.86, 1.03, 1.03, 1.03, 1.02, 0.99, 0.99, 1.01, 0.95, 0.96, 1.02, 0.82, 0.84, 0.87, 0.81, 0.82, 0.84, 0.92, 0.9, 0.93, 0.88, 0.85, 0.8, 0.83, 0.76, 0.77, 0.73, 0.82, 0.87, 0.91, 0.92, 0.91, 0.95, 0.88, 0.82, 0.78, 0.77, 0.79, 0.81, 0.85, 0.85],
   mage: [0.96, 1.14, 1.12, 0.99, 0.95, 0.9, 0.9, 0.91, 0.92, 0.86, 1.01, 0.98, 0.99, 0.96, 0.89, 0.89, 0.9, 0.87, 0.9, 0.94, 0.94, 0.98, 1.03, 0.98, 0.94, 1.04, 1.03, 1.05, 1.08, 1.05, 0.94, 0.99, 0.98, 1.04, 0.99, 0.96, 0.91, 0.89, 0.9, 0.91, 0.95, 0.99, 0.97, 0.97, 0.92, 0.95, 0.94, 1.03, 1.04, 1.05, 1.01, 0.97, 0.97, 0.97, 0.99, 0.99, 0.97, 0.97, 0.95, 0.96],
 };
 const classFloor = (clsId, floor) => ((CLASS_FLOOR[clsId] || [])[Math.max(1, Math.min(FLOORS, floor)) - 1] || 1);
@@ -2916,7 +2922,7 @@ function strike(run, hero, foe, power, rng, options = {}) {
     fx(run, { k: "miss", to: foe.id });
     return 0;
   }
-  const crit = rng() * 100 < hero.luck + perk(hero, "crit");
+  const crit = rng() * 100 < Math.min(CRIT_MAX, hero.luck + perk(hero, "crit"));
   // (the perks of talents and relics: more damage, the first attack of a turn, low HP)
   const bonus = 1 + perk(hero, "attack") + (hero.firstAttack ? perk(hero, "firstStrike") : 0) + (hero.hp < hero.maxHp / 2 ? perk(hero, "lowHp") : 0) + (hero.healed ? perk(hero, "healedStrike") : 0);
   let damage = hero.atk * between(rng, 0.9, 1.1) * power * bonus * (crit ? CRIT : 1) * (hero.blessed ? SHRINE_POWER : 1) * mightOf(hero);
@@ -3994,6 +4000,7 @@ module.exports = {
   TALENT_LEVELS,
   RELICS,
   relicFor,
+  CRIT_MAX,
   RELIC_IDS,
   relicOffer,
   AFFIXES,

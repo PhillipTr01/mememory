@@ -2370,3 +2370,21 @@ test("rpg: relics grow with the floor - shares up to twice as much on the last f
   assert.ok(Math.abs(run.heroes[0].perks.attack - before - rpg.relicFor("whetstone", 40).perks.attack) < 1e-9);
   assert.strictEqual(rpg.runView(run).relicTexts.whetstone, rpg.relicFor("whetstone", 40).text);
 });
+test("rpg: luck and dodge - a main stat keeps growing past level 100, never to 95% luck and 75% dodge; crits at most 95%", () => {
+  const at = (cls, lv) => {
+    const hero = rpg.newHero(cls);
+    const char = rpg.charOf(hero);
+    char.levels.luck = lv;
+    char.levels.agi = lv;
+    return rpg.statsOf(hero);
+  };
+  assert.ok(at("rogue", 150).agi >= at("rogue", 100).agi + 5, "the rogue's dodge still grows");
+  assert.ok(at("mage", 150).luck >= at("mage", 100).luck + 5, "the mage's luck still grows");
+  for (const cls of rpg.CLASS_IDS) {
+    const top = at(cls, rpg.LEVEL_MAX);
+    assert.ok(top.luck < 95 && top.agi < 75, `${cls}: ${top.luck} / ${top.agi}`);
+  }
+  // (a whole lot more, gear and talents: still under the cap)
+  assert.ok(rpg.statsOf(rpg.newHero("rogue"), "rogue", { agi: 500 }).agi < 75);
+  assert.strictEqual(rpg.CRIT_MAX, 95);
+});
