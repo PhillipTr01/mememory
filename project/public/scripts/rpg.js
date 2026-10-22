@@ -2457,6 +2457,7 @@ var PERK_TEXT = {
   spikeGuard: (v) => "-" + Math.round(v * 100) + "% spike damage",
   undying: () => "once a fight at 1 HP instead of down",
   healedStrike: (v) => "+" + Math.round(v * 100) + "% damage after a heal",
+  critDmg: (v) => "crits deal " + Math.round(v * 100) + "% more",
   lowHp: (v) => "+" + Math.round(v * 100) + "% damage below half HP",
   crit: (v) => "+" + Math.round(v) + "% crit",
   lifesteal: (v) => Math.round(v * 100) + "% lifesteal",
