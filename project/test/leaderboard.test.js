@@ -141,6 +141,13 @@ test("seasons: a world of its own - at the start everybody may join (the budget,
   // (the jackpot's last winner and records of the day go with them)
   assert.strictEqual(best.offIn("/season"), true);
   assert.strictEqual(best.offIn(""), false);
+  // The chat: a message from the season world carries the season - its bubble in the season's color
+  const chat = require("../game/casino_chat").create("test-season-chat", { save: false });
+  const from = (name, nsp) => ({ data: { username: name }, nsp: { name: nsp }, emit() {} });
+  chat.fromUser(from("anna", "/season/jackpot"), { message: "from the season" });
+  chat.fromUser(from("bert", "/jackpot"), { message: "from the casino" });
+  assert.deepStrictEqual(chat.messages().map((m) => m.season), [made.season.id, undefined]);
+  assert.ok(chat.online("anna").seasons[made.season.id], "the viewer gets the season's color");
   assert.ok((await seasons.update(made.season.id, { ...seasons.publicSeason(seasons.running()), bestWins: true })).season);
   const update = await leaderboard.view("anna", start + 61 * 60 * 1000);
   assert.deepStrictEqual([update.rows[0].username, update.rows[0].coins], ["cleo", 80000]);

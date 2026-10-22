@@ -52,9 +52,23 @@ function create(key, options = {}) {
       names: [...names].sort((a, b) => a.localeCompare(b)),
       season: seen.map(([name]) => name).sort((a, b) => a.localeCompare(b)),
       seasonOf: Object.fromEntries(seen.map(([name, key]) => [name, { id: bySlot[key].id, icon: bySlot[key].icon, name: bySlot[key].name }])),
+      // The running seasons the viewer may see: the colors of the messages written from them
+      seasons: seasonColors(viewer),
       // The moderators (🛡️ next to their names)
       mods: require("./moderators").names(),
     };
+  }
+
+  // {id: {name, icon, color}} of the running seasons the viewer may see (null color: the gold of the casino)
+  function seasonColors(viewer) {
+    if (!viewer) return {};
+    const seasons = require("./seasons");
+    return Object.fromEntries(
+      seasons
+        .runningAll()
+        .filter((season) => seasons.allowed(season, viewer))
+        .map((season) => [season.id, { name: season.name, icon: season.icon, color: season.color || null }]),
+    );
   }
 
   // Joins and leaves come in bursts (page changes): one update for them
@@ -103,8 +117,13 @@ function create(key, options = {}) {
     const text = cleanText(socket, data);
     if (text == null) return;
     const entry = { id: ++messageId, time: Date.now(), type: "user", name: socket.data.username, spectator: false, text: text };
-    // (sent from the season world: the others see the season badge right away)
-    if (socket.nsp && slots.WORLDS.some((world) => socket.nsp.name.startsWith(world + "/"))) sendOnline();
+    // (sent from the season world: the bubble in the season's colors - the others see the season badge right away)
+    const slot = socket.nsp && slots.SLOTS.find((s) => socket.nsp.name.startsWith(s.world + "/"));
+    if (slot) {
+      const season = require("./seasons").running(slot.key);
+      if (season) entry.season = season.id;
+      sendOnline();
+    }
     history.push(entry);
     if (history.length > config.CASINO_CHAT_HISTORY) history.splice(0, history.length - config.CASINO_CHAT_HISTORY);
     for (const page of pages) page.namespace.to(page.room).emit("chatMessage", entry);

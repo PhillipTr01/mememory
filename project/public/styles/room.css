@@ -577,8 +577,21 @@
   border-top-right-radius: 6px;
 }
 
+/* Written from a season world: the bubble in the season's color */
+.msg.from-season .msg-bubble {
+  background: rgba(var(--season-rgb), 0.16);
+  box-shadow: inset 0 0 0 1px rgba(var(--season-rgb), 0.5);
+}
+
+.msg.own.from-season .msg-bubble {
+  background: linear-gradient(135deg, rgb(var(--season-rgb)), rgba(var(--season-rgb), 0.75));
+  color: var(--season-on);
+  box-shadow: none;
+}
+
 /* 1-3 emojis without text are shown big and without bubble */
 .msg-bubble.jumbo {
+  box-shadow: none !important;
   background: transparent !important;
   font-size: 1.75rem;
   line-height: 1.15;

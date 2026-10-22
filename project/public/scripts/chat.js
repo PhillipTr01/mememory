@@ -247,6 +247,11 @@ function addChatMessage(message, live) {
 
     body.append(meta, bubble);
     element.append(avatarSlot, body);
+    // Written from a season world: the bubble in the season's colors (casino_wallet.js)
+    if (message.season != null) {
+      element.dataset.season = message.season;
+      if (typeof window.paintChatSeason == "function") window.paintChatSeason(element);
+    }
     lastMessage = message;
   }
 

@@ -367,6 +367,20 @@
   }
   window.markSeason = markSeason;
 
+  // A chat message written from a season world: its bubble in the season's color (only seasons the player may see)
+  function paintChatSeason(element) {
+    var season = (window.casinoSeasons || {})[element.dataset.season];
+    element.classList.toggle("from-season", !!season);
+    if (!season) return;
+    var color = /^#[0-9a-f]{6}$/i.test(season.color || "") ? season.color : "#d4a64a";
+    var rgb = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
+    element.style.setProperty("--season-rgb", rgb.join(", "));
+    // (the text on a full bubble: dark on a light color, white on a dark one)
+    var light = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2] > 150;
+    element.style.setProperty("--season-on", light ? "#1a1408" : "#fff");
+  }
+  window.paintChatSeason = paintChatSeason;
+
   var onlineButton = document.getElementById("chatOnline");
   var onlineList = document.getElementById("chatOnlineList");
   if (onlineButton) {
@@ -380,6 +394,8 @@
       var seasonOf = data.seasonOf || {};
       window.casinoSeasonNames = inSeason;
       window.casinoSeasonOf = seasonOf;
+      window.casinoSeasons = data.seasons || {};
+      document.querySelectorAll(".msg[data-season]").forEach(paintChatSeason);
       // The moderators: 🛡️ next to their names in the chat
       var mods = new Set(data.mods || []);
       window.casinoModNames = mods;
