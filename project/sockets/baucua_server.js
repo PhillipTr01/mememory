@@ -1,5 +1,6 @@
 const config = require("../game/config");
 const baucua = require("../game/baucua");
+const plays = require("../game/play_events");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
 const version = require("../game/version");
@@ -135,6 +136,10 @@ module.exports = function (io, options = {}) {
       [...wins].map(([name, win]) => coins.add(name, win, { reason: "baucua win", note: table.dice.join(" "), bet: staked(name) }).catch((error) => console.error("[baucua] Could not pay a win:", error))),
     );
     if (wins.size) best.changed();
+    // Every animal a player bet on: one play (the season's goals)
+    const spots = new Map();
+    for (const bet of table.bets) spots.set(bet.name + "\n" + bet.animal, { name: bet.name, on: bet.animal, bet: (spots.get(bet.name + "\n" + bet.animal) || { bet: 0 }).bet + bet.amount });
+    for (const spot of spots.values()) plays.played(world, { game: "baucua", ...spot, win: baucua.payout(spot.on, spot.bet, table.dice), hits: baucua.matches(spot.on, table.dice) });
   }
 
   function newRound() {

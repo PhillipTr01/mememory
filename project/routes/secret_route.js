@@ -24,7 +24,7 @@ module.exports = function (auth) {
   const router = express.Router({ caseSensitive: false, strict: true });
 
   // The addresses of data (not pages) - without access: an error instead of the page to ask for it
-  const DATA = /^\/(leaderboard\/|info\/|season|second-chance|request|maintenance|gift|shop\/|looks)/;
+  const DATA = /^\/(leaderboard\/|info\/|season|second-chance|goals|request|maintenance|gift|shop\/|looks)/;
 
   // Only for players the admin let in - everybody else gets the page to ask for access
   const approved = asyncHandler(async (req, res, next) => {
@@ -180,6 +180,20 @@ module.exports = function (auth) {
     auth,
     approved,
     asyncHandler(async (req, res) => modResult(res, await moderators.announce(req.username, (req.body || {}).text, (req.body || {}).minutes))),
+  );
+
+  /* ---------- The goals of the season the player plays in (game/season_kit.js) ---------- */
+
+  router.get(
+    "/goals",
+    auth,
+    approved,
+    asyncHandler(async (req, res) => {
+      const world = worlds.worldOf(req.username);
+      const season = worlds.isSeason(world) ? seasons.running(world) : null;
+      if (!season) return res.json({ season: null, currencies: [], quests: [] });
+      res.json({ season: { id: season.id, name: season.name, icon: season.icon, coinIcon: seasons.publicSeason(season).coinIcon }, ...(await require("../game/season_kit").view(season, req.username)) });
+    }),
   );
 
   /* ---------- Gifts: coins for another player (a click on a name in the chat) ---------- */

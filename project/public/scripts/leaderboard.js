@@ -19,6 +19,12 @@ function chatUsername() {
   return myName;
 }
 
+// What the board counts: the coins (🪙 - a season shows its own coin) or a currency of the season
+var boardIcon = null;
+function unit() {
+  return (boardIcon || "🪙") + " ";
+}
+
 function formatCoins(value) {
   return Number(value).toLocaleString("en-US");
 }
@@ -77,7 +83,7 @@ function change(row) {
 function podiumSpot(row) {
   var spot = el("div", "lb-spot place-" + row.rank + (row.username == myName ? " mine" : ""));
   spot.dataset.rank = row.rank;
-  spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), liveAvatar(row.username), nameOf(row.username, "lb-name"), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)), change(row));
+  spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), liveAvatar(row.username), nameOf(row.username, "lb-name"), el("span", "lb-coins", unit() + formatCoins(row.coins)), change(row));
   if (row.prize) spot.appendChild(el("span", "lb-prize", "🎁 " + row.prize));
   if (decidedOf(row)) spot.appendChild(decidedOf(row));
   spot.appendChild(el("div", "lb-step", String(row.rank)));
@@ -121,7 +127,7 @@ function listRow(row) {
   who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name"));
   if (row.prize) who.appendChild(el("span", "lb-prize", "🎁 " + row.prize));
   if (decidedOf(row)) who.appendChild(decidedOf(row));
-  item.append(el("span", "lb-rank", "#" + row.rank), who, change(row), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
+  item.append(el("span", "lb-rank", "#" + row.rank), who, change(row), el("span", "lb-coins", unit() + formatCoins(row.coins)));
   return item;
 }
 
@@ -152,11 +158,12 @@ function pendingRow(row) {
     used.title = "💔 " + row.chances + " second chance" + (row.chances == 1 ? "" : "s") + " used";
     who.appendChild(used);
   }
-  item.append(el("span", "lb-rank", "–"), who, wagerBar(row.wager), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
+  item.append(el("span", "lb-rank", "–"), who, wagerBar(row.wager), el("span", "lb-coins", unit() + formatCoins(row.coins)));
   return item;
 }
 
 function render() {
+  boardIcon = board.season && board.season.board ? board.season.board.icon : null;
   // (a season: who hasn't wagered enough yet has no place - in a list of its own below)
   var pending = board.rows.filter((row) => row.pending);
   var rows = board.rows.filter((row) => !row.pending);
@@ -186,8 +193,8 @@ function render() {
       label.title = "Your coins, wager and place right now. The others are as of the last update.";
     }
     var of = board.me.counted != null ? board.me.counted : board.counted != null ? board.counted : board.players;
-    if (board.me.pending) morphChildren(me, [label, el("span", "lb-me-rank", "No place yet"), wagerBar(board.me.wager), el("span", "lb-coins", "🪙 " + formatCoins(board.me.coins))]);
-    else morphChildren(me, [label, el("span", "lb-me-rank", "#" + board.me.rank + " of " + of), change(board.me), el("span", "lb-coins", "🪙 " + formatCoins(board.me.coins))]);
+    if (board.me.pending) morphChildren(me, [label, el("span", "lb-me-rank", "No place yet"), wagerBar(board.me.wager), el("span", "lb-coins", unit() + formatCoins(board.me.coins))]);
+    else morphChildren(me, [label, el("span", "lb-me-rank", "#" + board.me.rank + " of " + of), change(board.me), el("span", "lb-coins", unit() + formatCoins(board.me.coins))]);
   }
   var when = new Date(board.updatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
   var season = board.season;
@@ -384,7 +391,7 @@ function confetti(root) {
 function winnerSpot(row) {
   var spot = el("div", "lb-spot place-" + row.rank + (row.username == myName ? " mine" : ""));
   if (row.rank == 1) spot.appendChild(el("span", "lb-crown", "👑"));
-  spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), liveAvatar(row.username), nameOf(row.username, "lb-name"), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
+  spot.append(el("span", "lb-medal", MEDALS[row.rank - 1]), liveAvatar(row.username), nameOf(row.username, "lb-name"), el("span", "lb-coins", unit() + formatCoins(row.coins)));
   if (row.prize) spot.appendChild(el("span", "lb-prize", "🎁 " + row.prize));
   if (decidedOf(row)) spot.appendChild(decidedOf(row));
   spot.appendChild(el("div", "lb-step", String(row.rank)));
@@ -400,6 +407,7 @@ async function showWinners(id) {
     return showHint("The winners couldn't be loaded.", "error");
   }
   var season = data.season;
+  boardIcon = season && season.board ? season.board.icon : null;
   var page = document.getElementById("lbWinners");
   var head = el("div", "lb-win-head");
   var back = el("button", "lb-win-back", "← Leaderboard");
@@ -416,7 +424,7 @@ async function showWinners(id) {
   if (placed.length) {
     var champ = placed[0];
     var hero = el("div", "lb-champion");
-    hero.append(el("span", "lb-win-label", "The winner"), el("div", "lb-champion-name", champ.username + (champ.username == myName ? " (you!)" : "")), el("div", "lb-champion-coins", "🪙 " + formatCoins(champ.coins)));
+    hero.append(el("span", "lb-win-label", "The winner"), el("div", "lb-champion-name", champ.username + (champ.username == myName ? " (you!)" : "")), el("div", "lb-champion-coins", unit() + formatCoins(champ.coins)));
     if (champ.prize) hero.appendChild(el("div", "lb-champion-prize", "🎁 " + champ.prize));
     parts.push(hero);
     var top = placed.slice(0, 3);
@@ -426,7 +434,7 @@ async function showWinners(id) {
   }
   if (data.me) {
     var me = el("div", "lb-me");
-    me.append(el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", data.me.pending ? "No place - not wagered enough" : "#" + data.me.rank + " of " + placed.length), el("span", "lb-coins", "🪙 " + formatCoins(data.me.coins)));
+    me.append(el("span", "lb-me-label", "Your place"), el("span", "lb-me-rank", data.me.pending ? "No place - not wagered enough" : "#" + data.me.rank + " of " + placed.length), el("span", "lb-coins", unit() + formatCoins(data.me.coins)));
     if (data.me.prize) me.appendChild(el("span", "lb-prize", "🎁 " + data.me.prize));
     parts.push(me);
   }
@@ -436,7 +444,7 @@ async function showWinners(id) {
     var who = el("span", "lb-who");
     who.append(createAvatar(row.username, "sm"), nameOf(row.username, "lb-name"));
     if (decidedOf(row)) who.appendChild(decidedOf(row));
-    item.append(el("span", "lb-rank", "#" + row.rank), who, row.prize ? el("span", "lb-prize", "🎁 " + row.prize) : el("span"), el("span", "lb-coins", "🪙 " + formatCoins(row.coins)));
+    item.append(el("span", "lb-rank", "#" + row.rank), who, row.prize ? el("span", "lb-prize", "🎁 " + row.prize) : el("span"), el("span", "lb-coins", unit() + formatCoins(row.coins)));
     list.appendChild(item);
   });
   parts.push(list);

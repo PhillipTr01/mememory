@@ -5507,3 +5507,140 @@ body.jackpot-theme::before {
 .cs-mod-preview.error {
   color: var(--mm-danger);
 }
+
+/* ---------- The goals of the season (casino_goals.js) ---------- */
+.nav-goals {
+  cursor: pointer;
+}
+
+.nav-goals[hidden] {
+  display: none;
+}
+
+.goals-dialog {
+  max-width: 460px;
+}
+
+.goals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: min(62vh, 560px);
+  overflow-y: auto;
+  margin: 0.4rem -0.3rem 0.9rem;
+  padding: 0 0.3rem;
+}
+
+.goals-currencies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.goals-currency {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid rgba(var(--mm-accent-rgb), 0.45);
+  border-radius: 999px;
+  background: rgba(var(--mm-accent-rgb), 0.12);
+  font-variant-numeric: tabular-nums;
+}
+
+.goals-currency-name {
+  color: var(--mm-muted);
+  font-size: 0.8rem;
+}
+
+.goals-earn {
+  margin: 0;
+  color: var(--mm-muted);
+  font-size: 0.82rem;
+}
+
+.goals-quest {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--mm-border);
+  border-radius: 12px;
+  background: var(--mm-surface-2);
+}
+
+.goals-quest.done {
+  opacity: 0.6;
+}
+
+.goals-quest-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.goals-quest-icon {
+  font-size: 1.15rem;
+}
+
+.goals-quest-name {
+  flex: 1;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.goals-repeat {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+  color: var(--mm-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.goals-quest-text {
+  margin: 0;
+  color: var(--mm-muted);
+  font-size: 0.84rem;
+}
+
+.goals-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--mm-surface-3);
+  overflow: hidden;
+}
+
+.goals-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--mm-gradient);
+  transition: width 0.4s ease;
+}
+
+.goals-progress {
+  color: var(--mm-muted);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.goals-quest-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+.goals-reward {
+  color: var(--mm-accent);
+  font-weight: 600;
+}
+
+.goals-reset {
+  color: var(--mm-muted);
+}
+
+.goals-dialog .mm-dialog-actions .mm-btn {
+  flex: 1;
+}

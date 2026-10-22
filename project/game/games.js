@@ -25,7 +25,11 @@ function enabled(id, username) {
   if (game == null) return false;
   if (username != null && testMode.active(username)) return true;
   // (a season world: not the Dungeon - and not a game the admin keeps out of the seasons, GAME_X_SEASON)
-  if (username != null && !inSeasons(game) && require("./worlds").isSeason(require("./worlds").worldOf(username))) return false;
+  const worlds = require("./worlds");
+  const world = username != null ? worlds.worldOf(username) : "";
+  if (username != null && !inSeasons(game) && worlds.isSeason(world)) return false;
+  // (a season with games of its own - the admin built it with only some of them)
+  if (username != null && worlds.isSeason(world) && !require("./season_kit").hasGame(require("./seasons").running(world), id)) return false;
   return config[game.key] !== false;
 }
 

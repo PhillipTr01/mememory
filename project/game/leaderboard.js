@@ -87,7 +87,7 @@ seasons.changes.on("joined", (username, joined) => {
       const user = await User.findOne({ username: username }).select(["username", wallet.fields.coins, wallet.fields.reset].join(" ")).lean();
       if (user == null) return;
       const before = new Map(board.rows.map((row) => [row.username, row.before]));
-      const rows = (await placed(season, [...board.rows.map((row) => ({ username: row.username, coins: row.coins })), { username: username, coins: wallet.balanceOf(user) }])).map((row) => ({ ...row, before: before.has(row.username) ? before.get(row.username) : null }));
+      const rows = (await placed(season, [...board.rows.map((row) => ({ username: row.username, coins: row.coins })), { username: username, coins: require("./season_kit").boardOf(season) ? 0 : wallet.balanceOf(user) }])).map((row) => ({ ...row, before: before.has(row.username) ? before.get(row.username) : null }));
       await Setting.updateOne({ key: keyOf(season) }, { $set: { value: JSON.stringify({ ...board, rows: rows }) } }, { upsert: true });
     })
     .catch((error) => console.error("[leaderboard] Could not add a player:", error));

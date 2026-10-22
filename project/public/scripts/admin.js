@@ -4,7 +4,7 @@
 var HISTORY_KINDS = [
   ["Casino", [["start coins", "Start coins"], ["daily bonus", "Daily bonus"], ["cashback", "Cashback"], ["admin", "Admin"]]],
   ["Seasons", [["season start", "Season start"], ["second chance", "Second chance"]]],
-  ["Rewards", [["season reward", "Season reward"], ["reward", "Reward"], ["prize", "Own prize"]]],
+  ["Rewards", [["season reward", "Season reward"], ["quest reward", "Goal reward"], ["reward", "Reward"], ["prize", "Own prize"]]],
   ["Gifts", [["gift sent", "Sent"], ["gift received", "Received"], ["mod gift", "From a moderator"]]],
   ["Jackpot", [["jackpot bet", "Bet"], ["jackpot win", "Win"]]],
   ["Case battles", [["battle", "Bet"], ["battle win", "Win"], ["battle refund", "Refund"]]],
@@ -2033,6 +2033,8 @@ async function loadSeasons(quiet) {
     if (!shopSaved) shopSaved = await api("shop");
     seasonList = data.seasons;
     dailyBonusSetting = data.dailyBonus;
+    // (the building blocks of the sandbox)
+    if (data.kit && typeof seasonKit != "undefined") seasonKit.catalog(data.kit);
     renderSeasons();
     // The form: filled once per page (not by the refresh every few seconds)
     if (seasonFormFor !== seasonView + (seasonEdit ? ":edit" : "")) fillSeasonPage();
@@ -2540,6 +2542,7 @@ function fillSeasonForm(season) {
   renderPlayerPicks();
   document.getElementById("adSeasonHighlight").checked = season.highlight === true;
   document.getElementById("adSeasonBestWins").checked = season.bestWins !== false;
+  if (typeof seasonKit != "undefined") seasonKit.load(season.kit || null);
   // A running season: start and budget happened already
   var running = season.status == "running";
   document.getElementById("adSeasonStart").disabled = running;
@@ -2839,6 +2842,7 @@ async function saveSeason(event) {
     accessNames: document.getElementById("adSeasonAccess").value == "all" ? [] : document.getElementById("adSeasonNames").value,
     highlight: document.getElementById("adSeasonHighlight").checked,
     bestWins: document.getElementById("adSeasonBestWins").checked,
+    kit: typeof seasonKit != "undefined" ? seasonKit.value() : undefined,
   };
   // A running season keeps its start and budget
   var current = seasonList.find((s) => s.id == editingSeason);
@@ -3546,6 +3550,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("adResetForm").addEventListener("submit", hardReset);
   // Seasons
   document.getElementById("adSeasonForm").addEventListener("submit", saveSeason);
+  if (typeof seasonKit != "undefined") seasonKit.mount(document.getElementById("adSeasonKit"));
   document.getElementById("adSeasonAccess").addEventListener("change", (event) => {
     document.getElementById("adSeasonPicker").hidden = event.target.value == "all";
     if (event.target.value != "all") renderPlayerPicks();

@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const testMode = require("../game/test_mode");
 const config = require("../game/config");
+const plays = require("../game/play_events");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
 const casinoLock = require("../game/casino_lock");
@@ -336,6 +337,13 @@ module.exports = function (io, options = {}) {
     // The last battles (with the winner) only when the pages showed it - not during a reveal
     const done = () => {
       payWinner(battle);
+      // Every player of the battle: one play (the season's goals)
+      const shares = sharesOf(battle);
+      battle.seats.forEach((seat, i) => {
+        if (!seat || seat.bot) return;
+        const won = winnersOf(battle).indexOf(i);
+        plays.played(world, { game: "battles", name: seat.name, bet: battle.price, win: won >= 0 ? shares[won] || 0 : 0, mode: ruleOf(battle), players: battle.seats.length, teams: battle.teams === true });
+      });
       const winners = winnersOf(battle).map((seat) => battle.seats[seat]);
       lobby.history.unshift({ id: battle.id, winner: winners[0].name, winners: winners.map((w) => w.name), bot: winners.every((w) => w.bot), total: battle.payout, price: battle.price, teams: battle.teams === true });
       lobby.history.length = Math.min(lobby.history.length, config.BATTLE_HISTORY);

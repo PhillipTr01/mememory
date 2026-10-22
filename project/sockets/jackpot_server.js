@@ -1,4 +1,5 @@
 const config = require("../game/config");
+const plays = require("../game/play_events");
 const { jackpotRake } = require("../game/rake");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
@@ -281,6 +282,11 @@ module.exports = function (io, options = {}) {
       pot.records.luckiest = result;
     }
     pot.history.length = Math.min(pot.history.length, config.JACKPOT_HISTORY);
+    // Everybody in the pot: one play (the season's goals) - the chance as it was, in percent
+    const people = pot.entries.filter((entry) => entry.name !== GHOST);
+    for (const entry of people) {
+      plays.played(world, { game: "jackpot", name: entry.name, bet: entry.coins, win: entry.name === winner.name ? result.payout : 0, chance: Math.round((entry.coins / sum) * 10000) / 100, players: people.length, pot: sum, ghost: people.length < pot.entries.length });
+    }
     payWinner().catch(() => {});
     emitState();
     pot.timer = setTimeout(newRound, config.JACKPOT_PAUSE);

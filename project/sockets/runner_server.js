@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const config = require("../game/config");
+const plays = require("../game/play_events");
 const runner = require("../game/runner");
 const days = require("../game/days");
 const socketAuth = require("./socket_auth");
@@ -90,6 +91,8 @@ module.exports = function (io, options = {}) {
     state.played++;
     const record = result.distance > (state.bests[username] || 0);
     if (record) state.bests[username] = result.distance;
+    // (the season's goals: the run with how far it went)
+    plays.played(world, { game: "runner", name: username, bet: run.stake, win: win, distance: result.distance, pickups: result.coins });
     if (win > 0) {
       try {
         await coins.add(username, win, { reason: "runner win", note: `${result.distance.toLocaleString("en-US")} m · x${multiplier} · ${result.coins} coins +${Math.round(runner.coinBonus(result.coins) * 1000) / 10}%`, bet: run.stake });

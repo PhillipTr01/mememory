@@ -66,6 +66,10 @@ after(async () => {
 test("roulette: no timer without a bet; the first bet starts it, the reel rolls, the winners are paid", async () => {
   h.setCoins("alice", 10000);
   h.setCoins("bob", 10000);
+  // (every color a player bet on: one play - for the goals of a season)
+  const seenPlays = [];
+  const onPlay = (world, play) => world === "" && play.game === "roulette" && seenPlays.push(play);
+  require("../game/play_events").events.on("play", onPlay);
   const alice = client("alice");
   const bob = client("bob");
   const idle = await h.once(alice, "rouletteState");
@@ -109,6 +113,11 @@ test("roulette: no timer without a bet; the first bet starts it, the reel rolls,
   assert.strictEqual(h.coinsOf("alice"), expectAlice, `alice on ${color}`);
   assert.strictEqual(h.coinsOf("bob"), expectBob, `bob on ${color}`);
   assert.strictEqual(done.history[0].color, color);
+  require("../game/play_events").events.off("play", onPlay);
+  assert.deepStrictEqual(
+    seenPlays.map((p) => [p.name, p.on, p.bet, p.win, p.result, p.outcome]).sort(),
+    [["alice", "green", 100, color === "green" ? 1400 : 0, color, color === "green" ? "win" : "loss"], ["alice", "red", 1000, color === "red" ? 2000 : 0, color, color === "red" ? "win" : "loss"], ["bob", "blue", 500, color === "blue" ? 1000 : 0, color, color === "blue" ? "win" : "loss"]],
+  );
   // Then a new round that waits for a bet
   const next = await waitFor(alice, "rouletteState", (s) => s.round === rolled.round + 1);
   assert.strictEqual(next.phase, "idle");

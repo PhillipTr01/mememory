@@ -3,6 +3,7 @@ const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
 const casinoLock = require("../game/casino_lock");
 const bj = require("../game/blackjack");
+const plays = require("../game/play_events");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
@@ -351,6 +352,7 @@ module.exports = function (io, options = {}) {
             best.changed();
           }
           results.push({ name: seat.name, result: result, bet: hand.bet, payout: payout });
+          plays.played(world, { game: "blackjack", name: seat.name, kind: "hand", bet: hand.bet, win: payout, result: result, doubled: !!hand.doubled, split: !!hand.split });
         }
         // The side bets: paid now, with the round
         for (const side of seat.sideResults || []) {
@@ -359,6 +361,7 @@ module.exports = function (io, options = {}) {
             best.changed();
           }
           results.push({ name: seat.name, result: "side", side: side.type, bet: side.bet, payout: side.payout });
+          plays.played(world, { game: "blackjack", name: seat.name, kind: "side bet", side: side.type, bet: side.bet, win: side.payout });
         }
       }
       table.history.unshift({ round: table.round, dealer: bj.handValue(table.dealer.cards).total, results: results });

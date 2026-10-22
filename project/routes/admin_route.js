@@ -722,7 +722,15 @@ module.exports = function () {
 
   /* ---------- Seasons ---------- */
 
-  router.get("/api/seasons", admin, (req, res) => res.json({ seasons: seasons.list(), intervals: seasons.INTERVALS, dailyBonus: config.SEASON_DAILY_BONUS, now: Date.now() }));
+  router.get("/api/seasons", admin, (req, res) => res.json({ seasons: seasons.list(), intervals: seasons.INTERVALS, dailyBonus: config.SEASON_DAILY_BONUS, now: Date.now(), kit: require("../game/season_kit").catalog() }));
+
+  // The sandbox while it is built: what is wrong with it - or what every goal and currency says to the players
+  router.post("/api/seasons/kit-preview", admin, (req, res) => {
+    const kit = require("../game/season_kit");
+    const result = kit.check(req.body && req.body.kit);
+    if (result.error) return res.json({ error: result.error });
+    res.json({ quests: result.kit.quests.map((q) => kit.questText({ ...q, text: "" })), currencies: result.kit.currencies.map((c) => (c.earn ? kit.earnText(c) : null)) });
+  });
 
   // A new season: {name, icon, start, end (ms), budget, every (minutes), prizesOn, prizes: [{place, prize}]}
   router.post(

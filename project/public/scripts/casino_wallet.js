@@ -3,6 +3,12 @@
  * Uses the `socket` of the page (it sends "coins").
  */
 (function () {
+  // The goals of the season (casino_goals.js): only in a season world
+  if (window.CASINO_WORLD == "season" && document.getElementById("navCoins")) {
+    var goals = document.createElement("script");
+    goals.src = "/static/scripts/casino_goals.js";
+    (document.body || document.head).appendChild(goals);
+  }
   var button = document.getElementById("navCoins");
   var bonusButton = document.getElementById("navBonus");
   var coins = 0;

@@ -124,6 +124,20 @@ module.exports = function (io) {
     require("../game/worlds").testChat.refreshOnline();
   });
 
+  // A season changed (admin panel): the open pages of the games it doesn't have anymore go to another game
+  require("../game/seasons").changes.on("updated", (season) => {
+    const kit = require("../game/season_kit");
+    const slot = require("../game/season_slots").SLOTS.find((s) => s.key === season.slot);
+    if (!slot || !season.started || season.ended) return;
+    for (const game of games.GAMES) {
+      if (game.noSeason || kit.hasGame(season, game.id)) continue;
+      for (const socket of io.of(slot.world + game.namespace).sockets.values()) {
+        socket.emit("gameOff");
+        socket.disconnect(true);
+      }
+    }
+  });
+
   // A game turned off (admin panel): its open pages go to another game
   settings.changes.on("change", (values) => {
     for (const game of games.GAMES) {

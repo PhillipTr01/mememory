@@ -3,6 +3,7 @@ const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
 const casinoLock = require("../game/casino_lock");
 const slots = require("../game/slots");
+const plays = require("../game/play_events");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
@@ -152,6 +153,10 @@ module.exports = function (io, options = {}) {
     } catch (error) {
       console.error("[slots] Could not pay a win:", error);
     }
+    // (the season's goals: the spin with what it was)
+    const feed = entry.feed || {};
+    const kind = entry.result && entry.result.bonus ? "free games" : entry.result && entry.result.coinGame ? "coin game" : "line";
+    plays.played(world, { game: "slots", name: entry.name, bet: feed.buy || entry.bet || feed.bet || 0, win: entry.win, kind: kind, symbol: kind === "line" ? feed.symbol : null, count: kind === "line" ? feed.count : null, buy: !!feed.buy });
     if (entry.feed && entry.win > 0) {
       machine.feed.unshift(entry.feed);
       machine.feed.length = Math.min(machine.feed.length, config.SLOTS_FEED);
@@ -328,6 +333,9 @@ module.exports = function (io, options = {}) {
             // A bonus game waits for the player's click
             if (entry.result) hold(entry, "waiting");
             else schedulePay(entry, payIn);
+          } else {
+            // Nothing won: a play once the reels stopped (the season's goals)
+            setTimeout(() => plays.played(world, { game: "slots", name: username, bet: bet, win: 0, kind: "nothing", buy: false }), payIn).unref();
           }
           socket.emit("slotsResult", { id: id, bet: bet, buy: buy, cost: cost, grid: result.grid, stops: result.stops, lines: result.lines, lineWin: result.lineWin, coins: result.coins, bonus: result.bonus, coinGame: result.coinGame, win: result.win, capped: result.capped, payIn: payIn });
         } finally {

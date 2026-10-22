@@ -48,6 +48,10 @@ function check(casino) {
         const tester = require("../game/test_mode").active(user.username);
         if (tester !== worlds.isTest(socket.nsp.name)) return next(new Error("testMode"));
         if (worlds.worldOf(user.username) !== worlds.worldOfNamespace(socket.nsp.name)) return next(new Error("world"));
+        // (a game the season doesn't have: the page loads again - and goes to a game it has)
+        const world = worlds.worldOfNamespace(socket.nsp.name);
+        const game = worlds.isSeason(world) ? require("../game/games").GAMES.find((g) => world + g.namespace === socket.nsp.name) : null;
+        if (game && !require("../game/games").enabled(game.id, user.username)) return next(new Error("world"));
       }
 
       socket.data.username = user.username;

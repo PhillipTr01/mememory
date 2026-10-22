@@ -3,6 +3,7 @@ const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
 const casinoLock = require("../game/casino_lock");
 const roulette = require("../game/roulette");
+const plays = require("../game/play_events");
 const casinoChat = require("../game/casino_chat");
 const socketAuth = require("./socket_auth");
 const safe = require("./safe_handler");
@@ -156,6 +157,10 @@ module.exports = function (io, options = {}) {
       ),
     );
     if (wins.size) best.changed();
+    // Every color a player bet on: one play (the season's goals)
+    const spots = new Map();
+    for (const bet of table.bets) spots.set(bet.name + "\n" + bet.color, { name: bet.name, on: bet.color, bet: (spots.get(bet.name + "\n" + bet.color) || { bet: 0 }).bet + bet.amount });
+    for (const spot of spots.values()) plays.played(world, { game: "roulette", ...spot, win: roulette.payout(spot.on, spot.bet, table.slot), result: slot.color, number: slot.number });
   }
 
   function newRound() {

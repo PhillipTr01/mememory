@@ -1,4 +1,5 @@
 const config = require("../game/config");
+const plays = require("../game/play_events");
 const coins = require("../game/coins");
 const inPlay = require("../game/in_play");
 const casinoLock = require("../game/casino_lock");
@@ -666,6 +667,13 @@ module.exports = function (io, options = {}) {
     const winners = table.result.winners;
     // (the biggest pots: only people's - a bot's win is no record)
     winners.filter((w) => !isBot(w.seat)).forEach((w) => best.record(w.name, w.amount, w.hand || (table.result.showdown ? null : "everybody folded")));
+    // Everybody who played the hand: one play (the season's goals) - the chips put in, the chips won
+    table.seats.forEach((seat, i) => {
+      if (!seat || seat.bot || !seat.inHand) return;
+      const shown = (table.result.hands || []).find((h) => h.seat === i);
+      const hand = (winners.find((w) => w.seat === i) || {}).hand || (shown && shown.hand) || null;
+      plays.played(world, { game: "poker", name: seat.name, bet: seat.total || 0, win: winners.filter((w) => w.seat === i).reduce((sum, w) => sum + w.amount, 0), hand: hand ? hand.toLowerCase() : null, showdown: !!table.result.showdown, folded: !!seat.folded });
+    });
     // (a bot never shows what it didn't have to)
     table.seats.forEach((seat, i) => seat && seat.bot && seat.deciding && decide(i, false));
     table.history.unshift({

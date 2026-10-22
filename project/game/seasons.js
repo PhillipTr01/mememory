@@ -104,6 +104,9 @@ function publicSeason(season) {
     wagerX: wagerXOf(season),
     highlight: season.highlight === true,
     bestWins: season.bestWins !== false,
+    kit: season.kit || null,
+    // (what the leaderboard counts: a currency of the season - null: the coins)
+    board: require("./season_kit").boardOf(season),
     access: accessOf(season),
     status: closingOf(season) && closingOf(season).kind === "start" ? "starting" : status(season),
     // (the slot it runs in: its world - null: not started / over)
@@ -458,6 +461,11 @@ function check(input, current) {
   const wagerX = input.wagerX == null || input.wagerX === "" ? config.SEASON_WAGER_X : Number(input.wagerX);
   if (!Number.isInteger(wagerX) || wagerX < 0 || wagerX > 1000) return { error: "Wager to get a place: 0 to 1000 times the start budget." };
 
+  // The sandbox: games, currencies, goals, what the leaderboard counts (game/season_kit.js)
+  // (not sent: as it was)
+  const kit = input.kit === undefined && current && current.kit ? { kit: current.kit } : require("./season_kit").check(input.kit);
+  if (kit.error) return kit;
+
   // A running season: the start and the budget are given (they happened already)
   if (current && current.started) {
     if (start !== current.start || budget !== current.budget) return { error: "The season runs already: start and budget can't change." };
@@ -469,7 +477,7 @@ function check(input, current) {
   const others = state.seasons.filter((season) => season !== current && !season.ended && season.start < end && start < season.end);
   const crowded = atOnce(others, start, end);
   if (crowded) return { error: `At most ${MAX_AT_ONCE} seasons at the same time - it overlaps with ${crowded.map((season) => `"${season.name}"`).join(" and ")}.` };
-  return { season: { name: name, icon: icon, coinIcon: coinIcon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, chanceDelay: chanceDelay, closeWait: closeWait, color: color, every: every, prizesOn: prizesOn, prizes: clean, access: { mode: accessMode, names: accessNames }, highlight: highlight, bestWins: bestWins, wagerX: wagerX } };
+  return { season: { name: name, icon: icon, coinIcon: coinIcon, start: start, end: end, budget: budget, dailyBonus: dailyBonus, secondChances: secondChances, chanceDelay: chanceDelay, closeWait: closeWait, color: color, every: every, prizesOn: prizesOn, prizes: clean, access: { mode: accessMode, names: accessNames }, highlight: highlight, bestWins: bestWins, wagerX: wagerX, kit: kit.kit } };
 }
 
 // Seasons (all overlapping start - end) that run together with a new one somewhere in start - end: MAX_AT_ONCE of
@@ -505,6 +513,8 @@ async function update(id, input) {
   }
   await save();
   await tick();
+  // (its games may have changed: the pages of a game that is out now go elsewhere)
+  changes.emit("updated", season);
   return { season: publicSeason(season) };
 }
 
@@ -710,7 +720,10 @@ async function standings(which = null) {
   if (season == null) return [];
   const f = fieldsOf(season);
   const users = await User.find({ casinoApproved: true }).select(["username", f.coins, f.reset].join(" ")).lean();
-  return place(users.filter((user) => joined(user.username, season) === true).map((user) => ({ username: user.username, coins: walletOf(season).balanceOf(user) })));
+  // (a season counting a currency: its amount instead of the coins)
+  const board = require("./season_kit").boardOf(season);
+  const amounts = board ? await require("./season_kit").balances(season, board.id) : null;
+  return place(users.filter((user) => joined(user.username, season) === true).map((user) => ({ username: user.username, coins: amounts ? amounts.get(user.username) || 0 : walletOf(season).balanceOf(user) })));
 }
 
 /* ---------- The leaderboard of a season for the admin panel ---------- */
@@ -977,3 +990,6 @@ function accentStyle(username) {
 }
 
 module.exports = { wagerNeed, wagerXOf, prizesOf, prizeText, tieStats, board, joinedAt, join, joined, joinedSeasons, joinCoins, allowed, accessOf, inSeasonWorld, hereIn, worldOf, switchWorld, upcoming, closingInfo, closingInfos, closingKind, closingOf, runningAll, slotOf, boardKey, MAX_AT_ONCE, chanceStatus, useChance, clear, accentStyle, coinScript, INTERVALS, ACCESS, BOARD_KEY, SEASON_WORLD, changes, load, list, create, update, remove, endNow, tick, start, stop, reset, running, lastEnded, byId, publicSeason, standings, status };
+
+// The season sandbox listens to the plays of the games (goals, currencies)
+require("./season_kit");
