@@ -42,34 +42,26 @@ function listOf(body) {
   return [];
 }
 
-// The prizes of a place: the items ({name, price, count}) and the balance (wallet: quantity x value)
-function prizesOf(entry) {
+// The items of a place ({name, price, count}) - the other prizes (wallet balance) don't count
+function itemsOf(entry) {
   const items = [];
-  let wallet = 0;
   for (const prize of Array.isArray(entry.prizes) ? entry.prizes : []) {
     const reward = prize && prize.reward;
-    if (!reward) continue;
-    const quantity = Number(prize.quantity) || 1;
-    if (reward.type === "item" && reward.item) {
-      const base = reward.item.baseItem || {};
-      items.push({ name: base.name || "Item", price: cents(reward.item.price), count: quantity });
-    } else if (reward.type === "wallet") {
-      wallet += quantity * (cents(reward.value) || 0);
-    }
+    if (!reward || reward.type !== "item" || !reward.item) continue;
+    const base = reward.item.baseItem || {};
+    items.push({ name: base.name || "Item", price: cents(reward.item.price), count: Number(prize.quantity) || 1 });
   }
-  return { items: items, wallet: Math.round(wallet * 100) / 100 };
+  return items;
 }
 
 function entryOf(entry, i) {
   const user = entry.user || {};
-  const prizes = prizesOf(entry);
   return {
     place: Number(entry.rank) || i + 1,
     name: String(user.name || entry.userId || "?"),
     quests: Number.isFinite(Number(entry.completedQuestsCount)) ? Number(entry.completedQuestsCount) : null,
     shells: Number.isFinite(Number(entry.score)) ? Number(entry.score) : null,
-    items: prizes.items,
-    wallet: prizes.wallet,
+    items: itemsOf(entry),
   };
 }
 
@@ -80,8 +72,8 @@ function parse(body) {
     .sort((a, b) => a.place - b.place);
 }
 
-// What the prizes of a place are worth (the items and the balance)
-const worth = (row) => (row.items || []).reduce((sum, item) => sum + (item.price || 0) * item.count, 0) + (row.wallet || 0);
+// What the item of a place is worth
+const worth = (row) => (row.items || []).reduce((sum, item) => sum + (item.price || 0) * item.count, 0);
 
 /* ---------- The messages ---------- */
 
@@ -112,7 +104,6 @@ function rankingText(rows, at = Date.now(), compact = false) {
       lines.push(`🔪 ${item.count > 1 ? item.count + "× " : ""}${esc(compact ? shortName(item.name) : item.name)}`);
       lines.push(`💰 ${money(item.price)} Coins → <b>${euro(item.price)}</b>`);
     }
-    if (row.wallet > 0 && !compact) lines.push(`💵 ${money(row.wallet)} Coins Guthaben → ${euro(row.wallet)}`);
     lines.push("");
   }
   const text = lines.join("\n").trim();
@@ -147,7 +138,7 @@ function changes(before, now) {
   for (const row of now) {
     const was = oldPlaces.get(row.place);
     if (!was) continue;
-    const key = (r) => JSON.stringify([(r.items || []).map((i) => [i.name, i.price, i.count]), r.wallet || 0]);
+    const key = (r) => JSON.stringify((r.items || []).map((i) => [i.name, i.price, i.count]));
     if (key(was) !== key(row)) lines.push(`🎁 Platz ${row.place}: jetzt ${money(worth(row))} Coins → ${euro(worth(row))} (vorher ${money(worth(was))} Coins)`);
   }
   return lines;
