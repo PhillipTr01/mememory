@@ -8,14 +8,15 @@ const path = require("path");
  * something changed (places, quests, shells, prizes). The prices of csgofast come in cents (205334 -> 2,053.34).
  *
  * .env: TELEGRAM_BOT_TOKEN (needed - without it nothing runs), TELEGRAM_CHAT_ID (optional: otherwise the
- * first chat that sends /start), TELEGRAM_POLL_MINUTES (5), TELEGRAM_EUR_RATE (0.57),
+ * first chat that sends /start), TELEGRAM_POLL_MINUTES (1), TELEGRAM_EUR_RATE (0.57),
  * TELEGRAM_PLACES (15), TELEGRAM_HIGHLIGHT (FlaveDrake,duck.), CSGOFAST_TOP_URL, TELEGRAM_STATE_FILE (where the chat, the pinned message and the last ranking are kept).
  *
  * Commands in the chat: /start (this chat gets the ranking), /ranking (the ranking as a new message),
  * /raw (the first entry of the answer as it comes - to see its fields).
  */
 const TOP_URL = process.env.CSGOFAST_TOP_URL || "https://back-new.csgofast.com/api/motivator/seasons-top?limit=15";
-const minutes = () => Math.max(1, Number(process.env.TELEGRAM_POLL_MINUTES) || 5);
+const every = () => (minutes() === 1 ? "jede Minute" : `alle ${minutes()} Minuten`);
+const minutes = () => Math.max(1, Number(process.env.TELEGRAM_POLL_MINUTES) || 1);
 const eurRate = () => (process.env.TELEGRAM_EUR_RATE ? Number(String(process.env.TELEGRAM_EUR_RATE).replace(",", ".")) : 0.57);
 const stateFile = () => process.env.TELEGRAM_STATE_FILE || path.join(__dirname, "..", ".telegram_bot.json");
 
@@ -235,7 +236,7 @@ async function listen() {
           state.chatId = chatId;
           state.pinnedId = null;
           saveState();
-          await api("sendMessage", { chat_id: chatId, text: `👋 Hier kommt das Ranking hin. Es wird alle ${minutes()} Minuten aktualisiert.` });
+          await api("sendMessage", { chat_id: chatId, text: `👋 Hier kommt das Ranking hin. Es wird ${every()} aktualisiert.` });
           await check();
         } else if (command === "/ranking") {
           const rows = state.rows || parse(await fetchTop());
@@ -262,7 +263,7 @@ function start() {
   listen();
   check();
   setInterval(check, minutes() * 60 * 1000).unref();
-  console.log(`[telegram] Bot läuft, alle ${minutes()} Minuten${state.chatId ? "" : " - schick ihm /start"}.`);
+  console.log(`[telegram] Bot läuft, ${every()}${state.chatId ? "" : " - schick ihm /start"}.`);
   return true;
 }
 
