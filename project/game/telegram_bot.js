@@ -5,7 +5,7 @@ const path = require("path");
  * A Telegram bot of its own (@ptfast_bot), independent of the casino: every few minutes it reads the
  * season top of csgofast (TOP_URL), keeps one pinned message with the ranking up to date (names, quests,
  * shells, the item of every place with its price and the price in euros) and writes a message when
- * something changed (places, quests, shells, items).
+ * something changed (places, quests, shells, prizes). The prices of csgofast come in cents (205334 -> 2,053.34).
  *
  * .env: TELEGRAM_BOT_TOKEN (needed - without it nothing runs), TELEGRAM_CHAT_ID (optional: otherwise the
  * first chat that sends /start), TELEGRAM_POLL_MINUTES (5), TELEGRAM_EUR_RATE (0.57),
@@ -19,29 +19,19 @@ const minutes = () => Math.max(1, Number(process.env.TELEGRAM_POLL_MINUTES) || 5
 const eurRate = () => (process.env.TELEGRAM_EUR_RATE ? Number(String(process.env.TELEGRAM_EUR_RATE).replace(",", ".")) : 0.57);
 const stateFile = () => process.env.TELEGRAM_STATE_FILE || path.join(__dirname, "..", ".telegram_bot.json");
 
-/* ---------- Reading the ranking (the fields are found by their usual names) ---------- */
+/* ---------- Reading the ranking (csgofast: {seasonsTop: [{user: {name}, rank, score, completedQuestsCount, prizes}]}) ---------- */
 
-const pick = (obj, keys) => {
-  for (const key of keys) {
-    const value = key.split(".").reduce((o, k) => (o == null ? undefined : o[k]), obj);
-    if (value != null && value !== "") return value;
-  }
-  return undefined;
-};
-const num = (value) => {
-  if (Array.isArray(value)) return value.length;
-  const n = typeof value === "string" ? Number(value.replace(",", ".")) : Number(value);
-  return Number.isFinite(n) ? n : null;
+// The prices come in cents: 205334 -> 2,053.34
+const cents = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n / 100 : null;
 };
 
-// The list of the answer: the answer itself, or the first list of objects in it
+// The list of the answer: seasonsTop - or the first list of objects in it
 function listOf(body) {
   if (Array.isArray(body)) return body;
   if (body == null || typeof body !== "object") return [];
-  for (const key of ["data", "items", "top", "users", "list", "result", "results", "players", "leaders", "rating"]) {
-    const found = listOf(body[key]);
-    if (found.length) return found;
-  }
+  if (Array.isArray(body.seasonsTop)) return body.seasonsTop;
   for (const value of Object.values(body)) {
     if (Array.isArray(value) && value.some((v) => v && typeof v === "object")) return value;
     if (value && typeof value === "object") {
@@ -52,30 +42,34 @@ function listOf(body) {
   return [];
 }
 
-// The item of a place: {name, price} - or null
-function itemOf(entry) {
-  const raw = pick(entry, ["item", "prize", "reward", "award", "skin", "prizeItem", "rewardItem", "items.0", "prizes.0", "rewards.0"]);
-  if (raw == null) {
-    const price = num(pick(entry, ["itemPrice", "prizePrice", "rewardPrice"]));
-    const name = pick(entry, ["itemName", "prizeName", "rewardName"]);
-    return price != null || name ? { name: name ? String(name) : null, price: price } : null;
+// The prizes of a place: the items ({name, price, count}) and the balance (wallet: quantity x value)
+function prizesOf(entry) {
+  const items = [];
+  let wallet = 0;
+  for (const prize of Array.isArray(entry.prizes) ? entry.prizes : []) {
+    const reward = prize && prize.reward;
+    if (!reward) continue;
+    const quantity = Number(prize.quantity) || 1;
+    if (reward.type === "item" && reward.item) {
+      const base = reward.item.baseItem || {};
+      items.push({ name: base.name || "Item", price: cents(reward.item.price), count: quantity });
+    } else if (reward.type === "wallet") {
+      wallet += quantity * (cents(reward.value) || 0);
+    }
   }
-  if (typeof raw !== "object") return { name: String(raw), price: null };
-  const inner = pick(raw, ["item"]) && typeof raw.item === "object" ? raw.item : raw;
-  return {
-    name: pick(inner, ["name", "fullName", "marketName", "market_name", "title", "itemName"]) || null,
-    price: num(pick(inner, ["price", "cost", "value", "amount", "priceUsd", "steamPrice"])),
-  };
+  return { items: items, wallet: Math.round(wallet * 100) / 100 };
 }
 
 function entryOf(entry, i) {
-  const user = pick(entry, ["user", "player", "profile", "account"]) || {};
+  const user = entry.user || {};
+  const prizes = prizesOf(entry);
   return {
-    place: num(pick(entry, ["place", "position", "rank", "top", "index"])) || i + 1,
-    name: String(pick(user, ["name", "username", "nickname", "steamName", "personaname", "login"]) || pick(entry, ["name", "username", "nickname", "steamName", "userName", "login"]) || "?"),
-    quests: num(pick(entry, ["quests", "questsCount", "questCount", "completedQuests", "questsCompleted", "quest", "tasks", "tasksCount"])),
-    shells: num(pick(entry, ["shells", "shellsCount", "shellCount", "shell", "points", "score", "count", "amount", "value"])),
-    item: itemOf(entry),
+    place: Number(entry.rank) || i + 1,
+    name: String(user.name || entry.userId || "?"),
+    quests: Number.isFinite(Number(entry.completedQuestsCount)) ? Number(entry.completedQuestsCount) : null,
+    shells: Number.isFinite(Number(entry.score)) ? Number(entry.score) : null,
+    items: prizes.items,
+    wallet: prizes.wallet,
   };
 }
 
@@ -86,11 +80,15 @@ function parse(body) {
     .sort((a, b) => a.place - b.place);
 }
 
+// What the prizes of a place are worth (the items and the balance)
+const worth = (row) => (row.items || []).reduce((sum, item) => sum + (item.price || 0) * item.count, 0) + (row.wallet || 0);
+
 /* ---------- The messages ---------- */
 
 const esc = (text) => String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-const int = (n) => (n == null ? "–" : Number(n).toLocaleString("de-DE", { maximumFractionDigits: 2 }));
-const euro = (n) => (n == null ? "–" : (n * eurRate()).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €");
+const int = (n) => (n == null ? "–" : Number(n).toLocaleString("de-DE", { maximumFractionDigits: 0 }));
+const money = (n) => (n == null ? "–" : Number(n).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+const euro = (n) => (n == null ? "–" : money(n * eurRate()) + " €");
 const MEDALS = ["🥇", "🥈", "🥉"];
 const time = (at) => new Date(at).toLocaleString("de-DE", { timeZone: process.env.TELEGRAM_TZ || "Europe/Berlin", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
@@ -102,13 +100,17 @@ function rankingText(rows, at = Date.now()) {
     const mark = MEDALS[row.place - 1] || `<b>${row.place}.</b>`;
     lines.push(`${mark} <b>${esc(row.name)}</b>`);
     lines.push(`      🎯 ${int(row.quests)} Quests · 🐚 ${int(row.shells)} Shells`);
-    if (row.item) {
-      if (row.item.price != null) total += row.item.price;
-      lines.push(`      🎁 ${row.item.name ? esc(row.item.name) + " · " : ""}${int(row.item.price)} → <b>${euro(row.item.price)}</b>`);
+    for (const item of row.items || []) {
+      lines.push(`      🔪 ${item.count > 1 ? item.count + "× " : ""}${esc(item.name)}`);
+      lines.push(`           💲 ${money(item.price)} → <b>${euro(item.price)}</b>`);
     }
+    if (row.wallet > 0) lines.push(`      💵 Guthaben ${money(row.wallet)} → ${euro(row.wallet)}`);
+    if ((row.items || []).length + (row.wallet > 0 ? 1 : 0) > 1) lines.push(`      Σ ${money(worth(row))} → <b>${euro(worth(row))}</b>`);
+    total += worth(row);
+    lines.push("");
   }
-  if (rows.some((r) => r.item && r.item.price != null)) lines.push("", `💰 Alle Items: ${int(total)} → <b>${euro(total)}</b>`);
-  return lines.join("\n");
+  if (total > 0) lines.push(`💰 <b>Alle Preise: ${money(total)} → ${euro(total)}</b>`);
+  return lines.join("\n").trim();
 }
 
 // What changed since the last look: lines - empty: nothing
@@ -130,13 +132,13 @@ function changes(before, now) {
   }
   const names = new Set(now.map((r) => r.name));
   for (const row of before) if (!names.has(row.name)) lines.push(`👋 <b>${esc(row.name)}</b> ist raus (war Platz ${row.place}).`);
-  // The items of the places
-  const byPlace = (rows) => new Map(rows.map((r) => [r.place, r.item]));
-  const oldItems = byPlace(before);
-  for (const [place, item] of byPlace(now)) {
-    const was = oldItems.get(place);
-    if (!was || !item) continue;
-    if (was.name !== item.name || was.price !== item.price) lines.push(`🎁 Platz ${place}: ${esc(item.name || "Item")} jetzt ${int(item.price)} → ${euro(item.price)}${was.price != null ? ` (vorher ${int(was.price)})` : ""}`);
+  // The prizes of the places: other items, other prices
+  const oldPlaces = new Map(before.map((r) => [r.place, r]));
+  for (const row of now) {
+    const was = oldPlaces.get(row.place);
+    if (!was) continue;
+    const key = (r) => JSON.stringify([(r.items || []).map((i) => [i.name, i.price, i.count]), r.wallet || 0]);
+    if (key(was) !== key(row)) lines.push(`🎁 Platz ${row.place}: Preise jetzt ${money(worth(row))} → ${euro(worth(row))} (vorher ${money(worth(was))})`);
   }
   return lines;
 }
