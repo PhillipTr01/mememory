@@ -1,3 +1,4 @@
 /project/node_modules
 /project/.vscode
 /project/.env
+/project/.telegram_bot.json

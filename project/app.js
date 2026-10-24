@@ -246,4 +246,7 @@ server.on("error", (error) => {
 // No balance is looked at before the season is loaded (see game/coins.js hold)
 require("./game/coins").hold();
 server.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+
+// The Telegram bot (@ptfast_bot): the csgofast season ranking - on its own, only with TELEGRAM_BOT_TOKEN in the .env
+require("./game/telegram_bot").start();
 connectDatabase();
