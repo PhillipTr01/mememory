@@ -9,12 +9,12 @@ const path = require("path");
  *
  * .env: TELEGRAM_BOT_TOKEN (needed - without it nothing runs), TELEGRAM_CHAT_ID (optional: otherwise the
  * first chat that sends /start), TELEGRAM_POLL_MINUTES (5), TELEGRAM_EUR_RATE (0.57),
- * CSGOFAST_TOP_URL, TELEGRAM_STATE_FILE (where the chat, the pinned message and the last ranking are kept).
+ * TELEGRAM_PLACES (15), TELEGRAM_HIGHLIGHT (FlaveDrake,duck.), CSGOFAST_TOP_URL, TELEGRAM_STATE_FILE (where the chat, the pinned message and the last ranking are kept).
  *
  * Commands in the chat: /start (this chat gets the ranking), /ranking (the ranking as a new message),
  * /raw (the first entry of the answer as it comes - to see its fields).
  */
-const TOP_URL = process.env.CSGOFAST_TOP_URL || "https://back-new.csgofast.com/api/motivator/seasons-top?limit=16";
+const TOP_URL = process.env.CSGOFAST_TOP_URL || "https://back-new.csgofast.com/api/motivator/seasons-top?limit=15";
 const minutes = () => Math.max(1, Number(process.env.TELEGRAM_POLL_MINUTES) || 5);
 const eurRate = () => (process.env.TELEGRAM_EUR_RATE ? Number(String(process.env.TELEGRAM_EUR_RATE).replace(",", ".")) : 0.57);
 const stateFile = () => process.env.TELEGRAM_STATE_FILE || path.join(__dirname, "..", ".telegram_bot.json");
@@ -92,26 +92,36 @@ const euro = (n) => (n == null ? "–" : money(n * eurRate()) + " €");
 const MEDALS = ["🥇", "🥈", "🥉"];
 const time = (at) => new Date(at).toLocaleString("de-DE", { timeZone: process.env.TELEGRAM_TZ || "Europe/Berlin", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
-function rankingText(rows, at = Date.now()) {
+// The players to highlight (TELEGRAM_HIGHLIGHT, comma separated)
+const highlighted = () => new Set(String(process.env.TELEGRAM_HIGHLIGHT || "FlaveDrake,duck.").split(",").map((name) => name.trim().toLowerCase()).filter(Boolean));
+const places = () => Math.max(1, Number(process.env.TELEGRAM_PLACES) || 15);
+// (the wear in short - one message has room for at most 4096 characters)
+const WEAR = { "Factory New": "FN", "Minimal Wear": "MW", "Field-Tested": "FT", "Well-Worn": "WW", "Battle-Scarred": "BS" };
+const shortName = (name) => String(name).replace(/\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)/, (all, wear) => "(" + WEAR[wear] + ")");
+
+function rankingText(rows, at = Date.now(), compact = false) {
+  const marked = highlighted();
   const lines = [`🏆 <b>Season-Ranking</b>`, `<i>Stand: ${esc(time(at))}</i>`, ""];
   if (!rows.length) lines.push("Keine Einträge.");
-  let total = 0;
-  for (const row of rows) {
+  for (const row of rows.slice(0, places())) {
     const mark = MEDALS[row.place - 1] || `<b>${row.place}.</b>`;
-    lines.push(`${mark} <b>${esc(row.name)}</b>`);
-    lines.push(`      🎯 ${int(row.quests)} Quests · 🐚 ${int(row.shells)} Shells`);
+    const star = marked.has(row.name.toLowerCase());
+    lines.push(star ? `${mark} ⭐️ <u><b>${esc(row.name)}</b></u> ⭐️` : `${mark} <b>${esc(row.name)}</b>`);
+    lines.push(`🎯 ${int(row.quests)} Quests · 🐚 ${int(row.shells)} Shells`);
     for (const item of row.items || []) {
-      lines.push(`      🔪 ${item.count > 1 ? item.count + "× " : ""}${esc(item.name)}`);
-      lines.push(`           💲 ${money(item.price)} → <b>${euro(item.price)}</b>`);
+      lines.push(`🔪 ${item.count > 1 ? item.count + "× " : ""}${esc(compact ? shortName(item.name) : item.name)}`);
+      lines.push(`💰 ${money(item.price)} Coins → <b>${euro(item.price)}</b>`);
     }
-    if (row.wallet > 0) lines.push(`      💵 Guthaben ${money(row.wallet)} → ${euro(row.wallet)}`);
-    if ((row.items || []).length + (row.wallet > 0 ? 1 : 0) > 1) lines.push(`      Σ ${money(worth(row))} → <b>${euro(worth(row))}</b>`);
-    total += worth(row);
+    if (row.wallet > 0 && !compact) lines.push(`💵 ${money(row.wallet)} Coins Guthaben → ${euro(row.wallet)}`);
     lines.push("");
   }
-  if (total > 0) lines.push(`💰 <b>Alle Preise: ${money(total)} → ${euro(total)}</b>`);
-  return lines.join("\n").trim();
+  const text = lines.join("\n").trim();
+  // (too long for one message: the short form)
+  return text.length > 4096 && !compact ? rankingText(rows, at, true) : text.slice(0, 4096);
 }
+
+// A name in a message (the highlighted ones with a star)
+const who = (name) => (highlighted().has(name.toLowerCase()) ? `⭐️ <u><b>${esc(name)}</b></u>` : `<b>${esc(name)}</b>`);
 
 // What changed since the last look: lines - empty: nothing
 function changes(before, now) {
@@ -121,24 +131,24 @@ function changes(before, now) {
   for (const row of now) {
     const was = old.get(row.name);
     if (!was) {
-      lines.push(`🆕 <b>${esc(row.name)}</b> ist neu auf Platz ${row.place}.`);
+      lines.push(`🆕 ${who(row.name)} ist neu auf Platz ${row.place}.`);
       continue;
     }
     const parts = [];
     if (was.place !== row.place) parts.push(row.place < was.place ? `⬆️ Platz ${was.place} → ${row.place}` : `⬇️ Platz ${was.place} → ${row.place}`);
     if (was.quests !== row.quests && row.quests != null) parts.push(`🎯 ${int(was.quests)} → ${int(row.quests)} Quests`);
     if (was.shells !== row.shells && row.shells != null) parts.push(`🐚 ${int(was.shells)} → ${int(row.shells)} Shells`);
-    if (parts.length) lines.push(`<b>${esc(row.name)}</b>: ${parts.join(", ")}`);
+    if (parts.length) lines.push(`${who(row.name)}: ${parts.join(", ")}`);
   }
   const names = new Set(now.map((r) => r.name));
-  for (const row of before) if (!names.has(row.name)) lines.push(`👋 <b>${esc(row.name)}</b> ist raus (war Platz ${row.place}).`);
+  for (const row of before) if (!names.has(row.name)) lines.push(`👋 ${who(row.name)} ist raus (war Platz ${row.place}).`);
   // The prizes of the places: other items, other prices
   const oldPlaces = new Map(before.map((r) => [r.place, r]));
   for (const row of now) {
     const was = oldPlaces.get(row.place);
     if (!was) continue;
     const key = (r) => JSON.stringify([(r.items || []).map((i) => [i.name, i.price, i.count]), r.wallet || 0]);
-    if (key(was) !== key(row)) lines.push(`🎁 Platz ${row.place}: Preise jetzt ${money(worth(row))} → ${euro(worth(row))} (vorher ${money(worth(was))})`);
+    if (key(was) !== key(row)) lines.push(`🎁 Platz ${row.place}: jetzt ${money(worth(row))} Coins → ${euro(worth(row))} (vorher ${money(worth(was))} Coins)`);
   }
   return lines;
 }
