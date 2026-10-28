@@ -247,6 +247,7 @@ server.on("error", (error) => {
 require("./game/coins").hold();
 server.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
 
-// The Telegram bot (@ptfast_bot): the csgofast season ranking - on its own, only with TELEGRAM_BOT_TOKEN in the .env
-require("./game/telegram_bot").start();
+// The Telegram bot (@ptfast_bot): the csgofast season ranking - off for now, on only with TELEGRAM_BOT_ENABLED=true
+// (and TELEGRAM_BOT_TOKEN) in the .env
+if (String(process.env.TELEGRAM_BOT_ENABLED || "").trim().toLowerCase() === "true") require("./game/telegram_bot").start();
 connectDatabase();
