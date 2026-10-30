@@ -120,13 +120,8 @@ async function view(username, now = Date.now(), which = null) {
   const board = await get(now, world);
   const season = world ? seasons.running(world) : null;
   const ended = seasons.lastEnded();
-  // (a board updated only now and then: the own row always right now - coins, wager, place among everybody now)
-  let me = board.rows.find((row) => row.username === username) || null;
-  if (!board.live && season && seasons.joined(username, season.id)) {
-    const fresh = await build(now, board, season);
-    const live = fresh.rows.find((row) => row.username === username);
-    if (live) me = { ...live, live: true, counted: fresh.rows.filter((row) => row.rank != null).length };
-  }
+  // (the own row as of the same update as everybody's - a board updated only now and then shows no live place)
+  const me = board.rows.find((row) => row.username === username) || null;
   // (a season: the badges and the team of the players next to their names)
   const marks = season ? await require("./season_kit").marksOf(season) : new Map();
   const mark = (row) => (row && marks.has(row.username) ? { ...row, ...marks.get(row.username) } : row);
