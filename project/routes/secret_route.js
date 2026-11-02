@@ -84,6 +84,7 @@ module.exports = function (auth) {
   router.get("/roulette", auth, approved, gamePage("roulette", "roulette.html"));
   router.get("/baucua", auth, approved, gamePage("baucua", "baucua.html"));
   router.get("/runner", auth, approved, gamePage("runner", "runner.html"));
+  router.get("/megaways", auth, approved, gamePage("megaways", "megaways.html"));
   router.get("/leaderboard", auth, approved, page("leaderboard.html", hideOff));
   router.get("/shop", auth, approved, page("shop.html", hideOff));
   router.get("/rpg", auth, approved, gamePage("rpg", "rpg.html"));

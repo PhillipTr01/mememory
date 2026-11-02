@@ -584,6 +584,7 @@ module.exports = function () {
       roulette: { color: () => server.forceColor(value) },
       baucua: { dice: () => server.forceDice(value) },
       slots: { bonus: () => server.forceBonus(value) },
+      megaways: { bonus: () => server.forceBonus(value !== "") },
       blackjack: { deal: () => server.stackDeal(value) || "Unknown deal." },
       battles: {
         mode: () => server.forceMode(value),

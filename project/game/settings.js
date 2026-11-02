@@ -77,6 +77,12 @@ const FIELDS = [
   { group: "baucua", section: "Bets", key: "BAUCUA_MIN_BET", season: true, label: "Min bet", step: 10, min: 1, max: 100000000 },
   { group: "baucua", section: "Bets", key: "BAUCUA_MAX_BET", season: true, label: "Max bet per round", hint: "All animals of a player together.", step: 1000, min: 1, max: 100000000 },
   { group: "baucua", section: "Bets", key: "BAUCUA_MAX_BETS", season: true, label: "Bets per round", hint: "Separate bets of one player in one round (more on the same animal counts as a bet too).", step: 1, min: 1, max: 100 },
+  { group: "megaways", section: "Megaways", key: "GAME_MEGAWAYS", type: "toggle", label: "Megaways is on", hint: "Off: hidden for players - test mode still has it, to try it out first." },
+  { group: "megaways", section: "Access", key: "GAME_MEGAWAYS_SEASON", type: "toggle", label: "Available in seasons", hint: "Off: the season worlds don't have it. The normal casino keeps it." },
+  { group: "megaways", section: "Access", key: "NOCAP_MEGAWAYS", type: "toggle", label: "No max bet by balance", hint: "On: bets in this game are not limited by the balance (in seasons too). Its own min and max bets stay." },
+  { group: "megaways", section: "Bets", key: "MEGAWAYS_MIN_BET", season: true, label: "Min bet per spin", step: 10, min: 1, max: 100000000 },
+  { group: "megaways", section: "Bets", key: "MEGAWAYS_CAP_DIV", season: true, label: "Share of the max bet by balance (1/x)", hint: "Megaways gets 1/x of the max bet by balance (General), like the slots: of its all-in amount and of its share.", step: 1, min: 1, max: 1000 },
+  { group: "megaways", section: "Bets", key: "MEGAWAYS_MAX_BET", season: true, label: "Max bet per spin", step: 100, min: 1, max: 100000000 },
   { group: "runner", section: "Runner", key: "GAME_RUNNER", type: "toggle", label: "The runner is on", hint: "Off: hidden for players - test mode still has it, to try it out first." },
   { group: "runner", section: "Access", key: "GAME_RUNNER_SEASON", type: "toggle", label: "Available in seasons", hint: "Off: the season worlds don't have it. The normal casino keeps it." },
   { group: "runner", section: "Access", key: "NOCAP_RUNNER", type: "toggle", label: "No max bet by balance", hint: "On: bets in this game are not limited by the balance (in seasons too). Its own min and max bets stay." },
@@ -190,6 +196,7 @@ function mismatch(next, prefix = "") {
   if (next.ROULETTE_MIN_BET > next.ROULETTE_MAX_BET) return `${prefix}Roulette: the min bet is higher than the max bet.`;
   if (next.BAUCUA_MIN_BET > next.BAUCUA_MAX_BET) return `${prefix}Bầu Cua: the min bet is higher than the max bet.`;
   if (next.RUNNER_MIN_BET > next.RUNNER_MAX_BET) return `${prefix}Runner: the min entry is higher than the max entry.`;
+  if (next.MEGAWAYS_MIN_BET > next.MEGAWAYS_MAX_BET) return `${prefix}Megaways: the min bet is higher than the max bet.`;
   if (next.JACKPOT_GHOST_MIN > next.JACKPOT_GHOST_TOP) return `${prefix}Ghost: the share from is higher than the share up to.`;
   if (next.POKER_MIN_BUYIN > next.POKER_MAX_BUYIN) return `${prefix}Poker: the min buy-in is higher than the max buy-in.`;
   return null;

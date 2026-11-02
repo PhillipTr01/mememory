@@ -52,10 +52,11 @@ require("./sockets/slots_server")(io);
 require("./sockets/roulette_server")(io);
 require("./sockets/baucua_server")(io);
 require("./sockets/runner_server")(io);
+require("./sockets/megaways_server")(io);
 // The admin's test world: every game once more (/test/...), only for players in test mode
 {
   const worlds = require("./game/worlds");
-  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua", "runner"]) {
+  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua", "runner", "megaways"]) {
     worlds.servers.set(game, require(`./sockets/${game}_server`)(io, { world: worlds.TEST }));
   }
   // The dungeon (an RPG): in the test world - and in the normal casino once the admin turns it on (GAME_RPG)
@@ -63,7 +64,7 @@ require("./sockets/runner_server")(io);
   worlds.normalServers.set("rpg", require("./sockets/rpg_server")(io, { world: "" }));
   // The season worlds: every game once more per season slot (/season/..., /season2/...), only for players in its season
   for (const world of worlds.SEASONS) {
-    for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua", "runner"]) {
+    for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua", "runner", "megaways"]) {
       worlds.seasonServers.get(world).set(game, require(`./sockets/${game}_server`)(io, { world: world }));
     }
   }

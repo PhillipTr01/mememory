@@ -59,6 +59,7 @@ module.exports = {
   GAME_ROULETTE: true,
   GAME_BAUCUA: true,
   GAME_RUNNER: false, // (new: off until the admin turns it on - test mode has it)
+  GAME_MEGAWAYS: false, // (new: off until the admin turns it on - test mode has it)
   // Per game (admin panel): in the season worlds too (GAME_X_SEASON) - its bets not limited by the balance (NOCAP_X)
   GAME_JACKPOT_SEASON: true,
   GAME_ROULETTE_SEASON: true,
@@ -68,6 +69,7 @@ module.exports = {
   GAME_BLACKJACK_SEASON: true,
   GAME_SLOTS_SEASON: true,
   GAME_RUNNER_SEASON: true,
+  GAME_MEGAWAYS_SEASON: true,
   NOCAP_JACKPOT: false,
   NOCAP_ROULETTE: false,
   NOCAP_BAUCUA: false,
@@ -76,6 +78,7 @@ module.exports = {
   NOCAP_BLACKJACK: false,
   NOCAP_SLOTS: false,
   NOCAP_RUNNER: false,
+  NOCAP_MEGAWAYS: false,
   // (the dungeon: off - only test mode has it until the admin turns it on)
   GAME_RPG: false,
 
@@ -235,6 +238,23 @@ module.exports = {
   SLOTS_TAB_LOCK: 8000, // a spin from another tab of the player within this long of the last spin is refused (no autoplay in two tabs)
   SLOTS_FEED: 12, // last wins in the list
   SLOTS_TEST_BONUS: "off", // tests only: every spin starts a bonus game ("free" spins or the "coins" game) - not in the admin panel
+  // Megaways (game/megaways.js): 6 reels of 2 to 7 rows, tumbles, the dragon's free spins
+  MEGAWAYS_MIN_BET: 10,
+  MEGAWAYS_MAX_BET: 10000,
+  MEGAWAYS_CAP_DIV: 15, // gets 1/x of the max bet by balance (its floor and its share) - as the slots
+  MEGAWAYS_SPIN: 1600, // the reels drop in on the page
+  MEGAWAYS_TUMBLE: 1100, // one tumble on the page: the win shown, the symbols gone, new ones fall in
+  MEGAWAYS_FREE_INTRO: 3500, // the free spins start: the dragon wakes up
+  MEGAWAYS_FREE_SPIN: 1600, // one free spin on the page (its tumbles on top)
+  MEGAWAYS_EGG_TIME: 900, // a 🥚 in a free spin: the cave grows, a free spin more
+  MEGAWAYS_BONUS_END: 4000, // the free spins' win counted up and shown
+  MEGAWAYS_BIG_WIN: 15, // a win of this many times the bet gets the big show
+  MEGAWAYS_BIG_TIME: 3000,
+  MEGAWAYS_COUNT_TIME: 800, // after the reels (and the big-win show) the win is paid this soon
+  MEGAWAYS_PAUSE: 250, // after a spin is shown, the next one only this much later (the page)
+  MEGAWAYS_MIN_GAP: 1850, // at least this long from one spin to the next of a player
+  MEGAWAYS_FEED: 12, // last wins in the list
+  MEGAWAYS_TEST_BONUS: false, // tests only: every spin starts the free spins
   // Roulette (hidden, see game/roulette.js): 7 red, 7 blue, 1 green - red / blue 2x, green 14x
   ROULETTE_MIN_BET: 10,
   ROULETTE_MAX_BET: 100000, // all bets of a player in one round together

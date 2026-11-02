@@ -1,6 +1,7 @@
 const config = require("./config");
 const coins = require("./coins");
 const slots = require("./slots");
+const megaways = require("./megaways");
 
 // What the slot machine pays back on average (worked out from its reels and paytable once - it doesn't change)
 const limits = require("./limits");
@@ -205,6 +206,32 @@ const GAMES = {
     };
   },
 
+  megaways: (L) => {
+    const sym = (id) => megaways.BY_ID.get(id).icon;
+    return {
+      title: "Megaways",
+      sub: `6 reels with up to ${n(megaways.MAX_ROWS ** megaways.REELS)} ways to win, tumbles and the dragon's free spins.`,
+      sections: [
+        section("How it works", [
+          tile("🐉", "The reels", `Every reel shows ${megaways.MIN_ROWS} to ${megaways.MAX_ROWS} symbols, new on every spin. More symbols mean more ways to win.`, { big: n(megaways.MAX_ROWS ** megaways.REELS) }),
+          tile("➡️", "Ways", "Land a symbol on 3 or more reels next to each other from the left, in any row. Every combination pays.", { emoji: [sym("crown"), sym("crown"), sym("crown")] }),
+          tile(sym("wild"), "Wild", "The fire stands for every symbol but the egg. It lands on reels 2 to 6.", { emoji: [sym("wild")] }),
+          tile("⬇️", "Tumbles", "Winning symbols disappear and new ones fall in. That goes on as long as something wins.", { steps: ["Win", "Fall", "Win"] }),
+        ]),
+        section("Free spins", [
+          tile(sym("egg"), "Start them", `Land ${megaways.EGG_TRIGGER} or more ${sym("egg")} anywhere for ${megaways.FREE_SPINS} free spins. Every egg past the ${megaways.EGG_TRIGGER}th gives ${megaways.FREE_PER_EGG} more.`, { emoji: Array(megaways.EGG_TRIGGER).fill(sym("egg")) }),
+          tile("📈", "Dragon multiplier", "Every tumble raises the multiplier by 1. It never goes back down until the free spins are over.", { steps: ["×1", "×2", "×3"] }),
+          tile("🏔️", "The cave grows", `Every ${sym("egg")} gives one more free spin and makes every reel taller for the rest of the free spins.`, { tags: [["+1 spin", "green"], ["+1 row", "gold"]] }),
+        ]),
+        section("More", [
+          tile("🛒", "Bonus buy", `Buy the free spins for ${megaways.BUY_PRICE}× your bet.`, { tags: [[megaways.BUY_PRICE + "×", "gold"]] }),
+          tile("🏆", "Max win", `A spin pays at most ${n(megaways.MAX_WIN)}× your bet.`, { big: n(megaways.MAX_WIN) + "×" }),
+          tile("🪙", "Your bet", `Bet 🪙 ${n(L.MEGAWAYS_MIN_BET)} to ${n(L.MEGAWAYS_MAX_BET)} per spin.`, { coins: [n(L.MEGAWAYS_MIN_BET), n(L.MEGAWAYS_MAX_BET)] }),
+        ]),
+      ],
+    };
+  },
+
   roulette: (L) => ({
     title: "Roulette",
     sub: "Bet on red, blue or green. Everybody plays the same roll.",
@@ -290,8 +317,8 @@ function capText(L, world, game) {
   const x = limits.dividerOf(world, game);
   const share = Math.round(rule.share * 100) / 100;
   // (what counts: everything bet in the round - a spin, a battle, the chips at the table)
-  const what = { slots: "one spin", battles: "one battle", poker: "your chips at the table", runner: "the entry of a run" }[game] || "all your bets of one round together";
-  return `With up to 🪙 ${n(rule.floor)} you can bet all your coins. With more, ${what} ${["slots", "battles", "runner"].includes(game) ? "is" : "are"} limited to ${share}% of your coins.` + (x > 1 ? ` Slots allow 1/${x} of the max bet of the other games.` : "");
+  const what = { slots: "one spin", megaways: "one spin", battles: "one battle", poker: "your chips at the table", runner: "the entry of a run" }[game] || "all your bets of one round together";
+  return `With up to 🪙 ${n(rule.floor)} you can bet all your coins. With more, ${what} ${["slots", "megaways", "battles", "runner"].includes(game) ? "is" : "are"} limited to ${share}% of your coins.` + (x > 1 ? ` ${game === "megaways" ? "Megaways allows" : "Slots allow"} 1/${x} of the max bet of the other games.` : "");
 }
 
 // world: the limits of that world ("/season": the season's own ones)

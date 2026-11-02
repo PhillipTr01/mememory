@@ -28,6 +28,7 @@ const GAME_REASONS = [
   "roulette bet", "roulette win", "roulette refund",
   "baucua bet", "baucua win", "baucua refund",
   "runner bet", "runner win",
+  "megaways bet", "megaways win",
 ];
 const DAY = 24 * 3600 * 1000;
 

@@ -80,6 +80,12 @@ const FIELDS = {
     { id: "players", name: "Players", type: "number", say: ["with", "players"] },
     { id: "teams", name: "Teams", type: "choice", options: YES, yes: ["in teams", "without teams"] },
   ],
+  megaways: [
+    { id: "kind", name: "Result", type: "choice", options: opt(["nothing", "win", "free spins"]), say: ["with", ""] },
+    { id: "symbol", name: "Best symbol", type: "choice", options: opt(["bone", "mushroom", "key", "candle", "scroll", "potion", "sword", "shield", "ring", "crown", "dragon"]), say: ["with the best win of", ""] },
+    { id: "tumbles", name: "Tumbles", type: "number", say: ["with", "tumbles"] },
+    { id: "buy", name: "Bonus buy", type: "choice", options: YES, yes: ["with a bonus buy", "without a bonus buy"] },
+  ],
   runner: [
     { id: "distance", name: "Distance (m)", type: "number", say: ["running", "m"] },
     { id: "pickups", name: "Coins picked up", type: "number", say: ["picking up", "coins"] },
@@ -90,7 +96,7 @@ const FIELDS = {
     { id: "folded", name: "Folded", type: "choice", options: YES, yes: ["after folding", "without folding"] },
   ],
 };
-const GAME_NAMES = { any: "any game", jackpot: "the jackpot", roulette: "roulette", baucua: "Bầu Cua", battles: "case battles", poker: "poker", blackjack: "blackjack", slots: "slots", runner: "the runner" };
+const GAME_NAMES = { any: "any game", jackpot: "the jackpot", roulette: "roulette", baucua: "Bầu Cua", battles: "case battles", poker: "poker", blackjack: "blackjack", slots: "slots", megaways: "Megaways", runner: "the runner" };
 
 const seasonGames = () => require("./games").GAMES.filter((game) => !game.noSeason);
 const fieldsOf = (game) => [...COMMON, ...(FIELDS[game] || [])];
