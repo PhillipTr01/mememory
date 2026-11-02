@@ -131,7 +131,7 @@ test("pond: the features - a coin pays, the sun upgrades, the swirl turns a colo
   assert.strictEqual(pd.act("wild", "leaf", fresh(), frogs, state, random, pd.LANDING, false), null, "a collected wild was its frog's amber");
 });
 
-test("pond: frogs side by side may trade spots by chance; two frogs asking the same one argue and get new symbols around them", () => {
+test("pond: frogs side by side may trade spots by chance when it helps; two frogs asking the same one argue and get new symbols around them", () => {
   const yes = () => 0; // (every pair asks)
   const no = (max) => max - 1; // (no pair asks)
   const pond = () => Array.from({ length: 6 }, () => Array(6).fill("shell"));
@@ -140,8 +140,13 @@ test("pond: frogs side by side may trade spots by chance; two frogs asking the s
   let used = new Set();
   assert.deepStrictEqual(pd.meet(pond(), frogs, no, pd.LANDING, used), []);
   assert.deepStrictEqual(pd.meet(pond(), frogs, yes, pd.LANDING, used), [], "they asked already");
+  // (only when it helps: here nobody could move on from the other spot)
+  assert.deepStrictEqual(pd.meet(pond(), frogs, yes, pd.LANDING, new Set()), [], "a trade that changes nothing");
+  // (a leaf next to the red frog: the green frog can collect it from there)
+  const helps = pond();
+  helps[2][0] = "leaf";
   used = new Set();
-  assert.deepStrictEqual(pd.meet(pond(), frogs, yes, pd.LANDING, used), [{ id: "trade", frogs: ["leaf", "berry"] }]);
+  assert.deepStrictEqual(pd.meet(helps, frogs, yes, pd.LANDING, used), [{ id: "trade", frogs: ["leaf", "berry"] }]);
   assert.deepStrictEqual([frogs.leaf, frogs.berry], [[1, 0], [0, 0]]);
   // Two frogs ask the same one: they argue, the spots around them that stop them get new symbols
   frogs = { leaf: [1, 1], berry: [0, 1], bug: [2, 1], shell: [5, 5] };

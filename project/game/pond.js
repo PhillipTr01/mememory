@@ -20,7 +20,7 @@ const crypto = require("crypto");
  *  - 🪰 flies: the empty spots fill with flies - a frog can cross a fly once (it eats it);
  *  - 🌕 moon: the bonus symbol.
  * Then two frogs side by side may meet: each pair asks for a trade by chance (TRADE_CHANCE, once until one of
- * them moves again) and swaps spots. When two frogs ask the same frog, they argue instead: the spots around the
+ * them moves again) and swaps spots when that lets one of them move on. When two frogs ask the same frog, they argue instead: the spots around the
  * two that stop them (amber of another colour, an empty spot, a fly) get new symbols - room to move on.
  * Then the frogs move again - and so on while they find something to collect (or a meeting changes the pond).
  *
@@ -303,9 +303,12 @@ function meet(grid, frogs, randomInt, landing, used) {
     [over, ...two].forEach((f) => busy.add(f));
     meets.push({ id: "argue", frogs: two, over: over, cells: cells });
   }
-  // The others trade: they swap spots
+  // The others trade, but only when it helps: they swap spots and one of them can move on from there
+  const canMove = (swapped, family) => moveFrog(grid.map((column) => column.slice()), { ...swapped }, family).path.length > 1;
   for (const [a, b] of asking) {
     if (busy.has(a) || busy.has(b)) continue;
+    const swapped = { ...frogs, [a]: frogs[b], [b]: frogs[a] };
+    if (!canMove(swapped, a) && !canMove(swapped, b)) continue;
     [frogs[a], frogs[b]] = [frogs[b], frogs[a]];
     busy.add(a);
     busy.add(b);

@@ -292,8 +292,8 @@ function renderSize(n) {
 
 /* ---------- The frogs, the meter, the moons ---------- */
 
-// A frog in its colour (--fam), sitting on its lily pad
-var FROG_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 33 L44 38 A22 8 0 1 1 41 34 Z" fill="#15803d" /><ellipse cx="24" cy="26" rx="13" ry="10.5" fill="var(--fam)" /><circle cx="16" cy="15" r="5.8" fill="var(--fam)" /><circle cx="32" cy="15" r="5.8" fill="var(--fam)" /><circle cx="16" cy="15" r="3.2" fill="#fff" /><circle cx="32" cy="15" r="3.2" fill="#fff" /><circle cx="16.7" cy="15.5" r="1.7" fill="#111827" /><circle cx="32.7" cy="15.5" r="1.7" fill="#111827" /><path d="M17 27.5 Q24 33 31 27.5" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2" stroke-linecap="round" /></svg>';
+// A frog in its colour (--fam)
+var FROG_SVG = '<svg viewBox="9 8 30 30" aria-hidden="true"><ellipse cx="24" cy="26" rx="13" ry="10.5" fill="var(--fam)" /><circle cx="16" cy="15" r="5.8" fill="var(--fam)" /><circle cx="32" cy="15" r="5.8" fill="var(--fam)" /><circle cx="16" cy="15" r="3.2" fill="#fff" /><circle cx="32" cy="15" r="3.2" fill="#fff" /><circle cx="16.7" cy="15.5" r="1.7" fill="#111827" /><circle cx="32.7" cy="15.5" r="1.7" fill="#111827" /><path d="M17 27.5 Q24 33 31 27.5" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2" stroke-linecap="round" /></svg>';
 var frogBoxes = {};
 function renderFrogs() {
   var box = document.getElementById("pdFrogs");
