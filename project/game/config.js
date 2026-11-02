@@ -264,8 +264,10 @@ module.exports = {
   POND_CAP_DIV: 15, // gets 1/x of the max bet by balance (its floor and its share) - as the slots
   POND_SPIN: 1500, // the board drops in on the page
   POND_STEP: 1000, // one step on the page: the frogs get ready, the pond settles (the hops and the features on top)
-  POND_HOP: 320, // the frogs hop one spot (all at once) ...
-  POND_WALK: 4000, // ... a long walk faster: it takes this long at most
+  POND_TURN: 450, // a frog's turn starts: it lights up (the frogs move one after the other) ...
+  POND_HOP: 480, // ... and hops one spot ...
+  POND_WALK: 3400, // ... a long walk faster: a frog's walk takes this long at most
+  POND_MEET: 1600, // two frogs trade spots or argue
   POND_EFFECT: 800, // a feature symbol acts
   POND_CHEST_TIME: 1600, // the full meter's chests open
   POND_FREE_INTRO: 3500, // the free spins start: the moon rises

@@ -19,7 +19,10 @@ const crypto = require("crypto");
  *  - 🌀 swirl: the amber of another colour on the pond turns into the frog's colour;
  *  - 🪰 flies: the empty spots fill with flies - a frog can cross a fly once (it eats it);
  *  - 🌕 moon: the bonus symbol.
- * Then the frogs move again - and so on while they find something to collect.
+ * Then two frogs side by side may meet: each pair asks for a trade by chance (TRADE_CHANCE, once until one of
+ * them moves again) and swaps spots. When two frogs ask the same frog, they argue instead: the spots around the
+ * two that stop them (amber of another colour, an empty spot, a fly) get new symbols - room to move on.
+ * Then the frogs move again - and so on while they find something to collect (or a meeting changes the pond).
  *
  * The feature meter: every amber collected counts. A full meter (METER) gives three chests, each a random feature
  * symbol that acts for a random frog.
@@ -39,8 +42,8 @@ const MAX_SIZE = 8;
 const FAMILIES = [
   { id: "leaf", name: "Green amber", frog: "Green frog", color: "#4ade80", icon: "🍃" },
   { id: "berry", name: "Red amber", frog: "Red frog", color: "#f87171", icon: "🍓" },
-  { id: "bug", name: "Gold amber", frog: "Gold frog", color: "#facc15", icon: "🐞" },
-  { id: "shell", name: "Blue amber", frog: "Blue frog", color: "#60a5fa", icon: "🐚" },
+  { id: "bug", name: "Gold amber", frog: "Gold frog", color: "#facc15", icon: "🐝" },
+  { id: "shell", name: "Blue amber", frog: "Blue frog", color: "#60a5fa", icon: "💧" },
 ];
 const FAMILY_IDS = FAMILIES.map((family) => family.id);
 // An amber pays this (times the bet, before PAY_SCALE) at level 0 .. 7
@@ -79,21 +82,22 @@ const SYMBOLS = [
 ];
 const BY_ID = new Map(SYMBOLS.map((symbol) => [symbol.id, symbol]));
 
-// The pays times this: the payback 96.8% (as the slots). Simulated (1.2 million spins, 24,000 free games): unscaled
-// base game 52.8%, free spins about every 264 spins at 102.4x (11 free spins in the middle, 20 for one in ten) -
-// 91.6% in all -> scaled: base game 55.8%, free spins 41.0% (108.3x)
-const PAY_SCALE = 1.057;
+// The pays times this: the payback 96.8% (as the slots). Simulated (6.4 million spins, 144,000 free games): unscaled
+// base game 54.5%, free spins about every 254 spins at 108.5x (11 free spins in the middle, 20 for one in ten) -
+// 97.2% in all -> scaled: base game 54.3%, free spins 42.5% (108.1x)
+const PAY_SCALE = 0.996;
 const RTP = 0.968;
 const MOON_TRIGGER = 3; // this many 🌕 collected start the free spins ...
 const FREE_SPINS = 8; // ... this many of them
 const FREE_MORE = 3; // every MOON_TRIGGER 🌕 collected in the free spins: this many more
 const MAX_FREE_SPINS = 30;
 const MAX_WIN = 10000; // a spin (and its free spins) never pays more than this many times the bet
+const TRADE_CHANCE = 35; // in 100: two frogs side by side ask for a trade
 const MAX_STEPS = 60; // (a safety net - the frogs never move this often in a spin)
-// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 108.8x on
-// average (simulated), so about 95% of it comes back
+// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 108.6x on
+// average (simulated), so about 94% of it comes back
 const BUY_PRICE = 115;
-const BUY_RTP = 0.95;
+const BUY_RTP = 0.94;
 // How far one spin's win strays from its average, in bets (simulated) - for the RTP monitor
 const SPIN_SPREAD = 9;
 
@@ -264,9 +268,57 @@ function act(id, family, grid, frogs, state, randomInt, landing, chest) {
 }
 
 /*
+ * Frogs side by side meet (the grid and the frogs change in place; `used`: the pairs that met and have not moved
+ * since) -> [{id: "trade", frogs: [a, b]} | {id: "argue", frogs: [a, b], over: c, cells: [[c, r], ...]}]
+ */
+function meet(grid, frogs, randomInt, landing, used) {
+  const size = grid.length;
+  const asking = [];
+  for (let i = 0; i < FAMILY_IDS.length; i++)
+    for (let j = i + 1; j < FAMILY_IDS.length; j++) {
+      const [a, b] = [FAMILY_IDS[i], FAMILY_IDS[j]];
+      const pair = a + ":" + b;
+      if (used.has(pair) || Math.abs(frogs[a][0] - frogs[b][0]) + Math.abs(frogs[a][1] - frogs[b][1]) !== 1) continue;
+      used.add(pair);
+      if (randomInt(100) < TRADE_CHANCE) asking.push([a, b]);
+    }
+  const meets = [];
+  const busy = new Set();
+  // Two frogs ask the same one: they argue, the spots around them that stop them get new symbols
+  for (const over of FAMILY_IDS) {
+    const others = asking.filter((pair) => pair.includes(over)).map((pair) => (pair[0] === over ? pair[1] : pair[0]));
+    if (others.length < 2 || busy.has(over)) continue;
+    const two = others.slice(0, 2);
+    if (two.some((f) => busy.has(f))) continue;
+    const sitting = new Set(Object.values(frogs).map((spot) => key(...spot)));
+    const cells = [];
+    for (const family of two)
+      for (const [dc, dr] of NEIGHBOURS) {
+        const [c, r] = [frogs[family][0] + dc, frogs[family][1] + dr];
+        if (c < 0 || r < 0 || c >= size || r >= size || sitting.has(key(c, r)) || cells.some((cell) => key(...cell) === key(c, r))) continue;
+        if (collects(grid[c][r], family) || grid[c][r] === "wild") continue;
+        grid[c][r] = land(randomInt, landing);
+        cells.push([c, r]);
+      }
+    [over, ...two].forEach((f) => busy.add(f));
+    meets.push({ id: "argue", frogs: two, over: over, cells: cells });
+  }
+  // The others trade: they swap spots
+  for (const [a, b] of asking) {
+    if (busy.has(a) || busy.has(b)) continue;
+    [frogs[a], frogs[b]] = [frogs[b], frogs[a]];
+    busy.add(a);
+    busy.add(b);
+    meets.push({ id: "trade", frogs: [a, b] });
+  }
+  return meets;
+}
+
+/*
  * A pond played out: the frogs move, the features act, the meter fills - while the frogs find something.
  * `state` = {levels, meter, moons} (changed in place: the free spins keep it). -> {steps: [{grid, frogs (before),
- * moves: [{family, path, got, amber, level, pay}], chests: [ids], effects: [...], pay, levels, meter, moons (after)}],
+ * moves: [{family, path, got, amber, level, pay}] (one frog after the other), chests: [ids], effects: [...], meets:
+ * [...] (see meet), pay, levels, meter, moons (after)}],
  * grid, frogs (the last), pay (times the bet)}
  */
 function play(grid, frogs, randomInt, state, landing = LANDING) {
@@ -274,19 +326,21 @@ function play(grid, frogs, randomInt, state, landing = LANDING) {
   let pay = 0;
   grid = grid.map((column) => column.slice());
   frogs = Object.fromEntries(Object.entries(frogs).map(([f, spot]) => [f, spot.slice()]));
+  const used = new Set();
   for (let n = 0; n < MAX_STEPS; n++) {
     const before = grid.map((column) => column.slice());
     const frogsBefore = Object.fromEntries(Object.entries(frogs).map(([f, spot]) => [f, spot.slice()]));
-    const step = { grid: before, frogs: frogsBefore, moves: [], chests: [], effects: [], pay: 0 };
+    const step = { grid: before, frogs: frogsBefore, moves: [], chests: [], effects: [], meets: [], pay: 0 };
     for (const family of FAMILY_IDS) {
       const move = moveFrog(grid, frogs, family);
       if (move.path.length < 2) continue;
+      // (it moved: it may meet the others again)
+      [...used].filter((pair) => pair.split(":").includes(family)).forEach((pair) => used.delete(pair));
       move.level = state.levels[family];
       move.pay = move.amber * AMBER_VALUES[move.level] * PAY_SCALE;
       step.pay += move.pay;
       step.moves.push(move);
     }
-    if (!step.moves.length) break;
     // The meter: full, it gives the chests
     state.meter += step.moves.reduce((sum, move) => sum + move.amber, 0);
     while (state.meter >= METER) {
@@ -303,6 +357,8 @@ function play(grid, frogs, randomInt, state, landing = LANDING) {
       if (effect.pay) step.pay += effect.pay;
       step.effects.push(effect);
     }
+    step.meets = meet(grid, frogs, randomInt, landing, used);
+    if (!step.moves.length && !step.meets.length) break;
     pay += step.pay;
     step.levels = { ...state.levels };
     step.meter = state.meter;
@@ -389,4 +445,4 @@ function catalog() {
   };
 }
 
-module.exports = { VERSION, RTP, MIN_SIZE, MAX_SIZE, FAMILIES, FAMILY_IDS, FEATURES, FEATURE_IDS, SYMBOLS, BY_ID, AMBER_VALUES, COIN_VALUES, MAX_LEVEL, METER, CHESTS, CHEST, PAY_SCALE, MOON_TRIGGER, FREE_SPINS, FREE_MORE, MAX_FREE_SPINS, MAX_WIN, BUY_PRICE, BUY_RTP, SPIN_SPREAD, LANDING, FREE_LANDING, board, placeFrogs, deal, moveFrog, act, play, freeGame, spin, catalog, newLevels, newState };
+module.exports = { VERSION, RTP, MIN_SIZE, MAX_SIZE, FAMILIES, FAMILY_IDS, FEATURES, FEATURE_IDS, SYMBOLS, BY_ID, AMBER_VALUES, COIN_VALUES, MAX_LEVEL, METER, CHESTS, CHEST, PAY_SCALE, MOON_TRIGGER, FREE_SPINS, FREE_MORE, MAX_FREE_SPINS, MAX_WIN, BUY_PRICE, BUY_RTP, SPIN_SPREAD, LANDING, FREE_LANDING, TRADE_CHANCE, board, placeFrogs, deal, moveFrog, act, meet, play, freeGame, spin, catalog, newLevels, newState };
