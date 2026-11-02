@@ -182,10 +182,11 @@ async function startServer() {
   const baucua = require("../sockets/baucua_server")(io);
   const runner = require("../sockets/runner_server")(io);
   const megaways = require("../sockets/megaways_server")(io);
+  const pond = require("../sockets/pond_server")(io);
   // The admin's test world (game/worlds.js)
   const worlds = require("../game/worlds");
   const test = {};
-  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua", "runner", "megaways"]) {
+  for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua", "runner", "megaways", "pond"]) {
     test[game] = require(`../sockets/${game}_server`)(io, { world: worlds.TEST });
     worlds.servers.set(game, test[game]);
   }
@@ -194,7 +195,7 @@ async function startServer() {
   const bySlot = {};
   for (const world of worlds.SEASONS) {
     const servers = (bySlot[world] = {});
-    for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua", "runner", "megaways"]) {
+    for (const game of ["jackpot", "battles", "poker", "blackjack", "slots", "roulette", "baucua", "runner", "megaways", "pond"]) {
       servers[game] = require(`../sockets/${game}_server`)(io, { world: world });
       worlds.seasonServers.get(world).set(game, servers[game]);
     }
@@ -217,6 +218,7 @@ async function startServer() {
     baucua,
     runner,
     megaways,
+    pond,
     test,
     season,
     season2,

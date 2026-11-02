@@ -739,9 +739,10 @@ const GAMES = [
   ["baucua", "Bầu Cua"],
   ["runner", "Runner"],
   ["megaways", "Megaways"],
+  ["pond", "Frog Pond"],
 ];
-const BETS = ["jackpot bet", "battle", "poker buy-in", "poker chips", "blackjack bet", "slots bet", "roulette bet", "baucua bet", "runner bet", "megaways bet"];
-const WINS = ["jackpot win", "battle win", "blackjack win", "slots win", "roulette win", "baucua win", "runner win", "megaways win", "game win"];
+const BETS = ["jackpot bet", "battle", "poker buy-in", "poker chips", "blackjack bet", "slots bet", "roulette bet", "baucua bet", "runner bet", "megaways bet", "pond bet"];
+const WINS = ["jackpot win", "battle win", "blackjack win", "slots win", "roulette win", "baucua win", "runner win", "megaways win", "pond win", "game win"];
 const gameOf = (reason) => (GAMES.find(([prefix]) => reason.startsWith(prefix)) || [null, null])[1];
 
 // What every player did in the season (from its coin history): {username: {...}}

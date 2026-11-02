@@ -1,0 +1,373 @@
+/* Frog Pond: a square pond of 6x6 to 8x8, the frogs above it - the controls are the slots' (slots.css) */
+
+.pd-machine {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pd-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 2.2rem;
+}
+
+.pd-size {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.25rem 0.9rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(22, 163, 74, 0.25), rgba(6, 95, 70, 0.35));
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  color: #dcfce7;
+  font-variant-numeric: tabular-nums;
+}
+
+.pd-size-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.pd-size-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+}
+
+.pd-size.max {
+  border-color: rgba(250, 204, 21, 0.7);
+  background: linear-gradient(180deg, rgba(250, 204, 21, 0.3), rgba(161, 98, 7, 0.4));
+  color: #fef9c3;
+}
+
+/* The pond: the window of the board */
+.pd-window {
+  position: relative;
+  padding: 0.6rem;
+  border-radius: 18px;
+  background: radial-gradient(ellipse at 50% 30%, #134e4a 0%, #0b2f2c 60%, #071c1a 100%);
+  border: 2px solid #2a7a6e;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6), 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.pd-window.free {
+  border-color: #a5b4fc;
+  background: radial-gradient(ellipse at 50% 0%, #312e81 0%, #1e1b4b 60%, #0f0d2e 100%);
+}
+
+.pd-board {
+  position: relative;
+  width: min(100%, clamp(240px, calc(100vh - 560px), 430px));
+  aspect-ratio: 1;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 10px;
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.025) 0 12px, rgba(255, 255, 255, 0) 12px 24px);
+}
+
+.pd-column {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.pd-sym {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform;
+}
+
+/* A family's symbol: a lily pad of its colour under it */
+.pd-sym[class*="pd-fam-"]::after {
+  content: "";
+  position: absolute;
+  inset: 9%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--fam) 45%, transparent), color-mix(in srgb, var(--fam) 12%, transparent) 70%);
+}
+
+.pd-sym-icon {
+  position: relative;
+  font-size: calc(var(--cell) * 0.58);
+  line-height: 1;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+  transition: transform 0.15s;
+}
+
+.pd-wild .pd-sym-icon {
+  animation: pd-pulse 0.9s ease-in-out infinite alternate;
+}
+
+/* A tumble: the winning symbols glow, the others fade back */
+.pd-board.winning .pd-sym:not(.win) {
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+
+.pd-sym.win {
+  z-index: 1;
+}
+
+.pd-sym.win::before {
+  content: "";
+  position: absolute;
+  inset: 6%;
+  border-radius: 12px;
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.45), rgba(250, 204, 21, 0) 70%);
+  border: 2px solid rgba(250, 204, 21, 0.85);
+  animation: pd-pulse 0.5s ease-in-out infinite alternate;
+}
+
+.pd-sym.win .pd-sym-icon {
+  transform: scale(1.12);
+}
+
+/* A frog eats: its kind shrinks away; a splash: its row and column wash off; a special acts */
+.pd-sym.eaten .pd-sym-icon {
+  animation: pd-eaten 0.6s ease-in forwards;
+}
+
+@keyframes pd-eaten {
+  to {
+    transform: scale(0.2) translateY(-30%);
+    opacity: 0.2;
+  }
+}
+
+.pd-sym.splashed::before {
+  content: "";
+  position: absolute;
+  inset: 4%;
+  border-radius: 10px;
+  background: rgba(56, 189, 248, 0.35);
+  border: 2px solid rgba(125, 211, 252, 0.8);
+}
+
+.pd-sym.acting .pd-sym-icon {
+  transform: scale(1.3);
+  animation: pd-pulse 0.3s ease-in-out infinite alternate;
+}
+
+.pd-sym.moon-glow::before {
+  content: "";
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(253, 224, 71, 0.55), rgba(253, 224, 71, 0) 70%);
+  animation: pd-pulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes pd-pulse {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* The free spins' start and end, the big win: over the board */
+.pd-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: rgba(5, 10, 8, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.pd-stage[hidden] {
+  display: none;
+}
+
+.pd-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 26rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 16px;
+  text-align: center;
+  background: linear-gradient(180deg, #134e4a, #0b2f2c);
+  border: 2px solid #5eead4;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  animation: pd-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.pd-end {
+  background: linear-gradient(180deg, #312e81, #1e1b4b);
+  border-color: #a5b4fc;
+}
+
+.pd-big {
+  background: linear-gradient(180deg, #14532d, #052e16);
+  border-color: #4ade80;
+}
+
+@keyframes pd-in {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.pd-intro-moons {
+  font-size: 1.8rem;
+  letter-spacing: 0.15em;
+}
+
+.pd-intro-title {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #fde68a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+.pd-intro-spins {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ecfdf5;
+}
+
+.pd-intro-text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(236, 253, 245, 0.8);
+}
+
+.pd-intro-go {
+  min-width: 9rem;
+  margin-top: 0.25rem;
+}
+
+.pd-end-win {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #fff7ed;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The paytable: wins per way for the bet */
+.pd-pays {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.pd-pays th,
+.pd-pays td {
+  padding: 0.3rem 0.4rem;
+  text-align: right;
+  border-bottom: 1px solid var(--mm-border, rgba(255, 255, 255, 0.1));
+}
+
+.pd-pays th {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--mm-muted, #9ca3af);
+}
+
+.pd-pays .pd-pays-icon {
+  text-align: left;
+  font-size: 1.4rem;
+}
+
+/* The frogs: one per kind, a belly that fills, stars for the better symbols */
+.pd-frogs {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.35rem;
+}
+
+.pd-frog {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 0.25rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--fam) 14%, rgba(15, 23, 42, 0.6));
+  border: 1px solid color-mix(in srgb, var(--fam) 55%, transparent);
+}
+
+.pd-frog.grown {
+  box-shadow: 0 0 10px color-mix(in srgb, var(--fam) 55%, transparent);
+}
+
+.pd-frog-face {
+  grid-row: span 2;
+  font-size: 1.35rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px var(--fam));
+}
+
+.pd-frog-food {
+  position: absolute;
+  top: -0.35rem;
+  left: 1.3rem;
+  font-size: 0.75rem;
+}
+
+.pd-frog-belly {
+  height: 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.pd-frog-fill {
+  width: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--fam);
+  transition: width 0.35s ease-out;
+}
+
+.pd-frog-stars {
+  font-size: 0.65rem;
+  line-height: 1;
+  color: var(--fam);
+  letter-spacing: 0.05em;
+}
+
+.pd-pays .pd-pays-first td {
+  border-top: 2px solid var(--mm-border, rgba(255, 255, 255, 0.2));
+}
+
+@media (max-width: 600px) {
+  .pd-frogs {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.25rem;
+  }
+
+  .pd-window {
+    padding: 0.35rem;
+  }
+
+  .pd-intro-title {
+    font-size: 1.25rem;
+  }
+}

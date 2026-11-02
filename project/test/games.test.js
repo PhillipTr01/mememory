@@ -22,6 +22,7 @@ test("games: the Dungeon is off until the admin turns it on - test mode has it a
   const before = config.GAME_RPG;
   const runner = config.GAME_RUNNER;
   const megaways = config.GAME_MEGAWAYS;
+  const pond = config.GAME_POND;
   try {
     assert.strictEqual(config.GAME_RPG, false);
     assert.strictEqual(games.enabled("rpg", "games_player"), false);
@@ -30,13 +31,14 @@ test("games: the Dungeon is off until the admin turns it on - test mode has it a
     config.GAME_RPG = true;
     assert.strictEqual(games.enabled("rpg", "games_player"), true);
     // (never where a game sends to when another is off)
-    config.GAME_JACKPOT = config.GAME_ROULETTE = config.GAME_BAUCUA = config.GAME_BATTLES = config.GAME_POKER = config.GAME_BLACKJACK = config.GAME_SLOTS = config.GAME_RUNNER = config.GAME_MEGAWAYS = false;
+    config.GAME_JACKPOT = config.GAME_ROULETTE = config.GAME_BAUCUA = config.GAME_BATTLES = config.GAME_POKER = config.GAME_BLACKJACK = config.GAME_SLOTS = config.GAME_RUNNER = config.GAME_MEGAWAYS = config.GAME_POND = false;
     assert.strictEqual(games.firstEnabled("games_player"), null);
   } finally {
     testMode.stop("games_tester");
     config.GAME_RPG = before;
     config.GAME_RUNNER = runner;
     config.GAME_MEGAWAYS = megaways;
+    config.GAME_POND = pond;
     config.GAME_JACKPOT = config.GAME_ROULETTE = config.GAME_BAUCUA = config.GAME_BATTLES = config.GAME_POKER = config.GAME_BLACKJACK = config.GAME_SLOTS = true;
   }
 });

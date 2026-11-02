@@ -83,6 +83,12 @@ const FIELDS = [
   { group: "megaways", section: "Bets", key: "MEGAWAYS_MIN_BET", season: true, label: "Min bet per spin", step: 10, min: 1, max: 100000000 },
   { group: "megaways", section: "Bets", key: "MEGAWAYS_CAP_DIV", season: true, label: "Share of the max bet by balance (1/x)", hint: "Megaways gets 1/x of the max bet by balance (General), like the slots: of its all-in amount and of its share.", step: 1, min: 1, max: 1000 },
   { group: "megaways", section: "Bets", key: "MEGAWAYS_MAX_BET", season: true, label: "Max bet per spin", step: 100, min: 1, max: 100000000 },
+  { group: "pond", section: "Frog Pond", key: "GAME_POND", type: "toggle", label: "Frog Pond is on", hint: "Off: hidden for players - test mode still has it, to try it out first." },
+  { group: "pond", section: "Access", key: "GAME_POND_SEASON", type: "toggle", label: "Available in seasons", hint: "Off: the season worlds don't have it. The normal casino keeps it." },
+  { group: "pond", section: "Access", key: "NOCAP_POND", type: "toggle", label: "No max bet by balance", hint: "On: bets in this game are not limited by the balance (in seasons too). Its own min and max bets stay." },
+  { group: "pond", section: "Bets", key: "POND_MIN_BET", season: true, label: "Min bet per spin", step: 10, min: 1, max: 100000000 },
+  { group: "pond", section: "Bets", key: "POND_CAP_DIV", season: true, label: "Share of the max bet by balance (1/x)", hint: "Frog Pond gets 1/x of the max bet by balance (General), like the slots: of its all-in amount and of its share.", step: 1, min: 1, max: 1000 },
+  { group: "pond", section: "Bets", key: "POND_MAX_BET", season: true, label: "Max bet per spin", step: 100, min: 1, max: 100000000 },
   { group: "runner", section: "Runner", key: "GAME_RUNNER", type: "toggle", label: "The runner is on", hint: "Off: hidden for players - test mode still has it, to try it out first." },
   { group: "runner", section: "Access", key: "GAME_RUNNER_SEASON", type: "toggle", label: "Available in seasons", hint: "Off: the season worlds don't have it. The normal casino keeps it." },
   { group: "runner", section: "Access", key: "NOCAP_RUNNER", type: "toggle", label: "No max bet by balance", hint: "On: bets in this game are not limited by the balance (in seasons too). Its own min and max bets stay." },
@@ -197,6 +203,7 @@ function mismatch(next, prefix = "") {
   if (next.BAUCUA_MIN_BET > next.BAUCUA_MAX_BET) return `${prefix}Bầu Cua: the min bet is higher than the max bet.`;
   if (next.RUNNER_MIN_BET > next.RUNNER_MAX_BET) return `${prefix}Runner: the min entry is higher than the max entry.`;
   if (next.MEGAWAYS_MIN_BET > next.MEGAWAYS_MAX_BET) return `${prefix}Megaways: the min bet is higher than the max bet.`;
+  if (next.POND_MIN_BET > next.POND_MAX_BET) return `${prefix}Frog Pond: the min bet is higher than the max bet.`;
   if (next.JACKPOT_GHOST_MIN > next.JACKPOT_GHOST_TOP) return `${prefix}Ghost: the share from is higher than the share up to.`;
   if (next.POKER_MIN_BUYIN > next.POKER_MAX_BUYIN) return `${prefix}Poker: the min buy-in is higher than the max buy-in.`;
   return null;

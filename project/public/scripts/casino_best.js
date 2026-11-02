@@ -46,6 +46,7 @@
     }
     if (game == "battles") return text.replace(/^(\w)/, (c) => c.toUpperCase());
     if (game == "megaways" && typeof megawaysNote == "function") return megawaysNote(text);
+    if (game == "pond" && typeof pondNote == "function") return pondNote(text);
     return text;
   }
 
@@ -119,6 +120,7 @@
   // (the slots: the symbols come with the machine - then the notes again with their icons)
   socket.on("slotsSetup", () => setTimeout(render));
   socket.on("mwSetup", () => setTimeout(render));
+  socket.on("pdSetup", () => setTimeout(render));
   socket.on("bestWins", (lists) => {
     data = lists || { today: [], all: [] };
     // (a season without best wins: no card)

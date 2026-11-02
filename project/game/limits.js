@@ -44,7 +44,7 @@ function forWorld(world) {
 }
 
 // A game with its own share of the cap: slots spin far faster than the tables (1/x of the floor and of the share)
-const DIVIDERS = { slots: "SLOTS_CAP_DIV", megaways: "MEGAWAYS_CAP_DIV" };
+const DIVIDERS = { slots: "SLOTS_CAP_DIV", megaways: "MEGAWAYS_CAP_DIV", pond: "POND_CAP_DIV" };
 
 // How much of the cap a game gets: 1/x (1: all of it)
 function dividerOf(world, game) {
@@ -88,7 +88,7 @@ function betCap(balance, world, game) {
 }
 
 // The game of a bet (the reason of the coin history)
-const REASON_GAMES = { "jackpot bet": "jackpot", battle: "battles", "poker buy-in": "poker", "poker chips": "poker", "blackjack bet": "blackjack", "slots bet": "slots", "roulette bet": "roulette", "baucua bet": "baucua", "runner bet": "runner", "megaways bet": "megaways" };
+const REASON_GAMES = { "jackpot bet": "jackpot", battle: "battles", "poker buy-in": "poker", "poker chips": "poker", "blackjack bet": "blackjack", "slots bet": "slots", "roulette bet": "roulette", "baucua bet": "baucua", "runner bet": "runner", "megaways bet": "megaways", "pond bet": "pond" };
 function gameOfReason(reason) {
   return REASON_GAMES[reason] || null;
 }

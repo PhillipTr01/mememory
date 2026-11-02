@@ -15,6 +15,7 @@ var HISTORY_KINDS = [
   ["Bầu Cua", [["baucua bet", "Bet"], ["baucua win", "Win"], ["baucua refund", "Refund"]]],
   ["Runner", [["runner bet", "Entry"], ["runner win", "Win"]]],
   ["Megaways", [["megaways bet", "Bet"], ["megaways win", "Win"]]],
+  ["Frog Pond", [["pond bet", "Bet"], ["pond win", "Win"]]],
 ];
 
 
@@ -124,6 +125,7 @@ var SETTING_GROUPS = {
   blackjack: ["Blackjack", "Turn blackjack on or off, the seats and the limits of every table."],
   slots: ["Slots", "Turn slots on or off, the bet per spin."],
   megaways: ["Megaways", "Turn Megaways on or off, the bet per spin."],
+  pond: ["Frog Pond", "Turn Frog Pond on or off, the bet per spin."],
   roulette: ["Roulette", "Turn the roulette on or off, the bets, the time to bet."],
   baucua: ["Bầu Cua", "Turn Bầu Cua on or off, the bets, the time to bet."],
   runner: ["Runner", "Turn the runner on or off, the entries and the payout curve."],
@@ -131,7 +133,7 @@ var SETTING_GROUPS = {
 };
 var settingsGroup = "general";
 
-var GAME_GROUPS = ["jackpot", "roulette", "baucua", "battles", "poker", "blackjack", "slots", "megaways", "runner", "rpg"];
+var GAME_GROUPS = ["jackpot", "roulette", "baucua", "battles", "poker", "blackjack", "slots", "megaways", "pond", "runner", "rpg"];
 
 // Old addresses (bookmarks): to where it is now
 function redirect(parts) {
@@ -328,6 +330,8 @@ function renderLive(games) {
   if (sl) rows.push(liveRow("🎰", "Slots", sl.playing + (sl.playing == 1 ? " player" : " players") + " at the machines", formatCoins(sl.spins) + " spins", sl.playing > 0));
   var mw = games.megaways;
   if (mw) rows.push(liveRow("🐉", "Megaways", mw.playing + (mw.playing == 1 ? " player" : " players") + " at the machine", formatCoins(mw.spins) + " spins", mw.playing > 0));
+  var pd = games.pond;
+  if (pd) rows.push(liveRow("🐸", "Frog Pond", pd.playing + (pd.playing == 1 ? " player" : " players") + " at the pond", formatCoins(pd.spins) + " spins", pd.playing > 0));
   var rn = games.runner;
   if (rn) rows.push(liveRow("🏃", "Runner", rn.running + (rn.running == 1 ? " run" : " runs") + " going", formatCoins(rn.played) + " played", rn.running > 0));
   (games.blackjack || []).forEach((t) => rows.push(liveRow(t.icon, "Blackjack · " + t.name, (PHASE_TEXT[t.phase] || t.phase) + " · round " + t.round, t.taken + " / " + t.seats + " seats", t.taken > 0)));

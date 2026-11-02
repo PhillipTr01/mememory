@@ -15,6 +15,7 @@ const GAMES = [
   { id: "blackjack", key: "GAME_BLACKJACK", name: "Blackjack", page: "/blackjack", tab: "blackjack", namespace: "/blackjack" },
   { id: "slots", key: "GAME_SLOTS", name: "Slots", page: "/slots", tab: "slots", namespace: "/slots" },
   { id: "megaways", key: "GAME_MEGAWAYS", name: "Megaways", page: "/megaways", tab: "megaways", namespace: "/megaways" },
+  { id: "pond", key: "GAME_POND", name: "Frog Pond", page: "/pond", tab: "pond", namespace: "/pond" },
   { id: "runner", key: "GAME_RUNNER", name: "Runner", page: "/runner", tab: "runner", namespace: "/runner" },
   // (the dungeon: the normal casino's coins only - not in a season world)
   { id: "rpg", key: "GAME_RPG", name: "Dungeon", page: "/rpg", tab: "rpg", namespace: "/rpg", noSeason: true },

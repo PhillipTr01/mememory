@@ -2,6 +2,7 @@ const config = require("./config");
 const coins = require("./coins");
 const slots = require("./slots");
 const megaways = require("./megaways");
+const pond = require("./pond");
 
 // What the slot machine pays back on average (worked out from its reels and paytable once - it doesn't change)
 const limits = require("./limits");
@@ -232,6 +233,36 @@ const GAMES = {
     };
   },
 
+  pond: (L) => {
+    const sym = (id) => pond.BY_ID.get(id).icon;
+    return {
+      title: "Frog Pond",
+      sub: "Clusters on a growing pond, hungry frogs and the full moon's free spins.",
+      sections: [
+        section("How it works", [
+          tile("🪷", "The pond", `The pond starts at ${pond.MIN_SIZE}×${pond.MIN_SIZE} and can grow to ${pond.MAX_SIZE}×${pond.MAX_SIZE}.`, { big: `${pond.MAX_SIZE}×${pond.MAX_SIZE}` }),
+          tile(sym("berry2"), "Clusters", `Land ${pond.CLUSTER} or more symbols of one kind touching side by side. Better symbols and bigger clusters pay more.`, { emoji: [sym("berry0"), sym("berry1"), sym("berry2")] }),
+          tile(sym("wild"), "Firefly", "The firefly is wild and joins every cluster it touches.", { emoji: [sym("wild")] }),
+          tile("⬇️", "Tumbles", "Winning symbols disappear and new ones fall in. That goes on as long as something wins.", { steps: ["Win", "Fall", "Win"] }),
+        ]),
+        section("Frogs and specials", [
+          tile("🐸", "Frogs", "Every kind has its own frog that eats the symbols of its kind from your clusters. A full frog leaps, eats all of its kind on the pond and makes that kind land better.", { tags: [["Leap", "green"], ["Better symbols", "gold"]] }),
+          tile(sym("lotus"), "Lotus", "When nothing wins any more, a lotus makes the pond one row and one column bigger.", { emoji: [sym("lotus")] }),
+          tile(sym("splash"), "Splash", "When nothing wins any more, a splash clears its row and its column.", { emoji: [sym("splash")] }),
+        ]),
+        section("Free spins", [
+          tile(sym("moon"), "Start them", `Land ${pond.MOON_TRIGGER} or more ${sym("moon")} for ${pond.FREE_SPINS} free spins. Every moon past the ${pond.MOON_TRIGGER}rd gives ${pond.FREE_PER_MOON} more.`, { emoji: Array(pond.MOON_TRIGGER).fill(sym("moon")) }),
+          tile("🌙", "Nothing resets", "The size of the pond, the frogs and the better symbols carry on from one free spin to the next. Every moon gives one more free spin.", { tags: [["+1 spin", "green"]] }),
+        ]),
+        section("More", [
+          tile("🛒", "Bonus buy", `Buy the free spins for ${pond.BUY_PRICE}× your bet.`, { tags: [[pond.BUY_PRICE + "×", "gold"]] }),
+          tile("🏆", "Max win", `A spin pays at most ${n(pond.MAX_WIN)}× your bet.`, { big: n(pond.MAX_WIN) + "×" }),
+          tile("🪙", "Your bet", `Bet 🪙 ${n(L.POND_MIN_BET)} to ${n(L.POND_MAX_BET)} per spin.`, { coins: [n(L.POND_MIN_BET), n(L.POND_MAX_BET)] }),
+        ]),
+      ],
+    };
+  },
+
   roulette: (L) => ({
     title: "Roulette",
     sub: "Bet on red, blue or green. Everybody plays the same roll.",
@@ -317,8 +348,8 @@ function capText(L, world, game) {
   const x = limits.dividerOf(world, game);
   const share = Math.round(rule.share * 100) / 100;
   // (what counts: everything bet in the round - a spin, a battle, the chips at the table)
-  const what = { slots: "one spin", megaways: "one spin", battles: "one battle", poker: "your chips at the table", runner: "the entry of a run" }[game] || "all your bets of one round together";
-  return `With up to 🪙 ${n(rule.floor)} you can bet all your coins. With more, ${what} ${["slots", "megaways", "battles", "runner"].includes(game) ? "is" : "are"} limited to ${share}% of your coins.` + (x > 1 ? ` ${game === "megaways" ? "Megaways allows" : "Slots allow"} 1/${x} of the max bet of the other games.` : "");
+  const what = { slots: "one spin", megaways: "one spin", pond: "one spin", battles: "one battle", poker: "your chips at the table", runner: "the entry of a run" }[game] || "all your bets of one round together";
+  return `With up to 🪙 ${n(rule.floor)} you can bet all your coins. With more, ${what} ${["slots", "megaways", "pond", "battles", "runner"].includes(game) ? "is" : "are"} limited to ${share}% of your coins.` + (x > 1 ? ` ${game === "megaways" ? "Megaways allows" : "Slots allow"} 1/${x} of the max bet of the other games.` : "");
 }
 
 // world: the limits of that world ("/season": the season's own ones)

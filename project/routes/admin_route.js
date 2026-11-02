@@ -585,6 +585,7 @@ module.exports = function () {
       baucua: { dice: () => server.forceDice(value) },
       slots: { bonus: () => server.forceBonus(value) },
       megaways: { bonus: () => server.forceBonus(value !== "") },
+      pond: { bonus: () => server.forceBonus(value !== "") },
       blackjack: { deal: () => server.stackDeal(value) || "Unknown deal." },
       battles: {
         mode: () => server.forceMode(value),

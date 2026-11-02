@@ -8,7 +8,7 @@ const streak = require("./streak");
 const slots = require("./season_slots");
 
 // Bets (every game): one may take at most limits.betCap of the balance - more only with options.nocap (a double, a split)
-const BET_REASONS = ["jackpot bet", "battle", "poker buy-in", "poker chips", "blackjack bet", "slots bet", "roulette bet", "baucua bet", "runner bet", "megaways bet"];
+const BET_REASONS = ["jackpot bet", "battle", "poker buy-in", "poker chips", "blackjack bet", "slots bet", "roulette bet", "baucua bet", "runner bet", "megaways bet", "pond bet"];
 
 /*
  * "change" (username) after every change of a balance: every page that shows
@@ -221,7 +221,7 @@ function makeWallet(kind) {
   }
 
   // The max bet by balance of every game (null: none - lifted for the game, or no cap at all) - "slots:buy": a bonus buy
-  const capRules = (world) => Object.fromEntries([...limits.CAP_GAMES, "slots:buy", "megaways:buy"].map((game) => [game, limits.capRule(world, game)]));
+  const capRules = (world) => Object.fromEntries([...limits.CAP_GAMES, "slots:buy", "megaways:buy", "pond:buy"].map((game) => [game, limits.capRule(world, game)]));
 
   // { coins, bonus, bonusIn, world, betCap } - bonus: the daily free coins can be claimed now
   // (in the season: normal - the normal balance, shown next to the season's)

@@ -5,6 +5,7 @@ const days = require("./days");
 const config = require("./config");
 const slots = require("./slots");
 const megaways = require("./megaways");
+const pond = require("./pond");
 const roulette = require("./roulette");
 const baucua = require("./baucua");
 const cases = require("./cases");
@@ -19,6 +20,7 @@ const cases = require("./cases");
 const GAMES = [
   { id: "slots", name: "Slots", icon: "🎰", bet: ["slots bet"], win: ["slots win"], refund: [], theory: () => slots.rtp().rtp, perBet: () => slots.SPIN_SPREAD },
   { id: "megaways", name: "Megaways", icon: "🐉", bet: ["megaways bet"], win: ["megaways win"], refund: [], theory: () => megaways.RTP, perBet: () => megaways.SPIN_SPREAD, about: "Simulated: the tumbles make an exact sum out of reach (about +-0.1%)." },
+  { id: "pond", name: "Frog Pond", icon: "🐸", bet: ["pond bet"], win: ["pond win"], refund: [], theory: () => pond.RTP, perBet: () => pond.SPIN_SPREAD, about: "Simulated: the tumbles and the frogs make an exact sum out of reach (about +-0.1%)." },
   { id: "roulette", name: "Roulette", icon: "🎡", bet: ["roulette bet"], win: ["roulette win"], refund: ["roulette refund"], theory: () => roulette.rtp("red") },
   { id: "baucua", name: "Bầu Cua", icon: "🦀", bet: ["baucua bet"], win: ["baucua win"], refund: ["baucua refund"], theory: () => baucua.rtp() },
   { id: "runner", name: "Runner", icon: "🏃", bet: ["runner bet"], win: ["runner win"], refund: [], theory: () => null, about: () => `A game of skill: the payback depends on how well people run. ${config.RUNNER_EVEN.toLocaleString("en-US")} m pay the entry back, the most is ${config.RUNNER_MAX}x - every coin picked up adds ${Math.round(config.RUNNER_COIN_BONUS * 1000) / 10}% to the payout (up to ${Math.round(config.RUNNER_COIN_CAP * 1000) / 10}%).` },
