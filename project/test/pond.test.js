@@ -20,28 +20,26 @@ function rng(seed) {
 
 const ALL = (id) => [id, id, id, id, id, id];
 
-test("pond: clusters - 5 or more of one kind touching side by side, tiers mixed, the firefly joins and counts as the best tier", () => {
-  // 5 berries in an L (a firefly in it), the rest no cluster
-  const grid = [
-    ["berry0", "leaf0", "bug0", "shell0", "fish0", "flower0"],
-    ["berry2", "bug0", "shell0", "fish0", "flower0", "leaf0"],
-    ["wild", "shell0", "fish0", "flower0", "leaf0", "bug0"],
-    ["berry1", "berry0", "flower0", "leaf0", "bug0", "shell0"],
-    ["moon", "flower0", "leaf0", "bug0", "shell0", "fish0"],
-    ["splash", "leaf1", "bug1", "shell1", "fish1", "lotus"],
-  ];
+test("pond: clusters - 7 or more of one kind touching side by side, tiers mixed, the firefly joins and counts as the best tier", () => {
+  // 7 berries in an L (a firefly in it), the rest in diagonal stripes (no cluster)
+  const stripe = (c, r) => ["leaf0", "bug0", "shell0"][(c + r) % 3];
+  const grid = Array.from({ length: 6 }, (_, c) => Array.from({ length: 6 }, (_, r) => stripe(c, r)));
+  [[0, 0, "berry0"], [1, 0, "berry2"], [2, 0, "wild"], [3, 0, "berry1"], [4, 0, "berry0"], [4, 1, "berry0"], [4, 2, "berry2"]].forEach(([c, r, id]) => (grid[c][r] = id));
+  grid[5][5] = "moon";
+  grid[0][5] = "splash";
   const clusters = pd.clustersOf(grid);
   assert.strictEqual(clusters.length, 1);
   const [berry] = clusters;
   assert.strictEqual(berry.family, "berry");
-  assert.deepStrictEqual(berry.cells, [[0, 0], [1, 0], [2, 0], [3, 0], [3, 1]]);
+  assert.deepStrictEqual(berry.cells, [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2]]);
   const v = pd.TIER_VALUES;
-  const value = v[0] + v[2] + v[2] + v[1] + v[0];
+  const value = v[0] + v[2] + v[2] + v[1] + v[0] + v[0] + v[2];
   assert.ok(Math.abs(berry.value - value) < 1e-9);
   assert.ok(Math.abs(berry.pay - value * pd.SIZE_FACTORS[0] * pd.PAY_SCALE) < 1e-9);
-  // 4 touching: nothing; a whole board of one kind: one cluster of 36 (the biggest size factor)
-  assert.strictEqual(pd.clustersOf(grid.map((c) => c.map((id) => (id === "wild" ? "moon" : id)))).length, 0);
-  const full = pd.clustersOf(Array.from({ length: 6 }, () => ALL("fish1")));
+  // 6 touching: nothing; a whole board of one kind: one cluster of 36 (the biggest size factor)
+  grid[4][2] = "moon";
+  assert.strictEqual(pd.clustersOf(grid).length, 0);
+  const full = pd.clustersOf(Array.from({ length: 6 }, () => ALL("shell1")));
   assert.deepStrictEqual([full.length, full[0].size], [1, 36]);
   assert.ok(Math.abs(full[0].pay - 36 * v[1] * pd.SIZE_FACTORS[pd.SIZE_FACTORS.length - 1] * pd.PAY_SCALE) < 1e-9);
 });
@@ -83,9 +81,10 @@ test("pond: tumbles, frogs and specials - it ends with nothing left to do, the b
 test("pond: a full frog eats all of its kind left on the board and its kind lands better from then on", () => {
   const random = rng(5);
   const state = { levels: pd.newLevels(), bellies: { ...pd.newBellies(), bug: pd.BELLY - 1 } };
-  // A cluster of 5 bugs on top, 3 more bugs elsewhere
-  const grid = Array.from({ length: 6 }, (_, c) => Array.from({ length: 6 }, (_, r) => ["leaf0", "shell0", "fish0"][(c + r) % 3]));
-  for (let c = 0; c < 5; c++) grid[c][0] = "bug0";
+  // A cluster of 7 bugs on top, 3 more bugs elsewhere
+  const grid = Array.from({ length: 6 }, (_, c) => Array.from({ length: 6 }, (_, r) => ["leaf0", "shell0", "berry0"][(c + r) % 3]));
+  for (let c = 0; c < 6; c++) grid[c][0] = "bug0";
+  grid[0][1] = "bug0";
   grid[0][5] = grid[2][4] = "bug2";
   grid[5][5] = "bug1";
   const step = pd.play(grid, random, state).steps[0];
@@ -154,15 +153,15 @@ test("pond: pays back about 96.8% - the base game (seeded spins) and the free sp
     base += result.pay;
     if (pd.moonsIn(result.grid) >= pd.MOON_TRIGGER) triggers++;
   }
-  // (the base game: 58.18% x 3.164 / 3.15 = 58.44% - its spread over 60,000 spins about 0.3%)
-  assert.ok(Math.abs(base / N - 0.5844) < 0.015, `base game ${base / N}`);
-  // (the free spins: about 1 in 216 spins)
-  assert.ok(Math.abs(N / triggers - 216) < 35, `free spins every ${N / triggers}`);
+  // (the base game: 54.29% - its spread over 60,000 spins about 0.4%)
+  assert.ok(Math.abs(base / N - 0.5429) < 0.02, `base game ${base / N}`);
+  // (the free spins: about 1 in 250 spins)
+  assert.ok(Math.abs(N / triggers - 250) < 45, `free spins every ${N / triggers}`);
   let free = 0;
   const G = 2000;
   for (let g = 0; g < G; g++) free += pd.freeGame(pd.FREE_SPINS, random).x;
-  // (3 🌕: about 78.2x - its spread over 2,000 games about 2x)
-  assert.ok(Math.abs(free / G - 78.2) < 8, `free spins ${free / G}`);
+  // (3 🌕: about 98.1x - its spread over 2,000 games about 2.6x)
+  assert.ok(Math.abs(free / G - 98.1) < 10, `free spins ${free / G}`);
   assert.strictEqual(pd.RTP, 0.968);
 });
 
@@ -199,7 +198,7 @@ test("pond: a spin costs the bet, the server's board decides, the win is paid on
     const mia = client("mia");
     const noa = client("noa");
     const setup = await h.once(mia, "pdSetup");
-    assert.deepStrictEqual([setup.rules.minBet, setup.rules.maxBet, setup.size, setup.families.length, setup.buy], [config.POND_MIN_BET, config.POND_MAX_BET, [6, 8], 6, pd.BUY_PRICE]);
+    assert.deepStrictEqual([setup.rules.minBet, setup.rules.maxBet, setup.size, setup.families.length, setup.buy], [config.POND_MIN_BET, config.POND_MAX_BET, [6, 8], 4, pd.BUY_PRICE]);
     await h.once(noa, "pdFeed");
     const feeds = [];
     noa.on("pdFeed", (feed) => feeds.push(feed));

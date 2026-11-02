@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 
 /*
- * Frog Pond: a square board of 6x6 that can grow up to 8x8. Wins are clusters: 5 or more symbols of one family
+ * Frog Pond: a square board of 6x6 that can grow up to 8x8. Wins are clusters: 7 or more symbols of one family
  * touching side by side (any tier mixed). A cluster pays the values of its symbols times a factor for its size. The
  * ✨ firefly is wild and joins every cluster it touches (it counts as the best tier in that cluster).
  *
@@ -26,7 +26,7 @@ const crypto = require("crypto");
  */
 const MIN_SIZE = 6;
 const MAX_SIZE = 8;
-const CLUSTER = 5; // at least this many symbols touching win
+const CLUSTER = 7; // at least this many symbols touching win
 
 // The families: 3 tiers each (values: times the bet per symbol, before PAY_SCALE)
 const FAMILIES = [
@@ -34,8 +34,6 @@ const FAMILIES = [
   { id: "berry", name: "Berries", frog: "Red frog", color: "#f87171", icons: ["🫐", "🍒", "🍓"], names: ["Blueberry", "Cherry", "Strawberry"] },
   { id: "bug", name: "Bugs", frog: "Gold frog", color: "#facc15", icons: ["🐜", "🐞", "🦋"], names: ["Ant", "Ladybug", "Butterfly"] },
   { id: "shell", name: "Shells", frog: "Blue frog", color: "#60a5fa", icons: ["🐚", "🦪", "💎"], names: ["Shell", "Oyster", "Pearl"] },
-  { id: "flower", name: "Flowers", frog: "Pink frog", color: "#f472b6", icons: ["🌼", "🌷", "🌹"], names: ["Daisy", "Tulip", "Rose"] },
-  { id: "fish", name: "Fish", frog: "Teal frog", color: "#2dd4bf", icons: ["🐟", "🐠", "🐡"], names: ["Minnow", "Goldfish", "Puffer"] },
 ];
 const TIER_VALUES = [0.02, 0.07, 0.3];
 // How a family lands at level 0, 1, 2 (weights of tier 0, 1, 2)
@@ -45,10 +43,10 @@ const LEVEL_TIERS = [
   [24, 46, 30],
 ];
 const MAX_LEVEL = LEVEL_TIERS.length - 1;
-// A cluster of 5, 6, ... pays the values of its symbols times this (the last one for every bigger cluster)
+// A cluster of 7, 8, ... pays the values of its symbols times this (the last one for every bigger cluster)
 const SIZE_FACTORS = [1, 1.1, 1.2, 1.35, 1.5, 1.7, 1.9, 2.1, 2.4, 2.7, 3, 3.5];
-const BELLY = 10; // a frog leaps with this many symbols of its family in its belly ...
-const FREE_BELLY = 6; // ... in the free spins this many
+const BELLY = 14; // a frog leaps with this many symbols of its family in its belly ...
+const FREE_BELLY = 13; // ... in the free spins this many
 const LEAP_PAY = 2; // a symbol eaten by a frog pays its value times this
 
 const SPECIALS = [
@@ -58,8 +56,8 @@ const SPECIALS = [
   { id: "moon", icon: "🌕", name: "Full moon", scatter: true },
 ];
 // How likely a new symbol is each family or special (weights). The free spins: fewer 🌕
-const LANDING = { family: 22, wild: 1.6, lotus: 0.9, splash: 1.2, moon: 0.9 };
-const FREE_LANDING = { ...LANDING, wild: 2.4, moon: 0.3 };
+const LANDING = { family: 22, wild: 1.1, lotus: 0.6, splash: 0.8, moon: 0.5 };
+const FREE_LANDING = { ...LANDING, wild: 1.6, moon: 0.2 };
 
 const SYMBOLS = [];
 FAMILIES.forEach((family) => family.icons.forEach((icon, tier) => SYMBOLS.push({ id: family.id + tier, icon: icon, name: family.names[tier], family: family.id, tier: tier, value: TIER_VALUES[tier] })));
@@ -67,10 +65,9 @@ SPECIALS.forEach((special) => SYMBOLS.push({ ...special, family: null, tier: nul
 const BY_ID = new Map(SYMBOLS.map((symbol) => [symbol.id, symbol]));
 const FAMILY_IDS = FAMILIES.map((family) => family.id);
 
-// The pays times this: the payback 96.8% (as the slots). Simulated (10 million spins, 100,000 free games at 3.15):
-// 96.36% (base game 58.18%, free spins 38.18% - about every 216 spins, 77.9x with 3 🌕), +-0.15%; 3.15 x 0.968 /
-// 0.9636 -> 3.164: base game 58.44%, free spins 38.36% (3 🌕: about 78.2x)
-const PAY_SCALE = 3.164;
+// The pays times this: the payback 96.8% (as the slots). Simulated (10 million spins, 100,000 free games): 96.83%
+// (base game 54.29%, free spins 42.54% - about every 250 spins, 98.1x with 3 🌕), +-0.16%
+const PAY_SCALE = 1.497;
 const RTP = 0.968;
 const MOON_TRIGGER = 3; // this many 🌕 start the free spins ...
 const FREE_SPINS = 8; // ... this many of them ...
@@ -78,12 +75,12 @@ const FREE_PER_MOON = 2; // ... and this many more for every 🌕 past MOON_TRIG
 const MAX_FREE_SPINS = 50;
 const MAX_WIN = 10000; // a spin (and its free spins) never pays more than this many times the bet
 const MAX_STEPS = 120; // (a safety net - a run of tumbles is never this long)
-// Bonus buy: the free spins right away (3 🌕) for this many times the bet - a bought spin pays 81.5x on average
-// (simulated), so about 90.5% of it comes back
-const BUY_PRICE = 90;
-const BUY_RTP = 0.905;
+// Bonus buy: the free spins right away (3 🌕) for this many times the bet - a bought spin pays 100.4x on average
+// (simulated), so about 91.3% of it comes back
+const BUY_PRICE = 110;
+const BUY_RTP = 0.913;
 // How far one spin's win strays from its average, in bets (simulated) - for the RTP monitor
-const SPIN_SPREAD = 8;
+const SPIN_SPREAD = 10;
 
 function pick(weights, randomInt) {
   const tickets = weights.map((w) => Math.round(w * 1000));
@@ -114,7 +111,7 @@ const key = (c, r) => c + ":" + r;
 
 /*
  * The clusters of a board: [{family, cells: [[column, row], ...], size, value (the symbols' values), pay (times the
- * bet)}] - 5 or more of one family (any tier) or wild touching side by side, at least one of the family
+ * bet)}] - 7 or more of one family (any tier) or wild touching side by side, at least one of the family
  */
 function clustersOf(grid) {
   const size = grid.length;

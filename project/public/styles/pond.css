@@ -296,7 +296,7 @@
 /* The frogs: one per kind, a belly that fills, stars for the better symbols */
 .pd-frogs {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.35rem;
 }
 
@@ -319,9 +319,9 @@
 
 .pd-frog-face {
   grid-row: span 2;
-  width: 1.7rem;
-  height: 1.7rem;
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--fam) 70%, transparent));
+  width: 2.7rem;
+  height: 2.7rem;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--fam) 55%, transparent));
 }
 
 .pd-frog-face svg {
@@ -332,8 +332,8 @@
 
 .pd-frog-food {
   position: absolute;
-  top: -0.35rem;
-  left: 1.3rem;
+  top: -0.2rem;
+  left: 2.2rem;
   font-size: 0.75rem;
 }
 
@@ -365,7 +365,7 @@
 
 @media (max-width: 600px) {
   .pd-frogs {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.25rem;
   }
 

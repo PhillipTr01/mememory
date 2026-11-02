@@ -225,8 +225,8 @@ function renderSize(n) {
 
 /* ---------- The frogs ---------- */
 
-// A frog in the colour of its kind (--fam)
-var FROG_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="29" rx="15" ry="12" fill="var(--fam)" /><circle cx="15" cy="17" r="6.5" fill="var(--fam)" /><circle cx="33" cy="17" r="6.5" fill="var(--fam)" /><circle cx="15" cy="17" r="3.6" fill="#fff" /><circle cx="33" cy="17" r="3.6" fill="#fff" /><circle cx="15.8" cy="17.6" r="1.9" fill="#111827" /><circle cx="33.8" cy="17.6" r="1.9" fill="#111827" /><path d="M16 31 Q24 37 32 31" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.2" stroke-linecap="round" /><circle cx="12" cy="29" r="2" fill="rgba(255,255,255,.35)" /><circle cx="36" cy="29" r="2" fill="rgba(255,255,255,.35)" /></svg>';
+// A frog in the colour of its kind (--fam), sitting on its lily pad
+var FROG_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 33 L44 38 A22 8 0 1 1 41 34 Z" fill="#15803d" /><path d="M24 33 L44 38 A22 8 0 1 1 41 34 Z" fill="none" stroke="#0f5132" stroke-width="1.2" /><path d="M24 38 L12 41 M24 38 L30 43 M24 38 L8 37" stroke="#166534" stroke-width="1" /><ellipse cx="24" cy="26" rx="13" ry="10.5" fill="var(--fam)" /><circle cx="16" cy="15" r="5.8" fill="var(--fam)" /><circle cx="32" cy="15" r="5.8" fill="var(--fam)" /><circle cx="16" cy="15" r="3.2" fill="#fff" /><circle cx="32" cy="15" r="3.2" fill="#fff" /><circle cx="16.7" cy="15.5" r="1.7" fill="#111827" /><circle cx="32.7" cy="15.5" r="1.7" fill="#111827" /><path d="M17 27.5 Q24 33 31 27.5" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2" stroke-linecap="round" /><circle cx="13" cy="26" r="1.8" fill="rgba(255,255,255,.35)" /><circle cx="35" cy="26" r="1.8" fill="rgba(255,255,255,.35)" /></svg>';
 var frogBoxes = {};
 function renderFrogs() {
   var box = document.getElementById("pdFrogs");
