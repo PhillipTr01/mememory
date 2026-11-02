@@ -311,7 +311,7 @@ function renderSize(n) {
 /* ---------- The frogs, the meter, the moons ---------- */
 
 // A frog in its colour (--fam)
-var FROG_SVG = '<svg viewBox="9 8 30 30" aria-hidden="true"><circle class="pd-frog-glow" cx="24" cy="23" r="14.5" fill="var(--fam)" fill-opacity=".45" /><ellipse cx="24" cy="36.6" rx="11.5" ry="1.9" fill="#000" fill-opacity=".35" /><ellipse cx="24" cy="26" rx="13" ry="10.5" fill="var(--fam)" /><circle cx="16" cy="15" r="5.8" fill="var(--fam)" /><circle cx="32" cy="15" r="5.8" fill="var(--fam)" /><circle cx="16" cy="15" r="3.2" fill="#fff" /><circle cx="32" cy="15" r="3.2" fill="#fff" /><circle cx="16.7" cy="15.5" r="1.7" fill="#111827" /><circle cx="32.7" cy="15.5" r="1.7" fill="#111827" /><path d="M17 27.5 Q24 33 31 27.5" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2" stroke-linecap="round" /></svg>';
+var FROG_SVG = '<svg viewBox="9 8 30 30" aria-hidden="true"><ellipse class="pd-frog-glow" cx="24" cy="35.5" rx="14" ry="3" fill="var(--fam)" /><ellipse cx="24" cy="36.6" rx="11.5" ry="1.9" fill="#000" fill-opacity=".35" /><ellipse cx="24" cy="26" rx="13" ry="10.5" fill="var(--fam)" /><circle cx="16" cy="15" r="5.8" fill="var(--fam)" /><circle cx="32" cy="15" r="5.8" fill="var(--fam)" /><circle cx="16" cy="15" r="3.2" fill="#fff" /><circle cx="32" cy="15" r="3.2" fill="#fff" /><circle cx="16.7" cy="15.5" r="1.7" fill="#111827" /><circle cx="32.7" cy="15.5" r="1.7" fill="#111827" /><path d="M17 27.5 Q24 33 31 27.5" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2" stroke-linecap="round" /></svg>';
 // An evil frog: grey with a hint of its colour, small red eyes under angry lids, a belly in the colours it holds
 // (its own and every frog it ate)
 var evilCount = 0;
@@ -321,7 +321,7 @@ function evilFrogSvg(colours) {
   var stripes = colours.map((family, i) => '<rect x="' + (16 + i * width) + '" y="20" width="' + (width + 0.2) + '" height="16" style="fill: color-mix(in srgb, ' + familyInfo(family).color + ' 80%, #4b5563)" />').join("");
   return (
     '<svg viewBox="9 6 30 32" aria-hidden="true"><defs><clipPath id="' + id + '"><ellipse cx="24" cy="29" rx="7.5" ry="5.6" /></clipPath></defs>' +
-    '<circle class="pd-frog-glow" cx="24" cy="23" r="14.5" fill="#dc2626" fill-opacity=".4" /><ellipse cx="24" cy="36.6" rx="11.5" ry="1.9" fill="#000" fill-opacity=".35" />' +
+    '<ellipse class="pd-frog-glow" cx="24" cy="35.5" rx="14" ry="3" fill="#dc2626" /><ellipse cx="24" cy="36.6" rx="11.5" ry="1.9" fill="#000" fill-opacity=".35" />' +
     '<g style="fill: color-mix(in srgb, var(--fam) 30%, #6b7280)"><ellipse cx="24" cy="26" rx="13" ry="10.5" /><circle cx="16" cy="15" r="5.8" /><circle cx="32" cy="15" r="5.8" /></g>' +
     '<g clip-path="url(#' + id + ')">' + stripes + "</g>" +
     '<circle cx="16" cy="15" r="3.2" fill="#fff" /><circle cx="32" cy="15" r="3.2" fill="#fff" /><circle cx="16.4" cy="15.6" r="1.8" fill="#dc2626" /><circle cx="31.6" cy="15.6" r="1.8" fill="#dc2626" />' +
@@ -456,43 +456,76 @@ async function hopFrog(move, bet, win, hop) {
   var n = start[2] || 1;
   var colours = start[3] ? start[3].slice() : [move.family];
   var eatsAfter = (i) => (move.eats || []).filter((e) => e.after == i);
+  // What the frog takes from a spot: the gem pays (by the level of its colour; the wild by the frog's)
+  var take = (cellSpot) => {
+    var id = shown[cellSpot[0]][cellSpot[1]];
+    var collected = colours.includes(id) || id == "wild" || id == "fly" || (id != null && symbolOf(id) && symbolOf(id).feature);
+    if (!collected) return;
+    var cell = cellAt(cellSpot);
+    cell.classList.add("collected");
+    cell.animate([{ transform: "scale(1)", opacity: 1 }, { transform: "scale(1.3)", opacity: 0.8, offset: 0.3 }, { transform: "scale(0.2)", opacity: 0 }], { duration: Math.max(80, hop * 0.5), easing: "ease-in", fill: "forwards" });
+    shown[cellSpot[0]][cellSpot[1]] = null;
+    if (colours.includes(id) || id == "wild") {
+      var amber = setup.amberValues[levelsShown[id == "wild" ? move.family : id] || 0] * bet;
+      amberCount++;
+      detail.innerText = "🐸 The " + name + " collects " + amberCount + (amberCount == 1 ? " gem" : " gems");
+      floatNote(cellSpot, "+" + shortCoins(amber), "pd-note-win", Math.max(700, hop * 2));
+      countUp(document.getElementById("pdWinText"), Math.floor(win.amount + amber), hop * 0.3, Math.floor(win.amount));
+      win.amount += amber;
+    }
+  };
+  // (an evil frog licks up what touches its body: its tongue grabs one spot after the other)
+  var licksAfter = async (i) => {
+    for (var lickAt of (move.licks || []).filter((l) => l.after == i))
+      for (var cellSpot of lickAt.cells) {
+        await tongueTo(frog, cellSpot, size, hop * 0.5);
+        take(cellSpot);
+      }
+  };
+  var swirlsAfter = async (i) => {
+    for (var swirl of (move.swirls || []).filter((sw) => sw.after == i && !sw.shown)) {
+      swirl.shown = true;
+      detail.innerText = FEATURE_TEXT.swirl({ from: swirl.from, family: move.family });
+      (swirl.cells || []).forEach((cellSpot) => setSpot(cellSpot, move.family, bet));
+      await wait(setup.rules.effectTime * 0.6);
+    }
+  };
   for (var e of eatsAfter(0)) await eatFrog(move.family, e.family, colours, size);
+  await licksAfter(0);
+  await swirlsAfter(0);
   for (var i = 1; i < move.path.length; i++) {
     var spot = move.path[i];
     // (one hop flows into the next: no stop between them)
     jumpFrog(frog, spot, hop, size);
     await wait(hop * 0.7);
-    for (var cellSpot of move.cells ? move.cells[i] : [spot]) {
-      var id = shown[cellSpot[0]][cellSpot[1]];
-      var collected = colours.includes(id) || id == "wild" || id == "fly" || (id != null && symbolOf(id) && symbolOf(id).feature);
-      if (!collected) continue;
-      var cell = cellAt(cellSpot);
-      cell.classList.add("collected");
-      cell.animate([{ transform: "scale(1)", opacity: 1 }, { transform: "scale(1.3)", opacity: 0.8, offset: 0.3 }, { transform: "scale(0.2)", opacity: 0 }], { duration: Math.max(80, hop * 0.5), easing: "ease-in", fill: "forwards" });
-      shown[cellSpot[0]][cellSpot[1]] = null;
-      if (colours.includes(id) || id == "wild") {
-        // (each gem by the level of its colour; the wild by the frog's)
-        var amber = setup.amberValues[levelsShown[id == "wild" ? move.family : id] || 0] * bet;
-        amberCount++;
-        detail.innerText = "🐸 The " + name + " collects " + amberCount + (amberCount == 1 ? " gem" : " gems");
-        floatNote(cellSpot, "+" + shortCoins(amber), "pd-note-win", Math.max(700, hop * 2));
-        countUp(document.getElementById("pdWinText"), Math.floor(win.amount + amber), hop * 0.3, Math.floor(win.amount));
-        win.amount += amber;
-      }
-    }
+    for (var cellSpot of move.cells ? move.cells[i] : [spot]) take(cellSpot);
     // (a swirl: the gems of another colour turn into the frog's right away)
-    for (var swirl of (move.swirls || []).filter((sw) => sw.after == i)) {
-      detail.innerText = FEATURE_TEXT.swirl({ from: swirl.from, family: move.family });
-      (swirl.cells || []).forEach((cellSpot) => setSpot(cellSpot, move.family, bet));
-      await wait(setup.rules.effectTime * 0.6);
-    }
+    await swirlsAfter(i);
     for (var eaten of eatsAfter(i)) await eatFrog(move.family, eaten.family, colours, size);
+    await licksAfter(i);
+    await swirlsAfter(i);
     await wait(hop * 0.3);
   }
   frog.classList.remove("moving");
   if (box) box.frog.classList.remove("active");
   var end = move.path[move.path.length - 1];
   frogSpots[move.family] = start[3] ? [end[0], end[1], n, colours] : end;
+}
+
+// The evil frog's tongue shoots to a spot and back
+async function tongueTo(frog, spot, size, time) {
+  if (skipping) return;
+  var n = Math.round(parseFloat(frog.style.width) / size) || 1;
+  var mouth = [Number(frog.dataset.x) + (n * size) / 2, Number(frog.dataset.y) + n * size * 0.68];
+  var target = [(spot[0] + 0.5) * size, (spot[1] + 0.5) * size];
+  var tongue = el("div", "pd-tongue");
+  tongue.style.left = mouth[0] + "px";
+  tongue.style.top = mouth[1] + "px";
+  tongue.style.width = Math.hypot(target[0] - mouth[0], target[1] - mouth[1]) + "px";
+  tongue.style.transform = "rotate(" + Math.atan2(target[1] - mouth[1], target[0] - mouth[0]) + "rad)";
+  document.querySelector(".pd-frog-layer").append(tongue);
+  await tongue.animate([{ scale: "0 1" }, { scale: "1 1" }], { duration: time * 0.5, easing: "ease-out", fill: "forwards" }).finished;
+  tongue.animate([{ scale: "1 1" }, { scale: "0 1" }], { duration: time * 0.5, easing: "ease-in", fill: "forwards" }).finished.then(() => tongue.remove());
 }
 
 // The evil frog eats a frog next to it: its tongue shoots out, pulls the frog in, a gulp and a burst in its colour
@@ -567,7 +600,7 @@ async function turnEvil(effect, bet) {
 }
 
 // Two frogs meet: they trade spots, or two of them argue and new symbols land around them
-async function playMeet(meet, next, bet) {
+async function playMeet(meet, next, bet, win, step, inBonus) {
   var time = setup.rules.meetTime;
   var detail = document.getElementById("pdWinDetail");
   var [a, b] = meet.frogs;
@@ -588,14 +621,50 @@ async function playMeet(meet, next, bet) {
     await wait(time * 0.1);
     return;
   }
-  detail.innerText = "💢 The " + names + " argue and make room";
+  detail.innerText = "💢 The " + names + " riot over the pond";
   [a, b].forEach((family) => {
     floatNote(frogSpots[family], "💢", "pd-note-bubble", time * 0.6);
     if (!skipping) frogEls[family].animate([{ translate: "0 0" }, { translate: "-6% 0" }, { translate: "6% 0" }, { translate: "-6% 0" }, { translate: "6% 0" }, { translate: "0 0" }], { duration: time * 0.45 });
   });
   await wait(time * 0.5);
-  (meet.cells || []).forEach((spot) => setSpot(spot, next.grid[spot[0]] ? next.grid[spot[0]][spot[1]] : null, bet));
-  await wait(time * 0.5);
+  var size = boardSize() / shown.length;
+  // (a long riot faster: about 3 seconds at most)
+  var hop = Math.min(setup.rules.hopTime * 0.5, 3000 / Math.max(1, (meet.collected || []).length));
+  [a, b].forEach((family) => frogEls[family].classList.add("moving"));
+  // (by turns they jump on every symbol that is not a gem and take it; a firefly pays as a gem)
+  for (var one of meet.collected || []) {
+    jumpFrog(frogEls[one.family], one.at, hop, size);
+    await wait(hop * 0.8);
+    var cell = cellAt(one.at);
+    if (cell) cell.animate([{ transform: "scale(1)", opacity: 1 }, { transform: "scale(0.2)", opacity: 0 }], { duration: hop * 0.5, easing: "ease-in", fill: "forwards" });
+    shown[one.at[0]][one.at[1]] = null;
+    if (one.id == "wild") {
+      var amber = setup.amberValues[levelsShown[one.family] || 0] * bet;
+      floatNote(one.at, "+" + shortCoins(amber), "pd-note-win", 900);
+      countUp(document.getElementById("pdWinText"), Math.floor(win.amount + amber), hop * 0.3, Math.floor(win.amount));
+      win.amount += amber;
+    }
+    await wait(hop * 0.2);
+  }
+  [a, b].forEach((family) => frogEls[family].classList.remove("moving"));
+  // Every frog lands on its new spot ...
+  Object.entries(meet.spots || {}).forEach(([family, spot]) => {
+    frogSpots[family] = spot;
+    if (frogEls[family]) jumpFrog(frogEls[family], spot, time * 0.4, size);
+  });
+  await wait(time * 0.45);
+  // ... new symbols fall into the empty spots ...
+  (meet.refill || []).forEach(({ at, id }) => {
+    var cell = cellAt(at);
+    if (!cell) return;
+    shown[at[0]][at[1]] = id;
+    cell.getAnimations().forEach((animation) => animation.cancel());
+    fillCell(cell, id, bet);
+    if (!skipping) cell.animate([{ transform: "translateY(" + -(at[1] + 1) * size + "px)", opacity: 0 }, { opacity: 1, offset: 0.3 }, { transform: "translateY(0)", opacity: 1 }], { duration: 450, delay: at[0] * 30, easing: "cubic-bezier(.25,.9,.35,1.15)", fill: "backwards" });
+  });
+  await wait(650);
+  // ... and what they collected acts
+  for (var effect of meet.effects || []) await playEffect(effect, step, next, bet, win, inBonus);
 }
 
 // The full meter: three chests open, each with a feature symbol
@@ -725,7 +794,7 @@ async function playStep(step, next, bet, total, inBonus) {
     setMeter(step.meter);
   }
   for (var effect of step.effects) await playEffect(effect, step, next, bet, win, inBonus);
-  for (var meet of step.meets || []) await playMeet(meet, next, bet);
+  for (var meet of step.meets || []) await playMeet(meet, next, bet, win, step, inBonus);
   win.amount = total + step.pay * bet;
   document.getElementById("pdWinText").innerText = "🪙 " + formatCoins(Math.floor(win.amount));
   setLevels(step.levels, bet);
@@ -1202,7 +1271,7 @@ function showPaytable() {
   line("🌀", "The swirl turns the gems of another colour into the colour of its frog.");
   line("🪰", "Flies fill the empty spots, and a frog can cross each fly once by eating it.");
   line("🪨", "A rock clears the spots around where it lands, and a frog it hits jumps somewhere else.");
-  line("😈", "The curse turns a frog evil. It grows, eats the frogs next to it and collects their colours too.");
+  line("😈", "The curse turns a frog evil. It grows, eats the frogs next to it and licks up the gems of their colours too.");
   line("🌕", "Collect " + setup.free.trigger + " full moons in one spin for " + setup.free.spins + " free spins.");
   dialog.append(
     x,
@@ -1211,7 +1280,7 @@ function showPaytable() {
     table,
     el("p", "mm-dialog-text", "Every frog collects the touching gems of its own colour, hopping on from each one it takes. Wilds and feature symbols next to its path are collected too."),
     features,
-    el("p", "mm-dialog-text", "When no frog can move any more, frogs side by side may trade places. When two frogs want the same partner, they argue and new symbols land around them."),
+    el("p", "mm-dialog-text", "When no frog can move any more, frogs side by side may trade places. When two frogs want the same partner, they riot and take every symbol that is not a gem, then all frogs land somewhere new and new symbols fall in."),
     el("p", "mm-dialog-text", "Every gem collected fills the meter. A full meter opens " + setup.chests + " chests with feature symbols."),
   );
   backdrop.appendChild(dialog);

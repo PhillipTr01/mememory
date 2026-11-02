@@ -21,12 +21,13 @@ const crypto = require("crypto");
  *  - 🪰 flies: the empty spots fill with flies - a frog can cross a fly once (it eats it);
  *  - 🪨 rock: a rock falls on a spot - the 3x3 spots around it get new symbols, a frog hit jumps to a free spot;
  *  - 😈 curse: the frog turns evil (one per spin): it grows to 2x2, eats the frogs next to it (on its turn and
- *    after every hop) and collects their colours from then on;
+ *    after every hop) and collects their colours from then on; it licks up what it collects next to its body and
+ *    crosses the empty water;
  *  - 🌕 moon: the bonus symbol.
  * When no frog can move any more, the frogs side by side meet: each pair asks for a trade by chance
  * (TRADE_CHANCE, once until one of them moves again) and swaps spots when that lets one of them move on - several
- * pairs at once. When two frogs ask the same frog, they argue instead: the spots around the
- * two that stop them (amber of another colour, an empty spot, a fly) get new symbols - room to move on.
+ * pairs at once. When two frogs ask the same frog, they riot instead: they collect every symbol on the pond that is
+ * not a gem (the features act), every frog but an evil one lands on a new spot and new symbols fill the pond.
  * Then the frogs move again - and so on while they find something to collect (or a meeting changes the pond).
  *
  * The feature meter: every amber collected counts. A full meter (METER) gives three chests, each a random feature
@@ -75,7 +76,7 @@ const FEATURES = [
 const FEATURE_IDS = FEATURES.map((feature) => feature.id);
 // How likely a new spot is each colour's amber or each feature (weights) - the pond is always full (empty: never; a
 // spot is only emptied by a frog). The free spins: far more suns, wilds and lotuses
-const LANDING = { empty: 0, amber: 13, coin: 1.3, sun: 0.4, wild: 1.5, lotus: 0.35, rain: 0.35, swirl: 0.35, flies: 0.35, rock: 0.35, evil: 0.25, moon: 0.7 };
+const LANDING = { empty: 0, amber: 13, coin: 1.3, sun: 0.4, wild: 1.5, lotus: 0.35, rain: 0.35, swirl: 0.35, flies: 0.35, rock: 0.35, evil: 0.15, moon: 0.6 };
 const FREE_LANDING = { ...LANDING, sun: 7, wild: 6, lotus: 1.2, moon: 0.8 };
 // What a chest holds (weights)
 const CHEST = { coin: 34, sun: 24, wild: 10, lotus: 6, rain: 8, swirl: 8, flies: 8, rock: 8, evil: 0, moon: 2 };
@@ -89,9 +90,9 @@ const SYMBOLS = [
 ];
 const BY_ID = new Map(SYMBOLS.map((symbol) => [symbol.id, symbol]));
 
-// The pays times this: the payback 96.8% (as the slots). Simulated (3.2 million whole spins): base game 46.6%, free
-// spins about every 217 spins at 109.3x - 96.8% (+-0.5%) in all
-const PAY_SCALE = 0.792;
+// The pays times this: the payback 96.8% (as the slots). Simulated (6.4 million whole spins): base game 47.9%, free
+// spins about every 250 spins at 123.6x - 96.8% (+-0.4%) in all
+const PAY_SCALE = 0.75;
 const RTP = 0.968;
 const MOON_TRIGGER = 3; // this many 🌕 collected start the free spins ...
 const FREE_SPINS = 8; // ... this many of them
@@ -100,12 +101,12 @@ const MAX_FREE_SPINS = 30;
 const MAX_WIN = 10000; // a spin (and its free spins) never pays more than this many times the bet
 const TRADE_CHANCE = 50; // in 100: two frogs side by side ask for a trade
 const MAX_STEPS = 60; // (a safety net - the frogs never move this often in a spin)
-// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 109.8x on
+// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 124.1x on
 // average (simulated), so about 95% of it comes back
-const BUY_PRICE = 116;
-const BUY_RTP = 0.946;
+const BUY_PRICE = 131;
+const BUY_RTP = 0.947;
 // How far one spin's win strays from its average, in bets (simulated) - for the RTP monitor
-const SPIN_SPREAD = 9.6;
+const SPIN_SPREAD = 10.3;
 
 function pick(weights, randomInt) {
   const tickets = weights.map((w) => Math.round(w * 1000));
@@ -197,12 +198,34 @@ function moveFrog(grid, frogs, family, randomInt = null) {
     }
     others = occupied(frogs, family);
   };
-  eat(0);
   const trail = new Set(bodyOf(at[0], at[1], n).map((cell) => key(...cell)));
   const path = [at];
   const cells = [[]];
   const got = [];
   const swirls = [];
+  // (an evil frog licks up what it collects next to its body with its tongue - before it hops and after every hop)
+  const licks = [];
+  const lick = (after) => {
+    if (!evil) return;
+    const body = new Set(bodyOf(at[0], at[1], n).map((cell) => key(...cell)));
+    const taken = [];
+    for (const [bc, br] of bodyOf(at[0], at[1], n))
+      for (const [dc, dr] of NEIGHBOURS) {
+        const [c, r] = [bc + dc, br + dr];
+        if (c < 0 || r < 0 || c >= size || r >= grid[c].length || body.has(key(c, r)) || others.has(key(c, r)) || taken.some((cell) => key(...cell) === key(c, r))) continue;
+        if (!takes(grid[c][r])) continue;
+        got.push(grid[c][r]);
+        if (grid[c][r] === "swirl" && randomInt) {
+          grid[c][r] = null;
+          swirls.push({ after: after, ...swirlGrid(grid, family, colours, randomInt) });
+        }
+        grid[c][r] = null;
+        taken.push([c, r]);
+      }
+    if (taken.length) licks.push({ after: after, cells: taken });
+  };
+  eat(0);
+  lick(0);
   // The spots entered from one spot to the next (the whole body for a small frog)
   const entered = (from, to) => {
     const old = new Set(bodyOf(from[0], from[1], n).map((cell) => key(...cell)));
@@ -222,10 +245,13 @@ function moveFrog(grid, frogs, family, randomInt = null) {
         const into = entered(current, next);
         if (into.some((cell) => others.has(key(...cell)))) continue;
         // (on from there: its trail and the flies - never amber of another colour or an empty spot)
-        const open = into.every(([c, r]) => trail.has(key(c, r)) || grid[c][r] === "fly" || takes(grid[c][r]));
+        // (an evil frog is big: it crosses the empty water too)
+        const open = into.every(([c, r]) => trail.has(key(c, r)) || grid[c][r] === "fly" || takes(grid[c][r]) || (evil && grid[c][r] == null));
         if (!open) continue;
         from.set(k, current);
-        if (into.some(([c, r]) => !trail.has(key(c, r)) && takes(grid[c][r]))) {
+        // (an evil frog also hunts: a hop that brings another frog next to it is worth it)
+        const hunts = evil && FAMILY_IDS.some((f) => f !== family && frogs[f] && touching([...next, n], frogs[f]));
+        if (hunts || into.some(([c, r]) => !trail.has(key(c, r)) && takes(grid[c][r]))) {
           target = next;
           break;
         }
@@ -255,12 +281,13 @@ function moveFrog(grid, frogs, family, randomInt = null) {
       previous = step;
       at = step;
       eat(path.length - 1);
+      lick(path.length - 1);
     });
     at = target;
   }
   frogs[family] = evil ? [at[0], at[1], n, colours] : at;
   const amber = got.filter((id) => colours.includes(id) || id === "wild").length;
-  return { family: family, path: path, cells: cells, got: got, amber: amber, eats: eats, swirls: swirls, end: at };
+  return { family: family, path: path, cells: cells, got: got, amber: amber, eats: eats, swirls: swirls, licks: licks, end: at };
 }
 
 // The swirl: the gems of one other colour on the pond (at random) turn into the frog's -> {from, cells}
@@ -417,7 +444,7 @@ function act(id, family, grid, frogs, state, randomInt, landing, chest) {
  * Frogs side by side meet (the grid and the frogs change in place; `used`: the pairs that met and have not moved
  * since) -> [{id: "trade", frogs: [a, b]} | {id: "argue", frogs: [a, b], over: c, cells: [[c, r], ...]}]
  */
-function meet(grid, frogs, randomInt, landing, used) {
+function meet(grid, frogs, randomInt, landing, used, state = null) {
   const size = grid.length;
   const asking = [];
   for (let i = 0; i < FAMILY_IDS.length; i++)
@@ -437,18 +464,52 @@ function meet(grid, frogs, randomInt, landing, used) {
     if (others.length < 2 || busy.has(over)) continue;
     const two = others.slice(0, 2);
     if (two.some((f) => busy.has(f))) continue;
-    const sitting = occupied(frogs);
-    const cells = [];
-    for (const family of two)
-      for (const [dc, dr] of NEIGHBOURS) {
-        const [c, r] = [frogs[family][0] + dc, frogs[family][1] + dr];
-        if (c < 0 || r < 0 || c >= size || r >= size || sitting.has(key(c, r)) || cells.some((cell) => key(...cell) === key(c, r))) continue;
-        if (collects(grid[c][r], family) || grid[c][r] === "wild") continue;
-        grid[c][r] = land(randomInt, landing);
-        cells.push([c, r]);
+    // A riot: the two run over the whole pond and collect every symbol that is not a gem (by turns)
+    const riot = { id: "argue", frogs: two, over: over, collected: [], effects: [], pay: 0 };
+    grid.forEach((column, c) =>
+      column.forEach((id, r) => {
+        if (id == null || FAMILY_IDS.includes(id)) return;
+        const family = two[riot.collected.length % 2];
+        riot.collected.push({ at: [c, r], id: id, family: family });
+        grid[c][r] = null;
+      }),
+    );
+    // (the firefly is a gem of the frog that gets it)
+    riot.collected.filter((one) => one.id === "wild").forEach((one) => (riot.pay += AMBER_VALUES[state ? state.levels[one.family] : 0] * PAY_SCALE));
+    // Then every frog lands on a spot of its own (an evil one stays) ...
+    const fixed = new Set(Object.values(frogs).filter(isEvil).flatMap((spot) => bodyOf(spot[0], spot[1], sizeOf(spot)).map((cell) => key(...cell))));
+    riot.spots = {};
+    for (const family of FAMILY_IDS) {
+      if (!frogs[family] || isEvil(frogs[family])) continue;
+      const free = [];
+      const any = [];
+      grid.forEach((column, c) =>
+        column.forEach((id, r) => {
+          if (fixed.has(key(c, r))) return;
+          any.push([c, r]);
+          if (id == null) free.push([c, r]);
+        }),
+      );
+      const spots = free.length ? free : any;
+      const to = spots[randomInt(spots.length)];
+      grid[to[0]][to[1]] = null;
+      fixed.add(key(...to));
+      frogs[family] = to;
+      riot.spots[family] = to.slice();
+    }
+    // ... new symbols drop into the empty spots, and what the two collected acts
+    riot.refill = emptySpots(grid, frogs).map(([c, r]) => ({ at: [c, r], id: (grid[c][r] = land(randomInt, landing)) }));
+    if (state)
+      for (const one of riot.collected) {
+        if (one.id === "wild" || one.id === "fly" || !isFeature(one.id)) continue;
+        const effect = act(one.id, one.family, grid, frogs, state, randomInt, landing, false);
+        if (!effect) continue;
+        if (effect.pay) riot.pay += effect.pay;
+        riot.effects.push(effect);
       }
-    [over, ...two].forEach((f) => busy.add(f));
-    meets.push({ id: "argue", frogs: two, over: over, cells: cells });
+    meets.push(riot);
+    // (everybody has a new spot: no trades after a riot)
+    return meets;
   }
   // The others trade, but only when it helps: they swap spots and one of them can move on from there
   const canMove = (swapped, family) => moveFrog(grid.map((column) => column.slice()), { ...swapped }, family).path.length > 1;
@@ -489,7 +550,7 @@ function play(grid, frogs, randomInt, state, baseLanding = LANDING) {
     for (const family of FAMILY_IDS) {
       if (!frogs[family]) continue;
       const move = moveFrog(grid, frogs, family, randomInt);
-      if (move.path.length < 2 && !move.eats.length) continue;
+      if (move.path.length < 2 && !move.eats.length && !move.licks.length) continue;
       // (it moved: it may meet the others again)
       [...used].filter((pair) => pair.split(":").includes(family)).forEach((pair) => used.delete(pair));
       move.level = state.levels[family];
@@ -517,7 +578,10 @@ function play(grid, frogs, randomInt, state, baseLanding = LANDING) {
       step.effects.push(effect);
     }
     // (the frogs meet only when none of them can move any more: then every pair side by side may trade)
-    if (!step.moves.length) step.meets = meet(grid, frogs, randomInt, landing, used);
+    if (!step.moves.length) {
+      step.meets = meet(grid, frogs, randomInt, landing, used, state);
+      step.meets.forEach((one) => (step.pay += one.pay || 0));
+    }
     if (!step.moves.length && !step.meets.length) break;
     pay += step.pay;
     step.levels = { ...state.levels };

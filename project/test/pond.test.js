@@ -75,14 +75,14 @@ test("pond: the frogs move while they find something - the pond stays square (6x
     result.steps.forEach((step) => {
       pay += step.pay;
       assert.ok(step.moves.length > 0 || step.meets.length > 0, "a step moves a frog or changes the pond");
-      const parts = step.moves.reduce((sum, move) => sum + move.pay, 0) + step.effects.reduce((sum, effect) => sum + (effect.pay || 0), 0);
+      const parts = step.moves.reduce((sum, move) => sum + move.pay, 0) + step.effects.reduce((sum, effect) => sum + (effect.pay || 0), 0) + step.meets.reduce((sum, one) => sum + (one.pay || 0), 0);
       assert.ok(Math.abs(parts - step.pay) < 1e-9, "the moves and the coins");
       step.moves.forEach((move) => move.got.every((id) => id === move.family || !pd.FAMILY_IDS.includes(id)) && assert.ok(Math.abs(move.pay - move.amber * pd.AMBER_VALUES[move.level] * pd.PAY_SCALE) < 1e-9));
       assert.ok(step.meter >= 0 && step.meter < pd.METER);
       Object.values(step.levels).forEach((level) => assert.ok(level >= 0 && level <= pd.MAX_LEVEL));
       step.effects.forEach((effect) => (seen[effect.id] = (seen[effect.id] || 0) + 1));
       if (step.chests.length) seen.chests++;
-      moons += step.effects.filter((effect) => effect.id === "moon").length;
+      moons += [...step.effects, ...step.meets.flatMap((one) => one.effects || [])].filter((effect) => effect.id === "moon").length;
     });
     assert.strictEqual(state.moons, moons);
     assert.ok(Math.abs(result.pay - pay) < 1e-9);
@@ -147,7 +147,7 @@ test("pond: the features - a coin pays, the sun upgrades, the swirl turns a colo
   assert.strictEqual(pd.act("wild", "leaf", fresh(), frogs, state, random, pd.LANDING, false), null, "a collected wild was its frog's amber");
 });
 
-test("pond: frogs side by side may trade spots by chance when it helps; two frogs asking the same one argue and get new symbols around them", () => {
+test("pond: frogs side by side may trade spots by chance when it helps; two frogs asking the same one riot over the pond", () => {
   const yes = () => 0; // (every pair asks)
   const no = (max) => max - 1; // (no pair asks)
   const pond = () => Array.from({ length: 6 }, () => Array(6).fill("shell"));
@@ -164,18 +164,24 @@ test("pond: frogs side by side may trade spots by chance when it helps; two frog
   used = new Set();
   assert.deepStrictEqual(pd.meet(helps, frogs, yes, pd.LANDING, used), [{ id: "trade", frogs: ["leaf", "berry"] }]);
   assert.deepStrictEqual([frogs.leaf, frogs.berry], [[1, 0], [0, 0]]);
-  // Two frogs ask the same one: they argue, the spots around them that stop them get new symbols
+  // Two frogs ask the same one: they riot - every symbol that is not a gem is collected, the frogs land on new
+  // spots, new symbols fill the pond
   frogs = { leaf: [1, 1], berry: [0, 1], bug: [2, 1], shell: [5, 5] };
   const grid = pond();
   Object.values(frogs).forEach(([c, r]) => (grid[c][r] = null));
-  grid[0][0] = "berry";
-  const meets = pd.meet(grid, frogs, yes, pd.LANDING, new Set());
+  grid[4][4] = "coin2";
+  grid[3][0] = "wild";
+  grid[0][4] = "fly";
+  const state = pd.newState();
+  const meets = pd.meet(grid, frogs, yes, pd.LANDING, new Set(), state);
   assert.strictEqual(meets.length, 1);
-  assert.deepStrictEqual([meets[0].id, meets[0].frogs, meets[0].over], ["argue", ["berry", "bug"], "leaf"]);
-  const cells = meets[0].cells.map((cell) => cell.join(":")).sort();
-  // (around the red frog: its own amber stays; the frogs' spots stay)
-  assert.deepStrictEqual(cells, ["0:2", "2:0", "2:2", "3:1"]);
-  assert.deepStrictEqual([frogs.leaf, frogs.berry, frogs.bug], [[1, 1], [0, 1], [2, 1]], "nobody trades");
+  const riot = meets[0];
+  assert.deepStrictEqual([riot.id, riot.frogs, riot.over], ["argue", ["berry", "bug"], "leaf"]);
+  assert.deepStrictEqual(riot.collected.map((one) => one.id).sort(), ["coin2", "fly", "wild"]);
+  assert.ok(Math.abs(riot.pay - (pd.COIN_VALUES[2] + pd.AMBER_VALUES[0]) * pd.PAY_SCALE) < 1e-9, "the coin and the firefly");
+  assert.deepStrictEqual(Object.keys(riot.spots).sort(), ["berry", "bug", "leaf", "shell"]);
+  Object.values(frogs).forEach(([c, r]) => assert.strictEqual(grid[c][r], null, "a frog's spot is empty"));
+  assert.strictEqual(grid.flat().filter((id) => id == null).length, 4, "new symbols everywhere else");
   // In a spin: a step with only a meeting, then the frogs try again
   const random = rng(21);
   let met = 0;
@@ -308,15 +314,15 @@ test("pond: pays back about 96.8% - the base game (seeded spins) and the free sp
     base += pd.play(grid, frogs, random, state).pay;
     if (state.moons >= pd.MOON_TRIGGER) triggers++;
   }
-  // (the base game: 46.6%)
-  assert.ok(Math.abs(base / N - 0.466) < 0.02, `base game ${base / N}`);
-  // (the free spins: about 1 in 217 spins)
-  assert.ok(Math.abs(N / triggers - 217) < 45, `free spins every ${N / triggers}`);
+  // (the base game: 47.9%)
+  assert.ok(Math.abs(base / N - 0.479) < 0.02, `base game ${base / N}`);
+  // (the free spins: about 1 in 250 spins)
+  assert.ok(Math.abs(N / triggers - 250) < 45, `free spins every ${N / triggers}`);
   let free = 0;
   const G = 2000;
   for (let g = 0; g < G; g++) free += pd.freeGame(pd.FREE_SPINS, random).x;
-  // (about 109.3x - its spread over 2,000 games about 2x)
-  assert.ok(Math.abs(free / G - 109.3) < 8, `free spins ${free / G}`);
+  // (about 123.6x - its spread over 2,000 games about 2.5x)
+  assert.ok(Math.abs(free / G - 123.6) < 9, `free spins ${free / G}`);
   assert.strictEqual(pd.RTP, 0.968);
 });
 
@@ -400,31 +406,31 @@ test("pond: a bonus buy - the free spins wait for the click, are paid when playe
   try {
     sockets.forEach((socket) => socket.close());
     await h.wait(50);
-    h.setCoins("mia", 50000);
+    h.setCoins("mia", 60000);
     const page = client("mia");
     await h.once(page, "pdSetup");
     const result = h.once(page, "pdResult");
     page.emit("spin", { bet: 100, buy: true });
     const spin = await result;
     assert.ok(spin.bonus && spin.id && spin.frogs && spin.lastFrogs);
-    assert.strictEqual(h.coinsOf("mia"), 50000 - 100 * pd.BUY_PRICE, "the price of the buy");
+    assert.strictEqual(h.coinsOf("mia"), 60000 - 100 * pd.BUY_PRICE, "the price of the buy");
     // One spin at a time while free spins wait
     const busy = h.once(page, "pdError");
     page.emit("spin", { bet: 100 });
     assert.match(await busy, /free spins first/);
     await h.wait(100);
-    assert.strictEqual(h.coinsOf("mia"), 50000 - 100 * pd.BUY_PRICE, "nothing paid before the start");
+    assert.strictEqual(h.coinsOf("mia"), 60000 - 100 * pd.BUY_PRICE, "nothing paid before the start");
     page.emit("bonusStart", { id: spin.id });
     page.emit("bonusProgress", { id: spin.id, shown: 1 });
     await h.wait(30);
     page.close();
     await h.wait(spin.bonus.freeSpins.length * 60 + 300);
-    assert.strictEqual(h.coinsOf("mia"), 50000 - 100 * pd.BUY_PRICE, "nothing paid while away");
+    assert.strictEqual(h.coinsOf("mia"), 60000 - 100 * pd.BUY_PRICE, "nothing paid while away");
     const again = client("mia");
     const resumed = await h.once(again, "pdResume");
     assert.deepStrictEqual([resumed.id, resumed.shown, resumed.started, resumed.win], [spin.id, 1, true, spin.win]);
     await h.wait(resumed.payIn + 200);
-    assert.strictEqual(h.coinsOf("mia"), 50000 - 100 * pd.BUY_PRICE + spin.win);
+    assert.strictEqual(h.coinsOf("mia"), 60000 - 100 * pd.BUY_PRICE + spin.win);
     again.close();
   } finally {
     Object.assign(config, before);
