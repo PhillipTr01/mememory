@@ -88,8 +88,13 @@
 }
 
 /* An amber: its icon, big and plain like the other slots' symbols; an upgraded one glows in its colour */
+/* (no filters on the pond: drawn over and over while the frogs hop; the gem's shadow is in its picture) */
 .pd-amber .pd-sym-icon {
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 calc(var(--glow, 0) * 1px) var(--fam));
+  filter: none;
+}
+
+.pd-amber[data-level]:not([data-level="0"]) .pd-sym-icon {
+  filter: drop-shadow(0 0 calc(var(--glow, 0) * 1px) var(--fam));
 }
 
 .pd-amber[data-level="1"], .pd-amber[data-level="2"] { --glow: 3; }
@@ -138,7 +143,7 @@
   position: relative;
   font-size: calc(var(--cell) * 0.68);
   line-height: 1;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.5);
   transition: transform 0.15s;
 }
 
@@ -162,7 +167,6 @@
   /* (of the spot: a padding in % would be of the whole pond) */
   box-sizing: border-box;
   padding: calc(var(--cell) * 0.05);
-  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.55));
   /* (its own layer: a hop moves it without drawing the pond again) */
   will-change: transform;
 }
@@ -171,7 +175,15 @@
 /* A frog's turn: it lights up in its colour */
 .pd-board-frog.moving {
   z-index: 1;
-  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 6px var(--fam));
+  /* (its glow: a ring in the picture, see FROG_SVG) */
+}
+
+.pd-frog-glow {
+  opacity: 0;
+}
+
+.pd-board-frog.moving .pd-frog-glow {
+  opacity: 0.7;
 }
 
 /* A note over the pond: a win that floats up, a frog's bubble */
@@ -473,23 +485,15 @@
 }
 
 /* Skip the rest of the free spins */
+/* (the look of the other buttons: sl-paytable-btn) */
 .pd-skip {
-  margin-top: 0.3rem;
-  padding: 0.15rem 0.8rem;
-  border-radius: 999px;
-  border: 1px solid rgba(165, 180, 252, 0.6);
-  background: rgba(49, 46, 129, 0.6);
-  color: #e0e7ff;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.pd-skip:hover:not(:disabled) {
-  background: rgba(79, 70, 229, 0.7);
+  margin-top: 0.4rem;
+  height: 32px;
 }
 
 .pd-skip:disabled {
   opacity: 0.5;
+  transform: none;
 }
 
 .pd-skip[hidden] {

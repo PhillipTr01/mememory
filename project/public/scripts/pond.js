@@ -295,9 +295,9 @@ function renderSize(n) {
 /* ---------- The frogs, the meter, the moons ---------- */
 
 // A frog in its colour (--fam)
-var FROG_SVG = '<svg viewBox="9 8 30 30" aria-hidden="true"><ellipse cx="24" cy="26" rx="13" ry="10.5" fill="var(--fam)" /><circle cx="16" cy="15" r="5.8" fill="var(--fam)" /><circle cx="32" cy="15" r="5.8" fill="var(--fam)" /><circle cx="16" cy="15" r="3.2" fill="#fff" /><circle cx="32" cy="15" r="3.2" fill="#fff" /><circle cx="16.7" cy="15.5" r="1.7" fill="#111827" /><circle cx="32.7" cy="15.5" r="1.7" fill="#111827" /><path d="M17 27.5 Q24 33 31 27.5" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2" stroke-linecap="round" /></svg>';
+var FROG_SVG = '<svg viewBox="9 8 30 30" aria-hidden="true"><circle class="pd-frog-glow" cx="24" cy="23" r="14.5" fill="var(--fam)" fill-opacity=".45" /><ellipse cx="24" cy="36.6" rx="11.5" ry="1.9" fill="#000" fill-opacity=".35" /><ellipse cx="24" cy="26" rx="13" ry="10.5" fill="var(--fam)" /><circle cx="16" cy="15" r="5.8" fill="var(--fam)" /><circle cx="32" cy="15" r="5.8" fill="var(--fam)" /><circle cx="16" cy="15" r="3.2" fill="#fff" /><circle cx="32" cy="15" r="3.2" fill="#fff" /><circle cx="16.7" cy="15.5" r="1.7" fill="#111827" /><circle cx="32.7" cy="15.5" r="1.7" fill="#111827" /><path d="M17 27.5 Q24 33 31 27.5" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2" stroke-linecap="round" /></svg>';
 // The gem of a colour (--fam): one shape, the facets lighter and darker
-var GEM_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 9h20l10 11-20 22L4 20z" fill="var(--fam)" /><path d="M14 9h20l-4 11H18z" fill="#fff" fill-opacity=".38" /><path d="M4 20 14 9l4 11z" fill="#fff" fill-opacity=".2" /><path d="M34 9l10 11H30z" fill="#000" fill-opacity=".12" /><path d="M4 20h14l6 22z" fill="#fff" fill-opacity=".12" /><path d="M30 20h14L24 42z" fill="#000" fill-opacity=".22" /><path d="M17 12.5h6" stroke="#fff" stroke-opacity=".8" stroke-width="2" stroke-linecap="round" /></svg>';
+var GEM_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 11.5h20l10 11-20 22L4 22.5z" fill="#000" fill-opacity=".3" /><path d="M14 9h20l10 11-20 22L4 20z" fill="var(--fam)" /><path d="M14 9h20l-4 11H18z" fill="#fff" fill-opacity=".38" /><path d="M4 20 14 9l4 11z" fill="#fff" fill-opacity=".2" /><path d="M34 9l10 11H30z" fill="#000" fill-opacity=".12" /><path d="M4 20h14l6 22z" fill="#fff" fill-opacity=".12" /><path d="M30 20h14L24 42z" fill="#000" fill-opacity=".22" /><path d="M17 12.5h6" stroke="#fff" stroke-opacity=".8" stroke-width="2" stroke-linecap="round" /></svg>';
 var frogBoxes = {};
 function renderFrogs() {
   var box = document.getElementById("pdFrogs");
@@ -374,15 +374,18 @@ function frogName(family) {
   return familyInfo(family).frog.toLowerCase();
 }
 
-// A frog moves to a spot of the pond (`time`: an arc there, a little jump up in the middle)
-function jumpFrog(frog, spot, time) {
-  var size = boardSize() / shown.length;
-  var from = frogTransform(frog);
-  frog.dataset.x = spot[0] * size;
-  frog.dataset.y = spot[1] * size;
-  var to = frogTransform(frog);
-  frog.style.transform = to;
-  if (!skipping) frog.animate([{ transform: from + " scale(1)" }, { transform: from + " translateY(-8%) scale(1.3)", offset: 0.4 }, { transform: to + " scale(1)" }], { duration: time, easing: "ease-in-out" });
+// A frog moves to a spot of the pond (`time`: an arc there, a little jump up in the middle; `size`: of a spot)
+function jumpFrog(frog, spot, time, size) {
+  size = size || boardSize() / shown.length;
+  var [x0, y0] = [Number(frog.dataset.x), Number(frog.dataset.y)];
+  var [x1, y1] = [spot[0] * size, spot[1] * size];
+  frog.dataset.x = x1;
+  frog.dataset.y = y1;
+  frog.style.transform = frogTransform(frog);
+  if (skipping) return;
+  // (halfway: up in the air and a bit bigger)
+  var at = (x, y, scale) => ({ transform: "translate(" + x + "px, " + y + "px) scale(" + scale + ")" });
+  frog.animate([{ ...at(x0, y0, 1), easing: "ease-out" }, { ...at((x0 + x1) / 2, (y0 + y1) / 2 - size * 0.25, 1.2), easing: "ease-in" }, at(x1, y1, 1)], { duration: time });
 }
 
 // A short note over a spot of the pond that floats up (a win, a bubble of a frog)
@@ -409,9 +412,11 @@ async function hopFrog(move, bet, win, hop) {
   detail.innerText = "🐸 The " + name + " hops";
   await wait(setup.rules.turnTime);
   var amberCount = 0;
+  var size = boardSize() / shown.length;
   for (var i = 1; i < move.path.length; i++) {
     var spot = move.path[i];
-    jumpFrog(frog, spot, hop * 0.8);
+    // (one hop flows into the next: no stop between them)
+    jumpFrog(frog, spot, hop, size);
     await wait(hop * 0.7);
     var id = shown[spot[0]][spot[1]];
     var collected = id == move.family || id == "wild" || id == "fly" || (id != null && symbolOf(id) && symbolOf(id).feature);
