@@ -183,12 +183,11 @@
   left: 0;
   padding: 4%;
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.55));
-  transition: transform 0.25s ease-out;
 }
 
+/* (no transition: the frogs are drawn anew with the pond, a transition would slide them in from the corner) */
 .pd-board-frog.moving {
   z-index: 1;
-  transition: none;
 }
 
 .pd-board-frog svg {
