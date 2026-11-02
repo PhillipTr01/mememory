@@ -180,7 +180,9 @@ function fillCell(cell, id, bet) {
     cell.style.setProperty("--fam", familyInfo(symbol.family).color);
     var level = levelsShown[symbol.family] || 0;
     cell.dataset.level = level;
-    cell.append(el("span", "pd-sym-icon", symbol.icon));
+    var gem = el("span", "pd-sym-icon pd-gem");
+    gem.innerHTML = GEM_SVG;
+    cell.append(gem);
     if (level > 0) cell.append(el("span", "pd-sym-level", "★" + level));
     return;
   }
@@ -294,6 +296,8 @@ function renderSize(n) {
 
 // A frog in its colour (--fam)
 var FROG_SVG = '<svg viewBox="9 8 30 30" aria-hidden="true"><ellipse cx="24" cy="26" rx="13" ry="10.5" fill="var(--fam)" /><circle cx="16" cy="15" r="5.8" fill="var(--fam)" /><circle cx="32" cy="15" r="5.8" fill="var(--fam)" /><circle cx="16" cy="15" r="3.2" fill="#fff" /><circle cx="32" cy="15" r="3.2" fill="#fff" /><circle cx="16.7" cy="15.5" r="1.7" fill="#111827" /><circle cx="32.7" cy="15.5" r="1.7" fill="#111827" /><path d="M17 27.5 Q24 33 31 27.5" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2" stroke-linecap="round" /></svg>';
+// The gem of a colour (--fam): one shape, the facets lighter and darker
+var GEM_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 9h20l10 11-20 22L4 20z" fill="var(--fam)" /><path d="M14 9h20l-4 11H18z" fill="#fff" fill-opacity=".38" /><path d="M4 20 14 9l4 11z" fill="#fff" fill-opacity=".2" /><path d="M34 9l10 11H30z" fill="#000" fill-opacity=".12" /><path d="M4 20h14l6 22z" fill="#fff" fill-opacity=".12" /><path d="M30 20h14L24 42z" fill="#000" fill-opacity=".22" /><path d="M17 12.5h6" stroke="#fff" stroke-opacity=".8" stroke-width="2" stroke-linecap="round" /></svg>';
 var frogBoxes = {};
 function renderFrogs() {
   var box = document.getElementById("pdFrogs");
@@ -305,7 +309,8 @@ function renderFrogs() {
       frog.title = family.frog;
       var face = el("div", "pd-frog-face");
       face.innerHTML = FROG_SVG;
-      var amber = el("div", "pd-frog-amber", family.icon);
+      var amber = el("div", "pd-frog-amber pd-gem");
+      amber.innerHTML = GEM_SVG;
       var value = el("div", "pd-frog-value", "");
       var pips = el("div", "pd-frog-pips");
       for (var i = 0; i < setup.maxLevel; i++) pips.append(el("span", "pd-pip"));
@@ -352,11 +357,11 @@ function resetPanel(levels, meter, moons, bet, inBonus) {
 
 var FEATURE_TEXT = {
   coin: (e) => "🪙 A coin win",
-  sun: (e) => "☀️ The " + familyInfo(e.family).name.toLowerCase() + " is worth more",
+  sun: (e) => "☀️ The " + familyInfo(e.family).name.toLowerCase() + " are worth more",
   wild: (e) => "✨ A firefly lands on the pond",
   lotus: (e) => (e.grew ? "🪷 The pond grows" : "🪷 The pond is as big as it gets"),
   rain: (e) => "🌧️ Rain fills the empty spots",
-  swirl: (e) => (e.from ? "🌀 The " + familyInfo(e.from).name.toLowerCase() + " turns " + familyInfo(e.family).name.split(" ")[0].toLowerCase() : "🌀 Nothing to turn"),
+  swirl: (e) => (e.from ? "🌀 The " + familyInfo(e.from).name.toLowerCase() + " turn " + familyInfo(e.family).name.split(" ")[0].toLowerCase() : "🌀 Nothing to turn"),
   flies: (e) => "🪰 Flies fill the empty spots",
   moon: (e) => "🌕 A full moon",
 };
@@ -418,7 +423,7 @@ async function hopFrog(move, bet, win, hop) {
       if (id == move.family || id == "wild") {
         var amber = setup.amberValues[move.level] * bet;
         amberCount++;
-        detail.innerText = "🐸 The " + name + " collects " + amberCount + " amber";
+        detail.innerText = "🐸 The " + name + " collects " + amberCount + (amberCount == 1 ? " gem" : " gems");
         floatNote(spot, "+" + shortCoins(amber), "pd-note-win", Math.max(700, hop * 2));
         countUp(document.getElementById("pdWinText"), Math.floor(win.amount + amber), hop * 0.3, Math.floor(win.amount));
         win.amount += amber;
@@ -684,7 +689,7 @@ function bonusIntro(result) {
   return new Promise((resolve) => {
     var card = el("div", "pd-intro");
     card.append(el("div", "pd-intro-moons", "🌕🌕🌕"), el("div", "pd-intro-title", "Full Moon"), el("div", "pd-intro-spins", result.bonus.start + " free spins"));
-    card.append(el("p", "pd-intro-text", "The pond size, the meter, the amber levels and the moons you collect stay for all free spins. Every " + setup.free.trigger + " moons give " + setup.free.more + " more free spins."));
+    card.append(el("p", "pd-intro-text", "The pond size, the meter, the gem levels and the moons you collect stay for all free spins. Every " + setup.free.trigger + " moons give " + setup.free.more + " more free spins."));
     var go = el("button", "mm-btn mm-btn-primary pd-intro-go", "Start");
     go.type = "button";
     card.append(go);
@@ -1007,7 +1012,7 @@ function showPaytable() {
   head.append(el("th", "", ""), ...setup.amberValues.map((_, level) => el("th", "", level == 0 ? "Start" : "★" + level)));
   table.append(head);
   var row = el("tr");
-  row.append(el("td", "pd-pays-label", "Amber"), ...setup.amberValues.map((value) => el("td", "", money(value))));
+  row.append(el("td", "pd-pays-label", "Gem"), ...setup.amberValues.map((value) => el("td", "", money(value))));
   table.append(row);
   var coins = setup.symbols.filter((symbol) => symbol.coin != null).map((symbol) => money(symbol.coin));
   var features = el("ul", "pd-feature-list");
@@ -1017,22 +1022,22 @@ function showPaytable() {
     features.append(item);
   };
   line("🪙", "A coin pays " + coins.slice(0, -1).join(", ") + " or " + coins[coins.length - 1] + " right away.");
-  line("☀️", "The sun upgrades the amber of the frog that collects it.");
-  line("✨", "The firefly is wild and counts as amber for every frog.");
+  line("☀️", "The sun upgrades the gems of the frog that collects it.");
+  line("✨", "The firefly is wild and counts as a gem for every frog.");
   line("🪷", "The lotus makes the pond one row and one column bigger.");
   line("🌧️", "Rain fills the empty spots with new symbols.");
-  line("🌀", "The swirl turns the amber of another colour into the colour of its frog.");
+  line("🌀", "The swirl turns the gems of another colour into the colour of its frog.");
   line("🪰", "Flies fill the empty spots, and a frog can cross each fly once by eating it.");
   line("🌕", "Collect " + setup.free.trigger + " full moons in one spin for " + setup.free.spins + " free spins.");
   dialog.append(
     x,
     el("h2", "mm-dialog-title", "Paytable"),
-    el("p", "mm-dialog-text", "What one amber pays with your bet of 🪙 " + formatCoins(bet) + ". The sun upgrades amber up to " + setup.maxLevel + " times."),
+    el("p", "mm-dialog-text", "What one gem pays with your bet of 🪙 " + formatCoins(bet) + ". The sun upgrades gems up to " + setup.maxLevel + " times."),
     table,
-    el("p", "mm-dialog-text", "Every frog collects the touching amber of its own colour, hopping on from each one it takes. Wilds and feature symbols next to its path are collected too."),
+    el("p", "mm-dialog-text", "Every frog collects the touching gems of its own colour, hopping on from each one it takes. Wilds and feature symbols next to its path are collected too."),
     features,
     el("p", "mm-dialog-text", "Two frogs side by side sometimes trade places. When two frogs want the same partner, they argue and new symbols land around them."),
-    el("p", "mm-dialog-text", "Every amber collected fills the meter. A full meter opens " + setup.chests + " chests with feature symbols."),
+    el("p", "mm-dialog-text", "Every gem collected fills the meter. A full meter opens " + setup.chests + " chests with feature symbols."),
   );
   backdrop.appendChild(dialog);
   backdrop.addEventListener("click", (event) => event.target == backdrop && close());

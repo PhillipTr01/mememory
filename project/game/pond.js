@@ -38,12 +38,12 @@ const VERSION = 4;
 const MIN_SIZE = 6;
 const MAX_SIZE = 8;
 
-// The four frogs, the colours of the amber
+// The four frogs, the colours of the amber (on the page: one gem in four colours; the icons for texts)
 const FAMILIES = [
-  { id: "leaf", name: "Green amber", frog: "Green frog", color: "#4ade80", icon: "🍃" },
-  { id: "berry", name: "Red amber", frog: "Red frog", color: "#f87171", icon: "🍓" },
-  { id: "bug", name: "Gold amber", frog: "Gold frog", color: "#facc15", icon: "🐝" },
-  { id: "shell", name: "Blue amber", frog: "Blue frog", color: "#60a5fa", icon: "💧" },
+  { id: "leaf", name: "Green gems", frog: "Green frog", color: "#4ade80", icon: "🟢" },
+  { id: "berry", name: "Red gems", frog: "Red frog", color: "#f87171", icon: "🔴" },
+  { id: "bug", name: "Gold gems", frog: "Gold frog", color: "#facc15", icon: "🟡" },
+  { id: "shell", name: "Blue gems", frog: "Blue frog", color: "#60a5fa", icon: "🔵" },
 ];
 const FAMILY_IDS = FAMILIES.map((family) => family.id);
 // An amber pays this (times the bet, before PAY_SCALE) at level 0 .. 7

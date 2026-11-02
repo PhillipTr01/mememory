@@ -159,7 +159,9 @@
   position: absolute;
   top: 0;
   left: 0;
-  padding: 5%;
+  /* (of the spot: a padding in % would be of the whole pond) */
+  box-sizing: border-box;
+  padding: calc(var(--cell) * 0.05);
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.55));
   /* (its own layer: a hop moves it without drawing the pond again) */
   will-change: transform;
@@ -382,9 +384,22 @@
 
 .pd-frog-amber {
   position: absolute;
-  top: -0.2rem;
-  left: 2.2rem;
-  font-size: 0.75rem;
+  top: -0.25rem;
+  left: 2.1rem;
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+/* The gem: one shape in the colour of its frog */
+.pd-gem svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pd-amber .pd-gem {
+  width: calc(var(--cell) * 0.86);
+  height: calc(var(--cell) * 0.86);
 }
 
 .pd-frog-value {
