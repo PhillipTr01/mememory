@@ -203,6 +203,8 @@ function renderWays(grid) {
   var box = document.getElementById("mwWays");
   box.querySelector(".mw-ways-value").innerText = formatCoins(ways);
   box.classList.toggle("max", setup && ways >= setup.maxWays);
+  // (under every reel: its rows - many rows, many ways)
+  document.getElementById("mwRowCounts").replaceChildren(...grid.map((column) => el("span", "mw-row-count" + (setup && column.length >= setup.rows[1] ? " max" : ""), column.length)));
 }
 
 /*
