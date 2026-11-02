@@ -833,6 +833,12 @@ async function showEnd(result, total) {
 // 3 🌕 collected: the full moon rises before the free spins
 async function moonsShow(result) {
   document.getElementById("pdWinDetail").innerText = result.moons >= setup.free.trigger ? "🌕 The full moon rises!" : "🛒 The free spins";
+  // (a bonus buy: the moons it bought fill up, one after the other)
+  for (var moon = Math.min(result.moons, setup.free.trigger) + 1; moon <= setup.free.trigger; moon++) {
+    setMoons(moon, false);
+    document.getElementById("pdMoons").animate([{ transform: "scale(1)" }, { transform: "scale(1.2)" }, { transform: "scale(1)" }], { duration: 300 });
+    await wait(320);
+  }
   document.getElementById("pdMoons").classList.add("full");
   await wait(1100);
   document.getElementById("pdMoons").classList.remove("full");
