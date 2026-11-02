@@ -147,7 +147,7 @@ test("pond: the features - a coin pays, the sun upgrades, the swirl turns a colo
   assert.strictEqual(pd.act("wild", "leaf", fresh(), frogs, state, random, pd.LANDING, false), null, "a collected wild was its frog's amber");
 });
 
-test("pond: frogs side by side may trade spots by chance when it helps; two frogs asking the same one riot over the pond", () => {
+test("pond: frogs side by side may trade spots by chance when it helps; a third frog that argues makes them riot over the pond", () => {
   const yes = () => 0; // (every pair asks)
   const no = (max) => max - 1; // (no pair asks)
   const pond = () => Array.from({ length: 6 }, () => Array(6).fill("shell"));
@@ -164,8 +164,8 @@ test("pond: frogs side by side may trade spots by chance when it helps; two frog
   used = new Set();
   assert.deepStrictEqual(pd.meet(helps, frogs, yes, pd.LANDING, used), [{ id: "trade", frogs: ["leaf", "berry"] }]);
   assert.deepStrictEqual([frogs.leaf, frogs.berry], [[1, 0], [0, 0]]);
-  // Two frogs ask the same one: they riot - every symbol that is not a gem is collected, the frogs land on new
-  // spots, new symbols fill the pond
+  // Two want to trade and a frog next to them argues: the three riot - every symbol that is not a gem is taken,
+  // they drop back in on new spots, new symbols fill the pond
   frogs = { leaf: [1, 1], berry: [0, 1], bug: [2, 1], shell: [5, 5] };
   const grid = pond();
   Object.values(frogs).forEach(([c, r]) => (grid[c][r] = null));
@@ -176,10 +176,11 @@ test("pond: frogs side by side may trade spots by chance when it helps; two frog
   const meets = pd.meet(grid, frogs, yes, pd.LANDING, new Set(), state);
   assert.strictEqual(meets.length, 1);
   const riot = meets[0];
-  assert.deepStrictEqual([riot.id, riot.frogs, riot.over], ["argue", ["berry", "bug"], "leaf"]);
+  assert.deepStrictEqual([riot.id, riot.frogs, riot.over], ["argue", ["leaf", "berry"], "bug"]);
   assert.deepStrictEqual(riot.collected.map((one) => one.id).sort(), ["coin2", "fly", "wild"]);
   assert.ok(Math.abs(riot.pay - (pd.COIN_VALUES[2] + pd.AMBER_VALUES[0]) * pd.PAY_SCALE) < 1e-9, "the coin and the firefly");
-  assert.deepStrictEqual(Object.keys(riot.spots).sort(), ["berry", "bug", "leaf", "shell"]);
+  assert.deepStrictEqual(Object.keys(riot.spots).sort(), ["berry", "bug", "leaf"], "the blue frog stays");
+  assert.deepStrictEqual(frogs.shell, [5, 5]);
   Object.values(frogs).forEach(([c, r]) => assert.strictEqual(grid[c][r], null, "a frog's spot is empty"));
   assert.strictEqual(grid.flat().filter((id) => id == null).length, 4, "new symbols everywhere else");
   // In a spin: a step with only a meeting, then the frogs try again
@@ -314,15 +315,15 @@ test("pond: pays back about 96.8% - the base game (seeded spins) and the free sp
     base += pd.play(grid, frogs, random, state).pay;
     if (state.moons >= pd.MOON_TRIGGER) triggers++;
   }
-  // (the base game: 47.9%)
-  assert.ok(Math.abs(base / N - 0.479) < 0.02, `base game ${base / N}`);
-  // (the free spins: about 1 in 250 spins)
-  assert.ok(Math.abs(N / triggers - 250) < 45, `free spins every ${N / triggers}`);
+  // (the base game: 46.0%)
+  assert.ok(Math.abs(base / N - 0.46) < 0.02, `base game ${base / N}`);
+  // (the free spins: about 1 in 236 spins)
+  assert.ok(Math.abs(N / triggers - 236) < 45, `free spins every ${N / triggers}`);
   let free = 0;
   const G = 2000;
   for (let g = 0; g < G; g++) free += pd.freeGame(pd.FREE_SPINS, random).x;
-  // (about 123.6x - its spread over 2,000 games about 2.5x)
-  assert.ok(Math.abs(free / G - 123.6) < 9, `free spins ${free / G}`);
+  // (about 119x - its spread over 2,000 games about 2.5x)
+  assert.ok(Math.abs(free / G - 119) < 9, `free spins ${free / G}`);
   assert.strictEqual(pd.RTP, 0.968);
 });
 

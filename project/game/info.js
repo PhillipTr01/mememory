@@ -241,7 +241,7 @@ const GAMES = {
       sections: [
         section("How it works", [
           tile("🐸", "The frogs", "Every frog collects the touching gems of its own colour, hopping on from each one it takes. Wilds and feature symbols next to its path are collected too.", { emoji: pond.FAMILIES.map((family) => family.icon) }),
-          tile("🤝", "Meetings", "When no frog can move any more, frogs side by side may trade places. When two frogs want the same partner, they riot and take every symbol that is not a gem, then all frogs land somewhere new and new symbols fall in.", { emoji: ["🤝", "💢"] }),
+          tile("🤝", "Meetings", "When no frog can move any more, frogs side by side may trade places. Sometimes a third frog argues, and the three riot through the pond, take every symbol that is not a gem and drop back in somewhere new.", { emoji: ["🤝", "💢"] }),
           tile("☀️", "Gem levels", `Each gem pays a coin win. The sun upgrades the gems of its frog up to ${pond.MAX_LEVEL} times, and each step pays more.`, { tags: [["+1 level", "gold"]] }),
           tile("🧰", "Feature meter", `Every gem collected fills the meter. A full meter opens ${pond.CHESTS} chests with random feature symbols.`, { tags: [[pond.METER + " gems", "green"]] }),
           tile("🪷", "The pond", `The pond starts at ${pond.MIN_SIZE}×${pond.MIN_SIZE} and can grow to ${pond.MAX_SIZE}×${pond.MAX_SIZE}.`, { big: `${pond.MAX_SIZE}×${pond.MAX_SIZE}` }),

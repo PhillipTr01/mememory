@@ -621,17 +621,23 @@ async function playMeet(meet, next, bet, win, step, inBonus) {
     await wait(time * 0.1);
     return;
   }
-  detail.innerText = "💢 The " + names + " riot over the pond";
-  [a, b].forEach((family) => {
+  // (two want to trade, a third frog argues: the three riot)
+  var rioters = meet.rioters || [a, b];
+  var third = meet.over;
+  detail.innerText = "💢 The " + frogName(third) + " argues and a riot breaks out";
+  floatNote(frogSpots[a], "🤝", "pd-note-bubble", time * 0.6);
+  floatNote(frogSpots[b], "🤝", "pd-note-bubble", time * 0.6);
+  await wait(time * 0.3);
+  rioters.forEach((family) => {
     floatNote(frogSpots[family], "💢", "pd-note-bubble", time * 0.6);
-    if (!skipping) frogEls[family].animate([{ translate: "0 0" }, { translate: "-6% 0" }, { translate: "6% 0" }, { translate: "-6% 0" }, { translate: "6% 0" }, { translate: "0 0" }], { duration: time * 0.45 });
+    if (!skipping && frogEls[family]) frogEls[family].animate([{ translate: "0 0" }, { translate: "-6% 0" }, { translate: "6% 0" }, { translate: "-6% 0" }, { translate: "6% 0" }, { translate: "0 0" }], { duration: time * 0.45 });
   });
   await wait(time * 0.5);
   var size = boardSize() / shown.length;
   // (a long riot faster: about 3 seconds at most)
   var hop = Math.min(setup.rules.hopTime * 0.5, 3000 / Math.max(1, (meet.collected || []).length));
-  [a, b].forEach((family) => frogEls[family].classList.add("moving"));
-  // (by turns they jump on every symbol that is not a gem and take it; a firefly pays as a gem)
+  rioters.forEach((family) => frogEls[family] && frogEls[family].classList.add("moving"));
+  // They rumble over the pond by turns and take every symbol that is not a gem (a firefly pays as a gem)
   for (var one of meet.collected || []) {
     jumpFrog(frogEls[one.family], one.at, hop, size);
     await wait(hop * 0.8);
@@ -646,13 +652,30 @@ async function playMeet(meet, next, bet, win, step, inBonus) {
     }
     await wait(hop * 0.2);
   }
-  [a, b].forEach((family) => frogEls[family].classList.remove("moving"));
-  // Every frog lands on its new spot ...
-  Object.entries(meet.spots || {}).forEach(([family, spot]) => {
+  // ... run off the pond at the bottom ...
+  var height = boardSize();
+  if (!skipping)
+    await Promise.all(
+      rioters.map((family, i) => {
+        var frog = frogEls[family];
+        if (!frog) return null;
+        return frog.animate([{ transform: frogTransform(frog) }, { transform: "translate(" + frog.dataset.x + "px, " + (height + size) + "px)" }], { duration: 450, delay: i * 90, easing: "ease-in", fill: "forwards" }).finished;
+      }),
+    );
+  rioters.forEach((family) => frogEls[family] && frogEls[family].classList.remove("moving"));
+  // ... and drop back in from the top, each on a new spot
+  rioters.forEach((family, i) => {
+    var frog = frogEls[family];
+    var spot = meet.spots && meet.spots[family];
+    if (!frog || !spot) return;
     frogSpots[family] = spot;
-    if (frogEls[family]) jumpFrog(frogEls[family], spot, time * 0.4, size);
+    frog.getAnimations().forEach((animation) => animation.cancel());
+    frog.dataset.x = spot[0] * size;
+    frog.dataset.y = spot[1] * size;
+    frog.style.transform = frogTransform(frog);
+    if (!skipping) frog.animate([{ transform: "translate(" + frog.dataset.x + "px, " + -size * 1.5 + "px)" }, { transform: frogTransform(frog) }], { duration: 500, delay: i * 120, easing: "cubic-bezier(.3,1.4,.5,1)", fill: "backwards" });
   });
-  await wait(time * 0.45);
+  await wait(500 + rioters.length * 120);
   // ... new symbols fall into the empty spots ...
   (meet.refill || []).forEach(({ at, id }) => {
     var cell = cellAt(at);
@@ -1280,7 +1303,7 @@ function showPaytable() {
     table,
     el("p", "mm-dialog-text", "Every frog collects the touching gems of its own colour, hopping on from each one it takes. Wilds and feature symbols next to its path are collected too."),
     features,
-    el("p", "mm-dialog-text", "When no frog can move any more, frogs side by side may trade places. When two frogs want the same partner, they riot and take every symbol that is not a gem, then all frogs land somewhere new and new symbols fall in."),
+    el("p", "mm-dialog-text", "When no frog can move any more, frogs side by side may trade places. Sometimes a third frog argues, and the three riot through the pond, take every symbol that is not a gem and drop back in somewhere new."),
     el("p", "mm-dialog-text", "Every gem collected fills the meter. A full meter opens " + setup.chests + " chests with feature symbols."),
   );
   backdrop.appendChild(dialog);

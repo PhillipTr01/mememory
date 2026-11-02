@@ -26,8 +26,9 @@ const crypto = require("crypto");
  *  - 🌕 moon: the bonus symbol.
  * When no frog can move any more, the frogs side by side meet: each pair asks for a trade by chance
  * (TRADE_CHANCE, once until one of them moves again) and swaps spots when that lets one of them move on - several
- * pairs at once. When two frogs ask the same frog, they riot instead: they collect every symbol on the pond that is
- * not a gem (the features act), every frog but an evil one lands on a new spot and new symbols fill the pond.
+ * pairs at once. When a frog next to two that want to trade wants to argue (TRADE_CHANCE), the three riot instead:
+ * they take every symbol on the pond that is not a gem (the features act), run off the pond and drop back in on new
+ * spots, and new symbols fill the pond.
  * Then the frogs move again - and so on while they find something to collect (or a meeting changes the pond).
  *
  * The feature meter: every amber collected counts. A full meter (METER) gives three chests, each a random feature
@@ -90,9 +91,9 @@ const SYMBOLS = [
 ];
 const BY_ID = new Map(SYMBOLS.map((symbol) => [symbol.id, symbol]));
 
-// The pays times this: the payback 96.8% (as the slots). Simulated (6.4 million whole spins): base game 47.9%, free
-// spins about every 250 spins at 123.6x - 96.8% (+-0.4%) in all
-const PAY_SCALE = 0.75;
+// The pays times this: the payback 96.8% (as the slots). Simulated (6.4 million whole spins): base game 46.0%, free
+// spins about every 236 spins at 119x - 96.5% (+-0.4%) in all
+const PAY_SCALE = 0.71;
 const RTP = 0.968;
 const MOON_TRIGGER = 3; // this many 🌕 collected start the free spins ...
 const FREE_SPINS = 8; // ... this many of them
@@ -101,12 +102,12 @@ const MAX_FREE_SPINS = 30;
 const MAX_WIN = 10000; // a spin (and its free spins) never pays more than this many times the bet
 const TRADE_CHANCE = 50; // in 100: two frogs side by side ask for a trade
 const MAX_STEPS = 60; // (a safety net - the frogs never move this often in a spin)
-// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 124.1x on
+// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 119.5x on
 // average (simulated), so about 95% of it comes back
-const BUY_PRICE = 131;
-const BUY_RTP = 0.947;
+const BUY_PRICE = 126;
+const BUY_RTP = 0.948;
 // How far one spin's win strays from its average, in bets (simulated) - for the RTP monitor
-const SPIN_SPREAD = 10.3;
+const SPIN_SPREAD = 10.2;
 
 function pick(weights, randomInt) {
   const tickets = weights.map((w) => Math.round(w * 1000));
@@ -458,29 +459,26 @@ function meet(grid, frogs, randomInt, landing, used, state = null) {
     }
   const meets = [];
   const busy = new Set();
-  // Two frogs ask the same one: they argue, the spots around them that stop them get new symbols
-  for (const over of FAMILY_IDS) {
-    const others = asking.filter((pair) => pair.includes(over)).map((pair) => (pair[0] === over ? pair[1] : pair[0]));
-    if (others.length < 2 || busy.has(over)) continue;
-    const two = others.slice(0, 2);
-    if (two.some((f) => busy.has(f))) continue;
-    // A riot: the two run over the whole pond and collect every symbol that is not a gem (by turns)
-    const riot = { id: "argue", frogs: two, over: over, collected: [], effects: [], pay: 0 };
+  // Two frogs want to trade and a frog next to them wants to argue: the three riot - they rumble over the whole pond
+  // and take every symbol that is not a gem (by turns), run off the pond and drop back in from the top on new spots
+  for (const [a, b] of asking) {
+    const third = FAMILY_IDS.find((c) => c !== a && c !== b && frogs[c] && !isEvil(frogs[c]) && (touching(frogs[c], frogs[a]) || touching(frogs[c], frogs[b])) && randomInt(100) < TRADE_CHANCE);
+    if (!third) continue;
+    const rioters = [a, b, third];
+    const riot = { id: "argue", frogs: [a, b], over: third, rioters: rioters, collected: [], effects: [], pay: 0 };
     grid.forEach((column, c) =>
       column.forEach((id, r) => {
         if (id == null || FAMILY_IDS.includes(id)) return;
-        const family = two[riot.collected.length % 2];
-        riot.collected.push({ at: [c, r], id: id, family: family });
+        riot.collected.push({ at: [c, r], id: id, family: rioters[riot.collected.length % 3] });
         grid[c][r] = null;
       }),
     );
     // (the firefly is a gem of the frog that gets it)
     riot.collected.filter((one) => one.id === "wild").forEach((one) => (riot.pay += AMBER_VALUES[state ? state.levels[one.family] : 0] * PAY_SCALE));
-    // Then every frog lands on a spot of its own (an evil one stays) ...
-    const fixed = new Set(Object.values(frogs).filter(isEvil).flatMap((spot) => bodyOf(spot[0], spot[1], sizeOf(spot)).map((cell) => key(...cell))));
+    // They drop back in on spots of their own (the other frogs stay) ...
+    const fixed = new Set(Object.entries(frogs).filter(([f]) => !rioters.includes(f)).flatMap(([, spot]) => bodyOf(spot[0], spot[1], sizeOf(spot)).map((cell) => key(...cell))));
     riot.spots = {};
-    for (const family of FAMILY_IDS) {
-      if (!frogs[family] || isEvil(frogs[family])) continue;
+    for (const family of rioters) {
       const free = [];
       const any = [];
       grid.forEach((column, c) =>
@@ -497,7 +495,7 @@ function meet(grid, frogs, randomInt, landing, used, state = null) {
       frogs[family] = to;
       riot.spots[family] = to.slice();
     }
-    // ... new symbols drop into the empty spots, and what the two collected acts
+    // ... new symbols drop into the empty spots, and what they took acts
     riot.refill = emptySpots(grid, frogs).map(([c, r]) => ({ at: [c, r], id: (grid[c][r] = land(randomInt, landing)) }));
     if (state)
       for (const one of riot.collected) {
@@ -508,7 +506,7 @@ function meet(grid, frogs, randomInt, landing, used, state = null) {
         riot.effects.push(effect);
       }
     meets.push(riot);
-    // (everybody has a new spot: no trades after a riot)
+    // (everybody who rioted has a new spot: no trades after a riot)
     return meets;
   }
   // The others trade, but only when it helps: they swap spots and one of them can move on from there

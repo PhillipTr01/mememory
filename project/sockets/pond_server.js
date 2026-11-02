@@ -44,9 +44,10 @@ module.exports = function (io, options = {}) {
     const licked = step.moves.reduce((sum, move) => sum + (move.licks || []).reduce((n, lick) => n + lick.cells.length, 0), 0);
     return eats * config.POND_MEET * 0.6 + step.effects.filter((effect) => effect.id === "evil" && !effect.none).length * 450 + swirls * config.POND_EFFECT * 0.6 + licked * config.POND_HOP * 0.5;
   };
-  // (a riot: the two jump on every symbol that is not a gem, the frogs land, new symbols fall, the features act)
+  // (a riot: the three jump on every symbol that is not a gem, run off the pond and drop back in, new symbols fall,
+  // the features act)
   const riotTime = (step) =>
-    (step.meets || []).filter((one) => one.id === "argue" && one.collected).reduce((sum, one) => sum + Math.min(one.collected.length * config.POND_HOP * 0.5, 3000) + config.POND_MEET * 0.45 + 650 + (one.effects || []).length * config.POND_EFFECT, 0);
+    (step.meets || []).filter((one) => one.id === "argue" && one.collected).reduce((sum, one) => sum + Math.min(one.collected.length * config.POND_HOP * 0.5, 3000) + config.POND_MEET * 0.3 + 1500 + 650 + (one.effects || []).length * config.POND_EFFECT, 0);
   const walkTime = (move) => config.POND_TURN + Math.min(config.POND_WALK, (move.path.length - 1) * config.POND_HOP);
   const stepTime = (step) =>
     config.POND_STEP + step.moves.reduce((sum, move) => sum + walkTime(move), 0) + step.effects.length * config.POND_EFFECT + (step.chests.length ? config.POND_CHEST_TIME : 0) + (step.meets || []).length * config.POND_MEET + eatTime(step) + riotTime(step);
