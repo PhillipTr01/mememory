@@ -207,6 +207,23 @@
   pointer-events: none;
 }
 
+/* The symbol a frog sets off at the end of a step, over the frog */
+.pd-activation {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: max(2rem, calc(var(--cell) * 0.7));
+  height: max(2rem, calc(var(--cell) * 0.7));
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  border: 3px solid #fde68a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  font-size: max(1.2rem, calc(var(--cell) * 0.42));
+  line-height: 1;
+  pointer-events: none;
+}
+
 /* A falling rock (the rock feature) */
 .pd-falling-rock {
   position: absolute;

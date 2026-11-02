@@ -733,6 +733,7 @@ async function playEffect(effect, step, next, bet, win, inBonus) {
   detail.innerText = (effect.chest ? "🧰 " : "") + FEATURE_TEXT[effect.id](effect);
   var frogBox = frogBoxes[effect.family];
   if (frogBox && !effect.chest) frogBox.frog.animate([{ transform: "scale(1)" }, { transform: "scale(1.08)" }, { transform: "scale(1)" }], { duration: 400 });
+  showActivation(effect);
   if (effect.id == "coin") {
     countUp(document.getElementById("pdWinText"), Math.floor(win.amount + effect.pay * bet), setup.rules.effectTime * 0.5, Math.floor(win.amount));
     win.amount += effect.pay * bet;
@@ -780,6 +781,34 @@ async function rockFalls(effect, bet) {
     frogSpots[jump.family] = jump.to;
     jumpFrog(frogEls[jump.family], jump.to, time * 0.4, size);
   });
+}
+
+// The symbol a frog sets off: it pops up over the frog (a chest's over the frog it is for), the frog lights up
+function showActivation(effect) {
+  var frog = frogEls[effect.family];
+  var spot = frogSpots[effect.family];
+  if (!frog || !spot || skipping) return;
+  var time = setup.rules.effectTime;
+  var icon = effect.id == "coin" ? "🪙" : featureIcon(effect.id);
+  var n = spot[2] || 1;
+  var size = boardSize() / shown.length;
+  var badge = el("div", "pd-activation", icon);
+  badge.style.left = (spot[0] + n / 2) * size + "px";
+  badge.style.top = spot[1] * size + "px";
+  document.querySelector(".pd-frog-layer").append(badge);
+  badge
+    .animate(
+      [
+        { transform: "translate(-50%, -20%) scale(0.3)", opacity: 0 },
+        { transform: "translate(-50%, -75%) scale(1.15)", opacity: 1, offset: 0.25 },
+        { transform: "translate(-50%, -70%) scale(1)", opacity: 1, offset: 0.75 },
+        { transform: "translate(-50%, -90%) scale(1)", opacity: 0 },
+      ],
+      { duration: time, easing: "ease-out", fill: "forwards" },
+    )
+    .finished.then(() => badge.remove());
+  frog.classList.add("moving");
+  setTimeout(() => frog.classList.remove("moving"), time);
 }
 
 function setSpot(spot, id, bet) {
