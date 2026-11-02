@@ -10,6 +10,7 @@ var spinning = false;
 var pausedUntil = 0; // after a spin: the next one only from then on
 var spinWatch = null; // no answer from the server: the spin button comes back
 var activeBonus = null; // the id of the free spins playing on this page
+var skipping = false; // the player skips the rest of the free spins
 var BET_KEY = "pondBet";
 var maxMode = false;
 var PRESET_COUNT = 6;
@@ -39,7 +40,8 @@ function iconOf(id) {
   return symbol ? symbol.icon : "";
 }
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
+// (skipping the free spins: no more waiting)
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, skipping ? 0 : Math.max(0, ms)));
 
 // The note of a win in the best wins (casino_best.js): "9 berry" -> "9 × 🍓", "free spins 12" -> "🌕 12 free spins"
 function pondNote(text) {
@@ -167,10 +169,10 @@ function boardSize() {
 }
 
 var levelsShown = {};
-// The content of a spot: an amber (its colour, its level), a coin (its win), a feature, popcorn or nothing
+// The content of a spot: an amber (its colour, its level), a coin (its win), a feature, a fly or nothing
 function fillCell(cell, id, bet) {
   var symbol = id == null ? null : symbolOf(id);
-  cell.className = "pd-sym" + (symbol == null ? " pd-empty" : symbol.family ? " pd-amber" : symbol.pop ? " pd-pop" : " pd-feature pd-" + symbol.feature);
+  cell.className = "pd-sym" + (symbol == null ? " pd-empty" : symbol.family ? " pd-amber" : symbol.fly ? " pd-fly" : " pd-feature pd-" + symbol.feature);
   cell.replaceChildren();
   cell.style.removeProperty("--fam");
   if (symbol == null) return;
@@ -355,7 +357,7 @@ var FEATURE_TEXT = {
   lotus: (e) => (e.grew ? "🪷 The pond grows" : "🪷 The pond is as big as it gets"),
   rain: (e) => "🌧️ Rain fills the empty spots",
   swirl: (e) => (e.from ? "🌀 The " + familyInfo(e.from).name.toLowerCase() + " turns " + familyInfo(e.family).name.split(" ")[0].toLowerCase() : "🌀 Nothing to turn"),
-  popcorn: (e) => "🍿 Popcorn fills the empty spots",
+  flies: (e) => "🪰 Flies fill the empty spots",
   moon: (e) => "🌕 A full moon",
 };
 
@@ -363,11 +365,11 @@ function cellAt(spot) {
   return cells[spot[0]] && cells[spot[0]][spot[1]];
 }
 
-// A frog hops along its path: it collects what it lands on (the popcorn too, the other colours stay)
-async function hopFrog(move, bet, win) {
+// A frog hops along its path (`hop`: the time of a hop): it collects what it lands on and eats the flies, the other
+// colours stay
+async function hopFrog(move, bet, win, hop) {
   var frog = frogEls[move.family];
   var size = boardSize() / shown.length;
-  var hop = setup.rules.hopTime;
   frog.classList.add("moving");
   for (var i = 1; i < move.path.length; i++) {
     var from = frogTransform(frog);
@@ -376,27 +378,25 @@ async function hopFrog(move, bet, win) {
     frog.dataset.y = spot[1] * size;
     var to = frogTransform(frog);
     frog.style.transform = to;
-    frog.animate([{ transform: from + " scale(1)" }, { transform: from + " scale(1.25)", offset: 0.45 }, { transform: to + " scale(1)" }], { duration: hop * 0.9, easing: "ease-out" });
+    if (!skipping) frog.animate([{ transform: from + " scale(1)" }, { transform: from + " scale(1.25)", offset: 0.45 }, { transform: to + " scale(1)" }], { duration: hop * 0.9, easing: "ease-out" });
     await wait(hop * 0.55);
     var id = shown[spot[0]][spot[1]];
-    var collected = id == move.family || id == "wild" || id == "pop" || (id != null && symbolOf(id) && symbolOf(id).feature);
+    var collected = id == move.family || id == "wild" || id == "fly" || (id != null && symbolOf(id) && symbolOf(id).feature);
     if (collected) {
       var cell = cellAt(spot);
       cell.classList.add("collected");
-      cell.animate([{ transform: "scale(1)", opacity: 1 }, { transform: "scale(0.3)", opacity: 0 }], { duration: hop * 0.4, easing: "ease-in", fill: "forwards" });
+      cell.animate([{ transform: "scale(1)", opacity: 1 }, { transform: "scale(0.3)", opacity: 0 }], { duration: Math.max(60, hop * 0.4), easing: "ease-in", fill: "forwards" });
       shown[spot[0]][spot[1]] = null;
       if (id == move.family || id == "wild") {
-        win.amount += setup.amberValues[move.level] * bet;
-        countUp(document.getElementById("pdWinText"), Math.floor(win.amount), hop * 0.4, Math.floor(win.amount - setup.amberValues[move.level] * bet));
+        var amber = setup.amberValues[move.level] * bet;
+        countUp(document.getElementById("pdWinText"), Math.floor(win.amount + amber), hop * 0.4, Math.floor(win.amount));
+        win.amount += amber;
       }
     }
     await wait(hop * 0.45);
   }
   frog.classList.remove("moving");
   frogSpots[move.family] = move.path[move.path.length - 1];
-  // (the exact win of the move, rounding aside)
-  win.amount = win.base + move.pay * bet;
-  win.base = win.amount;
 }
 
 // The full meter: three chests open, each with a feature symbol
@@ -433,7 +433,6 @@ async function playEffect(effect, step, next, bet, win, inBonus) {
   if (effect.id == "coin") {
     countUp(document.getElementById("pdWinText"), Math.floor(win.amount + effect.pay * bet), setup.rules.effectTime * 0.5, Math.floor(win.amount));
     win.amount += effect.pay * bet;
-    win.base = win.amount;
   } else if (effect.id == "sun") {
     levelsShown[effect.family] = effect.level;
     setLevels(levelsShown, bet);
@@ -446,8 +445,8 @@ async function playEffect(effect, step, next, bet, win, inBonus) {
     (effect.cells || []).forEach((spot) => setSpot(spot, effect.family, bet));
   } else if (effect.id == "rain") {
     (effect.cells || []).forEach((spot) => setSpot(spot, next.grid[spot[0]] ? next.grid[spot[0]][spot[1]] : null, bet));
-  } else if (effect.id == "popcorn") {
-    (effect.cells || []).forEach((spot) => setSpot(spot, "pop", bet));
+  } else if (effect.id == "flies") {
+    (effect.cells || []).forEach((spot) => setSpot(spot, "fly", bet));
   } else if (effect.id == "moon") {
     setMoons(effect.moons, inBonus);
     document.getElementById("pdMoons").animate([{ transform: "scale(1)" }, { transform: "scale(1.2)" }, { transform: "scale(1)" }], { duration: 450 });
@@ -470,17 +469,21 @@ function redrawColour(family, bet) {
 }
 
 /*
- * One step: the frogs hop one after the other, the meter fills (full: the chests), the features act, then the pond
+ * One step: the frogs hop all at once, the meter fills (full: the chests), the features act, then the pond
  * as it is now (`next`: {grid, frogs}). -> the win of the step
  */
 async function playStep(step, next, bet, total, inBonus) {
   var time = setup.rules.stepTime;
-  var win = { amount: total, base: total };
+  var win = { amount: total };
   await wait(time * 0.3);
-  for (var move of step.moves) {
-    document.getElementById("pdWinDetail").innerText = "🐸 " + familyInfo(move.family).frog + (move.amber ? " · " + move.amber + " × " + familyIcon(move.family) : "");
-    await hopFrog(move, bet, win);
-  }
+  // All frogs hop at once (a long walk faster)
+  var longest = Math.max(0, ...step.moves.map((move) => move.path.length - 1));
+  var hop = longest ? Math.min(setup.rules.hopTime, setup.rules.walkTime / longest) : 0;
+  var amber = step.moves.reduce((sum, move) => sum + move.amber, 0);
+  document.getElementById("pdWinDetail").innerText = amber ? "🐸 The frogs collect " + amber + " amber" : "🐸 The frogs hop";
+  await Promise.all(step.moves.map((move) => hopFrog(move, bet, win, hop)));
+  // (the exact win of the moves, rounding aside)
+  win.amount = total + step.moves.reduce((sum, move) => sum + move.pay, 0) * bet;
   setMeter(step.chests.length ? setup.meter : step.meter);
   if (step.chests.length) {
     await openChests(step.chests);
@@ -639,18 +642,36 @@ async function playFree(result, from, before) {
   var total = before + bonus.freeSpins.slice(0, from).reduce((sum, free) => sum + free.pay * bet, 0);
   var counter = document.getElementById("pdFreeCounter");
   counter.hidden = false;
+  var skip = document.getElementById("pdSkip");
+  skip.hidden = false;
+  skip.disabled = false;
   document.getElementById("pdWindow").classList.add("free");
-  for (var n = from; n < bonus.freeSpins.length; n++) {
+  for (var n = from; n < bonus.freeSpins.length && !skipping; n++) {
     var free = bonus.freeSpins[n];
-    document.getElementById("pdFreeCount").innerText = n + 1 + " / " + (free.spins - free.more);
-    resetPanel(free.levels, free.meter, free.collected, bet, true);
-    await dropOut();
-    await showGrid(free.grid, true, { time: setup.rules.freeSpinTime * 0.8, frogs: free.frogs, bet: bet });
-    total += await playSteps(free.steps, free.last, free.lastFrogs, bet, total, true);
-    if (free.more) await moreSpins(free);
+    // (whatever goes wrong on the page: the free spins are skipped to their win, never stuck)
+    try {
+      document.getElementById("pdFreeCount").innerText = n + 1 + " / " + (free.spins - free.more);
+      resetPanel(free.levels, free.meter, free.collected, bet, true);
+      await dropOut();
+      await showGrid(free.grid, true, { time: setup.rules.freeSpinTime * 0.8, frogs: free.frogs, bet: bet });
+      total += await playSteps(free.steps, free.last, free.lastFrogs, bet, total, true);
+      if (free.more) await moreSpins(free);
+    } catch (error) {
+      console.error("[pond] Free spin", n + 1, error);
+      skipping = true;
+      break;
+    }
     socket.emit("bonusProgress", { id: result.id, shown: n + 1 });
     await wait(setup.rules.freeSpinTime * 0.2);
   }
+  // Skipped: the pond of the last free spin, then the win
+  if (skipping) {
+    var last = bonus.freeSpins[bonus.freeSpins.length - 1];
+    if (last) showGrid(last.last, false, { frogs: last.lastFrogs, bet: bet });
+    socket.emit("bonusProgress", { id: result.id, shown: bonus.freeSpins.length });
+    skipping = false;
+  }
+  skip.hidden = true;
   counter.hidden = true;
   document.getElementById("pdWindow").classList.remove("free");
   await bonusEnd(result);
@@ -937,7 +958,7 @@ function showPaytable() {
   line("🪷", "The lotus makes the pond one row and one column bigger.");
   line("🌧️", "Rain fills the empty spots with new symbols.");
   line("🌀", "The swirl turns the amber of another colour into the colour of its frog.");
-  line("🍿", "Popcorn fills the empty spots, and each piece lets a frog cross it once.");
+  line("🪰", "Flies fill the empty spots, and a frog can cross each fly once by eating it.");
   line("🌕", "Collect " + setup.free.trigger + " full moons in one spin for " + setup.free.spins + " free spins.");
   dialog.append(
     x,
@@ -971,6 +992,13 @@ document.getElementById("pdSpin").addEventListener("click", () => {
   spin(false);
 });
 document.getElementById("pdBuy").addEventListener("click", buyBonus);
+// Skip: the rest of the free spins at once, then their win
+document.getElementById("pdSkip").addEventListener("click", () => {
+  if (!activeBonus) return;
+  skipping = true;
+  document.getElementById("pdSkip").disabled = true;
+  stage(null);
+});
 document.getElementById("pdPaytable").addEventListener("click", showPaytable);
 document.getElementById("pdLess").addEventListener("click", () => {
   var list = presets();

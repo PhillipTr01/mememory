@@ -142,7 +142,7 @@
   border: 1px solid rgba(253, 230, 138, 0.35);
 }
 
-/* An empty spot: the water; popcorn: a frog crosses it once */
+/* An empty spot: the water; a fly: a frog crosses it once (it eats it) */
 .pd-empty::after {
   content: "";
   position: absolute;
@@ -151,7 +151,7 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.pd-pop .pd-sym-icon {
+.pd-fly .pd-sym-icon {
   font-size: calc(var(--cell) * 0.4);
   opacity: 0.8;
 }
@@ -444,6 +444,30 @@
 .pd-moons.full {
   border-color: #fde047;
   box-shadow: 0 0 14px rgba(253, 224, 71, 0.6);
+}
+
+/* Skip the rest of the free spins */
+.pd-skip {
+  margin-top: 0.3rem;
+  padding: 0.15rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(165, 180, 252, 0.6);
+  background: rgba(49, 46, 129, 0.6);
+  color: #e0e7ff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pd-skip:hover:not(:disabled) {
+  background: rgba(79, 70, 229, 0.7);
+}
+
+.pd-skip:disabled {
+  opacity: 0.5;
+}
+
+.pd-skip[hidden] {
+  display: none;
 }
 
 /* The chests of a full meter */

@@ -35,8 +35,10 @@ module.exports = function (io, options = {}) {
   const spinTab = new Map();
 
   // How long the page shows the base game: the drop, every step, the big-win show
-  // (a step: the frogs hop one after the other, the features act one by one, the chests open, the pond settles)
-  const stepTime = (step) => config.POND_STEP + step.moves.reduce((sum, move) => sum + (move.path.length - 1) * config.POND_HOP, 0) + step.effects.length * config.POND_EFFECT + (step.chests.length ? config.POND_CHEST_TIME : 0);
+  // (a step: the frogs hop all at once, the features act one by one, the chests open, the pond settles)
+  // (a long walk: the frogs hop faster, the walk takes POND_WALK at most)
+  const walkTime = (step) => Math.min(config.POND_WALK, Math.max(0, ...step.moves.map((move) => move.path.length - 1)) * config.POND_HOP);
+  const stepTime = (step) => config.POND_STEP + walkTime(step) + step.effects.length * config.POND_EFFECT + (step.chests.length ? config.POND_CHEST_TIME : 0);
   const stepsTime = (steps) => steps.reduce((sum, step) => sum + stepTime(step), 0);
   function baseTime(bet, result) {
     let time = config.POND_SPIN + stepsTime(result.steps) + config.POND_COUNT_TIME;
@@ -126,7 +128,7 @@ module.exports = function (io, options = {}) {
   }
 
   function rules() {
-    return { minBet: limits.POND_MIN_BET, maxBet: limits.POND_MAX_BET, spinTime: config.POND_SPIN, stepTime: config.POND_STEP, hopTime: config.POND_HOP, effectTime: config.POND_EFFECT, chestTime: config.POND_CHEST_TIME, freeIntro: config.POND_FREE_INTRO, freeSpinTime: config.POND_FREE_SPIN, moonTime: config.POND_MOON_TIME, bonusEndTime: config.POND_BONUS_END, bigWin: config.POND_BIG_WIN, bigTime: config.POND_BIG_TIME, countTime: config.POND_COUNT_TIME, pauseTime: config.POND_PAUSE, minGap: config.POND_MIN_GAP, resumeTime: config.SLOTS_RESUME_TIME };
+    return { minBet: limits.POND_MIN_BET, maxBet: limits.POND_MAX_BET, spinTime: config.POND_SPIN, stepTime: config.POND_STEP, hopTime: config.POND_HOP, walkTime: config.POND_WALK, effectTime: config.POND_EFFECT, chestTime: config.POND_CHEST_TIME, freeIntro: config.POND_FREE_INTRO, freeSpinTime: config.POND_FREE_SPIN, moonTime: config.POND_MOON_TIME, bonusEndTime: config.POND_BONUS_END, bigWin: config.POND_BIG_WIN, bigTime: config.POND_BIG_TIME, countTime: config.POND_COUNT_TIME, pauseTime: config.POND_PAUSE, minGap: config.POND_MIN_GAP, resumeTime: config.SLOTS_RESUME_TIME };
   }
 
   async function sendCoins(username) {

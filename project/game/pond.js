@@ -16,7 +16,7 @@ const crypto = require("crypto");
  *  - 🪷 lotus: the pond grows by one row and one column (at most 8x8);
  *  - 🌧️ rain: a redrop, the empty spots fill with new symbols;
  *  - 🌀 swirl: the amber of another colour on the pond turns into the frog's colour;
- *  - 🍿 popcorn: the empty spots fill with popcorn - a frog can cross a piece of popcorn once (it eats it);
+ *  - 🪰 flies: the empty spots fill with flies - a frog can cross a fly once (it eats it);
  *  - 🌕 moon: the bonus symbol.
  * Then the frogs move again - and so on while they find something to collect.
  *
@@ -30,7 +30,7 @@ const crypto = require("crypto");
  * The payback is 96.8%, as the slots': the pays are scaled by PAY_SCALE so that the simulated spins pay it back.
  */
 // The rules' version: free spins saved by other rules are paid, not shown again (their symbols may be gone)
-const VERSION = 3;
+const VERSION = 4;
 const MIN_SIZE = 6;
 const MAX_SIZE = 8;
 
@@ -58,42 +58,42 @@ const FEATURES = [
   { id: "lotus", icon: "🪷", name: "Lotus" },
   { id: "rain", icon: "🌧️", name: "Rain" },
   { id: "swirl", icon: "🌀", name: "Swirl" },
-  { id: "popcorn", icon: "🍿", name: "Popcorn" },
+  { id: "flies", icon: "🪰", name: "Flies" },
   { id: "moon", icon: "🌕", name: "Full moon" },
 ];
 const FEATURE_IDS = FEATURES.map((feature) => feature.id);
 // How likely a new spot is empty, an amber of each colour or each feature (weights). The free spins: more features
-const LANDING = { empty: 36, amber: 13, coin: 1.3, sun: 0.7, wild: 1.1, lotus: 0.35, rain: 0.45, swirl: 0.35, popcorn: 0.35, moon: 0.75 };
-const FREE_LANDING = { ...LANDING, empty: 30, amber: 14, sun: 1.2, wild: 1.3, lotus: 0.45, moon: 0.55 };
+const LANDING = { empty: 36, amber: 13, coin: 1.3, sun: 0.7, wild: 1.1, lotus: 0.35, rain: 0.45, swirl: 0.35, flies: 0.35, moon: 0.75 };
+const FREE_LANDING = { ...LANDING, empty: 16, amber: 16, sun: 3, wild: 2.2, lotus: 0.8, moon: 0.35 };
 // What a chest holds (weights)
-const CHEST = { coin: 30, sun: 22, wild: 10, lotus: 6, rain: 10, swirl: 8, popcorn: 8, moon: 6 };
+const CHEST = { coin: 30, sun: 22, wild: 10, lotus: 6, rain: 10, swirl: 8, flies: 8, moon: 6 };
 
-// The symbols for the page: the amber (one per colour), the coins, the features, the popcorn on the pond
+// The symbols for the page: the amber (one per colour), the coins, the features, a fly on the pond
 const SYMBOLS = [
   ...FAMILIES.map((family) => ({ id: family.id, icon: family.icon, name: family.name, family: family.id })),
   ...COIN_VALUES.map((value, i) => ({ id: "coin" + i, icon: "🪙", name: "Coin", feature: "coin", coin: value })),
   ...FEATURES.filter((feature) => feature.id != "coin").map((feature) => ({ id: feature.id, icon: feature.icon, name: feature.name, feature: feature.id })),
-  { id: "pop", icon: "🍿", name: "Popcorn piece", pop: true },
+  { id: "fly", icon: "🪰", name: "Fly", fly: true },
 ];
 const BY_ID = new Map(SYMBOLS.map((symbol) => [symbol.id, symbol]));
 
 // The pays times this: the payback 96.8% (as the slots). Simulated (1.2 million spins, 30,000 free games): unscaled
-// base game 55.1%, free spins about every 257 spins at 108.3x (with 19 free spins on average) - 97.4% in all
-// -> scaled: base game 54.8%, free spins 42.0% (107.7x)
-const PAY_SCALE = 0.994;
+// base game 55.0%, free spins about every 259 spins at 102.9x (11 free spins in the middle, 23 for one in ten) -
+// 94.7% in all -> scaled: base game 56.2%, free spins 40.6% (105.1x)
+const PAY_SCALE = 1.022;
 const RTP = 0.968;
 const MOON_TRIGGER = 3; // this many 🌕 collected start the free spins ...
 const FREE_SPINS = 8; // ... this many of them
-const FREE_MORE = 4; // every MOON_TRIGGER 🌕 collected in the free spins: this many more
-const MAX_FREE_SPINS = 50;
+const FREE_MORE = 3; // every MOON_TRIGGER 🌕 collected in the free spins: this many more
+const MAX_FREE_SPINS = 30;
 const MAX_WIN = 10000; // a spin (and its free spins) never pays more than this many times the bet
 const MAX_STEPS = 60; // (a safety net - the frogs never move this often in a spin)
-// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 108x on
-// average (simulated), so about 94% of it comes back
-const BUY_PRICE = 115;
-const BUY_RTP = 0.94;
+// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 105.7x on
+// average (simulated), so about 96% of it comes back
+const BUY_PRICE = 110;
+const BUY_RTP = 0.96;
 // How far one spin's win strays from its average, in bets (simulated) - for the RTP monitor
-const SPIN_SPREAD = 11;
+const SPIN_SPREAD = 9;
 
 function pick(weights, randomInt) {
   const tickets = weights.map((w) => Math.round(w * 1000));
@@ -146,7 +146,7 @@ const NEIGHBOURS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
 /*
  * A frog moves (the grid changes in place): it hops to the nearest spot it collects (over the other colours, the
- * popcorn and its own trail) - again and again. -> {family, path: [[c, r], ...] (from where it sat, spot by spot), got: [ids collected],
+ * flies and its own trail) - again and again. -> {family, path: [[c, r], ...] (from where it sat, spot by spot), got: [ids collected],
  * amber (how many), end: [c, r]}
  */
 function moveFrog(grid, frogs, family) {
@@ -157,7 +157,7 @@ function moveFrog(grid, frogs, family) {
   const path = [at];
   const got = [];
   for (;;) {
-    // The nearest spot to collect (breadth first over the trail and the popcorn)
+    // The nearest spot to collect (breadth first over the trail and the flies)
     const from = new Map([[key(...at), null]]);
     const queue = [at];
     let target = null;
@@ -174,7 +174,7 @@ function moveFrog(grid, frogs, family) {
           target = [x, y];
           break;
         }
-        // (it crosses amber of the other colours, the popcorn and its trail - never an empty spot)
+        // (it crosses amber of the other colours, the flies and its trail - never an empty spot)
         if (trail.has(k) || id != null) {
           from.set(k, [c, r]);
           queue.push([x, y]);
@@ -186,8 +186,8 @@ function moveFrog(grid, frogs, family) {
     for (let spot = target; spot && key(...spot) !== key(...at); spot = from.get(key(...spot))) way.unshift(spot);
     way.forEach(([c, r]) => {
       const id = grid[c][r];
-      // (it eats the popcorn and collects its own; the other colours stay)
-      if (id === "pop") grid[c][r] = null;
+      // (it eats the flies and collects its own; the other colours stay)
+      if (id === "fly") grid[c][r] = null;
       else if (collects(id, family)) {
         got.push(id);
         grid[c][r] = null;
@@ -212,7 +212,7 @@ const emptySpots = (grid, frogs) => {
 /*
  * A feature acts for the frog of `family` (the grid, the frogs and the state change in place) -> what it did:
  * {id, family, ...} (coin: pay; sun: level; wild (from a chest): at; lotus: grew; swirl: from, cells; rain and
- * popcorn: cells)
+ * flies: cells)
  */
 function act(id, family, grid, frogs, state, randomInt, landing, chest) {
   const feature = symbolOf(id) ? symbolOf(id).feature : id;
@@ -251,9 +251,9 @@ function act(id, family, grid, frogs, state, randomInt, landing, chest) {
         }
       }),
     );
-  } else if (feature === "rain" || feature === "popcorn") {
+  } else if (feature === "rain" || feature === "flies") {
     effect.cells = emptySpots(grid, frogs);
-    effect.cells.forEach(([c, r]) => (grid[c][r] = feature === "rain" ? land(randomInt, landing) : "pop"));
+    effect.cells.forEach(([c, r]) => (grid[c][r] = feature === "rain" ? land(randomInt, landing) : "fly"));
   } else if (feature === "moon") {
     state.moons++;
     effect.moons = state.moons;

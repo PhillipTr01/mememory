@@ -250,7 +250,7 @@ const GAMES = {
           tile(sym("wild"), "Firefly", "The firefly is wild and counts as amber for every frog.", { emoji: [sym("wild")] }),
           tile(sym("rain"), "Rain", "Rain fills the empty spots with new symbols, and the frogs move again.", { emoji: [sym("rain")] }),
           tile(sym("swirl"), "Swirl", "The swirl turns the amber of another colour into the colour of its frog.", { emoji: [sym("swirl")] }),
-          tile(sym("popcorn"), "Popcorn", "Popcorn fills the empty spots. Each piece lets a frog cross it once.", { emoji: [sym("popcorn")] }),
+          tile(sym("flies"), "Flies", "Flies fill the empty spots. A frog can cross each fly once by eating it.", { emoji: [sym("flies")] }),
         ]),
         section("Free spins", [
           tile(sym("moon"), "Start them", `Collect ${pond.MOON_TRIGGER} ${sym("moon")} in one spin for ${pond.FREE_SPINS} free spins.`, { emoji: Array(pond.MOON_TRIGGER).fill(sym("moon")) }),
