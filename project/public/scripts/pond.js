@@ -229,6 +229,7 @@ function showGrid(grid, drop, options) {
     frog.style.setProperty("--fam", family.color);
     frog.style.width = frog.style.height = size + "px";
     frog.innerHTML = FROG_SVG;
+    frog.dataset.look = "frog";
     frog.title = family.frog;
     layer.append(frog);
     frogEls[family.id] = frog;
@@ -266,11 +267,26 @@ function placeFrogs() {
   Object.entries(frogEls).forEach(([family, frog]) => {
     var spot = frogSpots[family];
     frog.hidden = !spot;
+    // (an eaten frog: its card above is grey)
+    if (frogBoxes[family]) frogBoxes[family].frog.classList.toggle("eaten", !spot);
     if (!spot) return;
+    frogLook(frog, spot, size);
     frog.dataset.x = spot[0] * size;
     frog.dataset.y = spot[1] * size;
     frog.style.transform = frogTransform(frog);
   });
+}
+
+// A frog as its spot says: an evil one is big (2x2), with horns and a spot of every colour it ate
+function frogLook(frog, spot, size) {
+  var n = spot[2] || 1;
+  var evil = !!spot[3];
+  frog.style.width = frog.style.height = n * size + "px";
+  var look = evil ? "evil:" + spot[3].join(",") : "frog";
+  if (frog.dataset.look == look) return;
+  frog.dataset.look = look;
+  frog.classList.toggle("evil", evil);
+  frog.innerHTML = evil ? evilFrogSvg(spot[3]) : FROG_SVG;
 }
 
 // The symbols on the pond fall out at the bottom, the frogs dive (before the next spin drops in)
@@ -296,6 +312,26 @@ function renderSize(n) {
 
 // A frog in its colour (--fam)
 var FROG_SVG = '<svg viewBox="9 8 30 30" aria-hidden="true"><circle class="pd-frog-glow" cx="24" cy="23" r="14.5" fill="var(--fam)" fill-opacity=".45" /><ellipse cx="24" cy="36.6" rx="11.5" ry="1.9" fill="#000" fill-opacity=".35" /><ellipse cx="24" cy="26" rx="13" ry="10.5" fill="var(--fam)" /><circle cx="16" cy="15" r="5.8" fill="var(--fam)" /><circle cx="32" cy="15" r="5.8" fill="var(--fam)" /><circle cx="16" cy="15" r="3.2" fill="#fff" /><circle cx="32" cy="15" r="3.2" fill="#fff" /><circle cx="16.7" cy="15.5" r="1.7" fill="#111827" /><circle cx="32.7" cy="15.5" r="1.7" fill="#111827" /><path d="M17 27.5 Q24 33 31 27.5" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2" stroke-linecap="round" /></svg>';
+// An evil frog: grey with a hint of its colour, small red eyes under angry lids, a belly in the colours it holds
+// (its own and every frog it ate)
+var evilCount = 0;
+function evilFrogSvg(colours) {
+  var id = "pdEvil" + evilCount++;
+  var width = 16 / colours.length;
+  var stripes = colours.map((family, i) => '<rect x="' + (16 + i * width) + '" y="20" width="' + (width + 0.2) + '" height="16" style="fill: color-mix(in srgb, ' + familyInfo(family).color + ' 80%, #4b5563)" />').join("");
+  return (
+    '<svg viewBox="9 6 30 32" aria-hidden="true"><defs><clipPath id="' + id + '"><ellipse cx="24" cy="29" rx="7.5" ry="5.6" /></clipPath></defs>' +
+    '<circle class="pd-frog-glow" cx="24" cy="23" r="14.5" fill="#dc2626" fill-opacity=".4" /><ellipse cx="24" cy="36.6" rx="11.5" ry="1.9" fill="#000" fill-opacity=".35" />' +
+    '<g style="fill: color-mix(in srgb, var(--fam) 30%, #6b7280)"><ellipse cx="24" cy="26" rx="13" ry="10.5" /><circle cx="16" cy="15" r="5.8" /><circle cx="32" cy="15" r="5.8" /></g>' +
+    '<g clip-path="url(#' + id + ')">' + stripes + "</g>" +
+    '<circle cx="16" cy="15" r="3.2" fill="#fff" /><circle cx="32" cy="15" r="3.2" fill="#fff" /><circle cx="16.4" cy="15.6" r="1.8" fill="#dc2626" /><circle cx="31.6" cy="15.6" r="1.8" fill="#dc2626" />' +
+    // (the angry lids: slanting down to the middle)
+    '<path d="M11.5 11.5 L20.5 14 L20.5 10 Z M36.5 11.5 L27.5 14 L27.5 10 Z" style="fill: color-mix(in srgb, var(--fam) 30%, #6b7280)" /><path d="M12 12 L20.3 14.2 M36 12 L27.7 14.2" stroke="#1f2937" stroke-width="1.6" stroke-linecap="round" />' +
+    '<path d="M18.5 22.5 Q24 21 29.5 22.5" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="1.8" stroke-linecap="round" />' +
+    "</svg>"
+  );
+}
+
 // The gem of a colour (--fam): one shape, the facets lighter and darker
 var GEM_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 11.5h20l10 11-20 22L4 22.5z" fill="#000" fill-opacity=".3" /><path d="M14 9h20l10 11-20 22L4 20z" fill="var(--fam)" /><path d="M14 9h20l-4 11H18z" fill="#fff" fill-opacity=".38" /><path d="M4 20 14 9l4 11z" fill="#fff" fill-opacity=".2" /><path d="M34 9l10 11H30z" fill="#000" fill-opacity=".12" /><path d="M4 20h14l6 22z" fill="#fff" fill-opacity=".12" /><path d="M30 20h14L24 42z" fill="#000" fill-opacity=".22" /><path d="M17 12.5h6" stroke="#fff" stroke-opacity=".8" stroke-width="2" stroke-linecap="round" /></svg>';
 var frogBoxes = {};
@@ -363,6 +399,7 @@ var FEATURE_TEXT = {
   rain: (e) => "🌧️ Rain fills the empty spots",
   swirl: (e) => (e.from ? "🌀 The " + familyInfo(e.from).name.toLowerCase() + " turn " + familyInfo(e.family).name.split(" ")[0].toLowerCase() : "🌀 Nothing to turn"),
   flies: (e) => "🪰 Flies fill the empty spots",
+  evil: (e) => (e.none ? "😈 The curse fades" : "😈 The " + frogName(e.family) + " turns evil"),
   rock: (e) => (e.jumps && e.jumps.length ? "🪨 A rock falls and the frogs jump away" : "🪨 A rock falls into the pond"),
   moon: (e) => "🌕 A full moon",
 };
@@ -414,32 +451,119 @@ async function hopFrog(move, bet, win, hop) {
   await wait(setup.rules.turnTime);
   var amberCount = 0;
   var size = boardSize() / shown.length;
+  var start = frogSpots[move.family] || move.path[0];
+  // (an evil frog: big, it collects the colours it ate)
+  var n = start[2] || 1;
+  var colours = start[3] ? start[3].slice() : [move.family];
+  var eatsAfter = (i) => (move.eats || []).filter((e) => e.after == i);
+  for (var e of eatsAfter(0)) await eatFrog(move.family, e.family, colours, size);
   for (var i = 1; i < move.path.length; i++) {
     var spot = move.path[i];
     // (one hop flows into the next: no stop between them)
     jumpFrog(frog, spot, hop, size);
     await wait(hop * 0.7);
-    var id = shown[spot[0]][spot[1]];
-    var collected = id == move.family || id == "wild" || id == "fly" || (id != null && symbolOf(id) && symbolOf(id).feature);
-    if (collected) {
-      var cell = cellAt(spot);
+    for (var cellSpot of move.cells ? move.cells[i] : [spot]) {
+      var id = shown[cellSpot[0]][cellSpot[1]];
+      var collected = colours.includes(id) || id == "wild" || id == "fly" || (id != null && symbolOf(id) && symbolOf(id).feature);
+      if (!collected) continue;
+      var cell = cellAt(cellSpot);
       cell.classList.add("collected");
       cell.animate([{ transform: "scale(1)", opacity: 1 }, { transform: "scale(1.3)", opacity: 0.8, offset: 0.3 }, { transform: "scale(0.2)", opacity: 0 }], { duration: Math.max(80, hop * 0.5), easing: "ease-in", fill: "forwards" });
-      shown[spot[0]][spot[1]] = null;
-      if (id == move.family || id == "wild") {
-        var amber = setup.amberValues[move.level] * bet;
+      shown[cellSpot[0]][cellSpot[1]] = null;
+      if (colours.includes(id) || id == "wild") {
+        // (each gem by the level of its colour; the wild by the frog's)
+        var amber = setup.amberValues[levelsShown[id == "wild" ? move.family : id] || 0] * bet;
         amberCount++;
         detail.innerText = "🐸 The " + name + " collects " + amberCount + (amberCount == 1 ? " gem" : " gems");
-        floatNote(spot, "+" + shortCoins(amber), "pd-note-win", Math.max(700, hop * 2));
+        floatNote(cellSpot, "+" + shortCoins(amber), "pd-note-win", Math.max(700, hop * 2));
         countUp(document.getElementById("pdWinText"), Math.floor(win.amount + amber), hop * 0.3, Math.floor(win.amount));
         win.amount += amber;
       }
     }
+    // (a swirl: the gems of another colour turn into the frog's right away)
+    for (var swirl of (move.swirls || []).filter((sw) => sw.after == i)) {
+      detail.innerText = FEATURE_TEXT.swirl({ from: swirl.from, family: move.family });
+      (swirl.cells || []).forEach((cellSpot) => setSpot(cellSpot, move.family, bet));
+      await wait(setup.rules.effectTime * 0.6);
+    }
+    for (var eaten of eatsAfter(i)) await eatFrog(move.family, eaten.family, colours, size);
     await wait(hop * 0.3);
   }
   frog.classList.remove("moving");
   if (box) box.frog.classList.remove("active");
-  frogSpots[move.family] = move.path[move.path.length - 1];
+  var end = move.path[move.path.length - 1];
+  frogSpots[move.family] = start[3] ? [end[0], end[1], n, colours] : end;
+}
+
+// The evil frog eats a frog next to it: its tongue shoots out, pulls the frog in, a gulp and a burst in its colour
+async function eatFrog(family, eaten, colours, size) {
+  var evil = frogEls[family];
+  var prey = frogEls[eaten];
+  document.getElementById("pdWinDetail").innerText = "😈 The " + frogName(family) + " eats the " + frogName(eaten);
+  colours.push(eaten);
+  var time = setup.rules.meetTime * 0.6;
+  var spot = frogSpots[family];
+  var n = (spot && spot[2]) || 1;
+  if (prey && !skipping) {
+    // (from the evil frog's mouth to the middle of the prey)
+    var mouth = [Number(evil.dataset.x) + (n * size) / 2, Number(evil.dataset.y) + n * size * 0.68];
+    var target = [Number(prey.dataset.x) + size / 2, Number(prey.dataset.y) + size / 2];
+    var length = Math.hypot(target[0] - mouth[0], target[1] - mouth[1]);
+    var tongue = el("div", "pd-tongue");
+    tongue.style.left = mouth[0] + "px";
+    tongue.style.top = mouth[1] + "px";
+    tongue.style.width = length + "px";
+    tongue.style.transform = "rotate(" + Math.atan2(target[1] - mouth[1], target[0] - mouth[0]) + "rad)";
+    document.querySelector(".pd-frog-layer").append(tongue);
+    await tongue.animate([{ scale: "0 1" }, { scale: "1 1" }], { duration: time * 0.25, easing: "ease-out", fill: "forwards" }).finished;
+    // (the tongue and the frog come back together)
+    var pull = { duration: time * 0.35, easing: "ease-in", fill: "forwards" };
+    tongue.animate([{ scale: "1 1" }, { scale: "0 1" }], pull);
+    await prey
+      .animate([{ transform: frogTransform(prey) + " scale(1)" }, { transform: "translate(" + (mouth[0] - size / 2) + "px, " + (mouth[1] - size / 2) + "px) scale(0.25)", opacity: 0.6 }], pull)
+      .finished;
+    tongue.remove();
+    prey.hidden = true;
+    // (a gulp and a ring in the colour it ate)
+    evil.animate([{ transform: frogTransform(evil) + " scale(1)" }, { transform: frogTransform(evil) + " scale(1.15, 0.9)" }, { transform: frogTransform(evil) + " scale(1)" }], { duration: time * 0.3, easing: "ease-out" });
+    var ring = el("div", "pd-eat-ring");
+    ring.style.setProperty("--fam", familyInfo(eaten).color);
+    ring.style.left = mouth[0] + "px";
+    ring.style.top = mouth[1] - (n * size) / 4 + "px";
+    ring.style.width = ring.style.height = n * size + "px";
+    document.querySelector(".pd-frog-layer").append(ring);
+    ring.animate([{ transform: "translate(-50%, -50%) scale(0.3)", opacity: 0.9 }, { transform: "translate(-50%, -50%) scale(1.4)", opacity: 0 }], { duration: time * 0.45, easing: "ease-out", fill: "forwards" }).finished.then(() => ring.remove());
+  }
+  delete frogSpots[eaten];
+  if (prey) prey.hidden = true;
+  if (frogBoxes[eaten]) frogBoxes[eaten].frog.classList.add("eaten");
+  var mine = frogSpots[family];
+  if (mine && mine[3]) {
+    frogSpots[family] = [mine[0], mine[1], mine[2], colours.slice()];
+    frogLook(evil, frogSpots[family], size);
+  }
+  await wait(time * 0.4);
+}
+
+// The curse: the frog turns evil, eats the frogs next to it and grows to 2x2 (the spots it covers are crushed)
+async function turnEvil(effect, bet) {
+  var family = effect.family;
+  var frog = frogEls[family];
+  var size = boardSize() / shown.length;
+  var spot = frogSpots[family];
+  var colours = [family];
+  frogSpots[family] = [spot[0], spot[1], 1, colours.slice()];
+  frogLook(frog, frogSpots[family], size);
+  if (!skipping) frog.animate([{ transform: frogTransform(frog) + " scale(1)" }, { transform: frogTransform(frog) + " scale(1.3) rotate(-8deg)" }, { transform: frogTransform(frog) + " scale(1)" }], { duration: 450 });
+  await wait(450);
+  for (var eaten of effect.eats || []) await eatFrog(family, eaten, colours, size);
+  (effect.cleared || []).forEach((cell) => setSpot(cell, null, bet));
+  frogSpots[family] = effect.spot;
+  frog.dataset.x = effect.spot[0] * size;
+  frog.dataset.y = effect.spot[1] * size;
+  frogLook(frog, effect.spot, size);
+  frog.style.transform = frogTransform(frog);
+  if (!skipping && effect.spot[2] > 1) frog.animate([{ transform: frogTransform(frog) + " scale(0.5)" }, { transform: frogTransform(frog) + " scale(1)" }], { duration: 400, easing: "cubic-bezier(.3,1.6,.5,1)" });
 }
 
 // Two frogs meet: they trade spots, or two of them argue and new symbols land around them
@@ -479,19 +603,31 @@ async function openChests(chests) {
   var card = el("div", "pd-intro pd-chests");
   var row = el("div", "pd-chest-row");
   chests.forEach((chest) => {
+    // (a chest: what is in it, for which frog)
+    var item = el("div", "pd-chest-item");
+    item.style.setProperty("--fam", familyInfo(chest.family).color);
     var box = el("div", "pd-chest");
-    box.style.setProperty("--fam", familyInfo(chest.family).color);
     box.append(el("span", "pd-chest-lid", "🧰"), el("span", "pd-chest-prize", featureIcon(chest.id)));
-    row.append(box);
+    var frog = el("span", "pd-chest-frog");
+    frog.innerHTML = FROG_SVG;
+    var label = el("div", "pd-chest-label");
+    label.append(el("span", "pd-chest-name", featureName(chest.id)), frog);
+    item.append(box, label);
+    row.append(item);
   });
-  card.append(el("div", "pd-intro-title", "Meter full"), row);
+  card.append(el("div", "pd-intro-title", "Meter full"), el("p", "pd-intro-text", "Every chest holds a feature symbol for the frog below it."), row);
   stage(card);
   var time = setup.rules.chestTime;
   await wait(time * 0.3);
-  [...row.children].forEach((box, i) => setTimeout(() => box.classList.add("open"), i * time * 0.15));
+  [...row.querySelectorAll(".pd-chest")].forEach((box, i) => setTimeout(() => box.classList.add("open"), i * time * 0.15));
   await wait(time * 0.6);
   stage(null);
   await wait(time * 0.1);
+}
+
+function featureName(id) {
+  var feature = setup.features.find((f) => f.id == id);
+  return feature ? feature.name : "";
 }
 
 function featureIcon(id) {
@@ -522,6 +658,8 @@ async function playEffect(effect, step, next, bet, win, inBonus) {
     (effect.cells || []).forEach((spot) => setSpot(spot, next.grid[spot[0]] ? next.grid[spot[0]][spot[1]] : null, bet));
   } else if (effect.id == "flies") {
     (effect.cells || []).forEach((spot) => setSpot(spot, "fly", bet));
+  } else if (effect.id == "evil" && !effect.none) {
+    await turnEvil(effect, bet);
   } else if (effect.id == "rock" && effect.at) {
     await rockFalls(effect, bet);
   } else if (effect.id == "moon") {
@@ -1058,6 +1196,7 @@ function showPaytable() {
   line("🌀", "The swirl turns the gems of another colour into the colour of its frog.");
   line("🪰", "Flies fill the empty spots, and a frog can cross each fly once by eating it.");
   line("🪨", "A rock clears the spots around where it lands, and a frog it hits jumps somewhere else.");
+  line("😈", "The curse turns a frog evil. It grows, eats the frogs next to it and collects their colours too.");
   line("🌕", "Collect " + setup.free.trigger + " full moons in one spin for " + setup.free.spins + " free spins.");
   dialog.append(
     x,

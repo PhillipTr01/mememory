@@ -12,13 +12,16 @@ const crypto = require("crypto");
  *
  * The feature symbols act once all frogs have moved (in the order they were collected):
  *  - 🪙 coin: an instant win;
- *  - ☀️ sun: the amber of the frog's colour upgrades one step (at most MAX_LEVEL times);
+ *  - ☀️ sun: the amber of the frog's colour upgrades one step (at most MAX_LEVEL times; no more suns land once every
+ *    colour is at the top);
  *  - ✨ wild: counts as an amber of the frog that collects it;
  *  - 🪷 lotus: the pond grows by one row and one column (at most 8x8);
  *  - 🌧️ rain: a redrop, the empty spots fill with new symbols;
- *  - 🌀 swirl: the amber of another colour on the pond turns into the frog's colour;
+ *  - 🌀 swirl: the amber of another colour on the pond turns into the frog's colour - at once, the frog collects on;
  *  - 🪰 flies: the empty spots fill with flies - a frog can cross a fly once (it eats it);
  *  - 🪨 rock: a rock falls on a spot - the 3x3 spots around it get new symbols, a frog hit jumps to a free spot;
+ *  - 😈 curse: the frog turns evil (one per spin): it grows to 2x2, eats the frogs next to it (on its turn and
+ *    after every hop) and collects their colours from then on;
  *  - 🌕 moon: the bonus symbol.
  * When no frog can move any more, the frogs side by side meet: each pair asks for a trade by chance
  * (TRADE_CHANCE, once until one of them moves again) and swaps spots when that lets one of them move on - several
@@ -66,15 +69,16 @@ const FEATURES = [
   { id: "swirl", icon: "🌀", name: "Swirl" },
   { id: "flies", icon: "🪰", name: "Flies" },
   { id: "rock", icon: "🪨", name: "Rock" },
+  { id: "evil", icon: "😈", name: "Curse" },
   { id: "moon", icon: "🌕", name: "Full moon" },
 ];
 const FEATURE_IDS = FEATURES.map((feature) => feature.id);
 // How likely a new spot is each colour's amber or each feature (weights) - the pond is always full (empty: never; a
 // spot is only emptied by a frog). The free spins: far more suns, wilds and lotuses
-const LANDING = { empty: 0, amber: 13, coin: 1.3, sun: 0.4, wild: 1.5, lotus: 0.35, rain: 0.35, swirl: 0.35, flies: 0.35, rock: 0.35, moon: 0.7 };
+const LANDING = { empty: 0, amber: 13, coin: 1.3, sun: 0.4, wild: 1.5, lotus: 0.35, rain: 0.35, swirl: 0.35, flies: 0.35, rock: 0.35, evil: 0.25, moon: 0.7 };
 const FREE_LANDING = { ...LANDING, sun: 7, wild: 6, lotus: 1.2, moon: 0.8 };
 // What a chest holds (weights)
-const CHEST = { coin: 34, sun: 24, wild: 10, lotus: 6, rain: 8, swirl: 8, flies: 8, rock: 8, moon: 2 };
+const CHEST = { coin: 34, sun: 24, wild: 10, lotus: 6, rain: 8, swirl: 8, flies: 8, rock: 8, evil: 0, moon: 2 };
 
 // The symbols for the page: the amber (one per colour), the coins, the features, a fly on the pond
 const SYMBOLS = [
@@ -85,9 +89,9 @@ const SYMBOLS = [
 ];
 const BY_ID = new Map(SYMBOLS.map((symbol) => [symbol.id, symbol]));
 
-// The pays times this: the payback 96.8% (as the slots). Simulated (3.2 million whole spins): base game 51.3%, free
-// spins about every 231 spins at 104.7x - 96.6% (+-0.5%) in all
-const PAY_SCALE = 0.907;
+// The pays times this: the payback 96.8% (as the slots). Simulated (3.2 million whole spins): base game 46.6%, free
+// spins about every 217 spins at 109.3x - 96.8% (+-0.5%) in all
+const PAY_SCALE = 0.792;
 const RTP = 0.968;
 const MOON_TRIGGER = 3; // this many 🌕 collected start the free spins ...
 const FREE_SPINS = 8; // ... this many of them
@@ -96,12 +100,12 @@ const MAX_FREE_SPINS = 30;
 const MAX_WIN = 10000; // a spin (and its free spins) never pays more than this many times the bet
 const TRADE_CHANCE = 50; // in 100: two frogs side by side ask for a trade
 const MAX_STEPS = 60; // (a safety net - the frogs never move this often in a spin)
-// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 105.2x on
+// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 109.8x on
 // average (simulated), so about 95% of it comes back
-const BUY_PRICE = 111;
-const BUY_RTP = 0.948;
+const BUY_PRICE = 116;
+const BUY_RTP = 0.946;
 // How far one spin's win strays from its average, in bets (simulated) - for the RTP monitor
-const SPIN_SPREAD = 8.8;
+const SPIN_SPREAD = 9.6;
 
 function pick(weights, randomInt) {
   const tickets = weights.map((w) => Math.round(w * 1000));
@@ -146,6 +150,20 @@ function placeFrogs(grid, randomInt) {
 }
 
 const key = (c, r) => c + ":" + r;
+// A frog's spot: [c, r] - an evil frog [c, r, size, colours] (its top left spot; the colours it collects)
+const sizeOf = (spot) => spot[2] || 1;
+const coloursOf = (family, spot) => spot[3] || [family];
+const isEvil = (spot) => !!(spot && spot[3]);
+const bodyOf = (c, r, n) => Array.from({ length: n * n }, (_, i) => [c + (i % n), r + Math.floor(i / n)]);
+// Every spot a frog sits on
+const occupied = (frogs, except) => new Set(Object.entries(frogs).flatMap(([f, spot]) => (f === except ? [] : bodyOf(spot[0], spot[1], sizeOf(spot)).map((cell) => key(...cell)))));
+// Two bodies side by side (or overlapping)
+function touching(a, b) {
+  const [na, nb] = [sizeOf(a), sizeOf(b)];
+  const dx = Math.max(a[0] - (b[0] + nb - 1), b[0] - (a[0] + na - 1), 0);
+  const dy = Math.max(a[1] - (b[1] + nb - 1), b[1] - (a[1] + na - 1), 0);
+  return dx + dy === 1 || (dx === 0 && dy === 0);
+}
 const symbolOf = (id) => (id == null ? null : BY_ID.get(id) || null);
 const isFeature = (id) => !!(symbolOf(id) && symbolOf(id).feature);
 // What a frog of `family` collects: its amber, the wild, the features
@@ -154,64 +172,115 @@ const NEIGHBOURS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
 /*
  * A frog moves (the grid changes in place): it hops to the nearest spot it collects (over the flies and its own
- * trail) - again and again. -> {family, path: [[c, r], ...] (from where it sat, spot by spot), got: [ids collected],
- * amber (how many), end: [c, r]}
+ * trail) - again and again. An evil frog (2x2) moves as a block and eats the frogs next to it before it starts and
+ * after every hop. -> {family, path: [[c, r], ...] (from where it sat, spot by spot), cells: [[spots entered], ...]
+ * (per hop), got: [ids collected], amber (how many), eats: [{family, after (hops)}], end: [c, r]}
  */
-function moveFrog(grid, frogs, family) {
+function moveFrog(grid, frogs, family, randomInt = null) {
   const size = grid.length;
-  const others = new Set(FAMILY_IDS.filter((f) => f !== family).map((f) => key(...frogs[f])));
-  let at = frogs[family];
-  const trail = new Set([key(...at)]);
+  const spot = frogs[family];
+  const n = sizeOf(spot);
+  const colours = coloursOf(family, spot).slice();
+  const evil = isEvil(spot);
+  const takes = (id) => colours.includes(id) || isFeature(id);
+  let others = occupied(frogs, family);
+  const eats = [];
+  let at = [spot[0], spot[1]];
+  // (an evil frog eats the frogs next to it: they are gone, their colours are its own now)
+  const eat = (after) => {
+    if (!evil) return;
+    for (const f of FAMILY_IDS) {
+      if (f === family || !frogs[f] || !touching([...at, n], frogs[f])) continue;
+      delete frogs[f];
+      colours.push(f);
+      eats.push({ family: f, after: after });
+    }
+    others = occupied(frogs, family);
+  };
+  eat(0);
+  const trail = new Set(bodyOf(at[0], at[1], n).map((cell) => key(...cell)));
   const path = [at];
+  const cells = [[]];
   const got = [];
+  const swirls = [];
+  // The spots entered from one spot to the next (the whole body for a small frog)
+  const entered = (from, to) => {
+    const old = new Set(bodyOf(from[0], from[1], n).map((cell) => key(...cell)));
+    return bodyOf(to[0], to[1], n).filter((cell) => !old.has(key(...cell)));
+  };
   for (;;) {
     // The nearest spot to collect (breadth first over the trail and the flies)
     const from = new Map([[key(...at), null]]);
     const queue = [at];
     let target = null;
     while (queue.length && !target) {
-      const [c, r] = queue.shift();
+      const current = queue.shift();
       for (const [dc, dr] of NEIGHBOURS) {
-        const x = c + dc;
-        const y = r + dr;
-        const k = key(x, y);
-        if (x < 0 || y < 0 || x >= size || y >= grid[x].length || from.has(k) || others.has(k)) continue;
-        const id = grid[x][y];
-        if (collects(id, family)) {
-          from.set(k, [c, r]);
-          target = [x, y];
+        const next = [current[0] + dc, current[1] + dr];
+        const k = key(...next);
+        if (next[0] < 0 || next[1] < 0 || next[0] + n > size || next[1] + n > grid[next[0]].length || from.has(k)) continue;
+        const into = entered(current, next);
+        if (into.some((cell) => others.has(key(...cell)))) continue;
+        // (on from there: its trail and the flies - never amber of another colour or an empty spot)
+        const open = into.every(([c, r]) => trail.has(key(c, r)) || grid[c][r] === "fly" || takes(grid[c][r]));
+        if (!open) continue;
+        from.set(k, current);
+        if (into.some(([c, r]) => !trail.has(key(c, r)) && takes(grid[c][r]))) {
+          target = next;
           break;
         }
-        // (on from there: its trail and the flies - never amber of another colour or an empty spot)
-        if (trail.has(k) || id === "fly") {
-          from.set(k, [c, r]);
-          queue.push([x, y]);
-        }
+        queue.push(next);
       }
     }
     if (!target) break;
     const way = [];
-    for (let spot = target; spot && key(...spot) !== key(...at); spot = from.get(key(...spot))) way.unshift(spot);
-    way.forEach(([c, r]) => {
-      const id = grid[c][r];
-      // (it eats the flies and collects its own; the other colours stay)
-      if (id === "fly") grid[c][r] = null;
-      else if (collects(id, family)) {
-        got.push(id);
-        grid[c][r] = null;
-      }
-      trail.add(key(c, r));
-      path.push([c, r]);
+    for (let step = target; step && key(...step) !== key(...at); step = from.get(key(...step))) way.unshift(step);
+    let previous = at;
+    way.forEach((step) => {
+      const into = entered(previous, step);
+      into.forEach(([c, r]) => {
+        const id = grid[c][r];
+        // (it eats the flies and collects its own; the other colours stay)
+        if (id === "fly") grid[c][r] = null;
+        else if (takes(id)) {
+          got.push(id);
+          grid[c][r] = null;
+          // (the swirl acts at once: the gems of another colour turn into the frog's, it collects on with them)
+          if (id === "swirl" && randomInt) swirls.push({ after: path.length, ...swirlGrid(grid, family, colours, randomInt) });
+        }
+        trail.add(key(c, r));
+      });
+      path.push(step);
+      cells.push(into);
+      previous = step;
+      at = step;
+      eat(path.length - 1);
     });
     at = target;
   }
-  frogs[family] = at;
-  const amber = got.filter((id) => id === family || id === "wild").length;
-  return { family: family, path: path, got: got, amber: amber, end: at };
+  frogs[family] = evil ? [at[0], at[1], n, colours] : at;
+  const amber = got.filter((id) => colours.includes(id) || id === "wild").length;
+  return { family: family, path: path, cells: cells, got: got, amber: amber, eats: eats, swirls: swirls, end: at };
+}
+
+// The swirl: the gems of one other colour on the pond (at random) turn into the frog's -> {from, cells}
+function swirlGrid(grid, family, colours, randomInt) {
+  const present = FAMILY_IDS.filter((f) => !colours.includes(f) && grid.some((column) => column.includes(f)));
+  const from = present.length ? present[randomInt(present.length)] : null;
+  const cells = [];
+  grid.forEach((column, c) =>
+    column.forEach((other, r) => {
+      if (from && other === from) {
+        grid[c][r] = family;
+        cells.push([c, r]);
+      }
+    }),
+  );
+  return { from: from, cells: cells };
 }
 
 const emptySpots = (grid, frogs) => {
-  const sitting = new Set(Object.values(frogs).map((spot) => key(...spot)));
+  const sitting = occupied(frogs);
   const spots = [];
   grid.forEach((column, c) => column.forEach((id, r) => id == null && !sitting.has(key(c, r)) && spots.push([c, r])));
   return spots;
@@ -267,7 +336,7 @@ function act(id, family, grid, frogs, state, randomInt, landing, chest) {
     const size = grid.length;
     const at = [randomInt(size), randomInt(size)];
     const inside = (c, r) => Math.abs(c - at[0]) <= 1 && Math.abs(r - at[1]) <= 1;
-    const sitting = new Set(Object.values(frogs).map((spot) => key(...spot)));
+    const sitting = occupied(frogs);
     effect.at = at;
     effect.cells = [];
     effect.ids = [];
@@ -280,8 +349,9 @@ function act(id, family, grid, frogs, state, randomInt, landing, chest) {
       }
     effect.jumps = [];
     for (const family of FAMILY_IDS) {
-      if (!inside(...frogs[family])) continue;
-      const taken = new Set(Object.values(frogs).map((spot) => key(...spot)));
+      // (an evil frog is too big: the rock bounces off)
+      if (!frogs[family] || isEvil(frogs[family]) || !inside(...frogs[family])) continue;
+      const taken = occupied(frogs);
       const free = [];
       const any = [];
       grid.forEach((column, c) => column.forEach((id, r) => !inside(c, r) && !taken.has(key(c, r)) && (id == null ? free : any).push([c, r])));
@@ -297,6 +367,45 @@ function act(id, family, grid, frogs, state, randomInt, landing, chest) {
       frogs[family] = to;
       effect.jumps.push({ family: family, to: to.slice() });
     }
+  } else if (feature === "evil") {
+    // (one evil frog a spin; a frog that is gone or evil already: nothing)
+    if (!frogs[family] || Object.values(frogs).some(isEvil)) {
+      effect.none = true;
+      return effect;
+    }
+    const spot = frogs[family];
+    const colours = [family];
+    effect.eats = [];
+    const eatNext = (body) => {
+      for (const f of FAMILY_IDS) {
+        if (f === family || !frogs[f] || !touching(body, frogs[f])) continue;
+        delete frogs[f];
+        colours.push(f);
+        effect.eats.push(f);
+      }
+    };
+    eatNext([spot[0], spot[1], 1]);
+    // It grows to 2x2 (the spots it covers are crushed), where there is room
+    const size = grid.length;
+    const others = occupied(frogs, family);
+    const room = [[0, 0], [1, 0], [0, 1], [1, 1]]
+      .map(([dc, dr]) => [spot[0] - dc, spot[1] - dr])
+      .filter(([c, r]) => c >= 0 && r >= 0 && c + 2 <= size && r + 2 <= size && bodyOf(c, r, 2).every((cell) => !others.has(key(...cell))));
+    const anchor = room.length ? room[randomInt(room.length)] : null;
+    let n = 1;
+    let at = [spot[0], spot[1]];
+    effect.cleared = [];
+    if (anchor) {
+      n = 2;
+      at = anchor;
+      bodyOf(at[0], at[1], 2).forEach(([c, r]) => {
+        if (grid[c][r] != null) effect.cleared.push([c, r]);
+        grid[c][r] = null;
+      });
+      eatNext([at[0], at[1], 2]);
+    }
+    frogs[family] = [at[0], at[1], n, colours];
+    effect.spot = frogs[family];
   } else if (feature === "moon") {
     state.moons++;
     effect.moons = state.moons;
@@ -315,6 +424,7 @@ function meet(grid, frogs, randomInt, landing, used) {
     for (let j = i + 1; j < FAMILY_IDS.length; j++) {
       const [a, b] = [FAMILY_IDS[i], FAMILY_IDS[j]];
       const pair = a + ":" + b;
+      if (!frogs[a] || !frogs[b] || isEvil(frogs[a]) || isEvil(frogs[b])) continue;
       if (used.has(pair) || Math.abs(frogs[a][0] - frogs[b][0]) + Math.abs(frogs[a][1] - frogs[b][1]) !== 1) continue;
       used.add(pair);
       if (randomInt(100) < TRADE_CHANCE) asking.push([a, b]);
@@ -327,7 +437,7 @@ function meet(grid, frogs, randomInt, landing, used) {
     if (others.length < 2 || busy.has(over)) continue;
     const two = others.slice(0, 2);
     if (two.some((f) => busy.has(f))) continue;
-    const sitting = new Set(Object.values(frogs).map((spot) => key(...spot)));
+    const sitting = occupied(frogs);
     const cells = [];
     for (const family of two)
       for (const [dc, dr] of NEIGHBOURS) {
@@ -361,23 +471,30 @@ function meet(grid, frogs, randomInt, landing, used) {
  * [...] (see meet), pay, levels, meter, moons (after)}],
  * grid, frogs (the last), pay (times the bet)}
  */
-function play(grid, frogs, randomInt, state, landing = LANDING) {
+// No more suns once every colour is at its top level (they would do nothing)
+const maxed = (state) => FAMILY_IDS.every((f) => state.levels[f] >= MAX_LEVEL);
+const landingFor = (landing, state) => (maxed(state) ? { ...landing, sun: 0 } : landing);
+
+function play(grid, frogs, randomInt, state, baseLanding = LANDING) {
   const steps = [];
   let pay = 0;
   grid = grid.map((column) => column.slice());
   frogs = Object.fromEntries(Object.entries(frogs).map(([f, spot]) => [f, spot.slice()]));
   const used = new Set();
   for (let n = 0; n < MAX_STEPS; n++) {
+    const landing = landingFor(baseLanding, state);
     const before = grid.map((column) => column.slice());
     const frogsBefore = Object.fromEntries(Object.entries(frogs).map(([f, spot]) => [f, spot.slice()]));
     const step = { grid: before, frogs: frogsBefore, moves: [], chests: [], effects: [], meets: [], pay: 0 };
     for (const family of FAMILY_IDS) {
-      const move = moveFrog(grid, frogs, family);
-      if (move.path.length < 2) continue;
+      if (!frogs[family]) continue;
+      const move = moveFrog(grid, frogs, family, randomInt);
+      if (move.path.length < 2 && !move.eats.length) continue;
       // (it moved: it may meet the others again)
       [...used].filter((pair) => pair.split(":").includes(family)).forEach((pair) => used.delete(pair));
       move.level = state.levels[family];
-      move.pay = move.amber * AMBER_VALUES[move.level] * PAY_SCALE;
+      // (each gem by the level of its colour: an evil frog collects the colours it ate; the wild is its own)
+      move.pay = move.got.filter((id) => id === "wild" || FAMILY_IDS.includes(id)).reduce((sum, id) => sum + AMBER_VALUES[state.levels[id === "wild" ? family : id]], 0) * PAY_SCALE;
       step.pay += move.pay;
       step.moves.push(move);
     }
@@ -386,10 +503,12 @@ function play(grid, frogs, randomInt, state, landing = LANDING) {
     while (state.meter >= METER) {
       state.meter -= METER;
       const ids = Object.keys(CHEST);
-      for (let i = 0; i < CHESTS; i++) step.chests.push({ id: ids[pick(Object.values(CHEST), randomInt)], family: FAMILY_IDS[randomInt(FAMILY_IDS.length)] });
+      const weights = ids.map((id) => (id === "sun" && maxed(state) ? 0 : CHEST[id]));
+      for (let i = 0; i < CHESTS; i++) step.chests.push({ id: ids[pick(weights, randomInt)], family: FAMILY_IDS[randomInt(FAMILY_IDS.length)] });
     }
     // The features act: the collected ones in order, then the chests'
-    const acting = [...step.moves.flatMap((move) => move.got.filter((id) => isFeature(id)).map((id) => ({ id: id, family: move.family }))), ...step.chests.map((chest) => ({ ...chest, chest: true }))];
+    // (a swirl a frog collects has acted already, on its way)
+    const acting = [...step.moves.flatMap((move) => move.got.filter((id) => isFeature(id) && id !== "swirl").map((id) => ({ id: id, family: move.family }))), ...step.chests.map((chest) => ({ ...chest, chest: true }))];
     for (const one of acting) {
       const effect = act(one.id, one.family, grid, frogs, state, randomInt, landing, one.chest === true);
       if (!effect) continue;
@@ -427,7 +546,7 @@ function freeGame(spins, randomInt, room = MAX_WIN) {
   let size = MIN_SIZE;
   for (let n = 0; n < game.spins; n++) {
     const start = { size: size, levels: { ...state.levels }, meter: state.meter, collected: state.moons };
-    const { grid, frogs } = deal(randomInt, size, FREE_LANDING);
+    const { grid, frogs } = deal(randomInt, size, landingFor(FREE_LANDING, state));
     const result = play(grid, frogs, randomInt, state, FREE_LANDING);
     size = result.grid.length;
     const moons = state.moons - start.collected;

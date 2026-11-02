@@ -252,6 +252,7 @@ const GAMES = {
           tile(sym("rain"), "Rain", "Rain fills the empty spots with new symbols, and the frogs move again.", { emoji: [sym("rain")] }),
           tile(sym("swirl"), "Swirl", "The swirl turns the gems of another colour into the colour of its frog.", { emoji: [sym("swirl")] }),
           tile(sym("rock"), "Rock", "A rock clears the spots around where it lands, and a frog it hits jumps somewhere else.", { emoji: [sym("rock")] }),
+          tile(sym("evil"), "Curse", "The curse turns a frog evil. It grows, eats the frogs next to it and collects their colours too.", { emoji: [sym("evil")] }),
           tile(sym("flies"), "Flies", "Flies fill the empty spots. A frog can cross each fly once by eating it.", { emoji: [sym("flies")] }),
         ]),
         section("Free spins", [

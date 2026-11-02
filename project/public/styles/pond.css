@@ -186,6 +186,27 @@
   opacity: 0.7;
 }
 
+/* The evil frog eats: its tongue, a ring in the colour of the frog it ate */
+.pd-tongue {
+  position: absolute;
+  z-index: 3;
+  height: max(4px, calc(var(--cell) * 0.1));
+  margin-top: calc(max(4px, calc(var(--cell) * 0.1)) / -2);
+  border-radius: 999px;
+  background: #f472b6;
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+
+.pd-eat-ring {
+  position: absolute;
+  z-index: 3;
+  border-radius: 50%;
+  border: 4px solid var(--fam);
+  box-shadow: 0 0 12px var(--fam);
+  pointer-events: none;
+}
+
 /* A falling rock (the rock feature) */
 .pd-falling-rock {
   position: absolute;
@@ -383,6 +404,12 @@
   box-shadow: 0 0 10px color-mix(in srgb, var(--fam) 55%, transparent);
 }
 
+/* A frog the evil frog ate: grey for the rest of the spin */
+.pd-frog.eaten {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
 .pd-frog.active {
   border-color: var(--fam);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--fam) 45%, transparent);
@@ -515,6 +542,40 @@
 .pd-chest-row {
   display: flex;
   gap: 0.9rem;
+}
+
+/* A chest, under it what it holds and the frog it is for */
+.pd-chest-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pd-chest-label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  opacity: 0;
+  transition: opacity 0.3s 0.15s;
+}
+
+.pd-chest-item:has(.pd-chest.open) .pd-chest-label {
+  opacity: 1;
+}
+
+.pd-chest-frog {
+  display: block;
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.pd-chest-frog svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .pd-chest {
