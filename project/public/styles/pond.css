@@ -161,6 +161,8 @@
   left: 0;
   padding: 5%;
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.55));
+  /* (its own layer: a hop moves it without drawing the pond again) */
+  will-change: transform;
 }
 
 /* (no transition: the frogs are drawn anew with the pond, a transition would slide them in from the corner) */

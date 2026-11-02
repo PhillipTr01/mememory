@@ -222,7 +222,7 @@ const GAMES = {
         section("Free spins", [
           tile(sym("egg"), "Start them", `Land ${megaways.EGG_TRIGGER} or more ${sym("egg")} anywhere for ${megaways.FREE_SPINS} free spins. Every egg past the ${megaways.EGG_TRIGGER}th gives ${megaways.FREE_PER_EGG} more.`, { emoji: Array(megaways.EGG_TRIGGER).fill(sym("egg")) }),
           tile("📈", "Dragon multiplier", "Every tumble raises the multiplier by 1. It never goes back down until the free spins are over.", { steps: ["×1", "×2", "×3"] }),
-          tile("🏔️", "The cave grows", `Every ${sym("egg")} gives one more free spin and makes every reel taller for the rest of the free spins.`, { tags: [["+1 spin", "green"], ["+1 row", "gold"]] }),
+          tile("🏔️", "The cave grows", `Every ${sym("egg")} gives one more free spin, and every reel shows at least one more row for the rest of the free spins.`, { tags: [["+1 spin", "green"], ["+1 row", "gold"]] }),
         ]),
         section("More", [
           tile("🛒", "Bonus buy", `Buy the free spins for ${megaways.BUY_PRICE}× your bet.`, { tags: [[megaways.BUY_PRICE + "×", "gold"]] }),

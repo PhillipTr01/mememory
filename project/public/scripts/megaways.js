@@ -429,7 +429,7 @@ async function caveGrows(free) {
   cells.forEach((column, reel) => column.forEach((cell, row) => shown[reel][row] == "egg" && cell.classList.add("egg-glow")));
   var detail = document.getElementById("mwWinDetail");
   var rows = Math.min(setup.rows[1], free.least + free.eggs);
-  detail.innerText = "🥚 +" + free.more + (free.more == 1 ? " free spin" : " free spins") + " · the cave grows to " + rows + " rows";
+  detail.innerText = "🥚 +" + free.more + (free.more == 1 ? " free spin" : " free spins") + " · every reel has at least " + rows + " rows now";
   document.getElementById("mwFreeCount").innerText = document.getElementById("mwFreeCount").innerText.replace(/\/ \d+/, "/ " + free.spins);
   await wait(setup.rules.eggTime);
 }
