@@ -396,9 +396,9 @@ var FEATURE_TEXT = {
   sun: (e) => "☀️ The " + familyInfo(e.family).name.toLowerCase() + " are worth more",
   wild: (e) => "✨ A firefly lands on the pond",
   lotus: (e) => (e.grew ? "🪷 The pond grows" : "🪷 The pond is as big as it gets"),
-  rain: (e) => "🌧️ Rain fills the empty spots",
+  rain: (e) => "🌧️ Rain brings new symbols",
   swirl: (e) => (e.from ? "🌀 The " + familyInfo(e.from).name.toLowerCase() + " turn " + familyInfo(e.family).name.split(" ")[0].toLowerCase() : "🌀 Nothing to turn"),
-  flies: (e) => "🪰 Flies fill the empty spots",
+  flies: (e) => "🪰 Flies land on the gems in the way",
   evil: (e) => (e.none ? "😈 The curse fades" : "😈 The " + frogName(e.family) + " turns evil"),
   rock: (e) => (e.jumps && e.jumps.length ? "🪨 A rock falls and the frogs jump away" : "🪨 A rock falls into the pond"),
   moon: (e) => "🌕 A full moon",
@@ -509,7 +509,14 @@ async function hopFrog(move, bet, win, hop) {
   frog.classList.remove("moving");
   if (box) box.frog.classList.remove("active");
   var end = move.path[move.path.length - 1];
-  frogSpots[move.family] = start[3] ? [end[0], end[1], n, colours] : end;
+  frogSpots[move.family] = start[3] && !move.calms ? [end[0], end[1], n, colours, start[4]] : end;
+  // (the curse wears off: the frog is small and itself again)
+  if (move.calms) {
+    detail.innerText = "😌 The " + name + " calms down";
+    frogLook(frog, frogSpots[move.family], size);
+    if (!skipping) frog.animate([{ transform: frogTransform(frog) + " scale(1.6)" }, { transform: frogTransform(frog) + " scale(1)" }], { duration: 450, easing: "ease-out" });
+    await wait(500);
+  }
 }
 
 // The evil frog's tongue shoots to a spot and back
@@ -748,7 +755,7 @@ async function playEffect(effect, step, next, bet, win, inBonus) {
   } else if (effect.id == "swirl") {
     (effect.cells || []).forEach((spot) => setSpot(spot, effect.family, bet));
   } else if (effect.id == "rain") {
-    (effect.cells || []).forEach((spot) => setSpot(spot, next.grid[spot[0]] ? next.grid[spot[0]][spot[1]] : null, bet));
+    (effect.cells || []).forEach((spot, i) => setSpot(spot, effect.ids ? effect.ids[i] : next.grid[spot[0]] ? next.grid[spot[0]][spot[1]] : null, bet));
   } else if (effect.id == "flies") {
     (effect.cells || []).forEach((spot) => setSpot(spot, "fly", bet));
   } else if (effect.id == "evil" && !effect.none) {
@@ -781,6 +788,22 @@ async function rockFalls(effect, bet) {
     frogSpots[jump.family] = jump.to;
     jumpFrog(frogEls[jump.family], jump.to, time * 0.4, size);
   });
+}
+
+// New symbols drop into the empty spots, column by column
+async function dropIn(refill, bet) {
+  var time = setup.rules.refillTime;
+  var size = boardSize() / shown.length;
+  refill.forEach(({ at, id }) => {
+    var cell = cellAt(at);
+    if (!cell) return;
+    shown[at[0]][at[1]] = id;
+    cell.getAnimations().forEach((animation) => animation.cancel());
+    cell.classList.remove("collected");
+    fillCell(cell, id, bet);
+    if (!skipping) cell.animate([{ transform: "translateY(" + -(at[1] + 1) * size + "px)", opacity: 0 }, { opacity: 1, offset: 0.3 }, { transform: "translateY(0)", opacity: 1 }], { duration: time * 0.7, delay: at[0] * time * 0.04, easing: "cubic-bezier(.25,.9,.35,1.15)", fill: "backwards" });
+  });
+  await wait(time);
 }
 
 // The symbol a frog sets off: it pops up over the frog (a chest's over the frog it is for), the frog lights up
@@ -846,6 +869,7 @@ async function playStep(step, next, bet, total, inBonus) {
     setMeter(step.meter);
   }
   for (var effect of step.effects) await playEffect(effect, step, next, bet, win, inBonus);
+  if ((step.refill || []).length) await dropIn(step.refill, bet);
   for (var meet of step.meets || []) await playMeet(meet, next, bet, win, step, inBonus);
   win.amount = total + step.pay * bet;
   document.getElementById("pdWinText").innerText = "🪙 " + formatCoins(Math.floor(win.amount));
@@ -1319,11 +1343,11 @@ function showPaytable() {
   line("☀️", "The sun upgrades the gems of the frog that collects it.");
   line("✨", "The firefly is wild and counts as a gem for every frog.");
   line("🪷", "The lotus makes the pond one row and one column bigger.");
-  line("🌧️", "Rain fills the empty spots with new symbols.");
+  line("🌧️", "Rain drops new symbols on the whole pond.");
   line("🌀", "The swirl turns the gems of another colour into the colour of its frog.");
-  line("🪰", "Flies fill the empty spots, and a frog can cross each fly once by eating it.");
+  line("🪰", "Flies land on the gems that block the frogs, and a frog can cross each fly once by eating it.");
   line("🪨", "A rock clears the spots around where it lands, and a frog it hits jumps somewhere else.");
-  line("😈", "The curse turns a frog evil. It grows, eats the frogs next to it and licks up the gems of their colours too.");
+  line("😈", "The curse turns a frog evil for three turns. It grows, eats the frogs next to it and licks up the gems of their colours too.");
   line("🌕", "Collect " + setup.free.trigger + " full moons in one spin for " + setup.free.spins + " free spins.");
   dialog.append(
     x,

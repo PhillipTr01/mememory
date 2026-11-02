@@ -8,7 +8,7 @@ const crypto = require("crypto");
  * finds one. It moves only onto a spot next to it that holds amber of its own colour, the ✨ wild (amber of every
  * colour) or a feature symbol - and collects it. Amber of another colour, an empty spot and another frog stop it; it
  * can walk back over its own trail. Every amber it collects pays the amber's value of its colour (by its level).
- * The pond is always full when it fills: only the frogs empty spots.
+ * The pond is always full when it fills: only the frogs empty spots, and after every step new symbols drop into them.
  *
  * The feature symbols act once all frogs have moved (in the order they were collected):
  *  - 🪙 coin: an instant win;
@@ -16,13 +16,13 @@ const crypto = require("crypto");
  *    colour is at the top);
  *  - ✨ wild: counts as an amber of the frog that collects it;
  *  - 🪷 lotus: the pond grows by one row and one column (at most 8x8);
- *  - 🌧️ rain: a redrop, the empty spots fill with new symbols;
+ *  - 🌧️ rain: a redrop, every spot but the frogs' gets a new symbol;
  *  - 🌀 swirl: the amber of another colour on the pond turns into the frog's colour - at once, the frog collects on;
- *  - 🪰 flies: the empty spots fill with flies - a frog can cross a fly once (it eats it);
+ *  - 🪰 flies: the gems next to the frogs that stop them turn into flies - a frog can cross a fly once (it eats it);
  *  - 🪨 rock: a rock falls on a spot - the 3x3 spots around it get new symbols, a frog hit jumps to a free spot;
  *  - 😈 curse: the frog turns evil (one per spin): it grows to 2x2, eats the frogs next to it (on its turn and
  *    after every hop) and collects their colours from then on; it licks up what it collects next to its body and
- *    crosses the empty water;
+ *    crosses the empty water; the curse wears off after EVIL_TURNS of its turns (the frogs it ate stay gone);
  *  - 🌕 moon: the bonus symbol.
  * When no frog can move any more, the frogs side by side meet: each pair asks for a trade by chance
  * (TRADE_CHANCE, once until one of them moves again) and swaps spots when that lets one of them move on - several
@@ -76,9 +76,9 @@ const FEATURES = [
 ];
 const FEATURE_IDS = FEATURES.map((feature) => feature.id);
 // How likely a new spot is each colour's amber or each feature (weights) - the pond is always full (empty: never; a
-// spot is only emptied by a frog). The free spins: far more suns, wilds and lotuses
-const LANDING = { empty: 0, amber: 13, coin: 1.3, sun: 0.4, wild: 1.5, lotus: 0.35, rain: 0.35, swirl: 0.35, flies: 0.35, rock: 0.35, evil: 0.15, moon: 0.6 };
-const FREE_LANDING = { ...LANDING, sun: 7, wild: 6, lotus: 1.2, moon: 0.8 };
+// spot is only emptied by a frog, and new symbols drop in). The free spins: far more suns, wilds and lotuses
+const LANDING = { empty: 0, amber: 13, coin: 1.3, sun: 0.4, wild: 1.5, lotus: 0.35, rain: 0.35, swirl: 0.35, flies: 0.35, rock: 0.35, evil: 0.15, moon: 0.175 };
+const FREE_LANDING = { ...LANDING, sun: 3, wild: 2.6, lotus: 1.2, moon: 0.27 };
 // What a chest holds (weights)
 const CHEST = { coin: 34, sun: 24, wild: 10, lotus: 6, rain: 8, swirl: 8, flies: 8, rock: 8, evil: 0, moon: 2 };
 
@@ -91,9 +91,9 @@ const SYMBOLS = [
 ];
 const BY_ID = new Map(SYMBOLS.map((symbol) => [symbol.id, symbol]));
 
-// The pays times this: the payback 96.8% (as the slots). Simulated (6.4 million whole spins): base game 46.0%, free
-// spins about every 236 spins at 119x - 96.5% (+-0.4%) in all
-const PAY_SCALE = 0.71;
+// The pays times this: the payback 96.8% (as the slots). Simulated (3.2 million whole spins): base game 56.2%, free
+// spins about every 246 spins at 99x - 96.5% (+-0.5%) in all
+const PAY_SCALE = 0.321;
 const RTP = 0.968;
 const MOON_TRIGGER = 3; // this many 🌕 collected start the free spins ...
 const FREE_SPINS = 8; // ... this many of them
@@ -101,13 +101,14 @@ const FREE_MORE = 3; // every MOON_TRIGGER 🌕 collected in the free spins: thi
 const MAX_FREE_SPINS = 30;
 const MAX_WIN = 10000; // a spin (and its free spins) never pays more than this many times the bet
 const TRADE_CHANCE = 50; // in 100: two frogs side by side ask for a trade
+const EVIL_TURNS = 3; // the curse wears off after this many turns of the evil frog
 const MAX_STEPS = 60; // (a safety net - the frogs never move this often in a spin)
-// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 119.5x on
+// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 99.6x on
 // average (simulated), so about 95% of it comes back
-const BUY_PRICE = 126;
+const BUY_PRICE = 105;
 const BUY_RTP = 0.948;
 // How far one spin's win strays from its average, in bets (simulated) - for the RTP monitor
-const SPIN_SPREAD = 10.2;
+const SPIN_SPREAD = 8.5;
 
 function pick(weights, randomInt) {
   const tickets = weights.map((w) => Math.round(w * 1000));
@@ -286,7 +287,7 @@ function moveFrog(grid, frogs, family, randomInt = null) {
     });
     at = target;
   }
-  frogs[family] = evil ? [at[0], at[1], n, colours] : at;
+  frogs[family] = evil ? [at[0], at[1], n, colours, spot[4]] : at;
   const amber = got.filter((id) => colours.includes(id) || id === "wild").length;
   return { family: family, path: path, cells: cells, got: got, amber: amber, eats: eats, swirls: swirls, licks: licks, end: at };
 }
@@ -305,6 +306,30 @@ function swirlGrid(grid, family, colours, randomInt) {
     }),
   );
   return { from: from, cells: cells };
+}
+
+// Every spot but the frogs'
+const openSpots = (grid, frogs) => {
+  const sitting = occupied(frogs);
+  const spots = [];
+  grid.forEach((column, c) => column.forEach((_, r) => !sitting.has(key(c, r)) && spots.push([c, r])));
+  return spots;
+};
+
+// The gems next to the frogs that stop them: of another colour than every frog next to it
+function blockingSpots(grid, frogs) {
+  const sitting = occupied(frogs);
+  const near = new Map();
+  for (const [family, spot] of Object.entries(frogs))
+    for (const [fc, fr] of bodyOf(spot[0], spot[1], sizeOf(spot)))
+      for (const [dc, dr] of NEIGHBOURS) {
+        const [c, r] = [fc + dc, fr + dr];
+        if (c < 0 || r < 0 || c >= grid.length || r >= grid[c].length || sitting.has(key(c, r))) continue;
+        const k = key(c, r);
+        if (!near.has(k)) near.set(k, { spot: [c, r], families: [] });
+        near.get(k).families.push(...coloursOf(family, spot));
+      }
+  return [...near.values()].filter(({ spot: [c, r], families }) => FAMILY_IDS.includes(grid[c][r]) && !families.includes(grid[c][r])).map(({ spot }) => spot);
 }
 
 const emptySpots = (grid, frogs) => {
@@ -357,8 +382,9 @@ function act(id, family, grid, frogs, state, randomInt, landing, chest) {
       }),
     );
   } else if (feature === "rain" || feature === "flies") {
-    effect.cells = emptySpots(grid, frogs);
-    effect.cells.forEach(([c, r]) => (grid[c][r] = feature === "rain" ? land(randomInt, landing) : "fly"));
+    // (rain: every spot but the frogs' gets a new symbol; flies: on the gems next to the frogs that stop them)
+    effect.cells = feature === "rain" ? openSpots(grid, frogs) : blockingSpots(grid, frogs);
+    effect.ids = effect.cells.map(([c, r]) => (grid[c][r] = feature === "rain" ? land(randomInt, landing) : "fly"));
   } else if (feature === "rock") {
     // (where it lands; the 3x3 around it: new symbols; a frog there jumps to a free spot outside)
     const size = grid.length;
@@ -432,7 +458,7 @@ function act(id, family, grid, frogs, state, randomInt, landing, chest) {
       });
       eatNext([at[0], at[1], 2]);
     }
-    frogs[family] = [at[0], at[1], n, colours];
+    frogs[family] = [at[0], at[1], n, colours, EVIL_TURNS];
     effect.spot = frogs[family];
   } else if (feature === "moon") {
     state.moons++;
@@ -544,7 +570,7 @@ function play(grid, frogs, randomInt, state, baseLanding = LANDING) {
     const landing = landingFor(baseLanding, state);
     const before = grid.map((column) => column.slice());
     const frogsBefore = Object.fromEntries(Object.entries(frogs).map(([f, spot]) => [f, spot.slice()]));
-    const step = { grid: before, frogs: frogsBefore, moves: [], chests: [], effects: [], meets: [], pay: 0 };
+    const step = { grid: before, frogs: frogsBefore, moves: [], chests: [], effects: [], refill: [], meets: [], pay: 0 };
     for (const family of FAMILY_IDS) {
       if (!frogs[family]) continue;
       const move = moveFrog(grid, frogs, family, randomInt);
@@ -556,6 +582,16 @@ function play(grid, frogs, randomInt, state, baseLanding = LANDING) {
       move.pay = move.got.filter((id) => id === "wild" || FAMILY_IDS.includes(id)).reduce((sum, id) => sum + AMBER_VALUES[state.levels[id === "wild" ? family : id]], 0) * PAY_SCALE;
       step.pay += move.pay;
       step.moves.push(move);
+      // (the curse wears off: after its last turn the evil frog is a frog again, small, on its top left spot)
+      const spot = frogs[family];
+      if (isEvil(spot)) {
+        const turns = (spot[4] || EVIL_TURNS) - 1;
+        if (turns > 0) frogs[family] = [spot[0], spot[1], spot[2], spot[3], turns];
+        else {
+          frogs[family] = [spot[0], spot[1]];
+          move.calms = true;
+        }
+      }
     }
     // The meter: full, it gives the chests
     state.meter += step.moves.reduce((sum, move) => sum + move.amber, 0);
@@ -575,6 +611,8 @@ function play(grid, frogs, randomInt, state, baseLanding = LANDING) {
       if (effect.pay) step.pay += effect.pay;
       step.effects.push(effect);
     }
+    // New symbols drop into the empty spots (the frogs' stay empty)
+    step.refill = step.moves.length ? emptySpots(grid, frogs).map(([c, r]) => ({ at: [c, r], id: (grid[c][r] = land(randomInt, landing)) })) : [];
     // (the frogs meet only when none of them can move any more: then every pair side by side may trade)
     if (!step.moves.length) {
       step.meets = meet(grid, frogs, randomInt, landing, used, state);
@@ -667,4 +705,4 @@ function catalog() {
   };
 }
 
-module.exports = { VERSION, RTP, MIN_SIZE, MAX_SIZE, FAMILIES, FAMILY_IDS, FEATURES, FEATURE_IDS, SYMBOLS, BY_ID, AMBER_VALUES, COIN_VALUES, MAX_LEVEL, METER, CHESTS, CHEST, PAY_SCALE, MOON_TRIGGER, FREE_SPINS, FREE_MORE, MAX_FREE_SPINS, MAX_WIN, BUY_PRICE, BUY_RTP, SPIN_SPREAD, LANDING, FREE_LANDING, TRADE_CHANCE, board, placeFrogs, deal, moveFrog, act, meet, play, freeGame, spin, catalog, newLevels, newState };
+module.exports = { VERSION, RTP, MIN_SIZE, MAX_SIZE, FAMILIES, FAMILY_IDS, FEATURES, FEATURE_IDS, SYMBOLS, BY_ID, AMBER_VALUES, COIN_VALUES, MAX_LEVEL, METER, CHESTS, CHEST, PAY_SCALE, MOON_TRIGGER, FREE_SPINS, FREE_MORE, MAX_FREE_SPINS, MAX_WIN, BUY_PRICE, BUY_RTP, SPIN_SPREAD, LANDING, FREE_LANDING, TRADE_CHANCE, EVIL_TURNS, board, placeFrogs, deal, moveFrog, act, meet, play, freeGame, spin, catalog, newLevels, newState };

@@ -50,7 +50,7 @@ module.exports = function (io, options = {}) {
     (step.meets || []).filter((one) => one.id === "argue" && one.collected).reduce((sum, one) => sum + Math.min(one.collected.length * config.POND_HOP * 0.5, 3000) + config.POND_MEET * 0.3 + 1500 + 650 + (one.effects || []).length * config.POND_EFFECT, 0);
   const walkTime = (move) => config.POND_TURN + Math.min(config.POND_WALK, (move.path.length - 1) * config.POND_HOP);
   const stepTime = (step) =>
-    config.POND_STEP + step.moves.reduce((sum, move) => sum + walkTime(move), 0) + step.effects.length * config.POND_EFFECT + (step.chests.length ? config.POND_CHEST_TIME : 0) + (step.meets || []).length * config.POND_MEET + eatTime(step) + riotTime(step);
+    config.POND_STEP + step.moves.reduce((sum, move) => sum + walkTime(move), 0) + step.effects.length * config.POND_EFFECT + (step.chests.length ? config.POND_CHEST_TIME : 0) + (step.meets || []).length * config.POND_MEET + eatTime(step) + riotTime(step) + ((step.refill || []).length ? config.POND_REFILL : 0) + step.moves.filter((move) => move.calms).length * 500;
   const stepsTime = (steps) => steps.reduce((sum, step) => sum + stepTime(step), 0);
   function baseTime(bet, result) {
     let time = config.POND_SPIN + stepsTime(result.steps) + config.POND_COUNT_TIME;
@@ -140,7 +140,7 @@ module.exports = function (io, options = {}) {
   }
 
   function rules() {
-    return { minBet: limits.POND_MIN_BET, maxBet: limits.POND_MAX_BET, spinTime: config.POND_SPIN, stepTime: config.POND_STEP, turnTime: config.POND_TURN, hopTime: config.POND_HOP, walkTime: config.POND_WALK, meetTime: config.POND_MEET, effectTime: config.POND_EFFECT, chestTime: config.POND_CHEST_TIME, freeIntro: config.POND_FREE_INTRO, freeSpinTime: config.POND_FREE_SPIN, moonTime: config.POND_MOON_TIME, bonusEndTime: config.POND_BONUS_END, bigWin: config.POND_BIG_WIN, bigTime: config.POND_BIG_TIME, countTime: config.POND_COUNT_TIME, pauseTime: config.POND_PAUSE, minGap: config.POND_MIN_GAP, resumeTime: config.SLOTS_RESUME_TIME };
+    return { minBet: limits.POND_MIN_BET, maxBet: limits.POND_MAX_BET, spinTime: config.POND_SPIN, stepTime: config.POND_STEP, turnTime: config.POND_TURN, hopTime: config.POND_HOP, walkTime: config.POND_WALK, meetTime: config.POND_MEET, refillTime: config.POND_REFILL, effectTime: config.POND_EFFECT, chestTime: config.POND_CHEST_TIME, freeIntro: config.POND_FREE_INTRO, freeSpinTime: config.POND_FREE_SPIN, moonTime: config.POND_MOON_TIME, bonusEndTime: config.POND_BONUS_END, bigWin: config.POND_BIG_WIN, bigTime: config.POND_BIG_TIME, countTime: config.POND_COUNT_TIME, pauseTime: config.POND_PAUSE, minGap: config.POND_MIN_GAP, resumeTime: config.SLOTS_RESUME_TIME };
   }
 
   async function sendCoins(username) {

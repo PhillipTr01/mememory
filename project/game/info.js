@@ -249,11 +249,11 @@ const GAMES = {
         section("Feature symbols", [
           tile("🪙", "Coin", "A coin pays a win right away.", { emoji: ["🪙"] }),
           tile(sym("wild"), "Firefly", "The firefly is wild and counts as a gem for every frog.", { emoji: [sym("wild")] }),
-          tile(sym("rain"), "Rain", "Rain fills the empty spots with new symbols, and the frogs move again.", { emoji: [sym("rain")] }),
+          tile(sym("rain"), "Rain", "Rain drops new symbols on the whole pond.", { emoji: [sym("rain")] }),
           tile(sym("swirl"), "Swirl", "The swirl turns the gems of another colour into the colour of its frog.", { emoji: [sym("swirl")] }),
           tile(sym("rock"), "Rock", "A rock clears the spots around where it lands, and a frog it hits jumps somewhere else.", { emoji: [sym("rock")] }),
-          tile(sym("evil"), "Curse", "The curse turns a frog evil. It grows, eats the frogs next to it and licks up the gems of their colours too.", { emoji: [sym("evil")] }),
-          tile(sym("flies"), "Flies", "Flies fill the empty spots. A frog can cross each fly once by eating it.", { emoji: [sym("flies")] }),
+          tile(sym("evil"), "Curse", "The curse turns a frog evil for three turns. It grows, eats the frogs next to it and licks up the gems of their colours too.", { emoji: [sym("evil")] }),
+          tile(sym("flies"), "Flies", "Flies land on the gems that block the frogs. A frog can cross each fly once by eating it.", { emoji: [sym("flies")] }),
         ]),
         section("Free spins", [
           tile(sym("moon"), "Start them", `Collect ${pond.MOON_TRIGGER} ${sym("moon")} in one spin for ${pond.FREE_SPINS} free spins.`, { emoji: Array(pond.MOON_TRIGGER).fill(sym("moon")) }),

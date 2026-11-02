@@ -268,6 +268,7 @@ module.exports = {
   POND_HOP: 480, // ... and hops one spot ...
   POND_WALK: 3400, // ... a long walk faster: a frog's walk takes this long at most
   POND_MEET: 1600, // two frogs trade spots or argue
+  POND_REFILL: 700, // new symbols drop into the empty spots
   POND_EFFECT: 800, // a feature symbol acts
   POND_CHEST_TIME: 2800, // the full meter's chests open
   POND_FREE_INTRO: 3500, // the free spins start: the moon rises
