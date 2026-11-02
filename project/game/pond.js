@@ -24,6 +24,8 @@ const crypto = require("crypto");
  *
  * The payback is 96.8%, as the slots': the pays are scaled by PAY_SCALE so that the simulated spins pay it back.
  */
+// The rules' version: free spins saved by other rules are paid, not shown again (their symbols may be gone)
+const VERSION = 2;
 const MIN_SIZE = 6;
 const MAX_SIZE = 8;
 const CLUSTER = 7; // at least this many symbols touching win
@@ -315,4 +317,4 @@ function catalog() {
   };
 }
 
-module.exports = { RTP, MIN_SIZE, MAX_SIZE, CLUSTER, FAMILIES, FAMILY_IDS, SYMBOLS, BY_ID, TIER_VALUES, SIZE_FACTORS, BELLY, FREE_BELLY, LEAP_PAY, MAX_LEVEL, PAY_SCALE, MOON_TRIGGER, FREE_SPINS, FREE_PER_MOON, MAX_FREE_SPINS, MAX_WIN, BUY_PRICE, BUY_RTP, SPIN_SPREAD, board, clustersOf, play, refill, moonsIn, freeSpinsFor, freeGame, spin, catalog, newLevels, newBellies };
+module.exports = { VERSION, RTP, MIN_SIZE, MAX_SIZE, CLUSTER, FAMILIES, FAMILY_IDS, SYMBOLS, BY_ID, TIER_VALUES, SIZE_FACTORS, BELLY, FREE_BELLY, LEAP_PAY, MAX_LEVEL, PAY_SCALE, MOON_TRIGGER, FREE_SPINS, FREE_PER_MOON, MAX_FREE_SPINS, MAX_WIN, BUY_PRICE, BUY_RTP, SPIN_SPREAD, board, clustersOf, play, refill, moonsIn, freeSpinsFor, freeGame, spin, catalog, newLevels, newBellies };

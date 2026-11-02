@@ -73,9 +73,16 @@ module.exports = function (io, options = {}) {
     }
   }
 
+  // Free spins saved by other rules (an update of the game): their symbols may be gone - paid, not shown again
+  const outdated = (entry) => entry.result && entry.result.version !== pond.VERSION;
+
   function resume(socket, username) {
-    for (const entry of machine.pending) {
+    for (const entry of machine.pending.slice()) {
       if (entry.name !== username || !entry.result) continue;
+      if (outdated(entry)) {
+        payPending(entry).catch((error) => console.error("[pond] Could not pay old free spins:", error));
+        continue;
+      }
       if (entry.state === "paused") {
         const rest = play(entry, config.SLOTS_RESUME_TIME);
         socket.emit("pdResume", { ...entry.result, id: entry.id, shown: entry.shown, started: true, payIn: rest });
@@ -235,7 +242,7 @@ module.exports = function (io, options = {}) {
               note: note + (buy ? " (bonus buy)" : ""),
               at: Date.now() + payIn,
               // The free spins: everything to show them again, how far they were seen
-              result: free ? { bet: bet, grid: result.grid, steps: result.steps, last: result.last, moons: result.moons, lineX: result.lineX, bonus: free, x: result.x, win: result.win, capped: result.capped } : null,
+              result: free ? { version: pond.VERSION, bet: bet, grid: result.grid, steps: result.steps, last: result.last, moons: result.moons, lineX: result.lineX, bonus: free, x: result.x, win: result.win, capped: result.capped } : null,
               shown: 0,
               state: null,
               feed: { name: username, bet: bet, buy: buy ? cost : null, win: result.win, symbol: top ? top.family : free ? "moon" : null, size: top ? top.size : 0, tumbles: result.steps.length, free: free ? free.freeSpins.length : null, at: Date.now() },
@@ -273,6 +280,7 @@ module.exports = function (io, options = {}) {
       // (free spins are never paid unseen because of the restart: held where they were)
       machine.pending.forEach((entry) => {
         if (!entry.result) return schedulePay(entry, (entry.at || 0) - Date.now());
+        if (outdated(entry)) return schedulePay(entry, 0);
         entry.state = entry.state === "waiting" ? "waiting" : "paused";
         entry.at = Date.now() + config.SLOTS_HOLD;
         schedulePay(entry, config.SLOTS_HOLD);

@@ -290,3 +290,20 @@ test("pond: its own share of the max bet by balance (1/x) - a bonus buy counts l
     [config.BET_CAP_FLOOR, config.BET_CAP_SHARE, config.POND_CAP_DIV] = saved;
   }
 });
+
+test("pond: free spins saved by other rules (an update of the game) are paid when the player is back, not shown again", async () => {
+  sockets.forEach((socket) => socket.close());
+  await h.wait(50);
+  h.setCoins("mia", 1000);
+  const old = { id: "old:1", name: "mia", bet: 100, win: 1106, note: "free spins 8", at: Date.now() + 60000, result: { bet: 100, grid: [["flower0"]], bonus: { freeSpins: [] }, win: 1106 }, shown: 3, state: "paused", feed: null };
+  server.pond.machine.pending.push(old);
+  const page = client("mia");
+  let resumed = false;
+  page.on("pdResume", () => (resumed = true));
+  await h.once(page, "pdSetup");
+  await h.wait(100);
+  assert.strictEqual(resumed, false, "not shown again");
+  assert.strictEqual(h.coinsOf("mia"), 1000 + 1106, "paid");
+  assert.ok(!server.pond.machine.pending.includes(old));
+  page.close();
+});
