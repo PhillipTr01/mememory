@@ -1,4 +1,4 @@
-/* Frog Pond: a square pond of 6x6 to 8x8, the frogs above it - the controls are the slots' (slots.css) */
+/* Frog Pond: a square pond of 6x6 to 8x8, the frogs on it and above it - the controls are the slots' (slots.css) */
 
 .pd-machine {
   position: relative;
@@ -87,14 +87,73 @@
   will-change: transform;
 }
 
-/* A family's symbol: a lily pad of its colour under it */
-.pd-sym[class*="pd-fam-"]::after {
+/* An amber: a gem in its colour, the brighter the higher its level */
+.pd-amber::after {
   content: "";
   position: absolute;
-  inset: 9%;
+  inset: 10%;
+  z-index: -1;
+  border-radius: 46% 54% 50% 50% / 55% 50% 50% 45%;
+  background: radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.55), color-mix(in srgb, var(--fam) 70%, #b45309) 35%, color-mix(in srgb, var(--fam) 45%, #451a03) 100%);
+  box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.35), 0 0 calc(var(--glow, 0) * 1px) color-mix(in srgb, var(--fam) 80%, transparent);
+}
+
+.pd-amber[data-level="1"], .pd-amber[data-level="2"] { --glow: 4; }
+.pd-amber[data-level="3"], .pd-amber[data-level="4"] { --glow: 8; }
+.pd-amber[data-level="5"], .pd-amber[data-level="6"], .pd-amber[data-level="7"] { --glow: 14; }
+
+.pd-amber .pd-sym-icon {
+  font-size: calc(var(--cell) * 0.42);
+  opacity: 0.85;
+}
+
+.pd-sym-level,
+.pd-sym-coin {
+  position: absolute;
+  bottom: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 0.3em;
+  border-radius: 999px;
+  font-size: max(0.55rem, calc(var(--cell) * 0.17));
+  font-weight: 800;
+  line-height: 1.35;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fef3c7;
+}
+
+.pd-sym-level {
+  bottom: auto;
+  top: 6%;
+  left: auto;
+  right: 6%;
+  transform: none;
+}
+
+/* A feature symbol: a soft ring under it */
+.pd-feature::after {
+  content: "";
+  position: absolute;
+  inset: 12%;
   z-index: -1;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--fam) 45%, transparent), color-mix(in srgb, var(--fam) 12%, transparent) 70%);
+  background: radial-gradient(circle, rgba(253, 230, 138, 0.28), rgba(253, 230, 138, 0) 70%);
+  border: 1px solid rgba(253, 230, 138, 0.35);
+}
+
+/* An empty spot: the water; popcorn: a frog crosses it once */
+.pd-empty::after {
+  content: "";
+  position: absolute;
+  inset: 30%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pd-pop .pd-sym-icon {
+  font-size: calc(var(--cell) * 0.4);
+  opacity: 0.8;
 }
 
 .pd-sym-icon {
@@ -105,67 +164,37 @@
   transition: transform 0.15s;
 }
 
-.pd-wild .pd-sym-icon {
+.pd-wild .pd-sym-icon,
+.pd-moon .pd-sym-icon {
   animation: pd-pulse 0.9s ease-in-out infinite alternate;
 }
 
-/* A tumble: the winning symbols glow, the others fade back */
-.pd-board.winning .pd-sym:not(.win) {
-  opacity: 0.35;
-  transition: opacity 0.15s;
+/* The frogs on the pond: over the spots, they hop from spot to spot */
+.pd-frog-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
 }
 
-.pd-sym.win {
+.pd-board-frog {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 4%;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.55));
+  transition: transform 0.25s ease-out;
+}
+
+.pd-board-frog.moving {
   z-index: 1;
+  transition: none;
 }
 
-.pd-sym.win::before {
-  content: "";
-  position: absolute;
-  inset: 6%;
-  border-radius: 12px;
-  background: radial-gradient(circle, rgba(250, 204, 21, 0.45), rgba(250, 204, 21, 0) 70%);
-  border: 2px solid rgba(250, 204, 21, 0.85);
-  animation: pd-pulse 0.5s ease-in-out infinite alternate;
-}
-
-.pd-sym.win .pd-sym-icon {
-  transform: scale(1.12);
-}
-
-/* A frog eats: its kind shrinks away; a splash: its row and column wash off; a special acts */
-.pd-sym.eaten .pd-sym-icon {
-  animation: pd-eaten 0.6s ease-in forwards;
-}
-
-@keyframes pd-eaten {
-  to {
-    transform: scale(0.2) translateY(-30%);
-    opacity: 0.2;
-  }
-}
-
-.pd-sym.splashed::before {
-  content: "";
-  position: absolute;
-  inset: 4%;
-  border-radius: 10px;
-  background: rgba(56, 189, 248, 0.35);
-  border: 2px solid rgba(125, 211, 252, 0.8);
-}
-
-.pd-sym.acting .pd-sym-icon {
-  transform: scale(1.3);
-  animation: pd-pulse 0.3s ease-in-out infinite alternate;
-}
-
-.pd-sym.moon-glow::before {
-  content: "";
-  position: absolute;
-  inset: 4%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(253, 224, 71, 0.55), rgba(253, 224, 71, 0) 70%);
-  animation: pd-pulse 0.6s ease-in-out infinite alternate;
+.pd-board-frog svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 @keyframes pd-pulse {
@@ -288,12 +317,17 @@
   color: var(--mm-muted, #9ca3af);
 }
 
+.pd-pays .pd-pays-label {
+  text-align: left;
+  font-weight: 700;
+}
+
 .pd-pays .pd-pays-icon {
   text-align: left;
   font-size: 1.4rem;
 }
 
-/* The frogs: one per kind, a belly that fills, stars for the better symbols */
+/* The frogs: one per colour, what one amber pays, the pips of its upgrades */
 .pd-frogs {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -306,15 +340,20 @@
   grid-template-columns: auto 1fr;
   grid-template-rows: auto auto;
   align-items: center;
-  column-gap: 0.25rem;
+  column-gap: 0.3rem;
   padding: 0.25rem 0.4rem;
   border-radius: 12px;
   background: color-mix(in srgb, var(--fam) 14%, rgba(15, 23, 42, 0.6));
   border: 1px solid color-mix(in srgb, var(--fam) 55%, transparent);
+  transition: box-shadow 0.2s;
 }
 
 .pd-frog.grown {
   box-shadow: 0 0 10px color-mix(in srgb, var(--fam) 55%, transparent);
+}
+
+.pd-frog.flash {
+  box-shadow: 0 0 22px var(--fam);
 }
 
 .pd-frog-face {
@@ -330,33 +369,142 @@
   height: 100%;
 }
 
-.pd-frog-food {
+.pd-frog-amber {
   position: absolute;
   top: -0.2rem;
   left: 2.2rem;
   font-size: 0.75rem;
 }
 
-.pd-frog-belly {
-  height: 0.4rem;
+.pd-frog-value {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #fef3c7;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pd-frog-pips {
+  display: flex;
+  gap: 2px;
+}
+
+.pd-pip {
+  flex: 1;
+  max-width: 0.6rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  transition: background 0.3s;
+}
+
+.pd-pip.on {
+  background: var(--fam);
+  box-shadow: 0 0 4px var(--fam);
+}
+
+/* The feature meter and the full moons collected (next to the size of the pond) */
+.pd-top {
+  flex-wrap: wrap;
+}
+
+.pd-meter,
+.pd-moons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(253, 230, 138, 0.35);
+  color: #fef3c7;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pd-meter-bar {
+  position: relative;
+  width: 6rem;
+  height: 0.5rem;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
   overflow: hidden;
 }
 
-.pd-frog-fill {
+.pd-meter-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
   width: 0;
-  height: 100%;
   border-radius: 999px;
-  background: var(--fam);
+  background: linear-gradient(90deg, #f59e0b, #fde047);
   transition: width 0.35s ease-out;
 }
 
-.pd-frog-stars {
-  font-size: 0.65rem;
-  line-height: 1;
-  color: var(--fam);
-  letter-spacing: 0.05em;
+.pd-moons.full {
+  border-color: #fde047;
+  box-shadow: 0 0 14px rgba(253, 224, 71, 0.6);
+}
+
+/* The chests of a full meter */
+.pd-chest-row {
+  display: flex;
+  gap: 0.9rem;
+}
+
+.pd-chest {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.6rem;
+  height: 3.6rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--fam) 25%, rgba(15, 23, 42, 0.8));
+  border: 2px solid color-mix(in srgb, var(--fam) 70%, transparent);
+  font-size: 2rem;
+}
+
+.pd-chest-prize {
+  position: absolute;
+  opacity: 0;
+  transform: scale(0.3);
+  transition: opacity 0.25s, transform 0.3s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.pd-chest-lid {
+  transition: opacity 0.2s, transform 0.25s;
+}
+
+.pd-chest.open .pd-chest-lid {
+  opacity: 0;
+  transform: translateY(-40%) scale(0.6);
+}
+
+.pd-chest.open .pd-chest-prize {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* The paytable: what one amber pays at every level, the feature symbols */
+.pd-feature-list {
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
+.pd-feature-list li {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  padding: 0.2rem 0;
+}
+
+.pd-feature-icon {
+  flex: 0 0 1.6rem;
+  font-size: 1.15rem;
+  text-align: center;
 }
 
 .pd-pays .pd-pays-first td {

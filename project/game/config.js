@@ -258,16 +258,18 @@ module.exports = {
   MEGAWAYS_MIN_GAP: 1850, // at least this long from one spin to the next of a player
   MEGAWAYS_FEED: 12, // last wins in the list
   MEGAWAYS_TEST_BONUS: false, // tests only: every spin starts the free spins
-  // Frog Pond (game/pond.js): a 6x6 to 8x8 board of clusters, tumbles, frogs that leap, the full moon's free spins
+  // Frog Pond (game/pond.js): a 6x6 to 8x8 pond, frogs that collect amber, feature symbols, the full moon's free spins
   POND_MIN_BET: 10,
   POND_MAX_BET: 10000,
   POND_CAP_DIV: 15, // gets 1/x of the max bet by balance (its floor and its share) - as the slots
   POND_SPIN: 1500, // the board drops in on the page
-  POND_TUMBLE: 1100, // one tumble on the page: the clusters shown, gone, new symbols fall in (or a special acts)
-  POND_LEAP_TIME: 900, // a frog leaps on top of a tumble
+  POND_STEP: 700, // one step on the page: the frogs get ready, the pond settles (the hops and the features on top)
+  POND_HOP: 170, // a frog hops one spot
+  POND_EFFECT: 650, // a feature symbol acts
+  POND_CHEST_TIME: 1600, // the full meter's chests open
   POND_FREE_INTRO: 3500, // the free spins start: the moon rises
   POND_FREE_SPIN: 1500, // one free spin on the page (its tumbles on top)
-  POND_MOON_TIME: 800, // a 🌕 in a free spin: a free spin more
+  POND_MOON_TIME: 800, // 🌕 collected in a free spin give free spins more
   POND_BONUS_END: 4000, // the free spins' win counted up and shown
   POND_BIG_WIN: 15, // a win of this many times the bet gets the big show
   POND_BIG_TIME: 3000,

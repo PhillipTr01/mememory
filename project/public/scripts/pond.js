@@ -1,11 +1,11 @@
-/* Frog Pond: the server fills the board, plays out the tumbles and the frogs and pays, this page only shows the spin. */
+/* Frog Pond: the server fills the pond, moves the frogs, lets the features act and pays, this page only shows the spin. */
 const socket = io((window.CASINO_NS || "") + "/pond");
 
 var myName = null;
 var myCoins = 0;
 var myCapRule = null; // the max bet by balance of a spin ({floor, share} - null: no cap), see casinoCapLeft
 var myBuyCapRule = null; // ... of a bonus buy (counts like a bet at a table)
-var setup = null; // {symbols, families, sizeFactors, cluster, size, belly, freeBelly, maxLevel, free, maxWin, buy, rules}
+var setup = null; // {symbols, families, features, amberValues, size, maxLevel, meter, chests, free, maxWin, buy, rules}
 var spinning = false;
 var pausedUntil = 0; // after a spin: the next one only from then on
 var spinWatch = null; // no answer from the server: the spin button comes back
@@ -44,10 +44,11 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, Math.max(0, ms
 // The note of a win in the best wins (casino_best.js): "9 berry" -> "9 × 🍓", "free spins 12" -> "🌕 12 free spins"
 function pondNote(text) {
   if (!setup) return text;
-  var cluster = /^(\d+) (\w+)/.exec(text);
-  if (cluster && setup.families.some((family) => family.id == cluster[2])) return cluster[1] + " × " + familyIcon(cluster[2]);
+  var amber = /^(\d+) (\w+)/.exec(text);
+  if (amber && setup.families.some((family) => family.id == amber[2])) return amber[1] + " × " + familyIcon(amber[2]);
   var free = /^free spins (\d+)/.exec(text);
   if (free) return "🌕 " + free[1] + " free spins";
+  if (/^coins/.test(text)) return "🪙 Coins";
   if (/^frog leap/.test(text)) return "🐸 Frog leap";
   return text;
 }
@@ -107,11 +108,11 @@ socket.on("pdSetup", (data) => {
   setup = data;
   if (first) {
     renderFrogs();
-    setFrogs(zeros(), zeros(), setup.belly);
-    showGrid(startScreen(), false);
     renderPresets();
     if (readBet() == "max") pickMax();
     else setBet(Number(readBet()) || 100);
+    resetPanel(null, 0, 0, null, false);
+    showGrid(startScreen(), false, { frogs: startFrogs() });
   }
   renderControls();
 });
@@ -131,27 +132,33 @@ socket.on("pdFeed", renderFeed);
 
 /* ---------- The pond ---------- */
 
-var shown = null; // the board on the screen
+var shown = null; // the pond on the screen
 var cells = []; // cells[column][row] - the elements
+var frogSpots = {}; // where the frogs sit on the screen: {leaf: [c, r], ...}
+var frogEls = {}; // the frogs on the pond
 
-function familyOf(id) {
-  var symbol = setup && symbolOf(id);
-  return symbol ? symbol.family : null;
-}
 function familyInfo(id) {
   return setup.families.find((family) => family.id == id);
 }
-// The best symbol of a family (its icon stands for the family)
+// The icon in the amber of a colour
 function familyIcon(id) {
-  var best = setup.symbols.filter((s) => s.family == id).sort((a, b) => b.tier - a.tier)[0];
-  return best ? best.icon : "";
+  var family = setup && familyInfo(id);
+  return family ? family.icon : "";
+}
+function zeros() {
+  return Object.fromEntries(setup.families.map((family) => [family.id, 0]));
 }
 
-// A board to start with (nothing won): the families mixed
+// A pond to start with: the colours and a few features mixed, empty spots between them
 function startScreen() {
-  var ids = setup.symbols.filter((s) => s.family && s.tier < 2).map((s) => s.id);
+  var ids = setup.families.map((family) => family.id).concat([null, null, "coin1", null, "wild"]);
   var n = setup.size[0];
   return Array.from({ length: n }, (_, c) => Array.from({ length: n }, (_, r) => ids[(c * 5 + r * 7) % ids.length]));
+}
+function startFrogs() {
+  var n = setup.size[0];
+  var spots = [[1, 1], [n - 2, 1], [1, n - 2], [n - 2, n - 2]];
+  return Object.fromEntries(setup.families.map((family, i) => [family.id, spots[i]]));
 }
 
 function boardSize() {
@@ -159,7 +166,36 @@ function boardSize() {
   return box.clientWidth || 360;
 }
 
-// The board on the screen: square cells, the symbols fall in (drop: from above, by column)
+var levelsShown = {};
+// The content of a spot: an amber (its colour, its level), a coin (its win), a feature, popcorn or nothing
+function fillCell(cell, id, bet) {
+  var symbol = id == null ? null : symbolOf(id);
+  cell.className = "pd-sym" + (symbol == null ? " pd-empty" : symbol.family ? " pd-amber" : symbol.pop ? " pd-pop" : " pd-feature pd-" + symbol.feature);
+  cell.replaceChildren();
+  cell.style.removeProperty("--fam");
+  if (symbol == null) return;
+  if (symbol.family) {
+    cell.style.setProperty("--fam", familyInfo(symbol.family).color);
+    var level = levelsShown[symbol.family] || 0;
+    cell.dataset.level = level;
+    cell.append(el("span", "pd-sym-icon", symbol.icon));
+    if (level > 0) cell.append(el("span", "pd-sym-level", "★" + level));
+    return;
+  }
+  cell.append(el("span", "pd-sym-icon", symbol.icon));
+  if (symbol.coin != null) cell.append(el("span", "pd-sym-coin", shortCoins(symbol.coin * (bet || currentBet() || 0))));
+}
+
+// A win on the pond: short (12.5K), small ones with their cents (1.99)
+function shortCoins(value) {
+  if (value < 100) return formatCoins(Math.round(value * 100) / 100);
+  value = Math.floor(value);
+  if (value >= 1000000) return Math.round(value / 100000) / 10 + "M";
+  if (value >= 10000) return Math.round(value / 100) / 10 + "K";
+  return formatCoins(value);
+}
+
+// The pond on the screen: square spots, the frogs on top (drop: the symbols fall in, by column)
 function showGrid(grid, drop, options) {
   options = options || {};
   var box = document.getElementById("pdBoard");
@@ -173,20 +209,31 @@ function showGrid(grid, drop, options) {
     columnBox.style.left = c * size + "px";
     columnBox.style.width = size + "px";
     cells[c] = column.map((id, r) => {
-      var family = familyOf(id);
-      var cell = el("div", "pd-sym pd-" + id + (family ? " pd-fam-" + family : ""));
+      var cell = el("div", "pd-sym");
       cell.style.top = r * size + "px";
       cell.style.height = size + "px";
-      if (family) cell.style.setProperty("--fam", familyInfo(family).color);
-      cell.append(el("span", "pd-sym-icon", iconOf(id)));
+      fillCell(cell, id, options.bet);
       columnBox.appendChild(cell);
       return cell;
     });
     return columnBox;
   });
-  box.replaceChildren(...columns);
+  var layer = el("div", "pd-frog-layer");
+  frogEls = {};
+  setup.families.forEach((family) => {
+    var frog = el("div", "pd-board-frog");
+    frog.style.setProperty("--fam", family.color);
+    frog.style.width = frog.style.height = size + "px";
+    frog.innerHTML = FROG_SVG;
+    frog.title = family.frog;
+    layer.append(frog);
+    frogEls[family.id] = frog;
+  });
+  box.replaceChildren(...columns, layer);
   shown = grid;
   renderSize(n);
+  if (options.frogs) frogSpots = JSON.parse(JSON.stringify(options.frogs));
+  placeFrogs();
   if (!drop) return Promise.resolve();
   var time = options.time || setup.rules.spinTime * 0.75;
   var animations = [];
@@ -202,10 +249,27 @@ function showGrid(grid, drop, options) {
       );
     }),
   );
+  Object.values(frogEls).forEach((frog, i) => animations.push(frog.animate([{ transform: frogTransform(frog) + " scale(0)" }, { transform: frogTransform(frog) + " scale(1)" }], { duration: time * 0.35, delay: time * 0.5 + i * 60, easing: "cubic-bezier(.3,1.6,.5,1)", fill: "backwards" }).finished));
   return Promise.all(animations);
 }
 
-// The symbols on the board fall out at the bottom (before the next spin drops in)
+function frogTransform(frog) {
+  return "translate(" + frog.dataset.x + "px, " + frog.dataset.y + "px)";
+}
+
+function placeFrogs() {
+  var size = boardSize() / (shown ? shown.length : setup.size[0]);
+  Object.entries(frogEls).forEach(([family, frog]) => {
+    var spot = frogSpots[family];
+    frog.hidden = !spot;
+    if (!spot) return;
+    frog.dataset.x = spot[0] * size;
+    frog.dataset.y = spot[1] * size;
+    frog.style.transform = frogTransform(frog);
+  });
+}
+
+// The symbols on the pond fall out at the bottom, the frogs dive (before the next spin drops in)
 function dropOut() {
   var width = boardSize();
   var animations = [];
@@ -214,6 +278,7 @@ function dropOut() {
       animations.push(cell.animate([{ transform: "translateY(0)", opacity: 1 }, { transform: "translateY(" + (width + 20) + "px)", opacity: 0.3 }], { duration: 260, delay: c * 30, easing: "ease-in", fill: "forwards" }).finished);
     }),
   );
+  Object.values(frogEls).forEach((frog) => animations.push(frog.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" }).finished));
   return Promise.all(animations);
 }
 
@@ -223,9 +288,9 @@ function renderSize(n) {
   box.classList.toggle("max", setup && n >= setup.size[1]);
 }
 
-/* ---------- The frogs ---------- */
+/* ---------- The frogs, the meter, the moons ---------- */
 
-// A frog in the colour of its kind (--fam), sitting on its lily pad
+// A frog in its colour (--fam), sitting on its lily pad
 var FROG_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 33 L44 38 A22 8 0 1 1 41 34 Z" fill="#15803d" /><path d="M24 33 L44 38 A22 8 0 1 1 41 34 Z" fill="none" stroke="#0f5132" stroke-width="1.2" /><path d="M24 38 L12 41 M24 38 L30 43 M24 38 L8 37" stroke="#166534" stroke-width="1" /><ellipse cx="24" cy="26" rx="13" ry="10.5" fill="var(--fam)" /><circle cx="16" cy="15" r="5.8" fill="var(--fam)" /><circle cx="32" cy="15" r="5.8" fill="var(--fam)" /><circle cx="16" cy="15" r="3.2" fill="#fff" /><circle cx="32" cy="15" r="3.2" fill="#fff" /><circle cx="16.7" cy="15.5" r="1.7" fill="#111827" /><circle cx="32.7" cy="15.5" r="1.7" fill="#111827" /><path d="M17 27.5 Q24 33 31 27.5" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2" stroke-linecap="round" /><circle cx="13" cy="26" r="1.8" fill="rgba(255,255,255,.35)" /><circle cx="35" cy="26" r="1.8" fill="rgba(255,255,255,.35)" /></svg>';
 var frogBoxes = {};
 function renderFrogs() {
@@ -238,108 +303,217 @@ function renderFrogs() {
       frog.title = family.frog;
       var face = el("div", "pd-frog-face");
       face.innerHTML = FROG_SVG;
-      var food = el("div", "pd-frog-food", familyIcon(family.id));
-      var belly = el("div", "pd-frog-belly");
-      var fill = el("div", "pd-frog-fill");
-      belly.append(fill);
-      var stars = el("div", "pd-frog-stars", "");
-      frog.append(face, food, belly, stars);
-      frogBoxes[family.id] = { frog: frog, fill: fill, stars: stars, face: face };
+      var amber = el("div", "pd-frog-amber", family.icon);
+      var value = el("div", "pd-frog-value", "");
+      var pips = el("div", "pd-frog-pips");
+      for (var i = 0; i < setup.maxLevel; i++) pips.append(el("span", "pd-pip"));
+      frog.append(face, amber, value, pips);
+      frogBoxes[family.id] = { frog: frog, value: value, pips: pips };
       return frog;
     }),
   );
 }
 
-// The bellies (0 .. full) and the levels of the families
-function setFrogs(bellies, levels, full) {
+// The levels of the amber: the pips, what one amber pays with the bet
+function setLevels(levels, bet) {
+  levelsShown = Object.assign({}, levels);
   setup.families.forEach((family) => {
     var box = frogBoxes[family.id];
     if (!box) return;
-    var value = (bellies && bellies[family.id]) || 0;
-    box.fill.style.width = Math.min(100, (value / full) * 100) + "%";
-    var level = (levels && levels[family.id]) || 0;
-    box.stars.innerText = "★".repeat(level) + "☆".repeat(setup.maxLevel - level);
+    var level = levels[family.id] || 0;
+    [...box.pips.children].forEach((pip, i) => pip.classList.toggle("on", i < level));
+    box.value.innerText = "🪙 " + shortCoins(setup.amberValues[level] * (bet || currentBet() || 0));
     box.frog.classList.toggle("grown", level > 0);
   });
 }
 
-function zeros() {
-  return Object.fromEntries(setup.families.map((family) => [family.id, 0]));
+function setMeter(meter) {
+  var fill = document.querySelector("#pdMeter .pd-meter-fill");
+  fill.style.width = Math.min(100, (meter / setup.meter) * 100) + "%";
+  document.querySelector("#pdMeter .pd-meter-count").innerText = meter + " / " + setup.meter;
+}
+
+function setMoons(moons, inBonus) {
+  var box = document.getElementById("pdMoons");
+  var part = inBonus ? moons % setup.free.trigger : Math.min(moons, setup.free.trigger);
+  box.querySelector(".pd-moons-value").innerText = part + " / " + setup.free.trigger;
+}
+
+// The frogs, the meter and the moons as at the start of a spin
+function resetPanel(levels, meter, moons, bet, inBonus) {
+  setLevels(levels || zeros(), bet);
+  setMeter(meter || 0);
+  setMoons(moons || 0, inBonus);
+}
+
+/* ---------- A step: the frogs move, the features act ---------- */
+
+var FEATURE_TEXT = {
+  coin: (e) => "🪙 A coin win",
+  sun: (e) => "☀️ The " + familyInfo(e.family).name.toLowerCase() + " is worth more",
+  wild: (e) => "✨ A firefly lands on the pond",
+  lotus: (e) => (e.grew ? "🪷 The pond grows" : "🪷 The pond is as big as it gets"),
+  rain: (e) => "🌧️ Rain fills the empty spots",
+  swirl: (e) => (e.from ? "🌀 The " + familyInfo(e.from).name.toLowerCase() + " turns " + familyInfo(e.family).name.split(" ")[0].toLowerCase() : "🌀 Nothing to turn"),
+  popcorn: (e) => "🍿 Popcorn fills the empty spots",
+  moon: (e) => "🌕 A full moon",
+};
+
+function cellAt(spot) {
+  return cells[spot[0]] && cells[spot[0]][spot[1]];
+}
+
+// A frog hops along its path: it collects what it lands on (the popcorn too, the other colours stay)
+async function hopFrog(move, bet, win) {
+  var frog = frogEls[move.family];
+  var size = boardSize() / shown.length;
+  var hop = setup.rules.hopTime;
+  frog.classList.add("moving");
+  for (var i = 1; i < move.path.length; i++) {
+    var from = frogTransform(frog);
+    var spot = move.path[i];
+    frog.dataset.x = spot[0] * size;
+    frog.dataset.y = spot[1] * size;
+    var to = frogTransform(frog);
+    frog.style.transform = to;
+    frog.animate([{ transform: from + " scale(1)" }, { transform: from + " scale(1.25)", offset: 0.45 }, { transform: to + " scale(1)" }], { duration: hop * 0.9, easing: "ease-out" });
+    await wait(hop * 0.55);
+    var id = shown[spot[0]][spot[1]];
+    var collected = id == move.family || id == "wild" || id == "pop" || (id != null && symbolOf(id) && symbolOf(id).feature);
+    if (collected) {
+      var cell = cellAt(spot);
+      cell.classList.add("collected");
+      cell.animate([{ transform: "scale(1)", opacity: 1 }, { transform: "scale(0.3)", opacity: 0 }], { duration: hop * 0.4, easing: "ease-in", fill: "forwards" });
+      shown[spot[0]][spot[1]] = null;
+      if (id == move.family || id == "wild") {
+        win.amount += setup.amberValues[move.level] * bet;
+        countUp(document.getElementById("pdWinText"), Math.floor(win.amount), hop * 0.4, Math.floor(win.amount - setup.amberValues[move.level] * bet));
+      }
+    }
+    await wait(hop * 0.45);
+  }
+  frog.classList.remove("moving");
+  frogSpots[move.family] = move.path[move.path.length - 1];
+  // (the exact win of the move, rounding aside)
+  win.amount = win.base + move.pay * bet;
+  win.base = win.amount;
+}
+
+// The full meter: three chests open, each with a feature symbol
+async function openChests(chests) {
+  var card = el("div", "pd-intro pd-chests");
+  var row = el("div", "pd-chest-row");
+  chests.forEach((chest) => {
+    var box = el("div", "pd-chest");
+    box.style.setProperty("--fam", familyInfo(chest.family).color);
+    box.append(el("span", "pd-chest-lid", "🧰"), el("span", "pd-chest-prize", featureIcon(chest.id)));
+    row.append(box);
+  });
+  card.append(el("div", "pd-intro-title", "Meter full"), row);
+  stage(card);
+  var time = setup.rules.chestTime;
+  await wait(time * 0.3);
+  [...row.children].forEach((box, i) => setTimeout(() => box.classList.add("open"), i * time * 0.15));
+  await wait(time * 0.6);
+  stage(null);
+  await wait(time * 0.1);
+}
+
+function featureIcon(id) {
+  var feature = setup.features.find((f) => f.id == id);
+  return feature ? feature.icon : "";
+}
+
+// A feature acts on the screen (the pond itself is shown again after the step)
+async function playEffect(effect, step, next, bet, win, inBonus) {
+  var detail = document.getElementById("pdWinDetail");
+  detail.innerText = (effect.chest ? "🧰 " : "") + FEATURE_TEXT[effect.id](effect);
+  var frogBox = frogBoxes[effect.family];
+  if (frogBox && !effect.chest) frogBox.frog.animate([{ transform: "scale(1)" }, { transform: "scale(1.08)" }, { transform: "scale(1)" }], { duration: 400 });
+  if (effect.id == "coin") {
+    countUp(document.getElementById("pdWinText"), Math.floor(win.amount + effect.pay * bet), setup.rules.effectTime * 0.5, Math.floor(win.amount));
+    win.amount += effect.pay * bet;
+    win.base = win.amount;
+  } else if (effect.id == "sun") {
+    levelsShown[effect.family] = effect.level;
+    setLevels(levelsShown, bet);
+    redrawColour(effect.family, bet);
+    frogBox.frog.classList.add("flash");
+    setTimeout(() => frogBox.frog.classList.remove("flash"), setup.rules.effectTime);
+  } else if (effect.id == "wild" && effect.at) {
+    setSpot(effect.at, "wild", bet);
+  } else if (effect.id == "swirl") {
+    (effect.cells || []).forEach((spot) => setSpot(spot, effect.family, bet));
+  } else if (effect.id == "rain") {
+    (effect.cells || []).forEach((spot) => setSpot(spot, next.grid[spot[0]] ? next.grid[spot[0]][spot[1]] : null, bet));
+  } else if (effect.id == "popcorn") {
+    (effect.cells || []).forEach((spot) => setSpot(spot, "pop", bet));
+  } else if (effect.id == "moon") {
+    setMoons(effect.moons, inBonus);
+    document.getElementById("pdMoons").animate([{ transform: "scale(1)" }, { transform: "scale(1.2)" }, { transform: "scale(1)" }], { duration: 450 });
+  }
+  await wait(setup.rules.effectTime);
+}
+
+function setSpot(spot, id, bet) {
+  var cell = cellAt(spot);
+  if (!cell) return;
+  shown[spot[0]][spot[1]] = id;
+  cell.getAnimations().forEach((animation) => animation.cancel());
+  fillCell(cell, id, bet);
+  cell.animate([{ transform: "scale(0.3)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: 260, easing: "cubic-bezier(.3,1.5,.5,1)" });
+}
+
+// An upgrade: the amber of a colour on the pond shows its new level
+function redrawColour(family, bet) {
+  shown.forEach((column, c) => column.forEach((id, r) => id == family && fillCell(cells[c][r], id, bet)));
 }
 
 /*
- * One step: the clusters light up (or the specials act), the frogs fill up and may leap, the spots go, the rest
- * falls down and new symbols fall in from the top (the next board: `next`). -> the win of the step
+ * One step: the frogs hop one after the other, the meter fills (full: the chests), the features act, then the pond
+ * as it is now (`next`: {grid, frogs}). -> the win of the step
  */
-async function playStep(step, next, bet, total, full) {
-  var time = setup.rules.tumbleTime;
-  var board = document.getElementById("pdBoard");
-  var gone = new Set(step.gone.map((spot) => spot[0] + ":" + spot[1]));
-  var mark = (spot, name) => cells[spot[0]] && cells[spot[0]][spot[1]] && cells[spot[0]][spot[1]].classList.add(name);
-  var detail = document.getElementById("pdWinDetail");
-  var stepWin = step.pay * bet;
-  if (step.kind == "win") {
-    step.clusters.forEach((cluster) => cluster.cells.forEach((spot) => mark(spot, "win")));
-    board.classList.add("winning");
-    var clusterPay = step.clusters.reduce((sum, cluster) => sum + cluster.pay, 0) * bet;
-    showWinDetail(step);
-    countUp(document.getElementById("pdWinText"), Math.floor(total + clusterPay), time * 0.4, Math.floor(total));
-    await wait(time * 0.45);
-    setFrogs(step.bellies, step.levels, full);
-    // A full frog leaps: it eats every symbol of its kind on the board
-    for (var leap of step.leaps) {
-      var box = frogBoxes[leap.family];
-      if (box) box.frog.animate([{ transform: "translateY(0) scale(1)" }, { transform: "translateY(-14px) scale(1.25)" }, { transform: "translateY(0) scale(1)" }], { duration: setup.rules.leapTime * 0.6, easing: "ease-out" });
-      leap.cells.forEach((spot) => mark(spot, "eaten"));
-      detail.innerText = "🐸 The " + familyInfo(leap.family).frog.toLowerCase() + " leaps and eats " + leap.cells.length + "!";
-      countUp(document.getElementById("pdWinText"), Math.floor(total + clusterPay + leap.pay * bet), setup.rules.leapTime * 0.5, Math.floor(total + clusterPay));
-      clusterPay += leap.pay * bet;
-      await wait(setup.rules.leapTime);
-    }
-  } else {
-    step.specials.forEach((special) => {
-      mark(special.at, "acting");
-      special.cells.forEach((spot) => mark(spot, "splashed"));
-    });
-    var lotus = step.specials.some((special) => special.id == "lotus");
-    var splash = step.specials.some((special) => special.id == "splash");
-    detail.innerText = [lotus ? (step.grow ? "🪷 The pond grows" : "🪷 The pond is as big as it gets") : "", splash ? "🌊 Splash" : ""].filter(Boolean).join(" · ");
-    await wait(time * 0.45);
+async function playStep(step, next, bet, total, inBonus) {
+  var time = setup.rules.stepTime;
+  var win = { amount: total, base: total };
+  await wait(time * 0.3);
+  for (var move of step.moves) {
+    document.getElementById("pdWinDetail").innerText = "🐸 " + familyInfo(move.family).frog + (move.amber ? " · " + move.amber + " × " + familyIcon(move.family) : "");
+    await hopFrog(move, bet, win);
   }
-  // Burst
-  var bursts = [];
-  gone.forEach((key) => {
-    var [c, r] = key.split(":").map(Number);
-    var cell = cells[c] && cells[c][r];
-    if (cell) bursts.push(cell.animate([{ transform: "scale(1)", opacity: 1 }, { transform: "scale(1.35)", opacity: 0 }], { duration: time * 0.18, easing: "ease-in", fill: "forwards" }).finished);
-  });
-  await Promise.all(bursts);
-  board.classList.remove("winning");
-  // Fall: the ones left from where they were, the new ones from above
-  var width = boardSize();
-  showGrid(next, false);
-  var size = width / next.length;
-  var falls = [];
-  next.forEach((column, c) => {
-    var old = step.grid[c] || [];
-    var keptRows = old.map((_, r) => r).filter((r) => !gone.has(c + ":" + r));
-    var fresh = column.length - keptRows.length;
-    cells[c].forEach((cell, r) => {
-      var from = r < fresh ? -(fresh - r) * size - 10 : (keptRows[r - fresh] - r) * size;
-      if (from == 0) return;
-      falls.push(cell.animate([{ transform: "translateY(" + from + "px)" }, { transform: "translateY(0)" }], { duration: time * 0.32, easing: "cubic-bezier(.3,.8,.4,1.1)", fill: "backwards" }).finished);
-    });
-  });
-  await Promise.all(falls);
-  return stepWin;
+  setMeter(step.chests.length ? setup.meter : step.meter);
+  if (step.chests.length) {
+    await openChests(step.chests);
+    setMeter(step.meter);
+  }
+  for (var effect of step.effects) await playEffect(effect, step, next, bet, win, inBonus);
+  win.amount = total + step.pay * bet;
+  document.getElementById("pdWinText").innerText = "🪙 " + formatCoins(Math.floor(win.amount));
+  setLevels(step.levels, bet);
+  setMoons(step.moons, inBonus);
+  // The pond as it is now: new spots pop in
+  var before = shown.map((column) => column.slice());
+  frogSpots = JSON.parse(JSON.stringify(next.frogs));
+  showGrid(next.grid.map((column) => column.slice()), false, { bet: bet });
+  var pops = [];
+  next.grid.forEach((column, c) =>
+    column.forEach((id, r) => {
+      if (id != null && (!before[c] || before[c][r] !== id)) pops.push(cells[c][r].animate([{ transform: "scale(0.3)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: time * 0.4, easing: "cubic-bezier(.3,1.5,.5,1)" }).finished);
+    }),
+  );
+  await Promise.all(pops);
+  await wait(time * 0.3);
+  return step.pay * bet;
 }
 
-function showWinDetail(step) {
-  var detail = document.getElementById("pdWinDetail");
-  var best = step.clusters.reduce((a, b) => (b.pay > a.pay ? b : a));
-  var text = step.clusters.length > 1 ? step.clusters.length + " clusters · best " : "";
-  text += best.size + " × " + familyIcon(best.family);
-  detail.innerText = text;
+// The steps of a spin (or a free spin) one after the other -> the win
+async function playSteps(steps, last, lastFrogs, bet, total, inBonus) {
+  var won = 0;
+  for (var i = 0; i < steps.length; i++) {
+    var next = i + 1 < steps.length ? { grid: steps[i + 1].grid, frogs: steps[i + 1].frogs } : { grid: last, frogs: lastFrogs };
+    won += await playStep(steps[i], next, bet, total + won, inBonus);
+  }
+  return won;
 }
 
 /* ---------- A spin ---------- */
@@ -376,16 +550,12 @@ async function playSpin(result) {
   var detail = document.getElementById("pdWinDetail");
   text.innerText = result.buy ? "🛒 Bonus buy" : "Good luck!";
   detail.innerText = "";
-  setFrogs(zeros(), zeros(), setup.belly);
+  resetPanel(null, 0, 0, result.bet, false);
   await dropOut();
-  await showGrid(result.grid, true);
-  var total = 0;
-  for (var i = 0; i < result.steps.length; i++) {
-    var next = i + 1 < result.steps.length ? result.steps[i + 1].grid : result.last;
-    total += await playStep(result.steps[i], next, result.bet, total, setup.belly);
-  }
+  await showGrid(result.grid, true, { frogs: result.frogs, bet: result.bet });
+  var total = await playSteps(result.steps, result.last, result.lastFrogs, result.bet, 0, false);
   if (result.bonus) {
-    await moonsShow();
+    await moonsShow(result);
     activeBonus = result.id;
     await bonusIntro(result);
     await playFree(result, 0, total);
@@ -421,15 +591,12 @@ async function showEnd(result, total) {
   else await wait(setup.rules.countTime);
 }
 
-function glowMoons() {
-  cells.forEach((column, c) => column.forEach((cell, r) => shown[c][r] == "moon" && cell.classList.add("moon-glow")));
-}
-
-// 3 🌕 or more: they glow before the free spins
-async function moonsShow() {
-  glowMoons();
-  document.getElementById("pdWinDetail").innerText = "🌕 The full moon rises!";
+// 3 🌕 collected: the full moon rises before the free spins
+async function moonsShow(result) {
+  document.getElementById("pdWinDetail").innerText = result.moons >= setup.free.trigger ? "🌕 The full moon rises!" : "🛒 The free spins";
+  document.getElementById("pdMoons").classList.add("full");
   await wait(1100);
+  document.getElementById("pdMoons").classList.remove("full");
 }
 
 /* ---------- The free spins ---------- */
@@ -449,8 +616,8 @@ function stage(content) {
 function bonusIntro(result) {
   return new Promise((resolve) => {
     var card = el("div", "pd-intro");
-    card.append(el("div", "pd-intro-moons", Array(Math.min(8, result.moons)).fill("🌕").join("")), el("div", "pd-intro-title", "Full Moon"), el("div", "pd-intro-spins", result.bonus.start + " free spins"));
-    card.append(el("p", "pd-intro-text", "The pond, the frogs and the better symbols stay for all free spins. Every moon gives one more free spin."));
+    card.append(el("div", "pd-intro-moons", "🌕🌕🌕"), el("div", "pd-intro-title", "Full Moon"), el("div", "pd-intro-spins", result.bonus.start + " free spins"));
+    card.append(el("p", "pd-intro-text", "The pond size, the meter, the amber levels and the moons you collect stay for all free spins. Every " + setup.free.trigger + " moons give " + setup.free.more + " more free spins."));
     var go = el("button", "mm-btn mm-btn-primary pd-intro-go", "Start");
     go.type = "button";
     card.append(go);
@@ -475,15 +642,12 @@ async function playFree(result, from, before) {
   document.getElementById("pdWindow").classList.add("free");
   for (var n = from; n < bonus.freeSpins.length; n++) {
     var free = bonus.freeSpins[n];
-    document.getElementById("pdFreeCount").innerText = n + 1 + " / " + free.spins;
-    setFrogs(free.bellies, free.levels, setup.freeBelly);
+    document.getElementById("pdFreeCount").innerText = n + 1 + " / " + (free.spins - free.more);
+    resetPanel(free.levels, free.meter, free.collected, bet, true);
     await dropOut();
-    await showGrid(free.grid, true, { time: setup.rules.freeSpinTime * 0.8 });
-    for (var i = 0; i < free.steps.length; i++) {
-      var next = i + 1 < free.steps.length ? free.steps[i + 1].grid : free.last;
-      total += await playStep(free.steps[i], next, bet, total, setup.freeBelly);
-    }
-    if (free.moons) await moreSpins(free);
+    await showGrid(free.grid, true, { time: setup.rules.freeSpinTime * 0.8, frogs: free.frogs, bet: bet });
+    total += await playSteps(free.steps, free.last, free.lastFrogs, bet, total, true);
+    if (free.more) await moreSpins(free);
     socket.emit("bonusProgress", { id: result.id, shown: n + 1 });
     await wait(setup.rules.freeSpinTime * 0.2);
   }
@@ -494,13 +658,13 @@ async function playFree(result, from, before) {
   socket.emit("bonusDone", { id: result.id });
 }
 
-// A 🌕 in a free spin: spins more
+// 🌕 collected in a free spin: spins more
 async function moreSpins(free) {
-  glowMoons();
-  var detail = document.getElementById("pdWinDetail");
-  detail.innerText = free.more ? "🌕 +" + free.more + (free.more == 1 ? " free spin" : " free spins") : "🌕 The most free spins are reached";
+  document.getElementById("pdWinDetail").innerText = "🌕 +" + free.more + " free spins";
   document.getElementById("pdFreeCount").innerText = document.getElementById("pdFreeCount").innerText.replace(/\/ \d+/, "/ " + free.spins);
+  document.getElementById("pdMoons").classList.add("full");
   await wait(setup.rules.moonTime);
+  document.getElementById("pdMoons").classList.remove("full");
 }
 
 async function bonusEnd(result) {
@@ -532,7 +696,8 @@ async function resumeBonus(result) {
   spinning = true;
   renderControls();
   activeBonus = result.id;
-  showGrid(result.last, false);
+  resetPanel(null, 0, result.moons, result.bet, false);
+  showGrid(result.last, false, { frogs: result.lastFrogs, bet: result.bet });
   var before = result.lineX * result.bet;
   document.getElementById("pdWinText").innerText = "🪙 " + formatCoins(Math.floor(before));
   if (!result.started) await bonusIntro(result);
@@ -583,6 +748,11 @@ function setBet(value, keepMax, typed) {
     // not remembered
   }
   renderControls();
+  // (the wins on the pond and of the frogs' amber are shown for the bet)
+  if (shown && !spinning && !activeBonus) {
+    setLevels(levelsShown);
+    showGrid(shown, false);
+  }
 }
 
 function pickMax() {
@@ -721,7 +891,7 @@ function renderFeed(feed) {
   document.getElementById("pdFeed").replaceChildren(
     ...feed.map((entry) => {
       var multiple = entry.win / (entry.buy || entry.bet);
-      var what = entry.free ? "🌕 " + entry.free + " free spins" : entry.symbol ? entry.size + " × " + familyIcon(entry.symbol) : "🐸";
+      var what = entry.free ? "🌕 " + entry.free + " free spins" : entry.symbol && entry.symbol != "moon" ? entry.size + " × " + familyIcon(entry.symbol) : "🐸";
       var sub = what + (entry.buy ? " · 🛒 bought for 🪙 " + formatCoins(entry.buy) : " · bet 🪙 " + formatCoins(entry.bet)) + " · " + (multiple >= 10 ? Math.round(multiple) : multiple.toFixed(1)) + "x";
       return historyItem(createAvatar(entry.name, "sm"), entry.name, sub, "🪙 " + formatCoins(entry.win));
     }),
@@ -745,31 +915,38 @@ function showPaytable() {
   x.type = "button";
   x.setAttribute("aria-label", "Close");
   x.addEventListener("click", close);
+  var money = (value) => formatCoins(Math.round(value * bet * 100) / 100);
+  // One amber at every level
   var table = el("table", "pd-pays");
-  var sizes = [5, 8, 12, 16];
-  var factor = (size) => setup.sizeFactors[Math.min(size - setup.cluster, setup.sizeFactors.length - 1)];
   var head = el("tr");
-  head.append(el("th", "", ""), ...sizes.map((size, i) => el("th", "", size + (i == sizes.length - 1 ? "+" : ""))));
+  head.append(el("th", "", ""), ...setup.amberValues.map((_, level) => el("th", "", level == 0 ? "Start" : "★" + level)));
   table.append(head);
-  setup.families.forEach((family) =>
-    setup.symbols
-      .filter((s) => s.family == family.id)
-      .slice()
-      .reverse()
-      .forEach((symbol) => {
-        var row = el("tr", symbol.tier == 2 ? "pd-pays-first" : "");
-        row.append(el("td", "pd-pays-icon", symbol.icon));
-        sizes.forEach((size) => row.append(el("td", "", formatCoins(Math.round(symbol.value * size * factor(size) * bet * 100) / 100))));
-        table.append(row);
-      }),
-  );
+  var row = el("tr");
+  row.append(el("td", "pd-pays-label", "Amber"), ...setup.amberValues.map((value) => el("td", "", money(value))));
+  table.append(row);
+  var coins = setup.symbols.filter((symbol) => symbol.coin != null).map((symbol) => money(symbol.coin));
+  var features = el("ul", "pd-feature-list");
+  var line = (icon, text) => {
+    var item = el("li");
+    item.append(el("span", "pd-feature-icon", icon), el("span", "", text));
+    features.append(item);
+  };
+  line("🪙", "A coin pays " + coins.slice(0, -1).join(", ") + " or " + coins[coins.length - 1] + " right away.");
+  line("☀️", "The sun upgrades the amber of the frog that collects it.");
+  line("✨", "The firefly is wild and counts as amber for every frog.");
+  line("🪷", "The lotus makes the pond one row and one column bigger.");
+  line("🌧️", "Rain fills the empty spots with new symbols.");
+  line("🌀", "The swirl turns the amber of another colour into the colour of its frog.");
+  line("🍿", "Popcorn fills the empty spots, and each piece lets a frog cross it once.");
+  line("🌕", "Collect " + setup.free.trigger + " full moons in one spin for " + setup.free.spins + " free spins.");
   dialog.append(
     x,
     el("h2", "mm-dialog-title", "Paytable"),
-    el("p", "mm-dialog-text", "Wins for a cluster of one symbol with your bet of 🪙 " + formatCoins(bet) + ". A mixed cluster pays for every symbol in it."),
+    el("p", "mm-dialog-text", "What one amber pays with your bet of 🪙 " + formatCoins(bet) + ". The sun upgrades amber up to " + setup.maxLevel + " times."),
     table,
-    el("p", "mm-dialog-text", "A frog eats its kind from your clusters. A full frog eats all of its kind on the pond, and each pays " + setup.leapPay + " times its value."),
-    el("p", "mm-dialog-text", iconOf("wild") + " joins every cluster it touches. " + setup.free.trigger + " or more " + iconOf("moon") + " start " + setup.free.spins + " free spins."),
+    el("p", "mm-dialog-text", "Every frog collects amber of its own colour and the feature symbols it reaches. Frogs cross other symbols but no empty spots."),
+    features,
+    el("p", "mm-dialog-text", "Every amber collected fills the meter. A full meter opens " + setup.chests + " chests with feature symbols."),
   );
   backdrop.appendChild(dialog);
   backdrop.addEventListener("click", (event) => event.target == backdrop && close());
@@ -781,7 +958,7 @@ function buyBonus() {
   var bet = currentBet();
   confirmDialog({
     title: "Buy the free spins?",
-    text: "You get " + setup.free.spins + " free spins right away for 🪙 " + formatCoins(bet * setup.buy) + ", " + setup.buy + "× your bet.",
+    text: "You get " + setup.free.spins + " free spins after this spin for 🪙 " + formatCoins(bet * setup.buy) + ", " + setup.buy + "× your bet.",
     confirmLabel: "Buy for 🪙 " + formatCoins(bet * setup.buy),
   }).then((sure) => sure && spin(true));
 }

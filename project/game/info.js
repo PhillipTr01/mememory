@@ -237,22 +237,24 @@ const GAMES = {
     const sym = (id) => pond.BY_ID.get(id).icon;
     return {
       title: "Frog Pond",
-      sub: "Clusters on a growing pond, hungry frogs and the full moon's free spins.",
+      sub: "Four frogs collect amber on a growing pond, with feature symbols and the full moon's free spins.",
       sections: [
         section("How it works", [
+          tile("🐸", "The frogs", "Every frog collects the amber of its own colour and every feature symbol it reaches. Frogs cross other symbols but never an empty spot.", { emoji: pond.FAMILIES.map((family) => family.icon) }),
+          tile("☀️", "Amber levels", `Each amber pays a coin win. The sun upgrades the amber of its frog up to ${pond.MAX_LEVEL} times, and each step pays more.`, { tags: [["+1 level", "gold"]] }),
+          tile("🧰", "Feature meter", `Every amber collected fills the meter. A full meter opens ${pond.CHESTS} chests with random feature symbols.`, { tags: [[pond.METER + " amber", "green"]] }),
           tile("🪷", "The pond", `The pond starts at ${pond.MIN_SIZE}×${pond.MIN_SIZE} and can grow to ${pond.MAX_SIZE}×${pond.MAX_SIZE}.`, { big: `${pond.MAX_SIZE}×${pond.MAX_SIZE}` }),
-          tile(sym("berry2"), "Clusters", `Land ${pond.CLUSTER} or more symbols of one kind touching side by side. Better symbols and bigger clusters pay more.`, { emoji: [sym("berry0"), sym("berry1"), sym("berry2")] }),
-          tile(sym("wild"), "Firefly", "The firefly is wild and joins every cluster it touches.", { emoji: [sym("wild")] }),
-          tile("⬇️", "Tumbles", "Winning symbols disappear and new ones fall in. That goes on as long as something wins.", { steps: ["Win", "Fall", "Win"] }),
         ]),
-        section("Frogs and specials", [
-          tile("🐸", "Frogs", "Every kind has its own frog that eats the symbols of its kind from your clusters. A full frog leaps, eats all of its kind on the pond and makes that kind land better.", { tags: [["Leap", "green"], ["Better symbols", "gold"]] }),
-          tile(sym("lotus"), "Lotus", "When nothing wins any more, a lotus makes the pond one row and one column bigger.", { emoji: [sym("lotus")] }),
-          tile(sym("splash"), "Splash", "When nothing wins any more, a splash clears its row and its column.", { emoji: [sym("splash")] }),
+        section("Feature symbols", [
+          tile("🪙", "Coin", "A coin pays a win right away.", { emoji: ["🪙"] }),
+          tile(sym("wild"), "Firefly", "The firefly is wild and counts as amber for every frog.", { emoji: [sym("wild")] }),
+          tile(sym("rain"), "Rain", "Rain fills the empty spots with new symbols, and the frogs move again.", { emoji: [sym("rain")] }),
+          tile(sym("swirl"), "Swirl", "The swirl turns the amber of another colour into the colour of its frog.", { emoji: [sym("swirl")] }),
+          tile(sym("popcorn"), "Popcorn", "Popcorn fills the empty spots. Each piece lets a frog cross it once.", { emoji: [sym("popcorn")] }),
         ]),
         section("Free spins", [
-          tile(sym("moon"), "Start them", `Land ${pond.MOON_TRIGGER} or more ${sym("moon")} for ${pond.FREE_SPINS} free spins. Every moon past the ${pond.MOON_TRIGGER}rd gives ${pond.FREE_PER_MOON} more.`, { emoji: Array(pond.MOON_TRIGGER).fill(sym("moon")) }),
-          tile("🌙", "Nothing resets", "The size of the pond, the frogs and the better symbols carry on from one free spin to the next. Every moon gives one more free spin.", { tags: [["+1 spin", "green"]] }),
+          tile(sym("moon"), "Start them", `Collect ${pond.MOON_TRIGGER} ${sym("moon")} in one spin for ${pond.FREE_SPINS} free spins.`, { emoji: Array(pond.MOON_TRIGGER).fill(sym("moon")) }),
+          tile("🌙", "Nothing resets", `The pond size, the meter, the amber levels and the moons you collect stay for all free spins. Every ${pond.MOON_TRIGGER} moons give ${pond.FREE_MORE} more free spins.`, { tags: [["+" + pond.FREE_MORE + " spins", "green"]] }),
         ]),
         section("More", [
           tile("🛒", "Bonus buy", `Buy the free spins for ${pond.BUY_PRICE}× your bet.`, { tags: [[pond.BUY_PRICE + "×", "gold"]] }),

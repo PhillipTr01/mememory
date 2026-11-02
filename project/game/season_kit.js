@@ -88,9 +88,9 @@ const FIELDS = {
   ],
   pond: [
     { id: "kind", name: "Result", type: "choice", options: opt(["nothing", "win", "free spins"]), say: ["with", ""] },
-    { id: "symbol", name: "Best cluster", type: "choice", options: opt(["leaf", "berry", "bug", "shell"], { leaf: "Leaves", berry: "Berries", bug: "Bugs", shell: "Shells" }), say: ["with the best cluster of", ""] },
-    { id: "size", name: "Cluster size", type: "number", say: ["with a cluster of", "symbols"] },
-    { id: "tumbles", name: "Tumbles", type: "number", say: ["with", "tumbles"] },
+    { id: "symbol", name: "Best frog", type: "choice", options: opt(["leaf", "berry", "bug", "shell"], { leaf: "Green frog", berry: "Red frog", bug: "Gold frog", shell: "Blue frog" }), say: ["with the best win of the", ""] },
+    { id: "size", name: "Amber collected", type: "number", say: ["with a frog collecting", "amber"] },
+    { id: "tumbles", name: "Frog moves", type: "number", say: ["with", "frog moves"] },
     { id: "buy", name: "Bonus buy", type: "choice", options: YES, yes: ["with a bonus buy", "without a bonus buy"] },
   ],
   runner: [

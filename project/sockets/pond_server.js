@@ -34,19 +34,20 @@ module.exports = function (io, options = {}) {
   const lastSpin = new Map();
   const spinTab = new Map();
 
-  // How long the page shows the base game: the drop, every tumble, the big-win show
-  // (a step: the tumble, every frog's leap on top)
-  const stepsTime = (steps) => steps.reduce((sum, step) => sum + config.POND_TUMBLE + step.leaps.length * config.POND_LEAP_TIME, 0);
+  // How long the page shows the base game: the drop, every step, the big-win show
+  // (a step: the frogs hop one after the other, the features act one by one, the chests open, the pond settles)
+  const stepTime = (step) => config.POND_STEP + step.moves.reduce((sum, move) => sum + (move.path.length - 1) * config.POND_HOP, 0) + step.effects.length * config.POND_EFFECT + (step.chests.length ? config.POND_CHEST_TIME : 0);
+  const stepsTime = (steps) => steps.reduce((sum, step) => sum + stepTime(step), 0);
   function baseTime(bet, result) {
     let time = config.POND_SPIN + stepsTime(result.steps) + config.POND_COUNT_TIME;
     if (!result.bonus && result.win >= bet * config.POND_BIG_WIN) time += config.POND_BIG_TIME;
     return time;
   }
 
-  // The free spins from free spin `shown` on (after `intro`): every spin, its tumbles, its moons - then the end
+  // The free spins from free spin `shown` on (after `intro`): every spin, its steps, the spins more - then the end
   function restTime(bet, result, shown, intro) {
     const left = result.bonus.freeSpins.slice(Math.max(0, shown));
-    let time = intro + left.reduce((sum, free) => sum + config.POND_FREE_SPIN + stepsTime(free.steps) + (free.moons ? config.POND_MOON_TIME : 0), 0) + config.POND_BONUS_END + config.POND_COUNT_TIME;
+    let time = intro + left.reduce((sum, free) => sum + config.POND_FREE_SPIN + stepsTime(free.steps) + (free.more ? config.POND_MOON_TIME : 0), 0) + config.POND_BONUS_END + config.POND_COUNT_TIME;
     if (result.win >= bet * config.POND_BIG_WIN) time += config.POND_BIG_TIME;
     return time;
   }
@@ -125,7 +126,7 @@ module.exports = function (io, options = {}) {
   }
 
   function rules() {
-    return { minBet: limits.POND_MIN_BET, maxBet: limits.POND_MAX_BET, spinTime: config.POND_SPIN, tumbleTime: config.POND_TUMBLE, freeIntro: config.POND_FREE_INTRO, freeSpinTime: config.POND_FREE_SPIN, leapTime: config.POND_LEAP_TIME, moonTime: config.POND_MOON_TIME, bonusEndTime: config.POND_BONUS_END, bigWin: config.POND_BIG_WIN, bigTime: config.POND_BIG_TIME, countTime: config.POND_COUNT_TIME, pauseTime: config.POND_PAUSE, minGap: config.POND_MIN_GAP, resumeTime: config.SLOTS_RESUME_TIME };
+    return { minBet: limits.POND_MIN_BET, maxBet: limits.POND_MAX_BET, spinTime: config.POND_SPIN, stepTime: config.POND_STEP, hopTime: config.POND_HOP, effectTime: config.POND_EFFECT, chestTime: config.POND_CHEST_TIME, freeIntro: config.POND_FREE_INTRO, freeSpinTime: config.POND_FREE_SPIN, moonTime: config.POND_MOON_TIME, bonusEndTime: config.POND_BONUS_END, bigWin: config.POND_BIG_WIN, bigTime: config.POND_BIG_TIME, countTime: config.POND_COUNT_TIME, pauseTime: config.POND_PAUSE, minGap: config.POND_MIN_GAP, resumeTime: config.SLOTS_RESUME_TIME };
   }
 
   async function sendCoins(username) {
@@ -136,10 +137,10 @@ module.exports = function (io, options = {}) {
 
   live.register("pond", () => ({ spins: machine.spins, playing: new Set([...room.sockets.values()].map((s) => s.data.username)).size }));
 
-  // The best win of a spin's base game (for the feed and the season's goals): the biggest cluster
+  // The best win of a spin's base game (for the feed and the season's goals): the frog that collected the most
   function bestOf(result) {
     let top = null;
-    for (const step of result.steps) for (const cluster of step.clusters) if (!top || cluster.pay > top.pay) top = cluster;
+    for (const step of result.steps) for (const move of step.moves) if (move.amber > 0 && (!top || move.pay > top.pay)) top = move;
     return top;
   }
 
@@ -233,7 +234,7 @@ module.exports = function (io, options = {}) {
           const payIn = baseTime(bet, result) + (free ? restTime(bet, result, 0, config.POND_FREE_INTRO) : 0);
           if (result.win > 0 || free) {
             id = ++pendingId + ":" + Date.now();
-            const note = free ? `free spins ${free.freeSpins.length}` : top ? `${top.size} ${top.family}` : "frog leap";
+            const note = free ? `free spins ${free.freeSpins.length}` : top ? `${top.amber} ${top.family}` : "coins";
             const entry = {
               id: id,
               name: username,
@@ -242,10 +243,10 @@ module.exports = function (io, options = {}) {
               note: note + (buy ? " (bonus buy)" : ""),
               at: Date.now() + payIn,
               // The free spins: everything to show them again, how far they were seen
-              result: free ? { version: pond.VERSION, bet: bet, grid: result.grid, steps: result.steps, last: result.last, moons: result.moons, lineX: result.lineX, bonus: free, x: result.x, win: result.win, capped: result.capped } : null,
+              result: free ? { version: pond.VERSION, bet: bet, grid: result.grid, frogs: result.frogs, steps: result.steps, last: result.last, lastFrogs: result.lastFrogs, moons: result.moons, lineX: result.lineX, bonus: free, x: result.x, win: result.win, capped: result.capped } : null,
               shown: 0,
               state: null,
-              feed: { name: username, bet: bet, buy: buy ? cost : null, win: result.win, symbol: top ? top.family : free ? "moon" : null, size: top ? top.size : 0, tumbles: result.steps.length, free: free ? free.freeSpins.length : null, at: Date.now() },
+              feed: { name: username, bet: bet, buy: buy ? cost : null, win: result.win, symbol: top ? top.family : free ? "moon" : null, size: top ? top.amber : 0, tumbles: result.steps.length, free: free ? free.freeSpins.length : null, at: Date.now() },
             };
             machine.pending.push(entry);
             persist.changed("pond");
@@ -254,7 +255,7 @@ module.exports = function (io, options = {}) {
           } else {
             setTimeout(() => plays.played(world, { game: "pond", name: username, bet: bet, win: 0, kind: "nothing", symbol: null, size: 0, tumbles: 0, buy: false }), payIn).unref();
           }
-          socket.emit("pdResult", { id: id, bet: bet, buy: buy, cost: cost, grid: result.grid, steps: result.steps, last: result.last, moons: result.moons, lineX: result.lineX, bonus: result.bonus, x: result.x, win: result.win, capped: result.capped, payIn: payIn });
+          socket.emit("pdResult", { id: id, bet: bet, buy: buy, cost: cost, grid: result.grid, frogs: result.frogs, steps: result.steps, last: result.last, lastFrogs: result.lastFrogs, moons: result.moons, lineX: result.lineX, bonus: result.bonus, x: result.x, win: result.win, capped: result.capped, payIn: payIn });
         } finally {
           busy.delete(username);
         }

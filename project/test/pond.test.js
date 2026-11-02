@@ -18,126 +18,170 @@ function rng(seed) {
 
 /* ---------- The machine ---------- */
 
-const ALL = (id) => [id, id, id, id, id, id];
+const copy = (grid) => grid.map((column) => column.slice());
+// A pond from rows (easier to read): rows[r][c], "." an empty spot
+const fromRows = (rows) => rows[0].map((_, c) => rows.map((row) => (row[c] === "." ? null : row[c])));
 
-test("pond: clusters - 7 or more of one kind touching side by side, tiers mixed, the firefly joins and counts as the best tier", () => {
-  // 7 berries in an L (a firefly in it), the rest in diagonal stripes (no cluster)
-  const stripe = (c, r) => ["leaf0", "bug0", "shell0"][(c + r) % 3];
-  const grid = Array.from({ length: 6 }, (_, c) => Array.from({ length: 6 }, (_, r) => stripe(c, r)));
-  [[0, 0, "berry0"], [1, 0, "berry2"], [2, 0, "wild"], [3, 0, "berry1"], [4, 0, "berry0"], [4, 1, "berry0"], [4, 2, "berry2"]].forEach(([c, r, id]) => (grid[c][r] = id));
-  grid[5][5] = "moon";
-  grid[0][5] = "splash";
-  const clusters = pd.clustersOf(grid);
-  assert.strictEqual(clusters.length, 1);
-  const [berry] = clusters;
-  assert.strictEqual(berry.family, "berry");
-  assert.deepStrictEqual(berry.cells, [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2]]);
-  const v = pd.TIER_VALUES;
-  const value = v[0] + v[2] + v[2] + v[1] + v[0] + v[0] + v[2];
-  assert.ok(Math.abs(berry.value - value) < 1e-9);
-  assert.ok(Math.abs(berry.pay - value * pd.SIZE_FACTORS[0] * pd.PAY_SCALE) < 1e-9);
-  // 6 touching: nothing; a whole board of one kind: one cluster of 36 (the biggest size factor)
-  grid[4][2] = "moon";
-  assert.strictEqual(pd.clustersOf(grid).length, 0);
-  const full = pd.clustersOf(Array.from({ length: 6 }, () => ALL("shell1")));
-  assert.deepStrictEqual([full.length, full[0].size], [1, 36]);
-  assert.ok(Math.abs(full[0].pay - 36 * v[1] * pd.SIZE_FACTORS[pd.SIZE_FACTORS.length - 1] * pd.PAY_SCALE) < 1e-9);
+test("pond: a frog collects its amber, the wild and the features - it crosses other colours and popcorn, never an empty spot or a frog", () => {
+  const grid = fromRows([
+    ["berry", "leaf", "coin1", ".", "leaf", "leaf"],
+    [".", "pop", ".", ".", ".", "."],
+    [".", "leaf", "wild", "bug", "leaf", "."],
+    [".", ".", ".", ".", ".", "."],
+    ["leaf", "leaf", ".", ".", ".", "."],
+    [".", ".", ".", ".", ".", "."],
+  ]);
+  const frogs = { leaf: [0, 1], berry: [5, 5], bug: [0, 5], shell: [5, 3] };
+  grid[0][1] = null;
+  const move = pd.moveFrog(grid, frogs, "leaf");
+  // (it crosses the red amber on [0, 0] and the gold one on [3, 2]; the leaves on [4, 0], [5, 0] and below are cut off)
+  assert.deepStrictEqual(move.got.sort(), ["coin1", "leaf", "leaf", "leaf", "wild"].sort());
+  assert.strictEqual(move.amber, 4, "3 leaves and the wild");
+  assert.strictEqual(grid[0][0], "berry", "the other colours stay");
+  assert.strictEqual(grid[3][2], "bug");
+  assert.strictEqual(grid[1][1], null, "the popcorn crossed is eaten");
+  assert.deepStrictEqual([grid[4][0], grid[5][0], grid[0][4], grid[1][4]], ["leaf", "leaf", "leaf", "leaf"]);
+  assert.deepStrictEqual(frogs.leaf, move.end);
+  // Every hop goes to a neighbour
+  move.path.slice(1).forEach((spot, i) => assert.strictEqual(Math.abs(spot[0] - move.path[i][0]) + Math.abs(spot[1] - move.path[i][1]), 1));
+  // Another frog blocks the way
+  const blocked = fromRows([["leaf", "leaf", "leaf"], [".", ".", "."], [".", ".", "."]]);
+  const two = { leaf: [0, 0], berry: [1, 0], bug: [2, 2], shell: [1, 2] };
+  blocked[0][0] = null;
+  assert.strictEqual(pd.moveFrog(blocked, two, "leaf").path.length, 1);
 });
 
-test("pond: tumbles, frogs and specials - it ends with nothing left to do, the board stays square and never above 8x8", () => {
+test("pond: the frogs move while they find something - the pond stays square (6x6 to 8x8), the meter below full, the levels at most 7", () => {
   const random = rng(7);
-  let leaps = 0;
-  let grew = 0;
-  let splashes = 0;
+  const seen = { coin: 0, sun: 0, lotus: 0, rain: 0, swirl: 0, popcorn: 0, moon: 0, wild: 0, chests: 0 };
   for (let i = 0; i < 3000; i++) {
-    const state = { levels: pd.newLevels(), bellies: pd.newBellies() };
-    const first = pd.board(random);
-    const result = pd.play(first, random, state);
+    const state = pd.newState();
+    const { grid, frogs } = pd.deal(random);
+    const result = pd.play(grid, frogs, random, state);
     const n = result.grid.length;
     assert.ok(n >= 6 && n <= 8);
     result.grid.forEach((column) => assert.strictEqual(column.length, n));
-    assert.strictEqual(pd.clustersOf(result.grid).length, 0, "nothing wins at the end");
-    assert.ok(!result.grid.some((c) => c.includes("lotus") || c.includes("splash")), "no special left");
-    if (result.steps.length) assert.strictEqual(result.steps[0].grid, first);
+    const spots = Object.values(result.frogs).map((spot) => spot.join(":"));
+    assert.strictEqual(new Set(spots).size, 4, "a frog per spot");
+    Object.values(result.frogs).forEach(([c, r]) => assert.strictEqual(result.grid[c][r], null, "an empty spot under a frog"));
+    // Nothing left to collect at the end
+    for (const family of pd.FAMILY_IDS) assert.strictEqual(pd.moveFrog(copy(result.grid), JSON.parse(JSON.stringify(result.frogs)), family).path.length, 1);
     let pay = 0;
+    let moons = 0;
     result.steps.forEach((step) => {
       pay += step.pay;
-      if (step.kind === "win") assert.ok(step.clusters.length > 0);
-      else assert.ok(step.specials.length > 0 && step.clusters.length === 0);
-      step.leaps.forEach((leap) => {
-        leaps++;
-        assert.strictEqual(step.bellies[leap.family], 0, "the belly empties");
-        assert.ok(leap.level >= 1 && leap.level <= pd.MAX_LEVEL);
-      });
-      if (step.grow) grew++;
-      splashes += step.specials.filter((s) => s.id === "splash").length;
-      Object.values(step.bellies).forEach((b) => assert.ok(b < pd.BELLY));
+      assert.ok(step.moves.length > 0);
+      const parts = step.moves.reduce((sum, move) => sum + move.pay, 0) + step.effects.reduce((sum, effect) => sum + (effect.pay || 0), 0);
+      assert.ok(Math.abs(parts - step.pay) < 1e-9, "the moves and the coins");
+      step.moves.forEach((move) => assert.ok(Math.abs(move.pay - move.amber * pd.AMBER_VALUES[move.level] * pd.PAY_SCALE) < 1e-9));
+      assert.ok(step.meter >= 0 && step.meter < pd.METER);
+      Object.values(step.levels).forEach((level) => assert.ok(level >= 0 && level <= pd.MAX_LEVEL));
+      step.effects.forEach((effect) => (seen[effect.id] = (seen[effect.id] || 0) + 1));
+      if (step.chests.length) seen.chests++;
+      moons += step.effects.filter((effect) => effect.id === "moon").length;
     });
+    assert.strictEqual(state.moons, moons);
     assert.ok(Math.abs(result.pay - pay) < 1e-9);
   }
-  assert.ok(leaps > 20 && grew > 100 && splashes > 100, `leaps ${leaps}, grown ${grew}, splashes ${splashes}`);
+  Object.entries(seen).forEach(([id, count]) => assert.ok(count > 0, `${id} seen`));
 });
 
-test("pond: a full frog eats all of its kind left on the board and its kind lands better from then on", () => {
+test("pond: the features - a coin pays, the sun upgrades, the swirl turns a colour, rain and popcorn fill the empty spots, the lotus grows the pond", () => {
   const random = rng(5);
-  const state = { levels: pd.newLevels(), bellies: { ...pd.newBellies(), bug: pd.BELLY - 1 } };
-  // A cluster of 7 bugs on top, 3 more bugs elsewhere
-  const grid = Array.from({ length: 6 }, (_, c) => Array.from({ length: 6 }, (_, r) => ["leaf0", "shell0", "berry0"][(c + r) % 3]));
-  for (let c = 0; c < 6; c++) grid[c][0] = "bug0";
-  grid[0][1] = "bug0";
-  grid[0][5] = grid[2][4] = "bug2";
-  grid[5][5] = "bug1";
-  const step = pd.play(grid, random, state).steps[0];
-  assert.deepStrictEqual(step.leaps.map((l) => [l.family, l.cells.length, l.level]), [["bug", 3, 1]]);
-  const value = 2 * pd.TIER_VALUES[2] + pd.TIER_VALUES[1];
-  assert.ok(Math.abs(step.leaps[0].pay - value * pd.LEAP_PAY * pd.PAY_SCALE) < 1e-9);
-  assert.strictEqual(state.levels.bug >= 1, true);
-  // Better tiers: a grown up family lands far more of its tier 2
-  const count = (levels) => {
-    let top = 0;
-    for (let i = 0; i < 4000; i++) {
-      const grid = pd.board(random, 6, levels);
-      grid.forEach((column) => column.forEach((id) => id === "bug2" && top++));
-    }
-    return top;
+  const frogs = { leaf: [0, 0], berry: [5, 5], bug: [0, 5], shell: [5, 0] };
+  const fresh = () => {
+    const grid = Array.from({ length: 6 }, () => Array(6).fill(null));
+    grid[2][2] = "berry";
+    grid[3][3] = "berry";
+    grid[4][4] = "bug";
+    return grid;
   };
-  assert.ok(count({ ...pd.newLevels(), bug: 2 }) > 4 * count(pd.newLevels()));
+  const state = pd.newState();
+  const coin = pd.act("coin3", "leaf", fresh(), frogs, state, random, pd.LANDING);
+  assert.ok(Math.abs(coin.pay - pd.COIN_VALUES[3] * pd.PAY_SCALE) < 1e-9);
+  for (let i = 0; i < 9; i++) pd.act("sun", "leaf", fresh(), frogs, state, random, pd.LANDING);
+  assert.strictEqual(state.levels.leaf, pd.MAX_LEVEL, "at most 7 upgrades");
+  // (the swirl: one colour turns, here the red or the gold)
+  const swirled = fresh();
+  const swirl = pd.act("swirl", "leaf", swirled, frogs, state, random, pd.LANDING);
+  assert.ok(["berry", "bug"].includes(swirl.from));
+  swirl.cells.forEach(([c, r]) => assert.strictEqual(swirled[c][r], "leaf"));
+  assert.ok(!swirled.some((column) => column.includes(swirl.from)));
+  // Popcorn: every empty spot but the frogs'
+  const popped = fresh();
+  const popcorn = pd.act("popcorn", "leaf", popped, frogs, state, random, pd.LANDING);
+  assert.strictEqual(popcorn.cells.length, 36 - 3 - 4);
+  Object.values(frogs).forEach(([c, r]) => assert.strictEqual(popped[c][r], null));
+  const rained = fresh();
+  const rain = pd.act("rain", "leaf", rained, frogs, state, random, pd.LANDING);
+  assert.strictEqual(rain.cells.length, 29);
+  // The lotus: one row and one column more, at most 8x8
+  const grown = fresh();
+  assert.strictEqual(pd.act("lotus", "leaf", grown, frogs, state, random, pd.LANDING).grew, true);
+  assert.deepStrictEqual([grown.length, grown[0].length, grown[2][2]], [7, 7, "berry"]);
+  pd.act("lotus", "leaf", grown, frogs, state, random, pd.LANDING);
+  assert.strictEqual(pd.act("lotus", "leaf", grown, frogs, state, random, pd.LANDING).grew, false);
+  assert.strictEqual(grown.length, 8);
+  // The moon counts; a wild from a chest lands on an empty spot
+  pd.act("moon", "leaf", fresh(), frogs, state, random, pd.LANDING);
+  assert.strictEqual(state.moons, 1);
+  const wild = pd.act("wild", "leaf", fresh(), frogs, state, random, pd.LANDING, true);
+  assert.ok(wild.at);
+  assert.strictEqual(pd.act("wild", "leaf", fresh(), frogs, state, random, pd.LANDING, false), null, "a collected wild was its frog's amber");
 });
 
-test("pond: the free spins - 3 🌕 give 8, every 🌕 more 2; the pond, the bellies and the better kinds carry on, a 🌕 a spin more", () => {
-  assert.deepStrictEqual([2, 3, 4, 5].map(pd.freeSpinsFor), [0, 8, 10, 12]);
+test("pond: every full meter opens 3 chests", () => {
+  const random = rng(9);
+  const grid = Array.from({ length: 6 }, () => Array(6).fill("leaf"));
+  const frogs = pd.placeFrogs(grid, random);
+  const state = { ...pd.newState(), meter: pd.METER - 2 };
+  const step = pd.play(grid, frogs, random, state).steps[0];
+  const amber = step.moves.reduce((sum, move) => sum + move.amber, 0);
+  assert.strictEqual(step.chests.length, Math.floor((pd.METER - 2 + amber) / pd.METER) * pd.CHESTS);
+  assert.ok(step.chests.length >= pd.CHESTS);
+  step.chests.forEach((chest) => assert.ok(Object.keys(pd.CHEST).includes(chest.id) && pd.FAMILY_IDS.includes(chest.family)));
+  assert.ok(step.effects.filter((effect) => effect.chest).length >= 1);
+});
+
+test("pond: the free spins - 3 🌕 collected give 8; the pond, the meter, the levels and the moons carry on, every 3 🌕 4 more", () => {
   const random = rng(11);
-  let sawMoon = false;
-  let carried = false;
+  let sawMore = false;
   for (let g = 0; g < 150; g++) {
     const game = pd.freeGame(pd.FREE_SPINS, random);
     let size = pd.MIN_SIZE;
     let spins = pd.FREE_SPINS;
     let x = 0;
     let levels = pd.newLevels();
+    let meter = 0;
+    let collected = 0;
     game.freeSpins.forEach((free) => {
       assert.strictEqual(free.size, size, "the pond keeps its size");
       assert.strictEqual(free.grid.length, size);
-      assert.deepStrictEqual(free.levels, levels, "the kinds keep their level");
+      assert.deepStrictEqual(free.levels, levels, "the amber keeps its level");
+      assert.strictEqual(free.meter, meter, "the meter keeps its amber");
+      assert.strictEqual(free.collected, collected, "the moons collected stay");
       size = free.last.length;
-      levels = free.steps.length ? free.steps[free.steps.length - 1].levels : levels;
-      if (Object.values(free.bellies).some((b) => b > 0)) carried = true;
+      const last = free.steps[free.steps.length - 1];
+      if (last) [levels, meter] = [last.levels, last.meter];
+      collected += free.moons;
+      const more = (Math.floor(collected / pd.MOON_TRIGGER) - Math.floor((collected - free.moons) / pd.MOON_TRIGGER)) * pd.FREE_MORE;
+      assert.strictEqual(free.more, Math.min(more, pd.MAX_FREE_SPINS - spins));
+      if (free.more) sawMore = true;
       spins += free.more;
       assert.strictEqual(free.spins, spins);
-      if (free.moons) sawMoon = true;
       x += free.pay;
     });
-    assert.strictEqual(game.freeSpins.length, Math.min(game.spins, pd.MAX_FREE_SPINS));
+    assert.strictEqual(game.freeSpins.length, game.spins);
     assert.ok(Math.abs(game.x - x) < 1e-6);
   }
-  assert.ok(sawMoon && carried);
+  assert.ok(sawMore);
 });
 
 test("pond: a bonus buy starts the free spins every time; a spin never pays more than the max win", () => {
   const random = rng(3);
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 60; i++) {
     const s = pd.spin(100, random, { buy: true });
-    assert.ok(s.moons >= pd.MOON_TRIGGER && s.bonus, "the free spins");
+    assert.ok(s.bonus, "the free spins");
     assert.ok(s.x <= pd.MAX_WIN);
     assert.strictEqual(s.win, Math.floor(100 * s.x));
   }
@@ -149,19 +193,20 @@ test("pond: pays back about 96.8% - the base game (seeded spins) and the free sp
   let base = 0;
   let triggers = 0;
   for (let i = 0; i < N; i++) {
-    const result = pd.play(pd.board(random), random, { levels: pd.newLevels(), bellies: pd.newBellies() });
-    base += result.pay;
-    if (pd.moonsIn(result.grid) >= pd.MOON_TRIGGER) triggers++;
+    const state = pd.newState();
+    const { grid, frogs } = pd.deal(random);
+    base += pd.play(grid, frogs, random, state).pay;
+    if (state.moons >= pd.MOON_TRIGGER) triggers++;
   }
-  // (the base game: 54.29% - its spread over 60,000 spins about 0.4%)
-  assert.ok(Math.abs(base / N - 0.5429) < 0.02, `base game ${base / N}`);
-  // (the free spins: about 1 in 250 spins)
-  assert.ok(Math.abs(N / triggers - 250) < 45, `free spins every ${N / triggers}`);
+  // (the base game: 54.8%)
+  assert.ok(Math.abs(base / N - 0.548) < 0.02, `base game ${base / N}`);
+  // (the free spins: about 1 in 257 spins)
+  assert.ok(Math.abs(N / triggers - 257) < 45, `free spins every ${N / triggers}`);
   let free = 0;
   const G = 2000;
   for (let g = 0; g < G; g++) free += pd.freeGame(pd.FREE_SPINS, random).x;
-  // (3 🌕: about 98.1x - its spread over 2,000 games about 2.6x)
-  assert.ok(Math.abs(free / G - 98.1) < 10, `free spins ${free / G}`);
+  // (about 107.7x - its spread over 2,000 games about 3.2x)
+  assert.ok(Math.abs(free / G - 107.7) < 11, `free spins ${free / G}`);
   assert.strictEqual(pd.RTP, 0.968);
 });
 
@@ -188,7 +233,7 @@ function client(name) {
   return socket;
 }
 
-const FAST = { POND_MIN_GAP: 0, POND_SPIN: 10, POND_TUMBLE: 0, POND_COUNT_TIME: 0, POND_FREE_INTRO: 0, POND_FREE_SPIN: 0, POND_MOON_TIME: 0, POND_LEAP_TIME: 0, POND_BONUS_END: 0, POND_BIG_TIME: 0 };
+const FAST = { POND_MIN_GAP: 0, POND_SPIN: 10, POND_STEP: 0, POND_HOP: 0, POND_EFFECT: 0, POND_CHEST_TIME: 0, POND_COUNT_TIME: 0, POND_FREE_INTRO: 0, POND_FREE_SPIN: 0, POND_MOON_TIME: 0, POND_BONUS_END: 0, POND_BIG_TIME: 0 };
 
 test("pond: a spin costs the bet, the server's board decides, the win is paid once shown - the others see it", async () => {
   const before = Object.fromEntries(Object.keys(FAST).map((key) => [key, config[key]]));
@@ -251,7 +296,7 @@ test("pond: a bonus buy - the free spins wait for the click, are paid when playe
     const result = h.once(page, "pdResult");
     page.emit("spin", { bet: 100, buy: true });
     const spin = await result;
-    assert.ok(spin.bonus && spin.id && spin.moons >= pd.MOON_TRIGGER);
+    assert.ok(spin.bonus && spin.id && spin.frogs && spin.lastFrogs);
     assert.strictEqual(h.coinsOf("mia"), 50000 - 100 * pd.BUY_PRICE, "the price of the buy");
     // One spin at a time while free spins wait
     const busy = h.once(page, "pdError");
@@ -295,7 +340,7 @@ test("pond: free spins saved by other rules (an update of the game) are paid whe
   sockets.forEach((socket) => socket.close());
   await h.wait(50);
   h.setCoins("mia", 1000);
-  const old = { id: "old:1", name: "mia", bet: 100, win: 1106, note: "free spins 8", at: Date.now() + 60000, result: { bet: 100, grid: [["flower0"]], bonus: { freeSpins: [] }, win: 1106 }, shown: 3, state: "paused", feed: null };
+  const old = { id: "old:1", name: "mia", bet: 100, win: 1106, note: "free spins 8", at: Date.now() + 60000, result: { bet: 100, version: 2, grid: [["flower0"]], bonus: { freeSpins: [] }, win: 1106 }, shown: 3, state: "paused", feed: null };
   server.pond.machine.pending.push(old);
   const page = client("mia");
   let resumed = false;
