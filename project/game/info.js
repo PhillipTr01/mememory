@@ -240,7 +240,7 @@ const GAMES = {
       sub: "Four frogs collect amber on a growing pond, with feature symbols and the full moon's free spins.",
       sections: [
         section("How it works", [
-          tile("🐸", "The frogs", "Every frog collects the amber of its own colour and every feature symbol it reaches. Frogs cross other symbols but never an empty spot.", { emoji: pond.FAMILIES.map((family) => family.icon) }),
+          tile("🐸", "The frogs", "Every frog collects the touching amber of its own colour, hopping on from each one it takes. Wilds and feature symbols next to its path are collected too.", { emoji: pond.FAMILIES.map((family) => family.icon) }),
           tile("☀️", "Amber levels", `Each amber pays a coin win. The sun upgrades the amber of its frog up to ${pond.MAX_LEVEL} times, and each step pays more.`, { tags: [["+1 level", "gold"]] }),
           tile("🧰", "Feature meter", `Every amber collected fills the meter. A full meter opens ${pond.CHESTS} chests with random feature symbols.`, { tags: [[pond.METER + " amber", "green"]] }),
           tile("🪷", "The pond", `The pond starts at ${pond.MIN_SIZE}×${pond.MIN_SIZE} and can grow to ${pond.MAX_SIZE}×${pond.MAX_SIZE}.`, { big: `${pond.MAX_SIZE}×${pond.MAX_SIZE}` }),

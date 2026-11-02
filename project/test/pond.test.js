@@ -22,26 +22,27 @@ const copy = (grid) => grid.map((column) => column.slice());
 // A pond from rows (easier to read): rows[r][c], "." an empty spot
 const fromRows = (rows) => rows[0].map((_, c) => rows.map((row) => (row[c] === "." ? null : row[c])));
 
-test("pond: a frog collects its amber, the wild and the features - it crosses other colours and flies, never an empty spot or a frog", () => {
+test("pond: a frog moves only onto its amber, the wild and the features next to it - other colours and empty spots stop it, a fly bridges a gap", () => {
   const grid = fromRows([
     ["berry", "leaf", "coin1", ".", "leaf", "leaf"],
     [".", "fly", ".", ".", ".", "."],
-    [".", "leaf", "wild", "bug", "leaf", "."],
+    ["shell", "leaf", "wild", "bug", "leaf", "."],
     [".", ".", ".", ".", ".", "."],
     ["leaf", "leaf", ".", ".", ".", "."],
     [".", ".", ".", ".", ".", "."],
   ]);
   const frogs = { leaf: [0, 1], berry: [5, 5], bug: [0, 5], shell: [5, 3] };
-  grid[0][1] = null;
   const move = pd.moveFrog(grid, frogs, "leaf");
-  // (it crosses the red amber on [0, 0] and the gold one on [3, 2]; the leaves on [4, 0], [5, 0] and below are cut off)
-  assert.deepStrictEqual(move.got.sort(), ["coin1", "leaf", "leaf", "leaf", "wild"].sort());
-  assert.strictEqual(move.amber, 4, "3 leaves and the wild");
-  assert.strictEqual(grid[0][0], "berry", "the other colours stay");
-  assert.strictEqual(grid[3][2], "bug");
+  // (over the fly to the two leaves, on to the coin and the wild; the red, blue and gold amber stop it)
+  assert.deepStrictEqual(move.got.slice().sort(), ["coin1", "leaf", "leaf", "wild"]);
+  assert.strictEqual(move.amber, 3, "2 leaves and the wild");
+  assert.deepStrictEqual([grid[0][0], grid[0][2], grid[3][2]], ["berry", "shell", "bug"], "the other colours stay");
   assert.strictEqual(grid[1][1], null, "the fly crossed is eaten");
-  assert.deepStrictEqual([grid[4][0], grid[5][0], grid[0][4], grid[1][4]], ["leaf", "leaf", "leaf", "leaf"]);
+  assert.deepStrictEqual([grid[4][0], grid[5][0], grid[4][2], grid[0][4], grid[1][4]], ["leaf", "leaf", "leaf", "leaf", "leaf"], "out of reach");
   assert.deepStrictEqual(frogs.leaf, move.end);
+  // Without the fly: the frog is stuck
+  const stuck = fromRows([["berry", "leaf"], [".", "."]]);
+  assert.strictEqual(pd.moveFrog(stuck, { leaf: [0, 1], berry: [1, 1], bug: [9, 9], shell: [8, 8] }, "leaf").path.length, 1);
   // Every hop goes to a neighbour
   move.path.slice(1).forEach((spot, i) => assert.strictEqual(Math.abs(spot[0] - move.path[i][0]) + Math.abs(spot[1] - move.path[i][1]), 1));
   // Another frog blocks the way
@@ -198,15 +199,15 @@ test("pond: pays back about 96.8% - the base game (seeded spins) and the free sp
     base += pd.play(grid, frogs, random, state).pay;
     if (state.moons >= pd.MOON_TRIGGER) triggers++;
   }
-  // (the base game: 56.2%)
-  assert.ok(Math.abs(base / N - 0.562) < 0.02, `base game ${base / N}`);
-  // (the free spins: about 1 in 259 spins)
-  assert.ok(Math.abs(N / triggers - 259) < 45, `free spins every ${N / triggers}`);
+  // (the base game: 55.8%)
+  assert.ok(Math.abs(base / N - 0.558) < 0.02, `base game ${base / N}`);
+  // (the free spins: about 1 in 264 spins)
+  assert.ok(Math.abs(N / triggers - 264) < 45, `free spins every ${N / triggers}`);
   let free = 0;
   const G = 2000;
   for (let g = 0; g < G; g++) free += pd.freeGame(pd.FREE_SPINS, random).x;
-  // (about 105.1x - its spread over 2,000 games about 1.9x)
-  assert.ok(Math.abs(free / G - 105.1) < 8, `free spins ${free / G}`);
+  // (about 108.3x - its spread over 2,000 games about 2x)
+  assert.ok(Math.abs(free / G - 108.3) < 8, `free spins ${free / G}`);
   assert.strictEqual(pd.RTP, 0.968);
 });
 

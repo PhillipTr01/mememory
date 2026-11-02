@@ -965,7 +965,7 @@ function showPaytable() {
     el("h2", "mm-dialog-title", "Paytable"),
     el("p", "mm-dialog-text", "What one amber pays with your bet of 🪙 " + formatCoins(bet) + ". The sun upgrades amber up to " + setup.maxLevel + " times."),
     table,
-    el("p", "mm-dialog-text", "Every frog collects amber of its own colour and the feature symbols it reaches. Frogs cross other symbols but no empty spots."),
+    el("p", "mm-dialog-text", "Every frog collects the touching amber of its own colour, hopping on from each one it takes. Wilds and feature symbols next to its path are collected too."),
     features,
     el("p", "mm-dialog-text", "Every amber collected fills the meter. A full meter opens " + setup.chests + " chests with feature symbols."),
   );

@@ -5,9 +5,10 @@ const crypto = require("crypto");
  * holds an amber of one of the four colours, a feature symbol or nothing.
  *
  * The frogs move: each frog in turn hops to the nearest symbol it can collect and on from there, as long as it
- * finds one. It collects amber of its own colour, the ✨ wild (amber of every colour) and the feature symbols. It
- * crosses amber of the other colours (they stay) but never an empty spot or another frog; it can walk back over its
- * own trail. Every amber it collects pays the amber's value of its colour (by the colour's level).
+ * finds one. It moves only onto a spot next to it that holds amber of its own colour, the ✨ wild (amber of every
+ * colour) or a feature symbol - and collects it. Amber of another colour, an empty spot and another frog stop it; it
+ * can walk back over its own trail. Every amber it collects pays the amber's value of its colour (by its level).
+ * The pond is always full when it fills: only the frogs empty spots.
  *
  * The feature symbols act once all frogs have moved (in the order they were collected):
  *  - 🪙 coin: an instant win;
@@ -43,7 +44,7 @@ const FAMILIES = [
 ];
 const FAMILY_IDS = FAMILIES.map((family) => family.id);
 // An amber pays this (times the bet, before PAY_SCALE) at level 0 .. 7
-const AMBER_VALUES = [0.02, 0.03, 0.045, 0.065, 0.1, 0.15, 0.22, 0.35];
+const AMBER_VALUES = [0.02, 0.035, 0.06, 0.1, 0.17, 0.28, 0.45, 0.75];
 const MAX_LEVEL = AMBER_VALUES.length - 1;
 // A coin pays this (times the bet, before PAY_SCALE)
 const COIN_VALUES = [0.2, 0.5, 1, 2, 5];
@@ -62,11 +63,12 @@ const FEATURES = [
   { id: "moon", icon: "🌕", name: "Full moon" },
 ];
 const FEATURE_IDS = FEATURES.map((feature) => feature.id);
-// How likely a new spot is empty, an amber of each colour or each feature (weights). The free spins: more features
-const LANDING = { empty: 36, amber: 13, coin: 1.3, sun: 0.7, wild: 1.1, lotus: 0.35, rain: 0.45, swirl: 0.35, flies: 0.35, moon: 0.75 };
-const FREE_LANDING = { ...LANDING, empty: 16, amber: 16, sun: 3, wild: 2.2, lotus: 0.8, moon: 0.35 };
+// How likely a new spot is each colour's amber or each feature (weights) - the pond is always full (empty: never; a
+// spot is only emptied by a frog). The free spins: far more suns, wilds and lotuses
+const LANDING = { empty: 0, amber: 13, coin: 1.3, sun: 0.4, wild: 1.5, lotus: 0.35, rain: 0.35, swirl: 0.35, flies: 0.35, moon: 0.7 };
+const FREE_LANDING = { ...LANDING, sun: 7, wild: 6, lotus: 1.2, moon: 0.8 };
 // What a chest holds (weights)
-const CHEST = { coin: 30, sun: 22, wild: 10, lotus: 6, rain: 10, swirl: 8, flies: 8, moon: 6 };
+const CHEST = { coin: 34, sun: 24, wild: 10, lotus: 6, rain: 8, swirl: 8, flies: 8, moon: 2 };
 
 // The symbols for the page: the amber (one per colour), the coins, the features, a fly on the pond
 const SYMBOLS = [
@@ -77,10 +79,10 @@ const SYMBOLS = [
 ];
 const BY_ID = new Map(SYMBOLS.map((symbol) => [symbol.id, symbol]));
 
-// The pays times this: the payback 96.8% (as the slots). Simulated (1.2 million spins, 30,000 free games): unscaled
-// base game 55.0%, free spins about every 259 spins at 102.9x (11 free spins in the middle, 23 for one in ten) -
-// 94.7% in all -> scaled: base game 56.2%, free spins 40.6% (105.1x)
-const PAY_SCALE = 1.022;
+// The pays times this: the payback 96.8% (as the slots). Simulated (1.2 million spins, 24,000 free games): unscaled
+// base game 52.8%, free spins about every 264 spins at 102.4x (11 free spins in the middle, 20 for one in ten) -
+// 91.6% in all -> scaled: base game 55.8%, free spins 41.0% (108.3x)
+const PAY_SCALE = 1.057;
 const RTP = 0.968;
 const MOON_TRIGGER = 3; // this many 🌕 collected start the free spins ...
 const FREE_SPINS = 8; // ... this many of them
@@ -88,10 +90,10 @@ const FREE_MORE = 3; // every MOON_TRIGGER 🌕 collected in the free spins: thi
 const MAX_FREE_SPINS = 30;
 const MAX_WIN = 10000; // a spin (and its free spins) never pays more than this many times the bet
 const MAX_STEPS = 60; // (a safety net - the frogs never move this often in a spin)
-// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 105.7x on
-// average (simulated), so about 96% of it comes back
-const BUY_PRICE = 110;
-const BUY_RTP = 0.96;
+// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 108.8x on
+// average (simulated), so about 95% of it comes back
+const BUY_PRICE = 115;
+const BUY_RTP = 0.95;
 // How far one spin's win strays from its average, in bets (simulated) - for the RTP monitor
 const SPIN_SPREAD = 9;
 
@@ -145,8 +147,8 @@ const collects = (id, family) => id === family || isFeature(id);
 const NEIGHBOURS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
 /*
- * A frog moves (the grid changes in place): it hops to the nearest spot it collects (over the other colours, the
- * flies and its own trail) - again and again. -> {family, path: [[c, r], ...] (from where it sat, spot by spot), got: [ids collected],
+ * A frog moves (the grid changes in place): it hops to the nearest spot it collects (over the flies and its own
+ * trail) - again and again. -> {family, path: [[c, r], ...] (from where it sat, spot by spot), got: [ids collected],
  * amber (how many), end: [c, r]}
  */
 function moveFrog(grid, frogs, family) {
@@ -174,8 +176,8 @@ function moveFrog(grid, frogs, family) {
           target = [x, y];
           break;
         }
-        // (it crosses amber of the other colours, the flies and its trail - never an empty spot)
-        if (trail.has(k) || id != null) {
+        // (on from there: its trail and the flies - never amber of another colour or an empty spot)
+        if (trail.has(k) || id === "fly") {
           from.set(k, [c, r]);
           queue.push([x, y]);
         }
