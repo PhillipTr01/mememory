@@ -241,7 +241,7 @@ const GAMES = {
       sections: [
         section("How it works", [
           tile("🐸", "The frogs", "Every frog collects the touching gems of its own colour, hopping on from each one it takes. Wilds and feature symbols next to its path are collected too.", { emoji: pond.FAMILIES.map((family) => family.icon) }),
-          tile("🤝", "Meetings", "Two frogs side by side sometimes trade places. When two frogs want the same partner, they argue and new symbols land around them.", { emoji: ["🤝", "💢"] }),
+          tile("🤝", "Meetings", "When no frog can move any more, frogs side by side may trade places. When two frogs want the same partner, they argue and new symbols land around them.", { emoji: ["🤝", "💢"] }),
           tile("☀️", "Gem levels", `Each gem pays a coin win. The sun upgrades the gems of its frog up to ${pond.MAX_LEVEL} times, and each step pays more.`, { tags: [["+1 level", "gold"]] }),
           tile("🧰", "Feature meter", `Every gem collected fills the meter. A full meter opens ${pond.CHESTS} chests with random feature symbols.`, { tags: [[pond.METER + " gems", "green"]] }),
           tile("🪷", "The pond", `The pond starts at ${pond.MIN_SIZE}×${pond.MIN_SIZE} and can grow to ${pond.MAX_SIZE}×${pond.MAX_SIZE}.`, { big: `${pond.MAX_SIZE}×${pond.MAX_SIZE}` }),
@@ -251,6 +251,7 @@ const GAMES = {
           tile(sym("wild"), "Firefly", "The firefly is wild and counts as a gem for every frog.", { emoji: [sym("wild")] }),
           tile(sym("rain"), "Rain", "Rain fills the empty spots with new symbols, and the frogs move again.", { emoji: [sym("rain")] }),
           tile(sym("swirl"), "Swirl", "The swirl turns the gems of another colour into the colour of its frog.", { emoji: [sym("swirl")] }),
+          tile(sym("rock"), "Rock", "A rock clears the spots around where it lands, and a frog it hits jumps somewhere else.", { emoji: [sym("rock")] }),
           tile(sym("flies"), "Flies", "Flies fill the empty spots. A frog can cross each fly once by eating it.", { emoji: [sym("flies")] }),
         ]),
         section("Free spins", [

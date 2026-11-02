@@ -363,6 +363,7 @@ var FEATURE_TEXT = {
   rain: (e) => "🌧️ Rain fills the empty spots",
   swirl: (e) => (e.from ? "🌀 The " + familyInfo(e.from).name.toLowerCase() + " turn " + familyInfo(e.family).name.split(" ")[0].toLowerCase() : "🌀 Nothing to turn"),
   flies: (e) => "🪰 Flies fill the empty spots",
+  rock: (e) => (e.jumps && e.jumps.length ? "🪨 A rock falls and the frogs jump away" : "🪨 A rock falls into the pond"),
   moon: (e) => "🌕 A full moon",
 };
 
@@ -521,11 +522,34 @@ async function playEffect(effect, step, next, bet, win, inBonus) {
     (effect.cells || []).forEach((spot) => setSpot(spot, next.grid[spot[0]] ? next.grid[spot[0]][spot[1]] : null, bet));
   } else if (effect.id == "flies") {
     (effect.cells || []).forEach((spot) => setSpot(spot, "fly", bet));
+  } else if (effect.id == "rock" && effect.at) {
+    await rockFalls(effect, bet);
   } else if (effect.id == "moon") {
     setMoons(effect.moons, inBonus);
     document.getElementById("pdMoons").animate([{ transform: "scale(1)" }, { transform: "scale(1.2)" }, { transform: "scale(1)" }], { duration: 450 });
   }
   await wait(setup.rules.effectTime);
+}
+
+// A rock falls on a spot: the spots around it splash new symbols, a frog hit jumps to its new spot
+async function rockFalls(effect, bet) {
+  var time = setup.rules.effectTime;
+  var size = boardSize() / shown.length;
+  if (!skipping) {
+    var rock = el("div", "pd-falling-rock", "🪨");
+    rock.style.left = effect.at[0] * size + "px";
+    rock.style.top = effect.at[1] * size + "px";
+    rock.style.width = rock.style.height = size + "px";
+    document.querySelector(".pd-frog-layer").append(rock);
+    await rock.animate([{ transform: "translateY(" + -(effect.at[1] + 1.5) * size + "px) scale(1.4)", opacity: 0.6 }, { transform: "translateY(0) scale(1)", opacity: 1 }], { duration: time * 0.45, easing: "cubic-bezier(.5,0,1,1)", fill: "forwards" }).finished;
+    document.getElementById("pdBoard").animate([{ transform: "translateY(0)" }, { transform: "translateY(4px)" }, { transform: "translateY(-2px)" }, { transform: "translateY(0)" }], { duration: 220 });
+    rock.animate([{ opacity: 1 }, { opacity: 0, transform: "scale(1.6)" }], { duration: time * 0.3, fill: "forwards" }).finished.then(() => rock.remove());
+  }
+  (effect.cells || []).forEach((spot, i) => setSpot(spot, effect.ids[i], bet));
+  (effect.jumps || []).forEach((jump) => {
+    frogSpots[jump.family] = jump.to;
+    jumpFrog(frogEls[jump.family], jump.to, time * 0.4, size);
+  });
 }
 
 function setSpot(spot, id, bet) {
@@ -1033,6 +1057,7 @@ function showPaytable() {
   line("🌧️", "Rain fills the empty spots with new symbols.");
   line("🌀", "The swirl turns the gems of another colour into the colour of its frog.");
   line("🪰", "Flies fill the empty spots, and a frog can cross each fly once by eating it.");
+  line("🪨", "A rock clears the spots around where it lands, and a frog it hits jumps somewhere else.");
   line("🌕", "Collect " + setup.free.trigger + " full moons in one spin for " + setup.free.spins + " free spins.");
   dialog.append(
     x,
@@ -1041,7 +1066,7 @@ function showPaytable() {
     table,
     el("p", "mm-dialog-text", "Every frog collects the touching gems of its own colour, hopping on from each one it takes. Wilds and feature symbols next to its path are collected too."),
     features,
-    el("p", "mm-dialog-text", "Two frogs side by side sometimes trade places. When two frogs want the same partner, they argue and new symbols land around them."),
+    el("p", "mm-dialog-text", "When no frog can move any more, frogs side by side may trade places. When two frogs want the same partner, they argue and new symbols land around them."),
     el("p", "mm-dialog-text", "Every gem collected fills the meter. A full meter opens " + setup.chests + " chests with feature symbols."),
   );
   backdrop.appendChild(dialog);

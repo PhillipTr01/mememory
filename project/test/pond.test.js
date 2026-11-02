@@ -54,7 +54,7 @@ test("pond: a frog moves only onto its amber, the wild and the features next to 
 
 test("pond: the frogs move while they find something - the pond stays square (6x6 to 8x8), the meter below full, the levels at most 7", () => {
   const random = rng(7);
-  const seen = { coin: 0, sun: 0, lotus: 0, rain: 0, swirl: 0, flies: 0, moon: 0, wild: 0, chests: 0 };
+  const seen = { coin: 0, sun: 0, lotus: 0, rain: 0, swirl: 0, flies: 0, rock: 0, moon: 0, wild: 0, chests: 0 };
   for (let i = 0; i < 3000; i++) {
     const state = pd.newState();
     const { grid, frogs } = pd.deal(random);
@@ -123,6 +123,19 @@ test("pond: the features - a coin pays, the sun upgrades, the swirl turns a colo
   pd.act("lotus", "leaf", grown, frogs, state, random, pd.LANDING);
   assert.strictEqual(pd.act("lotus", "leaf", grown, frogs, state, random, pd.LANDING).grew, false);
   assert.strictEqual(grown.length, 8);
+  // A rock: the 3x3 around it get new symbols, a frog there jumps to a spot outside
+  for (let i = 0; i < 40; i++) {
+    const pond = fresh();
+    const sitting = { leaf: [2, 2], berry: [5, 5], bug: [0, 5], shell: [5, 0] };
+    pond[2][2] = null;
+    const rock = pd.act("rock", "leaf", pond, sitting, state, random, pd.LANDING);
+    const inside = ([c, r]) => Math.abs(c - rock.at[0]) <= 1 && Math.abs(r - rock.at[1]) <= 1;
+    rock.cells.forEach(([c, r], j) => assert.strictEqual(pond[c][r], rock.ids[j]));
+    rock.jumps.forEach((jump) => assert.ok(!inside(jump.to), "it jumps out"));
+    Object.values(sitting).forEach(([c, r]) => assert.strictEqual(pond[c][r], null, "a frog's spot is empty"));
+    assert.strictEqual(new Set(Object.values(sitting).map((spot) => spot.join(":"))).size, 4);
+    if (inside([2, 2])) assert.ok(rock.jumps.some((jump) => jump.family === "leaf"));
+  }
   // The moon counts; a wild from a chest lands on an empty spot
   pd.act("moon", "leaf", fresh(), frogs, state, random, pd.LANDING);
   assert.strictEqual(state.moons, 1);
@@ -238,15 +251,15 @@ test("pond: pays back about 96.8% - the base game (seeded spins) and the free sp
     base += pd.play(grid, frogs, random, state).pay;
     if (state.moons >= pd.MOON_TRIGGER) triggers++;
   }
-  // (the base game: 54.3%)
-  assert.ok(Math.abs(base / N - 0.543) < 0.02, `base game ${base / N}`);
-  // (the free spins: about 1 in 254 spins)
-  assert.ok(Math.abs(N / triggers - 254) < 45, `free spins every ${N / triggers}`);
+  // (the base game: 51.3%)
+  assert.ok(Math.abs(base / N - 0.513) < 0.02, `base game ${base / N}`);
+  // (the free spins: about 1 in 231 spins)
+  assert.ok(Math.abs(N / triggers - 231) < 45, `free spins every ${N / triggers}`);
   let free = 0;
   const G = 2000;
   for (let g = 0; g < G; g++) free += pd.freeGame(pd.FREE_SPINS, random).x;
-  // (about 108.1x - its spread over 2,000 games about 2x)
-  assert.ok(Math.abs(free / G - 108.1) < 8, `free spins ${free / G}`);
+  // (about 104.7x - its spread over 2,000 games about 2x)
+  assert.ok(Math.abs(free / G - 104.7) < 8, `free spins ${free / G}`);
   assert.strictEqual(pd.RTP, 0.968);
 });
 

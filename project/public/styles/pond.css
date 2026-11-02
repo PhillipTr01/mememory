@@ -186,6 +186,17 @@
   opacity: 0.7;
 }
 
+/* A falling rock (the rock feature) */
+.pd-falling-rock {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--cell) * 0.8);
+  line-height: 1;
+  pointer-events: none;
+}
+
 /* A note over the pond: a win that floats up, a frog's bubble */
 .pd-note {
   position: absolute;

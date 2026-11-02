@@ -18,9 +18,11 @@ const crypto = require("crypto");
  *  - 🌧️ rain: a redrop, the empty spots fill with new symbols;
  *  - 🌀 swirl: the amber of another colour on the pond turns into the frog's colour;
  *  - 🪰 flies: the empty spots fill with flies - a frog can cross a fly once (it eats it);
+ *  - 🪨 rock: a rock falls on a spot - the 3x3 spots around it get new symbols, a frog hit jumps to a free spot;
  *  - 🌕 moon: the bonus symbol.
- * Then two frogs side by side may meet: each pair asks for a trade by chance (TRADE_CHANCE, once until one of
- * them moves again) and swaps spots when that lets one of them move on. When two frogs ask the same frog, they argue instead: the spots around the
+ * When no frog can move any more, the frogs side by side meet: each pair asks for a trade by chance
+ * (TRADE_CHANCE, once until one of them moves again) and swaps spots when that lets one of them move on - several
+ * pairs at once. When two frogs ask the same frog, they argue instead: the spots around the
  * two that stop them (amber of another colour, an empty spot, a fly) get new symbols - room to move on.
  * Then the frogs move again - and so on while they find something to collect (or a meeting changes the pond).
  *
@@ -63,15 +65,16 @@ const FEATURES = [
   { id: "rain", icon: "🌧️", name: "Rain" },
   { id: "swirl", icon: "🌀", name: "Swirl" },
   { id: "flies", icon: "🪰", name: "Flies" },
+  { id: "rock", icon: "🪨", name: "Rock" },
   { id: "moon", icon: "🌕", name: "Full moon" },
 ];
 const FEATURE_IDS = FEATURES.map((feature) => feature.id);
 // How likely a new spot is each colour's amber or each feature (weights) - the pond is always full (empty: never; a
 // spot is only emptied by a frog). The free spins: far more suns, wilds and lotuses
-const LANDING = { empty: 0, amber: 13, coin: 1.3, sun: 0.4, wild: 1.5, lotus: 0.35, rain: 0.35, swirl: 0.35, flies: 0.35, moon: 0.7 };
+const LANDING = { empty: 0, amber: 13, coin: 1.3, sun: 0.4, wild: 1.5, lotus: 0.35, rain: 0.35, swirl: 0.35, flies: 0.35, rock: 0.35, moon: 0.7 };
 const FREE_LANDING = { ...LANDING, sun: 7, wild: 6, lotus: 1.2, moon: 0.8 };
 // What a chest holds (weights)
-const CHEST = { coin: 34, sun: 24, wild: 10, lotus: 6, rain: 8, swirl: 8, flies: 8, moon: 2 };
+const CHEST = { coin: 34, sun: 24, wild: 10, lotus: 6, rain: 8, swirl: 8, flies: 8, rock: 8, moon: 2 };
 
 // The symbols for the page: the amber (one per colour), the coins, the features, a fly on the pond
 const SYMBOLS = [
@@ -82,24 +85,23 @@ const SYMBOLS = [
 ];
 const BY_ID = new Map(SYMBOLS.map((symbol) => [symbol.id, symbol]));
 
-// The pays times this: the payback 96.8% (as the slots). Simulated (6.4 million spins, 144,000 free games): unscaled
-// base game 54.5%, free spins about every 254 spins at 108.5x (11 free spins in the middle, 20 for one in ten) -
-// 97.2% in all -> scaled: base game 54.3%, free spins 42.5% (108.1x)
-const PAY_SCALE = 0.996;
+// The pays times this: the payback 96.8% (as the slots). Simulated (3.2 million whole spins): base game 51.3%, free
+// spins about every 231 spins at 104.7x - 96.6% (+-0.5%) in all
+const PAY_SCALE = 0.907;
 const RTP = 0.968;
 const MOON_TRIGGER = 3; // this many 🌕 collected start the free spins ...
 const FREE_SPINS = 8; // ... this many of them
 const FREE_MORE = 3; // every MOON_TRIGGER 🌕 collected in the free spins: this many more
 const MAX_FREE_SPINS = 30;
 const MAX_WIN = 10000; // a spin (and its free spins) never pays more than this many times the bet
-const TRADE_CHANCE = 35; // in 100: two frogs side by side ask for a trade
+const TRADE_CHANCE = 50; // in 100: two frogs side by side ask for a trade
 const MAX_STEPS = 60; // (a safety net - the frogs never move this often in a spin)
-// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 108.6x on
-// average (simulated), so about 94% of it comes back
-const BUY_PRICE = 115;
-const BUY_RTP = 0.94;
+// Bonus buy: the free spins after the base game for this many times the bet - a bought spin pays about 105.2x on
+// average (simulated), so about 95% of it comes back
+const BUY_PRICE = 111;
+const BUY_RTP = 0.948;
 // How far one spin's win strays from its average, in bets (simulated) - for the RTP monitor
-const SPIN_SPREAD = 9;
+const SPIN_SPREAD = 8.8;
 
 function pick(weights, randomInt) {
   const tickets = weights.map((w) => Math.round(w * 1000));
@@ -218,7 +220,7 @@ const emptySpots = (grid, frogs) => {
 /*
  * A feature acts for the frog of `family` (the grid, the frogs and the state change in place) -> what it did:
  * {id, family, ...} (coin: pay; sun: level; wild (from a chest): at; lotus: grew; swirl: from, cells; rain and
- * flies: cells)
+ * flies: cells; rock: at, cells, ids, jumps: [{family, to}])
  */
 function act(id, family, grid, frogs, state, randomInt, landing, chest) {
   const feature = symbolOf(id) ? symbolOf(id).feature : id;
@@ -260,6 +262,41 @@ function act(id, family, grid, frogs, state, randomInt, landing, chest) {
   } else if (feature === "rain" || feature === "flies") {
     effect.cells = emptySpots(grid, frogs);
     effect.cells.forEach(([c, r]) => (grid[c][r] = feature === "rain" ? land(randomInt, landing) : "fly"));
+  } else if (feature === "rock") {
+    // (where it lands; the 3x3 around it: new symbols; a frog there jumps to a free spot outside)
+    const size = grid.length;
+    const at = [randomInt(size), randomInt(size)];
+    const inside = (c, r) => Math.abs(c - at[0]) <= 1 && Math.abs(r - at[1]) <= 1;
+    const sitting = new Set(Object.values(frogs).map((spot) => key(...spot)));
+    effect.at = at;
+    effect.cells = [];
+    effect.ids = [];
+    for (let c = at[0] - 1; c <= at[0] + 1; c++)
+      for (let r = at[1] - 1; r <= at[1] + 1; r++) {
+        if (c < 0 || r < 0 || c >= size || r >= size || sitting.has(key(c, r))) continue;
+        grid[c][r] = land(randomInt, landing);
+        effect.cells.push([c, r]);
+        effect.ids.push(grid[c][r]);
+      }
+    effect.jumps = [];
+    for (const family of FAMILY_IDS) {
+      if (!inside(...frogs[family])) continue;
+      const taken = new Set(Object.values(frogs).map((spot) => key(...spot)));
+      const free = [];
+      const any = [];
+      grid.forEach((column, c) => column.forEach((id, r) => !inside(c, r) && !taken.has(key(c, r)) && (id == null ? free : any).push([c, r])));
+      const spots = free.length ? free : any;
+      if (!spots.length) continue;
+      const to = spots[randomInt(spots.length)];
+      // (the spot it left gets a new symbol too, the one it lands on is its own)
+      const from = frogs[family];
+      grid[from[0]][from[1]] = land(randomInt, landing);
+      effect.cells.push(from.slice());
+      effect.ids.push(grid[from[0]][from[1]]);
+      grid[to[0]][to[1]] = null;
+      frogs[family] = to;
+      effect.jumps.push({ family: family, to: to.slice() });
+    }
   } else if (feature === "moon") {
     state.moons++;
     effect.moons = state.moons;
@@ -360,7 +397,8 @@ function play(grid, frogs, randomInt, state, landing = LANDING) {
       if (effect.pay) step.pay += effect.pay;
       step.effects.push(effect);
     }
-    step.meets = meet(grid, frogs, randomInt, landing, used);
+    // (the frogs meet only when none of them can move any more: then every pair side by side may trade)
+    if (!step.moves.length) step.meets = meet(grid, frogs, randomInt, landing, used);
     if (!step.moves.length && !step.meets.length) break;
     pay += step.pay;
     step.levels = { ...state.levels };
